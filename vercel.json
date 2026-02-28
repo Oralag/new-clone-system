@@ -9,7 +9,7 @@
       "destination": "/api/ai-chat"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!adminapi|api).*)",
       "destination": "/index.html"
     }
   ],
