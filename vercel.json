@@ -1,0 +1,21 @@
+{
+  "rewrites": [
+    {
+      "source": "/adminapi/:path*",
+      "destination": "https://erp-backend-production-a349.up.railway.app/adminapi/:path*"
+    },
+    {
+      "source": "/api/ai-chat",
+      "destination": "/api/ai-chat"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/ai-chat.ts": {
+      "maxDuration": 60
+    }
+  }
+}
