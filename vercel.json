@@ -2,20 +2,23 @@
   "rewrites": [
     {
       "source": "/adminapi/:path*",
-      "destination": "https://erp-backend-production-a349.up.railway.app/adminapi/:path*"
+      "destination": "/api/proxy/:path*"
     },
     {
       "source": "/api/ai-chat",
       "destination": "/api/ai-chat"
     },
     {
-      "source": "/((?!adminapi|api).*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ],
   "functions": {
     "api/ai-chat.ts": {
       "maxDuration": 60
+    },
+    "api/proxy/[...path].ts": {
+      "maxDuration": 30
     }
   }
 }
