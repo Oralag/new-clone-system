@@ -1,7 +1,9 @@
 <template>
   <div class="receipt-page">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getPayReceiptList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getPayReceiptList"
+          del-path="/finance/PayReceipt/batchDel"
+          export-file-name="付款记录" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.receipt_no" placeholder="付款单号" clearable style="width:160px" />
           <el-input v-model="searchForm.contact_name" placeholder="付款对象" clearable style="width:150px" />
@@ -68,11 +70,11 @@
         <el-form-item label="付款金额" prop="amount" :rules="[{ required: true, message: '请输入付款金额' }]">
           <el-input-number v-model="fd.amount" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
-        <el-form-item label="付款账户" prop="account_name">
+        <el-form-item label="付款账户" prop="fund_id">
           <div style="display:flex;gap:4px;width:100%">
-            <el-select v-model="fd.account_name" placeholder="请选择账户" clearable style="flex:1">
-              <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.name" />
-              <el-option label="现金" value="现金" />
+            <el-select v-model="fd.fund_id" placeholder="请选择账户" clearable style="flex:1"
+              @change="onFundChange">
+              <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
             </el-select>
             <el-button :icon="Plus" @click="openAddFund" />
           </div>
@@ -164,9 +166,10 @@ const defaultFd = () => ({
   contact_id: null as any,
   contact_name: '',
   amount: 0,
-  account_name: '',
+  fund_id: null as any,
+  fund_name: '',
   pay_method: 'bank',
-  pay_date: new Date().toISOString().slice(0, 10),
+  pay_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   order_no: '',
   remark: '',
 })
@@ -196,6 +199,11 @@ function onContactChange(id: any) {
   fd.contact_name = c?.name ?? ''
 }
 
+function onFundChange(id: any) {
+  const f = fundOptions.value.find(x => x.id === id)
+  fd.fund_name = f?.name ?? ''
+}
+
 function openCreate() {
   Object.assign(fd, defaultFd())
   loadContacts()
@@ -206,7 +214,19 @@ async function handleSave() {
   try { await formRef.value?.validate() } catch { ElMessage.warning('请填写必填项'); return }
   saving.value = true
   try {
-    await createPayReceipt({ ...fd })
+    const { contact_type, contact_id, fund_id, fund_name, order_no, pay_method, ...rest } = fd
+    const payload: any = {
+      ...rest,
+      fund_id: fund_id ?? 0,
+      fund_name: fund_name || '',
+      pay_type: pay_method || 'cash',
+      order_sn: order_no || null,
+    }
+    if (contact_type === 'supplier') {
+      payload.supplier_id = contact_id ?? 0
+      payload.supplier_name = fd.contact_name
+    }
+    await createPayReceipt(payload)
     ElMessage.success('保存成功')
     drawerVisible.value = false
     tableRef.value?.refresh()
@@ -242,7 +262,7 @@ async function confirmQuickAdd() {
     if (fd.contact_type === 'supplier') {
       res = await createSupplier({ name: quickForm.name.trim() })
     } else if (fd.contact_type === 'customer') {
-      res = await createSaleCustomer({ nickname: quickForm.name.trim() })
+      res = await createSaleCustomer({ name: quickForm.name.trim() })
     }
     quickAddVisible.value = false
     await loadContacts()
@@ -285,7 +305,8 @@ async function submitAddFund() {
     ElMessage.success('新增账户成功')
     addFundVisible.value = false
     await loadFunds()
-    fd.account_name = fundForm.name.trim()
+    const newFund = fundOptions.value.find(f => f.name === fundForm.name.trim())
+    if (newFund) { fd.fund_id = newFund.id; fd.fund_name = newFund.name }
   } catch (e: any) {
     ElMessage.error(e?.message ?? '新增失败')
   } finally {
