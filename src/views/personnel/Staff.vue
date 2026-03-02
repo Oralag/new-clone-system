@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getStaffList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getStaffList"
+          del-path="/personnel/staff/batchDel"
+          export-file-name="员工列表" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="员工姓名">

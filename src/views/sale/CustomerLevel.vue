@@ -16,10 +16,7 @@
             :class="{ active: selectedLevel?.id === lv.id }"
             @click="selectLevel(lv)"
           >
-            <span class="level-name">
-              {{ lv.name }}
-              <span v-if="lv.discount !== undefined" class="level-discount">{{ lv.discount }}折</span>
-            </span>
+            <span class="level-name">{{ lv.name }}</span>
             <span class="level-actions">
               <el-icon class="act-icon" @click.stop="openLevelForm(lv)"><Edit /></el-icon>
               <el-icon class="act-icon danger" @click.stop="handleDeleteLevel(lv.id)"><Delete /></el-icon>
@@ -53,6 +50,26 @@
             <el-table-column label="系统销售价" width="110" align="right">
               <template #default="{ row }">
                 <span style="color:#86909c">¥{{ Number(row.sell_price || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="折扣" width="200" align="center">
+              <template #default="{ row }">
+                <div style="display:flex;align-items:center;gap:4px">
+                  <el-input-number
+                    v-model="row._discount_val"
+                    :min="0.01" :max="row._discount_mode === 'pct' ? 100 : 10"
+                    :precision="row._discount_mode === 'pct' ? 0 : 1"
+                    :step="row._discount_mode === 'pct' ? 1 : 0.1"
+                    :controls="false"
+                    size="small"
+                    style="width:64px"
+                    @change="applyDiscount(row)"
+                  />
+                  <el-select v-model="row._discount_mode" size="small" style="width:72px" @change="applyDiscount(row)">
+                    <el-option label="百分比" value="pct" />
+                    <el-option label="折扣" value="fold" />
+                  </el-select>
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="等级专属价" width="140" align="right">
@@ -93,7 +110,7 @@
             style="width:100%"
             placeholder="如：90 表示九折"
           />
-          <div style="font-size:12px;color:#86909c;margin-top:4px">1~100，100 表示不打折，90 表示九折</div>
+          <div style="font-size:12px;color:#86909c;margin-top:4px">1~100，100 = 不打折，90 = 9折（出单时自动计算）</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -121,8 +138,7 @@
         <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
       </el-table>
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
-        <span style="font-size:13px;color:#4e5969">已选 {{ pickerSelected.length }} 件，初始等级价（0=跟随销售价）：</span>
-        <el-input-number v-model="pickerInitPrice" :min="0" :precision="2" style="width:140px" />
+        <span style="font-size:13px;color:#4e5969">已选 {{ pickerSelected.length }} 件，确认后在价格表里设置具体价格。</span>
       </div>
       <template #footer>
         <el-button @click="priceFormVisible = false">取消</el-button>
@@ -209,6 +225,8 @@ interface PriceRow {
   unit_name: string
   sell_price: number
   level_price: number
+  _discount_val: number     // displayed discount value
+  _discount_mode: 'pct' | 'fold'  // 'pct'=百分比(0-100), 'fold'=折扣(0-10)
 }
 
 const priceRows = ref<PriceRow[]>([])
@@ -232,16 +250,35 @@ function buildPriceRows() {
     if (!key.startsWith(prefix)) continue
     const goodsId = Number(key.slice(prefix.length))
     const cached = goodsInfoCache.value[goodsId]
+    const sellPrice = cached?.sell_price ?? 0
+    const levelPrice = prices[key]
+    // Compute initial discount display value (百分比 mode by default)
+    const pct = sellPrice > 0 ? Math.round((levelPrice / sellPrice) * 100) : 100
     rows.push({
       goods_id: goodsId,
       goods_name: cached?.goods_name ?? `商品${goodsId}`,
       goods_sn: cached?.goods_sn ?? '',
       unit_name: cached?.unit_name ?? '',
-      sell_price: cached?.sell_price ?? 0,
-      level_price: prices[key],
+      sell_price: sellPrice,
+      level_price: levelPrice,
+      _discount_val: pct,
+      _discount_mode: 'pct',
     })
   }
   priceRows.value = rows
+}
+
+// Apply discount to compute level_price, then save
+function applyDiscount(row: PriceRow) {
+  if (!row.sell_price) return
+  if (row._discount_mode === 'pct') {
+    // 百分比: 90 → level_price = sell_price * 0.90
+    row.level_price = parseFloat((row.sell_price * (row._discount_val / 100)).toFixed(2))
+  } else {
+    // 折扣: 9 → level_price = sell_price * 0.9  (9折)
+    row.level_price = parseFloat((row.sell_price * (row._discount_val / 10)).toFixed(2))
+  }
+  savePriceRow(row)
 }
 
 function savePriceRow(row: PriceRow) {
@@ -315,17 +352,15 @@ function confirmAddPrices() {
   const lvId = selectedLevel.value.id
   for (const g of pickerSelected.value) {
     const key = `${lvId}_${g.id}`
-    // 如果已存在则不覆盖
     if (prices[key] === undefined) {
-      prices[key] = pickerInitPrice.value > 0 ? pickerInitPrice.value : Number(g.sell_price) || 0
+      prices[key] = Number(g.sell_price) || 0
     }
-    // 更新缓存
     goodsInfoCache.value[g.id] = g
   }
   saveLevelPrices(prices)
   priceFormVisible.value = false
   buildPriceRows()
-  ElMessage.success(`已添加 ${pickerSelected.value.length} 件商品价格`)
+  ElMessage.success(`已添加 ${pickerSelected.value.length} 件商品，请在价格表中设置折扣或专属价格`)
 }
 
 onMounted(async () => {

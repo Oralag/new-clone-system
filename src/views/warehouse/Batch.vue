@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getBatchList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getBatchList"
+          del-path="/stock/Batch/batchDel"
+          export-file-name="批次管理" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width: 180px" />
           <el-input v-model="searchForm.batch_no" placeholder="批次号" clearable style="width: 160px" />

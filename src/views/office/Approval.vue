@@ -13,7 +13,9 @@
           <el-button @click="onReset">重置</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getApprovalList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getApprovalList"
+          del-path="/office/approval/batchDel"
+          export-file-name="审批记录" :params="searchForm">
         <el-table-column label="标题" prop="title" />
         <el-table-column label="申请人" prop="applicant_name" />
         <el-table-column label="类型" prop="type_name" />

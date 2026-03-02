@@ -4,7 +4,9 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getSaleReturnList" :params="searchForm">
+        <ScTable ref="tableRef" :api-obj="getSaleReturnList"
+          del-path="/stock/SaleReturnOrder/batchDel"
+          export-file-name="销售退货单" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="退货单号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -43,13 +45,20 @@
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="order_no" label="退货单号" min-width="150" />
-          <el-table-column prop="customer_name" label="客户名称" min-width="140" />
+          <el-table-column label="客户名称" min-width="140">
+            <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="退货日期" width="110">
+            <template #default="{ row }">{{ (row.return_date || row.create_time || '').slice(0, 10) }}</template>
+          </el-table-column>
+          <el-table-column label="退货人" width="90">
+            <template #default="{ row }">{{ row.admin_name || '—' }}</template>
+          </el-table-column>
           <el-table-column prop="return_amount" label="退货金额" width="120" align="right">
             <template #default="{ row }">
               <span style="color:#165dff;font-weight:500">¥{{ Number(row.return_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="return_date" label="退货日期" width="120" />
           <el-table-column prop="reason" label="退货原因" min-width="140" show-overflow-tooltip />
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
@@ -58,9 +67,15 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
-              <el-button type="success" link size="small" @click="openEdit(row)">查看</el-button>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
+              <template v-if="row.status === 0">
+                <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
+                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
+              </template>
+              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -74,10 +89,11 @@
       <div class="form-topbar">
         <div style="display:flex;align-items:center;gap:12px">
           <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ fd.id ? '编辑退货单' : '新增退货单' }}</span>
+          <span class="form-title">{{ isReadonly ? '查看退货单' : (fd.id ? '编辑退货单' : '新增退货') }}</span>
+          <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button type="primary" :loading="saving" @click="handleSave">
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">
             保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
           </el-button>
         </div>
@@ -88,7 +104,7 @@
         <!-- 基本信息卡片 -->
         <div class="form-section">
           <div class="sec-title">基本信息</div>
-          <el-form ref="formRef" :model="fd" label-width="80px">
+          <el-form ref="formRef" :model="fd" label-width="80px" :disabled="isReadonly">
             <el-row :gutter="16">
               <!-- 行1 -->
               <el-col :span="6">
@@ -102,7 +118,7 @@
                   <div style="display:flex;gap:4px;width:100%">
                     <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
                       @change="onCustomerChange">
-                      <el-option v-for="c in customerOptions" :key="c.id" :label="c.nickname" :value="c.id" />
+                      <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
                     </el-select>
                     <el-button type="primary" :icon="Plus" @click="quickAddCustomerVisible = true" />
                   </div>
@@ -159,7 +175,7 @@
         <!-- 商品明细卡片 -->
         <div class="form-section">
           <!-- 工具栏 -->
-          <div class="goods-toolbar">
+          <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
               <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
               <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
@@ -398,7 +414,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getSaleReturnList, createSaleReturn, deleteSaleReturn } from '@/api/sale'
+import { getSaleReturnList, createSaleReturn, deleteSaleReturn, auditSaleReturn } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { getWarehouseList } from '@/api/warehouse'
@@ -431,6 +447,7 @@ async function fetchGoodsSpecs(goodsId: number) {
 }
 const searchForm = reactive<any>({ order_no: '', customer_name: '', status: '' })
 const showForm = ref(false)
+const isReadonly = ref(false)
 
 // ── 客户选项 ──────────────────────────────────────────────────────────────────
 const customerOptions = ref<any[]>([])
@@ -468,7 +485,7 @@ const defaultFd = () => ({
   customer_id: null as any,
   customer_name: '',
   admin_name: '',
-  return_date: new Date().toISOString().slice(0, 10),
+  return_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   reason: '',
   warehouse_id: null as any,
   warehouse_name: '',
@@ -532,7 +549,7 @@ function removeItem(index: number) {
 
 function onCustomerChange(id: any) {
   const c = customerOptions.value.find(x => x.id === id)
-  fd.customer_name = c?.nickname ?? ''
+  fd.customer_name = c?.name || c?.nickname || ''
 }
 
 function onWarehouseChange(id: any) {
@@ -542,14 +559,16 @@ function onWarehouseChange(id: any) {
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  isReadonly.value = false
   showForm.value = true
 }
 
-function openEdit(row: any) {
+function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach((item: any) => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  isReadonly.value = readonly
   showForm.value = true
 }
 
@@ -567,11 +586,20 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    const payload = {
-      ...fd,
+    const payload: Record<string, any> = {
+      customer_id: fd.customer_id,
+      customer_name: fd.customer_name,
+      admin_name: fd.admin_name,
+      return_date: fd.return_date,
+      reason: fd.reason,
+      warehouse_id: fd.warehouse_id,
+      warehouse_name: fd.warehouse_name,
+      return_amount: fd.return_amount,
+      remark: fd.remark,
+      total_amount: fd.total_amount,
       goods_info: JSON.stringify(fd.items),
-      items: undefined,
     }
+    if (fd.id) payload.id = fd.id
     await createSaleReturn(payload)
     ElMessage.success('保存成功')
     backToList()
@@ -587,6 +615,18 @@ async function handleDelete(id: number) {
   await deleteSaleReturn(id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
+}
+
+async function handleAudit(row: any, status: number) {
+  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
+  await ElMessageBox.confirm(`确定${action}该退货单？`, '提示', { type: 'warning' })
+  try {
+    await auditSaleReturn(row.id, status)
+    ElMessage.success(`${action}成功`)
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
+  }
 }
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
@@ -642,7 +682,7 @@ function confirmGoods() {
       unit_name: g.unit_name || '',
       num: 1,
       price_no_tax: priceNoTax,
-      tax_rate: 13,
+      tax_rate: 0,
       price: Number((priceNoTax * 1.13).toFixed(4)),
       remark: '',
     })
@@ -673,7 +713,7 @@ function confirmManualAdd() {
     unit_name: manualForm.unit_name,
     num: manualForm.num,
     price_no_tax: Number((manualForm.price / 1.13).toFixed(4)),
-    tax_rate: 13,
+    tax_rate: 0,
     price: manualForm.price,
     remark: '',
   })
@@ -727,7 +767,7 @@ async function confirmQuickAddCustomer() {
   }
   quickCustomerSaving.value = true
   try {
-    const res = await createSaleCustomer({ nickname: quickCustomerForm.nickname })
+    const res = await createSaleCustomer({ name: quickCustomerForm.nickname })
     const newId = res.data?.id ?? res.data
     await loadCustomers()
     fd.customer_id = newId

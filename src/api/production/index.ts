@@ -4,12 +4,20 @@ export const getProductionPlanList = (params?: any) => http.get('/production/pla
 export const createProductionPlan = (data: any) => http.post('/production/plan/add', data)
 export const updateProductionPlan = (data: any) => http.post('/production/plan/edit', data)
 export const deleteProductionPlan = (id: number) => http.post('/production/plan/del', { id })
+export const auditProductionPlan = (id: number, status: number) => http.post('/production/plan/audit', { id, status })
+
 export const getProductionInhouseList = (params?: any) => http.get('/production/inhouse/index', { params })
 export const createProductionInhouse = (data: any) => http.post('/production/inhouse/add', data)
+export const updateProductionInhouse = (data: any) => http.post('/production/inhouse/edit', data)
 export const deleteProductionInhouse = (id: number) => http.post('/production/inhouse/del', { id })
+export const auditProductionInhouse = (id: number, status: number) => http.post('/production/inhouse/audit', { id, status })
+
 export const getMaterialList = (params?: any) => http.get('/production/material/index', { params })
 export const createMaterial = (data: any) => http.post('/production/material/add', data)
 export const deleteMaterial = (id: number) => http.post('/production/material/del', { id })
+export const auditMaterial = (id: number, status: number) => http.post('/production/material/audit', { id, status })
+
 export const getReturnMaterialList = (params?: any) => http.get('/production/returnMaterial/index', { params })
 export const createReturnMaterial = (data: any) => http.post('/production/returnMaterial/add', data)
 export const deleteReturnMaterial = (id: number) => http.post('/production/returnMaterial/del', { id })
+export const auditReturnMaterial = (id: number, status: number) => http.post('/production/returnMaterial/audit', { id, status })

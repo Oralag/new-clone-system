@@ -22,7 +22,8 @@
           <el-button @click="onReset">重置</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getFinanceReportList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getFinanceReportList"
+          export-file-name="None" :params="searchForm">
         <el-table-column label="类型名称" prop="type_name" />
         <el-table-column label="收入" prop="income" />
         <el-table-column label="支出" prop="expense" />

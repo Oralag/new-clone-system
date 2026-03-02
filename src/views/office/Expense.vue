@@ -14,7 +14,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getOfficeExpenseList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getOfficeExpenseList"
+          del-path="/office/expense/batchDel"
+          export-file-name="费用报销" :params="searchForm">
         <el-table-column label="报销单号" prop="expense_no" />
         <el-table-column label="申请人" prop="applicant_name" />
         <el-table-column label="类型" prop="type_name" />

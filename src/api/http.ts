@@ -39,20 +39,28 @@ http.interceptors.response.use(
       })
       return Promise.reject(new Error(res.message || '未授权'))
     }
-    // code === 0 — business error
-    ElMessage.error(res.message || '请求失败')
+    // code === 0 — business error, show quietly only if message exists
+    if (res.message) {
+      ElMessage({ message: res.message, type: 'error', duration: 2000, showClose: true })
+    }
     return Promise.reject(new Error(res.message || '请求失败'))
   },
   (error) => {
     const status = error.response?.status
-    const messages: Record<number, string> = {
-      400: '请求参数错误',
-      401: '未授权，请重新登录',
-      403: '拒绝访问',
-      404: '请求地址不存在',
-      500: '服务器内部错误',
+    // 404 = interface not implemented, 500 = server error — suppress noisy popups for background loads
+    // Only show errors for mutation requests (POST/PUT/DELETE) or explicit 401/403
+    const method = error.config?.method?.toUpperCase()
+    const isMutation = method === 'POST' || method === 'PUT' || method === 'DELETE'
+    if (status === 401 || status === 403) {
+      ElMessage.error('无访问权限，请重新登录')
+    } else if (isMutation && status && status !== 404) {
+      const messages: Record<number, string> = {
+        400: '请求参数错误',
+        500: '服务器内部错误',
+      }
+      ElMessage.error(messages[status] ?? '操作失败，请重试')
     }
-    ElMessage.error(messages[status] ?? '网络请求失败')
+    // 404 and GET errors are silently ignored
     return Promise.reject(error)
   },
 )

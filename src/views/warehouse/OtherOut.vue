@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getOtherOutList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getOtherOutList"
+          del-path="/stock/OtherOut/batchDel"
+          export-file-name="其他出库" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.out_no" placeholder="出库单编号" clearable style="width: 180px" />
         </template>

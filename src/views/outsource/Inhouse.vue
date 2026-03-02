@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getOutsourceInhouseList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getOutsourceInhouseList"
+          del-path="/outsource/inhouse/batchDel"
+          export-file-name="外协入库" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="入库编号">

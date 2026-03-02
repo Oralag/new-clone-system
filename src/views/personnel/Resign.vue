@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getResignList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getResignList"
+          del-path="/personnel/resign/batchDel"
+          export-file-name="离职记录" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="员工姓名">

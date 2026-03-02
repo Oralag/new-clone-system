@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="scTable" :api-obj="getVisitList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getVisitList"
+          del-path="/office/visit/batchDel"
+          export-file-name="拜访记录" :params="searchForm">
         <el-table-column label="员工姓名" prop="staff_name" />
         <el-table-column label="地址" prop="address" />
         <el-table-column label="打卡时间" prop="check_time" />

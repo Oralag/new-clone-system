@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getExpenseList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getExpenseList"
+          del-path="/finance/Expense/batchDel"
+          export-file-name="费用记录" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="费用单号">

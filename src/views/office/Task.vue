@@ -14,7 +14,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getTaskList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getTaskList"
+          del-path="/office/task/batchDel"
+          export-file-name="任务管理" :params="searchForm">
         <el-table-column label="标题" prop="title" />
         <el-table-column label="负责人" prop="assignee_name" />
         <el-table-column label="优先级" prop="priority_name" />

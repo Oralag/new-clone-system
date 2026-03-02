@@ -15,14 +15,34 @@
         <slot name="toolbar" />
       </div>
       <div class="toolbar-right">
+        <!-- Import button -->
+        <el-tooltip content="导入Excel">
+          <el-upload
+            v-if="importApi || importPath"
+            :show-file-list="false"
+            accept=".xlsx,.xls,.csv"
+            :before-upload="handleImport"
+            style="display:inline-block"
+          >
+            <el-button :icon="Upload" size="small">导入</el-button>
+          </el-upload>
+        </el-tooltip>
+        <!-- Export button -->
+        <el-tooltip :content="selectedRows.length > 0 ? `导出已选 ${selectedRows.length} 条` : '导出全部数据'">
+          <el-button :icon="Download" size="small" @click="handleExport">
+            导出{{ selectedRows.length > 0 ? `(${selectedRows.length})` : '' }}
+          </el-button>
+        </el-tooltip>
+        <!-- Refresh button -->
         <el-tooltip content="刷新">
-          <el-button :icon="Refresh" circle size="small" @click="refresh" />
+          <el-button :icon="Refresh" circle size="small" @click="refresh" style="margin-left:4px" />
         </el-tooltip>
       </div>
     </div>
 
     <!-- Table -->
     <el-table
+      ref="elTableRef"
       v-loading="loading"
       :data="tableData"
       v-bind="$attrs"
@@ -31,8 +51,24 @@
       style="width: 100%"
       @selection-change="handleSelectionChange"
     >
+      <!-- Checkbox column always first -->
+      <el-table-column type="selection" width="50" align="center" />
       <slot />
     </el-table>
+
+    <!-- Selected info bar — shown only when rows are selected -->
+    <div v-if="selectedRows.length > 0" class="selected-bar">
+      已选 <strong>{{ selectedRows.length }}</strong> 条
+      <el-button type="primary" link size="small" @click="clearSelection">取消选择</el-button>
+      <el-button
+        v-if="batchDelApi || delPath"
+        type="danger"
+        :icon="Delete"
+        size="small"
+        style="margin-left:auto"
+        @click="handleBatchDelete"
+      >批量删除({{ selectedRows.length }})</el-button>
+    </div>
 
     <!-- Pagination -->
     <div v-if="total > 0" class="sc-pagination">
@@ -47,28 +83,77 @@
         @current-change="handleCurrentChange"
       />
     </div>
+
+    <!-- Import preview dialog -->
+    <el-dialog
+      v-model="importDialogVisible"
+      title="导入预览"
+      width="80%"
+      append-to-body
+      destroy-on-close
+    >
+      <div style="margin-bottom:12px;font-size:13px;color:#86909c">
+        共 {{ importPreviewData.length }} 条数据，请确认后点击确认导入。
+      </div>
+      <el-table :data="importPreviewData.slice(0, 20)" border size="small" max-height="400">
+        <el-table-column
+          v-for="col in importColumns"
+          :key="col"
+          :prop="col"
+          :label="col"
+          min-width="120"
+          show-overflow-tooltip
+        />
+      </el-table>
+      <div v-if="importPreviewData.length > 20" style="margin-top:8px;font-size:12px;color:#86909c">
+        仅显示前20条，实际导入全部 {{ importPreviewData.length }} 条。
+      </div>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Search, Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ref, computed, useSlots } from 'vue'
+import { Search, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import * as XLSX from 'xlsx'
+import http from '@/api/http'
 
 interface Props {
   apiObj: (params: any) => Promise<any>
   params?: Record<string, any>
   defaultPageSize?: number
   rowFilter?: (row: any) => boolean
+  sortBy?: string
+  /** POST function for batch delete — receives { ids: number[] } */
+  batchDelApi?: (data: { ids: number[] }) => Promise<any>
+  /** API path string for batch delete, e.g. "/shop/ShopCustomer/batchDel" — alternative to batchDelApi */
+  delPath?: string
+  /** POST function for creating a record — used for import */
+  importApi?: (data: any) => Promise<any>
+  /** API path string for import — alternative to importApi */
+  importPath?: string
+  /** Excel filename used when exporting */
+  exportFileName?: string
+  /** Column labels map for export: { prop: label } — overrides auto-detection */
+  exportColumns?: Record<string, string>
 }
 
 const props = withDefaults(defineProps<Props>(), {
   params: () => ({}),
   defaultPageSize: 20,
+  exportFileName: '导出数据',
 })
 
 const emit = defineEmits<{
   (e: 'selection-change', val: any[]): void
 }>()
+
+const slots = useSlots()
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -76,11 +161,35 @@ const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(props.defaultPageSize)
 const searchParams = ref<Record<string, any>>({})
+const selectedRows = ref<any[]>([])
+const elTableRef = ref<any>()
 
+// ── Auto-detect column prop→label from slot vnodes ────────────────────────────
+function getColumnMap(): Record<string, string> {
+  if (props.exportColumns && Object.keys(props.exportColumns).length) return props.exportColumns
+  const map: Record<string, string> = {}
+  try {
+    const vnodes = slots.default?.() ?? []
+    const walk = (nodes: any[]) => {
+      for (const vn of nodes) {
+        if (!vn) continue
+        const p = vn.props
+        if (p?.prop && p?.label) map[p.prop] = p.label
+        if (vn.children?.default) {
+          try { walk(vn.children.default()) } catch {}
+        }
+        if (Array.isArray(vn.children)) walk(vn.children)
+      }
+    }
+    walk(vnodes)
+  } catch {}
+  return map
+}
+
+// ── Data loading ─────────────────────────────────────────────────────────────
 async function loadData() {
   loading.value = true
   try {
-    // 过滤掉空字符串/null/undefined，避免后端路由报错
     const cleanParams = (obj: Record<string, any>) =>
       Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== '' && v !== null && v !== undefined))
 
@@ -92,62 +201,170 @@ async function loadData() {
     })
     const data = res?.data || res
     if (Array.isArray(data)) {
-      tableData.value = props.rowFilter ? data.filter(props.rowFilter) : data
-      total.value = tableData.value.length
+      let rows = props.rowFilter ? data.filter(props.rowFilter) : data
+      if (props.sortBy) rows = [...rows].sort((a, b) => (a[props.sortBy!] ?? 0) - (b[props.sortBy!] ?? 0))
+      tableData.value = rows
+      total.value = rows.length
     } else {
-      const rows = data?.rows || data?.list || data?.data || []
-      tableData.value = props.rowFilter ? rows.filter(props.rowFilter) : rows
+      let rows = data?.rows || data?.list || data?.data || []
+      if (props.rowFilter) rows = rows.filter(props.rowFilter)
+      if (props.sortBy) rows = [...rows].sort((a: any, b: any) => (a[props.sortBy!] ?? 0) - (b[props.sortBy!] ?? 0))
+      tableData.value = rows
       total.value = data?.total || 0
     }
-  } catch (e) {
+  } catch {
     // Error handled by interceptor
   } finally {
     loading.value = false
   }
 }
 
-function handleSearch() {
-  currentPage.value = 1
-  loadData()
-}
+// ── Search / pagination ───────────────────────────────────────────────────────
+function handleSearch() { currentPage.value = 1; loadData() }
+function handleReset() { searchParams.value = {}; currentPage.value = 1; loadData() }
+function handleSizeChange() { currentPage.value = 1; loadData() }
+function handleCurrentChange() { loadData() }
+function refresh() { loadData() }
 
-function handleReset() {
-  searchParams.value = {}
-  currentPage.value = 1
-  loadData()
-}
-
-function handleSizeChange() {
-  currentPage.value = 1
-  loadData()
-}
-
-function handleCurrentChange() {
-  loadData()
-}
-
-function refresh() {
-  loadData()
-}
-
+// ── Selection ─────────────────────────────────────────────────────────────────
 function handleSelectionChange(val: any[]) {
+  selectedRows.value = val
   emit('selection-change', val)
 }
+function clearSelection() {
+  elTableRef.value?.clearSelection()
+}
 
-// Expose for parent use
-defineExpose({ refresh, loadData, tableData, searchParams })
+// ── Batch delete ──────────────────────────────────────────────────────────────
+async function handleBatchDelete() {
+  const ids = selectedRows.value.map((r: any) => r.id).filter(Boolean)
+  if (!ids.length) { ElMessage.warning('请先勾选要删除的记录'); return }
+  await ElMessageBox.confirm(
+    `确定要删除选中的 ${ids.length} 条记录吗？此操作不可恢复。`,
+    '批量删除',
+    { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
+  )
+  try {
+    if (props.batchDelApi) {
+      await props.batchDelApi({ ids })
+    } else if (props.delPath) {
+      await http.post(props.delPath, { ids })
+    }
+    ElMessage.success(`已删除 ${ids.length} 条记录`)
+    clearSelection()
+    refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '删除失败')
+  }
+}
 
-onMounted(() => {
-  loadData()
-})
+// ── Export ────────────────────────────────────────────────────────────────────
+async function handleExport() {
+  const colMap = getColumnMap()
+  const skipKeys = new Set(['created_at', 'updated_at', 'password', 'token', 'id'])
 
-// Re-fetch when external params change
+  let rows: any[] = []
+
+  // If rows are selected, export only those; otherwise fetch all
+  if (selectedRows.value.length > 0) {
+    rows = selectedRows.value
+  } else {
+    try {
+      const cleanParams = (obj: Record<string, any>) =>
+        Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== '' && v !== null && v !== undefined))
+      const res: any = await props.apiObj({
+        page: 1,
+        list_rows: 10000,
+        ...cleanParams(props.params),
+        ...cleanParams(searchParams.value),
+      })
+      const data = res?.data || res
+      rows = Array.isArray(data) ? data : (data?.rows || data?.list || data?.data || [])
+    } catch {
+      ElMessage.error('获取导出数据失败')
+      return
+    }
+  }
+
+  if (!rows.length) { ElMessage.warning('暂无数据可导出'); return }
+
+  // Determine columns: use detected map keys (in order), or fall back to all row keys
+  const detectedCols = Object.keys(colMap)
+  const allKeys = detectedCols.length > 0
+    ? detectedCols.filter(k => !skipKeys.has(k))
+    : Object.keys(rows[0]).filter(k => !skipKeys.has(k))
+
+  // Build sheet with Chinese headers
+  const sheetData = rows.map(row => {
+    const out: Record<string, any> = {}
+    allKeys.forEach(k => {
+      const header = colMap[k] || k
+      out[header] = row[k] ?? ''
+    })
+    return out
+  })
+
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.json_to_sheet(sheetData)
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
+  const suffix = selectedRows.value.length > 0 ? `(已选${selectedRows.value.length}条)` : ''
+  XLSX.writeFile(wb, `${props.exportFileName}${suffix}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+  ElMessage.success(`已导出 ${rows.length} 条数据`)
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
+const importDialogVisible = ref(false)
+const importPreviewData = ref<any[]>([])
+const importColumns = ref<string[]>([])
+const importLoading = ref(false)
+
+function handleImport(file: File): boolean {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target!.result as ArrayBuffer)
+    const wb = XLSX.read(data, { type: 'array' })
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' })
+    if (!json.length) { ElMessage.warning('Excel文件无数据'); return }
+    importPreviewData.value = json
+    importColumns.value = Object.keys(json[0])
+    importDialogVisible.value = true
+  }
+  reader.readAsArrayBuffer(file)
+  return false // prevent default upload
+}
+
+async function confirmImport() {
+  if (!props.importApi && !props.importPath) return
+  importLoading.value = true
+  let success = 0
+  let failed = 0
+  for (const row of importPreviewData.value) {
+    try {
+      if (props.importApi) {
+        await props.importApi(row)
+      } else if (props.importPath) {
+        await http.post(props.importPath, row)
+      }
+      success++
+    } catch {
+      failed++
+    }
+  }
+  importLoading.value = false
+  importDialogVisible.value = false
+  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+  refresh()
+}
+
+// ── Expose ────────────────────────────────────────────────────────────────────
+defineExpose({ refresh, loadData, tableData, searchParams, selectedRows })
+
+onMounted(() => { loadData() })
+
 watch(
   () => props.params,
-  () => {
-    currentPage.value = 1
-    loadData()
-  },
+  () => { currentPage.value = 1; loadData() },
   { deep: true },
 )
 </script>
@@ -186,6 +403,25 @@ watch(
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.selected-bar {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: #e8f3ff;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #165dff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .sc-pagination {

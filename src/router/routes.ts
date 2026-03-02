@@ -71,16 +71,19 @@ const routes: RouteRecordRaw[] = [
       { path: 'outsource/payment', name: 'OutsourcePayment', component: () => import('@/views/outsource/Payment.vue'), meta: { title: '付款管理' } },
 
       // Finance
+      { path: 'finance/overview', name: 'FinanceOverview', component: () => import('@/views/finance/Overview.vue'), meta: { title: '财务总览' } },
       { path: 'finance/receivable', name: 'FinanceReceivable', component: () => import('@/views/finance/Receivable.vue'), meta: { title: '应收账款' } },
       { path: 'finance/payable', name: 'FinancePayable', component: () => import('@/views/finance/Payable.vue'), meta: { title: '应付账款' } },
       { path: 'finance/collect-receipt', name: 'FinanceCollectReceipt', component: () => import('@/views/finance/CollectReceipt.vue'), meta: { title: '收款单' } },
       { path: 'finance/pay-receipt', name: 'FinancePayReceipt', component: () => import('@/views/finance/PayReceipt.vue'), meta: { title: '付款单' } },
+      { path: 'finance/pay-receipt/new', name: 'FinancePayReceiptNew', component: () => import('@/views/finance/PayReceiptNew.vue'), meta: { title: '新增付款单' } },
       { path: 'finance/invoice', name: 'FinanceInvoice', component: () => import('@/views/finance/Invoice.vue'), meta: { title: '发票管理' } },
       { path: 'finance/statement', name: 'FinanceStatement', component: () => import('@/views/finance/Statement.vue'), meta: { title: '对账单' } },
       { path: 'finance/expense', name: 'FinanceExpense', component: () => import('@/views/finance/Expense.vue'), meta: { title: '费用管理' } },
       { path: 'finance/fund', name: 'FinanceFund', component: () => import('@/views/finance/Fund.vue'), meta: { title: '资金账户' } },
       { path: 'finance/fund-flow', name: 'FinanceFundFlow', component: () => import('@/views/finance/FundFlow.vue'), meta: { title: '资金流水' } },
       { path: 'finance/cost', name: 'FinanceCost', component: () => import('@/views/finance/Cost.vue'), meta: { title: '成本核算' } },
+      { path: 'finance/prepay', name: 'FinancePrepay', component: () => import('@/views/finance/Prepay.vue'), meta: { title: '预付款' } },
 
       // Goods
       { path: 'goods/info', name: 'GoodsInfo', component: () => import('@/views/goods/Info.vue'), meta: { title: '商品资料' } },

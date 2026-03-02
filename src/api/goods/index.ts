@@ -26,7 +26,7 @@ export const updateSpec = (data: any) => http.post('/goods/ShopSpec/edit', data)
 export const deleteSpec = (id: number) => http.post('/goods/ShopSpec/del', { id })
 
 export const getBomList = (params?: any) => http.get('/goods/ShopBom/index', { params })
-export const getBomByGoods = (goods_id: number) => http.get('/goods/ShopBom/detail', { params: { goods_id } })
+export const getBomByGoods = (goods_id: number) => http.get('/goods/ShopBom/getGoodsBom', { params: { goods_id } })
 export const createBom = (data: any) => http.post('/goods/ShopBom/add', data)
 export const updateBom = (data: any) => http.post('/goods/ShopBom/edit', data)
 export const deleteBom = (id: number) => http.post('/goods/ShopBom/del', { id })

@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getCarList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getCarList"
+          del-path="/personnel/car/batchDel"
+          export-file-name="用车记录" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="申请人">

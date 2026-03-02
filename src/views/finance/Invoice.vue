@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getInvoiceList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getInvoiceList"
+          del-path="/finance/Invoice/batchDel"
+          export-file-name="发票管理" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="发票号码">

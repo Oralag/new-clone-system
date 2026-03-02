@@ -6,7 +6,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getCouponList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getCouponList"
+          del-path="/retail/coupon/batchDel"
+          export-file-name="优惠券列表" :params="searchForm">
         <el-table-column label="名称" prop="name" />
         <el-table-column label="类型" prop="type_name" />
         <el-table-column label="折扣/减免" prop="discount" />

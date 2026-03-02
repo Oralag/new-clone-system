@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getSocialList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getSocialList"
+          del-path="/personnel/social/batchDel"
+          export-file-name="社保记录" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="员工姓名">

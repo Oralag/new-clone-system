@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getDeptList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getDeptList"
+          del-path="/setting/dept/batchDel"
+          export-file-name="部门管理" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="部门名称">

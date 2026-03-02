@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getWarehouseList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getWarehouseList"
+          del-path="/stock/WarehouseName/batchDel"
+          export-file-name="仓库管理" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.name" placeholder="仓库名称" clearable style="width: 180px" />
         </template>

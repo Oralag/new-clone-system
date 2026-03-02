@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getTransferList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getTransferList"
+          del-path="/stock/Allocation/batchDel"
+          export-file-name="调拨单" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.transfer_no" placeholder="调拨单编号" clearable style="width: 180px" />
         </template>

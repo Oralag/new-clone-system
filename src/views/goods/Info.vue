@@ -20,22 +20,43 @@
           <div class="cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
             全部
           </div>
-          <template v-for="item in filteredCates" :key="item.id">
+          <template v-for="item in cateTree" :key="item.id">
             <div class="cate-item" :class="{ active: selectedCateId === item.id }" @click="selectCate(item.id)">
+              <!-- 有子分类时显示三角 -->
+              <el-icon v-if="item.children.length" class="cate-arrow"
+                :class="{ expanded: !collapsedCates.has(item.id) }"
+                @click.stop="toggleCate(item.id)">
+                <ArrowRight />
+              </el-icon>
+              <span v-else class="cate-arrow-placeholder" />
               <span class="cate-item-name">{{ item.name }}</span>
               <span class="cate-item-actions">
                 <el-icon class="act-icon" @click.stop="openCateForm(item)"><Edit /></el-icon>
                 <el-icon class="act-icon danger" @click.stop="handleDeleteCate(item.id)"><Delete /></el-icon>
               </span>
             </div>
+            <!-- 子分类（可折叠） -->
+            <template v-if="!collapsedCates.has(item.id)">
+              <template v-for="child in item.children" :key="child.id">
+                <div class="cate-item cate-item-child" :class="{ active: selectedCateId === child.id }" @click="selectCate(child.id)">
+                  <span class="cate-item-name">└ {{ child.name }}</span>
+                  <span class="cate-item-actions">
+                    <el-icon class="act-icon" @click.stop="openCateForm(child)"><Edit /></el-icon>
+                    <el-icon class="act-icon danger" @click.stop="handleDeleteCate(child.id)"><Delete /></el-icon>
+                  </span>
+                </div>
+              </template>
+            </template>
           </template>
-          <div v-if="!cateLoading && filteredCates.length === 0" class="cate-empty">暂无分类</div>
+          <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty">暂无分类</div>
         </div>
       </div>
 
       <!-- 右侧商品列表 -->
       <div class="goods-list-wrap">
-        <ScTable ref="tableRef" :api-obj="getGoodsList" :params="searchForm" :row-filter="rowFilter">
+        <ScTable ref="tableRef" :api-obj="getGoodsList"
+          del-path="/goods/ShopGoods/batchDel"
+          export-file-name="商品列表" :params="searchForm" :row-filter="rowFilter">
           <template #search>
             <el-input v-model="searchForm.keyword" placeholder="输入关键字进行过滤" clearable style="width:200px" />
             <el-select v-model="filterType" placeholder="商品类型" clearable style="width:120px" @change="tableRef?.refresh()">
@@ -150,11 +171,24 @@
                 <el-form-item label="商品分类" prop="cate_id"
                   :rules="[{ required: true, message: '请选择商品分类' }]">
                   <div class="row-with-add">
-                    <el-select v-model="fd.cate_id" placeholder="请选择" clearable style="flex:1" @change="onCateChange">
-                      <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
-                    </el-select>
+                    <el-tree-select
+                      v-model="fd.cate_id"
+                      :data="cateTreeSelectData"
+                      :props="{ value: 'id', label: 'name', children: 'children' }"
+                      check-strictly
+                      clearable
+                      filterable
+                      placeholder="请选择商品分类"
+                      style="flex:1"
+                      @change="onCateChange"
+                    />
                     <el-button :icon="Plus" @click="quickAdd('cate')" />
                   </div>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="商品规格" prop="spec">
+                  <el-input v-model="fd.spec" placeholder="如：500g、1L、XL" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
@@ -246,8 +280,12 @@
           <!-- ② 计量单位 -->
           <div class="form-section" ref="secUnit" data-sec="unit">
             <div class="sec-title-row">
-              <span class="sec-title-text">计量单位</span>
-              <el-checkbox v-model="fd.multi_unit">启用多单位</el-checkbox>
+              <div style="display:flex;align-items:center;gap:12px">
+                <span class="sec-title-text">计量单位</span>
+                <el-checkbox v-model="fd.multi_unit" @change="onMultiUnitChange">
+                  <span :style="fd.multi_unit ? 'color:#165dff;font-weight:500' : ''">启用多单位</span>
+                </el-checkbox>
+              </div>
             </div>
             <el-row :gutter="24">
               <el-col :span="12">
@@ -262,6 +300,76 @@
                 </el-form-item>
               </el-col>
             </el-row>
+
+            <!-- 多单位表格 -->
+            <div v-if="fd.multi_unit" style="margin-top:4px">
+              <!-- 基础单位说明行 -->
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae0ff;border-radius:6px;margin-bottom:8px;font-size:13px">
+                <el-tag type="primary" size="small">基础单位</el-tag>
+                <span style="font-weight:600;color:#165dff">{{ fd.unit_name || '—' }}</span>
+                <span style="color:#86909c">（换算基准：1 {{ fd.unit_name || '单位' }} = 1）</span>
+                <span v-if="fd.cost_price" style="margin-left:8px;color:#52c41a">采购价：¥{{ Number(fd.cost_price).toFixed(2) }}</span>
+                <span v-if="fd.sell_price" style="margin-left:8px;color:#165dff">销售价：¥{{ Number(fd.sell_price).toFixed(2) }}</span>
+              </div>
+              <!-- 辅助单位表格 -->
+              <el-table :data="auxUnitRows" border size="small" style="width:100%">
+                <el-table-column type="index" label="序号" width="55" align="center" />
+                <el-table-column label="辅助单位" min-width="130">
+                  <template #default="{ row, $index }">
+                    <el-select v-if="!isView" v-model="row.unit_id" placeholder="请选择单位" size="small" style="width:100%"
+                      @change="(v:any) => onMultiUnitSelect(v, $index + 1)">
+                      <el-option v-for="u in unitOptions" :key="u.id" :label="u.name" :value="u.id" />
+                    </el-select>
+                    <span v-else>{{ row.unit_name || '—' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="换算关系" min-width="200" align="center">
+                  <template #default="{ row }">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px">
+                      <span>1 {{ row.unit_name || '辅助单位' }}</span>
+                      <span>=</span>
+                      <el-input-number v-if="!isView" v-model="row.ratio" :min="0.0001" :precision="4" :controls="false"
+                        size="small" style="width:80px" @change="onMultiUnitRatioChange(row)" />
+                      <span v-else>{{ row.ratio }}</span>
+                      <span style="color:#165dff;font-weight:500">{{ fd.unit_name || '基础单位' }}</span>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="采购价" width="130" align="center">
+                  <template #default="{ row }">
+                    <el-input-number v-if="!isView" v-model="row.cost_price" :min="0" :precision="2" :controls="false"
+                      size="small" style="width:100px" placeholder="自动核算" />
+                    <span v-else>¥{{ (row.cost_price ?? 0).toFixed(2) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="销售价" width="130" align="center">
+                  <template #default="{ row }">
+                    <el-input-number v-if="!isView" v-model="row.sell_price" :min="0" :precision="2" :controls="false"
+                      size="small" style="width:100px" placeholder="自动核算" />
+                    <span v-else>¥{{ (row.sell_price ?? 0).toFixed(2) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="最小销售单位" width="120" align="center">
+                  <template #default="{ row, $index }">
+                    <el-radio v-model="minSaleUnitIdx" :value="$index + 1" :disabled="isView" size="small">{{ '' }}</el-radio>
+                  </template>
+                </el-table-column>
+                <el-table-column label="默认销售单位" width="120" align="center">
+                  <template #default="{ row, $index }">
+                    <el-radio v-model="defaultSaleUnitIdx" :value="$index + 1" :disabled="isView" size="small">{{ '' }}</el-radio>
+                  </template>
+                </el-table-column>
+                <el-table-column v-if="!isView" label="操作" width="70" align="center">
+                  <template #default="{ row, $index }">
+                    <el-button type="danger" link size="small" @click="removeMultiUnitRow($index + 1)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <div v-if="auxUnitRows.length === 0 && !isView" style="text-align:center;color:#86909c;font-size:13px;padding:12px 0">
+                暂无辅助单位，点击下方添加
+              </div>
+              <el-button v-if="!isView" size="small" :icon="Plus" style="margin-top:8px" @click="addMultiUnitRow">添加辅助单位</el-button>
+            </div>
           </div>
 
           <!-- ③ 规格设置 -->
@@ -269,7 +377,9 @@
             <div class="sec-title-row">
               <div style="display:flex;align-items:center;gap:12px">
                 <span class="sec-title-text">规格设置</span>
-                <el-checkbox v-model="fd.multi_spec" @change="onMultiSpecChange">启用多规格</el-checkbox>
+                <el-checkbox v-model="fd.multi_spec" @change="onMultiSpecChange">
+                  <span :style="fd.multi_spec ? 'color:#165dff;font-weight:500' : ''">启用多规格</span>
+                </el-checkbox>
               </div>
               <el-button v-if="fd.multi_spec && !isView" size="small" type="primary" @click="addSpecAttr">+ 添加规格属性</el-button>
             </div>
@@ -397,6 +507,7 @@
                     <el-button
                       v-if="fd.id"
                       size="small"
+                      :disabled="false"
                       :loading="bomCostLoading"
                       @click="calcCostFromBom"
                     >从BOM核算</el-button>
@@ -436,7 +547,7 @@
         </el-form-item>
         <el-form-item label="上级分类">
           <el-select v-model="cateForm.parent_id" placeholder="请选择（可选）" clearable style="width:100%">
-            <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
+            <el-option v-for="c in cateTree" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="排序">
@@ -483,7 +594,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import {
@@ -500,17 +611,46 @@ const cateOptions = ref<any[]>([])
 const cateLoading = ref(false)
 const cateKeyword = ref('')
 const selectedCateId = ref<number | null>(null)
+const collapsedCates = ref<Set<number>>(new Set())
+
+function toggleCate(id: number) {
+  if (collapsedCates.value.has(id)) collapsedCates.value.delete(id)
+  else collapsedCates.value.add(id)
+}
+
+interface CateTreeNode { id: number; name: string; sort: number; parent_id: any; children: CateTreeNode[] }
+
+const cateTree = computed<CateTreeNode[]>(() => {
+  const all: CateTreeNode[] = cateOptions.value.map(c => ({ ...c, children: [] }))
+  const keyword = cateKeyword.value
+  // 搜索模式：扁平展示匹配项
+  if (keyword) return all.filter(c => c.name.includes(keyword))
+  // 树形模式
+  const map: Record<number, CateTreeNode> = {}
+  all.forEach(c => { map[c.id] = c })
+  const roots: CateTreeNode[] = []
+  all.forEach(c => {
+    const pid = c.parent_id
+    if (pid && map[pid]) map[pid].children.push(c)
+    else roots.push(c)
+  })
+  return roots
+})
 
 const filteredCates = computed(() => {
   if (!cateKeyword.value) return cateOptions.value
   return cateOptions.value.filter(c => c.name.includes(cateKeyword.value))
 })
 
+// el-tree-select data (same as cateTree but el-tree-select needs the full tree structure)
+const cateTreeSelectData = computed(() => cateTree.value)
+
 async function loadCates() {
   cateLoading.value = true
   try {
     const res = await getGoodsCateList({ list_rows: 200 })
-    cateOptions.value = res.data?.rows ?? []
+    const rows = res.data?.rows ?? []
+    cateOptions.value = [...rows].sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
   } finally {
     cateLoading.value = false
   }
@@ -518,7 +658,19 @@ async function loadCates() {
 
 function selectCate(id: number | null) {
   selectedCateId.value = id
-  searchForm.cate_id = id ?? ''
+  // Find all descendant IDs of the selected cate
+  if (id === null) {
+    searchForm.cate_id = ''
+  } else {
+    const children = cateOptions.value.filter(c => c.parent_id === id)
+    if (children.length > 0) {
+      // Parent category: don't filter by cate_id in API (get all), use rowFilter instead
+      searchForm.cate_id = ''
+    } else {
+      // Leaf category: filter directly by cate_id
+      searchForm.cate_id = id
+    }
+  }
   tableRef.value?.refresh()
 }
 
@@ -581,9 +733,25 @@ function getGoodsType(row: any): number {
   return goodsTypeMap.value[row.id] ?? row.goods_type ?? 1
 }
 
+// Cate IDs to show when a parent category is selected (parent + all children)
+const activeCateIds = computed<Set<number> | null>(() => {
+  const id = selectedCateId.value
+  if (id === null) return null
+  const children = cateOptions.value.filter(c => c.parent_id === id)
+  if (children.length === 0) return null  // leaf: handled by API param
+  const ids = new Set<number>([id, ...children.map(c => c.id)])
+  return ids
+})
+
 const rowFilter = computed(() => {
-  if (!filterType.value) return undefined
-  return (row: any) => getGoodsType(row) === filterType.value
+  const typeFilter = filterType.value ? (row: any) => getGoodsType(row) === filterType.value : null
+  const cateFilter = activeCateIds.value ? (row: any) => activeCateIds.value!.has(row.cate_id) : null
+  if (!typeFilter && !cateFilter) return undefined
+  return (row: any) => {
+    if (typeFilter && !typeFilter(row)) return false
+    if (cateFilter && !cateFilter(row)) return false
+    return true
+  }
 })
 
 // ── 品牌/单位选项 ─────────────────────────────────────────────────────────────
@@ -606,6 +774,7 @@ const defaultFd = () => ({
   id: 0,
   goods_sn: '', goods_name: '', en_name: '', goods_memo: '',
   goods_type: 1,
+  spec: '',
   cate_id: null as any, cate_name: '',
   brand_id: null as any, brand_name: '',
   unit_id: null as any, unit_name: '',
@@ -624,6 +793,9 @@ const saving = ref(false)
 function openCreate() {
   Object.assign(fd, defaultFd())
   specList.value = []
+  multiUnitRows.value = []
+  minSaleUnitIdx.value = 0
+  defaultSaleUnitIdx.value = 0
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => scrollRef.value?.scrollTo({ top: 0 }))
@@ -640,7 +812,16 @@ function genGoodsSn(): string {
 
 function openEdit(row: any) {
   isView.value = false
-  Object.assign(fd, defaultFd(), row, { goods_type: getGoodsType(row) })
+  Object.assign(fd, defaultFd(), row, {
+    goods_type: getGoodsType(row),
+    multi_unit: !!(row.multi_unit),
+    multi_spec: !!(row.multi_spec),
+    sell_price: Number(row.sell_price) || 0,
+    cost_price: Number(row.cost_price) || 0,
+    safe_min: Number(row.safe_min) || 0,
+    safe_max: Number(row.safe_max) || 0,
+    sort: Number(row.sort) || 0,
+  })
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
@@ -648,7 +829,16 @@ function openEdit(row: any) {
 
 function openView(row: any) {
   isView.value = true
-  Object.assign(fd, defaultFd(), row, { goods_type: getGoodsType(row) })
+  Object.assign(fd, defaultFd(), row, {
+    goods_type: getGoodsType(row),
+    multi_unit: !!(row.multi_unit),
+    multi_spec: !!(row.multi_spec),
+    sell_price: Number(row.sell_price) || 0,
+    cost_price: Number(row.cost_price) || 0,
+    safe_min: Number(row.safe_min) || 0,
+    safe_max: Number(row.safe_max) || 0,
+    sort: Number(row.sort) || 0,
+  })
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
@@ -656,7 +846,11 @@ function openView(row: any) {
 
 function openCopy(row: any) {
   isView.value = false
-  Object.assign(fd, defaultFd(), row, { id: 0, goods_sn: '' })
+  Object.assign(fd, defaultFd(), row, {
+    id: 0, goods_sn: '',
+    multi_unit: !!(row.multi_unit),
+    multi_spec: !!(row.multi_spec),
+  })
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
@@ -713,13 +907,17 @@ async function handleSave() {
   }
   saving.value = true
   try {
+    const payload: any = { ...fd }
+    // Convert boolean multi_unit/multi_spec to 0/1
+    payload.multi_unit = fd.multi_unit ? 1 : 0
+    payload.multi_spec = fd.multi_spec ? 1 : 0
     if (fd.id) {
-      await updateGoods({ ...fd })
+      await updateGoods(payload)
     } else {
-      const res = await createGoods({ ...fd })
+      const res = await createGoods(payload)
       fd.id = res.data?.id ?? 0
     }
-    // 保存 goods_type 到本地
+    // Also persist goods_type locally for display in list
     if (fd.id && fd.goods_type) {
       const map = { ...goodsTypeMap.value, [fd.id]: fd.goods_type }
       goodsTypeMap.value = map
@@ -742,7 +940,10 @@ async function handleSaveAndNew() {
   }
   saving.value = true
   try {
-    fd.id ? await updateGoods({ ...fd }) : await createGoods({ ...fd })
+    const payload: any = { ...fd }
+    payload.multi_unit = fd.multi_unit ? 1 : 0
+    payload.multi_spec = fd.multi_spec ? 1 : 0
+    fd.id ? await updateGoods(payload) : await createGoods(payload)
     ElMessage.success('保存成功，已进入新增')
     Object.assign(fd, defaultFd())
     specList.value = []
@@ -860,10 +1061,24 @@ function saveSpecAttrs(goodsId: number) {
 
 // Also sync with backend spec API (best-effort)
 async function loadSpecs() {
-  if (!fd.id) { specAttrs.value = []; skuList.value = []; return }
+  if (!fd.id) { specAttrs.value = []; skuList.value = []; multiUnitRows.value = []; return }
   // Load from localStorage first (source of truth for our multi-spec)
   specAttrs.value = loadSpecAttrs(fd.id)
+  // Auto-enable multi_spec if saved spec attrs exist
+  if (specAttrs.value.length > 0) fd.multi_spec = true
   rebuildSkuList()
+  // Load multi-unit
+  const saved = loadMultiUnits(fd.id)
+  if (saved.length > 0) {
+    multiUnitRows.value = saved
+    fd.multi_unit = true
+    minSaleUnitIdx.value = saved.findIndex(r => r.is_min_sale) ?? 0
+    defaultSaleUnitIdx.value = saved.findIndex(r => r.is_default_sale) ?? 0
+  } else if (fd.multi_unit) {
+    multiUnitRows.value = [initBaseUnitRow()]
+    minSaleUnitIdx.value = 0
+    defaultSaleUnitIdx.value = 0
+  }
 }
 
 function rebuildSkuList() {
@@ -954,11 +1169,14 @@ function confirmBatchPrice() {
 
 // Save spec data along with goods save
 function persistSpecData(goodsId: number) {
-  if (!fd.multi_spec) return
-  saveSpecAttrs(goodsId)
-  saveSkuData(goodsId)
-  // Also sync to backend spec API for BOM / other modules
-  syncSpecToBackend(goodsId)
+  if (fd.multi_spec) {
+    saveSpecAttrs(goodsId)
+    saveSkuData(goodsId)
+    syncSpecToBackend(goodsId)
+  }
+  if (fd.multi_unit) {
+    saveMultiUnits(goodsId)
+  }
 }
 
 async function syncSpecToBackend(goodsId: number) {
@@ -979,6 +1197,136 @@ async function syncSpecToBackend(goodsId: number) {
 
 // Unused stubs kept to avoid import errors (specList used in old code still imported)
 const specList = ref<any[]>([])
+
+// ── 多单位 ────────────────────────────────────────────────────────────────────
+const MULTI_UNIT_KEY = 'erp_goods_multi_unit_map'
+
+interface MultiUnitRow {
+  is_base: boolean
+  unit_id: number | null
+  unit_name: string
+  ratio: number          // 换算关系：1 本单位 = ratio 基础单位
+  is_min_sale: boolean
+  is_default_sale: boolean
+  cost_price: number     // 该单位对应的采购/成本价（自动换算）
+  sell_price: number     // 该单位对应的销售价（自动换算）
+}
+
+const multiUnitRows = ref<MultiUnitRow[]>([])
+const minSaleUnitIdx = ref(0)
+const defaultSaleUnitIdx = ref(0)
+
+// Auxiliary units = all rows except the base (index 0)
+const auxUnitRows = computed(() => multiUnitRows.value.slice(1))
+
+function loadMultiUnits(goodsId: number): MultiUnitRow[] {
+  try {
+    const map = JSON.parse(localStorage.getItem(MULTI_UNIT_KEY) || '{}')
+    const rows: MultiUnitRow[] = map[goodsId] ?? []
+    // Backfill price fields for older stored rows that lack them
+    return rows.map(r => ({ cost_price: 0, sell_price: 0, ...r }))
+  } catch { return [] }
+}
+
+function saveMultiUnits(goodsId: number) {
+  try {
+    const map = JSON.parse(localStorage.getItem(MULTI_UNIT_KEY) || '{}')
+    map[goodsId] = multiUnitRows.value.map((r, i) => ({
+      ...r,
+      is_min_sale: i === minSaleUnitIdx.value,
+      is_default_sale: i === defaultSaleUnitIdx.value,
+    }))
+    localStorage.setItem(MULTI_UNIT_KEY, JSON.stringify(map))
+  } catch {}
+}
+
+function initBaseUnitRow() {
+  const baseUnit = unitOptions.value.find(u => u.id === fd.unit_id)
+  return {
+    is_base: true,
+    unit_id: fd.unit_id,
+    unit_name: baseUnit?.name ?? fd.unit_name ?? '',
+    ratio: 1,
+    is_min_sale: true,
+    is_default_sale: true,
+    cost_price: fd.cost_price ?? 0,
+    sell_price: fd.sell_price ?? 0,
+  } as MultiUnitRow
+}
+
+function onMultiUnitChange(val: any) {
+  if (val) {
+    if (multiUnitRows.value.length === 0) {
+      multiUnitRows.value = [initBaseUnitRow()]
+      minSaleUnitIdx.value = 0
+      defaultSaleUnitIdx.value = 0
+    } else {
+      // 更新基础单位行的 unit_name
+      if (multiUnitRows.value[0]) {
+        const baseUnit = unitOptions.value.find(u => u.id === fd.unit_id)
+        multiUnitRows.value[0].unit_id = fd.unit_id
+        multiUnitRows.value[0].unit_name = baseUnit?.name ?? fd.unit_name ?? ''
+      }
+    }
+  }
+}
+
+function addMultiUnitRow() {
+  multiUnitRows.value.push({
+    is_base: false,
+    unit_id: null,
+    unit_name: '',
+    ratio: 1,
+    is_min_sale: false,
+    is_default_sale: false,
+    cost_price: fd.cost_price ?? 0,
+    sell_price: fd.sell_price ?? 0,
+  })
+}
+
+function removeMultiUnitRow(idx: number) {
+  multiUnitRows.value.splice(idx, 1)
+  if (minSaleUnitIdx.value >= multiUnitRows.value.length) minSaleUnitIdx.value = 0
+  if (defaultSaleUnitIdx.value >= multiUnitRows.value.length) defaultSaleUnitIdx.value = 0
+}
+
+function onMultiUnitSelect(unitId: number, idx: number) {
+  const u = unitOptions.value.find(u => u.id === unitId)
+  if (u) multiUnitRows.value[idx].unit_name = u.name
+}
+
+function onMultiUnitRatioChange(row: MultiUnitRow) {
+  // Auto-calculate prices: aux_price = base_price * ratio
+  const baseCost = Number(fd.cost_price) || 0
+  const baseSell = Number(fd.sell_price) || 0
+  row.cost_price = Math.round(baseCost * row.ratio * 100) / 100
+  row.sell_price = Math.round(baseSell * row.ratio * 100) / 100
+}
+
+// When base cost_price or sell_price changes, recalc all aux unit prices
+watch(() => fd.cost_price, (newCost) => {
+  if (!fd.multi_unit) return
+  const base = Number(newCost) || 0
+  // Also sync base unit row (index 0)
+  if (multiUnitRows.value[0]) multiUnitRows.value[0].cost_price = base
+  // Recalc aux rows (index 1+)
+  for (let i = 1; i < multiUnitRows.value.length; i++) {
+    const row = multiUnitRows.value[i]
+    row.cost_price = Math.round(base * row.ratio * 100) / 100
+  }
+})
+
+watch(() => fd.sell_price, (newSell) => {
+  if (!fd.multi_unit) return
+  const base = Number(newSell) || 0
+  if (multiUnitRows.value[0]) multiUnitRows.value[0].sell_price = base
+  for (let i = 1; i < multiUnitRows.value.length; i++) {
+    const row = multiUnitRows.value[i]
+    row.sell_price = Math.round(base * row.ratio * 100) / 100
+  }
+})
+
+
 
 // ── 标签页滚动高亮 ────────────────────────────────────────────────────────────
 const tabs = [
@@ -1068,6 +1416,11 @@ function onScroll() {
 .cate-item:hover { background: #f5f7ff; }
 .cate-item:hover .cate-item-actions { opacity: 1; }
 .cate-item.active { background: #e8f0fe; color: #165dff; font-weight: 500; }
+.cate-item-child { padding-left: 20px; font-size: 12px; color: #86909c; }
+.cate-item-child.active { color: #165dff; }
+.cate-arrow { font-size: 12px; margin-right: 4px; color: #86909c; transition: transform 0.2s; flex-shrink: 0; cursor: pointer; }
+.cate-arrow.expanded { transform: rotate(90deg); }
+.cate-arrow-placeholder { display: inline-block; width: 16px; flex-shrink: 0; }
 
 .cate-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

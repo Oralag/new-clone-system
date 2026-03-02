@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getWelfareList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getWelfareList"
+          del-path="/personnel/welfare/batchDel"
+          export-file-name="福利管理" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="福利名称">

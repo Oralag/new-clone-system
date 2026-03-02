@@ -43,31 +43,44 @@
 
       <div class="bom-table-wrap" v-loading="bomLoading">
         <template v-if="selectedGoods">
-          <el-table :data="bomList" border style="width:100%" empty-text="暂无物料，点击添加物料" show-summary :summary-method="getSummary">
-            <el-table-column type="index" label="序号" width="60" align="center" />
+          <!-- 工具栏 -->
+          <div class="bom-toolbar">
+            <div class="toolbar-left"></div>
+            <div class="toolbar-right">
+              <el-tooltip :content="bomSelected.length > 0 ? `导出已选 ${bomSelected.length} 条物料` : '导出当前成品BOM'">
+                <el-button :icon="Download" size="small" @click="handleExportBom">
+                  导出BOM{{ bomSelected.length > 0 ? `(${bomSelected.length})` : '' }}
+                </el-button>
+              </el-tooltip>
+              <el-tooltip content="导出所有成品的完整BOM清单">
+                <el-button :icon="Download" size="small" type="primary" plain @click="handleExportAllBom">
+                  导出全部成品BOM
+                </el-button>
+              </el-tooltip>
+            </div>
+          </div>
+
+          <el-table ref="bomTableRef" :data="bomList" border style="width:100%" empty-text="暂无物料，点击添加物料"
+            show-summary :summary-method="getSummary"
+            @selection-change="(v: any[]) => bomSelected = v">
+            <el-table-column type="selection" width="50" align="center" />
             <el-table-column prop="material_name" label="物料名称" min-width="140" />
             <el-table-column prop="material_sn" label="物料编码" width="110" />
-            <el-table-column label="数量" width="100" align="center">
+            <el-table-column label="用量" width="150" align="center">
               <template #default="{ row }">
-                <el-input-number
-                  v-model="row.num"
-                  :min="1" :precision="0" :step="1" :controls="false"
-                  size="small"
-                  style="width:70px"
-                  @change="saveRowField(row)"
-                />
+                <span style="font-weight:500">{{ row.num }}</span>
+                <span style="color:#86909c;margin-left:4px">{{ row.unit_name }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="_spec" label="规格" width="110" align="center" />
-            <el-table-column prop="unit_name" label="单位" width="80" align="center" />
-            <el-table-column label="单价(¥)" width="110" align="right">
+            <el-table-column :label="`单价(¥/单位)`" width="110" align="right">
               <template #default="{ row }">
                 <el-input-number
                   v-model="row._price"
-                  :min="0" :precision="2" :controls="false"
+                  :min="0" :precision="6" :controls="false"
                   size="small"
                   style="width:90px"
-                  placeholder="0.00"
+                  placeholder="0"
                   @change="saveBomPrice(row)"
                 />
               </template>
@@ -75,7 +88,7 @@
             <el-table-column label="小计(¥)" width="100" align="right">
               <template #default="{ row }">
                 <span style="font-weight:600;color:#165dff">
-                  {{ ((row._price || 0) * (row.num || 0)).toFixed(2) }}
+                  {{ ((row._price || 0) * (row.num || 0)).toFixed(4).replace(/\.?0+$/, '') || '0' }}
                 </span>
               </template>
             </el-table-column>
@@ -88,9 +101,21 @@
               </template>
             </el-table-column>
           </el-table>
+
+          <!-- 已选操作栏 -->
+          <div v-if="bomSelected.length > 0" class="bom-selected-bar">
+            已选 <strong>{{ bomSelected.length }}</strong> 条
+            <el-button type="primary" link size="small" @click="bomTableRef?.clearSelection()">取消选择</el-button>
+            <el-button type="danger" :icon="Delete" size="small" style="margin-left:auto" @click="handleBatchDeleteBom">
+              批量删除({{ bomSelected.length }})
+            </el-button>
+          </div>
           <div class="cost-summary">
+            <span class="cost-label">物料数量：</span>
+            <span class="cost-count">{{ bomList.filter(r => r.material_name && r.material_name !== '（待添加物料）' && r.num > 0).length }} 种</span>
+            <span class="cost-divider">|</span>
             <span class="cost-label">总成本：</span>
-            <span class="cost-value">¥{{ totalCost.toFixed(2) }}</span>
+            <span class="cost-value">¥{{ totalCost.toFixed(4).replace(/\.?0+$/, '') || '0' }}</span>
           </div>
         </template>
         <div v-else class="no-selection">
@@ -162,28 +187,92 @@
     <GoodsFormDialog ref="goodsFormDialogRef" @created="onGoodsCreated" />
 
     <!-- 添加/编辑/查看物料抽屉 -->
-    <el-drawer v-model="drawerVisible" :title="drawerTitle" width="420px" destroy-on-close>
+    <el-drawer v-model="drawerVisible" :title="drawerTitle" width="460px" destroy-on-close>
       <el-form ref="formRef" :model="form" label-width="90px" style="padding:0 16px" :disabled="drawerViewMode">
         <!-- 关联商品信息（只读展示） -->
         <div v-if="form.material_name" style="background:#f5f7fa;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;line-height:1.8">
           <div><span style="color:#86909c">物料名称：</span><b>{{ form.material_name }}</b></div>
           <div v-if="form.material_sn"><span style="color:#86909c">物料编码：</span>{{ form.material_sn }}</div>
-          <div v-if="form.unit_name"><span style="color:#86909c">单&emsp;&emsp;位：</span>{{ form.unit_name }}</div>
         </div>
+
+        <!-- 用量 + 用量单位（同行） -->
         <el-form-item label="用量" prop="num" :rules="[{ required: true, message: '请输入用量' }]">
-          <el-input-number v-model="form.num" :min="1" :precision="0" :step="1" style="width:100%" />
+          <div style="display:flex;gap:8px;width:100%">
+            <el-input-number v-model="form.num" :min="0" :precision="3" :step="1"
+              :controls="false" style="flex:1" placeholder="数量" />
+            <el-select v-model="form.unit_name" filterable allow-create
+              placeholder="单位（如克、个）" style="width:130px" @change="onUnitNameChange">
+              <el-option v-for="u in unitOptions" :key="u" :label="u" :value="u" />
+            </el-select>
+          </div>
+          <div style="font-size:12px;color:#86909c;margin-top:4px">
+            用量单位即计算成本的单位，如填"150 克"，单价也应填每克价格。<br>
+            切换单位时系统会自动换算单价（克↔斤↔千克等）
+          </div>
         </el-form-item>
-        <el-form-item label="单价(¥)" prop="_price">
-          <el-input-number v-model="form._price" :min="0" :precision="2" style="width:100%" placeholder="请输入单价" />
+
+        <!-- 单价 -->
+        <el-form-item :label="`单价(¥/${form.unit_name || '单位'})`">
+          <el-input-number v-model="form._price" :min="0" :precision="6" :controls="false"
+            style="width:100%" placeholder="每个用量单位的价格" />
         </el-form-item>
-        <el-form-item label="单位" prop="unit_name">
-          <el-select v-model="form.unit_name" filterable allow-create
-            placeholder="选择或输入单位（如：斤、克、个）" style="width:100%">
-            <el-option v-for="u in unitOptions" :key="u" :label="u" :value="u" />
-          </el-select>
-        </el-form-item>
+
+        <!-- 成本预览 -->
+        <div v-if="form._price > 0 && form.num > 0"
+          style="background:#f0f9ff;border:1px solid #bae0ff;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;line-height:2">
+          <div>用量成本：<b style="color:#165dff">¥{{ (form._price * form.num).toFixed(4) }}</b>
+            <span style="color:#86909c">（{{ form.num }} {{ form.unit_name }} × ¥{{ form._price }}/{{ form.unit_name }}）</span>
+          </div>
+        </div>
+
+        <!-- 采购换算（折叠区，辅助计算单价） -->
+        <el-divider content-position="left" style="margin:0 0 12px">
+          <span style="font-size:12px;color:#86909c;cursor:pointer" @click="showBuyCalc = !showBuyCalc">
+            {{ showBuyCalc ? '▾' : '▸' }} 采购换算（可选，帮你算单价）
+          </span>
+        </el-divider>
+        <template v-if="showBuyCalc">
+          <div style="background:#fffbe6;border:1px solid #ffe58f;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#614700">
+            例：面粉按<b>斤</b>购买，单价<b>2.5元/斤</b>，但用量单位是<b>克</b>，换算关系<b>1斤=500克</b>，
+            则自动算出单价 = 2.5 ÷ 500 = <b>0.005元/克</b>
+          </div>
+          <el-form-item label="采购单位">
+            <el-select v-model="form._buy_unit" filterable allow-create
+              placeholder="采购时的单位，如：斤、千克、箱" style="width:100%" @change="recalcPrice">
+              <el-option v-for="u in unitOptions" :key="u" :label="u" :value="u" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="采购单价(¥)">
+            <el-input-number v-model="form._buy_price" :min="0" :precision="2" :controls="false"
+              style="width:100%" placeholder="每采购单位的价格" @change="recalcPrice" />
+          </el-form-item>
+          <el-form-item label="换算关系">
+            <div style="display:flex;align-items:center;gap:6px;width:100%">
+              <span style="white-space:nowrap;font-size:13px;color:#606266">1</span>
+              <el-select v-model="form._buy_unit" filterable allow-create style="width:80px" size="small" @change="recalcPrice">
+                <el-option v-for="u in unitOptions" :key="u" :label="u" :value="u" />
+              </el-select>
+              <span style="white-space:nowrap;font-size:13px;color:#606266">=</span>
+              <el-input-number v-model="form._buy_ratio" :min="0.000001" :precision="3" :controls="false"
+                style="width:90px" size="small" @change="recalcPrice" />
+              <el-select v-model="form.unit_name" filterable allow-create style="width:80px" size="small" @change="recalcPrice">
+                <el-option v-for="u in unitOptions" :key="u" :label="u" :value="u" />
+              </el-select>
+            </div>
+          </el-form-item>
+          <div v-if="form._buy_price > 0 && form._buy_ratio > 0 && form._buy_unit"
+            style="background:#fff7e6;border:1px solid #ffd591;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:12px">
+            换算结果：¥{{ form._buy_price }} / {{ form._buy_unit }} ÷ {{ form._buy_ratio }}
+            = <b style="color:#d46b08">¥{{ (form._buy_price / form._buy_ratio).toFixed(6).replace(/\.?0+$/, '') }}</b>
+            / {{ form.unit_name || '用量单位' }}
+            <el-button type="primary" link size="small" style="margin-left:8px" @click="applyBuyCalc">
+              填入单价 →
+            </el-button>
+          </div>
+        </template>
+
         <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="可选备注" />
+          <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="可选备注" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -200,10 +289,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Plus, Search, Delete } from '@element-plus/icons-vue'
+import { Plus, Search, Delete, Download } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getGoodsList, createGoods, getUnitList, getSpecList, getBomList, getBomByGoods, createBom, updateBom, deleteBom } from '@/api/goods'
 import GoodsFormDialog from '@/components/GoodsFormDialog.vue'
+import * as XLSX from 'xlsx'
 
 // ── 本地单价存储 ───────────────────────────────────────────────────────────────
 const BOM_PRICE_KEY = 'erp_bom_prices'  // { bomId: price }
@@ -214,6 +304,17 @@ function saveBomPrices(map: Record<number, number>) {
   localStorage.setItem(BOM_PRICE_KEY, JSON.stringify(map))
 }
 const bomPrices = ref<Record<number, number>>(loadBomPrices())
+
+// 采购换算额外字段 { bomId: { buy_unit, buy_price, buy_ratio } }
+const BOM_EXTRAS_KEY = 'erp_bom_extras'
+interface BomExtra { buy_unit: string; buy_price: number; buy_ratio: number }
+function loadBomExtras(): Record<number, BomExtra> {
+  try { return JSON.parse(localStorage.getItem(BOM_EXTRAS_KEY) || '{}') } catch { return {} }
+}
+function saveBomExtrasStore(map: Record<number, BomExtra>) {
+  localStorage.setItem(BOM_EXTRAS_KEY, JSON.stringify(map))
+}
+const bomExtras = ref<Record<number, BomExtra>>(loadBomExtras())
 
 function saveBomPrice(row: any) {
   const map = { ...bomPrices.value }
@@ -249,7 +350,7 @@ async function saveRowField(row: any) {
       goods_id: selectedGoods.value.goods_id,
       goods_name: selectedGoods.value.goods_name,
       goods_sn: selectedGoods.value.goods_sn || '',
-      material_goods_id: row.material_goods_id || 0,
+      material_id: row.material_id || 0,
       material_name: row.material_name,
       material_sn: row.material_sn || '',
       num: row.num,
@@ -300,12 +401,23 @@ async function loadGoodsList() {
     const res = await getBomList({ list_rows: 1000 })
     const rows: any[] = res.data?.rows ?? []
     const map = new Map<number, any>()
+    const countMap = new Map<number, number>()
     for (const r of rows) {
-      if (r.goods_id && !map.has(r.goods_id)) {
-        map.set(r.goods_id, { goods_id: r.goods_id, goods_name: r.goods_name, goods_sn: r.goods_sn })
+      if (r.goods_id) {
+        if (!map.has(r.goods_id)) {
+          map.set(r.goods_id, { goods_id: r.goods_id, goods_name: r.goods_name, goods_sn: r.goods_sn, material_count: 0 })
+        }
+        // Only count real materials (not placeholder rows)
+        if (r.material_name && r.material_name !== '（待添加物料）' && r.num > 0) {
+          const cur = countMap.get(r.goods_id) ?? 0
+          countMap.set(r.goods_id, cur + 1)
+        }
       }
     }
-    goodsList.value = Array.from(map.values())
+    goodsList.value = Array.from(map.values()).map(g => ({
+      ...g,
+      material_count: countMap.get(g.goods_id) ?? 0,
+    }))
   } finally {
     goodsLoading.value = false
   }
@@ -334,6 +446,8 @@ async function handleRemoveGoods(item: any) {
 // ── 右侧物料列表 ─────────────────────────────────────────────────────────────
 const bomList = ref<any[]>([])
 const bomLoading = ref(false)
+const bomSelected = ref<any[]>([])
+const bomTableRef = ref<any>()
 
 async function loadBom() {
   if (!selectedGoods.value) return
@@ -352,6 +466,72 @@ async function handleDeleteBom(id: number) {
   ElMessage.success('删除成功')
   loadBom()
   loadGoodsList() // 如果删完了刷新左侧
+}
+
+async function handleBatchDeleteBom() {
+  const ids = bomSelected.value.map((r: any) => r.id).filter(Boolean)
+  if (!ids.length) return
+  await ElMessageBox.confirm(`确定删除选中的 ${ids.length} 条物料？`, '批量删除', { type: 'warning' })
+  await Promise.all(ids.map((id: number) => deleteBom(id)))
+  ElMessage.success(`已删除 ${ids.length} 条物料`)
+  bomSelected.value = []
+  loadBom()
+  loadGoodsList()
+}
+
+// 导出当前成品的 BOM（含成品信息）
+function handleExportBom() {
+  if (!selectedGoods.value) return
+  const rows = bomSelected.value.length > 0 ? bomSelected.value : bomList.value
+  if (!rows.length) { ElMessage.warning('暂无物料数据'); return }
+  const data = rows.map(r => ({
+    '成品名称': selectedGoods.value.goods_name,
+    '成品编码': selectedGoods.value.goods_sn || '',
+    '物料名称': r.material_name,
+    '物料编码': r.material_sn || '',
+    '规格': r._spec || '',
+    '用量': r.num,
+    '单位': r.unit_name,
+    '单价(¥)': r._price || 0,
+    '小计(¥)': ((r._price || 0) * (r.num || 0)).toFixed(2),
+    '备注': r.remark || '',
+  }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'BOM清单')
+  const suffix = bomSelected.value.length > 0 ? `_已选${bomSelected.value.length}条` : ''
+  XLSX.writeFile(wb, `BOM_${selectedGoods.value.goods_name}${suffix}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+  ElMessage.success(`已导出 ${data.length} 条物料`)
+}
+
+// 导出所有成品的完整 BOM 汇总表
+async function handleExportAllBom() {
+  ElMessage.info('正在获取全部BOM数据...')
+  try {
+    const res = await getBomList({ list_rows: 5000 })
+    const allRows: any[] = res.data?.rows ?? []
+    if (!allRows.length) { ElMessage.warning('暂无BOM数据'); return }
+    // 注入本地价格
+    const prices = bomPrices.value
+    const specs = bomSpecs.value
+    const data = allRows.map(r => ({
+      '成品名称': r.goods_name,
+      '成品编码': r.goods_sn || '',
+      '物料名称': r.material_name,
+      '物料编码': r.material_sn || '',
+      '规格': specs[r.id] || '',
+      '用量': r.num,
+      '单位': r.unit_name,
+      '单价(¥)': prices[r.id] || 0,
+      '小计(¥)': ((prices[r.id] || 0) * (r.num || 0)).toFixed(2),
+      '备注': r.remark || '',
+    }))
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), '全部BOM')
+    XLSX.writeFile(wb, `全部成品BOM_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+    ElMessage.success(`已导出 ${data.length} 条物料（共 ${new Set(allRows.map(r => r.goods_id)).size} 个成品）`)
+  } catch {
+    ElMessage.error('获取数据失败')
+  }
 }
 
 // ── 新增成品弹框 ─────────────────────────────────────────────────────────────
@@ -405,6 +585,7 @@ async function confirmAddGoods() {
     goods_id: row.id,
     goods_name: row.goods_name,
     goods_sn: row.goods_sn || '',
+    material_id: 0,
     material_name: '（待添加物料）',
     material_sn: '',
     num: 0,
@@ -422,13 +603,85 @@ async function confirmAddGoods() {
 // ── 添加/编辑/查看物料抽屉 ────────────────────────────────────────────────────
 const drawerVisible = ref(false)
 const drawerViewMode = ref(false)
+const showBuyCalc = ref(false)
 const drawerTitle = computed(() => {
   if (drawerViewMode.value) return '查看物料'
   return form.id ? '编辑物料' : '添加物料'
 })
 const submitting = ref(false)
 const formRef = ref()
-const form = reactive<any>({ id: 0, material_goods_id: 0, material_name: '', material_sn: '', num: 1, unit_name: '', remark: '', _price: 0 })
+const form = reactive<any>({
+  id: 0, material_id: 0, material_name: '', material_sn: '',
+  num: 1, unit_name: '', remark: '',
+  _price: 0,           // 每用量单位的单价（与 unit_name 对应）
+  _buy_unit: '',       // 采购单位（仅换算用）
+  _buy_price: 0,       // 采购单价
+  _buy_ratio: 1,       // 1采购单位 = N个用量单位
+  _goods_unit: '',     // 商品原始单位（用于切换单位时自动换算）
+  _goods_price: 0,     // 商品原始价格（每_goods_unit）
+})
+
+// ── 单位换算表 ────────────────────────────────────────────────────────────────
+// 以克为基准: 1单位 = N克
+const UNIT_GRAM_MAP: Record<string, number> = {
+  '克': 1, 'g': 1, 'G': 1,
+  '千克': 1000, '千克(kg)': 1000, 'kg': 1000, 'KG': 1000, 'Kg': 1000,
+  '斤': 500,
+  '两': 50,
+  '吨': 1000000,
+}
+// 以毫升为基准: 1单位 = N毫升
+const UNIT_ML_MAP: Record<string, number> = {
+  '毫升': 1, '毫升(ml)': 1, 'ml': 1, 'ML': 1, 'mL': 1,
+  '升': 1000, '升(L)': 1000, 'L': 1000, 'l': 1000,
+}
+// 以毫米为基准: 1单位 = N毫米
+const UNIT_MM_MAP: Record<string, number> = {
+  '毫米': 1, '毫米(mm)': 1, 'mm': 1,
+  '厘米': 10, '厘米(cm)': 10, 'cm': 10,
+  '米': 1000, '米(m)': 1000, 'm': 1,
+}
+
+/** 两个单位之间的换算比例: 1 fromUnit = ? toUnit */
+function getUnitRatio(fromUnit: string, toUnit: string): number | null {
+  if (fromUnit === toUnit) return 1
+  for (const map of [UNIT_GRAM_MAP, UNIT_ML_MAP, UNIT_MM_MAP]) {
+    const from = map[fromUnit]
+    const to = map[toUnit]
+    if (from !== undefined && to !== undefined) {
+      return from / to
+    }
+  }
+  return null
+}
+
+// 采购换算：点"填入单价"时把换算结果写入 _price
+function applyBuyCalc() {
+  if (form._buy_price > 0 && form._buy_ratio > 0) {
+    form._price = parseFloat((form._buy_price / form._buy_ratio).toFixed(6))
+  }
+}
+
+// 采购信息变化时自动填入单价（实时换算）
+function recalcPrice() {
+  if (form._buy_price > 0 && form._buy_ratio > 0) {
+    form._price = parseFloat((form._buy_price / form._buy_ratio).toFixed(6))
+  }
+}
+
+// 用量单位改变时，如果商品有原始价格/单位，自动换算单价
+function onUnitNameChange() {
+  if (!form._goods_unit || !form._goods_price || !form.unit_name) return
+  const ratio = getUnitRatio(form._goods_unit, form.unit_name)
+  if (ratio !== null && ratio > 0) {
+    // _goods_price 是每 _goods_unit 的价格
+    // 1 _goods_unit = ratio 个 form.unit_name
+    // => 每 form.unit_name 的价格 = _goods_price / ratio
+    form._price = parseFloat((form._goods_price / ratio).toFixed(6))
+    // 同时更新采购换算区的 _buy_ratio
+    form._buy_ratio = ratio
+  }
+}
 
 // ── 第一步：选商品弹框 ────────────────────────────────────────────────────────
 const pickGoodsVisible = ref(false)
@@ -517,14 +770,19 @@ async function confirmPickGoods() {
 
   Object.assign(form, {
     id: 0,
-    material_goods_id: row.id,
+    material_id: row.id,
     material_name: row.goods_name,
     material_sn: row.goods_sn || '',
     unit_name: row.unit_name || '',
     _spec: specStr,
     _price: Number(row.cost_price || 0),
+    _buy_unit: row.unit_name || '',
+    _buy_price: Number(row.cost_price || 0),
+    _buy_ratio: 1,
     num: 1,
     remark: '',
+    _goods_unit: row.unit_name || '',
+    _goods_price: Number(row.cost_price || 0),
   })
   pickGoodsVisible.value = false
   drawerViewMode.value = false
@@ -532,7 +790,20 @@ async function confirmPickGoods() {
 }
 
 function openMaterialDrawer(row: any, viewMode: boolean) {
-  Object.assign(form, { id: row.id, material_goods_id: row.material_goods_id || 0, material_name: row.material_name, material_sn: row.material_sn, num: row.num, unit_name: row.unit_name, remark: row.remark || '', _price: row._price || 0 })
+  const extra = bomExtras.value[row.id] || {}
+  Object.assign(form, {
+    id: row.id,
+    material_id: row.material_id || 0,
+    material_name: row.material_name,
+    material_sn: row.material_sn,
+    num: row.num,
+    unit_name: row.unit_name,
+    remark: row.remark || '',
+    _price: row._price || 0,
+    _buy_unit: extra.buy_unit || row.unit_name || '',
+    _buy_price: extra.buy_price || 0,
+    _buy_ratio: extra.buy_ratio || 1,
+  })
   drawerViewMode.value = viewMode
   drawerVisible.value = true
 }
@@ -541,11 +812,15 @@ async function handleSubmitMaterial() {
   await formRef.value?.validate()
   submitting.value = true
   try {
+    // 如有采购换算，计算出单价
+    if (form._buy_price > 0 && form._buy_ratio > 0) {
+      form._price = parseFloat((form._buy_price / form._buy_ratio).toFixed(6))
+    }
     const payload = {
       goods_id: selectedGoods.value.goods_id,
       goods_name: selectedGoods.value.goods_name,
       goods_sn: selectedGoods.value.goods_sn || '',
-      material_goods_id: form.material_goods_id || 0,
+      material_id: form.material_id || 0,
       material_name: form.material_name,
       material_sn: form.material_sn,
       num: form.num,
@@ -560,17 +835,23 @@ async function handleSubmitMaterial() {
     ElMessage.success(form.id ? '保存成功' : '添加成功')
     drawerVisible.value = false
     await loadBom()
-    // 新增时同步单价到 bomPrices（新记录 id 从刷新后列表里找）
-    if (form._price > 0 && !form.id) {
-      const newRow = bomList.value.find(r =>
-        r.material_name === form.material_name && !bomPrices.value[r.id]
-      )
-      if (newRow) {
-        const map = { ...bomPrices.value, [newRow.id]: form._price }
-        bomPrices.value = map
-        saveBomPrices(map)
-        bomList.value = injectExtras(bomList.value)
+    // 同步单价和采购换算到 localStorage（新记录 id 从刷新后列表里找）
+    const newRow = bomList.value.find(r =>
+      r.material_name === form.material_name && !bomPrices.value[r.id]
+    )
+    const targetId = newRow?.id
+    if (targetId) {
+      if (form._price > 0) {
+        const priceMap = { ...bomPrices.value, [targetId]: form._price }
+        bomPrices.value = priceMap
+        saveBomPrices(priceMap)
       }
+      if (form._buy_price > 0) {
+        const extrasMap = { ...bomExtras.value, [targetId]: { buy_unit: form._buy_unit, buy_price: form._buy_price, buy_ratio: form._buy_ratio } }
+        bomExtras.value = extrasMap
+        saveBomExtrasStore(extrasMap)
+      }
+      bomList.value = injectExtras(bomList.value)
     }
   } finally {
     submitting.value = false
@@ -659,6 +940,17 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
 }
 .goods-del:hover { color: #cb2a2a; }
 
+.goods-count {
+  font-size: 11px;
+  color: #165dff;
+  background: #e8f0fe;
+  border-radius: 3px;
+  padding: 0 4px;
+  flex-shrink: 0;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
 .empty-tip { text-align: center; color: #86909c; font-size: 13px; padding: 32px 12px; }
 
 .bom-panel {
@@ -681,6 +973,29 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
 
 .bom-table-wrap { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
+.bom-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  flex-shrink: 0;
+}
+.toolbar-left { display: flex; align-items: center; gap: 8px; }
+.toolbar-right { display: flex; align-items: center; gap: 6px; }
+
+.bom-selected-bar {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: #e8f3ff;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #165dff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .cost-summary {
   display: flex;
   justify-content: flex-end;
@@ -691,6 +1006,8 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
   gap: 8px;
 }
 .cost-label { font-size: 14px; color: #4e5969; font-weight: 500; }
+.cost-count { font-size: 16px; font-weight: 700; color: #165dff; }
+.cost-divider { color: #c9cdd4; margin: 0 4px; }
 .cost-value { font-size: 20px; font-weight: 700; color: #f53f3f; }
 
 .no-selection {

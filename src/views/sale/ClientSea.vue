@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getCustomerSeaList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getCustomerSeaList"
+          del-path="/shop/ShopCustomer/seaIndex"
+          export-file-name="客户公海" :params="searchForm">
         <template #search>
           <el-form-item label="客户名称">
             <el-input v-model="searchForm.keyword" placeholder="名称/手机号" clearable style="width: 180px" />

@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getMaterialList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getMaterialList"
+          del-path="/production/material/batchDel"
+          export-file-name="生产领料" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="出库编号">
@@ -24,10 +26,15 @@
         <el-table-column prop="num" label="数量" width="100" />
         <el-table-column prop="warehouse_name" label="仓库" min-width="120" />
         <el-table-column prop="status_tag" label="状态" width="100" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="success" size="small" link @click="formRef?.openView(row)">查看</el-button>
-              <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
+            <template v-if="row.status === 0">
+              <el-button type="primary" size="small" link @click="handleAudit(row, 1)">审核</el-button>
+              <el-button type="danger" size="small" link @click="handleAudit(row, 2)">驳回</el-button>
+            </template>
+            <el-button v-if="row.status === 1" type="warning" size="small" link @click="handleAudit(row, 0)">反审核</el-button>
+            <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -57,7 +64,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
-import { getMaterialList, createMaterial, deleteMaterial } from '@/api/production'
+import { getMaterialList, createMaterial, deleteMaterial, auditMaterial } from '@/api/production'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
@@ -91,6 +98,18 @@ async function handleDelete(id: number) {
   await deleteMaterial(id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
+}
+
+async function handleAudit(row: any, status: number) {
+  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
+  await ElMessageBox.confirm(`确定${action}该领料单？`, '提示', { type: 'warning' })
+  try {
+    await auditMaterial(row.id, status)
+    ElMessage.success(`${action}成功`)
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
+  }
 }
 </script>
 

@@ -1,7 +1,8 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getOperationLogList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getOperationLogList"
+          export-file-name="None" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="操作人">

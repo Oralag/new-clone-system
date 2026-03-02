@@ -22,7 +22,8 @@
           <el-button @click="onReset">重置</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getProcureReportList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getProcureReportList"
+          export-file-name="None" :params="searchForm">
         <el-table-column label="供应商名称" prop="supplier_name" />
         <el-table-column label="订单数" prop="order_count" />
         <el-table-column label="总金额" prop="total_amount" />

@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getSerialList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getSerialList"
+          del-path="/stock/Serial/batchDel"
+          export-file-name="序列号管理" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.serial_no" placeholder="序列号" clearable style="width: 180px" />
           <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width: 180px" />

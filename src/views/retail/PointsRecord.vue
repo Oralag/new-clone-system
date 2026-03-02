@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="scTable" :api-obj="getPointsList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getPointsList"
+          del-path="/retail/points/batchDel"
+          export-file-name="积分记录" :params="searchForm">
         <el-table-column label="会员名称" prop="member_name" />
         <el-table-column label="类型" prop="type_name" />
         <el-table-column label="积分" prop="points" />

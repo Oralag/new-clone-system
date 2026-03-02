@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="scTable" :api-obj="getRetailReturnList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getRetailReturnList"
+          del-path="/retail/return/batchDel"
+          export-file-name="零售退货" :params="searchForm">
         <el-table-column label="退货单号" prop="return_no" />
         <el-table-column label="订单编号" prop="order_no" />
         <el-table-column label="门店名称" prop="store_name" />

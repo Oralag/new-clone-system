@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getFundList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getFundList"
+          del-path="/finance/Fund/batchDel"
+          export-file-name="资金账户" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="账户名称">

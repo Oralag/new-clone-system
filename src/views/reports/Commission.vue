@@ -71,6 +71,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getContractList } from '@/api/sale'
+import { getStaffList } from '@/api/personnel'
 import { loadCommissionRates } from '@/utils/commission'
 
 const router = useRouter()
@@ -79,6 +80,7 @@ const loading = ref(false)
 const allContracts = ref<any[]>([])
 const filterStaff = ref<any>(null)
 const dateRange = ref<[string, string] | null>(null)
+const staffList = ref<any[]>([])  // 员工档案
 
 async function loadContracts() {
   loading.value = true
@@ -95,13 +97,20 @@ async function loadContracts() {
   }
 }
 
-onMounted(loadContracts)
+onMounted(async () => {
+  loadContracts()
+  const res = await getStaffList({ list_rows: 200 })
+  staffList.value = res.data?.rows ?? []
+})
 
-// 合同里出现过的经办人（有 admin_id 的）
+// 合同里出现过的经办人（有 admin_id 的），合并员工档案
 const staffInContracts = computed(() => {
   const map = new Map<number, string>()
+  // 优先从员工档案
+  for (const s of staffList.value) map.set(s.id, s.name)
+  // 补充合同里有但档案里没有的
   for (const c of allContracts.value) {
-    if (c.admin_id && c.admin_name) map.set(c.admin_id, c.admin_name)
+    if (c.admin_id && c.admin_name && !map.has(c.admin_id)) map.set(c.admin_id, c.admin_name)
   }
   return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
 })

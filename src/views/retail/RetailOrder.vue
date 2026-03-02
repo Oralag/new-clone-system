@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getRetailOrderList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getRetailOrderList"
+          del-path="/retail/order/batchDel"
+          export-file-name="零售订单" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.order_no" placeholder="订单编号" clearable style="width:160px" />
           <el-input v-model="searchForm.member_name" placeholder="会员名称" clearable style="width:140px" />
@@ -167,7 +169,7 @@ const saving = ref(false)
 const formRef = ref()
 const form = reactive({
   member_id: null as any, member_name: '',
-  order_date: new Date().toISOString().slice(0, 10),
+  order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   pay_method: 'cash', remark: '',
   items: [] as any[],
   total_amount: 0, discount_amount: 0, pay_amount: 0,
@@ -175,7 +177,7 @@ const form = reactive({
 
 function openForm() {
   Object.assign(form, {
-    member_id: null, member_name: '', order_date: new Date().toISOString().slice(0, 10),
+    member_id: null, member_name: '', order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
     pay_method: 'cash', remark: '', items: [],
     total_amount: 0, discount_amount: 0, pay_amount: 0,
   })

@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getPickList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getPickList"
+          del-path="/stock/Pick/batchDel"
+          export-file-name="拣货单" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.pick_no" placeholder="拣货单编号" clearable style="width: 180px" />
         </template>

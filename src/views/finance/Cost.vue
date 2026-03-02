@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getCostList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getCostList"
+          del-path="/finance/Cost/batchDel"
+          export-file-name="成本记录" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="商品名称">

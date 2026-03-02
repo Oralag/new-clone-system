@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getReceivableList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getReceivableList"
+          del-path="/finance/CollectAccounts/batchDel"
+          export-file-name="应收账款" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="客户名称">

@@ -42,11 +42,28 @@
           </div>
           <!-- 工具栏 -->
           <div class="sc-toolbar">
-            <el-button type="primary" :icon="Plus" @click="openForm()">新增供应商</el-button>
+            <div class="toolbar-left">
+              <el-button type="primary" :icon="Plus" @click="openForm()">新增供应商</el-button>
+            </div>
+            <div class="toolbar-right">
+              <el-upload :show-file-list="false" accept=".xlsx,.xls,.csv" :before-upload="handleImport" style="display:inline-block">
+                <el-button :icon="Upload" size="small">导入</el-button>
+              </el-upload>
+              <el-button :icon="Download" size="small" @click="handleExport">导出</el-button>
+            </div>
+          </div>
+          <!-- 已选提示 -->
+          <div v-if="selectedRows.length > 0" class="selected-bar">
+            已选 <strong>{{ selectedRows.length }}</strong> 条
+            <el-button type="primary" link size="small" @click="tableRef?.clearSelection()">取消选择</el-button>
+            <el-button type="danger" :icon="Delete" size="small" style="margin-left:auto" @click="handleBatchDelete">
+              批量删除({{ selectedRows.length }})
+            </el-button>
           </div>
           <!-- 表格 -->
-          <el-table :data="filteredRows" v-loading="loading" border stripe style="width:100%">
-            <el-table-column type="index" label="序号" width="60" align="center" />
+          <el-table ref="tableRef" :data="filteredRows" v-loading="loading" border stripe style="width:100%"
+            @selection-change="(v: any[]) => selectedRows = v">
+            <el-table-column type="selection" width="50" align="center" />
             <el-table-column prop="name" label="供应商名称" min-width="150" />
             <el-table-column prop="contact" label="联系人" width="120" />
             <el-table-column prop="mobile" label="手机号" width="130" />
@@ -185,15 +202,29 @@
       </template>
     </el-dialog>
 
+    <!-- 导入预览弹框 -->
+    <el-dialog v-model="importDialogVisible" title="导入预览" width="70%" append-to-body>
+      <div style="margin-bottom:10px;font-size:13px;color:#86909c">共 {{ importPreviewData.length }} 条，确认后导入。</div>
+      <el-table :data="importPreviewData.slice(0, 10)" border size="small" max-height="320">
+        <el-table-column v-for="col in (importPreviewData[0] ? Object.keys(importPreviewData[0]) : [])" :key="col" :prop="col" :label="col" min-width="120" show-overflow-tooltip />
+      </el-table>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Plus, Edit, Delete, Search, Refresh } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Search, Refresh, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getSupplierList, createSupplier, updateSupplier, deleteSupplier } from '@/api/procure'
 import { getPayableList, getPayReceiptList } from '@/api/finance'
+import http from '@/api/http'
+import * as XLSX from 'xlsx'
 
 // ── 本地分类（localStorage） ──────────────────────────────────────────────────
 const CATE_KEY = 'erp_supplier_cates'
@@ -336,6 +367,8 @@ const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const keyword = ref('')
+const selectedRows = ref<any[]>([])
+const tableRef = ref<any>()
 
 const filteredRows = computed(() => {
   if (selectedCateId.value === null) return allRows.value
@@ -416,7 +449,8 @@ async function handleSubmit() {
       await updateSupplier(payload)
     } else {
       const res = await createSupplier(payload)
-      supplierId = res.data?.id ?? res.data
+      // Handle various response shapes
+      supplierId = res?.data?.id ?? res?.data?.data?.id ?? res?.id ?? (typeof res?.data === 'number' ? res.data : null)
     }
     // 保存分类关联到本地
     if (supplierId) {
@@ -447,6 +481,70 @@ async function handleDelete(id: number) {
   loadData()
 }
 
+async function handleBatchDelete() {
+  const ids = selectedRows.value.map((r: any) => r.id).filter(Boolean)
+  if (!ids.length) return
+  await ElMessageBox.confirm(`确定删除选中的 ${ids.length} 个供应商吗？`, '批量删除', { type: 'warning' })
+  await http.post('/procure/supplier/batchDel', { ids })
+  ElMessage.success(`已删除 ${ids.length} 个供应商`)
+  selectedRows.value = []
+  loadData()
+}
+
+function handleExport() {
+  const rows = allRows.value
+  if (!rows.length) { ElMessage.warning('暂无数据可导出'); return }
+  const data = rows.map(r => ({
+    '供应商名称': r.name, '联系人': r.contact, '手机号': r.mobile,
+    '地址': r.address, '银行账户': r.bank, '备注': r.remark,
+  }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Sheet1')
+  XLSX.writeFile(wb, `供应商列表_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+  ElMessage.success(`已导出 ${rows.length} 条数据`)
+}
+
+const importDialogVisible = ref(false)
+const importPreviewData = ref<any[]>([])
+const importLoading = ref(false)
+
+function handleImport(file: File): boolean {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target!.result as ArrayBuffer)
+    const wb = XLSX.read(data, { type: 'array' })
+    const json: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
+    if (!json.length) { ElMessage.warning('Excel文件无数据'); return }
+    importPreviewData.value = json
+    importDialogVisible.value = true
+  }
+  reader.readAsArrayBuffer(file)
+  return false
+}
+
+async function confirmImport() {
+  importLoading.value = true
+  let success = 0, failed = 0
+  for (const row of importPreviewData.value) {
+    try {
+      const mapped: any = {}
+      if (row['供应商名称'] || row['name']) mapped.name = row['供应商名称'] || row['name']
+      if (row['联系人'] || row['contact']) mapped.contact = row['联系人'] || row['contact']
+      if (row['手机号'] || row['mobile']) mapped.mobile = row['手机号'] || row['mobile']
+      if (row['地址'] || row['address']) mapped.address = row['地址'] || row['address']
+      if (row['银行账户'] || row['bank']) mapped.bank = row['银行账户'] || row['bank']
+      if (row['备注'] || row['remark']) mapped.remark = row['备注'] || row['remark']
+      if (!mapped.name) { failed++; continue }
+      await createSupplier(mapped)
+      success++
+    } catch { failed++ }
+  }
+  importLoading.value = false
+  importDialogVisible.value = false
+  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+  loadData()
+}
+
 onMounted(loadData)
 </script>
 
@@ -462,6 +560,9 @@ onMounted(loadData)
 .fi-value.red { color: #f53f3f; }
 .fi-value.orange { color: #ff7d00; }
 .supplier-page { height: 100%; }
+.toolbar-left { display: flex; gap: 8px; align-items: center; }
+.toolbar-right { display: flex; gap: 4px; align-items: center; }
+.selected-bar { margin-bottom: 8px; padding: 6px 12px; background: #e8f3ff; border-radius: 4px; font-size: 13px; color: #165dff; display: flex; align-items: center; gap: 8px; }
 
 .list-layout {
   display: flex;
@@ -532,7 +633,7 @@ onMounted(loadData)
 
 .search-actions { display: flex; gap: 8px; }
 
-.sc-toolbar { margin-bottom: 12px; flex-shrink: 0; }
+.sc-toolbar { margin-bottom: 12px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
 
 .sc-pagination { display: flex; justify-content: flex-end; margin-top: 16px; flex-shrink: 0; }
 </style>

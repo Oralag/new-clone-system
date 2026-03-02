@@ -1,7 +1,8 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getFlowList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getFlowList"
+          export-file-name="出入库流水" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width: 180px" />
           <el-select v-model="searchForm.type" placeholder="出入库类型" clearable style="width: 140px">

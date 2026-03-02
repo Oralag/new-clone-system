@@ -6,7 +6,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getLeaveList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getLeaveList"
+          del-path="/office/leave/batchDel"
+          export-file-name="请假记录" :params="searchForm">
         <el-table-column label="员工姓名" prop="staff_name" />
         <el-table-column label="假期类型" prop="leave_type_name" />
         <el-table-column label="开始日期" prop="start_date" />

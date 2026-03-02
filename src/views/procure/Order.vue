@@ -4,7 +4,9 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getProcureOrderList" :params="searchForm">
+        <ScTable ref="tableRef" :api-obj="getProcureOrderList"
+          del-path="/stock/PurchaseOrder/batchDel"
+          export-file-name="采购订单" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="采购单号" clearable style="width:160px" />
             <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />
@@ -43,15 +45,26 @@
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="order_no" label="采购单号" min-width="150" />
-          <el-table-column prop="supplier_name" label="供应商" min-width="130" />
-          <el-table-column prop="warehouse_name" label="仓库" width="110" />
+          <el-table-column label="供应商" min-width="130">
+            <template #default="{ row }">{{ row.supplier_name || supplierOptions.find(s => s.id === row.supplier_id)?.name || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="仓库" width="110">
+            <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="开单日期" width="110">
+            <template #default="{ row }">{{ (row.order_date || row.create_time || '').slice(0, 10) }}</template>
+          </el-table-column>
+          <el-table-column label="预计交期" width="110">
+            <template #default="{ row }">{{ (row.delivery_date || '').slice(0, 10) || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="采购人" width="90">
+            <template #default="{ row }">{{ row.admin_name || '—' }}</template>
+          </el-table-column>
           <el-table-column label="含税合计" width="120" align="right">
             <template #default="{ row }">
               <span style="color:#165dff;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="delivery_date" label="预计交期" width="120" />
-          <el-table-column prop="admin_name" label="采购人" width="100" />
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
@@ -59,22 +72,26 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="入库状态" width="90" align="center">
+          <el-table-column label="采购数量" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.in_status === 1 ? 'success' : row.in_status === 2 ? 'warning' : ''" size="small">
-                {{ row.in_status === 1 ? '已入库' : row.in_status === 2 ? '部分入库' : '未入库' }}
-              </el-tag>
+              <span style="font-weight:600">{{ calcOrderQty(row) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="入库数量" width="90" align="center">
             <template #default="{ row }">
-              <el-button type="primary" link size="small" @click="openEdit(row)">查看</el-button>
+              <span v-if="getInhouseQty(row) > 0" style="color:#00b42a;font-weight:600">{{ getInhouseQty(row) }}</span>
+              <span v-else style="color:#c9cdd4">0</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right">
+            <template #default="{ row }">
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <template v-if="row.status === 0">
                 <el-button type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
-              <el-button v-if="row.status === 1 && row.in_status !== 1" type="warning" link size="small"
-                @click="handleInhouse(row)">入库</el-button>
+              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -88,10 +105,11 @@
       <div class="form-topbar">
         <div style="display:flex;align-items:center;gap:12px">
           <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ fd.id ? '编辑采购单' : '新增采购单' }}</span>
+          <span class="form-title">{{ isReadonly ? '查看采购单' : (fd.id ? '编辑采购单' : '新增采购单') }}</span>
+          <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button type="primary" :loading="saving" @click="handleSave">
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">
             保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
           </el-button>
         </div>
@@ -102,7 +120,7 @@
         <!-- 基本信息卡片 -->
         <div class="form-section">
           <div class="sec-title">基本信息</div>
-          <el-form ref="formRef" :model="fd" label-width="80px">
+          <el-form ref="formRef" :model="fd" label-width="80px" :disabled="isReadonly">
             <el-row :gutter="16">
               <!-- 行1 -->
               <el-col :span="6">
@@ -199,11 +217,10 @@
         <!-- 商品明细卡片 -->
         <div class="form-section">
           <!-- 工具栏 -->
-          <div class="goods-toolbar">
+          <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
               <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
               <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
-              <el-button :icon="Document" size="small" @click="openPlanPicker">选择采购计划商品</el-button>
               <el-button :icon="Box" size="small" @click="openBomPicker">选择BOM商品</el-button>
               <el-button :icon="Upload" size="small">导入商品</el-button>
               <el-button :icon="Camera" size="small">扫码录入</el-button>
@@ -349,12 +366,12 @@
             </div>
             <div class="settle-item">
               <span class="settle-label">运费</span>
-              <el-input-number v-model="fd.freight_amount" :min="0" :precision="2"
+              <el-input-number v-model="fd.freight_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:110px" @change="calcSettle" />
             </div>
             <div class="settle-item">
               <span class="settle-label">运费承担</span>
-              <el-select v-model="fd.freight_bearer" size="small" style="width:110px">
+              <el-select v-model="fd.freight_bearer" size="small" style="width:110px" :disabled="isReadonly">
                 <el-option label="我方承担" value="buyer" />
                 <el-option label="供应商承担" value="seller" />
                 <el-option label="各半" value="half" />
@@ -363,7 +380,7 @@
             </div>
             <div class="settle-item">
               <span class="settle-label">折扣方式</span>
-              <el-select v-model="fd.discount_type" size="small" style="width:120px" @change="calcSettle">
+              <el-select v-model="fd.discount_type" size="small" style="width:120px" :disabled="isReadonly" @change="calcSettle">
                 <el-option label="无折扣" value="none" />
                 <el-option label="按金额折扣" value="amount" />
                 <el-option label="按百分比折扣" value="percent" />
@@ -371,7 +388,7 @@
             </div>
             <div class="settle-item" v-if="fd.discount_type !== 'none'">
               <span class="settle-label">{{ fd.discount_type === 'percent' ? '折扣(%)' : '折扣金额' }}</span>
-              <el-input-number v-model="fd.discount_value" :min="0"
+              <el-input-number v-model="fd.discount_value" :min="0" :disabled="isReadonly"
                 :max="fd.discount_type === 'percent' ? 100 : fd.total_amount"
                 :precision="2" size="small" style="width:130px" @change="calcSettle" />
             </div>
@@ -381,17 +398,17 @@
             </div>
             <div class="settle-item">
               <span class="settle-label">单据支出</span>
-              <el-input-number v-model="fd.expense_amount" :min="0" :precision="2"
+              <el-input-number v-model="fd.expense_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" @change="calcSettle" />
             </div>
             <div class="settle-item">
               <span class="settle-label">本次付款</span>
-              <el-input-number v-model="fd.pay_amount" :min="0" :precision="2"
+              <el-input-number v-model="fd.pay_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" />
             </div>
             <div class="settle-item">
               <span class="settle-label">是否分期</span>
-              <el-switch v-model="fd.installment" active-text="是" inactive-text="否" />
+              <el-switch v-model="fd.installment" :disabled="isReadonly" active-text="是" inactive-text="否" />
             </div>
           </div>
           <div class="settle-summary">
@@ -553,15 +570,69 @@
       </template>
     </el-dialog>
 
+    <!-- 采购计划选择对话框 -->
+    <el-dialog v-model="planPickerVisible" title="从采购计划导入商品" width="820px" append-to-body>
+      <div style="display:flex;gap:12px;height:420px">
+        <!-- 左：计划列表 -->
+        <div style="width:230px;flex-shrink:0;border:1px solid #e4e7ed;border-radius:6px;display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:10px;border-bottom:1px solid #f2f3f5;flex-shrink:0">
+            <el-input v-model="planPickerKeyword" placeholder="搜索采购计划" clearable size="small" :prefix-icon="Search" />
+          </div>
+          <div style="flex:1;overflow-y:auto" v-loading="planPickerLoading">
+            <div
+              v-for="p in filteredPlanList" :key="p.id"
+              style="padding:9px 12px;cursor:pointer;font-size:13px;transition:background 0.12s;border-bottom:1px solid #f5f5f5"
+              :style="selectedPlan?.id === p.id ? 'background:#e8f0fe;color:#165dff;font-weight:500' : 'color:#4e5969'"
+              @click="selectPlan(p)"
+            >
+              <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.order_sn }}</div>
+              <div style="font-size:11px;color:#86909c;margin-top:2px">
+                {{ p.supplier_name || '—' }} · {{ (p.plan_date || p.created_at || '').slice(0,10) }}
+              </div>
+            </div>
+            <div v-if="!planPickerLoading && filteredPlanList.length === 0"
+              style="text-align:center;color:#86909c;font-size:13px;padding:24px 12px">暂无已审核的采购计划</div>
+          </div>
+        </div>
+        <!-- 右：计划商品列表 -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+          <div style="margin-bottom:8px;font-size:13px;color:#4e5969;flex-shrink:0">
+            {{ selectedPlan ? `「${selectedPlan.order_sn}」的商品明细（可多选）` : '请从左侧选择采购计划' }}
+          </div>
+          <el-table
+            ref="planItemTableRef"
+            :data="planItems"
+            border
+            height="360"
+            size="small"
+            @selection-change="(v: any[]) => selectedPlanItems = v"
+          >
+            <el-table-column type="selection" width="45" />
+            <el-table-column prop="goods_name" label="商品名称" min-width="140" />
+            <el-table-column prop="goods_sn" label="商品编码" width="110" />
+            <el-table-column prop="spec" label="规格" width="90" />
+            <el-table-column prop="num" label="计划数量" width="90" align="center" />
+            <el-table-column prop="unit_name" label="单位" width="65" align="center" />
+            <el-table-column prop="price" label="单价" width="90" align="right" />
+          </el-table>
+        </div>
+      </div>
+      <template #footer>
+        <span style="color:#86909c;font-size:13px">已选 {{ selectedPlanItems.length }} 件商品</span>
+        <el-button style="margin-left:12px" @click="planPickerVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!selectedPlanItems.length" @click="confirmPlanItems">确认导入</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureOrderList, createProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse } from '@/api/procure'
+import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, getProcureInhouseList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, getBomList, getBomByGoods, getSpecList } from '@/api/goods'
 import { getFundList, createFund } from '@/api/finance'
@@ -574,8 +645,37 @@ const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
+// 异步回填入库数量
+const inhouseMap = ref<Record<number, number>>({})
+
+async function loadInhouseMap() {
+  try {
+    const res = await getProcureInhouseList({ list_rows: 2000 })
+    const inhouseRows: any[] = res.data?.rows ?? []
+    const map: Record<number, number> = {}
+    for (const r of inhouseRows) {
+      const orderId = r.order_id
+      if (!orderId) continue
+      const items = parseItems(r.goods_info)
+      const qty = items.reduce((s: number, item: any) => s + (parseFloat(item.num) || 0), 0)
+      map[orderId] = (map[orderId] || 0) + qty
+    }
+    inhouseMap.value = map
+  } catch {}
+}
+
+function getInhouseQty(row: any): number {
+  return inhouseMap.value[row.id] || 0
+}
+
 function parseItems(goodsInfo: any): any[] {
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
+}
+
+function calcOrderQty(row: any): string {
+  const items = parseItems(row.goods_info)
+  const total = items.reduce((s: number, item: any) => s + (parseFloat(item.num) || 0), 0)
+  return total % 1 === 0 ? String(total) : total.toFixed(2)
 }
 
 const goodsSpecMap = reactive<Record<number, string[]>>({})
@@ -595,6 +695,7 @@ async function fetchGoodsSpecs(goodsId: number) {
 }
 const searchForm = reactive<any>({ order_no: '', supplier_name: '', status: '' })
 const showForm = ref(false)
+const isReadonly = ref(false)
 
 // ── 供应商/仓库/分类/资金账户选项 ─────────────────────────────────────────────
 const supplierOptions = ref<any[]>([])
@@ -626,7 +727,7 @@ async function loadStaff() {
   } catch { /* ignore */ }
 }
 
-onMounted(() => { loadSuppliers(); loadWarehouses(); loadCates(); loadFunds(); loadStaff() })
+onMounted(() => { loadSuppliers(); loadWarehouses(); loadCates(); loadFunds(); loadStaff(); loadInhouseMap() })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface OrderItem {
@@ -648,7 +749,7 @@ const defaultFd = () => ({
   supplier_id: null as any,
   supplier_name: '',
   admin_name: '',
-  order_date: new Date().toISOString().slice(0, 10),
+  order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   delivery_date: '',
   warehouse_id: null as any,
   warehouse_name: '',
@@ -746,15 +847,17 @@ function onFundChange(id: any) {
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  isReadonly.value = false
   showForm.value = true
 }
 
-function openEdit(row: any) {
+function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   try { fd.attachments = JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
   calcTotal()
   fd.items.forEach((item: any) => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  isReadonly.value = readonly
   showForm.value = true
 }
 
@@ -772,14 +875,30 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    const payload = {
-      ...fd,
+    const payload: Record<string, any> = {
+      supplier_id: fd.supplier_id,
+      supplier_name: fd.supplier_name,
+      admin_name: fd.admin_name,
+      order_date: fd.order_date,
+      delivery_date: fd.delivery_date,
+      warehouse_id: fd.warehouse_id,
+      warehouse_name: fd.warehouse_name,
+      need_invoice: fd.need_invoice,
+      fund_id: fd.fund_id,
+      fund_name: fd.fund_name,
+      pay_account: fd.pay_account,
+      remark: fd.remark,
+      total_amount: fd.total_amount,
+      freight_amount: fd.freight_amount,
+      freight_bearer: fd.freight_bearer,
       goods_info: JSON.stringify(fd.items),
-      attachments_info: JSON.stringify(fd.attachments),
-      items: undefined,
-      attachments: undefined,
     }
-    await createProcureOrder(payload)
+    if (fd.id) payload.id = fd.id
+    if (fd.id) {
+      await updateProcureOrder(payload)
+    } else {
+      await createProcureOrder(payload)
+    }
     ElMessage.success('保存成功')
     backToList()
   } catch (e: any) {
@@ -808,6 +927,17 @@ async function handleAudit(row: any, status: number) {
   }
 }
 
+async function handleReverseAudit(row: any) {
+  await ElMessageBox.confirm('反审核将撤销已入库的库存，确定继续？', '反审核确认', { type: 'warning' })
+  try {
+    await auditProcureOrder(row.id, 0)
+    ElMessage.success('反审核成功，库存已撤销')
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
+  }
+}
+
 async function handleInhouse(row: any) {
   await ElMessageBox.confirm(`确定将采购单「${row.order_no || row.id}」的商品全部入库？`, '确认入库', { type: 'warning' })
   try {
@@ -821,7 +951,7 @@ async function handleInhouse(row: any) {
       supplier_name: row.supplier_name,
       warehouse_id: row.warehouse_id,
       warehouse_name: row.warehouse_name,
-      in_date: new Date().toISOString().slice(0, 10),
+      in_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
       admin_name: row.admin_name,
       total_amount: row.total_amount,
       goods_info: row.goods_info,
@@ -829,6 +959,7 @@ async function handleInhouse(row: any) {
     })
     ElMessage.success('入库成功')
     tableRef.value?.refresh()
+    loadInhouseMap()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '入库失败')
   }
@@ -937,7 +1068,7 @@ function confirmGoods() {
       unit_name: g.unit_name || '',
       num: 1,
       price_no_tax: priceNoTax,
-      tax_rate: 13,
+      tax_rate: 0,
       price: Number((priceNoTax * 1.13).toFixed(4)),
       remark: '',
     })
@@ -969,7 +1100,7 @@ function confirmManualAdd() {
     unit_name: manualForm.unit_name,
     num: manualForm.num,
     price_no_tax: Number((manualForm.price / 1.13).toFixed(4)),
-    tax_rate: 13,
+    tax_rate: 0,
     price: manualForm.price,
     remark: '',
   })
@@ -977,9 +1108,64 @@ function confirmManualAdd() {
   manualAddVisible.value = false
 }
 
-// ── 采购计划选择（占位） ──────────────────────────────────────────────────────
-function openPlanPicker() {
-  ElMessage.info('选择采购计划商品功能开发中')
+// ── 采购计划选择 ──────────────────────────────────────────────────────────────
+const planPickerVisible = ref(false)
+const planPickerLoading = ref(false)
+const planPickerKeyword = ref('')
+const planList = ref<any[]>([])
+const selectedPlan = ref<any>(null)
+const planItems = ref<any[]>([])
+const selectedPlanItems = ref<any[]>([])
+const planItemTableRef = ref()
+
+const filteredPlanList = computed(() => {
+  if (!planPickerKeyword.value) return planList.value
+  const kw = planPickerKeyword.value
+  return planList.value.filter(p =>
+    p.order_sn?.includes(kw) || p.supplier_name?.includes(kw)
+  )
+})
+
+async function openPlanPicker() {
+  planPickerKeyword.value = ''
+  selectedPlan.value = null
+  planItems.value = []
+  selectedPlanItems.value = []
+  planPickerVisible.value = true
+  planPickerLoading.value = true
+  try {
+    const res = await http.get('/procure/ProcurePlan/index', { params: { status: 1, list_rows: 200 } })
+    planList.value = res.data?.rows || []
+  } catch {
+    planList.value = []
+  } finally {
+    planPickerLoading.value = false
+  }
+}
+
+function selectPlan(plan: any) {
+  selectedPlan.value = plan
+  selectedPlanItems.value = []
+  planItems.value = parseItems(plan.goods_info)
+}
+
+function confirmPlanItems() {
+  const newItems = selectedPlanItems.value.map(item => ({
+    goods_id: item.goods_id || 0,
+    goods_name: item.goods_name || '',
+    goods_sn: item.goods_sn || '',
+    spec: item.spec || '',
+    cate_name: item.cate_name || '',
+    unit_name: item.unit_name || '',
+    num: item.num || 1,
+    price: item.price || 0,
+    total: ((item.num || 1) * (item.price || 0)),
+    remark: '',
+  }))
+  fd.items.push(...newItems)
+  calcTotal()
+  planPickerVisible.value = false
+  ElMessage.success(`已导入 ${newItems.length} 件商品`)
 }
 
 // ── BOM商品选择 ───────────────────────────────────────────────────────────────
@@ -1050,7 +1236,7 @@ function confirmBomGoods() {
       unit_name: m.unit_name || '',
       num: m.num || 1,
       price_no_tax: 0,
-      tax_rate: 13,
+      tax_rate: 0,
       price: 0,
       remark: `BOM物料（${selectedBomGoods.value?.goods_name ?? ''}）`,
     })

@@ -255,13 +255,12 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    // 保存商品类型到 localStorage
-    const GOODS_TYPE_KEY = 'erp_goods_type_map'
-    const typeMap = (() => { try { return JSON.parse(localStorage.getItem(GOODS_TYPE_KEY) || '{}') } catch { return {} } })()
-
     const res = await createGoods({ ...fd })
     const newId = res.data?.id ?? 0
+    // Also persist goods_type locally for list display
     if (newId && fd.goods_type) {
+      const GOODS_TYPE_KEY = 'erp_goods_type_map'
+      const typeMap = (() => { try { return JSON.parse(localStorage.getItem(GOODS_TYPE_KEY) || '{}') } catch { return {} } })()
       typeMap[newId] = fd.goods_type
       localStorage.setItem(GOODS_TYPE_KEY, JSON.stringify(typeMap))
     }

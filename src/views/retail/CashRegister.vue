@@ -254,7 +254,7 @@ async function handleCheckout() {
   paying.value = true
   try {
     const res = await createRetailOrder({
-      order_date: new Date().toISOString().slice(0, 10),
+      order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
       member_id: selectedMemberId.value ?? 0,
       member_name: selectedMember.value?.name ?? '',
       total_amount: totalAmount.value,

@@ -11,7 +11,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getMemberList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getMemberList"
+          del-path="/retail/member/batchDel"
+          export-file-name="会员列表" :params="searchForm">
         <el-table-column label="昵称" prop="nickname" />
         <el-table-column label="手机号" prop="mobile" />
         <el-table-column label="等级" prop="level_name" />

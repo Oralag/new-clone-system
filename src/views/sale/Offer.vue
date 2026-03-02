@@ -4,7 +4,9 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getOfferList" :params="searchForm">
+        <ScTable ref="tableRef" :api-obj="getOfferList"
+          del-path="/shop/offerOrder/batchDel"
+          export-file-name="报价单" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.offer_no" placeholder="报价单号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -42,9 +44,19 @@
             </template>
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="customer_name" label="客户名称" min-width="140" />
-          <el-table-column prop="offer_date" label="报价日期" width="120" />
-          <el-table-column prop="expire_date" label="有效期至" width="120" />
+          <el-table-column prop="offer_no" label="报价单号" min-width="150" />
+          <el-table-column label="客户名称" min-width="140">
+            <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="报价日期" width="110">
+            <template #default="{ row }">{{ (row.offer_date || row.create_time || '').slice(0, 10) }}</template>
+          </el-table-column>
+          <el-table-column label="有效期至" width="110">
+            <template #default="{ row }">{{ (row.expire_date || '').slice(0, 10) || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="经办人" width="90">
+            <template #default="{ row }">{{ row.admin_name || '—' }}</template>
+          </el-table-column>
           <el-table-column prop="total_amount" label="报价金额" width="120" align="right">
             <template #default="{ row }">
               <span style="color:#165dff;font-weight:500">¥{{ Number(row.total_amount).toFixed(2) }}</span>
@@ -57,10 +69,15 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="admin_name" label="经办人" width="100" />
-          <el-table-column label="操作" width="120" fixed="right">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
-              <el-button type="success" link size="small" @click="openEdit(row)">查看</el-button>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
+              <template v-if="row.status === 0">
+                <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
+                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
+              </template>
+              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -71,15 +88,18 @@
     <!-- ── 新增/编辑全页面 ── -->
     <div v-else class="form-page">
       <div class="form-topbar">
-        <div class="form-title">{{ fd.id ? '编辑报价单' : '新增报价单' }}</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="form-title">{{ isReadonly ? '查看报价单' : (fd.id ? '编辑报价单' : '新增报价') }}</div>
+          <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
+        </div>
         <div class="form-actions">
           <el-button @click="backToList">返回</el-button>
-          <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">保存</el-button>
         </div>
       </div>
 
       <div class="form-body">
-        <el-form ref="formRef" :model="fd" label-width="90px">
+        <el-form ref="formRef" :model="fd" label-width="90px" :disabled="isReadonly">
 
           <!-- 基本信息 -->
           <div class="form-section">
@@ -91,7 +111,7 @@
                   <div style="display:flex;gap:4px;width:100%">
                     <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
                       @change="onCustomerChange">
-                      <el-option v-for="c in customerOptions" :key="c.id" :label="c.nickname" :value="c.id" />
+                      <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
                     </el-select>
                     <el-button type="primary" :icon="Plus" @click="openAddCustomer" />
                   </div>
@@ -157,7 +177,7 @@
           <div class="form-section">
             <div class="sec-title-row">
               <span class="sec-title">商品明细</span>
-              <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">添加商品</el-button>
+              <el-button v-if="!isReadonly" type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
             </div>
 
             <el-table :data="fd.items" border style="width:100%" empty-text="请点击添加商品">
@@ -274,6 +294,13 @@
         <el-table-column prop="cate_name" label="分类" width="100" />
         <el-table-column prop="unit_name" label="单位" width="70" align="center" />
         <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
+        <el-table-column label="库存" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.stock_qty > 0 ? 'success' : 'danger'" size="small" effect="plain">
+              {{ row.stock_qty }}
+            </el-tag>
+          </template>
+        </el-table-column>
       </el-table>
       <template #footer>
         <span style="color:#86909c;font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
@@ -290,9 +317,10 @@ import { ref, reactive, onMounted } from 'vue'
 import { Plus, Delete, Search } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getOfferList, createOffer, updateOffer, deleteOffer } from '@/api/sale'
+import { getOfferList, createOffer, updateOffer, deleteOffer, auditOffer } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
+import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import StaffSelect from '@/components/StaffSelect.vue'
 
@@ -320,6 +348,7 @@ async function fetchGoodsSpecs(goodsId: number) {
 }
 const searchForm = reactive<any>({ offer_no: '', customer_name: '', status: '' })
 const showForm = ref(false)
+const isReadonly = ref(false)
 
 // ── 客户等级 ──────────────────────────────────────────────────────────────────
 const levelOptions = ref<LevelItem[]>(loadLevels())
@@ -352,7 +381,7 @@ const defaultFd = () => ({
   customer_id: null as any,
   customer_name: '',
   level_id: null as any,
-  offer_date: new Date().toISOString().slice(0, 10),
+  offer_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   expire_date: '',
   admin_name: '',
   remark: '',
@@ -368,10 +397,11 @@ const saving = ref(false)
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  isReadonly.value = false
   showForm.value = true
 }
 
-function openEdit(row: any) {
+function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   // 解析 goods_info JSON
   try {
@@ -381,6 +411,7 @@ function openEdit(row: any) {
   }
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  isReadonly.value = readonly
   showForm.value = true
 }
 
@@ -391,7 +422,7 @@ function backToList() {
 
 function onCustomerChange(id: any) {
   const c = customerOptions.value.find(x => x.id === id)
-  fd.customer_name = c?.nickname ?? ''
+  fd.customer_name = c?.name || c?.nickname || ''
   // 自动套用客户绑定的等级
   const bound = levelMap[id]
   if (bound && levelOptions.value.some(l => l.id === bound)) {
@@ -459,11 +490,16 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    const payload = {
-      ...fd,
+    const payload: Record<string, any> = {
+      customer_id: fd.customer_id,
+      remark: fd.remark,
+      total_amount: fd.total_amount,
       goods_info: JSON.stringify(fd.items),
-      items: undefined,
     }
+    if (fd.id) payload.id = fd.id
+    if (fd.customer_name) payload.customer_name = fd.customer_name
+    if (fd.admin_name) payload.admin_name = fd.admin_name
+    if (fd.offer_date) payload.offer_date = fd.offer_date
     fd.id ? await updateOffer(payload) : await createOffer(payload)
     ElMessage.success('保存成功')
     backToList()
@@ -481,6 +517,18 @@ async function handleDelete(id: number) {
   tableRef.value?.refresh()
 }
 
+async function handleAudit(row: any, status: number) {
+  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
+  await ElMessageBox.confirm(`确定${action}该报价单？`, '提示', { type: 'warning' })
+  try {
+    await auditOffer(row.id, status)
+    ElMessage.success(`${action}成功`)
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
+  }
+}
+
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
 const goodsPickerVisible = ref(false)
 const goodsLoading = ref(false)
@@ -494,12 +542,21 @@ let searchTimer: any
 async function loadGoodsOptions() {
   goodsLoading.value = true
   try {
-    const res = await getGoodsList({
-      keyword: goodsPickerKeyword.value || undefined,
-      cate_id: goodsPickerCate.value || undefined,
-      list_rows: 50,
-    })
-    goodsOptions.value = res.data?.rows ?? []
+    const [goodsRes, stockRes] = await Promise.allSettled([
+      getGoodsList({
+        keyword: goodsPickerKeyword.value || undefined,
+        cate_id: goodsPickerCate.value || undefined,
+        list_rows: 200,
+      }),
+      http.get('/stock/StockAll/index', { params: { list_rows: 1000 } }),
+    ])
+    const rows: any[] = goodsRes.status === 'fulfilled' ? (goodsRes.value.data?.rows ?? []) : []
+    const stockRows: any[] = stockRes.status === 'fulfilled' ? (stockRes.value.data?.rows ?? []) : []
+    const stockMap: Record<number, number> = {}
+    for (const s of stockRows) {
+      stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.qty || 0)
+    }
+    goodsOptions.value = rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 }))
   } finally {
     goodsLoading.value = false
   }
@@ -560,7 +617,7 @@ async function submitAddCustomer() {
   if (!customerForm.nickname.trim()) { ElMessage.warning('请输入客户名称'); return }
   addCustomerLoading.value = true
   try {
-    const res = await createSaleCustomer({ nickname: customerForm.nickname.trim(), mobile: customerForm.mobile.trim() })
+    const res = await createSaleCustomer({ name: customerForm.nickname.trim(), mobile: customerForm.mobile.trim() })
     ElMessage.success('新增客户成功')
     addCustomerVisible.value = false
     await loadCustomers()

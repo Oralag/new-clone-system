@@ -117,6 +117,7 @@ export const menuData: TopMenuItem[] = [
     title: '财务',
     icon: 'Money',
     children: [
+      { key: 'finance-overview', title: '财务总览', path: '/finance/overview' },
       { key: 'finance-receivable', title: '应收账款', path: '/finance/receivable' },
       { key: 'finance-payable', title: '应付账款', path: '/finance/payable' },
       { key: 'finance-collect-receipt', title: '收款单', path: '/finance/collect-receipt' },
@@ -127,6 +128,7 @@ export const menuData: TopMenuItem[] = [
       { key: 'finance-fund', title: '资金账户', path: '/finance/fund' },
       { key: 'finance-fund-flow', title: '资金流水', path: '/finance/fund-flow' },
       { key: 'finance-cost', title: '成本核算', path: '/finance/cost' },
+      { key: 'finance-prepay', title: '预付款', path: '/finance/prepay' },
     ],
   },
   {
@@ -135,7 +137,6 @@ export const menuData: TopMenuItem[] = [
     icon: 'Goods',
     children: [
       { key: 'goods-info', title: '商品列表', path: '/goods/info' },
-      { key: 'goods-cate', title: '商品分类', path: '/goods/cate' },
       { key: 'goods-unit', title: '计量单位', path: '/goods/unit' },
       { key: 'goods-brand', title: '品牌管理', path: '/goods/brand' },
       { key: 'goods-bom', title: 'BOM清单', path: '/goods/bom' },

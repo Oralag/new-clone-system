@@ -4,7 +4,9 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getContractList" :params="searchForm">
+        <ScTable ref="tableRef" :api-obj="getContractList"
+          del-path="/shop/ContractOrder/batchDel"
+          export-file-name="销售合同" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.contract_no" placeholder="合同编号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -43,14 +45,25 @@
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="contract_no" label="合同编号" min-width="150" />
-          <el-table-column prop="customer_name" label="客户名称" min-width="140" />
+          <el-table-column label="客户名称" min-width="140">
+            <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
+          </el-table-column>
           <el-table-column prop="total_amount" label="合同金额" width="120" align="right">
             <template #default="{ row }">
               <span style="color:#165dff;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="sign_date" label="签约日期" width="120" />
-          <el-table-column prop="expire_date" label="到期日期" width="120" />
+          <el-table-column label="签约日期" width="110">
+            <template #default="{ row }">
+              {{ (row.sign_date || row.contract_date || row.create_time || '').slice(0, 10) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="到期日期" width="110">
+            <template #default="{ row }">{{ (row.expire_date || '').slice(0, 10) || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="经办人" width="90">
+            <template #default="{ row }">{{ row.admin_name || '—' }}</template>
+          </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
@@ -58,9 +71,15 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
-              <el-button type="success" link size="small" @click="openEdit(row)">查看</el-button>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
+              <template v-if="row.status === 0">
+                <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
+                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
+              </template>
+              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -74,10 +93,11 @@
       <div class="form-topbar">
         <div style="display:flex;align-items:center;gap:12px">
           <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ fd.id ? '编辑合同' : '新增合同' }}</span>
+          <span class="form-title">{{ isReadonly ? '查看合同' : (fd.id ? '编辑合同' : '新增合同') }}</span>
+          <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button type="primary" :loading="saving" @click="handleSave">
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">
             保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
           </el-button>
         </div>
@@ -88,7 +108,7 @@
         <!-- 基本信息卡片 -->
         <div class="form-section">
           <div class="sec-title">基本信息</div>
-          <el-form ref="formRef" :model="fd" label-width="80px">
+          <el-form ref="formRef" :model="fd" label-width="80px" :disabled="isReadonly">
             <el-row :gutter="16">
               <!-- 行1 -->
               <el-col :span="6">
@@ -102,7 +122,7 @@
                   <div style="display:flex;gap:4px;width:100%">
                     <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
                       @change="onCustomerChange">
-                      <el-option v-for="c in customerOptions" :key="c.id" :label="c.nickname" :value="c.id" />
+                      <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
                     </el-select>
                     <el-button type="primary" :icon="Plus" @click="quickAddCustomerVisible = true" />
                   </div>
@@ -189,7 +209,7 @@
         <!-- 商品明细卡片 -->
         <div class="form-section">
           <!-- 工具栏 -->
-          <div class="goods-toolbar">
+          <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
               <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
               <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
@@ -331,7 +351,7 @@
             </div>
             <div class="settle-item">
               <span class="settle-label">折扣方式</span>
-              <el-select v-model="fd.discount_type" size="small" style="width:120px" @change="calcSettle">
+              <el-select v-model="fd.discount_type" size="small" style="width:120px" :disabled="isReadonly" @change="calcSettle">
                 <el-option label="无折扣" value="none" />
                 <el-option label="按金额折扣" value="amount" />
                 <el-option label="按百分比折扣" value="percent" />
@@ -339,7 +359,7 @@
             </div>
             <div class="settle-item" v-if="fd.discount_type !== 'none'">
               <span class="settle-label">{{ fd.discount_type === 'percent' ? '折扣(%)' : '折扣金额' }}</span>
-              <el-input-number v-model="fd.discount_value" :min="0"
+              <el-input-number v-model="fd.discount_value" :min="0" :disabled="isReadonly"
                 :max="fd.discount_type === 'percent' ? 100 : fd.total_amount"
                 :precision="2" size="small" style="width:130px" @change="calcSettle" />
             </div>
@@ -349,27 +369,27 @@
             </div>
             <div class="settle-item">
               <span class="settle-label">其他收支</span>
-              <el-input-number v-model="fd.income_amount" :precision="2"
+              <el-input-number v-model="fd.income_amount" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" @change="calcSettle" />
               <span style="font-size:11px;color:#86909c">正数=额外收入，负数=额外支出</span>
             </div>
             <div class="settle-item">
               <span class="settle-label">本次收款</span>
-              <el-input-number v-model="fd.receive_amount" :min="0" :precision="2"
+              <el-input-number v-model="fd.receive_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" />
             </div>
             <div class="settle-item">
               <span class="settle-label">是否分期</span>
-              <el-switch v-model="fd.installment" active-text="是" inactive-text="否" />
+              <el-switch v-model="fd.installment" :disabled="isReadonly" active-text="是" inactive-text="否" />
             </div>
             <div class="settle-item">
               <span class="settle-label">物流费用</span>
-              <el-input-number v-model="fd.freight_amount" :min="0" :precision="2"
+              <el-input-number v-model="fd.freight_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" @change="calcSettle" />
             </div>
             <div class="settle-item">
               <span class="settle-label">费用承担</span>
-              <el-select v-model="fd.freight_bearer" size="small" style="width:120px">
+              <el-select v-model="fd.freight_bearer" size="small" style="width:120px" :disabled="isReadonly">
                 <el-option label="买方承担" value="buyer" />
                 <el-option label="卖方承担" value="seller" />
                 <el-option label="各付一半" value="half" />
@@ -396,7 +416,7 @@
     </div>
 
     <!-- 商品选择弹框 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="720px" append-to-body>
+    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="800px" append-to-body>
       <div style="margin-bottom:10px;display:flex;gap:8px">
         <el-input v-model="goodsPickerKeyword" placeholder="搜索商品名称/编码" clearable style="width:240px"
           :prefix-icon="Search" @input="onGoodsPickerSearch" />
@@ -413,6 +433,13 @@
         <el-table-column prop="cate_name" label="分类" width="90" />
         <el-table-column prop="unit_name" label="单位" width="65" align="center" />
         <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
+        <el-table-column label="库存" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.stock_qty > 0 ? 'success' : 'danger'" size="small" effect="plain">
+              {{ row.stock_qty }}
+            </el-tag>
+          </template>
+        </el-table-column>
       </el-table>
       <template #footer>
         <span style="color:#86909c;font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
@@ -484,11 +511,12 @@ import { useRouter } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getContractList, createContract, updateContract, deleteContract } from '@/api/sale'
+import { getContractList, createContract, updateContract, deleteContract, auditContract } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import { getFundList } from '@/api/finance'
+import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
 
@@ -557,6 +585,7 @@ function goToCommissionSetting() {
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({ contract_no: '', customer_name: '', status: '' })
 const showForm = ref(false)
+const isReadonly = ref(false)
 
 // ── 客户选项 ──────────────────────────────────────────────────────────────────
 const customerOptions = ref<any[]>([])
@@ -590,7 +619,7 @@ const defaultFd = () => ({
   admin_id: null as any,
   admin_name: '',
   commission_rate: 0,
-  sign_date: new Date().toISOString().slice(0, 10),
+  sign_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   expire_date: '',
   need_invoice: false,
   receive_account: '',
@@ -673,7 +702,7 @@ function removeItem(index: number) {
 
 function onCustomerChange(id: any) {
   const c = customerOptions.value.find(x => x.id === id)
-  fd.customer_name = c?.nickname ?? ''
+  fd.customer_name = c?.name || c?.nickname || ''
   // 自动套用客户绑定的等级
   const bound = levelMap[id]
   if (bound && levelOptions.value.some(l => l.id === bound)) {
@@ -698,14 +727,16 @@ function onLevelChange() {
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  isReadonly.value = false
   showForm.value = true
 }
 
-function openEdit(row: any) {
+function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  isReadonly.value = readonly
   showForm.value = true
 }
 
@@ -723,11 +754,16 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    const payload = {
-      ...fd,
+    const payload: Record<string, any> = {
+      customer_id: fd.customer_id,
+      remark: fd.remark,
+      total_amount: fd.total_amount,
       goods_info: JSON.stringify(fd.items),
-      items: undefined,
     }
+    if (fd.id) payload.id = fd.id
+    if (fd.customer_name) payload.customer_name = fd.customer_name
+    if (fd.admin_name) payload.admin_name = fd.admin_name
+    if (fd.sign_date) { payload.sign_date = fd.sign_date; payload.contract_date = fd.sign_date }
     fd.id ? await updateContract(payload) : await createContract(payload)
     ElMessage.success('保存成功')
     backToList()
@@ -745,6 +781,18 @@ async function handleDelete(id: number) {
   tableRef.value?.refresh()
 }
 
+async function handleAudit(row: any, status: number) {
+  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
+  await ElMessageBox.confirm(`确定${action}该合同？`, '提示', { type: 'warning' })
+  try {
+    await auditContract(row.id, status)
+    ElMessage.success(`${action}成功`)
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
+  }
+}
+
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
 const goodsPickerVisible = ref(false)
 const goodsLoading = ref(false)
@@ -758,12 +806,22 @@ let searchTimer: any
 async function loadGoodsOptions() {
   goodsLoading.value = true
   try {
-    const res = await getGoodsList({
-      keyword: goodsPickerKeyword.value || undefined,
-      cate_id: goodsPickerCate.value || undefined,
-      list_rows: 50,
-    })
-    goodsOptions.value = res.data?.rows ?? []
+    const [goodsRes, stockRes] = await Promise.allSettled([
+      getGoodsList({
+        keyword: goodsPickerKeyword.value || undefined,
+        cate_id: goodsPickerCate.value || undefined,
+        list_rows: 200,
+      }),
+      http.get('/stock/StockAll/index', { params: { list_rows: 1000 } }),
+    ])
+    const rows: any[] = goodsRes.status === 'fulfilled' ? (goodsRes.value.data?.rows ?? []) : []
+    const stockRows: any[] = stockRes.status === 'fulfilled' ? (stockRes.value.data?.rows ?? []) : []
+    // 按 goods_id 汇总所有仓库库存
+    const stockMap: Record<number, number> = {}
+    for (const s of stockRows) {
+      stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.qty || 0)
+    }
+    goodsOptions.value = rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 }))
   } finally {
     goodsLoading.value = false
   }
@@ -801,7 +859,7 @@ function confirmGoods() {
       unit_name: g.unit_name || '',
       num: 1,
       price_no_tax: priceNoTax,
-      tax_rate: 13,
+      tax_rate: 0,
       price: levelPrice,
       remark: '',
     })
@@ -833,7 +891,7 @@ function confirmManualAdd() {
     unit_name: manualForm.unit_name,
     num: manualForm.num,
     price_no_tax: Number((manualForm.price / 1.13).toFixed(4)),
-    tax_rate: 13,
+    tax_rate: 0,
     price: manualForm.price,
     remark: '',
   })
@@ -893,7 +951,7 @@ async function confirmQuickAddCustomer() {
   }
   quickCustomerSaving.value = true
   try {
-    const res = await createSaleCustomer({ nickname: quickCustomerForm.nickname })
+    const res = await createSaleCustomer({ name: quickCustomerForm.nickname })
     const newId = res.data?.id ?? res.data
     await loadCustomers()
     fd.customer_id = newId

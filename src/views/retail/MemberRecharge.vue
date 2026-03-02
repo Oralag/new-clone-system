@@ -22,7 +22,9 @@
           <el-button @click="onReset">重置</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getRechargeList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getRechargeList"
+          del-path="/retail/recharge/batchDel"
+          export-file-name="充值记录" :params="searchForm">
         <el-table-column label="充值单号" prop="recharge_no" />
         <el-table-column label="会员名称" prop="member_name" />
         <el-table-column label="充值金额" prop="amount" />

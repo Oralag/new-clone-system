@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getQualityList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getQualityList"
+          del-path="/outsource/quality/batchDel"
+          export-file-name="质检记录" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="质检编号">

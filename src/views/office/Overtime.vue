@@ -6,7 +6,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getOvertimeList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getOvertimeList"
+          del-path="/office/overtime/batchDel"
+          export-file-name="加班记录" :params="searchForm">
         <el-table-column label="员工姓名" prop="staff_name" />
         <el-table-column label="开始时间" prop="start_time" />
         <el-table-column label="结束时间" prop="end_time" />

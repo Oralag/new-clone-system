@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getOutsourcePlanList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getOutsourcePlanList"
+          del-path="/outsource/plan/batchDel"
+          export-file-name="外协计划" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="计划编号">

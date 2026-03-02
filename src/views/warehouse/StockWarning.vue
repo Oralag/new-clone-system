@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getWarningList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getWarningList"
+          del-path="/stock/StockWarning/batchDel"
+          export-file-name="库存预警" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width: 180px" />
           <el-input v-model="searchForm.warehouse_name" placeholder="仓库名称" clearable style="width: 180px" />

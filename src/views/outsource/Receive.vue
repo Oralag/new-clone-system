@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getReceiveList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getReceiveList"
+          del-path="/outsource/receive/batchDel"
+          export-file-name="外协收货" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="收货编号">

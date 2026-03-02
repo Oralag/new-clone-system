@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getBrandList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getBrandList"
+          del-path="/goods/ShopBrand/batchDel"
+          export-file-name="品牌列表" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="品牌名称">

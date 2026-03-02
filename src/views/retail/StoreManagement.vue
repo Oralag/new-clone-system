@@ -6,7 +6,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getStoreList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getStoreList"
+          del-path="/retail/store/batchDel"
+          export-file-name="门店列表" :params="searchForm">
         <el-table-column label="名称" prop="name" />
         <el-table-column label="地址" prop="address" />
         <el-table-column label="负责人" prop="manager_name" />

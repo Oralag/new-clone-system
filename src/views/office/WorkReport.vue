@@ -14,7 +14,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getWorkReportList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getWorkReportList"
+          del-path="/office/workReport/batchDel"
+          export-file-name="工作汇报" :params="searchForm">
         <el-table-column label="标题" prop="title" />
         <el-table-column label="员工姓名" prop="staff_name" />
         <el-table-column label="类型" prop="type_name" />

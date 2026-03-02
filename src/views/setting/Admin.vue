@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getAdminList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getAdminList"
+          del-path="/setting/admin/batchDel"
+          export-file-name="管理员" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="账号">

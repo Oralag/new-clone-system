@@ -11,7 +11,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getNoticeList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getNoticeList"
+          del-path="/office/notice/batchDel"
+          export-file-name="公告管理" :params="searchForm">
         <el-table-column label="标题" prop="title" />
         <el-table-column label="类型" prop="type_name" />
         <el-table-column label="阅读数" prop="read_count" />

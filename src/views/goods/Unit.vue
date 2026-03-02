@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getUnitList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getUnitList"
+          del-path="/goods/ShopUnit/batchDel"
+          export-file-name="计量单位" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="单位名称">

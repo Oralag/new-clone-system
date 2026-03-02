@@ -1,7 +1,15 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getGoodsCateList" :params="searchForm">
+      <ScTable
+        ref="tableRef"
+        :api-obj="getGoodsCateList"
+        :params="searchForm"
+        sort-by="sort"
+        :batch-del-api="batchDeleteGoodsCate"
+        :import-api="createGoodsCate"
+        export-file-name="商品分类"
+      >
         <template #search>
           <el-form inline>
             <el-form-item label="分类名称">
@@ -50,11 +58,15 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
 import { getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate } from '@/api/goods'
+import http from '@/api/http'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
 const formTitle = ref('新增')
 const searchForm = reactive<any>({ name: '' })
+
+// Batch delete API wrapper
+const batchDeleteGoodsCate = (data: { ids: number[] }) => http.post('/goods/ShopGoodsCate/batchDel', data)
 
 function openView(row?: any) {
   formRef.value?.openView(row)
@@ -68,7 +80,8 @@ function openForm(row?: any) {
 async function handleSubmit(data: any) {
   formRef.value?.setSubmitting(true)
   try {
-    data.id ? await updateGoodsCate(data) : await createGoodsCate(data)
+    const { parent_name, ...payload } = data
+    payload.id ? await updateGoodsCate(payload) : await createGoodsCate(payload)
     ElMessage.success('操作成功')
     formRef.value?.close()
     tableRef.value?.refresh()
@@ -89,3 +102,4 @@ async function handleDelete(id: number) {
 .page-container {}
 .search-actions { display: flex; gap: 8px; }
 </style>
+

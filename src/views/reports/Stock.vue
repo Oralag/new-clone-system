@@ -13,7 +13,8 @@
           <el-button @click="onReset">重置</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getStockReportList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getStockReportList"
+          export-file-name="None" :params="searchForm">
         <el-table-column label="商品编码" prop="goods_sn" />
         <el-table-column label="商品名称" prop="goods_name" />
         <el-table-column label="分类" prop="cate_name" />

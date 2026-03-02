@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getPrintList" :params="searchForm">
+      <ScTable ref="tableRef" :api-obj="getPrintList"
+          del-path="/setting/print/batchDel"
+          export-file-name="打印模板" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item label="模板名称">

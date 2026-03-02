@@ -82,7 +82,6 @@ function openView(data: Record<string, any>) {
 function close() {
   visible.value = false
   isView.value = false
-  formRef.value?.resetFields()
 }
 
 function handleClose() {

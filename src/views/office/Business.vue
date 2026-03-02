@@ -6,7 +6,9 @@
           <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
-      <ScTable ref="scTable" :api-obj="getBusinessList" :params="searchForm">
+      <ScTable ref="scTable" :api-obj="getBusinessList"
+          del-path="/office/business/batchDel"
+          export-file-name="商务记录" :params="searchForm">
         <el-table-column label="员工姓名" prop="staff_name" />
         <el-table-column label="目的地" prop="destination" />
         <el-table-column label="开始日期" prop="start_date" />

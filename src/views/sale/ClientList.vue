@@ -42,11 +42,37 @@
           </div>
           <!-- 工具栏 -->
           <div class="sc-toolbar">
-            <el-button type="primary" :icon="Plus" @click="openForm()">新增客户</el-button>
+            <div class="toolbar-left">
+              <el-button type="primary" :icon="Plus" @click="openForm()">新增客户</el-button>
+            </div>
+            <div class="toolbar-right">
+              <el-tooltip content="导入Excel">
+                <el-upload
+                  :show-file-list="false"
+                  accept=".xlsx,.xls,.csv"
+                  :before-upload="handleImport"
+                  style="display:inline-block"
+                >
+                  <el-button :icon="Upload" size="small">导入</el-button>
+                </el-upload>
+              </el-tooltip>
+              <el-tooltip content="导出Excel">
+                <el-button :icon="Download" size="small" @click="handleExport">导出</el-button>
+              </el-tooltip>
+            </div>
+          </div>
+          <!-- 已选提示 -->
+          <div v-if="selectedRows.length > 0" class="selected-bar">
+            已选 <strong>{{ selectedRows.length }}</strong> 条
+            <el-button type="primary" link size="small" @click="selectedRows = []">取消选择</el-button>
+            <el-button type="danger" :icon="Delete" size="small" style="margin-left:auto" @click="handleBatchDelete">
+              批量删除({{ selectedRows.length }})
+            </el-button>
           </div>
           <!-- 表格 -->
-          <el-table :data="filteredRows" v-loading="loading" border stripe style="width:100%">
-            <el-table-column type="index" label="序号" width="60" align="center" />
+          <el-table :data="filteredRows" v-loading="loading" border stripe style="width:100%"
+            @selection-change="(val: any[]) => selectedRows = val">
+            <el-table-column type="selection" width="50" align="center" />
             <el-table-column prop="nickname" label="客户名称" min-width="150" />
             <el-table-column prop="mobile" label="手机号" width="130" />
             <el-table-column label="客户分类" width="120">
@@ -61,12 +87,12 @@
             </el-table-column>
             <el-table-column label="来源" width="100">
               <template #default="{ row }">
-                {{ getSourceName(row.source_id || row.source) }}
+                {{ getSourceName(customerSourceMap[row.id] || row.source_id || row.source) }}
               </template>
             </el-table-column>
             <el-table-column label="余额" width="100" align="right">
               <template #default="{ row }">
-                {{ getCustomerBalance(row.id, row.balance).toFixed(2) }}
+                {{ Number(row.balance || 0).toFixed(2) }}
               </template>
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right">
@@ -97,15 +123,15 @@
     <!-- 查看客户弹框 -->
     <el-dialog v-model="viewVisible" title="客户详情" width="480px" append-to-body>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="客户名称">{{ viewRow.nickname }}</el-descriptions-item>
+        <el-descriptions-item label="客户名称">{{ viewRow.nickname || viewRow.name }}</el-descriptions-item>
         <el-descriptions-item label="手机号">{{ viewRow.mobile || '—' }}</el-descriptions-item>
         <el-descriptions-item label="客户分类">{{ getCateName(viewRow.id) || '—' }}</el-descriptions-item>
         <el-descriptions-item label="客户等级">{{ getLevelName(viewRow.id) || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="来源">{{ getSourceName(viewRow.source_id || viewRow.source) || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="余额">{{ viewRow.balance ?? '0' }}</el-descriptions-item>
+        <el-descriptions-item label="来源">{{ getSourceName(customerSourceMap[viewRow.id]) || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="余额">{{ Number(viewRow.balance || 0).toFixed(2) }}</el-descriptions-item>
         <el-descriptions-item label="地址" :span="2">{{ viewRow.address || '—' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ viewRow.remark || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间" :span="2">{{ viewRow.create_time || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间" :span="2">{{ viewRow.create_time || viewRow.created_at || '—' }}</el-descriptions-item>
       </el-descriptions>
       <template #footer>
         <el-button @click="viewVisible = false">关闭</el-button>
@@ -266,33 +292,41 @@
       </template>
     </el-dialog>
 
+    <!-- 导入预览弹框 -->
+    <el-dialog v-model="importDialogVisible" title="导入预览" width="70%" append-to-body destroy-on-close>
+      <div style="margin-bottom:10px;font-size:13px;color:#86909c">
+        共 {{ importPreviewData.length }} 条数据，确认后导入。
+      </div>
+      <el-table :data="importPreviewData.slice(0, 10)" border size="small" max-height="320">
+        <el-table-column
+          v-for="col in (importPreviewData[0] ? Object.keys(importPreviewData[0]) : [])"
+          :key="col" :prop="col" :label="col" min-width="120" show-overflow-tooltip
+        />
+      </el-table>
+      <div v-if="importPreviewData.length > 10" style="margin-top:8px;font-size:12px;color:#86909c">
+        仅显示前10条，实际导入全部 {{ importPreviewData.length }} 条。
+      </div>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Edit, Delete, Search, Refresh } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Search, Refresh, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getSaleCustomerList, getSaleCustomerDetail, createSaleCustomer, updateSaleCustomer, deleteSaleCustomer } from '@/api/sale'
+import http from '@/api/http'
+import * as XLSX from 'xlsx'
 import { loadLevels, loadLevelMap, saveLevelMap, type LevelItem } from '@/utils/customerLevel'
 import { getCollectReceiptList, createCollectReceipt, getReceivableList, getFundList, createFund } from '@/api/finance'
 
 const router = useRouter()
-
-// ── 本地余额（localStorage） ──────────────────────────────────────────────────
-const BALANCE_MAP_KEY = 'erp_customer_balance_map'  // { customerId: balance }
-function loadBalanceMap(): Record<number, number> {
-  try { return JSON.parse(localStorage.getItem(BALANCE_MAP_KEY) || '{}') } catch { return {} }
-}
-function saveBalanceMap(map: Record<number, number>) {
-  localStorage.setItem(BALANCE_MAP_KEY, JSON.stringify(map))
-}
-const balanceMap = ref<Record<number, number>>(loadBalanceMap())
-function getCustomerBalance(customerId: number, backendBalance: any): number {
-  if (balanceMap.value[customerId] !== undefined) return balanceMap.value[customerId]
-  return Number(backendBalance) || 0
-}
 
 // ── 本地分类（localStorage） ──────────────────────────────────────────────────
 const CATE_KEY = 'erp_customer_cates'
@@ -318,7 +352,17 @@ const cateMap = ref<Record<number, number>>(loadCateMap())
 const cateKeyword = ref('')
 const selectedCateId = ref<number | null>(null)
 
-// ── 客户等级（localStorage） ──────────────────────────────────────────────────
+// ── 客户来源（localStorage） ──────────────────────────────────────────────────
+const SOURCE_MAP_KEY = 'erp_customer_source_map'
+function loadSourceMap(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem(SOURCE_MAP_KEY) || '{}') } catch { return {} }
+}
+function saveSourceMap(map: Record<number, number>) {
+  localStorage.setItem(SOURCE_MAP_KEY, JSON.stringify(map))
+}
+const customerSourceMap = ref<Record<number, number>>(loadSourceMap())
+
+
 const LEVEL_MAP_KEY = 'erp_customer_level_map'
 function loadCustomerLevelMap(): Record<number, number> {
   try { return JSON.parse(localStorage.getItem(LEVEL_MAP_KEY) || '{}') } catch { return {} }
@@ -404,6 +448,8 @@ const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const keyword = ref('')
+const selectedRows = ref<any[]>([])
+const tableRef = ref<any>()
 
 // 按选中分类二次过滤
 const filteredRows = computed(() => {
@@ -420,7 +466,8 @@ async function loadData() {
       keyword: keyword.value || undefined,
     })
     const data = res?.data || res
-    allRows.value = data?.rows || data?.list || data?.data || []
+    const rawRows = data?.rows || data?.list || data?.data || []
+    allRows.value = rawRows.map((r: any) => ({ ...r, nickname: r.nickname || r.name || '' }))
     total.value = data?.total || 0
   } finally {
     loading.value = false
@@ -461,6 +508,7 @@ function openForm(row?: any) {
     ...(row ?? {}),
     cate_id: row ? (cateMap.value[row.id] ?? null) : null,
     level_id: row ? (customerLevelMap.value[row.id] ?? null) : null,
+    source_id: row ? (customerSourceMap.value[row.id] ?? null) : null,
   })
   formVisible.value = true
   // 编辑模式：加载财务信息
@@ -477,7 +525,13 @@ async function handleSubmit() {
   try { await formRef.value?.validate() } catch { return }
   formSaving.value = true
   try {
-    const { cate_id, level_id, ...payload } = formData
+    const payload: any = {
+      name: formData.nickname,
+      mobile: formData.mobile,
+      address: formData.address,
+      remark: formData.remark,
+    }
+    if (formData.id) payload.id = formData.id
     let customerId = formData.id
     if (customerId) {
       await updateSaleCustomer(payload)
@@ -488,16 +542,22 @@ async function handleSubmit() {
     // 保存分类关联到本地
     if (customerId) {
       const cMap = { ...cateMap.value }
-      if (cate_id) cMap[customerId] = cate_id
+      if (formData.cate_id) cMap[customerId] = formData.cate_id
       else delete cMap[customerId]
       cateMap.value = cMap
       saveCateMap(cMap)
       // 保存等级关联到本地
       const lMap = { ...customerLevelMap.value }
-      if (level_id) lMap[customerId] = level_id
+      if (formData.level_id) lMap[customerId] = formData.level_id
       else delete lMap[customerId]
       customerLevelMap.value = lMap
       saveCustomerLevelMap(lMap)
+      // 保存来源到本地
+      const sMap = { ...customerSourceMap.value }
+      if (formData.source_id) sMap[customerId] = formData.source_id
+      else delete sMap[customerId]
+      customerSourceMap.value = sMap
+      saveSourceMap(sMap)
     }
     ElMessage.success('操作成功')
     formVisible.value = false
@@ -524,12 +584,76 @@ async function handleDelete(id: number) {
   loadData()
 }
 
+async function handleBatchDelete() {
+  const ids = selectedRows.value.map((r: any) => r.id).filter(Boolean)
+  if (!ids.length) return
+  await ElMessageBox.confirm(`确定删除选中的 ${ids.length} 个客户吗？`, '批量删除', { type: 'warning' })
+  await http.post('/shop/ShopCustomer/batchDel', { ids })
+  ElMessage.success(`已删除 ${ids.length} 个客户`)
+  selectedRows.value = []
+  loadData()
+}
+
+function handleExport() {
+  const rows = allRows.value
+  if (!rows.length) { ElMessage.warning('暂无数据可导出'); return }
+  const data = rows.map(r => ({
+    '客户名称': r.nickname || r.name, '手机号': r.mobile, '邮箱': r.email,
+    '地址': r.address, '备注': r.remark,
+  }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Sheet1')
+  XLSX.writeFile(wb, `客户列表_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+  ElMessage.success(`已导出 ${rows.length} 条数据`)
+}
+
+const importDialogVisible = ref(false)
+const importPreviewData = ref<any[]>([])
+const importLoading = ref(false)
+
+function handleImport(file: File): boolean {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target!.result as ArrayBuffer)
+    const wb = XLSX.read(data, { type: 'array' })
+    const json: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
+    if (!json.length) { ElMessage.warning('Excel文件无数据'); return }
+    importPreviewData.value = json
+    importDialogVisible.value = true
+  }
+  reader.readAsArrayBuffer(file)
+  return false
+}
+
+async function confirmImport() {
+  importLoading.value = true
+  let success = 0, failed = 0
+  for (const row of importPreviewData.value) {
+    try {
+      const mapped: any = {}
+      const name = row['客户名称'] || row['nickname'] || row['name']
+      if (!name) { failed++; continue }
+      mapped.nickname = name; mapped.name = name
+      if (row['手机号'] || row['mobile']) mapped.mobile = row['手机号'] || row['mobile']
+      if (row['邮箱'] || row['email']) mapped.email = row['邮箱'] || row['email']
+      if (row['地址'] || row['address']) mapped.address = row['地址'] || row['address']
+      if (row['备注'] || row['remark']) mapped.remark = row['备注'] || row['remark']
+      await createSaleCustomer(mapped)
+      success++
+    } catch { failed++ }
+  }
+  importLoading.value = false
+  importDialogVisible.value = false
+  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+  loadData()
+}
+
 // ── 查看 ──────────────────────────────────────────────────────────────────────
 const viewVisible = ref(false)
 const viewRow = ref<any>({})
 
 function openView(row: any) {
-  viewRow.value = row
+  viewRow.value = { ...row }
   viewVisible.value = true
 }
 
@@ -571,11 +695,6 @@ async function loadFinanceInfo(customerId: number, customerName: string) {
     financeInfo.totalConsumed = totalConsumed
     financeInfo.unReceived = unReceived
     financeInfo.prepayBalance = Math.max(0, totalPrepay - totalConsumed)
-    // 同步余额到 balanceMap，确保列表显示正确
-    const bMap = { ...balanceMap.value }
-    bMap[customerId] = financeInfo.prepayBalance
-    balanceMap.value = bMap
-    saveBalanceMap(bMap)
   } catch {
     // 静默失败，不影响主流程
   } finally {
@@ -589,7 +708,7 @@ const prepaySaving = ref(false)
 const prepayForm = reactive({
   amount: 0,
   account_name: '',
-  receipt_date: new Date().toISOString().slice(0, 10),
+  receipt_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   remark: '预付款充值',
 })
 const fundOptions = ref<any[]>([])
@@ -624,7 +743,7 @@ async function submitAddFund() {
 function openPrepayDialog() {
   prepayForm.amount = 0
   prepayForm.account_name = ''
-  prepayForm.receipt_date = new Date().toISOString().slice(0, 10)
+  prepayForm.receipt_date = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
   prepayForm.remark = '预付款充值'
   prepayVisible.value = true
 }
@@ -635,24 +754,27 @@ async function submitPrepay() {
   }
   prepaySaving.value = true
   try {
-    await createCollectReceipt({
-      contact_type: 'customer',
-      contact_id: formData.id,
-      contact_name: formData.nickname || formData.name,
+    // 使用预付款接口，同步更新资金账户余额和客户余额
+    const fundOpt = fundOptions.value.find((f: any) => f.name === prepayForm.account_name)
+    await http.post('/finance/Prepay/create', {
+      pay_type: 'customer',
+      customer_id: formData.id,
+      customer_name: formData.nickname || formData.name,
       amount: prepayForm.amount,
-      account_name: prepayForm.account_name || '现金',
-      receipt_date: prepayForm.receipt_date,
+      fund_id: fundOpt?.id || 0,
+      fund_name: prepayForm.account_name || '',
+      pay_date: prepayForm.receipt_date,
       remark: prepayForm.remark || '预付款充值',
     })
-    ElMessage.success('充值成功，已记入财务收款单')
+    ElMessage.success('充值成功，已更新客户余额')
     prepayVisible.value = false
-    // 本地维护余额（后端不同步balance字段）
-    const currentBalance = getCustomerBalance(formData.id, allRows.value.find((r: any) => r.id === formData.id)?.balance)
-    const newBalance = currentBalance + prepayForm.amount
-    const bMap = { ...balanceMap.value }
-    bMap[formData.id] = newBalance
-    balanceMap.value = bMap
-    saveBalanceMap(bMap)
+    await loadData()  // 重新加载列表
+    // 把最新余额同步回详情弹框
+    const updated = allRows.value.find((r: any) => r.id === formData.id)
+    if (updated) {
+      formData.balance = updated.balance
+      if (viewRow.value?.id === formData.id) viewRow.value = { ...viewRow.value, balance: updated.balance }
+    }
     loadFinanceInfo(formData.id, formData.nickname)
   } catch (e: any) {
     ElMessage.error(e?.message ?? '充值失败')
@@ -743,7 +865,10 @@ onMounted(() => {
 
 .search-actions { display: flex; gap: 8px; }
 
-.sc-toolbar { margin-bottom: 12px; flex-shrink: 0; }
+.sc-toolbar { margin-bottom: 12px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
+.toolbar-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.toolbar-right { display: flex; gap: 4px; align-items: center; }
+.selected-bar { margin-bottom: 8px; padding: 6px 12px; background: #e8f3ff; border-radius: 4px; font-size: 13px; color: #165dff; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 .sc-pagination { display: flex; justify-content: flex-end; margin-top: 16px; flex-shrink: 0; }
 
