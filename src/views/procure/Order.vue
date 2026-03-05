@@ -44,7 +44,9 @@
             </template>
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="order_no" label="采购单号" min-width="150" />
+          <el-table-column label="采购单号" min-width="150">
+            <template #default="{ row }">{{ row.order_no || row.order_sn || '—' }}</template>
+          </el-table-column>
           <el-table-column label="供应商" min-width="130">
             <template #default="{ row }">{{ row.supplier_name || supplierOptions.find(s => s.id === row.supplier_id)?.name || '—' }}</template>
           </el-table-column>
@@ -83,16 +85,22 @@
               <span v-else style="color:#c9cdd4">0</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220" fixed="right">
+          <el-table-column label="已付金额" width="120" align="right">
             <template #default="{ row }">
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
-              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
-              <template v-if="row.status === 0">
-                <el-button type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
-              </template>
+              <span v-if="getPaidAmount(row) > 0" style="color:#00b42a;font-weight:600">¥{{ getPaidAmount(row).toFixed(2) }}</span>
+              <span v-else style="color:#c9cdd4">¥0.00</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="付款状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="getPayStatus(row).type" size="small">{{ getPayStatus(row).label }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="180" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
-              <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -125,7 +133,7 @@
               <!-- 行1 -->
               <el-col :span="6">
                 <el-form-item label="采购单号">
-                  <el-input :value="fd.id ? fd.order_no : '（保存后自动生成）'" disabled placeholder="自动生成" />
+                  <el-input :value="fd.order_no || fd.order_sn || '（保存后自动生成）'" disabled placeholder="自动生成" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
@@ -160,7 +168,8 @@
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="仓库" prop="warehouse_id">
+                <el-form-item label="仓库" prop="warehouse_id"
+                  :rules="[{ required: true, message: '请选择仓库', trigger: 'change' }]">
                   <el-select v-model="fd.warehouse_id" placeholder="请选择仓库" filterable style="width:100%"
                     @change="onWarehouseChange">
                     <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
@@ -173,17 +182,18 @@
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="付款账户" prop="fund_id"
-                  :rules="[{ required: true, message: '请选择付款账户', trigger: 'change' }]">
-                  <div style="display:flex;gap:4px;width:100%">
-                    <el-select v-model="fd.fund_id" placeholder="请选择付款账户" style="flex:1"
-                      @change="onFundChange">
-                      <el-option v-for="f in fundOptions" :key="f.id"
-                        :label="`${f.name}（¥${Number(f.balance||0).toFixed(2)}）`"
-                        :value="f.id" />
-                    </el-select>
-                    <el-button :icon="Plus" @click="openAddFund" />
-                  </div>
+                <el-form-item label="付款账户">
+                  <template v-if="isReadonly">
+                    <el-input :value="fd.pay_account || fd.fund_name || '—'" disabled />
+                  </template>
+                  <template v-else>
+                    <div style="display:flex;gap:4px;width:100%">
+                      <el-select v-model="fd.fund_id" placeholder="请选择账户" filterable style="flex:1" @change="onFundChange">
+                        <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+                      </el-select>
+                      <el-button type="primary" :icon="Plus" @click="openAddFund" />
+                    </div>
+                  </template>
                 </el-form-item>
               </el-col>
 
@@ -397,14 +407,20 @@
               <span class="settle-value">¥{{ fd.after_discount.toFixed(2) }}</span>
             </div>
             <div class="settle-item">
+              <span class="settle-label">本次付款</span>
+              <el-input-number v-model="fd.pay_amount" :min="0" :precision="2" :disabled="isReadonly"
+                size="small" style="width:130px" />
+            </div>
+            <div class="settle-item">
               <span class="settle-label">单据支出</span>
               <el-input-number v-model="fd.expense_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" @change="calcSettle" />
             </div>
-            <div class="settle-item">
-              <span class="settle-label">本次付款</span>
-              <el-input-number v-model="fd.pay_amount" :min="0" :precision="2" :disabled="isReadonly"
-                size="small" style="width:130px" />
+            <div v-if="isReadonly" class="settle-item">
+              <span class="settle-label">已付金额</span>
+              <span class="settle-value" style="color:#00b42a;font-weight:700">
+                ¥{{ getPaidAmount(fd).toFixed(2) }}
+              </span>
             </div>
             <div class="settle-item">
               <span class="settle-label">是否分期</span>
@@ -628,14 +644,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, getProcureInhouseList } from '@/api/procure'
+import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, getBomList, getBomByGoods, getSpecList } from '@/api/goods'
-import { getFundList, createFund } from '@/api/finance'
+import { getFundList, createFund, getPayReceiptList } from '@/api/finance'
+import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
 
@@ -645,27 +662,56 @@ const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
-// 异步回填入库数量
-const inhouseMap = ref<Record<number, number>>({})
+function getInhouseQty(row: any): number {
+  return Number(row.inhouse_qty || 0)
+}
 
-async function loadInhouseMap() {
+const paidMapById = ref<Record<number, number>>({})
+const paidMapByKey = ref<Record<string, number>>({})
+
+function payKey(orderSn: string, supplierName: string): string {
+  return `${String(orderSn || '').trim()}@@${String(supplierName || '').trim()}`
+}
+
+async function loadPaidMap() {
   try {
-    const res = await getProcureInhouseList({ list_rows: 2000 })
-    const inhouseRows: any[] = res.data?.rows ?? []
-    const map: Record<number, number> = {}
-    for (const r of inhouseRows) {
-      const orderId = r.order_id
-      if (!orderId) continue
-      const items = parseItems(r.goods_info)
-      const qty = items.reduce((s: number, item: any) => s + (parseFloat(item.num) || 0), 0)
-      map[orderId] = (map[orderId] || 0) + qty
+    const res = await getPayReceiptList({ list_rows: 2000 })
+    const rows: any[] = res.data?.rows ?? []
+    const idMap: Record<number, number> = {}
+    const keyMap: Record<string, number> = {}
+    for (const r of rows) {
+      const amount = Number(r.amount || 0)
+      if (!amount) continue
+      const orderSn = String(r.order_sn || '').trim()
+      const supplierName = String(r.supplier_name || r.contact_name || '').trim()
+      if (orderSn && supplierName) {
+        const key = payKey(orderSn, supplierName)
+        keyMap[key] = (keyMap[key] || 0) + amount
+      }
+      // 兼容历史备注：采购单付款 #ID 或 采购单自动付款 #ID
+      const m = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
+      if (m) {
+        const id = Number(m[1])
+        idMap[id] = (idMap[id] || 0) + amount
+      }
     }
-    inhouseMap.value = map
+    paidMapById.value = idMap
+    paidMapByKey.value = keyMap
   } catch {}
 }
 
-function getInhouseQty(row: any): number {
-  return inhouseMap.value[row.id] || 0
+function getPaidAmount(row: any): number {
+  const key = payKey(row.order_sn || row.order_no || '', row.supplier_name || '')
+  return paidMapByKey.value[key] || paidMapById.value[row.id] || 0
+}
+
+function getPayStatus(row: any): { label: string; type: string } {
+  const total = Number(row.total_amount || 0)
+  const paid = getPaidAmount(row)
+  if (total <= 0) return { label: '—', type: 'info' }
+  if (paid <= 0) return { label: '未付款', type: 'danger' }
+  if (paid >= total - 0.01) return { label: '已付清', type: 'success' }
+  return { label: '部分付款', type: 'warning' }
 }
 
 function parseItems(goodsInfo: any): any[] {
@@ -727,7 +773,7 @@ async function loadStaff() {
   } catch { /* ignore */ }
 }
 
-onMounted(() => { loadSuppliers(); loadWarehouses(); loadCates(); loadFunds(); loadStaff(); loadInhouseMap() })
+onMounted(() => { loadSuppliers(); loadWarehouses(); loadCates(); loadFunds(); loadStaff(); loadPaidMap() })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface OrderItem {
@@ -746,6 +792,7 @@ interface AttachFile {
 const defaultFd = () => ({
   id: 0,
   order_no: '',
+  order_sn: '',
   supplier_id: null as any,
   supplier_name: '',
   admin_name: '',
@@ -775,6 +822,13 @@ const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
 
+function generateOrderNo(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  const body = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+  return `PO${body}`
+}
+
 // 计算汇总
 const totalNoTax = computed(() =>
   fd.items.reduce((s, r) => s + (r.num || 0) * (r.price_no_tax || 0), 0)
@@ -796,7 +850,6 @@ function calcSettle() {
   } else {
     fd.after_discount = fd.total_amount * (1 - (fd.discount_value || 0) / 100)
   }
-  fd.pay_amount = Math.max(0, fd.after_discount - (fd.expense_amount || 0))
 }
 
 function calcItemTax(row: OrderItem) {
@@ -847,23 +900,29 @@ function onFundChange(id: any) {
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  fd.order_no = generateOrderNo()
+  fd.order_sn = fd.order_no
   isReadonly.value = false
   showForm.value = true
 }
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
+  fd.order_no = fd.order_no || row.order_sn || ''
+  fd.order_sn = fd.order_sn || fd.order_no || ''
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   try { fd.attachments = JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
   calcTotal()
   fd.items.forEach((item: any) => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
   isReadonly.value = readonly
   showForm.value = true
+  loadPaidMap()
 }
 
 function backToList() {
   showForm.value = false
   tableRef.value?.refresh()
+  loadPaidMap()
 }
 
 async function handleSave() {
@@ -876,29 +935,45 @@ async function handleSave() {
   saving.value = true
   try {
     const payload: Record<string, any> = {
+      order_no: fd.order_no || fd.order_sn || generateOrderNo(),
+      order_sn: fd.order_sn || fd.order_no || generateOrderNo(),
       supplier_id: fd.supplier_id,
       supplier_name: fd.supplier_name,
       admin_name: fd.admin_name,
       order_date: fd.order_date,
-      delivery_date: fd.delivery_date,
+      delivery_date: fd.delivery_date || null,
       warehouse_id: fd.warehouse_id,
       warehouse_name: fd.warehouse_name,
-      need_invoice: fd.need_invoice,
-      fund_id: fd.fund_id,
-      fund_name: fd.fund_name,
-      pay_account: fd.pay_account,
+      need_invoice: fd.need_invoice ? 1 : 0,
+      fund_id: fd.fund_id || 0,
+      fund_name: fd.fund_name || '',
+      pay_account: fd.pay_account || '',
+      pay_amount: Number(fd.pay_amount || 0),
       remark: fd.remark,
       total_amount: fd.total_amount,
-      freight_amount: fd.freight_amount,
-      freight_bearer: fd.freight_bearer,
+      freight_amount: Number(fd.freight_amount || 0),
+      freight_bearer: fd.freight_bearer || 'buyer',
+      discount_type: fd.discount_type || 'none',
+      discount_value: Number(fd.discount_value || 0),
+      after_discount: Number(fd.after_discount || 0),
+      expense_amount: Number(fd.expense_amount || 0),
+      installment: fd.installment ? 1 : 0,
+      attachments_info: JSON.stringify(fd.attachments || []),
       goods_info: JSON.stringify(fd.items),
     }
-    if (fd.id) payload.id = fd.id
+    let orderId = fd.id
     if (fd.id) {
+      payload.id = fd.id
       await updateProcureOrder(payload)
     } else {
-      await createProcureOrder(payload)
+      const createRes = await createProcureOrder(payload)
+      orderId = createRes?.data?.id || createRes?.data?.data?.id || 0
+      if (orderId) fd.id = orderId
     }
+
+    // 只调用后端审核，由后端统一处理库存入库与财务入账，避免重复执行
+    await auditProcureOrder(orderId, 1)
+
     ElMessage.success('保存成功')
     backToList()
   } catch (e: any) {
@@ -915,53 +990,15 @@ async function handleDelete(id: number) {
   tableRef.value?.refresh()
 }
 
-async function handleAudit(row: any, status: number) {
-  const action = status === 1 ? '审核通过' : '驳回'
-  await ElMessageBox.confirm(`确定${action}该采购单？`, '提示', { type: 'warning' })
-  try {
-    await auditProcureOrder(row.id, status)
-    ElMessage.success(`${action}成功`)
-    tableRef.value?.refresh()
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
-  }
-}
-
 async function handleReverseAudit(row: any) {
-  await ElMessageBox.confirm('反审核将撤销已入库的库存，确定继续？', '反审核确认', { type: 'warning' })
+  await ElMessageBox.confirm('反审核将撤销入库与财务入账，确定继续？', '反审核确认', { type: 'warning' })
   try {
     await auditProcureOrder(row.id, 0)
-    ElMessage.success('反审核成功，库存已撤销')
+    ElMessage.success('反审核成功，库存与财务已回滚')
     tableRef.value?.refresh()
+    loadPaidMap()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
-  }
-}
-
-async function handleInhouse(row: any) {
-  await ElMessageBox.confirm(`确定将采购单「${row.order_no || row.id}」的商品全部入库？`, '确认入库', { type: 'warning' })
-  try {
-    // 解析商品明细，创建入库单
-    let items: any[] = []
-    try { items = JSON.parse(row.goods_info || '[]') } catch { items = [] }
-    await createProcureInhouse({
-      order_id: row.id,
-      order_no: row.order_no,
-      supplier_id: row.supplier_id,
-      supplier_name: row.supplier_name,
-      warehouse_id: row.warehouse_id,
-      warehouse_name: row.warehouse_name,
-      in_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
-      admin_name: row.admin_name,
-      total_amount: row.total_amount,
-      goods_info: row.goods_info,
-      remark: `来自采购单 ${row.order_no || row.id}`,
-    })
-    ElMessage.success('入库成功')
-    tableRef.value?.refresh()
-    loadInhouseMap()
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? '入库失败')
   }
 }
 

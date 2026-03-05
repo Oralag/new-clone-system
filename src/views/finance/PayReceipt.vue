@@ -30,7 +30,9 @@
             <span style="color:#f53f3f;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="account_name" label="付款账户" width="130" />
+        <el-table-column label="付款账户" width="130">
+          <template #default="{ row }">{{ row.fund_name || row.account_name || '—' }}</template>
+        </el-table-column>
         <el-table-column prop="pay_date" label="付款日期" width="110" />
         <el-table-column prop="pay_method" label="付款方式" width="100" align="center" />
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
