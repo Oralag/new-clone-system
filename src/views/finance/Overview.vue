@@ -147,9 +147,9 @@
       </el-col>
     </el-row>
 
-    <!-- 第四行：应收 + 应付 + 采购货款 -->
+    <!-- 第四行：应收 + 采购货款 -->
     <el-row :gutter="14">
-      <el-col :span="8">
+      <el-col :span="12">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
@@ -169,27 +169,7 @@
           <div v-else class="empty-tip">暂无应收款</div>
         </el-card>
       </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <el-icon :size="15"><Document /></el-icon>
-              <span>应付账款</span>
-              <span class="header-total red">¥{{ payableTotal }}</span>
-              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/payable')">更多</el-button>
-            </div>
-          </template>
-          <div class="inline-list" v-if="payableList.length">
-            <div class="inline-item clickable" v-for="r in payableList.slice(0,6)" :key="r.id" @click="router.push('/finance/payable')">
-              <div class="inline-name">{{ r.supplier_name || '—' }}</div>
-              <div class="inline-value red">¥{{ Number(r.un_pay_amount||r.amount||r.total_amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ r.order_no || r.order_sn || '' }}</div>
-            </div>
-          </div>
-          <div v-else class="empty-tip">暂无应付款</div>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
+      <el-col :span="12">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
@@ -272,20 +252,31 @@ const fundTotal = computed(() =>
 const prepayTotal = computed(() =>
   prepayList.value.reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
 )
-// 资金收入/支出 = 流水（唯一准确来源，避免重复计算）
+const expenseList = ref<any[]>([])
+
+// 资金收入 = 收款单合计
 const collectTotal = computed(() =>
-  fundFlowList.value.filter(r => r.flow_type === 'income')
-    .reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
+  collectList.value.reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
 )
-const payTotal = computed(() =>
-  fundFlowList.value.filter(r => r.flow_type === 'expense')
-    .reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
-)
+// 资金支出 = 采购付款 (PayReceipt) + 费用支出 (Expense)
+const payTotal = computed(() => {
+  const pTotal = payList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
+  const eTotal = expenseList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
+  return (pTotal + eTotal).toFixed(2)
+})
 const receivableTotal = computed(() =>
-  receivableList.value.reduce((s, r) => s + Number(r.amount || r.total_amount || 0), 0).toFixed(2)
+  receivableList.value.reduce((s, r) => s + Number(r.un_receive_amount || r.amount || 0), 0).toFixed(2)
 )
+function getPayableUnpaidAmount(r: any): number {
+  if (r?.un_pay_amount !== undefined && r?.un_pay_amount !== null && r?.un_pay_amount !== '') {
+    return Math.max(0, Number(r.un_pay_amount || 0))
+  }
+  const orderAmount = Number(r?.order_amount || 0)
+  const paidAmount = Number(r?.paid_amount || 0)
+  return Math.max(0, orderAmount - paidAmount)
+}
 const payableTotal = computed(() =>
-  payableList.value.reduce((s, r) => s + Number(r.amount || r.total_amount || 0), 0).toFixed(2)
+  payableList.value.reduce((s, r) => s + getPayableUnpaidAmount(r), 0).toFixed(2)
 )
 const purchasePayTotal = computed(() =>
   purchasePayList.value.reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2)
@@ -321,18 +312,16 @@ const trendIncome = computed(() => buildTrend('income'))
 const trendExpense = computed(() => buildTrend('expense'))
 
 const summaryCards = computed(() => [
-  { key: 'fund', label: '账户余额', value: fundTotal.value, sub: `${fundList.value.length} 个账户`, color: '#165dff', bg: '#e8f0fe', icon: 'Wallet', route: '/finance/fund' },
-  { key: 'collect', label: '资金收入', value: collectTotal.value, sub: `${fundFlowList.value.filter(r => r.flow_type === 'income').length} 笔收入`, color: '#00b42a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/collect-receipt' },
-  { key: 'pay', label: '资金支出', value: payTotal.value, sub: `${fundFlowList.value.filter(r => r.flow_type === 'expense').length} 笔支出`, color: '#f53f3f', bg: '#fff0f0', icon: 'Bottom', route: '/finance/pay-receipt' },
-  { key: 'prepay', label: '预付款', value: prepayTotal.value, sub: `${prepayList.value.length} 笔`, color: '#ff7d00', bg: '#fff7e6', icon: 'Money', route: '/finance/prepay' },
-  { key: 'receivable', label: '应收款', value: receivableTotal.value, sub: `${receivableList.value.length} 笔待收`, color: '#00b42a', bg: '#e6f7f0', icon: 'DocumentChecked', route: '/finance/receivable' },
-  { key: 'payable', label: '应付款', value: payableTotal.value, sub: `${payableList.value.length} 笔待付`, color: '#f53f3f', bg: '#fff0f0', icon: 'Document', route: '/finance/payable' },
-  { key: 'purchase', label: '采购货款', value: purchasePayTotal.value, sub: `${purchasePayList.value.length} 笔采购`, color: '#722ed1', bg: '#f3e8ff', icon: 'Box', route: '/procure/order' },
+  { key: 'fund', label: '账户总余额', value: fundTotal.value, sub: `${fundList.value.length} 个账户`, color: '#165dff', bg: '#e8f0fe', icon: 'Wallet', route: '/finance/fund' },
+  { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${collectList.value.length} 笔收款`, color: '#00b42a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/collect-receipt' },
+  { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${payList.value.length} 笔付款`, color: '#f53f3f', bg: '#fff0f0', icon: 'Bottom', route: '/finance/pay-receipt' },
+  { key: 'payable', label: '应付总额', value: payableTotal.value, sub: `${payableList.value.filter((r) => getPayableUnpaidAmount(r) > 0).length} 笔欠款`, color: '#ff4d4f', bg: '#fff1f0', icon: 'DocumentChecked', route: '/finance/payable' },
+  { key: 'receivable', label: '应收总额', value: receivableTotal.value, sub: `${receivableList.value.length} 笔待收`, color: '#00b42a', bg: '#e6f7f0', icon: 'DocumentChecked', route: '/finance/receivable' },
 ])
 
 onMounted(async () => {
   try {
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, flowRes, purchaseRes] = await Promise.all([
+    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, flowRes, purchaseRes, expenseRes] = await Promise.all([
       getFundList({ list_rows: 100 }),
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
       http.get('/finance/CollectReceipt/index', { params: { list_rows: 50 } }),
@@ -341,6 +330,7 @@ onMounted(async () => {
       http.get('/finance/PayAccounts/index', { params: { list_rows: 200 } }),
       http.get('/finance/fundFlow/index', { params: { list_rows: 1000 } }),
       http.get('/stock/PurchaseOrder/index', { params: { list_rows: 200 } }),
+      http.get('/finance/Expense/index', { params: { list_rows: 200 } }),
     ])
     fundList.value = fundRes.data?.rows ?? []
     prepayList.value = prepayRes.data?.rows ?? []
@@ -350,6 +340,7 @@ onMounted(async () => {
     payableList.value = payableRes.data?.rows ?? []
     fundFlowList.value = flowRes.data?.rows ?? []
     purchasePayList.value = purchaseRes.data?.rows ?? []
+    expenseList.value = expenseRes.data?.rows ?? []
   } catch {}
 })
 </script>

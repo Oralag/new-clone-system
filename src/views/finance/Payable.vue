@@ -2,9 +2,9 @@
   <div class="payable-page">
     <!-- 顶部汇总 -->
     <div class="summary-bar">
-      <span class="summary-item">总欠款：<strong class="red">{{ fmt(summaryTotal) }}</strong></span>
+      <span class="summary-item">应付总金额：<strong class="red">{{ fmt(summaryUnpaid) }}</strong></span>
       <span class="summary-item">已付总金额：<strong class="blue">{{ fmt(summaryPaid) }}</strong></span>
-      <span class="summary-item">应付总金额：<strong class="orange">{{ fmt(summaryUnpaid) }}</strong></span>
+      <span class="summary-item">采购总额：<strong class="orange">{{ fmt(summaryOrder) }}</strong></span>
       <span class="summary-item">退货总金额：<strong>{{ fmt(0) }}</strong></span>
     </div>
 
@@ -42,7 +42,7 @@
       </div>
 
       <!-- 表格 -->
-      <el-table :data="rows" v-loading="loading" border stripe style="width:100%" size="default">
+      <el-table :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
         <el-table-column type="selection" width="44" />
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="supplier_name" label="供应商" min-width="150" />
@@ -51,7 +51,7 @@
         <el-table-column label="预付款" min-width="110" align="right">
           <template #default="{ row }">{{ fmt(row.prepay || 0) }}</template>
         </el-table-column>
-        <el-table-column label="欠款总额" min-width="120" align="right">
+        <el-table-column label="采购总额" min-width="120" align="right">
           <template #default="{ row }">
             <span style="font-weight:600">{{ fmt(row.order_amount) }}</span>
           </template>
@@ -124,15 +124,18 @@ const page = ref(1)
 const pageSize = ref(20)
 const supplierOptions = ref<any[]>([])
 
+// 直接使用后端按单据汇总后的结果，统一口径
+const displayRows = computed(() => rows.value)
+
 const searchForm = reactive({ supplier_name: '', date_from: '', date_to: '' })
 
 function fmt(v: any) {
   return Number(v || 0).toFixed(2)
 }
 
-const summaryTotal = computed(() => rows.value.reduce((s, r) => s + Number(r.order_amount || 0), 0))
-const summaryPaid = computed(() => rows.value.reduce((s, r) => s + Number(r.paid_amount || 0), 0))
-const summaryUnpaid = computed(() => rows.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0))
+const summaryOrder = computed(() => displayRows.value.reduce((s, r) => s + Number(r.order_amount || 0), 0))
+const summaryPaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.paid_amount || 0), 0))
+const summaryUnpaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0))
 
 async function load() {
   loading.value = true
@@ -186,7 +189,7 @@ function goPay(row: any) {
 onMounted(async () => {
   const res = await getSupplierList({ list_rows: 500 })
   supplierOptions.value = res.data?.rows ?? []
-  load()
+  await load()
 })
 </script>
 
