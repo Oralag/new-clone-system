@@ -99,6 +99,7 @@
           <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
+              <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row.id)">删除</el-button>
             </template>
@@ -988,6 +989,19 @@ async function handleDelete(id: number) {
   await deleteProcureOrder(id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
+}
+
+async function handleAudit(row: any, status: number) {
+  const action = status === 1 ? '审核通过' : '驳回'
+  await ElMessageBox.confirm(`确定${action}该采购单？`, '提示', { type: 'warning' })
+  try {
+    await auditProcureOrder(row.id, status)
+    ElMessage.success(`${action}成功`)
+    tableRef.value?.refresh()
+    loadPaidMap()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
+  }
 }
 
 async function handleReverseAudit(row: any) {
