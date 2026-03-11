@@ -77,6 +77,14 @@
                 @click="previewImage(url)"
               />
             </div>
+            <AiToolCallCard
+              v-for="tc in msg.toolCalls"
+              :key="tc.id"
+              :name="tc.name"
+              :input="tc.input"
+              :result="tc.result"
+              :status="tc.status"
+            />
             <div class="message-content" v-html="renderMarkdown(msg.content)" />
             <div class="message-time">{{ msg.time }}</div>
           </div>
@@ -100,9 +108,7 @@
           正在录入数据...
         </div>
         <div class="action-preview-content">{{ JSON.stringify(pendingAction.data, null, 2) }}</div>
-      </div>
-
-      <!-- Input area -->
+      </div>      <!-- Input area -->
       <div class="chat-input-area">
         <!-- Pending images preview -->
         <div v-if="pendingImages.length" class="pending-images">
@@ -112,12 +118,12 @@
           </div>
         </div>
 
-        <el-input
+        <textarea
+          ref="textareaRef"
           v-model="inputText"
-          type="textarea"
-          :rows="2"
-          placeholder="输入业务描述，或上传单据图片让AI识别录入..."
-          resize="none"
+          class="chat-native-textarea"
+          rows="2"
+          :placeholder="isRecording ? '正在聆听，请说话...' : '输入业务描述，或上传单据图片让AI识别录入...'"
           :disabled="isLoading"
           @keydown.enter.exact.prevent="sendMessage"
           @keydown.enter.shift.exact="inputText += '\n'"
@@ -125,6 +131,22 @@
         <div class="input-footer">
           <el-tooltip content="上传单据图片">
             <el-button :icon="Picture" circle size="small" plain @click="openImagePicker" :disabled="isLoading" />
+          </el-tooltip>
+          <el-tooltip v-if="voiceSupported" :content="isRecording ? '松开停止' : '按住说话'">
+            <el-button
+              :icon="Microphone"
+              circle
+              size="small"
+              :type="isRecording ? 'danger' : ''"
+              :plain="!isRecording"
+              :class="{ 'mic-active': isRecording }"
+              @mousedown.prevent="startVoice"
+              @mouseup="stopVoice"
+              @mouseleave="stopVoice"
+              @touchstart.prevent="startVoice"
+              @touchend="stopVoice"
+              :disabled="isLoading"
+            />
           </el-tooltip>
           <input
             ref="fileInputRef"
@@ -154,15 +176,18 @@
 </template>
 
 <script setup lang="ts">
-import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading } from '@element-plus/icons-vue'
+import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
+import AiToolCallCard from './ai/AiToolCallCard.vue'
+import type { ToolCallState } from './ai/composables/useAiAgent'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
   time: string
-  images?: string[]   // preview URLs (object URLs)
+  images?: string[]
+  toolCalls?: ToolCallState[]
 }
 
 interface PendingAction {
@@ -525,17 +550,19 @@ async function sendMessage() {
   }
 
   let assistantText = ''
-  const assistantMsg: Message = { role: 'assistant', content: '', time: getNow() }
+  const assistantMsg: Message = { role: 'assistant', content: '', time: getNow(), toolCalls: [] }
   messages.value.push(assistantMsg)
 
   try {
-    const endpoint = '/api/ai-chat'
-    const response = await fetch(endpoint, {
+    const erpToken = localStorage.getItem('erp_token') || ''
+    const response = await fetch('/api/ai-chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-erp-token': erpToken,
+      },
       body: JSON.stringify({
         messages: apiMessages,
-        systemPrompt: SYSTEM_PROMPT,
         images: imagesToSend.length > 0
           ? imagesToSend.map(i => ({ data: i.data, mediaType: i.mediaType }))
           : undefined,
@@ -550,25 +577,40 @@ async function sendMessage() {
     const contentType = response.headers.get('content-type') || ''
 
     if (contentType.includes('text/event-stream')) {
-      // Dev mode: SSE streaming from Vite plugin
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       if (!reader) throw new Error('无法读取响应流')
+      let buffer = ''
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        const chunk = decoder.decode(value, { stream: true })
-        for (const line of chunk.split('\n')) {
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        for (const line of lines) {
           if (!line.startsWith('data: ')) continue
           const data = line.slice(6).trim()
           if (data === '[DONE]') break
           try {
             const parsed = JSON.parse(data)
-            if (parsed.error) throw new Error(parsed.error)
-            if (parsed.text) {
+            if (parsed.type === 'text') {
               assistantText += parsed.text
               assistantMsg.content = assistantText
               nextTick(() => scrollToBottom())
+            } else if (parsed.type === 'tool_start') {
+              assistantMsg.toolCalls!.push({ id: parsed.id, name: parsed.name, input: parsed.input || {}, status: 'running' })
+              nextTick(() => scrollToBottom())
+            } else if (parsed.type === 'tool_result') {
+              const tc = assistantMsg.toolCalls!.find(t => t.id === parsed.id)
+              if (tc) {
+                tc.result = parsed.result
+                tc.status = (parsed.result?.startsWith('工具执行出错') || parsed.result?.startsWith('创建失败')) ? 'error' : 'success'
+              }
+              nextTick(() => scrollToBottom())
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.error)
+            } else if (parsed.error) {
+              throw new Error(parsed.error)
             }
           } catch (parseErr: any) {
             if (parseErr.message !== data) throw parseErr
@@ -582,23 +624,6 @@ async function sendMessage() {
       assistantText = result.content?.[0]?.text ?? result.choices?.[0]?.message?.content ?? ''
       assistantMsg.content = assistantText
       nextTick(() => scrollToBottom())
-    }
-
-    // Parse action block from completed response and auto-execute
-    const actionMatch = assistantText.match(/```action\s*([\s\S]*?)```/)
-    if (actionMatch) {
-      try {
-        const action = JSON.parse(actionMatch[1].trim())
-        // Remove raw action block from displayed message
-        assistantMsg.content = assistantText.replace(/```action[\s\S]*?```/, '').trim()
-        // Auto-execute immediately without user confirmation
-        pendingAction.value = {
-          type: action.type,
-          data: action.data,
-          apiPath: getApiPath(action.type),
-        }
-        await executeAction()
-      } catch {}
     }
   } catch (e: any) {
     assistantMsg.content = `抱歉，出现了错误：${e.message}`
@@ -715,6 +740,58 @@ function getApiPath(type: string): string {
     create_fund_account: '/finance/Fund/add',
   }
   return map[type] || '/unknown'
+}
+
+// ── Voice input (MediaRecorder → SiliconFlow Whisper) ────────────────────
+const isRecording = ref(false)
+const voiceSupported = ref(typeof window !== 'undefined' && !!navigator.mediaDevices?.getUserMedia)
+let mediaRecorder: MediaRecorder | null = null
+let audioChunks: Blob[] = []
+
+async function startVoice() {
+  if (isRecording.value) return
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    audioChunks = []
+    mediaRecorder = new MediaRecorder(stream)
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data) }
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop())
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
+      audioChunks = []
+      if (audioBlob.size < 1000) return
+      const prev = inputText.value
+      inputText.value = prev + '🎤 识别中...'
+      try {
+        const fd = new FormData()
+        fd.append('audio', audioBlob, 'audio.webm')
+        fd.append('model', 'FunAudioLLM/SenseVoiceSmall')
+        const res = await fetch('/api/transcribe', { method: 'POST', body: fd })
+        const json = await res.json() as any
+        if (json.error) throw new Error(json.error)
+        inputText.value = prev + (json.text || '')
+      } catch (e: any) {
+        inputText.value = prev
+        messages.value = [...messages.value, { role: 'assistant', content: `⚠️ 语音识别失败：${e.message}`, time: getNow() }]
+      }
+    }
+    mediaRecorder.start()
+    isRecording.value = true
+  } catch (e: any) {
+    inputText.value = e.name === 'NotAllowedError' ? '⚠️ 麦克风权限被拒绝' : `⚠️ 无法访问麦克风：${e.message}`
+  }
+}
+
+function stopVoice() {
+  if (isRecording.value && mediaRecorder) {
+    mediaRecorder.stop()
+    isRecording.value = false
+  }
+}
+
+function toggleVoice() {
+  if (isRecording.value) stopVoice()
+  else startVoice()
 }
 
 function openImagePicker() {
@@ -1170,4 +1247,30 @@ function renderMarkdown(text: string): string {
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.chat-native-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.6;
+  color: #1d2129;
+  background: #fff;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+  display: block;
+}
+.chat-native-textarea:focus { border-color: #409eff; }
+.chat-native-textarea:disabled { background: #f5f7fa; color: #c0c4cc; cursor: not-allowed; }
+.chat-native-textarea::placeholder { color: #c0c4cc; }
+
+.mic-active { animation: mic-pulse 1s ease-in-out infinite; }
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 63, 63, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(245, 63, 63, 0); }
+}
 </style>

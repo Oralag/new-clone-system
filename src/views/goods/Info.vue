@@ -1446,6 +1446,20 @@ function onScroll() {
 /* 右侧商品列表 */
 .goods-list-wrap { flex: 1; overflow: hidden; }
 
+@media (max-width: 767px) {
+  .list-layout { flex-direction: column !important; height: auto !important; }
+  .cate-panel { width: 100% !important; margin-right: 0 !important; margin-bottom: 8px; border-radius: 14px; max-height: none !important; overflow: visible !important; }
+  .cate-search { display: none !important; }
+  .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
+  .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
+  .cate-tree::-webkit-scrollbar { display: none; }
+  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f2f3f5; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
+  .cate-item.active { background: #e8f0fe !important; color: #165dff !important; border-color: #c5d6ff !important; }
+  .cate-item-actions { display: none !important; }
+  .cate-arrow, .cate-arrow-placeholder { display: none !important; }
+  .goods-list-wrap { overflow: visible !important; }
+}
+
 /* ── 全页表单 ── */
 .form-page {
   display: flex;

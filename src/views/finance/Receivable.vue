@@ -1,13 +1,13 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getReceivableList"
-          del-path="/finance/CollectAccounts/batchDel"
+      <ScTable ref="tableRef" :api-obj="getCollectReceiptList"
+          del-path="/finance/CollectReceipt/batchDel"
           export-file-name="应收账款" :params="searchForm">
         <template #search>
           <el-form inline>
-            <el-form-item label="客户名称">
-              <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width:180px" />
+            <el-form-item label="客户/单号">
+              <el-input v-model="searchForm.keyword" placeholder="客户名称/合同编号" clearable style="width:180px" />
             </el-form-item>
             <el-form-item label="日期范围">
               <el-date-picker
@@ -23,15 +23,29 @@
           </el-form>
           <div class="search-actions">
             <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="Object.assign(searchForm, { customer_name: '', date_range: null }); tableRef?.loadData()">重置</el-button>
+            <el-button @click="Object.assign(searchForm, { keyword: '', date_range: null }); tableRef?.loadData()">重置</el-button>
           </div>
         </template>
-        <el-table-column prop="customer_name" label="客户名称" min-width="140" />
-        <el-table-column prop="order_no" label="订单编号" min-width="160" />
-        <el-table-column prop="order_amount" label="订单金额" min-width="120" />
-        <el-table-column prop="received_amount" label="已收金额" min-width="120" />
-        <el-table-column prop="un_receive_amount" label="未收金额" min-width="120" />
-        <el-table-column prop="due_date" label="到期日期" min-width="120" />
+        <el-table-column label="客户名称" min-width="140">
+          <template #default="{ row }">{{ row.contact_name || row.customer_name || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="合同/订单编号" min-width="160">
+          <template #default="{ row }">{{ row.order_sn || row.order_no || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="应收金额" min-width="120" align="right">
+          <template #default="{ row }">
+            <span style="color:#165dff;font-weight:600">¥{{ Number(row.amount||0).toFixed(2) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="收款账户" min-width="120">
+          <template #default="{ row }">{{ row.fund_name || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="收款日期" min-width="120">
+          <template #default="{ row }">{{ (row.receipt_date || row.created_at || '').slice(0,10) }}</template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.remark || '—' }}</template>
+        </el-table-column>
       </ScTable>
     </el-card>
   </div>
@@ -39,10 +53,10 @@
 
 <script setup lang="ts">
 import ScTable from '@/components/ScTable.vue'
-import { getReceivableList } from '@/api/finance'
+import { getCollectReceiptList } from '@/api/finance'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const searchForm = reactive<any>({ customer_name: '', date_range: null })
+const searchForm = reactive<any>({ keyword: '', date_range: null })
 </script>
 
 <style scoped>

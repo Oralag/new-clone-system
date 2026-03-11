@@ -1,0 +1,121 @@
+<template>
+  <div class="tool-call-card" :class="statusClass">
+    <div class="card-header">
+      <el-icon class="card-icon"><component :is="statusIcon" /></el-icon>
+      <span class="tool-name">{{ toolLabel }}</span>
+      <span class="card-status">{{ statusText }}</span>
+    </div>
+    <div v-if="input && Object.keys(input).length" class="card-input">
+      <span v-for="(v, k) in input" :key="k" class="param-chip">
+        <b>{{ k }}</b>: {{ v }}
+      </span>
+    </div>
+    <div v-if="result" class="card-result">{{ result }}</div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Loading, CircleCheck, CircleClose, Tools } from '@element-plus/icons-vue'
+
+const props = defineProps<{
+  name: string
+  input?: Record<string, any>
+  result?: string
+  status: 'running' | 'success' | 'error'
+}>()
+
+const toolLabels: Record<string, string> = {
+  query_customers: '查询客户',
+  query_suppliers: '查询供应商',
+  query_goods: '查询商品',
+  query_inventory: '查询库存',
+  query_sales: '查询销售',
+  query_purchases: '查询采购',
+  query_finance: '查询财务',
+  query_staff: '查询员工',
+  query_warehouses: '查询仓库',
+  create_customer: '新增客户',
+  create_supplier: '新增供应商',
+  create_goods: '新增商品',
+  create_sale_order: '新增销售订单',
+  create_procure_order: '新增采购订单',
+  create_collect_receipt: '新增收款单',
+  create_pay_receipt: '新增付款单',
+  create_prepay: '新增预付款',
+  create_staff: '新增员工',
+  create_warehouse: '新增仓库',
+  create_fund_account: '新增资金账户',
+  navigate_to: '页面跳转',
+}
+
+const toolLabel = computed(() => toolLabels[props.name] || props.name)
+const statusClass = computed(() => `status-${props.status}`)
+const statusIcon = computed(() => {
+  if (props.status === 'running') return Loading
+  if (props.status === 'success') return CircleCheck
+  return CircleClose
+})
+const statusText = computed(() => {
+  if (props.status === 'running') return '执行中...'
+  if (props.status === 'success') return '完成'
+  return '失败'
+})
+</script>
+
+<style scoped>
+.tool-call-card {
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 4px 0;
+  font-size: 12px;
+  border: 1px solid #e4e7ed;
+  background: #f9fafb;
+}
+
+.status-running { border-color: #a0cfff; background: #ecf5ff; }
+.status-success { border-color: #b3e19d; background: #f0f9eb; }
+.status-error   { border-color: #fab6b6; background: #fef0f0; }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.status-running .card-icon { color: #409eff; animation: spin 1s linear infinite; }
+.status-success .card-icon { color: #67c23a; }
+.status-error   .card-icon { color: #f56c6c; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.tool-name { flex: 1; color: #303133; }
+.card-status { font-size: 11px; color: #909399; font-weight: 400; }
+
+.card-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.param-chip {
+  background: rgba(0,0,0,0.05);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: #606266;
+}
+
+.card-result {
+  margin-top: 6px;
+  color: #606266;
+  line-height: 1.5;
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+</style>

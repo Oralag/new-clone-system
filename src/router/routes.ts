@@ -9,11 +9,18 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '登录', public: true },
   },
   {
+    path: '/portal',
+    name: 'Portal',
+    component: () => import('@/views/Portal.vue'),
+    meta: { title: '选择模块' },
+  },
+  {
     path: '/',
     component: () => import('@/layouts/AdminLayout.vue'),
     redirect: '/dashboard',
     children: [
       { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/Dashboard.vue'), meta: { title: '工作台' } },
+      { path: 'dashboard/today-sales', name: 'TodaySales', component: () => import('@/views/dashboard/TodaySales.vue'), meta: { title: '今日销售' } },
 
       // Sale
       { path: 'sale/client', name: 'SaleClient', component: () => import('@/views/sale/ClientList.vue'), meta: { title: '客户管理' } },
@@ -84,6 +91,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'finance/fund-flow', name: 'FinanceFundFlow', component: () => import('@/views/finance/FundFlow.vue'), meta: { title: '资金流水' } },
       { path: 'finance/cost', name: 'FinanceCost', component: () => import('@/views/finance/Cost.vue'), meta: { title: '成本核算' } },
       { path: 'finance/prepay', name: 'FinancePrepay', component: () => import('@/views/finance/Prepay.vue'), meta: { title: '预付款' } },
+      { path: 'finance/fix-receivable', name: 'FixReceivable', component: () => import('@/views/finance/FixReceivable.vue'), meta: { title: '修复收款数据' } },
 
       // Goods
       { path: 'goods/info', name: 'GoodsInfo', component: () => import('@/views/goods/Info.vue'), meta: { title: '商品资料' } },
@@ -141,12 +149,28 @@ const routes: RouteRecordRaw[] = [
   },
   // Catch-all redirect
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
+
   // 独立页面（不使用 AdminLayout）
   {
     path: '/cashregister',
     name: 'CashRegister',
     component: () => import('@/views/retail/CashRegister.vue'),
     meta: { title: '收银台' },
+  },
+  // 智能体工作流（独立布局）
+  {
+    path: '/agent',
+    component: () => import('@/layouts/AgentLayout.vue'),
+    children: [
+      { path: '', name: 'AgentDashboard', component: () => import('@/views/agent/Dashboard.vue'), meta: { title: '智能体工作台' } },
+      { path: 'brand', name: 'AgentBrand', component: () => import('@/views/agent/Brand.vue'), meta: { title: '品牌设置' } },
+      { path: 'trending', name: 'AgentTrending', component: () => import('@/views/agent/Trending.vue'), meta: { title: '热搜抓取' } },
+      { path: 'copywriting', name: 'AgentCopywriting', component: () => import('@/views/agent/Copywriting.vue'), meta: { title: '文案生成' } },
+      { path: 'poster', name: 'AgentPoster', component: () => import('@/views/agent/Poster.vue'), meta: { title: '图文海报' } },
+      { path: 'video', name: 'AgentVideo', component: () => import('@/views/agent/Video.vue'), meta: { title: '视频生成' } },
+      { path: 'publish', name: 'AgentPublish', component: () => import('@/views/agent/Publish.vue'), meta: { title: '发布管理' } },
+      { path: 'history', name: 'AgentHistory', component: () => import('@/views/agent/History.vue'), meta: { title: '历史记录' } },
+    ],
   },
 ]
 

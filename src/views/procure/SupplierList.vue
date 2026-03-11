@@ -618,6 +618,19 @@ onMounted(loadData)
 
 .supplier-list-wrap { flex: 1; overflow: hidden; }
 
+@media (max-width: 767px) {
+  .list-layout { flex-direction: column !important; height: auto !important; }
+  .cate-panel { width: 100% !important; margin-right: 0 !important; margin-bottom: 8px; border-radius: 14px; max-height: none !important; overflow: visible !important; }
+  .cate-search { display: none !important; }
+  .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
+  .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
+  .cate-tree::-webkit-scrollbar { display: none; }
+  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f2f3f5; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
+  .cate-item.active { background: #e8f0fe !important; color: #165dff !important; border-color: #c5d6ff !important; }
+  .cate-item-actions { display: none !important; }
+  .supplier-list-wrap { overflow: visible !important; }
+}
+
 .sc-table { background: #fff; border-radius: 8px; padding: 16px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
 
 .sc-search {
@@ -636,4 +649,17 @@ onMounted(loadData)
 .sc-toolbar { margin-bottom: 12px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
 
 .sc-pagination { display: flex; justify-content: flex-end; margin-top: 16px; flex-shrink: 0; }
+
+@media (max-width: 767px) {
+  .list-layout { flex-direction: column !important; height: auto !important; }
+  .cate-panel { width: 100% !important; margin-right: 0 !important; margin-bottom: 8px; border-radius: 14px; max-height: none !important; overflow: visible !important; }
+  .cate-search { display: none !important; }
+  .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
+  .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
+  .cate-tree::-webkit-scrollbar { display: none; }
+  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f2f3f5; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
+  .cate-item.active { background: #e8f0fe !important; color: #165dff !important; border-color: #c5d6ff !important; }
+  .cate-item-actions { display: none !important; }
+  .supplier-list-wrap { overflow: visible !important; }
+}
 </style>

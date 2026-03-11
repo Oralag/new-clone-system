@@ -66,6 +66,7 @@ export const menuData: TopMenuItem[] = [
       { key: 'procure-supplier', title: '供应商管理', path: '/procure/supplier' },
       { key: 'procure-plan', title: '采购计划', path: '/procure/plan' },
       { key: 'procure-order', title: '采购订单', path: '/procure/order' },
+      { key: 'procure-inhouse', title: '采购入库', path: '/procure/inhouse' },
       { key: 'procure-return', title: '采购退货', path: '/procure/return' },
     ],
   },
@@ -129,6 +130,7 @@ export const menuData: TopMenuItem[] = [
       { key: 'finance-fund-flow', title: '资金流水', path: '/finance/fund-flow' },
       { key: 'finance-cost', title: '成本核算', path: '/finance/cost' },
       { key: 'finance-prepay', title: '预付款', path: '/finance/prepay' },
+      { key: 'finance-fix-receivable', title: '修复收款数据', path: '/finance/fix-receivable' },
     ],
   },
   {
@@ -187,6 +189,17 @@ export const menuData: TopMenuItem[] = [
       { key: 'setting-print', title: '打印模板', path: '/setting/print' },
       { key: 'setting-operation-log', title: '操作日志', path: '/setting/operation-log' },
       { key: 'setting-company', title: '企业信息', path: '/setting/company' },
+    ],
+  },
+  {
+    key: 'agent',
+    title: '智能体',
+    icon: 'MagicStick',
+    children: [
+      { key: 'agent-brand', title: '品牌设置', path: '/agent/brand' },
+      { key: 'agent-trending', title: '热搜抓取', path: '/agent/trending' },
+      { key: 'agent-copywriting', title: '文案生成', path: '/agent/copywriting' },
+      { key: 'agent-publish', title: '发布管理', path: '/agent/publish' },
     ],
   },
   {

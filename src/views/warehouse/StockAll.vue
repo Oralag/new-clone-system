@@ -114,6 +114,30 @@
           </el-table-column>
         </el-table>
 
+        <!-- 移动端卡片列表 -->
+        <div class="m-card-list">
+          <div v-if="loading" style="text-align:center;padding:24px;color:#86909c">加载中...</div>
+          <div v-else-if="tableData.length === 0" style="text-align:center;padding:24px;color:#86909c">暂无数据</div>
+          <div v-for="row in tableData" :key="row.goods_name + row.warehouse_name" class="m-card" @click="showDetail(row)">
+            <div class="m-card-title">
+              <span>{{ row.goods_name }}</span>
+              <span :class="['m-card-tag', getStockTag(row) === 'danger' ? 'danger' : getStockTag(row) === 'warning' ? 'warning' : 'success']">{{ row.qty }}</span>
+            </div>
+            <div class="m-card-row">
+              <span class="m-card-label">仓库</span>
+              <span class="m-card-value">{{ row.warehouse_name || '—' }}</span>
+            </div>
+            <div class="m-card-row">
+              <span class="m-card-label">单位</span>
+              <span class="m-card-value">{{ row.unit_name || '—' }}</span>
+            </div>
+            <div class="m-card-footer">
+              <span class="m-card-meta">均价 {{ row.avg_price || 0 }}</span>
+              <span class="m-card-value blue">货值 ¥{{ ((row.qty||0)*(row.avg_price||0)).toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- 分页 -->
         <div style="margin-top:12px;display:flex;justify-content:flex-end;align-items:center;gap:8px">
           <span style="font-size:13px;color:#666">共 {{ total }} 条</span>
@@ -205,16 +229,58 @@ const lowStockCount = computed(() => tableData.value.filter(r => {
   return safeMin > 0 && (parseFloat(r.qty) || 0) < safeMin
 }).length)
 
+// 从采购入库、销售出库、零售单计算每个商品的净库存
+async function calcStockMap(): Promise<Record<number, number>> {
+  const [procureRes, saleRes, retailRes] = await Promise.all([
+    http.get('/procure/ProcureInhouse/index', { params: { list_rows: 2000 } }),
+    http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
+    http.get('/retail/order/index', { params: { list_rows: 2000 } }),
+  ])
+  const map: Record<number, number> = {}
+  const parse = (info: any) => typeof info === 'string' ? JSON.parse(info || '[]') : (info || [])
+
+  for (const row of procureRes.data?.rows ?? []) {
+    if (Number(row.status) !== 1) continue
+    for (const item of parse(row.goods_info))
+      map[item.goods_id] = (map[item.goods_id] ?? 0) + Number(item.num || 0)
+  }
+  for (const row of saleRes.data?.rows ?? []) {
+    if (Number(row.status) !== 1) continue
+    for (const item of parse(row.goods_info))
+      map[item.goods_id] = (map[item.goods_id] ?? 0) - Number(item.num || 0)
+  }
+  for (const row of retailRes.data?.rows ?? []) {
+    for (const item of parse(row.goods_info))
+      map[item.goods_id] = (map[item.goods_id] ?? 0) - Number(item.num || 0)
+  }
+  return map
+}
+
 async function loadData() {
   loading.value = true
   try {
-    const params: any = { page: page.value, list_rows: pageSize.value }
-    if (keyword.value) params.goods_name = keyword.value
-    if (selectedWarehouse.value) params.warehouse_id = selectedWarehouse.value
+    const params: any = { list_rows: pageSize.value, page: page.value, status: 1 }
+    if (keyword.value) params.keyword = keyword.value
     if (selectedCate.value) params.cate_id = selectedCate.value
-    const res = await getStockList(params)
-    tableData.value = res.data?.rows || []
-    total.value = res.data?.total || 0
+
+    const [goodsRes, stockMap] = await Promise.all([
+      http.get('/goods/ShopGoods/index', { params }),
+      calcStockMap(),
+    ])
+
+    let rows = (goodsRes.data?.rows ?? []).map((g: any) => ({
+      ...g,
+      qty: stockMap[g.id] ?? 0,
+      avg_price: g.cost_price || 0,
+    }))
+
+    if (selectedWarehouse.value) {
+      // 仓库筛选：只保留在该仓库有库存记录的商品（qty != 0）
+      // 暂时不过滤，因为库存是全局计算的
+    }
+
+    tableData.value = rows
+    total.value = goodsRes.data?.total ?? rows.length
   } finally {
     loading.value = false
   }

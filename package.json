@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "CLOUDFLARE_API_TOKEN=rdRZlf7zm66MaFQfjUAj08ihpoY10kbOOa9lhw5T npx wrangler pages deploy dist --project-name nomaderp --commit-dirty=true"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
