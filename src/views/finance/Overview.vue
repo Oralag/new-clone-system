@@ -191,6 +191,50 @@
       </el-col>
     </el-row>
 
+    <!-- 第五行：销售单款 + 零售单款 -->
+    <el-row :gutter="14">
+      <el-col :span="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon :size="15"><Document /></el-icon>
+              <span>销售单款</span>
+              <span class="header-total blue">¥{{ saleOutTotal }}</span>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/stock/saleout')">更多</el-button>
+            </div>
+          </template>
+          <div class="inline-list" v-if="saleOutList.length">
+            <div class="inline-item clickable" v-for="r in saleOutList.slice(0,6)" :key="r.id" @click="router.push('/stock/saleout')">
+              <div class="inline-name">{{ r.customer_name || '—' }}</div>
+              <div class="inline-value blue">¥{{ Number(r.total_amount||0).toFixed(2) }}</div>
+              <div class="inline-sub">{{ r.order_no || '' }}</div>
+            </div>
+          </div>
+          <div v-else class="empty-tip">暂无销售出库单</div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon :size="15"><Money /></el-icon>
+              <span>零售单款</span>
+              <span class="header-total green">¥{{ retailTotal }}</span>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/retail/order')">更多</el-button>
+            </div>
+          </template>
+          <div class="inline-list" v-if="retailList.length">
+            <div class="inline-item clickable" v-for="r in retailList.slice(0,6)" :key="r.id" @click="router.push('/retail/order')">
+              <div class="inline-name">{{ r.customer_name || r.contact_name || '—' }}</div>
+              <div class="inline-value green">¥{{ Number(r.total_amount||r.amount||0).toFixed(2) }}</div>
+              <div class="inline-sub">{{ r.order_no || r.order_sn || '' }}</div>
+            </div>
+          </div>
+          <div v-else class="empty-tip">暂无零售单</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 资金流水（折叠） -->
     <div class="flow-section">
       <div class="flow-toggle" @click="flowVisible = !flowVisible">
@@ -243,6 +287,8 @@ const receivableList = ref<any[]>([])
 const payableList = ref<any[]>([])
 const purchasePayList = ref<any[]>([])
 const fundFlowList = ref<any[]>([])
+const saleOutList = ref<any[]>([])
+const retailList = ref<any[]>([])
 const flowVisible = ref(false)
 const chartW = 480
 
@@ -280,6 +326,14 @@ const payableTotal = computed(() =>
 )
 const purchasePayTotal = computed(() =>
   purchasePayList.value.reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2)
+)
+
+const saleOutTotal = computed(() =>
+  saleOutList.value.reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2)
+)
+
+const retailTotal = computed(() =>
+  retailList.value.reduce((s, r) => s + Number(r.total_amount || r.amount || 0), 0).toFixed(2)
 )
 
 // 近7天趋势数据
@@ -321,7 +375,7 @@ const summaryCards = computed(() => [
 
 onMounted(async () => {
   try {
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, flowRes, purchaseRes, expenseRes] = await Promise.all([
+    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, flowRes, purchaseRes, expenseRes, saleOutRes, retailRes] = await Promise.all([
       getFundList({ list_rows: 100 }),
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
       http.get('/finance/CollectReceipt/index', { params: { list_rows: 50 } }),
@@ -331,6 +385,8 @@ onMounted(async () => {
       http.get('/finance/fundFlow/index', { params: { list_rows: 1000 } }),
       http.get('/stock/PurchaseOrder/index', { params: { list_rows: 200 } }),
       http.get('/finance/Expense/index', { params: { list_rows: 200 } }),
+      http.get('/stock/SaleOutOrder/index', { params: { list_rows: 50 } }),
+      http.get('/retail/RetailOrder/index', { params: { list_rows: 50 } }),
     ])
     fundList.value = fundRes.data?.rows ?? []
     prepayList.value = prepayRes.data?.rows ?? []
@@ -341,6 +397,8 @@ onMounted(async () => {
     fundFlowList.value = flowRes.data?.rows ?? []
     purchasePayList.value = purchaseRes.data?.rows ?? []
     expenseList.value = expenseRes.data?.rows ?? []
+    saleOutList.value = saleOutRes.data?.rows ?? []
+    retailList.value = retailRes.data?.rows ?? []
   } catch {}
 })
 </script>

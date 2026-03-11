@@ -14,6 +14,7 @@ declare module 'vue' {
     AiAssistant: typeof import('./components/AiAssistant.vue')['default']
     AiToolCallCard: typeof import('./components/ai/AiToolCallCard.vue')['default']
     CustomerSelect: typeof import('./components/CustomerSelect.vue')['default']
+    ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBadge: typeof import('element-plus/es')['ElBadge']
     ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']

@@ -19,6 +19,12 @@
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增合同</el-button>
           </template>
+          <el-table-column label="来源报价单" width="140">
+            <template #default="{ row }">
+              <span v-if="row.quote_no" style="color:#165dff;font-size:12px">{{ row.quote_no }}</span>
+              <span v-else style="color:#c9cdd4;font-size:12px">—</span>
+            </template>
+          </el-table-column>
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="expand-detail">
@@ -79,6 +85,9 @@
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
+              <el-tooltip v-if="row.status === 2" content="驳回操作已禁用：合同已驳回，请重新提交或删除" placement="top">
+                <el-button type="danger" link size="small" disabled>驳回</el-button>
+              </el-tooltip>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
@@ -192,6 +201,11 @@
               <el-col :span="6" />
 
               <!-- 行3 -->
+              <el-col :span="6">
+                <el-form-item label="来源报价单">
+                  <el-input v-model="fd.quote_no" placeholder="报价单编号（可选）" clearable />
+                </el-form-item>
+              </el-col>
               <el-col :span="18">
                 <el-form-item label="备注">
                   <el-input v-model="fd.remark" type="textarea" :rows="2" placeholder="请输入备注" />
@@ -613,6 +627,7 @@ interface ContractItem {
 const defaultFd = () => ({
   id: 0,
   contract_no: '',
+  quote_no: '',
   customer_id: null as any,
   customer_name: '',
   level_id: null as any,
@@ -764,6 +779,7 @@ async function handleSave() {
     if (fd.customer_name) payload.customer_name = fd.customer_name
     if (fd.admin_name) payload.admin_name = fd.admin_name
     if (fd.sign_date) { payload.sign_date = fd.sign_date; payload.contract_date = fd.sign_date }
+    if (fd.quote_no) payload.quote_no = fd.quote_no
     fd.id ? await updateContract(payload) : await createContract(payload)
     ElMessage.success('保存成功')
     backToList()
@@ -784,12 +800,37 @@ async function handleDelete(id: number) {
 async function handleAudit(row: any, status: number) {
   const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
   await ElMessageBox.confirm(`确定${action}该合同？`, '提示', { type: 'warning' })
-  try {
-    await auditContract(row.id, status)
-    ElMessage.success(`${action}成功`)
-    tableRef.value?.refresh()
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+  let retries = 0
+  const maxRetries = 2
+  while (retries <= maxRetries) {
+    try {
+      await auditContract(row.id, status)
+      ElMessage.success(`${action}成功`)
+      // 审核通过后自动创建收款单
+      if (status === 1) {
+        try {
+          await http.post('/finance/CollectReceipt/add', {
+            contract_id: row.id,
+            contract_no: row.contract_no,
+            customer_id: row.customer_id,
+            customer_name: row.customer_name,
+            amount: Number(row.total_amount || 0),
+            receipt_date: new Date().toISOString().slice(0, 10),
+            remark: `合同 ${row.contract_no} 审核自动生成`,
+          })
+          ElMessage.success('已自动创建收款单')
+        } catch {
+          ElMessage.warning('审核成功，但自动创建收款单失败，请手动补录')
+        }
+      }
+      tableRef.value?.refresh()
+      return
+    } catch (e: any) {
+      retries++
+      if (retries > maxRetries) {
+        ElMessage.error(e?.message ?? '操作失败，已重试多次')
+      }
+    }
   }
 }
 

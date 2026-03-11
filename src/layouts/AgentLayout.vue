@@ -46,6 +46,7 @@
           <span v-if="brandStore.isConfigured" class="brand-pill">{{ brandStore.brand.name }}</span>
         </div>
         <div class="topbar-right">
+          <a class="home-link" href="/#/dashboard">主页</a>
           <button class="theme-toggle" @click="toggleTheme">
             <span v-if="theme === 'dark'">☀️</span>
             <span v-else>🌙</span>
@@ -95,11 +96,13 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 // Nav
 const navItems = [
   { label: '工作台', path: '/agent', icon: 'IconHome', exact: true },
+  { label: '品牌设置', path: '/agent/brand', icon: 'IconBrand' },
   { label: '热搜抓取', path: '/agent/trending', icon: 'IconTrend' },
   { label: '文案生成', path: '/agent/copywriting', icon: 'IconPen' },
   { label: '图文海报', path: '/agent/poster', icon: 'IconImage' },
   { label: '视频生成', path: '/agent/video', icon: 'IconVideo' },
   { label: '发布管理', path: '/agent/publish', icon: 'IconPublish' },
+  { label: '历史记录', path: '/agent/history', icon: 'IconHistory' },
 ]
 
 const platforms = [
@@ -114,13 +117,13 @@ const platforms = [
 const currentPageTitle = computed(() => {
   const map: Record<string, string> = {
     '/agent': '工作台',
+    '/agent/brand': '品牌设置',
     '/agent/trending': '热搜抓取',
     '/agent/copywriting': '文案生成',
     '/agent/poster': '图文海报',
     '/agent/video': '视频生成',
     '/agent/publish': '发布管理',
     '/agent/history': '历史记录',
-    '/agent/brand': '品牌配置',
   }
   return map[route.path] || '数字游牧'
 })
@@ -155,7 +158,7 @@ const SidebarContent = defineComponent({
       }, props.brandStore.isConfigured
         ? [h('span', { class: 'brand-card-name' }, props.brandStore.brand.name),
            h('span', { class: 'brand-card-sub' }, props.brandStore.brand.industry || '品牌主页')]
-        : [h('span', { class: 'brand-card-warn' }, '⚠️ 配置品牌信息')]
+        : [h('span', { class: 'brand-card-warn' }, '⚠️ 前往品牌设置')]
       ),
       h('nav', { class: 'nav-list' },
         props.navItems.map((item: any) =>
@@ -167,7 +170,7 @@ const SidebarContent = defineComponent({
         )
       ),
       h('div', { class: 'platform-section' }, [
-        h('div', { class: 'platform-label' }, '平台'),
+        h('div', { class: 'platform-label' }, '发布平台'),
         h('div', { class: 'platform-list' },
           props.platforms.map((p: any) =>
             h('span', { key: p.label, class: ['platform-tag', `platform-tag--${p.type}`] }, p.label)
@@ -175,8 +178,7 @@ const SidebarContent = defineComponent({
         ),
       ]),
       h('div', { class: 'sidebar-footer' }, [
-        h('div', { class: 'footer-link', onClick: () => emit('navigate', '/agent/history') }, '历史记录'),
-        h('div', { class: 'footer-link', onClick: () => emit('navigate', '/portal') }, '返回主页'),
+        h('div', { class: 'footer-link', onClick: () => emit('navigate', '/portal') }, '← 返回主系统'),
       ]),
     ])
   },
@@ -328,6 +330,18 @@ const SidebarContent = defineComponent({
 }
 .dark .brand-pill { background: #1e3a5f; color: #93c5fd; }
 .topbar-right { display: flex; align-items: center; gap: 14px; }
+.home-link {
+  font-size: 13px;
+  color: #64748b;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.15s;
+}
+.home-link:hover { color: #3b82f6; border-color: #bfdbfe; background: #eff6ff; }
+.dark .home-link { color: #94a3b8; border-color: #1e2a3a; }
+.dark .home-link:hover { color: #60a5fa; border-color: #2d4a6e; background: #1e3a5f; }
 .theme-toggle {
   background: none;
   border: none;

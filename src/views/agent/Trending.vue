@@ -11,10 +11,22 @@
         :class="{ active: currentPlatform === p.key }"
         @click="switchPlatform(p.key)"
       >{{ p.label }}</button>
-      <button class="btn-sm fetch-btn" :disabled="agentStore.loading" @click="doFetch">
-        <span v-if="agentStore.loading">抓取中...</span>
-        <span v-else>🔄 抓取热搜</span>
-      </button>
+
+      <div class="tabs-actions">
+        <button
+          v-if="localSelected.length > 0"
+          class="btn-sm clear-btn"
+          @click="clearSelection"
+        >清除选择</button>
+        <button
+          class="btn-sm fetch-btn"
+          :disabled="agentStore.loading"
+          @click="doFetch"
+        >
+          <span v-if="agentStore.loading">抓取中...</span>
+          <span v-else>获取最新热搜话题</span>
+        </button>
+      </div>
     </div>
 
     <!-- List -->
@@ -24,7 +36,8 @@
       </div>
       <div v-else-if="currentList.length === 0" class="empty-state">
         <div class="empty-icon">🔍</div>
-        <div class="empty-text">点击"抓取热搜"获取最新数据</div>
+        <div class="empty-text">点击"获取最新热搜话题"立即抓取</div>
+        <button class="btn-fetch-large" @click="doFetch">立即抓取</button>
       </div>
       <div v-else class="trending-list">
         <div
@@ -32,8 +45,9 @@
           :key="idx"
           class="trending-row"
           :class="{ selected: selectedSet.has(item.title) }"
+          @click="toggleSelect(item.title)"
         >
-          <label class="row-check">
+          <label class="row-check" @click.stop>
             <input
               type="checkbox"
               :checked="selectedSet.has(item.title)"
@@ -50,7 +64,10 @@
     <!-- Action Bar -->
     <div v-if="localSelected.length > 0" class="action-bar">
       <span class="selected-count">已选 {{ localSelected.length }} 个话题</span>
-      <button class="btn-generate" @click="goGenerate">用选中话题生成文案 →</button>
+      <div class="action-btns">
+        <button class="btn-clear-sel" @click="clearSelection">取消选择</button>
+        <button class="btn-generate" @click="goGenerate">用选中话题生成文案 →</button>
+      </div>
     </div>
   </div>
 </template>
@@ -67,12 +84,14 @@ const platforms = [
   { key: 'douyin', label: '抖音' },
   { key: 'xiaohongshu', label: '小红书' },
   { key: 'kuaishou', label: '快手' },
+  { key: 'weibo', label: '微博' },
+  { key: 'zhihu', label: '知乎' },
 ]
 
 const currentPlatform = ref('douyin')
 const localSelected = ref<string[]>([])
 
-const currentList = computed(() => agentStore.trending[currentPlatform.value] || [])
+const currentList = computed(() => agentStore.trendingData[currentPlatform.value] || [])
 const selectedSet = computed(() => new Set(localSelected.value))
 
 function switchPlatform(key: string) {
@@ -87,6 +106,10 @@ function toggleSelect(title: string) {
   const idx = localSelected.value.indexOf(title)
   if (idx >= 0) localSelected.value.splice(idx, 1)
   else localSelected.value.push(title)
+}
+
+function clearSelection() {
+  localSelected.value = []
 }
 
 function goGenerate() {
@@ -113,7 +136,12 @@ function formatHot(hot: string | number) {
 .trending-page { display: flex; flex-direction: column; gap: 16px; }
 .page-title { font-size: 20px; font-weight: 700; color: #1e293b; }
 
-.tabs-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .tab {
   padding: 7px 18px;
   border-radius: 20px;
@@ -127,6 +155,13 @@ function formatHot(hot: string | number) {
 .tab:hover { border-color: #93c5fd; color: #2563eb; }
 .tab.active { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 600; }
 
+.tabs-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .btn-sm {
   padding: 7px 16px;
   border-radius: 20px;
@@ -137,11 +172,16 @@ function formatHot(hot: string | number) {
   font-size: 13px;
   font-weight: 500;
   transition: all 0.15s;
-  margin-left: auto;
+  white-space: nowrap;
 }
 .btn-sm:hover { background: #dbeafe; }
 .btn-sm:disabled { opacity: 0.6; cursor: not-allowed; }
-.fetch-btn { white-space: nowrap; }
+.clear-btn {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+.clear-btn:hover { border-color: #fca5a5; color: #ef4444; background: #fef2f2; }
 
 .card {
   background: #fdfefe;
@@ -154,7 +194,19 @@ function formatHot(hot: string | number) {
 .loading-state { padding: 8px; }
 .empty-state { text-align: center; padding: 40px 0; }
 .empty-icon { font-size: 36px; margin-bottom: 10px; }
-.empty-text { font-size: 14px; color: #94a3b8; }
+.empty-text { font-size: 14px; color: #94a3b8; margin-bottom: 16px; }
+.btn-fetch-large {
+  padding: 10px 28px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.btn-fetch-large:hover { background: #1d4ed8; }
 
 .trending-list { display: flex; flex-direction: column; }
 .trending-row {
@@ -203,6 +255,19 @@ function formatHot(hot: string | number) {
   box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
 }
 .selected-count { font-size: 13px; color: #64748b; }
+.action-btns { display: flex; align-items: center; gap: 10px; }
+.btn-clear-sel {
+  padding: 8px 18px;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.btn-clear-sel:hover { border-color: #fca5a5; color: #ef4444; background: #fef2f2; }
 .btn-generate {
   padding: 9px 22px;
   background: #2563eb;

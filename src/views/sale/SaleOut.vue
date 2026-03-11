@@ -77,6 +77,9 @@
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
+              <el-tooltip v-if="row.status === 2" content="驳回操作已禁用：单据已驳回，请重新提交或删除" placement="top">
+                <el-button type="danger" link size="small" disabled>驳回</el-button>
+              </el-tooltip>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
@@ -500,6 +503,7 @@ import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { getWarehouseList } from '@/api/warehouse'
 import { getFundList, createFund } from '@/api/finance'
+import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
@@ -788,6 +792,23 @@ async function handleAudit(row: any, status: number) {
   try {
     await auditSaleOut(row.id, status)
     ElMessage.success(`${action}成功`)
+    // 审核通过后自动创建收款单
+    if (status === 1) {
+      try {
+        await http.post('/finance/CollectReceipt/add', {
+          saleout_id: row.id,
+          order_no: row.order_no,
+          customer_id: row.customer_id,
+          customer_name: row.customer_name,
+          amount: Number(row.total_amount || 0),
+          receipt_date: new Date().toISOString().slice(0, 10),
+          remark: `出库单 ${row.order_no} 审核自动生成`,
+        })
+        ElMessage.success('已自动创建收款单')
+      } catch {
+        ElMessage.warning('审核成功，但自动生成收款单失败，请手动补录')
+      }
+    }
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
