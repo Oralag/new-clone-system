@@ -1,146 +1,117 @@
 <template>
   <div class="stock-page">
-    <!-- 左侧过滤面板 -->
     <div class="stock-sidebar">
       <div class="sidebar-col">
         <div class="sidebar-label">仓库</div>
-        <el-input v-model="warehouseKeyword" placeholder="搜索" clearable size="small" style="margin-bottom:6px" />
         <div class="sidebar-section">
           <div :class="['sidebar-item', selectedWarehouse === 0 ? 'active' : '']" @click="selectWarehouse(0)">全部</div>
           <div
-            v-for="w in filteredWarehouses" :key="w.id"
-            :class="['sidebar-item', selectedWarehouse === w.id ? 'active' : '']"
-            @click="selectWarehouse(w.id)"
-          >{{ w.name }}</div>
+            v-for="warehouse in warehouses"
+            :key="warehouse.id"
+            :class="['sidebar-item', selectedWarehouse === warehouse.id ? 'active' : '']"
+            @click="selectWarehouse(warehouse.id)"
+          >
+            {{ warehouse.name }}
+          </div>
         </div>
       </div>
+
       <div class="sidebar-divider" />
+
       <div class="sidebar-col">
         <div class="sidebar-label">分类</div>
-        <el-input v-model="cateKeyword" placeholder="搜索" clearable size="small" style="margin-bottom:6px" />
         <div class="sidebar-section">
           <div :class="['sidebar-item', selectedCate === 0 ? 'active' : '']" @click="selectCate(0)">全部</div>
           <div
-            v-for="c in filteredCates" :key="c.id"
-            :class="['sidebar-item', selectedCate === c.id ? 'active' : '']"
-            @click="selectCate(c.id)"
-          >{{ c.name }}</div>
+            v-for="cate in categories"
+            :key="cate.id"
+            :class="['sidebar-item', selectedCate === cate.id ? 'active' : '']"
+            @click="selectCate(cate.id)"
+          >
+            {{ cate.name }}
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 右侧主内容 -->
-    <div class="stock-main">
-      <el-card style="margin-bottom:0">
-        <!-- 顶部统计栏 -->
+    <div style="flex:1;min-width:0">
+      <el-card>
         <div class="stock-topbar">
           <div class="topbar-left">
-            <el-button type="warning" size="small" @click="exportData">导出</el-button>
-            <span class="stat-label">合计库存: <b class="stat-blue">{{ totalQty.toFixed(2) }}</b></span>
-            <span class="stat-label">合计货值: <b class="stat-orange">{{ totalValue.toFixed(2) }}</b></span>
-            <span class="warning-tag high" title="高库存商品">
-              <span class="dot orange"></span>高库存 <b class="stat-orange">{{ highStockCount }}</b>
-            </span>
-            <span class="warning-tag low" title="低库存商品">
-              <span class="dot red"></span>低库存 <b class="stat-red">{{ lowStockCount }}</b>
+            <span
+              v-for="item in overviewStats"
+              :key="item.label"
+              class="stat-label"
+            >
+              {{ item.label }}
+              <strong class="stat-blue">{{ item.value }}</strong>
             </span>
           </div>
-          <div class="topbar-right">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span :title="selectionScopeText" style="font-size:12px;color:#999">{{ stockHealthHint }}</span>
+            <el-select v-model="statusFilter" size="small" style="width:110px" @change="refreshWithFirstPage">
+              <el-option label="全部" value="all" />
+              <el-option label="库存不足" value="low" />
+              <el-option label="零库存" value="zero" />
+              <el-option label="正常" value="normal" />
+            </el-select>
             <el-input
               v-model="keyword"
-              placeholder="商品名称/商品编码"
+              placeholder="商品名称/编码"
               clearable
               size="small"
               style="width:200px"
-              @change="loadData"
+              @change="refreshWithFirstPage"
             >
               <template #append>
-                <el-button :icon="Search" @click="loadData" />
+                <el-button :icon="Search" @click="refreshWithFirstPage" />
               </template>
             </el-input>
           </div>
         </div>
 
-        <!-- 表格 -->
-        <el-table
-          :data="tableData"
-          v-loading="loading"
-          border
-          stripe
-          size="small"
-          style="width:100%;margin-top:8px"
-        >
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="160">
+        <el-table v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px">
+          <el-table-column type="index" label="序号" width="55" align="center" />
+          <el-table-column prop="goods_name" label="商品名称" min-width="160" />
+          <el-table-column prop="goods_sn" label="商品编码" width="130" />
+          <el-table-column prop="cate_name" label="分类" width="100" />
+          <el-table-column prop="spec" label="规格" width="90" />
+          <el-table-column prop="unit_name" label="单位" width="65" align="center" />
+          <el-table-column label="当前库存" width="120" align="center">
             <template #default="{ row }">
-              <span class="goods-link" @click="showDetail(row)">{{ row.goods_name }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="单位" width="80">
-            <template #default="{ row }">{{ row.unit_name || '—' }}</template>
-          </el-table-column>
-          <el-table-column label="仓库名称" width="110">
-            <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
-          </el-table-column>
-          <el-table-column label="移动平均价" width="110" align="right">
-            <template #default="{ row }">{{ row.avg_price ? Number(row.avg_price).toFixed(4) : '—' }}</template>
-          </el-table-column>
-          <el-table-column label="可用库存" width="130" align="center">
-            <template #default="{ row }">
-              <span style="display:inline-flex;align-items:center;gap:4px">
-                <span v-if="getStockTag(row) === 'warning'" class="dot orange" style="width:8px;height:8px" />
-                <span v-if="getStockTag(row) === 'danger'" class="dot red" style="width:8px;height:8px" />
-                <el-tag :type="getStockTag(row)" size="small" effect="plain">{{ row.qty }}</el-tag>
-              </span>
+              <div style="display:flex;align-items:center;justify-content:center">
+                <el-tag :type="stockStatusType(row)" size="small" effect="plain">
+                  {{ Number(row.stock_num).toFixed(2) }}
+                </el-tag>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="安全库存" width="120" align="center">
             <template #default="{ row }">
-              <span v-if="parseFloat(row.safe_min) > 0 || parseFloat(row.safe_max) > 0" style="font-size:12px;color:#999">
-                {{ row.safe_min || 0 }} ~ {{ row.safe_max || '∞' }}
+              <span v-if="Number(row.safe_min) > 0 || Number(row.safe_max) > 0" style="font-size:12px;color:#6b7280">
+                {{ safeRangeText(row) }}
               </span>
-              <span v-else style="font-size:12px;color:#ccc">未设置</span>
+              <span v-else style="font-size:12px;color:#c0c4cc">未设置</span>
             </template>
           </el-table-column>
-          <el-table-column label="成本总额" width="110" align="right">
+          <el-table-column label="库存状态" width="110" align="center">
             <template #default="{ row }">
-              {{ ((row.qty || 0) * (row.avg_price || 0)).toFixed(2) }}
+              <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80" align="center" fixed="right">
+          <el-table-column label="成本价" width="90" align="right">
+            <template #default="{ row }">¥{{ Number(row.cost_price || 0).toFixed(2) }}</template>
+          </el-table-column>
+          <el-table-column label="库存货值" width="110" align="right">
             <template #default="{ row }">
-              <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
+              <span style="color:#165dff;font-weight:500">¥{{ (Number(row.stock_num) * Number(row.cost_price || 0)).toFixed(2) }}</span>
             </template>
           </el-table-column>
         </el-table>
 
-        <!-- 移动端卡片列表 -->
-        <div class="m-card-list">
-          <div v-if="loading" style="text-align:center;padding:24px;color:#86909c">加载中...</div>
-          <div v-else-if="tableData.length === 0" style="text-align:center;padding:24px;color:#86909c">暂无数据</div>
-          <div v-for="row in tableData" :key="row.goods_name + row.warehouse_name" class="m-card" @click="showDetail(row)">
-            <div class="m-card-title">
-              <span>{{ row.goods_name }}</span>
-              <span :class="['m-card-tag', getStockTag(row) === 'danger' ? 'danger' : getStockTag(row) === 'warning' ? 'warning' : 'success']">{{ row.qty }}</span>
-            </div>
-            <div class="m-card-row">
-              <span class="m-card-label">仓库</span>
-              <span class="m-card-value">{{ row.warehouse_name || '—' }}</span>
-            </div>
-            <div class="m-card-row">
-              <span class="m-card-label">单位</span>
-              <span class="m-card-value">{{ row.unit_name || '—' }}</span>
-            </div>
-            <div class="m-card-footer">
-              <span class="m-card-meta">均价 {{ row.avg_price || 0 }}</span>
-              <span class="m-card-value blue">货值 ¥{{ ((row.qty||0)*(row.avg_price||0)).toFixed(2) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 分页 -->
-        <div style="margin-top:12px;display:flex;justify-content:flex-end;align-items:center;gap:8px">
-          <span style="font-size:13px;color:#666">共 {{ total }} 条</span>
+        <div class="pager-row">
+          <span>共 {{ total }} 条</span>
+          <span v-if="tableSummaryText" style="color:#999">{{ tableSummaryText }}</span>
           <el-pagination
             v-model:current-page="page"
             v-model:page-size="pageSize"
@@ -152,45 +123,13 @@
           />
         </div>
       </el-card>
-
-      <!-- 库存详情抽屉 -->
-      <el-drawer v-model="detailVisible" title="库存详情" size="460px" direction="rtl">
-        <template v-if="detailRow">
-          <!-- 核心数据突出显示 -->
-          <div style="display:flex;gap:12px;margin-bottom:16px">
-            <div style="flex:1;background:#f0f9ff;border-radius:8px;padding:12px;text-align:center">
-              <div style="font-size:11px;color:#86909c;margin-bottom:4px">可用库存</div>
-              <div style="font-size:22px;font-weight:700;color:#409eff">{{ detailRow.qty }}</div>
-              <div style="font-size:11px;color:#86909c">{{ detailRow.unit_name || '' }}</div>
-            </div>
-            <div style="flex:1;background:#fff7e6;border-radius:8px;padding:12px;text-align:center">
-              <div style="font-size:11px;color:#86909c;margin-bottom:4px">成本总额</div>
-              <div style="font-size:22px;font-weight:700;color:#e6a23c">¥{{ ((detailRow.qty || 0) * (detailRow.avg_price || 0)).toFixed(2) }}</div>
-              <div style="font-size:11px;color:#86909c">均价 {{ detailRow.avg_price || 0 }}</div>
-            </div>
-          </div>
-          <el-descriptions :column="1" border size="small">
-            <el-descriptions-item label="商品名称">{{ detailRow.goods_name }}</el-descriptions-item>
-            <el-descriptions-item label="商品编码">{{ detailRow.goods_sn || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="商品单位">{{ detailRow.unit_name || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="仓库名称">{{ detailRow.warehouse_name || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="库位名称">{{ detailRow.location_name || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="锁定数量">{{ detailRow.lock_qty || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="安全最低库存">{{ detailRow.safe_min || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="安全最高库存">{{ detailRow.safe_max || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="属性">{{ detailRow.attr || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="规格型号">{{ detailRow.spec_model || '—' }}</el-descriptions-item>
-          </el-descriptions>
-        </template>
-      </el-drawer>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { getStockList, getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 
@@ -200,134 +139,154 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
 const keyword = ref('')
-const warehouseKeyword = ref('')
-const cateKeyword = ref('')
 const selectedWarehouse = ref(0)
 const selectedCate = ref(0)
+const statusFilter = ref<'all' | 'low' | 'zero' | 'normal'>('all')
 
 const warehouses = ref<any[]>([])
-const cates = ref<any[]>([])
+const categories = ref<any[]>([])
+const allRows = ref<any[]>([])
 
-const detailVisible = ref(false)
-const detailRow = ref<any>(null)
-
-const filteredWarehouses = computed(() =>
-  warehouses.value.filter(w => !warehouseKeyword.value || w.name.includes(warehouseKeyword.value))
-)
-const filteredCates = computed(() =>
-  cates.value.filter(c => !cateKeyword.value || c.name.includes(cateKeyword.value))
-)
-
-const totalQty = computed(() => tableData.value.reduce((s, r) => s + (parseFloat(r.qty) || 0), 0))
-const totalValue = computed(() => tableData.value.reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.avg_price) || 0), 0))
-const highStockCount = computed(() => tableData.value.filter(r => {
-  const safeMax = parseFloat(r.safe_max) || 0
-  return safeMax > 0 && (parseFloat(r.qty) || 0) > safeMax
-}).length)
-const lowStockCount = computed(() => tableData.value.filter(r => {
-  const safeMin = parseFloat(r.safe_min) || 0
-  return safeMin > 0 && (parseFloat(r.qty) || 0) < safeMin
-}).length)
-
-// 从采购入库、销售出库、零售单计算每个商品的净库存
-async function calcStockMap(): Promise<Record<number, number>> {
-  const [procureRes, saleRes, retailRes] = await Promise.all([
-    http.get('/procure/ProcureInhouse/index', { params: { list_rows: 2000 } }),
-    http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
-    http.get('/retail/order/index', { params: { list_rows: 2000 } }),
-  ])
-  const map: Record<number, number> = {}
-  const parse = (info: any) => typeof info === 'string' ? JSON.parse(info || '[]') : (info || [])
-
-  for (const row of procureRes.data?.rows ?? []) {
-    if (Number(row.status) !== 1) continue
-    for (const item of parse(row.goods_info))
-      map[item.goods_id] = (map[item.goods_id] ?? 0) + Number(item.num || 0)
+const totalQty = computed(() => tableData.value.reduce((sum, item) => sum + Number(item.stock_num || 0), 0))
+const lowStockCount = computed(() => allRows.value.filter(item => Number(item.safe_min) > 0 && Number(item.stock_num) < Number(item.safe_min)).length)
+const zeroStockCount = computed(() => allRows.value.filter(item => Number(item.stock_num) <= 0).length)
+const highStockCount = computed(() => allRows.value.filter(item => Number(item.safe_max) > 0 && Number(item.stock_num) > Number(item.safe_max)).length)
+const overviewStats = computed(() => [
+  { label: '总库存', value: totalQty.value.toFixed(2) },
+  { label: '库存不足', value: lowStockCount.value },
+  { label: '零库存', value: zeroStockCount.value },
+  { label: '库存过高', value: highStockCount.value },
+])
+const tableSummaryText = computed(() => {
+  const filters = []
+  if (selectedWarehouse.value) {
+    const warehouse = warehouses.value.find(item => item.id === selectedWarehouse.value)
+    if (warehouse?.name) filters.push(warehouse.name)
   }
-  for (const row of saleRes.data?.rows ?? []) {
-    if (Number(row.status) !== 1) continue
-    for (const item of parse(row.goods_info))
-      map[item.goods_id] = (map[item.goods_id] ?? 0) - Number(item.num || 0)
+  if (selectedCate.value) {
+    const cate = categories.value.find(item => item.id === selectedCate.value)
+    if (cate?.name) filters.push(cate.name)
   }
-  for (const row of retailRes.data?.rows ?? []) {
-    for (const item of parse(row.goods_info))
-      map[item.goods_id] = (map[item.goods_id] ?? 0) - Number(item.num || 0)
+  if (statusFilter.value !== 'all') filters.push(stockFilterLabel(statusFilter.value))
+  if (keyword.value.trim()) filters.push(`关键词：${keyword.value.trim()}`)
+  return filters.join(' / ')
+})
+const stockHealthHint = computed(() => {
+  const healthy = Math.max(allRows.value.length - lowStockCount.value - zeroStockCount.value, 0)
+  return `${selectionScopeText.value} · 正常 ${healthy} / 异常 ${lowStockCount.value + zeroStockCount.value + highStockCount.value}`
+})
+const selectionScopeText = computed(() => {
+  const labels = []
+  if (selectedWarehouse.value) {
+    const warehouse = warehouses.value.find(item => item.id === selectedWarehouse.value)
+    if (warehouse?.name) labels.push(`仓库：${warehouse.name}`)
   }
-  return map
+  if (selectedCate.value) {
+    const cate = categories.value.find(item => item.id === selectedCate.value)
+    if (cate?.name) labels.push(`分类：${cate.name}`)
+  }
+  return labels.join(' / ') || '当前范围：全部'
+})
+
+function stockStatusType(row: any) {
+  const stock = Number(row.stock_num)
+  const safeMin = Number(row.safe_min || 0)
+  const safeMax = Number(row.safe_max || 0)
+  if (stock < 0) return 'danger'
+  if (stock === 0) return 'info'
+  if (safeMin > 0 && stock < safeMin) return 'danger'
+  if (safeMax > 0 && stock > safeMax) return 'warning'
+  return 'success'
+}
+
+function stockStatusLabel(row: any) {
+  const stock = Number(row.stock_num)
+  const safeMin = Number(row.safe_min || 0)
+  const safeMax = Number(row.safe_max || 0)
+  if (stock < 0) return '库存负数'
+  if (stock === 0) return '零库存'
+  if (safeMin > 0 && stock < safeMin) return '库存不足'
+  if (safeMax > 0 && stock > safeMax) return '库存过高'
+  return '正常'
+}
+
+function stockFilterLabel(value: 'all' | 'low' | 'zero' | 'normal') {
+  return ({ all: '全部', low: '库存不足', zero: '零库存', normal: '正常' } as const)[value]
+}
+
+function safeRangeText(row: any) {
+  const min = Number(row.safe_min || 0).toFixed(0)
+  const max = Number(row.safe_max || 0)
+  return `${min} ~ ${max > 0 ? max.toFixed(0) : '∞'}`
 }
 
 async function loadData() {
   loading.value = true
   try {
-    const params: any = { list_rows: pageSize.value, page: page.value, status: 1 }
+    const params: any = {
+      list_rows: pageSize.value,
+      page: page.value,
+    }
     if (keyword.value) params.keyword = keyword.value
     if (selectedCate.value) params.cate_id = selectedCate.value
+    if (selectedWarehouse.value) params.warehouse_id = selectedWarehouse.value
 
-    const [goodsRes, stockMap] = await Promise.all([
-      http.get('/goods/ShopGoods/index', { params }),
-      calcStockMap(),
-    ])
+    const response: any = await getStockList(params)
+    let rows = response?.data?.rows ?? response?.rows ?? []
+    const rawTotal = response?.data?.total ?? response?.total ?? rows.length
 
-    let rows = (goodsRes.data?.rows ?? []).map((g: any) => ({
-      ...g,
-      qty: stockMap[g.id] ?? 0,
-      avg_price: g.cost_price || 0,
-    }))
-
-    if (selectedWarehouse.value) {
-      // 仓库筛选：只保留在该仓库有库存记录的商品（qty != 0）
-      // 暂时不过滤，因为库存是全局计算的
+    if (statusFilter.value === 'low') {
+      rows = rows.filter((item: any) => Number(item.safe_min) > 0 && Number(item.stock_num) < Number(item.safe_min))
+    } else if (statusFilter.value === 'zero') {
+      rows = rows.filter((item: any) => Number(item.stock_num) <= 0)
+    } else if (statusFilter.value === 'normal') {
+      rows = rows.filter((item: any) => {
+        const stock = Number(item.stock_num)
+        const safeMin = Number(item.safe_min || 0)
+        const safeMax = Number(item.safe_max || 0)
+        return stock > 0 && !(safeMin > 0 && stock < safeMin) && !(safeMax > 0 && stock > safeMax)
+      })
     }
 
     tableData.value = rows
-    total.value = goodsRes.data?.total ?? rows.length
+    total.value = statusFilter.value === 'all' ? rawTotal : rows.length
   } finally {
     loading.value = false
   }
 }
 
+async function loadOverviewRows() {
+  const response: any = await getStockList({ list_rows: 2000 })
+  allRows.value = response?.data?.rows ?? response?.rows ?? []
+}
+
 async function loadMeta() {
-  const [wRes, cRes] = await Promise.all([
+  const [warehouseRes, cateRes] = await Promise.all([
     getWarehouseList({ list_rows: 200 }),
-    http.get('/goods/ShopGoodsCate/index', { params: { list_rows: 200 } })
+    http.get('/goods/ShopGoodsCate/index', { params: { list_rows: 200 } }),
   ])
-  warehouses.value = wRes.data?.rows || []
-  cates.value = cRes.data?.rows || []
+  warehouses.value = warehouseRes.data?.rows ?? []
+  categories.value = cateRes.data?.rows ?? []
+}
+
+function refreshWithFirstPage() {
+  page.value = 1
+  loadData()
 }
 
 function selectWarehouse(id: number) {
   selectedWarehouse.value = id
-  page.value = 1
-  loadData()
+  refreshWithFirstPage()
 }
 
 function selectCate(id: number) {
   selectedCate.value = id
-  page.value = 1
-  loadData()
+  refreshWithFirstPage()
 }
 
-function getStockTag(row: any) {
-  const qty = parseFloat(row.qty) || 0
-  const safeMax = parseFloat(row.safe_max) || 0
-  const safeMin = parseFloat(row.safe_min) || 0
-  if (safeMax > 0 && qty > safeMax) return 'warning'
-  if (safeMin > 0 && qty < safeMin) return 'danger'
-  return 'success'
-}
-
-function showDetail(row: any) {
-  detailRow.value = row
-  detailVisible.value = true
-}
-
-function exportData() {
-  ElMessage.info('导出功能开发中')
-}
-
-onMounted(() => {
-  loadMeta()
-  loadData()
+onMounted(async () => {
+  await loadMeta()
+  await Promise.all([loadData(), loadOverviewRows()])
 })
 </script>
 
@@ -336,57 +295,73 @@ onMounted(() => {
   display: flex;
   height: 100%;
   gap: 12px;
-  padding: 0;
 }
+
 .stock-sidebar {
-  width: 280px;
+  width: 260px;
   flex-shrink: 0;
   background: #fff;
   border-radius: 4px;
   padding: 10px 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow-y: auto;
   display: flex;
   flex-direction: row;
   gap: 0;
 }
+
 .sidebar-col {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
+
 .sidebar-divider {
   width: 1px;
   background: #f0f0f0;
   margin: 0 6px;
   flex-shrink: 0;
 }
-.sidebar-item {
-  padding: 5px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #333;
-  transition: background .15s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sidebar-item:hover { background: #f0f7ff; }
-.sidebar-item.active { background: #e6f0ff; color: #409eff; font-weight: 600; }
-.sidebar-section { display: flex; flex-direction: column; gap: 2px; }
+
 .sidebar-label {
   font-size: 11px;
   font-weight: 600;
   color: #86909c;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   padding: 0 4px;
 }
 
-.stock-main { flex: 1; min-width: 0; }
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-item {
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  transition: background 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-item:hover {
+  background: #f0f7ff;
+}
+
+.sidebar-item.active {
+  background: #e6f0ff;
+  color: #409eff;
+  font-weight: 600;
+}
+
 .stock-topbar {
   display: flex;
   justify-content: space-between;
@@ -395,16 +370,31 @@ onMounted(() => {
   gap: 8px;
   margin-bottom: 4px;
 }
-.topbar-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.topbar-right { display: flex; align-items: center; }
-.stat-label { font-size: 13px; color: #333; }
-.stat-blue { color: #409eff; font-size: 16px; }
-.stat-orange { color: #e6a23c; font-size: 16px; }
-.stat-red { color: #f56c6c; font-size: 16px; }
-.warning-tag { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: default; }
-.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.dot.orange { background: #e6a23c; }
-.dot.red { background: #f56c6c; }
-.goods-link { color: #409eff; cursor: pointer; text-decoration: underline; }
-.goods-link:hover { opacity: 0.8; }
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #333;
+}
+
+.stat-blue {
+  color: #409eff;
+  font-size: 15px;
+}
+
+.pager-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
+}
 </style>

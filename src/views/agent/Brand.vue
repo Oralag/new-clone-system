@@ -9,6 +9,7 @@
         <div class="saved-info">
           <span class="saved-name">{{ brand.name }}</span>
           <span class="saved-meta">{{ brand.industry }}{{ brand.subIndustry ? ' · ' + brand.subIndustry : '' }}{{ brand.slogan ? ' · ' + brand.slogan : '' }}</span>
+          <span v-if="store.savedAt.value" class="saved-time">最近保存：{{ store.savedAt.value }}</span>
         </div>
       </div>
       <button class="btn-edit" @click="isCollapsed = false">编辑</button>
@@ -43,11 +44,11 @@
           </div>
         </div>
         <div class="opt-group">
-          <div class="opt-label">内容类型</div>
+          <div class="opt-label">内容类型（可多选）</div>
           <div class="opt-tags">
             <span v-for="t in contentTypes" :key="t.key" class="opt-tag"
-              :class="{ active: autoFlow.contentType === t.key }"
-              @click="autoFlow.contentType = t.key">{{ t.name }}</span>
+              :class="{ active: autoFlow.contentTypes.includes(t.key) }"
+              @click="toggleAfContentType(t.key)">{{ t.name }}</span>
           </div>
         </div>
         <div class="opt-group">
@@ -64,6 +65,10 @@
         </div>
       </div>
       <button class="btn-autoflow" @click="startAutoFlow">一键启动</button>
+      <div class="workflow-ready-row">
+        <span class="ready-chip">{{ autoFlowSummary }}</span>
+        <span v-if="brand.mainPlatforms.length" class="ready-chip muted">主攻平台：{{ mainPlatformSummary }}</span>
+      </div>
       <div v-if="agentStore.flowResults.length > 0" class="autoflow-prev-row">
         <span class="prev-hint">上次已生成 {{ agentStore.flowResults.length }} 条内容</span>
         <button class="btn-view-result" @click="router.push('/agent/publish')">查看结果</button>
@@ -113,7 +118,15 @@
         <div class="done-title">工作流完成！内容已就绪</div>
         <div class="done-btns">
           <button class="btn-goto" @click="router.push('/agent/publish')">前往发布管理</button>
+          <button class="btn-secondary" @click="startAutoFlow">重新执行</button>
           <button class="btn-secondary" @click="autoFlow.running = false">关闭</button>
+        </div>
+        <div class="done-desc" style="font-size:13px;color:#94a3b8;margin-bottom:12px">建议先预览并编辑内容，再前往发布</div>
+        <div class="done-btns">
+          <button class="btn-secondary" @click="router.push('/agent/copywriting')">📝 文案</button>
+          <button class="btn-secondary" @click="router.push('/agent/poster')">🖼 图文</button>
+          <button class="btn-secondary" @click="router.push('/agent/video')">🎬 视频脚本</button>
+          <button class="btn-goto" @click="router.push('/agent/publish')">直接发布</button>
         </div>
       </div>
     </div>
@@ -555,16 +568,32 @@ const afPlatforms = [
   { key: 'kuaishou', name: '快手' },
 ]
 const afSteps = computed(() => {
-  const typeLabel = { video: '生成视频脚本', poster: '生成图文内容', copy: '生成纯文案' }[autoFlow.contentType] || '生成内容'
-  return ['抓取热搜', 'AI 分析选题', typeLabel, '进入发布']
+  const labels = autoFlow.contentTypes
+    .map(key => contentTypes.find(item => item.key === key)?.name)
+    .filter(Boolean)
+  return ['抓取热搜', 'AI 分析选题', labels.length ? `生成${labels.join(' & ')}` : '生成内容', '进入发布']
 })
 const contentTypes = [
   { key: 'video', name: '视频脚本' },
   { key: 'poster', name: '图文' },
-  { key: 'copy', name: '纯文案' },
+  { key: 'copy', name: '文案' },
 ]
-const autoFlow = reactive({ platforms: ['douyin', 'xiaohongshu'] as string[], count: 3, running: false, step: 0, contentType: 'video' })
+const autoFlow = reactive({
+  platforms: ['douyin', 'xiaohongshu'] as string[],
+  count: 3,
+  running: false,
+  step: 0,
+  contentTypes: ['video', 'poster', 'copy'] as string[],
+  error: '',
+})
 let flowCancelled = false
+const autoFlowSummary = computed(() => {
+  const labels = autoFlow.contentTypes
+    .map(key => ({ video: '视频脚本', poster: '图文海报', copy: '爆款文案' }[key]))
+    .filter(Boolean)
+  return `计划生成 ${autoFlow.count} 条 ${labels.join(' / ')}`
+})
+const mainPlatformSummary = computed(() => brand.mainPlatforms.map(key => platformOptions.find(item => item.key === key)?.name).filter(Boolean).join(' / '))
 
 function cancelFlow() {
   flowCancelled = true
@@ -577,6 +606,14 @@ function toggleAfPlatform(key: string) {
   const i = autoFlow.platforms.indexOf(key)
   if (i >= 0) { if (autoFlow.platforms.length > 1) autoFlow.platforms.splice(i, 1) }
   else autoFlow.platforms.push(key)
+}
+function toggleAfContentType(key: string) {
+  const i = autoFlow.contentTypes.indexOf(key)
+  if (i >= 0) {
+    if (autoFlow.contentTypes.length > 1) autoFlow.contentTypes.splice(i, 1)
+  } else {
+    autoFlow.contentTypes.push(key)
+  }
 }
 const agentStore = useTrendingStore()
 
@@ -644,7 +681,7 @@ async function startAutoFlow() {
     autoFlowLog.value[1] = `已选出 ${selectedTopics.length} 个话题：${selectedTopics.join('、')}`
     autoFlow.step = 2
 
-    // 步骤3：按 contentType 生成内容
+    // 步骤3：按 contentTypes 生成内容
     const platNames: Record<string, string> = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手' }
     const flowItems: any[] = []
     autoFlowLog.value[2] = '正在生成内容...'
@@ -654,20 +691,21 @@ async function startAutoFlow() {
       for (const topic of selectedTopics) {
         if (flowCancelled) return
 
-        if (autoFlow.contentType === 'video') {
+        if (autoFlow.contentTypes.includes('video')) {
           const script = await callFlowAI(
             `请为话题「${topic}」创作一个适合${pName}的短视频脚本，格式：\n场景描述：xxx\n旁白/配音：xxx\n字幕：xxx\n时长建议：15-30秒\n符合品牌「${brand.name}」（${brand.industry}）调性，直接输出脚本内容。`
           )
           flowItems.push({ platform: pKey, platformName: pName, topic, type: 'video_script', content: script })
+        }
 
-        } else if (autoFlow.contentType === 'poster') {
+        if (autoFlow.contentTypes.includes('poster')) {
           const raw = await callFlowAI(
             `请为话题「${topic}」创作一篇${pName}图文帖子，严格按 JSON 输出：\n{"title":"标题(带emoji,25字内)","body":"正文(排版美观,500字内)","tags":["标签1","标签2","标签3","标签4"]}\n符合品牌「${brand.name}」调性，只输出JSON，不要其他内容。`
           )
           flowItems.push({ platform: pKey, platformName: pName, topic, type: 'poster', content: raw })
+        }
 
-        } else {
-          // 纯文案
+        if (autoFlow.contentTypes.includes('copy')) {
           const copy = await callFlowAI(
             `请为话题「${topic}」创作一条${pName}平台的爆款文案，符合品牌「${brand.name}」（${brand.industry}）调性，结合品牌产品自然植入，直接输出文案正文。`
           )
@@ -683,8 +721,10 @@ async function startAutoFlow() {
     if (firstVideo) agentStore.setVideoScript({ topic: firstVideo.topic, content: firstVideo.content, platform: firstVideo.platform })
     if (firstPoster) agentStore.setPublishContent({ script: firstPoster.content, topic: firstPoster.topic, type: 'poster' })
 
-    const typeLabel = { video: '视频脚本', poster: '图文', copy: '纯文案' }[autoFlow.contentType] || '内容'
-    autoFlowLog.value[2] = `已生成 ${flowItems.length} 条${typeLabel}`
+    const generatedLabels = autoFlow.contentTypes
+      .map(key => ({ video: '视频脚本', poster: '图文', copy: '文案' }[key]))
+      .filter(Boolean)
+    autoFlowLog.value[2] = `已生成 ${flowItems.length} 条${generatedLabels.join(' / ')}`
     autoFlow.step = 3
 
     // 步骤4：进入发布
@@ -1415,11 +1455,21 @@ function handleSave() {
 }
 .saved-name { font-size: 15px; font-weight: 600; color: #1a1a1a; display: block; }
 .saved-meta { font-size: 12px; color: #64748b; display: block; margin-top: 2px; }
+.saved-time { font-size: 11px; color: #94a3b8; display: block; margin-top: 4px; }
 .btn-edit {
   padding: 6px 16px; border-radius: 8px; border: 1.5px solid #7c3aed;
   background: #fff; color: #7c3aed; font-size: 13px; font-weight: 600; cursor: pointer;
 }
 .btn-edit:hover { background: #f5f3ff; }
+.workflow-ready-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.ready-chip {
+  display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px;
+  border-radius: 999px; background: rgba(124,58,237,0.08); color: #6d28d9;
+  border: 1px solid rgba(124,58,237,0.16); font-size: 12px; font-weight: 500;
+}
+.ready-chip.muted {
+  background: #f8fafc; color: #64748b; border-color: #e2e8f0;
+}
 
 /* ── 浅色主题变量 ── */
 .brand-page {
