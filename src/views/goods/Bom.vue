@@ -69,7 +69,7 @@
             <el-table-column label="用量" width="150" align="center">
               <template #default="{ row }">
                 <span style="font-weight:500">{{ row.num }}</span>
-                <span style="color:#86909c;margin-left:4px">{{ row.unit_name }}</span>
+                <span style="color:rgba(29,29,31,0.35);margin-left:4px">{{ row.unit_name }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="_spec" label="规格" width="110" align="center" />
@@ -87,7 +87,7 @@
             </el-table-column>
             <el-table-column label="小计(¥)" width="100" align="right">
               <template #default="{ row }">
-                <span style="font-weight:600;color:#165dff">
+                <span style="font-weight:600;color:#0071e3">
                   {{ ((row._price || 0) * (row.num || 0)).toFixed(4).replace(/\.?0+$/, '') || '0' }}
                 </span>
               </template>
@@ -174,7 +174,7 @@
         <el-table-column prop="cost_price" label="采购价" width="90" align="right" />
       </el-table>
       <div style="margin-top:12px;padding:10px 12px;background:#f0f9ff;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:13px">
-        <span style="color:#86909c;white-space:nowrap">找不到？</span>
+        <span style="color:rgba(29,29,31,0.35);white-space:nowrap">找不到？</span>
         <el-button type="primary" size="small" :icon="Plus" @click="openGoodsFormDialog">新建商品并选中</el-button>
       </div>
       <template #footer>
@@ -191,8 +191,8 @@
       <el-form ref="formRef" :model="form" label-width="90px" style="padding:0 16px" :disabled="drawerViewMode">
         <!-- 关联商品信息（只读展示） -->
         <div v-if="form.material_name" style="background:#f5f7fa;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;line-height:1.8">
-          <div><span style="color:#86909c">物料名称：</span><b>{{ form.material_name }}</b></div>
-          <div v-if="form.material_sn"><span style="color:#86909c">物料编码：</span>{{ form.material_sn }}</div>
+          <div><span style="color:rgba(29,29,31,0.35)">物料名称：</span><b>{{ form.material_name }}</b></div>
+          <div v-if="form.material_sn"><span style="color:rgba(29,29,31,0.35)">物料编码：</span>{{ form.material_sn }}</div>
         </div>
 
         <!-- 用量 + 用量单位（同行） -->
@@ -205,7 +205,7 @@
               <el-option v-for="u in unitOptions" :key="u" :label="u" :value="u" />
             </el-select>
           </div>
-          <div style="font-size:12px;color:#86909c;margin-top:4px">
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-top:4px">
             用量单位即计算成本的单位，如填"150 克"，单价也应填每克价格。<br>
             切换单位时系统会自动换算单价（克↔斤↔千克等）
           </div>
@@ -220,14 +220,14 @@
         <!-- 成本预览 -->
         <div v-if="form._price > 0 && form.num > 0"
           style="background:#f0f9ff;border:1px solid #bae0ff;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;line-height:2">
-          <div>用量成本：<b style="color:#165dff">¥{{ (form._price * form.num).toFixed(4) }}</b>
-            <span style="color:#86909c">（{{ form.num }} {{ form.unit_name }} × ¥{{ form._price }}/{{ form.unit_name }}）</span>
+          <div>用量成本：<b style="color:#0071e3">¥{{ (form._price * form.num).toFixed(4) }}</b>
+            <span style="color:rgba(29,29,31,0.35)">（{{ form.num }} {{ form.unit_name }} × ¥{{ form._price }}/{{ form.unit_name }}）</span>
           </div>
         </div>
 
         <!-- 采购换算（折叠区，辅助计算单价） -->
         <el-divider content-position="left" style="margin:0 0 12px">
-          <span style="font-size:12px;color:#86909c;cursor:pointer" @click="showBuyCalc = !showBuyCalc">
+          <span style="font-size:12px;color:rgba(29,29,31,0.35);cursor:pointer" @click="showBuyCalc = !showBuyCalc">
             {{ showBuyCalc ? '▾' : '▸' }} 采购换算（可选，帮你算单价）
           </span>
         </el-divider>
@@ -891,7 +891,7 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
   width: 240px;
   flex-shrink: 0;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e4e7ed;
   display: flex;
   flex-direction: column;
@@ -903,12 +903,12 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   flex-shrink: 0;
 }
 
-.panel-title { font-size: 14px; font-weight: 600; color: #1d2129; }
-.hint-text { font-size: 13px; color: #86909c; }
+.panel-title { font-size: 14px; font-weight: 600; color: #1d1d1f; }
+.hint-text { font-size: 13px; color: rgba(29,29,31,0.35); }
 
 .panel-search { padding: 8px 10px; flex-shrink: 0; }
 
@@ -924,15 +924,15 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
 }
 .goods-item:hover { background: #f5f7ff; }
 .goods-item:hover .goods-del { opacity: 1; }
-.goods-item.active { background: #e8f0fe; }
+.goods-item.active { background: rgba(0,113,227,0.08); }
 
 .goods-item-info { flex: 1; overflow: hidden; }
-.goods-name { font-size: 13px; color: #1d2129; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.goods-sn { font-size: 11px; color: #86909c; margin-top: 2px; }
+.goods-name { font-size: 13px; color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goods-sn { font-size: 11px; color: rgba(29,29,31,0.35); margin-top: 2px; }
 
 .goods-del {
   opacity: 0;
-  color: #f53f3f;
+  color: #dc2626;
   font-size: 14px;
   flex-shrink: 0;
   margin-left: 6px;
@@ -942,8 +942,8 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
 
 .goods-count {
   font-size: 11px;
-  color: #165dff;
-  background: #e8f0fe;
+  color: #0071e3;
+  background: rgba(0,113,227,0.08);
   border-radius: 3px;
   padding: 0 4px;
   flex-shrink: 0;
@@ -951,12 +951,12 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
   white-space: nowrap;
 }
 
-.empty-tip { text-align: center; color: #86909c; font-size: 13px; padding: 32px 12px; }
+.empty-tip { text-align: center; color: rgba(29,29,31,0.35); font-size: 13px; padding: 32px 12px; }
 
 .bom-panel {
   flex: 1;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e4e7ed;
   display: flex;
   flex-direction: column;
@@ -968,7 +968,7 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
 }
 
 .bom-table-wrap { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -987,9 +987,9 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
   margin-top: 8px;
   padding: 6px 12px;
   background: #e8f3ff;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 13px;
-  color: #165dff;
+  color: #0071e3;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1002,13 +1002,13 @@ onMounted(() => { loadGoodsList(); loadUnitOptions() })
   align-items: center;
   padding: 10px 16px;
   background: #f5f7fa;
-  border-radius: 6px;
+  border-radius: 10px;
   gap: 8px;
 }
-.cost-label { font-size: 14px; color: #4e5969; font-weight: 500; }
-.cost-count { font-size: 16px; font-weight: 700; color: #165dff; }
-.cost-divider { color: #c9cdd4; margin: 0 4px; }
-.cost-value { font-size: 20px; font-weight: 700; color: #f53f3f; }
+.cost-label { font-size: 14px; color: rgba(29,29,31,0.5); font-weight: 500; }
+.cost-count { font-size: 16px; font-weight: 700; color: #0071e3; }
+.cost-divider { color: rgba(29,29,31,0.2); margin: 0 4px; }
+.cost-value { font-size: 20px; font-weight: 700; color: #dc2626; }
 
 .no-selection {
   height: 100%;

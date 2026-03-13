@@ -112,7 +112,7 @@
             <label class="field-label">预付款抵扣</label>
             <el-input-number v-model="fd.prepay_deduct" :min="0" :precision="2" :controls="false" style="width:100%">
               <template #suffix>
-                <span style="font-size:11px;color:#f53f3f">注意: 多收的金额将会自动转为供应商预付款</span>
+                <span style="font-size:11px;color:#dc2626">注意: 多收的金额将会自动转为供应商预付款</span>
               </template>
             </el-input-number>
           </div>
@@ -363,14 +363,14 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
   margin-bottom: 16px;
 }
 
 .page-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
 }
 
 .header-actions {
@@ -382,7 +382,7 @@ onMounted(async () => {
   background: #fff;
   margin: 0 0 16px;
   padding: 20px 24px;
-  border-radius: 6px;
+  border-radius: 10px;
 }
 
 .info-row {
@@ -397,34 +397,34 @@ onMounted(async () => {
 
 .field-wrap.required .field-label::before {
   content: '* ';
-  color: #f53f3f;
+  color: #dc2626;
 }
 
 .field-label {
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   font-weight: 500;
 }
 
 .readonly-input :deep(.el-input__inner) {
-  background: #f7f8fa;
-  color: #1d2129;
+  background: #f5f5f7;
+  color: #1d1d1f;
   font-weight: 600;
 }
 
 .section-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
   padding: 6px 0 10px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   margin-bottom: 10px;
 }
 
 /* 付款行表格 */
 .pay-lines-table {
-  border: 1px solid #e8e8e8;
-  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 10px;
   overflow: hidden;
 }
 
@@ -435,7 +435,7 @@ onMounted(async () => {
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 600;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   align-items: center;
   gap: 12px;
 }
@@ -444,7 +444,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 40px 1fr 320px 40px;
   padding: 8px 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid rgba(0,0,0,0.05);
   align-items: center;
   gap: 12px;
 }
@@ -452,7 +452,7 @@ onMounted(async () => {
 .line-index {
   text-align: center;
   font-size: 13px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
 }
 
 .col-account { flex: 1; }
@@ -462,7 +462,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 40px 1fr 320px 40px;
   padding: 10px 12px;
-  border-top: 1px solid #e8e8e8;
+  border-top: 1px solid rgba(0,0,0,0.06);
   background: #fafafa;
   font-size: 13px;
   font-weight: 600;
@@ -472,6 +472,6 @@ onMounted(async () => {
 .total-amount {
   font-size: 15px;
   font-weight: 700;
-  color: #1d2129;
+  color: #1d1d1f;
 }
 </style>

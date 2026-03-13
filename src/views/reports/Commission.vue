@@ -37,7 +37,7 @@
         <el-table-column prop="orderCount" label="合同数" width="90" align="center" />
         <el-table-column label="销售金额" width="130" align="right">
           <template #default="{ row }">
-            <span style="color:#165dff;font-weight:500">¥{{ row.saleAmount.toFixed(2) }}</span>
+            <span style="color:#0071e3;font-weight:500">¥{{ row.saleAmount.toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="提成比例" width="100" align="center">
@@ -47,21 +47,21 @@
         </el-table-column>
         <el-table-column label="提成金额" width="130" align="right">
           <template #default="{ row }">
-            <span style="color:#00b42a;font-weight:600">¥{{ row.commissionAmount.toFixed(2) }}</span>
+            <span style="color:#16a34a;font-weight:600">¥{{ row.commissionAmount.toFixed(2) }}</span>
           </template>
         </el-table-column>
       </el-table>
 
       <div v-if="reportRows.length === 0 && !loading"
-        style="text-align:center;color:#86909c;padding:40px 0;font-size:14px">
+        style="text-align:center;color:rgba(29,29,31,0.35);padding:40px 0;font-size:14px">
         暂无提成数据。请先在「提成设置」中配置员工提成比例，并在销售合同中选择经办人。
       </div>
 
       <!-- 汇总行 -->
       <div v-if="reportRows.length > 0" class="summary-bar">
         <span>共 <b>{{ reportRows.length }}</b> 名员工</span>
-        <span>总销售额：<b style="color:#165dff">¥{{ totalSale.toFixed(2) }}</b></span>
-        <span>总提成：<b style="color:#00b42a">¥{{ totalCommission.toFixed(2) }}</b></span>
+        <span>总销售额：<b style="color:#0071e3">¥{{ totalSale.toFixed(2) }}</b></span>
+        <span>总提成：<b style="color:#16a34a">¥{{ totalCommission.toFixed(2) }}</b></span>
       </div>
     </el-card>
   </div>
@@ -163,6 +163,6 @@ function onReset() {
   gap: 32px;
   padding: 12px 4px 4px;
   font-size: 14px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
 }
 </style>

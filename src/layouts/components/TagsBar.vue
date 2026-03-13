@@ -17,9 +17,9 @@
         @contextmenu.prevent="showContextMenu($event, tab.path)"
       >
         {{ tab.title }}
-        <el-icon class="tag-close" @click.stop="tabsStore.closeTab(tab.path)">
-          <Close />
-        </el-icon>
+        <span class="tag-close" @click.stop="tabsStore.closeTab(tab.path)">
+          <el-icon><Close /></el-icon>
+        </span>
       </div>
     </div>
   </div>
@@ -63,20 +63,22 @@ function closeOther() {
 
 <style scoped>
 .tags-bar {
-  height: 36px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 0 8px;
+  padding: 0 14px;
   overflow: hidden;
 }
 
 .tags-wrap {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   overflow-x: auto;
   height: 100%;
   scrollbar-width: none;
@@ -89,61 +91,71 @@ function closeOther() {
 .tag-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
+  gap: 5px;
+  padding: 4px 12px;
   font-size: 12px;
-  color: #4e5969;
-  background: #f2f3f5;
-  border-radius: 4px;
+  font-weight: 500;
+  color: rgba(29, 29, 31, 0.45);
+  background: transparent;
+  border-radius: 20px;
   cursor: pointer;
   white-space: nowrap;
   border: 1px solid transparent;
-  transition: all 0.15s;
+  transition: all 0.15s cubic-bezier(0.23, 1, 0.32, 1);
   flex-shrink: 0;
+  letter-spacing: -0.01em;
 }
 
 .tag-item:hover {
-  color: #165dff;
-  background: #e8f0fe;
+  background: #f5f5f7;
+  color: #1d1d1f;
 }
 
 .tag-item.active {
-  color: #165dff;
-  background: #e8f0fe;
-  border-color: #165dff;
+  background: #ffffff;
+  color: #0071e3;
+  border-color: rgba(0, 113, 227, 0.15);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
 }
 
 .tag-close {
+  display: flex;
+  align-items: center;
   font-size: 10px;
-  opacity: 0.6;
-  transition: opacity 0.15s;
+  opacity: 0.4;
+  transition: opacity 0.15s, color 0.15s;
+  line-height: 1;
 }
 
 .tag-close:hover {
   opacity: 1;
-  color: #f53f3f;
+  color: #ff3b30;
 }
 
 .context-menu {
   position: fixed;
   z-index: 9999;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  padding: 4px 0;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  padding: 5px;
   min-width: 120px;
 }
 
 .ctx-item {
-  padding: 8px 16px;
+  padding: 8px 14px;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  color: #1d2129;
+  color: rgba(29, 29, 31, 0.7);
+  border-radius: 8px;
+  transition: background 0.12s;
 }
 
 .ctx-item:hover {
-  background: #f2f3f5;
-  color: #165dff;
+  background: #f5f5f7;
+  color: #1d1d1f;
 }
 </style>

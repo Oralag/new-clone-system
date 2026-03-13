@@ -3,20 +3,20 @@
     <el-row :gutter="12" style="margin-bottom:16px">
       <el-col :xs="24" :sm="8">
         <el-card shadow="never" style="text-align:center">
-          <div style="font-size:12px;color:#86909c;margin-bottom:4px">今日总销售额</div>
-          <div style="font-size:24px;font-weight:700;color:#165dff">¥{{ totalAmount.toFixed(2) }}</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">今日总销售额</div>
+          <div style="font-size:24px;font-weight:700;color:#0071e3">¥{{ totalAmount.toFixed(2) }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="8">
         <el-card shadow="never" style="text-align:center">
-          <div style="font-size:12px;color:#86909c;margin-bottom:4px">销售出库金额</div>
-          <div style="font-size:22px;font-weight:700;color:#00b42a">¥{{ saleAmount.toFixed(2) }}</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">销售出库金额</div>
+          <div style="font-size:22px;font-weight:700;color:#16a34a">¥{{ saleAmount.toFixed(2) }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="8">
         <el-card shadow="never" style="text-align:center">
-          <div style="font-size:12px;color:#86909c;margin-bottom:4px">零售订单金额</div>
-          <div style="font-size:22px;font-weight:700;color:#ff7d00">¥{{ retailAmount.toFixed(2) }}</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">零售订单金额</div>
+          <div style="font-size:22px;font-weight:700;color:#ea580c">¥{{ retailAmount.toFixed(2) }}</div>
         </el-card>
       </el-col>
     </el-row>
@@ -30,7 +30,7 @@
             <el-table-column prop="customer_name" label="客户" min-width="110" />
             <el-table-column label="出库金额" width="120" align="right">
               <template #default="{ row }">
-                <span style="color:#165dff;font-weight:600">¥{{ Number(row.total_amount||0).toFixed(2) }}</span>
+                <span style="color:#0071e3;font-weight:600">¥{{ Number(row.total_amount||0).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="out_date" label="日期" width="100" />
@@ -40,8 +40,8 @@
               </template>
             </el-table-column>
           </el-table>
-          <div style="margin-top:8px;text-align:right;font-size:13px;color:#4e5969">
-            合计 <b style="color:#165dff">¥{{ saleAmount.toFixed(2) }}</b>
+          <div style="margin-top:8px;text-align:right;font-size:13px;color:rgba(29,29,31,0.5)">
+            合计 <b style="color:#0071e3">¥{{ saleAmount.toFixed(2) }}</b>
           </div>
         </el-tab-pane>
 
@@ -52,14 +52,14 @@
             <el-table-column prop="member_name" label="会员" min-width="110" />
             <el-table-column label="实付金额" width="120" align="right">
               <template #default="{ row }">
-                <span style="color:#165dff;font-weight:600">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
+                <span style="color:#0071e3;font-weight:600">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="pay_method" label="支付方式" width="100" align="center" />
             <el-table-column prop="order_date" label="日期" width="100" />
           </el-table>
-          <div style="margin-top:8px;text-align:right;font-size:13px;color:#4e5969">
-            实付合计 <b style="color:#165dff">¥{{ retailAmount.toFixed(2) }}</b>
+          <div style="margin-top:8px;text-align:right;font-size:13px;color:rgba(29,29,31,0.5)">
+            实付合计 <b style="color:#0071e3">¥{{ retailAmount.toFixed(2) }}</b>
           </div>
         </el-tab-pane>
       </el-tabs>

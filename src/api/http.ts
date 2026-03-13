@@ -9,37 +9,35 @@ const http = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Request interceptor — attach token
+// Upgrade dialog trigger — set by TrialBanner component
+export const trialUpgradeTrigger = { show: () => {} }
+
 http.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(TOKEN_NAME)
-    if (token) {
-      config.headers['token'] = token
-    }
+    if (token) config.headers['token'] = token
     return config
   },
   (error) => Promise.reject(error),
 )
 
-// Response interceptor — handle code -1 / 0
 http.interceptors.response.use(
   (response) => {
     const res = response.data
-    if (res.code === 1) {
-      return res
-    }
+    if (res.code === 1) return res
     if (res.code === -1) {
-      // Unauthorised — clear token and redirect
       localStorage.removeItem(TOKEN_NAME)
       ElMessageBox.alert('登录已过期，请重新登录', '提示', {
         confirmButtonText: '确定',
-        callback: () => {
-          router.push('/login')
-        },
+        callback: () => router.push('/login'),
       })
       return Promise.reject(new Error(res.message || '未授权'))
     }
-    // code === 0 — business error, show quietly only if message exists
+    // 体验版限制 — 弹升级引导而不是普通报错
+    if (res.message?.includes('体验版')) {
+      trialUpgradeTrigger.show()
+      return Promise.reject(new Error(res.message))
+    }
     if (res.message) {
       ElMessage({ message: res.message, type: 'error', duration: 2000, showClose: true })
     }
@@ -47,20 +45,14 @@ http.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status
-    // 404 = interface not implemented, 500 = server error — suppress noisy popups for background loads
-    // Only show errors for mutation requests (POST/PUT/DELETE) or explicit 401/403
     const method = error.config?.method?.toUpperCase()
     const isMutation = method === 'POST' || method === 'PUT' || method === 'DELETE'
     if (status === 401 || status === 403) {
       ElMessage.error('无访问权限，请重新登录')
     } else if (isMutation && status && status !== 404) {
-      const messages: Record<number, string> = {
-        400: '请求参数错误',
-        500: '服务器内部错误',
-      }
+      const messages: Record<number, string> = { 400: '请求参数错误', 500: '服务器内部错误' }
       ElMessage.error(messages[status] ?? '操作失败，请重试')
     }
-    // 404 and GET errors are silently ignored
     return Promise.reject(error)
   },
 )

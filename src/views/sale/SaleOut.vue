@@ -35,7 +35,7 @@
                   </el-table-column>
                   <el-table-column label="含税合计" width="110" align="right">
                     <template #default="{ row: item }">
-                      <span style="color:#165dff;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
+                      <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
                   <el-table-column prop="remark" label="备注" min-width="100" />
@@ -59,7 +59,7 @@
           </el-table-column>
           <el-table-column prop="total_amount" label="出库金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#165dff;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -69,7 +69,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="{ row }">
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
@@ -81,6 +81,8 @@
                 <el-button type="danger" link size="small" disabled>驳回</el-button>
               </el-tooltip>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="router.push('/finance/receivable')">查看应收</el-button>
+              <el-button v-if="row.status === 1" type="success" link size="small" @click="router.push('/warehouse/stock')">查看库存</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -276,7 +278,7 @@
             </el-table-column>
             <el-table-column label="税额" width="100" align="right">
               <template #default="{ row }">
-                <span style="color:#f53f3f">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
+                <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column width="130">
@@ -304,7 +306,7 @@
             </el-table-column>
             <el-table-column label="含税合计" width="110" align="right">
               <template #default="{ row }">
-                <span style="color:#165dff;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+                <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="批次" width="130">
@@ -382,12 +384,12 @@
           </div>
           <div class="settle-summary">
             <span>未税合计：<b>¥{{ totalNoTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">税额合计：<b style="color:#f53f3f">¥{{ totalTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">含税合计：<b style="color:#165dff;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">商品成本：<b style="color:#86909c">¥{{ totalCost.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">运费：<b style="color:#86909c">¥{{ freightCost.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">净利润：<b :style="{ color: netProfit >= 0 ? '#00b42a' : '#f53f3f', fontSize: '16px' }">¥{{ netProfit.toFixed(2) }}</b></span>
-            <span style="margin-left:12px">利润率：<b :style="{ color: profitRate >= 0 ? '#00b42a' : '#f53f3f' }">{{ profitRate.toFixed(1) }}%</b></span>
+            <span style="margin-left:24px">税额合计：<b style="color:#dc2626">¥{{ totalTax.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">含税合计：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">商品成本：<b style="color:rgba(29,29,31,0.35)">¥{{ totalCost.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">运费：<b style="color:rgba(29,29,31,0.35)">¥{{ freightCost.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">净利润：<b :style="{ color: netProfit >= 0 ? '#16a34a' : '#dc2626', fontSize: '16px' }">¥{{ netProfit.toFixed(2) }}</b></span>
+            <span style="margin-left:12px">利润率：<b :style="{ color: profitRate >= 0 ? '#16a34a' : '#dc2626' }">{{ profitRate.toFixed(1) }}%</b></span>
           </div>
         </div>
 
@@ -414,7 +416,7 @@
         <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
       </el-table>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
       </template>
@@ -495,6 +497,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -510,6 +513,7 @@ import StaffSelect from '@/components/StaffSelect.vue'
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
+const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
@@ -733,7 +737,7 @@ function handlePrint() {
       <th>#</th><th>商品名称</th><th>规格</th><th>批次</th><th>单位</th><th>数量</th><th>单价</th><th>小计</th>
     </tr></thead><tbody>${items}</tbody></table>
     <div class="total">
-      含税合计：<b style="color:#165dff">¥${fd.total_amount.toFixed(2)}</b>
+      含税合计：<b style="color:#0071e3">¥${fd.total_amount.toFixed(2)}</b>
       &emsp;净利润：<b class="profit">¥${netProfit.value.toFixed(2)}</b>
       &emsp;利润率：<b class="profit">${profitRate.value.toFixed(1)}%</b>
     </div>
@@ -792,8 +796,8 @@ async function handleAudit(row: any, status: number) {
   try {
     await auditSaleOut(row.id, status)
     ElMessage.success(`${action}成功`)
-    // 审核通过后自动创建收款单
-    if (status === 1) {
+    // 审核通过后自动创建收款单 + 扣减客户余额
+    if (status === 1 && row.customer_id) {
       try {
         await http.post('/finance/CollectReceipt/add', {
           saleout_id: row.id,
@@ -807,6 +811,28 @@ async function handleAudit(row: any, status: number) {
         ElMessage.success('已自动创建收款单')
       } catch {
         ElMessage.warning('审核成功，但自动生成收款单失败，请手动补录')
+      }
+      // 扣减客户余额
+      try {
+        const customerRes = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
+        const customer = customerRes.data
+        const currentBalance = Number(customer?.balance || 0)
+        const newBalance = currentBalance - Number(row.total_amount || 0)
+        await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: newBalance })
+      } catch {
+        ElMessage.warning('余额扣减失败，请手动更新客户余额')
+      }
+    }
+    // 反审核时还原客户余额
+    if (status === 0 && row.customer_id) {
+      try {
+        const customerRes = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
+        const customer = customerRes.data
+        const currentBalance = Number(customer?.balance || 0)
+        const newBalance = currentBalance + Number(row.total_amount || 0)
+        await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: newBalance })
+      } catch {
+        ElMessage.warning('余额还原失败，请手动更新客户余额')
       }
     }
     tableRef.value?.refresh()
@@ -1025,11 +1051,11 @@ async function submitAddFund() {
 .expand-title {
   font-size: 12px;
   font-weight: 600;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   margin-bottom: 8px;
 }
 .expand-table {
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -1051,7 +1077,7 @@ async function submitAddFund() {
   flex-shrink: 0;
 }
 
-.form-title { font-size: 15px; font-weight: 600; color: #1d2129; }
+.form-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
 .form-actions { display: flex; gap: 8px; }
 
 .form-body {
@@ -1065,7 +1091,7 @@ async function submitAddFund() {
 
 .form-section {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e4e7ed;
   padding: 16px 18px 14px;
 }
@@ -1073,10 +1099,10 @@ async function submitAddFund() {
 .sec-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
   margin-bottom: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   display: block;
 }
 
@@ -1098,7 +1124,7 @@ async function submitAddFund() {
 
 .goods-count {
   font-size: 13px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   flex-shrink: 0;
 }
 
@@ -1129,26 +1155,26 @@ async function submitAddFund() {
 
 .settle-label {
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   white-space: nowrap;
 }
 
 .settle-value {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
 }
 
 .settle-value.primary {
-  color: #165dff;
+  color: #0071e3;
   font-size: 16px;
 }
 
 .settle-summary {
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid #f5f5f7;
   padding-top: 12px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   display: flex;
   align-items: center;
 }

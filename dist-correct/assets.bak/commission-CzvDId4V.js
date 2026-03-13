@@ -1,0 +1,1 @@
+const s="erp_commission_rates";function a(){try{return JSON.parse(localStorage.getItem(s)||"[]")}catch{return[]}}function n(t){localStorage.setItem(s,JSON.stringify(t))}function r(t){return a().find(e=>e.staffId===t)?.rate??0}export{r as g,a as l,n as s};

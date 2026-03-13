@@ -19,4 +19,7 @@ app.use(createPinia())
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
 
+const savedTheme = localStorage.getItem('erp_theme') || 'light'
+document.documentElement.setAttribute('data-theme', savedTheme)
+
 app.mount('#app')

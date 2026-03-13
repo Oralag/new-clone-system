@@ -49,7 +49,7 @@
             <el-table-column prop="unit_name" label="单位" width="80" align="center" />
             <el-table-column label="系统销售价" width="110" align="right">
               <template #default="{ row }">
-                <span style="color:#86909c">¥{{ Number(row.sell_price || 0).toFixed(2) }}</span>
+                <span style="color:rgba(29,29,31,0.35)">¥{{ Number(row.sell_price || 0).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="折扣" width="200" align="center">
@@ -110,7 +110,7 @@
             style="width:100%"
             placeholder="如：90 表示九折"
           />
-          <div style="font-size:12px;color:#86909c;margin-top:4px">1~100，100 = 不打折，90 = 9折（出单时自动计算）</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-top:4px">1~100，100 = 不打折，90 = 9折（出单时自动计算）</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -138,7 +138,7 @@
         <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
       </el-table>
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
-        <span style="font-size:13px;color:#4e5969">已选 {{ pickerSelected.length }} 件，确认后在价格表里设置具体价格。</span>
+        <span style="font-size:13px;color:rgba(29,29,31,0.5)">已选 {{ pickerSelected.length }} 件，确认后在价格表里设置具体价格。</span>
       </div>
       <template #footer>
         <el-button @click="priceFormVisible = false">取消</el-button>
@@ -395,7 +395,7 @@ onMounted(async () => {
   flex-shrink: 0;
   background: #fff;
   border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -406,11 +406,11 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px 8px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   flex-shrink: 0;
 }
 
-.panel-title { font-size: 13px; font-weight: 600; color: #1d2129; }
+.panel-title { font-size: 13px; font-weight: 600; color: #1d1d1f; }
 
 .level-list { flex: 1; overflow-y: auto; }
 
@@ -421,27 +421,27 @@ onMounted(async () => {
   padding: 10px 12px;
   cursor: pointer;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   transition: background 0.12s;
 }
 .level-item:hover { background: #f5f7ff; }
 .level-item:hover .level-actions { opacity: 1; }
-.level-item.active { background: #e8f0fe; color: #165dff; font-weight: 500; }
+.level-item.active { background: rgba(0,113,227,0.08); color: #0071e3; font-weight: 500; }
 
 .level-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
-.level-discount { font-size: 11px; color: #ff7d00; background: #fff7e6; border-radius: 3px; padding: 0 4px; flex-shrink: 0; }
+.level-discount { font-size: 11px; color: #ea580c; background: #fff7e6; border-radius: 3px; padding: 0 4px; flex-shrink: 0; }
 .level-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.12s; flex-shrink: 0; }
-.act-icon { font-size: 13px; color: #86909c; cursor: pointer; padding: 2px; }
-.act-icon:hover { color: #165dff; }
-.act-icon.danger:hover { color: #f53f3f; }
-.panel-empty { text-align: center; color: #86909c; font-size: 12px; padding: 24px 8px; }
+.act-icon { font-size: 13px; color: rgba(29,29,31,0.35); cursor: pointer; padding: 2px; }
+.act-icon:hover { color: #0071e3; }
+.act-icon.danger:hover { color: #dc2626; }
+.panel-empty { text-align: center; color: rgba(29,29,31,0.35); font-size: 12px; padding: 24px 8px; }
 
 /* 右侧价格面板 */
 .price-panel {
   flex: 1;
   background: #fff;
   border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -454,13 +454,13 @@ onMounted(async () => {
   justify-content: space-between;
   margin-bottom: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   flex-shrink: 0;
 }
 
 .price-hint {
   font-size: 12px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
 }
 
 .price-search {

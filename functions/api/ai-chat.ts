@@ -1,0 +1,428 @@
+// Cloudflare Pages Function — /api/ai-chat
+// Mirrors the logic in src/server/viteAiPlugin.ts
+
+interface Env {
+  ANTHROPIC_API_KEY: string
+  ANTHROPIC_BASE_URL?: string
+}
+
+const ERP_BASE = 'https://erp-server-production-b1b6.up.railway.app/adminapi'
+
+async function erpGet(path: string, params: Record<string, any>, token: string) {
+  const url = new URL(ERP_BASE + path)
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
+  })
+  const res = await fetch(url.toString(), { headers: { token, 'Content-Type': 'application/json' } })
+  return res.json()
+}
+
+async function erpPost(path: string, body: Record<string, any>, token: string) {
+  const res = await fetch(ERP_BASE + path, {
+    method: 'POST',
+    headers: { token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return res.json()
+}
+
+async function executeTool(name: string, input: Record<string, any>, token: string): Promise<string> {
+  try {
+    let result: string
+    switch (name) {
+      case 'query_customers': {
+        const res: any = await erpGet('/shop/ShopCustomer/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
+        const rows = res?.data?.rows || []
+        result = `共 ${res?.data?.total || rows.length} 位客户。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 名称: r.nickname || r.name, 手机: r.mobile, 余额: r.balance })))}`
+        break
+      }
+      case 'query_suppliers': {
+        const res: any = await erpGet('/procure/supplier/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
+        const rows = res?.data?.rows || []
+        result = `共 ${res?.data?.total || rows.length} 家供应商。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 名称: r.name, 联系人: r.contact, 手机: r.mobile })))}`
+        break
+      }
+      case 'query_goods': {
+        const res: any = await erpGet('/goods/ShopGoods/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
+        const rows = res?.data?.rows || []
+        result = `共 ${res?.data?.total || rows.length} 种商品。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 商品名: r.goods_name, 编码: r.goods_sn, 售价: r.sell_price, 分类: r.cate_name })))}`
+        break
+      }
+      case 'query_inventory': {
+        const res: any = await erpGet('/stock/StockAll/index', { list_rows: 100, keyword: input.keyword }, token)
+        const rows = res?.data?.rows || []
+        const totalVal = rows.reduce((s: number, r: any) => s + Number(r.qty || 0) * Number(r.avg_price || 0), 0)
+        result = `共 ${rows.length} 种商品，库存总价值约 ¥${totalVal.toFixed(2)}。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ 商品: r.goods_name, 库存: r.qty, 单位: r.unit_name, 仓库: r.warehouse_name, 均价: r.avg_price })))}`
+        break
+      }
+      case 'query_sales': {
+        const params: any = { list_rows: input.limit || 20 }
+        if (input.start_date) params.start_time = input.start_date
+        if (input.end_date) params.end_time = input.end_date
+        if (input.customer) params.customer_name = input.customer
+        const [outRes, contractRes]: any[] = await Promise.all([
+          erpGet('/stock/SaleOutOrder/index', params, token),
+          erpGet('/shop/ContractOrder/index', params, token),
+        ])
+        const outRows = outRes?.data?.rows || []
+        const outTotal = outRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
+        const contractRows = contractRes?.data?.rows || []
+        const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
+        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售合同 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}`
+        break
+      }
+      case 'query_purchases': {
+        const params: any = { list_rows: input.limit || 20 }
+        if (input.start_date) params.start_time = input.start_date
+        if (input.end_date) params.end_time = input.end_date
+        if (input.supplier) params.supplier_name = input.supplier
+        const res: any = await erpGet('/stock/PurchaseOrder/index', params, token)
+        const rows = res?.data?.rows || []
+        const total = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
+        result = `共 ${rows.length} 条采购订单，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 10).map((r: any) => ({ 供应商: r.supplier_name, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
+        break
+      }
+      case 'query_finance': {
+        const typeMap: Record<string, string> = {
+          collect: '/finance/CollectReceipt/index',
+          pay: '/finance/PayReceipt/index',
+          receivable: '/finance/CollectAccounts/index',
+          payable: '/finance/PayAccounts/index',
+          fund: '/finance/Fund/index',
+          prepay: '/finance/Prepay/index',
+        }
+        const path = typeMap[input.type]
+        if (!path) { result = '未知财务类型'; break }
+        const res: any = await erpGet(path, { list_rows: input.limit || 50 }, token)
+        const rows = res?.data?.rows || []
+        result = `${input.type} 共 ${rows.length} 条：${JSON.stringify(rows.slice(0, 20))}`
+        break
+      }
+      case 'query_staff': {
+        const res: any = await erpGet('/personnel/staff/index', { list_rows: 100, keyword: input.keyword }, token)
+        const rows = res?.data?.rows || []
+        result = `共 ${res?.data?.total || rows.length} 名员工。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 姓名: r.name, 手机: r.mobile, 部门: r.dept, 职位: r.jobs })))}`
+        break
+      }
+      case 'query_warehouses': {
+        const res: any = await erpGet('/stock/WarehouseName/index', { list_rows: 50 }, token)
+        const rows = res?.data?.rows || []
+        result = `共 ${rows.length} 个仓库：${rows.map((r: any) => r.name).join('、')}`
+        break
+      }
+      case 'create_customer': {
+        const res: any = await erpPost('/shop/ShopCustomer/add', input, token)
+        result = res?.code === 1 ? `客户创建成功！ID: ${res?.data?.id || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_supplier': {
+        const res: any = await erpPost('/procure/supplier/add', input, token)
+        result = res?.code === 1 ? `供应商创建成功！ID: ${res?.data?.id || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_goods': {
+        const res: any = await erpPost('/goods/ShopGoods/add', input, token)
+        result = res?.code === 1 ? `商品创建成功！ID: ${res?.data?.id || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_sale_order': {
+        const res: any = await erpPost('/shop/ContractOrder/add', input, token)
+        result = res?.code === 1 ? `销售订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_procure_order': {
+        const res: any = await erpPost('/stock/PurchaseOrder/add', input, token)
+        result = res?.code === 1 ? `采购订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_collect_receipt': {
+        const res: any = await erpPost('/finance/CollectReceipt/add', input, token)
+        result = res?.code === 1 ? `收款单创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_pay_receipt': {
+        const res: any = await erpPost('/finance/PayReceipt/add', input, token)
+        result = res?.code === 1 ? `付款单创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_prepay': {
+        if (!input.pay_type) input.pay_type = input.customer_name ? 'customer' : 'supplier'
+        const res: any = await erpPost('/finance/Prepay/create', input, token)
+        result = res?.code === 1 ? `预付款创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_staff': {
+        const res: any = await erpPost('/personnel/staff/add', input, token)
+        result = res?.code === 1 ? `员工创建成功！ID: ${res?.data?.id || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_warehouse': {
+        const res: any = await erpPost('/stock/WarehouseName/add', input, token)
+        result = res?.code === 1 ? `仓库创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_fund_account': {
+        const res: any = await erpPost('/finance/Fund/add', input, token)
+        result = res?.code === 1 ? `资金账户创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'create_retail_order': {
+        // goods_info must be a JSON string of the items array
+        const items: any[] = input.items || []
+        const total_amount = items.reduce((s: number, i: any) => s + (Number(i.num) || 1) * (Number(i.price) || 0), 0)
+        const payload = {
+          order_date: input.order_date || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
+          pay_method: input.pay_method || 'cash',
+          remark: input.remark || '',
+          member_id: input.member_id || null,
+          member_name: input.member_name || '',
+          total_amount,
+          discount_amount: input.discount_amount || 0,
+          pay_amount: total_amount - (input.discount_amount || 0),
+          goods_info: JSON.stringify(items),
+        }
+        const res: any = await erpPost('/retail/order/add', payload, token)
+        result = res?.code === 1 ? `零售订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'navigate_to': {
+        result = `导航指令：${input.page}`
+        break
+      }
+      case 'update_customer': {
+        const res: any = await erpPost('/shop/ShopCustomer/edit', input, token)
+        result = res?.code === 1 ? `客户更新成功！` : `更新失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_customer': {
+        const res: any = await erpPost('/shop/ShopCustomer/del', { id: input.id }, token)
+        result = res?.code === 1 ? `客户已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'update_supplier': {
+        const res: any = await erpPost('/procure/supplier/edit', input, token)
+        result = res?.code === 1 ? `供应商更新成功！` : `更新失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_supplier': {
+        const res: any = await erpPost('/procure/supplier/del', { id: input.id }, token)
+        result = res?.code === 1 ? `供应商已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'update_goods': {
+        const res: any = await erpPost('/goods/ShopGoods/edit', input, token)
+        result = res?.code === 1 ? `商品更新成功！` : `更新失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_goods': {
+        const res: any = await erpPost('/goods/ShopGoods/del', { id: input.id }, token)
+        result = res?.code === 1 ? `商品已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_retail_order': {
+        const res: any = await erpPost('/retail/order/del', { id: input.id }, token)
+        result = res?.code === 1 ? `零售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      default:
+        result = `未知工具：${name}`
+    }
+    return result
+  } catch (e: any) {
+    return `工具执行出错：${e.message}`
+  }
+}
+
+function detectIntent(text: string): 'query' | 'create' | 'navigate' | 'general' {
+  if (/查询|查看|统计|汇总|多少|列表|有哪些|显示|告诉我|查一下/.test(text)) return 'query'
+  if (/新增|添加|录入|创建|增加|登记|提交|帮我加|卖了|卖出|销售了|零售|出售|卖掉|写错|录错|改一下|修改|纠正|删掉|删除/.test(text)) return 'create'
+  if (/跳转|去|打开|进入|导航|页面/.test(text)) return 'navigate'
+  return 'general'
+}
+
+function getSystemPrompt(intent: string): string {
+  const BASE = `你是数字游牧ERP系统的内置AI助手，运行在系统内部，可以直接调用工具操作ERP数据。绝对禁止说"我无法直接操作"、"需要您手动"等推脱性语句。回复简洁友好，中文。`
+  const CORRECTION_RULE = `
+【纠错规则——最高优先级】
+用户说"写错了"、"录错了"、"改一下"、"名字不对"等，必须：
+1. 先调用对应的 query 工具查找刚才录入的错误记录，获取其 ID
+2. 若只是名称/字段错误：直接调用 update_xxx 修改，不要新建
+3. 若需要彻底删除重建：先 delete_xxx 删除错误记录，再 create_xxx 创建正确的
+4. 严禁在不删除/修改错误记录的情况下直接新建，避免重复数据`
+
+  const prompts: Record<string, string> = {
+    query: `${BASE}\n当前任务：数据查询。调用合适的查询工具获取数据，用清晰格式展示给用户。`,
+    create: `${BASE}
+${CORRECTION_RULE}
+
+【零售场景规则】
+用户说"卖了一个XX"、"卖出XX"、"零售了XX"等，必须：
+1. 先调用 query_goods 搜索商品，看是否已存在
+2. 若商品不存在，调用 create_goods 创建商品（填入用户给的售价和成本价）
+3. 立即调用 create_retail_order 创建零售订单，items 中包含该商品（使用商品ID、名称、数量、售价）
+4. 两步都完成后，告知用户：商品已录入 + 零售单已创建
+
+调用 create_retail_order 时，items 字段示例：
+[{"goods_id": 123, "goods_name": "奶豆腐", "num": 1, "price": 20}]
+
+其他录入：调用合适的创建工具录入数据。缺少必填字段时先询问用户。`,
+    navigate: `${BASE}\n当前任务：页面导航。调用 navigate_to 工具跳转到用户指定页面。`,
+    general: `${BASE}
+${CORRECTION_RULE}
+根据用户需求选择合适的工具完成任务。遇到零售/卖出场景，参照：先查商品→不存在则建商品→出零售单。`,
+  }
+  return prompts[intent] || prompts.general
+}
+
+const allTools = [
+  { name: 'query_customers', description: '查询客户列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '搜索关键词' }, limit: { type: 'number', description: '返回条数' } } } },
+  { name: 'query_suppliers', description: '查询供应商列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '搜索关键词' }, limit: { type: 'number', description: '返回条数' } } } },
+  { name: 'query_goods', description: '查询商品列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '商品名称/编码' }, limit: { type: 'number', description: '返回条数' } } } },
+  { name: 'query_inventory', description: '查询库存数据', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '商品名称' }, warehouse: { type: 'string', description: '仓库名称' } } } },
+  { name: 'query_sales', description: '查询销售订单/出货单', input_schema: { type: 'object', properties: { start_date: { type: 'string' }, end_date: { type: 'string' }, customer: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'query_purchases', description: '查询采购订单', input_schema: { type: 'object', properties: { start_date: { type: 'string' }, end_date: { type: 'string' }, supplier: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'query_finance', description: '查询财务数据', input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['collect', 'pay', 'receivable', 'payable', 'fund', 'prepay'] }, limit: { type: 'number' } }, required: ['type'] } },
+  { name: 'query_staff', description: '查询员工列表', input_schema: { type: 'object', properties: { keyword: { type: 'string' } } } },
+  { name: 'query_warehouses', description: '查询仓库列表', input_schema: { type: 'object', properties: {} } },
+  { name: 'create_customer', description: '新增客户', input_schema: { type: 'object', properties: { name: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' }, remark: { type: 'string' } }, required: ['name'] } },
+  { name: 'create_supplier', description: '新增供应商', input_schema: { type: 'object', properties: { name: { type: 'string' }, contact: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' }, bank: { type: 'string' } }, required: ['name'] } },
+  { name: 'create_goods', description: '新增商品', input_schema: { type: 'object', properties: { goods_name: { type: 'string' }, goods_sn: { type: 'string' }, sell_price: { type: 'number' }, cost_price: { type: 'number' }, unit_name: { type: 'string' }, cate_name: { type: 'string' } }, required: ['goods_name'] } },
+  { name: 'create_sale_order', description: '新增销售合同/订单', input_schema: { type: 'object', properties: { customer_name: { type: 'string' }, total_amount: { type: 'number' }, remark: { type: 'string' } }, required: ['customer_name'] } },
+  { name: 'create_procure_order', description: '新增采购订单', input_schema: { type: 'object', properties: { supplier_name: { type: 'string' }, total_amount: { type: 'number' }, remark: { type: 'string' } }, required: ['supplier_name'] } },
+  { name: 'create_collect_receipt', description: '新增收款单', input_schema: { type: 'object', properties: { contact_name: { type: 'string' }, amount: { type: 'number' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, receipt_date: { type: 'string' }, remark: { type: 'string' } }, required: ['contact_name', 'amount'] } },
+  { name: 'create_pay_receipt', description: '新增付款单', input_schema: { type: 'object', properties: { contact_name: { type: 'string' }, amount: { type: 'number' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, pay_date: { type: 'string' }, remark: { type: 'string' } }, required: ['contact_name', 'amount'] } },
+  { name: 'create_prepay', description: '新增预付款', input_schema: { type: 'object', properties: { amount: { type: 'number' }, pay_type: { type: 'string', enum: ['supplier', 'customer'] }, supplier_name: { type: 'string' }, customer_name: { type: 'string' }, pay_date: { type: 'string' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, remark: { type: 'string' } }, required: ['amount'] } },
+  { name: 'create_staff', description: '新增员工', input_schema: { type: 'object', properties: { name: { type: 'string' }, mobile: { type: 'string' }, dept: { type: 'string' }, jobs: { type: 'string' } }, required: ['name'] } },
+  { name: 'create_warehouse', description: '新增仓库', input_schema: { type: 'object', properties: { name: { type: 'string' }, remark: { type: 'string' } }, required: ['name'] } },
+  { name: 'create_fund_account', description: '新增资金账户', input_schema: { type: 'object', properties: { name: { type: 'string' }, balance: { type: 'number' } }, required: ['name'] } },
+  { name: 'create_retail_order', description: '新增零售订单（现场零售、当面销售、卖出商品时使用）', input_schema: { type: 'object', properties: { items: { type: 'array', description: '商品明细列表', items: { type: 'object', properties: { goods_id: { type: 'number', description: '商品ID（必须先用query_goods查到）' }, goods_name: { type: 'string' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '售价' } }, required: ['goods_name', 'num', 'price'] } }, order_date: { type: 'string', description: '日期YYYY-MM-DD，默认今天' }, pay_method: { type: 'string', description: '支付方式: cash/wechat/alipay/card，默认cash' }, member_name: { type: 'string' }, remark: { type: 'string' } }, required: ['items'] } },
+  { name: 'update_customer', description: '修改客户信息（用于纠正录入错误）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '客户ID（必须先query_customers查到）' }, name: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' }, remark: { type: 'string' } }, required: ['id'] } },
+  { name: 'delete_customer', description: '删除客户（用于删除错误录入的客户）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '客户ID' } }, required: ['id'] } },
+  { name: 'update_supplier', description: '修改供应商信息（用于纠正录入错误）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '供应商ID（必须先query_suppliers查到）' }, name: { type: 'string' }, contact: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' } }, required: ['id'] } },
+  { name: 'delete_supplier', description: '删除供应商（用于删除错误录入的供应商）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '供应商ID' } }, required: ['id'] } },
+  { name: 'update_goods', description: '修改商品信息（用于纠正录入错误）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '商品ID（必须先query_goods查到）' }, goods_name: { type: 'string' }, sell_price: { type: 'number' }, cost_price: { type: 'number' }, unit_name: { type: 'string' } }, required: ['id'] } },
+  { name: 'delete_goods', description: '删除商品（用于删除错误录入的商品）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '商品ID' } }, required: ['id'] } },
+  { name: 'delete_retail_order', description: '删除零售订单（用于删除错误的零售单）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '零售订单ID' } }, required: ['id'] } },
+  { name: 'navigate_to', description: '跳转到ERP系统的指定页面', input_schema: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
+]
+
+export const onRequestOptions: PagesFunction = async () => {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-erp-token',
+    },
+  })
+}
+
+export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const apiKey = env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), { status: 500 })
+  }
+
+  const { messages, images } = await request.json() as any
+  const erpToken = request.headers.get('x-erp-token') || ''
+
+  const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+
+  const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
+  const intent = detectIntent(lastUserMsg?.content || '')
+  const systemPrompt = getSystemPrompt(intent)
+
+  // Build API messages
+  const apiMessages = messages.map((m: any, idx: number) => {
+    const isLastUser = m.role === 'user' && idx === messages.length - 1
+    if (isLastUser && images?.length > 0) {
+      const content: any[] = images.map((img: any) => ({
+        type: 'image',
+        source: { type: 'base64', media_type: img.mediaType, data: img.data },
+      }))
+      content.push({ type: 'text', text: m.content || '请识别这张单据图片并帮我录入系统。' })
+      return { role: 'user', content }
+    }
+    return { role: m.role, content: m.content }
+  })
+
+  const { readable, writable } = new TransformStream()
+  const writer = writable.getWriter()
+  const encoder = new TextEncoder()
+
+  const send = async (obj: object) => {
+    await writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
+  }
+
+  // Run agentic loop in background
+  ;(async () => {
+    try {
+      let loopMessages = [...apiMessages]
+
+      for (let i = 0; i < 5; i++) {
+        const anthropicRes = await fetch(`${baseURL}/v1/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 4096,
+            system: systemPrompt,
+            tools: allTools,
+            messages: loopMessages,
+          }),
+        })
+
+        if (!anthropicRes.ok) {
+          const err = await anthropicRes.text()
+          await send({ type: 'error', error: `API错误: ${err}` })
+          break
+        }
+
+        const data: any = await anthropicRes.json()
+
+        // Stream text blocks
+        for (const block of data.content || []) {
+          if (block.type === 'text' && block.text) {
+            await send({ type: 'text', text: block.text })
+          }
+        }
+
+        if (data.stop_reason !== 'tool_use') break
+
+        // Execute tool calls
+        const toolUseBlocks = (data.content || []).filter((b: any) => b.type === 'tool_use')
+        const toolResults: any[] = []
+
+        for (const toolUse of toolUseBlocks) {
+          await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
+          const result = await executeTool(toolUse.name, toolUse.input, erpToken)
+          await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
+          toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
+        }
+
+        loopMessages = [
+          ...loopMessages,
+          { role: 'assistant', content: data.content },
+          { role: 'user', content: toolResults },
+        ]
+      }
+
+      await writer.write(encoder.encode('data: [DONE]\n\n'))
+    } catch (e: any) {
+      await send({ type: 'error', error: e.message })
+    } finally {
+      await writer.close()
+    }
+  })()
+
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+    },
+  })
+}

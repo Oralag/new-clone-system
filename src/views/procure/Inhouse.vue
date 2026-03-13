@@ -10,12 +10,15 @@
           <template #search>
             <el-input v-model="searchForm.in_no" placeholder="入库单号" clearable style="width:160px" />
             <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />
+            <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:150px" />
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增入库单</el-button>
           </template>
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="in_no" label="入库单号" min-width="150" />
+          <el-table-column prop="in_no" label="入库单号" min-width="150">
+            <template #default="{ row }">{{ row.in_no || row.inhouse_no || '—' }}</template>
+          </el-table-column>
           <el-table-column label="供应商" min-width="130">
             <template #default="{ row }">{{ row.supplier_name || supplierOptions.find(s => s.id === row.supplier_id)?.name || '—' }}</template>
           </el-table-column>
@@ -23,14 +26,14 @@
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="入库日期" width="110">
-            <template #default="{ row }">{{ (row.in_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ (row.in_date || row.inhouse_date || row.create_time || '').slice(0, 10) }}</template>
           </el-table-column>
           <el-table-column label="经办人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="总金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#165dff;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -40,7 +43,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="{ row }">
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
@@ -49,6 +52,8 @@
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="router.push('/finance/payable')">查看应付</el-button>
+              <el-button v-if="row.status === 1" type="success" link size="small" @click="router.push('/warehouse/stock')">查看库存</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -231,7 +236,7 @@
             </el-table-column>
             <el-table-column label="税额" width="100" align="right">
               <template #default="{ row }">
-                <span style="color:#f53f3f">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
+                <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column width="130">
@@ -253,7 +258,7 @@
             </el-table-column>
             <el-table-column label="含税合计" width="110" align="right">
               <template #default="{ row }">
-                <span style="color:#165dff;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+                <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="备注" min-width="110">
@@ -307,8 +312,8 @@
           </div>
           <div class="settle-summary">
             <span>未税合计：<b>¥{{ totalNoTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">税额合计：<b style="color:#f53f3f">¥{{ totalTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">含税合计：<b style="color:#165dff;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">税额合计：<b style="color:#dc2626">¥{{ totalTax.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">含税合计：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
           </div>
         </div>
 
@@ -336,7 +341,7 @@
         <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
       </el-table>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
       </template>
@@ -417,12 +422,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureInhouseList, createProcureInhouse, deleteProcureInhouse, getSupplierList, createSupplier, auditProcureInhouse } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getStaffList } from '@/api/personnel'
 import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { getFundList, createFund } from '@/api/finance'
 import StaffSelect from '@/components/StaffSelect.vue'
@@ -431,15 +436,16 @@ import StaffSelect from '@/components/StaffSelect.vue'
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
+const route = useRoute()
+const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const searchForm = reactive<any>({ in_no: '', supplier_name: '' })
+const searchForm = reactive<any>({ in_no: '', supplier_name: '', goods_name: '' })
 const showForm = ref(false)
 const isReadonly = ref(false)
 
 // ── 供应商/仓库/分类选项 ──────────────────────────────────────────────────────
 const supplierOptions = ref<any[]>([])
 const warehouseOptions = ref<any[]>([])
-const staffOptions = ref<any[]>([])
 const cateOptions = ref<any[]>([])
 
 async function loadSuppliers() {
@@ -455,7 +461,12 @@ async function loadCates() {
   cateOptions.value = res.data?.rows ?? []
 }
 
-onMounted(() => { loadSuppliers(); loadWarehouses(); loadCates(); loadFunds() })
+onMounted(() => {
+  loadSuppliers(); loadWarehouses(); loadCates(); loadFunds()
+  if (route.query.goods_name) {
+    searchForm.goods_name = String(route.query.goods_name)
+  }
+})
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface InhouseItem {
@@ -843,7 +854,7 @@ async function submitAddFund() {
   flex-shrink: 0;
 }
 
-.form-title { font-size: 15px; font-weight: 600; color: #1d2129; }
+.form-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
 .form-actions { display: flex; gap: 8px; }
 
 .form-body {
@@ -857,7 +868,7 @@ async function submitAddFund() {
 
 .form-section {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e4e7ed;
   padding: 16px 18px 14px;
 }
@@ -865,10 +876,10 @@ async function submitAddFund() {
 .sec-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
   margin-bottom: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   display: block;
 }
 
@@ -889,7 +900,7 @@ async function submitAddFund() {
 
 .goods-count {
   font-size: 13px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   flex-shrink: 0;
 }
 
@@ -918,26 +929,26 @@ async function submitAddFund() {
 
 .settle-label {
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   white-space: nowrap;
 }
 
 .settle-value {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
 }
 
 .settle-value.primary {
-  color: #165dff;
+  color: #0071e3;
   font-size: 16px;
 }
 
 .settle-summary {
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid #f5f5f7;
   padding-top: 12px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   display: flex;
   align-items: center;
 }

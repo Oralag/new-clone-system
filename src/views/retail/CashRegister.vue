@@ -3,11 +3,35 @@
 
     <!-- ── 顶栏 ── -->
     <div class="cr-topbar">
+      <div class="cr-home-btn" @click="$router.push('/dashboard')" title="返回首页">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M6 15v-5h4v5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        </svg>
+        <span>返回首页</span>
+      </div>
       <div class="cr-brand">
-        <div class="cr-brand-icon">数</div>
+        <div class="cr-brand-icon">
+          <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="8" fill="url(#crbg)"/>
+            <text x="17" y="27" text-anchor="middle" font-family="'Helvetica Neue','Arial',sans-serif" font-size="26" font-weight="800" fill="#70C1F2">N</text>
+            <circle cx="27" cy="8" r="4" fill="#F19D38"/>
+            <defs>
+              <linearGradient id="crbg" x1="0" y1="0" x2="0" y2="36" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#1C2B48"/>
+                <stop offset="100%" stop-color="#1D3974"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
         <span class="cr-brand-name">数字游牧收银台</span>
       </div>
       <div class="cr-top-right">
+        <!-- 克重计算器按钮 -->
+        <div class="cr-calc-btn" @click="openWeightCalc()" title="散装计价">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg>
+          <span>克重计算</span>
+        </div>
         <el-select
           v-model="selectedMemberId"
           placeholder="会员登录"
@@ -23,11 +47,20 @@
         <div class="cr-search-box">
           <el-icon class="cr-search-icon"><Search /></el-icon>
           <input
+            ref="searchInputRef"
             v-model="keyword"
             class="cr-search-input"
             placeholder="请输入条码/商品首字母缩写"
             @input="onSearch"
+            @keydown.enter="onBarcodeEnter"
           />
+          <div class="cr-scan-icon" title="条形码扫描" @click="focusSearch">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/>
+              <rect x="3" y="16" width="5" height="5"/>
+              <path d="M16 16h2v2M16 19h2M19 16v2M16 22h2M19 19v2h2M22 16h-1M22 22h-2"/>
+            </svg>
+          </div>
         </div>
       </div>
     </div>
@@ -97,6 +130,11 @@
         <!-- 右：分类 + 商品 -->
         <div class="cr-right">
           <div class="cr-cate-bar">
+            <div class="cr-cate-tab" :class="{ active: activeCate === 'hot' }"
+              @click="activeCate = 'hot'; loadHotGoods()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:3px"><path d="M12 2c0 0-6 6-6 12a6 6 0 0012 0c0-6-6-12-6-12z"/></svg>
+              热销产品
+            </div>
             <div class="cr-cate-tab" :class="{ active: activeCate === '' }"
               @click="activeCate = ''; loadGoods()">全部分类</div>
             <div v-for="c in cateList" :key="c.id" class="cr-cate-tab"
@@ -107,7 +145,9 @@
           </div>
 
           <div class="cr-goods-grid" v-loading="goodsLoading">
-            <div v-for="g in goodsList" :key="g.id" class="cr-goods-card" @click="addToCart(g)">
+            <div v-for="g in goodsList" :key="g.id" class="cr-goods-card"
+              :class="{ selected: selectedGoods?.id === g.id }"
+              @click="selectGoods(g)">
               <div class="cr-goods-name">{{ g.goods_name }}</div>
               <div class="cr-goods-prices">
                 <span class="cr-goods-price">¥{{ Number(g.sell_price).toFixed(2) }}</span>
@@ -128,17 +168,73 @@
     <!-- 结算成功弹框 -->
     <el-dialog v-model="successVisible" title="结算成功" width="360px" align-center>
       <div style="text-align:center;padding:16px 0">
-        <el-icon style="font-size:56px;color:#00b42a"><CircleCheckFilled /></el-icon>
-        <div style="font-size:26px;font-weight:700;margin:14px 0 6px;color:#1d2129">
+        <el-icon style="font-size:56px;color:#16a34a"><CircleCheckFilled /></el-icon>
+        <div style="font-size:26px;font-weight:700;margin:14px 0 6px;color:#1d1d1f">
           ¥{{ lastPayAmount.toFixed(2) }}
         </div>
-        <div style="color:#86909c;font-size:13px">订单号：{{ lastOrderNo }}</div>
+        <div style="color:rgba(29,29,31,0.35);font-size:13px">订单号：{{ lastOrderNo }}</div>
       </div>
       <template #footer>
         <el-button type="primary" style="width:100%" @click="successVisible = false; clearCart()">
           继续收银
         </el-button>
       </template>
+    </el-dialog>
+
+    <!-- 克重计算器 -->
+    <el-dialog v-model="weightCalcVisible" title="散装克重计价" width="340px" align-center>
+      <div style="display:flex;flex-direction:column;gap:16px;padding:8px 0">
+        <!-- 当前商品信息 -->
+        <div v-if="wcGoodsName" style="background:#f8fafc;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;font-weight:600;color:#1e293b">{{ wcGoodsName }}</span>
+          <span style="font-size:13px;color:#2563eb;font-weight:700">¥{{ wcPricePerJin }}/斤</span>
+        </div>
+        <!-- 无商品时提示 -->
+        <div v-else style="font-size:12px;color:#94a3b8;text-align:center">
+          请从右侧商品列表选择散装产品
+        </div>
+        <!-- 模式切换 -->
+        <div style="display:flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+          <div @click="wcMode='weight'"
+            style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
+            :style="wcMode==='weight' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
+            输入克数
+          </div>
+          <div @click="wcMode='amount'"
+            style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
+            :style="wcMode==='amount' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
+            输入金额
+          </div>
+        </div>
+        <!-- 输入框 -->
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:64px;font-size:13px;color:#64748b;flex-shrink:0">
+            {{ wcMode === 'weight' ? '称重（克）' : '金额（元）' }}
+          </span>
+          <el-input-number v-if="wcMode==='weight'" v-model="wcWeightGrams"
+            :min="0" :precision="1" controls-position="right" style="flex:1" />
+          <el-input-number v-else v-model="wcTargetAmount"
+            :min="0" :precision="2" controls-position="right" style="flex:1" />
+        </div>
+        <!-- 结果展示 -->
+        <div style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
+          <template v-if="wcMode==='weight'">
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">应付金额</div>
+            <div style="font-size:28px;font-weight:700;color:#2563eb">¥{{ wcAmount.toFixed(2) }}</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:4px">{{ wcWeightGrams }}克 ÷ 500 × ¥{{ wcPricePerJin }}/斤</div>
+          </template>
+          <template v-else>
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">需要称重</div>
+            <div style="font-size:28px;font-weight:700;color:#059669">{{ wcReverseGrams.toFixed(1) }} 克</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:4px">¥{{ wcTargetAmount }} ÷ ¥{{ wcPricePerJin }}/斤 × 500</div>
+          </template>
+        </div>
+        <el-button type="primary"
+          :disabled="(wcMode==='weight' ? wcAmount : wcTargetAmount) <= 0 || !wcGoodsName"
+          @click="addWeightItemToCart" style="width:100%">
+          加入购物车
+        </el-button>
+      </div>
     </el-dialog>
 
   </div>
@@ -153,10 +249,18 @@ import { getMemberList, createRetailOrder } from '@/api/retail'
 
 // ── 商品 ──────────────────────────────────────────────────────────────────────
 const keyword = ref('')
-const activeCate = ref<any>('')
+const activeCate = ref<any>('hot')
 const goodsList = ref<any[]>([])
 const goodsLoading = ref(false)
+const selectedGoods = ref<any>(null)
+
+// 点击商品卡片：选中高亮，同时加入购物车
+function selectGoods(g: any) {
+  selectedGoods.value = g
+  addToCart(g)
+}
 const cateList = ref<any[]>([])
+const searchInputRef = ref<HTMLInputElement>()
 let searchTimer: any
 
 async function loadGoods() {
@@ -174,9 +278,50 @@ async function loadGoods() {
   }
 }
 
+// 热销产品：按销量或创建时间排序（取最新入库/常用商品）
+async function loadHotGoods() {
+  goodsLoading.value = true
+  try {
+    const res = await getGoodsList({ status: 1, list_rows: 30, sort: 'sell_count', order: 'desc' })
+    let rows: any[] = res.data?.rows ?? []
+    if (rows.length === 0) {
+      // Fallback: just get all products
+      const res2 = await getGoodsList({ status: 1, list_rows: 30 })
+      rows = res2.data?.rows ?? []
+    }
+    goodsList.value = rows
+  } finally {
+    goodsLoading.value = false
+  }
+}
+
 function onSearch() {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(loadGoods, 300)
+  searchTimer = setTimeout(() => {
+    if (activeCate.value === 'hot') activeCate.value = ''
+    loadGoods()
+  }, 300)
+}
+
+function focusSearch() {
+  searchInputRef.value?.focus()
+}
+
+// 条形码扫描：按回车键触发精准匹配
+function onBarcodeEnter() {
+  const code = keyword.value.trim()
+  if (!code) return
+  // Try exact barcode match from loaded goods
+  const match = goodsList.value.find(g => g.goods_sn === code || g.barcode === code)
+  if (match) {
+    addToCart(match)
+    keyword.value = ''
+    ElMessage.success(`已添加：${match.goods_name}`)
+    return
+  }
+  // Try search
+  clearTimeout(searchTimer)
+  loadGoods()
 }
 
 // ── 购物车 ────────────────────────────────────────────────────────────────────
@@ -274,8 +419,61 @@ async function handleCheckout() {
   }
 }
 
+// ── 克重计算器 ────────────────────────────────────────────────────────────────
+const weightCalcVisible = ref(false)
+const wcGoodsId = ref<any>(null)
+const wcGoodsName = ref('')
+const wcPricePerJin = ref(0)
+const wcMode = ref<'weight' | 'amount'>('weight')
+const wcWeightGrams = ref(0)    // 正向：输入克数
+const wcTargetAmount = ref(0)   // 反向：输入金额
+// 正向：克数 → 金额
+const wcAmount = computed(() => {
+  if (!wcPricePerJin.value || !wcWeightGrams.value) return 0
+  return (wcWeightGrams.value / 500) * wcPricePerJin.value
+})
+// 反向：金额 → 克数
+const wcReverseGrams = computed(() => {
+  if (!wcPricePerJin.value || !wcTargetAmount.value) return 0
+  return (wcTargetAmount.value / wcPricePerJin.value) * 500
+})
+
+function openWeightCalc(g?: any) {
+  const target = g ?? selectedGoods.value
+  wcGoodsId.value = target?.id ?? null
+  wcGoodsName.value = target?.goods_name ?? ''
+  wcPricePerJin.value = target ? Number(target.sell_price) || 0 : 0
+  wcMode.value = 'weight'
+  wcWeightGrams.value = 0
+  wcTargetAmount.value = 0
+  weightCalcVisible.value = true
+}
+
+function addWeightItemToCart() {
+  const finalAmount = wcMode.value === 'weight' ? wcAmount.value : wcTargetAmount.value
+  const finalGrams = wcMode.value === 'weight' ? wcWeightGrams.value : wcReverseGrams.value
+  if (finalAmount <= 0) return
+  const name = wcGoodsName.value || '散装商品'
+  cartItems.push({
+    goods_id: wcGoodsId.value ?? -1,
+    goods_name: `${name} ${finalGrams.toFixed(1)}g`,
+    goods_sn: '',
+    unit_name: 'g',
+    price: finalAmount,
+    num: 1,
+  })
+  calcTotal()
+  weightCalcVisible.value = false
+  wcGoodsId.value = null
+  wcGoodsName.value = ''
+  wcPricePerJin.value = 0
+  wcWeightGrams.value = 0
+  wcTargetAmount.value = 0
+  ElMessage.success('已加入购物车')
+}
+
 onMounted(async () => {
-  const [, mc] = await Promise.all([loadGoods(), getGoodsCateList({ list_rows: 200 })])
+  const [, mc] = await Promise.all([loadHotGoods(), getGoodsCateList({ list_rows: 200 })])
   cateList.value = mc.data?.rows ?? []
   const mr = await getMemberList({ list_rows: 500 })
   memberList.value = mr.data?.rows ?? []
@@ -283,11 +481,11 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ── Shell (全屏深色背景) ─────────────────────────────────────────────────── */
+/* ── Shell ────────────────────────────────────────────────────────────────── */
 .cr-shell {
   position: fixed;
   inset: 0;
-  background: #3e4770;
+  background: #f0f2f7;
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
@@ -299,293 +497,270 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: 0 16px 0 24px;
   flex-shrink: 0;
+  background: #fff;
+  border-bottom: 1px solid #e8eaf0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
 .cr-brand { display: flex; align-items: center; gap: 10px; }
 .cr-brand-icon {
   width: 32px; height: 32px;
-  background: #fff;
-  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 700; color: #3e4770;
 }
-.cr-brand-name { font-size: 16px; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
+.cr-brand-name { font-size: 15px; font-weight: 600; color: #1a1a2e; letter-spacing: 0.3px; }
 
-.cr-top-right { display: flex; align-items: center; gap: 12px; }
+/* 返回首页按钮 - left aligned in topbar */
+.cr-home-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  flex-shrink: 0;
+}
+.cr-home-btn:hover { background: #e2e8f0; color: #334155; }
+
+.cr-top-right { display: flex; align-items: center; gap: 10px; }
+
+.cr-calc-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 500; color: #7c3aed;
+  background: #f5f3ff; border: 1px solid #ddd6fe;
+  cursor: pointer; transition: all 0.12s; user-select: none; flex-shrink: 0;
+}
+.cr-calc-btn:hover { background: #ede9fe; }
+
+.cr-scan-icon {
+  color: #94a3b8; cursor: pointer; padding: 2px;
+  transition: color 0.12s; flex-shrink: 0;
+}
+.cr-scan-icon:hover { color: #3b82f6; }
 
 .cr-member-select { width: 180px; }
 :deep(.cr-member-select .el-input__wrapper) {
-  background: rgba(255,255,255,0.15);
-  border-color: rgba(255,255,255,0.25);
+  background: #f8fafc;
+  border-color: #e2e8f0;
   box-shadow: none;
 }
-:deep(.cr-member-select .el-input__inner) { color: #fff; }
-:deep(.cr-member-select .el-input__inner::placeholder) { color: rgba(255,255,255,0.6); }
 
 .cr-search-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.25);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 20px;
   padding: 0 14px;
   height: 34px;
   width: 280px;
+  transition: border-color 0.15s;
 }
-.cr-search-icon { color: rgba(255,255,255,0.7); font-size: 14px; flex-shrink: 0; }
+.cr-search-box:focus-within { border-color: #3b82f6; background: #fff; }
+.cr-search-icon { color: #94a3b8; font-size: 14px; flex-shrink: 0; }
 .cr-search-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #fff;
-  font-size: 13px;
+  flex: 1; background: transparent; border: none; outline: none;
+  color: #1e293b; font-size: 13px;
 }
-.cr-search-input::placeholder { color: rgba(255,255,255,0.55); }
+.cr-search-input::placeholder { color: #94a3b8; }
 
 /* ── 主体 ────────────────────────────────────────────────────────────────── */
 .cr-body {
   flex: 1;
   overflow: hidden;
-  padding: 0 28px 24px;
+  padding: 16px 20px 20px;
   display: flex;
 }
 
 .cr-card {
   flex: 1;
   background: #fff;
-  border-radius: 16px;
+  border-radius: 18px;
   overflow: hidden;
   display: flex;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  border: 1px solid #e8eaf0;
 }
 
 /* ── 左：购物车 ──────────────────────────────────────────────────────────── */
 .cr-left {
   width: 300px;
   flex-shrink: 0;
-  border-right: 1px solid #f0f0f0;
+  border-right: 1px solid #f0f2f7;
   display: flex;
   flex-direction: column;
+  background: #fafbff;
 }
 
 .cr-left-actions {
   display: flex;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f2f7;
   flex-shrink: 0;
 }
 
 .cr-action-btn {
-  flex: 1;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #555;
-  cursor: pointer;
-  transition: background 0.12s;
-  border-right: 1px solid #f0f0f0;
-  user-select: none;
+  flex: 1; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #64748b; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  border-right: 1px solid #f0f2f7; user-select: none;
 }
 .cr-action-btn:last-child { border-right: none; }
-.cr-action-btn:hover { background: #f5f5f5; }
-.cr-action-btn.danger { color: #f53f3f; }
+.cr-action-btn:hover { background: #f1f5f9; color: #1e293b; }
+.cr-action-btn.danger { color: #dc2626; }
 .cr-action-btn.danger:hover { background: #fff0f0; }
 
-.cr-cart-area {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
+.cr-cart-area { flex: 1; overflow-y: auto; padding: 8px; }
+.cr-cart-area::-webkit-scrollbar { width: 4px; }
+.cr-cart-area::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
 
 .cr-cart-empty {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: #bbb;
+  height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px; color: #cbd5e1;
 }
-.cr-empty-icon { font-size: 48px; opacity: 0.4; }
+.cr-empty-icon { font-size: 48px; opacity: 0.5; }
 .cr-empty-text { font-size: 13px; text-align: center; line-height: 1.6; padding: 0 20px; }
 
-.cr-cart-list { display: flex; flex-direction: column; gap: 4px; }
+.cr-cart-list { display: flex; flex-direction: column; gap: 6px; }
 
 .cr-cart-item {
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 8px 10px;
-  background: #fafafa;
+  border: 1px solid #e8eef8;
+  border-radius: 12px;
+  padding: 9px 10px;
+  background: #fff;
+  transition: box-shadow 0.15s;
 }
+.cr-cart-item:hover { box-shadow: 0 2px 8px rgba(59,130,246,0.08); }
 
 .cr-cart-item-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 6px;
 }
-.cr-cart-item-name { font-size: 13px; font-weight: 500; color: #1d2129; flex: 1; }
+.cr-cart-item-name { font-size: 13px; font-weight: 500; color: #1e293b; flex: 1; }
 
 .cr-cart-item-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
 }
 
 .cr-qty-ctrl { display: flex; align-items: center; gap: 4px; }
 .cr-qty-btn {
   width: 24px; height: 24px;
-  border: 1px solid #ddd;
-  border-radius: 50%;
-  background: #fff;
-  cursor: pointer;
-  font-size: 14px;
+  border: 1px solid #e2e8f0; border-radius: 50%;
+  background: #f8fafc; cursor: pointer; font-size: 14px;
   display: flex; align-items: center; justify-content: center;
-  color: #555;
-  transition: all 0.1s;
+  color: #64748b; transition: all 0.1s;
 }
-.cr-qty-btn:hover { border-color: #3e4770; color: #3e4770; }
+.cr-qty-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
 
-.cr-cart-item-sub { font-size: 14px; font-weight: 600; color: #3e4770; }
+.cr-cart-item-sub { font-size: 14px; font-weight: 700; color: #2563eb; }
 
 /* ── 结算区 ──────────────────────────────────────────────────────────────── */
 .cr-settle {
   flex-shrink: 0;
-  border-top: 1px solid #f0f0f0;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  border-top: 1px solid #f0f2f7;
+  padding: 14px 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  background: #fff;
 }
 
 .cr-settle-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  color: #555;
+  display: flex; justify-content: space-between;
+  align-items: center; font-size: 13px; color: #64748b;
 }
+.cr-settle-row span:last-child { color: #1e293b; font-weight: 600; }
 
-.cr-pay-methods {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
+.cr-pay-methods { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .cr-pay-btn {
-  padding: 4px 12px;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  font-size: 12px;
-  color: #555;
-  cursor: pointer;
-  transition: all 0.12s;
-  user-select: none;
+  padding: 5px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px; font-size: 12px; color: #64748b;
+  background: #f8fafc; cursor: pointer; transition: all 0.12s; user-select: none;
 }
-.cr-pay-btn:hover { border-color: #3e4770; color: #3e4770; }
-.cr-pay-btn.active { background: #3e4770; border-color: #3e4770; color: #fff; }
+.cr-pay-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+.cr-pay-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
 
 .cr-checkout-btn {
-  width: 100%;
-  height: 46px;
-  background: #3e4770;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  letter-spacing: 1px;
+  width: 100%; height: 48px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff; border: none; border-radius: 14px;
+  font-size: 17px; font-weight: 700; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 1px;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.3);
 }
-.cr-checkout-btn:hover:not(:disabled) { background: #4e5a8a; }
-.cr-checkout-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cr-checkout-btn:hover:not(:disabled) { background: linear-gradient(135deg, #1d4ed8, #1e40af); box-shadow: 0 6px 20px rgba(37,99,235,0.4); }
+.cr-checkout-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── 右：分类 + 商品 ─────────────────────────────────────────────────────── */
 .cr-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
 }
 
 .cr-cate-bar {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 0 16px;
-  border-bottom: 1px solid #f0f0f0;
-  flex-shrink: 0;
-  overflow-x: auto;
+  display: flex; align-items: center; padding: 0 16px;
+  border-bottom: 1px solid #f0f2f7; flex-shrink: 0; overflow-x: auto;
+  background: #fafbff;
 }
 .cr-cate-bar::-webkit-scrollbar { height: 0; }
 
 .cr-cate-tab {
-  padding: 12px 16px;
-  font-size: 14px;
-  color: #666;
-  cursor: pointer;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  transition: all 0.12s;
-  user-select: none;
+  padding: 12px 16px; font-size: 14px; color: #94a3b8;
+  cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: all 0.12s; user-select: none;
 }
-.cr-cate-tab:hover { color: #3e4770; }
-.cr-cate-tab.active { color: #3e4770; border-bottom-color: #3e4770; font-weight: 600; }
+.cr-cate-tab:hover { color: #334155; }
+.cr-cate-tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
 
 .cr-goods-grid {
-  flex: 1;
-  overflow-y: auto;
+  flex: 1; overflow-y: auto;
   padding: 14px 12px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  align-content: start;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; align-content: start;
 }
+.cr-goods-grid::-webkit-scrollbar { width: 4px; }
+.cr-goods-grid::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
 
 .cr-goods-card {
-  border: 1px solid #ebebeb;
-  border-radius: 10px;
-  padding: 14px 12px 12px;
-  cursor: pointer;
-  background: #fff;
-  transition: all 0.15s;
-  user-select: none;
+  border: 1.5px solid #e8eef8;
+  border-radius: 14px; padding: 14px 12px 12px;
+  cursor: pointer; background: #fff;
+  transition: all 0.15s; user-select: none;
 }
 .cr-goods-card:hover {
-  border-color: #3e4770;
-  box-shadow: 0 2px 8px rgba(62,71,112,0.12);
-  transform: translateY(-1px);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.12);
+  transform: translateY(-2px);
 }
 .cr-goods-card:active { transform: scale(0.97); }
+.cr-goods-card.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.15);
+}
 
 .cr-goods-name {
-  font-size: 13px;
-  color: #1d2129;
-  line-height: 1.5;
-  margin-bottom: 10px;
-  font-weight: 500;
-  min-height: 38px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-size: 13px; color: #1e293b; line-height: 1.5; margin-bottom: 10px;
+  font-weight: 500; min-height: 38px;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
 }
 
 .cr-goods-prices { display: flex; flex-direction: column; gap: 2px; }
-.cr-goods-price { font-size: 15px; font-weight: 600; color: #333; }
-.cr-goods-member-price { font-size: 12px; color: #c48a2f; }
+.cr-goods-price { font-size: 15px; font-weight: 700; color: #1e293b; }
+.cr-goods-member-price { font-size: 11px; color: #d97706; font-weight: 500; }
 
 .cr-goods-empty {
-  grid-column: 1/-1;
-  text-align: center;
-  color: #bbb;
-  padding: 60px 0;
-  font-size: 14px;
+  grid-column: 1/-1; text-align: center;
+  color: #cbd5e1; padding: 60px 0; font-size: 14px;
 }
 </style>

@@ -4,6 +4,7 @@
     class="ai-trigger"
     :style="{ bottom: triggerBottom + 'px', right: triggerRight + 'px' }"
     @mousedown="onTriggerDragStart"
+    @touchstart.passive="onTriggerTouchStart"
     @click="onTriggerClick"
     :title="isOpen ? '关闭AI助手' : '打开AI助手'"
   >
@@ -21,7 +22,7 @@
       @click.stop
     >
       <!-- Header — drag handle -->
-      <div class="chat-header" @mousedown="onPanelDragStart">
+      <div class="chat-header" @mousedown="onPanelDragStart" @touchstart.passive="onPanelTouchStart">
         <div class="chat-header-info">
           <div class="chat-avatar">
             <el-icon :size="18"><Cpu /></el-icon>
@@ -55,6 +56,11 @@
               @click="sendQuickPrompt(p)"
             >{{ p }}</el-tag>
           </div>
+          <!-- BOM快速设置 -->
+          <div class="bom-quick-btn" @click="bomDialogVisible = true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            一键设置 BOM 物料清单
+          </div>
         </div>
 
         <div
@@ -86,6 +92,9 @@
               :status="tc.status"
             />
             <div class="message-content" v-html="renderMarkdown(msg.content)" />
+            <div v-if="msg.navRoute" class="message-nav-btn">
+              <el-button type="primary" size="small" @click="navigateTo(msg.navRoute!)">立即查看 →</el-button>
+            </div>
             <div class="message-time">{{ msg.time }}</div>
           </div>
         </div>
@@ -132,7 +141,7 @@
           <el-tooltip content="上传单据图片">
             <el-button :icon="Picture" circle size="small" plain @click="openImagePicker" :disabled="isLoading" />
           </el-tooltip>
-          <el-tooltip v-if="voiceSupported" :content="isRecording ? '松开停止' : '按住说话'">
+          <el-tooltip v-if="voiceSupported" :content="isRecording ? '点击停止' : '点击说话'">
             <el-button
               :icon="Microphone"
               circle
@@ -140,14 +149,11 @@
               :type="isRecording ? 'danger' : ''"
               :plain="!isRecording"
               :class="{ 'mic-active': isRecording }"
-              @mousedown.prevent="startVoice"
-              @mouseup="stopVoice"
-              @mouseleave="stopVoice"
-              @touchstart.prevent="startVoice"
-              @touchend="stopVoice"
+              @click.prevent="toggleVoice"
               :disabled="isLoading"
             />
           </el-tooltip>
+          <el-button v-if="isIOS" :icon="Microphone" circle size="small" plain @click="showIOSVoiceTip" :disabled="isLoading" />
           <input
             ref="fileInputRef"
             type="file"
@@ -173,14 +179,50 @@
   <transition name="fade">
     <div v-if="isOpen" class="ai-backdrop" @click="isOpen = false" />
   </transition>
+
+  <!-- BOM 快速设置弹框 -->
+  <el-dialog v-model="bomDialogVisible" title="一键设置 BOM 物料清单" width="500px" append-to-body>
+    <div style="margin-bottom:12px;font-size:13px;color:#64748b">
+      请选择成品和组成材料，系统将自动创建BOM清单。
+    </div>
+    <el-form label-width="80px">
+      <el-form-item label="成品">
+        <el-select v-model="bomFinished" placeholder="请选择成品" filterable style="width:100%"
+          @focus="loadBomGoods">
+          <el-option v-for="g in bomGoodsList" :key="g.id" :label="g.goods_name" :value="g.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="组成材料">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div v-for="(item, idx) in bomMaterials" :key="idx" style="display:flex;gap:8px;align-items:center">
+            <el-select v-model="item.goods_id" placeholder="选择材料" filterable style="flex:1">
+              <el-option v-for="g in bomGoodsList" :key="g.id" :label="g.goods_name" :value="g.id" />
+            </el-select>
+            <el-input-number v-model="item.num" :min="0.01" :precision="2" style="width:110px" placeholder="用量" />
+            <el-input v-model="item.unit_name" placeholder="单位" style="width:70px" />
+            <el-button type="danger" link :icon="Delete" @click="bomMaterials.splice(idx, 1)" />
+          </div>
+          <el-button type="primary" link @click="bomMaterials.push({ goods_id: null, num: 1, unit_name: '' })">
+            + 添加材料
+          </el-button>
+        </div>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="bomDialogVisible = false">取消</el-button>
+      <el-button type="primary" :loading="bomSaving" @click="submitBom">一键创建BOM</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 import http from '@/api/http'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
+import { getGoodsList, createBom } from '@/api/goods'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -188,6 +230,7 @@ interface Message {
   time: string
   images?: string[]
   toolCalls?: ToolCallState[]
+  navRoute?: string
 }
 
 interface PendingAction {
@@ -221,6 +264,7 @@ function saveHistory(msgs: Message[]) {
   } catch {}
 }
 
+const router = useRouter()
 const isOpen = ref(false)
 const unread = ref(0)
 const inputText = ref('')
@@ -259,6 +303,19 @@ function onTriggerDragStart(e: MouseEvent) {
   e.preventDefault()
 }
 
+function onTriggerTouchStart(e: TouchEvent) {
+  if (e.touches.length !== 1) return
+  isDragging = false
+  clickMoved = false
+  dragTarget = 'trigger'
+  startX = e.touches[0].clientX
+  startY = e.touches[0].clientY
+  startBottom = triggerBottom.value
+  startRight = triggerRight.value
+  window.addEventListener('touchmove', onTouchMove, { passive: false })
+  window.addEventListener('touchend', onTouchEnd)
+}
+
 function onPanelDragStart(e: MouseEvent) {
   // Don't drag if clicking a button inside header
   if ((e.target as HTMLElement).closest('button, .el-button')) return
@@ -272,6 +329,20 @@ function onPanelDragStart(e: MouseEvent) {
   window.addEventListener('mousemove', onDragMove)
   window.addEventListener('mouseup', onDragEnd)
   e.preventDefault()
+}
+
+function onPanelTouchStart(e: TouchEvent) {
+  if ((e.target as HTMLElement).closest('button, .el-button')) return
+  if (e.touches.length !== 1) return
+  isDragging = false
+  clickMoved = false
+  dragTarget = 'panel'
+  startX = e.touches[0].clientX
+  startY = e.touches[0].clientY
+  startBottom = triggerBottom.value
+  startRight = triggerRight.value
+  window.addEventListener('touchmove', onTouchMove, { passive: false })
+  window.addEventListener('touchend', onTouchEnd)
 }
 
 function onDragMove(e: MouseEvent) {
@@ -288,9 +359,30 @@ function onDragMove(e: MouseEvent) {
   triggerBottom.value = newBottom
 }
 
+function onTouchMove(e: TouchEvent) {
+  if (e.touches.length !== 1) return
+  const dx = e.touches[0].clientX - startX
+  const dy = e.touches[0].clientY - startY
+  if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+    isDragging = true
+    clickMoved = true
+    e.preventDefault() // prevent page scroll while dragging
+  }
+  if (!isDragging) return
+  const newRight = Math.max(8, Math.min(window.innerWidth - 80, startRight - dx))
+  const newBottom = Math.max(8, Math.min(window.innerHeight - 80, startBottom - dy))
+  triggerRight.value = newRight
+  triggerBottom.value = newBottom
+}
+
 function onDragEnd() {
   window.removeEventListener('mousemove', onDragMove)
   window.removeEventListener('mouseup', onDragEnd)
+}
+
+function onTouchEnd() {
+  window.removeEventListener('touchmove', onTouchMove)
+  window.removeEventListener('touchend', onTouchEnd)
 }
 
 function onTriggerClick() {
@@ -305,6 +397,52 @@ const quickPrompts = [
   '录入一条采购订单',
   '录入一笔预付款',
 ]
+
+// ── BOM 快速设置 ──────────────────────────────────────────────────────────────
+const bomDialogVisible = ref(false)
+const bomFinished = ref<any>(null)
+const bomMaterials = ref<{ goods_id: any; num: number; unit_name: string }[]>([
+  { goods_id: null, num: 1, unit_name: '' }
+])
+const bomGoodsList = ref<any[]>([])
+const bomSaving = ref(false)
+
+async function loadBomGoods() {
+  if (bomGoodsList.value.length > 0) return
+  try {
+    const res = await getGoodsList({ list_rows: 500, status: 1 })
+    bomGoodsList.value = res.data?.rows ?? []
+  } catch { /* ignore */ }
+}
+
+async function submitBom() {
+  if (!bomFinished.value) { ElMessage.warning('请选择成品'); return }
+  const validMaterials = bomMaterials.value.filter(m => m.goods_id && m.num > 0)
+  if (!validMaterials.length) { ElMessage.warning('请至少添加一种材料'); return }
+  bomSaving.value = true
+  try {
+    const finishedGoods = bomGoodsList.value.find(g => g.id === bomFinished.value)
+    for (const mat of validMaterials) {
+      const matGoods = bomGoodsList.value.find(g => g.id === mat.goods_id)
+      await createBom({
+        goods_id: bomFinished.value,
+        goods_name: finishedGoods?.goods_name || '',
+        material_id: mat.goods_id,
+        material_name: matGoods?.goods_name || '',
+        num: mat.num,
+        unit_name: mat.unit_name || matGoods?.unit_name || '',
+      })
+    }
+    ElMessage.success(`BOM 创建成功！${finishedGoods?.goods_name} 包含 ${validMaterials.length} 种材料`)
+    bomDialogVisible.value = false
+    bomFinished.value = null
+    bomMaterials.value = [{ goods_id: null, num: 1, unit_name: '' }]
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? 'BOM 创建失败')
+  } finally {
+    bomSaving.value = false
+  }
+}
 
 const SYSTEM_PROMPT = `你是数字游牧ERP系统的内置AI助手。你运行在该ERP系统内部，拥有直接调用系统API的能力，可以真实地录入、查询、汇总业务数据。
 
@@ -637,18 +775,19 @@ async function sendMessage() {
 
 async function executeAction() {
   if (!pendingAction.value) return
+  const actionType = pendingAction.value.type
   try {
-    const res = await http.post(pendingAction.value.apiPath, normalizeActionData(pendingAction.value.type, pendingAction.value.data))
+    const res = await http.post(pendingAction.value.apiPath, normalizeActionData(actionType, pendingAction.value.data))
     // http interceptor already unwraps code=1 responses; res = { code, data, message }
     const orderSn = res?.data?.order_sn || res?.data?.id
-    const extra = pendingAction.value.type === 'create_prepay'
-      ? `单号：${orderSn || '已生成'}，可在【财务→预付款】页面查看。`
-      : '请刷新对应页面查看最新数据。'
+    const navRoute = getListRoute(actionType)
+    const extra = orderSn ? `单号：${orderSn}。` : ''
     ElMessage.success('数据录入成功！')
     messages.value.push({
       role: 'assistant',
       content: `✅ 数据已成功录入系统！${extra}如需继续操作，请告诉我。`,
       time: getNow(),
+      navRoute,
     })
     pendingAction.value = null
   } catch (e: any) {
@@ -742,56 +881,79 @@ function getApiPath(type: string): string {
   return map[type] || '/unknown'
 }
 
-// ── Voice input (MediaRecorder → SiliconFlow Whisper) ────────────────────
-const isRecording = ref(false)
-const voiceSupported = ref(typeof window !== 'undefined' && !!navigator.mediaDevices?.getUserMedia)
-let mediaRecorder: MediaRecorder | null = null
-let audioChunks: Blob[] = []
-
-async function startVoice() {
-  if (isRecording.value) return
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    audioChunks = []
-    mediaRecorder = new MediaRecorder(stream)
-    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data) }
-    mediaRecorder.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop())
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
-      audioChunks = []
-      if (audioBlob.size < 1000) return
-      const prev = inputText.value
-      inputText.value = prev + '🎤 识别中...'
-      try {
-        const fd = new FormData()
-        fd.append('audio', audioBlob, 'audio.webm')
-        fd.append('model', 'FunAudioLLM/SenseVoiceSmall')
-        const res = await fetch('/api/transcribe', { method: 'POST', body: fd })
-        const json = await res.json() as any
-        if (json.error) throw new Error(json.error)
-        inputText.value = prev + (json.text || '')
-      } catch (e: any) {
-        inputText.value = prev
-        messages.value = [...messages.value, { role: 'assistant', content: `⚠️ 语音识别失败：${e.message}`, time: getNow() }]
-      }
-    }
-    mediaRecorder.start()
-    isRecording.value = true
-  } catch (e: any) {
-    inputText.value = e.name === 'NotAllowedError' ? '⚠️ 麦克风权限被拒绝' : `⚠️ 无法访问麦克风：${e.message}`
+function getListRoute(type: string): string {
+  const map: Record<string, string> = {
+    create_customer:       '/sale/client',
+    create_supplier:       '/procure/supplier',
+    create_goods:          '/goods/info',
+    create_goods_brand:    '/goods/brand',
+    create_goods_cate:     '/goods/cate',
+    create_goods_unit:     '/goods/unit',
+    create_staff:          '/personnel/staff',
+    create_warehouse:      '/warehouse/name',
+    create_sale_order:     '/sale/contract',
+    create_procure_order:  '/procure/order',
+    create_collect_receipt:'/finance/collect-receipt',
+    create_pay_receipt:    '/finance/pay-receipt',
+    create_prepay:         '/finance/prepay',
+    create_fund_account:   '/finance/fund',
+    create_retail_order:   '/retail/order',
   }
+  return map[type] || ''
+}
+
+function navigateTo(route: string) {
+  if (!route) return
+  router.push(route)
+  isOpen.value = false
+}
+
+
+// iOS Safari does not support SpeechRecognition — hide the button to avoid triggering Siri
+const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent)
+const SpeechRecognitionAPI = typeof window !== 'undefined' && !isIOS
+  ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+  : null
+const isRecording = ref(false)
+const voiceSupported = ref(!!SpeechRecognitionAPI)
+let recognition: any = null
+
+function startVoice() {
+  if (isRecording.value || !SpeechRecognitionAPI) return
+  recognition = new SpeechRecognitionAPI()
+  recognition.lang = 'zh-CN'
+  recognition.continuous = false
+  recognition.interimResults = false
+  recognition.onstart = () => { isRecording.value = true }
+  recognition.onresult = (e: any) => {
+    const text = Array.from(e.results as any[])
+      .map((r: any) => r[0].transcript)
+      .join('')
+    inputText.value = (inputText.value || '') + text
+  }
+  recognition.onerror = (e: any) => {
+    isRecording.value = false
+    if (e.error !== 'aborted') {
+      const msg = e.error === 'not-allowed' ? '⚠️ 麦克风权限被拒绝' : `⚠️ 语音识别失败：${e.error}`
+      messages.value = [...messages.value, { role: 'assistant', content: msg, time: getNow() }]
+    }
+  }
+  recognition.onend = () => { isRecording.value = false }
+  recognition.start()
 }
 
 function stopVoice() {
-  if (isRecording.value && mediaRecorder) {
-    mediaRecorder.stop()
-    isRecording.value = false
-  }
+  if (recognition) { recognition.stop(); recognition = null }
+  isRecording.value = false
 }
 
 function toggleVoice() {
   if (isRecording.value) stopVoice()
   else startVoice()
+}
+
+function showIOSVoiceTip() {
+  ElMessage.info('请点击输入框唤起键盘，再点击键盘右下角🎤语音键说话')
 }
 
 function openImagePicker() {
@@ -1021,6 +1183,24 @@ function renderMarkdown(text: string): string {
   color: #fff;
 }
 
+.bom-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #f5f3ff;
+  border: 1.5px solid #ddd6fe;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.bom-quick-btn:hover { background: #ede9fe; border-color: #c4b5fd; }
+
 .message-item {
   display: flex;
   gap: 8px;
@@ -1090,6 +1270,10 @@ function renderMarkdown(text: string): string {
   color: #c9cdd4;
   margin-top: 4px;
   padding: 0 2px;
+}
+
+.message-nav-btn {
+  margin-top: 8px;
 }
 
 .message-user .message-time {
@@ -1272,5 +1456,16 @@ function renderMarkdown(text: string): string {
 @keyframes mic-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(245, 63, 63, 0.4); }
   50% { box-shadow: 0 0 0 6px rgba(245, 63, 63, 0); }
+}
+
+/* Mobile: full-width panel */
+@media (max-width: 480px) {
+  .ai-chat-panel {
+    width: calc(100vw - 16px);
+    height: 70vh;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 90px !important;
+  }
 }
 </style>

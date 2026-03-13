@@ -76,14 +76,14 @@
             <el-table-column prop="bank" label="银行账户" min-width="160" show-overflow-tooltip />
             <el-table-column label="欠款" width="110" align="right">
               <template #default="{ row }">
-                <span :style="getDebtBalance(row.id) > 0 ? 'color:#f53f3f;font-weight:600' : ''">
+                <span :style="getDebtBalance(row.id) > 0 ? 'color:#dc2626;font-weight:600' : ''">
                   ¥{{ getDebtBalance(row.id).toFixed(2) }}
                 </span>
               </template>
             </el-table-column>
             <el-table-column label="累计采购" width="110" align="right">
               <template #default="{ row }">
-                <span style="color:#86909c">¥{{ getTotalPurchase(row.id).toFixed(2) }}</span>
+                <span style="color:rgba(29,29,31,0.35)">¥{{ getTotalPurchase(row.id).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right">
@@ -204,7 +204,7 @@
 
     <!-- 导入预览弹框 -->
     <el-dialog v-model="importDialogVisible" title="导入预览" width="70%" append-to-body>
-      <div style="margin-bottom:10px;font-size:13px;color:#86909c">共 {{ importPreviewData.length }} 条，确认后导入。</div>
+      <div style="margin-bottom:10px;font-size:13px;color:rgba(29,29,31,0.35)">共 {{ importPreviewData.length }} 条，确认后导入。</div>
       <el-table :data="importPreviewData.slice(0, 10)" border size="small" max-height="320">
         <el-table-column v-for="col in (importPreviewData[0] ? Object.keys(importPreviewData[0]) : [])" :key="col" :prop="col" :label="col" min-width="120" show-overflow-tooltip />
       </el-table>
@@ -221,7 +221,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Edit, Delete, Search, Refresh, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getSupplierList, createSupplier, updateSupplier, deleteSupplier } from '@/api/procure'
+import { getSupplierList, createSupplier, updateSupplier, deleteSupplier, getProcureOrderList } from '@/api/procure'
 import { getPayableList, getPayReceiptList } from '@/api/finance'
 import http from '@/api/http'
 import * as XLSX from 'xlsx'
@@ -230,49 +230,63 @@ import * as XLSX from 'xlsx'
 const CATE_KEY = 'erp_supplier_cates'
 const CATE_MAP_KEY = 'erp_supplier_cate_map'  // { supplierId: cateId }
 
-// ── 本地财务缓存（localStorage） ──────────────────────────────────────────────
-const SUPPLIER_FINANCE_KEY = 'erp_supplier_finance_map'
-function loadSupplierFinanceMap(): Record<number, { debtBalance: number; totalPurchase: number }> {
-  try { return JSON.parse(localStorage.getItem(SUPPLIER_FINANCE_KEY) || '{}') } catch { return {} }
-}
-function saveSupplierFinanceMap(map: Record<number, any>) {
-  localStorage.setItem(SUPPLIER_FINANCE_KEY, JSON.stringify(map))
-}
-const supplierFinanceMap = ref<Record<number, any>>(loadSupplierFinanceMap())
+// ── 实时财务数据：采购单 + 付款单 ─────────────────────────────────────────────
+const purchaseMap = ref<Record<number, number>>({})  // 累计采购
+const paidMap = ref<Record<number, number>>({})       // 累计付款
+const debtMap = ref<Record<number, number>>({})       // 欠款
+
 function getDebtBalance(supplierId: number): number {
-  return supplierFinanceMap.value[supplierId]?.debtBalance ?? 0
+  return debtMap.value[supplierId] ?? 0
 }
 function getTotalPurchase(supplierId: number): number {
-  return supplierFinanceMap.value[supplierId]?.totalPurchase ?? 0
+  return purchaseMap.value[supplierId] ?? 0
+}
+
+async function loadSupplierFinance() {
+  try {
+    const [orderRes, payRes] = await Promise.all([
+      getProcureOrderList({ list_rows: 2000 }),
+      getPayReceiptList({ list_rows: 2000 }),
+    ])
+    // 累计采购（已审核采购单）
+    const orders: any[] = orderRes.data?.rows ?? orderRes.data?.list ?? []
+    const pMap: Record<number, number> = {}
+    for (const o of orders) {
+      if (Number(o.status) !== 1) continue
+      const sid = Number(o.supplier_id)
+      if (sid) pMap[sid] = (pMap[sid] || 0) + Number(o.total_amount || 0)
+    }
+    purchaseMap.value = pMap
+    // 累计付款
+    const payments: any[] = payRes.data?.rows ?? payRes.data?.list ?? []
+    const pmMap: Record<number, number> = {}
+    for (const p of payments) {
+      const sid = Number(p.supplier_id)
+      if (sid) pmMap[sid] = (pmMap[sid] || 0) + Number(p.amount || 0)
+    }
+    paidMap.value = pmMap
+    // 欠款 = 采购 - 付款
+    const dMap: Record<number, number> = {}
+    const allIds = new Set([...Object.keys(pMap), ...Object.keys(pmMap)].map(Number))
+    for (const sid of allIds) {
+      dMap[sid] = Math.max(0, (pMap[sid] || 0) - (pmMap[sid] || 0))
+    }
+    debtMap.value = dMap
+  } catch { /* ignore */ }
 }
 
 // ── 财务信息（编辑弹框内） ────────────────────────────────────────────────────
 const financeLoading = ref(false)
 const financeInfo = reactive({ debtBalance: 0, totalPurchase: 0, totalPaid: 0, prepaid: 0 })
 
-async function loadFinanceInfo(supplierId: number, supplierName: string) {
+async function loadFinanceInfo(supplierId: number) {
   financeLoading.value = true
   try {
-    const [payableRes, receiptRes] = await Promise.all([
-      getPayableList({ supplier_name: supplierName, list_rows: 500 }),
-      getPayReceiptList({ supplier_name: supplierName, list_rows: 500 }),
-    ])
-    const payables: any[] = payableRes?.data?.rows ?? payableRes?.data?.list ?? []
-    const receipts: any[] = receiptRes?.data?.rows ?? receiptRes?.data?.list ?? []
-    const totalPurchase = payables.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
-    const totalPaid = receipts.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
-    const prepaid = Math.max(0, totalPaid - totalPurchase)
-    const debtBalance = Math.max(0, totalPurchase - totalPaid)
-    financeInfo.totalPurchase = totalPurchase
-    financeInfo.totalPaid = totalPaid
-    financeInfo.prepaid = prepaid
-    financeInfo.debtBalance = debtBalance
-    // 同步到列表缓存
-    const fMap = { ...supplierFinanceMap.value }
-    fMap[supplierId] = { debtBalance, totalPurchase }
-    supplierFinanceMap.value = fMap
-    saveSupplierFinanceMap(fMap)
-  } catch { /* 静默失败 */ } finally {
+    financeInfo.totalPurchase = purchaseMap.value[supplierId] ?? 0
+    financeInfo.totalPaid = paidMap.value[supplierId] ?? 0
+    financeInfo.prepaid = Math.max(0, financeInfo.totalPaid - financeInfo.totalPurchase)
+    financeInfo.debtBalance = Math.max(0, financeInfo.totalPurchase - financeInfo.totalPaid)
+  } finally {
     financeLoading.value = false
   }
 }
@@ -418,7 +432,7 @@ function openView(row: any) {
   Object.assign(formData, { id: 0, name: '', contact: '', mobile: '', cate_id: null, address: '', remark: '', ...row, cate_id: cateMap.value[row.id] ?? null })
   formVisible.value = true
   financeInfo.debtBalance = 0; financeInfo.totalPurchase = 0; financeInfo.totalPaid = 0; financeInfo.prepaid = 0
-  loadFinanceInfo(row.id, row.name)
+  loadFinanceInfo(row.id)
 }
 
 function openForm(row?: any) {
@@ -545,24 +559,27 @@ async function confirmImport() {
   loadData()
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await loadData()
+  loadSupplierFinance()
+})
 </script>
 
 <style scoped>
 .create-time-note { font-size: 11px; color: #c0c4cc; text-align: right; margin-bottom: 8px; }
-.finance-panel { margin-top: 16px; border-top: 1px solid #f2f3f5; padding-top: 12px; }
-.finance-title { font-size: 13px; font-weight: 600; color: #1d2129; margin-bottom: 10px; }
+.finance-panel { margin-top: 16px; border-top: 1px solid #f5f5f7; padding-top: 12px; }
+.finance-title { font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 10px; }
 .finance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.finance-item { background: #f5f7fa; border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
-.fi-label { font-size: 12px; color: #86909c; }
-.fi-value { font-size: 14px; font-weight: 600; color: #1d2129; }
-.fi-value.green { color: #00b42a; }
-.fi-value.red { color: #f53f3f; }
-.fi-value.orange { color: #ff7d00; }
+.finance-item { background: #f5f7fa; border-radius: 10px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+.fi-label { font-size: 12px; color: rgba(29,29,31,0.35); }
+.fi-value { font-size: 14px; font-weight: 600; color: #1d1d1f; }
+.fi-value.green { color: #16a34a; }
+.fi-value.red { color: #dc2626; }
+.fi-value.orange { color: #ea580c; }
 .supplier-page { height: 100%; }
 .toolbar-left { display: flex; gap: 8px; align-items: center; }
 .toolbar-right { display: flex; gap: 4px; align-items: center; }
-.selected-bar { margin-bottom: 8px; padding: 6px 12px; background: #e8f3ff; border-radius: 4px; font-size: 13px; color: #165dff; display: flex; align-items: center; gap: 8px; }
+.selected-bar { margin-bottom: 8px; padding: 6px 12px; background: #e8f3ff; border-radius: 8px; font-size: 13px; color: #0071e3; display: flex; align-items: center; gap: 8px; }
 
 .list-layout {
   display: flex;
@@ -575,7 +592,7 @@ onMounted(loadData)
   flex-shrink: 0;
   background: #fff;
   border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -587,11 +604,11 @@ onMounted(loadData)
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px 8px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   flex-shrink: 0;
 }
 
-.cate-title { font-size: 13px; font-weight: 600; color: #1d2129; }
+.cate-title { font-size: 13px; font-weight: 600; color: #1d1d1f; }
 .cate-search { padding: 8px 10px; flex-shrink: 0; }
 .cate-tree { flex: 1; overflow-y: auto; }
 
@@ -601,20 +618,20 @@ onMounted(loadData)
   justify-content: space-between;
   padding: 8px 12px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   cursor: pointer;
   transition: background 0.12s;
 }
 .cate-item:hover { background: #f5f7ff; }
 .cate-item:hover .cate-item-actions { opacity: 1; }
-.cate-item.active { background: #e8f0fe; color: #165dff; font-weight: 500; }
+.cate-item.active { background: rgba(0,113,227,0.08); color: #0071e3; font-weight: 500; }
 
 .cate-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cate-item-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.12s; flex-shrink: 0; }
-.act-icon { font-size: 13px; color: #86909c; cursor: pointer; padding: 2px; }
-.act-icon:hover { color: #165dff; }
-.act-icon.danger:hover { color: #f53f3f; }
-.cate-empty { text-align: center; color: #86909c; font-size: 12px; padding: 20px 0; }
+.act-icon { font-size: 13px; color: rgba(29,29,31,0.35); cursor: pointer; padding: 2px; }
+.act-icon:hover { color: #0071e3; }
+.act-icon.danger:hover { color: #dc2626; }
+.cate-empty { text-align: center; color: rgba(29,29,31,0.35); font-size: 12px; padding: 20px 0; }
 
 .supplier-list-wrap { flex: 1; overflow: hidden; }
 
@@ -625,13 +642,13 @@ onMounted(loadData)
   .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
   .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
   .cate-tree::-webkit-scrollbar { display: none; }
-  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f2f3f5; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
-  .cate-item.active { background: #e8f0fe !important; color: #165dff !important; border-color: #c5d6ff !important; }
+  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f5f5f7; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
+  .cate-item.active { background: rgba(0,113,227,0.08) !important; color: #0071e3 !important; border-color: rgba(0,113,227,0.2) !important; }
   .cate-item-actions { display: none !important; }
   .supplier-list-wrap { overflow: visible !important; }
 }
 
-.sc-table { background: #fff; border-radius: 8px; padding: 16px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.sc-table { background: #fff; border-radius: 12px; padding: 16px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
 
 .sc-search {
   display: flex;
@@ -639,7 +656,7 @@ onMounted(loadData)
   flex-wrap: wrap;
   gap: 12px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   margin-bottom: 12px;
   flex-shrink: 0;
 }
@@ -657,8 +674,8 @@ onMounted(loadData)
   .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
   .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
   .cate-tree::-webkit-scrollbar { display: none; }
-  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f2f3f5; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
-  .cate-item.active { background: #e8f0fe !important; color: #165dff !important; border-color: #c5d6ff !important; }
+  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f5f5f7; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
+  .cate-item.active { background: rgba(0,113,227,0.08) !important; color: #0071e3 !important; border-color: rgba(0,113,227,0.2) !important; }
   .cate-item-actions { display: none !important; }
   .supplier-list-wrap { overflow: visible !important; }
 }

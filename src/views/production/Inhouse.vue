@@ -121,7 +121,7 @@
             <el-table-column prop="plan_num" label="生产数量" width="90" align="right" />
             <el-table-column label="可入库数量" width="100" align="right">
               <template #default="{ row }">
-                <span :style="{ color: (row.plan_num - row.already_in) > 0 ? '#00b42a' : '#f53f3f' }">
+                <span :style="{ color: (row.plan_num - row.already_in) > 0 ? '#16a34a' : '#dc2626' }">
                   {{ Math.max(0, (row.plan_num || 0) - (row.already_in || 0)).toFixed(2) }}
                 </span>
               </template>
@@ -179,7 +179,7 @@
             </el-table-column>
             <el-table-column label="总成本" width="110" align="right">
               <template #default="{ row }">
-                <b style="color:#165dff">{{ row.total_cost?.toFixed(2) ?? '0.00' }}</b>
+                <b style="color:#0071e3">{{ row.total_cost?.toFixed(2) ?? '0.00' }}</b>
               </template>
             </el-table-column>
             <el-table-column label="入库单价" width="120" align="right">
@@ -500,27 +500,27 @@ function resetSearch() {
 .form-page { display: flex; flex-direction: column; height: 100%; background: #f5f6fa; }
 .form-topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 20px; background: #fff; border-bottom: 1px solid #e8e8e8;
+  padding: 10px 20px; background: #fff; border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .form-topbar-left { display: flex; align-items: center; gap: 10px; }
-.form-title { font-size: 15px; font-weight: 600; color: #1d2129; }
+.form-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
 
 .form-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-.form-section { background: #fff; border-radius: 8px; padding: 16px 20px; }
+.form-section { background: #fff; border-radius: 12px; padding: 16px 20px; }
 
 /* 字段行 */
 .field-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.field-label { font-size: 13px; color: #4e5969; white-space: nowrap; width: 70px; flex-shrink: 0; }
-.field-label.required::before { content: '* '; color: #f53f3f; }
+.field-label { font-size: 13px; color: rgba(29,29,31,0.5); white-space: nowrap; width: 70px; flex-shrink: 0; }
+.field-label.required::before { content: '* '; color: #dc2626; }
 
 /* 商品清单 */
-.goods-section { background: #fff; border-radius: 8px; padding: 16px 20px; }
+.goods-section { background: #fff; border-radius: 12px; padding: 16px 20px; }
 .goods-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 12px; font-size: 13px; font-weight: 600; color: #1d2129;
+  margin-bottom: 12px; font-size: 13px; font-weight: 600; color: #1d1d1f;
 }
-.goods-summary { font-size: 13px; color: #4e5969; font-weight: normal; }
-.goods-summary b { color: #165dff; }
+.goods-summary { font-size: 13px; color: rgba(29,29,31,0.5); font-weight: normal; }
+.goods-summary b { color: #0071e3; }
 
-.remark-section { background: #fff; border-radius: 8px; padding: 16px 20px; }
+.remark-section { background: #fff; border-radius: 12px; padding: 16px 20px; }
 </style>

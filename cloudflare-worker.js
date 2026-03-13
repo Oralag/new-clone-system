@@ -15,6 +15,16 @@ export default {
       return handleAIChat(request, env)
     }
 
+    // ── Self-hosted register endpoint ──────────────────────────────────────
+    if (url.pathname === '/adminapi/login/register' && request.method === 'POST') {
+      return handleRegister(request, env)
+    }
+
+    // ── Self-hosted login: check local users first ──────────────────────────
+    if (url.pathname === '/adminapi/login/account' && request.method === 'POST') {
+      return handleLogin(request, env)
+    }
+
     // Proxy all other requests to backend
     const targetUrl = 'https://saas.mzth.cn' + url.pathname + url.search
     const headers = new Headers(request.headers)
@@ -45,6 +55,82 @@ function corsHeaders() {
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, token, Authorization',
   }
+}
+
+function jsonRes(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+  })
+}
+
+function makeToken(account) {
+  const payload = btoa(JSON.stringify({ account, t: Date.now() }))
+  return `local_${payload}`
+}
+
+async function handleRegister(request, env) {
+  let body
+  try { body = await request.json() } catch { return jsonRes({ code: 0, show: 1, message: '请求格式错误', data: [] }) }
+
+  const { company_name, mobile, password } = body
+  if (!company_name) return jsonRes({ code: 0, show: 1, message: '请输入公司名称', data: [] })
+  if (!mobile || !/^1[3-9]\d{9}$/.test(mobile)) return jsonRes({ code: 0, show: 1, message: '请输入有效手机号', data: [] })
+  if (!password || password.length < 6) return jsonRes({ code: 0, show: 1, message: '密码至少6位', data: [] })
+
+  // Use KV if available, else in-memory (dev preview)
+  const kv = env.USERS_KV
+  if (kv) {
+    const existing = await kv.get(`user:${mobile}`)
+    if (existing) return jsonRes({ code: 0, show: 1, message: '该手机号已注册', data: [] })
+    const user = { company_name, mobile, password, created_at: Date.now(), admin_id: Date.now() }
+    await kv.put(`user:${mobile}`, JSON.stringify(user))
+  }
+
+  return jsonRes({ code: 1, show: 0, message: '注册成功', data: {} })
+}
+
+async function handleLogin(request, env) {
+  let body
+  try { body = await request.json() } catch { body = {} }
+
+  const { account, password } = body
+  const kv = env.USERS_KV
+
+  // Check local registered users
+  if (kv && account && password) {
+    const raw = await kv.get(`user:${account}`)
+    if (raw) {
+      const user = JSON.parse(raw)
+      if (user.password === password) {
+        const token = makeToken(account)
+        await kv.put(`token:${token}`, JSON.stringify({ account, company_name: user.company_name, admin_id: user.admin_id }), { expirationTtl: 2592000 })
+        return jsonRes({
+          code: 1, show: 0, message: '',
+          data: {
+            token,
+            name: user.company_name,
+            avatar: '',
+            role_name: '企业用户',
+            userInfo: { admin_id: user.admin_id, name: user.company_name, account, role_name: '企业用户', token },
+          }
+        })
+      }
+    }
+  }
+
+  // Fall through to saas proxy login
+  const targetUrl = 'https://saas.mzth.cn/adminapi/login/account'
+  const headers = new Headers({ 'Content-Type': 'application/json', 'host': 'saas.mzth.cn' })
+  const response = await fetch(new Request(targetUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  }))
+  const data = await response.json()
+  const newHeaders = new Headers({ 'Content-Type': 'application/json' })
+  Object.entries(corsHeaders()).forEach(([k, v]) => newHeaders.set(k, v))
+  return new Response(JSON.stringify(data), { status: response.status, headers: newHeaders })
 }
 
 async function handleAIChat(request, env) {

@@ -55,11 +55,12 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
-import { getFundList, createFund, deleteFund } from '@/api/finance'
+import { getFundList, createFund, updateFund, deleteFund } from '@/api/finance'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
@@ -78,7 +79,11 @@ function openForm(row?: any) {
 async function handleSubmit(data: any) {
   formRef.value?.setSubmitting(true)
   try {
-    await createFund(data)
+    if (data.id) {
+      await updateFund(data)
+    } else {
+      await createFund(data)
+    }
     ElMessage.success('操作成功')
     formRef.value?.close()
     tableRef.value?.refresh()

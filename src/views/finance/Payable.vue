@@ -28,7 +28,7 @@
             value-format="YYYY-MM-DD"
             style="width:140px"
           />
-          <span style="color:#86909c">至</span>
+          <span style="color:rgba(29,29,31,0.35)">至</span>
           <el-date-picker
             v-model="searchForm.date_to"
             type="date"
@@ -58,12 +58,12 @@
         </el-table-column>
         <el-table-column label="已付欠款" min-width="120" align="right">
           <template #default="{ row }">
-            <span style="color:#165dff">{{ fmt(row.paid_amount) }}</span>
+            <span style="color:#0071e3">{{ fmt(row.paid_amount) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="应付欠款" min-width="120" align="right">
           <template #default="{ row }">
-            <span :style="{ color: Number(row.un_pay_amount) > 0 ? '#f53f3f' : '#00b42a', fontWeight: '600' }">
+            <span :style="{ color: Number(row.un_pay_amount) > 0 ? '#dc2626' : '#16a34a', fontWeight: '600' }">
               {{ fmt(row.un_pay_amount) }}
             </span>
           </template>
@@ -97,10 +97,10 @@
           <template #default="{ row }">{{ fmt(row.order_amount) }}</template>
         </el-table-column>
         <el-table-column label="已付金额" min-width="110" align="right">
-          <template #default="{ row }"><span style="color:#165dff">{{ fmt(row.paid_amount) }}</span></template>
+          <template #default="{ row }"><span style="color:#0071e3">{{ fmt(row.paid_amount) }}</span></template>
         </el-table-column>
         <el-table-column label="应付金额" min-width="110" align="right">
-          <template #default="{ row }"><span style="color:#f53f3f;font-weight:600">{{ fmt(row.un_pay_amount) }}</span></template>
+          <template #default="{ row }"><span style="color:#dc2626;font-weight:600">{{ fmt(row.un_pay_amount) }}</span></template>
         </el-table-column>
         <el-table-column prop="due_date" label="订单日期" min-width="110" />
       </el-table>
@@ -202,21 +202,21 @@ onMounted(async () => {
 
 .summary-bar {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 14px 24px;
   display: flex;
   gap: 40px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid rgba(0,0,0,0.06);
   font-size: 14px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
 }
 
 .summary-item strong { font-size: 16px; }
-.summary-item strong.red { color: #f53f3f; }
-.summary-item strong.blue { color: #165dff; }
-.summary-item strong.orange { color: #ff7d00; }
+.summary-item strong.red { color: #dc2626; }
+.summary-item strong.blue { color: #0071e3; }
+.summary-item strong.orange { color: #ea580c; }
 
-.table-card { border-radius: 8px; }
+.table-card { border-radius: 12px; }
 
 .toolbar {
   margin-bottom: 14px;

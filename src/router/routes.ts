@@ -64,6 +64,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'warehouse/serial', name: 'WarehouseSerial', component: () => import('@/views/warehouse/Serial.vue'), meta: { title: '序列号管理' } },
 
       // Production
+      { path: 'production/overview', name: 'ProductionOverview', component: () => import('@/views/production/Overview.vue'), meta: { title: '生产总览' } },
       { path: 'production/plan', name: 'ProductionPlan', component: () => import('@/views/production/Plan.vue'), meta: { title: '生产计划' } },
       { path: 'production/inhouse', name: 'ProductionInhouse', component: () => import('@/views/production/Inhouse.vue'), meta: { title: '生产入库' } },
       { path: 'production/material', name: 'ProductionMaterial', component: () => import('@/views/production/Material.vue'), meta: { title: '领料管理' } },
@@ -103,6 +104,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'goods/price', name: 'GoodsPrice', component: () => import('@/views/goods/Price.vue'), meta: { title: '商品价格' } },
 
       // Reports
+      { path: 'reports/overview', name: 'ReportsOverview', component: () => import('@/views/reports/Overview.vue'), meta: { title: '报表总览' } },
       { path: 'reports/sale-rate', name: 'ReportsSaleRate', component: () => import('@/views/reports/SaleRate.vue'), meta: { title: '销售统计' } },
       { path: 'reports/sale-ledger', name: 'ReportsSaleLedger', component: () => import('@/views/reports/SaleLedger.vue'), meta: { title: '销售台账' } },
       { path: 'reports/commission', name: 'ReportsCommission', component: () => import('@/views/reports/Commission.vue'), meta: { title: '提成报表' } },
@@ -150,6 +152,22 @@ const routes: RouteRecordRaw[] = [
   // Catch-all redirect
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 
+  // 超级管理员控制台（独立页面，无 AdminLayout）
+  {
+    path: '/admin-console',
+    name: 'AdminConsole',
+    component: () => import('@/views/AdminConsole.vue'),
+    meta: { title: '租户管理控制台', superAdmin: true },
+  },
+
+  // 付费版介绍页
+  {
+    path: '/pricing',
+    name: 'Pricing',
+    component: () => import('@/views/Pricing.vue'),
+    meta: { title: '升级付费版', public: true },
+  },
+
   // 独立页面（不使用 AdminLayout）
   {
     path: '/cashregister',
@@ -168,6 +186,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'copywriting', name: 'AgentCopywriting', component: () => import('@/views/agent/Copywriting.vue'), meta: { title: '文案生成' } },
       { path: 'poster', name: 'AgentPoster', component: () => import('@/views/agent/Poster.vue'), meta: { title: '图文海报' } },
       { path: 'video', name: 'AgentVideo', component: () => import('@/views/agent/Video.vue'), meta: { title: '视频生成' } },
+      { path: 'creative-lab', name: 'AgentCreativeLab', component: () => import('@/views/agent/CreativeLab.vue'), meta: { title: 'AI创意实验室' } },
       { path: 'publish', name: 'AgentPublish', component: () => import('@/views/agent/Publish.vue'), meta: { title: '发布管理' } },
       { path: 'history', name: 'AgentHistory', component: () => import('@/views/agent/History.vue'), meta: { title: '历史记录' } },
     ],

@@ -90,9 +90,11 @@
                 {{ getSourceName(customerSourceMap[row.id] || row.source_id || row.source) }}
               </template>
             </el-table-column>
-            <el-table-column label="余额" width="100" align="right">
+            <el-table-column label="余额" width="120" align="right">
               <template #default="{ row }">
-                {{ Number(row.balance || 0).toFixed(2) }}
+                <span :style="{ color: getBalance(row.id) > 0 ? '#0071e3' : '#c0c4cc', fontWeight: '600' }">
+                  ¥{{ getBalance(row.id).toFixed(2) }}
+                </span>
               </template>
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right">
@@ -128,7 +130,15 @@
         <el-descriptions-item label="客户分类">{{ getCateName(viewRow.id) || '—' }}</el-descriptions-item>
         <el-descriptions-item label="客户等级">{{ getLevelName(viewRow.id) || '—' }}</el-descriptions-item>
         <el-descriptions-item label="来源">{{ getSourceName(customerSourceMap[viewRow.id]) || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="余额">{{ Number(viewRow.balance || 0).toFixed(2) }}</el-descriptions-item>
+        <el-descriptions-item label="预付款">
+          <span style="color:#16a34a;font-weight:600">¥{{ getPrepay(viewRow.id || 0).toFixed(2) }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="销售单金额">
+          <span style="color:#dc2626">¥{{ getSaleAmount(viewRow.id || 0).toFixed(2) }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="余额">
+          <span style="color:#0071e3;font-weight:600">¥{{ getBalance(viewRow.id || 0).toFixed(2) }}</span>
+        </el-descriptions-item>
         <el-descriptions-item label="地址" :span="2">{{ viewRow.address || '—' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ viewRow.remark || '—' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间" :span="2">{{ viewRow.create_time || viewRow.created_at || '—' }}</el-descriptions-item>
@@ -228,6 +238,7 @@
 
       <template #footer>
         <el-button @click="formVisible = false">取消</el-button>
+        <el-button v-if="!formData.id" type="success" :icon="Plus" @click="handleSubmitAndRecharge">保存并充值</el-button>
         <el-button type="primary" :loading="formSaving" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
@@ -294,7 +305,7 @@
 
     <!-- 导入预览弹框 -->
     <el-dialog v-model="importDialogVisible" title="导入预览" width="70%" append-to-body destroy-on-close>
-      <div style="margin-bottom:10px;font-size:13px;color:#86909c">
+      <div style="margin-bottom:10px;font-size:13px;color:rgba(29,29,31,0.35)">
         共 {{ importPreviewData.length }} 条数据，确认后导入。
       </div>
       <el-table :data="importPreviewData.slice(0, 10)" border size="small" max-height="320">
@@ -303,7 +314,7 @@
           :key="col" :prop="col" :label="col" min-width="120" show-overflow-tooltip
         />
       </el-table>
-      <div v-if="importPreviewData.length > 10" style="margin-top:8px;font-size:12px;color:#86909c">
+      <div v-if="importPreviewData.length > 10" style="margin-top:8px;font-size:12px;color:rgba(29,29,31,0.35)">
         仅显示前10条，实际导入全部 {{ importPreviewData.length }} 条。
       </div>
       <template #footer>
@@ -320,7 +331,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Edit, Delete, Search, Refresh, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getSaleCustomerList, getSaleCustomerDetail, createSaleCustomer, updateSaleCustomer, deleteSaleCustomer } from '@/api/sale'
+import { getSaleCustomerList, getSaleCustomerDetail, createSaleCustomer, updateSaleCustomer, deleteSaleCustomer, getContractList } from '@/api/sale'
 import http from '@/api/http'
 import * as XLSX from 'xlsx'
 import { loadLevels, loadLevelMap, saveLevelMap, type LevelItem } from '@/utils/customerLevel'
@@ -475,21 +486,19 @@ async function loadData() {
 }
 
 function refilter() {
-  // 分类切换只是 computed 重算，不需要重新请求
-  // 但若切换分类后当前页没有数据，回到第一页重新拉
   currentPage.value = 1
-  loadData()
+  loadDataAndBalances()
 }
 
 function handleSearch() {
   currentPage.value = 1
-  loadData()
+  loadDataAndBalances()
 }
 
 function handleReset() {
   keyword.value = ''
   currentPage.value = 1
-  loadData()
+  loadDataAndBalances()
 }
 
 // ── 客户表单 ──────────────────────────────────────────────────────────────────
@@ -569,7 +578,55 @@ async function handleSubmit() {
   }
 }
 
+async function handleSubmitAndRecharge() {
+  try { await formRef.value?.validate() } catch { return }
+  formSaving.value = true
+  try {
+    const payload: any = {
+      name: formData.nickname,
+      mobile: formData.mobile,
+      address: formData.address,
+      remark: formData.remark,
+    }
+    const res = await createSaleCustomer(payload)
+    const customerId = res.data?.id ?? res.data
+    if (customerId) {
+      formData.id = customerId
+      const cMap2 = { ...cateMap.value }
+      if (formData.cate_id) cMap2[customerId] = formData.cate_id
+      cateMap.value = cMap2; saveCateMap(cMap2)
+      const lMap2 = { ...customerLevelMap.value }
+      if (formData.level_id) lMap2[customerId] = formData.level_id
+      customerLevelMap.value = lMap2; saveCustomerLevelMap(lMap2)
+      const sMap2 = { ...customerSourceMap.value }
+      if (formData.source_id) sMap2[customerId] = formData.source_id
+      customerSourceMap.value = sMap2; saveSourceMap(sMap2)
+    }
+    formVisible.value = false
+    loadData()
+    await loadFinanceInfo(formData.id, formData.nickname)
+    prepayForm.amount = 0
+    prepayForm.account_name = ''
+    prepayForm.receipt_date = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+    prepayForm.remark = '预付款充值'
+    prepayVisible.value = true
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
+  } finally {
+    formSaving.value = false
+  }
+}
+
 async function handleDelete(id: number) {
+  // 检查是否有预付款记录，有则阻止删除
+  try {
+    const res = await http.get('/finance/Prepay/index', { params: { customer_id: id, pay_type: 'customer', list_rows: 1 } })
+    const list: any[] = res?.data?.rows ?? res?.data?.list ?? []
+    if (list.length > 0) {
+      ElMessage.warning('该客户存在预付款记录，请先到【财务 → 预付款】删除相关记录后再删除客户')
+      return
+    }
+  } catch { /* 查询失败不拦截，由后端兜底 */ }
   await ElMessageBox.confirm('确定删除该客户吗？', '提示', { type: 'warning' })
   await deleteSaleCustomer(id)
   const cMap = { ...cateMap.value }
@@ -676,13 +733,10 @@ const financeInfo = reactive({
 async function loadFinanceInfo(customerId: number, customerName: string) {
   financeLoading.value = true
   try {
-    // 查收款单（预付款充值记录）
-    const receiptRes = await getCollectReceiptList({ customer_name: customerName, list_rows: 500 })
-    const receipts: any[] = receiptRes?.data?.rows ?? receiptRes?.data?.list ?? []
-    const prepayReceipts = receipts.filter((r: any) =>
-      r.remark?.includes('预付款') || r.customer_name === customerName
-    )
-    const totalPrepay = prepayReceipts.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+    // 查预付款记录（customer类型）
+    const prepayRes = await http.get('/finance/Prepay/index', { params: { customer_id: customerId, pay_type: 'customer', list_rows: 500 } })
+    const prepayList: any[] = prepayRes?.data?.rows ?? prepayRes?.data?.list ?? []
+    const totalPrepay = prepayList.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
 
     // 查应收账款（消费记录）
     const receivableRes = await getReceivableList({ customer_name: customerName, list_rows: 500 })
@@ -787,8 +841,77 @@ function viewReceivable() {
   router.push('/finance/receivable')
 }
 
+// ── 余额 = 预付款充值 - 已审核销售单金额 ─────────────────────────────────────
+const balanceMap = ref<Record<number, number>>({})
+const prepayMap = ref<Record<number, number>>({})
+const saleAmountMap = ref<Record<number, number>>({})
+
+function getSaleOrderAmountValue(row: any): number {
+  const total = Number(row?.total_amount || 0)
+  const discType = String(row?.discount_type || 'none')
+  const discVal = Number(row?.discount_value || 0)
+  const afterDisc = Number(row?.after_discount)
+  const freight = Number(row?.freight_amount || 0)
+  const bearer = String(row?.freight_bearer || 'seller')
+  const income = Number(row?.income_amount || 0)
+  let base = total
+  if (Number.isFinite(afterDisc) && afterDisc >= 0) base = afterDisc
+  else if (discType === 'amount' && discVal > 0) base = Math.max(0, total - discVal)
+  else if (discType === 'percent' && discVal > 0) base = Math.max(0, total * (1 - discVal / 100))
+  const freightCharge = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
+  return Math.max(0, base + freightCharge - income)
+}
+
+async function loadBalances() {
+  try {
+    const prepayRes = await http.get('/finance/Prepay/index', { params: { list_rows: 1000, pay_type: 'customer' } })
+    const prepays: any[] = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
+    const pMap: Record<number, number> = {}
+    for (const p of prepays) {
+      const cid = Number(p.customer_id)
+      if (cid) pMap[cid] = (pMap[cid] || 0) + Number(p.amount || 0)
+    }
+    prepayMap.value = pMap
+  } catch { /* ignore */ }
+
+  try {
+    const contractRes = await getContractList({ list_rows: 2000, status: 1 })
+    const saleOrders: any[] = contractRes.data?.rows ?? contractRes.data?.list ?? []
+    const sMap: Record<number, number> = {}
+    for (const s of saleOrders) {
+      if (Number(s.status) !== 1) continue
+      const cid = Number(s.customer_id)
+      if (cid) sMap[cid] = (sMap[cid] || 0) + getSaleOrderAmountValue(s)
+    }
+    saleAmountMap.value = sMap
+  } catch { /* ignore */ }
+
+  // 余额 = 预付款 - 销售单金额
+  const bMap: Record<number, number> = {}
+  const allIds = new Set([...Object.keys(prepayMap.value), ...Object.keys(saleAmountMap.value)].map(Number))
+  for (const cid of allIds) {
+    bMap[cid] = Math.max(0, (prepayMap.value[cid] || 0) - (saleAmountMap.value[cid] || 0))
+  }
+  balanceMap.value = bMap
+}
+
+function getPrepay(customerId: number): number {
+  return prepayMap.value[customerId] ?? 0
+}
+function getSaleAmount(customerId: number): number {
+  return saleAmountMap.value[customerId] ?? 0
+}
+function getBalance(customerId: number): number {
+  return balanceMap.value[customerId] ?? 0
+}
+
+async function loadDataAndBalances() {
+  await loadData()
+  await loadBalances()
+}
+
 onMounted(() => {
-  loadData()
+  loadDataAndBalances()
   loadFunds()
 })
 </script>
@@ -807,7 +930,7 @@ onMounted(() => {
   flex-shrink: 0;
   background: #fff;
   border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -819,11 +942,11 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px 8px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   flex-shrink: 0;
 }
 
-.cate-title { font-size: 13px; font-weight: 600; color: #1d2129; }
+.cate-title { font-size: 13px; font-weight: 600; color: #1d1d1f; }
 .cate-search { padding: 8px 10px; flex-shrink: 0; }
 .cate-tree { flex: 1; overflow-y: auto; }
 
@@ -833,24 +956,24 @@ onMounted(() => {
   justify-content: space-between;
   padding: 8px 12px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   cursor: pointer;
   transition: background 0.12s;
 }
 .cate-item:hover { background: #f5f7ff; }
 .cate-item:hover .cate-item-actions { opacity: 1; }
-.cate-item.active { background: #e8f0fe; color: #165dff; font-weight: 500; }
+.cate-item.active { background: rgba(0,113,227,0.08); color: #0071e3; font-weight: 500; }
 
 .cate-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cate-item-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.12s; flex-shrink: 0; }
-.act-icon { font-size: 13px; color: #86909c; cursor: pointer; padding: 2px; }
-.act-icon:hover { color: #165dff; }
-.act-icon.danger:hover { color: #f53f3f; }
-.cate-empty { text-align: center; color: #86909c; font-size: 12px; padding: 20px 0; }
+.act-icon { font-size: 13px; color: rgba(29,29,31,0.35); cursor: pointer; padding: 2px; }
+.act-icon:hover { color: #0071e3; }
+.act-icon.danger:hover { color: #dc2626; }
+.cate-empty { text-align: center; color: rgba(29,29,31,0.35); font-size: 12px; padding: 20px 0; }
 
 .client-list-wrap { flex: 1; overflow: hidden; }
 
-.sc-table { background: #fff; border-radius: 8px; padding: 16px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.sc-table { background: #fff; border-radius: 12px; padding: 16px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
 
 .sc-search {
   display: flex;
@@ -858,7 +981,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   margin-bottom: 12px;
   flex-shrink: 0;
 }
@@ -868,23 +991,23 @@ onMounted(() => {
 .sc-toolbar { margin-bottom: 12px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
 .toolbar-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .toolbar-right { display: flex; gap: 4px; align-items: center; }
-.selected-bar { margin-bottom: 8px; padding: 6px 12px; background: #e8f3ff; border-radius: 4px; font-size: 13px; color: #165dff; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.selected-bar { margin-bottom: 8px; padding: 6px 12px; background: #e8f3ff; border-radius: 8px; font-size: 13px; color: #0071e3; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 .sc-pagination { display: flex; justify-content: flex-end; margin-top: 16px; flex-shrink: 0; }
 
 .finance-panel {
   margin-top: 16px;
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid #f5f5f7;
   padding-top: 12px;
 }
-.finance-title { font-size: 13px; font-weight: 600; color: #1d2129; margin-bottom: 10px; }
+.finance-title { font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 10px; }
 .finance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.finance-item { background: #f5f7fa; border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
-.fi-label { font-size: 12px; color: #86909c; }
-.fi-value { font-size: 14px; font-weight: 600; color: #1d2129; }
-.fi-value.green { color: #00b42a; }
-.fi-value.red { color: #f53f3f; }
-.fi-value.orange { color: #ff7d00; }
+.finance-item { background: #f5f7fa; border-radius: 10px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+.fi-label { font-size: 12px; color: rgba(29,29,31,0.35); }
+.fi-value { font-size: 14px; font-weight: 600; color: #1d1d1f; }
+.fi-value.green { color: #16a34a; }
+.fi-value.red { color: #dc2626; }
+.fi-value.orange { color: #ea580c; }
 .finance-actions { display: flex; gap: 8px; }
 .create-time-note { font-size: 11px; color: #c0c4cc; margin-top: 10px; text-align: right; }
 
@@ -895,8 +1018,8 @@ onMounted(() => {
   .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
   .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
   .cate-tree::-webkit-scrollbar { display: none; }
-  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f2f3f5; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
-  .cate-item.active { background: #e8f0fe !important; color: #165dff !important; border-color: #c5d6ff !important; }
+  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f5f5f7; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
+  .cate-item.active { background: rgba(0,113,227,0.08) !important; color: #0071e3 !important; border-color: rgba(0,113,227,0.2) !important; }
   .cate-item-actions { display: none !important; }
   .client-list-wrap { overflow: visible !important; }
 }

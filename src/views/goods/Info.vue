@@ -68,6 +68,9 @@
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
+            <el-button :icon="Upload" @click="triggerImport">导入</el-button>
+            <el-button :icon="Download" @click="downloadTemplate">下载模板</el-button>
+            <input ref="importFileRef" type="file" accept=".xlsx,.xls" style="display:none" @change="handleImportFile" />
           </template>
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="goods_sn" label="商品编码" min-width="120" />
@@ -283,7 +286,7 @@
               <div style="display:flex;align-items:center;gap:12px">
                 <span class="sec-title-text">计量单位</span>
                 <el-checkbox v-model="fd.multi_unit" @change="onMultiUnitChange">
-                  <span :style="fd.multi_unit ? 'color:#165dff;font-weight:500' : ''">启用多单位</span>
+                  <span :style="fd.multi_unit ? 'color:#0071e3;font-weight:500' : ''">启用多单位</span>
                 </el-checkbox>
               </div>
             </div>
@@ -306,10 +309,10 @@
               <!-- 基础单位说明行 -->
               <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae0ff;border-radius:6px;margin-bottom:8px;font-size:13px">
                 <el-tag type="primary" size="small">基础单位</el-tag>
-                <span style="font-weight:600;color:#165dff">{{ fd.unit_name || '—' }}</span>
-                <span style="color:#86909c">（换算基准：1 {{ fd.unit_name || '单位' }} = 1）</span>
+                <span style="font-weight:600;color:#0071e3">{{ fd.unit_name || '—' }}</span>
+                <span style="color:rgba(29,29,31,0.35)">（换算基准：1 {{ fd.unit_name || '单位' }} = 1）</span>
                 <span v-if="fd.cost_price" style="margin-left:8px;color:#52c41a">采购价：¥{{ Number(fd.cost_price).toFixed(2) }}</span>
-                <span v-if="fd.sell_price" style="margin-left:8px;color:#165dff">销售价：¥{{ Number(fd.sell_price).toFixed(2) }}</span>
+                <span v-if="fd.sell_price" style="margin-left:8px;color:#0071e3">销售价：¥{{ Number(fd.sell_price).toFixed(2) }}</span>
               </div>
               <!-- 辅助单位表格 -->
               <el-table :data="auxUnitRows" border size="small" style="width:100%">
@@ -331,7 +334,7 @@
                       <el-input-number v-if="!isView" v-model="row.ratio" :min="0.0001" :precision="4" :controls="false"
                         size="small" style="width:80px" @change="onMultiUnitRatioChange(row)" />
                       <span v-else>{{ row.ratio }}</span>
-                      <span style="color:#165dff;font-weight:500">{{ fd.unit_name || '基础单位' }}</span>
+                      <span style="color:#0071e3;font-weight:500">{{ fd.unit_name || '基础单位' }}</span>
                     </div>
                   </template>
                 </el-table-column>
@@ -365,7 +368,7 @@
                   </template>
                 </el-table-column>
               </el-table>
-              <div v-if="auxUnitRows.length === 0 && !isView" style="text-align:center;color:#86909c;font-size:13px;padding:12px 0">
+              <div v-if="auxUnitRows.length === 0 && !isView" style="text-align:center;color:rgba(29,29,31,0.35);font-size:13px;padding:12px 0">
                 暂无辅助单位，点击下方添加
               </div>
               <el-button v-if="!isView" size="small" :icon="Plus" style="margin-top:8px" @click="addMultiUnitRow">添加辅助单位</el-button>
@@ -378,14 +381,14 @@
               <div style="display:flex;align-items:center;gap:12px">
                 <span class="sec-title-text">规格设置</span>
                 <el-checkbox v-model="fd.multi_spec" @change="onMultiSpecChange">
-                  <span :style="fd.multi_spec ? 'color:#165dff;font-weight:500' : ''">启用多规格</span>
+                  <span :style="fd.multi_spec ? 'color:#0071e3;font-weight:500' : ''">启用多规格</span>
                 </el-checkbox>
               </div>
               <el-button v-if="fd.multi_spec && !isView" size="small" type="primary" @click="addSpecAttr">+ 添加规格属性</el-button>
             </div>
 
             <!-- 单规格模式 -->
-            <div v-if="!fd.multi_spec" style="color:#86909c;font-size:13px;padding:12px 0">
+            <div v-if="!fd.multi_spec" style="color:rgba(29,29,31,0.35);font-size:13px;padding:12px 0">
               未启用多规格，该商品只有一种规格。如需设置颜色、尺寸等多种规格，请勾选"启用多规格"。
             </div>
 
@@ -433,13 +436,13 @@
                 </div>
               </div>
 
-              <div v-if="specAttrs.length === 0" style="color:#86909c;font-size:13px;padding:8px 0">
+              <div v-if="specAttrs.length === 0" style="color:rgba(29,29,31,0.35);font-size:13px;padding:8px 0">
                 点击右上角"添加规格属性"开始设置规格，如：颜色（红/蓝/绿）、尺寸（S/M/L/XL）
               </div>
 
               <!-- SKU 组合表格 -->
               <div v-if="skuList.length > 0" style="margin-top:16px">
-                <div style="font-size:13px;font-weight:600;color:#1d2129;margin-bottom:8px">
+                <div style="font-size:13px;font-weight:600;color:#1d1d1f;margin-bottom:8px">
                   SKU 明细（共 {{ skuList.length }} 种组合）
                 </div>
                 <el-table :data="skuList" border size="small" style="width:100%">
@@ -512,7 +515,7 @@
                       @click="calcCostFromBom"
                     >从BOM核算</el-button>
                   </div>
-                  <div v-if="bomCostDetail" style="font-size:11px;color:#86909c;margin-top:4px;line-height:1.6">
+                  <div v-if="bomCostDetail" style="font-size:11px;color:rgba(29,29,31,0.35);margin-top:4px;line-height:1.6">
                     {{ bomCostDetail }}
                   </div>
                 </el-form-item>
@@ -589,12 +592,42 @@
       </template>
     </el-dialog>
 
+    <!-- 商品导入预览弹框 -->
+    <el-dialog v-model="importDialogVisible" title="导入商品预览" width="85%" append-to-body destroy-on-close>
+      <div style="margin-bottom:12px;font-size:13px;color:#86909c">
+        共 {{ importRows.length }} 条数据，请确认后点击确认导入。
+        <span v-if="importRows.length > 20">（下方仅预览前20条，实际导入全部）</span>
+      </div>
+      <el-table :data="importRows.slice(0, 20)" border size="small" max-height="400">
+        <el-table-column prop="goods_name" label="商品名称" min-width="130" />
+        <el-table-column prop="goods_sn" label="商品编码" min-width="120" />
+        <el-table-column prop="goods_type_text" label="商品类型" width="90" />
+        <el-table-column prop="en_name" label="英文名称" min-width="120" />
+        <el-table-column prop="barcode" label="条码" min-width="120" />
+        <el-table-column prop="sell_price" label="销售价" width="80" align="right" />
+        <el-table-column prop="cost_price" label="采购价" width="80" align="right" />
+        <el-table-column prop="remark" label="备注" min-width="120" />
+        <el-table-column label="状态" width="70" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row._error ? 'danger' : 'success'" size="small">
+              {{ row._error ? '异常' : '正常' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入 ({{ importRows.length }} 条)</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { Plus, Edit, Delete, ArrowRight } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, ArrowRight, Upload, Download } from '@element-plus/icons-vue'
+import * as XLSX from 'xlsx'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import {
@@ -960,6 +993,109 @@ async function handleDelete(id: number) {
   await deleteGoods(id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
+}
+
+// ── 商品导入 ─────────────────────────────────────────────────────────────────
+const importFileRef = ref<HTMLInputElement>()
+const importDialogVisible = ref(false)
+const importRows = ref<any[]>([])
+const importLoading = ref(false)
+
+// 模板列定义：Excel中文表头 -> API字段名
+const IMPORT_COL_MAP: Record<string, string> = {
+  '商品名称': 'goods_name',
+  '商品编码': 'goods_sn',
+  '英文名称': 'en_name',
+  '商品类型': 'goods_type', // 成品/半成品/原材料/辅料 或 1/2/3/4
+  '条码': 'barcode',
+  '销售价': 'sell_price',
+  '采购价': 'cost_price',
+  '安全库存下限': 'safe_min',
+  '安全库存上限': 'safe_max',
+  '备注': 'remark',
+}
+
+const GOODS_TYPE_TEXT_MAP: Record<string, number> = {
+  '成品': 1, '半成品': 2, '原材料': 3, '辅料': 4,
+}
+
+function triggerImport() {
+  importFileRef.value?.click()
+}
+
+function handleImportFile(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    const data = new Uint8Array(ev.target!.result as ArrayBuffer)
+    const wb = XLSX.read(data, { type: 'array' })
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' })
+    if (!json.length) { ElMessage.warning('Excel文件无数据'); return }
+
+    importRows.value = json.map(row => {
+      const mapped: any = {}
+      for (const [col, key] of Object.entries(IMPORT_COL_MAP)) {
+        if (row[col] !== undefined) mapped[key] = row[col]
+      }
+      // 支持直接用英文字段名
+      for (const key of Object.values(IMPORT_COL_MAP)) {
+        if (row[key] !== undefined && mapped[key] === undefined) mapped[key] = row[key]
+      }
+      // 处理商品类型文字 -> 数字
+      if (mapped.goods_type && isNaN(Number(mapped.goods_type))) {
+        mapped.goods_type = GOODS_TYPE_TEXT_MAP[mapped.goods_type] ?? 1
+      } else {
+        mapped.goods_type = Number(mapped.goods_type) || 1
+      }
+      mapped.goods_type_text = ['', '成品', '半成品', '原材料', '辅料'][mapped.goods_type] ?? '成品'
+      mapped._error = !mapped.goods_name
+      return mapped
+    })
+    importDialogVisible.value = true
+  }
+  reader.readAsArrayBuffer(file)
+  // Reset input so same file can be re-selected
+  ;(e.target as HTMLInputElement).value = ''
+}
+
+async function confirmImport() {
+  importLoading.value = true
+  let success = 0, failed = 0
+  for (const row of importRows.value) {
+    const { goods_type_text, _error, ...payload } = row
+    try {
+      await createGoods({ ...payload, status: 1 })
+      success++
+    } catch {
+      failed++
+    }
+  }
+  importLoading.value = false
+  importDialogVisible.value = false
+  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+  tableRef.value?.refresh()
+}
+
+function downloadTemplate() {
+  const headers = Object.keys(IMPORT_COL_MAP)
+  const example: Record<string, any> = {
+    '商品名称': '示例商品A',
+    '商品编码': 'SP001',
+    '英文名称': 'Sample Product A',
+    '商品类型': '成品',
+    '条码': '6901234567890',
+    '销售价': 99.9,
+    '采购价': 60,
+    '安全库存下限': 10,
+    '安全库存上限': 100,
+    '备注': '',
+  }
+  const ws = XLSX.utils.json_to_sheet([example], { header: headers })
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '商品导入模板')
+  XLSX.writeFile(wb, '商品导入模板.xlsx')
 }
 
 // Ctrl+S
@@ -1381,7 +1517,7 @@ function onScroll() {
   flex-shrink: 0;
   background: #fff;
   border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1393,11 +1529,11 @@ function onScroll() {
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px 8px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   flex-shrink: 0;
 }
 
-.cate-title { font-size: 13px; font-weight: 600; color: #1d2129; }
+.cate-title { font-size: 13px; font-weight: 600; color: #1d1d1f; }
 
 .cate-search { padding: 8px 10px; flex-shrink: 0; }
 
@@ -1409,16 +1545,16 @@ function onScroll() {
   justify-content: space-between;
   padding: 8px 12px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   cursor: pointer;
   transition: background 0.12s;
 }
 .cate-item:hover { background: #f5f7ff; }
 .cate-item:hover .cate-item-actions { opacity: 1; }
-.cate-item.active { background: #e8f0fe; color: #165dff; font-weight: 500; }
-.cate-item-child { padding-left: 20px; font-size: 12px; color: #86909c; }
-.cate-item-child.active { color: #165dff; }
-.cate-arrow { font-size: 12px; margin-right: 4px; color: #86909c; transition: transform 0.2s; flex-shrink: 0; cursor: pointer; }
+.cate-item.active { background: rgba(0,113,227,0.08); color: #0071e3; font-weight: 500; }
+.cate-item-child { padding-left: 20px; font-size: 12px; color: rgba(29,29,31,0.35); }
+.cate-item-child.active { color: #0071e3; }
+.cate-arrow { font-size: 12px; margin-right: 4px; color: rgba(29,29,31,0.35); transition: transform 0.2s; flex-shrink: 0; cursor: pointer; }
 .cate-arrow.expanded { transform: rotate(90deg); }
 .cate-arrow-placeholder { display: inline-block; width: 16px; flex-shrink: 0; }
 
@@ -1434,14 +1570,14 @@ function onScroll() {
 
 .act-icon {
   font-size: 13px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   cursor: pointer;
   padding: 2px;
 }
-.act-icon:hover { color: #165dff; }
-.act-icon.danger:hover { color: #f53f3f; }
+.act-icon:hover { color: #0071e3; }
+.act-icon.danger:hover { color: #dc2626; }
 
-.cate-empty { text-align: center; color: #86909c; font-size: 12px; padding: 20px 0; }
+.cate-empty { text-align: center; color: rgba(29,29,31,0.35); font-size: 12px; padding: 20px 0; }
 
 /* 右侧商品列表 */
 .goods-list-wrap { flex: 1; overflow: hidden; }
@@ -1453,8 +1589,8 @@ function onScroll() {
   .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
   .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
   .cate-tree::-webkit-scrollbar { display: none; }
-  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f2f3f5; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
-  .cate-item.active { background: #e8f0fe !important; color: #165dff !important; border-color: #c5d6ff !important; }
+  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f5f5f7; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
+  .cate-item.active { background: rgba(0,113,227,0.08) !important; color: #0071e3 !important; border-color: rgba(0,113,227,0.2) !important; }
   .cate-item-actions { display: none !important; }
   .cate-arrow, .cate-arrow-placeholder { display: none !important; }
   .goods-list-wrap { overflow: visible !important; }
@@ -1484,7 +1620,7 @@ function onScroll() {
 .tab-item {
   padding: 0 18px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1492,8 +1628,8 @@ function onScroll() {
   transition: all 0.15s;
   white-space: nowrap;
 }
-.tab-item:hover { color: #165dff; }
-.tab-item.active { color: #165dff; border-bottom-color: #165dff; font-weight: 500; }
+.tab-item:hover { color: #0071e3; }
+.tab-item.active { color: #0071e3; border-bottom-color: #0071e3; font-weight: 500; }
 
 .form-actions { display: flex; gap: 8px; }
 
@@ -1508,7 +1644,7 @@ function onScroll() {
 
 .form-section {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 20px 24px 8px;
   border: 1px solid #e4e7ed;
 }
@@ -1516,10 +1652,10 @@ function onScroll() {
 .sec-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
 }
 
 .sec-title-row {
@@ -1528,18 +1664,18 @@ function onScroll() {
   justify-content: space-between;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
 }
 
 .sec-title-text {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
 }
 
 .row-with-add { display: flex; gap: 8px; width: 100%; }
 
-.field-hint { font-size: 11px; color: #86909c; margin-top: 4px; line-height: 1.4; }
+.field-hint { font-size: 11px; color: rgba(29,29,31,0.35); margin-top: 4px; line-height: 1.4; }
 
 /* ── 多规格编辑器 ── */
 .spec-editor { padding: 4px 0; }
@@ -1547,7 +1683,7 @@ function onScroll() {
 .spec-attr-row {
   background: #f8f9fd;
   border: 1px solid #e4e7ed;
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 12px;
 }
@@ -1567,7 +1703,7 @@ function onScroll() {
 
 .spec-attr-label {
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   white-space: nowrap;
   flex-shrink: 0;
 }

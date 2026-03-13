@@ -35,7 +35,7 @@
                   </el-table-column>
                   <el-table-column label="含税合计" width="110" align="right">
                     <template #default="{ row: item }">
-                      <span style="color:#165dff;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
+                      <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
                   <el-table-column prop="remark" label="备注" min-width="100" />
@@ -64,7 +64,7 @@
           </el-table-column>
           <el-table-column label="含税合计" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#165dff;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -81,14 +81,14 @@
           </el-table-column>
           <el-table-column label="入库数量" width="90" align="center">
             <template #default="{ row }">
-              <span v-if="getInhouseQty(row) > 0" style="color:#00b42a;font-weight:600">{{ getInhouseQty(row) }}</span>
-              <span v-else style="color:#c9cdd4">0</span>
+              <span v-if="getInhouseQty(row) > 0" style="color:#16a34a;font-weight:600">{{ getInhouseQty(row) }}</span>
+              <span v-else style="color:rgba(29,29,31,0.2)">0</span>
             </template>
           </el-table-column>
           <el-table-column label="已付金额" width="120" align="right">
             <template #default="{ row }">
-              <span v-if="getPaidAmount(row) > 0" style="color:#00b42a;font-weight:600">¥{{ getPaidAmount(row).toFixed(2) }}</span>
-              <span v-else style="color:#c9cdd4">¥0.00</span>
+              <span v-if="getPaidAmount(row) > 0" style="color:#16a34a;font-weight:600">¥{{ getPaidAmount(row).toFixed(2) }}</span>
+              <span v-else style="color:rgba(29,29,31,0.2)">¥0.00</span>
             </template>
           </el-table-column>
           <el-table-column label="付款状态" width="100" align="center">
@@ -318,7 +318,7 @@
             </el-table-column>
             <el-table-column label="税额" width="100" align="right">
               <template #default="{ row }">
-                <span style="color:#f53f3f">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
+                <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column width="130">
@@ -346,7 +346,7 @@
             </el-table-column>
             <el-table-column label="含税合计" width="110" align="right">
               <template #default="{ row }">
-                <span style="color:#165dff;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+                <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="批次" width="130">
@@ -419,7 +419,7 @@
             </div>
             <div v-if="isReadonly" class="settle-item">
               <span class="settle-label">已付金额</span>
-              <span class="settle-value" style="color:#00b42a;font-weight:700">
+              <span class="settle-value" style="color:#16a34a;font-weight:700">
                 ¥{{ getPaidAmount(fd).toFixed(2) }}
               </span>
             </div>
@@ -430,8 +430,8 @@
           </div>
           <div class="settle-summary">
             <span>未税合计：<b>¥{{ totalNoTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">税额合计：<b style="color:#f53f3f">¥{{ totalTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">含税合计：<b style="color:#165dff;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">税额合计：<b style="color:#dc2626">¥{{ totalTax.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">含税合计：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
           </div>
         </div>
 
@@ -459,7 +459,7 @@
         <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
       </el-table>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
       </template>
@@ -540,7 +540,7 @@
       <div style="display:flex;gap:12px;height:420px">
         <!-- 左：成品列表 -->
         <div style="width:220px;flex-shrink:0;border:1px solid #e4e7ed;border-radius:6px;display:flex;flex-direction:column;overflow:hidden">
-          <div style="padding:10px;border-bottom:1px solid #f2f3f5;flex-shrink:0">
+          <div style="padding:10px;border-bottom:1px solid #f5f5f7;flex-shrink:0">
             <el-input v-model="bomPickerKeyword" placeholder="搜索成品" clearable size="small" :prefix-icon="Search" />
           </div>
           <div style="flex:1;overflow-y:auto" v-loading="bomPickerLoading">
@@ -548,19 +548,19 @@
               v-for="g in filteredBomGoods"
               :key="g.goods_id"
               style="padding:9px 12px;cursor:pointer;font-size:13px;transition:background 0.12s"
-              :style="selectedBomGoods?.goods_id === g.goods_id ? 'background:#e8f0fe;color:#165dff;font-weight:500' : 'color:#4e5969'"
+              :style="selectedBomGoods?.goods_id === g.goods_id ? 'background:rgba(0,113,227,0.08);color:#0071e3;font-weight:500' : 'color:rgba(29,29,31,0.5)'"
               @click="selectBomGoods(g)"
             >
               <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.goods_name }}</div>
-              <div v-if="g.goods_sn" style="font-size:11px;color:#86909c;margin-top:2px">{{ g.goods_sn }}</div>
+              <div v-if="g.goods_sn" style="font-size:11px;color:rgba(29,29,31,0.35);margin-top:2px">{{ g.goods_sn }}</div>
             </div>
             <div v-if="!bomPickerLoading && filteredBomGoods.length === 0"
-              style="text-align:center;color:#86909c;font-size:13px;padding:24px 12px">暂无成品</div>
+              style="text-align:center;color:rgba(29,29,31,0.35);font-size:13px;padding:24px 12px">暂无成品</div>
           </div>
         </div>
         <!-- 右：物料列表 -->
         <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-          <div style="margin-bottom:8px;font-size:13px;color:#4e5969;flex-shrink:0">
+          <div style="margin-bottom:8px;font-size:13px;color:rgba(29,29,31,0.5);flex-shrink:0">
             {{ selectedBomGoods ? `「${selectedBomGoods.goods_name}」的物料清单（可多选）` : '请从左侧选择成品' }}
           </div>
           <el-table
@@ -581,7 +581,7 @@
         </div>
       </div>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ selectedBomMaterials.length }} 件物料</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedBomMaterials.length }} 件物料</span>
         <el-button style="margin-left:12px" @click="bomPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!selectedBomMaterials.length" @click="confirmBomGoods">确认添加</el-button>
       </template>
@@ -592,28 +592,28 @@
       <div style="display:flex;gap:12px;height:420px">
         <!-- 左：计划列表 -->
         <div style="width:230px;flex-shrink:0;border:1px solid #e4e7ed;border-radius:6px;display:flex;flex-direction:column;overflow:hidden">
-          <div style="padding:10px;border-bottom:1px solid #f2f3f5;flex-shrink:0">
+          <div style="padding:10px;border-bottom:1px solid #f5f5f7;flex-shrink:0">
             <el-input v-model="planPickerKeyword" placeholder="搜索采购计划" clearable size="small" :prefix-icon="Search" />
           </div>
           <div style="flex:1;overflow-y:auto" v-loading="planPickerLoading">
             <div
               v-for="p in filteredPlanList" :key="p.id"
               style="padding:9px 12px;cursor:pointer;font-size:13px;transition:background 0.12s;border-bottom:1px solid #f5f5f5"
-              :style="selectedPlan?.id === p.id ? 'background:#e8f0fe;color:#165dff;font-weight:500' : 'color:#4e5969'"
+              :style="selectedPlan?.id === p.id ? 'background:rgba(0,113,227,0.08);color:#0071e3;font-weight:500' : 'color:rgba(29,29,31,0.5)'"
               @click="selectPlan(p)"
             >
               <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.order_sn }}</div>
-              <div style="font-size:11px;color:#86909c;margin-top:2px">
+              <div style="font-size:11px;color:rgba(29,29,31,0.35);margin-top:2px">
                 {{ p.supplier_name || '—' }} · {{ (p.plan_date || p.created_at || '').slice(0,10) }}
               </div>
             </div>
             <div v-if="!planPickerLoading && filteredPlanList.length === 0"
-              style="text-align:center;color:#86909c;font-size:13px;padding:24px 12px">暂无已审核的采购计划</div>
+              style="text-align:center;color:rgba(29,29,31,0.35);font-size:13px;padding:24px 12px">暂无已审核的采购计划</div>
           </div>
         </div>
         <!-- 右：计划商品列表 -->
         <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-          <div style="margin-bottom:8px;font-size:13px;color:#4e5969;flex-shrink:0">
+          <div style="margin-bottom:8px;font-size:13px;color:rgba(29,29,31,0.5);flex-shrink:0">
             {{ selectedPlan ? `「${selectedPlan.order_sn}」的商品明细（可多选）` : '请从左侧选择采购计划' }}
           </div>
           <el-table
@@ -635,7 +635,7 @@
         </div>
       </div>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ selectedPlanItems.length }} 件商品</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedPlanItems.length }} 件商品</span>
         <el-button style="margin-left:12px" @click="planPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!selectedPlanItems.length" @click="confirmPlanItems">确认导入</el-button>
       </template>
@@ -1411,11 +1411,11 @@ async function submitAddFund() {
 .expand-title {
   font-size: 12px;
   font-weight: 600;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   margin-bottom: 8px;
 }
 .expand-table {
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -1437,7 +1437,7 @@ async function submitAddFund() {
   flex-shrink: 0;
 }
 
-.form-title { font-size: 15px; font-weight: 600; color: #1d2129; }
+.form-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
 .form-actions { display: flex; gap: 8px; }
 
 .form-body {
@@ -1451,7 +1451,7 @@ async function submitAddFund() {
 
 .form-section {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e4e7ed;
   padding: 16px 18px 14px;
 }
@@ -1459,10 +1459,10 @@ async function submitAddFund() {
 .sec-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
   margin-bottom: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   display: block;
 }
 
@@ -1484,7 +1484,7 @@ async function submitAddFund() {
 
 .goods-count {
   font-size: 13px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   flex-shrink: 0;
 }
 
@@ -1515,26 +1515,26 @@ async function submitAddFund() {
 
 .settle-label {
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   white-space: nowrap;
 }
 
 .settle-value {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
 }
 
 .settle-value.primary {
-  color: #165dff;
+  color: #0071e3;
   font-size: 16px;
 }
 
 .settle-summary {
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid #f5f5f7;
   padding-top: 12px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   display: flex;
   align-items: center;
 }
@@ -1559,14 +1559,14 @@ async function submitAddFund() {
   gap: 6px;
   padding: 4px 8px;
   background: #f5f7ff;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 12px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
 }
 
 .attach-icon {
   font-size: 14px;
-  color: #165dff;
+  color: #0071e3;
   flex-shrink: 0;
 }
 
@@ -1579,13 +1579,13 @@ async function submitAddFund() {
 }
 
 .attach-size {
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   flex-shrink: 0;
 }
 
 .attach-download {
   font-size: 13px;
-  color: #165dff;
+  color: #0071e3;
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0.7;
@@ -1594,9 +1594,9 @@ async function submitAddFund() {
 
 .attach-del {
   font-size: 13px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   cursor: pointer;
   flex-shrink: 0;
 }
-.attach-del:hover { color: #f53f3f; }
+.attach-del:hover { color: #dc2626; }
 </style>

@@ -32,7 +32,7 @@
         </el-table-column>
       </el-table>
 
-      <div v-if="rateRows.length === 0" style="text-align:center;color:#86909c;padding:40px 0;font-size:14px">
+      <div v-if="rateRows.length === 0" style="text-align:center;color:rgba(29,29,31,0.35);padding:40px 0;font-size:14px">
         暂无提成设置，点击右上角「添加员工提成」开始配置
       </div>
     </el-card>

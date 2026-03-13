@@ -121,11 +121,29 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
       case 'create_sale_order': {
+        // 自动根据 customer_name 查找 customer_id
+        if (input.customer_name && !input.customer_id) {
+          try {
+            const cRes = await erpGet('/shop/ShopCustomer/index', { keyword: input.customer_name, list_rows: 5 }, token)
+            const customers = cRes?.data?.rows || []
+            const matched = customers.find((c: any) => (c.nickname || c.name) === input.customer_name || (c.nickname || c.name)?.includes(input.customer_name))
+            if (matched) input.customer_id = matched.id
+          } catch { /* ignore */ }
+        }
         const res = await erpPost('/shop/ContractOrder/add', input, token)
         result = res?.code === 1 ? `销售订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'create_procure_order': {
+        // 自动根据 supplier_name 查找 supplier_id
+        if (input.supplier_name && !input.supplier_id) {
+          try {
+            const sRes = await erpGet('/procure/supplier/index', { keyword: input.supplier_name, list_rows: 5 }, token)
+            const suppliers = sRes?.data?.rows || []
+            const matched = suppliers.find((s: any) => s.name === input.supplier_name || s.name?.includes(input.supplier_name))
+            if (matched) input.supplier_id = matched.id
+          } catch { /* ignore */ }
+        }
         const res = await erpPost('/stock/PurchaseOrder/add', input, token)
         result = res?.code === 1 ? `采购订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break

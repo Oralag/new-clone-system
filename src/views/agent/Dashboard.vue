@@ -1,15 +1,21 @@
 <template>
   <div class="dashboard">
-    <div class="hero">
-      <div class="hero-text">
-        <h2 class="hero-title">智能体工作流</h2>
-        <p class="hero-sub">自动追踪热搜 · AI 生成内容 · 多平台一键发布</p>
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="header-badge">
+          <span class="header-badge-dot"></span>
+          <span>Neural Ad Engine v3.1</span>
+        </div>
+        <h1 class="page-title">智能体工作流</h1>
+        <p class="page-sub">自动追踪热搜 · AI 生成内容 · 多平台一键发布</p>
       </div>
-      <div class="hero-meta">
-        <span class="hero-date">{{ today }}</span>
+      <div class="header-right">
+        <span class="header-date">{{ today }}</span>
       </div>
     </div>
 
+    <!-- Action Cards -->
     <div class="actions-grid">
       <div
         v-for="action in actions"
@@ -17,21 +23,28 @@
         class="action-card"
         @click="$router.push(action.path)"
       >
-        <div class="action-dot" :style="{ background: action.dot }" />
+        <div class="action-icon" :style="{ background: action.dot + '14', color: action.dot }">
+          <component :is="action.iconComp" />
+        </div>
         <div class="action-body">
           <div class="action-title">{{ action.title }}</div>
           <div class="action-desc">{{ action.desc }}</div>
         </div>
-        <svg class="action-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg class="action-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
       </div>
     </div>
 
+    <!-- Stats + Workflow -->
     <div class="two-col">
-      <div class="card">
+      <!-- Stats -->
+      <div class="apple-card">
         <div class="card-header">
-          <span class="card-title">数据概览</span>
+          <div>
+            <div class="card-micro">Performance Metrics</div>
+            <div class="card-title">数据概览</div>
+          </div>
         </div>
         <div class="stats-grid">
           <div v-for="s in stats" :key="s.label" class="stat-item">
@@ -41,15 +54,23 @@
         </div>
       </div>
 
-      <div class="card">
+      <!-- Workflow timeline -->
+      <div class="apple-card dark-card">
         <div class="card-header">
-          <span class="card-title">工作流程</span>
+          <div>
+            <div class="card-micro" style="color:rgba(255,255,255,0.3)">Active Sequences</div>
+            <div class="card-title" style="color:#fff">工作流程</div>
+          </div>
+          <div class="live-badge">
+            <span class="live-dot"></span>
+            <span>Running</span>
+          </div>
         </div>
         <div class="workflow-list">
+          <div class="workflow-vline"></div>
           <div v-for="(step, index) in workflowSteps" :key="index" class="workflow-step">
-            <div class="step-left">
-              <div class="step-index">{{ index + 1 }}</div>
-              <div v-if="index < workflowSteps.length - 1" class="step-line" />
+            <div class="step-node">
+              <span>{{ index + 1 }}</span>
             </div>
             <div class="step-content">
               <div class="step-name">{{ step.label }}</div>
@@ -60,10 +81,14 @@
       </div>
     </div>
 
-    <div v-if="agentStore.history.length > 0" class="card">
+    <!-- Recent -->
+    <div v-if="agentStore.history.length > 0" class="apple-card">
       <div class="card-header">
-        <span class="card-title">最近发布</span>
-        <button class="link-btn" @click="$router.push('/agent/history')">查看全部</button>
+        <div>
+          <div class="card-micro">Latest Activity</div>
+          <div class="card-title">最近发布</div>
+        </div>
+        <button class="link-btn" @click="$router.push('/agent/history')">查看全部 →</button>
       </div>
       <div class="recent-list">
         <div v-for="(item, i) in agentStore.history.slice(0, 4)" :key="i" class="recent-row">
@@ -81,24 +106,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, h, defineComponent } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
 
 const agentStore = useTrendingStore()
 
-const today = new Date().toLocaleDateString('zh-CN', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  weekday: 'long',
-})
+const today = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
+
+const IconTrend = defineComponent({ render: () => h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, [h('path', { d: 'M2 16L8 10l4 4 10-10' }), h('path', { d: 'M18 4h4v4' })]) })
+const IconPen = defineComponent({ render: () => h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, [h('path', { d: 'M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' })]) })
+const IconImage = defineComponent({ render: () => h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, [h('rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }), h('circle', { cx: 8.5, cy: 8.5, r: 1.5 }), h('path', { d: 'M21 15l-5-5L5 21' })]) })
+const IconVideo = defineComponent({ render: () => h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, [h('rect', { x: 2, y: 6, width: 14, height: 12, rx: 2 }), h('path', { d: 'M16 10l6-4v12l-6-4V10z' })]) })
+const IconSend = defineComponent({ render: () => h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, [h('line', { x1: 22, y1: 2, x2: 11, y2: 13 }), h('polygon', { points: '22 2 15 22 11 13 2 9 22 2' })]) })
 
 const actions = [
-  { path: '/agent/trending', title: '抓取热搜', desc: '获取今日最热话题', dot: '#f97316' },
-  { path: '/agent/copywriting', title: '生成文案', desc: 'AI 一键写爆款文案', dot: '#8b5cf6' },
-  { path: '/agent/poster', title: '图文海报', desc: 'AI 生成小红书海报', dot: '#ec4899' },
-  { path: '/agent/video', title: '生成视频', desc: '自动合成短视频', dot: '#0ea5e9' },
-  { path: '/agent/publish', title: '发布内容', desc: '一键发布多平台', dot: '#22c55e' },
+  { path: '/agent/trending', title: '抓取热搜', desc: '获取今日最热话题', dot: '#f97316', iconComp: IconTrend },
+  { path: '/agent/copywriting', title: '生成文案', desc: 'AI 一键写爆款文案', dot: '#8b5cf6', iconComp: IconPen },
+  { path: '/agent/poster', title: '图文海报', desc: 'AI 生成小红书海报', dot: '#ec4899', iconComp: IconImage },
+  { path: '/agent/video', title: '生成视频', desc: '自动合成短视频', dot: '#0071e3', iconComp: IconVideo },
+  { path: '/agent/publish', title: '发布内容', desc: '一键发布多平台', dot: '#34d399', iconComp: IconSend },
 ]
 
 const workflowSteps = [
@@ -112,590 +138,371 @@ const workflowSteps = [
 ]
 
 const stats = computed(() => [
-  {
-    value: Object.values(agentStore.trending).reduce((sum, arr) => sum + arr.length, 0) || '—',
-    label: '已抓取热搜',
-  },
-  {
-    value: agentStore.copywritingResults.length || '—',
-    label: '已生成文案',
-  },
-  {
-    value: agentStore.videoResults.length || '—',
-    label: '已生成视频',
-  },
-  {
-    value: agentStore.history.filter(h => h.status === 'published').length || '—',
-    label: '已发布内容',
-  },
+  { value: Object.values(agentStore.trending).reduce((sum, arr) => sum + arr.length, 0) || '—', label: '已抓取热搜' },
+  { value: agentStore.copywritingResults.length || '—', label: '已生成文案' },
+  { value: agentStore.videoResults.length || '—', label: '已生成视频' },
+  { value: agentStore.history.filter(h => h.status === 'published').length || '—', label: '已发布内容' },
 ])
 </script>
 
 <style scoped>
 .dashboard {
-  max-width: 960px;
+  max-width: 1000px;
   padding-bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.hero {
+/* ── Header ── */
+.page-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 28px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #ebebeb;
-  position: relative;
+  padding-bottom: 28px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 
-.hero-title {
-  font-size: 24px;
-  font-weight: 650;
-  color: #1a1a1a;
-  margin: 0 0 6px;
-  letter-spacing: -0.3px;
-}
-
-.hero-sub {
-  font-size: 13px;
-  color: #999;
-  margin: 0;
-}
-
-.hero-date {
-  font-size: 12px;
-  color: #bbb;
-}
-
-.autoflow-card,
-.autoflow-running {
-  background: linear-gradient(135deg, #faf5ff, #eff6ff);
-  border: 1.5px solid #c4b5fd;
-  border-radius: 16px;
-  padding: 22px 24px;
-  margin-bottom: 20px;
-}
-
-.autoflow-header,
-.running-header {
-  display: flex;
+.header-badge {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.autoflow-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.autoflow-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #7c3aed, #4f46e5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-}
-
-.autoflow-title,
-.running-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1a1a1a;
-}
-
-.autoflow-sub {
-  font-size: 12px;
-  color: #7c3aed;
-  margin-top: 2px;
-}
-
-.autoflow-options {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.opt-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.opt-label {
-  width: 56px;
-  flex-shrink: 0;
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.opt-tags {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.opt-tag {
-  padding: 5px 14px;
+  gap: 7px;
+  padding: 4px 12px;
+  background: rgba(0,113,227,0.07);
   border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1.5px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
-}
-
-.opt-tag.active {
-  border-color: #7c3aed;
-  background: #7c3aed;
-  color: #fff;
-}
-
-.flow-steps-preview {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.flow-step-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.flow-step-num {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #7c3aed, #4f46e5);
-  color: #fff;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #0071e3;
+  margin-bottom: 14px;
 }
 
-.flow-step-name {
-  font-size: 12px;
-  color: #4c1d95;
-  font-weight: 600;
+.header-badge-dot {
+  width: 5px;
+  height: 5px;
+  background: #0071e3;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
 }
 
-.btn-autoflow,
-.btn-goto {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, #7c3aed, #4f46e5);
-  color: #fff;
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.page-title {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
+  color: #1d1d1f;
+  margin: 0 0 10px;
+}
+
+.page-sub {
   font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+  color: rgba(29,29,31,0.4);
+  font-weight: 500;
+  margin: 0;
+  letter-spacing: -0.01em;
 }
 
-.running-brand {
-  font-size: 12px;
-  color: #7c3aed;
-  background: #f5f3ff;
-  padding: 3px 10px;
-  border-radius: 20px;
+.header-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(29,29,31,0.25);
+  letter-spacing: 0.04em;
 }
 
-.running-steps {
-  display: flex;
-  gap: 0;
-  margin-bottom: 20px;
-}
-
-.running-step {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-}
-
-.running-step:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  width: 100%;
-  height: 2px;
-  background: #e2e8f0;
-  z-index: 0;
-}
-
-.running-step.done::after {
-  background: #7c3aed;
-}
-
-.rs-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  z-index: 1;
-  position: relative;
-}
-
-.running-step.done .rs-icon { background: #7c3aed; color: #fff; }
-.running-step.active .rs-icon { background: #ede9fe; color: #7c3aed; border: 2px solid #7c3aed; }
-.running-step.pending .rs-icon { background: #f1f5f9; color: #94a3b8; }
-.rs-label { font-size: 11px; color: #64748b; text-align: center; }
-.running-step.done .rs-label { color: #7c3aed; font-weight: 600; }
-.running-step.active .rs-label { color: #1a1a1a; font-weight: 600; }
-.spinner-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #7c3aed; }
-.running-done { text-align: center; padding-top: 4px; }
-.done-title { font-size: 15px; font-weight: 700; color: #16a34a; margin-bottom: 14px; }
-.done-btns { display: flex; gap: 10px; justify-content: center; }
-
+/* ── Action Cards ── */
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
 }
 
 .action-card {
-  background: #fff;
-  border: 1px solid #ebebeb;
-  border-radius: 12px;
-  padding: 18px 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 20px;
+  padding: 20px 16px;
   cursor: pointer;
-  transition: all 0.18s;
+  transition: all 0.6s cubic-bezier(0.23,1,0.32,1);
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 12px;
-  position: relative;
 }
 
 .action-card:hover {
-  border-color: #d0d0d0;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,0.1);
 }
 
-.action-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.action-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  margin-top: 4px;
+  transition: transform 0.4s cubic-bezier(0.23,1,0.32,1);
 }
 
-.action-body {
-  flex: 1;
-}
+.action-card:hover .action-icon { transform: rotate(-8deg) scale(1.1); }
+
+.action-body { flex: 1; }
 
 .action-title {
   font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: 700;
+  color: #1d1d1f;
   margin-bottom: 4px;
+  letter-spacing: -0.02em;
 }
 
 .action-desc {
-  font-size: 12px;
-  color: #999;
-  line-height: 1.4;
+  font-size: 11px;
+  color: rgba(29,29,31,0.4);
+  line-height: 1.45;
+  font-weight: 500;
 }
 
 .action-arrow {
-  color: #ccc;
+  color: rgba(29,29,31,0.2);
   flex-shrink: 0;
-  margin-top: 2px;
+  transition: transform 0.3s, color 0.3s;
 }
+.action-card:hover .action-arrow { transform: translateX(3px); color: #1d1d1f; }
 
+/* ── Cards ── */
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-bottom: 16px;
 }
 
-.card {
-  background: #fff;
-  border: 1px solid #ebebeb;
-  border-radius: 12px;
-  padding: 20px 22px;
+.apple-card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 24px;
+  padding: 28px;
+  overflow: hidden;
+}
+
+.dark-card {
+  background: #1d1d1f;
+  border-color: transparent;
   position: relative;
+}
+
+.dark-card::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(0,113,227,0.12) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
+}
+
+.card-micro {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(29,29,31,0.28);
+  margin-bottom: 4px;
 }
 
 .card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d1d1f;
+  letter-spacing: -0.03em;
 }
 
 .link-btn {
   font-size: 12px;
-  color: #888;
+  font-weight: 600;
+  color: #0071e3;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
+  letter-spacing: -0.01em;
+  transition: opacity 0.15s;
+}
+.link-btn:hover { opacity: 0.7; }
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(52,211,153,0.1);
+  border: 1px solid rgba(52,211,153,0.2);
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #34d399;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
-.link-btn:hover {
-  color: #1a1a1a;
+.live-dot {
+  width: 5px;
+  height: 5px;
+  background: #34d399;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
 }
 
+/* Stats */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1px;
-  background: #f0f0f0;
-  border-radius: 8px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 16px;
   overflow: hidden;
 }
 
 .stat-item {
-  background: #fff;
-  padding: 18px 16px;
+  background: #ffffff;
+  padding: 20px 18px;
   text-align: center;
 }
 
 .stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a1a1a;
-  letter-spacing: -0.5px;
+  font-size: 36px;
+  font-weight: 800;
+  color: #1d1d1f;
+  letter-spacing: -0.04em;
   margin-bottom: 4px;
+  line-height: 1;
 }
 
 .stat-label {
-  font-size: 11px;
-  color: #aaa;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(29,29,31,0.28);
 }
 
+/* Workflow */
 .workflow-list {
+  position: relative;
   display: flex;
   flex-direction: column;
+  gap: 0;
+  padding-left: 28px;
+}
+
+.workflow-vline {
+  position: absolute;
+  left: 10px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: rgba(255,255,255,0.08);
 }
 
 .workflow-step {
   display: flex;
-  gap: 12px;
+  gap: 14px;
+  padding-bottom: 16px;
+  position: relative;
 }
 
-.step-left {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 20px;
-  flex-shrink: 0;
-}
+.workflow-step:last-child { padding-bottom: 0; }
 
-.step-index {
+.step-node {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #f0f0f0;
-  color: #888;
-  font-size: 10px;
-  font-weight: 600;
+  background: rgba(0,113,227,0.15);
+  border: 1px solid rgba(0,113,227,0.3);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #60a5fa;
   flex-shrink: 0;
+  position: absolute;
+  left: -28px;
+  top: 1px;
 }
 
-.step-line {
-  width: 1px;
-  flex: 1;
-  background: #f0f0f0;
-  margin: 3px 0;
-  min-height: 12px;
-}
-
-.step-content {
-  padding-bottom: 14px;
-  padding-top: 1px;
-}
+.step-content { padding-top: 1px; }
 
 .step-name {
   font-size: 13px;
-  font-weight: 550;
-  color: #1a1a1a;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
   margin-bottom: 2px;
+  letter-spacing: -0.01em;
 }
 
 .step-detail {
   font-size: 11px;
-  color: #aaa;
+  color: rgba(255,255,255,0.3);
+  font-weight: 500;
   line-height: 1.4;
 }
 
-.recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+/* Recent */
+.recent-list { display: flex; flex-direction: column; }
 
 .recent-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 11px 0;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
+.recent-row:last-child { border-bottom: none; }
 
-.recent-row:last-child {
-  border-bottom: none;
-}
+.recent-info { display: flex; flex-direction: column; gap: 3px; }
+.recent-title { font-size: 13px; color: #1d1d1f; font-weight: 500; letter-spacing: -0.01em; }
+.recent-meta { font-size: 11px; color: rgba(29,29,31,0.3); font-weight: 500; }
 
-.recent-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
+.status-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+.status-badge.published { background: rgba(52,211,153,0.1); color: #16a34a; }
+.status-badge.draft { background: #fffbeb; color: #d97706; }
+.status-badge.failed { background: #fef2f2; color: #dc2626; }
 
-.recent-title {
-  font-size: 13px;
-  color: #1a1a1a;
-  font-weight: 450;
-}
-
-.recent-meta {
-  font-size: 11px;
-  color: #bbb;
-}
-
-.status-badge {
-  font-size: 11px;
-  padding: 2px 9px;
-  border-radius: 20px;
-  font-weight: 500;
-}
-
-.status-badge.published {
-  background: #f0fdf4;
-  color: #16a34a;
-}
-
-.status-badge.draft {
-  background: #fffbeb;
-  color: #d97706;
-}
-
-.status-badge.failed {
-  background: #fef2f2;
-  color: #dc2626;
-}
-
-.hero::after,
-.card::after,
-.action-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.action-card::after,
-.card::after {
-  border-radius: inherit;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-:global([data-theme='dark']) .hero-title,
-:global([data-theme='dark']) .action-title,
-:global([data-theme='dark']) .card-title,
-:global([data-theme='dark']) .step-name,
-:global([data-theme='dark']) .recent-title {
-  color: #e2e8f0;
-}
-
-:global([data-theme='dark']) .hero {
-  border-bottom-color: #1e2a3a;
-}
-
-:global([data-theme='dark']) .hero-sub,
-:global([data-theme='dark']) .hero-date,
-:global([data-theme='dark']) .action-desc,
-:global([data-theme='dark']) .stat-label,
-:global([data-theme='dark']) .step-detail,
-:global([data-theme='dark']) .recent-meta,
-:global([data-theme='dark']) .link-btn {
-  color: #64748b;
-}
-
-:global([data-theme='dark']) .card,
-:global([data-theme='dark']) .action-card {
-  background: #141a24;
-  border-color: #1e2a3a;
-}
-
-:global([data-theme='dark']) .action-card:hover {
-  background: #1a2332;
-  border-color: #2d3f55;
-}
-
-:global([data-theme='dark']) .stats-grid,
-:global([data-theme='dark']) .step-index,
-:global([data-theme='dark']) .step-line {
-  background: #1e2a3a;
-}
-
-:global([data-theme='dark']) .stat-item {
-  background: #141a24;
-}
-
-:global([data-theme='dark']) .stat-value {
-  color: #f8fafc;
-}
-
-:global([data-theme='dark']) .recent-row {
-  border-bottom-color: #1e2a3a;
-}
-
-:global([data-theme='dark']) .action-card::after,
-:global([data-theme='dark']) .card::after {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
+/* Dark mode support */
+:global([data-theme='dark']) .page-title { color: #f8fafc; }
+:global([data-theme='dark']) .page-sub, :global([data-theme='dark']) .header-date { color: #64748b; }
+:global([data-theme='dark']) .page-header { border-bottom-color: #1e2a3a; }
+:global([data-theme='dark']) .apple-card { background: #111827; border-color: #1f2937; }
+:global([data-theme='dark']) .dark-card { background: #0d1117; }
+:global([data-theme='dark']) .card-title, :global([data-theme='dark']) .action-title, :global([data-theme='dark']) .recent-title { color: #e2e8f0; }
+:global([data-theme='dark']) .action-card { background: #111827; border-color: #1f2937; }
+:global([data-theme='dark']) .action-card:hover { background: #1a2332; border-color: #2d3f55; }
+:global([data-theme='dark']) .stats-grid { background: #1e2a3a; }
+:global([data-theme='dark']) .stat-item { background: #111827; }
+:global([data-theme='dark']) .stat-value { color: #f8fafc; }
+:global([data-theme='dark']) .recent-row { border-bottom-color: #1e2a3a; }
 
 @media (max-width: 900px) {
-  .actions-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .two-col {
-    grid-template-columns: 1fr;
-  }
+  .actions-grid { grid-template-columns: repeat(2, 1fr); }
+  .two-col { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 767px) {
-  .hero,
-  .recent-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .actions-grid,
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 600px) {
+  .actions-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
 }
 </style>

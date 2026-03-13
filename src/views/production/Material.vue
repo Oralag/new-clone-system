@@ -1,119 +1,301 @@
 <template>
-  <div class="page-container">
-    <el-card>
-      <ScTable ref="tableRef" :api-obj="getMaterialList"
+  <div class="material-page">
+
+    <!-- ══ 列表 ══ -->
+    <div v-if="!showForm">
+      <el-card>
+        <ScTable ref="tableRef" :api-obj="getMaterialList"
           del-path="/production/material/batchDel"
           export-file-name="生产领料" :params="searchForm">
-        <template #search>
-          <el-form inline>
-            <el-form-item label="出库编号">
-              <el-input v-model="searchForm.out_no" clearable style="width:180px" />
-            </el-form-item>
-            <el-form-item label="商品名称">
-              <el-input v-model="searchForm.goods_name" clearable style="width:180px" />
-            </el-form-item>
-          </el-form>
-          <div class="search-actions">
+          <template #search>
+            <el-input v-model="searchForm.out_no" placeholder="出库编号" clearable style="width:160px" />
+            <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:160px" />
             <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
-          </div>
-        </template>
-        <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
-        </template>
-        <el-table-column prop="out_no" label="出库编号" min-width="140" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="160" />
-        <el-table-column prop="num" label="数量" width="100" />
-        <el-table-column prop="warehouse_name" label="仓库" min-width="120" />
-        <el-table-column prop="status_tag" label="状态" width="100" />
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button type="success" size="small" link @click="formRef?.openView(row)">查看</el-button>
-            <template v-if="row.status === 0">
-              <el-button type="primary" size="small" link @click="handleAudit(row, 1)">审核</el-button>
-              <el-button type="danger" size="small" link @click="handleAudit(row, 2)">驳回</el-button>
-            </template>
-            <el-button v-if="row.status === 1" type="warning" size="small" link @click="handleAudit(row, 0)">反审核</el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
           </template>
-        </el-table-column>
-      </ScTable>
-    </el-card>
-    <ScForm ref="formRef" :title="formTitle" @submit="handleSubmit">
-      <template #default="{ form }">
-        <el-form-item label="商品名称" :rules="[{ required: true, message: '请输入商品名称' }]" prop="goods_name">
-          <el-input v-model="form.goods_name" />
-        </el-form-item>
-        <el-form-item label="数量" :rules="[{ required: true, message: '请输入数量' }]" prop="num">
-          <el-input-number v-model="form.num" :min="0" style="width:100%" />
-        </el-form-item>
-        <el-form-item label="仓库" prop="warehouse_name">
-          <el-input v-model="form.warehouse_name" />
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" :rows="3" />
-        </el-form-item>
+          <template #toolbar>
+            <el-button type="primary" :icon="Plus" @click="openAdd">新增领料</el-button>
+          </template>
+          <el-table-column prop="out_no" label="出库编号" min-width="150" />
+          <el-table-column prop="plan_name" label="关联生产计划" min-width="150" />
+          <el-table-column prop="out_date" label="领料日期" width="110">
+            <template #default="{ row }">{{ (row.out_date||row.created_at||'').slice(0,10) }}</template>
+          </el-table-column>
+          <el-table-column prop="warehouse_name" label="出库仓库" min-width="110" />
+          <el-table-column label="领料总价" width="110" align="right">
+            <template #default="{ row }">{{ Number(row.total_price||0).toFixed(2) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.status===1?'success':row.status===2?'danger':'info'" size="small">
+                {{ row.status===1?'已审核':row.status===2?'已驳回':'待审核' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right">
+            <template #default="{ row }">
+              <el-button type="success" size="small" link @click="openView(row)">查看</el-button>
+              <el-button v-if="row.status===0" type="primary" size="small" link @click="openEdit(row)">编辑</el-button>
+              <el-button v-if="row.status===0" type="primary" size="small" link @click="doAudit(row,1)">审核</el-button>
+              <el-button v-if="row.status===0" type="danger" size="small" link @click="doAudit(row,2)">驳回</el-button>
+              <el-button v-if="row.status===1" type="warning" size="small" link @click="doAudit(row,0)">反审核</el-button>
+              <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
+        </ScTable>
+      </el-card>
+    </div>
+
+    <!-- ══ 表单页 ══ -->
+    <div v-else class="form-page">
+      <div class="form-topbar">
+        <div class="form-topbar-left">
+          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
+          <span class="form-title">{{ isView?'查看领料单':fd.id?'编辑领料单':'新增领料单' }}</span>
+          <el-tag v-if="fd.status===1" type="success" size="small">已审核</el-tag>
+          <el-tag v-else-if="fd.status===2" type="danger" size="small">已驳回</el-tag>
+        </div>
+        <div class="form-topbar-right" v-if="!isView">
+          <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="form-section">
+          <el-row :gutter="16">
+            <el-col :span="6">
+              <div class="field-row">
+                <span class="field-label">出库编号</span>
+                <el-input v-model="fd.out_no" placeholder="不填自动生成" style="flex:1" :disabled="isView" />
+              </div>
+            </el-col>
+            <el-col :span="6">
+              <div class="field-row">
+                <span class="field-label required">领料日期</span>
+                <el-date-picker v-model="fd.out_date" type="date" value-format="YYYY-MM-DD" style="flex:1" :disabled="isView" />
+              </div>
+            </el-col>
+            <el-col :span="6">
+              <div class="field-row">
+                <span class="field-label required">出库仓库</span>
+                <el-select v-model="fd.warehouse_id" placeholder="选择仓库" style="flex:1" :disabled="isView" @change="onWarehouseChange">
+                  <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
+                </el-select>
+              </div>
+            </el-col>
+            <el-col :span="6">
+              <div class="field-row">
+                <span class="field-label">领料人</span>
+                <el-input v-model="fd.receiver" placeholder="领料人" style="flex:1" :disabled="isView" />
+              </div>
+            </el-col>
+            <el-col :span="8" style="margin-top:8px">
+              <div class="field-row">
+                <span class="field-label">关联生产计划</span>
+                <el-input v-model="fd.plan_name" placeholder="可选" readonly style="flex:1" />
+                <el-button v-if="!isView" size="small" @click="openPlanPicker">选择</el-button>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+
+        <div class="goods-toolbar" v-if="!isView">
+          <el-button type="primary" size="small" :icon="Plus" @click="openGoodsPicker">选择商品</el-button>
+          <el-button size="small" @click="addEmptyRow">手动添加行</el-button>
+          <span class="goods-summary">领料总价：<b>{{ totalPrice.toFixed(2) }}</b></span>
+        </div>
+        <div class="goods-summary-view" v-else>领料总价：<b>{{ totalPrice.toFixed(2) }}</b></div>
+
+        <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请添加领料商品">
+          <el-table-column type="index" label="#" width="45" align="center" />
+          <el-table-column label="商品名称" min-width="140">
+            <template #default="{ row }">
+              <el-input v-if="!isView" v-model="row.goods_name" size="small" />
+              <span v-else>{{ row.goods_name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="商品编码" width="110">
+            <template #default="{ row }">{{ row.goods_sn||'—' }}</template>
+          </el-table-column>
+          <el-table-column label="规格" width="100">
+            <template #default="{ row }">{{ row.spec||'—' }}</template>
+          </el-table-column>
+          <el-table-column label="单位" width="70" align="center">
+            <template #default="{ row }">{{ row.unit_name||'—' }}</template>
+          </el-table-column>
+          <el-table-column label="库存" width="80" align="right">
+            <template #default="{ row }">
+              <span :style="{color:(row.stock_num||0)>0?'#16a34a':'#dc2626'}">{{ row.stock_num??'—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="领料数量" width="110">
+            <template #header>领料数量<el-button v-if="!isView" link type="primary" size="small" @click="batchSet('num','领料数量')">批量</el-button></template>
+            <template #default="{ row }">
+              <el-input-number v-if="!isView" v-model="row.num" :min="0" :precision="2" controls-position="right" size="small" style="width:100%" @change="calcRow(row)" />
+              <span v-else>{{ row.num }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="出库单价" width="110">
+            <template #header>出库单价<el-button v-if="!isView" link type="primary" size="small" @click="batchSet('out_price','出库单价')">批量</el-button></template>
+            <template #default="{ row }">
+              <el-input-number v-if="!isView" v-model="row.out_price" :min="0" :precision="4" controls-position="right" size="small" style="width:100%" @change="calcRow(row)" />
+              <span v-else>{{ row.out_price }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="小计" width="100" align="right">
+            <template #default="{ row }"><b style="color:#dc2626">{{ ((row.num||0)*(row.out_price||0)).toFixed(2) }}</b></template>
+          </el-table-column>
+          <el-table-column label="备注" min-width="100">
+            <template #default="{ row }">
+              <el-input v-if="!isView" v-model="row.remark" size="small" placeholder="备注" />
+              <span v-else>{{ row.remark||'' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column v-if="!isView" label="" width="50" fixed="right">
+            <template #default="{ $index }">
+              <el-button type="danger" link size="small" :icon="Delete" @click="fd.items.splice($index,1)" />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="form-footer">
+          <div class="footer-summary">合计：数量 <b>{{ totalNum.toFixed(2) }}</b>&nbsp;&nbsp;总价 <b style="color:#dc2626">{{ totalPrice.toFixed(2) }}</b></div>
+          <div class="field-row" style="margin-top:8px">
+            <span class="field-label">备注</span>
+            <el-input v-model="fd.remark" type="textarea" :rows="2" :disabled="isView" style="flex:1" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 商品选择弹窗 -->
+    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="760px" append-to-body>
+      <el-input v-model="goodsSearch" placeholder="搜索名称/编码" clearable style="width:220px;margin-bottom:10px" @input="filterGoods" />
+      <el-table :data="filteredGoods" border size="small" height="380" @selection-change="pickerSel=$event">
+        <el-table-column type="selection" width="40" />
+        <el-table-column prop="name" label="商品名称" min-width="140" />
+        <el-table-column prop="goods_sn" label="编码" width="110" />
+        <el-table-column prop="spec" label="规格" width="100" />
+        <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+        <el-table-column prop="stock_num" label="库存" width="80" align="right" />
+      </el-table>
+      <template #footer>
+        <el-button @click="goodsPickerVisible=false">取消</el-button>
+        <el-button type="primary" @click="confirmGoods">确认（{{ pickerSel.length }}）</el-button>
       </template>
-    </ScForm>
+    </el-dialog>
+
+    <!-- 生产计划选择弹窗 -->
+    <el-dialog v-model="planPickerVisible" title="选择生产计划" width="700px" append-to-body>
+      <el-table :data="planList" border size="small" height="380" @row-click="selectPlan" style="cursor:pointer">
+        <el-table-column prop="order_sn" label="计划单号" width="150" />
+        <el-table-column prop="goods_name" label="商品" min-width="140" />
+        <el-table-column prop="plan_num" label="计划数量" width="100" align="right" />
+        <el-table-column prop="finish_date" label="完工日期" width="110">
+          <template #default="{ row }">{{ (row.finish_date||'').slice(0,10) }}</template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <!-- 批量设置 -->
+    <el-dialog v-model="batchVisible" :title="`批量设置：${batchLabel}`" width="280px" append-to-body>
+      <el-input-number v-model="batchValue" :min="0" :precision="4" style="width:100%" controls-position="right" />
+      <template #footer>
+        <el-button @click="batchVisible=false">取消</el-button>
+        <el-button type="primary" @click="applyBatch">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import ScForm from '@/components/ScForm.vue'
 import { getMaterialList, createMaterial, deleteMaterial, auditMaterial } from '@/api/production'
+import { getProductionPlanList } from '@/api/production'
+import { getWarehouseList } from '@/api/warehouse'
+import { getGoodsList } from '@/api/goods'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const formRef = ref<InstanceType<typeof ScForm>>()
-const formTitle = ref('新增领料')
-const searchForm = reactive<any>({})
+const searchForm = reactive({ out_no: '', goods_name: '' })
+function resetSearch() { searchForm.out_no=''; searchForm.goods_name=''; tableRef.value?.loadData() }
 
-function resetSearch() {
-  Object.keys(searchForm).forEach(k => delete searchForm[k])
-  tableRef.value?.loadData()
+const showForm = ref(false), isView = ref(false), saving = ref(false)
+const warehouseOptions = ref<any[]>([])
+async function loadWarehouses() {
+  try { const r = await getWarehouseList({ list_rows: 200 }); warehouseOptions.value = r.data?.list||r.data?.rows||r.data?.data||[] } catch {}
+}
+function onWarehouseChange(id: any) {
+  const w = warehouseOptions.value.find(x=>x.id===id); fd.warehouse_name=w?.name??''
+  fd.items.forEach(r=>{ if(!r.warehouse_id){r.warehouse_id=id;r.warehouse_name=w?.name??''} })
 }
 
-function openForm(row?: any) {
-  formTitle.value = '新增领料'
-  formRef.value?.open(row)
-}
+function defaultFd() { return { id:0,status:0,out_no:'',out_date:new Date().toISOString().slice(0,10),warehouse_id:null as any,warehouse_name:'',receiver:'',plan_id:0,plan_name:'',remark:'',items:[] as any[],total_price:0 } }
+const fd = reactive(defaultFd())
 
-async function handleSubmit(data: any) {
-  formRef.value?.setSubmitting(true)
-  try {
-    await createMaterial(data)
-    ElMessage.success('操作成功')
-    formRef.value?.close()
-    tableRef.value?.refresh()
-  } finally {
-    formRef.value?.setSubmitting(false)
-  }
-}
+function calcRow(r: any) { r.row_total=(r.num||0)*(r.out_price||0) }
+const totalNum = computed(()=>fd.items.reduce((s,r)=>s+(Number(r.num)||0),0))
+const totalPrice = computed(()=>fd.items.reduce((s,r)=>s+(Number(r.num)||0)*(Number(r.out_price)||0),0))
 
-async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该领料记录？', '提示', { type: 'warning' })
-  await deleteMaterial(id)
-  ElMessage.success('删除成功')
-  tableRef.value?.refresh()
-}
+async function openAdd() { Object.assign(fd,defaultFd()); fd.items=[]; isView.value=false; showForm.value=true; await loadWarehouses() }
+async function openEdit(row:any) { Object.assign(fd,{...defaultFd(),...row}); try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]}; fd.items.forEach(calcRow); isView.value=false; showForm.value=true; await loadWarehouses() }
+async function openView(row:any) { Object.assign(fd,{...defaultFd(),...row}); try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]}; fd.items.forEach(calcRow); isView.value=true; showForm.value=true; await loadWarehouses() }
+function backToList() { showForm.value=false; tableRef.value?.refresh() }
 
-async function handleAudit(row: any, status: number) {
-  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
-  await ElMessageBox.confirm(`确定${action}该领料单？`, '提示', { type: 'warning' })
-  try {
-    await auditMaterial(row.id, status)
-    ElMessage.success(`${action}成功`)
-    tableRef.value?.refresh()
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
-  }
+// 商品选择
+const goodsPickerVisible=ref(false), goodsSearch=ref(''), allGoods=ref<any[]>([]), filteredGoods=ref<any[]>([]), pickerSel=ref<any[]>([])
+async function openGoodsPicker() {
+  if(!allGoods.value.length) { try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.list||r.data?.data||[]}catch{} }
+  goodsSearch.value=''; filteredGoods.value=[...allGoods.value]; pickerSel.value=[]; goodsPickerVisible.value=true
 }
+function filterGoods() { const q=goodsSearch.value.trim().toLowerCase(); filteredGoods.value=allGoods.value.filter(g=>!q||(g.name||'').toLowerCase().includes(q)||(g.goods_sn||'').toLowerCase().includes(q)) }
+function confirmGoods() { pickerSel.value.forEach(g=>fd.items.push({goods_id:g.id,goods_name:g.name,goods_sn:g.goods_sn||'',spec:g.spec||'',unit_name:g.unit_name||'',stock_num:g.stock_num??null,num:1,out_price:0,row_total:0,remark:''})); goodsPickerVisible.value=false }
+function addEmptyRow() { fd.items.push({goods_id:0,goods_name:'',goods_sn:'',spec:'',unit_name:'',stock_num:null,num:1,out_price:0,row_total:0,remark:''}) }
+
+// 生产计划选择
+const planPickerVisible=ref(false), planList=ref<any[]>([])
+async function openPlanPicker() { try{const r=await getProductionPlanList({list_rows:100,status:1});planList.value=r.data?.list||r.data?.rows||r.data?.data||[]}catch{}; planPickerVisible.value=true }
+function selectPlan(p:any) { fd.plan_id=p.id; fd.plan_name=p.order_sn; planPickerVisible.value=false }
+
+// 批量设置
+const batchVisible=ref(false), batchField=ref(''), batchLabel=ref(''), batchValue=ref(0)
+function batchSet(f:string,l:string){batchField.value=f;batchLabel.value=l;batchValue.value=0;batchVisible.value=true}
+function applyBatch(){fd.items.forEach(r=>{r[batchField.value]=batchValue.value;calcRow(r)});batchVisible.value=false}
+
+async function handleSave() {
+  if(!fd.out_date){ElMessage.warning('请选择领料日期');return}
+  if(!fd.warehouse_id){ElMessage.warning('请选择出库仓库');return}
+  if(!fd.items.length){ElMessage.warning('请添加商品');return}
+  saving.value=true
+  try { await createMaterial({...fd,goods_info:JSON.stringify(fd.items),total_price:totalPrice.value}); ElMessage.success('保存成功'); backToList() } catch{} finally{saving.value=false}
+}
+async function doAudit(row:any,status:number) {
+  const labels:Record<number,string>={1:'审核',2:'驳回',0:'反审核'}
+  await ElMessageBox.confirm(`确定${labels[status]}该领料单？`,'提示',{type:'warning'})
+  try{await auditMaterial(row.id,status);ElMessage.success('操作成功');tableRef.value?.refresh()}catch{}
+}
+async function handleDelete(id:number) { await ElMessageBox.confirm('确定删除？','提示',{type:'warning'}); await deleteMaterial(id); ElMessage.success('删除成功'); tableRef.value?.refresh() }
+
+onMounted(loadWarehouses)
 </script>
 
 <style scoped>
-.page-container {}
-.search-actions { display: flex; gap: 8px; }
+.material-page{}
+.form-page{background:#fff;min-height:calc(100vh - 80px)}
+.form-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #e8edf2;background:#fff;position:sticky;top:0;z-index:10}
+.form-topbar-left{display:flex;align-items:center;gap:10px}
+.form-title{font-size:15px;font-weight:600;color:#333}
+.form-body{padding:16px}
+.form-section{margin-bottom:12px}
+.field-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.field-label{font-size:13px;color:#555;white-space:nowrap;flex-shrink:0;min-width:52px}
+.field-label.required::before{content:'*';color:#f56c6c;margin-right:2px}
+.goods-toolbar{display:flex;align-items:center;gap:8px;padding:8px 0;margin-bottom:6px;border-top:1px solid #f0f0f0}
+.goods-summary-view{padding:6px 0;font-size:13px;color:#555;border-top:1px solid #f0f0f0;margin-bottom:6px}
+.goods-summary{margin-left:auto;font-size:13px;color:#555}
+.goods-summary b{color:#dc2626}
+.form-footer{padding:12px 0;border-top:1px solid #f0f0f0}
+.footer-summary{font-size:13px;color:#555}
+.footer-summary b{color:#dc2626}
 </style>

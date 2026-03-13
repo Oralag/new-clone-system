@@ -20,17 +20,27 @@
         </template>
         <template #toolbar>
           <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
+          <el-button :icon="Wallet" @click="router.push('/finance/fund-flow')">资金流水</el-button>
+          <el-button :icon="CreditCard" @click="router.push('/finance/pay-receipt')">付款单</el-button>
         </template>
         <el-table-column prop="expense_no" label="费用单号" min-width="160" />
         <el-table-column prop="type_name" label="费用类型" min-width="120" />
-        <el-table-column prop="amount" label="金额" min-width="120" />
+        <el-table-column label="金额" min-width="120" align="right">
+          <template #default="{ row }">
+            <span style="color:#dc2626;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="applicant_name" label="申请人" min-width="120" />
+        <el-table-column label="申请日期" min-width="110">
+          <template #default="{ row }">{{ (row.apply_date || row.created_at || '').slice(0, 10) }}</template>
+        </el-table-column>
         <el-table-column prop="status_tag" label="状态" min-width="100" />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="success" link @click="openView(row)">查看</el-button>
-              <el-button type="primary" link @click="openForm(row)">编辑</el-button>
-              <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="primary" link @click="openForm(row)">编辑</el-button>
+            <el-button type="warning" link @click="router.push('/finance/fund-flow')">流水</el-button>
+            <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -55,12 +65,15 @@
 </template>
 
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { Plus, Wallet, CreditCard } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
 import { getExpenseList, createExpense, deleteExpense } from '@/api/finance'
 
+const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
 const formTitle = ref('新增')

@@ -35,7 +35,7 @@
                   </el-table-column>
                   <el-table-column label="含税合计" width="110" align="right">
                     <template #default="{ row: item }">
-                      <span style="color:#165dff;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
+                      <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
                   <el-table-column prop="remark" label="备注" min-width="100" />
@@ -56,7 +56,7 @@
           </el-table-column>
           <el-table-column prop="return_amount" label="退货金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#165dff;font-weight:500">¥{{ Number(row.return_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.return_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="reason" label="退货原因" min-width="140" show-overflow-tooltip />
@@ -257,7 +257,7 @@
             </el-table-column>
             <el-table-column label="税额" width="100" align="right">
               <template #default="{ row }">
-                <span style="color:#f53f3f">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
+                <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column width="130">
@@ -274,7 +274,7 @@
             </el-table-column>
             <el-table-column label="含税合计" width="110" align="right">
               <template #default="{ row }">
-                <span style="color:#165dff;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+                <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="备注" min-width="110">
@@ -318,8 +318,8 @@
             </div>
           </div>
           <div class="settle-summary">
-            <span>含税合计：<b style="color:#165dff;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">实退金额：<b style="color:#f53f3f;font-size:16px">¥{{ fd.return_amount.toFixed(2) }}</b></span>
+            <span>含税合计：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">实退金额：<b style="color:#dc2626;font-size:16px">¥{{ fd.return_amount.toFixed(2) }}</b></span>
           </div>
         </div>
 
@@ -346,7 +346,7 @@
         <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
       </el-table>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
       </template>
@@ -793,11 +793,11 @@ async function confirmQuickAddCustomer() {
 .expand-title {
   font-size: 12px;
   font-weight: 600;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   margin-bottom: 8px;
 }
 .expand-table {
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -819,7 +819,7 @@ async function confirmQuickAddCustomer() {
   flex-shrink: 0;
 }
 
-.form-title { font-size: 15px; font-weight: 600; color: #1d2129; }
+.form-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
 .form-actions { display: flex; gap: 8px; }
 
 .form-body {
@@ -833,7 +833,7 @@ async function confirmQuickAddCustomer() {
 
 .form-section {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e4e7ed;
   padding: 16px 18px 14px;
 }
@@ -841,10 +841,10 @@ async function confirmQuickAddCustomer() {
 .sec-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
   margin-bottom: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   display: block;
 }
 
@@ -866,7 +866,7 @@ async function confirmQuickAddCustomer() {
 
 .goods-count {
   font-size: 13px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   flex-shrink: 0;
 }
 
@@ -897,26 +897,26 @@ async function confirmQuickAddCustomer() {
 
 .settle-label {
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   white-space: nowrap;
 }
 
 .settle-value {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
 }
 
 .settle-value.primary {
-  color: #165dff;
+  color: #0071e3;
   font-size: 16px;
 }
 
 .settle-summary {
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid #f5f5f7;
   padding-top: 12px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   display: flex;
   align-items: center;
 }

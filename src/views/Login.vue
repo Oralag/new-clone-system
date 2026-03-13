@@ -1,217 +1,259 @@
 <template>
-  <div class="entry-page">
-    <div class="grain" />
+  <div class="login-page">
+    <div class="left-panel">
+      <!-- Logo -->
+      <div class="logo-row">
+        <div class="logo-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="8" fill="url(#nbg)"/>
+            <text x="17" y="27" text-anchor="middle" font-family="'Helvetica Neue','Arial',sans-serif" font-size="26" font-weight="800" fill="#70C1F2">N</text>
+            <circle cx="27" cy="8" r="4" fill="#F19D38"/>
+            <defs>
+              <linearGradient id="nbg" x1="0" y1="0" x2="0" y2="36" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#1C2B48"/>
+                <stop offset="100%" stop-color="#1D3974"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="logo-text">数字游牧 ERP</span>
+      </div>
 
-    <main class="entry-shell">
-      <section class="brand-panel">
-        <div class="brand-topline">Nomad ERP Cloud</div>
-        <h1 class="brand-title">数字游牧 ERP</h1>
-        <p class="brand-tagline">欧式极简交互，企业级业务与财务协同中枢</p>
-        <p class="brand-copy">
-          从传统进销存走向智能化运营：你已上线的智能体工作流模块可直接承接品牌策略、内容生产与执行流程，
-          后续可平滑扩展到客服自动对接接单等业务引擎。
-        </p>
-
-        <div class="module-grid">
-          <article class="module-card active">
-            <div class="module-title">智能体工作流</div>
-            <div class="module-meta">已上线</div>
-            <p>品牌、热搜、文案、视频、发布一体化流程。</p>
-          </article>
-          <article class="module-card">
-            <div class="module-title">客服自动对接接单</div>
-            <div class="module-meta">规划中</div>
-            <p>对话到订单自动流转，减少人工接单延迟。</p>
-          </article>
-          <article class="module-card">
-            <div class="module-title">多渠道订单中台</div>
-            <div class="module-meta">规划中</div>
-            <p>统一汇总电商、私域、门店订单与履约状态。</p>
-          </article>
+      <!-- Form area -->
+      <div class="form-area">
+        <div class="form-heading">
+          <h1>{{ activeTab === 'login' ? 'Sign In' : 'Join Us' }}</h1>
+          <p class="form-heading-cn">{{ activeTab === 'login' ? '欢迎回来，请登录您的账户' : '创建账户，开启数字游牧之旅' }}</p>
+          <p v-if="activeTab === 'login'">
+            New here? <a href="#" @click.prevent="switchTab('register')">Create account</a>
+          </p>
+          <p v-else>
+            Already a member? <a href="#" @click.prevent="switchTab('login')">Sign In</a>
+          </p>
         </div>
 
-        <div class="advantage-list">
-          <span>业务财务一体口径</span>
-          <span>审核反审核可追溯</span>
-          <span>云端开通按需付费</span>
-        </div>
-      </section>
+        <!-- Login Form -->
+        <el-form
+          v-if="activeTab === 'login'"
+          ref="loginFormRef"
+          :model="loginForm"
+          :rules="loginRules"
+          size="large"
+          label-position="top"
+          @keydown.enter="handleLogin"
+        >
+          <el-form-item label="ACCOUNT" prop="account">
+            <el-input v-model="loginForm.account" placeholder="Phone / Username" clearable />
+          </el-form-item>
+          <el-form-item label="ACCESS KEY" prop="password">
+            <el-input v-model="loginForm.password" type="password" placeholder="••••••••" show-password clearable />
+          </el-form-item>
+          <button class="submit-btn" :disabled="loginLoading" @click.prevent="handleLogin">
+            <span v-if="!loginLoading">SIGN IN</span>
+            <span v-else class="loading-dots"><span></span><span></span><span></span></span>
+          </button>
+        </el-form>
 
-      <section class="auth-panel">
-        <div class="auth-card">
-          <div class="mode-switch">
-            <button :class="['mode-btn', { active: activeTab === 'login' }]" @click="switchTab('login')">登录</button>
-            <button :class="['mode-btn', { active: activeTab === 'register' }]" @click="switchTab('register')">注册</button>
+        <!-- Register Form -->
+        <el-form
+          v-else
+          ref="registerFormRef"
+          :model="registerForm"
+          :rules="registerRules"
+          size="large"
+          label-position="top"
+        >
+          <el-form-item label="COMPANY NAME" prop="company_name">
+            <el-input v-model="registerForm.company_name" placeholder="Your Company" clearable />
+          </el-form-item>
+          <el-form-item label="MOBILE" prop="mobile">
+            <el-input v-model="registerForm.mobile" placeholder="Phone number" clearable />
+          </el-form-item>
+          <el-form-item label="ACCESS KEY" prop="password">
+            <el-input v-model="registerForm.password" type="password" placeholder="••••••••" show-password clearable />
+          </el-form-item>
+          <el-form-item label="CONFIRM KEY" prop="confirmPassword">
+            <el-input v-model="registerForm.confirmPassword" type="password" placeholder="••••••••" show-password clearable />
+          </el-form-item>
+          <el-form-item label="VERIFY" prop="captcha">
+            <div class="captcha-row">
+              <el-input v-model="registerForm.captcha" placeholder="输入右侧验证码" clearable style="flex:1" />
+              <captcha-canvas ref="captchaRef" v-model:code="captchaCode" :width="110" :height="36" />
+            </div>
+          </el-form-item>
+          <el-alert v-if="registerTip" :title="registerTip" :type="registerTipType" :closable="false" show-icon style="margin-bottom:16px;border-radius:12px" />
+          <button class="submit-btn" :disabled="registerLoading" @click.prevent="handleRegister">
+            <span v-if="!registerLoading">JOIN NOW</span>
+            <span v-else class="loading-dots"><span></span><span></span><span></span></span>
+          </button>
+        </el-form>
+      </div>
+
+      <!-- Footer -->
+      <div class="left-footer">
+        <div class="status-row">
+          <span class="status-dot"></span>
+          <span class="status-label">SYSTEM STATUS</span>
+          <span class="status-ok">Operational</span>
+        </div>
+        <div class="footer-meta">
+          <span>数字游牧 ERP</span>
+          <span class="dot-sep">·</span>
+          <span>V3.0 STABLE BUILD</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <!-- Decorative circles -->
+      <div class="deco-circle deco-c1"></div>
+      <div class="deco-circle deco-c2"></div>
+
+      <div class="right-content">
+        <div class="next-gen-badge">
+          <span class="badge-star">✦</span>
+          <span>NEXT-GEN PLATFORM</span>
+        </div>
+
+        <h2 class="hero-title">
+          <span class="line-white">构建数字</span><br />
+          <span class="line-light">未来。</span>
+        </h2>
+
+        <p class="hero-sub">为现代数字游牧企业打造的终极管理工作台</p>
+
+        <div class="feature-cards">
+          <div class="feat-card" v-for="f in features" :key="f.title">
+            <div class="feat-arrow">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M3 7h8M7 3l4 4-4 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="feat-text">
+              <div class="feat-title">{{ f.title }}</div>
+              <div class="feat-desc">{{ f.desc }}</div>
+            </div>
           </div>
-
-          <div class="auth-head">
-            <h2>{{ activeTab === 'login' ? '进入工作台' : '创建企业账号' }}</h2>
-            <p>{{ activeTab === 'login' ? '继续你的业务与智能体流程' : '30 秒开通，立即开始使用' }}</p>
-          </div>
-
-          <el-form
-            v-if="activeTab === 'login'"
-            ref="loginFormRef"
-            :model="loginForm"
-            :rules="loginRules"
-            size="large"
-            label-position="top"
-            @keydown.enter="handleLogin"
-          >
-            <el-form-item label="账号" prop="account">
-              <el-input v-model="loginForm.account" placeholder="请输入账号" prefix-icon="User" clearable />
-            </el-form-item>
-            <el-form-item label="密码" prop="password">
-              <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" prefix-icon="Lock" show-password clearable />
-            </el-form-item>
-            <el-button type="primary" size="large" :loading="loginLoading" class="submit-btn" @click="handleLogin">
-              登录系统
-            </el-button>
-          </el-form>
-
-          <el-form
-            v-else
-            ref="registerFormRef"
-            :model="registerForm"
-            :rules="registerRules"
-            size="large"
-            label-position="top"
-            @keydown.enter="handleRegister"
-          >
-            <el-form-item label="账号" prop="account">
-              <el-input v-model="registerForm.account" placeholder="请输入登录账号" clearable />
-            </el-form-item>
-            <el-form-item label="密码" prop="password">
-              <el-input v-model="registerForm.password" type="password" placeholder="请输入密码" show-password clearable />
-            </el-form-item>
-            <el-form-item label="确认密码" prop="confirmPassword">
-              <el-input v-model="registerForm.confirmPassword" type="password" placeholder="请再次输入密码" show-password clearable />
-            </el-form-item>
-            <el-form-item label="企业名称" prop="company_name">
-              <el-input v-model="registerForm.company_name" placeholder="例如：某某贸易有限公司" clearable />
-            </el-form-item>
-            <el-form-item label="联系人手机号" prop="mobile">
-              <el-input v-model="registerForm.mobile" placeholder="用于服务通知" clearable />
-            </el-form-item>
-            <el-button type="primary" size="large" :loading="registerLoading" class="submit-btn" @click="handleRegister">
-              立即注册
-            </el-button>
-          </el-form>
         </div>
-      </section>
-    </main>
+
+        <div class="right-footer">
+          <div class="trust-block">
+            <div class="avatars">
+              <div class="av" v-for="(c, i) in avatarColors" :key="i" :style="{ background: c, left: i * 22 + 'px' }"></div>
+            </div>
+            <div class="trust-text">
+              <div class="trust-label">TRUSTED BY</div>
+              <div class="trust-count">10,000+ FOUNDERS</div>
+            </div>
+          </div>
+          <div class="uptime-block">
+            <div class="uptime-label">GLOBAL UPTIME</div>
+            <div class="uptime-num">99.999%</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { ref, reactive } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
+import CaptchaCanvas from '@/components/CaptchaCanvas.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
+const features = [
+  { title: '全球化架构', desc: '让您的业务在无国界的世界中自由流动' },
+  { title: 'AI 智能驱动', desc: '从创意生成到全球投放，一键触达目标受众' },
+  { title: '极速响应', desc: '毫秒级数据同步，掌控全球业务动态' },
+]
+
+const avatarColors = ['#f87171', '#fb923c', '#a78bfa', '#60a5fa', '#34d399']
+
 const activeTab = ref<'login' | 'register'>('login')
+function switchTab(tab: 'login' | 'register') {
+  activeTab.value = tab
+  registerTip.value = ''
+  registerTipType.value = 'info'
+}
 
 const loginFormRef = ref<FormInstance>()
-const registerFormRef = ref<FormInstance>()
-
 const loginLoading = ref(false)
-const registerLoading = ref(false)
-
-const loginForm = reactive({
-  account: '',
-  password: '',
-})
-
-const registerForm = reactive({
-  account: '',
-  password: '',
-  confirmPassword: '',
-  company_name: '',
-  mobile: '',
-})
-
+const loginForm = reactive({ account: '', password: '' })
 const loginRules: FormRules = {
   account: [{ required: true, message: '请输入账号', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-}
-
-const registerRules: FormRules = {
-  account: [
-    { required: true, message: '请输入账号', trigger: 'blur' },
-    { min: 4, message: '账号至少 4 位', trigger: 'blur' },
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
-  ],
-  confirmPassword: [
-    { required: true, message: '请再次输入密码', trigger: 'blur' },
-    {
-      validator: (_rule: any, value: string, callback: any) => {
-        if (value !== registerForm.password) {
-          callback(new Error('两次密码输入不一致'))
-          return
-        }
-        callback()
-      },
-      trigger: 'blur',
-    },
-  ],
-  company_name: [{ required: true, message: '请输入企业名称', trigger: 'blur' }],
-  mobile: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
-}
-
-function switchTab(tab: 'login' | 'register') {
-  activeTab.value = tab
 }
 
 async function handleLogin() {
   if (!loginFormRef.value) return
   const valid = await loginFormRef.value.validate().catch(() => false)
   if (!valid) return
-
   loginLoading.value = true
   try {
     await authStore.login(loginForm.account, loginForm.password)
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/portal'
     router.push(redirect)
+  } catch {
   } finally {
     loginLoading.value = false
   }
+}
+
+const registerFormRef = ref<FormInstance>()
+const registerLoading = ref(false)
+const registerTip = ref('')
+const registerTipType = ref<'success' | 'error' | 'info'>('info')
+const registerForm = reactive({ company_name: '', mobile: '', password: '', confirmPassword: '', captcha: '' })
+const captchaRef = ref<any>(null)
+const captchaCode = ref('')
+
+const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
+  if (value === '') { callback(new Error('请再次输入密码')) }
+  else if (value !== registerForm.password) { callback(new Error('两次输入的密码不一致')) }
+  else { callback() }
+}
+
+const validateCaptcha = (_rule: any, value: string, callback: any) => {
+  if (!value) { callback(new Error('请输入验证码')) }
+  else if (value.toUpperCase() !== captchaCode.value.toUpperCase()) {
+    captchaRef.value?.refresh()
+    callback(new Error('验证码错误，已刷新'))
+  }
+  else { callback() }
+}
+
+const registerRules: FormRules = {
+  company_name: [{ required: true, message: '请输入企业名称', trigger: 'blur' }],
+  mobile: [{ required: true, message: '请输入手机号', trigger: 'blur' }, { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号', trigger: 'blur' }],
+  password: [{ required: true, message: '请设置密码', trigger: 'blur' }, { min: 6, message: '密码至少 6 位', trigger: 'blur' }],
+  confirmPassword: [{ required: true, message: '请确认密码', trigger: 'blur' }, { validator: validateConfirmPassword, trigger: 'blur' }],
+  captcha: [{ required: true, validator: validateCaptcha, trigger: 'blur' }],
 }
 
 async function handleRegister() {
   if (!registerFormRef.value) return
   const valid = await registerFormRef.value.validate().catch(() => false)
   if (!valid) return
-
   registerLoading.value = true
+  registerTip.value = ''
   try {
-    await http.post('/admin/Admin/register', {
-      account: registerForm.account,
-      password: registerForm.password,
-      company_name: registerForm.company_name,
-      mobile: registerForm.mobile,
-      contact_name: registerForm.account,
-    })
-
-    ElMessage.success('注册成功，请登录')
-    loginForm.account = registerForm.account
-    loginForm.password = registerForm.password
-    activeTab.value = 'login'
-  } catch (error: any) {
-    if (error?.response?.status === 404) {
-      ElMessage.error('当前环境未开通自助注册，请联系管理员开通')
-    } else {
-      ElMessage.error(error?.message || '注册失败')
-    }
+    await http.post('/login/register', { company_name: registerForm.company_name, mobile: registerForm.mobile, password: registerForm.password })
+    registerTip.value = '注册成功，请登录'
+    registerTipType.value = 'success'
+    setTimeout(() => { switchTab('login'); loginForm.account = registerForm.mobile }, 1500)
+  } catch (e: any) {
+    registerTip.value = e?.message || '注册失败，请重试'
+    registerTipType.value = 'error'
+    captchaRef.value?.refresh()
   } finally {
     registerLoading.value = false
   }
@@ -219,296 +261,397 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-.entry-page {
-  --ink: #e9edf4;
-  --ink-soft: rgba(233, 237, 244, 0.78);
-  --panel: rgba(14, 18, 24, 0.6);
-  --line: rgba(255, 255, 255, 0.12);
+* { box-sizing: border-box; }
+
+.login-page {
   min-height: 100vh;
-  padding: 24px;
-  background: radial-gradient(circle at 12% 12%, rgba(166, 145, 114, 0.28) 0, rgba(11, 18, 32, 0) 32%), linear-gradient(135deg, #0a0f18 0%, #111827 46%, #1a1f2e 100%);
-  overflow: hidden;
+  display: flex;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.09;
-  background-image: radial-gradient(circle, #fff 0.4px, transparent 0.4px);
-  background-size: 3px 3px;
-}
-
-.entry-shell {
-  position: relative;
-  z-index: 1;
-  width: min(1220px, 100%);
-  min-height: calc(100vh - 48px);
-  margin: 0 auto;
-  border: 1px solid var(--line);
-  border-radius: 26px;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-  backdrop-filter: blur(18px);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
-  display: grid;
-  grid-template-columns: 1.16fr 0.84fr;
-}
-
-.brand-panel {
-  padding: 56px 56px 44px;
-  color: var(--ink);
-  border-right: 1px solid var(--line);
+/* ── LEFT PANEL ── */
+.left-panel {
+  width: 480px;
+  flex-shrink: 0;
+  background: #f0f0f5;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  padding: 40px 48px;
 }
 
-.brand-topline {
-  font-size: 12px;
-  letter-spacing: 2.4px;
-  text-transform: uppercase;
-  color: rgba(213, 189, 153, 0.95);
-}
-
-.brand-title {
-  margin: 0;
-  font-size: 56px;
-  line-height: 1.06;
-  letter-spacing: 0.6px;
-  font-weight: 600;
-  font-family: 'Iowan Old Style', 'Times New Roman', STSong, serif;
-}
-
-.brand-tagline {
-  margin: 0;
-  font-size: 18px;
-  color: var(--ink-soft);
-}
-
-.brand-copy {
-  margin: 8px 0 2px;
-  font-size: 15px;
-  line-height: 1.8;
-  color: rgba(233, 237, 244, 0.85);
-  max-width: 92%;
-}
-
-.module-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.module-card {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
-  padding: 14px;
-}
-
-.module-card.active {
-  border-color: rgba(213, 189, 153, 0.9);
-  background: linear-gradient(160deg, rgba(213, 189, 153, 0.2), rgba(213, 189, 153, 0.06));
-}
-
-.module-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #f6f8fc;
-}
-
-.module-meta {
-  margin-top: 3px;
-  font-size: 12px;
-  color: rgba(213, 189, 153, 0.92);
-}
-
-.module-card p {
-  margin: 10px 0 0;
-  font-size: 12px;
-  line-height: 1.65;
-  color: rgba(224, 230, 240, 0.82);
-}
-
-.advantage-list {
-  margin-top: auto;
+.logo-row {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 
-.advantage-list span {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(238, 242, 248, 0.88);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-.auth-panel {
-  padding: 34px;
+.logo-icon {
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.auth-card {
-  width: min(420px, 100%);
-  border: 1px solid rgba(22, 26, 32, 0.12);
-  background: rgba(250, 250, 250, 0.94);
-  border-radius: 20px;
-  padding: 24px 24px 20px;
+.logo-text {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #1a1a2e;
 }
 
-.mode-switch {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid #d5d9e1;
-  border-radius: 999px;
-  overflow: hidden;
-  margin-bottom: 18px;
+.form-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 0;
 }
 
-.mode-btn {
-  border: none;
-  height: 40px;
-  background: #f3f5f8;
-  font-size: 14px;
-  color: #5c636f;
-  cursor: pointer;
+.form-heading {
+  margin-bottom: 36px;
 }
 
-.mode-btn.active {
-  background: #161c24;
-  color: #fff;
-  font-weight: 600;
+.form-heading h1 {
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  color: #1a1a2e;
+  margin: 0 0 6px;
+  line-height: 1;
 }
 
-.auth-head h2 {
-  margin: 0;
-  font-size: 30px;
-  letter-spacing: 0.2px;
-  font-weight: 600;
-  color: #141922;
-  font-family: 'Iowan Old Style', 'Times New Roman', STSong, serif;
-}
-
-.auth-head p {
-  margin: 8px 0 18px;
-  color: #5f6672;
+.form-heading-cn {
   font-size: 13px;
+  color: #aaa;
+  margin: 0 0 8px;
+  font-weight: 500;
 }
+
+.form-heading p {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+  font-weight: 500;
+}
+
+.form-heading a {
+  color: #5B4FE8;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.form-heading a:hover { text-decoration: underline; }
 
 .submit-btn {
   width: 100%;
-  height: 46px;
   margin-top: 8px;
+  height: 52px;
+  font-size: 13px;
+  font-weight: 800;
+  border-radius: 14px;
+  border: none;
+  background: #5B4FE8;
+  color: white;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  box-shadow: 0 8px 24px rgba(91,79,232,0.32);
+  transition: all 0.22s cubic-bezier(0.23,1,0.32,1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #4a3fd4;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(91,79,232,0.42);
+}
+
+.submit-btn:active:not(:disabled) { transform: translateY(0); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.loading-dots { display: flex; gap: 5px; align-items: center; }
+
+.captcha-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+.loading-dots span { width: 6px; height: 6px; background: white; border-radius: 50%; animation: blink 1.2s ease-in-out infinite; }
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+.left-footer {
+  padding-top: 24px;
+  border-top: 1px solid rgba(0,0,0,0.07);
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(34,197,94,0.6);
+}
+
+.status-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #aaa;
+}
+
+.status-ok {
+  font-size: 11px;
+  font-weight: 700;
+  color: #22c55e;
+}
+
+.footer-meta {
+  font-size: 10px;
+  color: #bbb;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  display: flex;
+  gap: 6px;
+}
+
+.dot-sep { color: #ddd; }
+
+/* ── RIGHT PANEL ── */
+.right-panel {
+  flex: 1;
+  background: linear-gradient(135deg, #5B4FE8 0%, #4338CA 40%, #3730A3 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 72px;
+  position: relative;
+  overflow: hidden;
+}
+
+.deco-circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  pointer-events: none;
+}
+
+.deco-c1 {
+  width: 520px;
+  height: 520px;
+  top: -100px;
+  right: -100px;
+}
+
+.deco-c2 {
+  width: 360px;
+  height: 360px;
+  bottom: -80px;
+  right: 120px;
+}
+
+.right-content {
+  max-width: 500px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.next-gen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 28px;
+}
+
+.badge-star { font-size: 9px; }
+
+.hero-title {
+  font-size: clamp(52px, 6vw, 80px);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  margin: 0 0 20px;
+}
+
+.line-white { color: #ffffff; }
+.line-light { color: rgba(255,255,255,0.45); }
+
+.hero-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
+  margin: 0 0 40px;
+  line-height: 1.65;
+}
+
+.feature-cards {
+  background: rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 40px;
+}
+
+.feat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  transition: background 0.2s;
+  cursor: default;
+}
+
+.feat-card:hover { background: rgba(255,255,255,0.07); }
+
+.feat-arrow {
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.feat-card:hover .feat-arrow { background: rgba(255,255,255,0.22); }
+
+.feat-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 3px;
+}
+
+.feat-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  font-weight: 500;
+}
+
+.right-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trust-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatars {
+  position: relative;
+  height: 34px;
+  width: 110px;
+}
+
+.av {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.25);
+  top: 0;
+}
+
+.trust-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 3px;
+}
+
+.trust-count {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.uptime-block { text-align: right; }
+
+.uptime-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 3px;
+}
+
+.uptime-num {
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.03em;
+}
+
+/* ── Element Plus overrides ── */
+:deep(.el-form-item__label) {
+  font-size: 10px;
+  font-weight: 800;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding-bottom: 6px;
+}
+
+:deep(.el-input__wrapper) {
   border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+  transition: box-shadow 0.2s;
 }
 
-@media (max-width: 1080px) {
-  .entry-page {
-    padding: 16px;
-  }
-
-  .entry-shell {
-    grid-template-columns: 1fr;
-    min-height: calc(100vh - 32px);
-  }
-
-  .brand-panel {
-    border-right: none;
-    border-bottom: 1px solid var(--line);
-    padding: 30px 24px 24px;
-  }
-
-  .brand-title {
-    font-size: 40px;
-  }
-
-  .brand-copy {
-    max-width: 100%;
-  }
-
-  .module-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .auth-panel {
-    padding: 22px 16px 24px;
-  }
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1.5px rgba(91,79,232,0.25);
 }
 
-@media (max-width: 600px) {
-  .entry-page {
-    padding: 0;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-    min-height: 100dvh;
-    background: #fff;
-  }
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(91,79,232,0.35) !important;
+}
 
-  .grain,
-  .brand-panel {
-    display: none;
-  }
+:deep(.el-input__inner) {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a2e;
+}
 
-  .entry-shell {
-    width: 100%;
-    min-height: 100dvh;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    backdrop-filter: none;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-  }
+:deep(.el-form-item) {
+  margin-bottom: 20px;
+}
 
-  .auth-panel {
-    flex: 1;
-    padding: 40px 24px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .auth-panel::before {
-    content: '数字游牧 ERP';
-    display: block;
-    font-size: 28px;
-    font-weight: 700;
-    color: #141922;
-    font-family: 'PingFang SC', STSong, serif;
-    margin-bottom: 6px;
-  }
-
-  .auth-panel::after {
-    content: '企业级业务与财务协同中枢';
-    display: block;
-    font-size: 13px;
-    color: #86909c;
-    margin-bottom: 32px;
-  }
-
-  .auth-card {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    width: 100%;
-  }
-
-  .auth-head h2 {
-    font-size: 22px;
-  }
-
-  .submit-btn {
-    height: 50px;
-    font-size: 16px;
-    border-radius: 12px;
-  }
+/* ── Responsive ── */
+@media (max-width: 960px) {
+  .login-page { flex-direction: column-reverse; }
+  .left-panel { width: 100%; padding: 32px 28px; }
+  .right-panel { padding: 48px 28px; min-height: 50vh; }
+  .hero-title { font-size: 40px; }
+  .feature-cards { margin-bottom: 24px; }
 }
 </style>

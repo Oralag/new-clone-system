@@ -8,8 +8,34 @@
     </div>
 
     <div class="top-actions">
+      <!-- 返回选择模块 -->
+      <el-tooltip content="选择模块" placement="bottom">
+        <button class="action-btn" @click="router.push('/portal')">
+          <el-icon :size="17"><Grid /></el-icon>
+        </button>
+      </el-tooltip>
+
+      <!-- 主题切换 -->
+      <el-tooltip content="亮色" placement="bottom">
+        <button class="action-btn" :class="{ active: appStore.theme === 'light' }" @click="appStore.setTheme('light')">
+          <el-icon :size="16"><Sunny /></el-icon>
+        </button>
+      </el-tooltip>
+      <el-tooltip content="暗黑" placement="bottom">
+        <button class="action-btn" :class="{ active: appStore.theme === 'dark' }" @click="appStore.setTheme('dark')">
+          <el-icon :size="16"><Moon /></el-icon>
+        </button>
+      </el-tooltip>
+      <el-tooltip content="护眼" placement="bottom">
+        <button class="action-btn" :class="{ active: appStore.theme === 'eye' }" @click="appStore.setTheme('eye')">
+          <el-icon :size="16"><View /></el-icon>
+        </button>
+      </el-tooltip>
+
       <el-tooltip content="消息通知" placement="bottom">
-        <el-button :icon="Bell" circle size="small" plain />
+        <button class="action-btn">
+          <el-icon :size="18"><Bell /></el-icon>
+        </button>
       </el-tooltip>
 
       <el-dropdown trigger="click" @command="handleUserCmd">
@@ -18,12 +44,13 @@
             {{ authStore.userName.charAt(0) }}
           </el-avatar>
           <span class="user-name">{{ authStore.userName }}</span>
-          <el-icon><ArrowDown /></el-icon>
+          <el-icon class="arrow-icon"><ArrowDown /></el-icon>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="profile">个人资料</el-dropdown-item>
             <el-dropdown-item command="password">修改密码</el-dropdown-item>
+            <el-dropdown-item v-if="isSuperAdmin" command="admin-console">🏢 租户管理控制台</el-dropdown-item>
             <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -74,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { Bell, ArrowDown } from '@element-plus/icons-vue'
+import { Bell, ArrowDown, Sunny, Moon, View, Grid } from '@element-plus/icons-vue'
 import { menuData } from './menuData'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
@@ -87,6 +114,12 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+
+const SUPER_ADMIN = '17747344571'
+const isSuperAdmin = computed(() => {
+  const acc = authStore.userInfo?.account || ''
+  return acc === SUPER_ADMIN
+})
 
 const currentTopMenu = computed(() =>
   menuData.find((m) => m.key === appStore.activeTopMenu),
@@ -109,7 +142,6 @@ async function saveProfile() {
   try {
     const id = authStore.userInfo?.id
     await updateAdmin({ id, name: profileForm.name, mobile: profileForm.mobile, email: profileForm.email })
-    // 更新本地缓存
     if (authStore.userInfo) {
       authStore.userInfo.name = profileForm.name
       authStore.userInfo.mobile = profileForm.mobile
@@ -163,6 +195,8 @@ async function handleUserCmd(cmd: string) {
     openProfile()
   } else if (cmd === 'password') {
     openPassword()
+  } else if (cmd === 'admin-console') {
+    router.push('/admin-console')
   } else if (cmd === 'logout') {
     await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
       confirmButtonText: '确定',
@@ -177,36 +211,102 @@ async function handleUserCmd(cmd: string) {
 
 <style scoped>
 .top-bar {
-  height: 50px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  height: 54px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 20px;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.breadcrumb { font-size: 13px; }
+.breadcrumb {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+:deep(.el-breadcrumb__inner) {
+  color: rgba(29, 29, 31, 0.4) !important;
+  font-weight: 500;
+}
+
+:deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
+  color: #1d1d1f !important;
+  font-weight: 600;
+}
+
+:deep(.el-breadcrumb__separator) {
+  color: rgba(29, 29, 31, 0.2) !important;
+}
 
 .top-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(29, 29, 31, 0.4);
+  transition: background 0.15s, color 0.15s;
+}
+
+.action-btn:hover {
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+.action-btn.active {
+  background: var(--blue-light);
+  color: var(--blue);
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 5px 10px 5px 5px;
+  border-radius: 20px;
   transition: background 0.15s;
 }
-.user-info:hover { background: #f2f3f5; }
 
-.avatar { background: #165dff; color: #fff; }
-.user-name { font-size: 13px; color: #1d2129; }
+.user-info:hover {
+  background: #f5f5f7;
+}
+
+.avatar {
+  background: #0071e3;
+  color: #fff;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d1d1f;
+  letter-spacing: -0.01em;
+}
+
+.arrow-icon {
+  font-size: 11px;
+  color: rgba(29, 29, 31, 0.3);
+}
 </style>
-

@@ -32,7 +32,19 @@
         </el-table-column>
         <el-table-column label="金额" width="120" align="right">
           <template #default="{ row }">
-            <span style="color:#00b42a;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
+            <span style="color:#16a34a;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="已核销" width="110" align="right">
+          <template #default="{ row }">
+            <span style="color:#dc2626">¥{{ getUsedAmount(row).toFixed(2) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="剩余可用" width="110" align="right">
+          <template #default="{ row }">
+            <span :style="{ color: getBalance(row) > 0 ? '#16a34a' : '#c0c4cc', fontWeight: '600' }">
+              ¥{{ getBalance(row).toFixed(2) }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column prop="fund_name" label="入账账户" width="130" />
@@ -110,6 +122,33 @@ const tableData = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
+
+// 核销金额 map: prepay order_sn -> used amount
+const usedAmountMap = ref<Record<string, number>>({})
+
+async function loadUsedAmounts() {
+  try {
+    const res = await http.get('/finance/CollectReceipt/index', { params: { list_rows: 2000 } })
+    const receipts: any[] = res.data?.rows ?? []
+    const map: Record<string, number> = {}
+    for (const r of receipts) {
+      if (String(r.remark || '').includes('预付款核销')) {
+        const cid = Number(r.customer_id)
+        if (cid) map[`c_${cid}`] = (map[`c_${cid}`] || 0) + Number(r.amount || 0)
+      }
+    }
+    usedAmountMap.value = map
+  } catch { /* ignore */ }
+}
+
+function getUsedAmount(row: any): number {
+  if (row.pay_type !== 'customer') return 0
+  return usedAmountMap.value[`c_${row.customer_id}`] ?? 0
+}
+
+function getBalance(row: any): number {
+  return Math.max(0, Number(row.amount || 0) - getUsedAmount(row))
+}
 
 const search = reactive({ keyword: '', pay_type: '' })
 
@@ -189,14 +228,30 @@ async function handleSave() {
 
 async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定删除该预付款记录？', '提示', { type: 'warning' })
+  // 找到要删除的记录，用于回退资金账户余额
+  const row = tableData.value.find((r: any) => r.id === id)
   await http.post('/finance/Prepay/del', { id })
+  // 回退资金账户余额
+  if (row?.fund_id && Number(row?.amount) > 0) {
+    try {
+      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+      const funds: any[] = fundRes.data?.rows || []
+      const fund = funds.find((f: any) => f.id === row.fund_id)
+      if (fund) {
+        const newBalance = Math.max(0, Number(fund.balance || 0) - Number(row.amount))
+        await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+      }
+    } catch { /* 回退失败不影响删除结果 */ }
+  }
   ElMessage.success('删除成功')
   loadData()
+  loadFunds()
 }
 
 onMounted(() => {
   loadData()
   loadFunds()
+  loadUsedAmounts()
 })
 </script>
 

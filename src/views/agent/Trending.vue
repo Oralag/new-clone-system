@@ -200,7 +200,7 @@ function formatHot(hot: string | number) {
   background: #2563eb;
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
@@ -225,7 +225,7 @@ function formatHot(hot: string | number) {
 .rank {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: 10px;
   background: #f1f5f9;
   color: #64748b;
   font-size: 12px;
@@ -261,7 +261,7 @@ function formatHot(hot: string | number) {
   background: #f8fafc;
   color: #64748b;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
@@ -273,7 +273,7 @@ function formatHot(hot: string | number) {
   background: #2563eb;
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;

@@ -5,7 +5,7 @@ let _hideTimer: ReturnType<typeof setTimeout> | null = null
 export const useAppStore = defineStore('app', {
   state: () => ({
     sidebarCollapsed: false,
-    theme: 'light',
+    theme: (localStorage.getItem('erp_theme') || 'light') as 'light' | 'dark' | 'eye',
     activeTopMenu: 'sale', // current top-level menu key (clicked/persistent)
     hoverTopMenu: '' as string, // hovered menu key (flyout)
     flyoutY: 56 as number, // top offset for flyout panel
@@ -13,6 +13,11 @@ export const useAppStore = defineStore('app', {
   actions: {
     toggleSidebar() {
       this.sidebarCollapsed = !this.sidebarCollapsed
+    },
+    setTheme(t: 'light' | 'dark' | 'eye') {
+      this.theme = t
+      localStorage.setItem('erp_theme', t)
+      document.documentElement.setAttribute('data-theme', t)
     },
     setActiveTopMenu(key: string) {
       this.activeTopMenu = key

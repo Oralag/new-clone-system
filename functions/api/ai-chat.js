@@ -1,16 +1,18 @@
+const DEFAULT_SYSTEM = '你是数字游牧ERP系统的AI助手，帮助用户查询数据、录入单据、解答业务问题。回答简洁专业，用中文回复。'
+
 export async function onRequest(context) {
   const { request, env } = context
 
-  const apiKey = env.ANTHROPIC_API_KEY || 'sk-ant-oat01-CVZ7MGdekrYYzidbMRuUETnDAIKhgeKN'
-  const baseUrl = env.ANTHROPIC_BASE_URL || 'https://chat.nuoda.vip/claudecode'
+  const apiKey = env.GEMINI_API_KEY || 'AIzaSyBmUXoTHWzIZHDIJu38vsLlaazJb2AiTeE'
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders() })
   }
 
   const { messages, systemPrompt, images } = await request.json()
+  const sysPrompt = systemPrompt || DEFAULT_SYSTEM
 
-  // If images were uploaded, attach them as vision content to the last user message
+  // Build processed messages with image support
   let processedMessages = messages.map(m => ({ ...m }))
   if (images && images.length > 0) {
     const lastUserIdx = [...processedMessages].map((m, i) => [m, i]).reverse().find(([m]) => m.role === 'user')?.[1]
@@ -22,53 +24,51 @@ export async function onRequest(context) {
         content: [
           ...images.map(img => ({
             type: 'image',
-            source: {
-              type: 'base64',
-              media_type: img.mediaType,
-              data: img.data,
-            },
+            source: { type: 'base64', media_type: img.mediaType, data: img.data },
           })),
-          {
-            type: 'text',
-            text: textContent || '请识别这张单据图片，提取所有关键信息（单据类型、单号、日期、客户/供应商、商品明细、金额等），然后告知我识别结果并帮我录入系统。',
-          },
+          { type: 'text', text: textContent || '请识别这张单据图片，提取所有关键信息，然后告知我识别结果并帮我录入系统。' },
         ],
       }
     }
   }
 
-  // Build messages: prepend system prompt as first user+assistant turn
-  const fullMessages = [
-    {
-      role: 'user',
-      content: `[系统初始化指令]\n${systemPrompt}\n\n请回复"明白"以确认你已理解上述规则。`,
-    },
-    {
-      role: 'assistant',
-      content: '明白，我是数字游牧ERP系统的内置AI助手，我可以直接操作系统API录入数据，不会添加任何免责声明或推脱性语句。',
-    },
-    ...processedMessages,
-  ]
-
-  const anthropicRes = await fetch(`${baseUrl}/v1/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      stream: false,
-      system: systemPrompt,
-      messages: fullMessages,
-    }),
+  // Convert to Gemini format
+  const geminiContents = processedMessages.map(m => {
+    const role = m.role === 'assistant' ? 'model' : 'user'
+    if (typeof m.content === 'string') {
+      return { role, parts: [{ text: m.content }] }
+    }
+    const parts = m.content.map(block => {
+      if (block.type === 'text') return { text: block.text }
+      if (block.type === 'image') return {
+        inline_data: { mime_type: block.source.media_type, data: block.source.data }
+      }
+      return { text: '' }
+    })
+    return { role, parts }
   })
 
-  const result = await anthropicRes.json()
-  return new Response(JSON.stringify(result), {
-    status: anthropicRes.status,
+  const geminiRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: sysPrompt }] },
+        contents: geminiContents,
+        generationConfig: { maxOutputTokens: 2048 },
+      }),
+    }
+  )
+
+  const result = await geminiRes.json()
+  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
+  return new Response(JSON.stringify({
+    content: [{ type: 'text', text }],
+    stop_reason: 'end_turn',
+  }), {
+    status: 200,
     headers: { 'Content-Type': 'application/json', ...corsHeaders() },
   })
 }

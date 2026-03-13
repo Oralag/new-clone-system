@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AiAssistant: typeof import('./components/AiAssistant.vue')['default']
     AiToolCallCard: typeof import('./components/ai/AiToolCallCard.vue')['default']
+    CaptchaCanvas: typeof import('./components/CaptchaCanvas.vue')['default']
     CustomerSelect: typeof import('./components/CustomerSelect.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
@@ -66,6 +67,7 @@ declare module 'vue' {
     ScTable: typeof import('./components/ScTable.vue')['default']
     StaffSelect: typeof import('./components/StaffSelect.vue')['default']
     SupplierSelect: typeof import('./components/SupplierSelect.vue')['default']
+    TrialBanner: typeof import('./components/TrialBanner.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

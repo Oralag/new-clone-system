@@ -35,7 +35,7 @@
                   </el-table-column>
                   <el-table-column label="含税合计" width="110" align="right">
                     <template #default="{ row: item }">
-                      <span style="color:#165dff;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
+                      <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
                   <el-table-column prop="remark" label="备注" min-width="100" />
@@ -59,7 +59,17 @@
           </el-table-column>
           <el-table-column prop="total_amount" label="报价金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#165dff;font-weight:500">¥{{ Number(row.total_amount).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.total_amount).toFixed(2) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="优惠/实付" width="140" align="right">
+            <template #default="{ row }">
+              <template v-if="Number(row.discount_amount) > 0">
+                <span style="font-size:11px;color:#f59e0b">优惠¥{{ Number(row.discount_amount).toFixed(2) }}</span>
+                <br />
+                <span style="color:#16a34a;font-weight:600">实付¥{{ Number(row.after_offer || (row.total_amount - row.discount_amount)).toFixed(2) }}</span>
+              </template>
+              <span v-else style="color:#94a3b8;font-size:12px">无优惠</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -133,15 +143,15 @@
               <!-- 大写金额展示 -->
               <el-col :span="24">
                 <div style="background:#fff5f5;border:1px solid #ffcdd2;border-radius:6px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap">
-                  <span style="font-size:13px;color:#86909c">报价金额：</span>
-                  <span style="font-size:22px;font-weight:700;color:#f53f3f;letter-spacing:1px">
+                  <span style="font-size:13px;color:rgba(29,29,31,0.35)">报价金额：</span>
+                  <span style="font-size:22px;font-weight:700;color:#dc2626;letter-spacing:1px">
                     ¥{{ fd.total_amount.toFixed(2) }}
                   </span>
-                  <span style="font-size:13px;color:#f53f3f">
+                  <span style="font-size:13px;color:#dc2626">
                     （{{ amountToChinese(fd.after_offer) || amountToChinese(fd.total_amount) }}）
                   </span>
                   <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-                    <span style="font-size:13px;color:#86909c;white-space:nowrap">优惠金额：</span>
+                    <span style="font-size:13px;color:rgba(29,29,31,0.35);white-space:nowrap">优惠金额：</span>
                     <el-input-number
                       v-model="fd.discount_amount"
                       :min="0" :max="fd.total_amount" :precision="2"
@@ -149,9 +159,14 @@
                       style="width:110px"
                       @change="calcAfterOffer"
                     />
-                    <span v-if="fd.discount_amount > 0" style="font-size:12px;color:#00b42a;white-space:nowrap">
-                      优惠后：¥{{ fd.after_offer.toFixed(2) }}
-                    </span>
+                    <template v-if="fd.discount_amount > 0 && fd.total_amount > 0">
+                      <span style="font-size:12px;color:#16a34a;white-space:nowrap">
+                        优惠后：¥{{ fd.after_offer.toFixed(2) }}
+                      </span>
+                      <span style="font-size:12px;color:#f59e0b;white-space:nowrap;background:#fef3c7;padding:2px 8px;border-radius:10px">
+                        {{ discountLabel }}
+                      </span>
+                    </template>
                   </div>
                 </div>
               </el-col>
@@ -228,7 +243,7 @@
               </el-table-column>
               <el-table-column label="小计" width="110" align="right">
                 <template #default="{ row }">
-                  <span style="color:#165dff">¥{{ ((row.num || 0) * (row.price || 0)).toFixed(2) }}</span>
+                  <span style="color:#0071e3">¥{{ ((row.num || 0) * (row.price || 0)).toFixed(2) }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="备注" min-width="120">
@@ -246,7 +261,7 @@
             <!-- 合计行 -->
             <div class="total-bar">
               <span>共 <b>{{ fd.items.length }}</b> 件商品</span>
-              <span>合计金额：<b style="color:#165dff;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+              <span>合计金额：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
             </div>
           </div>
 
@@ -303,7 +318,7 @@
         </el-table-column>
       </el-table>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
       </template>
@@ -313,7 +328,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { Plus, Delete, Search } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -476,6 +491,14 @@ function calcAfterOffer() {
   fd.after_offer = Math.max(0, fd.total_amount - (fd.discount_amount || 0))
 }
 
+const discountLabel = computed(() => {
+  if (!fd.discount_amount || !fd.total_amount) return ''
+  const ratio = fd.after_offer / fd.total_amount
+  const pct = ((1 - ratio) * 100).toFixed(1)
+  const zhekouVal = (ratio * 10).toFixed(1)
+  return `${zhekouVal}折 (优惠${pct}%)`
+})
+
 function removeItem(index: number) {
   fd.items.splice(index, 1)
   calcTotal()
@@ -494,12 +517,16 @@ async function handleSave() {
       customer_id: fd.customer_id,
       remark: fd.remark,
       total_amount: fd.total_amount,
+      discount_amount: fd.discount_amount || 0,
+      after_offer: fd.after_offer || fd.total_amount,
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id
     if (fd.customer_name) payload.customer_name = fd.customer_name
     if (fd.admin_name) payload.admin_name = fd.admin_name
     if (fd.offer_date) payload.offer_date = fd.offer_date
+    if (fd.expire_date) payload.expire_date = fd.expire_date
+    if (fd.level_id) payload.level_id = fd.level_id
     fd.id ? await updateOffer(payload) : await createOffer(payload)
     ElMessage.success('保存成功')
     backToList()
@@ -645,11 +672,11 @@ async function submitAddCustomer() {
 .expand-title {
   font-size: 12px;
   font-weight: 600;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   margin-bottom: 8px;
 }
 .expand-table {
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -671,7 +698,7 @@ async function submitAddCustomer() {
   flex-shrink: 0;
 }
 
-.form-title { font-size: 15px; font-weight: 600; color: #1d2129; }
+.form-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
 .form-actions { display: flex; gap: 8px; }
 
 .form-body {
@@ -685,7 +712,7 @@ async function submitAddCustomer() {
 
 .form-section {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e4e7ed;
   padding: 18px 20px 12px;
 }
@@ -693,10 +720,10 @@ async function submitAddCustomer() {
 .sec-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
   margin-bottom: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
 }
 
 .sec-title-row {
@@ -705,7 +732,7 @@ async function submitAddCustomer() {
   justify-content: space-between;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
 }
 
 .total-bar {
@@ -714,6 +741,6 @@ async function submitAddCustomer() {
   align-items: center;
   padding: 12px 4px 4px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
 }
 </style>

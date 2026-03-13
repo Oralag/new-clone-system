@@ -210,13 +210,13 @@ function reuseItem(item: HistoryItem) {
   padding: 2px 9px;
   background: #dbeafe;
   color: #1d4ed8;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
 }
 .type-tag {
   padding: 2px 9px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
 }

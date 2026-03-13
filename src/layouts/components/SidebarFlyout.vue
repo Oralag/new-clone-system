@@ -35,11 +35,10 @@ const flyoutMenu = computed(() =>
   appStore.hoverTopMenu ? menuData.find(m => m.key === appStore.hoverTopMenu) : null
 )
 
-// 每项高度约 37px，header 约 44px，padding 14px
 const flyoutTop = computed(() => {
   const rawY = appStore.flyoutY
   const itemCount = flyoutMenu.value?.children?.length ?? 0
-  const estimatedH = 44 + itemCount * 37 + 14
+  const estimatedH = 48 + itemCount * 36 + 14
   const maxTop = window.innerHeight - estimatedH - 8
   return Math.min(rawY, Math.max(8, maxTop))
 })
@@ -63,56 +62,64 @@ function navigate(path: string) {
 <style scoped>
 .sidebar-flyout {
   position: fixed;
-  left: 90px;
-  width: 168px;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  box-shadow: 4px 4px 16px rgba(0, 0, 0, 0.12);
+  left: 94px;
+  width: 172px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.06);
   z-index: 300;
   overflow-y: auto;
   max-height: calc(100vh - 16px);
   padding: 6px 0 8px;
 }
 
+.sidebar-flyout::-webkit-scrollbar { width: 4px; }
+.sidebar-flyout::-webkit-scrollbar-track { background: transparent; }
+.sidebar-flyout::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.06); border-radius: 10px; }
+
 .flyout-header {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
-  color: #1d2129;
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid #f2f3f5;
+  color: rgba(29, 29, 31, 0.3);
+  padding: 12px 14px 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   margin-bottom: 4px;
 }
 
 .flyout-item {
-  padding: 9px 16px;
+  padding: 8px 14px;
   font-size: 13px;
-  color: #4e5969;
+  font-weight: 500;
+  color: rgba(29, 29, 31, 0.7);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 10px;
   margin: 1px 6px;
-  transition: all 0.12s;
+  transition: all 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  letter-spacing: -0.01em;
 }
 
 .flyout-item:hover {
-  background: #f2f3f5;
-  color: #165dff;
+  background: #f5f5f7;
+  color: #1d1d1f;
 }
 
 .flyout-item.active {
-  background: #e8f0fe;
-  color: #165dff;
-  font-weight: 500;
+  background: rgba(0, 113, 227, 0.08);
+  color: #0071e3;
+  font-weight: 600;
 }
 
 /* Slide-in transition */
 .flyout-enter-active,
 .flyout-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1), transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
 }
 .flyout-enter-from,
 .flyout-leave-to {
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateX(-8px) scale(0.98);
 }
 </style>

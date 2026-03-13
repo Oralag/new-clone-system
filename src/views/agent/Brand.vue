@@ -9,7 +9,7 @@
         <div class="saved-info">
           <span class="saved-name">{{ brand.name }}</span>
           <span class="saved-meta">{{ brand.industry }}{{ brand.subIndustry ? ' · ' + brand.subIndustry : '' }}{{ brand.slogan ? ' · ' + brand.slogan : '' }}</span>
-          <span v-if="store.savedAt.value" class="saved-time">最近保存：{{ store.savedAt.value }}</span>
+          <span v-if="store.savedAt" class="saved-time">最近保存：{{ store.savedAt }}</span>
         </div>
       </div>
       <button class="btn-edit" @click="isCollapsed = false">编辑</button>
@@ -342,22 +342,43 @@
         </div>
 
         <!-- 品牌调性 -->
-        <div class="section-card">
-          <div class="section-title">🎨 品牌调性 & 内容风格</div>
-
-          <div class="field">
-            <div class="label-with-ai">
-              <label class="field-label">品牌调性（可多选）</label>
-              <button class="btn-ai-label" :class="{ loading: aiLoading.tones }" @click="aiSuggestTones">
-                {{ aiLoading.tones ? '⏳ 分析中...' : '✨ AI 推荐调性' }}
-              </button>
+        <div class="section-card tone-section-card">
+          <div class="tone-section-header">
+            <div>
+              <div class="section-title" style="margin-bottom:4px">🎨 品牌调性 & 内容风格</div>
+              <div class="tone-section-sub">选择后 AI 将按照对应风格生成所有内容</div>
             </div>
-            <div class="tone-tags">
-              <span v-for="tone in toneOptions" :key="tone" class="tone-tag"
-                :class="{ active: brand.tones.includes(tone) }" @click="toggleTone(tone)">{{ tone }}</span>
+            <button class="btn-ai-label" :class="{ loading: aiLoading.tones }" @click="aiSuggestTones">
+              {{ aiLoading.tones ? '⏳ 分析中...' : '✨ AI 推荐' }}
+            </button>
+          </div>
+
+          <!-- 调性卡片网格 -->
+          <div class="tone-cards-grid">
+            <div v-for="tone in toneCardOptions" :key="tone.name"
+              class="tone-card"
+              :class="{ active: brand.tones.includes(tone.name) }"
+              :style="brand.tones.includes(tone.name) ? `--tone-color: ${tone.color}` : ''"
+              @click="toggleTone(tone.name)">
+              <div class="tone-card-icon" :style="{ background: tone.bg }">{{ tone.icon }}</div>
+              <div class="tone-card-body">
+                <div class="tone-card-name">{{ tone.name }}</div>
+                <div class="tone-card-desc">{{ tone.desc }}</div>
+              </div>
+              <div v-if="brand.tones.includes(tone.name)" class="tone-card-check">✓</div>
             </div>
           </div>
 
+          <!-- 已选调性预览 -->
+          <div v-if="brand.tones.length" class="tone-selected-row">
+            <span class="tone-selected-label">已选：</span>
+            <span v-for="t in brand.tones" :key="t" class="tone-selected-chip">{{ t }}</span>
+          </div>
+        </div>
+
+        <!-- 品牌调性补充（禁忌/关键词） -->
+        <div class="section-card">
+          <div class="section-title">🔑 内容规范 & 关键词</div>
           <AiFieldHelper
             label="内容禁忌 / 不想出现的内容"
             type="textarea"
@@ -576,7 +597,7 @@ const afSteps = computed(() => {
 const contentTypes = [
   { key: 'video', name: '视频脚本' },
   { key: 'poster', name: '图文' },
-  { key: 'copy', name: '文案' },
+  { key: 'copy', name: '纯文案' },
 ]
 const autoFlow = reactive({
   platforms: ['douyin', 'xiaohongshu'] as string[],
@@ -604,8 +625,11 @@ function cancelFlow() {
 }
 function toggleAfPlatform(key: string) {
   const i = autoFlow.platforms.indexOf(key)
-  if (i >= 0) { if (autoFlow.platforms.length > 1) autoFlow.platforms.splice(i, 1) }
-  else autoFlow.platforms.push(key)
+  if (i >= 0) {
+    if (autoFlow.platforms.length > 1) autoFlow.platforms.splice(i, 1)
+  } else {
+    autoFlow.platforms.push(key)
+  }
 }
 function toggleAfContentType(key: string) {
   const i = autoFlow.contentTypes.indexOf(key)
@@ -620,11 +644,35 @@ const agentStore = useTrendingStore()
 // 工作流执行详情（每步的结果）
 const autoFlowLog = ref<string[]>([])
 
+async function generatePosterImage(prompt: string): Promise<string> {
+  try {
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Date.now()}`
+    await fetch(url, { method: 'HEAD' })
+    return url
+  } catch {
+    return ''
+  }
+}
+
+async function submitVideoGeneration(prompt: string): Promise<string> {
+  try {
+    const response = await fetch('/api/gen-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'submit', prompt }),
+    })
+    const result = await response.json()
+    return result.requestId || ''
+  } catch {
+    return ''
+  }
+}
+
 async function callFlowAI(prompt: string): Promise<string> {
   const response = await fetch('/api/ai-chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-erp-token': localStorage.getItem('erp_token') || '' },
-    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], systemPrompt: store.systemPrompt }),
+    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], noTools: true }),
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   const contentType = response.headers.get('content-type') || ''
@@ -633,19 +681,28 @@ async function callFlowAI(prompt: string): Promise<string> {
     const reader = response.body?.getReader()
     const decoder = new TextDecoder()
     if (!reader) throw new Error('无法读取响应')
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      for (const line of decoder.decode(value, { stream: true }).split('\n')) {
+    let done = false
+    while (!done) {
+      const chunk = await reader.read()
+      done = chunk.done
+      for (const line of decoder.decode(chunk.value, { stream: !done }).split('\n')) {
         if (!line.startsWith('data: ')) continue
-        const d = line.slice(6).trim()
-        if (d === '[DONE]') break
-        try { const p = JSON.parse(d); if (p.text) text += p.text } catch {}
+        const data = line.slice(6).trim()
+        if (data === '[DONE]') {
+          done = true
+          break
+        }
+        try {
+          const parsed = JSON.parse(data)
+          if (parsed.type === 'text' && parsed.text) text += parsed.text
+        } catch {
+          // ignore malformed SSE frames
+        }
       }
     }
   } else {
-    const r = await response.json()
-    text = r.content?.find((b: any) => b.type === 'text')?.text || ''
+    const result = await response.json()
+    text = result.content?.find((block: any) => block.type === 'text')?.text || ''
   }
   return text.trim()
 }
@@ -653,86 +710,176 @@ async function callFlowAI(prompt: string): Promise<string> {
 async function startAutoFlow() {
   autoFlow.running = true
   autoFlow.step = 0
+  autoFlow.error = ''
   autoFlowLog.value = []
   flowCancelled = false
+  agentStore.setFlowResults([])
 
   try {
-    // 步骤1：抓取热搜
     autoFlowLog.value[0] = '正在抓取热搜数据...'
     for (const platform of autoFlow.platforms) {
       await agentStore.fetchTrending(platform)
     }
     if (flowCancelled) return
-    const allItems = autoFlow.platforms.flatMap(p => (agentStore.trending as any)[p] || [])
+
+    const allItems = autoFlow.platforms.flatMap(platform => (agentStore.trending as any)[platform] || [])
     autoFlowLog.value[0] = `已抓取 ${allItems.length} 条热搜话题`
     autoFlow.step = 1
 
-    // 步骤2：AI 分析选题
     autoFlowLog.value[1] = 'AI 正在分析与品牌相关的话题...'
-    const topicList = allItems.slice(0, 20).map((t: any) => t.title).join('\n')
+    const topicList = allItems.slice(0, 20).map((item: any) => item.title).join('\n')
     const productInfo = brand.products?.length ? `核心产品：${brand.products.join('、')}` : ''
     const sellingInfo = brand.sellingPoints ? `产品卖点：${brand.sellingPoints}` : ''
     const selected = await callFlowAI(
-      `以下是当前热搜话题列表：\n${topicList}\n\n品牌信息：\n品牌名：${brand.name}\n行业：${brand.industry} / ${brand.subIndustry}\n${productInfo}\n${sellingInfo}\n\n任务：从热搜中选出与该品牌产品最相关、最适合借势创作内容的 ${Math.min(autoFlow.count, 3)} 个话题。如果热搜中没有直接相关的，可以选关联度最高的话题并在括号内注明借势角度（如：话题名称（角度：联系到产品xxx））。只输出话题名称（含括号补充），每行一个，不要序号。`
+      `以下是当前热搜话题列表：
+${topicList}
+
+品牌信息：
+品牌名：${brand.name}
+行业：${brand.industry} / ${brand.subIndustry}
+${productInfo}
+${sellingInfo}
+
+任务：从热搜中选出与该品牌产品最相关、最适合借势创作内容的 ${Math.min(autoFlow.count, 3)} 个话题。如果热搜中没有直接相关的，可以选关联度最高的话题并在括号内注明借势角度（如：话题名称（角度：联系到产品xxx））。只输出话题名称（含括号补充），每行一个，不要序号。`
     )
     if (flowCancelled) return
-    const selectedTopics = selected.split('\n').map(s => s.trim()).filter(Boolean).slice(0, autoFlow.count)
+
+    const selectedTopics = selected.split('\n').map(line => line.trim()).filter(Boolean).slice(0, autoFlow.count)
     agentStore.setSelectedTopics(selectedTopics)
-    autoFlowLog.value[1] = `已选出 ${selectedTopics.length} 个话题：${selectedTopics.join('、')}`
+    autoFlowLog.value[1] = `已选出 ${selectedTopics.length} 个话题`
     autoFlow.step = 2
 
-    // 步骤3：按 contentTypes 生成内容
-    const platNames: Record<string, string> = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手' }
+    const needVideo = autoFlow.contentTypes.includes('video')
+    const needPoster = autoFlow.contentTypes.includes('poster')
+    const needCopy = autoFlow.contentTypes.includes('copy')
+    const hasShortVideoPlatform = autoFlow.platforms.some(platform => ['douyin', 'kuaishou'].includes(platform))
+    const hasXiaohongshu = autoFlow.platforms.includes('xiaohongshu')
+    const platformNames: Record<string, string> = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手' }
     const flowItems: any[] = []
     autoFlowLog.value[2] = '正在生成内容...'
 
-    for (const pKey of autoFlow.platforms) {
-      const pName = platNames[pKey] || pKey
-      for (const topic of selectedTopics) {
-        if (flowCancelled) return
-
-        if (autoFlow.contentTypes.includes('video')) {
+    if (needVideo && hasShortVideoPlatform) {
+      const videoPlatforms = autoFlow.platforms.filter(platform => ['douyin', 'kuaishou'].includes(platform))
+      for (const platform of videoPlatforms) {
+        for (const topic of selectedTopics) {
+          autoFlowLog.value[2] = `正在生成视频脚本：${topic}...`
           const script = await callFlowAI(
-            `请为话题「${topic}」创作一个适合${pName}的短视频脚本，格式：\n场景描述：xxx\n旁白/配音：xxx\n字幕：xxx\n时长建议：15-30秒\n符合品牌「${brand.name}」（${brand.industry}）调性，直接输出脚本内容。`
+            `请为话题「${topic}」创作一个适合${platformNames[platform]}的短视频脚本，格式：
+场景描述：xxx
+旁白/配音：xxx
+字幕：xxx
+时长建议：15-30秒
+符合品牌「${brand.name}」（${brand.industry}）调性，直接输出脚本内容。`
           )
-          flowItems.push({ platform: pKey, platformName: pName, topic, type: 'video_script', content: script })
+          const videoPrompt = `${brand.name} brand product showcase, ${topic}, cinematic, high quality, 4k`
+          const requestId = await submitVideoGeneration(videoPrompt)
+          flowItems.push({
+            platform,
+            platformName: platformNames[platform],
+            topic,
+            type: 'video_script',
+            content: script,
+            videoRequestId: requestId,
+            videoStatus: requestId ? 'processing' : 'failed',
+          })
+          agentStore.setFlowResults([...flowItems])
         }
+      }
+    }
 
-        if (autoFlow.contentTypes.includes('poster')) {
+    if (needPoster) {
+      const posterPlatforms = hasXiaohongshu ? ['xiaohongshu'] : autoFlow.platforms.slice(0, 1)
+      for (const platform of posterPlatforms) {
+        for (const topic of selectedTopics) {
+          autoFlowLog.value[2] = `正在生成图文：${topic}...`
           const raw = await callFlowAI(
-            `请为话题「${topic}」创作一篇${pName}图文帖子，严格按 JSON 输出：\n{"title":"标题(带emoji,25字内)","body":"正文(排版美观,500字内)","tags":["标签1","标签2","标签3","标签4"]}\n符合品牌「${brand.name}」调性，只输出JSON，不要其他内容。`
+            `请为话题「${topic}」创作一篇${platformNames[platform] || platform}图文帖子，严格按 JSON 输出：
+{"title":"标题(带emoji,25字内)","body":"正文(排版美观,500字内)","tags":["标签1","标签2","标签3","标签4"]}
+符合品牌「${brand.name}」调性，只输出JSON，不要其他内容。`
           )
-          flowItems.push({ platform: pKey, platformName: pName, topic, type: 'poster', content: raw })
+          autoFlowLog.value[2] = `正在生成配图：${topic}...`
+          const imagePrompt = `${brand.name} ${brand.industry} product photo, ${topic}, beautiful, professional photography, xiaohongshu style`
+          const imageUrl = await generatePosterImage(imagePrompt)
+          flowItems.push({
+            platform,
+            platformName: platformNames[platform] || platform,
+            topic,
+            type: 'poster',
+            content: raw,
+            imageUrl,
+          })
+          agentStore.setFlowResults([...flowItems])
         }
+      }
+    }
 
-        if (autoFlow.contentTypes.includes('copy')) {
+    if (needCopy) {
+      for (const platform of autoFlow.platforms) {
+        for (const topic of selectedTopics) {
+          autoFlowLog.value[2] = `正在生成文案：${topic}（${platformNames[platform] || platform}）...`
           const copy = await callFlowAI(
-            `请为话题「${topic}」创作一条${pName}平台的爆款文案，符合品牌「${brand.name}」（${brand.industry}）调性，结合品牌产品自然植入，直接输出文案正文。`
+            `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}发布的营销文案，200字以内，语言生动有感染力，结尾带行动号召，符合品牌「${brand.name}」（${brand.industry}）调性，直接输出文案内容。`
           )
-          flowItems.push({ platform: pKey, platformName: pName, topic, type: 'copy', content: copy })
+          flowItems.push({
+            platform,
+            platformName: platformNames[platform] || platform,
+            topic,
+            type: 'copy',
+            content: copy,
+          })
+          agentStore.setFlowResults([...flowItems])
+        }
+      }
+    }
+
+    if (flowItems.length === 0) {
+      for (const platform of autoFlow.platforms) {
+        for (const topic of selectedTopics) {
+          const copy = await callFlowAI(
+            `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}的营销文案，200字以内，符合品牌「${brand.name}」调性，直接输出内容。`
+          )
+          flowItems.push({
+            platform,
+            platformName: platformNames[platform] || platform,
+            topic,
+            type: 'copy',
+            content: copy,
+          })
+          agentStore.setFlowResults([...flowItems])
         }
       }
     }
 
     agentStore.setFlowResults(flowItems)
     if (flowCancelled) return
-    const firstVideo = flowItems.find(i => i.type === 'video_script')
-    const firstPoster = flowItems.find(i => i.type === 'poster')
+
+    const firstVideo = flowItems.find(item => item.type === 'video_script')
+    const firstPoster = flowItems.find(item => item.type === 'poster')
     if (firstVideo) agentStore.setVideoScript({ topic: firstVideo.topic, content: firstVideo.content, platform: firstVideo.platform })
     if (firstPoster) agentStore.setPublishContent({ script: firstPoster.content, topic: firstPoster.topic, type: 'poster' })
 
-    const generatedLabels = autoFlow.contentTypes
-      .map(key => ({ video: '视频脚本', poster: '图文', copy: '文案' }[key]))
-      .filter(Boolean)
-    autoFlowLog.value[2] = `已生成 ${flowItems.length} 条${generatedLabels.join(' / ')}`
+    autoFlowLog.value[2] = `已生成 ${flowItems.length} 条内容（${autoFlow.contentTypes.map(key => contentTypes.find(item => item.key === key)?.name).filter(Boolean).join(' + ')}）`
     autoFlow.step = 3
 
-    // 步骤4：进入发布
+    const platforms = [...new Set(flowItems.map(item => item.platformName))]
+    agentStore.addHistoryItem({
+      id: Date.now().toString(),
+      title: `${brand.name} · ${selectedTopics.slice(0, 2).join('、')}${selectedTopics.length > 2 ? '...' : ''}`,
+      platforms,
+      time: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+      status: 'draft',
+      topics: selectedTopics,
+      results: flowItems,
+      contentTypes: [...autoFlow.contentTypes],
+      count: flowItems.length,
+    })
+
     autoFlowLog.value[3] = '所有内容就绪，可前往发布'
     autoFlow.step = 4
-
   } catch (e: any) {
-    ElMessage.error('工作流执行失败：' + e.message)
+    autoFlow.error = e.message || 'AI 请求失败'
+    autoFlow.step = afSteps.value.length
+    ElMessage.error('工作流执行失败：' + autoFlow.error)
     autoFlow.running = false
   }
 }
@@ -1171,6 +1318,19 @@ function toggleAge(age: string) {
 }
 
 const toneOptions = ['专业权威', '温暖亲切', '年轻活力', '高端大气', '接地气', '幽默搞笑', '情感共鸣', '科普知识', '故事叙述', '简洁直接']
+
+const toneCardOptions = [
+  { name: '专业权威', icon: '🎓', desc: '知识背书，建立信任', color: '#0071e3', bg: 'rgba(0,113,227,0.08)' },
+  { name: '温暖亲切', icon: '🤗', desc: '拉近距离，情感连接', color: '#f97316', bg: 'rgba(249,115,22,0.08)' },
+  { name: '年轻活力', icon: '⚡', desc: '潮流感，适合年轻圈层', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
+  { name: '高端大气', icon: '💎', desc: '品质感，奢华调性', color: '#64748b', bg: 'rgba(100,116,139,0.08)' },
+  { name: '接地气', icon: '🌿', desc: '朴实真实，贴近生活', color: '#16a34a', bg: 'rgba(22,163,74,0.08)' },
+  { name: '幽默搞笑', icon: '😂', desc: '轻松有趣，提升互动', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+  { name: '情感共鸣', icon: '💝', desc: '触动内心，引发共鸣', color: '#ec4899', bg: 'rgba(236,72,153,0.08)' },
+  { name: '科普知识', icon: '🔬', desc: '干货分享，树立专业形象', color: '#06b6d4', bg: 'rgba(6,182,212,0.08)' },
+  { name: '故事叙述', icon: '📖', desc: '故事化表达，增加代入感', color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
+  { name: '简洁直接', icon: '🎯', desc: '直击痛点，高效传达', color: '#334155', bg: 'rgba(51,65,85,0.08)' },
+]
 const priceLevelOptions = ['亲民大众', '中端品质', '中高端', '高端精品', '奢侈顶级']
 function toggleTone(tone: string) {
   const i = brand.tones.indexOf(tone)
@@ -1256,7 +1416,7 @@ function handleSave() {
 }
 .flow-panel-header-right { display: flex; align-items: center; gap: 10px; }
 .btn-cancel-flow {
-  padding: 5px 14px; border-radius: 8px; border: 1.5px solid #fca5a5;
+  padding: 5px 14px; border-radius: 12px; border: 1.5px solid #fca5a5;
   background: #fff; color: #dc2626; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
 .btn-cancel-flow:hover { background: #fef2f2; }
@@ -1321,7 +1481,7 @@ function handleSave() {
 
 .fps-log {
   font-size: 13px; color: #475569; background: #f8fafc;
-  border-radius: 8px; padding: 10px 14px; line-height: 1.6;
+  border-radius: 12px; padding: 10px 14px; line-height: 1.6;
   border-left: 3px solid #c4b5fd;
 }
 .flow-panel-step.done .fps-log { border-left-color: #7c3aed; color: #374151; }
@@ -1338,7 +1498,7 @@ function handleSave() {
 
 .flow-panel-done {
   margin-top: 24px; padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid rgba(0,0,0,0.05);
   text-align: center;
 }
 .done-icon {
@@ -1391,11 +1551,11 @@ function handleSave() {
 .autoflow-prev-row {
   display: flex; align-items: center; justify-content: space-between;
   margin-top: 10px; padding: 10px 14px;
-  background: #f0fdf4; border-radius: 10px; border: 1px solid #86efac;
+  background: #f0fdf4; border-radius: 14px; border: 1px solid #86efac;
 }
 .prev-hint { font-size: 12px; color: #16a34a; font-weight: 500; }
 .btn-view-result {
-  padding: 5px 14px; border-radius: 8px; border: 1.5px solid #16a34a;
+  padding: 5px 14px; border-radius: 12px; border: 1.5px solid #16a34a;
   background: #fff; color: #16a34a; font-size: 12px; font-weight: 600; cursor: pointer;
 }
 .btn-view-result:hover { background: #f0fdf4; }
@@ -1431,12 +1591,12 @@ function handleSave() {
 .done-title { font-size: 15px; font-weight: 700; color: #16a34a; margin-bottom: 14px; }
 .done-btns { display: flex; gap: 10px; justify-content: center; }
 .btn-goto {
-  padding: 8px 24px; border-radius: 10px; border: none;
+  padding: 8px 24px; border-radius: 14px; border: none;
   background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff;
   font-size: 13px; font-weight: 600; cursor: pointer;
 }
 .btn-secondary {
-  padding: 8px 20px; border-radius: 10px; border: 1.5px solid #e2e8f0;
+  padding: 8px 20px; border-radius: 14px; border: 1.5px solid #e2e8f0;
   background: #fff; color: #64748b; font-size: 13px; font-weight: 500; cursor: pointer;
 }
 
@@ -1448,7 +1608,7 @@ function handleSave() {
 }
 .saved-bar-left { display: flex; align-items: center; gap: 12px; }
 .saved-avatar {
-  width: 38px; height: 38px; border-radius: 10px;
+  width: 38px; height: 38px; border-radius: 14px;
   background: linear-gradient(135deg, #7c3aed, #4f46e5);
   color: #fff; font-size: 16px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
@@ -1457,7 +1617,7 @@ function handleSave() {
 .saved-meta { font-size: 12px; color: #64748b; display: block; margin-top: 2px; }
 .saved-time { font-size: 11px; color: #94a3b8; display: block; margin-top: 4px; }
 .btn-edit {
-  padding: 6px 16px; border-radius: 8px; border: 1.5px solid #7c3aed;
+  padding: 6px 16px; border-radius: 12px; border: 1.5px solid #7c3aed;
   background: #fff; color: #7c3aed; font-size: 13px; font-weight: 600; cursor: pointer;
 }
 .btn-edit:hover { background: #f5f3ff; }
@@ -1490,7 +1650,7 @@ function handleSave() {
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .page-title { font-size: 22px; font-weight: 700; color: var(--c-text); margin: 0 0 4px; }
 .page-desc { font-size: 13px; color: var(--c-text-3); margin: 0; }
-.btn-save { padding: 9px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg,#7c3aed,#4f46e5); color: #fff; font-size: 14px; cursor: pointer; font-weight: 600; transition: all 0.3s; box-shadow: 0 2px 8px rgba(124,58,237,0.25); }
+.btn-save { padding: 9px 22px; border-radius: 14px; border: none; background: linear-gradient(135deg,#7c3aed,#4f46e5); color: #fff; font-size: 14px; cursor: pointer; font-weight: 600; transition: all 0.3s; box-shadow: 0 2px 8px rgba(124,58,237,0.25); }
 .btn-save.saved { background: linear-gradient(135deg,#059669,#10b981); box-shadow: 0 2px 8px rgba(16,185,129,0.25); }
 .btn-save:hover { opacity: 0.88; transform: translateY(-1px); }
 
@@ -1522,7 +1682,7 @@ function handleSave() {
 .btn-ai-label.loading { opacity: 0.55; cursor: not-allowed; }
 
 .btn-ai-inline {
-  padding: 7px 10px; border-radius: 8px; font-size: 11px; cursor: pointer;
+  padding: 7px 10px; border-radius: 12px; font-size: 11px; cursor: pointer;
   border: 1px solid var(--c-accent-border); background: var(--c-accent-bg);
   color: var(--c-accent); transition: all 0.2s; white-space: nowrap; font-weight: 500;
 }
@@ -1537,7 +1697,7 @@ function handleSave() {
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field-input, .field-select {
   width: 100%; background: var(--c-input-bg); border: 1px solid var(--c-border);
-  border-radius: 8px; padding: 9px 12px; color: var(--c-text); font-size: 13px; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
+  border-radius: 12px; padding: 9px 12px; color: var(--c-text); font-size: 13px; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
 }
 .field-input:focus, .field-select:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); background: #fff; }
 .field-input::placeholder { color: #bbb; }
@@ -1545,7 +1705,7 @@ function handleSave() {
 .field-select option { background: #fff; color: #1a1a1a; }
 :deep(.field-input), :deep(.field-textarea) {
   width: 100%; background: var(--c-input-bg); border: 1px solid var(--c-border);
-  border-radius: 8px; padding: 9px 12px; color: var(--c-text); font-size: 13px; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
+  border-radius: 12px; padding: 9px 12px; color: var(--c-text); font-size: 13px; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
 }
 :deep(.field-textarea) { resize: vertical; line-height: 1.6; }
 :deep(.field-input:focus), :deep(.field-textarea:focus) { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); background: #fff; }
@@ -1560,7 +1720,7 @@ function handleSave() {
 :deep(.btn-ai-label.loading) { opacity: 0.55; cursor: not-allowed; }
 .field-textarea {
   width: 100%; background: var(--c-input-bg); border: 1px solid var(--c-border);
-  border-radius: 8px; padding: 9px 12px; color: var(--c-text); font-size: 13px; outline: none;
+  border-radius: 12px; padding: 9px 12px; color: var(--c-text); font-size: 13px; outline: none;
   resize: vertical; line-height: 1.6; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
 }
 .field-textarea:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); background: #fff; }
@@ -1568,7 +1728,7 @@ function handleSave() {
 .field-hint { font-size: 11px; color: var(--c-text-3); margin-top: 6px; }
 
 .industry-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-.industry-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 10px; border: 1px solid var(--c-border); background: var(--c-bg-soft); cursor: pointer; transition: all 0.2s; text-align: center; }
+.industry-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 14px; border: 1px solid var(--c-border); background: var(--c-bg-soft); cursor: pointer; transition: all 0.2s; text-align: center; }
 .industry-card:hover { border-color: #c4b5fd; background: rgba(124,58,237,0.04); }
 .industry-card.active { background: rgba(124,58,237,0.08); border-color: rgba(124,58,237,0.45); }
 .ind-icon { font-size: 20px; }
@@ -1596,10 +1756,10 @@ function handleSave() {
 @keyframes dot-bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
 
 .tag-input-row { display: flex; gap: 6px; }
-.tag-input { flex: 1; background: var(--c-input-bg); border: 1px solid var(--c-border); border-radius: 8px; padding: 7px 11px; color: var(--c-text); font-size: 12px; outline: none; transition: border-color 0.2s; }
+.tag-input { flex: 1; background: var(--c-input-bg); border: 1px solid var(--c-border); border-radius: 12px; padding: 7px 11px; color: var(--c-text); font-size: 12px; outline: none; transition: border-color 0.2s; }
 .tag-input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
 .tag-input::placeholder { color: #bbb; }
-.btn-add { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--c-accent-border); background: var(--c-accent-bg); color: var(--c-accent); font-size: 12px; cursor: pointer; white-space: nowrap; font-weight: 500; transition: all 0.2s; }
+.btn-add { padding: 7px 14px; border-radius: 12px; border: 1px solid var(--c-accent-border); background: var(--c-accent-bg); color: var(--c-accent); font-size: 12px; cursor: pointer; white-space: nowrap; font-weight: 500; transition: all 0.2s; }
 .btn-add:hover { background: rgba(124,58,237,0.14); }
 
 .age-options, .gender-options, .tone-tags, .freq-options { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1618,13 +1778,94 @@ function handleSave() {
 .platform-checks { display: flex; gap: 10px; flex-wrap: wrap; }
 .plat-label { cursor: pointer; }
 .hidden-cb { display: none; }
-.plat-box { padding: 8px 16px; border-radius: 10px; border: 1px solid var(--c-border); background: var(--c-bg-soft); color: var(--c-text-2); font-size: 13px; transition: all 0.2s; user-select: none; }
+.plat-box { padding: 8px 16px; border-radius: 14px; border: 1px solid var(--c-border); background: var(--c-bg-soft); color: var(--c-text-2); font-size: 13px; transition: all 0.2s; user-select: none; }
 .plat-box:hover { border-color: #c4b5fd; color: var(--c-accent); }
 .plat-box.active { background: rgba(124,58,237,0.1); border-color: rgba(124,58,237,0.45); color: var(--c-accent); font-weight: 600; }
 
 .preview-card { border-color: rgba(124,58,237,0.2); background: rgba(124,58,237,0.03); }
-.prompt-preview { font-size: 12px; color: var(--c-text-2); line-height: 1.8; white-space: pre-wrap; background: var(--c-bg-soft); border: 1px solid var(--c-border); border-radius: 8px; padding: 12px 14px; min-height: 80px; font-family: monospace; }
+.prompt-preview { font-size: 12px; color: var(--c-text-2); line-height: 1.8; white-space: pre-wrap; background: var(--c-bg-soft); border: 1px solid var(--c-border); border-radius: 12px; padding: 12px 14px; min-height: 80px; font-family: monospace; }
 .prompt-hint { font-size: 11px; color: var(--c-accent); opacity: 0.7; margin-top: 10px; }
+
+/* ── 调性卡片 ───────────────────────────────────────────────── */
+.tone-section-card { padding: 20px; }
+.tone-section-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.tone-section-sub { font-size: 11px; color: var(--c-text-3); margin-top: 2px; }
+
+.tone-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.tone-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--c-border);
+  background: var(--c-bg-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  position: relative;
+}
+.tone-card:hover { border-color: #c4b5fd; background: rgba(124,58,237,0.03); transform: translateY(-1px); }
+.tone-card.active {
+  border-color: var(--tone-color, #7c3aed);
+  background: color-mix(in srgb, var(--tone-color, #7c3aed) 6%, #fff);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--tone-color, #7c3aed) 20%, transparent);
+}
+
+.tone-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.tone-card-body { flex: 1; overflow: hidden; }
+.tone-card-name { font-size: 12px; font-weight: 600; color: var(--c-text); }
+.tone-card.active .tone-card-name { color: var(--tone-color, #7c3aed); }
+.tone-card-desc { font-size: 11px; color: var(--c-text-3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tone-card-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--tone-color, #7c3aed);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tone-selected-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-border);
+}
+.tone-selected-label { font-size: 11px; color: var(--c-text-3); font-weight: 500; }
+.tone-selected-chip {
+  padding: 3px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(124,58,237,0.08);
+  color: #7c3aed;
+  border: 1px solid rgba(124,58,237,0.2);
+}
 
 /* ── AI Modal ─────────────────────────────────────────────────── */
 .ai-modal-mask {
@@ -1647,7 +1888,7 @@ function handleSave() {
 .ai-modal-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   flex-shrink: 0;
 }
 .ai-modal-title {
@@ -1687,7 +1928,7 @@ function handleSave() {
 .variants-list { display: flex; flex-direction: column; gap: 10px; }
 .variant-card {
   border: 1.5px solid #eee;
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 12px 14px;
   cursor: pointer;
   transition: all 0.15s;
@@ -1704,7 +1945,7 @@ function handleSave() {
   background: rgba(124,58,237,0.1); padding: 2px 8px; border-radius: 20px;
 }
 .btn-adopt-inline {
-  padding: 4px 12px; border-radius: 6px;
+  padding: 4px 12px; border-radius: 10px;
   border: 1px solid rgba(124,58,237,0.3);
   background: rgba(124,58,237,0.06); color: #7c3aed;
   font-size: 12px; font-weight: 500; cursor: pointer;
@@ -1717,7 +1958,7 @@ function handleSave() {
 
 /* Footer */
 .ai-modal-footer {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid rgba(0,0,0,0.05);
   padding: 14px 20px 18px;
   flex-shrink: 0;
   background: #fdfdfd;
@@ -1725,7 +1966,7 @@ function handleSave() {
 .footer-edit-label { font-size: 11px; font-weight: 600; color: #bbb; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
 .editable-result {
   width: 100%; background: #fff;
-  border: 1.5px solid #e8e8e8;
+  border: 1.5px solid rgba(0,0,0,0.06);
   border-radius: 9px; padding: 10px 12px;
   color: #1a1a1a; font-size: 13px; line-height: 1.7;
   resize: vertical; outline: none; box-sizing: border-box;
@@ -1739,8 +1980,8 @@ function handleSave() {
 .footer-right-btns { display: flex; gap: 8px; }
 .btn-regen {
   display: flex; align-items: center; gap: 5px;
-  padding: 7px 14px; border-radius: 8px;
-  border: 1.5px solid #e8e8e8; background: #fff;
+  padding: 7px 14px; border-radius: 12px;
+  border: 1.5px solid rgba(0,0,0,0.06); background: #fff;
   color: #666; font-size: 12px; font-weight: 500;
   cursor: pointer; transition: all 0.15s;
 }
@@ -1748,14 +1989,14 @@ function handleSave() {
 .btn-regen:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-spinner { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(124,58,237,0.3); border-top-color: #7c3aed; animation: spin 0.8s linear infinite; }
 .btn-cancel {
-  padding: 7px 16px; border-radius: 8px;
-  border: 1.5px solid #e8e8e8; background: transparent;
+  padding: 7px 16px; border-radius: 12px;
+  border: 1.5px solid rgba(0,0,0,0.06); background: transparent;
   color: #888; font-size: 13px; cursor: pointer;
   transition: all 0.15s;
 }
 .btn-cancel:hover { border-color: #bbb; color: #444; }
 .btn-adopt {
-  padding: 7px 20px; border-radius: 8px; border: none;
+  padding: 7px 20px; border-radius: 12px; border: none;
   background: linear-gradient(135deg, #7c3aed, #4f46e5);
   color: #fff; font-size: 13px; font-weight: 600;
   cursor: pointer; box-shadow: 0 2px 8px rgba(124,58,237,0.25);

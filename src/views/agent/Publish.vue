@@ -268,7 +268,7 @@ function doPublish(idx: number) {
 /* 内容卡片 */
 .content-card {
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 14px;
   overflow: hidden;
   background: #fff;
 }
@@ -285,8 +285,8 @@ function doPublish(idx: number) {
   border-bottom: 1px solid #e2e8f0;
   flex-wrap: wrap;
 }
-.platform-tag { padding: 2px 8px; background: #dbeafe; color: #1d4ed8; border-radius: 4px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
-.type-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.platform-tag { padding: 2px 8px; background: #dbeafe; color: #1d4ed8; border-radius: 8px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.type-badge { padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
 .type-video_script { background: #ede9fe; color: #7c3aed; }
 .type-poster { background: #e0f2fe; color: #0369a1; }
 .type-copy { background: #d1fae5; color: #065f46; }

@@ -38,13 +38,9 @@
       <el-card>
         <div class="stock-topbar">
           <div class="topbar-left">
-            <span
-              v-for="item in overviewStats"
-              :key="item.label"
-              class="stat-label"
-            >
+            <span v-for="item in overviewStats" :key="item.label" class="stat-label">
               {{ item.label }}
-              <strong class="stat-blue">{{ item.value }}</strong>
+              <strong :class="item.label === '负库存' && item.value > 0 ? 'stat-red' : item.label === '库存不足' && item.value > 0 ? 'stat-orange' : 'stat-blue'">{{ item.value }}</strong>
             </span>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -72,39 +68,65 @@
 
         <el-table v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px">
           <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="160" />
+          <el-table-column prop="goods_name" label="商品名称" min-width="150" />
           <el-table-column prop="goods_sn" label="商品编码" width="130" />
           <el-table-column prop="cate_name" label="分类" width="100" />
           <el-table-column prop="spec" label="规格" width="90" />
           <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-          <el-table-column label="当前库存" width="120" align="center">
+          <el-table-column label="当前库存" width="110" align="center">
             <template #default="{ row }">
-              <div style="display:flex;align-items:center;justify-content:center">
-                <el-tag :type="stockStatusType(row)" size="small" effect="plain">
-                  {{ Number(row.stock_num).toFixed(2) }}
-                </el-tag>
-              </div>
+              <el-tag :type="stockStatusType(row)" size="small" effect="plain">
+                {{ getStockQty(row).toFixed(2) }}
+              </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="安全库存" width="120" align="center">
-            <template #default="{ row }">
-              <span v-if="Number(row.safe_min) > 0 || Number(row.safe_max) > 0" style="font-size:12px;color:#6b7280">
-                {{ safeRangeText(row) }}
-              </span>
-              <span v-else style="font-size:12px;color:#c0c4cc">未设置</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="库存状态" width="110" align="center">
+          <el-table-column label="库存状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="成本价" width="90" align="right">
-            <template #default="{ row }">¥{{ Number(row.cost_price || 0).toFixed(2) }}</template>
+            <template #default="{ row }">¥{{ getAvgPrice(row).toFixed(2) }}</template>
           </el-table-column>
           <el-table-column label="库存货值" width="110" align="right">
             <template #default="{ row }">
-              <span style="color:#165dff;font-weight:500">¥{{ (Number(row.stock_num) * Number(row.cost_price || 0)).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ (getStockQty(row) * getAvgPrice(row)).toFixed(2) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="出入库记录" width="190" align="center">
+            <template #default="{ row }">
+              <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
+                <el-tag v-if="inhouseCountMap[row.id] > 0" type="success" size="small" effect="plain">
+                  采购入库 {{ inhouseCountMap[row.id] }}次
+                </el-tag>
+                <el-tag v-if="saleCountMap[row.id] > 0" type="warning" size="small" effect="plain">
+                  销售出库 {{ saleCountMap[row.id] }}次
+                </el-tag>
+                <el-tag v-if="retailCountMap[row.id] > 0" type="primary" size="small" effect="plain">
+                  零售 {{ retailCountMap[row.id] }}次
+                </el-tag>
+                <span v-if="!inhouseCountMap[row.id] && !saleCountMap[row.id] && !retailCountMap[row.id]" style="color:#c0c4cc;font-size:12px">无记录</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="安全库存" width="130" align="center">
+            <template #default="{ row }">
+              <span v-if="Number(row.safe_min) > 0 || Number(row.safe_max) > 0"
+                style="font-size:12px;color:#6b7280;cursor:pointer" @click="openSafeSetting(row)">
+                {{ safeRangeText(row) }}
+              </span>
+              <el-button v-else type="primary" link size="small" @click="openSafeSetting(row)">设置</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column label="流水" width="60" align="center">
+            <template #default="{ row }">
+              <el-button type="info" link size="small" @click="router.push('/warehouse/flow')">流水</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column label="快捷跳转" width="120" align="center" fixed="right" class-name="col-white-bg">
+            <template #default="{ row }">
+              <el-button type="success" link size="small" @click="router.push('/procure/inhouse')">采购</el-button>
+              <el-button type="warning" link size="small" @click="router.push('/sale/contract')">销售</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -118,24 +140,48 @@
             :page-sizes="[20, 50, 100]"
             layout="sizes, prev, pager, next, jumper"
             :total="total"
-            @size-change="loadData"
-            @current-change="loadData"
+            @size-change="() => { page = 1 }"
+            @current-change="() => {}"
           />
         </div>
       </el-card>
     </div>
   </div>
+
+  <!-- 安全库存设置弹窗 -->
+  <el-dialog v-model="safeDialogVisible" title="设置安全库存" width="360px" :close-on-click-modal="false">
+    <div style="font-size:13px;color:#666;margin-bottom:12px">{{ safeForm.goods_name }}</div>
+    <el-form label-width="80px">
+      <el-form-item label="最低库存">
+        <el-input-number v-model="safeForm.safe_min" :min="0" :precision="0" style="width:100%" placeholder="低于此值触发不足预警" />
+      </el-form-item>
+      <el-form-item label="最高库存">
+        <el-input-number v-model="safeForm.safe_max" :min="0" :precision="0" style="width:100%" placeholder="0表示不限" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="safeDialogVisible = false">取消</el-button>
+      <el-button type="primary" :loading="safeSaving" @click="saveSafeSetting">保存</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { getStockList, getWarehouseList } from '@/api/warehouse'
+import { getGoodsList } from '@/api/goods'
 import http from '@/api/http'
 
+const router = useRouter()
 const loading = ref(false)
-const tableData = ref<any[]>([])
-const total = ref(0)
+const tableData = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filteredGoods.value.slice(start, start + pageSize.value)
+})
+const total = computed(() => filteredGoods.value.length)
 const page = ref(1)
 const pageSize = ref(20)
 const keyword = ref('')
@@ -145,24 +191,78 @@ const statusFilter = ref<'all' | 'low' | 'zero' | 'normal'>('all')
 
 const warehouses = ref<any[]>([])
 const categories = ref<any[]>([])
-const allRows = ref<any[]>([])
 
-const totalQty = computed(() => tableData.value.reduce((sum, item) => sum + Number(item.stock_num || 0), 0))
-const lowStockCount = computed(() => allRows.value.filter(item => Number(item.safe_min) > 0 && Number(item.stock_num) < Number(item.safe_min)).length)
-const zeroStockCount = computed(() => allRows.value.filter(item => Number(item.stock_num) <= 0).length)
-const highStockCount = computed(() => allRows.value.filter(item => Number(item.safe_max) > 0 && Number(item.stock_num) > Number(item.safe_max)).length)
+// All goods (from goods table - includes zero-stock items)
+const allGoods = ref<any[]>([])
+// Stock qty map: goods_id -> qty (from stock/StockAll - updated by inhouse audit)
+const stockQtyMap = ref<Record<number, number>>({})
+const stockPriceMap = ref<Record<number, number>>({})
+// Net deduction map: goods_id -> qty deducted by sales+retail (not yet reflected in StockAll)
+const deductQtyMap = ref<Record<number, number>>({})
+
+// Activity maps: goods_id -> count
+const inhouseCountMap = ref<Record<number, number>>({})
+const saleCountMap = ref<Record<number, number>>({})
+const retailCountMap = ref<Record<number, number>>({})
+
+function getStockQty(row: any): number {
+  const base = stockQtyMap.value[row.id] ?? Number(row.stock_num ?? 0)
+  const deduct = deductQtyMap.value[row.id] ?? 0
+  return base - deduct
+}
+
+function getAvgPrice(row: any): number {
+  return stockPriceMap.value[row.id] ?? Number(row.cost_price ?? 0)
+}
+
+// Filtered list (client-side after loading all goods)
+const filteredGoods = computed(() => {
+  let rows = allGoods.value
+
+  if (selectedCate.value) {
+    rows = rows.filter(r => r.cate_id === selectedCate.value)
+  }
+
+  if (keyword.value.trim()) {
+    const kw = keyword.value.trim().toLowerCase()
+    rows = rows.filter(r =>
+      String(r.goods_name || '').toLowerCase().includes(kw) ||
+      String(r.goods_sn || '').toLowerCase().includes(kw)
+    )
+  }
+
+  if (statusFilter.value === 'low') {
+    rows = rows.filter(r => Number(r.safe_min) > 0 && getStockQty(r) < Number(r.safe_min))
+  } else if (statusFilter.value === 'zero') {
+    rows = rows.filter(r => getStockQty(r) <= 0)
+  } else if (statusFilter.value === 'normal') {
+    rows = rows.filter(r => {
+      const qty = getStockQty(r)
+      const safeMin = Number(r.safe_min || 0)
+      const safeMax = Number(r.safe_max || 0)
+      return qty > 0 && !(safeMin > 0 && qty < safeMin) && !(safeMax > 0 && qty > safeMax)
+    })
+  }
+
+  return rows
+})
+
+const totalQty = computed(() => filteredGoods.value.reduce((s, r) => s + getStockQty(r), 0))
+const negativeStockCount = computed(() => filteredGoods.value.filter(r => getStockQty(r) < 0).length)
+const lowStockCount = computed(() => filteredGoods.value.filter(r => Number(r.safe_min) > 0 && getStockQty(r) < Number(r.safe_min)).length)
+const zeroStockCount = computed(() => filteredGoods.value.filter(r => getStockQty(r) === 0).length)
+const highStockCount = computed(() => filteredGoods.value.filter(r => Number(r.safe_max) > 0 && getStockQty(r) > Number(r.safe_max)).length)
+
 const overviewStats = computed(() => [
+  { label: '商品总数', value: filteredGoods.value.length },
   { label: '总库存', value: totalQty.value.toFixed(2) },
+  { label: '负库存', value: negativeStockCount.value },
   { label: '库存不足', value: lowStockCount.value },
   { label: '零库存', value: zeroStockCount.value },
-  { label: '库存过高', value: highStockCount.value },
 ])
+
 const tableSummaryText = computed(() => {
   const filters = []
-  if (selectedWarehouse.value) {
-    const warehouse = warehouses.value.find(item => item.id === selectedWarehouse.value)
-    if (warehouse?.name) filters.push(warehouse.name)
-  }
   if (selectedCate.value) {
     const cate = categories.value.find(item => item.id === selectedCate.value)
     if (cate?.name) filters.push(cate.name)
@@ -171,15 +271,17 @@ const tableSummaryText = computed(() => {
   if (keyword.value.trim()) filters.push(`关键词：${keyword.value.trim()}`)
   return filters.join(' / ')
 })
+
 const stockHealthHint = computed(() => {
-  const healthy = Math.max(allRows.value.length - lowStockCount.value - zeroStockCount.value, 0)
-  return `${selectionScopeText.value} · 正常 ${healthy} / 异常 ${lowStockCount.value + zeroStockCount.value + highStockCount.value}`
+  const healthy = Math.max(filteredGoods.value.length - negativeStockCount.value - lowStockCount.value - zeroStockCount.value, 0)
+  return `正常 ${healthy} / 负库存 ${negativeStockCount.value} / 零库存 ${zeroStockCount.value} / 不足 ${lowStockCount.value}`
 })
+
 const selectionScopeText = computed(() => {
   const labels = []
   if (selectedWarehouse.value) {
-    const warehouse = warehouses.value.find(item => item.id === selectedWarehouse.value)
-    if (warehouse?.name) labels.push(`仓库：${warehouse.name}`)
+    const w = warehouses.value.find(item => item.id === selectedWarehouse.value)
+    if (w?.name) labels.push(`仓库：${w.name}`)
   }
   if (selectedCate.value) {
     const cate = categories.value.find(item => item.id === selectedCate.value)
@@ -189,7 +291,7 @@ const selectionScopeText = computed(() => {
 })
 
 function stockStatusType(row: any) {
-  const stock = Number(row.stock_num)
+  const stock = getStockQty(row)
   const safeMin = Number(row.safe_min || 0)
   const safeMax = Number(row.safe_max || 0)
   if (stock < 0) return 'danger'
@@ -200,7 +302,7 @@ function stockStatusType(row: any) {
 }
 
 function stockStatusLabel(row: any) {
-  const stock = Number(row.stock_num)
+  const stock = getStockQty(row)
   const safeMin = Number(row.safe_min || 0)
   const safeMax = Number(row.safe_max || 0)
   if (stock < 0) return '库存负数'
@@ -220,44 +322,140 @@ function safeRangeText(row: any) {
   return `${min} ~ ${max > 0 ? max.toFixed(0) : '∞'}`
 }
 
-async function loadData() {
-  loading.value = true
+// 安全库存设置
+const safeDialogVisible = ref(false)
+const safeSaving = ref(false)
+const safeForm = ref({ id: 0, goods_name: '', safe_min: 0, safe_max: 0 })
+
+function openSafeSetting(row: any) {
+  safeForm.value = {
+    id: row.id,
+    goods_name: row.goods_name || '',
+    safe_min: Number(row.safe_min || 0),
+    safe_max: Number(row.safe_max || 0),
+  }
+  safeDialogVisible.value = true
+}
+
+async function saveSafeSetting() {
+  safeSaving.value = true
   try {
-    const params: any = {
-      list_rows: pageSize.value,
-      page: page.value,
-    }
-    if (keyword.value) params.keyword = keyword.value
-    if (selectedCate.value) params.cate_id = selectedCate.value
-    if (selectedWarehouse.value) params.warehouse_id = selectedWarehouse.value
-
-    const response: any = await getStockList(params)
-    let rows = response?.data?.rows ?? response?.rows ?? []
-    const rawTotal = response?.data?.total ?? response?.total ?? rows.length
-
-    if (statusFilter.value === 'low') {
-      rows = rows.filter((item: any) => Number(item.safe_min) > 0 && Number(item.stock_num) < Number(item.safe_min))
-    } else if (statusFilter.value === 'zero') {
-      rows = rows.filter((item: any) => Number(item.stock_num) <= 0)
-    } else if (statusFilter.value === 'normal') {
-      rows = rows.filter((item: any) => {
-        const stock = Number(item.stock_num)
-        const safeMin = Number(item.safe_min || 0)
-        const safeMax = Number(item.safe_max || 0)
-        return stock > 0 && !(safeMin > 0 && stock < safeMin) && !(safeMax > 0 && stock > safeMax)
-      })
-    }
-
-    tableData.value = rows
-    total.value = statusFilter.value === 'all' ? rawTotal : rows.length
+    await http.post('/goods/ShopGoods/edit', { id: safeForm.value.id, safe_min: safeForm.value.safe_min, safe_max: safeForm.value.safe_max })
+    // 更新本地数据
+    const row = allGoods.value.find((r: any) => r.id === safeForm.value.id)
+    if (row) { row.safe_min = safeForm.value.safe_min; row.safe_max = safeForm.value.safe_max }
+    safeDialogVisible.value = false
+    ElMessage.success('设置成功')
+  } catch {
+    ElMessage.error('设置失败')
   } finally {
-    loading.value = false
+    safeSaving.value = false
   }
 }
 
-async function loadOverviewRows() {
-  const response: any = await getStockList({ list_rows: 2000 })
-  allRows.value = response?.data?.rows ?? response?.rows ?? []
+function refreshWithFirstPage() {
+  page.value = 1
+}
+
+function selectWarehouse(id: number) {
+  selectedWarehouse.value = id
+  loadStockMap(id)
+  page.value = 1
+}
+
+function selectCate(id: number) {
+  selectedCate.value = id
+  page.value = 1
+}
+
+async function loadAllGoods() {
+  const res = await getGoodsList({ list_rows: 2000 })
+  allGoods.value = res.data?.rows ?? []
+}
+
+async function loadStockMap(warehouseId = 0) {
+  try {
+    const params: any = { list_rows: 2000 }
+    if (warehouseId) params.warehouse_id = warehouseId
+    const res: any = await getStockList(params)
+    const rows: any[] = res?.data?.rows ?? res?.rows ?? []
+    const qtyMap: Record<number, number> = {}
+    const priceMap: Record<number, number> = {}
+    for (const r of rows) {
+      const gid = Number(r.goods_id)
+      if (!gid) continue
+      qtyMap[gid] = (qtyMap[gid] || 0) + Number(r.qty ?? r.stock_num ?? 0)
+      if (!priceMap[gid] && Number(r.avg_price ?? r.cost_price ?? 0) > 0) {
+        priceMap[gid] = Number(r.avg_price ?? r.cost_price ?? 0)
+      }
+    }
+    stockQtyMap.value = qtyMap
+    stockPriceMap.value = priceMap
+  } catch { /* ignore */ }
+}
+
+async function loadActivityMaps() {
+  try {
+    const [inhouseRes, retailRes] = await Promise.allSettled([
+      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 500 } }),
+      http.get('/retail/order/index', { params: { list_rows: 500 } }),
+    ])
+
+    // Inhouse map (入库)
+    const inhouseRows: any[] = inhouseRes.status === 'fulfilled' ? (inhouseRes.value.data?.rows ?? []) : []
+    const inMap: Record<number, number> = {}
+    for (const r of inhouseRows) {
+      try {
+        const items = JSON.parse(r.goods_info || '[]')
+        for (const item of items) {
+          const gid = Number(item.goods_id)
+          if (gid) inMap[gid] = (inMap[gid] || 0) + 1
+        }
+      } catch { /* ignore */ }
+    }
+    inhouseCountMap.value = inMap
+
+    // Sale contracts as proxy for sales (出库)
+    const dMap: Record<number, number> = {}
+    const sMap: Record<number, number> = {}
+    try {
+      const saleRes = await http.get('/shop/ContractOrder/index', { params: { list_rows: 500, status: 1 } })
+      const saleRows: any[] = saleRes.data?.rows ?? []
+      for (const r of saleRows) {
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          for (const item of items) {
+            const gid = Number(item.goods_id)
+            const qty = Number(item.num || 0)
+            if (gid) {
+              sMap[gid] = (sMap[gid] || 0) + 1
+              dMap[gid] = (dMap[gid] || 0) + qty
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+    saleCountMap.value = sMap
+
+    // Retail map (零售出库)
+    const retailRows: any[] = retailRes.status === 'fulfilled' ? (retailRes.value.data?.rows ?? []) : []
+    const rMap: Record<number, number> = {}
+    for (const r of retailRows) {
+      try {
+        const items = JSON.parse(r.goods_info || '[]')
+        for (const item of items) {
+          const gid = Number(item.goods_id)
+          const qty = Number(item.num || item.qty || 0)
+          if (gid) {
+            rMap[gid] = (rMap[gid] || 0) + 1
+            dMap[gid] = (dMap[gid] || 0) + qty
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    retailCountMap.value = rMap
+    deductQtyMap.value = dMap
+  } catch { /* ignore */ }
 }
 
 async function loadMeta() {
@@ -269,24 +467,14 @@ async function loadMeta() {
   categories.value = cateRes.data?.rows ?? []
 }
 
-function refreshWithFirstPage() {
-  page.value = 1
-  loadData()
-}
-
-function selectWarehouse(id: number) {
-  selectedWarehouse.value = id
-  refreshWithFirstPage()
-}
-
-function selectCate(id: number) {
-  selectedCate.value = id
-  refreshWithFirstPage()
-}
-
 onMounted(async () => {
-  await loadMeta()
-  await Promise.all([loadData(), loadOverviewRows()])
+  loading.value = true
+  try {
+    await loadMeta()
+    await Promise.all([loadAllGoods(), loadStockMap(), loadActivityMaps()])
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
@@ -301,7 +489,7 @@ onMounted(async () => {
   width: 260px;
   flex-shrink: 0;
   background: #fff;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 10px 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow-y: auto;
@@ -319,7 +507,7 @@ onMounted(async () => {
 
 .sidebar-divider {
   width: 1px;
-  background: #f0f0f0;
+  background: rgba(0,0,0,0.05);
   margin: 0 6px;
   flex-shrink: 0;
 }
@@ -327,7 +515,7 @@ onMounted(async () => {
 .sidebar-label {
   font-size: 11px;
   font-weight: 600;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
@@ -342,7 +530,7 @@ onMounted(async () => {
 
 .sidebar-item {
   padding: 5px 8px;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   color: #333;
@@ -387,6 +575,14 @@ onMounted(async () => {
   color: #409eff;
   font-size: 15px;
 }
+.stat-red {
+  color: #dc2626;
+  font-size: 15px;
+}
+.stat-orange {
+  color: #ea580c;
+  font-size: 15px;
+}
 
 .pager-row {
   margin-top: 12px;
@@ -396,5 +592,10 @@ onMounted(async () => {
   gap: 8px;
   font-size: 13px;
   color: #666;
+}
+
+:deep(.col-white-bg .cell),
+:deep(.col-white-bg) {
+  background-color: #fff !important;
 }
 </style>

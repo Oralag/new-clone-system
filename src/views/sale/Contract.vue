@@ -19,12 +19,6 @@
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增合同</el-button>
           </template>
-          <el-table-column label="来源报价单" width="140">
-            <template #default="{ row }">
-              <span v-if="row.quote_no" style="color:#165dff;font-size:12px">{{ row.quote_no }}</span>
-              <span v-else style="color:#c9cdd4;font-size:12px">—</span>
-            </template>
-          </el-table-column>
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="expand-detail">
@@ -41,7 +35,7 @@
                   </el-table-column>
                   <el-table-column label="含税合计" width="110" align="right">
                     <template #default="{ row: item }">
-                      <span style="color:#165dff;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
+                      <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
                   <el-table-column prop="remark" label="备注" min-width="100" />
@@ -56,7 +50,7 @@
           </el-table-column>
           <el-table-column prop="total_amount" label="合同金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#165dff;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ calcContractAmount(row).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="签约日期" width="110">
@@ -77,19 +71,36 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="已收金额" width="110" align="right">
+            <template #default="{ row }">
+              <span style="color:#16a34a;font-weight:500">¥{{ getReceivedAmount(row).toFixed(2) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="待收金额" width="110" align="right">
+            <template #default="{ row }">
+              <span :style="{ color: getPendingAmount(row) > 0 ? '#dc2626' : '#6b7280', fontWeight: '500' }">
+                ¥{{ getPendingAmount(row).toFixed(2) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="收款状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.status === 1" :type="getReceiveStatus(row).type" size="small">
+                {{ getReceiveStatus(row).label }}
+              </el-tag>
+              <span v-else style="color:#c0c4cc;font-size:12px">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="240" fixed="right">
             <template #default="{ row }">
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <template v-if="row.status === 0">
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
-              <el-tooltip v-if="row.status === 2" content="驳回操作已禁用：合同已驳回，请重新提交或删除" placement="top">
-                <el-button type="danger" link size="small" disabled>驳回</el-button>
-              </el-tooltip>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+              <el-button v-if="row.status === 1 && getPendingAmount(row) > 0.01" type="success" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
+              <el-button v-if="Number(row.status) === 0" type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -163,7 +174,7 @@
                       style="flex:1"
                       :placeholder="fd.admin_id ? String(getCommissionRate(fd.admin_id)) : '0'"
                     />
-                    <span style="font-size:13px;color:#86909c">%</span>
+                    <span style="font-size:13px;color:rgba(29,29,31,0.35)">%</span>
                     <el-button link size="small" @click="goToCommissionSetting" style="font-size:12px;padding:0 2px">设置</el-button>
                   </div>
                 </el-form-item>
@@ -201,12 +212,17 @@
               <el-col :span="6" />
 
               <!-- 行3 -->
-              <el-col :span="6">
-                <el-form-item label="来源报价单">
-                  <el-input v-model="fd.quote_no" placeholder="报价单编号（可选）" clearable />
+              <el-col :span="6" v-if="fd.source_offer_no">
+                <el-form-item label="来源报价">
+                  <div style="display:flex;align-items:center;gap:6px;width:100%">
+                    <el-input :value="fd.source_offer_no" disabled style="flex:1" />
+                    <span v-if="calcOfferDisplayAmount > 0" style="font-size:13px;color:#0071e3;font-weight:600;white-space:nowrap">
+                      ¥{{ calcOfferDisplayAmount.toFixed(2) }}
+                    </span>
+                  </div>
                 </el-form-item>
               </el-col>
-              <el-col :span="18">
+              <el-col :span="fd.source_offer_no ? 12 : 18">
                 <el-form-item label="备注">
                   <el-input v-model="fd.remark" type="textarea" :rows="2" placeholder="请输入备注" />
                 </el-form-item>
@@ -225,6 +241,7 @@
           <!-- 工具栏 -->
           <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
+              <el-button type="success" :icon="Document" size="small" @click="openOfferPicker">选择报价单</el-button>
               <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
               <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
               <el-button :icon="Upload" size="small">导入商品</el-button>
@@ -311,7 +328,7 @@
             </el-table-column>
             <el-table-column label="税额" width="100" align="right">
               <template #default="{ row }">
-                <span style="color:#f53f3f">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
+                <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column width="130">
@@ -339,7 +356,7 @@
             </el-table-column>
             <el-table-column label="含税合计" width="110" align="right">
               <template #default="{ row }">
-                <span style="color:#165dff;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+                <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="备注" min-width="110">
@@ -360,7 +377,7 @@
           <div class="sec-title">结算信息</div>
           <div class="settlement-grid">
             <div class="settle-item">
-              <span class="settle-label">本单应收</span>
+              <span class="settle-label">商品含税合计</span>
               <span class="settle-value primary">¥{{ fd.total_amount.toFixed(2) }}</span>
             </div>
             <div class="settle-item">
@@ -385,12 +402,29 @@
               <span class="settle-label">其他收支</span>
               <el-input-number v-model="fd.income_amount" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" @change="calcSettle" />
-              <span style="font-size:11px;color:#86909c">正数=额外收入，负数=额外支出</span>
+              <span style="font-size:11px;color:rgba(29,29,31,0.35)">正数=额外收入，负数=额外支出</span>
             </div>
             <div class="settle-item">
               <span class="settle-label">本次收款</span>
-              <el-input-number v-model="fd.receive_amount" :min="0" :precision="2" :disabled="isReadonly"
+              <el-input-number v-model="fd.receive_amount" :min="0" :max="finalReceivable" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" />
+            </div>
+            <div class="settle-item" v-if="customerPrepayBalance > 0 || fd.prepay_amount > 0">
+              <span class="settle-label" style="color:#16a34a">
+                可用预付款
+                <el-tag type="success" size="small" style="margin-left:4px">¥{{ customerPrepayBalance.toFixed(2) }}</el-tag>
+              </span>
+              <el-input-number
+                v-model="fd.prepay_amount"
+                :min="0"
+                :max="Math.min(customerPrepayBalance, finalReceivable)"
+                :precision="2"
+                :disabled="isReadonly"
+                size="small"
+                style="width:130px"
+                placeholder="0"
+              />
+              <span style="font-size:11px;color:rgba(29,29,31,0.35)">审核时自动核销</span>
             </div>
             <div class="settle-item">
               <span class="settle-label">是否分期</span>
@@ -413,15 +447,27 @@
           </div>
           <div class="settle-summary">
             <span>未税合计：<b>¥{{ totalNoTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">税额合计：<b style="color:#f53f3f">¥{{ totalTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">含税合计：<b style="color:#165dff;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">税额合计：<b style="color:#dc2626">¥{{ totalTax.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">商品含税合计：<b>¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            <template v-if="fd.discount_type !== 'none' && Number(fd.discount_value) > 0">
+              <span style="margin-left:24px">折扣额：<b style="color:#16a34a">-¥{{ Number(fd.discount_type === 'percent' ? fd.total_amount * (fd.discount_value || 0) / 100 : fd.discount_value).toFixed(2) }}</b></span>
+            </template>
+            <span style="margin-left:24px">折后金额：<b>¥{{ fd.after_discount.toFixed(2) }}</b></span>
             <template v-if="fd.freight_amount > 0">
-              <span style="margin-left:24px">物流费：<b style="color:#7c3aed">¥{{ Number(fd.freight_amount).toFixed(2) }}</b></span>
-              <span style="margin-left:8px;font-size:12px;color:#86909c">（{{
+              <span style="margin-left:24px">物流费：<b style="color:#7c3aed">¥{{ freightCharge.toFixed(2) }}</b></span>
+              <span style="margin-left:8px;font-size:12px;color:rgba(29,29,31,0.35)">（{{
                 fd.freight_bearer === 'buyer' ? '买方承担' :
                 fd.freight_bearer === 'seller' ? '卖方承担' :
                 fd.freight_bearer === 'half' ? '各付一半' : '免运费'
               }}）</span>
+            </template>
+            <template v-if="Number(fd.income_amount) !== 0">
+              <span style="margin-left:24px">其他收支影响：<b :style="{ color: Number(fd.income_amount) > 0 ? '#16a34a' : '#dc2626' }">{{ Number(fd.income_amount) > 0 ? '-' : '+' }}¥{{ Math.abs(Number(fd.income_amount)).toFixed(2) }}</b></span>
+            </template>
+            <span style="margin-left:24px">最终应收：<b style="color:#0071e3;font-size:16px">¥{{ finalReceivable.toFixed(2) }}</b></span>
+            <template v-if="fd.prepay_amount > 0">
+              <span style="margin-left:24px">预付款核销：<b style="color:#16a34a">-¥{{ Number(fd.prepay_amount).toFixed(2) }}</b></span>
+              <span style="margin-left:24px">实际待收：<b style="color:#dc2626;font-size:16px">¥{{ finalPending.toFixed(2) }}</b></span>
             </template>
           </div>
         </div>
@@ -456,7 +502,7 @@
         </el-table-column>
       </el-table>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
       </template>
@@ -516,25 +562,66 @@
       </template>
     </el-dialog>
 
+    <!-- 选择报价单弹框 -->
+    <el-dialog v-model="offerPickerVisible" title="选择已审核报价单" width="880px" append-to-body>
+      <div style="margin-bottom:10px;display:flex;gap:8px">
+        <el-input v-model="offerPickerNo" placeholder="报价单号" clearable style="width:220px"
+          @input="onOfferPickerSearch" />
+        <el-input v-model="offerPickerCustomer" placeholder="客户名称" clearable style="width:220px"
+          @input="onOfferPickerSearch" />
+      </div>
+      <el-table
+        ref="offerTableRef"
+        v-loading="offerLoading"
+        :data="offerOptions"
+        border
+        height="360"
+        highlight-current-row
+        @current-change="onOfferCurrentChange"
+        @row-dblclick="confirmOfferPick"
+      >
+        <el-table-column type="index" width="50" align="center" />
+        <el-table-column prop="offer_no" label="报价单号" min-width="160" />
+        <el-table-column label="客户名称" min-width="140">
+          <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="报价日期" width="110">
+          <template #default="{ row }">{{ (row.offer_date || row.create_time || '').slice(0, 10) }}</template>
+        </el-table-column>
+        <el-table-column label="有效期至" width="110">
+          <template #default="{ row }">{{ (row.expire_date || '').slice(0, 10) || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="报价金额" width="120" align="right">
+          <template #default="{ row }">¥{{ calcOfferAmount(row).toFixed(2) }}</template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="offerPickerVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!selectedOffer" @click="confirmOfferPick">带入合同</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getContractList, createContract, updateContract, deleteContract, auditContract } from '@/api/sale'
+import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
-import { getFundList } from '@/api/finance'
+import { getFundList, createCollectReceipt, getCollectReceiptList } from '@/api/finance'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
 
+const DRAFT_KEY = 'sale_contract_draft_from_offer'
 const router = useRouter()
+const route = useRoute()
 
 function parseItems(goodsInfo: any): any[] {
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
@@ -601,11 +688,72 @@ const searchForm = reactive<any>({ contract_no: '', customer_name: '', status: '
 const showForm = ref(false)
 const isReadonly = ref(false)
 
+// ── 收款状态映射 ──────────────────────────────────────────────────────────────
+const receiptMap = ref<Record<string, number>>({}) // key: order_sn, value: total received
+
+async function loadReceiptMap() {
+  try {
+    const res = await getCollectReceiptList({ list_rows: 2000 })
+    const rows: any[] = res?.data?.rows ?? []
+    const map: Record<string, number> = {}
+    for (const r of rows) {
+      const sn = String(r?.order_sn || r?.order_no || '').trim()
+      if (sn) map[sn] = (map[sn] || 0) + Number(r.amount || 0)
+    }
+    receiptMap.value = map
+  } catch { /* ignore */ }
+}
+
+function getContractSn(row: any): string {
+  return String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+}
+
+function getReceivedAmount(row: any): number {
+  const sn = getContractSn(row)
+  return receiptMap.value[sn] ?? Number(row.receive_amount || 0)
+}
+
+function getPendingAmount(row: any): number {
+  return Math.max(0, calcContractAmount(row) - getReceivedAmount(row))
+}
+
+function getReceiveStatus(row: any): { label: string; type: string } {
+  const total = calcContractAmount(row)
+  const received = getReceivedAmount(row)
+  if (total <= 0) return { label: '无需收款', type: 'info' }
+  if (received <= 0) return { label: '未收款', type: 'danger' }
+  if (received >= total - 0.01) return { label: '已收清', type: 'success' }
+  return { label: '部分收款', type: 'warning' }
+}
+
 // ── 客户选项 ──────────────────────────────────────────────────────────────────
 const customerOptions = ref<any[]>([])
 async function loadCustomers() {
   const res = await getSaleCustomerList({ list_rows: 500 })
   customerOptions.value = res.data?.rows ?? []
+}
+
+// ── 预付款余额 ────────────────────────────────────────────────────────────────
+const customerPrepayBalance = ref(0) // 当前选中客户的可用预付款余额
+const prepayList = ref<any[]>([])    // 该客户所有预付款记录
+
+async function loadCustomerPrepay(customerId: number) {
+  if (!customerId) { customerPrepayBalance.value = 0; prepayList.value = []; return }
+  try {
+    const res = await http.get('/finance/Prepay/index', { params: { list_rows: 200, pay_type: 'customer' } })
+    const rows: any[] = res.data?.rows ?? []
+    const mine = rows.filter((r: any) => Number(r.customer_id) === customerId)
+    prepayList.value = mine
+    // 余额 = 预付款总额 - 已用于该客户的收款单金额
+    const totalPaid = mine.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+    // 查该客户收款单中备注含"预付款核销"的金额
+    const receiptRes = await http.get('/finance/CollectReceipt/index', { params: { list_rows: 500, customer_id: customerId } })
+    const receipts: any[] = receiptRes.data?.rows ?? []
+    const usedAmount = receipts
+      .filter((r: any) => String(r.remark || '').includes('预付款核销'))
+      .reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+    customerPrepayBalance.value = Math.max(0, totalPaid - usedAmount)
+  } catch { customerPrepayBalance.value = 0 }
 }
 
 // ── 分类选项（商品选择器用） ──────────────────────────────────────────────────
@@ -615,7 +763,11 @@ async function loadCates() {
   cateOptions.value = res.data?.rows ?? []
 }
 
-onMounted(() => { loadCustomers(); loadCates(); loadStaff(); loadFunds() })
+onMounted(async () => {
+  await Promise.all([loadCustomers(), loadCates(), loadStaff(), loadFunds(), loadReceiptMap()])
+  handleRouteFromOffer()
+  initAutoReceiptSync()
+})
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface ContractItem {
@@ -627,7 +779,8 @@ interface ContractItem {
 const defaultFd = () => ({
   id: 0,
   contract_no: '',
-  quote_no: '',
+  source_offer_id: 0,
+  source_offer_no: '',
   customer_id: null as any,
   customer_name: '',
   level_id: null as any,
@@ -647,6 +800,7 @@ const defaultFd = () => ({
   freight_bearer: 'buyer' as string,
   income_amount: 0,
   receive_amount: 0,
+  prepay_amount: 0,   // 本次使用预付款金额
   installment: false,
   items: [] as ContractItem[],
 })
@@ -662,6 +816,51 @@ const totalNoTax = computed(() =>
 const totalTax = computed(() =>
   fd.items.reduce((s, r) => s + (r.num || 0) * (r.price_no_tax || 0) * (r.tax_rate || 0) / 100, 0)
 )
+const freightCharge = computed(() =>
+  fd.freight_bearer === 'buyer' ? Number(fd.freight_amount || 0)
+    : fd.freight_bearer === 'half' ? Number(fd.freight_amount || 0) / 2
+    : 0
+)
+const finalReceivable = computed(() =>
+  Math.max(0, Number(fd.after_discount || 0) + freightCharge.value - Number(fd.income_amount || 0))
+)
+// 实际待收 = 应收 - 预付款核销
+const finalPending = computed(() =>
+  Math.max(0, finalReceivable.value - Number(fd.prepay_amount || 0))
+)
+
+function calcContractAmount(row: any): number {
+  const total = Number(row.total_amount || 0)
+  const discType = String(row.discount_type || 'none')
+  const discVal = Number(row.discount_value || 0)
+  const afterDisc = Number(row.after_discount)
+  const freight = Number(row.freight_amount || 0)
+  const bearer = String(row.freight_bearer || 'seller')
+  const income = Number(row.income_amount || 0)
+  let base = total
+  if (Number.isFinite(afterDisc) && afterDisc >= 0) base = afterDisc
+  else if (discType === 'amount' && discVal > 0) base = Math.max(0, total - discVal)
+  else if (discType === 'percent' && discVal > 0) base = Math.max(0, total * (1 - discVal / 100))
+  const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
+  return Math.max(0, base + fc - income)
+}
+
+function calcOfferAmount(row: any): number {
+  const total = Number(row.total_amount || 0)
+  const discVal = Number(row.discount_amount || row.discount_value || 0)
+  const afterOffer = row.after_offer ?? row.after_discount
+  if (Number.isFinite(Number(afterOffer)) && Number(afterOffer) >= 0) return Number(afterOffer)
+  if (discVal > 0) return Math.max(0, total - discVal)
+  return total
+}
+
+const calcOfferDisplayAmount = computed(() => {
+  // Show the quoted amount for the currently selected offer in the form
+  const selectedRow = offerOptions.value.find(o => o.id === fd.source_offer_id || o.offer_no === fd.source_offer_no)
+  if (selectedRow) return calcOfferAmount(selectedRow)
+  // Fallback to form's total amount
+  return fd.total_amount || 0
+})
 
 function calcTotal() {
   fd.total_amount = fd.items.reduce((s, r) => s + (r.num || 0) * (r.price || 0), 0)
@@ -676,13 +875,7 @@ function calcSettle() {
   } else {
     fd.after_discount = fd.total_amount * (1 - (fd.discount_value || 0) / 100)
   }
-  // 买方承担全额运费，各付一半则买方付一半
-  const freightCharge = fd.freight_bearer === 'buyer'
-    ? (fd.freight_amount || 0)
-    : fd.freight_bearer === 'half'
-      ? (fd.freight_amount || 0) / 2
-      : 0
-  fd.receive_amount = Math.max(0, fd.after_discount + freightCharge - (fd.income_amount || 0))
+  fd.receive_amount = Math.max(0, Math.min(Number(fd.receive_amount || 0), finalReceivable.value))
 }
 
 function calcItemTax(row: ContractItem) {
@@ -718,6 +911,8 @@ function removeItem(index: number) {
 function onCustomerChange(id: any) {
   const c = customerOptions.value.find(x => x.id === id)
   fd.customer_name = c?.name || c?.nickname || ''
+  fd.prepay_amount = 0
+  loadCustomerPrepay(Number(id))
   // 自动套用客户绑定的等级
   const bound = levelMap[id]
   if (bound && levelOptions.value.some(l => l.id === bound)) {
@@ -753,6 +948,7 @@ function openEdit(row: any, readonly = false) {
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
   isReadonly.value = readonly
   showForm.value = true
+  if (row.customer_id) loadCustomerPrepay(Number(row.customer_id))
 }
 
 function backToList() {
@@ -772,15 +968,44 @@ async function handleSave() {
     const payload: Record<string, any> = {
       customer_id: fd.customer_id,
       remark: fd.remark,
-      total_amount: fd.total_amount,
+      total_amount: finalReceivable.value,
+      discount_type: fd.discount_type,
+      discount_value: fd.discount_value,
+      after_discount: fd.after_discount,
+      freight_amount: fd.freight_amount,
+      freight_bearer: fd.freight_bearer,
+      income_amount: fd.income_amount,
+      receive_amount: fd.receive_amount,
+      receive_account: fd.receive_account || '',
+      need_invoice: fd.need_invoice ? 1 : 0,
+      installment: fd.installment ? 1 : 0,
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id
     if (fd.customer_name) payload.customer_name = fd.customer_name
     if (fd.admin_name) payload.admin_name = fd.admin_name
     if (fd.sign_date) { payload.sign_date = fd.sign_date; payload.contract_date = fd.sign_date }
-    if (fd.quote_no) payload.quote_no = fd.quote_no
-    fd.id ? await updateContract(payload) : await createContract(payload)
+    const isNew = !fd.id
+    const res = fd.id ? await updateContract(payload) : await createContract(payload)
+    const newId = Number(res?.data?.id || res?.data?.row?.id || res?.data?.data?.id || fd.id || 0)
+    if (!fd.id && newId) fd.id = newId
+    // 报价单转合同：标记报价单为已转换
+    if (isNew && fd.source_offer_id) {
+      try {
+        await auditOffer(fd.source_offer_id, 3)
+      } catch { /* ignore */ }
+    }
+    // 新建合同自动审核
+    if (isNew && newId) {
+      try {
+        await autoAuditContract(newId)
+        const detail = await getContractDetail(newId)
+        const row = detail?.data?.row || detail?.data || {}
+        await autoCreateReceipt(row)
+      } catch (e: any) {
+        ElMessage.warning(`保存成功，但自动审核未完成：${e?.message || ''}，请手动审核`)
+      }
+    }
     ElMessage.success('保存成功')
     backToList()
   } catch (e: any) {
@@ -788,6 +1013,155 @@ async function handleSave() {
   } finally {
     saving.value = false
   }
+}
+
+async function autoAuditContract(id: number) {
+  if (!id) throw new Error('合同ID无效')
+  await auditContract(id, 1)
+  const detail = await getContractDetail(id)
+  if (Number(detail?.data?.row?.status ?? detail?.data?.status ?? 0) === 1) return
+  await auditContract(id, 1)
+  const detail2 = await getContractDetail(id)
+  if (Number(detail2?.data?.row?.status ?? detail2?.data?.status ?? 0) !== 1) {
+    throw new Error('自动审核未完成，请在列表手动审核')
+  }
+}
+
+async function autoCreateReceipt(row: any) {
+  const orderSn = String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+  if (!orderSn) return
+  const finalAmt = calcContractAmount(row)
+  if (finalAmt <= 0) return
+  const customerId = Number(row?.customer_id || 0)
+  const customerName = String(row?.customer_name || customerOptions.value.find(c => Number(c?.id) === customerId)?.name || '').trim()
+  const account = String(row?.receive_account || '').trim()
+  const fundItem = fundOptions.value.find(f => String(f?.name || '').trim() === account)
+  const today = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+
+  // 检查是否已存在自动收款记录
+  try {
+    const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 200 })
+    const rows = existing?.data?.rows ?? []
+    if (rows.some((r: any) => String(r?.order_sn || r?.order_no || '').trim() === orderSn && String(r?.remark || '').includes('合同自动收款'))) return
+  } catch { /* ignore */ }
+
+  // 预付款核销：用该客户的预付款余额抵扣
+  const prepayAmt = Number(row?.prepay_amount || fd.prepay_amount || 0)
+  let remaining = finalAmt
+
+  if (prepayAmt > 0 && customerId) {
+    const actualPrepay = Math.min(prepayAmt, finalAmt)
+    try {
+      await createCollectReceipt({
+        customer_id: customerId, customer_name: customerName,
+        contact_type: 'customer', contact_id: customerId || null, contact_name: customerName,
+        amount: actualPrepay, order_sn: orderSn, order_no: orderSn,
+        fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
+        receipt_date: today, remark: `预付款核销 - ${orderSn}`,
+      })
+      remaining = Math.max(0, finalAmt - actualPrepay)
+    } catch { /* ignore */ }
+  }
+
+  // 剩余应收记录（未核销部分）
+  if (remaining > 0.01) {
+    try {
+      await createCollectReceipt({
+        customer_id: customerId, customer_name: customerName,
+        contact_type: 'customer', contact_id: customerId || null, contact_name: customerName,
+        amount: remaining, order_sn: orderSn, order_no: orderSn,
+        fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
+        receipt_date: today, remark: `合同自动收款 - ${orderSn}`,
+      })
+    } catch { /* ignore */ }
+  }
+}
+
+function handleRouteFromOffer() {
+  if (String(route.query.from || '') !== 'offer') return
+  const raw = sessionStorage.getItem(DRAFT_KEY)
+  if (!raw) return
+  try {
+    const draft = JSON.parse(raw)
+    Object.assign(fd, defaultFd())
+    fd.customer_id = draft.customer_id ?? null
+    fd.customer_name = draft.customer_name || ''
+    fd.level_id = draft.level_id ?? null
+    fd.admin_id = draft.admin_id ?? null
+    fd.admin_name = draft.admin_name || ''
+    fd.sign_date = draft.sign_date || fd.sign_date
+    fd.expire_date = draft.expire_date || ''
+    fd.source_offer_id = Number(draft.source_offer_id || 0)
+    fd.source_offer_no = draft.source_offer_no || ''
+    fd.remark = draft.remark || ''
+    fd.items = Array.isArray(draft.items) ? draft.items.map(normalizeItem) : []
+    calcTotal()
+    fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+    isReadonly.value = false
+    showForm.value = true
+    ElMessage.success(draft.source_offer_no
+      ? `已载入报价单 ${draft.source_offer_no}，请确认后保存合同`
+      : '已载入报价数据，请确认后保存合同')
+  } catch {
+    ElMessage.warning('报价转合同草稿读取失败')
+  } finally {
+    sessionStorage.removeItem(DRAFT_KEY)
+    router.replace('/sale/contract')
+  }
+}
+
+function normalizeItem(t: any): ContractItem {
+  const price = Number(t?.price || 0)
+  const taxRate = Number(t?.tax_rate || 0)
+  return {
+    goods_id: Number(t?.goods_id || 0),
+    goods_name: t?.goods_name || '',
+    goods_sn: t?.goods_sn || '',
+    spec: t?.spec || '',
+    cate_name: t?.cate_name || '',
+    unit_name: t?.unit_name || '',
+    num: Number(t?.num || 0),
+    price_no_tax: Number(t?.price_no_tax || (taxRate > 0 ? Number((price / (1 + taxRate / 100)).toFixed(4)) : price)),
+    tax_rate: taxRate,
+    price,
+    remark: t?.remark || '',
+  }
+}
+
+async function initAutoReceiptSync() {
+  try {
+    const [contractsRes, receiptsRes] = await Promise.all([
+      http.get('/shop/ContractOrder/index', { params: { status: 1, list_rows: 500 } }),
+      getCollectReceiptList({ list_rows: 2000 }),
+    ])
+    const contracts = contractsRes?.data?.rows ?? []
+    const receipts = receiptsRes?.data?.rows ?? []
+    const existingOrders = new Set(
+      receipts
+        .filter((r: any) => String(r?.remark || '').includes('合同自动收款'))
+        .map((r: any) => String(r?.order_sn || r?.order_no || '').trim())
+    )
+    for (const c of contracts) {
+      const sn = String(c?.order_sn || c?.contract_no || '').trim()
+      if (!sn || existingOrders.has(sn)) continue
+      const amt = calcContractAmount(c)
+      if (amt <= 0) continue
+      const customerId = Number(c?.customer_id || 0)
+      const customerName = String(c?.customer_name || customerOptions.value.find(x => Number(x?.id) === customerId)?.name || '').trim()
+      const account = String(c?.receive_account || '').trim()
+      const fundItem = fundOptions.value.find(f => String(f?.name || '').trim() === account)
+      const receiptDate = String(c?.sign_date || c?.create_time || '').slice(0, 10) || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+      try {
+        await createCollectReceipt({
+          customer_id: customerId, customer_name: customerName,
+          contact_type: 'customer', contact_id: customerId || null, contact_name: customerName,
+          amount: amt, order_sn: sn, order_no: sn,
+          fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
+          receipt_date: receiptDate, remark: `合同自动收款 - ${sn}`,
+        })
+      } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
 }
 
 async function handleDelete(id: number) {
@@ -798,40 +1172,43 @@ async function handleDelete(id: number) {
 }
 
 async function handleAudit(row: any, status: number) {
-  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
+  if (status === 2) { ElMessage.warning('驳回操作已禁用'); return }
+  const action = status === 1 ? '审核通过' : '反审核'
   await ElMessageBox.confirm(`确定${action}该合同？`, '提示', { type: 'warning' })
-  let retries = 0
-  const maxRetries = 2
-  while (retries <= maxRetries) {
+  try {
+    await auditContract(row.id, status)
+    let errMsg = ''
+    let freshRow = row
     try {
-      await auditContract(row.id, status)
-      ElMessage.success(`${action}成功`)
-      // 审核通过后自动创建收款单
-      if (status === 1) {
-        try {
-          await http.post('/finance/CollectReceipt/add', {
-            contract_id: row.id,
-            contract_no: row.contract_no,
-            customer_id: row.customer_id,
-            customer_name: row.customer_name,
-            amount: Number(row.total_amount || 0),
-            receipt_date: new Date().toISOString().slice(0, 10),
-            remark: `合同 ${row.contract_no} 审核自动生成`,
-          })
-          ElMessage.success('已自动创建收款单')
-        } catch {
-          ElMessage.warning('审核成功，但自动创建收款单失败，请手动补录')
-        }
-      }
-      tableRef.value?.refresh()
-      return
-    } catch (e: any) {
-      retries++
-      if (retries > maxRetries) {
-        ElMessage.error(e?.message ?? '操作失败，已重试多次')
-      }
+      const detail = await getContractDetail(Number(row?.id))
+      freshRow = detail?.data?.row || detail?.data || row
+    } catch { /* ignore */ }
+    if (status === 1) {
+      try { await autoCreateReceipt(freshRow) } catch (e: any) { errMsg = e?.message || '自动创建收款失败' }
+    } else if (status === 0) {
+      try { await cancelAutoReceipt(freshRow) } catch (e: any) { errMsg = e?.message || '自动撤回收款失败' }
     }
+    errMsg ? ElMessage.warning(`${action}成功，但财务联动失败：${errMsg}`) : ElMessage.success(`${action}成功`)
+    tableRef.value?.refresh()
+    loadReceiptMap()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
   }
+}
+
+async function cancelAutoReceipt(row: any) {
+  const orderSn = String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+  if (!orderSn) return
+  try {
+    const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
+    const rows = (existing?.data?.rows ?? []).filter((r: any) =>
+      String(r?.order_sn || r?.order_no || '').trim() === orderSn &&
+      String(r?.remark || '').includes('合同自动收款')
+    )
+    for (const r of rows) {
+      try { await http.post('/finance/CollectReceipt/del', { id: Number(r.id) }) } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
 }
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
@@ -1006,6 +1383,98 @@ async function confirmQuickAddCustomer() {
     quickCustomerSaving.value = false
   }
 }
+
+// ── 报价单选择器 ────────────────────────────────────────────────────────────
+const offerPickerVisible = ref(false)
+const offerLoading = ref(false)
+const offerOptions = ref<any[]>([])
+const offerPickerNo = ref('')
+const offerPickerCustomer = ref('')
+const selectedOffer = ref<any>(null)
+const offerTableRef = ref()
+let offerSearchTimer: any
+
+async function loadOfferOptions() {
+  offerLoading.value = true
+  try {
+    const res = await getOfferList({
+      status: 1,
+      offer_no: offerPickerNo.value || undefined,
+      customer_name: offerPickerCustomer.value || undefined,
+      list_rows: 200,
+    })
+    offerOptions.value = res.data?.rows ?? []
+  } finally {
+    offerLoading.value = false
+  }
+}
+
+function onOfferPickerSearch() {
+  clearTimeout(offerSearchTimer)
+  offerSearchTimer = setTimeout(loadOfferOptions, 300)
+}
+
+function onOfferCurrentChange(row: any) {
+  selectedOffer.value = row || null
+}
+
+function openOfferPicker() {
+  offerPickerNo.value = ''
+  offerPickerCustomer.value = ''
+  selectedOffer.value = null
+  offerPickerVisible.value = true
+  loadOfferOptions()
+}
+
+async function confirmOfferPick() {
+  if (!selectedOffer.value) { ElMessage.warning('请选择报价单'); return }
+  if (fd.items.length) {
+    await ElMessageBox.confirm('带入报价将覆盖当前商品明细，是否继续？', '提示', { type: 'warning' })
+  }
+  try {
+    const detail = await getOfferDetail(Number(selectedOffer.value.id))
+    const offer = detail?.data?.row || selectedOffer.value
+    applyOfferToForm(offer)
+    offerPickerVisible.value = false
+    offerTableRef.value?.setCurrentRow?.(null)
+    selectedOffer.value = null
+    ElMessage.success(offer.offer_no ? `已带入报价单 ${offer.offer_no}` : '已带入报价数据')
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '带入报价失败')
+  }
+}
+
+function applyOfferToForm(offer: any) {
+  const items: ContractItem[] = ((() => {
+    try { return JSON.parse(offer.goods_info || '[]') } catch { return [] }
+  })()).map(normalizeItem)
+  fd.customer_id = offer.customer_id ?? null
+  fd.customer_name = offer.customer_name || ''
+  fd.level_id = offer.level_id ?? null
+  fd.admin_id = offer.admin_id ?? null
+  fd.admin_name = offer.admin_name || ''
+  fd.sign_date = offer.offer_date || fd.sign_date
+  fd.expire_date = offer.expire_date || ''
+  fd.source_offer_id = Number(offer.id || 0)
+  fd.source_offer_no = offer.offer_no || ''
+  fd.remark = offer.offer_no ? `来源报价单：${offer.offer_no}` : fd.remark || ''
+  fd.items = items
+  calcTotal()
+  const discVal = Number(offer.discount_amount || offer.discount_value || 0)
+  const afterOffer = offer.after_offer ?? offer.after_discount
+  if (discVal > 0) {
+    fd.discount_type = 'amount'
+    fd.discount_value = discVal
+  } else if (Number.isFinite(Number(afterOffer)) && Number(afterOffer) >= 0 && Number(afterOffer) < fd.total_amount) {
+    fd.discount_type = 'amount'
+    fd.discount_value = Number((fd.total_amount - Number(afterOffer)).toFixed(2))
+  } else {
+    fd.discount_type = 'none'
+    fd.discount_value = 0
+  }
+  calcSettle()
+  fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+}
 </script>
 
 <style scoped>
@@ -1018,11 +1487,11 @@ async function confirmQuickAddCustomer() {
 .expand-title {
   font-size: 12px;
   font-weight: 600;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   margin-bottom: 8px;
 }
 .expand-table {
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -1044,7 +1513,7 @@ async function confirmQuickAddCustomer() {
   flex-shrink: 0;
 }
 
-.form-title { font-size: 15px; font-weight: 600; color: #1d2129; }
+.form-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
 .form-actions { display: flex; gap: 8px; }
 
 .form-body {
@@ -1058,7 +1527,7 @@ async function confirmQuickAddCustomer() {
 
 .form-section {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e4e7ed;
   padding: 16px 18px 14px;
 }
@@ -1066,10 +1535,10 @@ async function confirmQuickAddCustomer() {
 .sec-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
   margin-bottom: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid #f5f5f7;
   display: block;
 }
 
@@ -1091,7 +1560,7 @@ async function confirmQuickAddCustomer() {
 
 .goods-count {
   font-size: 13px;
-  color: #86909c;
+  color: rgba(29,29,31,0.35);
   flex-shrink: 0;
 }
 
@@ -1122,26 +1591,26 @@ async function confirmQuickAddCustomer() {
 
 .settle-label {
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   white-space: nowrap;
 }
 
 .settle-value {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: #1d1d1f;
 }
 
 .settle-value.primary {
-  color: #165dff;
+  color: #0071e3;
   font-size: 16px;
 }
 
 .settle-summary {
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid #f5f5f7;
   padding-top: 12px;
   font-size: 13px;
-  color: #4e5969;
+  color: rgba(29,29,31,0.5);
   display: flex;
   align-items: center;
 }

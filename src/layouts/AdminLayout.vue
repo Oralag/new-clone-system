@@ -19,6 +19,7 @@
           </el-avatar>
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item v-if="isSuperAdmin" command="admin-console">🏢 租户管理控制台</el-dropdown-item>
               <el-dropdown-item command="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -30,6 +31,9 @@
         <top-bar />
         <tags-bar />
       </template>
+
+      <!-- 体验版引导横幅 -->
+      <trial-banner ref="trialBannerRef" />
 
       <div class="page-content" :class="{ 'is-mobile': isMobile }">
         <router-view v-slot="{ Component, route: r }">
@@ -98,6 +102,7 @@ import SidebarFlyout from './components/SidebarFlyout.vue'
 import TopBar from './components/TopBar.vue'
 import TagsBar from './components/TagsBar.vue'
 import AiAssistant from '@/components/AiAssistant.vue'
+import TrialBanner from '@/components/TrialBanner.vue'
 import { useTabsStore } from '@/stores/tabs'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
@@ -111,12 +116,16 @@ const router = useRouter()
 const tabsStore = useTabsStore()
 const appStore = useAppStore()
 const authStore = useAuthStore()
+const trialBannerRef = ref<any>(null)
 
 const showMobileMenu = ref(false)
 const isMobile = ref(window.innerWidth < 768)
 const onResize = () => { isMobile.value = window.innerWidth < 768 }
 onMounted(() => window.addEventListener('resize', onResize))
 onUnmounted(() => window.removeEventListener('resize', onResize))
+
+const SUPER_ADMIN = '17747344571'
+const isSuperAdmin = computed(() => (authStore.userInfo?.account || '') === SUPER_ADMIN)
 
 const mobileNavItems = [
   { key: 'dashboard', title: '首页',  icon: 'Odometer',     path: '/dashboard' },
@@ -137,7 +146,9 @@ function navigateTo(path?: string) {
 }
 
 async function handleUserCmd(cmd: string) {
-  if (cmd === 'logout') {
+  if (cmd === 'admin-console') {
+    router.push('/admin-console')
+  } else if (cmd === 'logout') {
     await ElMessageBox.confirm('确定要退出登录吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
     authStore.logout()
     router.push('/login')
@@ -148,11 +159,12 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 </script>
 
 <style scoped>
-.admin-layout { display: flex; height: 100vh; overflow: hidden; background: #f0f2f5; }
-.main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-.page-content { flex: 1; overflow-y: auto; padding: 12px; }
-.page-footer { flex-shrink: 0; text-align: right; font-size: 10px; color: #c0c4cc; padding: 4px 16px 6px; border-top: 1px solid #eee; background: #fff; }
-.footer-brand { color: #a0a8c0; font-weight: 500; }
+.admin-layout { display: flex; height: 100vh; min-height: 100vh; overflow: hidden; background: #ffffff; min-width: 900px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+.admin-layout.is-mobile { min-width: unset; }
+.main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: #ffffff; }
+.page-content { flex: 1; overflow-y: auto; overflow-x: auto; padding: 16px; background: #f5f5f7; }
+.page-footer { flex-shrink: 0; text-align: right; font-size: 10px; color: rgba(0,0,0,0.2); padding: 4px 16px 6px; border-top: 1px solid rgba(0,0,0,0.05); background: #fff; letter-spacing: -0.01em; }
+.footer-brand { color: rgba(0,0,0,0.25); font-weight: 600; }
 
 /* 移动端顶部栏 */
 .mobile-topbar { height: 52px; background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; padding: 0 12px; gap: 10px; flex-shrink: 0; }

@@ -1,27 +1,31 @@
 <template>
   <div class="receipt-page">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getCollectReceiptList"
-          del-path="/finance/CollectReceipt/batchDel"
-          export-file-name="收款记录" :params="searchForm">
-        <template #search>
-          <el-input v-model="searchForm.receipt_no" placeholder="收款单号" clearable style="width:160px" />
-          <el-input v-model="searchForm.contact_name" placeholder="收款对象" clearable style="width:150px" />
-          <el-select v-model="searchForm.contact_type" placeholder="类型" clearable style="width:110px">
-            <el-option label="客户" value="customer" />
-            <el-option label="供应商" value="supplier" />
-            <el-option label="员工" value="staff" />
-            <el-option label="其他" value="other" />
-          </el-select>
-        </template>
-        <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openCreate">新增收款单</el-button>
-        </template>
+      <!-- 搜索栏 -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <el-input v-model="searchForm.receipt_no" placeholder="收款单号" clearable style="width:160px" @change="applyFilter" />
+        <el-input v-model="searchForm.contact_name" placeholder="收款对象" clearable style="width:150px" @change="applyFilter" />
+        <el-select v-model="searchForm.contact_type" placeholder="类型" clearable style="width:130px" @change="applyFilter">
+          <el-option label="客户" value="customer" />
+          <el-option label="供应商" value="supplier" />
+          <el-option label="员工" value="staff" />
+          <el-option label="其他" value="other" />
+          <el-option label="预付款充值" value="prepay" />
+        </el-select>
+        <el-button :icon="Refresh" @click="loadAll">刷新</el-button>
+        <div style="flex:1" />
+        <el-button type="primary" :icon="Plus" @click="openCreate">新增收款单</el-button>
+      </div>
+
+      <!-- 表格 -->
+      <el-table :data="pagedRows" v-loading="loading" border stripe style="width:100%">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="receipt_no" label="收款单号" min-width="150" />
-        <el-table-column prop="contact_type_label" label="类型" width="80" align="center">
+        <el-table-column label="类型" width="100" align="center">
           <template #default="{ row }">
-            <el-tag size="small" :type="typeTagMap[row.contact_type] ?? ''">{{ typeLabel(row.contact_type) }}</el-tag>
+            <el-tag size="small" :type="row._isPrepay ? 'primary' : (typeTagMap[row.contact_type] ?? '')">
+              {{ row._isPrepay ? '预付款充值' : typeLabel(row.contact_type) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="收款对象" min-width="130">
@@ -29,24 +33,41 @@
             {{ row.contact_name || row.customer_name || row.nickname || row.supplier_name || '—' }}
           </template>
         </el-table-column>
-        <el-table-column prop="amount" label="收款金额" width="120" align="right">
+        <el-table-column label="收款金额" width="120" align="right">
           <template #default="{ row }">
-            <span style="color:#00b42a;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
+            <span style="color:#16a34a;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="account_name" label="收款账户" width="130" />
+        <el-table-column label="收款账户" width="130">
+          <template #default="{ row }">
+            {{ row.account_name || row.fund_name || '—' }}
+          </template>
+        </el-table-column>
         <el-table-column label="收款日期" width="110">
           <template #default="{ row }">
-            {{ (row.receipt_date || row.created_at || '').slice(0, 10) }}
+            {{ (row.receipt_date || row.pay_date || row.created_at || '').slice(0, 10) }}
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-button v-if="!row._isPrepay" type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+            <span v-else style="color:#999;font-size:12px">预付款</span>
           </template>
         </el-table-column>
-      </ScTable>
+      </el-table>
+
+      <!-- 分页 -->
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="filteredRows.length"
+          :page-sizes="[20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          background
+        />
+      </div>
     </el-card>
 
     <!-- 新增收款单抽屉 -->
@@ -134,27 +155,88 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import ScTable from '@/components/ScTable.vue'
 import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund } from '@/api/finance'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSupplierList, createSupplier } from '@/api/procure'
+import http from '@/api/http'
 
-const tableRef = ref<InstanceType<typeof ScTable>>()
+// ── 数据加载 ──────────────────────────────────────────────────────────────────
+const loading = ref(false)
+const allRows = ref<any[]>([])
 const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '' })
+const currentPage = ref(1)
+const pageSize = ref(20)
 
+async function loadAll() {
+  loading.value = true
+  try {
+    const [receiptRes, prepayRes] = await Promise.all([
+      getCollectReceiptList({ list_rows: 1000 }),
+      http.get('/finance/Prepay/index', { params: { pay_type: 'customer', list_rows: 1000 } }),
+    ])
+    // 过滤掉收款单里备注含"预付款"的记录（这些是重复写入的，正确数据来自Prepay表）
+    const allReceipts: any[] = receiptRes?.data?.rows ?? receiptRes?.data?.list ?? []
+    const receipts = allReceipts.filter((r: any) => !String(r.remark || '').includes('预付款'))
+    const prepays: any[] = prepayRes?.data?.rows ?? prepayRes?.data?.list ?? []
+
+    const prepayRows = prepays.map((r: any) => ({
+      ...r,
+      _isPrepay: true,
+      receipt_no: r.order_sn || r.prepay_no || '—',
+      contact_type: 'prepay',
+      contact_name: r.customer_name || '—',
+      amount: r.amount,
+      fund_name: r.fund_name || '',
+      receipt_date: r.pay_date || r.create_time || '',
+      remark: r.remark || '预付款充值',
+    }))
+
+    // 合并，按日期倒序
+    const merged = [...receipts.map((r: any) => ({ ...r, _isPrepay: false })), ...prepayRows]
+    merged.sort((a, b) => {
+      const da = (a.receipt_date || a.pay_date || a.created_at || '').slice(0, 10)
+      const db = (b.receipt_date || b.pay_date || b.created_at || '').slice(0, 10)
+      return db.localeCompare(da)
+    })
+    allRows.value = merged
+  } finally {
+    loading.value = false
+  }
+}
+
+const filteredRows = computed(() => {
+  return allRows.value.filter(r => {
+    if (searchForm.receipt_no && !String(r.receipt_no || '').includes(searchForm.receipt_no)) return false
+    const name = r.contact_name || r.customer_name || r.nickname || r.supplier_name || ''
+    if (searchForm.contact_name && !name.includes(searchForm.contact_name)) return false
+    if (searchForm.contact_type && r.contact_type !== searchForm.contact_type) return false
+    return true
+  })
+})
+
+const pagedRows = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredRows.value.slice(start, start + pageSize.value)
+})
+
+function applyFilter() {
+  currentPage.value = 1
+}
+
+// ── 类型标签 ──────────────────────────────────────────────────────────────────
 const typeTagMap: Record<string, string> = {
-  customer: 'success', supplier: 'warning', staff: 'info', other: ''
+  customer: 'success', supplier: 'warning', staff: 'info', other: '', prepay: 'primary'
 }
 
 function typeLabel(type: string) {
-  const map: Record<string, string> = { customer: '客户', supplier: '供应商', staff: '员工', other: '其他' }
+  const map: Record<string, string> = { customer: '客户', supplier: '供应商', staff: '员工', other: '其他', prepay: '预付款充值' }
   return map[type] ?? type
 }
 
-// ── 抽屉 ──────────────────────────────────────────────────────────────────────
+// ── 新增收款单 ─────────────────────────────────────────────────────────────────
 const drawerVisible = ref(false)
 const saving = ref(false)
 const formRef = ref()
@@ -225,7 +307,7 @@ async function handleSave() {
     await createCollectReceipt(payload)
     ElMessage.success('保存成功')
     drawerVisible.value = false
-    tableRef.value?.refresh()
+    await loadAll()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
@@ -237,7 +319,7 @@ async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定删除该收款单？', '提示', { type: 'warning' })
   await deleteCollectReceipt(id)
   ElMessage.success('删除成功')
-  tableRef.value?.refresh()
+  await loadAll()
 }
 
 // ── 快速新增 ──────────────────────────────────────────────────────────────────
@@ -272,7 +354,7 @@ async function confirmQuickAdd() {
   }
 }
 
-onMounted(() => { loadContacts(); loadFunds() })
+onMounted(() => { loadAll(); loadFunds() })
 
 // ── 资金账户 ──────────────────────────────────────────────────────────────────
 const fundOptions = ref<any[]>([])

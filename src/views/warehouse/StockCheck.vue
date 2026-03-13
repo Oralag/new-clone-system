@@ -28,7 +28,7 @@
                   <el-table-column prop="check_qty" label="盘点数量" width="90" align="right" />
                   <el-table-column label="差异数量" width="90" align="right">
                     <template #default="{ row: item }">
-                      <span :style="{ color: (item.check_qty - item.system_qty) !== 0 ? '#f53f3f' : '#00b42a' }">
+                      <span :style="{ color: (item.check_qty - item.system_qty) !== 0 ? '#dc2626' : '#16a34a' }">
                         {{ (Number(item.check_qty||0) - Number(item.system_qty||0)).toFixed(2) }}
                       </span>
                     </template>
@@ -125,7 +125,7 @@
                 <el-select v-model="row.goods_id" filterable placeholder="请选择商品"
                   style="width:100%" @change="(v) => onGoodsChange(v, $index)">
                   <el-option v-for="g in goodsList" :key="g.id"
-                    :label="`${g.name}${g.goods_sn ? ' ['+g.goods_sn+']' : ''}`" :value="g.id" />
+                    :label="`${g.goods_name}${g.goods_sn ? ' ['+g.goods_sn+']' : ''}`" :value="g.id" />
                 </el-select>
               </template>
             </el-table-column>
@@ -151,7 +151,7 @@
             </el-table-column>
             <el-table-column label="差异数量" width="90" align="right">
               <template #default="{ row }">
-                <span :style="{ color: (row.check_qty - row.system_qty) !== 0 ? '#f53f3f' : '#00b42a', fontWeight: 500 }">
+                <span :style="{ color: (row.check_qty - row.system_qty) !== 0 ? '#dc2626' : '#16a34a', fontWeight: 500 }">
                   {{ (Number(row.check_qty||0) - Number(row.system_qty||0)).toFixed(2) }}
                 </span>
               </template>
@@ -240,7 +240,7 @@ function onWarehouseChange(val: string) {
 function onGoodsChange(goodsId: number, index: number) {
   const g = goodsList.value.find(x => x.id === goodsId)
   if (g) {
-    fd.items[index].goods_name = g.name
+    fd.items[index].goods_name = g.goods_name || ''
     fd.items[index].goods_sn = g.goods_sn || ''
     fd.items[index].unit_name = g.unit_name || ''
     fd.items[index].spec = g.spec || ''
@@ -344,9 +344,9 @@ async function handleDelete(id: number) {
 .form-title { font-size: 16px; font-weight: 600; flex: 1; }
 .form-header-actions { display: flex; gap: 8px; }
 .form-body { padding: 0 16px; }
-.form-card { border-radius: 6px; }
-.form-section-title { font-size: 14px; font-weight: 600; color: #1d2129; margin-bottom: 16px; }
+.form-card { border-radius: 10px; }
+.form-section-title { font-size: 14px; font-weight: 600; color: #1d1d1f; margin-bottom: 16px; }
 .expand-detail { padding: 12px 24px; background: #f9fafc; }
 .expand-title { font-weight: 600; margin-bottom: 8px; color: #333; }
-.expand-table { border-radius: 4px; }
+.expand-table { border-radius: 8px; }
 </style>

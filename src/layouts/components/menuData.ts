@@ -94,6 +94,7 @@ export const menuData: TopMenuItem[] = [
     title: '生产',
     icon: 'Tools',
     children: [
+      { key: 'production-overview', title: '生产总览', path: '/production/overview' },
       { key: 'production-plan', title: '生产计划', path: '/production/plan' },
       { key: 'production-inhouse', title: '生产入库', path: '/production/inhouse' },
       { key: 'production-material', title: '领料管理', path: '/production/material' },
@@ -149,6 +150,7 @@ export const menuData: TopMenuItem[] = [
     title: '报表',
     icon: 'TrendCharts',
     children: [
+      { key: 'reports-overview', title: '报表总览', path: '/reports/overview' },
       { key: 'reports-sale-rate', title: '销售统计', path: '/reports/sale-rate' },
       { key: 'reports-sale-ledger', title: '销售台账', path: '/reports/sale-ledger' },
       { key: 'reports-commission', title: '提成报表', path: '/reports/commission' },
@@ -189,17 +191,6 @@ export const menuData: TopMenuItem[] = [
       { key: 'setting-print', title: '打印模板', path: '/setting/print' },
       { key: 'setting-operation-log', title: '操作日志', path: '/setting/operation-log' },
       { key: 'setting-company', title: '企业信息', path: '/setting/company' },
-    ],
-  },
-  {
-    key: 'agent',
-    title: '智能体',
-    icon: 'MagicStick',
-    children: [
-      { key: 'agent-brand', title: '品牌设置', path: '/agent/brand' },
-      { key: 'agent-trending', title: '热搜抓取', path: '/agent/trending' },
-      { key: 'agent-copywriting', title: '文案生成', path: '/agent/copywriting' },
-      { key: 'agent-publish', title: '发布管理', path: '/agent/publish' },
     ],
   },
   {

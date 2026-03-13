@@ -71,7 +71,7 @@
             <template #default="{ row }">
               <div style="display:flex;align-items:center;gap:4px">
                 <el-progress :percentage="calcPct(row.schedule_num, row.plan_num)" :stroke-width="6" style="flex:1" :show-text="false" />
-                <span style="font-size:11px;color:#86909c;width:32px;text-align:right">{{ calcPct(row.schedule_num, row.plan_num) }}%</span>
+                <span style="font-size:11px;color:rgba(29,29,31,0.35);width:32px;text-align:right">{{ calcPct(row.schedule_num, row.plan_num) }}%</span>
               </div>
             </template>
           </el-table-column>
@@ -79,15 +79,15 @@
             <template #default="{ row }">
               <div style="display:flex;align-items:center;gap:4px">
                 <el-progress :percentage="calcPct(row.actual_num, row.plan_num)" :stroke-width="6" style="flex:1" :show-text="false" />
-                <span style="font-size:11px;color:#86909c;width:32px;text-align:right">{{ calcPct(row.actual_num, row.plan_num) }}%</span>
+                <span style="font-size:11px;color:rgba(29,29,31,0.35);width:32px;text-align:right">{{ calcPct(row.actual_num, row.plan_num) }}%</span>
               </div>
             </template>
           </el-table-column>
           <el-table-column label="入库进度" width="120">
             <template #default="{ row }">
               <div style="display:flex;align-items:center;gap:4px">
-                <el-progress :percentage="calcPct(row.inhouse_num, row.plan_num)" :stroke-width="6" style="flex:1" :show-text="false" color="#00b42a" />
-                <span style="font-size:11px;color:#86909c;width:32px;text-align:right">{{ calcPct(row.inhouse_num, row.plan_num) }}%</span>
+                <el-progress :percentage="calcPct(row.inhouse_num, row.plan_num)" :stroke-width="6" style="flex:1" :show-text="false" color="#16a34a" />
+                <span style="font-size:11px;color:rgba(29,29,31,0.35);width:32px;text-align:right">{{ calcPct(row.inhouse_num, row.plan_num) }}%</span>
               </div>
             </template>
           </el-table-column>
@@ -266,7 +266,7 @@
         </el-table-column>
       </el-table>
       <template #footer>
-        <span style="color:#86909c;font-size:13px">已选 {{ pickerSelection.length }} 件</span>
+        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ pickerSelection.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!pickerSelection.length" @click="confirmPickGoods">确认添加</el-button>
       </template>
@@ -293,12 +293,12 @@
 
     <!-- BOM 消耗弹窗 -->
     <el-dialog v-model="bomVisible" :title="`BOM消耗 - ${bomGoodsName}`" width="750px" append-to-body>
-      <div v-if="bomConsumeList.length === 0 && !bomLoading" style="text-align:center;padding:32px 0;color:#86909c">
+      <div v-if="bomConsumeList.length === 0 && !bomLoading" style="text-align:center;padding:32px 0;color:rgba(29,29,31,0.35)">
         该商品暂未配置BOM清单，请先在「商品 > BOM清单」中添加
       </div>
       <template v-else>
-        <div style="margin-bottom:12px;font-size:13px;color:#4e5969">
-          生产数量: <b style="color:#165dff;font-size:15px">{{ bomPlanNum }}</b>，以下为物料需求：
+        <div style="margin-bottom:12px;font-size:13px;color:rgba(29,29,31,0.5)">
+          生产数量: <b style="color:#0071e3;font-size:15px">{{ bomPlanNum }}</b>，以下为物料需求：
         </div>
         <el-table :data="bomConsumeList" v-loading="bomLoading" border size="small" show-summary :summary-method="bomSummary">
           <el-table-column prop="material_name" label="物料名称" min-width="140" />
@@ -308,8 +308,8 @@
           </el-table-column>
           <el-table-column label="需求数量" width="110" align="center">
             <template #default="{ row }">
-              <span style="font-weight:600;color:#165dff">{{ row._need }}</span>
-              <span style="color:#86909c;margin-left:2px">{{ row.unit_name }}</span>
+              <span style="font-weight:600;color:#0071e3">{{ row._need }}</span>
+              <span style="color:rgba(29,29,31,0.35);margin-left:2px">{{ row.unit_name }}</span>
             </template>
           </el-table-column>
           <el-table-column label="库存" width="90" align="center">
@@ -324,7 +324,7 @@
               <span v-if="row._need > row._stock" style="color:#f56c6c;font-weight:600">
                 {{ (row._need - row._stock).toFixed(2).replace(/\.?0+$/, '') }}
               </span>
-              <span v-else style="color:#00b42a">充足</span>
+              <span v-else style="color:#16a34a">充足</span>
             </template>
           </el-table-column>
         </el-table>
@@ -611,23 +611,23 @@ function bomSummary({ columns, data }: any) {
 
 .summary-bar {
   margin-top: 8px; padding: 8px 12px;
-  background: #f8fafc; border-radius: 4px;
-  font-size: 13px; color: #4e5969;
+  background: #f8fafc; border-radius: 8px;
+  font-size: 13px; color: rgba(29,29,31,0.5);
 }
-.summary-bar b { color: #165dff; }
+.summary-bar b { color: #0071e3; }
 
 .form-page { display: flex; flex-direction: column; gap: 12px; }
 .form-topbar {
   display: flex; justify-content: space-between; align-items: center;
-  background: #fff; padding: 12px 16px; border-radius: 8px;
+  background: #fff; padding: 12px 16px; border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,.06);
 }
-.form-title { font-size: 16px; font-weight: 600; color: #1d2129; }
+.form-title { font-size: 16px; font-weight: 600; color: #1d1d1f; }
 
 .goods-section { margin-top: 8px; }
 .goods-header {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 8px;
 }
-.goods-title { font-size: 13px; font-weight: 600; color: #1d2129; }
+.goods-title { font-size: 13px; font-weight: 600; color: #1d1d1f; }
 </style>

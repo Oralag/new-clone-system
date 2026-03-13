@@ -27,7 +27,7 @@
         <el-table-column prop="contact_name" label="付款对象" min-width="130" />
         <el-table-column prop="amount" label="付款金额" width="120" align="right">
           <template #default="{ row }">
-            <span style="color:#f53f3f;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
+            <span style="color:#dc2626;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="付款账户" width="130">

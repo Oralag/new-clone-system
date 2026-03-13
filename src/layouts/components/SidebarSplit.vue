@@ -3,7 +3,17 @@
     <!-- Logo -->
     <div class="logo-area">
       <div class="logo-icon">
-        <el-icon :size="26" color="#fff"><Promotion /></el-icon>
+        <svg width="42" height="42" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="36" height="36" rx="8" fill="url(#nbgs)"/>
+          <text x="17" y="27" text-anchor="middle" font-family="'Helvetica Neue','Arial',sans-serif" font-size="26" font-weight="800" fill="#70C1F2">N</text>
+          <circle cx="27" cy="8" r="4" fill="#F19D38"/>
+          <defs>
+            <linearGradient id="nbgs" x1="0" y1="0" x2="0" y2="36" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#1C2B48"/>
+              <stop offset="100%" stop-color="#1D3974"/>
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
       <div class="logo-name">数字游牧</div>
     </div>
@@ -63,9 +73,12 @@ function onClick(key: string) {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 .sidebar-split {
   width: 90px;
-  background: linear-gradient(180deg, #3a8ee6 0%, #1a6fd4 100%);
+  background: #f5f5f7;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -73,9 +86,12 @@ function onClick(key: string) {
   overflow-y: auto;
   overflow-x: visible;
   z-index: 100;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.sidebar-split::-webkit-scrollbar { display: none; }
+.sidebar-split::-webkit-scrollbar { width: 4px; }
+.sidebar-split::-webkit-scrollbar-track { background: transparent; }
+.sidebar-split::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.06); border-radius: 10px; }
 
 /* Logo */
 .logo-area {
@@ -84,25 +100,34 @@ function onClick(key: string) {
   align-items: center;
   gap: 6px;
   padding: 20px 0 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.18);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
 }
 
 .logo-icon {
-  width: 46px;
-  height: 46px;
-  background: rgba(255,255,255,0.18);
-  border-radius: 14px;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 10px;
 }
 
 .logo-name {
-  font-size: 12px;
-  color: #fff;
-  font-weight: 600;
-  letter-spacing: 1px;
+  font-size: 11px;
+  color: #1d1d1f;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  opacity: 0.5;
 }
 
 /* Menu list */
@@ -110,7 +135,8 @@ function onClick(key: string) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+  padding: 10px 6px;
+  gap: 2px;
 }
 
 /* Each menu item */
@@ -119,37 +145,43 @@ function onClick(key: string) {
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
-  padding: 11px 10px;
+  gap: 7px;
+  padding: 9px 10px;
   cursor: pointer;
-  color: rgba(255,255,255,0.82);
-  transition: background 0.15s, color 0.15s;
-  margin: 1px 4px;
-  border-radius: 8px;
+  color: rgba(29, 29, 31, 0.4);
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 10px;
 }
 
 .menu-item:hover {
-  background: rgba(255,255,255,0.16);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.05);
+  color: #1d1d1f;
 }
 
 .menu-item.active {
-  background: rgba(255,255,255,0.24);
-  color: #fff;
+  background: #ffffff;
+  color: #1d1d1f;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.menu-item.active .menu-icon {
+  color: #0071e3;
 }
 
 .menu-icon {
-  font-size: 14px;
-  width: 14px;
-  height: 14px;
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
+  transition: color 0.2s ease;
 }
 
 .menu-label {
-  font-size: 13px;
-  font-weight: 400;
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
   line-height: 1;
+  letter-spacing: -0.01em;
 }
 
 /* Bottom */
@@ -157,14 +189,14 @@ function onClick(key: string) {
   display: flex;
   justify-content: center;
   padding: 12px 0;
-  border-top: 1px solid rgba(255,255,255,0.18);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
 }
 
 .user-avatar {
   cursor: pointer;
-  background: rgba(255,255,255,0.25);
-  color: #fff;
+  background: #e8e8ed;
+  color: #1d1d1f;
   font-weight: 600;
   font-size: 13px;
 }

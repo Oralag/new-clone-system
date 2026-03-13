@@ -25,7 +25,7 @@
         </el-table-column>
         <el-table-column prop="pay_amount" label="实付金额" width="110" align="right">
           <template #default="{ row }">
-            <span style="color:#165dff;font-weight:600">¥{{ Number(row.pay_amount).toFixed(2) }}</span>
+            <span style="color:#0071e3;font-weight:600">¥{{ Number(row.pay_amount).toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="pay_method" label="支付方式" width="100" align="center" />
@@ -95,7 +95,7 @@
           </el-table-column>
           <el-table-column label="小计" width="90" align="right">
             <template #default="{ row }">
-              <span style="color:#165dff">¥{{ (row.num * row.price).toFixed(2) }}</span>
+              <span style="color:#0071e3">¥{{ (row.num * row.price).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column width="50" align="center">
@@ -109,7 +109,7 @@
           <span>合计：<b>¥{{ form.total_amount.toFixed(2) }}</b></span>
           <span>折扣：<el-input-number v-model="form.discount_amount" :min="0" :precision="2" size="small"
             controls-position="right" style="width:100px" @change="calcFormTotal" /></span>
-          <span>实付：<b style="color:#f53f3f;font-size:15px">¥{{ form.pay_amount.toFixed(2) }}</b></span>
+          <span>实付：<b style="color:#dc2626;font-size:15px">¥{{ form.pay_amount.toFixed(2) }}</b></span>
         </div>
       </el-form>
 
@@ -146,6 +146,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList } from '@/api/retail'
 import { getGoodsList } from '@/api/goods'
+import http from '@/api/http'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({ order_no: '', member_name: '' })
@@ -198,6 +199,20 @@ async function handleSave() {
   saving.value = true
   try {
     await createRetailOrder({ ...form, goods_info: JSON.stringify(form.items), items: undefined })
+    // 零售收款自动写入"零售收款账户"
+    try {
+      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+      const funds: any[] = fundRes.data?.rows ?? []
+      const retailFund = funds.find((f: any) => f.name === '零售收款账户')
+      if (retailFund) {
+        const newBalance = Number(retailFund.balance || 0) + Number(form.pay_amount)
+        await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: newBalance })
+      } else {
+        await http.post('/finance/Fund/add', { name: '零售收款账户', type: 2, balance: Number(form.pay_amount), remark: '零售单自动累计' })
+      }
+    } catch (e: any) {
+      console.warn('零售账户更新失败', e?.message)
+    }
     ElMessage.success('保存成功')
     drawerVisible.value = false
     tableRef.value?.refresh()
