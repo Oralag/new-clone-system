@@ -9,6 +9,7 @@
     />
 
     <div
+      ref="panelRef"
       class="guide-panel"
       :style="panelStyle"
     >
@@ -80,6 +81,7 @@ const route = useRoute()
 const router = useRouter()
 
 const targetRect = ref<DOMRect | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
 const step = computed(() => guide.currentStepData)
 const actions = computed(() => guide.currentActions)
 const currentAction = computed(() => guide.currentActionData)
@@ -149,9 +151,41 @@ function bindTargetElement(element: HTMLElement | null) {
   element.addEventListener('keydown', handleTargetKeydown, true)
 }
 
+function normalizeSelectorText(selector?: string) {
+  return String(selector || '')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .trim()
+}
+
+function findVisibleTargetFromElement(element: HTMLElement | null): HTMLElement | null {
+  if (!element) return null
+  const rect = element.getBoundingClientRect()
+  if (rect.width > 0 || rect.height > 0) return element
+  const candidate = element.querySelector('button, .el-button, input, textarea, select, [role="button"], [tabindex]') as HTMLElement | null
+  if (!candidate) return element
+  const candidateRect = candidate.getBoundingClientRect()
+  return (candidateRect.width > 0 || candidateRect.height > 0) ? candidate : element
+}
+
+function findByGuideId(selector: string): HTMLElement | null {
+  const match = selector.match(/data-guide-id\s*=\s*["']?([^"'\\\]]+)["']?/i)
+  if (!match) return null
+  const guideId = match[1].trim()
+  const all = Array.from(document.querySelectorAll('[data-guide-id]')) as HTMLElement[]
+  return all.find((el) => el.getAttribute('data-guide-id') === guideId) || null
+}
+
 function getTargetElement() {
   if (!guide.active || !isOnTargetRoute.value) return null
-  return document.querySelector(currentAction.value.selector) as HTMLElement | null
+  const selector = normalizeSelectorText(currentAction.value.selector)
+  if (!selector) return null
+  try {
+    const direct = document.querySelector(selector) as HTMLElement | null
+    return findVisibleTargetFromElement(direct) || findVisibleTargetFromElement(findByGuideId(selector))
+  } catch {
+    return findVisibleTargetFromElement(findByGuideId(selector))
+  }
 }
 
 function updatePosition(scrollIntoView = false) {
@@ -218,6 +252,7 @@ const panelStyle = computed(() => {
   // 有目标元素时，定位在元素旁边
   if (targetRect.value && isOnTargetRoute.value) {
     const panelWidth = 360
+    const panelHeight = panelRef.value?.offsetHeight || 420
     const gap = 22
     const rect = targetRect.value
     const placement = currentAction.value.placement || 'right'
@@ -232,13 +267,13 @@ const panelStyle = computed(() => {
       top = rect.bottom + gap
     } else if (placement === 'top') {
       left = rect.left
-      top = rect.top - 420
+      top = rect.top - panelHeight - gap
     }
 
     const minLeft = 16
     const maxLeft = window.innerWidth - panelWidth - 16
     const minTop = 16
-    const maxTop = window.innerHeight - 460
+    const maxTop = window.innerHeight - panelHeight - 16
 
     return {
       left: `${Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft))}px`,

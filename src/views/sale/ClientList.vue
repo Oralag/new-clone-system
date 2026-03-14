@@ -191,6 +191,7 @@
                 <el-option label="网络平台" :value="4" />
                 <el-option label="展会活动" :value="5" />
                 <el-option label="其他" :value="6" />
+                <el-option label="预收款" value="prepay" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -366,13 +367,13 @@ const selectedCateId = ref<number | null>(null)
 
 // ── 客户来源（localStorage） ──────────────────────────────────────────────────
 const SOURCE_MAP_KEY = 'erp_customer_source_map'
-function loadSourceMap(): Record<number, number> {
+function loadSourceMap(): Record<number, string | number> {
   try { return JSON.parse(localStorage.getItem(SOURCE_MAP_KEY) || '{}') } catch { return {} }
 }
-function saveSourceMap(map: Record<number, number>) {
+function saveSourceMap(map: Record<number, string | number>) {
   localStorage.setItem(SOURCE_MAP_KEY, JSON.stringify(map))
 }
-const customerSourceMap = ref<Record<number, number>>(loadSourceMap())
+const customerSourceMap = ref<Record<number, string | number>>(loadSourceMap())
 
 
 const LEVEL_MAP_KEY = 'erp_customer_level_map'
@@ -728,6 +729,7 @@ const SOURCE_NAMES: Record<number, string> = {
   1: '直接拜访', 2: '客户转介绍', 3: '电话开发', 4: '网络平台', 5: '展会活动', 6: '其他',
 }
 function getSourceName(source: any): string {
+  if (source === 'prepay' || source === '预付款充值' || source === '预收款') return '预收款'
   return SOURCE_NAMES[Number(source)] ?? ''
 }
 
@@ -830,6 +832,13 @@ async function submitPrepay() {
       pay_date: prepayForm.receipt_date,
       remark: prepayForm.remark || '预付款充值',
     })
+    if (formData.id) {
+      const sMap = { ...customerSourceMap.value, [formData.id]: 'prepay' }
+      customerSourceMap.value = sMap
+      saveSourceMap(sMap)
+      formData.source_id = 'prepay'
+      if (viewRow.value?.id === formData.id) viewRow.value = { ...viewRow.value, source_id: 'prepay' }
+    }
     ElMessage.success('充值成功，已更新客户余额')
     prepayVisible.value = false
     await loadData()  // 重新加载列表

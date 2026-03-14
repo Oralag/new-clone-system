@@ -215,55 +215,63 @@
       <div class="right-col">
 
         <!-- 新手向导卡片 -->
-        <div v-if="!guideHidden" class="guide-side-card">
+        <div v-if="!guideHidden" class="guide-side-card" :class="{ 'guide-pulse': isFirstVisit }">
           <div class="guide-side-header">
             <div class="guide-side-title">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
               新手向导
+              <a v-if="!guideStore.isFinished" class="guide-skip-all" @click="guideStore.skipAll()">全部跳过</a>
             </div>
             <div class="guide-side-actions">
               <div class="gmp-bar-wrap">
                 <div class="gmp-bar" :style="{ width: guideStore.progressPercent + '%' }" />
               </div>
               <span class="gmp-label">{{ guideStore.handledCount }}/{{ guideStore.steps.length }} 已处理</span>
+              <span class="gmp-time">约 15 分钟</span>
               <button class="guide-hide-btn" @click="hideGuide" title="收起向导">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
           </div>
 
-          <div class="guide-dots">
+          <div class="guide-capsules">
             <div
               v-for="(step, i) in guideStore.steps"
               :key="step.id"
-              class="guide-dot"
+              class="guide-capsule"
               :class="{
                 active: guideStore.currentStep === i,
                 done: guideStore.isStepCompleted(i),
                 skipped: guideStore.isStepSkipped(i),
                 locked: !guideStore.canOpenStep(i) && i > guideStore.currentStep,
               }"
-              :title="step.title"
               @click="guideStore.openStep(i)"
-            />
+            >
+              <span class="guide-capsule-num">{{ i + 1 }}</span>
+              <span class="guide-capsule-name">{{ step.short }}</span>
+            </div>
           </div>
 
-          <div class="guide-step-num" style="display:flex;align-items:center;gap:6px">
+          <div class="guide-step-num">
             Step {{ guideStore.currentStep + 1 }}
-            <span v-if="guideStore.isStepCompleted(guideStore.currentStep)" style="font-size:11px;color:#16a34a;background:#dcfce7;padding:2px 8px;border-radius:10px">✓ 已完成</span>
-            <span v-else-if="guideStore.isStepSkipped(guideStore.currentStep)" style="font-size:11px;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:10px">已跳过</span>
-            <span v-else style="font-size:11px;color:#2563eb;background:#dbeafe;padding:2px 8px;border-radius:10px">进行中</span>
-            <span style="font-size:11px;color:#1d4ed8;background:#eff6ff;padding:2px 8px;border-radius:10px">操作 {{ guideStore.currentAction + 1 }}/{{ guideStore.currentActionCount }}</span>
+            <span v-if="guideStore.isStepCompleted(guideStore.currentStep)" class="guide-tag guide-tag--done">✓ 已完成</span>
+            <span v-else-if="guideStore.isStepSkipped(guideStore.currentStep)" class="guide-tag guide-tag--skipped">已跳过</span>
+            <span v-else class="guide-tag guide-tag--active">进行中</span>
+            <span class="guide-tag guide-tag--action">操作 {{ guideStore.currentAction + 1 }}/{{ guideStore.currentActionCount }}</span>
           </div>
           <div class="guide-step-name">{{ currentGuideStep.title }}</div>
           <p class="guide-step-desc">{{ currentGuideStep.desc }}</p>
 
-          <div v-if="guideStore.isFinished"
-            style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#16a34a">
-            🎉 恭喜！完整的新手链路已经走通，可以随时重新开始演示。
+          <div v-if="guideStore.isFinished" class="guide-banner guide-banner--done">
+            <div class="guide-celebrate-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <div>
+              <strong class="guide-celebrate-title">恭喜完成全部链路!</strong>
+              <div>可以随时重新开始演示。</div>
+            </div>
           </div>
-          <div v-else
-            style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#1d4ed8">
+          <div v-else class="guide-banner guide-banner--info">
             当前步骤会自动跳转页面并弹出指引弹窗，只有"完成此步"或"跳过此步"后才会进入下一步。
           </div>
 
@@ -295,17 +303,16 @@
           </button>
 
           <div class="guide-nav-btns">
-            <button class="gnb-prev" @click="guideStore.setCurrentStep(guideStore.currentStep - 1)">← 上一步</button>
-            <button v-if="!guideStore.isFinished" class="gnb-next" @click="guideStore.startGuide(guideStore.currentStep)">
-              打开弹窗引导 →
-            </button>
+            <button class="gnb-prev" :disabled="guideStore.currentStep <= 0" @click="guideStore.setCurrentStep(guideStore.currentStep - 1)">← 上一步</button>
+            <button v-if="!guideStore.isFinished" class="gnb-skip" @click="guideStore.skipCurrentAndNext()">跳过此步</button>
             <button v-else class="gnb-finish" @click="guideStore.restartGuide()">重新开始</button>
           </div>
         </div>
         <!-- 收起后的小入口 -->
         <div v-else class="guide-collapsed" @click="showGuide">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
           <span>新手向导</span>
+          <span class="guide-collapsed-progress">{{ guideStore.handledCount }}/{{ guideStore.steps.length }}</span>
         </div>
 
         <!-- 智能洞察（置顶） -->
@@ -465,10 +472,18 @@ const router = useRouter()
 const guideStore = useGuideStore()
 const authStore = useAuthStore()
 const currentGuideStep = computed(() => guideStore.currentStepData)
+const isFirstVisit = ref(false)
 
 const isMobile = ref(window.innerWidth < 768)
 const onResize = () => { isMobile.value = window.innerWidth < 768 }
-onMounted(() => window.addEventListener('resize', onResize))
+onMounted(() => {
+  window.addEventListener('resize', onResize)
+  // 首次访问检测：无 onboarding state → 脉冲动画
+  if (!localStorage.getItem('erp_onboarding_state_v3')) {
+    isFirstVisit.value = true
+    setTimeout(() => { isFirstVisit.value = false }, 3000)
+  }
+})
 onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const stats = ref([
@@ -1302,43 +1317,162 @@ function drawTrendChart(n: number) {
 }
 .guide-hide-btn:hover { background: var(--gray-2); color: var(--dark); }
 
-/* 步骤小圆点 */
-.guide-dots {
+/* 步骤胶囊条 */
+.guide-capsules {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   margin-bottom: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.guide-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--faint);
+.guide-capsules::-webkit-scrollbar { display: none; }
+.guide-capsule {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--gray);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mid);
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
   flex-shrink: 0;
 }
-.guide-dot.done { background: #16a34a; }
-.guide-dot.skipped { background: #f59e0b; }
-.guide-dot.locked { opacity: 0.35; cursor: not-allowed; }
-.guide-dot.active { background: #0071e3; width: 20px; border-radius: 4px; }
+.guide-capsule-num {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--faint);
+  color: var(--mid);
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.guide-capsule.active { background: #dbeafe; color: #1d4ed8; }
+.guide-capsule.active .guide-capsule-num { background: #2563eb; color: #fff; }
+.guide-capsule.done { background: #dcfce7; color: #16a34a; }
+.guide-capsule.done .guide-capsule-num { background: #16a34a; color: #fff; }
+.guide-capsule.skipped { background: #fef3c7; color: #b45309; }
+.guide-capsule.skipped .guide-capsule-num { background: #f59e0b; color: #fff; }
+.guide-capsule.locked { opacity: 0.35; cursor: not-allowed; }
+
+/* 状态标签 */
+.guide-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.guide-tag--done { color: #16a34a; background: #dcfce7; }
+.guide-tag--skipped { color: #b45309; background: #fef3c7; }
+.guide-tag--active { color: #2563eb; background: #dbeafe; }
+.guide-tag--action { color: #1d4ed8; background: #eff6ff; }
+
+/* 提示条 */
+.guide-banner {
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.guide-banner--done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  background-size: 200% 200%;
+  animation: guide-shimmer 3s ease infinite;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+}
+.guide-celebrate-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.guide-celebrate-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #15803d;
+  margin-bottom: 2px;
+}
+.guide-banner--info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+@keyframes guide-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
 
 /* 收起后的小入口 */
 .guide-collapsed {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 12px 16px;
   background: var(--card-bg);
   border: 1px solid var(--border);
+  border-left: 3px solid #2563eb;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--mid);
   cursor: pointer;
   transition: all 0.15s;
 }
+.guide-collapsed-progress {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
 .guide-collapsed:hover { background: var(--blue-light); color: #0071e3; border-color: rgba(0,113,227,0.15); }
 .guide-collapsed svg { color: #0071e3; flex-shrink: 0; }
+
+/* 首次访问脉冲动画 */
+.guide-pulse {
+  animation: guide-card-pulse 0.6s ease 2;
+}
+@keyframes guide-card-pulse {
+  0%, 100% { border-color: var(--border); box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+  50% { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.15); }
+}
+
+/* "全部跳过"链接 */
+.guide-skip-all {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--dim);
+  cursor: pointer;
+  margin-left: 8px;
+}
+.guide-skip-all:hover { color: #c2410c; text-decoration: underline; }
+
+/* 预估时间 */
+.gmp-time {
+  font-size: 10px;
+  color: var(--dim);
+  white-space: nowrap;
+}
 
 
 .chart-card {
@@ -1962,7 +2096,8 @@ function drawTrendChart(n: number) {
 .guide-step-num {
   font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.18em;
   color: #0071e3; background: rgba(0,113,227,0.08);
-  display: inline-block; padding: 4px 10px; border-radius: 999px; margin-bottom: 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px; margin-bottom: 10px;
 }
 .guide-step-name { font-size: 16px; font-weight: 800; letter-spacing: -0.03em; color: var(--dark); margin-bottom: 6px; }
 .guide-step-desc { font-size: 12px; line-height: 1.6; color: var(--mid); margin: 0 0 12px; }
@@ -1996,10 +2131,11 @@ function drawTrendChart(n: number) {
 }
 .gnb-prev:hover:not(:disabled) { background: var(--gray-2); color: var(--dark); }
 .gnb-prev:disabled { opacity: 0.3; cursor: not-allowed; }
-.gnb-next {
-  flex: 2; padding: 10px 8px; background: var(--dark); border: none; border-radius: 12px;
-  font-size: 12px; font-weight: 700; color: var(--gray); cursor: pointer; transition: all 0.2s;
+.gnb-skip {
+  flex: 2; padding: 10px 8px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px;
+  font-size: 12px; font-weight: 700; color: #c2410c; cursor: pointer; transition: all 0.2s;
 }
+.gnb-skip:hover { background: #fed7aa; }
 .gnb-finish { flex: 2; padding: 10px 8px; background: #16a34a; border: none; border-radius: 12px; font-size: 12px; font-weight: 700; color: white; cursor: pointer; }
 
 @media (max-width: 900px) {

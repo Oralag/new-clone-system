@@ -127,11 +127,11 @@
             <div class="card-header">
               <el-icon :size="15"><TrendCharts /></el-icon>
               <span>近期收款</span>
-              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/collect-receipt')">更多</el-button>
+              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/fund-flow')">更多</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="collectList.length">
-            <div class="inline-item clickable" v-for="r in collectList.slice(0,6)" :key="r.id" @click="router.push('/finance/collect-receipt')">
+            <div class="inline-item clickable" v-for="r in collectList.slice(0,6)" :key="r.id" @click="router.push('/finance/fund-flow')">
               <div class="inline-name">{{ r.customer_name || r.contact_name || '—' }}</div>
               <div class="inline-value green">¥{{ Number(r.amount||0).toFixed(2) }}</div>
               <div class="inline-sub">{{ (r.receipt_date||r.created_at||'').slice(0,10) }}</div>
@@ -188,16 +188,16 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Box /></el-icon>
-              <span>采购货款（待付）</span>
+              <span>采购货款</span>
               <span class="header-total red">¥{{ purchasePayTotal }}</span>
-              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/payable')">更多</el-button>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/procure/order')">更多</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="purchasePayList.length">
-            <div class="inline-item clickable" v-for="r in purchasePayList.slice(0,6)" :key="r.id" @click="router.push('/finance/payable')">
+            <div class="inline-item clickable" v-for="r in purchasePayList.slice(0,6)" :key="r.id" @click="router.push('/procure/order')">
               <div class="inline-name">{{ r.supplier_name || '—' }}</div>
-              <div class="inline-value red">¥{{ Number(r.un_pay_amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ r.order_no || '' }}</div>
+              <div class="inline-value red">¥{{ Number(r.total_amount||0).toFixed(2) }}</div>
+              <div class="inline-sub">{{ r.order_no || r.order_sn || '' }}</div>
             </div>
           </div>
           <div v-else class="empty-tip">暂无采购货款</div>
@@ -423,6 +423,29 @@ const saleOutList = ref<any[]>([])
 const flowVisible = ref(false)
 const chartW = 480
 
+function isCustomerPrepayLike(row: any) {
+  const rawSource = String(
+    row?.source_name ||
+    row?.source_type ||
+    row?.biz_type ||
+    row?.module_name ||
+    row?.trade_type ||
+    row?.scene ||
+    row?.contact_type ||
+    row?.pay_type ||
+    ''
+  ).toLowerCase()
+  const remark = String(row?.remark || '')
+  return (
+    rawSource.includes('prepay') ||
+    rawSource.includes('预付') ||
+    rawSource.includes('预收') ||
+    remark.includes('预付款充值') ||
+    remark.includes('预收款') ||
+    remark.includes('预收')
+  )
+}
+
 // ============================================================
 // 收入/支出计算 — 与 FundFlow.vue 完全相同的6个来源组装逻辑
 // 字段名全部来自真实API返回（2026-03-14验证）
@@ -432,7 +455,7 @@ const allFlowItems = computed(() => {
   // 1. 收款单（income）— 真实字段: customer_name, amount, receipt_date, pay_type(非contact_type)
   for (const r of collectList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    const src = r.pay_type === 'prepay' ? '预付款收款' : '收款单'
+    const src = isCustomerPrepayLike(r) ? '预收款' : '收款单'
     items.push({ type: 'income', source: src, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: (r.receipt_date || r.created_at || '').slice(0, 10), order_no: r.receipt_no || r.order_sn || '' })
   }
   // 2. 零售单（income）— 真实字段: member_name, pay_amount, order_sn, order_date
@@ -491,7 +514,7 @@ const payableTotal = computed(() =>
   payableList.value.reduce((s, r) => s + getPayableUnpaidAmount(r), 0).toFixed(2)
 )
 const purchasePayTotal = computed(() =>
-  purchasePayList.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0).toFixed(2)
+  purchasePayList.value.reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2)
 )
 
 const saleOutTotal = computed(() =>
@@ -536,8 +559,8 @@ const summaryCards = computed(() => {
   const balance = fundTotal.value
   return [
   { key: 'fund', label: '资金余额', value: balance, sub: `= 收入 ¥${income.toFixed(2)} − 支出 ¥${expense.toFixed(2)}`, color: '#0071e3', bg: 'rgba(0,113,227,0.08)', icon: 'Wallet', route: '/finance/fund-flow' },
-  { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'income').length} 笔收入`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow' },
-  { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'expense').length} 笔支出`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow' },
+  { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'income').length} 笔收入`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow?type=income' },
+  { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'expense').length} 笔支出`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow?type=expense' },
   { key: 'payable', label: '应付总额', value: payableTotal.value, sub: `${payableList.value.filter((r) => getPayableUnpaidAmount(r) > 0).length} 笔欠款`, color: '#ff4d4f', bg: '#fff1f0', icon: 'DocumentChecked', route: '/finance/payable' },
   { key: 'receivable', label: '应收总额', value: receivableTotal.value, sub: `${receivableList.value.length} 笔待收`, color: '#16a34a', bg: '#e6f7f0', icon: 'DocumentChecked', route: '/finance/receivable' },
   ]
@@ -735,7 +758,7 @@ onMounted(async () => {
       getPayReceiptList({ list_rows: 1000 }),
       http.get('/finance/CollectAccounts/index', { params: { list_rows: 200 } }),
       http.get('/finance/PayAccounts/index', { params: { list_rows: 200, group_by_supplier: 1 } }),
-      http.get('/finance/PayAccounts/index', { params: { list_rows: 200, group_by_supplier: 1 } }),
+      http.get('/stock/PurchaseOrder/index', { params: { list_rows: 200 } }),
       http.get('/stock/SaleOutOrder/index', { params: { list_rows: 50 } }),
       http.get('/retail/order/index', { params: { list_rows: 200 } }),
       getExpenseList({ list_rows: 1000 }),
@@ -749,13 +772,22 @@ onMounted(async () => {
     payList.value = payRes.data?.rows ?? payRes.data?.list ?? []
     receivableList.value = receivableRes.data?.rows ?? receivableRes.data?.list ?? []
     payableList.value = payableRes.data?.rows ?? payableRes.data?.list ?? []
-    purchasePayList.value = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((r: any) => Number(r.un_pay_amount || 0) > 0)
+    purchasePayList.value = purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []
     saleOutList.value = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
     retailList.value = retailRes.data?.rows ?? retailRes.data?.list ?? []
     expenseList.value = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
     rechargeList.value = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
     clientList.value = clientRes.data?.rows ?? clientRes.data?.list ?? []
     supplierList.value = supplierRes.data?.rows ?? supplierRes.data?.list ?? []
+
+    // 过滤预付款：排除已删除的客户/供应商的记录
+    const clientIds = new Set(clientList.value.map((c: any) => c.id))
+    const supplierIds = new Set(supplierList.value.map((s: any) => s.id))
+    prepayList.value = prepayList.value.filter((r: any) => {
+      if (r.pay_type === 'customer') return r.customer_id && clientIds.has(r.customer_id)
+      if (r.pay_type === 'supplier') return r.supplier_id && supplierIds.has(r.supplier_id)
+      return true
+    })
   } catch {}
 })
 </script>

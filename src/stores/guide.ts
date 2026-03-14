@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { nextTick } from 'vue'
 import router from '@/router'
 
 export interface GuideAction {
@@ -12,6 +13,7 @@ export interface GuideAction {
 export interface GuideStep {
   id: string
   title: string
+  short: string
   path: string
   selector: string
   desc: string
@@ -35,6 +37,7 @@ const guideSteps: GuideStep[] = [
   {
     id: 'dashboard-overview',
     title: '先认识首页快捷入口',
+    short: '首页',
     path: '/dashboard',
     selector: '[data-guide-id=”guide-dashboard-quick-grid”]',
     placement: 'bottom',
@@ -53,6 +56,7 @@ const guideSteps: GuideStep[] = [
   {
     id: 'sale-client-create',
     title: '新增客户档案',
+    short: '客户',
     path: '/sale/client',
     selector: '[data-guide-id=”guide-client-create”]',
     desc: '销售流程第一步是先建立客户档案，后面的报价、合同、出库、收款都会引用这个客户。',
@@ -67,6 +71,7 @@ const guideSteps: GuideStep[] = [
   {
     id: 'sale-offer-create',
     title: '创建销售报价单',
+    short: '报价',
     path: '/sale/offer',
     selector: '[data-guide-id=”guide-offer-create”]',
     desc: '报价单用于和客户确认商品、价格、数量，是正式签约前最常见的第一张业务单据。',
@@ -82,6 +87,7 @@ const guideSteps: GuideStep[] = [
   {
     id: 'sale-contract-create',
     title: '创建销售合同',
+    short: '合同',
     path: '/sale/contract',
     selector: '[data-guide-id=”guide-contract-create”]',
     desc: '客户确认报价后，再创建正式合同，锁定金额、交付时间和收款要求。',
@@ -97,6 +103,7 @@ const guideSteps: GuideStep[] = [
   {
     id: 'sale-out-create',
     title: '创建销售出库单',
+    short: '出库',
     path: '/sale/out',
     selector: '[data-guide-id=”guide-saleout-create”]',
     desc: '商品发货时要创建销售出库单，系统会据此扣减库存，并为财务生成应收依据。',
@@ -112,6 +119,7 @@ const guideSteps: GuideStep[] = [
   {
     id: 'finance-receivable-overview',
     title: '查看应收账款',
+    short: '应收',
     path: '/finance/receivable',
     selector: '[data-guide-id=”guide-receivable-card”]',
     desc: '出库完成后，可以在应收账款里查看客户还欠多少钱，以及哪些单据尚未回款。',
@@ -124,6 +132,7 @@ const guideSteps: GuideStep[] = [
   {
     id: 'finance-collect-receipt-create',
     title: '录入收款单',
+    short: '收款',
     path: '/finance/collect-receipt',
     selector: '[data-guide-id=”guide-collect-receipt-create”]',
     desc: '客户打款后，要及时录入收款单，系统才能形成回款记录并支持后续对账。',
@@ -138,6 +147,7 @@ const guideSteps: GuideStep[] = [
   {
     id: 'reports-sale-rate',
     title: '查看销售统计报表',
+    short: '报表',
     path: '/reports/sale-rate',
     selector: '[data-guide-id=”guide-sale-rate-card”]',
     desc: '完成前面的业务流程后，可以到销售统计里查看员工维度或时间维度的成交表现。',
@@ -157,11 +167,18 @@ type StoredGuideState = {
   skipped: number[]
 }
 
+function normalizeSelector(selector?: string): string {
+  return String(selector || '')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .trim()
+}
+
 function normalizeGuideAction(step: GuideStep, action: string | GuideAction): NormalizedGuideAction {
   if (typeof action === 'string') {
     return {
       text: action,
-      selector: step.selector,
+      selector: normalizeSelector(step.selector),
       path: step.path,
       placement: step.placement,
       autoAdvance: false,
@@ -169,7 +186,7 @@ function normalizeGuideAction(step: GuideStep, action: string | GuideAction): No
   }
   return {
     text: action.text,
-    selector: action.selector || step.selector,
+    selector: normalizeSelector(action.selector || step.selector),
     path: action.path || step.path,
     placement: action.placement || step.placement,
     autoAdvance: action.autoAdvance === true,
@@ -300,11 +317,9 @@ export const useGuideStore = defineStore('guide', {
       this.currentAction = 0
       this.persist()
       // nextTick 后再设 active=true，确保 watch 能感知变化并触发跳转
-      import('vue').then(({ nextTick }) => {
-        nextTick(() => {
-          this.active = true
-          this.persist()
-        })
+      nextTick(() => {
+        this.active = true
+        this.persist()
       })
     },
 
@@ -316,11 +331,9 @@ export const useGuideStore = defineStore('guide', {
       this.currentStep = this.getFirstPendingStep()
       this.currentAction = 0
       this.persist()
-      import('vue').then(({ nextTick }) => {
-        nextTick(() => {
-          this.active = true
-          this.persist()
-        })
+      nextTick(() => {
+        this.active = true
+        this.persist()
       })
     },
 
@@ -340,11 +353,9 @@ export const useGuideStore = defineStore('guide', {
       this.currentStep = Math.max(0, Math.min(index, this.steps.length - 1))
       this.currentAction = 0
       this.persist()
-      import('vue').then(({ nextTick }) => {
-        nextTick(() => {
-          this.active = true
-          this.persist()
-        })
+      nextTick(() => {
+        this.active = true
+        this.persist()
       })
     },
 
@@ -413,6 +424,17 @@ export const useGuideStore = defineStore('guide', {
     skipCurrentAndNext() {
       this.markCurrentSkipped()
       this.advanceAfterHandle()
+    },
+
+    skipAll() {
+      for (let i = 0; i < this.steps.length; i++) {
+        if (!this.isStepHandled(i)) {
+          this.skipped.push(i)
+        }
+      }
+      this.active = false
+      this.currentAction = 0
+      this.persist()
     },
 
     resetGuide() {

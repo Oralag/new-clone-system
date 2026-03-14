@@ -21,7 +21,7 @@
       <div class="summary-card">
         <span class="s-label">未付款</span>
         <span class="s-value orange">¥{{ summary.unpaid.toFixed(2) }}</span>
-        <span class="s-formula">= 采购单 − 已付款</span>
+        <span class="s-formula">来源：应付账款</span>
       </div>
     </div>
 
@@ -85,16 +85,17 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { getPayReceiptList, getCollectReceiptList, getExpenseList } from '@/api/finance'
-import { getProcureOrderList } from '@/api/procure'
 import http from '@/api/http'
 
+const route = useRoute()
 const summaryLoading = ref(false)
 const tableLoading = ref(false)
-const summary = reactive({ balance: 0, income: 0, expense: 0, totalPurchase: 0, unpaid: 0 })
+const summary = reactive({ balance: 0, income: 0, expense: 0, unpaid: 0 })
 
 const filterKeyword = ref('')
-const filterType = ref('')
+const filterType = ref((route.query.type === 'income' || route.query.type === 'expense') ? route.query.type as string : '')
 const filterSource = ref('')
 const currentPage = ref(1)
 const pageSize = ref(20)
@@ -111,6 +112,29 @@ interface FlowItem {
 }
 
 const allItems = ref<FlowItem[]>([])
+
+function isCustomerPrepayLike(row: any) {
+  const rawSource = String(
+    row?.source_name ||
+    row?.source_type ||
+    row?.biz_type ||
+    row?.module_name ||
+    row?.trade_type ||
+    row?.scene ||
+    row?.contact_type ||
+    row?.pay_type ||
+    ''
+  ).toLowerCase()
+  const remark = String(row?.remark || '')
+  return (
+    rawSource.includes('prepay') ||
+    rawSource.includes('预付') ||
+    rawSource.includes('预收') ||
+    remark.includes('预付款充值') ||
+    remark.includes('预收款') ||
+    remark.includes('预收')
+  )
+}
 
 const filteredItems = computed(() => {
   let list = allItems.value
@@ -136,13 +160,13 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [collectRes, retailRes, purchaseRes, payRes, expenseRes, rechargeRes] = await Promise.all([
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes] = await Promise.all([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
-      getProcureOrderList({ list_rows: 1000 }),
       getPayReceiptList({ list_rows: 1000 }),
       getExpenseList({ list_rows: 1000 }),
       http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
+      http.get('/finance/PayAccounts/index', { params: { list_rows: 500 } }),
     ])
 
     const items: FlowItem[] = []
@@ -154,7 +178,7 @@ onMounted(async () => {
         date: (r.receipt_date || r.create_time || '').slice(0, 10),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
-        source: collectSourceMap[r.contact_type] || '收款单',
+        source: isCustomerPrepayLike(r) ? '预收款' : (collectSourceMap[r.contact_type] || '收款单'),
         name: r.contact_name || r.customer_name || '—',
         order_no: r.receipt_no || r.order_no || '',
         amount: Number(r.amount || 0),
@@ -223,16 +247,14 @@ onMounted(async () => {
     validItems.sort((a, b) => b.date.localeCompare(a.date))
     allItems.value = validItems
 
-    const purchases: any[] = purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []
     const incomeTotal = items.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0)
     const expenseTotal = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0)
     summary.income = incomeTotal
     summary.expense = expenseTotal
     summary.balance = Math.max(0, incomeTotal - expenseTotal)
-    summary.totalPurchase = purchases.reduce((sum, row) => sum + Number(row.total_amount || 0), 0)
-    summary.unpaid = purchases
-      .filter((row: any) => Number(row.status) === 1)
-      .reduce((sum, row) => sum + Math.max(0, Number(row.total_amount || 0) - Number(row.paid_amount || 0)), 0)
+    // 未付款来源：应付账款（PayAccounts），数据与应付账款页面一致
+    const payables: any[] = payableRes.data?.rows ?? payableRes.data?.list ?? []
+    summary.unpaid = payables.reduce((s, r) => s + Math.max(0, Number(r.un_pay_amount || 0)), 0)
 
   } catch { /* ignore */ } finally {
     summaryLoading.value = false

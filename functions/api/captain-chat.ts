@@ -154,11 +154,11 @@ const captainTools = [
   { name: 'navigate_to', description: '跳转到指定页面', input_schema: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
   {
     name: 'fetch_trending',
-    description: '获取各平台实时热搜榜单（真实数据）。仅在需要结合热搜数据制定营销策略时使用。支持平台：weibo（微博）、baidu（百度）、douyin（抖音）。注意：小红书和知乎不支持，禁止调用。',
+    description: '获取各平台实时热搜榜单（真实数据）。仅在需要结合热搜数据制定营销策略时使用。支持平台：weibo（微博）、baidu（百度）、douyin（抖音）、xiaohongshu（小红书）。',
     input_schema: {
       type: 'object',
       properties: {
-        platform: { type: 'string', enum: ['weibo', 'baidu', 'douyin'] },
+        platform: { type: 'string', enum: ['weibo', 'baidu', 'douyin', 'xiaohongshu'] },
       },
       required: ['platform'],
     },

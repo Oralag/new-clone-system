@@ -44,11 +44,11 @@ function normalizeSourceLabel(row: AnyRow, flowType: 'income' | 'expense' | 'ref
   const remark = text(row.remark)
 
   if (remark.includes('预付款核销')) return '预付款核销'
-  if (remark.includes('预付款充值')) return '客户预收'
+  if (remark.includes('预付款充值')) return '预收款'
   if (raw.includes('retail') || raw.includes('零售')) return '零售单'
   if (raw.includes('recharge') || remark.includes('会员充值')) return '会员充值'
   if (raw.includes('expense') || raw.includes('费用') || raw.includes('报销')) return '费用'
-  if (raw.includes('prepay') || raw.includes('预付')) return flowType === 'income' ? '客户预收' : '供应商预付'
+  if (raw.includes('prepay') || raw.includes('预付')) return flowType === 'income' ? '预收款' : '供应商预付'
   if (raw.includes('collect') || raw.includes('receipt') || raw === 'customer') return flowType === 'income' ? '销售收款' : '客户退款'
   if (raw.includes('pay') || raw.includes('付款') || raw === 'supplier') return flowType === 'income' ? '供应商退款' : '采购付款'
   if (raw === 'other') return flowType === 'income' ? '其他收入' : '其他支出'
