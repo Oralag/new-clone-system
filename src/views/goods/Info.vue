@@ -2063,7 +2063,12 @@ function stopListScanner() {
 .cate-empty { text-align: center; color: rgba(29,29,31,0.35); font-size: 12px; padding: 20px 0; }
 
 /* 右侧商品列表 */
-.goods-list-wrap { flex: 1; overflow: hidden; }
+.goods-list-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
 @media (max-width: 767px) {
   .list-layout { flex-direction: column !important; height: auto !important; }
