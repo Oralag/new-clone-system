@@ -169,109 +169,46 @@
     <section class="overview-section">
       <div class="overview-inner">
 
-        <div class="section-eyebrow">全模块覆盖 · 独立部署</div>
-        <h2 class="section-title">一套系统，全面守护您的业务</h2>
-        <p class="section-sub">从采购入库到销售收款，14 个核心模块无缝衔接；独立数据库，您的数据永久安全</p>
+        <h2 class="section-title">全链路业务管理 · 专属独立服务器 · <span class="section-title-blue">AI 全程加持</span></h2>
+        <p class="section-sub">从采购、仓库、销售到财务，14 个模块无缝衔接。每位用户独立数据库实例，数据物理隔离永久安全。内置 Claude AI 自动分析经营数据、生成洞察预警。全球多节点部署，99.9% 可用率，每日备份，2 小时响应。</p>
 
-        <!-- 工作流 -->
-        <div class="workflow-flow">
-          <div class="flow-step">
-            <div class="flow-step-num">01</div>
-            <div class="flow-step-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="7" width="20" height="14" rx="2" stroke="#0071e3" stroke-width="1.5"/>
-                <path d="M8 7V5a2 2 0 014 0v2M12 12v4M10 14h4" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <div class="flow-step-title">采购管理</div>
-            <div class="flow-step-desc">供应商管理、询报价、采购订单、到货验收、货款结算</div>
+        <!-- 核心卖点 -->
+        <div class="feature-pills">
+          <div class="feature-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8L6 7h12l-2-4z" stroke-linejoin="round"/></svg>
+            采购管理
           </div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step">
-            <div class="flow-step-num">02</div>
-            <div class="flow-step-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="3" width="20" height="18" rx="2" stroke="#0071e3" stroke-width="1.5"/>
-                <path d="M8 3v18M2 9h6M2 15h6" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <div class="flow-step-title">仓库管理</div>
-            <div class="flow-step-desc">多仓库管理、入库出库、库存盘点、调拨转仓、报废处理</div>
+          <div class="feature-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M2 9h6M2 15h6" stroke-linecap="round"/></svg>
+            仓库管理
           </div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step">
-            <div class="flow-step-num">03</div>
-            <div class="flow-step-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" stroke="#0071e3" stroke-width="1.5"/>
-                <path d="M16 3H8L6 7h12l-2-4z" stroke="#0071e3" stroke-width="1.5" stroke-linejoin="round"/>
-                <circle cx="12" cy="14" r="2" stroke="#0071e3" stroke-width="1.5"/>
-              </svg>
-            </div>
-            <div class="flow-step-title">销售管理</div>
-            <div class="flow-step-desc">客户管理、销售订单、发货跟踪、退换货处理、业绩统计</div>
+          <div class="feature-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><circle cx="12" cy="14" r="2"/></svg>
+            销售管理
           </div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step">
-            <div class="flow-step-num">04</div>
-            <div class="flow-step-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" stroke="#0071e3" stroke-width="1.5"/>
-                <path d="M12 7v5l3 3" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M9 12h3" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <div class="flow-step-title">财务管理</div>
-            <div class="flow-step-desc">应收应付、收款付款、资金账户、财务报表、成本核算</div>
+          <div class="feature-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" stroke-linecap="round"/></svg>
+            财务管理
           </div>
-        </div>
-
-        <!-- 扩展能力 -->
-        <div class="workflow-extra">
-          <div class="extra-card">
-            <div class="extra-icon-svg">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="#f59e0b"/>
-              </svg>
-            </div>
-            <div>
-              <div class="extra-title">AI 智能体工作流</div>
-              <div class="extra-desc">内置 Claude AI，热搜抓取 · 文案生成 · 海报制作 · 多平台自动发布</div>
-            </div>
+          <div class="feature-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><circle cx="9" cy="7" r="3"/><path d="M3 21c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke-linecap="round"/></svg>
+            人事协同
           </div>
-          <div class="extra-card">
-            <div class="extra-icon-svg">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="9" cy="7" r="3" stroke="#6366f1" stroke-width="1.5"/>
-                <circle cx="17" cy="9" r="2" stroke="#6366f1" stroke-width="1.5"/>
-                <path d="M3 21c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M17 21c0-2.2-1.3-4-3-5" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <div>
-              <div class="extra-title">人事 & 协同</div>
-              <div class="extra-desc">员工档案 · 薪资考勤 · 权限分配 · 审批流程 · 多角色协作</div>
-            </div>
+          <div class="feature-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 17v-4M12 17V8M17 17v-6" stroke-linecap="round"/></svg>
+            数据报表
           </div>
-          <div class="extra-card">
-            <div class="extra-icon-svg">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" rx="2" stroke="#10b981" stroke-width="1.5"/>
-                <path d="M7 17v-4M12 17V8M17 17v-6" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <div>
-              <div class="extra-title">数据报表</div>
-              <div class="extra-desc">销售分析 · 库存预警 · 财务汇总 · 经营大盘，数据驱动决策</div>
-            </div>
+          <div class="feature-pill feature-pill-ai">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="#f59e0b"/></svg>
+            AI 智能体
+          </div>
+          <div class="feature-pill feature-pill-safe">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><path d="M12 2l-8 4v6c0 4.4 3.4 8.5 8 9.9 4.6-1.4 8-5.5 8-9.9V6L12 2z" stroke-linejoin="round"/></svg>
+            独立数据库
           </div>
         </div>
 
         <!-- 服务器特性 -->
-        <div class="server-section-header">
-          <h2 class="server-section-title">专属独立服务器 — 数据安全、性能稳定、<span class="server-section-highlight">AI 全程加持</span></h2>
-          <p class="server-section-sub">付费版为每位用户配置独立实例，与其他用户物理隔离，不共享任何资源。内置 Claude AI 引擎自动分析经营数据，生成洞察与预警，让数据真正为您所用。全球多节点部署，99.9% 可用率保障，每日自动备份，2 小时内故障响应。</p>
-        </div>
         <div class="server-grid">
           <div class="server-card server-card-blue">
             <div class="server-card-icon-svg server-icon-blue">
@@ -282,7 +219,7 @@
               </svg>
             </div>
             <div class="server-card-title">数据完全隔离</div>
-            <div class="server-card-desc">专属数据库实例，与其他用户物理隔离。订单、财务、客户数据只有您能访问。</div>
+            <div class="server-card-desc">专属数据库实例，物理隔离，订单、财务、客户数据只有您能访问。</div>
           </div>
           <div class="server-card server-card-green">
             <div class="server-card-icon-svg server-icon-green">
@@ -291,8 +228,8 @@
                 <path d="M8 12l3 3 5-5" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <div class="server-card-title">永久保存不丢失</div>
-            <div class="server-card-desc">每日自动备份，数据永久保存，支持任意时间点恢复，业务数据零风险。</div>
+            <div class="server-card-title">永久备份不丢失</div>
+            <div class="server-card-desc">每日自动备份，支持任意时间点恢复，业务数据零风险。</div>
           </div>
           <div class="server-card server-card-purple">
             <div class="server-card-icon-svg server-icon-purple">
@@ -300,8 +237,8 @@
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <div class="server-card-title">性能独享不共享</div>
-            <div class="server-card-desc">独立计算资源，高峰期不受其他用户影响，支持百万级 SKU 稳定流畅。</div>
+            <div class="server-card-title">性能独享</div>
+            <div class="server-card-desc">独立计算资源，高峰期不受他人影响，支持百万级 SKU 稳定运行。</div>
           </div>
           <div class="server-card server-card-orange">
             <div class="server-card-icon-svg server-icon-orange">
@@ -311,8 +248,8 @@
                 <path d="M12 3c-2.5 2.5-4 5.6-4 9s1.5 6.5 4 9" stroke="#ea580c" stroke-width="1.5"/>
               </svg>
             </div>
-            <div class="server-card-title">全球节点低延迟</div>
-            <div class="server-card-desc">部署于全球多地区节点，中国、东南亚、欧美团队均可极速访问。</div>
+            <div class="server-card-title">全球低延迟</div>
+            <div class="server-card-desc">多地区节点，中国、东南亚、欧美团队均可极速访问。</div>
           </div>
           <div class="server-card server-card-red">
             <div class="server-card-icon-svg server-icon-red">
@@ -321,7 +258,7 @@
                 <path d="M9 12l2 2 4-4" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <div class="server-card-title">企业级安全防护</div>
+            <div class="server-card-title">企业级安全</div>
             <div class="server-card-desc">DDoS 防护、HTTPS 加密、IP 白名单、操作日志审计全方位保障。</div>
           </div>
           <div class="server-card server-card-ai-feature">
@@ -332,8 +269,8 @@
                 <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
             </div>
-            <div class="server-card-title">AI 智能助手专属</div>
-            <div class="server-card-desc">内置 Claude AI 数据分析，自动生成经营洞察、预警提示，让数据真正为您所用。</div>
+            <div class="server-card-title">AI 智能分析</div>
+            <div class="server-card-desc">内置 Claude AI 自动生成经营洞察与预警，让数据真正为您所用。</div>
           </div>
         </div>
 
@@ -999,7 +936,8 @@ const TOOL_LABELS: Record<string, string> = {
 }
 .portal-card:hover .card-icon { transform: rotate(-6deg) scale(1.08); }
 
-.card-icon-dark   { background: #1d1d1f; box-shadow: 0 12px 32px rgba(0,0,0,0.22); }
+.card-icon-dark   { background: rgba(29,29,31,0.08); box-shadow: none; }
+.card-icon-dark svg path, .card-icon-dark svg rect { fill: none; stroke: #1d1d1f; stroke-width: 1.8; }
 .card-icon-blue   { background: #0071e3; box-shadow: 0 12px 32px rgba(0,113,227,0.3); }
 .card-icon-purple { background: linear-gradient(135deg,#7c3aed,#a855f7); box-shadow: 0 12px 32px rgba(124,58,237,0.25); }
 .card-icon-green  { background: linear-gradient(135deg,#059669,#10b981); box-shadow: 0 12px 32px rgba(5,150,105,0.25); }
@@ -1591,13 +1529,32 @@ const TOOL_LABELS: Record<string, string> = {
   color: #0071e3; text-transform: uppercase; margin-bottom: 12px;
 }
 .section-title {
-  font-size: 36px; font-weight: 800; letter-spacing: -0.03em;
-  color: #1d1d1f; line-height: 1.15; margin: 0 0 14px;
+  font-size: clamp(22px, 3vw, 36px); font-weight: 800; letter-spacing: -0.03em;
+  color: #1d1d1f; line-height: 1.2; margin: 0 0 16px; text-align: center;
 }
+.section-title-blue { color: #0071e3; }
 .section-sub {
-  font-size: 15px; color: rgba(29,29,31,0.5); line-height: 1.6;
-  max-width: 600px; margin: 0 0 48px;
+  font-size: 15px; color: rgba(29,29,31,0.5); line-height: 1.7;
+  max-width: 680px; margin: 0 auto 40px; text-align: center;
 }
+
+/* ── Feature Pills ── */
+.feature-pills {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  justify-content: center; margin-bottom: 52px;
+}
+.feature-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 999px;
+  background: #fff; border: 1px solid rgba(0,113,227,0.15);
+  font-size: 12px; font-weight: 600; color: #1d1d1f;
+  transition: background 0.2s, border-color 0.2s;
+}
+.feature-pill:hover { background: rgba(0,113,227,0.06); border-color: rgba(0,113,227,0.3); }
+.feature-pill-ai { border-color: rgba(245,158,11,0.25); color: #92400e; }
+.feature-pill-ai:hover { background: rgba(245,158,11,0.08); }
+.feature-pill-safe { border-color: rgba(5,150,105,0.25); color: #065f46; }
+.feature-pill-safe:hover { background: rgba(5,150,105,0.08); }
 
 /* ── 功能全览区 ── */
 .overview-section {
@@ -1693,58 +1650,6 @@ const TOOL_LABELS: Record<string, string> = {
   background: #f5f5f7; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
 }
-
-/* ── ERP 工作流 ── */
-.workflow-flow {
-  display: flex;
-  align-items: flex-start;
-  gap: 0;
-  margin-bottom: 20px;
-  overflow-x: auto;
-}
-.flow-step {
-  flex: 1; min-width: 180px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px 20px;
-  text-align: center;
-  border: 1px solid rgba(0,0,0,0.06);
-}
-.flow-step-num {
-  font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
-  color: #0071e3; margin-bottom: 10px;
-}
-.flow-step-icon {
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 10px; height: 36px;
-}
-.flow-step-title { font-size: 14px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; }
-.flow-step-desc { font-size: 11.5px; color: rgba(29,29,31,0.45); line-height: 1.6; }
-.flow-arrow {
-  flex-shrink: 0;
-  font-size: 20px; color: rgba(29,29,31,0.2);
-  align-self: center;
-  padding: 0 10px;
-}
-.workflow-extra {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 0;
-}
-.extra-card {
-  display: flex; align-items: flex-start; gap: 14px;
-  background: #fff; border-radius: 14px; padding: 20px;
-  border: 1px solid rgba(0,0,0,0.06);
-}
-.extra-icon { font-size: 24px; flex-shrink: 0; }
-.extra-icon-svg {
-  width: 36px; height: 36px; flex-shrink: 0;
-  background: #f5f5f7; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-}
-.extra-title { font-size: 14px; font-weight: 700; color: #1d1d1f; margin-bottom: 4px; }
-.extra-desc { font-size: 12px; color: rgba(29,29,31,0.45); line-height: 1.5; }
 
 /* ── 升级 CTA 区 ── */
 .cta-section {

@@ -586,6 +586,7 @@ watch(
     display: flex;
     flex-direction: column;
     gap: 10px;
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 12px);
   }
   .mobile-empty {
     text-align: center;
