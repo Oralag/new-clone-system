@@ -180,103 +180,75 @@
           </div>
         </div>
 
-        <!-- 主体：左右布局 -->
+        <!-- 对话区 -->
         <div class="captain-main">
-
-          <!-- 左：身份信息栏 -->
-          <div class="captain-sidebar">
-            <div class="captain-glyph">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            </div>
-            <div class="captain-label">
-              CAPTAIN
-              <span class="captain-live"><span class="captain-live-dot"></span>LIVE</span>
-            </div>
-            <div class="captain-tagline">调度整个 Agency 完成你的目标</div>
-            <div class="captain-team-pills">
-              <div v-for="a in agentList" :key="a.id" class="team-pill" :style="{ '--c': a.color }" :title="a.name + ' · ' + a.specialty">
-                <span>{{ a.emoji }}</span>
+          <!-- 消息区 -->
+          <div ref="chatScrollRef" class="captain-feed">
+            <!-- 空状态 -->
+            <div v-if="captainMessages.length === 0" class="feed-empty">
+              <div class="feed-empty-grid">
+                <button v-for="p in quickPrompts" :key="p" class="feed-prompt" @click="sendCaptain(p)">
+                  <span class="feed-prompt-text">{{ p }}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
               </div>
             </div>
-            <button class="about-btn" @click="captainAboutOpen = true">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              了解 Captain
-            </button>
-          </div>
 
-          <!-- 右：对话区 -->
-          <div class="captain-chat">
-            <!-- 消息区 -->
-            <div ref="chatScrollRef" class="captain-feed">
-              <!-- 空状态 -->
-              <div v-if="captainMessages.length === 0" class="feed-empty">
-                <div class="feed-empty-grid">
-                  <button v-for="p in quickPrompts" :key="p" class="feed-prompt" @click="sendCaptain(p)">
-                    <span class="feed-prompt-text">{{ p }}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </button>
-                </div>
+            <template v-for="(msg, idx) in captainMessages" :key="idx">
+              <div v-if="msg.role === 'user'" class="feed-row feed-user">
+                <div class="feed-bubble-user">{{ msg.content }}</div>
               </div>
-
-              <template v-for="(msg, idx) in captainMessages" :key="idx">
-                <div v-if="msg.role === 'user'" class="feed-row feed-user">
-                  <div class="feed-bubble-user">{{ msg.content }}</div>
-                </div>
-                <div v-else class="feed-row feed-agency">
-                  <div class="feed-agency-inner">
-                    <template v-for="(step, si) in msg.steps" :key="si">
-                      <div v-if="step.type === 'captain_text'" class="feed-captain-text" v-html="renderMd(step.text)"></div>
-                      <div v-else-if="step.type === 'agent_start'" class="feed-agent-card">
-                        <div class="feed-agent-header" :style="{ background: getAgentColor(step.agentId) + '10' }">
-                          <span class="feed-agent-emoji">{{ step.emoji }}</span>
-                          <span class="feed-agent-name">{{ step.agentName }}</span>
-                          <div class="feed-agent-tag" :class="step.status">
-                            <span v-if="step.status === 'running'" class="spin-dot"></span>
-                            <span>{{ step.status === 'running' ? '执行中' : '完成' }}</span>
-                          </div>
+              <div v-else class="feed-row feed-agency">
+                <div class="feed-agency-inner">
+                  <template v-for="(step, si) in msg.steps" :key="si">
+                    <div v-if="step.type === 'captain_text'" class="feed-captain-text" v-html="renderMd(step.text)"></div>
+                    <div v-else-if="step.type === 'agent_start'" class="feed-agent-card">
+                      <div class="feed-agent-header" :style="{ background: getAgentColor(step.agentId) + '10' }">
+                        <span class="feed-agent-emoji">{{ step.emoji }}</span>
+                        <span class="feed-agent-name">{{ step.agentName }}</span>
+                        <div class="feed-agent-tag" :class="step.status">
+                          <span v-if="step.status === 'running'" class="spin-dot"></span>
+                          <span>{{ step.status === 'running' ? '执行中' : '完成' }}</span>
                         </div>
-                        <div class="feed-agent-task">{{ step.task }}</div>
-                        <div v-if="step.output" class="feed-agent-output">{{ step.output }}</div>
                       </div>
-                      <div v-else-if="step.type === 'tool'" class="feed-tool">
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                        {{ step.label }}
-                        <span class="feed-tool-dot" :class="step.status"></span>
-                      </div>
-                    </template>
-                  </div>
+                      <div class="feed-agent-task">{{ step.task }}</div>
+                      <div v-if="step.output" class="feed-agent-output">{{ step.output }}</div>
+                    </div>
+                    <div v-else-if="step.type === 'tool'" class="feed-tool">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                      {{ step.label }}
+                      <span class="feed-tool-dot" :class="step.status"></span>
+                    </div>
+                  </template>
                 </div>
-              </template>
-
-              <div v-if="captainLoading" class="feed-thinking">
-                <span class="feed-thinking-label">🎯 Captain</span>
-                <div class="feed-dots"><span></span><span></span><span></span></div>
               </div>
-            </div>
+            </template>
 
-            <!-- 输入区 -->
-            <div class="captain-compose">
-              <input
-                ref="captainInputRef"
-                v-model="captainInput"
-                class="captain-compose-input"
-                placeholder="输入目标，Captain 自动调度 Agency..."
-                @keydown.enter.prevent="sendCaptain()"
-                :disabled="captainLoading"
-              />
-              <div class="captain-compose-actions">
-                <button v-if="captainMessages.length > 0" class="compose-clear" @click="captainMessages = []" title="清空对话">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-                </button>
-                <button class="compose-send" :disabled="captainLoading || !captainInput.trim()" @click="sendCaptain()">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                </button>
-              </div>
+            <div v-if="captainLoading" class="feed-thinking">
+              <span class="feed-thinking-label">🎯 Captain</span>
+              <div class="feed-dots"><span></span><span></span><span></span></div>
             </div>
           </div>
 
+          <!-- 输入区 -->
+          <div class="captain-compose">
+            <input
+              ref="captainInputRef"
+              v-model="captainInput"
+              class="captain-compose-input"
+              placeholder="输入目标，Captain 自动调度 Agency..."
+              @keydown.enter.prevent="sendCaptain()"
+              :disabled="captainLoading"
+            />
+            <div class="captain-compose-actions">
+              <button v-if="captainMessages.length > 0" class="compose-clear" @click="captainMessages = []" title="清空对话">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+              </button>
+              <button class="compose-send" :disabled="captainLoading || !captainInput.trim()" @click="sendCaptain()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div><!-- /captain-wrap -->
 
@@ -1173,12 +1145,14 @@ async function sendCaptain(text?: string) {
 }
 .captain-main {
   display: flex;
+  flex-direction: column;
   border: 1px solid #e4e7ed;
   border-radius: 20px;
   background: #fff;
   overflow: hidden;
   box-shadow: 0 2px 16px rgba(0,0,0,0.06);
-  min-height: 340px;
+  min-height: 480px;
+  max-height: calc(100vh - 120px);
 }
 
 /* ── 左侧身份栏 ── */

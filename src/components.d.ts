@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AgentChat: typeof import('./components/agent/AgentChat.vue')['default']
     AgentOnboardingGuide: typeof import('./components/AgentOnboardingGuide.vue')['default']
+    AgentPageLayout: typeof import('./components/agent/AgentPageLayout.vue')['default']
     AiAssistant: typeof import('./components/AiAssistant.vue')['default']
     AiToolCallCard: typeof import('./components/ai/AiToolCallCard.vue')['default']
     CaptchaCanvas: typeof import('./components/CaptchaCanvas.vue')['default']

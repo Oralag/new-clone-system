@@ -36,12 +36,10 @@
           </el-select>
           <el-select v-model="filterSource" placeholder="来源" clearable style="width:130px">
             <el-option label="销售收款" value="销售收款" />
-            <el-option label="客户预付款" value="客户预付款" />
             <el-option label="会员充值" value="会员充值" />
             <el-option label="其他收入" value="其他收入" />
             <el-option label="零售单" value="零售单" />
             <el-option label="采购付款" value="采购付款" />
-            <el-option label="供应商预付款" value="供应商预付款" />
             <el-option label="其他支出" value="其他支出" />
             <el-option label="费用" value="费用" />
           </el-select>
@@ -136,14 +134,13 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [collectRes, retailRes, purchaseRes, payRes, expenseRes, rechargeRes, prepayRes] = await Promise.all([
+    const [collectRes, retailRes, purchaseRes, payRes, expenseRes, rechargeRes] = await Promise.all([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
       getProcureOrderList({ list_rows: 1000 }),
       getPayReceiptList({ list_rows: 1000 }),
       getExpenseList({ list_rows: 1000 }),
       http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
-      http.get('/finance/Prepay/index', { params: { list_rows: 1000 } }),
     ])
 
     const items: FlowItem[] = []
@@ -207,19 +204,7 @@ onMounted(async () => {
     }
 
     // 客户预付款（收入）/ 供应商预付款（支出）
-    const prepays: any[] = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
-    for (const r of prepays) {
-      const isCustomer = r.pay_type === 'customer'
-      items.push({
-        date: (r.pay_date || r.create_time || '').slice(0, 10),
-        type: isCustomer ? 'income' : 'expense',
-        source: isCustomer ? '客户预付款' : '供应商预付款',
-        name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'),
-        order_no: r.order_sn || '',
-        amount: Number(r.amount || 0),
-        remark: r.remark || '',
-      })
-    }
+    // 已通过收款单/付款单记录，不重复计入
 
     // 费用（支出）
     const expenses: any[] = expenseRes.data?.rows ?? expenseRes.data?.list ?? []

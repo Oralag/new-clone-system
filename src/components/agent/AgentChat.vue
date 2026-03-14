@@ -95,6 +95,11 @@ const props = defineProps<{
   quickPrompts?: string[]
 }>()
 
+const emit = defineEmits<{
+  (e: 'streaming-change', v: boolean): void
+  (e: 'message-sent'): void
+}>()
+
 const agent = computed(() => AGENTS[props.agentId] ?? AGENTS.copywriter)
 
 interface ToolCall {
@@ -162,6 +167,7 @@ async function sendMessage() {
   scrollToBottom()
 
   streaming.value = true
+  emit('streaming-change', true)
 
   const token = localStorage.getItem('erp_token') || ''
   // Build conversation history (excluding the current empty assistant msg)
@@ -219,6 +225,8 @@ async function sendMessage() {
   } finally {
     assistantMsg.streaming = false
     streaming.value = false
+    emit('streaming-change', false)
+    emit('message-sent')
     scrollToBottom()
   }
 }
@@ -266,6 +274,8 @@ onMounted(() => {
   loadMemory()
   nextTick(() => inputRef.value?.focus())
 })
+
+defineExpose({ sendQuickPrompt, clearChat })
 </script>
 
 <style scoped>

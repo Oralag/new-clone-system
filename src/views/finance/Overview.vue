@@ -427,15 +427,13 @@ const collectTotal = computed(() => {
   const receiptTotal = collectList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
   const retailIncomeTotal = retailList.value.reduce((s, r) => s + Number(r.pay_amount || r.total_amount || 0), 0)
   const rechargeTotal = rechargeList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
-  const customerPrepayTotal = prepayList.value.filter((r: any) => r.pay_type === 'customer').reduce((s, r) => s + Number(r.amount || 0), 0)
-  return (receiptTotal + retailIncomeTotal + rechargeTotal + customerPrepayTotal).toFixed(2)
+  return (receiptTotal + retailIncomeTotal + rechargeTotal).toFixed(2)
 })
-// 资金支出 = 付款单 + 费用 + 供应商预付款
+// 资金支出 = 付款单 + 费用
 const payTotal = computed(() => {
   const payReceiptTotal = payList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
   const expenseTotal = expenseList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
-  const supplierPrepayTotal = prepayList.value.filter((r: any) => r.pay_type === 'supplier').reduce((s, r) => s + Number(r.amount || 0), 0)
-  return (payReceiptTotal + expenseTotal + supplierPrepayTotal).toFixed(2)
+  return (payReceiptTotal + expenseTotal).toFixed(2)
 })
 
 const fundTotal = computed(() => {

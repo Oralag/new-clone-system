@@ -72,13 +72,18 @@
         成本价取商品列表cost_price；运费按合同承担比例扣除；费用来自费用管理模块；净利润 = 毛利润 − 运费 − 费用
       </div>
 
+      <!-- 切换Tab -->
+      <el-tabs v-model="viewMode" style="margin-bottom:4px">
+        <el-tab-pane label="按单品" name="goods" />
+        <el-tab-pane label="按单据" name="order" />
+      </el-tabs>
+
       <div v-if="loading" style="text-align:center;padding:40px 0">
         <el-icon class="is-loading" :size="24"><Loading /></el-icon>
       </div>
-      <div v-else-if="rows.length === 0" style="text-align:center;padding:40px 0;color:#aaa">
-        暂无利润数据（请先录入销售合同或零售订单）
-      </div>
-      <el-table v-else :data="rows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
+
+      <!-- 单品维度 -->
+      <el-table v-else-if="viewMode === 'goods'" :data="rows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
         <el-table-column prop="goods_name" label="商品名称" min-width="140" show-overflow-tooltip />
         <el-table-column label="销售数量" prop="num" align="right" width="80" />
         <el-table-column label="销售额" align="right" width="110">
@@ -124,6 +129,44 @@
             <el-tag size="small" :type="row.source === '零售' ? 'success' : 'primary'">{{ row.source }}</el-tag>
           </template>
         </el-table-column>
+        <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
+      </el-table>
+
+      <!-- 单据维度 -->
+      <el-table v-else :data="orderRows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
+        <el-table-column label="单据类型" align="center" width="80">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.source === '零售' ? 'success' : 'primary'">{{ row.source }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="order_no" label="单号" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="customer_name" label="客户" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="order_date" label="日期" width="100" />
+        <el-table-column label="销售额" align="right" width="120">
+          <template #default="{ row }">
+            <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.sale_amount) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="成本" align="right" width="120">
+          <template #default="{ row }">
+            <span style="color:#7c3aed">¥{{ fmt(row.cost_amount) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="毛利润" align="right" width="120" sortable prop="profit">
+          <template #default="{ row }">
+            <span :style="{ color: row.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
+              {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="毛利率" align="right" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.profit_rate >= 20 ? 'success' : row.profit_rate > 0 ? 'warning' : 'danger'" size="small">
+              {{ row.profit_rate.toFixed(1) }}%
+            </el-tag>
+          </template>
+        </el-table-column>
+        <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
       </el-table>
     </el-card>
   </div>
@@ -140,6 +183,7 @@ import http from '@/api/http'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
+const viewMode = ref<'goods' | 'order'>('goods')
 
 const saleContracts = ref<any[]>([])
 const retailOrders = ref<any[]>([])
@@ -217,6 +261,55 @@ const rows = computed(() => {
         ? ((r.sale_amount - r.num * r.unit_cost) / r.sale_amount * 100) : 0,
     }))
     .sort((a, b) => b.profit - a.profit)
+})
+
+// 单据维度：按每张合同/零售单一行
+const orderRows = computed(() => {
+  const result: any[] = []
+
+  for (const c of saleContracts.value) {
+    let sale_amount = 0
+    let cost_amount = 0
+    try {
+      for (const g of JSON.parse(c.goods_info || '[]')) {
+        const qty = Number(g.num || 0)
+        sale_amount += qty * Number(g.price || 0)
+        cost_amount += qty * getUnitCost(g.goods_id).unitCost
+      }
+    } catch {}
+    const profit = sale_amount - cost_amount
+    result.push({
+      source: '合同',
+      order_no: c.contract_no || c.order_no || c.id,
+      customer_name: c.customer_name || '—',
+      order_date: (c.contract_date || c.create_time || '').slice(0, 10),
+      sale_amount, cost_amount, profit,
+      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+    })
+  }
+
+  for (const r of retailOrders.value) {
+    let sale_amount = 0
+    let cost_amount = 0
+    try {
+      for (const g of JSON.parse(r.goods_info || '[]')) {
+        const qty = Number(g.num || 0)
+        sale_amount += qty * Number(g.price || 0)
+        cost_amount += qty * getUnitCost(g.goods_id).unitCost
+      }
+    } catch {}
+    const profit = sale_amount - cost_amount
+    result.push({
+      source: '零售',
+      order_no: r.order_sn || r.order_no || r.id,
+      customer_name: r.customer_name || r.member_name || '散客',
+      order_date: (r.order_date || r.create_time || '').slice(0, 10),
+      sale_amount, cost_amount, profit,
+      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+    })
+  }
+
+  return result.sort((a, b) => b.profit - a.profit)
 })
 
 const totalSale = computed(() => rows.value.reduce((s, r) => s + r.sale_amount, 0))

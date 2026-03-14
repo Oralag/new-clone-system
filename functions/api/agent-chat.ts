@@ -15,7 +15,8 @@ async function erpGet(path: string, params: Record<string, any>, token: string) 
     if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
   })
   const res = await fetch(url.toString(), { headers: { token, 'Content-Type': 'application/json' } })
-  return res.json()
+  const text = await res.text()
+  try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}），可能token已过期或接口路径有误`) }
 }
 
 async function erpPost(path: string, body: Record<string, any>, token: string) {
@@ -24,7 +25,8 @@ async function erpPost(path: string, body: Record<string, any>, token: string) {
     headers: { token, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  return res.json()
+  const text = await res.text()
+  try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}）`) }
 }
 
 async function executeTool(name: string, input: Record<string, any>, token: string): Promise<string> {
@@ -205,11 +207,11 @@ const agentTools = [
   { name: 'navigate_to', description: '跳转到指定页面', input_schema: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
   {
     name: 'fetch_trending',
-    description: '获取各平台实时热搜榜单（真实数据）。平台：weibo（微博）、baidu（百度）、douyin（抖音）、xiaohongshu（小红书）、zhihu（知乎）',
+    description: '获取各平台实时热搜榜单（真实数据）。支持平台：weibo（微博）、baidu（百度）、douyin（抖音）。注意：小红书和知乎不支持，禁止调用。',
     input_schema: {
       type: 'object',
       properties: {
-        platform: { type: 'string', enum: ['weibo', 'baidu', 'douyin', 'xiaohongshu', 'zhihu'], description: '平台名称' },
+        platform: { type: 'string', enum: ['weibo', 'baidu', 'douyin'], description: '平台名称' },
       },
       required: ['platform'],
     },

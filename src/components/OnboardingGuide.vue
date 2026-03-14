@@ -31,13 +31,10 @@
         <div class="guide-progress-bar" :style="{ width: `${guide.progressPercent}%` }" />
       </div>
 
-      <div v-if="!isOnTargetRoute" class="guide-status guide-status-info">
-        当前步骤对应页面尚未打开，点击下方按钮可直接跳转到该页面。
+      <div v-if=”!targetRect” class=”guide-status guide-status-warn”>
+        已进入目标页面，正在定位操作位置；如果没高亮出来，可点击”重新定位”。
       </div>
-      <div v-else-if="!targetRect" class="guide-status guide-status-warn">
-        已进入目标页面，正在定位操作位置；如果没高亮出来，可点击“重新定位”。
-      </div>
-      <div v-else class="guide-status guide-status-success">
+      <div v-else class=”guide-status guide-status-success”>
         页面中的高亮区域就是你当前需要操作的位置。
       </div>
 
@@ -65,8 +62,7 @@
       <div class="guide-panel-actions">
         <el-button text @click="guide.pauseGuide">稍后继续</el-button>
         <el-button @click="guide.goPrevActionOrStep">上一步</el-button>
-        <el-button v-if="!isOnTargetRoute" @click="guide.openStep(guide.currentStep)">前往当前页面</el-button>
-        <el-button v-else-if="!targetRect" @click="refreshPosition">重新定位</el-button>
+        <el-button v-if="!targetRect" @click="refreshPosition">重新定位</el-button>
         <el-button @click="guide.skipCurrentAndNext()">
           {{ isLastStep ? '跳过并结束' : '跳过此步' }}
         </el-button>
@@ -255,12 +251,18 @@ const panelStyle = computed(() => {
 
 watch(
   () => [guide.active, guide.currentStep, guide.currentAction, route.path],
-  () => {
-    if (!guide.active) {
+  ([active, step, action], prev) => {
+    if (!active) {
       clearRetryTimer()
       clearAutoAdvanceTimer()
       unbindTargetElement()
       targetRect.value = null
+      return
+    }
+    // 自动跳转到当前步骤对应页面
+    const targetPath = currentAction.value.path
+    if (targetPath && route.path !== targetPath) {
+      guide.navigateToCurrentAction()
       return
     }
     locateTarget(true)
