@@ -1,9 +1,9 @@
 <template>
-  <div class="captain-bar" :class="{ expanded: captainMessages.length > 0 || captainLoading }">
+  <div ref="barRef" class="captain-bar" :class="{ expanded: (captainMessages.length > 0 || captainLoading) && !isCollapsed }" @click.stop>
 
     <!-- 输入条（始终在顶部） -->
     <div class="bar-row">
-      <div class="bar-identity" @click="toggle">
+      <div class="bar-identity" @click="isCollapsed = false">
         <div class="bar-shield">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2L4 7v6c0 5 4.5 9.7 8 11 3.5-1.3 8-6 8-11V7L12 2z"/></svg>
         </div>
@@ -19,12 +19,21 @@
           :placeholder="lastPreview || 'AI 多智能体总调度 · 输入目标让 Captain 自动规划执行…'"
           :disabled="captainLoading"
           @keydown.enter.prevent="sendQuick"
+          @focus="isCollapsed = false"
         />
         <button v-if="captainMessages.length > 0" class="bar-tool-btn" @click="newSession" title="新建对话">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         </button>
         <button v-if="captainMessages.length > 0" class="bar-tool-btn" @click="clearCurrent" title="清空">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        </button>
+        <!-- 收起按钮：有消息且未收起时显示 -->
+        <button v-if="(captainMessages.length > 0 || captainLoading) && !isCollapsed" class="bar-tool-btn" @click="isCollapsed = true" title="收起">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>
+        </button>
+        <!-- 展开按钮：有消息且已收起时显示 -->
+        <button v-if="captainMessages.length > 0 && isCollapsed" class="bar-tool-btn" @click="isCollapsed = false" title="展开">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <button class="bar-send" :disabled="captainLoading || !quickText.trim()" @click="sendQuick">
           <svg v-if="!captainLoading" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
@@ -33,8 +42,8 @@
       </div>
     </div>
 
-    <!-- 消息区（在输入条下方往下展开） -->
-    <div v-if="captainMessages.length > 0 || captainLoading" class="inline-feed">
+    <!-- 消息区（在输入条下方往下展开，可收起） -->
+    <div v-if="(captainMessages.length > 0 || captainLoading) && !isCollapsed" class="inline-feed">
 
       <!-- 查看更多：折叠的旧消息 -->
       <div v-if="captainMessages.length > 2 && !showAllMessages" class="feed-more-btn" @click="showAllMessages = true">
@@ -110,6 +119,7 @@ const quickPrompts = [
 ]
 
 const isExpanded = ref(false)
+const isCollapsed = ref(false)
 const showHistory = ref(false)
 const quickText = ref('')
 const captainInput = ref('')
@@ -118,6 +128,16 @@ const captainMessages = ref<CaptainMsg[]>([])
 const feedRef = ref<HTMLDivElement>()
 const showAllMessages = ref(false)
 const inputRef = ref<HTMLInputElement>()
+const barRef = ref<HTMLDivElement>()
+
+// 点击外部自动收起
+function onClickOutside(e: MouseEvent) {
+  if (barRef.value && !barRef.value.contains(e.target as Node)) {
+    isCollapsed.value = true
+  }
+}
+onMounted(() => document.addEventListener('click', onClickOutside))
+onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 // ── 历史记录 ────────────────────────────────────────────────────────────────
 const historyList = ref<HistoryItem[]>(loadAllHistory())
@@ -197,6 +217,7 @@ async function sendQuick() {
   const text = quickText.value.trim()
   if (!text || captainLoading.value) return
   quickText.value = ''
+  isCollapsed.value = false
   captainInput.value = text
   sendCaptain()
 }

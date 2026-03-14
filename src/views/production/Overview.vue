@@ -197,8 +197,8 @@
             <el-table-column prop="unit_name" label="单位" width="70" align="center" />
             <el-table-column prop="materials" label="消耗原料" min-width="200">
               <template #default="{ row }">
-                <div v-for="m in row.materials" :key="m.goods_id" class="mat-row">
-                  <span class="mat-name">{{ m.goods_name }}</span>
+                <div v-for="m in row.materials" :key="m._matGoodsId || m.material_id" class="mat-row">
+                  <span class="mat-name">{{ m.material_name || m.goods_name }}</span>
                   <span class="mat-qty">×{{ m.num * row.qty }}</span>
                   <el-tag size="small" :type="m.stockOk ? 'success' : 'danger'" style="margin-left:4px">
                     库存{{ m.stock_num ?? '?' }}
@@ -362,11 +362,12 @@ async function loadBomProducts() {
       if (!mats.length) continue
       let canMake = Infinity
       const matsWithStock = mats.map((m: any) => {
-        const stock = stockMap[m.mat_goods_id] || 0
+        const matGoodsId = m.material_id || m.mat_goods_id || m.goods_id
+        const stock = stockMap[matGoodsId] || 0
         const needed = Number(m.num) || 1
         const possible = Math.floor(stock / needed)
         if (possible < canMake) canMake = possible
-        return { ...m, stock_num: stock, stockOk: stock >= needed }
+        return { ...m, _matGoodsId: matGoodsId, stock_num: stock, stockOk: stock >= needed }
       })
       result.push({
         goods_id: gid,
@@ -478,8 +479,8 @@ async function doGenerate() {
         const needed = Number(mat.num) * item.qty
         try {
           const matData = {
-            goods_id: mat.mat_goods_id,
-            goods_name: mat.goods_name,
+            goods_id: mat._matGoodsId,
+            goods_name: mat.material_name || mat.goods_name,
             num: needed,
             plan_id: planId,
             remark: `一键生成 - ${item.goods_name}`,
@@ -487,9 +488,9 @@ async function doGenerate() {
           const matRes = await createMaterial(matData)
           const matId = matRes.data?.id
           if (matId) await auditMaterial(matId, 1)
-          genLogs.value.push({ text: `  ✓ 领料：${mat.goods_name} × ${needed}`, type: 'success' })
+          genLogs.value.push({ text: `  ✓ 领料：${mat.material_name || mat.goods_name} × ${needed}`, type: 'success' })
         } catch (e) {
-          genLogs.value.push({ text: `  ⚠ 领料失败：${mat.goods_name}（可继续）`, type: 'error' })
+          genLogs.value.push({ text: `  ⚠ 领料失败：${mat.material_name || mat.goods_name}（可继续）`, type: 'error' })
         }
       }
 

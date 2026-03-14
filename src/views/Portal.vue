@@ -867,20 +867,24 @@ const TOOL_LABELS: Record<string, string> = {
   box-shadow: 0 60px 100px rgba(0,0,0,0.09);
 }
 
-/* ERP 卡 hover 变蓝色渐变 */
+/* ERP 卡默认深灰色，hover 变蓝 */
+.portal-card:not(.portal-card-ai):not(.portal-card-dim) {
+  background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.portal-card:not(.portal-card-ai):not(.portal-card-dim) .card-title { color: #fff; }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim) .card-desc  { color: rgba(255,255,255,0.5); }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim) .card-arrow { color: rgba(255,255,255,0.35); }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim) .tag { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); border-color: transparent; }
+
 .portal-card:not(.portal-card-ai):not(.portal-card-dim):hover {
   background: linear-gradient(135deg, #0071e3 0%, #005acd 100%);
   border-color: rgba(0,113,227,0.3);
   box-shadow: 0 40px 80px rgba(0,113,227,0.25);
 }
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-title { color: #fff; }
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-desc  { color: rgba(255,255,255,0.7); }
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-arrow { color: rgba(255,255,255,0.6); gap: 12px; }
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .tag { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.2); }
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-icon-dark { background: rgba(255,255,255,0.15); box-shadow: 0 12px 32px rgba(0,0,0,0.1); }
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-bg-icon { color: #fff; opacity: 0.06; }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-arrow { color: rgba(255,255,255,0.7); gap: 12px; }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-icon-dark { background: rgba(255,255,255,0.15); }
 
-.portal-card-blue   { background: #ffffff; }
 .portal-card-ai {
   background: linear-gradient(135deg, #0071e3 0%, #0057b8 60%, #004499 100%);
   border-color: rgba(0,113,227,0.3);
@@ -936,8 +940,7 @@ const TOOL_LABELS: Record<string, string> = {
 }
 .portal-card:hover .card-icon { transform: rotate(-6deg) scale(1.08); }
 
-.card-icon-dark   { background: rgba(29,29,31,0.08); box-shadow: none; }
-.card-icon-dark svg path, .card-icon-dark svg rect { fill: none; stroke: #1d1d1f; stroke-width: 1.8; }
+.card-icon-dark   { background: rgba(255,255,255,0.12); box-shadow: none; }
 .card-icon-blue   { background: #0071e3; box-shadow: 0 12px 32px rgba(0,113,227,0.3); }
 .card-icon-purple { background: linear-gradient(135deg,#7c3aed,#a855f7); box-shadow: 0 12px 32px rgba(124,58,237,0.25); }
 .card-icon-green  { background: linear-gradient(135deg,#059669,#10b981); box-shadow: 0 12px 32px rgba(5,150,105,0.25); }
