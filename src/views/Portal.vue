@@ -49,27 +49,26 @@
       </div>
     </div>
 
-    <!-- Hero — 精简为一行标题 -->
-    <div class="hero-compact">
-      <span class="hero-badge">
-        <span class="hero-badge-dot"></span>
-        <span>数字游牧 · 全球化业务管理平台</span>
-      </span>
-      <span class="hero-compact-title">选择您的<span class="hero-title-blue"> 工作空间</span></span>
-    </div>
-
     <!-- 主体区：左边模块卡片 + 右边 Captain -->
     <div class="main-layout">
 
       <!-- 左：模块卡片 -->
       <div class="cards-col">
-        <!-- Module Cards — 2 main + 1 coming -->
+        <!-- 工作空间标题 -->
+        <div class="workspace-header">
+          <span class="hero-badge">
+            <span class="hero-badge-dot"></span>
+            <span>数字游牧 · 全球化业务管理平台</span>
+          </span>
+          <h2 class="workspace-title">选择您的<span class="hero-title-blue"> 工作空间</span></h2>
+        </div>
+        <!-- Module Cards — 2×2 grid -->
         <div class="cards-grid">
 
       <!-- ERP -->
       <div class="portal-card" @click="go('/dashboard')">
         <div class="card-bg-icon">
-          <svg width="400" height="400" viewBox="0 0 48 48" fill="none" opacity="1">
+          <svg width="360" height="360" viewBox="0 0 48 48" fill="none" opacity="1">
             <rect x="4" y="4" width="18" height="18" rx="3" fill="currentColor"/>
             <rect x="26" y="4" width="18" height="18" rx="3" fill="currentColor"/>
             <rect x="4" y="26" width="18" height="18" rx="3" fill="currentColor"/>
@@ -77,7 +76,7 @@
           </svg>
         </div>
         <div class="card-icon card-icon-dark">
-          <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
             <rect x="4" y="4" width="18" height="18" rx="3" fill="white" opacity="0.9"/>
             <rect x="26" y="4" width="18" height="18" rx="3" fill="white" opacity="0.6"/>
             <rect x="4" y="26" width="18" height="18" rx="3" fill="white" opacity="0.6"/>
@@ -95,20 +94,20 @@
         </div>
         <div class="card-arrow">
           <span>管理中心</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
 
       <!-- 智能体工作流 -->
       <div class="portal-card portal-card-blue" @click="go('/agent')">
         <div class="card-bg-icon card-bg-blue">
-          <svg width="400" height="400" viewBox="0 0 24 24" fill="none" opacity="1">
+          <svg width="360" height="360" viewBox="0 0 24 24" fill="none" opacity="1">
             <circle cx="12" cy="8" r="5" fill="currentColor"/>
             <path d="M3 21c0-5 4-9 9-9s9 4 9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
         <div class="card-icon card-icon-blue">
-          <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
             <circle cx="24" cy="18" r="10" fill="white" opacity="0.9"/>
             <path d="M10 42c0-7.7 6.3-14 14-14s14 6.3 14 14" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
             <circle cx="36" cy="36" r="6" fill="white" opacity="0.8"/>
@@ -124,64 +123,114 @@
         </div>
         <div class="card-arrow">
           <span>立即进入</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
 
-      <!-- Coming soon -->
-      <div class="portal-card portal-card-dim">
-        <div class="card-icon card-icon-dim">
-          <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
-            <circle cx="24" cy="24" r="18" stroke="currentColor" stroke-width="3" opacity="0.4"/>
-            <path d="M24 16v8l5 5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+      <!-- BI 数据大屏 -->
+      <div class="portal-card portal-card-purple portal-card-dim">
+        <div class="card-bg-icon card-bg-purple">
+          <svg width="360" height="360" viewBox="0 0 24 24" fill="none" opacity="1">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M8 17V13M12 17V9M16 17V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
-        <h2 class="card-title" style="opacity:0.3">即将推出</h2>
-        <p class="card-desc" style="opacity:0.2">更多功能模块敬请期待，BI数据大屏、供应链协同门户正在开发中。</p>
-        <div class="card-arrow" style="opacity:0.15">
+        <div class="card-icon card-icon-purple">
+          <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
+            <rect x="4" y="4" width="40" height="40" rx="6" stroke="white" stroke-width="2.5" opacity="0.5"/>
+            <path d="M12 36V26M20 36V18M28 36V22M36 36V14" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+          </svg>
+        </div>
+        <h2 class="card-title">BI 数据大屏</h2>
+        <p class="card-desc">全局经营数据可视化。销售趋势、库存预警、财务汇总一屏掌握。</p>
+        <div class="card-tags">
+          <span class="tag tag-purple">数据可视化</span>
+          <span class="tag tag-purple">实时监控</span>
+          <span class="tag tag-purple">智能预警</span>
+        </div>
+        <div class="card-arrow">
           <span>敬请期待</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
+
+      <!-- 供应链协同 -->
+      <div class="portal-card portal-card-green portal-card-dim">
+        <div class="card-bg-icon card-bg-green">
+          <svg width="360" height="360" viewBox="0 0 24 24" fill="none" opacity="1">
+            <circle cx="5" cy="12" r="2" fill="currentColor"/>
+            <circle cx="12" cy="5" r="2" fill="currentColor"/>
+            <circle cx="19" cy="12" r="2" fill="currentColor"/>
+            <circle cx="12" cy="19" r="2" fill="currentColor"/>
+            <path d="M7 12h10M12 7v10" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="card-icon card-icon-green">
+          <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
+            <circle cx="12" cy="24" r="6" stroke="white" stroke-width="2.5" opacity="0.7"/>
+            <circle cx="36" cy="12" r="6" stroke="white" stroke-width="2.5" opacity="0.7"/>
+            <circle cx="36" cy="36" r="6" stroke="white" stroke-width="2.5" opacity="0.7"/>
+            <path d="M18 24L30 14M18 24L30 34" stroke="white" stroke-width="2" opacity="0.5"/>
+          </svg>
+        </div>
+        <h2 class="card-title">供应链协同</h2>
+        <p class="card-desc">多方协作门户。供应商、仓储、物流实时协同，打通全链路信息壁垒。</p>
+        <div class="card-tags">
+          <span class="tag tag-green">供应商管理</span>
+          <span class="tag tag-green">物流追踪</span>
+          <span class="tag tag-green">协同办公</span>
+        </div>
+        <div class="card-arrow">
+          <span>敬请期待</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
       </div><!-- /cards-grid -->
       </div><!-- /cards-col -->
 
       <!-- 右：Captain 总控台 -->
       <div class="captain-wrap">
 
-        <!-- 了解 Captain 弹窗 -->
-        <div v-if="captainAboutOpen" class="about-overlay" @click.self="captainAboutOpen = false">
-          <div class="about-modal">
-            <button class="about-close" @click="captainAboutOpen = false">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-            <div class="about-icon">🎯</div>
-            <h3 class="about-title">关于 Captain</h3>
-            <p class="about-lead">Captain 是数字游牧 Agency 的智能指挥官，它不只是一个聊天机器人。</p>
-            <div class="about-list">
-              <div class="about-item" v-for="item in aboutItems" :key="item.title">
-                <div class="about-item-icon" :style="{ background: item.color + '15', color: item.color }">{{ item.emoji }}</div>
-                <div>
-                  <div class="about-item-title">{{ item.title }}</div>
-                  <div class="about-item-desc">{{ item.desc }}</div>
-                </div>
-              </div>
+        <!-- Captain 指挥官标题 -->
+        <div class="captain-header">
+          <div class="captain-header-left">
+            <div class="captain-glyph">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2L4 7v6c0 5 4.5 9.7 8 11 3.5-1.3 8-6 8-11V7L12 2z"/></svg>
             </div>
-            <div class="about-agents">
-              <div class="about-agents-label">旗下 Agent 团队</div>
-              <div class="about-agents-grid">
-                <div v-for="a in agentList" :key="a.id" class="about-agent-chip" :style="{ background: a.color + '12', borderColor: a.color + '30' }">
-                  <span>{{ a.emoji }}</span>
-                  <span :style="{ color: a.color }">{{ a.name }}</span>
-                  <span class="about-agent-specialty">{{ a.specialty }}</span>
-                </div>
-              </div>
+            <div>
+              <div class="captain-header-title">Captain 指挥官</div>
+              <div class="captain-header-sub">AI 多智能体总调度系统</div>
             </div>
+          </div>
+          <div class="captain-live">
+            <span class="captain-live-dot"></span>
+            LIVE
           </div>
         </div>
 
         <!-- 对话区 -->
         <div class="captain-main">
+          <!-- 输入区 (顶部) -->
+          <div class="captain-compose">
+            <input
+              ref="captainInputRef"
+              v-model="captainInput"
+              class="captain-compose-input"
+              placeholder="输入目标，Captain 自动调度 Agency..."
+              @keydown.enter.prevent="sendCaptain()"
+              :disabled="captainLoading"
+            />
+            <div class="captain-compose-actions">
+              <button v-if="captainMessages.length > 0" class="compose-clear" @click="captainMessages = []" title="清空对话">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+              </button>
+              <button class="compose-send" :disabled="captainLoading || !captainInput.trim()" @click="sendCaptain()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              </button>
+            </div>
+          </div>
+
           <!-- 消息区 -->
           <div ref="chatScrollRef" class="captain-feed">
             <!-- 空状态 -->
@@ -227,26 +276,6 @@
             <div v-if="captainLoading" class="feed-thinking">
               <span class="feed-thinking-label">🎯 Captain</span>
               <div class="feed-dots"><span></span><span></span><span></span></div>
-            </div>
-          </div>
-
-          <!-- 输入区 -->
-          <div class="captain-compose">
-            <input
-              ref="captainInputRef"
-              v-model="captainInput"
-              class="captain-compose-input"
-              placeholder="输入目标，Captain 自动调度 Agency..."
-              @keydown.enter.prevent="sendCaptain()"
-              :disabled="captainLoading"
-            />
-            <div class="captain-compose-actions">
-              <button v-if="captainMessages.length > 0" class="compose-clear" @click="captainMessages = []" title="清空对话">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-              </button>
-              <button class="compose-send" :disabled="captainLoading || !captainInput.trim()" @click="sendCaptain()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-              </button>
             </div>
           </div>
         </div>
@@ -796,6 +825,21 @@ async function sendCaptain(text?: string) {
   white-space: nowrap;
 }
 
+/* ── Workspace header (above cards) ── */
+.workspace-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.workspace-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #1d1d1f;
+  margin: 0;
+}
+
 /* ── Hero ── */
 .hero {
   padding: 100px 48px 72px;
@@ -863,7 +907,7 @@ async function sendCaptain(text?: string) {
   align-items: flex-start;
   max-width: 1400px;
   margin: 0 auto 40px;
-  padding: 0 32px;
+  padding: 16px 32px 0;
 }
 
 .cards-col {
@@ -874,9 +918,9 @@ async function sendCaptain(text?: string) {
 /* ── Cards ── */
 .cards-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-  margin: 0 0 0;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 0;
   padding: 0;
 }
 
@@ -884,11 +928,11 @@ async function sendCaptain(text?: string) {
   position: relative;
   background: #f5f5f7;
   border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 28px;
-  padding: 36px 32px;
+  border-radius: 24px;
+  padding: 26px 24px;
   cursor: pointer;
   overflow: hidden;
-  transition: transform 1s cubic-bezier(0.23,1,0.32,1), box-shadow 1s cubic-bezier(0.23,1,0.32,1);
+  transition: transform 0.6s cubic-bezier(0.23,1,0.32,1), box-shadow 0.6s cubic-bezier(0.23,1,0.32,1);
   display: flex;
   flex-direction: column;
 }
@@ -898,9 +942,10 @@ async function sendCaptain(text?: string) {
   box-shadow: 0 60px 100px rgba(0,0,0,0.09);
 }
 
-.portal-card-blue { background: #ffffff; }
-
-.portal-card-dim { cursor: default; }
+.portal-card-blue   { background: #ffffff; }
+.portal-card-purple { background: #faf5ff; border-color: rgba(124,58,237,0.08); }
+.portal-card-green  { background: #f0fdf9; border-color: rgba(5,150,105,0.08); }
+.portal-card-dim    { cursor: default; }
 .portal-card-dim:hover { transform: none; box-shadow: none; }
 
 .card-bg-icon {
@@ -916,36 +961,40 @@ async function sendCaptain(text?: string) {
 .portal-card:hover .card-bg-icon { opacity: 0.06; }
 
 .card-icon {
-  width: 84px;
-  height: 84px;
-  border-radius: 28px;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 36px;
+  margin-bottom: 20px;
   transition: transform 0.6s cubic-bezier(0.23,1,0.32,1);
   flex-shrink: 0;
 }
 .portal-card:hover .card-icon { transform: rotate(-6deg) scale(1.08); }
 
-.card-icon-dark { background: #1d1d1f; box-shadow: 0 16px 40px rgba(0,0,0,0.22); }
-.card-icon-blue  { background: #0071e3; box-shadow: 0 16px 40px rgba(0,113,227,0.3); }
-.card-icon-dim   { background: rgba(29,29,31,0.06); color: rgba(29,29,31,0.25); }
+.card-icon-dark   { background: #1d1d1f; box-shadow: 0 12px 32px rgba(0,0,0,0.22); }
+.card-icon-blue   { background: #0071e3; box-shadow: 0 12px 32px rgba(0,113,227,0.3); }
+.card-icon-purple { background: linear-gradient(135deg,#7c3aed,#a855f7); box-shadow: 0 12px 32px rgba(124,58,237,0.25); }
+.card-icon-green  { background: linear-gradient(135deg,#059669,#10b981); box-shadow: 0 12px 32px rgba(5,150,105,0.25); }
+.card-icon-dim    { background: rgba(29,29,31,0.06); color: rgba(29,29,31,0.25); }
+
+.card-body { flex: 1; min-width: 0; }
 
 .card-title {
-  font-size: clamp(24px, 2.8vw, 34px);
+  font-size: clamp(17px, 2vw, 22px);
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   color: #1d1d1f;
-  margin: 0 0 16px;
-  line-height: 1.05;
+  margin: 0 0 10px;
+  line-height: 1.15;
 }
 
 .card-desc {
-  font-size: 15px;
+  font-size: 13px;
   color: rgba(29,29,31,0.42);
-  line-height: 1.7;
-  margin: 0 0 24px;
+  line-height: 1.6;
+  margin: 0 0 16px;
   font-weight: 500;
   flex: 1;
 }
@@ -953,12 +1002,12 @@ async function sendCaptain(text?: string) {
 .card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 32px;
+  gap: 5px;
+  margin-bottom: 20px;
 }
 
 .tag {
-  padding: 5px 13px;
+  padding: 4px 10px;
   background: rgba(0,0,0,0.06);
   border-radius: 999px;
   font-size: 10px;
@@ -967,23 +1016,22 @@ async function sendCaptain(text?: string) {
   letter-spacing: 0.02em;
 }
 
-.tag-blue {
-  background: rgba(0,113,227,0.08);
-  color: #0071e3;
-}
+.tag-blue   { background: rgba(0,113,227,0.08); color: #0071e3; }
+.tag-purple { background: rgba(124,58,237,0.08); color: #7c3aed; }
+.tag-green  { background: rgba(5,150,105,0.08);  color: #059669; }
 
 .card-arrow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 6px;
+  font-size: 12px;
   font-weight: 700;
-  color: rgba(29,29,31,0.3);
+  color: rgba(29,29,31,0.25);
   transition: gap 0.4s cubic-bezier(0.23,1,0.32,1), color 0.3s;
   letter-spacing: -0.01em;
 }
 .portal-card-blue .card-arrow { color: #1d1d1f; }
-.portal-card:hover:not(.portal-card-dim) .card-arrow { gap: 18px; color: #1d1d1f; }
+.portal-card:hover:not(.portal-card-dim) .card-arrow { gap: 12px; color: #1d1d1f; }
 .portal-card-blue:hover .card-arrow { color: #0071e3; }
 
 /* ── Platform Description ── */
@@ -1143,6 +1191,33 @@ async function sendCaptain(text?: string) {
   position: sticky;
   top: 24px;
 }
+
+/* Captain header (outside the dialog box) */
+.captain-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 12px;
+}
+.captain-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.captain-header-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1d1d1f;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+.captain-header-sub {
+  font-size: 11px;
+  color: rgba(29,29,31,0.35);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
 .captain-main {
   display: flex;
   flex-direction: column;
@@ -1150,9 +1225,9 @@ async function sendCaptain(text?: string) {
   border-radius: 20px;
   background: #fff;
   overflow: hidden;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
-  min-height: 480px;
-  max-height: calc(100vh - 120px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  min-height: 420px;
+  max-height: calc(100vh - 200px);
 }
 
 /* ── 左侧身份栏 ── */
@@ -1409,8 +1484,9 @@ async function sendCaptain(text?: string) {
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-top: 1px solid #f0f0f5;
+  border-bottom: 1px solid #f0f0f5;
   background: #fafbfc;
+  flex-shrink: 0;
 }
 .captain-compose-input {
   flex: 1;

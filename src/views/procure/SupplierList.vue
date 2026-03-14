@@ -429,7 +429,18 @@ const formData = reactive<any>({
 function openView(row: any) {
   isViewMode.value = true
   formTitle.value = '查看供应商'
-  Object.assign(formData, { id: 0, name: '', contact: '', mobile: '', cate_id: null, address: '', remark: '', ...row, cate_id: cateMap.value[row.id] ?? null })
+  const nextData = {
+    id: 0,
+    name: '',
+    contact: '',
+    mobile: '',
+    cate_id: null as any,
+    address: '',
+    remark: '',
+    ...row,
+  }
+  nextData.cate_id = cateMap.value[row.id] ?? null
+  Object.assign(formData, nextData)
   formVisible.value = true
   financeInfo.debtBalance = 0; financeInfo.totalPurchase = 0; financeInfo.totalPaid = 0; financeInfo.prepaid = 0
   loadFinanceInfo(row.id)
@@ -438,11 +449,18 @@ function openView(row: any) {
 function openForm(row?: any) {
   isViewMode.value = false
   formTitle.value = row ? '编辑供应商' : '新增供应商'
-  Object.assign(formData, {
-    id: 0, name: '', contact: '', mobile: '', cate_id: null, address: '', remark: '',
+  const nextData = {
+    id: 0,
+    name: '',
+    contact: '',
+    mobile: '',
+    cate_id: null as any,
+    address: '',
+    remark: '',
     ...(row ?? {}),
-    cate_id: row ? (cateMap.value[row.id] ?? null) : null,
-  })
+  }
+  nextData.cate_id = row ? (cateMap.value[row.id] ?? null) : null
+  Object.assign(formData, nextData)
   formVisible.value = true
   if (row?.id) {
     financeInfo.debtBalance = 0

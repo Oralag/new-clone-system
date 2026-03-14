@@ -31,10 +31,10 @@
         <div class="guide-progress-bar" :style="{ width: `${guide.progressPercent}%` }" />
       </div>
 
-      <div v-if=”!targetRect” class=”guide-status guide-status-warn”>
-        已进入目标页面，正在定位操作位置；如果没高亮出来，可点击”重新定位”。
+      <div v-if="!targetRect" class="guide-status guide-status-warn">
+        已进入目标页面，正在定位操作位置；如果没高亮出来，可点击"重新定位"。
       </div>
-      <div v-else class=”guide-status guide-status-success”>
+      <div v-else class="guide-status guide-status-success">
         页面中的高亮区域就是你当前需要操作的位置。
       </div>
 
@@ -76,11 +76,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useGuideStore } from '@/stores/guide'
 
 const guide = useGuideStore()
 const route = useRoute()
+const router = useRouter()
 
 const targetRect = ref<DOMRect | null>(null)
 const step = computed(() => guide.currentStepData)
@@ -251,8 +252,8 @@ const panelStyle = computed(() => {
 
 watch(
   () => [guide.active, guide.currentStep, guide.currentAction, route.path],
-  ([active, step, action], prev) => {
-    if (!active) {
+  () => {
+    if (!guide.active) {
       clearRetryTimer()
       clearAutoAdvanceTimer()
       unbindTargetElement()
@@ -262,7 +263,7 @@ watch(
     // 自动跳转到当前步骤对应页面
     const targetPath = currentAction.value.path
     if (targetPath && route.path !== targetPath) {
-      guide.navigateToCurrentAction()
+      router.push(targetPath)
       return
     }
     locateTarget(true)

@@ -873,12 +873,12 @@ async function loadDashboardData(force = false) {
   try {
     const today = getToday()
     const [saleRes, retailRes, customerRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
-      http.get('/stock/SaleOutOrder/index',     { params: { list_rows: 2000 } }),
-      http.get('/retail/order/index',           { params: { list_rows: 2000 } }),
+      http.get('/stock/SaleOutOrder/index',     { params: { list_rows: 200 } }),
+      http.get('/retail/order/index',           { params: { list_rows: 200 } }),
       http.get('/shop/ShopCustomer/index',      { params: { list_rows: 1 } }),
-      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 2000 } }),
-      http.get('/goods/ShopGoods/index',        { params: { list_rows: 2000, status: 1 } }),
-      http.get('/finance/fundFlow/index',       { params: { list_rows: 500 } }),
+      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 200 } }),
+      http.get('/goods/ShopGoods/index',        { params: { list_rows: 500, status: 1 } }),
+      http.get('/finance/fundFlow/index',       { params: { list_rows: 100 } }),
     ])
 
     const rows = (r: PromiseSettledResult<any>) =>
@@ -920,29 +920,14 @@ async function loadDashboardData(force = false) {
     void loadRankData(saleRows, retailRows)
     drawTrendChart(trendDays.value)
 
-    // Build AI insights from real data
-    try {
-      const receivableRes = await http.get('/finance/Receivable/index', { params: { list_rows: 1000 } })
-      const receivableRows = receivableRes?.data?.rows ?? []
-      const pendingReceivable = receivableRows
-        .filter((r: any) => Number(r.status) !== 1 && Number(r.un_collect || r.amount || 0) > 0)
-        .reduce((s: number, r: any) => s + Number(r.un_collect || r.amount || 0), 0)
-      buildInsights({
-        todaySale: saleAmt + retailAmt,
-        stockWarn: Number(stats.value[3].value) || 0,
-        customerCount: Number(stats.value[2].value) || 0,
-        todayOrders: todaySale.length + todayRetail.length,
-        pendingReceivable,
-      })
-    } catch {
-      buildInsights({
-        todaySale: saleAmt + retailAmt,
-        stockWarn: Number(stats.value[3].value) || 0,
-        customerCount: Number(stats.value[2].value) || 0,
-        todayOrders: todaySale.length + todayRetail.length,
-        pendingReceivable: 0,
-      })
-    }
+    // Build AI insights from real data (skip extra API call on mobile)
+    buildInsights({
+      todaySale: saleAmt + retailAmt,
+      stockWarn: Number(stats.value[3].value) || 0,
+      customerCount: Number(stats.value[2].value) || 0,
+      todayOrders: todaySale.length + todayRetail.length,
+      pendingReceivable: 0,
+    })
     lastRefreshAt = Date.now()
   } finally {
     dashboardLoading.value = false

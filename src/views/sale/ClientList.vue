@@ -513,13 +513,22 @@ const formData = reactive<any>({
 
 function openForm(row?: any) {
   formTitle.value = row ? '编辑客户' : '新增客户'
-  Object.assign(formData, {
-    id: 0, nickname: '', mobile: '', cate_id: null, level_id: null, source: null, source_id: null, address: '', remark: '',
+  const nextData = {
+    id: 0,
+    nickname: '',
+    mobile: '',
+    cate_id: null as any,
+    level_id: null as any,
+    source: null as any,
+    source_id: null as any,
+    address: '',
+    remark: '',
     ...(row ?? {}),
-    cate_id: row ? (cateMap.value[row.id] ?? null) : null,
-    level_id: row ? (customerLevelMap.value[row.id] ?? null) : null,
-    source_id: row ? (customerSourceMap.value[row.id] ?? null) : null,
-  })
+  }
+  nextData.cate_id = row ? (cateMap.value[row.id] ?? null) : null
+  nextData.level_id = row ? (customerLevelMap.value[row.id] ?? null) : null
+  nextData.source_id = row ? (customerSourceMap.value[row.id] ?? null) : null
+  Object.assign(formData, nextData)
   formVisible.value = true
   // 编辑模式：加载财务信息
   if (row?.id) {

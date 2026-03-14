@@ -115,6 +115,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
+import { buildCustomerPrepayBreakdown, getPrepayRowKey } from '@/utils/prepay'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -123,31 +124,30 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
 
-// 核销金额 map: prepay order_sn -> used amount
-const usedAmountMap = ref<Record<string, number>>({})
+const rowStatMap = ref<Record<string, { used_amount: number; balance: number }>>({})
+const collectReceiptRows = ref<any[]>([])
+const allMatchedRows = ref<any[]>([])
 
-async function loadUsedAmounts() {
+async function loadCollectReceipts() {
   try {
     const res = await http.get('/finance/CollectReceipt/index', { params: { list_rows: 2000 } })
-    const receipts: any[] = res.data?.rows ?? []
-    const map: Record<string, number> = {}
-    for (const r of receipts) {
-      if (String(r.remark || '').includes('预付款核销')) {
-        const cid = Number(r.customer_id)
-        if (cid) map[`c_${cid}`] = (map[`c_${cid}`] || 0) + Number(r.amount || 0)
-      }
-    }
-    usedAmountMap.value = map
+    collectReceiptRows.value = res.data?.rows ?? []
   } catch { /* ignore */ }
 }
 
 function getUsedAmount(row: any): number {
-  if (row.pay_type !== 'customer') return 0
-  return usedAmountMap.value[`c_${row.customer_id}`] ?? 0
+  const key = getPrepayRowKey(row)
+  return Number(rowStatMap.value[key]?.used_amount || 0)
 }
 
 function getBalance(row: any): number {
+  const key = getPrepayRowKey(row)
+  if (rowStatMap.value[key]) return Number(rowStatMap.value[key].balance || 0)
   return Math.max(0, Number(row.amount || 0) - getUsedAmount(row))
+}
+
+function rebuildRowStats() {
+  rowStatMap.value = buildCustomerPrepayBreakdown(allMatchedRows.value, collectReceiptRows.value).rowStats
 }
 
 const search = reactive({ keyword: '', pay_type: '' })
@@ -180,9 +180,17 @@ async function loadData() {
     const params: any = { page: page.value, list_rows: pageSize.value }
     if (search.pay_type) params.pay_type = search.pay_type
     if (search.keyword) params.keyword = search.keyword
-    const res = await http.get('/finance/Prepay/index', { params })
-    tableData.value = res.data?.rows || []
-    total.value = res.data?.total || 0
+    const allParams: any = { list_rows: 2000 }
+    if (search.pay_type) allParams.pay_type = search.pay_type
+    if (search.keyword) allParams.keyword = search.keyword
+    const [pageRes, allRes] = await Promise.all([
+      http.get('/finance/Prepay/index', { params }),
+      http.get('/finance/Prepay/index', { params: allParams }),
+    ])
+    tableData.value = pageRes.data?.rows || []
+    total.value = pageRes.data?.total || 0
+    allMatchedRows.value = allRes.data?.rows || []
+    rebuildRowStats()
   } finally {
     loading.value = false
   }
@@ -251,7 +259,7 @@ async function handleDelete(id: number) {
 onMounted(() => {
   loadData()
   loadFunds()
-  loadUsedAmounts()
+  loadCollectReceipts().then(rebuildRowStats)
 })
 </script>
 

@@ -343,6 +343,7 @@ import { getProcureOrderList } from '@/api/procure'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { getExpenseList } from '@/api/finance'
 import http from '@/api/http'
+import { buildCustomerPrepayBreakdown } from '@/utils/prepay'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
@@ -419,50 +420,40 @@ const netMargin = computed(() => {
   return income > 0 ? (netProfit.value / income * 100) : 0
 })
 
-// --- Prepay: total received, used (核销), balance ---
-// prepay row has: amount, used_amount (or we approximate from balance field)
+const prepayBreakdown = computed(() => buildCustomerPrepayBreakdown(prepayList.value, collectReceipts.value))
+const prepayCustomerStats = computed(() => prepayBreakdown.value.customerStats)
 const prepayTotalAmount = computed(() =>
-  prepayList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
+  prepayCustomerStats.value.reduce((sum, item) => sum + Number(item.total_amount || 0), 0)
 )
 const prepayUsedAmount = computed(() =>
-  prepayList.value.reduce((s, r) => s + Number(r.used_amount || r.received_amount || 0), 0)
+  prepayCustomerStats.value.reduce((sum, item) => sum + Number(item.used_amount || 0), 0)
 )
 const prepayBalance = computed(() =>
-  prepayList.value.reduce((s, r) => {
-    const used = Number(r.used_amount || r.received_amount || 0)
-    return s + Math.max(0, Number(r.amount || 0) - used)
-  }, 0)
+  prepayCustomerStats.value.reduce((sum, item) => sum + Number(item.balance || 0), 0)
 )
+
+function normalizeName(value: any): string {
+  return String(value ?? '').trim().toLowerCase()
+}
 
 // Build verify rows: per-customer view of which contracts were paid via prepay (核销)
 // CollectReceipt records with "预付款核销" in remark → keyed by customer_id
 const prepayVerifyRows = computed(() => {
-  // receipts that are prepay 核销
-  const verifyReceipts = collectReceipts.value.filter(r =>
-    String(r.remark || '').includes('预付款核销')
-  )
-  if (verifyReceipts.length === 0) return []
-
-  // group used amounts by customer_id
-  const usedMap: Record<number, { customer_name: string; used_amount: number }> = {}
-  for (const r of verifyReceipts) {
-    const cid = Number(r.customer_id)
-    if (!cid) continue
-    if (!usedMap[cid]) usedMap[cid] = { customer_name: r.customer_name || r.contact_name || `客户${cid}`, used_amount: 0 }
-    usedMap[cid].used_amount += Number(r.amount || 0)
-  }
-
-  // for each customer with 核销, find matching sale contracts
-  return Object.entries(usedMap).map(([cidStr, info]) => {
-    const cid = Number(cidStr)
-    const contracts = saleContracts.value.filter(c => Number(c.customer_id) === cid)
-    return {
-      customer_id: cid,
-      customer_name: info.customer_name,
-      used_amount: info.used_amount,
-      contracts,
-    }
-  }).sort((a, b) => b.used_amount - a.used_amount)
+  return prepayCustomerStats.value
+    .filter(item => Number(item.used_amount || 0) > 0)
+    .map(item => {
+      const contracts = saleContracts.value.filter(c => {
+        if (item.customer_id) return Number(c.customer_id) === Number(item.customer_id)
+        return normalizeName(c.customer_name) === normalizeName(item.customer_name)
+      })
+      return {
+        customer_id: item.customer_id || 0,
+        customer_name: item.customer_name,
+        used_amount: Number(item.used_amount || 0),
+        contracts,
+      }
+    })
+    .sort((a, b) => b.used_amount - a.used_amount)
 })
 
 // grossProfit now uses BOM/cost_price based unit cost
@@ -549,6 +540,18 @@ async function loadAll() {
     params.end_date = dateRange.value[1]
   }
   try {
+    const receiptParams: any = { list_rows: 2000 }
+    if (dateRange.value) {
+      receiptParams.start_date = dateRange.value[0]
+      receiptParams.end_date = dateRange.value[1]
+    }
+
+    const prepayParams: any = { list_rows: 500, pay_type: 'customer' }
+    if (dateRange.value) {
+      prepayParams.start_date = dateRange.value[0]
+      prepayParams.end_date = dateRange.value[1]
+    }
+
     const [contracts, retail, procure, stock, goods, bom, expense, prepay, receipts] = await Promise.allSettled([
       getContractList(params),
       getRetailOrderList(params),
@@ -557,8 +560,8 @@ async function loadAll() {
       getGoodsList({ list_rows: 500 }),
       getBomList({ list_rows: 500 }),
       getExpenseList({ ...params }),
-      http.get('/finance/Prepay/index', { params: { list_rows: 500, pay_type: 'customer' } }),
-      http.get('/finance/CollectReceipt/index', { params: { list_rows: 2000 } }),
+      http.get('/finance/Prepay/index', { params: prepayParams }),
+      http.get('/finance/CollectReceipt/index', { params: receiptParams }),
     ])
     saleContracts.value = contracts.status === 'fulfilled'
       ? (contracts.value?.data?.rows ?? contracts.value?.data?.data ?? []) : []

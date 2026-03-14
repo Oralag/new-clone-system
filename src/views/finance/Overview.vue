@@ -257,8 +257,10 @@
         <el-icon :size="12" style="margin-left:auto"><component :is="flowVisible ? 'ArrowUp' : 'ArrowDown'" /></el-icon>
       </div>
       <div v-if="flowVisible">
-        <el-table :data="fundFlowList" size="small" border style="width:100%">
+        <el-table :data="normalizedFundFlowList" size="small" border style="width:100%">
           <el-table-column prop="fund_name" label="账户" width="130" />
+          <el-table-column prop="source" label="来源" width="110" />
+          <el-table-column prop="name" label="对象" min-width="120" show-overflow-tooltip />
           <el-table-column label="类型" width="80" align="center">
             <template #default="{ row }">
               <el-tag :type="row.flow_type === 'income' ? 'success' : 'danger'" size="small">
@@ -276,6 +278,7 @@
           <el-table-column label="余额" width="120" align="right">
             <template #default="{ row }">¥{{ Number(row.after_balance||0).toFixed(2) }}</template>
           </el-table-column>
+          <el-table-column prop="order_no" label="单号" min-width="130" show-overflow-tooltip />
           <el-table-column prop="remark" label="摘要" min-width="200" show-overflow-tooltip />
           <el-table-column label="时间" width="160" prop="created_at" />
         </el-table>
@@ -401,6 +404,7 @@ import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, Ar
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 import { getFundList } from '@/api/finance'
+import { normalizeFundFlowRows, sumFundFlowIncome, sumFundFlowExpense } from '@/utils/fundFlow'
 
 const router = useRouter()
 
@@ -419,28 +423,16 @@ const retailList = ref<any[]>([])
 const flowVisible = ref(false)
 const chartW = 480
 
-// 资金余额 = 收入合计 - 支出合计（与资金明细页算法完全一致）
+// 资金余额以账户实时余额为准；收入/支出以资金流水为准
 const rechargeList = ref<any[]>([])
 const expenseList = ref<any[]>([])
 
-const collectTotal = computed(() => {
-  const receiptTotal = collectList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
-  const retailIncomeTotal = retailList.value.reduce((s, r) => s + Number(r.pay_amount || r.total_amount || 0), 0)
-  const rechargeTotal = rechargeList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
-  return (receiptTotal + retailIncomeTotal + rechargeTotal).toFixed(2)
-})
-// 资金支出 = 付款单 + 费用
-const payTotal = computed(() => {
-  const payReceiptTotal = payList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
-  const expenseTotal = expenseList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
-  return (payReceiptTotal + expenseTotal).toFixed(2)
-})
-
-const fundTotal = computed(() => {
-  const income = Number(collectTotal.value)
-  const expense = Number(payTotal.value)
-  return Math.max(0, income - expense).toFixed(2)
-})
+const normalizedFundFlowList = computed(() => normalizeFundFlowRows(fundFlowList.value))
+const collectTotal = computed(() => sumFundFlowIncome(normalizedFundFlowList.value).toFixed(2))
+const payTotal = computed(() => sumFundFlowExpense(normalizedFundFlowList.value).toFixed(2))
+const fundTotal = computed(() =>
+  fundList.value.reduce((sum, row) => sum + Number(row.balance || 0), 0).toFixed(2)
+)
 const prepayTotal = computed(() =>
   prepayList.value.filter((r: any) => r.pay_type === 'customer').reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
 )
@@ -487,8 +479,9 @@ function buildTrend(type: string) {
     const key = d.toISOString().slice(0, 10)
     map[key] = 0
   }
-  for (const r of fundFlowList.value) {
-    if (r.flow_type !== type) continue
+  for (const r of normalizedFundFlowList.value) {
+    if (type === 'income' && r.flow_type !== 'income') continue
+    if (type === 'expense' && r.flow_type === 'income') continue
     const day = (r.created_at || '').slice(0, 10)
     if (map[day] !== undefined) map[day] += Number(r.amount || 0)
   }
@@ -502,11 +495,11 @@ const trendExpense = computed(() => buildTrend('expense'))
 const summaryCards = computed(() => {
   const income = Number(collectTotal.value)
   const expense = Number(payTotal.value)
-  const balance = Math.max(0, income - expense).toFixed(2)
+  const balance = fundTotal.value
   return [
-  { key: 'fund', label: '资金余额', value: balance, sub: `= 收入 ¥${income.toFixed(2)} − 支出 ¥${expense.toFixed(2)}`, color: '#0071e3', bg: 'rgba(0,113,227,0.08)', icon: 'Wallet', route: '/finance/fund-flow' },
-  { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `收款${collectList.value.length}笔 + 零售${retailList.value.length}笔`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/collect-receipt' },
-  { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${payList.value.length} 笔付款`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/pay-receipt' },
+  { key: 'fund', label: '资金余额', value: balance, sub: `${fundList.value.length} 个账户实时余额`, color: '#0071e3', bg: 'rgba(0,113,227,0.08)', icon: 'Wallet', route: '/finance/fund' },
+  { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${normalizedFundFlowList.value.filter(r => r.flow_type === 'income').length} 笔已入账流水`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow' },
+  { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${normalizedFundFlowList.value.filter(r => r.flow_type !== 'income').length} 笔已出账流水`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow' },
 { key: 'payable', label: '应付总额', value: payableTotal.value, sub: `${payableList.value.filter((r) => getPayableUnpaidAmount(r) > 0).length} 笔欠款`, color: '#ff4d4f', bg: '#fff1f0', icon: 'DocumentChecked', route: '/finance/payable' },
   { key: 'receivable', label: '应收总额', value: receivableTotal.value, sub: `${receivableList.value.length} 笔待收`, color: '#16a34a', bg: '#e6f7f0', icon: 'DocumentChecked', route: '/finance/receivable' },
   ]
@@ -713,20 +706,20 @@ onMounted(async () => {
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
     ])
-    fundList.value = fundRes.data?.rows ?? []
-    prepayList.value = prepayRes.data?.rows ?? []
-    collectList.value = collectRes.data?.rows ?? []
-    payList.value = payRes.data?.rows ?? []
-    receivableList.value = receivableRes.data?.rows ?? []
-    payableList.value = payableRes.data?.rows ?? []
-    fundFlowList.value = flowRes.data?.rows ?? []
-    purchasePayList.value = (purchaseRes.data?.rows ?? []).filter((r: any) => Number(r.status) === 1)
-    expenseList.value = expenseRes.data?.rows ?? []
+    fundList.value = fundRes.data?.rows ?? fundRes.data?.list ?? []
+    prepayList.value = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
+    collectList.value = collectRes.data?.rows ?? collectRes.data?.list ?? []
+    payList.value = payRes.data?.rows ?? payRes.data?.list ?? []
+    receivableList.value = receivableRes.data?.rows ?? receivableRes.data?.list ?? []
+    payableList.value = payableRes.data?.rows ?? payableRes.data?.list ?? []
+    fundFlowList.value = flowRes.data?.rows ?? flowRes.data?.list ?? []
+    purchasePayList.value = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
+    expenseList.value = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
     clientList.value = clientRes.data?.rows ?? clientRes.data?.list ?? []
     supplierList.value = supplierRes.data?.rows ?? supplierRes.data?.list ?? []
-    saleOutList.value = saleOutRes.data?.rows ?? []
-    retailList.value = retailRes.data?.rows ?? []
-    rechargeList.value = rechargeRes.data?.rows ?? []
+    saleOutList.value = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
+    retailList.value = retailRes.data?.rows ?? retailRes.data?.list ?? []
+    rechargeList.value = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
   } catch {}
 })
 </script>

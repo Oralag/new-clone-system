@@ -308,22 +308,33 @@ export const useGuideStore = defineStore('guide', {
       if (this.isFinished) {
         this.resetGuide()
       }
+      this.active = false
       this.currentStep = typeof index === 'number' ? index : this.getFirstPendingStep()
       this.currentAction = 0
-      this.active = true
       this.persist()
-      this.navigateToCurrentAction()
+      // nextTick 后再设 active=true，确保 watch 能感知变化并触发跳转
+      import('vue').then(({ nextTick }) => {
+        nextTick(() => {
+          this.active = true
+          this.persist()
+        })
+      })
     },
 
     resumeGuide() {
       if (this.isFinished) {
         this.resetGuide()
       }
-      this.active = true
+      this.active = false
       this.currentStep = this.getFirstPendingStep()
       this.currentAction = 0
       this.persist()
-      this.navigateToCurrentAction()
+      import('vue').then(({ nextTick }) => {
+        nextTick(() => {
+          this.active = true
+          this.persist()
+        })
+      })
     },
 
     pauseGuide() {
@@ -338,10 +349,16 @@ export const useGuideStore = defineStore('guide', {
 
     openStep(index: number) {
       if (!this.canOpenStep(index) && index > this.currentStep) return
+      this.active = false
       this.currentStep = Math.max(0, Math.min(index, this.steps.length - 1))
       this.currentAction = 0
       this.persist()
-      this.navigateToCurrentAction()
+      import('vue').then(({ nextTick }) => {
+        nextTick(() => {
+          this.active = true
+          this.persist()
+        })
+      })
     },
 
     goPrevActionOrStep() {

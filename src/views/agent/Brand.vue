@@ -668,41 +668,38 @@ async function submitVideoGeneration(prompt: string): Promise<string> {
   }
 }
 
-async function callFlowAI(prompt: string): Promise<string> {
-  const response = await fetch('/api/ai-chat', {
+async function callAgentAI(agentId: string, prompt: string): Promise<string> {
+  const token = localStorage.getItem('erp_token') || ''
+  const response = await fetch('/api/agent-chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-erp-token': localStorage.getItem('erp_token') || '' },
-    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], noTools: true }),
+    headers: {
+      'Content-Type': 'application/json',
+      'x-erp-token': token,
+      'x-agent-id': agentId,
+    },
+    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], agentId }),
   })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  const contentType = response.headers.get('content-type') || ''
+  if (!response.ok) throw new Error(`Agent ${agentId} HTTP ${response.status}`)
+  const reader = response.body?.getReader()
+  const decoder = new TextDecoder()
+  if (!reader) throw new Error('无法读取响应')
   let text = ''
-  if (contentType.includes('text/event-stream')) {
-    const reader = response.body?.getReader()
-    const decoder = new TextDecoder()
-    if (!reader) throw new Error('无法读取响应')
-    let done = false
-    while (!done) {
-      const chunk = await reader.read()
-      done = chunk.done
-      for (const line of decoder.decode(chunk.value, { stream: !done }).split('\n')) {
-        if (!line.startsWith('data: ')) continue
-        const data = line.slice(6).trim()
-        if (data === '[DONE]') {
-          done = true
-          break
-        }
-        try {
-          const parsed = JSON.parse(data)
-          if (parsed.type === 'text' && parsed.text) text += parsed.text
-        } catch {
-          // ignore malformed SSE frames
-        }
-      }
+  let buffer = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const raw = line.slice(6).trim()
+      if (raw === '[DONE]') break
+      try {
+        const ev = JSON.parse(raw)
+        if (ev.type === 'text' && ev.text) text += ev.text
+      } catch {}
     }
-  } else {
-    const result = await response.json()
-    text = result.content?.find((block: any) => block.type === 'text')?.text || ''
   }
   return text.trim()
 }
@@ -730,7 +727,7 @@ async function startAutoFlow() {
     const topicList = allItems.slice(0, 20).map((item: any) => item.title).join('\n')
     const productInfo = brand.products?.length ? `核心产品：${brand.products.join('、')}` : ''
     const sellingInfo = brand.sellingPoints ? `产品卖点：${brand.sellingPoints}` : ''
-    const selected = await callFlowAI(
+    const selected = await callAgentAI('trend',
       `以下是当前热搜话题列表：
 ${topicList}
 
@@ -763,7 +760,7 @@ ${sellingInfo}
       for (const platform of videoPlatforms) {
         for (const topic of selectedTopics) {
           autoFlowLog.value[2] = `正在生成视频脚本：${topic}...`
-          const script = await callFlowAI(
+          const script = await callAgentAI('video',
             `请为话题「${topic}」创作一个适合${platformNames[platform]}的短视频脚本，格式：
 场景描述：xxx
 旁白/配音：xxx
@@ -792,7 +789,7 @@ ${sellingInfo}
       for (const platform of posterPlatforms) {
         for (const topic of selectedTopics) {
           autoFlowLog.value[2] = `正在生成图文：${topic}...`
-          const raw = await callFlowAI(
+          const raw = await callAgentAI('poster',
             `请为话题「${topic}」创作一篇${platformNames[platform] || platform}图文帖子，严格按 JSON 输出：
 {"title":"标题(带emoji,25字内)","body":"正文(排版美观,500字内)","tags":["标签1","标签2","标签3","标签4"]}
 符合品牌「${brand.name}」调性，只输出JSON，不要其他内容。`
@@ -817,7 +814,7 @@ ${sellingInfo}
       for (const platform of autoFlow.platforms) {
         for (const topic of selectedTopics) {
           autoFlowLog.value[2] = `正在生成文案：${topic}（${platformNames[platform] || platform}）...`
-          const copy = await callFlowAI(
+          const copy = await callAgentAI('copywriter',
             `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}发布的营销文案，200字以内，语言生动有感染力，结尾带行动号召，符合品牌「${brand.name}」（${brand.industry}）调性，直接输出文案内容。`
           )
           flowItems.push({
@@ -835,7 +832,7 @@ ${sellingInfo}
     if (flowItems.length === 0) {
       for (const platform of autoFlow.platforms) {
         for (const topic of selectedTopics) {
-          const copy = await callFlowAI(
+          const copy = await callAgentAI('copywriter',
             `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}的营销文案，200字以内，符合品牌「${brand.name}」调性，直接输出内容。`
           )
           flowItems.push({
