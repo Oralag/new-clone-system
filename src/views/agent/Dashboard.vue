@@ -1,5 +1,8 @@
 <template>
   <div class="dashboard">
+    <!-- Captain 指挥官 -->
+    <CaptainBar />
+
     <div class="dash-main-header">
       <div>
         <h1 class="dash-title">智能体工作流</h1>
@@ -67,6 +70,7 @@
 <script setup lang="ts">
 import { computed, h, defineComponent } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
+import CaptainBar from '@/components/CaptainBar.vue'
 
 const agentStore = useTrendingStore()
 

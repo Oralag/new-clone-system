@@ -372,19 +372,18 @@ async function sendCaptain(text?: string) {
 </script>
 
 <style scoped>
-/* ── 固定在最顶层，风格匹配 ERP TopBar ── */
+/* ── 智能体工作流页面顶部，风格匹配 ERP TopBar ── */
 .captain-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 9000;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.06);
+  position: relative;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin-bottom: 16px;
 }
 
 /* ── 收起态条 ── */
@@ -531,13 +530,13 @@ async function sendCaptain(text?: string) {
   overflow: hidden;
 }
 .drop-enter-from, .drop-leave-to { max-height: 0; opacity: 0; }
-.drop-enter-to, .drop-leave-from { max-height: 90vh; opacity: 1; }
+.drop-enter-to, .drop-leave-from { max-height: 660px; opacity: 1; }
 
 .drop-panel {
   background: #fff;
   border-top: 1px solid rgba(0,0,0,0.06);
   display: flex;
-  height: calc(100vh - 52px);
+  height: 600px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.1);
 }
 

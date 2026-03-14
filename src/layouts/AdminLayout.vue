@@ -46,6 +46,8 @@
           <span class="footer-brand">游牧观文化传媒出品</span>
           &nbsp;·&nbsp; 数字游牧 ERP 系统 &nbsp;·&nbsp; 保留所有权利
         </div>
+        <!-- 移动端底部占位，防止内容被底部导航遮挡（Safari padding-bottom bug workaround） -->
+        <div v-if="isMobile" class="mobile-scroll-spacer" />
       </div>
     </div>
 
@@ -94,7 +96,6 @@
     </el-drawer>
   </div>
 
-  <CaptainBar />
   <AiAssistant />
   <OnboardingGuide />
 </template>
@@ -105,7 +106,6 @@ import SidebarFlyout from './components/SidebarFlyout.vue'
 import TopBar from './components/TopBar.vue'
 import TagsBar from './components/TagsBar.vue'
 import AiAssistant from '@/components/AiAssistant.vue'
-import CaptainBar from '@/components/CaptainBar.vue'
 import OnboardingGuide from '@/components/OnboardingGuide.vue'
 import TrialBanner from '@/components/TrialBanner.vue'
 import { useTabsStore } from '@/stores/tabs'
@@ -168,9 +168,10 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 </script>
 
 <style scoped>
-.admin-layout { display: flex; height: 100vh; min-height: 100vh; overflow: hidden; background: #ffffff; min-width: 900px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; padding-top: 52px; }
-.admin-layout.is-mobile { min-width: unset; padding-top: 52px; }
+.admin-layout { display: flex; height: 100vh; min-height: 100vh; overflow: hidden; background: #ffffff; min-width: 900px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+.admin-layout.is-mobile { min-width: unset; overflow: auto; height: 100%; }
 .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: #ffffff; }
+.main-container.is-mobile { overflow: visible; height: auto; }
 .page-content { flex: 1; overflow-y: auto; overflow-x: auto; padding: 16px; background: #f5f5f7; }
 .page-footer { text-align: right; font-size: 10px; color: rgba(0,0,0,0.2); padding: 4px 0 6px; letter-spacing: -0.01em; }
 .footer-brand { color: rgba(0,0,0,0.25); font-weight: 600; }
@@ -191,7 +192,9 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 .nav-label { font-size: 11px; line-height: 1; }
 
 /* 移动端内容区底部留白 */
-.page-content.is-mobile { padding: 8px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); overflow-x: hidden; }
+.page-content.is-mobile { padding: 8px; padding-bottom: 8px; overflow-x: hidden; }
+/* Safari bug: padding-bottom in overflow:auto scroll containers is ignored — use a spacer div instead (see template) */
+.mobile-scroll-spacer { height: calc(100px + env(safe-area-inset-bottom, 34px)); flex-shrink: 0; }
 
 /* 移动端抽屉 */
 .drawer-inner { display: flex; flex-direction: column; height: 100%; }

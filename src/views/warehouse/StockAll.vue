@@ -28,7 +28,11 @@
             :class="['sidebar-item', selectedCate === cate.id ? 'active' : '']"
             @click="selectCate(cate.id)"
           >
-            {{ cate.name }}
+            <span class="cate-name">{{ cate.name }}</span>
+            <span class="cate-actions" @click.stop>
+              <el-button type="primary" link size="small" @click.stop="openEditCate(cate)">编辑</el-button>
+              <el-button type="danger" link size="small" @click.stop="handleDeleteCate(cate)">删除</el-button>
+            </span>
           </div>
         </div>
       </div>
@@ -164,15 +168,27 @@
       <el-button type="primary" :loading="safeSaving" @click="saveSafeSetting">保存</el-button>
     </template>
   </el-dialog>
+
+  <el-dialog v-model="editCateDialog" title="编辑分类" width="360px">
+    <el-form label-width="80px">
+      <el-form-item label="分类名称">
+        <el-input v-model="editCateForm.name" placeholder="请输入分类名称" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="editCateDialog = false">取消</el-button>
+      <el-button type="primary" @click="submitEditCate">保存</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getStockList, getWarehouseList } from '@/api/warehouse'
-import { getGoodsList } from '@/api/goods'
+import { getGoodsList, updateGoodsCate, deleteGoodsCate } from '@/api/goods'
 import http from '@/api/http'
 
 const router = useRouter()
@@ -459,12 +475,50 @@ async function loadActivityMaps() {
 }
 
 async function loadMeta() {
-  const [warehouseRes, cateRes] = await Promise.all([
-    getWarehouseList({ list_rows: 200 }),
-    http.get('/goods/ShopGoodsCate/index', { params: { list_rows: 200 } }),
-  ])
+  const warehouseRes = await getWarehouseList({ list_rows: 200 })
   warehouses.value = warehouseRes.data?.rows ?? []
-  categories.value = cateRes.data?.rows ?? []
+}
+
+function buildCategories() {
+  const seen = new Set<string>()
+  const result: any[] = []
+  for (const g of allGoods.value) {
+    const key = String(g.cate_id ?? '')
+    if (g.cate_id && g.cate_name && !seen.has(key)) {
+      seen.add(key)
+      result.push({ id: g.cate_id, name: g.cate_name })
+    }
+  }
+  categories.value = result
+}
+
+const editCateDialog = ref(false)
+const editCateForm = ref<{ id: number; name: string }>({ id: 0, name: '' })
+
+function openEditCate(cate: any) {
+  editCateForm.value = { id: cate.id, name: cate.name }
+  editCateDialog.value = true
+}
+
+async function submitEditCate() {
+  const name = editCateForm.value.name.trim()
+  if (!name) { ElMessage.warning('分类名称不能为空'); return }
+  const dup = categories.value.find(c => c.name === name && c.id !== editCateForm.value.id)
+  if (dup) { ElMessage.warning('已存在同名分类'); return }
+  await updateGoodsCate({ id: editCateForm.value.id, name })
+  ElMessage.success('修改成功')
+  editCateDialog.value = false
+  await loadAllGoods()
+  buildCategories()
+}
+
+async function handleDeleteCate(cate: any) {
+  await ElMessageBox.confirm(`确定删除分类「${cate.name}」？`, '提示', { type: 'warning' })
+  await deleteGoodsCate(cate.id)
+  ElMessage.success('删除成功')
+  if (selectedCate.value === cate.id) selectedCate.value = 0
+  await loadAllGoods()
+  buildCategories()
 }
 
 onMounted(async () => {
@@ -472,6 +526,7 @@ onMounted(async () => {
   try {
     await loadMeta()
     await Promise.all([loadAllGoods(), loadStockMap(), loadActivityMaps()])
+    buildCategories()
   } finally {
     loading.value = false
   }
@@ -538,6 +593,26 @@ onMounted(async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cate-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cate-actions {
+  display: none;
+  flex-shrink: 0;
+  gap: 0;
+}
+
+.sidebar-item:hover .cate-actions {
+  display: flex;
 }
 
 .sidebar-item:hover {
