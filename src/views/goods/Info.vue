@@ -79,9 +79,11 @@
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
-            <el-button :icon="Camera" @click="openListScanner">扫码录入</el-button>
-            <el-button :icon="Upload" @click="triggerImport">导入</el-button>
-            <el-button :icon="Download" @click="downloadTemplate">下载模板</el-button>
+            <template v-if="!isMobileList">
+              <el-button :icon="Camera" @click="openListScanner">扫码录入</el-button>
+              <el-button :icon="Upload" @click="triggerImport">导入</el-button>
+              <el-button :icon="Download" @click="downloadTemplate">下载模板</el-button>
+            </template>
             <input ref="importFileRef" type="file" accept=".xlsx,.xls" style="display:none" @change="handleImportFile" />
           </template>
           <template #selection-actions="{ selectedRows, clearSelection, refresh }">
@@ -93,6 +95,39 @@
             >
               移动
             </el-button>
+          </template>
+
+          <!-- 移动端卡片列表 -->
+          <template #mobile="{ rows, loading: listLoading }">
+            <div v-if="listLoading" style="text-align:center;padding:24px;color:#86909c">加载中...</div>
+            <div v-else-if="!rows.length" style="text-align:center;padding:24px;color:#86909c">暂无数据</div>
+            <template v-else>
+              <div v-for="row in rows" :key="row.id" class="goods-card" @click="openEdit(row)">
+                <div class="goods-card-title">
+                  <span>{{ row.goods_name }}</span>
+                  <el-tag v-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">原材料</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 4" size="small">辅料</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 1" type="success" size="small">成品</el-tag>
+                  <el-tag v-else type="info" size="small">未指定</el-tag>
+                </div>
+                <div class="goods-card-row">
+                  <span class="goods-card-label">分类</span>
+                  <span class="goods-card-value">{{ getCatePathText(row) || '-' }}</span>
+                </div>
+                <div class="goods-card-row">
+                  <span class="goods-card-label">销售价</span>
+                  <span class="goods-card-value blue">{{ row.sell_price ?? '-' }}</span>
+                </div>
+                <div class="goods-card-footer">
+                  <span class="goods-card-sn">{{ row.goods_sn || '' }}</span>
+                  <div style="display:flex;gap:8px">
+                    <el-button type="primary" link size="small" @click.stop="openEdit(row)">编辑</el-button>
+                    <el-button type="danger" link size="small" @click.stop="handleDelete(row.id)">删除</el-button>
+                  </div>
+                </div>
+              </div>
+            </template>
           </template>
           <el-table-column v-if="!isMobileList" type="index" label="序号" width="60" align="center" />
           <el-table-column v-if="!isMobileList" prop="goods_sn" label="商品编码" min-width="120" />
@@ -717,6 +752,7 @@ import {
   getSpecList, createSpec, deleteSpec,
   getBomByGoods,
 } from '@/api/goods'
+import { getStockList } from '@/api/warehouse'
 
 // ── 分类面板 ─────────────────────────────────────────────────────────────────
 const cateOptions = ref<any[]>([])
@@ -1201,6 +1237,18 @@ async function handleSaveAndNew() {
 }
 
 async function handleDelete(id: number) {
+  // 先查库存，有库存则拒绝删除
+  try {
+    const res = await getStockList({ goods_id: id, list_rows: 200 })
+    const rows = res?.data?.rows ?? res?.data ?? []
+    const totalStock = rows.reduce((sum: number, r: any) => sum + (Number(r.stock_num) || Number(r.stock) || 0), 0)
+    if (totalStock > 0) {
+      ElMessage.warning(`该商品当前有库存（${totalStock}），无法删除。如需下架请在编辑中关闭状态。`)
+      return
+    }
+  } catch {
+    // 查库存失败，允许继续删除流程
+  }
   await ElMessageBox.confirm('确定删除该商品？', '提示', { type: 'warning' })
   await deleteGoods(id)
   ElMessage.success('删除成功')
@@ -2229,10 +2277,50 @@ function stopListScanner() {
   .cate-item-actions { display: none !important; }
   .cate-arrow, .cate-arrow-placeholder { display: none !important; }
   .goods-list-wrap { overflow: visible !important; min-height: 0 !important; }
-  .goods-list-wrap :deep(.sc-table) { min-width: 0 !important; padding: 12px !important; }
-  .goods-list-wrap :deep(.el-table__cell) { padding: 8px 0 !important; }
-  .goods-list-wrap :deep(.el-button + .el-button) { margin-left: 6px !important; }
+  .goods-list-wrap :deep(.sc-table) { min-width: 0 !important; padding: 10px !important; }
 }
+
+/* 商品卡片（移动端） */
+.goods-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.goods-card:active { transform: scale(0.99); }
+.goods-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d1d1f;
+  margin-bottom: 10px;
+}
+.goods-card-title span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goods-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 13px;
+}
+.goods-card-label { color: rgba(29,29,31,0.4); font-size: 11px; font-weight: 600; }
+.goods-card-value { font-weight: 600; color: #1d1d1f; }
+.goods-card-value.blue { color: #0071e3; }
+.goods-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.goods-card-sn { font-size: 11px; color: rgba(29,29,31,0.3); }
 
 /* ── 全页表单 ── */
 .form-page {

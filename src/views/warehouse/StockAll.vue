@@ -1,41 +1,54 @@
 <template>
   <div class="stock-page">
-    <div class="stock-sidebar">
+    <div class="stock-sidebar" :style="{ width: sidebarWidth + 'px' }">
+      <div class="sidebar-inner">
+
       <div class="sidebar-col">
-        <div class="sidebar-label">仓库</div>
-        <div class="sidebar-section">
-          <div :class="['sidebar-item', selectedWarehouse === 0 ? 'active' : '']" @click="selectWarehouse(0)">全部</div>
-          <div
-            v-for="warehouse in warehouses"
-            :key="warehouse.id"
-            :class="['sidebar-item', selectedWarehouse === warehouse.id ? 'active' : '']"
-            @click="selectWarehouse(warehouse.id)"
-          >
-            {{ warehouse.name }}
-          </div>
+        <div class="sidebar-label-row">
+          <span class="sidebar-label">分类</span>
+          <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
         </div>
-      </div>
 
-      <div class="sidebar-divider" />
+        <!-- 仓库下拉 -->
+        <el-select
+          v-model="selectedWarehouse"
+          size="small"
+          style="width:100%;margin-bottom:8px"
+          @change="(val) => selectWarehouse(val)"
+        >
+          <el-option label="全部仓库" :value="0" />
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
 
-      <div class="sidebar-col">
-        <div class="sidebar-label">分类</div>
-        <div class="sidebar-section">
+        <div class="sidebar-section" v-loading="cateLoading">
           <div :class="['sidebar-item', selectedCate === 0 ? 'active' : '']" @click="selectCate(0)">全部</div>
-          <div
-            v-for="cate in categories"
-            :key="cate.id"
-            :class="['sidebar-item', selectedCate === cate.id ? 'active' : '']"
-            @click="selectCate(cate.id)"
-          >
-            <span class="cate-name">{{ cate.name }}</span>
-            <span class="cate-actions" @click.stop>
-              <el-button type="primary" link size="small" @click.stop="openEditCate(cate)">编辑</el-button>
-              <el-button type="danger" link size="small" @click.stop="handleDeleteCate(cate)">删除</el-button>
-            </span>
-          </div>
+          <template v-for="item in cateTree" :key="item.id">
+            <div :class="['sidebar-item', selectedCate === item.id ? 'active' : '']" @click="selectCate(item.id)">
+              <el-icon v-if="item.children.length" class="cate-arrow" :class="{ expanded: !collapsedCates.has(item.id) }" @click.stop="toggleCate(item.id)"><ArrowRight /></el-icon>
+              <span v-else class="cate-arrow-placeholder" />
+              <span class="cate-item-name">{{ item.name }}</span>
+              <span class="cate-item-actions">
+                <el-icon class="act-icon" @click.stop="openCateForm(item)"><Edit /></el-icon>
+                <el-icon class="act-icon danger" @click.stop="handleDeleteCate(item.id)"><Delete /></el-icon>
+              </span>
+            </div>
+            <template v-if="!collapsedCates.has(item.id)">
+              <div v-for="child in item.children" :key="child.id"
+                :class="['sidebar-item', 'sidebar-item-child', selectedCate === child.id ? 'active' : '']"
+                @click="selectCate(child.id)"
+              >
+                <span class="cate-item-name">└ {{ child.name }}</span>
+                <span class="cate-item-actions">
+                  <el-icon class="act-icon" @click.stop="openCateForm(child)"><Edit /></el-icon>
+                  <el-icon class="act-icon danger" @click.stop="handleDeleteCate(child.id)"><Delete /></el-icon>
+                </span>
+              </div>
+            </template>
+          </template>
         </div>
       </div>
+      </div><!-- /sidebar-inner -->
+      <div class="sidebar-resize-handle" @mousedown="startResize" />
     </div>
 
     <div style="flex:1;min-width:0">
@@ -169,29 +182,61 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="editCateDialog" title="编辑分类" width="360px">
-    <el-form label-width="80px">
-      <el-form-item label="分类名称">
-        <el-input v-model="editCateForm.name" placeholder="请输入分类名称" />
+  <el-dialog v-model="cateFormVisible" :title="cateFormTitle" width="400px" append-to-body>
+    <el-form :model="cateForm" label-width="90px">
+      <el-form-item label="分类名称" :rules="[{ required: true }]">
+        <el-input v-model="cateForm.name" placeholder="请输入分类名称" />
+      </el-form-item>
+      <el-form-item label="上级分类">
+        <el-select v-model="cateForm.parent_id" placeholder="请选择（可选）" clearable style="width:100%">
+          <el-option v-for="c in cateTree" :key="c.id" :label="c.name" :value="c.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="排序">
+        <el-input-number v-model="cateForm.sort" :min="0" style="width:100%" />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="editCateDialog = false">取消</el-button>
-      <el-button type="primary" @click="submitEditCate">保存</el-button>
+      <el-button @click="cateFormVisible = false">取消</el-button>
+      <el-button type="primary" :loading="cateSaving" @click="handleSaveCate">确定</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, Delete, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getStockList, getWarehouseList } from '@/api/warehouse'
-import { getGoodsList, updateGoodsCate, deleteGoodsCate } from '@/api/goods'
+import { getGoodsList, getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate } from '@/api/goods'
 import http from '@/api/http'
 
 const router = useRouter()
+
+// ── 侧边栏拖拽调宽 ────────────────────────────────────────────────────────────
+const SIDEBAR_MIN = 180
+const SIDEBAR_MAX = 500
+const sidebarWidth = ref(Number(localStorage.getItem('stock_sidebar_w') || 260))
+
+function startResize(e: MouseEvent) {
+  e.preventDefault()
+  const startX = e.clientX
+  const startW = sidebarWidth.value
+  function onMove(ev: MouseEvent) {
+    const w = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startW + ev.clientX - startX))
+    sidebarWidth.value = w
+  }
+  function onUp() {
+    localStorage.setItem('stock_sidebar_w', String(sidebarWidth.value))
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+  }
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+}
+
+onUnmounted(() => {})  // cleanup handled inline above
 const loading = ref(false)
 const tableData = computed(() => {
   const start = (page.value - 1) * pageSize.value
@@ -206,7 +251,88 @@ const selectedCate = ref(0)
 const statusFilter = ref<'all' | 'low' | 'zero' | 'normal'>('all')
 
 const warehouses = ref<any[]>([])
-const categories = ref<any[]>([])
+
+// ── 分类面板 ──────────────────────────────────────────────────────────────────
+const cateOptions = ref<any[]>([])
+const cateLoading = ref(false)
+const collapsedCates = ref<Set<number>>(new Set())
+
+function toggleCate(id: number) {
+  if (collapsedCates.value.has(id)) collapsedCates.value.delete(id)
+  else collapsedCates.value.add(id)
+}
+
+interface CateTreeNode { id: number; name: string; sort: number; parent_id: any; children: CateTreeNode[] }
+
+function buildCateTree(source: any[]) {
+  const all: CateTreeNode[] = source.map(c => ({ ...c, children: [] }))
+  const map: Record<number, CateTreeNode> = {}
+  all.forEach(c => { map[c.id] = c })
+  const roots: CateTreeNode[] = []
+  all.forEach(c => {
+    const pid = c.parent_id
+    if (pid && map[pid]) map[pid].children.push(c)
+    else roots.push(c)
+  })
+  return roots
+}
+
+const cateTree = computed<CateTreeNode[]>(() => buildCateTree(cateOptions.value))
+
+async function loadCates() {
+  cateLoading.value = true
+  try {
+    const res = await getGoodsCateList({ list_rows: 200 })
+    const rows = res.data?.rows ?? []
+    cateOptions.value = rows.sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+  } finally {
+    cateLoading.value = false
+  }
+}
+
+// 分类新增/编辑弹框
+const cateFormVisible = ref(false)
+const cateFormTitle = ref('新增分类')
+const cateSaving = ref(false)
+const cateForm = reactive({ id: 0, name: '', parent_id: null as any, sort: 0 })
+
+function openCateForm(row?: any) {
+  if (row) {
+    Object.assign(cateForm, { id: row.id, name: row.name, parent_id: row.parent_id ?? null, sort: row.sort ?? 0 })
+    cateFormTitle.value = '编辑分类'
+  } else {
+    Object.assign(cateForm, { id: 0, name: '', parent_id: null, sort: 0 })
+    cateFormTitle.value = '新增分类'
+  }
+  cateFormVisible.value = true
+}
+
+async function handleSaveCate() {
+  if (!cateForm.name.trim()) { ElMessage.warning('请输入分类名称'); return }
+  const sameLevelDup = cateOptions.value.find(c =>
+    c.name.trim() === cateForm.name.trim() &&
+    String(c.parent_id ?? '0') === String(cateForm.parent_id ?? '0') &&
+    c.id !== cateForm.id
+  )
+  if (sameLevelDup) { ElMessage.warning(`同级分类下已存在"${cateForm.name}"，请使用其他名称`); return }
+  cateSaving.value = true
+  try {
+    cateForm.id ? await updateGoodsCate(cateForm) : await createGoodsCate(cateForm)
+    ElMessage.success('操作成功')
+    cateFormVisible.value = false
+    await loadCates()
+  } finally {
+    cateSaving.value = false
+  }
+}
+
+async function handleDeleteCate(id: number) {
+  await ElMessageBox.confirm('确定删除该分类？', '提示', { type: 'warning' })
+  await deleteGoodsCate(id)
+  ElMessage.success('删除成功')
+  if (selectedCate.value === id) selectedCate.value = 0
+  await loadCates()
+}
 
 // All goods (from goods table - includes zero-stock items)
 const allGoods = ref<any[]>([])
@@ -479,54 +605,10 @@ async function loadMeta() {
   warehouses.value = warehouseRes.data?.rows ?? []
 }
 
-function buildCategories() {
-  const seen = new Set<string>()
-  const result: any[] = []
-  for (const g of allGoods.value) {
-    const key = String(g.cate_id ?? '')
-    if (g.cate_id && g.cate_name && !seen.has(key)) {
-      seen.add(key)
-      result.push({ id: g.cate_id, name: g.cate_name })
-    }
-  }
-  categories.value = result
-}
-
-const editCateDialog = ref(false)
-const editCateForm = ref<{ id: number; name: string }>({ id: 0, name: '' })
-
-function openEditCate(cate: any) {
-  editCateForm.value = { id: cate.id, name: cate.name }
-  editCateDialog.value = true
-}
-
-async function submitEditCate() {
-  const name = editCateForm.value.name.trim()
-  if (!name) { ElMessage.warning('分类名称不能为空'); return }
-  const dup = categories.value.find(c => c.name === name && c.id !== editCateForm.value.id)
-  if (dup) { ElMessage.warning('已存在同名分类'); return }
-  await updateGoodsCate({ id: editCateForm.value.id, name })
-  ElMessage.success('修改成功')
-  editCateDialog.value = false
-  await loadAllGoods()
-  buildCategories()
-}
-
-async function handleDeleteCate(cate: any) {
-  await ElMessageBox.confirm(`确定删除分类「${cate.name}」？`, '提示', { type: 'warning' })
-  await deleteGoodsCate(cate.id)
-  ElMessage.success('删除成功')
-  if (selectedCate.value === cate.id) selectedCate.value = 0
-  await loadAllGoods()
-  buildCategories()
-}
-
 onMounted(async () => {
   loading.value = true
   try {
-    await loadMeta()
-    await Promise.all([loadAllGoods(), loadStockMap(), loadActivityMaps()])
-    buildCategories()
+    await Promise.all([loadMeta(), loadCates(), loadAllGoods(), loadStockMap(), loadActivityMaps()])
   } finally {
     loading.value = false
   }
@@ -541,16 +623,36 @@ onMounted(async () => {
 }
 
 .stock-sidebar {
-  width: 260px;
   flex-shrink: 0;
   background: #fff;
   border-radius: 8px;
-  padding: 10px 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  position: relative;
+}
+
+.sidebar-inner {
+  flex: 1;
+  padding: 10px 8px;
   overflow-y: auto;
   display: flex;
   flex-direction: row;
   gap: 0;
+  min-width: 0;
+}
+
+.sidebar-resize-handle {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.sidebar-resize-handle:hover {
+  background: #dbeafe;
 }
 
 .sidebar-col {
@@ -577,6 +679,14 @@ onMounted(async () => {
   padding: 0 4px;
 }
 
+.sidebar-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
 .sidebar-section {
   display: flex;
   flex-direction: column;
@@ -590,29 +700,9 @@ onMounted(async () => {
   font-size: 13px;
   color: #333;
   transition: background 0.15s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.cate-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cate-actions {
-  display: none;
-  flex-shrink: 0;
-  gap: 0;
-}
-
-.sidebar-item:hover .cate-actions {
-  display: flex;
+  gap: 4px;
 }
 
 .sidebar-item:hover {
@@ -624,6 +714,55 @@ onMounted(async () => {
   color: #409eff;
   font-weight: 600;
 }
+
+.sidebar-item-child {
+  padding-left: 16px;
+}
+
+.cate-arrow {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+  transform: rotate(0deg);
+  font-size: 12px;
+}
+
+.cate-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.cate-arrow-placeholder {
+  display: inline-block;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.cate-item-name {
+  flex: 1;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.cate-item-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+
+.sidebar-item:hover .cate-item-actions {
+  opacity: 1;
+}
+
+.act-icon {
+  font-size: 13px;
+  color: rgba(29,29,31,0.35);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.act-icon:hover { color: #0071e3; }
+.act-icon.danger:hover { color: #dc2626; }
 
 .stock-topbar {
   display: flex;

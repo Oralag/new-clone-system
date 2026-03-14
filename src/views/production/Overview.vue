@@ -4,7 +4,7 @@
     <!-- ── 顶部：快捷操作 ──────────────────────────────────────────── -->
     <div class="quick-bar">
       <el-button type="primary" size="large" :icon="MagicStick" :loading="generating" @click="openGenerateDialog">
-        一键生成成品（BOM计划）
+        一键生产成品BOM计划
       </el-button>
       <el-button :icon="Refresh" @click="loadAll">刷新数据</el-button>
     </div>
@@ -115,7 +115,7 @@
     <!-- ══════════════════════════════════════════════════════════════
          一键生成成品对话框
     ══════════════════════════════════════════════════════════════ -->
-    <el-dialog v-model="generateVisible" title="一键生成成品（BOM计划）" width="760px" :close-on-click-modal="false">
+    <el-dialog v-model="generateVisible" title="一键生产成品BOM计划" width="760px" :close-on-click-modal="false">
       <div class="gen-dialog">
 
         <!-- Step 1: 选择产品 -->
@@ -353,7 +353,12 @@ async function loadBomProducts() {
     const result: any[] = []
     for (const [gidStr, mats] of Object.entries(bomByGoods)) {
       const gid = Number(gidStr)
-      const goods = allGoods.value.find((g: any) => g.id === gid)
+      // BOM记录自带goods_name，优先用它；fallback到allGoods
+      const firstMat = mats[0]
+      const goods = allGoods.value.find((g: any) => g.id === gid || g.goods_id === gid)
+      const goodsName = firstMat?.goods_name || goods?.goods_name || goods?.name || `商品#${gid}`
+      const goodsSn = goods?.goods_sn || goods?.sn || ''
+      const unitName = goods?.unit_name || firstMat?.unit_name || ''
       if (!mats.length) continue
       let canMake = Infinity
       const matsWithStock = mats.map((m: any) => {
@@ -365,8 +370,9 @@ async function loadBomProducts() {
       })
       result.push({
         goods_id: gid,
-        goods_name: goods?.name || `商品#${gid}`,
-        unit_name: goods?.unit_name || '',
+        goods_name: goodsName,
+        goods_sn: goodsSn,
+        unit_name: unitName,
         canMake: canMake === Infinity ? 0 : canMake,
         materials: matsWithStock,
       })
@@ -407,7 +413,7 @@ function openGenerateDialog() {
 function filterGenGoods() {
   const q = genSearch.value.trim().toLowerCase()
   filteredGenGoods.value = bomProducts.value.filter(g =>
-    !q || g.goods_name.toLowerCase().includes(q)
+    !q || g.goods_name.toLowerCase().includes(q) || (g.goods_sn || '').toLowerCase().includes(q)
   )
 }
 

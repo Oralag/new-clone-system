@@ -35,7 +35,7 @@
       <!-- 体验版引导横幅 -->
       <trial-banner ref="trialBannerRef" />
 
-      <div class="page-content" :class="{ 'is-mobile': isMobile }">
+      <div ref="pageContentRef" class="page-content" :class="{ 'is-mobile': isMobile }">
         <router-view v-slot="{ Component, route: r }">
           <keep-alive>
             <component :is="Component" :key="r.path" />
@@ -124,13 +124,18 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 const permStore = usePermissionStore()
 const trialBannerRef = ref<any>(null)
+const pageContentRef = ref<HTMLElement | null>(null)
 
 const visibleMenuData = computed(() => permStore.filteredMenuData)
 
 const showMobileMenu = ref(false)
 const isMobile = ref(window.innerWidth < 768)
 const onResize = () => { isMobile.value = window.innerWidth < 768 }
-onMounted(() => window.addEventListener('resize', onResize))
+onMounted(() => {
+  window.addEventListener('resize', onResize)
+  // 把 page-content 元素暴露到 window，供 ScTable 翻页时滚回顶部
+  ;(window as any).__pageContent = pageContentRef
+})
 onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const SUPER_ADMIN = '17747344571'
@@ -169,9 +174,8 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 
 <style scoped>
 .admin-layout { display: flex; height: 100vh; min-height: 100vh; overflow: hidden; background: #ffffff; min-width: 900px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-.admin-layout.is-mobile { min-width: unset; overflow: auto; height: 100%; }
+.admin-layout.is-mobile { min-width: unset; }
 .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: #ffffff; }
-.main-container.is-mobile { overflow: visible; height: auto; }
 .page-content { flex: 1; overflow-y: auto; overflow-x: auto; padding: 16px; background: #f5f5f7; }
 .page-footer { text-align: right; font-size: 10px; color: rgba(0,0,0,0.2); padding: 4px 0 6px; letter-spacing: -0.01em; }
 .footer-brand { color: rgba(0,0,0,0.25); font-weight: 600; }
@@ -191,10 +195,10 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 .nav-icon-svg { width: 22px; height: 22px; }
 .nav-label { font-size: 11px; line-height: 1; }
 
-/* 移动端内容区底部留白 */
-.page-content.is-mobile { padding: 8px; padding-bottom: 8px; overflow-x: hidden; }
-/* Safari bug: padding-bottom in overflow:auto scroll containers is ignored — use a spacer div instead (see template) */
-.mobile-scroll-spacer { height: calc(100px + env(safe-area-inset-bottom, 34px)); flex-shrink: 0; }
+/* 移动端内容区 */
+.page-content.is-mobile { overflow-x: hidden; padding: 8px; }
+/* 底部 spacer */
+.mobile-scroll-spacer { height: calc(60px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 
 /* 移动端抽屉 */
 .drawer-inner { display: flex; flex-direction: column; height: 100%; }

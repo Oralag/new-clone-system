@@ -1,7 +1,19 @@
 <template>
   <div class="sc-table">
-    <!-- Search bar -->
-    <div v-if="$slots.search" class="sc-search">
+    <!-- Search bar + Toolbar（移动端合并一行） -->
+    <div v-if="isMobile" class="sc-mobile-bar">
+      <div class="mobile-search-row">
+        <slot name="search" />
+        <el-button type="primary" :icon="Search" @click="handleSearch" style="flex-shrink:0" />
+      </div>
+      <div class="mobile-toolbar-row">
+        <slot name="toolbar" />
+        <el-button :icon="Refresh" circle size="small" @click="refresh" style="margin-left:auto" />
+      </div>
+    </div>
+
+    <!-- 桌面端 Search bar -->
+    <div v-else-if="$slots.search" class="sc-search">
       <slot name="search" />
       <div class="search-actions">
         <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
@@ -9,13 +21,13 @@
       </div>
     </div>
 
-    <!-- Toolbar -->
-    <div class="sc-toolbar">
+    <!-- 桌面端 Toolbar -->
+    <div v-if="!isMobile" class="sc-toolbar">
       <div class="toolbar-left">
         <slot name="toolbar" />
       </div>
-      <div class="toolbar-right">
-        <!-- Import button -->
+      <!-- 桌面端右侧操作 -->
+      <div v-if="!isMobile" class="toolbar-right">
         <el-tooltip content="导入Excel">
           <el-upload
             v-if="importApi || importPath"
@@ -27,7 +39,6 @@
             <el-button :icon="Upload" size="small">导入</el-button>
           </el-upload>
         </el-tooltip>
-        <!-- Export button -->
         <el-tooltip :content="selectedRows.length > 0 ? `导出已选 ${selectedRows.length} 条` : '导出全部数据'">
           <el-button :icon="Download" size="small" @click="handleExport">
             导出{{ selectedRows.length > 0 ? `(${selectedRows.length})` : '' }}
@@ -47,29 +58,57 @@
           size="small"
           @click="handleBatchDelete"
         >批量删除({{ selectedRows.length }})</el-button>
-        <!-- Refresh button -->
         <el-tooltip content="刷新">
           <el-button :icon="Refresh" circle size="small" @click="refresh" style="margin-left:4px" />
         </el-tooltip>
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="table-scroll-wrap">
-    <el-table
-      ref="elTableRef"
-      v-loading="loading"
-      :data="tableData"
-      v-bind="$attrs"
-      border
-      stripe
-      style="width: 100%"
-      @selection-change="handleSelectionChange"
-    >
-      <!-- Checkbox column always first -->
-      <el-table-column type="selection" width="50" align="center" />
-      <slot />
-    </el-table>
+    <!-- Table（桌面端） / 自动卡片列表（移动端） -->
+    <div v-if="isMobile" class="mobile-list" v-loading="loading">
+      <!-- 优先用自定义 mobile slot，否则自动生成卡片 -->
+      <template v-if="$slots.mobile">
+        <slot name="mobile" :rows="tableData" :loading="loading" />
+      </template>
+      <template v-else>
+        <div v-if="!loading && !tableData.length" class="mobile-empty">暂无数据</div>
+        <div v-for="row in tableData" :key="row.id ?? row.goods_id ?? JSON.stringify(row)" class="m-auto-card">
+          <!-- 标题行：第一个有 prop 的列 -->
+          <div class="m-auto-card__title">
+            <span>{{ getCellValue(row, mobileColumns.find(c => c.prop && !c.isAction)?.prop ?? '') }}</span>
+          </div>
+          <!-- 字段行：跳过第一列和操作列 -->
+          <template v-for="col in mobileColumns.slice(1).filter(c => !c.isAction && c.prop)" :key="col.prop">
+            <div class="m-auto-card__row">
+              <span class="m-auto-card__label">{{ col.label }}</span>
+              <span class="m-auto-card__value">
+                <!-- 有自定义 slot 则渲染 slot，否则直接取值 -->
+                <component :is="() => renderColSlot(col.vnode, row) ?? getCellValue(row, col.prop)" />
+              </span>
+            </div>
+          </template>
+          <!-- 操作列 -->
+          <div v-if="mobileColumns.find(c => c.isAction)" class="m-auto-card__actions">
+            <component :is="() => renderColSlot(mobileColumns.find(c => c.isAction)!.vnode, row)" />
+          </div>
+        </div>
+      </template>
+    </div>
+    <div v-else class="table-scroll-wrap">
+      <el-table
+        ref="elTableRef"
+        v-loading="loading"
+        :data="tableData"
+        v-bind="$attrs"
+        border
+        stripe
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
+        <!-- Checkbox column always first -->
+        <el-table-column type="selection" width="50" align="center" />
+        <slot />
+      </el-table>
     </div>
 
     <!-- Selected info bar — shown only when rows are selected -->
@@ -126,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, useSlots } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, useSlots } from 'vue'
 import { Search, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as XLSX from 'xlsx'
@@ -198,6 +237,53 @@ function getColumnMap(): Record<string, string> {
   return map
 }
 
+// ── 移动端列定义解析 ────────────────────────────────────────────────────────────
+interface ColDef { prop: string; label: string; isAction: boolean; vnode: any }
+
+const mobileColumns = computed<ColDef[]>(() => {
+  const result: ColDef[] = []
+  try {
+    const vnodes = slots.default?.() ?? []
+    const walk = (nodes: any[]) => {
+      for (const vn of nodes) {
+        if (!vn) continue
+        const p = vn.props
+        // 跳过 selection / index 列
+        if (p?.type === 'selection' || p?.type === 'index') continue
+        if (p?.label === '序号') continue
+        if (p?.label) {
+          result.push({
+            prop: p.prop ?? '',
+            label: p.label,
+            isAction: p.label === '相关操作' || p.label === '操作',
+            vnode: vn,
+          })
+        }
+        if (Array.isArray(vn.children)) walk(vn.children)
+      }
+    }
+    walk(vnodes)
+  } catch {}
+  return result
+})
+
+// 渲染某列的 default slot（用于操作列按钮）
+function renderColSlot(colVnode: any, row: any): any {
+  try {
+    const defaultSlot = colVnode.children?.default
+    if (typeof defaultSlot === 'function') return defaultSlot({ row })
+  } catch {}
+  return null
+}
+
+// 从行数据取值，支持点分路径
+function getCellValue(row: any, prop: string): any {
+  if (!prop) return ''
+  const val = prop.split('.').reduce((o, k) => o?.[k], row)
+  if (val === null || val === undefined || val === '') return '-'
+  return val
+}
+
 // ── Data loading ─────────────────────────────────────────────────────────────
 async function loadData() {
   loading.value = true
@@ -238,9 +324,19 @@ async function loadData() {
 // ── Search / pagination ───────────────────────────────────────────────────────
 function handleSearch() { currentPage.value = 1; loadData() }
 function handleReset() { searchParams.value = {}; currentPage.value = 1; loadData() }
-function handleSizeChange() { currentPage.value = 1; loadData() }
-function handleCurrentChange() { loadData() }
+function handleSizeChange() { currentPage.value = 1; loadData().then(scrollToTop) }
+function handleCurrentChange() { loadData().then(scrollToTop) }
 function refresh() { loadData() }
+
+function scrollToTop() {
+  if (window.innerWidth < 768) {
+    nextTick(() => {
+      // 直接找最近的可滚动祖先
+      const el = document.querySelector('.page-content') as HTMLElement | null
+      if (el) el.scrollTop = 0
+    })
+  }
+}
 
 // ── Selection ─────────────────────────────────────────────────────────────────
 function handleSelectionChange(val: any[]) {
@@ -449,23 +545,31 @@ watch(
 
 @media (max-width: 767px) {
   .sc-table {
-    padding: 12px;
+    padding: 10px;
   }
 
-  .sc-search,
-  .sc-toolbar,
-  .selected-bar {
+  /* 移动端搜索+新增合并区域 */
+  .sc-mobile-bar {
+    display: flex;
     flex-direction: column;
-    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 10px;
   }
-
-  .search-actions,
-  .toolbar-right {
+  .mobile-search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobile-search-row :deep(.el-input),
+  .mobile-search-row :deep(.el-select) {
+    flex: 1;
+    min-width: 0;
+  }
+  .mobile-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     flex-wrap: wrap;
-  }
-
-  .toolbar-right {
-    justify-content: flex-start;
   }
 
   /* 表格横向滚动容器，不影响页面整体宽度 */
@@ -478,10 +582,78 @@ watch(
     min-width: 480px;
   }
 
-  /* 分页底部留出足够空间，避免被底部导航栏遮挡 */
+  .mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .mobile-empty {
+    text-align: center;
+    padding: 32px 0;
+    color: rgba(29,29,31,0.3);
+    font-size: 13px;
+  }
+
+  /* 自动生成的移动端卡片 */
+  .m-auto-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px 16px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+  .m-auto-card__title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1d1d1f;
+    margin-bottom: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .m-auto-card__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 13px;
+  }
+  .m-auto-card__label {
+    color: rgba(29,29,31,0.4);
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+  .m-auto-card__value {
+    color: #1d1d1f;
+    font-weight: 500;
+    text-align: right;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .m-auto-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    flex-wrap: wrap;
+  }
+
+  /* 分页：固定在底部导航栏上方，不被遮挡 */
   .sc-pagination {
+    position: sticky;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     justify-content: center;
-    padding-bottom: 16px;
+    background: #f5f5f7;
+    padding: 10px 0;
+    margin: 0 -10px;
+    z-index: 10;
   }
 }
 </style>

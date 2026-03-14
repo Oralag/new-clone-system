@@ -9,9 +9,6 @@
         </div>
         <div class="bar-live-dot" :class="captainLoading ? 'dot-busy' : 'dot-live'" />
         <span class="bar-name">Captain 指挥官</span>
-        <span class="bar-divider">|</span>
-        <span v-if="lastPreview" class="bar-preview">{{ lastPreview }}</span>
-        <span v-else class="bar-hint">AI 多智能体总调度 · 输入目标让 Captain 自动规划执行</span>
       </div>
 
       <div class="bar-actions" @click.stop>
@@ -19,11 +16,11 @@
           v-if="!isExpanded"
           v-model="quickText"
           class="bar-input"
-          placeholder="输入目标，Captain 自动调度 Agency..."
+          :placeholder="lastPreview || 'AI 多智能体总调度 · 输入目标让 Captain 自动规划执行…'"
           :disabled="captainLoading"
           @keydown.enter.prevent="sendQuick"
         />
-        <button class="bar-send" :disabled="captainLoading || (!isExpanded && !quickText.trim())" @click="isExpanded ? null : sendQuick()">
+        <button v-if="!isExpanded" class="bar-send" :disabled="captainLoading || !quickText.trim()" @click="sendQuick">
           <svg v-if="!captainLoading" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
           <span v-else class="spin" />
         </button>
@@ -69,10 +66,6 @@
           <!-- 面板 header -->
           <div class="panel-header">
             <div class="panel-header-left">
-              <div class="panel-glyph">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2L4 7v6c0 5 4.5 9.7 8 11 3.5-1.3 8-6 8-11V7L12 2z"/></svg>
-              </div>
-              <span class="panel-title">Captain 指挥官</span>
               <div class="panel-live">
                 <span class="live-dot-green" />
                 LIVE
@@ -388,7 +381,7 @@ async function sendCaptain(text?: string) {
 
 /* ── 收起态条 ── */
 .bar-row {
-  height: 52px;
+  height: 68px;
   display: flex;
   align-items: center;
   padding: 0 20px;
@@ -401,9 +394,11 @@ async function sendCaptain(text?: string) {
   gap: 9px;
   cursor: pointer;
   flex-shrink: 0;
-  padding: 5px 8px 5px 5px;
+  padding: 5px 16px 5px 5px;
   border-radius: 10px;
   transition: background 0.15s;
+  border-right: 1px solid rgba(0,0,0,0.07);
+  margin-right: 4px;
 }
 .bar-identity:hover { background: rgba(0, 113, 227, 0.06); }
 
@@ -465,33 +460,29 @@ async function sendCaptain(text?: string) {
   align-items: center;
   gap: 6px;
   margin-left: auto;
-  flex-shrink: 0;
+  flex: 1;
 }
 
 .bar-input {
-  height: 34px;
-  width: 360px;
-  background: #f5f5f7;
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 8px;
+  height: 40px;
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   color: #1d1d1f;
-  font-size: 13px;
+  font-size: 13.5px;
   padding: 0 12px;
   outline: none;
   transition: all 0.2s;
   font-family: inherit;
 }
 .bar-input::placeholder { color: rgba(29,29,31,0.3); }
-.bar-input:focus {
-  background: #fff;
-  border-color: #0071e3;
-  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.15);
-}
+.bar-input:focus { background: transparent; border-color: transparent; box-shadow: none; }
 .bar-input:disabled { opacity: 0.45; }
 
 .bar-send {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   background: #0071e3;
   border: none;
   border-radius: 8px;

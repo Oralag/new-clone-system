@@ -35,42 +35,40 @@
               <button
                 class="tier-tab"
                 :class="{ active: activeTier === 'vip' }"
-                @click="activeTier = 'vip'; selectedBilling = 'annual'"
+                @click="activeTier = 'vip'; selectedBilling = 'monthly'"
               >
                 <span class="tier-icon">⭐</span> VIP
               </button>
               <button
                 class="tier-tab svip-tab"
                 :class="{ active: activeTier === 'svip' }"
-                @click="activeTier = 'svip'; selectedBilling = 'annual'"
+                @click="activeTier = 'svip'; selectedBilling = 'monthly'"
               >
                 <span class="tier-icon">👑</span> SVIP
                 <span class="tier-badge">推荐</span>
               </button>
             </div>
 
-            <!-- 付款周期选择 -->
-            <div class="billing-selector">
-              <button
+            <!-- 三个价格卡片同时展示 -->
+            <div class="price-cards">
+              <div
                 v-for="b in billingOptions"
                 :key="b.id"
-                class="billing-btn"
-                :class="{ active: selectedBilling === b.id }"
+                class="price-card"
+                :class="{ 'price-card-active': selectedBilling === b.id, 'price-card-svip': activeTier === 'svip' && selectedBilling === b.id }"
                 @click="selectedBilling = b.id"
               >
-                {{ b.label }}
-                <span v-if="b.tag" class="billing-tag">{{ b.tag }}</span>
-              </button>
-            </div>
-
-            <!-- 价格展示 -->
-            <div class="price-display" :class="activeTier === 'svip' ? 'price-svip' : ''">
-              <div class="price-main">
-                <span class="price-currency">¥</span>
-                <span class="price-num">{{ currentPrice.price }}</span>
-                <span class="price-period">/{{ currentPrice.period }}</span>
+                <div class="pc-tag-row">
+                  <span class="pc-label">{{ b.label }}</span>
+                  <span v-if="b.tag" class="pc-badge">{{ b.tag }}</span>
+                </div>
+                <div class="pc-price">
+                  <span class="pc-currency">¥</span>
+                  <span class="pc-num">{{ pricing[activeTier][b.id].price }}</span>
+                  <span class="pc-period">/{{ pricing[activeTier][b.id].period }}</span>
+                </div>
+                <div v-if="pricing[activeTier][b.id].note" class="pc-note">{{ pricing[activeTier][b.id].note }}</div>
               </div>
-              <div v-if="currentPrice.note" class="price-note">{{ currentPrice.note }}</div>
             </div>
           </div>
 
@@ -174,9 +172,9 @@ import { ref, computed } from 'vue'
 const visible = ref(false)
 const step = ref<'plan' | 'pay' | 'done'>('plan')
 const activeTier = ref<'vip' | 'svip'>('vip')
-const selectedBilling = ref<'monthly' | 'annual' | 'lifetime'>('annual')
+const selectedBilling = ref<'monthly' | 'annual' | 'lifetime'>('monthly')
 
-const billingOptions = [
+const billingOptions: { id: 'monthly' | 'annual' | 'lifetime'; label: string; tag?: string }[] = [
   { id: 'monthly', label: '月付' },
   { id: 'annual',  label: '年付', tag: '省钱' },
   { id: 'lifetime', label: '买断' },
@@ -278,7 +276,7 @@ const currentPermGroups = computed(() => activeTier.value === 'svip' ? svipPerms
 function open() {
   step.value = 'plan'
   activeTier.value = 'vip'
-  selectedBilling.value = 'annual'
+  selectedBilling.value = 'monthly'
   visible.value = true
 }
 
@@ -367,50 +365,39 @@ defineExpose({ open })
   letter-spacing: 0.04em;
 }
 
-/* Billing Selector */
-.billing-selector {
-  display: flex; gap: 6px; margin-bottom: 20px;
+/* Price Cards */
+.price-cards {
+  display: flex; flex-direction: column; gap: 8px; flex: 1;
 }
-.billing-btn {
-  flex: 1; padding: 8px 10px;
+.price-card {
   border: 1.5px solid rgba(0,0,0,0.09);
-  border-radius: 10px; cursor: pointer;
-  background: #fff;
-  font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.45);
+  border-radius: 12px; padding: 12px 14px;
+  cursor: pointer; background: #fff;
   transition: all 0.15s;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
 }
-.billing-btn:hover { border-color: rgba(0,0,0,0.2); color: #1d1d1f; }
-.billing-btn.active { border-color: #1d1d1f; background: #f5f5f7; color: #1d1d1f; }
-.billing-tag {
+.price-card:hover { border-color: rgba(0,0,0,0.2); }
+.price-card-active { border-color: #1d1d1f; background: #f5f5f7; }
+.price-card-svip { border-color: #7c3aed; background: linear-gradient(135deg, #f5f3ff, #ede9fe); }
+.pc-tag-row {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+}
+.pc-label { font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.5); }
+.price-card-active .pc-label { color: #1d1d1f; }
+.price-card-svip .pc-label { color: #7c3aed; }
+.pc-badge {
   font-size: 9px; font-weight: 700;
   background: #34d399; color: #fff;
-  padding: 1px 5px; border-radius: 999px;
+  padding: 1px 6px; border-radius: 999px;
 }
-
-/* Price Display */
-.price-display {
-  flex: 1;
-  display: flex; flex-direction: column; justify-content: center;
-  background: #f5f5f7;
-  border-radius: 16px; padding: 24px 20px;
-  margin-bottom: 0;
-  border: 1.5px solid rgba(0,0,0,0.06);
+.pc-price {
+  display: flex; align-items: baseline; gap: 2px;
 }
-.price-svip {
-  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
-  border-color: rgba(124,58,237,0.15);
-}
-.price-main {
-  display: flex; align-items: baseline; gap: 3px;
-  margin-bottom: 6px;
-}
-.price-currency { font-size: 18px; font-weight: 700; color: #1d1d1f; }
-.price-num { font-size: 48px; font-weight: 900; letter-spacing: -0.05em; color: #1d1d1f; line-height: 1; }
-.price-svip .price-num { color: #7c3aed; }
-.price-period { font-size: 14px; color: rgba(29,29,31,0.4); font-weight: 500; margin-left: 3px; }
-.price-note { font-size: 12px; color: rgba(29,29,31,0.45); font-weight: 500; }
-.price-svip .price-note { color: rgba(124,58,237,0.6); }
+.pc-currency { font-size: 13px; font-weight: 700; color: #1d1d1f; }
+.pc-num { font-size: 26px; font-weight: 900; letter-spacing: -0.04em; color: #1d1d1f; line-height: 1; }
+.price-card-svip .pc-num { color: #7c3aed; }
+.pc-period { font-size: 12px; color: rgba(29,29,31,0.4); font-weight: 500; margin-left: 2px; }
+.pc-note { font-size: 11px; color: rgba(29,29,31,0.4); margin-top: 3px; }
+.price-card-svip .pc-note { color: rgba(124,58,237,0.55); }
 
 /* Right */
 .ud-right {

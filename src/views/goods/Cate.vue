@@ -81,6 +81,17 @@ async function handleSubmit(data: any) {
   formRef.value?.setSubmitting(true)
   try {
     const { parent_name, ...payload } = data
+    // 校验同名：拉取当前列表检查
+    const listRes = await getGoodsCateList({ list_rows: 500 })
+    const allCates: any[] = listRes.data?.rows ?? []
+    const dup = allCates.find(c =>
+      c.name === payload.name &&
+      c.id !== payload.id
+    )
+    if (dup) {
+      ElMessage.warning('已存在同名分类，请换一个名称')
+      return
+    }
     payload.id ? await updateGoodsCate(payload) : await createGoodsCate(payload)
     ElMessage.success('操作成功')
     formRef.value?.close()

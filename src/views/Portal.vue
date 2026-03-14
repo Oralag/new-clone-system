@@ -1,5 +1,4 @@
 <template>
-  <CaptainBar />
   <div class="portal-page">
     <!-- Nav -->
     <nav class="glass-nav">
@@ -18,6 +17,10 @@
           </svg>
         </div>
         <span class="nav-logo-text">数字游牧</span>
+        <span class="nav-platform-badge">
+          <span class="nav-platform-dot"></span>
+          <span>数字游牧 · 全球化业务管理平台</span>
+        </span>
       </div>
       <div class="nav-links">
       </div>
@@ -55,12 +58,12 @@
 
       <!-- 模块卡片 -->
       <div class="cards-col">
+
+        <!-- Captain 指挥官 -->
+        <CaptainBar class="portal-captain" />
+
         <!-- 工作空间标题 -->
         <div class="workspace-header">
-          <span class="hero-badge">
-            <span class="hero-badge-dot"></span>
-            <span>数字游牧 · 全球化业务管理平台</span>
-          </span>
           <h2 class="workspace-title">选择您的<span class="hero-title-blue"> 工作空间</span></h2>
         </div>
         <!-- Module Cards — 2×2 grid -->
@@ -68,24 +71,16 @@
 
       <!-- ERP -->
       <div class="portal-card" @click="go('/dashboard')">
-        <div class="card-bg-icon">
-          <svg width="360" height="360" viewBox="0 0 48 48" fill="none" opacity="1">
-            <rect x="4" y="4" width="18" height="18" rx="3" fill="currentColor"/>
-            <rect x="26" y="4" width="18" height="18" rx="3" fill="currentColor"/>
-            <rect x="4" y="26" width="18" height="18" rx="3" fill="currentColor"/>
-            <rect x="26" y="26" width="18" height="18" rx="3" fill="currentColor"/>
-          </svg>
-        </div>
         <div class="card-icon card-icon-dark">
-          <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
-            <rect x="4" y="4" width="18" height="18" rx="3" fill="white" opacity="0.9"/>
-            <rect x="26" y="4" width="18" height="18" rx="3" fill="white" opacity="0.6"/>
-            <rect x="4" y="26" width="18" height="18" rx="3" fill="white" opacity="0.6"/>
-            <rect x="26" y="26" width="18" height="18" rx="3" fill="white" opacity="0.3"/>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" fill="white"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5" fill="white" opacity="0.6"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5" fill="white" opacity="0.6"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5" fill="white" opacity="0.35"/>
           </svg>
         </div>
-        <h2 class="card-title">游牧 ERP 系统</h2>
-        <p class="card-desc">全球化业务管理中枢。实时监控库存、销售与财务，掌控全局。</p>
+        <h2 class="card-title">游牧 ERP</h2>
+        <p class="card-desc">全链路业务管理中枢。销售、采购、仓库、财务、人事，一套系统全覆盖。</p>
         <div class="card-tags">
           <span class="tag">销售</span>
           <span class="tag">采购</span>
@@ -94,52 +89,39 @@
           <span class="tag">人事</span>
         </div>
         <div class="card-arrow">
-          <span>管理中心</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <span>进入管理中心</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
 
       <!-- 智能体工作流 -->
-      <div class="portal-card portal-card-blue" @click="go('/agent')">
-        <div class="card-bg-icon card-bg-blue">
-          <svg width="360" height="360" viewBox="0 0 24 24" fill="none" opacity="1">
-            <circle cx="12" cy="8" r="5" fill="currentColor"/>
-            <path d="M3 21c0-5 4-9 9-9s9 4 9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <div class="portal-card portal-card-ai" @click="go('/agent')">
+        <div class="card-ai-badge">由 Claude AI 驱动</div>
+        <div class="card-icon card-icon-ai">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="white" opacity="0.9"/>
           </svg>
         </div>
-        <div class="card-icon card-icon-blue">
-          <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
-            <circle cx="24" cy="18" r="10" fill="white" opacity="0.9"/>
-            <path d="M10 42c0-7.7 6.3-14 14-14s14 6.3 14 14" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
-            <circle cx="36" cy="36" r="6" fill="white" opacity="0.8"/>
-            <path d="M33 36h6M36 33v6" stroke="#0071e3" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <h2 class="card-title">智能体工作流</h2>
-        <p class="card-desc">AI 驱动的内容自动化系统。热搜抓取、文案生成、海报制作到多平台一键发布。</p>
+        <h2 class="card-title card-title-ai">让 AI 替你<br/>打理内容运营</h2>
+        <p class="card-desc">自动抓取热搜、生成爆款文案、制作海报，多平台一键发布。你只需设定目标，其余交给 AI。</p>
         <div class="card-tags">
-          <span class="tag tag-blue">热搜抓取</span>
-          <span class="tag tag-blue">文案生成</span>
-          <span class="tag tag-blue">自动发布</span>
+          <span class="tag tag-ai">热搜抓取</span>
+          <span class="tag tag-ai">文案生成</span>
+          <span class="tag tag-ai">海报制作</span>
+          <span class="tag tag-ai">自动发布</span>
         </div>
         <div class="card-arrow">
-          <span>立即进入</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <span>立即体验</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
 
       <!-- BI 数据大屏 -->
       <div class="portal-card portal-card-purple portal-card-dim">
-        <div class="card-bg-icon card-bg-purple">
-          <svg width="360" height="360" viewBox="0 0 24 24" fill="none" opacity="1">
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M8 17V13M12 17V9M16 17V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </div>
         <div class="card-icon card-icon-purple">
-          <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
-            <rect x="4" y="4" width="40" height="40" rx="6" stroke="white" stroke-width="2.5" opacity="0.5"/>
-            <path d="M12 36V26M20 36V18M28 36V22M36 36V14" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="1.5" opacity="0.5"/>
+            <path d="M7 17v-4M12 17V8M17 17v-6" stroke="white" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
         <h2 class="card-title">BI 数据大屏</h2>
@@ -151,27 +133,18 @@
         </div>
         <div class="card-arrow">
           <span>敬请期待</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
 
       <!-- 供应链协同 -->
       <div class="portal-card portal-card-green portal-card-dim">
-        <div class="card-bg-icon card-bg-green">
-          <svg width="360" height="360" viewBox="0 0 24 24" fill="none" opacity="1">
-            <circle cx="5" cy="12" r="2" fill="currentColor"/>
-            <circle cx="12" cy="5" r="2" fill="currentColor"/>
-            <circle cx="19" cy="12" r="2" fill="currentColor"/>
-            <circle cx="12" cy="19" r="2" fill="currentColor"/>
-            <path d="M7 12h10M12 7v10" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
-        </div>
         <div class="card-icon card-icon-green">
-          <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
-            <circle cx="12" cy="24" r="6" stroke="white" stroke-width="2.5" opacity="0.7"/>
-            <circle cx="36" cy="12" r="6" stroke="white" stroke-width="2.5" opacity="0.7"/>
-            <circle cx="36" cy="36" r="6" stroke="white" stroke-width="2.5" opacity="0.7"/>
-            <path d="M18 24L30 14M18 24L30 34" stroke="white" stroke-width="2" opacity="0.5"/>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <circle cx="5" cy="12" r="2.5" fill="white" opacity="0.9"/>
+            <circle cx="19" cy="6" r="2.5" fill="white" opacity="0.9"/>
+            <circle cx="19" cy="18" r="2.5" fill="white" opacity="0.9"/>
+            <path d="M7.5 12L16.5 7M7.5 12L16.5 17" stroke="white" stroke-width="1.5" opacity="0.5"/>
           </svg>
         </div>
         <h2 class="card-title">供应链协同</h2>
@@ -183,7 +156,7 @@
         </div>
         <div class="card-arrow">
           <span>敬请期待</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
 
@@ -192,149 +165,173 @@
 
     </div><!-- /main-layout -->
 
-    <!-- Platform Description (moved from hero) -->
-    <section class="platform-desc">
-      <div class="platform-desc-inner">
-        <div class="hero-badge" style="justify-content:center;margin-bottom:20px">
-          <span class="hero-badge-dot"></span>
-          <span>下一代数字资产自动化引擎</span>
-        </div>
-        <p class="hero-subtitle" style="text-align:center;max-width:700px;margin:0 auto">
-          融合 AI 智能体与全球化 ERP 架构，让您的业务在云端自由流动。从自动化的库存预测到智能化的广告创意生成，每一个决策都由最先进的神经网络驱动。
-        </p>
-      </div>
-    </section>
+    <!-- ── 功能全览 ── -->
+    <section class="overview-section">
+      <div class="overview-inner">
 
-    <!-- Neural Section -->
-    <section class="neural-section">
-      <div class="neural-glow"></div>
-      <div class="neural-content">
-        <div class="neural-left">
-          <div class="neural-badge">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2"/>
-            </svg>
-            <span>AI Neural Engine v2.0</span>
-          </div>
-          <h2 class="neural-title">由 Claude AI<br />驱动的神经中枢</h2>
-          <p class="neural-desc">融合 AI 智能体与全球化 ERP 架构，从自动化的库存预测到智能化的广告创意生成，每一个决策都由最先进的神经网络驱动。</p>
-          <div class="neural-stats">
-            <div class="stat"><div class="stat-num">99.9%</div><div class="stat-label">UPTIME</div></div>
-            <div class="stat"><div class="stat-num">12ms</div><div class="stat-label">LATENCY</div></div>
-            <div class="stat"><div class="stat-num">24/7</div><div class="stat-label">AI SUPPORT</div></div>
-          </div>
-        </div>
-        <div class="neural-grid">
-          <div class="neural-card"><div class="neural-card-icon">🌐</div><div class="neural-card-title">全球同步</div><div class="neural-card-desc">实时数据同步</div></div>
-          <div class="neural-card"><div class="neural-card-icon">⚡</div><div class="neural-card-title">极速响应</div><div class="neural-card-desc">毫秒级执行</div></div>
-          <div class="neural-card"><div class="neural-card-icon">🔒</div><div class="neural-card-title">端到端加密</div><div class="neural-card-desc">最高安全等级</div></div>
-          <div class="neural-card"><div class="neural-card-icon">📊</div><div class="neural-card-title">实时监控</div><div class="neural-card-desc">业务全景视图</div></div>
-        </div>
-      </div>
-    </section>
+        <div class="section-eyebrow">全模块覆盖 · 独立部署</div>
+        <h2 class="section-title">一套系统，全面守护您的业务</h2>
+        <p class="section-sub">从采购入库到销售收款，14 个核心模块无缝衔接；独立数据库，您的数据永久安全</p>
 
-    <!-- ── 独立服务器优势 ── -->
-    <section class="server-section">
-      <div class="server-inner">
-        <div class="section-eyebrow">DEDICATED INFRASTRUCTURE</div>
-        <h2 class="section-title">专属独立服务器<br/>您的数据，只属于您</h2>
-        <p class="section-sub">付费版为每位客户配置完全隔离的独立数据库实例，告别共享环境的安全隐患</p>
-        <div class="server-grid">
-          <div class="server-card">
-            <div class="server-card-icon">🔒</div>
-            <div class="server-card-title">数据完全隔离</div>
-            <div class="server-card-desc">专属数据库实例，与其他用户物理隔离，杜绝数据泄露风险。您的订单、财务、客户数据只有您能访问。</div>
-          </div>
-          <div class="server-card">
-            <div class="server-card-icon">⚡</div>
-            <div class="server-card-title">性能独享不共享</div>
-            <div class="server-card-desc">独立计算资源，高峰期不受其他用户影响。支持百万级 SKU 和千万级订单，稳定流畅无卡顿。</div>
-          </div>
-          <div class="server-card">
-            <div class="server-card-icon">💾</div>
-            <div class="server-card-title">自动备份永久保存</div>
-            <div class="server-card-desc">每日自动备份，数据永久保存，支持任意时间点恢复。业务数据是您最宝贵的资产，我们帮您守护。</div>
-          </div>
-          <div class="server-card">
-            <div class="server-card-icon">🌍</div>
-            <div class="server-card-title">全球节点低延迟</div>
-            <div class="server-card-desc">部署于全球多地区节点，无论您的团队在中国、东南亚还是欧美，都能享受极速访问体验。</div>
-          </div>
-          <div class="server-card">
-            <div class="server-card-icon">🛡️</div>
-            <div class="server-card-title">企业级安全防护</div>
-            <div class="server-card-desc">DDoS 防护、HTTPS 加密、IP 白名单、操作日志审计，符合企业信息安全管理要求。</div>
-          </div>
-          <div class="server-card">
-            <div class="server-card-icon">🔧</div>
-            <div class="server-card-title">专属技术支持</div>
-            <div class="server-card-desc">付费用户享有优先响应通道，专属客服 2 小时内响应。数据迁移、功能定制、使用培训全程陪伴。</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── ERP 完整工作流 ── -->
-    <section class="workflow-section">
-      <div class="workflow-inner">
-        <div class="section-eyebrow">COMPLETE ERP WORKFLOW</div>
-        <h2 class="section-title">一套系统，贯穿全链路</h2>
-        <p class="section-sub">从供应商询价到客户收款，从原材料入库到成品出口，数字游牧 ERP 覆盖跨境业务每一个关键节点</p>
-
+        <!-- 工作流 -->
         <div class="workflow-flow">
           <div class="flow-step">
             <div class="flow-step-num">01</div>
-            <div class="flow-step-icon">📦</div>
+            <div class="flow-step-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="7" width="20" height="14" rx="2" stroke="#0071e3" stroke-width="1.5"/>
+                <path d="M8 7V5a2 2 0 014 0v2M12 12v4M10 14h4" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
             <div class="flow-step-title">采购管理</div>
             <div class="flow-step-desc">供应商管理、询报价、采购订单、到货验收、货款结算</div>
           </div>
           <div class="flow-arrow">→</div>
           <div class="flow-step">
             <div class="flow-step-num">02</div>
-            <div class="flow-step-icon">🏭</div>
+            <div class="flow-step-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="3" width="20" height="18" rx="2" stroke="#0071e3" stroke-width="1.5"/>
+                <path d="M8 3v18M2 9h6M2 15h6" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
             <div class="flow-step-title">仓库管理</div>
             <div class="flow-step-desc">多仓库管理、入库出库、库存盘点、调拨转仓、报废处理</div>
           </div>
           <div class="flow-arrow">→</div>
           <div class="flow-step">
             <div class="flow-step-num">03</div>
-            <div class="flow-step-icon">💼</div>
+            <div class="flow-step-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" stroke="#0071e3" stroke-width="1.5"/>
+                <path d="M16 3H8L6 7h12l-2-4z" stroke="#0071e3" stroke-width="1.5" stroke-linejoin="round"/>
+                <circle cx="12" cy="14" r="2" stroke="#0071e3" stroke-width="1.5"/>
+              </svg>
+            </div>
             <div class="flow-step-title">销售管理</div>
             <div class="flow-step-desc">客户管理、销售订单、发货跟踪、退换货处理、业绩统计</div>
           </div>
           <div class="flow-arrow">→</div>
           <div class="flow-step">
             <div class="flow-step-num">04</div>
-            <div class="flow-step-icon">💰</div>
+            <div class="flow-step-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#0071e3" stroke-width="1.5"/>
+                <path d="M12 7v5l3 3" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M9 12h3" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
             <div class="flow-step-title">财务管理</div>
             <div class="flow-step-desc">应收应付、收款付款、资金账户、财务报表、成本核算</div>
           </div>
         </div>
 
+        <!-- 扩展能力 -->
         <div class="workflow-extra">
           <div class="extra-card">
-            <span class="extra-icon">🤖</span>
+            <div class="extra-icon-svg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="#f59e0b"/>
+              </svg>
+            </div>
             <div>
               <div class="extra-title">AI 智能体工作流</div>
-              <div class="extra-desc">热搜抓取 · 文案生成 · 海报制作 · 多平台自动发布</div>
+              <div class="extra-desc">内置 Claude AI，热搜抓取 · 文案生成 · 海报制作 · 多平台自动发布</div>
             </div>
           </div>
           <div class="extra-card">
-            <span class="extra-icon">👥</span>
+            <div class="extra-icon-svg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="9" cy="7" r="3" stroke="#6366f1" stroke-width="1.5"/>
+                <circle cx="17" cy="9" r="2" stroke="#6366f1" stroke-width="1.5"/>
+                <path d="M3 21c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M17 21c0-2.2-1.3-4-3-5" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
             <div>
               <div class="extra-title">人事 & 协同</div>
-              <div class="extra-desc">员工档案 · 考勤管理 · 权限分配 · 多角色协作</div>
+              <div class="extra-desc">员工档案 · 薪资考勤 · 权限分配 · 审批流程 · 多角色协作</div>
             </div>
           </div>
           <div class="extra-card">
-            <span class="extra-icon">📊</span>
+            <div class="extra-icon-svg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke="#10b981" stroke-width="1.5"/>
+                <path d="M7 17v-4M12 17V8M17 17v-6" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
             <div>
               <div class="extra-title">数据报表</div>
-              <div class="extra-desc">销售分析 · 库存预警 · 财务汇总 · 经营大盘</div>
+              <div class="extra-desc">销售分析 · 库存预警 · 财务汇总 · 经营大盘，数据驱动决策</div>
             </div>
           </div>
         </div>
+
+        <!-- 服务器特性 -->
+        <div class="server-grid">
+          <div class="server-card">
+            <div class="server-card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="11" width="18" height="10" rx="2" stroke="#1d1d1f" stroke-width="1.5"/>
+                <path d="M7 11V7a5 5 0 0110 0v4" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="12" cy="16" r="1.5" fill="#1d1d1f"/>
+              </svg>
+            </div>
+            <div class="server-card-title">数据完全隔离</div>
+            <div class="server-card-desc">专属数据库实例，与其他用户物理隔离。订单、财务、客户数据只有您能访问。</div>
+          </div>
+          <div class="server-card">
+            <div class="server-card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7v5c0 5.5 4.3 10.7 10 12 5.7-1.3 10-6.5 10-12V7L12 2z" stroke="#1d1d1f" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M8 12l3 3 5-5" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="server-card-title">永久保存不丢失</div>
+            <div class="server-card-desc">每日自动备份，数据永久保存，支持任意时间点恢复，业务数据零风险。</div>
+          </div>
+          <div class="server-card">
+            <div class="server-card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#1d1d1f" stroke-width="1.5"/>
+                <path d="M12 8v4l3 2" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="server-card-title">性能独享不共享</div>
+            <div class="server-card-desc">独立计算资源，高峰期不受其他用户影响，支持百万级 SKU 稳定流畅。</div>
+          </div>
+          <div class="server-card">
+            <div class="server-card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#1d1d1f" stroke-width="1.5"/>
+                <path d="M12 3a9 9 0 010 18M3 12h18" stroke="#1d1d1f" stroke-width="1.5"/>
+                <path d="M12 3c-2.5 2.5-4 5.6-4 9s1.5 6.5 4 9" stroke="#1d1d1f" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <div class="server-card-title">全球节点低延迟</div>
+            <div class="server-card-desc">部署于全球多地区节点，中国、东南亚、欧美团队均可极速访问。</div>
+          </div>
+          <div class="server-card">
+            <div class="server-card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2l-8 4v6c0 4.4 3.4 8.5 8 9.9 4.6-1.4 8-5.5 8-9.9V6L12 2z" stroke="#1d1d1f" stroke-width="1.5" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="server-card-title">企业级安全防护</div>
+            <div class="server-card-desc">DDoS 防护、HTTPS 加密、IP 白名单、操作日志审计全方位保障。</div>
+          </div>
+          <div class="server-card">
+            <div class="server-card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="8" r="4" stroke="#1d1d1f" stroke-width="1.5"/>
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="server-card-title">专属技术支持</div>
+            <div class="server-card-desc">2 小时内响应，数据迁移、功能培训、使用答疑全程专属陪伴。</div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -345,20 +342,20 @@
         <h2 class="cta-title">准备好了吗？<br/>升级专属付费版</h2>
         <p class="cta-sub">首月特惠 · 独立数据库 · 全功能解锁 · 专属技术支持<br/>付款后 2 小时内为您配置专属实例并激活账号</p>
         <div class="cta-plans">
-          <div class="cta-plan">
+          <div class="cta-plan" @click="upgradeDialog?.open()">
             <div class="cta-plan-name">月付版</div>
-            <div class="cta-plan-price">¥<span>99</span>/月</div>
+            <div class="cta-plan-price">¥<span>39</span>/月</div>
           </div>
-          <div class="cta-plan cta-plan-popular">
+          <div class="cta-plan cta-plan-popular" @click="upgradeDialog?.open()">
             <div class="cta-plan-tag">最受欢迎</div>
             <div class="cta-plan-name">年付版</div>
-            <div class="cta-plan-price">¥<span>799</span>/年</div>
-            <div class="cta-plan-note">相当于 ¥66/月，省 ¥389</div>
+            <div class="cta-plan-price">¥<span>299</span>/年</div>
+            <div class="cta-plan-note">相当于 ¥25/月，省 ¥169</div>
           </div>
-          <div class="cta-plan">
+          <div class="cta-plan" @click="upgradeDialog?.open()">
             <div class="cta-plan-name">买断版</div>
-            <div class="cta-plan-price">¥<span>1999</span>/永久</div>
-            <div class="cta-plan-note">一次付清，含 3 年支持</div>
+            <div class="cta-plan-price">¥<span>1599</span>/永久</div>
+            <div class="cta-plan-note">一次付清，永久使用</div>
           </div>
         </div>
         <button class="cta-btn" @click="upgradeDialog?.open()">立即升级付费版 →</button>
@@ -428,6 +425,77 @@ const auth = useAuthStore()
 
 function go(path: string) { router.push(path) }
 function logout() { auth.logout(); router.push('/login') }
+
+// ── Portal 嵌入式 AI 对话框 ────────────────────────────────────────────────
+const portalAiOpen = ref(false)
+const portalAiQuery = ref('')
+const portalAiLoading = ref(false)
+const portalAiInputRef = ref<HTMLInputElement | null>(null)
+const portalAiMessagesRef = ref<HTMLDivElement | null>(null)
+const portalAiMessages = ref<{ role: 'user' | 'ai'; content: string }[]>([])
+
+function openPortalAi() {
+  portalAiOpen.value = true
+  nextTick(() => portalAiInputRef.value?.focus())
+}
+
+function closePortalAi() {
+  if (!portalAiQuery.value) portalAiOpen.value = false
+}
+
+async function sendPortalAi() {
+  const q = portalAiQuery.value.trim()
+  if (!q || portalAiLoading.value) return
+  portalAiOpen.value = true
+  portalAiMessages.value.push({ role: 'user', content: q })
+  portalAiQuery.value = ''
+  portalAiLoading.value = true
+  await nextTick()
+  scrollPortalAi()
+  try {
+    const token = auth.token || localStorage.getItem('erp_token') || ''
+    const res = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({ messages: portalAiMessages.value.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.content })) }),
+    })
+    const reader = res.body?.getReader()
+    const dec = new TextDecoder()
+    let aiText = ''
+    portalAiMessages.value.push({ role: 'ai', content: '' })
+    const idx = portalAiMessages.value.length - 1
+    while (reader) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const chunk = dec.decode(value)
+      for (const line of chunk.split('\n')) {
+        if (!line.startsWith('data: ')) continue
+        const data = line.slice(6)
+        if (data === '[DONE]') break
+        try {
+          const ev = JSON.parse(data)
+          if (ev.type === 'text' && ev.text) {
+            aiText += ev.text
+            portalAiMessages.value[idx].content = aiText
+            await nextTick(); scrollPortalAi()
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    if (!aiText) portalAiMessages.value[idx].content = '好的，请问还有什么需要帮助的？'
+  } catch {
+    portalAiMessages.value.push({ role: 'ai', content: '连接 AI 服务失败，请稍后重试。' })
+  } finally {
+    portalAiLoading.value = false
+    await nextTick(); scrollPortalAi()
+  }
+}
+
+function scrollPortalAi() {
+  if (portalAiMessagesRef.value) {
+    portalAiMessagesRef.value.scrollTop = portalAiMessagesRef.value.scrollHeight
+  }
+}
 
 // ── Trial 状态 ────────────────────────────────────────────────────────────
 const upgradeDialog = ref<InstanceType<typeof UpgradeDialog> | null>(null)
@@ -537,7 +605,7 @@ const TOOL_LABELS: Record<string, string> = {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #1d1d1f;
   overflow-x: hidden;
-  padding-top: 52px;
+  padding-top: 0;
 }
 
 /* ── Nav ── */
@@ -569,6 +637,27 @@ const TOOL_LABELS: Record<string, string> = {
 .nav-logo-icon:hover { transform: scale(1.12) rotate(3deg); }
 
 .nav-logo-text { font-size: 18px; font-weight: 800; letter-spacing: -0.04em; color: #1d1d1f; }
+
+.nav-platform-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding: 4px 10px 4px 8px;
+  background: #f5f5f7;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #555;
+}
+.nav-platform-dot {
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(34,197,94,0.5);
+  flex-shrink: 0;
+}
 
 .nav-links { display: flex; gap: 40px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: rgba(29,29,31,0.3); }
 .nav-links span { cursor: pointer; transition: color 0.2s; }
@@ -608,6 +697,14 @@ const TOOL_LABELS: Record<string, string> = {
   white-space: nowrap;
 }
 
+/* ── Portal Captain Bar ── */
+.portal-captain {
+  margin-bottom: 20px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
 /* ── Workspace header (above cards) ── */
 .workspace-header {
   display: flex;
@@ -622,6 +719,113 @@ const TOOL_LABELS: Record<string, string> = {
   color: #1d1d1f;
   margin: 0;
 }
+
+/* ── Portal AI Bar ── */
+.portal-ai-bar {
+  margin-bottom: 20px;
+  background: #f5f5f7;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+.portal-ai-bar--open {
+  border-color: rgba(91,79,232,0.2);
+  box-shadow: 0 4px 20px rgba(91,79,232,0.08);
+}
+.portal-ai-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  cursor: text;
+}
+.portal-ai-icon {
+  color: #86868b;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.portal-ai-bar--open .portal-ai-icon {
+  color: #5B4FE8;
+}
+.portal-ai-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1d1f;
+  outline: none;
+  font-family: inherit;
+  cursor: text;
+}
+.portal-ai-input::placeholder {
+  color: #86868b;
+  font-weight: 400;
+}
+.portal-ai-send {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: #5B4FE8;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.portal-ai-send:hover { background: #4a3fd4; }
+.portal-ai-messages {
+  max-height: 780px;
+  overflow-y: auto;
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.portal-ai-msg {
+  font-size: 13.5px;
+  line-height: 1.55;
+  padding: 8px 12px;
+  border-radius: 10px;
+  max-width: 92%;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.portal-ai-msg--user {
+  align-self: flex-end;
+  background: #5B4FE8;
+  color: white;
+}
+.portal-ai-msg--ai {
+  align-self: flex-start;
+  background: white;
+  color: #1d1d1f;
+  border: 1px solid rgba(0,0,0,0.07);
+}
+.portal-ai-msg--loading {
+  padding: 10px 14px;
+}
+.portal-ai-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.portal-ai-dots span {
+  width: 6px;
+  height: 6px;
+  background: #86868b;
+  border-radius: 50%;
+  animation: portal-ai-blink 1.2s ease-in-out infinite;
+}
+.portal-ai-dots span:nth-child(2) { animation-delay: 0.2s; }
+.portal-ai-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes portal-ai-blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
 
 /* ── Hero ── */
 .hero {
@@ -722,6 +926,26 @@ const TOOL_LABELS: Record<string, string> = {
 }
 
 .portal-card-blue   { background: #ffffff; }
+.portal-card-ai {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  border-color: rgba(99,102,241,0.2);
+}
+.portal-card-ai .card-title { color: #fff; }
+.portal-card-ai .card-desc  { color: rgba(255,255,255,0.55); }
+.portal-card-ai .card-arrow { color: rgba(255,255,255,0.4); }
+.portal-card-ai:hover .card-arrow { color: #fff; }
+.card-ai-badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  color: #f59e0b;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.2);
+  padding: 3px 9px; border-radius: 999px;
+  margin-bottom: 16px; align-self: flex-start;
+}
+.card-title-ai { font-size: clamp(20px, 2.5vw, 26px); line-height: 1.2; }
+.tag-ai { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.card-icon-ai { background: rgba(245,158,11,0.15); box-shadow: none; }
 .portal-card-purple { background: #faf5ff; border-color: rgba(124,58,237,0.08); }
 .portal-card-green  { background: #f0fdf9; border-color: rgba(5,150,105,0.08); }
 .portal-card-dim {
@@ -1359,14 +1583,29 @@ const TOOL_LABELS: Record<string, string> = {
   max-width: 600px; margin: 0 0 48px;
 }
 
-/* ── 独立服务器区 ── */
-.server-section {
+/* ── 功能全览区 ── */
+.overview-section {
   background: #f5f5f7;
   padding: 80px 24px;
 }
-.server-inner {
+.overview-inner {
   max-width: 1100px; margin: 0 auto;
 }
+.overview-divider {
+  display: flex; align-items: center; gap: 16px;
+  margin: 48px 0;
+}
+.overview-divider::before, .overview-divider::after {
+  content: ''; flex: 1;
+  height: 1px; background: rgba(0,0,0,0.1);
+}
+.overview-divider span {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(29,29,31,0.35);
+  white-space: nowrap;
+}
+
+/* ── 服务器卡片 ── */
 .server-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1380,35 +1619,44 @@ const TOOL_LABELS: Record<string, string> = {
   transition: box-shadow 0.2s, transform 0.2s;
 }
 .server-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
-.server-card-icon { font-size: 28px; margin-bottom: 14px; }
+.server-card-icon-svg {
+  width: 40px; height: 40px;
+  background: #f5f5f7; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px; flex-shrink: 0;
+}
 .server-card-title { font-size: 15px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; }
 .server-card-desc { font-size: 13px; color: rgba(29,29,31,0.5); line-height: 1.6; }
-
-/* ── ERP 工作流区 ── */
-.workflow-section {
-  background: #fff;
-  padding: 80px 24px;
+.extra-icon-svg {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: #f5f5f7; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
 }
-.workflow-inner { max-width: 1100px; margin: 0 auto; }
+
+/* ── ERP 工作流 ── */
 .workflow-flow {
   display: flex;
   align-items: flex-start;
   gap: 0;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
   overflow-x: auto;
 }
 .flow-step {
   flex: 1; min-width: 180px;
-  background: #f5f5f7;
+  background: #fff;
   border-radius: 16px;
   padding: 24px 20px;
   text-align: center;
+  border: 1px solid rgba(0,0,0,0.06);
 }
 .flow-step-num {
   font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
   color: #0071e3; margin-bottom: 10px;
 }
-.flow-step-icon { font-size: 28px; margin-bottom: 10px; }
+.flow-step-icon {
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px; height: 36px;
+}
 .flow-step-title { font-size: 14px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; }
 .flow-step-desc { font-size: 11.5px; color: rgba(29,29,31,0.45); line-height: 1.6; }
 .flow-arrow {
@@ -1421,12 +1669,19 @@ const TOOL_LABELS: Record<string, string> = {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+  margin-bottom: 0;
 }
 .extra-card {
   display: flex; align-items: flex-start; gap: 14px;
-  background: #f5f5f7; border-radius: 14px; padding: 20px;
+  background: #fff; border-radius: 14px; padding: 20px;
+  border: 1px solid rgba(0,0,0,0.06);
 }
 .extra-icon { font-size: 24px; flex-shrink: 0; }
+.extra-icon-svg {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: #f5f5f7; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
 .extra-title { font-size: 14px; font-weight: 700; color: #1d1d1f; margin-bottom: 4px; }
 .extra-desc { font-size: 12px; color: rgba(29,29,31,0.45); line-height: 1.5; }
 
@@ -1462,6 +1717,7 @@ const TOOL_LABELS: Record<string, string> = {
   border-radius: 16px; padding: 20px 28px;
   min-width: 160px; position: relative;
   transition: background 0.2s;
+  cursor: pointer;
 }
 .cta-plan:hover { background: rgba(255,255,255,0.1); }
 .cta-plan-popular {
