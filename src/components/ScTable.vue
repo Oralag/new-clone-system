@@ -477,5 +477,11 @@ watch(
   :deep(.el-table) {
     min-width: 480px;
   }
+
+  /* 分页底部留出足够空间，避免被底部导航栏遮挡 */
+  .sc-pagination {
+    justify-content: center;
+    padding-bottom: 16px;
+  }
 }
 </style>

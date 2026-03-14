@@ -531,13 +531,13 @@ async function sendCaptain(text?: string) {
   overflow: hidden;
 }
 .drop-enter-from, .drop-leave-to { max-height: 0; opacity: 0; }
-.drop-enter-to, .drop-leave-from { max-height: 820px; opacity: 1; }
+.drop-enter-to, .drop-leave-from { max-height: 90vh; opacity: 1; }
 
 .drop-panel {
   background: #fff;
   border-top: 1px solid rgba(0,0,0,0.06);
   display: flex;
-  height: 760px;
+  height: calc(100vh - 52px);
   box-shadow: 0 8px 40px rgba(0,0,0,0.1);
 }
 

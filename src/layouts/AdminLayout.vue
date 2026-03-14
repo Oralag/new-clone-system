@@ -191,7 +191,7 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 .nav-label { font-size: 11px; line-height: 1; }
 
 /* 移动端内容区底部留白 */
-.page-content.is-mobile { padding: 8px; padding-bottom: calc(68px + env(safe-area-inset-bottom)); overflow-x: hidden; }
+.page-content.is-mobile { padding: 8px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); overflow-x: hidden; }
 
 /* 移动端抽屉 */
 .drawer-inner { display: flex; flex-direction: column; height: 100%; }
