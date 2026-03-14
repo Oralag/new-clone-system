@@ -269,18 +269,8 @@
 
         <!-- 服务器特性 -->
         <div class="server-section-header">
-          <div class="server-section-eyebrow">Infrastructure</div>
-          <h2 class="server-section-title">专属服务器<br/><span class="server-section-highlight">AI 级别的</span>稳定与安全</h2>
-          <p class="server-section-sub">付费版为每位用户配置独立服务器实例，不与任何人共享资源、数据或带宽。</p>
-          <div class="server-stats-row">
-            <div class="server-stat"><span class="server-stat-num">99.9%</span><span class="server-stat-label">可用率保障</span></div>
-            <div class="server-stat-divider" />
-            <div class="server-stat"><span class="server-stat-num">&lt; 50ms</span><span class="server-stat-label">全球平均延迟</span></div>
-            <div class="server-stat-divider" />
-            <div class="server-stat"><span class="server-stat-num">每日</span><span class="server-stat-label">自动备份</span></div>
-            <div class="server-stat-divider" />
-            <div class="server-stat"><span class="server-stat-num">2h</span><span class="server-stat-label">故障响应时限</span></div>
-          </div>
+          <h2 class="server-section-title">专属独立服务器 — 数据安全、性能稳定、<span class="server-section-highlight">AI 全程加持</span></h2>
+          <p class="server-section-sub">付费版为每位用户配置独立实例，与其他用户物理隔离，不共享任何资源。内置 Claude AI 引擎自动分析经营数据，生成洞察与预警，让数据真正为您所用。全球多节点部署，99.9% 可用率保障，每日自动备份，2 小时内故障响应。</p>
         </div>
         <div class="server-grid">
           <div class="server-card server-card-blue">
@@ -955,8 +945,8 @@ const TOOL_LABELS: Record<string, string> = {
 
 .portal-card-blue   { background: #ffffff; }
 .portal-card-ai {
-  background: linear-gradient(135deg, #0c1445 0%, #1a2580 50%, #0f3460 100%);
-  border-color: rgba(0,113,227,0.25);
+  background: linear-gradient(135deg, #0071e3 0%, #0057b8 60%, #004499 100%);
+  border-color: rgba(0,113,227,0.3);
 }
 .portal-card-ai .card-title { color: #fff; }
 .portal-card-ai .card-desc  { color: rgba(255,255,255,0.55); }
@@ -1186,7 +1176,6 @@ const TOOL_LABELS: Record<string, string> = {
   .main-layout { flex-direction: column; }
   .captain-wrap { width: 100%; position: static; }
   .cards-grid { grid-template-columns: 1fr 1fr; }
-  .portal-card-dim { grid-column: span 2; }
 }
 
 @media (max-width: 768px) {
@@ -1204,7 +1193,6 @@ const TOOL_LABELS: Record<string, string> = {
   .main-layout { padding: 0 16px; }
   .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .portal-card { padding: 28px 22px; border-radius: 24px; }
-  .portal-card-dim { grid-column: auto; }
   .card-icon { width: 52px; height: 52px; border-radius: 16px; }
   .card-icon svg { width: 30px; height: 30px; }
   .card-title { font-size: 20px; margin-top: 14px; }
@@ -1639,28 +1627,15 @@ const TOOL_LABELS: Record<string, string> = {
   text-align: center;
   margin-bottom: 40px;
 }
-.server-section-eyebrow {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
-  text-transform: uppercase; color: #0071e3; margin-bottom: 12px;
-}
 .server-section-title {
-  font-size: clamp(26px, 3.5vw, 38px); font-weight: 800;
-  letter-spacing: -0.03em; line-height: 1.15; color: #1d1d1f; margin: 0 0 14px;
+  font-size: clamp(20px, 2.8vw, 30px); font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.25; color: #1d1d1f; margin: 0 0 14px;
 }
 .server-section-highlight { color: #0071e3; }
 .server-section-sub {
-  font-size: 15px; color: rgba(29,29,31,0.55); max-width: 520px;
-  margin: 0 auto 28px; line-height: 1.6;
+  font-size: 15px; color: rgba(29,29,31,0.55); max-width: 620px;
+  margin: 0 auto; line-height: 1.7;
 }
-.server-stats-row {
-  display: flex; align-items: center; justify-content: center;
-  gap: 0; background: #f5f5f7; border-radius: 16px;
-  padding: 16px 24px; display: inline-flex; gap: 0;
-}
-.server-stat { display: flex; flex-direction: column; align-items: center; padding: 0 24px; }
-.server-stat-num { font-size: 20px; font-weight: 800; color: #0071e3; letter-spacing: -0.02em; }
-.server-stat-label { font-size: 11px; color: rgba(29,29,31,0.45); margin-top: 2px; font-weight: 500; }
-.server-stat-divider { width: 1px; height: 32px; background: rgba(0,0,0,0.08); flex-shrink: 0; }
 
 .server-grid {
   display: grid;
