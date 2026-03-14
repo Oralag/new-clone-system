@@ -78,7 +78,8 @@
           <el-table-column prop="goods_name" label="商品名称" min-width="150" />
           <el-table-column label="类型" width="80" align="center">
             <template #default="{ row }">
-              <el-tag v-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
+              <el-tag v-if="getGoodsType(row) === 0" type="info" size="small">未指定</el-tag>
+              <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
               <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">原材料</el-tag>
               <el-tag v-else-if="getGoodsType(row) === 4" size="small">辅料</el-tag>
               <el-tag v-else type="success" size="small">成品</el-tag>
@@ -607,12 +608,6 @@
         <div style="font-size:13px;color:#606266">
           缺少商品类型的行：<b>{{ importRows.filter(row => row._missingGoodsType).length }}</b>
         </div>
-        <el-select v-model="importDefaultGoodsType" placeholder="缺少商品类型时请选择默认类型" clearable style="width:220px">
-          <el-option label="成品" :value="1" />
-          <el-option label="半成品" :value="2" />
-          <el-option label="原材料" :value="3" />
-          <el-option label="辅料" :value="4" />
-        </el-select>
       </div>
       <el-table :data="importRows.slice(0, 20)" border size="small" max-height="400">
         <el-table-column prop="goods_name" label="商品名称" min-width="130" />
@@ -797,7 +792,8 @@ function saveGoodsTypeMap(map: Record<number, number>) {
 const goodsTypeMap = ref<Record<number, number>>(loadGoodsTypeMap())
 
 function getGoodsType(row: any): number {
-  return goodsTypeMap.value[row.id] ?? row.goods_type ?? 1
+  if (Object.prototype.hasOwnProperty.call(goodsTypeMap.value, row.id)) return Number(goodsTypeMap.value[row.id] ?? 0)
+  return Number(row.goods_type ?? 0)
 }
 
 function getCatePathText(row: any) {
@@ -1053,7 +1049,6 @@ const importFileRef = ref<HTMLInputElement>()
 const importDialogVisible = ref(false)
 const importRows = ref<any[]>([])
 const importLoading = ref(false)
-const importDefaultGoodsType = ref<number | undefined>(undefined)
 
 // 模板列定义：Excel中文表头 -> API字段名
 const IMPORT_COL_MAP: Record<string, string> = {
@@ -1374,7 +1369,6 @@ function handleImportFile(e: Event) {
     if (!bodyRows.length) { ElMessage.warning('Excel文件无数据'); return }
 
     importRows.value = bodyRows.map((row, index) => buildImportRow(row, fieldKeys, bestSheet.headerRowIndex + index + 2))
-    importDefaultGoodsType.value = undefined
     importDialogVisible.value = true
   }
   reader.readAsArrayBuffer(file)
@@ -1383,11 +1377,6 @@ function handleImportFile(e: Event) {
 }
 
 async function confirmImport() {
-  if (importRows.value.some(row => row._missingGoodsType) && !importDefaultGoodsType.value) {
-    ElMessage.warning('请先为缺少商品类型的数据选择默认类型')
-    return
-  }
-
   const { duplicatedInFile, existingNameSet } = await detectImportDuplicateNames(importRows.value)
   const hasDuplicateNames = duplicatedInFile.size > 0 || existingNameSet.size > 0
   const skippedNameSet = new Set<string>()
@@ -1440,8 +1429,10 @@ async function confirmImport() {
       }
     }
     try {
-      if (!payload.goods_type) payload.goods_type = importDefaultGoodsType.value
-      payload.goods_type = Number(payload.goods_type) || 1
+      const resolvedGoodsType = Number(payload.goods_type)
+      const hasGoodsType = [1, 2, 3, 4].includes(resolvedGoodsType)
+      if (hasGoodsType) payload.goods_type = resolvedGoodsType
+      else delete payload.goods_type
       if (payload.cate_name && !payload.cate_id) {
         const cate = await ensureImportCategory(payload.cate_name)
         if (cate) {
@@ -1452,8 +1443,8 @@ async function confirmImport() {
       }
       const res = await createGoods({ ...payload, status: 1 })
       const id = res.data?.id ?? 0
-      if (id && payload.goods_type) {
-        nextGoodsTypeMap[id] = payload.goods_type
+      if (id) {
+        nextGoodsTypeMap[id] = hasGoodsType ? resolvedGoodsType : 0
         typeMapChanged = true
       }
       success++
