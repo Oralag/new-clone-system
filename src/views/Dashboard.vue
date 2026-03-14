@@ -918,7 +918,8 @@ async function loadDashboardData(force = false) {
       items.forEach((i: any) => { stockMap[i.goods_id] = (stockMap[i.goods_id] ?? 0) - Number(i.num || 0) })
     })
     const goodsList: any[] = rows(goodsRes)
-    stats.value[3].value = String(goodsList.filter(g => (stockMap[g.id] ?? 0) <= 0).length)
+    const stockWarnCount = goodsList.filter(g => (stockMap[g.id] ?? 0) <= 0).length
+    stats.value[3].value = stockWarnCount > 100 ? '100+' : String(stockWarnCount)
 
     if (fundFlowRes.status === 'fulfilled') {
       fundFlowList.value = fundFlowRes.value?.data?.rows ?? fundFlowRes.value?.rows ?? []
@@ -932,7 +933,7 @@ async function loadDashboardData(force = false) {
     // Build AI insights from real data (skip extra API call on mobile)
     buildInsights({
       todaySale: saleAmt + retailAmt,
-      stockWarn: Number(stats.value[3].value) || 0,
+      stockWarn: stockWarnCount,
       customerCount: Number(stats.value[2].value) || 0,
       todayOrders: todaySale.length + todayRetail.length,
       pendingReceivable: 0,

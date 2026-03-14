@@ -810,6 +810,13 @@ function openCateForm(row?: any) {
 
 async function handleSaveCate() {
   if (!cateForm.name.trim()) { ElMessage.warning('请输入分类名称'); return }
+  // 同级重名校验
+  const sameLevelDup = cateOptions.value.find(c =>
+    c.name.trim() === cateForm.name.trim() &&
+    String(c.parent_id ?? '0') === String(cateForm.parent_id ?? '0') &&
+    c.id !== cateForm.id
+  )
+  if (sameLevelDup) { ElMessage.warning(`同级分类下已存在"${cateForm.name}"，请使用其他名称`); return }
   cateSaving.value = true
   try {
     cateForm.id ? await updateGoodsCate(cateForm) : await createGoodsCate(cateForm)
@@ -1134,6 +1141,13 @@ async function calcCostFromBom() {
 async function handleSave() {
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项（商品名称、商品分类、商品单位）'); return
+  }
+  // 新增时检查商品名是否已存在
+  if (!fd.id) {
+    const checkRes = await getGoodsList({ keyword: fd.goods_name, list_rows: 50 })
+    const existRows = checkRes?.data?.rows ?? []
+    const dup = existRows.find((r: any) => r.goods_name?.trim() === fd.goods_name?.trim())
+    if (dup) { ElMessage.warning(`商品"${fd.goods_name}"已存在，请勿重复添加`); return }
   }
   saving.value = true
   try {
@@ -1543,17 +1557,10 @@ async function confirmImport() {
     if (duplicatedInFile.size > 0) messages.push(`Excel 内有 ${duplicatedInFile.size} 个重名商品${importExamples.length ? `：${importExamples.join('、')}` : ''}`)
     if (existingNameSet.size > 0) messages.push(`系统内已存在 ${existingNameSet.size} 个同名商品${existingExamples.length ? `：${existingExamples.join('、')}` : ''}`)
 
-    try {
-      await ElMessageBox.confirm(`${messages.join('；')}。是否跳过这些重名商品，继续导入其余数据？`, '发现重名商品', {
-        type: 'warning',
-        confirmButtonText: '跳过重名继续导入',
-        cancelButtonText: '取消',
-      })
-      duplicatedInFile.forEach((_rows, key) => skippedNameSet.add(key))
-      existingNameSet.forEach(key => skippedNameSet.add(key))
-    } catch {
-      return
-    }
+    // 自动跳过所有重名，不再询问
+    duplicatedInFile.forEach((_rows, key) => skippedNameSet.add(key))
+    existingNameSet.forEach(key => skippedNameSet.add(key))
+    ElMessage.warning(`${messages.join('；')}，已自动跳过`)
   }
 
   importLoading.value = true
@@ -2211,7 +2218,7 @@ function stopListScanner() {
 
 @media (max-width: 767px) {
   .list-layout { flex-direction: column !important; height: auto !important; }
-  .cate-panel { width: 100% !important; margin-right: 0 !important; margin-bottom: 8px; border-radius: 14px; max-height: none !important; overflow: visible !important; }
+  .cate-panel { position: sticky !important; top: 0 !important; z-index: 20 !important; width: 100% !important; margin-right: 0 !important; margin-bottom: 8px; border-radius: 14px; max-height: none !important; overflow: visible !important; }
   .cate-search { display: none !important; }
   .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
   .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
@@ -2222,7 +2229,6 @@ function stopListScanner() {
   .cate-arrow, .cate-arrow-placeholder { display: none !important; }
   .goods-list-wrap { overflow: visible !important; min-height: 0 !important; }
   .goods-list-wrap :deep(.sc-table) { min-width: 0 !important; padding: 12px !important; }
-  .goods-list-wrap :deep(.el-table) { width: 100% !important; }
   .goods-list-wrap :deep(.el-table__cell) { padding: 8px 0 !important; }
   .goods-list-wrap :deep(.el-button + .el-button) { margin-left: 6px !important; }
 }

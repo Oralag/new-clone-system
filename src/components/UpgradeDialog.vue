@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    :width="step === 'pay' ? '480px' : '760px'"
+    :width="step === 'pay' ? '480px' : '860px'"
     :show-close="false"
     append-to-body
     align-center
@@ -28,49 +28,69 @@
               <span>数字游牧 · 付费版</span>
             </div>
             <h2 class="ud-headline">选择适合您的方案</h2>
-            <p class="ud-sub">独立数据库 · 全功能解锁 · 专属技术支持</p>
+            <p class="ud-sub">独立数据库 · 按需解锁 · 专属技术支持</p>
 
-            <div class="plans">
-              <div
-                v-for="p in plans"
-                :key="p.id"
-                class="plan-card"
-                :class="{ 'plan-selected': selected === p.id, 'plan-popular': p.popular }"
-                @click="selected = p.id"
+            <!-- 级别切换 Tab -->
+            <div class="tier-tabs">
+              <button
+                class="tier-tab"
+                :class="{ active: activeTier === 'vip' }"
+                @click="activeTier = 'vip'; selectedBilling = 'annual'"
               >
-                <div class="plan-top">
-                  <div class="plan-name-wrap">
-                    <span class="plan-name">{{ p.name }}</span>
-                    <span v-if="p.popular" class="plan-badge">最受欢迎</span>
-                  </div>
-                  <div class="plan-price-wrap">
-                    <span class="plan-currency">¥</span>
-                    <span class="plan-price">{{ p.price }}</span>
-                    <span class="plan-period">/{{ p.period }}</span>
-                  </div>
-                  <div v-if="p.note" class="plan-note">{{ p.note }}</div>
-                </div>
-                <div class="plan-check">
-                  <svg v-if="selected === p.id" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
+                <span class="tier-icon">⭐</span> VIP
+              </button>
+              <button
+                class="tier-tab svip-tab"
+                :class="{ active: activeTier === 'svip' }"
+                @click="activeTier = 'svip'; selectedBilling = 'annual'"
+              >
+                <span class="tier-icon">👑</span> SVIP
+                <span class="tier-badge">推荐</span>
+              </button>
+            </div>
+
+            <!-- 付款周期选择 -->
+            <div class="billing-selector">
+              <button
+                v-for="b in billingOptions"
+                :key="b.id"
+                class="billing-btn"
+                :class="{ active: selectedBilling === b.id }"
+                @click="selectedBilling = b.id"
+              >
+                {{ b.label }}
+                <span v-if="b.tag" class="billing-tag">{{ b.tag }}</span>
+              </button>
+            </div>
+
+            <!-- 价格展示 -->
+            <div class="price-display" :class="activeTier === 'svip' ? 'price-svip' : ''">
+              <div class="price-main">
+                <span class="price-currency">¥</span>
+                <span class="price-num">{{ currentPrice.price }}</span>
+                <span class="price-period">/{{ currentPrice.period }}</span>
               </div>
+              <div v-if="currentPrice.note" class="price-note">{{ currentPrice.note }}</div>
             </div>
           </div>
 
-          <!-- Right: perms -->
+          <!-- Right: perms comparison -->
           <div class="ud-right">
-            <div class="ud-perm-title">付费版包含</div>
+            <div class="ud-perm-title">功能对比</div>
             <div class="ud-perms">
-              <div v-for="g in permGroups" :key="g.label" class="perm-group">
+              <div v-for="g in currentPermGroups" :key="g.label" class="perm-group">
                 <div class="perm-group-label">{{ g.label }}</div>
                 <div class="perm-items">
-                  <div v-for="item in g.items" :key="item" class="perm-item">
-                    <span class="perm-check">✓</span>{{ item }}
+                  <div v-for="item in g.items" :key="item.text" class="perm-item">
+                    <span class="perm-check" :class="item.included ? 'check-yes' : 'check-no'">
+                      {{ item.included ? '✓' : '✗' }}
+                    </span>
+                    <span :class="item.included ? '' : 'perm-dim'">{{ item.text }}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <button class="ud-cta" @click="step = 'pay'">
+            <button class="ud-cta" :class="activeTier === 'svip' ? 'ud-cta-svip' : ''" @click="step = 'pay'">
               确认套餐，去付款
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
@@ -90,13 +110,12 @@
           <div class="pay-header">
             <div class="pay-title">扫码完成付款</div>
             <div class="pay-plan-info">
-              已选：<strong>{{ currentPlan?.name }}</strong>
-              <span class="pay-price">¥{{ currentPlan?.price }} / {{ currentPlan?.period }}</span>
+              已选：<strong>{{ activeTier === 'svip' ? 'SVIP' : 'VIP' }} · {{ currentPrice.label }}</strong>
+              <span class="pay-price">¥{{ currentPrice.price }} / {{ currentPrice.period }}</span>
             </div>
           </div>
 
           <div class="qr-area">
-            <!-- 微信收款码占位 — 替换 src 为真实二维码图片 -->
             <div class="qr-box">
               <div class="qr-placeholder">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.25">
@@ -154,58 +173,112 @@ import { ref, computed } from 'vue'
 
 const visible = ref(false)
 const step = ref<'plan' | 'pay' | 'done'>('plan')
-const selected = ref('annual')
+const activeTier = ref<'vip' | 'svip'>('vip')
+const selectedBilling = ref<'monthly' | 'annual' | 'lifetime'>('annual')
 
-const plans = [
-  {
-    id: 'monthly',
-    name: '月付版',
-    price: '99',
-    period: '月',
-    note: '',
-    popular: false,
-  },
-  {
-    id: 'annual',
-    name: '年付版',
-    price: '799',
-    period: '年',
-    note: '相当于 ¥66/月，省 ¥389',
-    popular: true,
-  },
-  {
-    id: 'lifetime',
-    name: '买断版',
-    price: '1999',
-    period: '永久',
-    note: '一次付清，永久使用，含3年支持',
-    popular: false,
-  },
+const billingOptions = [
+  { id: 'monthly', label: '月付' },
+  { id: 'annual',  label: '年付', tag: '省钱' },
+  { id: 'lifetime', label: '买断' },
 ]
 
-const currentPlan = computed(() => plans.find(p => p.id === selected.value))
+const pricing = {
+  vip: {
+    monthly:  { price: '39',   period: '月', label: '月付',  note: '' },
+    annual:   { price: '299',  period: '年', label: '年付',  note: '相当于 ¥25/月，省 ¥169' },
+    lifetime: { price: '1599',  period: '永久', label: '买断', note: '一次付清，永久使用' },
+  },
+  svip: {
+    monthly:  { price: '129',  period: '月', label: '月付',  note: '' },
+    annual:   { price: '999',  period: '年', label: '年付',  note: '相当于 ¥83/月，省 ¥549' },
+    lifetime: { price: '3999', period: '永久', label: '买断', note: '一次付清，含3年专属支持' },
+  },
+}
 
-const permGroups = [
+const currentPrice = computed(() => pricing[activeTier.value][selectedBilling.value])
+
+const vipPerms = [
+  {
+    label: '核心业务',
+    items: [
+      { text: '客户 / 销售 / 采购管理', included: true },
+      { text: '仓库 / 零售管理', included: true },
+      { text: '财务管理', included: true },
+      { text: '生产 / 委外管理', included: false },
+      { text: '人事管理', included: false },
+    ],
+  },
   {
     label: '数据与安全',
-    items: ['专属独立数据库', '数据永久保存', '数据完全隔离', '定期自动备份'],
+    items: [
+      { text: '专属独立数据库', included: true },
+      { text: '数据永久保存', included: true },
+      { text: '定期自动备份', included: true },
+      { text: '多账号协作（10人）', included: true },
+    ],
   },
   {
-    label: 'ERP 全模块',
-    items: ['销售 / 采购 / 仓库', '财务 / 人事 / 报表', '生产 / 委外 / 零售', '办公协同 / 系统设置'],
-  },
-  {
-    label: 'AI 智能体工作流',
-    items: ['热搜抓取 / 文案生成', '图文海报 / 视频生成', '多平台一键发布', 'AI 智能助手无限用'],
+    label: 'AI 与分析',
+    items: [
+      { text: '报表 / 数据分析', included: true },
+      { text: 'AI 智能助手', included: false },
+      { text: 'AI 工作流自动化', included: false },
+    ],
   },
   {
     label: '服务保障',
-    items: ['专属配置 + 数据迁移', '使用培训文档', '优先响应技术支持', '持续功能更新'],
+    items: [
+      { text: '使用培训文档', included: true },
+      { text: '标准技术支持', included: true },
+      { text: '优先专属支持', included: false },
+    ],
   },
 ]
 
+const svipPerms = [
+  {
+    label: '全功能业务',
+    items: [
+      { text: '客户 / 销售 / 采购管理', included: true },
+      { text: '仓库 / 零售管理', included: true },
+      { text: '财务管理', included: true },
+      { text: '生产 / 委外管理', included: true },
+      { text: '人事管理', included: true },
+    ],
+  },
+  {
+    label: '数据与安全',
+    items: [
+      { text: '专属独立数据库', included: true },
+      { text: '数据永久保存', included: true },
+      { text: '定期自动备份', included: true },
+      { text: '多账号协作（无限）', included: true },
+    ],
+  },
+  {
+    label: 'AI 与分析',
+    items: [
+      { text: '报表 / 数据分析', included: true },
+      { text: 'AI 智能助手无限用', included: true },
+      { text: 'AI 工作流自动化', included: true },
+    ],
+  },
+  {
+    label: '服务保障',
+    items: [
+      { text: '使用培训文档', included: true },
+      { text: '2小时响应专属支持', included: true },
+      { text: '数据迁移 + 专属配置', included: true },
+    ],
+  },
+]
+
+const currentPermGroups = computed(() => activeTier.value === 'svip' ? svipPerms : vipPerms)
+
 function open() {
   step.value = 'plan'
+  activeTier.value = 'vip'
+  selectedBilling.value = 'annual'
   visible.value = true
 }
 
@@ -262,62 +335,82 @@ defineExpose({ open })
   margin-bottom: 20px;
 }
 .ud-headline { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 6px; }
-.ud-sub { font-size: 13px; color: rgba(29,29,31,0.42); font-weight: 500; margin: 0 0 24px; }
+.ud-sub { font-size: 13px; color: rgba(29,29,31,0.42); font-weight: 500; margin: 0 0 20px; }
 
-/* Plans */
-.plans { display: flex; flex-direction: column; gap: 10px; flex: 1; }
-.plan-card {
-  position: relative;
-  border: 1.5px solid rgba(0,0,0,0.09);
-  border-radius: 14px; padding: 16px 44px 16px 16px;
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+/* Tier Tabs */
+.tier-tabs {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.tier-tab {
+  flex: 1; padding: 10px 14px;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  border-radius: 12px; cursor: pointer;
   background: #fff;
+  font-size: 14px; font-weight: 700; color: rgba(29,29,31,0.5);
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: all 0.2s; position: relative;
 }
-.plan-card:hover { border-color: rgba(0,0,0,0.2); }
-.plan-selected {
-  border-color: #1d1d1f !important;
+.tier-tab:hover { border-color: rgba(0,0,0,0.2); color: #1d1d1f; }
+.tier-tab.active {
+  border-color: #1d1d1f; background: #1d1d1f; color: #fff;
+}
+.svip-tab.active {
+  border-color: #7c3aed;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+.tier-icon { font-size: 15px; }
+.tier-badge {
+  position: absolute; top: -8px; right: 8px;
+  font-size: 9px; font-weight: 800;
+  background: #f59e0b; color: #fff;
+  padding: 2px 6px; border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+/* Billing Selector */
+.billing-selector {
+  display: flex; gap: 6px; margin-bottom: 20px;
+}
+.billing-btn {
+  flex: 1; padding: 8px 10px;
+  border: 1.5px solid rgba(0,0,0,0.09);
+  border-radius: 10px; cursor: pointer;
+  background: #fff;
+  font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.45);
+  transition: all 0.15s;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.billing-btn:hover { border-color: rgba(0,0,0,0.2); color: #1d1d1f; }
+.billing-btn.active { border-color: #1d1d1f; background: #f5f5f7; color: #1d1d1f; }
+.billing-tag {
+  font-size: 9px; font-weight: 700;
+  background: #34d399; color: #fff;
+  padding: 1px 5px; border-radius: 999px;
+}
+
+/* Price Display */
+.price-display {
+  flex: 1;
+  display: flex; flex-direction: column; justify-content: center;
   background: #f5f5f7;
-  box-shadow: 0 0 0 3px rgba(29,29,31,0.06);
+  border-radius: 16px; padding: 24px 20px;
+  margin-bottom: 0;
+  border: 1.5px solid rgba(0,0,0,0.06);
 }
-.plan-popular {
-  border-color: #0071e3;
+.price-svip {
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border-color: rgba(124,58,237,0.15);
 }
-.plan-popular.plan-selected {
-  border-color: #0071e3 !important;
-  background: #f0f7ff;
-  box-shadow: 0 0 0 3px rgba(0,113,227,0.1);
+.price-main {
+  display: flex; align-items: baseline; gap: 3px;
+  margin-bottom: 6px;
 }
-
-.plan-top {}
-.plan-name-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.plan-name { font-size: 14px; font-weight: 700; color: #1d1d1f; }
-.plan-badge {
-  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-  background: #0071e3; color: #fff;
-  padding: 2px 7px; border-radius: 999px;
-}
-.plan-price-wrap { display: flex; align-items: baseline; gap: 2px; }
-.plan-currency { font-size: 14px; font-weight: 700; color: #1d1d1f; }
-.plan-price { font-size: 28px; font-weight: 800; letter-spacing: -0.04em; color: #1d1d1f; line-height: 1; }
-.plan-period { font-size: 12px; color: rgba(29,29,31,0.4); font-weight: 500; margin-left: 2px; }
-.plan-note { font-size: 11px; color: rgba(29,29,31,0.4); margin-top: 4px; }
-
-.plan-check {
-  position: absolute; top: 50%; right: 16px;
-  transform: translateY(-50%);
-  width: 22px; height: 22px;
-  border: 1.5px solid rgba(0,0,0,0.15);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
-}
-.plan-selected .plan-check {
-  background: #1d1d1f; border-color: #1d1d1f; color: #fff;
-}
-.plan-popular.plan-selected .plan-check {
-  background: #0071e3; border-color: #0071e3;
-}
+.price-currency { font-size: 18px; font-weight: 700; color: #1d1d1f; }
+.price-num { font-size: 48px; font-weight: 900; letter-spacing: -0.05em; color: #1d1d1f; line-height: 1; }
+.price-svip .price-num { color: #7c3aed; }
+.price-period { font-size: 14px; color: rgba(29,29,31,0.4); font-weight: 500; margin-left: 3px; }
+.price-note { font-size: 12px; color: rgba(29,29,31,0.45); font-weight: 500; }
+.price-svip .price-note { color: rgba(124,58,237,0.6); }
 
 /* Right */
 .ud-right {
@@ -330,15 +423,18 @@ defineExpose({ open })
   letter-spacing: 0.1em; color: rgba(29,29,31,0.35);
   margin-bottom: 16px;
 }
-.ud-perms { display: flex; flex-direction: column; gap: 18px; flex: 1; }
+.ud-perms { display: flex; flex-direction: column; gap: 16px; flex: 1; }
 .perm-group {}
 .perm-group-label {
   font-size: 11px; font-weight: 700; color: rgba(29,29,31,0.5);
-  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 7px;
+  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
 }
-.perm-items { display: flex; flex-direction: column; gap: 4px; }
+.perm-items { display: flex; flex-direction: column; gap: 3px; }
 .perm-item { font-size: 12.5px; color: #1d1d1f; font-weight: 500; display: flex; align-items: center; gap: 7px; }
-.perm-check { color: #0071e3; font-weight: 800; font-size: 11px; flex-shrink: 0; }
+.perm-check { font-weight: 800; font-size: 11px; flex-shrink: 0; width: 14px; }
+.check-yes { color: #0071e3; }
+.check-no { color: rgba(29,29,31,0.2); }
+.perm-dim { color: rgba(29,29,31,0.3); }
 
 .ud-cta {
   display: flex; align-items: center; justify-content: center; gap: 7px;
@@ -350,6 +446,10 @@ defineExpose({ open })
   transition: background 0.2s, transform 0.2s;
 }
 .ud-cta:hover { background: #3a3a3a; transform: scale(0.98); }
+.ud-cta-svip {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+.ud-cta-svip:hover { background: linear-gradient(135deg, #6d28d9, #9333ea); }
 .ud-cta-note {
   font-size: 11px; color: rgba(29,29,31,0.35);
   text-align: center; margin-top: 10px; line-height: 1.5;
@@ -389,7 +489,6 @@ defineExpose({ open })
 }
 .qr-placeholder-text { font-size: 12px; font-weight: 700; color: rgba(29,29,31,0.35); }
 .qr-placeholder-hint { font-size: 10px; color: rgba(29,29,31,0.2); }
-/* 真实二维码图片样式 */
 .qr-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
 
 .qr-wechat-icon {

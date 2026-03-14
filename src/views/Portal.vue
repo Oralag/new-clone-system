@@ -1,4 +1,5 @@
 <template>
+  <CaptainBar />
   <div class="portal-page">
     <!-- Nav -->
     <nav class="glass-nav">
@@ -49,10 +50,10 @@
       </div>
     </div>
 
-    <!-- 主体区：左边模块卡片 + 右边 Captain -->
+    <!-- 主体区：模块卡片（全宽） -->
     <div class="main-layout">
 
-      <!-- 左：模块卡片 -->
+      <!-- 模块卡片 -->
       <div class="cards-col">
         <!-- 工作空间标题 -->
         <div class="workspace-header">
@@ -188,98 +189,6 @@
 
       </div><!-- /cards-grid -->
       </div><!-- /cards-col -->
-
-      <!-- 右：Captain 总控台 -->
-      <div class="captain-wrap">
-        <!-- spacer to align with workspace-header on the left -->
-        <div class="captain-spacer"></div>
-
-        <!-- Captain 指挥官标题 -->
-        <div class="captain-header">
-          <div class="captain-header-left">
-            <div class="captain-glyph">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2L4 7v6c0 5 4.5 9.7 8 11 3.5-1.3 8-6 8-11V7L12 2z"/></svg>
-            </div>
-            <div class="captain-header-title">Captain 指挥官</div>
-            <div class="captain-live">
-              <span class="captain-live-dot"></span>
-              LIVE
-            </div>
-          </div>
-          <div class="captain-header-sub">AI 多智能体总调度系统</div>
-        </div>
-
-        <!-- 对话区 -->
-        <div class="captain-main">
-          <!-- 输入区 (顶部) -->
-          <div class="captain-compose">
-            <input
-              ref="captainInputRef"
-              v-model="captainInput"
-              class="captain-compose-input"
-              placeholder="输入目标，Captain 自动调度 Agency..."
-              @keydown.enter.prevent="sendCaptain()"
-              :disabled="captainLoading"
-            />
-            <div class="captain-compose-actions">
-              <button v-if="captainMessages.length > 0" class="compose-clear" @click="captainMessages = []" title="清空对话">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-              </button>
-              <button class="compose-send" :disabled="captainLoading || !captainInput.trim()" @click="sendCaptain()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- 消息区 -->
-          <div ref="chatScrollRef" class="captain-feed">
-            <!-- 空状态 -->
-            <div v-if="captainMessages.length === 0" class="feed-empty">
-              <div class="feed-empty-grid">
-                <button v-for="p in quickPrompts" :key="p" class="feed-prompt" @click="sendCaptain(p)">
-                  <span class="feed-prompt-text">{{ p }}</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
-              </div>
-            </div>
-
-            <template v-for="(msg, idx) in captainMessages" :key="idx">
-              <div v-if="msg.role === 'user'" class="feed-row feed-user">
-                <div class="feed-bubble-user">{{ msg.content }}</div>
-              </div>
-              <div v-else class="feed-row feed-agency">
-                <div class="feed-agency-inner">
-                  <template v-for="(step, si) in msg.steps" :key="si">
-                    <div v-if="step.type === 'captain_text'" class="feed-captain-text" v-html="renderMd(step.text)"></div>
-                    <div v-else-if="step.type === 'agent_start'" class="feed-agent-card">
-                      <div class="feed-agent-header" :style="{ background: getAgentColor(step.agentId) + '10' }">
-                        <span class="feed-agent-emoji">{{ step.emoji }}</span>
-                        <span class="feed-agent-name">{{ step.agentName }}</span>
-                        <div class="feed-agent-tag" :class="step.status">
-                          <span v-if="step.status === 'running'" class="spin-dot"></span>
-                          <span>{{ step.status === 'running' ? '执行中' : '完成' }}</span>
-                        </div>
-                      </div>
-                      <div class="feed-agent-task">{{ step.task }}</div>
-                      <div v-if="step.output" class="feed-agent-output">{{ step.output }}</div>
-                    </div>
-                    <div v-else-if="step.type === 'tool'" class="feed-tool">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                      {{ step.label }}
-                      <span class="feed-tool-dot" :class="step.status"></span>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
-
-            <div v-if="captainLoading" class="feed-thinking">
-              <span class="feed-thinking-label">🎯 Captain</span>
-              <div class="feed-dots"><span></span><span></span><span></span></div>
-            </div>
-          </div>
-        </div>
-      </div><!-- /captain-wrap -->
 
     </div><!-- /main-layout -->
 
@@ -512,6 +421,7 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import UpgradeDialog from '@/components/UpgradeDialog.vue'
+import CaptainBar from '@/components/CaptainBar.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -616,134 +526,6 @@ const TOOL_LABELS: Record<string, string> = {
   query_finance: '查询财务', query_staff: '查询员工', query_warehouses: '查询仓库',
   navigate_to: '页面导航',
 }
-
-// ── Captain 对话状态 ────────────────────────────────────────────────────────
-interface Step {
-  type: 'agent_start' | 'captain_text' | 'tool'
-  agentId?: string; agentName?: string; emoji?: string
-  task?: string; output?: string; status?: string
-  text?: string; label?: string
-}
-interface CaptainMsg { role: 'user' | 'agency'; content: string; steps: Step[] }
-
-const captainMessages = ref<CaptainMsg[]>([])
-const captainInput = ref('')
-const captainLoading = ref(false)
-const captainOpen = ref(false)
-const captainAboutOpen = ref(false)
-const chatScrollRef = ref<HTMLDivElement>()
-const captainInputRef = ref<HTMLInputElement>()
-
-function getAgentColor(agentId?: string): string {
-  const found = agentList.find(a => a.id === agentId)
-  return found?.color ?? '#6366f1'
-}
-
-const quickPrompts = [
-  '分析本月销售数据，生成小红书推广文案',
-  '帮我规划一个新品上市的内容发布计划',
-  '追踪当前热点，给出3个选题方向',
-]
-
-function renderMd(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br/>')
-}
-
-async function scrollBottom() {
-  await nextTick()
-  if (chatScrollRef.value) chatScrollRef.value.scrollTop = chatScrollRef.value.scrollHeight
-}
-
-async function sendCaptain(text?: string) {
-  const content = (text ?? captainInput.value).trim()
-  if (!content || captainLoading.value) return
-  captainInput.value = ''
-  captainLoading.value = true
-
-  captainMessages.value.push({ role: 'user', content, steps: [] })
-  const agencyMsg: CaptainMsg = { role: 'agency', content: '', steps: [] }
-  captainMessages.value.push(agencyMsg)
-  await scrollBottom()
-
-  // 跟踪每个agent步骤
-  const agentSteps: Record<string, number> = {}
-  const toolSteps: Record<string, number> = {}
-
-  try {
-    const history = captainMessages.value
-      .filter(m => m.role === 'user')
-      .map(m => ({ role: 'user', content: m.content }))
-
-    const resp = await fetch('/api/captain-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-erp-token': localStorage.getItem('erp_token') || '' },
-      body: JSON.stringify({ messages: history }),
-    })
-    if (!resp.body) throw new Error('No response body')
-    const reader = resp.body.getReader()
-    const decoder = new TextDecoder()
-    let buf = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buf += decoder.decode(value, { stream: true })
-      const lines = buf.split('\n')
-      buf = lines.pop() ?? ''
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const raw = line.slice(6).trim()
-        if (raw === '[DONE]') break
-        try {
-          const evt = JSON.parse(raw)
-          if (evt.type === 'agent_thinking') {
-            if (evt.agentId === 'captain') {
-              // Captain 思考文本 — 找或创建 captain_text step
-              const last = agencyMsg.steps[agencyMsg.steps.length - 1]
-              if (last?.type === 'captain_text') {
-                last.text = (last.text ?? '') + evt.text
-              } else if (evt.text) {
-                agencyMsg.steps.push({ type: 'captain_text', text: evt.text })
-              }
-            } else {
-              // 专项agent思考 — 追加到对应 agent_start 的 output
-              const idx = agentSteps[evt.agentId]
-              if (idx !== undefined) {
-                const step = agencyMsg.steps[idx]
-                step.output = (step.output ?? '') + evt.text
-              }
-            }
-          } else if (evt.type === 'agent_start') {
-            const idx = agencyMsg.steps.length
-            agentSteps[evt.agentId] = idx
-            agencyMsg.steps.push({ type: 'agent_start', agentId: evt.agentId, agentName: evt.agentName, emoji: evt.emoji, task: evt.task, output: '', status: 'running' })
-          } else if (evt.type === 'agent_done') {
-            const idx = agentSteps[evt.agentId]
-            if (idx !== undefined) agencyMsg.steps[idx].status = 'done'
-          } else if (evt.type === 'tool_start') {
-            const idx = agencyMsg.steps.length
-            toolSteps[evt.id] = idx
-            agencyMsg.steps.push({ type: 'tool', label: TOOL_LABELS[evt.name] ?? evt.name, status: 'running' })
-          } else if (evt.type === 'tool_result') {
-            const idx = toolSteps[evt.id]
-            if (idx !== undefined) agencyMsg.steps[idx].status = 'done'
-          }
-          // 强制响应式更新
-          captainMessages.value = [...captainMessages.value]
-          await scrollBottom()
-        } catch {}
-      }
-    }
-  } catch (e: any) {
-    agencyMsg.steps.push({ type: 'captain_text', text: `❌ 出错：${e.message}` })
-  } finally {
-    captainLoading.value = false
-    captainMessages.value = [...captainMessages.value]
-    await scrollBottom()
-  }
-}
 </script>
 
 <style scoped>
@@ -755,6 +537,7 @@ async function sendCaptain(text?: string) {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #1d1d1f;
   overflow-x: hidden;
+  padding-top: 52px;
 }
 
 /* ── Nav ── */
@@ -900,23 +683,15 @@ async function sendCaptain(text?: string) {
   letter-spacing: -0.01em;
 }
 
-/* ── Main two-column layout ── */
+/* ── Main layout (now single column) ── */
 .main-layout {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-  max-width: 1400px;
+  max-width: 900px;
   margin: 0 auto 40px;
   padding: 16px 32px 0;
 }
 
 .cards-col {
-  flex: 1;
-  min-width: 0;
-}
-
-.captain-spacer {
-  height: 70px;
+  width: 100%;
 }
 
 /* ── Cards ── */
@@ -1182,98 +957,14 @@ async function sendCaptain(text?: string) {
   .card-icon svg { width: 30px; height: 30px; }
   .card-title { font-size: 20px; margin-top: 14px; }
   .card-desc { font-size: 13px; margin-top: 8px; }
-  .captain-wrap { margin-bottom: 24px; }
-  .captain-main { flex-direction: column; }
-  .captain-sidebar { width: 100%; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; padding: 16px 18px; border-right: none; border-bottom: 1px solid #f0f0f5; }
-  .captain-team-pills { margin-top: 0; }
-  .about-btn { margin-top: 0; }
+  .captain-strip-input { width: 130px; }
   .neural-content { grid-template-columns: 1fr; gap: 40px; }
   .neural-section { padding: 48px 20px; }
   .portal-footer { padding: 36px 20px; }
   .hide-sm { display: none; }
 }
 
-/* ── Captain 总控台 ── */
-.captain-wrap {
-  width: 460px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 24px;
-}
-
-/* Captain header (outside the dialog box) */
-.captain-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px 12px;
-}
-.captain-header-left {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-.captain-header-title {
-  font-size: 26px;
-  font-weight: 800;
-  color: #1d1d1f;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-  text-align: center;
-}
-.captain-header-sub {
-  font-size: 12px;
-  color: rgba(29,29,31,0.35);
-  font-weight: 500;
-  margin-top: 4px;
-  text-align: center;
-}
-
-.captain-main {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #e4e7ed;
-  border-radius: 20px;
-  background: #fff;
-  overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-  min-height: 420px;
-  max-height: calc(100vh - 200px);
-}
-
-/* ── 左侧身份栏 ── */
-.captain-sidebar {
-  width: 200px;
-  flex-shrink: 0;
-  border-right: 1px solid #f0f0f5;
-  padding: 28px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  background: linear-gradient(160deg, #fafaff 0%, #f4f5ff 100%);
-}
-.captain-glyph {
-  width: 42px; height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  flex-shrink: 0;
-}
-.captain-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #1d2129;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 3px;
-}
+/* ── Captain live dot (reused in drop header) ── */
 .captain-live {
   display: inline-flex;
   align-items: center;
@@ -1293,72 +984,8 @@ async function sendCaptain(text?: string) {
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
-.captain-tagline {
-  font-size: 13px;
-  color: #86909c;
-  font-weight: 400;
-}
-.captain-head-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-.captain-team-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-.team-pill {
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--c) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--c) 25%, transparent);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px;
-  cursor: default;
-  transition: transform 0.15s;
-}
-.team-pill:hover { transform: scale(1.15); }
-.about-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 1px solid #e4e7ed;
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 11px;
-  color: #4e5969;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  margin-top: 4px;
-}
-.about-btn:hover { border-color: #6366f1; color: #6366f1; background: #f0f0ff; }
 
-/* ── 右侧对话区 ── */
-.captain-chat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.captain-feed {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  scroll-behavior: smooth;
-  min-height: 260px;
-}
-.captain-feed::-webkit-scrollbar { width: 4px; }
-.captain-feed::-webkit-scrollbar-thumb { background: #e4e7ed; border-radius: 2px; }
-
-/* 空状态 */
+/* ── Feed empty state & prompts (shared) ── */
 .feed-empty { padding: 4px 0; }
 .feed-empty-grid {
   display: grid;

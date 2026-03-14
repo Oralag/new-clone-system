@@ -55,6 +55,7 @@
     </div>
 
     <!-- Table -->
+    <div class="table-scroll-wrap">
     <el-table
       ref="elTableRef"
       v-loading="loading"
@@ -69,6 +70,7 @@
       <el-table-column type="selection" width="50" align="center" />
       <slot />
     </el-table>
+    </div>
 
     <!-- Selected info bar — shown only when rows are selected -->
     <div v-if="selectedRows.length > 0" class="selected-bar">
@@ -83,7 +85,8 @@
         v-model:page-size="pageSize"
         :total="total"
         :page-sizes="[20, 50, 100, 200]"
-        layout="total, sizes, prev, pager, next, jumper"
+        :layout="isMobile ? 'prev, pager, next' : 'total, sizes, prev, pager, next, jumper'"
+        :pager-count="isMobile ? 5 : 7"
         background
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
@@ -123,11 +126,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, useSlots } from 'vue'
+import { ref, onMounted, onUnmounted, useSlots } from 'vue'
 import { Search, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as XLSX from 'xlsx'
 import http from '@/api/http'
+
+const isMobile = ref(window.innerWidth < 768)
+const onResize = () => { isMobile.value = window.innerWidth < 768 }
 
 interface Props {
   apiObj: (params: any) => Promise<any>
@@ -370,7 +376,8 @@ async function confirmImport() {
 // ── Expose ────────────────────────────────────────────────────────────────────
 defineExpose({ refresh, loadData, tableData, searchParams, selectedRows })
 
-onMounted(() => { loadData() })
+onMounted(() => { loadData(); window.addEventListener('resize', onResize) })
+onUnmounted(() => { window.removeEventListener('resize', onResize) })
 
 watch(
   () => props.params,
@@ -459,6 +466,16 @@ watch(
 
   .toolbar-right {
     justify-content: flex-start;
+  }
+
+  /* 表格横向滚动容器，不影响页面整体宽度 */
+  .table-scroll-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+  :deep(.el-table) {
+    min-width: 480px;
   }
 }
 </style>

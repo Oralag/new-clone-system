@@ -734,10 +734,11 @@ html, body {
   .el-dialog__header { padding: 18px 18px 14px !important; }
   .el-dialog__footer { padding: 12px 18px 22px !important; }
 
-  /* Table → card list */
-  .is-mobile .el-table { display: none !important; }
+  /* Table → mobile scroll */
   .m-card-list { display: none; }
   .is-mobile .m-card-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+  /* el-table on mobile: only horizontal scroll inside table-scroll-wrap */
+  .is-mobile .el-table { display: table !important; }
 
   /* Mobile card */
   .m-card {
@@ -795,9 +796,9 @@ html, body {
   .is-mobile .sc-table { height: auto !important; border-radius: 18px; padding: 12px; }
   .is-mobile .client-list-wrap, .is-mobile .supplier-list-wrap, .is-mobile .goods-list-wrap { overflow: visible !important; }
 
-  /* cate panel → horizontal scroll */
+  /* cate panel → sticky top + horizontal scroll */
   .is-mobile .list-layout { flex-direction: column !important; height: auto !important; }
-  .is-mobile .cate-panel { width: 100% !important; margin-right: 0 !important; margin-bottom: 8px; border-radius: 16px; max-height: none !important; overflow: visible !important; }
+  .is-mobile .cate-panel { position: sticky !important; top: 0 !important; z-index: 20 !important; width: 100% !important; margin-right: 0 !important; margin-bottom: 8px; border-radius: 16px; max-height: none !important; overflow: visible !important; }
   .is-mobile .cate-search { display: none !important; }
   .is-mobile .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
   .is-mobile .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }

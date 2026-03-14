@@ -94,6 +94,7 @@
     </el-drawer>
   </div>
 
+  <CaptainBar />
   <AiAssistant />
   <OnboardingGuide />
 </template>
@@ -104,6 +105,7 @@ import SidebarFlyout from './components/SidebarFlyout.vue'
 import TopBar from './components/TopBar.vue'
 import TagsBar from './components/TagsBar.vue'
 import AiAssistant from '@/components/AiAssistant.vue'
+import CaptainBar from '@/components/CaptainBar.vue'
 import OnboardingGuide from '@/components/OnboardingGuide.vue'
 import TrialBanner from '@/components/TrialBanner.vue'
 import { useTabsStore } from '@/stores/tabs'
@@ -166,8 +168,8 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 </script>
 
 <style scoped>
-.admin-layout { display: flex; height: 100vh; min-height: 100vh; overflow: hidden; background: #ffffff; min-width: 900px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-.admin-layout.is-mobile { min-width: unset; }
+.admin-layout { display: flex; height: 100vh; min-height: 100vh; overflow: hidden; background: #ffffff; min-width: 900px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; padding-top: 52px; }
+.admin-layout.is-mobile { min-width: unset; padding-top: 52px; }
 .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: #ffffff; }
 .page-content { flex: 1; overflow-y: auto; overflow-x: auto; padding: 16px; background: #f5f5f7; }
 .page-footer { text-align: right; font-size: 10px; color: rgba(0,0,0,0.2); padding: 4px 0 6px; letter-spacing: -0.01em; }
@@ -189,7 +191,7 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 .nav-label { font-size: 11px; line-height: 1; }
 
 /* 移动端内容区底部留白 */
-.page-content.is-mobile { padding: 8px; padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+.page-content.is-mobile { padding: 8px; padding-bottom: calc(68px + env(safe-area-inset-bottom)); overflow-x: hidden; }
 
 /* 移动端抽屉 */
 .drawer-inner { display: flex; flex-direction: column; height: 100%; }
