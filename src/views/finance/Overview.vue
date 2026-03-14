@@ -403,8 +403,7 @@ import { useRouter } from 'vue-router'
 import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, ArrowUp, ArrowDown, Box, Plus, Minus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
-import { getFundList } from '@/api/finance'
-import { normalizeFundFlowRows } from '@/utils/fundFlow'
+import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList } from '@/api/finance'
 
 const router = useRouter()
 
@@ -412,23 +411,64 @@ const fundList = ref<any[]>([])
 const clientList = ref<any[]>([])
 const supplierList = ref<any[]>([])
 const prepayList = ref<any[]>([])
-const collectList = ref<any[]>([])
-const payList = ref<any[]>([])
+const collectList = ref<any[]>([])   // 收款单 /finance/CollectReceipt/index
+const payList = ref<any[]>([])       // 付款单 /finance/PayReceipt/index
+const expenseList = ref<any[]>([])   // 费用单 /finance/Expense/index
+const rechargeList = ref<any[]>([])  // 会员充值 /retail/recharge/index
+const retailList = ref<any[]>([])    // 零售单 /retail/order/index
 const receivableList = ref<any[]>([])
 const payableList = ref<any[]>([])
 const purchasePayList = ref<any[]>([])
-const fundFlowList = ref<any[]>([])
 const saleOutList = ref<any[]>([])
-const retailList = ref<any[]>([])
 const flowVisible = ref(false)
 const chartW = 480
 
-const normalizedFundFlowList = computed(() => normalizeFundFlowRows(fundFlowList.value))
-// 收入/支出 统一从资金流水（FundFlow）汇总，与资金流水页保持一致
-const collectTotal = computed(() => sumFundFlowIncome(normalizedFundFlowList.value).toFixed(2))
-const payTotal = computed(() => sumFundFlowExpense(normalizedFundFlowList.value).toFixed(2))
-const accountTotal = computed(() =>
-  fundList.value.reduce((s, r) => s + Number(r.balance || 0), 0).toFixed(2)
+// ============================================================
+// 收入/支出计算 — 与 FundFlow.vue 完全相同的6个来源组装逻辑
+// ============================================================
+const collectSourceMap: Record<string, string> = {
+  customer: '销售收款', supplier: '供应商退款', staff: '员工还款', other: '其他收入'
+}
+const paySourceMap: Record<string, string> = {
+  supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出'
+}
+
+const allFlowItems = computed(() => {
+  const items: any[] = []
+  // 1. 收款单（income）
+  for (const r of collectList.value) {
+    if (Number(r.amount || 0) <= 0) continue
+    items.push({ type: 'income', source: collectSourceMap[r.contact_type] || '收款', amount: Number(r.amount || 0), date: (r.receipt_date || r.created_at || '').slice(0, 10) })
+  }
+  // 2. 零售单（income）
+  for (const r of retailList.value) {
+    if (Number(r.pay_amount || r.total_amount || 0) <= 0) continue
+    items.push({ type: 'income', source: '零售单', amount: Number(r.pay_amount || r.total_amount || 0), date: (r.order_date || r.created_at || '').slice(0, 10) })
+  }
+  // 3. 会员充值（income）
+  for (const r of rechargeList.value) {
+    if (Number(r.amount || 0) <= 0) continue
+    items.push({ type: 'income', source: '会员充值', amount: Number(r.amount || 0), date: (r.created_at || '').slice(0, 10) })
+  }
+  // 4. 付款单（expense）
+  for (const r of payList.value) {
+    if (Number(r.amount || 0) <= 0) continue
+    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', amount: Number(r.amount || 0), date: (r.pay_date || r.created_at || '').slice(0, 10) })
+  }
+  // 5. 费用单（expense）
+  for (const r of expenseList.value) {
+    if (Number(r.amount || 0) <= 0) continue
+    items.push({ type: 'expense', source: '费用', amount: Number(r.amount || 0), date: (r.expense_date || r.created_at || '').slice(0, 10) })
+  }
+  return items
+})
+
+// 收入/支出汇总 — 与 FundFlow.vue summary 计算完全一致
+const collectTotal = computed(() =>
+  allFlowItems.value.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0).toFixed(2)
+)
+const payTotal = computed(() =>
+  allFlowItems.value.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0).toFixed(2)
 )
 const fundTotal = computed(() =>
   Math.max(0, Number(collectTotal.value) - Number(payTotal.value)).toFixed(2)
@@ -462,7 +502,7 @@ const retailTotal = computed(() =>
   retailList.value.reduce((s, r) => s + Number(r.pay_amount || r.total_amount || 0), 0).toFixed(2)
 )
 
-// 近7天趋势数据
+// 近7天趋势数据 — 来自 allFlowItems，与 FundFlow.vue 一致
 const trendDays = computed(() => {
   const days: string[] = []
   for (let i = 6; i >= 0; i--) {
@@ -476,14 +516,12 @@ function buildTrend(type: string) {
   const map: Record<string, number> = {}
   for (let i = 6; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86400000)
-    const key = d.toISOString().slice(0, 10)
-    map[key] = 0
+    map[d.toISOString().slice(0, 10)] = 0
   }
-  for (const r of normalizedFundFlowList.value) {
-    if (type === 'income' && r.flow_type !== 'income') continue
-    if (type === 'expense' && r.flow_type === 'income') continue
-    const day = (r.created_at || '').slice(0, 10)
-    if (map[day] !== undefined) map[day] += Number(r.amount || 0)
+  for (const r of allFlowItems.value) {
+    if (type === 'income' && r.type !== 'income') continue
+    if (type === 'expense' && r.type !== 'expense') continue
+    if (map[r.date] !== undefined) map[r.date] += r.amount
   }
   const vals = Object.values(map)
   const max = Math.max(...vals, 1)
@@ -498,8 +536,8 @@ const summaryCards = computed(() => {
   const balance = fundTotal.value
   return [
   { key: 'fund', label: '资金余额', value: balance, sub: `= 收入 ¥${income.toFixed(2)} − 支出 ¥${expense.toFixed(2)}`, color: '#0071e3', bg: 'rgba(0,113,227,0.08)', icon: 'Wallet', route: '/finance/fund-flow' },
-  { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${normalizedFundFlowList.value.filter(r => r.flow_type === 'income').length} 笔已入账`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow' },
-  { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${normalizedFundFlowList.value.filter(r => r.flow_type !== 'income').length} 笔已出账`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow' },
+  { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'income').length} 笔收入`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow' },
+  { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'expense').length} 笔支出`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow' },
   { key: 'payable', label: '应付总额', value: payableTotal.value, sub: `${payableList.value.filter((r) => getPayableUnpaidAmount(r) > 0).length} 笔欠款`, color: '#ff4d4f', bg: '#fff1f0', icon: 'DocumentChecked', route: '/finance/payable' },
   { key: 'receivable', label: '应收总额', value: receivableTotal.value, sub: `${receivableList.value.length} 笔待收`, color: '#16a34a', bg: '#e6f7f0', icon: 'DocumentChecked', route: '/finance/receivable' },
   ]
@@ -690,17 +728,18 @@ async function savePay() {
 
 onMounted(async () => {
   try {
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, flowRes, purchaseRes, saleOutRes, retailRes, clientRes, supplierRes] = await Promise.all([
+    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes] = await Promise.all([
       getFundList({ list_rows: 100 }),
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
-      http.get('/finance/CollectReceipt/index', { params: { list_rows: 1000 } }),
-      http.get('/finance/PayReceipt/index', { params: { list_rows: 1000 } }),
+      getCollectReceiptList({ list_rows: 1000 }),
+      getPayReceiptList({ list_rows: 1000 }),
       http.get('/finance/CollectAccounts/index', { params: { list_rows: 200 } }),
-      http.get('/finance/PayAccounts/index', { params: { list_rows: 200 } }),
-      http.get('/finance/FundFlow/index', { params: { list_rows: 1000 } }),
-      http.get('/finance/PayAccounts/index', { params: { list_rows: 200 } }),
+      http.get('/finance/PayAccounts/index', { params: { list_rows: 200, group_by_supplier: 1 } }),
+      http.get('/finance/PayAccounts/index', { params: { list_rows: 200, group_by_supplier: 1 } }),
       http.get('/stock/SaleOutOrder/index', { params: { list_rows: 50 } }),
       http.get('/retail/order/index', { params: { list_rows: 200 } }),
+      getExpenseList({ list_rows: 1000 }),
+      http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
       http.get('/shop/ShopCustomer/index', { params: { list_rows: 500 } }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
     ])
@@ -710,10 +749,11 @@ onMounted(async () => {
     payList.value = payRes.data?.rows ?? payRes.data?.list ?? []
     receivableList.value = receivableRes.data?.rows ?? receivableRes.data?.list ?? []
     payableList.value = payableRes.data?.rows ?? payableRes.data?.list ?? []
-    fundFlowList.value = flowRes.data?.rows ?? flowRes.data?.list ?? []
     purchasePayList.value = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((r: any) => Number(r.un_pay_amount || 0) > 0)
     saleOutList.value = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
     retailList.value = retailRes.data?.rows ?? retailRes.data?.list ?? []
+    expenseList.value = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
+    rechargeList.value = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
     clientList.value = clientRes.data?.rows ?? clientRes.data?.list ?? []
     supplierList.value = supplierRes.data?.rows ?? supplierRes.data?.list ?? []
   } catch {}

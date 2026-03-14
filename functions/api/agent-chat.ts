@@ -7,10 +7,24 @@ interface Env {
   AGENT_MEMORY: KVNamespace
 }
 
-const ERP_BASE = 'https://erp-backend-production-a349.up.railway.app/adminapi'
+const DEFAULT_BACKEND = 'https://saas.mzth.cn/adminapi'
 
-async function erpGet(path: string, params: Record<string, any>, token: string) {
-  const url = new URL(ERP_BASE + path)
+function decodeErpToken(wrapped: string): { realToken: string; backend: string } {
+  try {
+    if (wrapped && wrapped.startsWith('erp_')) {
+      const json = decodeURIComponent(escape(atob(wrapped.slice(4))))
+      const payload = JSON.parse(json)
+      return {
+        realToken: payload.t || wrapped,
+        backend: (payload.b ? payload.b + '/adminapi' : DEFAULT_BACKEND),
+      }
+    }
+  } catch {}
+  return { realToken: wrapped, backend: DEFAULT_BACKEND }
+}
+
+async function erpGet(path: string, params: Record<string, any>, token: string, backend: string) {
+  const url = new URL(backend + path)
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
   })
@@ -19,8 +33,8 @@ async function erpGet(path: string, params: Record<string, any>, token: string) 
   try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}），可能token已过期或接口路径有误`) }
 }
 
-async function erpPost(path: string, body: Record<string, any>, token: string) {
-  const res = await fetch(ERP_BASE + path, {
+async function erpPost(path: string, body: Record<string, any>, token: string, backend: string) {
+  const res = await fetch(backend + path, {
     method: 'POST',
     headers: { token, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -29,30 +43,30 @@ async function erpPost(path: string, body: Record<string, any>, token: string) {
   try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}）`) }
 }
 
-async function executeTool(name: string, input: Record<string, any>, token: string): Promise<string> {
+async function executeTool(name: string, input: Record<string, any>, token: string, backend: string): Promise<string> {
   try {
     let result: string
     switch (name) {
       case 'query_customers': {
-        const res: any = await erpGet('/shop/ShopCustomer/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
+        const res: any = await erpGet('/shop/ShopCustomer/index', { list_rows: input.limit || 20, keyword: input.keyword }, token, backend)
         const rows = res?.data?.rows || []
         result = `共 ${res?.data?.total || rows.length} 位客户。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 名称: r.nickname || r.name, 手机: r.mobile, 余额: r.balance })))}`
         break
       }
       case 'query_suppliers': {
-        const res: any = await erpGet('/procure/supplier/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
+        const res: any = await erpGet('/procure/supplier/index', { list_rows: input.limit || 20, keyword: input.keyword }, token, backend)
         const rows = res?.data?.rows || []
         result = `共 ${res?.data?.total || rows.length} 家供应商。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 名称: r.name, 联系人: r.contact, 手机: r.mobile })))}`
         break
       }
       case 'query_goods': {
-        const res: any = await erpGet('/goods/ShopGoods/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
+        const res: any = await erpGet('/goods/ShopGoods/index', { list_rows: input.limit || 20, keyword: input.keyword }, token, backend)
         const rows = res?.data?.rows || []
         result = `共 ${res?.data?.total || rows.length} 种商品。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 商品名: r.goods_name, 编码: r.goods_sn, 售价: r.sell_price })))}`
         break
       }
       case 'query_inventory': {
-        const res: any = await erpGet('/stock/StockAll/index', { list_rows: 100, keyword: input.keyword }, token)
+        const res: any = await erpGet('/stock/StockAll/index', { list_rows: 100, keyword: input.keyword }, token, backend)
         const rows = res?.data?.rows || []
         result = `共 ${rows.length} 种商品。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ 商品: r.goods_name, 库存: r.qty, 仓库: r.warehouse_name })))}`
         break
@@ -61,7 +75,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const params: any = { list_rows: input.limit || 20 }
         if (input.start_date) params.start_time = input.start_date
         if (input.end_date) params.end_time = input.end_date
-        const res: any = await erpGet('/stock/SaleOutOrder/index', params, token)
+        const res: any = await erpGet('/stock/SaleOutOrder/index', params, token, backend)
         const rows = res?.data?.rows || []
         const total = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
         result = `出货单 ${rows.length} 条合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 10).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || '').slice(0, 10) })))}`
@@ -71,7 +85,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const params: any = { list_rows: input.limit || 20 }
         if (input.start_date) params.start_time = input.start_date
         if (input.end_date) params.end_time = input.end_date
-        const res: any = await erpGet('/stock/PurchaseOrder/index', params, token)
+        const res: any = await erpGet('/stock/PurchaseOrder/index', params, token, backend)
         const rows = res?.data?.rows || []
         const total = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
         result = `共 ${rows.length} 条采购订单，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 10).map((r: any) => ({ 供应商: r.supplier_name, 金额: r.total_amount })))}`
@@ -88,35 +102,35 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         }
         const path = typeMap[input.type]
         if (!path) { result = '未知财务类型'; break }
-        const res: any = await erpGet(path, { list_rows: input.limit || 50 }, token)
+        const res: any = await erpGet(path, { list_rows: input.limit || 50 }, token, backend)
         const rows = res?.data?.rows || []
         result = `${input.type} 共 ${rows.length} 条：${JSON.stringify(rows.slice(0, 20))}`
         break
       }
       case 'query_staff': {
-        const res: any = await erpGet('/personnel/staff/index', { list_rows: 100, keyword: input.keyword }, token)
+        const res: any = await erpGet('/personnel/staff/index', { list_rows: 100, keyword: input.keyword }, token, backend)
         const rows = res?.data?.rows || []
         result = `共 ${res?.data?.total || rows.length} 名员工。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 姓名: r.name, 部门: r.dept })))}`
         break
       }
       case 'query_warehouses': {
-        const res: any = await erpGet('/stock/WarehouseName/index', { list_rows: 50 }, token)
+        const res: any = await erpGet('/stock/WarehouseName/index', { list_rows: 50 }, token, backend)
         const rows = res?.data?.rows || []
         result = `共 ${rows.length} 个仓库：${rows.map((r: any) => r.name).join('、')}`
         break
       }
       case 'create_customer': {
-        const res: any = await erpPost('/shop/ShopCustomer/add', input, token)
+        const res: any = await erpPost('/shop/ShopCustomer/add', input, token, backend)
         result = res?.code === 1 ? `客户创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'create_supplier': {
-        const res: any = await erpPost('/procure/supplier/add', input, token)
+        const res: any = await erpPost('/procure/supplier/add', input, token, backend)
         result = res?.code === 1 ? `供应商创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'create_goods': {
-        const res: any = await erpPost('/goods/ShopGoods/add', input, token)
+        const res: any = await erpPost('/goods/ShopGoods/add', input, token, backend)
         result = res?.code === 1 ? `商品创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
@@ -130,7 +144,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
           total_amount,
           goods_info: JSON.stringify(items),
         }
-        const res: any = await erpPost('/retail/order/add', payload, token)
+        const res: any = await erpPost('/retail/order/add', payload, token, backend)
         result = res?.code === 1 ? `零售订单创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
@@ -278,6 +292,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const { messages, agentId } = await request.json() as any
   const erpToken = request.headers.get('x-erp-token') || ''
+  const { realToken, backend } = decodeErpToken(erpToken)
 
   const agent = AGENTS[agentId]
   if (!agent) {
@@ -325,7 +340,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
         for (const toolUse of toolUseBlocks) {
           await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
-          const result = await executeTool(toolUse.name, toolUse.input, erpToken)
+          const result = await executeTool(toolUse.name, toolUse.input, realToken, backend)
           await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
           toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
         }

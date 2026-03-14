@@ -10,7 +10,6 @@
 
     <div
       class="guide-panel"
-      :class="{ centered: !targetRect || !isOnTargetRoute }"
       :style="panelStyle"
     >
       <div class="guide-panel-head">
@@ -65,9 +64,6 @@
         <el-button v-if="!targetRect" @click="refreshPosition">重新定位</el-button>
         <el-button @click="guide.skipCurrentAndNext()">
           {{ isLastStep ? '跳过并结束' : '跳过此步' }}
-        </el-button>
-        <el-button type="primary" @click="guide.completeCurrentAndNext()">
-          {{ isLastAction ? (isLastStep ? '完成向导' : '完成此步，进入下一步') : '完成当前操作' }}
         </el-button>
       </div>
     </div>
@@ -189,12 +185,12 @@ function locateTarget(scrollIntoView = true) {
   const tryLocate = () => {
     attempts += 1
     const ok = updatePosition(attempts === 1 && scrollIntoView)
-    if (ok || attempts >= 12 || !guide.active) return
-    retryTimer = window.setTimeout(tryLocate, 220)
+    if (ok || attempts >= 20 || !guide.active) return
+    retryTimer = window.setTimeout(tryLocate, 300)
   }
 
   nextTick(() => {
-    retryTimer = window.setTimeout(tryLocate, 120)
+    retryTimer = window.setTimeout(tryLocate, 300)
   })
 }
 
@@ -219,34 +215,42 @@ const spotlightStyle = computed(() => {
 })
 
 const panelStyle = computed(() => {
-  if (!targetRect.value || !isOnTargetRoute.value) return {}
+  // 有目标元素时，定位在元素旁边
+  if (targetRect.value && isOnTargetRoute.value) {
+    const panelWidth = 360
+    const gap = 22
+    const rect = targetRect.value
+    const placement = currentAction.value.placement || 'right'
 
-  const panelWidth = 360
-  const gap = 22
-  const rect = targetRect.value
-  const placement = currentAction.value.placement || 'right'
+    let top = rect.top
+    let left = rect.right + gap
 
-  let top = rect.top
-  let left = rect.right + gap
+    if (placement === 'left') {
+      left = rect.left - panelWidth - gap
+    } else if (placement === 'bottom') {
+      left = rect.left
+      top = rect.bottom + gap
+    } else if (placement === 'top') {
+      left = rect.left
+      top = rect.top - 420
+    }
 
-  if (placement === 'left') {
-    left = rect.left - panelWidth - gap
-  } else if (placement === 'bottom') {
-    left = rect.left
-    top = rect.bottom + gap
-  } else if (placement === 'top') {
-    left = rect.left
-    top = rect.top - 420
+    const minLeft = 16
+    const maxLeft = window.innerWidth - panelWidth - 16
+    const minTop = 16
+    const maxTop = window.innerHeight - 460
+
+    return {
+      left: `${Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft))}px`,
+      top: `${Math.min(Math.max(top, minTop), Math.max(minTop, maxTop))}px`,
+    }
   }
-
-  const minLeft = 16
-  const maxLeft = window.innerWidth - panelWidth - 16
-  const minTop = 16
-  const maxTop = window.innerHeight - 460
-
+  // 找不到目标元素时，固定在右下角，不遮挡页面主体
   return {
-    left: `${Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft))}px`,
-    top: `${Math.min(Math.max(top, minTop), Math.max(minTop, maxTop))}px`,
+    right: '24px',
+    bottom: '90px',
+    left: 'auto',
+    top: 'auto',
   }
 })
 

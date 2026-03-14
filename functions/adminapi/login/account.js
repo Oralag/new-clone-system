@@ -91,10 +91,18 @@ export async function onRequest(context) {
         return jsonRes({ code: 0, show: 1, message: '专属后端暂时无法连接，请稍后重试', data: [] })
       }
 
-      // Trial user: use master account token so all backend requests work
+      // Trial user: use cached master token (refresh if expired) to avoid Railway round-trip
       try {
-        const masterData = await loginBackend(DEFAULT_BACKEND, { account: MASTER_ACCOUNT, password: MASTER_PASSWORD })
-        const realToken = masterData.code === 1 ? masterData.data.token : null
+        const CACHE_KEY = 'master_token_cache'
+        let realToken = null
+        const cached = await kv.get(CACHE_KEY)
+        if (cached) {
+          realToken = cached
+        } else {
+          const masterData = await loginBackend(DEFAULT_BACKEND, { account: MASTER_ACCOUNT, password: MASTER_PASSWORD })
+          realToken = masterData.code === 1 ? masterData.data.token : null
+          if (realToken) await kv.put(CACHE_KEY, realToken, { expirationTtl: 82800 }) // 23 hours
+        }
         const trialToken = wrapToken(realToken, DEFAULT_BACKEND, account, user.company_name, true)
         return jsonRes({
           code: 1, show: 0, message: '',
