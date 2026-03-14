@@ -6,7 +6,7 @@
       <div class="summary-card">
         <span class="s-label">资金余额</span>
         <span class="s-value blue">¥{{ summary.balance.toFixed(2) }}</span>
-        <span class="s-formula">{{ summary.fundCount }} 个账户实时余额合计</span>
+        <span class="s-formula">收入 ¥{{ summary.income.toFixed(2) }} − 支出 ¥{{ summary.expense.toFixed(2) }} = ¥{{ summary.balance.toFixed(2) }}</span>
       </div>
       <div class="summary-card">
         <span class="s-label">累计收入</span>
@@ -85,12 +85,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { getFundList, getPayableList, getFundFlowList } from '@/api/finance'
+import { getPayableList, getFundFlowList } from '@/api/finance'
 import { normalizeFundFlowRows, sumFundFlowExpense, sumFundFlowIncome } from '@/utils/fundFlow'
 
 const summaryLoading = ref(false)
 const tableLoading = ref(false)
-const summary = reactive({ balance: 0, income: 0, expense: 0, totalPurchase: 0, unpaid: 0, fundCount: 0 })
+const summary = reactive({ balance: 0, income: 0, expense: 0, totalPurchase: 0, unpaid: 0 })
 
 const filterKeyword = ref('')
 const filterType = ref('')
@@ -135,8 +135,7 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [fundRes, flowRes, payableRes] = await Promise.all([
-      getFundList({ list_rows: 200 }),
+    const [flowRes, payableRes] = await Promise.all([
       getFundFlowList({ list_rows: 2000 }),
       getPayableList({ list_rows: 1000 }),
     ])
@@ -153,12 +152,10 @@ onMounted(async () => {
       remark: row.remark,
     }))
 
-    const funds: any[] = fundRes.data?.rows ?? fundRes.data?.list ?? []
     const payables: any[] = payableRes.data?.rows ?? payableRes.data?.list ?? []
-    summary.fundCount = funds.length
-    summary.balance = funds.reduce((sum, row) => sum + Number(row.balance || 0), 0)
     summary.income = sumFundFlowIncome(normalizedRows)
     summary.expense = sumFundFlowExpense(normalizedRows)
+    summary.balance = Math.max(0, summary.income - summary.expense)
     summary.totalPurchase = payables.reduce((sum, row) => sum + Number(row.order_amount || row.total_amount || 0), 0)
     summary.unpaid = payables.reduce((sum, row) => {
       if (row?.un_pay_amount !== undefined && row?.un_pay_amount !== null && row?.un_pay_amount !== '') {

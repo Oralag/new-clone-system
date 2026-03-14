@@ -423,7 +423,7 @@ const retailList = ref<any[]>([])
 const flowVisible = ref(false)
 const chartW = 480
 
-// 资金余额以账户实时余额为准；收入/支出以资金流水为准
+// 资金余额按资金收支明细口径；账户余额单独在“账户余额”模块展示
 const rechargeList = ref<any[]>([])
 const expenseList = ref<any[]>([])
 
@@ -431,7 +431,7 @@ const normalizedFundFlowList = computed(() => normalizeFundFlowRows(fundFlowList
 const collectTotal = computed(() => sumFundFlowIncome(normalizedFundFlowList.value).toFixed(2))
 const payTotal = computed(() => sumFundFlowExpense(normalizedFundFlowList.value).toFixed(2))
 const fundTotal = computed(() =>
-  fundList.value.reduce((sum, row) => sum + Number(row.balance || 0), 0).toFixed(2)
+  Math.max(0, Number(collectTotal.value) - Number(payTotal.value)).toFixed(2)
 )
 const prepayTotal = computed(() =>
   prepayList.value.filter((r: any) => r.pay_type === 'customer').reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
@@ -497,7 +497,7 @@ const summaryCards = computed(() => {
   const expense = Number(payTotal.value)
   const balance = fundTotal.value
   return [
-  { key: 'fund', label: '资金余额', value: balance, sub: `${fundList.value.length} 个账户实时余额`, color: '#0071e3', bg: 'rgba(0,113,227,0.08)', icon: 'Wallet', route: '/finance/fund' },
+  { key: 'fund', label: '资金余额', value: balance, sub: `= 收入 ¥${income.toFixed(2)} − 支出 ¥${expense.toFixed(2)}`, color: '#0071e3', bg: 'rgba(0,113,227,0.08)', icon: 'Wallet', route: '/finance/fund-flow' },
   { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${normalizedFundFlowList.value.filter(r => r.flow_type === 'income').length} 笔已入账流水`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow' },
   { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${normalizedFundFlowList.value.filter(r => r.flow_type !== 'income').length} 笔已出账流水`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow' },
 { key: 'payable', label: '应付总额', value: payableTotal.value, sub: `${payableList.value.filter((r) => getPayableUnpaidAmount(r) > 0).length} 笔欠款`, color: '#ff4d4f', bg: '#fff1f0', icon: 'DocumentChecked', route: '/finance/payable' },
