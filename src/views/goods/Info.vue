@@ -767,7 +767,8 @@ async function loadCates() {
   try {
     const res = await getGoodsCateList({ list_rows: 200 })
     const rows = res.data?.rows ?? []
-    cateOptions.value = [...rows].sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+    const unique = rows.filter((r: any, i: number) => rows.findIndex((x: any) => x.name === r.name) === i)
+    cateOptions.value = [...unique].sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
   } finally {
     cateLoading.value = false
   }

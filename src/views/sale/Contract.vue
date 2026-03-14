@@ -761,7 +761,7 @@ async function loadCustomerPrepay(customerId: number) {
 const cateOptions = ref<any[]>([])
 async function loadCates() {
   const res = await getGoodsCateList({ list_rows: 200 })
-  cateOptions.value = res.data?.rows ?? []
+  const rc = res.data?.rows ?? []; cateOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.name === c.name) === i)
 }
 
 onMounted(async () => {

@@ -191,5 +191,6 @@ npm run deploy
 > 格式：`- [日期] 错误描述 → 正确做法`
 
 - [2026-03-14] 初始建立规范文档
+- [2026-03-14] 下拉选项出现重复 → 从API赋值 cateOptions 时必须按 name 去重：`const rc = rows; cateOptions.value = rc.filter((c, i) => rc.findIndex(x => x.name === c.name) === i)`，禁止直接 `cateOptions.value = res.data?.rows ?? []`
 
 <!-- 在此继续追加纠错记录 -->

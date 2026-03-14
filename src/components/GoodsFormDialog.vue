@@ -186,7 +186,8 @@ async function loadOptions() {
     getBrandList({ list_rows: 200 }),
     getUnitList({ list_rows: 200 }),
   ])
-  cateOptions.value = c.data?.rows ?? []
+  const rawCates = c.data?.rows ?? []
+  cateOptions.value = rawCates.filter((c: any, i: number) => rawCates.findIndex((x: any) => x.name === c.name) === i)
   brandOptions.value = b.data?.rows ?? []
   unitOptions.value = u.data?.rows ?? []
 }
@@ -233,7 +234,7 @@ async function quickAddCate() {
   try {
     await createGoodsCate({ name: name.trim() })
     const res = await getGoodsCateList({ list_rows: 200 })
-    cateOptions.value = res.data?.rows ?? []
+    const rc = res.data?.rows ?? []; cateOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.name === c.name) === i)
     const newOne = cateOptions.value.find(c => c.name === name.trim())
     if (newOne) fd.cate_id = newOne.id
     ElMessage.success('分类创建成功')

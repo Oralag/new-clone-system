@@ -365,7 +365,7 @@ function confirmAddPrices() {
 
 onMounted(async () => {
   const res = await getGoodsCateList({ list_rows: 200 })
-  cateOptions.value = res.data?.rows ?? []
+  const rc = res.data?.rows ?? []; cateOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.name === c.name) === i)
   // 预加载商品信息到缓存，用于显示已有价格行的名称
   try {
     const res2 = await getGoodsList({ list_rows: 500 })
