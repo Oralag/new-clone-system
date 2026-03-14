@@ -1145,7 +1145,7 @@ function pickImportSheet(workbook: XLSX.WorkBook) {
 
 function fillImportRelationFields(row: any) {
   if (row.cate_name) {
-    const cate = cateOptions.value.find(item => normalizeImportHeader(item.name) === normalizeImportHeader(row.cate_name))
+    const cate = findImportCategoryByPath(row.cate_name)
     if (cate) {
       row.cate_id = cate.id
       row.cate_name = cate.name
@@ -1207,6 +1207,68 @@ function buildImportRow(cells: any[], fieldKeys: string[], rowNo: number) {
   return mapped
 }
 
+function splitImportCategoryPath(value: any) {
+  return String(value ?? '')
+    .split(/[\/／]/)
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function findImportCategoryByNameAndParent(name: string, parentId: number | null) {
+  return cateOptions.value.find(item =>
+    normalizeImportHeader(item.name) === normalizeImportHeader(name)
+    && Number(item.parent_id ?? 0) === Number(parentId ?? 0),
+  )
+}
+
+function findImportCategoryByPath(path: any) {
+  const segments = splitImportCategoryPath(path)
+  if (!segments.length) return null
+
+  let parentId: number | null = null
+  let current: any = null
+  for (const segment of segments) {
+    current = findImportCategoryByNameAndParent(segment, parentId)
+    if (!current) return null
+    parentId = current.id
+  }
+  return current
+}
+
+async function ensureImportCategory(path: any) {
+  const segments = splitImportCategoryPath(path)
+  if (!segments.length) return null
+
+  let parentId: number | null = null
+  let current: any = null
+
+  for (const segment of segments) {
+    const existed = findImportCategoryByNameAndParent(segment, parentId)
+    if (existed) {
+      current = existed
+      parentId = existed.id
+      continue
+    }
+
+    const res = await createGoodsCate({ name: segment, parent_id: parentId })
+    const newId = res.data?.id ?? res.data?.rows?.[0]?.id ?? 0
+
+    if (newId) {
+      current = { id: newId, name: segment, parent_id: parentId, sort: 0 }
+      cateOptions.value = [...cateOptions.value, current]
+      parentId = newId
+      continue
+    }
+
+    await loadCates()
+    current = findImportCategoryByNameAndParent(segment, parentId)
+    if (!current) throw new Error(`分类创建失败：${segment}`)
+    parentId = current.id
+  }
+
+  return current
+}
+
 function triggerImport() {
   importFileRef.value?.click()
 }
@@ -1243,6 +1305,7 @@ async function confirmImport() {
   importLoading.value = true
   let success = 0, failed = 0, skipped = 0
   let typeMapChanged = false
+  let cateChanged = false
   const nextGoodsTypeMap = { ...goodsTypeMap.value }
   for (const row of importRows.value) {
     const { goods_type_text, _error, _errorText, _rowNo, ...payload } = row
@@ -1251,6 +1314,14 @@ async function confirmImport() {
       continue
     }
     try {
+      if (payload.cate_name && !payload.cate_id) {
+        const cate = await ensureImportCategory(payload.cate_name)
+        if (cate) {
+          payload.cate_id = cate.id
+          payload.cate_name = cate.name
+          cateChanged = true
+        }
+      }
       const res = await createGoods({ ...payload, status: 1 })
       const id = res.data?.id ?? 0
       if (id && payload.goods_type) {
@@ -1266,6 +1337,7 @@ async function confirmImport() {
     goodsTypeMap.value = nextGoodsTypeMap
     saveGoodsTypeMap(nextGoodsTypeMap)
   }
+  if (cateChanged) await loadCates()
   importLoading.value = false
   importDialogVisible.value = false
   ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}${skipped > 0 ? `，跳过 ${skipped} 条异常数据` : ''}`)
