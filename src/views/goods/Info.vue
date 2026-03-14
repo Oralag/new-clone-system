@@ -610,9 +610,11 @@
         <el-table-column prop="remark" label="备注" min-width="120" />
         <el-table-column label="状态" width="70" align="center">
           <template #default="{ row }">
-            <el-tag :type="row._error ? 'danger' : 'success'" size="small">
-              {{ row._error ? '异常' : '正常' }}
-            </el-tag>
+            <el-tooltip :content="row._errorText || '校验通过'" placement="top">
+              <el-tag :type="row._error ? 'danger' : 'success'" size="small">
+                {{ row._error ? '异常' : '正常' }}
+              </el-tag>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
@@ -1026,13 +1028,183 @@ const IMPORT_COL_MAP: Record<string, string> = {
   '条码': 'barcode',
   '销售价': 'sell_price',
   '采购价': 'cost_price',
+  '商品分类': 'cate_name',
+  '规格型号': 'spec',
+  '商品单位': 'unit_name',
+  '品牌': 'brand_name',
   '安全库存下限': 'safe_min',
   '安全库存上限': 'safe_max',
   '备注': 'remark',
 }
 
+const IMPORT_COL_ALIASES: Record<string, string[]> = {
+  goods_name: ['商品名称', '品名', '名称', 'goods_name'],
+  goods_sn: ['商品编码', '商品编号', '编码', '编号', '货号', 'goods_sn'],
+  en_name: ['英文名称', '英文名', 'en_name'],
+  goods_type: ['商品类型', '类型', 'goods_type'],
+  barcode: ['条码', '商品条码', '条形码', 'barcode'],
+  sell_price: ['销售价', '售价', '零售价', 'sell_price'],
+  cost_price: ['采购价', '成本价', '进价', 'cost_price'],
+  cate_name: ['商品分类', '分类', '类别', 'cate_name'],
+  spec: ['规格型号', '规格', '型号', 'spec'],
+  unit_name: ['商品单位', '单位', 'unit_name'],
+  brand_name: ['品牌', '商品品牌', 'brand_name'],
+  safe_min: ['安全库存下限', '最低库存', 'safe_min'],
+  safe_max: ['安全库存上限', '最高库存', 'safe_max'],
+  remark: ['备注', '说明', 'remark'],
+}
+
+const IMPORT_FIELD_LABELS: Record<string, string> = {
+  goods_name: '商品名称',
+  goods_sn: '商品编码',
+  en_name: '英文名称',
+  goods_type: '商品类型',
+  barcode: '条码',
+  sell_price: '销售价',
+  cost_price: '采购价',
+  cate_name: '商品分类',
+  spec: '规格型号',
+  unit_name: '商品单位',
+  brand_name: '品牌',
+  safe_min: '安全库存下限',
+  safe_max: '安全库存上限',
+  remark: '备注',
+}
+
+const IMPORT_REQUIRED_FIELDS = ['goods_name', 'cate_name', 'unit_name'] as const
+
 const GOODS_TYPE_TEXT_MAP: Record<string, number> = {
   '成品': 1, '半成品': 2, '原材料': 3, '辅料': 4,
+}
+
+const IMPORT_ALIAS_TO_FIELD = Object.entries(IMPORT_COL_ALIASES).reduce<Record<string, string>>((acc, [field, aliases]) => {
+  aliases.forEach(alias => {
+    acc[normalizeImportHeader(alias)] = field
+  })
+  return acc
+}, {})
+
+function normalizeImportHeader(value: any) {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[：:]/g, '')
+    .toLowerCase()
+}
+
+function normalizeImportCell(value: any) {
+  if (value == null) return ''
+  return typeof value === 'string' ? value.trim() : value
+}
+
+function resolveImportField(header: any): string {
+  const normalized = normalizeImportHeader(header)
+  return IMPORT_ALIAS_TO_FIELD[normalized] ?? ''
+}
+
+function scoreImportHeaderRow(row: any[]): number {
+  return new Set((row ?? []).map(cell => resolveImportField(cell)).filter(Boolean)).size
+}
+
+function hasImportRowData(row: any[] = []) {
+  return row.some(cell => normalizeImportCell(cell) !== '')
+}
+
+function parseImportSheetRows(sheet: XLSX.WorkSheet) {
+  return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true, blankrows: false }) as any[][]
+}
+
+function pickImportSheet(workbook: XLSX.WorkBook) {
+  let best: { sheetName: string; headerRowIndex: number; score: number; dataCount: number } | null = null
+  for (const sheetName of workbook.SheetNames) {
+    const rows = parseImportSheetRows(workbook.Sheets[sheetName])
+    let bestHeaderIndex = -1
+    let bestHeaderScore = 0
+    const scanRows = rows.slice(0, 10)
+    scanRows.forEach((row, index) => {
+      const score = scoreImportHeaderRow(row)
+      if (score > bestHeaderScore) {
+        bestHeaderScore = score
+        bestHeaderIndex = index
+      }
+    })
+    const dataCount = bestHeaderIndex >= 0
+      ? rows.slice(bestHeaderIndex + 1).filter(hasImportRowData).length
+      : rows.filter(hasImportRowData).length
+
+    if (
+      !best ||
+      bestHeaderScore > best.score ||
+      (bestHeaderScore === best.score && dataCount > best.dataCount)
+    ) {
+      best = { sheetName, headerRowIndex: bestHeaderIndex, score: bestHeaderScore, dataCount }
+    }
+  }
+  return best
+}
+
+function fillImportRelationFields(row: any) {
+  if (row.cate_name) {
+    const cate = cateOptions.value.find(item => normalizeImportHeader(item.name) === normalizeImportHeader(row.cate_name))
+    if (cate) {
+      row.cate_id = cate.id
+      row.cate_name = cate.name
+    }
+  }
+  if (row.unit_name) {
+    const unit = unitOptions.value.find(item => normalizeImportHeader(item.name) === normalizeImportHeader(row.unit_name))
+    if (unit) {
+      row.unit_id = unit.id
+      row.unit_name = unit.name
+    }
+  }
+  if (row.brand_name) {
+    const brand = brandOptions.value.find(item => normalizeImportHeader(item.name) === normalizeImportHeader(row.brand_name))
+    if (brand) {
+      row.brand_id = brand.id
+      row.brand_name = brand.name
+    }
+  }
+}
+
+function buildImportRow(cells: any[], fieldKeys: string[], rowNo: number) {
+  const mapped: any = {}
+
+  fieldKeys.forEach((field, index) => {
+    if (!field || mapped[field] !== undefined) return
+    const value = normalizeImportCell(cells[index])
+    if (value !== '') mapped[field] = value
+  })
+
+  for (const key of ['goods_name', 'goods_sn', 'en_name', 'barcode', 'remark', 'cate_name', 'spec', 'unit_name', 'brand_name'] as const) {
+    if (mapped[key] !== undefined) mapped[key] = String(mapped[key]).trim()
+  }
+
+  for (const key of ['sell_price', 'cost_price', 'safe_min', 'safe_max'] as const) {
+    if (mapped[key] === undefined || mapped[key] === '') continue
+    const num = Number(mapped[key])
+    if (!Number.isNaN(num)) mapped[key] = num
+  }
+
+  if (/^0+(?:\.0+)?$/.test(String(mapped.barcode ?? '').trim())) mapped.barcode = ''
+
+  if (mapped.goods_type && Number.isNaN(Number(mapped.goods_type))) {
+    mapped.goods_type = GOODS_TYPE_TEXT_MAP[String(mapped.goods_type).trim()] ?? 1
+  } else {
+    mapped.goods_type = Number(mapped.goods_type) || 1
+  }
+  mapped.goods_type_text = ['', '成品', '半成品', '原材料', '辅料'][mapped.goods_type] ?? '成品'
+
+  fillImportRelationFields(mapped)
+
+  const missingFields = IMPORT_REQUIRED_FIELDS.filter(field => !String(mapped[field] ?? '').trim())
+  mapped._rowNo = rowNo
+  mapped._error = missingFields.length > 0
+  mapped._errorText = mapped._error
+    ? `第 ${rowNo} 行缺少：${missingFields.map(field => IMPORT_FIELD_LABELS[field]).join('、')}`
+    : ''
+
+  return mapped
 }
 
 function triggerImport() {
@@ -1046,29 +1218,20 @@ function handleImportFile(e: Event) {
   reader.onload = (ev) => {
     const data = new Uint8Array(ev.target!.result as ArrayBuffer)
     const wb = XLSX.read(data, { type: 'array' })
-    const ws = wb.Sheets[wb.SheetNames[0]]
-    const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' })
-    if (!json.length) { ElMessage.warning('Excel文件无数据'); return }
+    const bestSheet = pickImportSheet(wb)
+    if (!bestSheet || bestSheet.score <= 0 || bestSheet.headerRowIndex < 0) {
+      ElMessage.warning('未识别到可导入的表头，请检查模板或表头名称')
+      return
+    }
 
-    importRows.value = json.map(row => {
-      const mapped: any = {}
-      for (const [col, key] of Object.entries(IMPORT_COL_MAP)) {
-        if (row[col] !== undefined) mapped[key] = row[col]
-      }
-      // 支持直接用英文字段名
-      for (const key of Object.values(IMPORT_COL_MAP)) {
-        if (row[key] !== undefined && mapped[key] === undefined) mapped[key] = row[key]
-      }
-      // 处理商品类型文字 -> 数字
-      if (mapped.goods_type && isNaN(Number(mapped.goods_type))) {
-        mapped.goods_type = GOODS_TYPE_TEXT_MAP[mapped.goods_type] ?? 1
-      } else {
-        mapped.goods_type = Number(mapped.goods_type) || 1
-      }
-      mapped.goods_type_text = ['', '成品', '半成品', '原材料', '辅料'][mapped.goods_type] ?? '成品'
-      mapped._error = !mapped.goods_name
-      return mapped
-    })
+    const ws = wb.Sheets[bestSheet.sheetName]
+    const rows = parseImportSheetRows(ws)
+    const headerRow = rows[bestSheet.headerRowIndex] ?? []
+    const fieldKeys = headerRow.map(cell => resolveImportField(cell))
+    const bodyRows = rows.slice(bestSheet.headerRowIndex + 1).filter(hasImportRowData)
+    if (!bodyRows.length) { ElMessage.warning('Excel文件无数据'); return }
+
+    importRows.value = bodyRows.map((row, index) => buildImportRow(row, fieldKeys, bestSheet.headerRowIndex + index + 2))
     importDialogVisible.value = true
   }
   reader.readAsArrayBuffer(file)
@@ -1078,19 +1241,34 @@ function handleImportFile(e: Event) {
 
 async function confirmImport() {
   importLoading.value = true
-  let success = 0, failed = 0
+  let success = 0, failed = 0, skipped = 0
+  let typeMapChanged = false
+  const nextGoodsTypeMap = { ...goodsTypeMap.value }
   for (const row of importRows.value) {
-    const { goods_type_text, _error, ...payload } = row
+    const { goods_type_text, _error, _errorText, _rowNo, ...payload } = row
+    if (_error) {
+      skipped++
+      continue
+    }
     try {
-      await createGoods({ ...payload, status: 1 })
+      const res = await createGoods({ ...payload, status: 1 })
+      const id = res.data?.id ?? 0
+      if (id && payload.goods_type) {
+        nextGoodsTypeMap[id] = payload.goods_type
+        typeMapChanged = true
+      }
       success++
     } catch {
       failed++
     }
   }
+  if (typeMapChanged) {
+    goodsTypeMap.value = nextGoodsTypeMap
+    saveGoodsTypeMap(nextGoodsTypeMap)
+  }
   importLoading.value = false
   importDialogVisible.value = false
-  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}${skipped > 0 ? `，跳过 ${skipped} 条异常数据` : ''}`)
   tableRef.value?.refresh()
 }
 
@@ -1104,6 +1282,10 @@ function downloadTemplate() {
     '条码': '6901234567890',
     '销售价': 99.9,
     '采购价': 60,
+    '商品分类': '默认分类',
+    '规格型号': '500g/袋',
+    '商品单位': '袋',
+    '品牌': '示例品牌',
     '安全库存下限': 10,
     '安全库存上限': 100,
     '备注': '',
