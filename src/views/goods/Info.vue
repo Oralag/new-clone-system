@@ -599,10 +599,22 @@
         共 {{ importRows.length }} 条数据，请确认后点击确认导入。
         <span v-if="importRows.length > 20">（下方仅预览前20条，实际导入全部）</span>
       </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="font-size:13px;color:#606266">
+          缺少商品类型的行：<b>{{ importRows.filter(row => row._missingGoodsType).length }}</b>
+        </div>
+        <el-select v-model="importDefaultGoodsType" placeholder="缺少商品类型时请选择默认类型" clearable style="width:220px">
+          <el-option label="成品" :value="1" />
+          <el-option label="半成品" :value="2" />
+          <el-option label="原材料" :value="3" />
+          <el-option label="辅料" :value="4" />
+        </el-select>
+      </div>
       <el-table :data="importRows.slice(0, 20)" border size="small" max-height="400">
         <el-table-column prop="goods_name" label="商品名称" min-width="130" />
         <el-table-column prop="goods_sn" label="商品编码" min-width="120" />
         <el-table-column prop="goods_type_text" label="商品类型" width="90" />
+        <el-table-column prop="cate_name" label="商品分类" min-width="120" />
         <el-table-column prop="en_name" label="英文名称" min-width="120" />
         <el-table-column prop="barcode" label="条码" min-width="120" />
         <el-table-column prop="sell_price" label="销售价" width="80" align="right" />
@@ -1018,6 +1030,7 @@ const importFileRef = ref<HTMLInputElement>()
 const importDialogVisible = ref(false)
 const importRows = ref<any[]>([])
 const importLoading = ref(false)
+const importDefaultGoodsType = ref<number | undefined>(undefined)
 
 // 模板列定义：Excel中文表头 -> API字段名
 const IMPORT_COL_MAP: Record<string, string> = {
@@ -1188,12 +1201,20 @@ function buildImportRow(cells: any[], fieldKeys: string[], rowNo: number) {
 
   if (/^0+(?:\.0+)?$/.test(String(mapped.barcode ?? '').trim())) mapped.barcode = ''
 
-  if (mapped.goods_type && Number.isNaN(Number(mapped.goods_type))) {
-    mapped.goods_type = GOODS_TYPE_TEXT_MAP[String(mapped.goods_type).trim()] ?? 1
-  } else {
-    mapped.goods_type = Number(mapped.goods_type) || 1
+  const rawGoodsType = String(mapped.goods_type ?? '').trim()
+  mapped._missingGoodsType = rawGoodsType === ''
+  if (!mapped._missingGoodsType) {
+    if (Number.isNaN(Number(mapped.goods_type))) {
+      mapped.goods_type = GOODS_TYPE_TEXT_MAP[String(mapped.goods_type).trim()] ?? undefined
+    } else {
+      const num = Number(mapped.goods_type)
+      mapped.goods_type = [1, 2, 3, 4].includes(num) ? num : undefined
+    }
   }
-  mapped.goods_type_text = ['', '成品', '半成品', '原材料', '辅料'][mapped.goods_type] ?? '成品'
+  mapped._missingGoodsType = !mapped.goods_type
+  mapped.goods_type_text = mapped.goods_type
+    ? (['', '成品', '半成品', '原材料', '辅料'][mapped.goods_type] ?? '未指定')
+    : '未指定'
 
   fillImportRelationFields(mapped)
 
@@ -1294,6 +1315,7 @@ function handleImportFile(e: Event) {
     if (!bodyRows.length) { ElMessage.warning('Excel文件无数据'); return }
 
     importRows.value = bodyRows.map((row, index) => buildImportRow(row, fieldKeys, bestSheet.headerRowIndex + index + 2))
+    importDefaultGoodsType.value = undefined
     importDialogVisible.value = true
   }
   reader.readAsArrayBuffer(file)
@@ -1302,18 +1324,24 @@ function handleImportFile(e: Event) {
 }
 
 async function confirmImport() {
+  if (importRows.value.some(row => row._missingGoodsType) && !importDefaultGoodsType.value) {
+    ElMessage.warning('请先为缺少商品类型的数据选择默认类型')
+    return
+  }
   importLoading.value = true
   let success = 0, failed = 0, skipped = 0
   let typeMapChanged = false
   let cateChanged = false
   const nextGoodsTypeMap = { ...goodsTypeMap.value }
   for (const row of importRows.value) {
-    const { goods_type_text, _error, _errorText, _rowNo, ...payload } = row
+    const { goods_type_text, _error, _errorText, _rowNo, _missingGoodsType, ...payload } = row
     if (_error) {
       skipped++
       continue
     }
     try {
+      if (!payload.goods_type) payload.goods_type = importDefaultGoodsType.value
+      payload.goods_type = Number(payload.goods_type) || 1
       if (payload.cate_name && !payload.cate_id) {
         const cate = await ensureImportCategory(payload.cate_name)
         if (cate) {
