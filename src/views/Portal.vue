@@ -945,7 +945,12 @@ async function sendCaptain(text?: string) {
 .portal-card-blue   { background: #ffffff; }
 .portal-card-purple { background: #faf5ff; border-color: rgba(124,58,237,0.08); }
 .portal-card-green  { background: #f0fdf9; border-color: rgba(5,150,105,0.08); }
-.portal-card-dim    { cursor: default; }
+.portal-card-dim {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.45;
+  pointer-events: none;
+}
 .portal-card-dim:hover { transform: none; box-shadow: none; }
 
 .card-bg-icon {
