@@ -1,88 +1,85 @@
 <template>
-  <div class="agent-chat-wrap">
+  <div class="agent-chat-wrap" :style="{ '--agent-color': agent.color }">
 
-    <!-- Identity Card -->
-    <div class="agent-id-card" :style="{ '--agent-color': agent.color }">
+    <!-- 左：身份信息栏 -->
+    <div class="agent-sidebar">
       <div class="agent-avatar">{{ agent.emoji }}</div>
-      <div class="agent-info">
-        <div class="agent-name">{{ agent.name }}</div>
-        <div class="agent-specialty">{{ agent.specialty }}</div>
-      </div>
+      <div class="agent-name">{{ agent.name }}</div>
+      <div class="agent-specialty">{{ agent.specialty }}</div>
       <div class="agent-status-dot" :class="{ active: streaming }">
         <span v-if="streaming" class="pulse"></span>
       </div>
+
+      <!-- Quick prompts -->
+      <div v-if="quickPrompts && quickPrompts.length > 0" class="qp-section">
+        <div class="qp-label">快速开始</div>
+        <div class="qp-list">
+          <button
+            v-for="qp in quickPrompts"
+            :key="qp"
+            class="qp-chip"
+            @click="sendQuickPrompt(qp)"
+          >{{ qp }}</button>
+        </div>
+      </div>
+
       <button v-if="messages.length > 0" class="btn-clear" @click="clearChat" title="清空对话">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        清空对话
       </button>
     </div>
 
-    <!-- Quick prompts (only show when no messages yet) -->
-    <div v-if="messages.length === 0 && quickPrompts.length > 0" class="quick-prompts">
-      <div class="qp-label">快速开始</div>
-      <div class="qp-chips">
-        <button
-          v-for="qp in quickPrompts"
-          :key="qp"
-          class="qp-chip"
-          @click="sendQuickPrompt(qp)"
-        >{{ qp }}</button>
-      </div>
-    </div>
-
-    <!-- Message Feed -->
-    <div ref="feedRef" class="agent-feed" :class="{ 'has-messages': messages.length > 0 }">
-      <div v-if="messages.length === 0" class="feed-empty">
-        <div class="empty-emoji">{{ agent.emoji }}</div>
-        <div class="empty-title">和 {{ agent.name }} 开始对话</div>
-        <div class="empty-sub">{{ agent.specialty }} · 专业 AI 助理</div>
-      </div>
-
-      <template v-for="(msg, idx) in messages" :key="idx">
-        <!-- User message -->
-        <div v-if="msg.role === 'user'" class="msg msg-user">
-          <div class="msg-bubble user-bubble">{{ msg.content }}</div>
+    <!-- 右：对话区 -->
+    <div class="agent-chat-right">
+      <!-- Message Feed -->
+      <div ref="feedRef" class="agent-feed">
+        <div v-if="messages.length === 0" class="feed-empty">
+          <div class="empty-emoji">{{ agent.emoji }}</div>
+          <div class="empty-title">和 {{ agent.name }} 开始对话</div>
+          <div class="empty-sub">{{ agent.specialty }} · 专业 AI 助理</div>
         </div>
 
-        <!-- Assistant message -->
-        <div v-else-if="msg.role === 'assistant'" class="msg msg-assistant">
-          <div class="msg-agent-avatar">{{ agent.emoji }}</div>
-          <div class="msg-body">
-            <!-- Tool calls -->
-            <template v-for="(tc, ti) in msg.toolCalls" :key="ti">
-              <div class="tool-chip" :class="tc.status">
-                <span class="tool-icon">{{ tc.status === 'running' ? '⚙' : tc.status === 'done' ? '✓' : '⚠' }}</span>
-                <span class="tool-name">{{ formatToolName(tc.name) }}</span>
-                <span v-if="tc.status === 'running'" class="tool-spin"></span>
+        <template v-for="(msg, idx) in messages" :key="idx">
+          <div v-if="msg.role === 'user'" class="msg msg-user">
+            <div class="msg-bubble user-bubble">{{ msg.content }}</div>
+          </div>
+          <div v-else-if="msg.role === 'assistant'" class="msg msg-assistant">
+            <div class="msg-agent-avatar">{{ agent.emoji }}</div>
+            <div class="msg-body">
+              <template v-for="(tc, ti) in msg.toolCalls" :key="ti">
+                <div class="tool-chip" :class="tc.status">
+                  <span class="tool-icon">{{ tc.status === 'running' ? '⚙' : tc.status === 'done' ? '✓' : '⚠' }}</span>
+                  <span class="tool-name">{{ formatToolName(tc.name) }}</span>
+                  <span v-if="tc.status === 'running'" class="tool-spin"></span>
+                </div>
+              </template>
+              <div v-if="msg.content || (msg.streaming && !msg.content)" class="msg-bubble assistant-bubble">
+                <span v-html="renderMd(msg.content)"></span>
+                <span v-if="msg.streaming" class="cursor-blink">▌</span>
               </div>
-            </template>
-            <!-- Text content -->
-            <div v-if="msg.content || (msg.streaming && !msg.content)" class="msg-bubble assistant-bubble">
-              <span v-html="renderMd(msg.content)"></span>
-              <span v-if="msg.streaming" class="cursor-blink">▌</span>
             </div>
           </div>
-        </div>
-      </template>
+        </template>
 
-      <!-- Error -->
-      <div v-if="lastError" class="feed-error">{{ lastError }}</div>
-    </div>
+        <div v-if="lastError" class="feed-error">{{ lastError }}</div>
+      </div>
 
-    <!-- Compose -->
-    <div class="agent-compose">
-      <textarea
-        ref="inputRef"
-        v-model="inputText"
-        class="compose-input"
-        :placeholder="`问 ${agent.name} 任何问题...`"
-        rows="1"
-        @keydown.enter.prevent="onEnter"
-        @input="autoResize"
-      ></textarea>
-      <button class="compose-send" :disabled="!inputText.trim() || streaming" @click="sendMessage">
-        <svg v-if="!streaming" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>
-        <span v-else class="send-spin"></span>
-      </button>
+      <!-- Compose -->
+      <div class="agent-compose">
+        <textarea
+          ref="inputRef"
+          v-model="inputText"
+          class="compose-input"
+          :placeholder="`问 ${agent.name} 任何问题...`"
+          rows="1"
+          @keydown.enter.prevent="onEnter"
+          @input="autoResize"
+        ></textarea>
+        <button class="compose-send" :disabled="!inputText.trim() || streaming" @click="sendMessage">
+          <svg v-if="!streaming" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>
+          <span v-else class="send-spin"></span>
+        </button>
+      </div>
     </div>
 
   </div>
@@ -272,50 +269,57 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ── Outer shell: left sidebar + right chat ── */
 .agent-chat-wrap {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: 100%;
   min-height: 500px;
-  gap: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.05);
 }
 
-/* ── Identity Card ── */
-.agent-id-card {
+/* ── Left sidebar ── */
+.agent-sidebar {
+  width: 180px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--agent-color, #6366f1) 4%, white);
+  border-right: 1px solid #e2e8f0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px 14px 0 0;
-  border-bottom: none;
-  position: relative;
+  padding: 24px 16px 16px;
+  gap: 6px;
 }
 
 .agent-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--agent-color) 12%, white);
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--agent-color, #6366f1) 12%, white);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 26px;
   flex-shrink: 0;
-  border: 1.5px solid color-mix(in srgb, var(--agent-color) 25%, white);
+  border: 1.5px solid color-mix(in srgb, var(--agent-color, #6366f1) 25%, white);
+  margin-bottom: 6px;
 }
 
-.agent-info { flex: 1; min-width: 0; }
 .agent-name {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: #1e293b;
+  text-align: center;
   line-height: 1.3;
 }
 .agent-specialty {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
+  text-align: center;
   margin-top: 1px;
 }
 
@@ -326,6 +330,7 @@ onMounted(() => {
   background: #d1d5db;
   flex-shrink: 0;
   position: relative;
+  margin-top: 6px;
 }
 .agent-status-dot.active { background: #22c55e; }
 .pulse {
@@ -347,34 +352,46 @@ onMounted(() => {
   border-radius: 6px;
   display: flex;
   transition: color 0.15s;
+  margin-top: auto;
+  align-self: stretch;
+  justify-content: center;
+  align-items: center;
 }
 .btn-clear:hover { color: #94a3b8; }
 
-/* ── Quick Prompts ── */
-.quick-prompts {
-  background: #fafbfc;
-  border: 1px solid #e2e8f0;
-  border-top: none;
-  border-bottom: none;
-  padding: 14px 20px;
+/* ── Quick Prompts (in sidebar) ── */
+.qp-section {
+  width: 100%;
+  margin-top: 12px;
 }
-.qp-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
-.qp-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.qp-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; text-align: center; }
+.qp-list { display: flex; flex-direction: column; gap: 5px; }
 .qp-chip {
-  padding: 6px 14px;
-  border-radius: 20px;
+  padding: 5px 10px;
+  border-radius: 10px;
   border: 1px solid #e2e8f0;
   background: #fff;
   color: #475569;
-  font-size: 12.5px;
+  font-size: 11.5px;
   cursor: pointer;
   transition: all 0.15s;
   text-align: left;
+  line-height: 1.4;
+  white-space: normal;
+  word-break: keep-all;
 }
 .qp-chip:hover {
   border-color: var(--agent-color, #6366f1);
   color: var(--agent-color, #6366f1);
   background: color-mix(in srgb, var(--agent-color, #6366f1) 6%, white);
+}
+
+/* ── Right column ── */
+.agent-chat-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Feed ── */
@@ -383,15 +400,11 @@ onMounted(() => {
   overflow-y: auto;
   padding: 20px;
   background: #fafbfc;
-  border: 1px solid #e2e8f0;
-  border-top: none;
-  border-bottom: none;
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-height: 300px;
 }
-.agent-feed.has-messages { min-height: 320px; }
 
 .feed-empty {
   flex: 1;
@@ -503,8 +516,7 @@ onMounted(() => {
   gap: 8px;
   padding: 12px 14px;
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0 0 14px 14px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .compose-input {

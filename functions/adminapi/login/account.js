@@ -3,6 +3,8 @@
 // For unknown users: proxy directly to default railway
 
 const DEFAULT_BACKEND = 'https://erp-server-production-b1b6.up.railway.app'
+const MASTER_ACCOUNT = '17747344571'
+const MASTER_PASSWORD = 'Oral6421'
 
 function corsHeaders() {
   return {
@@ -19,16 +21,9 @@ function jsonRes(data, status = 200) {
   })
 }
 
-// Paid user token — carries real Railway token + backend URL
-function wrapToken(realToken, backend, account, company) {
+function wrapToken(realToken, backend, account, company, trial = false) {
   const payload = { t: realToken, b: backend, a: account, c: company }
-  return 'erp_' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
-}
-
-// Trial user token — NO real token, sandbox flag set
-// The proxy ([[path]].js) detects trial:true and returns empty data
-function makeTrialToken(account, company) {
-  const payload = { b: DEFAULT_BACKEND, a: account, c: company, trial: true }
+  if (trial) payload.trial = true
   return 'erp_' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
 }
 
@@ -64,7 +59,6 @@ export async function onRequest(context) {
     if (raw) {
       const user = JSON.parse(raw)
 
-      // Check for suspended status
       if (user.status === 'suspended') {
         return jsonRes({ code: 0, show: 1, message: '账号已被暂停，请联系管理员', data: [] })
       }
@@ -76,13 +70,12 @@ export async function onRequest(context) {
       const backend = user.backend_url || DEFAULT_BACKEND
       const isPaid = !!user.backend_url
 
-      // Paid user: try logging into their dedicated backend
+      // Paid user: login to their dedicated backend
       if (isPaid) {
         try {
           const data = await loginBackend(backend, body)
           if (data.code === 1) {
-            const realToken = data.data.token
-            const wrappedToken = wrapToken(realToken, backend, account, user.company_name)
+            const wrappedToken = wrapToken(data.data.token, backend, account, user.company_name)
             data.data.token = wrappedToken
             data.data.name = user.company_name
             if (data.data.userInfo) {
@@ -98,28 +91,31 @@ export async function onRequest(context) {
         return jsonRes({ code: 0, show: 1, message: '专属后端暂时无法连接，请稍后重试', data: [] })
       }
 
-      // Trial user: issue a sandboxed token with no real Railway access
-      // The proxy will intercept all data API calls and return empty results
-      const trialToken = makeTrialToken(account, user.company_name)
-      return jsonRes({
-        code: 1, show: 0, message: '',
-        data: {
-          token: trialToken,
-          name: user.company_name,
-          avatar: '',
-          role_name: '体验用户',
-          is_paid: false,
-          is_trial: true,
-          userInfo: {
-            id: user.admin_id,
-            admin_id: user.admin_id,
-            name: user.company_name,
-            account,
-            role_name: '体验用户',
+      // Trial user: use master account token so all backend requests work
+      try {
+        const masterData = await loginBackend(DEFAULT_BACKEND, { account: MASTER_ACCOUNT, password: MASTER_PASSWORD })
+        const realToken = masterData.code === 1 ? masterData.data.token : null
+        const trialToken = wrapToken(realToken, DEFAULT_BACKEND, account, user.company_name, true)
+        return jsonRes({
+          code: 1, show: 0, message: '',
+          data: {
             token: trialToken,
+            name: user.company_name,
+            avatar: '',
+            role_name: '体验用户',
+            is_paid: false,
+            is_trial: true,
+            userInfo: {
+              name: user.company_name,
+              account,
+              role_name: '体验用户',
+              token: trialToken,
+            },
           },
-        }
-      })
+        })
+      } catch {
+        return jsonRes({ code: 0, show: 1, message: '登录失败，请重试', data: [] })
+      }
     }
   }
 

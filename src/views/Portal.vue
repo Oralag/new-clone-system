@@ -58,152 +58,13 @@
       <span class="hero-compact-title">选择您的<span class="hero-title-blue"> 工作空间</span></span>
     </div>
 
-    <!-- ── Captain 总控台 ── -->
-    <div class="captain-wrap">
+    <!-- 主体区：左边模块卡片 + 右边 Captain -->
+    <div class="main-layout">
 
-      <!-- 了解 Captain 弹窗 -->
-      <div v-if="captainAboutOpen" class="about-overlay" @click.self="captainAboutOpen = false">
-        <div class="about-modal">
-          <button class="about-close" @click="captainAboutOpen = false">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-          <div class="about-icon">🎯</div>
-          <h3 class="about-title">关于 Captain</h3>
-          <p class="about-lead">Captain 是数字游牧 Agency 的智能指挥官，它不只是一个聊天机器人。</p>
-          <div class="about-list">
-            <div class="about-item" v-for="item in aboutItems" :key="item.title">
-              <div class="about-item-icon" :style="{ background: item.color + '15', color: item.color }">{{ item.emoji }}</div>
-              <div>
-                <div class="about-item-title">{{ item.title }}</div>
-                <div class="about-item-desc">{{ item.desc }}</div>
-              </div>
-            </div>
-          </div>
-          <div class="about-agents">
-            <div class="about-agents-label">旗下 Agent 团队</div>
-            <div class="about-agents-grid">
-              <div v-for="a in agentList" :key="a.id" class="about-agent-chip" :style="{ background: a.color + '12', borderColor: a.color + '30' }">
-                <span>{{ a.emoji }}</span>
-                <span :style="{ color: a.color }">{{ a.name }}</span>
-                <span class="about-agent-specialty">{{ a.specialty }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 主体 -->
-      <div class="captain-main">
-        <!-- 顶部标题区 -->
-        <div class="captain-head">
-          <div class="captain-head-left">
-            <div class="captain-glyph">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            </div>
-            <div>
-              <div class="captain-label">
-                CAPTAIN
-                <span class="captain-live"><span class="captain-live-dot"></span>LIVE</span>
-              </div>
-              <div class="captain-tagline">告诉我你的目标，我来调度整个 Agency</div>
-            </div>
-          </div>
-          <div class="captain-head-right">
-            <div class="captain-team-pills">
-              <div v-for="a in agentList" :key="a.id" class="team-pill" :style="{ '--c': a.color }" :title="a.name">
-                <span>{{ a.emoji }}</span>
-              </div>
-            </div>
-            <button class="about-btn" @click="captainAboutOpen = true">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              了解 Captain
-            </button>
-          </div>
-        </div>
-
-        <!-- 消息区（仅展开后显示） -->
-        <div v-if="captainOpen" class="captain-conv">
-          <div ref="chatScrollRef" class="captain-feed">
-            <!-- 空状态 -->
-            <div v-if="captainMessages.length === 0" class="feed-empty">
-              <div class="feed-empty-grid">
-                <button v-for="p in quickPrompts" :key="p" class="feed-prompt" @click="sendCaptain(p)">
-                  <span class="feed-prompt-text">{{ p }}</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
-              </div>
-            </div>
-
-            <template v-for="(msg, idx) in captainMessages" :key="idx">
-              <!-- 用户 -->
-              <div v-if="msg.role === 'user'" class="feed-row feed-user">
-                <div class="feed-bubble-user">{{ msg.content }}</div>
-              </div>
-              <!-- Agency 回复 -->
-              <div v-else class="feed-row feed-agency">
-                <div class="feed-agency-inner">
-                  <template v-for="(step, si) in msg.steps" :key="si">
-                    <!-- Captain 思考 -->
-                    <div v-if="step.type === 'captain_text'" class="feed-captain-text" v-html="renderMd(step.text)"></div>
-                    <!-- Agent 执行卡 -->
-                    <div v-else-if="step.type === 'agent_start'" class="feed-agent-card">
-                      <div class="feed-agent-header" :style="{ background: getAgentColor(step.agentId) + '10' }">
-                        <span class="feed-agent-emoji">{{ step.emoji }}</span>
-                        <span class="feed-agent-name">{{ step.agentName }}</span>
-                        <div class="feed-agent-tag" :class="step.status">
-                          <span v-if="step.status === 'running'" class="spin-dot"></span>
-                          <span>{{ step.status === 'running' ? '执行中' : '完成' }}</span>
-                        </div>
-                      </div>
-                      <div class="feed-agent-task">{{ step.task }}</div>
-                      <div v-if="step.output" class="feed-agent-output">{{ step.output }}</div>
-                    </div>
-                    <!-- 工具调用 -->
-                    <div v-else-if="step.type === 'tool'" class="feed-tool">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                      {{ step.label }}
-                      <span class="feed-tool-dot" :class="step.status"></span>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
-
-            <div v-if="captainLoading" class="feed-thinking">
-              <span class="feed-thinking-label">🎯 Captain</span>
-              <div class="feed-dots"><span></span><span></span><span></span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 输入区 -->
-        <div class="captain-compose" :class="{ open: captainOpen }">
-          <input
-            ref="captainInputRef"
-            v-model="captainInput"
-            class="captain-compose-input"
-            placeholder="输入目标，Captain 自动调度 Agency 完成..."
-            @focus="captainOpen = true"
-            @keydown.enter.prevent="sendCaptain()"
-            :disabled="captainLoading"
-          />
-          <div class="captain-compose-actions">
-            <span class="compose-hint" v-if="!captainOpen">按 Enter 发送</span>
-            <button v-if="captainOpen && captainMessages.length > 0" class="compose-clear" @click="captainMessages = []; captainOpen = false" title="清空对话">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-            </button>
-            <button class="compose-send" :disabled="captainLoading || !captainInput.trim()" @click="sendCaptain()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Module Cards — 2 main + 1 coming -->
-    <div class="cards-grid">
+      <!-- 左：模块卡片 -->
+      <div class="cards-col">
+        <!-- Module Cards — 2 main + 1 coming -->
+        <div class="cards-grid">
 
       <!-- ERP -->
       <div class="portal-card" @click="go('/dashboard')">
@@ -282,8 +143,144 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
+      </div><!-- /cards-grid -->
+      </div><!-- /cards-col -->
 
-    </div>
+      <!-- 右：Captain 总控台 -->
+      <div class="captain-wrap">
+
+        <!-- 了解 Captain 弹窗 -->
+        <div v-if="captainAboutOpen" class="about-overlay" @click.self="captainAboutOpen = false">
+          <div class="about-modal">
+            <button class="about-close" @click="captainAboutOpen = false">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+            <div class="about-icon">🎯</div>
+            <h3 class="about-title">关于 Captain</h3>
+            <p class="about-lead">Captain 是数字游牧 Agency 的智能指挥官，它不只是一个聊天机器人。</p>
+            <div class="about-list">
+              <div class="about-item" v-for="item in aboutItems" :key="item.title">
+                <div class="about-item-icon" :style="{ background: item.color + '15', color: item.color }">{{ item.emoji }}</div>
+                <div>
+                  <div class="about-item-title">{{ item.title }}</div>
+                  <div class="about-item-desc">{{ item.desc }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="about-agents">
+              <div class="about-agents-label">旗下 Agent 团队</div>
+              <div class="about-agents-grid">
+                <div v-for="a in agentList" :key="a.id" class="about-agent-chip" :style="{ background: a.color + '12', borderColor: a.color + '30' }">
+                  <span>{{ a.emoji }}</span>
+                  <span :style="{ color: a.color }">{{ a.name }}</span>
+                  <span class="about-agent-specialty">{{ a.specialty }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 主体：左右布局 -->
+        <div class="captain-main">
+
+          <!-- 左：身份信息栏 -->
+          <div class="captain-sidebar">
+            <div class="captain-glyph">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <div class="captain-label">
+              CAPTAIN
+              <span class="captain-live"><span class="captain-live-dot"></span>LIVE</span>
+            </div>
+            <div class="captain-tagline">调度整个 Agency 完成你的目标</div>
+            <div class="captain-team-pills">
+              <div v-for="a in agentList" :key="a.id" class="team-pill" :style="{ '--c': a.color }" :title="a.name + ' · ' + a.specialty">
+                <span>{{ a.emoji }}</span>
+              </div>
+            </div>
+            <button class="about-btn" @click="captainAboutOpen = true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              了解 Captain
+            </button>
+          </div>
+
+          <!-- 右：对话区 -->
+          <div class="captain-chat">
+            <!-- 消息区 -->
+            <div ref="chatScrollRef" class="captain-feed">
+              <!-- 空状态 -->
+              <div v-if="captainMessages.length === 0" class="feed-empty">
+                <div class="feed-empty-grid">
+                  <button v-for="p in quickPrompts" :key="p" class="feed-prompt" @click="sendCaptain(p)">
+                    <span class="feed-prompt-text">{{ p }}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <template v-for="(msg, idx) in captainMessages" :key="idx">
+                <div v-if="msg.role === 'user'" class="feed-row feed-user">
+                  <div class="feed-bubble-user">{{ msg.content }}</div>
+                </div>
+                <div v-else class="feed-row feed-agency">
+                  <div class="feed-agency-inner">
+                    <template v-for="(step, si) in msg.steps" :key="si">
+                      <div v-if="step.type === 'captain_text'" class="feed-captain-text" v-html="renderMd(step.text)"></div>
+                      <div v-else-if="step.type === 'agent_start'" class="feed-agent-card">
+                        <div class="feed-agent-header" :style="{ background: getAgentColor(step.agentId) + '10' }">
+                          <span class="feed-agent-emoji">{{ step.emoji }}</span>
+                          <span class="feed-agent-name">{{ step.agentName }}</span>
+                          <div class="feed-agent-tag" :class="step.status">
+                            <span v-if="step.status === 'running'" class="spin-dot"></span>
+                            <span>{{ step.status === 'running' ? '执行中' : '完成' }}</span>
+                          </div>
+                        </div>
+                        <div class="feed-agent-task">{{ step.task }}</div>
+                        <div v-if="step.output" class="feed-agent-output">{{ step.output }}</div>
+                      </div>
+                      <div v-else-if="step.type === 'tool'" class="feed-tool">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                        {{ step.label }}
+                        <span class="feed-tool-dot" :class="step.status"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <div v-if="captainLoading" class="feed-thinking">
+                <span class="feed-thinking-label">🎯 Captain</span>
+                <div class="feed-dots"><span></span><span></span><span></span></div>
+              </div>
+            </div>
+
+            <!-- 输入区 -->
+            <div class="captain-compose">
+              <input
+                ref="captainInputRef"
+                v-model="captainInput"
+                class="captain-compose-input"
+                placeholder="输入目标，Captain 自动调度 Agency..."
+                @keydown.enter.prevent="sendCaptain()"
+                :disabled="captainLoading"
+              />
+              <div class="captain-compose-actions">
+                <button v-if="captainMessages.length > 0" class="compose-clear" @click="captainMessages = []" title="清空对话">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                </button>
+                <button class="compose-send" :disabled="captainLoading || !captainInput.trim()" @click="sendCaptain()">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /captain-wrap -->
+
+    </div><!-- /main-layout -->
 
     <!-- Platform Description (moved from hero) -->
     <section class="platform-desc">
@@ -510,7 +507,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import UpgradeDialog from '@/components/UpgradeDialog.vue'
@@ -574,6 +571,26 @@ function claimTrial() {
   showTrialModal.value = false
   showClaimSuccess.value = true
 }
+
+// 页面加载时同步 KV 状态：如果本地有记录但 KV 没有，清除本地；如果 KV 有记录但本地没有，写入本地
+onMounted(async () => {
+  if (!isTrial.value) return
+  try {
+    const res = await fetch('/api/trial-status', {
+      headers: { token: auth.token || '' },
+    })
+    const data = await res.json()
+    if (data.code === 1) {
+      if (data.data?.trial_start_ts) {
+        // KV 有记录，以 KV 为准写入本地
+        localStorage.setItem(storageKey.value, String(data.data.trial_start_ts))
+      } else {
+        // KV 没有记录，清除本地
+        localStorage.removeItem(storageKey.value)
+      }
+    }
+  } catch {}
+})
 
 // ── Agent 团队定义（前端展示用）─────────────────────────────────────────────
 const agentList = [
@@ -867,22 +884,36 @@ async function sendCaptain(text?: string) {
   letter-spacing: -0.01em;
 }
 
+/* ── Main two-column layout ── */
+.main-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  max-width: 1400px;
+  margin: 0 auto 40px;
+  padding: 0 32px;
+}
+
+.cards-col {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Cards ── */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  max-width: 1200px;
-  margin: 0 auto 112px;
-  padding: 0 48px;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin: 0 0 0;
+  padding: 0;
 }
 
 .portal-card {
   position: relative;
   background: #f5f5f7;
   border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 40px;
-  padding: 56px 48px;
+  border-radius: 28px;
+  padding: 36px 32px;
   cursor: pointer;
   overflow: hidden;
   transition: transform 1s cubic-bezier(0.23,1,0.32,1), box-shadow 1s cubic-bezier(0.23,1,0.32,1);
@@ -1095,7 +1126,9 @@ async function sendCaptain(text?: string) {
 /* ── Responsive ── */
 .hide-sm { display: inline; }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
+  .main-layout { flex-direction: column; }
+  .captain-wrap { width: 100%; position: static; }
   .cards-grid { grid-template-columns: 1fr 1fr; }
   .portal-card-dim { grid-column: span 2; }
 }
@@ -1112,14 +1145,19 @@ async function sendCaptain(text?: string) {
   .hero-sub { font-size: 14px; margin-top: 12px; }
   .upgrade-bar { font-size: 12px; }
   .upgrade-bar-inner { padding: 8px 16px; flex-direction: column; gap: 6px; align-items: flex-start; }
-  .cards-grid { grid-template-columns: 1fr; padding: 0 16px; gap: 12px; }
+  .main-layout { padding: 0 16px; }
+  .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .portal-card { padding: 28px 22px; border-radius: 24px; }
   .portal-card-dim { grid-column: auto; }
   .card-icon { width: 52px; height: 52px; border-radius: 16px; }
   .card-icon svg { width: 30px; height: 30px; }
   .card-title { font-size: 20px; margin-top: 14px; }
   .card-desc { font-size: 13px; margin-top: 8px; }
-  .captain-wrap { padding: 0 16px; margin-bottom: 24px; }
+  .captain-wrap { margin-bottom: 24px; }
+  .captain-main { flex-direction: column; }
+  .captain-sidebar { width: 100%; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; padding: 16px 18px; border-right: none; border-bottom: 1px solid #f0f0f5; }
+  .captain-team-pills { margin-top: 0; }
+  .about-btn { margin-top: 0; }
   .neural-content { grid-template-columns: 1fr; gap: 40px; }
   .neural-section { padding: 48px 20px; }
   .portal-footer { padding: 36px 20px; }
@@ -1128,36 +1166,32 @@ async function sendCaptain(text?: string) {
 
 /* ── Captain 总控台 ── */
 .captain-wrap {
-  max-width: 900px;
-  margin: 0 auto 40px;
-  padding: 0 24px;
+  width: 460px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
 }
 .captain-main {
+  display: flex;
   border: 1px solid #e4e7ed;
   border-radius: 20px;
   background: #fff;
   overflow: hidden;
   box-shadow: 0 2px 16px rgba(0,0,0,0.06);
-  transition: box-shadow 0.2s;
-}
-.captain-main:focus-within {
-  box-shadow: 0 4px 32px rgba(99,102,241,0.12);
-  border-color: #c7c9ff;
+  min-height: 340px;
 }
 
-/* 顶部标题区 */
-.captain-head {
+/* ── 左侧身份栏 ── */
+.captain-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  border-right: 1px solid #f0f0f5;
+  padding: 28px 20px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px 18px;
-  border-bottom: 1px solid #f0f0f5;
-  gap: 16px;
-}
-.captain-head-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(160deg, #fafaff 0%, #f4f5ff 100%);
 }
 .captain-glyph {
   width: 42px; height: 42px;
@@ -1209,15 +1243,17 @@ async function sendCaptain(text?: string) {
 }
 .captain-team-pills {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
+  margin-top: 4px;
 }
 .team-pill {
-  width: 30px; height: 30px;
-  border-radius: 9px;
+  width: 28px; height: 28px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--c) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--c) 25%, transparent);
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   cursor: default;
   transition: transform 0.15s;
 }
@@ -1227,29 +1263,34 @@ async function sendCaptain(text?: string) {
   align-items: center;
   gap: 5px;
   border: 1px solid #e4e7ed;
-  background: #f7f8fa;
+  background: #fff;
   border-radius: 8px;
   padding: 6px 12px;
-  font-size: 12px;
+  font-size: 11px;
   color: #4e5969;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
+  margin-top: 4px;
 }
 .about-btn:hover { border-color: #6366f1; color: #6366f1; background: #f0f0ff; }
 
-/* 消息区 */
-.captain-conv {
-  border-bottom: 1px solid #f0f0f5;
+/* ── 右侧对话区 ── */
+.captain-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .captain-feed {
-  max-height: 420px;
+  flex: 1;
   overflow-y: auto;
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   scroll-behavior: smooth;
+  min-height: 260px;
 }
 .captain-feed::-webkit-scrollbar { width: 4px; }
 .captain-feed::-webkit-scrollbar-thumb { background: #e4e7ed; border-radius: 2px; }
@@ -1258,7 +1299,7 @@ async function sendCaptain(text?: string) {
 .feed-empty { padding: 4px 0; }
 .feed-empty-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 @media (max-width: 640px) { .feed-empty-grid { grid-template-columns: 1fr; } }
@@ -1393,8 +1434,9 @@ async function sendCaptain(text?: string) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 20px;
-  background: #fff;
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f5;
+  background: #fafbfc;
 }
 .captain-compose-input {
   flex: 1;

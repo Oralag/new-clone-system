@@ -17,7 +17,7 @@
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">新增合同</el-button>
+            <el-button type="primary" :icon="Plus" @click="openCreate" data-guide-id="guide-contract-create">新增合同</el-button>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
@@ -117,7 +117,7 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-contract-save">
             保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
           </el-button>
         </div>
@@ -138,7 +138,8 @@
               </el-col>
               <el-col :span="6">
                 <el-form-item label="客户名称" prop="customer_id"
-                  :rules="[{ required: true, message: '请选择客户' }]">
+                  :rules="[{ required: true, message: '请选择客户' }]"
+                  data-guide-id="guide-contract-customer">
                   <div style="display:flex;gap:4px;width:100%">
                     <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
                       @change="onCustomerChange">
@@ -242,7 +243,7 @@
           <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
               <el-button type="success" :icon="Document" size="small" @click="openOfferPicker">选择报价单</el-button>
-              <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
+              <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker" data-guide-id="guide-contract-goods">选择商品</el-button>
               <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
               <el-button :icon="Upload" size="small">导入商品</el-button>
             </div>

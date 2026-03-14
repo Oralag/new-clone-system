@@ -14,7 +14,7 @@
         </el-select>
         <el-button :icon="Refresh" @click="loadAll">刷新</el-button>
         <div style="flex:1" />
-        <el-button type="primary" :icon="Plus" @click="openCreate">新增收款单</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate" data-guide-id="guide-collect-receipt-create">新增收款单</el-button>
       </div>
 
       <!-- 表格 -->
@@ -71,7 +71,7 @@
     </el-card>
 
     <!-- 新增收款单抽屉 -->
-    <el-drawer v-model="drawerVisible" title="新增收款单" size="520px" destroy-on-close>
+    <el-drawer v-model="drawerVisible" title="新增收款单" size="520px" destroy-on-close data-guide-id="guide-collect-receipt-form">
       <el-form ref="formRef" :model="fd" label-width="90px" style="padding:0 8px">
         <el-form-item label="收款对象类型" prop="contact_type" :rules="[{ required: true, message: '请选择类型' }]">
           <el-select v-model="fd.contact_type" style="width:100%" @change="onTypeChange">
@@ -119,7 +119,7 @@
       </el-form>
       <template #footer>
         <el-button @click="drawerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-collect-receipt-save">保存</el-button>
       </template>
     </el-drawer>
 

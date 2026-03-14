@@ -7,7 +7,7 @@
       <span class="summary-item">待收欠款：<strong class="red">{{ fmt(summaryUnpaid) }}</strong></span>
     </div>
 
-    <el-card class="table-card">
+    <el-card class="table-card" data-guide-id="guide-receivable-card">
       <div class="toolbar">
         <div class="search-area">
           <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:180px" />

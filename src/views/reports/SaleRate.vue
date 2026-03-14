@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <el-card>
+    <el-card data-guide-id="guide-sale-rate-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="员工姓名">
           <el-select v-model="searchForm.admin_name" placeholder="请选择员工" clearable style="width:180px">

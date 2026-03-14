@@ -96,6 +96,7 @@
   </div>
 
   <AiAssistant />
+  <OnboardingGuide />
 </template>
 
 <script setup lang="ts">
@@ -104,6 +105,7 @@ import SidebarFlyout from './components/SidebarFlyout.vue'
 import TopBar from './components/TopBar.vue'
 import TagsBar from './components/TagsBar.vue'
 import AiAssistant from '@/components/AiAssistant.vue'
+import OnboardingGuide from '@/components/OnboardingGuide.vue'
 import TrialBanner from '@/components/TrialBanner.vue'
 import { useTabsStore } from '@/stores/tabs'
 import { useAppStore } from '@/stores/app'

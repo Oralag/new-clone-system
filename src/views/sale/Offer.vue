@@ -17,7 +17,7 @@
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">新增报价</el-button>
+            <el-button type="primary" :icon="Plus" @click="openCreate" data-guide-id="guide-offer-create">新增报价</el-button>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
@@ -104,7 +104,7 @@
         </div>
         <div class="form-actions">
           <el-button @click="backToList">返回</el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-offer-save">保存</el-button>
         </div>
       </div>
 
@@ -117,7 +117,8 @@
             <el-row :gutter="20">
               <el-col :span="8">
                 <el-form-item label="客户名称" prop="customer_id"
-                  :rules="[{ required: true, message: '请选择客户' }]">
+                  :rules="[{ required: true, message: '请选择客户' }]"
+                  data-guide-id="guide-offer-customer">
                   <div style="display:flex;gap:4px;width:100%">
                     <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
                       @change="onCustomerChange">
@@ -192,7 +193,7 @@
           <div class="form-section">
             <div class="sec-title-row">
               <span class="sec-title">商品明细</span>
-              <el-button v-if="!isReadonly" type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
+              <el-button v-if="!isReadonly" type="primary" :icon="Plus" size="small" @click="openGoodsPicker" data-guide-id="guide-offer-goods">选择商品</el-button>
             </div>
 
             <el-table :data="fd.items" border style="width:100%" empty-text="请点击添加商品">

@@ -43,7 +43,7 @@
           <!-- 工具栏 -->
           <div class="sc-toolbar">
             <div class="toolbar-left">
-              <el-button type="primary" :icon="Plus" @click="openForm()">新增客户</el-button>
+              <el-button type="primary" :icon="Plus" @click="openForm()" data-guide-id="guide-client-create">新增客户</el-button>
             </div>
             <div class="toolbar-right">
               <el-tooltip content="导入Excel">
@@ -155,7 +155,8 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="客户名称" prop="nickname"
-              :rules="[{ required: true, message: '请输入客户名称' }]">
+              :rules="[{ required: true, message: '请输入客户名称' }]"
+              data-guide-id="guide-client-form-basic">
               <el-input v-model="formData.nickname" placeholder="请输入" />
             </el-form-item>
           </el-col>
@@ -239,7 +240,7 @@
       <template #footer>
         <el-button @click="formVisible = false">取消</el-button>
         <el-button v-if="!formData.id" type="success" :icon="Plus" @click="handleSubmitAndRecharge">保存并充值</el-button>
-        <el-button type="primary" :loading="formSaving" @click="handleSubmit">确定</el-button>
+        <el-button type="primary" :loading="formSaving" @click="handleSubmit" data-guide-id="guide-client-form-save">确定</el-button>
       </template>
     </el-dialog>
 
