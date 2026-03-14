@@ -49,7 +49,7 @@
             </div>
             <div class="inline-item total-item">
               <div class="inline-name">合计</div>
-              <div class="inline-value red">¥{{ fundTotal }}</div>
+              <div class="inline-value red">¥{{ accountTotal }}</div>
               <div class="inline-sub">{{ fundList.length }} 个账户</div>
             </div>
           </div>
@@ -403,8 +403,8 @@ import { useRouter } from 'vue-router'
 import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, ArrowUp, ArrowDown, Box, Plus, Minus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
-import { getFundList } from '@/api/finance'
-import { normalizeFundFlowRows, sumFundFlowIncome, sumFundFlowExpense } from '@/utils/fundFlow'
+import { getFundList, getExpenseList } from '@/api/finance'
+import { normalizeFundFlowRows } from '@/utils/fundFlow'
 
 const router = useRouter()
 
@@ -439,6 +439,9 @@ const payTotal = computed(() => {
   const expenseTotal = expenseList.value.reduce((s, r) => s + Number(r.amount || 0), 0)
   return (payReceiptTotal + expenseTotal).toFixed(2)
 })
+const accountTotal = computed(() =>
+  fundList.value.reduce((s, r) => s + Number(r.balance || 0), 0).toFixed(2)
+)
 const fundTotal = computed(() =>
   Math.max(0, Number(collectTotal.value) - Number(payTotal.value)).toFixed(2)
 )
@@ -699,7 +702,7 @@ async function savePay() {
 
 onMounted(async () => {
   try {
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, flowRes, purchaseRes, saleOutRes, retailRes, clientRes, supplierRes] = await Promise.all([
+    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, flowRes, purchaseRes, saleOutRes, retailRes, rechargeRes, expenseRes, clientRes, supplierRes] = await Promise.all([
       getFundList({ list_rows: 100 }),
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
       http.get('/finance/CollectReceipt/index', { params: { list_rows: 1000 } }),
@@ -710,6 +713,8 @@ onMounted(async () => {
       http.get('/stock/PurchaseOrder/index', { params: { list_rows: 200 } }),
       http.get('/stock/SaleOutOrder/index', { params: { list_rows: 50 } }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
+      http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
+      getExpenseList({ list_rows: 1000 }),
       http.get('/shop/ShopCustomer/index', { params: { list_rows: 500 } }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
     ])
@@ -725,6 +730,8 @@ onMounted(async () => {
     supplierList.value = supplierRes.data?.rows ?? supplierRes.data?.list ?? []
     saleOutList.value = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
     retailList.value = retailRes.data?.rows ?? retailRes.data?.list ?? []
+    rechargeList.value = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
+    expenseList.value = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
   } catch {}
 })
 </script>

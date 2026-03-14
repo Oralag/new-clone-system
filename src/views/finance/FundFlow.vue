@@ -11,12 +11,12 @@
       <div class="summary-card">
         <span class="s-label">累计收入</span>
         <span class="s-value green">¥{{ summary.income.toFixed(2) }}</span>
-        <span class="s-formula">按资金流水入账记录统计</span>
+        <span class="s-formula">按所有资金收入明细汇总</span>
       </div>
       <div class="summary-card">
         <span class="s-label">累计支出</span>
         <span class="s-value red">¥{{ summary.expense.toFixed(2) }}</span>
-        <span class="s-formula">按资金流水出账记录统计</span>
+        <span class="s-formula">按所有资金支出明细汇总</span>
       </div>
       <div class="summary-card">
         <span class="s-label">未付款</span>
@@ -85,8 +85,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { getPayableList, getFundFlowList } from '@/api/finance'
-import { normalizeFundFlowRows, sumFundFlowExpense, sumFundFlowIncome } from '@/utils/fundFlow'
+import { getPayReceiptList, getCollectReceiptList, getExpenseList } from '@/api/finance'
+import { getProcureOrderList } from '@/api/procure'
+import http from '@/api/http'
 
 const summaryLoading = ref(false)
 const tableLoading = ref(false)
@@ -135,34 +136,103 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [flowRes, payableRes] = await Promise.all([
-      getFundFlowList({ list_rows: 2000 }),
-      getPayableList({ list_rows: 1000 }),
+    const [collectRes, retailRes, purchaseRes, payRes, expenseRes, rechargeRes] = await Promise.all([
+      getCollectReceiptList({ list_rows: 1000 }),
+      http.get('/retail/order/index', { params: { list_rows: 1000 } }),
+      getProcureOrderList({ list_rows: 1000 }),
+      getPayReceiptList({ list_rows: 1000 }),
+      getExpenseList({ list_rows: 1000 }),
+      http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
     ])
 
-    const normalizedRows = normalizeFundFlowRows(flowRes.data?.rows ?? flowRes.data?.list ?? [])
-    allItems.value = normalizedRows.map(row => ({
-      date: row.date,
-      fund_name: row.fund_name,
-      type: row.flow_type === 'income' ? 'income' : 'expense',
-      source: row.source,
-      name: row.name,
-      order_no: row.order_no,
-      amount: row.amount,
-      remark: row.remark,
-    }))
+    const items: FlowItem[] = []
 
-    const payables: any[] = payableRes.data?.rows ?? payableRes.data?.list ?? []
-    summary.income = sumFundFlowIncome(normalizedRows)
-    summary.expense = sumFundFlowExpense(normalizedRows)
-    summary.balance = Math.max(0, summary.income - summary.expense)
-    summary.totalPurchase = payables.reduce((sum, row) => sum + Number(row.order_amount || row.total_amount || 0), 0)
-    summary.unpaid = payables.reduce((sum, row) => {
-      if (row?.un_pay_amount !== undefined && row?.un_pay_amount !== null && row?.un_pay_amount !== '') {
-        return sum + Math.max(0, Number(row.un_pay_amount || 0))
-      }
-      return sum + Math.max(0, Number(row.order_amount || row.total_amount || 0) - Number(row.paid_amount || 0))
-    }, 0)
+    const collectSourceMap: Record<string, string> = { customer: '销售收款', supplier: '供应商退款', staff: '员工还款', other: '其他收入' }
+    const collects: any[] = collectRes.data?.rows ?? collectRes.data?.list ?? []
+    for (const r of collects) {
+      items.push({
+        date: (r.receipt_date || r.create_time || '').slice(0, 10),
+        fund_name: r.fund_name || r.account_name || '—',
+        type: 'income',
+        source: collectSourceMap[r.contact_type] || '收款单',
+        name: r.contact_name || r.customer_name || '—',
+        order_no: r.receipt_no || r.order_no || '',
+        amount: Number(r.amount || 0),
+        remark: r.remark || '',
+      })
+    }
+
+    const retails: any[] = retailRes.data?.rows ?? retailRes.data?.list ?? []
+    for (const r of retails) {
+      items.push({
+        date: (r.order_date || r.create_time || '').slice(0, 10),
+        fund_name: r.fund_name || r.account_name || '—',
+        type: 'income',
+        source: '零售单',
+        name: r.customer_name || r.member_name || '散客',
+        order_no: r.order_sn || r.order_no || '',
+        amount: Number(r.total_amount || r.pay_amount || 0),
+        remark: r.remark || '',
+      })
+    }
+
+    const payments: any[] = payRes.data?.rows ?? payRes.data?.list ?? []
+    const paySourceMap: Record<string, string> = { supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出' }
+    for (const r of payments) {
+      items.push({
+        date: (r.pay_date || r.create_time || '').slice(0, 10),
+        fund_name: r.fund_name || r.account_name || '—',
+        type: 'expense',
+        source: paySourceMap[r.contact_type] || '付款单',
+        name: r.contact_name || r.supplier_name || '—',
+        order_no: r.receipt_no || r.order_no || '',
+        amount: Number(r.amount || 0),
+        remark: r.remark || '',
+      })
+    }
+
+    const recharges: any[] = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
+    for (const r of recharges) {
+      items.push({
+        date: (r.recharge_date || r.create_time || '').slice(0, 10),
+        fund_name: r.fund_name || r.account_name || '—',
+        type: 'income',
+        source: '会员充值',
+        name: r.member_name || '—',
+        order_no: r.recharge_no || '',
+        amount: Number(r.amount || 0),
+        remark: r.remark || '',
+      })
+    }
+
+    const expenses: any[] = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
+    for (const r of expenses) {
+      items.push({
+        date: (r.apply_date || r.expense_date || r.create_time || '').slice(0, 10),
+        fund_name: r.fund_name || r.account_name || '—',
+        type: 'expense',
+        source: '费用',
+        name: r.type_name || r.expense_name || r.name || '—',
+        order_no: r.expense_no || r.order_no || '',
+        amount: Number(r.amount || 0),
+        remark: r.remark || '',
+      })
+    }
+
+    const validItems = items.filter(i => i.amount > 0)
+    validItems.sort((a, b) => b.date.localeCompare(a.date))
+    allItems.value = validItems
+
+    const purchases: any[] = purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []
+    const incomeTotal = items.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0)
+    const expenseTotal = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0)
+    summary.income = incomeTotal
+    summary.expense = expenseTotal
+    summary.balance = Math.max(0, incomeTotal - expenseTotal)
+    summary.totalPurchase = purchases.reduce((sum, row) => sum + Number(row.total_amount || 0), 0)
+    summary.unpaid = purchases
+      .filter((row: any) => Number(row.status) === 1)
+      .reduce((sum, row) => sum + Math.max(0, Number(row.total_amount || 0) - Number(row.paid_amount || 0)), 0)
 
   } catch { /* ignore */ } finally {
     summaryLoading.value = false
