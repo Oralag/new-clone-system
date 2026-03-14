@@ -268,67 +268,82 @@
         </div>
 
         <!-- 服务器特性 -->
+        <div class="server-section-header">
+          <div class="server-section-eyebrow">Infrastructure</div>
+          <h2 class="server-section-title">专属服务器<br/><span class="server-section-highlight">AI 级别的</span>稳定与安全</h2>
+          <p class="server-section-sub">付费版为每位用户配置独立服务器实例，不与任何人共享资源、数据或带宽。</p>
+          <div class="server-stats-row">
+            <div class="server-stat"><span class="server-stat-num">99.9%</span><span class="server-stat-label">可用率保障</span></div>
+            <div class="server-stat-divider" />
+            <div class="server-stat"><span class="server-stat-num">&lt; 50ms</span><span class="server-stat-label">全球平均延迟</span></div>
+            <div class="server-stat-divider" />
+            <div class="server-stat"><span class="server-stat-num">每日</span><span class="server-stat-label">自动备份</span></div>
+            <div class="server-stat-divider" />
+            <div class="server-stat"><span class="server-stat-num">2h</span><span class="server-stat-label">故障响应时限</span></div>
+          </div>
+        </div>
         <div class="server-grid">
-          <div class="server-card">
-            <div class="server-card-icon-svg">
+          <div class="server-card server-card-blue">
+            <div class="server-card-icon-svg server-icon-blue">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="11" width="18" height="10" rx="2" stroke="#1d1d1f" stroke-width="1.5"/>
-                <path d="M7 11V7a5 5 0 0110 0v4" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round"/>
-                <circle cx="12" cy="16" r="1.5" fill="#1d1d1f"/>
+                <rect x="3" y="11" width="18" height="10" rx="2" stroke="#0071e3" stroke-width="1.5"/>
+                <path d="M7 11V7a5 5 0 0110 0v4" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="12" cy="16" r="1.5" fill="#0071e3"/>
               </svg>
             </div>
             <div class="server-card-title">数据完全隔离</div>
             <div class="server-card-desc">专属数据库实例，与其他用户物理隔离。订单、财务、客户数据只有您能访问。</div>
           </div>
-          <div class="server-card">
-            <div class="server-card-icon-svg">
+          <div class="server-card server-card-green">
+            <div class="server-card-icon-svg server-icon-green">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7v5c0 5.5 4.3 10.7 10 12 5.7-1.3 10-6.5 10-12V7L12 2z" stroke="#1d1d1f" stroke-width="1.5" stroke-linejoin="round"/>
-                <path d="M8 12l3 3 5-5" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 2L2 7v5c0 5.5 4.3 10.7 10 12 5.7-1.3 10-6.5 10-12V7L12 2z" stroke="#059669" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M8 12l3 3 5-5" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
             <div class="server-card-title">永久保存不丢失</div>
             <div class="server-card-desc">每日自动备份，数据永久保存，支持任意时间点恢复，业务数据零风险。</div>
           </div>
-          <div class="server-card">
-            <div class="server-card-icon-svg">
+          <div class="server-card server-card-purple">
+            <div class="server-card-icon-svg server-icon-purple">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" stroke="#1d1d1f" stroke-width="1.5"/>
-                <path d="M12 8v4l3 2" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
             <div class="server-card-title">性能独享不共享</div>
             <div class="server-card-desc">独立计算资源，高峰期不受其他用户影响，支持百万级 SKU 稳定流畅。</div>
           </div>
-          <div class="server-card">
-            <div class="server-card-icon-svg">
+          <div class="server-card server-card-orange">
+            <div class="server-card-icon-svg server-icon-orange">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" stroke="#1d1d1f" stroke-width="1.5"/>
-                <path d="M12 3a9 9 0 010 18M3 12h18" stroke="#1d1d1f" stroke-width="1.5"/>
-                <path d="M12 3c-2.5 2.5-4 5.6-4 9s1.5 6.5 4 9" stroke="#1d1d1f" stroke-width="1.5"/>
+                <circle cx="12" cy="12" r="9" stroke="#ea580c" stroke-width="1.5"/>
+                <path d="M12 3a9 9 0 010 18M3 12h18" stroke="#ea580c" stroke-width="1.5"/>
+                <path d="M12 3c-2.5 2.5-4 5.6-4 9s1.5 6.5 4 9" stroke="#ea580c" stroke-width="1.5"/>
               </svg>
             </div>
             <div class="server-card-title">全球节点低延迟</div>
             <div class="server-card-desc">部署于全球多地区节点，中国、东南亚、欧美团队均可极速访问。</div>
           </div>
-          <div class="server-card">
-            <div class="server-card-icon-svg">
+          <div class="server-card server-card-red">
+            <div class="server-card-icon-svg server-icon-red">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2l-8 4v6c0 4.4 3.4 8.5 8 9.9 4.6-1.4 8-5.5 8-9.9V6L12 2z" stroke="#1d1d1f" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M12 2l-8 4v6c0 4.4 3.4 8.5 8 9.9 4.6-1.4 8-5.5 8-9.9V6L12 2z" stroke="#dc2626" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M9 12l2 2 4-4" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
             <div class="server-card-title">企业级安全防护</div>
             <div class="server-card-desc">DDoS 防护、HTTPS 加密、IP 白名单、操作日志审计全方位保障。</div>
           </div>
-          <div class="server-card">
-            <div class="server-card-icon-svg">
+          <div class="server-card server-card-ai-feature">
+            <div class="server-card-ai-badge">Claude AI 加持</div>
+            <div class="server-card-icon-svg server-icon-ai">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="8" r="4" stroke="#1d1d1f" stroke-width="1.5"/>
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="3" fill="#f59e0b"/>
+                <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
             </div>
-            <div class="server-card-title">专属技术支持</div>
-            <div class="server-card-desc">2 小时内响应，数据迁移、功能培训、使用答疑全程专属陪伴。</div>
+            <div class="server-card-title">AI 智能助手专属</div>
+            <div class="server-card-desc">内置 Claude AI 数据分析，自动生成经营洞察、预警提示，让数据真正为您所用。</div>
           </div>
         </div>
 
@@ -915,7 +930,7 @@ const TOOL_LABELS: Record<string, string> = {
   padding: 26px 24px;
   cursor: pointer;
   overflow: hidden;
-  transition: transform 0.6s cubic-bezier(0.23,1,0.32,1), box-shadow 0.6s cubic-bezier(0.23,1,0.32,1);
+  transition: transform 0.6s cubic-bezier(0.23,1,0.32,1), box-shadow 0.6s cubic-bezier(0.23,1,0.32,1), background 0.5s cubic-bezier(0.23,1,0.32,1), border-color 0.5s;
   display: flex;
   flex-direction: column;
 }
@@ -925,10 +940,23 @@ const TOOL_LABELS: Record<string, string> = {
   box-shadow: 0 60px 100px rgba(0,0,0,0.09);
 }
 
+/* ERP 卡 hover 变蓝色渐变 */
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover {
+  background: linear-gradient(135deg, #0071e3 0%, #005acd 100%);
+  border-color: rgba(0,113,227,0.3);
+  box-shadow: 0 40px 80px rgba(0,113,227,0.25);
+}
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-title { color: #fff; }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-desc  { color: rgba(255,255,255,0.7); }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-arrow { color: rgba(255,255,255,0.6); gap: 12px; }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .tag { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.2); }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-icon-dark { background: rgba(255,255,255,0.15); box-shadow: 0 12px 32px rgba(0,0,0,0.1); }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-bg-icon { color: #fff; opacity: 0.06; }
+
 .portal-card-blue   { background: #ffffff; }
 .portal-card-ai {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-  border-color: rgba(99,102,241,0.2);
+  background: linear-gradient(135deg, #0c1445 0%, #1a2580 50%, #0f3460 100%);
+  border-color: rgba(0,113,227,0.25);
 }
 .portal-card-ai .card-title { color: #fff; }
 .portal-card-ai .card-desc  { color: rgba(255,255,255,0.55); }
@@ -1606,6 +1634,34 @@ const TOOL_LABELS: Record<string, string> = {
 }
 
 /* ── 服务器卡片 ── */
+/* ── Server Section Header ── */
+.server-section-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.server-section-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #0071e3; margin-bottom: 12px;
+}
+.server-section-title {
+  font-size: clamp(26px, 3.5vw, 38px); font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.15; color: #1d1d1f; margin: 0 0 14px;
+}
+.server-section-highlight { color: #0071e3; }
+.server-section-sub {
+  font-size: 15px; color: rgba(29,29,31,0.55); max-width: 520px;
+  margin: 0 auto 28px; line-height: 1.6;
+}
+.server-stats-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; background: #f5f5f7; border-radius: 16px;
+  padding: 16px 24px; display: inline-flex; gap: 0;
+}
+.server-stat { display: flex; flex-direction: column; align-items: center; padding: 0 24px; }
+.server-stat-num { font-size: 20px; font-weight: 800; color: #0071e3; letter-spacing: -0.02em; }
+.server-stat-label { font-size: 11px; color: rgba(29,29,31,0.45); margin-top: 2px; font-weight: 500; }
+.server-stat-divider { width: 1px; height: 32px; background: rgba(0,0,0,0.08); flex-shrink: 0; }
+
 .server-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1616,15 +1672,45 @@ const TOOL_LABELS: Record<string, string> = {
   border-radius: 18px;
   padding: 28px 24px;
   border: 1px solid rgba(0,0,0,0.06);
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: box-shadow 0.3s, transform 0.3s;
+  position: relative;
+  overflow: hidden;
 }
-.server-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.server-card:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.1); transform: translateY(-4px); }
+
+/* 卡片颜色变体 */
+.server-card-blue  { border-color: rgba(0,113,227,0.12); }
+.server-card-green { border-color: rgba(5,150,105,0.12); }
+.server-card-purple{ border-color: rgba(124,58,237,0.12); }
+.server-card-orange{ border-color: rgba(234,88,12,0.12); }
+.server-card-red   { border-color: rgba(220,38,38,0.12); }
+.server-card-ai-feature {
+  background: linear-gradient(135deg, #0c1445 0%, #1a2580 100%);
+  border-color: rgba(0,113,227,0.3);
+}
+.server-card-ai-feature .server-card-title { color: #fff; }
+.server-card-ai-feature .server-card-desc  { color: rgba(255,255,255,0.6); }
+.server-card-ai-badge {
+  display: inline-flex; font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #f59e0b;
+  background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.25);
+  padding: 2px 8px; border-radius: 999px; margin-bottom: 14px;
+}
+
 .server-card-icon-svg {
-  width: 40px; height: 40px;
-  background: #f5f5f7; border-radius: 10px;
+  width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 14px; flex-shrink: 0;
+  margin-bottom: 16px; flex-shrink: 0;
+  transition: transform 0.3s;
 }
+.server-card:hover .server-card-icon-svg { transform: scale(1.1) rotate(-4deg); }
+.server-icon-blue   { background: rgba(0,113,227,0.08); }
+.server-icon-green  { background: rgba(5,150,105,0.08); }
+.server-icon-purple { background: rgba(124,58,237,0.08); }
+.server-icon-orange { background: rgba(234,88,12,0.08); }
+.server-icon-red    { background: rgba(220,38,38,0.08); }
+.server-icon-ai     { background: rgba(245,158,11,0.12); }
+
 .server-card-title { font-size: 15px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; }
 .server-card-desc { font-size: 13px; color: rgba(29,29,31,0.5); line-height: 1.6; }
 .extra-icon-svg {

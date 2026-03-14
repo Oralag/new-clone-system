@@ -103,7 +103,13 @@
               </div>
             </div>
 
-            <template v-for="(msg, idx) in captainMessages" :key="idx">
+            <!-- 查看更多按钮 -->
+            <div v-if="captainMessages.length > 2 && !showAllMessages" class="feed-more-btn" @click="showAllMessages = true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>
+              查看更多 {{ captainMessages.length - 2 }} 条历史对话
+            </div>
+
+            <template v-for="(msg, idx) in (showAllMessages ? captainMessages : captainMessages.slice(-2))" :key="idx">
               <div v-if="msg.role === 'user'" class="row-user">
                 <div class="bubble-user">{{ msg.content }}</div>
               </div>
@@ -195,6 +201,7 @@ const captainInput = ref('')
 const captainLoading = ref(false)
 const captainMessages = ref<CaptainMsg[]>([])
 const feedRef = ref<HTMLDivElement>()
+const showAllMessages = ref(false)
 const inputRef = ref<HTMLInputElement>()
 
 // ── 历史记录 ────────────────────────────────────────────────────────────────
@@ -234,12 +241,14 @@ function newSession() {
   captainMessages.value = []
   historyActiveIdx.value = null
   showHistory.value = false
+  showAllMessages.value = false
 }
 
 function clearCurrent() {
   saveCurrentToHistory()
   captainMessages.value = []
   historyActiveIdx.value = null
+  showAllMessages.value = false
 }
 
 function clearAllHistory() {
@@ -527,7 +536,7 @@ async function sendCaptain(text?: string) {
   background: #fff;
   border-top: 1px solid rgba(0,0,0,0.06);
   display: flex;
-  height: 600px;
+  max-height: 600px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.1);
 }
 
@@ -743,6 +752,22 @@ async function sendCaptain(text?: string) {
 .panel-feed::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 2px; }
 
 .feed-empty { padding: 8px 0; }
+
+.feed-more-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0071e3;
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  user-select: none;
+}
+.feed-more-btn:hover { background: rgba(0,113,227,0.06); }
+
 .quick-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
