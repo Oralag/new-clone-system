@@ -1,0 +1,59 @@
+name: Validate CLAUDE.md
+
+# 每次 main 分支有 CLAUDE.md 更新时，检查基本格式要求。
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'CLAUDE.md'
+  pull_request:
+    paths:
+      - 'CLAUDE.md'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check file exists and is non-empty
+        run: |
+          if [ ! -s CLAUDE.md ]; then
+            echo "❌ CLAUDE.md 不存在或为空"
+            exit 1
+          fi
+          echo "✅ 文件存在"
+
+      - name: Check required sections
+        run: |
+          MISSING=()
+          grep -q "命名规范" CLAUDE.md || MISSING+=("命名规范")
+          grep -q "目录结构" CLAUDE.md || MISSING+=("目录结构")
+          grep -q "认证" CLAUDE.md     || MISSING+=("认证")
+          grep -q "团队纠错" CLAUDE.md || MISSING+=("团队纠错记录")
+
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "❌ 缺少必要章节: ${MISSING[*]}"
+            exit 1
+          fi
+          echo "✅ 所有必要章节齐全"
+
+      - name: Check no secrets leaked
+        run: |
+          # 检测是否意外写入了 token / 密码
+          if grep -iE "(sk-ant-|ANTHROPIC_API_KEY\s*=\s*sk|password\s*[:=]\s*\S{6,})" CLAUDE.md; then
+            echo "❌ CLAUDE.md 中可能含有敏感信息，请检查！"
+            exit 1
+          fi
+          echo "✅ 未检测到敏感信息"
+
+      - name: Report line count
+        run: |
+          LINES=$(wc -l < CLAUDE.md)
+          echo "📄 CLAUDE.md 当前 $LINES 行"
+          if [ "$LINES" -gt 500 ]; then
+            echo "⚠️  文件超过 500 行，考虑拆分为子文档"
+          fi
