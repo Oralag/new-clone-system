@@ -1,0 +1,177 @@
+# CLAUDE.md — 数字游牧ERP 团队规范
+
+> 这是团队共同维护的"活文档"。每当 Claude 写错变量名、弄错架构、或违反约定，
+> 立刻把正确规则补进来。规则越多，Claude 越聪明。
+>
+> 维护方式：`git add CLAUDE.md && git commit -m "docs: 纠正Claude关于XXX的错误"`
+
+---
+
+## 项目概览
+
+- **应用名称**: 数字游牧ERP（勿用"企禾云"，已废弃）
+- **技术栈**: Vue 3 + Vite + TypeScript + Element Plus + Pinia + Vue Router + Axios
+- **部署**: Cloudflare Pages — https://nomaderp.pages.dev
+- **后端 API**: `https://saas.mzth.cn/adminapi/`
+
+---
+
+## 一、命名规范
+
+### 变量 / 函数
+
+| 场景 | 规范 | 示例 |
+|------|------|------|
+| 普通变量 | camelCase | `pageSize`, `tableData` |
+| 布尔值 | `is` / `has` 前缀 | `isLoading`, `hasPermission` |
+| 响应式数据 | 直接 camelCase，不加 `ref`/`reactive` 后缀 | `list`，不是 `listRef` |
+| 事件处理函数 | `handle` 前缀 | `handleSubmit`, `handleSearch` |
+| API 请求函数 | 动词 + 名词 | `fetchOrderList`, `createInvoice` |
+| Pinia Store | `use` + 名词 + `Store` | `useAuthStore`, `usePermissionStore` |
+
+### 文件命名
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| Vue 组件 | PascalCase | `OrderList.vue`, `AiAssistant.vue` |
+| 普通 TS 文件 | camelCase | `http.ts`, `toolExecutor.ts` |
+| 视图页面 | PascalCase，放在对应模块文件夹 | `views/sale/SaleOrder.vue` |
+
+### 常量
+
+- 全大写 + 下划线，定义在 `src/config/index.ts`
+- 示例：`API_URL`, `TOKEN_NAME`, `USER_INFO_KEY`, `APP_NAME`
+
+---
+
+## 二、目录结构
+
+```
+src/
+├── api/           # Axios 请求函数，按模块分子目录
+│   ├── http.ts    # Axios 实例（唯一，勿新建）
+│   ├── auth.ts    # 登录/登出 API
+│   └── {module}/  # 如 sale/, finance/, warehouse/
+├── components/    # 公共组件（跨页面复用）
+│   └── ai/        # AI 助手相关组件
+├── config/
+│   └── index.ts   # 所有常量集中于此
+├── layouts/
+│   └── AdminLayout.vue  # 主框架（侧边栏+顶栏+标签栏）
+├── router/        # 路由配置（hash 模式）
+├── server/        # Vite 开发中间件 / AI 工具
+│   ├── tools/     # ERP 工具 schema + 执行器
+│   └── agents/    # AI 意图编排
+├── stores/        # Pinia 状态管理
+├── utils/         # 纯工具函数（无副作用）
+└── views/         # 页面组件，按业务模块分目录
+    ├── dashboard/
+    ├── sale/
+    ├── finance/
+    └── ...
+```
+
+**原则**：
+- 不在 `views/` 里放公共组件，公共组件一律在 `components/`
+- 不在 `utils/` 里写有副作用的代码（不引用 store、不调用 API）
+- 不新建第二个 axios 实例，统一用 `src/api/http.ts`
+
+---
+
+## 三、认证与 API 调用
+
+### Token
+
+```typescript
+// 正确：header key 是 'token'，不是 'Authorization'
+config.headers['token'] = token
+
+// 错误示例（勿用）：
+// config.headers['Authorization'] = `Bearer ${token}`
+```
+
+- Token 存储键名：`localStorage.getItem('erp_token')` — 即 `TOKEN_NAME` 常量
+- 用户信息键名：`localStorage.getItem('erp_user')` — 即 `USER_INFO_KEY` 常量
+
+### API 响应结构
+
+```typescript
+// 后端统一返回格式
+{ code: 1, data: any, message: string }
+
+// code === 1  → 成功
+// code === -1 → 未授权，需跳转登录
+// 其他        → 业务错误，message 展示给用户
+```
+
+- 响应拦截已在 `http.ts` 处理，**各模块 API 函数只处理 `res.data`，不再重复判断 code**
+
+---
+
+## 四、路由规范
+
+- 使用 **Hash 模式**（`createWebHashHistory`），不用 HTML5 History
+- 路由 path 全小写 + 连字符：`/sale-order`，不用 `/saleOrder`
+- 需要权限保护的页面不加 `meta.public`；登录页、门户页加 `meta: { public: true }`
+- 超管专属页面加 `meta: { superAdmin: true }`
+
+---
+
+## 五、组件规范
+
+### Element Plus 使用
+
+- 弹框用 `ElMessageBox`，轻提示用 `ElMessage`
+- 表格必须设置 `height` 或外层容器限高，防止页面撑开
+- 表单验证规则写在 `rules` 对象里，不写行内
+
+### Vue 3 Composition API
+
+```typescript
+// 正确：script setup 语法
+<script setup lang="ts">
+const props = defineProps<{ title: string }>()
+const emit = defineEmits<{ close: [] }>()
+</script>
+
+// 不用 Options API（除非维护旧组件）
+```
+
+---
+
+## 六、AI 助手规范
+
+- AI 聊天走 SSE，前端用 `useAiAgent.ts` composable，不直接操作 fetch
+- SSE 事件类型：`text` / `tool_start` / `tool_result` / `error` / `[DONE]`
+- 工具 schema 定义在 `src/server/tools/erpTools.ts`，执行器在 `toolExecutor.ts`
+- 新增 ERP 工具：先在 `erpTools.ts` 加 schema，再在 `toolExecutor.ts` 加 case
+- AI 代理最多循环 5 次（防止死循环），超出直接返回结果
+
+---
+
+## 七、构建 & 部署
+
+```bash
+# 本地开发
+npm run dev          # 端口 5173
+
+# 构建（不跑 vue-tsc，只跑 vite build）
+npm run build
+
+# 一键部署到 Cloudflare Pages
+npm run deploy
+```
+
+- **不要**在构建命令里加 `vue-tsc`，项目有已知 TS 类型错误不影响运行
+- 构建产物在 `dist/`，不要提交到 Git
+
+---
+
+## 八、团队纠错记录
+
+> 记录 Claude 曾犯过的错误，防止重犯。
+> 格式：`- [日期] 错误描述 → 正确做法`
+
+- [2026-03-14] 初始建立规范文档
+
+<!-- 在此继续追加纠错记录 -->
