@@ -45,7 +45,7 @@
             <div class="inline-item clickable" v-for="f in fundList" :key="f.id" @click="router.push('/finance/fund')">
               <div class="inline-name">{{ f.name }}</div>
               <div class="inline-value blue">¥{{ Number(f.balance||0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ { 1: '银行账户', 2: '现金', 3: '第三方' }[f.type] || f.type_name || '账户' }}</div>
+              <div class="inline-sub">{{ { '1': '银行账户', '2': '现金', '3': '第三方' }[f.type] || '账户' }}</div>
             </div>
             <div class="inline-item total-item">
               <div class="inline-name">合计</div>
@@ -132,7 +132,7 @@
           </template>
           <div class="inline-list" v-if="collectList.length">
             <div class="inline-item clickable" v-for="r in collectList.slice(0,6)" :key="r.id" @click="router.push('/finance/collect-receipt')">
-              <div class="inline-name">{{ r.contact_name || r.customer_name || '—' }}</div>
+              <div class="inline-name">{{ r.customer_name || r.contact_name || '—' }}</div>
               <div class="inline-value green">¥{{ Number(r.amount||0).toFixed(2) }}</div>
               <div class="inline-sub">{{ (r.receipt_date||r.created_at||'').slice(0,10) }}</div>
             </div>
@@ -151,7 +151,7 @@
           </template>
           <div class="inline-list" v-if="payList.length">
             <div class="inline-item clickable" v-for="r in payList.slice(0,6)" :key="r.id" @click="router.push('/finance/pay-receipt')">
-              <div class="inline-name">{{ r.contact_name || r.supplier_name || '—' }}</div>
+              <div class="inline-name">{{ r.supplier_name || r.contact_name || '—' }}</div>
               <div class="inline-value red">¥{{ Number(r.amount||0).toFixed(2) }}</div>
               <div class="inline-sub">{{ (r.pay_date||r.created_at||'').slice(0,10) }}</div>
             </div>
@@ -239,9 +239,9 @@
           </template>
           <div class="inline-list" v-if="retailList.length">
             <div class="inline-item clickable" v-for="r in retailList.slice(0,6)" :key="r.id" @click="router.push('/retail/order')">
-              <div class="inline-name">{{ r.member_name || r.customer_name || r.contact_name || '—' }}</div>
+              <div class="inline-name">{{ r.member_name || r.customer_name || '散客' }}</div>
               <div class="inline-value green">¥{{ Number(r.pay_amount||r.total_amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ r.order_no || '' }}</div>
+              <div class="inline-sub">{{ r.order_sn || '' }}</div>
             </div>
           </div>
           <div v-else class="empty-tip">暂无零售单</div>
@@ -249,39 +249,39 @@
       </el-col>
     </el-row>
 
-    <!-- 资金流水（折叠） -->
+    <!-- 资金流水（折叠）— 数据来源与 FundFlow.vue 相同 -->
     <div class="flow-section">
       <div class="flow-toggle" @click="flowVisible = !flowVisible">
         <el-icon :size="13"><List /></el-icon>
-        <span>资金流水明细（账户所有收支记录）</span>
+        <span>资金流水明细（{{ allFlowItems.length }} 条收支记录）</span>
         <el-icon :size="12" style="margin-left:auto"><component :is="flowVisible ? 'ArrowUp' : 'ArrowDown'" /></el-icon>
       </div>
       <div v-if="flowVisible">
-        <el-table :data="normalizedFundFlowList" size="small" border style="width:100%">
-          <el-table-column prop="fund_name" label="账户" width="130" />
-          <el-table-column prop="source" label="来源" width="110" />
-          <el-table-column prop="name" label="对象" min-width="120" show-overflow-tooltip />
+        <el-table :data="allFlowItems.slice(0, 50)" size="small" border style="width:100%">
+          <el-table-column prop="date" label="日期" width="110" />
+          <el-table-column prop="source" label="来源" width="110">
+            <template #default="{ row }">
+              <el-tag :type="row.type === 'income' ? 'success' : 'danger'" size="small">{{ row.source }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="类型" width="80" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.flow_type === 'income' ? 'success' : 'danger'" size="small">
-                {{ row.flow_type === 'income' ? '收入' : row.flow_type === 'refund' ? '冲红' : '支出' }}
+              <el-tag :type="row.type === 'income' ? 'success' : 'danger'" size="small">
+                {{ row.type === 'income' ? '收入' : '支出' }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="金额" width="120" align="right">
             <template #default="{ row }">
-              <span :style="{ color: row.flow_type === 'income' ? '#16a34a' : '#dc2626', fontWeight: '600' }">
-                {{ row.flow_type === 'income' ? '+' : '-' }}¥{{ Number(row.amount||0).toFixed(2) }}
+              <span :style="{ color: row.type === 'income' ? '#16a34a' : '#dc2626', fontWeight: '600' }">
+                {{ row.type === 'income' ? '+' : '-' }}¥{{ Number(row.amount||0).toFixed(2) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="余额" width="120" align="right">
-            <template #default="{ row }">¥{{ Number(row.after_balance||0).toFixed(2) }}</template>
-          </el-table-column>
-          <el-table-column prop="order_no" label="单号" min-width="130" show-overflow-tooltip />
-          <el-table-column prop="remark" label="摘要" min-width="200" show-overflow-tooltip />
-          <el-table-column label="时间" width="160" prop="created_at" />
         </el-table>
+        <div style="text-align:center;padding:8px">
+          <el-button link type="primary" @click="router.push('/finance/fund-flow')">查看完整流水</el-button>
+        </div>
       </div>
     </div>
   </div>
@@ -425,42 +425,39 @@ const chartW = 480
 
 // ============================================================
 // 收入/支出计算 — 与 FundFlow.vue 完全相同的6个来源组装逻辑
+// 字段名全部来自真实API返回（2026-03-14验证）
 // ============================================================
-const collectSourceMap: Record<string, string> = {
-  customer: '销售收款', supplier: '供应商退款', staff: '员工还款', other: '其他收入'
-}
-const paySourceMap: Record<string, string> = {
-  supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出'
-}
-
 const allFlowItems = computed(() => {
   const items: any[] = []
-  // 1. 收款单（income）
+  // 1. 收款单（income）— 真实字段: customer_name, amount, receipt_date, pay_type(非contact_type)
   for (const r of collectList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'income', source: collectSourceMap[r.contact_type] || '收款', amount: Number(r.amount || 0), date: (r.receipt_date || r.created_at || '').slice(0, 10) })
+    const src = r.pay_type === 'prepay' ? '预付款收款' : '收款单'
+    items.push({ type: 'income', source: src, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: (r.receipt_date || r.created_at || '').slice(0, 10), order_no: r.receipt_no || r.order_sn || '' })
   }
-  // 2. 零售单（income）
+  // 2. 零售单（income）— 真实字段: member_name, pay_amount, order_sn, order_date
   for (const r of retailList.value) {
-    if (Number(r.pay_amount || r.total_amount || 0) <= 0) continue
-    items.push({ type: 'income', source: '零售单', amount: Number(r.pay_amount || r.total_amount || 0), date: (r.order_date || r.created_at || '').slice(0, 10) })
+    const amt = Number(r.pay_amount || r.total_amount || 0)
+    if (amt <= 0) continue
+    items.push({ type: 'income', source: '零售单', name: r.member_name || r.customer_name || '散客', amount: amt, date: (r.order_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
   }
-  // 3. 会员充值（income）
+  // 3. 会员充值（income）— 真实字段: member_name, amount, recharge_date
   for (const r of rechargeList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'income', source: '会员充值', amount: Number(r.amount || 0), date: (r.created_at || '').slice(0, 10) })
+    items.push({ type: 'income', source: '会员充值', name: r.member_name || '—', amount: Number(r.amount || 0), date: (r.recharge_date || r.created_at || '').slice(0, 10), order_no: '' })
   }
-  // 4. 付款单（expense）
+  // 4. 付款单（expense）— 真实字段: contact_name, supplier_name, contact_type, amount, pay_date
   for (const r of payList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', amount: Number(r.amount || 0), date: (r.pay_date || r.created_at || '').slice(0, 10) })
+    const paySourceMap: Record<string, string> = { supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出' }
+    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: r.supplier_name || r.contact_name || '—', amount: Number(r.amount || 0), date: (r.pay_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
   }
-  // 5. 费用单（expense）
+  // 5. 费用单（expense）— 真实字段: name(非type_name), amount, expense_date, order_sn
   for (const r of expenseList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'expense', source: '费用', amount: Number(r.amount || 0), date: (r.expense_date || r.created_at || '').slice(0, 10) })
+    items.push({ type: 'expense', source: '费用', name: r.name || '—', amount: Number(r.amount || 0), date: (r.expense_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
   }
-  return items
+  return items.sort((a, b) => b.date.localeCompare(a.date))
 })
 
 // 收入/支出汇总 — 与 FundFlow.vue summary 计算完全一致
@@ -472,6 +469,9 @@ const payTotal = computed(() =>
 )
 const fundTotal = computed(() =>
   Math.max(0, Number(collectTotal.value) - Number(payTotal.value)).toFixed(2)
+)
+const accountTotal = computed(() =>
+  fundList.value.reduce((s, r) => s + Number(r.balance || 0), 0).toFixed(2)
 )
 const prepayTotal = computed(() =>
   prepayList.value.filter((r: any) => r.pay_type === 'customer').reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
