@@ -50,12 +50,18 @@ export async function onRequest(context) {
 
   // ── LIST all users ─────────────────────────────────────────────────────────
   if (request.method === 'GET' && action === 'list') {
+    const TRIAL_DAYS = 15
     const list = await kv.list({ prefix: 'user:' })
     const users = []
     for (const key of list.keys) {
       const raw = await kv.get(key.name)
       if (raw) {
         const user = JSON.parse(raw)
+        let trialDaysLeft = null
+        if (user.trial_start_at) {
+          const elapsed = Date.now() - new Date(user.trial_start_at).getTime()
+          trialDaysLeft = Math.max(0, TRIAL_DAYS - Math.floor(elapsed / 86400000))
+        }
         users.push({
           mobile: user.mobile,
           company_name: user.company_name,
@@ -63,6 +69,9 @@ export async function onRequest(context) {
           status: user.status || 'active',
           created_at: user.created_at,
           is_paid: !!user.backend_url,
+          trial_start_at: user.trial_start_at || null,
+          trial_expire_at: user.trial_expire_at || null,
+          trial_days_left: trialDaysLeft,
         })
       }
     }

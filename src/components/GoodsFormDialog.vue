@@ -72,7 +72,10 @@
         </el-col>
         <el-col :span="12">
           <el-form-item label="条形码" prop="barcode">
-            <el-input v-model="fd.barcode" placeholder="请输入条形码（可选）" />
+            <div style="display:flex;gap:4px;width:100%">
+              <el-input v-model="fd.barcode" placeholder="请输入或扫描条形码" style="flex:1" />
+              <el-button :icon="Camera" title="摄像头扫码" @click="openScanner" />
+            </div>
           </el-form-item>
         </el-col>
       </el-row>
@@ -143,12 +146,26 @@
       <el-button type="primary" :loading="saving" @click="handleSave">确认新建</el-button>
     </template>
   </el-dialog>
+
+  <!-- 扫码对话框 -->
+  <el-dialog v-model="scannerVisible" title="扫描条形码" width="min(420px, 95vw)" append-to-body destroy-on-close :close-on-click-modal="false" @closed="stopScanner">
+    <div style="text-align:center">
+      <video ref="videoRef" style="width:100%;max-height:60vh;background:#000;border-radius:8px;display:block" autoplay muted playsinline />
+      <div v-if="scanError" style="color:#f56c6c;margin-top:8px;font-size:13px">{{ scanError }}</div>
+      <div v-else-if="!scanning" style="color:#909399;margin-top:8px;font-size:13px">正在启动摄像头...</div>
+      <div v-else style="color:#409eff;margin-top:8px;font-size:13px">对准条形码，自动识别中...</div>
+    </div>
+    <template #footer>
+      <el-button @click="scannerVisible = false">取消</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Camera } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 import { createGoods, getGoodsCateList, createGoodsCate, getBrandList, createBrand, getUnitList, createUnit } from '@/api/goods'
 
 const emit = defineEmits<{
@@ -275,6 +292,52 @@ async function handleSave() {
 }
 
 onMounted(loadOptions)
+
+// ── 扫码填条形码 ──────────────────────────────────────────────────────────────
+const scannerVisible = ref(false)
+const scanning = ref(false)
+const scanError = ref('')
+const videoRef = ref<HTMLVideoElement>()
+let codeReader: BrowserMultiFormatReader | null = null
+let scanStream: MediaStream | null = null
+
+async function openScanner() {
+  scanError.value = ''
+  scanning.value = false
+  scannerVisible.value = true
+  setTimeout(startScanner, 300)
+}
+
+async function startScanner() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    })
+    scanStream = stream
+    if (videoRef.value) videoRef.value.srcObject = stream
+    scanning.value = true
+    codeReader = new BrowserMultiFormatReader()
+    codeReader.decodeFromStream(stream, videoRef.value!, (result) => {
+      if (!result) return
+      fd.barcode = result.getText()
+      ElMessage.success(`扫码成功：${fd.barcode}`)
+      stopScanner()
+      scannerVisible.value = false
+    })
+  } catch (e: any) {
+    scanError.value = e?.message ?? '摄像头启动失败，请检查浏览器权限'
+    scanning.value = false
+  }
+}
+
+function stopScanner() {
+  try { codeReader?.reset() } catch {}
+  codeReader = null
+  scanning.value = false
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null }
+  if (videoRef.value) videoRef.value.srcObject = null
+}
+
 defineExpose({ open })
 </script>
 

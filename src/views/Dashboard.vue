@@ -1,6 +1,99 @@
 <template>
   <div class="dashboard">
 
+    <!-- ══ 手机端首页 ══ -->
+    <template v-if="isMobile">
+      <!-- 顶部欢迎区 -->
+      <div class="m-header">
+        <div class="m-header-left">
+          <div class="m-header-greet">你好，{{ authStore.userName || '用户' }} 👋</div>
+          <div class="m-header-sub">数字游牧 ERP</div>
+        </div>
+        <div class="m-header-right">
+          <div class="m-header-refresh" @click="loadDashboardData(true)" :class="{ spinning: dashboardLoading }">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.02-8.36"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 大模块入口 -->
+      <div class="m-module-grid">
+        <div class="m-module-card m-module-dark" @click="router.push('/cashregister')">
+          <div class="m-module-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h2M10 15h4"/></svg>
+          </div>
+          <div class="m-module-label">零售收银台</div>
+          <div class="m-module-desc">快速开单 · 扫码结账</div>
+          <svg class="m-module-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+        <div class="m-module-card m-module-blue" @click="router.push('/portal')">
+          <div class="m-module-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
+          <div class="m-module-label">切换工作台</div>
+          <div class="m-module-desc">ERP · AI 工作流</div>
+          <svg class="m-module-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- 智能洞察 -->
+      <!-- 指标卡片 -->
+      <div class="m-stats-grid">
+        <div v-for="stat in stats.slice(0,4)" :key="stat.key" class="m-stat-card" @click="router.push(stat.link)">
+          <div class="m-stat-label">{{ stat.label }}</div>
+          <div class="m-stat-value">{{ stat.value }}</div>
+          <div class="m-stat-sub">{{ stat.sub }}</div>
+        </div>
+      </div>
+
+      <!-- 常用应用 -->
+      <div class="m-quick-card">
+        <div class="m-quick-header">
+          <span class="m-quick-title">常用应用</span>
+          <span class="m-quick-more" @click="editMode ? saveCustom() : (editMode = true)">
+            {{ editMode ? '完成' : '自定义' }}
+          </span>
+        </div>
+
+        <!-- 编辑模式：从全部应用里勾选 -->
+        <template v-if="editMode">
+          <div class="m-edit-hint">勾选要展示的应用（最多8个）</div>
+          <div v-for="section in allAppSections" :key="section.key" class="m-edit-section">
+            <div class="m-edit-section-title">{{ section.title }}</div>
+            <div class="m-edit-grid">
+              <div v-for="item in section.children" :key="item.key"
+                class="m-edit-item"
+                :class="{ selected: editSelected.includes(item.key), disabled: !editSelected.includes(item.key) && editSelected.length >= 8 }"
+                @click="toggleEditItem(item)">
+                <div class="m-edit-check">
+                  <svg v-if="editSelected.includes(item.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="m-edit-icon" :style="{ background: getSectionColor(section.key) }">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" v-html="getAppIcon(item.key)" />
+                </div>
+                <span class="m-edit-label">{{ item.title }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- 正常模式：展示选中的应用 -->
+        <template v-else>
+          <div class="m-quick-grid">
+            <div v-for="item in currentQuickItems" :key="item.path" class="m-quick-item" @click="router.push(item.path)">
+              <div class="m-quick-icon" :style="{ background: item.bg }">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" :stroke="item.color" stroke-width="1.8" v-html="item.svg" />
+              </div>
+              <span class="m-quick-label">{{ item.label }}</span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- ══ 桌面端内容（手机不显示） ══ -->
+    <template v-if="!isMobile">
+
     <!-- Header -->
     <div class="page-header">
       <div class="header-left">
@@ -30,7 +123,7 @@
       </div>
 
       <!-- 快捷入口 -->
-      <div class="quick-grid">
+      <div class="quick-grid" data-guide-id="guide-dashboard-quick-grid">
         <div
           v-for="item in quickItems" :key="item.path"
           class="quick-item"
@@ -118,8 +211,9 @@
       </div>
       </div>
 
-      <!-- Guide / Insights 右侧 -->
+      <!-- 右侧：智能洞察 + 销售统计 -->
       <div class="right-col">
+
         <!-- 新手向导卡片 -->
         <div v-if="!guideHidden" class="guide-side-card">
           <div class="guide-side-header">
@@ -129,46 +223,83 @@
             </div>
             <div class="guide-side-actions">
               <div class="gmp-bar-wrap">
-                <div class="gmp-bar" :style="{ width: (completedSteps.size / guideSteps.length * 100) + '%' }" />
+                <div class="gmp-bar" :style="{ width: guideStore.progressPercent + '%' }" />
               </div>
-              <span class="gmp-label">{{ completedSteps.size }}/{{ guideSteps.length }} 完成</span>
+              <span class="gmp-label">{{ guideStore.handledCount }}/{{ guideStore.steps.length }} 已处理</span>
               <button class="guide-hide-btn" @click="hideGuide" title="收起向导">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
           </div>
-          <!-- 步骤导航小点 -->
+
           <div class="guide-dots">
-            <div v-for="(step, i) in guideSteps" :key="i"
-              class="guide-dot" :class="{ active: guideStep === i, done: completedSteps.has(i) }"
-              @click="guideStep = i" :title="step.title" />
+            <div
+              v-for="(step, i) in guideStore.steps"
+              :key="step.id"
+              class="guide-dot"
+              :class="{
+                active: guideStore.currentStep === i,
+                done: guideStore.isStepCompleted(i),
+                skipped: guideStore.isStepSkipped(i),
+                locked: !guideStore.canOpenStep(i) && i > guideStore.currentStep,
+              }"
+              :title="step.title"
+              @click="guideStore.openStep(i)"
+            />
           </div>
-          <!-- 当前步骤内容 -->
+
           <div class="guide-step-num" style="display:flex;align-items:center;gap:6px">
-            Step {{ guideStep + 1 }}
-            <span v-if="completedSteps.has(guideStep)" style="font-size:11px;color:#16a34a;background:#dcfce7;padding:2px 8px;border-radius:10px">✓ 已完成</span>
+            Step {{ guideStore.currentStep + 1 }}
+            <span v-if="guideStore.isStepCompleted(guideStore.currentStep)" style="font-size:11px;color:#16a34a;background:#dcfce7;padding:2px 8px;border-radius:10px">✓ 已完成</span>
+            <span v-else-if="guideStore.isStepSkipped(guideStore.currentStep)" style="font-size:11px;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:10px">已跳过</span>
+            <span v-else style="font-size:11px;color:#2563eb;background:#dbeafe;padding:2px 8px;border-radius:10px">进行中</span>
+            <span style="font-size:11px;color:#1d4ed8;background:#eff6ff;padding:2px 8px;border-radius:10px">操作 {{ guideStore.currentAction + 1 }}/{{ guideStore.currentActionCount }}</span>
           </div>
-          <div class="guide-step-name">{{ guideSteps[guideStep].title }}</div>
-          <p class="guide-step-desc">{{ guideSteps[guideStep].desc }}</p>
-          <!-- 完成提示 -->
-          <div v-if="completedSteps.has(guideStep) && guideStep < guideSteps.length - 1"
+          <div class="guide-step-name">{{ currentGuideStep.title }}</div>
+          <p class="guide-step-desc">{{ currentGuideStep.desc }}</p>
+
+          <div v-if="guideStore.isFinished"
             style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#16a34a">
-            太棒了！已完成此步骤。继续下一步：<strong>{{ guideSteps[guideStep + 1].title }}</strong>
+            🎉 恭喜！完整的新手链路已经走通，可以随时重新开始演示。
           </div>
-          <div v-else-if="completedSteps.size === guideSteps.length"
-            style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#16a34a">
-            🎉 恭喜！您已完成所有入门向导，系统已全部准备就绪！
+          <div v-else
+            style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#1d4ed8">
+            当前步骤会自动跳转页面并弹出指引弹窗，只有"完成此步"或"跳过此步"后才会进入下一步。
           </div>
-          <button class="guide-goto-btn" @click="guideGoto">
-            前往 {{ guideSteps[guideStep].title }}
+
+          <div class="guide-action-list">
+            <div v-for="(action, index) in guideStore.currentActions" :key="`${currentGuideStep.id}-${index}`" class="guide-action-row">
+              <div class="gar-num">{{ index + 1 }}</div>
+              <div class="gar-text">{{ action.text }}</div>
+            </div>
+          </div>
+
+          <div class="guide-tip-inline" style="margin-bottom:12px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4M12 8h.01" />
+            </svg>
+            <div>
+              <strong style="display:block;color:#0f172a;margin-bottom:4px">完成标准</strong>
+              {{ currentGuideStep.result }}
+              <template v-if="currentGuideStep.tip">
+                <br />
+                {{ currentGuideStep.tip }}
+              </template>
+            </div>
+          </div>
+
+          <button class="guide-goto-btn" @click="guideStore.startGuide(guideStore.currentStep)">
+            {{ guideStore.active ? '继续当前步骤' : `前往 ${currentGuideStep.title}` }}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
+
           <div class="guide-nav-btns">
-            <button class="gnb-prev" :disabled="guideStep === 0" @click="guideStep--">← 上一步</button>
-            <button v-if="guideStep < guideSteps.length - 1" class="gnb-next" @click="markDoneAndNext">
-              {{ completedSteps.has(guideStep) ? '继续下一步 →' : '标记完成并继续 →' }}
+            <button class="gnb-prev" @click="guideStore.setCurrentStep(guideStore.currentStep - 1)">← 上一步</button>
+            <button v-if="!guideStore.isFinished" class="gnb-next" @click="guideStore.startGuide(guideStore.currentStep)">
+              打开弹窗引导 →
             </button>
-            <button v-else class="gnb-finish" @click="markDoneAndFinish">{{ completedSteps.size === guideSteps.length ? '重新开始' : '标记完成' }}</button>
+            <button v-else class="gnb-finish" @click="guideStore.restartGuide()">重新开始</button>
           </div>
         </div>
         <!-- 收起后的小入口 -->
@@ -177,7 +308,7 @@
           <span>新手向导</span>
         </div>
 
-        <!-- AI Insights -->
+        <!-- 智能洞察（置顶） -->
         <div class="insights-card">
           <div class="insights-bg">
             <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="0.5" opacity="0.08">
@@ -204,6 +335,84 @@
           </div>
           <button class="insights-btn" @click="router.push('/finance/overview')">查看财务总览 →</button>
         </div>
+
+        <!-- 销售统计总览 -->
+        <div class="sale-stat-card">
+          <div class="ssc-header">
+            <div>
+              <div class="card-micro">Sales Overview</div>
+              <h3 class="card-title">销售统计</h3>
+            </div>
+            <div class="ssc-tabs">
+              <button :class="['ssc-tab', statPeriod === 'today' ? 'active' : '']" @click="statPeriod = 'today'">今天</button>
+              <button :class="['ssc-tab', statPeriod === '7d' ? 'active' : '']" @click="statPeriod = '7d'">近7天</button>
+              <button :class="['ssc-tab', statPeriod === '30d' ? 'active' : '']" @click="statPeriod = '30d'">近30天</button>
+              <button :class="['ssc-tab', statPeriod === '3m' ? 'active' : '']" @click="statPeriod = '3m'">近3月</button>
+            </div>
+          </div>
+
+          <!-- 主指标 -->
+          <div class="ssc-main-row">
+            <div class="ssc-main-item">
+              <div class="ssc-main-label">销售总额</div>
+              <div class="ssc-main-value">¥{{ salesStats.totalAmt }}</div>
+            </div>
+            <div class="ssc-main-item">
+              <div class="ssc-main-label">订单数</div>
+              <div class="ssc-main-value">{{ salesStats.orderCount }}</div>
+            </div>
+          </div>
+
+          <!-- 次级指标 -->
+          <div class="ssc-sub-grid">
+            <div class="ssc-sub-item">
+              <div class="ssc-sub-label">销售出库</div>
+              <div class="ssc-sub-value">¥{{ salesStats.saleAmt }}</div>
+            </div>
+            <div class="ssc-sub-item">
+              <div class="ssc-sub-label">零售收款</div>
+              <div class="ssc-sub-value">¥{{ salesStats.retailAmt }}</div>
+            </div>
+            <div class="ssc-sub-item">
+              <div class="ssc-sub-label">均单金额</div>
+              <div class="ssc-sub-value">¥{{ salesStats.avgAmt }}</div>
+            </div>
+            <div class="ssc-sub-item">
+              <div class="ssc-sub-label">销售单数</div>
+              <div class="ssc-sub-value">{{ salesStats.saleCount }}</div>
+            </div>
+            <div class="ssc-sub-item">
+              <div class="ssc-sub-label">零售单数</div>
+              <div class="ssc-sub-value">{{ salesStats.retailCount }}</div>
+            </div>
+            <div class="ssc-sub-item">
+              <div class="ssc-sub-label">涉及客户</div>
+              <div class="ssc-sub-value">{{ salesStats.customerCount }}</div>
+            </div>
+          </div>
+
+          <!-- 迷你柱状趋势（按天，最近 periodDays 天） -->
+          <div v-if="salesStats.sparkData.length > 1" class="ssc-spark">
+            <div class="ssc-spark-label">趋势</div>
+            <div class="ssc-spark-bars">
+              <div
+                v-for="(bar, i) in salesStats.sparkData"
+                :key="i"
+                class="ssc-spark-bar-wrap"
+                :title="`${bar.date}: ¥${bar.amt.toFixed(2)}`"
+              >
+                <div
+                  class="ssc-spark-bar"
+                  :style="{ height: salesStats.sparkMax > 0 ? Math.max(4, (bar.amt / salesStats.sparkMax) * 48) + 'px' : '4px' }"
+                  :class="{ today: bar.isToday }"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button class="ssc-link-btn" @click="router.push('/reports/sale-rate')">查看销售报表 →</button>
+        </div>
+
       </div>
     </div>
 
@@ -239,15 +448,28 @@
       </el-table>
     </div>
 
+    </template><!-- end desktop -->
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onActivated, onDeactivated, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onActivated, onDeactivated, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '@/api/http'
+import { useGuideStore } from '@/stores/guide'
+import { useAuthStore } from '@/stores/auth'
+import { menuData } from '@/layouts/components/menuData'
 
 const router = useRouter()
+const guideStore = useGuideStore()
+const authStore = useAuthStore()
+const currentGuideStep = computed(() => guideStore.currentStepData)
+
+const isMobile = ref(window.innerWidth < 768)
+const onResize = () => { isMobile.value = window.innerWidth < 768 }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const stats = ref([
   { key: 'sale',     label: '今日销售额', value: '--', sub: '含销售+零售',   icon: 'Money',         link: '/dashboard/today-sales' },
@@ -259,6 +481,76 @@ const stats = ref([
 const insightItems = ref([
   { tag: 'Loading...', text: 'AI 正在分析您的业务数据...' },
 ])
+
+// ── 销售统计 ──
+const statPeriod = ref<'today' | '7d' | '30d' | '3m'>('today')
+
+const salesStats = computed(() => {
+  const today = getToday()
+  const now = new Date()
+  const cutoff = (days: number) => {
+    const d = new Date(now)
+    d.setDate(d.getDate() - (days - 1))
+    d.setHours(0, 0, 0, 0)
+    return d.toISOString().slice(0, 10)
+  }
+
+  let fromDate: string
+  let periodDays: number
+  if (statPeriod.value === 'today') { fromDate = today; periodDays = 1 }
+  else if (statPeriod.value === '7d') { fromDate = cutoff(7); periodDays = 7 }
+  else if (statPeriod.value === '30d') { fromDate = cutoff(30); periodDays = 30 }
+  else { fromDate = cutoff(90); periodDays = 90 }
+
+  const filteredSale = _saleRows.value.filter((r: any) => {
+    const d = (r.out_date || '').slice(0, 10)
+    return d >= fromDate && d <= today
+  })
+  const filteredRetail = _retailRows.value.filter((r: any) => {
+    const d = (r.order_date || '').slice(0, 10)
+    return d >= fromDate && d <= today
+  })
+
+  const saleAmt = filteredSale.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
+  const retailAmt = filteredRetail.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
+  const totalAmt = saleAmt + retailAmt
+  const orderCount = filteredSale.length + filteredRetail.length
+  const avgAmt = orderCount > 0 ? totalAmt / orderCount : 0
+
+  // unique customers
+  const custSet = new Set<string>()
+  filteredSale.forEach((r: any) => { if (r.customer_id) custSet.add(String(r.customer_id)) })
+  filteredRetail.forEach((r: any) => { if (r.customer_id) custSet.add(String(r.customer_id)) })
+
+  // spark data (by day)
+  const days: string[] = []
+  for (let i = periodDays - 1; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    const pad = (x: number) => String(x).padStart(2, '0')
+    days.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`)
+  }
+  const dayMap: Record<string, number> = Object.fromEntries(days.map(d => [d, 0]))
+  filteredSale.forEach((r: any) => { const d = (r.out_date || '').slice(0, 10); if (dayMap[d] !== undefined) dayMap[d] += Number(r.total_amount || 0) })
+  filteredRetail.forEach((r: any) => { const d = (r.order_date || '').slice(0, 10); if (dayMap[d] !== undefined) dayMap[d] += Number(r.pay_amount || r.total_amount || 0) })
+  const sparkData = days.map(d => ({ date: d.slice(5), amt: dayMap[d], isToday: d === today }))
+  const sparkMax = Math.max(...sparkData.map(b => b.amt), 1)
+
+  const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + 'w' : n.toFixed(2)
+
+  return {
+    totalAmt: fmt(totalAmt),
+    saleAmt: fmt(saleAmt),
+    retailAmt: fmt(retailAmt),
+    orderCount,
+    saleCount: filteredSale.length,
+    retailCount: filteredRetail.length,
+    avgAmt: fmt(avgAmt),
+    customerCount: custSet.size,
+    sparkData,
+    sparkMax,
+  }
+})
 
 function buildInsights(data: {
   todaySale: number, stockWarn: number, customerCount: number,
@@ -320,129 +612,116 @@ const quickItems = [
     svg: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   },
   {
-    label: '系统设置', path: '/setting/admin',
-    bg: 'rgba(100,116,139,0.1)', color: '#475569',
-    svg: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    label: '销售统计', path: '/reports/sale-rate',
+    bg: 'rgba(71,85,105,0.1)', color: '#475569',
+    svg: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
   },
 ]
 
 function openNewWindow() { window.open('/#/cashregister', '_blank') }
 
-// ── 新手向导 ──
-const guideStep = ref(0)
-const guideHidden = ref(localStorage.getItem('erp_guide_hidden') === '1')
-const completedSteps = ref<Set<number>>(new Set(
-  JSON.parse(localStorage.getItem('erp_guide_done') || '[]')
-))
-function hideGuide() { guideHidden.value = true; localStorage.setItem('erp_guide_hidden', '1') }
-function showGuide() { guideHidden.value = false; localStorage.removeItem('erp_guide_hidden') }
+// ── 自定义快捷应用 ────────────────────────────────────────────────
+const CUSTOM_KEY = 'erp_mobile_quick_items'
+const editMode = ref(false)
 
-function saveCompletedSteps() {
-  localStorage.setItem('erp_guide_done', JSON.stringify([...completedSteps.value]))
+// 全部可选应用（从 menuData，去掉 dashboard）
+const allAppSections = menuData.filter(s => s.key !== 'dashboard')
+
+// 颜色映射（复用 MobileApps 同样的配色）
+const sectionColorMap: Record<string, string> = {
+  customer: '#16a34a', sale: '#0071e3', retail: '#ea580c',
+  procure: '#7c3aed', warehouse: '#0891b2', production: '#db2777',
+  outsource: '#ca8a04', finance: '#0071e3', goods: '#dc2626',
+  reports: '#475569', office: '#16a34a', setting: '#475569', personnel: '#0d9488',
+}
+function getSectionColor(key: string) { return sectionColorMap[key] || '#0071e3' }
+
+// 图标映射（同 MobileApps）
+const appIconMap: Record<string, string> = {
+  'sale-client':   '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+  'sale-offer':    '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+  'sale-contract': '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  'sale-out':      '<path d="M5 12h14M12 5l7 7-7 7"/>',
+  'sale-return':   '<path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>',
+  'retail-store':  '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  'retail-order':  '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>',
+  'procure-order': '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  'procure-supplier': '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  'procure-inhouse':'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  'warehouse-stock':'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  'warehouse-check':'<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  'warehouse-warning':'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/>',
+  'finance-overview':'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  'finance-receivable':'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  'finance-fund':  '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+  'goods-info':    '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
+  'reports-overview':'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  'personnel-staff':'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+  'personnel-salary':'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  'reports-sale-rate':'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+}
+const defaultAppIcon = '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/>'
+function getAppIcon(key: string) { return appIconMap[key] || defaultAppIcon }
+
+// 默认8个快捷应用的 key（对应 menuData 中的 item.key）
+const DEFAULT_CUSTOM_KEYS = [
+  'sale-client', 'sale-offer', 'procure-order', 'warehouse-stock',
+  'finance-receivable', 'goods-info', 'personnel-staff', 'reports-sale-rate',
+]
+
+// 读取已保存的自定义配置
+function loadCustomKeys(): string[] {
+  try {
+    const r = localStorage.getItem(CUSTOM_KEY)
+    if (r) return JSON.parse(r)
+  } catch {}
+  return DEFAULT_CUSTOM_KEYS
 }
 
-function markDoneAndNext() {
-  completedSteps.value.add(guideStep.value)
-  saveCompletedSteps()
-  guideStep.value++
-}
+const editSelected = ref<string[]>(loadCustomKeys())
 
-function markDoneAndFinish() {
-  completedSteps.value.add(guideStep.value)
-  saveCompletedSteps()
-  if (completedSteps.value.size === guideSteps.length) {
-    guideStep.value = 0
+function toggleEditItem(item: { key: string; title: string; path?: string }) {
+  const idx = editSelected.value.indexOf(item.key)
+  if (idx >= 0) {
+    editSelected.value.splice(idx, 1)
+  } else {
+    if (editSelected.value.length >= 8) return
+    editSelected.value.push(item.key)
   }
 }
 
-const guideSteps = [
-  {
-    title: '新增客户',
-    sub: '客户管理',
-    path: '/sale/client',
-    desc: '销售流程的第一步是在系统中建立客户档案，记录客户的基本信息、联系方式和等级。',
-    actions: [
-      '进入 销售 → 客户管理',
-      '点击右上角「新增」按钮',
-      '填写客户名称、联系人、手机号等信息',
-      '保存客户档案',
-    ],
-    tip: '客户等级会影响价格策略，建议先设置好客户等级（销售 → 客户等级）。',
-  },
-  {
-    title: '创建销售报价',
-    sub: '销售报价',
-    path: '/sale/offer',
-    desc: '向客户发送报价单，明确商品、数量、单价，让客户确认后方可执行。',
-    actions: [
-      '进入 销售 → 销售报价',
-      '点击「新增报价」',
-      '选择刚才创建的客户',
-      '添加商品并填写报价数量和单价',
-      '提交并发送报价给客户',
-    ],
-    tip: '报价单确认后可直接转换为销售合同，无需重复录入数据。',
-  },
-  {
-    title: '签订销售合同',
-    sub: '销售合同',
-    path: '/sale/contract',
-    desc: '客户确认报价后，签订正式合同，锁定交货日期和付款条件。',
-    actions: [
-      '进入 销售 → 销售合同',
-      '点击「新增合同」或从报价单转入',
-      '确认合同金额、交货日期、付款方式',
-      '审核合同',
-    ],
-    tip: '合同审核后会触发库存预留逻辑，确保履约库存充足。',
-  },
-  {
-    title: '销售出库',
-    sub: '销售出库',
-    path: '/sale/out',
-    desc: '商品发货时创建出库单，系统自动扣减库存并生成应收账款。',
-    actions: [
-      '进入 销售 → 销售出库',
-      '点击「新增出库」',
-      '关联销售合同（可自动带入商品）',
-      '填写实际出库数量和出库仓库',
-      '审核出库单',
-    ],
-    tip: '出库单审核后，库存自动扣减，应收账款自动生成，无需手动操作财务。',
-  },
-  {
-    title: '应收账款 & 收款',
-    sub: '财务收款',
-    path: '/finance/receivable',
-    desc: '出库后产生应收款，客户付款时在系统中录入收款单进行核销。',
-    actions: [
-      '进入 财务 → 应收账款，查看待收款项',
-      '客户付款后进入 财务 → 收款单',
-      '点击「新增收款单」',
-      '选择客户和待核销的应收账款',
-      '填写收款金额和收款账户，确认',
-    ],
-    tip: '支持部分收款，剩余未核销金额会在应收账款中继续显示，方便跟踪催收。',
-  },
-  {
-    title: '查看销售报表',
-    sub: '销售统计',
-    path: '/reports/sale-rate',
-    desc: '流程完成后，在报表模块查看销售统计和利润分析，持续优化业务。',
-    actions: [
-      '进入 报表 → 销售统计，查看销售额趋势',
-      '进入 报表 → 销售台账，查看每笔明细',
-      '进入 报表 → 利润报表，分析毛利情况',
-    ],
-    tip: '可在工作台首页的"近30天销售趋势"图快速查看整体表现。',
-  },
-]
-
-function guideGoto() {
-  completedSteps.value.add(guideStep.value)
-  saveCompletedSteps()
-  router.push(guideSteps[guideStep.value].path)
+function saveCustom() {
+  localStorage.setItem(CUSTOM_KEY, JSON.stringify(editSelected.value))
+  editMode.value = false
 }
+
+// 把选中的 key 转换为 quickItem 格式
+const currentQuickItems = computed(() => {
+  const keys = loadCustomKeys()
+  const result: { label: string; path: string; bg: string; color: string; svg: string }[] = []
+  for (const key of keys) {
+    for (const section of allAppSections) {
+      const item = section.children.find((c: any) => c.key === key)
+      if (item && item.path) {
+        const baseColor = getSectionColor(section.key)
+        result.push({
+          label: item.title,
+          path: item.path,
+          bg: baseColor + '18',
+          color: baseColor,
+          svg: getAppIcon(key),
+        })
+        break
+      }
+    }
+  }
+  return result
+})
+
+// ── 新手向导 ──
+const guideHidden = ref(localStorage.getItem('erp_guide_hidden') === '1')
+function hideGuide() { guideHidden.value = true; localStorage.setItem('erp_guide_hidden', '1') }
+function showGuide() { guideHidden.value = false; localStorage.removeItem('erp_guide_hidden') }
 
 const saleTrendRef = ref<HTMLDivElement>()
 const fundFlowList = ref<any[]>([])
@@ -453,9 +732,13 @@ const rankMode = ref<'qty' | 'amt'>('qty')
 // 缓存原始数据，供切换天数时重绘
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
+const _rankSaleRows = ref<any[]>([])
+const _rankRetailRows = ref<any[]>([])
 
-// 商品排行（从 goods_info 聚合）
+// 商品排行（按全系统销售订单 + 零售订单聚合，避免只统计当前页/部分单据）
 const rankList = computed(() => {
+  const saleRankRows = _rankSaleRows.value.length ? _rankSaleRows.value : _saleRows.value
+  const retailRankRows = _rankRetailRows.value.length ? _rankRetailRows.value : _retailRows.value
   const map: Record<string, { name: string; spec: string; unit: string; qty: number; amt: number }> = {}
   const parseGoods = (r: any) => {
     const items: any[] = parseGoodsInfo(r.goods_info)
@@ -470,8 +753,8 @@ const rankList = computed(() => {
       map[key].amt += qty * price
     })
   }
-  _saleRows.value.forEach(r => parseGoods(r))
-  _retailRows.value.forEach(r => parseGoods(r))
+  saleRankRows.forEach(r => parseGoods(r))
+  retailRankRows.forEach(r => parseGoods(r))
   const sorted = Object.values(map).sort((a, b) =>
     rankMode.value === 'qty' ? b.qty - a.qty : b.amt - a.amt
   ).slice(0, 10)
@@ -486,6 +769,7 @@ const rankList = computed(() => {
 const dashboardLoading = ref(false)
 let lastRefreshAt = 0
 let refreshListenersBound = false
+let rankLoadToken = 0
 
 function getToday() {
   const d = new Date()
@@ -500,6 +784,83 @@ function parseGoodsInfo(goodsInfo: any) {
     return JSON.parse(goodsInfo)
   } catch {
     return []
+  }
+}
+
+function extractRows(payload: any) {
+  const data = payload?.data ?? payload
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.rows)) return data.rows
+  if (Array.isArray(data?.list)) return data.list
+  if (Array.isArray(data?.data)) return data.data
+  return []
+}
+
+function extractTotal(payload: any) {
+  const data = payload?.data ?? payload
+  const total = Number(
+    data?.total ??
+    data?.count ??
+    data?.total_count ??
+    data?.totalCount ??
+    data?.data_count
+  )
+  return Number.isFinite(total) && total > 0 ? total : undefined
+}
+
+function dedupeRows(rows: any[]) {
+  const seen = new Set<string>()
+  return rows.filter((row, idx) => {
+    const key = row?.id != null
+      ? `id:${row.id}`
+      : row?.order_no
+        ? `order:${row.order_no}`
+        : `idx:${idx}:${JSON.stringify(row)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+async function fetchAllRows(path: string, params: Record<string, any> = {}, pageSize = 500, maxPages = 40) {
+  const all: any[] = []
+  let page = 1
+  let total: number | undefined
+
+  while (page <= maxPages) {
+    const res = await http.get(path, { params: { ...params, page, list_rows: pageSize } })
+    const rows = extractRows(res)
+    if (!rows.length) break
+
+    all.push(...rows)
+    total = extractTotal(res) ?? total
+
+    if (total && all.length >= total) break
+    if (rows.length < pageSize) break
+    page += 1
+  }
+
+  return dedupeRows(all)
+}
+
+async function loadRankData(fallbackSaleRows: any[], fallbackRetailRows: any[]) {
+  const token = ++rankLoadToken
+
+  _rankSaleRows.value = fallbackSaleRows.filter((row: any) => Number(row.status ?? 1) === 1)
+  _rankRetailRows.value = fallbackRetailRows
+
+  const [contractRes, retailRes] = await Promise.allSettled([
+    fetchAllRows('/shop/ContractOrder/index', { status: 1 }),
+    fetchAllRows('/retail/order/index'),
+  ])
+
+  if (token !== rankLoadToken) return
+
+  if (contractRes.status === 'fulfilled' && contractRes.value.length) {
+    _rankSaleRows.value = contractRes.value
+  }
+  if (retailRes.status === 'fulfilled' && retailRes.value.length) {
+    _rankRetailRows.value = retailRes.value
   }
 }
 
@@ -556,6 +917,7 @@ async function loadDashboardData(force = false) {
 
     _saleRows.value = saleRows
     _retailRows.value = retailRows
+    void loadRankData(saleRows, retailRows)
     drawTrendChart(trendDays.value)
 
     // Build AI insights from real data
@@ -699,6 +1061,11 @@ function drawTrendChart(n: number) {
   max-width: 1400px;
   padding: 8px 0 40px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Mobile: remove outer padding so cards go edge-to-edge */
+@media (max-width: 767px) {
+  .dashboard { gap: 0; padding: 0; background: #f5f5f7; max-width: 100%; }
 }
 
 /* ── Header ── */
@@ -966,6 +1333,8 @@ function drawTrendChart(n: number) {
   flex-shrink: 0;
 }
 .guide-dot.done { background: #16a34a; }
+.guide-dot.skipped { background: #f59e0b; }
+.guide-dot.locked { opacity: 0.35; cursor: not-allowed; }
 .guide-dot.active { background: #0071e3; width: 20px; border-radius: 4px; }
 
 /* 收起后的小入口 */
@@ -1138,6 +1507,159 @@ function drawTrendChart(n: number) {
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
 .insights-btn:hover { background: var(--gray); transform: scale(0.99); }
+
+/* ── Sale Stat Card ── */
+.sale-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 22px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ssc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ssc-tabs {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ssc-tab {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--dim);
+  transition: all 0.15s;
+  letter-spacing: -0.01em;
+}
+.ssc-tab:hover { background: var(--gray); color: var(--dark); }
+.ssc-tab.active { background: #0071e3; color: #fff; border-color: #0071e3; }
+
+.ssc-main-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ssc-main-item {
+  background: var(--gray);
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+}
+
+.ssc-main-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  margin-bottom: 6px;
+}
+
+.ssc-main-value {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--dark);
+  line-height: 1;
+}
+
+.ssc-sub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.ssc-sub-item {
+  background: rgba(0,113,227,0.04);
+  border-radius: 12px;
+  padding: 10px 10px 8px;
+}
+
+.ssc-sub-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+
+.ssc-sub-value {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--dark);
+}
+
+.ssc-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.ssc-spark-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  flex-shrink: 0;
+  padding-bottom: 2px;
+}
+
+.ssc-spark-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 1;
+  height: 52px;
+}
+
+.ssc-spark-bar-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.ssc-spark-bar {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 3px 3px 0 0;
+  background: rgba(0,113,227,0.25);
+  transition: height 0.4s cubic-bezier(0.23,1,0.32,1);
+}
+.ssc-spark-bar.today {
+  background: #0071e3;
+}
+
+.ssc-link-btn {
+  width: 100%;
+  padding: 11px;
+  background: transparent;
+  color: #0071e3;
+  border: 1px solid rgba(0,113,227,0.2);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: -0.01em;
+}
+.ssc-link-btn:hover { background: rgba(0,113,227,0.06); }
 
 /* ── Action Hub (收银台 + 快捷入口) ── */
 .action-hub {
@@ -1499,5 +2021,314 @@ function drawTrendChart(n: number) {
   .guide-detail { grid-template-columns: 1fr; }
   .gsp-connector { width: 18px; margin: 0 4px; }
 }
+
+/* ── 大模块卡片 ── */
+.m-module-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px 12px 0;
+}
+.m-module-card {
+  border-radius: 16px;
+  padding: 18px 16px 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.m-module-card:active { opacity: 0.85; }
+.m-module-dark { background: #1d2129; }
+.m-module-blue { background: #0071e3; }
+.m-module-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; margin-bottom: 8px; flex-shrink: 0;
+}
+.m-module-label { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+.m-module-desc { font-size: 11px; color: rgba(255,255,255,0.55); }
+.m-module-arrow {
+  position: absolute; right: 14px; bottom: 14px;
+  color: rgba(255,255,255,0.45);
+}
+
+/* ── 自定义编辑模式 ── */
+.m-edit-hint {
+  font-size: 12px; color: #86909c; margin-bottom: 12px;
+  padding: 6px 8px; background: #f5f5f7; border-radius: 8px;
+}
+.m-edit-section { margin-bottom: 14px; }
+.m-edit-section-title {
+  font-size: 11px; font-weight: 700; color: #86909c;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.m-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px 4px;
+}
+.m-edit-item {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  cursor: pointer; padding: 6px 2px; border-radius: 10px;
+  position: relative; -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.m-edit-item:active { background: #f5f5f7; }
+.m-edit-item.disabled { opacity: 0.35; pointer-events: none; }
+.m-edit-check {
+  position: absolute; top: 2px; right: 8px;
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid #c2c8d5;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.m-edit-item.selected .m-edit-check { background: #0071e3; border-color: #0071e3; }
+.m-edit-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.m-edit-label {
+  font-size: 11px; color: #4e5969; text-align: center;
+  font-weight: 500; line-height: 1.3;
+}
+
+/* ── 手机端首页样式 ─────────────────────────────────────── */
+.m-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px 12px;
+  background: #fff;
+}
+.m-header-left { flex: 1; }
+.m-header-greet {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1d2129;
+  letter-spacing: -0.02em;
+}
+.m-header-sub {
+  font-size: 12px;
+  color: #86909c;
+  font-weight: 500;
+  margin-top: 2px;
+}
+.m-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.m-header-refresh {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f5f5f7;
+  color: #4e5969;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.m-header-refresh:active { background: #e8e8e8; }
+.m-header-refresh.spinning svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.m-header-cashier {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #0071e3;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-header-cashier:active { opacity: 0.85; }
+
+/* 快捷应用卡片 */
+.m-quick-card {
+  background: #fff;
+  border-radius: 16px;
+  margin: 10px 12px 0;
+  padding: 16px 16px 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.m-quick-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.m-quick-title { font-size: 15px; font-weight: 700; color: #1d2129; }
+.m-quick-more { font-size: 13px; color: #0071e3; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.m-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 0;
+  margin-bottom: 12px;
+}
+.m-quick-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-quick-item:active { opacity: 0.7; }
+.m-quick-icon {
+  width: 50px; height: 50px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.m-quick-label {
+  font-size: 11px; color: #4e5969; text-align: center;
+  font-weight: 500; line-height: 1.3;
+}
+
+/* 指标卡片 */
+/* ── Mobile Insights ── */
+.m-insights-card {
+  background: #1d1d1f;
+  border-radius: 16px;
+  margin: 10px 12px 0;
+  padding: 16px;
+  color: white;
+}
+.m-insights-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.m-insights-icon {
+  width: 30px; height: 30px;
+  background: #0071e3;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.m-insights-title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+.m-insights-sub { font-size: 10px; color: rgba(255,255,255,0.3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-left: auto; }
+.m-insights-list { display: flex; flex-direction: column; gap: 8px; }
+.m-insight-item {
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.m-insight-tag { font-size: 10px; font-weight: 700; color: #0071e3; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+.m-insight-text { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.5; }
+
+/* ── Mobile Sale Stat ── */
+.m-sale-stat-card {
+  background: #fff;
+  border-radius: 16px;
+  margin: 10px 12px 0;
+  padding: 16px 16px 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.m-ssc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.m-ssc-title { font-size: 15px; font-weight: 700; color: #1d2129; }
+.m-ssc-tabs { display: flex; gap: 4px; }
+.m-ssc-tab {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e5e6eb;
+  background: transparent;
+  color: #86909c;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-ssc-tab.active { background: #0071e3; color: #fff; border-color: #0071e3; }
+.m-ssc-main-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.m-ssc-main-item {
+  background: #f5f5f7;
+  border-radius: 10px;
+  padding: 10px 10px 8px;
+}
+.m-ssc-main-label { font-size: 10px; font-weight: 600; color: #86909c; margin-bottom: 4px; }
+.m-ssc-main-value { font-size: 15px; font-weight: 800; color: #1d2129; letter-spacing: -0.03em; }
+.m-ssc-sub-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.m-ssc-sub-item { text-align: center; }
+.m-ssc-sub-label { font-size: 10px; color: #86909c; margin-bottom: 3px; }
+.m-ssc-sub-val { font-size: 13px; font-weight: 700; color: #1d2129; letter-spacing: -0.02em; }
+.m-ssc-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 40px;
+  margin-bottom: 12px;
+}
+.m-ssc-spark-bar {
+  flex: 1;
+  min-height: 4px;
+  border-radius: 2px 2px 0 0;
+  background: rgba(0,113,227,0.2);
+  transition: height 0.3s;
+}
+.m-ssc-spark-bar.today { background: #0071e3; }
+.m-ssc-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0071e3;
+  text-align: center;
+  padding: 8px;
+  border: 1px solid rgba(0,113,227,0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-ssc-link:active { background: rgba(0,113,227,0.06); }
+
+.m-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px 12px 80px;
+  background: #f5f5f7;
+}
+.m-stat-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.m-stat-label { font-size: 11px; color: #86909c; font-weight: 600; margin-bottom: 6px; }
+.m-stat-value { font-size: 22px; font-weight: 800; color: #1d2129; letter-spacing: -0.03em; margin-bottom: 4px; }
+.m-stat-sub { font-size: 11px; color: #c2c8d5; }
 
 </style>

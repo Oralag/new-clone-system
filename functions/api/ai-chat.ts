@@ -6,7 +6,7 @@ interface Env {
   ANTHROPIC_BASE_URL?: string
 }
 
-const ERP_BASE = 'https://erp-server-production-b1b6.up.railway.app/adminapi'
+const ERP_BASE = 'https://erp-backend-production-a349.up.railway.app/adminapi'
 
 async function erpGet(path: string, params: Record<string, any>, token: string) {
   const url = new URL(ERP_BASE + path)

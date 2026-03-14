@@ -1,241 +1,355 @@
 <template>
   <div class="history-page">
+
+    <!-- Header -->
     <div class="page-header">
-      <div class="page-title">历史记录</div>
-      <div v-if="agentStore.history.length > 0" class="header-stats">
-        <span class="stat-badge">总内容数：{{ agentStore.history.length }}</span>
-        <el-button size="small" type="danger" plain @click="handleClear">清空历史</el-button>
-      </div>
+      <div class="page-title">对话历史</div>
+      <button v-if="agents.some(a => a.messageCount > 0)" class="btn-clear-all" @click="clearAll">
+        清空全部
+      </button>
     </div>
 
-    <!-- Empty state -->
-    <div v-if="agentStore.history.length === 0" class="card empty-state">
-      <div class="empty-icon">📚</div>
-      <div class="empty-text">暂无历史记录</div>
-      <div class="empty-sub">生成内容后将自动保存到历史记录</div>
+    <!-- Loading -->
+    <div v-if="loading" class="state-loading">
+      <div class="spin"></div>
+      <span>加载中...</span>
     </div>
 
-    <template v-else>
-      <!-- Category tabs -->
-      <div class="category-tabs">
-        <button
-          v-for="cat in categories"
-          :key="cat.key"
-          class="cat-tab"
-          :class="{ active: activeCat === cat.key }"
-          @click="activeCat = cat.key"
-        >
-          {{ cat.label }}
-          <span class="cat-count">{{ getCategoryCount(cat.key) }}</span>
-        </button>
-      </div>
+    <!-- Empty -->
+    <div v-else-if="agents.every(a => a.messageCount === 0)" class="state-empty">
+      <div class="empty-icon">💬</div>
+      <div class="empty-title">暂无对话历史</div>
+      <div class="empty-sub">去和各个 Agent 聊聊吧</div>
+    </div>
 
-      <!-- List -->
-      <div v-if="filteredHistory.length === 0" class="card empty-state">
-        <div class="empty-icon">🗂️</div>
-        <div class="empty-text">该分类暂无记录</div>
-      </div>
-
-      <div v-else class="history-list">
-        <div
-          v-for="item in filteredHistory"
-          :key="item.id"
-          class="history-row card"
-        >
-          <div class="row-meta">
-            <span class="platform-tag">{{ item.platformName || item.platform }}</span>
-            <span class="type-tag" :class="'type-' + item.type">{{ typeLabel(item.type) }}</span>
-            <span class="date-tag">{{ item.date }}</span>
-          </div>
-          <div class="row-topic">{{ item.topic }}</div>
-          <div class="row-preview">{{ item.preview }}</div>
-          <div class="row-actions">
-            <el-button size="small" @click="reuseItem(item)">复用方案</el-button>
-            <el-button size="small" @click="copyItem(item)">复制内容</el-button>
-            <el-button size="small" type="danger" plain @click="deleteItem(item.id)">删除</el-button>
-          </div>
+    <!-- Agent cards -->
+    <div v-else class="agents-grid">
+      <div
+        v-for="agent in agents.filter(a => a.messageCount > 0)"
+        :key="agent.agentId"
+        class="agent-card"
+        :class="{ active: activeAgentId === agent.agentId }"
+        :style="{ '--c': agent.color }"
+        @click="selectAgent(agent)"
+      >
+        <div class="card-avatar">{{ agent.emoji }}</div>
+        <div class="card-info">
+          <div class="card-name">{{ agent.name }}</div>
+          <div class="card-preview">{{ agent.lastUserMessage || '暂无对话' }}</div>
+        </div>
+        <div class="card-meta">
+          <div class="msg-count">{{ agent.messageCount }} 条</div>
+          <button class="btn-clear-agent" @click.stop="clearAgent(agent.agentId)" title="清空此 Agent 记忆">×</button>
         </div>
       </div>
-    </template>
+    </div>
+
+    <!-- Conversation viewer -->
+    <div v-if="activeAgent" class="conv-viewer">
+      <div class="conv-header">
+        <div class="conv-title">
+          <span class="conv-emoji">{{ activeAgent.emoji }}</span>
+          {{ activeAgent.name }} 的对话记录
+        </div>
+        <button class="conv-close" @click="activeAgentId = ''">×</button>
+      </div>
+      <div class="conv-messages" ref="convRef">
+        <template v-for="(msg, idx) in activeAgent.messages" :key="idx">
+          <div v-if="msg.role === 'user'" class="msg msg-user">
+            <div class="bubble user-bubble">{{ msg.content }}</div>
+          </div>
+          <div v-else class="msg msg-assistant">
+            <div class="msg-avatar">{{ activeAgent.emoji }}</div>
+            <div class="bubble assistant-bubble" v-html="renderMd(msg.content)"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useTrendingStore, type HistoryItem } from '@/stores/agent'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { marked } from 'marked'
 
-const router = useRouter()
-const agentStore = useTrendingStore()
-
-const activeCat = ref<'all' | 'copy' | 'image_text' | 'video_script' | 'topic'>('all')
-
-const categories = [
-  { key: 'all', label: '全部' },
-  { key: 'copy', label: '文案' },
-  { key: 'image_text', label: '图文' },
-  { key: 'video_script', label: '视频脚本' },
-  { key: 'topic', label: '选题' },
-]
-
-function typeLabel(type: string) {
-  const map: Record<string, string> = {
-    copy: '文案',
-    image_text: '图文',
-    video_script: '视频脚本',
-    topic: '选题',
-  }
-  return map[type] || type
+interface AgentSummary {
+  agentId: string
+  name: string
+  emoji: string
+  color: string
+  messageCount: number
+  lastUserMessage: string
+  messages: Array<{ role: string; content: string }>
 }
 
-function getCategoryCount(key: string) {
-  if (key === 'all') return agentStore.history.length
-  return agentStore.history.filter(h => h.type === key).length
+const loading = ref(true)
+const agents = ref<AgentSummary[]>([])
+const activeAgentId = ref('')
+const convRef = ref<HTMLElement>()
+
+const activeAgent = computed(() => agents.value.find(a => a.agentId === activeAgentId.value))
+
+function renderMd(text: string) {
+  if (!text) return ''
+  return marked.parse(text) as string
 }
 
-const filteredHistory = computed<HistoryItem[]>(() => {
-  if (activeCat.value === 'all') return agentStore.history
-  return agentStore.history.filter(h => h.type === activeCat.value)
-})
-
-function deleteItem(id: string) {
-  agentStore.removeHistoryItem(id)
+function selectAgent(agent: AgentSummary) {
+  activeAgentId.value = agent.agentId
+  nextTick(() => {
+    if (convRef.value) convRef.value.scrollTop = convRef.value.scrollHeight
+  })
 }
 
-async function handleClear() {
+async function loadHistory() {
+  loading.value = true
+  const token = localStorage.getItem('erp_token') || ''
   try {
-    await ElMessageBox.confirm('确定清空全部历史记录吗？此操作不可恢复。', '清空历史', {
-      confirmButtonText: '确定清空',
-      cancelButtonText: '取消',
-      type: 'warning',
+    const resp = await fetch('/api/agent-memory', {
+      headers: { 'x-erp-token': token },
     })
-    agentStore.clearHistory()
-    ElMessage.success('历史记录已清空')
-  } catch {
-    // user cancelled
-  }
+    if (resp.ok) {
+      agents.value = await resp.json()
+    }
+  } catch {}
+  loading.value = false
 }
 
-async function copyItem(item: HistoryItem) {
-  await navigator.clipboard.writeText(item.content || item.preview)
-  ElMessage.success('内容已复制')
+async function clearAgent(agentId: string) {
+  const token = localStorage.getItem('erp_token') || ''
+  await fetch(`/api/agent-memory?agentId=${agentId}`, {
+    method: 'DELETE',
+    headers: { 'x-erp-token': token },
+  })
+  agents.value = agents.value.filter(a => a.agentId !== agentId)
+  if (activeAgentId.value === agentId) activeAgentId.value = ''
 }
 
-function reuseItem(item: HistoryItem) {
-  const routeMap: Record<string, string> = {
-    copy: '/agent/copywriting',
-    image_text: '/agent/copywriting',
-    video_script: '/agent/video',
-    topic: '/agent/trending',
-  }
-  const target = routeMap[item.type] || '/agent/copywriting'
-  agentStore.setSelectedTopics([item.topic])
-  router.push(target)
+async function clearAll() {
+  const token = localStorage.getItem('erp_token') || ''
+  await fetch('/api/agent-memory', {
+    method: 'DELETE',
+    headers: { 'x-erp-token': token },
+  })
+  agents.value = []
+  activeAgentId.value = ''
 }
+
+onMounted(loadHistory)
 </script>
 
 <style scoped>
-.history-page { display: flex; flex-direction: column; gap: 16px; }
+.history-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
 }
-.page-title { font-size: 20px; font-weight: 700; color: #1e293b; }
-.header-stats { display: flex; align-items: center; gap: 12px; }
-.stat-badge {
-  padding: 4px 12px;
-  background: #eff6ff;
-  color: #2563eb;
-  border-radius: 20px;
+.page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.btn-clear-all {
+  padding: 6px 14px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
-}
-
-.card { background: #fdfefe; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
-.empty-state { text-align: center; padding: 48px 0; }
-.empty-icon { font-size: 40px; margin-bottom: 12px; }
-.empty-text { font-size: 15px; color: #64748b; font-weight: 500; margin-bottom: 6px; }
-.empty-sub { font-size: 12px; color: #94a3b8; }
-
-.category-tabs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.cat-tab {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  background: #fdfefe;
   cursor: pointer;
-  font-size: 13px;
-  color: #64748b;
   transition: all 0.15s;
 }
-.cat-tab:hover { border-color: #93c5fd; color: #2563eb; }
-.cat-tab.active { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 600; }
-.cat-count {
-  display: inline-flex;
+.btn-clear-all:hover { background: #fee2e2; }
+
+/* States */
+.state-loading {
+  display: flex;
   align-items: center;
+  gap: 10px;
+  color: #94a3b8;
+  font-size: 14px;
+  padding: 60px 0;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: rgba(0,0,0,0.08);
-  border-radius: 9px;
-  font-size: 11px;
 }
-.cat-tab.active .cat-count { background: rgba(255,255,255,0.3); }
+.spin {
+  width: 20px; height: 20px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.history-list { display: flex; flex-direction: column; gap: 12px; }
-.history-row { padding: 16px; }
+.state-empty {
+  text-align: center;
+  padding: 80px 0;
+  color: #94a3b8;
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-title { font-size: 16px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+.empty-sub { font-size: 13px; }
 
-.row-meta {
+/* Agent cards */
+.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.agent-card:hover { border-color: var(--c); box-shadow: 0 2px 12px color-mix(in srgb, var(--c) 15%, transparent); }
+.agent-card.active { border-color: var(--c); background: color-mix(in srgb, var(--c) 5%, white); }
+
+.card-avatar {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c) 12%, white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.card-info { flex: 1; min-width: 0; }
+.card-name { font-size: 14px; font-weight: 600; color: #1e293b; }
+.card-preview {
+  font-size: 12px; color: #94a3b8;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.msg-count {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c) 12%, white);
+  color: var(--c);
+  font-weight: 600;
+}
+.btn-clear-agent {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+.btn-clear-agent:hover { color: #ef4444; }
+
+/* Conversation viewer */
+.conv-viewer {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.conv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafbfc;
+}
+.conv-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
 }
-.platform-tag {
-  padding: 2px 9px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
+.conv-emoji { font-size: 18px; }
+.conv-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color 0.15s;
 }
-.type-tag {
-  padding: 2px 9px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.type-copy { background: #f0fdf4; color: #16a34a; }
-.type-image_text { background: #fdf4ff; color: #9333ea; }
-.type-video_script { background: #fff7ed; color: #ea580c; }
-.type-topic { background: #fefce8; color: #ca8a04; }
+.conv-close:hover { color: #475569; }
 
-.date-tag { font-size: 11px; color: #94a3b8; margin-left: auto; }
-.row-topic { font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 6px; }
-.row-preview {
-  font-size: 13px;
-  color: #64748b;
-  line-height: 1.6;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  margin-bottom: 12px;
+.conv-messages {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
-.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.msg { display: flex; gap: 10px; align-items: flex-start; }
+.msg-user { flex-direction: row-reverse; }
+.msg-assistant { flex-direction: row; }
+
+.msg-avatar {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: break-word;
+  max-width: 80%;
+}
+.user-bubble {
+  background: #6366f1;
+  color: #fff;
+  border-radius: 12px 4px 12px 12px;
+  margin-left: auto;
+}
+.assistant-bubble {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  border-radius: 4px 12px 12px 12px;
+}
+.assistant-bubble :deep(p) { margin: 0 0 8px; }
+.assistant-bubble :deep(p:last-child) { margin-bottom: 0; }
+.assistant-bubble :deep(ul), .assistant-bubble :deep(ol) { margin: 6px 0; padding-left: 20px; }
+.assistant-bubble :deep(li) { margin-bottom: 3px; }
+.assistant-bubble :deep(strong) { font-weight: 700; }
+.assistant-bubble :deep(code) { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+
+@media (max-width: 600px) {
+  .agents-grid { grid-template-columns: 1fr; }
+}
 </style>

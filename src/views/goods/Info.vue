@@ -68,6 +68,7 @@
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
+            <el-button :icon="Camera" @click="openListScanner">扫码录入</el-button>
             <el-button :icon="Upload" @click="triggerImport">导入</el-button>
             <el-button :icon="Download" @click="downloadTemplate">下载模板</el-button>
             <input ref="importFileRef" type="file" accept=".xlsx,.xls" style="display:none" @change="handleImportFile" />
@@ -621,14 +622,29 @@
       </template>
     </el-dialog>
 
+    <!-- 扫码录入对话框 -->
+    <el-dialog v-model="listScannerVisible" title="扫码录入商品" width="min(420px, 95vw)" append-to-body destroy-on-close :close-on-click-modal="false" @closed="stopListScanner">
+      <div style="text-align:center">
+        <video ref="listVideoRef" style="width:100%;max-height:60vh;background:#000;border-radius:8px;display:block" autoplay muted playsinline />
+        <div v-if="listScanError" style="color:#f56c6c;margin-top:8px;font-size:13px">{{ listScanError }}</div>
+        <div v-else-if="listScanLooking" style="color:#e6a23c;margin-top:8px;font-size:13px">正在查询条码信息...</div>
+        <div v-else-if="!listScanning" style="color:#909399;margin-top:8px;font-size:13px">正在启动摄像头...</div>
+        <div v-else style="color:#409eff;margin-top:8px;font-size:13px">对准商品条形码，识别后自动打开录入页面...</div>
+      </div>
+      <template #footer>
+        <el-button @click="listScannerVisible = false">取消</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { Plus, Edit, Delete, ArrowRight, Upload, Download } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, ArrowRight, Upload, Download, Camera } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 import ScTable from '@/components/ScTable.vue'
 import {
   getGoodsList, createGoods, updateGoods, deleteGoods,
@@ -1497,6 +1513,91 @@ function onScroll() {
   for (const { key, el } of refs) {
     if (el.value && el.value.offsetTop <= top) { activeTab.value = key; return }
   }
+}
+
+// ── 扫码录入 ──────────────────────────────────────────────────────────────────
+const listScannerVisible = ref(false)
+const listScanning = ref(false)
+const listScanLooking = ref(false)
+const listScanError = ref('')
+const listVideoRef = ref<HTMLVideoElement>()
+let listCodeReader: BrowserMultiFormatReader | null = null
+let listScanStream: MediaStream | null = null
+
+async function openListScanner() {
+  listScanError.value = ''
+  listScanning.value = false
+  listScanLooking.value = false
+  listScannerVisible.value = true
+  setTimeout(startListScanner, 300)
+}
+
+async function startListScanner() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    })
+    listScanStream = stream
+    if (listVideoRef.value) listVideoRef.value.srcObject = stream
+    listScanning.value = true
+    listCodeReader = new BrowserMultiFormatReader()
+    listCodeReader.decodeFromStream(stream, listVideoRef.value!, async (result) => {
+      if (!result) return
+      const code = result.getText()
+      stopListScanner()
+      listScanLooking.value = true
+
+      // 1. 先查本系统是否已有该条码
+      try {
+        const res = await getGoodsList({ keyword: code, list_rows: 5 })
+        const rows: any[] = res.data?.rows ?? []
+        const match = rows.find((r: any) => r.barcode === code || r.goods_sn === code)
+        if (match) {
+          listScannerVisible.value = false
+          listScanLooking.value = false
+          ElMessage.info('该条码商品已存在，已打开编辑页面')
+          openEdit(match)
+          return
+        }
+      } catch {}
+
+      // 2. 查公开条码库（Open Food Facts，对进口食品有效）
+      const prefill: any = { barcode: code }
+      try {
+        const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`, { signal: AbortSignal.timeout(5000) })
+        const j = await r.json()
+        if (j.status === 1 && j.product) {
+          const p = j.product
+          const name = p.product_name_zh || p.product_name || ''
+          const brand = p.brands || ''
+          const quantity = p.quantity || ''
+          if (name) prefill.goods_name = name + (quantity ? ` ${quantity}` : '')
+          if (brand) prefill.brand_name = brand
+        }
+      } catch {}
+
+      listScannerVisible.value = false
+      listScanLooking.value = false
+      openCreate()
+      Object.assign(fd, prefill)
+      if (prefill.goods_name) {
+        ElMessage.success(`已识别：${prefill.goods_name}，请补充完整信息`)
+      } else {
+        ElMessage.success(`条码已识别：${code}，请填写商品信息`)
+      }
+    })
+  } catch (e: any) {
+    listScanError.value = e?.message ?? '摄像头启动失败，请检查浏览器权限'
+    listScanning.value = false
+  }
+}
+
+function stopListScanner() {
+  try { listCodeReader?.reset() } catch {}
+  listCodeReader = null
+  listScanning.value = false
+  if (listScanStream) { listScanStream.getTracks().forEach(t => t.stop()); listScanStream = null }
+  if (listVideoRef.value) listVideoRef.value.srcObject = null
 }
 </script>
 

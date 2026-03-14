@@ -52,15 +52,17 @@
 
     <!-- 移动端底部导航 -->
     <div v-if="isMobile" class="mobile-bottom-nav">
-      <div v-for="item in mobileNavItems" :key="item.key" class="mobile-nav-item"
-        :class="{ active: appStore.activeTopMenu === item.key }"
-        @click="onMobileNav(item)">
-        <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
-        <span class="nav-label">{{ item.title }}</span>
+      <div class="mobile-nav-item" :class="{ active: route.path === '/dashboard' }" @click="router.push('/dashboard')">
+        <el-icon class="nav-icon"><Odometer /></el-icon>
+        <span class="nav-label">首页</span>
       </div>
-      <div class="mobile-nav-item" :class="{ active: showMobileMenu }" @click="showMobileMenu = true">
+      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/apps' }" @click="router.push('/mobile/apps')">
         <el-icon class="nav-icon"><Grid /></el-icon>
-        <span class="nav-label">更多</span>
+        <span class="nav-label">应用</span>
+      </div>
+      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/stats' }" @click="router.push('/mobile/stats')">
+        <svg class="nav-icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="nav-label">统计</span>
       </div>
     </div>
 
@@ -75,7 +77,7 @@
           <el-button :icon="Close" circle plain size="small" @click="showMobileMenu = false" />
         </div>
         <div class="drawer-menu">
-          <div v-for="section in menuData" :key="section.key" class="drawer-section">
+          <div v-for="section in visibleMenuData" :key="section.key" class="drawer-section">
             <div class="drawer-section-title">
               <el-icon><component :is="section.icon" /></el-icon>
               {{ section.title }}
@@ -106,9 +108,10 @@ import TrialBanner from '@/components/TrialBanner.vue'
 import { useTabsStore } from '@/stores/tabs'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
+import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
 import { menuData } from './components/menuData'
-import { Menu, Grid, Promotion, Close, HomeFilled } from '@element-plus/icons-vue'
+import { Menu, Grid, Promotion, Close, HomeFilled, Odometer } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -116,7 +119,10 @@ const router = useRouter()
 const tabsStore = useTabsStore()
 const appStore = useAppStore()
 const authStore = useAuthStore()
+const permStore = usePermissionStore()
 const trialBannerRef = ref<any>(null)
+
+const visibleMenuData = computed(() => permStore.filteredMenuData)
 
 const showMobileMenu = ref(false)
 const isMobile = ref(window.innerWidth < 768)
@@ -178,6 +184,7 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 .mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: #86909c; padding: 6px 4px; }
 .mobile-nav-item.active { color: #3a8ee6; }
 .nav-icon { font-size: 20px; }
+.nav-icon-svg { width: 22px; height: 22px; }
 .nav-label { font-size: 11px; line-height: 1; }
 
 /* 移动端内容区底部留白 */

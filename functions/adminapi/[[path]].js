@@ -63,17 +63,31 @@ export async function onRequest(context) {
   const realToken = decoded?.realToken || (decoded ? null : wrappedToken)
 
   // ── Trial user sandbox ────────────────────────────────────────────────────
-  // A trial user has no dedicated backend and no real Railway token.
-  // We return empty data for all data-fetching calls so they see their own
-  // empty workspace, not the owner's data.
   if (decoded?.trial && !isTrialPassthrough(url.pathname)) {
-    const method = request.method.toUpperCase()
-    if (method === 'GET') {
-      // Return empty list/object so the UI renders correctly but shows no data
-      return jsonRes({ code: 1, message: '', data: { list: [], rows: [], total: 0 } })
+    // Check KV: has the user claimed their 15-day trial and is it still active?
+    const kv = context.env.USERS_KV
+    let trialActive = false
+    if (kv && decoded.account) {
+      const raw = await kv.get(`user:${decoded.account}`)
+      if (raw) {
+        const user = JSON.parse(raw)
+        if (user.trial_start_at) {
+          const elapsed = Date.now() - new Date(user.trial_start_at).getTime()
+          const daysLeft = Math.max(0, 15 - Math.floor(elapsed / 86400000))
+          trialActive = daysLeft > 0
+        }
+      }
+    }
+
+    if (trialActive) {
+      // Trial is active — pass through to real backend
     } else {
-      // Block writes with a friendly message
-      return jsonRes({ code: 0, show: 1, message: '体验版暂不支持此操作，升级付费版即可使用完整功能' })
+      const method = request.method.toUpperCase()
+      if (method === 'GET') {
+        return jsonRes({ code: 1, message: '', data: { list: [], rows: [], total: 0 } })
+      } else {
+        return jsonRes({ code: 0, show: 1, message: '体验版暂不支持此操作，升级付费版即可使用完整功能' })
+      }
     }
   }
 

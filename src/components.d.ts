@@ -11,6 +11,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AgentChat: typeof import('./components/agent/AgentChat.vue')['default']
+    AgentOnboardingGuide: typeof import('./components/AgentOnboardingGuide.vue')['default']
     AiAssistant: typeof import('./components/AiAssistant.vue')['default']
     AiToolCallCard: typeof import('./components/ai/AiToolCallCard.vue')['default']
     CaptchaCanvas: typeof import('./components/CaptchaCanvas.vue')['default']
@@ -48,7 +50,6 @@ declare module 'vue' {
     ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElSelect: typeof import('element-plus/es')['ElSelect']
-    ElSkeleton: typeof import('element-plus/es')['ElSkeleton']
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
@@ -61,6 +62,7 @@ declare module 'vue' {
     GoodsFormDialog: typeof import('./components/GoodsFormDialog.vue')['default']
     GoodsSelect: typeof import('./components/GoodsSelect.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
+    OnboardingGuide: typeof import('./components/OnboardingGuide.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ScForm: typeof import('./components/ScForm.vue')['default']
@@ -68,6 +70,7 @@ declare module 'vue' {
     StaffSelect: typeof import('./components/StaffSelect.vue')['default']
     SupplierSelect: typeof import('./components/SupplierSelect.vue')['default']
     TrialBanner: typeof import('./components/TrialBanner.vue')['default']
+    UpgradeDialog: typeof import('./components/UpgradeDialog.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

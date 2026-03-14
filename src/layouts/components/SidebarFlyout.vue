@@ -24,15 +24,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAppStore } from '@/stores/app'
+import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
 import { menuData } from './menuData'
 
 const appStore = useAppStore()
+const permStore = usePermissionStore()
 const route = useRoute()
 const router = useRouter()
 
 const flyoutMenu = computed(() =>
-  appStore.hoverTopMenu ? menuData.find(m => m.key === appStore.hoverTopMenu) : null
+  appStore.hoverTopMenu ? permStore.filteredMenuData.find(m => m.key === appStore.hoverTopMenu) : null
 )
 
 const flyoutTop = computed(() => {

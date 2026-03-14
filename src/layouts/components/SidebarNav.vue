@@ -20,14 +20,16 @@
 <script setup lang="ts">
 import { menuData } from './menuData'
 import { useAppStore } from '@/stores/app'
+import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
 
 const appStore = useAppStore()
+const permStore = usePermissionStore()
 const route = useRoute()
 const router = useRouter()
 
 const currentMenu = computed(() =>
-  menuData.find((m) => m.key === appStore.activeTopMenu),
+  permStore.filteredMenuData.find((m) => m.key === appStore.activeTopMenu),
 )
 
 function navigate(path: string) {
@@ -42,7 +44,7 @@ function navigate(path: string) {
 watch(
   () => route.path,
   (path) => {
-    for (const menu of menuData) {
+    for (const menu of permStore.filteredMenuData) {
       if (menu.children?.some((c) => c.path && path.startsWith(c.path))) {
         appStore.setActiveTopMenu(menu.key)
         return

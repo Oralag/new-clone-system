@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { allTools } from './tools/erpTools'
 import { executeTool } from './tools/toolExecutor'
 import { detectIntent, getSystemPrompt } from './agents/orchestrator'
+import { getAgent, AGENTS } from './agents/agentRegistry'
 
 // ── Local user store (dev only) ───────────────────────────────────────────────
 const USERS_FILE = resolve(process.cwd(), '.local-users.json')
@@ -218,6 +219,200 @@ export function aiChatPlugin(): Plugin {
               { role: 'assistant', content: response.content },
               { role: 'user', content: toolResults },
             ]
+          }
+
+          res.write('data: [DONE]\n\n')
+        } catch (e: any) {
+          send({ type: 'error', error: e.message })
+        } finally {
+          res.end()
+        }
+      })
+
+      // ── /api/agent-chat — 专项Agent独立对话 ─────────────────────────────────
+      server.middlewares.use('/api/agent-chat', async (req, res, next) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type, x-erp-token, x-agent-id' })
+          res.end(); return
+        }
+        if (req.method !== 'POST') return next()
+
+        const chunks: Buffer[] = []
+        for await (const chunk of req as any) chunks.push(chunk)
+        const { messages, agentId } = JSON.parse(Buffer.concat(chunks).toString())
+        const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
+
+        const agent = getAgent(agentId)
+        if (!agent) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: `Unknown agent: ${agentId}` })); return }
+
+        const apiKey = process.env.ANTHROPIC_API_KEY
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
+
+        const clientOptions: any = { apiKey }
+        if (process.env.ANTHROPIC_BASE_URL) clientOptions.baseURL = process.env.ANTHROPIC_BASE_URL
+        const client = new Anthropic(clientOptions)
+
+        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
+        const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
+
+        try {
+          const apiMessages: Anthropic.MessageParam[] = messages.map((m: any) => ({
+            role: m.role as 'user' | 'assistant', content: m.content
+          }))
+          let loopMessages = [...apiMessages]
+          for (let i = 0; i < 5; i++) {
+            const response = await client.messages.create({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 4096,
+              system: agent.systemPrompt,
+              tools: allTools,
+              messages: loopMessages,
+            })
+            for (const block of response.content) {
+              if (block.type === 'text' && block.text) send({ type: 'text', text: block.text })
+            }
+            if (response.stop_reason !== 'tool_use') break
+            const toolUseBlocks = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+            const toolResults: Anthropic.ToolResultBlockParam[] = []
+            for (const toolUse of toolUseBlocks) {
+              send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
+              const result = await executeTool(toolUse.name, toolUse.input as Record<string, any>, erpToken)
+              send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
+              toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
+            }
+            loopMessages = [...loopMessages, { role: 'assistant', content: response.content }, { role: 'user', content: toolResults }]
+          }
+          res.write('data: [DONE]\n\n')
+        } catch (e: any) {
+          send({ type: 'error', error: e.message })
+        } finally {
+          res.end()
+        }
+      })
+
+      // ── /api/captain-chat — Captain多Agent协作调度 ─────────────────────────
+      server.middlewares.use('/api/captain-chat', async (req, res, next) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type, x-erp-token' })
+          res.end(); return
+        }
+        if (req.method !== 'POST') return next()
+
+        const chunks: Buffer[] = []
+        for await (const chunk of req as any) chunks.push(chunk)
+        const { messages } = JSON.parse(Buffer.concat(chunks).toString())
+        const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
+
+        const apiKey = process.env.ANTHROPIC_API_KEY
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
+
+        const clientOptions: any = { apiKey }
+        if (process.env.ANTHROPIC_BASE_URL) clientOptions.baseURL = process.env.ANTHROPIC_BASE_URL
+        const client = new Anthropic(clientOptions)
+
+        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
+        const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
+
+        try {
+          const captain = AGENTS.captain
+          const apiMessages: Anthropic.MessageParam[] = messages.map((m: any) => ({
+            role: m.role as 'user' | 'assistant', content: m.content
+          }))
+
+          // Phase 1: Captain 分析任务，决定调用哪些Agent
+          send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '' })
+          let loopMessages = [...apiMessages]
+          let captainResponse = ''
+          for (let i = 0; i < 3; i++) {
+            const response = await client.messages.create({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 2048,
+              system: captain.systemPrompt,
+              tools: allTools,
+              messages: loopMessages,
+            })
+            for (const block of response.content) {
+              if (block.type === 'text' && block.text) {
+                captainResponse += block.text
+                send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: block.text })
+              }
+            }
+            if (response.stop_reason !== 'tool_use') break
+            // Captain调用ERP工具
+            const toolUseBlocks = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+            const toolResults: Anthropic.ToolResultBlockParam[] = []
+            for (const toolUse of toolUseBlocks) {
+              send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
+              const result = await executeTool(toolUse.name, toolUse.input as Record<string, any>, erpToken)
+              send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
+              toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
+            }
+            loopMessages = [...loopMessages, { role: 'assistant', content: response.content }, { role: 'user', content: toolResults }]
+          }
+
+          // Phase 2: 解析 @@DISPATCH:agentId:任务@@ 并依次调用各专项Agent
+          const dispatchRe = /@@DISPATCH:(\w+):([^@]+)@@/g
+          const dispatches: Array<{ agentId: string; task: string }> = []
+          let m
+          while ((m = dispatchRe.exec(captainResponse)) !== null) {
+            dispatches.push({ agentId: m[1], task: m[2].trim() })
+          }
+
+          const agentOutputs: Array<{ agentId: string; agentName: string; output: string }> = []
+
+          for (const dispatch of dispatches) {
+            const subAgent = getAgent(dispatch.agentId)
+            if (!subAgent) continue
+            send({ type: 'agent_start', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, task: dispatch.task })
+
+            let agentOutput = ''
+            const subMessages: Anthropic.MessageParam[] = [{ role: 'user', content: dispatch.task }]
+            let subLoop = [...subMessages]
+            for (let i = 0; i < 3; i++) {
+              const subResp = await client.messages.create({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 2048,
+                system: subAgent.systemPrompt,
+                tools: allTools,
+                messages: subLoop,
+              })
+              for (const block of subResp.content) {
+                if (block.type === 'text' && block.text) {
+                  agentOutput += block.text
+                  send({ type: 'agent_thinking', agentId: subAgent.id, agentName: subAgent.name, text: block.text })
+                }
+              }
+              if (subResp.stop_reason !== 'tool_use') break
+              const subToolUseBlocks = subResp.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+              const subToolResults: Anthropic.ToolResultBlockParam[] = []
+              for (const toolUse of subToolUseBlocks) {
+                send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
+                const result = await executeTool(toolUse.name, toolUse.input as Record<string, any>, erpToken)
+                send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
+                subToolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
+              }
+              subLoop = [...subLoop, { role: 'assistant', content: subResp.content }, { role: 'user', content: subToolResults }]
+            }
+            send({ type: 'agent_done', agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
+            agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
+          }
+
+          // Phase 3: Captain 汇总所有Agent产出
+          if (agentOutputs.length > 0) {
+            const summaryContext = agentOutputs.map(a => `【${a.agentName}产出】\n${a.output}`).join('\n\n')
+            const summaryPrompt = `用户的原始需求：${messages[messages.length - 1]?.content}\n\n各Agent已完成工作：\n${summaryContext}\n\n请综合以上所有内容，给用户一个清晰的最终汇报。`
+            send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '\n\n---\n**Captain 综合汇报：**\n' })
+            const summaryResp = await client.messages.create({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 2048,
+              system: captain.systemPrompt,
+              messages: [{ role: 'user', content: summaryPrompt }],
+            })
+            for (const block of summaryResp.content) {
+              if (block.type === 'text' && block.text) {
+                send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: block.text })
+              }
+            }
           }
 
           res.write('data: [DONE]\n\n')

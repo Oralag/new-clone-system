@@ -75,6 +75,19 @@
           <el-form-item label="CONFIRM KEY" prop="confirmPassword">
             <el-input v-model="registerForm.confirmPassword" type="password" placeholder="••••••••" show-password clearable />
           </el-form-item>
+          <el-form-item label="INVITE CODE（选填）" prop="inviteCode">
+            <el-input v-model="registerForm.inviteCode" placeholder="输入邀请码可直接激活付费权限" clearable>
+              <template #prefix>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </template>
+            </el-input>
+            <div v-if="inviteCodeStatus === 'valid'" class="invite-hint invite-valid">
+              ✓ 有效邀请码 · {{ inviteCodeInfo }}
+            </div>
+            <div v-else-if="inviteCodeStatus === 'invalid'" class="invite-hint invite-invalid">
+              ✗ 邀请码无效或已使用
+            </div>
+          </el-form-item>
           <el-form-item label="VERIFY" prop="captcha">
             <div class="captcha-row">
               <el-input v-model="registerForm.captcha" placeholder="输入右侧验证码" clearable style="flex:1" />
@@ -157,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -212,9 +225,32 @@ const registerFormRef = ref<FormInstance>()
 const registerLoading = ref(false)
 const registerTip = ref('')
 const registerTipType = ref<'success' | 'error' | 'info'>('info')
-const registerForm = reactive({ company_name: '', mobile: '', password: '', confirmPassword: '', captcha: '' })
+const registerForm = reactive({ company_name: '', mobile: '', password: '', confirmPassword: '', captcha: '', inviteCode: '' })
 const captchaRef = ref<any>(null)
 const captchaCode = ref('')
+
+// ── 邀请码验证 ──
+const INVITE_STORAGE_KEY = 'nomad_invite_codes'
+
+function getInviteCodes(): any[] {
+  try { return JSON.parse(localStorage.getItem(INVITE_STORAGE_KEY) || '[]') } catch { return [] }
+}
+
+const inviteCodeStatus = ref<'idle' | 'valid' | 'invalid'>('idle')
+const inviteCodeInfo = ref('')
+
+watch(() => registerForm.inviteCode, (code) => {
+  if (!code.trim()) { inviteCodeStatus.value = 'idle'; inviteCodeInfo.value = ''; return }
+  const codes = getInviteCodes()
+  const found = codes.find((c: any) => c.code === code.trim().toUpperCase() && !c.usedBy && new Date(c.expiresAt) > new Date())
+  if (found) {
+    inviteCodeStatus.value = 'valid'
+    inviteCodeInfo.value = `${found.planLabel}，有效至 ${found.expiresAt.slice(0, 10)}`
+  } else {
+    inviteCodeStatus.value = 'invalid'
+    inviteCodeInfo.value = ''
+  }
+})
 
 const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
   if (value === '') { callback(new Error('请再次输入密码')) }
@@ -247,7 +283,26 @@ async function handleRegister() {
   registerTip.value = ''
   try {
     await http.post('/login/register', { company_name: registerForm.company_name, mobile: registerForm.mobile, password: registerForm.password })
-    registerTip.value = '注册成功，请登录'
+
+    // 如果有有效邀请码，标记为已使用
+    const code = registerForm.inviteCode.trim().toUpperCase()
+    if (code && inviteCodeStatus.value === 'valid') {
+      const codes = getInviteCodes()
+      const idx = codes.findIndex((c: any) => c.code === code)
+      if (idx !== -1) {
+        codes[idx].usedBy = registerForm.mobile
+        codes[idx].usedAt = new Date().toISOString()
+        localStorage.setItem(INVITE_STORAGE_KEY, JSON.stringify(codes))
+        localStorage.setItem(`invite_activated_${registerForm.mobile}`, JSON.stringify({
+          planLabel: codes[idx].planLabel,
+          activatedAt: new Date().toISOString(),
+          paidUntil: codes[idx].paidUntil,
+        }))
+      }
+      registerTip.value = '注册成功，邀请码已激活付费权限，请登录'
+    } else {
+      registerTip.value = '注册成功，请登录'
+    }
     registerTipType.value = 'success'
     setTimeout(() => { switchTab('login'); loginForm.account = registerForm.mobile }, 1500)
   } catch (e: any) {
@@ -653,5 +708,23 @@ async function handleRegister() {
   .right-panel { padding: 48px 28px; min-height: 50vh; }
   .hero-title { font-size: 40px; }
   .feature-cards { margin-bottom: 24px; }
+}
+
+/* ── Invite Code hints ── */
+.invite-hint {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+.invite-valid {
+  color: #22c55e;
+  background: rgba(34,197,94,0.08);
+}
+.invite-invalid {
+  color: #ef4444;
+  background: rgba(239,68,68,0.08);
 }
 </style>

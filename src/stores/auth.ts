@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { loginApi, logoutApi } from '@/api/login'
 import { TOKEN_NAME, USER_INFO_KEY } from '@/config'
+import { usePermissionStore } from './permission'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -28,6 +29,13 @@ export const useAuthStore = defineStore('auth', {
       this.userInfo = data.userInfo || data
       localStorage.setItem(TOKEN_NAME, this.token)
       localStorage.setItem(USER_INFO_KEY, JSON.stringify(this.userInfo))
+      usePermissionStore().setFromUserInfo(this.userInfo!)
+    },
+
+    initPermissions() {
+      if (this.userInfo) {
+        usePermissionStore().setFromUserInfo(this.userInfo)
+      }
     },
 
     logout() {
@@ -36,6 +44,7 @@ export const useAuthStore = defineStore('auth', {
       this.userInfo = null
       localStorage.removeItem(TOKEN_NAME)
       localStorage.removeItem(USER_INFO_KEY)
+      usePermissionStore().clear()
     },
 
     clearAuth() {
@@ -43,6 +52,7 @@ export const useAuthStore = defineStore('auth', {
       this.userInfo = null
       localStorage.removeItem(TOKEN_NAME)
       localStorage.removeItem(USER_INFO_KEY)
+      usePermissionStore().clear()
     },
   },
 })

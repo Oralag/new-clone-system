@@ -1,73 +1,104 @@
 <template>
-  <!-- 顶部横幅 -->
+  <!-- 顶部横幅 (ERP系统内部) -->
   <div class="trial-banner" v-if="isTrial && !bannerDismissed">
-    <span class="banner-icon">🆓</span>
+    <span class="banner-dot"></span>
     <span class="banner-text">
-      您当前使用的是<strong>体验版</strong>，数据为演示环境，升级付费版获得独立数据库与全功能支持
+      <template v-if="trialExpired">
+        <strong>体验已到期</strong> · 升级付费版继续使用全部功能
+      </template>
+      <template v-else-if="trialStarted">
+        <strong>体验版</strong> · 剩余 <strong class="days-highlight">{{ daysLeft }} 天</strong>体验时间 · 数据为演示环境
+      </template>
+      <template v-else>
+        <strong>体验版</strong> · 数据为演示环境，新增/编辑不可用
+      </template>
     </span>
-    <button class="banner-upgrade-btn" @click="router.push('/pricing')">了解付费版 →</button>
-    <button class="banner-close" @click="bannerDismissed = true">×</button>
+    <button class="banner-upgrade-btn" @click="upgradeDialog?.open()">升级付费版 →</button>
+    <button class="banner-close" @click="bannerDismissed = true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
   </div>
 
-  <!-- 首次登录欢迎弹框 -->
-  <el-dialog v-model="showWelcome" width="500px" :show-close="false" append-to-body align-center>
-    <div class="welcome-body">
-      <div class="welcome-icon">🎉</div>
-      <div class="welcome-title">欢迎使用数字游牧 ERP</div>
-      <div class="welcome-sub">您正在使用<strong>免费体验版</strong>，可以浏览所有功能界面</div>
-
-      <div class="compare-row">
-        <div class="compare-col">
-          <div class="col-head trial">体验版（当前）</div>
-          <div class="col-item no">✗ 数据共享演示环境</div>
-          <div class="col-item no">✗ 无法保存数据</div>
-          <div class="col-item no">✗ 新增/编辑禁用</div>
-          <div class="col-item ok">✓ 完整界面体验</div>
-        </div>
-        <div class="compare-arrow">→</div>
-        <div class="compare-col">
-          <div class="col-head paid">💎 付费版</div>
-          <div class="col-item ok">✓ 专属独立数据库</div>
-          <div class="col-item ok">✓ 数据永久保存</div>
-          <div class="col-item ok">✓ 全部功能开放</div>
-          <div class="col-item ok">✓ 完整界面体验</div>
-        </div>
-      </div>
-
-      <div class="welcome-actions">
-        <button class="btn-pricing" @click="showWelcome = false; router.push('/pricing')">
-          查看付费版详情 →
-        </button>
-        <button class="btn-later" @click="showWelcome = false">先体验一下</button>
-      </div>
-    </div>
-  </el-dialog>
-
-  <!-- 写操作升级提示（由 http 拦截器触发） -->
-  <el-dialog v-model="showUpgrade" width="400px" append-to-body align-center>
-    <div class="upgrade-body">
-      <div class="upgrade-icon">🔒</div>
-      <div class="upgrade-title">付费版功能</div>
-      <div class="upgrade-sub">数据写入、编辑和导入功能仅对付费版开放</div>
-      <button class="btn-pricing full" @click="showUpgrade = false; router.push('/pricing')">
-        查看付费版，立即升级 →
+  <!-- 写操作拦截弹窗 -->
+  <el-dialog v-model="showWriteBlock" width="400px" append-to-body align-center class="write-block-dialog">
+    <div class="wb-body">
+      <button class="wb-close" @click="showWriteBlock = false">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
-      <button class="btn-later full" @click="showUpgrade = false">关闭</button>
+
+      <div class="wb-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </div>
+      <div class="wb-title">体验版限制</div>
+      <div class="wb-desc">数据写入、编辑和导入功能仅对付费版开放</div>
+
+      <!-- 未领取：显示领取按钮 -->
+      <template v-if="!trialStarted && !trialExpired">
+        <div class="wb-divider">
+          <span>或者</span>
+        </div>
+        <div class="wb-trial-card" @click="claimTrial">
+          <div class="wb-trial-left">
+            <div class="wb-trial-icon">🎁</div>
+            <div>
+              <div class="wb-trial-title">领取 15 天免费体验</div>
+              <div class="wb-trial-desc">解锁全部功能，体验付费版完整能力</div>
+            </div>
+          </div>
+          <div class="wb-trial-btn">立即领取</div>
+        </div>
+      </template>
+
+      <!-- 已领取未到期 -->
+      <template v-else-if="trialStarted && !trialExpired">
+        <div class="wb-trial-active">
+          <div class="wb-trial-active-icon">⏳</div>
+          <div>
+            <div class="wb-trial-active-title">体验期进行中</div>
+            <div class="wb-trial-active-desc">剩余 <strong>{{ daysLeft }} 天</strong>，到期后需升级付费版</div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 已到期 -->
+      <template v-else-if="trialExpired">
+        <div class="wb-trial-expired">
+          <div class="wb-trial-expired-icon">⌛</div>
+          <div class="wb-trial-expired-text">15 天体验已到期，请升级付费版继续使用</div>
+        </div>
+      </template>
+
+      <button class="wb-upgrade-btn" @click="showWriteBlock = false; upgradeDialog?.open()">
+        {{ trialExpired ? '立即升级付费版 →' : '了解付费版，立即升级' }}
+      </button>
+      <button class="wb-cancel" @click="showWriteBlock = false">关闭</button>
     </div>
   </el-dialog>
+
+  <!-- 领取成功弹窗 -->
+  <el-dialog v-model="showClaimSuccess" width="360px" append-to-body align-center class="write-block-dialog">
+    <div class="wb-body" style="text-align:center">
+      <div class="claim-success-icon">🎉</div>
+      <div class="wb-title">体验已激活！</div>
+      <div class="wb-desc">您已成功领取 <strong>15 天</strong>免费体验<br/>到期时间：{{ trialExpireDate }}</div>
+      <button class="wb-upgrade-btn" @click="showClaimSuccess = false">开始体验</button>
+    </div>
+  </el-dialog>
+
+  <UpgradeDialog ref="upgradeDialog" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { trialUpgradeTrigger } from '@/api/http'
+import UpgradeDialog from '@/components/UpgradeDialog.vue'
 
-const router = useRouter()
 const auth = useAuthStore()
-const showWelcome = ref(false)
-const showUpgrade = ref(false)
+const showWriteBlock = ref(false)
+const showClaimSuccess = ref(false)
 const bannerDismissed = ref(false)
+const upgradeDialog = ref<InstanceType<typeof UpgradeDialog> | null>(null)
 
 const isTrial = computed(() => {
   const token = auth.token
@@ -76,138 +107,173 @@ const isTrial = computed(() => {
     const raw = token.slice(4)
     const pad = raw + '='.repeat((4 - raw.length % 4) % 4)
     const json = decodeURIComponent(escape(atob(pad)))
-    const payload = JSON.parse(json)
-    return !!payload.trial
-  } catch {
-    return false
-  }
+    return !!JSON.parse(json).trial
+  } catch { return false }
 })
+
+// 本地存储 key，按账号区分
+const storageKey = computed(() => `trial_start_${auth.userInfo?.account || 'default'}`)
+
+const trialStartTs = computed(() => {
+  const v = localStorage.getItem(storageKey.value)
+  return v ? parseInt(v) : null
+})
+
+const TRIAL_DAYS = 15
+const MS_PER_DAY = 86400000
+
+const trialStarted = computed(() => !!trialStartTs.value)
+
+const daysLeft = computed(() => {
+  if (!trialStartTs.value) return 0
+  const elapsed = Date.now() - trialStartTs.value
+  const left = TRIAL_DAYS - Math.floor(elapsed / MS_PER_DAY)
+  return Math.max(0, left)
+})
+
+const trialExpired = computed(() => trialStarted.value && daysLeft.value === 0)
+
+const trialExpireDate = computed(() => {
+  if (!trialStartTs.value) return ''
+  const d = new Date(trialStartTs.value + TRIAL_DAYS * MS_PER_DAY)
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
+})
+
+function claimTrial() {
+  const now = Date.now()
+  localStorage.setItem(storageKey.value, String(now))
+  // Sync to server KV
+  const token = auth.token || ''
+  fetch('/api/claim-trial', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', token },
+  }).catch(() => {})
+  showWriteBlock.value = false
+  showClaimSuccess.value = true
+}
 
 onMounted(() => {
-  trialUpgradeTrigger.show = () => { showUpgrade.value = true }
-
-  if (isTrial.value) {
-    const key = `trial_welcomed_${auth.userInfo?.account}`
-    if (!sessionStorage.getItem(key)) {
-      setTimeout(() => {
-        showWelcome.value = true
-        sessionStorage.setItem(key, '1')
-      }, 800)
-    }
-  }
+  trialUpgradeTrigger.show = () => { showWriteBlock.value = true }
 })
-
-defineExpose({ showUpgrade })
 </script>
 
+<style>
+.write-block-dialog .el-dialog { border-radius: 20px !important; overflow: hidden; padding: 0 !important; }
+.write-block-dialog .el-dialog__header { display: none !important; }
+.write-block-dialog .el-dialog__body { padding: 0 !important; }
+</style>
+
 <style scoped>
+/* ── Trial Banner ── */
 .trial-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(90deg, #fff7e6, #fffbe6);
-  border-bottom: 1px solid #ffe58f;
-  padding: 9px 20px;
-  font-size: 13px;
-  color: #874d00;
+  display: flex; align-items: center; gap: 10px;
+  background: #1d1d1f; padding: 10px 20px;
+  font-size: 13px; color: rgba(255,255,255,0.55);
   flex-shrink: 0;
 }
-.banner-icon { flex-shrink: 0; }
-.banner-text { flex: 1; line-height: 1.4; }
-.banner-text strong { font-weight: 700; }
+.banner-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #f5a623; flex-shrink: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.banner-text { flex: 1; line-height: 1.4; font-weight: 500; }
+.banner-text strong { color: #fff; font-weight: 700; }
+.days-highlight { color: #f5a623; }
 .banner-upgrade-btn {
-  background: #fa8c16;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 14px;
-  border-radius: 6px;
-  white-space: nowrap;
-  transition: background 0.15s;
-  flex-shrink: 0;
+  background: #fff; color: #1d1d1f; border: none; cursor: pointer;
+  font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 999px;
+  white-space: nowrap; flex-shrink: 0; transition: background 0.15s;
 }
-.banner-upgrade-btn:hover { background: #d46b08; }
+.banner-upgrade-btn:hover { background: rgba(255,255,255,0.88); }
 .banner-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: #d48806;
-  padding: 0 4px;
-  opacity: 0.6;
-  flex-shrink: 0;
-  transition: opacity 0.15s;
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.3); padding: 2px;
+  display: flex; align-items: center; flex-shrink: 0; transition: color 0.15s;
 }
-.banner-close:hover { opacity: 1; }
+.banner-close:hover { color: rgba(255,255,255,0.7); }
 
-/* Welcome */
-.welcome-body { padding: 8px 0 4px; text-align: center; }
-.welcome-icon { font-size: 36px; margin-bottom: 10px; }
-.welcome-title { font-size: 18px; font-weight: 800; color: #1d2129; margin-bottom: 6px; }
-.welcome-sub { font-size: 13px; color: #86909c; margin-bottom: 20px; }
-.welcome-sub strong { color: #fa8c16; }
-
-.compare-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  text-align: left;
+/* ── Write block dialog ── */
+.wb-body {
+  position: relative; padding: 32px 28px 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-.compare-col { flex: 1; }
-.compare-arrow { color: #c9cdd4; font-size: 20px; flex-shrink: 0; }
-
-.col-head {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 5px 10px;
-  border-radius: 6px;
-  margin-bottom: 8px;
+.wb-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 28px; height: 28px; background: rgba(0,0,0,0.05);
+  border: none; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(29,29,31,0.4); transition: background 0.15s;
 }
-.col-head.trial { background: #f2f3f5; color: #4e5969; }
-.col-head.paid { background: #fa8c16; color: #fff; }
-
-.col-item { font-size: 12px; padding: 3px 0; color: #4e5969; }
-.col-item.ok { color: #00b42a; }
-.col-item.no { color: #c9cdd4; text-decoration: line-through; }
-
-.welcome-actions { display: flex; gap: 8px; }
-
-/* Upgrade */
-.upgrade-body { padding: 8px 0 4px; text-align: center; }
-.upgrade-icon { font-size: 36px; margin-bottom: 10px; }
-.upgrade-title { font-size: 18px; font-weight: 800; color: #1d2129; margin-bottom: 6px; }
-.upgrade-sub { font-size: 13px; color: #86909c; margin-bottom: 20px; }
-
-/* Buttons */
-.btn-pricing {
-  flex: 1;
-  background: linear-gradient(135deg, #fa8c16, #d46b08);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 12px 16px;
-  border-radius: 8px;
-  transition: opacity 0.15s;
+.wb-close:hover { background: rgba(0,0,0,0.1); }
+.wb-icon {
+  width: 52px; height: 52px; background: #f5f5f7; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px; color: #1d1d1f;
 }
-.btn-pricing:hover { opacity: 0.9; }
-.btn-pricing.full { display: block; width: 100%; margin-bottom: 8px; }
+.wb-title { font-size: 17px; font-weight: 800; color: #1d1d1f; margin-bottom: 6px; text-align: center; }
+.wb-desc { font-size: 13px; color: rgba(29,29,31,0.45); margin-bottom: 16px; line-height: 1.5; text-align: center; }
 
-.btn-later {
-  flex: 1;
-  background: #f2f3f5;
-  color: #4e5969;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  padding: 12px;
-  border-radius: 8px;
-  transition: background 0.15s;
+/* divider */
+.wb-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px; color: rgba(29,29,31,0.2); font-size: 11px;
 }
-.btn-later:hover { background: #e8eaed; }
-.btn-later.full { display: block; width: 100%; }
+.wb-divider::before, .wb-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.07);
+}
+
+/* Trial claim card */
+.wb-trial-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: #f5f5f7; border: 1.5px solid rgba(0,0,0,0.07);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 14px;
+  cursor: pointer; transition: border-color 0.2s, background 0.2s;
+}
+.wb-trial-card:hover { border-color: #1d1d1f; background: #efefef; }
+.wb-trial-left { display: flex; align-items: center; gap: 10px; }
+.wb-trial-icon { font-size: 24px; flex-shrink: 0; }
+.wb-trial-title { font-size: 14px; font-weight: 700; color: #1d1d1f; margin-bottom: 2px; }
+.wb-trial-desc { font-size: 11px; color: rgba(29,29,31,0.45); }
+.wb-trial-btn {
+  flex-shrink: 0; background: #1d1d1f; color: #fff;
+  font-size: 11px; font-weight: 700; padding: 7px 14px;
+  border-radius: 999px; white-space: nowrap;
+}
+
+/* Trial active */
+.wb-trial-active {
+  display: flex; align-items: center; gap: 10px;
+  background: #f5f5f7; border-radius: 12px; padding: 13px 16px;
+  margin-bottom: 14px;
+}
+.wb-trial-active-icon { font-size: 22px; flex-shrink: 0; }
+.wb-trial-active-title { font-size: 13px; font-weight: 700; color: #1d1d1f; margin-bottom: 2px; }
+.wb-trial-active-desc { font-size: 12px; color: rgba(29,29,31,0.45); }
+.wb-trial-active-desc strong { color: #1d1d1f; }
+
+/* Trial expired */
+.wb-trial-expired {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff5f5; border: 1px solid rgba(255,59,48,0.12);
+  border-radius: 12px; padding: 13px 16px; margin-bottom: 14px;
+}
+.wb-trial-expired-icon { font-size: 22px; flex-shrink: 0; }
+.wb-trial-expired-text { font-size: 12px; color: rgba(29,29,31,0.55); line-height: 1.5; }
+
+.wb-upgrade-btn {
+  display: block; width: 100%; background: #1d1d1f; color: #fff;
+  border: none; cursor: pointer; font-size: 14px; font-weight: 700;
+  padding: 13px; border-radius: 12px; margin-bottom: 8px; transition: background 0.15s;
+}
+.wb-upgrade-btn:hover { background: #3a3a3a; }
+.wb-cancel {
+  display: block; width: 100%; background: none; color: rgba(29,29,31,0.4);
+  border: 1px solid rgba(0,0,0,0.09); cursor: pointer; font-size: 13px;
+  padding: 11px; border-radius: 12px; transition: background 0.15s;
+}
+.wb-cancel:hover { background: rgba(0,0,0,0.03); }
+
+/* Claim success */
+.claim-success-icon { font-size: 44px; margin-bottom: 14px; text-align: center; }
 </style>

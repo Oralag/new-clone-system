@@ -21,7 +21,7 @@
     <!-- Menu -->
     <div class="menu-list">
       <div
-        v-for="item in menuData"
+        v-for="item in visibleMenuData"
         :key="item.key"
         class="menu-item"
         :class="{ active: appStore.activeTopMenu === item.key }"
@@ -47,12 +47,16 @@
 import { menuData } from './menuData'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
+import { usePermissionStore } from '@/stores/permission'
 import { useRouter } from 'vue-router'
 import { Promotion } from '@element-plus/icons-vue'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
+const permStore = usePermissionStore()
 const router = useRouter()
+
+const visibleMenuData = computed(() => permStore.filteredMenuData)
 
 function onHover(key: string, e: MouseEvent) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -66,7 +70,7 @@ function onLeave() {
 function onClick(key: string) {
   appStore.setActiveTopMenu(key)
   appStore.setHoverTopMenu('')
-  const menu = menuData.find(m => m.key === key)
+  const menu = visibleMenuData.value.find(m => m.key === key)
   const firstPath = menu?.children?.[0]?.path
   if (firstPath) router.push(firstPath)
 }
