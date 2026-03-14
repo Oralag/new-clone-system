@@ -888,11 +888,17 @@ const TOOL_LABELS: Record<string, string> = {
 .portal-card-ai {
   background: linear-gradient(135deg, #0071e3 0%, #0057b8 60%, #004499 100%);
   border-color: rgba(0,113,227,0.3);
+  transition: transform 0.6s cubic-bezier(0.23,1,0.32,1), box-shadow 0.6s cubic-bezier(0.23,1,0.32,1), background 0.5s cubic-bezier(0.23,1,0.32,1);
 }
 .portal-card-ai .card-title { color: #fff; }
 .portal-card-ai .card-desc  { color: rgba(255,255,255,0.55); }
 .portal-card-ai .card-arrow { color: rgba(255,255,255,0.4); }
-.portal-card-ai:hover .card-arrow { color: #fff; }
+.portal-card-ai:hover {
+  background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.3);
+}
+.portal-card-ai:hover .card-arrow { color: #fff; gap: 12px; }
 .card-ai-badge {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
