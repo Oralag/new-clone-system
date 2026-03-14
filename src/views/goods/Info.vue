@@ -86,7 +86,11 @@
           </el-table-column>
           <el-table-column prop="en_name" label="英文名称" min-width="120" />
           <el-table-column prop="unit_name" label="商品单位" width="90" align="center" />
-          <el-table-column prop="cate_name" label="商品分类" min-width="110" />
+          <el-table-column label="商品分类" min-width="160">
+            <template #default="{ row }">
+              {{ getCatePathText(row) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="cost_price" label="采购价" width="90" align="right" />
           <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
           <el-table-column prop="brand_name" label="商品品牌" min-width="100" />
@@ -796,6 +800,25 @@ function getGoodsType(row: any): number {
   return goodsTypeMap.value[row.id] ?? row.goods_type ?? 1
 }
 
+function getCatePathText(row: any) {
+  const cateId = Number(row?.cate_id ?? 0)
+  if (!cateId) return row?.cate_name || '—'
+
+  const map = new Map(cateOptions.value.map((item: any) => [Number(item.id), item]))
+  const names: string[] = []
+  const seen = new Set<number>()
+  let current = map.get(cateId)
+
+  while (current && !seen.has(Number(current.id))) {
+    names.unshift(current.name)
+    seen.add(Number(current.id))
+    const parentId = Number(current.parent_id ?? 0)
+    current = parentId ? map.get(parentId) : null
+  }
+
+  return names.length ? names.join('/') : (row?.cate_name || '—')
+}
+
 // Cate IDs to show when a parent category is selected (parent + all children)
 const activeCateIds = computed<Set<number> | null>(() => {
   const id = selectedCateId.value
@@ -1110,6 +1133,10 @@ function normalizeImportCell(value: any) {
   return typeof value === 'string' ? value.trim() : value
 }
 
+function normalizeImportName(value: any) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
 function resolveImportField(header: any): string {
   const normalized = normalizeImportHeader(header)
   return IMPORT_ALIAS_TO_FIELD[normalized] ?? ''
@@ -1290,6 +1317,38 @@ async function ensureImportCategory(path: any) {
   return current
 }
 
+async function detectImportDuplicateNames(rows: any[]) {
+  const validRows = rows.filter(row => !row._error && String(row.goods_name ?? '').trim())
+  const nameMap = new Map<string, any[]>()
+
+  validRows.forEach(row => {
+    const key = normalizeImportName(row.goods_name)
+    if (!key) return
+    const list = nameMap.get(key) ?? []
+    list.push(row)
+    nameMap.set(key, list)
+  })
+
+  const duplicatedInFile = new Map<string, any[]>()
+  nameMap.forEach((list, key) => {
+    if (list.length > 1) duplicatedInFile.set(key, list)
+  })
+
+  const names = [...nameMap.keys()]
+  const existingNameSet = new Set<string>()
+  await Promise.all(names.map(async (name) => {
+    try {
+      const sourceName = nameMap.get(name)?.[0]?.goods_name ?? ''
+      const res = await getGoodsList({ keyword: sourceName, page: 1, list_rows: 20 })
+      const rows = res.data?.rows ?? []
+      const exact = rows.some((item: any) => normalizeImportName(item.goods_name) === name)
+      if (exact) existingNameSet.add(name)
+    } catch {}
+  }))
+
+  return { duplicatedInFile, existingNameSet }
+}
+
 function triggerImport() {
   importFileRef.value?.click()
 }
@@ -1328,6 +1387,38 @@ async function confirmImport() {
     ElMessage.warning('请先为缺少商品类型的数据选择默认类型')
     return
   }
+
+  const { duplicatedInFile, existingNameSet } = await detectImportDuplicateNames(importRows.value)
+  const hasDuplicateNames = duplicatedInFile.size > 0 || existingNameSet.size > 0
+  const skippedNameSet = new Set<string>()
+  const duplicateKeptRows = new Set<number>()
+
+  if (hasDuplicateNames) {
+    duplicatedInFile.forEach((rows) => {
+      if (rows.length > 0) duplicateKeptRows.add(rows[0]._rowNo)
+    })
+    const importExamples = [...duplicatedInFile.values()].slice(0, 3).map(rows => String(rows[0]?.goods_name ?? '')).filter(Boolean)
+    const existingExamples = [...existingNameSet].slice(0, 3).map(key => {
+      const row = importRows.value.find(item => normalizeImportName(item.goods_name) === key)
+      return String(row?.goods_name ?? '')
+    }).filter(Boolean)
+    const messages: string[] = []
+    if (duplicatedInFile.size > 0) messages.push(`Excel 内有 ${duplicatedInFile.size} 个重名商品${importExamples.length ? `：${importExamples.join('、')}` : ''}`)
+    if (existingNameSet.size > 0) messages.push(`系统内已存在 ${existingNameSet.size} 个同名商品${existingExamples.length ? `：${existingExamples.join('、')}` : ''}`)
+
+    try {
+      await ElMessageBox.confirm(`${messages.join('；')}。是否跳过这些重名商品，继续导入其余数据？`, '发现重名商品', {
+        type: 'warning',
+        confirmButtonText: '跳过重名继续导入',
+        cancelButtonText: '取消',
+      })
+      duplicatedInFile.forEach((_rows, key) => skippedNameSet.add(key))
+      existingNameSet.forEach(key => skippedNameSet.add(key))
+    } catch {
+      return
+    }
+  }
+
   importLoading.value = true
   let success = 0, failed = 0, skipped = 0
   let typeMapChanged = false
@@ -1338,6 +1429,15 @@ async function confirmImport() {
     if (_error) {
       skipped++
       continue
+    }
+    const normalizedName = normalizeImportName(payload.goods_name)
+    if (skippedNameSet.has(normalizedName)) {
+      if (duplicatedInFile.has(normalizedName) && duplicateKeptRows.has(_rowNo) && !existingNameSet.has(normalizedName)) {
+        duplicateKeptRows.delete(_rowNo)
+      } else {
+        skipped++
+        continue
+      }
     }
     try {
       if (!payload.goods_type) payload.goods_type = importDefaultGoodsType.value
