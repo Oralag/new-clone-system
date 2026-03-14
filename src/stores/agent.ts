@@ -184,8 +184,17 @@ export const useTrendingStore = defineStore('agent-trending', () => {
   async function fetchTrending(platform?: string) {
     const key = platform || 'douyin'
     loading.value = true
-    await new Promise(resolve => setTimeout(resolve, 1200))
-    trending.value[key] = MOCK_TRENDING[key] || []
+    try {
+      const res = await fetch(`/api/trending?platform=${encodeURIComponent(key)}`)
+      const json = await res.json()
+      if (json.code === 200 && Array.isArray(json.data) && json.data.length > 0) {
+        trending.value[key] = json.data
+      } else {
+        trending.value[key] = MOCK_TRENDING[key] || []
+      }
+    } catch {
+      trending.value[key] = MOCK_TRENDING[key] || []
+    }
     loading.value = false
   }
 

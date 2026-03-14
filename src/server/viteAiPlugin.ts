@@ -122,6 +122,127 @@ export function aiChatPlugin(): Plugin {
         }
       })
 
+      // ── Trending / Hot Search endpoint ──────────────────────────────────────
+      const PLATFORM_ROUTE: Record<string, string> = {
+        douyin: 'douyin',
+        xiaohongshu: 'toutiao',   // 小红书暂无公开API，用今日头条替代
+        kuaishou: 'kuaishou',
+        weibo: 'weibo',
+        bilibili: 'bilibili',
+        zhihu: 'zhihu',
+      }
+      const PLATFORM_SOURCE: Record<string, string> = {
+        xiaohongshu: '今日头条',
+        kuaishou: '今日头条',      // 快手 DailyHotApi 不稳定，fallback 到头条
+      }
+      // Fallback route: if primary route fails, try this one
+      const FALLBACK_ROUTE: Record<string, string> = {
+        kuaishou: 'toutiao',
+      }
+      const trendingCache = new Map<string, { data: any[]; ts: number }>()
+      const CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+
+      server.middlewares.use('/api/trending', async (req: any, res: any, next: any) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET', 'Access-Control-Allow-Headers': 'Content-Type' })
+          res.end(); return
+        }
+        if (req.method !== 'GET') return next()
+
+        const url = new URL(req.url || '', 'http://localhost')
+        const platform = url.searchParams.get('platform') || 'douyin'
+        const routeName = PLATFORM_ROUTE[platform]
+
+        if (!routeName) {
+          return jsonBody(res, { code: 400, data: [], message: `不支持的平台: ${platform}` }, 400)
+        }
+
+        // Check cache
+        const cached = trendingCache.get(platform)
+        if (cached && Date.now() - cached.ts < CACHE_TTL) {
+          return jsonBody(res, {
+            code: 200,
+            data: cached.data,
+            source: PLATFORM_SOURCE[platform] || platform,
+            fromCache: true,
+          })
+        }
+
+        try {
+          const { handleRoute } = await import(`dailyhot-api/dist/routes/${routeName}.js`)
+          // Some routes (e.g. bilibili) expect a Hono-like context object
+          const fakeCtx = { req: { query: () => undefined } }
+          const result = await handleRoute(fakeCtx, true)
+          const items = (result.data || []).map((item: any) => ({
+            title: item.title || '',
+            heat: typeof item.hot === 'number'
+              ? (item.hot >= 10000 ? `${(item.hot / 10000).toFixed(0)}万` : String(item.hot))
+              : item.hot || '热门',
+            url: item.url || item.mobileUrl || '',
+          }))
+
+          trendingCache.set(platform, { data: items, ts: Date.now() })
+
+          return jsonBody(res, {
+            code: 200,
+            data: items,
+            source: PLATFORM_SOURCE[platform] || platform,
+            total: items.length,
+            updateTime: result.updateTime || new Date().toISOString(),
+          })
+        } catch (e: any) {
+          // Fallback: try pearktrue API
+          const PEARKTRUE_NAMES: Record<string, string> = {
+            douyin: '抖音', weibo: '微博', bilibili: '哔哩哔哩', zhihu: '知乎',
+          }
+          const pearkName = PEARKTRUE_NAMES[routeName]
+          if (pearkName) {
+            try {
+              const fbRes = await fetch(`https://api.pearktrue.cn/api/dailyhot/?title=${encodeURIComponent(pearkName)}`)
+              const fbJson = await fbRes.json() as any
+              if (fbJson.code === 200 && Array.isArray(fbJson.data)) {
+                const items = fbJson.data.map((item: any) => ({
+                  title: item.title || '',
+                  heat: typeof item.hot === 'number'
+                    ? (item.hot >= 10000 ? `${(item.hot / 10000).toFixed(0)}万` : String(item.hot))
+                    : item.hot || '热门',
+                  url: item.url || item.mobileUrl || '',
+                }))
+                trendingCache.set(platform, { data: items, ts: Date.now() })
+                return jsonBody(res, {
+                  code: 200, data: items,
+                  source: PLATFORM_SOURCE[platform] || platform,
+                  total: items.length, fallback: 'pearktrue',
+                })
+              }
+            } catch { /* pearktrue also failed, fall through */ }
+          }
+          // Fallback 2: use alternative DailyHot route (e.g. kuaishou → toutiao)
+          const fbRoute = FALLBACK_ROUTE[platform]
+          if (fbRoute) {
+            try {
+              const { handleRoute: fbHandle } = await import(`dailyhot-api/dist/routes/${fbRoute}.js`)
+              const fbResult = await fbHandle({ req: { query: () => undefined } }, true)
+              const items = (fbResult.data || []).map((item: any) => ({
+                title: item.title || '',
+                heat: typeof item.hot === 'number'
+                  ? (item.hot >= 10000 ? `${(item.hot / 10000).toFixed(0)}万` : String(item.hot))
+                  : item.hot || '热门',
+                url: item.url || item.mobileUrl || '',
+              }))
+              trendingCache.set(platform, { data: items, ts: Date.now() })
+              return jsonBody(res, {
+                code: 200, data: items,
+                source: PLATFORM_SOURCE[platform] || platform,
+                total: items.length, fallback: fbRoute,
+              })
+            } catch { /* fallback route also failed */ }
+          }
+          console.error(`[trending] ${platform} fetch failed:`, e.message)
+          return jsonBody(res, { code: 500, data: [], message: `获取 ${platform} 热搜失败: ${e.message}` }, 500)
+        }
+      })
+
       server.middlewares.use('/api/ai-chat', async (req, res, next) => {
         if (req.method === 'OPTIONS') {
           res.writeHead(200, {
