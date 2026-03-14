@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>清除缓存 - 数字游牧ERP</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f5f5f7; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    .card { background: #fff; border-radius: 20px; padding: 40px 32px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    h1 { font-size: 20px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; }
+    p { font-size: 14px; color: rgba(29,29,31,0.5); margin-bottom: 24px; line-height: 1.6; }
+    .btn { display: block; width: 100%; padding: 14px; background: #0071e3; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .status { margin-top: 16px; font-size: 13px; color: #34c759; min-height: 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔄</div>
+    <h1>清除缓存</h1>
+    <p>如果页面打不开，点击下方按钮清除旧缓存，然后重新访问。</p>
+    <button class="btn" onclick="killSW()">立即清除并跳转</button>
+    <div class="status" id="status"></div>
+  </div>
+  <script>
+    async function killSW() {
+      const status = document.getElementById('status')
+      status.textContent = '正在清除...'
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations()
+          await Promise.all(regs.map(r => r.unregister()))
+        }
+        const keys = await caches.keys()
+        await Promise.all(keys.map(k => caches.delete(k)))
+        status.textContent = '✅ 清除成功，正在跳转...'
+        setTimeout(() => { window.location.href = '/' }, 800)
+      } catch(e) {
+        status.textContent = '清除完成，正在跳转...'
+        setTimeout(() => { window.location.href = '/' }, 800)
+      }
+    }
+    // 自动执行
+    killSW()
+  </script>
+</body>
+</html>

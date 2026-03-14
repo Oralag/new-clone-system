@@ -33,6 +33,20 @@
             导出{{ selectedRows.length > 0 ? `(${selectedRows.length})` : '' }}
           </el-button>
         </el-tooltip>
+        <slot
+          v-if="selectedRows.length > 0"
+          name="selection-actions"
+          :selected-rows="selectedRows"
+          :clear-selection="clearSelection"
+          :refresh="refresh"
+        />
+        <el-button
+          v-if="selectedRows.length > 0 && (batchDelApi || delPath)"
+          type="danger"
+          :icon="Delete"
+          size="small"
+          @click="handleBatchDelete"
+        >批量删除({{ selectedRows.length }})</el-button>
         <!-- Refresh button -->
         <el-tooltip content="刷新">
           <el-button :icon="Refresh" circle size="small" @click="refresh" style="margin-left:4px" />
@@ -60,14 +74,6 @@
     <div v-if="selectedRows.length > 0" class="selected-bar">
       已选 <strong>{{ selectedRows.length }}</strong> 条
       <el-button type="primary" link size="small" @click="clearSelection">取消选择</el-button>
-      <el-button
-        v-if="batchDelApi || delPath"
-        type="danger"
-        :icon="Delete"
-        size="small"
-        style="margin-left:auto"
-        @click="handleBatchDelete"
-      >批量删除({{ selectedRows.length }})</el-button>
     </div>
 
     <!-- Pagination -->
@@ -117,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, useSlots } from 'vue'
+import { ref, useSlots } from 'vue'
 import { Search, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as XLSX from 'xlsx'
@@ -200,13 +206,17 @@ async function loadData() {
       ...cleanParams(searchParams.value),
     })
     const data = res?.data || res
+    const dedup = (rows: any[]) => {
+      const seen = new Set()
+      return rows.filter(r => { const k = r.id ?? r.goods_id ?? JSON.stringify(r); return seen.has(k) ? false : seen.add(k) })
+    }
     if (Array.isArray(data)) {
-      let rows = props.rowFilter ? data.filter(props.rowFilter) : data
+      let rows = dedup(props.rowFilter ? data.filter(props.rowFilter) : data)
       if (props.sortBy) rows = [...rows].sort((a, b) => (a[props.sortBy!] ?? 0) - (b[props.sortBy!] ?? 0))
       tableData.value = rows
       total.value = rows.length
     } else {
-      let rows = data?.rows || data?.list || data?.data || []
+      let rows = dedup(data?.rows || data?.list || data?.data || [])
       if (props.rowFilter) rows = rows.filter(props.rowFilter)
       if (props.sortBy) rows = [...rows].sort((a: any, b: any) => (a[props.sortBy!] ?? 0) - (b[props.sortBy!] ?? 0))
       tableData.value = rows
@@ -428,5 +438,27 @@ watch(
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+@media (max-width: 767px) {
+  .sc-table {
+    padding: 12px;
+  }
+
+  .sc-search,
+  .sc-toolbar,
+  .selected-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-actions,
+  .toolbar-right {
+    flex-wrap: wrap;
+  }
+
+  .toolbar-right {
+    justify-content: flex-start;
+  }
 }
 </style>

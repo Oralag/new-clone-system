@@ -58,8 +58,19 @@
           del-path="/goods/ShopGoods/batchDel"
           export-file-name="商品列表" :params="searchForm" :row-filter="rowFilter">
           <template #search>
-            <el-input v-model="searchForm.keyword" placeholder="输入关键字进行过滤" clearable style="width:200px" />
-            <el-select v-model="filterType" placeholder="商品类型" clearable style="width:120px" @change="tableRef?.refresh()">
+            <el-input
+              v-model="searchForm.keyword"
+              placeholder="输入关键字进行过滤"
+              clearable
+              :style="{ width: isMobileList ? '100%' : '200px' }"
+            />
+            <el-select
+              v-model="filterType"
+              placeholder="商品类型"
+              clearable
+              :style="{ width: isMobileList ? '100%' : '120px' }"
+              @change="tableRef?.refresh()"
+            >
               <el-option label="成品" :value="1" />
               <el-option label="半成品" :value="2" />
               <el-option label="原材料" :value="3" />
@@ -73,9 +84,19 @@
             <el-button :icon="Download" @click="downloadTemplate">下载模板</el-button>
             <input ref="importFileRef" type="file" accept=".xlsx,.xls" style="display:none" @change="handleImportFile" />
           </template>
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="goods_sn" label="商品编码" min-width="120" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="150" />
+          <template #selection-actions="{ selectedRows, clearSelection, refresh }">
+            <el-button
+              type="primary"
+              size="small"
+              :disabled="!cateOptions.length"
+              @click="openBatchMoveDialog(selectedRows, clearSelection, refresh)"
+            >
+              移动
+            </el-button>
+          </template>
+          <el-table-column v-if="!isMobileList" type="index" label="序号" width="60" align="center" />
+          <el-table-column v-if="!isMobileList" prop="goods_sn" label="商品编码" min-width="120" />
+          <el-table-column prop="goods_name" label="商品名称" :min-width="isMobileList ? 140 : 150" />
           <el-table-column label="类型" width="80" align="center">
             <template #default="{ row }">
               <el-tag v-if="getGoodsType(row) === 0" type="info" size="small">未指定</el-tag>
@@ -85,27 +106,32 @@
               <el-tag v-else type="success" size="small">成品</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="en_name" label="英文名称" min-width="120" />
-          <el-table-column prop="unit_name" label="商品单位" width="90" align="center" />
-          <el-table-column label="商品分类" min-width="160">
+          <el-table-column v-if="!isMobileList" prop="en_name" label="英文名称" min-width="120" />
+          <el-table-column v-if="!isMobileList" prop="unit_name" label="商品单位" width="90" align="center" />
+          <el-table-column label="商品分类" :min-width="isMobileList ? 140 : 160">
             <template #default="{ row }">
               {{ getCatePathText(row) }}
             </template>
           </el-table-column>
-          <el-table-column prop="cost_price" label="采购价" width="90" align="right" />
+          <el-table-column v-if="!isMobileList" prop="cost_price" label="采购价" width="90" align="right" />
           <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
-          <el-table-column prop="brand_name" label="商品品牌" min-width="100" />
-          <el-table-column prop="barcode" label="商品条码" min-width="120" />
-          <el-table-column label="状态" width="80" align="center">
+          <el-table-column v-if="!isMobileList" prop="brand_name" label="商品品牌" min-width="100" />
+          <el-table-column v-if="!isMobileList" prop="barcode" label="商品条码" min-width="120" />
+          <el-table-column v-if="!isMobileList" label="状态" width="80" align="center">
             <template #default="{ row }">
               <el-switch :model-value="row.status === 1" disabled size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="相关操作" width="220" fixed="right" align="right">
+          <el-table-column
+            label="相关操作"
+            :width="isMobileList ? 120 : 220"
+            :fixed="isMobileList ? false : 'right'"
+            :align="isMobileList ? 'center' : 'right'"
+          >
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row)">编辑</el-button>
-              <el-button type="success" link size="small" @click="openView(row)">查看</el-button>
-              <el-button type="warning" link size="small" @click="openCopy(row)">复制</el-button>
+              <el-button v-if="!isMobileList" type="success" link size="small" @click="openView(row)">查看</el-button>
+              <el-button v-if="!isMobileList" type="warning" link size="small" @click="openCopy(row)">复制</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -569,6 +595,30 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="batchMoveDialogVisible" title="批量移动商品分类" width="420px" append-to-body>
+      <el-form label-width="90px">
+        <el-form-item label="已选商品">
+          <div>{{ batchMoveRows.length }} 个</div>
+        </el-form-item>
+        <el-form-item label="目标分类" required>
+          <el-tree-select
+            v-model="batchMoveCateId"
+            :data="allCateTreeSelectData"
+            :props="{ value: 'id', label: 'name', children: 'children' }"
+            check-strictly
+            clearable
+            filterable
+            placeholder="请选择目标分类"
+            style="width:100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="closeBatchMoveDialog">取消</el-button>
+        <el-button type="primary" :loading="batchMoveLoading" @click="confirmBatchMove">确定移动</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 快速新增（品牌/单位） -->
     <el-dialog v-model="quickDialogVisible" :title="quickDialogTitle" width="360px" append-to-body>
       <el-form label-width="80px">
@@ -682,12 +732,8 @@ function toggleCate(id: number) {
 
 interface CateTreeNode { id: number; name: string; sort: number; parent_id: any; children: CateTreeNode[] }
 
-const cateTree = computed<CateTreeNode[]>(() => {
-  const all: CateTreeNode[] = cateOptions.value.map(c => ({ ...c, children: [] }))
-  const keyword = cateKeyword.value
-  // 搜索模式：扁平展示匹配项
-  if (keyword) return all.filter(c => c.name.includes(keyword))
-  // 树形模式
+function buildCateTree(source: any[]) {
+  const all: CateTreeNode[] = source.map(c => ({ ...c, children: [] }))
   const map: Record<number, CateTreeNode> = {}
   all.forEach(c => { map[c.id] = c })
   const roots: CateTreeNode[] = []
@@ -697,6 +743,14 @@ const cateTree = computed<CateTreeNode[]>(() => {
     else roots.push(c)
   })
   return roots
+}
+
+const cateTree = computed<CateTreeNode[]>(() => {
+  const keyword = cateKeyword.value
+  // 搜索模式：扁平展示匹配项
+  if (keyword) return cateOptions.value.filter(c => c.name.includes(keyword)).map(c => ({ ...c, children: [] }))
+  // 树形模式
+  return buildCateTree(cateOptions.value)
 })
 
 const filteredCates = computed(() => {
@@ -706,6 +760,7 @@ const filteredCates = computed(() => {
 
 // el-tree-select data (same as cateTree but el-tree-select needs the full tree structure)
 const cateTreeSelectData = computed(() => cateTree.value)
+const allCateTreeSelectData = computed(() => buildCateTree(cateOptions.value))
 
 async function loadCates() {
   cateLoading.value = true
@@ -780,6 +835,16 @@ const searchForm = reactive<any>({ keyword: '', cate_id: '' })
 const filterType = ref<number | ''>('')
 const showForm = ref(false)
 const isView = ref(false)
+const isMobileList = ref(window.innerWidth < 768)
+const batchMoveDialogVisible = ref(false)
+const batchMoveLoading = ref(false)
+const batchMoveCateId = ref<number | null>(null)
+const batchMoveRows = ref<any[]>([])
+const batchMoveAfterAction = ref<{ clearSelection?: () => void; refresh?: () => void }>({})
+
+function handleMobileResize() {
+  isMobileList.value = window.innerWidth < 768
+}
 
 // 商品类型本地存储（后端无此字段）
 const GOODS_TYPE_KEY = 'erp_goods_type_map'
@@ -836,6 +901,84 @@ const rowFilter = computed(() => {
   }
 })
 
+function openBatchMoveDialog(rows: any[], clearSelection?: () => void, refresh?: () => void) {
+  if (!rows.length) {
+    ElMessage.warning('请先勾选要移动的商品')
+    return
+  }
+  if (!cateOptions.value.length) {
+    ElMessage.warning('请先创建商品分类')
+    return
+  }
+  batchMoveRows.value = [...rows]
+  batchMoveCateId.value = null
+  batchMoveAfterAction.value = { clearSelection, refresh }
+  batchMoveDialogVisible.value = true
+}
+
+function closeBatchMoveDialog() {
+  batchMoveDialogVisible.value = false
+  batchMoveCateId.value = null
+  batchMoveRows.value = []
+  batchMoveAfterAction.value = {}
+}
+
+async function confirmBatchMove() {
+  const targetCateId = Number(batchMoveCateId.value || 0)
+  if (!targetCateId) {
+    ElMessage.warning('请选择目标分类')
+    return
+  }
+
+  const targetCate = cateOptions.value.find(item => Number(item.id) === targetCateId)
+  if (!targetCate) {
+    ElMessage.warning('目标分类不存在，请重新选择')
+    return
+  }
+
+  const rowsToMove = batchMoveRows.value.filter(row => Number(row.cate_id ?? 0) !== targetCateId)
+  if (!rowsToMove.length) {
+    ElMessage.warning('所选商品已经在该分类下')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定将 ${rowsToMove.length} 个商品移动到“${targetCate.name}”吗？`,
+      '批量移动商品分类',
+      { type: 'warning', confirmButtonText: '确定移动', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+
+  batchMoveLoading.value = true
+  let success = 0
+  let failed = 0
+  try {
+    for (const row of rowsToMove) {
+      try {
+        await updateGoods({ id: row.id, cate_id: targetCate.id, cate_name: targetCate.name })
+        success++
+      } catch {
+        failed++
+      }
+    }
+
+    if (success > 0) {
+      batchMoveAfterAction.value.clearSelection?.()
+      batchMoveAfterAction.value.refresh?.()
+      await loadCates()
+    }
+
+    if (success > 0) ElMessage.success(`移动完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+    else ElMessage.error('移动失败，请重试')
+    closeBatchMoveDialog()
+  } finally {
+    batchMoveLoading.value = false
+  }
+}
+
 // ── 品牌/单位选项 ─────────────────────────────────────────────────────────────
 const brandOptions = ref<any[]>([])
 const unitOptions = ref<any[]>([])
@@ -849,7 +992,12 @@ async function loadOptions() {
   unitOptions.value = u.data?.rows ?? []
 }
 
-onMounted(() => { loadCates(); loadOptions() })
+onMounted(() => {
+  loadCates()
+  loadOptions()
+  window.addEventListener('resize', handleMobileResize)
+})
+onUnmounted(() => window.removeEventListener('resize', handleMobileResize))
 
 // ── 表单数据 ─────────────────────────────────────────────────────────────────
 const defaultFd = () => ({
@@ -2072,7 +2220,11 @@ function stopListScanner() {
   .cate-item.active { background: rgba(0,113,227,0.08) !important; color: #0071e3 !important; border-color: rgba(0,113,227,0.2) !important; }
   .cate-item-actions { display: none !important; }
   .cate-arrow, .cate-arrow-placeholder { display: none !important; }
-  .goods-list-wrap { overflow: visible !important; }
+  .goods-list-wrap { overflow: visible !important; min-height: 0 !important; }
+  .goods-list-wrap :deep(.sc-table) { min-width: 0 !important; padding: 12px !important; }
+  .goods-list-wrap :deep(.el-table) { width: 100% !important; }
+  .goods-list-wrap :deep(.el-table__cell) { padding: 8px 0 !important; }
+  .goods-list-wrap :deep(.el-button + .el-button) { margin-left: 6px !important; }
 }
 
 /* ── 全页表单 ── */

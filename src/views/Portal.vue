@@ -191,22 +191,22 @@
 
       <!-- 右：Captain 总控台 -->
       <div class="captain-wrap">
+        <!-- spacer to align with workspace-header on the left -->
+        <div class="captain-spacer"></div>
 
         <!-- Captain 指挥官标题 -->
         <div class="captain-header">
           <div class="captain-header-left">
             <div class="captain-glyph">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2L4 7v6c0 5 4.5 9.7 8 11 3.5-1.3 8-6 8-11V7L12 2z"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2L4 7v6c0 5 4.5 9.7 8 11 3.5-1.3 8-6 8-11V7L12 2z"/></svg>
             </div>
-            <div>
-              <div class="captain-header-title">Captain 指挥官</div>
-              <div class="captain-header-sub">AI 多智能体总调度系统</div>
+            <div class="captain-header-title">Captain 指挥官</div>
+            <div class="captain-live">
+              <span class="captain-live-dot"></span>
+              LIVE
             </div>
           </div>
-          <div class="captain-live">
-            <span class="captain-live-dot"></span>
-            LIVE
-          </div>
+          <div class="captain-header-sub">AI 多智能体总调度系统</div>
         </div>
 
         <!-- 对话区 -->
@@ -915,6 +915,10 @@ async function sendCaptain(text?: string) {
   min-width: 0;
 }
 
+.captain-spacer {
+  height: 70px;
+}
+
 /* ── Cards ── */
 .cards-grid {
   display: grid;
@@ -1200,27 +1204,32 @@ async function sendCaptain(text?: string) {
 /* Captain header (outside the dialog box) */
 .captain-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 4px 12px;
 }
 .captain-header-left {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 10px;
 }
 .captain-header-title {
-  font-size: 18px;
+  font-size: 26px;
   font-weight: 800;
   color: #1d1d1f;
   letter-spacing: -0.03em;
   line-height: 1.2;
+  text-align: center;
 }
 .captain-header-sub {
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(29,29,31,0.35);
   font-weight: 500;
-  margin-top: 1px;
+  margin-top: 4px;
+  text-align: center;
 }
 
 .captain-main {

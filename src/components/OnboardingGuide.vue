@@ -73,6 +73,11 @@
         <el-button text @click="guide.pauseGuide">稍后继续</el-button>
         <el-button @click="guide.goPrevActionOrStep">上一步</el-button>
         <el-button v-if="!targetRect" @click="refreshPosition">重新定位</el-button>
+        <el-button
+          v-if="!currentAction.autoAdvance && !isLastAction"
+          type="primary"
+          @click="guide.completeCurrentAndNext()"
+        >已完成，下一步</el-button>
         <el-button @click="guide.skipCurrentAndNext()">
           {{ isLastStep ? '跳过并结束' : '跳过此步' }}
         </el-button>
@@ -131,6 +136,31 @@ let settleTimers: number[] = []
 let boundTargetElement: HTMLElement | null = null
 let boundStepIndex = -1
 let boundActionIndex = -1
+let elevatedOverlay: HTMLElement | null = null
+let elevatedOverlayOriginalZ = ''
+
+function elevateOverlayOf(element: HTMLElement | null) {
+  // 恢复上一个被提升的 overlay
+  if (elevatedOverlay) {
+    elevatedOverlay.style.zIndex = elevatedOverlayOriginalZ
+    elevatedOverlay = null
+    elevatedOverlayOriginalZ = ''
+  }
+  if (!element) return
+  // 找最近的 el-overlay 祖先（Element Plus Dialog 的遮罩容器）
+  const overlay = element.closest('.el-overlay') as HTMLElement | null
+  if (!overlay) return
+  elevatedOverlay = overlay
+  elevatedOverlayOriginalZ = overlay.style.zIndex
+  overlay.style.zIndex = '4100'
+}
+
+function restoreOverlay() {
+  if (!elevatedOverlay) return
+  elevatedOverlay.style.zIndex = elevatedOverlayOriginalZ
+  elevatedOverlay = null
+  elevatedOverlayOriginalZ = ''
+}
 
 function clearRetryTimer() {
   if (retryTimer !== null) {
@@ -325,6 +355,7 @@ function updatePosition(scrollIntoView = false) {
   } as DOMRect
 
   targetRect.value = rect
+  elevateOverlayOf(element)
   bindTargetElement(element)
   scheduleSettledReposition()
   return true
@@ -525,10 +556,12 @@ watch(
       clearAutoAdvanceTimer()
       clearSettleTimers()
       unbindTargetElement()
+      restoreOverlay()
       targetRect.value = null
       document.body.style.overflow = ''
       return
     }
+    restoreOverlay()
     document.body.style.overflow = 'hidden'
     // 自动跳转到当前步骤对应页面
     const targetPath = currentAction.value.path
@@ -553,6 +586,7 @@ onBeforeUnmount(() => {
   clearAutoAdvanceTimer()
   clearSettleTimers()
   unbindTargetElement()
+  restoreOverlay()
   window.removeEventListener('resize', handleViewportChange)
   document.removeEventListener('scroll', handleViewportChange, true)
   window.visualViewport?.removeEventListener('resize', handleViewportChange)

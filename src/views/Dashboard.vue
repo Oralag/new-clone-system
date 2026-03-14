@@ -36,18 +36,7 @@
         </div>
       </div>
 
-      <!-- 智能洞察 -->
-      <!-- 指标卡片 -->
-      <div class="m-stats-grid">
-        <div v-for="stat in stats.slice(0,4)" :key="stat.key" class="m-stat-card" @click="router.push(stat.link)">
-          <div class="m-stat-label">{{ stat.label }}</div>
-          <div class="m-stat-value">{{ stat.value }}</div>
-          <div class="m-stat-sub">{{ stat.sub }}</div>
-        </div>
-      </div>
-
-      <!-- 常用应用 -->
-      <div class="m-quick-card">
+      <!-- 常用应用 -->      <div class="m-quick-card">
         <div class="m-quick-header">
           <span class="m-quick-title">常用应用</span>
           <span class="m-quick-more" @click="editMode ? saveCustom() : (editMode = true)">
@@ -125,14 +114,19 @@
       <!-- 快捷入口 -->
       <div class="quick-grid" data-guide-id="guide-dashboard-quick-grid">
         <div
-          v-for="item in quickItems" :key="item.path"
+          v-for="(item, index) in quickItems" :key="item.path"
           class="quick-item"
           @click="router.push(item.path)"
         >
-          <div class="quick-icon-wrap" :style="{ background: item.bg }">
-            <svg :width="item.sw||20" :height="item.sh||20" viewBox="0 0 24 24" fill="none" :stroke="item.color" stroke-width="1.8" v-html="item.svg" />
+          <div
+            class="quick-item-anchor"
+            :data-guide-id="index === 0 ? 'guide-dashboard-quick-first' : undefined"
+          >
+            <div class="quick-icon-wrap" :style="{ background: item.bg }">
+              <svg :width="item.sw||20" :height="item.sh||20" viewBox="0 0 24 24" fill="none" :stroke="item.color" stroke-width="1.8" v-html="item.svg" />
+            </div>
+            <span class="quick-label">{{ item.label }}</span>
           </div>
-          <span class="quick-label">{{ item.label }}</span>
         </div>
       </div>
     </div>
@@ -1855,14 +1849,21 @@ function drawTrendChart(n: number) {
 
 .quick-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
   padding: 12px 4px 10px;
   border-radius: 16px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.23,1,0.32,1);
+}
+.quick-item-anchor {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 18px;
 }
 .quick-item:hover {
   background: var(--gray);
@@ -2437,7 +2438,7 @@ function drawTrendChart(n: number) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  padding: 10px 12px 80px;
+  padding: 10px 12px 0;
   background: #f5f5f7;
 }
 .m-stat-card {

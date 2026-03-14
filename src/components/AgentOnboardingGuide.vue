@@ -1,6 +1,6 @@
 <template>
   <div v-if="guide.active" class="onboarding-guide-root">
-    <div v-if="!targetRect || !isOnTargetRoute" class="guide-backdrop" />
+    <div v-if="!isOnTargetRoute" class="guide-backdrop" />
 
     <div
       v-if="isOnTargetRoute && targetRect"
@@ -9,6 +9,7 @@
     />
 
     <div
+      ref="panelRef"
       class="guide-panel"
       :class="{ centered: !targetRect || !isOnTargetRoute }"
       :style="panelStyle"
@@ -35,7 +36,7 @@
         当前操作对应页面尚未打开，点击下方按钮可直接跳转。
       </div>
       <div v-else-if="!targetRect" class="guide-status guide-status-warn">
-        已进入目标页面，正在定位操作位置；如果没高亮出来，可点击“重新定位”。
+        已进入目标页面，但暂时没定位到高亮区域；你可以先按提示手动操作，或点击“重新定位”。
       </div>
       <div v-else class="guide-status guide-status-success">
         页面中的高亮区域就是你当前需要操作的位置。
@@ -87,6 +88,7 @@ const guide = useAgentGuideStore()
 const route = useRoute()
 
 const targetRect = ref<DOMRect | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
 const step = computed(() => guide.currentStepData)
 const actions = computed(() => guide.currentActions)
 const currentAction = computed(() => guide.currentActionData)
@@ -96,6 +98,7 @@ const isOnTargetRoute = computed(() => route.path === currentAction.value.path)
 
 let retryTimer: number | null = null
 let autoAdvanceTimer: number | null = null
+let settleTimers: number[] = []
 let boundTargetElement: HTMLElement | null = null
 let boundStepIndex = -1
 let boundActionIndex = -1
@@ -112,6 +115,11 @@ function clearAutoAdvanceTimer() {
     window.clearTimeout(autoAdvanceTimer)
     autoAdvanceTimer = null
   }
+}
+
+function clearSettleTimers() {
+  settleTimers.forEach((timer) => window.clearTimeout(timer))
+  settleTimers = []
 }
 
 function handleTargetAction() {
@@ -163,14 +171,63 @@ function normalizeSelectorText(selector?: string) {
     .trim()
 }
 
+function isElementVisible(element: HTMLElement | null): element is HTMLElement {
+  if (!element) return false
+  const rect = element.getBoundingClientRect()
+  if (rect.width <= 0 || rect.height <= 0) return false
+  const style = window.getComputedStyle(element)
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0'
+}
+
+function isInteractiveElement(element: HTMLElement) {
+  const tag = element.tagName.toLowerCase()
+  return (
+    tag === 'button' ||
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    tag === 'a' ||
+    element.matches('[role="button"], [tabindex], .el-button, .el-input__wrapper, .el-select__wrapper, .el-textarea__inner, .el-input__inner')
+  )
+}
+
+function isButtonLikeElement(element: HTMLElement) {
+  const tag = element.tagName.toLowerCase()
+  return tag === 'button' || tag === 'a' || element.matches('.el-button, [role="button"]')
+}
+
+function isFieldLikeElement(element: HTMLElement) {
+  const tag = element.tagName.toLowerCase()
+  return (
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    element.matches('.el-input__wrapper, .el-select__wrapper, .el-textarea__inner, .el-input__inner')
+  )
+}
+
 function findVisibleTargetFromElement(element: HTMLElement | null): HTMLElement | null {
   if (!element) return null
-  const rect = element.getBoundingClientRect()
-  if (rect.width > 0 || rect.height > 0) return element
-  const candidate = element.querySelector('button, .el-button, input, textarea, select, [role="button"], [tabindex]') as HTMLElement | null
-  if (!candidate) return element
-  const candidateRect = candidate.getBoundingClientRect()
-  return (candidateRect.width > 0 || candidateRect.height > 0) ? candidate : element
+  if (isElementVisible(element) && (isButtonLikeElement(element) || isFieldLikeElement(element))) {
+    return element
+  }
+
+  const buttonCandidate = Array.from(
+    element.querySelectorAll('button, .el-button, a, [role="button"]')
+  ).find((candidate) => isElementVisible(candidate as HTMLElement)) as HTMLElement | undefined
+  if (buttonCandidate) return buttonCandidate
+
+  const fieldCandidate = Array.from(
+    element.querySelectorAll('input, textarea, select, .el-input__wrapper, .el-select__wrapper, .el-textarea__inner, .el-input__inner')
+  ).find((candidate) => isElementVisible(candidate as HTMLElement)) as HTMLElement | undefined
+  if (fieldCandidate) return fieldCandidate
+
+  if (isElementVisible(element)) return element
+
+  const fallback = Array.from(
+    element.querySelectorAll('[role="button"], [tabindex]')
+  ).find((candidate) => isElementVisible(candidate as HTMLElement)) as HTMLElement | undefined
+  return fallback || null
 }
 
 function findByGuideId(selector: string): HTMLElement | null {
@@ -193,6 +250,17 @@ function getTargetElement() {
   }
 }
 
+function scheduleSettledReposition() {
+  clearSettleTimers()
+  const delays = [80, 180, 320, 520]
+  settleTimers = delays.map((delay) =>
+    window.setTimeout(() => {
+      if (!guide.active) return
+      updatePosition(false)
+    }, delay)
+  )
+}
+
 function updatePosition(scrollIntoView = false) {
   const element = getTargetElement()
   if (!element) {
@@ -202,7 +270,7 @@ function updatePosition(scrollIntoView = false) {
   }
 
   if (scrollIntoView) {
-    element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' })
+    element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' })
   }
 
   const rect = element.getBoundingClientRect()
@@ -214,6 +282,7 @@ function updatePosition(scrollIntoView = false) {
 
   targetRect.value = rect
   bindTargetElement(element)
+  scheduleSettledReposition()
   return true
 }
 
@@ -242,6 +311,100 @@ function handleViewportChange() {
   updatePosition(false)
 }
 
+function getOverlapArea(
+  a: { left: number; top: number; right: number; bottom: number },
+  b: { left: number; top: number; right: number; bottom: number },
+) {
+  const width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+  const height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+  return width * height
+}
+
+function resolvePanelPosition(
+  rect: DOMRect,
+  panelWidth: number,
+  panelHeight: number,
+  preferredPlacement: 'right' | 'left' | 'bottom' | 'top',
+) {
+  const gap = 22
+  const minLeft = 16
+  const minTop = 16
+  const maxLeft = Math.max(minLeft, window.innerWidth - panelWidth - 16)
+  const maxTop = Math.max(minTop, window.innerHeight - panelHeight - 16)
+
+  const makePlacement = (placement: 'right' | 'left' | 'bottom' | 'top') => {
+    if (placement === 'left') {
+      return {
+        placement,
+        left: rect.left - panelWidth - gap,
+        top: rect.top + rect.height / 2 - panelHeight / 2,
+      }
+    }
+    if (placement === 'bottom') {
+      return {
+        placement,
+        left: rect.left + rect.width / 2 - panelWidth / 2,
+        top: rect.bottom + gap,
+      }
+    }
+    if (placement === 'top') {
+      return {
+        placement,
+        left: rect.left + rect.width / 2 - panelWidth / 2,
+        top: rect.top - panelHeight - gap,
+      }
+    }
+    return {
+      placement,
+      left: rect.right + gap,
+      top: rect.top + rect.height / 2 - panelHeight / 2,
+    }
+  }
+
+  const placementOrder = [
+    preferredPlacement,
+    'right',
+    'bottom',
+    'left',
+    'top',
+  ].filter((placement, index, list) => list.indexOf(placement) === index) as Array<'right' | 'left' | 'bottom' | 'top'>
+
+  const fitsInViewport = (position: { left: number; top: number }) =>
+    position.left >= minLeft && position.left <= maxLeft && position.top >= minTop && position.top <= maxTop
+
+  const fitCandidate = placementOrder
+    .map((placement) => makePlacement(placement))
+    .find((candidate) => fitsInViewport(candidate))
+
+  if (fitCandidate) return fitCandidate
+
+  const targetBox = {
+    left: rect.left - 8,
+    top: rect.top - 8,
+    right: rect.right + 8,
+    bottom: rect.bottom + 8,
+  }
+
+  const bestCandidate = placementOrder
+    .map((placement) => {
+      const raw = makePlacement(placement)
+      const left = Math.min(Math.max(raw.left, minLeft), maxLeft)
+      const top = Math.min(Math.max(raw.top, minTop), maxTop)
+      const panelBox = {
+        left,
+        top,
+        right: left + panelWidth,
+        bottom: top + panelHeight,
+      }
+      const overlap = getOverlapArea(panelBox, targetBox)
+      const drift = Math.abs(left - raw.left) + Math.abs(top - raw.top)
+      return { ...raw, left, top, overlap, drift }
+    })
+    .sort((a, b) => a.overlap - b.overlap || a.drift - b.drift)[0]
+
+  return bestCandidate
+}
+
 const spotlightStyle = computed(() => {
   if (!targetRect.value) return {}
   const padding = 10
@@ -257,31 +420,14 @@ const panelStyle = computed(() => {
   if (!targetRect.value || !isOnTargetRoute.value) return {}
 
   const panelWidth = 360
-  const gap = 22
+  const panelHeight = panelRef.value?.offsetHeight || 420
   const rect = targetRect.value
   const placement = currentAction.value.placement || 'right'
-
-  let top = rect.top
-  let left = rect.right + gap
-
-  if (placement === 'left') {
-    left = rect.left - panelWidth - gap
-  } else if (placement === 'bottom') {
-    left = rect.left
-    top = rect.bottom + gap
-  } else if (placement === 'top') {
-    left = rect.left
-    top = rect.top - 420
-  }
-
-  const minLeft = 16
-  const maxLeft = window.innerWidth - panelWidth - 16
-  const minTop = 16
-  const maxTop = window.innerHeight - 460
+  const resolved = resolvePanelPosition(rect, panelWidth, panelHeight, placement)
 
   return {
-    left: `${Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft))}px`,
-    top: `${Math.min(Math.max(top, minTop), Math.max(minTop, maxTop))}px`,
+    left: `${resolved.left}px`,
+    top: `${resolved.top}px`,
   }
 })
 
@@ -291,6 +437,7 @@ watch(
     if (!guide.active) {
       clearRetryTimer()
       clearAutoAdvanceTimer()
+      clearSettleTimers()
       unbindTargetElement()
       targetRect.value = null
       return
@@ -308,6 +455,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   clearRetryTimer()
   clearAutoAdvanceTimer()
+  clearSettleTimers()
   unbindTargetElement()
   window.removeEventListener('resize', handleViewportChange)
   document.removeEventListener('scroll', handleViewportChange, true)

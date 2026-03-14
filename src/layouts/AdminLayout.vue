@@ -41,12 +41,11 @@
             <component :is="Component" :key="r.path" />
           </keep-alive>
         </router-view>
-      </div>
-
-      <div class="page-footer" v-if="!isMobile">
-        版权所有 © {{ new Date().getFullYear() }} &nbsp;·&nbsp;
-        <span class="footer-brand">游牧观文化传媒出品</span>
-        &nbsp;·&nbsp; 数字游牧 ERP 系统 &nbsp;·&nbsp; 保留所有权利
+        <div class="page-footer" v-if="!isMobile">
+          版权所有 © {{ new Date().getFullYear() }} &nbsp;·&nbsp;
+          <span class="footer-brand">游牧观文化传媒出品</span>
+          &nbsp;·&nbsp; 数字游牧 ERP 系统 &nbsp;·&nbsp; 保留所有权利
+        </div>
       </div>
     </div>
 
@@ -171,7 +170,7 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 .admin-layout.is-mobile { min-width: unset; }
 .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: #ffffff; }
 .page-content { flex: 1; overflow-y: auto; overflow-x: auto; padding: 16px; background: #f5f5f7; }
-.page-footer { flex-shrink: 0; text-align: right; font-size: 10px; color: rgba(0,0,0,0.2); padding: 4px 16px 6px; border-top: 1px solid rgba(0,0,0,0.05); background: #fff; letter-spacing: -0.01em; }
+.page-footer { text-align: right; font-size: 10px; color: rgba(0,0,0,0.2); padding: 4px 0 6px; letter-spacing: -0.01em; }
 .footer-brand { color: rgba(0,0,0,0.25); font-weight: 600; }
 
 /* 移动端顶部栏 */

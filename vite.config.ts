@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import legacy from '@vitejs/plugin-legacy'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
@@ -7,7 +8,6 @@ import { fileURLToPath, URL } from 'node:url'
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { aiChatPlugin } from './src/server/viteAiPlugin'
-import { VitePWA } from 'vite-plugin-pwa'
 
 function emitReferenceAssets() {
   const assetNames = [
@@ -51,40 +51,8 @@ export default defineConfig({
     }),
     aiChatPlugin(),
     emitReferenceAssets(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'icons/*.png'],
-      manifest: {
-        name: '数字游牧ERP',
-        short_name: '数字游牧',
-        description: '数字游牧企业资源管理系统',
-        theme_color: '#1a2332',
-        background_color: '#1a2332',
-        display: 'standalone',
-        start_url: '/',
-        scope: '/',
-        orientation: 'any',
-        icons: [
-          { src: '/icons/icon-72x72.png', sizes: '72x72', type: 'image/png' },
-          { src: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' },
-          { src: '/icons/icon-128x128.png', sizes: '128x128', type: 'image/png' },
-          { src: '/icons/icon-144x144.png', sizes: '144x144', type: 'image/png' },
-          { src: '/icons/icon-152x152.png', sizes: '152x152', type: 'image/png' },
-          { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: '/icons/icon-384x384.png', sizes: '384x384', type: 'image/png' },
-          { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/saas\.mzth\.cn\/.*/i,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'erp-api-cache', networkTimeoutSeconds: 10 },
-          },
-        ],
-      },
+    legacy({
+      targets: ['ios >= 12', 'chrome >= 64', 'safari >= 12'],
     }),
   ],
   resolve: {

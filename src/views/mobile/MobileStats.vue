@@ -1,6 +1,30 @@
 <template>
   <div class="mstats">
 
+    <!-- 今日核心指标 -->
+    <div class="ms-kpi-grid">
+      <div class="ms-kpi-card" @click="router.push('/dashboard/today-sales')">
+        <div class="ms-kpi-label">今日销售额</div>
+        <div class="ms-kpi-value">¥{{ todayStats.saleAmt }}</div>
+        <div class="ms-kpi-sub">含销售+零售</div>
+      </div>
+      <div class="ms-kpi-card" @click="router.push('/dashboard/today-sales')">
+        <div class="ms-kpi-label">今日订单</div>
+        <div class="ms-kpi-value">{{ todayStats.orderCount }}</div>
+        <div class="ms-kpi-sub">销售+零售单数</div>
+      </div>
+      <div class="ms-kpi-card" @click="router.push('/sale/client')">
+        <div class="ms-kpi-label">客户总数</div>
+        <div class="ms-kpi-value">{{ customerTotal }}</div>
+        <div class="ms-kpi-sub">全部客户</div>
+      </div>
+      <div class="ms-kpi-card" @click="router.push('/warehouse/stock')">
+        <div class="ms-kpi-label">库存预警</div>
+        <div class="ms-kpi-value" :style="{ color: stockWarn > 0 ? '#f53f3f' : '#00b42a' }">{{ stockWarn }}</div>
+        <div class="ms-kpi-sub">负库存+零库存</div>
+      </div>
+    </div>
+
     <!-- 智能洞察 -->
     <div class="ms-insights-card">
       <div class="ms-insights-header">
@@ -122,6 +146,7 @@ const router = useRouter()
 const insightItems = ref([{ tag: '加载中...', text: 'AI 正在分析您的业务数据...' }])
 const statPeriod = ref<'today' | '7d' | '30d' | '3m'>('today')
 const stockWarn = ref(0)
+const customerTotal = ref(0)
 
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
@@ -137,6 +162,16 @@ function parseGoodsInfo(g: any) {
   if (typeof g !== 'string' || !g) return []
   try { return JSON.parse(g) } catch { return [] }
 }
+
+const todayStats = computed(() => {
+  const today = getToday()
+  const fSale = _saleRows.value.filter((r: any) => (r.out_date||'').slice(0,10) === today)
+  const fRetail = _retailRows.value.filter((r: any) => (r.order_date||'').slice(0,10) === today)
+  const saleAmt = fSale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
+  const retailAmt = fRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
+  const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + 'w' : n.toFixed(2)
+  return { saleAmt: fmt(saleAmt + retailAmt), orderCount: fSale.length + fRetail.length }
+})
 
 const salesStats = computed(() => {
   const today = getToday()
@@ -236,6 +271,7 @@ onMounted(async () => {
 
   const custData = customerRes.status === 'fulfilled' ? (customerRes.value?.data ?? customerRes.value) : {}
   const customerCount = Number(custData?.total ?? 0)
+  customerTotal.value = customerCount
 
   try {
     const recRes = await http.get('/finance/Receivable/index', { params: { list_rows: 1000 } })
@@ -259,6 +295,26 @@ onMounted(async () => {
   background: #f5f5f7;
   min-height: 100%;
 }
+
+/* 今日核心指标 */
+.ms-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px 12px 0;
+}
+.ms-kpi-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.ms-kpi-card:active { background: #f0f5ff; }
+.ms-kpi-label { font-size: 11px; color: #86909c; font-weight: 600; margin-bottom: 6px; }
+.ms-kpi-value { font-size: 22px; font-weight: 800; color: #1d2129; letter-spacing: -0.03em; margin-bottom: 4px; }
+.ms-kpi-sub { font-size: 11px; color: #c2c8d5; }
 
 /* 智能洞察 */
 .ms-insights-card {
