@@ -484,10 +484,14 @@ export function aiChatPlugin(): Plugin {
           for (const dispatch of dispatches) {
             const subAgent = getAgent(dispatch.agentId)
             if (!subAgent) continue
+
+            // 员工接令回报
             send({ type: 'agent_start', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, task: dispatch.task })
+            send({ type: 'agent_ack', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, text: `收到，开始执行。` })
 
             let agentOutput = ''
-            const subMessages: Anthropic.MessageParam[] = [{ role: 'user', content: dispatch.task }]
+            const taskPrompt = `Captain指令：${dispatch.task}\n\n请直接执行并交付成果。`
+            const subMessages: Anthropic.MessageParam[] = [{ role: 'user', content: taskPrompt }]
             let subLoop = [...subMessages]
             for (let i = 0; i < 3; i++) {
               const subResp = await client.messages.create({
@@ -514,19 +518,20 @@ export function aiChatPlugin(): Plugin {
               }
               subLoop = [...subLoop, { role: 'assistant', content: subResp.content }, { role: 'user', content: subToolResults }]
             }
-            send({ type: 'agent_done', agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
+            // 员工完成汇报
+            send({ type: 'agent_done', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, output: agentOutput })
             agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
           }
 
-          // Phase 3: Captain 汇总所有Agent产出
+          // Phase 3: Captain 汇总所有员工产出
           if (agentOutputs.length > 0) {
-            const summaryContext = agentOutputs.map(a => `【${a.agentName}产出】\n${a.output}`).join('\n\n')
-            const summaryPrompt = `用户的原始需求：${messages[messages.length - 1]?.content}\n\n各Agent已完成工作：\n${summaryContext}\n\n请综合以上所有内容，给用户一个清晰的最终汇报。`
-            send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '\n\n---\n**Captain 综合汇报：**\n' })
+            const summaryContext = agentOutputs.map(a => `【${a.agentName}提交】\n${a.output}`).join('\n\n---\n\n')
+            const summaryPrompt = `原始指令：${messages[messages.length - 1]?.content}\n\n各团队成员已完成任务，汇总如下：\n\n${summaryContext}\n\n请以Captain身份，简洁有力地综合以上成果，直接呈现给决策者。不要逐个复述，给出整体判断和可执行建议。`
+            send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '\n\n---\n**📋 Captain 综合汇报**\n\n' })
             const summaryResp = await client.messages.create({
               model: 'claude-sonnet-4-6',
               max_tokens: 2048,
-              system: captain.systemPrompt,
+              system: AGENTS.captain.systemPrompt,
               messages: [{ role: 'user', content: summaryPrompt }],
             })
             for (const block of summaryResp.content) {

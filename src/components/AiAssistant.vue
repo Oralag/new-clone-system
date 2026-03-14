@@ -24,12 +24,12 @@
       <!-- Header — drag handle -->
       <div class="chat-header" @mousedown="onPanelDragStart" @touchstart.passive="onPanelTouchStart">
         <div class="chat-header-info">
-          <div class="chat-avatar">
-            <el-icon :size="18"><Cpu /></el-icon>
+          <div class="chat-avatar" style="background:#6366f1;color:#fff;font-size:16px;">
+            🎯
           </div>
           <div>
-            <div class="chat-name">数字游牧 AI 助手</div>
-            <div class="chat-status">{{ isLoading ? '正在输入...' : '在线' }}</div>
+            <div class="chat-name">Captain · 数字游牧指挥中枢</div>
+            <div class="chat-status">{{ isLoading ? '正在处理...' : '在线 · 随时待命' }}</div>
           </div>
         </div>
         <div class="chat-header-actions">
@@ -44,9 +44,9 @@
       <div ref="messagesRef" class="chat-messages">
         <!-- Welcome message -->
         <div class="chat-welcome" v-if="messages.length === 0">
-          <el-icon :size="40" color="#165dff"><Cpu /></el-icon>
-          <p class="welcome-title">你好！我是数字游牧 AI 助手</p>
-          <p class="welcome-sub">你可以用自然语言描述业务需求，我来帮你录入数据</p>
+          <div style="font-size:40px;margin-bottom:8px;">🎯</div>
+          <p class="welcome-title">Captain 在线</p>
+          <p class="welcome-sub">ERP数据、内容创作、团队调度——说目标，我来执行。</p>
           <div class="quick-prompts">
             <el-tag
               v-for="p in quickPrompts"
@@ -67,13 +67,29 @@
           v-for="(msg, idx) in messages"
           :key="idx"
           class="message-item"
-          :class="msg.role === 'user' ? 'message-user' : 'message-assistant'"
+          :class="[
+            msg.role === 'user' ? 'message-user' : 'message-assistant',
+            msg.isAck ? 'message-ack' : ''
+          ]"
         >
-          <div class="message-avatar">
-            <el-icon v-if="msg.role === 'assistant'"><Cpu /></el-icon>
+          <div
+            class="message-avatar"
+            :style="msg.agentId && msg.role === 'assistant' ? { background: getAgentColor(msg.agentId), color: '#fff' } : {}"
+            :title="msg.agentName"
+          >
+            <span v-if="msg.agentEmoji && msg.role === 'assistant'" class="agent-emoji">{{ msg.agentEmoji }}</span>
+            <el-icon v-else-if="msg.role === 'assistant'"><Cpu /></el-icon>
             <el-icon v-else><User /></el-icon>
           </div>
           <div class="message-bubble">
+            <!-- Agent 标签（非Captain且非普通assistant才显示） -->
+            <div v-if="msg.agentId && msg.agentId !== 'captain' && msg.role === 'assistant'" class="agent-label" :style="{ color: getAgentColor(msg.agentId) }">
+              {{ msg.agentEmoji }} {{ msg.agentName }}
+            </div>
+            <!-- Captain 标签 -->
+            <div v-else-if="msg.agentId === 'captain' && msg.role === 'assistant'" class="agent-label captain-label">
+              🎯 Captain
+            </div>
             <div v-if="msg.images?.length" class="message-images">
               <img
                 v-for="(url, i) in msg.images"
@@ -231,6 +247,12 @@ interface Message {
   images?: string[]
   toolCalls?: ToolCallState[]
   navRoute?: string
+  // 多Agent会话字段
+  agentId?: string       // 'captain' | 'copywriter' | 'poster' | ...
+  agentName?: string     // 显示名称
+  agentEmoji?: string    // 员工emoji
+  agentColor?: string    // 员工主色
+  isAck?: boolean        // 是接令回报（简短）
 }
 
 interface PendingAction {
@@ -643,6 +665,28 @@ async function fetchContextData(text: string): Promise<string> {
   return results.join('\n\n')
 }
 
+// ── Agent identity helpers ────────────────────────────────────────────────────
+const AGENT_COLORS: Record<string, string> = {
+  captain: '#6366f1',
+  copywriter: '#f59e0b',
+  poster: '#ec4899',
+  video: '#ef4444',
+  brand: '#8b5cf6',
+  publisher: '#10b981',
+  trend: '#06b6d4',
+}
+const AGENT_EMOJIS: Record<string, string> = {
+  captain: '🎯',
+  copywriter: '✍️',
+  poster: '🎨',
+  video: '🎬',
+  brand: '💎',
+  publisher: '🚀',
+  trend: '📈',
+}
+function getAgentColor(agentId: string) { return AGENT_COLORS[agentId] || '#6366f1' }
+function getAgentEmoji(agentId: string) { return AGENT_EMOJIS[agentId] || '🤖' }
+
 async function sendMessage() {
   const text = inputText.value.trim()
   const hasImages = pendingImages.value.length > 0
@@ -688,8 +732,11 @@ async function sendMessage() {
   }
 
   let assistantText = ''
-  const assistantMsg: Message = { role: 'assistant', content: '', time: getNow(), toolCalls: [] }
+  // 多Agent：agentId → 对应的消息对象
+  const agentMsgMap: Record<string, Message> = {}
+  const assistantMsg: Message = { role: 'assistant', content: '', time: getNow(), toolCalls: [], agentId: 'captain', agentName: 'Captain', agentEmoji: '🎯', agentColor: '#6366f1' }
   messages.value.push(assistantMsg)
+  agentMsgMap['captain'] = assistantMsg
 
   try {
     const erpToken = localStorage.getItem('erp_token') || ''
@@ -735,14 +782,57 @@ async function sendMessage() {
               assistantText += parsed.text
               assistantMsg.content = assistantText
               nextTick(() => scrollToBottom())
+            } else if (parsed.type === 'agent_ack') {
+              // 员工接令消息 — 单独气泡，简短
+              const ackMsg: Message = {
+                role: 'assistant',
+                content: parsed.text || '收到，开始执行。',
+                time: getNow(),
+                toolCalls: [],
+                agentId: parsed.agentId,
+                agentName: parsed.agentName,
+                agentEmoji: parsed.emoji,
+                agentColor: getAgentColor(parsed.agentId),
+                isAck: true,
+              }
+              messages.value.push(ackMsg)
+              nextTick(() => scrollToBottom())
+            } else if (parsed.type === 'agent_thinking') {
+              // 员工或Captain正在输出内容
+              const aId = parsed.agentId || 'captain'
+              if (!agentMsgMap[aId]) {
+                const newMsg: Message = {
+                  role: 'assistant',
+                  content: '',
+                  time: getNow(),
+                  toolCalls: [],
+                  agentId: aId,
+                  agentName: parsed.agentName,
+                  agentEmoji: parsed.emoji || getAgentEmoji(aId),
+                  agentColor: getAgentColor(aId),
+                }
+                messages.value.push(newMsg)
+                agentMsgMap[aId] = newMsg
+              }
+              agentMsgMap[aId].content += parsed.text || ''
+              nextTick(() => scrollToBottom())
+            } else if (parsed.type === 'agent_done') {
+              // 员工任务完成，不需额外操作（内容已通过 agent_thinking 追加）
+              nextTick(() => scrollToBottom())
             } else if (parsed.type === 'tool_start') {
-              assistantMsg.toolCalls!.push({ id: parsed.id, name: parsed.name, input: parsed.input || {}, status: 'running' })
+              // tool_start 挂在当前活跃的agent消息上
+              const activeMsg = agentMsgMap[parsed.agentId || 'captain'] || assistantMsg
+              activeMsg.toolCalls!.push({ id: parsed.id, name: parsed.name, input: parsed.input || {}, status: 'running' })
               nextTick(() => scrollToBottom())
             } else if (parsed.type === 'tool_result') {
-              const tc = assistantMsg.toolCalls!.find(t => t.id === parsed.id)
-              if (tc) {
-                tc.result = parsed.result
-                tc.status = (parsed.result?.startsWith('工具执行出错') || parsed.result?.startsWith('创建失败')) ? 'error' : 'success'
+              // 找到对应的 tool call 更新状态
+              for (const msg of Object.values(agentMsgMap)) {
+                const tc = msg.toolCalls?.find(t => t.id === parsed.id)
+                if (tc) {
+                  tc.result = parsed.result
+                  tc.status = (parsed.result?.startsWith('工具执行出错') || parsed.result?.startsWith('创建失败')) ? 'error' : 'success'
+                  break
+                }
               }
               nextTick(() => scrollToBottom())
             } else if (parsed.type === 'error') {
@@ -1274,6 +1364,35 @@ function renderMarkdown(text: string): string {
 
 .message-nav-btn {
   margin-top: 8px;
+}
+
+/* ── 多Agent 会话样式 ── */
+.agent-emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.agent-label {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 3px;
+  padding-left: 2px;
+  letter-spacing: 0.3px;
+}
+
+.captain-label {
+  color: #6366f1;
+}
+
+/* 接令气泡：简短、透明感 */
+.message-ack .message-content {
+  background: #f8f9ff;
+  color: #6366f1;
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid #e0e1ff;
+  border-radius: 8px;
+  font-style: italic;
 }
 
 .message-user .message-time {

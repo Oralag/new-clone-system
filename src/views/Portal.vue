@@ -169,8 +169,8 @@
     <section class="overview-section">
       <div class="overview-inner">
 
-        <h2 class="section-title">全链路业务管理 · 专属独立服务器 · <span class="section-title-blue">AI 全程加持</span></h2>
-        <p class="section-sub">从采购、仓库、销售到财务，14 个模块无缝衔接。每位用户独立数据库实例，数据物理隔离永久安全。内置 Claude AI 自动分析经营数据、生成洞察预警。全球多节点部署，99.9% 可用率，每日备份，2 小时响应。</p>
+        <h2 class="section-title">全 AI 驱动的业务管理平台 —<span class="section-title-blue"> 从进销存到智能决策</span></h2>
+        <p class="section-sub">AI Agent 自动处理内容运营、数据分析、经营预警；14 个业务模块全链路覆盖采购、仓库、销售、财务；每位用户独立数据库实例，数据物理隔离，全球节点部署，99.9% 可用率。</p>
 
         <!-- 核心卖点 -->
         <div class="feature-pills">
