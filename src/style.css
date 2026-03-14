@@ -852,3 +852,24 @@ html, body {
 .el-table th.el-table__cell.el-table-fixed-column--left {
   background: var(--gray) !important;
 }
+
+/* 补充修复：固定右侧操作列容器/补丁层发透 */
+.el-table .el-table__fixed-right-patch,
+.el-table .el-table__fixed-left-patch,
+.el-table .el-table__body td.el-table__cell.is-right-sticky,
+.el-table .el-table__body td.el-table__cell.el-table-fixed-column--right,
+.el-table .el-table__header th.el-table__cell.is-right-sticky,
+.el-table .el-table__header th.el-table__cell.el-table-fixed-column--right {
+  background-color: var(--card-bg) !important;
+  background-image: none !important;
+}
+
+.el-table .el-table__row.el-table__row--striped td.el-table__cell.is-right-sticky,
+.el-table .el-table__row.el-table__row--striped td.el-table__cell.el-table-fixed-column--right {
+  background-color: var(--gray) !important;
+}
+
+.el-table .el-table__row:hover td.el-table__cell.is-right-sticky,
+.el-table .el-table__row:hover td.el-table__cell.el-table-fixed-column--right {
+  background-color: var(--gray) !important;
+}
