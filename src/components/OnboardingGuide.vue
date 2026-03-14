@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <div v-if="guide.active" class="onboarding-guide-root">
     <!-- 四块遮罩围住 spotlight，中间镂空可点击 -->
     <template v-if="isOnTargetRoute && targetRect">
@@ -78,6 +79,7 @@
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -312,7 +314,17 @@ function updatePosition(scrollIntoView = false) {
     return false
   }
 
-  targetRect.value = raw
+  // 转为 fixed 坐标（直接使用 getBoundingClientRect，Teleport 到 body 后 fixed 坐标正确）
+  const rect = {
+    left: raw.left,
+    top: raw.top,
+    right: raw.right,
+    bottom: raw.bottom,
+    width: raw.width,
+    height: raw.height,
+  } as DOMRect
+
+  targetRect.value = rect
   bindTargetElement(element)
   scheduleSettledReposition()
   return true
@@ -451,7 +463,7 @@ const spotlightStyle = computed(() => {
   }
 })
 
-// 四块遮罩：上/下/左/右，围住 spotlight 区域
+// 四块遮罩：上/下/左/右，围住 spotlight 区域（fixed 坐标）
 const maskTop = computed(() => {
   if (!targetRect.value) return {}
   const padding = 10
@@ -461,14 +473,14 @@ const maskTop = computed(() => {
 const maskBottom = computed(() => {
   if (!targetRect.value) return {}
   const padding = 10
-  const bottom = Math.min(viewportH.value, targetRect.value.bottom + padding)
+  const bottom = targetRect.value.bottom + padding
   return { top: `${bottom}px`, left: '0', right: '0', bottom: '0' }
 })
 const maskLeft = computed(() => {
   if (!targetRect.value) return {}
   const padding = 10
   const top = Math.max(0, targetRect.value.top - padding)
-  const bottom = Math.min(viewportH.value, targetRect.value.bottom + padding)
+  const bottom = targetRect.value.bottom + padding
   const left = Math.max(0, targetRect.value.left - padding)
   return { top: `${top}px`, left: '0', width: `${left}px`, height: `${bottom - top}px` }
 })
@@ -476,41 +488,33 @@ const maskRight = computed(() => {
   if (!targetRect.value) return {}
   const padding = 10
   const top = Math.max(0, targetRect.value.top - padding)
-  const bottom = Math.min(viewportH.value, targetRect.value.bottom + padding)
-  const right = Math.min(viewportW.value, targetRect.value.right + padding)
+  const bottom = targetRect.value.bottom + padding
+  const right = targetRect.value.right + padding
   return { top: `${top}px`, left: `${right}px`, right: '0', height: `${bottom - top}px` }
 })
 
 const panelStyle = computed(() => {
-  if (currentAction.value.panelMode === 'fixed') {
-    return {
-      right: '24px',
-      bottom: '90px',
-      left: 'auto',
-      top: 'auto',
-    }
-  }
+  const fallback = () => ({
+    right: '24px',
+    bottom: '90px',
+    left: 'auto',
+    top: 'auto',
+  })
 
-  // 有目标元素时，定位在元素旁边
+  if (currentAction.value.panelMode === 'fixed') return fallback()
+
   if (targetRect.value && isOnTargetRoute.value) {
     const panelWidth = 360
     const panelHeight_ = panelHeight.value
     const rect = targetRect.value
     const placement = currentAction.value.placement || 'right'
     const resolved = resolvePanelPosition(rect, panelWidth, panelHeight_, placement)
-
     return {
       left: `${resolved.left}px`,
       top: `${resolved.top}px`,
     }
   }
-  // 找不到目标元素时，固定在右下角，不遮挡页面主体
-  return {
-    right: '24px',
-    bottom: '90px',
-    left: 'auto',
-    top: 'auto',
-  }
+  return fallback()
 })
 
 watch(
@@ -565,7 +569,6 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-/* 遮罩块，拦截背景交互 */
 .guide-mask {
   position: fixed;
   background: rgba(15, 23, 42, 0.52);
@@ -576,12 +579,9 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(2px);
 }
 
-/* spotlight 边框，纯视觉，不拦截点击 */
 .guide-spotlight {
   position: fixed;
   border-radius: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.92);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
   pointer-events: none;
   transition: all 0.18s ease;
 }

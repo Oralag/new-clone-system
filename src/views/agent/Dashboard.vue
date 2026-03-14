@@ -1,107 +1,65 @@
 <template>
   <div class="dashboard">
-    <div class="dash-layout">
+    <div class="dash-main-header">
+      <div>
+        <h1 class="dash-title">智能体工作流</h1>
+        <p class="dash-sub">自动追踪热搜 · AI 生成内容 · 多平台一键发布</p>
+      </div>
+    </div>
 
-      <!-- 左侧：流程 + 平台 -->
-      <aside class="dash-sidebar">
-        <div class="dash-sidebar-header">
-          <div class="dash-badge">
-            <span class="dash-badge-dot"></span>
-            Neural Ad Engine
-          </div>
-          <div class="dash-today">{{ today }}</div>
+    <!-- 入口卡片 -->
+    <div class="actions-grid">
+      <div
+        v-for="action in actions"
+        :key="action.path"
+        class="action-card"
+        @click="$router.push(action.path)"
+      >
+        <div class="action-icon" :style="{ background: action.color + '14', color: action.color }">
+          <component :is="action.iconComp" />
         </div>
+        <div class="action-body">
+          <div class="action-title">{{ action.title }}</div>
+          <div class="action-desc">{{ action.desc }}</div>
+        </div>
+        <svg class="action-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </div>
 
-        <!-- 工作流步骤 -->
-        <div class="dash-section">
-          <div class="dash-section-label">自动化流程</div>
-          <div class="workflow-list">
-            <div v-for="(step, i) in workflowSteps" :key="i" class="workflow-step">
-              <div class="step-node">{{ i + 1 }}</div>
-              <div class="step-body">
-                <div class="step-name">{{ step.label }}</div>
-                <div class="step-detail">{{ step.detail }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- 数据概览 -->
+    <div class="stats-row">
+      <div v-for="s in stats" :key="s.label" class="stat-card">
+        <div class="stat-value">{{ s.value }}</div>
+        <div class="stat-label">{{ s.label }}</div>
+      </div>
+    </div>
 
-        <!-- 发布平台 -->
-        <div class="dash-section">
-          <div class="dash-section-label">发布平台</div>
-          <div class="platform-list">
-            <div v-for="p in platforms" :key="p.name" class="platform-row">
-              <span class="platform-name">{{ p.emoji }} {{ p.name }}</span>
-              <span class="platform-tag" :class="p.tier">{{ p.tier === 'primary' ? '主要' : '次要' }}</span>
-            </div>
-          </div>
+    <!-- 最近活动 -->
+    <div v-if="agentStore.history.length > 0" class="recent-card">
+      <div class="recent-header">
+        <div class="recent-title-row">
+          <span class="dash-section-label" style="margin:0">最近发布</span>
         </div>
-      </aside>
-
-      <!-- 右侧：入口卡片 + 数据 -->
-      <main class="dash-main">
-        <div class="dash-main-header">
-          <div>
-            <h1 class="dash-title">智能体工作流</h1>
-            <p class="dash-sub">自动追踪热搜 · AI 生成内容 · 多平台一键发布</p>
+        <button class="link-btn" @click="$router.push('/agent/history')">全部记录 →</button>
+      </div>
+      <div class="recent-list">
+        <div v-for="(item, i) in agentStore.history.slice(0, 5)" :key="i" class="recent-row">
+          <div class="recent-info">
+            <span class="recent-name">{{ item.title }}</span>
+            <span class="recent-meta">{{ item.time }} · {{ item.platforms.join(' / ') }}</span>
           </div>
+          <span :class="['status-badge', item.status]">
+            {{ item.status === 'published' ? '已发布' : item.status === 'draft' ? '草稿' : '失败' }}
+          </span>
         </div>
-
-        <!-- 入口卡片 -->
-        <div class="actions-grid">
-          <div
-            v-for="action in actions"
-            :key="action.path"
-            class="action-card"
-            @click="$router.push(action.path)"
-          >
-            <div class="action-icon" :style="{ background: action.color + '14', color: action.color }">
-              <component :is="action.iconComp" />
-            </div>
-            <div class="action-body">
-              <div class="action-title">{{ action.title }}</div>
-              <div class="action-desc">{{ action.desc }}</div>
-            </div>
-            <svg class="action-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </div>
-        </div>
-
-        <!-- 数据概览 -->
-        <div class="stats-row">
-          <div v-for="s in stats" :key="s.label" class="stat-card">
-            <div class="stat-value">{{ s.value }}</div>
-            <div class="stat-label">{{ s.label }}</div>
-          </div>
-        </div>
-
-        <!-- 最近活动 -->
-        <div v-if="agentStore.history.length > 0" class="recent-card">
-          <div class="recent-header">
-            <div class="recent-title-row">
-              <span class="dash-section-label" style="margin:0">最近发布</span>
-            </div>
-            <button class="link-btn" @click="$router.push('/agent/history')">全部记录 →</button>
-          </div>
-          <div class="recent-list">
-            <div v-for="(item, i) in agentStore.history.slice(0, 5)" :key="i" class="recent-row">
-              <div class="recent-info">
-                <span class="recent-name">{{ item.title }}</span>
-                <span class="recent-meta">{{ item.time }} · {{ item.platforms.join(' / ') }}</span>
-              </div>
-              <span :class="['status-badge', item.status]">
-                {{ item.status === 'published' ? '已发布' : item.status === 'draft' ? '草稿' : '失败' }}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div v-else class="empty-recent">
-          <div class="empty-recent-icon">📭</div>
-          <div class="empty-recent-text">还没有发布记录</div>
-          <div class="empty-recent-sub">开始使用各 Agent 生成并发布内容</div>
-        </div>
-      </main>
+      </div>
+    </div>
+    <div v-else class="empty-recent">
+      <div class="empty-recent-icon">📭</div>
+      <div class="empty-recent-text">还没有发布记录</div>
+      <div class="empty-recent-sub">开始使用各 Agent 生成并发布内容</div>
     </div>
   </div>
 </template>
@@ -111,7 +69,6 @@ import { computed, h, defineComponent } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
 
 const agentStore = useTrendingStore()
-const today = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
 
 const IconTrend = defineComponent({ render: () => h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, [h('path', { d: 'M2 16L8 10l4 4 10-10' }), h('path', { d: 'M18 4h4v4' })]) })
 const IconPen = defineComponent({ render: () => h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, [h('path', { d: 'M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' })]) })
@@ -127,25 +84,6 @@ const actions = [
   { path: '/agent/publish', title: '发布管理', desc: '多平台发布计划与排期', color: '#34d399', iconComp: IconSend },
 ]
 
-const workflowSteps = [
-  { label: '热搜抓取', detail: '实时获取各平台热点' },
-  { label: 'AI 分析', detail: '匹配品牌内容方向' },
-  { label: '文案生成', detail: '多平台定制文案' },
-  { label: '图文海报', detail: 'AI 生成视觉素材' },
-  { label: '视频脚本', detail: '短视频分镜设计' },
-  { label: '人工审核', detail: '品牌调性把关' },
-  { label: '定时发布', detail: '同步发布各平台' },
-]
-
-const platforms = [
-  { name: '抖音', emoji: '🎵', tier: 'primary' },
-  { name: '小红书', emoji: '📕', tier: 'primary' },
-  { name: '快手', emoji: '⚡', tier: 'primary' },
-  { name: '微博', emoji: '🌐', tier: 'secondary' },
-  { name: 'B站', emoji: '📺', tier: 'secondary' },
-  { name: '知乎', emoji: '💡', tier: 'secondary' },
-]
-
 const stats = computed(() => [
   { value: Object.values(agentStore.trending).reduce((s, a) => s + a.length, 0) || '0', label: '已抓取热搜' },
   { value: agentStore.copywritingResults.length || '0', label: '已生成文案' },
@@ -156,142 +94,10 @@ const stats = computed(() => [
 
 <style scoped>
 .dashboard {
-  padding-bottom: 40px;
-}
-
-.dash-layout {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-/* ── Left sidebar ── */
-.dash-sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 18px;
-  overflow: hidden;
-  position: sticky;
-  top: 0;
-}
-
-.dash-sidebar-header {
-  padding: 18px 18px 14px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  background: #f9f9fb;
-}
-
-.dash-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #0071e3;
-  margin-bottom: 6px;
-}
-.dash-badge-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: #0071e3;
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-.dash-today {
-  font-size: 11px;
-  color: rgba(29,29,31,0.35);
-  font-weight: 500;
-}
-
-.dash-section {
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-.dash-section:last-child { border-bottom: none; }
-
-.dash-section-label {
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(29,29,31,0.28);
-  margin-bottom: 10px;
-}
-
-/* Workflow */
-.workflow-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding-left: 24px;
-  position: relative;
-}
-.workflow-list::before {
-  content: '';
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  bottom: 8px;
-  width: 1px;
-  background: rgba(0,0,0,0.07);
-}
-
-.workflow-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding-bottom: 12px;
-  position: relative;
-}
-.workflow-step:last-child { padding-bottom: 0; }
-
-.step-node {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(0,113,227,0.1);
-  border: 1px solid rgba(0,113,227,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  font-weight: 700;
-  color: #0071e3;
-  flex-shrink: 0;
-  position: absolute;
-  left: -24px;
-  top: 1px;
-}
-
-.step-body { padding-top: 0; }
-.step-name { font-size: 12px; font-weight: 600; color: #1d1d1f; margin-bottom: 1px; }
-.step-detail { font-size: 10.5px; color: rgba(29,29,31,0.38); line-height: 1.4; }
-
-/* Platforms */
-.platform-list { display: flex; flex-direction: column; gap: 4px; }
-.platform-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 0;
-}
-.platform-name { font-size: 12px; color: rgba(29,29,31,0.6); font-weight: 500; }
-.platform-tag { font-size: 10px; padding: 1px 8px; border-radius: 20px; font-weight: 600; }
-.platform-tag.primary { background: rgba(0,113,227,0.08); color: #0071e3; }
-.platform-tag.secondary { background: #f5f5f7; color: rgba(29,29,31,0.4); }
-
-/* ── Right main ── */
-.dash-main {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding-bottom: 40px;
 }
 
 .dash-main-header {
@@ -430,35 +236,24 @@ const stats = computed(() => [
 .empty-recent-sub { font-size: 12px; color: rgba(29,29,31,0.4); }
 
 /* Dark mode */
-:global([data-theme='dark']) .dash-sidebar,
 :global([data-theme='dark']) .action-card,
 :global([data-theme='dark']) .stat-card,
 :global([data-theme='dark']) .recent-card,
 :global([data-theme='dark']) .empty-recent { background: #111827; border-color: #1f2937; }
-:global([data-theme='dark']) .dash-sidebar-header { background: #0d1117; }
 :global([data-theme='dark']) .dash-title,
 :global([data-theme='dark']) .action-title,
-:global([data-theme='dark']) .step-name,
 :global([data-theme='dark']) .stat-value,
 :global([data-theme='dark']) .recent-name,
 :global([data-theme='dark']) .empty-recent-text { color: #f8fafc; }
 :global([data-theme='dark']) .dash-sub,
 :global([data-theme='dark']) .action-desc,
-:global([data-theme='dark']) .step-detail,
 :global([data-theme='dark']) .stat-label,
 :global([data-theme='dark']) .recent-meta,
 :global([data-theme='dark']) .empty-recent-sub { color: #64748b; }
-:global([data-theme='dark']) .dash-section { border-bottom-color: #1e2a3a; }
 :global([data-theme='dark']) .recent-row { border-bottom-color: #1e2a3a; }
-:global([data-theme='dark']) .platform-name { color: #94a3b8; }
-:global([data-theme='dark']) .platform-tag.secondary { background: #1e293b; color: #64748b; }
-:global([data-theme='dark']) .dash-today { color: #475569; }
 :global([data-theme='dark']) .action-card:hover { background: #1a2332; border-color: #2d3f55; }
-:global([data-theme='dark']) .workflow-list::before { background: rgba(255,255,255,0.07); }
 
 @media (max-width: 1000px) {
-  .dash-layout { flex-direction: column; }
-  .dash-sidebar { width: 100%; position: static; }
   .actions-grid { grid-template-columns: repeat(3, 1fr); }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
 }

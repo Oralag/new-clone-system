@@ -39,10 +39,23 @@
         </router-link>
       </nav>
 
+      <div class="sidebar-workflow">
+        <div class="nav-section-label">自动化流程</div>
+        <div class="workflow-list">
+          <div v-for="(step, i) in workflowSteps" :key="i" class="workflow-step">
+            <div class="step-node">{{ i + 1 }}</div>
+            <div class="step-body">
+              <div class="step-name">{{ step.label }}</div>
+              <div class="step-detail">{{ step.detail }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="sidebar-platforms">
         <div class="nav-section-label">发布平台</div>
         <div v-for="platform in platforms" :key="platform.key" class="platform-row">
-          <span class="platform-name">{{ platform.name }}</span>
+          <span class="platform-name">{{ platform.emoji }} {{ platform.name }}</span>
           <span class="platform-badge" :class="platform.tier">{{ platform.tier === 'primary' ? '主要' : '次要' }}</span>
         </div>
       </div>
@@ -193,12 +206,22 @@ const mobileNavItems = [
 ]
 
 const platforms = [
-  { key: 'douyin', name: '抖音', tier: 'primary' },
-  { key: 'xiaohongshu', name: '小红书', tier: 'primary' },
-  { key: 'kuaishou', name: '快手', tier: 'primary' },
-  { key: 'weibo', name: '微博', tier: 'secondary' },
-  { key: 'bilibili', name: 'B站', tier: 'secondary' },
-  { key: 'zhihu', name: '知乎', tier: 'secondary' },
+  { key: 'douyin', name: '抖音', emoji: '🎵', tier: 'primary' },
+  { key: 'xiaohongshu', name: '小红书', emoji: '📕', tier: 'primary' },
+  { key: 'kuaishou', name: '快手', emoji: '⚡', tier: 'primary' },
+  { key: 'weibo', name: '微博', emoji: '🌐', tier: 'secondary' },
+  { key: 'bilibili', name: 'B站', emoji: '📺', tier: 'secondary' },
+  { key: 'zhihu', name: '知乎', emoji: '💡', tier: 'secondary' },
+]
+
+const workflowSteps = [
+  { label: '热搜抓取', detail: '实时获取各平台热点' },
+  { label: 'AI 分析', detail: '匹配品牌内容方向' },
+  { label: '文案生成', detail: '多平台定制文案' },
+  { label: '图文海报', detail: 'AI 生成视觉素材' },
+  { label: '视频脚本', detail: '短视频分镜设计' },
+  { label: '人工审核', detail: '品牌调性把关' },
+  { label: '定时发布', detail: '同步发布各平台' },
 ]
 
 const pageTitleMap: Record<string, string> = {
@@ -342,6 +365,56 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 .nav-icon-wrap { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .nav-label { flex: 1; }
 
+/* Workflow */
+.sidebar-workflow { padding: 4px 10px 8px; }
+
+.workflow-list {
+  display: flex;
+  flex-direction: column;
+  padding-left: 22px;
+  position: relative;
+}
+.workflow-list::before {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: rgba(0,0,0,0.07);
+}
+
+.workflow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-bottom: 10px;
+  position: relative;
+}
+.workflow-step:last-child { padding-bottom: 0; }
+
+.step-node {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0,113,227,0.1);
+  border: 1px solid rgba(0,113,227,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: #0071e3;
+  flex-shrink: 0;
+  position: absolute;
+  left: -22px;
+  top: 2px;
+}
+
+.step-body { padding-top: 0; }
+.step-name { font-size: 11.5px; font-weight: 600; color: rgba(29,29,31,0.75); margin-bottom: 1px; }
+.step-detail { font-size: 10px; color: rgba(29,29,31,0.35); line-height: 1.4; }
+
 /* Platforms */
 .sidebar-platforms { padding: 4px 10px 8px; }
 .platform-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 10px; }
@@ -484,6 +557,10 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 [data-theme='dark'] .agent-main { background: #0f172a; }
 [data-theme='dark'] .sidebar-logo { border-color: #1f2937; }
 [data-theme='dark'] .sidebar-footer { border-color: #1f2937; }
+[data-theme='dark'] .step-name { color: #94a3b8; }
+[data-theme='dark'] .step-detail { color: #475569; }
+[data-theme='dark'] .workflow-list::before { background: rgba(255,255,255,0.07); }
+[data-theme='dark'] .step-node { background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.2); color: #60a5fa; }
 [data-theme='dark'] .nav-section-label { color: #475569; }
 
 @media (max-width: 767px) {

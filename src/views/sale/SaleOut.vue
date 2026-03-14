@@ -408,7 +408,7 @@
         </el-select>
       </div>
       <el-table ref="goodsTableRef" :data="goodsOptions" v-loading="goodsLoading"
-        border height="360" @selection-change="onGoodsSelectionChange">
+        border height="360" data-guide-id="guide-saleout-goods-table" @selection-change="onGoodsSelectionChange">
         <el-table-column type="selection" width="45" />
         <el-table-column prop="goods_sn" label="商品编码" width="120" />
         <el-table-column prop="goods_name" label="商品名称" min-width="150" />
@@ -419,7 +419,7 @@
       <template #footer>
         <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
+        <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods" data-guide-id="guide-saleout-goods-confirm">确认添加</el-button>
       </template>
     </el-dialog>
 

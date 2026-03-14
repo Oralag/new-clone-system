@@ -7,6 +7,7 @@ export interface GuideAction {
   selector?: string
   path?: string
   placement?: 'right' | 'left' | 'bottom' | 'top'
+  panelMode?: 'target' | 'fixed'
   autoAdvance?: boolean
 }
 
@@ -21,6 +22,7 @@ export interface GuideStep {
   result: string
   tip?: string
   placement?: 'right' | 'left' | 'bottom' | 'top'
+  panelMode?: 'target' | 'fixed'
 }
 
 export interface NormalizedGuideAction {
@@ -28,10 +30,11 @@ export interface NormalizedGuideAction {
   selector: string
   path: string
   placement?: 'right' | 'left' | 'bottom' | 'top'
+  panelMode?: 'target' | 'fixed'
   autoAdvance: boolean
 }
 
-const STORAGE_KEY = 'erp_onboarding_state_v3'
+const STORAGE_KEY = 'erp_onboarding_state_v4'
 
 const guideSteps: GuideStep[] = [
   {
@@ -39,14 +42,15 @@ const guideSteps: GuideStep[] = [
     title: '先认识首页快捷入口',
     short: '首页',
     path: '/dashboard',
-    selector: '[data-guide-id=”guide-dashboard-quick-grid”]',
+    selector: '[data-guide-id="guide-dashboard-quick-first"]',
     placement: 'bottom',
     desc: '先熟悉首页的快捷入口，后续操作都可以从这里快速进入，不用反复在菜单里找页面。',
     actions: [
       {
         text: '点击任意一个快捷入口，进入对应页面。',
-        selector: '[data-guide-id=”guide-dashboard-quick-grid”]',
+        selector: '[data-guide-id="guide-dashboard-quick-first"]',
         placement: 'bottom',
+        panelMode: 'fixed',
         autoAdvance: true,
       },
     ],
@@ -58,12 +62,12 @@ const guideSteps: GuideStep[] = [
     title: '新增客户档案',
     short: '客户',
     path: '/sale/client',
-    selector: '[data-guide-id=”guide-client-create”]',
+    selector: '[data-guide-id="guide-client-create"]',
     desc: '销售流程第一步是先建立客户档案，后面的报价、合同、出库、收款都会引用这个客户。',
     actions: [
-      { text: '点击”新增客户”按钮。', selector: '[data-guide-id=”guide-client-create”]', autoAdvance: true },
-      { text: '填写客户名称等基础资料。', selector: '[data-guide-id=”guide-client-form-basic”]', autoAdvance: true },
-      { text: '点击”确定”保存客户档案。', selector: '[data-guide-id=”guide-client-form-save”]', autoAdvance: true },
+      { text: '点击“新增客户”按钮。', selector: '[data-guide-id="guide-client-create"]', autoAdvance: true },
+      { text: '填写客户名称等基础资料。', selector: '[data-guide-id="guide-client-form-basic"]', autoAdvance: true },
+      { text: '点击“确定”保存客户档案。', selector: '[data-guide-id="guide-client-form-save"]', autoAdvance: true },
     ],
     result: '客户已进入系统，可在报价单、合同和收款单里直接选择。',
     tip: '建议顺手设置客户等级，后续报价和销售分析会更清晰。',
@@ -77,9 +81,11 @@ const guideSteps: GuideStep[] = [
     desc: '报价单用于和客户确认商品、价格、数量，是正式签约前最常见的第一张业务单据。',
     actions: [
       { text: '点击”新增报价”按钮。', selector: '[data-guide-id=”guide-offer-create”]', autoAdvance: true },
-      { text: '选择客户名称。', selector: '[data-guide-id=”guide-offer-customer”]', autoAdvance: true },
-      { text: '点击”选择商品”添加商品。', selector: '[data-guide-id=”guide-offer-goods”]', autoAdvance: true },
-      { text: '点击”保存”保存报价单。', selector: '[data-guide-id=”guide-offer-save”]', autoAdvance: true },
+      { text: '点击客户输入框，搜索并选择客户名称。', selector: '[data-guide-id=”guide-offer-customer”]', autoAdvance: true },
+      { text: '点击”选择商品”按钮，打开商品选择弹窗。', selector: '[data-guide-id=”guide-offer-goods”]', autoAdvance: true },
+      { text: '在列表中勾选一个或多个商品（勾选左侧复选框）。', selector: '[data-guide-id=”guide-offer-goods-table”]', placement: 'bottom', autoAdvance: false },
+      { text: '勾选完成后，点击”确认添加”将商品加入报价单。', selector: '[data-guide-id=”guide-offer-goods-confirm”]', autoAdvance: true },
+      { text: '确认商品行里的数量和单价无误后，点击”保存”。', selector: '[data-guide-id=”guide-offer-save”]', autoAdvance: true },
     ],
     result: '系统里会形成一张可追踪的报价单，后续可继续转成合同。',
     tip: '如果客户经常询价，先做报价单再转合同，能避免重复录入商品明细。',
@@ -93,9 +99,11 @@ const guideSteps: GuideStep[] = [
     desc: '客户确认报价后，再创建正式合同，锁定金额、交付时间和收款要求。',
     actions: [
       { text: '点击”新增合同”按钮。', selector: '[data-guide-id=”guide-contract-create”]', autoAdvance: true },
-      { text: '选择客户名称。', selector: '[data-guide-id=”guide-contract-customer”]', autoAdvance: true },
-      { text: '点击”选择商品”添加商品明细。', selector: '[data-guide-id=”guide-contract-goods”]', autoAdvance: true },
-      { text: '点击”保存”完成合同创建。', selector: '[data-guide-id=”guide-contract-save”]', autoAdvance: true },
+      { text: '点击客户输入框，搜索并选择客户名称。', selector: '[data-guide-id=”guide-contract-customer”]', autoAdvance: true },
+      { text: '点击”选择商品”按钮，打开商品选择弹窗。', selector: '[data-guide-id=”guide-contract-goods”]', autoAdvance: true },
+      { text: '在列表中勾选要添加的商品（可多选）。', selector: '[data-guide-id=”guide-contract-goods-table”]', placement: 'bottom', autoAdvance: false },
+      { text: '勾选完成后，点击”确认添加”将商品加入合同。', selector: '[data-guide-id=”guide-contract-goods-confirm”]', autoAdvance: true },
+      { text: '核对商品明细和金额无误后，点击”保存”完成合同创建。', selector: '[data-guide-id=”guide-contract-save”]', autoAdvance: true },
     ],
     result: '合同成为后续出库与回款跟踪的业务依据。',
     tip: '如果业务上已经有报价单，可优先使用”选择报价单”减少手工录入。',
@@ -109,9 +117,11 @@ const guideSteps: GuideStep[] = [
     desc: '商品发货时要创建销售出库单，系统会据此扣减库存，并为财务生成应收依据。',
     actions: [
       { text: '点击”新增出库”按钮。', selector: '[data-guide-id=”guide-saleout-create”]', autoAdvance: true },
-      { text: '选择客户名称。', selector: '[data-guide-id=”guide-saleout-basic”]', autoAdvance: true },
-      { text: '点击”选择商品”添加发货商品。', selector: '[data-guide-id=”guide-saleout-goods”]', autoAdvance: true },
-      { text: '点击”保存”完成出库单。', selector: '[data-guide-id=”guide-saleout-save”]', autoAdvance: true },
+      { text: '点击客户输入框，搜索并选择收货客户。', selector: '[data-guide-id=”guide-saleout-basic”]', autoAdvance: true },
+      { text: '点击”选择商品”按钮，打开商品选择弹窗。', selector: '[data-guide-id=”guide-saleout-goods”]', autoAdvance: true },
+      { text: '在列表中勾选本次要发出的商品（注意查看库存数量）。', selector: '[data-guide-id=”guide-saleout-goods-table”]', placement: 'bottom', autoAdvance: false },
+      { text: '勾选完成后，点击”确认添加”将商品加入出库单。', selector: '[data-guide-id=”guide-saleout-goods-confirm”]', autoAdvance: true },
+      { text: '检查发货数量正确后，点击”保存”完成出库单。', selector: '[data-guide-id=”guide-saleout-save”]', autoAdvance: true },
     ],
     result: '库存会按出库数据变化，财务也能据此跟踪待收款。',
     tip: '审核前请确认仓库和数量，避免库存与实际发货不一致。',
@@ -121,10 +131,10 @@ const guideSteps: GuideStep[] = [
     title: '查看应收账款',
     short: '应收',
     path: '/finance/receivable',
-    selector: '[data-guide-id=”guide-receivable-card”]',
+    selector: '[data-guide-id="guide-receivable-card"]',
     desc: '出库完成后，可以在应收账款里查看客户还欠多少钱，以及哪些单据尚未回款。',
     actions: [
-      { text: '查看应收账款列表，确认待收欠款金额。', selector: '[data-guide-id=”guide-receivable-card”]', autoAdvance: true },
+      { text: '查看应收账款列表，确认待收欠款金额。', selector: '[data-guide-id="guide-receivable-card"]', autoAdvance: true },
     ],
     result: '你已经能定位客户欠款并确认应收来源。',
     tip: '如果要直接登记客户付款，可以从这里进入收款流程。',
@@ -134,12 +144,12 @@ const guideSteps: GuideStep[] = [
     title: '录入收款单',
     short: '收款',
     path: '/finance/collect-receipt',
-    selector: '[data-guide-id=”guide-collect-receipt-create”]',
+    selector: '[data-guide-id="guide-collect-receipt-create"]',
     desc: '客户打款后，要及时录入收款单，系统才能形成回款记录并支持后续对账。',
     actions: [
-      { text: '点击”新增收款单”按钮。', selector: '[data-guide-id=”guide-collect-receipt-create”]', autoAdvance: true },
-      { text: '选择收款对象、填写金额和账户。', selector: '[data-guide-id=”guide-collect-receipt-form”]', autoAdvance: true },
-      { text: '点击”保存”完成收款登记。', selector: '[data-guide-id=”guide-collect-receipt-save”]', autoAdvance: true },
+      { text: '点击“新增收款单”按钮。', selector: '[data-guide-id="guide-collect-receipt-create"]', autoAdvance: true },
+      { text: '选择收款对象、填写金额和账户。', selector: '[data-guide-id="guide-collect-receipt-form"]', autoAdvance: true },
+      { text: '点击“保存”完成收款登记。', selector: '[data-guide-id="guide-collect-receipt-save"]', autoAdvance: true },
     ],
     result: '客户回款会被记录下来，财务查询与统计都会更准确。',
     tip: '如果只收到部分款项，也照实填写本次金额，系统可以分多次登记。',
@@ -149,10 +159,10 @@ const guideSteps: GuideStep[] = [
     title: '查看销售统计报表',
     short: '报表',
     path: '/reports/sale-rate',
-    selector: '[data-guide-id=”guide-sale-rate-card”]',
+    selector: '[data-guide-id="guide-sale-rate-card"]',
     desc: '完成前面的业务流程后，可以到销售统计里查看员工维度或时间维度的成交表现。',
     actions: [
-      { text: '点击”查询”查看销售统计数据。', selector: '[data-guide-id=”guide-sale-rate-card”]', autoAdvance: true },
+      { text: '点击“查询”查看销售统计数据。', selector: '[data-guide-id="guide-sale-rate-card"]', autoAdvance: true },
     ],
     result: '你已经完成从客户建档到收款、再到报表复盘的完整入门链路。',
     tip: '后续还可以继续查看销售台账、利润报表等更细的经营分析页面。',
@@ -181,6 +191,7 @@ function normalizeGuideAction(step: GuideStep, action: string | GuideAction): No
       selector: normalizeSelector(step.selector),
       path: step.path,
       placement: step.placement,
+      panelMode: step.panelMode,
       autoAdvance: false,
     }
   }
@@ -189,6 +200,7 @@ function normalizeGuideAction(step: GuideStep, action: string | GuideAction): No
     selector: normalizeSelector(action.selector || step.selector),
     path: action.path || step.path,
     placement: action.placement || step.placement,
+    panelMode: action.panelMode || step.panelMode || 'target',
     autoAdvance: action.autoAdvance === true,
   }
 }

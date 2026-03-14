@@ -302,6 +302,7 @@
         v-loading="goodsLoading"
         border
         height="360"
+        data-guide-id="guide-offer-goods-table"
         @selection-change="onGoodsSelectionChange"
       >
         <el-table-column type="selection" width="45" />
@@ -321,7 +322,7 @@
       <template #footer>
         <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
         <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
+        <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods" data-guide-id="guide-offer-goods-confirm">确认添加</el-button>
       </template>
     </el-dialog>
 
