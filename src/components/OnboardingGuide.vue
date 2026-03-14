@@ -1,7 +1,16 @@
 <template>
   <div v-if="guide.active" class="onboarding-guide-root">
-    <div v-if="!targetRect || !isOnTargetRoute" class="guide-backdrop" />
+    <!-- 四块遮罩围住 spotlight，中间镂空可点击 -->
+    <template v-if="isOnTargetRoute && targetRect">
+      <div class="guide-mask" :style="maskTop" />
+      <div class="guide-mask" :style="maskBottom" />
+      <div class="guide-mask" :style="maskLeft" />
+      <div class="guide-mask" :style="maskRight" />
+    </template>
+    <!-- 无目标时全屏遮罩 -->
+    <div v-else class="guide-mask guide-mask-full" />
 
+    <!-- spotlight 边框高亮 -->
     <div
       v-if="isOnTargetRoute && targetRect"
       class="guide-spotlight"
@@ -32,7 +41,7 @@
       </div>
 
       <div v-if="!targetRect" class="guide-status guide-status-warn">
-        已进入目标页面，正在定位操作位置；如果没高亮出来，可点击"重新定位"。
+        已进入目标页面，但暂时没定位到高亮区域；你可以先按提示手动操作，或点击“重新定位”。
       </div>
       <div v-else class="guide-status guide-status-success">
         页面中的高亮区域就是你当前需要操作的位置。
@@ -82,6 +91,31 @@ const router = useRouter()
 
 const targetRect = ref<DOMRect | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
+const panelHeight = ref(500)
+
+function getViewportSize() {
+  const vv = window.visualViewport
+  return {
+    width: Math.round(vv?.width || window.innerWidth),
+    height: Math.round(vv?.height || window.innerHeight),
+  }
+}
+
+const initialViewport = getViewportSize()
+const viewportW = ref(initialViewport.width)
+const viewportH = ref(initialViewport.height)
+
+// 每次 targetRect 更新后，等 DOM 稳定再读取真实高度
+watch(targetRect, () => {
+  nextTick(() => {
+    nextTick(() => {
+      if (panelRef.value) {
+        const h = panelRef.value.offsetHeight
+        if (h > 0) panelHeight.value = h
+      }
+    })
+  })
+})
 const step = computed(() => guide.currentStepData)
 const actions = computed(() => guide.currentActions)
 const currentAction = computed(() => guide.currentActionData)
@@ -91,6 +125,7 @@ const isOnTargetRoute = computed(() => route.path === currentAction.value.path)
 
 let retryTimer: number | null = null
 let autoAdvanceTimer: number | null = null
+let settleTimers: number[] = []
 let boundTargetElement: HTMLElement | null = null
 let boundStepIndex = -1
 let boundActionIndex = -1
@@ -107,6 +142,11 @@ function clearAutoAdvanceTimer() {
     window.clearTimeout(autoAdvanceTimer)
     autoAdvanceTimer = null
   }
+}
+
+function clearSettleTimers() {
+  settleTimers.forEach((timer) => window.clearTimeout(timer))
+  settleTimers = []
 }
 
 function handleTargetAction() {
@@ -158,14 +198,63 @@ function normalizeSelectorText(selector?: string) {
     .trim()
 }
 
+function isElementVisible(element: HTMLElement | null): element is HTMLElement {
+  if (!element) return false
+  const rect = element.getBoundingClientRect()
+  if (rect.width <= 0 || rect.height <= 0) return false
+  const style = window.getComputedStyle(element)
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0'
+}
+
+function isInteractiveElement(element: HTMLElement) {
+  const tag = element.tagName.toLowerCase()
+  return (
+    tag === 'button' ||
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    tag === 'a' ||
+    element.matches('[role="button"], [tabindex], .el-button, .el-input__wrapper, .el-select__wrapper, .el-textarea__inner, .el-input__inner')
+  )
+}
+
+function isButtonLikeElement(element: HTMLElement) {
+  const tag = element.tagName.toLowerCase()
+  return tag === 'button' || tag === 'a' || element.matches('.el-button, [role="button"]')
+}
+
+function isFieldLikeElement(element: HTMLElement) {
+  const tag = element.tagName.toLowerCase()
+  return (
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    element.matches('.el-input__wrapper, .el-select__wrapper, .el-textarea__inner, .el-input__inner')
+  )
+}
+
 function findVisibleTargetFromElement(element: HTMLElement | null): HTMLElement | null {
   if (!element) return null
-  const rect = element.getBoundingClientRect()
-  if (rect.width > 0 || rect.height > 0) return element
-  const candidate = element.querySelector('button, .el-button, input, textarea, select, [role="button"], [tabindex]') as HTMLElement | null
-  if (!candidate) return element
-  const candidateRect = candidate.getBoundingClientRect()
-  return (candidateRect.width > 0 || candidateRect.height > 0) ? candidate : element
+  if (isElementVisible(element) && (isButtonLikeElement(element) || isFieldLikeElement(element))) {
+    return element
+  }
+
+  const buttonCandidate = Array.from(
+    element.querySelectorAll('button, .el-button, a, [role="button"]')
+  ).find((candidate) => isElementVisible(candidate as HTMLElement)) as HTMLElement | undefined
+  if (buttonCandidate) return buttonCandidate
+
+  const fieldCandidate = Array.from(
+    element.querySelectorAll('input, textarea, select, .el-input__wrapper, .el-select__wrapper, .el-textarea__inner, .el-input__inner')
+  ).find((candidate) => isElementVisible(candidate as HTMLElement)) as HTMLElement | undefined
+  if (fieldCandidate) return fieldCandidate
+
+  if (isElementVisible(element)) return element
+
+  const fallback = Array.from(
+    element.querySelectorAll('[role="button"], [tabindex]')
+  ).find((candidate) => isElementVisible(candidate as HTMLElement)) as HTMLElement | undefined
+  return fallback || null
 }
 
 function findByGuideId(selector: string): HTMLElement | null {
@@ -188,6 +277,22 @@ function getTargetElement() {
   }
 }
 
+function scheduleSettledReposition() {
+  clearSettleTimers()
+  const delays = [120, 280, 480, 700]
+  settleTimers = delays.map((delay) =>
+    window.setTimeout(() => {
+      if (!guide.active) return
+      // 每次重定位同时更新面板真实高度
+      if (panelRef.value) {
+        const h = panelRef.value.offsetHeight
+        if (h > 0) panelHeight.value = h
+      }
+      updatePosition(false)
+    }, delay)
+  )
+}
+
 function updatePosition(scrollIntoView = false) {
   const element = getTargetElement()
   if (!element) {
@@ -197,18 +302,19 @@ function updatePosition(scrollIntoView = false) {
   }
 
   if (scrollIntoView) {
-    element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' })
+    element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' })
   }
 
-  const rect = element.getBoundingClientRect()
-  if (rect.width === 0 && rect.height === 0) {
+  const raw = element.getBoundingClientRect()
+  if (raw.width === 0 && raw.height === 0) {
     targetRect.value = null
     unbindTargetElement()
     return false
   }
 
-  targetRect.value = rect
+  targetRect.value = raw
   bindTargetElement(element)
+  scheduleSettledReposition()
   return true
 }
 
@@ -234,7 +340,104 @@ function refreshPosition() {
 
 function handleViewportChange() {
   if (!guide.active) return
+  const viewport = getViewportSize()
+  viewportW.value = viewport.width
+  viewportH.value = viewport.height
   updatePosition(false)
+}
+
+function getOverlapArea(
+  a: { left: number; top: number; right: number; bottom: number },
+  b: { left: number; top: number; right: number; bottom: number },
+) {
+  const width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+  const height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+  return width * height
+}
+
+function resolvePanelPosition(
+  rect: DOMRect,
+  panelWidth: number,
+  panelHeight: number,
+  preferredPlacement: 'right' | 'left' | 'bottom' | 'top',
+) {
+  const gap = 22
+  const minLeft = 16
+  const minTop = 16
+  const maxLeft = Math.max(minLeft, viewportW.value - panelWidth - 16)
+  const maxTop = Math.max(minTop, viewportH.value - panelHeight - 16)
+
+  const makePlacement = (placement: 'right' | 'left' | 'bottom' | 'top') => {
+    if (placement === 'left') {
+      return {
+        placement,
+        left: rect.left - panelWidth - gap,
+        top: rect.top + rect.height / 2 - panelHeight / 2,
+      }
+    }
+    if (placement === 'bottom') {
+      return {
+        placement,
+        left: rect.left + rect.width / 2 - panelWidth / 2,
+        top: rect.bottom + gap,
+      }
+    }
+    if (placement === 'top') {
+      return {
+        placement,
+        left: rect.left + rect.width / 2 - panelWidth / 2,
+        top: rect.top - panelHeight - gap,
+      }
+    }
+    return {
+      placement,
+      left: rect.right + gap,
+      top: rect.top + rect.height / 2 - panelHeight / 2,
+    }
+  }
+
+  const placementOrder = [
+    preferredPlacement,
+    'right',
+    'bottom',
+    'left',
+    'top',
+  ].filter((placement, index, list) => list.indexOf(placement) === index) as Array<'right' | 'left' | 'bottom' | 'top'>
+
+  const fitsInViewport = (position: { left: number; top: number }) =>
+    position.left >= minLeft && position.left <= maxLeft && position.top >= minTop && position.top <= maxTop
+
+  const fitCandidate = placementOrder
+    .map((placement) => makePlacement(placement))
+    .find((candidate) => fitsInViewport(candidate))
+
+  if (fitCandidate) return fitCandidate
+
+  const targetBox = {
+    left: rect.left - 8,
+    top: rect.top - 8,
+    right: rect.right + 8,
+    bottom: rect.bottom + 8,
+  }
+
+  const bestCandidate = placementOrder
+    .map((placement) => {
+      const raw = makePlacement(placement)
+      const left = Math.min(Math.max(raw.left, minLeft), maxLeft)
+      const top = Math.min(Math.max(raw.top, minTop), maxTop)
+      const panelBox = {
+        left,
+        top,
+        right: left + panelWidth,
+        bottom: top + panelHeight,
+      }
+      const overlap = getOverlapArea(panelBox, targetBox)
+      const drift = Math.abs(left - raw.left) + Math.abs(top - raw.top)
+      return { ...raw, left, top, overlap, drift }
+    })
+    .sort((a, b) => a.overlap - b.overlap || a.drift - b.drift)[0]
+
+  return bestCandidate
 }
 
 const spotlightStyle = computed(() => {
@@ -248,36 +451,57 @@ const spotlightStyle = computed(() => {
   }
 })
 
+// 四块遮罩：上/下/左/右，围住 spotlight 区域
+const maskTop = computed(() => {
+  if (!targetRect.value) return {}
+  const padding = 10
+  const top = Math.max(0, targetRect.value.top - padding)
+  return { top: '0', left: '0', right: '0', height: `${top}px` }
+})
+const maskBottom = computed(() => {
+  if (!targetRect.value) return {}
+  const padding = 10
+  const bottom = Math.min(viewportH.value, targetRect.value.bottom + padding)
+  return { top: `${bottom}px`, left: '0', right: '0', bottom: '0' }
+})
+const maskLeft = computed(() => {
+  if (!targetRect.value) return {}
+  const padding = 10
+  const top = Math.max(0, targetRect.value.top - padding)
+  const bottom = Math.min(viewportH.value, targetRect.value.bottom + padding)
+  const left = Math.max(0, targetRect.value.left - padding)
+  return { top: `${top}px`, left: '0', width: `${left}px`, height: `${bottom - top}px` }
+})
+const maskRight = computed(() => {
+  if (!targetRect.value) return {}
+  const padding = 10
+  const top = Math.max(0, targetRect.value.top - padding)
+  const bottom = Math.min(viewportH.value, targetRect.value.bottom + padding)
+  const right = Math.min(viewportW.value, targetRect.value.right + padding)
+  return { top: `${top}px`, left: `${right}px`, right: '0', height: `${bottom - top}px` }
+})
+
 const panelStyle = computed(() => {
+  if (currentAction.value.panelMode === 'fixed') {
+    return {
+      right: '24px',
+      bottom: '90px',
+      left: 'auto',
+      top: 'auto',
+    }
+  }
+
   // 有目标元素时，定位在元素旁边
   if (targetRect.value && isOnTargetRoute.value) {
     const panelWidth = 360
-    const panelHeight = panelRef.value?.offsetHeight || 420
-    const gap = 22
+    const panelHeight_ = panelHeight.value
     const rect = targetRect.value
     const placement = currentAction.value.placement || 'right'
-
-    let top = rect.top
-    let left = rect.right + gap
-
-    if (placement === 'left') {
-      left = rect.left - panelWidth - gap
-    } else if (placement === 'bottom') {
-      left = rect.left
-      top = rect.bottom + gap
-    } else if (placement === 'top') {
-      left = rect.left
-      top = rect.top - panelHeight - gap
-    }
-
-    const minLeft = 16
-    const maxLeft = window.innerWidth - panelWidth - 16
-    const minTop = 16
-    const maxTop = window.innerHeight - panelHeight - 16
+    const resolved = resolvePanelPosition(rect, panelWidth, panelHeight_, placement)
 
     return {
-      left: `${Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft))}px`,
-      top: `${Math.min(Math.max(top, minTop), Math.max(minTop, maxTop))}px`,
+      left: `${resolved.left}px`,
+      top: `${resolved.top}px`,
     }
   }
   // 找不到目标元素时，固定在右下角，不遮挡页面主体
@@ -295,10 +519,13 @@ watch(
     if (!guide.active) {
       clearRetryTimer()
       clearAutoAdvanceTimer()
+      clearSettleTimers()
       unbindTargetElement()
       targetRect.value = null
+      document.body.style.overflow = ''
       return
     }
+    document.body.style.overflow = 'hidden'
     // 自动跳转到当前步骤对应页面
     const targetPath = currentAction.value.path
     if (targetPath && route.path !== targetPath) {
@@ -313,14 +540,20 @@ watch(
 onMounted(() => {
   window.addEventListener('resize', handleViewportChange)
   document.addEventListener('scroll', handleViewportChange, true)
+  window.visualViewport?.addEventListener('resize', handleViewportChange)
+  window.visualViewport?.addEventListener('scroll', handleViewportChange)
 })
 
 onBeforeUnmount(() => {
   clearRetryTimer()
   clearAutoAdvanceTimer()
+  clearSettleTimers()
   unbindTargetElement()
   window.removeEventListener('resize', handleViewportChange)
   document.removeEventListener('scroll', handleViewportChange, true)
+  window.visualViewport?.removeEventListener('resize', handleViewportChange)
+  window.visualViewport?.removeEventListener('scroll', handleViewportChange)
+  document.body.style.overflow = ''
 })
 </script>
 
@@ -332,22 +565,23 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.guide-backdrop {
-  position: absolute;
-  inset: 0;
+/* 遮罩块，拦截背景交互 */
+.guide-mask {
+  position: fixed;
   background: rgba(15, 23, 42, 0.52);
-  backdrop-filter: blur(2px);
   pointer-events: auto;
 }
+.guide-mask-full {
+  inset: 0;
+  backdrop-filter: blur(2px);
+}
 
+/* spotlight 边框，纯视觉，不拦截点击 */
 .guide-spotlight {
   position: fixed;
   border-radius: 18px;
   border: 2px solid rgba(255, 255, 255, 0.92);
-  box-shadow:
-    0 0 0 9999px rgba(15, 23, 42, 0.52),
-    0 0 0 10px rgba(59, 130, 246, 0.16),
-    0 16px 40px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
   pointer-events: none;
   transition: all 0.18s ease;
 }
