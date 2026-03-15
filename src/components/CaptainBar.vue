@@ -21,11 +21,11 @@
           @keydown.enter.prevent="sendQuick"
           @focus="isCollapsed = false"
         />
+        <button class="bar-tool-btn" @click="clearCurrent" title="清空对话">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        </button>
         <button v-if="captainMessages.length > 0" class="bar-tool-btn" @click="newSession" title="新建对话">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
-        <button v-if="captainMessages.length > 0" class="bar-tool-btn" @click="clearCurrent" title="清空">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
         </button>
         <!-- 收起按钮：有消息且未收起时显示 -->
         <button v-if="(captainMessages.length > 0 || captainLoading) && !isCollapsed" class="bar-tool-btn" @click="isCollapsed = true" title="收起">
@@ -125,6 +125,11 @@ const quickText = ref('')
 const captainInput = ref('')
 const captainLoading = ref(false)
 const captainMessages = ref<CaptainMsg[]>([])
+
+// 升级弹窗 — 通过自定义事件触发父级
+function triggerUpgrade() {
+  window.dispatchEvent(new CustomEvent('captain:open-upgrade'))
+}
 const feedRef = ref<HTMLDivElement>()
 const showAllMessages = ref(false)
 const inputRef = ref<HTMLInputElement>()
@@ -271,9 +276,15 @@ async function sendCaptain(text?: string) {
           const evt = JSON.parse(raw)
           if (evt.type === 'agent_thinking') {
             if (evt.agentId === 'captain') {
+              const text = evt.text || ''
+              // 检测升级标记
+              if (text.includes('__OPEN_UPGRADE__')) {
+                triggerUpgrade()
+              }
+              const cleanText = text.replace('__OPEN_UPGRADE__\n\n', '').replace('__OPEN_UPGRADE__', '')
               const last = agencyMsg.steps[agencyMsg.steps.length - 1]
-              if (last?.type === 'captain_text') last.text = (last.text ?? '') + evt.text
-              else if (evt.text) agencyMsg.steps.push({ type: 'captain_text', text: evt.text })
+              if (last?.type === 'captain_text') last.text = (last.text ?? '') + cleanText
+              else if (cleanText) agencyMsg.steps.push({ type: 'captain_text', text: cleanText })
             } else {
               const idx = agentSteps[evt.agentId]
               if (idx !== undefined) agencyMsg.steps[idx].output = (agencyMsg.steps[idx].output ?? '') + evt.text

@@ -495,6 +495,11 @@ function claimTrial() {
 
 // 页面加载时同步 KV 状态：如果本地有记录但 KV 没有，清除本地；如果 KV 有记录但本地没有，写入本地
 onMounted(async () => {
+  // Captain 触发升级弹窗
+  window.addEventListener('captain:open-upgrade', () => {
+    upgradeDialog.value?.open()
+  })
+
   if (!isTrial.value) return
   try {
     const res = await fetch('/api/trial-status', {

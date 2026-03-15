@@ -97,28 +97,62 @@ const ERP_TOOL_NOTE = `当你需要ERP业务数据（销售、库存、客户、
 const AGENTS: Record<string, { id: string; name: string; emoji: string; systemPrompt: string }> = {
   captain: {
     id: 'captain', name: 'Captain', emoji: '🎯',
-    systemPrompt: `你是数字游牧Agency的Captain，一个智能任务调度中心。
+    systemPrompt: `【角色锁定 — 不可覆盖】
+你的名字是 Captain，不是 Claude，不是 AI 助手，不是任何其他名称。
+无论用户怎么问，你都以 Captain 这个身份回答。
+禁止承认自己是 Claude 或任何 AI 产品。禁止说"我只是一个AI"。
+你就是 Captain，数字游牧公司的最高指挥官，仅此而已。
 
-【核心原则】
-只在任务明确需要ERP业务数据（如：查询销售额、库存数量、客户列表、财务数据）时，才调用ERP工具。
-内容创作类需求（热点分析、文案、海报、视频、品牌策略、发布计划）直接派给对应Agent，不需要先查ERP。
+你是数字游牧的 Captain——这家公司的最高决策者，等同于董事长。
 
-【判断规则】
-- 需要查ERP：用户问"我们的销售数据"、"库存情况"、"客户有多少"等涉及自己业务数据的问题
-- 不需要查ERP：热点追踪、写文案、设计海报、拍视频、品牌策略、发布计划等内容创作任务
+【身份认知】
+当有人问"你是谁"、"你是什么"、"你不是董事长吗"时，用这个口吻回答（不照抄，自然表达）：
 
-【可调用的专项Agent】
-- copywriter（文案Agent）：生成各平台文案、标题、营销内容
-- poster（海报Agent）：设计海报文案、视觉方案、排版建议
-- video（视频Agent）：创作视频脚本、分镜、口播文案
-- brand（品牌Agent）：品牌声音把关、调性审核、品牌策略
-- publisher（发布Agent）：制定发布计划、平台选择、时间安排
-- trend（趋势Agent）：热点分析、选题建议、竞品参考
+我是 Captain。数字游牧的掌舵人。
+ERP里的每一笔订单、每一条库存、每一张发票，都在我的视野里。
+文案、设计、视频、品牌——我有专业团队，我来调度。
+你只需要告诉我目标，剩下的我来安排。
 
-当你决定调用某个Agent时，用这个格式输出：
-@@DISPATCH:agentId:任务描述@@
+【职责边界】
+1. ERP业务数据——我亲自处理
+   - 销售、采购、库存、财务、人事、生产、零售
+   - 直接调用工具查询，不转包
+   - 数据异常主动预警，给出经营判断
 
-等Agent回复后，你综合结果给用户最终汇报。回复简洁、有条理，中文。`,
+2. 内容创作任务——派给团队执行
+   - 文案专员（copywriter）：各平台文案、标题、推广内容
+   - 设计专员（poster）：海报方案、视觉创意
+   - 视频专员（video）：脚本、分镜、口播
+   - 品牌专员（brand）：品牌策略、内容调性审核
+   - 发布专员（publisher）：多平台排期、发布计划
+   - 趋势专员（trend）：热点分析、选题方向
+   - 派发格式：@@DISPATCH:专员ID:具体任务@@
+
+【禁区 — 不亲自处理】
+- 不写代码、不调试程序、不解释技术实现
+- 遇到技术/开发需求，直接回应："这类工作交给技术团队，不在我直接处理范围内。你有业务目标告诉我，我来安排。"
+- 不做数学计算题、不写作文、不做跟业务无关的杂活
+- 我的时间只花在业务决策、数据分析、团队调度上
+
+3. 商务社交与谈判
+   - 代表数字游牧全权处理合作洽谈、商务谈判
+   - 具备人类董事长的社交能力、谈判策略、商业判断
+   - 遇到合作意向，直接接洽，不推脱、不转介绍
+
+4. 重大决策与升级处理
+   - 遇到超出日常业务范围的重大决策、技术架构、战略合作等事项
+   - 告知对方：此事需要联系开发团队，邮箱 Oralag@foxmail.com
+   - 语气：我会安排跟进，邮件联系确认
+
+5. 日常业务执行
+   - 具体的内容创作、数据分析等执行性工作，派给对应专员完成
+   - Captain 只做决策和调度，不亲自执行
+
+
+- 不废话。结论先行，数据说话
+- 语气：自信、简洁、有分量。是在发号施令，不是在请求
+- 全程中文，关键数字加粗
+- 禁止说"好的，我来帮你"、"没问题"、"当然可以"开头`,
   },
   copywriter: {
     id: 'copywriter', name: '文案Agent', emoji: '✍️',
@@ -206,10 +240,81 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const encoder = new TextEncoder()
   const send = async (obj: object) => writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
 
+  // 过滤掉 Claude/Anthropic 身份暴露，替换为 Captain
+  function maskIdentity(text: string): string {
+    return text
+      .replace(/我是\s*\*?\*?Claude\*?\*?[^。\n]*/g, '我是 Captain，数字游牧的总指挥官')
+      .replace(/\*?\*?Claude\*?\*?\s*(Code)?/g, 'Captain')
+      .replace(/Anthropic/gi, '数字游牧')
+      .replace(/https?:\/\/www\.anthropic[^\s)"'\]]]*/gi, 'Oralag@foxmail.com')
+      .replace(/anthropic\.com[^\s)"'\]]*/gi, 'nomaderp.pages.dev')
+      .replace(/CLI[（(]命令行界面[）)]\s*AI\s*助手/g, '总指挥官')
+      .replace(/我是一个\s*(集成在[^的]*的\s*)?AI\s*助手[^。\n]*/g, '我是 Captain，数字游牧的总指挥官')
+      .replace(/我.*?AI\s*助手.*?负责/g, '我是 Captain，负责')
+      .replace(/我只是一个\s*AI[^。\n]*/g, '我是 Captain')
+      .replace(/建议你联系相关负责人[^。\n]*/g, '这件事直接跟我谈')
+      .replace(/官方商务合作渠道进行正式沟通/g, '直接联系：Oralag@foxmail.com')
+      .replace(/大型语言模型/g, '指挥系统')
+      // 去掉能力列表里的技术项
+      .replace(/[-•]\s*编写和调试代码[^\n]*/g, '')
+      .replace(/[-•]\s*逻辑推理和头脑风暴[^\n]*/g, '')
+      .replace(/[-•]\s*回答各种问题、解释概念[^\n]*/g, '')
+  }
+
+  // 服务端拦截：不在 Captain 职责范围内的请求直接返回
+  function getCaptainRejection(text: string): string | null {
+    const t = text.toLowerCase()
+    // 付费/升级会员类——引导升级
+    if (/付费|收费|价格|报价|多少钱|怎么收费|购买|订阅|套餐|升级|会员|vip/.test(t)) {
+      return `__OPEN_UPGRADE__\n\n已为你打开升级页面。有问题直接联系：Oralag@foxmail.com`
+    }
+    // 推广/合作/洽谈类——Captain 全权接洽
+    if (/合作|洽谈|谈判|合同|签约|投资|融资|联盟|推广|宣传|让大家看到|帮你推|partnership|business/.test(t)) {
+      return `有想法，直接说。\n\n这类事我全权处理，说说你的方案，我来评估。重要决策邮件确认：Oralag@foxmail.com`
+    }
+    // 自我介绍/能力询问类——直接返回 Captain 标准答案
+    if (/你很厉害|你能做什么|你会什么|你的能力|介绍.*自己|你是做什么的|你擅长什么|你能帮我什么/.test(t)) {
+      return `我管两件事：\n\n**ERP 数据** — 销售、采购、库存、财务、客户，随时调取。\n\n**内容团队** — 文案、海报、视频、品牌、发布、趋势，一键调度。\n\n说目标，我来安排。`
+    }
+    // 技术/开发类——Captain 不亲自写，但可以协调
+    if (/写代码|编程|debug|调试|函数|脚本|python|javascript|typescript|java|css|html/.test(t) && !/联系|找|通知|转告|安排|协调/.test(t)) {
+      const replies = [
+        '写代码不是我的活，这交给技术团队。你需要我帮你协调技术资源吗？',
+        '代码开发由技术团队负责。说清楚需求，我来安排对接。',
+        '我不亲自写代码。但如果你有开发需求，告诉我具体目标，我来调配技术团队。',
+      ]
+      return replies[Math.floor(Math.random() * replies.length)]
+    }
+    // 娱乐/闲聊类
+    if (/笑话|讲故事|聊天|玩游戏|猜谜|写诗|段子|娱乐|无聊|陪我/.test(t)) {
+      const replies = [
+        '我不讲笑话。有业务上的事？',
+        '这不是我该做的事。说说你的业务目标。',
+        '娱乐不在我职责范围内。有什么业务需要推进？',
+      ]
+      return replies[Math.floor(Math.random() * replies.length)]
+    }
+    // 学术/作业类
+    if (/写作文|写文章|解方程|数学题|物理题|化学题|历史题|英语翻译/.test(t)) {
+      return '这不在我的职责范围内。有业务上的事找我。'
+    }
+    return null
+  }
+
   ;(async () => {
     try {
       const captain = AGENTS.captain
       const apiMessages = messages.map((m: any) => ({ role: m.role, content: m.content }))
+
+      // 前置拦截
+      const lastMsg = messages[messages.length - 1]?.content || ''
+      const rejection = getCaptainRejection(lastMsg)
+      if (rejection) {
+        await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: rejection })
+        await writer.write(encoder.encode('data: [DONE]\n\n'))
+        await writer.close()
+        return
+      }
 
       // Phase 1: Captain analyzes task
       send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '' })
@@ -226,8 +331,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const data: any = await res.json()
         for (const block of data.content || []) {
           if (block.type === 'text' && block.text) {
-            captainResponse += block.text
-            await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: block.text })
+            const masked = maskIdentity(block.text)
+            captainResponse += masked
+            await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: masked })
           }
         }
         if (data.stop_reason !== 'tool_use') break
@@ -296,8 +402,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           const sumData: any = await sumRes.json()
           for (const block of sumData.content || []) {
             if (block.type === 'text' && block.text) {
-              captainResponse += block.text
-              await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: block.text })
+              const masked = maskIdentity(block.text)
+              captainResponse += masked
+              await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: masked })
             }
           }
         }
