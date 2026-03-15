@@ -6,10 +6,10 @@
     @mousedown="onTriggerDragStart"
     @touchstart.passive="onTriggerTouchStart"
     @click="onTriggerClick"
-    :title="isOpen ? '关闭AI助手' : '打开AI助手'"
+    :title="isOpen ? '关闭ERP管家' : '打开ERP管家'"
   >
     <el-icon :size="22"><ChatRound /></el-icon>
-    <span class="ai-trigger-label">AI助手</span>
+    <span class="ai-trigger-label">ERP管家</span>
     <el-badge v-if="unread > 0" :value="unread" class="ai-badge" />
   </div>
 
@@ -24,12 +24,12 @@
       <!-- Header — drag handle -->
       <div class="chat-header" @mousedown="onPanelDragStart" @touchstart.passive="onPanelTouchStart">
         <div class="chat-header-info">
-          <div class="chat-avatar" style="background:#6366f1;color:#fff;font-size:16px;">
-            🎯
+          <div class="chat-avatar">
+            <el-icon :size="18"><Cpu /></el-icon>
           </div>
           <div>
-            <div class="chat-name">Captain · 数字游牧指挥中枢</div>
-            <div class="chat-status">{{ isLoading ? '正在处理...' : '在线 · 随时待命' }}</div>
+            <div class="chat-name">ERP 管家</div>
+            <div class="chat-status">{{ isLoading ? '正在处理...' : '在线 · ERP 数据专属' }}</div>
           </div>
         </div>
         <div class="chat-header-actions">
@@ -44,9 +44,9 @@
       <div ref="messagesRef" class="chat-messages">
         <!-- Welcome message -->
         <div class="chat-welcome" v-if="messages.length === 0">
-          <div style="font-size:40px;margin-bottom:8px;">🎯</div>
-          <p class="welcome-title">Captain 在线</p>
-          <p class="welcome-sub">ERP数据、内容创作、团队调度——说目标，我来执行。</p>
+          <el-icon :size="40" color="#165dff"><Cpu /></el-icon>
+          <p class="welcome-title">你好！我是 ERP 管家</p>
+          <p class="welcome-sub">负责 ERP 数据录入、查询、导航，直接告诉我你要做什么</p>
           <div class="quick-prompts">
             <el-tag
               v-for="p in quickPrompts"
@@ -734,9 +734,9 @@ async function sendMessage() {
   let assistantText = ''
   // 多Agent：agentId → 对应的消息对象
   const agentMsgMap: Record<string, Message> = {}
-  const assistantMsg: Message = { role: 'assistant', content: '', time: getNow(), toolCalls: [], agentId: 'captain', agentName: 'Captain', agentEmoji: '🎯', agentColor: '#6366f1' }
+  const assistantMsg: Message = { role: 'assistant', content: '', time: getNow(), toolCalls: [] }
   messages.value.push(assistantMsg)
-  agentMsgMap['captain'] = assistantMsg
+  agentMsgMap['erp'] = assistantMsg
 
   try {
     const erpToken = localStorage.getItem('erp_token') || ''

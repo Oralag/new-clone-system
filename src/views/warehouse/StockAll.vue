@@ -22,29 +22,25 @@
 
         <div class="sidebar-section" v-loading="cateLoading">
           <div :class="['sidebar-item', selectedCate === 0 ? 'active' : '']" @click="selectCate(0)">全部</div>
-          <template v-for="item in cateTree" :key="item.id">
-            <div :class="['sidebar-item', selectedCate === item.id ? 'active' : '']" @click="selectCate(item.id)">
-              <el-icon v-if="item.children.length" class="cate-arrow" :class="{ expanded: !collapsedCates.has(item.id) }" @click.stop="toggleCate(item.id)"><ArrowRight /></el-icon>
-              <span v-else class="cate-arrow-placeholder" />
-              <span class="cate-item-name">{{ item.name }}</span>
-              <span class="cate-item-actions">
-                <el-icon class="act-icon" @click.stop="openCateForm(item)"><Edit /></el-icon>
-                <el-icon class="act-icon danger" @click.stop="handleDeleteCate(item.id)"><Delete /></el-icon>
-              </span>
-            </div>
-            <template v-if="!collapsedCates.has(item.id)">
-              <div v-for="child in item.children" :key="child.id"
-                :class="['sidebar-item', 'sidebar-item-child', selectedCate === child.id ? 'active' : '']"
-                @click="selectCate(child.id)"
-              >
-                <span class="cate-item-name">└ {{ child.name }}</span>
-                <span class="cate-item-actions">
-                  <el-icon class="act-icon" @click.stop="openCateForm(child)"><Edit /></el-icon>
-                  <el-icon class="act-icon danger" @click.stop="handleDeleteCate(child.id)"><Delete /></el-icon>
+          <el-tree
+            :data="cateTree"
+            :props="{ label: 'name', children: 'children' }"
+            node-key="id"
+            :default-expand-all="false"
+            highlight-current
+            style="background:transparent"
+            @node-click="(node: any) => selectCate(node.id)"
+          >
+            <template #default="{ node, data }">
+              <span :class="['tree-node-label', selectedCate === data.id ? 'active' : '']" style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:4px;overflow:hidden">
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ data.name }}</span>
+                <span class="cate-item-actions" style="flex-shrink:0">
+                  <el-icon class="act-icon" @click.stop="openCateForm(data)"><Edit /></el-icon>
+                  <el-icon class="act-icon danger" @click.stop="handleDeleteCate(data.id)"><Delete /></el-icon>
                 </span>
-              </div>
+              </span>
             </template>
-          </template>
+          </el-tree>
         </div>
       </div>
       </div><!-- /sidebar-inner -->
@@ -83,14 +79,15 @@
           </div>
         </div>
 
-        <el-table v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px">
+        <el-table v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px"
+          @sort-change="handleSortChange">
           <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="150" />
+          <el-table-column prop="goods_name" label="商品名称" min-width="150" sortable="custom" />
           <el-table-column prop="goods_sn" label="商品编码" width="130" />
-          <el-table-column prop="cate_name" label="分类" width="100" />
+          <el-table-column prop="cate_name" label="分类" width="100" sortable="custom" />
           <el-table-column prop="spec" label="规格" width="90" />
           <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-          <el-table-column label="当前库存" width="110" align="center">
+          <el-table-column label="当前库存" width="110" align="center" sortable="custom" prop="__stock_qty">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small" effect="plain">
                 {{ getStockQty(row).toFixed(2) }}
@@ -105,7 +102,7 @@
           <el-table-column label="成本价" width="90" align="right">
             <template #default="{ row }">¥{{ getAvgPrice(row).toFixed(2) }}</template>
           </el-table-column>
-          <el-table-column label="库存货值" width="110" align="right">
+          <el-table-column label="库存货值" width="110" align="right" sortable="custom" prop="__stock_value">
             <template #default="{ row }">
               <span style="color:#0071e3;font-weight:500">¥{{ (getStockQty(row) * getAvgPrice(row)).toFixed(2) }}</span>
             </template>
@@ -206,7 +203,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Plus, Edit, Delete, ArrowRight } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getStockList, getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate } from '@/api/goods'
@@ -249,18 +246,20 @@ const keyword = ref('')
 const selectedWarehouse = ref(0)
 const selectedCate = ref(0)
 const statusFilter = ref<'all' | 'low' | 'zero' | 'normal'>('all')
+const sortProp = ref('')
+const sortOrder = ref<'ascending' | 'descending' | ''>('')
+
+function handleSortChange({ prop, order }: { prop: string; order: string | null }) {
+  sortProp.value = prop || ''
+  sortOrder.value = (order as any) || ''
+  page.value = 1
+}
 
 const warehouses = ref<any[]>([])
 
 // ── 分类面板 ──────────────────────────────────────────────────────────────────
 const cateOptions = ref<any[]>([])
 const cateLoading = ref(false)
-const collapsedCates = ref<Set<number>>(new Set())
-
-function toggleCate(id: number) {
-  if (collapsedCates.value.has(id)) collapsedCates.value.delete(id)
-  else collapsedCates.value.add(id)
-}
 
 interface CateTreeNode { id: number; name: string; sort: number; parent_id: any; children: CateTreeNode[] }
 
@@ -270,7 +269,7 @@ function buildCateTree(source: any[]) {
   all.forEach(c => { map[c.id] = c })
   const roots: CateTreeNode[] = []
   all.forEach(c => {
-    const pid = c.parent_id
+    const pid = Number(c.parent_id ?? 0)
     if (pid && map[pid]) map[pid].children.push(c)
     else roots.push(c)
   })
@@ -357,12 +356,27 @@ function getAvgPrice(row: any): number {
   return stockPriceMap.value[row.id] ?? Number(row.cost_price ?? 0)
 }
 
+// Recursively collect all descendant cate ids (including self)
+function getCateIds(id: number): number[] {
+  const ids: number[] = []
+  function collect(cateId: number) {
+    ids.push(cateId)
+    // find in flat cateOptions for all children
+    cateOptions.value.forEach(c => {
+      if (Number(c.parent_id) === cateId) collect(c.id)
+    })
+  }
+  collect(id)
+  return ids
+}
+
 // Filtered list (client-side after loading all goods)
 const filteredGoods = computed(() => {
   let rows = allGoods.value
 
   if (selectedCate.value) {
-    rows = rows.filter(r => r.cate_id === selectedCate.value)
+    const matchIds = getCateIds(selectedCate.value)
+    rows = rows.filter(r => matchIds.includes(Number(r.cate_id)))
   }
 
   if (keyword.value.trim()) {
@@ -386,6 +400,22 @@ const filteredGoods = computed(() => {
     })
   }
 
+  if (sortProp.value && sortOrder.value) {
+    const dir = sortOrder.value === 'ascending' ? 1 : -1
+    rows = [...rows].sort((a, b) => {
+      let av: any, bv: any
+      if (sortProp.value === '__stock_qty') {
+        av = getStockQty(a); bv = getStockQty(b)
+      } else if (sortProp.value === '__stock_value') {
+        av = getStockQty(a) * getAvgPrice(a); bv = getStockQty(b) * getAvgPrice(b)
+      } else {
+        av = a[sortProp.value] ?? ''; bv = b[sortProp.value] ?? ''
+      }
+      if (typeof av === 'string') return dir * av.localeCompare(bv)
+      return dir * (av - bv)
+    })
+  }
+
   return rows
 })
 
@@ -406,7 +436,7 @@ const overviewStats = computed(() => [
 const tableSummaryText = computed(() => {
   const filters = []
   if (selectedCate.value) {
-    const cate = categories.value.find(item => item.id === selectedCate.value)
+    const cate = cateOptions.value.find(item => item.id === selectedCate.value)
     if (cate?.name) filters.push(cate.name)
   }
   if (statusFilter.value !== 'all') filters.push(stockFilterLabel(statusFilter.value))
@@ -426,7 +456,7 @@ const selectionScopeText = computed(() => {
     if (w?.name) labels.push(`仓库：${w.name}`)
   }
   if (selectedCate.value) {
-    const cate = categories.value.find(item => item.id === selectedCate.value)
+    const cate = cateOptions.value.find(item => item.id === selectedCate.value)
     if (cate?.name) labels.push(`分类：${cate.name}`)
   }
   return labels.join(' / ') || '当前范围：全部'
@@ -506,7 +536,7 @@ function selectWarehouse(id: number) {
 }
 
 function selectCate(id: number) {
-  selectedCate.value = id
+  selectedCate.value = Number(id)
   page.value = 1
 }
 

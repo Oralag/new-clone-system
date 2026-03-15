@@ -919,7 +919,7 @@ async function loadDashboardData(force = false) {
     })
     const goodsList: any[] = rows(goodsRes)
     const stockWarnCount = goodsList.filter(g => (stockMap[g.id] ?? 0) <= 0).length
-    stats.value[3].value = stockWarnCount > 100 ? '100+' : String(stockWarnCount)
+    stats.value[3].value = String(stockWarnCount)
 
     if (fundFlowRes.status === 'fulfilled') {
       fundFlowList.value = fundFlowRes.value?.data?.rows ?? fundFlowRes.value?.rows ?? []

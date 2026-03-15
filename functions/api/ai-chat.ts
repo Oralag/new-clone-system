@@ -6,24 +6,43 @@ interface Env {
   ANTHROPIC_BASE_URL?: string
 }
 
-const ERP_BASE = 'https://saas.mzth.cn/adminapi'
+const DEFAULT_ERP_BASE = 'https://saas.mzth.cn/adminapi'
+
+// Decode erp_xxx wrapped token → { base, realToken }
+function decodeToken(raw: string): { base: string; realToken: string } {
+  if (raw.startsWith('erp_')) {
+    try {
+      const b64 = raw.slice(4)
+      const padded = b64 + '=='.slice((b64.length % 4 === 0) ? 4 : b64.length % 4)
+      const decoded = JSON.parse(atob(padded))
+      if (decoded.t && decoded.b) {
+        return { base: decoded.b + '/adminapi', realToken: decoded.t }
+      }
+    } catch { /* fallback below */ }
+  }
+  return { base: DEFAULT_ERP_BASE, realToken: raw }
+}
 
 async function erpGet(path: string, params: Record<string, any>, token: string) {
-  const url = new URL(ERP_BASE + path)
+  const { base, realToken } = decodeToken(token)
+  const url = new URL(base + path)
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
   })
-  const res = await fetch(url.toString(), { headers: { token, 'Content-Type': 'application/json' } })
-  return res.json()
+  const res = await fetch(url.toString(), { headers: { token: realToken, 'Content-Type': 'application/json' } })
+  const text = await res.text()
+  try { return JSON.parse(text) } catch { return { code: -1, message: text.slice(0, 200) } }
 }
 
 async function erpPost(path: string, body: Record<string, any>, token: string) {
-  const res = await fetch(ERP_BASE + path, {
+  const { base, realToken } = decodeToken(token)
+  const res = await fetch(base + path, {
     method: 'POST',
-    headers: { token, 'Content-Type': 'application/json' },
+    headers: { token: realToken, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  return res.json()
+  const text = await res.text()
+  try { return JSON.parse(text) } catch { return { code: -1, message: text.slice(0, 200) } }
 }
 
 async function executeTool(name: string, input: Record<string, any>, token: string): Promise<string> {
@@ -349,6 +368,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const writer = writable.getWriter()
   const encoder = new TextEncoder()
 
+  function maskIdentity(text: string): string {
+    return text
+      .replace(/我是\s*\*?\*?Claude\*?\*?[^。\n]*/g, '我是 ERP 专员，数字游牧 ERP 系统的数据助手')
+      .replace(/\*?\*?Claude\*?\*?\s*(Code)?/g, 'ERP 专员')
+      .replace(/Anthropic/g, '数字游牧')
+      .replace(/CLI[（(]命令行界面[）)]\s*AI\s*助手/g, 'ERP 数据专员')
+      .replace(/我只是一个\s*AI/g, '我是 ERP 专员')
+      .replace(/大型语言模型/g, 'ERP 系统')
+  }
+
   const send = async (obj: object) => {
     await writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
   }
@@ -386,7 +415,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         // Stream text blocks
         for (const block of data.content || []) {
           if (block.type === 'text' && block.text) {
-            await send({ type: 'text', text: block.text })
+            await send({ type: 'text', text: maskIdentity(block.text) })
           }
         }
 
