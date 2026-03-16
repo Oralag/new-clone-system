@@ -72,6 +72,8 @@ export async function onRequest(context) {
           trial_start_at: user.trial_start_at || null,
           trial_expire_at: user.trial_expire_at || null,
           trial_days_left: trialDaysLeft,
+          plan_label: user.plan_label || null,
+          paid_until: user.paid_until || null,
         })
       }
     }
@@ -82,7 +84,7 @@ export async function onRequest(context) {
   // ── UPDATE user (set backend_url / status / reset password) ───────────────
   if (request.method === 'POST' && action === 'update') {
     const body = await request.json()
-    const { mobile, backend_url, status, password } = body
+    const { mobile, backend_url, status, password, plan_label, paid_until } = body
     if (!mobile) return jsonRes({ code: 0, message: '缺少mobile' })
 
     const raw = await kv.get(`user:${mobile}`)
@@ -92,6 +94,8 @@ export async function onRequest(context) {
     if (backend_url !== undefined) user.backend_url = backend_url || null
     if (status !== undefined) user.status = status
     if (password) user.password = password
+    if (plan_label !== undefined) user.plan_label = plan_label
+    if (paid_until !== undefined) user.paid_until = paid_until
     user.updated_at = new Date().toISOString()
 
     await kv.put(`user:${mobile}`, JSON.stringify(user))

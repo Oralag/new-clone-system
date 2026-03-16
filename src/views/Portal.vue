@@ -25,6 +25,18 @@
       <div class="nav-links">
       </div>
       <div style="display:flex;align-items:center;gap:8px">
+        <!-- 主题切换 -->
+        <div class="nav-theme-btns">
+          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'light' }" title="亮色" @click="appStore.setTheme('light')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
+          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'dark' }" title="暗黑" @click="appStore.setTheme('dark')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'eye' }" title="护眼" @click="appStore.setTheme('eye')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <button v-if="isTrial && !trialStarted" class="nav-trial-btn" @click="showTrialModal = true">🎁 领取15天体验</button>
         <button v-if="isTrial" class="nav-upgrade-btn" @click="upgradeDialog?.open()">升级付费版</button>
         <button class="nav-btn" @click="logout">退出登录</button>
@@ -367,11 +379,13 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAppStore } from '@/stores/app'
 import UpgradeDialog from '@/components/UpgradeDialog.vue'
 import CaptainBar from '@/components/CaptainBar.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+const appStore = useAppStore()
 
 function go(path: string) { router.push(path) }
 function logout() { auth.logout(); router.push('/login') }
@@ -634,6 +648,31 @@ const TOOL_LABELS: Record<string, string> = {
   transition: all 0.2s cubic-bezier(0.23,1,0.32,1);
 }
 .nav-btn:hover { background: rgba(0,113,227,0.88); transform: scale(0.97); }
+
+.nav-theme-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.nav-theme-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.8);
+  transition: background 0.15s, color 0.15s;
+}
+.nav-theme-btn:hover { background: rgba(255,255,255,0.25); color: #fff; }
+.nav-theme-btn.active { background: #fff; color: #0071e3; }
 
 /* ── Hero Compact ── */
 .hero-compact {

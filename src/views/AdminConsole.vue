@@ -75,6 +75,8 @@
               <th>企业</th>
               <th>手机号</th>
               <th>付费状态</th>
+              <th>套餐</th>
+              <th>到期时间</th>
               <th>体验状态</th>
               <th>后端</th>
               <th>注册时间</th>
@@ -100,6 +102,20 @@
                   </span>
                   <span v-if="u.status === 'suspended'" class="badge badge-suspended">已暂停</span>
                 </div>
+              </td>
+              <td>
+                <span v-if="u.plan_label" class="plan-label">{{ u.plan_label }}</span>
+                <span v-else class="trial-cell-none">—</span>
+              </td>
+              <td>
+                <div v-if="u.paid_until">
+                  <div v-if="isPaidExpired(u.paid_until)" class="trial-cell-expired">已到期</div>
+                  <div v-else class="paid-until-cell">
+                    <span class="trial-dot"></span>
+                    {{ formatDate(u.paid_until) }}
+                  </div>
+                </div>
+                <span v-else class="trial-cell-none">—</span>
               </td>
               <td>
                 <div v-if="!u.trial_start_at" class="trial-cell-none">未领取</div>
@@ -225,6 +241,20 @@
       </div>
 
       <el-form :model="editForm" label-width="100px" style="margin-top:20px">
+        <el-form-item label="套餐">
+          <div class="plan-options">
+            <button v-for="p in paidPlanOptions" :key="p.value"
+              :class="['plan-btn', { active: editForm.plan === p.value }]"
+              type="button"
+              @click="editForm.plan = p.value">
+              <span class="plan-btn-name">{{ p.label }}</span>
+              <span class="plan-btn-price">¥{{ p.price }}</span>
+            </button>
+          </div>
+          <div v-if="editForm.plan" class="field-hint">
+            到期时间：{{ calcExpireDate(editForm.plan, editForm.paid_until) }}
+          </div>
+        </el-form-item>
         <el-form-item label="专属后端">
           <el-input v-model="editForm.backend_url"
             placeholder="https://erp-tenant-xxx.up.railway.app" clearable />
@@ -313,8 +343,30 @@ async function loadUsers() {
 }
 
 function openEdit(u: any) {
-  editForm.value = { ...u, new_password: '' }
+  editForm.value = { ...u, new_password: '', plan: '' }
   editVisible.value = true
+}
+
+const paidPlanOptions = [
+  { value: '1m', label: '1个月', months: 1, price: 99 },
+  { value: '3m', label: '3个月', months: 3, price: 268 },
+  { value: '6m', label: '半年', months: 6, price: 499 },
+  { value: '1y', label: '1年', months: 12, price: 888 },
+]
+
+function calcExpireDate(planValue: string, existingPaidUntil?: string): string {
+  const plan = paidPlanOptions.find(p => p.value === planValue)
+  if (!plan) return ''
+  // 从当前到期时间续期，否则从今天起算
+  const base = existingPaidUntil && new Date(existingPaidUntil) > new Date()
+    ? new Date(existingPaidUntil)
+    : new Date()
+  base.setMonth(base.getMonth() + plan.months)
+  return base.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+function isPaidExpired(paidUntil: string): boolean {
+  return new Date(paidUntil) < new Date()
 }
 
 async function handleSave() {
@@ -325,6 +377,19 @@ async function handleSave() {
       backend_url: editForm.value.backend_url || null,
     }
     if (editForm.value.new_password) payload.password = editForm.value.new_password
+
+    // 套餐：计算新到期时间
+    if (editForm.value.plan) {
+      const plan = paidPlanOptions.find(p => p.value === editForm.value.plan)
+      if (plan) {
+        const base = editForm.value.paid_until && new Date(editForm.value.paid_until) > new Date()
+          ? new Date(editForm.value.paid_until)
+          : new Date()
+        base.setMonth(base.getMonth() + plan.months)
+        payload.plan_label = plan.label
+        payload.paid_until = base.toISOString()
+      }
+    }
 
     const res = await fetch('/api/admin-console?action=update', {
       method: 'POST',
@@ -359,10 +424,31 @@ async function toggleStatus(u: any) {
 }
 
 async function handleDelete(u: any) {
+  const backendHint = u.backend_url
+    ? `<div style="margin-top:12px;padding:10px 12px;background:#fff7e6;border:1px solid #ffd591;border-radius:6px;font-size:12px;line-height:1.8;color:#874d00;">
+        <strong>完整注销步骤：</strong><br>
+        1. 点击「确定删除」— 删除本系统账号<br>
+        2. 前往 Railway 删除该客户的后端服务（所有业务数据将彻底清除）<br>
+        <a href="https://railway.app/dashboard" target="_blank"
+          style="color:#1d5fce;text-decoration:none;font-weight:600;">
+          → 打开 Railway 控制台
+        </a><br>
+        <span style="color:#86909c;">后端地址：${u.backend_url}</span>
+      </div>`
+    : `<div style="margin-top:12px;padding:10px 12px;background:#f7f8fa;border:1px solid #e8eaed;border-radius:6px;font-size:12px;color:#4e5969;">
+        该账号为体验用户，无独立后端，删除账号即可。
+      </div>`
+
   await ElMessageBox.confirm(
-    `确定删除「${u.company_name}」？此操作不可恢复。`,
-    '删除确认',
-    { type: 'warning', confirmButtonText: '确定删除', confirmButtonClass: 'el-button--danger' }
+    `<span>确定注销「<strong>${u.company_name}</strong>」的账号？</span>${backendHint}`,
+    '注销账号',
+    {
+      type: 'warning',
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger',
+    }
   )
   const res = await fetch('/api/admin-console?action=delete', {
     method: 'DELETE',
@@ -918,6 +1004,63 @@ onMounted(() => {
   white-space: nowrap;
 }
 .copy-btn:hover { background: #3a3a3a; }
+
+/* Plan label */
+.plan-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d5fce;
+  background: #e8f0fe;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Paid until cell */
+.paid-until-cell {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #00b42a;
+}
+
+/* Plan selector in dialog */
+.plan-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plan-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #f2f3f5;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: all 0.15s;
+  min-width: 64px;
+}
+.plan-btn:hover { background: #e8eaed; }
+.plan-btn.active {
+  background: #e8f0fe;
+  border-color: #a5c3ff;
+}
+.plan-btn-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d2129;
+}
+.plan-btn.active .plan-btn-name { color: #1d5fce; }
+.plan-btn-price {
+  font-size: 11px;
+  color: #86909c;
+}
+.plan-btn.active .plan-btn-price { color: #1d5fce; }
 
 /* Code cell */
 .code-text {

@@ -43,7 +43,7 @@
           <el-avatar :size="28" :src="authStore.avatar" class="avatar">
             {{ authStore.userName.charAt(0) }}
           </el-avatar>
-          <span class="user-name">{{ authStore.userName }}</span>
+          <span class="user-name">{{ appStore.companyName || authStore.userName }}</span>
           <el-icon class="arrow-icon"><ArrowDown /></el-icon>
         </div>
         <template #dropdown>
@@ -107,13 +107,25 @@ import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { updateAdmin } from '@/api/setting'
+import { updateAdmin, getCompanyInfo } from '@/api/setting'
 import http from '@/api/http'
+import { onMounted } from 'vue'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+
+// 挂载时加载企业名（若 store 尚未有值）
+onMounted(async () => {
+  if (!appStore.companyName) {
+    try {
+      const res: any = await getCompanyInfo()
+      const name = (res.data ?? res)?.name
+      if (name) appStore.setCompanyName(name)
+    } catch { /* 静默失败，不影响页面 */ }
+  }
+})
 
 const SUPER_ADMIN = '17747344571'
 const isSuperAdmin = computed(() => {

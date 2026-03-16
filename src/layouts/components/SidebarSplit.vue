@@ -81,8 +81,8 @@ function onClick(key: string) {
 
 .sidebar-split {
   width: 90px;
-  background: #f5f5f7;
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--gray);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -104,7 +104,7 @@ function onClick(key: string) {
   align-items: center;
   gap: 6px;
   padding: 20px 0 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -128,7 +128,7 @@ function onClick(key: string) {
 
 .logo-name {
   font-size: 11px;
-  color: #1d1d1f;
+  color: var(--dark);
   font-weight: 700;
   letter-spacing: -0.02em;
   opacity: 0.5;

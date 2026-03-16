@@ -146,6 +146,18 @@
           </div>
         </div>
         <div class="topbar-right">
+          <!-- 主题切换 -->
+          <div class="topbar-theme-btns">
+            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'light' }" title="亮色" @click="appStore.setTheme('light')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            </button>
+            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'dark' }" title="暗黑" @click="appStore.setTheme('dark')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'eye' }" title="护眼" @click="appStore.setTheme('eye')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
           <div class="workflow-progress-tag">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="flex-shrink:0">
               <path d="M1 6h2l2-4 2 8 2-4 1 0" stroke="#0071e3" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
@@ -171,11 +183,13 @@
 import { computed, defineComponent, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBrandStore } from '@/stores/brand'
+import { useAppStore } from '@/stores/app'
 import { useWorkflowStatus } from '@/composables/useWorkflowStatus'
 
 const route = useRoute()
 const router = useRouter()
 const brandStore = useBrandStore()
+const appStore = useAppStore()
 
 const { stepStatuses, workflowProgressLabel } = useWorkflowStatus()
 
@@ -268,16 +282,16 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 .agent-layout {
   display: flex;
   height: 100vh;
-  background: #f5f5f7;
+  background: var(--gray);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1d1d1f;
+  color: var(--dark);
 }
 
 /* ── 侧边栏 ── */
 .agent-sidebar {
   width: 200px;
-  background: #f5f5f7;
-  border-right: 1px solid rgba(0,0,0,0.06);
+  background: var(--gray);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -292,13 +306,13 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   align-items: center;
   gap: 9px;
   padding: 16px 14px 14px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid var(--border);
 }
 .logo-icon { width: 28px; height: 28px; border-radius: 7px; overflow: hidden; flex-shrink: 0; }
 .logo-img { width: 100%; height: 100%; object-fit: contain; }
 .logo-text-wrap { flex: 1; min-width: 0; }
-.logo-text { display: block; font-size: 12.5px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; white-space: nowrap; }
-.logo-sub { display: block; font-size: 10px; color: rgba(29,29,31,0.35); margin-top: 1px; white-space: nowrap; }
+.logo-text { display: block; font-size: 12.5px; font-weight: 700; color: var(--dark); letter-spacing: -0.02em; white-space: nowrap; }
+.logo-sub { display: block; font-size: 10px; color: var(--dim); margin-top: 1px; white-space: nowrap; }
 .ai-dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: #34d399;
@@ -317,13 +331,13 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   margin: 10px 10px 4px;
   padding: 9px 10px;
   border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(0,0,0,0.07);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   cursor: pointer;
   transition: box-shadow 0.15s, border-color 0.15s;
 }
-.brand-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.09); border-color: rgba(0,0,0,0.12); }
+.brand-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.09); border-color: var(--faint); }
 .brand-avatar {
   width: 26px; height: 26px; border-radius: 7px;
   background: linear-gradient(135deg, #0071e3, #005bb5);
@@ -331,12 +345,12 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .brand-info { flex: 1; overflow: hidden; }
-.brand-name { font-size: 12px; font-weight: 600; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.brand-sub { font-size: 10px; color: rgba(29,29,31,0.4); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.brand-edit-icon { color: rgba(29,29,31,0.3); flex-shrink: 0; }
+.brand-name { font-size: 12px; font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-sub { font-size: 10px; color: var(--dim); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-edit-icon { color: var(--dim); flex-shrink: 0; }
 .brand-warn-icon { color: #f59e0b; display: flex; align-items: center; flex-shrink: 0; }
-.brand-unconfigured-text { font-size: 12px; color: rgba(29,29,31,0.5); flex: 1; }
-.brand-arrow { font-size: 12px; color: rgba(29,29,31,0.25); }
+.brand-unconfigured-text { font-size: 12px; color: var(--mid); flex: 1; }
+.brand-arrow { font-size: 12px; color: var(--dim); }
 
 /* 导航 */
 .sidebar-nav { padding: 6px 8px 0; flex: 1; }
@@ -344,7 +358,7 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   padding: 4px 6px 3px;
   font-size: 9.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.1em;
-  color: rgba(29,29,31,0.28);
+  color: var(--dim);
 }
 .nav-item {
   position: relative;
@@ -352,16 +366,16 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   padding: 7px 8px;
   border-radius: 8px;
   text-decoration: none;
-  color: rgba(29,29,31,0.5);
+  color: var(--mid);
   font-size: 12.5px; font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   margin-bottom: 1px;
 }
-.nav-item:hover { background: rgba(0,0,0,0.04); color: #1d1d1f; }
+.nav-item:hover { background: var(--faint); color: var(--dark); }
 .nav-item--active {
-  background: #ffffff !important;
-  color: #1d1d1f !important;
+  background: var(--card-bg) !important;
+  color: var(--dark) !important;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
 }
@@ -383,11 +397,11 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 /* 底部 */
 .sidebar-footer {
   padding: 6px 8px 12px;
-  border-top: 1px solid rgba(0,0,0,0.06);
+  border-top: 1px solid var(--border);
   display: flex; flex-direction: column; gap: 1px;
 }
-.nav-item--back { color: rgba(29,29,31,0.3); }
-.nav-item--back:hover { color: rgba(29,29,31,0.6); }
+.nav-item--back { color: var(--dim); }
+.nav-item--back:hover { color: var(--mid); }
 
 /* ── 主内容 ── */
 .agent-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -395,14 +409,14 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 /* 顶栏 */
 .agent-topbar {
   height: 52px;
-  background: #ffffff;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 24px;
   flex-shrink: 0;
 }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
-.topbar-title { font-size: 15px; font-weight: 700; color: #1d1d1f; margin: 0; letter-spacing: -0.02em; }
+.topbar-title { font-size: 15px; font-weight: 700; color: var(--dark); margin: 0; letter-spacing: -0.02em; }
 .topbar-brand-tag {
   display: flex; align-items: center; gap: 5px;
   font-size: 11px; font-weight: 600; color: #0071e3;
@@ -416,10 +430,36 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   padding: 3px 10px; border-radius: 20px; cursor: pointer; font-weight: 600;
 }
 .topbar-right { display: flex; align-items: center; gap: 14px; }
+
+.topbar-theme-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gray);
+  border-radius: 999px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+}
+.topbar-theme-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mid);
+  transition: background 0.15s, color 0.15s;
+}
+.topbar-theme-btn:hover { background: var(--gray-2); color: var(--dark); }
+.topbar-theme-btn.active { background: var(--card-bg); color: var(--blue); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
 .workflow-progress-tag {
   display: flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 600; color: rgba(29,29,31,0.5);
-  background: #f5f5f7; border-radius: 20px; padding: 4px 11px;
+  font-size: 11px; font-weight: 600; color: var(--mid);
+  background: var(--gray); border-radius: 20px; padding: 4px 11px;
 }
 .ai-status { display: flex; align-items: center; gap: 5px; }
 .ai-status-dot {
@@ -427,22 +467,22 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   background: #34d399; box-shadow: 0 0 0 2px rgba(52,211,153,0.2);
   animation: aipulse 2.5s ease-in-out infinite;
 }
-.ai-status-text { font-size: 11px; font-weight: 600; color: rgba(29,29,31,0.4); }
+.ai-status-text { font-size: 11px; font-weight: 600; color: var(--mid); }
 
 /* 内容区 */
-.agent-content { flex: 1; overflow-y: auto; padding: 24px 28px; background: #f5f5f7; }
+.agent-content { flex: 1; overflow-y: auto; padding: 24px 28px; background: var(--gray); }
 
 /* ── 移动端 ── */
 .mobile-topbar {
-  height: 50px; background: #ffffff;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  height: 50px; background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
   display: flex; align-items: center; padding: 0 14px; gap: 10px;
   position: sticky; top: 0; z-index: 20; flex-shrink: 0;
 }
-.mobile-menu-btn { background: none; border: none; padding: 6px; cursor: pointer; color: rgba(29,29,31,0.5); display: flex; align-items: center; }
-.mobile-title { flex: 1; font-size: 15px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+.mobile-menu-btn { background: none; border: none; padding: 6px; cursor: pointer; color: var(--mid); display: flex; align-items: center; }
+.mobile-title { flex: 1; font-size: 15px; font-weight: 700; color: var(--dark); letter-spacing: -0.02em; }
 .drawer-inner { padding: 10px 8px 14px; }
-.drawer-logo { display: flex; align-items: center; padding: 8px 6px 14px; border-bottom: 1px solid rgba(0,0,0,0.06); margin-bottom: 8px; }
+.drawer-logo { display: flex; align-items: center; padding: 8px 6px 14px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
 
 @media (max-width: 767px) {
   .agent-layout { display: block; height: auto; min-height: 100vh; }

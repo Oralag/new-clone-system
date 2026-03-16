@@ -9,8 +9,13 @@ export const useAppStore = defineStore('app', {
     activeTopMenu: 'sale', // current top-level menu key (clicked/persistent)
     hoverTopMenu: '' as string, // hovered menu key (flyout)
     flyoutY: 56 as number, // top offset for flyout panel
+    companyName: localStorage.getItem('erp_company_name') || '',
   }),
   actions: {
+    setCompanyName(name: string) {
+      this.companyName = name
+      localStorage.setItem('erp_company_name', name)
+    },
     toggleSidebar() {
       this.sidebarCollapsed = !this.sidebarCollapsed
     },

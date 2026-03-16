@@ -52,10 +52,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAppStore } from '@/stores/app'
 import { getCompanyInfo, updateCompanyInfo } from '@/api/setting'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const appStore = useAppStore()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -65,7 +67,10 @@ async function loadData() {
   loading.value = true
   try {
     const res: any = await getCompanyInfo()
-    Object.assign(form, res.data || res)
+    // http拦截器返回完整响应体 {code,data,message}，企业信息在 res.data
+    const info = res.data ?? res
+    Object.assign(form, info)
+    if (info.name) appStore.setCompanyName(info.name)
   } finally {
     loading.value = false
   }
@@ -75,6 +80,7 @@ async function handleSave() {
   saving.value = true
   try {
     await updateCompanyInfo(form)
+    if (form.name) appStore.setCompanyName(form.name)
     ElMessage.success('保存成功')
   } finally {
     saving.value = false

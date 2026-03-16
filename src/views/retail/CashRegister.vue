@@ -8,7 +8,7 @@
           <path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
           <path d="M6 15v-5h4v5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
         </svg>
-        <span>返回首页</span>
+        <span class="cr-home-text">返回首页</span>
       </div>
       <div class="cr-brand">
         <div class="cr-brand-icon">
@@ -30,7 +30,7 @@
         <!-- 克重计算器按钮 -->
         <div class="cr-calc-btn" @click="openWeightCalc()" title="散装计价">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg>
-          <span>克重计算</span>
+          <span class="cr-calc-text">克重计算</span>
         </div>
         <el-select
           v-model="selectedMemberId"
