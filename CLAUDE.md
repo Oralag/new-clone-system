@@ -192,5 +192,6 @@ npm run deploy
 
 - [2026-03-14] 初始建立规范文档
 - [2026-03-14] 下拉选项出现重复 → 从API赋值 cateOptions 时必须按 name 去重：`const rc = rows; cateOptions.value = rc.filter((c, i) => rc.findIndex(x => x.name === c.name) === i)`，禁止直接 `cateOptions.value = res.data?.rows ?? []`
+- [2026-03-16] 未审核单据（status=0）被计入财务统计 → 所有报表/统计/台账页面必须过滤 `status === 1`，未审核单据一律不计入任何金额统计
 
 <!-- 在此继续追加纠错记录 -->

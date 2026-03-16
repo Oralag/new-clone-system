@@ -1,0 +1,108 @@
+/* ============================================================
+   全局手机端适配 — 统一修复所有模块列表/表单页的移动端问题
+   规则：只在 max-width: 767px 生效，不影响桌面端
+   ============================================================ */
+
+@media (max-width: 767px) {
+
+  /* ── 1. 搜索框宽度覆盖 ──────────────────────────────────────
+     各页面 search slot 里的输入框/下拉都用了 style="width:XXXpx"
+     手机端强制 flex:1，避免溢出 */
+  .sc-mobile-bar .mobile-search-row .el-input,
+  .sc-mobile-bar .mobile-search-row .el-select {
+    flex: 1 !important;
+    min-width: 80px !important;
+    width: auto !important;
+  }
+
+  /* ── 2. 表单 el-col 响应式 ──────────────────────────────────
+     所有 .form-page 内的 el-col 强制单列显示（span会被覆盖为24）
+     Element Plus el-col 使用 flex-basis + max-width 实现 */
+  .form-page .el-col,
+  .form-body .el-col {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* ── 3. form-topbar 换行适配 ────────────────────────────────
+     标题+按钮两行排列，高度自适应 */
+  .form-topbar {
+    height: auto !important;
+    min-height: 52px !important;
+    padding: 8px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .form-topbar > div:first-child {
+    gap: 8px !important;
+  }
+
+  .form-body {
+    padding: 10px 10px 60px !important;
+    gap: 10px !important;
+  }
+
+  .form-section {
+    padding: 12px 12px 10px !important;
+  }
+
+  /* form-page 高度在手机端去掉固定calc，改用auto */
+  .form-page {
+    height: auto !important;
+    min-height: calc(100vh - 110px);
+  }
+
+  /* ── 4. 分页器简化 ──────────────────────────────────────────
+     StockAll 自定义分页器在手机端避免溢出 */
+  .pager-row {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    justify-content: center !important;
+  }
+
+  .pager-row .el-pagination {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* 隐藏分页器的 sizes 和 jumper（手机端太挤）*/
+  .pager-row .el-pagination .el-pagination__sizes,
+  .pager-row .el-pagination .el-pagination__jump {
+    display: none !important;
+  }
+
+  /* ── 5. el-card padding 缩小 ────────────────────────────────*/
+  .el-card__body {
+    padding: 10px !important;
+  }
+
+  /* ── 6. 操作列按钮折行 ──────────────────────────────────────
+     操作列多个 link button 换行，避免挤在一起 */
+  .m-auto-card__actions {
+    flex-wrap: wrap !important;
+    gap: 4px 8px !important;
+  }
+
+  /* ── 7. 商品明细表格（展开行/表单内）允许水平滚动 ────────── */
+  .expand-detail {
+    overflow-x: auto !important;
+    padding: 10px 10px 10px 12px !important;
+  }
+
+  .form-section .el-table {
+    overflow-x: auto !important;
+  }
+
+  /* ── 8. settlement-grid 换行 ────────────────────────────────*/
+  .settlement-grid {
+    gap: 10px 16px !important;
+  }
+
+  /* ── 9. goods-toolbar 换行 ──────────────────────────────────*/
+  .goods-toolbar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+}

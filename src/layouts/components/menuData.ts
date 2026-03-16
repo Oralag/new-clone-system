@@ -155,6 +155,7 @@ export const menuData: TopMenuItem[] = [
       { key: 'reports-sale-ledger', title: '销售台账', path: '/reports/sale-ledger' },
       { key: 'reports-commission', title: '提成报表', path: '/reports/commission' },
       { key: 'reports-procure', title: '采购统计', path: '/reports/procure' },
+      { key: 'reports-procure-ledger', title: '采购台账', path: '/reports/procure-ledger' },
       { key: 'reports-stock', title: '库存报表', path: '/reports/stock' },
       { key: 'reports-profit', title: '利润报表', path: '/reports/profit' },
       { key: 'reports-finance', title: '财务报表', path: '/reports/finance' },

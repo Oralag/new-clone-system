@@ -10,6 +10,18 @@
           <el-icon><Menu /></el-icon>
         </button>
         <span class="mobile-title">{{ route.meta?.title || '数字游牧ERP' }}</span>
+        <!-- 主题切换按钮组 -->
+        <div class="mobile-theme-btns">
+          <button class="mobile-theme-btn" :class="{ active: appStore.theme === 'light' }" @click="appStore.setTheme('light')">
+            <el-icon :size="15"><Sunny /></el-icon>
+          </button>
+          <button class="mobile-theme-btn" :class="{ active: appStore.theme === 'dark' }" @click="appStore.setTheme('dark')">
+            <el-icon :size="15"><Moon /></el-icon>
+          </button>
+          <button class="mobile-theme-btn" :class="{ active: appStore.theme === 'eye' }" @click="appStore.setTheme('eye')">
+            <el-icon :size="15"><View /></el-icon>
+          </button>
+        </div>
         <button class="mobile-home-btn" @click="router.push('/portal')">
           <el-icon><HomeFilled /></el-icon>
         </button>
@@ -114,7 +126,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
 import { menuData } from './components/menuData'
-import { Menu, Grid, Promotion, Close, HomeFilled, Odometer } from '@element-plus/icons-vue'
+import { Menu, Grid, Promotion, Close, HomeFilled, Odometer, Sunny, Moon, View } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -173,23 +185,28 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 </script>
 
 <style scoped>
-.admin-layout { display: flex; height: 100vh; min-height: 100vh; overflow: hidden; background: #ffffff; min-width: 900px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+.admin-layout { display: flex; height: 100vh; min-height: 100vh; overflow: hidden; background: var(--card-bg); min-width: 900px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 .admin-layout.is-mobile { min-width: unset; }
-.main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: #ffffff; }
-.page-content { flex: 1; overflow-y: auto; overflow-x: auto; padding: 16px; background: #f5f5f7; }
+.main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: var(--card-bg); }
+.page-content { flex: 1; overflow-y: auto; overflow-x: auto; padding: 16px; background: var(--gray); }
 .page-footer { text-align: right; font-size: 10px; color: rgba(0,0,0,0.2); padding: 4px 0 6px; letter-spacing: -0.01em; }
 .footer-brand { color: rgba(0,0,0,0.25); font-weight: 600; }
 
 /* 移动端顶部栏 */
-.mobile-topbar { height: 52px; background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; padding: 0 12px; gap: 10px; flex-shrink: 0; }
-.mobile-menu-btn, .mobile-home-btn { background: none; border: none; padding: 6px; cursor: pointer; color: #4e5969; font-size: 20px; display: flex; align-items: center; flex-shrink: 0; }
-.mobile-title { flex: 1; font-size: 16px; font-weight: 600; color: #1d2129; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-topbar { height: 52px; background: var(--card-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0; }
+.mobile-menu-btn, .mobile-home-btn { background: none; border: none; padding: 6px; cursor: pointer; color: var(--mid); font-size: 20px; display: flex; align-items: center; flex-shrink: 0; }
+.mobile-title { flex: 1; font-size: 15px; font-weight: 600; color: var(--dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mobile-user { flex-shrink: 0; }
 .mobile-avatar { cursor: pointer; background: #165dff; color: #fff; font-weight: 600; }
 
+/* 手机端主题切换按钮组 */
+.mobile-theme-btns { display: flex; align-items: center; gap: 2px; flex-shrink: 0; background: var(--gray); border-radius: 20px; padding: 2px; }
+.mobile-theme-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--mid); transition: background 0.15s, color 0.15s; }
+.mobile-theme-btn.active { background: var(--card-bg); color: var(--blue); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+
 /* 移动端底部导航 */
-.mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #fff; border-top: 1px solid #e8e8e8; display: flex; align-items: stretch; z-index: 200; padding-bottom: env(safe-area-inset-bottom); }
-.mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: #86909c; padding: 6px 4px; }
+.mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; align-items: stretch; z-index: 200; padding-bottom: env(safe-area-inset-bottom); }
+.mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: var(--dim); padding: 6px 4px; }
 .mobile-nav-item.active { color: #3a8ee6; }
 .nav-icon { font-size: 20px; }
 .nav-icon-svg { width: 22px; height: 22px; }
@@ -202,12 +219,12 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 
 /* 移动端抽屉 */
 .drawer-inner { display: flex; flex-direction: column; height: 100%; }
-.drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 1px solid #e8e8e8; flex-shrink: 0; }
-.drawer-logo { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: #1d2129; }
+.drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.drawer-logo { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--dark); }
 .drawer-menu { flex: 1; overflow-y: auto; padding: 8px 0; }
 .drawer-section { margin-bottom: 4px; }
-.drawer-section-title { display: flex; align-items: center; gap: 6px; padding: 10px 16px 6px; font-size: 13px; font-weight: 600; color: #4e5969; }
+.drawer-section-title { display: flex; align-items: center; gap: 6px; padding: 10px 16px 6px; font-size: 13px; font-weight: 600; color: var(--mid); }
 .drawer-section-items { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; }
-.drawer-item { padding: 7px 14px; font-size: 13px; color: #4e5969; background: #f2f3f5; border-radius: 20px; cursor: pointer; border: 1px solid transparent; }
-.drawer-item:active, .drawer-item.active { background: #e8f0fe; color: #165dff; border-color: #c5d6ff; }
+.drawer-item { padding: 7px 14px; font-size: 13px; color: var(--mid); background: var(--gray); border-radius: 20px; cursor: pointer; border: 1px solid transparent; }
+.drawer-item:active, .drawer-item.active { background: var(--blue-light); color: var(--blue); border-color: rgba(0,113,227,0.2); }
 </style>

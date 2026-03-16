@@ -1,6 +1,49 @@
 <template>
   <div class="stock-page">
-    <div class="stock-sidebar" :style="{ width: sidebarWidth + 'px' }">
+
+    <!-- 手机端：分类筛选 drawer -->
+    <el-drawer v-if="isMobile" v-model="drawerVisible" title="分类筛选" direction="ltr" size="75%">
+      <div class="sidebar-col" style="padding:0 8px">
+        <div class="sidebar-label-row">
+          <span class="sidebar-label">分类</span>
+          <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
+        </div>
+        <el-select
+          v-model="selectedWarehouse"
+          size="small"
+          style="width:100%;margin-bottom:8px"
+          @change="(val: any) => selectWarehouse(val)"
+        >
+          <el-option label="全部仓库" :value="0" />
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+        <div class="sidebar-section" v-loading="cateLoading">
+          <div :class="['sidebar-item', selectedCate === 0 ? 'active' : '']" @click="selectCate(0); drawerVisible = false">全部</div>
+          <el-tree
+            :data="cateTree"
+            :props="{ label: 'name', children: 'children' }"
+            node-key="id"
+            :default-expand-all="false"
+            highlight-current
+            style="background:transparent"
+            @node-click="(node: any) => { selectCate(node.id); drawerVisible = false }"
+          >
+            <template #default="{ node, data }">
+              <span :class="['tree-node-label', selectedCate === data.id ? 'active' : '']" style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:4px;overflow:hidden">
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ data.name }}</span>
+                <span class="cate-item-actions" style="flex-shrink:0">
+                  <el-icon class="act-icon" @click.stop="openCateForm(data)"><Edit /></el-icon>
+                  <el-icon class="act-icon danger" @click.stop="handleDeleteCate(data.id)"><Delete /></el-icon>
+                </span>
+              </span>
+            </template>
+          </el-tree>
+        </div>
+      </div>
+    </el-drawer>
+
+    <!-- 桌面端：固定侧边栏 -->
+    <div v-if="!isMobile" class="stock-sidebar" :style="{ width: sidebarWidth + 'px' }">
       <div class="sidebar-inner">
 
       <div class="sidebar-col">
@@ -45,12 +88,17 @@
       </div>
       </div><!-- /sidebar-inner -->
     </div>
-    <div class="sidebar-resize-handle" @mousedown="startResize" />
+    <div v-if="!isMobile" class="sidebar-resize-handle" @mousedown="startResize" />
 
     <div style="flex:1;min-width:0">
       <el-card>
         <div class="stock-topbar">
           <div class="topbar-left">
+            <!-- 手机端：分类筛选入口按钮 -->
+            <el-button v-if="isMobile" size="small" @click="drawerVisible = true">
+              <el-icon><Filter /></el-icon>
+              {{ selectedCate === 0 ? '全部分类' : cateOptions.find(c => c.id === selectedCate)?.name || '分类' }}
+            </el-button>
             <span v-for="item in overviewStats" :key="item.label" class="stat-label">
               {{ item.label }}
               <strong :class="item.label === '负库存' && item.value > 0 ? 'stat-red' : item.label === '库存不足' && item.value > 0 ? 'stat-orange' : 'stat-blue'">{{ item.value }}</strong>
@@ -203,13 +251,18 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, Delete, Filter } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getStockList, getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate } from '@/api/goods'
 import http from '@/api/http'
 
 const router = useRouter()
+
+// ── 移动端检测 ────────────────────────────────────────────────────────────────
+const isMobile = ref(window.innerWidth < 768)
+const drawerVisible = ref(false)
+function onResize() { isMobile.value = window.innerWidth < 768 }
 
 // ── 侧边栏拖拽调宽 ────────────────────────────────────────────────────────────
 const SIDEBAR_MIN = 180
@@ -233,7 +286,9 @@ function startResize(e: MouseEvent) {
   window.addEventListener('mouseup', onUp)
 }
 
-onUnmounted(() => {})  // cleanup handled inline above
+onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
+})
 const loading = ref(false)
 const tableData = computed(() => {
   const start = (page.value - 1) * pageSize.value
@@ -636,6 +691,7 @@ async function loadMeta() {
 }
 
 onMounted(async () => {
+  window.addEventListener('resize', onResize)
   loading.value = true
   try {
     await Promise.all([loadMeta(), loadCates(), loadAllGoods(), loadStockMap(), loadActivityMaps()])
@@ -842,5 +898,30 @@ onMounted(async () => {
 :deep(.col-white-bg .cell),
 :deep(.col-white-bg) {
   background-color: #fff !important;
+}
+
+@media (max-width: 767px) {
+  .stock-page {
+    flex-direction: column;
+  }
+  .stock-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .stock-topbar > div:last-child {
+    width: 100%;
+  }
+  .stock-topbar > div:last-child .el-select {
+    flex: 1;
+    min-width: 0;
+  }
+  .stock-topbar > div:last-child .el-input {
+    flex: 1;
+    min-width: 0;
+    width: auto !important;
+  }
+  .topbar-left {
+    flex-wrap: wrap;
+  }
 }
 </style>

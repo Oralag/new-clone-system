@@ -111,6 +111,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'reports/sale-ledger', name: 'ReportsSaleLedger', component: () => import('@/views/reports/SaleLedger.vue'), meta: { title: '销售台账' } },
       { path: 'reports/commission', name: 'ReportsCommission', component: () => import('@/views/reports/Commission.vue'), meta: { title: '提成报表' } },
       { path: 'reports/procure', name: 'ReportsProcure', component: () => import('@/views/reports/Procure.vue'), meta: { title: '采购统计' } },
+      { path: 'reports/procure-ledger', name: 'ReportsProcureLedger', component: () => import('@/views/reports/ProcureLedger.vue'), meta: { title: '采购台账' } },
       { path: 'reports/stock', name: 'ReportsStock', component: () => import('@/views/reports/Stock.vue'), meta: { title: '库存报表' } },
       { path: 'reports/profit', name: 'ReportsProfit', component: () => import('@/views/reports/Profit.vue'), meta: { title: '利润报表' } },
       { path: 'reports/finance', name: 'ReportsFinance', component: () => import('@/views/reports/Finance.vue'), meta: { title: '财务报表' } },

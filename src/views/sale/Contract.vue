@@ -913,11 +913,15 @@ function removeItem(index: number) {
   calcTotal()
 }
 
-function onCustomerChange(id: any) {
+async function onCustomerChange(id: any) {
   const c = customerOptions.value.find(x => x.id === id)
   fd.customer_name = c?.name || c?.nickname || ''
   fd.prepay_amount = 0
-  loadCustomerPrepay(Number(id))
+  await loadCustomerPrepay(Number(id))
+  // 新建合同时自动填入可用预付款余额
+  if (!fd.id && customerPrepayBalance.value > 0) {
+    fd.prepay_amount = Math.min(customerPrepayBalance.value, finalReceivable.value)
+  }
   // 自动套用客户绑定的等级
   const bound = levelMap[id]
   if (bound && levelOptions.value.some(l => l.id === bound)) {
@@ -946,14 +950,31 @@ function openCreate() {
   showForm.value = true
 }
 
-function openEdit(row: any, readonly = false) {
+async function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
   isReadonly.value = readonly
   showForm.value = true
-  if (row.customer_id) loadCustomerPrepay(Number(row.customer_id))
+  // 拉取完整详情，补全列表里缺失的字段（如 prepay_amount）
+  try {
+    const detail = await getContractDetail(Number(row.id))
+    const full = detail?.data?.row || detail?.data || {}
+    if (full.id) {
+      const items = fd.items // 保留已解析的 items
+      Object.assign(fd, full)
+      fd.items = items.length ? items : (()=>{ try { return JSON.parse(full.goods_info||'[]') } catch { return [] } })()
+      calcTotal()
+    }
+  } catch { /* 详情拉取失败不影响基本展示 */ }
+  // 加载预付款余额，完成后如果合同本身已有记录的 prepay_amount 则保留，否则自动填入可用余额
+  if (row.customer_id) {
+    await loadCustomerPrepay(Number(row.customer_id))
+    if (!fd.prepay_amount && customerPrepayBalance.value > 0) {
+      fd.prepay_amount = Math.min(customerPrepayBalance.value, finalReceivable.value)
+    }
+  }
 }
 
 function backToList() {
@@ -965,14 +986,19 @@ function buildContractHtml() {
   const items: any[] = fd.items || []
   const rows = items.map((item: any, i: number) => `
     <tr>
-      <td>${i + 1}</td>
+      <td style="text-align:center">${i + 1}</td>
       <td>${item.goods_name || ''}</td>
       <td>${item.goods_sn || ''}</td>
       <td>${item.spec || ''}</td>
-      <td>${item.unit_name || ''}</td>
-      <td>${item.num || 0}</td>
-      <td>¥${Number(item.price || 0).toFixed(2)}</td>
-      <td>¥${((item.num || 0) * (item.price || 0)).toFixed(2)}</td>
+      <td style="text-align:center">${item.unit_name || ''}</td>
+      <td style="text-align:right">${Number(item.num || 0).toFixed(2)}</td>
+      <td style="text-align:right">${Number(item.price_no_tax || 0).toFixed(4)}</td>
+      <td style="text-align:center">${item.tax_rate || 0}%</td>
+      <td style="text-align:right;color:#dc2626">${((item.num||0)*(item.price_no_tax||0)*(item.tax_rate||0)/100).toFixed(2)}</td>
+      <td style="text-align:right">${Number(item.price || 0).toFixed(4)}</td>
+      <td style="text-align:right">${((item.num||0)*(item.price_no_tax||0)).toFixed(2)}</td>
+      <td style="text-align:right;color:#0071e3;font-weight:600">${((item.num||0)*(item.price||0)).toFixed(2)}</td>
+      <td>${item.remark || ''}</td>
     </tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
   <title>销售合同 ${(fd as any).contract_no || ''}</title><link rel="icon" href="data:,">
@@ -988,8 +1014,9 @@ function buildContractHtml() {
     .section-title{font-weight:bold;margin:8px 0 4px;font-size:12px;border-left:3px solid #0071e3;padding-left:6px}
     .total-row{text-align:right;margin-top:6px;font-size:12px}
     .total-row b{color:#0071e3}
+    .sl{background:#f5f5f5;font-weight:bold;padding:4px 8px;white-space:nowrap}
     .footer{margin-top:24px;display:flex;justify-content:space-between;font-size:11px}
-    @media print{body{padding:8px 14px}@page{margin:10mm}}
+    @media print{body{padding:8px 14px}@page{margin:8mm;size:A4 landscape}}
   </style></head><body>
   <h2>销 售 合 同</h2>
   <div class="sub">数字游牧ERP &nbsp;·&nbsp; 合同编号：${(fd as any).contract_no || ''}</div>
@@ -1001,13 +1028,58 @@ function buildContractHtml() {
   </div>
   <div class="section-title">商品明细</div>
   <table>
-    <thead><tr><th>序号</th><th>商品名称</th><th>编码</th><th>规格</th><th>单位</th><th>数量</th><th>单价</th><th>金额</th></tr></thead>
+    <thead><tr>
+      <th style="text-align:center">序号</th>
+      <th>商品名称</th>
+      <th>编码</th>
+      <th>规格</th>
+      <th style="text-align:center">单位</th>
+      <th style="text-align:right">数量</th>
+      <th style="text-align:right">未税单价</th>
+      <th style="text-align:center">税率</th>
+      <th style="text-align:right">税额</th>
+      <th style="text-align:right">含税单价</th>
+      <th style="text-align:right">未税合计</th>
+      <th style="text-align:right">含税合计</th>
+      <th>备注</th>
+    </tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <div class="total-row">
     <span>合同总额：<b>¥${Number(fd.total_amount || 0).toFixed(2)}</b></span>
     ${fd.freight_amount ? `&nbsp;&nbsp;运费：¥${Number(fd.freight_amount).toFixed(2)}（${fd.freight_bearer === 'buyer' ? '买方承担' : fd.freight_bearer === 'seller' ? '卖方承担' : fd.freight_bearer === 'half' ? '各付一半' : '免运费'}）` : ''}
   </div>
+  <div class="section-title" style="margin-top:10px">结算信息</div>
+  <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px">
+    <colgroup><col style="width:14%"><col style="width:22%"><col style="width:14%"><col style="width:22%"><col style="width:14%"><col style="width:14%"></colgroup>
+    <tbody>
+      <tr>
+        <td class="sl">未税合计</td><td>¥${fd.items.reduce((s:number,r:any)=>s+(r.num||0)*(r.price_no_tax||0),0).toFixed(2)}</td>
+        <td class="sl">税额合计</td><td style="color:#dc2626">¥${fd.items.reduce((s:number,r:any)=>s+(r.num||0)*(r.price_no_tax||0)*(r.tax_rate||0)/100,0).toFixed(2)}</td>
+        <td class="sl">商品含税合计</td><td><b>¥${Number(fd.total_amount||0).toFixed(2)}</b></td>
+      </tr>
+      <tr>
+        <td class="sl">折扣方式</td><td>${fd.discount_type==='none'?'无折扣':fd.discount_type==='amount'?'按金额折扣':'按百分比折扣'}</td>
+        <td class="sl">${fd.discount_type==='percent'?'折扣(%)':'折扣金额'}</td><td style="color:#16a34a">${fd.discount_type==='none'?'—':fd.discount_type==='percent'?Number(fd.discount_value||0).toFixed(2)+'%':'-¥'+Number(fd.discount_value||0).toFixed(2)}</td>
+        <td class="sl">折后金额</td><td><b>¥${Number(fd.after_discount||0).toFixed(2)}</b></td>
+      </tr>
+      <tr>
+        <td class="sl">物流费用</td><td style="color:#7c3aed">${fd.freight_amount?'¥'+Number(fd.freight_amount).toFixed(2)+'（'+(fd.freight_bearer==='buyer'?'买方承担':fd.freight_bearer==='seller'?'卖方承担':fd.freight_bearer==='half'?'各付一半':'免运费')+'）':'—'}</td>
+        <td class="sl">其他收支</td><td>${Number(fd.income_amount||0)!==0?(Number(fd.income_amount)>0?'-':'+')+'¥'+Math.abs(Number(fd.income_amount)).toFixed(2):'—'}</td>
+        <td class="sl">最终应收</td><td style="color:#0071e3"><b>¥${Math.max(0,Number(fd.after_discount||0)+(fd.freight_bearer==='buyer'?Number(fd.freight_amount||0):fd.freight_bearer==='half'?Number(fd.freight_amount||0)/2:0)-Number(fd.income_amount||0)).toFixed(2)}</b></td>
+      </tr>
+      <tr>
+        <td class="sl">预付款核销</td><td style="color:#16a34a">${Number(fd.prepay_amount||0)>0?'-¥'+Number(fd.prepay_amount).toFixed(2):'—'}</td>
+        <td class="sl">实际待收</td><td style="color:#dc2626"><b>¥${Math.max(0,Math.max(0,Number(fd.after_discount||0)+(fd.freight_bearer==='buyer'?Number(fd.freight_amount||0):fd.freight_bearer==='half'?Number(fd.freight_amount||0)/2:0)-Number(fd.income_amount||0))-Number(fd.prepay_amount||0)).toFixed(2)}</b></td>
+        <td class="sl">本次收款</td><td>¥${Number(fd.receive_amount||0).toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td class="sl">是否开票</td><td>${fd.need_invoice?'是':'否'}</td>
+        <td class="sl">收款账户</td><td>${fd.receive_account||'—'}</td>
+        <td class="sl">分期付款</td><td>${Number(fd.installment)?'<span style="color:#0071e3">是</span>':'否'}</td>
+      </tr>
+    </tbody>
+  </table>
   ${fd.remark ? `<div style="margin-top:6px;font-size:11px">备注：${fd.remark}</div>` : ''}
   <div class="footer">
     <span>甲方（买方）签章：_______________</span>
@@ -1017,14 +1089,25 @@ function buildContractHtml() {
   </body></html>`
 }
 
-function handleContractPrint() {
+async function handleContractPrint() {
+  // 从收款单反查预付款核销金额
+  try {
+    const orderSn = String((fd as any).order_sn || (fd as any).contract_no || '').trim()
+    if (orderSn) {
+      const res = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
+      const rows = (res?.data?.rows ?? []).filter((r: any) =>
+        String(r?.order_sn || r?.order_no || '').trim() === orderSn &&
+        String(r?.remark || '').includes('预付款核销')
+      )
+      fd.prepay_amount = rows.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+    }
+  } catch { /* ignore */ }
   const w = window.open('', '_blank', 'width=900,height=700')
   if (!w) { ElMessage.warning('请允许弹窗'); return }
   w.document.write(buildContractHtml())
   w.document.close()
   w.focus()
   setTimeout(() => {
-    // 只移除扩展注入的图片/画布节点，不碰 table/div 等打印内容
     const ext = w.document.querySelectorAll('img, canvas, [id^="ext-"], [class*="extension"], [class*="plugin"], [data-extension]')
     ext.forEach(el => el.remove())
     w.print()
@@ -1140,7 +1223,6 @@ async function autoCreateReceipt(row: any) {
     try {
       await createCollectReceipt({
         customer_id: customerId, customer_name: customerName,
-        contact_type: 'customer', contact_id: customerId || null, contact_name: customerName,
         amount: actualPrepay, order_sn: orderSn, order_no: orderSn,
         fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
         receipt_date: today, remark: `预付款核销 - ${orderSn}`,
@@ -1154,7 +1236,6 @@ async function autoCreateReceipt(row: any) {
     try {
       await createCollectReceipt({
         customer_id: customerId, customer_name: customerName,
-        contact_type: 'customer', contact_id: customerId || null, contact_name: customerName,
         amount: remaining, order_sn: orderSn, order_no: orderSn,
         fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
         receipt_date: today, remark: `合同自动收款 - ${orderSn}`,
@@ -1240,7 +1321,6 @@ async function initAutoReceiptSync() {
       try {
         await createCollectReceipt({
           customer_id: customerId, customer_name: customerName,
-          contact_type: 'customer', contact_id: customerId || null, contact_name: customerName,
           amount: amt, order_sn: sn, order_no: sn,
           fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
           receipt_date: receiptDate, remark: `合同自动收款 - ${sn}`,
@@ -1251,6 +1331,22 @@ async function initAutoReceiptSync() {
 }
 
 async function handleDelete(id: number) {
+  // 检查是否有关联收款单，有则拦截
+  try {
+    const detail = await getContractDetail(id)
+    const row = detail?.data?.row || detail?.data || {}
+    const orderSn = String(row?.order_sn || row?.contract_no || '').trim()
+    if (orderSn) {
+      const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
+      const linked = (existing?.data?.rows ?? []).filter((r: any) =>
+        String(r?.order_sn || r?.order_no || '').trim() === orderSn
+      )
+      if (linked.length > 0) {
+        ElMessage.error(`该合同存在 ${linked.length} 笔关联收款单，请先前往【财务 > 收款单】删除后再删除合同`)
+        return
+      }
+    }
+  } catch { /* ignore */ }
   await ElMessageBox.confirm('确定删除该合同？', '提示', { type: 'warning' })
   await deleteContract(id)
   ElMessage.success('删除成功')
@@ -1260,7 +1356,28 @@ async function handleDelete(id: number) {
 async function handleAudit(row: any, status: number) {
   if (status === 2) { ElMessage.warning('驳回操作已禁用'); return }
   const action = status === 1 ? '审核通过' : '反审核'
-  await ElMessageBox.confirm(`确定${action}该合同？`, '提示', { type: 'warning' })
+
+  // 反审核前检查是否有关联收款单 — 有则直接拦截，必须先去收款单手动删除
+  if (status === 0) {
+    try {
+      const orderSn = String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+      if (orderSn) {
+        const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
+        const linked = (existing?.data?.rows ?? []).filter((r: any) =>
+          String(r?.order_sn || r?.order_no || '').trim() === orderSn
+        )
+        if (linked.length > 0) {
+          ElMessage.error(`该合同存在 ${linked.length} 笔关联收款单，请先前往【财务 > 收款单】删除后再反审核`)
+          return
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  try {
+    await ElMessageBox.confirm(`确定${action}该合同？`, '提示', { type: 'warning' })
+  } catch { return }
+
   try {
     await auditContract(row.id, status)
     let errMsg = ''
@@ -1287,9 +1404,9 @@ async function cancelAutoReceipt(row: any) {
   if (!orderSn) return
   try {
     const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
+    // 删除所有关联该合同的收款单（合同自动收款 + 预付款核销）
     const rows = (existing?.data?.rows ?? []).filter((r: any) =>
-      String(r?.order_sn || r?.order_no || '').trim() === orderSn &&
-      String(r?.remark || '').includes('合同自动收款')
+      String(r?.order_sn || r?.order_no || '').trim() === orderSn
     )
     for (const r of rows) {
       try { await http.post('/finance/CollectReceipt/del', { id: Number(r.id) }) } catch { /* ignore */ }

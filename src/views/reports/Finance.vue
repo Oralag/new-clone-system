@@ -23,7 +23,8 @@
         </el-form-item>
       </el-form>
       <ScTable ref="scTable" :api-obj="getFinanceReportList"
-          export-file-name="财务报表" :params="searchForm">
+          export-file-name="财务报表" :params="searchForm"
+          :row-filter="(r: any) => r.status === 1">
         <el-table-column label="收款单号" prop="order_sn" width="160" />
         <el-table-column label="客户名称" prop="customer_name" min-width="120" />
         <el-table-column label="收款金额" prop="amount" width="120" align="right">
