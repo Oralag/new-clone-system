@@ -780,4 +780,193 @@ onMounted(async () => {
   grid-column: 1/-1; text-align: center;
   color: #cbd5e1; padding: 60px 0; font-size: 14px;
 }
+
+/* ── 手机端 Tab 栏（桌面隐藏） ────────────────────────────────────────────── */
+.cr-mobile-tabs { display: none; }
+
+/* ── 响应式：≤ 768px 手机布局 ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* 顶栏紧凑化 */
+  .cr-topbar {
+    height: auto;
+    min-height: 52px;
+    padding: 6px 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .cr-home-text { display: none; }
+
+  .cr-home-btn {
+    padding: 6px 8px;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    justify-content: center;
+  }
+
+  .cr-brand-name {
+    font-size: 13px;
+    letter-spacing: 0;
+  }
+
+  .cr-brand-icon svg { width: 22px; height: 22px; }
+  .cr-brand { gap: 6px; }
+
+  .cr-top-right {
+    width: 100%;
+    gap: 6px;
+    order: 3;
+  }
+
+  .cr-calc-text { display: none; }
+
+  .cr-calc-btn {
+    padding: 6px 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cr-member-select { width: 120px; flex-shrink: 0; }
+
+  .cr-search-box {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  /* 主体：撑满剩余空间（减去顶栏和底部Tab） */
+  .cr-body {
+    padding: 0;
+    padding-bottom: 56px; /* 底部Tab高度 */
+  }
+
+  .cr-card {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    flex-direction: column;
+  }
+
+  /* 左右面板在手机上各占全屏，通过Tab切换显示 */
+  .cr-left {
+    width: 100%;
+    flex-shrink: unset;
+    border-right: none;
+    display: flex;
+  }
+
+  .cr-right {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Tab切换：隐藏非当前面板 */
+  .cr-left.mobile-hidden,
+  .cr-right.mobile-hidden {
+    display: none;
+  }
+
+  /* 商品网格：手机端2列 */
+  .cr-goods-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 10px 8px;
+    gap: 8px;
+  }
+
+  .cr-goods-card {
+    padding: 10px 9px 9px;
+    border-radius: 12px;
+  }
+
+  .cr-goods-name {
+    font-size: 12px;
+    min-height: 32px;
+    margin-bottom: 7px;
+  }
+
+  .cr-goods-price { font-size: 14px; }
+
+  /* 分类栏 */
+  .cr-cate-tab { padding: 10px 12px; font-size: 13px; }
+
+  /* 购物车列表 */
+  .cr-cart-area { padding: 6px 8px; }
+
+  .cr-cart-item { padding: 8px 9px; border-radius: 10px; }
+  .cr-cart-item-name { font-size: 12px; }
+  .cr-cart-item-sub { font-size: 13px; }
+
+  /* 结算区 */
+  .cr-settle { padding: 12px 10px; gap: 8px; }
+
+  .cr-checkout-btn {
+    height: 52px;
+    font-size: 16px;
+    border-radius: 14px;
+  }
+
+  /* 支付方式：横向滚动 */
+  .cr-pay-methods { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .cr-pay-methods::-webkit-scrollbar { height: 0; }
+  .cr-pay-btn { flex-shrink: 0; }
+
+  /* 底部Tab栏 */
+  .cr-mobile-tabs {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: #fff;
+    border-top: 1px solid #e8eaf0;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+    z-index: 100;
+  }
+
+  .cr-mobile-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 11px;
+    color: #94a3b8;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+    user-select: none;
+  }
+
+  .cr-mobile-tab.active { color: #2563eb; }
+
+  .cr-mobile-tab svg { flex-shrink: 0; }
+
+  .cr-cart-badge {
+    position: absolute;
+    top: 6px;
+    right: 50%;
+    margin-right: -18px;
+    min-width: 16px;
+    height: 16px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
+  }
+}
 </style>

@@ -66,10 +66,10 @@ function navigate(path: string) {
   position: fixed;
   left: 94px;
   width: 172px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.07);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08);
   z-index: 300;
   overflow-y: auto;
   max-height: calc(100vh - 16px);

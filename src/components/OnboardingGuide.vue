@@ -559,10 +559,12 @@ watch(
       restoreOverlay()
       targetRect.value = null
       document.body.style.overflow = ''
+      document.body.classList.remove('guide-active')
       return
     }
     restoreOverlay()
     document.body.style.overflow = 'hidden'
+    document.body.classList.add('guide-active')
     // 自动跳转到当前步骤对应页面
     const targetPath = currentAction.value.path
     if (targetPath && route.path !== targetPath) {
@@ -592,6 +594,7 @@ onBeforeUnmount(() => {
   window.visualViewport?.removeEventListener('resize', handleViewportChange)
   window.visualViewport?.removeEventListener('scroll', handleViewportChange)
   document.body.style.overflow = ''
+  document.body.classList.remove('guide-active')
 })
 </script>
 

@@ -484,7 +484,7 @@ watch(
 
 <style scoped>
 .sc-table {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 8px;
   padding: 16px;
 }
@@ -495,7 +495,7 @@ watch(
   flex-wrap: wrap;
   gap: 12px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 12px;
 }
 
@@ -591,22 +591,22 @@ watch(
   .mobile-empty {
     text-align: center;
     padding: 32px 0;
-    color: rgba(29,29,31,0.3);
+    color: var(--dim);
     font-size: 13px;
   }
 
   /* 自动生成的移动端卡片 */
   .m-auto-card {
-    background: #fff;
+    background: var(--card-bg);
     border-radius: 16px;
     padding: 14px 16px;
-    border: 1px solid rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
     box-shadow: 0 1px 6px rgba(0,0,0,0.05);
   }
   .m-auto-card__title {
     font-size: 15px;
     font-weight: 700;
-    color: #1d1d1f;
+    color: var(--dark);
     margin-bottom: 10px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -620,14 +620,14 @@ watch(
     font-size: 13px;
   }
   .m-auto-card__label {
-    color: rgba(29,29,31,0.4);
+    color: var(--dim);
     font-size: 11px;
     font-weight: 600;
     flex-shrink: 0;
     margin-right: 8px;
   }
   .m-auto-card__value {
-    color: #1d1d1f;
+    color: var(--dark);
     font-weight: 500;
     text-align: right;
     flex: 1;
@@ -642,7 +642,7 @@ watch(
     gap: 4px;
     margin-top: 10px;
     padding-top: 10px;
-    border-top: 1px solid rgba(0,0,0,0.06);
+    border-top: 1px solid var(--border);
     flex-wrap: wrap;
   }
 
@@ -651,7 +651,7 @@ watch(
     position: sticky;
     bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     justify-content: center;
-    background: #f5f5f7;
+    background: var(--gray);
     padding: 10px 0;
     margin: 0 -10px;
     z-index: 10;

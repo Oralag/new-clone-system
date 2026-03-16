@@ -1156,9 +1156,9 @@ function renderMarkdown(text: string): string {
   position: fixed;
   width: 400px;
   height: 580px;
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1243,7 +1243,7 @@ function renderMarkdown(text: string): string {
 .welcome-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--dark);
   margin: 4px 0 0;
 }
 
@@ -1329,8 +1329,8 @@ function renderMarkdown(text: string): string {
   font-size: 13px;
   line-height: 1.6;
   word-break: break-word;
-  background: #f2f3f5;
-  color: #1d2129;
+  background: var(--gray);
+  color: var(--dark);
 }
 
 .message-user .message-content {
@@ -1560,8 +1560,8 @@ function renderMarkdown(text: string): string {
   font-size: 13px;
   font-family: inherit;
   line-height: 1.6;
-  color: #1d2129;
-  background: #fff;
+  color: var(--dark);
+  background: var(--card-bg);
   resize: none;
   outline: none;
   transition: border-color 0.2s;

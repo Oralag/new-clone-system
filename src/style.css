@@ -1012,3 +1012,14 @@ html, body {
 .el-table .el-table__row:hover td.el-table__cell.el-table-fixed-column--right {
   background-color: var(--gray) !important;
 }
+
+/* ══════════════════════════════════════════════════════════
+   新手向导激活时：提升所有 Popper 层级，避免被遮罩盖住
+   ══════════════════════════════════════════════════════════ */
+body.guide-active .el-select__popper,
+body.guide-active .el-picker__popper,
+body.guide-active .el-dropdown__popper,
+body.guide-active .el-popper,
+body.guide-active [data-popper-placement] {
+  z-index: 4100 !important;
+}

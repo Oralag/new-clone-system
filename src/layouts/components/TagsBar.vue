@@ -107,12 +107,12 @@ function closeOther() {
 }
 
 .tag-item:hover {
-  background: #f5f5f7;
-  color: #1d1d1f;
+  background: var(--gray);
+  color: var(--dark);
 }
 
 .tag-item.active {
-  background: #ffffff;
+  background: var(--card-bg);
   color: #0071e3;
   border-color: rgba(0, 113, 227, 0.15);
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
@@ -136,10 +136,10 @@ function closeOther() {
 .context-menu {
   position: fixed;
   z-index: 9999;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   padding: 5px;
   min-width: 120px;
 }
@@ -149,13 +149,13 @@ function closeOther() {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  color: rgba(29, 29, 31, 0.7);
+  color: var(--mid);
   border-radius: 8px;
   transition: background 0.12s;
 }
 
 .ctx-item:hover {
-  background: #f5f5f7;
-  color: #1d1d1f;
+  background: var(--gray);
+  color: var(--dark);
 }
 </style>

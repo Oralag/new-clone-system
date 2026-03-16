@@ -224,10 +224,10 @@ async function handleUserCmd(cmd: string) {
 <style scoped>
 .top-bar {
   height: 54px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--card-bg);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -246,17 +246,17 @@ async function handleUserCmd(cmd: string) {
 }
 
 :deep(.el-breadcrumb__inner) {
-  color: rgba(29, 29, 31, 0.4) !important;
+  color: var(--dim) !important;
   font-weight: 500;
 }
 
 :deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
-  color: #1d1d1f !important;
+  color: var(--dark) !important;
   font-weight: 600;
 }
 
 :deep(.el-breadcrumb__separator) {
-  color: rgba(29, 29, 31, 0.2) !important;
+  color: var(--faint) !important;
 }
 
 .top-actions {
@@ -275,13 +275,13 @@ async function handleUserCmd(cmd: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(29, 29, 31, 0.4);
+  color: var(--mid);
   transition: background 0.15s, color 0.15s;
 }
 
 .action-btn:hover {
-  background: #f5f5f7;
-  color: #1d1d1f;
+  background: var(--gray);
+  color: var(--dark);
 }
 
 .action-btn.active {
@@ -300,7 +300,7 @@ async function handleUserCmd(cmd: string) {
 }
 
 .user-info:hover {
-  background: #f5f5f7;
+  background: var(--gray);
 }
 
 .avatar {
@@ -313,12 +313,12 @@ async function handleUserCmd(cmd: string) {
 .user-name {
   font-size: 13px;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--dark);
   letter-spacing: -0.01em;
 }
 
 .arrow-icon {
   font-size: 11px;
-  color: rgba(29, 29, 31, 0.3);
+  color: var(--dim);
 }
 </style>
