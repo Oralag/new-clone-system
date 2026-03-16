@@ -46,13 +46,13 @@
 
         <!-- 编辑模式：从全部应用里勾选 -->
         <template v-if="editMode">
-          <div class="m-edit-hint">勾选要展示的应用（最多8个）</div>
+          <div class="m-edit-hint">勾选要展示的应用</div>
           <div v-for="section in allAppSections" :key="section.key" class="m-edit-section">
             <div class="m-edit-section-title">{{ section.title }}</div>
             <div class="m-edit-grid">
               <div v-for="item in section.children" :key="item.key"
                 class="m-edit-item"
-                :class="{ selected: editSelected.includes(item.key), disabled: !editSelected.includes(item.key) && editSelected.length >= 8 }"
+                :class="{ selected: editSelected.includes(item.key) }"
                 @click="toggleEditItem(item)">
                 <div class="m-edit-check">
                   <svg v-if="editSelected.includes(item.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
@@ -694,7 +694,6 @@ function toggleEditItem(item: { key: string; title: string; path?: string }) {
   if (idx >= 0) {
     editSelected.value.splice(idx, 1)
   } else {
-    if (editSelected.value.length >= 8) return
     editSelected.value.push(item.key)
   }
 }
