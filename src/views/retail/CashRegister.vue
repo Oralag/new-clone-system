@@ -65,12 +65,25 @@
       </div>
     </div>
 
+    <!-- ── 手机端底部 Tab ── -->
+    <div class="cr-mobile-tabs">
+      <div class="cr-mobile-tab" :class="{ active: mobileTab === 'goods' }" @click="mobileTab = 'goods'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>商品</span>
+      </div>
+      <div class="cr-mobile-tab" :class="{ active: mobileTab === 'cart' }" @click="mobileTab = 'cart'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+        <span>购物车</span>
+        <span v-if="cartItems.length" class="cr-cart-badge">{{ cartItems.length }}</span>
+      </div>
+    </div>
+
     <!-- ── 主体 ── -->
     <div class="cr-body">
       <div class="cr-card">
 
         <!-- 左：购物车 -->
-        <div class="cr-left">
+        <div class="cr-left" :class="{ 'mobile-hidden': mobileTab !== 'cart' }">
           <div class="cr-left-actions">
             <div class="cr-action-btn" @click="() => {}">存单</div>
             <div class="cr-action-btn" @click="() => {}">取单</div>
@@ -128,7 +141,7 @@
         </div>
 
         <!-- 右：分类 + 商品 -->
-        <div class="cr-right">
+        <div class="cr-right" :class="{ 'mobile-hidden': mobileTab !== 'goods' }">
           <div class="cr-cate-bar">
             <div class="cr-cate-tab" :class="{ active: activeCate === 'hot' }"
               @click="activeCate = 'hot'; loadHotGoods()">
@@ -254,6 +267,9 @@ const goodsList = ref<any[]>([])
 const goodsLoading = ref(false)
 const selectedGoods = ref<any>(null)
 
+// 手机端 Tab 切换
+const mobileTab = ref<'goods' | 'cart'>('goods')
+
 // 点击商品卡片：选中高亮，同时加入购物车
 function selectGoods(g: any) {
   selectedGoods.value = g
@@ -344,6 +360,7 @@ function addToCart(g: any) {
     num: 1,
   })
   calcTotal()
+  // 手机端：加入购物车后短暂提示，不自动跳转（让用户继续选商品）
 }
 
 function changeQty(idx: number, delta: number) {

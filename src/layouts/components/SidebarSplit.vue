@@ -152,19 +152,19 @@ function onClick(key: string) {
   gap: 7px;
   padding: 9px 10px;
   cursor: pointer;
-  color: rgba(29, 29, 31, 0.4);
+  color: var(--mid);
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   border-radius: 10px;
 }
 
 .menu-item:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: #1d1d1f;
+  background: var(--faint);
+  color: var(--dark);
 }
 
 .menu-item.active {
-  background: #ffffff;
-  color: #1d1d1f;
+  background: var(--card-bg);
+  color: var(--dark);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
@@ -193,14 +193,14 @@ function onClick(key: string) {
   display: flex;
   justify-content: center;
   padding: 12px 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .user-avatar {
   cursor: pointer;
-  background: #e8e8ed;
-  color: #1d1d1f;
+  background: var(--gray-2);
+  color: var(--dark);
   font-weight: 600;
   font-size: 13px;
 }

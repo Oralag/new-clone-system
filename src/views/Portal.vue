@@ -584,10 +584,10 @@ const TOOL_LABELS: Record<string, string> = {
   top: 0;
   z-index: 50;
   height: 64px;
-  background: rgba(255,255,255,0.72);
+  background: rgba(255,255,255,0.85);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -606,7 +606,7 @@ const TOOL_LABELS: Record<string, string> = {
 }
 .nav-logo-icon:hover { transform: scale(1.12) rotate(3deg); }
 
-.nav-logo-text { font-size: 18px; font-weight: 800; letter-spacing: -0.04em; color: #1d1d1f; }
+.nav-logo-text { font-size: 18px; font-weight: 800; letter-spacing: -0.04em; color: var(--dark); }
 
 .nav-platform-badge {
   display: flex;
@@ -614,11 +614,11 @@ const TOOL_LABELS: Record<string, string> = {
   gap: 6px;
   margin-left: 4px;
   padding: 4px 10px 4px 8px;
-  background: #f5f5f7;
+  background: var(--gray);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
-  color: #555;
+  color: var(--mid);
 }
 .nav-platform-dot {
   width: 6px;

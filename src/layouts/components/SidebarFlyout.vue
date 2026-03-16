@@ -83,11 +83,11 @@ function navigate(path: string) {
 .flyout-header {
   font-size: 10px;
   font-weight: 700;
-  color: rgba(29, 29, 31, 0.3);
+  color: var(--dim);
   padding: 12px 14px 8px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
 }
 
@@ -95,7 +95,7 @@ function navigate(path: string) {
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 500;
-  color: rgba(29, 29, 31, 0.7);
+  color: var(--mid);
   cursor: pointer;
   border-radius: 10px;
   margin: 1px 6px;
@@ -104,8 +104,8 @@ function navigate(path: string) {
 }
 
 .flyout-item:hover {
-  background: #f5f5f7;
-  color: #1d1d1f;
+  background: var(--gray-2);
+  color: var(--dark);
 }
 
 .flyout-item.active {
