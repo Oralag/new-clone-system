@@ -246,7 +246,7 @@ function backToList() { showForm.value=false; tableRef.value?.refresh() }
 // 商品选择
 const goodsPickerVisible=ref(false), goodsSearch=ref(''), allGoods=ref<any[]>([]), filteredGoods=ref<any[]>([]), pickerSel=ref<any[]>([])
 async function openGoodsPicker() {
-  if(!allGoods.value.length) { try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.list||r.data?.data||[]}catch{} }
+  try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.rows||r.data?.list||r.data?.data||[]}catch{}
   goodsSearch.value=''; filteredGoods.value=[...allGoods.value]; pickerSel.value=[]; goodsPickerVisible.value=true
 }
 function filterGoods() { const q=goodsSearch.value.trim().toLowerCase(); filteredGoods.value=allGoods.value.filter(g=>!q||(g.name||'').toLowerCase().includes(q)||(g.goods_sn||'').toLowerCase().includes(q)) }
