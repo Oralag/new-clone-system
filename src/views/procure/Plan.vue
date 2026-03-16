@@ -84,7 +84,7 @@
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1" type="success" link size="small" @click="openInhouse(row)">入库</el-button>
               <el-button v-if="row.status === 3" link size="small" disabled>已入库</el-button>
               <el-button v-if="row.status === 3" type="danger" link size="small" @click="handleReverseInhouse(row)">反入库</el-button>
@@ -448,9 +448,12 @@ import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import StaffSelect from '@/components/StaffSelect.vue'
 import http from '@/api/http'
+import { usePermissionStore } from '@/stores/permission'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
+
+const permStore = usePermissionStore()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()

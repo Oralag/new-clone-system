@@ -25,6 +25,10 @@
             v-for="item in section.children"
             :key="item.key"
             class="app-item"
+            :class="{ 'app-item--pressed': pressedKey === item.key }"
+            @touchstart.passive="pressedKey = item.key"
+            @touchend="pressedKey = null"
+            @touchcancel="pressedKey = null"
             @click="navigate(item.path)"
           >
             <div class="app-icon" :style="{ background: getColor(section.key) }">
@@ -50,6 +54,7 @@ import { menuData } from '@/layouts/components/menuData'
 
 const router = useRouter()
 const searchKeyword = ref('')
+const pressedKey = ref<string | null>(null)
 
 const appSections = menuData.filter(s => s.key !== 'dashboard')
 
@@ -221,7 +226,7 @@ function getIcon(key: string) { return iconMap[key] || defaultIcon }
   border-radius: 12px;
   -webkit-tap-highlight-color: transparent;
 }
-.app-item:active { opacity: 0.7; }
+.app-item--pressed { opacity: 0.7; }
 
 .app-icon {
   width: 48px;

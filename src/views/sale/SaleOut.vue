@@ -80,7 +80,7 @@
               <el-tooltip v-if="row.status === 2" content="驳回操作已禁用：单据已驳回，请重新提交或删除" placement="top">
                 <el-button type="danger" link size="small" disabled>驳回</el-button>
               </el-tooltip>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="router.push('/finance/receivable')">查看应收</el-button>
               <el-button v-if="row.status === 1" type="success" link size="small" @click="router.push('/warehouse/stock')">查看库存</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
@@ -509,11 +509,13 @@ import { getWarehouseList } from '@/api/warehouse'
 import { getFundList, createFund } from '@/api/finance'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
+import { usePermissionStore } from '@/stores/permission'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
+const permStore = usePermissionStore()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 

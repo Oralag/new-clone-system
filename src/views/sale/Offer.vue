@@ -87,7 +87,7 @@
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -342,8 +342,10 @@ import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import StaffSelect from '@/components/StaffSelect.vue'
+import { usePermissionStore } from '@/stores/permission'
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
+const permStore = usePermissionStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
@@ -453,7 +455,7 @@ function buildPrintHtml() {
       <td>${item.remark || ''}</td>
     </tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>报价单 ${fd.offer_no || ''}</title>
+  <title>报价单 ${fd.offer_no || ''}</title><link rel="icon" href="data:,">
   <style>
     body{font-family:SimSun,"Microsoft YaHei",Arial;font-size:12px;color:#000;margin:20px}
     h2{text-align:center;font-size:18px;margin-bottom:4px}
@@ -496,7 +498,12 @@ function handlePrint() {
   w.document.write(buildPrintHtml())
   w.document.close()
   w.focus()
-  setTimeout(() => { w.print() }, 300)
+  setTimeout(() => {
+    // 只移除扩展注入的图片/画布节点，不碰 table/div 等打印内容
+    const ext = w.document.querySelectorAll('img, canvas, [id^="ext-"], [class*="extension"], [class*="plugin"], [data-extension]')
+    ext.forEach(el => el.remove())
+    w.print()
+  }, 600)
 }
 
 function handleExportPdf() {

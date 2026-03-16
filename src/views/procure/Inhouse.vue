@@ -51,7 +51,7 @@
                 <el-button type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="router.push('/finance/payable')">查看应付</el-button>
               <el-button v-if="row.status === 1" type="success" link size="small" @click="router.push('/warehouse/stock')">查看库存</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
@@ -431,9 +431,12 @@ import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { getFundList, createFund } from '@/api/finance'
 import StaffSelect from '@/components/StaffSelect.vue'
+import { usePermissionStore } from '@/stores/permission'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
+
+const permStore = usePermissionStore()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const route = useRoute()

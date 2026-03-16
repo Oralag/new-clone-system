@@ -31,13 +31,31 @@
         </el-row>
       </el-form>
     </el-card>
+
+    <el-card class="danger-zone">
+      <template #header>
+        <span class="danger-title">危险操作</span>
+      </template>
+      <div class="danger-item">
+        <div class="danger-desc">
+          <p class="danger-name">初始化所有数据</p>
+          <p class="danger-hint">清除本地所有缓存数据（登录状态、权限、用户信息等），系统将退出登录并恢复初始状态。</p>
+        </div>
+        <el-button type="danger" plain @click="handleInitAll">初始化所有数据</el-button>
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { getCompanyInfo, updateCompanyInfo } from '@/api/setting'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -63,9 +81,37 @@ async function handleSave() {
   }
 }
 
+async function handleInitAll() {
+  try {
+    await ElMessageBox.confirm(
+      '此操作将清除所有本地缓存数据（登录状态、权限配置、用户信息等），系统将退出登录。确定要继续吗？',
+      '初始化所有数据',
+      {
+        confirmButtonText: '确定初始化',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger',
+      }
+    )
+    localStorage.clear()
+    authStore.clearAuth()
+    ElMessage.success('初始化完成，即将跳转到登录页')
+    setTimeout(() => router.push('/login'), 1000)
+  } catch {
+    // 用户取消
+  }
+}
+
 onMounted(loadData)
 </script>
 
 <style scoped>
-.page-container {}
+.page-container { display: flex; flex-direction: column; gap: 16px; }
+.danger-zone { border-color: #fde2e2; }
+.danger-zone :deep(.el-card__header) { background: #fff5f5; border-bottom-color: #fde2e2; }
+.danger-title { color: #f56c6c; font-weight: 600; font-size: 14px; }
+.danger-item { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.danger-desc { flex: 1; }
+.danger-name { margin: 0 0 4px; font-weight: 500; color: #303133; }
+.danger-hint { margin: 0; font-size: 12px; color: #909399; line-height: 1.5; }
 </style>

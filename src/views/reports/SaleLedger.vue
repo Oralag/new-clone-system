@@ -5,9 +5,6 @@
         <el-form-item label="客户名称">
           <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width:180px" />
         </el-form-item>
-        <el-form-item label="商品名称">
-          <el-input v-model="searchForm.goods_name" placeholder="请输入商品名称" clearable style="width:180px" />
-        </el-form-item>
         <el-form-item label="日期">
           <el-date-picker
             v-model="dateRange"
@@ -27,13 +24,19 @@
       </el-form>
       <ScTable ref="scTable" :api-obj="getSaleLedgerList"
           export-file-name="销售台账" :params="searchForm">
-        <el-table-column label="订单编号" prop="order_no" />
-        <el-table-column label="客户名称" prop="customer_name" />
-        <el-table-column label="商品名称" prop="goods_name" />
-        <el-table-column label="数量" prop="num" />
-        <el-table-column label="单价" prop="unit_price" />
-        <el-table-column label="金额" prop="amount" />
-        <el-table-column label="销售员" prop="salesman_name" />
+        <el-table-column label="合同日期" prop="contract_date" width="110" />
+        <el-table-column label="客户名称" prop="customer_name" min-width="120" />
+        <el-table-column label="销售员" prop="admin_name" width="100" />
+        <el-table-column label="合同金额" prop="total_amount" width="120" align="right">
+          <template #default="{ row }">¥{{ Number(row.total_amount || 0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="折后金额" prop="after_discount" width="120" align="right">
+          <template #default="{ row }">¥{{ Number(row.after_discount || 0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="已收款" prop="receive_amount" width="110" align="right">
+          <template #default="{ row }">¥{{ Number(row.receive_amount || 0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="备注" prop="remark" min-width="120" />
       </ScTable>
     </el-card>
   </div>
@@ -47,27 +50,25 @@ import { getSaleLedgerList } from '@/api/reports'
 const scTable = ref()
 const dateRange = ref<[string, string] | null>(null)
 const searchForm = reactive<any>({
-  customer_name: '',
-  goods_name: ''
+  customer_name: ''
 })
 
 function onDateChange(val: [string, string] | null) {
   if (val) {
-    searchForm.start_date = val[0]
-    searchForm.end_date = val[1]
+    searchForm.contract_date_start = val[0]
+    searchForm.contract_date_end = val[1]
   } else {
-    delete searchForm.start_date
-    delete searchForm.end_date
+    delete searchForm.contract_date_start
+    delete searchForm.contract_date_end
   }
 }
 
 function onReset() {
   searchForm.customer_name = ''
-  searchForm.goods_name = ''
   dateRange.value = null
-  delete searchForm.start_date
-  delete searchForm.end_date
-  scTable.value.loadData()
+  delete searchForm.contract_date_start
+  delete searchForm.contract_date_end
+  scTable.value?.loadData()
 }
 </script>
 

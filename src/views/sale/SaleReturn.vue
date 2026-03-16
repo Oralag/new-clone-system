@@ -75,7 +75,7 @@
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -419,11 +419,13 @@ import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { getWarehouseList } from '@/api/warehouse'
 import StaffSelect from '@/components/StaffSelect.vue'
+import { usePermissionStore } from '@/stores/permission'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
+const permStore = usePermissionStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {

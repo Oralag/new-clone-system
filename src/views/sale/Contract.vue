@@ -98,7 +98,7 @@
               <template v-if="row.status === 0">
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               </template>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1 && getPendingAmount(row) > 0.01" type="success" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
               <el-button v-if="Number(row.status) === 0" type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
@@ -621,8 +621,10 @@ import { getFundList, createCollectReceipt, getCollectReceiptList } from '@/api/
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
+import { usePermissionStore } from '@/stores/permission'
 
 const DRAFT_KEY = 'sale_contract_draft_from_offer'
+const permStore = usePermissionStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -973,24 +975,24 @@ function buildContractHtml() {
       <td>¥${((item.num || 0) * (item.price || 0)).toFixed(2)}</td>
     </tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>销售合同 ${(fd as any).order_sn || ''}</title>
+  <title>销售合同 ${(fd as any).contract_no || ''}</title><link rel="icon" href="data:,">
   <style>
-    body{font-family:SimSun,"Microsoft YaHei",Arial;font-size:12px;color:#000;margin:20px}
-    h2{text-align:center;font-size:18px;margin-bottom:4px}
-    .sub{text-align:center;color:#666;margin-bottom:16px;font-size:12px}
-    .info{display:flex;flex-wrap:wrap;gap:8px 32px;margin-bottom:16px;font-size:12px}
-    .info span{min-width:160px}
+    *{box-sizing:border-box}
+    body{font-family:SimSun,"Microsoft YaHei",Arial;font-size:12px;color:#000;margin:0;padding:12px 20px}
+    h2{text-align:center;font-size:16px;margin:0 0 3px}
+    .sub{text-align:center;color:#666;margin-bottom:10px;font-size:11px}
+    .info{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-bottom:10px;font-size:11px}
     table{width:100%;border-collapse:collapse;font-size:11px}
-    th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
+    th,td{border:1px solid #ccc;padding:3px 5px;text-align:left}
     th{background:#f0f0f0;font-weight:bold}
-    .total-row{text-align:right;margin-top:8px;font-size:13px}
-    .total-row b{font-size:15px;color:#0071e3}
-    .section-title{font-weight:bold;margin:12px 0 6px;font-size:13px;border-left:3px solid #0071e3;padding-left:8px}
-    .footer{margin-top:40px;display:flex;justify-content:space-between;font-size:12px}
-    @media print{body{margin:0}}
+    .section-title{font-weight:bold;margin:8px 0 4px;font-size:12px;border-left:3px solid #0071e3;padding-left:6px}
+    .total-row{text-align:right;margin-top:6px;font-size:12px}
+    .total-row b{color:#0071e3}
+    .footer{margin-top:24px;display:flex;justify-content:space-between;font-size:11px}
+    @media print{body{padding:8px 14px}@page{margin:10mm}}
   </style></head><body>
   <h2>销 售 合 同</h2>
-  <div class="sub">数字游牧ERP · 合同编号：${(fd as any).order_sn || ''}</div>
+  <div class="sub">数字游牧ERP &nbsp;·&nbsp; 合同编号：${(fd as any).contract_no || ''}</div>
   <div class="info">
     <span>客户名称：${(fd as any).customer_name || ''}</span>
     <span>签订日期：${(fd as any).sign_date || ''}</span>
@@ -1004,9 +1006,9 @@ function buildContractHtml() {
   </table>
   <div class="total-row">
     <span>合同总额：<b>¥${Number(fd.total_amount || 0).toFixed(2)}</b></span>
-    ${fd.freight_amount ? `&nbsp;&nbsp;运费：¥${Number(fd.freight_amount).toFixed(2)}` : ''}
+    ${fd.freight_amount ? `&nbsp;&nbsp;运费：¥${Number(fd.freight_amount).toFixed(2)}（${fd.freight_bearer === 'buyer' ? '买方承担' : fd.freight_bearer === 'seller' ? '卖方承担' : fd.freight_bearer === 'half' ? '各付一半' : '免运费'}）` : ''}
   </div>
-  ${fd.remark ? `<div style="margin-top:10px;font-size:12px">备注：${fd.remark}</div>` : ''}
+  ${fd.remark ? `<div style="margin-top:6px;font-size:11px">备注：${fd.remark}</div>` : ''}
   <div class="footer">
     <span>甲方（买方）签章：_______________</span>
     <span>乙方（卖方）签章：_______________</span>
@@ -1021,7 +1023,12 @@ function handleContractPrint() {
   w.document.write(buildContractHtml())
   w.document.close()
   w.focus()
-  setTimeout(() => { w.print() }, 300)
+  setTimeout(() => {
+    // 只移除扩展注入的图片/画布节点，不碰 table/div 等打印内容
+    const ext = w.document.querySelectorAll('img, canvas, [id^="ext-"], [class*="extension"], [class*="plugin"], [data-extension]')
+    ext.forEach(el => el.remove())
+    w.print()
+  }, 600)
 }
 
 function handleContractExport() {

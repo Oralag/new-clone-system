@@ -38,7 +38,7 @@
               <el-button v-if="row.status===0" type="primary" size="small" link @click="openEdit(row)">编辑</el-button>
               <el-button v-if="row.status===0" type="primary" size="small" link @click="doAudit(row,1)">审核</el-button>
               <el-button v-if="row.status===0" type="danger" size="small" link @click="doAudit(row,2)">驳回</el-button>
-              <el-button v-if="row.status===1" type="warning" size="small" link @click="doAudit(row,0)">反审核</el-button>
+              <el-button v-if="row.status===1 && !permStore.isSubAccount" type="warning" size="small" link @click="doAudit(row,0)">反审核</el-button>
               <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -216,7 +216,9 @@ import { getMaterialList, createMaterial, deleteMaterial, auditMaterial } from '
 import { getProductionPlanList } from '@/api/production'
 import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList } from '@/api/goods'
+import { usePermissionStore } from '@/stores/permission'
 
+const permStore = usePermissionStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive({ out_no: '', goods_name: '' })
 function resetSearch() { searchForm.out_no=''; searchForm.goods_name=''; tableRef.value?.loadData() }

@@ -21,11 +21,19 @@
         <el-table-column prop="name" label="角色名称" min-width="140" />
         <el-table-column label="权限范围" min-width="280">
           <template #default="{ row }">
-            <span class="perm-tags">
-              <el-tag v-for="key in getPermMenuKeys(row.remark)" :key="key" size="small" style="margin:2px">
-                {{ menuKeyLabel(key) }}
-              </el-tag>
-              <span v-if="getPermMenuKeys(row.remark).length === 0" class="all-access">全部模块</span>
+            <span class="perm-summary-tags">
+              <template v-if="getPermMenuKeys(row.remark).length === 0">
+                <span class="all-access">全部模块</span>
+              </template>
+              <template v-else>
+                <el-tag
+                  v-for="group in getPermGroupSummary(row.remark)"
+                  :key="group.key"
+                  size="small"
+                  type="info"
+                  style="margin:2px"
+                >{{ group.title }}({{ group.count }})</el-tag>
+              </template>
             </span>
           </template>
         </el-table-column>
@@ -40,29 +48,60 @@
     </el-card>
 
     <!-- 角色表单对话框 -->
-    <el-dialog v-model="dialogVisible" :title="formTitle" width="620px" :close-on-click-modal="false">
+    <el-dialog v-model="dialogVisible" :title="formTitle" :width="dialogWidth" :close-on-click-modal="false">
       <el-form ref="elFormRef" :model="form" label-width="80px">
         <el-form-item label="角色名称" prop="name" :rules="[{ required: true, message: '请输入角色名称' }]">
           <el-input v-model="form.name" />
         </el-form-item>
 
+        <!-- 预设角色快捷套用 -->
+        <el-form-item label="快速套用">
+          <div class="preset-row">
+            <el-button
+              v-for="(_, name) in PRESET_ROLES"
+              :key="name"
+              size="small"
+              @click="applyPreset(name)"
+            >{{ name }}</el-button>
+          </div>
+        </el-form-item>
+
         <el-form-item label="菜单权限">
           <div class="perm-panel">
             <div class="perm-header">
-              <el-checkbox v-model="selectAll" :indeterminate="isIndeterminate" @change="onSelectAll">
-                全选
-              </el-checkbox>
-              <span class="perm-hint">不勾选 = 不能访问该模块</span>
+              <el-checkbox v-model="selectAll" :indeterminate="isIndeterminate" @change="onSelectAll">全选</el-checkbox>
+              <div class="perm-header-actions">
+                <el-button link size="small" @click="expandAll">展开全部</el-button>
+                <el-divider direction="vertical" />
+                <el-button link size="small" @click="collapseAll">收起全部</el-button>
+              </div>
             </div>
-            <div class="perm-grid">
-              <el-checkbox
-                v-for="menu in allMenuData"
-                :key="menu.key"
-                v-model="selectedMenus[menu.key]"
-                @change="onMenuChange"
-              >
-                {{ menu.title }}
-              </el-checkbox>
+
+            <!-- 按模块分组的折叠树 -->
+            <div class="perm-groups">
+              <div v-for="menu in allMenuData" :key="menu.key" class="perm-group">
+                <div class="perm-group-header" @click="toggleGroup(menu.key)">
+                  <el-icon class="group-arrow" :class="{ expanded: expandedGroups.has(menu.key) }">
+                    <ArrowRight />
+                  </el-icon>
+                  <el-checkbox
+                    :model-value="isGroupAllChecked(menu)"
+                    :indeterminate="isGroupIndeterminate(menu)"
+                    @change="(v: boolean) => onGroupSelectAll(menu, v)"
+                    @click.stop
+                  >
+                    {{ menu.title }}
+                  </el-checkbox>
+                  <span class="group-count">{{ getGroupCheckedCount(menu) }}/{{ menu.children.length }}</span>
+                </div>
+                <div v-show="expandedGroups.has(menu.key)" class="perm-group-items">
+                  <el-checkbox
+                    v-for="child in menu.children"
+                    :key="child.key"
+                    v-model="selectedMenus[child.key]"
+                  >{{ child.title }}</el-checkbox>
+                </div>
+              </div>
             </div>
           </div>
         </el-form-item>
@@ -77,7 +116,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getRoleList, createRole, updateRole, deleteRole } from '@/api/setting'
@@ -86,52 +125,180 @@ import { PERM_PREFIX, type PermConfig } from '@/stores/permission'
 
 const allMenuData = menuData
 
+// All sub-menu keys
+const allChildKeys = allMenuData.flatMap(m => m.children.map(c => c.key))
+
+// ── Preset roles ──────────────────────────────────────────────────────────────
+const OFFICE_KEYS = [
+  'office-task','office-cloud','office-remind','office-notice',
+  'office-approval','office-work-report','office-visit',
+  'office-expense','office-leave','office-overtime','office-business',
+]
+
+const PRESET_ROLES: Record<string, string[]> = {
+  销售员: [
+    'dashboard',
+    'sale-client','sale-sea','sale-level',
+    'sale-offer','sale-contract','sale-out','sale-return',
+    'retail-order','retail-return',
+    'goods-info',
+    'warehouse-stock',
+    'reports-sale-rate','reports-sale-ledger','reports-commission',
+    ...OFFICE_KEYS,
+  ],
+  店长: [
+    'dashboard',
+    'sale-client','sale-level',
+    'sale-offer','sale-contract','sale-out','sale-return',
+    'retail-store','retail-order','retail-return','retail-customer',
+    'retail-recharge','retail-points','retail-coupon',
+    'goods-info',
+    'warehouse-stock','warehouse-warning',
+    'reports-sale-rate','reports-sale-ledger','reports-commission',
+    ...OFFICE_KEYS,
+  ],
+  采购员: [
+    'dashboard',
+    'procure-supplier','procure-plan','procure-order','procure-inhouse','procure-return',
+    'outsource-plan','outsource-inhouse','outsource-receive','outsource-quality',
+    'warehouse-stock','warehouse-flow','warehouse-warning',
+    'goods-info',
+    'reports-procure','reports-stock',
+    ...OFFICE_KEYS,
+  ],
+  仓库员: [
+    'dashboard',
+    'warehouse-stock','warehouse-scrap','warehouse-transfer','warehouse-flow',
+    'warehouse-pick','warehouse-check','warehouse-other-in','warehouse-other-out',
+    'warehouse-warning','warehouse-name','warehouse-batch','warehouse-serial',
+    'procure-inhouse',
+    'sale-out',
+    'goods-info',
+    'reports-stock',
+    ...OFFICE_KEYS,
+  ],
+  财务: [
+    'dashboard',
+    'finance-overview','finance-receivable','finance-payable',
+    'finance-collect-receipt','finance-pay-receipt','finance-invoice',
+    'finance-statement','finance-expense','finance-fund','finance-fund-flow',
+    'finance-cost','finance-prepay',
+    'sale-contract','sale-out',
+    'procure-order','procure-inhouse',
+    'outsource-payable','outsource-payment',
+    'reports-overview','reports-sale-rate','reports-sale-ledger','reports-commission',
+    'reports-procure','reports-stock','reports-profit','reports-finance',
+    'goods-info',
+    'personnel-salary',
+    ...OFFICE_KEYS,
+  ],
+  生产主管: [
+    'dashboard',
+    'production-overview','production-plan','production-inhouse',
+    'production-material','production-return-material',
+    'outsource-plan','outsource-inhouse','outsource-receive','outsource-quality',
+    'procure-plan',
+    'warehouse-stock','warehouse-flow','warehouse-warning',
+    'goods-info','goods-bom',
+    'reports-stock',
+    ...OFFICE_KEYS,
+  ],
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const elFormRef = ref<any>()
 const formTitle = ref('新增角色')
 const dialogVisible = ref(false)
 const submitting = ref(false)
 const searchForm = reactive<any>({})
-
 const form = reactive<any>({ id: undefined, name: '' })
+
+// Sub-menu checkbox state
 const selectedMenus = reactive<Record<string, boolean>>({})
+allChildKeys.forEach(k => { selectedMenus[k] = false })
 
-// Initialize selectedMenus with all keys
-allMenuData.forEach(m => { selectedMenus[m.key] = false })
+// Expanded groups state — all expanded by default
+const expandedGroups = reactive(new Set<string>(allMenuData.map(m => m.key)))
 
+// ── Computed: global select all ───────────────────────────────────────────────
 const checkedCount = computed(() => Object.values(selectedMenus).filter(Boolean).length)
 const selectAll = computed({
-  get: () => checkedCount.value === allMenuData.length,
+  get: () => checkedCount.value === allChildKeys.length,
   set: () => {},
 })
 const isIndeterminate = computed(() =>
-  checkedCount.value > 0 && checkedCount.value < allMenuData.length
+  checkedCount.value > 0 && checkedCount.value < allChildKeys.length
 )
 
 function onSelectAll(val: boolean) {
-  allMenuData.forEach(m => { selectedMenus[m.key] = val })
+  allChildKeys.forEach(k => { selectedMenus[k] = val })
 }
 
-function onMenuChange() {}
-
-function resetSearch() {
-  Object.keys(searchForm).forEach(k => delete searchForm[k])
-  tableRef.value?.loadData()
+// ── Computed: per-group helpers ───────────────────────────────────────────────
+function getGroupCheckedCount(menu: typeof allMenuData[0]): number {
+  return menu.children.filter(c => selectedMenus[c.key]).length
 }
 
-// Parse perm keys from remark
+function isGroupAllChecked(menu: typeof allMenuData[0]): boolean {
+  return menu.children.every(c => selectedMenus[c.key])
+}
+
+function isGroupIndeterminate(menu: typeof allMenuData[0]): boolean {
+  const cnt = getGroupCheckedCount(menu)
+  return cnt > 0 && cnt < menu.children.length
+}
+
+function onGroupSelectAll(menu: typeof allMenuData[0], val: boolean) {
+  menu.children.forEach(c => { selectedMenus[c.key] = val })
+}
+
+// ── Expand / collapse ─────────────────────────────────────────────────────────
+function toggleGroup(key: string) {
+  expandedGroups.has(key) ? expandedGroups.delete(key) : expandedGroups.add(key)
+}
+
+function expandAll() {
+  allMenuData.forEach(m => expandedGroups.add(m.key))
+}
+
+function collapseAll() {
+  expandedGroups.clear()
+}
+
+// ── Preset apply ─────────────────────────────────────────────────────────────
+function applyPreset(name: string) {
+  const keys = new Set(PRESET_ROLES[name] ?? [])
+  allChildKeys.forEach(k => { selectedMenus[k] = keys.has(k) })
+}
+
+// ── Dialog width (responsive) ─────────────────────────────────────────────────
+const dialogWidth = computed(() =>
+  window.innerWidth < 600 ? '95vw' : '680px'
+)
+
+// ── Permission parsing helpers ────────────────────────────────────────────────
 function getPermMenuKeys(remark: string): string[] {
   if (!remark?.startsWith(PERM_PREFIX)) return []
   try {
     const cfg: PermConfig = JSON.parse(remark.slice(PERM_PREFIX.length))
     return cfg.menus || []
-  } catch {
-    return []
-  }
+  } catch { return [] }
 }
 
-function menuKeyLabel(key: string): string {
-  return allMenuData.find(m => m.key === key)?.title || key
+// Returns [{key, title, count}] per top-level module that has at least 1 allowed child
+function getPermGroupSummary(remark: string) {
+  const keys = new Set(getPermMenuKeys(remark))
+  if (keys.size === 0) return []
+  return allMenuData
+    .map(m => ({ key: m.key, title: m.title, count: m.children.filter(c => keys.has(c.key)).length }))
+    .filter(g => g.count > 0)
+}
+
+// ── Table helpers ─────────────────────────────────────────────────────────────
+function resetSearch() {
+  Object.keys(searchForm).forEach(k => delete searchForm[k])
+  tableRef.value?.loadData()
 }
 
 function openView(row: any) {
@@ -143,23 +310,27 @@ function openForm(row?: any, readonly = false) {
   form.id = row?.id
   form.name = row?.name || ''
 
-  // Parse existing permissions
   const existingKeys = getPermMenuKeys(row?.remark || '')
   if (existingKeys.length === 0) {
-    // No perm config = all access (main account style)
-    allMenuData.forEach(m => { selectedMenus[m.key] = true })
+    allChildKeys.forEach(k => { selectedMenus[k] = true })
   } else {
     const keySet = new Set(existingKeys)
-    allMenuData.forEach(m => { selectedMenus[m.key] = keySet.has(m.key) })
+    allChildKeys.forEach(k => { selectedMenus[k] = keySet.has(k) })
   }
+
+  // Auto-expand groups that have partial selection
+  allMenuData.forEach(m => {
+    const cnt = getGroupCheckedCount(m)
+    if (cnt > 0 && cnt < m.children.length) expandedGroups.add(m.key)
+  })
+
   dialogVisible.value = true
 }
 
 async function handleSubmit() {
   await elFormRef.value?.validate()
-  const menus = allMenuData.filter(m => selectedMenus[m.key]).map(m => m.key)
-  // 如果全选了，remark 存空字符串代表"全部模块"（主账号级别权限）
-  const isAllSelected = menus.length === allMenuData.length
+  const menus = allChildKeys.filter(k => selectedMenus[k])
+  const isAllSelected = menus.length === allChildKeys.length
   const remark = isAllSelected ? '' : (PERM_PREFIX + JSON.stringify({ menus } as PermConfig))
   submitting.value = true
   try {
@@ -185,11 +356,21 @@ async function handleDelete(id: number) {
 .page-container {}
 .search-actions { display: flex; gap: 8px; }
 
+/* 列表权限摘要 */
+.perm-summary-tags { display: flex; flex-wrap: wrap; }
+.all-access { color: #909399; font-size: 13px; }
+
+/* 预设角色行 */
+.preset-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* 权限面板 */
 .perm-panel {
   border: 1px solid #e4e7ed;
   border-radius: 6px;
   padding: 12px;
   width: 100%;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .perm-header {
@@ -201,17 +382,49 @@ async function handleDelete(id: number) {
   border-bottom: 1px solid #f0f0f0;
 }
 
-.perm-hint {
+.perm-header-actions { display: flex; align-items: center; gap: 4px; }
+
+/* 分组 */
+.perm-groups { display: flex; flex-direction: column; gap: 4px; }
+
+.perm-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+}
+.perm-group-header:hover { background: #f5f7fa; }
+
+.group-arrow {
   font-size: 12px;
+  color: #909399;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.group-arrow.expanded { transform: rotate(90deg); }
+
+.group-count {
+  margin-left: auto;
+  font-size: 11px;
   color: #909399;
 }
 
-.perm-grid {
+.perm-group-items {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px 4px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px 4px;
+  padding: 6px 8px 10px 24px;
+  border-left: 2px solid #f0f0f0;
+  margin-left: 10px;
 }
 
-.perm-tags { display: flex; flex-wrap: wrap; }
-.all-access { color: #909399; font-size: 13px; }
+@media (max-width: 600px) {
+  .perm-group-items {
+    grid-template-columns: repeat(2, 1fr);
+    padding-left: 16px;
+  }
+}
 </style>

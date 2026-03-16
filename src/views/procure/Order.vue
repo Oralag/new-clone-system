@@ -100,7 +100,7 @@
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -656,9 +656,12 @@ import { getFundList, createFund, getPayReceiptList } from '@/api/finance'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
+import { usePermissionStore } from '@/stores/permission'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
+
+const permStore = usePermissionStore()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()

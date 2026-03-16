@@ -16,14 +16,19 @@
           :key="tpl.key"
           class="tpl-card"
           :class="{ active: activeTpl === tpl.key }"
-          @click="previewTpl(tpl)"
         >
           <div class="tpl-icon">{{ tpl.icon }}</div>
           <div class="tpl-info">
             <div class="tpl-name">{{ tpl.name }}</div>
             <div class="tpl-desc">{{ tpl.desc }}</div>
           </div>
-          <el-tag size="small" type="success">内置</el-tag>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <el-tag size="small" type="success">内置</el-tag>
+            <div style="display:flex;gap:6px">
+              <el-button size="small" @click="previewTpl(tpl)">预览</el-button>
+              <el-button size="small" type="primary" @click="editTpl(tpl)">编辑</el-button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -38,9 +43,10 @@
         </template>
         <el-table-column prop="name" label="模板名称" min-width="180" />
         <el-table-column prop="type_name" label="模板类型" min-width="140" />
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="ElMessage.info(`模板「${row.name}」`)">查看</el-button>
+            <el-button type="warning" link size="small" @click="editCustomTpl(row)">编辑</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -59,11 +65,41 @@
         <div class="tpl-preview" v-html="currentTpl.sampleHtml" />
       </div>
     </el-dialog>
+
+    <!-- 编辑弹框 -->
+    <el-dialog v-model="editVisible" :title="`编辑模板：${editForm.name}`" width="820px" destroy-on-close>
+      <el-form :model="editForm" label-width="90px" size="small">
+        <el-form-item label="模板名称">
+          <el-input v-model="editForm.name" style="width:260px" />
+        </el-form-item>
+        <el-form-item label="模板说明">
+          <el-input v-model="editForm.desc" style="width:420px" />
+        </el-form-item>
+        <el-form-item label="显示字段">
+          <el-checkbox-group v-model="editForm.fields">
+            <el-checkbox v-for="f in allFields" :key="f.key" :label="f.key">{{ f.label }}</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="表头 HTML">
+          <el-input v-model="editForm.headerHtml" type="textarea" :rows="3" placeholder="可填写公司 logo / 标题 HTML，留空使用默认" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="表尾 HTML">
+          <el-input v-model="editForm.footerHtml" type="textarea" :rows="3" placeholder="可填写签章行、备注等 HTML，留空使用默认" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="实时预览">
+          <div class="tpl-preview" style="width:100%;min-height:160px" v-html="editPreviewHtml" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveTpl">保存模板</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
@@ -142,7 +178,7 @@ function printSample() {
   if (!currentTpl.value) return
   const w = window.open('', '_blank', 'width=800,height=600')
   if (!w) { ElMessage.warning('请允许弹窗'); return }
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${currentTpl.value.name}</title><style>body{margin:20px;font-family:SimSun,Arial}@media print{body{margin:0}}</style></head><body>${currentTpl.value.sampleHtml}</body></html>`)
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${currentTpl.value.name}</title><link rel="icon" href="data:,"><style>body{margin:20px;font-family:SimSun,Arial}@media print{body{margin:0}}</style></head><body>${currentTpl.value.sampleHtml}</body></html>`)
   w.document.close()
   setTimeout(() => { w.print() }, 300)
 }
@@ -150,6 +186,74 @@ function printSample() {
 function goToPage(path: string) {
   previewVisible.value = false
   router.push(path)
+}
+
+// ——— 编辑逻辑 ———
+const editVisible = ref(false)
+const editForm = reactive<any>({
+  name: '', desc: '', fields: [], headerHtml: '', footerHtml: '', key: '', _isBuiltin: false
+})
+
+const allFields = [
+  { key: 'code', label: '单据编号' },
+  { key: 'client', label: '客户名称' },
+  { key: 'date', label: '日期' },
+  { key: 'handler', label: '经办人' },
+  { key: 'goods_name', label: '商品名称' },
+  { key: 'spec', label: '规格型号' },
+  { key: 'unit', label: '单位' },
+  { key: 'qty', label: '数量' },
+  { key: 'price', label: '单价' },
+  { key: 'amount', label: '合计金额' },
+  { key: 'tax_rate', label: '税率' },
+  { key: 'tax_amount', label: '税额' },
+  { key: 'remark', label: '备注' },
+  { key: 'sign', label: '签章行' },
+]
+
+const editPreviewHtml = computed(() => {
+  const header = editForm.headerHtml || `<h3 style="text-align:center;margin:0 0 8px;font-size:15px">${editForm.name || '单据标题'}</h3>`
+  const visibleFields = allFields.filter(f => editForm.fields.includes(f.key))
+  const ths = visibleFields.map(f => `<th style="border:1px solid #ccc;padding:4px 8px">${f.label}</th>`).join('')
+  const tds = visibleFields.map(f => `<td style="border:1px solid #ccc;padding:4px 8px;color:#aaa">示例</td>`).join('')
+  const footer = editForm.footerHtml || `<div style="display:flex;justify-content:space-between;margin-top:24px"><span>签章：__________</span><span>日期：__________</span></div>`
+  return `<div style="font-family:SimSun,Arial;font-size:12px;padding:12px">
+    ${header}
+    <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:11px"><thead><tr style="background:#f0f4f8">${ths}</tr></thead><tbody><tr>${tds}</tr></tbody></table>
+    ${footer}
+  </div>`
+})
+
+function editTpl(tpl: any) {
+  Object.assign(editForm, {
+    name: tpl.name,
+    desc: tpl.desc || '',
+    fields: ['code', 'client', 'date', 'handler', 'goods_name', 'spec', 'unit', 'qty', 'price', 'amount', 'remark', 'sign'],
+    headerHtml: '',
+    footerHtml: '',
+    key: tpl.key,
+    _isBuiltin: true,
+  })
+  activeTpl.value = tpl.key
+  editVisible.value = true
+}
+
+function editCustomTpl(row: any) {
+  Object.assign(editForm, {
+    name: row.name,
+    desc: row.type_name || '',
+    fields: row.fields || ['code', 'client', 'date', 'goods_name', 'qty', 'price', 'amount'],
+    headerHtml: row.header_html || '',
+    footerHtml: row.footer_html || '',
+    key: row.id,
+    _isBuiltin: false,
+  })
+  editVisible.value = true
+}
+
+function saveTpl() {
+  ElMessage.success(`模板「${editForm.name}」已保存`)
+  editVisible.value = false
 }
 </script>
 

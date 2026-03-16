@@ -28,10 +28,14 @@
         <el-table-column prop="mobile" label="手机号" width="130" />
         <el-table-column label="权限" min-width="200">
           <template #default="{ row }">
-            <span v-if="getPermMenuKeys(row.remark).length > 0" class="perm-tags">
-              <el-tag v-for="key in getPermMenuKeys(row.remark)" :key="key" size="small" type="info" style="margin:2px">
-                {{ menuKeyLabel(key) }}
-              </el-tag>
+            <span v-if="getPermGroupSummary(row.remark).length > 0" class="perm-summary-tags">
+              <el-tag
+                v-for="g in getPermGroupSummary(row.remark)"
+                :key="g.key"
+                size="small"
+                type="info"
+                style="margin:2px"
+              >{{ g.title }}({{ g.count }})</el-tag>
             </span>
             <span v-else class="all-access">全部模块</span>
           </template>
@@ -48,8 +52,8 @@
     </el-card>
 
     <!-- 账号表单对话框 -->
-    <el-dialog v-model="dialogVisible" :title="formTitle" width="560px" :close-on-click-modal="false">
-      <el-form ref="elFormRef" :model="form" label-width="80px">
+    <el-dialog v-model="dialogVisible" :title="formTitle" :width="dialogWidth" :close-on-click-modal="false">
+      <el-form ref="elFormRef" :model="form" :label-width="isMobile ? '60px' : '80px'">
         <el-form-item label="账号" prop="account" :rules="[{ required: true, message: '请输入账号' }]">
           <el-input v-model="form.account" :disabled="!!form.id" />
         </el-form-item>
@@ -70,15 +74,20 @@
         <el-form-item label="手机号" prop="mobile">
           <el-input v-model="form.mobile" />
         </el-form-item>
-        <el-form-item v-if="selectedRolePerms.length > 0" label="权限预览">
+
+        <!-- 权限预览：按模块分组 -->
+        <el-form-item v-if="form.role_id" label="权限">
           <div class="perm-preview">
-            <el-tag v-for="key in selectedRolePerms" :key="key" size="small" style="margin:2px">
-              {{ menuKeyLabel(key) }}
-            </el-tag>
+            <template v-if="selectedRolePermGroups.length > 0">
+              <el-tag
+                v-for="g in selectedRolePermGroups"
+                :key="g.key"
+                size="small"
+                style="margin:2px"
+              >{{ g.title }}({{ g.count }})</el-tag>
+            </template>
+            <span v-else class="all-access">全部模块</span>
           </div>
-        </el-form-item>
-        <el-form-item v-else-if="form.role_id" label="权限预览">
-          <span class="all-access">全部模块</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -106,6 +115,9 @@ const submitting = ref(false)
 const searchForm = reactive<any>({})
 const roleList = ref<any[]>([])
 
+const isMobile = ref(window.innerWidth < 600)
+const dialogWidth = computed(() => isMobile.value ? '95vw' : '560px')
+
 const form = reactive<any>({
   id: undefined,
   account: '',
@@ -118,6 +130,7 @@ const form = reactive<any>({
 })
 
 onMounted(async () => {
+  window.addEventListener('resize', () => { isMobile.value = window.innerWidth < 600 })
   try {
     const res: any = await getRoleList({ list_rows: 200 })
     roleList.value = res?.data?.rows || res?.data?.list || res?.data || []
@@ -129,19 +142,21 @@ function getPermMenuKeys(remark: string): string[] {
   try {
     const cfg: PermConfig = JSON.parse(remark.slice(PERM_PREFIX.length))
     return cfg.menus || []
-  } catch {
-    return []
-  }
+  } catch { return [] }
 }
 
-function menuKeyLabel(key: string): string {
-  return menuData.find(m => m.key === key)?.title || key
+function getPermGroupSummary(remark: string) {
+  const keys = new Set(getPermMenuKeys(remark))
+  if (keys.size === 0) return []
+  return menuData
+    .map(m => ({ key: m.key, title: m.title, count: m.children.filter(c => keys.has(c.key)).length }))
+    .filter(g => g.count > 0)
 }
 
-const selectedRolePerms = computed(() => {
+const selectedRolePermGroups = computed(() => {
   if (!form.role_id) return []
   const role = roleList.value.find(r => r.id === form.role_id)
-  return getPermMenuKeys(role?.remark || '')
+  return getPermGroupSummary(role?.remark || '')
 })
 
 function onRoleChange(roleId: number) {
@@ -177,7 +192,6 @@ function openForm(row?: any) {
 
 async function handleSubmit() {
   await elFormRef.value?.validate()
-  // Copy role's perm remark into account's remark
   const role = roleList.value.find(r => r.id === form.role_id)
   const remark = role?.remark || ''
   const payload: any = {
@@ -214,7 +228,7 @@ async function handleDelete(id: number) {
 <style scoped>
 .page-container {}
 .search-actions { display: flex; gap: 8px; }
-.perm-tags { display: flex; flex-wrap: wrap; }
+.perm-summary-tags { display: flex; flex-wrap: wrap; }
 .all-access { color: #909399; font-size: 13px; }
 .perm-preview { display: flex; flex-wrap: wrap; }
 </style>
