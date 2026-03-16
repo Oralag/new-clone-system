@@ -912,8 +912,9 @@ function saveGoodsTypeMap(map: Record<number, number>) {
 const goodsTypeMap = ref<Record<number, number>>(loadGoodsTypeMap())
 
 function getGoodsType(row: any): number {
+  if (Number(row.goods_type ?? 0)) return Number(row.goods_type)
   if (Object.prototype.hasOwnProperty.call(goodsTypeMap.value, row.id)) return Number(goodsTypeMap.value[row.id] ?? 0)
-  return Number(row.goods_type ?? 0)
+  return 0
 }
 
 function getCatePathText(row: any) {
@@ -1676,7 +1677,8 @@ async function confirmImport() {
     }
     try {
       const resolvedGoodsType = Number(payload.goods_type)
-      const hasGoodsType = [1, 2, 3, 4].includes(resolvedGoodsType)
+      const validTypeVals = Object.values(GOODS_TYPE_TEXT_MAP)
+      const hasGoodsType = validTypeVals.includes(resolvedGoodsType)
       if (hasGoodsType) payload.goods_type = resolvedGoodsType
       else delete payload.goods_type
       if (payload.cate_name && !payload.cate_id) {

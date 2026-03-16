@@ -23,12 +23,16 @@
         </el-form-item>
       </el-form>
       <ScTable ref="scTable" :api-obj="getFinanceReportList"
-          export-file-name="None" :params="searchForm">
-        <el-table-column label="类型名称" prop="type_name" />
-        <el-table-column label="收入" prop="income" />
-        <el-table-column label="支出" prop="expense" />
-        <el-table-column label="净额" prop="net" />
-        <el-table-column label="周期" prop="period" />
+          export-file-name="财务报表" :params="searchForm">
+        <el-table-column label="收款单号" prop="order_sn" width="160" />
+        <el-table-column label="客户名称" prop="customer_name" min-width="120" />
+        <el-table-column label="收款金额" prop="amount" width="120" align="right">
+          <template #default="{ row }">¥{{ Number(row.amount || 0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="收款日期" prop="receipt_date" width="120" />
+        <el-table-column label="付款方式" prop="pay_type" width="90" align="center" />
+        <el-table-column label="资金账户" prop="fund_name" width="110" />
+        <el-table-column label="备注" prop="remark" min-width="140" />
       </ScTable>
     </el-card>
   </div>

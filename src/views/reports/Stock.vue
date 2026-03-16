@@ -30,25 +30,18 @@
         <el-table-column label="商品名称" prop="goods_name" min-width="140" />
         <el-table-column label="分类" prop="cate_name" width="100" />
         <el-table-column label="单位" prop="unit_name" width="70" align="center" />
-        <el-table-column label="期初库存" prop="opening_stock" width="100" align="right" />
-        <el-table-column label="入库数量" prop="in_num" width="100" align="right">
+        <el-table-column label="仓库名称" prop="warehouse_name" min-width="110" />
+        <el-table-column label="当前库存" prop="qty" width="100" align="right">
           <template #default="{ row }">
-            <span style="color:#16a34a">+{{ row.in_num || 0 }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="出库数量" prop="out_num" width="100" align="right">
-          <template #default="{ row }">
-            <span style="color:#ef4444">-{{ row.out_num || 0 }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="期末库存" prop="closing_stock" width="100" align="right">
-          <template #default="{ row }">
-            <span :style="{ fontWeight: 600, color: (row.closing_stock || 0) > 0 ? '#1d1d1f' : '#ef4444' }">
-              {{ row.closing_stock || 0 }}
+            <span :style="{ fontWeight: 600, color: Number(row.qty || 0) > 0 ? '#1d1d1f' : '#ef4444' }">
+              {{ row.qty || 0 }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="仓库名称" prop="warehouse_name" min-width="110" />
+        <el-table-column label="均价" prop="avg_price" width="100" align="right">
+          <template #default="{ row }">¥{{ Number(row.avg_price || 0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="锁定库存" prop="lock_qty" width="100" align="right" />
       </ScTable>
     </el-card>
   </div>

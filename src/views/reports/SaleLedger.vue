@@ -26,7 +26,7 @@
         </el-form-item>
       </el-form>
       <ScTable ref="scTable" :api-obj="getSaleLedgerList"
-          export-file-name="None" :params="searchForm">
+          export-file-name="销售台账" :params="searchForm">
         <el-table-column label="订单编号" prop="order_no" />
         <el-table-column label="客户名称" prop="customer_name" />
         <el-table-column label="商品名称" prop="goods_name" />

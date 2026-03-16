@@ -64,7 +64,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/adminapi': {
-        target: 'https://erp-backend-production-a349.up.railway.app',
+        target: 'https://saas.mzth.cn',
         changeOrigin: true,
         secure: true,
       },
