@@ -7,7 +7,7 @@
     <div v-if="!showForm" class="list-layout">
 
       <!-- 左侧分类面板 -->
-      <div class="cate-panel">
+      <div class="cate-panel" :style="{ width: catePanelWidth + 'px' }">
         <div class="cate-header">
           <span class="cate-title">商品分类</span>
           <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
@@ -20,37 +20,29 @@
           <div class="cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
             全部
           </div>
-          <template v-for="item in cateTree" :key="item.id">
-            <div class="cate-item" :class="{ active: selectedCateId === item.id }" @click="selectCate(item.id)">
-              <!-- 有子分类时显示三角 -->
-              <el-icon v-if="item.children.length" class="cate-arrow"
-                :class="{ expanded: !collapsedCates.has(item.id) }"
-                @click.stop="toggleCate(item.id)">
-                <ArrowRight />
-              </el-icon>
-              <span v-else class="cate-arrow-placeholder" />
-              <span class="cate-item-name">{{ item.name }}</span>
-              <span class="cate-item-actions">
-                <el-icon class="act-icon" @click.stop="openCateForm(item)"><Edit /></el-icon>
-                <el-icon class="act-icon danger" @click.stop="handleDeleteCate(item.id)"><Delete /></el-icon>
+          <el-tree
+            :data="cateTree"
+            :props="{ label: 'name', children: 'children' }"
+            node-key="id"
+            :default-expand-all="false"
+            highlight-current
+            style="background:transparent"
+            @node-click="(node: any) => selectCate(node.id)"
+          >
+            <template #default="{ data }">
+              <span style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:4px;overflow:hidden">
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ data.name }}</span>
+                <span class="cate-item-actions" style="flex-shrink:0">
+                  <el-icon class="act-icon" @click.stop="openCateForm(data)"><Edit /></el-icon>
+                  <el-icon class="act-icon danger" @click.stop="handleDeleteCate(data.id)"><Delete /></el-icon>
+                </span>
               </span>
-            </div>
-            <!-- 子分类（可折叠） -->
-            <template v-if="!collapsedCates.has(item.id)">
-              <template v-for="child in item.children" :key="child.id">
-                <div class="cate-item cate-item-child" :class="{ active: selectedCateId === child.id }" @click="selectCate(child.id)">
-                  <span class="cate-item-name">└ {{ child.name }}</span>
-                  <span class="cate-item-actions">
-                    <el-icon class="act-icon" @click.stop="openCateForm(child)"><Edit /></el-icon>
-                    <el-icon class="act-icon danger" @click.stop="handleDeleteCate(child.id)"><Delete /></el-icon>
-                  </span>
-                </div>
-              </template>
             </template>
-          </template>
+          </el-tree>
           <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty">暂无分类</div>
         </div>
       </div>
+      <div class="cate-resize-handle" @mousedown="startCateResize" />
 
       <!-- 右侧商品列表 -->
       <div class="goods-list-wrap">
@@ -744,6 +736,7 @@ import * as XLSX from 'xlsx'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import ScTable from '@/components/ScTable.vue'
+import http from '@/api/http'
 import {
   getGoodsList, createGoods, updateGoods, deleteGoods,
   getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate,
@@ -758,6 +751,25 @@ import { getStockList } from '@/api/warehouse'
 const cateOptions = ref<any[]>([])
 const cateLoading = ref(false)
 const cateKeyword = ref('')
+const CATE_PANEL_MIN = 160
+const CATE_PANEL_MAX = 400
+const catePanelWidth = ref(Number(localStorage.getItem('goods_cate_panel_w') || 200))
+
+function startCateResize(e: MouseEvent) {
+  e.preventDefault()
+  const startX = e.clientX
+  const startW = catePanelWidth.value
+  function onMove(ev: MouseEvent) {
+    catePanelWidth.value = Math.min(CATE_PANEL_MAX, Math.max(CATE_PANEL_MIN, startW + ev.clientX - startX))
+  }
+  function onUp() {
+    localStorage.setItem('goods_cate_panel_w', String(catePanelWidth.value))
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+  }
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+}
 const selectedCateId = ref<number | null>(null)
 const collapsedCates = ref<Set<number>>(new Set())
 
@@ -774,7 +786,7 @@ function buildCateTree(source: any[]) {
   all.forEach(c => { map[c.id] = c })
   const roots: CateTreeNode[] = []
   all.forEach(c => {
-    const pid = c.parent_id
+    const pid = Number(c.parent_id ?? 0)
     if (pid && map[pid]) map[pid].children.push(c)
     else roots.push(c)
   })
@@ -803,8 +815,7 @@ async function loadCates() {
   try {
     const res = await getGoodsCateList({ list_rows: 200 })
     const rows = res.data?.rows ?? []
-    const unique = rows.filter((r: any, i: number) => rows.findIndex((x: any) => x.name === r.name) === i)
-    cateOptions.value = [...unique].sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+    cateOptions.value = rows.sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
   } finally {
     cateLoading.value = false
   }
@@ -1236,8 +1247,27 @@ async function handleSaveAndNew() {
   }
 }
 
+async function handleClearAll() {
+  await ElMessageBox.confirm(
+    '确定清空全部商品？此操作不可撤销！所有商品数据将被永久删除。',
+    '危险操作确认',
+    { type: 'error', confirmButtonText: '确认清空', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
+  )
+  try {
+    // 先获取全部商品 ID
+    const res = await http.get('/goods/ShopGoods/index', { params: { list_rows: 1000 } })
+    const rows: any[] = res?.data?.rows ?? []
+    if (!rows.length) { ElMessage.info('商品列表已经是空的'); return }
+    const ids = rows.map((r: any) => r.id).filter(Boolean)
+    await http.post('/goods/ShopGoods/batchDel', { ids })
+    ElMessage.success(`已删除 ${ids.length} 条商品`)
+    tableRef.value?.loadData()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '删除失败，请手动全选后批量删除')
+  }
+}
+
 async function handleDelete(id: number) {
-  // 先查库存，有库存则拒绝删除
   try {
     const res = await getStockList({ goods_id: id, list_rows: 200 })
     const rows = res?.data?.rows ?? res?.data ?? []
@@ -1444,6 +1474,18 @@ function buildImportRow(cells: any[], fieldKeys: string[], rowNo: number) {
       mapped.goods_type = [1, 2, 3, 4].includes(num) ? num : undefined
     }
   }
+  // 商品类型缺失时，遍历已有类型映射，匹配商品名称中包含的类型名（"半成品"优先于"成品"）
+  if (!mapped.goods_type) {
+    const name = String(mapped.goods_name ?? '')
+    // 按类型名长度降序，确保"半成品"先于"成品"匹配
+    const sortedEntries = Object.entries(GOODS_TYPE_TEXT_MAP).sort((a, b) => b[0].length - a[0].length)
+    for (const [typeName, typeVal] of sortedEntries) {
+      if (name.includes(typeName)) {
+        mapped.goods_type = typeVal
+        break
+      }
+    }
+  }
   mapped._missingGoodsType = !mapped.goods_type
   mapped.goods_type_text = mapped.goods_type
     ? (['', '成品', '半成品', '原材料', '辅料'][mapped.goods_type] ?? '未指定')
@@ -1468,7 +1510,7 @@ function splitImportCategoryPath(value: any) {
     .filter(Boolean)
 }
 
-function findImportCategoryByNameAndParent(name: string, parentId: number | null) {
+function findImportCategoryByNameAndParent(name: string, parentId: number) {
   return cateOptions.value.find(item =>
     normalizeImportHeader(item.name) === normalizeImportHeader(name)
     && Number(item.parent_id ?? 0) === Number(parentId ?? 0),
@@ -1479,7 +1521,7 @@ function findImportCategoryByPath(path: any) {
   const segments = splitImportCategoryPath(path)
   if (!segments.length) return null
 
-  let parentId: number | null = null
+  let parentId: number = 0
   let current: any = null
   for (const segment of segments) {
     current = findImportCategoryByNameAndParent(segment, parentId)
@@ -1493,7 +1535,7 @@ async function ensureImportCategory(path: any) {
   const segments = splitImportCategoryPath(path)
   if (!segments.length) return null
 
-  let parentId: number | null = null
+  let parentId: number = 0
   let current: any = null
 
   for (const segment of segments) {
@@ -2191,7 +2233,6 @@ function stopListScanner() {
 
 /* 左侧分类 */
 .cate-panel {
-  width: 180px;
   flex-shrink: 0;
   background: #fff;
   border: 1px solid #e4e7ed;
@@ -2199,7 +2240,19 @@ function stopListScanner() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin-right: 0;
+}
+
+.cate-resize-handle {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
   margin-right: 12px;
+}
+.cate-resize-handle:hover {
+  background: #dbeafe;
 }
 
 .cate-header {
@@ -2228,7 +2281,8 @@ function stopListScanner() {
   transition: background 0.12s;
 }
 .cate-item:hover { background: #f5f7ff; }
-.cate-item:hover .cate-item-actions { opacity: 1; }
+.cate-item:hover .cate-item-actions,
+.el-tree-node__content:hover .cate-item-actions { opacity: 1; }
 .cate-item.active { background: rgba(0,113,227,0.08); color: #0071e3; font-weight: 500; }
 .cate-item-child { padding-left: 20px; font-size: 12px; color: rgba(29,29,31,0.35); }
 .cate-item-child.active { color: #0071e3; }

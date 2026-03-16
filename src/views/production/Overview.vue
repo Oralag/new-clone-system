@@ -399,7 +399,7 @@ async function loadWarehouses() {
 
 // ── 弹窗操作 ─────────────────────────────────────────────────────
 function openGenerateDialog() {
-  if (!bomProducts.value.length) {
+  if (bomLoading.value) {
     ElMessage.warning('请先等待BOM数据加载完毕')
     return
   }

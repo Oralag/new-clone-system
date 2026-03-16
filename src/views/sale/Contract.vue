@@ -117,6 +117,8 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
+          <el-button v-if="isReadonly" @click="handleContractPrint">打印</el-button>
+          <el-button v-if="isReadonly" @click="handleContractExport">导出</el-button>
           <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-contract-save">
             保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
           </el-button>
@@ -955,6 +957,82 @@ function openEdit(row: any, readonly = false) {
 function backToList() {
   showForm.value = false
   tableRef.value?.refresh()
+}
+
+function buildContractHtml() {
+  const items: any[] = fd.items || []
+  const rows = items.map((item: any, i: number) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${item.goods_name || ''}</td>
+      <td>${item.goods_sn || ''}</td>
+      <td>${item.spec || ''}</td>
+      <td>${item.unit_name || ''}</td>
+      <td>${item.num || 0}</td>
+      <td>¥${Number(item.price || 0).toFixed(2)}</td>
+      <td>¥${((item.num || 0) * (item.price || 0)).toFixed(2)}</td>
+    </tr>`).join('')
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>销售合同 ${(fd as any).order_sn || ''}</title>
+  <style>
+    body{font-family:SimSun,"Microsoft YaHei",Arial;font-size:12px;color:#000;margin:20px}
+    h2{text-align:center;font-size:18px;margin-bottom:4px}
+    .sub{text-align:center;color:#666;margin-bottom:16px;font-size:12px}
+    .info{display:flex;flex-wrap:wrap;gap:8px 32px;margin-bottom:16px;font-size:12px}
+    .info span{min-width:160px}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
+    th{background:#f0f0f0;font-weight:bold}
+    .total-row{text-align:right;margin-top:8px;font-size:13px}
+    .total-row b{font-size:15px;color:#0071e3}
+    .section-title{font-weight:bold;margin:12px 0 6px;font-size:13px;border-left:3px solid #0071e3;padding-left:8px}
+    .footer{margin-top:40px;display:flex;justify-content:space-between;font-size:12px}
+    @media print{body{margin:0}}
+  </style></head><body>
+  <h2>销 售 合 同</h2>
+  <div class="sub">数字游牧ERP · 合同编号：${(fd as any).order_sn || ''}</div>
+  <div class="info">
+    <span>客户名称：${(fd as any).customer_name || ''}</span>
+    <span>签订日期：${(fd as any).sign_date || ''}</span>
+    <span>合同到期：${fd.expire_date || ''}</span>
+    <span>经办人：${fd.admin_name || ''}</span>
+  </div>
+  <div class="section-title">商品明细</div>
+  <table>
+    <thead><tr><th>序号</th><th>商品名称</th><th>编码</th><th>规格</th><th>单位</th><th>数量</th><th>单价</th><th>金额</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="total-row">
+    <span>合同总额：<b>¥${Number(fd.total_amount || 0).toFixed(2)}</b></span>
+    ${fd.freight_amount ? `&nbsp;&nbsp;运费：¥${Number(fd.freight_amount).toFixed(2)}` : ''}
+  </div>
+  ${fd.remark ? `<div style="margin-top:10px;font-size:12px">备注：${fd.remark}</div>` : ''}
+  <div class="footer">
+    <span>甲方（买方）签章：_______________</span>
+    <span>乙方（卖方）签章：_______________</span>
+    <span>日期：___________</span>
+  </div>
+  </body></html>`
+}
+
+function handleContractPrint() {
+  const w = window.open('', '_blank', 'width=900,height=700')
+  if (!w) { ElMessage.warning('请允许弹窗'); return }
+  w.document.write(buildContractHtml())
+  w.document.close()
+  w.focus()
+  setTimeout(() => { w.print() }, 300)
+}
+
+function handleContractExport() {
+  const blob = new Blob([buildContractHtml()], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `销售合同_${(fd as any).order_sn || (fd as any).customer_name || ''}.html`
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('已导出，用浏览器打开后可另存为PDF')
 }
 
 async function handleSave() {

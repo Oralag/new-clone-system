@@ -44,8 +44,8 @@
         </div>
       </div>
       </div><!-- /sidebar-inner -->
-      <div class="sidebar-resize-handle" @mousedown="startResize" />
     </div>
+    <div class="sidebar-resize-handle" @mousedown="startResize" />
 
     <div style="flex:1;min-width:0">
       <el-card>
@@ -649,7 +649,6 @@ onMounted(async () => {
 .stock-page {
   display: flex;
   height: 100%;
-  gap: 12px;
 }
 
 .stock-sidebar {
@@ -679,6 +678,7 @@ onMounted(async () => {
   cursor: col-resize;
   background: transparent;
   transition: background 0.15s;
+  margin-right: 12px;
 }
 
 .sidebar-resize-handle:hover {
@@ -780,7 +780,8 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.sidebar-item:hover .cate-item-actions {
+.sidebar-item:hover .cate-item-actions,
+.el-tree-node__content:hover .cate-item-actions {
   opacity: 1;
 }
 

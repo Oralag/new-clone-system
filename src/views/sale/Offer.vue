@@ -104,6 +104,8 @@
         </div>
         <div class="form-actions">
           <el-button @click="backToList">返回</el-button>
+          <el-button v-if="isReadonly" :icon="Printer" @click="handlePrint">打印</el-button>
+          <el-button v-if="isReadonly" :icon="Download" @click="handleExportPdf">导出PDF</el-button>
           <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-offer-save">保存</el-button>
         </div>
       </div>
@@ -331,7 +333,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { Plus, Delete, Search } from '@element-plus/icons-vue'
+import { Plus, Delete, Search, Printer, Download } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getOfferList, createOffer, updateOffer, deleteOffer, auditOffer } from '@/api/sale'
@@ -432,9 +434,80 @@ function openEdit(row: any, readonly = false) {
   showForm.value = true
 }
 
-function backToList() {
-  showForm.value = false
+function backToList() {  showForm.value = false
   tableRef.value?.refresh()
+}
+
+function buildPrintHtml() {
+  const items: any[] = fd.items || []
+  const rows = items.map((item: any, i: number) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${item.goods_name || ''}</td>
+      <td>${item.goods_sn || ''}</td>
+      <td>${item.spec || ''}</td>
+      <td>${item.unit_name || ''}</td>
+      <td>${item.num || 0}</td>
+      <td>¥${Number(item.price || 0).toFixed(2)}</td>
+      <td>¥${((item.num || 0) * (item.price || 0)).toFixed(2)}</td>
+      <td>${item.remark || ''}</td>
+    </tr>`).join('')
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>报价单 ${fd.offer_no || ''}</title>
+  <style>
+    body{font-family:SimSun,"Microsoft YaHei",Arial;font-size:12px;color:#000;margin:20px}
+    h2{text-align:center;font-size:18px;margin-bottom:4px}
+    .sub{text-align:center;color:#666;margin-bottom:16px;font-size:12px}
+    .info{display:flex;flex-wrap:wrap;gap:8px 32px;margin-bottom:16px;font-size:12px}
+    .info span{min-width:160px}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
+    th{background:#f0f0f0;font-weight:bold}
+    .total{text-align:right;margin-top:8px;font-size:13px;font-weight:bold}
+    .footer{margin-top:30px;display:flex;justify-content:space-between;font-size:12px}
+    @media print{body{margin:0}}
+  </style></head><body>
+  <h2>报 价 单</h2>
+  <div class="sub">数字游牧ERP</div>
+  <div class="info">
+    <span>报价单号：${fd.offer_no || ''}</span>
+    <span>客户名称：${fd.customer_name || ''}</span>
+    <span>报价日期：${fd.offer_date || ''}</span>
+    <span>有效期至：${fd.expire_date || ''}</span>
+    <span>经办人：${fd.admin_name || ''}</span>
+  </div>
+  <table>
+    <thead><tr><th>序号</th><th>商品名称</th><th>编码</th><th>规格</th><th>单位</th><th>数量</th><th>单价</th><th>合计</th><th>备注</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="total">报价合计：¥${Number(fd.total_amount || 0).toFixed(2)}</div>
+  ${fd.remark ? `<div style="margin-top:10px;font-size:12px">备注：${fd.remark}</div>` : ''}
+  <div class="footer">
+    <span>供应方签章：_______________</span>
+    <span>采购方签章：_______________</span>
+    <span>日期：___________</span>
+  </div>
+  </body></html>`
+}
+
+function handlePrint() {
+  const w = window.open('', '_blank', 'width=900,height=700')
+  if (!w) { ElMessage.warning('请允许弹窗'); return }
+  w.document.write(buildPrintHtml())
+  w.document.close()
+  w.focus()
+  setTimeout(() => { w.print() }, 300)
+}
+
+function handleExportPdf() {
+  const blob = new Blob([buildPrintHtml()], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `报价单_${fd.offer_no || fd.customer_name || ''}.html`
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('已导出HTML文件，用浏览器打开后可另存为PDF')
 }
 
 function onCustomerChange(id: any) {

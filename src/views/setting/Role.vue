@@ -158,8 +158,9 @@ function openForm(row?: any, readonly = false) {
 async function handleSubmit() {
   await elFormRef.value?.validate()
   const menus = allMenuData.filter(m => selectedMenus[m.key]).map(m => m.key)
-  const permConfig: PermConfig = { menus }
-  const remark = PERM_PREFIX + JSON.stringify(permConfig)
+  // 如果全选了，remark 存空字符串代表"全部模块"（主账号级别权限）
+  const isAllSelected = menus.length === allMenuData.length
+  const remark = isAllSelected ? '' : (PERM_PREFIX + JSON.stringify({ menus } as PermConfig))
   submitting.value = true
   try {
     const data = { id: form.id, name: form.name, remark }

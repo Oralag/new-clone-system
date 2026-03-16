@@ -119,8 +119,8 @@ const form = reactive<any>({
 
 onMounted(async () => {
   try {
-    const res: any = await getRoleList()
-    roleList.value = res?.data?.list || res?.data || []
+    const res: any = await getRoleList({ list_rows: 200 })
+    roleList.value = res?.data?.rows || res?.data?.list || res?.data || []
   } catch {}
 })
 

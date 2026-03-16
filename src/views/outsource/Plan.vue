@@ -159,7 +159,7 @@
       <el-input v-model="goodsSearch" placeholder="搜索名称/编码" clearable style="width:220px;margin-bottom:10px" @input="filterGoods" />
       <el-table :data="filteredGoods" border size="small" height="380" @selection-change="pickerSel=$event">
         <el-table-column type="selection" width="40" />
-        <el-table-column prop="name" label="商品名称" min-width="140" />
+        <el-table-column prop="goods_name" label="商品名称" min-width="140" />
         <el-table-column prop="goods_sn" label="编码" width="110" />
         <el-table-column prop="spec" label="规格" width="100" />
         <el-table-column prop="unit_name" label="单位" width="70" align="center" />
@@ -212,9 +212,9 @@ async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{f
 function backToList(){showForm.value=false;tableRef.value?.refresh()}
 
 const goodsPickerVisible=ref(false),goodsSearch=ref(''),allGoods=ref<any[]>([]),filteredGoods=ref<any[]>([]),pickerSel=ref<any[]>([])
-async function openGoodsPicker(){if(!allGoods.value.length){try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.list||r.data?.data||[]}catch{}};goodsSearch.value='';filteredGoods.value=[...allGoods.value];pickerSel.value=[];goodsPickerVisible.value=true}
-function filterGoods(){const q=goodsSearch.value.trim().toLowerCase();filteredGoods.value=allGoods.value.filter(g=>!q||(g.name||'').toLowerCase().includes(q)||(g.goods_sn||'').toLowerCase().includes(q))}
-function confirmGoods(){pickerSel.value.forEach(g=>fd.items.push({goods_id:g.id,goods_name:g.name,goods_sn:g.goods_sn||'',spec:g.spec||'',unit_name:g.unit_name||'',plan_num:1,unit_price:0,row_total:0,remark:''}));goodsPickerVisible.value=false}
+async function openGoodsPicker(){try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.rows||r.data?.list||r.data?.data||[]}catch{};goodsSearch.value='';filteredGoods.value=[...allGoods.value];pickerSel.value=[];goodsPickerVisible.value=true}
+function filterGoods(){const q=goodsSearch.value.trim().toLowerCase();filteredGoods.value=allGoods.value.filter(g=>!q||(g.goods_name||g.name||'').toLowerCase().includes(q)||(g.goods_sn||'').toLowerCase().includes(q))}
+function confirmGoods(){pickerSel.value.forEach(g=>fd.items.push({goods_id:g.id,goods_name:g.goods_name||g.name,goods_sn:g.goods_sn||'',spec:g.spec||'',unit_name:g.unit_name||'',plan_num:1,unit_price:0,row_total:0,remark:''}));goodsPickerVisible.value=false}
 function addEmptyRow(){fd.items.push({goods_id:0,goods_name:'',goods_sn:'',spec:'',unit_name:'',plan_num:1,unit_price:0,row_total:0,remark:''})}
 
 const batchVisible=ref(false),batchField=ref(''),batchLabel=ref(''),batchValue=ref(0)

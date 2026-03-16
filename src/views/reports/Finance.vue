@@ -35,8 +35,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive } from 'vue'
 import ScTable from '@/components/ScTable.vue'
-
 import { getFinanceReportList } from '@/api/reports'
 
 const scTable = ref()

@@ -70,7 +70,11 @@
         <div class="cards-grid">
 
       <!-- ERP -->
-      <div class="portal-card" @click="go('/dashboard')">
+      <div class="portal-card" :class="{ 'card-pressed': pressedCard === 'erp' }"
+        @click="go('/dashboard')"
+        @touchstart.passive="pressedCard = 'erp'"
+        @touchend.passive="pressedCard = ''"
+        @touchcancel.passive="pressedCard = ''">
         <div class="card-icon card-icon-dark">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
             <rect x="3" y="3" width="7" height="7" rx="1.5" fill="white"/>
@@ -95,7 +99,11 @@
       </div>
 
       <!-- 智能体工作流 -->
-      <div class="portal-card portal-card-ai" @click="go('/agent')">
+      <div class="portal-card portal-card-ai" :class="{ 'card-pressed': pressedCard === 'agent' }"
+        @click="go('/agent')"
+        @touchstart.passive="pressedCard = 'agent'"
+        @touchend.passive="pressedCard = ''"
+        @touchcancel.passive="pressedCard = ''">
         <div class="card-ai-badge">由 Claude AI 驱动</div>
         <div class="card-icon card-icon-ai">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -367,6 +375,7 @@ const auth = useAuthStore()
 
 function go(path: string) { router.push(path) }
 function logout() { auth.logout(); router.push('/login') }
+const pressedCard = ref('')
 
 // ── Portal 嵌入式 AI 对话框 ────────────────────────────────────────────────
 const portalAiOpen = ref(false)
@@ -867,9 +876,17 @@ const TOOL_LABELS: Record<string, string> = {
   flex-direction: column;
 }
 
-.portal-card:hover {
+.portal-card:hover,
+.portal-card.card-pressed {
   transform: translateY(-14px) scale(1.02);
   box-shadow: 0 60px 100px rgba(0,0,0,0.09);
+}
+
+@media (hover: none) {
+  .portal-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 /* ERP 卡默认深灰色，hover 变蓝 */
@@ -882,13 +899,24 @@ const TOOL_LABELS: Record<string, string> = {
 .portal-card:not(.portal-card-ai):not(.portal-card-dim) .card-arrow { color: rgba(255,255,255,0.35); }
 .portal-card:not(.portal-card-ai):not(.portal-card-dim) .tag { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); border-color: transparent; }
 
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover {
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover,
+.portal-card:not(.portal-card-ai):not(.portal-card-dim).card-pressed {
   background: linear-gradient(135deg, #0071e3 0%, #005acd 100%);
   border-color: rgba(0,113,227,0.3);
   box-shadow: 0 40px 80px rgba(0,113,227,0.25);
 }
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-arrow { color: rgba(255,255,255,0.7); gap: 12px; }
-.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-icon-dark { background: rgba(255,255,255,0.15); }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-arrow,
+.portal-card:not(.portal-card-ai):not(.portal-card-dim).card-pressed .card-arrow { color: rgba(255,255,255,0.7); gap: 12px; }
+.portal-card:not(.portal-card-ai):not(.portal-card-dim):hover .card-icon-dark,
+.portal-card:not(.portal-card-ai):not(.portal-card-dim).card-pressed .card-icon-dark { background: rgba(255,255,255,0.15); }
+
+@media (hover: none) {
+  .portal-card:not(.portal-card-ai):not(.portal-card-dim):hover {
+    background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+    border-color: rgba(255,255,255,0.08);
+    box-shadow: none;
+  }
+}
 
 .portal-card-ai {
   background: linear-gradient(135deg, #0071e3 0%, #0057b8 60%, #004499 100%);
@@ -898,12 +926,22 @@ const TOOL_LABELS: Record<string, string> = {
 .portal-card-ai .card-title { color: #fff; }
 .portal-card-ai .card-desc  { color: rgba(255,255,255,0.55); }
 .portal-card-ai .card-arrow { color: rgba(255,255,255,0.4); }
-.portal-card-ai:hover {
+.portal-card-ai:hover,
+.portal-card-ai.card-pressed {
   background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
   border-color: rgba(255,255,255,0.1);
   box-shadow: 0 40px 80px rgba(0,0,0,0.3);
 }
-.portal-card-ai:hover .card-arrow { color: #fff; gap: 12px; }
+.portal-card-ai:hover .card-arrow,
+.portal-card-ai.card-pressed .card-arrow { color: #fff; gap: 12px; }
+
+@media (hover: none) {
+  .portal-card-ai:hover {
+    background: linear-gradient(135deg, #0071e3 0%, #0057b8 60%, #004499 100%);
+    border-color: rgba(0,113,227,0.3);
+    box-shadow: none;
+  }
+}
 .card-ai-badge {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em;

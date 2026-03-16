@@ -191,7 +191,7 @@ async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});try{f
 async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=true;showForm.value=true;await loadInit()}
 function backToList(){showForm.value=false;tableRef.value?.refresh()}
 const goodsPickerVisible=ref(false),goodsSearch=ref(''),allGoods=ref<any[]>([]),filteredGoods=ref<any[]>([]),pickerSel=ref<any[]>([])
-async function openGoodsPicker(){if(!allGoods.value.length){try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.list||r.data?.data||[]}catch{}};goodsSearch.value='';filteredGoods.value=[...allGoods.value];pickerSel.value=[];goodsPickerVisible.value=true}
+async function openGoodsPicker(){try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.rows||r.data?.list||r.data?.data||[]}catch{};goodsSearch.value='';filteredGoods.value=[...allGoods.value];pickerSel.value=[];goodsPickerVisible.value=true}
 function filterGoods(){const q=goodsSearch.value.trim().toLowerCase();filteredGoods.value=allGoods.value.filter(g=>!q||(g.name||'').toLowerCase().includes(q)||(g.goods_sn||'').toLowerCase().includes(q))}
 function confirmGoods(){pickerSel.value.forEach(g=>fd.items.push({goods_id:g.id,goods_name:g.name,goods_sn:g.goods_sn||'',spec:g.spec||'',unit_name:g.unit_name||'',stock_num:g.stock_num??null,num:1,in_price:0,row_total:0,remark:''}));goodsPickerVisible.value=false}
 function addEmptyRow(){fd.items.push({goods_id:0,goods_name:'',goods_sn:'',spec:'',unit_name:'',num:1,in_price:0,row_total:0,remark:''})}

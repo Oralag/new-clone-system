@@ -141,8 +141,19 @@ function onClickOutside(e: MouseEvent) {
     isCollapsed.value = true
   }
 }
-onMounted(() => document.addEventListener('click', onClickOutside))
-onUnmounted(() => document.removeEventListener('click', onClickOutside))
+function handleFill(e: Event) {
+  quickText.value = (e as CustomEvent<string>).detail
+  isCollapsed.value = false
+  nextTick(() => inputRef.value?.focus())
+}
+onMounted(() => {
+  document.addEventListener('click', onClickOutside)
+  window.addEventListener('captain-fill', handleFill)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside)
+  window.removeEventListener('captain-fill', handleFill)
+})
 
 // ── 历史记录 ────────────────────────────────────────────────────────────────
 const historyList = ref<HistoryItem[]>(loadAllHistory())
