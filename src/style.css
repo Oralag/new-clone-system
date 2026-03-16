@@ -220,6 +220,9 @@ html, body {
 [data-theme="dark"] .guide-tip-inline { background: rgba(0,113,227,0.12) !important; }
 [data-theme="dark"] .gsp-no { background: rgba(255,255,255,0.08) !important; }
 
+/* ── Portal nav 深色 ── */
+[data-theme="dark"] .glass-nav { background: rgba(28,28,30,0.92) !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+
 /* ── 通用表单页 深色 ── */
 [data-theme="dark"] .form-page { background: #1c1c1e !important; }
 [data-theme="dark"] .form-topbar { background: #2c2c2e !important; border-bottom-color: rgba(255,255,255,0.06) !important; }

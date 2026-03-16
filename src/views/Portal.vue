@@ -653,26 +653,26 @@ const TOOL_LABELS: Record<string, string> = {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(255,255,255,0.12);
+  background: var(--gray);
   border-radius: 999px;
   padding: 4px 6px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid var(--border);
 }
 .nav-theme-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: rgba(255,255,255,0.1);
+  background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.8);
+  color: var(--mid);
   transition: background 0.15s, color 0.15s;
 }
-.nav-theme-btn:hover { background: rgba(255,255,255,0.25); color: #fff; }
-.nav-theme-btn.active { background: #fff; color: #0071e3; }
+.nav-theme-btn:hover { background: var(--gray-2); color: var(--dark); }
+.nav-theme-btn.active { background: var(--card-bg); color: var(--blue); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 
 /* ── Hero Compact ── */
 .hero-compact {
