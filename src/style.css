@@ -312,6 +312,77 @@ html, body {
 [data-theme="dark"] .sidebar-resize-handle:hover { background: rgba(255,255,255,0.1) !important; }
 [data-theme="dark"] .stat-label { color: rgba(245,245,247,0.7) !important; }
 
+/* ── 报表总览 深色 ── */
+[data-theme="dark"] .ro-page { background: #1c1c1e !important; }
+[data-theme="dark"] .ro-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .ro-sub { color: rgba(245,245,247,0.35) !important; }
+[data-theme="dark"] .ro-kpi-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .ro-kpi-label { color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .ro-kpi-sub { color: rgba(245,245,247,0.28) !important; }
+[data-theme="dark"] .ro-chart-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .ro-card-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .ro-card-hint { color: rgba(245,245,247,0.3) !important; }
+[data-theme="dark"] .ro-empty { color: rgba(245,245,247,0.2) !important; }
+[data-theme="dark"] .ro-empty-sm { color: rgba(245,245,247,0.2) !important; }
+[data-theme="dark"] .ro-more { color: rgba(245,245,247,0.25) !important; }
+[data-theme="dark"] .ro-profit-col { border-right-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .ro-col-header.blue { background: rgba(0,113,227,0.12) !important; }
+[data-theme="dark"] .ro-col-header.purple { background: rgba(124,58,237,0.12) !important; }
+[data-theme="dark"] .ro-section-label { color: rgba(245,245,247,0.3) !important; }
+[data-theme="dark"] .ro-detail-row { border-bottom-color: rgba(255,255,255,0.04) !important; }
+[data-theme="dark"] .ro-dr-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .ro-dr-date { color: rgba(245,245,247,0.28) !important; }
+[data-theme="dark"] .ro-sum-block { background: #3a3a3c !important; }
+[data-theme="dark"] .ro-prepay-block { background: rgba(120,80,0,0.18) !important; border-color: rgba(253,230,138,0.15) !important; }
+[data-theme="dark"] .ro-sum-label { color: rgba(245,245,247,0.5) !important; }
+[data-theme="dark"] .ro-sum-total { border-top-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .ro-sum-divider { background: rgba(255,255,255,0.07) !important; }
+[data-theme="dark"] .ro-sale-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .ro-sale-bar-wrap { background: #3a3a3c !important; }
+[data-theme="dark"] .ro-prepay-verify-row { background: rgba(120,80,0,0.15) !important; }
+[data-theme="dark"] .ro-prepay-contract-row:hover { background: rgba(0,113,227,0.12) !important; }
+[data-theme="dark"] .ro-summary-col .ro-col-header { background: #3a3a3c !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .ro-col-header-summary { background: #3a3a3c !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .ro-sum-hint { color: rgba(245,245,247,0.3) !important; }
+
+/* ── AI 聊天面板 深色 ── */
+[data-theme="dark"] .ai-chat-panel { box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important; }
+[data-theme="dark"] .chat-messages { background: #1c1c1e !important; }
+[data-theme="dark"] .welcome-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .welcome-sub { color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .bom-quick-btn { background: #2c2c2e !important; border-color: rgba(167,139,250,0.3) !important; color: #a78bfa !important; }
+[data-theme="dark"] .bom-quick-btn:hover { background: #3a3a3c !important; border-color: #a78bfa !important; }
+[data-theme="dark"] .message-avatar { background: #3a3a3c !important; color: rgba(245,245,247,0.7) !important; }
+[data-theme="dark"] .message-content { background: #2c2c2e !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .message-content code { background: rgba(255,255,255,0.1) !important; }
+[data-theme="dark"] .message-time { color: rgba(245,245,247,0.25) !important; }
+[data-theme="dark"] .agent-label { opacity: 0.9; }
+[data-theme="dark"] .captain-label { color: #a5b4fc !important; }
+[data-theme="dark"] .message-ack .message-content { background: rgba(99,102,241,0.12) !important; color: #a5b4fc !important; border-color: rgba(99,102,241,0.25) !important; }
+[data-theme="dark"] .typing-dots span { background: rgba(245,245,247,0.35) !important; }
+[data-theme="dark"] .action-preview { background: rgba(22,163,74,0.1) !important; border-color: rgba(22,163,74,0.25) !important; }
+[data-theme="dark"] .action-preview-content { background: rgba(255,255,255,0.05) !important; color: rgba(245,245,247,0.6) !important; }
+[data-theme="dark"] .chat-input-area { border-top-color: rgba(255,255,255,0.06) !important; background: #1c1c1e !important; }
+[data-theme="dark"] .chat-native-textarea { background: #2c2c2e !important; border-color: rgba(255,255,255,0.1) !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .chat-native-textarea::placeholder { color: rgba(245,245,247,0.25) !important; }
+[data-theme="dark"] .chat-native-textarea:focus { border-color: #409eff !important; }
+[data-theme="dark"] .chat-native-textarea:disabled { background: #3a3a3c !important; color: rgba(245,245,247,0.2) !important; }
+[data-theme="dark"] .input-hint { color: rgba(245,245,247,0.2) !important; }
+[data-theme="dark"] .pending-img { border-color: rgba(255,255,255,0.1) !important; }
+/* AI 工具调用卡片 深色 */
+[data-theme="dark"] .tool-call-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .tool-call-card.status-running { background: rgba(0,113,227,0.1) !important; border-color: rgba(96,165,250,0.3) !important; }
+[data-theme="dark"] .tool-call-card.status-success { background: rgba(22,163,74,0.1) !important; border-color: rgba(74,222,128,0.3) !important; }
+[data-theme="dark"] .tool-call-card.status-error { background: rgba(220,38,38,0.1) !important; border-color: rgba(248,113,113,0.3) !important; }
+[data-theme="dark"] .tool-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .card-status { color: rgba(245,245,247,0.35) !important; }
+[data-theme="dark"] .param-chip { background: rgba(255,255,255,0.08) !important; color: rgba(245,245,247,0.6) !important; }
+[data-theme="dark"] .card-result { color: rgba(245,245,247,0.55) !important; }
+/* 聊天面板内 el-button plain 按钮 深色 */
+[data-theme="dark"] .ai-chat-panel .el-button.is-plain { background: #3a3a3c !important; border-color: rgba(255,255,255,0.12) !important; color: rgba(245,245,247,0.6) !important; }
+[data-theme="dark"] .ai-chat-panel .el-button.is-plain:hover { background: #48484a !important; border-color: rgba(255,255,255,0.2) !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .ai-chat-panel .el-button:not(.is-plain):not(.el-button--primary) { background: #3a3a3c !important; border-color: rgba(255,255,255,0.12) !important; color: rgba(245,245,247,0.7) !important; }
+
 /* ══════════════════════════════════════════════════════════
    Eye Protection Theme (淡蓝色)
    ══════════════════════════════════════════════════════════ */
@@ -1022,6 +1093,20 @@ html, body {
   .is-mobile .stock-sidebar .sidebar-item { flex-shrink: 0; border-radius: 999px; padding: 5px 14px; background: var(--gray); border: 1px solid transparent; white-space: nowrap; font-size: 13px; }
   .is-mobile .stock-sidebar .sidebar-item.active { background: var(--blue-light); color: var(--blue); border-color: rgba(0,113,227,0.2); font-weight: 700; }
   .is-mobile .stock-main { width: 100%; }
+}
+
+/* ── iOS 防止输入框聚焦时页面放大 ── */
+/* iOS Safari 在 font-size < 16px 的 input 聚焦时会自动 zoom，强制设为 16px 防止此行为 */
+@media screen and (max-width: 768px) {
+  input, textarea, select,
+  .el-input__inner,
+  .el-textarea__inner,
+  .bar-input,
+  .portal-ai-input,
+  .captain-compose-input,
+  .chat-native-textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* 全局修复：固定列（操作列）背景透明问题 — 跟随主题色 */
