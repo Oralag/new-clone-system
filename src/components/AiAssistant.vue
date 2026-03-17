@@ -151,6 +151,11 @@
           rows="2"
           :placeholder="isRecording ? '正在聆听，请说话...' : '输入业务描述，或上传单据图片让AI识别录入...'"
           :disabled="isLoading"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          enterkeyhint="send"
           @keydown.enter.exact.prevent="sendMessage"
           @keydown.enter.shift.exact="inputText += '\n'"
         />

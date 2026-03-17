@@ -18,6 +18,11 @@
           class="bar-input"
           :placeholder="lastPreview || 'AI 多智能体总调度 · 输入目标让 Captain 自动规划执行…'"
           :disabled="captainLoading"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          enterkeyhint="send"
           @keydown.enter.prevent="sendQuick"
           @focus="isCollapsed = false"
         />
