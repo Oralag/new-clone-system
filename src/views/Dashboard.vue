@@ -3,50 +3,73 @@
 
     <!-- ══ 手机端首页 ══ -->
     <template v-if="isMobile">
-      <!-- 顶部欢迎区 -->
-      <div class="m-header">
-        <div class="m-header-left">
-          <div class="m-header-greet">你好，{{ authStore.userName || '用户' }} 👋</div>
-          <div class="m-header-sub">数字游牧 ERP</div>
+
+      <!-- 顶部欢迎 Banner -->
+      <div class="mh-banner">
+        <div class="mh-banner-left">
+          <div class="mh-greet">你好，{{ authStore.userName || '用户' }}</div>
+          <div class="mh-date">{{ mobileToday }}</div>
         </div>
-        <div class="m-header-right">
-          <div class="m-header-refresh" @click="loadDashboardData(true)" :class="{ spinning: dashboardLoading }">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.02-8.36"/></svg>
+        <button class="mh-refresh" @click="loadDashboardData(true)" :class="{ spinning: dashboardLoading }">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.02-8.36"/></svg>
+        </button>
+      </div>
+
+      <!-- 今日核心指标卡片 -->
+      <div class="mh-kpi-row">
+        <div class="mh-kpi-card mh-kpi-main" @click="router.push('/dashboard/today-sales')">
+          <div class="mh-kpi-label">今日销售额</div>
+          <div class="mh-kpi-value">¥{{ stats[0].value }}</div>
+          <div class="mh-kpi-sub">含销售 + 零售</div>
+          <svg class="mh-kpi-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="mh-kpi-right">
+          <div class="mh-kpi-small" @click="router.push('/dashboard/today-sales')">
+            <div class="mh-kpi-small-label">今日订单</div>
+            <div class="mh-kpi-small-value">{{ stats[1].value }}</div>
+          </div>
+          <div class="mh-kpi-small" :class="{ warn: Number(stats[3].value) > 0 }" @click="router.push('/warehouse/stock')">
+            <div class="mh-kpi-small-label">库存预警</div>
+            <div class="mh-kpi-small-value" :style="{ color: Number(stats[3].value) > 0 ? '#f53f3f' : '' }">{{ stats[3].value }}</div>
+          </div>
+          <div class="mh-kpi-small" @click="router.push('/sale/client')">
+            <div class="mh-kpi-small-label">客户总数</div>
+            <div class="mh-kpi-small-value">{{ stats[2].value }}</div>
           </div>
         </div>
       </div>
 
-      <!-- 大模块入口 -->
-      <div class="m-module-grid">
-        <div class="m-module-card m-module-dark" @click="router.push('/cashregister')">
-          <div class="m-module-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h2M10 15h4"/></svg>
-          </div>
-          <div class="m-module-label">零售收银台</div>
-          <div class="m-module-desc">快速开单 · 扫码结账</div>
-          <svg class="m-module-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <!-- 快捷操作 -->
+      <div class="mh-section-card">
+        <div class="mh-section-header">
+          <span class="mh-section-title">快捷操作</span>
+          <span class="mh-section-more" @click="router.push('/cashregister')">
+            去收银台
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+          </span>
         </div>
-        <div class="m-module-card m-module-blue" @click="router.push('/portal')">
-          <div class="m-module-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <div class="mh-quick-grid">
+          <div v-for="item in mobileQuickActions" :key="item.path" class="mh-quick-item" @click="router.push(item.path)">
+            <div class="mh-quick-icon" :style="{ background: item.bg }">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" :stroke="item.color" stroke-width="1.8" v-html="item.svg" />
+            </div>
+            <span class="mh-quick-label">{{ item.label }}</span>
           </div>
-          <div class="m-module-label">切换工作台</div>
-          <div class="m-module-desc">ERP · AI 工作流</div>
-          <svg class="m-module-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
 
-      <!-- 常用应用 -->      <div class="m-quick-card">
-        <div class="m-quick-header">
-          <span class="m-quick-title">常用应用</span>
-          <span class="m-quick-more" @click="editMode ? saveCustom() : (editMode = true)">
+      <!-- 常用应用 -->
+      <div class="mh-section-card">
+        <div class="mh-section-header">
+          <span class="mh-section-title">常用应用</span>
+          <span class="mh-section-more" @click="editMode ? saveCustom() : (editMode = true)">
             {{ editMode ? '完成' : '自定义' }}
           </span>
         </div>
 
-        <!-- 编辑模式：从全部应用里勾选 -->
+        <!-- 编辑模式 -->
         <template v-if="editMode">
-          <div class="m-edit-hint">勾选要展示的应用</div>
+          <div class="m-edit-hint">勾选要展示的应用（最多8个）</div>
           <div v-for="section in allAppSections" :key="section.key" class="m-edit-section">
             <div class="m-edit-section-title">{{ section.title }}</div>
             <div class="m-edit-grid">
@@ -66,18 +89,39 @@
           </div>
         </template>
 
-        <!-- 正常模式：展示选中的应用 -->
+        <!-- 正常模式 -->
         <template v-else>
-          <div class="m-quick-grid">
-            <div v-for="item in currentQuickItems" :key="item.path" class="m-quick-item" @click="router.push(item.path)">
-              <div class="m-quick-icon" :style="{ background: item.bg }">
+          <div class="mh-app-grid">
+            <div v-for="item in currentQuickItems" :key="item.path" class="mh-app-item" @click="router.push(item.path)">
+              <div class="mh-app-icon" :style="{ background: item.bg }">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" :stroke="item.color" stroke-width="1.8" v-html="item.svg" />
               </div>
-              <span class="m-quick-label">{{ item.label }}</span>
+              <span class="mh-app-label">{{ item.label }}</span>
             </div>
           </div>
         </template>
       </div>
+
+      <!-- AI 智能洞察 -->
+      <div class="mh-insight-card">
+        <div class="mh-insight-header">
+          <div class="mh-insight-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2"/></svg>
+          </div>
+          <span class="mh-insight-title">AI 智能洞察</span>
+          <span class="mh-insight-badge">实时分析</span>
+        </div>
+        <div class="mh-insight-list">
+          <div v-for="item in insightItems" :key="item.tag" class="mh-insight-item">
+            <span class="mh-insight-tag">{{ item.tag }}</span>
+            <span class="mh-insight-text">{{ item.text }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部占位 -->
+      <div style="height: 20px" />
+
     </template>
 
     <!-- ══ 桌面端内容（手机不显示） ══ -->
@@ -479,6 +523,25 @@ onMounted(() => {
   }
 })
 onUnmounted(() => window.removeEventListener('resize', onResize))
+
+// 手机端今日日期显示
+const mobileToday = computed(() => {
+  const d = new Date()
+  const week = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]
+  return `${d.getMonth()+1}月${d.getDate()}日 ${week}`
+})
+
+// 手机端快捷操作（4+4=8个，比常用应用更高频）
+const mobileQuickActions = [
+  { label: '销售出库', path: '/sale/out',      bg: 'rgba(0,113,227,0.1)',  color: '#0071e3', svg: '<path d="M5 12h14M12 5l7 7-7 7"/>' },
+  { label: '采购入库', path: '/procure/inhouse', bg: 'rgba(8,145,178,0.1)', color: '#0891b2', svg: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>' },
+  { label: '收款单',  path: '/finance/collect-receipt', bg: 'rgba(5,150,105,0.1)',  color: '#059669', svg: '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>' },
+  { label: '库存总览', path: '/warehouse/stock', bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', svg: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
+  { label: '销售合同', path: '/sale/contract',  bg: 'rgba(0,113,227,0.08)', color: '#0071e3', svg: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
+  { label: '应收账款', path: '/finance/receivable', bg: 'rgba(5,150,105,0.08)', color: '#059669', svg: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
+  { label: '报销申请', path: '/office/expense', bg: 'rgba(220,38,38,0.08)',  color: '#dc2626', svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' },
+  { label: '零售收银', path: '/cashregister',   bg: 'rgba(249,115,22,0.1)', color: '#f97316', svg: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h2M10 15h4"/>' },
+]
 
 const stats = ref([
   { key: 'sale',     label: '今日销售额', value: '--', sub: '含销售+零售',   icon: 'Money',         link: '/dashboard/today-sales' },
@@ -2223,6 +2286,187 @@ function drawTrendChart(n: number) {
 }
 
 /* ── 手机端首页样式 ─────────────────────────────────────── */
+
+/* 顶部欢迎Banner */
+.mh-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 16px 14px;
+  background: #fff;
+}
+.mh-greet {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1d2129;
+  letter-spacing: -0.02em;
+}
+.mh-date {
+  font-size: 12px;
+  color: #86909c;
+  margin-top: 2px;
+  font-weight: 500;
+}
+.mh-refresh {
+  width: 36px; height: 36px;
+  background: #f5f5f7;
+  border: none;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #4e5969;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.mh-refresh:active { background: #e8e8e8; }
+.mh-refresh.spinning svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* KPI卡片行 */
+.mh-kpi-row {
+  display: flex;
+  gap: 10px;
+  padding: 0 12px;
+  margin-bottom: 10px;
+}
+.mh-kpi-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 16px 14px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mh-kpi-main {
+  flex: 1.4;
+  background: linear-gradient(135deg, #0071e3, #0055aa);
+  color: #fff;
+}
+.mh-kpi-main:active { opacity: 0.9; }
+.mh-kpi-label { font-size: 11px; font-weight: 600; opacity: 0.7; margin-bottom: 6px; }
+.mh-kpi-value { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 4px; }
+.mh-kpi-sub { font-size: 10px; opacity: 0.55; }
+.mh-kpi-arrow {
+  position: absolute;
+  right: 12px; top: 50%;
+  transform: translateY(-50%);
+}
+.mh-kpi-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mh-kpi-small {
+  flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  -webkit-tap-highlight-color: transparent;
+}
+.mh-kpi-small:active { background: #f0f5ff; }
+.mh-kpi-small-label { font-size: 10px; color: #86909c; font-weight: 600; margin-bottom: 3px; }
+.mh-kpi-small-value { font-size: 17px; font-weight: 800; color: #1d2129; letter-spacing: -0.03em; }
+
+/* Section 卡片通用 */
+.mh-section-card {
+  background: #fff;
+  border-radius: 16px;
+  margin: 0 12px 10px;
+  padding: 16px 16px 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.mh-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.mh-section-title { font-size: 15px; font-weight: 700; color: #1d2129; letter-spacing: -0.01em; }
+.mh-section-more {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 12px; color: #0071e3;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+
+/* 快捷操作网格 4列 */
+.mh-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 4px;
+}
+.mh-quick-item {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 6px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.mh-quick-item:active { opacity: 0.7; }
+.mh-quick-icon {
+  width: 48px; height: 48px;
+  border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mh-quick-label { font-size: 10px; color: #4e5969; font-weight: 500; text-align: center; }
+
+/* 常用应用网格 4列 */
+.mh-app-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 4px;
+}
+.mh-app-item {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 7px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.mh-app-item:active { opacity: 0.7; }
+.mh-app-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.mh-app-label { font-size: 10px; color: #4e5969; font-weight: 500; text-align: center; word-break: keep-all; }
+
+/* AI 洞察卡片 */
+.mh-insight-card {
+  background: #1d1d1f;
+  border-radius: 16px;
+  margin: 0 12px 10px;
+  padding: 16px;
+}
+.mh-insight-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+.mh-insight-icon {
+  width: 28px; height: 28px;
+  background: #0071e3;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mh-insight-title { font-size: 14px; font-weight: 700; color: #fff; }
+.mh-insight-badge {
+  margin-left: auto;
+  font-size: 10px; font-weight: 700;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mh-insight-list { display: flex; flex-direction: column; gap: 8px; }
+.mh-insight-item {
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mh-insight-tag { font-size: 10px; font-weight: 700; color: #0071e3; text-transform: uppercase; letter-spacing: 0.08em; }
+.mh-insight-text { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.5; }
+
+/* 旧版兼容（编辑模式） */
 .m-header {
   display: flex;
   align-items: center;
@@ -2264,7 +2508,6 @@ function drawTrendChart(n: number) {
 }
 .m-header-refresh:active { background: #e8e8e8; }
 .m-header-refresh.spinning svg { animation: spin 0.8s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 .m-header-cashier {
   display: flex;

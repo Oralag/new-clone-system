@@ -65,25 +65,97 @@
       </div>
     </div>
 
-    <!-- ── 手机端底部 Tab ── -->
-    <div class="cr-mobile-tabs">
-      <div class="cr-mobile-tab" :class="{ active: mobileTab === 'goods' }" @click="mobileTab = 'goods'">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        <span>商品</span>
+    <!-- ── 手机端：购物车抽屉遮罩 ── -->
+    <div class="cr-drawer-mask" v-if="cartDrawerOpen" @click="cartDrawerOpen = false" />
+
+    <!-- ── 手机端：购物车底部抽屉 ── -->
+    <div class="cr-cart-drawer" :class="{ open: cartDrawerOpen }">
+      <div class="cr-drawer-handle" @click="cartDrawerOpen = !cartDrawerOpen">
+        <div class="cr-drawer-grip" />
       </div>
-      <div class="cr-mobile-tab" :class="{ active: mobileTab === 'cart' }" @click="mobileTab = 'cart'">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
-        <span>购物车</span>
-        <span v-if="cartItems.length" class="cr-cart-badge">{{ cartItems.length }}</span>
+      <div class="cr-drawer-inner">
+        <div class="cr-drawer-header">
+          <span class="cr-drawer-title">购物车</span>
+          <div class="cr-drawer-actions">
+            <div class="cr-action-btn" @click="() => {}">存单</div>
+            <div class="cr-action-btn" @click="() => {}">取单</div>
+            <div class="cr-action-btn danger" @click="clearCart">清空</div>
+          </div>
+        </div>
+        <div class="cr-drawer-list">
+          <div v-if="cartItems.length === 0" class="cr-drawer-empty">
+            <span>🛒</span> 还没有商品，点击下方商品加入
+          </div>
+          <div v-for="(item, idx) in cartItems" :key="idx" class="cr-cart-item">
+            <div class="cr-cart-item-top">
+              <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+              <el-button type="danger" link size="small" :icon="Delete"
+                @click="cartItems.splice(idx,1); calcTotal()" />
+            </div>
+            <div class="cr-cart-item-bottom">
+              <div class="cr-qty-ctrl">
+                <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
+                <el-input-number v-model="item.num" :min="1" :precision="0"
+                  controls-position="right" size="small" style="width:64px"
+                  @change="calcTotal" />
+                <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
+              </div>
+              <span class="cr-cart-item-sub">¥{{ (item.num * item.price).toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+        <!-- 汇总 + 支付 -->
+        <div class="cr-settle cr-drawer-settle">
+          <div class="cr-settle-row">
+            <span>商品合计</span>
+            <span>¥{{ totalAmount.toFixed(2) }}</span>
+          </div>
+          <div class="cr-settle-row">
+            <span>折扣</span>
+            <el-input-number v-model="discountAmount" :min="0" :max="totalAmount" :precision="2"
+              controls-position="right" size="small" style="width:100px" @change="calcPay" />
+          </div>
+          <div class="cr-pay-methods">
+            <div v-for="m in payMethods" :key="m.value" class="cr-pay-btn"
+              :class="{ active: payMethod === m.value }" @click="payMethod = m.value">
+              {{ m.label }}
+            </div>
+          </div>
+          <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
+            @click="handleCheckout">
+            <span v-if="paying">处理中…</span>
+            <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ payAmount.toFixed(2) }}</span>
+          </button>
+        </div>
       </div>
+    </div>
+
+    <!-- ── 手机端：底部悬浮购物车栏 ── -->
+    <div class="cr-float-bar" @click="cartItems.length && (cartDrawerOpen = !cartDrawerOpen)">
+      <div class="cr-float-cart-icon" :class="{ 'has-items': cartItems.length }">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+        </svg>
+        <span v-if="cartItems.length" class="cr-float-badge">{{ cartItems.length }}</span>
+      </div>
+      <div class="cr-float-info">
+        <span v-if="!cartItems.length" class="cr-float-empty">点击商品加入购物车</span>
+        <span v-else class="cr-float-total">¥{{ payAmount.toFixed(2) }}</span>
+        <span v-if="cartItems.length" class="cr-float-count">共 {{ cartItems.reduce((s,i)=>s+i.num,0) }} 件</span>
+      </div>
+      <button v-if="cartItems.length" class="cr-float-checkout" :disabled="paying"
+        @click.stop="handleCheckout">
+        {{ paying ? '处理中' : '结算' }}
+      </button>
     </div>
 
     <!-- ── 主体 ── -->
     <div class="cr-body">
       <div class="cr-card">
 
-        <!-- 左：购物车 -->
-        <div class="cr-left" :class="{ 'mobile-hidden': mobileTab !== 'cart' }">
+        <!-- 左：购物车（桌面端） -->
+        <div class="cr-left">
           <div class="cr-left-actions">
             <div class="cr-action-btn" @click="() => {}">存单</div>
             <div class="cr-action-btn" @click="() => {}">取单</div>
@@ -141,7 +213,7 @@
         </div>
 
         <!-- 右：分类 + 商品 -->
-        <div class="cr-right" :class="{ 'mobile-hidden': mobileTab !== 'goods' }">
+        <div class="cr-right">
           <div class="cr-cate-bar">
             <div class="cr-cate-tab" :class="{ active: activeCate === 'hot' }"
               @click="activeCate = 'hot'; loadHotGoods()">
@@ -267,8 +339,8 @@ const goodsList = ref<any[]>([])
 const goodsLoading = ref(false)
 const selectedGoods = ref<any>(null)
 
-// 手机端 Tab 切换
-const mobileTab = ref<'goods' | 'cart'>('goods')
+// 手机端购物车抽屉
+const cartDrawerOpen = ref(false)
 
 // 点击商品卡片：选中高亮，同时加入购物车
 function selectGoods(g: any) {
@@ -781,8 +853,10 @@ onMounted(async () => {
   color: #cbd5e1; padding: 60px 0; font-size: 14px;
 }
 
-/* ── 手机端 Tab 栏（桌面隐藏） ────────────────────────────────────────────── */
-.cr-mobile-tabs { display: none; }
+/* ── 手机端悬浮购物车（桌面隐藏） ───────────────────────────────────────── */
+.cr-float-bar,
+.cr-cart-drawer,
+.cr-drawer-mask { display: none; }
 
 /* ── 响应式：≤ 768px 手机布局 ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -806,167 +880,201 @@ onMounted(async () => {
     justify-content: center;
   }
 
-  .cr-brand-name {
-    font-size: 13px;
-    letter-spacing: 0;
-  }
-
+  .cr-brand-name { font-size: 13px; letter-spacing: 0; }
   .cr-brand-icon svg { width: 22px; height: 22px; }
   .cr-brand { gap: 6px; }
 
-  .cr-top-right {
-    width: 100%;
-    gap: 6px;
-    order: 3;
-  }
+  .cr-top-right { width: 100%; gap: 6px; order: 3; }
 
   .cr-calc-text { display: none; }
-
   .cr-calc-btn {
-    padding: 6px 8px;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    justify-content: center;
-    flex-shrink: 0;
+    padding: 6px 8px; border-radius: 50%;
+    width: 32px; height: 32px;
+    justify-content: center; flex-shrink: 0;
   }
 
   .cr-member-select { width: 120px; flex-shrink: 0; }
+  .cr-search-box { flex: 1; width: auto; min-width: 0; }
 
-  .cr-search-box {
-    flex: 1;
-    width: auto;
-    min-width: 0;
-  }
-
-  /* 主体：撑满剩余空间（减去顶栏和底部Tab） */
-  .cr-body {
-    padding: 0;
-    padding-bottom: 56px; /* 底部Tab高度 */
-  }
+  /* 主体：留出底部悬浮栏高度 */
+  .cr-body { padding: 0; padding-bottom: 68px; }
 
   .cr-card {
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
-    flex-direction: column;
+    border-radius: 0; border: none;
+    box-shadow: none; flex-direction: column;
   }
 
-  /* 左右面板在手机上各占全屏，通过Tab切换显示 */
-  .cr-left {
-    width: 100%;
-    flex-shrink: unset;
-    border-right: none;
-    display: flex;
-  }
+  /* 桌面端左侧购物车在手机上隐藏 */
+  .cr-left { display: none; }
 
-  .cr-right {
-    flex: 1;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
+  .cr-right { flex: 1; display: flex; flex-direction: column; }
 
-  /* Tab切换：隐藏非当前面板 */
-  .cr-left.mobile-hidden,
-  .cr-right.mobile-hidden {
-    display: none;
-  }
-
-  /* 商品网格：手机端2列 */
+  /* 商品网格：2列 */
   .cr-goods-grid {
     grid-template-columns: repeat(2, 1fr);
-    padding: 10px 8px;
-    gap: 8px;
+    padding: 10px 8px; gap: 8px;
   }
 
-  .cr-goods-card {
-    padding: 10px 9px 9px;
-    border-radius: 12px;
-  }
-
-  .cr-goods-name {
-    font-size: 12px;
-    min-height: 32px;
-    margin-bottom: 7px;
-  }
-
+  .cr-goods-card { padding: 10px 9px 9px; border-radius: 12px; }
+  .cr-goods-name { font-size: 12px; min-height: 32px; margin-bottom: 7px; }
   .cr-goods-price { font-size: 14px; }
-
-  /* 分类栏 */
   .cr-cate-tab { padding: 10px 12px; font-size: 13px; }
 
-  /* 购物车列表 */
-  .cr-cart-area { padding: 6px 8px; }
-
-  .cr-cart-item { padding: 8px 9px; border-radius: 10px; }
-  .cr-cart-item-name { font-size: 12px; }
-  .cr-cart-item-sub { font-size: 13px; }
-
-  /* 结算区 */
-  .cr-settle { padding: 12px 10px; gap: 8px; }
-
-  .cr-checkout-btn {
-    height: 52px;
-    font-size: 16px;
-    border-radius: 14px;
+  /* ── 底部悬浮购物车栏 ── */
+  .cr-float-bar {
+    display: flex;
+    position: fixed;
+    bottom: 16px;
+    left: 12px;
+    right: 12px;
+    height: 56px;
+    background: #1e293b;
+    border-radius: 18px;
+    align-items: center;
+    padding: 0 6px 0 10px;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+    z-index: 200;
+    cursor: pointer;
+    user-select: none;
   }
 
-  /* 支付方式：横向滚动 */
+  .cr-float-cart-icon {
+    position: relative;
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.5);
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .cr-float-cart-icon.has-items {
+    background: #2563eb;
+    color: #fff;
+  }
+
+  .cr-float-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    min-width: 16px; height: 16px;
+    background: #ef4444;
+    color: #fff; font-size: 10px; font-weight: 700;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 4px; line-height: 1;
+    border: 1.5px solid #1e293b;
+  }
+
+  .cr-float-info {
+    flex: 1; display: flex; flex-direction: column; gap: 1px;
+  }
+  .cr-float-empty { font-size: 13px; color: rgba(255,255,255,0.4); }
+  .cr-float-total { font-size: 18px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .cr-float-count { font-size: 11px; color: rgba(255,255,255,0.45); }
+
+  .cr-float-checkout {
+    height: 42px; padding: 0 18px;
+    background: #2563eb;
+    color: #fff; border: none; border-radius: 13px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer; flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .cr-float-checkout:active { background: #1d4ed8; }
+  .cr-float-checkout:disabled { opacity: 0.5; }
+
+  /* ── 购物车抽屉遮罩 ── */
+  .cr-drawer-mask {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 300;
+  }
+
+  /* ── 购物车底部抽屉 ── */
+  .cr-cart-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    max-height: 80vh;
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    z-index: 400;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .cr-cart-drawer.open { transform: translateY(0); }
+
+  .cr-drawer-handle {
+    padding: 12px 0 6px;
+    display: flex; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .cr-drawer-grip {
+    width: 36px; height: 4px;
+    background: #e2e8f0; border-radius: 2px;
+  }
+
+  .cr-drawer-inner {
+    flex: 1; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  .cr-drawer-header {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 0 14px 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f0f2f7;
+  }
+  .cr-drawer-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+
+  .cr-drawer-header .cr-drawer-actions {
+    display: flex; gap: 4px;
+  }
+  .cr-drawer-header .cr-action-btn {
+    height: 30px; padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 12px; color: #64748b;
+    background: #f8fafc;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  .cr-drawer-header .cr-action-btn.danger { color: #dc2626; border-color: #fecaca; background: #fff5f5; }
+
+  .cr-drawer-list {
+    flex: 1; overflow-y: auto;
+    padding: 8px 12px;
+  }
+  .cr-drawer-list::-webkit-scrollbar { width: 0; }
+
+  .cr-drawer-empty {
+    padding: 24px 0; text-align: center;
+    color: #94a3b8; font-size: 14px;
+  }
+
+  .cr-drawer-settle {
+    border-top: 1px solid #f0f2f7;
+    padding: 12px 14px 24px;
+  }
+
+  /* 支付方式横向滚动 */
   .cr-pay-methods { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
   .cr-pay-methods::-webkit-scrollbar { height: 0; }
   .cr-pay-btn { flex-shrink: 0; }
 
-  /* 底部Tab栏 */
-  .cr-mobile-tabs {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 56px;
-    background: #fff;
-    border-top: 1px solid #e8eaf0;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
-    z-index: 100;
+  .cr-checkout-btn {
+    height: 52px; font-size: 16px; border-radius: 14px;
   }
 
-  .cr-mobile-tab {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    font-size: 11px;
-    color: #94a3b8;
-    cursor: pointer;
-    position: relative;
-    transition: color 0.15s;
-    user-select: none;
-  }
-
-  .cr-mobile-tab.active { color: #2563eb; }
-
-  .cr-mobile-tab svg { flex-shrink: 0; }
-
-  .cr-cart-badge {
-    position: absolute;
-    top: 6px;
-    right: 50%;
-    margin-right: -18px;
-    min-width: 16px;
-    height: 16px;
-    background: #ef4444;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 4px;
-    line-height: 1;
-  }
+  /* 购物车列表通用（抽屉内） */
+  .cr-cart-item { padding: 8px 9px; border-radius: 10px; }
+  .cr-cart-item-name { font-size: 12px; }
+  .cr-cart-item-sub { font-size: 13px; }
 }
 </style>

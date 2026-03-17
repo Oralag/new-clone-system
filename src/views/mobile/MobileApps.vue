@@ -32,7 +32,7 @@
             @click="navigate(item.path)"
           >
             <div class="app-icon" :style="{ background: getColor(section.key) }">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" v-html="getIcon(item.key)" />
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" v-html="getIcon(item.key)" />
             </div>
             <span class="app-label">{{ item.title }}</span>
           </div>
@@ -211,8 +211,8 @@ function getIcon(key: string) { return iconMap[key] || defaultIcon }
 
 .apps-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px 4px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px 8px;
   margin-bottom: 8px;
 }
 
@@ -229,17 +229,17 @@ function getIcon(key: string) { return iconMap[key] || defaultIcon }
 .app-item--pressed { opacity: 0.7; }
 
 .app-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 13px;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.16);
 }
 
 .app-label {
-  font-size: 10px;
+  font-size: 11px;
   color: #4e5969;
   text-align: center;
   line-height: 1.3;

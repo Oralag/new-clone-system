@@ -64,10 +64,10 @@ function closeOther() {
 <style scoped>
 .tags-bar {
   height: 40px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--card-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -95,7 +95,7 @@ function closeOther() {
   padding: 4px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: rgba(29, 29, 31, 0.45);
+  color: var(--mid);
   background: transparent;
   border-radius: 20px;
   cursor: pointer;

@@ -334,11 +334,11 @@ async function sendCaptain(text?: string) {
 .captain-bar {
   position: relative;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--card-bg, rgba(255,255,255,0.95));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.07);
+  border: 1px solid var(--border, rgba(0,0,0,0.07));
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   margin-bottom: 16px;
@@ -392,7 +392,7 @@ async function sendCaptain(text?: string) {
 .bar-name {
   font-size: 13px;
   font-weight: 700;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
@@ -434,7 +434,7 @@ async function sendCaptain(text?: string) {
   background: transparent;
   border: none;
   border-radius: 0;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   font-size: 13.5px;
   padding: 0 12px;
   outline: none;
@@ -478,7 +478,7 @@ async function sendCaptain(text?: string) {
   flex-shrink: 0;
   padding: 0;
 }
-.bar-toggle:hover { background: #f5f5f7; color: #1d1d1f; border-color: rgba(0,0,0,0.15); }
+.bar-toggle:hover { background: var(--gray, #f5f5f7); color: var(--dark, #1d1d1f); border-color: rgba(0,0,0,0.15); }
 
 /* ── 内联消息区 ── */
 .inline-feed {
@@ -486,8 +486,8 @@ async function sendCaptain(text?: string) {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border-top: 1px solid rgba(0,0,0,0.06);
-  background: #fafafa;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.06));
+  background: var(--gray, #fafafa);
   border-radius: 0 0 14px 14px;
 }
 
@@ -525,21 +525,21 @@ async function sendCaptain(text?: string) {
 
 .step-text {
   font-size: 13px;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   line-height: 1.6;
-  background: #fff;
+  background: var(--card-bg, #fff);
   border-radius: 4px 16px 16px 16px;
   padding: 9px 14px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border, rgba(0,0,0,0.06));
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
 .step-agent {
-  border: 1px solid rgba(0,0,0,0.07);
+  border: 1px solid var(--border, rgba(0,0,0,0.07));
   border-radius: 10px;
   overflow: hidden;
   font-size: 12px;
-  background: #fff;
+  background: var(--card-bg, #fff);
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .agent-header {
@@ -550,7 +550,7 @@ async function sendCaptain(text?: string) {
   border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 .agent-emoji { font-size: 14px; }
-.agent-name { font-size: 12px; font-weight: 600; color: #1d1d1f; flex: 1; letter-spacing: -0.01em; }
+.agent-name { font-size: 12px; font-weight: 600; color: var(--dark, #1d1d1f); flex: 1; letter-spacing: -0.01em; }
 .agent-tag {
   display: flex; align-items: center; gap: 4px;
   padding: 2px 8px; border-radius: 20px;
@@ -597,7 +597,7 @@ async function sendCaptain(text?: string) {
   padding: 0;
   flex-shrink: 0;
 }
-.bar-tool-btn:hover { background: #f5f5f7; color: #1d1d1f; border-color: rgba(0,0,0,0.15); }
+.bar-tool-btn:hover { background: var(--gray, #f5f5f7); color: var(--dark, #1d1d1f); border-color: rgba(0,0,0,0.15); }
 
 
 

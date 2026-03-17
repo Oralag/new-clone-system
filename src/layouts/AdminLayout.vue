@@ -4,38 +4,16 @@
     <sidebar-flyout v-if="!isMobile" />
 
     <div class="main-container">
-      <!-- 移动端顶部栏 -->
+      <!-- 移动端顶部栏：仅在非底部Tab页时显示页面标题 -->
       <div v-if="isMobile" class="mobile-topbar">
-        <button class="mobile-menu-btn" @click="showMobileMenu = true">
-          <el-icon><Menu /></el-icon>
-        </button>
-        <span class="mobile-title">{{ route.meta?.title || '数字游牧ERP' }}</span>
-        <!-- 主题切换按钮组 -->
-        <div class="mobile-theme-btns">
-          <button class="mobile-theme-btn" :class="{ active: appStore.theme === 'light' }" @click="appStore.setTheme('light')">
-            <el-icon :size="15"><Sunny /></el-icon>
-          </button>
-          <button class="mobile-theme-btn" :class="{ active: appStore.theme === 'dark' }" @click="appStore.setTheme('dark')">
-            <el-icon :size="15"><Moon /></el-icon>
-          </button>
-          <button class="mobile-theme-btn" :class="{ active: appStore.theme === 'eye' }" @click="appStore.setTheme('eye')">
-            <el-icon :size="15"><View /></el-icon>
+        <span class="mobile-title">{{ mobilePageTitle }}</span>
+        <div class="mobile-topbar-actions">
+          <button class="mobile-theme-btn-wrap" @click="cycleTheme">
+            <el-icon :size="17" v-if="appStore.theme === 'dark'"><Moon /></el-icon>
+            <el-icon :size="17" v-else-if="appStore.theme === 'eye'"><View /></el-icon>
+            <el-icon :size="17" v-else><Sunny /></el-icon>
           </button>
         </div>
-        <button class="mobile-home-btn" @click="router.push('/portal')">
-          <el-icon><HomeFilled /></el-icon>
-        </button>
-        <el-dropdown trigger="click" @command="handleUserCmd" class="mobile-user">
-          <el-avatar :size="30" :src="authStore.avatar" class="mobile-avatar">
-            {{ authStore.userName.charAt(0) }}
-          </el-avatar>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item v-if="isSuperAdmin" command="admin-console">🏢 租户管理控制台</el-dropdown-item>
-              <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
       </div>
 
       <!-- 桌面端顶部栏 + 标签栏 -->
@@ -58,54 +36,123 @@
           <span class="footer-brand">游牧观文化传媒出品</span>
           &nbsp;·&nbsp; 数字游牧 ERP 系统 &nbsp;·&nbsp; 保留所有权利
         </div>
-        <!-- 移动端底部占位，防止内容被底部导航遮挡（Safari padding-bottom bug workaround） -->
+        <!-- 移动端底部占位，防止内容被底部导航遮挡 -->
         <div v-if="isMobile" class="mobile-scroll-spacer" />
       </div>
     </div>
 
-    <!-- 移动端底部导航 -->
+    <!-- 移动端底部导航 5Tab -->
     <div v-if="isMobile" class="mobile-bottom-nav">
+      <!-- 首页 -->
       <div class="mobile-nav-item" :class="{ active: route.path === '/dashboard' }" @click="router.push('/dashboard')">
-        <el-icon class="nav-icon"><Odometer /></el-icon>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
         <span class="nav-label">首页</span>
       </div>
+
+      <!-- 工作（应用） -->
       <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/apps' }" @click="router.push('/mobile/apps')">
-        <el-icon class="nav-icon"><Grid /></el-icon>
-        <span class="nav-label">应用</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        <span class="nav-label">工作</span>
       </div>
+
+      <!-- 新建（中间突出按钮） -->
+      <div class="mobile-nav-item mobile-nav-add" @click="showQuickCreate = true">
+        <div class="nav-add-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </div>
+        <span class="nav-label">新建</span>
+      </div>
+
+      <!-- 报表 -->
       <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/stats' }" @click="router.push('/mobile/stats')">
-        <svg class="nav-icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        <span class="nav-label">统计</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">报表</span>
+      </div>
+
+      <!-- 我的 -->
+      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/profile' }" @click="router.push('/mobile/profile')">
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span class="nav-label">我的</span>
       </div>
     </div>
 
-    <!-- 移动端抽屉菜单 -->
-    <el-drawer v-if="isMobile" v-model="showMobileMenu" direction="ltr" size="82%" :with-header="false">
-      <div class="drawer-inner">
-        <div class="drawer-header">
-          <div class="drawer-logo">
-            <el-icon :size="22" color="#3a8ee6"><Promotion /></el-icon>
-            <span>数字游牧 ERP</span>
-          </div>
-          <el-button :icon="Close" circle plain size="small" @click="showMobileMenu = false" />
-        </div>
-        <div class="drawer-menu">
-          <div v-for="section in visibleMenuData" :key="section.key" class="drawer-section">
-            <div class="drawer-section-title">
-              <el-icon><component :is="section.icon" /></el-icon>
-              {{ section.title }}
+    <!-- 快速新建面板 -->
+    <div v-if="isMobile && showQuickCreate" class="quick-create-mask" @click.self="showQuickCreate = false">
+      <div class="quick-create-sheet">
+        <div class="qc-handle" />
+        <div class="qc-title">快速新建</div>
+        <div class="qc-grid">
+          <div class="qc-item" @click="goCreate('/sale/out')">
+            <div class="qc-icon" style="background:rgba(0,113,227,0.1)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </div>
-            <div class="drawer-section-items">
-              <div v-for="child in section.children" :key="child.key" class="drawer-item"
-                :class="{ active: route.path === child.path }"
-                @click="navigateTo(child.path)">
-                {{ child.title }}
-              </div>
+            <span>销售出库</span>
+          </div>
+          <div class="qc-item" @click="goCreate('/procure/order')">
+            <div class="qc-icon" style="background:rgba(124,58,237,0.1)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </div>
+            <span>采购订单</span>
+          </div>
+          <div class="qc-item" @click="goCreate('/finance/collect-receipt')">
+            <div class="qc-icon" style="background:rgba(5,150,105,0.1)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <span>收款单</span>
+          </div>
+          <div class="qc-item" @click="goCreate('/finance/pay-receipt')">
+            <div class="qc-icon" style="background:rgba(217,119,6,0.1)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <span>付款单</span>
+          </div>
+          <div class="qc-item" @click="goCreate('/sale/contract')">
+            <div class="qc-icon" style="background:rgba(0,113,227,0.08)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <span>销售合同</span>
+          </div>
+          <div class="qc-item" @click="goCreate('/procure/inhouse')">
+            <div class="qc-icon" style="background:rgba(8,145,178,0.1)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <span>采购入库</span>
+          </div>
+          <div class="qc-item" @click="goCreate('/office/expense')">
+            <div class="qc-icon" style="background:rgba(220,38,38,0.08)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <span>报销申请</span>
+          </div>
+          <div class="qc-item" @click="goCreate('/cashregister')">
+            <div class="qc-icon" style="background:rgba(249,115,22,0.1)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h2M10 15h4"/></svg>
+            </div>
+            <span>零售收银</span>
           </div>
         </div>
+        <button class="qc-cancel" @click="showQuickCreate = false">取消</button>
       </div>
-    </el-drawer>
+    </div>
+
   </div>
 
   <AiAssistant />
@@ -125,9 +172,7 @@ import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
-import { menuData } from './components/menuData'
-import { Menu, Grid, Promotion, Close, HomeFilled, Odometer, Sunny, Moon, View } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
+import { Sunny, Moon, View } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,48 +182,32 @@ const authStore = useAuthStore()
 const permStore = usePermissionStore()
 const trialBannerRef = ref<any>(null)
 const pageContentRef = ref<HTMLElement | null>(null)
+const showQuickCreate = ref(false)
 
-const visibleMenuData = computed(() => permStore.filteredMenuData)
-
-const showMobileMenu = ref(false)
 const isMobile = ref(window.innerWidth < 768)
 const onResize = () => { isMobile.value = window.innerWidth < 768 }
 onMounted(() => {
   window.addEventListener('resize', onResize)
-  // 把 page-content 元素暴露到 window，供 ScTable 翻页时滚回顶部
   ;(window as any).__pageContent = pageContentRef
 })
 onUnmounted(() => window.removeEventListener('resize', onResize))
 
-const SUPER_ADMIN = '17747344571'
-const isSuperAdmin = computed(() => (authStore.userInfo?.account || '') === SUPER_ADMIN)
+// 底部Tab页不在顶栏重复显示标题，其他页面显示当前路由标题
+const TAB_PATHS = ['/dashboard', '/mobile/apps', '/mobile/stats', '/mobile/profile']
+const mobilePageTitle = computed(() => {
+  if (TAB_PATHS.includes(route.path)) return '数字游牧 ERP'
+  return (route.meta?.title as string) || '数字游牧 ERP'
+})
 
-const mobileNavItems = [
-  { key: 'dashboard', title: '首页',  icon: 'Odometer',     path: '/dashboard' },
-  { key: 'sale',      title: '销售',  icon: 'ShoppingCart', path: '/sale/client' },
-  { key: 'finance',   title: '财务',  icon: 'Money',        path: '/finance/overview' },
-  { key: 'warehouse', title: '仓库',  icon: 'House',        path: '/warehouse/stock' },
-]
-
-function onMobileNav(item: { key: string; path: string }) {
-  appStore.setActiveTopMenu(item.key)
-  router.push(item.path)
+function cycleTheme() {
+  const themes = ['light', 'dark', 'eye'] as const
+  const idx = themes.indexOf(appStore.theme as any)
+  appStore.setTheme(themes[(idx + 1) % 3])
 }
 
-function navigateTo(path?: string) {
-  if (!path) return
-  showMobileMenu.value = false
+function goCreate(path: string) {
+  showQuickCreate.value = false
   router.push(path)
-}
-
-async function handleUserCmd(cmd: string) {
-  if (cmd === 'admin-console') {
-    router.push('/admin-console')
-  } else if (cmd === 'logout') {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
-    authStore.logout()
-    router.push('/login')
-  }
 }
 
 watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
@@ -192,39 +221,157 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 .page-footer { text-align: right; font-size: 10px; color: rgba(0,0,0,0.2); padding: 4px 0 6px; letter-spacing: -0.01em; }
 .footer-brand { color: rgba(0,0,0,0.25); font-weight: 600; }
 
-/* 移动端顶部栏 */
-.mobile-topbar { height: 52px; background: var(--card-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0; }
-.mobile-menu-btn, .mobile-home-btn { background: none; border: none; padding: 6px; cursor: pointer; color: var(--mid); font-size: 20px; display: flex; align-items: center; flex-shrink: 0; }
-.mobile-title { flex: 1; font-size: 15px; font-weight: 600; color: var(--dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mobile-user { flex-shrink: 0; }
-.mobile-avatar { cursor: pointer; background: #165dff; color: #fff; font-weight: 600; }
+/* ── 移动端顶部栏 ── */
+.mobile-topbar {
+  height: 48px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+.mobile-title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: -0.02em;
+}
+.mobile-topbar-actions { display: flex; align-items: center; gap: 4px; }
+.mobile-theme-btn-wrap {
+  width: 34px; height: 34px;
+  background: var(--gray);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--mid);
+}
 
-/* 手机端主题切换按钮组 */
-.mobile-theme-btns { display: flex; align-items: center; gap: 2px; flex-shrink: 0; background: var(--gray); border-radius: 20px; padding: 2px; }
-.mobile-theme-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--mid); transition: background 0.15s, color 0.15s; }
-.mobile-theme-btn.active { background: var(--card-bg); color: var(--blue); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+/* ── 移动端底部导航 ── */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom);
+}
 
-/* 移动端底部导航 */
-.mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; align-items: stretch; z-index: 200; padding-bottom: env(safe-area-inset-bottom); }
-.mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: var(--dim); padding: 6px 4px; }
-.mobile-nav-item.active { color: #3a8ee6; }
-.nav-icon { font-size: 20px; }
-.nav-icon-svg { width: 22px; height: 22px; }
-.nav-label { font-size: 11px; line-height: 1; }
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  color: var(--dim);
+  padding: 6px 4px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s;
+}
+.mobile-nav-item.active { color: #0071e3; }
+.mobile-nav-item.active .nav-svg { stroke: #0071e3; }
 
-/* 移动端内容区 */
-.page-content.is-mobile { overflow-x: hidden; padding: 8px; }
-/* 底部 spacer */
+.nav-svg { width: 22px; height: 22px; stroke: currentColor; }
+.nav-label { font-size: 10px; line-height: 1; font-weight: 500; }
+
+/* 中间 + 按钮 */
+.mobile-nav-add { position: relative; }
+.nav-add-btn {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #0071e3, #005bb5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,113,227,0.45);
+  margin-top: -10px;
+  flex-shrink: 0;
+}
+.mobile-nav-add .nav-label { color: #0071e3; font-weight: 600; }
+
+/* ── 移动端内容区 ── */
+.page-content.is-mobile { overflow-x: hidden; padding: 0; }
 .mobile-scroll-spacer { height: calc(60px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 
-/* 移动端抽屉 */
-.drawer-inner { display: flex; flex-direction: column; height: 100%; }
-.drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.drawer-logo { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--dark); }
-.drawer-menu { flex: 1; overflow-y: auto; padding: 8px 0; }
-.drawer-section { margin-bottom: 4px; }
-.drawer-section-title { display: flex; align-items: center; gap: 6px; padding: 10px 16px 6px; font-size: 13px; font-weight: 600; color: var(--mid); }
-.drawer-section-items { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; }
-.drawer-item { padding: 7px 14px; font-size: 13px; color: var(--mid); background: var(--gray); border-radius: 20px; cursor: pointer; border: 1px solid transparent; }
-.drawer-item:active, .drawer-item.active { background: var(--blue-light); color: var(--blue); border-color: rgba(0,113,227,0.2); }
+/* ── 快速新建面板 ── */
+.quick-create-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+}
+.quick-create-sheet {
+  width: 100%;
+  background: var(--card-bg, #fff);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.qc-handle {
+  width: 36px; height: 4px;
+  background: var(--border, #e5e6eb);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+.qc-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--dark, #1d2129);
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+.qc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 8px;
+  margin-bottom: 20px;
+}
+.qc-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.qc-item:active { opacity: 0.7; }
+.qc-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qc-item span {
+  font-size: 11px;
+  color: var(--mid, #4e5969);
+  font-weight: 500;
+  text-align: center;
+}
+.qc-cancel {
+  width: 100%;
+  height: 50px;
+  background: var(--gray, #f5f5f7);
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  color: var(--mid, #4e5969);
+  font-weight: 600;
+  cursor: pointer;
+}
+.qc-cancel:active { background: var(--gray-2, #e8e8ea); }
 </style>

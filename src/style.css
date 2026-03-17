@@ -94,7 +94,12 @@ html, body {
 [data-theme="dark"] .el-card__header { border-bottom-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
 
 /* ── Table 深色 ── */
-[data-theme="dark"] .el-table { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .el-table { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important;
+  --el-table-bg-color: #2c2c2e; --el-table-tr-bg-color: #2c2c2e; --el-table-header-bg-color: #3a3a3c;
+  --el-table-row-hover-bg-color: rgba(0,113,227,0.12); --el-table-border-color: rgba(255,255,255,0.06);
+  --el-table-text-color: #f5f5f7; --el-table-header-text-color: rgba(245,245,247,0.5);
+  --el-fill-color-lighter: #2c2c2e; --el-fill-color-light: #3a3a3c;
+}
 [data-theme="dark"] .el-table th.el-table__cell { background: #3a3a3c !important; color: rgba(245,245,247,0.5) !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
 [data-theme="dark"] .el-table td.el-table__cell { background: #2c2c2e !important; border-bottom-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
 [data-theme="dark"] .el-table__body-wrapper { background: #2c2c2e !important; }
@@ -220,8 +225,66 @@ html, body {
 [data-theme="dark"] .guide-tip-inline { background: rgba(0,113,227,0.12) !important; }
 [data-theme="dark"] .gsp-no { background: rgba(255,255,255,0.08) !important; }
 
-/* ── Portal nav 深色 ── */
+/* ── CaptainBar 深色 ── */
+[data-theme="dark"] .captain-bar { background: rgba(44,44,46,0.97) !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .bar-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .bar-preview { color: rgba(245,245,247,0.45) !important; }
+[data-theme="dark"] .bar-hint { color: rgba(245,245,247,0.25) !important; }
+[data-theme="dark"] .bar-input { color: #f5f5f7 !important; }
+[data-theme="dark"] .bar-identity { border-right-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .bar-toggle { border-color: rgba(255,255,255,0.1) !important; color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .bar-tool-btn { border-color: rgba(255,255,255,0.1) !important; color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .inline-feed { background: #1c1c1e !important; border-top-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .step-text { background: #2c2c2e !important; color: #f5f5f7 !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .step-agent { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .agent-header { border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .agent-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .agent-task { color: rgba(245,245,247,0.5) !important; }
+[data-theme="dark"] .agent-output { color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .tag-running { background: rgba(0,113,227,0.18) !important; color: #60a5fa !important; }
+[data-theme="dark"] .tag-done { background: rgba(22,163,74,0.15) !important; color: #4ade80 !important; }
+[data-theme="dark"] .thinking-label { color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .step-tool { color: rgba(245,245,247,0.4) !important; }
 [data-theme="dark"] .glass-nav { background: rgba(28,28,30,0.92) !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .portal-page { background: #1c1c1e !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .hero-compact-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .workspace-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .hero-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .hero-subtitle { color: rgba(245,245,247,0.42) !important; }
+[data-theme="dark"] .portal-ai-bar { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .portal-ai-bar--open { border-color: rgba(91,79,232,0.35) !important; }
+[data-theme="dark"] .portal-ai-input { color: #f5f5f7 !important; }
+[data-theme="dark"] .portal-ai-messages { border-top-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .portal-ai-msg--ai { background: #3a3a3c !important; color: #f5f5f7 !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .platform-desc { background: #2c2c2e !important; border-top-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .portal-footer { background: #2c2c2e !important; border-top-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .footer-logo { color: #f5f5f7 !important; }
+[data-theme="dark"] .footer-sub { color: rgba(245,245,247,0.2) !important; }
+[data-theme="dark"] .footer-copy { color: rgba(245,245,247,0.12) !important; }
+/* Portal Captain/Feed 深色 */
+[data-theme="dark"] .feed-prompt { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; color: rgba(245,245,247,0.6) !important; }
+[data-theme="dark"] .feed-prompt:hover { background: #3a3a3c !important; border-color: #6366f1 !important; color: #a5b4fc !important; }
+[data-theme="dark"] .feed-captain-text { color: #f5f5f7 !important; }
+[data-theme="dark"] .feed-agent-card { border-color: rgba(255,255,255,0.08) !important; background: #2c2c2e !important; }
+[data-theme="dark"] .feed-agent-header { background: #2c2c2e !important; }
+[data-theme="dark"] .feed-agent-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .feed-agent-tag.running { background: rgba(99,102,241,0.15) !important; }
+[data-theme="dark"] .feed-agent-tag.done { background: rgba(22,163,74,0.15) !important; }
+[data-theme="dark"] .feed-agent-task { border-bottom-color: rgba(255,255,255,0.06) !important; color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .feed-agent-output { color: rgba(245,245,247,0.65) !important; }
+[data-theme="dark"] .feed-tool { background: #3a3a3c !important; border-color: rgba(255,255,255,0.08) !important; color: rgba(245,245,247,0.5) !important; }
+[data-theme="dark"] .captain-compose { background: #2c2c2e !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .captain-compose-input { color: #f5f5f7 !important; }
+[data-theme="dark"] .about-modal { background: #2c2c2e !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .about-close { background: #3a3a3c !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,245,247,0.5) !important; }
+[data-theme="dark"] .about-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .about-lead { color: rgba(245,245,247,0.6) !important; }
+[data-theme="dark"] .about-item-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .about-item-desc { color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .about-agents-label { color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .wb-icon { background: #3a3a3c !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .wb-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .wb-desc { color: rgba(245,245,247,0.45) !important; }
 
 /* ── 通用表单页 深色 ── */
 [data-theme="dark"] .form-page { background: #1c1c1e !important; }
@@ -283,6 +346,8 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.14); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
 /* ══════════════════════════════════════════════════════════
    Responsive zoom
@@ -1023,3 +1088,318 @@ body.guide-active .el-popper,
 body.guide-active [data-popper-placement] {
   z-index: 4100 !important;
 }
+
+/* ══════════════════════════════════════════════════════════
+   暗黑模式终极覆盖 — 消灭所有 scoped 组件内的白色/浅色背景
+   使用 :root[data-theme="dark"] 提升特异性，覆盖 scoped 样式
+   ══════════════════════════════════════════════════════════ */
+
+/* 常见面板/卡片类 */
+:root[data-theme="dark"] .cate-panel,
+:root[data-theme="dark"] .left-panel,
+:root[data-theme="dark"] .side-panel,
+:root[data-theme="dark"] .tree-panel,
+:root[data-theme="dark"] .category-panel,
+:root[data-theme="dark"] .filter-panel,
+:root[data-theme="dark"] .detail-panel,
+:root[data-theme="dark"] .info-panel,
+:root[data-theme="dark"] .stat-panel,
+:root[data-theme="dark"] .summary-panel {
+  background: #2c2c2e !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  color: #f5f5f7 !important;
+}
+
+/* form-page / form-section / form-topbar（scoped 里的） */
+:root[data-theme="dark"] .form-page { background: #1c1c1e !important; }
+:root[data-theme="dark"] .form-topbar { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .form-scroll { background: #1c1c1e !important; }
+:root[data-theme="dark"] .form-section { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .sec-title { color: #f5f5f7 !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .sec-title-row { border-bottom-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .sec-title-text { color: #f5f5f7 !important; }
+:root[data-theme="dark"] .tab-item { color: rgba(245,245,247,0.5) !important; }
+:root[data-theme="dark"] .tab-item:hover,
+:root[data-theme="dark"] .tab-item.active { color: #60a5fa !important; }
+:root[data-theme="dark"] .tab-item.active { border-bottom-color: #60a5fa !important; }
+
+/* 商品/客户/库存 分类面板 */
+:root[data-theme="dark"] .cate-header { border-bottom-color: rgba(255,255,255,0.06) !important; background: #2c2c2e !important; }
+:root[data-theme="dark"] .cate-title { color: #f5f5f7 !important; }
+:root[data-theme="dark"] .cate-item { color: rgba(245,245,247,0.55) !important; }
+:root[data-theme="dark"] .cate-item:hover { background: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .cate-item.active { background: rgba(0,113,227,0.15) !important; color: #60a5fa !important; }
+:root[data-theme="dark"] .cate-item-child { color: rgba(245,245,247,0.35) !important; }
+:root[data-theme="dark"] .cate-arrow { color: rgba(245,245,247,0.3) !important; }
+:root[data-theme="dark"] .cate-empty { color: rgba(245,245,247,0.3) !important; }
+:root[data-theme="dark"] .cate-resize-handle:hover { background: rgba(255,255,255,0.06) !important; }
+
+/* 移动端商品卡片 */
+:root[data-theme="dark"] .goods-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .goods-card-title { color: #f5f5f7 !important; }
+:root[data-theme="dark"] .goods-card-value { color: #f5f5f7 !important; }
+:root[data-theme="dark"] .goods-card-label { color: rgba(245,245,247,0.4) !important; }
+:root[data-theme="dark"] .goods-card-footer { border-top-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .goods-card-sn { color: rgba(245,245,247,0.3) !important; }
+
+/* 规格编辑器 */
+:root[data-theme="dark"] .spec-attr-row { background: #3a3a3c !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .spec-attr-label { color: rgba(245,245,247,0.5) !important; }
+
+/* 移动端分类标签（横向滚动） */
+:root[data-theme="dark"] .cate-tree .cate-item { background: #3a3a3c !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .cate-tree .cate-item.active { background: rgba(0,113,227,0.2) !important; border-color: rgba(0,113,227,0.3) !important; }
+
+/* 通用列表卡片（移动端各模块） */
+:root[data-theme="dark"] .list-card,
+:root[data-theme="dark"] .m-card,
+:root[data-theme="dark"] .mobile-card,
+:root[data-theme="dark"] .order-card,
+:root[data-theme="dark"] .sale-card,
+:root[data-theme="dark"] .purchase-card,
+:root[data-theme="dark"] .finance-card,
+:root[data-theme="dark"] .stock-card,
+:root[data-theme="dark"] .customer-card,
+:root[data-theme="dark"] .supplier-card {
+  background: #2c2c2e !important;
+  border-color: rgba(255,255,255,0.06) !important;
+  color: #f5f5f7 !important;
+}
+
+/* 详情页头部/统计区 */
+:root[data-theme="dark"] .detail-header,
+:root[data-theme="dark"] .page-header,
+:root[data-theme="dark"] .stat-bar,
+:root[data-theme="dark"] .summary-bar,
+:root[data-theme="dark"] .info-bar,
+:root[data-theme="dark"] .filter-bar {
+  background: #2c2c2e !important;
+  border-color: rgba(255,255,255,0.06) !important;
+  color: #f5f5f7 !important;
+}
+
+/* 弹出层/抽屉内容 */
+:root[data-theme="dark"] .dialog-body,
+:root[data-theme="dark"] .drawer-body,
+:root[data-theme="dark"] .sheet-body,
+:root[data-theme="dark"] .modal-body {
+  background: #2c2c2e !important;
+  color: #f5f5f7 !important;
+}
+
+/* 搜索/过滤区 */
+:root[data-theme="dark"] .search-bar,
+:root[data-theme="dark"] .filter-row,
+:root[data-theme="dark"] .toolbar-row,
+:root[data-theme="dark"] .query-bar {
+  background: transparent !important;
+  color: #f5f5f7 !important;
+}
+
+/* 常见文字颜色类 */
+:root[data-theme="dark"] .label,
+:root[data-theme="dark"] .field-label,
+:root[data-theme="dark"] .form-label { color: rgba(245,245,247,0.5) !important; }
+:root[data-theme="dark"] .field-hint { color: rgba(245,245,247,0.35) !important; }
+:root[data-theme="dark"] .page-title,
+:root[data-theme="dark"] .section-title,
+:root[data-theme="dark"] .card-title { color: #f5f5f7 !important; }
+
+/* 边框颜色 */
+:root[data-theme="dark"] .divider,
+:root[data-theme="dark"] .separator { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.06) !important; }
+
+/* 数据标签/badge（状态标签在暗色下） */
+:root[data-theme="dark"] .status-tag,
+:root[data-theme="dark"] .badge { border-color: transparent !important; }
+
+/* 空状态 */
+:root[data-theme="dark"] .empty-state,
+:root[data-theme="dark"] .no-data { color: rgba(245,245,247,0.3) !important; }
+
+/* 通用 white/浅色背景兜底：任何直接用了 background:#fff 的元素
+   通过属性值选择（无法做到），改为覆盖最常见的容器组合 */
+:root[data-theme="dark"] .el-table__column-filter-trigger { color: rgba(245,245,247,0.4) !important; }
+:root[data-theme="dark"] .el-table__expand-column .cell { background: transparent !important; }
+:root[data-theme="dark"] .el-table__placeholder { background: #2c2c2e !important; }
+:root[data-theme="dark"] .el-table__cell.gutter { background: #3a3a3c !important; }
+:root[data-theme="dark"] .el-table__body-wrapper .el-scrollbar__wrap { background: #2c2c2e !important; }
+:root[data-theme="dark"] .el-table .el-scrollbar { background: #2c2c2e !important; }
+
+/* 彻底封住 el-table 白色行（包括非striped行） */
+:root[data-theme="dark"] .el-table__row td { background: #2c2c2e !important; }
+:root[data-theme="dark"] .el-table__row:hover td { background: rgba(0,113,227,0.1) !important; }
+:root[data-theme="dark"] .el-table__row.el-table__row--striped td { background: rgba(255,255,255,0.025) !important; }
+
+:root[data-theme="dark"] .el-table__fixed,
+:root[data-theme="dark"] .el-table__fixed-right { background: #2c2c2e !important; }
+:root[data-theme="dark"] .el-table__fixed .el-table__cell,
+:root[data-theme="dark"] .el-table__fixed-right .el-table__cell { background: #2c2c2e !important; }
+:root[data-theme="dark"] .el-table__fixed-right-patch { background: #2c2c2e !important; }
+
+/* ══════════════════════════════════════════════════════════
+   暗黑模式 — 各业务模块 scoped 白色背景覆盖（57个文件扫描结果）
+   ══════════════════════════════════════════════════════════ */
+
+/* ── 通用表单页（所有模块共用） ── */
+:root[data-theme="dark"] .form-page { background: #1c1c1e !important; }
+:root[data-theme="dark"] .form-topbar { background: #2c2c2e !important; border-bottom-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .form-scroll { background: #1c1c1e !important; }
+:root[data-theme="dark"] .form-section { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .form-body { background: #1c1c1e !important; }
+:root[data-theme="dark"] .sec-title { color: #f5f5f7 !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .sec-title-row { border-bottom-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .sec-title-text { color: #f5f5f7 !important; }
+
+/* ── 销售模块 ── */
+:root[data-theme="dark"] .finance-item { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .level-panel,
+:root[data-theme="dark"] .level-discount,
+:root[data-theme="dark"] .price-panel { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+
+/* ── 生产模块 ── */
+:root[data-theme="dark"] .goods-section,
+:root[data-theme="dark"] .remark-section { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .stat-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .gen-goods-card,
+:root[data-theme="dark"] .gen-log { background: #2c2c2e !important; }
+:root[data-theme="dark"] .summary-bar { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+
+/* ── 财务模块 ── */
+:root[data-theme="dark"] .summary-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .quick-action-card { background: #2c2c2e !important; }
+:root[data-theme="dark"] .flow-section { background: #2c2c2e !important; }
+:root[data-theme="dark"] .page-header { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .payment-summary { background: #2c2c2e !important; }
+
+/* ── 商品模块 ── */
+:root[data-theme="dark"] .goods-panel,
+:root[data-theme="dark"] .bom-panel { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+
+/* ── 仓库模块 ── */
+:root[data-theme="dark"] .stock-sidebar { background: #2c2c2e !important; }
+:root[data-theme="dark"] .form-header { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+
+/* ── 零售模块（收银台） ── */
+:root[data-theme="dark"] .cr-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .cr-cart-item { background: #2c2c2e !important; }
+:root[data-theme="dark"] .cr-qty-btn,
+:root[data-theme="dark"] .cr-pay-btn { background: #3a3a3c !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .cr-goods-card { background: #2c2c2e !important; }
+:root[data-theme="dark"] .cr-search-box { background: #3a3a3c !important; }
+
+/* ── 报表模块 ── */
+:root[data-theme="dark"] .ro-kpi-card,
+:root[data-theme="dark"] .ro-chart-card,
+:root[data-theme="dark"] .ro-prepay-block { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .ro-sum-block { background: #3a3a3c !important; }
+:root[data-theme="dark"] .ro-sale-bar-wrap { background: #3a3a3c !important; }
+:root[data-theme="dark"] .pf-summary { background: #2c2c2e !important; }
+
+/* ── 外协模块 ── */
+:root[data-theme="dark"] .payment-summary { background: #2c2c2e !important; }
+
+/* ── 移动端页面 ── */
+:root[data-theme="dark"] .ai-page,
+:root[data-theme="dark"] .apps-page,
+:root[data-theme="dark"] .profile-page { background: #1c1c1e !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .ai-topbar,
+:root[data-theme="dark"] .apps-header { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .ai-topbar-back,
+:root[data-theme="dark"] .apps-search,
+:root[data-theme="dark"] .ai-textarea { background: #3a3a3c !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .ai-quick-tag { background: #3a3a3c !important; color: rgba(245,245,247,0.7) !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .ai-msg-bubble { background: #2c2c2e !important; color: #f5f5f7 !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .ai-input-area { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .apps-section { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .profile-stats-row,
+:root[data-theme="dark"] .profile-menu-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .profile-logout-btn { background: #2c2c2e !important; color: #f87171 !important; }
+:root[data-theme="dark"] .ms-kpi-card,
+:root[data-theme="dark"] .ms-sale-card,
+:root[data-theme="dark"] .ms-quick-links { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .ms-main-item,
+:root[data-theme="dark"] .ms-ql-item { background: #3a3a3c !important; }
+
+/* ── Agent / AI 模块 ── */
+:root[data-theme="dark"] .flow-panel,
+:root[data-theme="dark"] .ai-modal,
+:root[data-theme="dark"] .autoflow-running { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .fps-log,
+:root[data-theme="dark"] .fps-log-loading { background: #1c1c1e !important; color: rgba(245,245,247,0.7) !important; }
+:root[data-theme="dark"] .opt-tag { background: #3a3a3c !important; color: #f5f5f7 !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .ready-chip.muted { background: #3a3a3c !important; color: rgba(245,245,247,0.5) !important; }
+:root[data-theme="dark"] .editable-result { background: #3a3a3c !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .feature-card,
+:root[data-theme="dark"] .apple-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .tab-bar { background: #3a3a3c !important; }
+:root[data-theme="dark"] .param-btn { background: #3a3a3c !important; color: rgba(245,245,247,0.7) !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .output-area--active { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .conv-viewer { background: #2c2c2e !important; }
+:root[data-theme="dark"] .assistant-bubble { background: #3a3a3c !important; color: #f5f5f7 !important; border-color: rgba(255,255,255,0.06) !important; }
+
+/* ── 控制台 ── */
+:root[data-theme="dark"] .console-wrap { background: #1c1c1e !important; }
+:root[data-theme="dark"] .top-nav { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .table-wrap { background: #2c2c2e !important; }
+:root[data-theme="dark"] .invite-gen-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .dialog-user-row { background: #3a3a3c !important; }
+:root[data-theme="dark"] .user-table thead tr { background: #3a3a3c !important; }
+
+/* ── Dashboard ── */
+:root[data-theme="dark"] .dashboard { background: #1c1c1e !important; }
+:root[data-theme="dark"] .command-section { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .chip-btn { background: #3a3a3c !important; color: rgba(245,245,247,0.7) !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .dept-block,
+:root[data-theme="dark"] .trending-panel { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .stat-item,
+:root[data-theme="dark"] .trending-rank { background: #3a3a3c !important; }
+:root[data-theme="dark"] .mh-kpi-small,
+:root[data-theme="dark"] .mh-section-card,
+:root[data-theme="dark"] .m-quick-card,
+:root[data-theme="dark"] .m-sale-stat-card,
+:root[data-theme="dark"] .m-stat-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .m-ssc-main-item,
+:root[data-theme="dark"] .mh-refresh,
+:root[data-theme="dark"] .m-edit-hint { background: #3a3a3c !important; }
+:root[data-theme="dark"] .m-edit-check { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+
+/* ── 组件库 ── */
+:root[data-theme="dark"] .bar-panel { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .msg-text,
+:root[data-theme="dark"] .typing-dots { background: #3a3a3c !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .panel-input { background: #3a3a3c !important; color: #f5f5f7 !important; border-color: rgba(255,255,255,0.1) !important; }
+:root[data-theme="dark"] .input-icon-btn { background: #3a3a3c !important; color: rgba(245,245,247,0.5) !important; }
+:root[data-theme="dark"] .qp-chip { background: #3a3a3c !important; color: rgba(245,245,247,0.7) !important; border-color: rgba(255,255,255,0.08) !important; }
+:root[data-theme="dark"] .tool-chip.running { background: #3a3a3c !important; }
+:root[data-theme="dark"] .guide-panel { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .guide-status-warn { background: rgba(245,158,11,0.12) !important; }
+:root[data-theme="dark"] .wb-trial-card,
+:root[data-theme="dark"] .wb-trial-active,
+:root[data-theme="dark"] .wb-trial-expired { background: #3a3a3c !important; }
+:root[data-theme="dark"] .tier-tab { background: #3a3a3c !important; color: rgba(245,245,247,0.7) !important; }
+:root[data-theme="dark"] .price-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .price-card-active { background: #3a3a3c !important; }
+:root[data-theme="dark"] .ud-right { background: #1c1c1e !important; }
+:root[data-theme="dark"] .done-contact { background: #3a3a3c !important; color: rgba(245,245,247,0.6) !important; }
+
+/* ── Portal 额外修复 ── */
+:root[data-theme="dark"] .overview-section { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+:root[data-theme="dark"] .server-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .feature-pill { background: #3a3a3c !important; color: rgba(245,245,247,0.7) !important; }
+:root[data-theme="dark"] .extra-icon-svg { background: #3a3a3c !important; }
+
+/* ── Pricing 页面 ── */
+:root[data-theme="dark"] .pricing-page { background: #1c1c1e !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .module-card,
+:root[data-theme="dark"] .contact-card,
+:root[data-theme="dark"] .contact-note { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; color: #f5f5f7 !important; }
+
+/* ── SidebarNav ── */
+:root[data-theme="dark"] .sidebar-nav { background: #1c1c1e !important; border-color: rgba(255,255,255,0.06) !important; }
+
+/* ── 通用 tab/chip 按钮 ── */
+:root[data-theme="dark"] .nav-tab.active { background: #2c2c2e !important; color: #f5f5f7 !important; }
+:root[data-theme="dark"] .tab-btn--active { background: #2c2c2e !important; color: #f5f5f7 !important; }
+
+/* ── 兜底结束 ── */

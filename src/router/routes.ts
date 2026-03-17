@@ -23,6 +23,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'dashboard/today-sales', name: 'TodaySales', component: () => import('@/views/dashboard/TodaySales.vue'), meta: { title: '今日销售' } },
       { path: 'mobile/stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '统计' } },
       { path: 'mobile/apps', name: 'MobileApps', component: () => import('@/views/mobile/MobileApps.vue'), meta: { title: '应用' } },
+      { path: 'mobile/profile', name: 'MobileProfile', component: () => import('@/views/mobile/MobileProfile.vue'), meta: { title: '我的' } },
 
       // Sale
       { path: 'sale/client', name: 'SaleClient', component: () => import('@/views/sale/ClientList.vue'), meta: { title: '客户管理' } },

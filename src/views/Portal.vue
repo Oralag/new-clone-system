@@ -571,9 +571,9 @@ const TOOL_LABELS: Record<string, string> = {
 
 .portal-page {
   min-height: 100vh;
-  background: #ffffff;
+  background: var(--card-bg, #ffffff);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   overflow-x: hidden;
   padding-top: 0;
 }
@@ -718,7 +718,7 @@ const TOOL_LABELS: Record<string, string> = {
 /* ── Portal AI Bar ── */
 .portal-ai-bar {
   margin-bottom: 20px;
-  background: #f5f5f7;
+  background: var(--gray, #f5f5f7);
   border-radius: 14px;
   border: 1.5px solid transparent;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -750,7 +750,7 @@ const TOOL_LABELS: Record<string, string> = {
   background: transparent;
   font-size: 14px;
   font-weight: 500;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   outline: none;
   font-family: inherit;
   cursor: text;
@@ -799,9 +799,9 @@ const TOOL_LABELS: Record<string, string> = {
 }
 .portal-ai-msg--ai {
   align-self: flex-start;
-  background: white;
-  color: #1d1d1f;
-  border: 1px solid rgba(0,0,0,0.07);
+  background: var(--gray, #f5f5f7);
+  color: var(--dark, #1d1d1f);
+  border: 1px solid var(--border, rgba(0,0,0,0.07));
 }
 .portal-ai-msg--loading {
   padding: 10px 14px;
@@ -1093,8 +1093,8 @@ const TOOL_LABELS: Record<string, string> = {
 .platform-desc {
   padding: 56px 48px;
   text-align: center;
-  background: #f5f5f7;
-  border-top: 1px solid rgba(0,0,0,0.04);
+  background: var(--gray, #f5f5f7);
+  border-top: 1px solid var(--border, rgba(0,0,0,0.04));
 }
 .platform-desc-inner {
   max-width: 800px;
@@ -1180,8 +1180,8 @@ const TOOL_LABELS: Record<string, string> = {
 .portal-footer {
   padding: 72px 48px;
   text-align: center;
-  border-top: 1px solid rgba(0,0,0,0.06);
-  background: #f5f5f7;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.06));
+  background: var(--gray, #f5f5f7);
 }
 
 .footer-logo {
@@ -1267,12 +1267,12 @@ const TOOL_LABELS: Record<string, string> = {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: #f7f8fa;
-  border: 1px solid #e4e7ed;
+  background: var(--gray, #f7f8fa);
+  border: 1px solid var(--border, #e4e7ed);
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 12px;
-  color: #4e5969;
+  color: var(--mid, #4e5969);
   cursor: pointer;
   text-align: left;
   line-height: 1.4;
@@ -1301,25 +1301,27 @@ const TOOL_LABELS: Record<string, string> = {
 /* Captain 思考文本 */
 .feed-captain-text {
   font-size: 14px;
-  color: #1d2129;
+  color: var(--dark, #1d2129);
   line-height: 1.7;
   padding: 0 2px;
 }
 
 /* Agent 执行卡 */
 .feed-agent-card {
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--border, #e4e7ed);
   border-radius: 12px;
   overflow: hidden;
+  background: var(--card-bg, #fff);
 }
 .feed-agent-header {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
+  background: var(--card-bg, #fff);
 }
 .feed-agent-emoji { font-size: 15px; }
-.feed-agent-name { font-size: 13px; font-weight: 600; color: #1d2129; flex: 1; }
+.feed-agent-name { font-size: 13px; font-weight: 600; color: var(--dark, #1d2129); flex: 1; }
 .feed-agent-tag {
   font-size: 11px;
   border-radius: 6px;
@@ -1341,13 +1343,13 @@ const TOOL_LABELS: Record<string, string> = {
 .feed-agent-task {
   padding: 0 14px 8px;
   font-size: 11px;
-  color: #86909c;
-  border-bottom: 1px solid #f0f0f5;
+  color: var(--dim, #86909c);
+  border-bottom: 1px solid var(--border, #f0f0f5);
 }
 .feed-agent-output {
   padding: 10px 14px;
   font-size: 13px;
-  color: #4e5969;
+  color: var(--mid, #4e5969);
   line-height: 1.6;
   max-height: 180px;
   overflow-y: auto;
@@ -1360,9 +1362,9 @@ const TOOL_LABELS: Record<string, string> = {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #86909c;
-  background: #f7f8fa;
-  border: 1px solid #e4e7ed;
+  color: var(--mid, #86909c);
+  background: var(--gray, #f7f8fa);
+  border: 1px solid var(--border, #e4e7ed);
   border-radius: 6px;
   padding: 3px 10px;
   width: fit-content;
@@ -1394,8 +1396,8 @@ const TOOL_LABELS: Record<string, string> = {
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f5;
-  background: #fafbfc;
+  border-bottom: 1px solid var(--border, #f0f0f5);
+  background: var(--gray, #fafbfc);
   flex-shrink: 0;
 }
 .captain-compose-input {
@@ -1403,7 +1405,7 @@ const TOOL_LABELS: Record<string, string> = {
   border: none;
   outline: none;
   font-size: 14px;
-  color: #1d2129;
+  color: var(--dark, #1d2129);
   background: transparent;
   padding: 4px 0;
 }
@@ -1453,7 +1455,7 @@ const TOOL_LABELS: Record<string, string> = {
   padding: 24px;
 }
 .about-modal {
-  background: #fff;
+  background: var(--card-bg, #fff);
   border-radius: 20px;
   padding: 32px;
   max-width: 520px;
@@ -1468,17 +1470,17 @@ const TOOL_LABELS: Record<string, string> = {
   top: 16px; right: 16px;
   width: 30px; height: 30px;
   border-radius: 8px;
-  border: 1px solid #e4e7ed;
-  background: #f7f8fa;
-  color: #86909c;
+  border: 1px solid var(--border, #e4e7ed);
+  background: var(--gray, #f7f8fa);
+  color: var(--mid, #86909c);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
 }
 .about-close:hover { background: #fee2e2; border-color: #fca5a5; color: #ef4444; }
 .about-icon { font-size: 40px; margin-bottom: 12px; }
-.about-title { font-size: 22px; font-weight: 700; color: #1d2129; margin: 0 0 8px; }
-.about-lead { font-size: 14px; color: #4e5969; line-height: 1.6; margin: 0 0 24px; }
+.about-title { font-size: 22px; font-weight: 700; color: var(--dark, #1d2129); margin: 0 0 8px; }
+.about-lead { font-size: 14px; color: var(--mid, #4e5969); line-height: 1.6; margin: 0 0 24px; }
 .about-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
 .about-item { display: flex; gap: 12px; align-items: flex-start; }
 .about-item-icon {
@@ -1488,9 +1490,9 @@ const TOOL_LABELS: Record<string, string> = {
   font-size: 16px;
   flex-shrink: 0;
 }
-.about-item-title { font-size: 13px; font-weight: 600; color: #1d2129; margin-bottom: 2px; }
-.about-item-desc { font-size: 12px; color: #86909c; line-height: 1.5; }
-.about-agents-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #86909c; text-transform: uppercase; margin-bottom: 10px; }
+.about-item-title { font-size: 13px; font-weight: 600; color: var(--dark, #1d2129); margin-bottom: 2px; }
+.about-item-desc { font-size: 12px; color: var(--dim, #86909c); line-height: 1.5; }
+.about-agents-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--dim, #86909c); text-transform: uppercase; margin-bottom: 10px; }
 .about-agents-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .about-agent-chip {
   display: flex;
@@ -1520,9 +1522,9 @@ const TOOL_LABELS: Record<string, string> = {
 }
 .wb-close:hover { background: rgba(0,0,0,0.1); }
 .wb-icon {
-  width: 52px; height: 52px; background: #f5f5f7; border-radius: 14px;
+  width: 52px; height: 52px; background: var(--gray, #f5f5f7); border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 14px; color: #1d1d1f; font-size: 26px;
+  margin: 0 auto 14px; color: var(--dark, #1d1d1f); font-size: 26px;
 }
 .wb-title { font-size: 17px; font-weight: 800; color: #1d1d1f; margin-bottom: 6px; text-align: center; }
 .wb-desc { font-size: 13px; color: rgba(29,29,31,0.45); margin-bottom: 16px; line-height: 1.5; text-align: center; }

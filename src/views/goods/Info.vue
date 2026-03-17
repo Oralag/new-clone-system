@@ -2505,3 +2505,34 @@ function stopListScanner() {
   flex: 1;
 }
 </style>
+
+<style>
+/* ── 商品资料 暗黑模式 ── */
+[data-theme="dark"] .cate-panel { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .cate-header { background: #2c2c2e !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cate-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .cate-item { color: rgba(245,245,247,0.55) !important; }
+[data-theme="dark"] .cate-item:hover { background: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cate-item.active { background: rgba(0,113,227,0.15) !important; color: #60a5fa !important; }
+[data-theme="dark"] .cate-item-child { color: rgba(245,245,247,0.35) !important; }
+[data-theme="dark"] .cate-arrow { color: rgba(245,245,247,0.3) !important; }
+[data-theme="dark"] .cate-empty { color: rgba(245,245,247,0.3) !important; }
+[data-theme="dark"] .goods-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .goods-card-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .goods-card-value { color: #f5f5f7 !important; }
+[data-theme="dark"] .goods-card-label { color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .goods-card-footer { border-top-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .goods-card-sn { color: rgba(245,245,247,0.3) !important; }
+[data-theme="dark"] .form-page { background: #1c1c1e !important; }
+[data-theme="dark"] .form-topbar { background: #2c2c2e !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .form-scroll { background: #1c1c1e !important; }
+[data-theme="dark"] .form-section { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .sec-title { color: #f5f5f7 !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .sec-title-row { border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .sec-title-text { color: #f5f5f7 !important; }
+[data-theme="dark"] .tab-item { color: rgba(245,245,247,0.5) !important; }
+[data-theme="dark"] .tab-item.active { color: #60a5fa !important; border-bottom-color: #60a5fa !important; }
+[data-theme="dark"] .spec-attr-row { background: #3a3a3c !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .spec-attr-label { color: rgba(245,245,247,0.5) !important; }
+[data-theme="dark"] .field-hint { color: rgba(245,245,247,0.35) !important; }
+</style>
