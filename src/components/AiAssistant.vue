@@ -1,6 +1,7 @@
 <template>
   <!-- Floating trigger button -->
   <div
+    v-show="route.path !== '/mobile/apps'"
     class="ai-trigger"
     :style="{ bottom: triggerBottom + 'px', right: triggerRight + 'px' }"
     @mousedown="onTriggerDragStart"
@@ -234,7 +235,7 @@
 <script setup lang="ts">
 import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
@@ -287,6 +288,7 @@ function saveHistory(msgs: Message[]) {
 }
 
 const router = useRouter()
+const route = useRoute()
 const isOpen = ref(false)
 const unread = ref(0)
 const inputText = ref('')

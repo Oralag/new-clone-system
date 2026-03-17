@@ -32,7 +32,7 @@
             @click="navigate(item.path)"
           >
             <div class="app-icon" :style="{ background: getColor(section.key) }">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" v-html="getIcon(item.key)" />
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" v-html="getIcon(item.key)" />
             </div>
             <span class="app-label">{{ item.title }}</span>
           </div>
@@ -137,7 +137,7 @@ function getIcon(key: string) { return iconMap[key] || defaultIcon }
 <style scoped>
 .apps-page {
   min-height: 100%;
-  background: #f5f5f7;
+  background: #f2f3f5;
   display: flex;
   flex-direction: column;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -145,7 +145,7 @@ function getIcon(key: string) { return iconMap[key] || defaultIcon }
 
 .apps-header {
   background: #fff;
-  padding: 16px 16px 12px;
+  padding: 14px 16px 10px;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -153,20 +153,20 @@ function getIcon(key: string) { return iconMap[key] || defaultIcon }
 }
 
 .apps-title {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   color: #1d2129;
-  letter-spacing: -0.03em;
-  margin-bottom: 10px;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
 }
 
 .apps-search {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f5f5f7;
-  border-radius: 12px;
-  padding: 9px 12px;
+  background: #f2f3f5;
+  border-radius: 8px;
+  padding: 8px 12px;
 }
 .apps-search-input {
   flex: 1;
@@ -186,65 +186,66 @@ function getIcon(key: string) { return iconMap[key] || defaultIcon }
 
 .apps-section {
   background: #fff;
-  margin-top: 8px;
-  padding: 14px 16px 6px;
+  margin-top: 6px;
+  padding: 12px 16px 8px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-bottom: 14px;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 .section-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 .section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #1d2129;
-  letter-spacing: -0.01em;
+  font-size: 12px;
+  font-weight: 600;
+  color: #86909c;
+  letter-spacing: 0.01em;
 }
 
 .apps-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px 8px;
-  margin-bottom: 8px;
+  gap: 14px 4px;
+  margin-bottom: 6px;
 }
 
 .app-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   padding: 4px 2px;
-  border-radius: 12px;
+  border-radius: 10px;
   -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.1s;
 }
-.app-item--pressed { opacity: 0.7; }
+.app-item--pressed { opacity: 0.65; transform: scale(0.95); }
 
 .app-icon {
-  width: 54px;
-  height: 54px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.16);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
 }
 
 .app-label {
   font-size: 11px;
-  color: #4e5969;
+  color: #333;
   text-align: center;
   line-height: 1.3;
   word-break: keep-all;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .apps-empty {
