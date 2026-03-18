@@ -99,9 +99,9 @@
       </el-col>
     </el-row>
 
-    <!-- 第三行：预付款 + 近期收款 + 近期付款 -->
+    <!-- 第三行：预收款 + 预付款 + 近期收款 + 近期付款 -->
     <el-row :gutter="14">
-      <el-col :span="8">
+      <el-col :span="6">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
@@ -111,17 +111,37 @@
               <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/prepay')">更多</el-button>
             </div>
           </template>
-          <div class="inline-list" v-if="prepayList.length">
-            <div class="inline-item clickable" v-for="r in prepayList.slice(0,6)" :key="r.id" @click="router.push('/finance/prepay')">
-              <div class="inline-name">{{ r.customer_name || r.supplier_name || '—' }}</div>
+          <div class="inline-list" v-if="prepayList.filter(r=>r.pay_type==='customer').length">
+            <div class="inline-item clickable" v-for="r in prepayList.filter(r=>r.pay_type==='customer').slice(0,4)" :key="r.id" @click="router.push('/finance/prepay')">
+              <div class="inline-name">{{ r.customer_name || '—' }}</div>
               <div class="inline-value green">¥{{ Number(r.amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ r.pay_type === 'customer' ? '客户预收' : '供应商预付' }}</div>
+              <div class="inline-sub">客户预收</div>
             </div>
           </div>
           <div v-else class="empty-tip">暂无预收款</div>
         </el-card>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="6">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon :size="15"><Money /></el-icon>
+              <span>预付款</span>
+              <span class="header-total orange">¥{{ supplierPrepayTotal }}</span>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/supplier-prepay')">更多</el-button>
+            </div>
+          </template>
+          <div class="inline-list" v-if="prepayList.filter(r=>r.pay_type==='supplier').length">
+            <div class="inline-item clickable" v-for="r in prepayList.filter(r=>r.pay_type==='supplier').slice(0,4)" :key="r.id" @click="router.push('/finance/supplier-prepay')">
+              <div class="inline-name">{{ r.supplier_name || '—' }}</div>
+              <div class="inline-value orange">¥{{ Number(r.amount||0).toFixed(2) }}</div>
+              <div class="inline-sub">供应商预付</div>
+            </div>
+          </div>
+          <div v-else class="empty-tip">暂无预付款</div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
@@ -131,7 +151,7 @@
             </div>
           </template>
           <div class="inline-list" v-if="recentCollectItems.length">
-            <div class="inline-item clickable" v-for="r in recentCollectItems.slice(0,6)" :key="r._key" @click="router.push('/finance/fund-flow')">
+            <div class="inline-item clickable" v-for="r in recentCollectItems.slice(0,4)" :key="r._key" @click="router.push('/finance/fund-flow')">
               <div class="inline-name">{{ r.name }}</div>
               <div class="inline-value green">¥{{ Number(r.amount||0).toFixed(2) }}</div>
               <div class="inline-sub">{{ r.date }}</div>
@@ -140,7 +160,7 @@
           <div v-else class="empty-tip">暂无收款记录</div>
         </el-card>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="6">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
@@ -150,7 +170,7 @@
             </div>
           </template>
           <div class="inline-list" v-if="payList.length">
-            <div class="inline-item clickable" v-for="r in payList.slice(0,6)" :key="r.id" @click="router.push('/finance/pay-receipt')">
+            <div class="inline-item clickable" v-for="r in payList.slice(0,4)" :key="r.id" @click="router.push('/finance/pay-receipt')">
               <div class="inline-name">{{ r.supplier_name || r.contact_name || '—' }}</div>
               <div class="inline-value red">¥{{ Number(r.amount||0).toFixed(2) }}</div>
               <div class="inline-sub">{{ (r.pay_date||r.created_at||'').slice(0,10) }}</div>
@@ -504,6 +524,9 @@ const accountTotal = computed(() =>
 )
 const prepayTotal = computed(() =>
   prepayList.value.filter((r: any) => r.pay_type === 'customer').reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
+)
+const supplierPrepayTotal = computed(() =>
+  prepayList.value.filter((r: any) => r.pay_type === 'supplier').reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
 )
 
 // 近期收款 = 收款单 + 预收款，按日期倒序
