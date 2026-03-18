@@ -661,7 +661,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -834,6 +834,10 @@ onMounted(() => {
       calcTotal()
     } catch { /* ignore */ }
   }
+  checkBomData()
+})
+
+function checkBomData() {
   // 从BOM物料清单跳转过来，预填物料数据
   const bomData = sessionStorage.getItem('procure_order_from_bom')
   if (bomData) {
@@ -862,6 +866,10 @@ onMounted(() => {
       calcTotal()
     } catch { /* ignore */ }
   }
+}
+
+onActivated(() => {
+  checkBomData()
 })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
