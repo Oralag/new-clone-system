@@ -1,11 +1,11 @@
-import type Anthropic from '@anthropic-ai/sdk'
+import type { FunctionDeclaration } from '@google/genai'
 
-export const queryTools: Anthropic.Tool[] = [
+export const queryTools: FunctionDeclaration[] = [
   {
     name: 'query_customers',
     description: '查询客户列表',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         keyword: { type: 'string', description: '搜索关键词（客户名称/手机）' },
         limit: { type: 'number', description: '返回条数，默认20' },
@@ -15,8 +15,8 @@ export const queryTools: Anthropic.Tool[] = [
   {
     name: 'query_suppliers',
     description: '查询供应商列表',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         keyword: { type: 'string', description: '搜索关键词' },
         limit: { type: 'number', description: '返回条数，默认20' },
@@ -26,8 +26,8 @@ export const queryTools: Anthropic.Tool[] = [
   {
     name: 'query_goods',
     description: '查询商品列表',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         keyword: { type: 'string', description: '商品名称/编码' },
         limit: { type: 'number', description: '返回条数，默认20' },
@@ -37,8 +37,8 @@ export const queryTools: Anthropic.Tool[] = [
   {
     name: 'query_inventory',
     description: '查询库存数据',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         keyword: { type: 'string', description: '商品名称' },
         warehouse: { type: 'string', description: '仓库名称' },
@@ -48,8 +48,8 @@ export const queryTools: Anthropic.Tool[] = [
   {
     name: 'query_sales',
     description: '查询销售订单/出货单',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         start_date: { type: 'string', description: '开始日期 YYYY-MM-DD' },
         end_date: { type: 'string', description: '结束日期 YYYY-MM-DD' },
@@ -61,8 +61,8 @@ export const queryTools: Anthropic.Tool[] = [
   {
     name: 'query_purchases',
     description: '查询采购订单',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         start_date: { type: 'string', description: '开始日期 YYYY-MM-DD' },
         end_date: { type: 'string', description: '结束日期 YYYY-MM-DD' },
@@ -74,8 +74,8 @@ export const queryTools: Anthropic.Tool[] = [
   {
     name: 'query_finance',
     description: '查询财务数据（收款单、付款单、应收应付、资金账户、预付款）',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         type: {
           type: 'string',
@@ -90,8 +90,8 @@ export const queryTools: Anthropic.Tool[] = [
   {
     name: 'query_staff',
     description: '查询员工列表',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         keyword: { type: 'string', description: '姓名/手机' },
       },
@@ -100,16 +100,19 @@ export const queryTools: Anthropic.Tool[] = [
   {
     name: 'query_warehouses',
     description: '查询仓库列表',
-    input_schema: { type: 'object' as const, properties: {} },
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
   },
 ]
 
-export const createTools: Anthropic.Tool[] = [
+export const createTools: FunctionDeclaration[] = [
   {
     name: 'create_customer',
     description: '新增客户',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         name: { type: 'string', description: '客户名称（必填）' },
         mobile: { type: 'string', description: '手机号' },
@@ -122,8 +125,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_supplier',
     description: '新增供应商',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         name: { type: 'string', description: '供应商名称（必填）' },
         contact: { type: 'string', description: '联系人' },
@@ -137,8 +140,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_goods',
     description: '新增商品',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         goods_name: { type: 'string', description: '商品名称（必填）' },
         goods_sn: { type: 'string', description: '商品编码' },
@@ -155,8 +158,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_sale_order',
     description: '新增销售合同/订单',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         customer_name: { type: 'string', description: '客户名称（必填）' },
         total_amount: { type: 'number', description: '金额' },
@@ -168,8 +171,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_procure_order',
     description: '新增采购订单',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         supplier_name: { type: 'string', description: '供应商名称（必填）' },
         total_amount: { type: 'number', description: '金额' },
@@ -181,8 +184,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_collect_receipt',
     description: '新增收款单',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         contact_name: { type: 'string', description: '收款对象（必填）' },
         amount: { type: 'number', description: '金额（必填）' },
@@ -197,8 +200,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_pay_receipt',
     description: '新增付款单',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         contact_name: { type: 'string', description: '付款对象（必填）' },
         amount: { type: 'number', description: '金额（必填）' },
@@ -213,8 +216,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_prepay',
     description: '新增预付款（向供应商预付或客户预充值）',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         amount: { type: 'number', description: '金额（必填）' },
         pay_type: { type: 'string', enum: ['supplier', 'customer'], description: 'supplier=向供应商预付，customer=客户预充值' },
@@ -231,8 +234,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_staff',
     description: '新增员工',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         name: { type: 'string', description: '姓名（必填）' },
         mobile: { type: 'string', description: '手机号' },
@@ -245,8 +248,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_warehouse',
     description: '新增仓库',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         name: { type: 'string', description: '仓库名称（必填）' },
         remark: { type: 'string', description: '备注' },
@@ -257,8 +260,8 @@ export const createTools: Anthropic.Tool[] = [
   {
     name: 'create_fund_account',
     description: '新增资金账户',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         name: { type: 'string', description: '账户名称（必填）' },
         balance: { type: 'number', description: '初始余额' },
@@ -268,12 +271,12 @@ export const createTools: Anthropic.Tool[] = [
   },
 ]
 
-export const navigateTools: Anthropic.Tool[] = [
+export const navigateTools: FunctionDeclaration[] = [
   {
     name: 'navigate_to',
     description: '跳转到ERP系统的指定页面',
-    input_schema: {
-      type: 'object' as const,
+    parameters: {
+      type: 'object',
       properties: {
         page: { type: 'string', description: '页面名称，如：客户列表、供应商、商品、库存、销售订单、采购订单、收款单、付款单、预付款、资金账户、员工、仓库、首页' },
       },
@@ -282,4 +285,4 @@ export const navigateTools: Anthropic.Tool[] = [
   },
 ]
 
-export const allTools: Anthropic.Tool[] = [...queryTools, ...createTools, ...navigateTools]
+export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...navigateTools]

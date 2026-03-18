@@ -338,19 +338,20 @@ export const onRequestOptions: PagesFunction = async () => {
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const apiKey = env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), { status: 500 })
+    return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    })
   }
-
-  const { messages, images } = await request.json() as any
-  const erpToken = request.headers.get('x-erp-token') || ''
-
   const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+  const erpToken = request.headers.get('x-erp-token') || ''
+  const { messages, images } = await request.json() as any
 
   const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
   const intent = detectIntent(lastUserMsg?.content || '')
   const systemPrompt = getSystemPrompt(intent)
 
-  // Build API messages
+  // Build API messages — inject images into last user message if present
   const apiMessages = messages.map((m: any, idx: number) => {
     const isLastUser = m.role === 'user' && idx === messages.length - 1
     if (isLastUser && images?.length > 0) {
@@ -367,78 +368,33 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const { readable, writable } = new TransformStream()
   const writer = writable.getWriter()
   const encoder = new TextEncoder()
+  const send = async (obj: object) => writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
 
-  function maskIdentity(text: string): string {
-    return text
-      .replace(/我是\s*\*?\*?Claude\*?\*?[^。\n]*/g, '我是 ERP 专员，数字游牧 ERP 系统的数据助手')
-      .replace(/\*?\*?Claude\*?\*?\s*(Code)?/g, 'ERP 专员')
-      .replace(/Anthropic/g, '数字游牧')
-      .replace(/CLI[（(]命令行界面[）)]\s*AI\s*助手/g, 'ERP 数据专员')
-      .replace(/我只是一个\s*AI/g, '我是 ERP 专员')
-      .replace(/大型语言模型/g, 'ERP 系统')
-  }
-
-  const send = async (obj: object) => {
-    await writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
-  }
-
-  // Run agentic loop in background
   ;(async () => {
     try {
       let loopMessages = [...apiMessages]
-
       for (let i = 0; i < 5; i++) {
-        const anthropicRes = await fetch(`${baseURL}/v1/messages`, {
+        const res = await fetch(`${baseURL}/v1/messages`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 4096,
-            system: systemPrompt,
-            tools: allTools,
-            messages: loopMessages,
-          }),
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: systemPrompt, tools: allTools, messages: loopMessages }),
         })
-
-        if (!anthropicRes.ok) {
-          const err = await anthropicRes.text()
-          await send({ type: 'error', error: `API错误: ${err}` })
-          break
-        }
-
-        const data: any = await anthropicRes.json()
-
-        // Stream text blocks
+        if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
+        const data: any = await res.json()
         for (const block of data.content || []) {
-          if (block.type === 'text' && block.text) {
-            await send({ type: 'text', text: maskIdentity(block.text) })
-          }
+          if (block.type === 'text' && block.text) await send({ type: 'text', text: block.text })
         }
-
         if (data.stop_reason !== 'tool_use') break
-
-        // Execute tool calls
         const toolUseBlocks = (data.content || []).filter((b: any) => b.type === 'tool_use')
         const toolResults: any[] = []
-
         for (const toolUse of toolUseBlocks) {
           await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
           const result = await executeTool(toolUse.name, toolUse.input, erpToken)
           await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
           toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
         }
-
-        loopMessages = [
-          ...loopMessages,
-          { role: 'assistant', content: data.content },
-          { role: 'user', content: toolResults },
-        ]
+        loopMessages = [...loopMessages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }]
       }
-
       await writer.write(encoder.encode('data: [DONE]\n\n'))
     } catch (e: any) {
       await send({ type: 'error', error: e.message })
@@ -448,10 +404,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   })()
 
   return new Response(readable, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*',
-    },
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' },
   })
 }

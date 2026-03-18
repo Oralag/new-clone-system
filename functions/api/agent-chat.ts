@@ -62,7 +62,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
       case 'query_goods': {
         const res: any = await erpGet('/goods/ShopGoods/index', { list_rows: input.limit || 20, keyword: input.keyword }, token, backend)
         const rows = res?.data?.rows || []
-        result = `共 ${res?.data?.total || rows.length} 种商品。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 商品名: r.goods_name, 编码: r.goods_sn, 售价: r.sell_price })))}`
+        result = `共 ${res?.data?.total || rows.length} 种商品。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 商品名: r.goods_name, 售价: r.sell_price })))}`
         break
       }
       case 'query_inventory': {
@@ -213,24 +213,25 @@ const AGENTS: Record<string, AgentDef> = {
 }
 
 const agentTools = [
-  { name: 'query_customers', description: '查询客户列表', input_schema: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
-  { name: 'query_suppliers', description: '查询供应商列表', input_schema: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
-  { name: 'query_goods', description: '查询商品列表', input_schema: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
-  { name: 'query_inventory', description: '查询库存数据', input_schema: { type: 'object', properties: { keyword: { type: 'string' } } } },
-  { name: 'query_sales', description: '查询销售数据', input_schema: { type: 'object', properties: { start_date: { type: 'string' }, end_date: { type: 'string' }, limit: { type: 'number' } } } },
-  { name: 'navigate_to', description: '跳转到指定页面', input_schema: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
+  { name: 'query_customers', description: '查询客户列表', parameters: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'query_suppliers', description: '查询供应商列表', parameters: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'query_goods', description: '查询商品列表', parameters: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'query_inventory', description: '查询库存数据', parameters: { type: 'object', properties: { keyword: { type: 'string' } } } },
+  { name: 'query_sales', description: '查询销售数据', parameters: { type: 'object', properties: { start_date: { type: 'string' }, end_date: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'navigate_to', description: '跳转到指定页面', parameters: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
   {
     name: 'fetch_trending',
-    description: '获取各平台实时热搜榜单（真实数据）。支持平台：weibo（微博）、baidu（百度）、douyin（抖音）、xiaohongshu（小红书）。',
-    input_schema: {
+    description: '获取各平台实时热搜榜单。支持平台：weibo（微博）、baidu（百度）、douyin（抖音）、xiaohongshu（小红书）。',
+    parameters: {
       type: 'object',
       properties: {
-        platform: { type: 'string', enum: ['weibo', 'baidu', 'douyin', 'xiaohongshu'], description: '平台名称' },
+        platform: { type: 'string', enum: ['weibo', 'baidu', 'douyin', 'xiaohongshu'] },
       },
       required: ['platform'],
     },
   },
 ]
+
 
 // Memory helpers
 async function loadMemory(kv: KVNamespace, token: string, agentId: string): Promise<any[]> {
@@ -244,9 +245,8 @@ async function loadMemory(kv: KVNamespace, token: string, agentId: string): Prom
 async function saveMemory(kv: KVNamespace, token: string, agentId: string, messages: any[]) {
   try {
     const key = `mem:${token.slice(-16)}:${agentId}`
-    // Keep last 40 messages to stay within KV limits
     const trimmed = messages.slice(-40)
-    await kv.put(key, JSON.stringify(trimmed), { expirationTtl: 60 * 60 * 24 * 30 }) // 30 days
+    await kv.put(key, JSON.stringify(trimmed), { expirationTtl: 60 * 60 * 24 * 30 })
   } catch {}
 }
 
@@ -260,7 +260,6 @@ export const onRequestOptions: PagesFunction = async () => {
   })
 }
 
-// DELETE /api/agent-chat?agentId=xxx — clear memory
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url)
   const agentId = url.searchParams.get('agentId') || ''
@@ -272,7 +271,6 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
   return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
 }
 
-// GET /api/agent-chat?agentId=xxx — load memory
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url)
   const agentId = url.searchParams.get('agentId') || ''
@@ -293,13 +291,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const { messages, agentId } = await request.json() as any
   const erpToken = request.headers.get('x-erp-token') || ''
   const { realToken, backend } = decodeErpToken(erpToken)
+  const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
 
   const agent = AGENTS[agentId]
   if (!agent) {
     return new Response(JSON.stringify({ error: `Unknown agent: ${agentId}` }), { status: 400 })
   }
-
-  const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
 
   const { readable, writable } = new TransformStream()
   const writer = writable.getWriter()
@@ -313,47 +310,33 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       let fullAssistantText = ''
 
       for (let i = 0; i < 5; i++) {
-        const anthropicRes = await fetch(`${baseURL}/v1/messages`, {
+        const res = await fetch(`${baseURL}/v1/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
           body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: agent.systemPrompt, tools: agentTools, messages: loopMessages }),
         })
-
-        if (!anthropicRes.ok) {
-          await send({ type: 'error', error: `API错误: ${await anthropicRes.text()}` })
-          break
-        }
-
-        const data: any = await anthropicRes.json()
-
+        if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
+        const data: any = await res.json()
         for (const block of data.content || []) {
           if (block.type === 'text' && block.text) {
             fullAssistantText += block.text
             await send({ type: 'text', text: block.text })
           }
         }
-
         if (data.stop_reason !== 'tool_use') break
-
         const toolUseBlocks = (data.content || []).filter((b: any) => b.type === 'tool_use')
         const toolResults: any[] = []
-
         for (const toolUse of toolUseBlocks) {
           await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
           const result = await executeTool(toolUse.name, toolUse.input, realToken, backend)
           await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
           toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
         }
-
         loopMessages = [...loopMessages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }]
       }
 
-      // Persist to KV: save the full conversation (user messages + final assistant reply)
       if (erpToken && fullAssistantText) {
-        const savedMessages = [
-          ...messages,
-          { role: 'assistant', content: fullAssistantText },
-        ]
+        const savedMessages = [...messages, { role: 'assistant', content: fullAssistantText }]
         await saveMemory(env.AGENT_MEMORY, erpToken, agentId, savedMessages)
       }
 

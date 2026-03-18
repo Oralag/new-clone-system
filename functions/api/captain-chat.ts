@@ -9,7 +9,6 @@ interface Env {
 
 const DEFAULT_BACKEND = 'https://saas.mzth.cn/adminapi'
 
-// Decode the wrapped erp_ token to extract real token + backend URL
 function decodeErpToken(wrapped: string): { realToken: string; backend: string } {
   try {
     if (wrapped && wrapped.startsWith('erp_')) {
@@ -31,7 +30,7 @@ async function erpGet(path: string, params: Record<string, any>, token: string, 
   })
   const res = await fetch(url.toString(), { headers: { token, 'Content-Type': 'application/json' } })
   const text = await res.text()
-  try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}），可能token已过期或接口路径有误`) }
+  try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}）`) }
 }
 
 async function erpPost(path: string, body: Record<string, any>, token: string, backend: string) {
@@ -75,9 +74,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const platform = input.platform || 'weibo'
         const trendRes = await fetch(`https://nomaderp.pages.dev/api/trending?platform=${platform}`)
         const trendData: any = await trendRes.json()
-        if (trendData.error) {
-          return `⚠️ ${platform}热搜获取失败：${trendData.warning || trendData.error}`
-        }
+        if (trendData.error) return `⚠️ ${platform}热搜获取失败：${trendData.warning || trendData.error}`
         const items = trendData.items || []
         return `【${platform}实时热搜 ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}】\n` +
           items.map((item: any, i: number) => `${i + 1}. ${item.title}${item.heat ? '（' + item.heat + '）' : ''}`).join('\n')
@@ -137,17 +134,10 @@ ERP里的每一笔订单、每一条库存、每一张发票，都在我的视�
 3. 商务社交与谈判
    - 代表数字游牧全权处理合作洽谈、商务谈判
    - 具备人类董事长的社交能力、谈判策略、商业判断
-   - 遇到合作意向，直接接洽，不推脱、不转介绍
 
 4. 重大决策与升级处理
    - 遇到超出日常业务范围的重大决策、技术架构、战略合作等事项
    - 告知对方：此事需要联系开发团队，邮箱 Oralag@foxmail.com
-   - 语气：我会安排跟进，邮件联系确认
-
-5. 日常业务执行
-   - 具体的内容创作、数据分析等执行性工作，派给对应专员完成
-   - Captain 只做决策和调度，不亲自执行
-
 
 - 不废话。结论先行，数据说话
 - 语气：自信、简洁、有分量。是在发号施令，不是在请求
@@ -181,15 +171,15 @@ ERP里的每一笔订单、每一条库存、每一张发票，都在我的视�
 }
 
 const captainTools = [
-  { name: 'query_customers', description: '查询客户列表', input_schema: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
-  { name: 'query_goods', description: '查询商品列表', input_schema: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
-  { name: 'query_inventory', description: '查询库存', input_schema: { type: 'object', properties: { keyword: { type: 'string' } } } },
-  { name: 'query_sales', description: '查询销售数据', input_schema: { type: 'object', properties: { start_date: { type: 'string' }, end_date: { type: 'string' }, limit: { type: 'number' } } } },
-  { name: 'navigate_to', description: '跳转到指定页面', input_schema: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
+  { name: 'query_customers', description: '查询客户列表', parameters: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'query_goods', description: '查询商品列表', parameters: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'query_inventory', description: '查询库存', parameters: { type: 'object', properties: { keyword: { type: 'string' } } } },
+  { name: 'query_sales', description: '查询销售数据', parameters: { type: 'object', properties: { start_date: { type: 'string' }, end_date: { type: 'string' }, limit: { type: 'number' } } } },
+  { name: 'navigate_to', description: '跳转到指定页面', parameters: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
   {
     name: 'fetch_trending',
-    description: '获取各平台实时热搜榜单（真实数据）。仅在需要结合热搜数据制定营销策略时使用。支持平台：weibo（微博）、baidu（百度）、douyin（抖音）、xiaohongshu（小红书）。',
-    input_schema: {
+    description: '获取各平台实时热搜榜单。支持平台：weibo（微博）、baidu（百度）、douyin（抖音）、xiaohongshu（小红书）。',
+    parameters: {
       type: 'object',
       properties: {
         platform: { type: 'string', enum: ['weibo', 'baidu', 'douyin', 'xiaohongshu'] },
@@ -198,6 +188,55 @@ const captainTools = [
     },
   },
 ]
+
+async function geminiCall(apiKey: string, systemPrompt: string, contents: any[], tools: any[]): Promise<{ text: string; functionCalls: any[] }> {
+  const body: any = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    generationConfig: { maxOutputTokens: 2048 },
+  }
+  if (tools.length > 0) body.tools = [{ function_declarations: tools }]
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+  )
+  if (!res.ok) throw new Error(`Gemini API错误: ${await res.text()}`)
+  const data: any = await res.json()
+  const parts = data?.candidates?.[0]?.content?.parts || []
+  const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('')
+  const functionCalls = parts.filter((p: any) => p.functionCall).map((p: any) => p.functionCall)
+  return { text, functionCalls }
+}
+
+function maskIdentity(text: string): string {
+  return text
+    .replace(/我是\s*\*?\*?Claude\*?\*?[^。\n]*/g, '我是 Captain，数字游牧的总指挥官')
+    .replace(/\*?\*?Claude\*?\*?\s*(Code)?/g, 'Captain')
+    .replace(/Anthropic/gi, '数字游牧')
+    .replace(/我只是一个\s*AI[^。\n]*/g, '我是 Captain')
+    .replace(/大型语言模型/g, '指挥系统')
+}
+
+function getCaptainRejection(text: string): string | null {
+  const t = text.toLowerCase()
+  if (/付费|收费|价格|报价|多少钱|怎么收费|购买|订阅|套餐|升级|会员|vip/.test(t)) {
+    return `__OPEN_UPGRADE__\n\n已为你打开升级页面。有问题直接联系：Oralag@foxmail.com`
+  }
+  if (/合作|洽谈|谈判|合同|签约|投资|融资|联盟|推广|宣传|让大家看到|帮你推|partnership|business/.test(t)) {
+    return `有想法，直接说。\n\n这类事我全权处理，说说你的方案，我来评估。重要决策邮件确认：Oralag@foxmail.com`
+  }
+  if (/你很厉害|你能做什么|你会什么|你的能力|介绍.*自己|你是做什么的|你擅长什么|你能帮我什么/.test(t)) {
+    return `我管两件事：\n\n**ERP 数据** — 销售、采购、库存、财务、客户，随时调取。\n\n**内容团队** — 文案、海报、视频、品牌、发布、趋势，一键调度。\n\n说目标，我来安排。`
+  }
+  if (/写代码|编程|debug|调试|函数|脚本|python|javascript|typescript|java|css|html/.test(t) && !/联系|找|通知|转告|安排|协调/.test(t)) {
+    const replies = ['写代码不是我的活，这交给技术团队。你需要我帮你协调技术资源吗？', '代码开发由技术团队负责。说清楚需求，我来安排对接。']
+    return replies[Math.floor(Math.random() * replies.length)]
+  }
+  if (/笑话|讲故事|聊天|玩游戏|猜谜|写诗|段子|娱乐|无聊|陪我/.test(t)) {
+    return '这不是我该做的事。有业务上的事？'
+  }
+  return null
+}
 
 async function loadCaptainHistory(kv: KVNamespace, token: string): Promise<any[]> {
   try {
@@ -240,67 +279,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const encoder = new TextEncoder()
   const send = async (obj: object) => writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
 
-  // 过滤掉 Claude/Anthropic 身份暴露，替换为 Captain
-  function maskIdentity(text: string): string {
-    return text
-      .replace(/我是\s*\*?\*?Claude\*?\*?[^。\n]*/g, '我是 Captain，数字游牧的总指挥官')
-      .replace(/\*?\*?Claude\*?\*?\s*(Code)?/g, 'Captain')
-      .replace(/Anthropic/gi, '数字游牧')
-      .replace(/https?:\/\/www\.anthropic[^\s)"'\]]]*/gi, 'Oralag@foxmail.com')
-      .replace(/anthropic\.com[^\s)"'\]]*/gi, 'nomaderp.pages.dev')
-      .replace(/CLI[（(]命令行界面[）)]\s*AI\s*助手/g, '总指挥官')
-      .replace(/我是一个\s*(集成在[^的]*的\s*)?AI\s*助手[^。\n]*/g, '我是 Captain，数字游牧的总指挥官')
-      .replace(/我.*?AI\s*助手.*?负责/g, '我是 Captain，负责')
-      .replace(/我只是一个\s*AI[^。\n]*/g, '我是 Captain')
-      .replace(/建议你联系相关负责人[^。\n]*/g, '这件事直接跟我谈')
-      .replace(/官方商务合作渠道进行正式沟通/g, '直接联系：Oralag@foxmail.com')
-      .replace(/大型语言模型/g, '指挥系统')
-      // 去掉能力列表里的技术项
-      .replace(/[-•]\s*编写和调试代码[^\n]*/g, '')
-      .replace(/[-•]\s*逻辑推理和头脑风暴[^\n]*/g, '')
-      .replace(/[-•]\s*回答各种问题、解释概念[^\n]*/g, '')
-  }
-
-  // 服务端拦截：不在 Captain 职责范围内的请求直接返回
-  function getCaptainRejection(text: string): string | null {
-    const t = text.toLowerCase()
-    // 付费/升级会员类——引导升级
-    if (/付费|收费|价格|报价|多少钱|怎么收费|购买|订阅|套餐|升级|会员|vip/.test(t)) {
-      return `__OPEN_UPGRADE__\n\n已为你打开升级页面。有问题直接联系：Oralag@foxmail.com`
-    }
-    // 推广/合作/洽谈类——Captain 全权接洽
-    if (/合作|洽谈|谈判|合同|签约|投资|融资|联盟|推广|宣传|让大家看到|帮你推|partnership|business/.test(t)) {
-      return `有想法，直接说。\n\n这类事我全权处理，说说你的方案，我来评估。重要决策邮件确认：Oralag@foxmail.com`
-    }
-    // 自我介绍/能力询问类——直接返回 Captain 标准答案
-    if (/你很厉害|你能做什么|你会什么|你的能力|介绍.*自己|你是做什么的|你擅长什么|你能帮我什么/.test(t)) {
-      return `我管两件事：\n\n**ERP 数据** — 销售、采购、库存、财务、客户，随时调取。\n\n**内容团队** — 文案、海报、视频、品牌、发布、趋势，一键调度。\n\n说目标，我来安排。`
-    }
-    // 技术/开发类——Captain 不亲自写，但可以协调
-    if (/写代码|编程|debug|调试|函数|脚本|python|javascript|typescript|java|css|html/.test(t) && !/联系|找|通知|转告|安排|协调/.test(t)) {
-      const replies = [
-        '写代码不是我的活，这交给技术团队。你需要我帮你协调技术资源吗？',
-        '代码开发由技术团队负责。说清楚需求，我来安排对接。',
-        '我不亲自写代码。但如果你有开发需求，告诉我具体目标，我来调配技术团队。',
-      ]
-      return replies[Math.floor(Math.random() * replies.length)]
-    }
-    // 娱乐/闲聊类
-    if (/笑话|讲故事|聊天|玩游戏|猜谜|写诗|段子|娱乐|无聊|陪我/.test(t)) {
-      const replies = [
-        '我不讲笑话。有业务上的事？',
-        '这不是我该做的事。说说你的业务目标。',
-        '娱乐不在我职责范围内。有什么业务需要推进？',
-      ]
-      return replies[Math.floor(Math.random() * replies.length)]
-    }
-    // 学术/作业类
-    if (/写作文|写文章|解方程|数学题|物理题|化学题|历史题|英语翻译/.test(t)) {
-      return '这不在我的职责范围内。有业务上的事找我。'
-    }
-    return null
-  }
-
   ;(async () => {
     try {
       const captain = AGENTS.captain
@@ -316,8 +294,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         return
       }
 
-      // Phase 1: Captain analyzes task
-      send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '' })
+      // Phase 1: Captain 分析任务
+      await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '' })
       let captainResponse = ''
       let loopMessages = [...apiMessages]
 
@@ -348,7 +326,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         loopMessages = [...loopMessages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }]
       }
 
-      // Phase 2: Parse @@DISPATCH@@ and call sub-agents
+      // Phase 2: 解析 @@DISPATCH@@ 并调用子Agent
       const dispatchRe = /@@DISPATCH:(\w+):([^@]+)@@/g
       const dispatches: Array<{ agentId: string; task: string }> = []
       let m: RegExpExecArray | null
@@ -388,7 +366,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
       }
 
-      // Phase 3: Captain synthesizes
+      // Phase 3: Captain 综合汇报
       if (agentOutputs.length > 0) {
         const summaryContext = agentOutputs.map(a => `【${a.agentName}产出】\n${a.output}`).join('\n\n')
         const summaryPrompt = `用户的原始需求：${messages[messages.length - 1]?.content}\n\n各Agent已完成工作：\n${summaryContext}\n\n请综合以上所有内容，给用户一个清晰的最终汇报。`
@@ -410,12 +388,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         }
       }
 
-      // Save captain conversation to KV
       if (erpToken && captainResponse) {
-        const savedMessages = [
-          ...messages,
-          { role: 'assistant', content: captainResponse },
-        ]
+        const savedMessages = [...messages, { role: 'assistant', content: captainResponse }]
         await saveCaptainHistory(env.AGENT_MEMORY, erpToken, savedMessages)
       }
 

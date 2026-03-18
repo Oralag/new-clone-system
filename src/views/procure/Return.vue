@@ -44,7 +44,7 @@
           <el-table-column prop="return_no" label="退货单号" min-width="150" />
           <el-table-column label="关联采购单" min-width="150">
             <template #default="{ row }">
-              <span style="color:#0071e3">{{ row.order_sn || '—' }}</span>
+              <span style="color:#0071e3">{{ parseMeta(row.goods_info).order_sn || row.order_sn || '—' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="供应商" min-width="120">
@@ -55,7 +55,7 @@
           </el-table-column>
           <el-table-column label="退货金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#dc2626;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+              <span style="color:#dc2626;font-weight:500">¥{{ (() => { const m = parseMeta(row.goods_info); const total = Number(m.total_amount || row.total_amount || 0); const unpaid = Math.max(0, Number(m.order_total_amount||0) - Number(m.order_pay_amount||0)); return Math.max(0, total - unpaid).toFixed(2) })() }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -168,11 +168,34 @@
         <!-- 结算信息 -->
         <div class="form-section">
           <div class="sec-title">结算信息</div>
-          <div class="settle-summary">
-            <span>退货金额合计：<b style="color:#dc2626;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
-            <span style="margin-left:32px;color:rgba(29,29,31,0.5);font-size:13px">
-              审核后将自动退款至采购订单对应资金账户，并扣减对应库存
-            </span>
+          <div class="settle-grid">
+            <div class="settle-item">
+              <span class="settle-label">退货金额合计</span>
+              <span class="settle-value" style="color:#dc2626">¥{{ fd.total_amount.toFixed(2) }}</span>
+            </div>
+            <div class="settle-item" v-if="fd.order_id">
+              <span class="settle-label">采购订单总额</span>
+              <span class="settle-value">¥{{ Number(fd.order_total_amount||0).toFixed(2) }}</span>
+            </div>
+            <div class="settle-item" v-if="fd.order_id">
+              <span class="settle-label">已付款金额</span>
+              <span class="settle-value" style="color:#16a34a">¥{{ Number(fd.order_pay_amount||0).toFixed(2) }}</span>
+            </div>
+            <div class="settle-item" v-if="fd.order_id">
+              <span class="settle-label">未付款金额</span>
+              <span class="settle-value" style="color:#d97706">¥{{ Math.max(0, Number(fd.order_total_amount||0) - Number(fd.order_pay_amount||0)).toFixed(2) }}</span>
+            </div>
+            <div class="settle-item" v-if="fd.order_id && fd.total_amount > 0">
+              <span class="settle-label">抵扣应付金额</span>
+              <span class="settle-value" style="color:#7c3aed">¥{{ Math.min(fd.total_amount, Math.max(0, Number(fd.order_total_amount||0) - Number(fd.order_pay_amount||0))).toFixed(2) }}</span>
+            </div>
+            <div class="settle-item" v-if="fd.order_id && fd.total_amount > 0">
+              <span class="settle-label">退回资金账户</span>
+              <span class="settle-value" style="color:#0071e3">¥{{ Math.max(0, fd.total_amount - Math.max(0, Number(fd.order_total_amount||0) - Number(fd.order_pay_amount||0))).toFixed(2) }}</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;color:rgba(29,29,31,0.45);font-size:12px">
+            审核后将自动扣减库存；退货金额优先抵扣未付款，剩余部分退回资金账户
           </div>
         </div>
 
@@ -221,8 +244,6 @@ import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureReturnList, createProcureReturn, deleteProcureReturn, auditProcureReturn, getProcureOrderList } from '@/api/procure'
-import { getFundList } from '@/api/finance'
-import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 
@@ -231,7 +252,11 @@ const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
-  try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
+  try { return (JSON.parse(goodsInfo || '[]') as any[]).filter((i: any) => !i._meta) } catch { return [] }
+}
+
+function parseMeta(goodsInfo: any): any {
+  try { return (JSON.parse(goodsInfo || '[]') as any[]).find((i: any) => i._meta) ?? {} } catch { return {} }
 }
 
 const searchForm = reactive<any>({ return_no: '', supplier_name: '', status: '' })
@@ -281,7 +306,16 @@ function openCreate() {
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  const meta = parseMeta(row.goods_info)
+  fd.items = parseItems(row.goods_info)
+  fd.order_id = meta.order_id || row.order_id || 0
+  fd.order_sn = meta.order_sn || row.order_sn || row.order_no || ''
+  fd.warehouse_id = meta.warehouse_id || row.warehouse_id || null
+  fd.warehouse_name = meta.warehouse_name || row.warehouse_name || ''
+  fd.fund_id = meta.fund_id || row.fund_id || null
+  fd.total_amount = meta.total_amount || row.total_amount || 0
+  fd.order_total_amount = meta.order_total_amount || row.order_total_amount || 0
+  fd.order_pay_amount = meta.order_pay_amount || row.order_pay_amount || 0
   // 还原 origin_num
   fd.items.forEach((item: any) => {
     if (!item.origin_num) item.origin_num = item.num
@@ -302,17 +336,26 @@ async function handleSave() {
   if (!returnItems.length) { ElMessage.warning('请至少选择一件商品并填写退货数量'); return }
   saving.value = true
   try {
+    // 注意：procure_return 表目前只有基础列，扩展字段存入 goods_info 的 _meta 节点
+    const goodsInfoWithMeta = [
+      ...returnItems,
+      {
+        _meta: true,
+        order_id: fd.order_id,
+        order_sn: fd.order_sn,
+        warehouse_id: fd.warehouse_id,
+        warehouse_name: fd.warehouse_name,
+        fund_id: fd.fund_id,
+        total_amount: fd.total_amount,
+        order_total_amount: fd.order_total_amount,
+        order_pay_amount: fd.order_pay_amount,
+      }
+    ]
     const payload: Record<string, any> = {
-      order_id: fd.order_id,
-      order_sn: fd.order_sn,
       supplier_id: fd.supplier_id,
       supplier_name: fd.supplier_name,
-      warehouse_id: fd.warehouse_id,
-      warehouse_name: fd.warehouse_name,
-      fund_id: fd.fund_id,
       remark: fd.remark,
-      total_amount: fd.total_amount,
-      goods_info: JSON.stringify(returnItems),
+      goods_info: JSON.stringify(goodsInfoWithMeta),
     }
     if (fd.id) payload.id = fd.id
     await createProcureReturn(payload)
@@ -337,70 +380,11 @@ async function handleAudit(row: any, status: number) {
   await ElMessageBox.confirm(`确定${action}该退货单？${status === 1 ? '\n审核后将自动扣减库存并退款至资金账户。' : status === 0 ? '\n反审核将撤销库存和财务变动。' : ''}`, '提示', { type: 'warning' })
   try {
     await auditProcureReturn(row.id, status)
-
-    // 审核通过：库存扣减 + 退款加回资金账户
-    if (status === 1) {
-      await handleReturnAuditSideEffects(row, 'audit')
-    }
-    // 反审核：库存加回 + 从资金账户扣回退款
-    if (status === 0) {
-      await handleReturnAuditSideEffects(row, 'reverse')
-    }
-
     ElMessage.success(`${action}成功`)
     stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
-  }
-}
-
-async function handleReturnAuditSideEffects(row: any, type: 'audit' | 'reverse') {
-  const items = parseItems(row.goods_info)
-  const fundId = row.fund_id
-  const returnAmount = Number(row.total_amount || 0)
-
-  // 1. 库存变动（退货=扣减库存，反审核=加回）
-  try {
-    for (const item of items) {
-      if (!item.goods_id || !item.num) continue
-      const stockRes = await http.get('/stock/StockAll/index', {
-        params: { goods_id: item.goods_id, warehouse_id: row.warehouse_id, list_rows: 10 }
-      })
-      const stockRows: any[] = stockRes.data?.rows ?? []
-      const stock = stockRows[0]
-      if (stock) {
-        const delta = type === 'audit' ? -Number(item.num) : Number(item.num)
-        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
-        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-      }
-    }
-  } catch (e: any) {
-    console.warn('退货库存变动失败', e?.message)
-  }
-
-  // 2. 资金账户变动：退货金额中只有已付款部分才退回资金账户，未付款部分直接抵扣应付
-  if (fundId && returnAmount > 0) {
-    try {
-      const orderPayAmount = Number(row.order_pay_amount || 0)
-      const orderTotalAmount = Number(row.order_total_amount || 0)
-      const unpaidAmount = Math.max(0, orderTotalAmount - orderPayAmount)
-      // 先抵扣未付款部分，剩余才退回账户
-      const refundToFund = type === 'audit'
-        ? Math.max(0, returnAmount - unpaidAmount)
-        : -Math.max(0, returnAmount - unpaidAmount)
-      if (Math.abs(refundToFund) > 0) {
-        const fundRes = await getFundList({ list_rows: 100 })
-        const funds: any[] = fundRes.data?.rows ?? []
-        const fund = funds.find((f: any) => f.id === Number(fundId))
-        if (fund) {
-          const newBalance = Math.max(0, Number(fund.balance || 0) + refundToFund)
-          await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
-        }
-      }
-    } catch (e: any) {
-      console.warn('退货资金账户变动失败', e?.message)
-    }
   }
 }
 
@@ -536,11 +520,24 @@ function confirmOrderSelect() {
   display: block;
 }
 
-.settle-summary {
-  padding-top: 4px;
-  font-size: 13px;
-  color: rgba(29,29,31,0.5);
+.settle-grid {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px 40px;
+  padding: 4px 0 6px;
+}
+.settle-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.settle-label {
+  font-size: 12px;
+  color: rgba(29,29,31,0.45);
+}
+.settle-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
 }
 </style>
