@@ -5,7 +5,7 @@
       <span class="summary-item">应付总金额：<strong class="red">{{ fmt(summaryUnpaid) }}</strong></span>
       <span class="summary-item">已付总金额：<strong class="blue">{{ fmt(summaryPaid) }}</strong></span>
       <span class="summary-item">采购总额：<strong class="orange">{{ fmt(summaryOrder) }}</strong></span>
-      <span class="summary-item">退货总金额：<strong>{{ fmt(0) }}</strong></span>
+      <span class="summary-item">退货总金额：<strong>{{ fmt(summaryReturn) }}</strong></span>
     </div>
 
     <el-card class="table-card">
@@ -114,18 +114,23 @@ import { useRouter } from 'vue-router'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import http from '@/api/http'
 import { getSupplierList } from '@/api/procure'
+import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 
 const router = useRouter()
 
 const loading = ref(false)
 const rows = ref<any[]>([])
+const rawRows = ref<any[]>([])
+const procureReturnRows = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
 const supplierOptions = ref<any[]>([])
 
-// 直接使用后端按单据汇总后的结果，统一口径
-const displayRows = computed(() => rows.value)
+const displayRows = computed(() => {
+  const normalizedReturns = normalizeProcureReturnFinanceRows(procureReturnRows.value)
+  return applyProcureReturnsToPayableRows(rawRows.value, normalizedReturns)
+})
 
 const searchForm = reactive({ supplier_name: '', date_from: '', date_to: '' })
 
@@ -136,22 +141,36 @@ function fmt(v: any) {
 const summaryOrder = computed(() => displayRows.value.reduce((s, r) => s + Number(r.order_amount || 0), 0))
 const summaryPaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.paid_amount || 0), 0))
 const summaryUnpaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0))
+const summaryReturn = computed(() => displayRows.value.reduce((s, r) => s + Number(r.return_amount || 0), 0))
 
 async function load() {
   loading.value = true
   try {
-    const res = await http.get('/finance/PayAccounts/index', {
-      params: {
-        page: page.value,
-        list_rows: pageSize.value,
-        supplier_name: searchForm.supplier_name,
-        date_from: searchForm.date_from,
-        date_to: searchForm.date_to,
-        group_by_supplier: 1,
-      }
-    })
-    rows.value = res.data?.rows ?? []
-    total.value = res.data?.total ?? 0
+    const [payableRes, returnRes] = await Promise.all([
+      http.get('/finance/PayAccounts/index', {
+        params: {
+          page: page.value,
+          list_rows: pageSize.value,
+          supplier_name: searchForm.supplier_name,
+          date_from: searchForm.date_from,
+          date_to: searchForm.date_to,
+          group_by_supplier: 1,
+        }
+      }),
+      http.get('/procure/ProcureReturn/index', {
+        params: {
+          supplier_name: searchForm.supplier_name,
+          date_from: searchForm.date_from,
+          date_to: searchForm.date_to,
+          status: 1,
+          list_rows: 1000,
+        }
+      }),
+    ])
+    rawRows.value = payableRes.data?.rows ?? []
+    rows.value = rawRows.value
+    procureReturnRows.value = returnRes.data?.rows ?? []
+    total.value = payableRes.data?.total ?? 0
   } finally {
     loading.value = false
   }

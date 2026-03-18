@@ -424,6 +424,7 @@ import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, Ar
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList } from '@/api/finance'
+import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 
 const router = useRouter()
 
@@ -438,6 +439,7 @@ const rechargeList = ref<any[]>([])  // 会员充值 /retail/recharge/index
 const retailList = ref<any[]>([])    // 零售单 /retail/order/index
 const receivableList = ref<any[]>([])
 const payableList = ref<any[]>([])
+const procureReturnFinanceList = ref<any[]>([])
 const purchasePayList = ref<any[]>([])
 const saleOutList = ref<any[]>([])
 const flowVisible = ref(false)
@@ -505,6 +507,11 @@ const allFlowItems = computed(() => {
     if (Number(r.amount || 0) <= 0) continue
     const isCustomer = r.pay_type === 'customer'
     items.push({ type: 'income', source: isCustomer ? '客户预收款' : '供应商预付款', name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: (r.create_time || '').slice(0, 10), order_no: r.prepay_no || '' })
+  }
+  // 7. 采购退货退款（income）
+  for (const r of procureReturnFinanceList.value) {
+    if (Number(r.refund_amount || 0) <= 0) continue
+    items.push({ type: 'income', source: '供应商退款', name: r.supplier_name || '—', amount: Number(r.refund_amount || 0), date: r.date || '', order_no: r.order_no || '' })
   }
   return items.sort((a, b) => b.date.localeCompare(a.date))
 })
@@ -795,7 +802,7 @@ async function savePay() {
 
 onMounted(async () => {
   try {
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes] = await Promise.all([
+    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes] = await Promise.all([
       getFundList({ list_rows: 100 }),
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
       getCollectReceiptList({ list_rows: 1000 }),
@@ -809,13 +816,16 @@ onMounted(async () => {
       http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
       http.get('/shop/ShopCustomer/index', { params: { list_rows: 500 } }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
+      http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
     ])
     fundList.value = fundRes.data?.rows ?? fundRes.data?.list ?? []
+    const fundNameMap = new Map<number, string>(fundList.value.map((row: any) => [Number(row.id), String(row.name || '')]))
     prepayList.value = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
     collectList.value = collectRes.data?.rows ?? collectRes.data?.list ?? []
     payList.value = payRes.data?.rows ?? payRes.data?.list ?? []
     receivableList.value = receivableRes.data?.rows ?? receivableRes.data?.list ?? []
-    payableList.value = payableRes.data?.rows ?? payableRes.data?.list ?? []
+    procureReturnFinanceList.value = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [], fundNameMap)
+    payableList.value = applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], procureReturnFinanceList.value)
     purchasePayList.value = purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []
     saleOutList.value = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
     retailList.value = retailRes.data?.rows ?? retailRes.data?.list ?? []

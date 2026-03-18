@@ -86,8 +86,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getPayReceiptList, getCollectReceiptList, getExpenseList } from '@/api/finance'
+import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList } from '@/api/finance'
 import http from '@/api/http'
+import { normalizeProcureReturnFinanceRows, applyProcureReturnsToPayableRows } from '@/utils/procureReturnFinance'
 
 const route = useRoute()
 const summaryLoading = ref(false)
@@ -160,7 +161,7 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes] = await Promise.all([
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes] = await Promise.all([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
       getPayReceiptList({ list_rows: 1000 }),
@@ -168,9 +169,13 @@ onMounted(async () => {
       http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
       http.get('/finance/PayAccounts/index', { params: { list_rows: 500 } }),
       http.get('/finance/Prepay/index', { params: { list_rows: 1000 } }),
+      getFundList({ list_rows: 200 }),
+      http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
     ])
 
     const items: FlowItem[] = []
+    const fundRows: any[] = fundRes.data?.rows ?? fundRes.data?.list ?? []
+    const fundNameMap = new Map<number, string>(fundRows.map((row: any) => [Number(row.id), String(row.name || '')]))
 
     const collectSourceMap: Record<string, string> = { customer: '销售收款', supplier: '供应商退款', staff: '员工还款', other: '其他收入' }
     const collects: any[] = collectRes.data?.rows ?? collectRes.data?.list ?? []
@@ -259,6 +264,21 @@ onMounted(async () => {
       })
     }
 
+    const normalizedReturns = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [], fundNameMap)
+    for (const r of normalizedReturns) {
+      if (r.refund_amount <= 0) continue
+      items.push({
+        date: r.date,
+        fund_name: r.fund_name || '—',
+        type: 'income',
+        source: '供应商退款',
+        name: r.supplier_name || '—',
+        order_no: r.order_no || '',
+        amount: Number(r.refund_amount || 0),
+        remark: r.remark || '采购退货退款',
+      })
+    }
+
     const validItems = items.filter(i => i.amount > 0)
     validItems.sort((a, b) => b.date.localeCompare(a.date))
     allItems.value = validItems
@@ -269,7 +289,7 @@ onMounted(async () => {
     summary.expense = expenseTotal
     summary.balance = Math.max(0, incomeTotal - expenseTotal)
     // 未付款来源：应付账款（PayAccounts），数据与应付账款页面一致
-    const payables: any[] = payableRes.data?.rows ?? payableRes.data?.list ?? []
+    const payables = applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], normalizedReturns)
     summary.unpaid = payables.reduce((s, r) => s + Math.max(0, Number(r.un_pay_amount || 0)), 0)
 
   } catch { /* ignore */ } finally {
