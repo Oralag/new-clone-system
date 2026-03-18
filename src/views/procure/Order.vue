@@ -270,11 +270,9 @@
                   @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)" />
               </template>
             </el-table-column>
-            <el-table-column label="分类" width="120">
+            <el-table-column label="分类" width="100">
               <template #default="{ row }">
-                <el-select v-model="row.cate_name" size="small" style="width:100%" placeholder="分类" clearable filterable>
-                  <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.name" />
-                </el-select>
+                <span style="font-size:12px;color:#666">{{ row.cate_name || '—' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="单位" width="70" align="center">

@@ -233,7 +233,7 @@
             </el-table-column>
             <el-table-column label="分类" width="100">
               <template #default="{ row }">
-                <el-input v-model="row.cate_name" size="small" placeholder="分类" />
+                <span style="font-size:12px;color:#666">{{ row.cate_name || '—' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="单位" width="70" align="center">
