@@ -5,7 +5,7 @@
     <div v-if="!showForm">
       <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureOrderList"
-          del-path="/stock/PurchaseOrder/batchDel"
+          :batch-del-api="batchDelProcureOrders"
           export-file-name="采购订单" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="采购单号" clearable style="width:160px" />
@@ -101,7 +101,7 @@
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -987,11 +987,54 @@ async function handleSave() {
   }
 }
 
-async function handleDelete(id: number) {
+async function handleDelete(row: any) {
   await ElMessageBox.confirm('确定删除该采购单？', '提示', { type: 'warning' })
-  await deleteProcureOrder(id)
+  // 回滚资金账户余额（后端创建时已扣减，删除需加回）
+  try {
+    const payAmount = Number(row.pay_amount || 0)
+    const fundId = row.fund_id
+    if (payAmount > 0 && fundId) {
+      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+      const funds: any[] = fundRes.data?.rows ?? []
+      const fund = funds.find((f: any) => f.id === fundId)
+      if (fund) {
+        const newBalance = Number(fund.balance || 0) + payAmount
+        await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+      }
+    }
+  } catch (e: any) {
+    console.warn('采购资金账户余额回滚失败', e?.message)
+  }
+  await deleteProcureOrder(row.id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
+}
+
+async function batchDelProcureOrders({ ids }: { ids: number[] }) {
+  const rows: any[] = tableRef.value?.selectedRows ?? []
+  // 按 fund_id 分组，分别加回余额
+  try {
+    const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+    const funds: any[] = fundRes.data?.rows ?? []
+    const refundMap: Record<number, number> = {}
+    for (const row of rows) {
+      const payAmount = Number(row.pay_amount || 0)
+      const fundId = Number(row.fund_id)
+      if (payAmount > 0 && fundId) {
+        refundMap[fundId] = (refundMap[fundId] || 0) + payAmount
+      }
+    }
+    for (const [fundId, amount] of Object.entries(refundMap)) {
+      const fund = funds.find((f: any) => f.id === Number(fundId))
+      if (fund) {
+        const newBalance = Number(fund.balance || 0) + amount
+        await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+      }
+    }
+  } catch (e: any) {
+    console.warn('采购资金账户余额回滚失败', e?.message)
+  }
+  return http.post('/stock/PurchaseOrder/batchDel', { ids })
 }
 
 async function handleAudit(row: any, status: number) {

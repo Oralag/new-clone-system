@@ -208,8 +208,8 @@
         </el-row>
       </el-form>
 
-      <!-- 财务信息（编辑模式显示） -->
-      <div v-if="formData.id" class="finance-panel" v-loading="financeLoading">
+      <!-- 财务信息（新增和编辑都显示） -->
+      <div class="finance-panel" v-loading="financeLoading">
         <div class="finance-title">财务信息</div>
         <div class="finance-grid">
           <div class="finance-item">
@@ -229,7 +229,7 @@
             <span class="fi-value orange">¥{{ financeInfo.unReceived.toFixed(2) }}</span>
           </div>
         </div>
-        <div class="finance-actions">
+        <div v-if="formData.id" class="finance-actions">
           <el-button type="success" size="small" :icon="Plus" @click="openPrepayDialog">充值预付款</el-button>
           <el-button size="small" @click="viewReceivable">查看应收记录</el-button>
         </div>

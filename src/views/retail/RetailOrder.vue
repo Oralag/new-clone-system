@@ -2,7 +2,7 @@
   <div class="page-container">
     <el-card>
       <ScTable ref="tableRef" :api-obj="getRetailOrderList"
-          del-path="/retail/order/batchDel"
+          :batch-del-api="batchDelRetailOrders"
           export-file-name="零售订单" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.order_no" placeholder="订单编号" clearable style="width:160px" />
@@ -32,7 +32,7 @@
         <el-table-column prop="order_date" label="订单日期" width="110" />
         <el-table-column label="操作" width="80" fixed="right">
           <template #default="{ row }">
-            <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -219,11 +219,38 @@ async function handleSave() {
   } finally { saving.value = false }
 }
 
-async function handleDelete(id: number) {
+async function deductRetailFund(amount: number) {
+  if (amount <= 0) return
+  const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+  const funds: any[] = fundRes.data?.rows ?? []
+  const retailFund = funds.find((f: any) => f.name === '零售收款账户')
+  if (retailFund) {
+    const newBalance = Math.max(0, Number(retailFund.balance || 0) - amount)
+    await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: newBalance })
+  }
+}
+
+async function handleDelete(row: any) {
   await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
-  await deleteRetailOrder(id)
+  try {
+    await deductRetailFund(Number(row.pay_amount || 0))
+  } catch (e: any) {
+    console.warn('零售账户余额回滚失败', e?.message)
+  }
+  await deleteRetailOrder(row.id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
+}
+
+async function batchDelRetailOrders({ ids }: { ids: number[] }) {
+  const rows: any[] = tableRef.value?.selectedRows ?? []
+  const totalPay = rows.reduce((s: number, r: any) => s + Number(r.pay_amount || 0), 0)
+  try {
+    await deductRetailFund(totalPay)
+  } catch (e: any) {
+    console.warn('零售账户余额回滚失败', e?.message)
+  }
+  return http.post('/retail/order/batchDel', { ids })
 }
 
 // 商品选择器
