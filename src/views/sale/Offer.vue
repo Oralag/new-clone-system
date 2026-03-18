@@ -74,8 +74,8 @@
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : '待审核' }}
+              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 4 ? 'warning' : 'info'" size="small">
+                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : row.status === 4 ? '已转单' : '待审核' }}
               </el-tag>
             </template>
           </el-table-column>
@@ -88,7 +88,8 @@
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+              <el-button v-if="row.status === 1" type="success" link size="small" @click="handleConvertToContract(row)">转销售合同</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -333,6 +334,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Plus, Delete, Search, Printer, Download } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -346,6 +348,7 @@ import { usePermissionStore } from '@/stores/permission'
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const permStore = usePermissionStore()
+const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
@@ -636,6 +639,27 @@ async function handleAudit(row: any, status: number) {
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
   }
+}
+
+async function handleConvertToContract(row: any) {
+  await ElMessageBox.confirm(`确定将报价单「${row.offer_no || row.id}」转为销售合同？`, '转销售合同', { type: 'info' })
+  // 标记报价单为已转单 status=4（或通过edit接口更新备注）
+  try {
+    await http.post('/shop/SalesOffer/edit', { id: row.id, status: 4 })
+  } catch (e: any) {
+    console.warn('更新报价单状态失败', e?.message)
+  }
+  // 用 sessionStorage 传递数据
+  sessionStorage.setItem('contract_from_offer', JSON.stringify({
+    offer_id: row.id,
+    offer_no: row.offer_no || '',
+    customer_id: row.customer_id,
+    customer_name: row.customer_name || '',
+    admin_name: row.admin_name || '',
+    remark: row.remark || '',
+    goods_info: row.goods_info || '[]',
+  }))
+  router.push('/sale/contract')
 }
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────

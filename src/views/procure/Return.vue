@@ -101,10 +101,19 @@
         <!-- 关联采购订单 -->
         <div class="form-section">
           <div class="sec-title">关联采购订单</div>
-          <div v-if="fd.order_id" style="display:flex;align-items:center;gap:12px">
+          <div v-if="fd.order_id" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
             <el-tag type="success" size="large">{{ fd.order_sn }}</el-tag>
             <span style="color:rgba(29,29,31,0.5);font-size:13px">供应商：{{ fd.supplier_name }}</span>
             <span style="color:rgba(29,29,31,0.5);font-size:13px">仓库：{{ fd.warehouse_name }}</span>
+            <span style="font-size:13px">
+              采购总额：<b style="color:#0071e3">¥{{ Number(fd.order_total_amount||0).toFixed(2) }}</b>
+            </span>
+            <span style="font-size:13px">
+              已付款：<b style="color:#16a34a">¥{{ Number(fd.order_pay_amount||0).toFixed(2) }}</b>
+            </span>
+            <span v-if="fd.order_total_amount - fd.order_pay_amount > 0" style="font-size:13px">
+              未付款：<b style="color:#dc2626">¥{{ (Number(fd.order_total_amount||0) - Number(fd.order_pay_amount||0)).toFixed(2) }}</b>
+            </span>
             <el-button v-if="!isReadonly" size="small" @click="openOrderPicker">重新选择</el-button>
           </div>
           <el-button v-else-if="!isReadonly" type="primary" @click="openOrderPicker">选择采购订单</el-button>
@@ -235,6 +244,8 @@ const defaultFd = () => ({
   return_no: '',
   order_id: 0,
   order_sn: '',
+  order_total_amount: 0,
+  order_pay_amount: 0,
   supplier_id: null as any,
   supplier_name: '',
   warehouse_id: null as any,
@@ -368,16 +379,24 @@ async function handleReturnAuditSideEffects(row: any, type: 'audit' | 'reverse')
     console.warn('退货库存变动失败', e?.message)
   }
 
-  // 2. 资金账户变动（退款=加回，反审核=扣回）
+  // 2. 资金账户变动：退货金额中只有已付款部分才退回资金账户，未付款部分直接抵扣应付
   if (fundId && returnAmount > 0) {
     try {
-      const fundRes = await getFundList({ list_rows: 100 })
-      const funds: any[] = fundRes.data?.rows ?? []
-      const fund = funds.find((f: any) => f.id === Number(fundId))
-      if (fund) {
-        const delta = type === 'audit' ? returnAmount : -returnAmount
-        const newBalance = Number(fund.balance || 0) + delta
-        await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: Math.max(0, newBalance) })
+      const orderPayAmount = Number(row.order_pay_amount || 0)
+      const orderTotalAmount = Number(row.order_total_amount || 0)
+      const unpaidAmount = Math.max(0, orderTotalAmount - orderPayAmount)
+      // 先抵扣未付款部分，剩余才退回账户
+      const refundToFund = type === 'audit'
+        ? Math.max(0, returnAmount - unpaidAmount)
+        : -Math.max(0, returnAmount - unpaidAmount)
+      if (Math.abs(refundToFund) > 0) {
+        const fundRes = await getFundList({ list_rows: 100 })
+        const funds: any[] = fundRes.data?.rows ?? []
+        const fund = funds.find((f: any) => f.id === Number(fundId))
+        if (fund) {
+          const newBalance = Math.max(0, Number(fund.balance || 0) + refundToFund)
+          await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+        }
       }
     } catch (e: any) {
       console.warn('退货资金账户变动失败', e?.message)
@@ -426,6 +445,8 @@ function confirmOrderSelect() {
   const order = selectedOrder.value
   fd.order_id = order.id
   fd.order_sn = order.order_sn
+  fd.order_total_amount = Number(order.total_amount || order.after_discount || 0)
+  fd.order_pay_amount = Number(order.pay_amount || 0)
   fd.supplier_id = order.supplier_id
   fd.supplier_name = order.supplier_name
   fd.warehouse_id = order.warehouse_id

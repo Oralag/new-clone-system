@@ -83,7 +83,7 @@
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="router.push('/finance/receivable')">查看应收</el-button>
               <el-button v-if="row.status === 1" type="success" link size="small" @click="router.push('/warehouse/stock')">查看库存</el-button>
-              <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -98,6 +98,7 @@
           <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
           <span class="form-title">{{ isReadonly ? '查看出库单' : (fd.id ? '编辑出库单' : '新增出库') }}</span>
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
+          <el-tag v-if="fd.contract_id && !isReadonly" type="info" size="small">来自合同</el-tag>
         </div>
         <div class="form-actions">
           <el-button :icon="Document" @click="handlePrint">打印出库单</el-button>
@@ -563,7 +564,39 @@ async function loadCates() {
   const rc = res.data?.rows ?? []; cateOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.name === c.name) === i)
 }
 
-onMounted(() => { loadCustomers(); loadWarehouses(); loadCates(); loadFunds() })
+onMounted(() => {
+  loadCustomers(); loadWarehouses(); loadCates(); loadFunds()
+  const contractData = sessionStorage.getItem('saleout_from_contract')
+  if (contractData) {
+    sessionStorage.removeItem('saleout_from_contract')
+    try {
+      const c = JSON.parse(contractData)
+      openCreate()
+      if (c.customer_id) { fd.customer_id = Number(c.customer_id); fd.customer_name = String(c.customer_name || '') }
+      if (c.warehouse_id) { fd.warehouse_id = Number(c.warehouse_id); fd.warehouse_name = String(c.warehouse_name || '') }
+      fd.admin_name = String(c.admin_name || '')
+      fd.remark = `来自销售合同 ${c.contract_sn}`
+      fd.contract_id = Number(c.contract_id || 0)
+      const items = JSON.parse(String(c.goods_info || '[]'))
+      fd.items = items.map((i: any) => ({
+        goods_id: i.goods_id || 0,
+        goods_name: i.goods_name || '',
+        goods_sn: i.goods_sn || '',
+        spec: i.spec || '',
+        cate_name: i.cate_name || '',
+        unit_name: i.unit_name || '',
+        batch_no: i.batch_no || '',
+        num: i.num || 0,
+        price_no_tax: i.price_no_tax || 0,
+        tax_rate: i.tax_rate || 0,
+        price: i.price || i.sell_price || 0,
+        cost_price: i.cost_price || 0,
+        remark: i.remark || '',
+      }))
+      calcTotal()
+    } catch { /* ignore */ }
+  }
+})
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface SaleOutItem {
@@ -594,6 +627,7 @@ const defaultFd = () => ({
   receive_amount: 0,
   installment: false,
   items: [] as SaleOutItem[],
+  contract_id: 0,
 })
 
 const fd = reactive(defaultFd())

@@ -100,6 +100,7 @@
               </template>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1 && getPendingAmount(row) > 0.01" type="success" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="handleConvertToSaleOut(row)">转出库单</el-button>
               <el-button v-if="Number(row.status) === 0" type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -1397,6 +1398,22 @@ async function handleAudit(row: any, status: number) {
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
   }
+}
+
+async function handleConvertToSaleOut(row: any) {
+  await ElMessageBox.confirm(`确定将销售合同「${row.order_sn || row.id}」转为销售出库单？`, '转出库单', { type: 'info' })
+  sessionStorage.setItem('saleout_from_contract', JSON.stringify({
+    contract_id: row.id,
+    contract_sn: row.order_sn || '',
+    customer_id: row.customer_id,
+    customer_name: row.customer_name || '',
+    admin_name: row.admin_name || '',
+    warehouse_id: row.warehouse_id || '',
+    warehouse_name: row.warehouse_name || '',
+    remark: row.remark || '',
+    goods_info: row.goods_info || '[]',
+  }))
+  router.push('/sale/sale-out')
 }
 
 async function cancelAutoReceipt(row: any) {

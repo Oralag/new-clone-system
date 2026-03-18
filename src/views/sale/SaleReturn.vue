@@ -76,7 +76,7 @@
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -100,6 +100,25 @@
       </div>
 
       <div class="form-body">
+
+        <!-- 关联销售出库单 -->
+        <div class="form-section">
+          <div class="sec-title">关联销售出库单</div>
+          <div v-if="fd.order_id" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <el-tag type="success" size="large">{{ fd.order_sn }}</el-tag>
+            <span style="color:rgba(29,29,31,0.5);font-size:13px">客户：{{ fd.customer_name }}</span>
+            <span style="color:rgba(29,29,31,0.5);font-size:13px">仓库：{{ fd.warehouse_name }}</span>
+            <span style="font-size:13px">
+              出库总额：<b style="color:#0071e3">¥{{ Number(fd.order_total_amount||0).toFixed(2) }}</b>
+            </span>
+            <span style="font-size:13px">
+              已收款：<b style="color:#16a34a">¥{{ Number(fd.order_collected_amount||0).toFixed(2) }}</b>
+            </span>
+            <el-button v-if="!isReadonly" size="small" @click="openSaleOutPicker">重新选择</el-button>
+          </div>
+          <el-button v-else-if="!isReadonly" type="primary" @click="openSaleOutPicker">选择销售出库单</el-button>
+          <div v-else style="color:rgba(29,29,31,0.35)">—</div>
+        </div>
 
         <!-- 基本信息卡片 -->
         <div class="form-section">
@@ -177,8 +196,11 @@
           <!-- 工具栏 -->
           <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
-              <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
-              <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
+              <template v-if="!fd.order_id">
+                <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
+                <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
+              </template>
+              <span v-else style="font-size:13px;color:rgba(29,29,31,0.5)">已从出库单导入商品，填写退货数量即可</span>
             </div>
             <span class="goods-count">共 <b>{{ fd.items.length }}</b> 件商品</span>
           </div>
@@ -218,6 +240,9 @@
                 <el-input v-model="row.unit_name" size="small" placeholder="单位" />
               </template>
             </el-table-column>
+            <el-table-column v-if="fd.order_id" label="出库数量" width="90" align="right">
+              <template #default="{ row }">{{ row.origin_num ?? '—' }}</template>
+            </el-table-column>
             <el-table-column width="120">
               <template #header>
                 <div class="batch-header">
@@ -226,7 +251,7 @@
                 </div>
               </template>
               <template #default="{ row }">
-                <el-input-number v-model="row.num" :min="0" :precision="2" size="small"
+                <el-input-number v-model="row.num" :min="0" :max="fd.order_id && row.origin_num ? row.origin_num : undefined" :precision="2" size="small"
                   controls-position="right" style="width:100%" @change="calcItemTax(row); calcTotal()" />
               </template>
             </el-table-column>
@@ -406,6 +431,29 @@
       </template>
     </el-dialog>
 
+    <!-- 选择销售出库单弹框 -->
+    <el-dialog v-model="saleOutPickerVisible" title="选择销售出库单" width="780px" append-to-body>
+      <div style="margin-bottom:10px;display:flex;gap:8px">
+        <el-input v-model="saleOutPickerKeyword" placeholder="搜索出库单号/客户名称" clearable style="width:260px" />
+      </div>
+      <el-table :data="filteredSaleOutOrders" v-loading="saleOutPickerLoading" border height="380"
+        highlight-current-row @current-change="onSaleOutSelect">
+        <el-table-column prop="order_sn" label="出库单号" min-width="160" />
+        <el-table-column prop="customer_name" label="客户" min-width="120" />
+        <el-table-column prop="warehouse_name" label="仓库" width="110" />
+        <el-table-column label="出库金额" width="110" align="right">
+          <template #default="{ row }">¥{{ Number(row.total_amount||0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="出库日期" width="110">
+          <template #default="{ row }">{{ (row.out_date||row.create_time||'').slice(0,10) }}</template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="saleOutPickerVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!selectedSaleOut" @click="confirmSaleOutSelect">确认选择</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -414,10 +462,11 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getSaleReturnList, createSaleReturn, deleteSaleReturn, auditSaleReturn } from '@/api/sale'
+import { getSaleReturnList, createSaleReturn, deleteSaleReturn, auditSaleReturn, getSaleOutList } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { getWarehouseList } from '@/api/warehouse'
+import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 
@@ -484,6 +533,10 @@ interface SaleReturnItem {
 const defaultFd = () => ({
   id: 0,
   order_no: '',
+  order_id: 0,
+  order_sn: '',
+  order_total_amount: 0,
+  order_collected_amount: 0,
   customer_id: null as any,
   customer_name: '',
   admin_name: '',
@@ -589,6 +642,8 @@ async function handleSave() {
   saving.value = true
   try {
     const payload: Record<string, any> = {
+      order_id: fd.order_id,
+      order_sn: fd.order_sn,
       customer_id: fd.customer_id,
       customer_name: fd.customer_name,
       admin_name: fd.admin_name,
@@ -599,7 +654,7 @@ async function handleSave() {
       return_amount: fd.return_amount,
       remark: fd.remark,
       total_amount: fd.total_amount,
-      goods_info: JSON.stringify(fd.items),
+      goods_info: JSON.stringify(fd.items.filter(i => (i.num || 0) > 0)),
     }
     if (fd.id) payload.id = fd.id
     await createSaleReturn(payload)
@@ -624,10 +679,42 @@ async function handleAudit(row: any, status: number) {
   await ElMessageBox.confirm(`确定${action}该退货单？`, '提示', { type: 'warning' })
   try {
     await auditSaleReturn(row.id, status)
+
+    // 审核通过：退货=库存加回
+    if (status === 1) {
+      await handleReturnStockEffect(row, 'audit')
+    }
+    // 反审核：撤销库存加回（重新扣减）
+    if (status === 0) {
+      await handleReturnStockEffect(row, 'reverse')
+    }
+
     ElMessage.success(`${action}成功`)
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
+  }
+}
+
+async function handleReturnStockEffect(row: any, type: 'audit' | 'reverse') {
+  const items = parseItems(row.goods_info)
+  try {
+    for (const item of items) {
+      if (!item.goods_id || !item.num) continue
+      const stockRes = await http.get('/stock/StockAll/index', {
+        params: { goods_id: item.goods_id, warehouse_id: row.warehouse_id, list_rows: 10 }
+      })
+      const stockRows: any[] = stockRes.data?.rows ?? []
+      const stock = stockRows[0]
+      if (stock) {
+        // 退货审核通过=库存加回(+num)；反审核=扣减(-num)
+        const delta = type === 'audit' ? Number(item.num) : -Number(item.num)
+        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
+        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
+      }
+    }
+  } catch (e: any) {
+    console.warn('销售退货库存变动失败', e?.message)
   }
 }
 
@@ -782,6 +869,71 @@ async function confirmQuickAddCustomer() {
   } finally {
     quickCustomerSaving.value = false
   }
+}
+
+// ── 选择销售出库单 ────────────────────────────────────────────────────────────
+const saleOutPickerVisible = ref(false)
+const saleOutPickerLoading = ref(false)
+const saleOutList = ref<any[]>([])
+const saleOutPickerKeyword = ref('')
+const selectedSaleOut = ref<any>(null)
+
+const filteredSaleOutOrders = computed(() => {
+  if (!saleOutPickerKeyword.value) return saleOutList.value
+  const kw = saleOutPickerKeyword.value
+  return saleOutList.value.filter(o =>
+    o.order_sn?.includes(kw) || o.customer_name?.includes(kw)
+  )
+})
+
+function onSaleOutSelect(row: any) {
+  selectedSaleOut.value = row
+}
+
+async function openSaleOutPicker() {
+  saleOutPickerKeyword.value = ''
+  selectedSaleOut.value = null
+  saleOutPickerVisible.value = true
+  saleOutPickerLoading.value = true
+  try {
+    const res = await getSaleOutList({ status: 1, list_rows: 200 })
+    saleOutList.value = res.data?.rows ?? []
+  } catch {
+    saleOutList.value = []
+  } finally {
+    saleOutPickerLoading.value = false
+  }
+}
+
+function confirmSaleOutSelect() {
+  if (!selectedSaleOut.value) return
+  const order = selectedSaleOut.value
+  fd.order_id = order.id
+  fd.order_sn = order.order_sn
+  fd.order_total_amount = Number(order.total_amount || order.after_discount || 0)
+  fd.order_collected_amount = Number(order.collected_amount || order.pay_amount || 0)
+  fd.customer_id = order.customer_id
+  fd.customer_name = order.customer_name || ''
+  fd.warehouse_id = order.warehouse_id
+  fd.warehouse_name = order.warehouse_name || ''
+
+  // 从销售出库单商品明细生成退货行（num默认0，origin_num=出库数量）
+  const items = parseItems(order.goods_info)
+  fd.items = items.map((i: any) => ({
+    goods_id: i.goods_id || 0,
+    goods_name: i.goods_name || '',
+    goods_sn: i.goods_sn || '',
+    spec: i.spec || '',
+    unit_name: i.unit_name || '',
+    origin_num: i.num || 0,
+    num: 0,
+    price_no_tax: Number(i.price_no_tax || i.price || 0),
+    tax_rate: i.tax_rate || 0,
+    price: Number(i.price || 0),
+    remark: '',
+  }))
+  calcTotal()
+  saleOutPickerVisible.value = false
 }
 </script>
 
