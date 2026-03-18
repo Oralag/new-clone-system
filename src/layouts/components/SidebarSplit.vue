@@ -48,15 +48,23 @@ import { menuData } from './menuData'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissionStore } from '@/stores/permission'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Promotion } from '@element-plus/icons-vue'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const permStore = usePermissionStore()
 const router = useRouter()
+const route = useRoute()
 
 const visibleMenuData = computed(() => permStore.filteredMenuData)
+
+// 路由变化时自动同步顶级菜单高亮
+watchEffect(() => {
+  const path = route.path
+  const matched = menuData.find(m => m.children?.some(c => c.path && path.startsWith(c.path)))
+  if (matched) appStore.setActiveTopMenu(matched.key)
+})
 
 function onHover(key: string, e: MouseEvent) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
