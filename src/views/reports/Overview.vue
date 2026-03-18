@@ -139,7 +139,7 @@
 
         <!-- 汇总 -->
         <div class="ro-summary-col">
-          <div class="ro-col-header" style="background:#f8fafc;color:#1d1d1f">
+          <div class="ro-col-header ro-col-header-summary">
             <span>核算汇总</span>
           </div>
           <div class="ro-sum-block">
@@ -167,7 +167,7 @@
                 {{ grossProfit >= 0 ? '+' : '-' }}¥{{ fmt(Math.abs(grossProfit)) }}
               </span>
             </div>
-            <div class="ro-sum-row" style="font-size:11px;color:rgba(29,29,31,0.4)">毛利率 {{ grossMargin.toFixed(1) }}%</div>
+            <div class="ro-sum-row ro-sum-hint">毛利率 {{ grossMargin.toFixed(1) }}%</div>
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row">
               <span class="ro-sum-label">我方运费</span>
@@ -184,7 +184,7 @@
                 {{ netProfit >= 0 ? '+' : '-' }}¥{{ fmt(Math.abs(netProfit)) }}
               </span>
             </div>
-            <div class="ro-sum-row" style="font-size:11px;color:rgba(29,29,31,0.4)">净利率 {{ netMargin.toFixed(1) }}%</div>
+            <div class="ro-sum-row ro-sum-hint">净利率 {{ netMargin.toFixed(1) }}%</div>
           </div>
 
           <!-- 客户预收款余额（单独展示，不计入利润） -->
@@ -688,6 +688,9 @@ onMounted(loadAll)
   transition: background 0.15s;
 }
 .ro-prepay-contract-row:hover { background: rgba(0,113,227,0.06); }
+
+.ro-sum-hint { font-size:11px; color:rgba(29,29,31,0.4); }
+.ro-col-header-summary { background:#f8fafc; color:#1d1d1f; }
 
 @media (max-width:1200px) {
   .ro-kpi-grid { grid-template-columns:repeat(2,1fr); }

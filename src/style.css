@@ -312,6 +312,47 @@ html, body {
 [data-theme="dark"] .sidebar-resize-handle:hover { background: rgba(255,255,255,0.1) !important; }
 [data-theme="dark"] .stat-label { color: rgba(245,245,247,0.7) !important; }
 
+/* ── 智能体工作台 Dashboard 深色 ── */
+[data-theme="dark"] .command-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .command-eyebrow { color: rgba(245,245,247,0.45) !important; }
+[data-theme="dark"] .section-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .section-sub { color: rgba(245,245,247,0.35) !important; }
+[data-theme="dark"] .dept-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .dept-desc { color: rgba(245,245,247,0.35) !important; }
+[data-theme="dark"] .member-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .member-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .member-role { color: rgba(245,245,247,0.35) !important; }
+[data-theme="dark"] .member-cta { color: rgba(245,245,247,0.25) !important; }
+[data-theme="dark"] .member-card:hover .member-cta { color: #60a5fa !important; }
+[data-theme="dark"] .stats-panel,
+[data-theme="dark"] .trending-panel { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .panel-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .stat-value { color: #f5f5f7 !important; }
+[data-theme="dark"] .trending-title { color: #f5f5f7 !important; }
+[data-theme="dark"] .trending-rank { color: rgba(245,245,247,0.25) !important; }
+[data-theme="dark"] .trending-heat { color: rgba(245,245,247,0.28) !important; }
+[data-theme="dark"] .trending-empty { color: rgba(245,245,247,0.25) !important; }
+[data-theme="dark"] .trending-item { border-bottom-color: rgba(255,255,255,0.04) !important; }
+
+/* ── 智能体 AgentChat 深色 ── */
+[data-theme="dark"] .agent-chat-wrap { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .agent-sidebar { background: #242426 !important; border-right-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .agent-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .agent-specialty { color: rgba(245,245,247,0.4) !important; }
+[data-theme="dark"] .agent-feed { background: #1c1c1e !important; }
+[data-theme="dark"] .agent-chat-right { background: #2c2c2e !important; }
+[data-theme="dark"] .assistant-bubble { background: #2c2c2e !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .assistant-bubble :deep(code) { background: #3a3a3c !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .assistant-bubble :deep(pre) { background: #3a3a3c !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .assistant-bubble :deep(blockquote) { border-left-color: rgba(255,255,255,0.15) !important; color: rgba(245,245,247,0.5) !important; }
+[data-theme="dark"] .compose-input { color: #f5f5f7 !important; }
+[data-theme="dark"] .compose-input::placeholder { color: rgba(245,245,247,0.25) !important; }
+[data-theme="dark"] .agent-compose { background: #2c2c2e !important; border-top-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .tool-chip { background: #3a3a3c !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,245,247,0.6) !important; }
+[data-theme="dark"] .tool-chip.running { background: rgba(146,64,14,0.15) !important; border-color: rgba(253,230,138,0.2) !important; color: #fcd34d !important; }
+[data-theme="dark"] .tool-chip.done { background: rgba(22,101,52,0.15) !important; border-color: rgba(187,247,208,0.2) !important; color: #4ade80 !important; }
+[data-theme="dark"] .tool-chip.error { background: rgba(153,27,27,0.15) !important; border-color: rgba(254,202,202,0.2) !important; color: #f87171 !important; }
+
 /* ── 报表总览 深色 ── */
 [data-theme="dark"] .ro-page { background: #1c1c1e !important; }
 [data-theme="dark"] .ro-title { color: #f5f5f7 !important; }
@@ -344,6 +385,48 @@ html, body {
 [data-theme="dark"] .ro-summary-col .ro-col-header { background: #3a3a3c !important; color: #f5f5f7 !important; }
 [data-theme="dark"] .ro-col-header-summary { background: #3a3a3c !important; color: #f5f5f7 !important; }
 [data-theme="dark"] .ro-sum-hint { color: rgba(245,245,247,0.3) !important; }
+
+/* ── 收银台 深色 ── */
+[data-theme="dark"] .cr-shell { background: #1c1c1e !important; }
+[data-theme="dark"] .cr-topbar { background: #2c2c2e !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cr-brand-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .cr-home-btn { background: #3a3a3c !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,245,247,0.6) !important; }
+[data-theme="dark"] .cr-home-btn:hover { background: #48484a !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .cr-calc-btn { background: rgba(124,58,237,0.12) !important; border-color: rgba(167,139,250,0.25) !important; color: #a78bfa !important; }
+[data-theme="dark"] .cr-calc-btn:hover { background: rgba(124,58,237,0.2) !important; }
+[data-theme="dark"] .cr-search-box { background: #3a3a3c !important; border-color: rgba(255,255,255,0.1) !important; }
+[data-theme="dark"] .cr-search-box:focus-within { border-color: #3b82f6 !important; background: #2c2c2e !important; }
+[data-theme="dark"] .cr-search-input { color: #f5f5f7 !important; }
+[data-theme="dark"] .cr-search-input::placeholder { color: rgba(245,245,247,0.3) !important; }
+[data-theme="dark"] .cr-search-icon { color: rgba(245,245,247,0.3) !important; }
+[data-theme="dark"] .cr-scan-icon { color: rgba(245,245,247,0.3) !important; }
+[data-theme="dark"] .cr-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cr-left { background: #242426 !important; border-right-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cr-left-actions { border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cr-action-btn { color: rgba(245,245,247,0.5) !important; border-right-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cr-action-btn:hover { background: #3a3a3c !important; color: #f5f5f7 !important; }
+[data-theme="dark"] .cr-action-btn.danger { color: #f87171 !important; }
+[data-theme="dark"] .cr-action-btn.danger:hover { background: rgba(220,38,38,0.12) !important; }
+[data-theme="dark"] .cr-cart-area::-webkit-scrollbar-thumb { background: #3a3a3c !important; }
+[data-theme="dark"] .cr-cart-empty { color: rgba(245,245,247,0.2) !important; }
+[data-theme="dark"] .cr-cart-item { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .cr-cart-item-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .cr-qty-btn { background: #3a3a3c !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,245,247,0.6) !important; }
+[data-theme="dark"] .cr-qty-btn:hover { border-color: #3b82f6 !important; color: #3b82f6 !important; background: rgba(59,130,246,0.1) !important; }
+[data-theme="dark"] .cr-settle { background: #242426 !important; border-top-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cr-settle-row { color: rgba(245,245,247,0.45) !important; }
+[data-theme="dark"] .cr-settle-row span:last-child { color: #f5f5f7 !important; }
+[data-theme="dark"] .cr-pay-btn { background: #3a3a3c !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,245,247,0.55) !important; }
+[data-theme="dark"] .cr-pay-btn:hover { border-color: #3b82f6 !important; color: #3b82f6 !important; background: rgba(59,130,246,0.1) !important; }
+[data-theme="dark"] .cr-cate-bar { background: #242426 !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .cr-cate-tab { color: rgba(245,245,247,0.35) !important; }
+[data-theme="dark"] .cr-cate-tab:hover { color: rgba(245,245,247,0.7) !important; }
+[data-theme="dark"] .cr-goods-grid::-webkit-scrollbar-thumb { background: #3a3a3c !important; }
+[data-theme="dark"] .cr-goods-card { background: #2c2c2e !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .cr-goods-card:hover { border-color: #3b82f6 !important; }
+[data-theme="dark"] .cr-goods-card.selected { background: rgba(37,99,235,0.12) !important; border-color: #2563eb !important; }
+[data-theme="dark"] .cr-goods-name { color: #f5f5f7 !important; }
+[data-theme="dark"] .cr-goods-price { color: #f5f5f7 !important; }
 
 /* ── AI 聊天面板 深色 ── */
 [data-theme="dark"] .ai-chat-panel { box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important; }

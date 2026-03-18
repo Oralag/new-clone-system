@@ -69,8 +69,8 @@ const statusText = computed(() => {
   padding: 8px 12px;
   margin: 4px 0;
   font-size: 12px;
-  border: 1px solid #e4e7ed;
-  background: #f9fafb;
+  border: 1px solid var(--faint, #e4e7ed);
+  background: var(--gray, #f9fafb);
 }
 
 .status-running { border-color: #a0cfff; background: #ecf5ff; }
@@ -90,8 +90,8 @@ const statusText = computed(() => {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.tool-name { flex: 1; color: #303133; }
-.card-status { font-size: 11px; color: #909399; font-weight: 400; }
+.tool-name { flex: 1; color: var(--dark, #303133); }
+.card-status { font-size: 11px; color: var(--mid, #909399); font-weight: 400; }
 
 .card-input {
   display: flex;
@@ -101,15 +101,15 @@ const statusText = computed(() => {
 }
 
 .param-chip {
-  background: rgba(0,0,0,0.05);
+  background: var(--faint, rgba(0,0,0,0.05));
   border-radius: 4px;
   padding: 1px 6px;
-  color: #606266;
+  color: var(--mid, #606266);
 }
 
 .card-result {
   margin-top: 6px;
-  color: #606266;
+  color: var(--mid, #606266);
   line-height: 1.5;
   max-height: 60px;
   overflow: hidden;

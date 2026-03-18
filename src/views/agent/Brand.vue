@@ -21,7 +21,7 @@
         <div class="autoflow-title-wrap">
           <div class="autoflow-icon">⚡</div>
           <div>
-            <div class="autoflow-title">AI 自动完成工作流</div>
+            <div class="autoflow-title">交给 Agent 团队</div>
             <div class="autoflow-sub">为「{{ brand.name }}」一键抓取热搜、生成文案并准备发布</div>
           </div>
         </div>
@@ -64,7 +64,7 @@
           </div>
         </div>
       </div>
-      <button class="btn-autoflow" @click="startAutoFlow">一键启动</button>
+      <button class="btn-autoflow" @click="startAutoFlow">交给 Captain</button>
       <div class="workflow-ready-row">
         <span class="ready-chip">{{ autoFlowSummary }}</span>
         <span v-if="brand.mainPlatforms.length" class="ready-chip muted">主攻平台：{{ mainPlatformSummary }}</span>
@@ -668,7 +668,7 @@ async function submitVideoGeneration(prompt: string): Promise<string> {
   }
 }
 
-async function callAgentAI(agentId: string, prompt: string): Promise<string> {
+async function callAgentAI(agentId: string, prompt: string, brandContext?: string): Promise<string> {
   const token = localStorage.getItem('erp_token') || ''
   const response = await fetch('/api/agent-chat', {
     method: 'POST',
@@ -677,7 +677,7 @@ async function callAgentAI(agentId: string, prompt: string): Promise<string> {
       'x-erp-token': token,
       'x-agent-id': agentId,
     },
-    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], agentId }),
+    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], agentId, brandContext }),
   })
   if (!response.ok) throw new Error(`Agent ${agentId} HTTP ${response.status}`)
   const reader = response.body?.getReader()
@@ -737,7 +737,8 @@ ${topicList}
 ${productInfo}
 ${sellingInfo}
 
-任务：从热搜中选出与该品牌产品最相关、最适合借势创作内容的 ${Math.min(autoFlow.count, 3)} 个话题。如果热搜中没有直接相关的，可以选关联度最高的话题并在括号内注明借势角度（如：话题名称（角度：联系到产品xxx））。只输出话题名称（含括号补充），每行一个，不要序号。`
+任务：从热搜中选出与该品牌产品最相关、最适合借势创作内容的 ${Math.min(autoFlow.count, 3)} 个话题。如果热搜中没有直接相关的，可以选关联度最高的话题并在括号内注明借势角度（如：话题名称（角度：联系到产品xxx））。只输出话题名称（含括号补充），每行一个，不要序号。`,
+      store.systemPrompt
     )
     if (flowCancelled) return
 
@@ -766,7 +767,8 @@ ${sellingInfo}
 旁白/配音：xxx
 字幕：xxx
 时长建议：15-30秒
-符合品牌「${brand.name}」（${brand.industry}）调性，直接输出脚本内容。`
+符合品牌「${brand.name}」（${brand.industry}）调性，直接输出脚本内容。`,
+            store.systemPrompt
           )
           const videoPrompt = `${brand.name} brand product showcase, ${topic}, cinematic, high quality, 4k`
           const requestId = await submitVideoGeneration(videoPrompt)
@@ -792,7 +794,8 @@ ${sellingInfo}
           const raw = await callAgentAI('poster',
             `请为话题「${topic}」创作一篇${platformNames[platform] || platform}图文帖子，严格按 JSON 输出：
 {"title":"标题(带emoji,25字内)","body":"正文(排版美观,500字内)","tags":["标签1","标签2","标签3","标签4"]}
-符合品牌「${brand.name}」调性，只输出JSON，不要其他内容。`
+符合品牌「${brand.name}」调性，只输出JSON，不要其他内容。`,
+            store.systemPrompt
           )
           autoFlowLog.value[2] = `正在生成配图：${topic}...`
           const imagePrompt = `${brand.name} ${brand.industry} product photo, ${topic}, beautiful, professional photography, xiaohongshu style`
@@ -815,7 +818,8 @@ ${sellingInfo}
         for (const topic of selectedTopics) {
           autoFlowLog.value[2] = `正在生成文案：${topic}（${platformNames[platform] || platform}）...`
           const copy = await callAgentAI('copywriter',
-            `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}发布的营销文案，200字以内，语言生动有感染力，结尾带行动号召，符合品牌「${brand.name}」（${brand.industry}）调性，直接输出文案内容。`
+            `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}发布的营销文案，200字以内，语言生动有感染力，结尾带行动号召，符合品牌「${brand.name}」（${brand.industry}）调性，直接输出文案内容。`,
+            store.systemPrompt
           )
           flowItems.push({
             platform,
@@ -833,7 +837,8 @@ ${sellingInfo}
       for (const platform of autoFlow.platforms) {
         for (const topic of selectedTopics) {
           const copy = await callAgentAI('copywriter',
-            `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}的营销文案，200字以内，符合品牌「${brand.name}」调性，直接输出内容。`
+            `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}的营销文案，200字以内，符合品牌「${brand.name}」调性，直接输出内容。`,
+            store.systemPrompt
           )
           flowItems.push({
             platform,

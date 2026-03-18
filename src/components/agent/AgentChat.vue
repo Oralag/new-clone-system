@@ -285,10 +285,10 @@ defineExpose({ sendQuickPrompt, clearChat })
   flex-direction: row;
   height: 100%;
   min-height: 500px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--faint, #e2e8f0);
   border-radius: 16px;
   overflow: hidden;
-  background: #fff;
+  background: var(--card-bg, #fff);
   box-shadow: 0 2px 16px rgba(0,0,0,0.05);
 }
 
@@ -296,8 +296,8 @@ defineExpose({ sendQuickPrompt, clearChat })
 .agent-sidebar {
   width: 180px;
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--agent-color, #6366f1) 4%, white);
-  border-right: 1px solid #e2e8f0;
+  background: color-mix(in srgb, var(--agent-color, #6366f1) 4%, var(--card-bg, white));
+  border-right: 1px solid var(--faint, #e2e8f0);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -322,7 +322,7 @@ defineExpose({ sendQuickPrompt, clearChat })
 .agent-name {
   font-size: 13px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--dark, #1e293b);
   text-align: center;
   line-height: 1.3;
 }
@@ -379,9 +379,9 @@ defineExpose({ sendQuickPrompt, clearChat })
 .qp-chip {
   padding: 5px 10px;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #475569;
+  border: 1px solid var(--faint, #e2e8f0);
+  background: var(--card-bg, #fff);
+  color: var(--mid, #475569);
   font-size: 11.5px;
   cursor: pointer;
   transition: all 0.15s;
@@ -393,7 +393,7 @@ defineExpose({ sendQuickPrompt, clearChat })
 .qp-chip:hover {
   border-color: var(--agent-color, #6366f1);
   color: var(--agent-color, #6366f1);
-  background: color-mix(in srgb, var(--agent-color, #6366f1) 6%, white);
+  background: color-mix(in srgb, var(--agent-color, #6366f1) 6%, var(--card-bg, white));
 }
 
 /* ── Right column ── */
@@ -409,7 +409,7 @@ defineExpose({ sendQuickPrompt, clearChat })
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #fafbfc;
+  background: var(--gray, #fafbfc);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -428,7 +428,7 @@ defineExpose({ sendQuickPrompt, clearChat })
   padding: 40px 0;
 }
 .empty-emoji { font-size: 40px; margin-bottom: 4px; }
-.empty-title { font-size: 15px; font-weight: 600; color: #475569; }
+.empty-title { font-size: 15px; font-weight: 600; color: var(--mid, #475569); }
 .empty-sub { font-size: 12px; }
 
 /* ── Messages ── */
@@ -467,9 +467,9 @@ defineExpose({ sendQuickPrompt, clearChat })
   margin-left: auto;
 }
 .assistant-bubble {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  color: #1e293b;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--faint, #e2e8f0);
+  color: var(--dark, #1e293b);
   border-radius: 4px 14px 14px 14px;
 }
 .assistant-bubble :deep(p) { margin: 0 0 8px; }
@@ -478,9 +478,9 @@ defineExpose({ sendQuickPrompt, clearChat })
 .assistant-bubble :deep(li) { margin-bottom: 3px; }
 .assistant-bubble :deep(h1), .assistant-bubble :deep(h2), .assistant-bubble :deep(h3) { margin: 10px 0 6px; font-size: 1em; }
 .assistant-bubble :deep(strong) { font-weight: 700; }
-.assistant-bubble :deep(code) { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
-.assistant-bubble :deep(pre) { background: #f1f5f9; padding: 10px; border-radius: 8px; overflow-x: auto; }
-.assistant-bubble :deep(blockquote) { border-left: 3px solid #e2e8f0; padding-left: 10px; color: #64748b; margin: 6px 0; }
+.assistant-bubble :deep(code) { background: var(--gray, #f1f5f9); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+.assistant-bubble :deep(pre) { background: var(--gray, #f1f5f9); padding: 10px; border-radius: 8px; overflow-x: auto; }
+.assistant-bubble :deep(blockquote) { border-left: 3px solid var(--faint, #e2e8f0); padding-left: 10px; color: var(--mid, #64748b); margin: 6px 0; }
 
 /* ── Tool calls ── */
 .tool-chip {
@@ -525,8 +525,8 @@ defineExpose({ sendQuickPrompt, clearChat })
   align-items: flex-end;
   gap: 8px;
   padding: 12px 14px;
-  background: #fff;
-  border-top: 1px solid #e2e8f0;
+  background: var(--card-bg, #fff);
+  border-top: 1px solid var(--faint, #e2e8f0);
 }
 
 .compose-input {
@@ -535,7 +535,7 @@ defineExpose({ sendQuickPrompt, clearChat })
   outline: none;
   background: transparent;
   font-size: 14px;
-  color: #1e293b;
+  color: var(--dark, #1e293b);
   resize: none;
   line-height: 1.6;
   font-family: inherit;
@@ -543,7 +543,7 @@ defineExpose({ sendQuickPrompt, clearChat })
   overflow-y: auto;
   padding: 4px 0;
 }
-.compose-input::placeholder { color: #94a3b8; }
+.compose-input::placeholder { color: var(--dim, #94a3b8); }
 
 .compose-send {
   width: 36px;

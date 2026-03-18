@@ -371,8 +371,8 @@ function copyOutput() {
 }
 
 .feature-card {
-  background: #ffffff;
-  border: 1px solid rgba(0,0,0,0.06);
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--faint, rgba(0,0,0,0.06));
   border-radius: 18px;
   padding: 18px 16px;
   display: flex;
@@ -412,22 +412,22 @@ function copyOutput() {
 .feature-title {
   font-size: 13px;
   font-weight: 700;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   margin-bottom: 3px;
   letter-spacing: -0.02em;
 }
 
 .feature-desc {
   font-size: 11px;
-  color: rgba(29,29,31,0.4);
+  color: var(--mid, rgba(29,29,31,0.4));
   font-weight: 500;
   line-height: 1.4;
 }
 
 /* ── Apple Card ── */
 .apple-card {
-  background: #ffffff;
-  border: 1px solid rgba(0,0,0,0.06);
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--faint, rgba(0,0,0,0.06));
   border-radius: 24px;
   padding: 28px;
   overflow: hidden;
@@ -445,14 +445,14 @@ function copyOutput() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: rgba(29,29,31,0.28);
+  color: var(--dim, rgba(29,29,31,0.28));
   margin-bottom: 4px;
 }
 
 .card-title {
   font-size: 18px;
   font-weight: 700;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   letter-spacing: -0.03em;
 }
 
@@ -485,7 +485,7 @@ function copyOutput() {
   background: transparent;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(29,29,31,0.45);
+  color: var(--mid, rgba(29,29,31,0.45));
   cursor: pointer;
   transition: all 0.2s;
   letter-spacing: -0.01em;
@@ -493,8 +493,8 @@ function copyOutput() {
 }
 
 .tab-btn--active {
-  background: #ffffff;
-  color: #1d1d1f;
+  background: var(--card-bg, #ffffff);
+  color: var(--dark, #1d1d1f);
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 
@@ -503,13 +503,13 @@ function copyOutput() {
 
 .creative-textarea {
   width: 100%;
-  border: 1px solid rgba(0,0,0,0.09);
+  border: 1px solid var(--faint, rgba(0,0,0,0.09));
   border-radius: 14px;
   padding: 14px 16px;
   font-size: 13px;
   font-family: 'Inter', -apple-system, sans-serif;
-  color: #1d1d1f;
-  background: #f9f9fb;
+  color: var(--dark, #1d1d1f);
+  background: var(--gray, #f9f9fb);
   resize: vertical;
   outline: none;
   line-height: 1.6;
@@ -519,10 +519,10 @@ function copyOutput() {
 
 .creative-textarea:focus {
   border-color: rgba(0,113,227,0.4);
-  background: #fff;
+  background: var(--card-bg, #fff);
 }
 
-.creative-textarea::placeholder { color: rgba(29,29,31,0.3); }
+.creative-textarea::placeholder { color: var(--dim, rgba(29,29,31,0.3)); }
 
 /* Params */
 .params-row {
@@ -548,20 +548,20 @@ function copyOutput() {
 .param-btn {
   padding: 5px 12px;
   border-radius: 20px;
-  border: 1px solid rgba(0,0,0,0.09);
-  background: #f5f5f7;
+  border: 1px solid var(--faint, rgba(0,0,0,0.09));
+  background: var(--gray, #f5f5f7);
   font-size: 11px;
   font-weight: 600;
-  color: rgba(29,29,31,0.5);
+  color: var(--mid, rgba(29,29,31,0.5));
   cursor: pointer;
   transition: all 0.15s;
 }
 
-.param-btn:hover { border-color: rgba(0,0,0,0.15); color: #1d1d1f; }
+.param-btn:hover { border-color: var(--border, rgba(0,0,0,0.15)); color: var(--dark, #1d1d1f); }
 
 .param-btn--active {
-  background: #1d1d1f;
-  color: #fff;
+  background: var(--dark, #1d1d1f);
+  color: var(--card-bg, #fff);
   border-color: transparent;
 }
 
@@ -611,8 +611,8 @@ function copyOutput() {
 
 /* Output Area */
 .output-area {
-  background: #f9f9fb;
-  border: 1px solid rgba(0,0,0,0.06);
+  background: var(--gray, #f9f9fb);
+  border: 1px solid var(--faint, rgba(0,0,0,0.06));
   border-radius: 16px;
   min-height: 160px;
   padding: 20px;
@@ -621,7 +621,7 @@ function copyOutput() {
 
 .output-area--active {
   border-color: rgba(124,58,237,0.2);
-  background: #fff;
+  background: var(--card-bg, #fff);
 }
 
 .output-placeholder {
@@ -685,7 +685,7 @@ function copyOutput() {
 
 .output-text {
   font-size: 13px;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   line-height: 1.75;
   white-space: pre-wrap;
   font-weight: 400;
@@ -702,14 +702,14 @@ function copyOutput() {
   gap: 12px;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.06);
-  background: #f9f9fb;
+  border: 1px solid var(--faint, rgba(0,0,0,0.06));
+  background: var(--gray, #f9f9fb);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .inspiration-card:hover {
-  background: #fff;
+  background: var(--card-bg, #fff);
   border-color: rgba(0,113,227,0.2);
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
@@ -719,7 +719,7 @@ function copyOutput() {
 .inspiration-num {
   font-size: 11px;
   font-weight: 800;
-  color: rgba(29,29,31,0.2);
+  color: var(--dim, rgba(29,29,31,0.2));
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   width: 20px;
@@ -728,7 +728,7 @@ function copyOutput() {
 .inspiration-text {
   flex: 1;
   font-size: 12px;
-  color: rgba(29,29,31,0.65);
+  color: var(--mid, rgba(29,29,31,0.65));
   font-weight: 500;
   line-height: 1.4;
 }
@@ -763,7 +763,7 @@ function copyOutput() {
 .bottom-stat-value {
   font-size: 32px;
   font-weight: 800;
-  color: #1d1d1f;
+  color: var(--dark, #1d1d1f);
   letter-spacing: -0.04em;
   line-height: 1;
   margin-bottom: 6px;
@@ -774,32 +774,8 @@ function copyOutput() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(29,29,31,0.28);
+  color: var(--dim, rgba(29,29,31,0.28));
 }
-
-/* ── Dark Mode ── */
-:global([data-theme='dark']) .page-title { color: #f8fafc; }
-:global([data-theme='dark']) .page-sub { color: #64748b; }
-:global([data-theme='dark']) .page-header { border-bottom-color: #1e2a3a; }
-:global([data-theme='dark']) .apple-card { background: #111827; border-color: #1f2937; }
-:global([data-theme='dark']) .feature-card { background: #111827; border-color: #1f2937; }
-:global([data-theme='dark']) .feature-card:hover { background: #1a2332; border-color: #2d3f55; }
-:global([data-theme='dark']) .feature-title,
-:global([data-theme='dark']) .card-title,
-:global([data-theme='dark']) .output-text,
-:global([data-theme='dark']) .bottom-stat-value { color: #e2e8f0; }
-:global([data-theme='dark']) .tab-bar { background: #1e293b; }
-:global([data-theme='dark']) .tab-btn--active { background: #1f2937; color: #e2e8f0; }
-:global([data-theme='dark']) .creative-textarea { background: #1e293b; border-color: #334155; color: #e2e8f0; }
-:global([data-theme='dark']) .creative-textarea:focus { background: #1f2937; }
-:global([data-theme='dark']) .param-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
-:global([data-theme='dark']) .param-btn--active { background: #f8fafc; color: #111827; }
-:global([data-theme='dark']) .output-area { background: #1e293b; border-color: #334155; }
-:global([data-theme='dark']) .output-area--active { background: #1f2937; }
-:global([data-theme='dark']) .inspiration-card { background: #1e293b; border-color: #334155; }
-:global([data-theme='dark']) .inspiration-card:hover { background: #1f2937; border-color: rgba(96,165,250,0.3); }
-:global([data-theme='dark']) .inspiration-text { color: #94a3b8; }
-:global([data-theme='dark']) .bottom-stat { border-right-color: #1e2a3a; }
 
 /* ── Responsive ── */
 @media (max-width: 900px) {

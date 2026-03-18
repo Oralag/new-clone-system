@@ -360,7 +360,7 @@ export function aiChatPlugin(): Plugin {
 
         const chunks: Buffer[] = []
         for await (const chunk of req as any) chunks.push(chunk)
-        const { messages, agentId } = JSON.parse(Buffer.concat(chunks).toString())
+        const { messages, agentId, brandContext } = JSON.parse(Buffer.concat(chunks).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
         const agent = getAgent(agentId)
@@ -385,7 +385,9 @@ export function aiChatPlugin(): Plugin {
             const response = await client.messages.create({
               model: 'claude-sonnet-4-6',
               max_tokens: 4096,
-              system: agent.systemPrompt,
+              system: brandContext
+                ? `${agent.systemPrompt}\n\n---\n【当前品牌信息】\n${brandContext}`
+                : agent.systemPrompt,
               tools: allTools,
               messages: loopMessages,
             })
