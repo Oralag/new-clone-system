@@ -243,13 +243,23 @@ import { ref, reactive, computed } from 'vue'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureReturnList, createProcureReturn, deleteProcureReturn, auditProcureReturn, getProcureOrderList } from '@/api/procure'
+import http from '@/api/http'
+import { getProcureReturnList, createProcureReturn, deleteProcureReturn, auditProcureReturn, getProcureOrderList, updateProcureOrder } from '@/api/procure'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { adjustFundBalance } from '@/utils/fund'
 
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+
+function roundMoney(value: any) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100
+}
+
+function hasValue(value: any) {
+  return value !== undefined && value !== null && value !== ''
+}
 
 function parseItems(goodsInfo: any): any[] {
   try { return (JSON.parse(goodsInfo || '[]') as any[]).filter((i: any) => !i._meta) } catch { return [] }
@@ -257,6 +267,179 @@ function parseItems(goodsInfo: any): any[] {
 
 function parseMeta(goodsInfo: any): any {
   try { return (JSON.parse(goodsInfo || '[]') as any[]).find((i: any) => i._meta) ?? {} } catch { return {} }
+}
+
+function calcItemsAmount(items: any[]) {
+  return roundMoney((items || []).reduce((sum, item) => sum + Number(item.num || 0) * Number(item.price || 0), 0))
+}
+
+async function getProcureOrderRow(orderId: number, orderSn = '') {
+  const requestList = [
+    orderId ? { id: orderId, list_rows: 20 } : null,
+    orderSn ? { order_no: orderSn, list_rows: 20 } : null,
+    orderSn ? { order_sn: orderSn, list_rows: 20 } : null,
+  ].filter(Boolean)
+
+  for (const params of requestList) {
+    try {
+      const res = await getProcureOrderList(params)
+      const rows: any[] = res.data?.rows ?? []
+      const matched = rows.find((item: any) => Number(item.id) === Number(orderId))
+        || rows.find((item: any) => (item.order_sn || item.order_no) === orderSn)
+        || rows[0]
+      if (matched) return matched
+    } catch {
+      // ignore and fallback
+    }
+  }
+
+  return null
+}
+
+function buildProcureOrderPayload(order: any, overrides: Record<string, any>) {
+  return {
+    id: order.id,
+    order_no: order.order_no || order.order_sn || '',
+    order_sn: order.order_sn || order.order_no || '',
+    supplier_id: order.supplier_id,
+    supplier_name: order.supplier_name || '',
+    admin_name: order.admin_name || '',
+    order_date: order.order_date || '',
+    delivery_date: order.delivery_date || null,
+    warehouse_id: order.warehouse_id || null,
+    warehouse_name: order.warehouse_name || '',
+    need_invoice: Number(order.need_invoice || 0),
+    fund_id: order.fund_id || 0,
+    fund_name: order.fund_name || '',
+    pay_account: order.pay_account || '',
+    pay_amount: roundMoney(order.pay_amount),
+    remark: order.remark || '',
+    total_amount: roundMoney(order.total_amount),
+    freight_amount: roundMoney(order.freight_amount),
+    freight_bearer: order.freight_bearer || 'buyer',
+    discount_type: order.discount_type || 'none',
+    discount_value: Number(order.discount_value || 0),
+    after_discount: hasValue(order.after_discount) ? roundMoney(order.after_discount) : roundMoney(order.total_amount),
+    expense_amount: roundMoney(order.expense_amount),
+    installment: Number(order.installment || 0),
+    attachments_info: typeof order.attachments_info === 'string'
+      ? order.attachments_info
+      : JSON.stringify(order.attachments_info || []),
+    goods_info: typeof order.goods_info === 'string'
+      ? order.goods_info
+      : JSON.stringify(order.goods_info || []),
+    ...overrides,
+  }
+}
+
+async function applyStockDelta(items: any[], warehouseId: number, direction: 'audit' | 'reverse') {
+  const qtyMap = new Map<number, { goods_name: string, qty: number }>()
+  for (const item of items) {
+    const goodsId = Number(item.goods_id || 0)
+    const qty = Number(item.num || 0)
+    if (!goodsId || !qty) continue
+    const current = qtyMap.get(goodsId)
+    qtyMap.set(goodsId, {
+      goods_name: item.goods_name || current?.goods_name || '商品',
+      qty: roundMoney((current?.qty || 0) + qty),
+    })
+  }
+
+  const snapshots: Array<{ id: number, qty: number }> = []
+
+  for (const [goodsId, info] of qtyMap.entries()) {
+    const stockRes = await http.get('/stock/StockAll/index', {
+      params: { goods_id: goodsId, warehouse_id: warehouseId, list_rows: 10 }
+    })
+    const stockRows: any[] = stockRes.data?.rows ?? []
+    const stock = stockRows.find((item: any) => Number(item.goods_id) === goodsId) || stockRows[0]
+    if (!stock) throw new Error(`${info.goods_name}未找到库存记录`)
+
+    const currentQty = Number(stock.qty || 0)
+    const delta = direction === 'audit' ? -info.qty : info.qty
+    const nextQty = roundMoney(currentQty + delta)
+    if (nextQty < 0) throw new Error(`${info.goods_name}库存不足，当前库存 ${currentQty}`)
+
+    snapshots.push({ id: Number(stock.id), qty: currentQty })
+    await http.post('/stock/StockAll/edit', { id: stock.id, qty: nextQty })
+  }
+
+  return snapshots
+}
+
+async function rollbackStockDelta(snapshots: Array<{ id: number, qty: number }>) {
+  for (const item of snapshots) {
+    await http.post('/stock/StockAll/edit', { id: item.id, qty: item.qty })
+  }
+}
+
+async function applyProcureReturnEffect(row: any, direction: 'audit' | 'reverse') {
+  const items = parseItems(row.goods_info)
+  const meta = parseMeta(row.goods_info)
+  const warehouseId = Number(meta.warehouse_id || row.warehouse_id || 0)
+  const orderId = Number(meta.order_id || row.order_id || 0)
+  const orderSn = meta.order_sn || row.order_sn || row.order_no || ''
+  const returnAmount = calcItemsAmount(items)
+
+  if (!warehouseId) throw new Error('未找到退货仓库，无法同步库存')
+  if (!orderId) throw new Error('未找到关联采购单，无法同步财务')
+  if (returnAmount <= 0) return
+
+  const stockSnapshots = await applyStockDelta(items, warehouseId, direction)
+
+  let orderRollbackPayload: Record<string, any> | null = null
+  try {
+    const liveOrder = await getProcureOrderRow(orderId, orderSn)
+    if (!liveOrder) throw new Error('未找到关联采购单')
+
+    const currentOrderTotal = hasValue(liveOrder.after_discount)
+      ? roundMoney(liveOrder.after_discount)
+      : roundMoney(liveOrder.total_amount)
+    const currentRawTotal = roundMoney(liveOrder.total_amount)
+    const currentAfterDiscount = hasValue(liveOrder.after_discount)
+      ? roundMoney(liveOrder.after_discount)
+      : currentOrderTotal
+    const currentPayAmount = roundMoney(liveOrder.pay_amount)
+
+    const unpaidAmount = Math.max(0, roundMoney(currentOrderTotal - currentPayAmount))
+    const refundAmount = Math.max(0, roundMoney(returnAmount - unpaidAmount))
+    const signedAmount = direction === 'audit' ? -returnAmount : returnAmount
+    const nextRawTotal = Math.max(0, roundMoney(currentRawTotal + signedAmount))
+    const nextAfterDiscount = Math.max(0, roundMoney(currentAfterDiscount + signedAmount))
+    const nextPayAmount = direction === 'audit'
+      ? Math.max(0, roundMoney(currentPayAmount - refundAmount))
+      : roundMoney(currentPayAmount + refundAmount)
+
+    orderRollbackPayload = buildProcureOrderPayload(liveOrder, {
+      total_amount: currentRawTotal,
+      after_discount: currentAfterDiscount,
+      pay_amount: currentPayAmount,
+    })
+
+    await updateProcureOrder(buildProcureOrderPayload(liveOrder, {
+      total_amount: nextRawTotal,
+      after_discount: nextAfterDiscount,
+      pay_amount: nextPayAmount,
+    }))
+
+    if (refundAmount > 0) {
+      await adjustFundBalance({
+        fundId: Number(meta.fund_id || liveOrder.fund_id || 0) || null,
+        fundName: liveOrder.fund_name || '',
+        delta: direction === 'audit' ? refundAmount : -refundAmount,
+      })
+    }
+  } catch (error) {
+    try {
+      if (orderRollbackPayload) {
+        await updateProcureOrder(orderRollbackPayload)
+      }
+      await rollbackStockDelta(stockSnapshots)
+    } catch (rollbackError) {
+      console.warn('采购退货回滚失败', rollbackError)
+    }
+    throw error
+  }
 }
 
 const searchForm = reactive<any>({ return_no: '', supplier_name: '', status: '' })
@@ -380,6 +563,8 @@ async function handleAudit(row: any, status: number) {
   await ElMessageBox.confirm(`确定${action}该退货单？${status === 1 ? '\n审核后将自动扣减库存并退款至资金账户。' : status === 0 ? '\n反审核将撤销库存和财务变动。' : ''}`, '提示', { type: 'warning' })
   try {
     await auditProcureReturn(row.id, status)
+    if (status === 1) await applyProcureReturnEffect(row, 'audit')
+    if (status === 0) await applyProcureReturnEffect(row, 'reverse')
     ElMessage.success(`${action}成功`)
     stockRefreshStore.trigger()
     tableRef.value?.refresh()
@@ -429,7 +614,7 @@ function confirmOrderSelect() {
   const order = selectedOrder.value
   fd.order_id = order.id
   fd.order_sn = order.order_sn
-  fd.order_total_amount = Number(order.total_amount || order.after_discount || 0)
+  fd.order_total_amount = Number(order.after_discount ?? order.total_amount ?? 0)
   fd.order_pay_amount = Number(order.pay_amount || 0)
   fd.supplier_id = order.supplier_id
   fd.supplier_name = order.supplier_name
