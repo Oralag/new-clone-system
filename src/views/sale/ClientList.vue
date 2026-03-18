@@ -150,6 +150,11 @@
     </el-dialog>
 
     <!-- 新增/编辑客户弹框 -->
+    <!-- ⚠️ 规则：新增和编辑界面必须完全一致
+         - finance-panel 不加 v-if，始终显示
+         - 充值预付款按钮两种模式都显示（新增时自动先保存客户）
+         - 查看应收记录 v-if="formData.id"（新增时无意义）
+         - 底部按钮只有：取消 + 确定，禁止加「保存并充值」 -->
     <el-dialog v-model="formVisible" :title="formTitle" width="560px" append-to-body>
       <el-form ref="formRef" :model="formData" label-width="90px">
         <el-row :gutter="16">
