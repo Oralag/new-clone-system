@@ -154,8 +154,8 @@
       </template>
     </el-dialog>
 
-    <!-- 添加物料：第一步选商品 -->
-    <el-dialog v-model="pickGoodsVisible" title="选择物料（从商品库）" width="620px" append-to-body destroy-on-close>
+    <!-- 添加物料：第一步选商品（支持多选） -->
+    <el-dialog v-model="pickGoodsVisible" title="选择物料（支持多选）" width="680px" append-to-body destroy-on-close>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <el-input v-model="pickKeyword" placeholder="搜索商品名称/编码" clearable :prefix-icon="Search"
           style="flex:1" @input="onPickSearch" />
@@ -166,8 +166,9 @@
           <el-option label="辅料" :value="4" />
         </el-select>
       </div>
-      <el-table :data="pickGoodsList" v-loading="pickLoading" border height="300"
-        highlight-current-row @current-change="onPickRow">
+      <el-table ref="pickTableRef" :data="pickGoodsList" v-loading="pickLoading" border height="320"
+        @selection-change="(v: any[]) => pickedRows = v">
+        <el-table-column type="selection" width="46" align="center" />
         <el-table-column prop="goods_sn" label="编码" width="120" />
         <el-table-column prop="goods_name" label="名称" min-width="150" />
         <el-table-column label="类型" width="80" align="center">
@@ -178,13 +179,84 @@
         <el-table-column prop="unit_name" label="单位" width="70" align="center" />
         <el-table-column prop="cost_price" label="采购价" width="90" align="right" />
       </el-table>
-      <div style="margin-top:12px;padding:10px 12px;background:#f0f9ff;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:13px">
-        <span style="color:rgba(29,29,31,0.35);white-space:nowrap">找不到？</span>
-        <el-button type="primary" size="small" :icon="Plus" @click="openGoodsFormDialog">新建商品并选中</el-button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+        <div style="font-size:13px;color:rgba(29,29,31,0.55)">
+          已选 <b style="color:#0071e3">{{ pickedRows.length }}</b> 个物料
+        </div>
+        <div style="padding:8px 12px;background:#f0f9ff;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:13px">
+          <span style="color:rgba(29,29,31,0.35);white-space:nowrap">找不到？</span>
+          <el-button type="primary" size="small" :icon="Plus" @click="openGoodsFormDialog">新建商品并选中</el-button>
+        </div>
       </div>
       <template #footer>
         <el-button @click="pickGoodsVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!pickedRow" @click="confirmPickGoods">下一步：填用量</el-button>
+        <el-button type="primary" :disabled="pickedRows.length === 0" @click="confirmPickGoods">
+          下一步：填用量（{{ pickedRows.length }} 个）
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 添加物料：第二步批量填写用量 -->
+    <el-dialog v-model="batchFillVisible" title="批量填写用量" width="960px" append-to-body destroy-on-close>
+      <div style="margin-bottom:12px;font-size:13px;color:rgba(29,29,31,0.55)">
+        共选中 <b>{{ batchItems.length }}</b> 个物料，请填写每个物料的用量信息后批量添加。
+      </div>
+      <el-table :data="batchItems" border style="width:100%">
+        <el-table-column prop="material_name" label="物料名称" min-width="130">
+          <template #default="{ row }">
+            <div style="font-weight:500">{{ row.material_name }}</div>
+            <div v-if="row.material_sn" style="font-size:11px;color:rgba(29,29,31,0.35)">{{ row.material_sn }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="用量" width="120" align="center">
+          <template #default="{ row }">
+            <el-input-number v-model="row.num" :min="0" :precision="3" :controls="false"
+              size="small" style="width:100%" placeholder="数量" />
+          </template>
+        </el-table-column>
+        <el-table-column label="单位" width="130" align="center">
+          <template #default="{ row }">
+            <el-select v-model="row.unit_name" filterable allow-create
+              size="small" placeholder="单位" style="width:100%">
+              <el-option v-for="u in unitOptions" :key="u" :label="u" :value="u" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="单价(¥)" width="110" align="center">
+          <template #default="{ row }">
+            <el-input-number v-model="row._price" :min="0" :precision="6" :controls="false"
+              size="small" style="width:100%" placeholder="0" />
+          </template>
+        </el-table-column>
+        <el-table-column label="小计(¥)" width="100" align="right">
+          <template #default="{ row }">
+            <span style="font-weight:600;color:#0071e3">
+              {{ row._price > 0 && row.num > 0 ? ((row._price * row.num).toFixed(4).replace(/\.?0+$/, '')) : '—' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="100">
+          <template #default="{ row }">
+            <el-input v-model="row.remark" size="small" placeholder="可选" clearable />
+          </template>
+        </el-table-column>
+        <el-table-column label="" width="44" align="center">
+          <template #default="{ $index }">
+            <el-button type="danger" link :icon="Delete" size="small" @click="batchItems.splice($index, 1)" />
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <el-button link @click="batchFillVisible = false; pickGoodsVisible = true">← 返回重选</el-button>
+          <div style="display:flex;gap:8px">
+            <el-button @click="batchFillVisible = false">取消</el-button>
+            <el-button type="primary" :loading="batchSubmitting" :disabled="batchItems.length === 0"
+              @click="handleBatchSubmitMaterials">
+              批量添加（{{ batchItems.length }} 个）
+            </el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
 
@@ -489,15 +561,27 @@ async function handleBatchDeleteBom() {
 }
 
 // 跳转到采购订单新建页，预填当前物料清单
-function handleGotoProcure() {
+async function handleGotoProcure() {
   const rows = bomSelected.value.length > 0 ? bomSelected.value : bomList.value
   if (!rows.length) { ElMessage.warning('暂无物料数据'); return }
-  const items = rows.map(r => ({
-    goods_id: 0,
+
+  // 批量查商品信息，补全 cate_name（BOM表未存分类）
+  const ids = [...new Set(rows.map((r: any) => r.material_id).filter(Boolean))]
+  const cateMap: Record<number, string> = {}
+  if (ids.length) {
+    try {
+      const res = await getGoodsList({ list_rows: 1000 })
+      const gList: any[] = res.data?.rows ?? []
+      gList.forEach((g: any) => { cateMap[g.id] = g.cate_name || '' })
+    } catch { /* ignore，分类留空 */ }
+  }
+
+  const items = rows.map((r: any) => ({
+    goods_id: r.material_id || 0,
     goods_name: r.material_name,
     goods_sn: r.material_sn || '',
     spec: r._spec || '',
-    cate_name: r.cate_name || '',
+    cate_name: cateMap[r.material_id] ?? r.cate_name ?? '',
     unit_name: r.unit_name || '',
     batch_no: '',
     num: r.num || 1,
@@ -717,14 +801,21 @@ function onUnitNameChange() {
   }
 }
 
-// ── 第一步：选商品弹框 ────────────────────────────────────────────────────────
+// ── 第一步：选商品弹框（多选） ─────────────────────────────────────────────────
 const pickGoodsVisible = ref(false)
 const pickKeyword = ref('')
 const pickGoodsType = ref<any>('')
 const pickGoodsList = ref<any[]>([])
 const pickLoading = ref(false)
-const pickedRow = ref<any>(null)
+const pickedRows = ref<any[]>([])   // 多选列表
+const pickedRow = ref<any>(null)    // 保留兼容单条新建商品后选中
+const pickTableRef = ref<any>(null)
 let pickSearchTimer: ReturnType<typeof setTimeout>
+
+// ── 第二步：批量填写用量弹框 ──────────────────────────────────────────────────
+const batchFillVisible = ref(false)
+const batchSubmitting = ref(false)
+const batchItems = ref<any[]>([])
 
 function goodsTypeLabel(t: number) {
   return { 1: '成品', 2: '半成品', 3: '原材料', 4: '辅料' }[t] ?? '成品'
@@ -775,52 +866,97 @@ function openGoodsFormDialog() {
 }
 
 async function onGoodsCreated(newGoods: any) {
-  // 刷新商品列表并自动选中新建的商品
+  // 刷新商品列表并自动勾选新建的商品
   await loadPickGoods()
   const newRow = pickGoodsList.value.find((g: any) => g.id === newGoods.id)
     ?? pickGoodsList.value.find((g: any) => g.goods_name === newGoods.goods_name)
-  if (newRow) pickedRow.value = newRow
+  if (newRow && pickTableRef.value) {
+    pickTableRef.value.toggleRowSelection(newRow, true)
+  }
 }
 
 function openAddMaterial() {
   // 先弹商品选择器
   pickKeyword.value = ''
   pickGoodsType.value = ''
-  pickedRow.value = null
+  pickedRows.value = []
   pickGoodsVisible.value = true
   loadPickGoods()
 }
 
 async function confirmPickGoods() {
-  const row = pickedRow.value
-  if (!row) return
-  // 拉取该商品的规格，拼成一个展示字符串
-  let specStr = ''
-  try {
-    const specRes = await getSpecList({ goods_id: row.id, list_rows: 20 })
-    const specs: any[] = specRes.data?.rows ?? []
-    specStr = specs.map((s: any) => `${s.spec_name}：${s.spec_value}`).join('；')
-  } catch { /* 无规格也没关系 */ }
-
-  Object.assign(form, {
-    id: 0,
+  if (!pickedRows.value.length) return
+  // 批量拉取规格（并发）
+  const specResults = await Promise.allSettled(
+    pickedRows.value.map(row =>
+      getSpecList({ goods_id: row.id, list_rows: 20 })
+        .then(res => ({ id: row.id, specs: res.data?.rows ?? [] }))
+        .catch(() => ({ id: row.id, specs: [] }))
+    )
+  )
+  const specMap: Record<number, string> = {}
+  specResults.forEach(r => {
+    if (r.status === 'fulfilled') {
+      const { id, specs } = r.value as any
+      specMap[id] = (specs as any[]).map((s: any) => `${s.spec_name}：${s.spec_value}`).join('；')
+    }
+  })
+  batchItems.value = pickedRows.value.map(row => ({
     material_id: row.id,
     material_name: row.goods_name,
     material_sn: row.goods_sn || '',
     unit_name: row.unit_name || '',
-    _spec: specStr,
+    _spec: specMap[row.id] || '',
     _price: Number(row.cost_price || 0),
-    _buy_unit: row.unit_name || '',
-    _buy_price: Number(row.cost_price || 0),
-    _buy_ratio: 1,
     num: 1,
     remark: '',
-    _goods_unit: row.unit_name || '',
-    _goods_price: Number(row.cost_price || 0),
-  })
+  }))
   pickGoodsVisible.value = false
-  drawerViewMode.value = false
-  drawerVisible.value = true
+  batchFillVisible.value = true
+}
+
+async function handleBatchSubmitMaterials() {
+  const items = batchItems.value.filter(r => r.num > 0)
+  if (!items.length) {
+    ElMessage.warning('请至少为一个物料填写用量（大于0）')
+    return
+  }
+  batchSubmitting.value = true
+  try {
+    for (const item of items) {
+      await createBom({
+        goods_id: selectedGoods.value.goods_id,
+        goods_name: selectedGoods.value.goods_name,
+        goods_sn: selectedGoods.value.goods_sn || '',
+        material_id: item.material_id,
+        material_name: item.material_name,
+        material_sn: item.material_sn,
+        num: item.num,
+        unit_name: item.unit_name,
+        remark: item.remark,
+      })
+    }
+    ElMessage.success(`已成功添加 ${items.length} 个物料`)
+    batchFillVisible.value = false
+    await loadBom()
+    // 保存单价到 localStorage
+    await loadBom()
+    items.forEach(item => {
+      if (item._price > 0) {
+        const newRow = bomList.value.find(r =>
+          r.material_id === item.material_id && !bomPrices.value[r.id]
+        )
+        if (newRow) {
+          const priceMap = { ...bomPrices.value, [newRow.id]: item._price }
+          bomPrices.value = priceMap
+          saveBomPrices(priceMap)
+        }
+      }
+    })
+    bomList.value = injectExtras(bomList.value)
+  } finally {
+    batchSubmitting.value = false
+  }
 }
 
 function openMaterialDrawer(row: any, viewMode: boolean) {

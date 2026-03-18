@@ -44,7 +44,7 @@
           <div class="inline-list" v-if="fundList.length">
             <div class="inline-item clickable" v-for="f in fundList" :key="f.id" @click="router.push('/finance/fund')">
               <div class="inline-name">{{ f.name }}</div>
-              <div class="inline-value blue">¥{{ Number(f.balance||0).toFixed(2) }}</div>
+              <div class="inline-value blue">¥{{ Number(f.display_balance ?? f.balance ?? 0).toFixed(2) }}</div>
               <div class="inline-sub">{{ { '1': '银行账户', '2': '现金', '3': '第三方' }[f.type] || '账户' }}</div>
             </div>
             <div class="inline-item total-item">
@@ -154,7 +154,10 @@
             <div class="inline-item clickable" v-for="r in recentCollectItems.slice(0,4)" :key="r._key" @click="router.push('/finance/fund-flow')">
               <div class="inline-name">{{ r.name }}</div>
               <div class="inline-value green">¥{{ Number(r.amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ r.date }}</div>
+              <div class="inline-sub">
+                {{ r.date }}
+                <span v-if="Number(r.refund_allocated || 0) > 0"> · 已退款 ¥{{ Number(r.refund_allocated || 0).toFixed(2) }}</span>
+              </div>
             </div>
           </div>
           <div v-else class="empty-tip">暂无收款记录</div>
@@ -427,7 +430,8 @@ import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, Ar
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList } from '@/api/finance'
-import { applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
+import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
+import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 
 const router = useRouter()
 
@@ -436,6 +440,7 @@ const clientList = ref<any[]>([])
 const supplierList = ref<any[]>([])
 const prepayList = ref<any[]>([])
 const collectList = ref<any[]>([])   // 收款单 /finance/CollectReceipt/index
+const adjustedCollectList = ref<any[]>([])
 const payList = ref<any[]>([])       // 付款单 /finance/PayReceipt/index
 const expenseList = ref<any[]>([])   // 费用单 /finance/Expense/index
 const rechargeList = ref<any[]>([])  // 会员充值 /retail/recharge/index
@@ -443,6 +448,7 @@ const retailList = ref<any[]>([])    // 零售单 /retail/order/index
 const receivableList = ref<any[]>([])
 const payableList = ref<any[]>([])
 const procureReturnFinanceList = ref<any[]>([])
+const saleReturnFinanceList = ref<any[]>([])
 const purchasePayList = ref<any[]>([])
 const saleOutList = ref<any[]>([])
 const flowVisible = ref(false)
@@ -514,7 +520,12 @@ const allFlowItems = computed(() => {
   // 7. 采购退货退款（income）
   for (const r of procureReturnFinanceList.value) {
     if (Number(r.refund_amount || 0) <= 0) continue
-    items.push({ type: 'income', source: '供应商退款', name: r.supplier_name || '—', amount: Number(r.refund_amount || 0), date: r.date || '', order_no: r.order_no || '' })
+    items.push({ type: 'income', source: '采购退货退款', name: r.supplier_name || '—', amount: Number(r.refund_amount || 0), date: r.date || '', order_no: r.order_no || '' })
+  }
+  // 8. 销售退货退款（expense）
+  for (const r of saleReturnFinanceList.value) {
+    if (Number(r.refund_amount || 0) <= 0) continue
+    items.push({ type: 'expense', source: '销售退货退款', name: r.customer_name || '—', amount: Number(r.refund_amount || 0), date: r.date || '', order_no: r.order_no || '' })
   }
   return items.sort((a, b) => b.date.localeCompare(a.date))
 })
@@ -530,7 +541,7 @@ const fundTotal = computed(() =>
   Math.max(0, Number(collectTotal.value) - Number(payTotal.value)).toFixed(2)
 )
 const accountTotal = computed(() =>
-  fundList.value.reduce((s, r) => s + Number(r.balance || 0), 0).toFixed(2)
+  fundList.value.reduce((s, r) => s + Number(r.display_balance ?? r.balance ?? 0), 0).toFixed(2)
 )
 const prepayTotal = computed(() =>
   prepayList.value.filter((r: any) => r.pay_type === 'customer').reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
@@ -545,9 +556,15 @@ const adjustedPayList = computed(() =>
 // 近期收款 = 收款单 + 预收款，按日期倒序
 const recentCollectItems = computed(() => {
   const items: any[] = []
-  for (const r of collectList.value) {
-    if (Number(r.amount || 0) <= 0) continue
-    items.push({ _key: 'c_' + r.id, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: (r.receipt_date || r.create_time || '').slice(0, 10) })
+  for (const r of adjustedCollectList.value) {
+    if (Number(r.net_amount ?? r.amount ?? 0) <= 0) continue
+    items.push({
+      _key: 'c_' + r.id,
+      name: r.customer_name || r.contact_name || '—',
+      amount: Number(r.net_amount ?? r.amount ?? 0),
+      date: (r.receipt_date || r.create_time || '').slice(0, 10),
+      refund_allocated: Number(r.refund_allocated || 0),
+    })
   }
   for (const r of prepayList.value) {
     if (Number(r.amount || 0) <= 0) continue
@@ -808,12 +825,12 @@ async function savePay() {
 
 onMounted(async () => {
   try {
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes] = await Promise.all([
+    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes] = await Promise.all([
       getFundList({ list_rows: 100 }),
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
       getCollectReceiptList({ list_rows: 1000 }),
       getPayReceiptList({ list_rows: 1000 }),
-      http.get('/finance/CollectAccounts/index', { params: { list_rows: 200 } }),
+      http.get('/finance/CollectAccounts/index', { params: { list_rows: 1000 } }),
       http.get('/finance/PayAccounts/index', { params: { list_rows: 200, group_by_supplier: 1 } }),
       http.get('/stock/PurchaseOrder/index', { params: { list_rows: 200 } }),
       http.get('/stock/SaleOutOrder/index', { params: { list_rows: 50 } }),
@@ -823,15 +840,21 @@ onMounted(async () => {
       http.get('/shop/ShopCustomer/index', { params: { list_rows: 500 } }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
+      http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
     ])
-    fundList.value = fundRes.data?.rows ?? fundRes.data?.list ?? []
-    const fundNameMap = new Map<number, string>(fundList.value.map((row: any) => [Number(row.id), String(row.name || '')]))
+    const rawFundList = fundRes.data?.rows ?? fundRes.data?.list ?? []
+    const fundNameMap = new Map<number, string>(rawFundList.map((row: any) => [Number(row.id), String(row.name || '')]))
     prepayList.value = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
     collectList.value = collectRes.data?.rows ?? collectRes.data?.list ?? []
     payList.value = payRes.data?.rows ?? payRes.data?.list ?? []
-    receivableList.value = receivableRes.data?.rows ?? receivableRes.data?.list ?? []
+    const rawReceivableList = receivableRes.data?.rows ?? receivableRes.data?.list ?? []
     procureReturnFinanceList.value = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [], fundNameMap)
+    const normalizedSaleReturns = normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? [])
+    fundList.value = applyProcureReturnsToFundRows(rawFundList, procureReturnFinanceList.value)
+    saleReturnFinanceList.value = buildSaleReturnSettlementRows(rawReceivableList, normalizedSaleReturns)
     payableList.value = applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], procureReturnFinanceList.value)
+    receivableList.value = applySaleReturnsToReceivableRows(rawReceivableList, normalizedSaleReturns)
+    adjustedCollectList.value = applySaleReturnsToCollectReceiptRows(collectList.value, normalizedSaleReturns, rawReceivableList)
     purchasePayList.value = purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []
     saleOutList.value = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
     retailList.value = retailRes.data?.rows ?? retailRes.data?.list ?? []

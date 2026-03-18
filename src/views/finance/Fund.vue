@@ -20,7 +20,7 @@
         </template>
         <el-table-column prop="name" label="账户名称" min-width="140" />
         <el-table-column prop="type_name" label="账户类型" min-width="120" />
-        <el-table-column label="退货退款" min-width="120" align="right">
+        <el-table-column label="采购退货退款" min-width="120" align="right">
           <template #default="{ row }">
             <span :style="{ color: Number(row.refund_amount || 0) > 0 ? '#16a34a' : 'rgba(29,29,31,0.25)', fontWeight: 600 }">
               ¥{{ Number(row.refund_amount || 0).toFixed(2) }}

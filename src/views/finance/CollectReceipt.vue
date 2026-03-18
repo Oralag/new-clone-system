@@ -38,6 +38,18 @@
             <span style="color:#16a34a;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="退款金额" width="120" align="right">
+          <template #default="{ row }">
+            <span :style="{ color: Number(row.refund_allocated || 0) > 0 ? '#dc2626' : 'rgba(29,29,31,0.25)', fontWeight: 600 }">
+              ¥{{ Number(row.refund_allocated || 0).toFixed(2) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="净收款" width="120" align="right">
+          <template #default="{ row }">
+            <span style="color:#0071e3;font-weight:600">¥{{ Number(row.net_amount ?? row.amount ?? 0).toFixed(2) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="收款账户" width="130">
           <template #default="{ row }">
             {{ row.account_name || row.fund_name || '—' }}
@@ -158,10 +170,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund } from '@/api/finance'
+import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund, getReceivableList } from '@/api/finance'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSupplierList, createSupplier } from '@/api/procure'
 import http from '@/api/http'
+import { applySaleReturnsToCollectReceiptRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 
 // ── 数据加载 ──────────────────────────────────────────────────────────────────
 const loading = ref(false)
@@ -173,14 +186,19 @@ const pageSize = ref(20)
 async function loadAll() {
   loading.value = true
   try {
-    const [receiptRes, prepayRes] = await Promise.all([
+    const [receiptRes, prepayRes, receivableRes, saleReturnRes] = await Promise.all([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/finance/Prepay/index', { params: { pay_type: 'customer', list_rows: 1000 } }),
+      getReceivableList({ list_rows: 1000 }),
+      http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
     ])
     // 过滤掉收款单里备注含"预付款"的记录（这些是重复写入的，正确数据来自Prepay表）
     const allReceipts: any[] = receiptRes?.data?.rows ?? receiptRes?.data?.list ?? []
     const receipts = allReceipts.filter((r: any) => !String(r.remark || '').includes('预付款'))
     const prepays: any[] = prepayRes?.data?.rows ?? prepayRes?.data?.list ?? []
+    const receivableRows: any[] = receivableRes?.data?.rows ?? receivableRes?.data?.list ?? []
+    const saleReturnRows = normalizeSaleReturnFinanceRows(saleReturnRes?.data?.rows ?? saleReturnRes?.data?.list ?? [])
+    const adjustedReceipts = applySaleReturnsToCollectReceiptRows(receipts, saleReturnRows, receivableRows)
 
     const prepayRows = prepays.map((r: any) => ({
       ...r,
@@ -195,7 +213,7 @@ async function loadAll() {
     }))
 
     // 合并，按日期倒序
-    const merged = [...receipts.map((r: any) => ({ ...r, _isPrepay: false })), ...prepayRows]
+    const merged = [...adjustedReceipts.map((r: any) => ({ ...r, _isPrepay: false })), ...prepayRows]
     merged.sort((a, b) => {
       const da = (a.receipt_date || a.pay_date || a.created_at || '').slice(0, 10)
       const db = (b.receipt_date || b.pay_date || b.created_at || '').slice(0, 10)

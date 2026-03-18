@@ -86,9 +86,10 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList } from '@/api/finance'
+import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList, getReceivableList } from '@/api/finance'
 import http from '@/api/http'
 import { normalizeProcureReturnFinanceRows, applyProcureReturnsToPayableRows } from '@/utils/procureReturnFinance'
+import { buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 
 const route = useRoute()
 const summaryLoading = ref(false)
@@ -161,7 +162,7 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes] = await Promise.all([
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes, receivableRes, saleReturnRes] = await Promise.all([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
       getPayReceiptList({ list_rows: 1000 }),
@@ -171,6 +172,8 @@ onMounted(async () => {
       http.get('/finance/Prepay/index', { params: { list_rows: 1000 } }),
       getFundList({ list_rows: 200 }),
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
+      getReceivableList({ list_rows: 1000 }),
+      http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
     ])
 
     const items: FlowItem[] = []
@@ -271,11 +274,29 @@ onMounted(async () => {
         date: r.date,
         fund_name: r.fund_name || '—',
         type: 'income',
-        source: '供应商退款',
+        source: '采购退货退款',
         name: r.supplier_name || '—',
         order_no: r.order_no || '',
         amount: Number(r.refund_amount || 0),
         remark: r.remark || '采购退货退款',
+      })
+    }
+
+    const saleReturnFinanceRows = buildSaleReturnSettlementRows(
+      receivableRes.data?.rows ?? receivableRes.data?.list ?? [],
+      normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? saleReturnRes.data?.list ?? [])
+    )
+    for (const r of saleReturnFinanceRows) {
+      if (r.refund_amount <= 0) continue
+      items.push({
+        date: r.date,
+        fund_name: '—',
+        type: 'expense',
+        source: '销售退货退款',
+        name: r.customer_name || '—',
+        order_no: r.order_no || '',
+        amount: Number(r.refund_amount || 0),
+        remark: r.remark || '销售退货退款',
       })
     }
 
