@@ -169,11 +169,14 @@
               <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/pay-receipt')">更多</el-button>
             </div>
           </template>
-          <div class="inline-list" v-if="payList.length">
-            <div class="inline-item clickable" v-for="r in payList.slice(0,4)" :key="r.id" @click="router.push('/finance/pay-receipt')">
+          <div class="inline-list" v-if="adjustedPayList.length">
+            <div class="inline-item clickable" v-for="r in adjustedPayList.slice(0,4)" :key="r.id" @click="router.push('/finance/pay-receipt')">
               <div class="inline-name">{{ r.supplier_name || r.contact_name || '—' }}</div>
-              <div class="inline-value red">¥{{ Number(r.amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ (r.pay_date||r.created_at||'').slice(0,10) }}</div>
+              <div class="inline-value red">¥{{ Number(r.net_amount ?? r.amount ?? 0).toFixed(2) }}</div>
+              <div class="inline-sub">
+                {{ (r.pay_date||r.created_at||'').slice(0,10) }}
+                <span v-if="Number(r.refund_allocated || 0) > 0"> · 已退款 ¥{{ Number(r.refund_allocated || 0).toFixed(2) }}</span>
+              </div>
             </div>
           </div>
           <div v-else class="empty-tip">暂无付款记录</div>
@@ -424,7 +427,7 @@ import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, Ar
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList } from '@/api/finance'
-import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
+import { applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 
 const router = useRouter()
 
@@ -534,6 +537,9 @@ const prepayTotal = computed(() =>
 )
 const supplierPrepayTotal = computed(() =>
   prepayList.value.filter((r: any) => r.pay_type === 'supplier').reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
+)
+const adjustedPayList = computed(() =>
+  applyProcureReturnsToPayReceiptRows(payList.value, procureReturnFinanceList.value)
 )
 
 // 近期收款 = 收款单 + 预收款，按日期倒序

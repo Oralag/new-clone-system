@@ -1,7 +1,7 @@
 <template>
   <div class="receipt-page">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getPayReceiptList"
+      <ScTable ref="tableRef" :api-obj="getPayReceiptListWithRefund"
           del-path="/finance/PayReceipt/batchDel"
           export-file-name="付款记录" :params="searchForm">
         <template #search>
@@ -30,6 +30,18 @@
             <span style="color:#dc2626;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="退款金额" width="120" align="right">
+          <template #default="{ row }">
+            <span :style="{ color: Number(row.refund_allocated || 0) > 0 ? '#16a34a' : 'rgba(29,29,31,0.25)', fontWeight: 600 }">
+              ¥{{ Number(row.refund_allocated || 0).toFixed(2) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="净付款" width="120" align="right">
+          <template #default="{ row }">
+            <span style="color:#0071e3;font-weight:600">¥{{ Number(row.net_amount ?? row.amount ?? 0).toFixed(2) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="付款账户" width="130">
           <template #default="{ row }">{{ row.fund_name || row.account_name || '—' }}</template>
         </el-table-column>
@@ -53,6 +65,8 @@ import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getPayReceiptList, deletePayReceipt } from '@/api/finance'
+import http from '@/api/http'
+import { applyProcureReturnsToPayReceiptRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 
 const router = useRouter()
 
@@ -66,6 +80,25 @@ const typeTagMap: Record<string, string> = {
 function typeLabel(type: string) {
   const map: Record<string, string> = { supplier: '供应商', customer: '客户', staff: '员工', other: '其他' }
   return map[type] ?? type
+}
+
+async function getPayReceiptListWithRefund(params: any) {
+  const [payRes, returnRes] = await Promise.all([
+    getPayReceiptList(params),
+    http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
+  ])
+
+  const rows: any[] = payRes.data?.rows ?? []
+  const normalizedReturns = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [])
+  const nextRows = applyProcureReturnsToPayReceiptRows(rows, normalizedReturns)
+
+  return {
+    ...payRes,
+    data: {
+      ...(payRes.data || {}),
+      rows: nextRows,
+    },
+  }
 }
 
 async function handleDelete(id: number) {

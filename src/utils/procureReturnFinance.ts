@@ -46,6 +46,11 @@ export interface ProcureReturnFinanceRow {
   remark: string
 }
 
+export interface ProcureRefundAllocationRow {
+  refund_allocated: number
+  net_amount: number
+}
+
 export function normalizeProcureReturnFinanceRows(
   rows: AnyRow[],
   fundNameMap?: Map<number, string>,
@@ -158,4 +163,102 @@ export function applyProcureReturnsToPayableRows(payableRows: AnyRow[], returnRo
       orders,
     }
   })
+}
+
+function getOrderRefundMap(returnRows: ProcureReturnFinanceRow[]) {
+  const map = new Map<string, number>()
+  for (const row of returnRows) {
+    if (row.refund_amount <= 0) continue
+    const current = map.get(row.order_key) || 0
+    map.set(row.order_key, roundMoney(current + row.refund_amount))
+  }
+  return map
+}
+
+function getSupplierRefundMap(returnRows: ProcureReturnFinanceRow[]) {
+  const map = new Map<string, number>()
+  for (const row of returnRows) {
+    if (row.refund_amount <= 0) continue
+    const current = map.get(row.supplier_key) || 0
+    map.set(row.supplier_key, roundMoney(current + row.refund_amount))
+  }
+  return map
+}
+
+export function applyProcureReturnsToPayReceiptRows(paymentRows: AnyRow[], returnRows: ProcureReturnFinanceRow[]) {
+  const rows = (paymentRows || []).map((row) => ({ ...row }))
+  const result: Array<AnyRow & ProcureRefundAllocationRow> = rows.map((row) => ({
+    ...row,
+    refund_allocated: 0,
+    net_amount: roundMoney(row.amount),
+  }))
+
+  const supplierRefundMap = getSupplierRefundMap(returnRows)
+  const orderRefundMap = getOrderRefundMap(returnRows)
+  const getSupplierKey = (row: AnyRow) => (
+    row.contact_id
+      ? `id:${row.contact_id}`
+      : row.supplier_id
+        ? `id:${row.supplier_id}`
+        : `name:${text(row.contact_name || row.supplier_name)}`
+  )
+
+  const allocate = (index: number, amount: number) => {
+    const current = result[index]
+    const rawAmount = toNumber(current.amount)
+    const available = Math.max(0, roundMoney(rawAmount - current.refund_allocated))
+    if (available <= 0 || amount <= 0) return 0
+    const used = Math.min(available, amount)
+    current.refund_allocated = roundMoney(current.refund_allocated + used)
+    current.net_amount = Math.max(0, roundMoney(rawAmount - current.refund_allocated))
+    return used
+  }
+
+  // 1) 优先按采购单号匹配退款到付款记录
+  for (let index = 0; index < result.length; index++) {
+    const row = result[index]
+    if (String(row.contact_type || '') !== 'supplier') continue
+    const orderNo = text(row.order_sn || row.order_no || row.receipt_no)
+    if (!orderNo) continue
+    const orderKey = `no:${orderNo}`
+    const remain = orderRefundMap.get(orderKey) || 0
+    if (remain <= 0) continue
+    const used = allocate(index, remain)
+    orderRefundMap.set(orderKey, Math.max(0, roundMoney(remain - used)))
+    if (used > 0) {
+      const supplierKey = getSupplierKey(row)
+      supplierRefundMap.set(supplierKey, Math.max(0, roundMoney((supplierRefundMap.get(supplierKey) || 0) - used)))
+    }
+  }
+
+  // 2) 剩余退款按供应商分摊到最近的供应商付款
+  const supplierIndexes = new Map<string, number[]>()
+  result.forEach((row, index) => {
+    if (String(row.contact_type || '') !== 'supplier') return
+    const supplierKey = getSupplierKey(row)
+    const list = supplierIndexes.get(supplierKey) || []
+    list.push(index)
+    supplierIndexes.set(supplierKey, list)
+  })
+
+  for (const indexes of supplierIndexes.values()) {
+    indexes.sort((a, b) => {
+      const aDate = text(result[a].pay_date || result[a].create_time)
+      const bDate = text(result[b].pay_date || result[b].create_time)
+      return bDate.localeCompare(aDate)
+    })
+  }
+
+  for (const [supplierKey, indexes] of supplierIndexes.entries()) {
+    let remain = supplierRefundMap.get(supplierKey) || 0
+    if (remain <= 0) continue
+
+    for (const index of indexes) {
+      if (remain <= 0) break
+      const used = allocate(index, remain)
+      remain = Math.max(0, roundMoney(remain - used))
+    }
+  }
+
+  return result
 }
