@@ -496,7 +496,7 @@ function handleGotoProcure() {
     goods_name: r.material_name,
     goods_sn: r.material_sn || '',
     spec: r._spec || '',
-    cate_name: '',
+    cate_name: r.cate_name || '',
     unit_name: r.unit_name || '',
     batch_no: '',
     num: r.num || 1,

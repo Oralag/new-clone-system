@@ -8,39 +8,75 @@
 
       <!-- 左侧分类面板 -->
       <div class="cate-panel" :style="{ width: catePanelWidth + 'px' }">
-        <div class="cate-header">
-          <span class="cate-title">商品分类</span>
-          <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
+        <!-- 视图切换 tab -->
+        <div class="cate-view-tabs">
+          <span class="cate-view-tab" :class="{ active: leftView === 'cate' }" @click="switchLeftView('cate')">商品分类</span>
+          <span class="cate-view-tab" :class="{ active: leftView === 'bom' }" @click="switchLeftView('bom')">BOM视图</span>
         </div>
-        <div class="cate-search">
-          <el-input v-model="cateKeyword" placeholder="搜索分类" clearable size="small" />
-        </div>
-        <div class="cate-tree" v-loading="cateLoading">
-          <!-- 全部 -->
-          <div class="cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
-            全部
+
+        <!-- 商品分类模式 -->
+        <template v-if="leftView === 'cate'">
+          <div class="cate-header">
+            <span class="cate-title">商品分类</span>
+            <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
           </div>
-          <el-tree
-            :data="cateTree"
-            :props="{ label: 'name', children: 'children' }"
-            node-key="id"
-            :default-expand-all="false"
-            highlight-current
-            style="background:transparent"
-            @node-click="(node: any) => selectCate(node.id)"
-          >
-            <template #default="{ data }">
-              <span style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:4px;overflow:hidden">
-                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ data.name }}</span>
-                <span class="cate-item-actions" style="flex-shrink:0">
-                  <el-icon class="act-icon" @click.stop="openCateForm(data)"><Edit /></el-icon>
-                  <el-icon class="act-icon danger" @click.stop="handleDeleteCate(data.id)"><Delete /></el-icon>
+          <div class="cate-search">
+            <el-input v-model="cateKeyword" placeholder="搜索分类" clearable size="small" />
+          </div>
+          <div class="cate-tree" v-loading="cateLoading">
+            <div class="cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
+              全部
+            </div>
+            <el-tree
+              :data="cateTree"
+              :props="{ label: 'name', children: 'children' }"
+              node-key="id"
+              :default-expand-all="false"
+              highlight-current
+              style="background:transparent"
+              @node-click="(node: any) => selectCate(node.id)"
+            >
+              <template #default="{ data }">
+                <span style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:4px;overflow:hidden">
+                  <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ data.name }}</span>
+                  <span class="cate-item-actions" style="flex-shrink:0">
+                    <el-icon class="act-icon" @click.stop="openCateForm(data)"><Edit /></el-icon>
+                    <el-icon class="act-icon danger" @click.stop="handleDeleteCate(data.id)"><Delete /></el-icon>
+                  </span>
                 </span>
+              </template>
+            </el-tree>
+            <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty">暂无分类</div>
+          </div>
+        </template>
+
+        <!-- BOM视图模式 -->
+        <template v-else>
+          <div class="cate-header">
+            <span class="cate-title">按成品筛选</span>
+          </div>
+          <div class="cate-search">
+            <el-input v-model="bomViewKeyword" placeholder="搜索成品" clearable size="small" />
+          </div>
+          <div class="cate-tree" v-loading="bomViewLoading">
+            <div class="cate-item" :class="{ active: bomViewGoodsId === null }" @click="selectBomGoods(null)">
+              全部商品
+            </div>
+            <div
+              v-for="g in filteredBomGoodsList"
+              :key="g.goods_id"
+              class="cate-item"
+              :class="{ active: bomViewGoodsId === g.goods_id }"
+              @click="selectBomGoods(g)"
+            >
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.goods_name }}</span>
+              <span class="goods-count" style="flex-shrink:0;font-size:11px;color:#0071e3;background:rgba(0,113,227,0.08);border-radius:3px;padding:0 4px;margin-left:4px">
+                {{ g.material_count }}种
               </span>
-            </template>
-          </el-tree>
-          <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty">暂无分类</div>
-        </div>
+            </div>
+            <div v-if="!bomViewLoading && filteredBomGoodsList.length === 0" class="cate-empty">暂无BOM成品</div>
+          </div>
+        </template>
       </div>
       <div class="cate-resize-handle" @mousedown="startCateResize" />
 
@@ -147,6 +183,15 @@
           <el-table-column v-if="!isMobileList" label="状态" width="80" align="center">
             <template #default="{ row }">
               <el-switch :model-value="row.status === 1" disabled size="small" />
+            </template>
+          </el-table-column>
+          <!-- BOM视图：显示用量 -->
+          <el-table-column v-if="leftView === 'bom' && bomViewGoodsId !== null" label="用量" width="110" align="center">
+            <template #default="{ row }">
+              <span v-if="getBomUsage(row)" style="color:#0071e3;font-weight:500">
+                {{ getBomUsage(row) }}
+              </span>
+              <el-tag v-else type="success" size="small">成品</el-tag>
             </template>
           </el-table-column>
           <el-table-column
@@ -743,7 +788,7 @@ import {
   getBrandList, createBrand,
   getUnitList, createUnit,
   getSpecList, createSpec, deleteSpec,
-  getBomByGoods,
+  getBomByGoods, getBomList,
 } from '@/api/goods'
 import { getStockList } from '@/api/warehouse'
 
@@ -937,6 +982,107 @@ function getCatePathText(row: any) {
 }
 
 // Cate IDs to show when a parent category is selected (parent + all children)
+// ── BOM 视图 ──────────────────────────────────────────────────────────────────
+const leftView = ref<'cate' | 'bom'>('cate')
+const bomViewLoading = ref(false)
+const bomViewKeyword = ref('')
+// { goods_id, goods_name, goods_sn, material_count, materialIds: Set<number> }
+const bomGoodsList = ref<any[]>([])
+// 当前选中的成品（null = 全部）
+const bomViewGoodsId = ref<number | null>(null)
+// materialIds of selected BOM product + the product itself
+const bomViewMaterialIds = ref<Set<number>>(new Set())
+// map: goods_id -> BOM rows (for usage display)
+const bomUsageMap = ref<Map<number, any>>(new Map())
+
+const filteredBomGoodsList = computed(() => {
+  if (!bomViewKeyword.value) return bomGoodsList.value
+  return bomGoodsList.value.filter(g =>
+    g.goods_name?.includes(bomViewKeyword.value) || g.goods_sn?.includes(bomViewKeyword.value)
+  )
+})
+
+async function loadBomView() {
+  bomViewLoading.value = true
+  try {
+    const res = await getBomList({ list_rows: 2000 })
+    const rows: any[] = res.data?.rows ?? []
+    // 聚合成品
+    const goodsMap = new Map<number, any>()
+    for (const r of rows) {
+      if (!r.goods_id) continue
+      if (!goodsMap.has(r.goods_id)) {
+        goodsMap.set(r.goods_id, {
+          goods_id: r.goods_id,
+          goods_name: r.goods_name,
+          goods_sn: r.goods_sn,
+          material_count: 0,
+          materialIds: new Set<number>(),
+          bomRows: [] as any[],
+        })
+      }
+      const g = goodsMap.get(r.goods_id)!
+      if (r.material_name && r.material_name !== '（待添加物料）' && r.num > 0) {
+        g.material_count++
+        if (r.material_id) g.materialIds.add(r.material_id)
+        g.bomRows.push(r)
+      }
+    }
+    bomGoodsList.value = Array.from(goodsMap.values())
+    // 重建 usageMap
+    const newUsageMap = new Map<number, any>()
+    for (const g of bomGoodsList.value) {
+      for (const r of g.bomRows) {
+        if (r.material_id) newUsageMap.set(r.material_id, r)
+      }
+    }
+    bomUsageMap.value = newUsageMap
+  } finally {
+    bomViewLoading.value = false
+  }
+}
+
+function selectBomGoods(g: any | null) {
+  if (g === null) {
+    bomViewGoodsId.value = null
+    bomViewMaterialIds.value = new Set()
+  } else {
+    bomViewGoodsId.value = g.goods_id
+    // 包含成品本身 + 所有物料
+    bomViewMaterialIds.value = new Set([g.goods_id, ...g.materialIds])
+    // 只为当前成品重建 usageMap（物料id -> bom行）
+    const m = new Map<number, any>()
+    for (const r of g.bomRows) {
+      if (r.material_id) m.set(r.material_id, r)
+    }
+    bomUsageMap.value = m
+  }
+  tableRef.value?.refresh()
+}
+
+function switchLeftView(view: 'cate' | 'bom') {
+  leftView.value = view
+  if (view === 'bom') {
+    // 重置分类筛选，切换到 BOM 模式
+    selectedCateId.value = null
+    searchForm.cate_id = ''
+    bomViewGoodsId.value = null
+    bomViewMaterialIds.value = new Set()
+    loadBomView()
+  } else {
+    // 切回分类模式，重置 BOM 筛选
+    bomViewGoodsId.value = null
+    bomViewMaterialIds.value = new Set()
+  }
+  tableRef.value?.refresh()
+}
+
+function getBomUsage(row: any): string {
+  const r = bomUsageMap.value.get(row.id)
+  if (!r) return ''
+  return `${r.num} ${r.unit_name || ''}`
+}
+
 const activeCateIds = computed<Set<number> | null>(() => {
   const id = selectedCateId.value
   if (id === null) return null
@@ -949,10 +1095,14 @@ const activeCateIds = computed<Set<number> | null>(() => {
 const rowFilter = computed(() => {
   const typeFilter = filterType.value ? (row: any) => getGoodsType(row) === filterType.value : null
   const cateFilter = activeCateIds.value ? (row: any) => activeCateIds.value!.has(row.cate_id) : null
-  if (!typeFilter && !cateFilter) return undefined
+  // BOM视图：按物料ID集合筛选
+  const bomIds = leftView.value === 'bom' && bomViewGoodsId.value !== null ? bomViewMaterialIds.value : null
+  const bomFilter = bomIds ? (row: any) => bomIds.has(row.id) : null
+  if (!typeFilter && !cateFilter && !bomFilter) return undefined
   return (row: any) => {
     if (typeFilter && !typeFilter(row)) return false
     if (cateFilter && !cateFilter(row)) return false
+    if (bomFilter && !bomFilter(row)) return false
     return true
   }
 })
@@ -2255,6 +2405,29 @@ function stopListScanner() {
 }
 .cate-resize-handle:hover {
   background: #dbeafe;
+}
+
+.cate-view-tabs {
+  display: flex;
+  border-bottom: 1px solid #f5f5f7;
+  flex-shrink: 0;
+}
+
+.cate-view-tab {
+  flex: 1;
+  text-align: center;
+  font-size: 13px;
+  padding: 8px 0;
+  cursor: pointer;
+  color: rgba(29,29,31,0.5);
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.cate-view-tab.active {
+  color: #0071e3;
+  border-bottom-color: #0071e3;
+  font-weight: 500;
 }
 
 .cate-header {
