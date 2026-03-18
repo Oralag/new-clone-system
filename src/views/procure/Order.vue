@@ -781,21 +781,24 @@ async function loadStaff() {
 onMounted(() => {
   loadSuppliers(); loadWarehouses(); loadCates(); loadFunds(); loadStaff(); loadPaidMap()
   // 从采购计划跳转过来，预填数据
-  if (route.query.from_plan === '1') {
-    openCreate()
-    if (route.query.supplier_id) {
-      fd.supplier_id = Number(route.query.supplier_id)
-      fd.supplier_name = String(route.query.supplier_name || '')
-    }
-    if (route.query.warehouse_id) {
-      fd.warehouse_id = Number(route.query.warehouse_id)
-      fd.warehouse_name = String(route.query.warehouse_name || '')
-    }
-    fd.admin_name = String(route.query.admin_name || '')
-    fd.remark = String(route.query.remark || '')
-    fd.plan_id = Number(route.query.plan_id || 0)
+  const planData = sessionStorage.getItem('procure_order_from_plan')
+  if (planData) {
+    sessionStorage.removeItem('procure_order_from_plan')
     try {
-      const items = JSON.parse(String(route.query.goods_info || '[]'))
+      const p = JSON.parse(planData)
+      openCreate()
+      if (p.supplier_id) {
+        fd.supplier_id = Number(p.supplier_id)
+        fd.supplier_name = String(p.supplier_name || '')
+      }
+      if (p.warehouse_id) {
+        fd.warehouse_id = Number(p.warehouse_id)
+        fd.warehouse_name = String(p.warehouse_name || '')
+      }
+      fd.admin_name = String(p.admin_name || '')
+      fd.remark = String(p.remark || '')
+      fd.plan_id = Number(p.plan_id || 0)
+      const items = JSON.parse(String(p.goods_info || '[]'))
       fd.items = items.map((i: any) => ({
         goods_id: i.goods_id || 0,
         goods_name: i.goods_name || '',

@@ -652,21 +652,18 @@ async function handleConvertToOrder(row: any) {
     console.warn('更新计划状态失败', e?.message)
   }
   tableRef.value?.refresh()
-  // 跳转到采购订单，携带计划数据
-  router.push({
-    path: '/procure/order',
-    query: {
-      from_plan: '1',
-      plan_id: row.id,
-      supplier_id: row.supplier_id,
-      supplier_name: row.supplier_name || '',
-      warehouse_id: row.warehouse_id || '',
-      warehouse_name: row.warehouse_name || '',
-      admin_name: row.admin_name || '',
-      remark: row.remark || '',
-      goods_info: row.goods_info || '[]',
-    }
-  })
+  // 用 sessionStorage 传递预填数据，避免 URL 超长
+  sessionStorage.setItem('procure_order_from_plan', JSON.stringify({
+    plan_id: row.id,
+    supplier_id: row.supplier_id,
+    supplier_name: row.supplier_name || '',
+    warehouse_id: row.warehouse_id || '',
+    warehouse_name: row.warehouse_name || '',
+    admin_name: row.admin_name || '',
+    remark: row.remark || '',
+    goods_info: row.goods_info || '[]',
+  }))
+  router.push('/procure/order')
 }
 
 async function handleAudit(row: any, status: number) {
