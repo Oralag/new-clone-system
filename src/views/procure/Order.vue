@@ -101,7 +101,7 @@
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row)">删除</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -233,6 +233,7 @@
               <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
               <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
               <el-button :icon="Box" size="small" @click="openBomPicker">选择BOM商品</el-button>
+              <el-button :icon="Document" size="small" @click="openPlanPicker">选择采购计划</el-button>
               <el-button :icon="Upload" size="small">导入商品</el-button>
               <el-button :icon="Camera" size="small">扫码录入</el-button>
             </div>
@@ -649,7 +650,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder } from '@/api/procure'
+import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, getBomList, getBomByGoods, getSpecList } from '@/api/goods'
 import { getFundList, createFund, getPayReceiptList } from '@/api/finance'
@@ -777,7 +778,42 @@ async function loadStaff() {
   } catch { /* ignore */ }
 }
 
-onMounted(() => { loadSuppliers(); loadWarehouses(); loadCates(); loadFunds(); loadStaff(); loadPaidMap() })
+onMounted(() => {
+  loadSuppliers(); loadWarehouses(); loadCates(); loadFunds(); loadStaff(); loadPaidMap()
+  // 从采购计划跳转过来，预填数据
+  if (route.query.from_plan === '1') {
+    openCreate()
+    if (route.query.supplier_id) {
+      fd.supplier_id = Number(route.query.supplier_id)
+      fd.supplier_name = String(route.query.supplier_name || '')
+    }
+    if (route.query.warehouse_id) {
+      fd.warehouse_id = Number(route.query.warehouse_id)
+      fd.warehouse_name = String(route.query.warehouse_name || '')
+    }
+    fd.admin_name = String(route.query.admin_name || '')
+    fd.remark = String(route.query.remark || '')
+    fd.plan_id = Number(route.query.plan_id || 0)
+    try {
+      const items = JSON.parse(String(route.query.goods_info || '[]'))
+      fd.items = items.map((i: any) => ({
+        goods_id: i.goods_id || 0,
+        goods_name: i.goods_name || '',
+        goods_sn: i.goods_sn || '',
+        spec: i.spec || '',
+        cate_name: i.cate_name || '',
+        unit_name: i.unit_name || '',
+        batch_no: '',
+        num: i.num || 0,
+        price_no_tax: i.price_no_tax || i.price || 0,
+        tax_rate: i.tax_rate || 0,
+        price: i.price || 0,
+        remark: i.remark || '',
+      }))
+      calcTotal()
+    } catch { /* ignore */ }
+  }
+})
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface OrderItem {
@@ -795,6 +831,7 @@ interface AttachFile {
 
 const defaultFd = () => ({
   id: 0,
+  plan_id: 0,
   order_no: '',
   order_sn: '',
   supplier_id: null as any,
@@ -1042,6 +1079,28 @@ async function handleAudit(row: any, status: number) {
   await ElMessageBox.confirm(`确定${action}该采购单？`, '提示', { type: 'warning' })
   try {
     await auditProcureOrder(row.id, status)
+    // 审核通过后自动创建并审核采购入库记录
+    if (status === 1) {
+      try {
+        const items = JSON.parse(row.goods_info || '[]')
+        const inhouseRes = await createProcureInhouse({
+          order_id: row.id,
+          supplier_id: row.supplier_id,
+          supplier_name: row.supplier_name,
+          warehouse_id: row.warehouse_id,
+          warehouse_name: row.warehouse_name,
+          admin_name: row.admin_name,
+          in_date: (row.order_date || row.create_time || '').slice(0, 10),
+          total_amount: row.total_amount,
+          remark: row.remark || '',
+          goods_info: JSON.stringify(items),
+        })
+        const inhouseId = inhouseRes.data?.id ?? inhouseRes.data
+        if (inhouseId) await auditProcureInhouse(inhouseId, 1)
+      } catch (e: any) {
+        console.warn('自动创建采购入库记录失败', e?.message)
+      }
+    }
     ElMessage.success(`${action}成功`)
     tableRef.value?.refresh()
     loadPaidMap()
@@ -1053,6 +1112,16 @@ async function handleAudit(row: any, status: number) {
 async function handleReverseAudit(row: any) {
   await ElMessageBox.confirm('反审核将撤销入库与财务入账，确定继续？', '反审核确认', { type: 'warning' })
   try {
+    // 先反审核关联的采购入库记录
+    try {
+      const inhouseListRes = await getProcureInhouseList({ order_id: row.id, list_rows: 10 })
+      const inhouseRows: any[] = inhouseListRes.data?.rows ?? []
+      for (const r of inhouseRows) {
+        if (r.status === 1) await auditProcureInhouse(r.id, 0)
+      }
+    } catch (e: any) {
+      console.warn('采购入库反审核失败', e?.message)
+    }
     await auditProcureOrder(row.id, 0)
     ElMessage.success('反审核成功，库存与财务已回滚')
     tableRef.value?.refresh()
@@ -1261,6 +1330,16 @@ function confirmPlanItems() {
   }))
   fd.items.push(...newItems)
   calcTotal()
+  // 预填供应商（如果还没填）
+  if (selectedPlan.value && !fd.supplier_id) {
+    fd.supplier_id = selectedPlan.value.supplier_id
+    fd.supplier_name = selectedPlan.value.supplier_name || ''
+  }
+  // 标记该计划为已转单
+  if (selectedPlan.value?.id) {
+    fd.plan_id = selectedPlan.value.id
+    http.post('/procure/ProcurePlan/edit', { id: selectedPlan.value.id, status: 4 }).catch(() => {})
+  }
   planPickerVisible.value = false
   ElMessage.success(`已导入 ${newItems.length} 件商品`)
 }

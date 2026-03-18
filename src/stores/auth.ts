@@ -44,6 +44,13 @@ export const useAuthStore = defineStore('auth', {
       this.userInfo = null
       localStorage.removeItem(TOKEN_NAME)
       localStorage.removeItem(USER_INFO_KEY)
+      localStorage.removeItem('erp_company_name')
+      localStorage.removeItem('brand_profile')
+      localStorage.removeItem('brand_profile_savedAt')
+      localStorage.removeItem('erp_brand_data')
+      localStorage.removeItem('erp_ai_chat_history')
+      localStorage.removeItem('agent_history')
+      localStorage.removeItem('agent_flow_results')
       usePermissionStore().clear()
     },
 
@@ -52,6 +59,13 @@ export const useAuthStore = defineStore('auth', {
       this.userInfo = null
       localStorage.removeItem(TOKEN_NAME)
       localStorage.removeItem(USER_INFO_KEY)
+      localStorage.removeItem('erp_company_name')
+      localStorage.removeItem('brand_profile')
+      localStorage.removeItem('brand_profile_savedAt')
+      localStorage.removeItem('erp_brand_data')
+      localStorage.removeItem('erp_ai_chat_history')
+      localStorage.removeItem('agent_history')
+      localStorage.removeItem('agent_flow_results')
       usePermissionStore().clear()
     },
   },

@@ -69,25 +69,24 @@
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
               <el-tag
-                :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 3 ? '' : 'info'"
+                :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 3 ? '' : row.status === 4 ? 'info' : 'info'"
                 size="small"
               >
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : row.status === 3 ? '已入库' : '待审核' }}
+                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : row.status === 3 ? '已入库' : row.status === 4 ? '已转单' : '待审核' }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="250" fixed="right">
             <template #default="{ row }">
               <el-button v-if="row.status === 1 || row.status === 3" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+              <el-button v-else-if="row.status === 4" type="info" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <template v-if="row.status === 0">
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button v-if="row.status === 1" type="success" link size="small" @click="openInhouse(row)">入库</el-button>
-              <el-button v-if="row.status === 3" link size="small" disabled>已入库</el-button>
-              <el-button v-if="row.status === 3" type="danger" link size="small" @click="handleReverseInhouse(row)">反入库</el-button>
+              <el-button v-if="row.status === 1" type="success" link size="small" @click="handleConvertToOrder(row)">转采购订单</el-button>
               <el-button v-if="row.status !== 3" type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -439,6 +438,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Upload, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -454,6 +454,7 @@ import { usePermissionStore } from '@/stores/permission'
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 
 const permStore = usePermissionStore()
+const router = useRouter()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
@@ -640,6 +641,32 @@ async function handleDelete(id: number) {
   await deleteProcurePlan(id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
+}
+
+async function handleConvertToOrder(row: any) {
+  await ElMessageBox.confirm(`确定将采购计划「${row.plan_no}」转为采购订单？`, '转采购订单', { type: 'info' })
+  // 标记计划为已转单 status=4
+  try {
+    await http.post('/procure/ProcurePlan/edit', { id: row.id, status: 4 })
+  } catch (e: any) {
+    console.warn('更新计划状态失败', e?.message)
+  }
+  tableRef.value?.refresh()
+  // 跳转到采购订单，携带计划数据
+  router.push({
+    path: '/procure/order',
+    query: {
+      from_plan: '1',
+      plan_id: row.id,
+      supplier_id: row.supplier_id,
+      supplier_name: row.supplier_name || '',
+      warehouse_id: row.warehouse_id || '',
+      warehouse_name: row.warehouse_name || '',
+      admin_name: row.admin_name || '',
+      remark: row.remark || '',
+      goods_info: row.goods_info || '[]',
+    }
+  })
 }
 
 async function handleAudit(row: any, status: number) {
