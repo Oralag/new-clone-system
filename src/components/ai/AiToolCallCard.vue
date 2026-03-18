@@ -1,22 +1,47 @@
 <template>
   <div class="tool-call-card" :class="statusClass">
+    <!-- 头部：图标 + 名称 + 状态 + 展开按钮 -->
     <div class="card-header">
       <el-icon class="card-icon"><component :is="statusIcon" /></el-icon>
       <span class="tool-name">{{ toolLabel }}</span>
       <span class="card-status">{{ statusText }}</span>
+      <button
+        v-if="status === 'success' && result && result.length > 200"
+        @click="isExpanded = !isExpanded"
+        class="expand-btn"
+      >
+        {{ isExpanded ? '收起' : '展开' }}
+      </button>
     </div>
+
+    <!-- 入参 -->
     <div v-if="input && Object.keys(input).length" class="card-input">
       <span v-for="(v, k) in input" :key="k" class="param-chip">
         <b>{{ k }}</b>: {{ v }}
       </span>
     </div>
-    <div v-if="result" class="card-result">{{ result }}</div>
+
+    <!-- 加载中 -->
+    <div v-if="status === 'running'" class="loading-row">
+      <span class="loading-text">工具执行中...</span>
+    </div>
+
+    <!-- 成功结果 -->
+    <div v-if="status === 'success' && result" class="card-result" :class="{ collapsed: !isExpanded && result.length > 200 }">
+      {{ result }}
+    </div>
+    <div v-if="status === 'success' && result && !isExpanded && result.length > 200" class="collapse-tip" @click="isExpanded = true">
+      内容过长，点击展开查看全部
+    </div>
+
+    <!-- 失败信息 -->
+    <div v-if="status === 'error'" class="card-result error-result">{{ result }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Loading, CircleCheck, CircleClose, Tools } from '@element-plus/icons-vue'
+import { ref, computed } from 'vue'
+import { Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   name: string
@@ -24,6 +49,8 @@ const props = defineProps<{
   result?: string
   status: 'running' | 'success' | 'error'
 }>()
+
+const isExpanded = ref(false)
 
 const toolLabels: Record<string, string> = {
   query_customers: '查询客户',
@@ -93,6 +120,16 @@ const statusText = computed(() => {
 .tool-name { flex: 1; color: var(--dark, #303133); }
 .card-status { font-size: 11px; color: var(--mid, #909399); font-weight: 400; }
 
+.expand-btn {
+  padding: 1px 8px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 11px;
+  cursor: pointer;
+}
+
 .card-input {
   display: flex;
   flex-wrap: wrap;
@@ -107,15 +144,35 @@ const statusText = computed(() => {
   color: var(--mid, #606266);
 }
 
+.loading-row {
+  margin-top: 6px;
+}
+.loading-text {
+  font-size: 12px;
+  color: #409eff;
+}
+
 .card-result {
   margin-top: 6px;
   color: var(--mid, #606266);
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.card-result.collapsed {
   max-height: 60px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+}
+
+.error-result {
+  color: #f56c6c;
+}
+
+.collapse-tip {
+  font-size: 11px;
+  color: #409eff;
+  cursor: pointer;
+  margin-top: 2px;
 }
 </style>
