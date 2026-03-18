@@ -653,6 +653,7 @@ import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, getBomList, getBomByGoods, getSpecList } from '@/api/goods'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { getFundList, createFund, getPayReceiptList } from '@/api/finance'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
@@ -799,6 +800,32 @@ onMounted(() => {
       fd.remark = String(p.remark || '')
       fd.plan_id = Number(p.plan_id || 0)
       const items = JSON.parse(String(p.goods_info || '[]'))
+      fd.items = items.map((i: any) => ({
+        goods_id: i.goods_id || 0,
+        goods_name: i.goods_name || '',
+        goods_sn: i.goods_sn || '',
+        spec: i.spec || '',
+        cate_name: i.cate_name || '',
+        unit_name: i.unit_name || '',
+        batch_no: '',
+        num: i.num || 0,
+        price_no_tax: i.price_no_tax || i.price || 0,
+        tax_rate: i.tax_rate || 0,
+        price: i.price || 0,
+        remark: i.remark || '',
+      }))
+      calcTotal()
+    } catch { /* ignore */ }
+  }
+  // 从BOM物料清单跳转过来，预填物料数据
+  const bomData = sessionStorage.getItem('procure_order_from_bom')
+  if (bomData) {
+    sessionStorage.removeItem('procure_order_from_bom')
+    try {
+      const b = JSON.parse(bomData)
+      openCreate()
+      fd.remark = String(b.remark || '')
+      const items = JSON.parse(String(b.goods_info || '[]'))
       fd.items = items.map((i: any) => ({
         goods_id: i.goods_id || 0,
         goods_name: i.goods_name || '',
@@ -1201,7 +1228,7 @@ async function loadGoodsOptions() {
       cate_id: goodsPickerCate.value || undefined,
       list_rows: 50,
     })
-    goodsOptions.value = res.data?.rows ?? []
+    goodsOptions.value = fuzzyFilterGoods(res.data?.rows ?? [], goodsPickerKeyword.value || '')
   } finally {
     goodsLoading.value = false
   }

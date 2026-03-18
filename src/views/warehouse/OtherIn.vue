@@ -249,6 +249,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getOtherInList, createOtherIn, deleteOtherIn, getWarehouseList } from '@/api/warehouse'
 import { getGoodsList } from '@/api/goods'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -350,10 +351,7 @@ async function openGoodsPicker() {
   goodsPickerVisible.value = true
 }
 function filterGoods() {
-  const q = goodsSearch.value.trim().toLowerCase()
-  filteredGoods.value = allGoods.value.filter(g =>
-    !q || (g.name||'').toLowerCase().includes(q) || (g.goods_sn||'').toLowerCase().includes(q)
-  )
+  filteredGoods.value = fuzzyFilterGoods(allGoods.value, goodsSearch.value.trim())
 }
 function confirmGoodsPicker() {
   pickerSelection.value.forEach(g => {

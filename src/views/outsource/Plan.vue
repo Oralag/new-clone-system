@@ -189,6 +189,7 @@ import ScTable from '@/components/ScTable.vue'
 import { getOutsourcePlanList, createOutsourcePlan, updateOutsourcePlan, deleteOutsourcePlan } from '@/api/outsource'
 import { getSupplierList } from '@/api/procure'
 import { getGoodsList } from '@/api/goods'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 
@@ -215,7 +216,7 @@ function backToList(){showForm.value=false;tableRef.value?.refresh()}
 
 const goodsPickerVisible=ref(false),goodsSearch=ref(''),allGoods=ref<any[]>([]),filteredGoods=ref<any[]>([]),pickerSel=ref<any[]>([])
 async function openGoodsPicker(){try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.rows||r.data?.list||r.data?.data||[]}catch{};goodsSearch.value='';filteredGoods.value=[...allGoods.value];pickerSel.value=[];goodsPickerVisible.value=true}
-function filterGoods(){const q=goodsSearch.value.trim().toLowerCase();filteredGoods.value=allGoods.value.filter(g=>!q||(g.goods_name||g.name||'').toLowerCase().includes(q)||(g.goods_sn||'').toLowerCase().includes(q))}
+function filterGoods(){filteredGoods.value=fuzzyFilterGoods(allGoods.value,goodsSearch.value.trim())}
 function confirmGoods(){pickerSel.value.forEach(g=>fd.items.push({goods_id:g.id,goods_name:g.goods_name||g.name,goods_sn:g.goods_sn||'',spec:g.spec||'',unit_name:g.unit_name||'',plan_num:1,unit_price:0,row_total:0,remark:''}));goodsPickerVisible.value=false}
 function addEmptyRow(){fd.items.push({goods_id:0,goods_name:'',goods_sn:'',spec:'',unit_name:'',plan_num:1,unit_price:0,row_total:0,remark:''})}
 

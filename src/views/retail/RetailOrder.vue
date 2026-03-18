@@ -146,6 +146,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList } from '@/api/retail'
 import { getGoodsList } from '@/api/goods'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import http from '@/api/http'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
@@ -265,7 +266,7 @@ async function loadGoodsOptions() {
   goodsLoading.value = true
   try {
     const res = await getGoodsList({ keyword: goodsKeyword.value || undefined, list_rows: 50 })
-    goodsOptions.value = res.data?.rows ?? []
+    goodsOptions.value = fuzzyFilterGoods(res.data?.rows ?? [], goodsKeyword.value || '')
   } finally { goodsLoading.value = false }
 }
 

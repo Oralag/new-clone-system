@@ -445,6 +445,7 @@ import ScTable from '@/components/ScTable.vue'
 import { getProcurePlanList, createProcurePlan, deleteProcurePlan, getSupplierList, createSupplier, auditProcurePlan } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { getStaffList } from '@/api/personnel'
 import StaffSelect from '@/components/StaffSelect.vue'
 import http from '@/api/http'
@@ -696,7 +697,7 @@ async function loadGoodsOptions() {
       cate_id: goodsPickerCate.value || undefined,
       list_rows: 50,
     })
-    goodsOptions.value = res.data?.rows ?? []
+    goodsOptions.value = fuzzyFilterGoods(res.data?.rows ?? [], goodsPickerKeyword.value || '')
   } finally {
     goodsLoading.value = false
   }

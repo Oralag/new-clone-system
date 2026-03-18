@@ -617,6 +617,7 @@ import ScTable from '@/components/ScTable.vue'
 import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { getStaffList } from '@/api/personnel'
 import { getFundList, createCollectReceipt, getCollectReceiptList } from '@/api/finance'
 import http from '@/api/http'
@@ -1459,7 +1460,7 @@ async function loadGoodsOptions() {
     for (const s of stockRows) {
       stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.qty || 0)
     }
-    goodsOptions.value = rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 }))
+    goodsOptions.value = fuzzyFilterGoods(rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 })), goodsPickerKeyword.value || '')
   } finally {
     goodsLoading.value = false
   }

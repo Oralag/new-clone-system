@@ -47,6 +47,11 @@
           <div class="bom-toolbar">
             <div class="toolbar-left"></div>
             <div class="toolbar-right">
+              <el-tooltip :content="bomSelected.length > 0 ? `将已选 ${bomSelected.length} 条物料转为采购单` : '将当前物料清单转为采购单'">
+                <el-button :icon="ShoppingCart" size="small" type="success" @click="handleGotoProcure">
+                  去采购{{ bomSelected.length > 0 ? `(${bomSelected.length})` : '' }}
+                </el-button>
+              </el-tooltip>
               <el-tooltip :content="bomSelected.length > 0 ? `导出已选 ${bomSelected.length} 条物料` : '导出当前成品BOM'">
                 <el-button :icon="Download" size="small" @click="handleExportBom">
                   导出BOM{{ bomSelected.length > 0 ? `(${bomSelected.length})` : '' }}
@@ -289,11 +294,14 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Plus, Search, Delete, Download } from '@element-plus/icons-vue'
+import { Plus, Search, Delete, Download, ShoppingCart } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getGoodsList, createGoods, getUnitList, getSpecList, getBomList, getBomByGoods, createBom, updateBom, deleteBom } from '@/api/goods'
 import GoodsFormDialog from '@/components/GoodsFormDialog.vue'
 import * as XLSX from 'xlsx'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 // ── 本地单价存储 ───────────────────────────────────────────────────────────────
 const BOM_PRICE_KEY = 'erp_bom_prices'  // { bomId: price }
@@ -477,6 +485,31 @@ async function handleBatchDeleteBom() {
   bomSelected.value = []
   loadBom()
   loadGoodsList()
+}
+
+// 跳转到采购订单新建页，预填当前物料清单
+function handleGotoProcure() {
+  const rows = bomSelected.value.length > 0 ? bomSelected.value : bomList.value
+  if (!rows.length) { ElMessage.warning('暂无物料数据'); return }
+  const items = rows.map(r => ({
+    goods_id: 0,
+    goods_name: r.material_name,
+    goods_sn: r.material_sn || '',
+    spec: r._spec || '',
+    cate_name: '',
+    unit_name: r.unit_name || '',
+    batch_no: '',
+    num: r.num || 1,
+    price_no_tax: r._price || 0,
+    tax_rate: 0,
+    price: r._price || 0,
+    remark: `BOM物料（${selectedGoods.value?.goods_name ?? ''}）`,
+  }))
+  sessionStorage.setItem('procure_order_from_bom', JSON.stringify({
+    goods_info: JSON.stringify(items),
+    remark: `来自BOM：${selectedGoods.value?.goods_name ?? ''}`,
+  }))
+  router.push({ name: 'ProcureOrder' })
 }
 
 // 导出当前成品的 BOM（含成品信息）

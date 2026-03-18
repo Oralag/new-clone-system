@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 import http from '@/api/http'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 
 const emit = defineEmits<{
   (e: 'confirm', val: any[]): void
@@ -62,7 +63,9 @@ async function loadData() {
       params: { page: page.value, list_rows: pageSize.value, keyword: keyword.value },
     })
     const data = res?.data || {}
-    list.value = data.rows || data.list || []
+    // 服务端按 keyword 粗筛后，前端再做模糊二次过滤
+    const rows = data.rows || data.list || []
+    list.value = fuzzyFilterGoods(rows, keyword.value)
     total.value = data.total || 0
   } finally {
     loading.value = false
