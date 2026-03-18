@@ -106,7 +106,7 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Money /></el-icon>
-              <span>预付款</span>
+              <span>预收款</span>
               <span class="header-total green">¥{{ prepayTotal }}</span>
               <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/prepay')">更多</el-button>
             </div>
@@ -118,7 +118,7 @@
               <div class="inline-sub">{{ r.pay_type === 'customer' ? '客户预收' : '供应商预付' }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无预付款</div>
+          <div v-else class="empty-tip">暂无预收款</div>
         </el-card>
       </el-col>
       <el-col :span="8">
@@ -130,11 +130,11 @@
               <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/fund-flow')">更多</el-button>
             </div>
           </template>
-          <div class="inline-list" v-if="collectList.length">
-            <div class="inline-item clickable" v-for="r in collectList.slice(0,6)" :key="r.id" @click="router.push('/finance/fund-flow')">
-              <div class="inline-name">{{ r.customer_name || r.contact_name || '—' }}</div>
+          <div class="inline-list" v-if="recentCollectItems.length">
+            <div class="inline-item clickable" v-for="r in recentCollectItems.slice(0,6)" :key="r._key" @click="router.push('/finance/fund-flow')">
+              <div class="inline-name">{{ r.name }}</div>
               <div class="inline-value green">¥{{ Number(r.amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ (r.receipt_date||r.created_at||'').slice(0,10) }}</div>
+              <div class="inline-sub">{{ r.date }}</div>
             </div>
           </div>
           <div v-else class="empty-tip">暂无收款记录</div>
@@ -480,6 +480,12 @@ const allFlowItems = computed(() => {
     if (Number(r.amount || 0) <= 0) continue
     items.push({ type: 'expense', source: '费用', name: r.name || '—', amount: Number(r.amount || 0), date: (r.expense_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
   }
+  // 6. 预收款（income）
+  for (const r of prepayList.value) {
+    if (Number(r.amount || 0) <= 0) continue
+    const isCustomer = r.pay_type === 'customer'
+    items.push({ type: 'income', source: isCustomer ? '客户预收款' : '供应商预付款', name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: (r.create_time || '').slice(0, 10), order_no: r.prepay_no || '' })
+  }
   return items.sort((a, b) => b.date.localeCompare(a.date))
 })
 
@@ -499,6 +505,21 @@ const accountTotal = computed(() =>
 const prepayTotal = computed(() =>
   prepayList.value.filter((r: any) => r.pay_type === 'customer').reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)
 )
+
+// 近期收款 = 收款单 + 预收款，按日期倒序
+const recentCollectItems = computed(() => {
+  const items: any[] = []
+  for (const r of collectList.value) {
+    if (Number(r.amount || 0) <= 0) continue
+    items.push({ _key: 'c_' + r.id, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: (r.receipt_date || r.create_time || '').slice(0, 10) })
+  }
+  for (const r of prepayList.value) {
+    if (Number(r.amount || 0) <= 0) continue
+    const isCustomer = r.pay_type === 'customer'
+    items.push({ _key: 'p_' + r.id, name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: (r.create_time || '').slice(0, 10) })
+  }
+  return items.sort((a, b) => b.date.localeCompare(a.date))
+})
 const receivableTotal = computed(() =>
   receivableList.value.reduce((s, r) => s + Number(r.un_pay_amount ?? (Number(r.total_amount || r.amount || 0) - Number(r.paid_amount || 0))), 0).toFixed(2)
 )

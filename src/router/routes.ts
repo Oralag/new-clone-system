@@ -94,7 +94,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'finance/fund', name: 'FinanceFund', component: () => import('@/views/finance/Fund.vue'), meta: { title: '资金账户' } },
       { path: 'finance/fund-flow', name: 'FinanceFundFlow', component: () => import('@/views/finance/FundFlow.vue'), meta: { title: '资金流水' } },
       { path: 'finance/cost', name: 'FinanceCost', component: () => import('@/views/finance/Cost.vue'), meta: { title: '成本核算' } },
-      { path: 'finance/prepay', name: 'FinancePrepay', component: () => import('@/views/finance/Prepay.vue'), meta: { title: '预付款' } },
+      { path: 'finance/prepay', name: 'FinancePrepay', component: () => import('@/views/finance/Prepay.vue'), props: { fixedType: 'customer' }, meta: { title: '预收款' } },
+      { path: 'finance/supplier-prepay', name: 'FinanceSupplierPrepay', component: () => import('@/views/finance/Prepay.vue'), props: { fixedType: 'supplier' }, meta: { title: '预付款' } },
       { path: 'finance/fix-receivable', name: 'FixReceivable', component: () => import('@/views/finance/FixReceivable.vue'), meta: { title: '修复收款数据' } },
 
       // Goods

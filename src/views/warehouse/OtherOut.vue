@@ -266,8 +266,10 @@ import { getOtherOutList, createOtherOut, deleteOtherOut, getWarehouseList } fro
 import { getGoodsList } from '@/api/goods'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 const permStore = usePermissionStore()
+const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive({ out_no: '', goods_name: '' })
 
@@ -419,6 +421,7 @@ async function handleSave() {
     }
     await createOtherOut(payload)
     ElMessage.success('保存成功')
+    stockRefreshStore.trigger()
     backToList()
   } catch { } finally { saving.value = false }
 }
@@ -430,6 +433,7 @@ async function handleAudit(row: any, status: number) {
   try {
     await http.post('/stock/OtherOut/audit', { id: row.id, status })
     ElMessage.success('操作成功')
+    stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch {}
 }
@@ -439,6 +443,7 @@ async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定删除该出库单吗？', '提示', { type: 'warning' })
   await deleteOtherOut(id)
   ElMessage.success('删除成功')
+  stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
 

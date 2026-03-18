@@ -160,13 +160,14 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes] = await Promise.all([
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes] = await Promise.all([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
       getPayReceiptList({ list_rows: 1000 }),
       getExpenseList({ list_rows: 1000 }),
       http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
       http.get('/finance/PayAccounts/index', { params: { list_rows: 500 } }),
+      http.get('/finance/Prepay/index', { params: { list_rows: 1000 } }),
     ])
 
     const items: FlowItem[] = []
@@ -238,6 +239,21 @@ onMounted(async () => {
         source: '费用',
         name: r.type_name || r.expense_name || r.name || '—',
         order_no: r.expense_no || r.order_no || '',
+        amount: Number(r.amount || 0),
+        remark: r.remark || '',
+      })
+    }
+
+    const prepays: any[] = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
+    for (const r of prepays) {
+      const isCustomer = r.pay_type === 'customer'
+      items.push({
+        date: (r.create_time || '').slice(0, 10),
+        fund_name: r.fund_name || '—',
+        type: 'income',
+        source: isCustomer ? '客户预收款' : '供应商预付款',
+        name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'),
+        order_no: r.prepay_no || r.order_no || '',
         amount: Number(r.amount || 0),
         remark: r.remark || '',
       })

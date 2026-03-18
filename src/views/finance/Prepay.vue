@@ -4,14 +4,14 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <el-input v-model="search.keyword" placeholder="客户名/供应商名/单号" clearable style="width:200px" @change="loadData" />
-          <el-select v-model="search.pay_type" placeholder="类型" clearable style="width:120px" @change="loadData">
+          <el-select v-if="!fixedType" v-model="search.pay_type" placeholder="类型" clearable style="width:120px" @change="loadData">
             <el-option label="客户预收款" value="customer" />
             <el-option label="供应商预付款" value="supplier" />
           </el-select>
           <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
         </div>
         <div class="toolbar-right">
-          <el-button type="primary" :icon="Plus" @click="openCreate">新增预付款</el-button>
+          <el-button type="primary" :icon="Plus" @click="openCreate">新增{{ fixedType === 'customer' ? '预收款' : fixedType === 'supplier' ? '预付款' : '预付款' }}</el-button>
         </div>
       </div>
 
@@ -73,9 +73,9 @@
     </el-card>
 
     <!-- 新增弹框 -->
-    <el-dialog v-model="dialogVisible" title="新增预付款" width="500px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="fixedType === 'customer' ? '新增预收款' : fixedType === 'supplier' ? '新增预付款' : '新增预付款'" width="500px" destroy-on-close>
       <el-form ref="formRef" :model="fd" label-width="100px" :rules="rules">
-        <el-form-item label="类型" prop="pay_type">
+        <el-form-item v-if="!fixedType" label="类型" prop="pay_type">
           <el-select v-model="fd.pay_type" style="width:100%" @change="fd.customer_name='';fd.supplier_name=''">
             <el-option label="客户预收款" value="customer" />
             <el-option label="供应商预付款" value="supplier" />
@@ -116,6 +116,8 @@ import { Search, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
 import { buildCustomerPrepayBreakdown, getPrepayRowKey } from '@/utils/prepay'
+
+const props = defineProps<{ fixedType?: 'customer' | 'supplier' }>()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -178,10 +180,11 @@ async function loadData() {
   loading.value = true
   try {
     const params: any = { page: page.value, list_rows: pageSize.value }
-    if (search.pay_type) params.pay_type = search.pay_type
+    const effectiveType = props.fixedType || search.pay_type
+    if (effectiveType) params.pay_type = effectiveType
     if (search.keyword) params.keyword = search.keyword
     const allParams: any = { list_rows: 2000 }
-    if (search.pay_type) allParams.pay_type = search.pay_type
+    if (effectiveType) allParams.pay_type = effectiveType
     if (search.keyword) allParams.keyword = search.keyword
     const [pageRes, allRes] = await Promise.all([
       http.get('/finance/Prepay/index', { params }),
@@ -207,7 +210,7 @@ function onFundChange(id: number) {
 }
 
 function openCreate() {
-  fd.pay_type = 'customer'
+  fd.pay_type = props.fixedType || 'customer'
   fd.customer_name = ''
   fd.supplier_name = ''
   fd.amount = 0
@@ -235,7 +238,7 @@ async function handleSave() {
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该预付款记录？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm('确定删除该记录？', '提示', { type: 'warning' })
   // 找到要删除的记录，用于回退资金账户余额
   const row = tableData.value.find((r: any) => r.id === id)
   await http.post('/finance/Prepay/del', { id })

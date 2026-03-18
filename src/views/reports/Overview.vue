@@ -334,8 +334,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { Refresh, Money, ShoppingCart, TrendCharts, Shop } from '@element-plus/icons-vue'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
+const stockRefreshStore = useStockRefreshStore()
+watch(() => stockRefreshStore.version, () => loadAll())
 import { getStockReportList } from '@/api/reports'
 import { getContractList } from '@/api/sale'
 import { getRetailOrderList } from '@/api/retail'
@@ -587,6 +590,7 @@ async function loadAll() {
 }
 
 onMounted(loadAll)
+onActivated(loadAll)
 </script>
 
 <style scoped>

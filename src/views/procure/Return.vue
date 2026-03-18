@@ -388,13 +388,13 @@ import { getStaffList } from '@/api/personnel'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { usePermissionStore } from '@/stores/permission'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 
 const permStore = usePermissionStore()
-
-// ── 列表 ─────────────────────────────────────────────────────────────────────
+const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
@@ -568,6 +568,7 @@ async function handleSave() {
     if (fd.id) payload.id = fd.id
     await createProcureReturn(payload)
     ElMessage.success('保存成功')
+    stockRefreshStore.trigger()
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')
@@ -580,6 +581,7 @@ async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定删除该退货单？', '提示', { type: 'warning' })
   await deleteProcureReturn(id)
   ElMessage.success('删除成功')
+  stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
 
@@ -589,6 +591,7 @@ async function handleAudit(row: any, status: number) {
   try {
     await auditProcureReturn(row.id, status)
     ElMessage.success(`${action}成功`)
+    stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')

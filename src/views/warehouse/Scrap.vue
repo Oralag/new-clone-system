@@ -103,6 +103,8 @@ import ScForm from '@/components/ScForm.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getScrapList, createScrap, deleteScrap, getWarehouseList, getStockList } from '@/api/warehouse'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
+const stockRefreshStore = useStockRefreshStore()
 
 const tableRef = ref()
 const formRef = ref()
@@ -192,6 +194,7 @@ const handleSubmit = async (form: any, done: () => void) => {
   try {
     await createScrap(form)
     ElMessage.success('操作成功')
+    stockRefreshStore.trigger()
     done()
     tableRef.value.refresh()
   } catch {
@@ -203,6 +206,7 @@ const handleDelete = async (id: number) => {
   await ElMessageBox.confirm('确定要删除该报废单吗？', '提示', { type: 'warning' })
   await deleteScrap(id)
   ElMessage.success('删除成功')
+  stockRefreshStore.trigger()
   tableRef.value.refresh()
 }
 

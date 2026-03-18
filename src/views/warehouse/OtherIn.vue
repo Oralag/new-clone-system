@@ -251,8 +251,10 @@ import { getOtherInList, createOtherIn, deleteOtherIn, getWarehouseList } from '
 import { getGoodsList } from '@/api/goods'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 const permStore = usePermissionStore()
+const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive({ in_no: '', goods_name: '' })
 
@@ -404,6 +406,7 @@ async function handleSave() {
     }
     await createOtherIn(payload)
     ElMessage.success('保存成功')
+    stockRefreshStore.trigger()
     backToList()
   } catch { } finally { saving.value = false }
 }
@@ -415,6 +418,7 @@ async function handleAudit(row: any, status: number) {
   try {
     await http.post('/stock/OtherIn/audit', { id: row.id, status })
     ElMessage.success('操作成功')
+    stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch {}
 }
@@ -424,6 +428,7 @@ async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定删除该入库单吗？', '提示', { type: 'warning' })
   await deleteOtherIn(id)
   ElMessage.success('删除成功')
+  stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
 

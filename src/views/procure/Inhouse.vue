@@ -432,11 +432,13 @@ import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { getFundList, createFund } from '@/api/finance'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 
 const permStore = usePermissionStore()
+const stockRefreshStore = useStockRefreshStore()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const route = useRoute()
@@ -609,6 +611,7 @@ async function handleSave() {
     if (fd.id) payload.id = fd.id
     await createProcureInhouse(payload)
     ElMessage.success('保存成功')
+    stockRefreshStore.trigger()
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')
@@ -621,6 +624,7 @@ async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定删除该入库单？', '提示', { type: 'warning' })
   await deleteProcureInhouse(id)
   ElMessage.success('删除成功')
+  stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
 
@@ -630,6 +634,7 @@ async function handleAudit(row: any, status: number) {
   try {
     await auditProcureInhouse(row.id, status)
     ElMessage.success(`${action}成功`)
+    stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
