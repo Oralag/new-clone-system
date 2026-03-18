@@ -192,6 +192,7 @@ npm run deploy
 
 - [2026-03-14] 初始建立规范文档
 - [2026-03-14] 下拉选项出现重复 → 从API赋值 cateOptions 时必须按 name 去重：`const rc = rows; cateOptions.value = rc.filter((c, i) => rc.findIndex(x => x.name === c.name) === i)`，禁止直接 `cateOptions.value = res.data?.rows ?? []`
-- [2026-03-16] 未审核单据（status=0）被计入财务统计 → 所有报表/统计/台账页面必须过滤 `status === 1`，未审核单据一律不计入任何金额统计
+- [2026-03-18] 新建客户界面财务信息面板消失 → `finance-panel` 禁止加 `v-if="formData.id"`，必须始终显示；只有"充值预付款"/"查看应收记录"操作按钮才加 `v-if="formData.id"`（文件：`src/views/sale/ClientList.vue`）
+- [2026-03-18] 删除零售/采购订单后资金账户余额未更新 → 删除前必须先调用资金账户回滚逻辑（零售：扣减"零售收款账户"；采购：加回对应 fund_id 账户）；`del-path` 改用 `batchDelApi` prop 以支持删除前 hook
 
 <!-- 在此继续追加纠错记录 -->
