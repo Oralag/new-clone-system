@@ -704,11 +704,11 @@ async function confirmAddGoods() {
     goods_name: row.goods_name,
     goods_sn: row.goods_sn || '',
     material_id: 0,
-    material_name: '（待添加物料）',
+    material_name: '',
     material_sn: '',
     num: 0,
     unit_name: '',
-    remark: '自动占位，请添加实际物料后删除此行',
+    remark: '',
   })
   ElMessage.success(`已添加成品「${row.goods_name}」，请在右侧添加物料`)
   addGoodsVisible.value = false
