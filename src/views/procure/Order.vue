@@ -101,7 +101,7 @@
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row)">删除</el-button>
+              <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
