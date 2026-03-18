@@ -101,7 +101,7 @@
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1 && getPendingAmount(row) > 0.01" type="success" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="handleConvertToSaleOut(row)">转出库单</el-button>
-              <el-button v-if="Number(row.status) === 0" type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="danger" link size="small" @click="Number(row.status) === 1 ? ElMessage.warning('请先执行【反审核】，再删除该销售合同') : handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
