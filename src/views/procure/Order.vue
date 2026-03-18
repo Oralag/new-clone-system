@@ -355,6 +355,21 @@
                 <el-input v-model="row.batch_no" size="small" placeholder="批次/打码日期" />
               </template>
             </el-table-column>
+            <el-table-column label="行供应商" width="150">
+              <template #default="{ row }">
+                <el-select
+                  v-model="row.supplier_id"
+                  size="small"
+                  placeholder="同整体"
+                  clearable
+                  filterable
+                  style="width:100%"
+                  @change="(val: any) => { row.supplier_name = supplierOptions.find(s => s.id === val)?.name || '' }"
+                >
+                  <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
+                </el-select>
+              </template>
+            </el-table-column>
             <el-table-column label="备注" min-width="110">
               <template #default="{ row }">
                 <el-input v-model="row.remark" size="small" placeholder="备注" />
@@ -813,6 +828,8 @@ onMounted(() => {
         tax_rate: i.tax_rate || 0,
         price: i.price || 0,
         remark: i.remark || '',
+        supplier_id: i.supplier_id || null,
+        supplier_name: i.supplier_name || '',
       }))
       calcTotal()
     } catch { /* ignore */ }
@@ -839,6 +856,8 @@ onMounted(() => {
         tax_rate: i.tax_rate || 0,
         price: i.price || 0,
         remark: i.remark || '',
+        supplier_id: i.supplier_id || null,
+        supplier_name: i.supplier_name || '',
       }))
       calcTotal()
     } catch { /* ignore */ }
@@ -850,6 +869,7 @@ interface OrderItem {
   goods_id: number; goods_name: string; goods_sn: string
   spec: string; cate_name: string; unit_name: string; batch_no: string
   num: number; price_no_tax: number; tax_rate: number; price: number; remark: string
+  supplier_id: number | null; supplier_name: string
 }
 
 interface AttachFile {
@@ -1267,6 +1287,8 @@ function confirmGoods() {
       tax_rate: 0,
       price: Number((priceNoTax * 1.13).toFixed(4)),
       remark: '',
+      supplier_id: null,
+      supplier_name: '',
     })
     fetchGoodsSpecs(g.id)
   }
@@ -1299,6 +1321,8 @@ function confirmManualAdd() {
     tax_rate: 0,
     price: manualForm.price,
     remark: '',
+    supplier_id: null,
+    supplier_name: '',
   })
   calcTotal()
   manualAddVisible.value = false
@@ -1357,6 +1381,8 @@ function confirmPlanItems() {
     price: item.price || 0,
     total: ((item.num || 1) * (item.price || 0)),
     remark: '',
+    supplier_id: null,
+    supplier_name: '',
   }))
   fd.items.push(...newItems)
   calcTotal()
@@ -1445,6 +1471,8 @@ function confirmBomGoods() {
       tax_rate: 0,
       price: 0,
       remark: `BOM物料（${selectedBomGoods.value?.goods_name ?? ''}）`,
+      supplier_id: null,
+      supplier_name: '',
     })
   }
   calcTotal()
