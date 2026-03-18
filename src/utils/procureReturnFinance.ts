@@ -262,3 +262,38 @@ export function applyProcureReturnsToPayReceiptRows(paymentRows: AnyRow[], retur
 
   return result
 }
+
+export function applyProcureReturnsToFundRows(fundRows: AnyRow[], returnRows: ProcureReturnFinanceRow[]) {
+  const refundByFundId = new Map<number, number>()
+  const refundByFundNameOnly = new Map<string, number>()
+
+  for (const row of returnRows) {
+    const refundAmount = roundMoney(row.refund_amount)
+    if (refundAmount <= 0) continue
+
+    const fundId = Number(row.fund_id || 0)
+    const fundName = text(row.fund_name)
+
+    if (fundId > 0) {
+      refundByFundId.set(fundId, roundMoney((refundByFundId.get(fundId) || 0) + refundAmount))
+    } else if (fundName) {
+      refundByFundNameOnly.set(fundName, roundMoney((refundByFundNameOnly.get(fundName) || 0) + refundAmount))
+    }
+  }
+
+  return (fundRows || []).map((row) => {
+    const rawBalance = roundMoney(toNumber(row.balance))
+    const fundId = Number(row.id || 0)
+    const fundName = text(row.name)
+    const refundById = fundId > 0 ? (refundByFundId.get(fundId) || 0) : 0
+    const refundByName = fundName ? (refundByFundNameOnly.get(fundName) || 0) : 0
+    const refundAmount = roundMoney(refundById + refundByName)
+
+    return {
+      ...row,
+      raw_balance: rawBalance,
+      refund_amount: refundAmount,
+      display_balance: roundMoney(rawBalance + refundAmount),
+    }
+  })
+}
