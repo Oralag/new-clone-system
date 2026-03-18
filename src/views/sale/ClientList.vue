@@ -240,7 +240,6 @@
 
       <template #footer>
         <el-button @click="formVisible = false">取消</el-button>
-        <el-button v-if="!formData.id" type="success" :icon="Plus" @click="handleSubmitAndRecharge">保存并充值</el-button>
         <el-button type="primary" :loading="formSaving" @click="handleSubmit" data-guide-id="guide-client-form-save">确定</el-button>
       </template>
     </el-dialog>
