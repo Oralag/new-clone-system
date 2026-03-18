@@ -229,9 +229,9 @@
             <span class="fi-value orange">¥{{ financeInfo.unReceived.toFixed(2) }}</span>
           </div>
         </div>
-        <div v-if="formData.id" class="finance-actions">
+        <div class="finance-actions">
           <el-button type="success" size="small" :icon="Plus" @click="openPrepayDialog">充值预付款</el-button>
-          <el-button size="small" @click="viewReceivable">查看应收记录</el-button>
+          <el-button v-if="formData.id" size="small" @click="viewReceivable">查看应收记录</el-button>
         </div>
       </div>
       <div v-if="formData.id && formData.create_time" class="create-time-note">
@@ -805,7 +805,28 @@ async function submitAddFund() {
   }
 }
 
-function openPrepayDialog() {
+async function openPrepayDialog() {
+  // 新增模式：先保存客户，再开充值
+  if (!formData.id) {
+    try { await formRef.value?.validate() } catch { return }
+    formSaving.value = true
+    try {
+      const payload: any = { name: formData.nickname, mobile: formData.mobile, address: formData.address, remark: formData.remark }
+      const res = await createSaleCustomer(payload)
+      const customerId = res.data?.id ?? res.data
+      if (!customerId) { ElMessage.error('保存客户失败，无法充值'); return }
+      formData.id = customerId
+      const cMap = { ...cateMap.value }; if (formData.cate_id) cMap[customerId] = formData.cate_id; cateMap.value = cMap; saveCateMap(cMap)
+      const lMap = { ...customerLevelMap.value }; if (formData.level_id) lMap[customerId] = formData.level_id; customerLevelMap.value = lMap; saveCustomerLevelMap(lMap)
+      const sMap = { ...customerSourceMap.value }; if (formData.source_id) sMap[customerId] = formData.source_id; customerSourceMap.value = sMap; saveSourceMap(sMap)
+      loadData()
+      await loadFinanceInfo(customerId, formData.nickname)
+    } catch (e: any) {
+      ElMessage.error(e?.message ?? '保存失败'); return
+    } finally {
+      formSaving.value = false
+    }
+  }
   prepayForm.amount = 0
   prepayForm.account_name = ''
   prepayForm.receipt_date = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
