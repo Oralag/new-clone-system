@@ -297,6 +297,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Search, Delete, Download, ShoppingCart } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getGoodsList, createGoods, getUnitList, getSpecList, getBomList, getBomByGoods, createBom, updateBom, deleteBom } from '@/api/goods'
+import { fuzzyMatch, fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import GoodsFormDialog from '@/components/GoodsFormDialog.vue'
 import * as XLSX from 'xlsx'
 import { useRouter } from 'vue-router'
@@ -398,7 +399,7 @@ const selectedGoods = ref<any>(null)
 const filteredGoodsList = computed(() => {
   if (!goodsKeyword.value) return goodsList.value
   return goodsList.value.filter(g =>
-    g.goods_name?.includes(goodsKeyword.value) || g.goods_sn?.includes(goodsKeyword.value)
+    fuzzyMatch(g.goods_name || '', goodsKeyword.value) || fuzzyMatch(g.goods_sn || '', goodsKeyword.value)
   )
 })
 
@@ -753,7 +754,7 @@ async function loadPickGoods() {
     if (pickGoodsType.value) {
       rows = rows.filter(r => getBomGoodsType(r) === pickGoodsType.value)
     }
-    pickGoodsList.value = rows
+    pickGoodsList.value = fuzzyFilterGoods(rows, pickKeyword.value || '')
   } finally {
     pickLoading.value = false
   }

@@ -665,7 +665,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList } from '@/api/procure'
+import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, getBomList, getBomByGoods, getSpecList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
@@ -1160,6 +1160,17 @@ async function handleAudit(row: any, status: number) {
 }
 
 async function handleReverseAudit(row: any) {
+  // 先检查是否存在已审核的退货单
+  try {
+    const returnRes = await getProcureReturnList({ order_id: row.id, status: 1, list_rows: 10 })
+    const auditedReturns: any[] = returnRes.data?.rows ?? []
+    if (auditedReturns.length > 0) {
+      ElMessage.warning(`该采购合同存在 ${auditedReturns.length} 笔已审核的退货单，请先前往【采购退货】将退货单反审核后，再反审核该合同`)
+      return
+    }
+  } catch (e: any) {
+    console.warn('检查退货单失败', e?.message)
+  }
   await ElMessageBox.confirm('反审核将撤销入库与财务入账，确定继续？', '反审核确认', { type: 'warning' })
   try {
     // 先反审核关联的采购入库记录

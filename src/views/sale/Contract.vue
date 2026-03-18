@@ -614,7 +614,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer } from '@/api/sale'
+import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
@@ -1372,6 +1372,16 @@ async function handleAudit(row: any, status: number) {
           ElMessage.error(`该合同存在 ${linked.length} 笔关联收款单，请先前往【财务 > 收款单】删除后再反审核`)
           return
         }
+      }
+    } catch { /* ignore */ }
+
+    // 反审核前检查是否有已审核的退货单
+    try {
+      const returnRes = await getSaleReturnList({ contract_id: row.id, status: 1, list_rows: 10 })
+      const auditedReturns: any[] = returnRes.data?.rows ?? []
+      if (auditedReturns.length > 0) {
+        ElMessage.warning(`该合同存在 ${auditedReturns.length} 笔已审核的退货单，请先前往【销售退货】将退货单反审核后，再反审核该合同`)
+        return
       }
     } catch { /* ignore */ }
   }

@@ -340,6 +340,7 @@ import { ArrowLeft, ArrowRight, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
 import { getGoodsList } from '@/api/goods'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { getBomByGoods } from '@/api/goods'
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
@@ -498,7 +499,7 @@ async function loadPickerGoods() {
     const stockRows: any[] = stockRes.data?.rows ?? []
     const stockMap: Record<number, number> = {}
     for (const s of stockRows) stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.qty || 0)
-    pickerGoods.value = rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 }))
+    pickerGoods.value = fuzzyFilterGoods(rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 })), pickerKeyword.value || '')
   } finally { pickerLoading.value = false }
 }
 
