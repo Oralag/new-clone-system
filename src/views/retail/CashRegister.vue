@@ -231,7 +231,6 @@
 
           <div class="cr-goods-grid" v-loading="goodsLoading">
             <div v-for="g in goodsList" :key="g.id" class="cr-goods-card"
-              :class="{ selected: selectedGoods?.id === g.id }"
               @click="selectGoods(g)">
               <div class="cr-goods-name">{{ g.goods_name }}</div>
               <div class="cr-goods-prices">

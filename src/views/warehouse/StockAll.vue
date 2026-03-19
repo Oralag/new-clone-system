@@ -636,9 +636,14 @@ async function loadActivityMaps() {
     for (const r of inhouseRows) {
       try {
         const items = JSON.parse(r.goods_info || '[]')
+        const goodsInThisOrder = new Set<number>()
         for (const item of items) {
           const gid = Number(item.goods_id)
-          if (gid) inMap[gid] = (inMap[gid] || 0) + 1
+          if (gid) goodsInThisOrder.add(gid)
+        }
+        // 每张入库单对该商品只计 1 次，不按商品行数叠加
+        for (const gid of goodsInThisOrder) {
+          inMap[gid] = (inMap[gid] || 0) + 1
         }
       } catch { /* ignore */ }
     }
@@ -653,13 +658,17 @@ async function loadActivityMaps() {
       for (const r of saleRows) {
         try {
           const items = JSON.parse(r.goods_info || '[]')
+          const goodsInThisOrder = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
             const qty = Number(item.num || 0)
             if (gid) {
-              sMap[gid] = (sMap[gid] || 0) + 1
+              goodsInThisOrder.add(gid)
               dMap[gid] = (dMap[gid] || 0) + qty
             }
+          }
+          for (const gid of goodsInThisOrder) {
+            sMap[gid] = (sMap[gid] || 0) + 1
           }
         } catch { /* ignore */ }
       }
@@ -672,13 +681,17 @@ async function loadActivityMaps() {
     for (const r of retailRows) {
       try {
         const items = JSON.parse(r.goods_info || '[]')
+        const goodsInThisOrder = new Set<number>()
         for (const item of items) {
           const gid = Number(item.goods_id)
           const qty = Number(item.num || item.qty || 0)
           if (gid) {
-            rMap[gid] = (rMap[gid] || 0) + 1
+            goodsInThisOrder.add(gid)
             dMap[gid] = (dMap[gid] || 0) + qty
           }
+        }
+        for (const gid of goodsInThisOrder) {
+          rMap[gid] = (rMap[gid] || 0) + 1
         }
       } catch { /* ignore */ }
     }
