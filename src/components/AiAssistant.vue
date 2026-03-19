@@ -80,10 +80,10 @@
               @click="sendQuickPrompt(p)"
             >{{ p }}</el-tag>
           </div>
-          <!-- BOM快速设置 -->
-          <div class="bom-quick-btn" @click="bomDialogVisible = true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            一键设置 BOM 物料清单
+          <!-- BOM生产计划 -->
+          <div class="bom-quick-btn" @click="openBomDialog">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10M7 12h6"/></svg>
+            一键生产BOM
           </div>
         </div>
 
@@ -189,17 +189,16 @@
           <button
             v-if="voiceSupported"
             class="mic-hold-btn"
-            :class="{ 'mic-hold-btn--active': isRecording }"
+            :class="{ 'mic-hold-btn--active': isRecording, 'mic-hold-btn--cancel': isCancelling }"
             :disabled="isLoading"
             @mousedown.prevent="onMicDown"
             @mouseup.prevent="onMicUp"
-            @mouseleave.prevent="onMicCancel"
             @touchstart.prevent="onMicDown"
             @touchend.prevent="onMicUp"
             @touchcancel.prevent="onMicCancel"
           >
             <el-icon><Microphone /></el-icon>
-            <span>{{ isRecording ? '松手发送' : '按住说话' }}</span>
+            <span>{{ isCancelling ? '松手取消' : isRecording ? '松手发送' : '按住说话' }}</span>
           </button>
           <button v-if="isIOS" class="mic-hold-btn" @click="showIOSVoiceTip" :disabled="isLoading">
             <el-icon><Microphone /></el-icon>
@@ -213,6 +212,9 @@
                 <span></span><span></span><span></span><span></span><span></span>
               </div>
               <p>正在聆听，松手发送</p>
+              <div class="voice-cancel-hint" :class="{ 'voice-cancel-hint--active': isCancelling }">
+                ↑ 上滑取消
+              </div>
             </div>
           </transition>
           <input
@@ -241,49 +243,118 @@
     <div v-if="isOpen" class="ai-backdrop" @click="isOpen = false" />
   </transition>
 
-  <!-- BOM 快速设置弹框 -->
-  <el-dialog v-model="bomDialogVisible" title="一键设置 BOM 物料清单" width="500px" append-to-body>
-    <div style="margin-bottom:12px;font-size:13px;color:#64748b">
-      请选择成品和组成材料，系统将自动创建BOM清单。
-    </div>
-    <el-form label-width="80px">
-      <el-form-item label="成品">
-        <el-select v-model="bomFinished" placeholder="请选择成品" filterable style="width:100%"
-          @focus="loadBomGoods">
-          <el-option v-for="g in bomGoodsList" :key="g.id" :label="g.goods_name" :value="g.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="组成材料">
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div v-for="(item, idx) in bomMaterials" :key="idx" style="display:flex;gap:8px;align-items:center">
-            <el-select v-model="item.goods_id" placeholder="选择材料" filterable style="flex:1">
-              <el-option v-for="g in bomGoodsList" :key="g.id" :label="g.goods_name" :value="g.id" />
-            </el-select>
-            <el-input-number v-model="item.num" :min="0.01" :precision="2" style="width:110px" placeholder="用量" />
-            <el-input v-model="item.unit_name" placeholder="单位" style="width:70px" />
-            <el-button type="danger" link :icon="Delete" @click="bomMaterials.splice(idx, 1)" />
-          </div>
-          <el-button type="primary" link @click="bomMaterials.push({ goods_id: null, num: 1, unit_name: '' })">
-            + 添加材料
-          </el-button>
+  <!-- 一键生产BOM弹框 -->
+  <el-dialog v-model="bomDialogVisible" title="一键生产成品BOM计划" width="760px" append-to-body :close-on-click-modal="false">
+    <div class="gen-dialog">
+      <!-- Step 1: 选择产品 -->
+      <div class="gen-section">
+        <div class="gen-section-title">
+          <el-icon><GoodsFilled /></el-icon> 选择要生产的产品
         </div>
-      </el-form-item>
-    </el-form>
+        <div class="gen-search-row">
+          <el-input v-model="genSearch" placeholder="搜索产品名称…" clearable style="width:220px" @input="filterGenGoods" />
+          <span class="gen-hint">共 {{ filteredGenGoods.length }} 个有BOM的产品</span>
+          <el-button size="small" :loading="bomLoading" @click="loadBomProducts">{{ bomLoading ? '加载中…' : '刷新' }}</el-button>
+        </div>
+        <div class="gen-goods-grid">
+          <div
+            v-for="g in filteredGenGoods" :key="g.goods_id"
+            :class="['gen-goods-card', { selected: selectedGenGoods.has(g.goods_id) }]"
+            @click="toggleGenGoods(g)"
+          >
+            <div class="gen-goods-name">{{ g.goods_name }}</div>
+            <div class="gen-goods-meta">
+              <span class="gen-canmake" :class="g.canMake > 0 ? 'ok' : 'lack'">可生产: {{ g.canMake }}</span>
+            </div>
+            <div v-if="selectedGenGoods.has(g.goods_id)" class="gen-qty-row" @click.stop>
+              <span class="gen-qty-label">数量</span>
+              <el-input-number v-model="genQtyMap[g.goods_id]" :min="1" :max="g.canMake || 9999" size="small" controls-position="right" style="width:110px" />
+              <span class="gen-unit">{{ g.unit_name || '' }}</span>
+            </div>
+            <el-icon v-if="selectedGenGoods.has(g.goods_id)" class="gen-check"><Select /></el-icon>
+          </div>
+        </div>
+        <div v-if="filteredGenGoods.length === 0 && !bomLoading" class="empty-tip">没有找到有BOM配置的产品</div>
+      </div>
+
+      <!-- Step 2: 仓库 + 日期 -->
+      <div class="gen-section" v-if="selectedGenGoods.size > 0">
+        <div class="gen-section-title"><el-icon><SetUp /></el-icon> 配置生产参数</div>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <div class="field-row">
+              <span class="field-label required">成品入库仓库</span>
+              <el-select v-model="genWarehouse" placeholder="选择仓库" style="flex:1">
+                <el-option v-for="w in warehouseList" :key="w.id" :label="w.name" :value="w.id" />
+              </el-select>
+            </div>
+          </el-col>
+          <el-col :span="12">
+            <div class="field-row">
+              <span class="field-label">计划日期</span>
+              <el-date-picker v-model="genDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="flex:1" />
+            </div>
+          </el-col>
+        </el-row>
+        <el-row style="margin-top:10px">
+          <el-col :span="24">
+            <div class="field-row">
+              <span class="field-label">备注</span>
+              <el-input v-model="genRemark" placeholder="可选备注" style="flex:1" />
+            </div>
+          </el-col>
+        </el-row>
+      </div>
+
+      <!-- 预览 -->
+      <div class="gen-section" v-if="genPreviewList.length > 0">
+        <div class="gen-section-title"><el-icon><Document /></el-icon> 生产预览（BOM原料消耗）</div>
+        <el-table :data="genPreviewList" size="small" border style="width:100%">
+          <el-table-column prop="goods_name" label="成品" min-width="120" />
+          <el-table-column prop="qty" label="生产数量" width="90" align="right" />
+          <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+          <el-table-column prop="materials" label="消耗原料" min-width="200">
+            <template #default="{ row }">
+              <div v-for="m in row.materials" :key="m._matGoodsId || m.material_id" class="mat-row">
+                <span class="mat-name">{{ m.material_name || m.goods_name }}</span>
+                <span class="mat-qty">×{{ m.num * row.qty }}</span>
+                <el-tag size="small" :type="m.stockOk ? 'success' : 'danger'" style="margin-left:4px">库存{{ m.stock_num ?? '?' }}</el-tag>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 日志 -->
+      <div class="gen-log" v-if="genLogs.length > 0">
+        <div v-for="(log, i) in genLogs" :key="i" :class="['gen-log-item', log.type]">
+          <el-icon v-if="log.type === 'success'"><CircleCheck /></el-icon>
+          <el-icon v-else-if="log.type === 'error'"><CircleClose /></el-icon>
+          <el-icon v-else class="is-loading"><Loading /></el-icon>
+          {{ log.text }}
+        </div>
+      </div>
+    </div>
     <template #footer>
-      <el-button @click="bomDialogVisible = false">取消</el-button>
-      <el-button type="primary" :loading="bomSaving" @click="submitBom">一键创建BOM</el-button>
+      <el-button @click="bomDialogVisible = false" :disabled="generating">取消</el-button>
+      <el-button type="primary" :icon="MagicStick" :loading="generating"
+        :disabled="selectedGenGoods.size === 0 || !genWarehouse"
+        @click="doGenerate">
+        {{ generating ? '生成中…' : '确认一键生成' }}
+      </el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone, Clock } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone, Clock, GoodsFilled, SetUp, Document, CircleCheck, CircleClose, Select, MagicStick } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
-import { getGoodsList, createBom } from '@/api/goods'
+import { getGoodsList } from '@/api/goods'
+import { createProductionPlan, auditProductionPlan, createProductionInhouse, auditProductionInhouse, createMaterial, auditMaterial } from '@/api/production'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -510,50 +581,140 @@ const quickPrompts = [
   '录入一笔预付款',
 ]
 
-// ── BOM 快速设置 ──────────────────────────────────────────────────────────────
+// ── 一键生产BOM ───────────────────────────────────────────────────────────────
 const bomDialogVisible = ref(false)
-const bomFinished = ref<any>(null)
-const bomMaterials = ref<{ goods_id: any; num: number; unit_name: string }[]>([
-  { goods_id: null, num: 1, unit_name: '' }
-])
-const bomGoodsList = ref<any[]>([])
-const bomSaving = ref(false)
+const bomLoading = ref(false)
+const bomProducts = ref<any[]>([])
+const warehouseList = ref<any[]>([])
+const genSearch = ref('')
+const filteredGenGoods = ref<any[]>([])
+const selectedGenGoods = ref<Set<number>>(new Set())
+const genQtyMap = ref<Record<number, number>>({})
+const genWarehouse = ref<number | null>(null)
+const genDate = ref('')
+const genRemark = ref('')
+const genLogs = ref<{ text: string; type: 'info' | 'success' | 'error' }[]>([])
+const generating = ref(false)
 
-async function loadBomGoods() {
-  if (bomGoodsList.value.length > 0) return
+const genPreviewList = computed(() => {
+  return [...selectedGenGoods.value].map(gid => {
+    const g = bomProducts.value.find(b => b.goods_id === gid)
+    return g ? { ...g, qty: genQtyMap.value[gid] || 1 } : null
+  }).filter(Boolean)
+})
+
+async function loadBomProducts() {
+  bomLoading.value = true
   try {
-    const res = await getGoodsList({ list_rows: 500, status: 1 })
-    bomGoodsList.value = res.data?.rows ?? []
-  } catch { /* ignore */ }
+    const gRes = await getGoodsList({ list_rows: 500 })
+    const allGoods: any[] = gRes.data?.rows ?? []
+    const bomRes = await http.get('/goods/ShopBom/index', { params: { list_rows: 1000 } })
+    const bomAll: any[] = bomRes.data?.rows ?? []
+    const bomByGoods: Record<number, any[]> = {}
+    for (const bom of bomAll) {
+      if (!bomByGoods[bom.goods_id]) bomByGoods[bom.goods_id] = []
+      bomByGoods[bom.goods_id].push(bom)
+    }
+    const stockRes = await http.get('/stock/StockAll/index', { params: { list_rows: 1000 } })
+    const stocks: any[] = stockRes.data?.rows ?? []
+    const stockMap: Record<number, number> = {}
+    for (const s of stocks) stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.stock_num || 0)
+    const result: any[] = []
+    for (const [gidStr, mats] of Object.entries(bomByGoods)) {
+      const gid = Number(gidStr)
+      const goods = allGoods.find((g: any) => g.id === gid)
+      const goodsName = mats[0]?.goods_name || goods?.goods_name || `商品#${gid}`
+      let canMake = Infinity
+      const matsWithStock = mats.map((m: any) => {
+        const matGoodsId = m.material_id || m.mat_goods_id
+        const stock = stockMap[matGoodsId] || 0
+        const needed = Number(m.num) || 1
+        const possible = Math.floor(stock / needed)
+        if (possible < canMake) canMake = possible
+        return { ...m, _matGoodsId: matGoodsId, stock_num: stock, stockOk: stock >= needed }
+      })
+      result.push({ goods_id: gid, goods_name: goodsName, unit_name: goods?.unit_name || '', canMake: canMake === Infinity ? 0 : canMake, materials: matsWithStock })
+    }
+    bomProducts.value = result.sort((a, b) => b.canMake - a.canMake)
+    filteredGenGoods.value = [...bomProducts.value]
+  } catch (e) { console.error(e) } finally { bomLoading.value = false }
 }
 
-async function submitBom() {
-  if (!bomFinished.value) { ElMessage.warning('请选择成品'); return }
-  const validMaterials = bomMaterials.value.filter(m => m.goods_id && m.num > 0)
-  if (!validMaterials.length) { ElMessage.warning('请至少添加一种材料'); return }
-  bomSaving.value = true
+async function loadWarehouses() {
   try {
-    const finishedGoods = bomGoodsList.value.find(g => g.id === bomFinished.value)
-    for (const mat of validMaterials) {
-      const matGoods = bomGoodsList.value.find(g => g.id === mat.goods_id)
-      await createBom({
-        goods_id: bomFinished.value,
-        goods_name: finishedGoods?.goods_name || '',
-        material_id: mat.goods_id,
-        material_name: matGoods?.goods_name || '',
-        num: mat.num,
-        unit_name: mat.unit_name || matGoods?.unit_name || '',
-      })
-    }
-    ElMessage.success(`BOM 创建成功！${finishedGoods?.goods_name} 包含 ${validMaterials.length} 种材料`)
-    bomDialogVisible.value = false
-    bomFinished.value = null
-    bomMaterials.value = [{ goods_id: null, num: 1, unit_name: '' }]
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? 'BOM 创建失败')
-  } finally {
-    bomSaving.value = false
+    const res = await http.get('/stock/WarehouseName/index', { params: { list_rows: 100 } })
+    warehouseList.value = res.data?.rows ?? []
+    if (!genWarehouse.value && warehouseList.value.length) genWarehouse.value = warehouseList.value[0].id
+  } catch {}
+}
+
+function openBomDialog() {
+  selectedGenGoods.value = new Set()
+  genQtyMap.value = {}
+  genLogs.value = []
+  genSearch.value = ''
+  filteredGenGoods.value = [...bomProducts.value]
+  bomDialogVisible.value = true
+  if (!bomProducts.value.length) loadBomProducts()
+  if (!warehouseList.value.length) loadWarehouses()
+}
+
+function filterGenGoods() {
+  const q = genSearch.value.trim().toLowerCase()
+  filteredGenGoods.value = bomProducts.value.filter(g => !q || g.goods_name.toLowerCase().includes(q))
+}
+
+function toggleGenGoods(g: any) {
+  if (selectedGenGoods.value.has(g.goods_id)) {
+    selectedGenGoods.value.delete(g.goods_id)
+    delete genQtyMap.value[g.goods_id]
+  } else {
+    selectedGenGoods.value.add(g.goods_id)
+    genQtyMap.value[g.goods_id] = Math.min(g.canMake || 1, 1)
   }
+  selectedGenGoods.value = new Set(selectedGenGoods.value)
+}
+
+async function doGenerate() {
+  if (!selectedGenGoods.value.size) return
+  if (!genWarehouse.value) { ElMessage.warning('请选择入库仓库'); return }
+  const items = genPreviewList.value as any[]
+  const lacking = items.filter(i => i.canMake < i.qty)
+  if (lacking.length) {
+    try {
+      await ElMessageBox.confirm(`以下产品物料库存不足：${lacking.map((l: any) => l.goods_name).join('、')}，是否继续？`, '库存不足确认', { type: 'warning' })
+    } catch { return }
+  }
+  generating.value = true
+  genLogs.value = []
+  const today = genDate.value || new Date().toISOString().slice(0, 10)
+  for (const item of items) {
+    genLogs.value.push({ text: `开始生成：${item.goods_name} × ${item.qty}`, type: 'info' })
+    try {
+      const planRes = await createProductionPlan({
+        plan_date: today, finish_date: today,
+        remark: genRemark.value || '一键生成BOM计划',
+        goods_list: [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }],
+        plan_num: item.qty, schedule_num: item.qty,
+      })
+      const planId = planRes.data?.id
+      genLogs.value.push({ text: `  ✓ 生产计划已创建（ID: ${planId}）`, type: 'success' })
+      if (planId) { await auditProductionPlan(planId, 1); genLogs.value.push({ text: `  ✓ 生产计划已审核通过`, type: 'success' }) }
+      try {
+        const matItems = item.materials.map((mat: any) => ({ goods_id: mat._matGoodsId, goods_name: mat.material_name || mat.goods_name, goods_sn: mat.material_sn || mat.goods_sn || '', unit_name: mat.unit_name || '', num: Number(mat.num) * item.qty, out_price: 0, row_total: 0, remark: '' }))
+        const matRes = await createMaterial({ out_date: today, warehouse_id: genWarehouse.value, plan_id: planId, plan_name: planRes.data?.order_sn || '', remark: `一键生成 - ${item.goods_name}`, items: matItems, goods_info: JSON.stringify(matItems), total_price: 0 })
+        const matId = matRes.data?.id
+        if (matId) await auditMaterial(matId, 1)
+        genLogs.value.push({ text: `  ✓ 领料单已创建并审核（共 ${matItems.length} 种原料）`, type: 'success' })
+      } catch { genLogs.value.push({ text: `  ⚠ 领料失败（可继续）`, type: 'error' }) }
+      const inhouseRes = await createProductionInhouse({ plan_id: planId, plan_name: planRes.data?.order_sn || '', goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name, warehouse_id: genWarehouse.value, in_date: today, remark: genRemark.value || '一键生成BOM入库', is_backflush: 1 })
+      const inhouseId = inhouseRes.data?.id
+      genLogs.value.push({ text: `  ✓ 生产入库单已创建（ID: ${inhouseId}）`, type: 'success' })
+      if (inhouseId) { await auditProductionInhouse(inhouseId, 1); genLogs.value.push({ text: `  ✓ 入库审核通过 — 成品已入库`, type: 'success' }) }
+    } catch (e: any) { genLogs.value.push({ text: `  ✗ 失败：${e?.message || '接口错误'}`, type: 'error' }) }
+  }
+  generating.value = false
+  ElMessage.success('一键生成完成！')
 }
 
 const SYSTEM_PROMPT = `你是数字游牧ERP系统的内置AI助手。你运行在该ERP系统内部，拥有直接调用系统API的能力，可以真实地录入、查询、汇总业务数据。
@@ -600,8 +761,8 @@ const SYSTEM_PROMPT = `你是数字游牧ERP系统的内置AI助手。你运行�
 - create_warehouse: name(仓库名,必填), remark(备注)
 
 业务单据录入：
-- create_sale_order: customer_name(客户,必填), total_amount(金额), remark(备注)
-- create_procure_order: supplier_name(供应商,必填), total_amount(金额), remark(备注)
+- create_sale_order: customer_name(客户,必填), total_amount(金额), admin_name(经办人), remark(备注), items(商品明细数组，每项含 goods_name/num/price/unit_name)
+- create_procure_order: supplier_name(供应商,必填), total_amount(金额), admin_name(经办人), remark(备注), items(商品明细数组，每项含 goods_name/num/price/unit_name)
 - create_collect_receipt: contact_name(收款对象,必填), amount(金额,必填), fund_id(账户ID), fund_name(账户名), receipt_date(日期), remark(备注)
 - create_pay_receipt: contact_name(付款对象,必填), amount(金额,必填), fund_id(账户ID), fund_name(账户名), pay_date(日期), remark(备注)
 
@@ -617,13 +778,14 @@ const SYSTEM_PROMPT = `你是数字游牧ERP系统的内置AI助手。你运行�
 【图像识别规则】
 当用户上传单据图片时（出库单、入库单、采购单、收款单等）：
 1. 仔细识别图片中所有文字信息
-2. 提取：单据类型、单号、日期、客户/供应商、商品明细（名称、数量、单价、合计）、金额合计、备注等
-3. 根据单据类型判断对应的 action type：
+2. 提取：单据类型、单号、日期、客户/供应商、经办人、商品明细（名称、数量、单价、合计）、金额合计、备注等
+3. 商品明细必须逐行读取，每行写入 items 数组（goods_name=商品名称，num=数量，price=含税单价，unit_name=单位）
+4. 根据单据类型判断对应的 action type：
    - 出库单/发货单 → create_sale_order（出库操作）
    - 入库单/采购单 → create_procure_order（采购操作）
    - 收款单/回款单 → create_collect_receipt
    - 付款单 → create_pay_receipt
-4. 告知用户识别到的内容，确认后输出 action 块录入
+5. 告知用户识别到的内容，确认后输出 action 块录入
 
 回复简洁友好，中文。`
 
@@ -797,29 +959,13 @@ async function sendMessage() {
   pendingAction.value = null
   nextTick(() => scrollToBottom())
 
-  // Fetch relevant backend data for query intent
-  let contextData = ''
-  if (text) {
-    contextData = await fetchContextData(text)
-  }
-
-  // Build messages for API — last 20 messages, exclude image previews (not transferable)
-  // Also strip any old "I cannot operate" disclaimer messages from history context
+  // Build messages for API — last 6 messages only
   const BAD_PHRASES = ['无法直接操作', '仅为信息整理', '需要您手动', '手动在对应系统']
   const apiMessages = messages.value
     .filter((m) => m.role === 'user' || m.role === 'assistant')
     .filter((m) => !BAD_PHRASES.some(p => m.content.includes(p)))
-    .slice(-20)
+    .slice(-6)
     .map((m) => ({ role: m.role, content: m.content }))
-
-  // Inject data context into the last user message if we fetched something
-  if (contextData && apiMessages.length > 0) {
-    const last = apiMessages[apiMessages.length - 1]
-    apiMessages[apiMessages.length - 1] = {
-      role: last.role,
-      content: `${last.content}\n\n[系统数据上下文]\n${contextData}`,
-    }
-  }
 
   let assistantText = ''
   // 多Agent：agentId → 对应的消息对象
@@ -870,6 +1016,10 @@ async function sendMessage() {
             const parsed = JSON.parse(data)
             if (parsed.type === 'text') {
               assistantText += parsed.text
+              assistantMsg.content = assistantText
+              nextTick(() => scrollToBottom())
+            } else if (parsed.type === 'text_replace') {
+              assistantText = parsed.text
               assistantMsg.content = assistantText
               nextTick(() => scrollToBottom())
             } else if (parsed.type === 'agent_ack') {
@@ -1095,18 +1245,36 @@ const SpeechRecognitionAPI = typeof window !== 'undefined' && !isIOS
   ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
   : null
 const isRecording = ref(false)
+const isCancelling = ref(false)
 const voiceSupported = ref(!!SpeechRecognitionAPI)
 let recognition: any = null
 
 let voiceText = ''
+let micStartY = 0
+const CANCEL_THRESHOLD = 60 // 上滑超过60px进入取消区
 
-function onMicDown() {
+function onPointerMove(e: PointerEvent | TouchEvent) {
+  if (!isRecording.value) return
+  const clientY = 'touches' in e ? (e as TouchEvent).touches[0]?.clientY : (e as PointerEvent).clientY
+  if (clientY == null) return
+  isCancelling.value = (micStartY - clientY) > CANCEL_THRESHOLD
+}
+
+function onMicDown(e: MouseEvent | TouchEvent) {
   if (isRecording.value || !SpeechRecognitionAPI || isLoading.value) return
+  micStartY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
+  isCancelling.value = false
   voiceText = ''
+
+  window.addEventListener('mousemove', onPointerMove as any)
+  window.addEventListener('pointermove', onPointerMove as any)
+  window.addEventListener('touchmove', onPointerMove as any, { passive: true })
+
   recognition = new SpeechRecognitionAPI()
   recognition.lang = 'zh-CN'
   recognition.continuous = true
   recognition.interimResults = false
+  isRecording.value = true  // 立即设置，不等 onstart（避免授权弹窗期间卡住）
   recognition.onstart = () => { isRecording.value = true }
   recognition.onresult = (e: any) => {
     voiceText = Array.from(e.results as any[])
@@ -1115,30 +1283,50 @@ function onMicDown() {
   }
   recognition.onerror = (e: any) => {
     isRecording.value = false
+    isCancelling.value = false
+    window.removeEventListener('mousemove', onPointerMove as any)
+    window.removeEventListener('pointermove', onPointerMove as any)
+    window.removeEventListener('touchmove', onPointerMove as any)
     if (e.error !== 'aborted') {
       const msg = e.error === 'not-allowed' ? '麦克风权限被拒绝' : `语音识别失败：${e.error}`
       messages.value = [...messages.value, { role: 'assistant', content: msg, time: getNow() }]
     }
   }
   recognition.onend = () => {
+    window.removeEventListener('mousemove', onPointerMove as any)
+    window.removeEventListener('pointermove', onPointerMove as any)
+    window.removeEventListener('touchmove', onPointerMove as any)
     isRecording.value = false
-    if (voiceText.trim()) {
+    const shouldSend = !isCancelling.value && voiceText.trim()
+    isCancelling.value = false
+    if (shouldSend) {
       inputText.value = voiceText.trim()
       voiceText = ''
       nextTick(() => sendMessage())
+    } else {
+      voiceText = ''
     }
   }
   recognition.start()
 }
 
 function onMicUp() {
-  if (!isRecording.value || !recognition) return
-  recognition.stop()
+  if (!recognition) return
+  isRecording.value = false
+  if (isCancelling.value) {
+    onMicCancel()
+  } else {
+    recognition.stop()
+  }
 }
 
 function onMicCancel() {
-  if (!isRecording.value || !recognition) return
+  window.removeEventListener('mousemove', onPointerMove as any)
+  window.removeEventListener('pointermove', onPointerMove as any)
+  window.removeEventListener('touchmove', onPointerMove as any)
+  if (!recognition) return
   voiceText = ''
+  isCancelling.value = false
   recognition.abort()
   recognition = null
   isRecording.value = false
@@ -1404,6 +1592,37 @@ function renderMarkdown(text: string): string {
   user-select: none;
 }
 .bom-quick-btn:hover { background: #ede9fe; border-color: #c4b5fd; }
+
+/* 一键生产BOM弹框 */
+.gen-dialog { max-height: 70vh; overflow-y: auto; }
+.gen-section { margin-bottom: 18px; }
+.gen-section-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #f0f0f0; }
+.gen-search-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.gen-hint { font-size: 12px; color: #aaa; }
+.gen-goods-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; }
+.gen-goods-card { border: 1px solid #e4e7ed; border-radius: 6px; padding: 8px 10px; cursor: pointer; position: relative; transition: all 0.15s; background: #fafafa; }
+.gen-goods-card:hover { border-color: #409eff; background: #ecf5ff; }
+.gen-goods-card.selected { border-color: #409eff; background: #ecf5ff; }
+.gen-goods-name { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; }
+.gen-goods-meta { font-size: 11px; }
+.gen-canmake.ok { color: #16a34a; }
+.gen-canmake.lack { color: #dc2626; }
+.gen-qty-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #d0e8ff; }
+.gen-qty-label { font-size: 12px; color: #666; flex-shrink: 0; }
+.gen-unit { font-size: 12px; color: #888; }
+.gen-check { position: absolute; top: 6px; right: 6px; color: #409eff; font-size: 16px; }
+.field-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.field-label { font-size: 13px; color: #555; white-space: nowrap; flex-shrink: 0; }
+.field-label.required::before { content: '*'; color: #f56c6c; margin-right: 2px; }
+.mat-row { display: flex; align-items: center; gap: 4px; font-size: 12px; margin-bottom: 2px; }
+.mat-name { color: #333; }
+.mat-qty { color: #888; }
+.gen-log { background: #f8fafc; border: 1px solid #e8edf2; border-radius: 6px; padding: 10px 12px; max-height: 180px; overflow-y: auto; font-family: monospace; font-size: 12px; margin-top: 12px; }
+.gen-log-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; line-height: 1.6; }
+.gen-log-item.success { color: #16a34a; }
+.gen-log-item.error { color: #dc2626; }
+.gen-log-item.info { color: #555; }
+.empty-tip { color: #aaa; font-size: 13px; text-align: center; padding: 20px 0; }
 
 .message-item {
   display: flex;
@@ -1720,9 +1939,23 @@ function renderMarkdown(text: string): string {
   color: #f56c6c;
   animation: mic-pulse 1s ease-in-out infinite;
 }
-.mic-hold-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.mic-hold-btn--cancel {
+  background: #f0f0f0;
+  border-color: #909399;
+  color: #909399;
+  animation: none !important;
+}
+
+/* 上滑取消提示 */
+.voice-cancel-hint {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 4px;
+  transition: color 0.2s;
+}
+.voice-cancel-hint--active {
+  color: #f56c6c;
+  font-weight: 600;
 }
 
 /* 历史会话面板 */

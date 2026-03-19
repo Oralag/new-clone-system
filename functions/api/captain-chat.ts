@@ -294,7 +294,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         return
       }
 
-      // Phase 1: Captain 分析任务
+      // Phase 1: Captain 分析任务（流式）
       await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '' })
       let captainResponse = ''
       let loopMessages = [...apiMessages]
@@ -303,19 +303,50 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const res = await fetch(`${baseURL}/v1/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, system: captain.systemPrompt, tools: captainTools, messages: loopMessages }),
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: captain.systemPrompt, tools: captainTools, messages: loopMessages, stream: true }),
         })
         if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
-        const data: any = await res.json()
-        for (const block of data.content || []) {
-          if (block.type === 'text' && block.text) {
-            const masked = maskIdentity(block.text)
-            captainResponse += masked
-            await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: masked })
+
+        const reader = res.body!.getReader()
+        const dec = new TextDecoder()
+        let buf = '', stopReason = '', roundText = ''
+        const contentBlocks: any[] = []
+        let currentBlock: any = null
+
+        outer1: while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n'); buf = lines.pop() || ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const raw = line.slice(6).trim()
+            if (raw === '[DONE]') break outer1
+            let evt: any; try { evt = JSON.parse(raw) } catch { continue }
+            if (evt.type === 'message_delta' && evt.delta?.stop_reason) stopReason = evt.delta.stop_reason
+            if (evt.type === 'content_block_start') { currentBlock = { ...evt.content_block, index: evt.index }; if (currentBlock.type === 'tool_use') currentBlock.input_raw = '' }
+            if (evt.type === 'content_block_delta') {
+              if (evt.delta.type === 'text_delta') {
+                const masked = maskIdentity(evt.delta.text)
+                roundText += masked; captainResponse += masked
+                await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: masked })
+              } else if (evt.delta.type === 'input_json_delta' && currentBlock) currentBlock.input_raw += evt.delta.partial_json
+            }
+            if (evt.type === 'content_block_stop' && currentBlock) {
+              if (currentBlock.type === 'tool_use') { try { currentBlock.input = JSON.parse(currentBlock.input_raw || '{}') } catch { currentBlock.input = {} } }
+              contentBlocks.push(currentBlock); currentBlock = null
+            }
+            if (evt.type === 'message_stop') break outer1
           }
         }
-        if (data.stop_reason !== 'tool_use') break
-        const toolUseBlocks = (data.content || []).filter((b: any) => b.type === 'tool_use')
+
+        if (stopReason !== 'tool_use') break
+        const toolUseBlocks = contentBlocks.filter((b: any) => b.type === 'tool_use')
+        const textBlocks = contentBlocks.filter((b: any) => b.type === 'text')
+        const apiContent = [
+          ...textBlocks.map((b: any) => ({ type: 'text', text: b.text || roundText })),
+          ...toolUseBlocks.map((b: any) => ({ type: 'tool_use', id: b.id, name: b.name, input: b.input })),
+        ]
         const toolResults: any[] = []
         for (const toolUse of toolUseBlocks) {
           await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
@@ -323,7 +354,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
           toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
         }
-        loopMessages = [...loopMessages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }]
+        loopMessages = [...loopMessages, { role: 'assistant', content: apiContent }, { role: 'user', content: toolResults }]
       }
 
       // Phase 2: 解析 @@DISPATCH@@ 并调用子Agent
@@ -348,18 +379,39 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           const subRes = await fetch(`${baseURL}/v1/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-            body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, system: subAgent.systemPrompt, messages: subLoop }),
+            body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: subAgent.systemPrompt, messages: subLoop, stream: true }),
           })
           if (!subRes.ok) break
-          const subData: any = await subRes.json()
-          for (const block of subData.content || []) {
-            if (block.type === 'text' && block.text) {
-              agentOutput += block.text
-              await send({ type: 'agent_thinking', agentId: subAgent.id, agentName: subAgent.name, text: block.text })
+
+          const subReader = subRes.body!.getReader()
+          const subDec = new TextDecoder()
+          let subBuf = '', subStop = '', subRoundText = ''
+          const subBlocks: any[] = []
+          let subCur: any = null
+
+          outer2: while (true) {
+            const { done, value } = await subReader.read()
+            if (done) break
+            subBuf += subDec.decode(value, { stream: true })
+            const lines = subBuf.split('\n'); subBuf = lines.pop() || ''
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              const raw = line.slice(6).trim()
+              if (raw === '[DONE]') break outer2
+              let evt: any; try { evt = JSON.parse(raw) } catch { continue }
+              if (evt.type === 'message_delta' && evt.delta?.stop_reason) subStop = evt.delta.stop_reason
+              if (evt.type === 'content_block_start') { subCur = { ...evt.content_block }; if (subCur.type === 'tool_use') subCur.input_raw = '' }
+              if (evt.type === 'content_block_delta' && evt.delta.type === 'text_delta') {
+                subRoundText += evt.delta.text; agentOutput += evt.delta.text
+                await send({ type: 'agent_thinking', agentId: subAgent.id, agentName: subAgent.name, text: evt.delta.text })
+              }
+              if (evt.type === 'content_block_stop' && subCur) { subBlocks.push(subCur); subCur = null }
+              if (evt.type === 'message_stop') break outer2
             }
           }
-          if (subData.stop_reason !== 'tool_use') break
-          subLoop = [...subLoop, { role: 'assistant', content: subData.content }]
+
+          if (subStop !== 'tool_use') break
+          subLoop = [...subLoop, { role: 'assistant', content: [{ type: 'text', text: subRoundText }] }]
         }
 
         await send({ type: 'agent_done', agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
@@ -374,15 +426,28 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const sumRes = await fetch(`${baseURL}/v1/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, system: captain.systemPrompt, messages: [{ role: 'user', content: summaryPrompt }] }),
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: captain.systemPrompt, messages: [{ role: 'user', content: summaryPrompt }], stream: true }),
         })
         if (sumRes.ok) {
-          const sumData: any = await sumRes.json()
-          for (const block of sumData.content || []) {
-            if (block.type === 'text' && block.text) {
-              const masked = maskIdentity(block.text)
-              captainResponse += masked
-              await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: masked })
+          const sumReader = sumRes.body!.getReader()
+          const sumDec = new TextDecoder()
+          let sumBuf = ''
+          outer3: while (true) {
+            const { done, value } = await sumReader.read()
+            if (done) break
+            sumBuf += sumDec.decode(value, { stream: true })
+            const lines = sumBuf.split('\n'); sumBuf = lines.pop() || ''
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              const raw = line.slice(6).trim()
+              if (raw === '[DONE]') break outer3
+              let evt: any; try { evt = JSON.parse(raw) } catch { continue }
+              if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+                const masked = maskIdentity(evt.delta.text)
+                captainResponse += masked
+                await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: masked })
+              }
+              if (evt.type === 'message_stop') break outer3
             }
           }
         }

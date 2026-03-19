@@ -345,9 +345,11 @@ async function loadBomProducts() {
     // 获取库存
     const stockRes = await http.get('/stock/StockAll/index', { params: { list_rows: 1000 } })
     const stocks: any[] = stockRes.data?.rows ?? stockRes.data?.list ?? []
+    console.log('[BOM] 库存原始数据 第一条:', stocks[0])
     const stockMap: Record<number, number> = {}
     for (const s of stocks) {
-      stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.stock_num || 0)
+      const qty = Number(s.stock_num ?? s.qty ?? s.num ?? 0)
+      stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + qty
     }
     // 计算每个成品可生产数量
     const result: any[] = []
@@ -466,6 +468,7 @@ async function doGenerate() {
       }
       const planRes = await createProductionPlan(planData)
       const planId = planRes.data?.id
+      console.log('[BOM] 生产计划 planRes:', planRes)
       genLogs.value.push({ text: `  ✓ 生产计划已创建（ID: ${planId}）`, type: 'success' })
 
       // 2. 审核生产计划
@@ -474,24 +477,35 @@ async function doGenerate() {
         genLogs.value.push({ text: `  ✓ 生产计划已审核通过`, type: 'success' })
       }
 
-      // 3. 创建领料单（扣减原料库存）
-      for (const mat of item.materials) {
-        const needed = Number(mat.num) * item.qty
-        try {
-          const matData = {
-            goods_id: mat._matGoodsId,
-            goods_name: mat.material_name || mat.goods_name,
-            num: needed,
-            plan_id: planId,
-            remark: `一键生成 - ${item.goods_name}`,
-          }
-          const matRes = await createMaterial(matData)
-          const matId = matRes.data?.id
-          if (matId) await auditMaterial(matId, 1)
-          genLogs.value.push({ text: `  ✓ 领料：${mat.material_name || mat.goods_name} × ${needed}`, type: 'success' })
-        } catch (e) {
-          genLogs.value.push({ text: `  ⚠ 领料失败：${mat.material_name || mat.goods_name}（可继续）`, type: 'error' })
+      // 3. 创建领料单（扣减原料库存）—— 一单包含全部原料明细
+      try {
+        const matItems = item.materials.map((mat: any) => ({
+          goods_id: mat._matGoodsId,
+          goods_name: mat.material_name || mat.goods_name,
+          goods_sn: mat.material_sn || mat.goods_sn || '',
+          unit_name: mat.unit_name || '',
+          num: Number(mat.num) * item.qty,
+          out_price: 0,
+          row_total: 0,
+          remark: '',
+        }))
+        const matData = {
+          out_date: today,
+          warehouse_id: genWarehouse.value,
+          plan_id: planId,
+          plan_name: planRes.data?.order_sn || '',
+          remark: `一键生成 - ${item.goods_name}`,
+          items: matItems,
+          goods_info: JSON.stringify(matItems),
+          total_price: 0,
         }
+        const matRes = await createMaterial(matData)
+        const matId = matRes.data?.id
+        console.log('[BOM] 领料单 matRes:', matRes, 'matId:', matId)
+        if (matId) await auditMaterial(matId, 1)
+        genLogs.value.push({ text: `  ✓ 领料单已创建并审核（共 ${matItems.length} 种原料）`, type: 'success' })
+      } catch (e) {
+        genLogs.value.push({ text: `  ⚠ 领料失败（可继续）`, type: 'error' })
       }
 
       // 4. 创建生产入库单（成品入库）
@@ -509,6 +523,7 @@ async function doGenerate() {
       }
       const inhouseRes = await createProductionInhouse(inhouseData)
       const inhouseId = inhouseRes.data?.id
+      console.log('[BOM] 入库单 inhouseRes:', inhouseRes, 'inhouseId:', inhouseId)
       genLogs.value.push({ text: `  ✓ 生产入库单已创建（ID: ${inhouseId}）`, type: 'success' })
 
       // 5. 审核入库单（触发库存增加）

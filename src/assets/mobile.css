@@ -15,6 +15,41 @@
     width: auto !important;
   }
 
+  /* ── 1b. search slot 内的 el-form inline 手机端强制换行 ─────
+     33个页面用了 el-form inline，手机端必须竖排显示 */
+  .sc-mobile-bar .mobile-search-row .el-form--inline {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+  .sc-mobile-bar .mobile-search-row .el-form--inline .el-form-item {
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+  }
+  .sc-mobile-bar .mobile-search-row .el-form--inline .el-form-item__content {
+    flex: 1 !important;
+    margin-left: 0 !important;
+  }
+  .sc-mobile-bar .mobile-search-row .el-form--inline .el-form-item__label {
+    font-size: 12px !important;
+    padding-right: 4px !important;
+    flex-shrink: 0 !important;
+  }
+  .sc-mobile-bar .mobile-search-row .el-form--inline .el-input,
+  .sc-mobile-bar .mobile-search-row .el-form--inline .el-select {
+    width: 100% !important;
+  }
+
+  /* ── 1c. 隐藏 search slot 里自带的查询/重置按钮 ─────────────
+     ScTable 手机端自带搜索按钮，各页面 slot 里的 .search-actions 重复了 */
+  .sc-mobile-bar .mobile-search-row .search-actions {
+    display: none !important;
+  }
+
   /* ── 2. 表单 el-col 响应式 ──────────────────────────────────
      所有 .form-page 内的 el-col 强制单列显示（span会被覆盖为24）
      Element Plus el-col 使用 flex-basis + max-width 实现 */

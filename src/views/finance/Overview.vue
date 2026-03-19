@@ -221,7 +221,7 @@
           </template>
           <div class="inline-list" v-if="purchasePayList.length">
             <div class="inline-item clickable" v-for="r in purchasePayList.slice(0,6)" :key="r.id" @click="router.push('/procure/order')">
-              <div class="inline-name">{{ r.supplier_name || '—' }}</div>
+              <div class="inline-name">{{ getPurchaseSupplierLabel(r) }}</div>
               <div class="inline-value red">¥{{ Number(r.total_amount||0).toFixed(2) }}</div>
               <div class="inline-sub">{{ r.order_no || r.order_sn || '' }}</div>
             </div>
@@ -576,6 +576,19 @@ const recentCollectItems = computed(() => {
 const receivableTotal = computed(() =>
   receivableList.value.reduce((s, r) => s + Number(r.un_pay_amount ?? (Number(r.total_amount || r.amount || 0) - Number(r.paid_amount || 0))), 0).toFixed(2)
 )
+function getPurchaseSupplierLabel(row: any): string {
+  try {
+    const items = typeof row.goods_info === 'string' ? JSON.parse(row.goods_info) : (row.goods_info || [])
+    const ids = [...new Set(items.map((i: any) => Number(i.supplier_id)).filter(Boolean))]
+    if (ids.length > 1) return '多供应商'
+    if (ids.length === 1) {
+      const s = supplierList.value.find((x: any) => x.id === ids[0])
+      return s?.name || row.supplier_name || '—'
+    }
+  } catch {}
+  return row.supplier_name || supplierList.value.find((s: any) => s.id === row.supplier_id)?.name || '—'
+}
+
 function getPayableUnpaidAmount(r: any): number {
   if (r?.un_pay_amount !== undefined && r?.un_pay_amount !== null && r?.un_pay_amount !== '') {
     return Math.max(0, Number(r.un_pay_amount || 0))

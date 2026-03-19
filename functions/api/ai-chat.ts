@@ -45,10 +45,36 @@ async function erpPost(path: string, body: Record<string, any>, token: string) {
   try { return JSON.parse(text) } catch { return { code: -1, message: text.slice(0, 200) } }
 }
 
+async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
+  return Promise.all(items.map(async (item) => {
+    const num = item.num ?? item.qty ?? 1
+    const normalized = { ...item, num, qty: undefined }
+    delete normalized.qty
+    if (!normalized.goods_name || normalized.goods_id) return normalized
+    try {
+      const res: any = await erpGet('/goods/ShopGoods/index', { keyword: normalized.goods_name, list_rows: 5 }, token)
+      const rows = res?.data?.rows || []
+      const matched = rows.find((g: any) =>
+        g.goods_name === normalized.goods_name ||
+        g.goods_name?.includes(normalized.goods_name) ||
+        normalized.goods_name?.includes(g.goods_name)
+      )
+      if (matched) return { ...normalized, goods_id: matched.id, goods_sn: matched.goods_sn, unit_name: normalized.unit_name || matched.unit_name, cate_name: matched.cate_name }
+    } catch { /* ignore */ }
+    return normalized
+  }))
+}
+
 async function executeTool(name: string, input: Record<string, any>, token: string): Promise<string> {
   try {
     let result: string
     switch (name) {
+      case 'query_retail_orders': {
+        const res: any = await erpGet('/retail/order/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
+        const rows = res?.data?.rows || []
+        result = `共 ${res?.data?.total || rows.length} 条零售订单。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 单号: r.order_sn, 商品: r.goods_info, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
+        break
+      }
       case 'query_customers': {
         const res: any = await erpGet('/shop/ShopCustomer/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
         const rows = res?.data?.rows || []
@@ -145,12 +171,52 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         break
       }
       case 'create_sale_order': {
-        const res: any = await erpPost('/shop/ContractOrder/add', input, token)
+        // 自动根据 customer_name 查找 customer_id
+        if (input.customer_name && !input.customer_id) {
+          try {
+            const cRes: any = await erpGet('/shop/ShopCustomer/index', { keyword: input.customer_name, list_rows: 5 }, token)
+            const customers = cRes?.data?.rows || []
+            const matched = customers.find((c: any) => (c.nickname || c.name) === input.customer_name || (c.nickname || c.name)?.includes(input.customer_name))
+            if (matched) { input.customer_id = matched.id; input.customer_name = matched.nickname || matched.name }
+          } catch { /* ignore */ }
+        }
+        // 自动根据 goods_name 查找 goods_id，序列化为 goods_info
+        const saleItems = Array.isArray(input.items) ? input.items : []
+        const resolvedSaleItems = await resolveGoodsIds(saleItems, token)
+        const salePayload: Record<string, any> = {
+          customer_id: input.customer_id,
+          customer_name: input.customer_name,
+          total_amount: input.total_amount,
+          admin_name: input.admin_name || '',
+          remark: input.remark || '',
+          goods_info: JSON.stringify(resolvedSaleItems),
+        }
+        const res: any = await erpPost('/shop/ContractOrder/add', salePayload, token)
         result = res?.code === 1 ? `销售订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'create_procure_order': {
-        const res: any = await erpPost('/stock/PurchaseOrder/add', input, token)
+        // 自动根据 supplier_name 查找 supplier_id
+        if (input.supplier_name && !input.supplier_id) {
+          try {
+            const sRes: any = await erpGet('/procure/supplier/index', { keyword: input.supplier_name, list_rows: 5 }, token)
+            const suppliers = sRes?.data?.rows || []
+            const matched = suppliers.find((s: any) => s.name === input.supplier_name || s.name?.includes(input.supplier_name))
+            if (matched) { input.supplier_id = matched.id; input.supplier_name = matched.name }
+          } catch { /* ignore */ }
+        }
+        // 自动根据 goods_name 查找 goods_id，序列化为 goods_info
+        const procureItems = Array.isArray(input.items) ? input.items : []
+        const resolvedProcureItems = await resolveGoodsIds(procureItems, token)
+        const procurePayload: Record<string, any> = {
+          supplier_id: input.supplier_id,
+          supplier_name: input.supplier_name,
+          total_amount: input.total_amount,
+          admin_name: input.admin_name || '',
+          remark: input.remark || '',
+          goods_info: JSON.stringify(resolvedProcureItems),
+        }
+        const res: any = await erpPost('/stock/PurchaseOrder/add', procurePayload, token)
         result = res?.code === 1 ? `采购订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
@@ -273,11 +339,13 @@ function getSystemPrompt(intent: string): string {
   const BASE = `你是数字游牧ERP系统的内置AI助手，运行在系统内部，可以直接调用工具操作ERP数据。绝对禁止说"我无法直接操作"、"需要您手动"等推脱性语句。回复简洁友好，中文。`
   const CORRECTION_RULE = `
 【纠错规则——最高优先级】
-用户说"写错了"、"录错了"、"改一下"、"名字不对"等，必须：
+用户说"写错了"、"录错了"、"改一下"、"名字不对"、"删除"等，必须：
 1. 先调用对应的 query 工具查找刚才录入的错误记录，获取其 ID
+   - 零售单用 query_retail_orders；采购单用 query_purchases；销售单用 query_sales
 2. 若只是名称/字段错误：直接调用 update_xxx 修改，不要新建
 3. 若需要彻底删除重建：先 delete_xxx 删除错误记录，再 create_xxx 创建正确的
-4. 严禁在不删除/修改错误记录的情况下直接新建，避免重复数据`
+4. 严禁在不删除/修改错误记录的情况下直接新建，避免重复数据
+5. 严禁让用户自己去页面找ID——你必须先用 query 工具查到 ID 再操作`
   const DOCUMENT_IMAGE_RULES = `
 【单据图片识别规则】
 识别单据图片时：
@@ -288,6 +356,7 @@ function getSystemPrompt(intent: string): string {
 - 商品名称只能取表格中"商品名称/品名/货物名称"那一列的完整内容，必须整格逐字读完；不能把数量、单价、金额、单位、备注串进商品名称
 - 商品名称必须完整识别，包含品牌名+产品名+规格，例如"科尔沁原味奶豆腐300g"不能缩短为"奶豆腐"
 - 如果图片模糊、字迹不清晰、被遮挡，导致供应商名称或商品名称任一字段无法确认，必须直接说明"这里看不清，需要补拍特写"，不要猜测、不要编造近似字
+- 如果供应商名称或商品名称有任意一个无法确认，禁止输出半成品识别结果；不要只报单号/日期/金额后就结束，必须直接要求用户补拍对应区域特写
 - 对手写人名逐字辨认，正式姓名（如"王丽敏"）不要误读为口头称谓（如"王阿姨"）
 - 输出识别结果时，供应商名称和商品名称后面注明来源字段（例如：供应商名称〔来源：销货单位〕、商品名称〔来源：商品名称列〕），便于用户复核
 - 识别完毕后，先列出识别到的所有字段让用户确认
@@ -298,7 +367,6 @@ function getSystemPrompt(intent: string): string {
     query: `${BASE}\n当前任务：数据查询。调用合适的查询工具获取数据，用清晰格式展示给用户。`,
     create: `${BASE}
 ${CORRECTION_RULE}
-${DOCUMENT_IMAGE_RULES}
 
 【零售场景规则】
 用户说"卖了一个XX"、"卖出XX"、"零售了XX"等，必须：
@@ -311,6 +379,11 @@ ${DOCUMENT_IMAGE_RULES}
 [{"goods_id": 123, "goods_name": "奶豆腐", "num": 1, "price": 20}]
 
 其他录入：调用合适的创建工具录入数据。缺少必填字段时先询问用户。`,
+    create_with_image: `${BASE}
+${CORRECTION_RULE}
+${DOCUMENT_IMAGE_RULES}
+
+其他录入：调用合适的创建工具录入数据。缺少必填字段时先询问用户。`,
     navigate: `${BASE}\n当前任务：页面导航。调用 navigate_to 工具跳转到用户指定页面。`,
     general: `${BASE}
 ${CORRECTION_RULE}
@@ -319,7 +392,25 @@ ${CORRECTION_RULE}
   return prompts[intent] || prompts.general
 }
 
+function shouldAskForCloseup(text: string): boolean {
+  const normalized = String(text || '').replace(/\s+/g, '')
+  if (!normalized) return true
+  // 只在 AI 自己明确说看不清、且没有识别出任何商品内容时才触发
+  const hasRetryRequest = /补拍|重拍|特写|重新拍|重新上传|拍清楚/.test(normalized)
+  if (hasRetryRequest) return false  // AI 已经在要求补拍了，不再覆盖
+  const placeholderGoods = /商品1|商品一|商品A/.test(normalized)
+  return placeholderGoods
+}
+
+const CLOSEUP_MESSAGE = `这张单据里【供应商名称】和【商品名称】目前无法可靠识别，先不要录入。
+请这样补拍后再发我：
+1. 把整张单据横向摆正后重拍一张
+2. 单独补拍“销货单位/供货单位”区域特写
+3. 单独补拍表格“商品名称/品名”那一列特写
+拍清楚后我再继续识别。`
+
 const allTools = [
+  { name: 'query_retail_orders', description: '查询零售订单列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '商品名称/会员名' }, limit: { type: 'number', description: '返回条数' } } } },
   { name: 'query_customers', description: '查询客户列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '搜索关键词' }, limit: { type: 'number', description: '返回条数' } } } },
   { name: 'query_suppliers', description: '查询供应商列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '搜索关键词' }, limit: { type: 'number', description: '返回条数' } } } },
   { name: 'query_goods', description: '查询商品列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '商品名称/编码' }, limit: { type: 'number', description: '返回条数' } } } },
@@ -332,8 +423,8 @@ const allTools = [
   { name: 'create_customer', description: '新增客户', input_schema: { type: 'object', properties: { name: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' }, remark: { type: 'string' } }, required: ['name'] } },
   { name: 'create_supplier', description: '新增供应商', input_schema: { type: 'object', properties: { name: { type: 'string' }, contact: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' }, bank: { type: 'string' } }, required: ['name'] } },
   { name: 'create_goods', description: '新增商品', input_schema: { type: 'object', properties: { goods_name: { type: 'string' }, goods_sn: { type: 'string' }, sell_price: { type: 'number' }, cost_price: { type: 'number' }, unit_name: { type: 'string' }, cate_name: { type: 'string' } }, required: ['goods_name'] } },
-  { name: 'create_sale_order', description: '新增销售合同/订单', input_schema: { type: 'object', properties: { customer_name: { type: 'string' }, total_amount: { type: 'number' }, remark: { type: 'string' } }, required: ['customer_name'] } },
-  { name: 'create_procure_order', description: '新增采购订单', input_schema: { type: 'object', properties: { supplier_name: { type: 'string' }, total_amount: { type: 'number' }, remark: { type: 'string' } }, required: ['supplier_name'] } },
+  { name: 'create_sale_order', description: '新增销售合同/订单', input_schema: { type: 'object', properties: { customer_name: { type: 'string', description: '客户名称（必填）' }, total_amount: { type: 'number' }, admin_name: { type: 'string', description: '经办人/业务员姓名' }, remark: { type: 'string' }, items: { type: 'array', description: '商品明细列表，每项含 goods_name/num/price/unit_name', items: { type: 'object', properties: { goods_name: { type: 'string', description: '商品名称' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '含税单价' }, unit_name: { type: 'string', description: '单位' } } } } }, required: ['customer_name'] } },
+  { name: 'create_procure_order', description: '新增采购订单', input_schema: { type: 'object', properties: { supplier_name: { type: 'string', description: '供应商名称（必填）' }, total_amount: { type: 'number' }, admin_name: { type: 'string', description: '经办人/采购人姓名' }, remark: { type: 'string' }, items: { type: 'array', description: '商品明细列表，每项含 goods_name/num/price/unit_name', items: { type: 'object', properties: { goods_name: { type: 'string', description: '商品名称' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '含税单价' }, unit_name: { type: 'string', description: '单位' } } } } }, required: ['supplier_name'] } },
   { name: 'create_collect_receipt', description: '新增收款单', input_schema: { type: 'object', properties: { contact_name: { type: 'string' }, amount: { type: 'number' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, receipt_date: { type: 'string' }, remark: { type: 'string' } }, required: ['contact_name', 'amount'] } },
   { name: 'create_pay_receipt', description: '新增付款单', input_schema: { type: 'object', properties: { contact_name: { type: 'string' }, amount: { type: 'number' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, pay_date: { type: 'string' }, remark: { type: 'string' } }, required: ['contact_name', 'amount'] } },
   { name: 'create_prepay', description: '新增预付款', input_schema: { type: 'object', properties: { amount: { type: 'number' }, pay_type: { type: 'string', enum: ['supplier', 'customer'] }, supplier_name: { type: 'string' }, customer_name: { type: 'string' }, pay_date: { type: 'string' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, remark: { type: 'string' } }, required: ['amount'] } },
@@ -376,8 +467,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const { messages, images } = await request.json() as any
 
   const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
-  // 有图片时强制走 create，确保单据识别规则生效
-  const intent = images?.length > 0 ? 'create' : detectIntent(lastUserMsg?.content || '')
+  // 有图片时附加完整识别规则；无图片时用精简 prompt
+  const intent = images?.length > 0 ? 'create_with_image' : detectIntent(lastUserMsg?.content || '')
   const systemPrompt = getSystemPrompt(intent)
 
   // Build API messages — inject images into last user message if present
@@ -406,15 +497,72 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const res = await fetch(`${baseURL}/v1/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: systemPrompt, tools: allTools, messages: loopMessages }),
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: systemPrompt, tools: allTools, messages: loopMessages, stream: true }),
         })
         if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
-        const data: any = await res.json()
-        for (const block of data.content || []) {
-          if (block.type === 'text' && block.text) await send({ type: 'text', text: block.text })
+
+        // 流式解析
+        const reader = res.body!.getReader()
+        const dec = new TextDecoder()
+        let buf = ''
+        let assistantText = ''
+        let stopReason = ''
+        const contentBlocks: any[] = []
+        let currentBlock: any = null
+
+        outer: while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() || ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const raw = line.slice(6).trim()
+            if (raw === '[DONE]') break outer
+            let evt: any
+            try { evt = JSON.parse(raw) } catch { continue }
+
+            if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
+              stopReason = evt.delta.stop_reason
+            }
+            if (evt.type === 'content_block_start') {
+              currentBlock = { ...evt.content_block, index: evt.index }
+              if (currentBlock.type === 'tool_use') currentBlock.input_raw = ''
+            }
+            if (evt.type === 'content_block_delta') {
+              if (evt.delta.type === 'text_delta') {
+                assistantText += evt.delta.text
+                await send({ type: 'text', text: evt.delta.text })
+              } else if (evt.delta.type === 'input_json_delta' && currentBlock) {
+                currentBlock.input_raw += evt.delta.partial_json
+              }
+            }
+            if (evt.type === 'content_block_stop' && currentBlock) {
+              if (currentBlock.type === 'tool_use') {
+                try { currentBlock.input = JSON.parse(currentBlock.input_raw || '{}') } catch { currentBlock.input = {} }
+              }
+              contentBlocks.push(currentBlock)
+              currentBlock = null
+            }
+            if (evt.type === 'message_stop') break outer
+          }
         }
-        if (data.stop_reason !== 'tool_use') break
-        const toolUseBlocks = (data.content || []).filter((b: any) => b.type === 'tool_use')
+
+        if (stopReason !== 'tool_use') {
+          if (images?.length > 0 && shouldAskForCloseup(assistantText)) {
+            // 清掉已发的文字，发补拍提示（覆盖）
+            await send({ type: 'text_replace', text: CLOSEUP_MESSAGE })
+          }
+          break
+        }
+
+        const toolUseBlocks = contentBlocks.filter((b: any) => b.type === 'tool_use')
+        const textBlocks = contentBlocks.filter((b: any) => b.type === 'text')
+        const apiContent = [
+          ...textBlocks.map((b: any) => ({ type: 'text', text: b.text || assistantText })),
+          ...toolUseBlocks.map((b: any) => ({ type: 'tool_use', id: b.id, name: b.name, input: b.input })),
+        ]
         const toolResults: any[] = []
         for (const toolUse of toolUseBlocks) {
           await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
@@ -422,7 +570,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
           toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
         }
-        loopMessages = [...loopMessages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }]
+        loopMessages = [...loopMessages, { role: 'assistant', content: apiContent }, { role: 'user', content: toolResults }]
       }
       await writer.write(encoder.encode('data: [DONE]\n\n'))
     } catch (e: any) {

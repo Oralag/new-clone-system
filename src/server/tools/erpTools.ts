@@ -163,7 +163,21 @@ export const createTools: FunctionDeclaration[] = [
       properties: {
         customer_name: { type: 'string', description: '客户名称（必填）' },
         total_amount: { type: 'number', description: '金额' },
+        admin_name: { type: 'string', description: '经办人/业务员姓名' },
         remark: { type: 'string', description: '备注' },
+        items: {
+          type: 'array',
+          description: '商品明细列表',
+          items: {
+            type: 'object',
+            properties: {
+              goods_name: { type: 'string', description: '商品名称' },
+              qty: { type: 'number', description: '数量' },
+              price: { type: 'number', description: '单价' },
+              unit_name: { type: 'string', description: '单位' },
+            },
+          },
+        },
       },
       required: ['customer_name'],
     },
@@ -176,7 +190,21 @@ export const createTools: FunctionDeclaration[] = [
       properties: {
         supplier_name: { type: 'string', description: '供应商名称（必填）' },
         total_amount: { type: 'number', description: '金额' },
+        admin_name: { type: 'string', description: '经办人/采购人姓名' },
         remark: { type: 'string', description: '备注' },
+        items: {
+          type: 'array',
+          description: '商品明细列表',
+          items: {
+            type: 'object',
+            properties: {
+              goods_name: { type: 'string', description: '商品名称' },
+              qty: { type: 'number', description: '数量' },
+              price: { type: 'number', description: '单价' },
+              unit_name: { type: 'string', description: '单位' },
+            },
+          },
+        },
       },
       required: ['supplier_name'],
     },

@@ -168,14 +168,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted, useSlots } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, onActivated, useSlots } from 'vue'
 import { Search, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as XLSX from 'xlsx'
 import http from '@/api/http'
 
-const isMobile = ref(window.innerWidth < 768)
-const onResize = () => { isMobile.value = window.innerWidth < 768 }
+const checkMobile = () => window.innerWidth < 768
+const isMobile = ref(checkMobile())
+const onResize = () => { isMobile.value = checkMobile() }
 
 interface Props {
   apiObj: (params: any) => Promise<any>
@@ -493,7 +494,8 @@ async function confirmImport() {
 // ── Expose ────────────────────────────────────────────────────────────────────
 defineExpose({ refresh, loadData, tableData, searchParams, selectedRows })
 
-onMounted(() => { loadData(); window.addEventListener('resize', onResize) })
+onMounted(() => { isMobile.value = checkMobile(); loadData(); window.addEventListener('resize', onResize) })
+onActivated(() => { isMobile.value = checkMobile() })
 onUnmounted(() => { window.removeEventListener('resize', onResize) })
 
 watch(

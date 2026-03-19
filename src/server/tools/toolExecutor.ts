@@ -20,6 +20,30 @@ async function erpPost(path: string, body: Record<string, any>, token: string) {
   return res.json()
 }
 
+async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
+  return Promise.all(
+    items.map(async (item) => {
+      // 统一数量字段：qty → num
+      const num = item.num ?? item.qty ?? 1
+      const normalized = { ...item, num, qty: undefined }
+      delete normalized.qty
+
+      if (!normalized.goods_name || normalized.goods_id) return normalized
+      try {
+        const res = await erpGet('/goods/ShopGoods/index', { keyword: normalized.goods_name, list_rows: 5 }, token)
+        const rows = res?.data?.rows || []
+        const matched = rows.find((g: any) =>
+          g.goods_name === normalized.goods_name ||
+          g.goods_name?.includes(normalized.goods_name) ||
+          normalized.goods_name?.includes(g.goods_name)
+        )
+        if (matched) return { ...normalized, goods_id: matched.id, goods_sn: matched.goods_sn, unit_name: normalized.unit_name || matched.unit_name, cate_name: matched.cate_name }
+      } catch { /* ignore */ }
+      return normalized
+    })
+  )
+}
+
 export async function executeTool(name: string, input: Record<string, any>, token: string): Promise<string> {
   try {
     let result: string
@@ -127,10 +151,24 @@ export async function executeTool(name: string, input: Record<string, any>, toke
             const cRes = await erpGet('/shop/ShopCustomer/index', { keyword: input.customer_name, list_rows: 5 }, token)
             const customers = cRes?.data?.rows || []
             const matched = customers.find((c: any) => (c.nickname || c.name) === input.customer_name || (c.nickname || c.name)?.includes(input.customer_name))
-            if (matched) input.customer_id = matched.id
+            if (matched) {
+              input.customer_id = matched.id
+              input.customer_name = matched.nickname || matched.name
+            }
           } catch { /* ignore */ }
         }
-        const res = await erpPost('/shop/ContractOrder/add', input, token)
+        // 自动根据 goods_name 查找 goods_id，并序列化为 goods_info
+        const rawItems = Array.isArray(input.items) ? input.items : []
+        const resolvedItems = rawItems.length > 0 ? await resolveGoodsIds(rawItems, token) : []
+        const payload: Record<string, any> = {
+          customer_id: input.customer_id,
+          customer_name: input.customer_name,
+          total_amount: input.total_amount,
+          admin_name: input.admin_name || '',
+          remark: input.remark || '',
+          goods_info: JSON.stringify(resolvedItems),
+        }
+        const res = await erpPost('/shop/ContractOrder/add', payload, token)
         result = res?.code === 1 ? `销售订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
@@ -141,10 +179,24 @@ export async function executeTool(name: string, input: Record<string, any>, toke
             const sRes = await erpGet('/procure/supplier/index', { keyword: input.supplier_name, list_rows: 5 }, token)
             const suppliers = sRes?.data?.rows || []
             const matched = suppliers.find((s: any) => s.name === input.supplier_name || s.name?.includes(input.supplier_name))
-            if (matched) input.supplier_id = matched.id
+            if (matched) {
+              input.supplier_id = matched.id
+              input.supplier_name = matched.name  // 回填标准名称
+            }
           } catch { /* ignore */ }
         }
-        const res = await erpPost('/stock/PurchaseOrder/add', input, token)
+        // 自动根据 goods_name 查找 goods_id，并序列化为 goods_info
+        const rawItems = Array.isArray(input.items) ? input.items : []
+        const resolvedItems = rawItems.length > 0 ? await resolveGoodsIds(rawItems, token) : []
+        const payload: Record<string, any> = {
+          supplier_id: input.supplier_id,
+          supplier_name: input.supplier_name,
+          total_amount: input.total_amount,
+          admin_name: input.admin_name || '',
+          remark: input.remark || '',
+          goods_info: JSON.stringify(resolvedItems),
+        }
+        const res = await erpPost('/stock/PurchaseOrder/add', payload, token)
         result = res?.code === 1 ? `采购订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
