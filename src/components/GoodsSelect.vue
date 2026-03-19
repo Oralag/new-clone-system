@@ -1,38 +1,63 @@
 <template>
-  <el-dialog v-model="visible" title="选择商品" width="900px" destroy-on-close>
-    <div class="select-search">
-      <el-input v-model="keyword" placeholder="商品名称/编码" clearable style="width: 200px" @keyup.enter="search" />
-      <el-select v-model="cateId" placeholder="商品分类" clearable style="width: 140px" @change="search">
-        <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
-      </el-select>
-      <el-button type="primary" @click="search">搜索</el-button>
-    </div>
+  <el-dialog v-model="visible" title="选择商品" width="1100px" destroy-on-close>
+    <div class="gs-body">
+      <!-- 左侧分类树 -->
+      <div class="gs-cate">
+        <div class="gs-cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">全部</div>
+        <el-tree
+          v-if="cateTree.length"
+          :data="cateTree"
+          :props="{ label: 'name', children: 'children' }"
+          node-key="id"
+          :default-expand-all="true"
+          highlight-current
+          @node-click="(n: any) => selectCate(n.id)"
+        >
+          <template #default="{ node, data }">
+            <span class="gs-tree-node" :class="{ active: selectedCateId === data.id }">{{ node.label }}</span>
+          </template>
+        </el-tree>
+      </div>
 
-    <el-table
-      v-loading="loading"
-      :data="list"
-      border
-      stripe
-      @selection-change="handleSelect"
-    >
-      <el-table-column type="selection" width="50" />
-      <el-table-column prop="goods_sn" label="商品编码" width="140" />
-      <el-table-column prop="goods_name" label="商品名称" min-width="180" />
-      <el-table-column prop="cate_name" label="分类" width="120" />
-      <el-table-column prop="unit_name" label="单位" width="80" />
-      <el-table-column prop="sell_price" label="销售价" width="100" />
-      <el-table-column prop="stock_num" label="库存" width="100" />
-    </el-table>
+      <!-- 右侧内容 -->
+      <div class="gs-main">
+        <div class="gs-search">
+          <el-input v-model="keyword" placeholder="商品名称/编码" clearable style="width: 220px" @keyup.enter="search" />
+          <el-button type="primary" @click="search">搜索</el-button>
+        </div>
 
-    <div class="dialog-pagination">
-      <el-pagination
-        v-model:current-page="page"
-        v-model:page-size="pageSize"
-        :total="total"
-        layout="total, prev, pager, next"
-        background
-        @current-change="loadData"
-      />
+        <el-table
+          v-loading="loading"
+          :data="list"
+          border
+          stripe
+          height="420"
+          @selection-change="handleSelect"
+        >
+          <el-table-column type="selection" width="45" />
+          <el-table-column type="index" label="序号" width="55" align="center" />
+          <el-table-column prop="goods_sn" label="商品编码" width="120" />
+          <el-table-column prop="goods_name" label="商品名称" min-width="150" />
+          <el-table-column prop="cate_name" label="商品分类" width="110" />
+          <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+          <el-table-column prop="stock_num" label="库存数量" width="90" align="right" />
+          <el-table-column prop="cost_price" label="采购价" width="90" align="right" />
+          <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
+        </el-table>
+
+        <div class="gs-footer">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[20, 50, 100]"
+            layout="total, sizes, prev, pager, next"
+            background
+            @current-change="loadData"
+            @size-change="() => { page = 1; loadData() }"
+          />
+        </div>
+      </div>
     </div>
 
     <template #footer>
@@ -54,13 +79,28 @@ const emit = defineEmits<{
 const visible = ref(false)
 const loading = ref(false)
 const keyword = ref('')
-const cateId = ref<any>(null)
+const selectedCateId = ref<any>(null)
 const cateOptions = ref<any[]>([])
 const list = ref<any[]>([])
 const selected = ref<any[]>([])
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+
+interface CateNode { id: number; name: string; parent_id: any; children: CateNode[] }
+function buildCateTree(source: any[]): CateNode[] {
+  const all: CateNode[] = source.map(c => ({ ...c, children: [] }))
+  const map: Record<number, CateNode> = {}
+  all.forEach(c => { map[c.id] = c })
+  const roots: CateNode[] = []
+  all.forEach(c => {
+    const pid = Number(c.parent_id ?? 0)
+    if (pid && map[pid]) map[pid].children.push(c)
+    else roots.push(c)
+  })
+  return roots
+}
+const cateTree = computed(() => buildCateTree(cateOptions.value))
 
 async function loadCates() {
   try {
@@ -70,19 +110,38 @@ async function loadCates() {
   } catch {}
 }
 
+// 选分类时收集该分类及所有子分类 id
+function collectIds(id: number): number[] {
+  const result = [id]
+  const children = cateOptions.value.filter(c => Number(c.parent_id) === id)
+  children.forEach(c => result.push(...collectIds(c.id)))
+  return result
+}
+
 async function loadData() {
   loading.value = true
   try {
     const params: any = { page: page.value, list_rows: pageSize.value, keyword: keyword.value }
-    if (cateId.value) params.cate_id = cateId.value
+    if (selectedCateId.value) params.cate_id = selectedCateId.value
     const res: any = await http.get('/shop.ShopGoods/index', { params })
     const data = res?.data || {}
-    const rows = data.rows || data.list || []
+    let rows = data.rows || data.list || []
+    // 若有子分类则前端也做子分类过滤
+    if (selectedCateId.value) {
+      const ids = collectIds(selectedCateId.value)
+      rows = rows.filter((g: any) => ids.includes(Number(g.cate_id)))
+    }
     list.value = fuzzyFilterGoods(rows, keyword.value)
     total.value = data.total || 0
   } finally {
     loading.value = false
   }
+}
+
+function selectCate(id: number | null) {
+  selectedCateId.value = id
+  page.value = 1
+  loadData()
 }
 
 function search() {
@@ -102,7 +161,8 @@ function confirm() {
 function open() {
   visible.value = true
   keyword.value = ''
-  cateId.value = null
+  selectedCateId.value = null
+  page.value = 1
   loadCates()
   loadData()
 }
@@ -111,15 +171,72 @@ defineExpose({ open })
 </script>
 
 <style scoped>
-.select-search {
+.gs-body {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 0;
+  height: 540px;
 }
 
-.dialog-pagination {
+/* 左侧分类 */
+.gs-cate {
+  width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid #e4e7ed;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.gs-cate-item {
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  border-radius: 0;
+  line-height: 1.4;
+}
+.gs-cate-item:hover,
+.gs-cate-item.active {
+  background: #ecf5ff;
+  color: #409eff;
+  font-weight: 500;
+}
+.gs-tree-node {
+  font-size: 13px;
+  color: #333;
+  line-height: 1.4;
+}
+.gs-tree-node.active {
+  color: #409eff;
+  font-weight: 500;
+}
+:deep(.el-tree-node__content) {
+  height: 32px;
+}
+:deep(.el-tree-node__content:hover) {
+  background: #ecf5ff;
+}
+:deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: #ecf5ff;
+  color: #409eff;
+}
+
+/* 右侧主区 */
+.gs-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-left: 12px;
+}
+.gs-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.gs-footer {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin-top: 10px;
+  flex-shrink: 0;
 }
 </style>
