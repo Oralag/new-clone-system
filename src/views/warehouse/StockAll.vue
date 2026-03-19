@@ -242,9 +242,12 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="单据编号" min-width="150">
+        <el-table-column label="单据编号" min-width="160">
           <template #default="{ row }">
-            <el-button v-if="row._sn" type="primary" link size="small" @click="goToDoc(row)">{{ row._sn }}</el-button>
+            <span v-if="row._sn" @click="goToDoc(row)"
+              style="color:#0071e3;cursor:pointer;text-decoration:underline;font-size:13px">
+              {{ row._sn }}
+            </span>
             <span v-else style="color:#c0c4cc">—</span>
           </template>
         </el-table-column>
@@ -823,7 +826,10 @@ async function openFlowDialog(goods: any) {
       for (const r of (inhouseRes.value.data?.rows ?? [])) {
         try {
           const items = JSON.parse(r.goods_info || '[]')
-          const matched = items.find((i: any) => Number(i.goods_id) === gid)
+          const matched = items.find((i: any) =>
+            (gid && Number(i.goods_id) === gid) ||
+            (goods.goods_name && i.goods_name === goods.goods_name)
+          )
           if (matched) {
             rows.push({
               _type: 'in',
@@ -845,9 +851,11 @@ async function openFlowDialog(goods: any) {
         try {
           const allItems = JSON.parse(r.goods_info || '[]')
           const items = allItems.filter((i: any) => !i._meta)
-          const matched = items.find((i: any) => Number(i.goods_id) === gid)
+          const matched = items.find((i: any) =>
+            (gid && Number(i.goods_id) === gid) ||
+            (goods.goods_name && i.goods_name === goods.goods_name)
+          )
           if (matched) {
-            const meta = allItems.find((i: any) => i._meta) ?? {}
             rows.push({
               _type: 'return_in',
               _sn: r.return_no || '',
@@ -866,7 +874,10 @@ async function openFlowDialog(goods: any) {
       for (const r of (saleRes.value.data?.rows ?? [])) {
         try {
           const items = JSON.parse(r.goods_info || '[]')
-          const matched = items.find((i: any) => Number(i.goods_id) === gid)
+          const matched = items.find((i: any) =>
+            (gid && Number(i.goods_id) === gid) ||
+            (goods.goods_name && i.goods_name === goods.goods_name)
+          )
           if (matched) {
             rows.push({
               _type: 'out',
