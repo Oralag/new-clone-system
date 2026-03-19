@@ -163,19 +163,35 @@
           <el-tooltip content="上传单据图片">
             <el-button :icon="Picture" circle size="small" plain @click="openImagePicker" :disabled="isLoading" />
           </el-tooltip>
-          <el-tooltip v-if="voiceSupported" :content="isRecording ? '点击停止' : '点击说话'">
-            <el-button
-              :icon="Microphone"
-              circle
-              size="small"
-              :type="isRecording ? 'danger' : ''"
-              :plain="!isRecording"
-              :class="{ 'mic-active': isRecording }"
-              @click.prevent="toggleVoice"
-              :disabled="isLoading"
-            />
-          </el-tooltip>
-          <el-button v-if="isIOS" :icon="Microphone" circle size="small" plain @click="showIOSVoiceTip" :disabled="isLoading" />
+          <button
+            v-if="voiceSupported"
+            class="mic-hold-btn"
+            :class="{ 'mic-hold-btn--active': isRecording }"
+            :disabled="isLoading"
+            @mousedown.prevent="onMicDown"
+            @mouseup.prevent="onMicUp"
+            @mouseleave.prevent="onMicCancel"
+            @touchstart.prevent="onMicDown"
+            @touchend.prevent="onMicUp"
+            @touchcancel.prevent="onMicCancel"
+          >
+            <el-icon><Microphone /></el-icon>
+            <span>{{ isRecording ? '松手发送' : '按住说话' }}</span>
+          </button>
+          <button v-if="isIOS" class="mic-hold-btn" @click="showIOSVoiceTip" :disabled="isLoading">
+            <el-icon><Microphone /></el-icon>
+            <span>按住说话</span>
+          </button>
+
+          <!-- 长按录音遮罩 -->
+          <transition name="fade">
+            <div v-if="isRecording" class="voice-overlay">
+              <div class="voice-wave">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <p>正在聆听，松手发送</p>
+            </div>
+          </transition>
           <input
             ref="fileInputRef"
             type="file"
@@ -1015,38 +1031,50 @@ const isRecording = ref(false)
 const voiceSupported = ref(!!SpeechRecognitionAPI)
 let recognition: any = null
 
-function startVoice() {
-  if (isRecording.value || !SpeechRecognitionAPI) return
+let voiceText = ''
+
+function onMicDown() {
+  if (isRecording.value || !SpeechRecognitionAPI || isLoading.value) return
+  voiceText = ''
   recognition = new SpeechRecognitionAPI()
   recognition.lang = 'zh-CN'
-  recognition.continuous = false
+  recognition.continuous = true
   recognition.interimResults = false
   recognition.onstart = () => { isRecording.value = true }
   recognition.onresult = (e: any) => {
-    const text = Array.from(e.results as any[])
+    voiceText = Array.from(e.results as any[])
       .map((r: any) => r[0].transcript)
       .join('')
-    inputText.value = (inputText.value || '') + text
   }
   recognition.onerror = (e: any) => {
     isRecording.value = false
     if (e.error !== 'aborted') {
-      const msg = e.error === 'not-allowed' ? '⚠️ 麦克风权限被拒绝' : `⚠️ 语音识别失败：${e.error}`
+      const msg = e.error === 'not-allowed' ? '麦克风权限被拒绝' : `语音识别失败：${e.error}`
       messages.value = [...messages.value, { role: 'assistant', content: msg, time: getNow() }]
     }
   }
-  recognition.onend = () => { isRecording.value = false }
+  recognition.onend = () => {
+    isRecording.value = false
+    if (voiceText.trim()) {
+      inputText.value = voiceText.trim()
+      voiceText = ''
+      nextTick(() => sendMessage())
+    }
+  }
   recognition.start()
 }
 
-function stopVoice() {
-  if (recognition) { recognition.stop(); recognition = null }
-  isRecording.value = false
+function onMicUp() {
+  if (!isRecording.value || !recognition) return
+  recognition.stop()
 }
 
-function toggleVoice() {
-  if (isRecording.value) stopVoice()
-  else startVoice()
+function onMicCancel() {
+  if (!isRecording.value || !recognition) return
+  voiceText = ''
+  recognition.abort()
+  recognition = null
+  isRecording.value = false
 }
 
 function showIOSVoiceTip() {
@@ -1593,6 +1621,83 @@ function renderMarkdown(text: string): string {
 @keyframes mic-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(245, 63, 63, 0.4); }
   50% { box-shadow: 0 0 0 6px rgba(245, 63, 63, 0); }
+}
+
+/* 长按说话按钮 */
+.mic-hold-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px;
+  height: 30px;
+  border-radius: 15px;
+  border: 1px solid #dcdfe6;
+  background: #f5f7fa;
+  color: #606266;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mic-hold-btn:hover {
+  border-color: #409eff;
+  color: #409eff;
+  background: #ecf5ff;
+}
+.mic-hold-btn--active {
+  background: #fef0f0;
+  border-color: #f56c6c;
+  color: #f56c6c;
+  animation: mic-pulse 1s ease-in-out infinite;
+}
+.mic-hold-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 长按录音遮罩 */
+.voice-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 20;
+  pointer-events: none;
+}
+.voice-overlay p {
+  color: #fff;
+  font-size: 14px;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+.voice-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 36px;
+}
+.voice-wave span {
+  display: block;
+  width: 5px;
+  border-radius: 3px;
+  background: #f53f3f;
+  animation: wave-bar 0.8s ease-in-out infinite;
+}
+.voice-wave span:nth-child(1) { height: 14px; animation-delay: 0s; }
+.voice-wave span:nth-child(2) { height: 24px; animation-delay: 0.1s; }
+.voice-wave span:nth-child(3) { height: 36px; animation-delay: 0.2s; }
+.voice-wave span:nth-child(4) { height: 24px; animation-delay: 0.3s; }
+.voice-wave span:nth-child(5) { height: 14px; animation-delay: 0.4s; }
+@keyframes wave-bar {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.6; }
+  50% { transform: scaleY(1); opacity: 1; }
 }
 
 /* Mobile: full-width panel */
