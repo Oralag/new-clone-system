@@ -722,7 +722,6 @@ async function handleRegister() {
   .form-heading h1 { font-size: 28px; }
   .form-heading p { margin: 4px 0 0; }
   .left-footer { margin-top: 8px; }
-  .mobile-tagline { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 }
 
 /* ── Invite Code hints ── */
@@ -744,7 +743,13 @@ async function handleRegister() {
 }
 /* ── Mobile tagline (hidden on desktop) ── */
 .mobile-tagline {
-  display: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+@media (min-width: 961px) {
+  .mobile-tagline { display: none; }
 }
 .mobile-badge {
   font-size: 10px;
