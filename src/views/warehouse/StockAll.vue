@@ -243,7 +243,10 @@
           </template>
         </el-table-column>
         <el-table-column label="单据编号" min-width="150">
-          <template #default="{ row }">{{ row._sn || '—' }}</template>
+          <template #default="{ row }">
+            <el-button v-if="row._sn" type="primary" link size="small" @click="goToDoc(row)">{{ row._sn }}</el-button>
+            <span v-else style="color:#c0c4cc">—</span>
+          </template>
         </el-table-column>
         <el-table-column label="数量" width="80" align="right">
           <template #default="{ row }">
@@ -788,6 +791,17 @@ const flowDialogVisible = ref(false)
 const flowLoading = ref(false)
 const flowGoodsName = ref('')
 const flowRows = ref<any[]>([])
+
+function goToDoc(row: any) {
+  flowDialogVisible.value = false
+  if (row._type === 'in') {
+    router.push({ path: '/procure/inhouse', query: { in_no: row._sn } })
+  } else if (row._type === 'return_in') {
+    router.push({ path: '/procure/return', query: { return_no: row._sn } })
+  } else if (row._type === 'out') {
+    router.push({ path: '/sale/contract', query: { contract_no: row._sn } })
+  }
+}
 
 async function openFlowDialog(goods: any) {
   flowGoodsName.value = goods.goods_name || ''

@@ -468,9 +468,8 @@ async function loadCates() {
 
 onMounted(() => {
   loadSuppliers(); loadWarehouses(); loadCates(); loadFunds()
-  if (route.query.goods_name) {
-    searchForm.goods_name = String(route.query.goods_name)
-  }
+  if (route.query.goods_name) searchForm.goods_name = String(route.query.goods_name)
+  if (route.query.in_no) searchForm.in_no = String(route.query.in_no)
 })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────

@@ -773,6 +773,7 @@ async function loadCates() {
 onMounted(async () => {
   await Promise.all([loadCustomers(), loadCates(), loadStaff(), loadFunds(), loadReceiptMap()])
   handleRouteFromOffer()
+  if (route.query.contract_no) searchForm.contract_no = String(route.query.contract_no)
   initAutoReceiptSync()
 })
 

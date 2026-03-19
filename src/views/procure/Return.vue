@@ -239,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -248,10 +248,17 @@ import { getProcureReturnList, createProcureReturn, deleteProcureReturn, auditPr
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { adjustFundBalance } from '@/utils/fund'
+import { useRoute } from 'vue-router'
 
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
+const route = useRoute()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+
+onMounted(() => {
+  if (route.query.return_no) searchForm.return_no = String(route.query.return_no)
+  if (route.query.supplier_name) searchForm.supplier_name = String(route.query.supplier_name)
+})
 
 function roundMoney(value: any) {
   return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100
