@@ -726,13 +726,13 @@ async function handleRegister() {
 /* ── Responsive ── */
 @media (max-width: 960px) {
   .login-page { flex-direction: column; height: 100vh; overflow: hidden; }
-  .left-panel { width: 100%; flex: 1; padding: 24px 24px 16px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
+  .left-panel { width: 100%; flex: 1; padding: 20px 20px 12px; overflow: hidden; display: flex; flex-direction: column; }
   .right-panel { display: none; }
-  .form-area { flex: 1; padding: 12px 0; justify-content: center; }
-  .form-heading { margin-bottom: 16px; }
-  .form-heading h1 { font-size: 28px; }
-  .form-heading p { margin: 4px 0 0; }
-  .left-footer { margin-top: 8px; }
+  .form-area { flex: 0 0 auto; padding: 10px 0 0; justify-content: flex-start; }
+  .form-heading { margin-bottom: 12px; }
+  .form-heading h1 { font-size: 26px; margin-bottom: 2px; }
+  .form-heading p { margin: 3px 0 0; }
+  .left-footer { margin-top: auto; padding-top: 8px; }
 }
 
 /* ── Invite Code hints ── */
