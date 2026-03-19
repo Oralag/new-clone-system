@@ -21,8 +21,19 @@
 
       <!-- 手机端广告文案条 -->
       <div class="mobile-tagline">
-        <span class="mobile-badge">✦ NEXT-GEN</span>
-        <span class="mobile-slogan">为现代数字游牧企业打造的终极管理工作台</span>
+        <div class="deco-circle deco-c1"></div>
+        <div class="deco-circle deco-c2"></div>
+        <div class="mobile-tagline-inner">
+          <div class="next-gen-badge" style="margin-bottom:10px">
+            <span class="badge-star">✦</span>
+            <span>NEXT-GEN PLATFORM</span>
+          </div>
+          <h2 class="hero-title" style="font-size:28px;margin-bottom:6px">
+            <span class="line-white">构建数字</span>
+            <span class="line-light">未来。</span>
+          </h2>
+          <p class="hero-sub" style="font-size:13px;margin:0">为现代数字游牧企业打造的终极管理工作台</p>
+        </div>
       </div>
 
       <!-- Form area -->
@@ -744,26 +755,18 @@ async function handleRegister() {
 /* ── Mobile tagline (hidden on desktop) ── */
 .mobile-tagline {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #5B4FE8 0%, #4338CA 40%, #3730A3 100%);
+  border-radius: 16px;
+  margin-top: 14px;
+  padding: 18px 20px;
+}
+.mobile-tagline-inner {
+  position: relative;
+  z-index: 1;
 }
 @media (min-width: 961px) {
   .mobile-tagline { display: none; }
-}
-.mobile-badge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #fff;
-  background: #1a1a2e;
-  border-radius: 20px;
-  padding: 3px 9px;
-  white-space: nowrap;
-}
-.mobile-slogan {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.4;
 }
 </style>
