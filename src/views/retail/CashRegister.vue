@@ -824,17 +824,6 @@ onMounted(async () => {
   cursor: pointer; background: #fff;
   transition: all 0.15s; user-select: none;
 }
-.cr-goods-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 16px rgba(59,130,246,0.12);
-  transform: translateY(-2px);
-}
-.cr-goods-card:active { transform: scale(0.97); }
-.cr-goods-card.selected {
-  border-color: #2563eb;
-  background: #eff6ff;
-  box-shadow: 0 4px 16px rgba(37,99,235,0.15);
-}
 
 .cr-goods-name {
   font-size: 13px; color: #1e293b; line-height: 1.5; margin-bottom: 10px;

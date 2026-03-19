@@ -625,15 +625,29 @@ async function loadStockMap(warehouseId = 0) {
 
 async function loadActivityMaps() {
   try {
-    const [inhouseRes, retailRes] = await Promise.allSettled([
+    const [inhouseRes, retailRes, returnRes] = await Promise.allSettled([
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 500 } }),
       http.get('/retail/order/index', { params: { list_rows: 500 } }),
+      http.get('/procure/ProcureReturn/index', { params: { list_rows: 500 } }),
     ])
 
-    // Inhouse map (入库)
+    // 退货单涉及的入库单 id 集合，用于排除
+    const returnInhouseIds = new Set<number>()
+    if (returnRes.status === 'fulfilled') {
+      for (const r of (returnRes.value.data?.rows ?? [])) {
+        // 退货单审核时可能关联了入库单 id（存在 inhouse_id 字段）
+        const inhouseId = Number(r.inhouse_id || 0)
+        if (inhouseId) returnInhouseIds.add(inhouseId)
+      }
+    }
+
+    // Inhouse map (入库) — 排除退货触发的入库单
     const inhouseRows: any[] = inhouseRes.status === 'fulfilled' ? (inhouseRes.value.data?.rows ?? []) : []
     const inMap: Record<number, number> = {}
     for (const r of inhouseRows) {
+      // 跳过退货关联的入库单，或备注包含"退货"的
+      if (returnInhouseIds.has(Number(r.id))) continue
+      if (String(r.remark || '').includes('退货')) continue
       try {
         const items = JSON.parse(r.goods_info || '[]')
         const goodsInThisOrder = new Set<number>()
