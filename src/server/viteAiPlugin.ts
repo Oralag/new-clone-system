@@ -280,7 +280,7 @@ export function aiChatPlugin(): Plugin {
 
         try {
           const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
-          const intent = detectIntent(lastUserMsg?.content || '')
+          const intent = images?.length > 0 ? 'create' : detectIntent(lastUserMsg?.content || '')
           const systemPrompt = getSystemPrompt(intent)
 
           // Convert messages to Gemini Content format
