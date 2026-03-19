@@ -371,7 +371,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const { messages, images } = await request.json() as any
 
   const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
-  const intent = detectIntent(lastUserMsg?.content || '')
+  // 有图片时强制走 create，确保单据识别规则生效
+  const intent = images?.length > 0 ? 'create' : detectIntent(lastUserMsg?.content || '')
   const systemPrompt = getSystemPrompt(intent)
 
   // Build API messages — inject images into last user message if present
