@@ -120,14 +120,20 @@
     </el-drawer>
 
     <!-- 商品选择弹框 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="600px" append-to-body>
-      <el-input v-model="goodsKeyword" placeholder="搜索商品" clearable :prefix-icon="Search"
-        style="margin-bottom:10px" @input="onGoodsSearch" />
+    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="680px" append-to-body>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <el-input v-model="goodsKeyword" placeholder="搜索商品" clearable :prefix-icon="Search"
+          style="width:180px" @input="onGoodsSearch" />
+        <el-select v-model="goodsCateFilter" placeholder="商品分类" clearable style="width:140px" @change="loadGoodsOptions">
+          <el-option v-for="c in goodsCateOptions" :key="c.id" :label="c.name" :value="c.id" />
+        </el-select>
+      </div>
       <el-table :data="goodsOptions" v-loading="goodsLoading" border height="320"
         @selection-change="selectedGoods = $event">
         <el-table-column type="selection" width="45" />
         <el-table-column prop="goods_sn" label="编码" width="110" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="140" />
+        <el-table-column prop="goods_name" label="商品名称" min-width="130" />
+        <el-table-column prop="cate_name" label="分类" width="90" />
         <el-table-column prop="unit_name" label="单位" width="70" align="center" />
         <el-table-column prop="sell_price" label="售价" width="90" align="right" />
       </el-table>
@@ -145,7 +151,7 @@ import { Plus, Delete, Search } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList } from '@/api/retail'
-import { getGoodsList } from '@/api/goods'
+import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import http from '@/api/http'
 
@@ -258,6 +264,8 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
 const goodsPickerVisible = ref(false)
 const goodsLoading = ref(false)
 const goodsKeyword = ref('')
+const goodsCateFilter = ref<any>(null)
+const goodsCateOptions = ref<any[]>([])
 const goodsOptions = ref<any[]>([])
 const selectedGoods = ref<any[]>([])
 let st: any
@@ -265,15 +273,24 @@ let st: any
 async function loadGoodsOptions() {
   goodsLoading.value = true
   try {
-    const res = await getGoodsList({ keyword: goodsKeyword.value || undefined, list_rows: 50 })
+    const params: any = { keyword: goodsKeyword.value || undefined, list_rows: 50 }
+    if (goodsCateFilter.value) params.cate_id = goodsCateFilter.value
+    const res = await getGoodsList(params)
     goodsOptions.value = fuzzyFilterGoods(res.data?.rows ?? [], goodsKeyword.value || '')
   } finally { goodsLoading.value = false }
 }
 
 function onGoodsSearch() { clearTimeout(st); st = setTimeout(loadGoodsOptions, 300) }
 
-function openGoodsPicker() {
-  goodsKeyword.value = ''; selectedGoods.value = []
+async function openGoodsPicker() {
+  goodsKeyword.value = ''; goodsCateFilter.value = null; selectedGoods.value = []
+  if (!goodsCateOptions.value.length) {
+    try {
+      const res = await getGoodsCateList({ list_rows: 200 })
+      const rows = res.data?.rows || res.data?.list || res.data?.data || []
+      goodsCateOptions.value = rows.filter((c: any, i: number) => rows.findIndex((x: any) => x.name === c.name) === i)
+    } catch {}
+  }
   goodsPickerVisible.value = true; loadGoodsOptions()
 }
 

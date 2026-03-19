@@ -248,14 +248,18 @@
     <!-- 商品选择器 -->
     <el-dialog v-model="goodsPickerVisible" title="选择商品" width="800px" append-to-body>
       <div style="margin-bottom:10px;display:flex;gap:8px">
-        <el-input v-model="pickerKeyword" placeholder="搜索商品名称/编码" clearable style="width:240px"
+        <el-input v-model="pickerKeyword" placeholder="搜索商品名称/编码" clearable style="width:220px"
           :prefix-icon="Search" @input="onPickerSearch" />
+        <el-select v-model="pickerCate" placeholder="商品分类" clearable style="width:140px" @change="loadPickerGoods">
+          <el-option v-for="c in pickerCateOptions" :key="c.id" :label="c.name" :value="c.id" />
+        </el-select>
       </div>
       <el-table :data="pickerGoods" v-loading="pickerLoading" border height="360"
         @selection-change="pickerSelection = $event">
         <el-table-column type="selection" width="45" />
         <el-table-column prop="goods_sn" label="商品编码" width="120" />
         <el-table-column prop="goods_name" label="商品名称" min-width="150" />
+        <el-table-column prop="cate_name" label="分类" width="90" />
         <el-table-column prop="unit_name" label="单位" width="65" align="center" />
         <el-table-column label="库存" width="80" align="center">
           <template #default="{ row }">
@@ -483,6 +487,8 @@ onMounted(() => {
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
 const goodsPickerVisible = ref(false)
 const pickerKeyword = ref('')
+const pickerCate = ref<any>(null)
+const pickerCateOptions = ref<any[]>([])
 const pickerGoods = ref<any[]>([])
 const pickerLoading = ref(false)
 const pickerSelection = ref<any[]>([])
@@ -491,8 +497,10 @@ let pickerTimer: any
 async function loadPickerGoods() {
   pickerLoading.value = true
   try {
+    const params: any = { keyword: pickerKeyword.value || undefined, list_rows: 100 }
+    if (pickerCate.value) params.cate_id = pickerCate.value
     const [goodsRes, stockRes] = await Promise.all([
-      getGoodsList({ keyword: pickerKeyword.value || undefined, list_rows: 100 }),
+      getGoodsList(params),
       http.get('/stock/StockAll/index', { params: { list_rows: 1000 } }),
     ])
     const rows: any[] = goodsRes.data?.rows ?? []
@@ -520,8 +528,18 @@ function confirmPickGoods() {
   goodsPickerVisible.value = false
 }
 
-watch(goodsPickerVisible, v => {
-  if (v) { pickerKeyword.value = ''; pickerSelection.value = []; loadPickerGoods() }
+watch(goodsPickerVisible, async v => {
+  if (v) {
+    pickerKeyword.value = ''; pickerCate.value = null; pickerSelection.value = []
+    if (!pickerCateOptions.value.length) {
+      try {
+        const r = await getGoodsCateList({ list_rows: 200 })
+        const rows = r.data?.rows || r.data?.list || r.data?.data || []
+        pickerCateOptions.value = rows.filter((c: any, i: number) => rows.findIndex((x: any) => x.name === c.name) === i)
+      } catch {}
+    }
+    loadPickerGoods()
+  }
 })
 
 // ── 销售单选择器 ──────────────────────────────────────────────────────────────

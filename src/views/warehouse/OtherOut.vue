@@ -225,9 +225,12 @@
     </div>
 
     <!-- ══════════════════════ 商品选择弹窗 ══════════════════════ -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="760px" append-to-body>
+    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="800px" append-to-body>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <el-input v-model="goodsSearch" placeholder="搜索商品名称/编码" clearable style="width:240px" @input="filterGoods" />
+        <el-input v-model="goodsSearch" placeholder="搜索商品名称/编码" clearable style="width:200px" @input="filterGoods" />
+        <el-select v-model="pickerCate" placeholder="商品分类" clearable style="width:140px" @change="filterGoods">
+          <el-option v-for="c in goodsCateOptions" :key="c.id" :label="c.name" :value="c.id" />
+        </el-select>
       </div>
       <el-table :data="filteredGoods" border size="small" height="400"
         @selection-change="pickerSelection = $event">
@@ -263,7 +266,7 @@ import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getOtherOutList, createOtherOut, deleteOtherOut, getWarehouseList } from '@/api/warehouse'
-import { getGoodsList } from '@/api/goods'
+import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
@@ -348,6 +351,8 @@ function backToList() { showForm.value = false; tableRef.value?.refresh() }
 // ── 商品选择器 ──────────────────────────────────────────────────
 const goodsPickerVisible = ref(false)
 const goodsSearch = ref('')
+const pickerCate = ref<any>(null)
+const goodsCateOptions = ref<any[]>([])
 const allGoods = ref<any[]>([])
 const filteredGoods = ref<any[]>([])
 const pickerSelection = ref<any[]>([])
@@ -359,13 +364,23 @@ async function openGoodsPicker() {
       allGoods.value = res.data?.list || res.data?.data || []
     } catch {}
   }
+  if (!goodsCateOptions.value.length) {
+    try {
+      const res = await getGoodsCateList({ list_rows: 200 })
+      const rows = res.data?.rows || res.data?.list || res.data?.data || []
+      goodsCateOptions.value = rows.filter((c: any, i: number) => rows.findIndex((x: any) => x.name === c.name) === i)
+    } catch {}
+  }
   goodsSearch.value = ''
+  pickerCate.value = null
   filteredGoods.value = [...allGoods.value]
   pickerSelection.value = []
   goodsPickerVisible.value = true
 }
 function filterGoods() {
-  filteredGoods.value = fuzzyFilterGoods(allGoods.value, goodsSearch.value.trim())
+  let list = allGoods.value
+  if (pickerCate.value) list = list.filter((g: any) => g.cate_id === pickerCate.value)
+  filteredGoods.value = fuzzyFilterGoods(list, goodsSearch.value.trim())
 }
 function confirmGoodsPicker() {
   pickerSelection.value.forEach(g => {
