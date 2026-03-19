@@ -34,6 +34,9 @@
           </div>
         </div>
         <div class="chat-header-actions">
+          <el-tooltip content="历史会话">
+            <el-button :icon="Clock" circle size="small" plain @click="showHistory = !showHistory" />
+          </el-tooltip>
           <el-tooltip content="清空对话">
             <el-button :icon="Delete" circle size="small" plain @click="clearMessages" />
           </el-tooltip>
@@ -43,6 +46,26 @@
 
       <!-- Messages -->
       <div ref="messagesRef" class="chat-messages">
+
+        <!-- 历史会话面板 -->
+        <transition name="slide-down">
+          <div v-if="showHistory" class="history-panel">
+            <div class="history-panel-header">
+              <span>历史会话</span>
+              <el-button link size="small" @click="showHistory = false">收起</el-button>
+            </div>
+            <div v-if="sessions.length === 0" class="history-empty">暂无历史会话</div>
+            <div
+              v-for="(s, i) in sessions"
+              :key="s.time"
+              class="history-item"
+              @click="restoreSession(i)"
+            >
+              <div class="history-item-title">{{ s.summary }}</div>
+              <div class="history-item-meta">{{ s.time }} · {{ s.count }}条消息</div>
+            </div>
+          </div>
+        </transition>
         <!-- Welcome message -->
         <div class="chat-welcome" v-if="messages.length === 0">
           <el-icon :size="40" color="#165dff"><Cpu /></el-icon>
@@ -254,7 +277,7 @@
 </template>
 
 <script setup lang="ts">
-import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone } from '@element-plus/icons-vue'
+import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone, Clock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
@@ -291,7 +314,51 @@ interface ImageItem {
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 const HISTORY_KEY = 'erp_ai_chat_history'
-const MAX_HISTORY = 100  // keep at most 100 messages in storage
+const SESSIONS_KEY = 'erp_ai_sessions'
+const MAX_HISTORY = 100
+const MAX_SESSIONS = 20
+
+interface Session {
+  time: string
+  summary: string
+  count: number
+  messages: Message[]
+}
+
+const showHistory = ref(false)
+const sessions = ref<Session[]>(loadSessions())
+
+function loadSessions(): Session[] {
+  try {
+    const raw = localStorage.getItem(SESSIONS_KEY)
+    if (raw) return JSON.parse(raw) as Session[]
+  } catch {}
+  return []
+}
+
+function saveSessions(list: Session[]) {
+  try {
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(list.slice(-MAX_SESSIONS)))
+  } catch {}
+}
+
+function archiveSession() {
+  const msgs = messages.value
+  if (msgs.length < 2) return
+  const first = msgs.find(m => m.role === 'user')
+  const summary = first ? first.content.slice(0, 30) + (first.content.length > 30 ? '...' : '') : '对话记录'
+  const s: Session = { time: getNow(), summary, count: msgs.length, messages: [...msgs] }
+  sessions.value = [...sessions.value, s]
+  saveSessions(sessions.value)
+}
+
+function restoreSession(index: number) {
+  const s = sessions.value[index]
+  if (!s) return
+  messages.value = [...s.messages]
+  showHistory.value = false
+  nextTick(() => scrollToBottom())
+}
 
 function loadHistory(): Message[] {
   try {
@@ -1140,6 +1207,7 @@ function sendQuickPrompt(p: string) {
 }
 
 function clearMessages() {
+  archiveSession()
   messages.value = []
   pendingAction.value = null
   localStorage.removeItem(HISTORY_KEY)
@@ -1655,6 +1723,64 @@ function renderMarkdown(text: string): string {
 .mic-hold-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 历史会话面板 */
+.history-panel {
+  background: #f7f8fa;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid #e8eaed;
+}
+.history-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #606266;
+  border-bottom: 1px solid #e8eaed;
+  background: #fff;
+}
+.history-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #c0c4cc;
+}
+.history-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f1f3;
+  transition: background 0.15s;
+}
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: #ecf5ff; }
+.history-item-title {
+  font-size: 13px;
+  color: #303133;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item-meta {
+  font-size: 11px;
+  color: #909399;
+  margin-top: 2px;
+}
+.slide-down-enter-active, .slide-down-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+.slide-down-enter-from, .slide-down-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.slide-down-enter-to, .slide-down-leave-from {
+  max-height: 400px;
+  opacity: 1;
 }
 
 /* 长按录音遮罩 */
