@@ -39,7 +39,10 @@
         </div>
         <button v-if="isTrial && !trialStarted" class="nav-trial-btn" @click="showTrialModal = true">🎁 领取15天体验</button>
         <button v-if="isTrial" class="nav-upgrade-btn" @click="upgradeDialog?.open()">升级付费版</button>
-        <button class="nav-btn" @click="logout">退出登录</button>
+        <button class="nav-btn" @click="logout" title="退出登录">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-2px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          退出
+        </button>
       </div>
     </nav>
 
@@ -634,20 +637,20 @@ const TOOL_LABELS: Record<string, string> = {
 .nav-links span:hover { color: #0071e3; }
 
 .nav-btn {
-  padding: 10px 24px;
-  background: #0071e3;
-  color: white;
-  border: none;
+  padding: 7px 14px;
+  background: transparent;
+  color: rgba(29,29,31,0.5);
+  border: 1px solid rgba(29,29,31,0.15);
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  box-shadow: 0 6px 20px rgba(0,113,227,0.25);
-  transition: all 0.2s cubic-bezier(0.23,1,0.32,1);
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  transition: all 0.18s;
 }
-.nav-btn:hover { background: rgba(0,113,227,0.88); transform: scale(0.97); }
+.nav-btn:hover { background: rgba(239,68,68,0.07); color: #ef4444; border-color: rgba(239,68,68,0.25); }
 
 .nav-theme-btns {
   display: flex;
@@ -1213,7 +1216,7 @@ const TOOL_LABELS: Record<string, string> = {
   .nav-logo-icon svg { width: 26px; height: 26px; }
   .nav-links { display: none; }
   .nav-trial-btn, .nav-upgrade-btn { display: none; }
-  .nav-btn { padding: 6px 14px; font-size: 12px; }
+  .nav-btn { padding: 5px 10px; font-size: 11px; }
   .hero { padding: 36px 20px 28px; }
   .hero-title { font-size: 38px; line-height: 0.95; }
   .hero-sub { font-size: 14px; margin-top: 12px; }
