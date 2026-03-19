@@ -24,15 +24,28 @@
         <div class="deco-circle deco-c1"></div>
         <div class="deco-circle deco-c2"></div>
         <div class="mobile-tagline-inner">
-          <div class="next-gen-badge" style="margin-bottom:10px">
+          <div class="next-gen-badge" style="margin-bottom:12px">
             <span class="badge-star">✦</span>
             <span>NEXT-GEN PLATFORM</span>
           </div>
-          <h2 class="hero-title" style="font-size:28px;margin-bottom:6px">
+          <h2 class="hero-title" style="font-size:32px;margin-bottom:8px">
             <span class="line-white">构建数字</span>
             <span class="line-light">未来。</span>
           </h2>
-          <p class="hero-sub" style="font-size:13px;margin:0">为现代数字游牧企业打造的终极管理工作台</p>
+          <p class="hero-sub" style="font-size:13px;margin:0 0 16px">为现代数字游牧企业打造的终极管理工作台</p>
+          <div class="feature-cards" style="margin-bottom:0">
+            <div class="feat-card" v-for="f in features" :key="f.title">
+              <div class="feat-arrow">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 7h8M7 3l4 4-4 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="feat-text">
+                <div class="feat-title">{{ f.title }}</div>
+                <div class="feat-desc">{{ f.desc }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -726,13 +739,14 @@ async function handleRegister() {
 /* ── Responsive ── */
 @media (max-width: 960px) {
   .login-page { flex-direction: column; height: 100vh; overflow: hidden; }
-  .left-panel { width: 100%; flex: 1; padding: 20px 20px 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .left-panel { width: 100%; flex: 1; padding: 20px 20px 12px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
   .right-panel { display: none; }
-  .form-area { flex: 0 0 auto; padding: 10px 0 0; justify-content: flex-start; }
+  .form-area { flex: 1; padding: 12px 0 0; justify-content: center; }
   .form-heading { margin-bottom: 12px; }
   .form-heading h1 { font-size: 26px; margin-bottom: 2px; }
   .form-heading p { margin: 3px 0 0; }
-  .left-footer { margin-top: auto; padding-top: 8px; }
+  .left-footer { padding-top: 8px; }
+  .mobile-tagline .feat-card { padding: 10px 14px; }
 }
 
 /* ── Invite Code hints ── */
