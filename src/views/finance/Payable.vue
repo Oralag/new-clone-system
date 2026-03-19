@@ -146,31 +146,77 @@ const summaryReturn = computed(() => displayRows.value.reduce((s, r) => s + Numb
 async function load() {
   loading.value = true
   try {
-    const [payableRes, returnRes] = await Promise.all([
-      http.get('/finance/PayAccounts/index', {
+    const [orderRes, returnRes] = await Promise.all([
+      http.get('/stock/PurchaseOrder/index', {
         params: {
-          page: page.value,
-          list_rows: pageSize.value,
-          supplier_name: searchForm.supplier_name,
-          date_from: searchForm.date_from,
-          date_to: searchForm.date_to,
-          group_by_supplier: 1,
+          list_rows: 2000,
+          supplier_name: searchForm.supplier_name || undefined,
         }
       }),
       http.get('/procure/ProcureReturn/index', {
         params: {
-          supplier_name: searchForm.supplier_name,
-          date_from: searchForm.date_from,
-          date_to: searchForm.date_to,
+          supplier_name: searchForm.supplier_name || undefined,
           status: 1,
           list_rows: 1000,
         }
       }),
     ])
-    rawRows.value = payableRes.data?.rows ?? []
-    rows.value = rawRows.value
+
+    const orders: any[] = orderRes.data?.rows ?? []
+
+    // 按供应商聚合采购订单
+    const supplierMap = new Map<string, any>()
+    for (const o of orders) {
+      const key = o.supplier_id ? `id:${o.supplier_id}` : `name:${String(o.supplier_name || '').trim()}`
+      if (!supplierMap.has(key)) {
+        supplierMap.set(key, {
+          supplier_id: o.supplier_id || 0,
+          supplier_name: o.supplier_name || '',
+          contact_name: o.contact_name || '',
+          contact_mobile: o.contact_mobile || '',
+          order_amount: 0,
+          paid_amount: 0,
+          un_pay_amount: 0,
+          prepay: 0,
+          orders: [],
+        })
+      }
+      const s = supplierMap.get(key)!
+      const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
+      const paidAmt = Number(o.pay_amount ?? 0)
+      const unpaid = Math.max(0, orderAmt - paidAmt)
+      s.order_amount += orderAmt
+      s.paid_amount += paidAmt
+      s.un_pay_amount += unpaid
+      s.orders.push({
+        order_id: o.id,
+        order_no: o.order_no || o.order_sn || '',
+        order_amount: orderAmt,
+        paid_amount: paidAmt,
+        un_pay_amount: unpaid,
+        due_date: (o.order_date || o.create_time || '').slice(0, 10),
+      })
+    }
+
+    // 日期过滤（前端）
+    let aggregated = Array.from(supplierMap.values())
+    if (searchForm.date_from || searchForm.date_to) {
+      for (const s of aggregated) {
+        s.orders = s.orders.filter((o: any) => {
+          if (searchForm.date_from && o.due_date < searchForm.date_from) return false
+          if (searchForm.date_to && o.due_date > searchForm.date_to) return false
+          return true
+        })
+        s.order_amount = s.orders.reduce((sum: number, o: any) => sum + o.order_amount, 0)
+        s.paid_amount = s.orders.reduce((sum: number, o: any) => sum + o.paid_amount, 0)
+        s.un_pay_amount = s.orders.reduce((sum: number, o: any) => sum + o.un_pay_amount, 0)
+      }
+      aggregated = aggregated.filter(s => s.orders.length > 0)
+    }
+
+    rawRows.value = aggregated
     procureReturnRows.value = returnRes.data?.rows ?? []
-    total.value = payableRes.data?.total ?? 0
+    total.value = aggregated.length
   } finally {
     loading.value = false
   }

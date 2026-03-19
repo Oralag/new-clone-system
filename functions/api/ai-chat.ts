@@ -87,7 +87,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const outTotal = outRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
         const contractRows = contractRes?.data?.rows || []
         const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售合同 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}`
+        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售合同 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ id: r.id, 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}`
         break
       }
       case 'query_purchases': {
@@ -98,7 +98,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const res: any = await erpGet('/stock/PurchaseOrder/index', params, token)
         const rows = res?.data?.rows || []
         const total = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-        result = `共 ${rows.length} 条采购订单，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 10).map((r: any) => ({ 供应商: r.supplier_name, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
+        result = `共 ${rows.length} 条采购订单，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 10).map((r: any) => ({ id: r.id, 供应商: r.supplier_name, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
         break
       }
       case 'query_finance': {
@@ -243,6 +243,16 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         result = res?.code === 1 ? `零售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
+      case 'delete_purchase_order': {
+        const res: any = await erpPost('/stock/PurchaseOrder/del', { id: input.id }, token)
+        result = res?.code === 1 ? `采购订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_sale_order': {
+        const res: any = await erpPost('/shop/ContractOrder/del', { id: input.id }, token)
+        result = res?.code === 1 ? `销售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
       default:
         result = `未知工具：${name}`
     }
@@ -322,6 +332,8 @@ const allTools = [
   { name: 'update_goods', description: '修改商品信息（用于纠正录入错误）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '商品ID（必须先query_goods查到）' }, goods_name: { type: 'string' }, sell_price: { type: 'number' }, cost_price: { type: 'number' }, unit_name: { type: 'string' } }, required: ['id'] } },
   { name: 'delete_goods', description: '删除商品（用于删除错误录入的商品）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '商品ID' } }, required: ['id'] } },
   { name: 'delete_retail_order', description: '删除零售订单（用于删除错误的零售单）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '零售订单ID' } }, required: ['id'] } },
+  { name: 'delete_purchase_order', description: '删除采购订单（用于删除错误的采购单，需先用 query_purchases 查到ID）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '采购订单ID' } }, required: ['id'] } },
+  { name: 'delete_sale_order', description: '删除销售合同/订单（用于删除错误的销售单，需先用 query_sales 查到ID）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '销售订单ID' } }, required: ['id'] } },
   { name: 'navigate_to', description: '跳转到ERP系统的指定页面', input_schema: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
 ]
 

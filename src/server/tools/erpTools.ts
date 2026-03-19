@@ -285,4 +285,51 @@ export const navigateTools: FunctionDeclaration[] = [
   },
 ]
 
-export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...navigateTools]
+export const deleteTools: FunctionDeclaration[] = [
+  {
+    name: 'delete_purchase_order',
+    description: '删除采购订单（需先用 query_purchases 查到订单ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '采购订单ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_supplier',
+    description: '删除供应商（需先用 query_suppliers 查到供应商ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '供应商ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_sale_order',
+    description: '删除销售合同/订单（需先用 query_sales 查到订单ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '销售订单ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_customer',
+    description: '删除客户（需先用 query_customers 查到客户ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '客户ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
+]
+
+export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...deleteTools, ...navigateTools]

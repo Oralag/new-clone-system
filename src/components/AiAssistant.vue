@@ -179,7 +179,7 @@
           <input
             ref="fileInputRef"
             type="file"
-            accept="image/*"
+            accept="image/*,.heic,.heif"
             multiple
             style="display:none"
             @change="onFileChange"
@@ -1061,25 +1061,36 @@ async function onFileChange(e: Event) {
   const files = (e.target as HTMLInputElement).files
   if (!files) return
   for (const file of Array.from(files)) {
-    if (!file.type.startsWith('image/')) continue
-    const data = await fileToBase64(file)
-    pendingImages.value.push({
-      previewUrl: URL.createObjectURL(file),
-      data,
-      mediaType: file.type,
-    })
+    if (!file.type.startsWith('image/') && !file.name.toLowerCase().match(/\.(heic|heif)$/)) continue
+    const { data, previewUrl } = await compressToJpeg(file)
+    pendingImages.value.push({ previewUrl, data, mediaType: 'image/jpeg' })
   }
   // reset input so same file can be re-selected
   ;(e.target as HTMLInputElement).value = ''
 }
 
-function fileToBase64(file: File): Promise<string> {
+// 将任意图片（含 HEIC）转为 JPEG，长边限 1600px，质量 0.85
+function compressToJpeg(file: File): Promise<{ data: string; previewUrl: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
-      const result = reader.result as string
-      // strip "data:image/xxx;base64," prefix
-      resolve(result.split(',')[1])
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 1600
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+          else { width = Math.round(width * MAX / height); height = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        resolve({ data: dataUrl.split(',')[1], previewUrl: dataUrl })
+      }
+      img.onerror = reject
+      img.src = reader.result as string
     }
     reader.onerror = reject
     reader.readAsDataURL(file)

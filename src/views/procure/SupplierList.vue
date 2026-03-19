@@ -248,13 +248,28 @@ async function loadSupplierFinance() {
       getProcureOrderList({ list_rows: 2000 }),
       getPayReceiptList({ list_rows: 2000 }),
     ])
-    // 累计采购（已审核采购单）
+    // 累计采购（已审核采购单，按行供应商拆分）
     const orders: any[] = orderRes.data?.rows ?? orderRes.data?.list ?? []
     const pMap: Record<number, number> = {}
     for (const o of orders) {
       if (Number(o.status) !== 1) continue
-      const sid = Number(o.supplier_id)
-      if (sid) pMap[sid] = (pMap[sid] || 0) + Number(o.total_amount || 0)
+      const headSid = Number(o.supplier_id)
+      let items: any[] = []
+      try { items = JSON.parse(o.goods_info || '[]') } catch { items = [] }
+      // 检查是否有行级供应商
+      const hasRowSupplier = items.some((i: any) => Number(i.supplier_id))
+      if (!hasRowSupplier) {
+        // 单一供应商，整单金额归头部
+        if (headSid) pMap[headSid] = (pMap[headSid] || 0) + Number(o.total_amount || 0)
+      } else {
+        // 多供应商，按行拆分
+        for (const item of items) {
+          const rowSid = Number(item.supplier_id) || headSid
+          if (!rowSid) continue
+          const rowAmount = (Number(item.num) || 0) * (Number(item.price) || 0)
+          pMap[rowSid] = (pMap[rowSid] || 0) + rowAmount
+        }
+      }
     }
     purchaseMap.value = pMap
     // 累计付款

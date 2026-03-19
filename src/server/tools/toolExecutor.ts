@@ -63,7 +63,7 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const outTotal = outRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
         const contractRows = contractRes?.data?.rows || []
         const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售合同 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}`
+        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售合同 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ id: r.id, 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}`
         break
       }
       case 'query_purchases': {
@@ -74,7 +74,7 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const res = await erpGet('/stock/PurchaseOrder/index', params, token)
         const rows = res?.data?.rows || []
         const total = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-        result = `共 ${rows.length} 条采购订单，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 10).map((r: any) => ({ 供应商: r.supplier_name, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
+        result = `共 ${rows.length} 条采购订单，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 10).map((r: any) => ({ id: r.id, 供应商: r.supplier_name, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
         break
       }
       case 'query_finance': {
@@ -181,6 +181,26 @@ export async function executeTool(name: string, input: Record<string, any>, toke
       }
       case 'navigate_to': {
         result = `导航指令：${input.page}`
+        break
+      }
+      case 'delete_purchase_order': {
+        const res = await erpPost('/stock/PurchaseOrder/del', { id: input.id }, token)
+        result = res?.code === 1 ? `采购订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_supplier': {
+        const res = await erpPost('/procure/supplier/del', { id: input.id }, token)
+        result = res?.code === 1 ? `供应商已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_sale_order': {
+        const res = await erpPost('/shop/ContractOrder/del', { id: input.id }, token)
+        result = res?.code === 1 ? `销售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_customer': {
+        const res = await erpPost('/shop/ShopCustomer/del', { id: input.id }, token)
+        result = res?.code === 1 ? `客户已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       default:

@@ -48,7 +48,7 @@
             <template #default="{ row }">{{ row.order_no || row.order_sn || '—' }}</template>
           </el-table-column>
           <el-table-column label="供应商" min-width="130">
-            <template #default="{ row }">{{ row.supplier_name || supplierOptions.find(s => s.id === row.supplier_id)?.name || '—' }}</template>
+            <template #default="{ row }">{{ getOrderSupplierLabel(row) }}</template>
           </el-table-column>
           <el-table-column label="仓库" width="110">
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
@@ -737,6 +737,17 @@ function getPayStatus(row: any): { label: string; type: string } {
 
 function parseItems(goodsInfo: any): any[] {
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
+}
+
+function getOrderSupplierLabel(row: any): string {
+  const items = parseItems(row.goods_info)
+  const rowSupplierIds = [...new Set(items.map((i: any) => Number(i.supplier_id)).filter(Boolean))]
+  if (rowSupplierIds.length > 1) return '多供应商'
+  if (rowSupplierIds.length === 1) {
+    const s = supplierOptions.value.find(x => x.id === rowSupplierIds[0])
+    return s?.name || row.supplier_name || '—'
+  }
+  return row.supplier_name || supplierOptions.value.find(s => s.id === row.supplier_id)?.name || '—'
 }
 
 function calcOrderQty(row: any): string {

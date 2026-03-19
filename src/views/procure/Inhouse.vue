@@ -15,6 +15,30 @@
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增入库单</el-button>
           </template>
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div class="expand-detail">
+                <div class="expand-title">商品明细</div>
+                <el-table :data="parseItems(row.goods_info)" border size="small" class="expand-table">
+                  <el-table-column type="index" width="40" align="center" />
+                  <el-table-column prop="goods_name" label="商品名称" min-width="140" />
+                  <el-table-column prop="goods_sn" label="编码" width="110" />
+                  <el-table-column prop="spec" label="规格" width="100" />
+                  <el-table-column prop="unit_name" label="单位" width="65" align="center" />
+                  <el-table-column prop="num" label="入库数量" width="90" align="right" />
+                  <el-table-column label="含税单价" width="110" align="right">
+                    <template #default="{ row: item }">¥{{ Number(item.price || 0).toFixed(2) }}</template>
+                  </el-table-column>
+                  <el-table-column label="含税合计" width="110" align="right">
+                    <template #default="{ row: item }">
+                      <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="remark" label="备注" min-width="100" />
+                </el-table>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="in_no" label="入库单号" min-width="150">
             <template #default="{ row }">{{ row.in_no || row.inhouse_no || '—' }}</template>
@@ -440,6 +464,10 @@ const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 
+function parseItems(goodsInfo: any): any[] {
+  try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
+}
+
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const route = useRoute()
 const router = useRouter()
@@ -842,6 +870,21 @@ async function submitAddFund() {
 
 <style scoped>
 .inhouse-page { height: 100%; }
+
+.expand-detail {
+  padding: 12px 20px 12px 48px;
+  background: #f8faff;
+}
+.expand-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(29,29,31,0.5);
+  margin-bottom: 8px;
+}
+.expand-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
 
 .form-page {
   display: flex;

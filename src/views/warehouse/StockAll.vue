@@ -242,13 +242,14 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="单据编号" min-width="160">
+        <el-table-column label="单据编号" min-width="140">
           <template #default="{ row }">
-            <span v-if="row._sn" @click="goToDoc(row)"
-              style="color:#0071e3;cursor:pointer;text-decoration:underline;font-size:13px">
-              {{ row._sn }}
-            </span>
-            <span v-else style="color:#c0c4cc">—</span>
+            <span style="font-size:13px;color:#555">{{ row._sn || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="跳转" width="80" align="center">
+          <template #default="{ row }">
+            <el-button type="primary" size="small" @click="goToDoc(row)">查看</el-button>
           </template>
         </el-table-column>
         <el-table-column label="数量" width="80" align="right">

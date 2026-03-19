@@ -19,6 +19,12 @@
         <span class="logo-text">数字游牧 ERP</span>
       </div>
 
+      <!-- 手机端广告文案条 -->
+      <div class="mobile-tagline">
+        <span class="mobile-badge">✦ NEXT-GEN</span>
+        <span class="mobile-slogan">为现代数字游牧企业打造的终极管理工作台</span>
+      </div>
+
       <!-- Form area -->
       <div class="form-area">
         <div class="form-heading">
@@ -716,6 +722,7 @@ async function handleRegister() {
   .form-heading h1 { font-size: 28px; }
   .form-heading p { margin: 4px 0 0; }
   .left-footer { margin-top: 8px; }
+  .mobile-tagline { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 }
 
 /* ── Invite Code hints ── */
@@ -734,5 +741,24 @@ async function handleRegister() {
 .invite-invalid {
   color: #ef4444;
   background: rgba(239,68,68,0.08);
+}
+/* ── Mobile tagline (hidden on desktop) ── */
+.mobile-tagline {
+  display: none;
+}
+.mobile-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: #1a1a2e;
+  border-radius: 20px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+.mobile-slogan {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
 }
 </style>
