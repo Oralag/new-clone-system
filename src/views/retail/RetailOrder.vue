@@ -76,7 +76,7 @@
         <!-- 商品明细 -->
         <div style="margin:8px 0 10px;display:flex;align-items:center;justify-content:space-between">
           <span style="font-weight:600;font-size:13px">商品明细</span>
-          <el-button type="primary" size="small" :icon="Plus" @click="openGoodsPicker">添加商品</el-button>
+          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">添加商品</el-button>
         </div>
         <el-table :data="form.items" border size="small" empty-text="请添加商品">
           <el-table-column prop="goods_name" label="商品" min-width="130" />
@@ -119,40 +119,17 @@
       </template>
     </el-drawer>
 
-    <!-- 商品选择弹框 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="680px" append-to-body>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <el-input v-model="goodsKeyword" placeholder="搜索商品" clearable :prefix-icon="Search"
-          style="width:180px" @input="onGoodsSearch" />
-        <el-select v-model="goodsCateFilter" placeholder="商品分类" clearable style="width:140px" @change="loadGoodsOptions">
-          <el-option v-for="c in goodsCateOptions" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </div>
-      <el-table :data="goodsOptions" v-loading="goodsLoading" border height="320"
-        @selection-change="selectedGoods = $event">
-        <el-table-column type="selection" width="45" />
-        <el-table-column prop="goods_sn" label="编码" width="110" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="130" />
-        <el-table-column prop="cate_name" label="分类" width="90" />
-        <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-        <el-table-column prop="sell_price" label="售价" width="90" align="right" />
-      </el-table>
-      <template #footer>
-        <el-button @click="goodsPickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedGoods.length" @click="confirmGoods">确认</el-button>
-      </template>
-    </el-dialog>
+    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Plus, Delete, Search } from '@element-plus/icons-vue'
+import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList } from '@/api/retail'
-import { getGoodsList, getGoodsCateList } from '@/api/goods'
-import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import http from '@/api/http'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
@@ -261,46 +238,14 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
 }
 
 // 商品选择器
-const goodsPickerVisible = ref(false)
-const goodsLoading = ref(false)
-const goodsKeyword = ref('')
-const goodsCateFilter = ref<any>(null)
-const goodsCateOptions = ref<any[]>([])
-const goodsOptions = ref<any[]>([])
-const selectedGoods = ref<any[]>([])
-let st: any
-
-async function loadGoodsOptions() {
-  goodsLoading.value = true
-  try {
-    const params: any = { keyword: goodsKeyword.value || undefined, list_rows: 50 }
-    if (goodsCateFilter.value) params.cate_id = goodsCateFilter.value
-    const res = await getGoodsList(params)
-    goodsOptions.value = fuzzyFilterGoods(res.data?.rows ?? [], goodsKeyword.value || '')
-  } finally { goodsLoading.value = false }
-}
-
-function onGoodsSearch() { clearTimeout(st); st = setTimeout(loadGoodsOptions, 300) }
-
-async function openGoodsPicker() {
-  goodsKeyword.value = ''; goodsCateFilter.value = null; selectedGoods.value = []
-  if (!goodsCateOptions.value.length) {
-    try {
-      const res = await getGoodsCateList({ list_rows: 200 })
-      const rows = res.data?.rows || res.data?.list || res.data?.data || []
-      goodsCateOptions.value = rows.filter((c: any, i: number) => rows.findIndex((x: any) => x.name === c.name) === i)
-    } catch {}
-  }
-  goodsPickerVisible.value = true; loadGoodsOptions()
-}
-
-function confirmGoods() {
-  for (const g of selectedGoods.value) {
+const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
+function onGoodsConfirm(goods: any[]) {
+  for (const g of goods) {
     if (form.items.some((i: any) => i.goods_id === g.id)) continue
     form.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
       unit_name: g.unit_name || '', price: Number(g.sell_price) || 0, num: 1 })
   }
-  calcFormTotal(); goodsPickerVisible.value = false
+  calcFormTotal()
 }
 </script>
 

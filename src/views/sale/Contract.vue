@@ -246,7 +246,7 @@
           <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
               <el-button type="success" :icon="Document" size="small" @click="openOfferPicker">选择报价单</el-button>
-              <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker" data-guide-id="guide-contract-goods">选择商品</el-button>
+              <el-button type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()" data-guide-id="guide-contract-goods">选择商品</el-button>
               <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
               <el-button :icon="Upload" size="small">导入商品</el-button>
             </div>
@@ -479,38 +479,7 @@
       </div>
     </div>
 
-    <!-- 商品选择弹框 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="800px" append-to-body>
-      <div style="margin-bottom:10px;display:flex;gap:8px">
-        <el-input v-model="goodsPickerKeyword" placeholder="搜索商品名称/编码" clearable style="width:240px"
-          :prefix-icon="Search" @input="onGoodsPickerSearch" />
-        <el-select v-model="goodsPickerCate" placeholder="商品分类" clearable style="width:150px"
-          @change="loadGoodsOptions">
-          <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </div>
-      <el-table ref="goodsTableRef" :data="goodsOptions" v-loading="goodsLoading"
-        border height="360" data-guide-id="guide-contract-goods-table" @selection-change="onGoodsSelectionChange">
-        <el-table-column type="selection" width="45" />
-        <el-table-column prop="goods_sn" label="商品编码" width="120" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-        <el-table-column prop="cate_name" label="分类" width="90" />
-        <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-        <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
-        <el-table-column label="库存" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.stock_qty > 0 ? 'success' : 'danger'" size="small" effect="plain">
-              {{ row.stock_qty }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-      <template #footer>
-        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
-        <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods" data-guide-id="guide-contract-goods-confirm">确认添加</el-button>
-      </template>
-    </el-dialog>
+    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
     <!-- 手动新增商品弹框 -->
     <el-dialog v-model="manualAddVisible" title="新增商品行" width="420px" append-to-body>
@@ -614,10 +583,10 @@ import { useRouter, useRoute } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
-import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
+import { getSpecList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import { getFundList, createCollectReceipt, getCollectReceiptList } from '@/api/finance'
 import http from '@/api/http'
@@ -763,15 +732,8 @@ async function loadCustomerPrepay(customerId: number) {
   } catch { customerPrepayBalance.value = 0 }
 }
 
-// ── 分类选项（商品选择器用） ──────────────────────────────────────────────────
-const cateOptions = ref<any[]>([])
-async function loadCates() {
-  const res = await getGoodsCateList({ list_rows: 200 })
-  const rc = res.data?.rows ?? []; cateOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.name === c.name) === i)
-}
-
 onMounted(async () => {
-  await Promise.all([loadCustomers(), loadCates(), loadStaff(), loadFunds(), loadReceiptMap()])
+  await Promise.all([loadCustomers(), loadStaff(), loadFunds(), loadReceiptMap()])
   handleRouteFromOffer()
   if (route.query.contract_no) searchForm.contract_no = String(route.query.contract_no)
   initAutoReceiptSync()
@@ -1453,79 +1415,21 @@ async function cancelAutoReceipt(row: any) {
 }
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
-const goodsPickerVisible = ref(false)
-const goodsLoading = ref(false)
-const goodsOptions = ref<any[]>([])
-const goodsPickerKeyword = ref('')
-const goodsPickerCate = ref<any>('')
-const selectedGoodsRows = ref<any[]>([])
-const goodsTableRef = ref()
-let searchTimer: any
+const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 
-async function loadGoodsOptions() {
-  goodsLoading.value = true
-  try {
-    const [goodsRes, stockRes] = await Promise.allSettled([
-      getGoodsList({
-        keyword: goodsPickerKeyword.value || undefined,
-        cate_id: goodsPickerCate.value || undefined,
-        list_rows: 200,
-      }),
-      http.get('/stock/StockAll/index', { params: { list_rows: 1000 } }),
-    ])
-    const rows: any[] = goodsRes.status === 'fulfilled' ? (goodsRes.value.data?.rows ?? []) : []
-    const stockRows: any[] = stockRes.status === 'fulfilled' ? (stockRes.value.data?.rows ?? []) : []
-    // 按 goods_id 汇总所有仓库库存
-    const stockMap: Record<number, number> = {}
-    for (const s of stockRows) {
-      stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.qty || 0)
-    }
-    goodsOptions.value = fuzzyFilterGoods(rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 })), goodsPickerKeyword.value || '')
-  } finally {
-    goodsLoading.value = false
-  }
-}
-
-function onGoodsPickerSearch() {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(loadGoodsOptions, 300)
-}
-
-function onGoodsSelectionChange(rows: any[]) {
-  selectedGoodsRows.value = rows
-}
-
-function openGoodsPicker() {
-  goodsPickerKeyword.value = ''
-  goodsPickerCate.value = ''
-  selectedGoodsRows.value = []
-  goodsPickerVisible.value = true
-  loadGoodsOptions()
-}
-
-function confirmGoods() {
-  for (const g of selectedGoodsRows.value) {
+function onGoodsConfirm(goods: any[]) {
+  for (const g of goods) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
     const basePrice = Number(g.sell_price) || 0
     const levelPrice = fd.level_id ? (getLevelPrice(fd.level_id, g.id) ?? basePrice) : basePrice
     const priceNoTax = Number((levelPrice / 1.13).toFixed(4))
-    fd.items.push({
-      goods_id: g.id,
-      goods_name: g.goods_name,
-      goods_sn: g.goods_sn || '',
-      spec: g.spec || '',
-      cate_name: g.cate_name || '',
-      unit_name: g.unit_name || '',
-      num: 1,
-      price_no_tax: priceNoTax,
-      tax_rate: 0,
-      price: levelPrice,
-      remark: '',
-    })
+    fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
+      spec: g.spec || '', cate_name: g.cate_name || '', unit_name: g.unit_name || '',
+      num: 1, price_no_tax: priceNoTax, tax_rate: 0,
+      price: Number((priceNoTax * 1.13).toFixed(4)), remark: '' })
     fetchGoodsSpecs(g.id)
   }
   calcTotal()
-  goodsPickerVisible.value = false
 }
 
 // ── 手动新增商品 ──────────────────────────────────────────────────────────────

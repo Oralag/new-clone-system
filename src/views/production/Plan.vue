@@ -187,7 +187,7 @@
         <div class="goods-section">
           <div class="goods-header">
             <span class="goods-title">商品清单</span>
-            <el-button v-if="!isView" size="small" type="primary" @click="goodsPickerVisible = true">+ 选择商品</el-button>
+            <el-button v-if="!isView" size="small" type="primary" @click="goodsSelectRef?.open()">+ 选择商品</el-button>
           </div>
           <el-table :data="fd.items" border size="small" style="width:100%">
             <el-table-column prop="goods_sn" label="商品编码" width="120" />
@@ -245,36 +245,7 @@
       </el-card>
     </div>
 
-    <!-- 商品选择器 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="800px" append-to-body>
-      <div style="margin-bottom:10px;display:flex;gap:8px">
-        <el-input v-model="pickerKeyword" placeholder="搜索商品名称/编码" clearable style="width:220px"
-          :prefix-icon="Search" @input="onPickerSearch" />
-        <el-select v-model="pickerCate" placeholder="商品分类" clearable style="width:140px" @change="loadPickerGoods">
-          <el-option v-for="c in pickerCateOptions" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </div>
-      <el-table :data="pickerGoods" v-loading="pickerLoading" border height="360"
-        @selection-change="pickerSelection = $event">
-        <el-table-column type="selection" width="45" />
-        <el-table-column prop="goods_sn" label="商品编码" width="120" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-        <el-table-column prop="cate_name" label="分类" width="90" />
-        <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-        <el-table-column label="库存" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="(row.stock_qty||0) > 0 ? 'success' : 'danger'" size="small" effect="plain">
-              {{ row.stock_qty || 0 }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-      <template #footer>
-        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ pickerSelection.length }} 件</span>
-        <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!pickerSelection.length" @click="confirmPickGoods">确认添加</el-button>
-      </template>
-    </el-dialog>
+    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
     <!-- 销售单选择器 -->
     <el-dialog v-model="salePickerVisible" title="选择销售单" width="700px" append-to-body>
@@ -340,12 +311,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { ArrowLeft, ArrowRight, Search } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
-import { getGoodsList, getGoodsCateList } from '@/api/goods'
-import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { getBomByGoods } from '@/api/goods'
+import GoodsSelect from '@/components/GoodsSelect.vue'
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const loading = ref(false)
@@ -484,63 +454,19 @@ onMounted(() => {
   window.addEventListener('keydown', onKeydown)
 })
 
-// ── 商品选择器 ────────────────────────────────────────────────────────────────
-const goodsPickerVisible = ref(false)
-const pickerKeyword = ref('')
-const pickerCate = ref<any>(null)
-const pickerCateOptions = ref<any[]>([])
-const pickerGoods = ref<any[]>([])
-const pickerLoading = ref(false)
-const pickerSelection = ref<any[]>([])
-let pickerTimer: any
+// ── 商品選択器 ────────────────────────────────────────────────────────────────
+const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 
-async function loadPickerGoods() {
-  pickerLoading.value = true
-  try {
-    const params: any = { keyword: pickerKeyword.value || undefined, list_rows: 100 }
-    if (pickerCate.value) params.cate_id = pickerCate.value
-    const [goodsRes, stockRes] = await Promise.all([
-      getGoodsList(params),
-      http.get('/stock/StockAll/index', { params: { list_rows: 1000 } }),
-    ])
-    const rows: any[] = goodsRes.data?.rows ?? []
-    const stockRows: any[] = stockRes.data?.rows ?? []
-    const stockMap: Record<number, number> = {}
-    for (const s of stockRows) stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.qty || 0)
-    pickerGoods.value = fuzzyFilterGoods(rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 })), pickerKeyword.value || '')
-  } finally { pickerLoading.value = false }
-}
-
-function onPickerSearch() {
-  clearTimeout(pickerTimer)
-  pickerTimer = setTimeout(loadPickerGoods, 300)
-}
-
-function confirmPickGoods() {
-  for (const g of pickerSelection.value) {
+function onGoodsConfirm(goods: any[]) {
+  for (const g of goods) {
     if (fd.items.some((i: any) => i.goods_id === g.id)) continue
     fd.items.push({
-      goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
+      goods_id: g.id, goods_name: g.goods_name || g.name, goods_sn: g.goods_sn || '',
       unit_name: g.unit_name || '', attr: g.attr || '', spec: g.spec || '',
-      num: 1, actual_num: 0, stock_qty: g.stock_qty || 0,
+      num: 1, actual_num: 0, stock_qty: g.stock_num || 0,
     })
   }
-  goodsPickerVisible.value = false
 }
-
-watch(goodsPickerVisible, async v => {
-  if (v) {
-    pickerKeyword.value = ''; pickerCate.value = null; pickerSelection.value = []
-    if (!pickerCateOptions.value.length) {
-      try {
-        const r = await getGoodsCateList({ list_rows: 200 })
-        const rows = r.data?.rows || r.data?.list || r.data?.data || []
-        pickerCateOptions.value = rows.filter((c: any, i: number) => rows.findIndex((x: any) => x.name === c.name) === i)
-      } catch {}
-    }
-    loadPickerGoods()
-  }
-})
 
 // ── 销售单选择器 ──────────────────────────────────────────────────────────────
 const salePickerVisible = ref(false)

@@ -185,7 +185,7 @@
           <!-- 工具栏 -->
           <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
-              <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker">选择商品</el-button>
+              <el-button type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()">选择商品</el-button>
               <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
               <el-button :icon="Document" size="small" @click="openPlanPicker">选择采购计划商品</el-button>
               <el-button :icon="Upload" size="small">导入商品</el-button>
@@ -344,32 +344,7 @@
       </div>
     </div>
 
-    <!-- 商品选择弹框 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="720px" append-to-body>
-      <div style="margin-bottom:10px;display:flex;gap:8px">
-        <el-input v-model="goodsPickerKeyword" placeholder="搜索商品名称/编码" clearable style="width:240px"
-          :prefix-icon="Search" @input="onGoodsPickerSearch" />
-        <el-select v-model="goodsPickerCate" placeholder="商品分类" clearable style="width:150px"
-          @change="loadGoodsOptions">
-          <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </div>
-      <el-table ref="goodsTableRef" :data="goodsOptions" v-loading="goodsLoading"
-        border height="360" @selection-change="onGoodsSelectionChange">
-        <el-table-column type="selection" width="45" />
-        <el-table-column prop="goods_sn" label="商品编码" width="120" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-        <el-table-column prop="cate_name" label="分类" width="90" />
-        <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-        <el-table-column prop="cost_price" label="采购价" width="90" align="right" />
-        <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
-      </el-table>
-      <template #footer>
-        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
-        <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods">确认添加</el-button>
-      </template>
-    </el-dialog>
+    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
     <!-- 手动新增商品弹框 -->
     <el-dialog v-model="manualAddVisible" title="新增商品行" width="420px" append-to-body>
@@ -447,12 +422,12 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
+import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getProcureInhouseList, createProcureInhouse, deleteProcureInhouse, getSupplierList, createSupplier, auditProcureInhouse } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { getFundList, createFund } from '@/api/finance'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
@@ -479,7 +454,6 @@ const isReadonly = ref(false)
 // ── 供应商/仓库/分类选项 ──────────────────────────────────────────────────────
 const supplierOptions = ref<any[]>([])
 const warehouseOptions = ref<any[]>([])
-const cateOptions = ref<any[]>([])
 
 async function loadSuppliers() {
   const res = await getSupplierList({ list_rows: 500 })
@@ -489,13 +463,8 @@ async function loadWarehouses() {
   const res = await getWarehouseList({ list_rows: 200 })
   warehouseOptions.value = res.data?.rows ?? []
 }
-async function loadCates() {
-  const res = await getGoodsCateList({ list_rows: 200 })
-  const rc = res.data?.rows ?? []; cateOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.name === c.name) === i)
-}
-
 onMounted(() => {
-  loadSuppliers(); loadWarehouses(); loadCates(); loadFunds()
+  loadSuppliers(); loadWarehouses(); loadFunds()
   if (route.query.goods_name) searchForm.goods_name = String(route.query.goods_name)
   if (route.query.in_no) searchForm.in_no = String(route.query.in_no)
 })
@@ -669,48 +638,10 @@ async function handleAudit(row: any, status: number) {
 }
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
-const goodsPickerVisible = ref(false)
-const goodsLoading = ref(false)
-const goodsOptions = ref<any[]>([])
-const goodsPickerKeyword = ref('')
-const goodsPickerCate = ref<any>('')
-const selectedGoodsRows = ref<any[]>([])
-const goodsTableRef = ref()
-let searchTimer: any
+const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 
-async function loadGoodsOptions() {
-  goodsLoading.value = true
-  try {
-    const res = await getGoodsList({
-      keyword: goodsPickerKeyword.value || undefined,
-      cate_id: goodsPickerCate.value || undefined,
-      list_rows: 50,
-    })
-    goodsOptions.value = res.data?.rows ?? []
-  } finally {
-    goodsLoading.value = false
-  }
-}
-
-function onGoodsPickerSearch() {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(loadGoodsOptions, 300)
-}
-
-function onGoodsSelectionChange(rows: any[]) {
-  selectedGoodsRows.value = rows
-}
-
-function openGoodsPicker() {
-  goodsPickerKeyword.value = ''
-  goodsPickerCate.value = ''
-  selectedGoodsRows.value = []
-  goodsPickerVisible.value = true
-  loadGoodsOptions()
-}
-
-function confirmGoods() {
-  for (const g of selectedGoodsRows.value) {
+function onGoodsConfirm(goods: any[]) {
+  for (const g of goods) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
     const priceNoTax = Number(g.cost_price) || 0
     fd.items.push({
@@ -728,7 +659,6 @@ function confirmGoods() {
     })
   }
   calcTotal()
-  goodsPickerVisible.value = false
 }
 
 // ── 手动新增商品 ──────────────────────────────────────────────────────────────

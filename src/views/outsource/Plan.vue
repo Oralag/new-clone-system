@@ -99,7 +99,7 @@
         </div>
 
         <div class="goods-toolbar" v-if="!isView">
-          <el-button type="primary" size="small" :icon="Plus" @click="openGoodsPicker">选择商品</el-button>
+          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">选择商品</el-button>
           <el-button size="small" @click="addEmptyRow">手动添加行</el-button>
           <span class="goods-summary">委外总金额：<b>{{ totalAmount.toFixed(2) }}</b></span>
         </div>
@@ -154,27 +154,7 @@
       </div>
     </div>
 
-    <!-- 商品选择 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="800px" append-to-body>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <el-input v-model="goodsSearch" placeholder="搜索名称/编码" clearable style="width:200px" @input="filterGoods" />
-        <el-select v-model="pickerCate" placeholder="商品分类" clearable style="width:140px" @change="filterGoods">
-          <el-option v-for="c in goodsCateOptions" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </div>
-      <el-table :data="filteredGoods" border size="small" height="380" @selection-change="pickerSel=$event">
-        <el-table-column type="selection" width="40" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="140" />
-        <el-table-column prop="goods_sn" label="编码" width="110" />
-        <el-table-column prop="cate_name" label="分类" width="90" />
-        <el-table-column prop="spec" label="规格" width="100" />
-        <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-      </el-table>
-      <template #footer>
-        <el-button @click="goodsPickerVisible=false">取消</el-button>
-        <el-button type="primary" @click="confirmGoods">确认（{{ pickerSel.length }}）</el-button>
-      </template>
-    </el-dialog>
+    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
     <!-- 批量设置 -->
     <el-dialog v-model="batchVisible" :title="`批量设置：${batchLabel}`" width="280px" append-to-body>
@@ -192,10 +172,9 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getOutsourcePlanList, createOutsourcePlan, updateOutsourcePlan, deleteOutsourcePlan } from '@/api/outsource'
 import { getSupplierList } from '@/api/procure'
-import { getGoodsList, getGoodsCateList } from '@/api/goods'
-import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 
@@ -220,14 +199,10 @@ async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});try{f
 async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=true;showForm.value=true;await loadSuppliers()}
 function backToList(){showForm.value=false;tableRef.value?.refresh()}
 
-const goodsPickerVisible=ref(false),goodsSearch=ref(''),pickerCate=ref<any>(null),goodsCateOptions=ref<any[]>([]),allGoods=ref<any[]>([]),filteredGoods=ref<any[]>([]),pickerSel=ref<any[]>([])
-async function openGoodsPicker(){
-  try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.rows||r.data?.list||r.data?.data||[]}catch{}
-  if(!goodsCateOptions.value.length){try{const r=await getGoodsCateList({list_rows:200});const rows=r.data?.rows||r.data?.list||r.data?.data||[];goodsCateOptions.value=rows.filter((c:any,i:number)=>rows.findIndex((x:any)=>x.name===c.name)===i)}catch{}}
-  goodsSearch.value='';pickerCate.value=null;filteredGoods.value=[...allGoods.value];pickerSel.value=[];goodsPickerVisible.value=true
+const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
+function onGoodsConfirm(goods: any[]) {
+  goods.forEach(g=>fd.items.push({goods_id:g.id,goods_name:g.goods_name||g.name,goods_sn:g.goods_sn||'',spec:g.spec||'',unit_name:g.unit_name||'',plan_num:1,unit_price:0,row_total:0,remark:''}))
 }
-function filterGoods(){let list=allGoods.value;if(pickerCate.value)list=list.filter((g:any)=>g.cate_id===pickerCate.value);filteredGoods.value=fuzzyFilterGoods(list,goodsSearch.value.trim())}
-function confirmGoods(){pickerSel.value.forEach(g=>fd.items.push({goods_id:g.id,goods_name:g.goods_name||g.name,goods_sn:g.goods_sn||'',spec:g.spec||'',unit_name:g.unit_name||'',plan_num:1,unit_price:0,row_total:0,remark:''}));goodsPickerVisible.value=false}
 function addEmptyRow(){fd.items.push({goods_id:0,goods_name:'',goods_sn:'',spec:'',unit_name:'',plan_num:1,unit_price:0,row_total:0,remark:''})}
 
 const batchVisible=ref(false),batchField=ref(''),batchLabel=ref(''),batchValue=ref(0)

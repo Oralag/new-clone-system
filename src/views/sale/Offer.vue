@@ -196,7 +196,7 @@
           <div class="form-section">
             <div class="sec-title-row">
               <span class="sec-title">商品明细</span>
-              <el-button v-if="!isReadonly" type="primary" :icon="Plus" size="small" @click="openGoodsPicker" data-guide-id="guide-offer-goods">选择商品</el-button>
+              <el-button v-if="!isReadonly" type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()" data-guide-id="guide-offer-goods">选择商品</el-button>
             </div>
 
             <el-table :data="fd.items" border style="width:100%" empty-text="请点击添加商品">
@@ -289,45 +289,7 @@
       </template>
     </el-dialog>
 
-    <!-- 商品选择弹框 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="680px" append-to-body>
-      <div style="margin-bottom:10px;display:flex;gap:8px">
-        <el-input v-model="goodsPickerKeyword" placeholder="搜索商品名称/编码" clearable style="width:240px"
-          :prefix-icon="Search" @input="onGoodsPickerSearch" />
-        <el-select v-model="goodsPickerCate" placeholder="商品分类" clearable style="width:150px"
-          @change="loadGoodsOptions">
-          <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </div>
-      <el-table
-        ref="goodsTableRef"
-        :data="goodsOptions"
-        v-loading="goodsLoading"
-        border
-        height="360"
-        data-guide-id="guide-offer-goods-table"
-        @selection-change="onGoodsSelectionChange"
-      >
-        <el-table-column type="selection" width="45" />
-        <el-table-column prop="goods_sn" label="商品编码" width="120" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-        <el-table-column prop="cate_name" label="分类" width="100" />
-        <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-        <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
-        <el-table-column label="库存" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.stock_qty > 0 ? 'success' : 'danger'" size="small" effect="plain">
-              {{ row.stock_qty }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-      <template #footer>
-        <span style="color:rgba(29,29,31,0.35);font-size:13px">已选 {{ selectedGoodsRows.length }} 件</span>
-        <el-button style="margin-left:12px" @click="goodsPickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedGoodsRows.length" @click="confirmGoods" data-guide-id="guide-offer-goods-confirm">确认添加</el-button>
-      </template>
-    </el-dialog>
+    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
   </div>
 </template>
@@ -335,13 +297,13 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Delete, Search, Printer, Download } from '@element-plus/icons-vue'
+import { Plus, Delete, Printer, Download } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getOfferList, createOffer, updateOffer, deleteOffer, auditOffer } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getGoodsList, getGoodsCateList, getSpecList } from '@/api/goods'
-import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
+import { getSpecList } from '@/api/goods'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import StaffSelect from '@/components/StaffSelect.vue'
@@ -386,14 +348,7 @@ async function loadCustomers() {
   customerOptions.value = res.data?.rows ?? []
 }
 
-// ── 分类选项（商品选择器用） ──────────────────────────────────────────────────
-const cateOptions = ref<any[]>([])
-async function loadCates() {
-  const res = await getGoodsCateList({ list_rows: 200 })
-  const rc = res.data?.rows ?? []; cateOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.name === c.name) === i)
-}
-
-onMounted(() => { loadCustomers(); loadCates() })
+onMounted(() => { loadCustomers() })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface OfferItem {
@@ -664,57 +619,10 @@ async function handleConvertToContract(row: any) {
 }
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
-const goodsPickerVisible = ref(false)
-const goodsLoading = ref(false)
-const goodsOptions = ref<any[]>([])
-const goodsPickerKeyword = ref('')
-const goodsPickerCate = ref<any>('')
-const selectedGoodsRows = ref<any[]>([])
-const goodsTableRef = ref()
-let searchTimer: any
+const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 
-async function loadGoodsOptions() {
-  goodsLoading.value = true
-  try {
-    const [goodsRes, stockRes] = await Promise.allSettled([
-      getGoodsList({
-        keyword: goodsPickerKeyword.value || undefined,
-        cate_id: goodsPickerCate.value || undefined,
-        list_rows: 200,
-      }),
-      http.get('/stock/StockAll/index', { params: { list_rows: 1000 } }),
-    ])
-    const rows: any[] = goodsRes.status === 'fulfilled' ? (goodsRes.value.data?.rows ?? []) : []
-    const stockRows: any[] = stockRes.status === 'fulfilled' ? (stockRes.value.data?.rows ?? []) : []
-    const stockMap: Record<number, number> = {}
-    for (const s of stockRows) {
-      stockMap[s.goods_id] = (stockMap[s.goods_id] || 0) + Number(s.qty || 0)
-    }
-    goodsOptions.value = fuzzyFilterGoods(rows.map(g => ({ ...g, stock_qty: stockMap[g.id] ?? 0 })), goodsPickerKeyword.value || '')
-  } finally {
-    goodsLoading.value = false
-  }
-}
-
-function onGoodsPickerSearch() {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(loadGoodsOptions, 300)
-}
-
-function onGoodsSelectionChange(rows: any[]) {
-  selectedGoodsRows.value = rows
-}
-
-function openGoodsPicker() {
-  goodsPickerKeyword.value = ''
-  goodsPickerCate.value = ''
-  selectedGoodsRows.value = []
-  goodsPickerVisible.value = true
-  loadGoodsOptions()
-}
-
-function confirmGoods() {
-  for (const g of selectedGoodsRows.value) {
+function onGoodsConfirm(goods: any[]) {
+  for (const g of goods) {
     // 避免重复添加同一商品
     if (fd.items.some(i => i.goods_id === g.id)) continue
     // 优先使用等级专属价，否则用系统销售价
@@ -733,7 +641,6 @@ function confirmGoods() {
     fetchGoodsSpecs(g.id)
   }
   calcTotal()
-  goodsPickerVisible.value = false
 }
 
 // ── 快速新增客户 ──────────────────────────────────────────────────────────────

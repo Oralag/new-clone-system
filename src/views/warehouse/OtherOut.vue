@@ -110,7 +110,7 @@
 
         <!-- 商品明细工具栏 -->
         <div class="goods-toolbar" v-if="!isView">
-          <el-button type="primary" size="small" :icon="Plus" @click="openGoodsPicker">选择商品</el-button>
+          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">选择商品</el-button>
           <el-button size="small" :icon="Plus" @click="addEmptyRow">手动添加行</el-button>
           <span class="goods-summary">出库总价：<b>{{ totalPrice.toFixed(2) }}</b></span>
         </div>
@@ -224,29 +224,7 @@
       </div>
     </div>
 
-    <!-- ══════════════════════ 商品选择弹窗 ══════════════════════ -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="800px" append-to-body>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <el-input v-model="goodsSearch" placeholder="搜索商品名称/编码" clearable style="width:200px" @input="filterGoods" />
-        <el-select v-model="pickerCate" placeholder="商品分类" clearable style="width:140px" @change="filterGoods">
-          <el-option v-for="c in goodsCateOptions" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </div>
-      <el-table :data="filteredGoods" border size="small" height="400"
-        @selection-change="pickerSelection = $event">
-        <el-table-column type="selection" width="40" />
-        <el-table-column prop="name" label="商品名称" min-width="150" />
-        <el-table-column prop="goods_sn" label="商品编码" width="120" />
-        <el-table-column prop="cate_name" label="分类" width="100" />
-        <el-table-column prop="spec" label="规格" width="100" />
-        <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-        <el-table-column prop="stock_num" label="库存" width="80" align="right" />
-      </el-table>
-      <template #footer>
-        <el-button @click="goodsPickerVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmGoodsPicker">确认添加（{{ pickerSelection.length }}）</el-button>
-      </template>
-    </el-dialog>
+    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
     <!-- 批量设置弹窗 -->
     <el-dialog v-model="batchVisible" :title="`批量设置：${batchLabel}`" width="300px" append-to-body>
@@ -265,9 +243,8 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getOtherOutList, createOtherOut, deleteOtherOut, getWarehouseList } from '@/api/warehouse'
-import { getGoodsList, getGoodsCateList } from '@/api/goods'
-import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -349,41 +326,10 @@ async function openView(row: any) {
 function backToList() { showForm.value = false; tableRef.value?.refresh() }
 
 // ── 商品选择器 ──────────────────────────────────────────────────
-const goodsPickerVisible = ref(false)
-const goodsSearch = ref('')
-const pickerCate = ref<any>(null)
-const goodsCateOptions = ref<any[]>([])
-const allGoods = ref<any[]>([])
-const filteredGoods = ref<any[]>([])
-const pickerSelection = ref<any[]>([])
+const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 
-async function openGoodsPicker() {
-  if (!allGoods.value.length) {
-    try {
-      const res = await getGoodsList({ list_rows: 500 })
-      allGoods.value = res.data?.list || res.data?.data || []
-    } catch {}
-  }
-  if (!goodsCateOptions.value.length) {
-    try {
-      const res = await getGoodsCateList({ list_rows: 200 })
-      const rows = res.data?.rows || res.data?.list || res.data?.data || []
-      goodsCateOptions.value = rows.filter((c: any, i: number) => rows.findIndex((x: any) => x.name === c.name) === i)
-    } catch {}
-  }
-  goodsSearch.value = ''
-  pickerCate.value = null
-  filteredGoods.value = [...allGoods.value]
-  pickerSelection.value = []
-  goodsPickerVisible.value = true
-}
-function filterGoods() {
-  let list = allGoods.value
-  if (pickerCate.value) list = list.filter((g: any) => g.cate_id === pickerCate.value)
-  filteredGoods.value = fuzzyFilterGoods(list, goodsSearch.value.trim())
-}
-function confirmGoodsPicker() {
-  pickerSelection.value.forEach(g => {
+function onGoodsConfirm(goods: any[]) {
+  goods.forEach(g => {
     fd.items.push({
       goods_id: g.id,
       goods_name: g.name,
@@ -401,7 +347,6 @@ function confirmGoodsPicker() {
       remark: '',
     })
   })
-  goodsPickerVisible.value = false
 }
 
 function addEmptyRow() {

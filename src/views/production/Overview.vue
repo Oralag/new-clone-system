@@ -494,10 +494,10 @@ async function doGenerate() {
         const matData = {
           out_date: today,
           warehouse_id: genWarehouse.value,
+          warehouse_name: warehouseList.value.find((w: any) => w.id === genWarehouse.value)?.name || '',
           plan_id: planId,
           plan_name: planRes.data?.order_sn || '',
           remark: `一键生成 - ${item.goods_name}`,
-          items: matItems,
           goods_info: JSON.stringify(matItems),
           total_price: 0,
         }
@@ -511,17 +511,14 @@ async function doGenerate() {
       }
 
       // 4. 创建生产入库单（成品入库）
-      const inhouseItems = [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }]
       const inhouseData = {
         plan_id: planId,
-        goods_id: item.goods_id,
-        goods_name: item.goods_name,
-        unit_name: item.unit_name,
-        goods_info: JSON.stringify(inhouseItems),
-        warehouse_id: genWarehouse.value,
         in_date: today,
+        warehouse_id: genWarehouse.value,
+        warehouse_name: warehouseList.value.find((w: any) => w.id === genWarehouse.value)?.name || '',
         back_flush: 1,
         remark: genRemark.value || '一键生成BOM入库',
+        items: [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }],
       }
       const inhouseRes = await createProductionInhouse(inhouseData)
       const inhouseId = inhouseRes.data?.id

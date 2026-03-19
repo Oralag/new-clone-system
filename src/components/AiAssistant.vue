@@ -703,12 +703,12 @@ async function doGenerate() {
       if (planId) { await auditProductionPlan(planId, 1); genLogs.value.push({ text: `  ✓ 生产计划已审核通过`, type: 'success' }) }
       try {
         const matItems = item.materials.map((mat: any) => ({ goods_id: mat._matGoodsId, goods_name: mat.material_name || mat.goods_name, goods_sn: mat.material_sn || mat.goods_sn || '', unit_name: mat.unit_name || '', num: Number(mat.num) * item.qty, out_price: 0, row_total: 0, remark: '' }))
-        const matRes = await createMaterial({ out_date: today, warehouse_id: genWarehouse.value, plan_id: planId, plan_name: planRes.data?.order_sn || '', remark: `一键生成 - ${item.goods_name}`, items: matItems, goods_info: JSON.stringify(matItems), total_price: 0 })
+        const matRes = await createMaterial({ out_date: today, warehouse_id: genWarehouse.value, plan_id: planId, plan_name: planRes.data?.order_sn || '', remark: `一键生成 - ${item.goods_name}`, goods_info: JSON.stringify(matItems), total_price: 0 })
         const matId = matRes.data?.id
         if (matId) await auditMaterial(matId, 1)
         genLogs.value.push({ text: `  ✓ 领料单已创建并审核（共 ${matItems.length} 种原料）`, type: 'success' })
       } catch { genLogs.value.push({ text: `  ⚠ 领料失败（可继续）`, type: 'error' }) }
-      const inhouseRes = await createProductionInhouse({ plan_id: planId, goods_id: item.goods_id, goods_name: item.goods_name, unit_name: item.unit_name, goods_info: JSON.stringify([{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }]), warehouse_id: genWarehouse.value, in_date: today, back_flush: 1, remark: genRemark.value || '一键生成BOM入库' })
+      const inhouseRes = await createProductionInhouse({ plan_id: planId, in_date: today, warehouse_id: genWarehouse.value, back_flush: 1, remark: genRemark.value || '一键生成BOM入库', items: [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }] })
       const inhouseId = inhouseRes.data?.id
       genLogs.value.push({ text: `  ✓ 生产入库单已创建（ID: ${inhouseId}）`, type: 'success' })
       if (inhouseId) { await auditProductionInhouse(inhouseId, 1); genLogs.value.push({ text: `  ✓ 入库审核通过 — 成品已入库`, type: 'success' }) }

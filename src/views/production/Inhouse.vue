@@ -447,12 +447,7 @@ async function handleSave() {
       warehouse_name: fd.warehouse_name,
       back_flush: fd.back_flush ? 1 : 0,
       remark: fd.remark,
-      goods_info: JSON.stringify(fd.items),
-      // 主商品信息（取第一行）
-      goods_id: fd.items[0]?.goods_id || 0,
-      goods_name: fd.items[0]?.goods_name || '',
-      unit_name: fd.items[0]?.unit_name || '',
-      num: fd.items.reduce((s, r) => s + (r.num || 0), 0),
+      items: fd.items,
     }
     if (fd.id) {
       payload.id = fd.id
