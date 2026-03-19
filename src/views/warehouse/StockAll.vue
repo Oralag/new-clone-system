@@ -249,15 +249,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, reactive } from 'vue'
+import { computed, onActivated, onMounted, onUnmounted, ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Plus, Edit, Delete, Filter } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getStockList, getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate } from '@/api/goods'
 import http from '@/api/http'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 const router = useRouter()
+const stockRefreshStore = useStockRefreshStore()
 
 // ── 移动端检测 ────────────────────────────────────────────────────────────────
 const isMobile = ref(window.innerWidth < 768)
@@ -690,6 +692,13 @@ async function loadMeta() {
   warehouses.value = warehouseRes.data?.rows ?? []
 }
 
+async function reloadStockRelatedData() {
+  await Promise.all([
+    loadStockMap(selectedWarehouse.value),
+    loadActivityMaps(),
+  ])
+}
+
 onMounted(async () => {
   window.addEventListener('resize', onResize)
   loading.value = true
@@ -698,6 +707,14 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+onActivated(() => {
+  reloadStockRelatedData()
+})
+
+watch(() => stockRefreshStore.version, () => {
+  reloadStockRelatedData()
 })
 </script>
 

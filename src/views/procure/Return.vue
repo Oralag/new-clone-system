@@ -383,7 +383,6 @@ async function applyProcureReturnEffect(row: any, direction: 'audit' | 'reverse'
 
   if (!warehouseId) throw new Error('未找到退货仓库，无法同步库存')
   if (!orderId) throw new Error('未找到关联采购单，无法同步财务')
-  if (returnAmount <= 0) return
 
   const stockSnapshots = await applyStockDelta(items, warehouseId, direction)
 
@@ -416,11 +415,13 @@ async function applyProcureReturnEffect(row: any, direction: 'audit' | 'reverse'
       pay_amount: currentPayAmount,
     })
 
-    await updateProcureOrder(buildProcureOrderPayload(liveOrder, {
-      total_amount: nextRawTotal,
-      after_discount: nextAfterDiscount,
-      pay_amount: nextPayAmount,
-    }))
+    if (returnAmount > 0) {
+      await updateProcureOrder(buildProcureOrderPayload(liveOrder, {
+        total_amount: nextRawTotal,
+        after_discount: nextAfterDiscount,
+        pay_amount: nextPayAmount,
+      }))
+    }
 
     if (refundAmount > 0) {
       await adjustFundBalance({
