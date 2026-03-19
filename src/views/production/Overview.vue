@@ -458,11 +458,13 @@ async function doGenerate() {
     genLogs.value.push({ text: `开始生成：${item.goods_name} × ${item.qty}`, type: 'info' })
     try {
       // 1. 创建生产计划
+      const planItems = [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }]
       const planData = {
         plan_date: today,
         finish_date: today,
         remark: genRemark.value || '一键生成BOM计划',
-        goods_list: [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }],
+        goods_name: item.goods_name,
+        goods_info: JSON.stringify(planItems),
         plan_num: item.qty,
         schedule_num: item.qty,
       }

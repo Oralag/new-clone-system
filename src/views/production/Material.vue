@@ -168,12 +168,18 @@
     </div>
 
     <!-- 商品选择弹窗 -->
-    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="760px" append-to-body>
-      <el-input v-model="goodsSearch" placeholder="搜索名称/编码" clearable style="width:220px;margin-bottom:10px" @input="filterGoods" />
+    <el-dialog v-model="goodsPickerVisible" title="选择商品" width="800px" append-to-body>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <el-input v-model="goodsSearch" placeholder="搜索名称/编码" clearable style="width:200px" @input="filterGoods" />
+        <el-select v-model="pickerCate" placeholder="商品分类" clearable style="width:140px" @change="filterGoods">
+          <el-option v-for="c in goodsCateOptions" :key="c.id" :label="c.name" :value="c.id" />
+        </el-select>
+      </div>
       <el-table :data="filteredGoods" border size="small" height="380" @selection-change="pickerSel=$event">
         <el-table-column type="selection" width="40" />
         <el-table-column prop="name" label="商品名称" min-width="140" />
         <el-table-column prop="goods_sn" label="编码" width="110" />
+        <el-table-column prop="cate_name" label="分类" width="90" />
         <el-table-column prop="spec" label="规格" width="100" />
         <el-table-column prop="unit_name" label="单位" width="70" align="center" />
         <el-table-column prop="stock_num" label="库存" width="80" align="right" />
@@ -215,7 +221,7 @@ import ScTable from '@/components/ScTable.vue'
 import { getMaterialList, createMaterial, deleteMaterial, auditMaterial } from '@/api/production'
 import { getProductionPlanList } from '@/api/production'
 import { getWarehouseList } from '@/api/warehouse'
-import { getGoodsList } from '@/api/goods'
+import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { usePermissionStore } from '@/stores/permission'
 
@@ -247,12 +253,17 @@ async function openView(row:any) { Object.assign(fd,{...defaultFd(),...row}); tr
 function backToList() { showForm.value=false; tableRef.value?.refresh() }
 
 // 商品选择
-const goodsPickerVisible=ref(false), goodsSearch=ref(''), allGoods=ref<any[]>([]), filteredGoods=ref<any[]>([]), pickerSel=ref<any[]>([])
+const goodsPickerVisible=ref(false), goodsSearch=ref(''), pickerCate=ref<any>(null), goodsCateOptions=ref<any[]>([]), allGoods=ref<any[]>([]), filteredGoods=ref<any[]>([]), pickerSel=ref<any[]>([])
 async function openGoodsPicker() {
   try{const r=await getGoodsList({list_rows:500});allGoods.value=r.data?.rows||r.data?.list||r.data?.data||[]}catch{}
-  goodsSearch.value=''; filteredGoods.value=[...allGoods.value]; pickerSel.value=[]; goodsPickerVisible.value=true
+  if(!goodsCateOptions.value.length){try{const r=await getGoodsCateList({list_rows:200});const rows=r.data?.rows||r.data?.list||r.data?.data||[];goodsCateOptions.value=rows.filter((c:any,i:number)=>rows.findIndex((x:any)=>x.name===c.name)===i)}catch{}}
+  goodsSearch.value=''; pickerCate.value=null; filteredGoods.value=[...allGoods.value]; pickerSel.value=[]; goodsPickerVisible.value=true
 }
-function filterGoods() { filteredGoods.value = fuzzyFilterGoods(allGoods.value, goodsSearch.value.trim()) }
+function filterGoods() {
+  let list=allGoods.value
+  if(pickerCate.value) list=list.filter((g:any)=>g.cate_id===pickerCate.value)
+  filteredGoods.value = fuzzyFilterGoods(list, goodsSearch.value.trim())
+}
 function confirmGoods() { pickerSel.value.forEach(g=>fd.items.push({goods_id:g.id,goods_name:g.name,goods_sn:g.goods_sn||'',spec:g.spec||'',unit_name:g.unit_name||'',stock_num:g.stock_num??null,num:1,out_price:0,row_total:0,remark:''})); goodsPickerVisible.value=false }
 function addEmptyRow() { fd.items.push({goods_id:0,goods_name:'',goods_sn:'',spec:'',unit_name:'',stock_num:null,num:1,out_price:0,row_total:0,remark:''}) }
 

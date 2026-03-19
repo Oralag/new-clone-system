@@ -1,7 +1,10 @@
 <template>
   <el-dialog v-model="visible" title="选择商品" width="900px" destroy-on-close>
     <div class="select-search">
-      <el-input v-model="keyword" placeholder="商品名称/编码" clearable style="width: 220px" @keyup.enter="search" />
+      <el-input v-model="keyword" placeholder="商品名称/编码" clearable style="width: 200px" @keyup.enter="search" />
+      <el-select v-model="cateId" placeholder="商品分类" clearable style="width: 140px" @change="search">
+        <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
+      </el-select>
       <el-button type="primary" @click="search">搜索</el-button>
     </div>
 
@@ -41,6 +44,7 @@
 
 <script setup lang="ts">
 import http from '@/api/http'
+import { getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 
 const emit = defineEmits<{
@@ -50,20 +54,29 @@ const emit = defineEmits<{
 const visible = ref(false)
 const loading = ref(false)
 const keyword = ref('')
+const cateId = ref<any>(null)
+const cateOptions = ref<any[]>([])
 const list = ref<any[]>([])
 const selected = ref<any[]>([])
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 
+async function loadCates() {
+  try {
+    const res: any = await getGoodsCateList({ list_rows: 200 })
+    const rows = res?.data?.rows || res?.data?.list || res?.data?.data || []
+    cateOptions.value = rows.filter((c: any, i: number) => rows.findIndex((x: any) => x.name === c.name) === i)
+  } catch {}
+}
+
 async function loadData() {
   loading.value = true
   try {
-    const res: any = await http.get('/shop.ShopGoods/index', {
-      params: { page: page.value, list_rows: pageSize.value, keyword: keyword.value },
-    })
+    const params: any = { page: page.value, list_rows: pageSize.value, keyword: keyword.value }
+    if (cateId.value) params.cate_id = cateId.value
+    const res: any = await http.get('/shop.ShopGoods/index', { params })
     const data = res?.data || {}
-    // 服务端按 keyword 粗筛后，前端再做模糊二次过滤
     const rows = data.rows || data.list || []
     list.value = fuzzyFilterGoods(rows, keyword.value)
     total.value = data.total || 0
@@ -88,6 +101,9 @@ function confirm() {
 
 function open() {
   visible.value = true
+  keyword.value = ''
+  cateId.value = null
+  loadCates()
   loadData()
 }
 

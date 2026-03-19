@@ -339,7 +339,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ArrowLeft, ArrowRight, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
-import { getGoodsList } from '@/api/goods'
+import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { getBomByGoods } from '@/api/goods'
 
