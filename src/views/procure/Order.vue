@@ -1077,9 +1077,6 @@ async function handleSave() {
       if (orderId) fd.id = orderId
     }
 
-    // 只调用后端审核，由后端统一处理库存入库与财务入账，避免重复执行
-    await auditProcureOrder(orderId, 1)
-
     ElMessage.success('保存成功')
     backToList()
   } catch (e: any) {

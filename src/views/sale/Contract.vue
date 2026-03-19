@@ -1197,10 +1197,7 @@ async function autoAuditContract(id: number) {
   if (!id) throw new Error('合同ID无效')
   await auditContract(id, 1)
   const detail = await getContractDetail(id)
-  if (Number(detail?.data?.row?.status ?? detail?.data?.status ?? 0) === 1) return
-  await auditContract(id, 1)
-  const detail2 = await getContractDetail(id)
-  if (Number(detail2?.data?.row?.status ?? detail2?.data?.status ?? 0) !== 1) {
+  if (Number(detail?.data?.row?.status ?? detail?.data?.status ?? 0) !== 1) {
     throw new Error('自动审核未完成，请在列表手动审核')
   }
 }
