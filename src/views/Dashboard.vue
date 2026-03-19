@@ -19,7 +19,7 @@
       <div class="mh-kpi-row">
         <div class="mh-kpi-card mh-kpi-main" @click="router.push('/dashboard/today-sales')">
           <div class="mh-kpi-label">今日销售额</div>
-          <div class="mh-kpi-value">¥{{ stats[0].value }}</div>
+          <div class="mh-kpi-value">{{ stats[0].value }}</div>
           <div class="mh-kpi-sub">含销售 + 零售</div>
           <svg class="mh-kpi-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
         </div>
