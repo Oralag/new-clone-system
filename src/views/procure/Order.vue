@@ -665,7 +665,7 @@ import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
+import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, getBomList, getBomByGoods, getSpecList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
@@ -1137,28 +1137,6 @@ async function handleAudit(row: any, status: number) {
   await ElMessageBox.confirm(`确定${action}该采购单？`, '提示', { type: 'warning' })
   try {
     await auditProcureOrder(row.id, status)
-    // 审核通过后自动创建并审核采购入库记录
-    if (status === 1) {
-      try {
-        const items = JSON.parse(row.goods_info || '[]')
-        const inhouseRes = await createProcureInhouse({
-          order_id: row.id,
-          supplier_id: row.supplier_id,
-          supplier_name: row.supplier_name,
-          warehouse_id: row.warehouse_id,
-          warehouse_name: row.warehouse_name,
-          admin_name: row.admin_name,
-          in_date: (row.order_date || row.create_time || '').slice(0, 10),
-          total_amount: row.total_amount,
-          remark: row.remark || '',
-          goods_info: JSON.stringify(items),
-        })
-        const inhouseId = inhouseRes.data?.id ?? inhouseRes.data
-        if (inhouseId) await auditProcureInhouse(inhouseId, 1)
-      } catch (e: any) {
-        console.warn('自动创建采购入库记录失败', e?.message)
-      }
-    }
     ElMessage.success(`${action}成功`)
     tableRef.value?.refresh()
     loadPaidMap()
