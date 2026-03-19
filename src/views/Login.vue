@@ -319,7 +319,8 @@ async function handleRegister() {
 * { box-sizing: border-box; }
 
 .login-page {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -703,8 +704,8 @@ async function handleRegister() {
 
 /* ── Responsive ── */
 @media (max-width: 960px) {
-  .login-page { flex-direction: column; min-height: 100vh; }
-  .left-panel { width: 100%; flex: 1; padding: 48px 28px 32px; }
+  .login-page { flex-direction: column; height: 100vh; overflow: hidden; }
+  .left-panel { width: 100%; flex: 1; padding: 48px 28px 32px; overflow-y: auto; }
   .right-panel { display: none; }
   .form-area { padding: 24px 0; }
   .form-heading h1 { font-size: 36px; }

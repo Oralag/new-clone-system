@@ -155,19 +155,22 @@
               <span style="color:#0071e3;font-weight:500">¥{{ (getStockQty(row) * getAvgPrice(row)).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="出入库记录" width="190" align="center">
+          <el-table-column label="出入库记录" width="210" align="center">
             <template #default="{ row }">
               <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
                 <el-tag v-if="inhouseCountMap[row.id] > 0" type="success" size="small" effect="plain">
                   采购入库 {{ inhouseCountMap[row.id] }}次
                 </el-tag>
-                <el-tag v-if="saleCountMap[row.id] > 0" type="warning" size="small" effect="plain">
+                <el-tag v-if="returnCountMap[row.id] > 0" type="warning" size="small" effect="plain">
+                  退货 {{ returnCountMap[row.id] }}次
+                </el-tag>
+                <el-tag v-if="saleCountMap[row.id] > 0" type="danger" size="small" effect="plain">
                   销售出库 {{ saleCountMap[row.id] }}次
                 </el-tag>
                 <el-tag v-if="retailCountMap[row.id] > 0" type="primary" size="small" effect="plain">
                   零售 {{ retailCountMap[row.id] }}次
                 </el-tag>
-                <span v-if="!inhouseCountMap[row.id] && !saleCountMap[row.id] && !retailCountMap[row.id]" style="color:#c0c4cc;font-size:12px">无记录</span>
+                <span v-if="!inhouseCountMap[row.id] && !returnCountMap[row.id] && !saleCountMap[row.id] && !retailCountMap[row.id]" style="color:#c0c4cc;font-size:12px">无记录</span>
               </div>
             </template>
           </el-table-column>
@@ -182,7 +185,7 @@
           </el-table-column>
           <el-table-column label="流水" width="60" align="center">
             <template #default="{ row }">
-              <el-button type="info" link size="small" @click="router.push('/warehouse/flow')">流水</el-button>
+              <el-button type="info" link size="small" @click="openFlowDialog(row)">流水</el-button>
             </template>
           </el-table-column>
           <el-table-column label="快捷跳转" width="120" align="center" fixed="right" class-name="col-white-bg">
@@ -224,6 +227,45 @@
     <template #footer>
       <el-button @click="safeDialogVisible = false">取消</el-button>
       <el-button type="primary" :loading="safeSaving" @click="saveSafeSetting">保存</el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 出入库流水弹窗 -->
+  <el-dialog v-model="flowDialogVisible" :title="`出入库流水 — ${flowGoodsName}`" width="700px" append-to-body>
+    <div v-loading="flowLoading">
+      <el-table :data="flowRows" border size="small" style="width:100%" max-height="440">
+        <el-table-column type="index" width="45" align="center" />
+        <el-table-column label="类型" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row._type === 'in' ? 'success' : row._type === 'return_in' ? 'warning' : 'danger'" size="small">
+              {{ row._type === 'in' ? '采购入库' : row._type === 'return_in' ? '采购退货' : '销售出库' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="单据编号" min-width="150">
+          <template #default="{ row }">{{ row._sn || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="数量" width="80" align="right">
+          <template #default="{ row }">
+            <span :style="{ color: row._type === 'in' ? '#16a34a' : '#dc2626', fontWeight: 600 }">
+              {{ row._type === 'in' ? '+' : '-' }}{{ row._qty }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="单价" width="90" align="right">
+          <template #default="{ row }">¥{{ Number(row._price || 0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="日期" width="110">
+          <template #default="{ row }">{{ (row._date || '').slice(0, 10) }}</template>
+        </el-table-column>
+        <el-table-column label="供应商/客户" min-width="110">
+          <template #default="{ row }">{{ row._partner || '—' }}</template>
+        </el-table-column>
+      </el-table>
+      <div v-if="!flowLoading && !flowRows.length" style="text-align:center;color:#c0c4cc;padding:20px">暂无记录</div>
+    </div>
+    <template #footer>
+      <el-button @click="flowDialogVisible = false">关闭</el-button>
     </template>
   </el-dialog>
 
@@ -400,6 +442,7 @@ const deductQtyMap = ref<Record<number, number>>({})
 
 // Activity maps: goods_id -> count
 const inhouseCountMap = ref<Record<number, number>>({})
+const returnCountMap = ref<Record<number, number>>({})
 const saleCountMap = ref<Record<number, number>>({})
 const retailCountMap = ref<Record<number, number>>({})
 
@@ -663,6 +706,27 @@ async function loadActivityMaps() {
     }
     inhouseCountMap.value = inMap
 
+    // Return map (退货出库)
+    const retMap: Record<number, number> = {}
+    if (returnRes.status === 'fulfilled') {
+      for (const r of (returnRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        try {
+          const allItems = JSON.parse(r.goods_info || '[]')
+          const items = allItems.filter((i: any) => !i._meta)
+          const goodsInThisReturn = new Set<number>()
+          for (const item of items) {
+            const gid = Number(item.goods_id)
+            if (gid) goodsInThisReturn.add(gid)
+          }
+          for (const gid of goodsInThisReturn) {
+            retMap[gid] = (retMap[gid] || 0) + 1
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    returnCountMap.value = retMap
+
     // Sale contracts as proxy for sales (出库)
     const dMap: Record<number, number> = {}
     const sMap: Record<number, number> = {}
@@ -717,6 +781,98 @@ async function loadActivityMaps() {
 async function loadMeta() {
   const warehouseRes = await getWarehouseList({ list_rows: 200 })
   warehouses.value = warehouseRes.data?.rows ?? []
+}
+
+// ── 出入库流水弹窗 ────────────────────────────────────────────────────────────
+const flowDialogVisible = ref(false)
+const flowLoading = ref(false)
+const flowGoodsName = ref('')
+const flowRows = ref<any[]>([])
+
+async function openFlowDialog(goods: any) {
+  flowGoodsName.value = goods.goods_name || ''
+  flowDialogVisible.value = true
+  flowLoading.value = true
+  flowRows.value = []
+  try {
+    const gid = Number(goods.id)
+    const rows: any[] = []
+
+    const [inhouseRes, saleRes, returnRes] = await Promise.allSettled([
+      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 500 } }),
+      http.get('/shop/ContractOrder/index', { params: { list_rows: 500, status: 1 } }),
+      http.get('/procure/ProcureReturn/index', { params: { list_rows: 500 } }),
+    ])
+
+    // 采购入库
+    if (inhouseRes.status === 'fulfilled') {
+      for (const r of (inhouseRes.value.data?.rows ?? [])) {
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const matched = items.find((i: any) => Number(i.goods_id) === gid)
+          if (matched) {
+            rows.push({
+              _type: 'in',
+              _sn: r.in_no || r.inhouse_no || '',
+              _qty: Number(matched.num || 0),
+              _price: Number(matched.price || 0),
+              _date: r.in_date || r.create_time || '',
+              _partner: r.supplier_name || '',
+            })
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 采购退货（出库）
+    if (returnRes.status === 'fulfilled') {
+      for (const r of (returnRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        try {
+          const allItems = JSON.parse(r.goods_info || '[]')
+          const items = allItems.filter((i: any) => !i._meta)
+          const matched = items.find((i: any) => Number(i.goods_id) === gid)
+          if (matched) {
+            const meta = allItems.find((i: any) => i._meta) ?? {}
+            rows.push({
+              _type: 'return_in',
+              _sn: r.return_no || '',
+              _qty: Number(matched.num || 0),
+              _price: Number(matched.price || 0),
+              _date: r.return_date || r.create_time || '',
+              _partner: r.supplier_name || '',
+            })
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 销售出库
+    if (saleRes.status === 'fulfilled') {
+      for (const r of (saleRes.value.data?.rows ?? [])) {
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const matched = items.find((i: any) => Number(i.goods_id) === gid)
+          if (matched) {
+            rows.push({
+              _type: 'out',
+              _sn: r.contract_no || r.order_sn || '',
+              _qty: Number(matched.num || 0),
+              _price: Number(matched.price || 0),
+              _date: r.sign_date || r.create_time || '',
+              _partner: r.customer_name || '',
+            })
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 按日期排序
+    rows.sort((a, b) => (a._date > b._date ? -1 : 1))
+    flowRows.value = rows
+  } catch { /* ignore */ } finally {
+    flowLoading.value = false
+  }
 }
 
 async function reloadStockRelatedData() {
