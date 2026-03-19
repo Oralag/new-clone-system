@@ -702,13 +702,20 @@ async function handleRegister() {
   margin-bottom: 20px;
 }
 
+@media (max-width: 960px) {
+  :deep(.el-form-item) { margin-bottom: 12px; }
+}
+
 /* ── Responsive ── */
 @media (max-width: 960px) {
   .login-page { flex-direction: column; height: 100vh; overflow: hidden; }
-  .left-panel { width: 100%; flex: 1; padding: 48px 28px 32px; overflow-y: auto; }
+  .left-panel { width: 100%; flex: 1; padding: 24px 24px 16px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
   .right-panel { display: none; }
-  .form-area { padding: 24px 0; }
-  .form-heading h1 { font-size: 36px; }
+  .form-area { flex: 1; padding: 12px 0; justify-content: center; }
+  .form-heading { margin-bottom: 16px; }
+  .form-heading h1 { font-size: 28px; }
+  .form-heading p { margin: 4px 0 0; }
+  .left-footer { margin-top: 8px; }
 }
 
 /* ── Invite Code hints ── */
