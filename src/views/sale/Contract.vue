@@ -1134,6 +1134,13 @@ async function handleSave() {
   if (!fd.items.length) {
     ElMessage.warning('请至少添加一件商品'); return
   }
+  if (!fd.receive_amount || fd.receive_amount <= 0) {
+    try {
+      await ElMessageBox.confirm('本次收款金额未填写，是否继续保存？', '提示', {
+        confirmButtonText: '继续保存', cancelButtonText: '去填写', type: 'warning'
+      })
+    } catch { return }
+  }
   saving.value = true
   try {
     const payload: Record<string, any> = {
