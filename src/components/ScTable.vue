@@ -75,15 +75,18 @@
         <div v-for="row in tableData" :key="row.id ?? row.goods_id ?? JSON.stringify(row)" class="m-auto-card">
           <!-- 标题行：第一个有 prop 的列 -->
           <div class="m-auto-card__title">
-            <span>{{ getCellValue(row, mobileColumns.find(c => c.prop && !c.isAction)?.prop ?? '') }}</span>
+            <component :is="() => {
+              const first = mobileColumns.find(c => !c.isAction)
+              if (!first) return '-'
+              return renderColSlot(first.vnode, row) ?? (first.prop ? getCellValue(row, first.prop) : '-')
+            }" />
           </div>
           <!-- 字段行：跳过第一列和操作列 -->
-          <template v-for="col in mobileColumns.slice(1).filter(c => !c.isAction && c.prop)" :key="col.prop">
+          <template v-for="col in mobileColumns.slice(1).filter(c => !c.isAction && (c.prop || c.vnode?.children?.default))" :key="col.prop || col.label">
             <div class="m-auto-card__row">
               <span class="m-auto-card__label">{{ col.label }}</span>
               <span class="m-auto-card__value">
-                <!-- 有自定义 slot 则渲染 slot，否则直接取值 -->
-                <component :is="() => renderColSlot(col.vnode, row) ?? getCellValue(row, col.prop)" />
+                <component :is="() => renderColSlot(col.vnode, row) ?? (col.prop ? getCellValue(row, col.prop) : '-')" />
               </span>
             </div>
           </template>
@@ -270,8 +273,26 @@ const mobileColumns = computed<ColDef[]>(() => {
 // 渲染某列的 default slot（用于操作列按钮）
 function renderColSlot(colVnode: any, row: any): any {
   try {
-    const defaultSlot = colVnode.children?.default
-    if (typeof defaultSlot === 'function') return defaultSlot({ row })
+    // 兼容多种 vnode children 结构
+    const children = colVnode.children
+    let defaultSlot: any = null
+    if (children) {
+      if (typeof children.default === 'function') {
+        defaultSlot = children.default
+      } else if (typeof children === 'function') {
+        defaultSlot = children
+      } else if (children.default && typeof children.default === 'object') {
+        // 编译后可能是对象
+        defaultSlot = children.default
+      }
+    }
+    if (typeof defaultSlot === 'function') {
+      const result = defaultSlot({ row })
+      // 如果返回的是空数组或 null，返回 null 让外层降级到 prop
+      if (result === null || result === undefined) return null
+      if (Array.isArray(result) && result.length === 0) return null
+      return result
+    }
   } catch {}
   return null
 }
