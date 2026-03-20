@@ -373,6 +373,12 @@ function clearSelection() {
 async function handleBatchDelete() {
   const ids = selectedRows.value.map((r: any) => r.id).filter(Boolean)
   if (!ids.length) { ElMessage.warning('请先勾选要删除的记录'); return }
+  // 拦截已审核记录
+  const auditedRows = selectedRows.value.filter((r: any) => Number(r.status) === 1)
+  if (auditedRows.length) {
+    ElMessage.error(`选中的 ${auditedRows.length} 条记录已审核，请先反审核后再删除`)
+    return
+  }
   await ElMessageBox.confirm(
     `确定要删除选中的 ${ids.length} 条记录吗？此操作不可恢复。`,
     '批量删除',

@@ -31,7 +31,7 @@
           <template #default="{ row }">
             <el-button type="success" link @click="openView(row)">查看</el-button>
               <el-button type="primary" link @click="openForm(row)">编辑</el-button>
-              <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="danger" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </ScTable>

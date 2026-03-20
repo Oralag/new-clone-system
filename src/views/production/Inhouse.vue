@@ -240,7 +240,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useRoute } from 'vue-router'
@@ -355,12 +355,32 @@ async function onSelectPlan(plan: any) {
   fd.plan_name = `${plan.order_sn} - ${plan.goods_name}`
   planPickerVisible.value = false
 
+  // 查该计划已审核的领料单，汇总物料总价
+  let materialTotalPrice = 0
+  let materialTotalNum = 0
+  try {
+    const mRes = await http.get('/production/material/index', {
+      params: { list_rows: 500 }
+    })
+    const mRows: any[] = mRes.data?.rows ?? []
+    const pid = Number(plan.id)
+    for (const mr of mRows) {
+      const mrPlanId = Number(mr.production_plan_id || mr.plan_id || 0)
+      if (mrPlanId === pid && Number(mr.status) === 1) {
+        materialTotalPrice += Number(mr.total_price || 0)
+        try {
+          const items: any[] = JSON.parse(mr.goods_info || '[]')
+          materialTotalNum += items.reduce((s, i) => s + Number(i.num || 0), 0)
+        } catch {}
+      }
+    }
+  } catch {}
+
   // 加载该计划的商品（从 goods_info 解析）
   try {
     let items: any[] = []
     try { items = JSON.parse(plan.goods_info || '[]') } catch {}
     if (!items.length && plan.goods_id) {
-      // 单品计划
       items = [{
         goods_id: plan.goods_id,
         goods_name: plan.goods_name,
@@ -387,6 +407,17 @@ async function onSelectPlan(plan: any) {
         total_cost: 0,
       }))
     }
+
+    // 自动填入物料单价：领料总价 ÷ 计划总数量
+    const planTotalNum = items.reduce((s, i) => s + Number(i.num || 0), 0)
+    if (materialTotalPrice > 0 && planTotalNum > 0) {
+      const unitMaterialPrice = materialTotalPrice / planTotalNum
+      items.forEach(item => {
+        item.material_price = Number(unitMaterialPrice.toFixed(4))
+      })
+      ElMessage.success(`已自动带入物料成本：¥${materialTotalPrice.toFixed(2)}`)
+    }
+
     items.forEach(r => calcRow(r))
     fd.items = items
   } catch {}
@@ -500,35 +531,89 @@ function resetSearch() {
   tableRef.value?.loadData()
 }
 
-onMounted(async () => {
+async function initFromQuery() {
   const { plan_id, plan_name, goods_info } = route.query
-  if (plan_id) {
-    await loadWarehouses()
-    Object.assign(fd, defaultFd())
-    fd.plan_id = Number(plan_id)
-    fd.plan_name = String(plan_name || '')
-    fd.items = []
-    // 把计划商品作为入库明细
-    try {
-      const planItems: any[] = JSON.parse(String(goods_info || '[]'))
-      for (const gi of planItems) {
-        fd.items.push({
-          goods_id: gi.goods_id,
-          goods_name: gi.goods_name,
-          goods_sn: gi.goods_sn || '',
-          unit_name: gi.unit_name || '',
-          num: Number(gi.num || 0),
-          material_price: 0,
-          process_price: 0,
-          in_price: 0,
-          total_cost: 0,
-        })
-      }
-    } catch {}
-    isView.value = false
-    showForm.value = true
+  if (!plan_id) return
+
+  await loadWarehouses()
+  Object.assign(fd, defaultFd())
+  fd.plan_id = Number(plan_id)
+  fd.plan_name = String(plan_name || '')
+  fd.items = []
+
+  const planItems: any[] = JSON.parse(String(goods_info || '[]'))
+  if (!planItems.length) { isView.value = false; showForm.value = true; return }
+
+  // 1. 查该计划已审核领料单，汇总每种商品的物料总价
+  const materialPriceMap: Record<number, number> = {} // goods_id → 总金额
+  const materialNumMap: Record<number, number> = {}   // goods_id → 总数量
+  try {
+    const mRes = await http.get('/production/material/index', { params: { list_rows: 500 } })
+    const mRows: any[] = mRes.data?.rows ?? []
+    const pid = Number(plan_id)
+    for (const mr of mRows) {
+      const mrPlanId = Number(mr.production_plan_id || mr.plan_id || 0)
+      if (mrPlanId !== pid || Number(mr.status) !== 1) continue
+      try {
+        const items: any[] = JSON.parse(mr.goods_info || '[]')
+        for (const it of items) {
+          const gid = Number(it.goods_id)
+          const num = Number(it.num || 0)
+          const price = Number(it.out_price || it.price || 0)
+          materialNumMap[gid] = (materialNumMap[gid] || 0) + num
+          materialPriceMap[gid] = (materialPriceMap[gid] || 0) + num * price
+        }
+      } catch {}
+    }
+  } catch {}
+
+  // 2. 查商品采购价作为兜底
+  const costPriceMap: Record<number, number> = {}
+  try {
+    const goodsIds = planItems.map(gi => gi.goods_id).filter(Boolean)
+    const gRes = await http.get('/goods/ShopGoods/index', { params: { list_rows: 200 } })
+    const gRows: any[] = gRes.data?.rows ?? gRes.data?.list ?? []
+    for (const g of gRows) {
+      if (goodsIds.includes(g.id)) costPriceMap[g.id] = Number(g.cost_price || 0)
+    }
+  } catch {}
+
+  // 3. 组装 items
+  let hasPrice = false
+  for (const gi of planItems) {
+    const gid = Number(gi.goods_id)
+    const num = Number(gi.num || 0)
+    // 物料单价：领料单实际单价 > 商品采购价 > 0
+    let materialPrice = 0
+    if (materialNumMap[gid] > 0) {
+      materialPrice = Number((materialPriceMap[gid] / materialNumMap[gid]).toFixed(4))
+    } else if (costPriceMap[gid] > 0) {
+      materialPrice = costPriceMap[gid]
+    }
+    if (materialPrice > 0) hasPrice = true
+    const item = {
+      goods_id: gid,
+      goods_name: gi.goods_name,
+      goods_sn: gi.goods_sn || '',
+      unit_name: gi.unit_name || '',
+      num,
+      material_price: materialPrice,
+      process_price: 0,
+      in_price: materialPrice,
+      total_cost: 0,
+    }
+    calcRow(item)
+    fd.items.push(item)
   }
-})
+  if (hasPrice) ElMessage.success('已自动带入物料成本')
+  isView.value = false
+  showForm.value = true
+}
+
+// 防止 onMounted + onActivated 在首次加载时都触发导致重复
+let _initDone = false
+onMounted(async () => { _initDone = false; await initFromQuery(); _initDone = true })
+onActivated(async () => { if (_initDone) await initFromQuery() })
 </script>
 
 <style scoped>

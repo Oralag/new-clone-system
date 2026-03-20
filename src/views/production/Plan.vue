@@ -102,12 +102,57 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="260" fixed="right" align="center">
+          <el-table-column label="流程状态" width="220" align="center">
+            <template #default="{ row }">
+              <div class="flow-steps">
+                <!-- 步骤1: 领料 -->
+                <div class="flow-step" :class="getStepClass(row, 'material')">
+                  <div class="step-dot"></div>
+                  <span class="step-label">{{ getMaterialLabel(row) }}</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <!-- 步骤2: 入库 -->
+                <div class="flow-step" :class="getStepClass(row, 'inhouse')">
+                  <div class="step-dot"></div>
+                  <span class="step-label">{{ getInhouseLabel(row) }}</span>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right" align="center">
             <template #default="{ row }">
               <el-button link type="primary" size="small" @click="openView(row)">查看</el-button>
               <el-button link type="success" size="small" @click="openEdit(row)">编辑</el-button>
-              <el-button link type="warning" size="small" @click="goPickMaterial(row)">领料</el-button>
-              <el-button link size="small" style="color:#9333ea" @click="goInhouse(row)">入库</el-button>
+              <!-- 领料按钮：已领料显示完成态，否则激活 -->
+              <el-button
+                v-if="!hasMaterial(row)"
+                link type="warning" size="small"
+                @click="goPickMaterial(row)"
+              >领料</el-button>
+              <el-button
+                v-else
+                link size="small"
+                style="color:#16a34a;cursor:default"
+                disabled
+              >已领料✓</el-button>
+              <!-- 入库按钮：有领料才激活 -->
+              <el-button
+                v-if="row.inhouse_num > 0 || row.status === 2"
+                link size="small"
+                style="color:#16a34a;cursor:default"
+                disabled
+              >已入库✓</el-button>
+              <el-button
+                v-else-if="hasMaterial(row)"
+                link size="small" style="color:#9333ea"
+                @click="goInhouse(row)"
+              >入库</el-button>
+              <el-button
+                v-else
+                link size="small"
+                style="color:#c0c4cc;cursor:not-allowed"
+                disabled
+              >入库</el-button>
               <el-button link type="danger" size="small" @click="handleDel(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -387,6 +432,9 @@ async function loadData() {
     const res = await http.get('/production/plan/index', { params })
     tableData.value = res.data?.rows || []
     total.value = res.data?.total || 0
+    // 加载每条计划的领料状态
+    const ids = tableData.value.map((r: any) => r.id)
+    loadMaterialStatus(ids)
   } finally { loading.value = false }
 }
 
@@ -403,6 +451,47 @@ function resetSearch() {
   loadData()
 }
 
+// ── 领料状态 map（plan_id → true 表示有已审核领料单）────────────────────────
+const materialMap = ref<Record<number, boolean>>({})
+
+async function loadMaterialStatus(planIds: number[]) {
+  if (!planIds.length) return
+  try {
+    const res = await http.get('/production/material/index', { params: { list_rows: 500 } })
+    const rows: any[] = res.data?.rows ?? []
+    const map: Record<number, boolean> = {}
+    for (const r of rows) {
+      const pid = Number(r.production_plan_id || r.plan_id)
+      if (pid && r.status === 1) map[pid] = true
+    }
+    materialMap.value = map
+  } catch {}
+}
+
+function hasMaterial(row: any): boolean {
+  return !!materialMap.value[row.id]
+}
+
+function getStepClass(row: any, step: 'material' | 'inhouse') {
+  if (step === 'material') {
+    return hasMaterial(row) ? 'step-done' : 'step-active'
+  }
+  // inhouse
+  if (row.inhouse_num > 0 || row.status === 2) return 'step-done'
+  if (hasMaterial(row)) return 'step-active'
+  return 'step-pending'
+}
+
+function getMaterialLabel(row: any) {
+  return hasMaterial(row) ? '已领料' : '待领料'
+}
+
+function getInhouseLabel(row: any) {
+  if (row.inhouse_num > 0 || row.status === 2) return '已入库'
+  if (hasMaterial(row)) return '待入库'
+  return '待入库'
+}
+
 // ── 跳转领料/入库 ─────────────────────────────────────────────────────────────
 function goPickMaterial(row: any) {
   router.push({ name: 'ProductionMaterial', query: { plan_id: row.id, plan_name: row.order_sn, goods_info: row.goods_info } })
@@ -412,6 +501,16 @@ function goInhouse(row: any) {
 }
 
 async function handleDel(id: number) {
+  if (materialMap.value[id]) {
+    ElMessageBox.alert(
+      '该生产计划已有审核通过的领料单，无法直接删除。<br/>请先前往「<b>生产 → 领料管理</b>」对领料单执行<b>反审核</b>，再删除计划。',
+      '无法删除',
+      { type: 'warning', dangerouslyUseHTMLString: true, confirmButtonText: '去领料管理' }
+    ).then(() => {
+      router.push({ name: 'ProductionMaterial' })
+    }).catch(() => {})
+    return
+  }
   await ElMessageBox.confirm('确定删除该生产计划？', '提示', { type: 'warning' })
   await http.post('/production/plan/del', { id })
   ElMessage.success('删除成功')
@@ -419,6 +518,17 @@ async function handleDel(id: number) {
 }
 
 async function handleBatchDel() {
+  const blockedIds = selection.value.map(r => r.id).filter(id => materialMap.value[id])
+  if (blockedIds.length) {
+    ElMessageBox.alert(
+      `选中的 ${blockedIds.length} 条计划已有审核通过的领料单，无法删除。<br/>请先前往「<b>生产 → 领料管理</b>」对相关领料单执行<b>反审核</b>，再删除计划。`,
+      '无法删除',
+      { type: 'warning', dangerouslyUseHTMLString: true, confirmButtonText: '去领料管理' }
+    ).then(() => {
+      router.push({ name: 'ProductionMaterial' })
+    }).catch(() => {})
+    return
+  }
   await ElMessageBox.confirm(`确定删除选中的 ${selection.value.length} 条记录？`, '提示', { type: 'warning' })
   await http.post('/production/plan/batchDel', { ids: selection.value.map(r => r.id) })
   ElMessage.success('删除成功')
@@ -668,4 +778,29 @@ watch(() => fd.items, (v) => { if (v.length) loadPlanBom() }, { deep: true })
   margin-bottom: 8px;
 }
 .goods-title { font-size: 13px; font-weight: 600; color: #1d1d1f; }
+
+/* 流程步骤 */
+.flow-steps {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.flow-step {
+  display: flex; align-items: center; gap: 4px;
+}
+.step-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.step-label { font-size: 12px; white-space: nowrap; }
+.flow-arrow { font-size: 11px; color: #c0c4cc; }
+
+/* 待处理（灰） */
+.step-pending .step-dot { background: #e5e7eb; }
+.step-pending .step-label { color: #c0c4cc; }
+
+/* 当前激活（蓝/橙） */
+.step-active .step-dot { background: #f59e0b; }
+.step-active .step-label { color: #f59e0b; font-weight: 600; }
+
+/* 已完成（绿） */
+.step-done .step-dot { background: #16a34a; }
+.step-done .step-label { color: #16a34a; font-weight: 600; }
 </style>

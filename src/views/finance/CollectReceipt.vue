@@ -63,7 +63,7 @@
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="!row._isPrepay" type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-button v-if="!row._isPrepay" type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             <span v-else style="color:#999;font-size:12px">预付款</span>
           </template>
         </el-table-column>
