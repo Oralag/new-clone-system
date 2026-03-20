@@ -28,6 +28,10 @@ function toNumber(value: any): number {
   return Number.isFinite(num) ? num : 0
 }
 
+function cleanText(value: any): string {
+  return String(value || '').trim().replace(/\s+/g, '')
+}
+
 function pickWarehouseId(item: any, fallbackId?: number | null): number {
   return toNumber(item?.warehouse_id || fallbackId || 0)
 }
@@ -44,13 +48,13 @@ function groupItems(items: any[], options: MaterialStockOptions): StockGroup[] {
     if (qty <= 0) continue
 
     const goodsId = toNumber(item?.goods_id)
-    const goodsSn = String(item?.goods_sn || '').trim()
-    const goodsName = String(item?.goods_name || item?.name || '商品')
-    if (!goodsId && !goodsSn) continue
+    const goodsSn = cleanText(item?.goods_sn)
+    const goodsName = String(item?.goods_name || item?.name || '商品').trim()
+    if (!goodsId && !goodsSn && !goodsName) continue
 
     const warehouseId = pickWarehouseId(item, options.defaultWarehouseId)
     const warehouseName = pickWarehouseName(item, options.defaultWarehouseName)
-    const key = `${warehouseId || warehouseName || 'default'}::${goodsId || goodsSn}`
+    const key = `${warehouseId || warehouseName || 'default'}::${goodsSn || goodsId || goodsName}`
     const existing = groups.get(key)
 
     if (existing) {
@@ -72,22 +76,89 @@ function groupItems(items: any[], options: MaterialStockOptions): StockGroup[] {
   return [...groups.values()]
 }
 
+function goodsMatchScore(row: any, group: StockGroup) {
+  const rowGoodsId = toNumber(row?.goods_id)
+  const rowGoodsSn = cleanText(row?.goods_sn)
+  const rowGoodsName = cleanText(row?.goods_name)
+  const targetName = cleanText(group.goods_name)
+
+  if (group.goods_sn && rowGoodsSn && rowGoodsSn === group.goods_sn) return 100
+  if (group.goods_id && rowGoodsId && rowGoodsId === group.goods_id) return 90
+  if (targetName && rowGoodsName && rowGoodsName === targetName) return 70
+  if (targetName && rowGoodsName && (rowGoodsName.includes(targetName) || targetName.includes(rowGoodsName))) return 50
+  return 0
+}
+
+function warehouseMatchScore(row: any, group: StockGroup) {
+  const rowWarehouseId = toNumber(row?.warehouse_id)
+  const rowWarehouseName = cleanText(row?.warehouse_name)
+  const targetWarehouseName = cleanText(group.warehouse_name)
+
+  if (group.warehouse_id && rowWarehouseId && rowWarehouseId === group.warehouse_id) return 20
+  if (targetWarehouseName && rowWarehouseName && rowWarehouseName === targetWarehouseName) return 15
+  if (!group.warehouse_id && !targetWarehouseName) return 5
+  return 0
+}
+
+function dedupeRows(rows: any[]) {
+  const map = new Map<string, any>()
+  for (const row of rows || []) {
+    const key = String(row?.id || `${row?.goods_sn || ''}-${row?.goods_id || ''}-${row?.warehouse_id || row?.warehouse_name || ''}`)
+    if (!map.has(key)) map.set(key, row)
+  }
+  return [...map.values()]
+}
+
+async function fetchStockRows(group: StockGroup) {
+  const queries: any[] = []
+  const baseQuery: any = { list_rows: 200 }
+
+  if (group.goods_sn) {
+    queries.push({ ...baseQuery, goods_sn: group.goods_sn, ...(group.warehouse_id ? { warehouse_id: group.warehouse_id } : {}), ...(group.warehouse_name ? { warehouse_name: group.warehouse_name } : {}) })
+    queries.push({ ...baseQuery, goods_sn: group.goods_sn })
+  }
+  if (group.goods_id) {
+    queries.push({ ...baseQuery, goods_id: group.goods_id, ...(group.warehouse_id ? { warehouse_id: group.warehouse_id } : {}), ...(group.warehouse_name ? { warehouse_name: group.warehouse_name } : {}) })
+    queries.push({ ...baseQuery, goods_id: group.goods_id })
+  }
+  if (group.goods_name) {
+    queries.push({ ...baseQuery, goods_name: group.goods_name, ...(group.warehouse_id ? { warehouse_id: group.warehouse_id } : {}), ...(group.warehouse_name ? { warehouse_name: group.warehouse_name } : {}) })
+    queries.push({ ...baseQuery, keyword: group.goods_name })
+  }
+  queries.push({ list_rows: 2000, ...(group.warehouse_id ? { warehouse_id: group.warehouse_id } : {}), ...(group.warehouse_name ? { warehouse_name: group.warehouse_name } : {}) })
+  queries.push({ list_rows: 2000 })
+
+  const collected: any[] = []
+  for (const params of queries) {
+    try {
+      const res = await http.get('/stock/StockAll/index', { params })
+      const rows: any[] = res.data?.rows ?? res.data?.list ?? []
+      collected.push(...rows)
+      if (collected.length) {
+        const matched = findStockRow(collected, group)
+        if (matched) return dedupeRows(collected)
+      }
+    } catch {
+      // ignore and continue fallback query
+    }
+  }
+
+  return dedupeRows(collected)
+}
+
 function findStockRow(rows: any[], group: StockGroup) {
-  return rows.find((row: any) => {
-    const rowGoodsId = toNumber(row?.goods_id)
-    const rowGoodsSn = String(row?.goods_sn || '').trim()
-    const rowWarehouseId = toNumber(row?.warehouse_id)
-    const rowWarehouseName = String(row?.warehouse_name || '').trim()
+  let bestRow: any = null
+  let bestScore = 0
 
-    const goodsMatched = group.goods_id
-      ? rowGoodsId === group.goods_id
-      : !!group.goods_sn && rowGoodsSn === group.goods_sn
+  for (const row of rows || []) {
+    const score = goodsMatchScore(row, group) + warehouseMatchScore(row, group)
+    if (score > bestScore) {
+      bestScore = score
+      bestRow = row
+    }
+  }
 
-    if (!goodsMatched) return false
-    if (group.warehouse_id && rowWarehouseId) return rowWarehouseId === group.warehouse_id
-    if (group.warehouse_name && rowWarehouseName) return rowWarehouseName === group.warehouse_name
-    return true
-  }) || rows[0]
+  return bestScore > 0 ? bestRow : null
 }
 
 export async function applyMaterialStockDelta(items: any[], options: MaterialStockOptions) {
@@ -97,14 +168,7 @@ export async function applyMaterialStockDelta(items: any[], options: MaterialSto
 
   try {
     for (const group of groups) {
-      const params: any = { list_rows: 50 }
-      if (group.goods_sn) params.goods_sn = group.goods_sn
-      else if (group.goods_id) params.goods_id = group.goods_id
-      if (group.warehouse_id) params.warehouse_id = group.warehouse_id
-      else if (group.warehouse_name) params.warehouse_name = group.warehouse_name
-
-      const res = await http.get('/stock/StockAll/index', { params })
-      const rows: any[] = res.data?.rows ?? res.data?.list ?? []
+      const rows = await fetchStockRows(group)
       const stockRow = findStockRow(rows, group)
       if (!stockRow) {
         throw new Error(`${group.goods_name}未找到库存记录`)
