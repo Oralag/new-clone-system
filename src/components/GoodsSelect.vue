@@ -9,7 +9,6 @@
           :data="cateTree"
           :props="{ label: 'name', children: 'children' }"
           node-key="id"
-          :default-expand-all="true"
           highlight-current
           @node-click="(n: any) => selectCate(n.id)"
         >
@@ -106,7 +105,7 @@ async function loadCates() {
   try {
     const res: any = await getGoodsCateList({ list_rows: 200 })
     const rows = res?.data?.rows || res?.data?.list || res?.data?.data || []
-    cateOptions.value = rows.filter((c: any, i: number) => rows.findIndex((x: any) => x.name === c.name) === i)
+    cateOptions.value = rows.sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
   } catch {}
 }
 
@@ -123,7 +122,7 @@ async function loadData() {
   try {
     const params: any = { page: page.value, list_rows: pageSize.value, keyword: keyword.value }
     if (selectedCateId.value) params.cate_id = selectedCateId.value
-    const res: any = await http.get('/shop.ShopGoods/index', { params })
+    const res: any = await http.get('/goods/ShopGoods/index', { params })
     const data = res?.data || {}
     let rows = data.rows || data.list || []
     // 若有子分类则前端也做子分类过滤

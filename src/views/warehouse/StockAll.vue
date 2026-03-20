@@ -658,14 +658,25 @@ async function loadStockMap(warehouseId = 0) {
     if (warehouseId) params.warehouse_id = warehouseId
     const res: any = await getStockList(params)
     const rows: any[] = res?.data?.rows ?? res?.rows ?? []
+    // 用 goods_sn 做桥梁：先建 sn->qty 和 sn->price 的 map
+    const snQtyMap: Record<string, number> = {}
+    const snPriceMap: Record<string, number> = {}
+    for (const r of rows) {
+      const sn = r.goods_sn
+      if (!sn) continue
+      snQtyMap[sn] = (snQtyMap[sn] || 0) + Number(r.qty ?? r.stock_num ?? 0)
+      if (!snPriceMap[sn] && Number(r.avg_price ?? r.cost_price ?? 0) > 0) {
+        snPriceMap[sn] = Number(r.avg_price ?? r.cost_price ?? 0)
+      }
+    }
+    // 再用商品表的 goods_sn 匹配商品 id
     const qtyMap: Record<number, number> = {}
     const priceMap: Record<number, number> = {}
-    for (const r of rows) {
-      const gid = Number(r.goods_id)
-      if (!gid) continue
-      qtyMap[gid] = (qtyMap[gid] || 0) + Number(r.qty ?? r.stock_num ?? 0)
-      if (!priceMap[gid] && Number(r.avg_price ?? r.cost_price ?? 0) > 0) {
-        priceMap[gid] = Number(r.avg_price ?? r.cost_price ?? 0)
+    for (const g of allGoods.value) {
+      const sn = g.goods_sn
+      if (sn && snQtyMap[sn] !== undefined) {
+        qtyMap[g.id] = snQtyMap[sn]
+        if (snPriceMap[sn]) priceMap[g.id] = snPriceMap[sn]
       }
     }
     stockQtyMap.value = qtyMap

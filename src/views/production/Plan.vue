@@ -31,10 +31,28 @@
           :data="tableData" v-loading="loading" border stripe size="small"
           style="width:100%;margin-top:8px"
           @selection-change="selection = $event"
+          row-key="id"
         >
           <el-table-column type="selection" width="40" />
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div style="padding:8px 24px 12px">
+                <el-table :data="parseItems(row.goods_info)" border size="small" style="width:100%">
+                  <el-table-column prop="goods_sn" label="编码" width="120" />
+                  <el-table-column prop="goods_name" label="商品名称" min-width="160" />
+                  <el-table-column prop="spec" label="规格" width="120">
+                    <template #default="{ row: r }">{{ r.spec || '—' }}</template>
+                  </el-table-column>
+                  <el-table-column prop="unit_name" label="单位" width="65" align="center" />
+                  <el-table-column prop="num" label="计划数量" width="90" align="right" />
+                </el-table>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column prop="order_sn" label="生产单号" width="150" />
+          <el-table-column label="生产单号" width="150">
+            <template #default="{ row }">{{ row.order_sn || `SC${(row.plan_date||row.created_at||'').slice(0,10).replace(/-/g,'')}${String(row.id).padStart(3,'0')}` }}</template>
+          </el-table-column>
           <el-table-column label="销售编号" width="130">
             <template #default="{ row }">{{ row.sale_order_sn || '—' }}</template>
           </el-table-column>
@@ -56,13 +74,6 @@
           </el-table-column>
           <el-table-column label="生产数量" width="90" align="right">
             <template #default="{ row }">{{ row.plan_num || 0 }}</template>
-          </el-table-column>
-          <el-table-column label="商品明细" width="80" align="center">
-            <template #default="{ row }">
-              <el-button link type="primary" size="small" @click="showItems(row)">
-                <el-icon><ArrowRight /></el-icon>
-              </el-button>
-            </template>
           </el-table-column>
           <el-table-column label="入库数量" width="90" align="right">
             <template #default="{ row }">{{ row.inhouse_num || 0 }}</template>
@@ -91,10 +102,12 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="160" fixed="right" align="center">
+          <el-table-column label="操作" width="260" fixed="right" align="center">
             <template #default="{ row }">
               <el-button link type="primary" size="small" @click="openView(row)">查看</el-button>
               <el-button link type="success" size="small" @click="openEdit(row)">编辑</el-button>
+              <el-button link type="warning" size="small" @click="goPickMaterial(row)">领料</el-button>
+              <el-button link size="small" style="color:#9333ea" @click="goInhouse(row)">入库</el-button>
               <el-button link type="danger" size="small" @click="handleDel(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -119,15 +132,6 @@
         </div>
       </el-card>
 
-      <!-- 商品明细弹框 -->
-      <el-dialog v-model="itemsVisible" title="商品明细" width="600px">
-        <el-table :data="itemsRow ? parseItems(itemsRow.goods_info) : []" border size="small">
-          <el-table-column prop="goods_sn" label="编码" width="110" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-          <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-          <el-table-column prop="num" label="计划数量" width="90" align="right" />
-        </el-table>
-      </el-dialog>
     </div>
 
     <!-- ── 新增/编辑全页面 ── -->
@@ -242,6 +246,41 @@
             </el-col>
           </el-row>
         </el-form>
+
+        <!-- BOM 物料需求 -->
+        <div class="goods-section" v-if="fd.items.length">
+          <div class="goods-header">
+            <span class="goods-title">BOM 物料需求</span>
+            <el-button size="small" type="warning" @click="goPickMaterial(fd)" v-if="fd.id">去领料</el-button>
+          </div>
+          <div v-if="planBomLoading" style="text-align:center;padding:24px;color:#999">加载中...</div>
+          <el-table v-else :data="planBomList" border size="small" style="width:100%">
+            <el-table-column prop="material_name" label="物料名称" min-width="140" />
+            <el-table-column prop="material_sn" label="物料编码" width="110" />
+            <el-table-column prop="_spec" label="规格" width="120">
+              <template #default="{ row }">{{ row._spec || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="单位用量" width="90" align="center">
+              <template #default="{ row }">{{ row.num }} {{ row.unit_name }}</template>
+            </el-table-column>
+            <el-table-column label="需求数量" width="100" align="center">
+              <template #default="{ row }">
+                <b style="color:#0071e3">{{ row._need }}</b> {{ row.unit_name }}
+              </template>
+            </el-table-column>
+            <el-table-column label="库存" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row._stock >= row._need ? 'success' : 'danger'" size="small" effect="plain">{{ row._stock }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="缺口" width="90" align="center">
+              <template #default="{ row }">
+                <span v-if="row._need > row._stock" style="color:#f56c6c;font-weight:600">{{ (row._need - row._stock).toFixed(2).replace(/\.?0+$/,'') }}</span>
+                <span v-else style="color:#16a34a">充足</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </el-card>
     </div>
 
@@ -311,11 +350,14 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
 import http from '@/api/http'
 import { getBomByGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
+
+const router = useRouter()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const loading = ref(false)
@@ -361,6 +403,14 @@ function resetSearch() {
   loadData()
 }
 
+// ── 跳转领料/入库 ─────────────────────────────────────────────────────────────
+function goPickMaterial(row: any) {
+  router.push({ name: 'ProductionMaterial', query: { plan_id: row.id, plan_name: row.order_sn, goods_info: row.goods_info } })
+}
+function goInhouse(row: any) {
+  router.push({ name: 'ProductionInhouse', query: { plan_id: row.id, plan_name: row.order_sn, goods_info: row.goods_info } })
+}
+
 async function handleDel(id: number) {
   await ElMessageBox.confirm('确定删除该生产计划？', '提示', { type: 'warning' })
   await http.post('/production/plan/del', { id })
@@ -379,7 +429,6 @@ function handleExport() { ElMessage.info('导出功能开发中') }
 
 const itemsVisible = ref(false)
 const itemsRow = ref<any>(null)
-function showItems(row: any) { itemsRow.value = row; itemsVisible.value = true }
 
 function parseItems(info: any): any[] {
   try { return JSON.parse(info || '[]') } catch { return [] }
@@ -404,10 +453,17 @@ function resetFd() {
   })
 }
 
-function openCreate() { resetFd(); isView.value = false; showForm.value = true }
+function genOrderSn() {
+  const d = new Date()
+  const ymd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`
+  const rand = String(Math.floor(Math.random()*1000)).padStart(3,'0')
+  return `SC${ymd}${rand}`
+}
+function openCreate() { resetFd(); fd.order_sn = genOrderSn(); isView.value = false; showForm.value = true }
 
 function openEdit(row: any) {
   Object.assign(fd, { ...row, items: parseItems(row.goods_info) })
+  if (!fd.order_sn) fd.order_sn = `SC${row.id}`
   isView.value = false
   showForm.value = true
 }
@@ -541,6 +597,43 @@ function bomSummary({ columns, data }: any) {
     return ''
   })
 }
+
+// ── 详情页 BOM 物料汇总 ───────────────────────────────────────────────────────
+const planBomList = ref<any[]>([])
+const planBomLoading = ref(false)
+
+async function loadPlanBom() {
+  if (!fd.items.length) return
+  planBomLoading.value = true
+  try {
+    const stockRes = await http.get('/stock/StockAll/index', { params: { list_rows: 2000 } })
+    const stockRows: any[] = stockRes.data?.rows ?? []
+    const stockMap: Record<number, number> = {}
+    for (const s of stockRows) {
+      const gid = s.goods_id
+      if (gid) stockMap[gid] = (stockMap[gid] || 0) + Number(s.stock_num || s.qty || 0)
+    }
+    // 读取本地存储的规格
+    let bomSpecsLocal: Record<number, string> = {}
+    try { bomSpecsLocal = JSON.parse(localStorage.getItem('erp_bom_specs') || '{}') } catch { /* ignore */ }
+    const result: any[] = []
+    for (const item of fd.items) {
+      const bomRes = await getBomByGoods(item.goods_id)
+      const bomRows: any[] = bomRes.data?.rows ?? []
+      for (const r of bomRows) {
+        if (!r.material_name) continue
+        const matGoodsId = r.material_id || r.goods_id
+        const need = Number((Number(r.num) * Number(item.num || 0)).toFixed(4))
+        result.push({ ...r, goods_name: item.goods_name, _need: need, _stock: stockMap[matGoodsId] || 0, _spec: bomSpecsLocal[r.id] || '' })
+      }
+    }
+    planBomList.value = result
+  } finally {
+    planBomLoading.value = false
+  }
+}
+
+watch(() => fd.items, (v) => { if (v.length) loadPlanBom() }, { deep: true })
 </script>
 
 <style scoped>

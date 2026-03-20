@@ -247,6 +247,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getProductionPlanList, getProductionInhouseList, createProductionPlan, auditProductionPlan, createProductionInhouse, auditProductionInhouse, createMaterial, auditMaterial } from '@/api/production'
 import { getGoodsList, getBomByGoods } from '@/api/goods'
 import http from '@/api/http'
+import { applyMaterialStockDelta } from '@/utils/materialStock'
 
 // ── 统计数据 ──────────────────────────────────────────────────────
 const statCards = ref([
@@ -491,23 +492,28 @@ async function doGenerate() {
           row_total: 0,
           remark: '',
         }))
-        const matData = {
-          out_date: today,
+        const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
+        const matData: any = {
           warehouse_id: genWarehouse.value,
-          warehouse_name: warehouseList.value.find((w: any) => w.id === genWarehouse.value)?.name || '',
+          warehouse_name: warehouseName,
           plan_id: planId,
-          plan_name: planRes.data?.order_sn || '',
           remark: `一键生成 - ${item.goods_name}`,
-          goods_info: JSON.stringify(matItems),
-          total_price: 0,
+          goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))),
         }
         const matRes = await createMaterial(matData)
         const matId = matRes.data?.id
         console.log('[BOM] 领料单 matRes:', matRes, 'matId:', matId)
-        if (matId) await auditMaterial(matId, 1)
+        if (matId) {
+          await auditMaterial(matId, 1)
+          await applyMaterialStockDelta(matItems, {
+            direction: 'deduct',
+            defaultWarehouseId: Number(genWarehouse.value || 0),
+            defaultWarehouseName: warehouseName,
+          })
+        }
         genLogs.value.push({ text: `  ✓ 领料单已创建并审核（共 ${matItems.length} 种原料）`, type: 'success' })
-      } catch (e) {
-        genLogs.value.push({ text: `  ⚠ 领料失败（可继续）`, type: 'error' })
+      } catch (e: any) {
+        genLogs.value.push({ text: `  ⚠ 领料失败：${e?.message || ''}（可继续）`, type: 'error' })
       }
 
       // 4. 创建生产入库单（成品入库）
@@ -515,10 +521,8 @@ async function doGenerate() {
         plan_id: planId,
         in_date: today,
         warehouse_id: genWarehouse.value,
-        warehouse_name: warehouseList.value.find((w: any) => w.id === genWarehouse.value)?.name || '',
-        back_flush: 1,
         remark: genRemark.value || '一键生成BOM入库',
-        items: [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }],
+        goods_info: JSON.stringify([{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }]),
       }
       const inhouseRes = await createProductionInhouse(inhouseData)
       const inhouseId = inhouseRes.data?.id
@@ -533,6 +537,7 @@ async function doGenerate() {
 
     } catch (e: any) {
       genLogs.value.push({ text: `  ✗ 失败：${e?.message || '接口错误'}`, type: 'error' })
+      console.error('[BOM] error:', e)
     }
   }
 

@@ -355,6 +355,7 @@ import AiToolCallCard from './ai/AiToolCallCard.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
 import { getGoodsList } from '@/api/goods'
 import { createProductionPlan, auditProductionPlan, createProductionInhouse, auditProductionInhouse, createMaterial, auditMaterial } from '@/api/production'
+import { applyMaterialStockDelta } from '@/utils/materialStock'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -702,10 +703,18 @@ async function doGenerate() {
       genLogs.value.push({ text: `  ✓ 生产计划已创建（ID: ${planId}）`, type: 'success' })
       if (planId) { await auditProductionPlan(planId, 1); genLogs.value.push({ text: `  ✓ 生产计划已审核通过`, type: 'success' }) }
       try {
+        const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
         const matItems = item.materials.map((mat: any) => ({ goods_id: mat._matGoodsId, goods_name: mat.material_name || mat.goods_name, goods_sn: mat.material_sn || mat.goods_sn || '', unit_name: mat.unit_name || '', num: Number(mat.num) * item.qty, out_price: 0, row_total: 0, remark: '' }))
-        const matRes = await createMaterial({ out_date: today, warehouse_id: genWarehouse.value, plan_id: planId, plan_name: planRes.data?.order_sn || '', remark: `一键生成 - ${item.goods_name}`, goods_info: JSON.stringify(matItems), total_price: 0 })
+        const matRes = await createMaterial({ pick_date: today, warehouse_id: genWarehouse.value, warehouse_name: warehouseName, plan_id: planId, plan_name: planRes.data?.order_sn || '', remark: `一键生成 - ${item.goods_name}`, goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))), total_price: 0 })
         const matId = matRes.data?.id
-        if (matId) await auditMaterial(matId, 1)
+        if (matId) {
+          await auditMaterial(matId, 1)
+          await applyMaterialStockDelta(matItems, {
+            direction: 'deduct',
+            defaultWarehouseId: Number(genWarehouse.value || 0),
+            defaultWarehouseName: warehouseName,
+          })
+        }
         genLogs.value.push({ text: `  ✓ 领料单已创建并审核（共 ${matItems.length} 种原料）`, type: 'success' })
       } catch { genLogs.value.push({ text: `  ⚠ 领料失败（可继续）`, type: 'error' }) }
       const inhouseRes = await createProductionInhouse({ plan_id: planId, in_date: today, warehouse_id: genWarehouse.value, back_flush: 1, remark: genRemark.value || '一键生成BOM入库', items: [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }] })

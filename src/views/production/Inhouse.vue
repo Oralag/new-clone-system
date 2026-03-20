@@ -18,11 +18,11 @@
           </template>
           <el-table-column prop="order_sn" label="入库单号" min-width="150" />
           <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-          <el-table-column prop="num" label="入库数量" width="100" align="right" />
+          <el-table-column prop="inhouse_qty" label="入库数量" width="100" align="right" />
           <el-table-column prop="unit_name" label="单位" width="70" align="center" />
           <el-table-column prop="warehouse_name" label="入库仓库" min-width="110" />
-          <el-table-column prop="in_date" label="入库日期" width="110">
-            <template #default="{ row }">{{ (row.in_date || row.created_at || '').slice(0,10) }}</template>
+          <el-table-column prop="inhouse_date" label="入库日期" width="110">
+            <template #default="{ row }">{{ (row.inhouse_date || row.create_time || '').slice(0,10) }}</template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
@@ -240,9 +240,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProductionInhouseList, createProductionInhouse, updateProductionInhouse, deleteProductionInhouse, auditProductionInhouse } from '@/api/production'
 import { getProductionPlanList } from '@/api/production'
@@ -250,6 +251,7 @@ import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 
+const route = useRoute()
 const permStore = usePermissionStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({})
@@ -269,6 +271,7 @@ function defaultFd() {
     in_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
     warehouse_id: null as any,
     warehouse_name: '',
+    admin_name: '',
     back_flush: false,
     remark: '',
     status: 0,
@@ -433,21 +436,29 @@ function applyBatch() {
 
 // ── 保存 ─────────────────────────────────────────────────────────────────────
 async function handleSave() {
-  if (!fd.plan_id && !fd.items.length) {
+  if (!fd.plan_id) {
     ElMessage.warning('请选择生产计划单')
+    return
+  }
+  if (!fd.items.length) {
+    ElMessage.warning('请添加商品')
     return
   }
   saving.value = true
   try {
     const payload: any = {
       plan_id: fd.plan_id,
-      order_sn: fd.order_sn || undefined,
-      in_date: fd.in_date,
-      warehouse_id: fd.warehouse_id,
-      warehouse_name: fd.warehouse_name,
-      back_flush: fd.back_flush ? 1 : 0,
-      remark: fd.remark,
-      items: fd.items,
+      plan_no: fd.plan_name,
+      goods_id: fd.items[0]?.goods_id || 0,
+      goods_name: fd.items.map((i: any) => i.goods_name).join('、').slice(0, 100),
+      inhouse_qty: fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0), 0),
+      inhouse_date: fd.in_date,
+      warehouse_id: fd.warehouse_id || 0,
+      warehouse_name: fd.warehouse_name || '',
+      admin_name: fd.admin_name || '',
+      remark: fd.remark || '',
+      order_sn: fd.order_sn || '',
+      goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) {
       payload.id = fd.id
@@ -488,6 +499,36 @@ function resetSearch() {
   Object.keys(searchForm).forEach(k => delete searchForm[k])
   tableRef.value?.loadData()
 }
+
+onMounted(async () => {
+  const { plan_id, plan_name, goods_info } = route.query
+  if (plan_id) {
+    await loadWarehouses()
+    Object.assign(fd, defaultFd())
+    fd.plan_id = Number(plan_id)
+    fd.plan_name = String(plan_name || '')
+    fd.items = []
+    // 把计划商品作为入库明细
+    try {
+      const planItems: any[] = JSON.parse(String(goods_info || '[]'))
+      for (const gi of planItems) {
+        fd.items.push({
+          goods_id: gi.goods_id,
+          goods_name: gi.goods_name,
+          goods_sn: gi.goods_sn || '',
+          unit_name: gi.unit_name || '',
+          num: Number(gi.num || 0),
+          material_price: 0,
+          process_price: 0,
+          in_price: 0,
+          total_cost: 0,
+        })
+      }
+    } catch {}
+    isView.value = false
+    showForm.value = true
+  }
+})
 </script>
 
 <style scoped>
