@@ -195,6 +195,11 @@
             <el-table-column prop="goods_name" label="成品" min-width="120" />
             <el-table-column prop="qty" label="生产数量" width="90" align="right" />
             <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+            <el-table-column label="加工单价" width="110" align="right">
+              <template #default="{ row }">
+                {{ Number(row.process_price || 0).toFixed(2) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="materials" label="消耗原料" min-width="200">
               <template #default="{ row }">
                 <div v-for="m in row.materials" :key="m._matGoodsId || m.material_id" class="mat-row">
@@ -287,6 +292,10 @@ const genWarehouse = ref<number | null>(null)
 const genDate = ref('')
 const genRemark = ref('')
 const genLogs = ref<{ text: string; type: 'info' | 'success' | 'error' }[]>([])
+
+function loadBomProcessPrices(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem('erp_bom_process_prices') || '{}') } catch { return {} }
+}
 
 const genPreviewList = computed(() => {
   return [...selectedGenGoods.value].map(gid => {
@@ -383,6 +392,7 @@ async function loadBomProducts() {
     const result: any[] = []
     for (const [gidStr, mats] of Object.entries(bomByGoods)) {
       const gid = Number(gidStr)
+      const processPriceMap = loadBomProcessPrices()
       // BOM记录自带goods_name，优先用它；fallback到allGoods
       const firstMat = mats[0]
       const goods = allGoods.value.find((g: any) => g.id === gid || g.goods_id === gid)
@@ -404,6 +414,7 @@ async function loadBomProducts() {
         goods_name: goodsName,
         goods_sn: goodsSn,
         unit_name: unitName,
+        process_price: Number(processPriceMap[gid] || 0),
         canMake: canMake === Infinity ? 0 : canMake,
         materials: matsWithStock,
       })
@@ -486,7 +497,15 @@ async function doGenerate() {
     genLogs.value.push({ text: `开始生成：${item.goods_name} × ${item.qty}`, type: 'info' })
     try {
       // 1. 创建生产计划
-      const planItems = [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }]
+      const planItems = [{
+        goods_id: item.goods_id,
+        goods_name: item.goods_name,
+        goods_sn: item.goods_sn || '',
+        num: item.qty,
+        plan_num: item.qty,
+        unit_name: item.unit_name,
+        process_price: Number(item.process_price || 0),
+      }]
       const planData = {
         plan_date: today,
         finish_date: today,
@@ -523,10 +542,9 @@ async function doGenerate() {
         const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
         const matData: any = {
           pick_date: today,
-          warehouse_id: genWarehouse.value,
-          warehouse_name: warehouseName,
           production_plan_id: planId,
           plan_name: planNo,
+          goods_name: matItems.map((mat: any) => mat.goods_name).join('、').slice(0, 100),
           remark: `一键生成 - ${item.goods_name}`,
           goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))),
         }
@@ -555,7 +573,15 @@ async function doGenerate() {
         warehouse_id: Number(genWarehouse.value || 0),
         warehouse_name: warehouseName,
         remark: genRemark.value || '一键生成BOM入库',
-        items: [{ goods_id: item.goods_id, goods_name: item.goods_name, goods_sn: item.goods_sn || '', num: item.qty, unit_name: item.unit_name }],
+        items: [{
+          goods_id: item.goods_id,
+          goods_name: item.goods_name,
+          goods_sn: item.goods_sn || '',
+          num: item.qty,
+          unit_name: item.unit_name,
+          process_price: Number(item.process_price || 0),
+          in_price: Number(item.process_price || 0),
+        }],
       })
       const inhouseId = inhouseRes.rows?.[0]?.id
       console.log('[BOM] 入库单 inhouseRes:', inhouseRes, 'inhouseId:', inhouseId)

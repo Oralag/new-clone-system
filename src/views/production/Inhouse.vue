@@ -773,8 +773,6 @@ async function handleSave() {
             production_plan_id: fd.plan_id || 0,
             plan_name: fd.plan_name || '',
             admin_name: fd.admin_name || '',
-            warehouse_id: fd.warehouse_id,
-            warehouse_name: fd.warehouse_name || '',
             remark: `倒冲领料 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
             goods_info: JSON.stringify(matItems),
             goods_name: matItems.map(i => i.goods_name).join('、').slice(0, 100),

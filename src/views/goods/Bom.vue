@@ -134,6 +134,17 @@
             <span class="cost-divider">|</span>
             <span class="cost-label">总成本：</span>
             <span class="cost-value">¥{{ totalCost.toFixed(4).replace(/\.?0+$/, '') || '0' }}</span>
+            <span class="cost-divider">|</span>
+            <span class="cost-label">加工单价：</span>
+            <el-input-number
+              v-model="currentProcessPrice"
+              :min="0"
+              :precision="4"
+              :controls="false"
+              size="small"
+              style="width:120px"
+              placeholder="可不填"
+            />
           </div>
         </template>
         <div v-else class="no-selection">
@@ -473,6 +484,31 @@ function saveRowSpec(row: any) {
   bomSpecs.value = map
   saveBomSpecs(map)
 }
+
+const BOM_PROCESS_KEY = 'erp_bom_process_prices'  // { goodsId: processPrice }
+function loadBomProcessPrices(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem(BOM_PROCESS_KEY) || '{}') } catch { return {} }
+}
+function saveBomProcessPrices(map: Record<number, number>) {
+  localStorage.setItem(BOM_PROCESS_KEY, JSON.stringify(map))
+}
+const bomProcessPrices = ref<Record<number, number>>(loadBomProcessPrices())
+
+const currentProcessPrice = computed({
+  get() {
+    const goodsId = Number(selectedGoods.value?.goods_id || 0)
+    return goodsId ? Number(bomProcessPrices.value[goodsId] || 0) : 0
+  },
+  set(value: number) {
+    const goodsId = Number(selectedGoods.value?.goods_id || 0)
+    if (!goodsId) return
+    const map = { ...bomProcessPrices.value }
+    if (Number(value || 0) > 0) map[goodsId] = Number(value || 0)
+    else delete map[goodsId]
+    bomProcessPrices.value = map
+    saveBomProcessPrices(map)
+  }
+})
 
 async function saveRowField(row: any) {
   if (!row.id || !selectedGoods.value) return
