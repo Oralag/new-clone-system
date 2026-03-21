@@ -771,7 +771,6 @@ async function handleSave() {
           const matRes = await createMaterial({
             pick_date: fd.in_date || new Date().toISOString().slice(0, 10),
             production_plan_id: fd.plan_id || 0,
-            plan_name: fd.plan_name || '',
             admin_name: fd.admin_name || '',
             remark: `倒冲领料 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
             goods_info: JSON.stringify(matItems),

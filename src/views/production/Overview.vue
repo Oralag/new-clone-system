@@ -174,7 +174,7 @@
             <el-icon><SetUp /></el-icon> 配置生产参数
           </div>
           <el-row :gutter="16">
-            <el-col :span="12">
+            <el-col :span="8">
               <div class="field-row">
                 <span class="field-label required">成品入库仓库</span>
                 <el-select v-model="genWarehouse" placeholder="选择仓库" style="flex:1">
@@ -182,7 +182,15 @@
                 </el-select>
               </div>
             </el-col>
-            <el-col :span="12">
+            <el-col :span="8">
+              <div class="field-row">
+                <span class="field-label required">原料领料仓库</span>
+                <el-select v-model="genMaterialWarehouse" placeholder="选择仓库" style="flex:1">
+                  <el-option v-for="w in warehouseList" :key="`mat-${w.id}`" :label="w.name" :value="w.id" />
+                </el-select>
+              </div>
+            </el-col>
+            <el-col :span="8">
               <div class="field-row">
                 <span class="field-label">计划日期</span>
                 <el-date-picker v-model="genDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="flex:1" />
@@ -263,7 +271,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import {
   MagicStick, Refresh, List, Warning, Loading, Finished, GoodsFilled,
   SetUp, Document, CircleCheck, CircleClose, Select
@@ -310,13 +318,10 @@ const selectedGenGoods = ref<Set<number>>(new Set())
 const genQtyMap = ref<Record<number, number>>({})
 const genProcessPriceMap = ref<Record<number, number>>({})
 const genWarehouse = ref<number | null>(null)
+const genMaterialWarehouse = ref<number | null>(null)
 const genDate = ref('')
 const genRemark = ref('')
 const genLogs = ref<{ text: string; type: 'info' | 'success' | 'error' }[]>([])
-
-function loadBomProcessPrices(): Record<number, number> {
-  try { return JSON.parse(localStorage.getItem('erp_bom_process_prices') || '{}') } catch { return {} }
-}
 
 const genPreviewList = computed(() => {
   return [...selectedGenGoods.value].map(gid => {
@@ -417,7 +422,6 @@ async function loadBomProducts() {
     const result: any[] = []
     for (const [gidStr, mats] of Object.entries(bomByGoods)) {
       const gid = Number(gidStr)
-      const processPriceMap = loadBomProcessPrices()
       // BOM记录自带goods_name，优先用它；fallback到allGoods
       const firstMat = mats[0]
       const goods = allGoods.value.find((g: any) => g.id === gid || g.goods_id === gid)
@@ -439,7 +443,7 @@ async function loadBomProducts() {
         goods_name: goodsName,
         goods_sn: goodsSn,
         unit_name: unitName,
-        process_price: Number(processPriceMap[gid] || 0),
+        process_price: 0,
         canMake: canMake === Infinity ? 0 : canMake,
         materials: matsWithStock,
       })
@@ -460,8 +464,15 @@ async function loadWarehouses() {
     if (!genWarehouse.value && warehouseList.value.length) {
       genWarehouse.value = warehouseList.value[0].id
     }
+    if (!genMaterialWarehouse.value && warehouseList.value.length) {
+      genMaterialWarehouse.value = warehouseList.value[0].id
+    }
   } catch {}
 }
+
+watch(genWarehouse, (value) => {
+  if (!genMaterialWarehouse.value) genMaterialWarehouse.value = value || null
+})
 
 // ── 弹窗操作 ─────────────────────────────────────────────────────
 function openGenerateDialog() {
@@ -502,6 +513,7 @@ function toggleGenGoods(g: any) {
 async function doGenerate() {
   if (!selectedGenGoods.value.size) return
   if (!genWarehouse.value) { ElMessage.warning('请选择入库仓库'); return }
+  if (!genMaterialWarehouse.value) { ElMessage.warning('请选择领料仓库'); return }
 
   const items = genPreviewList.value as any[]
 
@@ -567,14 +579,13 @@ async function doGenerate() {
           row_total: 0,
           remark: '',
         }))
-        const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
+        const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genMaterialWarehouse.value))?.name || ''
         const matData: any = {
           pick_date: today,
           production_plan_id: planId,
-          plan_name: planNo,
           goods_name: matItems.map((mat: any) => mat.goods_name).join('、').slice(0, 100),
           remark: `一键生成 - ${item.goods_name}`,
-          goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))),
+          goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genMaterialWarehouse.value, warehouse_name: warehouseName }))),
         }
         const matRes = await createMaterial(matData)
         const matId = getResponseId(matRes)
@@ -583,7 +594,7 @@ async function doGenerate() {
           await auditMaterial(matId, 1)
           await applyMaterialStockDelta(matItems, {
             direction: 'deduct',
-            defaultWarehouseId: Number(genWarehouse.value || 0),
+            defaultWarehouseId: Number(genMaterialWarehouse.value || 0),
             defaultWarehouseName: warehouseName,
           })
         }
