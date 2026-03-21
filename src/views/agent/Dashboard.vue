@@ -3,158 +3,167 @@
 
     <!-- ── 品牌未配置引导卡 ── -->
     <div v-if="!brandStore.isConfigured" class="setup-guide-card">
-      <div class="guide-icon">🏢</div>
-      <div class="guide-body">
-        <div class="guide-title">欢迎来到数字游牧传媒</div>
-        <div class="guide-desc">配置品牌信息后，各部门专员将基于品牌宪法开展工作，生产更精准的内容。</div>
+      <div class="guide-icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round">
+          <rect x="4" y="4" width="24" height="24" rx="6"/>
+          <path d="M16 11v8M16 22v1"/>
+        </svg>
       </div>
-      <button class="guide-btn" @click="$router.push('/agent/brand')">立即配置品牌 →</button>
+      <div class="guide-body">
+        <div class="guide-title">先配置品牌信息，让各部门专员了解你的公司</div>
+        <div class="guide-desc">品牌信息是AI专员工作的基础——配置后，所有内容生产将基于你的品牌调性进行。</div>
+      </div>
+      <button class="guide-btn" @click="$router.push('/agent/brand')">立即配置 →</button>
     </div>
 
-    <!-- ── 公司Banner ── -->
+    <!-- ── 顶部横幅 ── -->
     <section class="company-banner">
       <div class="banner-left">
-        <div class="company-tag">数字游牧传媒</div>
-        <h1 class="company-title" v-if="brandStore.isConfigured">
-          {{ brandStore.brand.name }}
-          <span class="company-industry">· {{ brandStore.brand.subIndustry || brandStore.brand.industry }}</span>
+        <div class="banner-meta">
+          <!-- 公司名从 brandStore 读取，未配置显示"我的公司" -->
+          <span class="banner-company">{{ brandStore.isConfigured ? brandStore.brand.name : '我的公司' }}</span>
+          <span v-if="brandStore.isConfigured && (brandStore.brand.subIndustry || brandStore.brand.industry)" class="banner-industry">
+            · {{ brandStore.brand.subIndustry || brandStore.brand.industry }}
+          </span>
+        </div>
+        <h1 class="banner-title">
+          {{ brandStore.isConfigured ? '智能广告部门' : '欢迎使用智能广告部门' }}
         </h1>
-        <h1 class="company-title placeholder" v-else>未配置品牌信息</h1>
-        <div class="banner-stats">
-          <div class="bstat">
-            <span class="bstat-num">{{ totalStaff }}</span>
-            <span class="bstat-label">名专员在岗</span>
-          </div>
-          <div class="bstat-sep">·</div>
-          <div class="bstat">
-            <span class="bstat-num">{{ departmentCount }}</span>
-            <span class="bstat-label">个部门</span>
-          </div>
-          <div class="bstat-sep">·</div>
-          <div class="bstat">
-            <span class="bstat-num ai-online">AI 在线</span>
-          </div>
+        <div class="banner-sub-row">
+          <span class="banner-date">{{ todayLabel }}</span>
+          <span class="banner-sep">·</span>
+          <span class="ai-online-badge">
+            <span class="ai-online-dot"></span>AI 就绪
+          </span>
         </div>
       </div>
-      <div class="banner-actions">
-        <button class="banner-btn primary" @click="$router.push('/agent/meeting')">
-          <span class="btn-icon">💬</span> 召开会议
+      <div class="banner-quick-actions">
+        <button class="bqa-btn primary" @click="$router.push('/agent/meeting')">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <rect x="1" y="2" width="12" height="8" rx="2"/>
+            <path d="M4.5 13h5M7 10v3"/>
+          </svg>
+          召开会议
         </button>
-        <button class="banner-btn" @click="$router.push('/agent/trending')">
-          <span class="btn-icon">📈</span> 查看热搜
+        <button class="bqa-btn" @click="$router.push('/agent/trending')">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M1 10L4.5 6.5L7.5 9.5L13 3"/>
+            <path d="M10 3h3v3"/>
+          </svg>
+          查看热搜
         </button>
-        <button class="banner-btn" @click="$router.push('/agent/publish')">
-          <span class="btn-icon">🚀</span> 发布管理
+        <button class="bqa-btn" @click="$router.push('/agent/publish')">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M7 1v8M4.5 3.5L7 1l2.5 2.5"/>
+            <path d="M1.5 10v2.5h11V10"/>
+          </svg>
+          发布管理
         </button>
       </div>
     </section>
 
-    <!-- ── Captain 指挥台 ── -->
-    <section class="command-section">
-      <div class="command-header">
-        <div class="command-title-group">
-          <div class="captain-badge">🎯 董事长办公室</div>
-          <h2 class="command-title">Captain 总指挥</h2>
-          <p class="command-sub">输入指令，Captain 将协调各部门专员完成任务</p>
+    <!-- ── 中部：Captain 指挥台 + 今日数据 ── -->
+    <div class="mid-grid">
+      <!-- 左侧：Captain 指挥台 -->
+      <section class="command-section">
+        <div class="command-header">
+          <div class="command-title-group">
+            <span class="captain-label">🎯 Captain 总指挥</span>
+            <p class="command-desc">输入指令，Captain 将协调各部门完成任务</p>
+          </div>
+          <div class="command-chips">
+            <button v-for="p in quickPrompts" :key="p" class="chip-btn" @click="fillCaptain(p)">{{ p }}</button>
+          </div>
         </div>
-        <div class="command-chips">
-          <button
-            v-for="p in quickPrompts"
-            :key="p"
-            class="chip-btn"
-            @click="fillCaptain(p)"
-          >{{ p }}</button>
-        </div>
-      </div>
-      <CaptainBar />
-    </section>
+        <CaptainBar />
+      </section>
 
-    <!-- ── 部门卡片 ── -->
+      <!-- 右侧：今日数据小卡片 -->
+      <aside class="stats-aside">
+        <div class="stats-aside-title">今日数据</div>
+        <div class="stats-cards">
+          <div v-for="s in stats" :key="s.label" class="stat-card">
+            <div class="stat-card-icon">
+              <!-- 细线条SVG图标 -->
+              <svg v-if="s.type==='trending'" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <path d="M1 13L5.5 8.5L9 12L16 4"/><path d="M13 4h3v3"/>
+              </svg>
+              <svg v-else-if="s.type==='copy'" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <rect x="3" y="5" width="12" height="12" rx="1.5"/><path d="M6 5V4a1 1 0 011-1h7a1 1 0 011 1v9a1 1 0 01-1 1h-1"/>
+                <path d="M6 9h6M6 12h4"/>
+              </svg>
+              <svg v-else-if="s.type==='publish'" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <path d="M9 2v10M6 5l3-3 3 3"/><path d="M2 13v3h14v-3"/>
+              </svg>
+              <svg v-else width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <circle cx="9" cy="9" r="7"/><path d="M9 6v4l2.5 2.5"/>
+              </svg>
+            </div>
+            <div class="stat-card-value">{{ s.value }}</div>
+            <div class="stat-card-label">{{ s.label }}</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ── 5个部门入口卡片（横排） ── -->
     <section class="depts-section">
       <div class="section-hd">
-        <h3 class="section-title">各部门专员</h3>
-        <span class="section-sub">点击卡片进入对应专员工作间</span>
+        <h3 class="section-title">各部门</h3>
+        <span class="section-sub">点击进入对应部门工作间</span>
       </div>
-
-      <div class="depts-grid">
+      <div class="depts-row">
         <div
           v-for="dept in departments"
           :key="dept.id"
           class="dept-card"
+          :style="{ '--dc': dept.color }"
+          @click="$router.push(dept.path)"
         >
-          <!-- 部门头 -->
-          <div class="dept-card-hd">
-            <span class="dept-emoji">{{ dept.emoji }}</span>
-            <div class="dept-info">
-              <div class="dept-name">{{ dept.name }}</div>
-              <div class="dept-desc">{{ dept.desc }}</div>
+          <div class="dept-card-top">
+            <div class="dept-icon-wrap">
+              <!-- 各部门细线条SVG图标 -->
+              <component :is="dept.icon" />
             </div>
+            <span class="dept-status-dot"></span>
           </div>
-          <!-- 专员列表 -->
-          <div class="staff-list">
-            <div
-              v-for="member in dept.members"
-              :key="member.id"
-              class="staff-row"
-              @click="$router.push(member.path)"
-            >
-              <div class="staff-avatar" :style="{ background: member.color + '18', color: member.color }">
-                {{ member.emoji }}
-              </div>
-              <div class="staff-info">
-                <span class="staff-name">{{ member.name }}</span>
-                <span class="staff-role">{{ member.role }}</span>
-              </div>
-              <div class="staff-status">
-                <span class="status-dot"></span>
-                <span class="status-text">在岗</span>
-              </div>
-            </div>
+          <div class="dept-name">{{ dept.name }}</div>
+          <div class="dept-desc">{{ dept.desc }}</div>
+          <div class="dept-enter-btn">
+            进入
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M2 6h8M7 3l3 3-3 3"/>
+            </svg>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ── 底部双栏 ── -->
-    <div class="bottom-grid">
-      <!-- 数据概览 -->
-      <div class="stats-panel">
-        <div class="panel-hd">
-          <span class="panel-title">今日数据</span>
-        </div>
-        <div class="stats-grid">
-          <div v-for="s in stats" :key="s.label" class="stat-item">
-            <div class="stat-icon">{{ s.emoji }}</div>
-            <div class="stat-value">{{ s.value }}</div>
-            <div class="stat-label">{{ s.label }}</div>
-          </div>
+    <!-- ── 底部：今日热搜快览 ── -->
+    <div class="trending-panel">
+      <div class="panel-hd">
+        <span class="panel-title">今日热搜快览</span>
+        <router-link to="/agent/trending" class="panel-link">
+          查看全部
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M2 5.5h7M6 3l3 2.5L6 8"/>
+          </svg>
+        </router-link>
+      </div>
+      <div class="trending-list" v-if="topTrending.length > 0">
+        <div v-for="(item, i) in topTrending" :key="i" class="trending-item">
+          <span class="trending-rank" :class="i < 3 ? 'rank-hot' : ''">{{ i + 1 }}</span>
+          <span class="trending-title">{{ item.title }}</span>
+          <span v-if="item.category" class="trending-cate">{{ item.category }}</span>
+          <span class="trending-heat">{{ item.heat }}</span>
         </div>
       </div>
-
-      <!-- 今日热搜快览 -->
-      <div class="trending-panel">
-        <div class="panel-hd">
-          <span class="panel-title">今日热搜</span>
-          <router-link to="/agent/trending" class="panel-link">查看全部 →</router-link>
-        </div>
-        <div class="trending-list">
-          <div
-            v-for="(item, i) in topTrending"
-            :key="i"
-            class="trending-item"
-          >
-            <span class="trending-rank" :class="i < 3 ? 'rank-hot' : ''">{{ i + 1 }}</span>
-            <span class="trending-title">{{ item.title }}</span>
-            <span class="trending-heat">{{ item.heat }}</span>
-          </div>
-          <div v-if="topTrending.length === 0" class="trending-empty">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.3;margin-bottom:6px">
-              <path d="M3 12h4l3-9 4 18 3-9h4" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <div>暂无热搜数据</div>
-            <router-link to="/agent/trending" class="panel-link" style="margin-top:6px">立即抓取 →</router-link>
-          </div>
-        </div>
+      <div class="trending-empty" v-else>
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="opacity:.25">
+          <path d="M2 14h4l3.5-10 5 20 3.5-10H26"/>
+        </svg>
+        <div>暂无热搜数据</div>
+        <router-link to="/agent/trending" class="panel-link" style="margin-top:6px">去情报部抓取 →</router-link>
       </div>
     </div>
 
@@ -162,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, defineComponent, h } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
 import { useBrandStore } from '@/stores/brand'
 import CaptainBar from '@/components/CaptainBar.vue'
@@ -170,84 +179,101 @@ import CaptainBar from '@/components/CaptainBar.vue'
 const agentStore = useTrendingStore()
 const brandStore = useBrandStore()
 
+// 今日日期
+const todayLabel = computed(() => {
+  const d = new Date()
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+})
+
 // Captain 快捷指令
-const quickPrompts = [
-  '策划新品上线内容方案',
-  '分析热搜生成推广方向',
-  '制定本周多平台内容计划',
-]
+const quickPrompts = ['策划新品上线方案', '分析热搜生成推广方向', '制定本周内容计划']
 
 function fillCaptain(text: string) {
   window.dispatchEvent(new CustomEvent('captain-fill', { detail: text }))
 }
 
-// 部门 + 专员定义（体现公司架构）
-const departments = ref([
+// 今日数据
+const stats = computed(() => [
+  { type: 'trending', value: Object.values(agentStore.trending).reduce((s, a) => s + a.length, 0), label: '已抓热搜' },
+  { type: 'copy',    value: agentStore.copywritingResults.length, label: '已生文案' },
+  { type: 'publish', value: agentStore.history.filter(h => h.status === 'published').length, label: '已发布' },
+])
+
+// 部门图标组件（内联SVG细线条）
+const IconContent  = defineComponent({ render: () => h('svg', { width:18, height:18, viewBox:'0 0 18 18', fill:'none', stroke:'currentColor', 'stroke-width':'1.5', 'stroke-linecap':'round' }, [
+  h('rect', { x:3, y:2, width:12, height:14, rx:2 }),
+  h('path', { d:'M6 6h6M6 9h6M6 12h4' }),
+]) })
+const IconCreative = defineComponent({ render: () => h('svg', { width:18, height:18, viewBox:'0 0 18 18', fill:'none', stroke:'currentColor', 'stroke-width':'1.5', 'stroke-linecap':'round' }, [
+  h('circle', { cx:9, cy:9, r:3.5 }),
+  h('path', { d:'M9 1v3M9 14v3M1 9h3M14 9h3' }),
+]) })
+const IconBrand    = defineComponent({ render: () => h('svg', { width:18, height:18, viewBox:'0 0 18 18', fill:'none', stroke:'currentColor', 'stroke-width':'1.5', 'stroke-linejoin':'round' }, [
+  h('path', { d:'M9 2l2 5h5.5L12 10.5l1.5 5L9 13l-4.5 2.5L6 10.5 1.5 7H7L9 2z' }),
+]) })
+const IconTrending = defineComponent({ render: () => h('svg', { width:18, height:18, viewBox:'0 0 18 18', fill:'none', stroke:'currentColor', 'stroke-width':'1.5', 'stroke-linecap':'round', 'stroke-linejoin':'round' }, [
+  h('path', { d:'M1 13L5.5 8.5L9 12L16 4' }),
+  h('path', { d:'M13 4h3v3' }),
+]) })
+const IconPublish  = defineComponent({ render: () => h('svg', { width:18, height:18, viewBox:'0 0 18 18', fill:'none', stroke:'currentColor', 'stroke-width':'1.5', 'stroke-linecap':'round', 'stroke-linejoin':'round' }, [
+  h('path', { d:'M9 2v10M6 5l3-3 3 3' }),
+  h('path', { d:'M2 13v3h14v-3' }),
+]) })
+
+// 5个部门定义
+const departments = [
   {
     id: 'content',
     name: '内容部',
-    emoji: '✍️',
     desc: '文案·视频全链路内容生产',
-    members: [
-      { id: 'copywriter', name: '林晓文', role: '高级文案策划', emoji: '✍️', color: '#f59e0b', path: '/agent/copywriting' },
-      { id: 'video', name: '张明远', role: '视频内容总监', emoji: '🎬', color: '#ef4444', path: '/agent/video' },
-    ],
+    emoji: '✍️',
+    color: '#f59e0b',
+    path: '/agent/content',
+    icon: IconContent,
   },
   {
     id: 'creative',
     name: '创意部',
-    emoji: '🎨',
     desc: '海报·视觉设计·创意策略',
-    members: [
-      { id: 'poster', name: '陈美琪', role: '首席设计师', emoji: '🎨', color: '#ec4899', path: '/agent/poster' },
-    ],
+    emoji: '🎨',
+    color: '#ec4899',
+    path: '/agent/creative',
+    icon: IconCreative,
   },
   {
     id: 'brand',
     name: '品牌部',
-    emoji: '💎',
     desc: '品牌战略·调性把控·竞品分析',
-    members: [
-      { id: 'brand', name: '王思远', role: '品牌战略总监', emoji: '💎', color: '#8b5cf6', path: '/agent/brand' },
-    ],
+    emoji: '💎',
+    color: '#8b5cf6',
+    path: '/agent/brand',
+    icon: IconBrand,
   },
   {
     id: 'intel',
     name: '情报部',
-    emoji: '📈',
     desc: '热点追踪·趋势分析·选题建议',
-    members: [
-      { id: 'trend', name: '刘浩然', role: '市场情报总监', emoji: '📈', color: '#06b6d4', path: '/agent/trending' },
-    ],
+    emoji: '📈',
+    color: '#06b6d4',
+    path: '/agent/trending',
+    icon: IconTrending,
   },
   {
     id: 'publish',
     name: '发布部',
-    emoji: '🚀',
     desc: '多平台排期·发布计划·数据复盘',
-    members: [
-      { id: 'publisher', name: '赵欣然', role: '发布运营总监', emoji: '🚀', color: '#10b981', path: '/agent/publish' },
-    ],
+    emoji: '🚀',
+    color: '#10b981',
+    path: '/agent/publish',
+    icon: IconPublish,
   },
-])
+]
 
-// 统计数量
-const totalStaff = computed(() => departments.value.reduce((s, d) => s + d.members.length, 0))
-const departmentCount = computed(() => departments.value.length)
-
-// 数据统计
-const stats = computed(() => [
-  { emoji: '🔥', value: Object.values(agentStore.trending).reduce((s, a) => s + a.length, 0) || 0, label: '已抓热搜' },
-  { emoji: '✍️', value: agentStore.copywritingResults.length || 0, label: '已生文案' },
-  { emoji: '🎬', value: agentStore.videoResults.length || 0, label: '已生视频' },
-  { emoji: '🚀', value: agentStore.history.filter(h => h.status === 'published').length || 0, label: '已发布' },
-])
-
-// 今日热搜快览（取 douyin 前5，无则取 xiaohongshu）
+// 今日热搜快览
 const topTrending = computed(() => {
   const douyin = agentStore.trending.douyin || []
   const xhs = agentStore.trending.xiaohongshu || []
-  return (douyin.length > 0 ? douyin : xhs).slice(0, 5)
+  return (douyin.length > 0 ? douyin : xhs).slice(0, 6)
 })
 </script>
 
@@ -257,6 +283,7 @@ const topTrending = computed(() => {
   flex-direction: column;
   gap: 16px;
   padding-bottom: 40px;
+  max-width: 1200px;
 }
 
 /* ── 品牌配置引导卡 ── */
@@ -265,26 +292,26 @@ const topTrending = computed(() => {
   align-items: center;
   gap: 16px;
   padding: 18px 22px;
-  background: rgba(245,158,11,0.07);
-  border: 1.5px solid rgba(245,158,11,0.25);
+  background: rgba(245,158,11,0.06);
+  border: 1.5px solid rgba(245,158,11,0.22);
   border-radius: 14px;
   animation: fadeUp 0.3s ease both;
 }
-.guide-icon { font-size: 32px; flex-shrink: 0; }
+.guide-icon-wrap { flex-shrink: 0; }
 .guide-body { flex: 1; }
-.guide-title { font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 4px; }
+.guide-title { font-size: 13.5px; font-weight: 700; color: #92400e; margin-bottom: 4px; }
 .guide-desc { font-size: 12px; color: #b45309; line-height: 1.5; }
 .guide-btn {
   padding: 9px 20px;
   background: #f59e0b; color: #fff;
   border: none; border-radius: 10px;
-  font-size: 13px; font-weight: 700;
+  font-size: 13px; font-weight: 700; font-family: inherit;
   cursor: pointer; white-space: nowrap;
   transition: opacity 0.15s;
 }
 .guide-btn:hover { opacity: 0.88; }
 
-/* ── 公司Banner ── */
+/* ── 顶部横幅 ── */
 .company-banner {
   display: flex;
   align-items: center;
@@ -294,98 +321,72 @@ const topTrending = computed(() => {
   background: #ffffff;
   border: 1px solid rgba(0,0,0,0.07);
   border-top: 3px solid #0071e3;
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.05);
   animation: fadeUp 0.25s ease both;
 }
 .banner-left { flex: 1; min-width: 0; }
-.company-tag {
-  display: inline-flex;
-  align-items: center;
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.1em;
-  color: #0071e3; opacity: 0.8;
-  margin-bottom: 6px;
-}
-.company-title {
-  font-size: 22px; font-weight: 800;
-  color: #1d1d1f; letter-spacing: -0.04em;
-  margin: 0 0 10px; line-height: 1.2;
-}
-.company-title.placeholder { color: rgba(29,29,31,0.25); font-style: italic; }
-.company-industry { font-size: 14px; font-weight: 500; color: rgba(29,29,31,0.4); margin-left: 4px; }
-.banner-stats {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.bstat { display: flex; align-items: baseline; gap: 4px; }
-.bstat-num {
-  font-size: 15px; font-weight: 800;
-  color: #1d1d1f; letter-spacing: -0.03em;
-}
-.bstat-num.ai-online {
-  font-size: 11px;
-  background: rgba(52,211,153,0.12);
-  color: #059669;
-  padding: 2px 9px; border-radius: 20px;
-  font-weight: 700;
-}
-.bstat-label { font-size: 11px; color: rgba(29,29,31,0.4); }
-.bstat-sep { color: rgba(29,29,31,0.2); font-size: 12px; }
-.banner-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
-.banner-btn {
-  display: flex; align-items: center; gap: 5px;
+.banner-meta { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.banner-company { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #0071e3; }
+.banner-industry { font-size: 10px; color: rgba(29,29,31,0.4); }
+.banner-title { font-size: 22px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.04em; margin: 0 0 10px; line-height: 1.2; }
+.banner-sub-row { display: flex; align-items: center; gap: 8px; }
+.banner-date { font-size: 12px; color: rgba(29,29,31,0.4); }
+.banner-sep { color: rgba(29,29,31,0.2); }
+.ai-online-badge { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #059669; }
+.ai-online-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: aipulse 2.5s ease-in-out infinite; }
+
+.banner-quick-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.bqa-btn {
+  display: flex; align-items: center; gap: 6px;
   padding: 9px 16px;
   border: 1px solid rgba(0,0,0,0.1);
   border-radius: 10px;
   background: #f5f5f7;
   font-size: 12.5px; font-weight: 600;
   color: rgba(29,29,31,0.7);
-  cursor: pointer; white-space: nowrap;
+  cursor: pointer; white-space: nowrap; font-family: inherit;
   transition: all 0.15s;
 }
-.banner-btn:hover { background: #ebebed; color: #1d1d1f; border-color: rgba(0,0,0,0.15); }
-.banner-btn.primary {
-  background: #0071e3; color: #fff;
-  border-color: transparent;
-}
-.banner-btn.primary:hover { background: #0066cc; }
-.btn-icon { font-size: 13px; }
+.bqa-btn:hover { background: #ebebed; color: #1d1d1f; }
+.bqa-btn.primary { background: #0071e3; color: #fff; border-color: transparent; }
+.bqa-btn.primary:hover { background: #0066cc; }
 
-/* ── Captain 指挥台 ── */
+/* ── 中部网格 ── */
+.mid-grid {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 14px;
+  animation: fadeUp 0.3s 0.05s ease both;
+}
+
+/* Captain 指挥台 */
 .command-section {
   background: #ffffff;
   border: 1px solid rgba(0,0,0,0.07);
   border-left: 3px solid #6366f1;
   border-radius: 14px;
-  padding: 20px 20px 0;
+  padding: 18px 18px 0;
   box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-  animation: fadeUp 0.3s 0.05s ease both;
+  overflow: hidden;
 }
 .command-header {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 14px; margin-bottom: 16px;
+  gap: 12px; margin-bottom: 14px;
 }
-.captain-badge {
-  display: inline-flex; align-items: center;
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: #6366f1;
-  margin-bottom: 5px;
+.captain-label {
+  display: block;
+  font-size: 13px; font-weight: 800; color: #1d1d1f;
+  letter-spacing: -0.02em; margin-bottom: 3px;
 }
-.command-title {
-  font-size: 17px; font-weight: 800; color: #1d1d1f;
-  letter-spacing: -0.03em; margin: 0 0 4px;
-}
-.command-sub { font-size: 12px; color: rgba(29,29,31,0.4); margin: 0; }
-.command-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.command-desc { font-size: 11px; color: rgba(29,29,31,0.4); margin: 0; }
+.command-chips { display: flex; gap: 5px; flex-wrap: wrap; align-items: flex-start; }
 .chip-btn {
   background: #f5f5f7; border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 20px; padding: 5px 12px;
-  font-size: 11.5px; font-weight: 500;
-  color: rgba(29,29,31,0.6);
-  cursor: pointer; white-space: nowrap;
-  transition: all 0.15s; font-family: inherit;
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 11px; font-weight: 500; color: rgba(29,29,31,0.6);
+  cursor: pointer; white-space: nowrap; font-family: inherit;
+  transition: all 0.15s;
 }
 .chip-btn:hover { border-color: #6366f1; color: #6366f1; background: rgba(99,102,241,0.06); }
 .command-section :deep(.captain-bar) {
@@ -395,116 +396,118 @@ const topTrending = computed(() => {
   border-top: 1px solid rgba(0,0,0,0.06) !important;
 }
 
-/* ── 部门卡片区 ── */
+/* 今日数据侧栏 */
+.stats-aside {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.07);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+.stats-aside-title { font-size: 12px; font-weight: 700; color: #1d1d1f; margin-bottom: 12px; letter-spacing: -0.01em; }
+.stats-cards { display: flex; flex-direction: column; gap: 8px; }
+.stat-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px;
+  background: #f5f5f7; border-radius: 10px;
+}
+.stat-card-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(0,113,227,0.08); display: flex; align-items: center; justify-content: center; color: #0071e3; flex-shrink: 0; }
+.stat-card-value { font-size: 22px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.04em; line-height: 1; }
+.stat-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(29,29,31,0.35); }
+
+/* ── 部门入口卡片横排 ── */
 .depts-section {
-  display: flex; flex-direction: column; gap: 12px;
+  display: flex; flex-direction: column; gap: 10px;
   animation: fadeUp 0.3s 0.1s ease both;
 }
 .section-hd { display: flex; align-items: center; gap: 10px; }
-.section-title { font-size: 14px; font-weight: 700; color: #1d1d1f; margin: 0; letter-spacing: -0.02em; }
-.section-sub { font-size: 11px; color: rgba(29,29,31,0.4); font-weight: 500; }
+.section-title { font-size: 13px; font-weight: 700; color: #1d1d1f; margin: 0; }
+.section-sub { font-size: 11px; color: rgba(29,29,31,0.4); }
 
-.depts-grid {
+.depts-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
 }
 
 .dept-card {
   background: #ffffff;
   border: 1px solid rgba(0,0,0,0.06);
+  border-top: 3px solid var(--dc, #0071e3);
   border-radius: 14px;
-  overflow: hidden;
-}
-
-.dept-card-hd {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-.dept-emoji { font-size: 22px; }
-.dept-info { flex: 1; }
-.dept-name { font-size: 13px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.01em; }
-.dept-desc { font-size: 11px; color: rgba(29,29,31,0.4); margin-top: 2px; }
-
-.staff-list { padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 2px; }
-
-.staff-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 8px;
-  border-radius: 10px;
+  padding: 16px 14px 14px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: flex; flex-direction: column; gap: 6px;
 }
-.staff-row:hover { background: #f5f5f7; }
+.dept-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.09); }
 
-.staff-avatar {
-  width: 32px; height: 32px; border-radius: 9px;
+.dept-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.dept-icon-wrap {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: color-mix(in srgb, var(--dc, #0071e3) 10%, white);
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; flex-shrink: 0;
+  color: var(--dc, #0071e3);
 }
-.staff-info { flex: 1; min-width: 0; }
-.staff-name { display: block; font-size: 13px; font-weight: 700; color: #1d1d1f; }
-.staff-role { display: block; font-size: 10.5px; color: rgba(29,29,31,0.4); margin-top: 1px; }
-
-.staff-status {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 11px; color: #16a34a; font-weight: 600;
-  white-space: nowrap;
-}
-.status-dot {
-  width: 5px; height: 5px; border-radius: 50%;
+.dept-status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
   background: #34d399;
   animation: aipulse 2.5s ease-in-out infinite;
 }
-
-/* ── 底部双栏 ── */
-.bottom-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  animation: fadeUp 0.3s 0.15s ease both;
+.dept-name { font-size: 13px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.01em; }
+.dept-desc { font-size: 11px; color: rgba(29,29,31,0.45); line-height: 1.4; flex: 1; }
+.dept-enter-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 700; color: var(--dc, #0071e3);
+  margin-top: 6px;
 }
 
-.stats-panel,
+/* ── 热搜快览 ── */
 .trending-panel {
   background: #ffffff;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.07);
   border-radius: 14px;
   padding: 18px;
+  animation: fadeUp 0.3s 0.15s ease both;
 }
 .panel-hd {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
-.panel-title { font-size: 13px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.01em; }
-.panel-link { font-size: 11.5px; font-weight: 600; color: #0071e3; text-decoration: none; }
+.panel-title { font-size: 13px; font-weight: 700; color: #1d1d1f; }
+.panel-link {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 600; color: #0071e3; text-decoration: none;
+}
 .panel-link:hover { opacity: 0.75; }
 
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.stat-item { padding: 14px 12px; background: #f5f5f7; border-radius: 10px; text-align: center; }
-.stat-icon { font-size: 18px; margin-bottom: 6px; }
-.stat-value { font-size: 26px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.04em; line-height: 1; margin-bottom: 4px; }
-.stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(29,29,31,0.3); }
-
-.trending-list { display: flex; flex-direction: column; }
-.trending-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-.trending-item:last-child { border-bottom: none; }
+.trending-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+.trending-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  transition: background 0.1s;
+}
+.trending-item:hover { background: #f5f5f7; }
 .trending-rank {
   width: 18px; height: 18px; border-radius: 5px;
   background: #f5f5f7;
-  font-size: 11px; font-weight: 700; color: rgba(29,29,31,0.4);
+  font-size: 10.5px; font-weight: 700; color: rgba(29,29,31,0.4);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .rank-hot { background: rgba(239,68,68,0.1); color: #ef4444; }
 .trending-title { flex: 1; font-size: 12.5px; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.trending-heat { font-size: 11px; color: rgba(29,29,31,0.35); white-space: nowrap; flex-shrink: 0; }
+.trending-cate {
+  font-size: 10px; color: rgba(29,29,31,0.35);
+  background: #f5f5f7; padding: 2px 6px; border-radius: 4px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.trending-heat { font-size: 11px; color: rgba(29,29,31,0.3); white-space: nowrap; flex-shrink: 0; }
 .trending-empty {
   display: flex; flex-direction: column; align-items: center;
-  padding: 20px 0; font-size: 12px; color: rgba(29,29,31,0.35); text-align: center;
+  padding: 20px 0; font-size: 12px; color: rgba(29,29,31,0.35); text-align: center; gap: 6px;
 }
 
-/* 入场动画 */
+/* 动画 */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -515,14 +518,18 @@ const topTrending = computed(() => {
 }
 
 /* 响应式 */
+@media (max-width: 1100px) {
+  .depts-row { grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 900px) {
+  .mid-grid { grid-template-columns: 1fr; }
   .company-banner { flex-direction: column; align-items: flex-start; }
-  .banner-actions { width: 100%; }
-  .bottom-grid { grid-template-columns: 1fr; }
-  .depts-grid { grid-template-columns: 1fr; }
+  .banner-quick-actions { width: 100%; }
+  .depts-row { grid-template-columns: repeat(2, 1fr); }
+  .trending-list { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 560px) {
-  .command-header { flex-direction: column; gap: 10px; }
-  .command-chips { flex-wrap: wrap; }
+  .depts-row { grid-template-columns: 1fr 1fr; }
+  .trending-list { grid-template-columns: 1fr; }
 }
 </style>
