@@ -250,6 +250,14 @@ import { getGoodsList, getBomByGoods } from '@/api/goods'
 import http from '@/api/http'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
 
+function getResponseId(res: any) {
+  return Number(res?.data?.id || res?.data?.data?.id || res?.data || 0)
+}
+
+function getResponseOrderSn(res: any) {
+  return String(res?.data?.order_sn || res?.data?.data?.order_sn || '')
+}
+
 // ── 统计数据 ──────────────────────────────────────────────────────
 const statCards = ref([
   { key: 'total', label: '生产计划总数', value: '—', sub: '全部计划', color: '#409eff', bg: '#eff6ff', icon: 'List', path: '/production/plan' },
@@ -489,7 +497,8 @@ async function doGenerate() {
         schedule_num: item.qty,
       }
       const planRes = await createProductionPlan(planData)
-      const planId = planRes.data?.id
+      const planId = getResponseId(planRes)
+      const planNo = getResponseOrderSn(planRes)
       console.log('[BOM] 生产计划 planRes:', planRes)
       genLogs.value.push({ text: `  ✓ 生产计划已创建（ID: ${planId}）`, type: 'success' })
 
@@ -513,14 +522,16 @@ async function doGenerate() {
         }))
         const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
         const matData: any = {
+          pick_date: today,
           warehouse_id: genWarehouse.value,
           warehouse_name: warehouseName,
-          plan_id: planId,
+          production_plan_id: planId,
+          plan_name: planNo,
           remark: `一键生成 - ${item.goods_name}`,
           goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))),
         }
         const matRes = await createMaterial(matData)
-        const matId = matRes.data?.id
+        const matId = getResponseId(matRes)
         console.log('[BOM] 领料单 matRes:', matRes, 'matId:', matId)
         if (matId) {
           await auditMaterial(matId, 1)
@@ -539,7 +550,7 @@ async function doGenerate() {
       const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
       const inhouseRes = await createProductionInhouseAndAutoAudit({
         plan_id: planId,
-        plan_no: planRes.data?.order_sn || '',
+        plan_no: planNo,
         inhouse_date: today,
         warehouse_id: Number(genWarehouse.value || 0),
         warehouse_name: warehouseName,

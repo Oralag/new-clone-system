@@ -484,8 +484,23 @@ const planList = ref<any[]>([])
 
 async function openPlanPicker() {
   try {
-    const res = await getProductionPlanList({ list_rows: 200, status: 1 })
-    planList.value = res.data?.rows ?? []
+    const [res, inhouseRes] = await Promise.all([
+      getProductionPlanList({ list_rows: 200, status: 1 }),
+      getProductionInhouseList({ list_rows: 1000 }),
+    ])
+    const rows = res.data?.rows ?? []
+    const inhouseRows: any[] = inhouseRes.data?.rows ?? []
+    const inhouseMap = new Map<number, number>()
+    for (const row of inhouseRows) {
+      if (Number(row.status) !== 1) continue
+      const planId = Number(row.plan_id || 0)
+      if (!planId) continue
+      inhouseMap.set(planId, (inhouseMap.get(planId) || 0) + Number(row.inhouse_qty || 0))
+    }
+    planList.value = rows.map((row: any) => ({
+      ...row,
+      inhouse_num: Number(inhouseMap.get(Number(row.id || 0)) ?? row.inhouse_num ?? 0),
+    }))
   } catch {}
   planPickerVisible.value = true
 }
@@ -539,6 +554,7 @@ async function onSelectPlan(plan: any) {
 
   // 加载该计划的商品（从 goods_info 解析）
   try {
+    const actualInhouseNum = Number(plan.inhouse_num || 0)
     let items: any[] = []
     try { items = JSON.parse(plan.goods_info || '[]') } catch {}
     if (!items.length && plan.goods_id) {
@@ -549,18 +565,18 @@ async function onSelectPlan(plan: any) {
         unit_name: plan.unit_name || '',
         spec: '',
         plan_num: plan.schedule_num || plan.plan_num || 0,
-        already_in: plan.inhouse_num || 0,
-        num: Math.max(0, (plan.schedule_num || plan.plan_num || 0) - (plan.inhouse_num || 0)),
+        already_in: actualInhouseNum,
+        num: Math.max(0, (plan.schedule_num || plan.plan_num || 0) - actualInhouseNum),
         material_price: 0,
         process_price: 0,
         in_price: 0,
         total_cost: 0,
       }]
     } else {
-      items = items.map(i => ({
+      items = items.map((i, index) => ({
         ...i,
         plan_num: i.plan_num || i.num || 0,
-        already_in: i.already_in || 0,
+        already_in: i.already_in || (items.length === 1 && index === 0 ? actualInhouseNum : 0),
         num: i.num || 0,
         material_price: i.material_price || 0,
         process_price: i.process_price || 0,
@@ -679,6 +695,7 @@ async function handleSave() {
         savedRows.push({
           ...createPayload,
           id: getResponseId(res),
+          order_sn: res?.data?.order_sn || res?.data?.data?.order_sn || fd.order_sn || '',
           goods_sn: item.goods_sn || '',
           unit_name: item.unit_name || '',
           in_price: Number(item.in_price || 0),
@@ -694,7 +711,7 @@ async function handleSave() {
         type_name: '人工成本',
         amount: processTotal,
         apply_date: fd.in_date || new Date().toISOString().slice(0, 10),
-        order_sn: fd.order_sn || '',
+        order_sn: savedRows[0]?.order_sn || fd.order_sn || '',
         remark: `生产入库人工成本 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
       })
     }

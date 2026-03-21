@@ -358,6 +358,14 @@ import { createProductionPlan, auditProductionPlan, createMaterial, auditMateria
 import { applyMaterialStockDelta } from '@/utils/materialStock'
 import { createProductionInhouseAndAutoAudit } from '@/utils/productionInhouse'
 
+function getResponseId(res: any) {
+  return Number(res?.data?.id || res?.data?.data?.id || res?.data || 0)
+}
+
+function getResponseOrderSn(res: any) {
+  return String(res?.data?.order_sn || res?.data?.data?.order_sn || '')
+}
+
 interface Message {
   role: 'user' | 'assistant'
   content: string
@@ -700,14 +708,15 @@ async function doGenerate() {
         goods_info: JSON.stringify([{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }]),
         plan_num: item.qty, schedule_num: item.qty,
       })
-      const planId = planRes.data?.id
+      const planId = getResponseId(planRes)
+      const planNo = getResponseOrderSn(planRes)
       genLogs.value.push({ text: `  ✓ 生产计划已创建（ID: ${planId}）`, type: 'success' })
       if (planId) { await auditProductionPlan(planId, 1); genLogs.value.push({ text: `  ✓ 生产计划已审核通过`, type: 'success' }) }
       try {
         const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
         const matItems = item.materials.map((mat: any) => ({ goods_id: mat._matGoodsId, goods_name: mat.material_name || mat.goods_name, goods_sn: mat.material_sn || mat.goods_sn || '', unit_name: mat.unit_name || '', num: Number(mat.num) * item.qty, out_price: 0, row_total: 0, remark: '' }))
-        const matRes = await createMaterial({ pick_date: today, warehouse_id: genWarehouse.value, warehouse_name: warehouseName, plan_id: planId, plan_name: planRes.data?.order_sn || '', remark: `一键生成 - ${item.goods_name}`, goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))), total_price: 0 })
-        const matId = matRes.data?.id
+        const matRes = await createMaterial({ pick_date: today, warehouse_id: genWarehouse.value, warehouse_name: warehouseName, production_plan_id: planId, plan_name: planNo, remark: `一键生成 - ${item.goods_name}`, goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))), total_price: 0 })
+        const matId = getResponseId(matRes)
         if (matId) {
           await auditMaterial(matId, 1)
           await applyMaterialStockDelta(matItems, {
@@ -721,7 +730,7 @@ async function doGenerate() {
       const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
       const inhouseRes = await createProductionInhouseAndAutoAudit({
         plan_id: planId,
-        plan_no: planRes.data?.order_sn || '',
+        plan_no: planNo,
         inhouse_date: today,
         warehouse_id: Number(genWarehouse.value || 0),
         warehouse_name: warehouseName,
