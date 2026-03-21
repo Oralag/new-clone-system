@@ -97,7 +97,13 @@
             <el-col :span="4">
               <div class="field-row">
                 <span class="field-label">倒冲领料</span>
-                <el-switch v-model="fd.back_flush" :disabled="isView" />
+                <span v-if="isView || fd.status === 1" style="flex:1;color:#666">{{ fd.back_flush ? '已开启' : '未开启' }}</span>
+                <el-tooltip v-else
+                  :content="hasMaterial ? '该计划已有手工领料单，不可倒冲' : ''"
+                  :disabled="!hasMaterial"
+                  placement="top">
+                  <el-switch v-model="fd.back_flush" :disabled="hasMaterial" />
+                </el-tooltip>
               </div>
             </el-col>
           </el-row>
@@ -250,6 +256,10 @@ import { getProductionPlanList } from '@/api/production'
 import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { createExpense } from '@/api/finance'
+import { createMaterial, auditMaterial } from '@/api/production'
+import { getBomByGoods } from '@/api/goods'
+import { applyMaterialStockDelta } from '@/utils/materialStock'
 
 const route = useRoute()
 const permStore = usePermissionStore()
@@ -260,6 +270,7 @@ const searchForm = reactive<any>({})
 const showForm = ref(false)
 const isView = ref(false)
 const saving = ref(false)
+const hasMaterial = ref(false) // 该计划是否已有手工领料单
 
 // ── 表单数据 ─────────────────────────────────────────────────────────────────
 function defaultFd() {
@@ -297,6 +308,7 @@ function onWarehouseChange(id: any) {
 // ── 计算 ─────────────────────────────────────────────────────────────────────
 function calcRow(row: any) {
   row.total_cost = ((row.num || 0) * ((row.material_price || 0) + (row.process_price || 0)))
+  row.in_price = (row.material_price || 0) + (row.process_price || 0)
 }
 
 const totalCost = computed(() =>
@@ -358,6 +370,7 @@ async function onSelectPlan(plan: any) {
   // 查该计划已审核的领料单，汇总物料总价
   let materialTotalPrice = 0
   let materialTotalNum = 0
+  hasMaterial.value = false
   try {
     const mRes = await http.get('/production/material/index', {
       params: { list_rows: 500 }
@@ -367,6 +380,7 @@ async function onSelectPlan(plan: any) {
     for (const mr of mRows) {
       const mrPlanId = Number(mr.production_plan_id || mr.plan_id || 0)
       if (mrPlanId === pid && Number(mr.status) === 1) {
+        hasMaterial.value = true
         materialTotalPrice += Number(mr.total_price || 0)
         try {
           const items: any[] = JSON.parse(mr.goods_info || '[]')
@@ -497,6 +511,78 @@ async function handleSave() {
     } else {
       await createProductionInhouse(payload)
     }
+    // 自动写人工成本记录（加工合计汇总）
+    const processTotal = fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0) * (Number(r.process_price) || 0), 0)
+    if (processTotal > 0) {
+      const goodsNames = fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)
+      try {
+        await createExpense({
+          type_name: '人工成本',
+          amount: processTotal,
+          apply_date: fd.in_date || new Date().toISOString().slice(0, 10),
+          remark: `生产入库自动汇总 - ${goodsNames}`,
+        })
+      } catch {}
+    }
+    // 倒冲领料：按 BOM 自动生成领料单并扣减库存
+    if (fd.back_flush && fd.warehouse_id) {
+      try {
+        // 汇总所有成品需要的原材料（BOM × 本次入库数量）
+        const materialMap = new Map<number, any>()
+        for (const item of fd.items) {
+          const qty = Number(item.num) || 0
+          if (!qty || !item.goods_id) continue
+          const bomRes = await getBomByGoods(item.goods_id)
+          const bomItems: any[] = bomRes.data?.list ?? bomRes.data?.rows ?? bomRes.data ?? []
+          for (const bom of bomItems) {
+            const matId = Number(bom.material_id || bom.goods_id)
+            const need = (Number(bom.num) || 0) * qty
+            if (!matId || need <= 0) continue
+            if (materialMap.has(matId)) {
+              materialMap.get(matId).num += need
+            } else {
+              materialMap.set(matId, {
+                goods_id: matId,
+                goods_name: bom.material_name || bom.goods_name || '',
+                goods_sn: bom.material_sn || bom.goods_sn || '',
+                unit_name: bom.unit_name || '',
+                num: need,
+                out_price: Number(bom.cost_price || bom.price || 0),
+                warehouse_id: fd.warehouse_id,
+                warehouse_name: fd.warehouse_name || '',
+              })
+            }
+          }
+        }
+        const matItems = [...materialMap.values()]
+        if (matItems.length) {
+          const matRes = await createMaterial({
+            pick_date: fd.in_date || new Date().toISOString().slice(0, 10),
+            production_plan_id: fd.plan_id || 0,
+            plan_name: fd.plan_name || '',
+            admin_name: fd.admin_name || '',
+            warehouse_id: fd.warehouse_id,
+            warehouse_name: fd.warehouse_name || '',
+            remark: `倒冲领料 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
+            goods_info: JSON.stringify(matItems),
+            goods_name: matItems.map(i => i.goods_name).join('、').slice(0, 100),
+            total_price: matItems.reduce((s, i) => s + i.num * i.out_price, 0),
+          })
+          const matId = Number(matRes.data?.id || matRes.data?.data?.id || matRes.data)
+          if (matId) {
+            await auditMaterial(matId, 1)
+          }
+          await applyMaterialStockDelta(matItems, {
+            direction: 'deduct',
+            defaultWarehouseId: fd.warehouse_id,
+            defaultWarehouseName: fd.warehouse_name || '',
+          })
+          ElMessage.success(`倒冲领料完成，已扣减 ${matItems.length} 种原材料`)
+        }
+      } catch (e: any) {
+        ElMessage.warning(`倒冲领料失败：${e?.message ?? '未知错误'}，请手工补录领料单`)
+      }
+    }
     ElMessage.success('保存成功')
     backToList()
   } catch (e: any) {
@@ -538,10 +624,10 @@ async function initFromQuery() {
   await loadWarehouses()
   Object.assign(fd, defaultFd())
   fd.plan_id = Number(plan_id)
-  fd.plan_name = String(plan_name || '')
-  fd.items = []
 
   const planItems: any[] = JSON.parse(String(goods_info || '[]'))
+  fd.plan_name = String(plan_name || '')
+  fd.items = []
   if (!planItems.length) { isView.value = false; showForm.value = true; return }
 
   // 1. 查该计划已审核领料单，汇总每种商品的物料总价

@@ -792,9 +792,17 @@ async function handleSave() {
 
 async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定删除该出库单？', '提示', { type: 'warning' })
-  await deleteSaleOut(id)
-  ElMessage.success('删除成功')
-  tableRef.value?.refresh()
+  try {
+    await deleteSaleOut(id)
+    ElMessage.success('删除成功')
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    if (e?.message && !e.message.includes('Unexpected token')) {
+      ElMessage.error(e.message)
+    } else {
+      ElMessage.error('删除失败，请重试')
+    }
+  }
 }
 
 async function handleAudit(row: any, status: number) {
@@ -830,21 +838,14 @@ async function handleAudit(row: any, status: number) {
         ElMessage.warning('余额扣减失败，请手动更新客户余额')
       }
     }
-    // 反审核时还原客户余额
-    if (status === 0 && row.customer_id) {
-      try {
-        const customerRes = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
-        const customer = customerRes.data
-        const currentBalance = Number(customer?.balance || 0)
-        const newBalance = currentBalance + Number(row.total_amount || 0)
-        await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: newBalance })
-      } catch {
-        ElMessage.warning('余额还原失败，请手动更新客户余额')
-      }
-    }
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+    const msg = e?.message ?? ''
+    if (!msg || msg.includes('Unexpected token') || msg.includes('JSON')) {
+      ElMessage.error('操作失败，请重试')
+    } else {
+      ElMessage.error(msg)
+    }
   }
 }
 

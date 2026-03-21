@@ -289,6 +289,10 @@ async function loadWarehouses() {
   try {
     const r = await getWarehouseList({ list_rows: 200 })
     warehouseOptions.value = r.data?.list || r.data?.rows || r.data?.data || []
+    if (!fd.warehouse_id && warehouseOptions.value.length) {
+      fd.warehouse_id = warehouseOptions.value[0].id
+      fd.warehouse_name = warehouseOptions.value[0].name
+    }
   } catch {}
 }
 
@@ -364,17 +368,37 @@ async function loadRowStock(row: any, warehouseId?: any) {
   const resolvedWarehouseId = toNumber(warehouseId || row.warehouse_id || fd.warehouse_id || 0)
   row.warehouse_id = resolvedWarehouseId || null
   row.warehouse_name = row.warehouse_name || getWarehouseName(resolvedWarehouseId) || fd.warehouse_name || ''
-  if (!resolvedWarehouseId || !row.goods_id) {
+  if (!resolvedWarehouseId || (!row.goods_id && !row.goods_sn)) {
     row.stock_num = resolvedWarehouseId ? 0 : null
     return
   }
   row.stock_num = null
   try {
-    const res = await http.get('/stock/StockAll/index', {
-      params: { warehouse_id: resolvedWarehouseId, goods_id: row.goods_id, list_rows: 100 },
-    })
+    // 不带 warehouse_id 查全部仓库，再按 warehouse_name 匹配（StockAll 里 warehouse_id 可能是旧数据）
+    const warehouseName = row.warehouse_name || getWarehouseName(resolvedWarehouseId) || fd.warehouse_name || ''
+    const params: any = { list_rows: 100 }
+    if (row.goods_sn) {
+      params.goods_sn = row.goods_sn
+    } else {
+      params.goods_id = row.goods_id
+    }
+    const res = await http.get('/stock/StockAll/index', { params })
     const rows: any[] = res.data?.rows ?? res.data?.list ?? []
-    row.stock_num = rows.reduce((sum: number, item: any) => sum + toNumber(item.stock_num ?? item.qty), 0)
+    // 先尝试按 warehouse_id 匹配，找不到再按 warehouse_name 匹配
+    let matched = rows.filter((item: any) => toNumber(item.warehouse_id) === resolvedWarehouseId)
+    if (!matched.length && warehouseName) {
+      matched = rows.filter((item: any) => item.warehouse_name === warehouseName)
+    }
+    if (!matched.length) matched = rows  // 只有一个仓库时直接用全部
+    row.stock_num = matched.reduce((sum: number, item: any) => sum + toNumber(item.qty ?? item.stock_num), 0)
+    // 如果单价未设置，从库存均价自动填入
+    if (!toNumber(row.out_price) && matched.length) {
+      const avgPrice = toNumber(matched[0].avg_price ?? matched[0].cost_price)
+      if (avgPrice > 0) {
+        row.out_price = avgPrice
+        row.row_total = toNumber(row.num) * avgPrice
+      }
+    }
   } catch {
     row.stock_num = 0
   }
@@ -389,11 +413,11 @@ async function openAdd() {
   fd.items = []
   isView.value = false
   showForm.value = true
-  await loadWarehouses()
+  await Promise.all([loadWarehouses(), loadPlanOptions()])
 }
 
 async function openEdit(row: any) {
-  await loadWarehouses()
+  await Promise.all([loadWarehouses(), loadPlanOptions()])
   buildFormFromRow(row)
   isView.value = false
   showForm.value = true
@@ -401,7 +425,7 @@ async function openEdit(row: any) {
 }
 
 async function openView(row: any) {
-  await loadWarehouses()
+  await Promise.all([loadWarehouses(), loadPlanOptions()])
   buildFormFromRow(row)
   isView.value = true
   showForm.value = true
@@ -573,20 +597,12 @@ async function handleSave() {
     const warehouseName = fd.warehouse_name || getWarehouseName(warehouseId)
     const payload: any = {
       order_sn: fd.order_sn || '',
-      out_no: fd.order_sn || '',
       pick_date: fd.pick_date,
-      out_date: fd.pick_date,
       production_plan_id: fd.production_plan_id || 0,
-      plan_id: fd.production_plan_id || 0,
-      plan_name: fd.plan_name || '',
       admin_name: fd.admin_name || '',
-      receiver: fd.admin_name || '',
-      warehouse_id: warehouseId || 0,
-      warehouse_name: warehouseName,
       remark: fd.remark || '',
       goods_info: JSON.stringify(items),
       goods_name: items.map((item) => item.goods_name).join('、').slice(0, 100),
-      total_price: totalPrice.value,
     }
     if (fd.id) payload.id = fd.id
 
@@ -643,19 +659,19 @@ async function handleDelete(id: number) {
 }
 
 onMounted(async () => {
-  await loadWarehouses()
+  await Promise.all([loadWarehouses(), loadPlanOptions()])
   const { plan_id, plan_name, goods_info } = route.query
   if (!plan_id) return
 
   Object.assign(fd, defaultFd())
   fd.production_plan_id = toNumber(plan_id)
-  fd.plan_name = String(plan_name || '')
   fd.items = []
   isView.value = false
   showForm.value = true
 
   try {
     const planItems: any[] = JSON.parse(String(goods_info || '[]'))
+    fd.plan_name = String(plan_name || '')
     for (const goodsItem of planItems) {
       const bomRes = await getBomByGoods(goodsItem.goods_id)
       const bomRows: any[] = bomRes.data?.rows ?? []

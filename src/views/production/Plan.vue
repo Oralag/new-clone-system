@@ -494,10 +494,12 @@ function getInhouseLabel(row: any) {
 
 // ── 跳转领料/入库 ─────────────────────────────────────────────────────────────
 function goPickMaterial(row: any) {
-  router.push({ name: 'ProductionMaterial', query: { plan_id: row.id, plan_name: row.order_sn, goods_info: row.goods_info } })
+  const planSn = row.order_sn || `SC${(row.plan_date||row.created_at||'').slice(0,10).replace(/-/g,'')}${String(row.id).padStart(3,'0')}`
+  router.push({ name: 'ProductionMaterial', query: { plan_id: row.id, plan_name: planSn, goods_info: typeof row.goods_info === 'string' ? row.goods_info : JSON.stringify(row.goods_info || []) } })
 }
 function goInhouse(row: any) {
-  router.push({ name: 'ProductionInhouse', query: { plan_id: row.id, plan_name: row.order_sn, goods_info: row.goods_info } })
+  const planSn = row.order_sn || `SC${(row.plan_date||row.created_at||'').slice(0,10).replace(/-/g,'')}${String(row.id).padStart(3,'0')}`
+  router.push({ name: 'ProductionInhouse', query: { plan_id: row.id, plan_name: planSn, goods_info: typeof row.goods_info === 'string' ? row.goods_info : JSON.stringify(row.goods_info || []) } })
 }
 
 async function handleDel(id: number) {
