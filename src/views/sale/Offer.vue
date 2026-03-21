@@ -144,6 +144,11 @@
                   <el-date-picker v-model="fd.offer_date" type="date" value-format="YYYY-MM-DD" style="width:100%" placeholder="请选择日期" />
                 </el-form-item>
               </el-col>
+              <el-col :span="8">
+                <el-form-item label="报价单号">
+                  <el-input v-model="fd.offer_no" readonly placeholder="生成中..." />
+                </el-form-item>
+              </el-col>
               <!-- 大写金额展示 -->
               <el-col :span="24">
                 <div style="background:#fff5f5;border:1px solid #ffcdd2;border-radius:6px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap">
@@ -358,6 +363,7 @@ interface OfferItem {
 
 const defaultFd = () => ({
   id: 0,
+  offer_no: '',
   customer_id: null as any,
   customer_name: '',
   level_id: null as any,
@@ -375,14 +381,26 @@ const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
 
-function openCreate() {
+async function openCreate() {
   Object.assign(fd, defaultFd())
   isReadonly.value = false
   showForm.value = true
+  try {
+    const today = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
+    const ymd = today.replace(/-/g, '')
+    const res = await getOfferList({ list_rows: 1000 })
+    const rows: any[] = res?.data?.rows ?? res?.data?.list ?? []
+    const todayCount = rows.filter((r: any) => (r.create_time || r.offer_date || '').slice(0, 10) === today).length
+    fd.offer_no = `BJ${ymd}${String(todayCount + 1).padStart(3, '0')}`
+  } catch {
+    const ymd = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10).replace(/-/g, '')
+    fd.offer_no = `BJ${ymd}001`
+  }
 }
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
+  fd.offer_no = row.offer_no || `BJ${String(row.id || '').padStart(4, '0')}`
   // 解析 goods_info JSON
   try {
     fd.items = JSON.parse(row.goods_info || '[]')

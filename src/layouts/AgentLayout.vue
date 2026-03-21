@@ -3,44 +3,31 @@
 
     <!-- ── 侧边栏（桌面端） ── -->
     <aside v-if="!isMobile" class="agent-sidebar">
-      <!-- Logo -->
+      <!-- Logo区域：公司名 + 品牌名 -->
       <div class="sidebar-logo">
         <div class="logo-icon">
           <img src="/nomad-logo.png" alt="N" class="logo-img" />
         </div>
         <div class="logo-text-wrap">
-          <span class="logo-text">Nomad Agent</span>
-          <span class="logo-sub">AI 内容工作流</span>
+          <span class="logo-text">数字游牧传媒</span>
+          <span class="logo-sub" v-if="brandStore.isConfigured">{{ brandStore.brand.name }}</span>
+          <span class="logo-sub dim" v-else>未配置品牌</span>
         </div>
         <span class="ai-dot" title="AI在线"></span>
       </div>
 
-      <!-- 品牌卡 -->
-      <div class="brand-card" @click="router.push('/agent/brand')">
-        <template v-if="brandStore.isConfigured">
-          <div class="brand-avatar">{{ brandStore.brand.name.charAt(0) }}</div>
-          <div class="brand-info">
-            <div class="brand-name">{{ brandStore.brand.name }}</div>
-            <div class="brand-sub">{{ brandStore.brand.subIndustry || brandStore.brand.industry || '未设置行业' }}</div>
-          </div>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="brand-edit-icon">
-            <path d="M8.5 1.5L10.5 3.5L4 10H2V8L8.5 1.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
-          </svg>
-        </template>
-        <template v-else>
-          <div class="brand-warn-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
-          <span class="brand-unconfigured-text">配置品牌信息</span>
-          <span class="brand-arrow">→</span>
-        </template>
+      <!-- 品牌未配置时的醒目警告条 -->
+      <div v-if="!brandStore.isConfigured" class="brand-warn-bar" @click="router.push('/agent/brand')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="warn-icon">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>请先配置品牌信息</span>
+        <span class="warn-arrow">→</span>
       </div>
 
-      <!-- 导航 -->
+      <!-- 导航：总部 -->
       <nav class="sidebar-nav">
-        <div class="nav-section-label">工作区</div>
+        <div class="nav-section-label">总部</div>
         <router-link to="/agent" class="nav-item" active-class="nav-item--active" exact>
           <span class="nav-item-icon">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -52,34 +39,73 @@
           </span>
           <span class="nav-item-label">工作台</span>
         </router-link>
+        <router-link to="/agent/meeting" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon"><IconMeeting /></span>
+          <span class="nav-item-label">会议室</span>
+          <span v-if="meetingStore.isRunning" class="wf-badge wf-active"><span class="active-pulse"></span></span>
+        </router-link>
 
-        <div class="nav-section-label" style="margin-top:8px">生产流程</div>
-        <router-link
-          v-for="item in workflowNavItems"
-          :key="item.path"
-          :to="item.path"
-          class="nav-item"
-          active-class="nav-item--active"
-        >
-          <span class="nav-item-icon"><component :is="item.icon" /></span>
-          <span class="nav-item-label">{{ item.label }}</span>
-          <span v-if="stepStatuses[item.path] === 'done'" class="wf-badge wf-done">
+        <!-- 内容部 -->
+        <div class="nav-section-label" style="margin-top:10px">
+          <span class="dept-emoji-small">✍️</span> 内容部
+        </div>
+        <router-link to="/agent/copywriting" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon"><IconCopy /></span>
+          <span class="nav-item-label">林晓文 · 文案</span>
+          <span v-if="stepStatuses['/agent/copywriting'] === 'done'" class="wf-badge wf-done">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
-          <span v-else-if="stepStatuses[item.path] === 'active'" class="wf-badge wf-active">
-            <span class="active-pulse"></span>
+        </router-link>
+        <router-link to="/agent/video" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon"><IconVideo /></span>
+          <span class="nav-item-label">张明远 · 视频</span>
+          <span v-if="stepStatuses['/agent/video'] === 'done'" class="wf-badge wf-done">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
         </router-link>
 
-        <div class="nav-section-label" style="margin-top:8px">发布</div>
-        <router-link to="/agent/publish" class="nav-item" active-class="nav-item--active">
-          <span class="nav-item-icon"><IconPublish /></span>
-          <span class="nav-item-label">发布管理</span>
-          <span v-if="stepStatuses['/agent/publish'] === 'done'" class="wf-badge wf-done">
+        <!-- 创意部 -->
+        <div class="nav-section-label" style="margin-top:10px">
+          <span class="dept-emoji-small">🎨</span> 创意部
+        </div>
+        <router-link to="/agent/poster" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon"><IconPoster /></span>
+          <span class="nav-item-label">陈美琪 · 设计</span>
+          <span v-if="stepStatuses['/agent/poster'] === 'done'" class="wf-badge wf-done">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
-          <span v-else-if="stepStatuses['/agent/publish'] === 'active'" class="wf-badge wf-active">
-            <span class="active-pulse"></span>
+        </router-link>
+
+        <!-- 品牌部 -->
+        <div class="nav-section-label" style="margin-top:10px">
+          <span class="dept-emoji-small">💎</span> 品牌部
+        </div>
+        <router-link to="/agent/brand" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon"><IconBrand /></span>
+          <span class="nav-item-label">王思远 · 品牌</span>
+        </router-link>
+
+        <!-- 情报部 -->
+        <div class="nav-section-label" style="margin-top:10px">
+          <span class="dept-emoji-small">📈</span> 情报部
+        </div>
+        <router-link to="/agent/trending" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon"><IconTrending /></span>
+          <span class="nav-item-label">刘浩然 · 趋势</span>
+          <span v-if="stepStatuses['/agent/trending'] === 'done'" class="wf-badge wf-done">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </router-link>
+
+        <!-- 发布部 -->
+        <div class="nav-section-label" style="margin-top:10px">
+          <span class="dept-emoji-small">🚀</span> 发布部
+        </div>
+        <router-link to="/agent/publish" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon"><IconPublish /></span>
+          <span class="nav-item-label">赵欣然 · 发布</span>
+          <span v-if="stepStatuses['/agent/publish'] === 'done'" class="wf-badge wf-done">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
         </router-link>
       </nav>
@@ -112,7 +138,7 @@
       <div class="drawer-inner">
         <div class="drawer-logo">
           <img src="/nomad-logo.png" alt="N" style="width:28px;height:28px;border-radius:7px;object-fit:contain" />
-          <span style="font-size:14px;font-weight:700;margin-left:8px;color:#1d1d1f">Nomad Agent</span>
+          <span style="font-size:14px;font-weight:700;margin-left:8px;color:#1d1d1f">数字游牧传媒</span>
         </div>
         <router-link
           v-for="item in mobileNavItems"
@@ -184,12 +210,14 @@ import { computed, defineComponent, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBrandStore } from '@/stores/brand'
 import { useAppStore } from '@/stores/app'
+import { useMeetingStore } from '@/stores/meeting'
 import { useWorkflowStatus } from '@/composables/useWorkflowStatus'
 
 const route = useRoute()
 const router = useRouter()
 const brandStore = useBrandStore()
 const appStore = useAppStore()
+const meetingStore = useMeetingStore()
 
 const { stepStatuses, workflowProgressLabel } = useWorkflowStatus()
 
@@ -201,6 +229,14 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
 function handleResize() { isMobile.value = window.innerWidth < 768 }
 
 // ── 扁平 SVG 图标组件 ──────────────────────────────────────────────────────
+const IconMeeting = defineComponent({ render: () => h('svg', { width: 15, height: 15, viewBox: '0 0 15 15', fill: 'none' }, [
+  h('rect', { x: 1, y: 2, width: 13, height: 9, rx: 2, stroke: 'currentColor', 'stroke-width': 1.3 }),
+  h('path', { d: 'M5 13h5M7.5 11v2', stroke: 'currentColor', 'stroke-width': 1.3, 'stroke-linecap': 'round' }),
+  h('circle', { cx: 4.5, cy: 6.5, r: 1.2, fill: 'currentColor', opacity: 0.7 }),
+  h('circle', { cx: 7.5, cy: 6.5, r: 1.2, fill: 'currentColor', opacity: 0.7 }),
+  h('circle', { cx: 10.5, cy: 6.5, r: 1.2, fill: 'currentColor', opacity: 0.7 }),
+]) })
+
 const IconTrending = defineComponent({ render: () => h('svg', { width: 15, height: 15, viewBox: '0 0 15 15', fill: 'none' }, [
   h('path', { d: 'M1 11L5 7L8 10L14 3', stroke: 'currentColor', 'stroke-width': 1.3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
   h('path', { d: 'M11 3h3v3', stroke: 'currentColor', 'stroke-width': 1.3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
@@ -222,13 +258,6 @@ const IconVideo = defineComponent({ render: () => h('svg', { width: 15, height: 
   h('path', { d: 'M10 6.5l4-2.5v7l-4-2.5V6.5Z', stroke: 'currentColor', 'stroke-width': 1.3, 'stroke-linejoin': 'round' }),
 ]) })
 
-const IconLab = defineComponent({ render: () => h('svg', { width: 15, height: 15, viewBox: '0 0 15 15', fill: 'none' }, [
-  h('path', { d: 'M5.5 1v4.5L2 12a1 1 0 001 1h9a1 1 0 001-1L9.5 5.5V1', stroke: 'currentColor', 'stroke-width': 1.3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
-  h('path', { d: 'M4.5 1h6', stroke: 'currentColor', 'stroke-width': 1.3, 'stroke-linecap': 'round' }),
-  h('circle', { cx: 6, cy: 9, r: 1, fill: 'currentColor', opacity: 0.6 }),
-  h('circle', { cx: 9, cy: 10, r: 0.7, fill: 'currentColor', opacity: 0.4 }),
-]) })
-
 const IconPublish = defineComponent({ render: () => h('svg', { width: 15, height: 15, viewBox: '0 0 15 15', fill: 'none' }, [
   h('path', { d: 'M7.5 1v9M4.5 4L7.5 1l3 3', stroke: 'currentColor', 'stroke-width': 1.3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
   h('path', { d: 'M2 11v2h11v-2', stroke: 'currentColor', 'stroke-width': 1.3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
@@ -248,24 +277,23 @@ const IconBrand = defineComponent({ render: () => h('svg', { width: 15, height: 
   h('path', { d: 'M7.5 1.5l1.8 4h4l-3.3 2.4 1.3 4-3.8-2.8-3.8 2.8 1.3-4L1.7 5.5h4l1.8-4z', stroke: 'currentColor', 'stroke-width': 1.2, 'stroke-linejoin': 'round' }),
 ]) })
 
-const workflowNavItems = [
-  { path: '/agent/trending',     icon: IconTrending, label: '热搜抓取' },
-  { path: '/agent/copywriting',  icon: IconCopy,     label: '文案生成' },
-  { path: '/agent/poster',       icon: IconPoster,   label: '图文海报' },
-  { path: '/agent/video',        icon: IconVideo,    label: '视频生成' },
-  { path: '/agent/creative-lab', icon: IconLab,      label: 'AI创意实验室' },
-]
-
+// 移动端导航项
 const mobileNavItems = [
-  { path: '/agent',              icon: defineComponent({ render: () => h('svg', { width:15, height:15, viewBox:'0 0 15 15', fill:'none' }, [h('rect',{x:1,y:1,width:6,height:6,rx:1.5,stroke:'currentColor','stroke-width':1.3}),h('rect',{x:8,y:1,width:6,height:6,rx:1.5,stroke:'currentColor','stroke-width':1.3}),h('rect',{x:1,y:8,width:6,height:6,rx:1.5,stroke:'currentColor','stroke-width':1.3}),h('rect',{x:8,y:8,width:6,height:6,rx:1.5,stroke:'currentColor','stroke-width':1.3})]) }), label: '工作台' },
-  { path: '/agent/brand',        icon: IconBrand,    label: '品牌设置' },
-  ...workflowNavItems,
-  { path: '/agent/publish',      icon: IconPublish,  label: '发布管理' },
-  { path: '/agent/history',      icon: IconHistory,  label: '历史记录' },
+  { path: '/agent', icon: defineComponent({ render: () => h('svg', { width:15, height:15, viewBox:'0 0 15 15', fill:'none' }, [h('rect',{x:1,y:1,width:6,height:6,rx:1.5,stroke:'currentColor','stroke-width':1.3}),h('rect',{x:8,y:1,width:6,height:6,rx:1.5,stroke:'currentColor','stroke-width':1.3}),h('rect',{x:1,y:8,width:6,height:6,rx:1.5,stroke:'currentColor','stroke-width':1.3}),h('rect',{x:8,y:8,width:6,height:6,rx:1.5,stroke:'currentColor','stroke-width':1.3})]) }), label: '工作台' },
+  { path: '/agent/meeting', icon: IconMeeting, label: '会议室' },
+  { path: '/agent/brand',   icon: IconBrand,   label: '王思远 · 品牌' },
+  { path: '/agent/trending', icon: IconTrending, label: '刘浩然 · 趋势' },
+  { path: '/agent/copywriting', icon: IconCopy, label: '林晓文 · 文案' },
+  { path: '/agent/poster',  icon: IconPoster,  label: '陈美琪 · 设计' },
+  { path: '/agent/video',   icon: IconVideo,   label: '张明远 · 视频' },
+  { path: '/agent/publish', icon: IconPublish, label: '赵欣然 · 发布' },
+  { path: '/agent/history', icon: IconHistory, label: '历史记录' },
 ]
 
+// 页面标题映射
 const pageTitleMap: Record<string, string> = {
   '/agent': '工作台',
+  '/agent/meeting': '会议室',
   '/agent/brand': '品牌设置',
   '/agent/trending': '热搜抓取',
   '/agent/copywriting': '文案生成',
@@ -289,7 +317,7 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 
 /* ── 侧边栏 ── */
 .agent-sidebar {
-  width: 200px;
+  width: 210px;
   background: var(--gray);
   border-right: 1px solid var(--border);
   display: flex;
@@ -311,8 +339,9 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 .logo-icon { width: 28px; height: 28px; border-radius: 7px; overflow: hidden; flex-shrink: 0; }
 .logo-img { width: 100%; height: 100%; object-fit: contain; }
 .logo-text-wrap { flex: 1; min-width: 0; }
-.logo-text { display: block; font-size: 12.5px; font-weight: 700; color: var(--dark); letter-spacing: -0.02em; white-space: nowrap; }
-.logo-sub { display: block; font-size: 10px; color: var(--dim); margin-top: 1px; white-space: nowrap; }
+.logo-text { display: block; font-size: 12px; font-weight: 700; color: var(--dark); letter-spacing: -0.02em; white-space: nowrap; }
+.logo-sub { display: block; font-size: 10px; color: var(--dim); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logo-sub.dim { color: #f59e0b; }
 .ai-dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: #34d399;
@@ -325,32 +354,31 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   50% { box-shadow: 0 0 0 5px rgba(52,211,153,0.06); }
 }
 
-/* 品牌卡 */
-.brand-card {
-  display: flex; align-items: center; gap: 8px;
-  margin: 10px 10px 4px;
-  padding: 9px 10px;
-  border-radius: 10px;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+/* 品牌未配置警告条 */
+.brand-warn-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 10px 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(245,158,11,0.09);
+  border: 1px solid rgba(245,158,11,0.25);
   cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b45309;
+  transition: background 0.15s;
 }
-.brand-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.09); border-color: var(--faint); }
-.brand-avatar {
-  width: 26px; height: 26px; border-radius: 7px;
-  background: linear-gradient(135deg, #0071e3, #005bb5);
-  color: #fff; font-size: 11px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+.brand-warn-bar:hover { background: rgba(245,158,11,0.15); }
+.warn-icon { flex-shrink: 0; }
+.warn-arrow { margin-left: auto; }
+
+/* 部门小emoji标签 */
+.dept-emoji-small {
+  margin-right: 3px;
+  font-size: 10px;
 }
-.brand-info { flex: 1; overflow: hidden; }
-.brand-name { font-size: 12px; font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.brand-sub { font-size: 10px; color: var(--dim); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.brand-edit-icon { color: var(--dim); flex-shrink: 0; }
-.brand-warn-icon { color: #f59e0b; display: flex; align-items: center; flex-shrink: 0; }
-.brand-unconfigured-text { font-size: 12px; color: var(--mid); flex: 1; }
-.brand-arrow { font-size: 12px; color: var(--dim); }
 
 /* 导航 */
 .sidebar-nav { padding: 6px 8px 0; flex: 1; }
@@ -359,6 +387,7 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   font-size: 9.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--dim);
+  display: flex; align-items: center;
 }
 .nav-item {
   position: relative;
@@ -367,7 +396,7 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
   border-radius: 8px;
   text-decoration: none;
   color: var(--mid);
-  font-size: 12.5px; font-weight: 500;
+  font-size: 12px; font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   margin-bottom: 1px;
@@ -386,7 +415,6 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 /* 工作流徽标 */
 .wf-badge { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .wf-done { color: #16a34a; }
-.wf-active { }
 .active-pulse {
   width: 7px; height: 7px; border-radius: 50%;
   background: #0071e3;
@@ -432,26 +460,15 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能体�
 .topbar-right { display: flex; align-items: center; gap: 14px; }
 
 .topbar-theme-btns {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--gray);
-  border-radius: 999px;
-  padding: 4px 6px;
+  display: flex; align-items: center; gap: 4px;
+  background: var(--gray); border-radius: 999px; padding: 4px 6px;
   border: 1px solid var(--border);
 }
 .topbar-theme-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--mid);
-  transition: background 0.15s, color 0.15s;
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--mid); transition: background 0.15s, color 0.15s;
 }
 .topbar-theme-btn:hover { background: var(--gray-2); color: var(--dark); }
 .topbar-theme-btn.active { background: var(--card-bg); color: var(--blue); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }

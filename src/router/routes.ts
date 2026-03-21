@@ -185,6 +185,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/layouts/AgentLayout.vue'),
     children: [
       { path: '', name: 'AgentDashboard', component: () => import('@/views/agent/Dashboard.vue'), meta: { title: '智能体工作台' } },
+      { path: 'meeting', name: 'AgentMeeting', component: () => import('@/views/agent/MeetingRoom.vue'), meta: { title: '会议室' } },
       { path: 'brand', name: 'AgentBrand', component: () => import('@/views/agent/Brand.vue'), meta: { title: '品牌设置' } },
       { path: 'trending', name: 'AgentTrending', component: () => import('@/views/agent/Trending.vue'), meta: { title: '热搜抓取' } },
       { path: 'copywriting', name: 'AgentCopywriting', component: () => import('@/views/agent/Copywriting.vue'), meta: { title: '文案生成' } },

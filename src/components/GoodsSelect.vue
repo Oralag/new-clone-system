@@ -125,12 +125,24 @@ async function loadData() {
     const res: any = await http.get('/goods/ShopGoods/index', { params })
     const data = res?.data || {}
     let rows = data.rows || data.list || []
-    // 若有子分类则前端也做子分类过滤
     if (selectedCateId.value) {
       const ids = collectIds(selectedCateId.value)
       rows = rows.filter((g: any) => ids.includes(Number(g.cate_id)))
     }
-    list.value = fuzzyFilterGoods(rows, keyword.value)
+    rows = fuzzyFilterGoods(rows, keyword.value)
+    // 查实时库存，用 goods_sn 做桥梁汇总
+    try {
+      const stockRes: any = await http.get('/stock/StockAll/index', { params: { list_rows: 2000 } })
+      const stockRows: any[] = stockRes?.data?.rows || stockRes?.data?.list || []
+      const snQtyMap: Record<string, number> = {}
+      for (const s of stockRows) {
+        const sn = s.goods_sn
+        if (!sn) continue
+        snQtyMap[sn] = (snQtyMap[sn] || 0) + Number(s.qty ?? s.stock_num ?? 0)
+      }
+      rows = rows.map((g: any) => ({ ...g, stock_num: snQtyMap[g.goods_sn] ?? g.stock_num ?? 0 }))
+    } catch {}
+    list.value = rows
     total.value = data.total || 0
   } finally {
     loading.value = false
