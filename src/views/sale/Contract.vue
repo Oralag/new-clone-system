@@ -44,7 +44,9 @@
             </template>
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="contract_no" label="合同编号" min-width="150" />
+          <el-table-column label="合同编号" min-width="150">
+            <template #default="{ row }">{{ getContractSn(row) }}</template>
+          </el-table-column>
           <el-table-column label="客户名称" min-width="140">
             <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
           </el-table-column>
@@ -91,17 +93,15 @@
               <span v-else style="color:#c0c4cc;font-size:12px">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="240" fixed="right">
+          <el-table-column label="操作" width="260" fixed="right">
             <template #default="{ row }">
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
-              <template v-if="row.status === 0">
-                <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-              </template>
-              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
+              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1 && getPendingAmount(row) > 0.01" type="success" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="handleConvertToSaleOut(row)">转出库单</el-button>
-              <el-button type="danger" link size="small" @click="Number(row.status) === 1 ? ElMessage.warning('请先执行【反审核】，再删除该销售合同') : handleDelete(row.id)">删除</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -681,7 +681,19 @@ async function loadReceiptMap() {
 }
 
 function getContractSn(row: any): string {
-  return String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+  // 优先从 remark 里解析 [NO:xxx]
+  const m = (row?.remark || '').match(/^\[NO:([^\]]+)\]/)
+  if (m) return m[1]
+  return String(row?.order_sn || row?.contract_no || (row?.id ? `HT${String(row.id).padStart(4,'0')}` : '')).trim()
+}
+
+function parseContractRemark(remark: string): string {
+  return (remark || '').replace(/^\[NO:[^\]]+\]\s*/, '').replace(/^\[OID:[^\]]+\]\s*/, '')
+}
+
+function parseSourceOfferId(remark: string): number {
+  const m = (remark || '').match(/\[OID:(\d+)\]/)
+  return m ? Number(m[1]) : 0
 }
 
 function getReceivedAmount(row: any): number {
@@ -762,6 +774,7 @@ const defaultFd = () => ({
   need_invoice: false,
   receive_account: '',
   remark: '',
+  contract_no: '',
   total_amount: 0,
   discount_type: 'none' as string,
   discount_value: 0,
@@ -909,14 +922,28 @@ function onLevelChange() {
   ElMessage.info('已按新等级刷新商品价格')
 }
 
-function openCreate() {
+async function openCreate() {
   Object.assign(fd, defaultFd())
   isReadonly.value = false
   showForm.value = true
+  try {
+    const today = new Date(Date.now() + 8*3600000).toISOString().slice(0,10)
+    const ymd = today.replace(/-/g,'')
+    const res = await getContractList({ list_rows: 1000 })
+    const rows: any[] = res?.data?.rows ?? []
+    const todayCount = rows.filter((r: any) => (r.created_at||r.sign_date||'').slice(0,10) === today).length
+    fd.contract_no = `HT${ymd}${String(todayCount+1).padStart(3,'0')}`
+  } catch {
+    const ymd = new Date(Date.now()+8*3600000).toISOString().slice(0,10).replace(/-/g,'')
+    fd.contract_no = `HT${ymd}001`
+  }
 }
 
 async function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
+  fd.contract_no = getContractSn(row)
+  fd.remark = parseContractRemark(row.remark || '')
+  fd.source_offer_id = parseSourceOfferId(row.remark || '')
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
@@ -1108,7 +1135,12 @@ async function handleSave() {
   try {
     const payload: Record<string, any> = {
       customer_id: fd.customer_id,
-      remark: fd.remark,
+      remark: (() => {
+        let r = fd.remark || ''
+        if (fd.source_offer_id) r = `[OID:${fd.source_offer_id}]` + (r ? ' ' + r : '')
+        if (fd.contract_no) r = `[NO:${fd.contract_no}]` + (r ? ' ' + r : '')
+        return r
+      })(),
       total_amount: finalReceivable.value,
       discount_type: fd.discount_type,
       discount_value: fd.discount_value,
@@ -1133,7 +1165,7 @@ async function handleSave() {
     // 报价单转合同：标记报价单为已转换
     if (isNew && fd.source_offer_id) {
       try {
-        await auditOffer(fd.source_offer_id, 3)
+        await http.post('/shop/offerOrder/edit', { id: fd.source_offer_id, status: 4 })
       } catch { /* ignore */ }
     }
     // 新建合同自动审核
@@ -1213,7 +1245,7 @@ async function autoCreateReceipt(row: any) {
   }
 }
 
-function handleRouteFromOffer() {
+async function handleRouteFromOffer() {
   if (String(route.query.from || '') !== 'offer') return
   const raw = sessionStorage.getItem(DRAFT_KEY)
   if (!raw) return
@@ -1230,19 +1262,33 @@ function handleRouteFromOffer() {
     fd.source_offer_id = Number(draft.source_offer_id || 0)
     fd.source_offer_no = draft.source_offer_no || ''
     fd.remark = draft.remark || ''
+    if (Number(draft.discount_amount) > 0) {
+      fd.discount_type = 'amount'
+      fd.discount_value = Number(draft.discount_amount)
+    }
     fd.items = Array.isArray(draft.items) ? draft.items.map(normalizeItem) : []
     calcTotal()
     fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+    // 生成合同编号
+    try {
+      const today = new Date(Date.now() + 8*3600000).toISOString().slice(0,10)
+      const ymd = today.replace(/-/g,'')
+      const res = await getContractList({ list_rows: 1000 })
+      const rows: any[] = res?.data?.rows ?? []
+      const todayCount = rows.filter((r: any) => (r.created_at||r.sign_date||'').slice(0,10) === today).length
+      fd.contract_no = `HT${ymd}${String(todayCount+1).padStart(3,'0')}`
+    } catch {
+      const ymd = new Date(Date.now()+8*3600000).toISOString().slice(0,10).replace(/-/g,'')
+      fd.contract_no = `HT${ymd}001`
+    }
     isReadonly.value = false
     showForm.value = true
+    sessionStorage.removeItem(DRAFT_KEY)
     ElMessage.success(draft.source_offer_no
       ? `已载入报价单 ${draft.source_offer_no}，请确认后保存合同`
       : '已载入报价数据，请确认后保存合同')
   } catch {
     ElMessage.warning('报价转合同草稿读取失败')
-  } finally {
-    sessionStorage.removeItem(DRAFT_KEY)
-    router.replace('/sale/contract')
   }
 }
 
@@ -1344,7 +1390,8 @@ async function handleAudit(row: any, status: number) {
 
     // 反审核前检查是否有已审核的退货单（通过出库单关联）
     try {
-      const saleOutRes = await getSaleOutList({ contract_id: row.id, list_rows: 100 })
+      const orderSn = getContractSn(row)
+      const saleOutRes = await getSaleOutList({ keyword: orderSn, list_rows: 100 })
       const saleOutIds: number[] = (saleOutRes.data?.rows ?? []).map((o: any) => o.id)
       if (saleOutIds.length > 0) {
         const returnRes = await getSaleReturnList({ list_rows: 500 })
@@ -1374,6 +1421,11 @@ async function handleAudit(row: any, status: number) {
       try { await autoCreateReceipt(freshRow) } catch (e: any) { errMsg = e?.message || '自动创建收款失败' }
     } else if (status === 0) {
       try { await cancelAutoReceipt(freshRow) } catch (e: any) { errMsg = e?.message || '自动撤回收款失败' }
+      // 反审核后把来源报价单状态恢复为已审核（1）
+      const offerId = parseSourceOfferId(freshRow.remark || '') || parseSourceOfferId(row.remark || '')
+      if (offerId) {
+        try { await http.post('/shop/offerOrder/edit', { id: offerId, status: 1 }) } catch { /* ignore */ }
+      }
     }
     errMsg ? ElMessage.warning(`${action}成功，但财务联动失败：${errMsg}`) : ElMessage.success(`${action}成功`)
     tableRef.value?.refresh()
@@ -1384,7 +1436,7 @@ async function handleAudit(row: any, status: number) {
 }
 
 async function handleConvertToSaleOut(row: any) {
-  await ElMessageBox.confirm(`确定将销售合同「${row.order_sn || row.id}」转为销售出库单？`, '转出库单', { type: 'info' })
+  await ElMessageBox.confirm(`确定将销售合同「${getContractSn(row)}」转为销售出库单？`, '转出库单', { type: 'info' })
   sessionStorage.setItem('saleout_from_contract', JSON.stringify({
     contract_id: row.id,
     contract_sn: row.order_sn || '',
@@ -1396,7 +1448,7 @@ async function handleConvertToSaleOut(row: any) {
     remark: row.remark || '',
     goods_info: row.goods_info || '[]',
   }))
-  router.push('/sale/sale-out')
+  router.push('/sale/out')
 }
 
 async function cancelAutoReceipt(row: any) {

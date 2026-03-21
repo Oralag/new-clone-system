@@ -16,10 +16,46 @@
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openAdd">新增生产入库</el-button>
           </template>
+          <el-table-column type="expand" width="36">
+            <template #default="{ row }">
+              <div class="expand-cost" :ref="(el: any) => el && triggerExpand(row)">
+                <div v-if="!expandState[row.id] || expandState[row.id]?.loading" style="padding:16px 20px;color:#aaa;font-size:13px">查询领料成本中...</div>
+                <template v-else-if="expandState[row.id]?.loaded">
+                  <el-table :data="expandState[row.id].items" border size="small" style="margin:8px 16px;width:calc(100% - 32px)">
+                    <el-table-column prop="goods_name" label="商品名称" min-width="140" />
+                    <el-table-column prop="num" label="入库数量" width="90" align="right" />
+                    <el-table-column label="物料单价" width="110" align="right">
+                      <template #default="{ row: r }">¥{{ fmtN(r.material_price) }}</template>
+                    </el-table-column>
+                    <el-table-column label="加工单价" width="110" align="right">
+                      <template #default="{ row: r }">¥{{ fmtN(r.process_price) }}</template>
+                    </el-table-column>
+                    <el-table-column label="入库单价" width="110" align="right">
+                      <template #default="{ row: r }"><b style="color:#0071e3">¥{{ fmtN(r.in_price) }}</b></template>
+                    </el-table-column>
+                    <el-table-column label="总成本" width="120" align="right">
+                      <template #default="{ row: r }"><b style="color:#16a34a">¥{{ fmtN(Number(r.num||0)*Number(r.in_price||0)) }}</b></template>
+                    </el-table-column>
+                  </el-table>
+                  <div class="expand-total">
+                    领料成本：<b style="color:#f59e0b">¥{{ fmtN(expandState[row.id].materialCost) }}</b>
+                    &nbsp;&nbsp;合计成本：<b style="color:#16a34a">¥{{ fmtN(expandState[row.id].totalCost) }}</b>
+                    &nbsp;&nbsp;入库均价：<b style="color:#0071e3">¥{{ fmtN(expandState[row.id].avgPrice) }}</b>
+                  </div>
+                </template>
+                <div v-else style="padding:16px 20px;color:#aaa;font-size:13px">加载失败</div>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="order_sn" label="入库单号" min-width="150" />
           <el-table-column prop="goods_name" label="商品名称" min-width="150" />
           <el-table-column prop="inhouse_qty" label="入库数量" width="100" align="right" />
           <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+          <el-table-column label="入库成本" width="120" align="right">
+            <template #default="{ row }">
+              <b style="color:#16a34a">¥{{ fmtN(calcTotalCost(row)) }}</b>
+            </template>
+          </el-table-column>
           <el-table-column prop="warehouse_name" label="入库仓库" min-width="110" />
           <el-table-column prop="inhouse_date" label="入库日期" width="110">
             <template #default="{ row }">{{ (row.inhouse_date || row.create_time || '').slice(0,10) }}</template>
@@ -766,7 +802,21 @@ async function handleSave() {
             }
           }
         }
+
+        // 补充查商品 cost_price，作为 BOM 里 out_price=0 时的 fallback
         const matItems = [...materialMap.values()]
+        const missingPriceIds = matItems.filter(i => !i.out_price).map(i => i.goods_id)
+        if (missingPriceIds.length) {
+          try {
+            const gRes = await http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } })
+            const gRows: any[] = gRes.data?.rows ?? []
+            const costMap: Record<number, number> = {}
+            for (const g of gRows) costMap[g.id] = Number(g.cost_price || 0)
+            for (const i of matItems) {
+              if (!i.out_price && costMap[i.goods_id]) i.out_price = costMap[i.goods_id]
+            }
+          } catch {}
+        }
         if (matItems.length) {
           const matRes = await createMaterial({
             pick_date: fd.in_date || new Date().toISOString().slice(0, 10),
@@ -846,6 +896,223 @@ async function handleDelete(id: number) {
 function resetSearch() {
   Object.keys(searchForm).forEach(k => delete searchForm[k])
   tableRef.value?.loadData()
+}
+
+function fmtN(v: any): string {
+  const n = Number(v || 0)
+  return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function parseCostItems(row: any): any[] {
+  const meta = parseProductionInhouseMeta(row?.remark)
+  if (row.goods_info) {
+    try {
+      const items = JSON.parse(row.goods_info)
+      if (Array.isArray(items) && items.length) {
+        return items.map((i: any) => ({ ...i, goods_id: i.goods_id || row.goods_id || 0 }))
+      }
+    } catch {}
+  }
+  return [{
+    goods_id: row.goods_id || 0,
+    goods_name: row.goods_name || '',
+    num: Number(row.inhouse_qty || 0),
+    material_price: Number(meta.material_price || 0),
+    process_price: Number(meta.process_price || 0),
+    in_price: Number(row.in_price || meta.in_price || 0),
+  }]
+}
+
+// 展开行：reactive Map 存各行数据，ref 回调触发查询
+const expandState = reactive<Record<number, { loading: boolean; loaded: boolean; items: any[]; materialCost: number; totalCost: number; avgPrice: number }>>({})
+
+function triggerExpand(row: any) {
+  if (expandState[row.id]?.loaded || expandState[row.id]?.loading) return
+  loadExpandData(row)
+}
+
+async function loadExpandData(row: any) {
+
+  expandState[row.id] = { loading: true, loaded: false, items: [], materialCost: 0, totalCost: 0, avgPrice: 0 }
+
+  try {
+    const base = parseCostItems(row)
+
+    // 采购入库移动均价 + BOM物料成本，兜底商品采购价
+    const avgPriceMap: Record<number, number> = {}
+    try {
+      const [ihRes, bomRes, gRes] = await Promise.allSettled([
+        http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
+        http.get('/goods/ShopBom/index', { params: { list_rows: 500 } }),
+        http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } }),
+      ])
+      const goodsRows: any[] = gRes.status === 'fulfilled' ? (gRes.value.data?.rows ?? []) : []
+      for (const g of goodsRows) avgPriceMap[g.id] = Number(g.cost_price || 0)
+      const snTotalCost: Record<string, number> = {}
+      const snTotalQty: Record<string, number> = {}
+      const ihRows: any[] = ihRes.status === 'fulfilled' ? (ihRes.value.data?.rows ?? []) : []
+      for (const ih of ihRows) {
+        if (Number(ih.status) !== 1) continue
+        try {
+          for (const item of JSON.parse(ih.goods_info || '[]')) {
+            const sn = item.goods_sn
+            if (!sn) continue
+            const qty = Number(item.num || 0)
+            const price = Number(item.price || 0)
+            if (qty > 0 && price > 0) {
+              snTotalCost[sn] = (snTotalCost[sn] || 0) + qty * price
+              snTotalQty[sn] = (snTotalQty[sn] || 0) + qty
+            }
+          }
+        } catch {}
+      }
+      // BOM产品：成品均价 = 各物料用量 × 物料采购均价 之和
+      const snAvgPrice: Record<string, number> = {}
+      for (const sn in snTotalQty) {
+        if (snTotalQty[sn] > 0) snAvgPrice[sn] = snTotalCost[sn] / snTotalQty[sn]
+      }
+      const bomRows: any[] = bomRes.status === 'fulfilled' ? (bomRes.value.data?.rows ?? []) : []
+      const bomMap: Record<number, { material_sn: string; num: number }[]> = {}
+      for (const b of bomRows) {
+        const gid = Number(b.goods_id || 0)
+        if (!gid) continue
+        if (!bomMap[gid]) bomMap[gid] = []
+        bomMap[gid].push({ material_sn: b.material_sn || '', num: Number(b.num || 0) })
+      }
+      for (const gid in bomMap) {
+        const g = goodsRows.find(x => x.id === Number(gid))
+        const sn = g?.goods_sn
+        if (!sn) continue
+        let bomCost = 0
+        for (const mat of bomMap[Number(gid)]) {
+          bomCost += mat.num * (snAvgPrice[mat.material_sn] || 0)
+        }
+        if (bomCost > 0) {
+          snTotalCost[sn] = bomCost
+          snTotalQty[sn] = 1
+        }
+      }
+      for (const g of goodsRows) {
+        const sn = g.goods_sn
+        if (sn && snTotalQty[sn] > 0) avgPriceMap[g.id] = snTotalCost[sn] / snTotalQty[sn]
+      }
+    } catch {}
+
+    // 查领料总价（仅用于展示领料成本）
+    let materialTotalPrice = 0
+    const planId = Number(row.plan_id || 0)
+    if (planId) {
+      try {
+        const mRes = await http.get('/production/material/index', {
+          params: { list_rows: 500, production_plan_id: planId }
+        })
+        for (const mr of (mRes.data?.rows ?? [])) {
+          if (Number(mr.production_plan_id || mr.plan_id) !== planId || Number(mr.status) !== 1) continue
+          materialTotalPrice += Number(mr.total_price || 0)
+        }
+      } catch {}
+    }
+
+    const resolvedItems = base.map((item: any) => {
+      const gid = Number(item.goods_id || 0)
+      const mp = avgPriceMap[gid] || Number(item.material_price || 0)
+      const pp = Number(item.process_price || 0)
+      return { ...item, material_price: mp, in_price: mp + pp }
+    })
+
+    const totalCost = resolvedItems.reduce((s, r) => s + Number(r.num||0) * Number(r.in_price||0), 0)
+    const totalQty = resolvedItems.reduce((s, r) => s + Number(r.num||0), 0)
+
+    expandState[row.id] = {
+      loading: false, loaded: true,
+      items: resolvedItems,
+      materialCost: materialTotalPrice,
+      totalCost,
+      avgPrice: totalQty > 0 ? totalCost / totalQty : 0,
+    }
+  } catch {
+    expandState[row.id] = { loading: false, loaded: true, items: parseCostItems(row), materialCost: 0, totalCost: 0, avgPrice: 0 }
+  }
+}
+
+function calcTotalCost(row: any): number {
+  const items = parseCostItems(row)
+  return items.reduce((s, r) => {
+    const gid = Number(r.goods_id || 0)
+    const mp = stockAvgMap.value[gid] || Number(r.material_price || 0)
+    const pp = Number(r.process_price || 0)
+    return s + (Number(r.num || 0) * (mp + pp))
+  }, 0)
+}
+function calcAvgPrice(row: any): number {
+  const items = parseCostItems(row)
+  const totalQty = items.reduce((s, r) => s + Number(r.num || 0), 0)
+  return totalQty > 0 ? calcTotalCost(row) / totalQty : 0
+}
+
+// 预加载移动加权平均价（采购入库 + BOM物料成本）供列表"入库成本"列使用
+const stockAvgMap = ref<Record<number, number>>({})
+async function loadStockAvg() {
+  try {
+    const [ihRes, bomRes, gRes] = await Promise.allSettled([
+      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
+      http.get('/goods/ShopBom/index', { params: { list_rows: 500 } }),
+      http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } }),
+    ])
+    const m: Record<number, number> = {}
+    const goodsRows: any[] = gRes.status === 'fulfilled' ? (gRes.value.data?.rows ?? []) : []
+    for (const g of goodsRows) m[g.id] = Number(g.cost_price || 0)
+    const snTotalCost: Record<string, number> = {}
+    const snTotalQty: Record<string, number> = {}
+    // 采购入库
+    const ihRows: any[] = ihRes.status === 'fulfilled' ? (ihRes.value.data?.rows ?? []) : []
+    for (const ih of ihRows) {
+      if (Number(ih.status) !== 1) continue
+      try {
+        for (const item of JSON.parse(ih.goods_info || '[]')) {
+          const sn = item.goods_sn
+          if (!sn) continue
+          const qty = Number(item.num || 0)
+          const price = Number(item.price || 0)
+          if (qty > 0 && price > 0) {
+            snTotalCost[sn] = (snTotalCost[sn] || 0) + qty * price
+            snTotalQty[sn] = (snTotalQty[sn] || 0) + qty
+          }
+        }
+      } catch {}
+    }
+    // BOM产品：成品均价 = 各物料用量 × 物料采购均价 之和
+    const snAvgPrice: Record<string, number> = {}
+    for (const sn in snTotalQty) {
+      if (snTotalQty[sn] > 0) snAvgPrice[sn] = snTotalCost[sn] / snTotalQty[sn]
+    }
+    const bomRows: any[] = bomRes.status === 'fulfilled' ? (bomRes.value.data?.rows ?? []) : []
+    const bomMap: Record<number, { material_sn: string; num: number }[]> = {}
+    for (const b of bomRows) {
+      const gid = Number(b.goods_id || 0)
+      if (!gid) continue
+      if (!bomMap[gid]) bomMap[gid] = []
+      bomMap[gid].push({ material_sn: b.material_sn || '', num: Number(b.num || 0) })
+    }
+    for (const gid in bomMap) {
+      const g = goodsRows.find(x => x.id === Number(gid))
+      const sn = g?.goods_sn
+      if (!sn) continue
+      let bomCost = 0
+      for (const mat of bomMap[Number(gid)]) {
+        bomCost += mat.num * (snAvgPrice[mat.material_sn] || 0)
+      }
+      if (bomCost > 0) {
+        snTotalCost[sn] = bomCost
+        snTotalQty[sn] = 1
+      }
+    }
+    for (const g of goodsRows) {
+      const sn = g.goods_sn
+      if (sn && snTotalQty[sn] > 0) m[g.id] = snTotalCost[sn] / snTotalQty[sn]
+    }
+    stockAvgMap.value = m
+  } catch {}
 }
 
 async function initFromQuery() {
@@ -930,7 +1197,7 @@ async function initFromQuery() {
 
 // 防止 onMounted + onActivated 在首次加载时都触发导致重复
 let _initDone = false
-onMounted(async () => { _initDone = false; await initFromQuery(); _initDone = true })
+onMounted(async () => { _initDone = false; loadStockAvg(); await initFromQuery(); _initDone = true })
 onActivated(async () => { if (_initDone) await initFromQuery() })
 </script>
 
@@ -964,4 +1231,7 @@ onActivated(async () => { if (_initDone) await initFromQuery() })
 .goods-summary b { color: #0071e3; }
 
 .remark-section { background: #fff; border-radius: 12px; padding: 16px 20px; }
+
+.expand-cost { background: #f8fafc; }
+.expand-total { padding: 8px 20px 12px; font-size: 13px; color: rgba(29,29,31,0.5); }
 </style>

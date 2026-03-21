@@ -69,7 +69,7 @@
       <!-- 数据说明 -->
       <div class="pf-note">
         <el-icon><InfoFilled /></el-icon>
-        成本价取商品列表cost_price；运费按合同承担比例扣除；费用来自费用管理模块；净利润 = 毛利润 − 运费 − 费用
+        成本价优先取库存移动均价(avg_price)，无均价时取商品采购价(cost_price)；运费按合同承担比例扣除；费用来自费用管理模块；净利润 = 毛利润 − 运费 − 费用
       </div>
 
       <!-- 切换Tab -->
@@ -126,7 +126,7 @@
         </el-table-column>
         <el-table-column label="来源" align="center" width="70">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.source === '零售' ? 'success' : 'primary'">{{ row.source }}</el-tag>
+            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
           </template>
         </el-table-column>
         <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
@@ -136,7 +136,7 @@
       <el-table v-else :data="orderRows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
         <el-table-column label="单据类型" align="center" width="80">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.source === '零售' ? 'success' : 'primary'">{{ row.source }}</el-tag>
+            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="order_no" label="单号" min-width="150" show-overflow-tooltip />
@@ -175,7 +175,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { InfoFilled, Loading } from '@element-plus/icons-vue'
-import { getContractList } from '@/api/sale'
+import { getContractList, getSaleOutList } from '@/api/sale'
 import { getRetailOrderList } from '@/api/retail'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { getExpenseList } from '@/api/finance'
@@ -186,16 +186,67 @@ const dateRange = ref<[string, string] | null>(null)
 const viewMode = ref<'goods' | 'order'>('goods')
 
 const saleContracts = ref<any[]>([])
+const saleOutOrders = ref<any[]>([])
 const retailOrders = ref<any[]>([])
 const goodsList = ref<any[]>([])
+const procureInhouseList = ref<any[]>([])
 const bomList = ref<any[]>([])
 const expenseList = ref<any[]>([])
 
-// goods_id -> cost_price map (商品列表里设置的成本价)
+// goods_id -> 移动加权平均价（采购入库 + BOM物料成本），兜底商品 cost_price
 const goodsCostMap = computed(() => {
   const m: Record<number, number> = {}
   for (const g of goodsList.value) {
     m[g.id] = Number(g.cost_price || 0)
+  }
+  // 采购入库移动均价
+  const snTotalCost: Record<string, number> = {}
+  const snTotalQty: Record<string, number> = {}
+  for (const ih of procureInhouseList.value) {
+    if (Number(ih.status) !== 1) continue
+    try {
+      for (const item of JSON.parse(ih.goods_info || '[]')) {
+        const sn = item.goods_sn
+        if (!sn) continue
+        const qty = Number(item.num || 0)
+        const price = Number(item.price || 0)
+        if (qty > 0 && price > 0) {
+          snTotalCost[sn] = (snTotalCost[sn] || 0) + qty * price
+          snTotalQty[sn] = (snTotalQty[sn] || 0) + qty
+        }
+      }
+    } catch {}
+  }
+  // BOM产品：成品均价 = 各物料用量 × 物料采购均价 之和
+  const snAvgPrice: Record<string, number> = {}
+  for (const sn in snTotalQty) {
+    if (snTotalQty[sn] > 0) snAvgPrice[sn] = snTotalCost[sn] / snTotalQty[sn]
+  }
+  const bomMap: Record<number, { material_sn: string; num: number }[]> = {}
+  for (const b of bomList.value) {
+    const gid = Number(b.goods_id || 0)
+    if (!gid) continue
+    if (!bomMap[gid]) bomMap[gid] = []
+    bomMap[gid].push({ material_sn: b.material_sn || '', num: Number(b.num || 0) })
+  }
+  for (const gid in bomMap) {
+    const g = goodsList.value.find(x => x.id === Number(gid))
+    const sn = g?.goods_sn
+    if (!sn) continue
+    let bomCost = 0
+    for (const mat of bomMap[Number(gid)]) {
+      bomCost += mat.num * (snAvgPrice[mat.material_sn] || 0)
+    }
+    if (bomCost > 0) {
+      snTotalCost[sn] = bomCost
+      snTotalQty[sn] = 1
+    }
+  }
+  for (const g of goodsList.value) {
+    const sn = g.goods_sn
+    if (sn && snTotalQty[sn] > 0) {
+      m[g.id] = snTotalCost[sn] / snTotalQty[sn]
+    }
   }
   return m
 })
@@ -209,15 +260,16 @@ const hasBomSet = computed(() => {
   return s
 })
 
-// Cost always comes from the goods master cost_price
-// BOM tag is shown for info only — cost_price on finished goods already reflects BOM cost
+// Cost: 优先采购入库移动均价，兜底商品 cost_price
 function getUnitCost(goodsId: number): { unitCost: number; hasBom: boolean; costSource: string } {
   const c = goodsCostMap.value[goodsId] || 0
   const hasBom = hasBomSet.value.has(goodsId)
+  const g = goodsList.value.find(x => x.id === goodsId)
+  const hasAvg = g?.goods_sn && procureInhouseList.value.length > 0
   return {
     unitCost: c,
     hasBom,
-    costSource: c > 0 ? `成本价 ¥${c}${hasBom ? '（含BOM）' : ''}` : '未设置成本价',
+    costSource: c > 0 ? `${hasAvg ? '采购均价' : '采购价'} ¥${c.toFixed(2)}${hasBom ? '（含BOM）' : ''}` : '未设置成本价',
   }
 }
 
@@ -250,6 +302,7 @@ const rows = computed(() => {
   }
 
   for (const c of saleContracts.value) add(c.goods_info, '合同')
+  for (const o of saleOutOrders.value) add(o.goods_info, '出库单')
   for (const r of retailOrders.value) add(r.goods_info, '零售')
 
   return Object.values(map)
@@ -283,6 +336,27 @@ const orderRows = computed(() => {
       order_no: c.contract_no || c.order_no || c.id,
       customer_name: c.customer_name || '—',
       order_date: (c.contract_date || c.create_time || '').slice(0, 10),
+      sale_amount, cost_amount, profit,
+      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+    })
+  }
+
+  for (const o of saleOutOrders.value) {
+    let sale_amount = 0
+    let cost_amount = 0
+    try {
+      for (const g of JSON.parse(o.goods_info || '[]')) {
+        const qty = Number(g.num || 0)
+        sale_amount += qty * Number(g.price || 0)
+        cost_amount += qty * getUnitCost(g.goods_id).unitCost
+      }
+    } catch {}
+    const profit = sale_amount - cost_amount
+    result.push({
+      source: '出库单',
+      order_no: o.order_no || o.order_sn || o.id,
+      customer_name: o.customer_name || '—',
+      order_date: (o.out_date || o.create_time || '').slice(0, 10),
       sale_amount, cost_amount, profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
     })
@@ -346,18 +420,22 @@ async function loadData() {
     params.end_date = dateRange.value[1]
   }
   try {
-    const [c, r, g, b, e] = await Promise.allSettled([
+    const [c, o, r, g, ih, b, e] = await Promise.allSettled([
       getContractList(params),
+      getSaleOutList({ ...params, status: 1 }),
       getRetailOrderList(params),
       getGoodsList({ list_rows: 500 }),
+      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
       getExpenseList(params),
     ])
-    saleContracts.value = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
-    retailOrders.value  = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []) : []
-    goodsList.value     = g.status === 'fulfilled' ? (g.value?.data?.rows  ?? []) : []
-    bomList.value       = b.status === 'fulfilled' ? (b.value?.data?.rows  ?? []) : []
-    expenseList.value   = e.status === 'fulfilled' ? (e.value?.data?.rows  ?? []) : []
+    saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
+    saleOutOrders.value      = o.status === 'fulfilled' ? (o.value?.data?.rows  ?? []) : []
+    retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []) : []
+    goodsList.value          = g.status === 'fulfilled' ? (g.value?.data?.rows  ?? []) : []
+    procureInhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []) : []
+    bomList.value            = b.status === 'fulfilled' ? (b.value?.data?.rows  ?? []) : []
+    expenseList.value        = e.status === 'fulfilled' ? (e.value?.data?.rows  ?? []) : []
   } finally {
     loading.value = false
   }

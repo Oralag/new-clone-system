@@ -44,7 +44,9 @@
             </template>
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="offer_no" label="报价单号" min-width="150" />
+          <el-table-column label="报价单号" min-width="150">
+            <template #default="{ row }">{{ parseOfferNo(row) }}</template>
+          </el-table-column>
           <el-table-column label="客户名称" min-width="140">
             <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
           </el-table-column>
@@ -323,6 +325,16 @@ function parseItems(goodsInfo: any): any[] {
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
 }
 
+function parseOfferNo(row: any): string {
+  const m = (row.remark || '').match(/^\[NO:([^\]]+)\]/)
+  if (m) return m[1]
+  return row.offer_no || `BJ${String(row.id || '').padStart(4, '0')}`
+}
+
+function parseRemark(remark: string): string {
+  return (remark || '').replace(/^\[NO:[^\]]+\]\s*/, '')
+}
+
 const goodsSpecMap = reactive<Record<number, string[]>>({})
 async function fetchGoodsSpecs(goodsId: number) {
   if (!goodsId || goodsSpecMap[goodsId] !== undefined) return
@@ -400,7 +412,8 @@ async function openCreate() {
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
-  fd.offer_no = row.offer_no || `BJ${String(row.id || '').padStart(4, '0')}`
+  fd.offer_no = parseOfferNo(row)
+  fd.remark = parseRemark(row.remark || '')
   // 解析 goods_info JSON
   try {
     fd.items = JSON.parse(row.goods_info || '[]')
@@ -574,7 +587,7 @@ async function handleSave() {
   try {
     const payload: Record<string, any> = {
       customer_id: fd.customer_id,
-      remark: fd.remark,
+      remark: fd.offer_no ? `[NO:${fd.offer_no}]${fd.remark ? ' ' + fd.remark : ''}` : fd.remark,
       total_amount: fd.total_amount,
       discount_amount: fd.discount_amount || 0,
       after_offer: fd.after_offer || fd.total_amount,
@@ -616,24 +629,22 @@ async function handleAudit(row: any, status: number) {
 }
 
 async function handleConvertToContract(row: any) {
-  await ElMessageBox.confirm(`确定将报价单「${row.offer_no || row.id}」转为销售合同？`, '转销售合同', { type: 'info' })
-  // 标记报价单为已转单 status=4（或通过edit接口更新备注）
-  try {
-    await http.post('/shop/SalesOffer/edit', { id: row.id, status: 4 })
-  } catch (e: any) {
-    console.warn('更新报价单状态失败', e?.message)
-  }
-  // 用 sessionStorage 传递数据
-  sessionStorage.setItem('contract_from_offer', JSON.stringify({
-    offer_id: row.id,
-    offer_no: row.offer_no || '',
+  const offerNo = parseOfferNo(row)
+  await ElMessageBox.confirm(`确定将报价单「${offerNo}」转为销售合同？`, '转销售合同', { type: 'info' })
+  let items: any[] = []
+  try { items = JSON.parse(row.goods_info || '[]') } catch {}
+  sessionStorage.setItem('sale_contract_draft_from_offer', JSON.stringify({
+    source_offer_id: row.id,
+    source_offer_no: offerNo,
     customer_id: row.customer_id,
     customer_name: row.customer_name || '',
     admin_name: row.admin_name || '',
-    remark: row.remark || '',
-    goods_info: row.goods_info || '[]',
+    remark: parseRemark(row.remark || ''),
+    discount_amount: Number(row.discount_amount || 0),
+    after_offer: Number(row.after_offer || 0),
+    items,
   }))
-  router.push('/sale/contract')
+  router.push('/sale/contract?from=offer')
 }
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────

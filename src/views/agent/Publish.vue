@@ -1,6 +1,23 @@
 <template>
   <div class="publish-page">
 
+    <!-- 发布专员悬浮小窗 -->
+    <div class="agent-float" :class="{ open: agentOpen }">
+      <div class="agent-float-header" @click="agentOpen = !agentOpen">
+        <div class="agent-float-title">
+          <span>🚀</span>
+          <span>发布专员</span>
+          <span class="agent-float-dot"></span>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path :d="agentOpen ? 'M2 8l4-4 4 4' : 'M2 4l4 4 4-4'"/>
+        </svg>
+      </div>
+      <div v-if="agentOpen" class="agent-float-body">
+        <AgentChat agent-id="publisher" :quick-prompts="agentPrompts" />
+      </div>
+    </div>
+
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <div class="toolbar-left">
@@ -115,6 +132,15 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useTrendingStore } from '@/stores/agent'
+import AgentChat from '@/components/agent/AgentChat.vue'
+
+// 发布专员小窗
+const agentOpen = ref(false)
+const agentPrompts = [
+  '帮我制定本周发布计划',
+  '这批内容应该什么时间发效果最好？',
+  '各平台发布频率建议',
+]
 
 const router = useRouter()
 const agentStore = useTrendingStore()

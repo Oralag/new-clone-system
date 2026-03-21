@@ -114,8 +114,8 @@ defineExpose({ loadHistory })
 .ap-layout {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 110px);
-  min-height: 500px;
+  height: calc(100vh - 60px);
+  min-height: 600px;
   gap: 0;
 }
 

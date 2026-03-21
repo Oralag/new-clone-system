@@ -147,7 +147,7 @@
               <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="成本价" width="90" align="right">
+          <el-table-column label="移动均价" width="90" align="right">
             <template #default="{ row }">¥{{ getAvgPrice(row).toFixed(2) }}</template>
           </el-table-column>
           <el-table-column label="库存货值" width="110" align="right" sortable="custom" prop="__stock_value">
@@ -658,25 +658,87 @@ async function loadStockMap(warehouseId = 0) {
     if (warehouseId) params.warehouse_id = warehouseId
     const res: any = await getStockList(params)
     const rows: any[] = res?.data?.rows ?? res?.rows ?? []
-    // 用 goods_sn 做桥梁：先建 sn->qty 和 sn->price 的 map
+    // 用 goods_sn 做桥梁：先建 sn->qty 的 map
     const snQtyMap: Record<string, number> = {}
-    const snPriceMap: Record<string, number> = {}
     for (const r of rows) {
       const sn = r.goods_sn
       if (!sn) continue
       snQtyMap[sn] = (snQtyMap[sn] || 0) + Number(r.qty ?? r.stock_num ?? 0)
-      if (!snPriceMap[sn] && Number(r.avg_price ?? r.cost_price ?? 0) > 0) {
-        snPriceMap[sn] = Number(r.avg_price ?? r.cost_price ?? 0)
-      }
     }
+
+    // 移动加权平均价：采购入库 + BOM物料成本
+    const snTotalCost: Record<string, number> = {}
+    const snTotalQty: Record<string, number> = {}
+    try {
+      const ihRes = await http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } })
+
+      // 采购入库单
+      const ihRows: any[] = ihRes.data?.rows ?? []
+      for (const ih of ihRows) {
+        if (Number(ih.status) !== 1) continue
+        try {
+          const items: any[] = JSON.parse(ih.goods_info || '[]')
+          for (const item of items) {
+            const sn = item.goods_sn
+            if (!sn) continue
+            const qty = Number(item.num || 0)
+            const price = Number(item.price || 0)
+            if (qty > 0 && price > 0) {
+              snTotalCost[sn] = (snTotalCost[sn] || 0) + qty * price
+              snTotalQty[sn] = (snTotalQty[sn] || 0) + qty
+            }
+          }
+        } catch {}
+      }
+
+      // BOM产品：成品均价 = BOM各物料用量 × 物料采购均价 之和
+      // 先建 goods_sn -> 采购均价 的映射
+      const snAvgPrice: Record<string, number> = {}
+      for (const _sn in snTotalQty) {
+        if (snTotalQty[_sn] > 0) snAvgPrice[_sn] = snTotalCost[_sn] / snTotalQty[_sn]
+      }
+      // 查BOM表
+      let bomRows: any[] = []
+      try {
+        const bomRes = await http.get('/goods/ShopBom/index', { params: { list_rows: 500 } })
+        bomRows = bomRes.data?.rows ?? []
+      } catch {}
+      // 按 goods_id 分组BOM物料
+      const bomMap: Record<number, { material_sn: string; num: number }[]> = {}
+      for (const b of bomRows) {
+        const gid = Number(b.goods_id || 0)
+        if (!gid) continue
+        if (!bomMap[gid]) bomMap[gid] = []
+        bomMap[gid].push({ material_sn: b.material_sn || '', num: Number(b.num || 0) })
+      }
+      // 有BOM定义的商品，用BOM物料成本算均价
+      for (const gid in bomMap) {
+        const g = allGoods.value.find(x => x.id === Number(gid))
+        const sn = g?.goods_sn
+        if (!sn) continue
+        let bomCost = 0
+        for (const mat of bomMap[Number(gid)]) {
+          bomCost += mat.num * (snAvgPrice[mat.material_sn] || 0)
+        }
+        if (bomCost > 0) {
+          snTotalCost[sn] = bomCost
+          snTotalQty[sn] = 1
+        }
+      }
+    } catch {}
+
     // 再用商品表的 goods_sn 匹配商品 id
     const qtyMap: Record<number, number> = {}
     const priceMap: Record<number, number> = {}
     for (const g of allGoods.value) {
       const sn = g.goods_sn
-      if (sn && snQtyMap[sn] !== undefined) {
+      if (!sn) continue
+      if (snQtyMap[sn] !== undefined) {
         qtyMap[g.id] = snQtyMap[sn]
-        if (snPriceMap[sn]) priceMap[g.id] = snPriceMap[sn]
+      }
+      // 移动加权平均价 = 采购总额 / 采购总量
+      if (snTotalQty[sn] > 0) {
+        priceMap[g.id] = snTotalCost[sn] / snTotalQty[sn]
       }
     }
     stockQtyMap.value = qtyMap

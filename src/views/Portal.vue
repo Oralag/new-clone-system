@@ -125,13 +125,13 @@
             <path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="white" opacity="0.9"/>
           </svg>
         </div>
-        <h2 class="card-title card-title-ai">让 AI 替你<br/>打理内容运营</h2>
-        <p class="card-desc">自动抓取热搜、生成爆款文案、制作海报，多平台一键发布。你只需设定目标，其余交给 AI。</p>
+        <h2 class="card-title card-title-ai">智能体工作流</h2>
+        <p class="card-desc">多 Agent 协同作业，热搜抓取、文案生成、海报制作全自动流转。你只需设定目标，其余交给 AI。</p>
         <div class="card-tags">
-          <span class="tag tag-ai">热搜抓取</span>
-          <span class="tag tag-ai">文案生成</span>
-          <span class="tag tag-ai">海报制作</span>
-          <span class="tag tag-ai">自动发布</span>
+          <span class="tag tag-ai">多Agent协作</span>
+          <span class="tag tag-ai">自动流转</span>
+          <span class="tag tag-ai">内容生产</span>
+          <span class="tag tag-ai">一键发布</span>
         </div>
         <div class="card-arrow">
           <span>立即体验</span>
