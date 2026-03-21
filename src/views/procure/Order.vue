@@ -38,6 +38,9 @@
                       <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
+                  <el-table-column label="供应商" width="130">
+                    <template #default="{ row: item }">{{ item.supplier_name || '—' }}</template>
+                  </el-table-column>
                   <el-table-column prop="remark" label="备注" min-width="100" />
                 </el-table>
               </div>
@@ -357,7 +360,11 @@
             </el-table-column>
             <el-table-column label="行供应商" width="150">
               <template #default="{ row }">
+                <template v-if="isReadonly">
+                  <span>{{ row.supplier_name || (supplierOptions.find((s:any) => s.id === row.supplier_id)?.name) || '同整体' }}</span>
+                </template>
                 <el-select
+                  v-else
                   v-model="row.supplier_id"
                   size="small"
                   placeholder="同整体"

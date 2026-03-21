@@ -98,7 +98,6 @@ export const menuData: TopMenuItem[] = [
       { key: 'production-plan', title: '生产计划', path: '/production/plan' },
       { key: 'production-inhouse', title: '生产入库', path: '/production/inhouse' },
       { key: 'production-material', title: '领料管理', path: '/production/material' },
-      { key: 'production-return-material', title: '退料管理', path: '/production/return-material' },
     ],
   },
   {

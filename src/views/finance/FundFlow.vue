@@ -90,11 +90,14 @@ import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList, 
 import http from '@/api/http'
 import { normalizeProcureReturnFinanceRows, applyProcureReturnsToPayableRows } from '@/utils/procureReturnFinance'
 import { buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
+import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 
 const route = useRoute()
 const summaryLoading = ref(false)
 const tableLoading = ref(false)
 const summary = reactive({ balance: 0, income: 0, expense: 0, unpaid: 0 })
+const purchaseOrdersForLabel = ref<any[]>([])
+const supplierListForLabel = ref<any[]>([])
 
 const filterKeyword = ref('')
 const filterType = ref((route.query.type === 'income' || route.query.type === 'expense') ? route.query.type as string : '')
@@ -162,7 +165,7 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes, receivableRes, saleReturnRes] = await Promise.all([
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes, receivableRes, saleReturnRes, procureRes, supRes] = await Promise.all([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
       getPayReceiptList({ list_rows: 1000 }),
@@ -174,7 +177,11 @@ onMounted(async () => {
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
       getReceivableList({ list_rows: 1000 }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
+      http.get('/stock/PurchaseOrder/index', { params: { list_rows: 1000 } }),
+      http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
     ])
+    purchaseOrdersForLabel.value = procureRes.data?.rows ?? []
+    supplierListForLabel.value = supRes.data?.rows ?? []
 
     const items: FlowItem[] = []
     const fundRows: any[] = fundRes.data?.rows ?? fundRes.data?.list ?? []
@@ -217,7 +224,7 @@ onMounted(async () => {
         fund_name: r.fund_name || r.account_name || '—',
         type: 'expense',
         source: paySourceMap[r.contact_type] || '付款单',
-        name: r.contact_name || r.supplier_name || '—',
+        name: getPayReceiptSupplierLabel(r, purchaseOrdersForLabel.value, supplierListForLabel.value),
         order_no: r.receipt_no || r.order_no || '',
         amount: Number(r.amount || 0),
         remark: r.remark || '',

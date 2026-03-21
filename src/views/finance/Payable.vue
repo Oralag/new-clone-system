@@ -115,6 +115,7 @@ import { Search, Refresh } from '@element-plus/icons-vue'
 import http from '@/api/http'
 import { getSupplierList } from '@/api/procure'
 import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
+import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
 
 const router = useRouter()
 
@@ -146,7 +147,7 @@ const summaryReturn = computed(() => displayRows.value.reduce((s, r) => s + Numb
 async function load() {
   loading.value = true
   try {
-    const [orderRes, returnRes] = await Promise.all([
+    const [orderRes, returnRes, supplierRes] = await Promise.all([
       http.get('/stock/PurchaseOrder/index', {
         params: {
           list_rows: 2000,
@@ -160,6 +161,7 @@ async function load() {
           list_rows: 1000,
         }
       }),
+      http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
     ])
 
     const orders: any[] = orderRes.data?.rows ?? []
@@ -167,11 +169,12 @@ async function load() {
     // 按供应商聚合采购订单
     const supplierMap = new Map<string, any>()
     for (const o of orders) {
-      const key = o.supplier_id ? `id:${o.supplier_id}` : `name:${String(o.supplier_name || '').trim()}`
+      const displayName = getProcureOrderSupplierLabel(o, supplierRes.data?.rows ?? [])
+      const key = displayName === '多供应商' ? `order:${o.id}` : (o.supplier_id ? `id:${o.supplier_id}` : `name:${String(o.supplier_name || '').trim()}`)
       if (!supplierMap.has(key)) {
         supplierMap.set(key, {
-          supplier_id: o.supplier_id || 0,
-          supplier_name: o.supplier_name || '',
+          supplier_id: displayName === '多供应商' ? 0 : (o.supplier_id || 0),
+          supplier_name: displayName,
           contact_name: o.contact_name || '',
           contact_mobile: o.contact_mobile || '',
           order_amount: 0,

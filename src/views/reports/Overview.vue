@@ -113,7 +113,7 @@
           <div class="ro-section-label">采购订单（{{ procureOrders.length }} 单）</div>
           <div v-if="procureOrders.length === 0 && !loading" class="ro-empty-sm">暂无采购订单</div>
           <div v-for="row in procureOrders.slice(0, 8)" :key="row.id" class="ro-detail-row">
-            <span class="ro-dr-name">{{ row.supplier_name || row.order_sn || '-' }}</span>
+            <span class="ro-dr-name">{{ getProcureSupplierLabel(row) || row.order_sn || '-' }}</span>
             <span class="ro-dr-date">{{ row.order_date || row.created_at?.slice(0,10) }}</span>
             <span class="ro-dr-amt red">−¥{{ fmt(row.total_amount || 0) }}</span>
           </div>
@@ -360,6 +360,7 @@ const bomList = ref<any[]>([])
 const expenseList = ref<any[]>([])
 const prepayList = ref<any[]>([])
 const collectReceipts = ref<any[]>([])
+const supplierList = ref<any[]>([])
 
 // --- Totals from raw orders ---
 const saleTotal = computed(() =>
@@ -481,10 +482,23 @@ const grossMargin = computed(() => {
 })
 
 // --- Supplier aggregation from raw purchase orders ---
+function getProcureSupplierLabel(row: any): string {
+  try {
+    const items = typeof row.goods_info === 'string' ? JSON.parse(row.goods_info) : (row.goods_info || [])
+    const ids = [...new Set(items.map((i: any) => Number(i.supplier_id)).filter(Boolean))]
+    if (ids.length > 1) return '多供应商'
+    if (ids.length === 1) {
+      const item = items.find((i: any) => i.supplier_id)
+      return item?.supplier_name || supplierList.value.find((s: any) => s.id === ids[0])?.name || row.supplier_name || '—'
+    }
+  } catch {}
+  return row.supplier_name || supplierList.value.find((s: any) => s.id === row.supplier_id)?.name || '—'
+}
+
 const supplierRows = computed(() => {
   const map: Record<string, number> = {}
   for (const o of procureOrders.value) {
-    const k = o.supplier_name || '无供应商'
+    const k = getProcureSupplierLabel(o)
     map[k] = (map[k] || 0) + Number(o.total_amount || 0)
   }
   return Object.entries(map)
@@ -584,6 +598,8 @@ async function loadAll() {
       ? (prepay.value?.data?.rows ?? []) : []
     collectReceipts.value = receipts.status === 'fulfilled'
       ? (receipts.value?.data?.rows ?? []) : []
+    const sup = await http.get('/procure/supplier/index', { params: { list_rows: 500 } }).catch(() => null)
+    supplierList.value = sup?.data?.rows ?? []
   } finally {
     loading.value = false
   }

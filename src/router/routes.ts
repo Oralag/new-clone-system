@@ -71,7 +71,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'production/plan', name: 'ProductionPlan', component: () => import('@/views/production/Plan.vue'), meta: { title: '生产计划' } },
       { path: 'production/inhouse', name: 'ProductionInhouse', component: () => import('@/views/production/Inhouse.vue'), meta: { title: '生产入库' } },
       { path: 'production/material', name: 'ProductionMaterial', component: () => import('@/views/production/Material.vue'), meta: { title: '领料管理' } },
-      { path: 'production/return-material', name: 'ProductionReturnMaterial', component: () => import('@/views/production/ReturnMaterial.vue'), meta: { title: '退料管理' } },
 
       // Outsource
       { path: 'outsource/plan', name: 'OutsourcePlan', component: () => import('@/views/outsource/Plan.vue'), meta: { title: '委外计划' } },

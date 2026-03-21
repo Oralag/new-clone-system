@@ -195,7 +195,7 @@ const PRESET_ROLES: Record<string, string[]> = {
   生产主管: [
     'dashboard',
     'production-overview','production-plan','production-inhouse',
-    'production-material','production-return-material',
+    'production-material',
     'outsource-plan','outsource-inhouse','outsource-receive','outsource-quality',
     'procure-plan',
     'warehouse-stock','warehouse-flow','warehouse-warning',

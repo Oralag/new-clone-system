@@ -174,7 +174,7 @@
           </template>
           <div class="inline-list" v-if="adjustedPayList.length">
             <div class="inline-item clickable" v-for="r in adjustedPayList.slice(0,4)" :key="r.id" @click="router.push('/finance/pay-receipt')">
-              <div class="inline-name">{{ r.supplier_name || r.contact_name || '—' }}</div>
+              <div class="inline-name">{{ getPayReceiptSupplierLabel(r, purchasePayList, supplierList) }}</div>
               <div class="inline-value red">¥{{ Number(r.net_amount ?? r.amount ?? 0).toFixed(2) }}</div>
               <div class="inline-sub">
                 {{ (r.pay_date||r.created_at||'').slice(0,10) }}
@@ -431,6 +431,7 @@ import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList } from '@/api/finance'
 import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
+import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 
 const router = useRouter()
@@ -504,7 +505,7 @@ const allFlowItems = computed(() => {
   for (const r of payList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const paySourceMap: Record<string, string> = { supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出' }
-    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: r.supplier_name || r.contact_name || '—', amount: Number(r.amount || 0), date: (r.pay_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
+    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: getPayReceiptSupplierLabel(r, purchasePayList.value, supplierList.value), amount: Number(r.amount || 0), date: (r.pay_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
   }
   // 5. 费用单（expense）— 真实字段: name(非type_name), amount, expense_date, order_sn
   for (const r of expenseList.value) {

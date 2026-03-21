@@ -42,6 +42,7 @@
               <el-button v-if="row.status === 0" type="primary" size="small" link @click="doAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 0" type="danger" size="small" link @click="doAudit(row, 2)">驳回</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" size="small" link @click="doAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1" type="success" size="small" link @click="openReturnDialog(row)">退料</el-button>
               <el-button
                 type="danger"
                 size="small"
@@ -237,6 +238,73 @@
         <el-button type="primary" @click="applyBatch">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 退料弹窗 -->
+    <el-dialog v-model="returnDialogVisible" title="退料" width="860px" append-to-body destroy-on-close>
+      <div style="margin-bottom:12px">
+        <el-row :gutter="16">
+          <el-col :span="8">
+            <div class="field-row">
+              <span class="field-label required">退料日期</span>
+              <el-date-picker v-model="rfd.return_date" type="date" value-format="YYYY-MM-DD" style="flex:1" />
+            </div>
+          </el-col>
+          <el-col :span="8">
+            <div class="field-row">
+              <span class="field-label required">退回仓库</span>
+              <el-select v-model="rfd.warehouse_id" placeholder="选择仓库" style="flex:1" @change="onReturnWarehouseChange">
+                <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
+              </el-select>
+            </div>
+          </el-col>
+          <el-col :span="8">
+            <div class="field-row">
+              <span class="field-label">退料人</span>
+              <el-input v-model="rfd.returner" placeholder="退料人" style="flex:1" />
+            </div>
+          </el-col>
+        </el-row>
+      </div>
+      <el-table :data="rfd.items" border size="small" style="width:100%">
+        <el-table-column type="index" label="#" width="45" align="center" />
+        <el-table-column label="商品名称" min-width="140">
+          <template #default="{ row }">{{ row.goods_name }}</template>
+        </el-table-column>
+        <el-table-column label="商品编码" width="110">
+          <template #default="{ row }">{{ row.goods_sn || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="单位" width="70" align="center">
+          <template #default="{ row }">{{ row.unit_name || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="退料数量" width="120">
+          <template #default="{ row }">
+            <el-input-number v-model="row.num" :min="0" :precision="2" controls-position="right" size="small" style="width:100%" />
+          </template>
+        </el-table-column>
+        <el-table-column label="入库单价" width="120">
+          <template #default="{ row }">
+            <el-input-number v-model="row.in_price" :min="0" :precision="4" controls-position="right" size="small" style="width:100%" />
+          </template>
+        </el-table-column>
+        <el-table-column label="小计" width="100" align="right">
+          <template #default="{ row }"><b style="color:#16a34a">{{ ((row.num||0)*(row.in_price||0)).toFixed(2) }}</b></template>
+        </el-table-column>
+        <el-table-column label="退料原因" min-width="120">
+          <template #default="{ row }">
+            <el-input v-model="row.reason" size="small" placeholder="原因" />
+          </template>
+        </el-table-column>
+      </el-table>
+      <div style="padding:8px 0;font-size:13px;color:#555">退料总价：<b style="color:#16a34a">{{ returnTotalPrice.toFixed(2) }}</b></div>
+      <div class="field-row" style="margin-top:4px">
+        <span class="field-label">备注</span>
+        <el-input v-model="rfd.remark" type="textarea" :rows="2" style="flex:1" />
+      </div>
+      <template #footer>
+        <el-button @click="returnDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="returnSaving" @click="handleReturnSave">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -248,7 +316,7 @@ import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import StaffSelect from '@/components/StaffSelect.vue'
-import { getMaterialList, createMaterial, deleteMaterial, auditMaterial } from '@/api/production'
+import { getMaterialList, createMaterial, deleteMaterial, auditMaterial, createReturnMaterial } from '@/api/production'
 import { getProductionPlanList } from '@/api/production'
 import { getWarehouseList } from '@/api/warehouse'
 import { getBomByGoods } from '@/api/goods'
@@ -698,6 +766,79 @@ onMounted(async () => {
     await refreshAllRowStocks()
   } catch {}
 })
+
+// ══ 退料弹窗逻辑 ══
+const returnDialogVisible = ref(false)
+const returnSaving = ref(false)
+const rfd = reactive({
+  return_date: '',
+  warehouse_id: null as any,
+  warehouse_name: '',
+  returner: '',
+  plan_id: 0,
+  plan_name: '',
+  remark: '',
+  items: [] as any[],
+})
+
+const returnTotalPrice = computed(() => rfd.items.reduce((s, r) => s + (Number(r.num) || 0) * (Number(r.in_price) || 0), 0))
+
+function onReturnWarehouseChange(id: any) {
+  const w = warehouseOptions.value.find((x: any) => x.id === id)
+  rfd.warehouse_name = w?.name ?? ''
+}
+
+function openReturnDialog(row: any) {
+  rfd.return_date = new Date().toISOString().slice(0, 10)
+  rfd.warehouse_id = row.warehouse_id ?? null
+  rfd.warehouse_name = row.warehouse_name ?? ''
+  rfd.returner = ''
+  rfd.plan_id = toNumber(row.production_plan_id || row.plan_id)
+  rfd.plan_name = row.plan_name || ''
+  rfd.remark = ''
+  try {
+    const srcItems: any[] = JSON.parse(row.goods_info || '[]')
+    rfd.items = srcItems.map((item: any) => ({
+      goods_id: toNumber(item.goods_id),
+      goods_name: item.goods_name || '',
+      goods_sn: item.goods_sn || '',
+      spec: item.spec || '',
+      unit_name: item.unit_name || '',
+      num: toNumber(item.num),
+      in_price: toNumber(item.out_price ?? item.in_price ?? item.cost_price),
+      reason: '',
+    }))
+  } catch {
+    rfd.items = []
+  }
+  returnDialogVisible.value = true
+}
+
+async function handleReturnSave() {
+  if (!rfd.return_date) { ElMessage.warning('请选择退料日期'); return }
+  if (!rfd.warehouse_id) { ElMessage.warning('请选择退回仓库'); return }
+  if (!rfd.items.length) { ElMessage.warning('请添加退料商品'); return }
+  returnSaving.value = true
+  try {
+    await createReturnMaterial({
+      return_date: rfd.return_date,
+      warehouse_id: rfd.warehouse_id,
+      warehouse_name: rfd.warehouse_name,
+      returner: rfd.returner,
+      plan_id: rfd.plan_id,
+      plan_name: rfd.plan_name,
+      remark: rfd.remark,
+      goods_info: JSON.stringify(rfd.items),
+      total_price: returnTotalPrice.value,
+    })
+    ElMessage.success('退料保存成功')
+    returnDialogVisible.value = false
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    returnSaving.value = false
+  }
+}
 </script>
 
 <style scoped>

@@ -74,7 +74,9 @@
       <el-table :data="tableData" border stripe size="small" style="width:100%">
         <el-table-column type="index" label="序号" width="55" align="center" />
         <el-table-column label="下单日期" prop="order_date" width="110" />
-        <el-table-column label="供应商名称" prop="supplier_name" min-width="120" />
+        <el-table-column label="供应商名称" min-width="120">
+          <template #default="{ row }">{{ getSupplierLabel(row) }}</template>
+        </el-table-column>
         <el-table-column label="采购金额" prop="total_amount" width="110" align="right">
           <template #default="{ row }">{{ fmt(row.total_amount) }}</template>
         </el-table-column>
@@ -161,6 +163,16 @@ const stats = computed(() => {
     freight: rows.reduce((s, r) => s + Number(r.freight_amount || 0), 0),
   }
 })
+
+function getSupplierLabel(row: any): string {
+  try {
+    const items = typeof row.goods_info === 'string' ? JSON.parse(row.goods_info) : (row.goods_info || [])
+    const ids = [...new Set(items.map((i: any) => Number(i.supplier_id)).filter(Boolean))]
+    if (ids.length > 1) return '多供应商'
+    if (ids.length === 1) return items.find((i: any) => i.supplier_id)?.supplier_name || row.supplier_name || String(ids[0])
+  } catch {}
+  return row.supplier_name || '—'
+}
 
 function filterRows(rows: any[]) {
   return rows.filter(r => {

@@ -653,8 +653,12 @@ async function handleSave() {
           apply_date: fd.in_date || new Date().toISOString().slice(0, 10),
           remark: `生产入库自动汇总 - ${goodsNames}`,
         })
-      } catch {}
+      }
     }
+    // 暂停自动写费用：
+    // 当前正式库 expense 表字段与前端/部分后端逻辑不一致，
+    // 继续自动写入会在保存时弹 SQL 字段不存在错误。
+    // 先确保生产入库主流程和库存同步正常，人工成本可后续在费用管理中手工补录。
     // 倒冲领料：按 BOM 自动生成领料单并扣减库存
     if (fd.back_flush && fd.warehouse_id) {
       try {

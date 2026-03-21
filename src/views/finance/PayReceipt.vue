@@ -24,7 +24,9 @@
             <el-tag size="small" :type="typeTagMap[row.contact_type] ?? ''">{{ typeLabel(row.contact_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="contact_name" label="付款对象" min-width="130" />
+        <el-table-column label="付款对象" min-width="130">
+          <template #default="{ row }">{{ getPaySupplierLabel(row) }}</template>
+        </el-table-column>
         <el-table-column prop="amount" label="付款金额" width="120" align="right">
           <template #default="{ row }">
             <span style="color:#dc2626;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
@@ -67,8 +69,15 @@ import ScTable from '@/components/ScTable.vue'
 import { getPayReceiptList, deletePayReceipt } from '@/api/finance'
 import http from '@/api/http'
 import { applyProcureReturnsToPayReceiptRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
+import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 
 const router = useRouter()
+const purchaseOrders = ref<any[]>([])
+const supplierList = ref<any[]>([])
+
+function getPaySupplierLabel(row: any) {
+  return getPayReceiptSupplierLabel(row, purchaseOrders.value, supplierList.value)
+}
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '' })
@@ -83,10 +92,14 @@ function typeLabel(type: string) {
 }
 
 async function getPayReceiptListWithRefund(params: any) {
-  const [payRes, returnRes] = await Promise.all([
+  const [payRes, returnRes, procureRes, supRes] = await Promise.all([
     getPayReceiptList(params),
     http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
+    http.get('/stock/PurchaseOrder/index', { params: { list_rows: 1000 } }),
+    http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
   ])
+  purchaseOrders.value = procureRes.data?.rows ?? []
+  supplierList.value = supRes.data?.rows ?? []
 
   const rows: any[] = payRes.data?.rows ?? []
   const normalizedReturns = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [])

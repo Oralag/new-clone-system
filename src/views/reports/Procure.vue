@@ -131,7 +131,7 @@ const filteredRows = computed(() => {
 
 const stats = computed(() => {
   const rows = filteredRows.value
-  const suppliers = new Set(rows.map(r => r.supplier_name)).size
+  const suppliers = new Set(rows.map(r => getSupplierLabel(r))).size
   return {
     count: rows.length,
     total: rows.reduce((s, r) => s + Number(r.total_amount || 0), 0),
@@ -141,10 +141,20 @@ const stats = computed(() => {
   }
 })
 
+function getSupplierLabel(row: any): string {
+  try {
+    const items = typeof row.goods_info === 'string' ? JSON.parse(row.goods_info) : (row.goods_info || [])
+    const ids = [...new Set(items.map((i: any) => Number(i.supplier_id)).filter(Boolean))]
+    if (ids.length > 1) return '多供应商'
+    if (ids.length === 1) return items.find((i: any) => i.supplier_id)?.supplier_name || row.supplier_name || String(ids[0])
+  } catch {}
+  return row.supplier_name || '—'
+}
+
 const summaryData = computed(() => {
   const map: Record<string, any> = {}
   for (const r of filteredRows.value) {
-    const name = r.supplier_name || '未知'
+    const name = getSupplierLabel(r)
     if (!map[name]) map[name] = { supplier_name: name, count: 0, total: 0, paid: 0, unpaid: 0 }
     map[name].count++
     map[name].total += Number(r.total_amount || 0)
