@@ -24,16 +24,17 @@ function normalizeExpenseResponse(res: any) {
 
 function buildExpensePayload(data: any) {
   const payload = { ...(data || {}) }
-  const typeName = String(payload.type_name || payload.title || payload.expense_type || payload.expense_name || '').trim()
+  const typeName = String(payload.type_name || payload.title || payload.expense_type || payload.expense_name || payload.name || '').trim()
   const expenseDate = payload.apply_date || payload.expense_date || ''
 
-  delete payload.type_name
-  delete payload.apply_date
-
-  if (typeName && !payload.title) payload.title = typeName
-  if (expenseDate && !payload.expense_date) payload.expense_date = expenseDate
-
-  return payload
+  return {
+    name: payload.name || typeName,
+    amount: Number(payload.amount || 0),
+    expense_date: expenseDate,
+    remark: payload.remark || '',
+    order_sn: payload.order_sn || payload.expense_no || '',
+    applicant_name: payload.applicant_name || '',
+  }
 }
 
 export const getReceivableList = (params?: any) => http.get('/finance/CollectAccounts/index', { params })

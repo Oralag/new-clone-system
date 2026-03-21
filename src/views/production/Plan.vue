@@ -429,8 +429,23 @@ async function loadData() {
     const params: any = { page: page.value, list_rows: pageSize.value }
     if (searchForm.order_sn) params.order_sn = searchForm.order_sn
     if (searchForm.status !== '') params.status = searchForm.status
-    const res = await http.get('/production/plan/index', { params })
-    tableData.value = res.data?.rows || []
+    const [res, inhouseRes] = await Promise.all([
+      http.get('/production/plan/index', { params }),
+      http.get('/production/inhouse/index', { params: { list_rows: 1000 } }),
+    ])
+    const rows = res.data?.rows || []
+    const inhouseRows: any[] = inhouseRes.data?.rows || []
+    const inhouseMap = new Map<number, number>()
+    for (const inhouse of inhouseRows) {
+      if (Number(inhouse.status) !== 1) continue
+      const planId = Number(inhouse.plan_id || 0)
+      if (!planId) continue
+      inhouseMap.set(planId, (inhouseMap.get(planId) || 0) + Number(inhouse.inhouse_qty || 0))
+    }
+    tableData.value = rows.map((row: any) => ({
+      ...row,
+      inhouse_num: Number(inhouseMap.get(Number(row.id || 0)) ?? row.inhouse_num ?? 0),
+    }))
     total.value = res.data?.total || 0
     // 加载每条计划的领料状态
     const ids = tableData.value.map((r: any) => r.id)

@@ -259,6 +259,7 @@ import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { createExpense } from '@/api/finance'
 import { createMaterial, auditMaterial } from '@/api/production'
 import { getBomByGoods } from '@/api/goods'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
@@ -687,10 +688,17 @@ async function handleSave() {
 
     const { changedCount } = await autoAuditSavedRows(savedRows)
 
-    // 暂停自动写费用：
-    // 当前正式库 expense 表字段与前端/部分后端逻辑不一致，
-    // 继续自动写入会在保存时弹 SQL 字段不存在错误。
-    // 先确保生产入库主流程和库存同步正常，人工成本可后续在费用管理中手工补录。
+    const processTotal = fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0) * (Number(r.process_price) || 0), 0)
+    if (processTotal > 0) {
+      await createExpense({
+        type_name: '人工成本',
+        amount: processTotal,
+        apply_date: fd.in_date || new Date().toISOString().slice(0, 10),
+        order_sn: fd.order_sn || '',
+        remark: `生产入库人工成本 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
+      })
+    }
+
     // 倒冲领料：按 BOM 自动生成领料单并扣减库存
     if (fd.back_flush && fd.warehouse_id) {
       try {

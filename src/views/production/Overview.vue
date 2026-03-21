@@ -244,7 +244,8 @@ import {
   SetUp, Document, CircleCheck, CircleClose, Select
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getProductionPlanList, getProductionInhouseList, createProductionPlan, auditProductionPlan, createProductionInhouse, auditProductionInhouse, createMaterial, auditMaterial } from '@/api/production'
+import { getProductionPlanList, getProductionInhouseList, createProductionPlan, auditProductionPlan, createMaterial, auditMaterial } from '@/api/production'
+import { createProductionInhouseAndAutoAudit } from '@/utils/productionInhouse'
 import { getGoodsList, getBomByGoods } from '@/api/goods'
 import http from '@/api/http'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
@@ -304,19 +305,31 @@ async function loadStats() {
     statCards.value[0].value = String(plans.length)
     statCards.value[1].value = String(plans.filter((p: any) => p.status === 1).length)
     statCards.value[2].value = String(plans.filter((p: any) => p.status === 2).length)
-    statCards.value[3].value = String(inhouses.filter((h: any) => (h.created_at || '').slice(0, 10) >= monthStart).length)
+    statCards.value[3].value = String(inhouses.filter((h: any) => ((h.inhouse_date || h.create_time || h.created_at || '').slice(0, 10) >= monthStart)).length)
   } catch {}
 }
 
 async function loadActivePlans() {
   try {
-    const res = await getProductionPlanList({ list_rows: 10, status: 1 })
+    const [res, inhouseRes] = await Promise.all([
+      getProductionPlanList({ list_rows: 10, status: 1 }),
+      getProductionInhouseList({ list_rows: 1000 }),
+    ])
     const list = res.data?.rows ?? res.data?.list ?? []
+    const inhouses = inhouseRes.data?.rows ?? inhouseRes.data?.list ?? []
+    const inhouseMap = new Map<number, number>()
+    for (const inhouse of inhouses) {
+      if (Number(inhouse.status) !== 1) continue
+      const planId = Number(inhouse.plan_id || 0)
+      if (!planId) continue
+      inhouseMap.set(planId, (inhouseMap.get(planId) || 0) + Number(inhouse.inhouse_qty || 0))
+    }
     activePlans.value = list.map((p: any) => ({
       ...p,
+      inhouse_num: Number(inhouseMap.get(Number(p.id || 0)) ?? p.inhouse_num ?? 0),
       goods_list_str: p.goods_list ? p.goods_list.map((g: any) => g.goods_name).join('、') : (p.goods_name || ''),
       schedule_pct: Math.min(100, Math.round((p.schedule_num / (p.plan_num || 1)) * 100)),
-      inhouse_pct: Math.min(100, Math.round((p.inhouse_num / (p.plan_num || 1)) * 100)),
+      inhouse_pct: Math.min(100, Math.round((Number(inhouseMap.get(Number(p.id || 0)) ?? p.inhouse_num ?? 0) / (p.plan_num || 1)) * 100)),
     }))
   } catch {}
 }
@@ -324,7 +337,13 @@ async function loadActivePlans() {
 async function loadRecentInhouse() {
   try {
     const res = await getProductionInhouseList({ list_rows: 8 })
-    recentInhouse.value = res.data?.rows ?? res.data?.list ?? []
+    const rows = res.data?.rows ?? res.data?.list ?? []
+    recentInhouse.value = rows.map((row: any) => ({
+      ...row,
+      order_sn: row.order_sn || row.inhouse_no || '',
+      num: Number(row.inhouse_qty || row.num || 0),
+      in_date: row.inhouse_date || row.in_date || row.create_time || row.created_at || '',
+    }))
   } catch {}
 }
 
@@ -517,23 +536,19 @@ async function doGenerate() {
       }
 
       // 4. 创建生产入库单（成品入库）
-      const inhouseData = {
+      const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
+      const inhouseRes = await createProductionInhouseAndAutoAudit({
         plan_id: planId,
-        in_date: today,
-        warehouse_id: genWarehouse.value,
+        plan_no: planRes.data?.order_sn || '',
+        inhouse_date: today,
+        warehouse_id: Number(genWarehouse.value || 0),
+        warehouse_name: warehouseName,
         remark: genRemark.value || '一键生成BOM入库',
-        goods_info: JSON.stringify([{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }]),
-      }
-      const inhouseRes = await createProductionInhouse(inhouseData)
-      const inhouseId = inhouseRes.data?.id
+        items: [{ goods_id: item.goods_id, goods_name: item.goods_name, goods_sn: item.goods_sn || '', num: item.qty, unit_name: item.unit_name }],
+      })
+      const inhouseId = inhouseRes.rows?.[0]?.id
       console.log('[BOM] 入库单 inhouseRes:', inhouseRes, 'inhouseId:', inhouseId)
-      genLogs.value.push({ text: `  ✓ 生产入库单已创建（ID: ${inhouseId}）`, type: 'success' })
-
-      // 5. 审核入库单（触发库存增加）
-      if (inhouseId) {
-        await auditProductionInhouse(inhouseId, 1)
-        genLogs.value.push({ text: `  ✓ 入库审核通过 — 成品已入库`, type: 'success' })
-      }
+      genLogs.value.push({ text: `  ✓ 生产入库单已创建并审核（ID: ${inhouseId || '—'}）`, type: 'success' })
 
     } catch (e: any) {
       genLogs.value.push({ text: `  ✗ 失败：${e?.message || '接口错误'}`, type: 'error' })

@@ -8,6 +8,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { aiChatPlugin } from './src/server/viteAiPlugin'
+import { VitePWA } from 'vite-plugin-pwa'
 
 function emitReferenceAssets() {
   const assetNames = [
@@ -53,6 +54,41 @@ export default defineConfig({
     emitReferenceAssets(),
     legacy({
       targets: ['ios >= 12', 'chrome >= 64', 'safari >= 12'],
+    }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.png', 'nomad-logo.png', 'icons/*.png'],
+      manifest: {
+        name: '数字游牧ERP',
+        short_name: '数字游牧',
+        description: '数字游牧企业资源管理系统',
+        theme_color: '#1976d2',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: './',
+        icons: [
+          { src: 'icons/icon-72x72.png', sizes: '72x72', type: 'image/png' },
+          { src: 'icons/icon-96x96.png', sizes: '96x96', type: 'image/png' },
+          { src: 'icons/icon-128x128.png', sizes: '128x128', type: 'image/png' },
+          { src: 'icons/icon-144x144.png', sizes: '144x144', type: 'image/png' },
+          { src: 'icons/icon-152x152.png', sizes: '152x152', type: 'image/png' },
+          { src: 'icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-384x384.png', sizes: '384x384', type: 'image/png' },
+          { src: 'icons/icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,woff2}'],
+        navigateFallback: null,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/nomaderp\.pages\.dev\/adminapi\/.*/i,
+            handler: 'NetworkFirst',
+            options: { cacheName: 'api-cache', networkTimeoutSeconds: 10 },
+          },
+        ],
+      },
     }),
   ],
   resolve: {

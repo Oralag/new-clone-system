@@ -354,8 +354,9 @@ import http from '@/api/http'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
 import { getGoodsList } from '@/api/goods'
-import { createProductionPlan, auditProductionPlan, createProductionInhouse, auditProductionInhouse, createMaterial, auditMaterial } from '@/api/production'
+import { createProductionPlan, auditProductionPlan, createMaterial, auditMaterial } from '@/api/production'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
+import { createProductionInhouseAndAutoAudit } from '@/utils/productionInhouse'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -717,10 +718,18 @@ async function doGenerate() {
         }
         genLogs.value.push({ text: `  ✓ 领料单已创建并审核（共 ${matItems.length} 种原料）`, type: 'success' })
       } catch { genLogs.value.push({ text: `  ⚠ 领料失败（可继续）`, type: 'error' }) }
-      const inhouseRes = await createProductionInhouse({ plan_id: planId, in_date: today, warehouse_id: genWarehouse.value, back_flush: 1, remark: genRemark.value || '一键生成BOM入库', items: [{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }] })
-      const inhouseId = inhouseRes.data?.id
-      genLogs.value.push({ text: `  ✓ 生产入库单已创建（ID: ${inhouseId}）`, type: 'success' })
-      if (inhouseId) { await auditProductionInhouse(inhouseId, 1); genLogs.value.push({ text: `  ✓ 入库审核通过 — 成品已入库`, type: 'success' }) }
+      const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
+      const inhouseRes = await createProductionInhouseAndAutoAudit({
+        plan_id: planId,
+        plan_no: planRes.data?.order_sn || '',
+        inhouse_date: today,
+        warehouse_id: Number(genWarehouse.value || 0),
+        warehouse_name: warehouseName,
+        remark: genRemark.value || '一键生成BOM入库',
+        items: [{ goods_id: item.goods_id, goods_name: item.goods_name, goods_sn: item.goods_sn || '', num: item.qty, unit_name: item.unit_name }],
+      })
+      const inhouseId = inhouseRes.rows?.[0]?.id
+      genLogs.value.push({ text: `  ✓ 生产入库单已创建并审核（ID: ${inhouseId || '—'}）`, type: 'success' })
     } catch (e: any) { genLogs.value.push({ text: `  ✗ 失败：${e?.message || '接口错误'}`, type: 'error' }) }
   }
   generating.value = false
