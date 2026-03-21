@@ -83,7 +83,14 @@
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="router.push('/finance/receivable')">查看应收</el-button>
               <el-button v-if="row.status === 1" type="success" link size="small" @click="router.push('/warehouse/stock')">查看库存</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button
+                type="danger"
+                link
+                size="small"
+                :disabled="row.status === 1 && !isEmptyTestSaleOut(row)"
+                :title="row.status === 1 ? (isEmptyTestSaleOut(row) ? '空白测试单允许直接删除' : '请先反审核再删除') : ''"
+                @click="handleDelete(row)"
+              >删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -790,10 +797,33 @@ async function handleSave() {
   }
 }
 
-async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该出库单？', '提示', { type: 'warning' })
+function isEmptyTestSaleOut(row: any) {
+  const items = parseItems(row?.goods_info)
+  const hasAnyItem = items.some((item: any) =>
+    item && (
+      Number(item?.goods_id || 0) > 0
+      || String(item?.goods_name || '').trim()
+      || Number(item?.num || 0) > 0
+    )
+  )
+  return Number(row?.status) === 1
+    && !getSaleOutOrderKey(row)
+    && !String(row?.customer_name || '').trim()
+    && !String(row?.warehouse_name || '').trim()
+    && !String(row?.admin_name || '').trim()
+    && !hasAnyItem
+}
+
+async function handleDelete(rowOrId: any) {
+  const row = typeof rowOrId === 'object' && rowOrId !== null ? rowOrId : { id: Number(rowOrId || 0) }
+  if (Number(row?.status) === 1 && !isEmptyTestSaleOut(row)) {
+    ElMessage.warning('请先反审核再删除')
+    return
+  }
+  const message = isEmptyTestSaleOut(row) ? '该记录是空白测试单，确定直接删除？' : '确定删除该出库单？'
+  await ElMessageBox.confirm(message, '提示', { type: 'warning' })
   try {
-    await deleteSaleOut(id)
+    await deleteSaleOut(Number(row.id))
     ElMessage.success('删除成功')
     tableRef.value?.refresh()
   } catch (e: any) {
