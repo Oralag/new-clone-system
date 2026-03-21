@@ -18,9 +18,11 @@ interface StockGroup {
   goods_id: number
   goods_sn: string
   goods_name: string
+  unit_name: string
   warehouse_id: number
   warehouse_name: string
   qty: number
+  avg_price: number
 }
 
 function toNumber(value: any): number {
@@ -50,6 +52,8 @@ function groupItems(items: any[], options: MaterialStockOptions): StockGroup[] {
     const goodsId = toNumber(item?.goods_id)
     const goodsSn = cleanText(item?.goods_sn)
     const goodsName = String(item?.goods_name || item?.name || '商品').trim()
+    const unitName = String(item?.unit_name || '').trim()
+    const avgPrice = toNumber(item?.avg_price ?? item?.in_price ?? item?.price ?? item?.cost_price)
     if (!goodsId && !goodsSn && !goodsName) continue
 
     const warehouseId = pickWarehouseId(item, options.defaultWarehouseId)
@@ -67,9 +71,11 @@ function groupItems(items: any[], options: MaterialStockOptions): StockGroup[] {
       goods_id: goodsId,
       goods_sn: goodsSn,
       goods_name: goodsName,
+      unit_name: unitName,
       warehouse_id: warehouseId,
       warehouse_name: warehouseName,
       qty,
+      avg_price: avgPrice,
     })
   }
 
@@ -171,6 +177,22 @@ export async function applyMaterialStockDelta(items: any[], options: MaterialSto
       const rows = await fetchStockRows(group)
       const stockRow = findStockRow(rows, group)
       if (!stockRow) {
+        if (options.direction === 'restore') {
+          const createRes = await http.post('/stock/StockAll/add', {
+            goods_id: group.goods_id,
+            goods_sn: group.goods_sn,
+            goods_name: group.goods_name,
+            unit_name: group.unit_name,
+            warehouse_id: group.warehouse_id,
+            warehouse_name: group.warehouse_name,
+            qty: group.qty,
+            avg_price: group.avg_price.toFixed(4),
+          })
+          const createdId = toNumber(createRes?.data?.id ?? createRes?.data?.data?.id ?? createRes?.data)
+          if (createdId) snapshots.push({ id: createdId, qty: 0 })
+          changedCount += 1
+          continue
+        }
         throw new Error(`${group.goods_name}未找到库存记录`)
       }
 

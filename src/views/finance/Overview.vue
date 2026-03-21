@@ -69,7 +69,7 @@
             <svg :width="chartW" height="120" style="overflow:visible">
               <!-- Y轴参考线 -->
               <line v-for="i in 4" :key="i" :x1="0" :y1="(i-1)*30" :x2="chartW" :y2="(i-1)*30"
-                stroke="rgba(0,0,0,0.05)" stroke-width="1" />
+                class="chart-grid-line" stroke-width="1" />
               <!-- 收入折线 -->
               <polyline v-if="trendIncome.length > 1"
                 :points="trendIncome.map((v,i) => `${i*(chartW/(trendDays.length-1))},${90 - v * 80}`).join(' ')"
@@ -87,7 +87,7 @@
               <!-- X轴标签 -->
               <text v-for="(d,i) in trendDays" :key="'d'+i"
                 :x="i*(chartW/(trendDays.length-1||1))" y="110" text-anchor="middle"
-                font-size="10" fill="rgba(29,29,31,0.35)">{{ d }}</text>
+                font-size="10" class="chart-axis-label">{{ d }}</text>
             </svg>
             <!-- 图例 -->
             <div class="trend-legend">
@@ -970,9 +970,9 @@ onMounted(async () => {
 .sum-card :deep(.el-card__body) { padding: 12px 14px; }
 .sum-inner { display: flex; align-items: center; justify-content: space-between; }
 .sum-info { flex: 1; min-width: 0; }
-.sum-label { font-size: 11px; color: rgba(29,29,31,0.35); margin-bottom: 4px; }
+.sum-label { font-size: 11px; color: var(--dim); margin-bottom: 4px; }
 .sum-value { font-size: 18px; font-weight: 700; line-height: 1.2; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sum-sub { font-size: 11px; color: rgba(29,29,31,0.2); }
+.sum-sub { font-size: 11px; color: var(--faint); }
 .sum-icon {
   width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
@@ -986,7 +986,7 @@ onMounted(async () => {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--dark);
 }
 .header-total { margin-left: auto; font-size: 14px; font-weight: 700; }
 .header-total.green { color: #16a34a; }
@@ -1005,36 +1005,36 @@ onMounted(async () => {
   flex-direction: column;
   align-items: flex-start;
   padding: 6px 16px 6px 0;
-  border-right: 1px solid rgba(0,0,0,0.05);
+  border-right: 1px solid var(--border);
   margin-right: 16px;
   min-width: 100px;
 }
 .inline-item:last-child { border-right: none; }
 .inline-item.clickable { cursor: pointer; border-radius: 10px; transition: background 0.15s; }
-.inline-item.clickable:hover { background: #f0f7ff; }
-.total-item { border-left: 2px solid rgba(0,0,0,0.06); padding-left: 16px; margin-left: 4px; }
-.inline-name { font-size: 12px; color: rgba(29,29,31,0.5); margin-bottom: 2px; white-space: nowrap; }
+.inline-item.clickable:hover { background: var(--blue-light); }
+.total-item { border-left: 2px solid var(--border); padding-left: 16px; margin-left: 4px; }
+.inline-name { font-size: 12px; color: var(--mid); margin-bottom: 2px; white-space: nowrap; }
 .inline-value { font-size: 15px; font-weight: 700; line-height: 1.2; margin-bottom: 2px; }
 .inline-value.blue { color: #0071e3; }
 .inline-value.green { color: #16a34a; }
 .inline-value.red { color: #dc2626; }
 .inline-value.orange { color: #ea580c; }
-.inline-sub { font-size: 11px; color: rgba(29,29,31,0.2); }
+.inline-sub { font-size: 11px; color: var(--faint); }
 
 /* 趋势图 */
 .trend-chart { padding: 4px 0 0; }
-.trend-legend { display: flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 12px; color: rgba(29,29,31,0.35); }
+.trend-legend { display: flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--dim); }
 .legend-dot { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
 .legend-dot.income { background: #16a34a; }
 .legend-dot.expense { background: #dc2626; }
 
-.empty-tip { font-size: 13px; color: rgba(29,29,31,0.35); padding: 8px 0; }
+.empty-tip { font-size: 13px; color: var(--dim); padding: 8px 0; }
 
 /* 资金流水折叠区 */
 .flow-section {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 .flow-toggle {
@@ -1043,10 +1043,12 @@ onMounted(async () => {
   gap: 6px;
   padding: 8px 14px;
   font-size: 12px;
-  color: rgba(29,29,31,0.35);
+  color: var(--dim);
   cursor: pointer;
   user-select: none;
   transition: background 0.15s;
 }
-.flow-toggle:hover { background: #f5f5f7; }
+.flow-toggle:hover { background: var(--gray); }
+.chart-grid-line { stroke: var(--border); }
+.chart-axis-label { fill: var(--dim); }
 </style>

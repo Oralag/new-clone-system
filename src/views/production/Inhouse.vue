@@ -56,7 +56,7 @@
           <el-tag v-else-if="fd.status === 2" type="danger" size="small">已驳回</el-tag>
         </div>
         <div class="form-topbar-right" v-if="!isView">
-          <el-button type="primary" :loading="saving" @click="handleSave">保存（Ctrl+S）</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">保存并审核（Ctrl+S）</el-button>
         </div>
       </div>
 
@@ -259,7 +259,6 @@ import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
-import { createExpense } from '@/api/finance'
 import { createMaterial, auditMaterial } from '@/api/production'
 import { getBomByGoods } from '@/api/goods'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
@@ -385,6 +384,8 @@ function buildAuditStockItems(row: any) {
     goods_name: row.goods_name || '',
     goods_sn: row.goods_sn || '',
     num: Number(row.inhouse_qty || 0),
+    unit_name: row.unit_name || '',
+    avg_price: Number(row.in_price || row.avg_price || 0),
     warehouse_id: row.warehouse_id || 0,
     warehouse_name: row.warehouse_name || '',
   }
@@ -405,10 +406,12 @@ function buildAuditStockItems(row: any) {
       goods_name: item.goods_name || row.goods_name || '',
       goods_sn: item.goods_sn || row.goods_sn || '',
       num: Number(item.num ?? item.inhouse_qty ?? row.inhouse_qty ?? 0),
+      unit_name: item.unit_name || row.unit_name || '',
+      avg_price: Number(item.in_price ?? item.avg_price ?? row.in_price ?? row.avg_price ?? 0),
       warehouse_id: item.warehouse_id || row.warehouse_id || 0,
       warehouse_name: item.warehouse_name || row.warehouse_name || '',
     }))
-    .filter((item: any) => item.goods_id && item.num > 0)
+    .filter((item: any) => (item.goods_id || item.goods_sn || item.goods_name) && item.num > 0)
 }
 
 async function syncAuditAndStock(row: any, status: 0 | 1) {
@@ -427,6 +430,29 @@ async function syncAuditAndStock(row: any, status: 0 | 1) {
     try {
       await auditProductionInhouse(row.id, status === 1 ? 0 : 1)
     } catch {}
+    throw error
+  }
+}
+
+function getResponseId(res: any, fallbackId = 0) {
+  return Number(res?.data?.id || res?.data?.data?.id || res?.data || fallbackId || 0)
+}
+
+async function autoAuditSavedRows(rows: any[]) {
+  const auditedRows: any[] = []
+
+  try {
+    for (const row of rows) {
+      await syncAuditAndStock(row, 1)
+      auditedRows.push(row)
+    }
+    return { changedCount: auditedRows.length }
+  } catch (error) {
+    for (const row of [...auditedRows].reverse()) {
+      try {
+        await syncAuditAndStock(row, 0)
+      } catch {}
+    }
     throw error
   }
 }
@@ -621,40 +647,44 @@ async function handleSave() {
       remark: fd.remark || '',
       inhouse_no: fd.order_sn || '',
     }
+    const savedRows: any[] = []
     if (fd.id) {
       // 编辑：用第一个商品更新
       const item0 = fd.items[0] || {}
-      await updateProductionInhouse({
+      const updatePayload = {
         ...basePayload,
         id: fd.id,
         goods_id: item0.goods_id || 0,
+        goods_sn: item0.goods_sn || '',
         goods_name: fd.items.map((i: any) => i.goods_name).join('、').slice(0, 100),
+        unit_name: item0.unit_name || '',
+        in_price: Number(item0.in_price || 0),
         inhouse_qty: fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0), 0),
-      })
+      }
+      await updateProductionInhouse(updatePayload)
+      savedRows.push(updatePayload)
     } else {
       // 新增：每个商品保存一条记录
       for (const item of fd.items) {
-        await createProductionInhouse({
+        const createPayload = {
           ...basePayload,
           goods_id: item.goods_id || 0,
+          goods_sn: item.goods_sn || '',
           goods_name: item.goods_name || '',
+          unit_name: item.unit_name || '',
+          in_price: Number(item.in_price || 0),
           inhouse_qty: Number(item.num) || 0,
+        }
+        const res = await createProductionInhouse(createPayload)
+        savedRows.push({
+          ...createPayload,
+          id: getResponseId(res),
         })
       }
     }
-    // 自动写人工成本记录（加工合计汇总）
-    const processTotal = fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0) * (Number(r.process_price) || 0), 0)
-    if (processTotal > 0) {
-      const goodsNames = fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)
-      try {
-        await createExpense({
-          type_name: '人工成本',
-          amount: processTotal,
-          apply_date: fd.in_date || new Date().toISOString().slice(0, 10),
-          remark: `生产入库自动汇总 - ${goodsNames}`,
-        })
-      }
-    }
+
+    const { changedCount } = await autoAuditSavedRows(savedRows)
+
     // 暂停自动写费用：
     // 当前正式库 expense 表字段与前端/部分后端逻辑不一致，
     // 继续自动写入会在保存时弹 SQL 字段不存在错误。
@@ -719,7 +749,7 @@ async function handleSave() {
         ElMessage.warning(`倒冲领料失败：${e?.message ?? '未知错误'}，请手工补录领料单`)
       }
     }
-    ElMessage.success('保存成功')
+    ElMessage.success(`保存并审核成功，库存已增加 ${changedCount} 项`)
     stockRefreshStore.trigger()
     backToList()
   } catch (e: any) {
