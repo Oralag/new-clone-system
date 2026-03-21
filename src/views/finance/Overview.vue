@@ -509,8 +509,9 @@ const allFlowItems = computed(() => {
   }
   // 5. 费用单（expense）— 真实字段: name(非type_name), amount, expense_date, order_sn
   for (const r of expenseList.value) {
+    if (r.payment_status === 'pending') continue
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'expense', source: '费用', name: r.name || '—', amount: Number(r.amount || 0), date: (r.expense_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
+    items.push({ type: 'expense', source: r.payment_status === 'paid' ? '费用(已付)' : '费用', name: r.name || '—', amount: Number(r.amount || 0), date: (r.expense_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
   }
   // 6. 预收款（income）
   for (const r of prepayList.value) {

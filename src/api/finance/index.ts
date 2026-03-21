@@ -1,9 +1,27 @@
 import http from '../http'
 
+function cleanExpenseRemark(remark: any) {
+  return String(remark || '')
+    .replace(/【待付款】|【已付款】|\[待付款\]|\[已付款\]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+function detectExpensePaymentStatus(row: any) {
+  const explicit = String(row?.payment_status || row?.pay_status || '').toLowerCase()
+  if (explicit === 'pending' || explicit === '待付款' || explicit === 'unpaid') return 'pending'
+  if (explicit === 'paid' || explicit === '已付款') return 'paid'
+  const remark = String(row?.remark || '')
+  if (/【已付款】|\[已付款\]/.test(remark)) return 'paid'
+  if (/【待付款】|\[待付款\]/.test(remark)) return 'pending'
+  return ''
+}
+
 function normalizeExpenseRow(row: any) {
   if (!row || typeof row !== 'object') return row
   const typeName = row.type_name || row.title || row.expense_type || row.expense_name || row.name || ''
   const applyDate = row.apply_date || row.expense_date || row.created_at || ''
+  const paymentStatus = detectExpensePaymentStatus(row)
   return {
     ...row,
     type_name: typeName,
@@ -11,6 +29,10 @@ function normalizeExpenseRow(row: any) {
     expense_type: row.expense_type || typeName,
     apply_date: applyDate,
     expense_date: row.expense_date || applyDate,
+    remark_clean: cleanExpenseRemark(row.remark),
+    payment_status: paymentStatus,
+    payment_status_text: paymentStatus === 'paid' ? '已付款' : paymentStatus === 'pending' ? '待付款' : '未标记',
+    payment_status_tag: paymentStatus === 'paid' ? 'success' : paymentStatus === 'pending' ? 'warning' : 'info',
   }
 }
 
@@ -26,12 +48,19 @@ function buildExpensePayload(data: any) {
   const payload = { ...(data || {}) }
   const typeName = String(payload.type_name || payload.title || payload.expense_type || payload.expense_name || payload.name || '').trim()
   const expenseDate = payload.apply_date || payload.expense_date || ''
+  const paymentStatus = detectExpensePaymentStatus(payload)
+  const cleanRemark = cleanExpenseRemark(payload.remark)
+  const remark = paymentStatus === 'paid'
+    ? `【已付款】${cleanRemark ? ` ${cleanRemark}` : ''}`
+    : paymentStatus === 'pending'
+      ? `【待付款】${cleanRemark ? ` ${cleanRemark}` : ''}`
+      : cleanRemark
 
   return {
     name: payload.name || typeName,
     amount: Number(payload.amount || 0),
     expense_date: expenseDate,
-    remark: payload.remark || '',
+    remark,
     order_sn: payload.order_sn || payload.expense_no || '',
     applicant_name: payload.applicant_name || '',
   }
@@ -58,6 +87,7 @@ export async function getExpenseList(params?: any) {
   return normalizeExpenseResponse(await http.get('/finance/Expense/index', { params: safeParams }))
 }
 export const createExpense = (data: any) => http.post('/finance/Expense/add', buildExpensePayload(data))
+export const updateExpense = (data: any) => http.post('/finance/Expense/edit', { id: Number(data?.id || 0), ...buildExpensePayload(data) })
 export const deleteExpense = (id: number) => http.post('/finance/Expense/del', { id })
 export const getFundList = (params?: any) => http.get('/finance/Fund/index', { params })
 export const createFund = (data: any) => http.post('/finance/Fund/add', data)

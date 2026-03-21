@@ -21,7 +21,7 @@
       <div class="summary-card">
         <span class="s-label">未付款</span>
         <span class="s-value orange">¥{{ summary.unpaid.toFixed(2) }}</span>
-        <span class="s-formula">来源：应付账款</span>
+        <span class="s-formula">来源：应付账款 + 待付款费用</span>
       </div>
     </div>
 
@@ -247,15 +247,16 @@ onMounted(async () => {
 
     const expenses: any[] = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
     for (const r of expenses) {
+      if (r.payment_status === 'pending') continue
       items.push({
         date: (r.apply_date || r.expense_date || r.create_time || '').slice(0, 10),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'expense',
-        source: '费用',
+        source: r.payment_status === 'paid' ? '费用(已付)' : '费用',
         name: r.type_name || r.expense_name || r.name || '—',
         order_no: r.expense_no || r.order_no || '',
         amount: Number(r.amount || 0),
-        remark: r.remark || '',
+        remark: r.remark_clean || r.remark || '',
       })
     }
 
@@ -316,9 +317,12 @@ onMounted(async () => {
     summary.income = incomeTotal
     summary.expense = expenseTotal
     summary.balance = Math.max(0, incomeTotal - expenseTotal)
-    // 未付款来源：应付账款（PayAccounts），数据与应付账款页面一致
+    // 未付款来源：应付账款（PayAccounts）+ 待付款费用
     const payables = applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], normalizedReturns)
-    summary.unpaid = payables.reduce((s, r) => s + Math.max(0, Number(r.un_pay_amount || 0)), 0)
+    const pendingExpenseTotal = expenses
+      .filter((r: any) => r.payment_status === 'pending')
+      .reduce((s: number, r: any) => s + Math.max(0, Number(r.amount || 0)), 0)
+    summary.unpaid = payables.reduce((s, r) => s + Math.max(0, Number(r.un_pay_amount || 0)), 0) + pendingExpenseTotal
 
   } catch { /* ignore */ } finally {
     summaryLoading.value = false

@@ -24,10 +24,12 @@
             <el-input v-model="cateKeyword" placeholder="搜索分类" clearable size="small" />
           </div>
           <div class="cate-tree" v-loading="cateLoading">
-            <div class="cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
+            <!-- PC端：树形结构 -->
+            <div class="cate-item pc-only" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
               全部
             </div>
             <el-tree
+              class="pc-only"
               :data="cateTree"
               :props="{ label: 'name', children: 'children' }"
               node-key="id"
@@ -46,7 +48,18 @@
                 </span>
               </template>
             </el-tree>
-            <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty">暂无分类</div>
+            <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty pc-only">暂无分类</div>
+            <!-- 移动端：横向滚动 chip -->
+            <div class="mobile-cate-chips">
+              <span class="cate-chip" :class="{ active: selectedCateId === null }" @click="selectCate(null)">全部</span>
+              <span
+                v-for="c in cateOptions"
+                :key="c.id"
+                class="cate-chip"
+                :class="{ active: selectedCateId === c.id }"
+                @click="selectCate(c.id)"
+              >{{ c.name }}</span>
+            </div>
           </div>
         </template>
 
@@ -2494,16 +2507,21 @@ function stopListScanner() {
   overflow-x: hidden;
 }
 
+/* 移动端 chip 默认隐藏，PC端 pc-only 显示 */
+.mobile-cate-chips { display: none; }
+
 @media (max-width: 767px) {
   .list-layout { flex-direction: column !important; height: auto !important; }
   .cate-panel { position: sticky !important; top: 0 !important; z-index: 20 !important; width: 100% !important; margin-right: 0 !important; margin-bottom: 8px; border-radius: 14px; max-height: none !important; overflow: visible !important; }
   .cate-search { display: none !important; }
   .cate-header { border-bottom: none !important; padding-bottom: 4px !important; }
-  .cate-tree { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: visible !important; gap: 6px; padding: 6px 10px !important; height: auto !important; scrollbar-width: none; }
-  .cate-tree::-webkit-scrollbar { display: none; }
-  .cate-item { flex-shrink: 0 !important; border-radius: 20px !important; padding: 5px 14px !important; background: #f5f5f7; border: 1px solid transparent; white-space: nowrap; display: flex !important; }
-  .cate-item.active { background: rgba(0,113,227,0.08) !important; color: #0071e3 !important; border-color: rgba(0,113,227,0.2) !important; }
-  .cate-item-actions { display: none !important; }
+  .cate-tree { display: block !important; overflow-x: auto !important; overflow-y: visible !important; padding: 0 10px 8px !important; height: auto !important; }
+  /* 隐藏 PC 树形，显示移动端 chip */
+  .pc-only { display: none !important; }
+  .mobile-cate-chips { display: flex !important; flex-direction: row; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .mobile-cate-chips::-webkit-scrollbar { display: none; }
+  .cate-chip { flex-shrink: 0; border-radius: 20px; padding: 5px 14px; background: #f5f5f7; border: 1px solid transparent; white-space: nowrap; font-size: 13px; color: rgba(29,29,31,0.7); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .cate-chip.active { background: rgba(0,113,227,0.08); color: #0071e3; border-color: rgba(0,113,227,0.2); }
   .cate-arrow, .cate-arrow-placeholder { display: none !important; }
   .goods-list-wrap { overflow: visible !important; min-height: 0 !important; }
   .goods-list-wrap :deep(.sc-table) { min-width: 0 !important; padding: 10px !important; }

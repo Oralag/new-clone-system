@@ -712,6 +712,7 @@ async function handleSave() {
         amount: processTotal,
         apply_date: fd.in_date || new Date().toISOString().slice(0, 10),
         order_sn: savedRows[0]?.order_sn || fd.order_sn || '',
+        payment_status: 'pending',
         remark: `生产入库人工成本 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
       })
     }
