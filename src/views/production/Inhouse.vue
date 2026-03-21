@@ -263,9 +263,11 @@ import { createMaterial, auditMaterial } from '@/api/production'
 import { getBomByGoods } from '@/api/goods'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
 import {
-  buildProductionInhouseGoodsInfo,
+  buildProductionInhouseRemark,
+  cleanProductionInhouseRemark,
   generateProductionInhouseOrderSn,
   normalizeProductionInhouseItems,
+  parseProductionInhouseMeta,
   syncProductionLaborExpense,
 } from '@/utils/productionInhouse'
 
@@ -337,6 +339,7 @@ async function openAdd() {
 }
 
 function buildItemsFromRow(row: any) {
+  const meta = parseProductionInhouseMeta(row?.remark)
   if (row.goods_info) {
     try { return JSON.parse(row.goods_info) } catch {}
   }
@@ -344,15 +347,15 @@ function buildItemsFromRow(row: any) {
     return [{
       goods_id: row.goods_id || 0,
       goods_name: row.goods_name || '',
-      goods_sn: row.goods_sn || '',
-      unit_name: row.unit_name || '',
-      spec: row.spec || '',
+      goods_sn: row.goods_sn || meta.goods_sn || '',
+      unit_name: row.unit_name || meta.unit_name || '',
+      spec: row.spec || meta.spec || '',
       plan_num: Number(row.inhouse_qty || 0),
       already_in: 0,
       num: Number(row.inhouse_qty || 0),
-      material_price: 0,
-      process_price: 0,
-      in_price: 0,
+      material_price: Number(meta.material_price || 0),
+      process_price: Number(meta.process_price || 0),
+      in_price: Number(row.in_price || meta.in_price || 0),
       total_cost: 0,
     }]
   }
@@ -360,7 +363,7 @@ function buildItemsFromRow(row: any) {
 }
 
 function openEdit(row: any) {
-  Object.assign(fd, { ...defaultFd(), ...row })
+  Object.assign(fd, { ...defaultFd(), ...row, remark: cleanProductionInhouseRemark(row?.remark) })
   fd.items = buildItemsFromRow(row)
   fd.items.forEach(r => calcRow(r))
   isView.value = false
@@ -371,7 +374,7 @@ function openEdit(row: any) {
 }
 
 function openView(row: any) {
-  Object.assign(fd, { ...defaultFd(), ...row })
+  Object.assign(fd, { ...defaultFd(), ...row, remark: cleanProductionInhouseRemark(row?.remark) })
   fd.items = buildItemsFromRow(row)
   fd.items.forEach(r => calcRow(r))
   isView.value = true
@@ -385,13 +388,14 @@ function backToList() {
 }
 
 function buildAuditStockItems(row: any) {
+  const meta = parseProductionInhouseMeta(row?.remark)
   const fallbackItem = {
     goods_id: row.goods_id || 0,
     goods_name: row.goods_name || '',
-    goods_sn: row.goods_sn || '',
+    goods_sn: row.goods_sn || meta.goods_sn || '',
     num: Number(row.inhouse_qty || 0),
-    unit_name: row.unit_name || '',
-    avg_price: Number(row.in_price || row.avg_price || 0),
+    unit_name: row.unit_name || meta.unit_name || '',
+    avg_price: Number(row.in_price || row.avg_price || meta.in_price || 0),
     warehouse_id: row.warehouse_id || 0,
     warehouse_name: row.warehouse_name || '',
   }
@@ -410,10 +414,10 @@ function buildAuditStockItems(row: any) {
     .map((item: any) => ({
       goods_id: item.goods_id || row.goods_id || 0,
       goods_name: item.goods_name || row.goods_name || '',
-      goods_sn: item.goods_sn || row.goods_sn || '',
+      goods_sn: item.goods_sn || row.goods_sn || meta.goods_sn || '',
       num: Number(item.num ?? item.inhouse_qty ?? row.inhouse_qty ?? 0),
-      unit_name: item.unit_name || row.unit_name || '',
-      avg_price: Number(item.in_price ?? item.avg_price ?? row.in_price ?? row.avg_price ?? 0),
+      unit_name: item.unit_name || row.unit_name || meta.unit_name || '',
+      avg_price: Number(item.in_price ?? item.avg_price ?? row.in_price ?? row.avg_price ?? meta.in_price ?? 0),
       warehouse_id: item.warehouse_id || row.warehouse_id || 0,
       warehouse_name: item.warehouse_name || row.warehouse_name || '',
     }))
@@ -685,7 +689,7 @@ async function handleSave() {
         goods_id: item0.goods_id || 0,
         goods_name: item0.goods_name || fd.items.map((i: any) => i.goods_name).join('、').slice(0, 100),
         inhouse_qty: Number(item0.num) || 0,
-        goods_info: buildProductionInhouseGoodsInfo(normalizedItem0),
+        remark: buildProductionInhouseRemark(fd.remark || '', normalizedItem0[0] || item0),
       }
       await updateProductionInhouse(updatePayload)
       savedRows.push({
@@ -707,7 +711,7 @@ async function handleSave() {
           goods_id: item.goods_id || 0,
           goods_name: item.goods_name || '',
           inhouse_qty: Number(item.num) || 0,
-          goods_info: buildProductionInhouseGoodsInfo(normalizedItem),
+          remark: buildProductionInhouseRemark(fd.remark || '', normalizedItem[0] || item),
         }
         if (!createPayload.inhouse_qty) continue
         const res = await createProductionInhouse(createPayload)

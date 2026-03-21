@@ -15,11 +15,42 @@ function text(value: any) {
   return String(value || '').trim()
 }
 
+const INHOUSE_META_PREFIX = '【SYS_PI_META】'
+
 export function generateProductionInhouseOrderSn() {
   const d = new Date()
   const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
   const rand = String(Math.floor(Math.random() * 1000)).padStart(3, '0')
   return `SCRK${ymd}${rand}`
+}
+
+export function cleanProductionInhouseRemark(remark: any) {
+  return String(remark || '')
+    .replace(new RegExp(`\\n?${INHOUSE_META_PREFIX}[\\s\\S]*$`), '')
+    .trim()
+}
+
+export function parseProductionInhouseMeta(remark: any) {
+  const match = String(remark || '').match(new RegExp(`${INHOUSE_META_PREFIX}([\\s\\S]*)$`))
+  if (!match?.[1]) return {}
+  try {
+    return JSON.parse(match[1])
+  } catch {
+    return {}
+  }
+}
+
+export function buildProductionInhouseRemark(remark: any, item: any) {
+  const cleanRemark = cleanProductionInhouseRemark(remark)
+  const meta = {
+    goods_sn: text(item?.goods_sn),
+    unit_name: text(item?.unit_name),
+    spec: text(item?.spec),
+    material_price: toNumber(item?.material_price),
+    process_price: toNumber(item?.process_price),
+    in_price: toNumber(item?.in_price ?? item?.avg_price),
+  }
+  return `${cleanRemark}${cleanRemark ? '\n' : ''}${INHOUSE_META_PREFIX}${JSON.stringify(meta)}`
 }
 
 export function normalizeProductionInhouseItems(items: any[], defaults?: any) {
@@ -58,8 +89,8 @@ function isAutoProductionLaborExpense(row: any, orderSn: string) {
   const rowOrderSn = text(row?.order_sn || row?.expense_no)
   return (
     rowOrderSn === orderSn &&
-    /生产人工成本|人工成本/.test(typeName) &&
-    /生产入库人工成本/.test(remark)
+    /加工成本|生产人工成本|人工成本/.test(typeName) &&
+    /生产入库加工成本|生产入库人工成本/.test(remark)
   )
 }
 
@@ -94,13 +125,13 @@ export async function syncProductionLaborExpense(options: {
   }
 
   const payload = {
-    type_name: '生产人工成本',
+    type_name: '加工成本',
     amount,
     apply_date: options?.inhouse_date || new Date().toISOString().slice(0, 10),
     order_sn: orderSn,
     applicant_name: options?.admin_name || '',
     payment_status: matched[0]?.payment_status || 'pending',
-    remark: `生产入库人工成本 - ${goodsSummary || orderSn}`,
+    remark: `生产入库加工成本 - ${goodsSummary || orderSn}`,
   }
 
   if (!matched.length) {
@@ -120,27 +151,18 @@ export async function syncProductionLaborExpense(options: {
 }
 
 function buildAuditStockItems(row: any) {
-  const goodsInfo = (() => {
-    try {
-      return normalizeProductionInhouseItems(JSON.parse(row?.goods_info || '[]'), row)
-    } catch {
-      return []
-    }
-  })()
-
-  if (goodsInfo.length) {
-    return goodsInfo.map((item: any) => ({
-      ...item,
-      avg_price: toNumber(item.in_price || item.avg_price),
-    }))
-  }
+  const meta = parseProductionInhouseMeta(row?.remark)
 
   return normalizeProductionInhouseItems([{
     goods_id: row.goods_id || 0,
     goods_name: row.goods_name || '',
-    goods_sn: row.goods_sn || '',
-    unit_name: row.unit_name || '',
-    avg_price: toNumber(row.in_price || row.avg_price || 0),
+    goods_sn: row.goods_sn || meta.goods_sn || '',
+    unit_name: row.unit_name || meta.unit_name || '',
+    spec: row.spec || meta.spec || '',
+    material_price: toNumber(meta.material_price),
+    process_price: toNumber(meta.process_price),
+    avg_price: toNumber(row.in_price || row.avg_price || meta.in_price || 0),
+    in_price: toNumber(row.in_price || row.avg_price || meta.in_price || 0),
     num: toNumber(row.inhouse_qty || row.num || 0),
     warehouse_id: row.warehouse_id || 0,
     warehouse_name: row.warehouse_name || '',
@@ -199,13 +221,13 @@ export async function createProductionInhouseAndAutoAudit(options: {
       warehouse_id: options.warehouse_id,
       warehouse_name: options.warehouse_name || '',
     })
-    const goodsInfo = buildProductionInhouseGoodsInfo(normalizedItems)
+    const normalizedItem = normalizedItems[0] || item
     const createPayload = {
       ...basePayload,
       goods_id: item.goods_id || 0,
       goods_name: item.goods_name || '',
       inhouse_qty: toNumber(item.num || item.inhouse_qty || 0),
-      goods_info: goodsInfo,
+      remark: buildProductionInhouseRemark(options.remark || '', normalizedItem),
     }
     if (!createPayload.inhouse_qty) continue
     const res = await createProductionInhouse(createPayload)

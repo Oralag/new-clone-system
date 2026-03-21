@@ -10,7 +10,7 @@ function text(value: any) {
 export function isProductionLaborExpense(row: any) {
   const typeName = text(row?.type_name || row?.title || row?.expense_type || row?.name)
   const remark = text(row?.remark_clean || row?.remark)
-  return /生产人工成本|人工成本/.test(typeName) || /生产入库人工成本/.test(remark)
+  return /加工成本|生产人工成本|人工成本/.test(typeName) || /生产入库加工成本|生产入库人工成本/.test(remark)
 }
 
 export function buildExpensePayableRows(expenseRows: any[]) {
@@ -28,7 +28,7 @@ export function buildExpensePayableRows(expenseRows: any[]) {
         __payable_source: 'expense',
         source_name: '生产人工',
         supplier_id: 0,
-        supplier_name: text(row.name || row.type_name) || '生产人工成本',
+        supplier_name: text(row.name || row.type_name) || '加工成本',
         contact_name: text(row.applicant_name || row.admin_name || orderNo) || '生产入库',
         contact_mobile: '',
         prepay: 0,
