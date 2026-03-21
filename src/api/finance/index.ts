@@ -62,7 +62,6 @@ function buildExpensePayload(data: any) {
     expense_date: expenseDate,
     remark,
     order_sn: payload.order_sn || payload.expense_no || '',
-    applicant_name: payload.applicant_name || '',
   }
 }
 
