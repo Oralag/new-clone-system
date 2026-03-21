@@ -655,30 +655,32 @@ async function handleSave() {
         ...basePayload,
         id: fd.id,
         goods_id: item0.goods_id || 0,
-        goods_sn: item0.goods_sn || '',
         goods_name: fd.items.map((i: any) => i.goods_name).join('、').slice(0, 100),
-        unit_name: item0.unit_name || '',
-        in_price: Number(item0.in_price || 0),
         inhouse_qty: fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0), 0),
       }
       await updateProductionInhouse(updatePayload)
-      savedRows.push(updatePayload)
+      savedRows.push({
+        ...updatePayload,
+        goods_sn: item0.goods_sn || '',
+        unit_name: item0.unit_name || '',
+        in_price: Number(item0.in_price || 0),
+      })
     } else {
       // 新增：每个商品保存一条记录
       for (const item of fd.items) {
         const createPayload = {
           ...basePayload,
           goods_id: item.goods_id || 0,
-          goods_sn: item.goods_sn || '',
           goods_name: item.goods_name || '',
-          unit_name: item.unit_name || '',
-          in_price: Number(item.in_price || 0),
           inhouse_qty: Number(item.num) || 0,
         }
         const res = await createProductionInhouse(createPayload)
         savedRows.push({
           ...createPayload,
           id: getResponseId(res),
+          goods_sn: item.goods_sn || '',
+          unit_name: item.unit_name || '',
+          in_price: Number(item.in_price || 0),
         })
       }
     }
