@@ -216,7 +216,9 @@
     <el-dialog v-model="planPickerVisible" title="选择生产计划单" width="800px" append-to-body>
       <el-table :data="planList" border size="small" height="400"
         @row-click="onSelectPlan" style="cursor:pointer">
-        <el-table-column prop="order_sn" label="计划单号" width="150" />
+        <el-table-column label="计划单号" width="150">
+          <template #default="{ row }">{{ row.order_sn || `SC${(row.plan_date||row.created_at||'').slice(0,10).replace(/-/g,'')}${String(row.id).padStart(3,'0')}` }}</template>
+        </el-table-column>
         <el-table-column prop="goods_name" label="商品名称" min-width="150" />
         <el-table-column prop="schedule_num" label="排产数量" width="100" align="right" />
         <el-table-column prop="actual_num" label="已生产" width="100" align="right" />
@@ -256,6 +258,7 @@ import { getProductionPlanList } from '@/api/production'
 import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { createExpense } from '@/api/finance'
 import { createMaterial, auditMaterial } from '@/api/production'
 import { getBomByGoods } from '@/api/goods'
@@ -263,6 +266,7 @@ import { applyMaterialStockDelta } from '@/utils/materialStock'
 
 const route = useRoute()
 const permStore = usePermissionStore()
+const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({})
 
@@ -327,18 +331,43 @@ async function openAdd() {
   await loadWarehouses()
 }
 
+function buildItemsFromRow(row: any) {
+  if (row.goods_info) {
+    try { return JSON.parse(row.goods_info) } catch {}
+  }
+  if (row.goods_id || row.goods_name) {
+    return [{
+      goods_id: row.goods_id || 0,
+      goods_name: row.goods_name || '',
+      goods_sn: row.goods_sn || '',
+      unit_name: row.unit_name || '',
+      spec: row.spec || '',
+      plan_num: Number(row.inhouse_qty || 0),
+      already_in: 0,
+      num: Number(row.inhouse_qty || 0),
+      material_price: 0,
+      process_price: 0,
+      in_price: 0,
+      total_cost: 0,
+    }]
+  }
+  return []
+}
+
 function openEdit(row: any) {
   Object.assign(fd, { ...defaultFd(), ...row })
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  fd.items = buildItemsFromRow(row)
   fd.items.forEach(r => calcRow(r))
   isView.value = false
   showForm.value = true
   loadWarehouses()
+  const planSn = row.plan_name ? row.plan_name.split(' - ')[0] : ''
+  checkHasMaterial(Number(row.plan_id || 0), planSn)
 }
 
 function openView(row: any) {
   Object.assign(fd, { ...defaultFd(), ...row })
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  fd.items = buildItemsFromRow(row)
   fd.items.forEach(r => calcRow(r))
   isView.value = true
   showForm.value = true
@@ -348,6 +377,78 @@ function openView(row: any) {
 function backToList() {
   showForm.value = false
   tableRef.value?.refresh()
+}
+
+function buildAuditStockItems(row: any) {
+  const fallbackItem = {
+    goods_id: row.goods_id || 0,
+    goods_name: row.goods_name || '',
+    goods_sn: row.goods_sn || '',
+    num: Number(row.inhouse_qty || 0),
+    warehouse_id: row.warehouse_id || 0,
+    warehouse_name: row.warehouse_name || '',
+  }
+
+  const items = (() => {
+    if (!row?.goods_info) return [fallbackItem]
+    try {
+      const parsed = JSON.parse(row.goods_info || '[]')
+      return Array.isArray(parsed) && parsed.length ? parsed : [fallbackItem]
+    } catch {
+      return [fallbackItem]
+    }
+  })()
+
+  return items
+    .map((item: any) => ({
+      goods_id: item.goods_id || row.goods_id || 0,
+      goods_name: item.goods_name || row.goods_name || '',
+      goods_sn: item.goods_sn || row.goods_sn || '',
+      num: Number(item.num ?? item.inhouse_qty ?? row.inhouse_qty ?? 0),
+      warehouse_id: item.warehouse_id || row.warehouse_id || 0,
+      warehouse_name: item.warehouse_name || row.warehouse_name || '',
+    }))
+    .filter((item: any) => item.goods_id && item.num > 0)
+}
+
+async function syncAuditAndStock(row: any, status: 0 | 1) {
+  await auditProductionInhouse(row.id, status)
+
+  const items = buildAuditStockItems(row)
+  if (!items.length) return { changedCount: 0 }
+
+  try {
+    return await applyMaterialStockDelta(items, {
+      direction: status === 1 ? 'restore' : 'deduct',
+      defaultWarehouseId: row.warehouse_id,
+      defaultWarehouseName: row.warehouse_name || '',
+    })
+  } catch (error) {
+    try {
+      await auditProductionInhouse(row.id, status === 1 ? 0 : 1)
+    } catch {}
+    throw error
+  }
+}
+
+// ── 检查计划是否已有手工领料单 ────────────────────────────────────────────────
+async function checkHasMaterial(planId: number, planSn: string) {
+  hasMaterial.value = false
+  if (!planId) return
+  try {
+    const mRes = await http.get('/production/material/index', {
+      params: { list_rows: 500, production_plan_id: planId }
+    })
+    const mRows: any[] = mRes.data?.rows ?? []
+    for (const mr of mRows) {
+      const mrPlanId = Number(mr.production_plan_id || mr.plan_id || 0)
+      const snMatch = planSn && (mr.order_sn || '').includes(planSn)
+      if ((mrPlanId === planId || snMatch) && Number(mr.status) === 1) {
+        hasMaterial.value = true
+        return
+      }
+    }
+  } catch {}
 }
 
 // ── 生产计划选择器 ────────────────────────────────────────────────────────────
@@ -364,28 +465,47 @@ async function openPlanPicker() {
 
 async function onSelectPlan(plan: any) {
   fd.plan_id = plan.id
-  fd.plan_name = `${plan.order_sn} - ${plan.goods_name}`
+  const planSn = plan.order_sn || `SC${(plan.plan_date||plan.created_at||'').slice(0,10).replace(/-/g,'')}${String(plan.id).padStart(3,'0')}`
+  fd.plan_name = `${planSn} - ${plan.goods_name}`
   planPickerVisible.value = false
 
-  // 查该计划已审核的领料单，汇总物料总价
+  // 查该计划已审核的领料单，汇总物料总价，同时设置 hasMaterial
   let materialTotalPrice = 0
   let materialTotalNum = 0
   hasMaterial.value = false
   try {
     const mRes = await http.get('/production/material/index', {
-      params: { list_rows: 500 }
+      params: { list_rows: 500, production_plan_id: plan.id }
     })
     const mRows: any[] = mRes.data?.rows ?? []
     const pid = Number(plan.id)
     for (const mr of mRows) {
       const mrPlanId = Number(mr.production_plan_id || mr.plan_id || 0)
-      if (mrPlanId === pid && Number(mr.status) === 1) {
+      const snMatch = planSn && (mr.order_sn || '').includes(planSn)
+      if ((mrPlanId === pid || snMatch) && Number(mr.status) === 1) {
         hasMaterial.value = true
         materialTotalPrice += Number(mr.total_price || 0)
         try {
           const items: any[] = JSON.parse(mr.goods_info || '[]')
           materialTotalNum += items.reduce((s, i) => s + Number(i.num || 0), 0)
         } catch {}
+      }
+    }
+    // 如果按 plan_id 过滤后没有结果，再全量扫描一次（兼容后端不支持过滤的情况）
+    if (!hasMaterial.value && mRows.length === 0) {
+      const mRes2 = await http.get('/production/material/index', { params: { list_rows: 1000 } })
+      const mRows2: any[] = mRes2.data?.rows ?? []
+      for (const mr of mRows2) {
+        const mrPlanId = Number(mr.production_plan_id || mr.plan_id || 0)
+        const snMatch = planSn && (mr.order_sn || '').includes(planSn)
+        if ((mrPlanId === pid || snMatch) && Number(mr.status) === 1) {
+          hasMaterial.value = true
+          materialTotalPrice += Number(mr.total_price || 0)
+          try {
+            const items: any[] = JSON.parse(mr.goods_info || '[]')
+            materialTotalNum += items.reduce((s, i) => s + Number(i.num || 0), 0)
+          } catch {}
+        }
       }
     }
   } catch {}
@@ -491,25 +611,36 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    const payload: any = {
+    const basePayload: any = {
       plan_id: fd.plan_id,
       plan_no: fd.plan_name,
-      goods_id: fd.items[0]?.goods_id || 0,
-      goods_name: fd.items.map((i: any) => i.goods_name).join('、').slice(0, 100),
-      inhouse_qty: fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0), 0),
       inhouse_date: fd.in_date,
       warehouse_id: fd.warehouse_id || 0,
       warehouse_name: fd.warehouse_name || '',
       admin_name: fd.admin_name || '',
       remark: fd.remark || '',
-      order_sn: fd.order_sn || '',
-      goods_info: JSON.stringify(fd.items),
+      inhouse_no: fd.order_sn || '',
     }
     if (fd.id) {
-      payload.id = fd.id
-      await updateProductionInhouse(payload)
+      // 编辑：用第一个商品更新
+      const item0 = fd.items[0] || {}
+      await updateProductionInhouse({
+        ...basePayload,
+        id: fd.id,
+        goods_id: item0.goods_id || 0,
+        goods_name: fd.items.map((i: any) => i.goods_name).join('、').slice(0, 100),
+        inhouse_qty: fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0), 0),
+      })
     } else {
-      await createProductionInhouse(payload)
+      // 新增：每个商品保存一条记录
+      for (const item of fd.items) {
+        await createProductionInhouse({
+          ...basePayload,
+          goods_id: item.goods_id || 0,
+          goods_name: item.goods_name || '',
+          inhouse_qty: Number(item.num) || 0,
+        })
+      }
     }
     // 自动写人工成本记录（加工合计汇总）
     const processTotal = fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0) * (Number(r.process_price) || 0), 0)
@@ -577,6 +708,7 @@ async function handleSave() {
             defaultWarehouseId: fd.warehouse_id,
             defaultWarehouseName: fd.warehouse_name || '',
           })
+          stockRefreshStore.trigger()
           ElMessage.success(`倒冲领料完成，已扣减 ${matItems.length} 种原材料`)
         }
       } catch (e: any) {
@@ -584,6 +716,7 @@ async function handleSave() {
       }
     }
     ElMessage.success('保存成功')
+    stockRefreshStore.trigger()
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')
@@ -597,8 +730,20 @@ async function handleAudit(row: any, status: number) {
   const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
   await ElMessageBox.confirm(`确定${action}该生产入库单？`, '提示', { type: 'warning' })
   try {
-    await auditProductionInhouse(row.id, status)
-    ElMessage.success(`${action}成功`)
+    if (status === 2) {
+      await auditProductionInhouse(row.id, status)
+      ElMessage.success(`${action}成功`)
+      tableRef.value?.refresh()
+      return
+    }
+
+    const { changedCount } = await syncAuditAndStock(row, status as 0 | 1)
+    stockRefreshStore.trigger()
+    ElMessage.success(
+      status === 1
+        ? `${action}成功，库存已增加 ${changedCount} 项`
+        : `${action}成功，库存已回滚 ${changedCount} 项`
+    )
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
@@ -609,6 +754,7 @@ async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定删除该生产入库记录？', '提示', { type: 'warning' })
   await deleteProductionInhouse(id)
   ElMessage.success('删除成功')
+  stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
 
@@ -628,7 +774,7 @@ async function initFromQuery() {
   const planItems: any[] = JSON.parse(String(goods_info || '[]'))
   fd.plan_name = String(plan_name || '')
   fd.items = []
-  if (!planItems.length) { isView.value = false; showForm.value = true; return }
+  if (!planItems.length) { isView.value = false; showForm.value = true; checkHasMaterial(Number(plan_id), String(plan_name || '')); return }
 
   // 1. 查该计划已审核领料单，汇总每种商品的物料总价
   const materialPriceMap: Record<number, number> = {} // goods_id → 总金额
@@ -693,6 +839,7 @@ async function initFromQuery() {
   }
   if (hasPrice) ElMessage.success('已自动带入物料成本')
   isView.value = false
+  checkHasMaterial(Number(plan_id), String(plan_name || ''))
   showForm.value = true
 }
 
