@@ -480,11 +480,11 @@ import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip }
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getSaleOutList, createSaleOut, updateSaleOut, deleteSaleOut, auditSaleOut } from '@/api/sale'
+import { getSaleOutList, createSaleOut, updateSaleOut, deleteSaleOut, auditSaleOut, getSaleReturnList } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSpecList } from '@/api/goods'
 import { getWarehouseList } from '@/api/warehouse'
-import { getFundList, createFund } from '@/api/finance'
+import { getFundList, createFund, getCollectReceiptList, deleteCollectReceipt } from '@/api/finance'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
@@ -805,17 +805,111 @@ async function handleDelete(id: number) {
   }
 }
 
+function getSaleOutOrderKey(row: any) {
+  return String(row?.order_no || row?.order_sn || row?.out_no || '').trim()
+}
+
+function isAutoSaleOutReceipt(receipt: any, row: any) {
+  const orderKey = getSaleOutOrderKey(row)
+  const remark = String(receipt?.remark || '')
+  return Number(receipt?.saleout_id || 0) === Number(row?.id || 0)
+    || (!!orderKey && remark.includes(`出库单 ${orderKey} 审核自动生成`))
+}
+
+async function getLinkedSaleOutReceipts(row: any) {
+  const orderKey = getSaleOutOrderKey(row)
+  if (!orderKey && !row?.id) return []
+  try {
+    const res = await getCollectReceiptList(orderKey ? { keyword: orderKey, list_rows: 500 } : { list_rows: 1000 })
+    const rows: any[] = res?.data?.rows ?? res?.data?.list ?? []
+    return rows.filter((receipt: any) => {
+      const receiptOrderKey = String(receipt?.order_sn || receipt?.order_no || '').trim()
+      return Number(receipt?.saleout_id || 0) === Number(row?.id || 0)
+        || (!!orderKey && receiptOrderKey === orderKey)
+    })
+  } catch {
+    return []
+  }
+}
+
+async function getReverseAuditDependencies(row: any) {
+  try {
+    const returnRes = await getSaleReturnList({ list_rows: 500 })
+    const returnRows: any[] = returnRes?.data?.rows ?? returnRes?.data?.list ?? []
+    const auditedReturns = returnRows.filter((item: any) =>
+      Number(item?.status) === 1 && Number(item?.order_id) === Number(row?.id)
+    )
+    if (auditedReturns.length > 0) {
+      ElMessage.warning(`该出库单存在 ${auditedReturns.length} 笔已审核的销售退货单，请先前往【销售退货】反审核后再继续`)
+      return null
+    }
+  } catch { /* ignore */ }
+
+  const linkedReceipts = await getLinkedSaleOutReceipts(row)
+  const autoReceipts = linkedReceipts.filter((receipt: any) => isAutoSaleOutReceipt(receipt, row))
+  const manualReceipts = linkedReceipts.filter((receipt: any) => !isAutoSaleOutReceipt(receipt, row))
+
+  if (manualReceipts.length > 0) {
+    ElMessage.error(`该出库单存在 ${manualReceipts.length} 笔关联收款单，请先前往【财务 > 收款单】删除后再反审核`)
+    return null
+  }
+
+  return { autoReceipts }
+}
+
+async function removeAutoSaleOutReceipts(receipts: any[]) {
+  for (const receipt of receipts) {
+    if (!receipt?.id) continue
+    await deleteCollectReceipt(Number(receipt.id))
+  }
+}
+
+async function syncSaleOutCustomerBalance(row: any, mode: 'audit' | 'reverse') {
+  if (!row?.customer_id) return
+  const customerRes = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
+  const customer = customerRes.data
+  const currentBalance = Number(customer?.balance || 0)
+  const amount = Number(row?.total_amount || 0)
+  const nextBalance = mode === 'audit' ? currentBalance - amount : currentBalance + amount
+  await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: nextBalance })
+}
+
 async function handleAudit(row: any, status: number) {
   const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
-  await ElMessageBox.confirm(`确定${action}该出库单？`, '提示', { type: 'warning' })
   try {
-    await auditSaleOut(row.id, status)
-    ElMessage.success(`${action}成功`)
+    await ElMessageBox.confirm(`确定${action}该出库单？`, '提示', { type: 'warning' })
+  } catch { return }
+
+  try {
+    let autoReceipts: any[] = []
+    let autoReceiptsRemoved = false
+    let financeWarning = ''
+
+    if (status === 0) {
+      const deps = await getReverseAuditDependencies(row)
+      if (!deps) return
+      autoReceipts = deps.autoReceipts
+    }
+
+    try {
+      await auditSaleOut(row.id, status)
+    } catch (e) {
+      if (status === 0 && autoReceipts.length > 0) {
+        await removeAutoSaleOutReceipts(autoReceipts)
+        autoReceiptsRemoved = true
+        autoReceipts = []
+        await auditSaleOut(row.id, status)
+      } else {
+        throw e
+      }
+    }
+
     // 审核通过后自动创建收款单 + 扣减客户余额
     if (status === 1 && row.customer_id) {
       try {
         await http.post('/finance/CollectReceipt/add', {
           saleout_id: row.id,
+          order_sn: row.order_no,
           order_no: row.order_no,
           customer_id: row.customer_id,
           customer_name: row.customer_name,
@@ -823,21 +917,34 @@ async function handleAudit(row: any, status: number) {
           receipt_date: new Date().toISOString().slice(0, 10),
           remark: `出库单 ${row.order_no} 审核自动生成`,
         })
-        ElMessage.success('已自动创建收款单')
       } catch {
-        ElMessage.warning('审核成功，但自动生成收款单失败，请手动补录')
+        financeWarning = financeWarning ? `${financeWarning}；自动生成收款单失败` : '自动生成收款单失败，请手动补录'
       }
       // 扣减客户余额
       try {
-        const customerRes = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
-        const customer = customerRes.data
-        const currentBalance = Number(customer?.balance || 0)
-        const newBalance = currentBalance - Number(row.total_amount || 0)
-        await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: newBalance })
+        await syncSaleOutCustomerBalance(row, 'audit')
       } catch {
-        ElMessage.warning('余额扣减失败，请手动更新客户余额')
+        financeWarning = financeWarning ? `${financeWarning}；客户余额扣减失败` : '客户余额扣减失败，请手动更新'
       }
     }
+
+    if (status === 0) {
+      if (autoReceipts.length > 0 && !autoReceiptsRemoved) {
+        try {
+          await removeAutoSaleOutReceipts(autoReceipts)
+        } catch {
+          financeWarning = financeWarning ? `${financeWarning}；自动收款单撤回失败` : '自动收款单撤回失败，请手动删除'
+        }
+      }
+
+      try {
+        await syncSaleOutCustomerBalance(row, 'reverse')
+      } catch {
+        financeWarning = financeWarning ? `${financeWarning}；客户余额还原失败` : '客户余额还原失败，请手动更新'
+      }
+    }
+
+    financeWarning ? ElMessage.warning(`${action}成功，但${financeWarning}`) : ElMessage.success(`${action}成功`)
     tableRef.value?.refresh()
   } catch (e: any) {
     const msg = e?.message ?? ''
