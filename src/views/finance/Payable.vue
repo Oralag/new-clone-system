@@ -44,18 +44,18 @@
       <!-- 表格 -->
       <el-table :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
         <el-table-column type="selection" width="44" />
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column label="来源" width="100" align="center">
+        <el-table-column v-if="!isMobile" type="index" label="序号" width="60" align="center" />
+        <el-table-column v-if="!isMobile" label="来源" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.__payable_source === 'expense' ? 'warning' : 'primary'" size="small">
-              {{ row.source_name || (row.__payable_source === 'expense' ? '生产人工' : '采购') }}
+              {{ row.source_name || (row.__payable_source === 'expense' ? '生产成本' : '采购') }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="supplier_name" label="供应商" min-width="150" />
-        <el-table-column prop="contact_name" label="联系人" min-width="100" />
-        <el-table-column prop="contact_mobile" label="联系电话" min-width="130" />
-        <el-table-column label="预付款" min-width="110" align="right">
+        <el-table-column v-if="!isMobile" prop="contact_name" label="联系人" min-width="100" />
+        <el-table-column v-if="!isMobile" prop="contact_mobile" label="联系电话" min-width="130" />
+        <el-table-column v-if="!isMobile" label="预付款" min-width="110" align="right">
           <template #default="{ row }">{{ fmt(row.prepay || 0) }}</template>
         </el-table-column>
         <el-table-column label="业务金额" min-width="120" align="right">
@@ -63,7 +63,7 @@
             <span style="font-weight:600">{{ fmt(row.order_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="已付欠款" min-width="120" align="right">
+        <el-table-column v-if="!isMobile" label="已付欠款" min-width="120" align="right">
           <template #default="{ row }">
             <span style="color:#0071e3">{{ fmt(row.paid_amount) }}</span>
           </template>
@@ -121,7 +121,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import http from '@/api/http'
@@ -132,6 +132,10 @@ import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
 
 const router = useRouter()
+
+const isMobile = ref(window.innerWidth < 768)
+let _rt: ReturnType<typeof setTimeout> | null = null
+function _onResize() { if (_rt) clearTimeout(_rt); _rt = setTimeout(() => { isMobile.value = window.innerWidth < 768 }, 300) }
 
 const loading = ref(false)
 const rows = ref<any[]>([])
@@ -282,7 +286,9 @@ onMounted(async () => {
   const res = await getSupplierList({ list_rows: 500 })
   supplierOptions.value = res.data?.rows ?? []
   await load()
+  window.addEventListener('resize', _onResize)
 })
+onUnmounted(() => window.removeEventListener('resize', _onResize))
 </script>
 
 <style scoped>

@@ -26,7 +26,7 @@ export function buildExpensePayableRows(expenseRows: any[]) {
         id: `expense_${row.id}`,
         expense_id: row.id,
         __payable_source: 'expense',
-        source_name: '生产人工',
+        source_name: '生产成本',
         supplier_id: 0,
         supplier_name: text(row.name || row.type_name) || '加工成本',
         contact_name: text(row.applicant_name || row.admin_name || orderNo) || '生产入库',
@@ -43,7 +43,7 @@ export function buildExpensePayableRows(expenseRows: any[]) {
           paid_amount: 0,
           un_pay_amount: amount,
           due_date: dueDate,
-          source_name: '生产人工',
+          source_name: '生产成本',
           remark: text(row.remark_clean || row.remark),
         }],
       }

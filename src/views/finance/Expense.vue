@@ -12,7 +12,7 @@
             <el-form-item label="费用类型">
               <el-input v-model="searchForm.type_name" placeholder="请输入费用类型" clearable style="width:180px" />
             </el-form-item>
-            <el-form-item label="付款标记">
+            <el-form-item label="付款状态">
               <el-select v-model="searchForm.payment_status" clearable style="width:140px" placeholder="全部">
                 <el-option label="待付款" value="pending" />
                 <el-option label="已付款" value="paid" />
@@ -43,7 +43,7 @@
         <el-table-column label="申请日期" min-width="110">
           <template #default="{ row }">{{ (row.apply_date || row.created_at || '').slice(0, 10) }}</template>
         </el-table-column>
-        <el-table-column label="付款标记" min-width="100" align="center">
+        <el-table-column label="付款状态" min-width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.payment_status_tag" size="small">{{ row.payment_status_text }}</el-tag>
           </template>
@@ -55,8 +55,7 @@
           <template #default="{ row }">
             <el-button type="success" link @click="openView(row)">查看</el-button>
             <el-button type="primary" link @click="openForm(row)">编辑</el-button>
-            <el-button v-if="row.payment_status !== 'pending'" type="warning" link @click="handleMarkPayment(row, 'pending')">标待付款</el-button>
-            <el-button v-if="row.payment_status !== 'paid'" type="success" link @click="handleMarkPayment(row, 'paid')">标已付款</el-button>
+            <el-button v-if="row.payment_status !== 'paid'" type="success" link @click="openPayDialog(row)">付款</el-button>
             <el-button type="warning" link @click="router.push('/finance/fund-flow')">流水</el-button>
             <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
           </template>
@@ -74,35 +73,64 @@
         <el-form-item label="申请日期" prop="apply_date">
           <el-date-picker v-model="form.apply_date" type="date" placeholder="请选择申请日期" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
-        <el-form-item label="付款标记" prop="payment_status">
-          <el-select v-model="form.payment_status" placeholder="请选择" style="width:100%">
-            <el-option label="待付款" value="pending" />
-            <el-option label="已付款" value="paid" />
-            <el-option label="不标记" value="" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
         </el-form-item>
       </template>
     </ScForm>
+    <el-dialog v-model="payVisible" title="费用付款" width="460px" destroy-on-close>
+      <el-form label-width="90px">
+        <el-form-item label="费用类型">
+          <el-input :value="payRow?.type_name || payRow?.name || ''" readonly />
+        </el-form-item>
+        <el-form-item label="付款日期">
+          <el-date-picker v-model="payForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="付款账户">
+          <el-select v-model="payForm.fund_id" filterable clearable placeholder="请选择账户" style="width:100%" @change="onPayFundChange">
+            <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="付款金额">
+          <el-input-number v-model="payForm.amount" :min="0" :precision="2" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="payForm.remark" type="textarea" :rows="3" placeholder="请输入备注" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="payVisible = false">取消</el-button>
+        <el-button type="primary" :loading="paySubmitting" @click="submitPay">确认付款</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Wallet, CreditCard } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
-import { getExpenseList, createExpense, updateExpense, deleteExpense } from '@/api/finance'
+import { getExpenseList, createExpense, updateExpense, deleteExpense, createPayReceipt, getFundList } from '@/api/finance'
 
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
 const formTitle = ref('新增')
 const searchForm = reactive<any>({ expense_no: '', type_name: '', payment_status: '' })
+const fundOptions = ref<any[]>([])
+const payVisible = ref(false)
+const paySubmitting = ref(false)
+const payRow = ref<any>(null)
+const payForm = reactive<any>({
+  pay_date: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
+  fund_id: null,
+  fund_name: '',
+  amount: 0,
+  remark: '',
+})
 
 async function getExpenseListForTable(params?: any) {
   const res = await getExpenseList(params)
@@ -153,24 +181,65 @@ async function handleSubmit(data: any) {
   }
 }
 
-async function handleMarkPayment(row: any, paymentStatus: 'pending' | 'paid') {
-  await ElMessageBox.confirm(
-    `确定把这张费用单标记为${paymentStatus === 'paid' ? '已付款' : '待付款'}？`,
-    '提示',
-    { type: 'warning' }
-  )
-  await updateExpense({
-    id: row.id,
-    type_name: row.type_name,
-    amount: row.amount,
-    apply_date: row.apply_date || row.expense_date || '',
-    applicant_name: row.applicant_name || row.admin_name || '',
-    order_sn: row.order_sn || row.expense_no || '',
-    remark: row.remark_clean ?? row.remark ?? '',
-    payment_status: paymentStatus,
-  })
-  ElMessage.success('标记成功')
-  tableRef.value?.refresh()
+async function loadFunds() {
+  const res = await getFundList({ list_rows: 200 })
+  fundOptions.value = res.data?.rows ?? res.data?.list ?? []
+}
+
+function onPayFundChange(id: any) {
+  const found = fundOptions.value.find((f: any) => f.id === id)
+  payForm.fund_name = found?.name || ''
+}
+
+function openPayDialog(row: any) {
+  payRow.value = row
+  payForm.pay_date = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
+  payForm.fund_id = null
+  payForm.fund_name = ''
+  payForm.amount = Number(row.amount || 0)
+  payForm.remark = row.remark_clean ?? row.remark ?? ''
+  payVisible.value = true
+}
+
+async function submitPay() {
+  const row = payRow.value
+  if (!row) return
+  if (!payForm.fund_id) {
+    ElMessage.warning('请选择付款账户')
+    return
+  }
+  if (Number(payForm.amount || 0) <= 0) {
+    ElMessage.warning('请填写付款金额')
+    return
+  }
+  paySubmitting.value = true
+  try {
+    await createPayReceipt({
+      order_sn: row.order_sn || row.expense_no || '',
+      pay_date: payForm.pay_date,
+      contact_type: 'other',
+      contact_name: row.type_name || row.name || '费用支出',
+      amount: Number(payForm.amount || 0),
+      fund_id: payForm.fund_id,
+      fund_name: payForm.fund_name || '',
+      pay_type: 'bank',
+      remark: payForm.remark || '',
+    })
+    await updateExpense({
+      id: Number(row.id),
+      type_name: row.type_name,
+      amount: row.amount,
+      apply_date: row.apply_date || row.expense_date || '',
+      order_sn: row.order_sn || row.expense_no || '',
+      remark: row.remark_clean ?? row.remark ?? '',
+      payment_status: 'paid',
+    })
+    payVisible.value = false
+    ElMessage.success('付款成功')
+    tableRef.value?.refresh()
+  } finally {
+    paySubmitting.value = false
+  }
 }
 
 async function handleDelete(id: number) {
@@ -179,6 +248,10 @@ async function handleDelete(id: number) {
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
 }
+
+onMounted(() => {
+  loadFunds().catch(() => {})
+})
 </script>
 
 <style scoped>
