@@ -149,6 +149,19 @@
                 />
                 <span class="gen-unit">{{ g.unit_name || '' }}</span>
               </div>
+              <div v-if="selectedGenGoods.has(g.goods_id)" class="gen-qty-row" @click.stop>
+                <span class="gen-qty-label">加工单价</span>
+                <el-input-number
+                  v-model="genProcessPriceMap[g.goods_id]"
+                  :min="0"
+                  :precision="4"
+                  size="small"
+                  controls-position="right"
+                  style="width:120px"
+                  placeholder="可不填"
+                />
+                <span class="gen-unit">元</span>
+              </div>
               <el-icon v-if="selectedGenGoods.has(g.goods_id)" class="gen-check"><Select /></el-icon>
             </div>
           </div>
@@ -197,7 +210,14 @@
             <el-table-column prop="unit_name" label="单位" width="70" align="center" />
             <el-table-column label="加工单价" width="110" align="right">
               <template #default="{ row }">
-                {{ Number(row.process_price || 0).toFixed(2) }}
+                <el-input-number
+                  v-model="genProcessPriceMap[row.goods_id]"
+                  :min="0"
+                  :precision="4"
+                  controls-position="right"
+                  size="small"
+                  style="width:100%"
+                />
               </template>
             </el-table-column>
             <el-table-column prop="materials" label="消耗原料" min-width="200">
@@ -288,6 +308,7 @@ const genSearch = ref('')
 const filteredGenGoods = ref<any[]>([])
 const selectedGenGoods = ref<Set<number>>(new Set())
 const genQtyMap = ref<Record<number, number>>({})
+const genProcessPriceMap = ref<Record<number, number>>({})
 const genWarehouse = ref<number | null>(null)
 const genDate = ref('')
 const genRemark = ref('')
@@ -300,7 +321,11 @@ function loadBomProcessPrices(): Record<number, number> {
 const genPreviewList = computed(() => {
   return [...selectedGenGoods.value].map(gid => {
     const g = bomProducts.value.find(b => b.goods_id === gid)
-    return g ? { ...g, qty: genQtyMap.value[gid] || 1 } : null
+    return g ? {
+      ...g,
+      qty: genQtyMap.value[gid] || 1,
+      process_price: Number(genProcessPriceMap.value[gid] ?? g.process_price ?? 0),
+    } : null
   }).filter(Boolean)
 })
 
@@ -446,6 +471,7 @@ function openGenerateDialog() {
   }
   selectedGenGoods.value = new Set()
   genQtyMap.value = {}
+  genProcessPriceMap.value = {}
   genLogs.value = []
   genSearch.value = ''
   filteredGenGoods.value = [...bomProducts.value]
@@ -463,9 +489,11 @@ function toggleGenGoods(g: any) {
   if (selectedGenGoods.value.has(g.goods_id)) {
     selectedGenGoods.value.delete(g.goods_id)
     delete genQtyMap.value[g.goods_id]
+    delete genProcessPriceMap.value[g.goods_id]
   } else {
     selectedGenGoods.value.add(g.goods_id)
     genQtyMap.value[g.goods_id] = Math.min(g.canMake || 1, 1)
+    genProcessPriceMap.value[g.goods_id] = Number(g.process_price || 0)
   }
   selectedGenGoods.value = new Set(selectedGenGoods.value)
 }
@@ -504,7 +532,7 @@ async function doGenerate() {
         num: item.qty,
         plan_num: item.qty,
         unit_name: item.unit_name,
-        process_price: Number(item.process_price || 0),
+        process_price: Number(genProcessPriceMap.value[item.goods_id] ?? item.process_price ?? 0),
       }]
       const planData = {
         plan_date: today,
@@ -579,8 +607,8 @@ async function doGenerate() {
           goods_sn: item.goods_sn || '',
           num: item.qty,
           unit_name: item.unit_name,
-          process_price: Number(item.process_price || 0),
-          in_price: Number(item.process_price || 0),
+          process_price: Number(genProcessPriceMap.value[item.goods_id] ?? item.process_price ?? 0),
+          in_price: Number(genProcessPriceMap.value[item.goods_id] ?? item.process_price ?? 0),
         }],
       })
       const inhouseId = inhouseRes.rows?.[0]?.id
