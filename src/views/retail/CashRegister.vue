@@ -214,18 +214,32 @@
 
         <!-- 右：分类 + 商品 -->
         <div class="cr-right">
+          <!-- 第一行：热销 + 全部 + 根分类 -->
           <div class="cr-cate-bar">
             <div class="cr-cate-tab" :class="{ active: activeCate === 'hot' }"
-              @click="activeCate = 'hot'; loadHotGoods()">
+              @click="selectParentCate('hot')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:3px"><path d="M12 2c0 0-6 6-6 12a6 6 0 0012 0c0-6-6-12-6-12z"/></svg>
               热销产品
             </div>
-            <div class="cr-cate-tab" :class="{ active: activeCate === '' }"
-              @click="activeCate = ''; loadGoods()">全部分类</div>
-            <div v-for="c in cateList" :key="c.id" class="cr-cate-tab"
-              :class="{ active: activeCate === c.id }"
-              @click="activeCate = c.id; loadGoods()">
+            <div class="cr-cate-tab" :class="{ active: activeCate === '' && activePCate === '' }"
+              @click="selectParentCate('')">全部分类</div>
+            <div v-for="c in cateRoots" :key="c.id" class="cr-cate-tab"
+              :class="{ active: activePCate === c.id || activeCate === c.id }"
+              @click="selectParentCate(c.id)">
               {{ c.name }}
+            </div>
+          </div>
+          <!-- 第二行：当前父分类的子分类 -->
+          <div v-if="activePCateChildren.length" class="cr-cate-bar cr-cate-sub-bar">
+            <div
+              class="cr-cate-tab cr-cate-sub-tab"
+              :class="{ active: activeCate === activePCate }"
+              @click="activeCate = activePCate; loadGoods()"
+            >全部</div>
+            <div v-for="sub in activePCateChildren" :key="sub.id" class="cr-cate-tab cr-cate-sub-tab"
+              :class="{ active: activeCate === sub.id }"
+              @click="activeCate = sub.id; loadGoods()">
+              {{ sub.name }}
             </div>
           </div>
 
@@ -334,9 +348,24 @@ import { getMemberList, createRetailOrder } from '@/api/retail'
 // ── 商品 ──────────────────────────────────────────────────────────────────────
 const keyword = ref('')
 const activeCate = ref<any>('hot')
+const activePCate = ref<any>('')  // 当前选中的父分类 ID
 const goodsList = ref<any[]>([])
 const goodsLoading = ref(false)
 const selectedGoods = ref<any>(null)
+
+// 分类树计算
+const cateRoots = computed(() => cateList.value.filter((c: any) => !c.parent_id || c.parent_id === 0))
+const activePCateChildren = computed(() => {
+  if (!activePCate.value) return []
+  return cateList.value.filter((c: any) => c.parent_id === activePCate.value)
+})
+
+function selectParentCate(id: any) {
+  activePCate.value = id === 'hot' || id === '' ? '' : id
+  activeCate.value = id
+  if (id === 'hot') loadHotGoods()
+  else loadGoods()
+}
 
 // 手机端购物车抽屉
 const cartDrawerOpen = ref(false)
@@ -385,7 +414,7 @@ async function loadHotGoods() {
 function onSearch() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
-    if (activeCate.value === 'hot') activeCate.value = ''
+    if (activeCate.value === 'hot') { activePCate.value = ''; activeCate.value = '' }
     loadGoods()
   }, 300)
 }
@@ -807,7 +836,16 @@ onMounted(async () => {
   border-bottom: 2px solid transparent; transition: all 0.12s; user-select: none;
 }
 .cr-cate-tab:hover { color: #334155; }
-.cr-cate-tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+.cr-cate-sub-bar {
+  background: #f5f7ff;
+  border-bottom: 1px solid #eaeef8;
+}
+.cr-cate-sub-tab {
+  font-size: 13px;
+  padding: 8px 14px;
+  color: #64748b;
+}
+.cr-cate-sub-tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
 
 .cr-goods-grid {
   flex: 1; overflow-y: auto;

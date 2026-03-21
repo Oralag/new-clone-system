@@ -4,7 +4,7 @@
     <div class="summary-bar">
       <span class="summary-item">应付总金额：<strong class="red">{{ fmt(summaryUnpaid) }}</strong></span>
       <span class="summary-item">已付总金额：<strong class="blue">{{ fmt(summaryPaid) }}</strong></span>
-      <span class="summary-item">采购总额：<strong class="orange">{{ fmt(summaryOrder) }}</strong></span>
+      <span class="summary-item">业务总额：<strong class="orange">{{ fmt(summaryOrder) }}</strong></span>
       <span class="summary-item">退货总金额：<strong>{{ fmt(summaryReturn) }}</strong></span>
     </div>
 
@@ -45,13 +45,20 @@
       <el-table :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
         <el-table-column type="selection" width="44" />
         <el-table-column type="index" label="序号" width="60" align="center" />
+        <el-table-column label="来源" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.__payable_source === 'expense' ? 'warning' : 'primary'" size="small">
+              {{ row.source_name || (row.__payable_source === 'expense' ? '生产人工' : '采购') }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="supplier_name" label="供应商" min-width="150" />
         <el-table-column prop="contact_name" label="联系人" min-width="100" />
         <el-table-column prop="contact_mobile" label="联系电话" min-width="130" />
         <el-table-column label="预付款" min-width="110" align="right">
           <template #default="{ row }">{{ fmt(row.prepay || 0) }}</template>
         </el-table-column>
-        <el-table-column label="采购总额" min-width="120" align="right">
+        <el-table-column label="业务金额" min-width="120" align="right">
           <template #default="{ row }">
             <span style="font-weight:600">{{ fmt(row.order_amount) }}</span>
           </template>
@@ -71,7 +78,8 @@
         <el-table-column label="操作" width="130" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="viewDetail(row)">欠款详情</el-button>
-            <el-button type="warning" link size="small" @click="goPay(row)">付款</el-button>
+            <el-button v-if="row.__payable_source !== 'expense'" type="warning" link size="small" @click="goPay(row)">付款</el-button>
+            <el-button v-else type="warning" link size="small" @click="router.push('/finance/expense')">费用</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -92,7 +100,10 @@
     <!-- 欠款详情弹框 -->
     <el-dialog v-model="detailVisible" :title="`${detailSupplier} - 欠款详情`" width="760px" destroy-on-close>
       <el-table :data="detailRows" border size="small">
-        <el-table-column prop="order_no" label="采购单号" min-width="150" />
+        <el-table-column prop="source_name" label="来源" min-width="100">
+          <template #default="{ row }">{{ row.source_name || '采购' }}</template>
+        </el-table-column>
+        <el-table-column prop="order_no" label="单号" min-width="150" />
         <el-table-column label="订单金额" min-width="110" align="right">
           <template #default="{ row }">{{ fmt(row.order_amount) }}</template>
         </el-table-column>
@@ -103,6 +114,7 @@
           <template #default="{ row }"><span style="color:#dc2626;font-weight:600">{{ fmt(row.un_pay_amount) }}</span></template>
         </el-table-column>
         <el-table-column prop="due_date" label="订单日期" min-width="110" />
+        <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
       </el-table>
     </el-dialog>
   </div>
@@ -113,9 +125,11 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import http from '@/api/http'
+import { getExpenseList } from '@/api/finance'
 import { getSupplierList } from '@/api/procure'
 import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
+import { buildExpensePayableRows } from '@/utils/expensePayable'
 
 const router = useRouter()
 
@@ -147,7 +161,7 @@ const summaryReturn = computed(() => displayRows.value.reduce((s, r) => s + Numb
 async function load() {
   loading.value = true
   try {
-    const [orderRes, returnRes, supplierRes] = await Promise.all([
+    const [orderRes, returnRes, supplierRes, expenseRes] = await Promise.all([
       http.get('/stock/PurchaseOrder/index', {
         params: {
           list_rows: 2000,
@@ -162,6 +176,7 @@ async function load() {
         }
       }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
+      getExpenseList({ list_rows: 1000 }),
     ])
 
     const orders: any[] = orderRes.data?.rows ?? []
@@ -217,9 +232,18 @@ async function load() {
       aggregated = aggregated.filter(s => s.orders.length > 0)
     }
 
-    rawRows.value = aggregated
+    const expensePayables = buildExpensePayableRows(expenseRes.data?.rows ?? expenseRes.data?.list ?? [])
+      .filter((row: any) => !searchForm.supplier_name || String(row.supplier_name || '').includes(searchForm.supplier_name))
+      .filter((row: any) => {
+        const dueDate = String(row.orders?.[0]?.due_date || '')
+        if (searchForm.date_from && dueDate < searchForm.date_from) return false
+        if (searchForm.date_to && dueDate > searchForm.date_to) return false
+        return true
+      })
+
+    rawRows.value = [...aggregated, ...expensePayables]
     procureReturnRows.value = returnRes.data?.rows ?? []
-    total.value = aggregated.length
+    total.value = rawRows.value.length
   } finally {
     loading.value = false
   }

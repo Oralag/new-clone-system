@@ -433,6 +433,7 @@ import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList }
 import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
+import { buildExpensePayableRows } from '@/utils/expensePayable'
 
 const router = useRouter()
 
@@ -867,7 +868,10 @@ onMounted(async () => {
     const normalizedSaleReturns = normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? [])
     fundList.value = applyProcureReturnsToFundRows(rawFundList, procureReturnFinanceList.value)
     saleReturnFinanceList.value = buildSaleReturnSettlementRows(rawReceivableList, normalizedSaleReturns)
-    payableList.value = applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], procureReturnFinanceList.value)
+    payableList.value = [
+      ...applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], procureReturnFinanceList.value),
+      ...buildExpensePayableRows(expenseRes.data?.rows ?? expenseRes.data?.list ?? []),
+    ]
     receivableList.value = applySaleReturnsToReceivableRows(rawReceivableList, normalizedSaleReturns)
     adjustedCollectList.value = applySaleReturnsToCollectReceiptRows(collectList.value, normalizedSaleReturns, rawReceivableList)
     purchasePayList.value = purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []

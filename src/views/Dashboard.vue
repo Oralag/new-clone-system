@@ -23,19 +23,33 @@
           <div class="mh-kpi-sub">含销售 + 零售</div>
           <svg class="mh-kpi-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
         </div>
-        <div class="mh-kpi-right">
-          <div class="mh-kpi-small" @click="router.push('/dashboard/today-sales')">
-            <div class="mh-kpi-small-label">今日订单</div>
-            <div class="mh-kpi-small-value">{{ stats[1].value }}</div>
+        <!-- 收银台按钮 -->
+        <div class="mh-cashregister-btn" @click="router.push('/cashregister')">
+          <div class="mh-crb-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="2" y="5" width="20" height="14" rx="3"/>
+              <path d="M2 10h20M6 15h2M10 15h4"/>
+            </svg>
           </div>
-          <div class="mh-kpi-small" :class="{ warn: Number(stats[3].value) > 0 }" @click="router.push('/warehouse/stock')">
-            <div class="mh-kpi-small-label">库存预警</div>
-            <div class="mh-kpi-small-value" :style="{ color: Number(stats[3].value) > 0 ? '#f53f3f' : '' }">{{ stats[3].value }}</div>
-          </div>
-          <div class="mh-kpi-small" @click="router.push('/sale/client')">
-            <div class="mh-kpi-small-label">客户总数</div>
-            <div class="mh-kpi-small-value">{{ stats[2].value }}</div>
-          </div>
+          <div class="mh-crb-label">零售收银台</div>
+          <div class="mh-crb-desc">快速开单 · 扫码结账</div>
+          <svg class="mh-crb-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- 三个小指标 -->
+      <div class="mh-kpi-mini-row">
+        <div class="mh-kpi-small" @click="router.push('/dashboard/today-sales')">
+          <div class="mh-kpi-small-label">今日订单</div>
+          <div class="mh-kpi-small-value">{{ stats[1].value }}</div>
+        </div>
+        <div class="mh-kpi-small" :class="{ warn: Number(stats[3].value) > 0 }" @click="router.push('/warehouse/stock')">
+          <div class="mh-kpi-small-label">库存预警</div>
+          <div class="mh-kpi-small-value" :style="{ color: Number(stats[3].value) > 0 ? '#f53f3f' : '' }">{{ stats[3].value }}</div>
+        </div>
+        <div class="mh-kpi-small" @click="router.push('/sale/client')">
+          <div class="mh-kpi-small-label">客户总数</div>
+          <div class="mh-kpi-small-value">{{ stats[2].value }}</div>
         </div>
       </div>
 
@@ -2357,6 +2371,42 @@ function drawTrendChart(n: number) {
   flex-direction: column;
   gap: 8px;
 }
+.mh-kpi-mini-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px;
+  margin-bottom: 10px;
+}
+.mh-kpi-mini-row .mh-kpi-small { flex: 1; }
+/* 移动端收银台按钮 */
+.mh-cashregister-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 14px;
+  background: linear-gradient(135deg, #0071e3, #0055b3);
+  border-radius: 16px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,113,227,0.28);
+  -webkit-tap-highlight-color: transparent;
+}
+.mh-cashregister-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+  pointer-events: none;
+}
+.mh-cashregister-btn:active { transform: scale(0.97); }
+.mh-crb-icon { color: rgba(255,255,255,0.9); margin-bottom: 4px; }
+.mh-crb-label { font-size: 13px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+.mh-crb-desc { font-size: 10px; color: rgba(255,255,255,0.65); font-weight: 500; }
+.mh-crb-arrow { position: absolute; right: 12px; bottom: 12px; }
 .mh-kpi-small {
   flex: 1;
   background: #fff;

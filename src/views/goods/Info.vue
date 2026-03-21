@@ -49,16 +49,32 @@
               </template>
             </el-tree>
             <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty pc-only">暂无分类</div>
-            <!-- 移动端：横向滚动 chip -->
+            <!-- 移动端：两行 chip，第一行根分类，第二行子分类 -->
             <div class="mobile-cate-chips">
-              <span class="cate-chip" :class="{ active: selectedCateId === null }" @click="selectCate(null)">全部</span>
-              <span
-                v-for="c in cateOptions"
-                :key="c.id"
-                class="cate-chip"
-                :class="{ active: selectedCateId === c.id }"
-                @click="selectCate(c.id)"
-              >{{ c.name }}</span>
+              <!-- 第一行：全部 + 根节点 -->
+              <div class="mobile-chip-row">
+                <span class="cate-chip" :class="{ active: selectedCateId === null }" @click="selectCate(null)">全部</span>
+                <span
+                  v-for="c in cateTree"
+                  :key="c.id"
+                  class="cate-chip"
+                  :class="{ active: selectedCateId === c.id || (c.children && c.children.some((ch: any) => ch.id === selectedCateId)) }"
+                  @click="selectCate(c.id)"
+                >{{ c.name }}</span>
+              </div>
+              <!-- 第二行：当前选中根节点的子分类 -->
+              <div
+                v-if="cateTree.find((c: any) => c.id === selectedCateId)?.children?.length"
+                class="mobile-chip-row mobile-chip-sub"
+              >
+                <span
+                  v-for="sub in cateTree.find((c: any) => c.id === selectedCateId)?.children ?? []"
+                  :key="(sub as any).id"
+                  class="cate-chip cate-chip-sub"
+                  :class="{ active: selectedCateId === (sub as any).id }"
+                  @click="selectCate((sub as any).id)"
+                >{{ (sub as any).name }}</span>
+              </div>
             </div>
           </div>
         </template>
@@ -2518,10 +2534,13 @@ function stopListScanner() {
   .cate-tree { display: block !important; overflow-x: auto !important; overflow-y: visible !important; padding: 0 10px 8px !important; height: auto !important; }
   /* 隐藏 PC 树形，显示移动端 chip */
   .pc-only { display: none !important; }
-  .mobile-cate-chips { display: flex !important; flex-direction: row; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-  .mobile-cate-chips::-webkit-scrollbar { display: none; }
+  .mobile-cate-chips { display: flex !important; flex-direction: column; gap: 6px; }
+  .mobile-chip-row { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .mobile-chip-row::-webkit-scrollbar { display: none; }
+  .mobile-chip-sub { padding-left: 4px; border-left: 3px solid rgba(0,113,227,0.2); margin-left: 2px; }
   .cate-chip { flex-shrink: 0; border-radius: 20px; padding: 5px 14px; background: #f5f5f7; border: 1px solid transparent; white-space: nowrap; font-size: 13px; color: rgba(29,29,31,0.7); cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .cate-chip.active { background: rgba(0,113,227,0.08); color: #0071e3; border-color: rgba(0,113,227,0.2); }
+  .cate-chip-sub { font-size: 12px; padding: 4px 12px; }
   .cate-arrow, .cate-arrow-placeholder { display: none !important; }
   .goods-list-wrap { overflow: visible !important; min-height: 0 !important; }
   .goods-list-wrap :deep(.sc-table) { min-width: 0 !important; padding: 10px !important; }
