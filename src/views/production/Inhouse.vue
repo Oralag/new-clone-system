@@ -259,10 +259,15 @@ import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
-import { createExpense } from '@/api/finance'
 import { createMaterial, auditMaterial } from '@/api/production'
 import { getBomByGoods } from '@/api/goods'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
+import {
+  buildProductionInhouseGoodsInfo,
+  generateProductionInhouseOrderSn,
+  normalizeProductionInhouseItems,
+  syncProductionLaborExpense,
+} from '@/utils/productionInhouse'
 
 const route = useRoute()
 const permStore = usePermissionStore()
@@ -654,6 +659,8 @@ async function handleSave() {
   }
   saving.value = true
   try {
+    const sharedOrderSn = fd.order_sn || generateProductionInhouseOrderSn()
+    fd.order_sn = sharedOrderSn
     const basePayload: any = {
       plan_id: fd.plan_id,
       plan_no: fd.plan_name,
@@ -662,22 +669,28 @@ async function handleSave() {
       warehouse_name: fd.warehouse_name || '',
       admin_name: fd.admin_name || '',
       remark: fd.remark || '',
-      inhouse_no: fd.order_sn || '',
+      inhouse_no: sharedOrderSn,
     }
     const savedRows: any[] = []
     if (fd.id) {
       // 编辑：用第一个商品更新
       const item0 = fd.items[0] || {}
+      const normalizedItem0 = normalizeProductionInhouseItems([item0], {
+        warehouse_id: fd.warehouse_id,
+        warehouse_name: fd.warehouse_name || '',
+      })
       const updatePayload = {
         ...basePayload,
         id: fd.id,
         goods_id: item0.goods_id || 0,
-        goods_name: fd.items.map((i: any) => i.goods_name).join('、').slice(0, 100),
-        inhouse_qty: fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0), 0),
+        goods_name: item0.goods_name || fd.items.map((i: any) => i.goods_name).join('、').slice(0, 100),
+        inhouse_qty: Number(item0.num) || 0,
+        goods_info: buildProductionInhouseGoodsInfo(normalizedItem0),
       }
       await updateProductionInhouse(updatePayload)
       savedRows.push({
         ...updatePayload,
+        order_sn: sharedOrderSn,
         goods_sn: item0.goods_sn || '',
         unit_name: item0.unit_name || '',
         in_price: Number(item0.in_price || 0),
@@ -685,17 +698,23 @@ async function handleSave() {
     } else {
       // 新增：每个商品保存一条记录
       for (const item of fd.items) {
+        const normalizedItem = normalizeProductionInhouseItems([item], {
+          warehouse_id: fd.warehouse_id,
+          warehouse_name: fd.warehouse_name || '',
+        })
         const createPayload = {
           ...basePayload,
           goods_id: item.goods_id || 0,
           goods_name: item.goods_name || '',
           inhouse_qty: Number(item.num) || 0,
+          goods_info: buildProductionInhouseGoodsInfo(normalizedItem),
         }
+        if (!createPayload.inhouse_qty) continue
         const res = await createProductionInhouse(createPayload)
         savedRows.push({
           ...createPayload,
           id: getResponseId(res),
-          order_sn: res?.data?.order_sn || res?.data?.data?.order_sn || fd.order_sn || '',
+          order_sn: res?.data?.order_sn || res?.data?.data?.order_sn || sharedOrderSn,
           goods_sn: item.goods_sn || '',
           unit_name: item.unit_name || '',
           in_price: Number(item.in_price || 0),
@@ -705,18 +724,13 @@ async function handleSave() {
 
     const { changedCount } = await autoAuditSavedRows(savedRows)
 
-    const processTotal = fd.items.reduce((s: number, r: any) => s + (Number(r.num) || 0) * (Number(r.process_price) || 0), 0)
-    if (processTotal > 0) {
-      await createExpense({
-        type_name: '生产人工成本',
-        amount: processTotal,
-        apply_date: fd.in_date || new Date().toISOString().slice(0, 10),
-        order_sn: savedRows[0]?.order_sn || fd.order_sn || '',
-        applicant_name: fd.admin_name || '',
-        payment_status: 'pending',
-        remark: `生产入库人工成本 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
-      })
-    }
+    await syncProductionLaborExpense({
+      order_sn: savedRows[0]?.order_sn || sharedOrderSn,
+      inhouse_date: fd.in_date || new Date().toISOString().slice(0, 10),
+      admin_name: fd.admin_name || '',
+      items: fd.items,
+      active: true,
+    })
 
     // 倒冲领料：按 BOM 自动生成领料单并扣减库存
     if (fd.back_flush && fd.warehouse_id) {
@@ -801,6 +815,13 @@ async function handleAudit(row: any, status: number) {
     }
 
     const { changedCount } = await syncAuditAndStock(row, status as 0 | 1)
+    await syncProductionLaborExpense({
+      order_sn: row.order_sn || row.inhouse_no || '',
+      inhouse_date: row.inhouse_date || row.in_date || row.create_time || new Date().toISOString().slice(0, 10),
+      admin_name: row.admin_name || '',
+      items: buildItemsFromRow(row),
+      active: status === 1,
+    })
     stockRefreshStore.trigger()
     ElMessage.success(
       status === 1
