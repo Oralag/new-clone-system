@@ -294,7 +294,7 @@
           <router-link to="/warehouse/stock" class="ro-link">查看库存 →</router-link>
         </div>
         <div v-if="stockRows.length === 0 && !loading" class="ro-empty">暂无库存数据</div>
-        <el-table v-else :data="stockRows.slice(0, 8)" size="small" style="width:100%">
+        <el-table v-else :data="stockRows.slice(0, 5)" size="small" style="width:100%" :max-height="280">
           <el-table-column prop="goods_name" label="商品" min-width="100" show-overflow-tooltip />
           <el-table-column label="库存量" align="right" width="70">
             <template #default="{ row }">

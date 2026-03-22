@@ -128,9 +128,15 @@
         </div>
 
         <el-table v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px"
+          :row-class-name="({ row }: any) => bomGoodsSet.has(row.id) ? 'bom-row' : ''"
           @sort-change="handleSortChange">
           <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="150" sortable="custom" />
+          <el-table-column prop="goods_name" label="商品名称" min-width="150" sortable="custom">
+            <template #default="{ row }">
+              <span>{{ row.goods_name }}</span>
+              <el-tag v-if="bomGoodsSet.has(row.id)" size="small" style="margin-left:6px;vertical-align:middle;background:#e6a23c;color:#fff;border-color:#e6a23c">BOM</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="goods_sn" label="商品编码" width="130" />
           <el-table-column prop="cate_name" label="分类" width="100" sortable="custom" />
           <el-table-column prop="spec" label="规格" width="90" />
@@ -441,6 +447,7 @@ async function handleDeleteCate(id: number) {
 
 // All goods (from goods table - includes zero-stock items)
 const allGoods = ref<any[]>([])
+const bomGoodsSet = ref<Set<number>>(new Set())
 // Stock qty map: goods_id -> qty (from stock/StockAll - updated by inhouse audit)
 const stockQtyMap = ref<Record<number, number>>({})
 const stockPriceMap = ref<Record<number, number>>({})
@@ -711,6 +718,8 @@ async function loadStockMap(warehouseId = 0) {
         if (!bomMap[gid]) bomMap[gid] = []
         bomMap[gid].push({ material_sn: b.material_sn || '', num: Number(b.num || 0) })
       }
+      // 记录有BOM的商品ID
+      bomGoodsSet.value = new Set(Object.keys(bomMap).map(Number))
       // 有BOM定义的商品，用BOM物料成本算均价
       for (const gid in bomMap) {
         const g = allGoods.value.find(x => x.id === Number(gid))
@@ -1001,6 +1010,12 @@ watch(() => stockRefreshStore.version, () => {
 </script>
 
 <style scoped>
+:deep(.bom-row) {
+  background-color: #fdf6ec !important;
+}
+:deep(.bom-row:hover > td) {
+  background-color: #faecd8 !important;
+}
 .stock-page {
   display: flex;
   height: 100%;

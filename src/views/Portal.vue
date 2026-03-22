@@ -139,23 +139,28 @@
         </div>
       </div>
 
-      <!-- BI 数据大屏 -->
-      <div class="portal-card portal-card-purple portal-card-dim">
-        <div class="card-icon card-icon-purple">
+      <!-- 对外投资 -->
+      <div class="portal-card portal-card-gold" :class="{ 'card-pressed': pressedCard === 'investment' }"
+        @click="go('/investment')"
+        @touchstart.passive="pressedCard = 'investment'"
+        @touchend.passive="pressedCard = ''"
+        @touchcancel.passive="pressedCard = ''">
+        <div class="card-icon card-icon-gold">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="1.5" opacity="0.5"/>
-            <path d="M7 17v-4M12 17V8M17 17v-6" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="9" stroke="white" stroke-width="1.5" opacity="0.6"/>
+            <circle cx="12" cy="12" r="4" fill="white" opacity="0.9"/>
+            <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
           </svg>
         </div>
-        <h2 class="card-title">BI 数据大屏</h2>
-        <p class="card-desc">全局经营数据可视化。销售趋势、库存预警、财务汇总一屏掌握。</p>
+        <h2 class="card-title">对外投资</h2>
+        <p class="card-desc">AI 智能投资决策中枢。市场研判、交易指令、资产管理、生命体观测一体化。</p>
         <div class="card-tags">
-          <span class="tag tag-purple">数据可视化</span>
-          <span class="tag tag-purple">实时监控</span>
-          <span class="tag tag-purple">智能预警</span>
+          <span class="tag tag-gold">市场分析</span>
+          <span class="tag tag-gold">智能决策</span>
+          <span class="tag tag-gold">资产管理</span>
         </div>
         <div class="card-arrow">
-          <span>敬请期待</span>
+          <span>进入投资中枢</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
@@ -998,6 +1003,9 @@ const TOOL_LABELS: Record<string, string> = {
 .card-icon-ai { background: rgba(245,158,11,0.15); box-shadow: none; }
 .portal-card-purple { background: #faf5ff; border-color: rgba(124,58,237,0.08); }
 .portal-card-green  { background: #f0fdf9; border-color: rgba(5,150,105,0.08); }
+.portal-card-gold   { background: linear-gradient(135deg, #fffbf0, #fff8e8); border-color: rgba(245,166,35,0.12); }
+.card-icon-gold     { background: linear-gradient(135deg, #b8860b, #d4a574); }
+.tag-gold           { background: rgba(212,165,116,0.15); color: #8b6914; }
 .portal-card-dim {
   cursor: not-allowed;
   filter: grayscale(1);

@@ -61,8 +61,8 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><TrendCharts /></el-icon>
-              <span>近期资金流水趋势</span>
-              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/fund-flow')">查看明细</el-button>
+              <span>近期利润趋势</span>
+              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/report/profit')">查看明细</el-button>
             </div>
           </template>
           <div class="trend-chart">
@@ -71,19 +71,26 @@
               <line v-for="i in 4" :key="i" :x1="0" :y1="(i-1)*30" :x2="chartW" :y2="(i-1)*30"
                 class="chart-grid-line" stroke-width="1" />
               <!-- 收入折线 -->
-              <polyline v-if="trendIncome.length > 1"
-                :points="trendIncome.map((v,i) => `${i*(chartW/(trendDays.length-1))},${90 - v * 80}`).join(' ')"
-                fill="none" stroke="#16a34a" stroke-width="2" stroke-linejoin="round" />
-              <!-- 支出折线 -->
-              <polyline v-if="trendExpense.length > 1"
-                :points="trendExpense.map((v,i) => `${i*(chartW/(trendDays.length-1))},${90 - v * 80}`).join(' ')"
-                fill="none" stroke="#dc2626" stroke-width="2" stroke-linejoin="round" />
+              <polyline v-if="trendRevenue.length > 1"
+                :points="trendRevenue.map((v,i) => `${i*(chartW/(trendDays.length-1))},${90 - v * 80}`).join(' ')"
+                fill="none" stroke="#0071e3" stroke-width="2" stroke-linejoin="round" />
+              <!-- 成本折线 -->
+              <polyline v-if="trendCost.length > 1"
+                :points="trendCost.map((v,i) => `${i*(chartW/(trendDays.length-1))},${90 - v * 80}`).join(' ')"
+                fill="none" stroke="#7c3aed" stroke-width="2" stroke-linejoin="round" />
+              <!-- 利润折线 -->
+              <polyline v-if="trendProfit.length > 1"
+                :points="trendProfit.map((v,i) => `${i*(chartW/(trendDays.length-1))},${55 - v * 45}`).join(' ')"
+                fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 3" />
               <!-- 收入点 -->
-              <circle v-for="(v,i) in trendIncome" :key="'in'+i"
-                :cx="i*(chartW/(trendDays.length-1||1))" :cy="90 - v * 80" r="3" fill="#16a34a" />
-              <!-- 支出点 -->
-              <circle v-for="(v,i) in trendExpense" :key="'ex'+i"
-                :cx="i*(chartW/(trendDays.length-1||1))" :cy="90 - v * 80" r="3" fill="#dc2626" />
+              <circle v-for="(v,i) in trendRevenue" :key="'rv'+i"
+                :cx="i*(chartW/(trendDays.length-1||1))" :cy="90 - v * 80" r="3" fill="#0071e3" />
+              <!-- 成本点 -->
+              <circle v-for="(v,i) in trendCost" :key="'ct'+i"
+                :cx="i*(chartW/(trendDays.length-1||1))" :cy="90 - v * 80" r="3" fill="#7c3aed" />
+              <!-- 利润点 -->
+              <circle v-for="(v,i) in trendProfit" :key="'pf'+i"
+                :cx="i*(chartW/(trendDays.length-1||1))" :cy="55 - v * 45" r="3" fill="#16a34a" />
               <!-- X轴标签 -->
               <text v-for="(d,i) in trendDays" :key="'d'+i"
                 :x="i*(chartW/(trendDays.length-1||1))" y="110" text-anchor="middle"
@@ -91,13 +98,54 @@
             </svg>
             <!-- 图例 -->
             <div class="trend-legend">
-              <span class="legend-dot income"></span><span>收入</span>
-              <span class="legend-dot expense" style="margin-left:12px"></span><span>支出</span>
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0071e3;margin-right:4px"></span><span>收入</span>
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7c3aed;margin:0 4px 0 12px"></span><span>成本</span>
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin:0 4px 0 12px"></span><span>利润</span>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- ═══════════ 利润分析入口 ═══════════ -->
+    <div class="profit-entry" @click="router.push('/reports/finance')">
+      <div class="profit-entry-left">
+        <div class="profit-entry-icon">
+          <el-icon :size="28"><TrendCharts /></el-icon>
+        </div>
+        <div class="profit-entry-info">
+          <div class="profit-entry-title">利润分析</div>
+          <div class="profit-entry-desc">按单品 · 按单据 · 按月份 · 按客户 多维度利润报表</div>
+        </div>
+      </div>
+      <div class="profit-entry-nums">
+        <div class="profit-entry-item">
+          <span class="profit-entry-label">营业收入</span>
+          <span class="profit-entry-val blue">¥{{ profitFmt(profitSummary.revenue) }}</span>
+        </div>
+        <div class="profit-entry-item">
+          <span class="profit-entry-label">销售成本</span>
+          <span class="profit-entry-val purple">¥{{ profitFmt(profitSummary.cost) }}</span>
+        </div>
+        <div class="profit-entry-item">
+          <span class="profit-entry-label">毛利润</span>
+          <span class="profit-entry-val" :style="{ color: profitSummary.grossProfit >= 0 ? '#16a34a' : '#dc2626' }">
+            {{ profitSummary.grossProfit >= 0 ? '+' : '' }}¥{{ profitFmt(profitSummary.grossProfit) }}
+          </span>
+        </div>
+        <div class="profit-entry-divider"></div>
+        <div class="profit-entry-item profit-entry-item--big">
+          <span class="profit-entry-label" style="font-weight:700">净利润</span>
+          <span class="profit-entry-val" :style="{ color: profitSummary.netProfit >= 0 ? '#16a34a' : '#dc2626', fontSize:'20px' }">
+            {{ profitSummary.netProfit >= 0 ? '+' : '' }}¥{{ profitFmt(profitSummary.netProfit) }}
+          </span>
+          <span class="profit-entry-rate">净利率 {{ profitSummary.netRate.toFixed(1) }}%</span>
+        </div>
+      </div>
+      <div class="profit-entry-arrow">
+        <el-icon :size="20"><ArrowRight /></el-icon>
+      </div>
+    </div>
 
     <!-- 第三行：预收款 + 预付款 + 近期收款 + 近期付款 -->
     <el-row :gutter="14">
@@ -310,6 +358,7 @@
         </div>
       </div>
     </div>
+
   </div>
 
   <!-- 快速收款弹窗 -->
@@ -426,10 +475,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, ArrowUp, ArrowDown, Box, Plus, Minus } from '@element-plus/icons-vue'
+import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, ArrowUp, ArrowDown, ArrowRight, Box, Plus, Minus, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList } from '@/api/finance'
+import { getContractList } from '@/api/sale'
+import { getGoodsList, getBomList } from '@/api/goods'
 import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
@@ -453,7 +504,12 @@ const procureReturnFinanceList = ref<any[]>([])
 const saleReturnFinanceList = ref<any[]>([])
 const purchasePayList = ref<any[]>([])
 const saleOutList = ref<any[]>([])
+const contractList = ref<any[]>([])
+const profitGoodsList = ref<any[]>([])
+const profitInhouseList = ref<any[]>([])
+const profitBomList = ref<any[]>([])
 const flowVisible = ref(false)
+const profitViewMode = ref<'goods' | 'order' | 'month'>('goods')
 const chartW = 480
 
 function isCustomerPrepayLike(row: any) {
@@ -616,6 +672,38 @@ const retailTotal = computed(() =>
 )
 
 // 近7天趋势数据 — 来自 allFlowItems，与 FundFlow.vue 一致
+// ── 利润趋势图：按天计算收入/成本/利润 ───────────────────────────────
+const profitCostMap = computed(() => {
+  const m: Record<number, number> = {}
+  for (const g of profitGoodsList.value) m[g.id] = Number(g.cost_price || 0)
+  const snTC: Record<string, number> = {}, snTQ: Record<string, number> = {}
+  for (const ih of profitInhouseList.value) {
+    if (Number(ih.status) !== 1) continue
+    try { for (const item of JSON.parse(ih.goods_info || '[]')) {
+      const sn = item.goods_sn; if (!sn) continue
+      const q = Number(item.num||0), p = Number(item.price||0)
+      if (q>0&&p>0) { snTC[sn]=(snTC[sn]||0)+q*p; snTQ[sn]=(snTQ[sn]||0)+q }
+    }} catch {}
+  }
+  const snAvg: Record<string,number> = {}
+  for (const sn in snTQ) if (snTQ[sn]>0) snAvg[sn]=snTC[sn]/snTQ[sn]
+  const bomMap: Record<number,{sn:string;num:number}[]> = {}
+  for (const b of profitBomList.value) { const gid=Number(b.goods_id||0); if(!gid)continue; if(!bomMap[gid])bomMap[gid]=[]; bomMap[gid].push({sn:b.material_sn||'',num:Number(b.num||0)}) }
+  for (const gid in bomMap) { const g=profitGoodsList.value.find(x=>x.id===Number(gid)); if(!g?.goods_sn)continue; let bc=0; for(const mt of bomMap[Number(gid)])bc+=mt.num*(snAvg[mt.sn]||0); if(bc>0){snTC[g.goods_sn]=bc;snTQ[g.goods_sn]=1} }
+  for (const g of profitGoodsList.value) { const sn=g.goods_sn; if(sn&&snTQ[sn]>0)m[g.id]=snTC[sn]/snTQ[sn] }
+  return m
+})
+
+function getDateKey(dateStr: string) { return (dateStr || '').slice(0, 10) }
+
+function myProfitFreight(row: any): number {
+  const f = Number(row.freight_amount || 0)
+  if (!f) return 0
+  if (row.freight_bearer === 'seller') return f
+  if (row.freight_bearer === 'half') return f / 2
+  return 0
+}
+
 const trendDays = computed(() => {
   const days: string[] = []
   for (let i = 6; i >= 0; i--) {
@@ -625,23 +713,190 @@ const trendDays = computed(() => {
   return days
 })
 
-function buildTrend(type: string) {
-  const map: Record<string, number> = {}
+const profitTrendData = computed(() => {
+  const revenueMap: Record<string,number> = {}
+  const costMap: Record<string,number> = {}
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000)
-    map[d.toISOString().slice(0, 10)] = 0
+    const k = new Date(Date.now() - i*86400000).toISOString().slice(0,10)
+    revenueMap[k] = 0; costMap[k] = 0
   }
-  for (const r of allFlowItems.value) {
-    if (type === 'income' && r.type !== 'income') continue
-    if (type === 'expense' && r.type !== 'expense') continue
-    if (map[r.date] !== undefined) map[r.date] += r.amount
+  for (const c of contractList.value) {
+    const k = getDateKey(c.contract_date || c.create_time || '')
+    if (revenueMap[k] === undefined) continue
+    revenueMap[k] += Number(c.after_discount || c.total_amount || 0)
+    try { for (const g of JSON.parse(c.goods_info||'[]')) costMap[k] += Number(g.num||0) * (profitCostMap.value[g.goods_id]||0) } catch {}
+    costMap[k] += myProfitFreight(c)
   }
-  const vals = Object.values(map)
-  const max = Math.max(...vals, 1)
-  return vals.map(v => v / max)
+  for (const r of retailList.value) {
+    const k = getDateKey(r.order_date || r.create_time || '')
+    if (revenueMap[k] === undefined) continue
+    try { for (const g of JSON.parse(r.goods_info||'[]')) {
+      const q = Number(g.num||0)
+      revenueMap[k] += q * Number(g.price||0)
+      costMap[k] += q * (profitCostMap.value[g.goods_id]||0)
+    }} catch {}
+  }
+  for (const e of expenseList.value) {
+    const k = getDateKey(e.expense_date || e.create_time || '')
+    if (costMap[k] !== undefined) costMap[k] += Number(e.amount || 0)
+  }
+  const revVals = Object.values(revenueMap)
+  const costVals = Object.values(costMap)
+  const profitVals = revVals.map((r, i) => r - costVals[i])
+  return { revVals, costVals, profitVals }
+})
+
+const trendRevenue = computed(() => {
+  const { revVals, costVals } = profitTrendData.value
+  const max = Math.max(...revVals, ...costVals, 1)
+  return revVals.map(v => v / max)
+})
+const trendCost = computed(() => {
+  const { revVals, costVals } = profitTrendData.value
+  const max = Math.max(...revVals, ...costVals, 1)
+  return costVals.map(v => v / max)
+})
+const trendProfit = computed(() => {
+  const { profitVals } = profitTrendData.value
+  const absMax = Math.max(...profitVals.map(Math.abs), 1)
+  return profitVals.map(v => v / absMax)
+})
+
+// ═══════════ 利润分析 computed ═══════════
+function profitFmt(v: number): string {
+  return isNaN(v) ? '0.00' : v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-const trendIncome = computed(() => buildTrend('income'))
-const trendExpense = computed(() => buildTrend('expense'))
+
+function getUnitCostFromMap(goodsId: number): { unitCost: number; costSource: string } {
+  const c = profitCostMap.value[goodsId] || 0
+  return {
+    unitCost: c,
+    costSource: c > 0 ? `成本 ¥${c.toFixed(2)}` : '未设置成本价',
+  }
+}
+
+// 按单品
+const profitByGoods = computed(() => {
+  const map: Record<string, any> = {}
+  const add = (goodsInfo: string | null, source: string, discountRatio = 1) => {
+    if (!goodsInfo) return
+    try {
+      for (const g of JSON.parse(goodsInfo)) {
+        const key = `${g.goods_id}_${source}`
+        const { unitCost, costSource } = getUnitCostFromMap(g.goods_id)
+        if (!map[key]) map[key] = { goods_name: g.goods_name || '-', goods_id: g.goods_id, num: 0, sale_amount: 0, unit_cost: unitCost, cost_source: costSource, source }
+        const qty = Number(g.num || 0)
+        map[key].num += qty
+        map[key].sale_amount += qty * Number(g.price || 0) * discountRatio
+      }
+    } catch {}
+  }
+  for (const c of contractList.value) {
+    const actualAmount = Number(c.after_discount || c.total_amount || 0)
+    let rawTotal = 0
+    try { for (const g of JSON.parse(c.goods_info || '[]')) rawTotal += Number(g.num || 0) * Number(g.price || 0) } catch {}
+    add(c.goods_info, '合同', rawTotal > 0 ? actualAmount / rawTotal : 1)
+  }
+  for (const r of retailList.value) add(r.goods_info, '零售')
+  return Object.values(map).map((r: any) => ({
+    ...r,
+    cost_amount: r.num * r.unit_cost,
+    profit: r.sale_amount - r.num * r.unit_cost,
+    profit_rate: r.sale_amount > 0 ? ((r.sale_amount - r.num * r.unit_cost) / r.sale_amount * 100) : 0,
+  })).sort((a: any, b: any) => b.profit - a.profit)
+})
+
+// 按单据
+const profitByOrder = computed(() => {
+  const result: any[] = []
+  for (const c of contractList.value) {
+    let cost_amount = 0
+    try { for (const g of JSON.parse(c.goods_info || '[]')) cost_amount += Number(g.num || 0) * getUnitCostFromMap(g.goods_id).unitCost } catch {}
+    const sale_amount = Number(c.after_discount || c.total_amount || 0)
+    const freight = myProfitFreight(c)
+    const profit = sale_amount - cost_amount
+    const net_profit = profit - freight
+    result.push({
+      source: '合同',
+      order_no: ((c.remark || '').match(/^\[NO:([^\]]+)\]/) || [])[1] || c.order_sn || c.contract_no || `HT${String(c.id).padStart(4, '0')}`,
+      customer_name: c.customer_name || '—',
+      order_date: (c.contract_date || c.create_time || '').slice(0, 10),
+      sale_amount, cost_amount, profit, freight, net_profit,
+      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+      net_rate: sale_amount > 0 ? (net_profit / sale_amount * 100) : 0,
+    })
+  }
+  for (const r of retailList.value) {
+    let sale_amount = 0, cost_amount = 0
+    try { for (const g of JSON.parse(r.goods_info || '[]')) { const q = Number(g.num || 0); sale_amount += q * Number(g.price || 0); cost_amount += q * getUnitCostFromMap(g.goods_id).unitCost } } catch {}
+    const profit = sale_amount - cost_amount
+    result.push({
+      source: '零售', order_no: r.order_sn || r.order_no || r.id,
+      customer_name: r.customer_name || r.member_name || '散客',
+      order_date: (r.order_date || r.create_time || '').slice(0, 10),
+      sale_amount, cost_amount, profit, freight: 0, net_profit: profit,
+      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+      net_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+    })
+  }
+  return result.sort((a, b) => b.profit - a.profit)
+})
+
+// 按月份
+const profitByMonth = computed(() => {
+  const map: Record<string, { month: string; revenue: number; cost: number; expense: number; freight: number }> = {}
+  const ensure = (m: string) => { if (!map[m]) map[m] = { month: m, revenue: 0, cost: 0, expense: 0, freight: 0 } }
+  for (const c of contractList.value) {
+    const m = (c.contract_date || c.create_time || '').slice(0, 7)
+    if (!m) continue
+    ensure(m)
+    map[m].revenue += Number(c.after_discount || c.total_amount || 0)
+    try { for (const g of JSON.parse(c.goods_info || '[]')) map[m].cost += Number(g.num || 0) * (profitCostMap.value[g.goods_id] || 0) } catch {}
+    map[m].freight += myProfitFreight(c)
+  }
+  for (const r of retailList.value) {
+    const m = (r.order_date || r.create_time || '').slice(0, 7)
+    if (!m) continue
+    ensure(m)
+    try { for (const g of JSON.parse(r.goods_info || '[]')) { const q = Number(g.num || 0); map[m].revenue += q * Number(g.price || 0); map[m].cost += q * (profitCostMap.value[g.goods_id] || 0) } } catch {}
+  }
+  for (const e of expenseList.value) {
+    const m = (e.expense_date || e.create_time || '').slice(0, 7)
+    if (!m) continue
+    ensure(m)
+    map[m].expense += Number(e.amount || 0)
+  }
+  return Object.values(map).map(r => {
+    const grossProfit = r.revenue - r.cost
+    const grossRate = r.revenue > 0 ? (grossProfit / r.revenue * 100) : 0
+    const netProfit = grossProfit - r.expense - r.freight
+    const netRate = r.revenue > 0 ? (netProfit / r.revenue * 100) : 0
+    return { ...r, grossProfit, grossRate, netProfit, netRate }
+  }).sort((a, b) => b.month.localeCompare(a.month))
+})
+
+// 汇总
+const profitSummary = computed(() => {
+  const revenue = profitByMonth.value.reduce((s, r) => s + r.revenue, 0)
+  const cost = profitByMonth.value.reduce((s, r) => s + r.cost, 0)
+  const expense = profitByMonth.value.reduce((s, r) => s + r.expense, 0)
+  const freight = profitByMonth.value.reduce((s, r) => s + r.freight, 0)
+  const grossProfit = revenue - cost
+  const netProfit = grossProfit - expense - freight
+  return {
+    revenue, cost, expense, freight, grossProfit, netProfit,
+    grossRate: revenue > 0 ? (grossProfit / revenue * 100) : 0,
+    netRate: revenue > 0 ? (netProfit / revenue * 100) : 0,
+  }
+})
+
+function getMonthSummary() {
+  const t = profitSummary.value
+  return ['合计', `¥${profitFmt(t.revenue)}`, `¥${profitFmt(t.cost)}`,
+    `${t.grossProfit >= 0 ? '+' : ''}¥${profitFmt(t.grossProfit)}`, `${t.grossRate.toFixed(1)}%`,
+    `¥${profitFmt(t.expense)}`, `¥${profitFmt(t.freight)}`,
+    `${t.netProfit >= 0 ? '+' : ''}¥${profitFmt(t.netProfit)}`, `${t.netRate.toFixed(1)}%`]
+}
 
 const summaryCards = computed(() => {
   const income = Number(collectTotal.value)
@@ -841,7 +1096,7 @@ async function savePay() {
 
 onMounted(async () => {
   try {
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes] = await Promise.all([
+    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes, pGoodsRes, pInhouseRes, pBomRes] = await Promise.all([
       getFundList({ list_rows: 100 }),
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
       getCollectReceiptList({ list_rows: 1000 }),
@@ -857,6 +1112,10 @@ onMounted(async () => {
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
+      getContractList({ list_rows: 500 }),
+      getGoodsList({ list_rows: 500 }),
+      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
+      getBomList({ list_rows: 500 }),
     ])
     const rawFundList = fundRes.data?.rows ?? fundRes.data?.list ?? []
     const fundNameMap = new Map<number, string>(rawFundList.map((row: any) => [Number(row.id), String(row.name || '')]))
@@ -881,6 +1140,10 @@ onMounted(async () => {
     rechargeList.value = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
     clientList.value = clientRes.data?.rows ?? clientRes.data?.list ?? []
     supplierList.value = supplierRes.data?.rows ?? supplierRes.data?.list ?? []
+    contractList.value = contractRes.data?.rows ?? contractRes.data?.list ?? []
+    profitGoodsList.value = pGoodsRes.data?.rows ?? pGoodsRes.data?.list ?? []
+    profitInhouseList.value = pInhouseRes.data?.rows ?? pInhouseRes.data?.list ?? []
+    profitBomList.value = pBomRes.data?.rows ?? pBomRes.data?.list ?? []
 
     // 过滤预付款：排除已删除的客户/供应商的记录
     const clientIds = new Set(clientList.value.map((c: any) => c.id))
@@ -1056,4 +1319,33 @@ onMounted(async () => {
 .flow-toggle:hover { background: var(--gray); }
 .chart-grid-line { stroke: var(--border); }
 .chart-axis-label { fill: var(--dim); }
+
+/* 利润分析入口大卡片 */
+.profit-entry {
+  display: flex; align-items: center; gap: 20px;
+  padding: 20px 24px; border-radius: 16px; cursor: pointer;
+  background: linear-gradient(135deg, #f0f7ff 0%, #f8f0ff 50%, #f0fff4 100%);
+  border: 1px solid #e0e8f0;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+.profit-entry:hover { box-shadow: 0 6px 24px rgba(0,113,227,0.12); transform: translateY(-2px); }
+.profit-entry-left { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.profit-entry-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: linear-gradient(135deg, #0071e3, #7c3aed);
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.profit-entry-info { display: flex; flex-direction: column; gap: 4px; }
+.profit-entry-title { font-size: 17px; font-weight: 700; color: #1d1d1f; }
+.profit-entry-desc { font-size: 12px; color: rgba(29,29,31,0.45); }
+.profit-entry-nums {
+  display: flex; gap: 20px; flex: 1; justify-content: flex-end; align-items: center; flex-wrap: wrap;
+}
+.profit-entry-item { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; }
+.profit-entry-item--big { }
+.profit-entry-label { font-size: 11px; color: rgba(29,29,31,0.4); }
+.profit-entry-val { font-size: 16px; font-weight: 700; }
+.profit-entry-rate { font-size: 11px; color: rgba(29,29,31,0.4); }
+.profit-entry-divider { width: 1px; height: 36px; background: #d8dde4; }
+.profit-entry-arrow { color: rgba(29,29,31,0.3); flex-shrink: 0; }
 </style>

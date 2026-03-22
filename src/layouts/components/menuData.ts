@@ -37,6 +37,7 @@ export const menuData: TopMenuItem[] = [
     title: '销售',
     icon: 'ShoppingCart',
     children: [
+      { key: 'sale-overview', title: '销售总览', path: '/sale/overview' },
       { key: 'sale-offer', title: '销售报价', path: '/sale/offer' },
       { key: 'sale-contract', title: '销售合同', path: '/sale/contract' },
       { key: 'sale-out', title: '销售出库', path: '/sale/out' },
@@ -119,6 +120,7 @@ export const menuData: TopMenuItem[] = [
     icon: 'Money',
     children: [
       { key: 'finance-overview', title: '财务总览', path: '/finance/overview' },
+      { key: 'finance-profit', title: '利润表', path: '/reports/finance' },
       { key: 'finance-receivable', title: '应收账款', path: '/finance/receivable' },
       { key: 'finance-payable', title: '应付账款', path: '/finance/payable' },
       { key: 'finance-collect-receipt', title: '收款单', path: '/finance/collect-receipt' },
@@ -131,8 +133,6 @@ export const menuData: TopMenuItem[] = [
       { key: 'finance-cost', title: '成本核算', path: '/finance/cost' },
       { key: 'finance-prepay', title: '预收款', path: '/finance/prepay' },
       { key: 'finance-supplier-prepay', title: '预付款', path: '/finance/supplier-prepay' },
-      { key: 'finance-profit', title: '利润表', path: '/reports/finance' },
-      { key: 'finance-fix-receivable', title: '修复收款数据', path: '/finance/fix-receivable' },
     ],
   },
   {

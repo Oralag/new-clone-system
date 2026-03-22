@@ -26,6 +26,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'mobile/profile', name: 'MobileProfile', component: () => import('@/views/mobile/MobileProfile.vue'), meta: { title: '我的' } },
 
       // Sale
+      { path: 'sale/overview', name: 'SaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
       { path: 'sale/client', name: 'SaleClient', component: () => import('@/views/sale/ClientList.vue'), meta: { title: '客户管理' } },
       { path: 'sale/sea', name: 'SaleSea', component: () => import('@/views/sale/ClientSea.vue'), meta: { title: '客户公海' } },
       { path: 'sale/level', name: 'SaleLevel', component: () => import('@/views/sale/CustomerLevel.vue'), meta: { title: '客户等级' } },
@@ -196,6 +197,16 @@ const routes: RouteRecordRaw[] = [
       { path: 'creative-lab', name: 'AgentCreativeLab', component: () => import('@/views/agent/CreativeLab.vue'), meta: { title: 'AI创意实验室' } },
       { path: 'publish', name: 'AgentPublish', component: () => import('@/views/agent/Publish.vue'), meta: { title: '发布管理' } },
       { path: 'history', name: 'AgentHistory', component: () => import('@/views/agent/History.vue'), meta: { title: '历史记录' } },
+    ],
+  },
+  // 投资部门（独立布局 — 黑曜石观测舱）
+  {
+    path: '/investment',
+    component: () => import('@/layouts/InvestmentLayout.vue'),
+    children: [
+      { path: '', name: 'InvestmentIndex', component: () => import('@/views/investment/Index.vue'), meta: { title: '亚当观测舱' } },
+      { path: 'city', name: 'InvestmentCity', component: () => import('@/views/investment/City.vue'), meta: { title: '生态园区' } },
+      { path: 'market', name: 'InvestmentMarket', component: () => import('@/views/investment/Market.vue'), meta: { title: '股票市场' } },
     ],
   },
 ]

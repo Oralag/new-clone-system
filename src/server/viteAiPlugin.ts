@@ -7,6 +7,9 @@ import { allTools } from './tools/erpTools'
 import { executeTool } from './tools/toolExecutor'
 import { detectIntent, getSystemPrompt } from './agents/orchestrator'
 import { getAgent, AGENTS } from './agents/agentRegistry'
+import { adamTools } from './tools/adamTools'
+import { executeAdamTool } from './tools/adamExecutor'
+import { adamAgent } from './agents/adamOrchestrator'
 
 // ── Local user store (dev only) ───────────────────────────────────────────────
 const USERS_FILE = resolve(process.cwd(), '.local-users.json')
@@ -66,7 +69,10 @@ export function aiChatPlugin(): Plugin {
       server.middlewares.use('/adminapi/login/account', async (req: any, res: any, next: any) => {
         if (req.method !== 'POST') return next()
         try {
-          const body = await readBodyJson(req)
+          const chunks: Buffer[] = []
+          for await (const chunk of req as any) chunks.push(chunk)
+          const rawBody = Buffer.concat(chunks).toString()
+          const body = JSON.parse(rawBody)
           const { account, password } = body
           const users = readUsers()
           const user = users[account]
@@ -83,9 +89,16 @@ export function aiChatPlugin(): Plugin {
               }
             })
           }
-          // Not a local user — forward to railway proxy (vite proxy handles it)
-          return next()
-        } catch {
+          // Not a local user — forward to Railway directly via fetch
+          const upstream = await fetch('https://erp-server-production-b1b6.up.railway.app/adminapi/login/account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: rawBody,
+          })
+          const result = await upstream.text()
+          res.writeHead(upstream.status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
+          res.end(result)
+        } catch (e: any) {
           return next()
         }
       })
@@ -550,6 +563,71 @@ export function aiChatPlugin(): Plugin {
             }
           }
 
+          res.write('data: [DONE]\n\n')
+        } catch (e: any) {
+          send({ type: 'error', error: e.message })
+        } finally {
+          res.end()
+        }
+      })
+
+      // ── /api/adam-agent — 亚当投资决策中枢 ─────────────────────────────────
+      server.middlewares.use('/api/adam-agent', async (req, res, next) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type, x-erp-token' })
+          res.end(); return
+        }
+        if (req.method !== 'POST') return next()
+
+        const chunks: Buffer[] = []
+        for await (const chunk of req as any) chunks.push(chunk)
+        const { messages, adamState } = JSON.parse(Buffer.concat(chunks).toString())
+        const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
+
+        const apiKey = process.env.GEMINI_API_KEY
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY' })); return }
+
+        const genAI = new GoogleGenAI({ apiKey })
+
+        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
+        const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
+
+        try {
+          const systemInstruction = adamAgent.buildSystemPrompt(adamState || {})
+
+          const history: Content[] = messages.slice(0, -1).map((m: any) => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content }],
+          }))
+
+          const chat = genAI.chats.create({
+            model: 'gemini-2.0-flash',
+            config: { systemInstruction, tools: [{ functionDeclarations: adamTools }] },
+            history,
+          })
+
+          const lastMsg = messages[messages.length - 1]
+          let currentParts: any[] = [{ text: lastMsg?.content || '' }]
+
+          for (let i = 0; i < 5; i++) {
+            const response = await chat.sendMessage({ message: currentParts })
+            const textParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
+            for (const part of textParts) {
+              if (part.text) send({ type: 'text', text: part.text })
+            }
+            const fnParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
+            if (fnParts.length === 0) break
+            const toolResultParts: any[] = []
+            for (const part of fnParts) {
+              const fc = part.functionCall
+              const callId = fc.id || fc.name
+              send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
+              const result = await executeAdamTool(fc.name, fc.args as Record<string, any>, erpToken)
+              send({ type: 'tool_result', id: callId, name: fc.name, result })
+              toolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
+            }
+            currentParts = toolResultParts
+          }
           res.write('data: [DONE]\n\n')
         } catch (e: any) {
           send({ type: 'error', error: e.message })

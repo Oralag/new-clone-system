@@ -343,7 +343,8 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Search, Delete, CircleCheckFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getGoodsList, getGoodsCateList } from '@/api/goods'
-import { getMemberList, createRetailOrder } from '@/api/retail'
+import { getMemberList, createRetailOrder, getRetailOrderList } from '@/api/retail'
+import { getSaleContractList } from '@/api/reports'
 
 // ── 商品 ──────────────────────────────────────────────────────────────────────
 const keyword = ref('')
@@ -394,18 +395,39 @@ async function loadGoods() {
   }
 }
 
-// 热销产品：按销量或创建时间排序（取最新入库/常用商品）
+// 热销产品：从零售单+销售单统计实际销量，按频次排序商品
 async function loadHotGoods() {
   goodsLoading.value = true
   try {
-    const res = await getGoodsList({ status: 1, list_rows: 30, sort: 'sell_count', order: 'desc' })
-    let rows: any[] = res.data?.rows ?? []
-    if (rows.length === 0) {
-      // Fallback: just get all products
-      const res2 = await getGoodsList({ status: 1, list_rows: 30 })
-      rows = res2.data?.rows ?? []
+    // 并行拉取：全部商品 + 近期零售订单 + 近期销售合同
+    const [goodsRes, retailRes, saleRes] = await Promise.all([
+      getGoodsList({ status: 1, list_rows: 60 }),
+      getRetailOrderList({ list_rows: 200 }).catch(() => ({ data: { rows: [] } })),
+      getSaleContractList({ list_rows: 200 }).catch(() => ({ data: { rows: [] } })),
+    ])
+    const allGoods: any[] = goodsRes.data?.rows ?? []
+
+    // 统计每个商品的销量
+    const salesCount: Record<string, number> = {}
+    const orders = [
+      ...(retailRes.data?.rows ?? []),
+      ...(saleRes.data?.rows ?? []),
+    ]
+    for (const order of orders) {
+      try {
+        const items = typeof order.goods_info === 'string'
+          ? JSON.parse(order.goods_info)
+          : (order.goods_info ?? [])
+        for (const item of items) {
+          const gid = String(item.goods_id)
+          salesCount[gid] = (salesCount[gid] || 0) + Number(item.num || 1)
+        }
+      } catch { /* ignore parse errors */ }
     }
-    goodsList.value = rows
+
+    // 按销量降序排序，没销量的排后面
+    allGoods.sort((a, b) => (salesCount[String(b.id)] || 0) - (salesCount[String(a.id)] || 0))
+    goodsList.value = allGoods
   } finally {
     goodsLoading.value = false
   }

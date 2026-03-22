@@ -166,6 +166,20 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="净利润" align="right" width="120" sortable prop="net_profit">
+          <template #default="{ row }">
+            <span :style="{ color: row.net_profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
+              {{ row.net_profit >= 0 ? '+' : '' }}¥{{ fmt(row.net_profit) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="净利率" align="right" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.net_rate >= 20 ? 'success' : row.net_rate > 0 ? 'warning' : 'danger'" size="small">
+              {{ row.net_rate.toFixed(1) }}%
+            </el-tag>
+          </template>
+        </el-table-column>
         <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
       </el-table>
     </el-card>
@@ -175,7 +189,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { InfoFilled, Loading } from '@element-plus/icons-vue'
-import { getContractList, getSaleOutList } from '@/api/sale'
+import { getContractList } from '@/api/sale'
 import { getRetailOrderList } from '@/api/retail'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { getExpenseList } from '@/api/finance'
@@ -186,7 +200,6 @@ const dateRange = ref<[string, string] | null>(null)
 const viewMode = ref<'goods' | 'order'>('goods')
 
 const saleContracts = ref<any[]>([])
-const saleOutOrders = ref<any[]>([])
 const retailOrders = ref<any[]>([])
 const goodsList = ref<any[]>([])
 const procureInhouseList = ref<any[]>([])
@@ -279,7 +292,7 @@ const rows = computed(() => {
     unit_cost: number; has_bom: boolean; cost_source: string; source: string
   }> = {}
 
-  const add = (goodsInfo: string | null, source: string) => {
+  const add = (goodsInfo: string | null, source: string, discountRatio = 1) => {
     if (!goodsInfo) return
     try {
       const items = JSON.parse(goodsInfo)
@@ -296,13 +309,19 @@ const rows = computed(() => {
         const qty = Number(g.num || 0)
         const price = Number(g.price || 0)
         map[key].num += qty
-        map[key].sale_amount += qty * price
+        map[key].sale_amount += qty * price * discountRatio
       }
     } catch {}
   }
 
-  for (const c of saleContracts.value) add(c.goods_info, '合同')
-  for (const o of saleOutOrders.value) add(o.goods_info, '出库单')
+  for (const c of saleContracts.value) {
+    // 计算优惠比例：实际金额 / 商品原价合计
+    const actualAmount = Number(c.after_discount || c.total_amount || 0)
+    let rawTotal = 0
+    try { for (const g of JSON.parse(c.goods_info || '[]')) rawTotal += Number(g.num || 0) * Number(g.price || 0) } catch {}
+    const ratio = rawTotal > 0 ? actualAmount / rawTotal : 1
+    add(c.goods_info, '合同', ratio)
+  }
   for (const r of retailOrders.value) add(r.goods_info, '零售')
 
   return Object.values(map)
@@ -321,44 +340,25 @@ const orderRows = computed(() => {
   const result: any[] = []
 
   for (const c of saleContracts.value) {
-    let sale_amount = 0
     let cost_amount = 0
     try {
       for (const g of JSON.parse(c.goods_info || '[]')) {
         const qty = Number(g.num || 0)
-        sale_amount += qty * Number(g.price || 0)
         cost_amount += qty * getUnitCost(g.goods_id).unitCost
       }
     } catch {}
+    const sale_amount = Number(c.after_discount || c.total_amount || 0)
+    const freight = myFreight(c)
     const profit = sale_amount - cost_amount
+    const net_profit = profit - freight
     result.push({
       source: '合同',
-      order_no: c.contract_no || c.order_no || c.id,
+      order_no: ((c.remark || '').match(/^\[NO:([^\]]+)\]/) || [])[1] || c.order_sn || c.contract_no || `HT${String(c.id).padStart(4, '0')}`,
       customer_name: c.customer_name || '—',
       order_date: (c.contract_date || c.create_time || '').slice(0, 10),
-      sale_amount, cost_amount, profit,
+      sale_amount, cost_amount, profit, freight, net_profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
-    })
-  }
-
-  for (const o of saleOutOrders.value) {
-    let sale_amount = 0
-    let cost_amount = 0
-    try {
-      for (const g of JSON.parse(o.goods_info || '[]')) {
-        const qty = Number(g.num || 0)
-        sale_amount += qty * Number(g.price || 0)
-        cost_amount += qty * getUnitCost(g.goods_id).unitCost
-      }
-    } catch {}
-    const profit = sale_amount - cost_amount
-    result.push({
-      source: '出库单',
-      order_no: o.order_no || o.order_sn || o.id,
-      customer_name: o.customer_name || '—',
-      order_date: (o.out_date || o.create_time || '').slice(0, 10),
-      sale_amount, cost_amount, profit,
-      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+      net_rate: sale_amount > 0 ? (net_profit / sale_amount * 100) : 0,
     })
   }
 
@@ -378,8 +378,9 @@ const orderRows = computed(() => {
       order_no: r.order_sn || r.order_no || r.id,
       customer_name: r.customer_name || r.member_name || '散客',
       order_date: (r.order_date || r.create_time || '').slice(0, 10),
-      sale_amount, cost_amount, profit,
+      sale_amount, cost_amount, profit, freight: 0, net_profit: profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+      net_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
     })
   }
 
@@ -420,9 +421,8 @@ async function loadData() {
     params.end_date = dateRange.value[1]
   }
   try {
-    const [c, o, r, g, ih, b, e] = await Promise.allSettled([
+    const [c, r, g, ih, b, e] = await Promise.allSettled([
       getContractList(params),
-      getSaleOutList({ ...params, status: 1 }),
       getRetailOrderList(params),
       getGoodsList({ list_rows: 500 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
@@ -430,7 +430,6 @@ async function loadData() {
       getExpenseList(params),
     ])
     saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
-    saleOutOrders.value      = o.status === 'fulfilled' ? (o.value?.data?.rows  ?? []) : []
     retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []) : []
     goodsList.value          = g.status === 'fulfilled' ? (g.value?.data?.rows  ?? []) : []
     procureInhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []) : []

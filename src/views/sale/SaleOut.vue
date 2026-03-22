@@ -481,7 +481,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -541,8 +541,7 @@ async function loadWarehouses() {
   warehouseOptions.value = res.data?.rows ?? []
 }
 
-onMounted(() => {
-  loadCustomers(); loadWarehouses(); loadFunds()
+function tryLoadContractData() {
   const contractData = sessionStorage.getItem('saleout_from_contract')
   if (contractData) {
     sessionStorage.removeItem('saleout_from_contract')
@@ -554,6 +553,8 @@ onMounted(() => {
       fd.admin_name = String(c.admin_name || '')
       fd.remark = `来自销售合同 ${c.contract_sn}`
       fd.contract_id = Number(c.contract_id || 0)
+      fd.discount_type = String(c.discount_type || 'none')
+      fd.discount_value = Number(c.discount_value || 0)
       const items = JSON.parse(String(c.goods_info || '[]'))
       fd.items = items.map((i: any) => ({
         goods_id: i.goods_id || 0,
@@ -573,6 +574,15 @@ onMounted(() => {
       calcTotal()
     } catch { /* ignore */ }
   }
+}
+
+onMounted(() => {
+  loadCustomers(); loadWarehouses(); loadFunds()
+  tryLoadContractData()
+})
+
+onActivated(() => {
+  tryLoadContractData()
 })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
@@ -690,14 +700,31 @@ function onWarehouseChange(id: any) {
   fd.warehouse_name = w?.name ?? ''
 }
 
-function openCreate() {
+async function openCreate() {
   Object.assign(fd, defaultFd())
   isReadonly.value = false
   showForm.value = true
+  try {
+    const today = new Date(Date.now() + 8*3600000).toISOString().slice(0,10)
+    const ymd = today.replace(/-/g,'')
+    const res = await getSaleOutList({ list_rows: 1000 })
+    const rows: any[] = res?.data?.rows ?? []
+    const todayCount = rows.filter((r: any) => (r.created_at||r.out_date||'').slice(0,10) === today).length
+    fd.order_no = `CK${ymd}${String(todayCount+1).padStart(3,'0')}`
+  } catch {
+    const ymd = new Date(Date.now()+8*3600000).toISOString().slice(0,10).replace(/-/g,'')
+    fd.order_no = `CK${ymd}001`
+  }
 }
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
+  // 从 remark 解析出库单号
+  const m = (row?.remark || '').match(/^\[NO:([^\]]+)\]/)
+  if (m) {
+    fd.order_no = m[1]
+    fd.remark = (row.remark || '').replace(/^\[NO:[^\]]+\]\s*/, '')
+  }
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach((item: any) => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
@@ -778,8 +805,16 @@ async function handleSave() {
       out_date: fd.out_date,
       warehouse_id: fd.warehouse_id,
       warehouse_name: fd.warehouse_name,
-      remark: fd.remark,
+      remark: (() => {
+        let r = (fd.remark || '').replace(/^\[NO:[^\]]+\]\s*/, '')
+        if (fd.order_no) r = `[NO:${fd.order_no}]` + (r ? ' ' + r : '')
+        return r
+      })(),
       total_amount: fd.total_amount,
+      discount_type: fd.discount_type,
+      discount_value: fd.discount_value,
+      after_discount: fd.after_discount,
+      contract_id: fd.contract_id || 0,
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id
@@ -894,6 +929,28 @@ async function removeAutoSaleOutReceipts(receipts: any[]) {
   }
 }
 
+async function handleSaleOutStockEffect(row: any, type: 'audit' | 'reverse') {
+  const items = parseItems(row.goods_info)
+  try {
+    for (const item of items) {
+      if (!item.goods_id || !item.num) continue
+      const stockRes = await http.get('/stock/StockAll/index', {
+        params: { goods_id: item.goods_id, warehouse_id: row.warehouse_id, list_rows: 10 }
+      })
+      const stockRows: any[] = stockRes.data?.rows ?? []
+      const stock = stockRows[0]
+      if (stock) {
+        // 出库审核通过=库存扣减(-num)；反审核=库存加回(+num)
+        const delta = type === 'audit' ? -Number(item.num) : Number(item.num)
+        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
+        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
+      }
+    }
+  } catch (e: any) {
+    console.warn('销售出库库存变动失败', e?.message)
+  }
+}
+
 async function syncSaleOutCustomerBalance(row: any, mode: 'audit' | 'reverse') {
   if (!row?.customer_id) return
   const customerRes = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
@@ -934,10 +991,20 @@ async function handleAudit(row: any, status: number) {
       }
     }
 
+    // 审核通过后扣减库存
+    if (status === 1) {
+      try {
+        await handleSaleOutStockEffect(row, 'audit')
+      } catch {
+        financeWarning = financeWarning ? `${financeWarning}；库存扣减失败` : '库存扣减失败，请手动更新'
+      }
+    }
+
     // 审核通过后自动创建收款单 + 扣减客户余额
     if (status === 1 && row.customer_id) {
       try {
         await http.post('/finance/CollectReceipt/add', {
+          contact_type: 'customer',
           saleout_id: row.id,
           order_sn: row.order_no,
           order_no: row.order_no,
@@ -971,6 +1038,13 @@ async function handleAudit(row: any, status: number) {
         await syncSaleOutCustomerBalance(row, 'reverse')
       } catch {
         financeWarning = financeWarning ? `${financeWarning}；客户余额还原失败` : '客户余额还原失败，请手动更新'
+      }
+
+      // 反审核：库存加回
+      try {
+        await handleSaleOutStockEffect(row, 'reverse')
+      } catch {
+        financeWarning = financeWarning ? `${financeWarning}；库存还原失败` : '库存还原失败，请手动更新'
       }
     }
 

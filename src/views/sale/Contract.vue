@@ -1223,25 +1223,33 @@ async function autoCreateReceipt(row: any) {
     const actualPrepay = Math.min(prepayAmt, finalAmt)
     try {
       await createCollectReceipt({
+        contact_type: 'customer',
         customer_id: customerId, customer_name: customerName,
         amount: actualPrepay, order_sn: orderSn, order_no: orderSn,
         fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
         receipt_date: today, remark: `预付款核销 - ${orderSn}`,
       })
       remaining = Math.max(0, finalAmt - actualPrepay)
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error('[autoCreateReceipt] 预付款核销收款单创建失败', e)
+      throw e
+    }
   }
 
   // 剩余应收记录（未核销部分）
   if (remaining > 0.01) {
     try {
       await createCollectReceipt({
+        contact_type: 'customer',
         customer_id: customerId, customer_name: customerName,
         amount: remaining, order_sn: orderSn, order_no: orderSn,
         fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
         receipt_date: today, remark: `合同自动收款 - ${orderSn}`,
       })
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error('[autoCreateReceipt] 应收收款单创建失败', e)
+      throw e
+    }
   }
 }
 
@@ -1447,6 +1455,9 @@ async function handleConvertToSaleOut(row: any) {
     warehouse_name: row.warehouse_name || '',
     remark: row.remark || '',
     goods_info: row.goods_info || '[]',
+    discount_type: row.discount_type || 'none',
+    discount_value: row.discount_value || 0,
+    total_amount: row.total_amount || 0,
   }))
   router.push('/sale/out')
 }

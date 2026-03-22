@@ -10,6 +10,7 @@ export const deleteRetailOrder = (id: number) => http.post('/retail/order/del', 
 export const getRetailReturnList = (params?: any) => http.get('/retail/return/index', { params })
 export const createRetailReturn = (data: any) => http.post('/retail/return/add', data)
 export const deleteRetailReturn = (id: number) => http.post('/retail/return/del', { id })
+export const auditRetailReturn = (id: number, status: number) => http.post('/retail/return/audit', { id, status })
 export const getMemberList = (params?: any) => http.get('/retail/member/index', { params })
 export const createMember = (data: any) => http.post('/retail/member/add', data)
 export const updateMember = (data: any) => http.post('/retail/member/edit', data)
