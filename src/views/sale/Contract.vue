@@ -1250,7 +1250,6 @@ async function handleSave() {
       freight_bearer: fd.freight_bearer,
       income_amount: fd.income_amount,
       receive_amount: fd.receive_amount,
-      prepay_amount: fd.prepay_amount,
       receive_account: fd.receive_account || '',
       need_invoice: fd.need_invoice ? 1 : 0,
       installment: fd.installment ? 1 : 0,

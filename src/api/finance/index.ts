@@ -65,10 +65,45 @@ function buildExpensePayload(data: any) {
   }
 }
 
+function normalizeCollectReceiptPayload(data: any) {
+  const payload = { ...(data || {}) }
+  const contactType = String(payload.contact_type || '').trim().toLowerCase()
+  const contactName = String(
+    payload.contact_name
+    || payload.customer_name
+    || payload.supplier_name
+    || payload.staff_name
+    || '',
+  ).trim()
+  const remark = String(payload.remark || '').trim()
+  const typeRemark = contactType && contactType !== 'customer' && !remark.startsWith(`[${contactType}]`)
+    ? `[${contactType}]${remark ? ` ${remark}` : ''}`
+    : remark
+
+  const result: Record<string, any> = {
+    amount: Number(payload.amount || 0),
+    fund_id: payload.fund_id ?? 0,
+    fund_name: payload.fund_name || '',
+    receipt_date: payload.receipt_date || payload.pay_date || '',
+    order_sn: payload.order_sn || payload.order_no || '',
+    pay_type: payload.pay_type || 'cash',
+    remark: typeRemark,
+  }
+
+  if (payload.customer_id || contactType === 'customer') {
+    result.customer_id = Number(payload.customer_id || payload.contact_id || 0)
+    result.customer_name = String(payload.customer_name || contactName || '').trim()
+  } else if (contactName) {
+    result.contact_name = contactName
+  }
+
+  return result
+}
+
 export const getReceivableList = (params?: any) => http.get('/finance/CollectAccounts/index', { params })
 export const getPayableList = (params?: any) => http.get('/finance/PayAccounts/index', { params })
 export const getCollectReceiptList = (params?: any) => http.get('/finance/CollectReceipt/index', { params })
-export const createCollectReceipt = (data: any) => http.post('/finance/CollectReceipt/add', data)
+export const createCollectReceipt = (data: any) => http.post('/finance/CollectReceipt/add', normalizeCollectReceiptPayload(data))
 export const deleteCollectReceipt = (id: number) => http.post('/finance/CollectReceipt/del', { id })
 export const getPayReceiptList = (params?: any) => http.get('/finance/PayReceipt/index', { params })
 export const createPayReceipt = (data: any) => http.post('/finance/PayReceipt/add', data)

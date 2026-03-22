@@ -377,7 +377,13 @@
       </el-input>
     </div>
     <el-form :model="collectForm" label-width="80px" style="margin-top:12px">
-      <el-form-item label="收款对象">
+      <el-form-item label="类型">
+        <el-radio-group v-model="collectForm.category" @change="onCollectCategoryChange">
+          <el-radio-button value="receipt">收款单（客户）</el-radio-button>
+          <el-radio-button value="other">其他收入</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item v-if="collectForm.category === 'receipt'" label="收款对象">
         <div class="contact-row">
           <el-select
             v-model="collectForm.contact_id"
@@ -387,9 +393,10 @@
           >
             <el-option v-for="c in clientList" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
-          <el-button class="other-btn" :type="collectForm.contact_id === -1 ? 'primary' : 'default'" @click="toggleCollectOther">其他</el-button>
         </div>
-        <el-input v-if="collectForm.contact_id === -1" v-model="collectForm.contact_name" placeholder="手动输入名称" style="margin-top:6px" />
+      </el-form-item>
+      <el-form-item v-if="collectForm.category === 'other'" label="收入说明">
+        <el-input v-model="collectForm.contact_name" placeholder="如：利息收入、赔偿金" />
       </el-form-item>
       <el-form-item label="收款账户">
         <div class="contact-row">
@@ -432,7 +439,13 @@
       </el-input>
     </div>
     <el-form :model="payForm" label-width="80px" style="margin-top:12px">
-      <el-form-item label="付款对象">
+      <el-form-item label="类型">
+        <el-radio-group v-model="payForm.category" @change="onPayCategoryChange">
+          <el-radio-button value="receipt">付款单（供应商）</el-radio-button>
+          <el-radio-button value="other">其他支出</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item v-if="payForm.category === 'receipt'" label="付款对象">
         <div class="contact-row">
           <el-select
             v-model="payForm.contact_id"
@@ -442,9 +455,10 @@
           >
             <el-option v-for="s in supplierList" :key="s.id" :label="s.name" :value="s.id" />
           </el-select>
-          <el-button class="other-btn" :type="payForm.contact_id === -1 ? 'primary' : 'default'" @click="togglePayOther">其他</el-button>
         </div>
-        <el-input v-if="payForm.contact_id === -1" v-model="payForm.contact_name" placeholder="手动输入名称" style="margin-top:6px" />
+      </el-form-item>
+      <el-form-item v-if="payForm.category === 'other'" label="支出说明">
+        <el-input v-model="payForm.contact_name" placeholder="如：办公用品、快递费" />
       </el-form-item>
       <el-form-item label="付款账户">
         <div class="contact-row">
@@ -478,7 +492,7 @@ import { useRouter } from 'vue-router'
 import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, ArrowUp, ArrowDown, ArrowRight, Box, Plus, Minus, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
-import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList } from '@/api/finance'
+import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList, createCollectReceipt } from '@/api/finance'
 import { getContractList } from '@/api/sale'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
@@ -597,7 +611,7 @@ const payTotal = computed(() =>
   allFlowItems.value.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0).toFixed(2)
 )
 const fundTotal = computed(() =>
-  Math.max(0, Number(collectTotal.value) - Number(payTotal.value)).toFixed(2)
+  (Number(collectTotal.value) - Number(payTotal.value)).toFixed(2)
 )
 const accountTotal = computed(() =>
   fundList.value.reduce((s, r) => s + Number(r.display_balance ?? r.balance ?? 0), 0).toFixed(2)
@@ -915,15 +929,21 @@ const summaryCards = computed(() => {
 const collectDialogVisible = ref(false)
 const collectSaving = ref(false)
 const collectOcrText = ref('')
-const collectForm = ref<any>({ contact_id: null, contact_name: '', contact_type: 'customer', fund_id: null, fund_name: '', amount: 0, receipt_date: new Date().toISOString().slice(0, 10), remark: '' })
+const collectForm = ref<any>({ category: 'receipt', contact_id: null, contact_name: '', contact_type: 'customer', fund_id: null, fund_name: '', amount: 0, receipt_date: new Date().toISOString().slice(0, 10), remark: '' })
 
 function openQuickCollect() {
   collectOcrText.value = ''
-  collectForm.value = { contact_id: null, contact_name: '', contact_type: 'customer', fund_id: null, fund_name: '', amount: 0, receipt_date: new Date().toISOString().slice(0, 10), remark: '' }
+  collectForm.value = { category: 'receipt', contact_id: null, contact_name: '', contact_type: 'customer', fund_id: null, fund_name: '', amount: 0, receipt_date: new Date().toISOString().slice(0, 10), remark: '' }
   collectDialogVisible.value = true
 }
+function onCollectCategoryChange(val: string) {
+  collectForm.value.contact_id = null
+  collectForm.value.contact_name = ''
+  collectForm.value.contact_type = val === 'other' ? 'other' : 'customer'
+}
 function toggleCollectOther() {
-  collectForm.value.contact_id = collectForm.value.contact_id === -1 ? null : -1
+  collectForm.value.category = 'other'
+  collectForm.value.contact_id = null
   collectForm.value.contact_name = ''
   collectForm.value.contact_type = 'other'
 }
@@ -996,10 +1016,18 @@ function parseNaturalText(text: string): { amount: number; remark: string; date:
 function parseCollectOcr() {
   const text = collectOcrText.value.trim()
   if (!text) return
-  const { amount, remark, date } = parseNaturalText(text)
+  const { amount, remark, date, isExpense } = parseNaturalText(text)
   if (amount > 0) collectForm.value.amount = amount
   if (remark) collectForm.value.remark = remark
   collectForm.value.receipt_date = date
+  // 非客户相关的收入关键词 → 自动切到"其他收入"
+  const otherIncomeKeywords = /利息|退税|赔偿|补贴|奖励|返利|分红|佣金|违约金|赔付|其他收入/
+  if (otherIncomeKeywords.test(text)) {
+    collectForm.value.category = 'other'
+    collectForm.value.contact_type = 'other'
+    collectForm.value.contact_id = null
+    collectForm.value.contact_name = remark || ''
+  }
   if (amount > 0) {
     ElMessage.success(`识别完成：金额 ¥${amount}，请确认收款信息`)
   } else {
@@ -1009,19 +1037,31 @@ function parseCollectOcr() {
 
 async function saveCollect() {
   if (!collectForm.value.amount) { ElMessage.warning('请输入收款金额'); return }
-  const name = collectForm.value.contact_id === -1 ? collectForm.value.contact_name : (clientList.value.find((x: any) => x.id === collectForm.value.contact_id)?.name || collectForm.value.contact_name || '')
+  const isOther = collectForm.value.category === 'other'
+  const name = isOther
+    ? collectForm.value.contact_name
+    : (clientList.value.find((x: any) => x.id === collectForm.value.contact_id)?.name || collectForm.value.contact_name || '')
+  if (isOther && !name) { ElMessage.warning('请输入收入说明'); return }
   const fundName = collectForm.value.fund_id === -1 ? collectForm.value.fund_name : (fundList.value.find((x: any) => x.id === collectForm.value.fund_id)?.name || '')
   collectSaving.value = true
   try {
-    await http.post('/finance/CollectReceipt/add', {
+    await createCollectReceipt(isOther ? {
       contact_name: name,
-      contact_type: collectForm.value.contact_id !== -1 && collectForm.value.contact_id ? 'customer' : 'other',
+      contact_type: 'other',
+      fund_name: fundName,
+      amount: collectForm.value.amount,
+      receipt_date: collectForm.value.receipt_date,
+      remark: collectForm.value.remark,
+    } : {
+      customer_id: collectForm.value.contact_id || 0,
+      customer_name: name,
+      contact_type: 'customer',
       fund_name: fundName,
       amount: collectForm.value.amount,
       receipt_date: collectForm.value.receipt_date,
       remark: collectForm.value.remark,
     })
-    ElMessage.success('收款记录已保存')
+    ElMessage.success(isOther ? '其他收入已保存' : '收款记录已保存')
     collectDialogVisible.value = false
   } catch { ElMessage.error('保存失败') } finally { collectSaving.value = false }
 }
@@ -1030,15 +1070,21 @@ async function saveCollect() {
 const payDialogVisible = ref(false)
 const paySaving = ref(false)
 const payOcrText = ref('')
-const payForm = ref<any>({ contact_id: null, contact_name: '', contact_type: 'other', fund_id: null, fund_name: '', amount: 0, pay_date: new Date().toISOString().slice(0, 10), remark: '' })
+const payForm = ref<any>({ category: 'receipt', contact_id: null, contact_name: '', contact_type: 'supplier', fund_id: null, fund_name: '', amount: 0, pay_date: new Date().toISOString().slice(0, 10), remark: '' })
 
 function openQuickPay() {
   payOcrText.value = ''
-  payForm.value = { contact_id: null, contact_name: '', contact_type: 'other', fund_id: null, fund_name: '', amount: 0, pay_date: new Date().toISOString().slice(0, 10), remark: '' }
+  payForm.value = { category: 'receipt', contact_id: null, contact_name: '', contact_type: 'supplier', fund_id: null, fund_name: '', amount: 0, pay_date: new Date().toISOString().slice(0, 10), remark: '' }
   payDialogVisible.value = true
 }
+function onPayCategoryChange(val: string) {
+  payForm.value.contact_id = null
+  payForm.value.contact_name = ''
+  payForm.value.contact_type = val === 'other' ? 'other' : 'supplier'
+}
 function togglePayOther() {
-  payForm.value.contact_id = payForm.value.contact_id === -1 ? null : -1
+  payForm.value.category = 'other'
+  payForm.value.contact_id = null
   payForm.value.contact_name = ''
   payForm.value.contact_type = 'other'
 }
@@ -1062,9 +1108,11 @@ function parsePayOcr() {
   if (amount > 0) payForm.value.amount = amount
   if (remark) payForm.value.remark = remark
   payForm.value.pay_date = date
-  // 费用类自动设置为其他付款
-  if (isExpense && payForm.value.contact_id === null) {
-    payForm.value.contact_id = -1
+  // 费用类自动切到"其他支出"分类
+  if (isExpense) {
+    payForm.value.category = 'other'
+    payForm.value.contact_type = 'other'
+    payForm.value.contact_id = null
     payForm.value.contact_name = remark || ''
   }
   if (amount > 0) {
@@ -1077,19 +1125,23 @@ function parsePayOcr() {
 
 async function savePay() {
   if (!payForm.value.amount) { ElMessage.warning('请输入付款金额'); return }
-  const name = payForm.value.contact_id === -1 ? payForm.value.contact_name : (supplierList.value.find((x: any) => x.id === payForm.value.contact_id)?.name || payForm.value.contact_name || '')
+  const isOther = payForm.value.category === 'other'
+  const name = isOther
+    ? payForm.value.contact_name
+    : (supplierList.value.find((x: any) => x.id === payForm.value.contact_id)?.name || payForm.value.contact_name || '')
+  if (isOther && !name) { ElMessage.warning('请输入支出说明'); return }
   const fundName = payForm.value.fund_id === -1 ? payForm.value.fund_name : (fundList.value.find((x: any) => x.id === payForm.value.fund_id)?.name || '')
   paySaving.value = true
   try {
     await http.post('/finance/PayReceipt/add', {
       contact_name: name,
-      contact_type: payForm.value.contact_id !== -1 && payForm.value.contact_id ? 'supplier' : 'other',
+      contact_type: isOther ? 'other' : 'supplier',
       fund_name: fundName,
       amount: payForm.value.amount,
       pay_date: payForm.value.pay_date,
       remark: payForm.value.remark,
     })
-    ElMessage.success('付款记录已保存')
+    ElMessage.success(isOther ? '其他支出已保存' : '付款记录已保存')
     payDialogVisible.value = false
   } catch { ElMessage.error('保存失败') } finally { paySaving.value = false }
 }

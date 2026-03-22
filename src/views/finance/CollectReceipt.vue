@@ -23,14 +23,14 @@
         <el-table-column prop="receipt_no" label="收款单号" min-width="150" />
         <el-table-column label="类型" width="100" align="center">
           <template #default="{ row }">
-            <el-tag size="small" :type="row._isPrepay ? 'primary' : (typeTagMap[row.contact_type] ?? '')">
-              {{ row._isPrepay ? '预付款充值' : typeLabel(row.contact_type) }}
+            <el-tag size="small" :type="row._isPrepay ? 'primary' : (typeTagMap[getRowContactType(row)] ?? '')">
+              {{ row._isPrepay ? '预付款充值' : typeLabel(getRowContactType(row)) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="收款对象" min-width="130">
           <template #default="{ row }">
-            {{ row.contact_name || row.customer_name || row.nickname || row.supplier_name || '—' }}
+            {{ getRowContactName(row) }}
           </template>
         </el-table-column>
         <el-table-column label="收款金额" width="120" align="right">
@@ -193,9 +193,9 @@ async function loadAll() {
       getReceivableList({ list_rows: 1000 }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
     ])
-    // 过滤掉收款单里备注含"预付款"的记录（这些是重复写入的，正确数据来自Prepay表）
+    // 过滤掉收款单里旧版“预付款充值”重复写入的记录（预付款核销记录要保留）
     const allReceipts: any[] = receiptRes?.data?.rows ?? receiptRes?.data?.list ?? []
-    const receipts = allReceipts.filter((r: any) => !String(r.remark || '').includes('预付款'))
+    const receipts = allReceipts.filter((r: any) => !/^预付款充值/.test(String(r.remark || '').trim()))
     const prepays: any[] = prepayRes?.data?.rows ?? prepayRes?.data?.list ?? []
     const receivableRows: any[] = receivableRes?.data?.rows ?? receivableRes?.data?.list ?? []
     const saleReturnRows = normalizeSaleReturnFinanceRows(saleReturnRes?.data?.rows ?? saleReturnRes?.data?.list ?? [])
@@ -229,9 +229,9 @@ async function loadAll() {
 const filteredRows = computed(() => {
   return allRows.value.filter(r => {
     if (searchForm.receipt_no && !String(r.receipt_no || '').includes(searchForm.receipt_no)) return false
-    const name = r.contact_name || r.customer_name || r.nickname || r.supplier_name || ''
+    const name = getRowContactName(r)
     if (searchForm.contact_name && !name.includes(searchForm.contact_name)) return false
-    if (searchForm.contact_type && r.contact_type !== searchForm.contact_type) return false
+    if (searchForm.contact_type && getRowContactType(r) !== searchForm.contact_type) return false
     return true
   })
 })
@@ -253,6 +253,21 @@ const typeTagMap: Record<string, string> = {
 function typeLabel(type: string) {
   const map: Record<string, string> = { customer: '客户', supplier: '供应商', staff: '员工', other: '其他', prepay: '预付款充值' }
   return map[type] ?? type
+}
+
+function getRowContactType(row: any) {
+  if (row?._isPrepay) return 'prepay'
+  const explicit = String(row?.contact_type || '').trim()
+  if (explicit) return explicit
+  if (row?.customer_id || row?.customer_name) return 'customer'
+  const remark = String(row?.remark || '').toLowerCase()
+  if (remark.startsWith('[supplier]')) return 'supplier'
+  if (remark.startsWith('[staff]')) return 'staff'
+  return 'other'
+}
+
+function getRowContactName(row: any) {
+  return String(row?.contact_name || row?.customer_name || row?.nickname || row?.supplier_name || '—')
 }
 
 // ── 新增收款单 ─────────────────────────────────────────────────────────────────
@@ -316,6 +331,12 @@ async function handleSave() {
   saving.value = true
   try {
     const { contact_type, contact_id, fund_id, fund_name, order_no, ...rest } = fd
+    const normalizedRemark = (() => {
+      const rawRemark = String(fd.remark || '').trim()
+      if (contact_type === 'customer') return rawRemark
+      const marker = `[${contact_type}]`
+      return rawRemark.startsWith(marker) ? rawRemark : `${marker}${rawRemark ? ` ${rawRemark}` : ''}`
+    })()
     const payload: any = {
       ...rest,
       contact_type,
@@ -325,16 +346,11 @@ async function handleSave() {
       fund_name: fund_name || '',
       order_sn: order_no || null,
       order_no: order_no || null,
+      remark: normalizedRemark,
     }
     if (contact_type === 'customer') {
       payload.customer_id = contact_id ?? 0
       payload.customer_name = fd.contact_name
-    } else if (contact_type === 'supplier') {
-      payload.supplier_id = contact_id ?? 0
-      payload.supplier_name = fd.contact_name
-    } else if (contact_type === 'staff') {
-      payload.staff_id = contact_id ?? 0
-      payload.staff_name = fd.contact_name
     }
     await createCollectReceipt(payload)
     ElMessage.success('保存成功')
