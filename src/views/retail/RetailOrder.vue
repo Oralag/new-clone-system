@@ -3,7 +3,8 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getRetailOrderList"
           :batch-del-api="batchDelRetailOrders"
-          export-file-name="零售订单" :params="searchForm">
+          export-file-name="零售订单" :params="searchForm"
+          :export-columns="{ order_no: '订单编号', member_name: '会员名称', store_name: '门店', order_date: '日期', total_amount: '商品合计', discount_amount: '折扣', pay_amount: '实付金额', pay_method: '支付方式', status: '状态' }">
         <template #search>
           <el-input v-model="searchForm.order_no" placeholder="订单编号" clearable style="width:160px" />
           <el-input v-model="searchForm.member_name" placeholder="会员名称" clearable style="width:140px" />
@@ -19,7 +20,7 @@
         </template>
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column label="订单编号" min-width="160">
-          <template #default="{ row }">{{ row.order_no || `LS${(row.order_date || row.create_time || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
+          <template #default="{ row }">{{ row.order_sn || `LS${(row.order_date || row.created_at || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
         </el-table-column>
         <el-table-column prop="member_name" label="会员名称" min-width="100" />
         <el-table-column prop="store_name" label="门店" min-width="100" />
@@ -215,7 +216,7 @@ async function generateRetailNo(): Promise<string> {
     let maxSeq = 0
     const prefix = `LS${ymd}`
     for (const r of rows) {
-      const no = r.order_no || ''
+      const no = r.order_sn || ''
       if (no.startsWith(prefix)) {
         const seq = parseInt(no.slice(prefix.length), 10)
         if (seq > maxSeq) maxSeq = seq
@@ -231,8 +232,8 @@ async function handleSave() {
   if (!form.items.length) { ElMessage.warning('请添加商品'); return }
   saving.value = true
   try {
-    const order_no = await generateRetailNo()
-    await createRetailOrder({ ...form, order_no, goods_info: JSON.stringify(form.items), items: undefined })
+    const order_sn = await generateRetailNo()
+    await createRetailOrder({ ...form, order_sn, goods_info: JSON.stringify(form.items), items: undefined })
     try {
       const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
       const funds: any[] = fundRes.data?.rows ?? []

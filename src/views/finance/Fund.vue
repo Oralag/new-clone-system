@@ -3,7 +3,8 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getFundListWithRefund"
           del-path="/finance/Fund/batchDel"
-          export-file-name="资金账户" :params="searchForm">
+          export-file-name="资金账户" :params="searchForm"
+          :export-columns="{ name: '账户名称', type_name: '账户类型', refund_amount: '采购退货退款', balance: '余额', remark: '备注' }">
         <template #search>
           <el-form inline>
             <el-form-item label="账户名称">

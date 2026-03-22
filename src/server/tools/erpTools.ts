@@ -297,6 +297,35 @@ export const createTools: FunctionDeclaration[] = [
       required: ['name'],
     },
   },
+  {
+    name: 'quick_sale',
+    description: '一键销售：自动创建销售合同并审核、创建出库单并审核（含库存扣减）。支持优惠和运费',
+    parameters: {
+      type: 'object',
+      properties: {
+        customer_name: { type: 'string', description: '客户名称（必填）' },
+        warehouse_name: { type: 'string', description: '仓库名称（默认"门店"）' },
+        items: {
+          type: 'array',
+          description: '商品明细列表（必填）',
+          items: {
+            type: 'object',
+            properties: {
+              goods_name: { type: 'string', description: '商品名称' },
+              num: { type: 'number', description: '数量' },
+              price: { type: 'number', description: '单价（不填则用系统售价）' },
+              unit_name: { type: 'string', description: '单位' },
+            },
+          },
+        },
+        discount: { type: 'number', description: '优惠金额（可选，默认0）' },
+        freight: { type: 'number', description: '运费（可选，默认0）' },
+        freight_payer: { type: 'string', enum: ['buyer', 'seller'], description: '运费承担方：buyer=对方承担（加到合计），seller=我方承担（不加到合计）。默认buyer' },
+        remark: { type: 'string', description: '备注' },
+      },
+      required: ['customer_name', 'items'],
+    },
+  },
 ]
 
 export const navigateTools: FunctionDeclaration[] = [

@@ -90,8 +90,8 @@
             </el-table-column>
             <el-table-column label="状态" align="center" width="80">
               <template #default="{ row }">
-                <el-tag :type="row.status == 1 ? 'success' : row.status == 2 ? 'danger' : 'warning'" size="small">
-                  {{ row.status == 1 ? '已审核' : row.status == 2 ? '已驳回' : '待审核' }}
+                <el-tag :type="row.status == 1 ? 'success' : row.status == 2 ? 'danger' : row.status == 4 ? 'warning' : 'info'" size="small">
+                  {{ row.status == 1 ? '已审核' : row.status == 2 ? '已驳回' : row.status == 4 ? '✓ 已转单' : '待审核' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -208,7 +208,13 @@
             <el-input-number v-model="qs.discount" :min="0" :precision="2" size="default" style="width:100%" placeholder="优惠金额" @change="calcQsTotal" />
           </el-form-item>
           <el-form-item label="运费" style="flex:1;margin-bottom:0">
-            <el-input-number v-model="qs.freight" :min="0" :precision="2" size="default" style="width:100%" placeholder="运费" @change="calcQsTotal" />
+            <div style="display:flex;gap:8px;align-items:center;width:100%">
+              <el-input-number v-model="qs.freight" :min="0" :precision="2" size="default" style="flex:1" placeholder="运费" @change="calcQsTotal" />
+              <el-select v-model="qs.freightPayer" size="default" style="width:100px" @change="calcQsTotal">
+                <el-option label="对方承担" value="buyer" />
+                <el-option label="我方承担" value="seller" />
+              </el-select>
+            </div>
           </el-form-item>
         </div>
         <el-form-item label="备注">
@@ -218,9 +224,25 @@
           <div v-if="qs.discount > 0 || qs.freight > 0" style="font-size:13px;color:#999;margin-bottom:4px">
             商品合计：¥{{ fmt(qs.goodsTotal) }}
             <span v-if="qs.discount > 0" style="margin-left:12px">优惠：-¥{{ fmt(qs.discount) }}</span>
-            <span v-if="qs.freight > 0" style="margin-left:12px">运费：+¥{{ fmt(qs.freight) }}</span>
+            <span v-if="qs.freight > 0" style="margin-left:12px">运费：+¥{{ fmt(qs.freight) }}（{{ qs.freightPayer === 'seller' ? '我方承担' : '对方承担' }}）</span>
           </div>
           合计：<span style="color:#0071e3;font-size:18px;font-weight:700">¥{{ fmt(qs.total) }}</span>
+        </div>
+        <el-divider style="margin:12px 0" />
+        <div style="font-weight:600;margin-bottom:8px">本次收款</div>
+        <div style="display:flex;gap:16px;margin-bottom:8px">
+          <el-form-item label="收款金额" style="flex:1;margin-bottom:0">
+            <el-input-number v-model="qs.collectAmount" :min="0" :max="qs.total" :precision="2" size="default" style="width:100%" @change="calcQsOwed" />
+          </el-form-item>
+          <el-form-item label="收款账户" style="flex:1;margin-bottom:0">
+            <el-select v-model="qs.fundId" filterable placeholder="选择账户" style="width:100%" @change="onQsFundChange">
+              <el-option v-for="f in fundList" :key="f.id" :label="f.name" :value="f.id" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div style="display:flex;justify-content:flex-end;font-size:13px;color:#999">
+          <span v-if="qs.owed > 0" style="color:#e6a23c">本次欠款：¥{{ fmt(qs.owed) }}</span>
+          <span v-else style="color:#67c23a">全额收款</span>
         </div>
       </el-form>
       <template #footer>
@@ -257,6 +279,7 @@ const saleOutRows = ref<any[]>([])
 const customerList = ref<any[]>([])
 const warehouseList = ref<any[]>([])
 const goodsList = ref<any[]>([])
+const fundList = ref<any[]>([])
 const inhouseList = ref<any[]>([])
 const bomList = ref<any[]>([])
 const activeTab = ref('contract')
@@ -416,14 +439,19 @@ const qs = reactive({
   remark: '',
   discount: 0,
   freight: 0,
+  freightPayer: 'buyer' as 'buyer' | 'seller',
   goodsTotal: 0,
   total: 0,
+  collectAmount: 0,
+  fundId: null as any,
+  fundName: '',
+  owed: 0,
 })
 
 function openQuickSale() {
   qs.customer_id = null; qs.customer_name = ''
   qs.warehouse_id = null; qs.warehouse_name = ''
-  qs.items = []; qs.remark = ''; qs.discount = 0; qs.freight = 0; qs.goodsTotal = 0; qs.total = 0
+  qs.items = []; qs.remark = ''; qs.discount = 0; qs.freight = 0; qs.freightPayer = 'buyer'; qs.goodsTotal = 0; qs.total = 0; qs.collectAmount = 0; qs.fundId = null; qs.fundName = ''; qs.owed = 0
   qsVisible.value = true
 }
 
@@ -435,6 +463,15 @@ function onQsCustomerChange(id: number) {
 function onQsWarehouseChange(id: number) {
   const w = warehouseList.value.find(x => x.id === id)
   qs.warehouse_name = w?.name || ''
+}
+
+function onQsFundChange(id: number) {
+  const f = fundList.value.find(x => x.id === id)
+  qs.fundName = f?.name || ''
+}
+
+function calcQsOwed() {
+  qs.owed = Math.max(0, qs.total - (qs.collectAmount || 0))
 }
 
 function onQsGoodsConfirm(goods: any[]) {
@@ -451,8 +488,11 @@ function onQsGoodsConfirm(goods: any[]) {
 
 function calcQsTotal() {
   qs.goodsTotal = qs.items.reduce((s, r) => s + (r.num || 0) * (r.price || 0), 0)
-  qs.total = qs.goodsTotal - (qs.discount || 0) + (qs.freight || 0)
+  const freightAdd = qs.freightPayer === 'buyer' ? (qs.freight || 0) : 0
+  qs.total = qs.goodsTotal - (qs.discount || 0) + freightAdd
   if (qs.total < 0) qs.total = 0
+  qs.collectAmount = qs.total
+  calcQsOwed()
 }
 
 async function submitQuickSale() {
@@ -471,20 +511,19 @@ async function submitQuickSale() {
     const today = new Date().toISOString().slice(0, 10)
 
     // 1. 创建合同
+    const freightNote = qs.freight > 0 ? `运费¥${qs.freight.toFixed(2)}(${qs.freightPayer === 'seller' ? '我方承担' : '对方承担'})` : ''
+    const fullRemark = [qs.remark, freightNote].filter(Boolean).join(' ')
     const contractRes = await createContract({
       customer_id: qs.customer_id,
       customer_name: qs.customer_name,
       admin_name: '',
       contract_date: today,
       sign_date: today,
-      warehouse_id: qs.warehouse_id,
-      warehouse_name: qs.warehouse_name,
       total_amount: qs.goodsTotal,
       after_discount: qs.total,
       discount_type: qs.discount > 0 ? 'amount' : 'none',
       discount_value: qs.discount || 0,
-      freight: qs.freight || 0,
-      remark: qs.remark,
+      remark: fullRemark,
       goods_info: goodsInfo,
     })
     const contractId = contractRes?.data?.id || contractRes?.data?.lastId
@@ -505,9 +544,8 @@ async function submitQuickSale() {
       after_discount: qs.total,
       discount_type: qs.discount > 0 ? 'amount' : 'none',
       discount_value: qs.discount || 0,
-      freight: qs.freight || 0,
       contract_id: contractId,
-      remark: `来自销售合同 `,
+      remark: fullRemark || '来自销售合同',
       goods_info: goodsInfo,
     })
     const saleOutId = saleOutRes?.data?.id || saleOutRes?.data?.lastId
@@ -531,7 +569,25 @@ async function submitQuickSale() {
       } catch {}
     }
 
-    ElMessage.success(`一键销售完成！合同+出库单已生成并审核`)
+    // 6. 本次收款（如果有收款金额且选了账户）
+    if (qs.collectAmount > 0 && qs.fundId) {
+      try {
+        await http.post('/finance/CollectReceipt/add', {
+          contact_name: qs.customer_name,
+          customer_id: qs.customer_id,
+          amount: qs.collectAmount,
+          fund_id: qs.fundId,
+          fund_name: qs.fundName,
+          receipt_date: today,
+          remark: `一键销售收款`,
+        })
+      } catch {}
+    }
+
+    const msg = qs.collectAmount > 0 && qs.fundId
+      ? `一键销售完成！收款 ¥${qs.collectAmount.toFixed(2)}${qs.owed > 0 ? '，欠款 ¥' + qs.owed.toFixed(2) : ''}`
+      : '一键销售完成！合同+出库单已生成并审核'
+    ElMessage.success(msg)
     qsVisible.value = false
     loadData()
   } catch (e: any) {
@@ -548,7 +604,7 @@ function fmt(v: number): string {
 
 // ── 加载 ──────────────────────────────────────────────────────────────────────
 async function loadData() {
-  const [c, o, s, cust, wh, g, ih, b] = await Promise.allSettled([
+  const [c, o, s, cust, wh, g, ih, b, fd] = await Promise.allSettled([
     getContractList({ list_rows: 50 }),
     getOfferList({ list_rows: 50 }),
     getSaleOutList({ list_rows: 50 }),
@@ -557,6 +613,7 @@ async function loadData() {
     getGoodsList({ list_rows: 500 }),
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
     getBomList({ list_rows: 500 }),
+    http.get('/finance/Fund/index', { params: { list_rows: 50 } }),
   ])
   contractRows.value = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
   offerRows.value = o.status === 'fulfilled' ? (o.value?.data?.rows ?? []) : []
@@ -566,6 +623,7 @@ async function loadData() {
   goodsList.value = g.status === 'fulfilled' ? (g.value?.data?.rows ?? []) : []
   inhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []) : []
   bomList.value = b.status === 'fulfilled' ? (b.value?.data?.rows ?? []) : []
+  fundList.value = fd.status === 'fulfilled' ? (fd.value?.data?.rows ?? []) : []
 }
 
 onMounted(loadData)

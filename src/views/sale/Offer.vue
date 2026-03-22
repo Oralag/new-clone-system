@@ -7,7 +7,8 @@
         <ScTable ref="tableRef" :api-obj="getOfferList"
           del-path="/shop/offerOrder/batchDel"
           export-file-name="报价单" :params="searchForm"
-          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''">
+          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''"
+          :export-columns="{ remark: '报价单号', customer_name: '客户名称', offer_date: '报价日期', expire_date: '有效期至', admin_name: '经办人', total_amount: '报价金额', discount_amount: '优惠金额', after_offer: '实付金额', status: '状态' }">>
           <template #search>
             <el-input v-model="searchForm.offer_no" placeholder="报价单号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -75,8 +76,9 @@
               <span v-else style="color:#94a3b8;font-size:12px">无优惠</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="280" fixed="right">
+          <el-table-column label="操作" min-width="200" fixed="right">
             <template #default="{ row }">
+              <span v-if="row.status === 4" style="color:#16a34a;margin-right:4px;font-weight:700">✓</span>
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 4 ? 'warning' : 'info'" size="small" style="margin-right:8px">
                 {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : row.status === 4 ? '已转单' : '待审核' }}
               </el-tag>
@@ -397,10 +399,18 @@ async function openCreate() {
   try {
     const today = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
     const ymd = today.replace(/-/g, '')
+    const prefix = `BJ${ymd}`
     const res = await getOfferList({ list_rows: 1000 })
     const rows: any[] = res?.data?.rows ?? res?.data?.list ?? []
-    const todayCount = rows.filter((r: any) => (r.create_time || r.offer_date || '').slice(0, 10) === today).length
-    fd.offer_no = `BJ${ymd}${String(todayCount + 1).padStart(3, '0')}`
+    let maxSeq = 0
+    for (const r of rows) {
+      const sn = r.order_sn || ((r.remark || '').match(/^\[NO:([^\]]+)\]/) || [])[1] || ''
+      if (sn.startsWith(prefix)) {
+        const seq = parseInt(sn.slice(prefix.length), 10)
+        if (seq > maxSeq) maxSeq = seq
+      }
+    }
+    fd.offer_no = `${prefix}${String(maxSeq + 1).padStart(3, '0')}`
   } catch {
     const ymd = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10).replace(/-/g, '')
     fd.offer_no = `BJ${ymd}001`
@@ -591,6 +601,7 @@ async function handleSave() {
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id
+    if (fd.offer_no) payload.order_sn = fd.offer_no
     if (fd.customer_name) payload.customer_name = fd.customer_name
     if (fd.admin_name) payload.admin_name = fd.admin_name
     if (fd.offer_date) payload.offer_date = fd.offer_date

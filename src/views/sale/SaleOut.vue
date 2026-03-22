@@ -6,7 +6,9 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getSaleOutList"
           del-path="/stock/SaleOutOrder/batchDel"
-          export-file-name="销售出货单" :params="searchForm">
+          export-file-name="销售出货单" :params="searchForm"
+          :row-class-name="({ row }: any) => row.status === 1 ? 'row-audited' : ''"
+          :export-columns="{ order_sn: '出库单号', customer_name: '客户名称', warehouse_name: '仓库', out_date: '出库日期', admin_name: '经办人', total_amount: '出库金额', after_discount: '折后金额', status: '状态', remark: '备注' }">>
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="出库单号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -64,15 +66,12 @@
               <span style="color:#0071e3;font-weight:500">¥{{ (Number(row.after_discount) || Number(row.total_amount || 0)).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column label="操作" width="320" fixed="right">
             <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
+              <span v-if="row.status === 1" style="color:#16a34a;margin-right:4px;font-weight:700">✓</span>
+              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small" style="margin-right:8px">
                 {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : '待审核' }}
               </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="280" fixed="right">
-            <template #default="{ row }">
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <template v-if="row.status === 0">
@@ -1226,6 +1225,14 @@ async function submitAddFund() {
 
 <style scoped>
 .saleout-page { height: 100%; }
+
+:deep(.row-audited) {
+  background-color: #f5f5f5 !important;
+  color: #aaa;
+}
+:deep(.row-audited) td { color: #aaa !important; }
+:deep(.row-audited) .el-tag { opacity: 0.7; }
+:deep(.row-audited) .el-button { opacity: 0.7; }
 
 .expand-detail {
   padding: 12px 20px 12px 48px;

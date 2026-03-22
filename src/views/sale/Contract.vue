@@ -7,7 +7,8 @@
         <ScTable ref="tableRef" :api-obj="getContractList"
           del-path="/shop/ContractOrder/batchDel"
           export-file-name="销售合同" :params="searchForm"
-          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''">
+          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''"
+          :export-columns="{ order_sn: '合同编号', customer_name: '客户名称', total_amount: '合同金额', sign_date: '签约日期', expire_date: '到期日期', admin_name: '经办人', status: '状态', remark: '备注' }">
           <template #search>
             <el-input v-model="searchForm.contract_no" placeholder="合同编号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -96,6 +97,7 @@
           </el-table-column>
           <el-table-column label="操作" width="300" fixed="right">
             <template #default="{ row }">
+              <span v-if="row.status === 4" style="color:#16a34a;margin-right:4px;font-weight:700">✓</span>
               <el-tag v-if="row.status === 4" type="warning" size="small" style="margin-right:8px">已转单</el-tag>
               <el-button v-if="row.status === 1 || row.status === 4" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
@@ -931,10 +933,18 @@ async function openCreate() {
   try {
     const today = new Date(Date.now() + 8*3600000).toISOString().slice(0,10)
     const ymd = today.replace(/-/g,'')
+    const prefix = `HT${ymd}`
     const res = await getContractList({ list_rows: 1000 })
     const rows: any[] = res?.data?.rows ?? []
-    const todayCount = rows.filter((r: any) => (r.created_at||r.sign_date||'').slice(0,10) === today).length
-    fd.contract_no = `HT${ymd}${String(todayCount+1).padStart(3,'0')}`
+    let maxSeq = 0
+    for (const r of rows) {
+      const sn = r.order_sn || ((r.remark || '').match(/^\[NO:([^\]]+)\]/) || [])[1] || ''
+      if (sn.startsWith(prefix)) {
+        const seq = parseInt(sn.slice(prefix.length), 10)
+        if (seq > maxSeq) maxSeq = seq
+      }
+    }
+    fd.contract_no = `${prefix}${String(maxSeq + 1).padStart(3,'0')}`
   } catch {
     const ymd = new Date(Date.now()+8*3600000).toISOString().slice(0,10).replace(/-/g,'')
     fd.contract_no = `HT${ymd}001`
@@ -1157,6 +1167,7 @@ async function handleSave() {
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id
+    if (fd.contract_no) payload.order_sn = fd.contract_no
     if (fd.customer_name) payload.customer_name = fd.customer_name
     if (fd.admin_name) payload.admin_name = fd.admin_name
     if (fd.sign_date) { payload.sign_date = fd.sign_date; payload.contract_date = fd.sign_date }
@@ -1283,10 +1294,18 @@ async function handleRouteFromOffer() {
     try {
       const today = new Date(Date.now() + 8*3600000).toISOString().slice(0,10)
       const ymd = today.replace(/-/g,'')
+      const prefix = `HT${ymd}`
       const res = await getContractList({ list_rows: 1000 })
       const rows: any[] = res?.data?.rows ?? []
-      const todayCount = rows.filter((r: any) => (r.created_at||r.sign_date||'').slice(0,10) === today).length
-      fd.contract_no = `HT${ymd}${String(todayCount+1).padStart(3,'0')}`
+      let maxSeq = 0
+      for (const r of rows) {
+        const sn = r.order_sn || ((r.remark || '').match(/^\[NO:([^\]]+)\]/) || [])[1] || ''
+        if (sn.startsWith(prefix)) {
+          const seq = parseInt(sn.slice(prefix.length), 10)
+          if (seq > maxSeq) maxSeq = seq
+        }
+      }
+      fd.contract_no = `${prefix}${String(maxSeq + 1).padStart(3,'0')}`
     } catch {
       const ymd = new Date(Date.now()+8*3600000).toISOString().slice(0,10).replace(/-/g,'')
       fd.contract_no = `HT${ymd}001`

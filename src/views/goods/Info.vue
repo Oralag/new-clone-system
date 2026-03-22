@@ -113,7 +113,8 @@
       <div class="goods-list-wrap">
         <ScTable ref="tableRef" :api-obj="getGoodsList"
           del-path="/goods/ShopGoods/batchDel"
-          export-file-name="商品列表" :params="searchForm" :row-filter="rowFilter">
+          export-file-name="商品列表" :params="searchForm" :row-filter="rowFilter"
+          :export-columns="{ goods_sn: '商品编码', goods_name: '商品名称', goods_type: '类型', en_name: '英文名称', unit_name: '商品单位', cate_name: '商品分类', cost_price: '采购价', sell_price: '销售价', brand_name: '商品品牌', barcode: '商品条码', status: '状态' }">
           <template #search>
             <el-input
               v-model="searchForm.keyword"

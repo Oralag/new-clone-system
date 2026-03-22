@@ -773,12 +773,32 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   font-size: 10px;
-  padding: 3px 8px;
-  border-radius: 3px;
+  padding: 4px 10px;
+  border-radius: 4px;
   background: var(--faint);
   color: var(--mid);
   border: 1px solid var(--border);
   font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tool-chip:hover:not(:disabled) {
+  background: rgba(245,166,35,0.06);
+  border-color: rgba(245,166,35,0.25);
+  color: #F5A623;
+}
+.tool-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.tool-chip.running {
+  border-color: rgba(0,212,255,0.3);
+  color: #00D4FF;
+  background: rgba(0,212,255,0.05);
+}
+.tool-chip.done {
+  border-color: rgba(0,229,160,0.2);
+  color: #00E5A0;
 }
 .tool-indicator {
   width: 4px;
@@ -786,6 +806,71 @@ onUnmounted(() => {
   border-radius: 50%;
   background: #00D4FF;
   opacity: 0.5;
+  flex-shrink: 0;
+}
+.tool-chip:hover:not(:disabled) .tool-indicator { background: #F5A623; opacity: 1; }
+.tool-chip.running .tool-indicator {
+  background: #00D4FF;
+  opacity: 1;
+  animation: toolSpin 0.8s linear infinite;
+}
+.tool-chip.done .tool-indicator { background: #00E5A0; opacity: 1; }
+@keyframes toolSpin {
+  0% { box-shadow: 0 0 0 0 rgba(0,212,255,0.4); }
+  50% { box-shadow: 0 0 0 3px rgba(0,212,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,212,255,0.4); }
+}
+
+/* 工具执行结果面板 */
+.tool-result-panel {
+  margin-top: 8px;
+  background: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.tool-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0,212,255,0.03) 0%, transparent 100%);
+}
+.tool-result-name {
+  font-size: 9px;
+  font-weight: 700;
+  color: #00D4FF;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.05em;
+}
+.tool-result-close {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.1s;
+}
+.tool-result-close:hover { background: var(--border); color: var(--dark); }
+.tool-result-body {
+  padding: 8px;
+  font-size: 10px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--mid);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 0;
+  scrollbar-width: thin;
 }
 
 .detail-trace {

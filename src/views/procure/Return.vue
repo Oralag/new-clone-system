@@ -5,7 +5,8 @@
     <div v-if="!showForm">
       <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureReturnList"
-          export-file-name="采购退货单" :params="searchForm">
+          export-file-name="采购退货单" :params="searchForm"
+          :export-columns="{ return_no: '退货单号', order_sn: '关联采购单', supplier_name: '供应商', return_date: '退货日期', total_amount: '退货金额', status: '状态' }">
           <template #search>
             <el-input v-model="searchForm.return_no" placeholder="退货单号" clearable style="width:160px" />
             <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />

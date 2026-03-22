@@ -268,6 +268,100 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
 
+      // ── 一键销售 ──────────────────────────────────────
+      case 'quick_sale': {
+        // 1. 查找客户
+        const custRes = await erpGet('/shop/ShopCustomer/index', { keyword: input.customer_name, list_rows: 5 }, token)
+        const customers = custRes?.data?.rows || []
+        const cust = customers.find((c: any) => (c.nickname || c.name) === input.customer_name || (c.nickname || c.name)?.includes(input.customer_name))
+        if (!cust) { result = `未找到客户"${input.customer_name}"，请先创建客户`; break }
+        const customerId = cust.id
+        const customerName = cust.nickname || cust.name
+
+        // 2. 查找仓库
+        const whName = input.warehouse_name || '门店'
+        const whRes = await erpGet('/stock/WarehouseName/index', { list_rows: 50 }, token)
+        const warehouses = whRes?.data?.rows || []
+        const wh = warehouses.find((w: any) => w.name === whName || w.name?.includes(whName))
+        if (!wh) { result = `未找到仓库"${whName}"，可用仓库：${warehouses.map((w: any) => w.name).join('、')}`; break }
+
+        // 3. 解析商品明细
+        const rawItems = Array.isArray(input.items) ? input.items : []
+        if (!rawItems.length) { result = '请提供商品明细'; break }
+        const resolvedItems = await resolveGoodsIds(rawItems, token)
+        // 补充 sell_price / cost_price
+        for (const item of resolvedItems) {
+          if (item.goods_id && !item.price) {
+            try {
+              const gRes = await erpGet('/goods/ShopGoods/index', { keyword: item.goods_name, list_rows: 5 }, token)
+              const g = (gRes?.data?.rows || []).find((r: any) => r.id === item.goods_id)
+              if (g) {
+                item.price = Number(g.sell_price) || 0
+                item.cost_price = Number(g.cost_price) || 0
+              }
+            } catch { /* ignore */ }
+          }
+          if (!item.price) item.price = 0
+          if (!item.cost_price) item.cost_price = 0
+        }
+
+        // 4. 计算金额
+        const goodsTotal = resolvedItems.reduce((s: number, r: any) => s + (r.num || 1) * (r.price || 0), 0)
+        const discount = Number(input.discount) || 0
+        const freight = Number(input.freight) || 0
+        const freightPayer = input.freight_payer || 'buyer'
+        const freightAdd = freightPayer === 'buyer' ? freight : 0
+        const finalTotal = Math.max(0, goodsTotal - discount + freightAdd)
+
+        const goodsInfo = JSON.stringify(resolvedItems.map((i: any) => ({
+          goods_id: i.goods_id, goods_name: i.goods_name, goods_sn: i.goods_sn || '',
+          spec: i.spec || '', unit_name: i.unit_name || '',
+          num: i.num || 1, price: i.price, price_no_tax: i.price,
+          tax_rate: 0, cost_price: i.cost_price || 0, remark: '',
+        })))
+        const today = new Date().toISOString().slice(0, 10)
+
+        // 5. 创建合同
+        const freightNote = freight > 0 ? `运费¥${freight.toFixed(2)}(${freightPayer === 'seller' ? '我方承担' : '对方承担'})` : ''
+        const fullRemark = [input.remark || '', freightNote].filter(Boolean).join(' ')
+        const contractRes = await erpPost('/shop/ContractOrder/add', {
+          customer_id: customerId, customer_name: customerName, admin_name: '',
+          contract_date: today, sign_date: today,
+          total_amount: goodsTotal, after_discount: finalTotal,
+          discount_type: discount > 0 ? 'amount' : 'none', discount_value: discount,
+          remark: fullRemark,
+          goods_info: goodsInfo,
+        }, token)
+        const contractId = contractRes?.data?.id || contractRes?.data?.lastId
+        if (!contractId) { result = `合同创建失败：${contractRes?.msg || JSON.stringify(contractRes)}`; break }
+
+        // 6. 审核合同
+        await erpPost('/shop/ContractOrder/audit', { id: contractId, status: 1 }, token)
+
+        // 7. 创建出库单
+        const saleOutRes = await erpPost('/stock/SaleOutOrder/add', {
+          customer_id: customerId, customer_name: customerName, admin_name: '',
+          out_date: today,
+          warehouse_id: wh.id, warehouse_name: wh.name,
+          total_amount: goodsTotal, after_discount: finalTotal,
+          discount_type: discount > 0 ? 'amount' : 'none', discount_value: discount,
+          contract_id: contractId,
+          remark: fullRemark || '来自一键销售', goods_info: goodsInfo,
+        }, token)
+        const saleOutId = saleOutRes?.data?.id || saleOutRes?.data?.lastId
+        if (!saleOutId) { result = `出库单创建失败：${saleOutRes?.msg || JSON.stringify(saleOutRes)}`; break }
+
+        // 8. 审核出库单（触发库存扣减）
+        await erpPost('/stock/SaleOutOrder/audit', { id: saleOutId, status: 1 }, token)
+
+        const itemsSummary = resolvedItems.map((i: any) => `${i.goods_name}×${i.num || 1}`).join('、')
+        let totalDetail = `商品合计 ¥${goodsTotal.toFixed(2)}`
+        if (discount > 0) totalDetail += `，优惠 -¥${discount.toFixed(2)}`
+        if (freight > 0) totalDetail += `，运费 +¥${freight.toFixed(2)}（${freightPayer === 'seller' ? '我方承担，不计入' : '对方承担'}）`
+        result = `一键销售完成！\n客户：${customerName}\n仓库：${wh.name}\n商品：${itemsSummary}\n${totalDetail}\n应收合计：¥${finalTotal.toFixed(2)}\n合同+出库已自动审核，库存已扣减。`
+        break
+      }
+
       // ── 编辑工具 ──────────────────────────────────────
       case 'update_goods': {
         const res = await erpPost('/goods/ShopGoods/edit', input, token)

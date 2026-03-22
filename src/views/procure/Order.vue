@@ -6,7 +6,8 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureOrderList"
           :batch-del-api="batchDelProcureOrders"
-          export-file-name="采购订单" :params="searchForm">
+          export-file-name="采购订单" :params="searchForm"
+          :export-columns="{ order_no: '采购单号', supplier_name: '供应商', warehouse_name: '仓库', order_date: '开单日期', delivery_date: '预计交期', admin_name: '采购人', total_amount: '含税合计', status: '状态', pay_amount: '已付金额' }">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="采购单号" clearable style="width:160px" />
             <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />

@@ -88,7 +88,7 @@
         <el-tab-pane label="最近订单" name="order">
           <el-table :data="orderRows" style="width:100%" size="small" max-height="400">
             <el-table-column label="单号" min-width="160" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.order_no || `LS${(row.order_date || row.create_time || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
+              <template #default="{ row }">{{ row.order_sn || `LS${(row.order_date || row.created_at || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
             </el-table-column>
             <el-table-column prop="member_name" label="会员" min-width="120" show-overflow-tooltip>
               <template #default="{ row }">{{ row.member_name || '散客' }}</template>
@@ -173,7 +173,7 @@
     <el-dialog v-model="detailVisible" title="订单详情" width="560px" destroy-on-close>
       <div v-if="detailRow" class="order-detail">
         <div class="detail-header">
-          <div class="detail-kv"><span class="detail-k">单号</span><span class="detail-v">{{ detailRow.order_no || `LS${(detailRow.order_date || detailRow.create_time || '').slice(0, 10).replace(/-/g, '')}${String(detailRow.id).padStart(3,'0')}` }}</span></div>
+          <div class="detail-kv"><span class="detail-k">单号</span><span class="detail-v">{{ detailRow.order_sn || `LS${(detailRow.order_date || detailRow.created_at || '').slice(0, 10).replace(/-/g, '')}${String(detailRow.id).padStart(3,'0')}` }}</span></div>
           <div class="detail-kv"><span class="detail-k">日期</span><span class="detail-v">{{ (detailRow.order_date || detailRow.create_time || '').slice(0, 10) }}</span></div>
           <div class="detail-kv"><span class="detail-k">会员</span><span class="detail-v">{{ detailRow.member_name || '散客' }}</span></div>
           <div class="detail-kv"><span class="detail-k">支付方式</span><span class="detail-v">{{ payLabel(detailRow.pay_method) }}</span></div>

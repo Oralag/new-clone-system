@@ -3,7 +3,8 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getCustomerSeaList"
           del-path="/shop/ShopCustomer/seaIndex"
-          export-file-name="客户公海" :params="searchForm">
+          export-file-name="客户公海" :params="searchForm"
+          :export-columns="{ nickname: '客户名称', mobile: '手机号', level_name: '客户等级', source_name: '来源', create_time: '进入公海时间' }">
         <template #search>
           <el-form-item label="客户名称">
             <el-input v-model="searchForm.keyword" placeholder="名称/手机号" clearable style="width: 180px" />

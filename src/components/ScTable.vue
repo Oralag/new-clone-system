@@ -229,7 +229,17 @@ function getColumnMap(): Record<string, string> {
       for (const vn of nodes) {
         if (!vn) continue
         const p = vn.props
-        if (p?.prop && p?.label) map[p.prop] = p.label
+        if (p?.label) {
+          // Skip special columns
+          const t = p.type
+          if (t === 'index' || t === 'selection' || t === 'expand') continue
+          if (p.label === '操作' || p.label === '序号') continue
+          if (p.prop) {
+            map[p.prop] = p.label
+          } else if (p['export-key']) {
+            map[p['export-key']] = p.label
+          }
+        }
         if (vn.children?.default) {
           try { walk(vn.children.default()) } catch {}
         }
@@ -434,15 +444,43 @@ async function handleExport() {
     ? detectedCols.filter(k => !skipKeys.has(k))
     : Object.keys(rows[0]).filter(k => !skipKeys.has(k))
 
+  // Check if rows contain goods_info — expand each item as a separate row
+  const hasGoods = rows.some(r => r.goods_info)
+  const goodsCols = hasGoods
+    ? [['goods_name', '商品名称'], ['goods_sn', '商品编码'], ['spec', '规格'], ['unit_name', '单位'], ['num', '数量'], ['price', '单价']]
+    : []
+
   // Build sheet with Chinese headers
-  const sheetData = rows.map(row => {
-    const out: Record<string, any> = {}
+  const sheetData: Record<string, any>[] = []
+  for (const row of rows) {
+    const base: Record<string, any> = {}
     allKeys.forEach(k => {
+      if (k === 'goods_info') return
       const header = colMap[k] || k
-      out[header] = row[k] ?? ''
+      let val = row[k] ?? ''
+      if (k === 'status') val = val == 1 ? '已审核' : val == 2 ? '已驳回' : val == 4 ? '已转单' : '待审核'
+      base[header] = val
     })
-    return out
-  })
+    if (hasGoods && row.goods_info) {
+      try {
+        const items = JSON.parse(row.goods_info)
+        if (Array.isArray(items) && items.length) {
+          for (const item of items) {
+            const line = { ...base }
+            for (const [key, label] of goodsCols) {
+              line[label] = item[key] ?? ''
+            }
+            line['小计'] = ((Number(item.num) || 0) * (Number(item.price) || 0)).toFixed(2)
+            sheetData.push(line)
+          }
+          continue
+        }
+      } catch {}
+    }
+    if (hasGoods) goodsCols.forEach(([, label]) => { base[label] = '' })
+    if (hasGoods) base['小计'] = ''
+    sheetData.push(base)
+  }
 
   const wb = XLSX.utils.book_new()
   const ws = XLSX.utils.json_to_sheet(sheetData)

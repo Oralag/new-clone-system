@@ -6,7 +6,8 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureInhouseList"
           del-path="/procure/ProcureInhouse/batchDel"
-          export-file-name="采购入库单" :params="searchForm">
+          export-file-name="采购入库单" :params="searchForm"
+          :export-columns="{ in_no: '入库单号', supplier_name: '供应商', warehouse_name: '仓库', in_date: '入库日期', admin_name: '经办人', total_amount: '总金额', status: '状态' }">
           <template #search>
             <el-input v-model="searchForm.in_no" placeholder="入库单号" clearable style="width:160px" />
             <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />

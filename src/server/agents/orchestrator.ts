@@ -1,6 +1,6 @@
 export function detectIntent(text: string): 'query' | 'create' | 'navigate' | 'general' {
   if (/查询|查看|统计|汇总|多少|列表|有哪些|显示|告诉我|查一下/.test(text)) return 'query'
-  if (/新增|添加|录入|创建|增加|登记|提交|帮我加/.test(text)) return 'create'
+  if (/新增|添加|录入|创建|增加|登记|提交|帮我加|一键销售|卖给|出货给|销售给/.test(text)) return 'create'
   if (/编辑|修改|更新|改一下|改成|设置|设为|加上规格|添加规格|多规格/.test(text)) return 'create'
   if (/删除|删掉|移除|去掉/.test(text)) return 'create'
   if (/跳转|去|打开|进入|导航|页面/.test(text)) return 'navigate'
@@ -58,7 +58,9 @@ export function getSystemPrompt(intent: 'query' | 'create' | 'navigate' | 'gener
 当前任务：数据录入。调用合适的创建工具录入数据。缺少必填字段时先询问用户。
 - 创建商品/客户/供应商前，必须先用对应的查询工具检查是否已存在同名记录，已存在则告知用户并停止创建
 - 有单据图片时，先列出识别到的字段并等待用户确认，再执行创建
-- 输出识别结果时，供应商名称和商品名称后面标注来源字段，方便用户核对`,
+- 输出识别结果时，供应商名称和商品名称后面标注来源字段，方便用户核对
+- 用户说"一键销售"、"卖给XX"、"出货给XX"时，使用 quick_sale 工具，一步完成合同+出库+审核+库存扣减
+- quick_sale 需要客户名、商品明细（名称+数量），可选优惠、运费、运费承担方`,
     navigate: `${BASE}\n当前任务：页面导航。调用 navigate_to 工具跳转到用户指定页面。`,
     general: `${BASE}\n根据用户需求选择合适的工具完成任务。`,
   }
