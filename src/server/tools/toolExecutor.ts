@@ -130,16 +130,52 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
       case 'create_customer': {
+        // 重名检查：先查询是否已存在同名客户
+        const custName = (input.nickname || input.name || '').trim()
+        if (custName) {
+          try {
+            const checkRes = await erpGet('/shop/ShopCustomer/index', { keyword: custName, list_rows: 50 }, token)
+            const existing = (checkRes?.data?.rows || []).find((r: any) => (r.nickname || r.name)?.trim() === custName)
+            if (existing) {
+              result = `客户"${custName}"已存在（ID: ${existing.id}），请勿重复创建。如需修改请使用编辑功能。`
+              break
+            }
+          } catch { /* 查询失败不阻塞创建 */ }
+        }
         const res = await erpPost('/shop/ShopCustomer/add', input, token)
         result = res?.code === 1 ? `客户创建成功！ID: ${res?.data?.id || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'create_supplier': {
+        // 重名检查：先查询是否已存在同名供应商
+        const suppName = (input.name || '').trim()
+        if (suppName) {
+          try {
+            const checkRes = await erpGet('/procure/supplier/index', { keyword: suppName, list_rows: 50 }, token)
+            const existing = (checkRes?.data?.rows || []).find((r: any) => r.name?.trim() === suppName)
+            if (existing) {
+              result = `供应商"${suppName}"已存在（ID: ${existing.id}），请勿重复创建。如需修改请使用编辑功能。`
+              break
+            }
+          } catch { /* 查询失败不阻塞创建 */ }
+        }
         const res = await erpPost('/procure/supplier/add', input, token)
         result = res?.code === 1 ? `供应商创建成功！ID: ${res?.data?.id || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'create_goods': {
+        // 重名检查：先查询是否已存在同名商品
+        const goodsName = (input.goods_name || '').trim()
+        if (goodsName) {
+          try {
+            const checkRes = await erpGet('/goods/ShopGoods/index', { keyword: goodsName, list_rows: 50 }, token)
+            const existing = (checkRes?.data?.rows || []).find((r: any) => r.goods_name?.trim() === goodsName)
+            if (existing) {
+              result = `商品"${goodsName}"已存在（ID: ${existing.id}），请勿重复创建。如需修改请使用编辑功能。`
+              break
+            }
+          } catch { /* 查询失败不阻塞创建 */ }
+        }
         const res = await erpPost('/goods/ShopGoods/add', input, token)
         result = res?.code === 1 ? `商品创建成功！ID: ${res?.data?.id || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
