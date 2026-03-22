@@ -224,6 +224,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { getSupplierList, createSupplier, updateSupplier, deleteSupplier, getProcureOrderList } from '@/api/procure'
 import { getPayableList, getPayReceiptList } from '@/api/finance'
 import http from '@/api/http'
+import { readScopedJson, writeScopedJson } from '@/utils/storageScope'
 import * as XLSX from 'xlsx'
 
 // ── 本地分类（localStorage） ──────────────────────────────────────────────────
@@ -309,16 +310,16 @@ async function loadFinanceInfo(supplierId: number) {
 interface CateItem { id: number; name: string }
 
 function loadCatesFromStorage(): CateItem[] {
-  try { return JSON.parse(localStorage.getItem(CATE_KEY) || '[]') } catch { return [] }
+  return readScopedJson<CateItem[]>(CATE_KEY, [])
 }
 function saveCatesToStorage(list: CateItem[]) {
-  localStorage.setItem(CATE_KEY, JSON.stringify(list))
+  writeScopedJson(CATE_KEY, list)
 }
 function loadCateMap(): Record<number, number> {
-  try { return JSON.parse(localStorage.getItem(CATE_MAP_KEY) || '{}') } catch { return {} }
+  return readScopedJson<Record<number, number>>(CATE_MAP_KEY, {})
 }
 function saveCateMap(map: Record<number, number>) {
-  localStorage.setItem(CATE_MAP_KEY, JSON.stringify(map))
+  writeScopedJson(CATE_MAP_KEY, map)
 }
 
 const cateOptions = ref<CateItem[]>(loadCatesFromStorage())

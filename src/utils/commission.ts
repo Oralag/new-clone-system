@@ -1,6 +1,8 @@
 // 提成设置本地存储工具
 // erp_commission_rates: { staffId: ratePercent }  e.g. { 1: 5.0 }  (%)
 
+import { readScopedJson, writeScopedJson } from './storageScope'
+
 const RATES_KEY = 'erp_commission_rates'
 
 export interface CommissionRate {
@@ -10,15 +12,11 @@ export interface CommissionRate {
 }
 
 export function loadCommissionRates(): CommissionRate[] {
-  try {
-    return JSON.parse(localStorage.getItem(RATES_KEY) || '[]')
-  } catch {
-    return []
-  }
+  return readScopedJson<CommissionRate[]>(RATES_KEY, [])
 }
 
 export function saveCommissionRates(rates: CommissionRate[]): void {
-  localStorage.setItem(RATES_KEY, JSON.stringify(rates))
+  writeScopedJson(RATES_KEY, rates)
 }
 
 export function getCommissionRate(staffId: number): number {

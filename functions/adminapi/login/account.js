@@ -2,9 +2,9 @@
 // For KV-registered users: verify password, check backend_url, proxy to correct backend
 // For unknown users: proxy directly to default railway
 
+import { hashPassword, isHashedPassword, verifyPassword } from '../../utils/password.js'
+
 const DEFAULT_BACKEND = 'https://erp-server-production-b1b6.up.railway.app'
-const MASTER_ACCOUNT = '17747344571'
-const MASTER_PASSWORD = 'Oral6421'
 
 function corsHeaders() {
   return {
@@ -63,8 +63,15 @@ export async function onRequest(context) {
         return jsonRes({ code: 0, show: 1, message: '账号已被暂停，请联系管理员', data: [] })
       }
 
-      if (user.password !== password) {
+      const passwordOk = await verifyPassword(password, user.password)
+      if (!passwordOk) {
         return jsonRes({ code: 0, show: 1, message: '密码错误', data: [] })
+      }
+
+      if (!isHashedPassword(user.password)) {
+        user.password = await hashPassword(password)
+        user.updated_at = new Date().toISOString()
+        await kv.put(`user:${account}`, JSON.stringify(user))
       }
 
       const backend = user.backend_url || DEFAULT_BACKEND
@@ -94,12 +101,17 @@ export async function onRequest(context) {
       // Trial user: use cached master token (refresh if expired) to avoid Railway round-trip
       try {
         const CACHE_KEY = 'master_token_cache'
+        const masterAccount = env.MASTER_ACCOUNT
+        const masterPassword = env.MASTER_PASSWORD
+        if (!masterAccount || !masterPassword) {
+          return jsonRes({ code: 0, show: 1, message: '试用账号未配置管理员凭证，请联系管理员处理', data: [] })
+        }
         let realToken = null
         const cached = await kv.get(CACHE_KEY)
         if (cached) {
           realToken = cached
         } else {
-          const masterData = await loginBackend(DEFAULT_BACKEND, { account: MASTER_ACCOUNT, password: MASTER_PASSWORD })
+          const masterData = await loginBackend(DEFAULT_BACKEND, { account: masterAccount, password: masterPassword })
           realToken = masterData.code === 1 ? masterData.data.token : null
           if (realToken) await kv.put(CACHE_KEY, realToken, { expirationTtl: 82800 }) // 23 hours
         }

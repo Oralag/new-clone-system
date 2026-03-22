@@ -59,6 +59,15 @@ export async function onRequest(context) {
   const wrappedToken = request.headers.get('token') || ''
   const decoded = decodeToken(wrappedToken)
 
+  if (decoded?.trial && !isTrialPassthrough(url.pathname)) {
+    return jsonRes({
+      code: 0,
+      show: 1,
+      message: '体验版暂不支持该功能，请升级正式版后使用',
+      data: [],
+    })
+  }
+
   const backend = decoded?.backend || DEFAULT_BACKEND
   const realToken = decoded?.realToken || (decoded ? null : wrappedToken)
 

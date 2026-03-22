@@ -39,7 +39,7 @@
       <div class="danger-item">
         <div class="danger-desc">
           <p class="danger-name">初始化所有数据</p>
-          <p class="danger-hint">清除本地所有缓存数据（登录状态、权限、用户信息等），系统将退出登录并恢复初始状态。</p>
+          <p class="danger-hint">仅清除登录态、权限、界面缓存与会话草稿，不再清空本地业务配置，系统将退出登录并恢复初始状态。</p>
         </div>
         <el-button type="danger" plain @click="handleInitAll">初始化所有数据</el-button>
       </div>
@@ -62,6 +62,16 @@ const appStore = useAppStore()
 const loading = ref(false)
 const saving = ref(false)
 const form = reactive<any>({})
+
+const SAFE_RESET_KEYS = [
+  'erp_theme',
+  'stock_sidebar_w',
+  'procure_order_from_plan',
+  'procure_order_from_bom',
+  'sale_contract_draft_from_offer',
+  'saleout_from_contract',
+  'cr_store_id',
+]
 
 async function loadData() {
   loading.value = true
@@ -90,7 +100,7 @@ async function handleSave() {
 async function handleInitAll() {
   try {
     await ElMessageBox.confirm(
-      '此操作将清除所有本地缓存数据（登录状态、权限配置、用户信息等），系统将退出登录。确定要继续吗？',
+      '此操作将清除登录状态、权限配置、界面缓存和会话草稿，系统将退出登录；本地业务配置将保留。确定要继续吗？',
       '初始化所有数据',
       {
         confirmButtonText: '确定初始化',
@@ -99,7 +109,8 @@ async function handleInitAll() {
         confirmButtonClass: 'el-button--danger',
       }
     )
-    localStorage.clear()
+    SAFE_RESET_KEYS.forEach((key) => localStorage.removeItem(key))
+    sessionStorage.clear()
     authStore.clearAuth()
     ElMessage.success('初始化完成，即将跳转到登录页')
     setTimeout(() => router.push('/login'), 1000)

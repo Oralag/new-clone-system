@@ -1,6 +1,8 @@
 // 客户等级 + 等级商品价格，全部 localStorage 本地存储
 // 因后端无对应接口，数据存本地持久化
 
+import { readScopedJson, writeScopedJson } from './storageScope'
+
 export interface LevelItem { id: number; name: string; discount?: number }
 
 const LEVEL_KEY = 'erp_customer_levels'
@@ -15,30 +17,27 @@ const DEFAULT_LEVELS: LevelItem[] = [
 ]
 
 export function loadLevels(): LevelItem[] {
-  try {
-    const v = localStorage.getItem(LEVEL_KEY)
-    return v ? JSON.parse(v) : DEFAULT_LEVELS
-  } catch { return DEFAULT_LEVELS }
+  return readScopedJson<LevelItem[]>(LEVEL_KEY, DEFAULT_LEVELS)
 }
 
 export function saveLevels(list: LevelItem[]) {
-  localStorage.setItem(LEVEL_KEY, JSON.stringify(list))
+  writeScopedJson(LEVEL_KEY, list)
 }
 
 export function loadLevelMap(): Record<number, number> {
-  try { return JSON.parse(localStorage.getItem(LEVEL_MAP_KEY) || '{}') } catch { return {} }
+  return readScopedJson<Record<number, number>>(LEVEL_MAP_KEY, {})
 }
 
 export function saveLevelMap(map: Record<number, number>) {
-  localStorage.setItem(LEVEL_MAP_KEY, JSON.stringify(map))
+  writeScopedJson(LEVEL_MAP_KEY, map)
 }
 
 export function loadLevelPrices(): Record<string, number> {
-  try { return JSON.parse(localStorage.getItem(LEVEL_PRICE_KEY) || '{}') } catch { return {} }
+  return readScopedJson<Record<string, number>>(LEVEL_PRICE_KEY, {})
 }
 
 export function saveLevelPrices(prices: Record<string, number>) {
-  localStorage.setItem(LEVEL_PRICE_KEY, JSON.stringify(prices))
+  writeScopedJson(LEVEL_PRICE_KEY, prices)
 }
 
 export function getLevelPrice(levelId: number, goodsId: number): number | null {

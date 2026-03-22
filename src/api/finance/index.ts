@@ -92,6 +92,7 @@ export const getFundList = (params?: any) => http.get('/finance/Fund/index', { p
 export const createFund = (data: any) => http.post('/finance/Fund/add', data)
 export const updateFund = (data: any) => http.post('/finance/Fund/edit', data)
 export const deleteFund = (id: number) => http.post('/finance/Fund/del', { id })
+export const auditFund = (id: number, status: number) => http.post('/finance/Fund/audit', { id, status })
 export const getFundFlowList = (params?: any) => http.get('/finance/FundFlow/index', { params })
 export const getCostList = (params?: any) => http.get('/finance/Cost/index', { params })
 export const createCost = (data: any) => http.post('/finance/Cost/add', data)

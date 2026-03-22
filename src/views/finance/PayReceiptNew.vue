@@ -211,6 +211,11 @@ const payLines = ref<{ fund_id: any; fund_name: string; amount: number }[]>([
 ])
 
 const linesTotal = computed(() => payLines.value.reduce((s, l) => s + Number(l.amount || 0), 0))
+const validPayLines = computed(() =>
+  payLines.value
+    .map((line, index) => ({ ...line, _index: index }))
+    .filter(line => Number(line.amount || 0) > 0)
+)
 
 function addLine() {
   payLines.value.push({ fund_id: null, fund_name: '', amount: 0 })
@@ -248,30 +253,39 @@ const saving = ref(false)
 async function handleSave() {
   if (!fd.supplier_id) { ElMessage.warning('请选择供应商'); return }
   if (linesTotal.value <= 0) { ElMessage.warning('请填写付款金额'); return }
+  if (validPayLines.value.some(line => !line.fund_id)) {
+    ElMessage.warning('请为每一条付款明细选择付款账户')
+    return
+  }
 
   saving.value = true
   try {
-    // 取第一行作为主付款信息（多行时合并）
-    const mainLine = payLines.value[0]
-    const payload = {
-      order_sn: fd.order_sn || undefined,
-      pay_date: fd.pay_date,
-      supplier_id: fd.supplier_id,
-      supplier_name: fd.supplier_name,
-      contact_type: 'supplier',
-      contact_name: fd.supplier_name,
-      contact_id: fd.supplier_id,
-      amount: linesTotal.value,
-      fund_id: mainLine.fund_id ?? 0,
-      fund_name: mainLine.fund_name || '',
-      pay_type: 'bank',
-      discount_amount: fd.discount_amount,
-      prepay_deduct: fd.prepay_deduct,
-      verify_type: fd.verify_type,
-      remark: fd.remark,
+    const totalLines = validPayLines.value.length
+    for (const [idx, line] of validPayLines.value.entries()) {
+      const payload = {
+        order_sn: fd.order_sn
+          ? (totalLines === 1 ? fd.order_sn : `${fd.order_sn}-${String(idx + 1).padStart(2, '0')}`)
+          : undefined,
+        pay_date: fd.pay_date,
+        supplier_id: fd.supplier_id,
+        supplier_name: fd.supplier_name,
+        contact_type: 'supplier',
+        contact_name: fd.supplier_name,
+        contact_id: fd.supplier_id,
+        amount: Number(line.amount || 0),
+        fund_id: line.fund_id ?? 0,
+        fund_name: line.fund_name || '',
+        pay_type: 'bank',
+        discount_amount: totalLines === 1 ? fd.discount_amount : 0,
+        prepay_deduct: totalLines === 1 ? fd.prepay_deduct : 0,
+        verify_type: fd.verify_type,
+        remark: totalLines === 1
+          ? fd.remark
+          : `${fd.remark || ''}${fd.remark ? ' ' : ''}[分账户 ${idx + 1}/${totalLines}]`.trim(),
+      }
+      await createPayReceipt(payload)
     }
-    await createPayReceipt(payload)
-    ElMessage.success('付款单保存成功')
+    ElMessage.success(totalLines > 1 ? `已按付款账户拆分保存 ${totalLines} 笔付款单` : '付款单保存成功')
     router.back()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')

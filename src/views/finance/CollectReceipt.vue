@@ -173,6 +173,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund, getReceivableList } from '@/api/finance'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSupplierList, createSupplier } from '@/api/procure'
+import { getStaffList, createStaff } from '@/api/personnel'
 import http from '@/api/http'
 import { applySaleReturnsToCollectReceiptRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 
@@ -282,6 +283,9 @@ async function loadContacts() {
   } else if (fd.contact_type === 'supplier') {
     const res = await getSupplierList({ list_rows: 500 })
     contactOptions.value = res.data?.rows ?? []
+  } else if (fd.contact_type === 'staff') {
+    const res = await getStaffList({ list_rows: 500 })
+    contactOptions.value = (res.data?.rows ?? []).map((r: any) => ({ id: r.id, name: r.name }))
   }
 }
 
@@ -314,13 +318,23 @@ async function handleSave() {
     const { contact_type, contact_id, fund_id, fund_name, order_no, ...rest } = fd
     const payload: any = {
       ...rest,
+      contact_type,
+      contact_id: contact_id ?? 0,
+      contact_name: fd.contact_name || '',
       fund_id: fund_id ?? 0,
       fund_name: fund_name || '',
       order_sn: order_no || null,
+      order_no: order_no || null,
     }
     if (contact_type === 'customer') {
       payload.customer_id = contact_id ?? 0
       payload.customer_name = fd.contact_name
+    } else if (contact_type === 'supplier') {
+      payload.supplier_id = contact_id ?? 0
+      payload.supplier_name = fd.contact_name
+    } else if (contact_type === 'staff') {
+      payload.staff_id = contact_id ?? 0
+      payload.staff_name = fd.contact_name
     }
     await createCollectReceipt(payload)
     ElMessage.success('保存成功')
@@ -359,6 +373,8 @@ async function confirmQuickAdd() {
       res = await createSaleCustomer({ name: quickForm.name.trim() })
     } else if (fd.contact_type === 'supplier') {
       res = await createSupplier({ name: quickForm.name.trim() })
+    } else if (fd.contact_type === 'staff') {
+      res = await createStaff({ name: quickForm.name.trim() })
     }
     quickAddVisible.value = false
     await loadContacts()

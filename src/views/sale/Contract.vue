@@ -102,7 +102,7 @@
               <el-button v-if="row.status === 1 || row.status === 4" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button v-if="row.status === 1 || row.status === 4" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1 && getPendingAmount(row) > 0.01" type="success" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="handleConvertToSaleOut(row)">转出库单</el-button>
               <el-button type="danger" link size="small" :disabled="row.status === 1 || row.status === 4" :title="row.status === 1 || row.status === 4 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
@@ -475,6 +475,11 @@
             <span style="margin-left:24px">最终应收：<b style="color:#0071e3;font-size:16px">¥{{ finalReceivable.toFixed(2) }}</b></span>
             <template v-if="fd.prepay_amount > 0">
               <span style="margin-left:24px">预付款核销：<b style="color:#16a34a">-¥{{ Number(fd.prepay_amount).toFixed(2) }}</b></span>
+            </template>
+            <template v-if="fd.receive_amount > 0">
+              <span style="margin-left:24px">本次收款：<b style="color:#16a34a">-¥{{ Number(fd.receive_amount).toFixed(2) }}</b></span>
+            </template>
+            <template v-if="fd.prepay_amount > 0 || fd.receive_amount > 0">
               <span style="margin-left:24px">实际待收：<b style="color:#dc2626;font-size:16px">¥{{ finalPending.toFixed(2) }}</b></span>
             </template>
           </div>
@@ -592,7 +597,7 @@ import { getContractList, createContract, updateContract, deleteContract, auditC
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSpecList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
-import { getFundList, createCollectReceipt, getCollectReceiptList } from '@/api/finance'
+import { getFundList, createCollectReceipt, getCollectReceiptList, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
@@ -602,6 +607,48 @@ const DRAFT_KEY = 'sale_contract_draft_from_offer'
 const permStore = usePermissionStore()
 const router = useRouter()
 const route = useRoute()
+
+function parseRemarkTag(remark: string, tag: string): string {
+  const safeTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const matched = String(remark || '').match(new RegExp(`\\[${safeTag}:([^\\]]+)\\]`))
+  return matched?.[1]?.trim() || ''
+}
+
+function stripContractRemarkTags(remark: string): string {
+  return String(remark || '')
+    .replace(/\[(NO|OID|PP):[^\]]+\]\s*/g, '')
+    .trim()
+}
+
+function buildContractRemark() {
+  const parts = [
+    fd.contract_no ? `[NO:${fd.contract_no}]` : '',
+    fd.source_offer_id ? `[OID:${fd.source_offer_id}]` : '',
+    Number(fd.prepay_amount || 0) > 0 ? `[PP:${Number(fd.prepay_amount || 0).toFixed(2)}]` : '',
+    String(fd.remark || '').trim(),
+  ].filter(Boolean)
+  return parts.join(' ')
+}
+
+function getContractOrderSn(row: any): string {
+  return String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+}
+
+function parsePrepayAmount(remark: string): number {
+  return Number(parseRemarkTag(remark, 'PP') || 0)
+}
+
+function buildContractExpenseRemark(row: any) {
+  const orderSn = getContractOrderSn(row)
+  return `${row?.customer_name || ''} 销售合同运费（我方承担） - ${orderSn}`.trim()
+}
+
+function isAutoContractReceiptRow(row: any, orderSn: string) {
+  const sn = String(row?.order_sn || row?.order_no || '').trim()
+  const remark = String(row?.remark || '')
+  if (sn !== orderSn) return false
+  return remark.includes(`合同自动收款 - ${orderSn}`) || remark.includes(`预付款核销 - ${orderSn}`)
+}
 
 function parseItems(goodsInfo: any): any[] {
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
@@ -685,19 +732,17 @@ async function loadReceiptMap() {
 }
 
 function getContractSn(row: any): string {
-  // 优先从 remark 里解析 [NO:xxx]
-  const m = (row?.remark || '').match(/^\[NO:([^\]]+)\]/)
-  if (m) return m[1]
+  const taggedSn = parseRemarkTag(row?.remark || '', 'NO')
+  if (taggedSn) return taggedSn
   return String(row?.order_sn || row?.contract_no || (row?.id ? `HT${String(row.id).padStart(4,'0')}` : '')).trim()
 }
 
 function parseContractRemark(remark: string): string {
-  return (remark || '').replace(/^\[NO:[^\]]+\]\s*/, '').replace(/^\[OID:[^\]]+\]\s*/, '')
+  return stripContractRemarkTags(remark)
 }
 
 function parseSourceOfferId(remark: string): number {
-  const m = (remark || '').match(/\[OID:(\d+)\]/)
-  return m ? Number(m[1]) : 0
+  return Number(parseRemarkTag(remark, 'OID') || 0)
 }
 
 function getReceivedAmount(row: any): number {
@@ -752,7 +797,6 @@ onMounted(async () => {
   await Promise.all([loadCustomers(), loadStaff(), loadFunds(), loadReceiptMap()])
   handleRouteFromOffer()
   if (route.query.contract_no) searchForm.contract_no = String(route.query.contract_no)
-  initAutoReceiptSync()
 })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
@@ -778,7 +822,6 @@ const defaultFd = () => ({
   need_invoice: false,
   receive_account: '',
   remark: '',
-  contract_no: '',
   total_amount: 0,
   discount_type: 'none' as string,
   discount_value: 0,
@@ -811,10 +854,20 @@ const freightCharge = computed(() =>
 const finalReceivable = computed(() =>
   Math.max(0, Number(fd.after_discount || 0) + freightCharge.value - Number(fd.income_amount || 0))
 )
-// 实际待收 = 应收 - 预付款核销
+// 实际待收 = 应收 - 预付款核销 - 本次收款
 const finalPending = computed(() =>
-  Math.max(0, finalReceivable.value - Number(fd.prepay_amount || 0))
+  Math.max(0, finalReceivable.value - Number(fd.prepay_amount || 0) - Number(fd.receive_amount || 0))
 )
+
+function normalizeReceiptAllocation() {
+  const currentPrepay = Math.max(0, Number(fd.prepay_amount || 0))
+  const currentReceive = Math.max(0, Number(fd.receive_amount || 0))
+  const availablePrepay = Math.max(customerPrepayBalance.value, currentPrepay)
+  const nextPrepay = Math.min(currentPrepay, Math.max(0, Math.min(availablePrepay, finalReceivable.value)))
+  const nextReceive = Math.min(currentReceive, Math.max(0, finalReceivable.value - nextPrepay))
+  fd.prepay_amount = Number(nextPrepay.toFixed(2))
+  fd.receive_amount = Number(nextReceive.toFixed(2))
+}
 
 function calcContractAmount(row: any): number {
   const total = Number(row.total_amount || 0)
@@ -862,7 +915,7 @@ function calcSettle() {
   } else {
     fd.after_discount = fd.total_amount * (1 - (fd.discount_value || 0) / 100)
   }
-  fd.receive_amount = Math.max(0, Math.min(Number(fd.receive_amount || 0), finalReceivable.value))
+  normalizeReceiptAllocation()
 }
 
 function calcItemTax(row: ContractItem) {
@@ -909,6 +962,7 @@ async function onCustomerChange(id: any) {
   if (bound && levelOptions.value.some(l => l.id === bound)) {
     fd.level_id = bound
   }
+  normalizeReceiptAllocation()
 }
 
 function onLevelChange() {
@@ -956,6 +1010,7 @@ async function openEdit(row: any, readonly = false) {
   fd.contract_no = getContractSn(row)
   fd.remark = parseContractRemark(row.remark || '')
   fd.source_offer_id = parseSourceOfferId(row.remark || '')
+  fd.prepay_amount = Number(row.prepay_amount || parsePrepayAmount(row.remark || '') || 0)
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
@@ -968,6 +1023,10 @@ async function openEdit(row: any, readonly = false) {
     if (full.id) {
       const items = fd.items // 保留已解析的 items
       Object.assign(fd, full)
+      fd.contract_no = getContractSn(full)
+      fd.remark = parseContractRemark(full.remark || '')
+      fd.source_offer_id = parseSourceOfferId(full.remark || '')
+      fd.prepay_amount = Number(full.prepay_amount || parsePrepayAmount(full.remark || '') || fd.prepay_amount || 0)
       fd.items = items.length ? items : (()=>{ try { return JSON.parse(full.goods_info||'[]') } catch { return [] } })()
       calcTotal()
     }
@@ -978,6 +1037,7 @@ async function openEdit(row: any, readonly = false) {
     if (!fd.prepay_amount && customerPrepayBalance.value > 0) {
       fd.prepay_amount = Math.min(customerPrepayBalance.value, finalReceivable.value)
     }
+    normalizeReceiptAllocation()
   }
 }
 
@@ -1074,7 +1134,7 @@ function buildContractHtml() {
       </tr>
       <tr>
         <td class="sl">预付款核销</td><td style="color:#16a34a">${Number(fd.prepay_amount||0)>0?'-¥'+Number(fd.prepay_amount).toFixed(2):'—'}</td>
-        <td class="sl">实际待收</td><td style="color:#dc2626"><b>¥${Math.max(0,Math.max(0,Number(fd.after_discount||0)+(fd.freight_bearer==='buyer'?Number(fd.freight_amount||0):fd.freight_bearer==='half'?Number(fd.freight_amount||0)/2:0)-Number(fd.income_amount||0))-Number(fd.prepay_amount||0)).toFixed(2)}</b></td>
+        <td class="sl">实际待收</td><td style="color:#dc2626"><b>¥${Math.max(0,Math.max(0,Number(fd.after_discount||0)+(fd.freight_bearer==='buyer'?Number(fd.freight_amount||0):fd.freight_bearer==='half'?Number(fd.freight_amount||0)/2:0)-Number(fd.income_amount||0))-Number(fd.prepay_amount||0)-Number(fd.receive_amount||0)).toFixed(2)}</b></td>
         <td class="sl">本次收款</td><td>¥${Number(fd.receive_amount||0).toFixed(2)}</td>
       </tr>
       <tr>
@@ -1129,6 +1189,39 @@ function handleContractExport() {
   ElMessage.success('已导出，用浏览器打开后可另存为PDF')
 }
 
+async function ensureContractFreightExpense(row: any) {
+  const freightAmt = Number(row?.freight_amount || 0)
+  const bearer = String(row?.freight_bearer || 'seller')
+  if (freightAmt <= 0 || bearer !== 'seller') return
+
+  const orderSn = getContractOrderSn(row)
+  const remark = buildContractExpenseRemark({ ...row, order_sn: orderSn })
+  const existing = await getExpenseList({ list_rows: 1000 })
+  const rows: any[] = existing?.data?.rows ?? existing?.data?.list ?? []
+  if (rows.some((item: any) => String(item?.remark || '').includes(`销售合同运费（我方承担） - ${orderSn}`))) return
+
+  const expenseDate = String(row?.sign_date || row?.contract_date || row?.create_time || '').slice(0, 10)
+    || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+  await createExpense({
+    name: '销售运费',
+    amount: freightAmt,
+    expense_date: expenseDate,
+    order_sn: orderSn,
+    remark,
+  })
+}
+
+async function cleanupContractFreightExpense(row: any) {
+  const orderSn = getContractOrderSn(row)
+  if (!orderSn) return
+  const existing = await getExpenseList({ list_rows: 1000 })
+  const rows: any[] = existing?.data?.rows ?? existing?.data?.list ?? []
+  const targets = rows.filter((item: any) => String(item?.remark || '').includes(`销售合同运费（我方承担） - ${orderSn}`))
+  for (const item of targets) {
+    await deleteExpense(Number(item.id))
+  }
+}
+
 async function handleSave() {
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项'); return
@@ -1136,7 +1229,7 @@ async function handleSave() {
   if (!fd.items.length) {
     ElMessage.warning('请至少添加一件商品'); return
   }
-  if (!fd.receive_amount || fd.receive_amount <= 0) {
+  if (Number(fd.receive_amount || 0) <= 0 && Number(fd.prepay_amount || 0) <= 0 && finalReceivable.value > 0) {
     try {
       await ElMessageBox.confirm('本次收款金额未填写，是否继续保存？', '提示', {
         confirmButtonText: '继续保存', cancelButtonText: '去填写', type: 'warning'
@@ -1145,15 +1238,11 @@ async function handleSave() {
   }
   saving.value = true
   try {
+    normalizeReceiptAllocation()
     const payload: Record<string, any> = {
       customer_id: fd.customer_id,
-      remark: (() => {
-        let r = fd.remark || ''
-        if (fd.source_offer_id) r = `[OID:${fd.source_offer_id}]` + (r ? ' ' + r : '')
-        if (fd.contract_no) r = `[NO:${fd.contract_no}]` + (r ? ' ' + r : '')
-        return r
-      })(),
-      total_amount: finalReceivable.value,
+      remark: buildContractRemark(),
+      total_amount: fd.total_amount,
       discount_type: fd.discount_type,
       discount_value: fd.discount_value,
       after_discount: fd.after_discount,
@@ -1161,6 +1250,7 @@ async function handleSave() {
       freight_bearer: fd.freight_bearer,
       income_amount: fd.income_amount,
       receive_amount: fd.receive_amount,
+      prepay_amount: fd.prepay_amount,
       receive_account: fd.receive_account || '',
       need_invoice: fd.need_invoice ? 1 : 0,
       installment: fd.installment ? 1 : 0,
@@ -1188,6 +1278,7 @@ async function handleSave() {
         const detail = await getContractDetail(newId)
         const row = detail?.data?.row || detail?.data || {}
         await autoCreateReceipt(row)
+        await ensureContractFreightExpense(row)
       } catch (e: any) {
         ElMessage.warning(`保存成功，但自动审核未完成：${e?.message || ''}，请手动审核`)
       }
@@ -1211,7 +1302,7 @@ async function autoAuditContract(id: number) {
 }
 
 async function autoCreateReceipt(row: any) {
-  const orderSn = String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+  const orderSn = getContractOrderSn(row)
   if (!orderSn) return
   const finalAmt = calcContractAmount(row)
   if (finalAmt <= 0) return
@@ -1219,49 +1310,48 @@ async function autoCreateReceipt(row: any) {
   const customerName = String(row?.customer_name || customerOptions.value.find(c => Number(c?.id) === customerId)?.name || '').trim()
   const account = String(row?.receive_account || '').trim()
   const fundItem = fundOptions.value.find(f => String(f?.name || '').trim() === account)
-  const today = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+  const receiptDate = String(row?.sign_date || row?.contract_date || row?.create_time || '').slice(0, 10)
+    || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
 
-  // 检查是否已存在自动收款记录
+  let existingRows: any[] = []
   try {
     const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 200 })
-    const rows = existing?.data?.rows ?? []
-    if (rows.some((r: any) => String(r?.order_sn || r?.order_no || '').trim() === orderSn && String(r?.remark || '').includes('合同自动收款'))) return
+    existingRows = existing?.data?.rows ?? []
   } catch { /* ignore */ }
 
-  // 预付款核销：用该客户的预付款余额抵扣
-  const prepayAmt = Number(row?.prepay_amount || fd.prepay_amount || 0)
-  let remaining = finalAmt
+  const existingPrepay = existingRows.some((item) => isAutoContractReceiptRow(item, orderSn) && String(item?.remark || '').includes('预付款核销'))
+  const existingReceive = existingRows.some((item) => isAutoContractReceiptRow(item, orderSn) && String(item?.remark || '').includes('合同自动收款'))
 
+  const prepayAmt = Math.min(Math.max(0, Number(row?.prepay_amount || parsePrepayAmount(row?.remark || '') || fd.prepay_amount || 0)), finalAmt)
+  const receiveAmt = Math.min(
+    Math.max(0, Number(row?.receive_amount || 0)),
+    Math.max(0, finalAmt - prepayAmt),
+  )
+
+  // 预付款核销：只登记真实核销金额，不再自动补齐剩余应收
   if (prepayAmt > 0 && customerId) {
-    const actualPrepay = Math.min(prepayAmt, finalAmt)
-    try {
+    if (!existingPrepay) {
       await createCollectReceipt({
         contact_type: 'customer',
         customer_id: customerId, customer_name: customerName,
-        amount: actualPrepay, order_sn: orderSn, order_no: orderSn,
+        contact_id: customerId, contact_name: customerName,
+        amount: prepayAmt, order_sn: orderSn, order_no: orderSn,
         fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
-        receipt_date: today, remark: `预付款核销 - ${orderSn}`,
+        receipt_date: receiptDate, remark: `预付款核销 - ${orderSn}`,
       })
-      remaining = Math.max(0, finalAmt - actualPrepay)
-    } catch (e) {
-      console.error('[autoCreateReceipt] 预付款核销收款单创建失败', e)
-      throw e
     }
   }
 
-  // 剩余应收记录（未核销部分）
-  if (remaining > 0.01) {
-    try {
+  if (receiveAmt > 0.01) {
+    if (!existingReceive) {
       await createCollectReceipt({
         contact_type: 'customer',
         customer_id: customerId, customer_name: customerName,
-        amount: remaining, order_sn: orderSn, order_no: orderSn,
+        contact_id: customerId, contact_name: customerName,
+        amount: receiveAmt, order_sn: orderSn, order_no: orderSn,
         fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
-        receipt_date: today, remark: `合同自动收款 - ${orderSn}`,
+        receipt_date: receiptDate, remark: `合同自动收款 - ${orderSn}`,
       })
-    } catch (e) {
-      console.error('[autoCreateReceipt] 应收收款单创建失败', e)
-      throw e
     }
   }
 }
@@ -1339,41 +1429,6 @@ function normalizeItem(t: any): ContractItem {
   }
 }
 
-async function initAutoReceiptSync() {
-  try {
-    const [contractsRes, receiptsRes] = await Promise.all([
-      http.get('/shop/ContractOrder/index', { params: { status: 1, list_rows: 500 } }),
-      getCollectReceiptList({ list_rows: 2000 }),
-    ])
-    const contracts = contractsRes?.data?.rows ?? []
-    const receipts = receiptsRes?.data?.rows ?? []
-    const existingOrders = new Set(
-      receipts
-        .filter((r: any) => String(r?.remark || '').includes('合同自动收款'))
-        .map((r: any) => String(r?.order_sn || r?.order_no || '').trim())
-    )
-    for (const c of contracts) {
-      const sn = String(c?.order_sn || c?.contract_no || '').trim()
-      if (!sn || existingOrders.has(sn)) continue
-      const amt = calcContractAmount(c)
-      if (amt <= 0) continue
-      const customerId = Number(c?.customer_id || 0)
-      const customerName = String(c?.customer_name || customerOptions.value.find(x => Number(x?.id) === customerId)?.name || '').trim()
-      const account = String(c?.receive_account || '').trim()
-      const fundItem = fundOptions.value.find(f => String(f?.name || '').trim() === account)
-      const receiptDate = String(c?.sign_date || c?.create_time || '').slice(0, 10) || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
-      try {
-        await createCollectReceipt({
-          customer_id: customerId, customer_name: customerName,
-          amount: amt, order_sn: sn, order_no: sn,
-          fund_id: Number(fundItem?.id || 0), fund_name: fundItem?.name || account || '',
-          receipt_date: receiptDate, remark: `合同自动收款 - ${sn}`,
-        })
-      } catch { /* ignore */ }
-    }
-  } catch { /* ignore */ }
-}
-
 async function handleDelete(id: number) {
   // 检查是否有关联收款单，有则拦截
   try {
@@ -1404,14 +1459,15 @@ async function handleAudit(row: any, status: number) {
   // 反审核前检查是否有关联收款单 — 有则直接拦截，必须先去收款单手动删除
   if (status === 0) {
     try {
-      const orderSn = String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+      const orderSn = getContractOrderSn(row)
       if (orderSn) {
         const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
         const linked = (existing?.data?.rows ?? []).filter((r: any) =>
           String(r?.order_sn || r?.order_no || '').trim() === orderSn
         )
-        if (linked.length > 0) {
-          ElMessage.error(`该合同存在 ${linked.length} 笔关联收款单，请先前往【财务 > 收款单】删除后再反审核`)
+        const manualLinked = linked.filter((item: any) => !isAutoContractReceiptRow(item, orderSn))
+        if (manualLinked.length > 0) {
+          ElMessage.error(`该合同存在 ${manualLinked.length} 笔手工收款单，请先前往【财务 > 收款单】删除后再反审核`)
           return
         }
       }
@@ -1439,6 +1495,10 @@ async function handleAudit(row: any, status: number) {
   } catch { return }
 
   try {
+    // 如果是已转单状态(4)要反审核，先退回已审核(1)
+    if (status === 0 && Number(row.status) === 4) {
+      try { await http.post('/shop/ContractOrder/edit', { id: row.id, status: 1 }) } catch {}
+    }
     await auditContract(row.id, status)
     let errMsg = ''
     let freshRow = row
@@ -1448,8 +1508,10 @@ async function handleAudit(row: any, status: number) {
     } catch { /* ignore */ }
     if (status === 1) {
       try { await autoCreateReceipt(freshRow) } catch (e: any) { errMsg = e?.message || '自动创建收款失败' }
+      try { await ensureContractFreightExpense(freshRow) } catch (e: any) { errMsg = errMsg || e?.message || '自动写入销售运费失败' }
     } else if (status === 0) {
       try { await cancelAutoReceipt(freshRow) } catch (e: any) { errMsg = e?.message || '自动撤回收款失败' }
+      try { await cleanupContractFreightExpense(freshRow) } catch (e: any) { errMsg = errMsg || e?.message || '自动撤回销售运费失败' }
       // 反审核后把来源报价单状态恢复为已审核（1）
       const offerId = parseSourceOfferId(freshRow.remark || '') || parseSourceOfferId(row.remark || '')
       if (offerId) {
@@ -1488,13 +1550,13 @@ async function handleConvertToSaleOut(row: any) {
 }
 
 async function cancelAutoReceipt(row: any) {
-  const orderSn = String(row?.order_sn || row?.contract_no || (row?.id ? `CONTRACT-${row.id}` : '')).trim()
+  const orderSn = getContractOrderSn(row)
   if (!orderSn) return
   try {
     const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
-    // 删除所有关联该合同的收款单（合同自动收款 + 预付款核销）
+    // 只删除系统自动生成的收款单，手工收款单保留并由前置校验拦截
     const rows = (existing?.data?.rows ?? []).filter((r: any) =>
-      String(r?.order_sn || r?.order_no || '').trim() === orderSn
+      isAutoContractReceiptRow(r, orderSn)
     )
     for (const r of rows) {
       try { await http.post('/finance/CollectReceipt/del', { id: Number(r.id) }) } catch { /* ignore */ }
@@ -1510,11 +1572,10 @@ function onGoodsConfirm(goods: any[]) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
     const basePrice = Number(g.sell_price) || 0
     const levelPrice = fd.level_id ? (getLevelPrice(fd.level_id, g.id) ?? basePrice) : basePrice
-    const priceNoTax = Number((levelPrice / 1.13).toFixed(4))
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
       spec: g.spec || '', cate_name: g.cate_name || '', unit_name: g.unit_name || '',
-      num: 1, price_no_tax: priceNoTax, tax_rate: 0,
-      price: Number((priceNoTax * 1.13).toFixed(4)), remark: '' })
+      num: 1, price_no_tax: Number(levelPrice.toFixed(4)), tax_rate: 0,
+      price: Number(levelPrice.toFixed(4)), remark: '' })
     fetchGoodsSpecs(g.id)
   }
   calcTotal()
@@ -1541,7 +1602,7 @@ function confirmManualAdd() {
     cate_name: '',
     unit_name: manualForm.unit_name,
     num: manualForm.num,
-    price_no_tax: Number((manualForm.price / 1.13).toFixed(4)),
+    price_no_tax: Number(manualForm.price.toFixed(4)),
     tax_rate: 0,
     price: manualForm.price,
     remark: '',

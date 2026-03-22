@@ -1,6 +1,8 @@
 // Cloudflare Pages Function — /adminapi/login/register
 // Stores users in KV (USERS_KV binding) and supports self-hosted registration
 
+import { hashPassword } from '../../utils/password.js'
+
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -46,8 +48,7 @@ export async function onRequest(context) {
 
   const kv = env.USERS_KV
   if (!kv) {
-    // No KV configured — still return success for now (data won't persist)
-    return jsonRes({ code: 1, show: 0, message: '注册成功', data: {} })
+    return jsonRes({ code: 0, show: 1, message: '注册服务未配置，请联系管理员', data: [] }, 500)
   }
 
   const existing = await kv.get(`user:${mobile}`)
@@ -58,7 +59,7 @@ export async function onRequest(context) {
   const user = {
     company_name: company_name.trim(),
     mobile,
-    password,
+    password: await hashPassword(password),
     admin_id: Date.now(),
     created_at: new Date().toISOString(),
   }

@@ -2,6 +2,8 @@
 // Super admin API: list/update/delete KV users
 // Protected: only account 17747344571 can call this
 
+import { hashPassword } from '../utils/password.js'
+
 const SUPER_ADMIN = '17747344571'
 
 function corsHeaders() {
@@ -93,7 +95,7 @@ export async function onRequest(context) {
     const user = JSON.parse(raw)
     if (backend_url !== undefined) user.backend_url = backend_url || null
     if (status !== undefined) user.status = status
-    if (password) user.password = password
+    if (password) user.password = await hashPassword(password)
     if (plan_label !== undefined) user.plan_label = plan_label
     if (paid_until !== undefined) user.paid_until = paid_until
     user.updated_at = new Date().toISOString()
