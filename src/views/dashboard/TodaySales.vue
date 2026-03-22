@@ -34,7 +34,7 @@
               <el-table-column prop="customer_name" label="客户" min-width="100" show-overflow-tooltip />
               <el-table-column label="金额" width="110" align="right">
                 <template #default="{ row }">
-                  <span style="color:#0071e3;font-weight:600">¥{{ Number(row.total_amount||0).toFixed(2) }}</span>
+                  <span style="color:#0071e3;font-weight:600">¥{{ (Number(row.after_discount) || Number(row.total_amount||0)).toFixed(2) }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="out_date" label="日期" width="100" />
@@ -73,7 +73,7 @@
                 </div>
                 <div class="mobile-card-footer">
                   <span class="mobile-card-label">金额</span>
-                  <span class="mobile-card-amount">¥{{ Number(row.total_amount||0).toFixed(2) }}</span>
+                  <span class="mobile-card-amount">¥{{ (Number(row.after_discount) || Number(row.total_amount||0)).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -147,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import http from '@/api/http'
 
 const loading = ref(false)
@@ -162,11 +162,11 @@ const today = (() => {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
 })()
 
-const saleAmount = computed(() => saleRows.value.reduce((s, r) => s + Number(r.total_amount||0), 0))
+const saleAmount = computed(() => saleRows.value.reduce((s, r) => s + (Number(r.after_discount) || Number(r.total_amount||0)), 0))
 const retailAmount = computed(() => retailRows.value.reduce((s, r) => s + Number(r.pay_amount||r.total_amount||0), 0))
 const totalAmount = computed(() => saleAmount.value + retailAmount.value)
 
-onMounted(async () => {
+async function fetchToday() {
   loading.value = true
   const [sr, rr] = await Promise.allSettled([
     http.get('/stock/SaleOutOrder/index', { params: { list_rows: 500 } }),
@@ -181,7 +181,14 @@ onMounted(async () => {
     retailRows.value = all.filter((r: any) => (r.order_date||'').slice(0,10) === today)
   }
   loading.value = false
+}
+
+let timer: ReturnType<typeof setInterval>
+onMounted(() => {
+  fetchToday()
+  timer = setInterval(fetchToday, 30000)
 })
+onUnmounted(() => clearInterval(timer))
 </script>
 
 <style scoped>

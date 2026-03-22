@@ -203,10 +203,23 @@
             </template>
           </el-table-column>
         </el-table>
+        <div style="display:flex;gap:16px;margin-bottom:12px">
+          <el-form-item label="优惠" style="flex:1;margin-bottom:0">
+            <el-input-number v-model="qs.discount" :min="0" :precision="2" size="default" style="width:100%" placeholder="优惠金额" @change="calcQsTotal" />
+          </el-form-item>
+          <el-form-item label="运费" style="flex:1;margin-bottom:0">
+            <el-input-number v-model="qs.freight" :min="0" :precision="2" size="default" style="width:100%" placeholder="运费" @change="calcQsTotal" />
+          </el-form-item>
+        </div>
         <el-form-item label="备注">
           <el-input v-model="qs.remark" placeholder="选填" />
         </el-form-item>
         <div class="qs-total">
+          <div v-if="qs.discount > 0 || qs.freight > 0" style="font-size:13px;color:#999;margin-bottom:4px">
+            商品合计：¥{{ fmt(qs.goodsTotal) }}
+            <span v-if="qs.discount > 0" style="margin-left:12px">优惠：-¥{{ fmt(qs.discount) }}</span>
+            <span v-if="qs.freight > 0" style="margin-left:12px">运费：+¥{{ fmt(qs.freight) }}</span>
+          </div>
           合计：<span style="color:#0071e3;font-size:18px;font-weight:700">¥{{ fmt(qs.total) }}</span>
         </div>
       </el-form>
@@ -401,13 +414,16 @@ const qs = reactive({
   warehouse_name: '',
   items: [] as any[],
   remark: '',
+  discount: 0,
+  freight: 0,
+  goodsTotal: 0,
   total: 0,
 })
 
 function openQuickSale() {
   qs.customer_id = null; qs.customer_name = ''
   qs.warehouse_id = null; qs.warehouse_name = ''
-  qs.items = []; qs.remark = ''; qs.total = 0
+  qs.items = []; qs.remark = ''; qs.discount = 0; qs.freight = 0; qs.goodsTotal = 0; qs.total = 0
   qsVisible.value = true
 }
 
@@ -434,7 +450,9 @@ function onQsGoodsConfirm(goods: any[]) {
 }
 
 function calcQsTotal() {
-  qs.total = qs.items.reduce((s, r) => s + (r.num || 0) * (r.price || 0), 0)
+  qs.goodsTotal = qs.items.reduce((s, r) => s + (r.num || 0) * (r.price || 0), 0)
+  qs.total = qs.goodsTotal - (qs.discount || 0) + (qs.freight || 0)
+  if (qs.total < 0) qs.total = 0
 }
 
 async function submitQuickSale() {
@@ -461,10 +479,11 @@ async function submitQuickSale() {
       sign_date: today,
       warehouse_id: qs.warehouse_id,
       warehouse_name: qs.warehouse_name,
-      total_amount: qs.total,
+      total_amount: qs.goodsTotal,
       after_discount: qs.total,
-      discount_type: 'none',
-      discount_value: 0,
+      discount_type: qs.discount > 0 ? 'amount' : 'none',
+      discount_value: qs.discount || 0,
+      freight: qs.freight || 0,
       remark: qs.remark,
       goods_info: goodsInfo,
     })
@@ -482,10 +501,11 @@ async function submitQuickSale() {
       out_date: today,
       warehouse_id: qs.warehouse_id,
       warehouse_name: qs.warehouse_name,
-      total_amount: qs.total,
+      total_amount: qs.goodsTotal,
       after_discount: qs.total,
-      discount_type: 'none',
-      discount_value: 0,
+      discount_type: qs.discount > 0 ? 'amount' : 'none',
+      discount_value: qs.discount || 0,
+      freight: qs.freight || 0,
       contract_id: contractId,
       remark: `来自销售合同 `,
       goods_info: goodsInfo,

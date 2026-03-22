@@ -381,7 +381,7 @@ const orderRows = computed(() => {
     try { for (const g of JSON.parse(r.goods_info || '[]')) { const q = Number(g.num || 0); sale_amount += q * Number(g.price || 0); cost_amount += q * getUnitCost(g.goods_id).unitCost } } catch {}
     const profit = sale_amount - cost_amount
     result.push({
-      source: '零售', order_no: r.order_sn || r.order_no || `零售订单 ${(r.order_date || r.create_time || '').slice(0, 10)}`,
+      source: '零售', order_no: r.order_sn || r.order_no || `LS${(r.order_date || r.create_time || '').slice(0, 10).replace(/-/g, '')}${String(r.id).padStart(3, '0')}`,
       customer_name: r.customer_name || r.member_name || '散客',
       order_date: (r.order_date || r.create_time || '').slice(0, 10),
       sale_amount, cost_amount, profit, freight: 0, net_profit: profit,

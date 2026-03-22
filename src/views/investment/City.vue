@@ -10,45 +10,72 @@
             <span class="detail-name">{{ selectedInst.name }}</span>
             <span class="detail-status-tag" :class="selectedInst.status">{{ statusLabel(selectedInst.status) }}</span>
           </div>
-          <button class="detail-close" @click="selectedId = null">&times;</button>
+          <button class="detail-close" @click="selectedId = null">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M1 1l8 8M9 1l-8 8"/>
+            </svg>
+          </button>
         </div>
 
         <!-- 建筑信息 -->
         <div v-if="selectedBuilding" class="detail-section">
-          <div class="detail-section-title">建筑</div>
+          <div class="detail-section-title">BUILDING_INFO</div>
           <div class="detail-row">
             <span class="detail-label">状态</span>
-            <span class="detail-value">{{ buildingStatusLabel(selectedBuilding.status) }}</span>
+            <span class="detail-value" :class="selectedBuilding.status">{{ buildingStatusLabel(selectedBuilding.status) }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">坐标</span>
             <span class="detail-value mono">({{ selectedBuilding.position.gridX }}, {{ selectedBuilding.position.gridY }})</span>
           </div>
           <div v-if="selectedBuilding.upgradeHistory.length" class="detail-row">
-            <span class="detail-label">升级次数</span>
-            <span class="detail-value mono">{{ selectedBuilding.upgradeHistory.length }}</span>
+            <span class="detail-label">升级</span>
+            <span class="detail-value mono">LV.{{ selectedBuilding.upgradeHistory.length }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">建造</span>
+            <span class="detail-value mono">{{ formatDate(selectedBuilding.constructedAt) }}</span>
           </div>
         </div>
 
         <!-- 工具列表 -->
-        <div v-if="selectedInst.toolIds.length" class="detail-section">
-          <div class="detail-section-title">可用工具</div>
-          <div v-for="tid in selectedInst.toolIds" :key="tid" class="tool-tag">
-            {{ toolNameMap[tid] || tid }}
+        <div class="detail-section">
+          <div class="detail-section-title">TOOLS <span class="tool-count">{{ selectedInst.toolIds.length }}</span></div>
+          <div v-if="selectedInst.toolIds.length" class="tool-grid">
+            <button
+              v-for="tid in selectedInst.toolIds"
+              :key="tid"
+              class="tool-chip"
+              :class="{ running: toolRunning === tid, done: toolResults[tid] !== undefined && toolRunning !== tid }"
+              :disabled="!!toolRunning"
+              @click="executeTool(tid)"
+            >
+              <span class="tool-indicator" :class="{ spin: toolRunning === tid }"></span>
+              {{ toolNameMap[tid] || tid }}
+            </button>
           </div>
-        </div>
-        <div v-else class="detail-section">
-          <div class="detail-section-title">可用工具</div>
-          <span class="detail-empty">暂无工具</span>
+          <span v-else class="detail-empty">NO_TOOLS_AVAILABLE</span>
+          <!-- 工具执行结果 -->
+          <div v-if="toolResultDisplay" class="tool-result-panel">
+            <div class="tool-result-head">
+              <span class="tool-result-name">{{ toolNameMap[toolResultId] || toolResultId }}</span>
+              <button class="tool-result-close" @click="toolResultDisplay = ''">×</button>
+            </div>
+            <pre class="tool-result-body">{{ toolResultDisplay }}</pre>
+          </div>
         </div>
 
         <!-- 最近活动 -->
         <div class="detail-section">
-          <div class="detail-section-title">最近活动</div>
-          <div v-if="selectedInst.recentTrace" class="detail-trace">{{ selectedInst.recentTrace }}</div>
-          <div v-else class="detail-empty">暂无活动记录</div>
+          <div class="detail-section-title">RECENT_ACTIVITY</div>
+          <div v-if="selectedInst.recentTrace" class="detail-trace">
+            <span class="trace-indicator"></span>
+            {{ selectedInst.recentTrace }}
+          </div>
+          <div v-else class="detail-empty">IDLE</div>
           <div v-if="relatedEvents.length" class="detail-events">
             <div v-for="ev in relatedEvents" :key="ev.id" class="detail-event-item">
+              <span class="detail-event-dot" :class="ev.stage"></span>
               <span class="detail-event-time">{{ formatTime(ev.at) }}</span>
               <span class="detail-event-text">{{ ev.title }}</span>
             </div>
@@ -56,10 +83,17 @@
         </div>
       </div>
 
-      <!-- 机构列表（未选中时 或 折叠显示） -->
-      <div v-show="!selectedInst">
+      <!-- 机构列表（未选中时） -->
+      <div v-show="!selectedInst" class="inst-list-wrap">
+        <div class="sidebar-title-bar">
+          <span class="sidebar-title">INSTITUTIONS</span>
+          <span class="sidebar-count">{{ adamStore.institutions.length }}</span>
+        </div>
         <div class="sidebar-section" v-for="zone in zoneList" :key="zone.key">
-          <div class="sidebar-section-title">{{ zone.label }}</div>
+          <div class="sidebar-section-title">
+            <span class="zone-indicator" :class="zone.key"></span>
+            {{ zone.label }}
+          </div>
           <div
             v-for="inst in zone.items"
             :key="inst.institutionId"
@@ -81,9 +115,11 @@
     <!-- 右侧像素城市 -->
     <div class="city-main">
       <div class="panel panel-observatory">
-        <div class="panel-header">
-          <span class="panel-title">亚当的世界</span>
-          <span class="panel-badge">Phase 1</span>
+        <div class="panel-head">
+          <span class="panel-icon">◈</span>
+          <span class="panel-title">PHYSICAL_REPRESENTATION</span>
+          <span class="panel-badge">32x32</span>
+          <span class="panel-badge phase">Phase 1</span>
         </div>
         <div
           ref="viewportRef"
@@ -93,6 +129,13 @@
           @contextmenu.prevent
           @touchstart.passive="onTouchStart"
         >
+          <!-- 区域标签 -->
+          <div class="zone-labels">
+            <span class="zone-float-label core">CORE_SURVIVAL</span>
+            <span class="zone-float-label growth">ABILITY_GROWTH</span>
+            <span class="zone-float-label social">SOCIAL_RELATION</span>
+          </div>
+
           <div class="iso-scene" :style="sceneStyle">
             <!-- 地面网格 -->
             <div
@@ -130,9 +173,18 @@
               <span class="bldg-name">{{ b.name }}</span>
             </div>
           </div>
-          <div class="iso-hint">
-            <span>{{ adamStore.core.status === 'dormant' ? '认知：休眠中' : '认知：观测中' }}</span>
-            <span>滚轮缩放 · 左键平移 · 右键旋转</span>
+
+          <!-- 状态 HUD -->
+          <div class="iso-hud">
+            <span class="hud-item">
+              <span class="hud-dot" :class="adamStore.core.status"></span>
+              {{ adamStore.core.status === 'dormant' ? 'COGNITIVE: DORMANT' : 'COGNITIVE: OBSERVING' }}
+            </span>
+          </div>
+          <div class="iso-controls">
+            <span>SCROLL:ZOOM</span>
+            <span>L-DRAG:PAN</span>
+            <span>R-DRAG:ROTATE</span>
           </div>
         </div>
       </div>
@@ -143,12 +195,70 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import { useAdamStore } from '@/stores/adam'
-import type { InvestmentInstitutionId } from '@/types/investment'
+import type { InvestmentInstitutionId, InvestmentToolId } from '@/types/investment'
 
 const adamStore = useAdamStore()
 
 // ── 选中状态 ──
 const selectedId = ref<InvestmentInstitutionId | null>(null)
+
+// ── 工具执行 ──
+const toolRunning = ref<string | null>(null)
+const toolResults = ref<Record<string, string>>({})
+const toolResultDisplay = ref('')
+const toolResultId = ref('')
+
+async function executeTool(tid: string) {
+  if (toolRunning.value) return
+  toolRunning.value = tid
+  toolResultDisplay.value = ''
+  toolResultId.value = tid
+
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    const res = await fetch('/api/adam-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: `请执行工具: ${tid}` }],
+        adamState: { ...adamStore.core },
+      }),
+    })
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const reader = res.body?.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let result = ''
+
+    while (reader) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const payload = line.slice(6).trim()
+        if (payload === '[DONE]') break
+        try {
+          const data = JSON.parse(payload)
+          if (data.type === 'text') result += data.text
+          else if (data.type === 'tool_result') result += data.result || ''
+        } catch { /* ignore */ }
+      }
+    }
+
+    toolResults.value[tid] = result || '执行完成'
+    toolResultDisplay.value = result || '执行完成'
+  } catch (e: any) {
+    toolResults.value[tid] = `错误: ${e.message}`
+    toolResultDisplay.value = `错误: ${e.message}`
+  } finally {
+    toolRunning.value = null
+  }
+}
 
 const selectedInst = computed(() =>
   selectedId.value ? adamStore.institutions.find((i) => i.institutionId === selectedId.value) || null : null,
@@ -174,7 +284,7 @@ const zoneList = computed(() => [
 ])
 
 const emojiMap: Record<string, string> = {
-  bureau: '🏛', finance_gateway: '🏦', vault: '🔐', reactor: '⚡',
+  bureau: '🏛', finance_gateway: '🏦', reactor: '⚡',
   intel_station: '📡', research_institute: '🔬', adam_academy: '🎓',
   data_center: '💾', risk_lab: '⚗️', arbitration_hall: '⚖️',
   ad_company: '📺', archive: '📚', corner: '🏠',
@@ -182,8 +292,8 @@ const emojiMap: Record<string, string> = {
 function getEmoji(id: string) { return emojiMap[id] || '🏗️' }
 
 function statusLabel(status: string) {
-  const map: Record<string, string> = { idle: '待命', active: '运行中', locked: '未解锁', cooldown: '冷却中', disabled: '停用', urgent: '紧急' }
-  return map[status] || status
+  const map: Record<string, string> = { idle: 'IDLE', active: 'ACTIVE', locked: 'LOCKED', cooldown: 'COOLDOWN', disabled: 'DISABLED', urgent: 'URGENT' }
+  return map[status] || status.toUpperCase()
 }
 
 function buildingStatusLabel(status: string) {
@@ -222,6 +332,13 @@ function formatTime(iso: string) {
   } catch { return '--/-- --:--' }
 }
 
+function formatDate(iso: string) {
+  try {
+    const d = new Date(iso)
+    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
+  } catch { return '--' }
+}
+
 // ── 等轴测参数 ──
 const TILE_W = 80
 const TILE_H = 40
@@ -242,7 +359,6 @@ interface BldgDef {
 const bldgDefs: Record<string, BldgDef> = {
   bureau:             { emoji: '🏛', h: 48, top: '#5B8DEF', left: '#3D6BC7', right: '#2C529E' },
   finance_gateway:    { emoji: '🏦', h: 56, top: '#F5A623', left: '#C7851A', right: '#9E6A14' },
-  vault:              { emoji: '🔐', h: 32, top: '#A78BFA', left: '#7C5FC7', right: '#5B4399' },
   reactor:            { emoji: '⚡', h: 60, top: '#FF6B35', left: '#CC5529', right: '#993F1E' },
   intel_station:      { emoji: '📡', h: 64, top: '#00D4FF', left: '#00A3C7', right: '#007A99' },
   research_institute: { emoji: '🔬', h: 52, top: '#4FC3F7', left: '#3A9BC7', right: '#2A7399' },
@@ -452,6 +568,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ═══════════════════════════════════════════════════
+   生态园区 — City.vue
+   Observatory-grade isometric pixel city
+   ═══════════════════════════════════════════════════ */
+
 .city-page {
   height: 100%;
   display: flex;
@@ -460,27 +581,64 @@ onUnmounted(() => {
 
 /* ── 左侧状态栏 ── */
 .city-sidebar {
-  width: 220px;
+  width: 230px;
   flex-shrink: 0;
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   overflow-y: auto;
   margin-right: 16px;
   scrollbar-width: thin;
 }
+
+.sidebar-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-title {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.sidebar-count {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--dim);
+  background: var(--faint);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
 .sidebar-section {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
 }
 .sidebar-section:last-child { border-bottom: none; }
 .sidebar-section-title {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--dim);
-  margin-bottom: 10px;
-  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+.zone-indicator {
+  width: 3px;
+  height: 10px;
+  border-radius: 1px;
+}
+.zone-indicator.core { background: #F5A623; }
+.zone-indicator.growth { background: #00D4FF; }
+.zone-indicator.social { background: #A78BFA; }
+
 .inst-item {
   display: flex;
   align-items: center;
@@ -488,23 +646,42 @@ onUnmounted(() => {
   padding: 7px 8px;
   border-radius: 6px;
   margin-bottom: 2px;
-  transition: background 0.15s;
-  cursor: default;
+  transition: all 0.15s;
+  cursor: pointer;
+  border: 1px solid transparent;
 }
-.inst-item:hover { background: var(--faint); }
-.inst-item.locked { opacity: 0.45; }
-.inst-emoji { font-size: 16px; flex-shrink: 0; }
+.inst-item:hover {
+  background: var(--faint);
+  border-color: var(--border);
+}
+.inst-item.locked { opacity: 0.40; }
+.inst-item.selected {
+  background: rgba(245,166,35,0.06);
+  border-color: rgba(245,166,35,0.20);
+}
+.inst-emoji { font-size: 15px; flex-shrink: 0; }
 .inst-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.inst-name { font-size: 12px; font-weight: 600; color: var(--dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.inst-status-label { font-size: 9px; color: var(--dim); }
-.inst-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.inst-dot.idle { background: var(--dim); }
-.inst-dot.active { background: #00E5A0; }
+.inst-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inst-status-label {
+  font-size: 8px;
+  color: var(--dim);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.05em;
+}
+.inst-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.inst-dot.idle { background: var(--dim); opacity: 0.5; }
+.inst-dot.active { background: #00E5A0; box-shadow: 0 0 4px rgba(0,229,160,0.4); }
 .inst-dot.locked { background: var(--border); }
-.inst-dot.busy { background: #F5A623; animation: instpulse 1.5s ease-in-out infinite; }
+.inst-dot.busy { background: #F5A623; animation: dotPulse 1.5s ease-in-out infinite; }
 .inst-dot.error { background: #FF4D4D; }
-@keyframes instpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-.inst-item.selected { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.2); }
+@keyframes dotPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 /* ── 详情面板 ── */
 .detail-panel {
@@ -518,40 +695,56 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
 }
-.detail-emoji { font-size: 24px; }
-.detail-title-wrap { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.detail-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+.detail-emoji { font-size: 22px; }
+.detail-title-wrap { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.detail-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+}
 .detail-status-tag {
   display: inline-block;
-  font-size: 9px;
-  font-weight: 600;
+  font-size: 8px;
+  font-weight: 700;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 3px;
   width: fit-content;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.06em;
 }
 .detail-status-tag.idle { background: var(--faint); color: var(--dim); }
-.detail-status-tag.active { background: rgba(0,229,160,0.1); color: #00E5A0; }
+.detail-status-tag.active { background: rgba(0,229,160,0.08); color: #00E5A0; }
 .detail-status-tag.locked { background: var(--faint); color: var(--dim); }
-.detail-status-tag.cooldown { background: rgba(0,212,255,0.1); color: #00D4FF; }
-.detail-status-tag.urgent { background: rgba(255,77,77,0.1); color: #FF4D4D; }
+.detail-status-tag.cooldown { background: rgba(0,212,255,0.08); color: #00D4FF; }
+.detail-status-tag.urgent { background: rgba(255,77,77,0.08); color: #FF4D4D; }
 .detail-close {
-  width: 24px; height: 24px; border: none; background: var(--faint);
-  border-radius: 6px; cursor: pointer; font-size: 16px; color: var(--dim);
+  width: 22px; height: 22px; border: 1px solid var(--border); background: transparent;
+  border-radius: 4px; cursor: pointer; color: var(--dim);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   transition: all 0.15s;
 }
-.detail-close:hover { background: var(--border); color: var(--dark); }
+.detail-close:hover { border-color: var(--mid); color: var(--dark); }
 
 .detail-section {
   border-top: 1px solid var(--border);
   padding-top: 10px;
 }
 .detail-section-title {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 700;
   color: var(--dim);
   margin-bottom: 8px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tool-count {
+  background: var(--faint);
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 8px;
 }
 .detail-row {
   display: flex;
@@ -560,18 +753,39 @@ onUnmounted(() => {
   padding: 3px 0;
 }
 .detail-label { font-size: 11px; color: var(--dim); }
-.detail-value { font-size: 11px; font-weight: 600; color: var(--dark); }
-.detail-value.mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+.detail-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dark);
+}
+.detail-value.mono { font-family: 'SF Mono', 'Fira Code', monospace; letter-spacing: 0.03em; }
+.detail-value.active { color: #00E5A0; }
+.detail-value.planned { color: var(--dim); }
 
-.tool-tag {
-  display: inline-block;
+/* 工具网格 */
+.tool-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 10px;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: 3px;
   background: var(--faint);
   color: var(--mid);
-  margin: 0 4px 4px 0;
   border: 1px solid var(--border);
+  font-family: inherit;
+}
+.tool-indicator {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #00D4FF;
+  opacity: 0.5;
 }
 
 .detail-trace {
@@ -580,12 +794,27 @@ onUnmounted(() => {
   line-height: 1.5;
   padding: 6px 8px;
   background: var(--faint);
-  border-radius: 6px;
+  border-radius: 4px;
   margin-bottom: 8px;
+  border-left: 2px solid rgba(245,166,35,0.3);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.trace-indicator {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #F5A623;
+  flex-shrink: 0;
+  margin-top: 5px;
 }
 .detail-empty {
-  font-size: 11px;
+  font-size: 9px;
   color: var(--dim);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.08em;
+  opacity: 0.5;
 }
 .detail-events {
   margin-top: 8px;
@@ -595,18 +824,29 @@ onUnmounted(() => {
 }
 .detail-event-item {
   display: flex;
-  gap: 8px;
-  align-items: baseline;
+  gap: 6px;
+  align-items: center;
 }
+.detail-event-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.detail-event-dot.sense { background: #00D4FF; }
+.detail-event-dot.judge { background: #F5A623; }
+.detail-event-dot.act { background: #00E5A0; }
+.detail-event-dot.settle { background: #A78BFA; }
+.detail-event-dot.archive { background: var(--dim); }
 .detail-event-time {
-  font-size: 9px;
+  font-size: 8px;
   color: var(--dim);
   font-family: 'SF Mono', 'Fira Code', monospace;
-  min-width: 72px;
+  min-width: 68px;
   flex-shrink: 0;
 }
 .detail-event-text {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--mid);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -614,7 +854,9 @@ onUnmounted(() => {
 }
 
 /* ── 建筑选中高亮 ── */
-.iso-bldg.selected { filter: brightness(1.3) drop-shadow(0 0 8px rgba(245,166,35,0.5)); }
+.iso-bldg.selected {
+  filter: brightness(1.3) drop-shadow(0 0 10px rgba(245,166,35,0.6));
+}
 
 /* ── 右侧城市 ── */
 .city-main {
@@ -627,26 +869,45 @@ onUnmounted(() => {
 .panel {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   flex: 1;
   display: flex;
   flex-direction: column;
 }
-.panel-header {
+.panel-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(245,166,35,0.02) 0%, transparent 100%);
 }
-.panel-title { font-size: 12px; font-weight: 700; color: var(--dark); }
+.panel-icon {
+  font-size: 10px;
+  color: #F5A623;
+  opacity: 0.6;
+}
+.panel-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
 .panel-badge {
-  font-size: 9px; font-weight: 600; color: var(--dim);
-  border: 1px solid var(--border); padding: 2px 6px;
-  border-radius: 4px; font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--dim);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.05em;
+  margin-left: auto;
 }
+.panel-badge.phase { margin-left: 4px; }
 
 /* ═══════════════════════════════════════════
    像素风等轴测城市
@@ -659,9 +920,29 @@ onUnmounted(() => {
   cursor: grab;
   user-select: none;
   background:
-    radial-gradient(ellipse at center, var(--faint) 0%, transparent 70%);
+    radial-gradient(ellipse at center, rgba(245,166,35,0.02) 0%, transparent 60%),
+    radial-gradient(ellipse at 30% 40%, rgba(0,212,255,0.015) 0%, transparent 50%);
 }
 .iso-viewport:active { cursor: grabbing; }
+
+/* 区域浮动标签 */
+.zone-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+.zone-float-label {
+  position: absolute;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  opacity: 0.15;
+}
+.zone-float-label.core { top: 12px; left: 16px; color: #F5A623; }
+.zone-float-label.growth { top: 12px; right: 16px; color: #00D4FF; }
+.zone-float-label.social { bottom: 40px; left: 50%; transform: translateX(-50%); color: #A78BFA; }
 
 .iso-scene {
   position: relative;
@@ -690,8 +971,8 @@ onUnmounted(() => {
   cursor: pointer;
   transition: filter 0.2s;
 }
-.iso-bldg:hover { filter: brightness(1.2); }
-.iso-bldg.locked { opacity: 0.4; filter: saturate(0.3); }
+.iso-bldg:hover { filter: brightness(1.2) drop-shadow(0 0 6px rgba(255,255,255,0.1)); }
+.iso-bldg.locked { opacity: 0.35; filter: saturate(0.2) brightness(0.8); }
 
 /* 墙体公共 */
 .wall {
@@ -756,7 +1037,7 @@ onUnmounted(() => {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
   z-index: 10;
@@ -769,38 +1050,74 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   margin-top: 2px;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   color: var(--dark);
   white-space: nowrap;
   text-shadow: 0 1px 2px var(--card-bg), 0 0 4px var(--card-bg);
-  opacity: 0.75;
+  opacity: 0.6;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.03em;
   transition: opacity 0.2s;
 }
 .iso-bldg:hover .bldg-name { opacity: 1; }
+.iso-bldg.selected .bldg-name { opacity: 1; color: #F5A623; }
 
-/* 提示文字 */
-.iso-hint {
+/* HUD 叠加 */
+.iso-hud {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+.hud-item {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--dim);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.5;
+}
+.hud-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.hud-dot.alive { background: #00E5A0; box-shadow: 0 0 4px rgba(0,229,160,0.4); }
+.hud-dot.dormant { background: var(--dim); }
+.hud-dot.survival { background: #FF4D4D; animation: dotPulse 1s infinite; }
+.hud-dot.shutdown { background: var(--dim); opacity: 0.3; }
+
+.iso-controls {
   position: absolute;
   bottom: 10px;
   right: 14px;
-  text-align: right;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 10px;
+  z-index: 10;
 }
-.iso-hint span {
-  font-size: 9px;
+.iso-controls span {
+  font-size: 8px;
   color: var(--dim);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.06em;
+  opacity: 0.35;
 }
 
 @media (max-width: 767px) {
   .city-page { flex-direction: column; }
-  .city-sidebar { width: 100%; margin-right: 0; margin-bottom: 12px; border-radius: 10px; max-height: 200px; }
+  .city-sidebar { width: 100%; margin-right: 0; margin-bottom: 12px; border-radius: 8px; max-height: 200px; }
   .sidebar-section { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px; }
   .sidebar-section-title { width: 100%; margin-bottom: 4px; }
   .inst-item { padding: 4px 6px; }
   .iso-viewport { min-height: 300px; }
   .bldg-icon { font-size: 16px; }
+  .zone-labels { display: none; }
 }
 </style>

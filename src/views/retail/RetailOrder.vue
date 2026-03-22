@@ -18,7 +18,9 @@
           <el-button type="primary" :icon="Plus" @click="openForm()">新增订单</el-button>
         </template>
         <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="order_no" label="订单编号" min-width="160" />
+        <el-table-column label="订单编号" min-width="160">
+          <template #default="{ row }">{{ row.order_no || `LS${(row.order_date || row.create_time || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
+        </el-table-column>
         <el-table-column prop="member_name" label="会员名称" min-width="100" />
         <el-table-column prop="store_name" label="门店" min-width="100" />
         <el-table-column prop="total_amount" label="商品合计" width="110" align="right">
@@ -204,11 +206,33 @@ function calcFormTotal() {
   form.pay_amount = Math.max(0, form.total_amount - (form.discount_amount || 0))
 }
 
+async function generateRetailNo(): Promise<string> {
+  const ymd = (form.order_date || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)).replace(/-/g, '')
+  try {
+    const res = await getRetailOrderList({ list_rows: 500, order_date: form.order_date })
+    const rows: any[] = res.data?.rows ?? []
+    // 找当天已有的 LS 编号，取最大序号
+    let maxSeq = 0
+    const prefix = `LS${ymd}`
+    for (const r of rows) {
+      const no = r.order_no || ''
+      if (no.startsWith(prefix)) {
+        const seq = parseInt(no.slice(prefix.length), 10)
+        if (seq > maxSeq) maxSeq = seq
+      }
+    }
+    return `${prefix}${String(maxSeq + 1).padStart(3, '0')}`
+  } catch {
+    return `LS${ymd}001`
+  }
+}
+
 async function handleSave() {
   if (!form.items.length) { ElMessage.warning('请添加商品'); return }
   saving.value = true
   try {
-    await createRetailOrder({ ...form, goods_info: JSON.stringify(form.items), items: undefined })
+    const order_no = await generateRetailNo()
+    await createRetailOrder({ ...form, order_no, goods_info: JSON.stringify(form.items), items: undefined })
     try {
       const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
       const funds: any[] = fundRes.data?.rows ?? []

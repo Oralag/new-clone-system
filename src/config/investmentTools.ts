@@ -109,7 +109,7 @@ export const investmentToolDefinitions: InvestmentToolDefinition[] = [
   {
     id: 'manage_vault',
     label: '管理保险箱',
-    institutionId: 'vault',
+    institutionId: 'finance_gateway',
     stage: 'act',
     description: '存入或释放保险箱资金',
     traceTemplate: '保险箱状态刚刚发生变化',

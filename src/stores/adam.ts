@@ -50,18 +50,17 @@ function defaultCore(): AdamCore {
 function defaultInstitutions(): InstitutionStateRecord[] {
   const defs: Array<{ id: InvestmentInstitutionId; name: string; zone: InstitutionStateRecord['zone']; status: InstitutionStateRecord['status']; toolIds: InstitutionStateRecord['toolIds'] }> = [
     { id: 'bureau', name: '投资局', zone: 'core_survival', status: 'idle', toolIds: ['record_investment', 'settle_dividend', 'apply_penalty'] },
-    { id: 'finance_gateway', name: '金融机构', zone: 'core_survival', status: 'idle', toolIds: ['request_loan', 'request_erp_access'] },
-    { id: 'vault', name: '保险箱', zone: 'core_survival', status: 'locked', toolIds: ['manage_vault'] },
+    { id: 'finance_gateway', name: '金融机构', zone: 'core_survival', status: 'idle', toolIds: ['request_loan', 'request_erp_access', 'manage_vault'] },
     { id: 'reactor', name: '反应堆', zone: 'core_survival', status: 'idle', toolIds: [] },
     { id: 'intel_station', name: '情报站', zone: 'ability_growth', status: 'idle', toolIds: ['scan_market_news', 'get_sector_heat', 'get_northbound_flow'] },
     { id: 'research_institute', name: '研究院', zone: 'ability_growth', status: 'idle', toolIds: ['get_stock_realtime', 'get_stock_history', 'analyze_fundamentals', 'screen_stocks', 'generate_research_report'] },
     { id: 'adam_academy', name: '亚当学院', zone: 'ability_growth', status: 'locked', toolIds: [] },
-    { id: 'data_center', name: '数据仓库', zone: 'ability_growth', status: 'locked', toolIds: [] },
-    { id: 'risk_lab', name: '风险实验室', zone: 'ability_growth', status: 'locked', toolIds: [] },
+    { id: 'data_center', name: '数据仓库', zone: 'ability_growth', status: 'idle', toolIds: [] },
+    { id: 'risk_lab', name: '风险实验室', zone: 'ability_growth', status: 'idle', toolIds: [] },
     { id: 'arbitration_hall', name: '仲裁所', zone: 'social_relation', status: 'idle', toolIds: [] },
     { id: 'ad_company', name: '广告公司', zone: 'social_relation', status: 'locked', toolIds: [] },
     { id: 'archive', name: '档案馆', zone: 'social_relation', status: 'idle', toolIds: [] },
-    { id: 'corner', name: '亚当的角落', zone: 'social_relation', status: 'locked', toolIds: ['build_structure', 'relocate_structure', 'upgrade_structure'] },
+    { id: 'corner', name: '亚当的角落', zone: 'social_relation', status: 'idle', toolIds: ['build_structure', 'relocate_structure', 'upgrade_structure'] },
   ]
   return defs.map((d) => ({
     institutionId: d.id,
@@ -83,19 +82,18 @@ function defaultBuildings(): BuildingRecord[] {
     // 核心生存区 — 左上
     { id: 'bureau', name: '投资局', category: 'institutional', gx: 4, gy: 4, status: 'active' },
     { id: 'finance_gateway', name: '金融机构', category: 'institutional', gx: 8, gy: 2, status: 'active' },
-    { id: 'vault', name: '保险箱', category: 'institutional', gx: 2, gy: 8, status: 'planned' },
     { id: 'reactor', name: '反应堆', category: 'functional', gx: 6, gy: 10, status: 'active' },
     // 能力成长区 — 右上
     { id: 'intel_station', name: '情报站', category: 'institutional', gx: 18, gy: 2, status: 'active' },
     { id: 'research_institute', name: '研究院', category: 'institutional', gx: 22, gy: 5, status: 'active' },
     { id: 'adam_academy', name: '学院', category: 'institutional', gx: 26, gy: 2, status: 'planned' },
-    { id: 'data_center', name: '数据仓库', category: 'functional', gx: 19, gy: 8, status: 'planned' },
-    { id: 'risk_lab', name: '风险实验室', category: 'functional', gx: 25, gy: 8, status: 'planned' },
+    { id: 'data_center', name: '数据仓库', category: 'functional', gx: 19, gy: 8, status: 'active' },
+    { id: 'risk_lab', name: '风险实验室', category: 'functional', gx: 25, gy: 8, status: 'active' },
     // 社会关系区 — 下方中央
     { id: 'arbitration_hall', name: '仲裁所', category: 'institutional', gx: 8, gy: 20, status: 'active' },
     { id: 'ad_company', name: '广告公司', category: 'functional', gx: 14, gy: 24, status: 'planned' },
     { id: 'archive', name: '档案馆', category: 'institutional', gx: 6, gy: 24, status: 'active' },
-    { id: 'corner', name: '亚当的角落', category: 'trace', gx: 20, gy: 20, status: 'planned' },
+    { id: 'corner', name: '亚当的角落', category: 'trace', gx: 20, gy: 20, status: 'active' },
   ]
   const now = new Date().toISOString()
   return placements.map((p) => ({

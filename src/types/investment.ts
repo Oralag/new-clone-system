@@ -22,7 +22,6 @@ export type InvestmentEventType =
 export type InvestmentInstitutionId =
   | 'bureau'
   | 'finance_gateway'
-  | 'vault'
   | 'reactor'
   | 'intel_station'
   | 'research_institute'
@@ -79,6 +78,7 @@ export interface RecommendationRecord {
   title: string
   symbol?: string
   issuedAt: string
+  confidence?: number
   status:
     | 'drafted'
     | 'issued'

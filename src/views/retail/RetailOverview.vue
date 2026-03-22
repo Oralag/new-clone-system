@@ -61,12 +61,23 @@
         <div class="kpi-label">{{ periodLabel }}退货</div>
         <div class="kpi-val orange">{{ kpi.returnCount }}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">收款方式占比</div>
-        <div class="kpi-pay-methods">
-          <span v-for="m in kpi.payBreakdown" :key="m.method" class="kpi-pay-tag">
-            {{ m.label }} {{ m.pct }}%
-          </span>
+    </div>
+
+    <!-- 收款方式明细 -->
+    <div class="pay-breakdown-row" v-if="kpi.payBreakdown.length">
+      <div class="pay-breakdown-title">收款方式汇总</div>
+      <div class="pay-breakdown-cards">
+        <div v-for="m in kpi.payBreakdown" :key="m.method" class="pay-breakdown-card">
+          <div class="pay-bd-icon" :style="{ background: m.color }">{{ m.icon }}</div>
+          <div class="pay-bd-info">
+            <div class="pay-bd-label">{{ m.label }}</div>
+            <div class="pay-bd-amount">¥{{ fmt(m.amount) }}</div>
+          </div>
+          <div class="pay-bd-meta">
+            <span class="pay-bd-count">{{ m.count }}笔</span>
+            <span class="pay-bd-pct">{{ m.pct }}%</span>
+          </div>
+          <div class="pay-bd-bar"><div class="pay-bd-bar-fill" :style="{ width: m.pct + '%', background: m.color }"></div></div>
         </div>
       </div>
     </div>
@@ -77,7 +88,7 @@
         <el-tab-pane label="最近订单" name="order">
           <el-table :data="orderRows" style="width:100%" size="small" max-height="400">
             <el-table-column label="单号" min-width="160" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.order_no || `LS${String(row.id).padStart(4,'0')}` }}</template>
+              <template #default="{ row }">{{ row.order_no || `LS${(row.order_date || row.create_time || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
             </el-table-column>
             <el-table-column prop="member_name" label="会员" min-width="120" show-overflow-tooltip>
               <template #default="{ row }">{{ row.member_name || '散客' }}</template>
@@ -162,7 +173,7 @@
     <el-dialog v-model="detailVisible" title="订单详情" width="560px" destroy-on-close>
       <div v-if="detailRow" class="order-detail">
         <div class="detail-header">
-          <div class="detail-kv"><span class="detail-k">单号</span><span class="detail-v">{{ detailRow.order_no || `LS${String(detailRow.id).padStart(4,'0')}` }}</span></div>
+          <div class="detail-kv"><span class="detail-k">单号</span><span class="detail-v">{{ detailRow.order_no || `LS${(detailRow.order_date || detailRow.create_time || '').slice(0, 10).replace(/-/g, '')}${String(detailRow.id).padStart(3,'0')}` }}</span></div>
           <div class="detail-kv"><span class="detail-k">日期</span><span class="detail-v">{{ (detailRow.order_date || detailRow.create_time || '').slice(0, 10) }}</span></div>
           <div class="detail-kv"><span class="detail-k">会员</span><span class="detail-v">{{ detailRow.member_name || '散客' }}</span></div>
           <div class="detail-kv"><span class="detail-k">支付方式</span><span class="detail-v">{{ payLabel(detailRow.pay_method) }}</span></div>
@@ -260,7 +271,8 @@ function parseGoodsInfo(info: string): string {
 // ── KPI ───────────────────────────────────────────────────────────────────────
 const kpi = computed(() => {
   let revenue = 0, orderCount = 0, memberRevenue = 0
-  const payCount: Record<string, number> = {}
+  const payAmountMap: Record<string, number> = {}
+  const payCountMap: Record<string, number> = {}
 
   for (const o of orderRows.value) {
     const d = o.order_date || o.create_time || ''
@@ -269,7 +281,8 @@ const kpi = computed(() => {
       revenue += pay
       orderCount++
       const pm = o.pay_method || 'cash'
-      payCount[pm] = (payCount[pm] || 0) + pay
+      payAmountMap[pm] = (payAmountMap[pm] || 0) + pay
+      payCountMap[pm] = (payCountMap[pm] || 0) + 1
       if (o.member_id && o.member_id !== 0) memberRevenue += pay
     }
   }
@@ -277,12 +290,25 @@ const kpi = computed(() => {
   const returnCount = returnRows.value.filter(r => inPeriod(r.create_time || '')).length
   const avgOrder = orderCount > 0 ? revenue / orderCount : 0
 
-  // 收款方式占比
-  const payBreakdown = Object.entries(payCount)
+  const payStyleMap: Record<string, { icon: string; color: string }> = {
+    cash: { icon: '💵', color: '#16a34a' },
+    wechat: { icon: '💬', color: '#07c160' },
+    alipay: { icon: '🔵', color: '#1677ff' },
+    balance: { icon: '👤', color: '#f59e0b' },
+    card: { icon: '💳', color: '#6366f1' },
+  }
+
+  // 收款方式明细
+  const payBreakdown = Object.entries(payAmountMap)
     .sort((a, b) => b[1] - a[1])
     .map(([method, amount]) => ({
-      method, label: payMethodMap[method] || method,
+      method,
+      label: payMethodMap[method] || method,
+      amount,
+      count: payCountMap[method] || 0,
       pct: revenue > 0 ? Math.round(amount / revenue * 100) : 0,
+      icon: payStyleMap[method]?.icon || '💰',
+      color: payStyleMap[method]?.color || '#999',
     }))
 
   return { revenue, orderCount, avgOrder, memberRevenue, returnCount, payBreakdown }
@@ -389,6 +415,43 @@ onMounted(loadData)
   font-size: 11px; padding: 1px 6px; border-radius: 3px;
   background: #e8eaf0; color: #555; font-weight: 500;
 }
+
+/* 收款方式汇总 */
+.pay-breakdown-row {
+  margin-top: 14px; padding: 16px 20px; background: #f8fafc; border-radius: 12px;
+}
+.pay-breakdown-title {
+  font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;
+}
+.pay-breakdown-cards {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.pay-breakdown-card {
+  flex: 1; min-width: 160px; max-width: 240px;
+  background: #fff; border-radius: 10px; padding: 14px 16px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04); border: 1px solid #f0f2f7;
+  position: relative; overflow: hidden;
+}
+.pay-bd-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+  opacity: 0.15;
+}
+.pay-bd-info { flex: 1; min-width: 0; }
+.pay-bd-label { font-size: 12px; color: #999; margin-bottom: 2px; }
+.pay-bd-amount { font-size: 17px; font-weight: 700; color: #1d1d1f; }
+.pay-bd-meta {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+.pay-bd-count { font-size: 12px; color: #999; }
+.pay-bd-pct { font-size: 13px; font-weight: 600; color: #555; }
+.pay-bd-bar {
+  width: 100%; height: 3px; background: #f0f2f7; border-radius: 2px;
+  flex-basis: 100%;
+}
+.pay-bd-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
 
 .goods-detail { font-size: 12px; color: #888; }
 

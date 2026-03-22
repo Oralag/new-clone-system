@@ -153,6 +153,11 @@ const statusLabel = computed(() => {
 </script>
 
 <style scoped>
+/* ═══════════════════════════════════════════════════
+   黑曜石观测舱 — Layout
+   Observatory-grade navigation shell
+   ═══════════════════════════════════════════════════ */
+
 .inv-layout {
   display: flex;
   height: 100vh;
@@ -171,6 +176,7 @@ const statusLabel = computed(() => {
   flex-shrink: 0;
   overflow-y: auto;
   scrollbar-width: none;
+  position: relative;
 }
 .inv-sidebar::-webkit-scrollbar { display: none; }
 
@@ -181,6 +187,7 @@ const statusLabel = computed(() => {
   gap: 10px;
   padding: 18px 16px 16px;
   border-bottom: 1px solid var(--border);
+  position: relative;
 }
 .logo-icon { flex-shrink: 0; }
 .logo-text-wrap { flex: 1; min-width: 0; }
@@ -194,12 +201,13 @@ const statusLabel = computed(() => {
 }
 .logo-sub {
   display: block;
-  font-size: 9px;
+  font-size: 8px;
   color: var(--dim);
   margin-top: 2px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  opacity: 0.6;
 }
 
 /* 生命指示灯 */
@@ -211,15 +219,16 @@ const statusLabel = computed(() => {
 }
 .life-dot.alive {
   background: #00E5A0;
-  box-shadow: 0 0 0 2px rgba(0,229,160,0.2);
+  box-shadow: 0 0 6px rgba(0,229,160,0.4), 0 0 0 2px rgba(0,229,160,0.15);
   animation: lifepulse 2.5s ease-in-out infinite;
 }
 .life-dot.dormant {
   background: var(--dim);
+  opacity: 0.5;
 }
 @keyframes lifepulse {
-  0%,100% { box-shadow: 0 0 0 2px rgba(0,229,160,0.2); }
-  50% { box-shadow: 0 0 0 5px rgba(0,229,160,0.06); }
+  0%,100% { box-shadow: 0 0 6px rgba(0,229,160,0.4), 0 0 0 2px rgba(0,229,160,0.15); }
+  50% { box-shadow: 0 0 10px rgba(0,229,160,0.2), 0 0 0 5px rgba(0,229,160,0.05); }
 }
 
 /* 导航 */
@@ -228,8 +237,8 @@ const statusLabel = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px;
-  border-radius: 8px;
+  padding: 9px 12px;
+  border-radius: 6px;
   text-decoration: none;
   color: var(--mid);
   font-size: 12px;
@@ -237,15 +246,30 @@ const statusLabel = computed(() => {
   cursor: pointer;
   transition: all 0.15s;
   margin-bottom: 2px;
+  border: 1px solid transparent;
+  position: relative;
 }
 .nav-item:hover {
   background: var(--faint);
   color: var(--dark);
+  border-color: var(--border);
 }
 .nav-item--active {
-  background: rgba(245,166,35,0.08) !important;
+  background: rgba(245,166,35,0.06) !important;
   color: #F5A623 !important;
   font-weight: 600;
+  border-color: rgba(245,166,35,0.15) !important;
+}
+.nav-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: #F5A623;
+  border-radius: 1px;
+  box-shadow: 0 0 4px rgba(245,166,35,0.3);
 }
 
 /* 底部 */
@@ -253,7 +277,7 @@ const statusLabel = computed(() => {
   padding: 10px 10px 16px;
   border-top: 1px solid var(--border);
 }
-.nav-item--back { color: var(--dim); }
+.nav-item--back { color: var(--dim); font-size: 11px; }
 .nav-item--back:hover { color: var(--mid); }
 
 /* ── 主内容 ── */
@@ -267,7 +291,7 @@ const statusLabel = computed(() => {
 
 /* 顶栏 */
 .inv-topbar {
-  height: 52px;
+  height: 48px;
   background: var(--card-bg);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -278,13 +302,13 @@ const statusLabel = computed(() => {
 }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
 .topbar-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--dark);
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
-.topbar-right { display: flex; align-items: center; gap: 14px; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
 
 /* 主题切换按钮 */
 .topbar-theme-btns {
@@ -293,12 +317,12 @@ const statusLabel = computed(() => {
   gap: 2px;
   background: var(--gray);
   border-radius: 999px;
-  padding: 3px 5px;
+  padding: 2px 4px;
   border: 1px solid var(--border);
 }
 .topbar-theme-btn {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -310,7 +334,7 @@ const statusLabel = computed(() => {
   transition: background 0.15s, color 0.15s;
 }
 .topbar-theme-btn:hover { background: var(--faint); color: var(--dark); }
-.topbar-theme-btn.active { background: var(--card-bg); color: #F5A623; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.topbar-theme-btn.active { background: var(--card-bg); color: #F5A623; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
 
 /* 预算标签 */
 .budget-tag {
@@ -318,22 +342,23 @@ const statusLabel = computed(() => {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 6px;
-  background: rgba(245,166,35,0.06);
-  border: 1px solid rgba(245,166,35,0.15);
+  border-radius: 4px;
+  background: rgba(245,166,35,0.04);
+  border: 1px solid rgba(245,166,35,0.12);
 }
 .budget-label {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
-  color: rgba(245,166,35,0.60);
+  color: rgba(245,166,35,0.50);
   font-family: 'SF Mono', 'Fira Code', monospace;
   letter-spacing: 0.1em;
 }
 .budget-val {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: #F5A623;
   font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: -0.01em;
 }
 
 /* 状态标签 */
@@ -342,19 +367,19 @@ const statusLabel = computed(() => {
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 .status-tag.alive {
-  background: rgba(0,229,160,0.06);
-  border: 1px solid rgba(0,229,160,0.15);
+  background: rgba(0,229,160,0.04);
+  border: 1px solid rgba(0,229,160,0.12);
 }
 .status-tag.dormant {
   background: var(--faint);
   border: 1px solid var(--border);
 }
 .status-tag.survival {
-  background: rgba(255,77,77,0.06);
-  border: 1px solid rgba(255,77,77,0.15);
+  background: rgba(255,77,77,0.04);
+  border: 1px solid rgba(255,77,77,0.12);
 }
 .status-tag.shutdown {
   background: var(--faint);
@@ -365,32 +390,34 @@ const statusLabel = computed(() => {
   height: 5px;
   border-radius: 50%;
 }
-.alive .status-dot { background: #00E5A0; }
-.dormant .status-dot { background: var(--dim); }
-.survival .status-dot { background: #FF4D4D; animation: lifepulse 1.5s ease-in-out infinite; }
-.shutdown .status-dot { background: var(--dim); }
+.alive .status-dot { background: #00E5A0; box-shadow: 0 0 4px rgba(0,229,160,0.4); }
+.dormant .status-dot { background: var(--dim); opacity: 0.5; }
+.survival .status-dot { background: #FF4D4D; animation: survPulse 1.2s ease-in-out infinite; }
+.shutdown .status-dot { background: var(--dim); opacity: 0.3; }
+@keyframes survPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 .status-text {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   font-family: 'SF Mono', 'Fira Code', monospace;
   letter-spacing: 0.08em;
 }
 .alive .status-text { color: #00E5A0; }
-.dormant .status-text { color: var(--dim); }
+.dormant .status-text { color: var(--dim); opacity: 0.6; }
 .survival .status-text { color: #FF4D4D; }
-.shutdown .status-text { color: var(--dim); }
+.shutdown .status-text { color: var(--dim); opacity: 0.4; }
 
 /* 内容区 */
 .inv-content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 28px;
+  padding: 20px 24px;
   background: var(--gray);
+  scrollbar-width: thin;
 }
 
 /* ── 移动端 ── */
 .mobile-topbar {
-  height: 50px;
+  height: 48px;
   background: var(--card-bg);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -413,7 +440,7 @@ const statusLabel = computed(() => {
 }
 .mobile-title {
   flex: 1;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--dark);
 }
@@ -442,7 +469,7 @@ const statusLabel = computed(() => {
 
 @media (max-width: 767px) {
   .inv-layout { display: block; height: auto; min-height: 100vh; }
-  .inv-main { min-height: calc(100vh - 50px); }
+  .inv-main { min-height: calc(100vh - 48px); }
   .inv-content { padding: 14px 12px 24px; }
 }
 </style>

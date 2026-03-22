@@ -375,7 +375,7 @@ const orderRows = computed(() => {
     const profit = sale_amount - cost_amount
     result.push({
       source: '零售',
-      order_no: r.order_sn || r.order_no || r.id,
+      order_no: r.order_sn || r.order_no || `LS${(r.order_date || r.create_time || '').slice(0, 10).replace(/-/g, '')}${String(r.id).padStart(3, '0')}`,
       customer_name: r.customer_name || r.member_name || '散客',
       order_date: (r.order_date || r.create_time || '').slice(0, 10),
       sale_amount, cost_amount, profit, freight: 0, net_profit: profit,

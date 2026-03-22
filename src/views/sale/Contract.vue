@@ -6,7 +6,8 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getContractList"
           del-path="/shop/ContractOrder/batchDel"
-          export-file-name="销售合同" :params="searchForm">
+          export-file-name="销售合同" :params="searchForm"
+          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''">
           <template #search>
             <el-input v-model="searchForm.contract_no" placeholder="合同编号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -68,8 +69,8 @@
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : '待审核' }}
+              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 4 ? 'warning' : 'info'" size="small">
+                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : row.status === 4 ? '已转单' : '待审核' }}
               </el-tag>
             </template>
           </el-table-column>
@@ -93,15 +94,16 @@
               <span v-else style="color:#c0c4cc;font-size:12px">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="260" fixed="right">
+          <el-table-column label="操作" width="300" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+              <el-tag v-if="row.status === 4" type="warning" size="small" style="margin-right:8px">已转单</el-tag>
+              <el-button v-if="row.status === 1 || row.status === 4" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1 && getPendingAmount(row) > 0.01" type="success" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="handleConvertToSaleOut(row)">转出库单</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1 || row.status === 4" :title="row.status === 1 || row.status === 4 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -1459,6 +1461,10 @@ async function handleConvertToSaleOut(row: any) {
     discount_value: row.discount_value || 0,
     total_amount: row.total_amount || 0,
   }))
+  // 标记合同为已转单
+  try {
+    await http.post('/shop/ContractOrder/edit', { id: row.id, status: 4 })
+  } catch { /* ignore */ }
   router.push('/sale/out')
 }
 
@@ -1687,6 +1693,14 @@ function applyOfferToForm(offer: any) {
 
 <style scoped>
 .contract-page { height: 100%; }
+
+:deep(.row-converted) {
+  background-color: #f5f5f5 !important;
+  color: #aaa;
+}
+:deep(.row-converted) td { color: #aaa !important; }
+:deep(.row-converted) .el-tag { opacity: 0.7; }
+:deep(.row-converted) .el-button { opacity: 0.7; }
 
 .expand-detail {
   padding: 12px 20px 12px 48px;

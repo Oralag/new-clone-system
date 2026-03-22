@@ -6,7 +6,8 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getOfferList"
           del-path="/shop/offerOrder/batchDel"
-          export-file-name="报价单" :params="searchForm">
+          export-file-name="报价单" :params="searchForm"
+          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''">
           <template #search>
             <el-input v-model="searchForm.offer_no" placeholder="报价单号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -74,15 +75,11 @@
               <span v-else style="color:#94a3b8;font-size:12px">无优惠</span>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 4 ? 'warning' : 'info'" size="small">
+              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 4 ? 'warning' : 'info'" size="small" style="margin-right:8px">
                 {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : row.status === 4 ? '已转单' : '待审核' }}
               </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
-            <template #default="{ row }">
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <template v-if="row.status === 0">
@@ -707,6 +704,14 @@ async function submitAddCustomer() {
 
 <style scoped>
 .offer-page { height: 100%; }
+
+:deep(.row-converted) {
+  background-color: #f5f5f5 !important;
+  color: #aaa;
+}
+:deep(.row-converted) td { color: #aaa !important; }
+:deep(.row-converted) .el-tag { opacity: 0.7; }
+:deep(.row-converted) .el-button { opacity: 0.7; }
 
 .expand-detail {
   padding: 12px 20px 12px 48px;

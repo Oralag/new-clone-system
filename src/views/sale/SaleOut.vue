@@ -1019,16 +1019,13 @@ async function handleAudit(row: any, status: number) {
     // 审核通过后自动创建收款单 + 扣减客户余额
     if (status === 1 && row.customer_id) {
       try {
+        const sn = (() => { const m = (row.remark||'').match(/^\[NO:([^\]]+)\]/); return m ? m[1] : (row.order_sn || row.order_no || '') })()
         await http.post('/finance/CollectReceipt/add', {
-          contact_type: 'customer',
-          saleout_id: row.id,
-          order_sn: row.order_no,
-          order_no: row.order_no,
           customer_id: row.customer_id,
           customer_name: row.customer_name,
-          amount: Number(row.total_amount || 0),
+          amount: Number(row.after_discount || row.total_amount || 0),
           receipt_date: new Date().toISOString().slice(0, 10),
-          remark: `出库单 ${row.order_no} 审核自动生成`,
+          remark: `出库单 ${sn} 审核自动生成`,
         })
       } catch {
         financeWarning = financeWarning ? `${financeWarning}；自动生成收款单失败` : '自动生成收款单失败，请手动补录'
