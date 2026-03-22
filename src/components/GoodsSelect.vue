@@ -70,6 +70,7 @@
 import http from '@/api/http'
 import { getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
+import { calcStockByFlow } from '@/utils/stockFlowCalc'
 
 const emit = defineEmits<{
   (e: 'confirm', val: any[]): void
@@ -85,6 +86,8 @@ const selected = ref<any[]>([])
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+// 流水汇总库存 map: goods_id -> qty，打开弹窗时加载一次
+const flowQtyMap = ref<Record<number, number>>({})
 
 interface CateNode { id: number; name: string; parent_id: any; children: CateNode[] }
 function buildCateTree(source: any[]): CateNode[] {
@@ -130,18 +133,11 @@ async function loadData() {
       rows = rows.filter((g: any) => ids.includes(Number(g.cate_id)))
     }
     rows = fuzzyFilterGoods(rows, keyword.value)
-    // 查实时库存，用 goods_sn 做桥梁汇总
-    try {
-      const stockRes: any = await http.get('/stock/StockAll/index', { params: { list_rows: 2000 } })
-      const stockRows: any[] = stockRes?.data?.rows || stockRes?.data?.list || []
-      const snQtyMap: Record<string, number> = {}
-      for (const s of stockRows) {
-        const sn = s.goods_sn
-        if (!sn) continue
-        snQtyMap[sn] = (snQtyMap[sn] || 0) + Number(s.qty ?? s.stock_num ?? 0)
-      }
-      rows = rows.map((g: any) => ({ ...g, stock_num: snQtyMap[g.goods_sn] ?? g.stock_num ?? 0 }))
-    } catch {}
+    // 用流水汇总的库存覆盖商品表的 stock_num
+    rows = rows.map((g: any) => ({
+      ...g,
+      stock_num: flowQtyMap.value[Number(g.id)] ?? 0
+    }))
     list.value = rows
     total.value = data.total || 0
   } finally {
@@ -169,12 +165,19 @@ function confirm() {
   visible.value = false
 }
 
-function open() {
+async function open() {
   visible.value = true
   keyword.value = ''
   selectedCateId.value = null
   page.value = 1
   loadCates()
+  // 先加载流水汇总库存，再加载商品列表
+  loading.value = true
+  try {
+    flowQtyMap.value = await calcStockByFlow()
+  } catch {
+    flowQtyMap.value = {}
+  }
   loadData()
 }
 

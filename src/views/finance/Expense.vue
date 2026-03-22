@@ -2,7 +2,7 @@
   <div class="page-container">
     <el-card>
       <ScTable ref="tableRef" :api-obj="getExpenseListForTable"
-          del-path="/finance/Expense/batchDel"
+          :batch-del-api="handleBatchDel"
           export-file-name="费用记录" :params="searchForm">
         <template #search>
           <el-form inline>
@@ -256,6 +256,10 @@ async function handleDelete(id: number) {
   await deleteExpense(id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
+}
+
+async function handleBatchDel({ ids }: { ids: number[] }) {
+  await Promise.all(ids.map(id => deleteExpense(id)))
 }
 
 onMounted(() => {

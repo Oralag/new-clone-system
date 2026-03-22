@@ -49,11 +49,18 @@
         <div class="kpi-val purple">¥{{ fmt(kpi.cost) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}利润</div>
+        <div class="kpi-label">{{ periodLabel }}毛利润</div>
         <div class="kpi-val" :style="{ color: kpi.profit >= 0 ? '#16a34a' : '#dc2626' }">
           {{ kpi.profit >= 0 ? '+' : '' }}¥{{ fmt(kpi.profit) }}
         </div>
-        <div class="kpi-sub">利润率 {{ kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }}%</div>
+        <div class="kpi-sub">毛利率 {{ kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }}%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">{{ periodLabel }}净利润</div>
+        <div class="kpi-val" :style="{ color: kpi.netProfit >= 0 ? '#0071e3' : '#dc2626' }">
+          {{ kpi.netProfit >= 0 ? '+' : '' }}¥{{ fmt(kpi.netProfit) }}
+        </div>
+        <div class="kpi-sub">扣运费 ¥{{ fmt(kpi.sellerFreight) }}</div>
       </div>
       <div class="kpi-divider"></div>
       <div class="kpi-card">
@@ -267,6 +274,7 @@ import {
   createContract, auditContract, auditContractSilent, createSaleOut, auditSaleOutSilent,
 } from '@/api/sale'
 import { getGoodsList, getBomList } from '@/api/goods'
+import { createCollectReceipt } from '@/api/finance'
 import http from '@/api/http'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 
@@ -362,7 +370,7 @@ function inPeriod(dateStr: string): boolean {
 
 // ── KPI ───────────────────────────────────────────────────────────────────────
 const kpi = computed(() => {
-  let sale = 0, cost = 0
+  let sale = 0, cost = 0, sellerFreight = 0
   const customerSet = new Set<number>()
   let orders = 0
 
@@ -371,6 +379,7 @@ const kpi = computed(() => {
     if (inPeriod(d)) {
       sale += Number(c.after_discount || c.total_amount || 0)
       try { for (const g of JSON.parse(c.goods_info || '[]')) cost += Number(g.num || 0) * (goodsCostMap.value[g.goods_id] || 0) } catch {}
+      if (c.freight_bearer === 'seller') sellerFreight += Number(c.freight_amount || 0)
       if (c.customer_id) customerSet.add(c.customer_id)
       orders++
     }
@@ -378,10 +387,14 @@ const kpi = computed(() => {
 
   const pendingOffer = offerRows.value.filter(r => Number(r.status) === 0).length
   const pendingContract = contractRows.value.filter(r => Number(r.status) === 0).length
+  const grossProfit = sale - cost
+  const netProfit = grossProfit - sellerFreight
 
   return {
     sale, cost,
-    profit: sale - cost,
+    profit: grossProfit,
+    netProfit,
+    sellerFreight,
     pendingCount: pendingOffer + pendingContract,
     pendingOffer, pendingContract,
     customers: customerSet.size,
@@ -559,8 +572,9 @@ async function submitQuickSale() {
     // 4. 审核出库单
     await auditSaleOutSilent(saleOutId, 1).catch(() => {})
 
-    // 4.5 标记合同为"已转单"
-    await http.post('/shop/ContractOrder/edit', { id: contractId, status: 4 }).catch(() => {})
+    // 4.5 标记合同为"已转单" + 设置合同编号（后端不自动生成 order_sn）
+    const contractSn = `HT${String(contractId).padStart(4, '0')}`
+    await http.post('/shop/ContractOrder/edit', { id: contractId, status: 4, order_sn: contractSn }).catch(() => {})
 
     // 5. 库存扣减
     for (const item of qs.items) {
@@ -577,43 +591,35 @@ async function submitQuickSale() {
       } catch {}
     }
 
-    // 6. 获取合同编号，用于关联收款单
-    let contractSn = ''
-    try {
-      const detail = await http.get('/shop/ContractOrder/detail', { params: { id: contractId } })
-      const row = detail?.data?.row || detail?.data || {}
-      contractSn = row.order_sn || `HT${String(contractId).padStart(4, '0')}`
-    } catch {
-      contractSn = `HT${String(contractId).padStart(4, '0')}`
+    // 6. 收款单用 contractSn 关联（已在 step 4.5 设置）
+
+    // 7. 创建收款单（后端不会自动生成，需前端主动创建）
+    if (qs.collectAmount > 0) {
+      await createCollectReceipt({
+        contact_type: 'customer',
+        customer_id: qs.customer_id,
+        customer_name: qs.customer_name,
+        contact_id: qs.customer_id,
+        contact_name: qs.customer_name,
+        amount: qs.collectAmount,
+        fund_id: qs.fundId || 0,
+        fund_name: qs.fundName || '',
+        order_sn: contractSn,
+        order_no: contractSn,
+        receipt_date: today,
+        remark: `一键销售收款 - ${contractSn}`,
+      })
     }
 
-    // 7. 更新收款单（审核出库后自动生成，补上账户、金额、合同编号）
-    try {
-      const rcptRes = await http.get('/finance/CollectReceipt/index', { params: { list_rows: 10 } })
-      const receipts = rcptRes?.data?.rows || []
-      // 找最近一条该客户、fund_id=0 的自动收款单
-      const autoReceipt = receipts.find((r: any) =>
-        Number(r.customer_id) === Number(qs.customer_id) && Number(r.fund_id) === 0
-      )
-      if (autoReceipt) {
-        await http.post('/finance/CollectReceipt/edit', {
-          id: autoReceipt.id,
-          amount: qs.collectAmount,
-          fund_id: qs.fundId || 0,
-          fund_name: qs.fundName || '',
-          order_sn: contractSn,
-        })
-      }
-    } catch {}
-
-    // 7. 我方承担运费 → 记入费用管理
+    // 8. 我方承担运费 → 记入费用管理（remark 含合同编号，反审核时可匹配清理）
     if (qs.freight > 0 && qs.freightPayer === 'seller') {
       try {
         await http.post('/finance/Expense/add', {
           name: '销售运费',
           amount: qs.freight,
           expense_date: today,
-          remark: `${qs.customer_name} 一键销售运费（我方承担）`,
+          order_sn: contractSn,
+          remark: `${qs.customer_name} 销售合同运费（我方承担） - ${contractSn}`,
         })
       } catch {}
     }

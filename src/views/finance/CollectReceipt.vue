@@ -61,9 +61,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="!row._isPrepay" type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+            <template v-if="!row._isPrepay">
+              <el-button v-if="Number(row.status) === 1" type="warning" link size="small" @click="handleUnaudit(row)">反审核</el-button>
+              <el-button type="danger" link size="small" :disabled="Number(row.status) === 1" @click="handleDelete(row.id)">删除</el-button>
+            </template>
             <span v-else style="color:#999;font-size:12px">预付款</span>
           </template>
         </el-table-column>
@@ -379,6 +382,13 @@ async function handleDelete(id: number) {
     } catch { /* 回退失败不阻塞删除结果 */ }
   }
   ElMessage.success('删除成功')
+  await loadAll()
+}
+
+async function handleUnaudit(row: any) {
+  await ElMessageBox.confirm('确定反审核该收款单？反审核后可删除。', '提示', { type: 'warning' })
+  await http.post('/finance/CollectReceipt/edit', { id: row.id, status: 0 })
+  ElMessage.success('反审核成功')
   await loadAll()
 }
 

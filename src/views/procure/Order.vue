@@ -1140,13 +1140,28 @@ async function handleAudit(row: any, status: number) {
 }
 
 async function handleReverseAudit(row: any) {
-  // 先检查是否存在已审核的退货单
+  // 先检查是否存在关联的退货单（order_id 存在 goods_info 的 _meta 对象中）
   try {
-    const returnRes = await getProcureReturnList({ list_rows: 200 })
+    const returnRes = await getProcureReturnList({ list_rows: 500 })
     const allReturns: any[] = returnRes.data?.rows ?? []
-    const auditedReturns = allReturns.filter((r: any) => r.order_id === row.id && r.status === 1)
-    if (auditedReturns.length > 0) {
-      ElMessage.warning(`该采购合同存在 ${auditedReturns.length} 笔已审核的退货单，请先前往【采购退货】将退货单反审核后，再反审核该合同`)
+    const linkedReturns = allReturns.filter((r: any) => {
+      // 顶层 order_id
+      if (Number(r.order_id) === Number(row.id)) return true
+      // goods_info 内 _meta.order_id
+      try {
+        const goods = typeof r.goods_info === 'string' ? JSON.parse(r.goods_info) : (r.goods_info || [])
+        const meta = goods.find((g: any) => g._meta)
+        if (meta && Number(meta.order_id) === Number(row.id)) return true
+      } catch {}
+      return false
+    })
+    if (linkedReturns.length > 0) {
+      const auditedCount = linkedReturns.filter((r: any) => r.status === 1).length
+      const pendingCount = linkedReturns.length - auditedCount
+      const parts = []
+      if (auditedCount) parts.push(`${auditedCount} 笔已审核`)
+      if (pendingCount) parts.push(`${pendingCount} 笔未审核`)
+      ElMessage.warning(`该采购合同存在 ${parts.join('、')} 的退货单，请先前往【采购退货】处理后，再反审核该合同`)
       return
     }
   } catch (e: any) {

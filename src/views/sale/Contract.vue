@@ -1430,7 +1430,22 @@ function normalizeItem(t: any): ContractItem {
 }
 
 async function handleDelete(id: number) {
-  // 检查是否有关联收款单，有则拦截
+  // 检查是否有关联出库单
+  try {
+    const detail = await getContractDetail(id)
+    const row = detail?.data?.row || detail?.data || {}
+    const orderSn = getContractSn(row)
+    if (orderSn) {
+      const saleOutRes = await getSaleOutList({ keyword: orderSn, list_rows: 100 })
+      const linkedOut = (saleOutRes?.data?.rows ?? [])
+      if (linkedOut.length > 0) {
+        ElMessage.error(`该合同存在 ${linkedOut.length} 笔关联出库单，请先反审核并删除出库单后再删除合同`)
+        return
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 检查是否有关联收款单
   try {
     const detail = await getContractDetail(id)
     const row = detail?.data?.row || detail?.data || {}

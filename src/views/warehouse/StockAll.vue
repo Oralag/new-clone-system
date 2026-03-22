@@ -756,21 +756,16 @@ async function loadStockMap(warehouseId = 0) {
       }
     } catch {}
 
-    // 再用商品表的 goods_sn 匹配商品 id
-    const qtyMap: Record<number, number> = {}
+    // 再用商品表的 goods_sn 匹配商品 id（仅更新均价，库存数量由 loadActivityMaps 流水汇总）
     const priceMap: Record<number, number> = {}
     for (const g of allGoods.value) {
       const sn = g.goods_sn
       if (!sn) continue
-      if (snQtyMap[sn] !== undefined) {
-        qtyMap[g.id] = snQtyMap[sn]
-      }
       // 移动加权平均价 = 采购总额 / 采购总量
       if (snTotalQty[sn] > 0) {
         priceMap[g.id] = snTotalCost[sn] / snTotalQty[sn]
       }
     }
-    stockQtyMap.value = qtyMap
     stockPriceMap.value = priceMap
   } catch { /* ignore */ }
 }
@@ -787,21 +782,22 @@ async function loadActivityMaps() {
       http.get('/production/material/index', { params: { list_rows: 500 } }),
     ])
 
+    // 流水库存汇总：goods_id -> 净数量（入库为正，出库为负）
+    const fqMap: Record<number, number> = {}
+
     // 退货单涉及的入库单 id 集合，用于排除
     const returnInhouseIds = new Set<number>()
     if (returnRes.status === 'fulfilled') {
       for (const r of (returnRes.value.data?.rows ?? [])) {
-        // 退货单审核时可能关联了入库单 id（存在 inhouse_id 字段）
         const inhouseId = Number(r.inhouse_id || 0)
         if (inhouseId) returnInhouseIds.add(inhouseId)
       }
     }
 
-    // Inhouse map (入库) — 排除退货触发的入库单
+    // Inhouse (采购入库) — 排除退货触发的入库单
     const inhouseRows: any[] = inhouseRes.status === 'fulfilled' ? (inhouseRes.value.data?.rows ?? []) : []
     const inMap: Record<number, number> = {}
     for (const r of inhouseRows) {
-      // 跳过退货关联的入库单，或备注包含"退货"的
       if (returnInhouseIds.has(Number(r.id))) continue
       if (String(r.remark || '').includes('退货')) continue
       try {
@@ -809,9 +805,12 @@ async function loadActivityMaps() {
         const goodsInThisOrder = new Set<number>()
         for (const item of items) {
           const gid = Number(item.goods_id)
-          if (gid) goodsInThisOrder.add(gid)
+          const qty = Number(item.num || 0)
+          if (gid) {
+            goodsInThisOrder.add(gid)
+            fqMap[gid] = (fqMap[gid] || 0) + qty // 入库 +
+          }
         }
-        // 每张入库单对该商品只计 1 次，不按商品行数叠加
         for (const gid of goodsInThisOrder) {
           inMap[gid] = (inMap[gid] || 0) + 1
         }
@@ -819,7 +818,7 @@ async function loadActivityMaps() {
     }
     inhouseCountMap.value = inMap
 
-    // Return map (退货出库)
+    // Return (采购退货出库)
     const retMap: Record<number, number> = {}
     if (returnRes.status === 'fulfilled') {
       for (const r of (returnRes.value.data?.rows ?? [])) {
@@ -830,7 +829,11 @@ async function loadActivityMaps() {
           const goodsInThisReturn = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
-            if (gid) goodsInThisReturn.add(gid)
+            const qty = Number(item.num || 0)
+            if (gid) {
+              goodsInThisReturn.add(gid)
+              fqMap[gid] = (fqMap[gid] || 0) - qty // 退货出库 -
+            }
           }
           for (const gid of goodsInThisReturn) {
             retMap[gid] = (retMap[gid] || 0) + 1
@@ -840,7 +843,7 @@ async function loadActivityMaps() {
     }
     returnCountMap.value = retMap
 
-    // Sale out orders (出库单)
+    // Sale out orders (销售出库)
     const dMap: Record<number, number> = {}
     const sMap: Record<number, number> = {}
     try {
@@ -856,6 +859,7 @@ async function loadActivityMaps() {
             if (gid) {
               goodsInThisOrder.add(gid)
               dMap[gid] = (dMap[gid] || 0) + qty
+              fqMap[gid] = (fqMap[gid] || 0) - qty // 销售出库 -
             }
           }
           for (const gid of goodsInThisOrder) {
@@ -866,7 +870,7 @@ async function loadActivityMaps() {
     } catch { /* ignore */ }
     saleCountMap.value = sMap
 
-    // Retail map (零售出库)
+    // Retail (零售出库)
     const retailRows: any[] = retailRes.status === 'fulfilled' ? (retailRes.value.data?.rows ?? []) : []
     const rMap: Record<number, number> = {}
     for (const r of retailRows) {
@@ -879,6 +883,7 @@ async function loadActivityMaps() {
           if (gid) {
             goodsInThisOrder.add(gid)
             dMap[gid] = (dMap[gid] || 0) + qty
+            fqMap[gid] = (fqMap[gid] || 0) - qty // 零售出库 -
           }
         }
         for (const gid of goodsInThisOrder) {
@@ -899,7 +904,11 @@ async function loadActivityMaps() {
           const goodsInThis = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
-            if (gid) goodsInThis.add(gid)
+            const qty = Number(item.num || 0)
+            if (gid) {
+              goodsInThis.add(gid)
+              fqMap[gid] = (fqMap[gid] || 0) + qty // 其他入库 +
+            }
           }
           for (const gid of goodsInThis) {
             oiMap[gid] = (oiMap[gid] || 0) + 1
@@ -919,7 +928,11 @@ async function loadActivityMaps() {
           const goodsInThis = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
-            if (gid) goodsInThis.add(gid)
+            const qty = Number(item.num || 0)
+            if (gid) {
+              goodsInThis.add(gid)
+              fqMap[gid] = (fqMap[gid] || 0) - qty // 其他出库 -
+            }
           }
           for (const gid of goodsInThis) {
             ooMap[gid] = (ooMap[gid] || 0) + 1
@@ -935,7 +948,11 @@ async function loadActivityMaps() {
       for (const r of (prodInRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         const gid = Number(r.goods_id)
-        if (gid) piMap[gid] = (piMap[gid] || 0) + 1
+        const qty = Number(r.inhouse_qty || r.qty || 0)
+        if (gid) {
+          piMap[gid] = (piMap[gid] || 0) + 1
+          fqMap[gid] = (fqMap[gid] || 0) + qty // 生产入库 +
+        }
       }
     }
     prodInCountMap.value = piMap
@@ -950,7 +967,11 @@ async function loadActivityMaps() {
           const goodsInThis = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
-            if (gid) goodsInThis.add(gid)
+            const qty = Number(item.num || 0)
+            if (gid) {
+              goodsInThis.add(gid)
+              fqMap[gid] = (fqMap[gid] || 0) - qty // 生产领料 -
+            }
           }
           for (const gid of goodsInThis) {
             pmMap[gid] = (pmMap[gid] || 0) + 1
@@ -959,6 +980,9 @@ async function loadActivityMaps() {
       }
     }
     prodOutCountMap.value = pmMap
+
+    // 用流水汇总覆盖库存数量
+    stockQtyMap.value = fqMap
   } catch { /* ignore */ }
 }
 
