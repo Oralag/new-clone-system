@@ -50,6 +50,7 @@ export const menuData: TopMenuItem[] = [
     title: '零售',
     icon: 'Shop',
     children: [
+      { key: 'retail-overview', title: '零售总览', path: '/retail/overview' },
       { key: 'retail-store', title: '门店管理', path: '/retail/store' },
       { key: 'retail-order', title: '零售订单', path: '/retail/order' },
       { key: 'retail-return', title: '零售退货', path: '/retail/return' },

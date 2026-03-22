@@ -33,6 +33,17 @@
           <span class="cr-calc-text">克重计算</span>
         </div>
         <el-select
+          v-model="selectedStoreId"
+          placeholder="选择门店"
+          clearable
+          filterable
+          size="small"
+          class="cr-member-select"
+          @change="onStoreChange"
+        >
+          <el-option v-for="s in storeList" :key="s.id" :label="s.name" :value="s.id" />
+        </el-select>
+        <el-select
           v-model="selectedMemberId"
           placeholder="会员登录"
           clearable
@@ -343,7 +354,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Search, Delete, CircleCheckFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getGoodsList, getGoodsCateList } from '@/api/goods'
-import { getMemberList, createRetailOrder, getRetailOrderList } from '@/api/retail'
+import { getMemberList, createRetailOrder, getRetailOrderList, getStoreList } from '@/api/retail'
 import { getSaleContractList } from '@/api/reports'
 import http from '@/api/http'
 
@@ -467,6 +478,14 @@ function onBarcodeEnter() {
 interface CartItem { goods_id: number; goods_name: string; goods_sn: string; unit_name: string; price: number; num: number }
 
 const cartItems = reactive<CartItem[]>([])
+
+// 门店
+const storeList = ref<any[]>([])
+const selectedStoreId = ref<number | null>(null)
+const selectedStore = computed(() => storeList.value.find((s: any) => s.id === selectedStoreId.value))
+function onStoreChange(id: number) {
+  localStorage.setItem('cr_store_id', String(id ?? ''))
+}
 const totalAmount = ref(0)
 const discountAmount = ref(0)
 const payAmount = ref(0)
@@ -561,6 +580,8 @@ async function handleCheckout() {
       order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
       member_id: selectedMemberId.value ?? 0,
       member_name: selectedMember.value?.name ?? '',
+      store_id: selectedStoreId.value ?? null,
+      store_name: selectedStore.value?.name ?? '',
       total_amount: totalAmount.value,
       discount_amount: discountAmount.value,
       pay_amount: payAmount.value,
@@ -640,8 +661,19 @@ function addWeightItemToCart() {
 onMounted(async () => {
   const [, mc] = await Promise.all([loadHotGoods(), getGoodsCateList({ list_rows: 200 })])
   cateList.value = mc.data?.rows ?? []
-  const mr = await getMemberList({ list_rows: 500 })
+  const [mr, sr] = await Promise.all([
+    getMemberList({ list_rows: 500 }),
+    getStoreList({ list_rows: 100 }),
+  ])
   memberList.value = mr.data?.rows ?? []
+  storeList.value = sr.data?.rows ?? []
+  // 恢复上次选择的门店
+  const savedStoreId = localStorage.getItem('cr_store_id')
+  if (savedStoreId && storeList.value.find((s: any) => s.id === Number(savedStoreId))) {
+    selectedStoreId.value = Number(savedStoreId)
+  } else if (storeList.value.length === 1) {
+    selectedStoreId.value = storeList.value[0].id
+  }
 })
 </script>
 

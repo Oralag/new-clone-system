@@ -819,19 +819,27 @@ async function handleSave() {
         return r
       })(),
       total_amount: fd.total_amount,
-      discount_type: fd.discount_type,
-      discount_value: fd.discount_value,
       after_discount: fd.after_discount,
-      contract_id: fd.contract_id || 0,
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id
+    let savedId = fd.id
     if (fd.id) {
       await updateSaleOut(payload)
     } else {
-      await createSaleOut(payload)
+      const res = await createSaleOut(payload)
+      savedId = res?.data?.id || 0
     }
-    ElMessage.success('保存成功')
+    // 保存后自动审核 + 扣减库存
+    if (savedId) {
+      try {
+        await auditSaleOut(savedId, 1)
+        await handleSaleOutStockEffect({ ...payload, id: savedId, goods_info: JSON.stringify(fd.items) }, 'audit')
+      } catch (e: any) {
+        ElMessage.warning('保存成功，但自动审核/库存扣减失败：' + (e?.message || ''))
+      }
+    }
+    ElMessage.success('保存并审核成功')
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')

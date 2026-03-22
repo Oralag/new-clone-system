@@ -7,6 +7,9 @@
         <template #search>
           <el-input v-model="searchForm.order_no" placeholder="订单编号" clearable style="width:160px" />
           <el-input v-model="searchForm.member_name" placeholder="会员名称" clearable style="width:140px" />
+          <el-select v-model="searchForm.store_id" placeholder="门店" clearable style="width:130px">
+            <el-option v-for="s in storeList" :key="s.id" :label="s.name" :value="s.id" />
+          </el-select>
           <el-date-picker v-model="dateRange" type="daterange" range-separator="至"
             start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
             style="width:230px" @change="onDateChange" />
@@ -16,7 +19,8 @@
         </template>
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="order_no" label="订单编号" min-width="160" />
-        <el-table-column prop="member_name" label="会员名称" min-width="120" />
+        <el-table-column prop="member_name" label="会员名称" min-width="100" />
+        <el-table-column prop="store_name" label="门店" min-width="100" />
         <el-table-column prop="total_amount" label="商品合计" width="110" align="right">
           <template #default="{ row }">¥{{ Number(row.total_amount).toFixed(2) }}</template>
         </el-table-column>
@@ -42,6 +46,14 @@
     <el-drawer v-model="drawerVisible" title="新增零售订单" size="720px" destroy-on-close>
       <el-form ref="formRef" :model="form" label-width="90px" style="padding:0 4px">
         <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="门店" prop="store_id">
+              <el-select v-model="form.store_id" placeholder="选择门店（可选）" clearable filterable style="width:100%"
+                @change="onStoreChange">
+                <el-option v-for="s in storeList" :key="s.id" :label="s.name" :value="s.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
           <el-col :span="12">
             <el-form-item label="会员" prop="member_id">
               <el-select v-model="form.member_id" placeholder="选择会员（可选）" clearable filterable style="width:100%"
@@ -129,11 +141,11 @@ import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList } from '@/api/retail'
+import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList, getStoreList } from '@/api/retail'
 import http from '@/api/http'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const searchForm = reactive<any>({ order_no: '', member_name: '' })
+const searchForm = reactive<any>({ order_no: '', member_name: '', store_id: '' })
 const dateRange = ref<any>(null)
 
 function onDateChange(val: any) {
@@ -141,11 +153,18 @@ function onDateChange(val: any) {
   else { delete searchForm.start_date; delete searchForm.end_date }
 }
 
+// 门店列表
+const storeList = ref<any[]>([])
 // 会员列表
 const memberList = ref<any[]>([])
+
 onMounted(async () => {
-  const res = await getMemberList({ list_rows: 500 })
-  memberList.value = res.data?.rows ?? []
+  const [sr, mr] = await Promise.allSettled([
+    getStoreList({ list_rows: 500 }),
+    getMemberList({ list_rows: 500 }),
+  ])
+  if (sr.status === 'fulfilled') storeList.value = sr.value.data?.rows ?? []
+  if (mr.status === 'fulfilled') memberList.value = mr.value.data?.rows ?? []
 })
 
 // 表单
@@ -153,6 +172,7 @@ const drawerVisible = ref(false)
 const saving = ref(false)
 const formRef = ref()
 const form = reactive({
+  store_id: null as any, store_name: '',
   member_id: null as any, member_name: '',
   order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   pay_method: 'cash', remark: '',
@@ -162,11 +182,17 @@ const form = reactive({
 
 function openForm() {
   Object.assign(form, {
-    member_id: null, member_name: '', order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
+    store_id: null, store_name: '',
+    member_id: null, member_name: '',
+    order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
     pay_method: 'cash', remark: '', items: [],
     total_amount: 0, discount_amount: 0, pay_amount: 0,
   })
   drawerVisible.value = true
+}
+
+function onStoreChange(id: any) {
+  form.store_name = storeList.value.find(s => s.id === id)?.name ?? ''
 }
 
 function onMemberChange(id: any) {
@@ -183,7 +209,6 @@ async function handleSave() {
   saving.value = true
   try {
     await createRetailOrder({ ...form, goods_info: JSON.stringify(form.items), items: undefined })
-    // 零售收款自动写入"零售收款账户"
     try {
       const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
       const funds: any[] = fundRes.data?.rows ?? []
@@ -197,7 +222,6 @@ async function handleSave() {
     } catch (e: any) {
       console.warn('零售账户更新失败', e?.message)
     }
-    // 零售扣减库存（默认从第一个仓库扣减）
     try {
       await retailStockEffect(form.items, 'deduct')
     } catch (e: any) {
@@ -227,7 +251,6 @@ async function handleDelete(row: any) {
   } catch (e: any) {
     console.warn('零售账户余额回滚失败', e?.message)
   }
-  // 删除时库存加回
   try {
     const items = JSON.parse(row.goods_info || '[]')
     await retailStockEffect(items, 'restore')
@@ -247,7 +270,6 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
   } catch (e: any) {
     console.warn('零售账户余额回滚失败', e?.message)
   }
-  // 批量删除时库存加回
   for (const row of rows) {
     try {
       const items = JSON.parse(row.goods_info || '[]')
@@ -257,9 +279,7 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
   return http.post('/retail/order/batchDel', { ids })
 }
 
-// 零售库存变动：deduct=扣减，restore=加回
 async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
-  // 获取第一个仓库作为默认仓库
   const whRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 1 } })
   const defaultWh = whRes.data?.rows?.[0]
   if (!defaultWh) return
@@ -277,7 +297,6 @@ async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
   }
 }
 
-// 商品选择器
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {

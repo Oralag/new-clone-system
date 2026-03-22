@@ -816,12 +816,12 @@ async function loadActivityMaps() {
     }
     returnCountMap.value = retMap
 
-    // Sale contracts as proxy for sales (出库)
+    // Sale out orders (出库单)
     const dMap: Record<number, number> = {}
     const sMap: Record<number, number> = {}
     try {
-      const saleRes = await http.get('/shop/ContractOrder/index', { params: { list_rows: 500, status: 1 } })
-      const saleRows: any[] = saleRes.data?.rows ?? []
+      const saleOutRes = await http.get('/stock/SaleOutOrder/index', { params: { list_rows: 500, status: 1 } })
+      const saleRows: any[] = saleOutRes.data?.rows ?? []
       for (const r of saleRows) {
         try {
           const items = JSON.parse(r.goods_info || '[]')
