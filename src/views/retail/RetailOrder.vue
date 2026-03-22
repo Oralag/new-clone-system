@@ -197,6 +197,12 @@ async function handleSave() {
     } catch (e: any) {
       console.warn('零售账户更新失败', e?.message)
     }
+    // 零售扣减库存（默认从第一个仓库扣减）
+    try {
+      await retailStockEffect(form.items, 'deduct')
+    } catch (e: any) {
+      ElMessage.warning('库存扣减失败，请手动更新')
+    }
     ElMessage.success('保存成功')
     drawerVisible.value = false
     tableRef.value?.refresh()
@@ -221,6 +227,13 @@ async function handleDelete(row: any) {
   } catch (e: any) {
     console.warn('零售账户余额回滚失败', e?.message)
   }
+  // 删除时库存加回
+  try {
+    const items = JSON.parse(row.goods_info || '[]')
+    await retailStockEffect(items, 'restore')
+  } catch (e: any) {
+    console.warn('库存还原失败', e?.message)
+  }
   await deleteRetailOrder(row.id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
@@ -234,7 +247,34 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
   } catch (e: any) {
     console.warn('零售账户余额回滚失败', e?.message)
   }
+  // 批量删除时库存加回
+  for (const row of rows) {
+    try {
+      const items = JSON.parse(row.goods_info || '[]')
+      await retailStockEffect(items, 'restore')
+    } catch { /* ignore */ }
+  }
   return http.post('/retail/order/batchDel', { ids })
+}
+
+// 零售库存变动：deduct=扣减，restore=加回
+async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
+  // 获取第一个仓库作为默认仓库
+  const whRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 1 } })
+  const defaultWh = whRes.data?.rows?.[0]
+  if (!defaultWh) return
+  for (const item of items) {
+    if (!item.goods_id || !item.num) continue
+    const stockRes = await http.get('/stock/StockAll/index', {
+      params: { goods_id: item.goods_id, warehouse_id: defaultWh.id, list_rows: 10 }
+    })
+    const stock = stockRes.data?.rows?.[0]
+    if (stock) {
+      const delta = mode === 'deduct' ? -Number(item.num) : Number(item.num)
+      const newQty = Math.max(0, Number(stock.qty || 0) + delta)
+      await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
+    }
+  }
 }
 
 // 商品选择器

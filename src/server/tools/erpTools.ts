@@ -143,13 +143,13 @@ export const createTools: FunctionDeclaration[] = [
     parameters: {
       type: 'object',
       properties: {
-        goods_name: { type: 'string', description: '商品名称（必填）' },
+        goods_name: { type: 'string', description: '商品名称（必填，系统唯一不可重复）' },
         goods_sn: { type: 'string', description: '商品编码' },
         sell_price: { type: 'number', description: '售价' },
         cost_price: { type: 'number', description: '成本价' },
         unit_name: { type: 'string', description: '单位' },
         cate_name: { type: 'string', description: '分类' },
-        spec: { type: 'string', description: '规格' },
+        spec: { type: 'string', description: '规格（单规格文本，如500g）' },
         barcode: { type: 'string', description: '条码' },
       },
       required: ['goods_name'],
@@ -358,6 +358,139 @@ export const deleteTools: FunctionDeclaration[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'delete_goods',
+    description: '删除商品（需先用 query_goods 查到商品ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '商品ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_staff',
+    description: '删除员工（需先用 query_staff 查到员工ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '员工ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_warehouse',
+    description: '删除仓库（需先用 query_warehouses 查到仓库名）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '仓库ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_fund_account',
+    description: '删除资金账户',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '资金账户ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
 ]
 
-export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...deleteTools, ...navigateTools]
+export const editTools: FunctionDeclaration[] = [
+  {
+    name: 'update_goods',
+    description: '编辑商品信息（需先用 query_goods 查到商品ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '商品ID（必填）' },
+        goods_name: { type: 'string', description: '商品名称' },
+        goods_sn: { type: 'string', description: '商品编码' },
+        sell_price: { type: 'number', description: '售价' },
+        cost_price: { type: 'number', description: '成本价' },
+        unit_name: { type: 'string', description: '单位' },
+        cate_name: { type: 'string', description: '分类' },
+        spec: { type: 'string', description: '规格（单规格文本）' },
+        barcode: { type: 'string', description: '条码' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_customer',
+    description: '编辑客户信息（需先用 query_customers 查到客户ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '客户ID（必填）' },
+        nickname: { type: 'string', description: '客户名称' },
+        mobile: { type: 'string', description: '手机号' },
+        address: { type: 'string', description: '地址' },
+        remark: { type: 'string', description: '备注' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_supplier',
+    description: '编辑供应商信息（需先用 query_suppliers 查到供应商ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '供应商ID（必填）' },
+        name: { type: 'string', description: '供应商名称' },
+        contact: { type: 'string', description: '联系人' },
+        mobile: { type: 'string', description: '手机号' },
+        address: { type: 'string', description: '地址' },
+        bank: { type: 'string', description: '银行账户' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'add_goods_spec',
+    description: '给商品添加规格（如颜色、尺寸、重量等）。需先用 query_goods 查到商品ID',
+    parameters: {
+      type: 'object',
+      properties: {
+        goods_id: { type: 'number', description: '商品ID（必填）' },
+        goods_name: { type: 'string', description: '商品名称' },
+        spec_name: { type: 'string', description: '规格名称（必填，如：重量、颜色、尺寸）' },
+        spec_value: { type: 'string', description: '规格值列表（必填，逗号分隔，如：200g,500g,1斤）' },
+      },
+      required: ['goods_id', 'spec_name', 'spec_value'],
+    },
+  },
+  {
+    name: 'query_goods_spec',
+    description: '查询商品的规格列表',
+    parameters: {
+      type: 'object',
+      properties: {
+        goods_id: { type: 'number', description: '商品ID（必填）' },
+      },
+      required: ['goods_id'],
+    },
+  },
+  {
+    name: 'delete_goods_spec',
+    description: '删除商品的某个规格',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '规格ID（必填，先用 query_goods_spec 查到）' },
+      },
+      required: ['id'],
+    },
+  },
+]
+
+export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools]

@@ -244,7 +244,7 @@
         <el-table-column label="类型" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row._type === 'in' ? 'success' : row._type === 'return_in' ? 'warning' : 'danger'" size="small">
-              {{ row._type === 'in' ? '采购入库' : row._type === 'return_in' ? '采购退货' : '销售出库' }}
+              {{ row._type === 'in' ? '采购入库' : row._type === 'return_in' ? '采购退货' : row._type === 'retail' ? '零售出库' : '销售出库' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -885,7 +885,9 @@ function goToDoc(row: any) {
   } else if (row._type === 'return_in') {
     router.push({ path: '/procure/return', query: { return_no: row._sn } })
   } else if (row._type === 'out') {
-    router.push({ path: '/sale/contract', query: { contract_no: row._sn } })
+    router.push('/sale/out')
+  } else if (row._type === 'retail') {
+    router.push('/retail/order')
   }
 }
 
@@ -898,9 +900,10 @@ async function openFlowDialog(goods: any) {
     const gid = Number(goods.id)
     const rows: any[] = []
 
-    const [inhouseRes, saleRes, returnRes] = await Promise.allSettled([
+    const [inhouseRes, saleOutRes, retailRes, returnRes] = await Promise.allSettled([
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 500 } }),
-      http.get('/shop/ContractOrder/index', { params: { list_rows: 500, status: 1 } }),
+      http.get('/stock/SaleOutOrder/index', { params: { list_rows: 500, status: 1 } }),
+      http.get('/retail/order/index', { params: { list_rows: 500 } }),
       http.get('/procure/ProcureReturn/index', { params: { list_rows: 500 } }),
     ])
 
@@ -953,8 +956,32 @@ async function openFlowDialog(goods: any) {
     }
 
     // 销售出库
-    if (saleRes.status === 'fulfilled') {
-      for (const r of (saleRes.value.data?.rows ?? [])) {
+    if (saleOutRes.status === 'fulfilled') {
+      for (const r of (saleOutRes.value.data?.rows ?? [])) {
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const matched = items.find((i: any) =>
+            (gid && Number(i.goods_id) === gid) ||
+            (goods.goods_name && i.goods_name === goods.goods_name)
+          )
+          if (matched) {
+            const m = (r.remark || '').match(/^\[NO:([^\]]+)\]/)
+            rows.push({
+              _type: 'out',
+              _sn: m ? m[1] : (r.order_sn || r.order_no || ''),
+              _qty: Number(matched.num || 0),
+              _price: Number(matched.price || 0),
+              _date: r.out_date || r.create_time || '',
+              _partner: r.customer_name || '',
+            })
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 零售出库
+    if (retailRes.status === 'fulfilled') {
+      for (const r of (retailRes.value.data?.rows ?? [])) {
         try {
           const items = JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -963,12 +990,12 @@ async function openFlowDialog(goods: any) {
           )
           if (matched) {
             rows.push({
-              _type: 'out',
-              _sn: r.contract_no || r.order_sn || '',
+              _type: 'retail',
+              _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.sign_date || r.create_time || '',
-              _partner: r.customer_name || '',
+              _date: r.order_date || r.create_time || '',
+              _partner: r.member_name || '散客',
             })
           }
         } catch { /* ignore */ }

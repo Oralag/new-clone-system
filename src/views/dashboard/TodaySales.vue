@@ -50,14 +50,30 @@
             <div v-if="loading" style="padding:20px;text-align:center;color:#999">加载中...</div>
             <div v-else-if="saleRows.length === 0" style="padding:20px;text-align:center;color:#999">今日暂无销售出库</div>
             <div v-else class="mobile-list">
-              <div v-for="(row, i) in saleRows" :key="i" class="mobile-item">
-                <div class="mobile-item-left">
-                  <div class="mobile-item-name">{{ row.customer_name || '—' }}</div>
-                  <div class="mobile-item-sub">{{ row.order_no || '' }}{{ row.out_date ? ' · ' + row.out_date : '' }}</div>
-                </div>
-                <div class="mobile-item-right">
-                  <div class="mobile-item-amount">¥{{ Number(row.total_amount||0).toFixed(2) }}</div>
+              <div v-for="(row, i) in saleRows" :key="i" class="mobile-card">
+                <div class="mobile-card-header">
+                  <span class="mobile-card-no">{{ row.order_no || ('—') }}</span>
                   <el-tag :type="row.status==1?'success':'info'" size="small">{{ row.status==1?'已审核':'待审核' }}</el-tag>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">客户</span>
+                  <span class="mobile-card-val">{{ row.customer_name || '—' }}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">日期</span>
+                  <span class="mobile-card-val">{{ row.out_date || '—' }}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">仓库</span>
+                  <span class="mobile-card-val">{{ row.warehouse_name || '—' }}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">经手人</span>
+                  <span class="mobile-card-val">{{ row.handler_name || row.staff_name || '—' }}</span>
+                </div>
+                <div class="mobile-card-footer">
+                  <span class="mobile-card-label">金额</span>
+                  <span class="mobile-card-amount">¥{{ Number(row.total_amount||0).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -89,13 +105,33 @@
             <div v-if="loading" style="padding:20px;text-align:center;color:#999">加载中...</div>
             <div v-else-if="retailRows.length === 0" style="padding:20px;text-align:center;color:#999">今日暂无零售订单</div>
             <div v-else class="mobile-list">
-              <div v-for="(row, i) in retailRows" :key="i" class="mobile-item">
-                <div class="mobile-item-left">
-                  <div class="mobile-item-name">{{ row.member_name || '散客' }}</div>
-                  <div class="mobile-item-sub">{{ row.pay_method || '' }}{{ row.order_date ? ' · ' + row.order_date : '' }}</div>
+              <div v-for="(row, i) in retailRows" :key="i" class="mobile-card">
+                <div class="mobile-card-header">
+                  <span class="mobile-card-no">{{ row.order_no || '—' }}</span>
                 </div>
-                <div class="mobile-item-right">
-                  <div class="mobile-item-amount">¥{{ Number(row.pay_amount||0).toFixed(2) }}</div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">会员</span>
+                  <span class="mobile-card-val">{{ row.member_name || '散客' }}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">日期</span>
+                  <span class="mobile-card-val">{{ row.order_date || '—' }}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">支付方式</span>
+                  <span class="mobile-card-val">{{ row.pay_method || '—' }}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">收银员</span>
+                  <span class="mobile-card-val">{{ row.cashier_name || row.staff_name || '—' }}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">门店</span>
+                  <span class="mobile-card-val">{{ row.store_name || '—' }}</span>
+                </div>
+                <div class="mobile-card-footer">
+                  <span class="mobile-card-label">实付</span>
+                  <span class="mobile-card-amount">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -162,47 +198,55 @@ onMounted(async () => {
 .mobile-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
-.mobile-item {
+.mobile-card {
+  background: #f5f7fa;
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e8eaed;
+}
+.mobile-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8eaed;
 }
-.mobile-item-left {
-  flex: 1;
-  min-width: 0;
+.mobile-card-no {
+  font-size: 12px;
+  color: #666;
+  font-family: monospace;
 }
-.mobile-item-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1d1d1f;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.mobile-item-sub {
-  font-size: 11px;
-  color: #999;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.mobile-item-right {
-  flex-shrink: 0;
-  text-align: right;
+.mobile-card-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
 }
-.mobile-item-amount {
-  font-size: 16px;
+.mobile-card-label {
+  color: #999;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+.mobile-card-val {
+  color: #1d1d1f;
+  font-weight: 500;
+  text-align: right;
+  flex: 1;
+}
+.mobile-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e8eaed;
+}
+.mobile-card-amount {
+  font-size: 18px;
   font-weight: 700;
   color: #0071e3;
 }

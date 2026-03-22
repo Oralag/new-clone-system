@@ -195,4 +195,6 @@ npm run deploy
 - [2026-03-18] 新建客户界面财务信息面板消失 → `finance-panel` 禁止加 `v-if="formData.id"`，必须始终显示；只有"充值预付款"/"查看应收记录"操作按钮才加 `v-if="formData.id"`（文件：`src/views/sale/ClientList.vue`）
 - [2026-03-18] 删除零售/采购订单后资金账户余额未更新 → 删除前必须先调用资金账户回滚逻辑（零售：扣减"零售收款账户"；采购：加回对应 fund_id 账户）；`del-path` 改用 `batchDelApi` prop 以支持删除前 hook
 
+- [2026-03-22] AI助手创建商品/客户/供应商时允许重名 → `toolExecutor.ts` 中 `create_goods`/`create_customer`/`create_supplier` 必须先查询同名记录，已存在则拒绝创建；`orchestrator.ts` 的 create 提示词也要指导 AI 先检查重名
+
 <!-- 在此继续追加纠错记录 -->

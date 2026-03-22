@@ -33,20 +33,27 @@
 
     <!-- KPI 卡片 -->
     <div class="kpi-row">
-      <div class="kpi-card">
-        <div class="kpi-label">本月销售额</div>
-        <div class="kpi-val blue">¥{{ fmt(kpi.monthSale) }}</div>
+      <div class="kpi-period-switch">
+        <span
+          v-for="p in periods" :key="p.key"
+          :class="['period-tag', { active: activePeriod === p.key }]"
+          @click="activePeriod = p.key"
+        >{{ p.label }}</span>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">本月成本</div>
-        <div class="kpi-val purple">¥{{ fmt(kpi.monthCost) }}</div>
+        <div class="kpi-label">{{ periodLabel }}销售额</div>
+        <div class="kpi-val blue">¥{{ fmt(kpi.sale) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">本月利润</div>
-        <div class="kpi-val" :style="{ color: kpi.monthProfit >= 0 ? '#16a34a' : '#dc2626' }">
-          {{ kpi.monthProfit >= 0 ? '+' : '' }}¥{{ fmt(kpi.monthProfit) }}
+        <div class="kpi-label">{{ periodLabel }}成本</div>
+        <div class="kpi-val purple">¥{{ fmt(kpi.cost) }}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">{{ periodLabel }}利润</div>
+        <div class="kpi-val" :style="{ color: kpi.profit >= 0 ? '#16a34a' : '#dc2626' }">
+          {{ kpi.profit >= 0 ? '+' : '' }}¥{{ fmt(kpi.profit) }}
         </div>
-        <div class="kpi-sub">利润率 {{ kpi.monthSale > 0 ? (kpi.monthProfit / kpi.monthSale * 100).toFixed(1) : '0.0' }}%</div>
+        <div class="kpi-sub">利润率 {{ kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }}%</div>
       </div>
       <div class="kpi-divider"></div>
       <div class="kpi-card">
@@ -55,12 +62,12 @@
         <div class="kpi-sub">报价{{ kpi.pendingOffer }} / 合同{{ kpi.pendingContract }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">本月客户</div>
-        <div class="kpi-val blue">{{ kpi.monthCustomers }}</div>
+        <div class="kpi-label">{{ periodLabel }}客户</div>
+        <div class="kpi-val blue">{{ kpi.customers }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">本月订单</div>
-        <div class="kpi-val blue">{{ kpi.monthOrders }}</div>
+        <div class="kpi-label">{{ periodLabel }}订单</div>
+        <div class="kpi-val blue">{{ kpi.orders }}</div>
       </div>
     </div>
 
@@ -284,21 +291,52 @@ const goodsCostMap = computed(() => {
   return m
 })
 
-// ── KPI ───────────────────────────────────────────────────────────────────────
-const thisMonth = new Date().toISOString().slice(0, 7)
+// ── 时间维度切换 ──────────────────────────────────────────────────────────────
+const periods = [
+  { key: 'month', label: '本月' },
+  { key: 'quarter', label: '本季' },
+  { key: 'year', label: '本年' },
+  { key: 'all', label: '全部' },
+] as const
+type PeriodKey = typeof periods[number]['key']
+const activePeriod = ref<PeriodKey>('month')
 
+const periodLabel = computed(() => {
+  const map: Record<PeriodKey, string> = { month: '本月', quarter: '本季', year: '本年', all: '' }
+  return map[activePeriod.value]
+})
+
+function inPeriod(dateStr: string): boolean {
+  if (activePeriod.value === 'all') return true
+  const now = new Date()
+  const y = now.getFullYear(), m = now.getMonth() // 0-indexed
+  const prefix = dateStr?.slice(0, 10) || ''
+  if (!prefix) return false
+  if (activePeriod.value === 'month') return prefix.slice(0, 7) === `${y}-${String(m + 1).padStart(2, '0')}`
+  if (activePeriod.value === 'year') return prefix.startsWith(String(y))
+  // quarter
+  const qStart = Math.floor(m / 3) * 3 // 0,3,6,9
+  const from = `${y}-${String(qStart + 1).padStart(2, '0')}-01`
+  const toMonth = qStart + 3
+  const to = toMonth > 11
+    ? `${y + 1}-01-01`
+    : `${y}-${String(toMonth + 1).padStart(2, '0')}-01`
+  return prefix >= from && prefix < to
+}
+
+// ── KPI ───────────────────────────────────────────────────────────────────────
 const kpi = computed(() => {
-  let monthSale = 0, monthCost = 0
+  let sale = 0, cost = 0
   const customerSet = new Set<number>()
-  let monthOrders = 0
+  let orders = 0
 
   for (const c of contractRows.value) {
-    const m = (c.contract_date || c.create_time || '').slice(0, 7)
-    if (m === thisMonth) {
-      monthSale += Number(c.after_discount || c.total_amount || 0)
-      try { for (const g of JSON.parse(c.goods_info || '[]')) monthCost += Number(g.num || 0) * (goodsCostMap.value[g.goods_id] || 0) } catch {}
+    const d = c.contract_date || c.create_time || ''
+    if (inPeriod(d)) {
+      sale += Number(c.after_discount || c.total_amount || 0)
+      try { for (const g of JSON.parse(c.goods_info || '[]')) cost += Number(g.num || 0) * (goodsCostMap.value[g.goods_id] || 0) } catch {}
       if (c.customer_id) customerSet.add(c.customer_id)
-      monthOrders++
+      orders++
     }
   }
 
@@ -306,12 +344,12 @@ const kpi = computed(() => {
   const pendingContract = contractRows.value.filter(r => Number(r.status) === 0).length
 
   return {
-    monthSale, monthCost,
-    monthProfit: monthSale - monthCost,
+    sale, cost,
+    profit: sale - cost,
     pendingCount: pendingOffer + pendingContract,
     pendingOffer, pendingContract,
-    monthCustomers: customerSet.size,
-    monthOrders,
+    customers: customerSet.size,
+    orders,
   }
 })
 
@@ -531,6 +569,20 @@ onMounted(loadData)
 .kpi-row {
   display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;
   padding: 16px 20px; background: #f8fafc; border-radius: 12px;
+  position: relative;
+}
+.kpi-period-switch {
+  position: absolute; top: 12px; right: 16px;
+  display: flex; gap: 4px; background: #e8eaf0; border-radius: 6px; padding: 2px;
+}
+.period-tag {
+  padding: 3px 10px; border-radius: 4px; font-size: 12px; color: #666;
+  cursor: pointer; transition: all 0.2s; user-select: none;
+}
+.period-tag:hover { color: #333; }
+.period-tag.active {
+  background: #fff; color: #0071e3; font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 .kpi-card { display: flex; flex-direction: column; gap: 4px; min-width: 100px; }
 .kpi-label { font-size: 11px; color: rgba(29,29,31,0.4); }

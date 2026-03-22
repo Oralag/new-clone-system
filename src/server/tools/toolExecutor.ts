@@ -267,6 +267,56 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         result = res?.code === 1 ? `资金账户创建成功！` : `创建失败：${res?.msg || JSON.stringify(res)}`
         break
       }
+
+      // ── 编辑工具 ──────────────────────────────────────
+      case 'update_goods': {
+        const res = await erpPost('/goods/ShopGoods/edit', input, token)
+        result = res?.code === 1 ? `商品编辑成功！` : `编辑失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'update_customer': {
+        const res = await erpPost('/shop/ShopCustomer/edit', input, token)
+        result = res?.code === 1 ? `客户编辑成功！` : `编辑失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'update_supplier': {
+        const res = await erpPost('/procure/supplier/edit', input, token)
+        result = res?.code === 1 ? `供应商编辑成功！` : `编辑失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'add_goods_spec': {
+        // 先启用商品的多规格标记
+        if (input.goods_id) {
+          try {
+            await erpPost('/goods/ShopGoods/edit', { id: input.goods_id, multi_spec: 1 }, token)
+          } catch { /* ignore */ }
+        }
+        const res = await erpPost('/goods/ShopSpec/add', {
+          goods_id: input.goods_id,
+          goods_name: input.goods_name || '',
+          spec_name: input.spec_name,
+          spec_value: input.spec_value,
+        }, token)
+        result = res?.code === 1 ? `规格"${input.spec_name}"添加成功！值：${input.spec_value}` : `添加失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'query_goods_spec': {
+        const res = await erpGet('/goods/ShopSpec/index', { goods_id: input.goods_id, list_rows: 200 }, token)
+        const rows = res?.data?.rows || []
+        if (rows.length === 0) {
+          result = '该商品暂无规格信息。'
+        } else {
+          result = `共 ${rows.length} 个规格：${JSON.stringify(rows.map((r: any) => ({ id: r.id, 规格名: r.spec_name, 规格值: r.spec_value })))}`
+        }
+        break
+      }
+      case 'delete_goods_spec': {
+        const res = await erpPost('/goods/ShopSpec/del', { id: input.id }, token)
+        result = res?.code === 1 ? `规格已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+
+      // ── 删除工具 ──────────────────────────────────────
       case 'navigate_to': {
         result = `导航指令：${input.page}`
         break
@@ -289,6 +339,26 @@ export async function executeTool(name: string, input: Record<string, any>, toke
       case 'delete_customer': {
         const res = await erpPost('/shop/ShopCustomer/del', { id: input.id }, token)
         result = res?.code === 1 ? `客户已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_goods': {
+        const res = await erpPost('/goods/ShopGoods/del', { id: input.id }, token)
+        result = res?.code === 1 ? `商品已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_staff': {
+        const res = await erpPost('/personnel/staff/del', { id: input.id }, token)
+        result = res?.code === 1 ? `员工已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_warehouse': {
+        const res = await erpPost('/stock/WarehouseName/del', { id: input.id }, token)
+        result = res?.code === 1 ? `仓库已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_fund_account': {
+        const res = await erpPost('/finance/Fund/del', { id: input.id }, token)
+        result = res?.code === 1 ? `资金账户已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       default:

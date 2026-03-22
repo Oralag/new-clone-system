@@ -345,6 +345,7 @@ import { ElMessage } from 'element-plus'
 import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { getMemberList, createRetailOrder, getRetailOrderList } from '@/api/retail'
 import { getSaleContractList } from '@/api/reports'
+import http from '@/api/http'
 
 // ── 商品 ──────────────────────────────────────────────────────────────────────
 const keyword = ref('')
@@ -533,6 +534,25 @@ const successVisible = ref(false)
 const lastPayAmount = ref(0)
 const lastOrderNo = ref('')
 
+// 零售库存变动：deduct=扣减，restore=加回
+async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
+  const whRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 1 } })
+  const defaultWh = whRes.data?.rows?.[0]
+  if (!defaultWh) return
+  for (const item of items) {
+    if (!item.goods_id || !item.num) continue
+    const stockRes = await http.get('/stock/StockAll/index', {
+      params: { goods_id: item.goods_id, warehouse_id: defaultWh.id, list_rows: 10 }
+    })
+    const stock = stockRes.data?.rows?.[0]
+    if (stock) {
+      const delta = mode === 'deduct' ? -Number(item.num) : Number(item.num)
+      const newQty = Math.max(0, Number(stock.qty || 0) + delta)
+      await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
+    }
+  }
+}
+
 async function handleCheckout() {
   if (!cartItems.length) { ElMessage.warning('购物车为空'); return }
   paying.value = true
@@ -550,6 +570,12 @@ async function handleCheckout() {
     })
     lastPayAmount.value = payAmount.value
     lastOrderNo.value = res.data?.order_no ?? res.data?.id ?? ''
+    // 收银台扣减库存
+    try {
+      await retailStockEffect(cartItems, 'deduct')
+    } catch {
+      ElMessage.warning('库存扣减失败，请手动更新')
+    }
     successVisible.value = true
   } catch (e: any) {
     ElMessage.error(e?.message ?? '结算失败')
