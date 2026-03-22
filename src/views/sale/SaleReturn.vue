@@ -446,9 +446,10 @@ import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
+import { TAX_RATES } from '@/config'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
-const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
+const taxRates = TAX_RATES
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const permStore = usePermissionStore()

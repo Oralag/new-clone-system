@@ -66,7 +66,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
-import { getInvoiceList, createInvoice, deleteInvoice } from '@/api/finance'
+import { getInvoiceList, createInvoice, updateInvoice, deleteInvoice } from '@/api/finance'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
@@ -85,10 +85,16 @@ function openForm(row?: any) {
 async function handleSubmit(data: any) {
   formRef.value?.setSubmitting(true)
   try {
-    await createInvoice(data)
+    if (data.id) {
+      await updateInvoice(data)
+    } else {
+      await createInvoice(data)
+    }
     ElMessage.success('操作成功')
     formRef.value?.close()
     tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败')
   } finally {
     formRef.value?.setSubmitting(false)
   }

@@ -958,8 +958,8 @@ async function loadDashboardData(force = false) {
   try {
     const today = getToday()
     const [saleRes, retailRes, customerRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
-      http.get('/stock/SaleOutOrder/index',     { params: { list_rows: 200 } }),
-      http.get('/retail/order/index',           { params: { list_rows: 200 } }),
+      http.get('/stock/SaleOutOrder/index',     { params: { list_rows: 2000 } }),
+      http.get('/retail/order/index',           { params: { list_rows: 2000 } }),
       http.get('/shop/ShopCustomer/index',      { params: { list_rows: 1 } }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 200 } }),
       http.get('/goods/ShopGoods/index',        { params: { list_rows: 500, status: 1 } }),
@@ -974,7 +974,10 @@ async function loadDashboardData(force = false) {
 
     const todaySale   = saleRows.filter((r: any) => (r.out_date   || '').slice(0, 10) === today)
     const todayRetail = retailRows.filter((r: any) => (r.order_date || '').slice(0, 10) === today)
-    const saleAmt   = todaySale.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
+    const saleAmt   = todaySale.reduce((s: number, r: any) => {
+      const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
+      return s + amt
+    }, 0)
     const retailAmt = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
     stats.value[0].value = '¥' + (saleAmt + retailAmt).toFixed(2)
     stats.value[1].value = String(todaySale.length + todayRetail.length)

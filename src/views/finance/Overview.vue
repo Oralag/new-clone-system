@@ -225,7 +225,7 @@
               <div class="inline-name">{{ getPayReceiptSupplierLabel(r, purchasePayList, supplierList) }}</div>
               <div class="inline-value red">¥{{ Number(r.net_amount ?? r.amount ?? 0).toFixed(2) }}</div>
               <div class="inline-sub">
-                {{ (r.pay_date||r.created_at||'').slice(0,10) }}
+                {{ (r.pay_date||r.created_at||'').slice(0,16).replace('T',' ') }}
                 <span v-if="Number(r.refund_allocated || 0) > 0"> · 已退款 ¥{{ Number(r.refund_allocated || 0).toFixed(2) }}</span>
               </div>
             </div>

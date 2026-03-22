@@ -35,7 +35,10 @@
         </div>
         <div class="chat-header-actions">
           <el-tooltip content="历史会话">
-            <el-button :icon="Clock" circle size="small" plain @click="showHistory = !showHistory" />
+            <el-button :icon="Clock" circle size="small" plain @click="showHistory = !showHistory; showMemory = false" />
+          </el-tooltip>
+          <el-tooltip content="偏好记忆">
+            <el-button :icon="Setting" circle size="small" plain @click="showMemory = !showMemory; showHistory = false" />
           </el-tooltip>
           <el-tooltip content="清空对话">
             <el-button :icon="Delete" circle size="small" plain @click="clearMessages" />
@@ -66,6 +69,10 @@
             </div>
           </div>
         </transition>
+
+        <!-- 偏好记忆面板 -->
+        <AiMemoryPanel v-if="showMemory" @close="showMemory = false" />
+
         <!-- Welcome message -->
         <div class="chat-welcome" v-if="messages.length === 0">
           <el-icon :size="40" color="#165dff"><Cpu /></el-icon>
@@ -347,16 +354,19 @@
 </template>
 
 <script setup lang="ts">
-import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone, Clock, GoodsFilled, SetUp, Document, CircleCheck, CircleClose, Select, MagicStick } from '@element-plus/icons-vue'
+import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone, Clock, GoodsFilled, SetUp, Document, CircleCheck, CircleClose, Select, MagicStick, Setting } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
+import AiMemoryPanel from './ai/AiMemoryPanel.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
 import { getGoodsList } from '@/api/goods'
 import { createProductionPlan, auditProductionPlan, createMaterial, auditMaterial } from '@/api/production'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
 import { createProductionInhouseAndAutoAudit } from '@/utils/productionInhouse'
+import { useUserMemoryStore } from '@/stores/userMemory'
+import { extractAndMerge } from './ai/composables/useMemoryExtractor'
 
 function getResponseId(res: any) {
   return Number(res?.data?.id || res?.data?.data?.id || res?.data || 0)
@@ -407,6 +417,7 @@ interface Session {
 }
 
 const showHistory = ref(false)
+const showMemory = ref(false)
 const sessions = ref<Session[]>(loadSessions())
 
 function loadSessions(): Session[] {
@@ -1004,6 +1015,7 @@ async function sendMessage() {
 
   try {
     const erpToken = localStorage.getItem('erp_token') || ''
+    const memoryStore = useUserMemoryStore()
     const response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: {
@@ -1015,6 +1027,7 @@ async function sendMessage() {
         images: imagesToSend.length > 0
           ? imagesToSend.map(i => ({ data: i.data, mediaType: i.mediaType }))
           : undefined,
+        userMemory: memoryStore.systemPromptFragment || undefined,
       }),
     })
 
@@ -1423,6 +1436,7 @@ function sendQuickPrompt(p: string) {
 }
 
 function clearMessages() {
+  extractAndMerge(messages.value) // 异步提取偏好，不阻塞
   archiveSession()
   messages.value = []
   pendingAction.value = null

@@ -322,14 +322,13 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const today = new Date().toISOString().slice(0, 10)
 
         // 5. 创建合同
-        const freightNote = freight > 0 ? `运费¥${freight.toFixed(2)}(${freightPayer === 'seller' ? '我方承担' : '对方承担'})` : ''
-        const fullRemark = [input.remark || '', freightNote].filter(Boolean).join(' ')
         const contractRes = await erpPost('/shop/ContractOrder/add', {
           customer_id: customerId, customer_name: customerName, admin_name: '',
           contract_date: today, sign_date: today,
           total_amount: goodsTotal, after_discount: finalTotal,
           discount_type: discount > 0 ? 'amount' : 'none', discount_value: discount,
-          remark: fullRemark,
+          freight_amount: freight, freight_bearer: freightPayer,
+          remark: input.remark || '',
           goods_info: goodsInfo,
         }, token)
         const contractId = contractRes?.data?.id || contractRes?.data?.lastId
@@ -344,9 +343,8 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           out_date: today,
           warehouse_id: wh.id, warehouse_name: wh.name,
           total_amount: goodsTotal, after_discount: finalTotal,
-          discount_type: discount > 0 ? 'amount' : 'none', discount_value: discount,
-          contract_id: contractId,
-          remark: fullRemark || '来自一键销售', goods_info: goodsInfo,
+          discount_amount: discount, freight_amount: freight, freight_bearer: freightPayer,
+          remark: input.remark || '来自一键销售', goods_info: goodsInfo,
         }, token)
         const saleOutId = saleOutRes?.data?.id || saleOutRes?.data?.lastId
         if (!saleOutId) { result = `出库单创建失败：${saleOutRes?.msg || JSON.stringify(saleOutRes)}`; break }

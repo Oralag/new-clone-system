@@ -40,8 +40,8 @@
           </template>
         </el-table-column>
         <el-table-column prop="applicant_name" label="申请人" min-width="120" />
-        <el-table-column label="申请日期" min-width="110">
-          <template #default="{ row }">{{ (row.apply_date || row.created_at || '').slice(0, 10) }}</template>
+        <el-table-column label="申请日期" min-width="150">
+          <template #default="{ row }">{{ (row.apply_date || row.created_at || '').slice(0, 16).replace('T', ' ') }}</template>
         </el-table-column>
         <el-table-column label="付款状态" min-width="100" align="center">
           <template #default="{ row }">
@@ -114,6 +114,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
 import { getExpenseList, createExpense, updateExpense, deleteExpense, createPayReceipt, getFundList } from '@/api/finance'
+import { adjustFundBalance } from '@/utils/fund'
 
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
@@ -193,7 +194,7 @@ function onPayFundChange(id: any) {
 
 function openPayDialog(row: any) {
   payRow.value = row
-  payForm.pay_date = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
+  payForm.pay_date = new Date().toLocaleDateString('sv-SE')
   payForm.fund_id = null
   payForm.fund_name = ''
   payForm.amount = Number(row.amount || 0)
@@ -222,7 +223,7 @@ async function submitPay() {
       amount: Number(payForm.amount || 0),
       fund_id: payForm.fund_id,
       fund_name: payForm.fund_name || '',
-      pay_type: 'bank',
+      pay_type: payForm.fund_name?.includes('现金') ? 'cash' : payForm.fund_name?.includes('支付宝') ? 'alipay' : payForm.fund_name?.includes('微信') ? 'wechat' : 'bank',
       remark: payForm.remark || '',
     })
     await updateExpense({
@@ -234,6 +235,14 @@ async function submitPay() {
       remark: row.remark_clean ?? row.remark ?? '',
       payment_status: 'paid',
     })
+    // 扣减资金账户余额
+    try {
+      await adjustFundBalance({
+        fundId: payForm.fund_id,
+        fundName: payForm.fund_name,
+        delta: -Number(payForm.amount || 0),
+      })
+    } catch { /* 扣减失败不阻塞 */ }
     payVisible.value = false
     ElMessage.success('付款成功')
     tableRef.value?.refresh()

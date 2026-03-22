@@ -21,10 +21,12 @@ export const deleteCheck = (id: number) => http.post('/stock/StockCheck/del', { 
 
 export const getOtherInList = (params?: any) => http.get('/stock/OtherIn/index', { params })
 export const createOtherIn = (data: any) => http.post('/stock/OtherIn/add', data)
+export const updateOtherIn = (data: any) => http.post('/stock/OtherIn/edit', data)
 export const deleteOtherIn = (id: number) => http.post('/stock/OtherIn/del', { id })
 
 export const getOtherOutList = (params?: any) => http.get('/stock/OtherOut/index', { params })
 export const createOtherOut = (data: any) => http.post('/stock/OtherOut/add', data)
+export const updateOtherOut = (data: any) => http.post('/stock/OtherOut/edit', data)
 export const deleteOtherOut = (id: number) => http.post('/stock/OtherOut/del', { id })
 
 export const getWarningList = (params?: any) => http.get('/stock/StockWarning/index', { params })

@@ -264,7 +264,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ShoppingCart, Document, DocumentChecked, Box, Plus } from '@element-plus/icons-vue'
 import {
   getOfferList, getContractList, getSaleOutList,
-  createContract, auditContract, createSaleOut, auditSaleOut,
+  createContract, auditContract, auditContractSilent, createSaleOut, auditSaleOutSilent,
 } from '@/api/sale'
 import { getGoodsList, getBomList } from '@/api/goods'
 import http from '@/api/http'
@@ -397,7 +397,7 @@ async function quickAuditContract(row: any) {
   loadData()
 }
 
-function quickConvertToOut(row: any) {
+async function quickConvertToOut(row: any) {
   sessionStorage.setItem('saleout_from_contract', JSON.stringify({
     contract_id: row.id,
     contract_sn: row.order_sn || '',
@@ -412,18 +412,23 @@ function quickConvertToOut(row: any) {
     discount_value: row.discount_value || 0,
     total_amount: row.total_amount || 0,
   }))
+  // 标记合同为"已转单"状态
+  try {
+    await http.post('/shop/ContractOrder/edit', { id: row.id, status: 4 })
+  } catch { /* ignore */ }
   router.push('/sale/out')
 }
 
 function quickOfferToContract(row: any) {
   sessionStorage.setItem('sale_contract_draft_from_offer', JSON.stringify({
-    offer_id: row.id,
+    source_offer_id: row.id,
+    source_offer_no: row.order_sn || row.offer_no || '',
     customer_id: row.customer_id,
     customer_name: row.customer_name || '',
     admin_name: row.admin_name || '',
     goods_info: row.goods_info || '[]',
   }))
-  router.push('/sale/contract')
+  router.push('/sale/contract?from=offer')
 }
 
 // ── 一键销售 ──────────────────────────────────────────────────────────────────
@@ -511,8 +516,6 @@ async function submitQuickSale() {
     const today = new Date().toISOString().slice(0, 10)
 
     // 1. 创建合同
-    const freightNote = qs.freight > 0 ? `运费¥${qs.freight.toFixed(2)}(${qs.freightPayer === 'seller' ? '我方承担' : '对方承担'})` : ''
-    const fullRemark = [qs.remark, freightNote].filter(Boolean).join(' ')
     const contractRes = await createContract({
       customer_id: qs.customer_id,
       customer_name: qs.customer_name,
@@ -520,17 +523,19 @@ async function submitQuickSale() {
       contract_date: today,
       sign_date: today,
       total_amount: qs.goodsTotal,
-      after_discount: qs.total,
       discount_type: qs.discount > 0 ? 'amount' : 'none',
       discount_value: qs.discount || 0,
-      remark: fullRemark,
+      after_discount: qs.total,
+      freight_amount: qs.freight || 0,
+      freight_bearer: qs.freightPayer,
+      remark: qs.remark,
       goods_info: goodsInfo,
     })
     const contractId = contractRes?.data?.id || contractRes?.data?.lastId
     if (!contractId) throw new Error('合同创建失败')
 
     // 2. 审核合同
-    await auditContract(contractId, 1)
+    await auditContractSilent(contractId, 1).catch(() => {})
 
     // 3. 创建出库单
     const saleOutRes = await createSaleOut({
@@ -541,18 +546,21 @@ async function submitQuickSale() {
       warehouse_id: qs.warehouse_id,
       warehouse_name: qs.warehouse_name,
       total_amount: qs.goodsTotal,
+      discount_amount: qs.discount || 0,
       after_discount: qs.total,
-      discount_type: qs.discount > 0 ? 'amount' : 'none',
-      discount_value: qs.discount || 0,
-      contract_id: contractId,
-      remark: fullRemark || '来自销售合同',
+      freight_amount: qs.freight || 0,
+      freight_bearer: qs.freightPayer,
+      remark: qs.remark || '来自销售合同',
       goods_info: goodsInfo,
     })
     const saleOutId = saleOutRes?.data?.id || saleOutRes?.data?.lastId
     if (!saleOutId) throw new Error('出库单创建失败')
 
-    // 4. 审核出库单（触发库存扣减）
-    await auditSaleOut(saleOutId, 1)
+    // 4. 审核出库单
+    await auditSaleOutSilent(saleOutId, 1).catch(() => {})
+
+    // 4.5 标记合同为"已转单"
+    await http.post('/shop/ContractOrder/edit', { id: contractId, status: 4 }).catch(() => {})
 
     // 5. 库存扣减
     for (const item of qs.items) {
@@ -569,17 +577,43 @@ async function submitQuickSale() {
       } catch {}
     }
 
-    // 6. 本次收款（如果有收款金额且选了账户）
-    if (qs.collectAmount > 0 && qs.fundId) {
-      try {
-        await http.post('/finance/CollectReceipt/add', {
-          contact_name: qs.customer_name,
-          customer_id: qs.customer_id,
+    // 6. 获取合同编号，用于关联收款单
+    let contractSn = ''
+    try {
+      const detail = await http.get('/shop/ContractOrder/detail', { params: { id: contractId } })
+      const row = detail?.data?.row || detail?.data || {}
+      contractSn = row.order_sn || `HT${String(contractId).padStart(4, '0')}`
+    } catch {
+      contractSn = `HT${String(contractId).padStart(4, '0')}`
+    }
+
+    // 7. 更新收款单（审核出库后自动生成，补上账户、金额、合同编号）
+    try {
+      const rcptRes = await http.get('/finance/CollectReceipt/index', { params: { list_rows: 10 } })
+      const receipts = rcptRes?.data?.rows || []
+      // 找最近一条该客户、fund_id=0 的自动收款单
+      const autoReceipt = receipts.find((r: any) =>
+        Number(r.customer_id) === Number(qs.customer_id) && Number(r.fund_id) === 0
+      )
+      if (autoReceipt) {
+        await http.post('/finance/CollectReceipt/edit', {
+          id: autoReceipt.id,
           amount: qs.collectAmount,
-          fund_id: qs.fundId,
-          fund_name: qs.fundName,
-          receipt_date: today,
-          remark: `一键销售收款`,
+          fund_id: qs.fundId || 0,
+          fund_name: qs.fundName || '',
+          order_sn: contractSn,
+        })
+      }
+    } catch {}
+
+    // 7. 我方承担运费 → 记入费用管理
+    if (qs.freight > 0 && qs.freightPayer === 'seller') {
+      try {
+        await http.post('/finance/Expense/add', {
+          name: '销售运费',
+          amount: qs.freight,
+          expense_date: today,
+          remark: `${qs.customer_name} 一键销售运费（我方承担）`,
         })
       } catch {}
     }
@@ -605,15 +639,15 @@ function fmt(v: number): string {
 // ── 加载 ──────────────────────────────────────────────────────────────────────
 async function loadData() {
   const [c, o, s, cust, wh, g, ih, b, fd] = await Promise.allSettled([
-    getContractList({ list_rows: 50 }),
-    getOfferList({ list_rows: 50 }),
-    getSaleOutList({ list_rows: 50 }),
+    getContractList({ list_rows: 2000 }),
+    getOfferList({ list_rows: 2000 }),
+    getSaleOutList({ list_rows: 2000 }),
     http.get('/shop/ShopCustomer/index', { params: { list_rows: 500 } }),
     http.get('/stock/WarehouseName/index', { params: { list_rows: 100 } }),
     getGoodsList({ list_rows: 500 }),
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
     getBomList({ list_rows: 500 }),
-    http.get('/finance/Fund/index', { params: { list_rows: 50 } }),
+    http.get('/finance/Fund/index', { params: { list_rows: 200 } }),
   ])
   contractRows.value = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
   offerRows.value = o.status === 'fulfilled' ? (o.value?.data?.rows ?? []) : []

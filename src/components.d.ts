@@ -15,6 +15,7 @@ declare module 'vue' {
     AgentOnboardingGuide: typeof import('./components/AgentOnboardingGuide.vue')['default']
     AgentPageLayout: typeof import('./components/agent/AgentPageLayout.vue')['default']
     AiAssistant: typeof import('./components/AiAssistant.vue')['default']
+    AiMemoryPanel: typeof import('./components/ai/AiMemoryPanel.vue')['default']
     AiToolCallCard: typeof import('./components/ai/AiToolCallCard.vue')['default']
     CaptainBar: typeof import('./components/CaptainBar.vue')['default']
     CaptchaCanvas: typeof import('./components/CaptchaCanvas.vue')['default']

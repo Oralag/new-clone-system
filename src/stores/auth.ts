@@ -3,6 +3,18 @@ import { loginApi, logoutApi } from '@/api/login'
 import { TOKEN_NAME, USER_INFO_KEY } from '@/config'
 import { usePermissionStore } from './permission'
 
+const AUTH_STORAGE_KEYS = [
+  TOKEN_NAME,
+  USER_INFO_KEY,
+  'erp_company_name',
+  'brand_profile',
+  'brand_profile_savedAt',
+  'erp_brand_data',
+  'erp_ai_chat_history',
+  'agent_history',
+  'agent_flow_results',
+]
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem(TOKEN_NAME) || '',
@@ -25,6 +37,7 @@ export const useAuthStore = defineStore('auth', {
     async login(account: string, password: string) {
       const res: any = await loginApi({ account, password })
       const data = res.data
+      if (!data?.token) throw new Error('登录失败：未获取到token')
       this.token = data.token
       this.userInfo = data.userInfo || data
       localStorage.setItem(TOKEN_NAME, this.token)
@@ -38,35 +51,20 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    logout() {
-      logoutApi().catch(() => {})
+    _clearAllState() {
       this.token = ''
       this.userInfo = null
-      localStorage.removeItem(TOKEN_NAME)
-      localStorage.removeItem(USER_INFO_KEY)
-      localStorage.removeItem('erp_company_name')
-      localStorage.removeItem('brand_profile')
-      localStorage.removeItem('brand_profile_savedAt')
-      localStorage.removeItem('erp_brand_data')
-      localStorage.removeItem('erp_ai_chat_history')
-      localStorage.removeItem('agent_history')
-      localStorage.removeItem('agent_flow_results')
+      AUTH_STORAGE_KEYS.forEach(key => localStorage.removeItem(key))
       usePermissionStore().clear()
     },
 
+    logout() {
+      logoutApi().catch(() => {})
+      this._clearAllState()
+    },
+
     clearAuth() {
-      this.token = ''
-      this.userInfo = null
-      localStorage.removeItem(TOKEN_NAME)
-      localStorage.removeItem(USER_INFO_KEY)
-      localStorage.removeItem('erp_company_name')
-      localStorage.removeItem('brand_profile')
-      localStorage.removeItem('brand_profile_savedAt')
-      localStorage.removeItem('erp_brand_data')
-      localStorage.removeItem('erp_ai_chat_history')
-      localStorage.removeItem('agent_history')
-      localStorage.removeItem('agent_flow_results')
-      usePermissionStore().clear()
+      this._clearAllState()
     },
   },
 })

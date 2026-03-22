@@ -690,6 +690,15 @@ async function handleSave() {
 
 async function doAudit(row: any, status: number) {
   const labels: Record<number, string> = { 1: '审核', 2: '驳回', 0: '反审核' }
+  // 防止重复审核导致库存多扣
+  if (status === 1 && row.status === 1) {
+    ElMessage.warning('该领料单已审核，无需重复操作')
+    return
+  }
+  if (status === 0 && row.status !== 1) {
+    ElMessage.warning('该领料单未审核，无法反审核')
+    return
+  }
   await ElMessageBox.confirm(`确定${labels[status]}该领料单？`, '提示', { type: 'warning' })
   try {
     if (status === 2) {
@@ -831,7 +840,15 @@ async function handleReturnSave() {
       goods_info: JSON.stringify(rfd.items),
       total_price: returnTotalPrice.value,
     })
-    ElMessage.success('退料保存成功')
+    // 恢复库存
+    try {
+      await applyMaterialStockDelta(rfd.items, {
+        direction: 'restore',
+        defaultWarehouseId: rfd.warehouse_id,
+        defaultWarehouseName: rfd.warehouse_name,
+      })
+    } catch { /* 库存恢复失败不阻塞退料保存 */ }
+    ElMessage.success('退料保存成功，库存已恢复')
     returnDialogVisible.value = false
   } catch (e: any) {
     ElMessage.error(e?.message || '保存失败')

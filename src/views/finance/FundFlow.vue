@@ -41,7 +41,7 @@
         <span class="table-count">共 {{ filteredItems.length }} 条</span>
       </div>
       <el-table :data="pagedItems" v-loading="tableLoading" border stripe style="width:100%">
-        <el-table-column label="日期" width="110">
+        <el-table-column label="日期" width="150">
           <template #default="{ row }">{{ row.date }}</template>
         </el-table-column>
         <el-table-column label="账户" width="120">
@@ -192,7 +192,7 @@ onMounted(async () => {
     const collects: any[] = collectRes.data?.rows ?? collectRes.data?.list ?? []
     for (const r of collects) {
       items.push({
-        date: (r.receipt_date || r.create_time || '').slice(0, 10),
+        date: (r.receipt_date || r.create_time || '').slice(0, 16).replace('T', ' '),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
         source: isCustomerPrepayLike(r) ? '预收款' : (collectSourceMap[r.contact_type] || '收款单'),
@@ -215,7 +215,7 @@ onMounted(async () => {
       const amt = Number(r.after_discount || r.total_amount || 0)
       if (amt <= 0) continue
       items.push({
-        date: (r.sign_date || r.contract_date || r.created_at || '').slice(0, 10),
+        date: (r.sign_date || r.contract_date || r.created_at || '').slice(0, 16).replace('T', ' '),
         fund_name: r.receive_account || '—',
         type: 'income',
         source: '销售合同',
@@ -229,7 +229,7 @@ onMounted(async () => {
     const retails: any[] = retailRes.data?.rows ?? retailRes.data?.list ?? []
     for (const r of retails) {
       items.push({
-        date: (r.order_date || r.create_time || '').slice(0, 10),
+        date: (r.order_date || r.create_time || '').slice(0, 16).replace('T', ' '),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
         source: '零售单',
@@ -244,7 +244,7 @@ onMounted(async () => {
     const paySourceMap: Record<string, string> = { supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出' }
     for (const r of payments) {
       items.push({
-        date: (r.pay_date || r.create_time || '').slice(0, 10),
+        date: (r.pay_date || r.create_time || '').slice(0, 16).replace('T', ' '),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'expense',
         source: paySourceMap[r.contact_type] || '付款单',
@@ -258,7 +258,7 @@ onMounted(async () => {
     const recharges: any[] = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
     for (const r of recharges) {
       items.push({
-        date: (r.recharge_date || r.create_time || '').slice(0, 10),
+        date: (r.recharge_date || r.create_time || '').slice(0, 16).replace('T', ' '),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
         source: '会员充值',
@@ -273,7 +273,7 @@ onMounted(async () => {
     for (const r of expenses) {
       if (r.payment_status === 'pending') continue
       items.push({
-        date: (r.apply_date || r.expense_date || r.create_time || '').slice(0, 10),
+        date: (r.apply_date || r.expense_date || r.create_time || '').slice(0, 16).replace('T', ' '),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'expense',
         source: r.payment_status === 'paid' ? '费用(已付)' : '费用',
@@ -288,9 +288,9 @@ onMounted(async () => {
     for (const r of prepays) {
       const isCustomer = r.pay_type === 'customer'
       items.push({
-        date: (r.create_time || '').slice(0, 10),
+        date: (r.create_time || '').slice(0, 16).replace('T', ' '),
         fund_name: r.fund_name || '—',
-        type: 'income',
+        type: isCustomer ? 'income' : 'expense',
         source: isCustomer ? '客户预收款' : '供应商预付款',
         name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'),
         order_no: r.prepay_no || r.order_no || '',
@@ -340,7 +340,7 @@ onMounted(async () => {
     const expenseTotal = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0)
     summary.income = incomeTotal
     summary.expense = expenseTotal
-    summary.balance = Math.max(0, incomeTotal - expenseTotal)
+    summary.balance = incomeTotal - expenseTotal
     // 未付款来源：应付账款（PayAccounts）+ 待付款费用
     const payables = applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], normalizedReturns)
     const pendingExpenseTotal = expenses

@@ -60,7 +60,7 @@
         <el-form-item label="姓名" prop="name" :rules="[{ required: true, message: '请输入姓名' }]">
           <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item label="密码" prop="password">
+        <el-form-item label="密码" prop="password" :rules="form.id ? [] : [{ required: true, message: '请输入密码' }]">
           <el-input v-model="form.password" type="password" show-password :placeholder="form.id ? '不修改请留空' : '请输入密码'" />
         </el-form-item>
         <el-form-item label="角色" prop="role_id">

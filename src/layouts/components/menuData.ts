@@ -134,6 +134,8 @@ export const menuData: TopMenuItem[] = [
       { key: 'finance-cost', title: '成本核算', path: '/finance/cost' },
       { key: 'finance-prepay', title: '预收款', path: '/finance/prepay' },
       { key: 'finance-supplier-prepay', title: '预付款', path: '/finance/supplier-prepay' },
+      { key: 'finance-other-expense', title: '其他支出', path: '/finance/other-expense' },
+      { key: 'finance-other-income', title: '其他收入', path: '/finance/other-income' },
     ],
   },
   {

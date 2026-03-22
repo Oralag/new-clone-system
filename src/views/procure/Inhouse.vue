@@ -433,9 +433,10 @@ import { getFundList, createFund } from '@/api/finance'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { TAX_RATES } from '@/config'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
-const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
+const taxRates = TAX_RATES
 
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()

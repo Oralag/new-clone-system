@@ -47,7 +47,9 @@
         <el-table-column label="付款账户" width="130">
           <template #default="{ row }">{{ row.fund_name || row.account_name || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="pay_date" label="付款日期" width="110" />
+        <el-table-column label="付款日期" width="150">
+          <template #default="{ row }">{{ (row.pay_date || row.created_at || '').slice(0, 16).replace('T', ' ') }}</template>
+        </el-table-column>
         <el-table-column prop="pay_method" label="付款方式" width="100" align="center" />
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="100" fixed="right">
@@ -70,6 +72,7 @@ import { getPayReceiptList, deletePayReceipt } from '@/api/finance'
 import http from '@/api/http'
 import { applyProcureReturnsToPayReceiptRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
+import { adjustFundBalance } from '@/utils/fund'
 
 const router = useRouter()
 const purchaseOrders = ref<any[]>([])
@@ -115,8 +118,21 @@ async function getPayReceiptListWithRefund(params: any) {
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该付款单？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm('确定删除该付款单？删除后将回退对应资金账户余额。', '提示', { type: 'warning' })
+  // 先获取该行数据用于回退
+  const res = await getPayReceiptList({ id })
+  const row = res?.data?.rows?.[0] || res?.data?.list?.[0]
   await deletePayReceipt(id)
+  // 回退资金账户余额（付款是支出，删除后要加回来）
+  if (row && Number(row.amount || 0) > 0) {
+    try {
+      await adjustFundBalance({
+        fundId: row.fund_id,
+        fundName: row.fund_name || row.account_name,
+        delta: Number(row.amount),
+      })
+    } catch { /* 回退失败不阻塞删除结果 */ }
+  }
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
 }

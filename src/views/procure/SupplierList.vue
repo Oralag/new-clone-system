@@ -543,7 +543,7 @@ function handleExport() {
   const rows = allRows.value
   if (!rows.length) { ElMessage.warning('暂无数据可导出'); return }
   const data = rows.map(r => ({
-    '供应商名称': r.name, '联系人': r.contact, '手机号': r.mobile,
+    '供应商名称': r.name, '供应商分类': getCateName(r.id), '联系人': r.contact, '手机号': r.mobile,
     '地址': r.address, '银行账户': r.bank, '备注': r.remark,
   }))
   const wb = XLSX.utils.book_new()
@@ -573,27 +573,90 @@ function handleImport(file: File): boolean {
 async function confirmImport() {
   importLoading.value = true
   let success = 0, failed = 0
+  let newCateCount = 0
+  // 预处理：收集所有分类名，自动新建不存在的分类
+  const cateName2Id: Record<string, number> = {}
+  for (const c of cateOptions.value) {
+    cateName2Id[c.name] = c.id
+  }
+  for (const row of importPreviewData.value) {
+    const cateName = (row['分类名称'] || row['供应商分类'] || row['分类'] || row['category'] || '').toString().trim()
+    if (cateName && cateName !== '默认' && !cateName2Id[cateName]) {
+      const newId = Date.now() + Math.floor(Math.random() * 1000) + newCateCount
+      cateName2Id[cateName] = newId
+      cateOptions.value.push({ id: newId, name: cateName })
+      newCateCount++
+    }
+  }
+  if (newCateCount > 0) {
+    saveCatesToStorage([...cateOptions.value])
+  }
+  const updatedMap = { ...cateMap.value }
   for (const row of importPreviewData.value) {
     try {
       const mapped: any = {}
       if (row['供应商名称'] || row['name']) mapped.name = row['供应商名称'] || row['name']
       if (row['联系人'] || row['contact']) mapped.contact = row['联系人'] || row['contact']
-      if (row['手机号'] || row['mobile']) mapped.mobile = row['手机号'] || row['mobile']
+      if (row['手机号'] || row['mobile']) mapped.mobile = String(row['手机号'] || row['mobile'] || '')
       if (row['地址'] || row['address']) mapped.address = row['地址'] || row['address']
       if (row['银行账户'] || row['bank']) mapped.bank = row['银行账户'] || row['bank']
-      if (row['备注'] || row['remark']) mapped.remark = row['备注'] || row['remark']
+      if (row['备注'] || row['remark'] || row['简介']) mapped.remark = row['备注'] || row['remark'] || row['简介']
+      if (row['编号']) mapped.code = row['编号']
+      if (row['税号']) mapped.tax_no = row['税号']
       if (!mapped.name) { failed++; continue }
-      await createSupplier(mapped)
+      const res = await createSupplier(mapped)
+      const supplierId = res?.data?.id ?? res?.data?.data?.id ?? res?.id ?? (typeof res?.data === 'number' ? res.data : null)
+      // 关联分类
+      const cateName = (row['分类名称'] || row['供应商分类'] || row['分类'] || row['category'] || '').toString().trim()
+      if (supplierId && cateName && cateName2Id[cateName]) {
+        updatedMap[supplierId] = cateName2Id[cateName]
+      }
       success++
     } catch { failed++ }
   }
+  cateMap.value = updatedMap
+  saveCateMap(updatedMap)
   importLoading.value = false
   importDialogVisible.value = false
-  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+  const msgs = [`导入完成：成功 ${success} 条`]
+  if (failed > 0) msgs[0] += `，失败 ${failed} 条`
+  if (newCateCount > 0) msgs.push(`自动新建 ${newCateCount} 个分类`)
+  ElMessage.success(msgs.join('；'))
   loadData()
 }
 
+// 一次性修复：为已导入的供应商补充分类（执行一次后自动跳过）
+function fixSupplierCates() {
+  const FIX_FLAG = 'erp_supplier_cate_fixed_v1'
+  if (localStorage.getItem(FIX_FLAG)) return
+  const CATES = [
+    { id: 1774181236661, name: '乳制品厂' },
+    { id: 1774181236664, name: '糕点厂' },
+    { id: 1774181236667, name: '包材厂' },
+    { id: 1774181236670, name: '半成品厂' },
+  ]
+  const MAP: Record<string, number> = {"11":1774181236667,"19":1774181236661,"23":1774181236661,"24":1774181236664,"25":1774181236661,"27":1774181236664,"28":1774181236667,"29":1774181236664,"30":1774181236664,"31":1774181236664,"32":1774181236664,"33":1774181236664,"34":1774181236664,"35":1774181236664,"36":1774181236667,"37":1774181236664,"38":1774181236664,"39":1774181236664,"40":1774181236670,"41":1774181236670,"42":1774181236670,"45":1774181236667,"46":1774181236661,"47":1774181236661,"48":1774181236667,"49":1774181236667,"50":1774181236667,"53":1774181236661,"54":1774181236670,"55":1774181236670,"56":1774181236670,"57":1774181236670,"58":1774181236670,"59":1774181236670,"60":1774181236667,"61":1774181236670,"62":1774181236670,"63":1774181236661,"64":1774181236661,"65":1774181236661,"66":1774181236667,"67":1774181236667,"68":1774181236667,"69":1774181236667,"70":1774181236667,"71":1774181236667,"72":1774181236667}
+  // 合并分类
+  const existing = readScopedJson<CateItem[]>(CATE_KEY, [])
+  const merged = [...existing]
+  for (const c of CATES) {
+    if (!merged.find(x => x.name === c.name)) merged.push(c)
+  }
+  writeScopedJson(CATE_KEY, merged)
+  cateOptions.value = merged
+  // 合并映射
+  const existingMap = readScopedJson<Record<number, number>>(CATE_MAP_KEY, {})
+  const mergedMap = { ...existingMap }
+  for (const [k, v] of Object.entries(MAP)) {
+    if (!mergedMap[Number(k)]) mergedMap[Number(k)] = v
+  }
+  writeScopedJson(CATE_MAP_KEY, mergedMap)
+  cateMap.value = mergedMap
+  localStorage.setItem(FIX_FLAG, '1')
+}
+
 onMounted(async () => {
+  fixSupplierCates()
   await loadData()
   loadSupplierFinance()
 })

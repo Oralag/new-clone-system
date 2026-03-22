@@ -238,6 +238,25 @@
           <el-button type="success" size="small" :icon="Plus" @click="openPrepayDialog">充值预付款</el-button>
           <el-button v-if="formData.id" size="small" @click="viewReceivable">查看应收记录</el-button>
         </div>
+        <!-- 预付款明细 -->
+        <div v-if="formData.id && prepayRecords.length > 0" style="margin-top:10px">
+          <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:6px">预付款记录</div>
+          <el-table :data="prepayRecords" border stripe size="small" max-height="200">
+            <el-table-column prop="pay_date" label="日期" width="100" />
+            <el-table-column label="金额" width="110" align="right">
+              <template #default="{ row }">
+                <span style="color:#16a34a;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="fund_name" label="账户" min-width="100" show-overflow-tooltip />
+            <el-table-column prop="remark" label="备注" min-width="100" show-overflow-tooltip />
+            <el-table-column label="操作" width="70" align="center">
+              <template #default="{ row }">
+                <el-button link type="danger" size="small" @click="handleDeletePrepay(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
       <div v-if="formData.id && formData.create_time" class="create-time-note">
         创建时间：{{ formData.create_time }}
@@ -745,6 +764,7 @@ const financeInfo = reactive({
   totalConsumed: 0,
   unReceived: 0,
 })
+const prepayRecords = ref<any[]>([])
 
 async function loadFinanceInfo(customerId: number, customerName: string) {
   financeLoading.value = true
@@ -753,6 +773,7 @@ async function loadFinanceInfo(customerId: number, customerName: string) {
     const prepayRes = await http.get('/finance/Prepay/index', { params: { customer_id: customerId, pay_type: 'customer', list_rows: 500 } })
     const prepayList: any[] = prepayRes?.data?.rows ?? prepayRes?.data?.list ?? []
     const totalPrepay = prepayList.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+    prepayRecords.value = prepayList
 
     // 查应收账款（消费记录）
     const receivableRes = await getReceivableList({ customer_name: customerName, list_rows: 500 })
@@ -883,6 +904,31 @@ async function submitPrepay() {
 
 function viewReceivable() {
   router.push('/finance/receivable')
+}
+
+async function handleDeletePrepay(row: any) {
+  const amount = Number(row.amount || 0)
+  await ElMessageBox.confirm(
+    `确定删除该预付款？\n金额：¥${amount.toFixed(2)}\n删除后将回退资金账户余额`,
+    '删除预付款',
+    { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' },
+  )
+  await http.post('/finance/Prepay/del', { id: row.id })
+  // 回退资金账户余额
+  if (row.fund_id && amount > 0) {
+    try {
+      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+      const funds: any[] = fundRes.data?.rows || []
+      const fund = funds.find((f: any) => f.id === row.fund_id)
+      if (fund) {
+        const newBalance = Number(fund.balance || 0) - amount
+        await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+      }
+    } catch { /* ignore */ }
+  }
+  ElMessage.success('删除成功，资金账户已回退')
+  await loadFinanceInfo(formData.id, formData.nickname)
+  await loadBalances()
 }
 
 // ── 余额 = 预付款充值 - 已审核销售单金额 ─────────────────────────────────────

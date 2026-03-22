@@ -51,6 +51,9 @@ import { ref, reactive } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getRetailReturnList, deleteRetailReturn, auditRetailReturn } from '@/api/retail'
+import { adjustFundBalance } from '@/utils/fund'
+import { RETAIL_FUND_NAME } from '@/config'
+import http from '@/api/http'
 
 const scTable = ref()
 const searchForm = reactive<any>({ return_no: '', status: '' })
@@ -60,6 +63,37 @@ async function handleAudit(row: any, status: number) {
   await ElMessageBox.confirm(`确定${action}该退货单？`, '提示', { type: 'warning' })
   try {
     await auditRetailReturn(row.id, status)
+    // 审核通过时：恢复库存 + 回退资金
+    if (status === 1) {
+      const amount = Number(row.amount || 0)
+      // 回退资金账户
+      if (amount > 0) {
+        try {
+          await adjustFundBalance({ fundName: RETAIL_FUND_NAME, delta: -amount })
+        } catch { /* ignore */ }
+      }
+      // 恢复库存
+      try {
+        const items: any[] = JSON.parse(row.goods_info || '[]')
+        if (items.length) {
+          const whRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 1 } })
+          const defaultWh = whRes.data?.rows?.[0]
+          if (defaultWh) {
+            for (const item of items) {
+              if (!item.goods_id || !item.num) continue
+              const stockRes = await http.get('/stock/StockAll/index', {
+                params: { goods_id: item.goods_id, warehouse_id: defaultWh.id, list_rows: 10 }
+              })
+              const stock = stockRes.data?.rows?.[0]
+              if (stock) {
+                const newQty = Number(stock.qty || 0) + Number(item.num)
+                await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
+              }
+            }
+          }
+        }
+      } catch { /* 库存恢复失败不阻塞 */ }
+    }
     ElMessage.success(`${action}成功`)
     scTable.value?.refresh()
   } catch (e: any) {

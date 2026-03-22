@@ -55,9 +55,9 @@
             {{ row.account_name || row.fund_name || '—' }}
           </template>
         </el-table-column>
-        <el-table-column label="收款日期" width="110">
+        <el-table-column label="收款日期" width="150">
           <template #default="{ row }">
-            {{ (row.receipt_date || row.pay_date || row.created_at || '').slice(0, 10) }}
+            {{ (row.receipt_date || row.pay_date || row.created_at || '').slice(0, 16).replace('T', ' ') }}
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
@@ -176,6 +176,7 @@ import { getSupplierList, createSupplier } from '@/api/procure'
 import { getStaffList, createStaff } from '@/api/personnel'
 import http from '@/api/http'
 import { applySaleReturnsToCollectReceiptRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
+import { adjustFundBalance } from '@/utils/fund'
 
 // ── 数据加载 ──────────────────────────────────────────────────────────────────
 const loading = ref(false)
@@ -282,7 +283,7 @@ const defaultFd = () => ({
   amount: 0,
   fund_id: null as any,
   fund_name: '',
-  receipt_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
+  receipt_date: new Date().toLocaleDateString('sv-SE'),
   order_no: '',
   remark: '',
 })
@@ -364,8 +365,19 @@ async function handleSave() {
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该收款单？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm('确定删除该收款单？删除后将回退对应资金账户余额。', '提示', { type: 'warning' })
+  const row = allRows.value.find(r => r.id === id)
   await deleteCollectReceipt(id)
+  // 回退资金账户余额
+  if (row && Number(row.amount || 0) > 0) {
+    try {
+      await adjustFundBalance({
+        fundId: row.fund_id,
+        fundName: row.fund_name || row.account_name,
+        delta: -Number(row.amount),
+      })
+    } catch { /* 回退失败不阻塞删除结果 */ }
+  }
   ElMessage.success('删除成功')
   await loadAll()
 }

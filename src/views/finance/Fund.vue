@@ -37,8 +37,8 @@
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="success" link @click="openView(row)">查看</el-button>
-              <el-button type="primary" link @click="openForm(row)">编辑</el-button>
-            <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="primary" link @click="openForm(row)">编辑</el-button>
+            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -63,17 +63,73 @@
         </el-form-item>
       </template>
     </ScForm>
+
+    <!-- 查看弹窗：账户信息 + 收支明细 -->
+    <el-dialog v-model="viewVisible" :title="`${viewFund?.name || ''} — 账户明细`" width="900px" destroy-on-close>
+      <div class="view-header">
+        <el-descriptions :column="4" border size="small">
+          <el-descriptions-item label="账户名称">{{ viewFund?.name }}</el-descriptions-item>
+          <el-descriptions-item label="账户类型">{{ viewFund?.type_name || typeLabel(viewFund?.type) }}</el-descriptions-item>
+          <el-descriptions-item label="余额">
+            <span :style="{ fontWeight: 600, color: Number(viewFund?.display_balance ?? viewFund?.balance ?? 0) < 0 ? '#dc2626' : '#16a34a' }">
+              ¥{{ Number(viewFund?.display_balance ?? viewFund?.balance ?? 0).toFixed(2) }}
+            </span>
+          </el-descriptions-item>
+          <el-descriptions-item label="备注">{{ viewFund?.remark || '—' }}</el-descriptions-item>
+        </el-descriptions>
+      </div>
+
+      <div class="view-summary">
+        <span>收入合计：<b style="color:#16a34a">¥{{ viewIncomeTotal.toFixed(2) }}</b></span>
+        <span>支出合计：<b style="color:#dc2626">¥{{ viewExpenseTotal.toFixed(2) }}</b></span>
+        <span>共 <b>{{ viewDetails.length }}</b> 笔</span>
+      </div>
+
+      <el-table :data="viewDetails" v-loading="viewLoading" border stripe size="small" max-height="400" style="width:100%">
+        <el-table-column type="index" label="序号" width="55" align="center" />
+        <el-table-column label="类型" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row._direction === 'income' ? 'success' : 'danger'" size="small">
+              {{ row._direction === 'income' ? '收入' : '支出' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="日期" width="150">
+          <template #default="{ row }">{{ (row.receipt_date || row.pay_date || row.create_time || '').slice(0, 16).replace('T', ' ') }}</template>
+        </el-table-column>
+        <el-table-column label="对方单位" min-width="130">
+          <template #default="{ row }">{{ row.contact_name || row.customer_name || row.supplier_name || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="来源" width="90">
+          <template #default="{ row }">{{ row._source || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="金额" width="110" align="right">
+          <template #default="{ row }">
+            <span :style="{ fontWeight: 600, color: row._direction === 'income' ? '#16a34a' : '#dc2626' }">
+              {{ row._direction === 'income' ? '+' : '-' }}¥{{ Number(row.amount || 0).toFixed(2) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="160" :show-overflow-tooltip="{ appendTo: 'body' }">
+          <template #default="{ row }">{{ row.remark || '—' }}</template>
+        </el-table-column>
+      </el-table>
+
+      <template #footer>
+        <el-button @click="viewVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
 import http from '@/api/http'
-import { getFundList, createFund, updateFund, deleteFund } from '@/api/finance'
+import { getFundList, createFund, updateFund, deleteFund, getPayReceiptList, getCollectReceiptList } from '@/api/finance'
 import { applyProcureReturnsToFundRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
@@ -81,8 +137,51 @@ const formRef = ref<InstanceType<typeof ScForm>>()
 const formTitle = ref('新增')
 const searchForm = reactive<any>({ name: '' })
 
-function openView(row?: any) {
-  formRef.value?.openView(normalizeFundRow(row))
+// ── 查看弹窗 ──
+const viewVisible = ref(false)
+const viewLoading = ref(false)
+const viewFund = ref<any>(null)
+const viewDetails = ref<any[]>([])
+
+const viewIncomeTotal = computed(() => viewDetails.value.filter(r => r._direction === 'income').reduce((s, r) => s + Number(r.amount || 0), 0))
+const viewExpenseTotal = computed(() => viewDetails.value.filter(r => r._direction === 'expense').reduce((s, r) => s + Number(r.amount || 0), 0))
+
+const sourceMap: Record<string, string> = {
+  customer: '客户', supplier: '供应商', other: '其他',
+}
+
+function typeLabel(type: any) {
+  const m: Record<string, string> = { '1': '银行账户', '2': '现金', '3': '第三方' }
+  return m[String(type)] || ''
+}
+
+async function openView(row: any) {
+  viewFund.value = row
+  viewVisible.value = true
+  viewLoading.value = true
+  viewDetails.value = []
+  try {
+    const fundId = Number(row.id)
+    const [payRes, collectRes] = await Promise.all([
+      getPayReceiptList({ list_rows: 2000 }),
+      getCollectReceiptList({ list_rows: 2000 }),
+    ])
+    const payRows = (payRes.data?.rows ?? [])
+      .filter((r: any) => Number(r.fund_id) === fundId)
+      .map((r: any) => ({ ...r, _direction: 'expense', _source: sourceMap[r.contact_type] || r.contact_type || '' }))
+    const collectRows = (collectRes.data?.rows ?? [])
+      .filter((r: any) => Number(r.fund_id) === fundId)
+      .map((r: any) => ({ ...r, _direction: 'income', _source: sourceMap[r.contact_type] || r.contact_type || '' }))
+    const all = [...payRows, ...collectRows]
+    all.sort((a, b) => {
+      const da = a.receipt_date || a.pay_date || a.create_time || ''
+      const db = b.receipt_date || b.pay_date || b.create_time || ''
+      return db.localeCompare(da)
+    })
+    viewDetails.value = all
+  } finally {
+    viewLoading.value = false
+  }
 }
 
 function openForm(row?: any) {
@@ -123,10 +222,13 @@ async function getFundListWithRefund(params: any) {
 async function handleSubmit(data: any) {
   formRef.value?.setSubmitting(true)
   try {
+    // 只传后端需要的字段，过滤掉前端计算字段（raw_balance, display_balance, refund_amount 等）
+    const payload: any = { name: data.name, type: data.type, balance: data.balance, remark: data.remark }
     if (data.id) {
-      await updateFund(data)
+      payload.id = data.id
+      await updateFund(payload)
     } else {
-      await createFund(data)
+      await createFund(payload)
     }
     ElMessage.success('操作成功')
     formRef.value?.close()
@@ -136,9 +238,24 @@ async function handleSubmit(data: any) {
   }
 }
 
-async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
-  await deleteFund(id)
+async function handleDelete(row: any) {
+  // 检查是否有关联的收支记录
+  const fundId = Number(row.id)
+  const [payRes, collectRes] = await Promise.all([
+    getPayReceiptList({ list_rows: 2000 }),
+    getCollectReceiptList({ list_rows: 2000 }),
+  ])
+  const payCount = (payRes.data?.rows ?? []).filter((r: any) => Number(r.fund_id) === fundId).length
+  const collectCount = (collectRes.data?.rows ?? []).filter((r: any) => Number(r.fund_id) === fundId).length
+  const total = payCount + collectCount
+
+  if (total > 0) {
+    ElMessage.warning(`该账户下有 ${total} 笔收支记录（${payCount}笔支出、${collectCount}笔收入），无法删除。请先清空关联记录`)
+    return
+  }
+
+  await ElMessageBox.confirm(`确定删除账户"${row.name}"？`, '提示', { type: 'warning' })
+  await deleteFund(row.id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
 }
@@ -147,4 +264,6 @@ async function handleDelete(id: number) {
 <style scoped>
 .page-container {}
 .search-actions { display: flex; gap: 8px; }
+.view-header { margin-bottom: 12px; }
+.view-summary { display: flex; gap: 24px; align-items: center; margin-bottom: 10px; font-size: 14px; color: #606266; }
 </style>

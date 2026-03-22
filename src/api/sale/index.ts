@@ -22,6 +22,7 @@ export const createContract = (data: any) => http.post('/shop/ContractOrder/add'
 export const updateContract = (data: any) => http.post('/shop/ContractOrder/edit', data)
 export const deleteContract = (id: number) => http.post('/shop/ContractOrder/del', { id })
 export const auditContract = (id: number, status: number) => http.post('/shop/ContractOrder/audit', { id, status })
+export const auditContractSilent = (id: number, status: number) => http.post('/shop/ContractOrder/audit', { id, status }, { silent: true } as any)
 
 export const getSaleOutList = (params?: any) => http.get('/stock/SaleOutOrder/index', { params })
 export const getSaleOutDetail = (id: number) => http.get('/stock/SaleOutOrder/detail', { params: { id } })
@@ -29,6 +30,7 @@ export const createSaleOut = (data: any) => http.post('/stock/SaleOutOrder/add',
 export const updateSaleOut = (data: any) => http.post('/stock/SaleOutOrder/edit', data)
 export const deleteSaleOut = (id: number) => http.post('/stock/SaleOutOrder/del', { id })
 export const auditSaleOut = (id: number, status: number) => http.post('/stock/SaleOutOrder/audit', { id, status })
+export const auditSaleOutSilent = (id: number, status: number) => http.post('/stock/SaleOutOrder/audit', { id, status }, { silent: true } as any)
 
 export const getSaleReturnList = (params?: any) => http.get('/stock/SaleReturnOrder/index', { params })
 export const createSaleReturn = (data: any) => http.post('/stock/SaleReturnOrder/add', data)

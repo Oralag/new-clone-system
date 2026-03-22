@@ -270,7 +270,7 @@ export function aiChatPlugin(): Plugin {
 
         const body: Buffer[] = []
         for await (const chunk of req as any) body.push(chunk)
-        const { messages, images } = JSON.parse(Buffer.concat(body).toString())
+        const { messages, images, userMemory } = JSON.parse(Buffer.concat(body).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
         const apiKey = process.env.GEMINI_API_KEY
@@ -294,7 +294,8 @@ export function aiChatPlugin(): Plugin {
         try {
           const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
           const intent = images?.length > 0 ? 'create' : detectIntent(lastUserMsg?.content || '')
-          const systemPrompt = getSystemPrompt(intent)
+          let systemPrompt = getSystemPrompt(intent)
+          if (userMemory) systemPrompt += '\n\n' + userMemory
 
           // Convert messages to Gemini Content format
           const history: Content[] = messages.slice(0, -1).map((m: any) => ({
@@ -357,6 +358,53 @@ export function aiChatPlugin(): Plugin {
           send({ type: 'error', error: e.message })
         } finally {
           res.end()
+        }
+      })
+
+      // ── /api/ai-extract-memory — 从对话中提取用户偏好 ──────────────────────────
+      server.middlewares.use('/api/ai-extract-memory', async (req, res, next) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' })
+          res.end(); return
+        }
+        if (req.method !== 'POST') return next()
+
+        const body: Buffer[] = []
+        for await (const chunk of req as any) body.push(chunk)
+        const { conversationSummary } = JSON.parse(Buffer.concat(body).toString())
+
+        const apiKey = process.env.GEMINI_API_KEY
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY' })); return }
+
+        try {
+          const genAI = new GoogleGenAI({ apiKey })
+          const result = await genAI.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: [{ role: 'user', parts: [{ text: conversationSummary }] }],
+            config: {
+              systemInstruction: `你是偏好提取引擎。分析以下ERP对话，提取用户的使用偏好。
+只输出纯JSON（不要markdown代码块），格式如下（省略无法判断的字段）：
+{
+  "nickName": "用户希望被称呼的方式",
+  "aliases": {"用户术语": "ERP标准术语"},
+  "defaultWarehouse": "仓库名",
+  "topCustomers": ["客户名"],
+  "topSuppliers": ["供应商名"],
+  "habits": ["观察到的使用习惯"],
+  "language": "简洁或详细"
+}
+不要猜测，只提取对话中明确体现的偏好。没有体现的字段不要输出。`,
+            },
+          })
+
+          const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+          const cleaned = text.replace(/```json?\s*/g, '').replace(/```\s*/g, '').trim()
+          const preferences = JSON.parse(cleaned)
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
+          res.end(JSON.stringify({ preferences }))
+        } catch (e: any) {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
+          res.end(JSON.stringify({ preferences: {} }))
         }
       })
 

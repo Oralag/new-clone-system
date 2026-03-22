@@ -110,9 +110,11 @@ export const createPayReceipt = (data: any) => http.post('/finance/PayReceipt/ad
 export const deletePayReceipt = (id: number) => http.post('/finance/PayReceipt/del', { id })
 export const getInvoiceList = (params?: any) => http.get('/finance/Invoice/index', { params })
 export const createInvoice = (data: any) => http.post('/finance/Invoice/add', data)
+export const updateInvoice = (data: any) => http.post('/finance/Invoice/edit', data)
 export const deleteInvoice = (id: number) => http.post('/finance/Invoice/del', { id })
 export const getStatementList = (params?: any) => http.get('/finance/Statement/index', { params })
 export const createStatement = (data: any) => http.post('/finance/Statement/add', data)
+export const updateStatement = (data: any) => http.post('/finance/Statement/edit', data)
 export const deleteStatement = (id: number) => http.post('/finance/Statement/del', { id })
 export async function getExpenseList(params?: any) {
   const safeParams = { ...(params || {}) }

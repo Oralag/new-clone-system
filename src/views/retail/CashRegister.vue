@@ -357,6 +357,8 @@ import { getGoodsList, getGoodsCateList } from '@/api/goods'
 import { getMemberList, createRetailOrder, getRetailOrderList, getStoreList } from '@/api/retail'
 import { getSaleContractList } from '@/api/reports'
 import http from '@/api/http'
+import { adjustFundBalance } from '@/utils/fund'
+import { RETAIL_FUND_NAME } from '@/config'
 
 // ── 商品 ──────────────────────────────────────────────────────────────────────
 const keyword = ref('')
@@ -493,12 +495,16 @@ const payAmount = ref(0)
 function addToCart(g: any) {
   const exist = cartItems.find(i => i.goods_id === g.id)
   if (exist) { exist.num++; calcTotal(); return }
+  // 有会员时使用会员价
+  const usePrice = selectedMemberId.value && Number(g.member_price) > 0
+    ? Number(g.member_price)
+    : Number(g.sell_price) || 0
   cartItems.push({
     goods_id: g.id,
     goods_name: g.goods_name,
     goods_sn: g.goods_sn || '',
     unit_name: g.unit_name || '',
-    price: Number(g.sell_price) || 0,
+    price: usePrice,
     num: 1,
   })
   calcTotal()
@@ -574,10 +580,22 @@ async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
 
 async function handleCheckout() {
   if (!cartItems.length) { ElMessage.warning('购物车为空'); return }
+  // 会员余额支付验证
+  if (payMethod.value === 'balance') {
+    if (!selectedMemberId.value || !selectedMember.value) {
+      ElMessage.warning('请先选择会员')
+      return
+    }
+    const memberBalance = Number(selectedMember.value.balance || 0)
+    if (memberBalance < payAmount.value) {
+      ElMessage.warning(`会员余额不足（余额：¥${memberBalance.toFixed(2)}，应付：¥${payAmount.value.toFixed(2)}）`)
+      return
+    }
+  }
   paying.value = true
   try {
     const res = await createRetailOrder({
-      order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
+      order_date: new Date().toLocaleDateString('sv-SE'),
       member_id: selectedMemberId.value ?? 0,
       member_name: selectedMember.value?.name ?? '',
       store_id: selectedStoreId.value ?? null,
@@ -597,6 +615,14 @@ async function handleCheckout() {
     } catch {
       ElMessage.warning('库存扣减失败，请手动更新')
     }
+    // 更新资金账户（零售收款账户）
+    try {
+      await adjustFundBalance({
+        fundName: RETAIL_FUND_NAME,
+        delta: payAmount.value,
+        allowCreate: true,
+      })
+    } catch { /* 资金更新失败不阻塞 */ }
     successVisible.value = true
   } catch (e: any) {
     ElMessage.error(e?.message ?? '结算失败')

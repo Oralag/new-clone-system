@@ -146,6 +146,7 @@ import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList, getStoreList } from '@/api/retail'
 import http from '@/api/http'
+import { RETAIL_FUND_NAME } from '@/config'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({ order_no: '', member_name: '', store_id: '' })
@@ -237,12 +238,12 @@ async function handleSave() {
     try {
       const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
       const funds: any[] = fundRes.data?.rows ?? []
-      const retailFund = funds.find((f: any) => f.name === '零售收款账户')
+      const retailFund = funds.find((f: any) => f.name === RETAIL_FUND_NAME)
       if (retailFund) {
         const newBalance = Number(retailFund.balance || 0) + Number(form.pay_amount)
         await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: newBalance })
       } else {
-        await http.post('/finance/Fund/add', { name: '零售收款账户', type: 2, balance: Number(form.pay_amount), remark: '零售单自动累计' })
+        await http.post('/finance/Fund/add', { name: RETAIL_FUND_NAME, type: 2, balance: Number(form.pay_amount), remark: '零售单自动累计' })
       }
     } catch (e: any) {
       console.warn('零售账户更新失败', e?.message)
@@ -262,9 +263,9 @@ async function deductRetailFund(amount: number) {
   if (amount <= 0) return
   const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
   const funds: any[] = fundRes.data?.rows ?? []
-  const retailFund = funds.find((f: any) => f.name === '零售收款账户')
+  const retailFund = funds.find((f: any) => f.name === RETAIL_FUND_NAME)
   if (retailFund) {
-    const newBalance = Math.max(0, Number(retailFund.balance || 0) - amount)
+    const newBalance = Number(retailFund.balance || 0) - amount
     await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: newBalance })
   }
 }

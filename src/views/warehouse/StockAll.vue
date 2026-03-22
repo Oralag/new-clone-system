@@ -130,38 +130,38 @@
         <el-table v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px"
           :row-class-name="({ row }: any) => bomGoodsSet.has(row.id) ? 'bom-row' : ''"
           @sort-change="handleSortChange">
-          <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="150" sortable="custom">
+          <el-table-column v-if="!isMobile" type="index" label="序号" width="55" align="center" />
+          <el-table-column prop="goods_name" label="商品名称" min-width="120" sortable="custom">
             <template #default="{ row }">
               <span>{{ row.goods_name }}</span>
               <el-tag v-if="bomGoodsSet.has(row.id)" size="small" style="margin-left:6px;vertical-align:middle;background:#e6a23c;color:#fff;border-color:#e6a23c">BOM</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="goods_sn" label="商品编码" width="130" />
-          <el-table-column prop="cate_name" label="分类" width="100" sortable="custom" />
-          <el-table-column prop="spec" label="规格" width="90" />
-          <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-          <el-table-column label="当前库存" width="110" align="center" sortable="custom" prop="__stock_qty">
+          <el-table-column v-if="!isMobile" prop="goods_sn" label="商品编码" width="130" />
+          <el-table-column v-if="!isMobile" prop="cate_name" label="分类" width="100" sortable="custom" />
+          <el-table-column v-if="!isMobile" prop="spec" label="规格" width="90" />
+          <el-table-column prop="unit_name" label="单位" :width="isMobile ? 50 : 65" align="center" />
+          <el-table-column label="库存" :width="isMobile ? 70 : 110" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small" effect="plain">
-                {{ getStockQty(row).toFixed(2) }}
+                {{ getStockQty(row).toFixed(isMobile ? 0 : 2) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="库存状态" width="100" align="center">
+          <el-table-column v-if="!isMobile" label="库存状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="移动均价" width="90" align="right">
+          <el-table-column v-if="!isMobile" label="移动均价" width="90" align="right">
             <template #default="{ row }">¥{{ getAvgPrice(row).toFixed(2) }}</template>
           </el-table-column>
-          <el-table-column label="库存货值" width="110" align="right" sortable="custom" prop="__stock_value">
+          <el-table-column v-if="!isMobile" label="库存货值" width="110" align="right" sortable="custom" prop="__stock_value" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
               <span style="color:#0071e3;font-weight:500">¥{{ (getStockQty(row) * getAvgPrice(row)).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="出入库记录" width="210" align="center">
+          <el-table-column v-if="!isMobile" label="出入库记录" width="280" align="center">
             <template #default="{ row }">
               <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
                 <el-tag v-if="inhouseCountMap[row.id] > 0" type="success" size="small" effect="plain">
@@ -176,11 +176,23 @@
                 <el-tag v-if="retailCountMap[row.id] > 0" type="primary" size="small" effect="plain">
                   零售 {{ retailCountMap[row.id] }}次
                 </el-tag>
-                <span v-if="!inhouseCountMap[row.id] && !returnCountMap[row.id] && !saleCountMap[row.id] && !retailCountMap[row.id]" style="color:#c0c4cc;font-size:12px">无记录</span>
+                <el-tag v-if="otherInCountMap[row.id] > 0" type="success" size="small" effect="plain">
+                  其他入库 {{ otherInCountMap[row.id] }}次
+                </el-tag>
+                <el-tag v-if="otherOutCountMap[row.id] > 0" type="danger" size="small" effect="plain">
+                  其他出库 {{ otherOutCountMap[row.id] }}次
+                </el-tag>
+                <el-tag v-if="prodInCountMap[row.id] > 0" type="success" size="small" effect="plain">
+                  生产入库 {{ prodInCountMap[row.id] }}次
+                </el-tag>
+                <el-tag v-if="prodOutCountMap[row.id] > 0" type="warning" size="small" effect="plain">
+                  生产领料 {{ prodOutCountMap[row.id] }}次
+                </el-tag>
+                <span v-if="!inhouseCountMap[row.id] && !returnCountMap[row.id] && !saleCountMap[row.id] && !retailCountMap[row.id] && !otherInCountMap[row.id] && !otherOutCountMap[row.id] && !prodInCountMap[row.id] && !prodOutCountMap[row.id]" style="color:#c0c4cc;font-size:12px">无记录</span>
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="安全库存" width="130" align="center">
+          <el-table-column v-if="!isMobile" label="安全库存" width="130" align="center">
             <template #default="{ row }">
               <span v-if="Number(row.safe_min) > 0 || Number(row.safe_max) > 0"
                 style="font-size:12px;color:#6b7280;cursor:pointer" @click="openSafeSetting(row)">
@@ -189,12 +201,12 @@
               <el-button v-else type="primary" link size="small" @click="openSafeSetting(row)">设置</el-button>
             </template>
           </el-table-column>
-          <el-table-column label="流水" width="60" align="center">
+          <el-table-column v-if="!isMobile" label="流水" width="60" align="center">
             <template #default="{ row }">
               <el-button type="info" link size="small" @click="openFlowDialog(row)">流水</el-button>
             </template>
           </el-table-column>
-          <el-table-column label="快捷跳转" width="120" align="center" fixed="right" class-name="col-white-bg">
+          <el-table-column v-if="!isMobile" label="快捷跳转" width="120" align="center" fixed="right" class-name="col-white-bg">
             <template #default="{ row }">
               <el-button type="success" link size="small" @click="router.push('/procure/inhouse')">采购</el-button>
               <el-button type="warning" link size="small" @click="router.push('/sale/contract')">销售</el-button>
@@ -237,44 +249,50 @@
   </el-dialog>
 
   <!-- 出入库流水弹窗 -->
-  <el-dialog v-model="flowDialogVisible" :title="`出入库流水 — ${flowGoodsName}`" width="700px" append-to-body>
+  <el-dialog v-model="flowDialogVisible" :title="`出入库流水 — ${flowGoodsName}`" width="750px" append-to-body>
     <div v-loading="flowLoading">
       <el-table :data="flowRows" border size="small" style="width:100%" max-height="440">
         <el-table-column type="index" width="45" align="center" />
         <el-table-column label="类型" width="90" align="center">
           <template #default="{ row }">
-            <el-tag :type="row._type === 'in' ? 'success' : row._type === 'return_in' ? 'warning' : 'danger'" size="small">
-              {{ row._type === 'in' ? '采购入库' : row._type === 'return_in' ? '采购退货' : row._type === 'retail' ? '零售出库' : '销售出库' }}
+            <el-tag :type="(flowTypeMap[row._type]?.tag as any) || 'info'" size="small">
+              {{ flowTypeMap[row._type]?.label || row._type }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="单据编号" min-width="140">
+        <el-table-column label="单据编号" min-width="130">
           <template #default="{ row }">
             <span style="font-size:13px;color:#555">{{ row._sn || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="跳转" width="80" align="center">
+        <el-table-column label="跳转" width="70" align="center">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="goToDoc(row)">查看</el-button>
+            <el-button type="primary" link size="small" @click="goToDoc(row)">查看</el-button>
           </template>
         </el-table-column>
-        <el-table-column label="数量" width="80" align="right">
+        <el-table-column label="数量" width="90" align="right">
           <template #default="{ row }">
-            <span :style="{ color: row._type === 'in' ? '#16a34a' : '#dc2626', fontWeight: 600 }">
-              {{ row._type === 'in' ? '+' : '-' }}{{ row._qty }}
+            <span :style="{ color: flowTypeMap[row._type]?.direction === '+' ? '#16a34a' : '#dc2626', fontWeight: 600 }">
+              {{ flowTypeMap[row._type]?.direction || '+' }}{{ row._qty }}
             </span>
           </template>
         </el-table-column>
         <el-table-column label="单价" width="90" align="right">
           <template #default="{ row }">¥{{ Number(row._price || 0).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column label="日期" width="110">
+        <el-table-column label="日期" width="100">
           <template #default="{ row }">{{ (row._date || '').slice(0, 10) }}</template>
         </el-table-column>
-        <el-table-column label="供应商/客户" min-width="110">
+        <el-table-column label="备注/对方" min-width="110" :show-overflow-tooltip="{ appendTo: 'body' }">
           <template #default="{ row }">{{ row._partner || '—' }}</template>
         </el-table-column>
       </el-table>
+      <div v-if="!flowLoading && flowRows.length" style="display:flex;gap:20px;margin-top:10px;font-size:13px;color:#606266">
+        <span>入库合计：<b style="color:#16a34a">+{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '+').reduce((s, r) => s + r._qty, 0) }}</b></span>
+        <span>出库合计：<b style="color:#dc2626">-{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '-').reduce((s, r) => s + r._qty, 0) }}</b></span>
+        <span>净变动：<b>{{ flowRows.reduce((s, r) => s + (flowTypeMap[r._type]?.direction === '+' ? r._qty : -r._qty), 0) }}</b></span>
+        <span>共 <b>{{ flowRows.length }}</b> 笔</span>
+      </div>
       <div v-if="!flowLoading && !flowRows.length" style="text-align:center;color:#c0c4cc;padding:20px">暂无记录</div>
     </div>
     <template #footer>
@@ -459,11 +477,13 @@ const inhouseCountMap = ref<Record<number, number>>({})
 const returnCountMap = ref<Record<number, number>>({})
 const saleCountMap = ref<Record<number, number>>({})
 const retailCountMap = ref<Record<number, number>>({})
+const otherInCountMap = ref<Record<number, number>>({})
+const otherOutCountMap = ref<Record<number, number>>({})
+const prodInCountMap = ref<Record<number, number>>({})
+const prodOutCountMap = ref<Record<number, number>>({})
 
 function getStockQty(row: any): number {
-  const base = stockQtyMap.value[row.id] ?? Number(row.stock_num ?? 0)
-  const deduct = deductQtyMap.value[row.id] ?? 0
-  return base - deduct
+  return stockQtyMap.value[row.id] ?? Number(row.stock_num ?? 0)
 }
 
 function getAvgPrice(row: any): number {
@@ -757,10 +777,14 @@ async function loadStockMap(warehouseId = 0) {
 
 async function loadActivityMaps() {
   try {
-    const [inhouseRes, retailRes, returnRes] = await Promise.allSettled([
+    const [inhouseRes, retailRes, returnRes, otherInRes, otherOutRes, prodInRes, prodOutRes] = await Promise.allSettled([
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 500 } }),
       http.get('/retail/order/index', { params: { list_rows: 500 } }),
       http.get('/procure/ProcureReturn/index', { params: { list_rows: 500 } }),
+      http.get('/stock/OtherIn/index', { params: { list_rows: 500 } }),
+      http.get('/stock/OtherOut/index', { params: { list_rows: 500 } }),
+      http.get('/production/inhouse/index', { params: { list_rows: 500 } }),
+      http.get('/production/material/index', { params: { list_rows: 500 } }),
     ])
 
     // 退货单涉及的入库单 id 集合，用于排除
@@ -864,6 +888,77 @@ async function loadActivityMaps() {
     }
     retailCountMap.value = rMap
     deductQtyMap.value = dMap
+
+    // Other In (其他入库)
+    const oiMap: Record<number, number> = {}
+    if (otherInRes.status === 'fulfilled') {
+      for (const r of (otherInRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const goodsInThis = new Set<number>()
+          for (const item of items) {
+            const gid = Number(item.goods_id)
+            if (gid) goodsInThis.add(gid)
+          }
+          for (const gid of goodsInThis) {
+            oiMap[gid] = (oiMap[gid] || 0) + 1
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    otherInCountMap.value = oiMap
+
+    // Other Out (其他出库)
+    const ooMap: Record<number, number> = {}
+    if (otherOutRes.status === 'fulfilled') {
+      for (const r of (otherOutRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const goodsInThis = new Set<number>()
+          for (const item of items) {
+            const gid = Number(item.goods_id)
+            if (gid) goodsInThis.add(gid)
+          }
+          for (const gid of goodsInThis) {
+            ooMap[gid] = (ooMap[gid] || 0) + 1
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    otherOutCountMap.value = ooMap
+
+    // Production Inhouse (生产入库) — 单品记录
+    const piMap: Record<number, number> = {}
+    if (prodInRes.status === 'fulfilled') {
+      for (const r of (prodInRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        const gid = Number(r.goods_id)
+        if (gid) piMap[gid] = (piMap[gid] || 0) + 1
+      }
+    }
+    prodInCountMap.value = piMap
+
+    // Production Material (生产领料)
+    const pmMap: Record<number, number> = {}
+    if (prodOutRes.status === 'fulfilled') {
+      for (const r of (prodOutRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const goodsInThis = new Set<number>()
+          for (const item of items) {
+            const gid = Number(item.goods_id)
+            if (gid) goodsInThis.add(gid)
+          }
+          for (const gid of goodsInThis) {
+            pmMap[gid] = (pmMap[gid] || 0) + 1
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    prodOutCountMap.value = pmMap
   } catch { /* ignore */ }
 }
 
@@ -878,6 +973,17 @@ const flowLoading = ref(false)
 const flowGoodsName = ref('')
 const flowRows = ref<any[]>([])
 
+const flowTypeMap: Record<string, { label: string; tag: string; direction: '+' | '-' }> = {
+  in: { label: '采购入库', tag: 'success', direction: '+' },
+  return_in: { label: '采购退货', tag: 'warning', direction: '-' },
+  out: { label: '销售出库', tag: 'danger', direction: '-' },
+  retail: { label: '零售出库', tag: 'primary', direction: '-' },
+  other_in: { label: '其他入库', tag: 'success', direction: '+' },
+  other_out: { label: '其他出库', tag: 'danger', direction: '-' },
+  prod_in: { label: '生产入库', tag: 'success', direction: '+' },
+  prod_out: { label: '生产领料', tag: 'warning', direction: '-' },
+}
+
 function goToDoc(row: any) {
   flowDialogVisible.value = false
   if (row._type === 'in') {
@@ -888,6 +994,14 @@ function goToDoc(row: any) {
     router.push('/sale/out')
   } else if (row._type === 'retail') {
     router.push('/retail/order')
+  } else if (row._type === 'other_in') {
+    router.push('/warehouse/other-in')
+  } else if (row._type === 'other_out') {
+    router.push('/warehouse/other-out')
+  } else if (row._type === 'prod_in') {
+    router.push('/production/inhouse')
+  } else if (row._type === 'prod_out') {
+    router.push('/production/material')
   }
 }
 
@@ -900,11 +1014,15 @@ async function openFlowDialog(goods: any) {
     const gid = Number(goods.id)
     const rows: any[] = []
 
-    const [inhouseRes, saleOutRes, retailRes, returnRes] = await Promise.allSettled([
+    const [inhouseRes, saleOutRes, retailRes, returnRes, otherInRes, otherOutRes, prodInRes, prodOutRes] = await Promise.allSettled([
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 500 } }),
       http.get('/stock/SaleOutOrder/index', { params: { list_rows: 500, status: 1 } }),
       http.get('/retail/order/index', { params: { list_rows: 500 } }),
       http.get('/procure/ProcureReturn/index', { params: { list_rows: 500 } }),
+      http.get('/stock/OtherIn/index', { params: { list_rows: 500 } }),
+      http.get('/stock/OtherOut/index', { params: { list_rows: 500 } }),
+      http.get('/production/inhouse/index', { params: { list_rows: 500 } }),
+      http.get('/production/material/index', { params: { list_rows: 500 } }),
     ])
 
     // 采购入库
@@ -996,6 +1114,95 @@ async function openFlowDialog(goods: any) {
               _price: Number(matched.price || 0),
               _date: r.order_date || r.create_time || '',
               _partner: r.member_name || '散客',
+            })
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 其他入库
+    if (otherInRes.status === 'fulfilled') {
+      for (const r of (otherInRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const matched = items.find((i: any) =>
+            (gid && Number(i.goods_id) === gid) ||
+            (goods.goods_name && i.goods_name === goods.goods_name)
+          )
+          if (matched) {
+            rows.push({
+              _type: 'other_in',
+              _sn: r.order_sn || '',
+              _qty: Number(matched.num || 0),
+              _price: Number(matched.price || 0),
+              _date: r.in_date || r.created_at || '',
+              _partner: r.remark || '',
+            })
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 其他出库
+    if (otherOutRes.status === 'fulfilled') {
+      for (const r of (otherOutRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const matched = items.find((i: any) =>
+            (gid && Number(i.goods_id) === gid) ||
+            (goods.goods_name && i.goods_name === goods.goods_name)
+          )
+          if (matched) {
+            rows.push({
+              _type: 'other_out',
+              _sn: r.order_sn || '',
+              _qty: Number(matched.num || 0),
+              _price: Number(matched.price || 0),
+              _date: r.out_date || r.created_at || '',
+              _partner: r.remark || '',
+            })
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 生产入库（单品记录，不是 goods_info 数组）
+    if (prodInRes.status === 'fulfilled') {
+      for (const r of (prodInRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        if ((gid && Number(r.goods_id) === gid) || (goods.goods_name && r.goods_name === goods.goods_name)) {
+          rows.push({
+            _type: 'prod_in',
+            _sn: r.inhouse_no || r.order_sn || '',
+            _qty: Number(r.inhouse_qty || r.qty || 0),
+            _price: 0,
+            _date: r.inhouse_date || r.create_time || '',
+            _partner: r.remark?.replace(/\n【SYS_PI_META】.*/s, '') || '',
+          })
+        }
+      }
+    }
+
+    // 生产领料（goods_info 数组）
+    if (prodOutRes.status === 'fulfilled') {
+      for (const r of (prodOutRes.value.data?.rows ?? [])) {
+        if (r.status !== 1) continue
+        try {
+          const items = JSON.parse(r.goods_info || '[]')
+          const matched = items.find((i: any) =>
+            (gid && Number(i.goods_id) === gid) ||
+            (goods.goods_name && i.goods_name === goods.goods_name)
+          )
+          if (matched) {
+            rows.push({
+              _type: 'prod_out',
+              _sn: r.order_sn || '',
+              _qty: Number(matched.num || 0),
+              _price: Number(matched.out_price || 0),
+              _date: r.pick_date || r.created_at || '',
+              _partner: r.remark || '',
             })
           }
         } catch { /* ignore */ }
@@ -1248,6 +1455,7 @@ watch(() => stockRefreshStore.version, () => {
   .stock-topbar {
     flex-direction: column;
     align-items: flex-start;
+    gap: 8px;
   }
   .stock-topbar > div:last-child {
     width: 100%;
@@ -1263,6 +1471,19 @@ watch(() => stockRefreshStore.version, () => {
   }
   .topbar-left {
     flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .stat-label {
+    font-size: 11px !important;
+  }
+  .pager-row {
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+  .pager-row .el-pagination__sizes,
+  .pager-row .el-pagination__jump {
+    display: none;
   }
 }
 </style>

@@ -602,6 +602,7 @@ import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
 import { usePermissionStore } from '@/stores/permission'
+import { TAX_RATES } from '@/config'
 
 const DRAFT_KEY = 'sale_contract_draft_from_offer'
 const permStore = usePermissionStore()
@@ -673,7 +674,7 @@ async function fetchGoodsSpecs(goodsId: number) {
 }
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
-const taxRates = [0, 1, 3, 6, 9, 10, 13, 16, 17]
+const taxRates = TAX_RATES
 
 // ── 客户等级 ──────────────────────────────────────────────────────────────────
 const levelOptions = ref<LevelItem[]>(loadLevels())

@@ -244,7 +244,7 @@ import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getOtherOutList, createOtherOut, deleteOtherOut, getWarehouseList } from '@/api/warehouse'
+import { getOtherOutList, createOtherOut, updateOtherOut, deleteOtherOut, getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -377,7 +377,12 @@ async function handleSave() {
       goods_info: JSON.stringify(fd.items),
       total_price: totalPrice.value,
     }
-    await createOtherOut(payload)
+    if (fd.id) {
+      payload.id = fd.id
+      await updateOtherOut(payload)
+    } else {
+      await createOtherOut(payload)
+    }
     ElMessage.success('保存成功')
     stockRefreshStore.trigger()
     backToList()

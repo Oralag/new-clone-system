@@ -245,7 +245,8 @@ async function handleLogin() {
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/portal'
     router.push(redirect)
-  } catch {
+  } catch (e: any) {
+    ElMessage.error(e?.message || '账号或密码错误，请重试')
   } finally {
     loginLoading.value = false
   }

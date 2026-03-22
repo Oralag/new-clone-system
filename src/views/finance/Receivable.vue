@@ -63,8 +63,8 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="出库日期" min-width="110">
-          <template #default="{ row }">{{ (row.out_date || row.created_at || '').slice(0, 10) }}</template>
+        <el-table-column label="出库日期" min-width="150">
+          <template #default="{ row }">{{ (row.out_date || row.created_at || '').slice(0, 16).replace('T', ' ') }}</template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">

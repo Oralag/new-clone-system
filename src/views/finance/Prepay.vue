@@ -49,11 +49,14 @@
         </el-table-column>
         <el-table-column prop="fund_name" label="入账账户" width="130" />
         <el-table-column prop="pay_date" label="日期" width="110" />
-        <el-table-column prop="admin_name" label="经办人" width="100" />
-        <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
-        <el-table-column label="操作" width="80" align="center" fixed="right">
+        <el-table-column prop="admin_name" label="经办人" width="80" />
+        <el-table-column prop="remark" label="备注" min-width="100" show-overflow-tooltip />
+        <el-table-column label="操作" width="100" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button link type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-tooltip v-if="getUsedAmount(row) > 0" content="已核销，无法删除" placement="top">
+              <el-button link type="info" size="small" disabled>删除</el-button>
+            </el-tooltip>
+            <el-button v-else link type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -238,23 +241,40 @@ async function handleSave() {
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该记录？', '提示', { type: 'warning' })
-  // 找到要删除的记录，用于回退资金账户余额
   const row = tableData.value.find((r: any) => r.id === id)
+  if (!row) { ElMessage.warning('未找到该记录'); return }
+
+  // 安全检查：已核销（部分/全部）的预付款不允许删除
+  const usedAmount = getUsedAmount(row)
+  if (usedAmount > 0) {
+    ElMessage.warning(`该预付款已核销 ¥${usedAmount.toFixed(2)}，无法删除。请先撤销相关核销记录`)
+    return
+  }
+
+  const amount = Number(row.amount || 0)
+  const target = row.pay_type === 'customer' ? (row.customer_name || '—') : (row.supplier_name || '—')
+  await ElMessageBox.confirm(
+    `确定删除该预付款？\n\n对象：${target}\n金额：¥${amount.toFixed(2)}\n\n删除后将同步回退资金账户余额`,
+    '删除预付款',
+    { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' },
+  )
+
   await http.post('/finance/Prepay/del', { id })
+
   // 回退资金账户余额
-  if (row?.fund_id && Number(row?.amount) > 0) {
+  if (row.fund_id && amount > 0) {
     try {
       const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
       const funds: any[] = fundRes.data?.rows || []
       const fund = funds.find((f: any) => f.id === row.fund_id)
       if (fund) {
-        const newBalance = Math.max(0, Number(fund.balance || 0) - Number(row.amount))
+        const newBalance = Number(fund.balance || 0) - amount
         await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
       }
     } catch { /* 回退失败不影响删除结果 */ }
   }
-  ElMessage.success('删除成功')
+
+  ElMessage.success('删除成功，资金账户余额已回退')
   loadData()
   loadFunds()
 }
