@@ -44,7 +44,9 @@
             </template>
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="order_no" label="出库单号" min-width="150" />
+          <el-table-column label="出库单号" min-width="150">
+            <template #default="{ row }">{{ parseSaleOutNo(row) }}</template>
+          </el-table-column>
           <el-table-column label="客户名称" min-width="140">
             <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
           </el-table-column>
@@ -57,9 +59,9 @@
           <el-table-column label="经办人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="total_amount" label="出库金额" width="120" align="right">
+          <el-table-column label="出库金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ (Number(row.after_discount) || Number(row.total_amount || 0)).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -698,6 +700,12 @@ function onCustomerChange(id: any) {
 function onWarehouseChange(id: any) {
   const w = warehouseOptions.value.find(x => x.id === id)
   fd.warehouse_name = w?.name ?? ''
+}
+
+function parseSaleOutNo(row: any): string {
+  const m = (row?.remark || '').match(/^\[NO:([^\]]+)\]/)
+  if (m) return m[1]
+  return row?.order_sn || row?.order_no || (row?.id ? `CK${String(row.id).padStart(4, '0')}` : '')
 }
 
 async function openCreate() {

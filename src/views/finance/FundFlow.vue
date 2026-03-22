@@ -165,7 +165,7 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes, receivableRes, saleReturnRes, procureRes, supRes, saleOutRes] = await Promise.all([
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes, receivableRes, saleReturnRes, procureRes, supRes, contractRes] = await Promise.all([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
       getPayReceiptList({ list_rows: 1000 }),
@@ -179,7 +179,7 @@ onMounted(async () => {
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
       http.get('/stock/PurchaseOrder/index', { params: { list_rows: 1000 } }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
-      http.get('/stock/SaleOutOrder/index', { params: { status: 1, list_rows: 1000 } }),
+      http.get('/shop/ContractOrder/index', { params: { status: 1, list_rows: 1000 } }),
     ])
     purchaseOrdersForLabel.value = procureRes.data?.rows ?? []
     supplierListForLabel.value = supRes.data?.rows ?? []
@@ -203,22 +203,24 @@ onMounted(async () => {
       })
     }
 
-    // 已审核销售出库单 —— 补充收款单缺失时的销售收入
-    const saleOuts: any[] = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
+    // 已审核销售合同 —— 补充收款单缺失时的销售收入（使用折后金额）
+    const contracts: any[] = contractRes.data?.rows ?? contractRes.data?.list ?? []
     const collectOrderSns = new Set(collects.map((r: any) => String(r?.order_sn || r?.order_no || '').trim()).filter(Boolean))
-    for (const r of saleOuts) {
-      const orderNo = String(r.order_no || r.order_sn || '').trim()
+    for (const r of contracts) {
+      // 从备注中提取合同编号，如 "[NO:HT20260321017]"
+      const remarkMatch = String(r.remark || '').match(/\[NO:([^\]]+)\]/)
+      const contractNo = remarkMatch?.[1] || String(r.order_sn || r.contract_no || '').trim()
       // 如果已有对应收款单，跳过避免重复
-      if (orderNo && collectOrderSns.has(orderNo)) continue
-      const amt = Number(r.total_amount || 0)
+      if (contractNo && collectOrderSns.has(contractNo)) continue
+      const amt = Number(r.after_discount || r.total_amount || 0)
       if (amt <= 0) continue
       items.push({
-        date: (r.out_date || r.create_time || '').slice(0, 10),
-        fund_name: r.fund_name || r.account_name || '—',
+        date: (r.sign_date || r.contract_date || r.created_at || '').slice(0, 10),
+        fund_name: r.receive_account || '—',
         type: 'income',
-        source: '销售出库',
+        source: '销售合同',
         name: r.customer_name || '—',
-        order_no: orderNo || '',
+        order_no: contractNo || '',
         amount: amt,
         remark: r.remark || '',
       })

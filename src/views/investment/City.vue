@@ -2,52 +2,78 @@
   <div class="city-page">
     <!-- 左侧状态栏 -->
     <aside class="city-sidebar">
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">核心生存区</div>
-        <div
-          v-for="inst in coreInstitutions"
-          :key="inst.institutionId"
-          class="inst-item"
-          :class="inst.status"
-        >
-          <span class="inst-emoji">{{ getEmoji(inst.institutionId) }}</span>
-          <div class="inst-info">
-            <span class="inst-name">{{ inst.name }}</span>
-            <span class="inst-status-label">{{ statusLabel(inst.status) }}</span>
+      <!-- 详情面板（选中机构时） -->
+      <div v-if="selectedInst" class="detail-panel">
+        <div class="detail-header">
+          <span class="detail-emoji">{{ getEmoji(selectedInst.institutionId) }}</span>
+          <div class="detail-title-wrap">
+            <span class="detail-name">{{ selectedInst.name }}</span>
+            <span class="detail-status-tag" :class="selectedInst.status">{{ statusLabel(selectedInst.status) }}</span>
           </div>
-          <span class="inst-dot" :class="inst.status"></span>
+          <button class="detail-close" @click="selectedId = null">&times;</button>
+        </div>
+
+        <!-- 建筑信息 -->
+        <div v-if="selectedBuilding" class="detail-section">
+          <div class="detail-section-title">建筑</div>
+          <div class="detail-row">
+            <span class="detail-label">状态</span>
+            <span class="detail-value">{{ buildingStatusLabel(selectedBuilding.status) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">坐标</span>
+            <span class="detail-value mono">({{ selectedBuilding.position.gridX }}, {{ selectedBuilding.position.gridY }})</span>
+          </div>
+          <div v-if="selectedBuilding.upgradeHistory.length" class="detail-row">
+            <span class="detail-label">升级次数</span>
+            <span class="detail-value mono">{{ selectedBuilding.upgradeHistory.length }}</span>
+          </div>
+        </div>
+
+        <!-- 工具列表 -->
+        <div v-if="selectedInst.toolIds.length" class="detail-section">
+          <div class="detail-section-title">可用工具</div>
+          <div v-for="tid in selectedInst.toolIds" :key="tid" class="tool-tag">
+            {{ toolNameMap[tid] || tid }}
+          </div>
+        </div>
+        <div v-else class="detail-section">
+          <div class="detail-section-title">可用工具</div>
+          <span class="detail-empty">暂无工具</span>
+        </div>
+
+        <!-- 最近活动 -->
+        <div class="detail-section">
+          <div class="detail-section-title">最近活动</div>
+          <div v-if="selectedInst.recentTrace" class="detail-trace">{{ selectedInst.recentTrace }}</div>
+          <div v-else class="detail-empty">暂无活动记录</div>
+          <div v-if="relatedEvents.length" class="detail-events">
+            <div v-for="ev in relatedEvents" :key="ev.id" class="detail-event-item">
+              <span class="detail-event-time">{{ formatTime(ev.at) }}</span>
+              <span class="detail-event-text">{{ ev.title }}</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">能力成长区</div>
-        <div
-          v-for="inst in growthInstitutions"
-          :key="inst.institutionId"
-          class="inst-item"
-          :class="inst.status"
-        >
-          <span class="inst-emoji">{{ getEmoji(inst.institutionId) }}</span>
-          <div class="inst-info">
-            <span class="inst-name">{{ inst.name }}</span>
-            <span class="inst-status-label">{{ statusLabel(inst.status) }}</span>
+
+      <!-- 机构列表（未选中时 或 折叠显示） -->
+      <div v-show="!selectedInst">
+        <div class="sidebar-section" v-for="zone in zoneList" :key="zone.key">
+          <div class="sidebar-section-title">{{ zone.label }}</div>
+          <div
+            v-for="inst in zone.items"
+            :key="inst.institutionId"
+            class="inst-item"
+            :class="[inst.status, { selected: selectedId === inst.institutionId }]"
+            @click="selectedId = inst.institutionId"
+          >
+            <span class="inst-emoji">{{ getEmoji(inst.institutionId) }}</span>
+            <div class="inst-info">
+              <span class="inst-name">{{ inst.name }}</span>
+              <span class="inst-status-label">{{ statusLabel(inst.status) }}</span>
+            </div>
+            <span class="inst-dot" :class="inst.status"></span>
           </div>
-          <span class="inst-dot" :class="inst.status"></span>
-        </div>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">社会关系区</div>
-        <div
-          v-for="inst in socialInstitutions"
-          :key="inst.institutionId"
-          class="inst-item"
-          :class="inst.status"
-        >
-          <span class="inst-emoji">{{ getEmoji(inst.institutionId) }}</span>
-          <div class="inst-info">
-            <span class="inst-name">{{ inst.name }}</span>
-            <span class="inst-status-label">{{ statusLabel(inst.status) }}</span>
-          </div>
-          <span class="inst-dot" :class="inst.status"></span>
         </div>
       </div>
     </aside>
@@ -80,9 +106,10 @@
               v-for="b in sortedBuildings"
               :key="b.key"
               class="iso-bldg"
-              :class="{ locked: b.locked }"
+              :class="{ locked: b.locked, selected: selectedId === b.instId }"
               :style="b.posStyle"
               :title="b.name"
+              @click.stop="selectedId = b.instId"
             >
               <div class="wall wall-left" :style="{ height: b.wallH + 'px', background: b.colorLeft }">
                 <div class="windows" v-if="b.wallH > 20">
@@ -116,19 +143,35 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import { useAdamStore } from '@/stores/adam'
+import type { InvestmentInstitutionId } from '@/types/investment'
 
 const adamStore = useAdamStore()
 
+// ── 选中状态 ──
+const selectedId = ref<InvestmentInstitutionId | null>(null)
+
+const selectedInst = computed(() =>
+  selectedId.value ? adamStore.institutions.find((i) => i.institutionId === selectedId.value) || null : null,
+)
+
+const selectedBuilding = computed(() =>
+  selectedId.value ? adamStore.buildings.find((b) => b.institutionId === selectedId.value) || null : null,
+)
+
+const relatedEvents = computed(() => {
+  if (!selectedInst.value) return []
+  return adamStore.events
+    .filter((e) => e.institutionId === selectedId.value)
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, 5)
+})
+
 // ── 左侧状态栏：按区域分组的机构 ──
-const coreInstitutions = computed(() =>
-  adamStore.institutions.filter((i) => i.zone === 'core_survival'),
-)
-const growthInstitutions = computed(() =>
-  adamStore.institutions.filter((i) => i.zone === 'ability_growth'),
-)
-const socialInstitutions = computed(() =>
-  adamStore.institutions.filter((i) => i.zone === 'social_relation'),
-)
+const zoneList = computed(() => [
+  { key: 'core', label: '核心生存区', items: adamStore.institutions.filter((i) => i.zone === 'core_survival') },
+  { key: 'growth', label: '能力成长区', items: adamStore.institutions.filter((i) => i.zone === 'ability_growth') },
+  { key: 'social', label: '社会关系区', items: adamStore.institutions.filter((i) => i.zone === 'social_relation') },
+])
 
 const emojiMap: Record<string, string> = {
   bureau: '🏛', finance_gateway: '🏦', vault: '🔐', reactor: '⚡',
@@ -139,8 +182,44 @@ const emojiMap: Record<string, string> = {
 function getEmoji(id: string) { return emojiMap[id] || '🏗️' }
 
 function statusLabel(status: string) {
-  const map: Record<string, string> = { idle: '待命', active: '运行中', locked: '未解锁', busy: '忙碌', error: '异常' }
+  const map: Record<string, string> = { idle: '待命', active: '运行中', locked: '未解锁', cooldown: '冷却中', disabled: '停用', urgent: '紧急' }
   return map[status] || status
+}
+
+function buildingStatusLabel(status: string) {
+  const map: Record<string, string> = { planned: '规划中', active: '已建成', upgrading: '升级中', disabled: '停用', memorial: '纪念碑' }
+  return map[status] || status
+}
+
+const toolNameMap: Record<string, string> = {
+  scan_market_news: '扫描市场新闻',
+  get_stock_realtime: '实时行情',
+  get_stock_history: '历史行情',
+  analyze_fundamentals: '基本面分析',
+  screen_stocks: '选股筛选',
+  get_northbound_flow: '北向资金',
+  get_sector_heat: '板块热度',
+  generate_research_report: '研报生成',
+  record_investment: '记录投资',
+  settle_dividend: '结算分红',
+  apply_penalty: '执行赔付',
+  request_loan: '申请贷款',
+  manage_vault: '保险箱管理',
+  build_structure: '建造',
+  relocate_structure: '迁移',
+  upgrade_structure: '升级建筑',
+  request_erp_access: '请求ERP权限',
+}
+
+function formatTime(iso: string) {
+  try {
+    const d = new Date(iso)
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    const day = d.getDate().toString().padStart(2, '0')
+    const hour = d.getHours().toString().padStart(2, '0')
+    const min = d.getMinutes().toString().padStart(2, '0')
+    return `${month}/${day} ${hour}:${min}`
+  } catch { return '--/-- --:--' }
 }
 
 // ── 等轴测参数 ──
@@ -220,6 +299,7 @@ const groundCells = computed(() => {
 const sortedBuildings = computed(() => {
   const list: Array<{
     key: string; name: string; emoji: string; locked: boolean
+    instId: string
     wallH: number; windowRows: number[]
     colorTop: string; colorLeft: string; colorRight: string
     posStyle: Record<string, string>
@@ -237,6 +317,7 @@ const sortedBuildings = computed(() => {
       name: b.name,
       emoji: def.emoji,
       locked: isLocked,
+      instId: b.institutionId || b.type,
       wallH,
       windowRows: Array.from({ length: rows }, (_, i) => i),
       colorTop: def.top,
@@ -423,6 +504,117 @@ onUnmounted(() => {
 .inst-dot.busy { background: #F5A623; animation: instpulse 1.5s ease-in-out infinite; }
 .inst-dot.error { background: #FF4D4D; }
 @keyframes instpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.inst-item.selected { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.2); }
+
+/* ── 详情面板 ── */
+.detail-panel {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.detail-emoji { font-size: 24px; }
+.detail-title-wrap { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.detail-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+.detail-status-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+}
+.detail-status-tag.idle { background: var(--faint); color: var(--dim); }
+.detail-status-tag.active { background: rgba(0,229,160,0.1); color: #00E5A0; }
+.detail-status-tag.locked { background: var(--faint); color: var(--dim); }
+.detail-status-tag.cooldown { background: rgba(0,212,255,0.1); color: #00D4FF; }
+.detail-status-tag.urgent { background: rgba(255,77,77,0.1); color: #FF4D4D; }
+.detail-close {
+  width: 24px; height: 24px; border: none; background: var(--faint);
+  border-radius: 6px; cursor: pointer; font-size: 16px; color: var(--dim);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all 0.15s;
+}
+.detail-close:hover { background: var(--border); color: var(--dark); }
+
+.detail-section {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.detail-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dim);
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+.detail-label { font-size: 11px; color: var(--dim); }
+.detail-value { font-size: 11px; font-weight: 600; color: var(--dark); }
+.detail-value.mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+
+.tool-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--faint);
+  color: var(--mid);
+  margin: 0 4px 4px 0;
+  border: 1px solid var(--border);
+}
+
+.detail-trace {
+  font-size: 11px;
+  color: var(--mid);
+  line-height: 1.5;
+  padding: 6px 8px;
+  background: var(--faint);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.detail-empty {
+  font-size: 11px;
+  color: var(--dim);
+}
+.detail-events {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.detail-event-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.detail-event-time {
+  font-size: 9px;
+  color: var(--dim);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+.detail-event-text {
+  font-size: 11px;
+  color: var(--mid);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 建筑选中高亮 ── */
+.iso-bldg.selected { filter: brightness(1.3) drop-shadow(0 0 8px rgba(245,166,35,0.5)); }
 
 /* ── 右侧城市 ── */
 .city-main {

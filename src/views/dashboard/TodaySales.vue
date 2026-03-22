@@ -28,14 +28,11 @@
           <el-table :data="saleRows" v-loading="loading" border size="small" style="width:100%" :max-height="tableMaxH">
             <el-table-column type="index" width="40" align="center" />
             <el-table-column v-if="!isMobile" prop="order_no" label="单号" min-width="120" show-overflow-tooltip />
-            <el-table-column prop="customer_name" label="客户" min-width="70" show-overflow-tooltip />
-            <el-table-column label="金额" min-width="90" align="right">
-              <template #default="{ row }">
-                <span style="color:#0071e3;font-weight:600">¥{{ Number(row.total_amount||0).toFixed(2) }}</span>
-              </template>
-            </el-table-column>
+            <el-table-column prop="customer_name" label="客户" min-width="80" show-overflow-tooltip />
+            <el-table-column label="金额" min-width="95" align="right"
+              :formatter="(row:any) => '¥' + Number(row.total_amount||0).toFixed(2)" />
             <el-table-column v-if="!isMobile" prop="out_date" label="日期" width="100" />
-            <el-table-column label="状态" width="70" align="center">
+            <el-table-column v-if="!isMobile" label="状态" width="70" align="center">
               <template #default="{ row }">
                 <el-tag :type="row.status==1?'success':'info'" size="small">{{ row.status==1?'已审核':'待审核' }}</el-tag>
               </template>
@@ -52,13 +49,9 @@
           <el-table :data="retailRows" v-loading="loading" border size="small" style="width:100%" :max-height="tableMaxH">
             <el-table-column type="index" width="40" align="center" />
             <el-table-column v-if="!isMobile" prop="order_no" label="单号" min-width="120" show-overflow-tooltip />
-            <el-table-column prop="member_name" label="会员" min-width="70" show-overflow-tooltip />
-            <el-table-column label="实付" min-width="90" align="right">
-              <template #default="{ row }">
-                <span style="color:#0071e3;font-weight:600">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column v-if="isMobile" prop="pay_method" label="支付" width="60" align="center" />
+            <el-table-column prop="member_name" label="会员" min-width="80" show-overflow-tooltip />
+            <el-table-column label="实付" min-width="95" align="right"
+              :formatter="(row:any) => '¥' + Number(row.pay_amount||0).toFixed(2)" />
             <el-table-column v-if="!isMobile" prop="pay_method" label="支付" width="80" align="center" />
             <el-table-column v-if="!isMobile" prop="order_date" label="日期" width="100" />
           </el-table>
