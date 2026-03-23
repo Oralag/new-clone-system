@@ -127,41 +127,84 @@
           </div>
         </div>
 
-        <el-table v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px"
+        <div v-if="isMobile" v-loading="loading" class="mobile-stock-list">
+          <div v-if="!tableData.length" class="mobile-stock-empty">暂无数据</div>
+          <div v-for="row in tableData" :key="row.id" :class="['mobile-stock-card', bomGoodsSet.has(row.id) ? 'is-bom' : '']">
+            <div class="mobile-stock-card__head">
+              <div class="mobile-stock-card__title-wrap">
+                <div class="mobile-stock-card__title">{{ row.goods_name || '—' }}</div>
+                <div class="mobile-stock-card__meta">
+                  <span>{{ row.goods_sn || '无编码' }}</span>
+                  <span v-if="row.cate_name">{{ row.cate_name }}</span>
+                </div>
+              </div>
+              <el-tag v-if="bomGoodsSet.has(row.id)" size="small" class="mobile-stock-card__bom">BOM</el-tag>
+            </div>
+            <div class="mobile-stock-card__grid">
+              <div class="mobile-stock-card__item">
+                <span class="mobile-stock-card__label">单位</span>
+                <span class="mobile-stock-card__value">{{ row.unit_name || '—' }}</span>
+              </div>
+              <div class="mobile-stock-card__item">
+                <span class="mobile-stock-card__label">库存</span>
+                <el-tag :type="stockStatusType(row)" size="small" effect="plain">
+                  {{ getStockQty(row).toFixed(0) }}
+                </el-tag>
+              </div>
+              <div class="mobile-stock-card__item">
+                <span class="mobile-stock-card__label">状态</span>
+                <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
+              </div>
+              <div class="mobile-stock-card__item">
+                <span class="mobile-stock-card__label">安全库存</span>
+                <span class="mobile-stock-card__value mobile-stock-card__value--link" @click="openSafeSetting(row)">
+                  {{ Number(row.safe_min) > 0 || Number(row.safe_max) > 0 ? safeRangeText(row) : '设置' }}
+                </span>
+              </div>
+            </div>
+            <div class="mobile-stock-card__actions">
+              <el-button type="info" link size="small" @click="openFlowDialog(row)">流水</el-button>
+              <el-button type="success" link size="small" @click="router.push('/procure/inhouse')">采购</el-button>
+              <el-button type="warning" link size="small" @click="router.push('/sale/contract')">销售</el-button>
+            </div>
+          </div>
+        </div>
+
+        <el-table v-else v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px"
           :row-class-name="({ row }: any) => bomGoodsSet.has(row.id) ? 'bom-row' : ''"
           @sort-change="handleSortChange">
-          <el-table-column v-if="!isMobile" type="index" label="序号" width="55" align="center" />
+          <el-table-column type="index" label="序号" width="55" align="center" />
           <el-table-column prop="goods_name" label="商品名称" min-width="120" sortable="custom">
             <template #default="{ row }">
               <span>{{ row.goods_name }}</span>
               <el-tag v-if="bomGoodsSet.has(row.id)" size="small" style="margin-left:6px;vertical-align:middle;background:#e6a23c;color:#fff;border-color:#e6a23c">BOM</el-tag>
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobile" prop="goods_sn" label="商品编码" width="130" />
-          <el-table-column v-if="!isMobile" prop="cate_name" label="分类" width="100" sortable="custom" />
-          <el-table-column v-if="!isMobile" prop="spec" label="规格" width="90" />
-          <el-table-column prop="unit_name" label="单位" :width="isMobile ? 50 : 65" align="center" />
-          <el-table-column label="库存" :width="isMobile ? 70 : 110" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
+          <el-table-column prop="goods_sn" label="商品编码" width="130" />
+          <el-table-column prop="cate_name" label="分类" width="100" sortable="custom" />
+          <el-table-column prop="spec" label="规格" width="90" />
+          <el-table-column prop="unit_name" label="单位" width="65" align="center" />
+          <el-table-column label="库存" width="110" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small" effect="plain">
-                {{ getStockQty(row).toFixed(isMobile ? 0 : 2) }}
+                {{ getStockQty(row).toFixed(2) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobile" label="库存状态" width="100" align="center">
+          <el-table-column label="库存状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobile" label="移动均价" width="90" align="right">
+          <el-table-column label="移动均价" width="90" align="right">
             <template #default="{ row }">¥{{ getAvgPrice(row).toFixed(2) }}</template>
           </el-table-column>
-          <el-table-column v-if="!isMobile" label="库存货值" width="110" align="right" sortable="custom" prop="__stock_value" :sort-orders="['descending','ascending',null]">
+          <el-table-column label="库存货值" width="110" align="right" sortable="custom" prop="__stock_value" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
               <span style="color:#0071e3;font-weight:500">¥{{ (getStockQty(row) * getAvgPrice(row)).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobile" label="出入库记录" width="280" align="center">
+          <el-table-column label="出入库记录" width="280" align="center">
             <template #default="{ row }">
               <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
                 <el-tag v-if="inhouseCountMap[row.id] > 0" type="success" size="small" effect="plain">
@@ -192,7 +235,7 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobile" label="安全库存" width="130" align="center">
+          <el-table-column label="安全库存" width="130" align="center">
             <template #default="{ row }">
               <span v-if="Number(row.safe_min) > 0 || Number(row.safe_max) > 0"
                 style="font-size:12px;color:#6b7280;cursor:pointer" @click="openSafeSetting(row)">
@@ -201,12 +244,12 @@
               <el-button v-else type="primary" link size="small" @click="openSafeSetting(row)">设置</el-button>
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobile" label="流水" width="60" align="center">
+          <el-table-column label="流水" width="60" align="center">
             <template #default="{ row }">
               <el-button type="info" link size="small" @click="openFlowDialog(row)">流水</el-button>
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobile" label="快捷跳转" width="120" align="center" fixed="right" class-name="col-white-bg">
+          <el-table-column label="快捷跳转" width="120" align="center" fixed="right" class-name="col-white-bg">
             <template #default="{ row }">
               <el-button type="success" link size="small" @click="router.push('/procure/inhouse')">采购</el-button>
               <el-button type="warning" link size="small" @click="router.push('/sale/contract')">销售</el-button>
@@ -1472,6 +1515,110 @@ watch(() => stockRefreshStore.version, () => {
   background-color: #fff !important;
 }
 
+.mobile-stock-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-stock-empty {
+  padding: 28px 0;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+.mobile-stock-card {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.mobile-stock-card.is-bom {
+  background: #fffbf2;
+  border-color: #f5d7a1;
+}
+
+.mobile-stock-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mobile-stock-card__title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-stock-card__title {
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: #303133;
+  word-break: break-word;
+}
+
+.mobile-stock-card__meta {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 12px;
+  color: #909399;
+  word-break: break-all;
+}
+
+.mobile-stock-card__bom {
+  flex-shrink: 0;
+  background: #e6a23c;
+  color: #fff;
+  border-color: #e6a23c;
+}
+
+.mobile-stock-card__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.mobile-stock-card__item {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-stock-card__label {
+  font-size: 11px;
+  color: #909399;
+}
+
+.mobile-stock-card__value {
+  font-size: 13px;
+  color: #303133;
+  word-break: break-word;
+}
+
+.mobile-stock-card__value--link {
+  color: #409eff;
+}
+
+.mobile-stock-card__actions {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #f2f3f5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
 @media (max-width: 767px) {
   .stock-page {
     flex-direction: column;
@@ -1508,6 +1655,14 @@ watch(() => stockRefreshStore.version, () => {
   .pager-row .el-pagination__sizes,
   .pager-row .el-pagination__jump {
     display: none;
+  }
+  .mobile-stock-card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+  .mobile-stock-card__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
   }
 }
 </style>
