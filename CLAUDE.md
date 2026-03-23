@@ -30,7 +30,7 @@
 - **应用名称**: 数字游牧ERP（勿用"企禾云"，已废弃）
 - **技术栈**: Vue 3 + Vite + TypeScript + Element Plus + Pinia + Vue Router + Axios
 - **部署**: Cloudflare Pages — https://nomaderp.pages.dev
-- **后端 API**: `https://saas.mzth.cn/adminapi/`
+- **后端 API**: `https://nomaderp.pages.dev/adminapi/`（通过 Cloudflare Pages 代理到 Railway erp-server）
 
 ---
 
