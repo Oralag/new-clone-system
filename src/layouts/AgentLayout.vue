@@ -115,6 +115,30 @@
         </router-link>
       </nav>
 
+      <!-- 公告栏 -->
+      <div class="sidebar-bulletin">
+        <div class="bulletin-hd">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1 3h10v7H1zM3 3V1.5h6V3"/><path d="M4 6h4M4 8h2"/></svg>
+          <span>公告</span>
+          <button class="bulletin-edit-btn" @click="editingBulletin = !editingBulletin" :title="editingBulletin ? '完成' : '编辑'">
+            <svg v-if="!editingBulletin" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M8.5 1.5l2 2L4 10H2v-2l6.5-6.5z"/></svg>
+            <svg v-else width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6l3 3 5-5"/></svg>
+          </button>
+        </div>
+        <textarea
+          v-if="editingBulletin"
+          v-model="bulletinText"
+          class="bulletin-textarea"
+          placeholder="输入公告内容..."
+          rows="3"
+          @blur="saveBulletin"
+        />
+        <div v-else class="bulletin-body">
+          <span v-if="bulletinText">{{ bulletinText }}</span>
+          <span v-else class="bulletin-empty">暂无公告</span>
+        </div>
+      </div>
+
       <!-- 底部 -->
       <div class="sidebar-footer">
         <div class="nav-section-label" style="margin-bottom:4px">其他</div>
@@ -230,6 +254,15 @@ const meetingStore = useMeetingStore()
 
 const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
+
+// 公告栏
+const BULLETIN_KEY = 'agent_bulletin'
+const editingBulletin = ref(false)
+const bulletinText = ref(localStorage.getItem(BULLETIN_KEY) || '')
+function saveBulletin() {
+  localStorage.setItem(BULLETIN_KEY, bulletinText.value)
+  editingBulletin.value = false
+}
 
 onMounted(() => window.addEventListener('resize', handleResize))
 onUnmounted(() => window.removeEventListener('resize', handleResize))
@@ -371,6 +404,68 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广�
   box-shadow: 0 0 0 2px rgba(0,113,227,0.2);
   animation: aipulse 2s ease-in-out infinite;
 }
+
+/* 底部 */
+.sidebar-footer {
+  padding: 10px 10px 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* 公告栏 */
+.sidebar-bulletin {
+  margin: 8px 10px;
+  padding: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.bulletin-hd {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  margin-bottom: 6px;
+}
+.bulletin-edit-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--dim);
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.bulletin-edit-btn:hover { color: #0071e3; }
+.bulletin-body {
+  font-size: 11px;
+  color: var(--mid);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.bulletin-empty { color: var(--dim); font-style: italic; }
+.bulletin-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--dark);
+  background: var(--gray);
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.5;
+}
+.bulletin-textarea:focus { border-color: #0071e3; }
 
 /* 底部 */
 .sidebar-footer {
