@@ -21,15 +21,37 @@
       <nav class="sidebar-nav">
         <router-link to="/investment" class="nav-item" active-class="nav-item--active" exact>
           <Eye :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">亚当</span>
+          <span class="nav-item-label">总览</span>
         </router-link>
         <router-link to="/investment/city" class="nav-item" active-class="nav-item--active">
           <Map :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">生态园区</span>
+          <span class="nav-item-label">园区地图</span>
         </router-link>
+
+        <div class="nav-section-title">情报研究</div>
         <router-link to="/investment/market" class="nav-item" active-class="nav-item--active">
           <BarChart3 :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">股票市场</span>
+          <span class="nav-item-label">市场情报</span>
+        </router-link>
+
+        <div class="nav-section-title">商业生态</div>
+        <router-link to="/investment/marketing" class="nav-item" active-class="nav-item--active">
+          <TrendingUp :size="15" :stroke-width="1.5" />
+          <span class="nav-item-label">营销顾问</span>
+        </router-link>
+        <router-link to="/investment/designer" class="nav-item" active-class="nav-item--active">
+          <Palette :size="15" :stroke-width="1.5" />
+          <span class="nav-item-label">平面设计师</span>
+        </router-link>
+
+        <div class="nav-section-title">亚当</div>
+        <router-link to="/investment/archive" class="nav-item" active-class="nav-item--active">
+          <BookOpen :size="15" :stroke-width="1.5" />
+          <span class="nav-item-label">档案馆</span>
+        </router-link>
+        <router-link to="/investment/library" class="nav-item" active-class="nav-item--active">
+          <Library :size="15" :stroke-width="1.5" />
+          <span class="nav-item-label">图书馆</span>
         </router-link>
       </nav>
 
@@ -120,7 +142,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
 import { useAppStore } from '@/stores/app'
-import { Eye, TrendingUp, ChevronLeft, Menu, Map, BarChart3 } from 'lucide-vue-next'
+import { Eye, TrendingUp, ChevronLeft, Menu, Map, BarChart3, BookOpen, Library, Palette } from 'lucide-vue-next'
 
 const route = useRoute()
 const adamStore = useAdamStore()
@@ -134,15 +156,23 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
 function handleResize() { isMobile.value = window.innerWidth < 768 }
 
 const mobileNavItems = [
-  { path: '/investment', label: '亚当' },
-  { path: '/investment/city', label: '生态园区' },
-  { path: '/investment/market', label: '股票市场' },
+  { path: '/investment', label: '总览' },
+  { path: '/investment/city', label: '园区地图' },
+  { path: '/investment/market', label: '市场情报' },
+  { path: '/investment/marketing', label: '营销顾问' },
+  { path: '/investment/designer', label: '平面设计师' },
+  { path: '/investment/archive', label: '档案馆' },
+  { path: '/investment/library', label: '图书馆' },
 ]
 
 const pageTitleMap: Record<string, string> = {
   '/investment': '亚当观测舱',
   '/investment/city': '生态园区',
-  '/investment/market': '股票市场',
+  '/investment/market': '市场情报',
+  '/investment/marketing': '营销顾问',
+  '/investment/designer': '平面设计师',
+  '/investment/archive': '档案馆',
+  '/investment/library': '图书馆',
 }
 const currentPageTitle = computed(() => pageTitleMap[route.path] || '亚当观测舱')
 
@@ -233,6 +263,16 @@ const statusLabel = computed(() => {
 
 /* 导航 */
 .sidebar-nav { padding: 12px 10px 0; flex: 1; }
+.nav-section-title {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  padding: 12px 12px 4px;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
 .nav-item {
   display: flex;
   align-items: center;

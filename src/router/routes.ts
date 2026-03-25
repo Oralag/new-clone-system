@@ -209,7 +209,11 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'InvestmentIndex', component: () => import('@/views/investment/Index.vue'), meta: { title: '亚当观测舱' } },
       { path: 'city', name: 'InvestmentCity', component: () => import('@/views/investment/City.vue'), meta: { title: '生态园区' } },
-      { path: 'market', name: 'InvestmentMarket', component: () => import('@/views/investment/Market.vue'), meta: { title: '股票市场' } },
+      { path: 'market', name: 'InvestmentMarket', component: () => import('@/views/investment/Market.vue'), meta: { title: '市场情报' } },
+      { path: 'marketing', name: 'InvestmentMarketing', component: () => import('@/views/investment/Marketing.vue'), meta: { title: '营销顾问' } },
+      { path: 'designer', name: 'InvestmentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
+      { path: 'archive', name: 'InvestmentArchive', component: () => import('@/views/investment/Archive.vue'), meta: { title: '档案馆' } },
+      { path: 'library', name: 'InvestmentLibrary', component: () => import('@/views/investment/Library.vue'), meta: { title: '图书馆' } },
     ],
   },
 ]
