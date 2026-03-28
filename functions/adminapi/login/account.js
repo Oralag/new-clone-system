@@ -4,7 +4,7 @@
 
 import { hashPassword, isHashedPassword, verifyPassword } from '../../utils/password.js'
 
-const DEFAULT_BACKEND = 'https://erp-server-production-b1b6.up.railway.app'
+const DEFAULT_BACKEND = 'https://erp-server-xsji.onrender.com'
 
 function corsHeaders() {
   return {
