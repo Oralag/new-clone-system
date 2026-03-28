@@ -2,7 +2,7 @@
 // Reads backend URL from wrapped token (erp_xxx), routes request to correct backend
 // Trial users (no dedicated backend) get sandboxed empty responses
 
-const DEFAULT_BACKEND = 'https://erp-server-production-b1b6.up.railway.app'
+const DEFAULT_BACKEND = 'https://erp-server-xsji.onrender.com'
 
 // Paths that trial users MUST be able to call (auth / user info)
 const TRIAL_PASSTHROUGH = [
@@ -78,6 +78,12 @@ export async function onRequest(context) {
   else headers.delete('token')
   headers.delete('origin')
   headers.delete('referer')
+  headers.delete('cf-connecting-ip')
+  headers.delete('cf-ipcountry')
+  headers.delete('cf-ray')
+  headers.delete('cf-visitor')
+  headers.delete('x-forwarded-for')
+  headers.delete('x-forwarded-proto')
 
   try {
     const proxyRequest = new Request(targetUrl, {
