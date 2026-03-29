@@ -339,22 +339,19 @@ function guessColumns(row: any) {
 
 function matchFund(name: string) {
   if (!name) return null
-  const n = name.toLowerCase()
-  return fundOptions.value.find((f: any) => String(f.name || '').toLowerCase() === n)
-    || fundOptions.value.find((f: any) => String(f.name || '').toLowerCase().includes(n) || n.includes(String(f.name || '').toLowerCase()))
-    || null
+  const n = name.toLowerCase().trim()
+  return fundOptions.value.find((f: any) => String(f.name || '').toLowerCase().trim() === n) || null
 }
 
 async function matchOrCreateFund(name: string) {
-  if (!name) return fundOptions.value[0] || null
+  if (!name) return null
   const existing = matchFund(name)
   if (existing) return existing
-  // 自动创建新账户
-  await createFund({ name, balance: 0, type: 1, status: 1 })
-  // 重新加载账户列表拿到新ID
+  // 没有完全匹配的账户，自动新建
+  await createFund({ name, balance: 0, fund_type: 1, status: 1 })
   const res = await getFundList({ list_rows: 200 })
-  fundOptions.value = (res.data?.rows ?? res.data?.list ?? []).filter((f: any) => f.status === 1 || f.status === '1')
-  return matchFund(name) || fundOptions.value[0] || null
+  fundOptions.value = res.data?.rows ?? res.data?.list ?? []
+  return matchFund(name) || null
 }
 
 let _colCache: ReturnType<typeof guessColumns> | null = null
