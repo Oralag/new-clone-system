@@ -1,6 +1,8 @@
 <template>
   <div class="dashboard">
 
+    <DeptBulletin dept-id="dashboard" />
+
     <!-- ── 品牌未配置引导卡 ── -->
     <div v-if="!brandStore.isConfigured" class="setup-guide-card">
       <div class="guide-icon-wrap">
@@ -175,6 +177,7 @@ import { computed, defineComponent, h } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
 import { useBrandStore } from '@/stores/brand'
 import CaptainBar from '@/components/CaptainBar.vue'
+import DeptBulletin from '@/components/agent/DeptBulletin.vue'
 
 const agentStore = useTrendingStore()
 const brandStore = useBrandStore()
@@ -266,6 +269,15 @@ const departments = [
     color: '#10b981',
     path: '/agent/publish',
     icon: IconPublish,
+  },
+  {
+    id: 'marketing',
+    name: '营销顾问',
+    desc: '营销战略·客户分析·定价策略·SWOT',
+    emoji: '📊',
+    color: '#059669',
+    path: '/investment/marketing',
+    icon: IconTrending,
   },
 ]
 

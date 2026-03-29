@@ -1,5 +1,6 @@
 import { ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useAdamStore } from '@/stores/adam'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -30,6 +31,7 @@ function getNow() {
 }
 
 export function useAiAgent(messagesRef: ReturnType<typeof ref<HTMLDivElement | undefined>>) {
+  const adamStore = useAdamStore()
   const messages = ref<ChatMessage[]>(loadHistory())
   const isLoading = ref(false)
 
@@ -96,6 +98,7 @@ export function useAiAgent(messagesRef: ReturnType<typeof ref<HTMLDivElement | u
           images: imagesToSend.length > 0
             ? imagesToSend.map(i => ({ data: i.data, mediaType: i.mediaType }))
             : undefined,
+          books: adamStore.books,
         }),
       })
 
@@ -127,6 +130,8 @@ export function useAiAgent(messagesRef: ReturnType<typeof ref<HTMLDivElement | u
                 assistantMsg.content += parsed.text
                 scrollToBottom()
               } else if (parsed.type === 'tool_start') {
+                // update_emotion 是内部情绪机制，不在界面上显示
+                if (parsed.name === 'update_emotion') continue
                 assistantMsg.toolCalls!.push({
                   id: parsed.id,
                   name: parsed.name,

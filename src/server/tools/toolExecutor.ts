@@ -453,6 +453,71 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         result = res?.code === 1 ? `资金账户已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
+      case 'web_search': {
+        const tavilyKey = process.env.TAVILY_API_KEY
+        if (!tavilyKey || tavilyKey === 'tvly-') {
+          result = '搜索功能未配置：请在 .env 文件中设置 TAVILY_API_KEY'
+          break
+        }
+        const searchRes = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: tavilyKey,
+            query: input.query,
+            max_results: input.max_results || 5,
+            search_depth: 'basic',
+          }),
+        })
+        const searchData = await searchRes.json() as { results?: Array<{ title: string; url: string; content: string; score: number }> }
+        const items = searchData?.results || []
+        if (items.length === 0) {
+          result = `未找到"${input.query}"的相关结果`
+        } else {
+          const summary = items.map((r, i) =>
+            `${i + 1}. **${r.title}**\n   ${r.content?.slice(0, 200)}...\n   来源：${r.url}`
+          ).join('\n\n')
+          result = `搜索"${input.query}"，找到 ${items.length} 条结果：\n\n${summary}`
+        }
+        break
+      }
+      case 'get_trending': {
+        const platform = input.platform || 'douyin'
+        const ROUTE_MAP: Record<string, string> = {
+          douyin: 'douyin', weibo: 'weibo', bilibili: 'bilibili',
+          zhihu: 'zhihu', xiaohongshu: 'toutiao', kuaishou: 'toutiao',
+        }
+        const LABEL_MAP: Record<string, string> = {
+          douyin: '抖音', weibo: '微博', bilibili: 'B站',
+          zhihu: '知乎', xiaohongshu: '今日头条（小红书替代）', kuaishou: '今日头条（快手替代）',
+        }
+        const routeName = ROUTE_MAP[platform]
+        if (!routeName) { result = `不支持的平台：${platform}`; break }
+        try {
+          const { handleRoute } = await import(`dailyhot-api/dist/routes/${routeName}.js`)
+          const resp = await handleRoute({ req: { query: () => undefined } }, true)
+          const items: Array<{ title: string; heat: string }> = (resp.data || []).slice(0, 20).map((item: any) => ({
+            title: item.title || '',
+            heat: typeof item.hot === 'number'
+              ? (item.hot >= 10000 ? `${(item.hot / 10000).toFixed(0)}万` : String(item.hot))
+              : item.hot || '热门',
+          }))
+          if (items.length === 0) { result = `${LABEL_MAP[platform] || platform}热榜数据为空`; break }
+          const list = items.map((item, i) => `${i + 1}. ${item.title}（热度：${item.heat}）`).join('\n')
+          result = `${LABEL_MAP[platform] || platform} 实时热榜 Top${items.length}：\n\n${list}`
+        } catch (e: any) {
+          result = `获取${LABEL_MAP[platform] || platform}热榜失败：${e.message}`
+        }
+        break
+      }
+      case 'generate_image': {
+        const prompt = encodeURIComponent(input.prompt || '')
+        const width = input.width || 1024
+        const height = input.height || 1024
+        const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=${width}&height=${height}&nologo=true&model=flux`
+        result = `IMAGE_URL:${imageUrl}\n图片已成功生成，URL：${imageUrl}`
+        break
+      }
       default:
         result = `未知工具：${name}`
     }

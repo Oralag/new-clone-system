@@ -27,7 +27,7 @@
           <template #default="{ row }">{{ row.receipt_no || row.order_sn || row.order_no || '—' }}</template>
         </el-table-column>
         <el-table-column label="单据日期" min-width="150">
-          <template #default="{ row }">{{ (row.receipt_date || row.create_time || '').slice(0, 16).replace('T', ' ') }}</template>
+          <template #default="{ row }">{{ fmtDt(row.receipt_date || row.create_time) }}</template>
         </el-table-column>
         <el-table-column label="付款单位" min-width="160">
           <template #default="{ row }">{{ row.contact_name || '—' }}</template>
@@ -98,7 +98,7 @@
     <el-dialog v-model="viewVisible" title="查看其他收入" width="520px">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="编号">{{ viewRow?.receipt_no || viewRow?.order_sn || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="单据日期">{{ (viewRow?.receipt_date || '').slice(0, 16).replace('T', ' ') }}</el-descriptions-item>
+        <el-descriptions-item label="单据日期">{{ fmtDt(viewRow?.receipt_date) }}</el-descriptions-item>
         <el-descriptions-item label="付款单位">{{ viewRow?.contact_name || '—' }}</el-descriptions-item>
         <el-descriptions-item label="收入类型">{{ viewRow?.income_type_name || cleanRemark(viewRow?.remark) || '—' }}</el-descriptions-item>
         <el-descriptions-item label="结算账户">{{ viewRow?.fund_name || '—' }}</el-descriptions-item>
@@ -122,6 +122,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import http from '@/api/http'
 import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund, updateFund } from '@/api/finance'
+import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()

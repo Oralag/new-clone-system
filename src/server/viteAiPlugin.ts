@@ -5,11 +5,12 @@ import { resolve } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { allTools } from './tools/erpTools'
 import { executeTool } from './tools/toolExecutor'
-import { detectIntent, getSystemPrompt } from './agents/orchestrator'
+import { handleRealtimeUpgrade } from './realtimeRelay'
 import { getAgent, AGENTS } from './agents/agentRegistry'
 import { adamTools } from './tools/adamTools'
 import { executeAdamTool } from './tools/adamExecutor'
 import { adamAgent } from './agents/adamOrchestrator'
+import { detectIntent, getSystemPrompt } from './agents/orchestrator'
 
 // ── Local user store (dev only) ───────────────────────────────────────────────
 const USERS_FILE = resolve(process.cwd(), '.local-users.json')
@@ -619,7 +620,7 @@ export function aiChatPlugin(): Plugin {
         }
       })
 
-      // ── /api/adam-agent — 亚当投资决策中枢 ─────────────────────────────────
+      // ── /api/adam-agent — 亚当投资决策中枢 (Anthropic Claude) ──────────────
       server.middlewares.use('/api/adam-agent', async (req, res, next) => {
         if (req.method === 'OPTIONS') {
           res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type, x-erp-token' })
@@ -629,58 +630,110 @@ export function aiChatPlugin(): Plugin {
 
         const chunks: Buffer[] = []
         for await (const chunk of req as any) chunks.push(chunk)
-        const { messages, adamState } = JSON.parse(Buffer.concat(chunks).toString())
+        const { messages, images, adamState } = JSON.parse(Buffer.concat(chunks).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
-        const apiKey = process.env.GEMINI_API_KEY
-        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY' })); return }
-
-        const genAI = new GoogleGenAI({ apiKey })
+        const apiKey = process.env.ANTHROPIC_API_KEY
+        const baseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
         const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
 
         try {
-          const systemInstruction = adamAgent.buildSystemPrompt(adamState || {})
+          const systemPrompt = adamAgent.buildSystemPrompt(adamState || {})
 
-          const history: Content[] = messages.slice(0, -1).map((m: any) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }],
+          // 构建 Anthropic tools 格式
+          const anthropicTools = adamTools.map((t: any) => ({
+            name: t.name,
+            description: t.description,
+            input_schema: t.parameters || { type: 'object', properties: {} },
           }))
 
-          const chat = genAI.chats.create({
-            model: 'gemini-2.0-flash',
-            config: { systemInstruction, tools: [{ functionDeclarations: adamTools }] },
-            history,
+          // 构建消息历史：最后一条 user 消息如有图片则插入 vision 内容块
+          const anthropicMessages = messages.map((m: any, idx: number) => {
+            const isLastUser = m.role === 'user' && idx === messages.length - 1
+            if (isLastUser && images?.length > 0) {
+              const parts: any[] = images.map((img: any) => ({
+                type: 'image',
+                source: { type: 'base64', media_type: img.mediaType, data: img.data },
+              }))
+              parts.push({ type: 'text', text: m.content || '请分析这张图片。' })
+              return { role: 'user', content: parts }
+            }
+            return {
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.content,
+            }
           })
 
-          const lastMsg = messages[messages.length - 1]
-          let currentParts: any[] = [{ text: lastMsg?.content || '' }]
-
+          // 工具调用循环（最多5轮）
+          let currentMessages = [...anthropicMessages]
           for (let i = 0; i < 5; i++) {
-            const response = await chat.sendMessage({ message: currentParts })
-            const textParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
-            for (const part of textParts) {
-              if (part.text) send({ type: 'text', text: part.text })
+            const response = await fetch(`${baseURL}/v1/messages`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+              },
+              body: JSON.stringify({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 4096,
+                system: systemPrompt,
+                tools: anthropicTools,
+                messages: currentMessages,
+              }),
+            })
+
+            if (!response.ok) {
+              const errText = await response.text()
+              send({ type: 'error', error: `Anthropic API 错误: ${response.status} ${errText}` })
+              break
             }
-            const fnParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
-            if (fnParts.length === 0) break
-            const toolResultParts: any[] = []
-            for (const part of fnParts) {
-              const fc = part.functionCall
-              const callId = fc.id || fc.name
-              send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
-              const result = await executeAdamTool(fc.name, fc.args as Record<string, any>, erpToken)
-              send({ type: 'tool_result', id: callId, name: fc.name, result })
-              toolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
+
+            const data = await response.json() as any
+            const content = data.content || []
+
+            // 流式输出文本
+            for (const block of content) {
+              if (block.type === 'text' && block.text) {
+                send({ type: 'text', text: block.text })
+              }
             }
-            currentParts = toolResultParts
+
+            // 处理工具调用
+            const toolUses = content.filter((b: any) => b.type === 'tool_use')
+            if (toolUses.length === 0 || data.stop_reason === 'end_turn') break
+
+            // 把 assistant 回复加入历史
+            currentMessages.push({ role: 'assistant', content })
+
+            // 执行工具并收集结果
+            const toolResults: any[] = []
+            for (const toolUse of toolUses) {
+              send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
+              const result = await executeAdamTool(toolUse.name, toolUse.input || {}, erpToken)
+              send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
+              toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
+            }
+
+            // 把工具结果加入历史，继续对话
+            currentMessages.push({ role: 'user', content: toolResults })
           }
+
           res.write('data: [DONE]\n\n')
         } catch (e: any) {
           send({ type: 'error', error: e.message })
         } finally {
           res.end()
+        }
+      })
+
+      // ── WebSocket upgrade: OpenAI Realtime API 语音中继 ──────────────────
+      server.httpServer?.on('upgrade', (req: any, socket: any, head: any) => {
+        if (req.url?.startsWith('/api/realtime')) {
+          handleRealtimeUpgrade(req, socket, head)
         }
       })
     },

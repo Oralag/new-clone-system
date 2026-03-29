@@ -53,10 +53,10 @@
             </template>
           </el-table-column>
           <el-table-column label="开单日期" width="110">
-            <template #default="{ row }">{{ (row.plan_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.plan_date || row.create_time) }}</template>
           </el-table-column>
           <el-table-column label="期望交期" width="110">
-            <template #default="{ row }">{{ (row.expected_date || '').slice(0, 10) || '—' }}</template>
+            <template #default="{ row }">{{ fmtDt(row.expected_date) || '—' }}</template>
           </el-table-column>
           <el-table-column label="采购人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
@@ -427,6 +427,7 @@ import StaffSelect from '@/components/StaffSelect.vue'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
+import { fmtDt } from '@/utils/date'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES

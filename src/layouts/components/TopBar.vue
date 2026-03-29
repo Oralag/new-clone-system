@@ -7,6 +7,8 @@
       </el-breadcrumb>
     </div>
 
+    <div class="top-clock">{{ clockStr }}</div>
+
     <div class="top-actions">
       <!-- 返回选择模块 -->
       <el-tooltip content="选择模块" placement="bottom">
@@ -109,12 +111,25 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { updateAdmin, getCompanyInfo } from '@/api/setting'
 import http from '@/api/http'
-import { onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+
+// ── 实时时钟 ──────────────────────────────────────────────────────────────────
+const clockStr = ref('')
+let clockTimer: ReturnType<typeof setInterval> | null = null
+
+function updateClock() {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+  clockStr.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} 星期${weekDays[now.getDay()]} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+}
+updateClock()
+clockTimer = setInterval(updateClock, 1000)
 
 // 挂载时加载企业名（若 store 尚未有值）
 onMounted(async () => {
@@ -126,6 +141,8 @@ onMounted(async () => {
     } catch { /* 静默失败，不影响页面 */ }
   }
 })
+
+onUnmounted(() => { if (clockTimer) clearInterval(clockTimer) })
 
 const SUPER_ADMIN = '17747344571'
 const isSuperAdmin = computed(() => {
@@ -257,6 +274,14 @@ async function handleUserCmd(cmd: string) {
 
 :deep(.el-breadcrumb__separator) {
   color: var(--faint) !important;
+}
+
+.top-clock {
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--dim);
+  letter-spacing: 0.03em;
+  user-select: none;
 }
 
 .top-actions {

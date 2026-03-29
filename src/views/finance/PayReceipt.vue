@@ -48,7 +48,7 @@
           <template #default="{ row }">{{ row.fund_name || row.account_name || '—' }}</template>
         </el-table-column>
         <el-table-column label="付款日期" width="150">
-          <template #default="{ row }">{{ (row.pay_date || row.created_at || '').slice(0, 16).replace('T', ' ') }}</template>
+          <template #default="{ row }">{{ fmtDt(row.pay_date || row.created_at) }}</template>
         </el-table-column>
         <el-table-column prop="pay_method" label="付款方式" width="100" align="center" />
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
@@ -73,6 +73,7 @@ import http from '@/api/http'
 import { applyProcureReturnsToPayReceiptRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { adjustFundBalance } from '@/utils/fund'
+import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const purchaseOrders = ref<any[]>([])

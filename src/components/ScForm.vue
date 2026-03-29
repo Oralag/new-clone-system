@@ -20,7 +20,7 @@
 
     <template #footer>
       <div class="form-footer">
-        <div class="create-time-note" v-if="formData.create_time">创建时间：{{ formData.create_time }}</div>
+        <div class="create-time-note" v-if="formData.create_time">创建时间：{{ fmtDt(formData.create_time) }}</div>
         <div class="footer-btns">
           <el-button @click="handleClose">关 闭</el-button>
           <template v-if="isView">
@@ -37,6 +37,7 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
+import { fmtDt } from '@/utils/date'
 
 interface Props {
   title?: string

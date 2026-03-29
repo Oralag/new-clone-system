@@ -1,3 +1,5 @@
+import { fmtDt } from './date'
+
 type AnyRow = Record<string, any>
 
 function toNumber(value: any) {
@@ -54,7 +56,7 @@ export function normalizeSaleReturnFinanceRows(rows: AnyRow[]) {
       order_key: orderNo ? `no:${orderNo}` : `return:${row.id || Math.random()}`,
       order_no: orderNo,
       return_amount: returnAmount,
-      date: text(row.return_date || row.create_time).slice(0, 10),
+      date: fmtDt(text(row.return_date || row.create_time)),
       remark: text(row.remark || row.reason),
     })
   }

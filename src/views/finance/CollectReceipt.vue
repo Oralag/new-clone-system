@@ -57,7 +57,7 @@
         </el-table-column>
         <el-table-column label="收款日期" width="150">
           <template #default="{ row }">
-            {{ (row.receipt_date || row.pay_date || row.created_at || '').slice(0, 16).replace('T', ' ') }}
+            {{ fmtDt(row.receipt_date || row.pay_date || row.created_at) }}
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
@@ -180,6 +180,7 @@ import { getStaffList, createStaff } from '@/api/personnel'
 import http from '@/api/http'
 import { applySaleReturnsToCollectReceiptRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { adjustFundBalance } from '@/utils/fund'
+import { fmtDt } from '@/utils/date'
 
 // ── 数据加载 ──────────────────────────────────────────────────────────────────
 const loading = ref(false)

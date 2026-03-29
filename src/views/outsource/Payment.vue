@@ -15,7 +15,7 @@
           <el-table-column prop="payment_no" label="付款编号" min-width="150" />
           <el-table-column prop="supplier_name" label="供应商" min-width="130" />
           <el-table-column prop="payment_date" label="付款日期" width="110">
-            <template #default="{ row }">{{ (row.payment_date||row.created_at||'').slice(0,10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.payment_date || row.created_at) }}</template>
           </el-table-column>
           <el-table-column prop="account_name" label="付款账户" min-width="120" />
           <el-table-column label="付款金额" width="120" align="right">
@@ -152,6 +152,7 @@ import { getOutsourcePaymentList, createOutsourcePayment, deleteOutsourcePayment
 import { getSupplierList } from '@/api/procure'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { fmtDt } from '@/utils/date'
 
 const tableRef=ref<InstanceType<typeof ScTable>>()
 const permStore = usePermissionStore()

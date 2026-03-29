@@ -324,7 +324,7 @@
           <template #default="{ row }">¥{{ Number(row._price || 0).toFixed(2) }}</template>
         </el-table-column>
         <el-table-column label="日期" width="100">
-          <template #default="{ row }">{{ (row._date || '').slice(0, 10) }}</template>
+          <template #default="{ row }">{{ fmtDt(row._date) }}</template>
         </el-table-column>
         <el-table-column label="备注/对方" min-width="110" :show-overflow-tooltip="{ appendTo: 'body' }">
           <template #default="{ row }">{{ row._partner || '—' }}</template>
@@ -366,6 +366,7 @@
 
 <script setup lang="ts">
 import { computed, onActivated, onMounted, onUnmounted, ref, reactive, watch } from 'vue'
+import { fmtDt } from '@/utils/date'
 import { useRouter } from 'vue-router'
 import { Search, Plus, Edit, Delete, Filter } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

@@ -15,7 +15,7 @@
           <el-table-column prop="plan_no" label="计划编号" min-width="150" />
           <el-table-column prop="supplier_name" label="供应商" min-width="130" />
           <el-table-column prop="plan_date" label="计划日期" width="110">
-            <template #default="{ row }">{{ (row.plan_date||row.created_at||'').slice(0,10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.plan_date || row.created_at) }}</template>
           </el-table-column>
           <el-table-column prop="finish_date" label="交货日期" width="110" />
           <el-table-column label="委外总金额" width="120" align="right">
@@ -177,6 +177,7 @@ import { getOutsourcePlanList, createOutsourcePlan, updateOutsourcePlan, deleteO
 import { getSupplierList } from '@/api/procure'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { fmtDt } from '@/utils/date'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const permStore = usePermissionStore()

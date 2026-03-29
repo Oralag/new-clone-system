@@ -359,12 +359,14 @@ import { getSaleContractList } from '@/api/reports'
 import http from '@/api/http'
 import { adjustFundBalance } from '@/utils/fund'
 import { RETAIL_FUND_NAME } from '@/config'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 // ── 商品 ──────────────────────────────────────────────────────────────────────
 const keyword = ref('')
 const activeCate = ref<any>('hot')
 const activePCate = ref<any>('')  // 当前选中的父分类 ID
 const goodsList = ref<any[]>([])
+const stockRefreshStore = useStockRefreshStore()
 const goodsLoading = ref(false)
 const selectedGoods = ref<any>(null)
 
@@ -623,6 +625,7 @@ async function handleCheckout() {
         allowCreate: true,
       })
     } catch { /* 资金更新失败不阻塞 */ }
+    stockRefreshStore.trigger()
     successVisible.value = true
   } catch (e: any) {
     ElMessage.error(e?.message ?? '结算失败')

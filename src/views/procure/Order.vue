@@ -58,10 +58,10 @@
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="开单日期" width="110">
-            <template #default="{ row }">{{ (row.order_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.order_date || row.create_time) }}</template>
           </el-table-column>
           <el-table-column label="预计交期" width="110">
-            <template #default="{ row }">{{ (row.delivery_date || '').slice(0, 10) || '—' }}</template>
+            <template #default="{ row }">{{ fmtDt(row.delivery_date) || '—' }}</template>
           </el-table-column>
           <el-table-column label="采购人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
@@ -603,7 +603,7 @@
             >
               <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.order_sn }}</div>
               <div style="font-size:11px;color:rgba(29,29,31,0.35);margin-top:2px">
-                {{ p.supplier_name || '—' }} · {{ (p.plan_date || p.created_at || '').slice(0,10) }}
+                {{ p.supplier_name || '—' }} · {{ fmtDt(p.plan_date || p.created_at) }}
               </div>
             </div>
             <div v-if="!planPickerLoading && filteredPlanList.length === 0"
@@ -658,11 +658,14 @@ import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { fmtDt } from '@/utils/date'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
 
 const permStore = usePermissionStore()
+const stockRefreshStore = useStockRefreshStore()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
@@ -1131,6 +1134,7 @@ async function handleAudit(row: any, status: number) {
   await ElMessageBox.confirm(`确定${action}该采购单？`, '提示', { type: 'warning' })
   try {
     await auditProcureOrder(row.id, status)
+    stockRefreshStore.trigger()
     ElMessage.success(`${action}成功`)
     tableRef.value?.refresh()
     loadPaidMap()
@@ -1180,6 +1184,7 @@ async function handleReverseAudit(row: any) {
       console.warn('采购入库反审核失败', e?.message)
     }
     await auditProcureOrder(row.id, 0)
+    stockRefreshStore.trigger()
     ElMessage.success('反审核成功，库存与财务已回滚')
     tableRef.value?.refresh()
     loadPaidMap()

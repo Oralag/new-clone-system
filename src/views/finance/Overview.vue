@@ -225,7 +225,7 @@
               <div class="inline-name">{{ getPayReceiptSupplierLabel(r, purchasePayList, supplierList) }}</div>
               <div class="inline-value red">¥{{ Number(r.net_amount ?? r.amount ?? 0).toFixed(2) }}</div>
               <div class="inline-sub">
-                {{ (r.pay_date||r.created_at||'').slice(0,16).replace('T',' ') }}
+                {{ fmtDt(r.pay_date || r.created_at) }}
                 <span v-if="Number(r.refund_allocated || 0) > 0"> · 已退款 ¥{{ Number(r.refund_allocated || 0).toFixed(2) }}</span>
               </div>
             </div>
@@ -487,7 +487,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, ArrowUp, ArrowDown, ArrowRight, Box, Plus, Minus, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -499,6 +499,7 @@ import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, app
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
+import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 
@@ -559,36 +560,36 @@ const allFlowItems = computed(() => {
   for (const r of collectList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const src = isCustomerPrepayLike(r) ? '预收款' : '收款单'
-    items.push({ type: 'income', source: src, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: (r.receipt_date || r.created_at || '').slice(0, 10), order_no: r.receipt_no || r.order_sn || '' })
+    items.push({ type: 'income', source: src, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.receipt_date || r.created_at), order_no: r.receipt_no || r.order_sn || '' })
   }
   // 2. 零售单（income）— 真实字段: member_name, pay_amount, order_sn, order_date
   for (const r of retailList.value) {
     const amt = Number(r.pay_amount || r.total_amount || 0)
     if (amt <= 0) continue
-    items.push({ type: 'income', source: '零售单', name: r.member_name || r.customer_name || '散客', amount: amt, date: (r.order_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
+    items.push({ type: 'income', source: '零售单', name: r.member_name || r.customer_name || '散客', amount: amt, date: fmtDt(r.order_date || r.created_at), order_no: r.order_sn || '' })
   }
   // 3. 会员充值（income）— 真实字段: member_name, amount, recharge_date
   for (const r of rechargeList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'income', source: '会员充值', name: r.member_name || '—', amount: Number(r.amount || 0), date: (r.recharge_date || r.created_at || '').slice(0, 10), order_no: '' })
+    items.push({ type: 'income', source: '会员充值', name: r.member_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.recharge_date || r.created_at), order_no: '' })
   }
   // 4. 付款单（expense）— 真实字段: contact_name, supplier_name, contact_type, amount, pay_date
   for (const r of payList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const paySourceMap: Record<string, string> = { supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出' }
-    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: getPayReceiptSupplierLabel(r, purchasePayList.value, supplierList.value), amount: Number(r.amount || 0), date: (r.pay_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
+    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: getPayReceiptSupplierLabel(r, purchasePayList.value, supplierList.value), amount: Number(r.amount || 0), date: fmtDt(r.pay_date || r.created_at), order_no: r.order_sn || '' })
   }
   // 5. 费用单（expense）— 真实字段: name(非type_name), amount, expense_date, order_sn
   for (const r of expenseList.value) {
     if (r.payment_status === 'pending') continue
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'expense', source: r.payment_status === 'paid' ? '费用(已付)' : '费用', name: r.name || '—', amount: Number(r.amount || 0), date: (r.expense_date || r.created_at || '').slice(0, 10), order_no: r.order_sn || '' })
+    items.push({ type: 'expense', source: r.payment_status === 'paid' ? '费用(已付)' : '费用', name: r.name || '—', amount: Number(r.amount || 0), date: fmtDt(r.expense_date || r.created_at), order_no: r.order_sn || '' })
   }
   // 6. 预收款（income）
   for (const r of prepayList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const isCustomer = r.pay_type === 'customer'
-    items.push({ type: 'income', source: isCustomer ? '客户预收款' : '供应商预付款', name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: (r.create_time || '').slice(0, 10), order_no: r.prepay_no || '' })
+    items.push({ type: 'income', source: isCustomer ? '客户预收款' : '供应商预付款', name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: fmtDt(r.create_time), order_no: r.prepay_no || '' })
   }
   // 7. 采购退货退款（income）
   for (const r of procureReturnFinanceList.value) {
@@ -635,14 +636,14 @@ const recentCollectItems = computed(() => {
       _key: 'c_' + r.id,
       name: r.customer_name || r.contact_name || '—',
       amount: Number(r.net_amount ?? r.amount ?? 0),
-      date: (r.receipt_date || r.create_time || '').slice(0, 10),
+      date: fmtDt(r.receipt_date || r.create_time),
       refund_allocated: Number(r.refund_allocated || 0),
     })
   }
   for (const r of prepayList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const isCustomer = r.pay_type === 'customer'
-    items.push({ _key: 'p_' + r.id, name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: (r.create_time || '').slice(0, 10) })
+    items.push({ _key: 'p_' + r.id, name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: fmtDt(r.create_time) })
   }
   return items.sort((a, b) => b.date.localeCompare(a.date))
 })
@@ -834,7 +835,7 @@ const profitByOrder = computed(() => {
       source: '合同',
       order_no: ((c.remark || '').match(/^\[NO:([^\]]+)\]/) || [])[1] || c.order_sn || c.contract_no || `HT${String(c.id).padStart(4, '0')}`,
       customer_name: c.customer_name || '—',
-      order_date: (c.contract_date || c.create_time || '').slice(0, 10),
+      order_date: fmtDt(c.contract_date || c.create_time),
       sale_amount, cost_amount, profit, freight, net_profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
       net_rate: sale_amount > 0 ? (net_profit / sale_amount * 100) : 0,
@@ -847,7 +848,7 @@ const profitByOrder = computed(() => {
     result.push({
       source: '零售', order_no: r.order_sn || r.order_no || r.id,
       customer_name: r.customer_name || r.member_name || '散客',
-      order_date: (r.order_date || r.create_time || '').slice(0, 10),
+      order_date: fmtDt(r.order_date || r.create_time),
       sale_amount, cost_amount, profit, freight: 0, net_profit: profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
       net_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
@@ -1048,6 +1049,7 @@ async function saveCollect() {
     await createCollectReceipt(isOther ? {
       contact_name: name,
       contact_type: 'other',
+      fund_id: collectForm.value.fund_id === -1 ? null : collectForm.value.fund_id,
       fund_name: fundName,
       amount: collectForm.value.amount,
       receipt_date: collectForm.value.receipt_date,
@@ -1056,6 +1058,7 @@ async function saveCollect() {
       customer_id: collectForm.value.contact_id || 0,
       customer_name: name,
       contact_type: 'customer',
+      fund_id: collectForm.value.fund_id === -1 ? null : collectForm.value.fund_id,
       fund_name: fundName,
       amount: collectForm.value.amount,
       receipt_date: collectForm.value.receipt_date,
@@ -1063,6 +1066,7 @@ async function saveCollect() {
     })
     ElMessage.success(isOther ? '其他收入已保存' : '收款记录已保存')
     collectDialogVisible.value = false
+    loadAllData()
   } catch { ElMessage.error('保存失败') } finally { collectSaving.value = false }
 }
 
@@ -1136,6 +1140,7 @@ async function savePay() {
     await http.post('/finance/PayReceipt/add', {
       contact_name: name,
       contact_type: isOther ? 'other' : 'supplier',
+      fund_id: payForm.value.fund_id === -1 ? null : payForm.value.fund_id,
       fund_name: fundName,
       amount: payForm.value.amount,
       pay_date: payForm.value.pay_date,
@@ -1143,12 +1148,13 @@ async function savePay() {
     })
     ElMessage.success(isOther ? '其他支出已保存' : '付款记录已保存')
     payDialogVisible.value = false
+    loadAllData()
   } catch { ElMessage.error('保存失败') } finally { paySaving.value = false }
 }
 
-onMounted(async () => {
+async function loadAllData() {
   try {
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes, pGoodsRes, pInhouseRes, pBomRes] = await Promise.all([
+    const settled = await Promise.allSettled([
       getFundList({ list_rows: 100 }),
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
       getCollectReceiptList({ list_rows: 1000 }),
@@ -1169,15 +1175,49 @@ onMounted(async () => {
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
     ])
+    const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
+    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes, pGoodsRes, pInhouseRes, pBomRes] = settled.map((_,i) => ok(i))
     const rawFundList = fundRes.data?.rows ?? fundRes.data?.list ?? []
     const fundNameMap = new Map<number, string>(rawFundList.map((row: any) => [Number(row.id), String(row.name || '')]))
     prepayList.value = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
-    collectList.value = collectRes.data?.rows ?? collectRes.data?.list ?? []
-    payList.value = payRes.data?.rows ?? payRes.data?.list ?? []
+    const rawCollectList = collectRes.data?.rows ?? collectRes.data?.list ?? []
+    const rawPayList = payRes.data?.rows ?? payRes.data?.list ?? []
+    collectList.value = rawCollectList
+    payList.value = rawPayList
     const rawReceivableList = receivableRes.data?.rows ?? receivableRes.data?.list ?? []
     procureReturnFinanceList.value = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [], fundNameMap)
     const normalizedSaleReturns = normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? [])
-    fundList.value = applyProcureReturnsToFundRows(rawFundList, procureReturnFinanceList.value)
+
+    // 按 fund_id 动态计算各账户余额：收款单收入 - 付款单支出（不依赖balance字段）
+    const fundIncomeById = new Map<number, number>()
+    const fundIncomeByName = new Map<string, number>()
+    for (const r of rawCollectList) {
+      const amt = Number(r.amount || 0)
+      if (amt <= 0) continue
+      const fid = Number(r.fund_id || 0)
+      const fname = String(r.fund_name || '').trim()
+      if (fid > 0) fundIncomeById.set(fid, (fundIncomeById.get(fid) || 0) + amt)
+      else if (fname) fundIncomeByName.set(fname, (fundIncomeByName.get(fname) || 0) + amt)
+    }
+    const fundExpenseById = new Map<number, number>()
+    const fundExpenseByName = new Map<string, number>()
+    for (const r of rawPayList) {
+      const amt = Number(r.amount || 0)
+      if (amt <= 0) continue
+      const fid = Number(r.fund_id || 0)
+      const fname = String(r.fund_name || '').trim()
+      if (fid > 0) fundExpenseById.set(fid, (fundExpenseById.get(fid) || 0) + amt)
+      else if (fname) fundExpenseByName.set(fname, (fundExpenseByName.get(fname) || 0) + amt)
+    }
+    const fundListWithDynamic = rawFundList.map((row: any) => {
+      const fid = Number(row.id || 0)
+      const fname = String(row.name || '').trim()
+      const income = (fundIncomeById.get(fid) || 0) + (fundIncomeByName.get(fname) || 0)
+      const expense = (fundExpenseById.get(fid) || 0) + (fundExpenseByName.get(fname) || 0)
+      const dynamicBalance = Math.round((income - expense) * 100) / 100
+      return { ...row, raw_balance: dynamicBalance, balance: dynamicBalance, display_balance: dynamicBalance }
+    })
+    fundList.value = applyProcureReturnsToFundRows(fundListWithDynamic, procureReturnFinanceList.value)
     saleReturnFinanceList.value = buildSaleReturnSettlementRows(rawReceivableList, normalizedSaleReturns)
     payableList.value = [
       ...applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], procureReturnFinanceList.value),
@@ -1206,7 +1246,10 @@ onMounted(async () => {
       return true
     })
   } catch {}
-})
+}
+
+onMounted(() => loadAllData())
+onActivated(() => loadAllData())
 </script>
 
 <style scoped>

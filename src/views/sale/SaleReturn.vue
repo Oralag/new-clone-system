@@ -49,7 +49,7 @@
             <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
           </el-table-column>
           <el-table-column label="退货日期" width="110">
-            <template #default="{ row }">{{ (row.return_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.return_date || row.create_time) }}</template>
           </el-table-column>
           <el-table-column label="退货人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
@@ -421,7 +421,7 @@
           <template #default="{ row }">¥{{ Number(row.total_amount||0).toFixed(2) }}</template>
         </el-table-column>
         <el-table-column label="出库日期" width="110">
-          <template #default="{ row }">{{ (row.out_date||row.create_time||'').slice(0,10) }}</template>
+          <template #default="{ row }">{{ fmtDt(row.out_date || row.create_time) }}</template>
         </el-table-column>
       </el-table>
       <template #footer>
@@ -436,6 +436,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
+import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
@@ -447,12 +448,14 @@ import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const permStore = usePermissionStore()
+const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
@@ -661,6 +664,7 @@ async function handleAudit(row: any, status: number) {
     }
 
     ElMessage.success(`${action}成功`)
+    stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')

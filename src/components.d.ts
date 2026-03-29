@@ -21,6 +21,7 @@ declare module 'vue' {
     CaptchaCanvas: typeof import('./components/CaptchaCanvas.vue')['default']
     CommanderBar: typeof import('./components/CommanderBar.vue')['default']
     CustomerSelect: typeof import('./components/CustomerSelect.vue')['default']
+    DeptBulletin: typeof import('./components/agent/DeptBulletin.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBadge: typeof import('element-plus/es')['ElBadge']
@@ -77,6 +78,7 @@ declare module 'vue' {
     SupplierSelect: typeof import('./components/SupplierSelect.vue')['default']
     TrialBanner: typeof import('./components/TrialBanner.vue')['default']
     UpgradeDialog: typeof import('./components/UpgradeDialog.vue')['default']
+    VoiceCallOverlay: typeof import('./components/ai/VoiceCallOverlay.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

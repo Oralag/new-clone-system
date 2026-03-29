@@ -65,7 +65,7 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
   }))
 }
 
-async function executeTool(name: string, input: Record<string, any>, token: string): Promise<string> {
+async function executeTool(name: string, input: Record<string, any>, token: string, books?: any[]): Promise<string> {
   try {
     let result: string
     switch (name) {
@@ -319,6 +319,21 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         result = res?.code === 1 ? `销售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
+      case 'browse_books': {
+        const bks = books || []
+        const keyword = input.keyword?.toLowerCase() || ''
+        const filtered = keyword
+          ? bks.filter((b: any) => b.title?.toLowerCase().includes(keyword) || b.tags?.some((t: string) => t.toLowerCase().includes(keyword)))
+          : bks
+        result = `图书馆共 ${filtered.length} 本书。${JSON.stringify(filtered.map((b: any) => ({ id: b.id, 书名: b.title, 作者: b.author, 标签: b.tags })))}`
+        break
+      }
+      case 'add_book': {
+        const id = `book_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+        const tags = input.tags ? String(input.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
+        result = JSON.stringify({ status: 'added', id, title: input.title, content: input.content, author: 'ai-assistant', tags, createdAt: new Date().toISOString(), note: '新书已添加到图书馆书架' })
+        break
+      }
       default:
         result = `未知工具：${name}`
     }
@@ -442,6 +457,8 @@ const allTools = [
   { name: 'delete_purchase_order', description: '删除采购订单（用于删除错误的采购单，需先用 query_purchases 查到ID）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '采购订单ID' } }, required: ['id'] } },
   { name: 'delete_sale_order', description: '删除销售合同/订单（用于删除错误的销售单，需先用 query_sales 查到ID）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '销售订单ID' } }, required: ['id'] } },
   { name: 'navigate_to', description: '跳转到ERP系统的指定页面', input_schema: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
+  { name: 'browse_books', description: '查阅图书馆书架上的书本（标题、作者、标签）', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '按标题或标签筛选' } } } },
+  { name: 'add_book', description: '往图书馆书架上添加新书', input_schema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' }, tags: { type: 'string', description: '逗号分隔标签' } }, required: ['title', 'content'] } },
 ]
 
 export const onRequestOptions: PagesFunction = async () => {
@@ -464,7 +481,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
   const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
   const erpToken = request.headers.get('x-erp-token') || ''
-  const { messages, images } = await request.json() as any
+  const { messages, images, books } = await request.json() as any
 
   const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
   // 有图片时附加完整识别规则；无图片时用精简 prompt
@@ -566,7 +583,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const toolResults: any[] = []
         for (const toolUse of toolUseBlocks) {
           await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
-          const result = await executeTool(toolUse.name, toolUse.input, erpToken)
+          const result = await executeTool(toolUse.name, toolUse.input, erpToken, books)
           await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
           toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
         }

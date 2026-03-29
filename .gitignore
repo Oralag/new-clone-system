@@ -26,3 +26,4 @@ dist.bak
 *.njsproj
 *.sln
 *.sw?
+.vercel

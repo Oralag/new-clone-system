@@ -56,7 +56,7 @@
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="出库日期" width="110">
-            <template #default="{ row }">{{ (row.out_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.out_date || row.create_time) }}</template>
           </el-table-column>
           <el-table-column label="经办人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
@@ -485,6 +485,7 @@
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
+import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
@@ -497,12 +498,14 @@ import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const permStore = usePermissionStore()
+const stockRefreshStore = useStockRefreshStore()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
@@ -835,6 +838,7 @@ async function handleSave() {
       try {
         await auditSaleOut(savedId, 1)
         await handleSaleOutStockEffect({ ...payload, id: savedId, goods_info: JSON.stringify(fd.items) }, 'audit')
+        stockRefreshStore.trigger()
       } catch (e: any) {
         ElMessage.warning('保存成功，但自动审核/库存扣减失败：' + (e?.message || ''))
       }
@@ -1062,6 +1066,7 @@ async function handleAudit(row: any, status: number) {
     }
 
     financeWarning ? ElMessage.warning(`${action}成功，但${financeWarning}`) : ElMessage.success(`${action}成功`)
+    stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch (e: any) {
     const msg = e?.message ?? ''

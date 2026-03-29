@@ -54,8 +54,10 @@ import { getRetailReturnList, deleteRetailReturn, auditRetailReturn } from '@/ap
 import { adjustFundBalance } from '@/utils/fund'
 import { RETAIL_FUND_NAME } from '@/config'
 import http from '@/api/http'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 const scTable = ref()
+const stockRefreshStore = useStockRefreshStore()
 const searchForm = reactive<any>({ return_no: '', status: '' })
 
 async function handleAudit(row: any, status: number) {
@@ -95,6 +97,7 @@ async function handleAudit(row: any, status: number) {
       } catch { /* 库存恢复失败不阻塞 */ }
     }
     ElMessage.success(`${action}成功`)
+    stockRefreshStore.trigger()
     scTable.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')

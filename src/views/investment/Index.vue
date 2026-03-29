@@ -8,11 +8,11 @@
 
         <div class="status-header">
           <div class="adam-identity">
-            <!-- 生命指示器：多环呼吸灯 -->
+            <!-- 亚当头像 + 状态光环 -->
             <div class="life-indicator" :class="adamStore.core.status">
               <span class="life-orbit orbit-1"></span>
               <span class="life-orbit orbit-2"></span>
-              <span class="life-core"></span>
+              <img :src="adamAvatarUrl" class="adam-identity-img" alt="亚当" />
             </div>
             <div class="adam-name">
               <span class="name-main">ADAM <span class="name-id">#1</span></span>
@@ -103,11 +103,11 @@
                 <span class="risk-icon">⚠</span> {{ adamStore.latestRecommendation.riskNote }}
               </div>
               <div class="instruction-actions">
-                <button class="btn-gold">
+                <button class="btn-gold" @click="handleAdoptRecommendation">
                   <span class="btn-glow"></span>
                   已执行
                 </button>
-                <button class="btn-ghost">跳过</button>
+                <button class="btn-ghost" @click="handleSkipRecommendation">跳过</button>
               </div>
             </div>
           </div>
@@ -170,11 +170,17 @@
 
           <div v-for="msg in messages" :key="msg.id" class="msg" :class="msg.role">
             <div class="msg-header">
-              <span class="msg-avatar" :class="msg.role">{{ msg.role === 'user' ? 'U' : 'A' }}</span>
+              <span class="msg-avatar" :class="msg.role">
+                <img v-if="msg.role === 'assistant'" :src="adamAvatarUrl" class="adam-msg-img" alt="亚当" />
+                <template v-else>U</template>
+              </span>
               <span class="msg-sender">{{ msg.role === 'user' ? 'OPERATOR' : 'ADAM' }}</span>
               <span class="msg-time">{{ msg.time }}</span>
             </div>
             <div class="msg-content" v-html="renderMarkdown(msg.content)"></div>
+            <div v-if="msg.images?.length" class="msg-images">
+              <img v-for="(url, i) in msg.images" :key="i" :src="url" class="msg-img-thumb" />
+            </div>
 
             <div v-if="msg.toolCalls?.length" class="tool-calls">
               <div v-for="call in msg.toolCalls" :key="call.id" class="tool-card" :class="call.status">
@@ -185,8 +191,7 @@
                     {{ call.status === 'running' ? 'EXECUTING' : call.status === 'success' ? 'DONE' : 'FAILED' }}
                   </span>
                 </div>
-                <div v-if="call.result" class="tool-result">
-                  <pre>{{ call.result.slice(0, 300) }}{{ call.result.length > 300 ? '...' : '' }}</pre>
+                <div v-if="call.result" class="tool-result" style="display:none">
                 </div>
               </div>
             </div>
@@ -194,7 +199,9 @@
 
           <div v-if="isLoading" class="msg assistant">
             <div class="msg-header">
-              <span class="msg-avatar assistant">A</span>
+              <span class="msg-avatar assistant">
+                <img :src="adamAvatarUrl" class="adam-msg-img" alt="亚当" />
+              </span>
               <span class="msg-sender">ADAM</span>
             </div>
             <div class="typing-indicator">
@@ -205,22 +212,39 @@
 
         <div class="chat-input-area">
           <div class="disclaimer">AI ANALYSIS · NOT INVESTMENT ADVICE · RISK ASSUMED</div>
+          <!-- 待发送图片预览 -->
+          <div v-if="pendingImages.length" class="pending-images">
+            <div v-for="(img, idx) in pendingImages" :key="idx" class="pending-img-wrap">
+              <img :src="img.previewUrl" class="pending-img" />
+              <button class="pending-img-remove" @click="removePendingImage(idx)">×</button>
+            </div>
+          </div>
           <div class="input-row">
+            <!-- 图片上传按钮 -->
+            <button class="img-btn" title="发送图片" @click="openImagePicker" :disabled="isLoading">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+            </button>
             <textarea
               ref="inputRef"
               v-model="inputText"
               class="chat-input"
-              placeholder="对亚当说话..."
+              placeholder="对亚当说话...（可粘贴图片）"
               rows="1"
               @keydown.enter.exact.prevent="handleSend"
               @input="autoResize"
+              @paste="onPaste"
             />
-            <button class="send-btn" :disabled="!inputText.trim() || isLoading" @click="handleSend">
+            <button class="send-btn" :disabled="(!inputText.trim() && !pendingImages.length) || isLoading" @click="handleSend">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z"/>
               </svg>
             </button>
           </div>
+          <!-- 隐藏 file input -->
+          <input ref="fileInputRef" type="file" accept="image/*" multiple style="display:none" @change="onFileChange" />
         </div>
       </div>
     </div>
@@ -228,8 +252,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useAdamStore } from '@/stores/adam'
+import { applyToolResult } from '@/utils/adamToolSync'
+import { marked } from 'marked'
+import adamAvatarUrl from '@/assets/adam-avatar.png'
+
+// marked 配置：不换行产生段落，安全输出
+marked.setOptions({ breaks: true, gfm: true })
 
 const adamStore = useAdamStore()
 
@@ -260,6 +290,45 @@ function handleActivate() {
   adamStore.activate()
 }
 
+function handleAdoptRecommendation() {
+  const rec = adamStore.latestRecommendation
+  if (!rec || rec.status === 'adopted' || rec.status === 'executed') return
+  rec.status = 'adopted'
+  const now = new Date().toISOString()
+  const evtId = `evt_adopt_${Date.now()}`
+  adamStore.addEvent({
+    id: evtId,
+    type: 'recommendation_adopted',
+    stage: 'act',
+    title: `已执行指令: ${rec.title}`,
+    summary: rec.thesis?.slice(0, 60) || '',
+    at: now,
+    institutionId: 'bureau',
+  })
+  rec.linkedEventIds.push(evtId)
+  adamStore.persist()
+}
+
+function handleSkipRecommendation() {
+  const rec = adamStore.latestRecommendation
+  if (!rec || rec.status === 'adopted' || rec.status === 'executed') return
+  rec.status = 'archived'
+  const now = new Date().toISOString()
+  adamStore.addEvent({
+    id: `evt_skip_${Date.now()}`,
+    type: 'archive_recorded',
+    stage: 'archive',
+    title: `跳过指令: ${rec.title}`,
+    summary: '规则传递者选择跳过',
+    at: now,
+    institutionId: 'bureau',
+  })
+  if (adamStore.core.recommendationAccuracy > 0) {
+    adamStore.core.recommendationAccuracy = Math.max(0, adamStore.core.recommendationAccuracy - 2)
+  }
+  adamStore.persist()
+}
+
 function formatTime(iso: string) {
   try {
     const d = new Date(iso)
@@ -279,11 +348,18 @@ interface ToolCallState {
   status: 'running' | 'success' | 'error'
 }
 
+interface ImageItem {
+  previewUrl: string
+  data: string       // base64（不含前缀）
+  mediaType: string
+}
+
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   time: string
+  images?: string[]  // previewUrl 列表，仅用于显示
   toolCalls?: ToolCallState[]
 }
 
@@ -292,15 +368,26 @@ const MAX_HISTORY = 80
 
 const messagesDiv = ref<HTMLDivElement>()
 const inputRef = ref<HTMLTextAreaElement>()
+const fileInputRef = ref<HTMLInputElement>()
 const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const isLoading = ref(false)
+const pendingImages = ref<ImageItem[]>([])
 
 onMounted(() => {
+  // 刷新存活天数
+  adamStore.refreshSurvivalDays()
+  survivalTimer = window.setInterval(() => adamStore.refreshSurvivalDays(), 60 * 60 * 1000) // 每小时刷新
+
   try {
     const raw = localStorage.getItem(HISTORY_KEY)
     if (raw) messages.value = JSON.parse(raw)
   } catch { /* ignore */ }
+})
+
+let survivalTimer: number | undefined
+onUnmounted(() => {
+  if (survivalTimer) clearInterval(survivalTimer)
 })
 
 function persistHistory() {
@@ -326,26 +413,26 @@ function nowStr() {
 }
 
 function renderMarkdown(text: string) {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>')
+  return marked.parse(text) as string
 }
 
 async function handleSend() {
   const text = inputText.value.trim()
-  if (!text || isLoading.value) return
+  if ((!text && !pendingImages.value.length) || isLoading.value) return
+
+  const imagesToSend = [...pendingImages.value]
+  const previewUrls = imagesToSend.map(i => i.previewUrl)
 
   const userMsg: ChatMessage = {
     id: `u_${Date.now()}`,
     role: 'user',
-    content: text,
+    content: text || '请分析这张图片。',
     time: nowStr(),
+    images: previewUrls.length ? previewUrls : undefined,
   }
   messages.value.push(userMsg)
   inputText.value = ''
+  pendingImages.value = []
   if (inputRef.value) inputRef.value.style.height = 'auto'
   scrollToBottom()
 
@@ -375,7 +462,11 @@ async function handleSend() {
       },
       body: JSON.stringify({
         messages: apiMessages,
+        images: imagesToSend.length > 0
+          ? imagesToSend.map(i => ({ data: i.data, mediaType: i.mediaType }))
+          : undefined,
         adamState: { ...adamStore.core },
+        books: adamStore.books,
       }),
     })
 
@@ -387,8 +478,9 @@ async function handleSend() {
     const reader = res.body?.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let streamDone = false
 
-    while (reader) {
+    while (reader && !streamDone) {
       const { done, value } = await reader.read()
       if (done) break
 
@@ -399,7 +491,7 @@ async function handleSend() {
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue
         const payload = line.slice(6).trim()
-        if (payload === '[DONE]') break
+        if (payload === '[DONE]') { streamDone = true; break }
 
         try {
           const data = JSON.parse(payload)
@@ -407,6 +499,7 @@ async function handleSend() {
             assistantMsg.content += data.text
             scrollToBottom()
           } else if (data.type === 'tool_start') {
+            if (data.name === 'update_emotion') continue
             assistantMsg.toolCalls!.push({
               id: data.id,
               name: data.name,
@@ -419,6 +512,10 @@ async function handleSend() {
             if (call) {
               call.result = data.result
               call.status = 'success'
+            }
+            // 工具结果 → 回写 adamStore
+            if (data.result) {
+              applyToolResult(adamStore, data.name, data.result)
             }
             scrollToBottom()
           } else if (data.type === 'error') {
@@ -437,11 +534,71 @@ async function handleSend() {
     }
   } finally {
     isLoading.value = false
+    previewUrls.forEach(url => URL.revokeObjectURL(url))
     persistHistory()
     scrollToBottom()
   }
 }
-</script>
+
+// ── 图片处理 ──────────────────────────────────────────────────────────────
+
+function openImagePicker() {
+  fileInputRef.value?.click()
+}
+
+function compressToJpeg(file: File): Promise<{ data: string; previewUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 1600
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+          else { width = Math.round(width * MAX / height); height = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        const data = dataUrl.split(',')[1]
+        const previewUrl = URL.createObjectURL(file)
+        resolve({ data, previewUrl })
+      }
+      img.onerror = reject
+      img.src = ev.target!.result as string
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+async function onFileChange(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (!files) return
+  for (const file of Array.from(files)) {
+    if (!file.type.startsWith('image/')) continue
+    const { data, previewUrl } = await compressToJpeg(file)
+    pendingImages.value.push({ previewUrl, data, mediaType: 'image/jpeg' })
+  }
+  ;(e.target as HTMLInputElement).value = ''
+}
+
+async function onPaste(e: ClipboardEvent) {
+  const items = Array.from(e.clipboardData?.items ?? []).filter(i => i.type.startsWith('image/'))
+  for (const item of items) {
+    const file = item.getAsFile()
+    if (!file) continue
+    const { data, previewUrl } = await compressToJpeg(file)
+    pendingImages.value.push({ previewUrl, data, mediaType: 'image/jpeg' })
+  }
+}
+
+function removePendingImage(idx: number) {
+  URL.revokeObjectURL(pendingImages.value[idx].previewUrl)
+  pendingImages.value.splice(idx, 1)
+}</script>
 
 <style scoped>
 /* ═══════════════════════════════════════════════════
@@ -551,6 +708,14 @@ async function handleSend() {
   border-radius: 50%;
   position: relative;
   z-index: 2;
+}
+.adam-identity-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  position: relative;
+  z-index: 2;
+  border-radius: 50%;
 }
 .life-orbit {
   position: absolute;
@@ -1132,6 +1297,14 @@ async function handleSend() {
   background: rgba(245,166,35,0.10);
   color: #F5A623;
   border: 1px solid rgba(245,166,35,0.20);
+  overflow: hidden;
+  padding: 0;
+}
+.adam-msg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 .msg-sender {
   font-size: 10px;
@@ -1154,6 +1327,38 @@ async function handleSend() {
   padding-left: 28px;
 }
 .msg.user .msg-content { color: var(--mid); }
+
+/* Markdown 渲染样式 */
+.msg-content :deep(p) { margin: 0 0 6px; }
+.msg-content :deep(p:last-child) { margin-bottom: 0; }
+.msg-content :deep(ul), .msg-content :deep(ol) { margin: 4px 0; padding-left: 20px; }
+.msg-content :deep(li) { margin: 2px 0; }
+.msg-content :deep(code) {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  background: var(--faint);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #F5A623;
+}
+.msg-content :deep(pre) {
+  background: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+.msg-content :deep(pre code) { background: none; padding: 0; }
+.msg-content :deep(strong) { color: var(--dark); }
+.msg-content :deep(a) { color: #00D4FF; text-decoration: none; }
+.msg-content :deep(a:hover) { text-decoration: underline; }
+.msg-content :deep(blockquote) {
+  border-left: 2px solid #F5A623;
+  margin: 6px 0;
+  padding: 4px 10px;
+  color: var(--dim);
+}
 
 /* 工具调用 */
 .tool-calls {
@@ -1254,6 +1459,68 @@ async function handleSend() {
   display: flex;
   align-items: flex-end;
   gap: 8px;
+}
+.img-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--faint);
+  color: var(--mid);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+.img-btn:hover:not(:disabled) { color: #F5A623; border-color: #F5A623; }
+.img-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.pending-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.pending-img-wrap {
+  position: relative;
+}
+.pending-img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.pending-img-remove {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.msg-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.msg-img-thumb {
+  max-width: 200px;
+  max-height: 160px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border);
 }
 .chat-input {
   flex: 1;

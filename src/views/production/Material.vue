@@ -25,7 +25,7 @@
             <template #default="{ row }">{{ row.admin_name || row.receiver || '—' }}</template>
           </el-table-column>
           <el-table-column label="领料日期" width="110">
-            <template #default="{ row }">{{ (row.pick_date || row.out_date || row.created_at || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.pick_date || row.out_date || row.created_at) }}</template>
           </el-table-column>
           <el-table-column prop="warehouse_name" label="出库仓库" min-width="120" />
           <el-table-column label="状态" width="90" align="center">
@@ -321,6 +321,7 @@ import { getProductionPlanList } from '@/api/production'
 import { getWarehouseList } from '@/api/warehouse'
 import { getBomByGoods } from '@/api/goods'
 import http from '@/api/http'
+import { fmtDt } from '@/utils/date'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
 import { usePermissionStore } from '@/stores/permission'
 

@@ -104,7 +104,7 @@
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ (row.order_date || row.create_time || '').slice(0, 10) }}</template>
+              <template #default="{ row }">{{ fmtDt(row.order_date || row.create_time) }}</template>
             </el-table-column>
             <el-table-column label="商品明细" min-width="200" show-overflow-tooltip>
               <template #default="{ row }">
@@ -139,7 +139,7 @@
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ (row.create_time || '').slice(0, 10) }}</template>
+              <template #default="{ row }">{{ fmtDt(row.create_time) }}</template>
             </el-table-column>
             <template #empty><div style="padding:20px 0;color:#aaa">暂无退货</div></template>
           </el-table>
@@ -174,7 +174,7 @@
       <div v-if="detailRow" class="order-detail">
         <div class="detail-header">
           <div class="detail-kv"><span class="detail-k">单号</span><span class="detail-v">{{ detailRow.order_sn || `LS${(detailRow.order_date || detailRow.created_at || '').slice(0, 10).replace(/-/g, '')}${String(detailRow.id).padStart(3,'0')}` }}</span></div>
-          <div class="detail-kv"><span class="detail-k">日期</span><span class="detail-v">{{ (detailRow.order_date || detailRow.create_time || '').slice(0, 10) }}</span></div>
+          <div class="detail-kv"><span class="detail-k">日期</span><span class="detail-v">{{ fmtDt(detailRow.order_date || detailRow.create_time) }}</span></div>
           <div class="detail-kv"><span class="detail-k">会员</span><span class="detail-v">{{ detailRow.member_name || '散客' }}</span></div>
           <div class="detail-kv"><span class="detail-k">支付方式</span><span class="detail-v">{{ payLabel(detailRow.pay_method) }}</span></div>
         </div>
@@ -209,6 +209,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ShoppingCart, Document, User, RefreshLeft } from '@element-plus/icons-vue'
 import { getRetailOrderList, getRetailReturnList } from '@/api/retail'
+import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 

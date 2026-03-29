@@ -147,8 +147,10 @@ import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList, getStoreList } from '@/api/retail'
 import http from '@/api/http'
 import { RETAIL_FUND_NAME } from '@/config'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const stockRefreshStore = useStockRefreshStore()
 const searchForm = reactive<any>({ order_no: '', member_name: '', store_id: '' })
 const dateRange = ref<any>(null)
 
@@ -253,6 +255,7 @@ async function handleSave() {
     } catch (e: any) {
       ElMessage.warning('库存扣减失败，请手动更新')
     }
+    stockRefreshStore.trigger()
     ElMessage.success('保存成功')
     drawerVisible.value = false
     tableRef.value?.refresh()
@@ -285,6 +288,7 @@ async function handleDelete(row: any) {
   }
   await deleteRetailOrder(row.id)
   ElMessage.success('删除成功')
+  stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
 
@@ -302,6 +306,7 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
       await retailStockEffect(items, 'restore')
     } catch { /* ignore */ }
   }
+  stockRefreshStore.trigger()
   return http.post('/retail/order/batchDel', { ids })
 }
 

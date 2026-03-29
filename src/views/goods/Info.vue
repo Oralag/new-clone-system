@@ -1686,7 +1686,7 @@ function buildImportRow(cells: any[], fieldKeys: string[], rowNo: number) {
 
 function splitImportCategoryPath(value: any) {
   return String(value ?? '')
-    .split(/[\/／]/)
+    .split('/')
     .map(item => item.trim())
     .filter(Boolean)
 }
@@ -1737,6 +1737,7 @@ async function ensureImportCategory(path: any) {
       continue
     }
 
+    // 后端返回已存在，重新加载后复用
     await loadCates()
     current = findImportCategoryByNameAndParent(segment, parentId)
     if (!current) throw new Error(`分类创建失败：${segment}`)
@@ -1869,6 +1870,12 @@ async function confirmImport() {
           cateChanged = true
         }
       }
+      // 用商品编码检查是否已存在，避免重复导入
+      if (payload.goods_sn) {
+        const checkRes = await getGoodsList({ keyword: payload.goods_sn, list_rows: 10 })
+        const exists = (checkRes.data?.rows ?? []).some((r: any) => r.goods_sn === payload.goods_sn)
+        if (exists) { skipped++; continue }
+      }
       const res = await createGoods({ ...payload, status: 1 })
       const id = res.data?.id ?? 0
       if (id) {
@@ -1901,7 +1908,7 @@ function downloadTemplate() {
     '条码': '6901234567890',
     '销售价': 99.9,
     '采购价': 60,
-    '商品分类': '默认分类',
+    '商品分类': '一级分类>二级分类',
     '规格型号': '500g/袋',
     '商品单位': '袋',
     '品牌': '示例品牌',

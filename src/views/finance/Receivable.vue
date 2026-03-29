@@ -64,7 +64,7 @@
           </template>
         </el-table-column>
         <el-table-column label="出库日期" min-width="150">
-          <template #default="{ row }">{{ (row.out_date || row.created_at || '').slice(0, 16).replace('T', ' ') }}</template>
+          <template #default="{ row }">{{ fmtDt(row.out_date || row.created_at) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
@@ -95,6 +95,7 @@ import { Search, Refresh } from '@element-plus/icons-vue'
 import { getReceivableList } from '@/api/finance'
 import http from '@/api/http'
 import { applySaleReturnsToReceivableRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
+import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const loading = ref(false)

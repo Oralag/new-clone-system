@@ -1,3 +1,5 @@
+import { fmtDt } from './date'
+
 type AnyRow = Record<string, any>
 
 function toNumber(value: any) {
@@ -85,7 +87,7 @@ export function normalizeProcureReturnFinanceRows(
       refund_amount: roundMoney(refundAmount),
       fund_id: fundId,
       fund_name: text(row.fund_name || row.account_name || fundNameMap?.get(fundId) || ''),
-      date: text(row.return_date || row.create_time).slice(0, 10),
+      date: fmtDt(text(row.return_date || row.create_time)),
       remark: text(row.remark),
     })
   }

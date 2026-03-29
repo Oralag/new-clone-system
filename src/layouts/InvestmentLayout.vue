@@ -31,7 +31,7 @@
         <div class="nav-section-title">情报研究</div>
         <router-link to="/investment/market" class="nav-item" active-class="nav-item--active">
           <BarChart3 :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">市场情报</span>
+          <span class="nav-item-label">市场</span>
         </router-link>
 
         <div class="nav-section-title">商业生态</div>
@@ -158,7 +158,7 @@ function handleResize() { isMobile.value = window.innerWidth < 768 }
 const mobileNavItems = [
   { path: '/investment', label: '总览' },
   { path: '/investment/city', label: '园区地图' },
-  { path: '/investment/market', label: '市场情报' },
+  { path: '/investment/market', label: '市场' },
   { path: '/investment/marketing', label: '营销顾问' },
   { path: '/investment/designer', label: '平面设计师' },
   { path: '/investment/archive', label: '档案馆' },
@@ -168,7 +168,7 @@ const mobileNavItems = [
 const pageTitleMap: Record<string, string> = {
   '/investment': '亚当观测舱',
   '/investment/city': '生态园区',
-  '/investment/market': '市场情报',
+  '/investment/market': '市场',
   '/investment/marketing': '营销顾问',
   '/investment/designer': '平面设计师',
   '/investment/archive': '档案馆',

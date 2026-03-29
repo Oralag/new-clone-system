@@ -32,6 +32,9 @@ export type InvestmentInstitutionId =
   | 'ad_company'
   | 'archive'
   | 'corner'
+  | 'marketing_consultancy'
+  | 'library'
+  | (string & {})
 
 export type InvestmentInstitutionStatus =
   | 'locked'
@@ -59,6 +62,12 @@ export type InvestmentToolId =
   | 'relocate_structure'
   | 'upgrade_structure'
   | 'request_erp_access'
+  | 'issue_recommendation'
+  | 'write_reflection'
+  | 'consult_marketing_expert'
+  | 'browse_books'
+  | 'add_book'
+  | 'recommend_book'
 
 export interface InvestmentEventRecord {
   id: string
@@ -114,7 +123,7 @@ export interface LedgerEntryRecord {
 export interface InstitutionStateRecord {
   institutionId: InvestmentInstitutionId
   name: string
-  zone: 'core_survival' | 'ability_growth' | 'social_relation'
+  zone: 'command_center' | 'intelligence' | 'commerce' | 'adam_domain'
   status: InvestmentInstitutionStatus
   lastActivityAt?: string
   recentTrace?: string
@@ -145,5 +154,15 @@ export interface ReflectionRecord {
   id: string
   at: string
   content: string
+  linkedEventIds: string[]
+}
+
+export interface BookRecord {
+  id: string
+  title: string
+  content: string
+  author: 'adam' | 'user' | string
+  tags?: string[]
+  createdAt: string
   linkedEventIds: string[]
 }

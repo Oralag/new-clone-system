@@ -189,6 +189,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { InfoFilled, Loading } from '@element-plus/icons-vue'
+import { fmtDt } from '@/utils/date'
 import { getContractList } from '@/api/sale'
 import { getRetailOrderList } from '@/api/retail'
 import { getGoodsList, getBomList } from '@/api/goods'
@@ -355,7 +356,7 @@ const orderRows = computed(() => {
       source: '合同',
       order_no: ((c.remark || '').match(/^\[NO:([^\]]+)\]/) || [])[1] || c.order_sn || c.contract_no || `HT${String(c.id).padStart(4, '0')}`,
       customer_name: c.customer_name || '—',
-      order_date: (c.contract_date || c.create_time || '').slice(0, 10),
+      order_date: fmtDt(c.contract_date || c.create_time),
       sale_amount, cost_amount, profit, freight, net_profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
       net_rate: sale_amount > 0 ? (net_profit / sale_amount * 100) : 0,
@@ -377,7 +378,7 @@ const orderRows = computed(() => {
       source: '零售',
       order_no: r.order_sn || r.order_no || `LS${(r.order_date || r.create_time || '').slice(0, 10).replace(/-/g, '')}${String(r.id).padStart(3, '0')}`,
       customer_name: r.customer_name || r.member_name || '散客',
-      order_date: (r.order_date || r.create_time || '').slice(0, 10),
+      order_date: fmtDt(r.order_date || r.create_time),
       sale_amount, cost_amount, profit, freight: 0, net_profit: profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
       net_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,

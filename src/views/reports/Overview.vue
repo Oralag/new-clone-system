@@ -89,7 +89,7 @@
           <div v-if="saleContracts.length === 0 && !loading" class="ro-empty-sm">暂无已审核合同</div>
           <div v-for="row in saleContracts.slice(0, 6)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.customer_name || row.order_sn || '-' }}</span>
-            <span class="ro-dr-date">{{ row.sign_date || row.created_at?.slice(0,10) }}</span>
+            <span class="ro-dr-date">{{ fmtDt(row.sign_date || row.created_at) }}</span>
             <span class="ro-dr-amt blue">+¥{{ fmt(row.total_amount || 0) }}</span>
           </div>
           <div v-if="saleContracts.length > 6" class="ro-more">还有 {{ saleContracts.length - 6 }} 笔合同...</div>
@@ -98,7 +98,7 @@
           <div v-if="retailOrders.length === 0 && !loading" class="ro-empty-sm">暂无零售订单</div>
           <div v-for="row in retailOrders.slice(0, 6)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.member_name || row.customer_name || '散客' }}</span>
-            <span class="ro-dr-date">{{ row.order_date || row.created_at?.slice(0,10) }}</span>
+            <span class="ro-dr-date">{{ fmtDt(row.order_date || row.created_at) }}</span>
             <span class="ro-dr-amt green">+¥{{ fmt(row.pay_amount || row.total_amount || 0) }}</span>
           </div>
           <div v-if="retailOrders.length > 6" class="ro-more">还有 {{ retailOrders.length - 6 }} 笔订单...</div>
@@ -114,7 +114,7 @@
           <div v-if="procureOrders.length === 0 && !loading" class="ro-empty-sm">暂无采购订单</div>
           <div v-for="row in procureOrders.slice(0, 8)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ getProcureSupplierLabel(row) || row.order_sn || '-' }}</span>
-            <span class="ro-dr-date">{{ row.order_date || row.created_at?.slice(0,10) }}</span>
+            <span class="ro-dr-date">{{ fmtDt(row.order_date || row.created_at) }}</span>
             <span class="ro-dr-amt red">−¥{{ fmt(row.total_amount || 0) }}</span>
           </div>
           <div v-if="procureOrders.length > 8" class="ro-more">还有 {{ procureOrders.length - 8 }} 笔采购...</div>
@@ -123,7 +123,7 @@
           <div v-if="freightTotal === 0 && !loading" class="ro-empty-sm">无运费承担</div>
           <div v-for="row in freightRows" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.customer_name || '-' }}（{{ freightLabel(row) }}）</span>
-            <span class="ro-dr-date">{{ row.sign_date || row.created_at?.slice(0,10) }}</span>
+            <span class="ro-dr-date">{{ fmtDt(row.sign_date || row.created_at) }}</span>
             <span class="ro-dr-amt red">−¥{{ fmt(myFreight(row)) }}</span>
           </div>
 
@@ -131,7 +131,7 @@
           <div v-if="expenseList.length === 0 && !loading" class="ro-empty-sm">暂无费用记录</div>
           <div v-for="row in expenseList.slice(0, 6)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.title || row.expense_type || '-' }}</span>
-            <span class="ro-dr-date">{{ row.expense_date || row.created_at?.slice(0,10) }}</span>
+            <span class="ro-dr-date">{{ fmtDt(row.expense_date || row.created_at) }}</span>
             <span class="ro-dr-amt red">−¥{{ fmt(row.amount || 0) }}</span>
           </div>
           <div v-if="expenseList.length > 6" class="ro-more">还有 {{ expenseList.length - 6 }} 笔费用...</div>
@@ -216,7 +216,7 @@
                      class="ro-prepay-contract-row"
                      @click="$router.push('/sale/contract')">
                   <span style="font-size:11px;color:#1d1d1f;flex:1">{{ c.order_sn || c.customer_name || '-' }}</span>
-                  <span style="font-size:11px;color:rgba(29,29,31,0.4)">{{ (c.sign_date||c.created_at||'').slice(0,10) }}</span>
+                  <span style="font-size:11px;color:rgba(29,29,31,0.4)">{{ fmtDt(c.sign_date || c.created_at) }}</span>
                   <span style="font-size:11px;color:#0071e3;font-weight:600">¥{{ fmt(c.total_amount||0) }}</span>
                 </div>
                 <div v-if="item.contracts.length === 0" style="font-size:11px;color:rgba(29,29,31,0.35);padding:2px 0">
@@ -336,6 +336,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { Refresh, Money, ShoppingCart, TrendCharts, Shop } from '@element-plus/icons-vue'
+import { fmtDt } from '@/utils/date'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 const stockRefreshStore = useStockRefreshStore()
 watch(() => stockRefreshStore.version, () => loadAll())

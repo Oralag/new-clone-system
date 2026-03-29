@@ -1,21 +1,38 @@
 <template>
   <div class="publish-page">
 
-    <!-- 发布专员悬浮小窗 -->
-    <div class="agent-float" :class="{ open: agentOpen }">
-      <div class="agent-float-header" @click="agentOpen = !agentOpen">
-        <div class="agent-float-title">
-          <span>🚀</span>
-          <span>发布专员</span>
-          <span class="agent-float-dot"></span>
+    <DeptBulletin dept-id="publish" />
+
+    <!-- ── 发布专员指挥台 + 今日数据 ── -->
+    <div class="mid-grid">
+      <section class="command-section" :style="{ '--ac': '#10b981' }">
+        <div class="command-header">
+          <div class="command-title-group">
+            <span class="agent-label">🚀 发布部</span>
+            <p class="command-desc">多平台排期 · 发布计划 · 数据复盘</p>
+          </div>
+          <div class="command-chips">
+            <button v-for="p in agentPrompts" :key="p" class="chip-btn" @click="publishChatRef?.sendQuickPrompt(p)">{{ p }}</button>
+          </div>
         </div>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-          <path :d="agentOpen ? 'M2 8l4-4 4 4' : 'M2 4l4 4 4-4'"/>
-        </svg>
-      </div>
-      <div v-if="agentOpen" class="agent-float-body">
-        <AgentChat agent-id="publisher" :quick-prompts="agentPrompts" />
-      </div>
+        <AgentChat agent-id="publisher" ref="publishChatRef" />
+      </section>
+
+      <aside class="stats-aside">
+        <div class="stats-aside-title">今日数据</div>
+        <div class="stats-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 2v10M6 5l3-3 3 3"/><path d="M2 13v3h14v-3"/></svg></div>
+            <div class="stat-card-value">{{ publishedCount }}</div>
+            <div class="stat-card-label">已发布</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon icon-pending"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="9" r="7"/><path d="M9 6v4l2.5 2.5"/></svg></div>
+            <div class="stat-card-value">{{ pendingCount }}</div>
+            <div class="stat-card-label">待发布</div>
+          </div>
+        </div>
+      </aside>
     </div>
 
     <!-- 顶部工具栏 -->
@@ -115,14 +132,50 @@
             <span class="platform-name">{{ item.platformName }}</span>
             <span v-if="item.topic" class="topic-chip">{{ item.topic.slice(0, 10) }}{{ item.topic.length > 10 ? '…' : '' }}</span>
           </div>
-          <button class="btn-publish" @click="publishOne(idx)">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            发布
-          </button>
+          <div class="card-footer-actions">
+            <button class="btn-preview" @click="previewCard(idx)">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7s2.5-4.5 6-4.5S13 7 13 7s-2.5 4.5-6 4.5S1 7 1 7z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.3"/></svg>
+              查看
+            </button>
+            <button class="btn-publish" @click="publishOne(idx)">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              发布
+            </button>
+          </div>
         </div>
 
       </div>
     </div>
+
+    <!-- 预览弹窗 -->
+    <Teleport to="body">
+      <div v-if="previewIdx >= 0" class="preview-overlay" @click.self="previewIdx = -1">
+        <div class="preview-modal">
+          <div class="preview-header">
+            <div class="preview-header-left">
+              <span class="type-badge" :class="filtered[previewIdx]?.type">{{ typeLabel(filtered[previewIdx]?.type || '') }}</span>
+              <span class="preview-platform">{{ platformEmoji(filtered[previewIdx]?.platform || '') }} {{ filtered[previewIdx]?.platformName }}</span>
+            </div>
+            <button class="preview-close" @click="previewIdx = -1">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="preview-body">
+            <div v-if="filtered[previewIdx]?.type === 'poster' && filtered[previewIdx]?.imageUrl" class="preview-image">
+              <img :src="filtered[previewIdx].imageUrl" :alt="filtered[previewIdx].topic" />
+            </div>
+            <div class="preview-content">{{ displayContent(filtered[previewIdx]) }}</div>
+          </div>
+          <div class="preview-footer">
+            <button class="btn-cancel-edit" @click="previewIdx = -1">关闭</button>
+            <button class="btn-publish" @click="publishOne(previewIdx); previewIdx = -1">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              发布
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
   </div>
 </template>
@@ -133,9 +186,10 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useTrendingStore } from '@/stores/agent'
 import AgentChat from '@/components/agent/AgentChat.vue'
+import DeptBulletin from '@/components/agent/DeptBulletin.vue'
 
-// 发布专员小窗
-const agentOpen = ref(false)
+// 发布专员
+const publishChatRef = ref<InstanceType<typeof AgentChat>>()
 const agentPrompts = [
   '帮我制定本周发布计划',
   '这批内容应该什么时间发效果最好？',
@@ -145,6 +199,9 @@ const agentPrompts = [
 const router = useRouter()
 const agentStore = useTrendingStore()
 
+const publishedCount = computed(() => agentStore.history.filter(h => h.status === 'published').length)
+const pendingCount = computed(() => agentStore.flowResults.length)
+
 const showFilter = ref(false)
 const filterType = ref('')
 const filterPlatform = ref('')
@@ -152,6 +209,7 @@ const selected = ref<number[]>([])
 const menuOpen = ref(-1)
 const editingIdx = ref(-1)
 const editContent = ref('')
+const previewIdx = ref(-1)
 
 const typeOptions = [
   { key: 'copy', name: '文案' },
@@ -264,6 +322,10 @@ function publishOne(idx: number) {
   ElMessage.success(`「${filtered.value[idx].platformName}」发布成功（模拟）`)
 }
 
+function previewCard(idx: number) {
+  previewIdx.value = idx
+}
+
 function batchPublish() {
   if (selected.value.length === 0) return
   ElMessage.success(`已批量发布 ${selected.value.length} 条内容（模拟）`)
@@ -273,9 +335,34 @@ function batchPublish() {
 
 <style scoped>
 .publish-page {
-  padding: 0 24px 40px;
+  padding: 0 0 40px;
   min-height: 100%;
+  max-width: 1200px;
 }
+
+/* mid-grid 同 Dashboard Captain */
+.mid-grid { display: grid; grid-template-columns: 1fr 240px; gap: 14px; margin-bottom: 16px; }
+.command-section {
+  background: #ffffff; border: 1px solid rgba(0,0,0,0.07);
+  border-left: 3px solid var(--ac, #10b981); border-radius: 14px;
+  padding: 18px 18px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden;
+}
+.command-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.agent-label { display: block; font-size: 13px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.02em; margin-bottom: 3px; }
+.command-desc { font-size: 11px; color: rgba(29,29,31,0.4); margin: 0; }
+.command-chips { display: flex; gap: 5px; flex-wrap: wrap; align-items: flex-start; }
+.chip-btn { background: #f5f5f7; border: 1px solid rgba(0,0,0,0.08); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 500; color: rgba(29,29,31,0.6); cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
+.chip-btn:hover { border-color: var(--ac); color: var(--ac); background: color-mix(in srgb, var(--ac) 6%, white); }
+.command-section :deep(.agent-bar) { border: none !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; margin-bottom: 0 !important; border-top: 1px solid rgba(0,0,0,0.06) !important; }
+
+.stats-aside { background: #ffffff; border: 1px solid rgba(0,0,0,0.07); border-radius: 14px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+.stats-aside-title { font-size: 12px; font-weight: 700; color: #1d1d1f; margin-bottom: 12px; }
+.stats-cards { display: flex; flex-direction: column; gap: 8px; }
+.stat-card { display: flex; align-items: center; gap: 10px; padding: 11px 12px; background: #f5f5f7; border-radius: 10px; }
+.stat-card-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(16,185,129,0.08); display: flex; align-items: center; justify-content: center; color: #10b981; flex-shrink: 0; }
+.icon-pending { background: rgba(245,158,11,0.08) !important; color: #f59e0b !important; }
+.stat-card-value { font-size: 22px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.04em; line-height: 1; }
+.stat-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(29,29,31,0.35); }
 
 /* ── 工具栏 ── */
 .toolbar {
@@ -454,4 +541,57 @@ function batchPublish() {
   transition: background .15s;
 }
 .btn-publish:hover { background: #f1f5f9; }
+
+.card-footer-actions { display: flex; gap: 6px; align-items: center; }
+
+.btn-preview {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: 8px;
+  background: transparent; color: #94a3b8;
+  border: 1px solid #334155; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all .15s;
+}
+.btn-preview:hover { background: #1e293b; color: #e2e8f0; border-color: #475569; }
+
+/* 预览弹窗 */
+.preview-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.preview-modal {
+  background: #1a2234; border: 1px solid #334155;
+  border-radius: 18px; width: 100%; max-width: 600px;
+  max-height: 80vh; display: flex; flex-direction: column;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+}
+.preview-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid #1e293b;
+}
+.preview-header-left { display: flex; align-items: center; gap: 10px; }
+.preview-platform { font-size: 13px; color: #94a3b8; }
+.preview-close {
+  background: none; border: none; padding: 6px; cursor: pointer;
+  color: #64748b; border-radius: 6px; display: flex; align-items: center;
+  transition: background .15s;
+}
+.preview-close:hover { background: #273449; color: #e2e8f0; }
+.preview-body {
+  flex: 1; overflow-y: auto; padding: 20px;
+}
+.preview-image {
+  border-radius: 10px; overflow: hidden; margin-bottom: 16px;
+  background: #0f172a;
+}
+.preview-image img { width: 100%; display: block; }
+.preview-content {
+  font-size: 15px; color: #e2e8f0; line-height: 1.8;
+  white-space: pre-wrap; word-break: break-word;
+}
+.preview-footer {
+  display: flex; gap: 10px; justify-content: flex-end;
+  padding: 14px 20px; border-top: 1px solid #1e293b;
+}
 </style>

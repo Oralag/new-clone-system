@@ -146,6 +146,46 @@ export const investmentToolDefinitions: InvestmentToolDefinition[] = [
     description: '向管家申请 ERP 数据访问或操作',
     traceTemplate: '金融机构记录了一次 ERP 访问申请',
   },
+  {
+    id: 'issue_recommendation',
+    label: '发出投资指令',
+    institutionId: 'bureau',
+    stage: 'act',
+    description: '发出正式投资指令给规则传递者',
+    traceTemplate: '投资局发出了一条新指令',
+  },
+  {
+    id: 'write_reflection',
+    label: '写日记',
+    institutionId: 'archive',
+    stage: 'archive',
+    description: '亚当记录自己的思考和反省',
+    traceTemplate: '档案馆收录了一篇新日记',
+  },
+  {
+    id: 'browse_books',
+    label: '查阅书架',
+    institutionId: 'library',
+    stage: 'judge',
+    description: '查阅图书馆书架上的所有书本',
+    traceTemplate: '图书馆被查阅了一次',
+  },
+  {
+    id: 'add_book',
+    label: '写书',
+    institutionId: 'library',
+    stage: 'archive',
+    description: '往图书馆书架上添加一本新书',
+    traceTemplate: '图书馆新增了一本书',
+  },
+  {
+    id: 'recommend_book',
+    label: '推荐书',
+    institutionId: 'library',
+    stage: 'judge',
+    description: '从书架上推荐一本书给规则传递者',
+    traceTemplate: '图书馆发出了一条读书推荐',
+  },
 ]
 
 export const investmentToolMap = Object.fromEntries(

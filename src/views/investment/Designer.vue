@@ -10,12 +10,15 @@
             <span class="header-sub">GRAPHIC DESIGN STUDIO · 独立设计师</span>
           </div>
         </div>
-        <div class="header-badges">
-          <span class="badge">海报</span>
-          <span class="badge">Banner</span>
-          <span class="badge">包装</span>
-          <span class="badge">Logo</span>
-          <span class="badge">社媒图</span>
+        <div class="header-right">
+          <div class="header-badges">
+            <span class="badge">海报</span>
+            <span class="badge">Banner</span>
+            <span class="badge">包装</span>
+            <span class="badge">Logo</span>
+            <span class="badge">社媒图</span>
+          </div>
+          <button v-if="hasMessages" class="clear-chat-btn" @click="clearHistory">清空对话</button>
         </div>
       </div>
 
@@ -105,6 +108,30 @@
               <button class="copy-btn" @click="copyText(block.text)">{{ copiedIdx === idx ? '已复制' : '复制' }}</button>
             </div>
           </template>
+
+          <!-- 生成的图片 -->
+          <template v-if="block.type === 'image'">
+            <div class="block-label">🖼️ 生成图片</div>
+            <div class="image-block">
+              <div v-if="block.imgLoading" class="img-loading">⏳ 图片生成中，请稍候...</div>
+              <img
+                v-show="!block.imgLoading && !block.imgError"
+                :src="block.imageUrl"
+                alt="AI生成图片"
+                class="generated-image"
+                @load="block.imgLoading = false"
+                @error="block.imgLoading = false; block.imgError = true"
+                @click="openImage(block.imageUrl)"
+              />
+              <div v-if="block.imgError" class="img-error">
+                <span>图片加载失败</span>
+                <button class="image-action-btn" @click="block.imgError = false; block.imgLoading = true; block.imageUrl = block.imageUrl + ''">重试</button>
+              </div>
+              <div class="image-actions">
+                <a :href="block.imageUrl" target="_blank" class="image-action-btn">新窗口打开</a>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -130,9 +157,12 @@ interface ChatMessage {
 
 interface PaletteColor { hex: string; name: string }
 interface DesignBlock {
-  type: 'palette' | 'prompt'
+  type: 'palette' | 'prompt' | 'image'
   colors?: PaletteColor[]
   text?: string
+  imageUrl?: string
+  imgLoading?: boolean
+  imgError?: boolean
 }
 
 const messages = ref<ChatMessage[]>([])
@@ -189,6 +219,7 @@ const toolLabelMap: Record<string, string> = {
   query_customers: '查询客户', query_suppliers: '查询供应商', query_goods: '查询商品',
   query_inventory: '查询库存', query_sales: '查询销售数据', query_purchases: '查询采购数据',
   query_finance: '查询财务数据', query_staff: '查询员工', query_warehouses: '查询仓库',
+  generate_image: '生成图片',
 }
 function toolLabel(name: string) { return toolLabelMap[name] || name }
 
@@ -234,6 +265,16 @@ async function copyText(text: string) {
     setTimeout(() => { copiedIdx.value = null }, 1500)
   } catch {}
 }
+
+function openImage(url?: string) {
+  if (url) window.open(url, '_blank')
+}
+function clearHistory() {
+  messages.value = []
+  designData.value = []
+  try { localStorage.removeItem(HISTORY_KEY) } catch {}
+}
+
 async function sendMessage(text: string) {
   const trimmed = text.trim()
   if (!trimmed || isLoading.value) return
@@ -249,7 +290,7 @@ async function sendMessage(text: string) {
 
   try {
     const token = localStorage.getItem('erp_token') || ''
-    const apiMessages = messages.value.slice(-20).map((m) => ({ role: m.role, content: m.content }))
+    const apiMessages = messages.value.slice(-10).map((m) => ({ role: m.role, content: m.content }))
     const res = await fetch('/api/agent-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
@@ -270,9 +311,11 @@ async function sendMessage(text: string) {
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-      for (const line of lines) {
+      // 按 SSE 双换行切割消息
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() || ''
+      for (const part of parts) {
+        const line = part.startsWith('data: ') ? part : part.split('\n').find(l => l.startsWith('data: ')) || ''
         if (!line.startsWith('data: ')) continue
         const payload = line.slice(6).trim()
         if (payload === '[DONE]') { streamDone = true; break }
@@ -287,6 +330,10 @@ async function sendMessage(text: string) {
           } else if (data.type === 'tool_result') {
             const tc = assistantMsg.toolCalls!.find(t => t.id === data.id)
             if (tc) tc.status = 'done'
+            if (data.result && typeof data.result === 'string' && data.result.startsWith('IMAGE_URL:')) {
+              const imageUrl = data.result.slice(10)
+              designData.value.push({ type: 'image', imageUrl, imgLoading: true, imgError: false })
+            }
           } else if (data.type === 'error') {
             assistantMsg.content += `\n⚠️ ${data.error}`
           }
@@ -448,6 +495,13 @@ async function sendMessage(text: string) {
 .send-btn:hover:not(:disabled) { background: rgba(225,29,72,0.12); border-color: rgba(225,29,72,0.3); }
 .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.header-right { display: flex; align-items: center; gap: 10px; }
+.clear-chat-btn {
+  font-size: 10px; color: var(--dim); background: none; border: 1px solid var(--border);
+  border-radius: 4px; padding: 3px 10px; cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.clear-chat-btn:hover { color: #e11d48; border-color: rgba(225,29,72,0.3); }
+
 /* ── 右侧画布面板 ── */
 .canvas-panel {
   width: 360px; flex-shrink: 0; display: flex; flex-direction: column;
@@ -511,6 +565,30 @@ async function sendMessage(text: string) {
   color: var(--dim); cursor: pointer; font-family: inherit;
 }
 .copy-btn:hover { color: #e11d48; border-color: rgba(225,29,72,0.3); }
+
+/* 生成图片 */
+.image-block { position: relative; }
+.generated-image {
+  width: 100%; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border); transition: transform 0.15s;
+}
+.generated-image:hover { transform: scale(1.02); }
+.img-loading {
+  padding: 20px; text-align: center; font-size: 13px;
+  color: var(--dim); background: var(--faint); border-radius: 6px;
+  border: 1px dashed var(--border);
+}
+.img-error {
+  padding: 16px; text-align: center; font-size: 12px;
+  color: var(--dim); display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.image-actions { display: flex; gap: 6px; margin-top: 6px; }
+.image-action-btn {
+  font-size: 10px; padding: 3px 10px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--card-bg);
+  color: var(--dim); cursor: pointer; text-decoration: none; font-family: inherit;
+}
+.image-action-btn:hover { color: #e11d48; border-color: rgba(225,29,72,0.3); }
 
 @media (max-width: 767px) {
   .designer-page { flex-direction: column; }

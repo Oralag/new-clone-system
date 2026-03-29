@@ -93,7 +93,7 @@
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ (row.contract_date || row.create_time || '').slice(0, 10) }}</template>
+              <template #default="{ row }">{{ fmtDt(row.contract_date || row.create_time) }}</template>
             </el-table-column>
             <el-table-column label="状态" align="center" width="80">
               <template #default="{ row }">
@@ -125,7 +125,7 @@
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ (row.offer_date || row.create_time || '').slice(0, 10) }}</template>
+              <template #default="{ row }">{{ fmtDt(row.offer_date || row.create_time) }}</template>
             </el-table-column>
             <el-table-column label="状态" align="center" width="80">
               <template #default="{ row }">
@@ -156,7 +156,7 @@
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ (row.out_date || row.create_time || '').slice(0, 10) }}</template>
+              <template #default="{ row }">{{ fmtDt(row.out_date || row.create_time) }}</template>
             </el-table-column>
             <el-table-column label="状态" align="center" width="80">
               <template #default="{ row }">
@@ -268,6 +268,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { fmtDt } from '@/utils/date'
 import { ShoppingCart, Document, DocumentChecked, Box, Plus } from '@element-plus/icons-vue'
 import {
   getOfferList, getContractList, getSaleOutList,

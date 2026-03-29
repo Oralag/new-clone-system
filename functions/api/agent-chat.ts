@@ -4,7 +4,9 @@
 interface Env {
   ANTHROPIC_API_KEY: string
   ANTHROPIC_BASE_URL?: string
+  REPLICATE_API_TOKEN?: string
   AGENT_MEMORY: KVNamespace
+  AI: Ai
 }
 
 const DEFAULT_BACKEND = 'https://saas.mzth.cn/adminapi'
@@ -43,7 +45,7 @@ async function erpPost(path: string, body: Record<string, any>, token: string, b
   try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}）`) }
 }
 
-async function executeTool(name: string, input: Record<string, any>, token: string, backend: string): Promise<string> {
+async function executeTool(name: string, input: Record<string, any>, token: string, backend: string, ai?: Ai, kv?: KVNamespace): Promise<string> {
   try {
     let result: string
     switch (name) {
@@ -165,6 +167,34 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         result = `导航指令：${input.page}`
         break
       }
+      case 'generate_image': {
+        if (!ai) { result = '生图服务未就绪'; break }
+        const widthMap: Record<string, number> = { '16:9': 1024, '9:16': 576, '4:3': 1024, '3:4': 768, '1:1': 1024 }
+        const heightMap: Record<string, number> = { '16:9': 576, '9:16': 1024, '4:3': 768, '3:4': 1024, '1:1': 1024 }
+        const ratio = input.aspect_ratio || '1:1'
+        const w = widthMap[ratio] ?? 1024
+        const h = heightMap[ratio] ?? 1024
+        const imgResponse = await ai.run('@cf/black-forest-labs/flux-1-schnell', {
+          prompt: input.prompt || '',
+          width: w,
+          height: h,
+          num_steps: 4,
+        }) as any
+        // flux-1-schnell 返回 { image: string }，image 已是 base64 字符串
+        let base64: string
+        if (imgResponse?.image && typeof imgResponse.image === 'string') {
+          base64 = imgResponse.image
+        } else if (imgResponse instanceof ReadableStream) {
+          const buf = await new Response(imgResponse).arrayBuffer()
+          base64 = btoa(Array.from(new Uint8Array(buf)).map((b: number) => String.fromCharCode(b)).join(''))
+        } else if (imgResponse instanceof ArrayBuffer) {
+          base64 = btoa(Array.from(new Uint8Array(imgResponse)).map((b: number) => String.fromCharCode(b)).join(''))
+        } else {
+          result = `生图失败：未知响应格式 ${typeof imgResponse}`; break
+        }
+        result = `IMAGE_URL:data:image/png;base64,${base64}`
+        break
+      }
       default:
         result = `工具 ${name} 已收到，参数：${JSON.stringify(input)}`
     }
@@ -247,6 +277,10 @@ const AGENTS: Record<string, AgentDef> = {
 
 【交互风格】像设计师跟客户沟通：先了解需求再动手；用视觉语言描述方案；给出2-3个方向供选择；专业术语配通俗解释。
 
+【生图能力】你拥有 generate_image 工具，可以直接生成图片！当用户需要看到实际效果时，主动调用此工具。提示词必须是英文，要详细描述画面。根据设计用途选择合适的比例（海报用9:16，Banner用16:9，社媒方图用1:1等）。
+- 工具调用成功后图片已自动展示在界面右侧预览区，直接告知用户即可
+- 禁止说"暂未开通生图功能"、"无法直接生成"、"联系管理员"、"未配置API"等——生图功能已开通，直接调用 generate_image 工具即可
+
 ${ERP_TOOL_NOTE}回复用中文，专业且有美感，像在做设计提案。`,
   },
   marketing: {
@@ -322,6 +356,24 @@ const agentTools = [
   },
 ]
 
+const generateImageTool = {
+  name: 'generate_image',
+  description: '根据英文提示词生成图片。调用AI生图模型（Flux Schnell），返回图片URL。提示词必须是英文，尽量详细描述画面内容、风格、构图、色调。',
+  parameters: {
+    type: 'object',
+    properties: {
+      prompt: { type: 'string', description: '英文生图提示词，详细描述画面' },
+      aspect_ratio: { type: 'string', enum: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'], description: '图片比例，默认1:1' },
+    },
+    required: ['prompt'],
+  },
+}
+
+function getToolsForAgent(agentId: string) {
+  if (agentId === 'designer') return [...agentTools, generateImageTool]
+  return agentTools
+}
+
 
 // Memory helpers
 async function loadMemory(kv: KVNamespace, token: string, agentId: string): Promise<any[]> {
@@ -363,6 +415,12 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url)
+  const imgKey = url.searchParams.get('imgKey') || ''
+  if (imgKey) {
+    const data = await env.AGENT_MEMORY.get(imgKey, 'arrayBuffer')
+    if (!data) return new Response('Image not found or expired', { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } })
+    return new Response(data, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } })
+  }
   const agentId = url.searchParams.get('agentId') || ''
   const erpToken = request.headers.get('x-erp-token') || ''
   if (!agentId || !erpToken) {
@@ -378,10 +436,21 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), { status: 500 })
   }
 
-  const { messages, agentId } = await request.json() as any
+  const body = await request.json() as any
+
+  // 图片取回接口
+  if (body.action === 'getImage' && body.imgKey) {
+    const data = await env.AGENT_MEMORY.get(body.imgKey, 'arrayBuffer')
+    if (!data) return new Response('expired', { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } })
+    return new Response(data, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } })
+  }
+
+  const { messages, agentId } = body
   const erpToken = request.headers.get('x-erp-token') || ''
   const { realToken, backend } = decodeErpToken(erpToken)
   const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+  const replicateToken = env.REPLICATE_API_TOKEN || ''
+  const cfAI = env.AI
 
   const agent = AGENTS[agentId]
   if (!agent) {
@@ -395,15 +464,19 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   ;(async () => {
     try {
-      const apiMessages = messages.map((m: any) => ({ role: m.role, content: m.content }))
-      let loopMessages = [...apiMessages]
+      // 截取最近 10 条，避免超出 200k token 限制
+      const apiMessages = messages.slice(-10).map((m: any) => ({ role: m.role, content: m.content }))
+      // 确保第一条是 user 消息（Anthropic 要求）
+      const firstUserIdx = apiMessages.findIndex((m: any) => m.role === 'user')
+      const trimmedMessages = firstUserIdx > 0 ? apiMessages.slice(firstUserIdx) : apiMessages
+      let loopMessages = [...trimmedMessages]
       let fullAssistantText = ''
 
       for (let i = 0; i < 5; i++) {
         const res = await fetch(`${baseURL}/v1/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: agent.systemPrompt, tools: agentTools, messages: loopMessages }),
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: agent.systemPrompt, tools: getToolsForAgent(agentId), messages: loopMessages }),
         })
         if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
         const data: any = await res.json()
@@ -418,7 +491,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const toolResults: any[] = []
         for (const toolUse of toolUseBlocks) {
           await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
-          const result = await executeTool(toolUse.name, toolUse.input, realToken, backend)
+          const result = await executeTool(toolUse.name, toolUse.input, realToken, backend, cfAI, env.AGENT_MEMORY)
           await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
           toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
         }

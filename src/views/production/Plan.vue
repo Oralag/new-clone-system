@@ -57,7 +57,7 @@
             <template #default="{ row }">{{ row.sale_order_sn || '—' }}</template>
           </el-table-column>
           <el-table-column label="开单日期" width="105">
-            <template #default="{ row }">{{ (row.plan_date||row.created_at||'').slice(0,10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.plan_date || row.created_at) }}</template>
           </el-table-column>
           <el-table-column label="交货日期" width="105">
             <template #default="{ row }">{{ row.finish_date || '—' }}</template>
@@ -338,7 +338,7 @@
         <el-table-column prop="order_sn" label="销售单号" width="160" />
         <el-table-column prop="customer_name" label="客户" min-width="120" />
         <el-table-column label="日期" width="110">
-          <template #default="{ row }">{{ (row.sign_date||row.created_at||'').slice(0,10) }}</template>
+          <template #default="{ row }">{{ fmtDt(row.sign_date || row.created_at) }}</template>
         </el-table-column>
         <el-table-column label="金额" width="110" align="right">
           <template #default="{ row }">¥{{ Number(row.total_amount||0).toFixed(2) }}</template>
@@ -399,6 +399,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import http from '@/api/http'
+import { fmtDt } from '@/utils/date'
 import { getBomByGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 

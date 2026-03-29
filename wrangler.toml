@@ -1,6 +1,9 @@
 name = "digital-nomad"
 pages_build_output_dir = "dist"
 
+[ai]
+binding = "AI"
+
 [[kv_namespaces]]
 binding = "AGENT_MEMORY"
 id = "34551c1704904c3ab22463a73fc56f5c"

@@ -52,7 +52,7 @@
             <template #default="{ row }">{{ row.supplier_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="退货日期" width="110">
-            <template #default="{ row }">{{ (row.return_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.return_date || row.create_time) }}</template>
           </el-table-column>
           <el-table-column label="退货金额" width="120" align="right">
             <template #default="{ row }">
@@ -227,7 +227,7 @@
           <template #default="{ row }">¥{{ Number(row.total_amount||0).toFixed(2) }}</template>
         </el-table-column>
         <el-table-column label="采购日期" width="110">
-          <template #default="{ row }">{{ (row.order_date||'').slice(0,10) }}</template>
+          <template #default="{ row }">{{ fmtDt(row.order_date) }}</template>
         </el-table-column>
       </el-table>
       <template #footer>
@@ -250,6 +250,7 @@ import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { adjustFundBalance } from '@/utils/fund'
 import { useRoute } from 'vue-router'
+import { fmtDt } from '@/utils/date'
 
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()

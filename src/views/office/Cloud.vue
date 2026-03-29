@@ -34,7 +34,7 @@
         </el-table-column>
         <el-table-column label="上传人" prop="uploader_name" width="120" />
         <el-table-column label="上传时间" prop="create_time" width="160">
-          <template #default="{ row }">{{ (row.create_time || row.created_at || '').slice(0, 16) }}</template>
+          <template #default="{ row }">{{ fmtDt(row.create_time || row.created_at) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
@@ -63,6 +63,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Document, Picture, VideoPlay, Folder } from '@element-plus/icons-vue'
 import ScTable from '@/components/ScTable.vue'
 import { getCloudList, createCloud, deleteCloud } from '@/api/office'
+import { fmtDt } from '@/utils/date'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({})

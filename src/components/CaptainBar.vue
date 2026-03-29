@@ -29,6 +29,29 @@
         <button class="bar-tool-btn" @click="clearCurrent" title="清空对话">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
         </button>
+        <button class="bar-tool-btn" @click.stop="showHistory = !showHistory" title="历史会话">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </button>
+        <!-- 历史会话下拉面板 -->
+        <div v-if="showHistory" class="history-dropdown" @click.stop>
+          <div class="history-header">
+            <span class="history-title">历史会话</span>
+            <button v-if="historyList.length > 0" class="history-clear-btn" @click="clearAllHistory">清空</button>
+          </div>
+          <div v-if="historyList.length === 0" class="history-empty">暂无历史会话</div>
+          <div v-else class="history-list">
+            <div
+              v-for="(item, idx) in historyList"
+              :key="idx"
+              class="history-item"
+              :class="{ active: historyActiveIdx === idx }"
+              @click="loadHistory(idx)"
+            >
+              <div class="history-item-title">{{ item.title }}</div>
+              <div class="history-item-time">{{ item.time }}</div>
+            </div>
+          </div>
+        </div>
         <button v-if="captainMessages.length > 0" class="bar-tool-btn" @click="newSession" title="新建对话">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -51,7 +74,7 @@
     <div v-if="(captainMessages.length > 0 || captainLoading) && !isCollapsed" class="inline-feed">
 
       <!-- 查看更多：折叠的旧消息 -->
-      <div v-if="captainMessages.length > 2 && !showAllMessages" class="feed-more-btn" @click="showAllMessages = true">
+      <div v-if="captainMessages.length > 2 && !showAllMessages" class="feed-more-btn" @click.stop="showAllMessages = true">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
         查看更多 {{ captainMessages.length - 2 }} 条历史
       </div>
@@ -96,6 +119,10 @@
 </template>
 
 <script setup lang="ts">
+import { useAdamStore } from '@/stores/adam'
+
+const adamStore = useAdamStore()
+
 interface Step {
   type: 'agent_start' | 'captain_text' | 'tool'
   agentId?: string; agentName?: string; emoji?: string
@@ -116,6 +143,7 @@ const agentList = [
   { id: 'copywriter', color: '#f59e0b' }, { id: 'poster', color: '#ec4899' },
   { id: 'video', color: '#ef4444' },      { id: 'brand', color: '#8b5cf6' },
   { id: 'publisher', color: '#10b981' },  { id: 'trend', color: '#06b6d4' },
+  { id: 'marketing', color: '#059669' },
 ]
 const quickPrompts = [
   '分析本月销售数据，生成小红书推广文案',
@@ -144,6 +172,7 @@ const barRef = ref<HTMLDivElement>()
 function onClickOutside(e: MouseEvent) {
   if (barRef.value && !barRef.value.contains(e.target as Node)) {
     isCollapsed.value = true
+    showHistory.value = false
   }
 }
 function handleFill(e: Event) {
@@ -271,7 +300,7 @@ async function sendCaptain(text?: string) {
     const resp = await fetch('/api/captain-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-erp-token': localStorage.getItem('erp_token') || '' },
-      body: JSON.stringify({ messages: history }),
+      body: JSON.stringify({ messages: history, books: adamStore.books }),
     })
     if (!resp.body) throw new Error('No response body')
     const reader = resp.body.getReader()
@@ -431,6 +460,7 @@ async function sendCaptain(text?: string) {
   gap: 6px;
   margin-left: auto;
   flex: 1;
+  position: relative;
 }
 
 .bar-input {
@@ -604,7 +634,81 @@ async function sendCaptain(text?: string) {
 }
 .bar-tool-btn:hover { background: var(--gray, #f5f5f7); color: var(--dark, #1d1d1f); border-color: rgba(0,0,0,0.15); }
 
-
+/* ── 历史会话下拉 ── */
+.history-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 60px;
+  width: 280px;
+  max-height: 320px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  z-index: 200;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.06));
+}
+.history-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dark, #1d1d1f);
+}
+.history-clear-btn {
+  font-size: 11px;
+  color: #ef4444;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.history-clear-btn:hover { background: rgba(239,68,68,0.08); }
+.history-empty {
+  padding: 24px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(29,29,31,0.3);
+}
+.history-list {
+  overflow-y: auto;
+  flex: 1;
+}
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
+}
+.history-item:hover { background: rgba(0,113,227,0.04); }
+.history-item.active { background: rgba(0,113,227,0.08); }
+.history-item-title {
+  font-size: 12.5px;
+  color: var(--dark, #1d1d1f);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 8px;
+}
+.history-item-time {
+  font-size: 11px;
+  color: rgba(29,29,31,0.35);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* 动画 */
 .spin {

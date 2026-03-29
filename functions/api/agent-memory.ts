@@ -5,7 +5,7 @@ interface Env {
   AGENT_MEMORY: KVNamespace
 }
 
-const AGENT_IDS = ['captain', 'copywriter', 'poster', 'video', 'brand', 'publisher', 'trend']
+const AGENT_IDS = ['captain', 'copywriter', 'poster', 'video', 'brand', 'publisher', 'trend', 'marketing']
 const AGENT_META: Record<string, { name: string; emoji: string; color: string }> = {
   captain:    { name: 'Captain',   emoji: '🎯', color: '#6366f1' },
   copywriter: { name: '文案Agent', emoji: '✍️', color: '#f59e0b' },
@@ -14,6 +14,7 @@ const AGENT_META: Record<string, { name: string; emoji: string; color: string }>
   brand:      { name: '品牌Agent', emoji: '💎', color: '#8b5cf6' },
   publisher:  { name: '发布Agent', emoji: '🚀', color: '#10b981' },
   trend:      { name: '趋势Agent', emoji: '📈', color: '#06b6d4' },
+  marketing:  { name: '营销顾问',  emoji: '📊', color: '#059669' },
 }
 
 export const onRequestOptions: PagesFunction = async () => {
@@ -31,6 +32,7 @@ export const onRequestOptions: PagesFunction = async () => {
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url)
   const agentId = url.searchParams.get('agentId')
+  const caller = url.searchParams.get('caller')  // captain | adam
   const erpToken = request.headers.get('x-erp-token') || ''
 
   if (!erpToken) {
@@ -40,6 +42,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   const tokenKey = erpToken.slice(-16)
+
+  if (agentId && caller) {
+    // Return caller-specific history (e.g. captain's dispatches to marketing)
+    const key = `mem:${tokenKey}:${agentId}:${caller}`
+    const messages = await env.AGENT_MEMORY.get(key, 'json') as any[] || []
+    return new Response(JSON.stringify(messages), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    })
+  }
 
   if (agentId) {
     // Return full history for one agent
@@ -77,6 +88,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url)
   const agentId = url.searchParams.get('agentId')
+  const caller = url.searchParams.get('caller')
   const erpToken = request.headers.get('x-erp-token') || ''
 
   if (!erpToken) {
@@ -87,10 +99,16 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
 
   const tokenKey = erpToken.slice(-16)
 
-  if (agentId) {
+  if (agentId && caller) {
+    await env.AGENT_MEMORY.delete(`mem:${tokenKey}:${agentId}:${caller}`)
+  } else if (agentId) {
     await env.AGENT_MEMORY.delete(`mem:${tokenKey}:${agentId}`)
+    // Also clear caller sub-keys
+    await Promise.all(['captain', 'adam'].map(c => env.AGENT_MEMORY.delete(`mem:${tokenKey}:${agentId}:${c}`)))
   } else {
     await Promise.all(AGENT_IDS.map(id => env.AGENT_MEMORY.delete(`mem:${tokenKey}:${id}`)))
+    // Also clear caller sub-keys for marketing
+    await Promise.all(['captain', 'adam'].map(c => env.AGENT_MEMORY.delete(`mem:${tokenKey}:marketing:${c}`)))
   }
 
   return new Response(JSON.stringify({ ok: true }), {

@@ -43,7 +43,7 @@
           <el-table-column prop="order_sn" label="盘点单号" min-width="160" />
           <el-table-column prop="warehouse_name" label="盘点仓库" min-width="130" />
           <el-table-column label="盘点日期" width="110">
-            <template #default="{ row }">{{ (row.check_date || '').slice(0, 10) || '—' }}</template>
+            <template #default="{ row }">{{ fmtDt(row.check_date) || '—' }}</template>
           </el-table-column>
           <el-table-column prop="admin_name" label="盘点人" width="90" />
           <el-table-column label="状态" width="90">
@@ -175,6 +175,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { fmtDt } from '@/utils/date'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import ScTable from '@/components/ScTable.vue'

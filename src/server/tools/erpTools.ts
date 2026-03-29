@@ -522,4 +522,49 @@ export const editTools: FunctionDeclaration[] = [
   },
 ]
 
-export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools]
+export const searchTools: FunctionDeclaration[] = [
+  {
+    name: 'web_search',
+    description: '联网搜索最新信息，包括新闻、市场行情、商品价格、行业动态、政策法规等实时数据',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '搜索关键词（必填）' },
+        max_results: { type: 'number', description: '返回结果数量，默认5' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'get_trending',
+    description: '获取各平台实时热搜/热榜数据，可用于文案创作方向、选题参考、热点追踪。支持平台：douyin（抖音）、weibo（微博）、bilibili（B站）、zhihu（知乎）、xiaohongshu（小红书/今日头条替代）、kuaishou（快手）',
+    parameters: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          enum: ['douyin', 'weibo', 'bilibili', 'zhihu', 'xiaohongshu', 'kuaishou'],
+          description: '平台名称，默认 douyin',
+        },
+      },
+    },
+  },
+]
+
+export const imageTools: FunctionDeclaration[] = [
+  {
+    name: 'generate_image',
+    description: '使用 AI 生成图片。输入英文提示词，返回生成图片的 URL。适用于海报、Banner、社媒图、产品图等设计场景。',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: '图片描述（英文），越详细越好，包含风格、色彩、构图等' },
+        width: { type: 'number', description: '图片宽度（像素），默认1024' },
+        height: { type: 'number', description: '图片高度（像素），默认1024' },
+      },
+      required: ['prompt'],
+    },
+  },
+]
+
+export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools]

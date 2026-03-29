@@ -20,7 +20,7 @@
           <el-table-column prop="out_no" label="出库单号" min-width="150" />
           <el-table-column prop="out_man" label="出库人" width="110" />
           <el-table-column prop="out_date" label="出库日期" width="110">
-            <template #default="{ row }">{{ (row.out_date || row.created_at || '').slice(0,10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.out_date || row.created_at) }}</template>
           </el-table-column>
           <el-table-column prop="warehouse_name" label="出库仓库" min-width="110" />
           <el-table-column label="出库总价" width="110" align="right">
@@ -240,6 +240,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { fmtDt } from '@/utils/date'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'

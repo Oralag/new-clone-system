@@ -53,10 +53,10 @@
             <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
           </el-table-column>
           <el-table-column label="报价日期" width="110">
-            <template #default="{ row }">{{ (row.offer_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.offer_date || row.create_time) }}</template>
           </el-table-column>
           <el-table-column label="有效期至" width="110">
-            <template #default="{ row }">{{ (row.expire_date || '').slice(0, 10) || '—' }}</template>
+            <template #default="{ row }">{{ fmtDt(row.expire_date) || '—' }}</template>
           </el-table-column>
           <el-table-column label="经办人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
@@ -304,6 +304,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Delete, Printer, Download } from '@element-plus/icons-vue'
+import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'

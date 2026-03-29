@@ -51,7 +51,7 @@
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="入库日期" width="110">
-            <template #default="{ row }">{{ (row.in_date || row.inhouse_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.in_date || row.inhouse_date || row.create_time) }}</template>
           </el-table-column>
           <el-table-column label="经办人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
@@ -434,6 +434,7 @@ import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { TAX_RATES } from '@/config'
+import { fmtDt } from '@/utils/date'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES

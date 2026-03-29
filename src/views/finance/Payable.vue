@@ -130,6 +130,7 @@ import { getSupplierList } from '@/api/procure'
 import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
+import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 
@@ -216,7 +217,7 @@ async function load() {
         order_amount: orderAmt,
         paid_amount: paidAmt,
         un_pay_amount: unpaid,
-        due_date: (o.order_date || o.create_time || '').slice(0, 10),
+        due_date: fmtDt(o.order_date || o.create_time),
       })
     }
 

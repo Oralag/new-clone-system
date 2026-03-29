@@ -41,7 +41,7 @@
         </el-table-column>
         <el-table-column prop="applicant_name" label="申请人" min-width="120" />
         <el-table-column label="申请日期" min-width="150">
-          <template #default="{ row }">{{ (row.apply_date || row.created_at || '').slice(0, 16).replace('T', ' ') }}</template>
+          <template #default="{ row }">{{ fmtDt(row.apply_date || row.created_at) }}</template>
         </el-table-column>
         <el-table-column label="付款状态" min-width="100" align="center">
           <template #default="{ row }">
@@ -115,6 +115,7 @@ import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
 import { getExpenseList, createExpense, updateExpense, deleteExpense, createPayReceipt, getFundList } from '@/api/finance'
 import { adjustFundBalance } from '@/utils/fund'
+import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()

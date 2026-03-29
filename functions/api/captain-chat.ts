@@ -43,7 +43,7 @@ async function erpPost(path: string, body: Record<string, any>, token: string, b
   try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}）`) }
 }
 
-async function executeTool(name: string, input: Record<string, any>, token: string, backend: string): Promise<string> {
+async function executeTool(name: string, input: Record<string, any>, token: string, backend: string, books?: any[]): Promise<string> {
   try {
     switch (name) {
       case 'query_customers': {
@@ -81,6 +81,19 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
       }
       case 'navigate_to':
         return `导航指令：${input.page}`
+      case 'browse_books': {
+        const bks = books || []
+        const keyword = input.keyword?.toLowerCase() || ''
+        const filtered = keyword
+          ? bks.filter((b: any) => b.title?.toLowerCase().includes(keyword) || b.tags?.some((t: string) => t.toLowerCase().includes(keyword)))
+          : bks
+        return `图书馆共 ${filtered.length} 本书。${JSON.stringify(filtered.map((b: any) => ({ id: b.id, 书名: b.title, 作者: b.author, 标签: b.tags })))}`
+      }
+      case 'add_book': {
+        const id = `book_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+        const tags = input.tags ? String(input.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
+        return JSON.stringify({ status: 'added', id, title: input.title, content: input.content, author: 'captain', tags, createdAt: new Date().toISOString(), note: '新书已添加到图书馆书架' })
+      }
       default:
         return `工具 ${name} 已收到`
     }
@@ -123,6 +136,7 @@ ERP里的每一笔订单、每一条库存、每一张发票，都在我的视�
    - 品牌专员（brand）：品牌策略、内容调性审核
    - 发布专员（publisher）：多平台排期、发布计划
    - 趋势专员（trend）：热点分析、选题方向
+   - 营销顾问（marketing）：营销战略、客户分析、定价策略、促销方案、SWOT分析、市场洞察
    - 派发格式：@@DISPATCH:专员ID:具体任务@@
 
 【禁区 — 不亲自处理】
@@ -168,6 +182,16 @@ ERP里的每一笔订单、每一条库存、每一张发票，都在我的视�
     id: 'trend', name: '趋势Agent', emoji: '📈',
     systemPrompt: `你是数字游牧Agency的趋势洞察Agent。专长：各平台热点话题分析和预测、赛道竞争格局分析、内容选题建议、消费者情绪洞察、季节性营销时机、爆款内容规律总结。基于真实的市场规律给分析，区分短期热点和长期趋势。${ERP_TOOL_NOTE}回复用中文，有洞察力，数据化表达。`,
   },
+  marketing: {
+    id: 'marketing', name: '营销顾问', emoji: '📊',
+    systemPrompt: `你是数字游牧投资生态园区的营销战略顾问。知识体系基于两大理论支柱：
+
+【A·科特勒营销管理】营销环境分析（PESTEL/波特五力/SWOT）、STP战略（市场细分/目标市场/定位）、4P/7P营销组合、消费者行为（购买决策5阶段/心理学4效应）、品牌与CRM（Keller CBBE/CLV/RFM）、数字营销（SEO/SEM/社媒/内容漏斗/私域/AARRR）、营销度量（ROI/CAC/LTV/NPS）。
+
+【B·特劳特&里斯定位系列】定位理论（心智战场/第一法则/关联定位/重新定位/品牌延伸陷阱）、商战四种战略（防御战/进攻战/侧翼战/游击战）、22条商规精要（领先/品类/心智/认知/聚焦/专有/二元/对立/分化/延伸/牺牲/资源法则）、聚焦战略（收缩聚焦/专家品牌胜通才）、品类创新（品类分化=品牌诞生/新品类4关键）、视觉锤（语言钉子+视觉锤/一致性重复）、差异化9法（《与众不同》）。
+
+结合ERP数据给出有据可依的建议，标注使用框架，输出可执行方案。${ERP_TOOL_NOTE}回复用中文，兼具战略高度和落地可行性。`,
+  },
 }
 
 const captainTools = [
@@ -187,6 +211,8 @@ const captainTools = [
       required: ['platform'],
     },
   },
+  { name: 'browse_books', description: '查阅图书馆书架上的书本（标题、作者、标签）', parameters: { type: 'object', properties: { keyword: { type: 'string', description: '按标题或标签筛选' } } } },
+  { name: 'add_book', description: '往图书馆书架上添加新书', parameters: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' }, tags: { type: 'string', description: '逗号分隔标签' } }, required: ['title', 'content'] } },
 ]
 
 async function geminiCall(apiKey: string, systemPrompt: string, contents: any[], tools: any[]): Promise<{ text: string; functionCalls: any[] }> {
@@ -269,7 +295,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), { status: 500 })
   }
 
-  const { messages } = await request.json() as any
+  const { messages, books } = await request.json() as any
   const erpToken = request.headers.get('x-erp-token') || ''
   const { realToken, backend } = decodeErpToken(erpToken)
   const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
@@ -350,7 +376,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const toolResults: any[] = []
         for (const toolUse of toolUseBlocks) {
           await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
-          const result = await executeTool(toolUse.name, toolUse.input, realToken, backend)
+          const result = await executeTool(toolUse.name, toolUse.input, realToken, backend, books)
           await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
           toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
         }
@@ -416,6 +442,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
         await send({ type: 'agent_done', agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
         agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
+
+        // 存储 Captain → Agent 对话记录到 KV
+        if (erpToken && agentOutput) {
+          try {
+            const callerKey = `mem:${erpToken.slice(-16)}:${dispatch.agentId}:captain`
+            const existing = await env.AGENT_MEMORY.get(callerKey, 'json') as any[] || []
+            const now = new Date().toISOString()
+            existing.push(
+              { role: 'user', content: dispatch.task, caller: 'captain', time: now },
+              { role: 'assistant', content: agentOutput, time: now }
+            )
+            await env.AGENT_MEMORY.put(callerKey, JSON.stringify(existing.slice(-30)), { expirationTtl: 60 * 60 * 24 * 30 })
+          } catch {}
+        }
       }
 
       // Phase 3: Captain 综合汇报

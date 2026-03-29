@@ -95,7 +95,7 @@
           </template>
         </el-table-column>
         <el-table-column label="日期" width="150">
-          <template #default="{ row }">{{ (row.receipt_date || row.pay_date || row.create_time || '').slice(0, 16).replace('T', ' ') }}</template>
+          <template #default="{ row }">{{ fmtDt(row.receipt_date || row.pay_date || row.create_time) }}</template>
         </el-table-column>
         <el-table-column label="对方单位" min-width="130">
           <template #default="{ row }">{{ row.contact_name || row.customer_name || row.supplier_name || '—' }}</template>
@@ -131,6 +131,7 @@ import ScForm from '@/components/ScForm.vue'
 import http from '@/api/http'
 import { getFundList, createFund, updateFund, deleteFund, getPayReceiptList, getCollectReceiptList } from '@/api/finance'
 import { applyProcureReturnsToFundRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
+import { fmtDt } from '@/utils/date'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()

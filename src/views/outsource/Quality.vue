@@ -15,7 +15,7 @@
           <el-table-column prop="quality_no" label="质检编号" min-width="150" />
           <el-table-column prop="supplier_name" label="供应商" min-width="130" />
           <el-table-column prop="quality_date" label="质检日期" width="110">
-            <template #default="{ row }">{{ (row.quality_date||row.created_at||'').slice(0,10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.quality_date || row.created_at) }}</template>
           </el-table-column>
           <el-table-column prop="inspector" label="质检人" width="90" />
           <el-table-column label="合格率" width="90" align="center">
@@ -138,6 +138,7 @@ import { getQualityList, createQuality, deleteQuality } from '@/api/outsource'
 import { getSupplierList } from '@/api/procure'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { fmtDt } from '@/utils/date'
 
 const tableRef=ref<InstanceType<typeof ScTable>>()
 const permStore = usePermissionStore()

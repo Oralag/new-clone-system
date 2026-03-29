@@ -1,84 +1,95 @@
 <template>
-  <div class="agent-chat-wrap" :style="{ '--agent-color': agent.color }">
+  <div ref="barRef" class="agent-bar" :class="{ expanded: (messages.length > 0 || streaming) && !isCollapsed, compact }" :style="{ '--ac': agent.color }" @click.stop>
 
-    <!-- 左：身份信息栏 -->
-    <div class="agent-sidebar">
-      <div class="agent-avatar">{{ agent.emoji }}</div>
-      <div class="agent-name">{{ agent.name }}</div>
-      <div class="agent-specialty">{{ agent.specialty }}</div>
-      <div class="agent-status-dot" :class="{ active: streaming }">
-        <span v-if="streaming" class="pulse"></span>
+    <!-- 输入条（始终在顶部） -->
+    <div class="bar-row">
+      <div class="bar-identity" @click="isCollapsed = false">
+        <div class="bar-shield">{{ agent.emoji }}</div>
+        <div class="bar-live-dot" :class="streaming ? 'dot-busy' : 'dot-live'" />
+        <span class="bar-name">{{ agent.name }}</span>
       </div>
 
-      <!-- Quick prompts -->
-      <div v-if="quickPrompts && quickPrompts.length > 0" class="qp-section">
-        <div class="qp-label">快速开始</div>
-        <div class="qp-list">
-          <button
-            v-for="qp in quickPrompts"
-            :key="qp"
-            class="qp-chip"
-            @click="sendQuickPrompt(qp)"
-          >{{ qp }}</button>
-        </div>
-      </div>
-
-      <button v-if="messages.length > 0" class="btn-clear" @click="clearChat" title="清空对话">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-        清空对话
-      </button>
-    </div>
-
-    <!-- 右：对话区 -->
-    <div class="agent-chat-right">
-      <!-- Message Feed -->
-      <div ref="feedRef" class="agent-feed">
-        <div v-if="messages.length === 0" class="feed-empty">
-          <div class="empty-emoji">{{ agent.emoji }}</div>
-          <div class="empty-title">和 {{ agent.name }} 开始对话</div>
-          <div class="empty-sub">{{ agent.specialty }} · 专业 AI 助理</div>
-        </div>
-
-        <template v-for="(msg, idx) in messages" :key="idx">
-          <div v-if="msg.role === 'user'" class="msg msg-user">
-            <div class="msg-bubble user-bubble">{{ msg.content }}</div>
-          </div>
-          <div v-else-if="msg.role === 'assistant'" class="msg msg-assistant">
-            <div class="msg-agent-avatar">{{ agent.emoji }}</div>
-            <div class="msg-body">
-              <template v-for="(tc, ti) in msg.toolCalls" :key="ti">
-                <div class="tool-chip" :class="tc.status">
-                  <span class="tool-icon">{{ tc.status === 'running' ? '⚙' : tc.status === 'done' ? '✓' : '⚠' }}</span>
-                  <span class="tool-name">{{ formatToolName(tc.name) }}</span>
-                  <span v-if="tc.status === 'running'" class="tool-spin"></span>
-                </div>
-              </template>
-              <div v-if="msg.content || (msg.streaming && !msg.content)" class="msg-bubble assistant-bubble">
-                <span v-html="renderMd(msg.content)"></span>
-                <span v-if="msg.streaming" class="cursor-blink">▌</span>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <div v-if="lastError" class="feed-error">{{ lastError }}</div>
-      </div>
-
-      <!-- Compose -->
-      <div class="agent-compose">
-        <textarea
+      <div class="bar-actions" @click.stop>
+        <input
           ref="inputRef"
           v-model="inputText"
-          class="compose-input"
-          :placeholder="`问 ${agent.name} 任何问题...`"
-          rows="1"
-          @keydown.enter.prevent="onEnter"
-          @input="autoResize"
-        ></textarea>
-        <button class="compose-send" :disabled="!inputText.trim() || streaming" @click="sendMessage">
-          <svg v-if="!streaming" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>
-          <span v-else class="send-spin"></span>
+          class="bar-input"
+          :placeholder="`和 ${agent.name} 对话...`"
+          :disabled="streaming"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          enterkeyhint="send"
+          @keydown.enter.prevent="sendMessage"
+          @focus="isCollapsed = false"
+        />
+        <button v-if="messages.length > 0" class="bar-tool-btn" @click="clearChat" title="清空对话">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
         </button>
+        <!-- 收起按钮 -->
+        <button v-if="(messages.length > 0 || streaming) && !isCollapsed" class="bar-tool-btn" @click="isCollapsed = true" title="收起">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>
+        </button>
+        <!-- 展开按钮 -->
+        <button v-if="messages.length > 0 && isCollapsed" class="bar-tool-btn" @click="isCollapsed = false" title="展开">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <button class="bar-send" :disabled="streaming || !inputText.trim()" @click="sendMessage">
+          <svg v-if="!streaming" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          <span v-else class="spin" />
+        </button>
+      </div>
+    </div>
+
+    <!-- 消息区（在输入条下方展开） -->
+    <div v-if="(messages.length > 0 || streaming) && !isCollapsed" class="inline-feed">
+
+      <!-- 查看更多 -->
+      <div v-if="messages.length > 4 && !showAllMessages" class="feed-more-btn" @click.stop="showAllMessages = true">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        查看更多 {{ messages.length - 4 }} 条历史
+      </div>
+
+      <template v-for="(msg, idx) in displayMessages" :key="idx">
+        <div v-if="msg.role === 'user'" class="row-user">
+          <div class="bubble-user">{{ msg.content }}</div>
+        </div>
+        <div v-else-if="msg.role === 'assistant'" class="row-assistant">
+          <div class="assistant-inner">
+            <!-- 工具调用 -->
+            <template v-for="(tc, ti) in msg.toolCalls" :key="ti">
+              <div class="step-tool">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                {{ formatToolName(tc.name) }}
+                <span class="tool-dot" :class="tc.status === 'done' ? 'dot-done' : tc.status === 'error' ? 'dot-error' : 'dot-running'" />
+              </div>
+            </template>
+            <!-- 文本内容 -->
+            <div v-if="msg.content || msg.streaming" class="step-text" v-html="renderMd(msg.content)"></div>
+            <!-- 生成的图片 -->
+            <div v-if="msg.images?.length" class="step-images">
+              <a v-for="(url, i) in msg.images" :key="i" :href="url" target="_blank">
+                <img :src="url" class="step-image" alt="AI生成图片" />
+              </a>
+            </div>
+            <!-- 存入发布按钮 -->
+            <div v-if="msg.content && !msg.streaming" class="step-actions">
+              <button class="btn-save-publish" @click="saveToPublish(msg, idx)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v10M8 8l4 4 4-4M3 16v4h18v-4"/></svg>
+                存入发布
+              </button>
+              <span v-if="savedIndexes.has(idx)" class="saved-hint">✓ 已存入</span>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div v-if="lastError" class="row-error">{{ lastError }}</div>
+
+      <div v-if="streaming && !messages[messages.length - 1]?.content" class="row-thinking">
+        <span class="thinking-label">{{ agent.emoji }} {{ agent.name }}</span>
+        <div class="thinking-dots"><span /><span /><span /></div>
       </div>
     </div>
 
@@ -86,13 +97,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { AGENTS } from '@/server/agents/agentRegistry'
+import { useTrendingStore } from '@/stores/agent'
 import { marked } from 'marked'
 
 const props = defineProps<{
   agentId: string
   quickPrompts?: string[]
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -101,6 +116,38 @@ const emit = defineEmits<{
 }>()
 
 const agent = computed(() => AGENTS[props.agentId] ?? AGENTS.copywriter)
+const agentStore = useTrendingStore()
+const router = useRouter()
+const savedIndexes = ref<Set<number>>(new Set())
+
+// agentId → 发布类型映射
+const agentTypeMap: Record<string, 'copy' | 'poster' | 'video_script'> = {
+  copywriter: 'copy',
+  poster: 'poster',
+  designer: 'poster',
+  video: 'video_script',
+}
+
+// agentId → 平台映射
+const agentPlatformMap: Record<string, { platform: string; platformName: string }> = {
+  copywriter: { platform: 'xiaohongshu', platformName: '小红书' },
+  poster: { platform: 'xiaohongshu', platformName: '小红书' },
+  designer: { platform: 'xiaohongshu', platformName: '小红书' },
+  video: { platform: 'douyin', platformName: '抖音' },
+}
+
+function saveToPublish(msg: ChatMessage, idx: number) {
+  const type = agentTypeMap[props.agentId] ?? 'copy'
+  const { platform, platformName } = agentPlatformMap[props.agentId] ?? { platform: 'xiaohongshu', platformName: '小红书' }
+  const imageUrl = msg.images?.[0] ?? ''
+  agentStore.setFlowResults([
+    ...agentStore.flowResults,
+    { platform, platformName, topic: '', type, content: msg.content, imageUrl: imageUrl || undefined },
+  ])
+  savedIndexes.value = new Set([...savedIndexes.value, idx])
+  ElMessage({ message: '已存入发布，前往发布页查看', type: 'success', duration: 2500,
+    onClick: () => router.push('/agent/publish') })
+}
 
 interface ToolCall {
   id: string
@@ -111,6 +158,7 @@ interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   toolCalls?: ToolCall[]
+  images?: string[]
   streaming?: boolean
 }
 
@@ -118,8 +166,14 @@ const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const streaming = ref(false)
 const lastError = ref('')
-const feedRef = ref<HTMLElement>()
-const inputRef = ref<HTMLTextAreaElement>()
+const isCollapsed = ref(false)
+const showAllMessages = ref(false)
+const inputRef = ref<HTMLInputElement>()
+const barRef = ref<HTMLDivElement>()
+
+const displayMessages = computed(() =>
+  showAllMessages.value ? messages.value : messages.value.slice(-4)
+)
 
 function renderMd(text: string) {
   if (!text) return ''
@@ -130,27 +184,35 @@ function formatToolName(name: string) {
   return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-function autoResize() {
-  const el = inputRef.value
-  if (!el) return
-  el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 160) + 'px'
+// 点击外部自动收起
+function onClickOutside(e: MouseEvent) {
+  if (barRef.value && !barRef.value.contains(e.target as Node)) {
+    isCollapsed.value = true
+  }
 }
-
-function scrollToBottom() {
-  nextTick(() => {
-    if (feedRef.value) feedRef.value.scrollTop = feedRef.value.scrollHeight
-  })
-}
+onMounted(() => {
+  document.addEventListener('click', onClickOutside)
+  loadMemory()
+  nextTick(() => inputRef.value?.focus())
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside)
+})
 
 function sendQuickPrompt(prompt: string) {
   inputText.value = prompt
-  sendMessage()
+  isCollapsed.value = false
+  nextTick(() => {
+    inputRef.value?.focus()
+    sendMessage()
+  })
 }
 
-function onEnter(e: KeyboardEvent) {
-  if (e.shiftKey) return
-  sendMessage()
+async function scrollBottom() {
+  await nextTick()
+  // 自动滚动到底部 — feed 区域
+  const feed = barRef.value?.querySelector('.inline-feed')
+  if (feed) feed.scrollTop = feed.scrollHeight
 }
 
 async function sendMessage() {
@@ -159,18 +221,17 @@ async function sendMessage() {
 
   inputText.value = ''
   lastError.value = ''
-  if (inputRef.value) { inputRef.value.style.height = 'auto' }
+  isCollapsed.value = false
 
   messages.value.push({ role: 'user', content: text })
   const assistantMsg: ChatMessage = { role: 'assistant', content: '', toolCalls: [], streaming: true }
   messages.value.push(assistantMsg)
-  scrollToBottom()
+  await scrollBottom()
 
   streaming.value = true
   emit('streaming-change', true)
 
   const token = localStorage.getItem('erp_token') || ''
-  // Build conversation history (excluding the current empty assistant msg)
   const history = messages.value.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
 
   try {
@@ -207,13 +268,20 @@ async function sendMessage() {
           const ev = JSON.parse(raw)
           if (ev.type === 'text') {
             assistantMsg.content += ev.text
-            scrollToBottom()
+            messages.value = [...messages.value]
+            await scrollBottom()
           } else if (ev.type === 'tool_start') {
             assistantMsg.toolCalls!.push({ id: ev.id, name: ev.name, status: 'running' })
-            scrollToBottom()
+            messages.value = [...messages.value]
+            await scrollBottom()
           } else if (ev.type === 'tool_result') {
             const tc = assistantMsg.toolCalls!.find(t => t.id === ev.id)
             if (tc) tc.status = 'done'
+            if (ev.result && typeof ev.result === 'string' && ev.result.startsWith('IMAGE_URL:')) {
+              if (!assistantMsg.images) assistantMsg.images = []
+              assistantMsg.images.push(ev.result.slice(10))
+            }
+            messages.value = [...messages.value]
           } else if (ev.type === 'error') {
             lastError.value = ev.error
           }
@@ -227,7 +295,8 @@ async function sendMessage() {
     streaming.value = false
     emit('streaming-change', false)
     emit('message-sent')
-    scrollToBottom()
+    messages.value = [...messages.value]
+    await scrollBottom()
   }
 }
 
@@ -264,317 +333,322 @@ async function clearMemory() {
   }
   messages.value = []
   lastError.value = ''
+  showAllMessages.value = false
 }
 
 function clearChat() {
   clearMemory()
 }
 
-onMounted(() => {
-  loadMemory()
-  nextTick(() => inputRef.value?.focus())
-})
-
 defineExpose({ sendQuickPrompt, clearChat })
 </script>
 
 <style scoped>
-/* ── Outer shell: left sidebar + right chat ── */
-.agent-chat-wrap {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  min-height: 500px;
-  border: 1px solid var(--faint, #e2e8f0);
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--card-bg, #fff);
-  box-shadow: 0 2px 16px rgba(0,0,0,0.05);
-}
-
-/* ── Left sidebar ── */
-.agent-sidebar {
-  width: 180px;
-  flex-shrink: 0;
-  background: color-mix(in srgb, var(--agent-color, #6366f1) 4%, var(--card-bg, white));
-  border-right: 1px solid var(--faint, #e2e8f0);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 16px 16px;
-  gap: 6px;
-}
-
-.agent-avatar {
-  width: 52px;
-  height: 52px;
+/* ── 条形布局（仿 CaptainBar） ── */
+.agent-bar {
+  position: relative;
+  z-index: 100;
+  background: var(--card-bg, rgba(255,255,255,0.95));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--agent-color, #6366f1) 12%, white);
+  border: 1px solid var(--border, rgba(0,0,0,0.07));
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin-bottom: 16px;
+}
+
+/* ── 条 ── */
+.bar-row {
+  height: 68px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+}
+
+.bar-identity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 5px 16px 5px 5px;
+  border-radius: 10px;
+  transition: background 0.15s;
+  border-right: 1px solid rgba(0,0,0,0.07);
+  margin-right: 4px;
+}
+.bar-identity:hover { background: color-mix(in srgb, var(--ac, #6366f1) 6%, transparent); }
+
+.bar-shield {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--ac, #6366f1), color-mix(in srgb, var(--ac, #6366f1) 70%, #000));
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 14px;
   flex-shrink: 0;
-  border: 1.5px solid color-mix(in srgb, var(--agent-color, #6366f1) 25%, white);
-  margin-bottom: 6px;
 }
 
-.agent-name {
+.bar-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-live { background: #34d399; box-shadow: 0 0 0 2px rgba(52,211,153,0.2); }
+.dot-busy { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); animation: blink 1s infinite; }
+@keyframes blink { 0%,100% { opacity:1 } 50% { opacity:0.3 } }
+
+.bar-name {
   font-size: 13px;
   font-weight: 700;
-  color: var(--dark, #1e293b);
-  text-align: center;
-  line-height: 1.3;
-}
-.agent-specialty {
-  font-size: 11px;
-  color: #94a3b8;
-  text-align: center;
-  margin-top: 1px;
+  color: var(--dark, #1d1d1f);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
-.agent-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #d1d5db;
-  flex-shrink: 0;
+.bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex: 1;
   position: relative;
-  margin-top: 6px;
 }
-.agent-status-dot.active { background: #22c55e; }
-.pulse {
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: #22c55e;
-  opacity: 0.3;
-  animation: pulse 1.5s ease-out infinite;
-}
-@keyframes pulse { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(2.2); opacity: 0; } }
 
-.btn-clear {
-  background: none;
+.bar-input {
+  height: 40px;
+  flex: 1;
+  background: transparent;
   border: none;
-  color: #cbd5e1;
+  border-radius: 0;
+  color: var(--dark, #1d1d1f);
+  font-size: 13.5px;
+  padding: 0 12px;
+  outline: none;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.bar-input::placeholder { color: rgba(29,29,31,0.3); }
+.bar-input:focus { background: transparent; border-color: transparent; box-shadow: none; }
+.bar-input:disabled { opacity: 0.45; }
+
+.bar-send {
+  width: 40px;
+  height: 40px;
+  background: var(--ac, #6366f1);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
   display: flex;
-  transition: color 0.15s;
-  margin-top: auto;
-  align-self: stretch;
-  justify-content: center;
-  align-items: center;
-}
-.btn-clear:hover { color: #94a3b8; }
-
-/* ── Quick Prompts (in sidebar) ── */
-.qp-section {
-  width: 100%;
-  margin-top: 12px;
-}
-.qp-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; text-align: center; }
-.qp-list { display: flex; flex-direction: column; gap: 5px; }
-.qp-chip {
-  padding: 5px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--faint, #e2e8f0);
-  background: var(--card-bg, #fff);
-  color: var(--mid, #475569);
-  font-size: 11.5px;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-align: left;
-  line-height: 1.4;
-  white-space: normal;
-  word-break: keep-all;
-}
-.qp-chip:hover {
-  border-color: var(--agent-color, #6366f1);
-  color: var(--agent-color, #6366f1);
-  background: color-mix(in srgb, var(--agent-color, #6366f1) 6%, var(--card-bg, white));
-}
-
-/* ── Right column ── */
-.agent-chat-right {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ── Feed ── */
-.agent-feed {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  background: var(--gray, #fafbfc);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 300px;
-}
-
-.feed-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  gap: 8px;
-  color: #94a3b8;
-  padding: 40px 0;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  padding: 0;
 }
-.empty-emoji { font-size: 40px; margin-bottom: 4px; }
-.empty-title { font-size: 15px; font-weight: 600; color: var(--mid, #475569); }
-.empty-sub { font-size: 12px; }
+.bar-send:hover:not(:disabled) { opacity: 0.85; }
+.bar-send:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* ── Messages ── */
-.msg { display: flex; gap: 10px; align-items: flex-start; }
-.msg-user { flex-direction: row-reverse; }
-.msg-assistant { flex-direction: row; }
-
-.msg-agent-avatar {
+.bar-tool-btn {
   width: 32px;
   height: 32px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--agent-color, #6366f1) 12%, white);
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.09);
+  border-radius: 8px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  color: rgba(29,29,31,0.4);
+  transition: all 0.15s;
+  padding: 0;
   flex-shrink: 0;
-  margin-top: 2px;
-  border: 1px solid color-mix(in srgb, var(--agent-color, #6366f1) 20%, white);
+}
+.bar-tool-btn:hover { background: var(--gray, #f5f5f7); color: var(--dark, #1d1d1f); border-color: rgba(0,0,0,0.15); }
+
+/* ── 内联消息区 ── */
+.inline-feed {
+  padding: 4px 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.06));
+  background: var(--gray, #fafafa);
+  border-radius: 0 0 14px 14px;
+  max-height: 480px;
+  overflow-y: auto;
 }
 
-.msg-body { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; max-width: 85%; }
-
-.msg-bubble {
-  padding: 10px 14px;
-  border-radius: 14px;
-  font-size: 14px;
-  line-height: 1.7;
-  word-break: break-word;
+.feed-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ac, #0071e3);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  user-select: none;
+  align-self: flex-start;
 }
-.user-bubble {
-  background: var(--agent-color, #6366f1);
+.feed-more-btn:hover { background: color-mix(in srgb, var(--ac, #0071e3) 7%, transparent); }
+
+/* 消息行 */
+.row-user { display: flex; justify-content: flex-end; }
+.bubble-user {
+  background: var(--ac, #6366f1);
   color: #fff;
-  border-radius: 14px 4px 14px 14px;
-  max-width: 75%;
-  margin-left: auto;
+  border-radius: 16px 16px 4px 16px;
+  padding: 9px 14px;
+  font-size: 13px;
+  max-width: 70%;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
 }
-.assistant-bubble {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--faint, #e2e8f0);
-  color: var(--dark, #1e293b);
-  border-radius: 4px 14px 14px 14px;
-}
-.assistant-bubble :deep(p) { margin: 0 0 8px; }
-.assistant-bubble :deep(p:last-child) { margin-bottom: 0; }
-.assistant-bubble :deep(ul), .assistant-bubble :deep(ol) { margin: 6px 0; padding-left: 20px; }
-.assistant-bubble :deep(li) { margin-bottom: 3px; }
-.assistant-bubble :deep(h1), .assistant-bubble :deep(h2), .assistant-bubble :deep(h3) { margin: 10px 0 6px; font-size: 1em; }
-.assistant-bubble :deep(strong) { font-weight: 700; }
-.assistant-bubble :deep(code) { background: var(--gray, #f1f5f9); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
-.assistant-bubble :deep(pre) { background: var(--gray, #f1f5f9); padding: 10px; border-radius: 8px; overflow-x: auto; }
-.assistant-bubble :deep(blockquote) { border-left: 3px solid var(--faint, #e2e8f0); padding-left: 10px; color: var(--mid, #64748b); margin: 6px 0; }
 
-/* ── Tool calls ── */
-.tool-chip {
+.row-assistant { display: flex; }
+.assistant-inner { display: flex; flex-direction: column; gap: 8px; max-width: 92%; }
+
+.step-text {
+  font-size: 13px;
+  color: var(--dark, #1d1d1f);
+  line-height: 1.6;
+  background: var(--card-bg, #fff);
+  border-radius: 4px 16px 16px 16px;
+  padding: 9px 14px;
+  border: 1px solid var(--border, rgba(0,0,0,0.06));
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.step-text :deep(p) { margin: 0 0 8px; }
+.step-text :deep(p:last-child) { margin-bottom: 0; }
+.step-text :deep(ul), .step-text :deep(ol) { margin: 6px 0; padding-left: 20px; }
+.step-text :deep(li) { margin-bottom: 3px; }
+.step-text :deep(h1), .step-text :deep(h2), .step-text :deep(h3) { margin: 10px 0 6px; font-size: 1em; }
+.step-text :deep(strong) { font-weight: 700; }
+.step-text :deep(code) { background: var(--gray, #f1f5f9); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+.step-text :deep(pre) { background: var(--gray, #f1f5f9); padding: 10px; border-radius: 8px; overflow-x: auto; }
+.step-text :deep(blockquote) { border-left: 3px solid var(--faint, #e2e8f0); padding-left: 10px; color: var(--mid, #64748b); margin: 6px 0; }
+.step-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.step-image { max-width: 100%; border-radius: 6px; border: 1px solid var(--faint, #e2e8f0); cursor: pointer; display: block; }
+
+.step-tool {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid;
-  width: fit-content;
+  font-size: 11px;
+  color: rgba(29,29,31,0.4);
+  padding: 3px 0;
 }
-.tool-chip.running { background: #fffbeb; border-color: #fde68a; color: #92400e; }
-.tool-chip.done { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
-.tool-chip.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.tool-dot { width: 6px; height: 6px; border-radius: 50%; }
+.dot-running { background: #f59e0b; animation: blink 1s infinite; }
+.dot-done    { background: #34d399; }
+.dot-error   { background: #ef4444; }
 
-.tool-spin {
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid #f59e0b;
-  border-top-color: transparent;
+/* 错误 */
+.row-error {
+  padding: 8px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 12px;
+}
+
+/* 思考中 */
+.row-thinking { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.thinking-label { font-size: 12px; color: rgba(29,29,31,0.4); }
+.thinking-dots { display: flex; gap: 3px; }
+.thinking-dots span {
+  width: 5px; height: 5px; background: rgba(29,29,31,0.2);
+  border-radius: 50%; animation: bounce 1.2s infinite;
+}
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,60%,100% { transform:translateY(0) } 30% { transform:translateY(-4px) } }
+
+/* 动画 */
+.spin {
+  width: 13px; height: 13px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Error ── */
-.feed-error {
-  padding: 10px 14px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  color: #dc2626;
-  font-size: 13px;
+/* ── compact 模式（侧面板场景） ── */
+.agent-bar.compact {
+  margin-bottom: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 }
-
-/* ── Compose ── */
-.agent-compose {
-  display: flex;
-  align-items: flex-end;
+.agent-bar.compact .bar-row {
+  height: 52px;
+  padding: 0 12px;
   gap: 8px;
-  padding: 12px 14px;
-  background: var(--card-bg, #fff);
-  border-top: 1px solid var(--faint, #e2e8f0);
 }
-
-.compose-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 14px;
-  color: var(--dark, #1e293b);
-  resize: none;
-  line-height: 1.6;
-  font-family: inherit;
-  max-height: 160px;
-  overflow-y: auto;
-  padding: 4px 0;
+.agent-bar.compact .bar-shield {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
 }
-.compose-input::placeholder { color: var(--dim, #94a3b8); }
+.agent-bar.compact .bar-name { font-size: 12px; }
+.agent-bar.compact .bar-input { font-size: 12.5px; height: 34px; }
+.agent-bar.compact .bar-send { width: 34px; height: 34px; }
+.agent-bar.compact .bar-tool-btn { width: 28px; height: 28px; }
+.agent-bar.compact .inline-feed {
+  padding: 4px 12px 10px;
+  max-height: 340px;
+}
+.agent-bar.compact .bubble-user,
+.agent-bar.compact .step-text { font-size: 12px; padding: 7px 11px; }
 
-.compose-send {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: none;
-  background: var(--agent-color, #6366f1);
-  color: #fff;
-  cursor: pointer;
+.step-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: opacity 0.15s;
-}
-.compose-send:disabled { opacity: 0.4; cursor: not-allowed; }
-.compose-send:not(:disabled):hover { opacity: 0.85; }
-
-.send-spin {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255,255,255,0.4);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  display: inline-block;
+  gap: 8px;
+  margin-top: 4px;
 }
 
-.cursor-blink {
-  animation: blink 1s step-end infinite;
-  color: var(--agent-color, #6366f1);
+.btn-save-publish {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ac, #6366f1);
+  background: color-mix(in srgb, var(--ac, #6366f1) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ac, #6366f1) 20%, transparent);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
 }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.btn-save-publish:hover {
+  background: color-mix(in srgb, var(--ac, #6366f1) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ac, #6366f1) 35%, transparent);
+}
+
+.saved-hint {
+  font-size: 11px;
+  color: #34d399;
+  font-weight: 600;
+}
+
+/* 暗色模式 */
+:global([data-theme='dark']) .agent-bar { background: #111827; border-color: #1f2937; }
+:global([data-theme='dark']) .bar-name { color: #f8fafc; }
+:global([data-theme='dark']) .inline-feed { background: #0d1117; }
+:global([data-theme='dark']) .step-text { background: #1e293b; border-color: #334155; color: #e2e8f0; }
 </style>

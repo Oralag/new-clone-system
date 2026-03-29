@@ -15,7 +15,7 @@
           <el-table-column prop="in_no" label="入库编号" min-width="150" />
           <el-table-column prop="supplier_name" label="供应商" min-width="130" />
           <el-table-column prop="in_date" label="入库日期" width="110">
-            <template #default="{ row }">{{ (row.in_date||row.created_at||'').slice(0,10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.in_date || row.created_at) }}</template>
           </el-table-column>
           <el-table-column prop="warehouse_name" label="入库仓库" min-width="110" />
           <el-table-column prop="receiver" label="收货人" width="90" />
@@ -159,6 +159,7 @@ import { getSupplierList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { fmtDt } from '@/utils/date'
 
 const tableRef=ref<InstanceType<typeof ScTable>>()
 const permStore = usePermissionStore()

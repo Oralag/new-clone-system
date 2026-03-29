@@ -9,13 +9,12 @@
     @click="onTriggerClick"
     :title="isOpen ? '关闭ERP管家' : '打开ERP管家'"
   >
-    <el-icon :size="22"><ChatRound /></el-icon>
     <span class="ai-trigger-label">ERP管家</span>
     <el-badge v-if="unread > 0" :value="unread" class="ai-badge" />
   </div>
 
   <!-- Chat panel -->
-  <transition name="chat-slide">
+  <transition name="chat-slide" @after-enter="scrollToBottom">
     <div
       v-if="isOpen"
       class="ai-chat-panel"
@@ -25,15 +24,15 @@
       <!-- Header — drag handle -->
       <div class="chat-header" @mousedown="onPanelDragStart" @touchstart.passive="onPanelTouchStart">
         <div class="chat-header-info">
-          <div class="chat-avatar">
-            <el-icon :size="18"><Cpu /></el-icon>
-          </div>
           <div>
             <div class="chat-name">ERP 管家</div>
             <div class="chat-status">{{ isLoading ? '正在处理...' : '在线 · ERP 数据专属' }}</div>
           </div>
         </div>
         <div class="chat-header-actions">
+          <el-tooltip content="语音通话">
+            <el-button :icon="Phone" circle size="small" plain @click="voiceCallActive = true" />
+          </el-tooltip>
           <el-tooltip content="历史会话">
             <el-button :icon="Clock" circle size="small" plain @click="showHistory = !showHistory; showMemory = false" />
           </el-tooltip>
@@ -75,8 +74,7 @@
 
         <!-- Welcome message -->
         <div class="chat-welcome" v-if="messages.length === 0">
-          <el-icon :size="40" color="#165dff"><Cpu /></el-icon>
-          <p class="welcome-title">你好！我是 ERP 管家</p>
+          <p class="welcome-title">你好！我是亚当</p>
           <p class="welcome-sub">负责 ERP 数据录入、查询、导航，直接告诉我你要做什么</p>
           <div class="quick-prompts">
             <el-tag
@@ -109,7 +107,7 @@
             :title="msg.agentName"
           >
             <span v-if="msg.agentEmoji && msg.role === 'assistant'" class="agent-emoji">{{ msg.agentEmoji }}</span>
-            <el-icon v-else-if="msg.role === 'assistant'"><Cpu /></el-icon>
+            <span v-else-if="msg.role === 'assistant'" class="assistant-text-avatar">AI</span>
             <el-icon v-else><User /></el-icon>
           </div>
           <div class="message-bubble">
@@ -179,7 +177,7 @@
           v-model="inputText"
           class="chat-native-textarea"
           rows="2"
-          :placeholder="isRecording ? '正在聆听，请说话...' : '输入业务描述，或上传单据图片让AI识别录入...'"
+          :placeholder="isRecording ? '正在聆听，请说话...' : '输入业务描述，或上传/粘贴单据图片让AI识别录入...'"
           :disabled="isLoading"
           autocomplete="off"
           autocorrect="off"
@@ -188,6 +186,7 @@
           enterkeyhint="send"
           @keydown.enter.exact.prevent="sendMessage"
           @keydown.enter.shift.exact="inputText += '\n'"
+          @paste="onPaste"
         />
         <div class="input-footer">
           <el-tooltip content="上传单据图片">
@@ -249,6 +248,9 @@
   <transition name="fade">
     <div v-if="isOpen" class="ai-backdrop" @click="isOpen = false" />
   </transition>
+
+  <!-- 语音通话覆盖层 -->
+  <VoiceCallOverlay v-model:visible="voiceCallActive" />
 
   <!-- 一键生产BOM弹框 -->
   <el-dialog v-model="bomDialogVisible" title="一键生产成品BOM计划" width="760px" append-to-body :close-on-click-modal="false">
@@ -354,12 +356,14 @@
 </template>
 
 <script setup lang="ts">
-import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone, Clock, GoodsFilled, SetUp, Document, CircleCheck, CircleClose, Select, MagicStick, Setting } from '@element-plus/icons-vue'
+import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone, Clock, GoodsFilled, SetUp, Document, CircleCheck, CircleClose, Select, MagicStick, Setting, Phone } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
+import { fmtDt } from '@/utils/date'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
 import AiMemoryPanel from './ai/AiMemoryPanel.vue'
+import VoiceCallOverlay from './ai/VoiceCallOverlay.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
 import { getGoodsList } from '@/api/goods'
 import { createProductionPlan, auditProductionPlan, createMaterial, auditMaterial } from '@/api/production'
@@ -367,6 +371,7 @@ import { applyMaterialStockDelta } from '@/utils/materialStock'
 import { createProductionInhouseAndAutoAudit } from '@/utils/productionInhouse'
 import { useUserMemoryStore } from '@/stores/userMemory'
 import { extractAndMerge } from './ai/composables/useMemoryExtractor'
+import adamAvatarUrl from '@/assets/adam-avatar.png'
 
 function getResponseId(res: any) {
   return Number(res?.data?.id || res?.data?.data?.id || res?.data || 0)
@@ -470,6 +475,7 @@ function saveHistory(msgs: Message[]) {
 const router = useRouter()
 const route = useRoute()
 const isOpen = ref(false)
+const voiceCallActive = ref(false)
 const unread = ref(0)
 const inputText = ref('')
 const messages = ref<Message[]>(loadHistory())
@@ -485,8 +491,21 @@ watch(messages, (val) => saveHistory(val), { deep: true })
 // ── Drag positioning ──────────────────────────────────────────────────────────
 const triggerBottom = ref(32)
 const triggerRight = ref(32)
-const panelBottom = computed(() => triggerBottom.value + 80)
-const panelRight = computed(() => triggerRight.value)
+const PANEL_HEIGHT = 580
+const PANEL_WIDTH = 400
+// 面板独立定位（漂浮窗，不依附触发按钮）
+const panelBottom = ref(-1) // -1 表示未初始化
+const panelRight = ref(-1)
+let panelPositionInited = false
+
+function initPanelPosition() {
+  if (panelPositionInited) return
+  panelPositionInited = true
+  const idealBottom = triggerBottom.value + 80
+  const maxBottom = window.innerHeight - PANEL_HEIGHT - 8
+  panelBottom.value = Math.min(idealBottom, Math.max(8, maxBottom))
+  panelRight.value = Math.min(triggerRight.value, Math.max(8, window.innerWidth - PANEL_WIDTH - 8))
+}
 
 let isDragging = false
 let dragTarget: 'trigger' | 'panel' = 'trigger'
@@ -528,8 +547,8 @@ function onPanelDragStart(e: MouseEvent) {
   dragTarget = 'panel'
   startX = e.clientX
   startY = e.clientY
-  startBottom = triggerBottom.value
-  startRight = triggerRight.value
+  startBottom = panelBottom.value
+  startRight = panelRight.value
   window.addEventListener('mousemove', onDragMove)
   window.addEventListener('mouseup', onDragEnd)
   e.preventDefault()
@@ -543,8 +562,8 @@ function onPanelTouchStart(e: TouchEvent) {
   dragTarget = 'panel'
   startX = e.touches[0].clientX
   startY = e.touches[0].clientY
-  startBottom = triggerBottom.value
-  startRight = triggerRight.value
+  startBottom = panelBottom.value
+  startRight = panelRight.value
   window.addEventListener('touchmove', onTouchMove, { passive: false })
   window.addEventListener('touchend', onTouchEnd)
 }
@@ -557,10 +576,13 @@ function onDragMove(e: MouseEvent) {
     clickMoved = true
   }
   if (!isDragging) return
-  const newRight = Math.max(8, Math.min(window.innerWidth - 80, startRight - dx))
-  const newBottom = Math.max(8, Math.min(window.innerHeight - 80, startBottom - dy))
-  triggerRight.value = newRight
-  triggerBottom.value = newBottom
+  if (dragTarget === 'panel') {
+    panelRight.value = Math.max(8, Math.min(window.innerWidth - PANEL_WIDTH - 8, startRight - dx))
+    panelBottom.value = Math.max(8, Math.min(window.innerHeight - PANEL_HEIGHT - 8, startBottom - dy))
+  } else {
+    triggerRight.value = Math.max(8, Math.min(window.innerWidth - 80, startRight - dx))
+    triggerBottom.value = Math.max(8, Math.min(window.innerHeight - 80, startBottom - dy))
+  }
 }
 
 function onTouchMove(e: TouchEvent) {
@@ -573,10 +595,13 @@ function onTouchMove(e: TouchEvent) {
     e.preventDefault() // prevent page scroll while dragging
   }
   if (!isDragging) return
-  const newRight = Math.max(8, Math.min(window.innerWidth - 80, startRight - dx))
-  const newBottom = Math.max(8, Math.min(window.innerHeight - 80, startBottom - dy))
-  triggerRight.value = newRight
-  triggerBottom.value = newBottom
+  if (dragTarget === 'panel') {
+    panelRight.value = Math.max(8, Math.min(window.innerWidth - PANEL_WIDTH - 8, startRight - dx))
+    panelBottom.value = Math.max(8, Math.min(window.innerHeight - PANEL_HEIGHT - 8, startBottom - dy))
+  } else {
+    triggerRight.value = Math.max(8, Math.min(window.innerWidth - 80, startRight - dx))
+    triggerBottom.value = Math.max(8, Math.min(window.innerHeight - 80, startBottom - dy))
+  }
 }
 
 function onDragEnd() {
@@ -832,7 +857,8 @@ function toggleChat() {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     unread.value = 0
-    nextTick(() => scrollToBottom())
+    initPanelPosition()
+    // @after-enter 钩子会在动画结束后触发 scrollToBottom
   }
 }
 
@@ -853,7 +879,7 @@ async function fetchContextData(text: string): Promise<string> {
       ])
       const outRows: any[] = outRes?.data?.rows || []
       const outTotal = outRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-      results.push(`【销售出货单】共 ${outRows.length} 条，合计 ¥${outTotal.toFixed(2)}。最近5条：${JSON.stringify(outRows.slice(0, 5).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0,10) })))}`)
+      results.push(`【销售出货单】共 ${outRows.length} 条，合计 ¥${outTotal.toFixed(2)}。最近5条：${JSON.stringify(outRows.slice(0, 5).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: fmtDt(r.out_date || r.created_at) })))}`)
       const contractRows: any[] = contractRes?.data?.rows || []
       const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
       results.push(`【销售合同】共 ${contractRows.length} 份，合计 ¥${contractTotal.toFixed(2)}`)
@@ -896,7 +922,7 @@ async function fetchContextData(text: string): Promise<string> {
       const res: any = await http.get('/stock/PurchaseOrder/index', { params: { list_rows: 100 } })
       const rows: any[] = res?.data?.rows || []
       const total = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-      results.push(`【采购订单】共 ${rows.length} 条，合计 ¥${total.toFixed(2)}。最近5条：${JSON.stringify(rows.slice(0, 5).map((r: any) => ({ 供应商: r.supplier_name, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0,10) })))}`)
+      results.push(`【采购订单】共 ${rows.length} 条，合计 ¥${total.toFixed(2)}。最近5条：${JSON.stringify(rows.slice(0, 5).map((r: any) => ({ 供应商: r.supplier_name, 金额: r.total_amount, 日期: fmtDt(r.order_date || r.created_at) })))}`)
     }
     // Finance - receivables/payables
     if (lower.includes('应收') || lower.includes('应付') || lower.includes('收款') || lower.includes('付款') || lower.includes('财务')) {
@@ -1102,6 +1128,8 @@ async function sendMessage() {
               nextTick(() => scrollToBottom())
             } else if (parsed.type === 'tool_start') {
               // tool_start 挂在当前活跃的agent消息上
+              // update_emotion 是内部情绪机制，不在界面上显示
+              if (parsed.name === 'update_emotion') { nextTick(() => scrollToBottom()); continue }
               const activeMsg = agentMsgMap[parsed.agentId || 'captain'] || assistantMsg
               activeMsg.toolCalls!.push({ id: parsed.id, name: parsed.name, input: parsed.input || {}, status: 'running' })
               nextTick(() => scrollToBottom())
@@ -1393,6 +1421,20 @@ async function onFileChange(e: Event) {
   ;(e.target as HTMLInputElement).value = ''
 }
 
+async function onPaste(e: ClipboardEvent) {
+  const items = e.clipboardData?.items
+  if (!items) return
+  const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'))
+  if (imageItems.length === 0) return
+  e.preventDefault()
+  for (const item of imageItems) {
+    const file = item.getAsFile()
+    if (!file) continue
+    const { data, previewUrl } = await compressToJpeg(file)
+    pendingImages.value.push({ previewUrl, data, mediaType: 'image/jpeg' })
+  }
+}
+
 // 将任意图片（含 HEIC）转为 JPEG，长边限 1600px，质量 0.85
 function compressToJpeg(file: File): Promise<{ data: string; previewUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -1488,6 +1530,35 @@ function renderMarkdown(text: string): string {
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
+}
+
+.ai-trigger-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.adam-avatar-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.adam-welcome-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 12px rgba(22, 93, 255, 0.2);
+}
+
+.adam-msg-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  object-fit: contain;
 }
 
 .ai-badge {
@@ -1677,8 +1748,8 @@ function renderMarkdown(text: string): string {
 }
 
 .message-avatar {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1687,6 +1758,7 @@ function renderMarkdown(text: string): string {
   font-size: 14px;
   background: #f2f3f5;
   color: #4e5969;
+  overflow: hidden;
 }
 
 .message-user .message-avatar {

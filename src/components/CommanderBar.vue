@@ -188,6 +188,7 @@ import { Cpu, Delete, Close, User, Promotion, Picture, Microphone, ArrowDown, Ar
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import http from '@/api/http'
+import { fmtDt } from '@/utils/date'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
 import { getGoodsList, createBom } from '@/api/goods'
@@ -323,7 +324,7 @@ async function fetchContextData(text: string): Promise<string> {
       ])
       const outRows: any[] = outRes?.data?.rows || []
       const outTotal = outRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-      results.push(`【销售出货单】共 ${outRows.length} 条，合计 ¥${outTotal.toFixed(2)}。最近5条：${JSON.stringify(outRows.slice(0, 5).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0,10) })))}`)
+      results.push(`【销售出货单】共 ${outRows.length} 条，合计 ¥${outTotal.toFixed(2)}。最近5条：${JSON.stringify(outRows.slice(0, 5).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: fmtDt(r.out_date || r.created_at) })))}`)
       const contractRows: any[] = contractRes?.data?.rows || []
       const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
       results.push(`【销售合同】共 ${contractRows.length} 份，合计 ¥${contractTotal.toFixed(2)}`)
@@ -361,7 +362,7 @@ async function fetchContextData(text: string): Promise<string> {
       const res: any = await http.get('/stock/PurchaseOrder/index', { params: { list_rows: 100 } })
       const rows: any[] = res?.data?.rows || []
       const total = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-      results.push(`【采购订单】共 ${rows.length} 条，合计 ¥${total.toFixed(2)}。最近5条：${JSON.stringify(rows.slice(0, 5).map((r: any) => ({ 供应商: r.supplier_name, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0,10) })))}`)
+      results.push(`【采购订单】共 ${rows.length} 条，合计 ¥${total.toFixed(2)}。最近5条：${JSON.stringify(rows.slice(0, 5).map((r: any) => ({ 供应商: r.supplier_name, 金额: r.total_amount, 日期: fmtDt(r.order_date || r.created_at) })))}`)
     }
     if (lower.includes('应收') || lower.includes('应付') || lower.includes('收款') || lower.includes('付款') || lower.includes('财务')) {
       const [collectRes, payRes, receivableRes, payableRes]: any[] = await Promise.all([

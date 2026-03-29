@@ -206,7 +206,7 @@
               <td>
                 <span class="badge badge-paid">{{ c.planLabel }}</span>
               </td>
-              <td class="date-cell">{{ c.expiresAt.slice(0, 10) }}</td>
+              <td class="date-cell">{{ fmtDt(c.expiresAt) }}</td>
               <td>
                 <span v-if="c.usedBy" class="badge badge-trial">已使用</span>
                 <span v-else-if="isExpired(c.expiresAt)" class="badge badge-suspended">已过期</span>
@@ -282,6 +282,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const auth = useAuthStore()

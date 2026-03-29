@@ -1,3 +1,5 @@
+import { fmtDt } from './date'
+
 function toNumber(value: any) {
   const num = Number(value)
   return Number.isFinite(num) ? num : 0
@@ -21,7 +23,7 @@ export function buildExpensePayableRows(expenseRows: any[]) {
     .map((row: any) => {
       const amount = toNumber(row.amount)
       const orderNo = text(row.order_sn || row.expense_no) || `FY${row.id || ''}`
-      const dueDate = text(row.expense_date || row.apply_date || row.created_at).slice(0, 10)
+      const dueDate = fmtDt(text(row.expense_date || row.apply_date || row.created_at))
       return {
         id: `expense_${row.id}`,
         expense_id: row.id,

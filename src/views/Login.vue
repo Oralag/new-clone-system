@@ -135,9 +135,11 @@
       <!-- Footer -->
       <div class="left-footer">
         <div class="status-row">
-          <span class="status-dot"></span>
+          <span class="status-dot" :class="serverStatus"></span>
           <span class="status-label">SYSTEM STATUS</span>
-          <span class="status-ok">Operational</span>
+          <span v-if="serverStatus === 'checking'" class="status-checking">Waking up...</span>
+          <span v-else-if="serverStatus === 'online'" class="status-ok">Operational</span>
+          <span v-else class="status-sleeping">Starting (~30s)</span>
         </div>
         <div class="footer-meta">
           <span>数字游牧 ERP</span>
@@ -200,17 +202,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import CaptchaCanvas from '@/components/CaptchaCanvas.vue'
+import { fmtDt } from '@/utils/date'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+
+// 后端状态：checking / online / sleeping
+const serverStatus = ref<'checking' | 'online' | 'sleeping'>('checking')
+
+onMounted(async () => {
+  try {
+    const start = Date.now()
+    await http.get('/system/Login/ping').catch(() => http.get('/system/Login/index'))
+    serverStatus.value = Date.now() - start > 8000 ? 'sleeping' : 'online'
+  } catch {
+    serverStatus.value = 'online' // 即使失败也不影响登录
+  }
+})
 
 const features = [
   { title: '全球化架构', desc: '让您的业务在无国界的世界中自由流动' },
@@ -276,7 +292,7 @@ watch(() => registerForm.inviteCode, (code) => {
   const found = codes.find((c: any) => c.code === code.trim().toUpperCase() && !c.usedBy && new Date(c.expiresAt) > new Date())
   if (found) {
     inviteCodeStatus.value = 'valid'
-    inviteCodeInfo.value = `${found.planLabel}，有效至 ${found.expiresAt.slice(0, 10)}`
+    inviteCodeInfo.value = `${found.planLabel}，有效至 ${fmtDt(found.expiresAt)}`
   } else {
     inviteCodeStatus.value = 'invalid'
     inviteCodeInfo.value = ''
@@ -484,7 +500,24 @@ async function handleRegister() {
   background: #22c55e;
   border-radius: 50%;
   box-shadow: 0 0 8px rgba(34,197,94,0.6);
+  transition: background 0.4s, box-shadow 0.4s;
 }
+.status-dot.checking {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245,158,11,0.6);
+  animation: pulse-dot 1s infinite;
+}
+.status-dot.sleeping {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239,68,68,0.6);
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.status-checking { font-size: 11px; color: #f59e0b; font-weight: 600; }
+.status-sleeping  { font-size: 11px; color: #ef4444; font-weight: 600; }
 
 .status-label {
   font-size: 10px;

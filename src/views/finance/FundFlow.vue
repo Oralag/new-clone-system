@@ -91,6 +91,7 @@ import http from '@/api/http'
 import { normalizeProcureReturnFinanceRows, applyProcureReturnsToPayableRows } from '@/utils/procureReturnFinance'
 import { buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
+import { fmtDt } from '@/utils/date'
 
 const route = useRoute()
 const summaryLoading = ref(false)
@@ -192,7 +193,7 @@ onMounted(async () => {
     const collects: any[] = collectRes.data?.rows ?? collectRes.data?.list ?? []
     for (const r of collects) {
       items.push({
-        date: (r.receipt_date || r.create_time || '').slice(0, 16).replace('T', ' '),
+        date: fmtDt(r.receipt_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
         source: isCustomerPrepayLike(r) ? '预收款' : (collectSourceMap[r.contact_type] || '收款单'),
@@ -215,7 +216,7 @@ onMounted(async () => {
       const amt = Number(r.after_discount || r.total_amount || 0)
       if (amt <= 0) continue
       items.push({
-        date: (r.sign_date || r.contract_date || r.created_at || '').slice(0, 16).replace('T', ' '),
+        date: fmtDt(r.sign_date || r.contract_date || r.created_at),
         fund_name: r.receive_account || '—',
         type: 'income',
         source: '销售合同',
@@ -229,7 +230,7 @@ onMounted(async () => {
     const retails: any[] = retailRes.data?.rows ?? retailRes.data?.list ?? []
     for (const r of retails) {
       items.push({
-        date: (r.order_date || r.create_time || '').slice(0, 16).replace('T', ' '),
+        date: fmtDt(r.order_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
         source: '零售单',
@@ -244,7 +245,7 @@ onMounted(async () => {
     const paySourceMap: Record<string, string> = { supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出' }
     for (const r of payments) {
       items.push({
-        date: (r.pay_date || r.create_time || '').slice(0, 16).replace('T', ' '),
+        date: fmtDt(r.pay_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'expense',
         source: paySourceMap[r.contact_type] || '付款单',
@@ -258,7 +259,7 @@ onMounted(async () => {
     const recharges: any[] = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
     for (const r of recharges) {
       items.push({
-        date: (r.recharge_date || r.create_time || '').slice(0, 16).replace('T', ' '),
+        date: fmtDt(r.recharge_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
         source: '会员充值',
@@ -273,7 +274,7 @@ onMounted(async () => {
     for (const r of expenses) {
       if (r.payment_status === 'pending') continue
       items.push({
-        date: (r.apply_date || r.expense_date || r.create_time || '').slice(0, 16).replace('T', ' '),
+        date: fmtDt(r.apply_date || r.expense_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'expense',
         source: r.payment_status === 'paid' ? '费用(已付)' : '费用',
@@ -288,7 +289,7 @@ onMounted(async () => {
     for (const r of prepays) {
       const isCustomer = r.pay_type === 'customer'
       items.push({
-        date: (r.create_time || '').slice(0, 16).replace('T', ' '),
+        date: fmtDt(r.create_time),
         fund_name: r.fund_name || '—',
         type: isCustomer ? 'income' : 'expense',
         source: isCustomer ? '客户预收款' : '供应商预付款',

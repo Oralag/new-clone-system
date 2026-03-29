@@ -100,7 +100,7 @@
         <el-table-column prop="unit_name" label="单位" width="70" align="center" />
         <el-table-column prop="warehouse_name" label="入库仓库" min-width="110" />
         <el-table-column label="入库日期" width="110">
-          <template #default="{ row }">{{ (row.in_date || row.created_at || '').slice(0,10) }}</template>
+          <template #default="{ row }">{{ fmtDt(row.in_date || row.created_at) }}</template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
@@ -281,6 +281,7 @@ import { getProductionPlanList, getProductionInhouseList, createProductionPlan, 
 import { createProductionInhouseAndAutoAudit } from '@/utils/productionInhouse'
 import { getGoodsList, getBomByGoods } from '@/api/goods'
 import http from '@/api/http'
+import { fmtDt } from '@/utils/date'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
 
 function getResponseId(res: any) {

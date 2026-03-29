@@ -1,3 +1,5 @@
+import { fmtDt } from './date'
+
 type AnyRow = Record<string, any>
 
 export interface NormalizedFundFlowRow {
@@ -125,7 +127,7 @@ export function normalizeFundFlowRows(rows: AnyRow[]): NormalizedFundFlowRow[] {
       after_balance: toNumber(row.after_balance),
       remark: text(row.remark),
       created_at: createdAt,
-      date: createdAt.slice(0, 10),
+      date: fmtDt(createdAt),
     }
 
     if (!deduped.has(normalized.id)) deduped.set(normalized.id, normalized)

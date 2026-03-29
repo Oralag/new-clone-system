@@ -15,7 +15,7 @@
           <el-table-column prop="receive_no" label="收货编号" min-width="150" />
           <el-table-column prop="supplier_name" label="供应商" min-width="130" />
           <el-table-column prop="receive_date" label="收货日期" width="110">
-            <template #default="{ row }">{{ (row.receive_date||row.created_at||'').slice(0,10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.receive_date || row.created_at) }}</template>
           </el-table-column>
           <el-table-column prop="receiver" label="收货人" width="90" />
           <el-table-column label="收货总价" width="110" align="right">
@@ -142,6 +142,7 @@ import { getReceiveList, createReceive, deleteReceive } from '@/api/outsource'
 import { getSupplierList } from '@/api/procure'
 import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
+import { fmtDt } from '@/utils/date'
 
 const tableRef=ref<InstanceType<typeof ScTable>>()
 const permStore = usePermissionStore()

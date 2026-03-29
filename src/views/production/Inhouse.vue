@@ -58,7 +58,7 @@
           </el-table-column>
           <el-table-column prop="warehouse_name" label="入库仓库" min-width="110" />
           <el-table-column prop="inhouse_date" label="入库日期" width="110">
-            <template #default="{ row }">{{ (row.inhouse_date || row.create_time || '').slice(0,10) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.inhouse_date || row.create_time) }}</template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
@@ -259,7 +259,7 @@
         <el-table-column prop="schedule_num" label="排产数量" width="100" align="right" />
         <el-table-column prop="actual_num" label="已生产" width="100" align="right" />
         <el-table-column prop="finish_date" label="完工日期" width="110">
-          <template #default="{ row }">{{ (row.finish_date || '').slice(0,10) }}</template>
+          <template #default="{ row }">{{ fmtDt(row.finish_date) }}</template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
@@ -293,6 +293,7 @@ import { getProductionInhouseList, createProductionInhouse, updateProductionInho
 import { getProductionPlanList } from '@/api/production'
 import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
+import { fmtDt } from '@/utils/date'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { createMaterial, auditMaterial } from '@/api/production'

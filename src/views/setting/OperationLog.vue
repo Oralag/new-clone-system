@@ -20,7 +20,9 @@
         <el-table-column prop="operator_name" label="操作人" min-width="120" />
         <el-table-column prop="action" label="操作行为" min-width="200" />
         <el-table-column prop="ip" label="IP地址" width="140" />
-        <el-table-column prop="create_time" label="操作时间" width="160" />
+        <el-table-column prop="create_time" label="操作时间" width="180">
+          <template #default="{ row }">{{ fmtDt(row.create_time) }}</template>
+        </el-table-column>
       </ScTable>
     </el-card>
   </div>
@@ -30,6 +32,7 @@
 import { ref, reactive } from 'vue'
 import ScTable from '@/components/ScTable.vue'
 import { getOperationLogList } from '@/api/setting'
+import { fmtDt } from '@/utils/date'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({})

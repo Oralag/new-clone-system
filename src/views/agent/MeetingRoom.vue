@@ -85,30 +85,43 @@
           v-for="msg in meetingStore.messages"
           :key="msg.id"
           class="message-row"
-          :class="msg.role === 'captain' ? 'row-captain' : 'row-member'"
+          :class="msg.role === 'user' ? 'row-user' : msg.role === 'captain' ? 'row-captain' : 'row-member'"
         >
-          <!-- 头像 -->
-          <div
-            class="msg-avatar"
-            :style="{ background: msg.agentColor + '18', color: msg.agentColor }"
-          >{{ msg.agentEmoji }}</div>
+          <!-- 用户插话（右侧简洁气泡） -->
+          <template v-if="msg.role === 'user'">
+            <div class="msg-bubble-wrap user-wrap">
+              <div class="msg-meta" style="justify-content:flex-end">
+                <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
+                <span class="msg-name" style="color:#0071e3">你</span>
+              </div>
+              <div class="msg-bubble bubble-user">
+                <div class="msg-content" v-html="renderContent(msg.content)"></div>
+              </div>
+            </div>
+          </template>
 
-          <!-- 气泡 -->
-          <div class="msg-bubble-wrap">
-            <div class="msg-meta">
-              <span class="msg-name" :style="{ color: msg.agentColor }">{{ msg.agentName }}</span>
-              <span class="msg-role-tag">{{ STAFF[msg.agentId as keyof typeof STAFF]?.title || '' }}</span>
-              <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
-            </div>
+          <!-- Agent / Captain 消息 -->
+          <template v-else>
             <div
-              class="msg-bubble"
-              :class="{ 'bubble-captain': msg.role === 'captain', 'bubble-streaming': msg.isStreaming }"
-              :style="{ '--mc': msg.agentColor }"
-            >
-              <div class="msg-content" v-html="renderContent(msg.content)"></div>
-              <span v-if="msg.isStreaming" class="typing-cursor">▍</span>
+              class="msg-avatar"
+              :style="{ background: msg.agentColor + '18', color: msg.agentColor }"
+            >{{ msg.agentEmoji }}</div>
+            <div class="msg-bubble-wrap">
+              <div class="msg-meta">
+                <span class="msg-name" :style="{ color: msg.agentColor }">{{ msg.agentName }}</span>
+                <span class="msg-role-tag">{{ STAFF[msg.agentId as keyof typeof STAFF]?.title || '' }}</span>
+                <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
+              </div>
+              <div
+                class="msg-bubble"
+                :class="{ 'bubble-captain': msg.role === 'captain', 'bubble-streaming': msg.isStreaming }"
+                :style="{ '--mc': msg.agentColor }"
+              >
+                <div class="msg-content" v-html="renderContent(msg.content)"></div>
+                <span v-if="msg.isStreaming" class="typing-cursor">▍</span>
+              </div>
             </div>
-          </div>
+          </template>
         </div>
 
         <!-- 正在输入动画 -->
@@ -125,6 +138,33 @@
             <span class="typing-dot"></span>
             <span class="typing-name">{{ STAFF[typingAgent as keyof typeof STAFF]?.title }} 正在输入…</span>
           </div>
+        </div>
+
+        <!-- 执行进度面板 -->
+        <div v-if="meetingStore.phase === 'executing' && Object.keys(meetingStore.executionStatus).length > 0" class="exec-progress">
+          <div class="exec-header">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="7" cy="7" r="5.5"/><path d="M7 4v3l2 1"/>
+            </svg>
+            <span>任务执行中</span>
+          </div>
+          <div v-for="(status, agentId) in meetingStore.executionStatus" :key="agentId" class="exec-row">
+            <span class="exec-emoji">{{ STAFF[agentId as keyof typeof STAFF]?.emoji || '⚙️' }}</span>
+            <span class="exec-name">{{ STAFF[agentId as keyof typeof STAFF]?.title || agentId }}</span>
+            <span class="exec-status" :class="'exec-' + status">
+              {{ status === 'pending' ? '排队中' : status === 'running' ? '执行中' : status === 'done' ? '完成' : '出错' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 完成后跳转按钮 -->
+        <div v-if="meetingStore.phase === 'done' && agentStore.flowResults.length > 0" class="goto-publish">
+          <button class="goto-publish-btn" @click="router.push('/agent/publish')">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M3 7h8M8 4l3 3-3 3"/>
+            </svg>
+            前往发布部 · 查看内容
+          </button>
         </div>
       </div>
 
@@ -191,10 +231,9 @@
         <textarea
           v-model="topicInput"
           class="topic-input"
-          :placeholder="meetingStore.phase === 'done' ? '输入新议题，重新开始会议…' : '输入会议议题，例如：策划新品上线内容方案'"
+          :placeholder="meetingStore.isRunning ? '会议进行中，输入内容可插话补充…' : meetingStore.phase === 'done' ? '输入新议题，重新开始会议…' : '输入会议议题，例如：策划新品上线内容方案'"
           rows="2"
-          :disabled="meetingStore.isRunning"
-          @keydown.enter.exact.prevent="handleStart"
+          @keydown.enter.exact.prevent="meetingStore.isRunning ? handleInterject() : handleStart()"
         ></textarea>
         <div class="input-btns">
           <button
@@ -207,6 +246,13 @@
               <path d="M3 7h8M8 4l3 3-3 3"/>
             </svg>
             召开会议
+          </button>
+          <!-- 会议进行中：发送 + 结束 -->
+          <button v-if="meetingStore.isRunning && topicInput.trim()" class="interject-btn" @click="handleInterject">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+            发送
           </button>
           <button v-if="meetingStore.isRunning" class="stop-btn" @click="handleStop">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
@@ -229,12 +275,18 @@
 
 <script setup lang="ts">
 import { ref, nextTick, computed, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useBrandStore } from '@/stores/brand'
 import { useMeetingStore } from '@/stores/meeting'
+import { useTrendingStore } from '@/stores/agent'
 import type { MeetingMessage } from '@/stores/meeting'
+import type { FlowResult } from '@/stores/agent'
 
+const router = useRouter()
 const brandStore = useBrandStore()
 const meetingStore = useMeetingStore()
+const agentStore = useTrendingStore()
 
 const messagesEl = ref<HTMLElement | null>(null)
 const topicInput = ref('')
@@ -242,6 +294,7 @@ const typingAgent = ref<string | null>(null)
 const speakingAgent = ref<string | null>(null)
 const showSummaryPanel = ref(false)
 let shouldStop = false
+const interjections = ref<string[]>([]) // 用户插话队列
 
 // 各专员定义（职位，不用实名）
 const STAFF = {
@@ -266,7 +319,7 @@ const meetingSteps = [
 // 阶段中文标签
 const phaseLabel = computed(() => {
   const map: Record<string, string> = {
-    idle: '待机', opening: '开场中', discussing: '讨论中', summarizing: '总结中', done: '已完成',
+    idle: '待机', opening: '开场中', discussing: '讨论中', summarizing: '总结中', executing: '执行中', done: '已完成',
   }
   return map[meetingStore.phase] || ''
 })
@@ -274,7 +327,7 @@ const phaseLabel = computed(() => {
 // 会议进度百分比（用于进度条展示）
 const progressPct = computed(() => {
   const map: Record<string, number> = {
-    idle: 0, opening: 15, discussing: 55, summarizing: 85, done: 100,
+    idle: 0, opening: 15, discussing: 45, summarizing: 65, executing: 85, done: 100,
   }
   return map[meetingStore.phase] || 0
 })
@@ -301,6 +354,19 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 // ── 核心：流式消息（typing动画 → 真实SSE流） ──
 async function addStreamingMessage(agentId: keyof typeof STAFF, prompt: string, brandContext?: string): Promise<string> {
   if (shouldStop) return ''
+
+  // 消费用户插话，追加到 prompt
+  if (interjections.value.length > 0) {
+    const extra = interjections.value.map(t => `「${t}」`).join('；')
+    prompt += `\n\n【老板插话补充】：${extra}\n请在回答中考虑老板的补充意见。`
+    interjections.value = []
+  }
+
+  // 把前面所有消息作为上下文（最多保留最近8条，避免太长）
+  const history = meetingStore.messages
+    .filter(m => !m.isStreaming && m.content && !m.content.includes('网络异常'))
+    .slice(-8)
+    .map(m => ({ role: 'assistant' as const, content: `【${m.agentName}】：${m.content}` }))
 
   const staff = STAFF[agentId]
   typingAgent.value = agentId
@@ -337,7 +403,11 @@ async function addStreamingMessage(agentId: keyof typeof STAFF, prompt: string, 
         'x-erp-token': token,
         'x-agent-id': agentId,
       },
-      body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], agentId, brandContext }),
+      body: JSON.stringify({
+        messages: [...history, { role: 'user', content: prompt }],
+        agentId,
+        brandContext,
+      }),
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const reader = response.body?.getReader()
@@ -415,10 +485,81 @@ async function callAgentAI(agentId: string, prompt: string, brandContext?: strin
   return text.trim()
 }
 
+// ── 判断是否为有效会议议题 ──
+function isValidTopic(text: string): boolean {
+  const t = text.trim()
+  // 太短且像闲聊的直接过滤
+  if (t.length <= 5) {
+    const chatPatterns = /^(你好|hello|hi|嗨|在吗|大家在吗|在不在|有人吗|哈喽|喂|嘿|测试|test|哈哈|ok|好的|嗯|666|牛|厉害|谢谢|感谢|拜拜|再见|晚安|早安)$/i
+    if (chatPatterns.test(t)) return false
+  }
+  return true
+}
+
+// ── 把用户输入显示为消息 ──
+function addUserMessage(text: string) {
+  meetingStore.addMessage({
+    id: uid(),
+    agentId: 'user',
+    agentName: '你',
+    agentEmoji: '👤',
+    agentColor: '#0071e3',
+    role: 'user',
+    content: text,
+    timestamp: Date.now(),
+    isStreaming: false,
+  })
+}
+
+// ── 闲聊时 Captain 直接回复，不启动会议 ──
+async function handleCasualChat(text: string) {
+  meetingStore.startMeeting(text)
+  addUserMessage(text)
+  meetingStore.setPhase('opening')
+  await addStreamingMessage('captain',
+    `你是数字游牧广告公司的Captain总指挥，你在会议室里。有人说了："${text}"。\n\n这不是正式议题，是闲聊/打招呼。请用你的风格简短回应（50字以内），然后引导对方提出正式的会议议题。\n语气自信、简洁，不要客套。`,
+  )
+  finalizeMeeting()
+}
+
+// ── 议题类型判断 ──
+async function classifyTopic(topic: string, brandContext?: string): Promise<'content' | 'strategy' | 'qa'> {
+  // 关键词快速判断，避免 AI 误判
+  const t = topic
+  const contentKeywords = ['文案', '推广', '海报', '视频', '脚本', '内容', '小红书', '抖音', '朋友圈', '广告', '创作', '图文', '种草', '发布', '写']
+  const strategyKeywords = ['策略', '规划', '计划', '分析', '竞品', '定位', '方向', '市场', 'swot', '营销方案', '品牌战略']
+  const qaKeywords = ['你好', '你是', '介绍', '了解', '知道吗', '什么是', '怎么样', '如何看']
+
+  if (contentKeywords.some(k => t.includes(k))) return 'content'
+  if (qaKeywords.some(k => t.includes(k))) return 'qa'
+  if (strategyKeywords.some(k => t.includes(k))) return 'strategy'
+
+  // 兜底用 AI 判断
+  try {
+    const result = await callAgentAI('captain',
+      `有人在会议室提出了一个议题：「${topic}」\n\n判断类型，只回复一个单词：\n- content：需要产出内容（文案/海报/视频脚本等创作任务）\n- strategy：讨论策略/方案/规划（营销计划、竞品分析、品牌策略等）\n- qa：提问了解（询问信息、打招呼等非创作非策略）\n\n只回复 content、strategy 或 qa。`,
+      brandContext
+    )
+    const r = result.trim().toLowerCase()
+    if (r.includes('content')) return 'content'
+    if (r.includes('strategy')) return 'strategy'
+    return 'qa'
+  } catch {
+    return 'content'
+  }
+}
+
 // ── 主会议流程（串行AI调用） ──
 async function runMeeting(topic: string) {
+  // 先判断是不是有效议题
+  if (!isValidTopic(topic)) {
+    await handleCasualChat(topic)
+    return
+  }
+
   shouldStop = false
   meetingStore.startMeeting(topic)
+  addUserMessage(topic)
 
   const brand = brandStore.isConfigured ? brandStore.brand : null
   const brandContext = brandStore.isConfigured ? brandStore.systemPrompt : undefined
@@ -427,7 +568,79 @@ async function runMeeting(topic: string) {
     : '（品牌信息未配置，请根据通用内容输出）'
 
   try {
-    // 1. Captain 开场
+    // 判断议题类型，决定走哪条流程
+    const topicType = await classifyTopic(topic, brandContext)
+    if (shouldStop) return finalizeMeeting()
+
+    if (topicType === 'qa') {
+      // 问答类：Captain 直接回答，不开正式会议
+      meetingStore.setPhase('opening')
+      await addStreamingMessage('captain',
+        `你是数字游牧广告公司的Captain总指挥，有人在会议室问你：「${topic}」\n${brandInfo}\n\n请直接、专业地回答这个问题（300字以内）。如果是关于公司/品牌/产品的问题，结合已有信息回答；如果是开放性问题，给出你的判断。回答后，引导对方提出下一步的内容创作或策略需求。\n语气自信直接，不客套。`,
+        brandContext
+      )
+      finalizeMeeting()
+      return
+    }
+
+    if (topicType === 'strategy') {
+      // 策略类：营销顾问 + Captain 主导，不走热搜流程
+      meetingStore.setPhase('opening')
+      await addStreamingMessage('captain',
+        `你是一家广告公司的Captain总指挥，正在主持策略讨论会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（100字以内）：说明今天要解决的核心问题，以及你对这次讨论的期望。语气专业、有主见。`,
+        brandContext
+      )
+      if (shouldStop) return finalizeMeeting()
+
+      await new Promise(r => setTimeout(r, 400))
+      await addStreamingMessage('captain',
+        `请营销顾问就「${topic}」给出专业的策略分析框架和建议方向。`,
+        brandContext
+      )
+      if (shouldStop) return finalizeMeeting()
+
+      meetingStore.setPhase('discussing')
+      await addStreamingMessage('trend',
+        `你是广告公司的营销战略顾问。Captain邀请你就「${topic}」进行专业分析。\n${brandInfo}\n\n请用营销理论框架（200字以内）：\n- 核心问题诊断\n- 2-3个可选策略方向及优劣势\n- 优先推荐的方向和理由\n语气专业、有说服力。`,
+        brandContext
+      )
+      if (shouldStop) return finalizeMeeting()
+
+      await new Promise(r => setTimeout(r, 400))
+      await addStreamingMessage('captain',
+        `文案专员，基于刚才的策略方向，给出内容落地的具体建议。`,
+        brandContext
+      )
+      if (shouldStop) return finalizeMeeting()
+
+      await addStreamingMessage('copywriter',
+        `你是广告公司的文案专员。针对策略议题「${topic}」，结合营销顾问的分析，给出内容层面的落地方案（150字以内）：\n- 核心传播信息\n- 推荐的内容形式和平台\n- 一个示范标题`,
+        brandContext
+      )
+      if (shouldStop) return finalizeMeeting()
+
+      meetingStore.setPhase('summarizing')
+      await new Promise(r => setTimeout(r, 400))
+      const captainSummary = await addStreamingMessage('captain',
+        `基于以上策略讨论，请作为Captain汇总（150字以内）：\n1. 明确推荐的策略方向\n2. 下一步行动计划（分配给具体专员）\n3. 关键成功指标\n语气有决断力。`,
+        brandContext
+      )
+      if (shouldStop) return finalizeMeeting()
+
+      if (captainSummary.includes('文案')) meetingStore.assignTask('copywriter', `围绕「${topic}」策略落地创作文案`)
+      if (captainSummary.includes('视频')) meetingStore.assignTask('video', `制作「${topic}」相关视频脚本`)
+      if (captainSummary.includes('设计') || captainSummary.includes('海报')) meetingStore.assignTask('poster', `设计「${topic}」配套视觉物料`)
+      if (captainSummary.includes('发布') || captainSummary.includes('排期')) meetingStore.assignTask('publisher', `安排「${topic}」内容发布计划`)
+
+      if (Object.keys(meetingStore.assignedTasks).length > 0 && !shouldStop) {
+        await executeAssignedTasks(topic, brandInfo, brandContext)
+      } else {
+        finalizeMeeting()
+      }
+      return
+    }
+
+    // content 类：完整内容创作流程（热搜分析 → 文案 → 设计 → 执行）
     meetingStore.setPhase('opening')
     await addStreamingMessage('captain',
       `你是一家广告公司的Captain总指挥，正在主持内容策划会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（150字以内）：\n1. 介绍今天的会议议题\n2. 说明会议目标\n3. 提出对各专员的期待\n语气专业、有激情。直接输出开场白，不加额外说明。`,
@@ -435,7 +648,6 @@ async function runMeeting(topic: string) {
     )
     if (shouldStop) return finalizeMeeting()
 
-    // 2. Captain @情报专员
     await new Promise(r => setTimeout(r, 400))
     if (shouldStop) return finalizeMeeting()
     await addStreamingMessage('captain',
@@ -444,7 +656,6 @@ async function runMeeting(topic: string) {
     )
     if (shouldStop) return finalizeMeeting()
 
-    // 3. 情报专员发言
     meetingStore.setPhase('discussing')
     await addStreamingMessage('trend',
       `你是广告公司的情报专员。Captain邀请你就议题「${topic}」分析市场趋势。\n${brandInfo}\n\n请从情报视角（200字以内）：\n- 点出2-3个当前最相关的社交媒体热点或趋势\n- 给出内容机会窗口判断\n- 推荐最适合的平台和话题方向\n语气专业务实，直接说分析，不要客套话。`,
@@ -452,7 +663,6 @@ async function runMeeting(topic: string) {
     )
     if (shouldStop) return finalizeMeeting()
 
-    // 4. Captain @文案专员
     await new Promise(r => setTimeout(r, 400))
     if (shouldStop) return finalizeMeeting()
     await addStreamingMessage('captain',
@@ -461,14 +671,12 @@ async function runMeeting(topic: string) {
     )
     if (shouldStop) return finalizeMeeting()
 
-    // 5. 文案专员发言
     await addStreamingMessage('copywriter',
       `你是广告公司的文案专员。\n议题：「${topic}」\n${brandInfo}\n\n基于情报专员的趋势分析，请输出（200字以内）：\n- 核心文案方向（1-2句提炼）\n- 推荐2-3个平台专属文案角度（如抖音/小红书/微博）\n- 一条示范标题（带emoji）\n语气有创意感，体现专业文案风格。`,
       brandContext
     )
     if (shouldStop) return finalizeMeeting()
 
-    // 6. 设计专员主动补充视觉方向
     await new Promise(r => setTimeout(r, 500))
     if (shouldStop) return finalizeMeeting()
     await addStreamingMessage('poster',
@@ -477,33 +685,129 @@ async function runMeeting(topic: string) {
     )
     if (shouldStop) return finalizeMeeting()
 
-    // 7. Captain 汇总 + 分配任务
     meetingStore.setPhase('summarizing')
     await new Promise(r => setTimeout(r, 400))
     if (shouldStop) return finalizeMeeting()
 
     const captainSummary = await addStreamingMessage('captain',
-      `作为Captain，根据以上讨论，对「${topic}」进行最终汇总（200字以内）：\n\n1. 总结核心内容策略（2-3条）\n2. 明确分配任务：\n   - @文案专员：文案任务\n   - @视频专员：视频任务\n   - @设计专员：设计任务\n   - @发布专员：发布安排\n3. 强调品牌调性要点\n\n语气有决断力，体现总指挥风格。`,
+      `基于以上内容策划讨论，请作为Captain进行最终汇总（200字以内）：\n\n1. 总结核心内容策略（2-3条）\n2. 明确分配任务：\n   - @文案专员：文案任务\n   - @视频专员：视频任务\n   - @设计专员：设计任务\n   - @发布专员：发布安排\n3. 强调品牌调性要点\n\n语气有决断力，体现总指挥风格。`,
       brandContext
     )
     if (shouldStop) return finalizeMeeting()
 
-    // 解析任务分配
     if (captainSummary.includes('文案')) meetingStore.assignTask('copywriter', `围绕「${topic}」创作多平台文案`)
     if (captainSummary.includes('视频')) meetingStore.assignTask('video', `制作「${topic}」短视频脚本`)
     if (captainSummary.includes('设计') || captainSummary.includes('海报')) meetingStore.assignTask('poster', `设计「${topic}」配套视觉海报`)
     if (captainSummary.includes('发布') || captainSummary.includes('排期')) meetingStore.assignTask('publisher', `安排「${topic}」内容发布排期`)
 
-    // 8. 生成会议纪要（不作为消息）
-    const summaryText = await callAgentAI('captain',
-      `请为以下议题生成简洁的会议纪要：\n议题：「${topic}」\n${brandInfo}\n\n格式：\n【会议主题】\n【核心结论】（3条以内）\n【任务分配】（各专员各一条）\n【注意事项】（1条）\n\n100字以内，简洁专业。`,
-      brandContext
-    )
-
-    finalizeMeeting(summaryText)
-    showSummaryPanel.value = true
+    if (Object.keys(meetingStore.assignedTasks).length > 0 && !shouldStop) {
+      await executeAssignedTasks(topic, brandInfo, brandContext)
+    } else {
+      finalizeMeeting()
+    }
   } catch {
     finalizeMeeting('会议因异常中断，请重新开始。')
+  }
+}
+
+// ── 执行阶段：各专员并行生成内容 ──
+const EXEC_PROMPTS: Record<string, (topic: string, brandInfo: string) => string> = {
+  copywriter: (topic, brandInfo) =>
+    `你是广告公司文案专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请直接输出一篇完整的小红书图文文案（300-500字），包含：\n- 吸引人的标题（带emoji）\n- 正文（有痛点→解决方案→产品植入的结构）\n- 5个精准话题标签\n\n不要解释，直接输出可发布的文案。`,
+  poster: (topic, brandInfo) =>
+    `你是广告公司设计专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请输出3张配图的详细描述方案：\n- 图1：封面图（描述画面构图、主体、文字、色调）\n- 图2：功能展示图（描述具体展示什么功能/场景）\n- 图3：金句图（描述背景+文案排版方式）\n\n每张图描述50-80字，要具体到可以直接用AI生图。`,
+  video: (topic, brandInfo) =>
+    `你是广告公司视频专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请输出一个30秒短视频脚本，包含：\n- 开头钩子（前3秒）\n- 分镜头描述（5-6个镜头，每个标注时长和画面）\n- 口播文案\n- BGM建议\n\n按时长严格控制，直接输出脚本。`,
+  publisher: (topic, brandInfo) =>
+    `你是广告公司发布专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请输出具体的发布计划：\n- 发布平台和优先级\n- 各平台最佳发布时间\n- 话题标签策略\n- 首周发布排期表（哪天发什么）\n- 互动引导策略\n\n直接输出可执行的计划表。`,
+}
+
+const AGENT_TO_TYPE: Record<string, FlowResult['type']> = {
+  copywriter: 'copy',
+  poster: 'poster',
+  video: 'video_script',
+}
+
+// 清理 AI 输出中的前言/思考过程，只保留实际内容
+function cleanAgentOutput(raw: string): string {
+  let text = raw.trim()
+  // 去掉开头的"好的，..."、"我来..."、"让我..."等前言（到第一个换行或分隔符为止）
+  const preamblePatterns = [
+    /^(?:好的|OK|没问题|收到|了解|明白)[，,。！!～~\s]*(?:我(?:来|先|马上|立刻|现在)[^。！\n]*[。！\n])/,
+    /^(?:我(?:需要|先|来|去)[^。！\n]*[。！\n])/,
+    /^(?:让我[^。！\n]*[。！\n])/,
+  ]
+  for (const pat of preamblePatterns) {
+    text = text.replace(pat, '').trim()
+  }
+  // 如果以 --- 开头（markdown分隔符），去掉
+  text = text.replace(/^---+\s*/, '').trim()
+  return text || raw.trim()
+}
+
+async function executeAssignedTasks(topic: string, brandInfo: string, brandContext?: string) {
+  meetingStore.setPhase('executing')
+
+  // Captain 宣布进入执行阶段
+  await addStreamingMessage('captain',
+    `会议讨论结束。现在进入执行阶段。各专员立即按分配的任务开始产出内容。我在这里监督。\n\n请用一句话宣布进入执行阶段（30字以内），语气果断。`,
+    brandContext
+  )
+
+  const tasks = { ...meetingStore.assignedTasks }
+  // 初始化执行状态
+  for (const agentId of Object.keys(tasks)) {
+    meetingStore.setExecutionStatus(agentId, 'pending')
+  }
+
+  // 串行执行各专员（避免并发SSE问题）
+  for (const [agentId, task] of Object.entries(tasks)) {
+    if (shouldStop) break
+
+    meetingStore.setExecutionStatus(agentId, 'running')
+    const promptFn = EXEC_PROMPTS[agentId]
+    const prompt = promptFn ? promptFn(topic, brandInfo) : `执行任务：${task}。议题：${topic}。${brandInfo}`
+
+    const output = await addStreamingMessage(agentId as keyof typeof STAFF, prompt, brandContext)
+
+    // 写入 flowResults（发布专员除外，它的产出是计划而非内容）
+    const resultType = AGENT_TO_TYPE[agentId]
+    if (resultType && output && !output.includes('网络异常')) {
+      const result: FlowResult = {
+        platform: 'xiaohongshu',
+        platformName: '小红书',
+        topic,
+        type: resultType,
+        content: cleanAgentOutput(output),
+      }
+      const existing = [...agentStore.flowResults]
+      existing.push(result)
+      agentStore.setFlowResults(existing)
+    }
+
+    meetingStore.setExecutionStatus(agentId, 'done')
+    await scrollToBottom()
+  }
+
+  // Captain 总结
+  if (!shouldStop) {
+    await addStreamingMessage('captain',
+      `所有专员已完成产出。请用简短有力的一句话收尾（30字以内），告知老板内容已就绪，可以前往发布部查看和发布。`,
+      brandContext
+    )
+  }
+
+  finalizeMeeting('任务执行完毕，内容已送达发布部。')
+  showSummaryPanel.value = false
+
+  const savedCount = Object.keys(tasks).filter(id => AGENT_TO_TYPE[id]).length
+  if (savedCount > 0) {
+    ElMessage({
+      message: `${savedCount} 条内容已存入发布页`,
+      type: 'success',
+      duration: 3000,
+      onClick: () => router.push('/agent/publish'),
+    })
   }
 }
 
@@ -517,7 +821,162 @@ function finalizeMeeting(summaryText?: string) {
 function handleStart() {
   const t = topicInput.value.trim()
   if (!t || meetingStore.isRunning) return
+  topicInput.value = ''
   runMeeting(t)
+}
+
+// ── 后台会议：提交给服务端异步跑，前端可离开 ──
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+async function startBackgroundMeeting(topic: string) {
+  if (!isValidTopic(topic)) {
+    await handleCasualChat(topic)
+    return
+  }
+
+  const brand = brandStore.isConfigured ? brandStore.brand : null
+  const brandContext = brandStore.isConfigured ? brandStore.systemPrompt : undefined
+  const brandInfo = brand
+    ? `品牌「${brand.name}」（${brand.industry}），目标受众：${brand.audienceDesc || '未指定'}`
+    : '（品牌信息未配置，请根据通用内容输出）'
+
+  shouldStop = false
+  meetingStore.startMeeting(topic)
+  addUserMessage(topic)
+  meetingStore.setPhase('opening')
+
+  // 显示"后台运行"提示消息
+  meetingStore.addMessage({
+    id: uid(),
+    agentId: 'captain',
+    agentName: 'Captain',
+    agentEmoji: '🎯',
+    agentColor: '#6366f1',
+    role: 'captain',
+    content: `收到。「${topic}」——团队开始执行，你可以先去做别的事，完成后我会通知你结果已存入发布页。`,
+    timestamp: Date.now(),
+    isStreaming: false,
+  })
+
+  const token = localStorage.getItem('erp_token') || ''
+  let jobId = ''
+  try {
+    const res = await fetch('/api/meeting-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({ topic, brandInfo, brandContext }),
+    })
+    const data = await res.json() as any
+    jobId = data.jobId
+  } catch (e: any) {
+    ElMessage.error('会议启动失败：' + e.message)
+    meetingStore.endMeeting('')
+    return
+  }
+
+  if (!jobId) {
+    ElMessage.error('会议启动失败')
+    meetingStore.endMeeting('')
+    return
+  }
+
+  const EMOJI_MAP: Record<string, string> = { captain: '🎯', trend: '📈', copywriter: '✍️', poster: '🎨', video: '🎬', publisher: '🚀', marketing: '📊' }
+  const COLOR_MAP: Record<string, string> = { captain: '#6366f1', trend: '#06b6d4', copywriter: '#f59e0b', poster: '#ec4899', video: '#ef4444', publisher: '#10b981', marketing: '#059669' }
+
+  function appendLog(msg: { agentId: string; agentName: string; content: string }) {
+    meetingStore.addMessage({
+      id: uid(),
+      agentId: msg.agentId,
+      agentName: msg.agentName,
+      agentEmoji: EMOJI_MAP[msg.agentId] || '🤖',
+      agentColor: COLOR_MAP[msg.agentId] || '#888',
+      role: msg.agentId === 'captain' ? 'captain' : 'member',
+      content: msg.content,
+      timestamp: Date.now(),
+      isStreaming: false,
+    })
+    scrollToBottom()
+  }
+
+  // 轮询结果（每3秒一次，实时追加新消息）
+  let shownCount = 0
+  let attempts = 0
+  pollTimer = setInterval(async () => {
+    attempts++
+    if (attempts > 200) {
+      clearInterval(pollTimer!)
+      pollTimer = null
+      ElMessage.error('会议超时，请重新发起')
+      meetingStore.endMeeting('')
+      return
+    }
+    try {
+      const res = await fetch(`/api/meeting-run?jobId=${jobId}`)
+      const data = await res.json() as any
+
+      // 实时更新进度阶段
+      if (data.phase && data.phase !== meetingStore.phase) {
+        meetingStore.setPhase(data.phase as any)
+      }
+
+      // 实时追加新增的消息（增量显示）
+      const log: any[] = data.log || []
+      for (let i = shownCount; i < log.length; i++) {
+        appendLog(log[i])
+      }
+      shownCount = log.length
+
+      if (data.status === 'done') {
+        clearInterval(pollTimer!)
+        pollTimer = null
+
+        if (data.flowResults?.length > 0) {
+          agentStore.setFlowResults([...agentStore.flowResults, ...data.flowResults])
+          ElMessage({
+            message: `✅ 会议完成，${data.flowResults.length} 条内容已存入发布页`,
+            type: 'success',
+            duration: 4000,
+            onClick: () => router.push('/agent/publish'),
+          })
+        }
+
+        meetingStore.endMeeting('任务执行完毕，内容已送达发布部。')
+        scrollToBottom()
+
+      } else if (data.status === 'error') {
+        clearInterval(pollTimer!)
+        pollTimer = null
+        ElMessage.error('会议执行失败：' + data.error)
+        meetingStore.endMeeting('')
+      }
+    } catch {}
+  }, 3000)
+}
+
+onUnmounted(() => {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+})
+
+function handleInterject() {
+  const text = topicInput.value.trim()
+  if (!text) return
+  topicInput.value = ''
+  // 添加用户消息到消息流
+  const msg: MeetingMessage = {
+    id: uid(),
+    agentId: 'user',
+    agentName: '你',
+    agentEmoji: '👤',
+    agentColor: '#0071e3',
+    role: 'user',
+    content: text,
+    timestamp: Date.now(),
+    isStreaming: false,
+  }
+  meetingStore.addMessage(msg)
+  // 存入插话队列，下一个 agent 发言时会参考
+  interjections.value.push(text)
+  scrollToBottom()
 }
 
 function handleStop() {
@@ -561,7 +1020,10 @@ function handleExport() {
   URL.revokeObjectURL(url)
 }
 
-onUnmounted(() => { shouldStop = true })
+onUnmounted(() => {
+  shouldStop = true
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+})
 </script>
 
 <style scoped>
@@ -606,6 +1068,8 @@ onUnmounted(() => { shouldStop = true })
 }
 .phase-opening, .phase-discussing { background: rgba(99,102,241,0.1); color: #6366f1; }
 .phase-summarizing { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.phase-executing { background: rgba(79,70,229,0.1); color: #6366f1; animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
 .phase-done { background: rgba(16,185,129,0.1); color: #10b981; }
 
 /* 参与者头像 */
@@ -700,7 +1164,17 @@ onUnmounted(() => { shouldStop = true })
 .message-row { display: flex; align-items: flex-start; gap: 10px; animation: slideIn 0.25s ease both; }
 .row-captain { flex-direction: row; }
 .row-member { flex-direction: row-reverse; }
+.row-user { flex-direction: row-reverse; }
 @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* 用户插话气泡 */
+.user-wrap { align-items: flex-end; }
+.bubble-user {
+  background: #0071e3 !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  border-radius: 14px 14px 4px 14px !important;
+}
 
 .msg-avatar {
   width: 36px; height: 36px; border-radius: 10px;
@@ -802,6 +1276,51 @@ onUnmounted(() => { shouldStop = true })
 }
 .export-btn:hover { background: rgba(99,102,241,0.12); }
 
+/* 执行进度面板 */
+.exec-progress {
+  background: rgba(99,102,241,0.04);
+  border: 1px solid rgba(99,102,241,0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  animation: slideIn 0.25s ease both;
+}
+.exec-header {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 700; color: #6366f1;
+}
+.exec-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; padding: 4px 0;
+}
+.exec-emoji { font-size: 14px; }
+.exec-name { font-weight: 600; color: var(--dark, #1d1d1f); flex: 1; }
+.exec-status {
+  font-size: 11px; font-weight: 700;
+  padding: 2px 10px; border-radius: 20px;
+}
+.exec-pending { background: rgba(0,0,0,0.05); color: rgba(29,29,31,0.4); }
+.exec-running { background: rgba(99,102,241,0.1); color: #6366f1; animation: blink 1.2s ease-in-out infinite; }
+.exec-done { background: rgba(16,185,129,0.1); color: #10b981; }
+.exec-error { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+/* 跳转发布部按钮 */
+.goto-publish {
+  display: flex; justify-content: center; padding: 8px 0;
+  animation: slideIn 0.3s ease both;
+}
+.goto-publish-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+}
+.goto-publish-btn:hover { opacity: 0.9; }
+.goto-publish-btn:active { transform: scale(0.97); }
+
 /* ── 底部输入区 ── */
 .meeting-input-area {
   border-top: 1px solid rgba(0,0,0,0.06);
@@ -852,6 +1371,17 @@ onUnmounted(() => { shouldStop = true })
 .start-btn:hover { opacity: 0.9; }
 .start-btn:active { transform: scale(0.97); }
 .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.interject-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 18px;
+  background: #0071e3; color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 13px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.interject-btn:hover { opacity: 0.85; }
 
 .stop-btn {
   display: flex; align-items: center; gap: 6px;

@@ -59,11 +59,11 @@
           </el-table-column>
           <el-table-column label="签约日期" width="110">
             <template #default="{ row }">
-              {{ (row.sign_date || row.contract_date || row.create_time || '').slice(0, 10) }}
+              {{ fmtDt(row.sign_date || row.contract_date || row.create_time) }}
             </template>
           </el-table-column>
           <el-table-column label="到期日期" width="110">
-            <template #default="{ row }">{{ (row.expire_date || '').slice(0, 10) || '—' }}</template>
+            <template #default="{ row }">{{ fmtDt(row.expire_date) || '—' }}</template>
           </el-table-column>
           <el-table-column label="经办人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
@@ -568,10 +568,10 @@
           <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
         </el-table-column>
         <el-table-column label="报价日期" width="110">
-          <template #default="{ row }">{{ (row.offer_date || row.create_time || '').slice(0, 10) }}</template>
+          <template #default="{ row }">{{ fmtDt(row.offer_date || row.create_time) }}</template>
         </el-table-column>
         <el-table-column label="有效期至" width="110">
-          <template #default="{ row }">{{ (row.expire_date || '').slice(0, 10) || '—' }}</template>
+          <template #default="{ row }">{{ fmtDt(row.expire_date) || '—' }}</template>
         </el-table-column>
         <el-table-column label="报价金额" width="120" align="right">
           <template #default="{ row }">¥{{ calcOfferAmount(row).toFixed(2) }}</template>
@@ -590,6 +590,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
+import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
@@ -603,9 +604,11 @@ import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils
 import { getCommissionRate } from '@/utils/commission'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
 
 const DRAFT_KEY = 'sale_contract_draft_from_offer'
 const permStore = usePermissionStore()
+const stockRefreshStore = useStockRefreshStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -648,7 +651,9 @@ function isAutoContractReceiptRow(row: any, orderSn: string) {
   const sn = String(row?.order_sn || row?.order_no || '').trim()
   const remark = String(row?.remark || '')
   if (sn !== orderSn) return false
-  return remark.includes(`合同自动收款 - ${orderSn}`) || remark.includes(`预付款核销 - ${orderSn}`)
+  return remark.includes(`合同自动收款 - ${orderSn}`)
+    || remark.includes(`预付款核销 - ${orderSn}`)
+    || remark.includes(`一键销售收款 - ${orderSn}`)
 }
 
 function parseItems(goodsInfo: any): any[] {
@@ -1431,10 +1436,11 @@ function normalizeItem(t: any): ContractItem {
 
 async function handleDelete(id: number) {
   // 检查是否有关联出库单
+  let orderSn = ''
   try {
     const detail = await getContractDetail(id)
     const row = detail?.data?.row || detail?.data || {}
-    const orderSn = getContractSn(row)
+    orderSn = getContractSn(row) || String(row?.order_sn || row?.contract_no || '').trim()
     if (orderSn) {
       const saleOutRes = await getSaleOutList({ keyword: orderSn, list_rows: 100 })
       const linkedOut = (saleOutRes?.data?.rows ?? [])
@@ -1445,23 +1451,21 @@ async function handleDelete(id: number) {
     }
   } catch { /* ignore */ }
 
-  // 检查是否有关联收款单
-  try {
-    const detail = await getContractDetail(id)
-    const row = detail?.data?.row || detail?.data || {}
-    const orderSn = String(row?.order_sn || row?.contract_no || '').trim()
-    if (orderSn) {
+  await ElMessageBox.confirm('确定删除该合同？', '提示', { type: 'warning' })
+
+  // 删合同前先联动删除所有关联收款单
+  if (orderSn) {
+    try {
       const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
       const linked = (existing?.data?.rows ?? []).filter((r: any) =>
         String(r?.order_sn || r?.order_no || '').trim() === orderSn
       )
-      if (linked.length > 0) {
-        ElMessage.error(`该合同存在 ${linked.length} 笔关联收款单，请先前往【财务 > 收款单】删除后再删除合同`)
-        return
+      for (const r of linked) {
+        try { await http.post('/finance/CollectReceipt/del', { id: Number(r.id) }) } catch { /* ignore */ }
       }
-    }
-  } catch { /* ignore */ }
-  await ElMessageBox.confirm('确定删除该合同？', '提示', { type: 'warning' })
+    } catch { /* ignore */ }
+  }
+
   await deleteContract(id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
@@ -1534,6 +1538,7 @@ async function handleAudit(row: any, status: number) {
       }
     }
     errMsg ? ElMessage.warning(`${action}成功，但财务联动失败：${errMsg}`) : ElMessage.success(`${action}成功`)
+    stockRefreshStore.trigger()
     tableRef.value?.refresh()
     loadReceiptMap()
   } catch (e: any) {
@@ -1569,9 +1574,9 @@ async function cancelAutoReceipt(row: any) {
   if (!orderSn) return
   try {
     const existing = await getCollectReceiptList({ keyword: orderSn, list_rows: 500 })
-    // 只删除系统自动生成的收款单，手工收款单保留并由前置校验拦截
+    // 删除所有 order_sn 匹配该合同的收款单（包括合同自动收款、一键收款、出库单自动生成的）
     const rows = (existing?.data?.rows ?? []).filter((r: any) =>
-      isAutoContractReceiptRow(r, orderSn)
+      String(r?.order_sn || r?.order_no || '').trim() === orderSn
     )
     for (const r of rows) {
       try { await http.post('/finance/CollectReceipt/del', { id: Number(r.id) }) } catch { /* ignore */ }

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 // 会议室消息类型
 export interface MeetingMessage {
@@ -8,7 +8,7 @@ export interface MeetingMessage {
   agentName: string      // 林晓文、张明远等
   agentEmoji: string
   agentColor: string
-  role: 'captain' | 'member'
+  role: 'captain' | 'member' | 'user'
   content: string
   timestamp: number
   isStreaming?: boolean
@@ -20,24 +20,58 @@ export interface MeetingState {
   messages: MeetingMessage[]
   isRunning: boolean
   topic: string          // 当前会议议题
-  phase: 'idle' | 'opening' | 'discussing' | 'summarizing' | 'done'
+  phase: 'idle' | 'opening' | 'discussing' | 'summarizing' | 'executing' | 'done'
   summary: string        // 会议纪要
   assignedTasks: Record<string, string>  // agentId -> task
 }
 
+const STORAGE_KEY = 'meeting_session'
+
+function loadSession(): Partial<MeetingState> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+
+function saveSession(state: MeetingState) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch { /* quota exceeded */ }
+}
+
 export const useMeetingStore = defineStore('meeting', () => {
+  const saved = loadSession()
   // 消息列表
-  const messages = ref<MeetingMessage[]>([])
-  // 会议是否进行中
-  const isRunning = ref(false)
+  const messages = ref<MeetingMessage[]>(saved.messages || [])
+  // 会议是否进行中（恢复时如果之前在运行中但未完成，标记为非运行以避免卡死）
+  const isRunning = ref(saved.isRunning && saved.phase !== 'done' ? false : false)
   // 当前议题
-  const topic = ref('')
-  // 会议阶段
-  const phase = ref<MeetingState['phase']>('idle')
+  const topic = ref(saved.topic || '')
+  // 会议阶段（如果之前在执行中途断开，标记为done）
+  const phase = ref<MeetingState['phase']>(
+    saved.phase === 'executing' || saved.phase === 'discussing' || saved.phase === 'summarizing' || saved.phase === 'opening'
+      ? 'done'
+      : (saved.phase || 'idle')
+  )
   // 会议纪要
-  const summary = ref('')
+  const summary = ref(saved.summary || '')
   // 已分配的任务
-  const assignedTasks = ref<Record<string, string>>({})
+  const assignedTasks = ref<Record<string, string>>(saved.assignedTasks || {})
+  // 执行状态跟踪
+  const executionStatus = ref<Record<string, 'pending' | 'running' | 'done' | 'error'>>({})
+
+  // 持久化：关键状态变化时自动保存
+  function persist() {
+    saveSession({
+      messages: messages.value.map(m => ({ ...m, isStreaming: false })),
+      isRunning: isRunning.value,
+      topic: topic.value,
+      phase: phase.value,
+      summary: summary.value,
+      assignedTasks: assignedTasks.value,
+    })
+  }
 
   // 新增消息
   function addMessage(msg: MeetingMessage) {
@@ -58,6 +92,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     if (last && last.agentId === agentId) {
       last.isStreaming = false
     }
+    persist()
   }
 
   // 开始会议
@@ -67,6 +102,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     isRunning.value = true
     summary.value = ''
     assignedTasks.value = {}
+    executionStatus.value = {}
   }
 
   // 结束会议
@@ -74,6 +110,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     phase.value = 'done'
     isRunning.value = false
     summary.value = meetingSummary
+    persist()
   }
 
   // 重置会议（清空所有状态）
@@ -84,11 +121,18 @@ export const useMeetingStore = defineStore('meeting', () => {
     phase.value = 'idle'
     summary.value = ''
     assignedTasks.value = {}
+    executionStatus.value = {}
+    localStorage.removeItem(STORAGE_KEY)
   }
 
   // 设置任务分配
   function assignTask(agentId: string, task: string) {
     assignedTasks.value[agentId] = task
+  }
+
+  // 设置执行状态
+  function setExecutionStatus(agentId: string, status: 'pending' | 'running' | 'done' | 'error') {
+    executionStatus.value = { ...executionStatus.value, [agentId]: status }
   }
 
   // 设置会议阶段
@@ -103,6 +147,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     phase,
     summary,
     assignedTasks,
+    executionStatus,
     addMessage,
     appendToLastMessage,
     finalizeLastMessage,
@@ -110,6 +155,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     endMeeting,
     resetMeeting,
     assignTask,
+    setExecutionStatus,
     setPhase,
   }
 })
