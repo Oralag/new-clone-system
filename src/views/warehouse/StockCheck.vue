@@ -272,14 +272,14 @@ function resetForm() {
 async function openCreate() {
   resetForm()
   isEdit.value = false
-  await Promise.all([loadWarehouse(), loadGoods()])
+  await Promise.allSettled([loadWarehouse(), loadGoods()])
   showForm.value = true
 }
 
 async function openEdit(row: any) {
   resetForm()
   isEdit.value = true
-  await Promise.all([loadWarehouse(), loadGoods()])
+  await Promise.allSettled([loadWarehouse(), loadGoods()])
   fd.id = row.id
   fd.order_sn = row.order_sn || ''
   fd.check_date = (row.check_date || '').slice(0, 10)

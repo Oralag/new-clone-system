@@ -430,10 +430,11 @@ async function loadData() {
     const params: any = { page: page.value, list_rows: pageSize.value }
     if (searchForm.order_sn) params.order_sn = searchForm.order_sn
     if (searchForm.status !== '') params.status = searchForm.status
-    const [res, inhouseRes] = await Promise.all([
+    const settled = await Promise.allSettled([
       http.get('/production/plan/index', { params }),
       http.get('/production/inhouse/index', { params: { list_rows: 1000 } }),
     ])
+    const [res, inhouseRes] = settled.map((s: any) => s.status === 'fulfilled' ? s.value : { data: { rows: [], list: [] } })
     const rows = res.data?.rows || []
     const inhouseRows: any[] = inhouseRes.data?.rows || []
     const inhouseMap = new Map<number, number>()

@@ -337,15 +337,16 @@ const genPreviewList = computed(() => {
 
 // ── 加载所有数据 ─────────────────────────────────────────────────
 async function loadAll() {
-  await Promise.all([loadStats(), loadActivePlans(), loadRecentInhouse(), loadBomProducts(), loadWarehouses()])
+  await Promise.allSettled([loadStats(), loadActivePlans(), loadRecentInhouse(), loadBomProducts(), loadWarehouses()])
 }
 
 async function loadStats() {
   try {
-    const [planRes, inhouseRes] = await Promise.all([
+    const settled0 = await Promise.allSettled([
       getProductionPlanList({ list_rows: 200 }),
       getProductionInhouseList({ list_rows: 200 }),
     ])
+    const [planRes, inhouseRes] = settled0.map((s: any) => s.status === 'fulfilled' ? s.value : { data: { rows: [], list: [] } })
     const plans = planRes.data?.rows ?? planRes.data?.list ?? []
     const inhouses = inhouseRes.data?.rows ?? inhouseRes.data?.list ?? []
     const now = new Date()
@@ -359,10 +360,11 @@ async function loadStats() {
 
 async function loadActivePlans() {
   try {
-    const [res, inhouseRes] = await Promise.all([
+    const settled1 = await Promise.allSettled([
       getProductionPlanList({ list_rows: 10, status: 1 }),
       getProductionInhouseList({ list_rows: 1000 }),
     ])
+    const [res, inhouseRes] = settled1.map((s: any) => s.status === 'fulfilled' ? s.value : { data: { rows: [], list: [] } })
     const list = res.data?.rows ?? res.data?.list ?? []
     const inhouses = inhouseRes.data?.rows ?? inhouseRes.data?.list ?? []
     const inhouseMap = new Map<number, number>()

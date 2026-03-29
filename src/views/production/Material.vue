@@ -737,7 +737,7 @@ async function handleDelete(id: number) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadWarehouses(), loadPlanOptions()])
+  await Promise.allSettled([loadWarehouses(), loadPlanOptions()])
   const { plan_id, plan_name, goods_info } = route.query
   if (!plan_id) return
 

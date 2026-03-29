@@ -245,10 +245,11 @@ function getTotalPurchase(supplierId: number): number {
 
 async function loadSupplierFinance() {
   try {
-    const [orderRes, payRes] = await Promise.all([
+    const settled = await Promise.allSettled([
       getProcureOrderList({ list_rows: 2000 }),
       getPayReceiptList({ list_rows: 2000 }),
     ])
+    const [orderRes, payRes] = settled.map((s: any) => s.status === 'fulfilled' ? s.value : { data: { rows: [], list: [] } })
     // 累计采购（已审核采购单，按行供应商拆分）
     const orders: any[] = orderRes.data?.rows ?? orderRes.data?.list ?? []
     const pMap: Record<number, number> = {}

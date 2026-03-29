@@ -1286,7 +1286,7 @@ async function openFlowDialog(goods: any) {
 }
 
 async function reloadStockRelatedData() {
-  await Promise.all([
+  await Promise.allSettled([
     loadStockMap(selectedWarehouse.value),
     loadActivityMaps(),
   ])
@@ -1296,7 +1296,7 @@ onMounted(async () => {
   window.addEventListener('resize', onResize)
   loading.value = true
   try {
-    await Promise.all([loadMeta(), loadCates(), loadAllGoods(), loadStockMap(), loadActivityMaps()])
+    await Promise.allSettled([loadMeta(), loadCates(), loadAllGoods(), loadStockMap(), loadActivityMaps()])
   } finally {
     loading.value = false
   }
