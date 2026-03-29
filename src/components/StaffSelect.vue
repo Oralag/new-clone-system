@@ -70,14 +70,17 @@ async function handleAdd() {
   if (!addForm.value.name.trim()) { ElMessage.warning('请输入员工姓名'); return }
   adding.value = true
   try {
-    const res = await createStaff({ name: addForm.value.name.trim(), mobile: addForm.value.mobile, job_name: addForm.value.job_name })
+    const name = addForm.value.name.trim()
+    // setting/Admin requires account + password; auto-generate account from name
+    const account = 'staff_' + name.replace(/\s+/g, '') + '_' + Date.now().toString().slice(-6)
+    const res = await createStaff({ name, account, password: '123456', mobile: addForm.value.mobile, remark: addForm.value.job_name, role_id: 0 })
     ElMessage.success('新增成功')
     addVisible.value = false
     addForm.value = { name: '', mobile: '', job_name: '' }
     await loadStaff()
     // 自动选中新增的员工
     const newId = res.data?.id
-    const newStaff = options.value.find(s => s.id === newId) ?? options.value.find(s => s.name === addForm.value.name)
+    const newStaff = options.value.find(s => s.id === newId) ?? options.value.find(s => s.name === name)
     if (newStaff) {
       selected.value = props.valueKey === 'id' ? newStaff.id : newStaff.name
       emit('update:modelValue', selected.value)

@@ -2,7 +2,7 @@
   <div class="page-container">
     <el-card>
       <ScTable ref="tableRef" :api-obj="getStaffList"
-          del-path="/personnel/staff/batchDel"
+          del-path="/setting/Admin/batchDel"
           export-file-name="员工列表" :params="searchForm">
         <template #search>
           <el-form inline>
@@ -88,6 +88,14 @@ function openForm(row?: any) {
 async function handleSubmit(data: any) {
   formRef.value?.setSubmitting(true)
   try {
+    if (!data.id) {
+      // setting/Admin requires account + password for new staff
+      if (!data.account) {
+        data.account = 'staff_' + String(data.name || '').replace(/\s+/g, '') + '_' + Date.now().toString().slice(-6)
+      }
+      if (!data.password) data.password = '123456'
+      data.role_id = data.role_id ?? 0
+    }
     data.id ? await updateStaff(data) : await createStaff(data)
     ElMessage.success('操作成功')
     formRef.value?.close()
