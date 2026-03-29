@@ -166,7 +166,7 @@ onMounted(async () => {
   summaryLoading.value = true
   tableLoading.value = true
   try {
-    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes, receivableRes, saleReturnRes, procureRes, supRes, contractRes] = await Promise.all([
+    const settled = await Promise.allSettled([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/retail/order/index', { params: { list_rows: 1000 } }),
       getPayReceiptList({ list_rows: 1000 }),
@@ -182,6 +182,8 @@ onMounted(async () => {
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       http.get('/shop/ContractOrder/index', { params: { status: 1, list_rows: 1000 } }),
     ])
+    const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes, receivableRes, saleReturnRes, procureRes, supRes, contractRes] = settled.map((_, i) => ok(i))
     purchaseOrdersForLabel.value = procureRes.data?.rows ?? []
     supplierListForLabel.value = supRes.data?.rows ?? []
 

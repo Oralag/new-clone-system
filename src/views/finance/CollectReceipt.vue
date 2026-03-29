@@ -192,12 +192,14 @@ const pageSize = ref(20)
 async function loadAll() {
   loading.value = true
   try {
-    const [receiptRes, prepayRes, receivableRes, saleReturnRes] = await Promise.all([
+    const settled = await Promise.allSettled([
       getCollectReceiptList({ list_rows: 1000 }),
       http.get('/finance/Prepay/index', { params: { pay_type: 'customer', list_rows: 1000 } }),
       getReceivableList({ list_rows: 1000 }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
     ])
+    const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
+    const [receiptRes, prepayRes, receivableRes, saleReturnRes] = settled.map((_, i) => ok(i))
     // 过滤掉收款单里旧版“预付款充值”重复写入的记录（预付款核销记录要保留）
     const allReceipts: any[] = receiptRes?.data?.rows ?? receiptRes?.data?.list ?? []
     const receipts = allReceipts.filter((r: any) => !/^预付款充值/.test(String(r.remark || '').trim()))

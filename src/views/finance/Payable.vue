@@ -166,7 +166,7 @@ const summaryReturn = computed(() => displayRows.value.reduce((s, r) => s + Numb
 async function load() {
   loading.value = true
   try {
-    const [orderRes, returnRes, supplierRes, expenseRes] = await Promise.all([
+    const settled = await Promise.allSettled([
       http.get('/stock/PurchaseOrder/index', {
         params: {
           list_rows: 2000,
@@ -183,6 +183,8 @@ async function load() {
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       getExpenseList({ list_rows: 1000 }),
     ])
+    const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
+    const [orderRes, returnRes, supplierRes, expenseRes] = settled.map((_, i) => ok(i))
 
     const orders: any[] = orderRes.data?.rows ?? []
 

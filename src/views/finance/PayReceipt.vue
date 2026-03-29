@@ -96,12 +96,14 @@ function typeLabel(type: string) {
 }
 
 async function getPayReceiptListWithRefund(params: any) {
-  const [payRes, returnRes, procureRes, supRes] = await Promise.all([
+  const settled = await Promise.allSettled([
     getPayReceiptList(params),
     http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
     http.get('/stock/PurchaseOrder/index', { params: { list_rows: 1000 } }),
     http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
   ])
+  const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
+  const [payRes, returnRes, procureRes, supRes] = settled.map((_, i) => ok(i))
   purchaseOrders.value = procureRes.data?.rows ?? []
   supplierList.value = supRes.data?.rows ?? []
 
