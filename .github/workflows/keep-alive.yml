@@ -1,0 +1,19 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'  # 每14分钟 ping 一次（Render 15分钟不活跃就休眠）
+  workflow_dispatch:         # 支持手动触发
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        run: |
+          curl -sf --max-time 30 \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"account":"ping","password":"ping","terminal":1}' \
+            https://erp-server-xsji.onrender.com/adminapi/login/account \
+            || true
