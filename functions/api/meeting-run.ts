@@ -126,7 +126,7 @@ async function runMeetingJob(
     // 1. Captain 开场
     await saveProgress('opening')
     await speak('captain',
-      `你正在主持一场内容策划会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（100字以内）：说明今天的议题和目标，提出对各专员的期待。语气专业、有激情。`,
+      `你正在主持一场内容策划会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（200字以内），结构如下：\n1. 背景（1-2句）：说明产品/品牌是什么、本次推广的核心目标、当前面临的主要挑战\n2. 本次会议目标：明确今天要产出什么\n3. 任务分工：说明派哪些专员参与、各自负责什么\n语气专业、有决断力。`,
       brandContext
     )
 
