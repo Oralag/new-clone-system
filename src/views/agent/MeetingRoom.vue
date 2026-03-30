@@ -314,6 +314,7 @@ const interjections = ref<string[]>([]) // 用户插话队列
 // 各专员定义（职位，不用实名）
 const STAFF = {
   captain:    { title: 'Captain',  emoji: '🎯', color: '#6366f1' },
+  briefer:    { title: '参谋',     emoji: '🗂️', color: '#64748b' },
   copywriter: { title: '文案专员', emoji: '✍️', color: '#f59e0b' },
   video:      { title: '视频专员', emoji: '🎬', color: '#ef4444' },
   poster:     { title: '设计专员', emoji: '🎨', color: '#ec4899' },
@@ -611,10 +612,20 @@ async function runMeeting(topic: string) {
     }
 
     if (topicType === 'strategy') {
-      // 策略类：Captain 开场并决定派谁发言
+      // 策略类：参谋先简报，Captain再决断
       meetingStore.setPhase('opening')
+
+      // 参谋简报
+      const strategyBrieferPrompt = brand
+        ? `你是会议室的参谋，负责在Captain发令前做情报简报。\n\n完整品牌档案：\n${brandContext}\n\n策略议题：「${topic}」\n\n请做情报简报（150字以内）：\n1. 品牌当前最需要解决的核心问题（结合议题）\n2. 竞争格局速览（竞品优劣势）\n3. 关键约束（资源、调性、禁忌）\n语气：参谋向指挥官汇报，简洁客观，直达重点。`
+        : `你是会议室的参谋。策略议题：「${topic}」\n请做简要背景分析（80字以内），语气简洁客观。`
+
+      await addStreamingMessage('briefer', strategyBrieferPrompt, brandContext)
+      if (shouldStop) return finalizeMeeting()
+      await new Promise(r => setTimeout(r, 300))
+
       const strategyOpening = await addStreamingMessage('captain',
-        `你是一家广告公司的Captain总指挥，正在主持策略讨论会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（150字以内），结构如下：\n1. 背景（1-2句）：说明品牌/产品现状、本次策略讨论的背景和必要性\n2. 核心问题：明确今天要解决的关键挑战是什么\n3. 分工：说明派哪些专员参与、各自从哪个角度切入\n语气专业、有主见。\n\n【重要】开场白最后一行必须是派发指令，格式如下（根据议题选择需要的专员，不要全派）：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（营销/情报）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）\n例如策略类议题通常需要：@@DISPATCH:trend,copywriter@@`,
+        `你是广告公司的Captain总指挥。参谋刚做了情报简报。\n策略议题：「${topic}」\n${brandInfo}\n\n直接发出策略指令（100字以内）：\n- 不写背景，直接说判断和命令\n- 明确今天要解决什么核心问题\n- 点名哪些专员参与、各自的分析角度\n- 语气简短有力，是在发号施令\n\n【重要】指令最后一行必须是派发指令：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（营销/情报）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）\n例如策略类议题通常需要：@@DISPATCH:trend,copywriter@@`,
         brandContext
       )
       if (shouldStop) return finalizeMeeting()
@@ -626,11 +637,11 @@ async function runMeeting(topic: string) {
 
       // 各专员的 prompt 模板
       const strategyPrompts: Record<string, string> = {
-        trend: `你是广告公司的营销战略顾问。Captain邀请你就「${topic}」进行专业分析。\n${brandInfo}\n\n请用营销理论框架（200字以内）：\n- 核心问题诊断\n- 2-3个可选策略方向及优劣势\n- 优先推荐的方向和理由\n语气专业、有说服力。`,
-        copywriter: `你是广告公司的文案专员。针对策略议题「${topic}」，给出内容层面的落地方案（150字以内）：\n- 核心传播信息\n- 推荐的内容形式和平台\n- 一个示范标题`,
-        poster: `你是广告公司的设计专员。针对策略议题「${topic}」，给出视觉方向建议（150字以内）：\n- 视觉风格定位\n- 关键视觉元素建议\n- 色调参考`,
-        video: `你是广告公司的视频专员。针对策略议题「${topic}」，给出视频内容策略（150字以内）：\n- 视频形式和时长建议\n- 核心叙事方向\n- 开头钩子设计`,
-        publisher: `你是广告公司的发布专员。针对策略议题「${topic}」，给出发布策略建议（150字以内）：\n- 平台优先级\n- 发布时机建议\n- 话题标签策略`,
+        trend: `你是广告公司的情报专员。Captain命令你就「${topic}」做营销策略分析。\n${brandContext || brandInfo}\n\n请从情报视角（200字以内）：\n- 核心问题诊断：品牌目前面临什么真实挑战\n- 2-3个可选策略方向及优劣势（结合品牌调性和竞品）\n- 优先推荐哪个方向，理由\n语气专业、有说服力，直接说分析，不客套。`,
+        copywriter: `你是广告公司的文案专员。针对策略议题「${topic}」，给出内容层面的落地方案（150字以内）。\n${brandContext || brandInfo}\n- 核心传播信息（符合品牌调性和禁忌）\n- 推荐的内容形式和平台\n- 一个示范标题`,
+        poster: `你是广告公司的设计专员。针对策略议题「${topic}」，给出视觉方向建议（150字以内）。\n${brandContext || brandInfo}\n- 视觉风格定位（符合品牌调性）\n- 关键视觉元素建议\n- 色调参考`,
+        video: `你是广告公司的视频专员。针对策略议题「${topic}」，给出视频内容策略（150字以内）。\n${brandContext || brandInfo}\n- 视频形式和时长建议\n- 核心叙事方向\n- 开头钩子设计`,
+        publisher: `你是广告公司的发布专员。针对策略议题「${topic}」，给出发布策略建议（150字以内）。\n${brandContext || brandInfo}\n- 平台优先级（结合品牌主要平台）\n- 发布时机建议\n- 话题标签策略`,
       }
 
       for (const agentId of strategyAgents) {
@@ -667,10 +678,22 @@ async function runMeeting(topic: string) {
       return
     }
 
-    // content 类：Captain 开场并决定派谁发言
+    // content 类：参谋先做情报简报，Captain再发作战命令
     meetingStore.setPhase('opening')
+
+    // 参谋简报：展开品牌背景 + 本次任务分析
+    const brieferPrompt = brand
+      ? `你是会议室的参谋，负责在Captain发令前做情报简报。\n\n以下是完整品牌档案：\n${brandContext}\n\n本次议题：「${topic}」\n\n请做一份简洁的情报简报（200字以内），包含：\n1. 品牌现状速览（产品、目标受众、核心卖点各一句）\n2. 本次任务的核心挑战是什么（针对议题分析，不要泛泛而谈）\n3. 关键限制（调性禁忌、竞争对手、违禁词等）\n\n语气：参谋向指挥官汇报，简洁、客观、有料，不废话。`
+      : `你是会议室的参谋。本次议题：「${topic}」\n\n品牌信息未配置，请做简要的任务背景分析（100字以内）：目标平台、核心受众、主要挑战。语气简洁客观。`
+
+    await addStreamingMessage('briefer', brieferPrompt, brandContext)
+    if (shouldStop) return finalizeMeeting()
+
+    await new Promise(r => setTimeout(r, 300))
+
+    // Captain 发作战命令（看完简报后）
     const contentOpening = await addStreamingMessage('captain',
-      `你是一家广告公司的Captain总指挥，正在主持内容策划会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（200字以内），结构如下：\n1. 背景（1-2句）：说明产品/品牌是什么、本次推广的核心目标、当前面临的主要挑战\n2. 本次会议目标：明确今天要产出什么\n3. 任务分工：说明派哪些专员参与、各自负责什么\n语气专业、有决断力。\n\n【重要】开场白最后一行必须是派发指令，格式如下（根据议题选择需要的专员）：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（情报/热点）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）\n例如小红书图文推广通常需要：@@DISPATCH:trend,copywriter,poster@@`,
+      `你是广告公司的Captain总指挥。参谋刚才做了情报简报。\n议题：「${topic}」\n${brandInfo}\n\n现在直接发出作战命令（150字以内）：\n- 不写背景、不写会议目标、不解释为什么\n- 直接点名各专员，每条命令格式：「专员名，[动词]+[具体要求]+[交付标准]」\n- 语气短促、有压迫感，像战场指挥\n\n示例风格（不要照抄，根据议题发真实命令）：\n「情报，摸清小红书数字游牧赛道热点，给我前3个切入口，附品牌相关度评分。\n文案，基于情报报告出2套标题，小红书风格，情绪要强，不要废话。\n设计，配合文案出封面方案，1080×1440，给我设计方向不是废话。」\n\n【重要】命令最后一行必须是派发指令：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（情报/热点）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）`,
       brandContext
     )
     if (shouldStop) return finalizeMeeting()
@@ -682,11 +705,11 @@ async function runMeeting(topic: string) {
 
     // 各专员的 prompt 模板
     const contentPrompts: Record<string, string> = {
-      trend: `你是广告公司的情报专员。Captain邀请你就议题「${topic}」分析市场趋势。\n${brandInfo}\n\n请从情报视角（200字以内）：\n- 点出2-3个当前最相关的社交媒体热点或趋势\n- 给出内容机会窗口判断\n- 推荐最适合的平台和话题方向\n语气专业务实，直接说分析，不要客套话。`,
-      copywriter: `你是广告公司的文案专员。\n议题：「${topic}」\n${brandInfo}\n\n基于前面的分析，请输出（200字以内）：\n- 核心文案方向（1-2句提炼）\n- 推荐2-3个平台专属文案角度（如抖音/小红书/微博）\n- 一条示范标题（带emoji）\n语气有创意感，体现专业文案风格。`,
-      poster: `你是广告公司的设计专员。\n议题：「${topic}」\n${brandInfo}\n\n请输出视觉设计建议（150字以内）：\n- 海报/视觉内容的设计风格建议\n- 1个最有创意的视觉表达方向\n- 色调/画面感参考\n语气有设计感，直接说建议。`,
-      video: `你是广告公司的视频专员。\n议题：「${topic}」\n${brandInfo}\n\n请输出视频内容方向（150字以内）：\n- 短视频形式和时长建议\n- 前3秒钩子设计\n- 核心叙事节奏\n语气有节奏感，直接说方向。`,
-      publisher: `你是广告公司的发布专员。\n议题：「${topic}」\n${brandInfo}\n\n请输出发布策略（150字以内）：\n- 平台优先级排序和理由\n- 最佳发布时间建议\n- 话题标签策略\n语气实操性强。`,
+      trend: `你是广告公司的情报专员。Captain命令你就议题「${topic}」分析市场趋势。\n${brandContext || brandInfo}\n\n请从情报视角（200字以内）：\n- 当前最相关的2-3个社交媒体热点或趋势\n- 内容机会窗口判断（结合品牌trendingFilters和主要平台）\n- 推荐最适合的平台和话题方向\n语气专业务实，直接说分析，不要客套话。`,
+      copywriter: `你是广告公司的文案专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n基于前面的分析，请输出（200字以内）：\n- 核心文案方向（严格遵守品牌调性、禁忌词、禁用词）\n- 推荐2-3个平台专属文案角度\n- 一条示范标题（带emoji，符合品牌keywords）\n语气有创意感，体现专业文案风格。`,
+      poster: `你是广告公司的设计专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n请输出视觉设计建议（150字以内）：\n- 海报/视觉内容的设计风格（符合品牌调性）\n- 1个最有创意的视觉表达方向\n- 色调/画面感参考\n语气有设计感，直接说建议。`,
+      video: `你是广告公司的视频专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n请输出视频内容方向（150字以内）：\n- 短视频形式和时长建议（针对品牌主要平台）\n- 前3秒钩子设计\n- 核心叙事节奏\n语气有节奏感，直接说方向。`,
+      publisher: `你是广告公司的发布专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n请输出发布策略（150字以内）：\n- 平台优先级排序（参考品牌mainPlatforms和publishFreq）\n- 最佳发布时间建议\n- 话题标签策略\n语气实操性强。`,
     }
 
     for (const agentId of contentAgents) {
