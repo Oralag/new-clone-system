@@ -588,4 +588,50 @@ export const videoRenderTools: FunctionDeclaration[] = [
   },
 ]
 
-export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools]
+export const contentTools: FunctionDeclaration[] = [
+  {
+    name: 'record_content_performance',
+    description: '记录内容发布后的效果数据，用于分析哪类内容效果最好，帮助优化后续创作方向',
+    parameters: {
+      type: 'object',
+      properties: {
+        content_title: { type: 'string', description: '内容标题' },
+        platform: {
+          type: 'string',
+          enum: ['xiaohongshu', 'wechat', 'douyin', 'weibo', 'bilibili', 'other'],
+          description: '发布平台',
+        },
+        publish_date: { type: 'string', description: '发布日期 YYYY-MM-DD' },
+        content_type: {
+          type: 'string',
+          enum: ['图文', '短视频', '直播', '文章', '海报'],
+          description: '内容类型',
+        },
+        views: { type: 'number', description: '浏览量/播放量' },
+        likes: { type: 'number', description: '点赞数' },
+        comments: { type: 'number', description: '评论数' },
+        shares: { type: 'number', description: '转发/分享数' },
+        saves: { type: 'number', description: '收藏数（小红书等平台）' },
+        notes: { type: 'string', description: '备注，如：爆款原因分析、改进点等' },
+      },
+      required: ['content_title', 'platform', 'publish_date'],
+    },
+  },
+  {
+    name: 'query_content_performance',
+    description: '查询历史内容效果数据，分析哪类内容效果好，输出规律总结和建议',
+    parameters: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          enum: ['xiaohongshu', 'wechat', 'douyin', 'weibo', 'bilibili', 'other', 'all'],
+          description: '平台筛选，默认 all（全部）',
+        },
+        limit: { type: 'number', description: '返回条数，默认20' },
+      },
+    },
+  },
+]
+
+export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools]

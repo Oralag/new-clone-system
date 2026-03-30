@@ -1,4 +1,7 @@
-const ERP_BASE = 'https://erp-server-production-b1b6.up.railway.app/adminapi'
+const ERP_BASE = 'https://erp-server-xsji.onrender.com/adminapi'
+
+// 内容效果数据内存存储（进程级别，重启清空）
+const contentPerformanceStore: Array<Record<string, any>> = []
 
 async function erpGet(path: string, params: Record<string, any>, token: string) {
   const url = new URL(ERP_BASE + path)
@@ -548,6 +551,56 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         } else {
           result = `渲染失败：${resp?.message || '未知错误'}`
         }
+        break
+      }
+      case 'record_content_performance': {
+        // 内容效果数据存储在内存（进程级别，重启清空），生产建议写DB
+        const record = {
+          id: Date.now(),
+          content_title: input.content_title,
+          platform: input.platform,
+          publish_date: input.publish_date,
+          content_type: input.content_type || '图文',
+          views: input.views || 0,
+          likes: input.likes || 0,
+          comments: input.comments || 0,
+          shares: input.shares || 0,
+          saves: input.saves || 0,
+          notes: input.notes || '',
+          created_at: new Date().toISOString(),
+        }
+        contentPerformanceStore.push(record)
+        const engagement = record.views > 0
+          ? ((record.likes + record.comments + record.shares + record.saves) / record.views * 100).toFixed(2)
+          : '0'
+        result = `✅ 内容效果已记录\n标题：${record.content_title}\n平台：${record.platform}\n发布日期：${record.publish_date}\n浏览量：${record.views.toLocaleString()} | 点赞：${record.likes} | 评论：${record.comments} | 转发：${record.shares} | 收藏：${record.saves}\n互动率：${engagement}%`
+        break
+      }
+      case 'query_content_performance': {
+        const platform = input.platform || 'all'
+        const limit = input.limit || 20
+        let records = platform === 'all'
+          ? contentPerformanceStore
+          : contentPerformanceStore.filter(r => r.platform === platform)
+        records = records.slice(-limit).reverse()
+        if (records.length === 0) {
+          result = `暂无${platform === 'all' ? '' : platform + '平台的'}内容效果数据。请先使用 record_content_performance 工具录入数据。`
+          break
+        }
+        const totalViews = records.reduce((s, r) => s + r.views, 0)
+        const avgEngagement = records.map(r => r.views > 0 ? (r.likes + r.comments + r.shares + r.saves) / r.views * 100 : 0)
+        const avgEngRate = (avgEngagement.reduce((s, v) => s + v, 0) / records.length).toFixed(2)
+        const topByViews = [...records].sort((a, b) => b.views - a.views)[0]
+        const topByEng = [...records].sort((a, b) => {
+          const ea = a.views > 0 ? (a.likes + a.comments + a.shares + a.saves) / a.views : 0
+          const eb = b.views > 0 ? (b.likes + b.comments + b.shares + b.saves) / b.views : 0
+          return eb - ea
+        })[0]
+        const list = records.slice(0, 10).map((r, i) => {
+          const eng = r.views > 0 ? ((r.likes + r.comments + r.shares + r.saves) / r.views * 100).toFixed(1) : '0'
+          return `${i + 1}. [${r.platform}] ${r.content_title}\n   ${r.publish_date} | 浏览${r.views.toLocaleString()} | 互动率${eng}%${r.notes ? ` | ${r.notes}` : ''}`
+        }).join('\n')
+        result = `📊 内容效果分析（共${records.length}条）\n\n总浏览量：${totalViews.toLocaleString()}\n平均互动率：${avgEngRate}%\n\n🏆 最高浏览：${topByViews?.content_title}（${topByViews?.views?.toLocaleString()}次）\n🔥 最高互动率：${topByEng?.content_title}\n\n近期内容列表：\n${list}`
         break
       }
       default:

@@ -506,6 +506,46 @@ export function aiChatPlugin(): Plugin {
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
         const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
 
+        // 执行单个Sub-Agent，返回输出文本
+        async function runSubAgent(subAgentId: string, taskPrompt: string): Promise<string> {
+          const subAgent = getAgent(subAgentId)
+          if (!subAgent) return ''
+          send({ type: 'agent_start', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, task: taskPrompt })
+          send({ type: 'agent_ack', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, text: '收到，开始执行。' })
+
+          let agentOutput = ''
+          const subChat = genAI.chats.create({
+            model: 'gemini-2.0-flash',
+            config: { systemInstruction: subAgent.systemPrompt, tools: [{ functionDeclarations: allTools }] },
+          })
+          let subParts: any[] = [{ text: taskPrompt }]
+
+          for (let i = 0; i < 3; i++) {
+            const subResp = await subChat.sendMessage({ message: subParts })
+            const subTextParts = subResp.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
+            for (const part of subTextParts) {
+              if (part.text) {
+                agentOutput += part.text
+                send({ type: 'agent_thinking', agentId: subAgent.id, agentName: subAgent.name, text: part.text })
+              }
+            }
+            const subFnParts = subResp.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
+            if (subFnParts.length === 0) break
+            const subToolResultParts: any[] = []
+            for (const part of subFnParts) {
+              const fc = part.functionCall
+              const callId = fc.id || fc.name
+              send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
+              const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken)
+              send({ type: 'tool_result', id: callId, name: fc.name, result })
+              subToolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
+            }
+            subParts = subToolResultParts
+          }
+          send({ type: 'agent_done', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, output: agentOutput })
+          return agentOutput
+        }
+
         try {
           const captain = AGENTS.captain
 
@@ -549,56 +589,70 @@ export function aiChatPlugin(): Plugin {
             currentParts = toolResultParts
           }
 
-          // Phase 2: 解析 @@DISPATCH:agentId:任务@@ 并依次调用各专项Agent
-          const dispatchRe = /@@DISPATCH:(\w+):([^@]+)@@/g
-          const dispatches: Array<{ agentId: string; task: string }> = []
-          let m
-          while ((m = dispatchRe.exec(captainResponse)) !== null) {
-            dispatches.push({ agentId: m[1], task: m[2].trim() })
-          }
-
+          // Phase 2: 解析调度指令（支持JSON流水线 + 旧格式兼容）
           const agentOutputs: Array<{ agentId: string; agentName: string; output: string }> = []
 
-          for (const dispatch of dispatches) {
-            const subAgent = getAgent(dispatch.agentId)
-            if (!subAgent) continue
+          // 尝试解析 JSON 流水线
+          const pipelineMatch = captainResponse.match(/```dispatch-plan\s*([\s\S]*?)```/)
+          if (pipelineMatch) {
+            // JSON 流水线模式
+            try {
+              const plan = JSON.parse(pipelineMatch[1].trim())
+              if (plan.mode === 'pipeline' && Array.isArray(plan.pipeline)) {
+                // 上一步输出缓存（用于 pipe_output_to_next）
+                const stepOutputs: Record<string, string> = {}
 
-            send({ type: 'agent_start', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, task: dispatch.task })
-            send({ type: 'agent_ack', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, text: `收到，开始执行。` })
+                for (const step of plan.pipeline) {
+                  const subAgent = getAgent(step.agentId)
+                  if (!subAgent) continue
 
-            let agentOutput = ''
-            const taskPrompt = `Captain指令：${dispatch.task}\n\n请直接执行并交付成果。`
+                  // 构建任务提示词：如有上游输出则附加
+                  let taskPrompt = `Captain指令：${step.task}\n\n请直接执行并交付成果。`
+                  const upstream = step.receives_from
+                  if (upstream) {
+                    const sources = Array.isArray(upstream) ? upstream : [upstream]
+                    const upstreamContext = sources
+                      .filter((id: string) => stepOutputs[id])
+                      .map((id: string) => {
+                        const ag = getAgent(id)
+                        return `【${ag?.name || id}的产出】\n${stepOutputs[id]}`
+                      })
+                      .join('\n\n---\n\n')
+                    if (upstreamContext) {
+                      taskPrompt += `\n\n---\n上游输出供参考：\n${upstreamContext}`
+                    }
+                  }
 
-            const subChat = genAI.chats.create({
-              model: 'gemini-2.0-flash',
-              config: { systemInstruction: subAgent.systemPrompt, tools: [{ functionDeclarations: allTools }] },
-            })
-            let subParts: any[] = [{ text: taskPrompt }]
+                  const output = await runSubAgent(step.agentId, taskPrompt)
+                  stepOutputs[step.agentId] = output
+                  agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output })
 
-            for (let i = 0; i < 3; i++) {
-              const subResp = await subChat.sendMessage({ message: subParts })
-              const subTextParts = subResp.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
-              for (const part of subTextParts) {
-                if (part.text) {
-                  agentOutput += part.text
-                  send({ type: 'agent_thinking', agentId: subAgent.id, agentName: subAgent.name, text: part.text })
+                  // 审核关卡：brand 审核不通过时，流水线终止并提示
+                  if (step.is_gate && step.agentId === 'brand' && output.includes('❌ 不通过')) {
+                    send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '\n\n⚠️ **品牌审核未通过**，流水线暂停。请根据品牌Agent的意见修改后重新提交。\n' })
+                    res.write('data: [DONE]\n\n')
+                    res.end()
+                    return
+                  }
                 }
               }
-              const subFnParts = subResp.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
-              if (subFnParts.length === 0) break
-              const subToolResultParts: any[] = []
-              for (const part of subFnParts) {
-                const fc = part.functionCall
-                const callId = fc.id || fc.name
-                send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
-                const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken)
-                send({ type: 'tool_result', id: callId, name: fc.name, result })
-                subToolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
-              }
-              subParts = subToolResultParts
+            } catch (_) {
+              // JSON 解析失败，降级到旧格式
             }
-            send({ type: 'agent_done', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, output: agentOutput })
-            agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output: agentOutput })
+          }
+
+          // 旧格式：@@DISPATCH:agentId:任务@@（兼容单dispatch）
+          if (agentOutputs.length === 0) {
+            const dispatchRe = /@@DISPATCH:(\w+):([^@]+)@@/g
+            let m
+            while ((m = dispatchRe.exec(captainResponse)) !== null) {
+              const agentId = m[1]
+              const task = m[2].trim()
+              const subAgent = getAgent(agentId)
+              if (!subAgent) continue
+              const output = await runSubAgent(agentId, `Captain指令：${task}\n\n请直接执行并交付成果。`)
+              agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output })
+            }
           }
 
           // Phase 3: Captain 汇总
