@@ -162,6 +162,9 @@ export interface BookRecord {
   title: string
   content: string
   author: 'adam' | 'user' | string
+  type?: 'knowledge' | 'book'  // knowledge=亚当知识图谱模块, book=用户投喂书籍
+  confidence?: number           // 知识图谱专用：置信度 0-100
+  domain?: string               // 知识图谱专用：能力域分类
   tags?: string[]
   createdAt: string
   linkedEventIds: string[]

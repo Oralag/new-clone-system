@@ -307,6 +307,11 @@ export const useAdamStore = defineStore('adam', () => {
     persist()
   }
 
+  function removeBook(id: string) {
+    books.value = books.value.filter(b => b.id !== id)
+    persist()
+  }
+
   /** 亚当自主新增机构（build_structure 工具触发） */
   function addInstitution(inst: InstitutionStateRecord) {
     if (institutions.value.find((i) => i.institutionId === inst.institutionId)) return
@@ -417,6 +422,7 @@ export const useAdamStore = defineStore('adam', () => {
     addRecommendation,
     addReflection,
     addBook,
+    removeBook,
     addInstitution,
     addBuilding,
     activate,

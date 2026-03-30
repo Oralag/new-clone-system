@@ -211,6 +211,21 @@
 
     <!-- ── 底部：输入区 ── -->
     <div class="meeting-input-area">
+      <!-- 品牌选择器 -->
+      <div class="brand-selector-row">
+        <span class="brand-selector-label">品牌档案：</span>
+        <div class="brand-selector-tabs">
+          <div
+            v-for="b in brandStore.profiles"
+            :key="b.id"
+            class="brand-selector-tab"
+            :class="{ active: brandStore.activeId === b.id }"
+            @click="brandStore.setActive(b.id)"
+          >{{ b.name || '未命名' }}</div>
+        </div>
+        <router-link to="/agent/brand" class="brand-selector-link">管理</router-link>
+      </div>
+
       <!-- 品牌未配置提示 -->
       <div v-if="!brandStore.isConfigured" class="input-warn">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#b45309" stroke-width="1.5" stroke-linecap="round">
@@ -1330,6 +1345,25 @@ onUnmounted(() => {
   flex-shrink: 0;
   display: flex; flex-direction: column; gap: 10px;
 }
+/* 品牌选择器 */
+.brand-selector-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.brand-selector-label { font-size: 12px; color: #94a3b8; flex-shrink: 0; }
+.brand-selector-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.brand-selector-tab {
+  padding: 3px 12px; border-radius: 12px; font-size: 12px; cursor: pointer;
+  background: #f1f5f9; color: #64748b; border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.brand-selector-tab.active {
+  background: #ede9fe; color: #5b21b6; border-color: #a78bfa;
+}
+.brand-selector-link {
+  font-size: 12px; color: #6366f1; text-decoration: none; margin-left: auto; flex-shrink: 0;
+}
+.brand-selector-link:hover { text-decoration: underline; }
+
 .input-warn {
   display: flex; align-items: center; gap: 6px;
   font-size: 11.5px; color: #b45309;

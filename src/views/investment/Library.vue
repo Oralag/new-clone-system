@@ -5,76 +5,135 @@
       <div class="header-left">
         <span class="header-emoji">📚</span>
         <div class="header-info">
-          <h2 class="header-title">知识书架</h2>
-          <span class="header-sub">LIBRARY · {{ books.length }} 本藏书</span>
+          <h2 class="header-title">图书馆</h2>
+          <span class="header-sub">LIBRARY · {{ activeTab === 'knowledge' ? knowledgeModules.length + ' 个知识域' : userBooks.length + ' 本藏书' }}</span>
         </div>
       </div>
-      <button class="add-btn" @click="showForm = !showForm">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M6 1v10M1 6h10"/>
-        </svg>
-        添加书本
-      </button>
-    </div>
-
-    <!-- 添加表单 -->
-    <div v-if="showForm" class="add-form">
-      <div class="search-row">
-        <input
-          v-model="form.title"
-          class="form-input search-input"
-          placeholder="输入书名，如：定位、营销管理、穷查理宝典..."
-          :disabled="isSearching"
-          @keydown.enter.prevent="handleSearch"
-        />
-        <button class="search-btn" :disabled="!form.title.trim() || isSearching" @click="handleSearch">
-          <template v-if="isSearching">
-            <span class="searching-dot"></span> 搜索中...
-          </template>
-          <template v-else>🔍 搜索</template>
+      <div class="header-right">
+        <!-- Tab 切换 -->
+        <div class="tab-switch">
+          <button :class="['tab-btn', activeTab === 'knowledge' ? 'active' : '']" @click="activeTab = 'knowledge'">
+            🧬 知识图谱
+          </button>
+          <button :class="['tab-btn', activeTab === 'books' ? 'active' : '']" @click="activeTab = 'books'">
+            📖 藏书架
+          </button>
+        </div>
+        <button v-if="activeTab === 'books'" class="add-btn" @click="showForm = !showForm">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M6 1v10M1 6h10"/>
+          </svg>
+          添加书本
         </button>
       </div>
-      <div v-if="searchError" class="search-error">{{ searchError }}</div>
-      <div v-if="form.content" class="search-preview">
-        <div class="preview-header">
-          <span class="preview-title">📖 {{ form.title }}</span>
-          <div v-if="form.tags" class="preview-tags">
-            <span v-for="tag in form.tags.split(',')" :key="tag" class="preview-tag">{{ tag.trim() }}</span>
-          </div>
-        </div>
-        <div class="preview-content">{{ form.content.slice(0, 500) }}{{ form.content.length > 500 ? '...' : '' }}</div>
-      </div>
-      <div class="form-actions">
-        <button class="btn-cancel" @click="showForm = false; form.title = ''; form.content = ''; form.tags = ''; searchError = ''">取消</button>
-        <button class="btn-submit" :disabled="!form.title || !form.content" @click="handleAddBook">上架</button>
-      </div>
     </div>
 
-    <!-- 书架（始终显示至少3层） -->
-    <div class="bookcase">
-      <div v-for="(shelfBooks, shelfIdx) in shelves" :key="shelfIdx" class="shelf">
-        <div class="shelf-books">
-          <template v-if="shelfBooks.length > 0">
-            <div
-              v-for="book in shelfBooks"
-              :key="book.id"
-              class="book-spine"
-              :class="{ selected: selectedBook?.id === book.id }"
-              :style="bookStyle(book, shelfIdx)"
-              @click="selectBook(book)"
-            >
-              <span class="spine-author">{{ authorLabel(book.author) }}</span>
-              <span class="spine-title">{{ book.title }}</span>
-              <div class="spine-decor"></div>
+    <!-- ===== 知识图谱 Tab ===== -->
+    <div v-if="activeTab === 'knowledge'" class="knowledge-panel">
+      <div class="knowledge-intro">
+        <span class="intro-icon">⚡</span>
+        <span class="intro-text">亚当的认知能力域 — 内置知识结构，影响其分析判断与决策风格</span>
+      </div>
+      <div class="knowledge-grid">
+        <div
+          v-for="mod in knowledgeModules"
+          :key="mod.id"
+          class="knowledge-card"
+          :class="{ expanded: expandedId === mod.id }"
+          @click="toggleExpand(mod.id)"
+        >
+          <div class="card-header">
+            <div class="card-icon" :style="{ background: mod.color }">{{ mod.icon }}</div>
+            <div class="card-meta">
+              <div class="card-title">{{ mod.title }}</div>
+              <div class="card-domain">{{ mod.domain }}</div>
             </div>
-          </template>
+            <div class="card-confidence">
+              <div class="conf-bar">
+                <div class="conf-fill" :style="{ width: mod.confidence + '%', background: confColor(mod.confidence) }"></div>
+              </div>
+              <span class="conf-num" :style="{ color: confColor(mod.confidence) }">{{ mod.confidence }}%</span>
+            </div>
+          </div>
+          <div class="card-tags">
+            <span v-for="tag in mod.tags" :key="tag" class="card-tag">{{ tag }}</span>
+          </div>
+          <div v-if="expandedId === mod.id" class="card-content">
+            <div class="content-text">{{ mod.content }}</div>
+          </div>
+          <div class="card-toggle">{{ expandedId === mod.id ? '收起 ▲' : '展开 ▼' }}</div>
         </div>
-        <div class="shelf-board"></div>
-        <div class="shelf-shadow"></div>
       </div>
     </div>
 
-    <!-- 展开书本内容 -->
+    <!-- ===== 藏书架 Tab ===== -->
+    <div v-if="activeTab === 'books'" class="books-panel">
+      <!-- 添加表单 -->
+      <div v-if="showForm" class="add-form">
+        <div class="search-row">
+          <input
+            v-model="form.title"
+            class="form-input search-input"
+            placeholder="输入书名，如：定位、穷查理宝典、股票作手回忆录..."
+            :disabled="isSearching"
+            @keydown.enter.prevent="handleSearch"
+          />
+          <button class="search-btn" :disabled="!form.title.trim() || isSearching" @click="handleSearch">
+            <template v-if="isSearching">
+              <span class="searching-dot"></span> 搜索中...
+            </template>
+            <template v-else>🔍 搜索</template>
+          </button>
+        </div>
+        <div v-if="searchError" class="search-error">{{ searchError }}</div>
+        <div v-if="form.content" class="search-preview">
+          <div class="preview-header">
+            <span class="preview-title">📖 {{ form.title }}</span>
+            <div v-if="form.tags" class="preview-tags">
+              <span v-for="tag in form.tags.split(',')" :key="tag" class="preview-tag">{{ tag.trim() }}</span>
+            </div>
+          </div>
+          <div class="preview-content">{{ form.content.slice(0, 500) }}{{ form.content.length > 500 ? '...' : '' }}</div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel" @click="showForm = false; form.title = ''; form.content = ''; form.tags = ''; searchError = ''">取消</button>
+          <button class="btn-submit" :disabled="!form.title || !form.content" @click="handleAddBook">上架</button>
+        </div>
+      </div>
+
+      <!-- 空状态 -->
+      <div v-if="userBooks.length === 0 && !showForm" class="empty-shelf">
+        <div class="empty-icon">🗂️</div>
+        <div class="empty-title">藏书架还是空的</div>
+        <div class="empty-desc">点击右上角「添加书本」，给亚当投喂你读过的书<br/>亚当会吸收书中框架，影响他的分析风格</div>
+      </div>
+
+      <!-- 书架（始终显示至少3层） -->
+      <div v-else class="bookcase">
+        <div v-for="(shelfBooks, shelfIdx) in shelves" :key="shelfIdx" class="shelf">
+          <div class="shelf-books">
+            <template v-if="shelfBooks.length > 0">
+              <div
+                v-for="book in shelfBooks"
+                :key="book.id"
+                class="book-spine"
+                :class="{ selected: selectedBook?.id === book.id }"
+                :style="bookStyle(book, shelfIdx)"
+                @click="selectBook(book)"
+              >
+                <span class="spine-author">用户</span>
+                <span class="spine-title">{{ book.title }}</span>
+                <div class="spine-decor"></div>
+              </div>
+            </template>
+          </div>
+          <div class="shelf-board"></div>
+          <div class="shelf-shadow"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 展开书本内容 Modal -->
     <Teleport to="body">
       <Transition name="book-modal">
         <div v-if="selectedBook" class="book-overlay" @click.self="selectedBook = null">
@@ -82,10 +141,10 @@
             <div class="book-open-cover" :style="{ background: getCoverColor(selectedBook) }">
               <button class="close-btn" @click="selectedBook = null">&times;</button>
               <div class="cover-content">
-                <div class="cover-icon">{{ selectedBook.author === 'user' ? '👤' : '🧬' }}</div>
+                <div class="cover-icon">👤</div>
                 <h2 class="cover-title">{{ selectedBook.title }}</h2>
                 <div class="cover-meta">
-                  <span>{{ authorLabel(selectedBook.author) }}</span>
+                  <span>用户投喂</span>
                   <span>{{ formatDate(selectedBook.createdAt) }}</span>
                 </div>
                 <div v-if="selectedBook.tags?.length" class="cover-tags">
@@ -110,94 +169,194 @@ import type { BookRecord } from '@/types/investment'
 
 const adamStore = useAdamStore()
 
-// 预置书籍：如果书架里没有就自动添加
-const PRESET_BOOKS: Omit<BookRecord, 'createdAt'>[] = [
+// ===== 亚当内置知识图谱模块 =====
+const KNOWLEDGE_MODULES = [
   {
-    id: 'preset_marketing_mgmt',
-    title: '营销管理（第16版）',
-    content: `作者：菲利普·科特勒 / 凯文·莱恩·凯勒
+    id: 'km_technical',
+    title: '技术分析',
+    domain: '量化 · 价格行为',
+    icon: '📈',
+    color: 'linear-gradient(135deg, #1a3a5c, #2a5a8c)',
+    confidence: 87,
+    tags: ['K线形态', '均线系统', 'RSI/MACD', '成交量', '支撑阻力'],
+    content: `核心方法论：道氏理论、波浪理论、K线形态识别
 
-【核心框架】
+均线系统：5/10/20/60/120/250日均线；金叉死叉信号；均线多头/空头排列判断趋势强度
 
-一、营销环境分析
-- PESTEL分析：政治、经济、社会、技术、环境、法律六大宏观因素
-- 波特五力模型：供应商议价力、买方议价力、替代品威胁、新进入者威胁、行业竞争
-- SWOT矩阵：输出SO（增长）、WO（扭转）、ST（防御）、WT（撤退）四象限策略
+动量指标：RSI超买超卖（>70/<30）；MACD柱状图背离；KDJ随机指标；布林带宽度判断波动率
 
-二、STP战略
-- 市场细分：地理、人口、心理、行为四维度切割市场
-- 目标市场选择：无差异/差异化/集中化/微观四种覆盖策略
-- 定位声明：For [目标客群] who [需求], [品牌] is [品类] that [差异化利益]
-- 感知图（Perceptual Map）：可视化品牌在消费者心智中的位置
+成交量分析：量价背离、天量见顶信号、缩量突破有效性判断
 
-三、营销组合 4P / 7P
-- 产品（Product）：核心利益→基本产品→期望产品→延伸产品→潜在产品；产品线长度/宽度/深度决策；新品开发Stage-Gate流程；PLC（导入→成长→成熟→衰退）生命周期管理
-- 价格（Price）：成本加成、价值定价、心理定价（尾数/锚定/分层）、竞争定价、撇脂定价、渗透定价、动态定价
-- 渠道（Place）：直销 vs 间接分销；渠道层级设计；渠道冲突管理；全渠道O2O整合
-- 促销（Promotion）：IMC整合营销传播 — 广告、销售促进、公关、人员推销、直销与数字营销
-- 服务扩展 3P：人员（People）、流程（Process）、有形展示（Physical Evidence）
+形态识别：头肩顶底、双顶双底、三角形整理、旗形整理、杯柄形态
 
-四、消费者行为
-- 购买决策5阶段：问题识别→信息搜索→方案评估→购买决策→购后行为
-- 影响因素4层：文化因素→社会因素→个人因素→心理因素
-- B2B采购中心6角色：发起者、使用者、影响者、决策者、批准者、购买者
-- 行为经济学：损失厌恶、社会认同、稀缺效应、锚定效应、框架效应
+局限性认知：技术分析在高流动性市场有效，小市值/低流动性标的容易被操纵；技术信号滞后于基本面变化。`,
+  },
+  {
+    id: 'km_fundamental',
+    title: '基本面分析',
+    domain: '价值投资 · 财务分析',
+    icon: '🏦',
+    color: 'linear-gradient(135deg, #2D4A3E, #3D6A5E)',
+    confidence: 92,
+    tags: ['财务报表', 'DCF估值', 'PE/PB/PS', '护城河', '竞争格局'],
+    content: `财务分析三表：利润表（盈利质量）、资产负债表（偿债能力）、现金流量表（造血能力）
 
-五、品牌管理与CRM
-- Keller CBBE模型：品牌认知→品牌含义→品牌反应→品牌关系
-- 品牌架构：品牌屋 vs 背书品牌 vs 独立品牌
-- CLV（客户终身价值）= Σ(年利润 × 留存率^t / (1+折现率)^t)
-- RFM分析：最近购买时间(R)、购买频率(F)、消费金额(M)
-- NPS净推荐值 = 推荐者% - 贬损者%
+核心指标：ROE（净资产收益率）≥15%为优质；毛利率趋势；自由现金流/净利润比值；资产负债率
 
-六、数字营销
-- SEO/SEM搜索营销；社交媒体策略；内容营销漏斗（TOFU→MOFU→BOFU）
-- 营销自动化；私域流量运营；AARRR海盗漏斗（获取→激活→留存→收入→推荐）
-- A/B测试方法论
+估值方法：DCF贴现现金流（主观性强，适合稳定现金流企业）；PE相对估值（横向行业比较）；PB适用银行保险；EV/EBITDA适用重资产行业；PS适用高成长亏损企业
 
-七、营销度量
-- 营销ROI = (营销贡献利润 - 营销成本) / 营销成本
-- CAC客户获取成本；LTV/CAC比率 ≥ 3为健康
-- 转化率优化（CRO）；归因模型`,
-    author: 'adam',
-    tags: ['营销', 'STP', '4P', 'SWOT', '品牌管理'],
-    linkedEventIds: [],
+护城河识别：品牌溢价、转换成本、网络效应、成本优势、规模效应、牌照壁垒
+
+行业分析：波特五力模型；行业景气度周期；集中度CR4/CR8；龙头溢价逻辑
+
+局限性：财务数据滞后3-12个月；财务造假风险（关注应收账款/存货异常增长）。`,
+  },
+  {
+    id: 'km_behavioral',
+    title: '行为金融学',
+    domain: '心理 · 市场非理性',
+    icon: '🧠',
+    color: 'linear-gradient(135deg, #5B2333, #8B3353)',
+    confidence: 78,
+    tags: ['认知偏差', '损失厌恶', '从众效应', '锚定效应', '过度自信'],
+    content: `核心偏差清单：
+• 损失厌恶：亏损的痛苦是同等收益快乐的2-2.5倍 → 导致持亏止盈
+• 过度自信：高估自身判断准确率，低估不确定性 → 仓位过重
+• 锚定效应：被买入价格锚定，影响理性卖出决策
+• 从众行为：追涨杀跌，泡沫形成机制
+• 近期偏差：过度重视最近发生的事件
+• 确认偏误：只寻找支持自己观点的信息
+• 处置效应：过早卖出盈利股，持有亏损股太久
+
+市场情绪指标：恐慌贪婪指数、融资融券余额、新增开户数、IPO热度
+
+反向运用：极度恐慌时布局，极度贪婪时减仓。`,
+  },
+  {
+    id: 'km_macro',
+    title: '宏观经济分析',
+    domain: '周期 · 政策 · 汇率',
+    icon: '🌍',
+    color: 'linear-gradient(135deg, #4A3728, #6A5738)',
+    confidence: 74,
+    tags: ['利率周期', '通胀', '货币政策', '经济周期', '大类资产'],
+    content: `经济周期四阶段（美林时钟）：
+• 复苏期：GDP↑、通胀低 → 股票最优
+• 过热期：GDP↑、通胀↑ → 大宗商品最优
+• 滞胀期：GDP↓、通胀↑ → 现金最优
+• 衰退期：GDP↓、通胀↓ → 债券最优
+
+关键宏观指标：PMI（50分界线）；CPI/PPI剪刀差；M2增速；社融数据；GDP当季同比；失业率
+
+货币政策传导：降准→银行可贷资金↑；降息→无风险利率↓→股票估值↑；量化宽松→流动性泛滥→资产通胀
+
+汇率影响：人民币升值→外资流入A股；出口型企业承压；大宗商品进口成本下降
+
+注意：宏观分析精度有限，更适合判断大方向和配置比例，不适合短期择时。`,
+  },
+  {
+    id: 'km_risk',
+    title: '风险管理',
+    domain: '仓位 · 止损 · 对冲',
+    icon: '🛡️',
+    color: 'linear-gradient(135deg, #3B3560, #5B5580)',
+    confidence: 83,
+    tags: ['仓位管理', 'Kelly公式', 'VaR', '最大回撤', '相关性'],
+    content: `仓位管理框架：
+• Kelly公式：f* = (bp - q) / b，b=赔率，p=胜率，q=败率；实际使用半Kelly更安全
+• 单笔风险控制：单次损失不超过总资金2%（标准）或1%（保守）
+• 分散化：单只标的不超过总仓位20%；行业集中度不超过40%
+
+止损纪律：
+• 技术止损：跌破关键支撑位
+• 比例止损：亏损达买入价7-8%
+• 时间止损：持有X天未产生预期收益则离场
+
+回撤管理：最大回撤>20%时强制检视持仓逻辑；连续亏损3笔后降低仓位至半仓
+
+对冲工具：股指期货、期权保护性认沽、反向ETF
+
+风险量化：VaR（在险价值）；压力测试；相关性分析（避免持仓高相关标的）。`,
+  },
+  {
+    id: 'km_psychology',
+    title: '交易心理',
+    domain: '情绪 · 纪律 · 执行',
+    icon: '🎯',
+    color: 'linear-gradient(135deg, #1B4D3E, #0F3028)',
+    confidence: 69,
+    tags: ['纪律', '情绪管理', '复盘', '交易日志', '心流'],
+    content: `交易心理的核心矛盾：人类情绪系统进化用于生存，而市场需要的是反直觉行为（人怕亏→要止损；人追涨→要逆向）
+
+高水平交易者的心理特征：
+• 结果独立：用期望值而非单次结果评价决策质量
+• 过程导向：专注执行系统，不执念每笔盈亏
+• 不确定性接受：承认无法预测，只能管理概率
+• 快速止损无情绪：止损不是失败，是风控的执行
+
+复盘机制：每笔交易记录"预期逻辑→实际结果→偏差原因"，每月统计胜率/盈亏比/最大单笔亏损
+
+常见心理陷阱：
+• 报复性交易（连亏后加倍下注）
+• 恐惧性持仓（赚了一点点就跑）
+• 希望型持仓（明知逻辑错了还死扛）
+
+注：这是亚当目前相对薄弱的领域，情绪机制还在校准中。`,
   },
 ]
 
+// ===== 清理旧数据 =====
 onMounted(() => {
-  for (const preset of PRESET_BOOKS) {
-    if (!adamStore.books.find(b => b.id === preset.id)) {
-      adamStore.addBook({ ...preset, createdAt: new Date().toISOString() })
-    }
+  // 清理：旧 preset_ 书、adam 伪装书、内容异常的书（AI拒绝生成时写入）
+  const BAD_KEYWORDS = ['无法为你生成', '我无法', '超出了我的能力', 'Claude Code', 'Anthropic']
+  const toRemove = adamStore.books.filter(b => {
+    if (b.id.startsWith('preset_')) return true
+    if (b.author === 'adam' && !b.type) return true
+    if (b.content && BAD_KEYWORDS.some(kw => b.content.includes(kw))) return true
+    return false
+  })
+  for (const b of toRemove) {
+    adamStore.removeBook?.(b.id)
   }
 })
 
+const activeTab = ref<'knowledge' | 'books'>('knowledge')
+const expandedId = ref<string | null>(null)
 const showForm = ref(false)
 const selectedBook = ref<BookRecord | null>(null)
 const isSearching = ref(false)
 const searchError = ref('')
 const form = reactive({ title: '', content: '', tags: '' })
 
-const books = computed(() => adamStore.books)
-const sortedBooks = computed(() =>
-  [...books.value].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+const knowledgeModules = computed(() => KNOWLEDGE_MODULES)
+const userBooks = computed(() =>
+  adamStore.books
+    .filter(b => b.type === 'book' || b.author === 'user')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 )
 
 const BOOKS_PER_SHELF = 6
-
 const shelves = computed(() => {
   const result: BookRecord[][] = []
-  const all = sortedBooks.value
+  const all = userBooks.value
   for (let i = 0; i < all.length; i += BOOKS_PER_SHELF) {
     result.push(all.slice(i, i + BOOKS_PER_SHELF))
   }
-  // 至少显示3层书架
   while (result.length < 3) result.push([])
   return result
 })
 
-// 书脊颜色方案
+function toggleExpand(id: string) {
+  expandedId.value = expandedId.value === id ? null : id
+}
+
+function confColor(conf: number) {
+  if (conf >= 85) return '#22c55e'
+  if (conf >= 70) return '#f59e0b'
+  return '#ef4444'
+}
+
+// 书脊颜色方案（藏书架）
 const SPINE_COLORS = [
   { bg: 'linear-gradient(180deg, #8B4513 0%, #6B3410 100%)', text: '#F5DEB3' },
   { bg: 'linear-gradient(180deg, #1a3a5c 0%, #0f2440 100%)', text: '#B8D4E8' },
@@ -205,8 +364,6 @@ const SPINE_COLORS = [
   { bg: 'linear-gradient(180deg, #2D4A3E 0%, #1B2E26 100%)', text: '#B8D4C8' },
   { bg: 'linear-gradient(180deg, #4A3728 0%, #2E2219 100%)', text: '#D4C4A8' },
   { bg: 'linear-gradient(180deg, #3B3560 0%, #252040 100%)', text: '#C4BDE8' },
-  { bg: 'linear-gradient(180deg, #5C4033 0%, #3A2820 100%)', text: '#E0CDB8' },
-  { bg: 'linear-gradient(180deg, #1B4D3E 0%, #0F3028 100%)', text: '#A8D8C4' },
 ]
 
 const COVER_COLORS = [
@@ -229,12 +386,9 @@ function hashCode(str: string): number {
 
 function bookStyle(book: BookRecord, shelfIdx: number) {
   const h = hashCode(book.id + shelfIdx)
-  const colorIdx = h % SPINE_COLORS.length
-  const scheme = SPINE_COLORS[colorIdx]
-  // 书脊宽度根据内容长度变化
+  const scheme = SPINE_COLORS[h % SPINE_COLORS.length]
   const contentLen = book.content?.length || 100
   const width = Math.max(36, Math.min(70, 36 + Math.floor(contentLen / 200) * 4))
-  // 书脊高度微变
   const height = 160 + (h % 20) - 10
   return {
     background: scheme.bg,
@@ -251,13 +405,6 @@ function getCoverColor(book: BookRecord) {
 
 function selectBook(book: BookRecord) {
   selectedBook.value = book
-}
-
-function authorLabel(author: string) {
-  if (author === 'user') return '用户'
-  if (author === 'adam') return '亚当'
-  if (author === 'captain') return 'Captain'
-  return author
 }
 
 function formatDate(iso: string) {
@@ -306,6 +453,7 @@ function handleAddBook() {
     title: form.title,
     content: form.content,
     author: 'user',
+    type: 'book',
     tags,
     createdAt: new Date().toISOString(),
     linkedEventIds: [],
@@ -335,6 +483,8 @@ function handleAddBook() {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(139,111,71,0.04) 0%, transparent 100%);
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .header-left { display: flex; align-items: center; gap: 12px; }
 .header-emoji { font-size: 24px; }
@@ -346,6 +496,37 @@ function handleAddBook() {
   font-family: 'SF Mono', 'Fira Code', monospace;
   letter-spacing: 0.06em;
 }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Tab 切换 */
+.tab-switch {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.tab-btn {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--mid);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tab-btn:hover { background: var(--faint); }
+.tab-btn.active {
+  background: rgba(139,111,71,0.1);
+  color: #8B6F47;
+}
+
 .add-btn {
   display: flex;
   align-items: center;
@@ -360,8 +541,172 @@ function handleAddBook() {
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 .add-btn:hover { background: rgba(139, 111, 71, 0.12); border-color: rgba(139, 111, 71, 0.5); }
+
+/* ===== 知识图谱面板 ===== */
+.knowledge-panel {
+  padding: 16px 18px;
+}
+
+.knowledge-intro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(139,111,71,0.04);
+  border: 1px solid rgba(139,111,71,0.1);
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+.intro-icon { font-size: 14px; }
+.intro-text {
+  font-size: 11px;
+  color: var(--mid);
+  line-height: 1.5;
+}
+
+.knowledge-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.knowledge-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  background: var(--card-bg);
+}
+.knowledge-card:hover {
+  border-color: rgba(139,111,71,0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.knowledge-card.expanded {
+  border-color: rgba(139,111,71,0.4);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.card-meta {
+  flex: 1;
+  min-width: 0;
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 2px;
+}
+.card-domain {
+  font-size: 10px;
+  color: var(--dim);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.04em;
+}
+
+.card-confidence {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.conf-bar {
+  width: 60px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.conf-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.conf-num {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  min-width: 32px;
+  text-align: right;
+}
+
+.card-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 0 14px 10px;
+}
+.card-tag {
+  font-size: 9px;
+  color: var(--dim);
+  background: var(--faint);
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.card-content {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--faint);
+}
+.content-text {
+  font-size: 12px;
+  color: var(--mid);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.card-toggle {
+  padding: 6px 14px;
+  font-size: 10px;
+  color: var(--dim);
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--faint);
+  letter-spacing: 0.05em;
+}
+
+/* ===== 藏书架面板 ===== */
+.books-panel {}
+
+/* 空状态 */
+.empty-shelf {
+  padding: 48px 20px;
+  text-align: center;
+}
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 8px;
+}
+.empty-desc {
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.7;
+}
 
 /* 添加表单 */
 .add-form {
@@ -369,11 +714,7 @@ function handleAddBook() {
   border-bottom: 1px solid var(--border);
   background: var(--faint);
 }
-.search-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
+.search-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .search-input { flex: 1; }
 .search-btn {
   padding: 8px 16px;
@@ -424,11 +765,7 @@ function handleAddBook() {
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
-.preview-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--dark);
-}
+.preview-title { font-size: 13px; font-weight: 600; color: var(--dark); }
 .preview-tags { display: flex; gap: 4px; }
 .preview-tag {
   font-size: 9px;
@@ -447,49 +784,7 @@ function handleAddBook() {
   overflow-y: auto;
   white-space: pre-wrap;
 }
-.form-row { margin-bottom: 12px; }
-.form-label {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.06em;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-}
-.form-input {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--card-bg);
-  color: var(--dark);
-  font-size: 13px;
-  outline: none;
-  box-sizing: border-box;
-}
-.form-input:focus { border-color: #8B6F47; }
-.form-textarea {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--card-bg);
-  color: var(--dark);
-  font-size: 13px;
-  outline: none;
-  resize: vertical;
-  font-family: inherit;
-  line-height: 1.6;
-  box-sizing: border-box;
-}
-.form-textarea:focus { border-color: #8B6F47; }
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .btn-cancel {
   padding: 6px 14px;
   border: 1px solid var(--border);
@@ -512,6 +807,18 @@ function handleAddBook() {
   font-family: inherit;
 }
 .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+.form-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--card-bg);
+  color: var(--dark);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.form-input:focus { border-color: #8B6F47; }
 
 /* ===== 书架 ===== */
 .bookcase {
@@ -525,12 +832,7 @@ function handleAddBook() {
       rgba(139,111,71,0.08) 200px
     );
 }
-
-.shelf {
-  position: relative;
-  margin-bottom: 8px;
-}
-
+.shelf { position: relative; margin-bottom: 8px; }
 .shelf-books {
   display: flex;
   align-items: flex-end;
@@ -538,8 +840,6 @@ function handleAddBook() {
   padding: 0 24px;
   min-height: 170px;
 }
-
-/* 书脊 */
 .book-spine {
   position: relative;
   display: flex;
@@ -561,9 +861,7 @@ function handleAddBook() {
 .book-spine::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
+  left: 0; top: 0; bottom: 0;
   width: 3px;
   background: rgba(255,255,255,0.08);
   border-radius: 2px 0 0 2px;
@@ -582,7 +880,6 @@ function handleAddBook() {
     inset 2px 0 2px rgba(255,255,255,0.05),
     3px 10px 20px rgba(0,0,0,0.25);
 }
-
 .spine-author {
   font-size: 7px;
   font-weight: 600;
@@ -613,29 +910,21 @@ function handleAddBook() {
   opacity: 0.3;
   margin-top: auto;
 }
-
-/* 木板 */
 .shelf-board {
   height: 12px;
   background: linear-gradient(180deg, #C4A882 0%, #A8896A 40%, #96775A 100%);
   border-radius: 0 0 2px 2px;
-  box-shadow:
-    0 2px 4px rgba(0,0,0,0.15),
-    inset 0 1px 0 rgba(255,255,255,0.2);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2);
   position: relative;
 }
 .shelf-board::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: 2px;
   background: linear-gradient(90deg,
-    rgba(139,111,71,0.2) 0%,
-    rgba(139,111,71,0.05) 20%,
-    rgba(139,111,71,0.1) 50%,
-    rgba(139,111,71,0.05) 80%,
+    rgba(139,111,71,0.2) 0%, rgba(139,111,71,0.05) 20%,
+    rgba(139,111,71,0.1) 50%, rgba(139,111,71,0.05) 80%,
     rgba(139,111,71,0.2) 100%
   );
 }
@@ -645,7 +934,7 @@ function handleAddBook() {
   margin: 0 4px;
 }
 
-/* ===== 打开的书 Modal ===== */
+/* ===== 打开书本 Modal ===== */
 .book-overlay {
   position: fixed;
   inset: 0;
@@ -665,7 +954,6 @@ function handleAddBook() {
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
-
 .book-open-cover {
   width: 220px;
   flex-shrink: 0;
@@ -677,10 +965,8 @@ function handleAddBook() {
 }
 .close-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
+  top: 10px; right: 10px;
+  width: 28px; height: 28px;
   border: none;
   background: rgba(0,0,0,0.2);
   color: rgba(255,255,255,0.8);
@@ -693,7 +979,6 @@ function handleAddBook() {
   transition: background 0.15s;
 }
 .close-btn:hover { background: rgba(0,0,0,0.4); }
-
 .cover-content {
   flex: 1;
   display: flex;
@@ -702,12 +987,7 @@ function handleAddBook() {
   gap: 12px;
 }
 .cover-icon { font-size: 28px; }
-.cover-title {
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.4;
-  margin: 0;
-}
+.cover-title { font-size: 18px; font-weight: 700; line-height: 1.4; margin: 0; }
 .cover-meta {
   display: flex;
   flex-direction: column;
@@ -725,14 +1005,12 @@ function handleAddBook() {
   color: rgba(255,255,255,0.85);
   border: 1px solid rgba(255,255,255,0.1);
 }
-
 .book-open-pages {
   flex: 1;
   background: #FDF8F0;
   padding: 28px 24px;
   overflow-y: auto;
   position: relative;
-  /* 纸张纹理 */
   background-image:
     repeating-linear-gradient(
       transparent 0px,
@@ -744,9 +1022,7 @@ function handleAddBook() {
 .book-open-pages::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
+  left: 0; top: 0; bottom: 0;
   width: 3px;
   background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02));
 }
@@ -766,7 +1042,7 @@ function handleAddBook() {
 .book-modal-leave-to { opacity: 0; }
 .book-modal-leave-to .book-open { transform: scale(0.95); opacity: 0; }
 
-/* 移动端适配 */
+/* 移动端 */
 @media (max-width: 640px) {
   .shelf-books { padding: 0 12px; gap: 2px; }
   .book-spine { padding: 8px 3px; }
@@ -775,5 +1051,6 @@ function handleAddBook() {
   .book-open-cover { width: 100%; padding: 20px; min-height: 140px; }
   .cover-title { font-size: 16px; }
   .book-open-pages { padding: 20px 16px; }
+  .tab-btn { padding: 5px 8px; font-size: 10px; }
 }
 </style>

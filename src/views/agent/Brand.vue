@@ -1,6 +1,22 @@
 <template>
   <div class="brand-page">
 
+    <!-- ── 多品牌切换栏 ── -->
+    <div class="brand-tabs">
+      <div
+        v-for="b in store.profiles"
+        :key="b.id"
+        class="brand-tab"
+        :class="{ active: store.activeId === b.id }"
+        @click="switchBrand(b.id)"
+      >
+        <span class="brand-tab-dot" :style="{ background: b.id === 'nomaderp_default' ? '#6366f1' : '#10b981' }"></span>
+        {{ b.name || '未命名品牌' }}
+        <span v-if="b.id !== 'nomaderp_default'" class="brand-tab-del" @click.stop="handleDeleteBrand(b.id)">×</span>
+      </div>
+      <button class="brand-tab-add" @click="handleNewBrand">+ 新增品牌</button>
+    </div>
+
     <!-- ── 收起态（已保存）── -->
     <template v-if="isCollapsed">
     <div class="brand-saved-bar">
@@ -578,9 +594,31 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const store = useBrandStore()
-const brand = store.brand
+const brand = reactive({ ...store.activeBrand })
 const saved = ref(false)
 const isCollapsed = ref(store.isConfigured)
+
+// 切换品牌时同步编辑区
+function switchBrand(id: string) {
+  store.setActive(id)
+  Object.assign(brand, store.activeBrand)
+  isCollapsed.value = store.isConfigured
+}
+
+function handleNewBrand() {
+  const newBrand = store.createBrand()
+  store.saveBrand(newBrand)
+  store.setActive(newBrand.id)
+  Object.assign(brand, newBrand)
+  isCollapsed.value = false
+}
+
+function handleDeleteBrand(id: string) {
+  if (store.profiles.length <= 1) { ElMessage.warning('至少保留一个品牌'); return }
+  store.deleteBrand(id)
+  Object.assign(brand, store.activeBrand)
+  isCollapsed.value = store.isConfigured
+}
 
 // ── 一键工作流 ──
 const afPlatforms = [
@@ -1393,7 +1431,8 @@ function handleSave() {
     ElMessage.warning('请选择细分领域')
     return
   }
-  store.saveBrand()
+  store.saveBrand({ ...brand })
+  store.setActive(brand.id)
   saved.value = true
   ElMessage.success('品牌设置已保存')
   setTimeout(() => {
@@ -1404,6 +1443,32 @@ function handleSave() {
 </script>
 
 <style scoped>
+/* ── 多品牌切换栏 ── */
+.brand-tabs {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.brand-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px;
+  background: #f1f5f9; color: #64748b; border: 1.5px solid transparent;
+  transition: all 0.15s;
+}
+.brand-tab.active {
+  background: #ede9fe; color: #5b21b6; border-color: #a78bfa;
+}
+.brand-tab-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.brand-tab-del {
+  margin-left: 2px; color: #94a3b8; font-size: 15px; line-height: 1;
+  padding: 0 2px; border-radius: 4px;
+}
+.brand-tab-del:hover { color: #ef4444; background: #fee2e2; }
+.brand-tab-add {
+  padding: 6px 14px; border-radius: 20px; border: 1.5px dashed #cbd5e1;
+  background: none; color: #94a3b8; font-size: 13px; cursor: pointer;
+}
+.brand-tab-add:hover { border-color: #6366f1; color: #6366f1; }
+
 /* ── 执行大面板 ── */
 .flow-panel {
   background: #fff;
