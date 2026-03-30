@@ -337,9 +337,10 @@ function formatTime(ts: number) {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
-// 转义 HTML + 换行转 <br>
+// 转义 HTML + 换行转 <br>，同时隐藏 @@DISPATCH:...@@ 指令行
 function renderContent(text: string) {
   return text
+    .replace(/@@DISPATCH:[\w,]+@@/g, '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\n/g, '<br>')
 }
@@ -549,6 +550,17 @@ async function classifyTopic(topic: string, brandContext?: string): Promise<'con
   }
 }
 
+// ── 解析 Captain 开场白里的 @@DISPATCH:...@@ 指令 ──
+const VALID_AGENTS = ['trend', 'copywriter', 'poster', 'video', 'publisher'] as const
+function parseDispatch(text: string): string[] {
+  const match = text.match(/@@DISPATCH:([\w,]+)@@/)
+  if (!match) return ['trend', 'copywriter'] // 兜底：默认情报+文案
+  return match[1]
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => (VALID_AGENTS as readonly string[]).includes(s))
+}
+
 // ── 主会议流程（串行AI调用） ──
 async function runMeeting(topic: string) {
   // 先判断是不是有效议题
@@ -584,53 +596,53 @@ async function runMeeting(topic: string) {
     }
 
     if (topicType === 'strategy') {
-      // 策略类：营销顾问 + Captain 主导，不走热搜流程
+      // 策略类：Captain 开场并决定派谁发言
       meetingStore.setPhase('opening')
-      await addStreamingMessage('captain',
-        `你是一家广告公司的Captain总指挥，正在主持策略讨论会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（100字以内）：说明今天要解决的核心问题，以及你对这次讨论的期望。语气专业、有主见。`,
+      const strategyOpening = await addStreamingMessage('captain',
+        `你是一家广告公司的Captain总指挥，正在主持策略讨论会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（150字以内），结构如下：\n1. 背景（1-2句）：说明品牌/产品现状、本次策略讨论的背景和必要性\n2. 核心问题：明确今天要解决的关键挑战是什么\n3. 分工：说明派哪些专员参与、各自从哪个角度切入\n语气专业、有主见。\n\n【重要】开场白最后一行必须是派发指令，格式如下（根据议题选择需要的专员，不要全派）：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（营销/情报）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）\n例如策略类议题通常需要：@@DISPATCH:trend,copywriter@@`,
         brandContext
       )
       if (shouldStop) return finalizeMeeting()
 
-      await new Promise(r => setTimeout(r, 400))
-      await addStreamingMessage('captain',
-        `请营销顾问就「${topic}」给出专业的策略分析框架和建议方向。`,
-        brandContext
-      )
-      if (shouldStop) return finalizeMeeting()
+      // 解析 Captain 派发的专员列表
+      const strategyAgents = parseDispatch(strategyOpening)
 
       meetingStore.setPhase('discussing')
-      await addStreamingMessage('trend',
-        `你是广告公司的营销战略顾问。Captain邀请你就「${topic}」进行专业分析。\n${brandInfo}\n\n请用营销理论框架（200字以内）：\n- 核心问题诊断\n- 2-3个可选策略方向及优劣势\n- 优先推荐的方向和理由\n语气专业、有说服力。`,
-        brandContext
-      )
-      if (shouldStop) return finalizeMeeting()
 
-      await new Promise(r => setTimeout(r, 400))
-      await addStreamingMessage('captain',
-        `文案专员，基于刚才的策略方向，给出内容落地的具体建议。`,
-        brandContext
-      )
-      if (shouldStop) return finalizeMeeting()
+      // 各专员的 prompt 模板
+      const strategyPrompts: Record<string, string> = {
+        trend: `你是广告公司的营销战略顾问。Captain邀请你就「${topic}」进行专业分析。\n${brandInfo}\n\n请用营销理论框架（200字以内）：\n- 核心问题诊断\n- 2-3个可选策略方向及优劣势\n- 优先推荐的方向和理由\n语气专业、有说服力。`,
+        copywriter: `你是广告公司的文案专员。针对策略议题「${topic}」，给出内容层面的落地方案（150字以内）：\n- 核心传播信息\n- 推荐的内容形式和平台\n- 一个示范标题`,
+        poster: `你是广告公司的设计专员。针对策略议题「${topic}」，给出视觉方向建议（150字以内）：\n- 视觉风格定位\n- 关键视觉元素建议\n- 色调参考`,
+        video: `你是广告公司的视频专员。针对策略议题「${topic}」，给出视频内容策略（150字以内）：\n- 视频形式和时长建议\n- 核心叙事方向\n- 开头钩子设计`,
+        publisher: `你是广告公司的发布专员。针对策略议题「${topic}」，给出发布策略建议（150字以内）：\n- 平台优先级\n- 发布时机建议\n- 话题标签策略`,
+      }
 
-      await addStreamingMessage('copywriter',
-        `你是广告公司的文案专员。针对策略议题「${topic}」，结合营销顾问的分析，给出内容层面的落地方案（150字以内）：\n- 核心传播信息\n- 推荐的内容形式和平台\n- 一个示范标题`,
-        brandContext
-      )
+      for (const agentId of strategyAgents) {
+        if (shouldStop) return finalizeMeeting()
+        const prompt = strategyPrompts[agentId]
+        if (!prompt) continue
+        await new Promise(r => setTimeout(r, 400))
+        await addStreamingMessage(agentId as keyof typeof STAFF, prompt, brandContext)
+      }
       if (shouldStop) return finalizeMeeting()
 
       meetingStore.setPhase('summarizing')
       await new Promise(r => setTimeout(r, 400))
+      const strategyHistory = meetingStore.messages
+        .filter(m => m.role !== 'user' && !m.isStreaming && m.content)
+        .map(m => `【${m.agentName}】：${m.content}`)
+        .join('\n\n')
       const captainSummary = await addStreamingMessage('captain',
-        `基于以上策略讨论，请作为Captain汇总（150字以内）：\n1. 明确推荐的策略方向\n2. 下一步行动计划（分配给具体专员）\n3. 关键成功指标\n语气有决断力。`,
+        `刚才的策略讨论内容如下：\n\n${strategyHistory}\n\n---\n议题：「${topic}」\n\n请作为Captain汇总（150字以内）：\n1. 明确推荐的策略方向\n2. 根据议题只分配真正需要的专员（不要全派）：需要文案才@文案专员，需要视频才@视频专员，需要图文/设计才@设计专员，需要排期才@发布专员\n3. 关键成功指标\n语气有决断力。`,
         brandContext
       )
       if (shouldStop) return finalizeMeeting()
 
-      if (captainSummary.includes('文案')) meetingStore.assignTask('copywriter', `围绕「${topic}」策略落地创作文案`)
-      if (captainSummary.includes('视频')) meetingStore.assignTask('video', `制作「${topic}」相关视频脚本`)
-      if (captainSummary.includes('设计') || captainSummary.includes('海报')) meetingStore.assignTask('poster', `设计「${topic}」配套视觉物料`)
-      if (captainSummary.includes('发布') || captainSummary.includes('排期')) meetingStore.assignTask('publisher', `安排「${topic}」内容发布计划`)
+      if (captainSummary.includes('@文案专员')) meetingStore.assignTask('copywriter', `围绕「${topic}」策略落地创作文案`)
+      if (captainSummary.includes('@视频专员')) meetingStore.assignTask('video', `制作「${topic}」相关视频脚本`)
+      if (captainSummary.includes('@设计专员')) meetingStore.assignTask('poster', `设计「${topic}」配套视觉物料`)
+      if (captainSummary.includes('@发布专员')) meetingStore.assignTask('publisher', `安排「${topic}」内容发布计划`)
 
       if (Object.keys(meetingStore.assignedTasks).length > 0 && !shouldStop) {
         await executeAssignedTasks(topic, brandInfo, brandContext)
@@ -640,65 +652,55 @@ async function runMeeting(topic: string) {
       return
     }
 
-    // content 类：完整内容创作流程（热搜分析 → 文案 → 设计 → 执行）
+    // content 类：Captain 开场并决定派谁发言
     meetingStore.setPhase('opening')
-    await addStreamingMessage('captain',
-      `你是一家广告公司的Captain总指挥，正在主持内容策划会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（150字以内）：\n1. 介绍今天的会议议题\n2. 说明会议目标\n3. 提出对各专员的期待\n语气专业、有激情。直接输出开场白，不加额外说明。`,
+    const contentOpening = await addStreamingMessage('captain',
+      `你是一家广告公司的Captain总指挥，正在主持内容策划会议。\n议题：「${topic}」\n${brandInfo}\n\n请用简洁有力的开场白（200字以内），结构如下：\n1. 背景（1-2句）：说明产品/品牌是什么、本次推广的核心目标、当前面临的主要挑战\n2. 本次会议目标：明确今天要产出什么\n3. 任务分工：说明派哪些专员参与、各自负责什么\n语气专业、有决断力。\n\n【重要】开场白最后一行必须是派发指令，格式如下（根据议题选择需要的专员）：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（情报/热点）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）\n例如小红书图文推广通常需要：@@DISPATCH:trend,copywriter,poster@@`,
       brandContext
     )
     if (shouldStop) return finalizeMeeting()
 
-    await new Promise(r => setTimeout(r, 400))
-    if (shouldStop) return finalizeMeeting()
-    await addStreamingMessage('captain',
-      `请情报专员分析一下与「${topic}」相关的市场热点趋势，给出选题方向。请用一句话点名，30字以内。`,
-      brandContext
-    )
-    if (shouldStop) return finalizeMeeting()
+    // 解析 Captain 派发的专员列表
+    const contentAgents = parseDispatch(contentOpening)
 
     meetingStore.setPhase('discussing')
-    await addStreamingMessage('trend',
-      `你是广告公司的情报专员。Captain邀请你就议题「${topic}」分析市场趋势。\n${brandInfo}\n\n请从情报视角（200字以内）：\n- 点出2-3个当前最相关的社交媒体热点或趋势\n- 给出内容机会窗口判断\n- 推荐最适合的平台和话题方向\n语气专业务实，直接说分析，不要客套话。`,
-      brandContext
-    )
-    if (shouldStop) return finalizeMeeting()
 
-    await new Promise(r => setTimeout(r, 400))
-    if (shouldStop) return finalizeMeeting()
-    await addStreamingMessage('captain',
-      `感谢情报专员的洞察。现在请文案专员基于刚才的趋势，给出文案创作方向。30字以内点名。`,
-      brandContext
-    )
-    if (shouldStop) return finalizeMeeting()
+    // 各专员的 prompt 模板
+    const contentPrompts: Record<string, string> = {
+      trend: `你是广告公司的情报专员。Captain邀请你就议题「${topic}」分析市场趋势。\n${brandInfo}\n\n请从情报视角（200字以内）：\n- 点出2-3个当前最相关的社交媒体热点或趋势\n- 给出内容机会窗口判断\n- 推荐最适合的平台和话题方向\n语气专业务实，直接说分析，不要客套话。`,
+      copywriter: `你是广告公司的文案专员。\n议题：「${topic}」\n${brandInfo}\n\n基于前面的分析，请输出（200字以内）：\n- 核心文案方向（1-2句提炼）\n- 推荐2-3个平台专属文案角度（如抖音/小红书/微博）\n- 一条示范标题（带emoji）\n语气有创意感，体现专业文案风格。`,
+      poster: `你是广告公司的设计专员。\n议题：「${topic}」\n${brandInfo}\n\n请输出视觉设计建议（150字以内）：\n- 海报/视觉内容的设计风格建议\n- 1个最有创意的视觉表达方向\n- 色调/画面感参考\n语气有设计感，直接说建议。`,
+      video: `你是广告公司的视频专员。\n议题：「${topic}」\n${brandInfo}\n\n请输出视频内容方向（150字以内）：\n- 短视频形式和时长建议\n- 前3秒钩子设计\n- 核心叙事节奏\n语气有节奏感，直接说方向。`,
+      publisher: `你是广告公司的发布专员。\n议题：「${topic}」\n${brandInfo}\n\n请输出发布策略（150字以内）：\n- 平台优先级排序和理由\n- 最佳发布时间建议\n- 话题标签策略\n语气实操性强。`,
+    }
 
-    await addStreamingMessage('copywriter',
-      `你是广告公司的文案专员。\n议题：「${topic}」\n${brandInfo}\n\n基于情报专员的趋势分析，请输出（200字以内）：\n- 核心文案方向（1-2句提炼）\n- 推荐2-3个平台专属文案角度（如抖音/小红书/微博）\n- 一条示范标题（带emoji）\n语气有创意感，体现专业文案风格。`,
-      brandContext
-    )
-    if (shouldStop) return finalizeMeeting()
-
-    await new Promise(r => setTimeout(r, 500))
-    if (shouldStop) return finalizeMeeting()
-    await addStreamingMessage('poster',
-      `你是广告公司的设计专员。刚才情报专员和文案专员提出了内容方向，你补充视觉设计层面的建议。\n议题：「${topic}」\n${brandInfo}\n\n请输出（150字以内）：\n- 海报/视觉内容的设计风格建议\n- 1个最有创意的视觉表达方向\n- 色调/画面感参考\n语气有设计感，直接说建议。`,
-      brandContext
-    )
+    for (const agentId of contentAgents) {
+      if (shouldStop) return finalizeMeeting()
+      const prompt = contentPrompts[agentId]
+      if (!prompt) continue
+      await new Promise(r => setTimeout(r, 400))
+      await addStreamingMessage(agentId as keyof typeof STAFF, prompt, brandContext)
+    }
     if (shouldStop) return finalizeMeeting()
 
     meetingStore.setPhase('summarizing')
     await new Promise(r => setTimeout(r, 400))
     if (shouldStop) return finalizeMeeting()
 
+    const discussionHistory = meetingStore.messages
+      .filter(m => m.role !== 'user' && !m.isStreaming && m.content)
+      .map(m => `【${m.agentName}】：${m.content}`)
+      .join('\n\n')
     const captainSummary = await addStreamingMessage('captain',
-      `基于以上内容策划讨论，请作为Captain进行最终汇总（200字以内）：\n\n1. 总结核心内容策略（2-3条）\n2. 明确分配任务：\n   - @文案专员：文案任务\n   - @视频专员：视频任务\n   - @设计专员：设计任务\n   - @发布专员：发布安排\n3. 强调品牌调性要点\n\n语气有决断力，体现总指挥风格。`,
+      `刚才的会议讨论内容如下：\n\n${discussionHistory}\n\n---\n议题：「${topic}」\n\n请作为Captain进行最终汇总（200字以内）：\n1. 总结核心内容策略（2-3条）\n2. 根据议题需求，只分配真正需要的专员（不要全派）：\n   - 需要写文案才 @文案专员\n   - 需要视频脚本才 @视频专员\n   - 需要图文/海报/设计才 @设计专员\n   - 需要发布排期才 @发布专员\n   例如"小红书图文"只需要 @文案专员 和 @设计专员\n3. 强调品牌调性要点\n\n语气有决断力，体现总指挥风格。`,
       brandContext
     )
     if (shouldStop) return finalizeMeeting()
 
-    if (captainSummary.includes('文案')) meetingStore.assignTask('copywriter', `围绕「${topic}」创作多平台文案`)
-    if (captainSummary.includes('视频')) meetingStore.assignTask('video', `制作「${topic}」短视频脚本`)
-    if (captainSummary.includes('设计') || captainSummary.includes('海报')) meetingStore.assignTask('poster', `设计「${topic}」配套视觉海报`)
-    if (captainSummary.includes('发布') || captainSummary.includes('排期')) meetingStore.assignTask('publisher', `安排「${topic}」内容发布排期`)
+    if (captainSummary.includes('@文案专员')) meetingStore.assignTask('copywriter', `围绕「${topic}」创作文案`)
+    if (captainSummary.includes('@视频专员')) meetingStore.assignTask('video', `制作「${topic}」短视频脚本`)
+    if (captainSummary.includes('@设计专员')) meetingStore.assignTask('poster', `设计「${topic}」配套视觉方案`)
+    if (captainSummary.includes('@发布专员')) meetingStore.assignTask('publisher', `安排「${topic}」内容发布排期`)
 
     if (Object.keys(meetingStore.assignedTasks).length > 0 && !shouldStop) {
       await executeAssignedTasks(topic, brandInfo, brandContext)
@@ -719,7 +721,7 @@ const EXEC_PROMPTS: Record<string, (topic: string, brandInfo: string) => string>
   video: (topic, brandInfo) =>
     `你是广告公司视频专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请输出一个30秒短视频脚本，包含：\n- 开头钩子（前3秒）\n- 分镜头描述（5-6个镜头，每个标注时长和画面）\n- 口播文案\n- BGM建议\n\n按时长严格控制，直接输出脚本。`,
   publisher: (topic, brandInfo) =>
-    `你是广告公司发布专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请输出具体的发布计划：\n- 发布平台和优先级\n- 各平台最佳发布时间\n- 话题标签策略\n- 首周发布排期表（哪天发什么）\n- 互动引导策略\n\n直接输出可执行的计划表。`,
+    `你是广告公司发布专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请直接输出一份完整的发布计划卡片，格式如下（可直接复制使用，不要有任何解释或提示词）：\n\n📅 发布计划\n\n平台优先级：\n1. [平台名] — [理由]\n2. [平台名] — [理由]\n3. [平台名] — [理由]\n\n⏰ 发布时间表：\n· [日期/时间] [平台] — [内容类型]\n· [日期/时间] [平台] — [内容类型]\n· [日期/时间] [平台] — [内容类型]\n\n🏷️ 话题标签（直接复制使用）：\n#[话题1] #[话题2] #[话题3] #[话题4] #[话题5]\n\n📊 预期效果：\n· 曝光量目标：[具体数字]\n· 互动率目标：[具体数字]\n· 转化目标：[具体描述]\n\n💡 互动引导语：\n[一句可直接用于评论区互动的引导语]\n\n请根据议题和品牌信息填入真实内容，所有内容都要具体可执行，不要留空或写示例。`,
 }
 
 const AGENT_TO_TYPE: Record<string, FlowResult['type']> = {

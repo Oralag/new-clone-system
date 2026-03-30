@@ -383,12 +383,76 @@ onMounted(() => {
     const raw = localStorage.getItem(HISTORY_KEY)
     if (raw) messages.value = JSON.parse(raw)
   } catch { /* ignore */ }
+
+  // 亚当主动留言系统
+  if (adamStore.core.status === 'alive') {
+    triggerWakeup()                                            // 进入页面触发一次唤醒
+    pollTimer = window.setInterval(pollMessages, 30 * 1000)   // 每30秒轮询未读消息
+  }
 })
 
 let survivalTimer: number | undefined
+let pollTimer: number | undefined
+
 onUnmounted(() => {
   if (survivalTimer) clearInterval(survivalTimer)
+  if (pollTimer) clearInterval(pollTimer)
 })
+
+// ── 亚当主动留言 ────────────────────────────────────────────────────────────
+
+async function triggerWakeup() {
+  const token = localStorage.getItem('erp_token') || ''
+  try {
+    await fetch('/api/adam/wakeup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({ adamState: { ...adamStore.core } }),
+    })
+    // wakeup 成功后稍等片刻再 poll（给 KV 写入留点时间）
+    setTimeout(pollMessages, 3000)
+  } catch { /* ignore */ }
+}
+
+async function pollMessages() {
+  const token = localStorage.getItem('erp_token') || ''
+  try {
+    const res = await fetch('/api/adam/messages', {
+      headers: { 'x-erp-token': token },
+    })
+    if (!res.ok) return
+    const data = await res.json() as { messages: Array<{ id: string; content: string; toolCalls?: any[]; timestamp: string }> }
+    if (!data.messages?.length) return
+
+    for (const msg of data.messages) {
+      const chatMsg: ChatMessage = {
+        id: msg.id,
+        role: 'assistant',
+        content: msg.content,
+        time: formatMsgTime(msg.timestamp),
+        toolCalls: msg.toolCalls?.map(tc => ({
+          id: `tc_${Math.random().toString(36).slice(2)}`,
+          name: tc.name,
+          input: {},
+          result: tc.result,
+          status: 'success' as const,
+        })),
+      }
+      messages.value.push(chatMsg)
+    }
+    persistHistory()
+    scrollToBottom()
+  } catch { /* ignore */ }
+}
+
+function formatMsgTime(iso: string): string {
+  try {
+    const d = new Date(iso)
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  } catch {
+    return nowStr()
+  }
+}
 
 function persistHistory() {
   const trimmed = messages.value.slice(-MAX_HISTORY)

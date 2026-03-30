@@ -3,7 +3,7 @@ import http from '../http'
 export const getSupplierList = (params?: any) => http.get('/procure/supplier/index', { params })
 export const createSupplier = (data: any) => http.post('/procure/supplier/add', data)
 export const updateSupplier = (data: any) => http.post('/procure/supplier/edit', data)
-export const deleteSupplier = (id: number) => http.post('/procure/supplier/del', { id })
+export const deleteSupplier = (id: number) => http.post('/procure/supplier/del', { id: String(id) })
 
 export const getProcurePlanList = (params?: any) => http.get('/procure/ProcurePlan/index', { params })
 export const createProcurePlan = (data: any) => http.post('/procure/ProcurePlan/add', data)

@@ -518,6 +518,38 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         result = `IMAGE_URL:${imageUrl}\n图片已成功生成，URL：${imageUrl}`
         break
       }
+      case 'render_image': {
+        const resp = await erpPost('/image/render', {
+          root_code: input.root_code,
+          component_code: input.component_code,
+          composition_id: input.composition_id || 'Poster',
+          width: input.width || 1080,
+          height: input.height || 1080,
+        }, token)
+        if (resp?.code === 1 && resp?.data?.base64) {
+          result = `IMAGE_BASE64:${resp.data.base64}`
+        } else {
+          result = `图片渲染失败：${resp?.message || '未知错误'}`
+        }
+        break
+      }
+      case 'render_video': {
+        const resp = await erpPost('/video/render', {
+          root_code: input.root_code,
+          component_code: input.component_code,
+          composition_id: input.composition_id || 'MyVideo',
+          width: input.width || 1080,
+          height: input.height || 1920,
+          fps: 30,
+          duration_frames: input.duration_frames || 900,
+        }, token)
+        if (resp?.code === 1 && resp?.data?.base64) {
+          result = `VIDEO_BASE64:${resp.data.base64}`
+        } else {
+          result = `渲染失败：${resp?.message || '未知错误'}`
+        }
+        break
+      }
       default:
         result = `未知工具：${name}`
     }

@@ -7,8 +7,6 @@
       </el-breadcrumb>
     </div>
 
-    <div class="top-clock">{{ clockStr }}</div>
-
     <div class="top-actions">
       <!-- 返回选择模块 -->
       <el-tooltip content="选择模块" placement="bottom">

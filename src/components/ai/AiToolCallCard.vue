@@ -6,7 +6,7 @@
       <span class="tool-name">{{ toolLabel }}</span>
       <span class="card-status">{{ statusText }}</span>
       <button
-        v-if="status === 'success' && result && result.length > 200"
+        v-if="status === 'success' && result && !isVideoResult && !isImageResult && result.length > 200"
         @click="isExpanded = !isExpanded"
         class="expand-btn"
       >
@@ -27,12 +27,27 @@
     </div>
 
     <!-- 成功结果 -->
-    <div v-if="status === 'success' && result" class="card-result" :class="{ collapsed: !isExpanded && result.length > 200 }">
-      {{ result }}
-    </div>
-    <div v-if="status === 'success' && result && !isExpanded && result.length > 200" class="collapse-tip" @click="isExpanded = true">
-      内容过长，点击展开查看全部
-    </div>
+    <template v-if="status === 'success' && result">
+      <!-- 视频播放器 -->
+      <div v-if="isVideoResult" class="card-video">
+        <video controls style="max-width:100%; border-radius:6px; margin-top:8px; display:block">
+          <source :src="videoSrc" type="video/mp4" />
+        </video>
+        <a :href="videoSrc" download="video.mp4" class="video-download-btn">⬇ 下载视频</a>
+      </div>
+      <!-- 图片显示 -->
+      <div v-else-if="isImageResult" class="card-image">
+        <img :src="imageSrc" style="max-width:100%; border-radius:6px; margin-top:8px; display:block" />
+        <a :href="imageSrc" download="image.png" class="video-download-btn">⬇ 下载图片</a>
+      </div>
+      <!-- 普通文本结果 -->
+      <div v-else class="card-result" :class="{ collapsed: !isExpanded && result.length > 200 }">
+        {{ result }}
+      </div>
+      <div v-if="!isVideoResult && !isImageResult && !isExpanded && result.length > 200" class="collapse-tip" @click="isExpanded = true">
+        内容过长，点击展开查看全部
+      </div>
+    </template>
 
     <!-- 失败信息 -->
     <div v-if="status === 'error'" class="card-result error-result">{{ result }}</div>
@@ -51,6 +66,29 @@ const props = defineProps<{
 }>()
 
 const isExpanded = ref(false)
+
+// VIDEO_BASE64: prefix detection
+const isVideoResult = computed(() => props.result?.startsWith('VIDEO_BASE64:') ?? false)
+const videoSrc = computed(() => {
+  if (!isVideoResult.value || !props.result) return ''
+  const b64 = props.result.slice('VIDEO_BASE64:'.length)
+  try {
+    const binary = atob(b64)
+    const arr = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i)
+    return URL.createObjectURL(new Blob([arr], { type: 'video/mp4' }))
+  } catch {
+    return ''
+  }
+})
+
+// IMAGE_BASE64: prefix detection
+const isImageResult = computed(() => props.result?.startsWith('IMAGE_BASE64:') ?? false)
+const imageSrc = computed(() => {
+  if (!isImageResult.value || !props.result) return ''
+  const b64 = props.result.slice('IMAGE_BASE64:'.length)
+  return `data:image/png;base64,${b64}`
+})
 
 const toolLabels: Record<string, string> = {
   query_customers: '查询客户',
@@ -74,6 +112,9 @@ const toolLabels: Record<string, string> = {
   create_warehouse: '新增仓库',
   create_fund_account: '新增资金账户',
   navigate_to: '页面跳转',
+  render_video: '渲染视频',
+  render_image: '渲染图片',
+  generate_image: '生成图片',
 }
 
 const toolLabel = computed(() => toolLabels[props.name] || props.name)
@@ -174,5 +215,23 @@ const statusText = computed(() => {
   color: #409eff;
   cursor: pointer;
   margin-top: 2px;
+}
+
+.card-video {
+  margin-top: 8px;
+}
+
+.video-download-btn {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 12px;
+  background: #409eff;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  text-decoration: none;
+}
+.video-download-btn:hover {
+  background: #337ecc;
 }
 </style>

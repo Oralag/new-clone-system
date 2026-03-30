@@ -276,8 +276,17 @@ const departments = [
     desc: '营销战略·客户分析·定价策略·SWOT',
     emoji: '📊',
     color: '#059669',
-    path: '/investment/marketing',
+    path: '/agent/marketing',
     icon: IconTrending,
+  },
+  {
+    id: 'designer',
+    name: '平面设计师',
+    desc: '海报·Banner·Logo·包装·社媒图',
+    emoji: '🎨',
+    color: '#e11d48',
+    path: '/agent/designer',
+    icon: IconCreative,
   },
 ]
 
@@ -438,7 +447,7 @@ const topTrending = computed(() => {
 
 .depts-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 10px;
 }
 
@@ -530,6 +539,9 @@ const topTrending = computed(() => {
 }
 
 /* 响应式 */
+@media (max-width: 1200px) {
+  .depts-row { grid-template-columns: repeat(4, 1fr); }
+}
 @media (max-width: 1100px) {
   .depts-row { grid-template-columns: repeat(3, 1fr); }
 }

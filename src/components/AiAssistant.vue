@@ -74,7 +74,7 @@
 
         <!-- Welcome message -->
         <div class="chat-welcome" v-if="messages.length === 0">
-          <p class="welcome-title">你好！我是亚当</p>
+          <p class="welcome-title">你好！我是 ERP 管家</p>
           <p class="welcome-sub">负责 ERP 数据录入、查询、导航，直接告诉我你要做什么</p>
           <div class="quick-prompts">
             <el-tag

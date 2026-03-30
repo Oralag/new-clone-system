@@ -200,6 +200,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'creative-lab', name: 'AgentCreativeLab', component: () => import('@/views/agent/CreativeLab.vue'), meta: { title: 'AI创意实验室' } },
       { path: 'publish', name: 'AgentPublish', component: () => import('@/views/agent/Publish.vue'), meta: { title: '发布管理' } },
       { path: 'history', name: 'AgentHistory', component: () => import('@/views/agent/History.vue'), meta: { title: '历史记录' } },
+      { path: 'marketing', name: 'AgentMarketing', component: () => import('@/views/investment/Marketing.vue'), meta: { title: '营销顾问' } },
+      { path: 'designer', name: 'AgentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
     ],
   },
   // 投资部门（独立布局 — 黑曜石观测舱）

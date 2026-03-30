@@ -553,18 +553,39 @@ export const searchTools: FunctionDeclaration[] = [
 
 export const imageTools: FunctionDeclaration[] = [
   {
-    name: 'generate_image',
-    description: '使用 AI 生成图片。输入英文提示词，返回生成图片的 URL。适用于海报、Banner、社媒图、产品图等设计场景。',
+    name: 'render_image',
+    description: '将 Remotion Still TSX 代码渲染成 PNG 图片，在服务器端执行渲染并返回可显示的图片。当你写完海报/Banner/社媒图代码后，调用此工具直接生成图片文件，无需用户手动执行命令。',
     parameters: {
       type: 'object',
       properties: {
-        prompt: { type: 'string', description: '图片描述（英文），越详细越好，包含风格、色彩、构图等' },
-        width: { type: 'number', description: '图片宽度（像素），默认1024' },
-        height: { type: 'number', description: '图片高度（像素），默认1024' },
+        root_code: { type: 'string', description: 'Root.tsx 完整代码，包含 Still 注册（import Still from remotion + export const RemotionRoot）' },
+        component_code: { type: 'string', description: '海报/图片主组件的完整 TSX 代码，保存为 Poster.tsx' },
+        composition_id: { type: 'string', description: 'Still 的 id 属性值，如 "Poster"、"Banner"' },
+        width: { type: 'number', description: '图片宽度（像素），默认 1080' },
+        height: { type: 'number', description: '图片高度（像素），默认 1080。小红书封面1440，竖版海报1920，公众号头图500' },
       },
-      required: ['prompt'],
+      required: ['root_code', 'component_code', 'composition_id'],
     },
   },
 ]
 
-export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools]
+export const videoRenderTools: FunctionDeclaration[] = [
+  {
+    name: 'render_video',
+    description: '将 Remotion TSX 代码渲染成 MP4 视频，在服务器端执行渲染并返回可播放视频。当你写完视频代码后，调用此工具直接生成视频文件，无需用户手动执行命令。',
+    parameters: {
+      type: 'object',
+      properties: {
+        root_code: { type: 'string', description: 'Root.tsx 完整代码，包含 Composition 注册（import + export const RemotionRoot）' },
+        component_code: { type: 'string', description: '视频主组件的完整 TSX 代码（包含所有场景），保存为 Video.tsx' },
+        composition_id: { type: 'string', description: 'Composition 的 id 属性值，如 "ErpAd"、"MyVideo"' },
+        duration_frames: { type: 'number', description: '总帧数，30fps 下：15秒=450帧，30秒=900帧，60秒=1800帧' },
+        width: { type: 'number', description: '视频宽度（像素），默认 1080' },
+        height: { type: 'number', description: '视频高度（像素），竖屏默认 1920，横屏用 1080' },
+      },
+      required: ['root_code', 'component_code', 'composition_id'],
+    },
+  },
+]
+
+export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools]

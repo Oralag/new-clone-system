@@ -101,6 +101,8 @@
           <h1 class="topbar-title">{{ currentPageTitle }}</h1>
         </div>
         <div class="topbar-right">
+          <!-- 实时时钟 -->
+          <div class="inv-clock">{{ clockStr }}</div>
           <!-- 主题切换 -->
           <div class="topbar-theme-btns">
             <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'light' }" title="亮色" @click="appStore.setTheme('light')">
@@ -152,8 +154,23 @@ const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
 
 onMounted(() => window.addEventListener('resize', handleResize))
-onUnmounted(() => window.removeEventListener('resize', handleResize))
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  if (clockTimer) clearInterval(clockTimer)
+})
 function handleResize() { isMobile.value = window.innerWidth < 768 }
+
+// ── 实时时钟 ──
+const clockStr = ref('')
+let clockTimer: ReturnType<typeof setInterval> | null = null
+function updateClock() {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+  clockStr.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} 星期${weekDays[now.getDay()]} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+}
+updateClock()
+clockTimer = setInterval(updateClock, 1000)
 
 const mobileNavItems = [
   { path: '/investment', label: '总览' },
@@ -349,6 +366,15 @@ const statusLabel = computed(() => {
   letter-spacing: 0;
 }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+/* 实时时钟 */
+.inv-clock {
+  font-size: 11px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
 
 /* 主题切换按钮 */
 .topbar-theme-btns {

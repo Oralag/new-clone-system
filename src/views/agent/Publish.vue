@@ -111,9 +111,7 @@
             <img :src="item.imageUrl" :alt="item.topic" />
           </div>
           <!-- 视频脚本 / 文案 / 图文文字 -->
-          <div class="card-text" :class="{ compact: item.type === 'poster' && item.imageUrl }">
-            {{ displayContent(item) }}
-          </div>
+          <div class="card-text" :class="{ compact: item.type === 'poster' && item.imageUrl }" v-html="renderMd(item)" />
         </div>
 
         <!-- 编辑弹层 -->
@@ -164,10 +162,14 @@
             <div v-if="filtered[previewIdx]?.type === 'poster' && filtered[previewIdx]?.imageUrl" class="preview-image">
               <img :src="filtered[previewIdx].imageUrl" :alt="filtered[previewIdx].topic" />
             </div>
-            <div class="preview-content">{{ displayContent(filtered[previewIdx]) }}</div>
+            <div class="preview-content" v-html="renderMd(filtered[previewIdx])" />
           </div>
           <div class="preview-footer">
             <button class="btn-cancel-edit" @click="previewIdx = -1">关闭</button>
+            <button class="btn-cancel-edit" @click="copyContent(filtered[previewIdx])">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 10V2.5A.5.5 0 012.5 2H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              复制
+            </button>
             <button class="btn-publish" @click="publishOne(previewIdx); previewIdx = -1">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               发布
@@ -185,6 +187,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useTrendingStore } from '@/stores/agent'
+import { marked } from 'marked'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptBulletin from '@/components/agent/DeptBulletin.vue'
 
@@ -269,6 +272,10 @@ function displayContent(item: any) {
     } catch { return item.content }
   }
   return item.content
+}
+
+function renderMd(item: any) {
+  return marked.parse(displayContent(item) || '') as string
 }
 
 function toggleSelect(idx: number) {
@@ -493,10 +500,13 @@ function batchPublish() {
 
 .card-text {
   font-size: 14px; color: #cbd5e1; line-height: 1.7;
-  white-space: pre-wrap; word-break: break-word;
+  word-break: break-word;
   display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical;
   overflow: hidden; padding-bottom: 14px;
 }
+.card-text :deep(p) { margin: 0 0 6px; }
+.card-text :deep(strong) { color: #f1f5f9; }
+.card-text :deep(blockquote) { margin: 0; padding-left: 10px; border-left: 2px solid #475569; color: #94a3b8; }
 .card-text.compact { -webkit-line-clamp: 3; }
 
 /* 编辑弹层 */
@@ -588,8 +598,14 @@ function batchPublish() {
 .preview-image img { width: 100%; display: block; }
 .preview-content {
   font-size: 15px; color: #e2e8f0; line-height: 1.8;
-  white-space: pre-wrap; word-break: break-word;
+  word-break: break-word;
 }
+.preview-content :deep(p) { margin: 0 0 10px; }
+.preview-content :deep(strong) { color: #f8fafc; }
+.preview-content :deep(blockquote) { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid #475569; color: #94a3b8; }
+.preview-content :deep(code) { background: #1e293b; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+.preview-content :deep(ul), .preview-content :deep(ol) { padding-left: 20px; margin: 0 0 10px; }
+.preview-content :deep(h1), .preview-content :deep(h2), .preview-content :deep(h3) { color: #f1f5f9; margin: 0 0 8px; }
 .preview-footer {
   display: flex; gap: 10px; justify-content: flex-end;
   padding: 14px 20px; border-top: 1px solid #1e293b;

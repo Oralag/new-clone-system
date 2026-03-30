@@ -465,6 +465,12 @@ export function aiChatPlugin(): Plugin {
               const fc = part.functionCall
               const callId = fc.id || fc.name
               send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
+              // render_video / render_image take 1-3 minutes — send progress hint
+              if (fc.name === 'render_video') {
+                send({ type: 'text', text: '\n⏳ 视频渲染中，通常需要 1~3 分钟，请稍候...\n' })
+              } else if (fc.name === 'render_image') {
+                send({ type: 'text', text: '\n⏳ 图片渲染中，请稍候...\n' })
+              }
               const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken)
               send({ type: 'tool_result', id: callId, name: fc.name, result })
               toolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })

@@ -113,6 +113,33 @@
           </span>
           <span class="nav-item-label">发布部</span>
         </router-link>
+
+        <!-- 顾问 -->
+        <div class="nav-section-label" style="margin-top:10px">顾问</div>
+
+        <!-- 营销顾问 -->
+        <router-link to="/agent/marketing" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <path d="M1 11L5 7L8 10L14 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M11 3h3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="3" cy="12" r="1.5" fill="currentColor" opacity="0.6"/>
+            </svg>
+          </span>
+          <span class="nav-item-label">营销顾问</span>
+        </router-link>
+
+        <!-- 平面设计师 -->
+        <router-link to="/agent/designer" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <circle cx="7.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M2 13c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+              <path d="M11 8l2 2-1 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-item-label">平面设计师</span>
+        </router-link>
       </nav>
 
       <!-- 公告栏 -->
@@ -275,9 +302,11 @@ const mobileNavItems = [
   { path: '/agent/content',  label: '内容部' },
   { path: '/agent/creative', label: '创意部' },
   { path: '/agent/brand',    label: '品牌部' },
-  { path: '/agent/trending', label: '情报部' },
-  { path: '/agent/publish',  label: '发布部' },
-  { path: '/agent/history',  label: '历史记录' },
+  { path: '/agent/trending',   label: '情报部' },
+  { path: '/agent/publish',    label: '发布部' },
+  { path: '/agent/marketing',  label: '营销顾问' },
+  { path: '/agent/designer',   label: '平面设计师' },
+  { path: '/agent/history',    label: '历史记录' },
 ]
 
 // 页面标题映射
@@ -288,8 +317,10 @@ const pageTitleMap: Record<string, string> = {
   '/agent/creative':  '创意部',
   '/agent/brand':     '品牌部',
   '/agent/trending':  '情报部',
-  '/agent/publish':   '发布部',
-  '/agent/history':   '历史记录',
+  '/agent/publish':     '发布部',
+  '/agent/marketing':   '营销顾问',
+  '/agent/designer':    '平面设计师',
+  '/agent/history':     '历史记录',
   '/agent/copywriting': '文案生成',
   '/agent/poster':    '图文海报',
   '/agent/video':     '视频生成',
