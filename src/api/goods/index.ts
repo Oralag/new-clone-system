@@ -33,3 +33,6 @@ export const deleteBom = (id: number) => http.post('/goods/ShopBom/del', { id })
 
 export const getGoodsPriceList = (params?: any) => http.get('/goods/ShopGoodsPrice/index', { params })
 export const updateGoodsPrice = (data: any) => http.post('/goods/ShopGoodsPrice/edit', data)
+
+export const getUnitConvert = (goods_id: number) => http.get('/goods/GoodsUnitConvert/index', { params: { goods_id } })
+export const saveUnitConvert = (data: { goods_id: number; units: { unit_name: string; ratio: number }[] }) => http.post('/goods/GoodsUnitConvert/save', data)

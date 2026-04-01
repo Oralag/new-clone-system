@@ -819,6 +819,7 @@ import {
   getUnitList, createUnit,
   getSpecList, createSpec, deleteSpec,
   getBomByGoods, getBomList,
+  getUnitConvert, saveUnitConvert,
 } from '@/api/goods'
 import { getStockList } from '@/api/warehouse'
 
@@ -2027,8 +2028,9 @@ async function loadSpecs() {
   // Auto-enable multi_spec if saved spec attrs exist
   if (specAttrs.value.length > 0) fd.multi_spec = true
   rebuildSkuList()
-  // Load multi-unit
-  const saved = loadMultiUnits(fd.id)
+  // Load multi-unit：优先从服务端取，没有再降级到 localStorage
+  const serverUnits = await loadMultiUnitsFromServer(fd.id)
+  const saved = serverUnits.length ? serverUnits : loadMultiUnits(fd.id)
   if (saved.length > 0) {
     multiUnitRows.value = saved
     fd.multi_unit = true
@@ -2136,6 +2138,7 @@ function persistSpecData(goodsId: number) {
   }
   if (fd.multi_unit) {
     saveMultiUnits(goodsId)
+    saveMultiUnitsToServer(goodsId)
   }
 }
 
@@ -2179,11 +2182,35 @@ const defaultSaleUnitIdx = ref(0)
 // Auxiliary units = all rows except the base (index 0)
 const auxUnitRows = computed(() => multiUnitRows.value.slice(1))
 
+async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]> {
+  try {
+    const res = await getUnitConvert(goodsId)
+    const rows: any[] = res.data?.rows ?? []
+    if (!rows.length) return []
+    return rows.map((r: any, i: number) => ({
+      is_base: i === 0,
+      unit_id: null,
+      unit_name: r.unit_name,
+      ratio: Number(r.ratio),
+      is_min_sale: i === 0,
+      is_default_sale: i === 0,
+      cost_price: 0,
+      sell_price: 0,
+    }))
+  } catch { return [] }
+}
+
+async function saveMultiUnitsToServer(goodsId: number) {
+  try {
+    const units = multiUnitRows.value.map(r => ({ unit_name: r.unit_name, ratio: r.ratio }))
+    await saveUnitConvert({ goods_id: goodsId, units })
+  } catch { /* 静默失败，不影响主流程 */ }
+}
+
 function loadMultiUnits(goodsId: number): MultiUnitRow[] {
   try {
     const map = JSON.parse(localStorage.getItem(MULTI_UNIT_KEY) || '{}')
     const rows: MultiUnitRow[] = map[goodsId] ?? []
-    // Backfill price fields for older stored rows that lack them
     return rows.map(r => ({ cost_price: 0, sell_price: 0, ...r }))
   } catch { return [] }
 }

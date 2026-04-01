@@ -6,6 +6,7 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureOrderList"
           :batch-del-api="batchDelProcureOrders"
+          sort-by="order_date" :sort-desc="true" :default-page-size="200"
           export-file-name="采购订单" :params="searchForm"
           :export-columns="{ order_no: '采购单号', supplier_name: '供应商', warehouse_name: '仓库', order_date: '开单日期', delivery_date: '预计交期', admin_name: '采购人', total_amount: '含税合计', status: '状态', pay_amount: '已付金额' }">
           <template #search>
@@ -19,6 +20,8 @@
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增采购单</el-button>
+            <el-button type="success" :icon="Check" :loading="batchAuditing" @click="handleBatchAudit">批量审核</el-button>
+            <el-button type="warning" :icon="RefreshLeft" :loading="batchReverseAuditing" @click="handleBatchReverseAudit">批量反审核</el-button>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
@@ -58,7 +61,7 @@
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="开单日期" width="110">
-            <template #default="{ row }">{{ fmtDt(row.order_date || row.create_time) }}</template>
+            <template #default="{ row }">{{ (row.order_date || row.create_time || '').slice(0, 10) }}</template>
           </el-table-column>
           <el-table-column label="预计交期" width="110">
             <template #default="{ row }">{{ fmtDt(row.delivery_date) || '—' }}</template>
@@ -279,9 +282,18 @@
                 <span style="font-size:12px;color:#666">{{ row.cate_name || '—' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="单位" width="70" align="center">
+            <el-table-column label="单位" width="90" align="center">
               <template #default="{ row }">
-                <el-input v-model="row.unit_name" size="small" placeholder="单位" />
+                <el-select
+                  v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
+                  v-model="row.unit_name"
+                  size="small"
+                  style="width:100%"
+                  @change="(v: string) => onUnitChange(row, v)"
+                >
+                  <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u.unit_name" :label="u.unit_name" :value="u.unit_name" />
+                </el-select>
+                <el-input v-else v-model="row.unit_name" size="small" placeholder="单位" />
               </template>
             </el-table-column>
             <el-table-column width="120">
@@ -645,12 +657,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
-import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close } from '@element-plus/icons-vue'
+import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
+import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getBomList, getBomByGoods, getSpecList } from '@/api/goods'
+import { getBomList, getBomByGoods, getSpecList, getUnitConvert } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getFundList, createFund, getPayReceiptList } from '@/api/finance'
 import http from '@/api/http'
@@ -666,6 +678,85 @@ const taxRates = TAX_RATES
 
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
+
+// ── 批量审核 / 反审核 ────────────────────────────────────────────────────────
+const batchAuditing = ref(false)
+const batchReverseAuditing = ref(false)
+
+async function handleBatchAudit() {
+  const selected: any[] = tableRef.value?.selectedRows ?? []
+  if (!selected.length) { ElMessage.warning('请先勾选要审核的采购单'); return }
+  const pending = selected.filter(r => Number(r.status) !== 1)
+  if (!pending.length) { ElMessage.warning('所选采购单已全部审核'); return }
+  await ElMessageBox.confirm(`确定批量审核选中的 ${pending.length} 条采购单？`, '提示', { type: 'warning' })
+  batchAuditing.value = true
+  let success = 0, failed = 0
+  for (const row of pending) {
+    try {
+      await auditProcureOrder(row.id, 1)
+      try {
+        const existRes = await getProcureInhouseList({ order_id: row.id, list_rows: 5 })
+        const existRows: any[] = existRes.data?.rows ?? []
+        if (existRows.length === 0) {
+          const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
+          const inhouseRes = await createProcureInhouse({
+            purchase_order_id: row.id,
+            supplier_id: row.supplier_id,
+            supplier_name: row.supplier_name,
+            warehouse_id: row.warehouse_id || 0,
+            warehouse_name: row.warehouse_name || '',
+            admin_name: row.admin_name || '',
+            in_date: (row.order_date || row.created_at || '').slice(0, 10),
+            total_amount: row.total_amount,
+            remark: row.remark || '',
+            goods_info: items,
+          })
+          const inhouseId = inhouseRes.data?.id ?? inhouseRes.data
+          if (inhouseId) await auditProcureInhouse(inhouseId, 1)
+        } else {
+          for (const r of existRows) {
+            if (r.status !== 1) await auditProcureInhouse(r.id, 1)
+          }
+        }
+      } catch (e: any) {
+        console.warn('自动创建入库单失败', e?.message)
+      }
+      success++
+    } catch { failed++ }
+  }
+  batchAuditing.value = false
+  stockRefreshStore.trigger()
+  tableRef.value?.refresh()
+  loadPaidMap()
+  ElMessage.success(`批量审核完成：成功 ${success} 条${failed ? `，失败 ${failed} 条` : ''}`)
+}
+
+async function handleBatchReverseAudit() {
+  const selected: any[] = tableRef.value?.selectedRows ?? []
+  if (!selected.length) { ElMessage.warning('请先勾选要反审核的采购单'); return }
+  const audited = selected.filter(r => Number(r.status) === 1)
+  if (!audited.length) { ElMessage.warning('所选采购单中没有已审核的'); return }
+  await ElMessageBox.confirm(`确定批量反审核选中的 ${audited.length} 条采购单？反审核将撤销入库与财务入账。`, '提示', { type: 'warning' })
+  batchReverseAuditing.value = true
+  let success = 0, failed = 0
+  for (const row of audited) {
+    try {
+      try {
+        const inhouseListRes = await getProcureInhouseList({ order_id: row.id, list_rows: 10 })
+        for (const r of (inhouseListRes.data?.rows ?? [])) {
+          if (r.status === 1) await auditProcureInhouse(r.id, 0)
+        }
+      } catch {}
+      await auditProcureOrder(row.id, 0)
+      success++
+    } catch { failed++ }
+  }
+  batchReverseAuditing.value = false
+  stockRefreshStore.trigger()
+  tableRef.value?.refresh()
+  loadPaidMap()
+  ElMessage.success(`批量反审核完成：成功 ${success} 条${failed ? `，失败 ${failed} 条` : ''}`)
+}
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
@@ -723,6 +814,7 @@ function getPayStatus(row: any): { label: string; type: string } {
 }
 
 function parseItems(goodsInfo: any): any[] {
+  if (Array.isArray(goodsInfo)) return goodsInfo
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
 }
 
@@ -756,6 +848,23 @@ async function fetchGoodsSpecs(goodsId: number) {
       options.push(...vals)
     }
     goodsSpecMap[goodsId] = [...new Set(options)]
+  } catch { /* ignore */ }
+}
+
+// 商品多单位换算缓存：goods_id -> [{unit_name, ratio}]
+const goodsUnitMap = reactive<Record<number, { unit_name: string; ratio: number }[]>>({})
+async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
+  if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
+  goodsUnitMap[goodsId] = []
+  try {
+    const res = await getUnitConvert(goodsId)
+    const rows: any[] = res.data?.rows ?? []
+    if (rows.length) {
+      goodsUnitMap[goodsId] = rows.map(r => ({ unit_name: r.unit_name, ratio: Number(r.ratio) }))
+    } else {
+      // 没有配置多单位，只有基础单位
+      goodsUnitMap[goodsId] = baseUnitName ? [{ unit_name: baseUnitName, ratio: 1 }] : []
+    }
   } catch { /* ignore */ }
 }
 const searchForm = reactive<any>({ order_no: '', supplier_name: '', status: '' })
@@ -1005,7 +1114,12 @@ function openEdit(row: any, readonly = false) {
   try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   try { fd.attachments = JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
   calcTotal()
-  fd.items.forEach((item: any) => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  fd.items.forEach((item: any) => {
+    if (item.goods_id) {
+      fetchGoodsSpecs(item.goods_id)
+      fetchGoodsUnits(item.goods_id, item.unit_name || '')
+    }
+  })
   isReadonly.value = readonly
   showForm.value = true
   loadPaidMap()
@@ -1134,6 +1248,37 @@ async function handleAudit(row: any, status: number) {
   await ElMessageBox.confirm(`确定${action}该采购单？`, '提示', { type: 'warning' })
   try {
     await auditProcureOrder(row.id, status)
+    // 审核通过后自动创建并审核采购入库记录（先检查是否已存在，避免重复）
+    if (status === 1) {
+      try {
+        const existRes = await getProcureInhouseList({ order_id: row.id, list_rows: 5 })
+        const existRows: any[] = existRes.data?.rows ?? []
+        if (existRows.length === 0) {
+          const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
+          const inhouseRes = await createProcureInhouse({
+            purchase_order_id: row.id,
+            supplier_id: row.supplier_id,
+            supplier_name: row.supplier_name,
+            warehouse_id: row.warehouse_id || 0,
+            warehouse_name: row.warehouse_name || '',
+            admin_name: row.admin_name || '',
+            in_date: (row.order_date || row.created_at || '').slice(0, 10),
+            total_amount: row.total_amount,
+            remark: row.remark || '',
+            goods_info: items,
+          })
+          const inhouseId = inhouseRes.data?.id ?? inhouseRes.data
+          if (inhouseId) await auditProcureInhouse(inhouseId, 1)
+        } else {
+          // 已有入库单，确保已审核
+          for (const r of existRows) {
+            if (r.status !== 1) await auditProcureInhouse(r.id, 1)
+          }
+        }
+      } catch (e: any) {
+        console.warn('自动创建采购入库记录失败', e?.message)
+      }
+    }
     stockRefreshStore.trigger()
     ElMessage.success(`${action}成功`)
     tableRef.value?.refresh()
@@ -1255,8 +1400,16 @@ function onGoodsConfirm(goods: any[]) {
       price: Number((priceNoTax * 1.13).toFixed(4)), remark: '',
       supplier_id: null, supplier_name: '' })
     fetchGoodsSpecs(g.id)
+    fetchGoodsUnits(g.id, g.unit_name || '')
   }
   calcTotal()
+}
+
+// 切换采购单位时，更新 unit_ratio 字段供入库换算使用
+function onUnitChange(row: any, unitName: string) {
+  const units = goodsUnitMap[row.goods_id] ?? []
+  const found = units.find(u => u.unit_name === unitName)
+  row.unit_ratio = found ? found.ratio : 1
 }
 
 // ── 手动新增商品 ──────────────────────────────────────────────────────────────
