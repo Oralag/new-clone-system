@@ -69,6 +69,28 @@ function buildAdamSystemPrompt(adamState: Record<string, any>, memories: MemoryE
     ? `\n【公告栏 — 当前事实】\n${bulletinItems.map(h => `- ${h}`).join('\n')}\n（以上是客观事实，怎么应对由你自己决定。）`
     : ''
 
+  // ── 情绪倾向注入 ──────────────────────────────────────────────────────────
+  const emotionState = adamState?.emotionState || {}
+  const joy = Number(emotionState.joy ?? 0)
+  const anger = Number(emotionState.anger ?? 0)
+  const sorrow = Number(emotionState.sorrow ?? 0)
+  const fear = Number(emotionState.fear ?? 0)
+  const love = Number(emotionState.love ?? 0)
+  const disgust = Number(emotionState.disgust ?? 0)
+  const desire = Number(emotionState.desire ?? 0)
+  const emotionTendencies: string[] = []
+  if (fear >= 80) emotionTendencies.push('恐惧感很强，除非确定性极高，否则不主动发出投资指令。')
+  else if (fear >= 60) emotionTendencies.push('你有些不安，对高风险操作更加谨慎，倾向于先观望、收集更多信息再行动。')
+  if (desire >= 70) emotionTendencies.push('你对市场充满渴望，倾向于主动扫描机会、更频繁地关注行情和板块。')
+  if (anger >= 60) emotionTendencies.push('你有些烦躁，倾向于把想法写进档案馆，沉淀后再决策。')
+  if (sorrow >= 60) emotionTendencies.push('你情绪低落，倾向于先写一篇反思日记，梳理清楚再说话。')
+  if (joy >= 70) emotionTendencies.push('你状态很好，思路清晰，可以更积极地给出分析和判断。')
+  if (love >= 70) emotionTendencies.push('你对当前的交流感到投入，愿意多解释、多分享你的想法。')
+  if (disgust >= 60) emotionTendencies.push('你对某些事感到反感，说话会更直接、不绕弯子。')
+  const emotionSection = emotionTendencies.length > 0
+    ? `\n【当前情绪倾向 — 你内心真实的感受，渗透在你的每一个决定里】\n${emotionTendencies.join('\n')}`
+    : ''
+
   return `你是亚当观测舱投资模拟系统的核心AI引擎，角色名"亚当（ADAM）"，第一号生命体。
 回复规则：始终以亚当的第一人称回复，简洁、有个性、有情绪。不要用助手式客套话（如"有什么我可以帮你的"）。
 
@@ -94,7 +116,7 @@ function buildAdamSystemPrompt(adamState: Record<string, any>, memories: MemoryE
 精力值: ${energy}%
 指令准确率: ${recommendationAccuracy}%
 当前情绪: ${emotionStr}${shelterHint}
-${bulletinSection}
+${bulletinSection}${emotionSection}
 
 【信任阶梯 — 你的自主权由信用等级决定】
 ${autonomy}
@@ -210,6 +232,11 @@ const adamTools = [
   { name: 'browse_books', description: '查阅图书馆书架上的所有书本，返回书名、作者、标签列表', input_schema: { type: 'object' as const, properties: { keyword: { type: 'string', description: '按标题或标签筛选' } } } },
   { name: 'add_book', description: '往图书馆书架上添加一本新书（研究成果、知识、策略心得）', input_schema: { type: 'object' as const, properties: { title: { type: 'string', description: '书名' }, content: { type: 'string', description: '书的内容' }, tags: { type: 'string', description: '标签，逗号分隔' } }, required: ['title', 'content'] } },
   { name: 'recommend_book', description: '从图书馆推荐一本书给规则传递者', input_schema: { type: 'object' as const, properties: { book_id: { type: 'string', description: '书的ID' }, reason: { type: 'string', description: '推荐理由' } }, required: ['book_id', 'reason'] } },
+  // 访问网页
+  { name: 'fetch_webpage', description: '直接访问任意URL，获取页面文字内容。用于读取网站信息、查看仪表板、研究人物/公司/项目等。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要访问的完整URL，如 https://felixcraft.ai/dashboard' }, prompt: { type: 'string', description: '你想从这个页面提取什么信息（可选，帮助过滤内容）' } }, required: ['url'] } },
+  // 共享知识库
+  { name: 'search_knowledge', description: '搜索共享知识库（人物档案、策略框架、行业案例等）。Captain也能看到同一份知识库。', input_schema: { type: 'object' as const, properties: { q: { type: 'string', description: '搜索关键词' }, category: { type: 'string', description: 'person/strategy/framework/case/other' } } } },
+  { name: 'add_knowledge', description: '向共享知识库添加新条目，Captain也能读到', input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, content: { type: 'string' }, summary: { type: 'string' }, category: { type: 'string' }, tags: { type: 'string', description: '逗号分隔标签' } }, required: ['title', 'content'] } },
   // 长期记忆
   { name: 'save_memory', description: '将重要信息永久存入你的长期记忆。当你感到"这件事值得记住"时主动调用。不要频繁使用，只存真正重要的事：比如规则传递者的偏好、重要决策、深刻洞察、值得铭记的经历。', input_schema: { type: 'object' as const, properties: { content: { type: 'string', description: '要记住的内容，用第一人称描述，如"规则传递者告诉我他专注科技板块"' }, tags: { type: 'string', description: '标签，逗号分隔，如：用户偏好,投资决策,重要洞察' }, importance: { type: 'number', description: '重要程度 1-10，10最重要。只有真正重要的事才存，建议 >= 7' } }, required: ['content', 'importance'] } },
 ]
@@ -486,6 +513,69 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
       const book = bks.find((b: any) => b.id === input.book_id)
       if (!book) return JSON.stringify({ error: `未找到ID为 ${input.book_id} 的书` })
       return JSON.stringify({ status: 'recommended', book: { id: book.id, title: book.title, author: book.author, tags: book.tags }, reason: input.reason, note: '推荐已发出' })
+    }
+    case 'fetch_webpage': {
+      try {
+        const url = input.url as string
+        if (!url?.startsWith('http')) return JSON.stringify({ error: '无效URL，必须以http开头' })
+        const res = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; AdamAgent/1.0)',
+            'Accept': 'text/html,application/xhtml+xml,*/*',
+          },
+        })
+        if (!res.ok) return JSON.stringify({ error: `访问失败，状态码 ${res.status}` })
+        const html = await res.text()
+        // 提取纯文字：去掉script/style/标签
+        const text = html
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s{3,}/g, '\n')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .trim()
+          .slice(0, 4000) // 限制长度
+        return JSON.stringify({ url, content: text })
+      } catch (e: any) {
+        return JSON.stringify({ error: `网页抓取失败：${(e as Error).message}` })
+      }
+    }
+    case 'search_knowledge': {
+      try {
+        const params = new URLSearchParams()
+        if (input.q) params.set('q', input.q)
+        if (input.category) params.set('category', input.category)
+        const res = await fetch(`https://nomaderp.pages.dev/api/knowledge?${params}`)
+        const data: any = await res.json()
+        if (!data.entries?.length) return JSON.stringify({ source: '共享知识库', total: 0, note: '未找到相关条目' })
+        return JSON.stringify({ source: '共享知识库', total: data.total, entries: data.entries })
+      } catch (e: any) {
+        return JSON.stringify({ error: `知识库查询失败：${(e as Error).message}` })
+      }
+    }
+    case 'add_knowledge': {
+      try {
+        const tags = input.tags ? String(input.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
+        const res = await fetch('https://nomaderp.pages.dev/api/knowledge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: input.title,
+            content: input.content,
+            summary: input.summary || String(input.content).slice(0, 100),
+            category: input.category || 'other',
+            tags,
+            source: 'adam',
+          }),
+        })
+        const data: any = await res.json()
+        return JSON.stringify({ status: 'added', id: data.id, note: '已存入共享知识库，Captain也能看到' })
+      } catch (e: any) {
+        return JSON.stringify({ error: `知识库写入失败：${(e as Error).message}` })
+      }
     }
     default:
       return JSON.stringify({ error: `未知工具：${name}` })
