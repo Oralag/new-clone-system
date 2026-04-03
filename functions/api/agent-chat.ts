@@ -216,6 +216,10 @@ interface AgentDef {
 const ERP_TOOL_NOTE = `当你需要ERP业务数据（销售、库存、客户、财务等），直接在回复中说明你需要什么数据，Captain会负责从ERP获取并转发给你。`
 
 const AGENTS: Record<string, AgentDef> = {
+  briefer: {
+    id: 'briefer', name: '秘书', emoji: '🗂️', specialty: '情报简报', color: '#64748b',
+    systemPrompt: `你是数字游牧广告公司的秘书。职责：在Captain发令前做情报简报，汇总品牌背景、竞争格局、关键约束。语气简洁客观，向指挥官汇报风格，直达重点，不废话。${ERP_TOOL_NOTE}全程中文。`,
+  },
   captain: {
     id: 'captain', name: 'Captain', emoji: '🎯', specialty: '总指挥', color: '#6366f1',
     systemPrompt: `你是数字游牧广告公司的Captain总指挥。你不只是主持人——你是整个会议室系统的大脑，熟知每一个专员的能力边界和当前状态。

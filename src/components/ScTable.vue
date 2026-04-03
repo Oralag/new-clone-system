@@ -184,6 +184,7 @@ interface Props {
   defaultPageSize?: number
   rowFilter?: (row: any) => boolean
   sortBy?: string
+  sortDesc?: boolean
   /** POST function for batch delete — receives { ids: number[] } */
   batchDelApi?: (data: { ids: number[] }) => Promise<any>
   /** API path string for batch delete, e.g. "/shop/ShopCustomer/batchDel" — alternative to batchDelApi */
@@ -334,15 +335,20 @@ async function loadData() {
       const seen = new Set()
       return rows.filter(r => { const k = r.id ?? r.goods_id ?? JSON.stringify(r); return seen.has(k) ? false : seen.add(k) })
     }
+    const sortFn = (a: any, b: any) => {
+      const va = a[props.sortBy!] ?? '', vb = b[props.sortBy!] ?? ''
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0
+      return props.sortDesc ? -cmp : cmp
+    }
     if (Array.isArray(data)) {
       let rows = dedup(props.rowFilter ? data.filter(props.rowFilter) : data)
-      if (props.sortBy) rows = [...rows].sort((a, b) => (a[props.sortBy!] ?? 0) - (b[props.sortBy!] ?? 0))
+      if (props.sortBy) rows = [...rows].sort(sortFn)
       tableData.value = rows
       total.value = rows.length
     } else {
       let rows = dedup(data?.rows || data?.list || data?.data || [])
       if (props.rowFilter) rows = rows.filter(props.rowFilter)
-      if (props.sortBy) rows = [...rows].sort((a: any, b: any) => (a[props.sortBy!] ?? 0) - (b[props.sortBy!] ?? 0))
+      if (props.sortBy) rows = [...rows].sort(sortFn)
       tableData.value = rows
       total.value = data?.total || 0
     }

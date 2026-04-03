@@ -11,12 +11,14 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AdamChat: typeof import('./components/AdamChat.vue')['default']
     AgentChat: typeof import('./components/agent/AgentChat.vue')['default']
     AgentOnboardingGuide: typeof import('./components/AgentOnboardingGuide.vue')['default']
     AgentPageLayout: typeof import('./components/agent/AgentPageLayout.vue')['default']
     AiAssistant: typeof import('./components/AiAssistant.vue')['default']
     AiMemoryPanel: typeof import('./components/ai/AiMemoryPanel.vue')['default']
     AiToolCallCard: typeof import('./components/ai/AiToolCallCard.vue')['default']
+    BrandCustomerService: typeof import('./components/BrandCustomerService.vue')['default']
     CaptainBar: typeof import('./components/CaptainBar.vue')['default']
     CaptchaCanvas: typeof import('./components/CaptchaCanvas.vue')['default']
     CommanderBar: typeof import('./components/CommanderBar.vue')['default']
@@ -69,6 +71,7 @@ declare module 'vue' {
     GoodsFormDialog: typeof import('./components/GoodsFormDialog.vue')['default']
     GoodsSelect: typeof import('./components/GoodsSelect.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
+    ImageCropper: typeof import('./components/ImageCropper.vue')['default']
     OnboardingGuide: typeof import('./components/OnboardingGuide.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

@@ -12,7 +12,7 @@ const routes: RouteRecordRaw[] = [
     path: '/portal',
     name: 'Portal',
     component: () => import('@/views/Portal.vue'),
-    meta: { title: '选择模块' },
+    meta: { title: '选择模块', public: true },
   },
   {
     path: '/',
@@ -202,6 +202,26 @@ const routes: RouteRecordRaw[] = [
       { path: 'history', name: 'AgentHistory', component: () => import('@/views/agent/History.vue'), meta: { title: '历史记录' } },
       { path: 'marketing', name: 'AgentMarketing', component: () => import('@/views/investment/Marketing.vue'), meta: { title: '营销顾问' } },
       { path: 'designer', name: 'AgentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
+    ],
+  },
+  // 品牌主页 & 零售中心（独立布局，公开访问无需ERP登录）
+  {
+    path: '/brand',
+    component: () => import('@/layouts/BrandLayout.vue'),
+    meta: { public: true },
+    children: [
+      { path: '', name: 'BrandIndex', component: () => import('@/views/brand/Index.vue'), meta: { title: 'NOMADIC DAIRY', public: true } },
+      { path: 'products', name: 'BrandProducts', component: () => import('@/views/brand/Products.vue'), meta: { title: '全部产品 - NOMADIC DAIRY', public: true } },
+      { path: 'product/:id', name: 'BrandProductDetail', component: () => import('@/views/brand/ProductDetail.vue'), meta: { title: '产品详情 - NOMADIC DAIRY', public: true } },
+      { path: 'cart', name: 'BrandCart', component: () => import('@/views/brand/Cart.vue'), meta: { title: '购物车 - NOMADIC DAIRY', public: true } },
+      { path: 'reviews', name: 'BrandReviews', component: () => import('@/views/brand/Reviews.vue'), meta: { title: '用户评价 - NOMADIC DAIRY', public: true } },
+      { path: 'story', name: 'BrandStory', component: () => import('@/views/brand/Story.vue'), meta: { title: '品牌故事 - NOMADIC DAIRY', public: true } },
+      { path: 'shipping', name: 'BrandShipping', component: () => import('@/views/brand/Shipping.vue'), meta: { title: '物流查询 - NOMADIC DAIRY', public: true } },
+      { path: 'support', name: 'BrandSupport', component: () => import('@/views/brand/Support.vue'), meta: { title: '客户支持 - NOMADIC DAIRY', public: true } },
+      { path: 'settings', name: 'BrandSettings', component: () => import('@/views/brand/Settings.vue'), meta: { title: '品牌设置 - NOMADIC DAIRY', public: true } },
+      { path: 'orders', name: 'BrandOrders', component: () => import('@/views/brand/Orders.vue'), meta: { title: '订单查询 - NOMADIC DAIRY', public: true } },
+      { path: 'wholesale-apply', name: 'BrandWholesaleApply', component: () => import('@/views/brand/WholesaleApply.vue'), meta: { title: '采购商申请 - NOMADIC DAIRY', public: true } },
+      { path: 'checkout', name: 'BrandCheckout', component: () => import('@/views/brand/Checkout.vue'), meta: { title: '结账 - NOMADIC DAIRY', public: true } },
     ],
   },
   // 投资部门（独立布局 — 黑曜石观测舱）

@@ -364,6 +364,281 @@
       </div>
     </div>
   </div>
+
+  <!-- 记录投资弹窗 -->
+  <div v-if="showRecordInvestmentDialog" class="dialog-mask" @click.self="showRecordInvestmentDialog = false">
+    <div class="dialog-box">
+      <div class="dialog-title">📈 记录投资</div>
+      <div class="dialog-desc">手动记录一笔投资操作，写入资金流水</div>
+      <input v-model="riForm.symbol" type="text" class="dialog-input" placeholder="标的（如 000001 或 黄金）" />
+      <div class="dialog-row-2col">
+        <select v-model="riForm.direction" class="dialog-select">
+          <option value="buy">买入</option>
+          <option value="sell">卖出</option>
+        </select>
+        <input v-model="riForm.amount" type="number" class="dialog-input" placeholder="金额（元）" min="0" />
+      </div>
+      <input v-model="riForm.note" type="text" class="dialog-input" placeholder="备注（可选）" />
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showRecordInvestmentDialog = false">取消</button>
+        <button class="btn-gold" @click="handleRecordInvestment">记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结算分红弹窗 -->
+  <div v-if="showDividendDialog" class="dialog-mask" @click.self="showDividendDialog = false">
+    <div class="dialog-box">
+      <div class="dialog-title">💰 结算分红</div>
+      <div class="dialog-desc">
+        当前信用等级 <strong>{{ adamStore.core.creditLevel }}</strong>，
+        分红比例：你 <strong>{{ dividendRatio * 100 }}%</strong> / 亚当 {{ (1 - dividendRatio) * 100 }}%
+      </div>
+      <input v-model="dvForm.totalProfit" type="number" class="dialog-input" placeholder="本期总利润（元）" min="0" />
+      <div v-if="dvForm.totalProfit" class="dialog-calc-hint">
+        → 你获得：¥{{ (parseFloat(dvForm.totalProfit) * dividendRatio).toFixed(2) }}
+        　亚当留存：¥{{ (parseFloat(dvForm.totalProfit) * (1 - dividendRatio)).toFixed(2) }}
+      </div>
+      <input v-model="dvForm.note" type="text" class="dialog-input" placeholder="备注（可选）" />
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showDividendDialog = false">取消</button>
+        <button class="btn-gold" @click="handleSettleDividend">结算</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 执行赔付弹窗 -->
+  <div v-if="showPenaltyDialog" class="dialog-mask" @click.self="showPenaltyDialog = false">
+    <div class="dialog-box">
+      <div class="dialog-title">⚖️ 执行赔付</div>
+      <div class="dialog-desc">赔付公式：客观置信度 × 损失金额 × 0.1</div>
+      <input v-model="penForm.lossAmount" type="number" class="dialog-input" placeholder="实际损失金额（元）" min="0" />
+      <div class="dialog-row-2col">
+        <div class="dialog-label-input">
+          <label class="dialog-field-label">亚当自报置信度</label>
+          <input v-model="penForm.selfConfidence" type="number" class="dialog-input" placeholder="0-100" min="0" max="100" />
+        </div>
+        <div class="dialog-label-input">
+          <label class="dialog-field-label">客观置信度（你评）</label>
+          <input v-model="penForm.objConfidence" type="number" class="dialog-input" placeholder="0-100" min="0" max="100" />
+        </div>
+      </div>
+      <div v-if="penForm.lossAmount && penForm.objConfidence" class="dialog-calc-hint">
+        → 赔付金额：¥{{ penaltyAmount.toFixed(2) }}（亚当账户扣除）
+      </div>
+      <input v-model="penForm.note" type="text" class="dialog-input" placeholder="事件说明（可选）" />
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showPenaltyDialog = false">取消</button>
+        <button class="btn-gold" @click="handleApplyPenalty">确认赔付</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 发出指令弹窗 -->
+  <div v-if="showIssueRecommDialog" class="dialog-mask" @click.self="showIssueRecommDialog = false">
+    <div class="dialog-box dialog-box-wide">
+      <div class="dialog-title">📋 发出投资指令</div>
+      <div class="dialog-desc">亚当代表你发出一份正式投资建议</div>
+      <input v-model="recForm.title" type="text" class="dialog-input" placeholder="标题（如：买入比亚迪）" />
+      <div class="dialog-row-2col">
+        <input v-model="recForm.symbol" type="text" class="dialog-input" placeholder="标的代码（可选）" />
+        <select v-model="recForm.direction" class="dialog-select">
+          <option value="long">做多/买入</option>
+          <option value="short">做空/卖出</option>
+          <option value="hold">持有观望</option>
+          <option value="exit">止盈离场</option>
+        </select>
+      </div>
+      <div class="dialog-row-2col">
+        <input v-model="recForm.targetPrice" type="number" class="dialog-input" placeholder="目标价（元，可选）" min="0" />
+        <input v-model="recForm.stopLoss" type="number" class="dialog-input" placeholder="止损价（元，可选）" min="0" />
+      </div>
+      <div class="dialog-label-input" style="margin-bottom:6px">
+        <label class="dialog-field-label">亚当置信度：{{ recForm.confidence }}%</label>
+        <input v-model="recForm.confidence" type="range" min="0" max="100" style="width:100%;accent-color:#00D4FF" />
+      </div>
+      <textarea v-model="recForm.thesis" class="dialog-textarea" placeholder="核心逻辑（必填）" rows="3"></textarea>
+      <textarea v-model="recForm.riskNote" class="dialog-textarea" placeholder="风险提示（必填）" rows="2"></textarea>
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showIssueRecommDialog = false">取消</button>
+        <button class="btn-gold" @click="handleIssueRecommendation">发出指令</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 下达任务弹窗（情报站/研究院等需要参数的AI工具） -->
+  <div v-if="showTaskDialog" class="dialog-mask" @click.self="showTaskDialog = false">
+    <div class="dialog-box">
+      <div class="dialog-title">{{ taskDialogTitle }}</div>
+      <div class="dialog-desc">{{ taskDialogDesc }}</div>
+      <input
+        v-for="field in taskDialogFields"
+        :key="field.key"
+        v-model="taskParams[field.key]"
+        :type="field.type || 'text'"
+        class="dialog-input"
+        :placeholder="field.placeholder"
+      />
+      <!-- 工具运行中显示loading -->
+      <div v-if="toolRunning === taskDialogToolId" class="dialog-running">
+        <span class="tool-indicator spin"></span> 亚当正在执行…
+      </div>
+      <div v-if="taskResultText" class="task-result-box">{{ taskResultText }}</div>
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showTaskDialog = false">关闭</button>
+        <button class="btn-gold" :disabled="!!toolRunning" @click="handleRunTask">下达任务</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保险箱弹窗 -->
+  <div v-if="showVaultDialog" class="dialog-mask" @click.self="showVaultDialog = false">
+    <div class="dialog-box">
+      <div class="dialog-title">🔒 保险箱管理</div>
+      <div class="dialog-desc">
+        当前保险箱余额：<strong>¥{{ adamStore.core.survivalDays >= 7 ? vaultBalance.toLocaleString() : '未解锁' }}</strong>
+        <span v-if="adamStore.core.survivalDays < 7" style="color:#888;display:block;margin-top:4px">（存活满7天后解锁，当前第{{ adamStore.core.survivalDays }}天）</span>
+      </div>
+      <div v-if="adamStore.core.survivalDays >= 7">
+        <div class="dialog-row-2col" style="margin-bottom:8px">
+          <button class="btn-ghost" :class="{ active: vaultAction === 'deposit' }" style="flex:1" @click="vaultAction = 'deposit'">存入</button>
+          <button class="btn-ghost" :class="{ active: vaultAction === 'withdraw' }" style="flex:1" @click="vaultAction = 'withdraw'">取出</button>
+        </div>
+        <input v-model="vaultAmount" type="number" class="dialog-input" :placeholder="`${vaultAction === 'deposit' ? '存入' : '取出'}金额（元）`" min="0" />
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showVaultDialog = false">取消</button>
+        <button v-if="adamStore.core.survivalDays >= 7" class="btn-gold" @click="handleVault">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图书馆书架弹窗 -->
+  <div v-if="showLibraryDialog" class="dialog-mask" @click.self="showLibraryDialog = false">
+    <div class="dialog-box dialog-box-wide">
+      <div class="dialog-title">📖 图书馆书架</div>
+      <input v-model="librarySearch" type="text" class="dialog-input" placeholder="搜索书名或标签…" style="margin-bottom:8px" />
+      <div v-if="filteredBooks.length === 0" class="detail-empty" style="padding:16px 0">书架空空，亚当还没有写过书</div>
+      <div v-else class="library-list">
+        <div v-for="b in filteredBooks" :key="b.id" class="library-item">
+          <div class="library-item-title">{{ b.title }}</div>
+          <div class="library-item-meta">
+            <span>{{ b.author === 'adam' ? '亚当著' : '用户投喂' }}</span>
+            <span v-if="b.tags?.length">· {{ b.tags.join(' / ') }}</span>
+            <span>· {{ formatTime(b.createdAt) }}</span>
+          </div>
+          <div class="library-item-content">{{ b.content?.slice(0, 120) }}{{ b.content?.length > 120 ? '…' : '' }}</div>
+        </div>
+      </div>
+      <div class="dialog-actions" style="margin-top:8px">
+        <button class="btn-ghost" @click="showLibraryDialog = false">关闭</button>
+        <button class="btn-gold" @click="showAddBookDialog = true; showLibraryDialog = false">+ 投喂书籍</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加书籍弹窗 -->
+  <div v-if="showAddBookDialog" class="dialog-mask" @click.self="showAddBookDialog = false">
+    <div class="dialog-box dialog-box-wide">
+      <div class="dialog-title">📝 投喂书籍给亚当</div>
+      <div class="dialog-desc">你可以把书籍内容投喂给亚当，丰富他的知识库</div>
+      <input v-model="bookForm.title" type="text" class="dialog-input" placeholder="书名（必填）" />
+      <input v-model="bookForm.tags" type="text" class="dialog-input" placeholder="标签，逗号分隔（如：投资,价值,巴菲特）" />
+      <textarea v-model="bookForm.content" class="dialog-textarea" placeholder="书籍内容或摘要（必填）" rows="5"></textarea>
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showAddBookDialog = false">取消</button>
+        <button class="btn-gold" @click="handleAddBook">投喂</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 写日记弹窗（触发亚当反思） -->
+  <div v-if="showReflectionDialog" class="dialog-mask" @click.self="showReflectionDialog = false">
+    <div class="dialog-box dialog-box-wide">
+      <div class="dialog-title">📓 档案馆 · 触发亚当反思</div>
+      <div class="dialog-desc">给亚当一个提示，让他写下今天的反思日记</div>
+      <textarea v-model="reflectionPrompt" class="dialog-textarea" placeholder="今天发生了什么？你想让亚当反思哪些事？（可选，留空让他自由发挥）" rows="3"></textarea>
+      <div v-if="toolRunning === 'write_reflection'" class="dialog-running">
+        <span class="tool-indicator spin"></span> 亚当正在写日记…
+      </div>
+      <div v-if="reflectionResultText" class="task-result-box">{{ reflectionResultText }}</div>
+      <!-- 历史日记 -->
+      <div v-if="adamStore.reflections.length" style="margin-top:12px">
+        <div class="dialog-field-label" style="margin-bottom:6px">历史日记（最近5篇）</div>
+        <div v-for="r in [...adamStore.reflections].reverse().slice(0,5)" :key="r.id" class="reflection-item">
+          <div class="reflection-time">{{ formatTime(r.at) }}</div>
+          <div class="reflection-content">{{ r.content }}</div>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showReflectionDialog = false">关闭</button>
+        <button class="btn-gold" :disabled="!!toolRunning" @click="handleWriteReflection">触发反思</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 迁移建筑弹窗 -->
+  <div v-if="showRelocateDialog" class="dialog-mask" @click.self="showRelocateDialog = false">
+    <div class="dialog-box">
+      <div class="dialog-title">🏗️ 迁移建筑</div>
+      <div class="dialog-desc">选择要迁移的建筑，填入新坐标</div>
+      <select v-model="relocateForm.buildingId" class="dialog-select">
+        <option value="">选择建筑…</option>
+        <option v-for="b in adamStore.buildings.filter(b => b.status === 'active')" :key="b.id" :value="b.id">
+          {{ b.name }}（{{ b.position.gridX }}, {{ b.position.gridY }}）
+        </option>
+      </select>
+      <div class="dialog-row-2col" style="margin-top:8px">
+        <input v-model="relocateForm.newX" type="number" class="dialog-input" placeholder="新 X 坐标" min="0" max="31" />
+        <input v-model="relocateForm.newY" type="number" class="dialog-input" placeholder="新 Y 坐标" min="0" max="31" />
+      </div>
+      <input v-model="relocateForm.reason" type="text" class="dialog-input" placeholder="迁移原因（可选）" />
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showRelocateDialog = false">取消</button>
+        <button class="btn-gold" @click="handleRelocate">确认迁移</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 升级建筑弹窗 -->
+  <div v-if="showUpgradeDialog" class="dialog-mask" @click.self="showUpgradeDialog = false">
+    <div class="dialog-box">
+      <div class="dialog-title">⬆️ 升级建筑</div>
+      <div class="dialog-desc">为建筑记录一次升级</div>
+      <select v-model="upgradeForm.buildingId" class="dialog-select">
+        <option value="">选择建筑…</option>
+        <option v-for="b in adamStore.buildings.filter(b => b.status === 'active')" :key="b.id" :value="b.id">
+          {{ b.name }}（LV.{{ b.upgradeHistory?.length || 0 }}）
+        </option>
+      </select>
+      <input v-model="upgradeForm.newType" type="text" class="dialog-input" placeholder="升级后类型描述（如：超算中心）" style="margin-top:8px" />
+      <input v-model="upgradeForm.reason" type="text" class="dialog-input" placeholder="升级原因（可选）" />
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showUpgradeDialog = false">取消</button>
+        <button class="btn-gold" @click="handleUpgrade">确认升级</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ERP权限申请弹窗 -->
+  <div v-if="showErpAccessDialog" class="dialog-mask" @click.self="showErpAccessDialog = false">
+    <div class="dialog-box">
+      <div class="dialog-title">🔑 申请ERP数据权限</div>
+      <div class="dialog-desc">亚当申请访问你的ERP业务数据，用于市场分析</div>
+      <select v-model="erpAccessForm.dataType" class="dialog-select">
+        <option value="sales">销售数据</option>
+        <option value="inventory">库存数据</option>
+        <option value="finance">财务数据</option>
+        <option value="customers">客户数据</option>
+        <option value="all">全部数据</option>
+      </select>
+      <input v-model="erpAccessForm.reason" type="text" class="dialog-input" placeholder="申请原因（可选）" style="margin-top:8px" />
+      <div class="dialog-actions">
+        <button class="btn-ghost" @click="showErpAccessDialog = false">拒绝</button>
+        <button class="btn-gold" @click="handleErpAccess(true)">批准授权</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -543,6 +818,443 @@ onUnmounted(() => {
   if (moveDoneTimer) clearTimeout(moveDoneTimer)
 })
 
+// ── 下达任务弹窗（通用 AI 工具，需要参数） ──
+interface TaskField { key: string; placeholder: string; type?: string }
+const showTaskDialog = ref(false)
+const taskDialogTitle = ref('')
+const taskDialogDesc = ref('')
+const taskDialogToolId = ref('')
+const taskDialogFields = ref<TaskField[]>([])
+const taskParams = ref<Record<string, string>>({})
+const taskResultText = ref('')
+
+// 工具参数配置表
+const toolTaskConfig: Record<string, { title: string; desc: string; fields: TaskField[] }> = {
+  scan_market_news:         { title: '📡 扫描市场新闻', desc: '亚当将为你抓取相关新闻资讯', fields: [{ key: 'keywords', placeholder: '关键词（如：新能源、AI、比亚迪）' }] },
+  get_sector_heat:          { title: '🌡️ 板块热度', desc: '亚当查询当前市场各板块热度', fields: [{ key: 'top_n', placeholder: '显示前N个板块（默认10）', type: 'number' }] },
+  get_northbound_flow:      { title: '🌊 北向资金', desc: '亚当查询北向资金流入流出情况', fields: [] },
+  get_stock_realtime:       { title: '📈 实时行情', desc: '亚当查询指定股票实时价格', fields: [{ key: 'symbol', placeholder: '股票代码（如：000001）' }] },
+  get_stock_history:        { title: '📊 历史K线', desc: '亚当查询股票历史K线数据', fields: [{ key: 'symbol', placeholder: '股票代码（如：000001）' }, { key: 'period', placeholder: '周期：daily/weekly/monthly（默认daily）' }, { key: 'count', placeholder: '条数（默认30，最多90）', type: 'number' }] },
+  analyze_fundamentals:     { title: '🔬 基本面分析', desc: '亚当查询股票基本面数据（PE/PB/市值等）', fields: [{ key: 'symbol', placeholder: '股票代码（如：600519）' }] },
+  screen_stocks:            { title: '🔍 选股筛选', desc: '亚当从A股涨幅榜筛选机会', fields: [{ key: 'criteria', placeholder: '筛选条件说明（如：低PE高ROE）' }] },
+  generate_research_report: { title: '📋 生成研报', desc: '亚当结合实时行情撰写研究报告', fields: [{ key: 'symbol', placeholder: '股票代码（可选，留空则写宏观报告）' }, { key: 'subject', placeholder: '研究主题（如：AI算力赛道分析）' }, { key: 'focus', placeholder: '关注重点（如：技术面/基本面/催化剂）' }] },
+  consult_marketing_expert: { title: '📊 咨询营销顾问', desc: '亚当代你向营销专家提问，结合ERP数据分析', fields: [{ key: 'question', placeholder: '你的问题（如：如何提高客户复购率？）' }, { key: 'context', placeholder: '补充背景（可选）' }] },
+}
+
+function openTaskDialog(tid: string) {
+  const cfg = toolTaskConfig[tid]
+  if (!cfg) return
+  taskDialogTitle.value = cfg.title
+  taskDialogDesc.value = cfg.desc
+  taskDialogToolId.value = tid
+  taskDialogFields.value = cfg.fields
+  taskParams.value = {}
+  taskResultText.value = ''
+  showTaskDialog.value = true
+}
+
+async function handleRunTask() {
+  const tid = taskDialogToolId.value
+  if (toolRunning.value) return
+  toolRunning.value = tid
+  taskResultText.value = ''
+
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    // 把用户填的参数拼进消息，让AI知道该用什么参数
+    const paramStr = Object.entries(taskParams.value)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}="${v}"`)
+      .join('，')
+    const content = paramStr
+      ? `请执行工具: ${tid}，参数：${paramStr}`
+      : `请执行工具: ${tid}`
+
+    const res = await fetch('/api/adam-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content }],
+        adamState: { ...adamStore.core },
+        books: adamStore.books,
+        toolParams: taskParams.value,
+      }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const reader = res.body?.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let result = ''
+    let streamDone = false
+
+    while (reader && !streamDone) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const payload = line.slice(6).trim()
+        if (payload === '[DONE]') { streamDone = true; break }
+        try {
+          const data = JSON.parse(payload)
+          if (data.type === 'text') result += data.text
+          else if (data.type === 'tool_result') result += data.result || ''
+        } catch { /* ignore */ }
+      }
+    }
+    taskResultText.value = result || '执行完成，亚当未返回内容'
+    // 同步到主工具结果显示
+    toolResults.value[tid] = result || '执行完成'
+    toolResultDisplay.value = result || '执行完成'
+    toolResultId.value = tid
+  } catch (e: any) {
+    taskResultText.value = `执行失败：${e.message}`
+  } finally {
+    toolRunning.value = null
+  }
+}
+
+// ── 保险箱弹窗 ──
+const showVaultDialog = ref(false)
+const vaultAction = ref<'deposit' | 'withdraw'>('deposit')
+const vaultAmount = ref('')
+const vaultBalance = computed(() =>
+  adamStore.ledger
+    .filter(e => e.kind === 'vault_deposit' || e.kind === 'vault_release')
+    .reduce((s, e) => e.kind === 'vault_deposit' ? s + e.amount : s - e.amount, 0)
+)
+
+function handleVault() {
+  const amount = parseFloat(vaultAmount.value)
+  if (!amount || amount <= 0) return
+  if (vaultAction.value === 'deposit') {
+    adamStore.addLedgerEntry({
+      id: `led_vault_${Date.now()}`,
+      at: new Date().toISOString(),
+      kind: 'vault_deposit',
+      amount,
+      direction: 'out',
+      title: `存入保险箱 ¥${amount}`,
+      linkedEventIds: [],
+    })
+  } else {
+    if (amount > vaultBalance.value) { alert('取出金额超过保险箱余额'); return }
+    adamStore.addLedgerEntry({
+      id: `led_vault_${Date.now()}`,
+      at: new Date().toISOString(),
+      kind: 'vault_release',
+      amount,
+      direction: 'in',
+      title: `从保险箱取出 ¥${amount}`,
+      linkedEventIds: [],
+    })
+  }
+  vaultAmount.value = ''
+  showVaultDialog.value = false
+}
+
+// ── 图书馆弹窗 ──
+const showLibraryDialog = ref(false)
+const showAddBookDialog = ref(false)
+const librarySearch = ref('')
+const bookForm = ref({ title: '', tags: '', content: '' })
+
+const filteredBooks = computed(() => {
+  const q = librarySearch.value.toLowerCase()
+  if (!q) return adamStore.books
+  return adamStore.books.filter(b =>
+    b.title?.toLowerCase().includes(q) ||
+    b.tags?.some(t => t.toLowerCase().includes(q))
+  )
+})
+
+function handleAddBook() {
+  if (!bookForm.value.title || !bookForm.value.content) return
+  adamStore.addBook({
+    id: `book_${Date.now()}`,
+    title: bookForm.value.title,
+    content: bookForm.value.content,
+    author: 'user',
+    tags: bookForm.value.tags ? bookForm.value.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    createdAt: new Date().toISOString(),
+    linkedEventIds: [],
+  })
+  bookForm.value = { title: '', tags: '', content: '' }
+  showAddBookDialog.value = false
+}
+
+// ── 档案馆反思弹窗 ──
+const showReflectionDialog = ref(false)
+const reflectionPrompt = ref('')
+const reflectionResultText = ref('')
+
+async function handleWriteReflection() {
+  if (toolRunning.value) return
+  toolRunning.value = 'write_reflection'
+  reflectionResultText.value = ''
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    const content = reflectionPrompt.value
+      ? `请执行工具: write_reflection，今天的提示：${reflectionPrompt.value}`
+      : '请执行工具: write_reflection，自由发挥，写下今天的反思日记'
+    const res = await fetch('/api/adam-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content }],
+        adamState: { ...adamStore.core },
+        books: adamStore.books,
+      }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const reader = res.body?.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let result = ''
+    let streamDone = false
+    while (reader && !streamDone) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const payload = line.slice(6).trim()
+        if (payload === '[DONE]') { streamDone = true; break }
+        try {
+          const data = JSON.parse(payload)
+          if (data.type === 'text') result += data.text
+          else if (data.type === 'tool_result') {
+            // 解析日记内容写入store
+            try {
+              const r = JSON.parse(data.result || '{}')
+              if (r.content) {
+                adamStore.addReflection({ id: r.id || `ref_${Date.now()}`, at: r.at || new Date().toISOString(), content: r.content, linkedEventIds: [] })
+              }
+            } catch { /* ignore */ }
+            result += data.result || ''
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    reflectionResultText.value = result || '亚当已完成日记'
+    reflectionPrompt.value = ''
+  } catch (e: any) {
+    reflectionResultText.value = `执行失败：${e.message}`
+  } finally {
+    toolRunning.value = null
+  }
+}
+
+// ── 迁移建筑弹窗 ──
+const showRelocateDialog = ref(false)
+const relocateForm = ref({ buildingId: '', newX: '', newY: '', reason: '' })
+
+function handleRelocate() {
+  const bldg = adamStore.buildings.find(b => b.id === relocateForm.value.buildingId)
+  if (!bldg) return
+  const newX = parseInt(relocateForm.value.newX)
+  const newY = parseInt(relocateForm.value.newY)
+  if (isNaN(newX) || isNaN(newY)) return
+  bldg.position.gridX = newX
+  bldg.position.gridY = newY
+  adamStore.addEvent({
+    id: `ev_relocate_${Date.now()}`,
+    type: 'building_relocated',
+    stage: 'act',
+    title: `迁移「${bldg.name}」到 (${newX}, ${newY})`,
+    summary: relocateForm.value.reason || '',
+    at: new Date().toISOString(),
+    institutionId: (bldg.institutionId as any) || undefined,
+  })
+  adamStore.persist()
+  relocateForm.value = { buildingId: '', newX: '', newY: '', reason: '' }
+  showRelocateDialog.value = false
+}
+
+// ── 升级建筑弹窗 ──
+const showUpgradeDialog = ref(false)
+const upgradeForm = ref({ buildingId: '', newType: '', reason: '' })
+
+function handleUpgrade() {
+  const bldg = adamStore.buildings.find(b => b.id === upgradeForm.value.buildingId)
+  if (!bldg || !upgradeForm.value.newType) return
+  const fromType = bldg.type
+  bldg.status = 'upgrading'
+  bldg.upgradeHistory = bldg.upgradeHistory || []
+  bldg.upgradeHistory.push({ at: new Date().toISOString(), fromType, toType: upgradeForm.value.newType, reason: upgradeForm.value.reason || undefined })
+  bldg.type = upgradeForm.value.newType
+  bldg.status = 'active'
+  adamStore.addEvent({
+    id: `ev_upgrade_${Date.now()}`,
+    type: 'building_upgraded',
+    stage: 'act',
+    title: `升级「${bldg.name}」→ ${upgradeForm.value.newType}（LV.${bldg.upgradeHistory.length}）`,
+    summary: upgradeForm.value.reason || '',
+    at: new Date().toISOString(),
+    institutionId: (bldg.institutionId as any) || undefined,
+  })
+  adamStore.persist()
+  upgradeForm.value = { buildingId: '', newType: '', reason: '' }
+  showUpgradeDialog.value = false
+}
+
+// ── ERP权限申请弹窗 ──
+const showErpAccessDialog = ref(false)
+const erpAccessForm = ref({ dataType: 'sales', reason: '' })
+
+function handleErpAccess(approved: boolean) {
+  if (approved) {
+    adamStore.addEvent({
+      id: `ev_erp_${Date.now()}`,
+      type: 'institution_unlocked',
+      stage: 'act',
+      title: `批准ERP数据权限：${erpAccessForm.value.dataType}`,
+      summary: erpAccessForm.value.reason || '',
+      at: new Date().toISOString(),
+      institutionId: 'finance_gateway',
+    })
+  }
+  showErpAccessDialog.value = false
+}
+
+// ── 记录投资弹窗 ──
+const showRecordInvestmentDialog = ref(false)
+const riForm = ref({ symbol: '', direction: 'buy', amount: '', note: '' })
+
+function handleRecordInvestment() {
+  const amount = parseFloat(riForm.value.amount)
+  if (!amount || amount <= 0) return
+  const isBuy = riForm.value.direction === 'buy'
+  adamStore.addLedgerEntry({
+    id: `led_invest_${Date.now()}`,
+    at: new Date().toISOString(),
+    kind: 'cost',
+    amount,
+    direction: isBuy ? 'out' : 'in',
+    title: `${isBuy ? '买入' : '卖出'} ${riForm.value.symbol || '（未填标的）'}${riForm.value.note ? '：' + riForm.value.note : ''}`,
+    linkedEventIds: [],
+  })
+  adamStore.addEvent({
+    id: `ev_invest_${Date.now()}`,
+    type: 'trade_result_recorded',
+    stage: 'act',
+    title: `${isBuy ? '买入' : '卖出'} ${riForm.value.symbol || '未知标的'} ¥${amount}`,
+    summary: riForm.value.note || '',
+    at: new Date().toISOString(),
+    institutionId: 'bureau',
+  })
+  riForm.value = { symbol: '', direction: 'buy', amount: '', note: '' }
+  showRecordInvestmentDialog.value = false
+}
+
+// ── 结算分红弹窗 ──
+const showDividendDialog = ref(false)
+const dvForm = ref({ totalProfit: '', note: '' })
+
+const dividendRatioMap: Record<string, number> = { C: 0.1, B: 0.2, 'B+': 0.3, A: 0.4, S: 0.5 }
+const dividendRatio = computed(() => dividendRatioMap[adamStore.core.creditLevel] || 0.1)
+
+function handleSettleDividend() {
+  const total = parseFloat(dvForm.value.totalProfit)
+  if (!total || total <= 0) return
+  const userShare = parseFloat((total * dividendRatio.value).toFixed(2))
+  const adamShare = parseFloat((total * (1 - dividendRatio.value)).toFixed(2))
+  // 用户分红：从亚当账户扣出
+  adamStore.addLedgerEntry({
+    id: `led_div_user_${Date.now()}`,
+    at: new Date().toISOString(),
+    kind: 'dividend',
+    amount: userShare,
+    direction: 'out',
+    title: `分红给用户（${dividendRatio.value * 100}%）：¥${userShare}${dvForm.value.note ? ' — ' + dvForm.value.note : ''}`,
+    linkedEventIds: [],
+  })
+  adamStore.addEvent({
+    id: `ev_div_${Date.now()}`,
+    type: 'ledger_entry_created',
+    stage: 'settle',
+    title: `结算分红 — 总利润¥${total}，你获得¥${userShare}，亚当留存¥${adamShare}`,
+    summary: dvForm.value.note || '',
+    at: new Date().toISOString(),
+    institutionId: 'bureau',
+  })
+  dvForm.value = { totalProfit: '', note: '' }
+  showDividendDialog.value = false
+}
+
+// ── 执行赔付弹窗 ──
+const showPenaltyDialog = ref(false)
+const penForm = ref({ lossAmount: '', selfConfidence: '', objConfidence: '', note: '' })
+
+const penaltyAmount = computed(() => {
+  const loss = parseFloat(penForm.value.lossAmount) || 0
+  const obj = parseFloat(penForm.value.objConfidence) || 0
+  return loss * (obj / 100) * 0.1
+})
+
+function handleApplyPenalty() {
+  const loss = parseFloat(penForm.value.lossAmount)
+  const obj = parseFloat(penForm.value.objConfidence)
+  if (!loss || loss <= 0 || !obj) return
+  const penalty = parseFloat(penaltyAmount.value.toFixed(2))
+  adamStore.addLedgerEntry({
+    id: `led_pen_${Date.now()}`,
+    at: new Date().toISOString(),
+    kind: 'penalty',
+    amount: penalty,
+    direction: 'out',
+    title: `赔付损失¥${loss}（客观置信度${obj}%）：¥${penalty}${penForm.value.note ? ' — ' + penForm.value.note : ''}`,
+    linkedEventIds: [],
+  })
+  adamStore.addEvent({
+    id: `ev_pen_${Date.now()}`,
+    type: 'dispute_resolved',
+    stage: 'settle',
+    title: `执行赔付 ¥${penalty}（损失¥${loss} × 置信度${obj}% × 0.1）`,
+    summary: penForm.value.note || '',
+    at: new Date().toISOString(),
+    institutionId: 'bureau',
+  })
+  penForm.value = { lossAmount: '', selfConfidence: '', objConfidence: '', note: '' }
+  showPenaltyDialog.value = false
+}
+
+// ── 发出指令弹窗 ──
+const showIssueRecommDialog = ref(false)
+const recForm = ref({ title: '', symbol: '', direction: 'long', targetPrice: '', stopLoss: '', confidence: 70, thesis: '', riskNote: '' })
+
+function handleIssueRecommendation() {
+  if (!recForm.value.title || !recForm.value.thesis || !recForm.value.riskNote) return
+  const rec = {
+    id: `rec_${Date.now()}`,
+    title: recForm.value.title,
+    symbol: recForm.value.symbol || undefined,
+    issuedAt: new Date().toISOString(),
+    confidence: recForm.value.confidence,
+    status: 'issued' as const,
+    thesis: recForm.value.thesis,
+    riskNote: recForm.value.riskNote,
+    linkedEventIds: [] as string[],
+  }
+  adamStore.addRecommendation(rec)
+  adamStore.addEvent({
+    id: `ev_rec_${Date.now()}`,
+    type: 'recommendation_issued',
+    stage: 'act',
+    title: `发出指令：${rec.title}`,
+    summary: `置信度${rec.confidence}%。${rec.thesis.slice(0, 60)}`,
+    at: new Date().toISOString(),
+    institutionId: 'bureau',
+  })
+  recForm.value = { title: '', symbol: '', direction: 'long', targetPrice: '', stopLoss: '', confidence: 70, thesis: '', riskNote: '' }
+  showIssueRecommDialog.value = false
+}
+
 // ── 工具执行 ──
 const toolRunning = ref<string | null>(null)
 const toolResults = ref<Record<string, string>>({})
@@ -550,6 +1262,21 @@ const toolResultDisplay = ref('')
 const toolResultId = ref('')
 
 async function executeTool(tid: string) {
+  // 拦截有专属对话框的工具，直接打开弹窗
+  if (tid === 'record_investment') { showRecordInvestmentDialog.value = true; return }
+  if (tid === 'settle_dividend') { showDividendDialog.value = true; return }
+  if (tid === 'apply_penalty') { showPenaltyDialog.value = true; return }
+  if (tid === 'issue_recommendation') { showIssueRecommDialog.value = true; return }
+  if (tid === 'manage_vault') { showVaultDialog.value = true; return }
+  if (tid === 'browse_books') { showLibraryDialog.value = true; return }
+  if (tid === 'add_book') { showAddBookDialog.value = true; return }
+  if (tid === 'write_reflection') { showReflectionDialog.value = true; return }
+  if (tid === 'relocate_structure') { showRelocateDialog.value = true; return }
+  if (tid === 'upgrade_structure') { showUpgradeDialog.value = true; return }
+  if (tid === 'request_erp_access') { showErpAccessDialog.value = true; return }
+  // 需要参数的 AI 工具 → 下达任务弹窗
+  if (toolTaskConfig[tid]) { openTaskDialog(tid); return }
+
   if (toolRunning.value) return
   toolRunning.value = tid
   toolResultDisplay.value = ''
@@ -2223,4 +2950,49 @@ onUnmounted(() => {
 .btn-gold:hover { background: rgba(245,166,35,0.25); }
 .btn-ghost { padding: 5px 14px; background: transparent; border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; color: #888; font-size: 12px; cursor: pointer; }
 .btn-ghost:hover { border-color: rgba(255,255,255,0.3); color: #aaa; }
+
+/* 宽弹窗 */
+.dialog-box-wide { width: 420px; }
+
+/* 两列布局 */
+.dialog-row-2col { display: flex; gap: 8px; }
+.dialog-row-2col .dialog-input,
+.dialog-row-2col .dialog-select { flex: 1; min-width: 0; }
+
+/* 下拉选择 */
+.dialog-select { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #e8e8e0; font-size: 13px; outline: none; cursor: pointer; }
+.dialog-select:focus { border-color: rgba(245,166,35,0.4); }
+.dialog-select option { background: #1a1a1e; }
+
+/* 字段标签输入组 */
+.dialog-label-input { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.dialog-field-label { font-size: 10px; color: var(--muted); }
+
+/* 计算预览 */
+.dialog-calc-hint { font-size: 11px; color: #00D4FF; background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.15); border-radius: 5px; padding: 6px 10px; }
+
+/* 文本域 */
+.dialog-textarea { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #e8e8e0; font-size: 12px; outline: none; resize: vertical; font-family: inherit; line-height: 1.5; }
+.dialog-textarea:focus { border-color: rgba(245,166,35,0.4); }
+
+/* 任务执行中 */
+.dialog-running { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #00D4FF; padding: 6px 0; }
+
+/* 任务结果框 */
+.task-result-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 10px; font-size: 11px; color: #c8c8c0; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; line-height: 1.6; }
+
+/* 图书馆列表 */
+.library-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+.library-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 6px; padding: 10px; }
+.library-item-title { font-size: 12px; font-weight: 600; color: #e8e8e0; margin-bottom: 3px; }
+.library-item-meta { font-size: 10px; color: var(--muted); margin-bottom: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+.library-item-content { font-size: 11px; color: #888; line-height: 1.5; }
+
+/* 日记历史 */
+.reflection-item { background: rgba(255,255,255,0.03); border-left: 2px solid rgba(0,212,255,0.3); padding: 8px 10px; margin-bottom: 6px; border-radius: 0 6px 6px 0; }
+.reflection-time { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.reflection-content { font-size: 11px; color: #aaa; line-height: 1.5; white-space: pre-wrap; }
+
+/* btn active state */
+.btn-ghost.active { border-color: rgba(245,166,35,0.5); color: #F5A623; background: rgba(245,166,35,0.08); }
 </style>

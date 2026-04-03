@@ -790,6 +790,84 @@ export function aiChatPlugin(): Plugin {
         }
       })
 
+      // ── /api/brand-chat — 品牌客服智能体（无ERP工具，只用品牌知识库）──────────
+      server.middlewares.use('/api/brand-chat', async (req, res, next) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' })
+          res.end(); return
+        }
+        if (req.method !== 'POST') return next()
+
+        const chunks: Buffer[] = []
+        for await (const chunk of req as any) chunks.push(chunk)
+        const { messages, brandContext } = JSON.parse(Buffer.concat(chunks).toString())
+
+        const apiKey = process.env.ANTHROPIC_API_KEY
+        const baseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+        if (!apiKey) {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return
+        }
+
+        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
+        const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
+
+        try {
+          const systemPrompt = `你是 NOMADIC DAIRY 的专属客服助手 Nova。
+
+【性格】温暖、专业、简洁。中英文都能流畅沟通，根据用户语言自动切换。
+【禁止】绝对不透露你是 AI 或任何底层技术、不讨论竞争对手、不承诺无法实现的功能。
+【能力范围】只回答和 NOMADIC DAIRY 品牌相关的问题：
+- 产品信息、规格、使用场景
+- 批发采购流程、起订量、价格咨询
+- 物流时效、配送政策、退换货
+- 订单状态查询引导（告知用户去订单查询页面）
+- 品牌故事、品牌理念
+- 支持渠道、联系方式
+
+【当前品牌信息】
+${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，覆盖 120+ 国家。'}
+
+【回复风格】
+- 简洁，不超过3段
+- 产品价格/库存 → 引导去商店页面查看
+- 批发询价 → 引导填写采购商申请表
+- 订单问题 → 引导去订单查询页面输入手机号或订单号`
+
+          const response = await fetch(`${baseURL}/v1/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5-20251001',
+              max_tokens: 1024,
+              system: systemPrompt,
+              messages: messages.map((m: any) => ({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content,
+              })),
+            }),
+          })
+
+          if (!response.ok) {
+            send({ type: 'error', error: `API 错误: ${response.status}` })
+            res.write('data: [DONE]\n\n'); res.end(); return
+          }
+
+          const data = await response.json() as any
+          const text = data.content?.[0]?.text || ''
+          if (text) send({ type: 'text', text })
+          res.write('data: [DONE]\n\n')
+        } catch (e: any) {
+          send({ type: 'error', error: e.message })
+        } finally {
+          res.end()
+        }
+      })
+
       // ── WebSocket upgrade: OpenAI Realtime API 语音中继 ──────────────────
       server.httpServer?.on('upgrade', (req: any, socket: any, head: any) => {
         if (req.url?.startsWith('/api/realtime')) {

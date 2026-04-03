@@ -323,6 +323,122 @@ export async function executeAdamTool(
         })
       }
 
+      // ── 深度财务分析 ──
+      case 'get_financial_reports': {
+        const rawSym = (input.symbol || '').replace(/[^0-9a-zA-Z]/g, '')
+        if (!rawSym) return JSON.stringify({ error: '请提供股票代码' })
+        try {
+          const market = rawSym.startsWith('6') ? 'SH' : 'SZ'
+          const count = Math.min(input.count || 4, 8)
+          const url = `https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code=${market}${rawSym}`
+          const resp = await fetch(url, { headers: { Referer: 'https://emweb.securities.eastmoney.com' } })
+          const json = await resp.json() as any
+          const rows: any[] = json?.data ?? []
+          if (!rows.length) return JSON.stringify({ error: '未获取到财报数据' })
+          const reports = rows.slice(0, count).map((r: any) => ({
+            period: r.REPORT_DATE_NAME || r.REPORT_DATE?.slice(0, 10),
+            revenue: r.TOTALOPERATEREVE ? (r.TOTALOPERATEREVE / 1e8).toFixed(2) + '亿' : '-',
+            revenue_yoy: r.TOTALOPERATEREVETZ ? r.TOTALOPERATEREVETZ.toFixed(2) + '%' : '-',
+            net_profit: r.PARENTNETPROFIT ? (r.PARENTNETPROFIT / 1e8).toFixed(2) + '亿' : '-',
+            profit_yoy: r.PARENTNETPROFITTZ ? r.PARENTNETPROFITTZ.toFixed(2) + '%' : '-',
+            roe: r.ROEJQ ? r.ROEJQ.toFixed(2) + '%' : '-',
+            eps: r.EPSJB ? r.EPSJB.toFixed(2) : '-',
+            gross_margin: r.XSMLL ? r.XSMLL.toFixed(2) + '%' : '-',
+            net_margin: r.XSJLL ? r.XSJLL.toFixed(2) + '%' : '-',
+            debt_ratio: r.ZCFZL ? r.ZCFZL.toFixed(2) + '%' : '-',
+            fcff: r.FCFF_FORWARD ? (r.FCFF_FORWARD / 1e8).toFixed(2) + '亿' : '-',
+          }))
+          return JSON.stringify({ source: '东方财富财报数据', symbol: rawSym, reports })
+        } catch (e: any) {
+          return JSON.stringify({ error: `获取财报失败：${e.message}` })
+        }
+      }
+
+      case 'calc_dcf_valuation': {
+        const rawSym = (input.symbol || '').replace(/[^0-9a-zA-Z]/g, '')
+        if (!rawSym) return JSON.stringify({ error: '请提供股票代码' })
+        try {
+          // 1. 获取财报数据（取最近4期）
+          const market = rawSym.startsWith('6') ? 'SH' : 'SZ'
+          const url = `https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code=${market}${rawSym}`
+          const resp = await fetch(url, { headers: { Referer: 'https://emweb.securities.eastmoney.com' } })
+          const json = await resp.json() as any
+          const rows: any[] = (json?.data ?? []).slice(0, 4)
+          if (!rows.length) return JSON.stringify({ error: '无法获取财报数据，DCF估值无法计算' })
+
+          // 2. 获取实时行情（市值、股价）
+          const prefix = rawSym.startsWith('6') ? 'sh' : 'sz'
+          const rt = await fetchSinaRealtime(`${prefix}${rawSym}`)
+          const mktCap = await fetchEastmoneyFundamentals(`${rawSym.startsWith('6') ? '1' : '0'}.${rawSym}`)
+
+          // 3. 计算历史增长率
+          const profits = rows.map((r: any) => r.PARENTNETPROFIT).filter((v: any) => v > 0)
+          let histGrowth = 0
+          if (profits.length >= 2) {
+            histGrowth = ((profits[0] / profits[profits.length - 1]) ** (1 / (profits.length - 1)) - 1) * 100
+          }
+
+          // 4. DCF 参数
+          const g = (input.growth_rate ?? Math.min(Math.max(histGrowth * 0.7, 3), 25)) / 100
+          const r = (input.discount_rate ?? 10) / 100
+          const gTerminal = (input.terminal_growth ?? 3) / 100
+          const years = 10
+
+          // 5. 基准自由现金流（取最新年化）
+          const latestFcff = rows[0]?.FCFF_FORWARD || rows[0]?.PARENTNETPROFIT || 0
+          const baseFcff = latestFcff / 1e8 // 亿元
+
+          // 6. DCF 计算
+          let pvSum = 0
+          for (let i = 1; i <= years; i++) {
+            const fcff_i = baseFcff * (1 + g) ** i
+            pvSum += fcff_i / (1 + r) ** i
+          }
+          const terminalValue = (baseFcff * (1 + g) ** years * (1 + gTerminal)) / (r - gTerminal)
+          const pvTerminal = terminalValue / (1 + r) ** years
+          const totalValue = pvSum + pvTerminal // 亿元
+
+          // 7. 每股估值（需总股本）
+          const sharesRaw = rows[0]?.TOTALSHARES || null
+          const shares = sharesRaw ? sharesRaw / 1e8 : null // 亿股
+          const fairValuePerShare = shares ? totalValue / shares : null
+          const currentPrice = rt ? Number(rt.price) : null
+          const margin = fairValuePerShare && currentPrice
+            ? ((fairValuePerShare - currentPrice) / fairValuePerShare * 100).toFixed(1)
+            : null
+
+          return JSON.stringify({
+            source: 'DCF估值 · 东方财富数据',
+            symbol: rawSym,
+            name: rows[0]?.SECURITY_NAME_ABBR || rawSym,
+            params: {
+              growth_rate: (g * 100).toFixed(1) + '%',
+              discount_rate: (r * 100).toFixed(1) + '%',
+              terminal_growth: (gTerminal * 100).toFixed(1) + '%',
+              hist_growth: histGrowth.toFixed(1) + '%',
+              base_fcff: baseFcff.toFixed(2) + '亿',
+            },
+            result: {
+              total_value: totalValue.toFixed(0) + '亿',
+              fair_value_per_share: fairValuePerShare ? fairValuePerShare.toFixed(2) + '元' : '需要总股本数据',
+              current_price: currentPrice ? currentPrice + '元' : '-',
+              safety_margin: margin ? margin + '%' : '-',
+              pe_ttm: mktCap?.pe_ttm ?? '-',
+              pb: mktCap?.pb ?? '-',
+              verdict: margin
+                ? Number(margin) > 30 ? '低估，安全边际充足'
+                  : Number(margin) > 0 ? '略低估'
+                  : Number(margin) > -20 ? '合理估值'
+                  : '高估，谨慎'
+                : '数据不足',
+            },
+            note: 'DCF估值基于历史数据推算，仅供参考，不构成投资建议',
+          })
+        } catch (e: any) {
+          return JSON.stringify({ error: `DCF估值计算失败：${e.message}` })
+        }
+      }
+
       // ── 投资局 ──
       case 'record_investment': {
         return JSON.stringify({
@@ -444,6 +560,64 @@ export async function executeAdamTool(
         })
       }
 
+      // ── 网页抓取 ──
+      case 'fetch_webpage': {
+        const url = input.url as string
+        if (!url?.startsWith('http')) return JSON.stringify({ error: '无效URL，必须以http开头' })
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AdamAgent/1.0)', Accept: 'text/html,*/*' },
+        })
+        if (!res.ok) return JSON.stringify({ error: `访问失败，状态码 ${res.status}` })
+        const html = await res.text()
+        const text = html
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s{3,}/g, '\n')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .trim()
+          .slice(0, 4000)
+        return JSON.stringify({ url, content: text })
+      }
+
+      // ── 共享知识库 ──
+      case 'search_knowledge': {
+        try {
+          const params = new URLSearchParams()
+          if (input.q) params.set('q', input.q)
+          if (input.category) params.set('category', input.category)
+          const res = await fetch(`https://nomaderp.pages.dev/api/knowledge?${params}`)
+          const data: any = await res.json()
+          if (!data.entries?.length) return JSON.stringify({ source: '共享知识库', total: 0, note: '未找到相关条目' })
+          return JSON.stringify({ source: '共享知识库', total: data.total, entries: data.entries })
+        } catch (e: any) {
+          return JSON.stringify({ error: `知识库查询失败：${e.message}` })
+        }
+      }
+
+      case 'add_knowledge': {
+        try {
+          const tags = input.tags ? String(input.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
+          const res = await fetch('https://nomaderp.pages.dev/api/knowledge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: input.title,
+              content: input.content,
+              summary: input.summary || String(input.content).slice(0, 100),
+              category: input.category || 'other',
+              tags,
+              source: 'adam',
+            }),
+          })
+          const data: any = await res.json()
+          return JSON.stringify({ status: 'added', id: data.id, note: '已存入共享知识库，Captain也能看到' })
+        } catch (e: any) {
+          return JSON.stringify({ error: `知识库写入失败：${e.message}` })
+        }
+      }
+
       // ── 情绪自主更新 ──
       case 'update_emotion': {
         // 直接返回输入值，前端 applyToolResult 会写入 store
@@ -522,6 +696,34 @@ export async function executeAdamTool(
           book: { id: book.id, title: book.title, author: book.author, tags: book.tags },
           reason: input.reason,
           note: '推荐已发出',
+        })
+      }
+
+      // ── 联网搜索 ──
+      case 'web_search': {
+        const tavilyKey = process.env.TAVILY_API_KEY
+        if (!tavilyKey || tavilyKey === 'tvly-') {
+          return JSON.stringify({ error: '联网搜索未配置（TAVILY_API_KEY 未设置）' })
+        }
+        const searchRes = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: tavilyKey,
+            query: input.query,
+            max_results: input.max_results || 5,
+            search_depth: 'basic',
+          }),
+        })
+        const searchData = await searchRes.json() as { results?: Array<{ title: string; url: string; content: string; score: number }> }
+        const items = searchData?.results || []
+        if (items.length === 0) {
+          return JSON.stringify({ source: '互联网搜索', query: input.query, results: [], note: '未找到相关结果' })
+        }
+        return JSON.stringify({
+          source: '互联网搜索 · Tavily',
+          query: input.query,
+          results: items.map(r => ({ title: r.title, url: r.url, content: r.content?.slice(0, 300) })),
         })
       }
 

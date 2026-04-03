@@ -132,6 +132,10 @@
         </div>
       </header>
 
+      <div class="inv-adam-wrap">
+        <AdamChat />
+      </div>
+
       <section class="inv-content">
         <router-view />
       </section>
@@ -145,6 +149,8 @@ import { useRoute } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
 import { useAppStore } from '@/stores/app'
 import { Eye, TrendingUp, ChevronLeft, Menu, Map, BarChart3, BookOpen, Library, Palette } from 'lucide-vue-next'
+import CaptainBar from '@/components/CaptainBar.vue'
+import AdamChat from '@/components/AdamChat.vue'
 
 const route = useRoute()
 const adamStore = useAdamStore()
@@ -472,6 +478,13 @@ const statusLabel = computed(() => {
 .survival .status-text { color: #FF4D4D; }
 .shutdown .status-text { color: var(--dim); opacity: 0.4; }
 
+/* Adam 对话框 */
+.inv-adam-wrap {
+  flex-shrink: 0;
+  padding: 12px 24px 0;
+  background: var(--gray);
+}
+
 /* 内容区 */
 .inv-content {
   flex: 1;
@@ -536,6 +549,7 @@ const statusLabel = computed(() => {
 @media (max-width: 767px) {
   .inv-layout { display: block; height: auto; min-height: 100vh; }
   .inv-main { min-height: calc(100vh - 48px); }
+  .inv-adam-wrap { padding: 10px 12px 0; }
   .inv-content { padding: 14px 12px 24px; }
 }
 </style>

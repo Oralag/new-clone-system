@@ -670,6 +670,69 @@
             </el-form-item>
           </div>
 
+          <!-- ⑥ 品牌中心 -->
+          <div class="form-section brand-center-section" ref="secBrand" data-sec="brand">
+            <div class="sec-title">
+              品牌中心
+              <span class="brand-sec-badge">独立存储 · 不上传至ERP服务器</span>
+            </div>
+            <el-row :gutter="24">
+              <el-col :span="12">
+                <el-form-item label="批发价 (¥)">
+                  <el-input-number v-model="brandFd.wholesalePrice" :min="0" :precision="2" controls-position="right" style="width:100%" placeholder="批发价格" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="起订量 (件)">
+                  <el-input-number v-model="brandFd.minOrderQuantity" :min="1" :precision="0" controls-position="right" style="width:100%" placeholder="最低起订数量" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="24">
+                <el-form-item label="分类标签">
+                  <div class="brand-tag-row">
+                    <label
+                      v-for="opt in TAG_OPTIONS"
+                      :key="opt.value"
+                      class="brand-tag-check"
+                      :class="{ active: brandFd.tags.includes(opt.value) }"
+                      @click="!isView && toggleBrandTag(opt.value)"
+                    >{{ opt.label }}</label>
+                  </div>
+                </el-form-item>
+              </el-col>
+              <el-col :span="24">
+                <el-form-item label="主图 URL">
+                  <el-input v-model="brandFd.image" placeholder="https://... 主展示图（建议 800×600）" />
+                  <img v-if="brandFd.image" :src="brandFd.image" class="brand-img-preview" referrerpolicy="no-referrer" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="24">
+                <el-form-item label="轮播图">
+                  <div class="brand-carousel-grid">
+                    <div v-for="(_, idx) in brandFd.headerImages" :key="idx" class="brand-carousel-item">
+                      <el-input v-model="brandFd.headerImages[idx]" :placeholder="`轮播图 ${idx + 1} URL`" size="small" />
+                      <img v-if="brandFd.headerImages[idx]" :src="brandFd.headerImages[idx]" class="brand-img-preview-sm" referrerpolicy="no-referrer" />
+                    </div>
+                  </div>
+                </el-form-item>
+              </el-col>
+              <el-col :span="24">
+                <el-form-item label="详情图 URL">
+                  <el-input v-model="brandFd.detailImage" placeholder="https://... 长图详情（建议宽 1200px）" />
+                  <img v-if="brandFd.detailImage" :src="brandFd.detailImage" class="brand-img-preview" referrerpolicy="no-referrer" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <div class="brand-save-hint" v-if="fd.id">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              品牌中心数据保存在此设备本地，点击顶部「保存」后生效。
+            </div>
+            <div class="brand-save-hint warn" v-else>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              请先保存商品基本信息，再填写品牌中心字段。
+            </div>
+          </div>
+
         </el-form>
       </div>
     </div>
@@ -1259,6 +1322,8 @@ const saving = ref(false)
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  Object.assign(brandFd, defaultBrandFd())
+  brandFd.headerImages = ['', '', '', '']
   specList.value = []
   multiUnitRows.value = []
   minSaleUnitIdx.value = 0
@@ -1292,6 +1357,7 @@ function openEdit(row: any) {
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
+  if (row.id) loadBrandFd(row.id)
 }
 
 function openView(row: any) {
@@ -1309,6 +1375,7 @@ function openView(row: any) {
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
+  if (row.id) loadBrandFd(row.id)
 }
 
 function openCopy(row: any) {
@@ -1398,6 +1465,8 @@ async function handleSave() {
       saveGoodsTypeMap(map)
     }
     ElMessage.success('保存成功')
+    // Save brand center fields to localStorage
+    if (fd.id) saveBrandFd(fd.id)
     // Persist spec data (localStorage + backend sync)
     if (fd.id) persistSpecData(fd.id)
     backToList()
@@ -2322,6 +2391,7 @@ const tabs = [
   { key: 'spec', label: '规格设置' },
   { key: 'price', label: '价格&条码' },
   { key: 'remark', label: '备注信息' },
+  { key: 'brand', label: '品牌中心' },
 ]
 const activeTab = ref('base')
 const scrollRef = ref<HTMLDivElement>()
@@ -2330,16 +2400,17 @@ const secUnit = ref<HTMLDivElement>()
 const secSpec = ref<HTMLDivElement>()
 const secPrice = ref<HTMLDivElement>()
 const secRemark = ref<HTMLDivElement>()
+const secBrand = ref<HTMLDivElement>()
 
 function scrollToSection(key: string) {
-  const map: Record<string, any> = { base: secBase, unit: secUnit, spec: secSpec, price: secPrice, remark: secRemark }
+  const map: Record<string, any> = { base: secBase, unit: secUnit, spec: secSpec, price: secPrice, remark: secRemark, brand: secBrand }
   map[key]?.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   activeTab.value = key
 }
 
 function onScroll() {
   const refs = [
-    { key: 'remark', el: secRemark }, { key: 'price', el: secPrice },
+    { key: 'brand', el: secBrand }, { key: 'remark', el: secRemark }, { key: 'price', el: secPrice },
     { key: 'spec', el: secSpec }, { key: 'unit', el: secUnit }, { key: 'base', el: secBase },
   ]
   const container = scrollRef.value
@@ -2348,6 +2419,69 @@ function onScroll() {
   for (const { key, el } of refs) {
     if (el.value && el.value.offsetTop <= top) { activeTab.value = key; return }
   }
+}
+
+// ── 品牌中心字段 (localStorage) ───────────────────────────────────────────────
+const BRAND_STORE_KEY = 'erp_brand_center_data'
+
+interface BrandCenterItem {
+  wholesalePrice: number
+  minOrderQuantity: number
+  tags: string[]
+  image: string
+  headerImages: string[]
+  detailImage: string
+}
+
+function loadBrandMap(): Record<string, BrandCenterItem> {
+  try { return JSON.parse(localStorage.getItem(BRAND_STORE_KEY) ?? '{}') } catch { return {} }
+}
+function saveBrandMap(map: Record<string, BrandCenterItem>) {
+  localStorage.setItem(BRAND_STORE_KEY, JSON.stringify(map))
+}
+
+const defaultBrandFd = (): BrandCenterItem => ({
+  wholesalePrice: 0,
+  minOrderQuantity: 1,
+  tags: [],
+  image: '',
+  headerImages: ['', '', '', ''],
+  detailImage: '',
+})
+
+const brandFd = reactive(defaultBrandFd())
+
+const TAG_OPTIONS = [
+  { value: 'new', label: '新品' },
+  { value: 'hot', label: '热销' },
+  { value: 'sale', label: '特惠' },
+]
+
+function loadBrandFd(goodsId: number) {
+  const map = loadBrandMap()
+  const saved = map[String(goodsId)]
+  Object.assign(brandFd, defaultBrandFd(), saved ?? {})
+  // Ensure headerImages always has 4 slots
+  while (brandFd.headerImages.length < 4) brandFd.headerImages.push('')
+}
+
+function saveBrandFd(goodsId: number) {
+  const map = loadBrandMap()
+  map[String(goodsId)] = {
+    wholesalePrice: brandFd.wholesalePrice,
+    minOrderQuantity: brandFd.minOrderQuantity,
+    tags: brandFd.tags,
+    image: brandFd.image,
+    headerImages: brandFd.headerImages.slice(0, 4),
+    detailImage: brandFd.detailImage,
+  }
+  saveBrandMap(map)
+}
+
+function toggleBrandTag(tag: string) {
+  const idx = brandFd.tags.indexOf(tag)
+  if (idx >= 0) brandFd.tags.splice(idx, 1)
+  else brandFd.tags.push(tag)
 }
 
 // ── 扫码录入 ──────────────────────────────────────────────────────────────────
@@ -2749,6 +2883,44 @@ function stopListScanner() {
   gap: 4px;
   flex: 1;
 }
+
+/* ── 品牌中心 ── */
+.brand-center-section .sec-title { display: flex; align-items: center; gap: 10px; }
+.brand-sec-badge {
+  font-size: 10px; font-weight: 600;
+  background: rgba(124,58,237,0.1); color: #7c3aed;
+  padding: 2px 8px; border-radius: 999px; letter-spacing: 0.02em;
+}
+.brand-tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.brand-tag-check {
+  padding: 5px 14px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  cursor: pointer; transition: all 0.2s;
+  background: #f5f5f7; color: rgba(29,29,31,0.5);
+  user-select: none;
+}
+.brand-tag-check.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+.brand-img-preview {
+  display: block; margin-top: 8px;
+  max-width: 200px; max-height: 120px;
+  object-fit: cover; border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.brand-carousel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.brand-carousel-item { display: flex; flex-direction: column; gap: 6px; }
+.brand-img-preview-sm {
+  display: block; max-width: 140px; max-height: 80px;
+  object-fit: cover; border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.brand-save-hint {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: rgba(29,29,31,0.4);
+  margin-top: 16px; padding: 10px 14px;
+  background: #f5f5f7; border-radius: 10px;
+}
+.brand-save-hint.warn { background: #fffbf0; color: #d97706; }
 </style>
 
 <style>

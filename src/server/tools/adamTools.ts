@@ -285,6 +285,88 @@ export const adamTools = [
     },
   },
 
+  // ── 深度财务分析 ──
+  {
+    name: 'get_financial_reports',
+    description: '获取指定A股公司的历史财报数据（营收、净利润、ROE、EPS、毛利率等），最近几个季度/年报',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        symbol: { type: 'string' as const, description: '股票代码，如 600519' },
+        count: { type: 'number' as const, description: '返回期数，默认4（最近4期）' },
+      },
+      required: ['symbol'],
+    },
+  },
+  {
+    name: 'calc_dcf_valuation',
+    description: '对指定股票做DCF（折现现金流）估值，返回合理估值区间和当前安全边际',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        symbol: { type: 'string' as const, description: '股票代码，如 600519' },
+        growth_rate: { type: 'number' as const, description: '预期未来增长率（%），如 10 表示10%，不填则自动根据历史数据估算' },
+        discount_rate: { type: 'number' as const, description: '折现率（%），默认10' },
+        terminal_growth: { type: 'number' as const, description: '永续增长率（%），默认3' },
+      },
+      required: ['symbol'],
+    },
+  },
+
+  // ── 联网搜索 ──
+  {
+    name: 'web_search',
+    description: '联网搜索任意信息——人物、公司、项目、新闻、行业动态、学术资料等。当你想了解一个人、一家公司、一个项目，或者任何你不确定的事情时，用这个工具搜索真实网络信息。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string' as const, description: '搜索关键词（必填），尽量具体，如"Felix Craft AI investor"、"OpenAI GPT-4 release"等' },
+        max_results: { type: 'number' as const, description: '返回结果数，默认5' },
+      },
+      required: ['query'],
+    },
+  },
+
+  // ── 共享知识库 ──
+  {
+    name: 'fetch_webpage',
+    description: '直接访问任意URL，获取页面文字内容。用于读取网站信息、查看仪表板、研究人物/公司/项目等。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        url: { type: 'string' as const, description: '要访问的完整URL，如 https://felixcraft.ai/dashboard' },
+        prompt: { type: 'string' as const, description: '你想从这个页面提取什么信息（可选）' },
+      },
+      required: ['url'],
+    },
+  },
+  {
+    name: 'search_knowledge',
+    description: '搜索共享知识库。知识库里存放了人物档案、策略框架、行业案例等长期积累的知识。当需要了解某个人物（如Felix Craft）、某种策略或框架时，先来这里查。Captain也能看到同一份知识库。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        q: { type: 'string' as const, description: '搜索关键词（如人名、概念、领域）' },
+        category: { type: 'string' as const, description: '分类筛选：person / strategy / framework / case / other（可选）' },
+      },
+    },
+  },
+  {
+    name: 'add_knowledge',
+    description: '向共享知识库添加新条目。Captain 也能读到。适合存放人物档案、策略总结、行业案例等需要长期保留的知识。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        title: { type: 'string' as const, description: '条目标题（必填）' },
+        content: { type: 'string' as const, description: '详细内容（必填）' },
+        summary: { type: 'string' as const, description: '一句话摘要，方便快速判断相关性' },
+        category: { type: 'string' as const, description: 'person / strategy / framework / case / other' },
+        tags: { type: 'string' as const, description: '标签，逗号分隔（如"AI,自主,投资"）' },
+      },
+      required: ['title', 'content'],
+    },
+  },
+
   // ── 图书馆 ──
   {
     name: 'browse_books',

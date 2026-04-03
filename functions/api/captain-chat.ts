@@ -94,6 +94,42 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const tags = input.tags ? String(input.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
         return JSON.stringify({ status: 'added', id, title: input.title, content: input.content, author: 'captain', tags, createdAt: new Date().toISOString(), note: '新书已添加到图书馆书架' })
       }
+      case 'search_knowledge': {
+        try {
+          const params = new URLSearchParams()
+          if (input.q) params.set('q', input.q)
+          if (input.category) params.set('category', input.category)
+          const res = await fetch(`https://nomaderp.pages.dev/api/knowledge?${params}`, {
+            headers: { 'Content-Type': 'application/json' },
+          })
+          const data: any = await res.json()
+          if (!data.entries?.length) return JSON.stringify({ source: '共享知识库', total: 0, note: '未找到相关条目' })
+          return JSON.stringify({ source: '共享知识库', total: data.total, entries: data.entries })
+        } catch (e: any) {
+          return JSON.stringify({ error: `知识库查询失败：${e.message}` })
+        }
+      }
+      case 'add_knowledge': {
+        try {
+          const tags = input.tags ? String(input.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
+          const res = await fetch('https://nomaderp.pages.dev/api/knowledge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: input.title,
+              content: input.content,
+              summary: input.summary || input.content?.slice(0, 100),
+              category: input.category || 'other',
+              tags,
+              source: 'captain',
+            }),
+          })
+          const data: any = await res.json()
+          return JSON.stringify({ status: 'added', id: data.id, note: '已存入共享知识库，亚当也能看到' })
+        } catch (e: any) {
+          return JSON.stringify({ error: `知识库写入失败：${e.message}` })
+        }
+      }
       default:
         return `工具 ${name} 已收到`
     }
@@ -213,6 +249,32 @@ const captainTools = [
   },
   { name: 'browse_books', description: '查阅图书馆书架上的书本（标题、作者、标签）', parameters: { type: 'object', properties: { keyword: { type: 'string', description: '按标题或标签筛选' } } } },
   { name: 'add_book', description: '往图书馆书架上添加新书', parameters: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' }, tags: { type: 'string', description: '逗号分隔标签' } }, required: ['title', 'content'] } },
+  {
+    name: 'search_knowledge',
+    description: '搜索共享知识库。知识库里存放了人物档案、策略框架、行业案例等长期积累的知识。当需要了解某个人物（如Felix Craft）、某种策略或框架时，先来这里查。',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: { type: 'string', description: '搜索关键词（如人名、概念、领域）' },
+        category: { type: 'string', description: '分类筛选：person / strategy / framework / case / other（可选）' },
+      },
+    },
+  },
+  {
+    name: 'add_knowledge',
+    description: '向共享知识库添加新条目。Captain 和亚当都能读到。适合存放人物档案、策略总结、行业案例等需要长期保留的知识。',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '条目标题（必填）' },
+        content: { type: 'string', description: '详细内容（必填）' },
+        summary: { type: 'string', description: '一句话摘要，方便快速判断相关性' },
+        category: { type: 'string', description: 'person / strategy / framework / case / other' },
+        tags: { type: 'string', description: '标签，逗号分隔（如"AI,自主,投资"）' },
+      },
+      required: ['title', 'content'],
+    },
+  },
 ]
 
 async function geminiCall(apiKey: string, systemPrompt: string, contents: any[], tools: any[]): Promise<{ text: string; functionCalls: any[] }> {

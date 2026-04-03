@@ -133,29 +133,114 @@
       </div>
     </div>
 
-    <!-- 展开书本内容 Modal -->
+    <!-- 沉浸式阅读器（微信阅读风格） -->
     <Teleport to="body">
-      <Transition name="book-modal">
-        <div v-if="selectedBook" class="book-overlay" @click.self="selectedBook = null">
-          <div class="book-open">
-            <div class="book-open-cover" :style="{ background: getCoverColor(selectedBook) }">
-              <button class="close-btn" @click="selectedBook = null">&times;</button>
-              <div class="cover-content">
-                <div class="cover-icon">👤</div>
-                <h2 class="cover-title">{{ selectedBook.title }}</h2>
-                <div class="cover-meta">
-                  <span>用户投喂</span>
-                  <span>{{ formatDate(selectedBook.createdAt) }}</span>
+      <Transition name="reader-fade">
+        <div v-if="selectedBook" class="wx-reader" :class="'theme-' + readerTheme" @click="handleReaderClick">
+
+          <!-- 始终可见的退出按钮 -->
+          <button class="wx-fixed-back" @click.stop="closeReader">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 4L7 10l6 6"/>
+            </svg>
+          </button>
+
+          <!-- 顶部栏（点击内容区中央切换显隐） -->
+          <Transition name="bar-slide">
+            <div v-if="showBars" class="wx-topbar" @click.stop>
+              <button class="wx-back" @click="closeReader">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M13 4L7 10l6 6"/>
+                </svg>
+              </button>
+              <div class="wx-title-wrap">
+                <div class="wx-book-title">{{ selectedBook.title }}</div>
+                <div class="wx-progress-bar">
+                  <div class="wx-progress-fill" :style="{ width: progressPct + '%' }"></div>
                 </div>
-                <div v-if="selectedBook.tags?.length" class="cover-tags">
-                  <span v-for="tag in selectedBook.tags" :key="tag" class="cover-tag">{{ tag }}</span>
+              </div>
+              <div class="wx-pct">{{ progressPct }}%</div>
+            </div>
+          </Transition>
+
+          <!-- 内容区 -->
+          <div class="wx-content">
+            <!-- 封面页 -->
+            <template v-if="currentPage === 0">
+              <div class="wx-cover" :style="{ background: getCoverColor(selectedBook) }">
+                <div class="wx-cover-deco">❧</div>
+                <h2 class="wx-cover-title">{{ selectedBook.title }}</h2>
+                <div class="wx-cover-line"></div>
+                <div class="wx-cover-tags">
+                  <span v-for="tag in selectedBook.tags" :key="tag" class="wx-cover-tag">{{ tag }}</span>
+                </div>
+                <div class="wx-cover-hint">点击右侧开始阅读</div>
+              </div>
+            </template>
+            <!-- 内容页 -->
+            <template v-else>
+              <Transition :name="'page-' + pageDir" mode="out-in">
+                <div :key="currentPage" class="wx-page-text">
+                  <div class="wx-text-body" :style="{ fontSize: fontSize + 'px' }">{{ pages[currentPage - 1] }}</div>
+                  <div class="wx-page-num">{{ currentPage }} / {{ pages.length }}</div>
+                </div>
+              </Transition>
+            </template>
+          </div>
+
+          <!-- 底部工具栏 -->
+          <Transition name="bar-slide-up">
+            <div v-if="showBars" class="wx-bottombar" @click.stop>
+              <!-- 目录按钮 -->
+              <button class="wx-tool-btn" @click="showToc = !showToc">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M3 5h12M3 9h8M3 13h10"/>
+                </svg>
+                <span>目录</span>
+              </button>
+
+              <!-- 字号 -->
+              <div class="wx-fontsize">
+                <button class="wx-fs-btn" @click="fontSize = Math.max(12, fontSize - 1)">A-</button>
+                <span class="wx-fs-val">{{ fontSize }}</span>
+                <button class="wx-fs-btn" @click="fontSize = Math.min(22, fontSize + 1)">A+</button>
+              </div>
+
+              <!-- 主题切换 -->
+              <div class="wx-themes">
+                <button
+                  v-for="t in themes" :key="t.key"
+                  class="wx-theme-dot"
+                  :class="{ active: readerTheme === t.key }"
+                  :style="{ background: t.color }"
+                  @click="readerTheme = t.key"
+                ></button>
+              </div>
+            </div>
+          </Transition>
+
+          <!-- 目录抽屉 -->
+          <Transition name="toc-slide">
+            <div v-if="showToc" class="wx-toc" @click.stop>
+              <div class="wx-toc-header">
+                <span>目录</span>
+                <button class="wx-toc-close" @click="showToc = false">&times;</button>
+              </div>
+              <div class="wx-toc-list">
+                <div
+                  v-for="(item, i) in tocItems"
+                  :key="i"
+                  class="wx-toc-item"
+                  :class="{ active: currentPage - 1 === i }"
+                  @click="jumpToPage(i + 1); showToc = false"
+                >
+                  <span class="wx-toc-num">{{ i + 1 }}</span>
+                  <span class="wx-toc-preview">{{ item }}</span>
                 </div>
               </div>
             </div>
-            <div class="book-open-pages">
-              <div class="pages-content">{{ selectedBook.content }}</div>
-            </div>
-          </div>
+          </Transition>
+
         </div>
       </Transition>
     </Teleport>
@@ -163,7 +248,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useAdamStore } from '@/stores/adam'
 import type { BookRecord } from '@/types/investment'
 
@@ -405,6 +490,113 @@ function getCoverColor(book: BookRecord) {
 
 function selectBook(book: BookRecord) {
   selectedBook.value = book
+  currentPage.value = 0
+  showBars.value = false
+  showToc.value = false
+  pageDir.value = 'forward'
+}
+
+// 清理 Markdown 符号
+function cleanContent(raw: string): string {
+  return raw
+    .replace(/^#{1,6}\s+/gm, '')        // ## 标题符号
+    .replace(/\*\*(.+?)\*\*/g, '$1')    // **粗体**
+    .replace(/\*(.+?)\*/g, '$1')        // *斜体*
+    .replace(/`{1,3}[^`]*`{1,3}/g, '')  // `代码`
+    .replace(/^---+$/gm, '────')        // --- 分割线
+    .replace(/^\s*[-*]\s+/gm, '• ')     // - 列表项
+    .replace(/\n{3,}/g, '\n\n')         // 多余空行压缩成最多一行
+    .trim()
+}
+
+// 每页约600字
+const CHARS_PER_PAGE = 600
+
+const pages = computed(() => {
+  const raw = selectedBook.value?.content || ''
+  if (!raw) return []
+  const content = cleanContent(raw)
+  const result: string[] = []
+  const paragraphs = content.split(/\n\n+/).filter(p => p.trim())
+  let current = ''
+  for (const para of paragraphs) {
+    if (current.length + para.length + 1 > CHARS_PER_PAGE && current.length > 0) {
+      result.push(current.trim())
+      current = para
+    } else {
+      current = current ? current + '\n\n' + para : para
+    }
+  }
+  if (current.trim()) result.push(current.trim())
+  return result
+})
+
+// 目录：每页取前20字作为标题
+const tocItems = computed(() => pages.value.map(p => p.slice(0, 20).replace(/\n/g, ' ') + '…'))
+
+const currentPage = ref(0)
+const showBars = ref(false)
+const showToc = ref(false)
+const pageDir = ref<'forward' | 'back'>('forward')
+const fontSize = ref(16)
+const readerTheme = ref<'light' | 'dark' | 'sepia'>('sepia')
+
+const themes = [
+  { key: 'light', color: '#ffffff' },
+  { key: 'sepia', color: '#f5ead0' },
+  { key: 'dark', color: '#1a1a1a' },
+]
+
+const progressPct = computed(() => {
+  if (!pages.value.length) return 0
+  return Math.round((currentPage.value / pages.value.length) * 100)
+})
+
+function closeReader() {
+  selectedBook.value = null
+  currentPage.value = 0
+  showBars.value = false
+  showToc.value = false
+}
+
+function prevPage() {
+  if (currentPage.value > 0) {
+    pageDir.value = 'back'
+    currentPage.value--
+  }
+}
+
+function nextPage() {
+  if (currentPage.value <= pages.value.length - 1) {
+    pageDir.value = 'forward'
+    currentPage.value++
+  }
+}
+
+function jumpToPage(n: number) {
+  pageDir.value = n > currentPage.value ? 'forward' : 'back'
+  currentPage.value = n
+}
+
+function handleReaderClick(e: MouseEvent) {
+  if (showToc.value) { showToc.value = false; return }
+  const el = e.currentTarget as HTMLElement
+  const x = e.clientX
+  const w = el.offsetWidth
+  const zone = w / 3
+  if (x < zone) {
+    prevPage()
+  } else if (x > w - zone) {
+    nextPage()
+  } else {
+    showBars.value = !showBars.value
+  }
+}
+
+function getSpineColor(book: BookRecord) {
+  const h = hashCode(book.id)
+  const colors = ['#5a3a1a', '#1a2a4a', '#3a1522', '#1a2e26', '#2a1a10', '#252040']
+  return colors[h % colors.length]
 }
 
 function formatDate(iso: string) {
@@ -934,123 +1126,267 @@ function handleAddBook() {
   margin: 0 4px;
 }
 
-/* ===== 打开书本 Modal ===== */
-.book-overlay {
+/* ===== 沉浸式阅读器（微信阅读风格） ===== */
+.wx-reader {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 9999;
-  padding: 20px;
-}
-.book-open {
-  display: flex;
-  max-width: 720px;
-  width: 100%;
-  max-height: 80vh;
-  border-radius: 4px 8px 8px 4px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-.book-open-cover {
-  width: 220px;
-  flex-shrink: 0;
-  padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  position: relative;
-  color: rgba(255,255,255,0.9);
-}
-.close-btn {
-  position: absolute;
-  top: 10px; right: 10px;
-  width: 28px; height: 28px;
-  border: none;
-  background: rgba(0,0,0,0.2);
-  color: rgba(255,255,255,0.8);
-  border-radius: 50%;
-  font-size: 18px;
+  user-select: none;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.close-btn:hover { background: rgba(0,0,0,0.4); }
-.cover-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
-}
-.cover-icon { font-size: 28px; }
-.cover-title { font-size: 18px; font-weight: 700; line-height: 1.4; margin: 0; }
-.cover-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-  opacity: 0.7;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-}
-.cover-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-.cover-tag {
-  font-size: 9px;
-  padding: 2px 8px;
-  border-radius: 3px;
-  background: rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.85);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.book-open-pages {
-  flex: 1;
-  background: #FDF8F0;
-  padding: 28px 24px;
-  overflow-y: auto;
-  position: relative;
-  background-image:
-    repeating-linear-gradient(
-      transparent 0px,
-      transparent 27px,
-      rgba(139,111,71,0.06) 27px,
-      rgba(139,111,71,0.06) 28px
-    );
-}
-.book-open-pages::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02));
-}
-.pages-content {
-  font-size: 13px;
-  line-height: 28px;
-  color: #3a3024;
-  white-space: pre-wrap;
-  font-family: 'Georgia', 'Noto Serif SC', serif;
 }
 
-/* Modal 动画 */
-.book-modal-enter-active { transition: all 0.3s ease; }
-.book-modal-leave-active { transition: all 0.2s ease; }
-.book-modal-enter-from { opacity: 0; }
-.book-modal-enter-from .book-open { transform: scale(0.9) translateY(20px); opacity: 0; }
-.book-modal-leave-to { opacity: 0; }
-.book-modal-leave-to .book-open { transform: scale(0.95); opacity: 0; }
+/* 主题 */
+.theme-light { background: #ffffff; color: #333; }
+.theme-sepia  { background: #f5ead0; color: #4a3728; }
+.theme-dark   { background: #1a1a1a; color: #c0b89a; }
+
+/* 始终可见的退出按钮 */
+.wx-fixed-back {
+  position: absolute;
+  top: 14px; left: 16px;
+  z-index: 30;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: inherit;
+}
+.theme-light .wx-fixed-back { background: rgba(0,0,0,0.07); color: #333; }
+.theme-sepia  .wx-fixed-back { background: rgba(74,55,40,0.12); color: #4a3728; }
+.theme-dark   .wx-fixed-back { background: rgba(255,255,255,0.1); color: #c0b89a; }
+.wx-fixed-back:hover { transform: scale(1.1); opacity: 0.9; }
+
+/* 顶部栏 */
+.wx-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.theme-light .wx-topbar { background: rgba(255,255,255,0.92); border-bottom: 1px solid rgba(0,0,0,0.08); }
+.theme-sepia  .wx-topbar { background: rgba(245,234,208,0.92); border-bottom: 1px solid rgba(74,55,40,0.1); }
+.theme-dark   .wx-topbar { background: rgba(26,26,26,0.92);   border-bottom: 1px solid rgba(255,255,255,0.08); }
+
+.wx-back {
+  border: none; background: none; padding: 4px; cursor: pointer;
+  display: flex; align-items: center; opacity: 0.6; transition: opacity 0.15s;
+  color: inherit;
+}
+.wx-back:hover { opacity: 1; }
+
+.wx-title-wrap { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.wx-book-title { font-size: 13px; font-weight: 600; opacity: 0.85; }
+.wx-progress-bar {
+  height: 2px; border-radius: 1px;
+  background: rgba(128,128,128,0.2);
+  overflow: hidden;
+}
+.wx-progress-fill {
+  height: 100%;
+  background: #4CAF50;
+  border-radius: 1px;
+  transition: width 0.3s ease;
+}
+.wx-pct {
+  font-size: 11px;
+  opacity: 0.4;
+  font-family: 'SF Mono', monospace;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* 内容区 */
+.wx-content {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 封面 */
+.wx-cover {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: rgba(255,255,255,0.92);
+  text-align: center;
+  padding: 40px 32px;
+}
+.wx-cover-deco { font-size: 32px; opacity: 0.4; font-family: Georgia, serif; }
+.wx-cover-title { font-size: 28px; font-weight: 800; line-height: 1.4; margin: 0; }
+.wx-cover-line { width: 48px; height: 1px; background: rgba(255,255,255,0.3); }
+.wx-cover-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.wx-cover-tag {
+  font-size: 11px; padding: 3px 12px; border-radius: 14px;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+}
+.wx-cover-hint {
+  font-size: 11px; color: rgba(255,255,255,0.3);
+  margin-top: 16px; font-family: 'SF Mono', monospace;
+}
+
+/* 正文页 */
+.wx-page-text {
+  flex: 1;
+  padding: 64px 8vw 72px;
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+.wx-text-body {
+  flex: 1;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  font-family: 'Georgia', 'Noto Serif SC', 'Source Han Serif CN', serif;
+  word-break: break-all;
+  overflow: hidden;
+}
+.wx-page-num {
+  text-align: center;
+  font-size: 11px;
+  opacity: 0.3;
+  font-family: 'SF Mono', monospace;
+  margin-top: 20px;
+  letter-spacing: 0.1em;
+}
+
+/* 底部工具栏 */
+.wx-bottombar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 14px 24px 24px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  gap: 20px;
+}
+.theme-light .wx-bottombar { background: rgba(255,255,255,0.92); border-top: 1px solid rgba(0,0,0,0.08); }
+.theme-sepia  .wx-bottombar { background: rgba(245,234,208,0.92); border-top: 1px solid rgba(74,55,40,0.1); }
+.theme-dark   .wx-bottombar { background: rgba(26,26,26,0.92);   border-top: 1px solid rgba(255,255,255,0.08); }
+
+.wx-tool-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  border: none; background: none; cursor: pointer; color: inherit;
+  opacity: 0.6; font-size: 11px; font-family: inherit; padding: 4px 8px;
+  transition: opacity 0.15s;
+}
+.wx-tool-btn:hover { opacity: 1; }
+
+.wx-fontsize {
+  display: flex; align-items: center; gap: 12px;
+}
+.wx-fs-btn {
+  border: 1px solid currentColor; border-radius: 4px;
+  background: none; cursor: pointer; color: inherit; opacity: 0.5;
+  font-size: 12px; font-weight: 700; padding: 3px 10px;
+  font-family: inherit; transition: opacity 0.15s;
+}
+.wx-fs-btn:hover { opacity: 1; }
+.wx-fs-val { font-size: 13px; opacity: 0.6; min-width: 20px; text-align: center; }
+
+.wx-themes {
+  display: flex; align-items: center; gap: 8px;
+}
+.wx-theme-dot {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.wx-theme-dot.active { border-color: #4CAF50; transform: scale(1.15); }
+
+/* 目录抽屉 */
+.wx-toc {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 280px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+}
+.theme-light .wx-toc { background: #fff; }
+.theme-sepia  .wx-toc { background: #f0dfc0; }
+.theme-dark   .wx-toc { background: #232323; }
+
+.wx-toc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px;
+  font-size: 14px; font-weight: 700;
+  border-bottom: 1px solid rgba(128,128,128,0.15);
+}
+.wx-toc-close {
+  border: none; background: none; font-size: 20px; cursor: pointer;
+  color: inherit; opacity: 0.5; line-height: 1;
+}
+.wx-toc-close:hover { opacity: 1; }
+.wx-toc-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.wx-toc-item {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 10px 18px; cursor: pointer;
+  transition: background 0.12s;
+  font-size: 13px; line-height: 1.5;
+}
+.wx-toc-item:hover { background: rgba(128,128,128,0.08); }
+.wx-toc-item.active { background: rgba(76,175,80,0.1); color: #4CAF50; }
+.wx-toc-num {
+  font-size: 10px; opacity: 0.35;
+  font-family: 'SF Mono', monospace; min-width: 18px; flex-shrink: 0;
+}
+.wx-toc-preview { opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 翻页动画 */
+.page-forward-enter-active,
+.page-forward-leave-active,
+.page-back-enter-active,
+.page-back-leave-active { transition: all 0.22s ease; }
+
+.page-forward-enter-from { opacity: 0; transform: translateX(30px); }
+.page-forward-leave-to   { opacity: 0; transform: translateX(-30px); }
+.page-back-enter-from    { opacity: 0; transform: translateX(-30px); }
+.page-back-leave-to      { opacity: 0; transform: translateX(30px); }
+
+/* 顶底栏动画 */
+.bar-slide-enter-active, .bar-slide-leave-active { transition: all 0.2s ease; }
+.bar-slide-enter-from, .bar-slide-leave-to { opacity: 0; transform: translateY(-100%); }
+.bar-slide-up-enter-active, .bar-slide-up-leave-active { transition: all 0.2s ease; }
+.bar-slide-up-enter-from, .bar-slide-up-leave-to { opacity: 0; transform: translateY(100%); }
+
+/* 目录动画 */
+.toc-slide-enter-active, .toc-slide-leave-active { transition: transform 0.25s ease; }
+.toc-slide-enter-from, .toc-slide-leave-to { transform: translateX(-100%); }
+
+/* 阅读器进出动画 */
+.reader-fade-enter-active { transition: opacity 0.25s ease; }
+.reader-fade-leave-active { transition: opacity 0.2s ease; }
+.reader-fade-enter-from, .reader-fade-leave-to { opacity: 0; }
 
 /* 移动端 */
 @media (max-width: 640px) {
   .shelf-books { padding: 0 12px; gap: 2px; }
   .book-spine { padding: 8px 3px; }
   .spine-title { font-size: 9px; }
-  .book-open { flex-direction: column; max-height: 85vh; }
-  .book-open-cover { width: 100%; padding: 20px; min-height: 140px; }
-  .cover-title { font-size: 16px; }
-  .book-open-pages { padding: 20px 16px; }
+  .wx-page-text { padding: 64px 6vw 72px; }
+  .wx-toc { width: 240px; }
   .tab-btn { padding: 5px 8px; font-size: 10px; }
 }
 </style>

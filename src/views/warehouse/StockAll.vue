@@ -184,10 +184,10 @@
           <el-table-column prop="cate_name" label="分类" width="100" sortable="custom" />
           <el-table-column prop="spec" label="规格" width="90" />
           <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-          <el-table-column label="库存" width="110" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
+          <el-table-column label="库存" width="140" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small" effect="plain">
-                {{ getStockQty(row).toFixed(2) }}
+                {{ formatStockWithUnits(row.id, getStockQty(row), row.unit_name) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -196,8 +196,13 @@
               <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="移动均价" width="90" align="right">
-            <template #default="{ row }">¥{{ getAvgPrice(row).toFixed(2) }}</template>
+          <el-table-column label="移动均价" width="130" align="right">
+            <template #default="{ row }">
+              <div>¥{{ getAvgPrice(row).toFixed(2) }}/{{ row.unit_name }}</div>
+              <div v-if="getLargeUnitPrice(row.id, getAvgPrice(row))" style="font-size:11px;color:#999">
+                ¥{{ getLargeUnitPrice(row.id, getAvgPrice(row))!.price.toFixed(2) }}/{{ getLargeUnitPrice(row.id, getAvgPrice(row))!.unit }}
+              </div>
+            </template>
           </el-table-column>
           <el-table-column label="库存货值" width="110" align="right" sortable="custom" prop="__stock_value" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
@@ -371,7 +376,7 @@ import { useRouter } from 'vue-router'
 import { Search, Plus, Edit, Delete, Filter } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getStockList, getWarehouseList } from '@/api/warehouse'
-import { getGoodsList, getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate } from '@/api/goods'
+import { getGoodsList, getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate, getUnitConvert } from '@/api/goods'
 import http from '@/api/http'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 
@@ -513,6 +518,43 @@ const bomGoodsSet = ref<Set<number>>(new Set())
 // Stock qty map: goods_id -> qty (from stock/StockAll - updated by inhouse audit)
 const stockQtyMap = ref<Record<number, number>>({})
 const stockPriceMap = ref<Record<number, number>>({})
+// 多单位换算 map: goods_id -> [{unit_name, ratio}] (大单位在前，小单位ratio=1在后)
+const unitConvertMap = ref<Record<number, { unit_name: string; ratio: number }[]>>({})
+
+async function loadUnitConvertMap() {
+  // 只加载 multi_unit=true 的商品
+  const multiGoods = allGoods.value.filter(g => g.multi_unit)
+  await Promise.allSettled(multiGoods.map(async (g) => {
+    try {
+      const res = await getUnitConvert(g.id)
+      const rows: any[] = res.data?.rows ?? []
+      if (rows.length) unitConvertMap.value[g.id] = rows.map((r: any) => ({ unit_name: r.unit_name, ratio: Number(r.ratio) }))
+    } catch {}
+  }))
+}
+
+// 将小单位数量换算为 "X大单位 Y小单位" 格式
+function formatStockWithUnits(goodsId: number, qty: number, baseUnit: string): string {
+  const units = unitConvertMap.value[goodsId]
+  if (!units || units.length < 2) return `${qty.toFixed(0)} ${baseUnit}`
+  // 找比例最大的大单位
+  const largeUnit = units.reduce((a, b) => b.ratio > a.ratio ? b : a)
+  if (largeUnit.ratio <= 1) return `${qty.toFixed(0)} ${baseUnit}`
+  const large = Math.floor(qty / largeUnit.ratio)
+  const small = qty % largeUnit.ratio
+  if (large === 0) return `${small.toFixed(0)} ${baseUnit}`
+  if (small === 0) return `${large} ${largeUnit.unit_name}`
+  return `${large} ${largeUnit.unit_name} ${small.toFixed(0)} ${baseUnit}`
+}
+
+// 获取大单位的移动均价（= 小单位均价 × 换算比）
+function getLargeUnitPrice(goodsId: number, basePrice: number): { unit: string; price: number } | null {
+  const units = unitConvertMap.value[goodsId]
+  if (!units || units.length < 2) return null
+  const largeUnit = units.reduce((a, b) => b.ratio > a.ratio ? b : a)
+  if (largeUnit.ratio <= 1) return null
+  return { unit: largeUnit.unit_name, price: basePrice * largeUnit.ratio }
+}
 // Net deduction map: goods_id -> qty deducted by sales+retail (not yet reflected in StockAll)
 const deductQtyMap = ref<Record<number, number>>({})
 
@@ -721,6 +763,7 @@ function selectCate(id: number) {
 async function loadAllGoods() {
   const res = await getGoodsList({ list_rows: 2000 })
   allGoods.value = res.data?.rows ?? []
+  loadUnitConvertMap()
 }
 
 async function loadStockMap(warehouseId = 0) {
@@ -748,7 +791,7 @@ async function loadStockMap(warehouseId = 0) {
       for (const ih of ihRows) {
         if (Number(ih.status) !== 1) continue
         try {
-          const items: any[] = JSON.parse(ih.goods_info || '[]')
+          const items: any[] = Array.isArray(ih.goods_info) ? ih.goods_info : JSON.parse(ih.goods_info || '[]')
           for (const item of items) {
             const sn = item.goods_sn
             if (!sn) continue
@@ -842,10 +885,11 @@ async function loadActivityMaps() {
     const inhouseRows: any[] = inhouseRes.status === 'fulfilled' ? (inhouseRes.value.data?.rows ?? []) : []
     const inMap: Record<number, number> = {}
     for (const r of inhouseRows) {
+      if (Number(r.status) !== 1) continue  // 只统计已审核
       if (returnInhouseIds.has(Number(r.id))) continue
       if (String(r.remark || '').includes('退货')) continue
       try {
-        const items = JSON.parse(r.goods_info || '[]')
+        const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
         const goodsInThisOrder = new Set<number>()
         for (const item of items) {
           const gid = Number(item.goods_id)
@@ -868,7 +912,7 @@ async function loadActivityMaps() {
       for (const r of (returnRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         try {
-          const allItems = JSON.parse(r.goods_info || '[]')
+          const allItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const items = allItems.filter((i: any) => !i._meta)
           const goodsInThisReturn = new Set<number>()
           for (const item of items) {
@@ -895,7 +939,7 @@ async function loadActivityMaps() {
       const saleRows: any[] = saleOutRes.data?.rows ?? []
       for (const r of saleRows) {
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThisOrder = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
@@ -919,7 +963,7 @@ async function loadActivityMaps() {
     const rMap: Record<number, number> = {}
     for (const r of retailRows) {
       try {
-        const items = JSON.parse(r.goods_info || '[]')
+        const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
         const goodsInThisOrder = new Set<number>()
         for (const item of items) {
           const gid = Number(item.goods_id)
@@ -944,7 +988,7 @@ async function loadActivityMaps() {
       for (const r of (otherInRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThis = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
@@ -968,7 +1012,7 @@ async function loadActivityMaps() {
       for (const r of (otherOutRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThis = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
@@ -1007,7 +1051,7 @@ async function loadActivityMaps() {
       for (const r of (prodOutRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThis = new Set<number>()
           for (const item of items) {
             const gid = Number(item.goods_id)
@@ -1096,18 +1140,22 @@ async function openFlowDialog(goods: any) {
     // 采购入库
     if (inhouseRes.status === 'fulfilled') {
       for (const r of (inhouseRes.value.data?.rows ?? [])) {
+        if (Number(r.status) !== 1) continue  // 只统计已审核
         try {
-          const items = JSON.parse(r.goods_info || '[]')
-          const matched = items.find((i: any) =>
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
+          const matchedItems = items.filter((i: any) =>
             (gid && Number(i.goods_id) === gid) ||
             (goods.goods_name && i.goods_name === goods.goods_name)
           )
-          if (matched) {
+          // 同一入库单内同商品可能多行，合并数量
+          const totalQty = matchedItems.reduce((s: number, i: any) => s + Number(i.num || 0), 0)
+          const avgPrice = matchedItems.length > 0 ? Number(matchedItems[0].price || 0) : 0
+          if (matchedItems.length > 0) {
             rows.push({
               _type: 'in',
               _sn: r.in_no || r.inhouse_no || '',
-              _qty: Number(matched.num || 0),
-              _price: Number(matched.price || 0),
+              _qty: totalQty,
+              _price: avgPrice,
               _date: r.in_date || r.create_time || '',
               _partner: r.supplier_name || '',
             })
@@ -1121,7 +1169,7 @@ async function openFlowDialog(goods: any) {
       for (const r of (returnRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         try {
-          const allItems = JSON.parse(r.goods_info || '[]')
+          const allItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const items = allItems.filter((i: any) => !i._meta)
           const matched = items.find((i: any) =>
             (gid && Number(i.goods_id) === gid) ||
@@ -1145,7 +1193,7 @@ async function openFlowDialog(goods: any) {
     if (saleOutRes.status === 'fulfilled') {
       for (const r of (saleOutRes.value.data?.rows ?? [])) {
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
             (gid && Number(i.goods_id) === gid) ||
             (goods.goods_name && i.goods_name === goods.goods_name)
@@ -1169,7 +1217,7 @@ async function openFlowDialog(goods: any) {
     if (retailRes.status === 'fulfilled') {
       for (const r of (retailRes.value.data?.rows ?? [])) {
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
             (gid && Number(i.goods_id) === gid) ||
             (goods.goods_name && i.goods_name === goods.goods_name)
@@ -1193,7 +1241,7 @@ async function openFlowDialog(goods: any) {
       for (const r of (otherInRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
             (gid && Number(i.goods_id) === gid) ||
             (goods.goods_name && i.goods_name === goods.goods_name)
@@ -1217,7 +1265,7 @@ async function openFlowDialog(goods: any) {
       for (const r of (otherOutRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
             (gid && Number(i.goods_id) === gid) ||
             (goods.goods_name && i.goods_name === goods.goods_name)
@@ -1258,7 +1306,7 @@ async function openFlowDialog(goods: any) {
       for (const r of (prodOutRes.value.data?.rows ?? [])) {
         if (r.status !== 1) continue
         try {
-          const items = JSON.parse(r.goods_info || '[]')
+          const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
             (gid && Number(i.goods_id) === gid) ||
             (goods.goods_name && i.goods_name === goods.goods_name)

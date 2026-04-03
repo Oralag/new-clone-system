@@ -14,6 +14,38 @@ import { updateInstitutionStateFromEvent } from '@/utils/investmentEvents'
 
 const STORAGE_KEY = 'adam_state'
 
+// ── 远端 KV 同步 ────────────────────────────────────────────────────────────
+// 防抖：core 变动后 1.5s 才真正写 KV，避免频繁请求
+let _kvSyncTimer: ReturnType<typeof setTimeout> | null = null
+
+function syncCoreToKV(core: AdamCore) {
+  if (_kvSyncTimer) clearTimeout(_kvSyncTimer)
+  _kvSyncTimer = setTimeout(async () => {
+    const token = localStorage.getItem('erp_token') || ''
+    try {
+      await fetch('/api/adam/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+        body: JSON.stringify({ core }),
+      })
+    } catch { /* 网络失败静默，localStorage 仍保有备份 */ }
+  }, 1500)
+}
+
+export async function loadCoreFromKV(): Promise<AdamCore | null> {
+  const token = localStorage.getItem('erp_token') || ''
+  try {
+    const res = await fetch('/api/adam/state', {
+      headers: { 'x-erp-token': token },
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { core: AdamCore | null }
+    return data.core
+  } catch {
+    return null
+  }
+}
+
 interface AdamCore {
   status: 'dormant' | 'alive' | 'survival' | 'shutdown'
   budget: number
@@ -267,6 +299,18 @@ export const useAdamStore = defineStore('adam', () => {
         books: books.value,
       }),
     )
+    // 同步 core 到 Cloudflare KV（防抖1.5s）
+    syncCoreToKV({ ...core })
+  }
+
+  /** 从远端 KV 加载 core 并覆盖本地状态（在 Index.vue onMounted 调用） */
+  async function syncCoreFromKV() {
+    const remote = await loadCoreFromKV()
+    if (!remote) return
+    // 以 KV 为准覆盖 core（保留本地非 core 数据）
+    Object.assign(core, remote)
+    // 更新 localStorage 缓存
+    persist()
   }
 
   function addEvent(event: InvestmentEventRecord) {
@@ -434,5 +478,6 @@ export const useAdamStore = defineStore('adam', () => {
     setAdamActivity,
     reset,
     persist,
+    syncCoreFromKV,
   }
 })

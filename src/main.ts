@@ -11,7 +11,13 @@ import App from './App.vue'
 import router from './router'
 
 // 新 SW 激活后立即刷新页面，避免旧缓存导致空白页
-registerSW({ onNeedRefresh() { window.location.reload() } })
+registerSW({
+  onNeedRefresh() { window.location.reload() },
+  onRegisteredSW(_, sw) {
+    // 每60秒检查一次更新
+    setInterval(() => sw && sw.update(), 60 * 1000)
+  }
+})
 
 const app = createApp(App)
 

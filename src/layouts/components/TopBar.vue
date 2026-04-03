@@ -15,6 +15,17 @@
         </button>
       </el-tooltip>
 
+      <!-- 品牌中心预览 -->
+      <el-tooltip content="品牌中心" placement="bottom">
+        <button class="action-btn action-btn-brand" @click="router.push('/brand?from=erp')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+        </button>
+      </el-tooltip>
+
       <!-- 主题切换 -->
       <el-tooltip content="亮色" placement="bottom">
         <button class="action-btn" :class="{ active: appStore.theme === 'light' }" @click="appStore.setTheme('light')">
@@ -301,6 +312,7 @@ async function handleUserCmd(cmd: string) {
   color: var(--mid);
   transition: background 0.15s, color 0.15s;
 }
+.action-btn-brand { color: #7c3aed; }
 
 .action-btn:hover {
   background: var(--gray);

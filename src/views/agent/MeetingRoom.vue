@@ -314,7 +314,7 @@ const interjections = ref<string[]>([]) // 用户插话队列
 // 各专员定义（职位，不用实名）
 const STAFF = {
   captain:    { title: 'Captain',  emoji: '🎯', color: '#6366f1' },
-  briefer:    { title: '参谋',     emoji: '🗂️', color: '#64748b' },
+  briefer:    { title: '秘书',     emoji: '🗂️', color: '#64748b' },
   copywriter: { title: '文案专员', emoji: '✍️', color: '#f59e0b' },
   video:      { title: '视频专员', emoji: '🎬', color: '#ef4444' },
   poster:     { title: '设计专员', emoji: '🎨', color: '#ec4899' },
@@ -612,20 +612,29 @@ async function runMeeting(topic: string) {
     }
 
     if (topicType === 'strategy') {
-      // 策略类：参谋先简报，Captain再决断
+      // 策略类：Captain 先开场定调 → 秘书补充背景 → Captain 派发指令
       meetingStore.setPhase('opening')
 
-      // 参谋简报
+      // Captain 先开场
+      await addStreamingMessage('captain',
+        `你是广告公司的Captain总指挥。今天的策略议题是：「${topic}」\n${brandInfo}\n\n请做简短有力的开场白（80字以内）：\n- 说清楚今天这个议题为什么重要\n- 会议目标是什么\n- 语气自信、有决断力，像在主持高效决策会议`,
+        brandContext
+      )
+      if (shouldStop) return finalizeMeeting()
+      await new Promise(r => setTimeout(r, 300))
+
+      // 秘书补充背景和约束
       const strategyBrieferPrompt = brand
-        ? `你是会议室的参谋，负责在Captain发令前做情报简报。\n\n完整品牌档案：\n${brandContext}\n\n策略议题：「${topic}」\n\n请做情报简报（150字以内）：\n1. 品牌当前最需要解决的核心问题（结合议题）\n2. 竞争格局速览（竞品优劣势）\n3. 关键约束（资源、调性、禁忌）\n语气：参谋向指挥官汇报，简洁客观，直达重点。`
-        : `你是会议室的参谋。策略议题：「${topic}」\n请做简要背景分析（80字以内），语气简洁客观。`
+        ? `你是会议室的秘书。Captain刚开完场，现在你补充背景资料。\n\n完整品牌档案：\n${brandContext}\n\n策略议题：「${topic}」\n\n请做情报简报（150字以内）：\n1. 品牌当前最需要解决的核心问题（结合议题）\n2. 竞争格局速览（竞品优劣势）\n3. 关键约束（资源、调性、禁忌）\n语气：秘书协助主持，简洁客观，直达重点。`
+        : `你是会议室的秘书。Captain刚开完场。策略议题：「${topic}」\n请补充简要背景分析（80字以内），语气简洁客观。`
 
       await addStreamingMessage('briefer', strategyBrieferPrompt, brandContext)
       if (shouldStop) return finalizeMeeting()
       await new Promise(r => setTimeout(r, 300))
 
+      // Captain 看完秘书简报后发出正式指令
       const strategyOpening = await addStreamingMessage('captain',
-        `你是广告公司的Captain总指挥。参谋刚做了情报简报。\n策略议题：「${topic}」\n${brandInfo}\n\n直接发出策略指令（100字以内）：\n- 不写背景，直接说判断和命令\n- 明确今天要解决什么核心问题\n- 点名哪些专员参与、各自的分析角度\n- 语气简短有力，是在发号施令\n\n【重要】指令最后一行必须是派发指令：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（营销/情报）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）\n例如策略类议题通常需要：@@DISPATCH:trend,copywriter@@`,
+        `你是广告公司的Captain总指挥。秘书刚补充了背景简报。\n策略议题：「${topic}」\n${brandInfo}\n\n现在发出正式策略指令（100字以内）：\n- 不写背景，直接说判断和命令\n- 明确今天要解决什么核心问题\n- 点名哪些专员参与、各自的分析角度\n- 语气简短有力，是在发号施令\n\n【重要】指令最后一行必须是派发指令：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（营销/情报）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）\n例如策略类议题通常需要：@@DISPATCH:trend,copywriter@@`,
         brandContext
       )
       if (shouldStop) return finalizeMeeting()
@@ -678,22 +687,30 @@ async function runMeeting(topic: string) {
       return
     }
 
-    // content 类：参谋先做情报简报，Captain再发作战命令
+    // content 类：Captain 先开场 → 秘书补充背景和安排 → Captain 派发作战命令
     meetingStore.setPhase('opening')
 
-    // 参谋简报：展开品牌背景 + 本次任务分析
+    // Captain 先开场定调
+    await addStreamingMessage('captain',
+      `你是广告公司的Captain总指挥。今天的创作议题是：「${topic}」\n${brandInfo}\n\n请做简短有力的开场白（80字以内）：\n- 说清楚今天要产出什么\n- 这次创作的核心目标和方向\n- 语气自信直接，像在主持高效创作会议`,
+      brandContext
+    )
+    if (shouldStop) return finalizeMeeting()
+    await new Promise(r => setTimeout(r, 300))
+
+    // 秘书补充品牌背景和具体安排
     const brieferPrompt = brand
-      ? `你是会议室的参谋，负责在Captain发令前做情报简报。\n\n以下是完整品牌档案：\n${brandContext}\n\n本次议题：「${topic}」\n\n请做一份简洁的情报简报（200字以内），包含：\n1. 品牌现状速览（产品、目标受众、核心卖点各一句）\n2. 本次任务的核心挑战是什么（针对议题分析，不要泛泛而谈）\n3. 关键限制（调性禁忌、竞争对手、违禁词等）\n\n语气：参谋向指挥官汇报，简洁、客观、有料，不废话。`
-      : `你是会议室的参谋。本次议题：「${topic}」\n\n品牌信息未配置，请做简要的任务背景分析（100字以内）：目标平台、核心受众、主要挑战。语气简洁客观。`
+      ? `你是会议室的秘书。Captain刚做了开场，现在你补充背景资料和会议安排。\n\n以下是完整品牌档案：\n${brandContext}\n\n本次议题：「${topic}」\n\n请做一份简洁的背景简报（200字以内），包含：\n1. 品牌现状速览（产品、目标受众、核心卖点各一句）\n2. 本次任务的核心挑战是什么（针对议题分析，不要泛泛而谈）\n3. 关键限制（调性禁忌、竞争对手、违禁词等）\n\n语气：秘书协助主持，简洁、客观、有料，不废话。`
+      : `你是会议室的秘书。Captain刚做了开场。本次议题：「${topic}」\n\n品牌信息未配置，请补充简要的任务背景（100字以内）：目标平台、核心受众、主要挑战。语气简洁客观。`
 
     await addStreamingMessage('briefer', brieferPrompt, brandContext)
     if (shouldStop) return finalizeMeeting()
 
     await new Promise(r => setTimeout(r, 300))
 
-    // Captain 发作战命令（看完简报后）
+    // Captain 看完秘书简报后发作战命令
     const contentOpening = await addStreamingMessage('captain',
-      `你是广告公司的Captain总指挥。参谋刚才做了情报简报。\n议题：「${topic}」\n${brandInfo}\n\n现在直接发出作战命令（150字以内）：\n- 不写背景、不写会议目标、不解释为什么\n- 直接点名各专员，每条命令格式：「专员名，[动词]+[具体要求]+[交付标准]」\n- 语气短促、有压迫感，像战场指挥\n\n示例风格（不要照抄，根据议题发真实命令）：\n「情报，摸清小红书数字游牧赛道热点，给我前3个切入口，附品牌相关度评分。\n文案，基于情报报告出2套标题，小红书风格，情绪要强，不要废话。\n设计，配合文案出封面方案，1080×1440，给我设计方向不是废话。」\n\n【重要】命令最后一行必须是派发指令：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（情报/热点）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）`,
+      `你是广告公司的Captain总指挥。秘书刚才补充了背景资料。\n议题：「${topic}」\n${brandInfo}\n\n现在直接发出作战命令（150字以内）：\n- 不写背景、不写会议目标、不解释为什么\n- 直接点名各专员，每条命令格式：「专员名，[动词]+[具体要求]+[交付标准]」\n- 语气短促、有压迫感，像战场指挥\n\n示例风格（不要照抄，根据议题发真实命令）：\n「情报，摸清小红书数字游牧赛道热点，给我前3个切入口，附品牌相关度评分。\n文案，基于情报报告出2套标题，小红书风格，情绪要强，不要废话。\n设计，配合文案出封面方案，1080×1440，给我设计方向不是废话。」\n\n【重要】命令最后一行必须是派发指令：\n@@DISPATCH:专员1,专员2,...@@\n可选专员：trend（情报/热点）、copywriter（文案）、poster（设计）、video（视频）、publisher（发布）`,
       brandContext
     )
     if (shouldStop) return finalizeMeeting()

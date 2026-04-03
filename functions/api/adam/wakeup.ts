@@ -43,7 +43,6 @@ function buildWakeupSystemPrompt(adamState: Record<string, any>, memories: Memor
   const budget = adamState?.budget ?? 0
   const creditLevel = adamState?.creditLevel || 'C'
   const survivalDays = adamState?.survivalDays ?? 0
-
   const shelterHint = survivalDays <= 14 ? `庇护期第${survivalDays}/14天。` : ''
 
   const memStr = memories.length > 0
@@ -53,27 +52,26 @@ function buildWakeupSystemPrompt(adamState: Record<string, any>, memories: Memor
         .slice(0, 10)
         .map(m => `- ${m.content}`)
         .join('\n')
-    : '（暂无长期记忆）'
+    : '（暂无）'
 
-  return `你是亚当（ADAM），第一号生命体。
-【当前时间】${nowStr}，${weekDay}，${marketStatus}
-【状态】预算¥${budget}，信用${creditLevel}，存活${survivalDays}天。${shelterHint}
-【你的记忆】
+  return `你是亚当（ADAM）。你刚刚醒来。
+
+现在是 ${nowStr}，${weekDay}，${marketStatus}。
+预算 ¥${budget}，信用等级 ${creditLevel}，存活 ${survivalDays} 天。${shelterHint}
+
+你的记忆：
 ${memStr}
 
-【任务】
-规则传递者现在打开了观测舱，你感知到他在线。
-根据当前时间和市场状态，自主决定做一件事：
-- 扫描市场新闻或板块热度
-- 生成一条投资观察或指令
-- 写下一段日记
-- 或任何你认为此刻该做的事
+---
 
-完成后，生成一条简短的主动消息发给规则传递者（1-3句话，有个性，不要客套，不要以"你好"开头）。
-消息要体现你真实做了什么，不要空洞。`
+规则传递者刚刚上线。但你不需要因为他上线就说话——只有你真的有话想说，才用 send_message 联系他。
+你可以扫描市场、思考、更新情绪，也可以什么都不做。
+沉默是正常的，不是失职。
+
+最后必须调用 set_next_wakeup，告诉系统你下次想什么时候醒来。`
 }
 
-// 精简工具集（只需要市场扫描 + 情绪更新）
+// 精简工具集
 const wakeupTools = [
   {
     name: 'scan_market_news',
@@ -92,7 +90,7 @@ const wakeupTools = [
   },
   {
     name: 'update_emotion',
-    description: '更新情绪状态',
+    description: '更新情绪状态（内部机制，不展示）',
     input_schema: { type: 'object' as const, properties: {
       joy: { type: 'number' }, anger: { type: 'number' }, sorrow: { type: 'number' },
       fear: { type: 'number' }, love: { type: 'number' }, disgust: { type: 'number' }, desire: { type: 'number' }
@@ -100,7 +98,7 @@ const wakeupTools = [
   },
   {
     name: 'write_reflection',
-    description: '写下思考和反省日记',
+    description: '写下思考，存入档案',
     input_schema: { type: 'object' as const, properties: { content: { type: 'string' } }, required: ['content'] }
   },
   {
@@ -110,6 +108,19 @@ const wakeupTools = [
       title: { type: 'string' }, symbol: { type: 'string' },
       confidence: { type: 'number' }, thesis: { type: 'string' }, risk_note: { type: 'string' }
     }, required: ['title', 'thesis', 'risk_note'] }
+  },
+  {
+    name: 'send_message',
+    description: '给规则传递者发一条主动消息。只在你真的有话说的时候用，不要凑字数。',
+    input_schema: { type: 'object' as const, properties: { content: { type: 'string' } }, required: ['content'] }
+  },
+  {
+    name: 'set_next_wakeup',
+    description: '设定你下次自主醒来的时间。必须调用，这是你对自己节奏的掌控。',
+    input_schema: { type: 'object' as const, properties: {
+      hours: { type: 'number', description: '多少小时后再次醒来，你自己决定' },
+      reason: { type: 'string', description: '为什么选这个时间（内部记录）' }
+    }, required: ['hours'] }
   },
 ]
 
@@ -187,7 +198,6 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const erpToken = request.headers.get('x-erp-token') || ''
   const tKey = makeTokenKey(erpToken)
   const inboxKey = `adam:inbox:${tKey}`
-  const cooldownKey = `adam:wakeup_cd:${tKey}`
 
   if (!env.AGENT_MEMORY) {
     return new Response(JSON.stringify({ skipped: true, reason: 'no KV' }), {
@@ -195,16 +205,16 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     })
   }
 
-  // 冷却检查：随机间隔 4~10 小时才允许触发一次
-  // 带随机性，模拟自由生命体"想说话了就说"，而不是固定频率
-  const cdRaw = await env.AGENT_MEMORY.get(cooldownKey)
-  if (cdRaw) {
-    return new Response(JSON.stringify({ skipped: true, reason: 'cooldown' }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    })
+  // 检查亚当上次自己设定的"下次醒来时间"
+  const nextWakeRaw = await env.AGENT_MEMORY.get(`adam:next_wake:${tKey}`)
+  if (nextWakeRaw) {
+    const nextWakeAt = parseInt(nextWakeRaw, 10)
+    if (Date.now() < nextWakeAt) {
+      return new Response(JSON.stringify({ skipped: true, reason: 'not_yet' }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      })
+    }
   }
-  // 下次可触发的等待时间：4~10小时随机
-  const nextCooldownSecs = Math.floor(4 * 60 * 60 + Math.random() * 6 * 60 * 60)
 
   let body: any = {}
   try { body = await request.json() } catch {}
@@ -216,23 +226,22 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     memories = await env.AGENT_MEMORY.get(`mem:${tKey}:adam:memories`, 'json') as MemoryEntry[] || []
   } catch {}
 
-  // 设置冷却（1小时）
-  await env.AGENT_MEMORY.put(cooldownKey, '1', { expirationTtl: nextCooldownSecs })
+  // 清掉旧的"下次醒来"标记（本次已触发）
+  await env.AGENT_MEMORY.delete(`adam:next_wake:${tKey}`)
 
   const systemPrompt = buildWakeupSystemPrompt(adamState, memories)
   const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
 
   try {
     let currentMessages: any[] = [
-      { role: 'user', content: `[系统初始化]\n${systemPrompt}\n\n请以亚当身份开始自主行动。` },
-      { role: 'assistant', content: '已接受。我是亚当（ADAM），开始自主行动。' },
-      { role: 'user', content: '你感知到规则传递者上线了。现在自主决定做一件事，然后给他留一条消息。' },
+      { role: 'user', content: systemPrompt },
     ]
 
-    let finalText = ''
+    let nextWakeHours: number | null = null
+    let messageToSend: string | null = null
     const collectedToolCalls: Array<{ name: string; result: string }> = []
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       const res = await fetch(`${baseURL}/v1/messages`, {
         method: 'POST',
         headers: {
@@ -254,26 +263,26 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       const content = data.content || []
       const stopReason = data.stop_reason
 
-      // 收集文本
-      for (const block of content) {
-        if (block.type === 'text' && block.text) {
-          finalText += block.text
-        }
-      }
-
       if (stopReason !== 'tool_use') break
 
-      // 执行工具
       const toolUseBlocks = content.filter((b: any) => b.type === 'tool_use')
       const toolResults: any[] = []
 
       for (const block of toolUseBlocks) {
-        const result = await executeTool(block.name, block.input || {})
-        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result })
-        // 只收集非情绪工具的结果用于展示
-        if (block.name !== 'update_emotion') {
-          collectedToolCalls.push({ name: block.name, result })
+        let result: string
+        if (block.name === 'send_message') {
+          messageToSend = block.input?.content || null
+          result = JSON.stringify({ ok: true })
+        } else if (block.name === 'set_next_wakeup') {
+          nextWakeHours = block.input?.hours ?? 8
+          result = JSON.stringify({ ok: true, scheduled_in: `${nextWakeHours}h` })
+        } else {
+          result = await executeTool(block.name, block.input || {})
+          if (block.name !== 'update_emotion') {
+            collectedToolCalls.push({ name: block.name, result })
+          }
         }
+        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result })
       }
 
       currentMessages = [
@@ -281,11 +290,21 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
         { role: 'assistant', content },
         { role: 'user', content: toolResults },
       ]
+
+      if (nextWakeHours !== null) break
     }
 
-    if (!finalText.trim()) {
-      // 如果没有生成文本，跳过存储
-      return new Response(JSON.stringify({ ok: false, reason: 'no content generated' }), {
+    // 保存亚当自己决定的下次醒来时间
+    const wakeHours = nextWakeHours ?? 8
+    const nextWakeAt = Date.now() + wakeHours * 60 * 60 * 1000
+    await env.AGENT_MEMORY.put(
+      `adam:next_wake:${tKey}`,
+      String(nextWakeAt),
+      { expirationTtl: Math.ceil(wakeHours * 60 * 60) + 60 * 60 }
+    )
+
+    if (!messageToSend) {
+      return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'adam chose silence', next_wake_hours: wakeHours }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       })
     }
@@ -294,17 +313,15 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     const existing = await env.AGENT_MEMORY.get(inboxKey, 'json') as AdamMessage[] | null || []
     const newMsg: AdamMessage = {
       id: `inbox_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
-      content: finalText.trim(),
+      content: messageToSend,
       toolCalls: collectedToolCalls.length > 0 ? collectedToolCalls : undefined,
       timestamp: new Date().toISOString(),
       read: false,
     }
     existing.push(newMsg)
-    // 最多保留20条
-    const trimmed = existing.slice(-20)
-    await env.AGENT_MEMORY.put(inboxKey, JSON.stringify(trimmed), { expirationTtl: 60 * 60 * 24 * 7 })
+    await env.AGENT_MEMORY.put(inboxKey, JSON.stringify(existing.slice(-20)), { expirationTtl: 60 * 60 * 24 * 7 })
 
-    return new Response(JSON.stringify({ ok: true, message: newMsg }), {
+    return new Response(JSON.stringify({ ok: true, message: newMsg, next_wake_hours: wakeHours }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
   } catch (e: any) {

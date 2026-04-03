@@ -165,25 +165,29 @@
         </div>
       </div>
 
-      <!-- 供应链协同 -->
-      <div class="portal-card portal-card-green portal-card-dim">
-        <div class="card-icon card-icon-green">
+      <!-- 品牌主页 & 零售中心 -->
+      <div class="portal-card portal-card-brand" :class="{ 'card-pressed': pressedCard === 'brand' }"
+        @click="go('/brand')"
+        @touchstart.passive="pressedCard = 'brand'"
+        @touchend.passive="pressedCard = ''"
+        @touchcancel.passive="pressedCard = ''">
+        <div class="card-icon card-icon-brand">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <circle cx="5" cy="12" r="2.5" fill="white" opacity="0.9"/>
-            <circle cx="19" cy="6" r="2.5" fill="white" opacity="0.9"/>
-            <circle cx="19" cy="18" r="2.5" fill="white" opacity="0.9"/>
-            <path d="M7.5 12L16.5 7M7.5 12L16.5 17" stroke="white" stroke-width="1.5" opacity="0.5"/>
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="white" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+            <line x1="3" y1="6" x2="21" y2="6" stroke="white" stroke-width="1.8" opacity="0.7"/>
+            <path d="M16 10a4 4 0 01-8 0" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
           </svg>
         </div>
-        <h2 class="card-title">供应链协同</h2>
-        <p class="card-desc">多方协作门户。供应商、仓储、物流实时协同，打通全链路信息壁垒。</p>
+        <h2 class="card-title">品牌主页</h2>
+        <p class="card-desc">面向零售客户与采购商的品牌展示平台。产品商城、批发采购、评价系统一体化。</p>
         <div class="card-tags">
-          <span class="tag tag-green">供应商管理</span>
-          <span class="tag tag-green">物流追踪</span>
-          <span class="tag tag-green">协同办公</span>
+          <span class="tag tag-brand">品牌展示</span>
+          <span class="tag tag-brand">零售商城</span>
+          <span class="tag tag-brand">批发采购</span>
+          <span class="tag tag-brand">评价系统</span>
         </div>
         <div class="card-arrow">
-          <span>敬请期待</span>
+          <span>进入品牌中心</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
@@ -1006,6 +1010,28 @@ const TOOL_LABELS: Record<string, string> = {
 .portal-card-gold   { background: linear-gradient(135deg, #fffbf0, #fff8e8); border-color: rgba(245,166,35,0.12); }
 .card-icon-gold     { background: linear-gradient(135deg, #b8860b, #d4a574); }
 .tag-gold           { background: rgba(212,165,116,0.15); color: #8b6914; }
+.portal-card-brand   { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #9333ea 100%); border-color: rgba(124,58,237,0.3); }
+.card-icon-brand     { background: rgba(255,255,255,0.18); box-shadow: none; }
+.tag-brand           { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); }
+.portal-card-brand .card-title { color: #fff; }
+.portal-card-brand .card-desc  { color: rgba(255,255,255,0.5); }
+.portal-card-brand .card-arrow { color: rgba(255,255,255,0.35); }
+.portal-card-brand:hover,
+.portal-card-brand.card-pressed {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  border-color: rgba(168,85,247,0.4);
+  box-shadow: 0 40px 80px rgba(124,58,237,0.3);
+}
+.portal-card-brand:hover .card-arrow,
+.portal-card-brand.card-pressed .card-arrow { color: #fff; gap: 12px; }
+@media (hover: none) {
+  .portal-card-brand:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #9333ea 100%);
+    border-color: rgba(124,58,237,0.3);
+    box-shadow: none;
+  }
+}
+
 .portal-card-dim {
   cursor: not-allowed;
   filter: grayscale(1);

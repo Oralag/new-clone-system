@@ -1,0 +1,12 @@
+name = "adam-cron"
+main = "index.ts"
+compatibility_date = "2024-09-23"
+
+# 每4小时运行一次（北京时间大约：2点、6点、10点、14点、18点、22点）
+[triggers]
+crons = ["0 */4 * * *"]
+
+# 共享同一个 KV namespace（与 Pages 项目相同的 binding）
+[[kv_namespaces]]
+binding = "AGENT_MEMORY"
+id = "34551c1704904c3ab22463a73fc56f5c"
