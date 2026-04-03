@@ -151,16 +151,37 @@ const isCollapsed = ref(true)
 let pollTimer: number | undefined
 
 onMounted(async () => {
+  // 先从本地缓存快速渲染，再从云端拉最新
   try {
     const raw = localStorage.getItem(HISTORY_KEY)
     if (raw) messages.value = JSON.parse(raw)
   } catch { /* ignore */ }
+
+  // 从云端拉取（跨设备同步）
+  await loadHistoryFromCloud()
 
   if (adamStore.core.status === 'alive') {
     triggerWakeup()
     pollTimer = window.setInterval(pollMessages, 30 * 1000)
   }
 })
+
+async function loadHistoryFromCloud() {
+  const token = localStorage.getItem('erp_token') || ''
+  if (!token) return
+  try {
+    const res = await fetch('/api/adam/history', {
+      headers: { 'x-erp-token': token },
+    })
+    if (!res.ok) return
+    const data = await res.json() as { messages: ChatMessage[] }
+    if (data.messages?.length) {
+      // 云端数据覆盖本地（云端是权威来源）
+      messages.value = data.messages
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(data.messages.slice(-MAX_HISTORY)))
+    }
+  } catch { /* 云端不可用时静默降级到本地缓存 */ }
+}
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
@@ -222,6 +243,20 @@ function formatMsgTime(iso: string): string {
 function persistHistory() {
   const trimmed = messages.value.slice(-MAX_HISTORY)
   localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed))
+  // 异步同步到云端，不阻塞 UI
+  syncHistoryToCloud(trimmed)
+}
+
+async function syncHistoryToCloud(msgs: ChatMessage[]) {
+  const token = localStorage.getItem('erp_token') || ''
+  if (!token) return
+  try {
+    await fetch('/api/adam/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({ messages: msgs }),
+    })
+  } catch { /* 静默失败，本地缓存兜底 */ }
 }
 
 function scrollToBottom() {
