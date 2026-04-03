@@ -195,11 +195,17 @@ function saveEdit() {
   if (editType.value === 'channel') {
     const channels = cfg.value.channels.map((c, i) => i === editIdx.value ? { ...editData.value } : c)
     brandEdit.updateConfig({ channels })
-  } else if (editType.value === 'faq') {
-    const faqs = cfg.value.faqs.map((f, i) => i === editIdx.value ? { ...editData.value } : f)
-    brandEdit.updateConfig({ faqs })
-  } else if (editType.value === 'faqAdd') {
-    brandEdit.updateConfig({ faqs: [...cfg.value.faqs, editData.value] })
+  } else if (editType.value === 'faq' || editType.value === 'faqAdd') {
+    if (!editData.value.q?.trim() || !editData.value.a?.trim()) {
+      alert('问题和回答不能为空')
+      return
+    }
+    if (editType.value === 'faq') {
+      const faqs = cfg.value.faqs.map((f, i) => i === editIdx.value ? { ...editData.value } : f)
+      brandEdit.updateConfig({ faqs })
+    } else {
+      brandEdit.updateConfig({ faqs: [...cfg.value.faqs, editData.value] })
+    }
   }
   editDialogVisible.value = false
 }

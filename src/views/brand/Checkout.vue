@@ -246,6 +246,10 @@ async function submitOrder() {
     alert('请填写必填项（姓名、手机号、地址）')
     return
   }
+  if (!/^1[3-9]\d{9}$/.test(form.mobile)) {
+    alert('请输入正确的11位手机号')
+    return
+  }
   submitting.value = true
   try {
     const goods_info = shopStore.cart.map(item => ({
@@ -276,6 +280,10 @@ async function submitOrder() {
 async function submitInquiry() {
   if (!wForm.company || !wForm.contact || !wForm.mobile) {
     alert('请填写必填项（公司名称、联系人、手机号）')
+    return
+  }
+  if (!/^1[3-9]\d{9}$/.test(wForm.mobile)) {
+    alert('请输入正确的11位手机号')
     return
   }
   submitting.value = true
