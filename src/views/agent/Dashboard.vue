@@ -98,7 +98,7 @@
         <CaptainBar />
       </section>
 
-      <!-- 右侧：今日数据小卡片 -->
+      <!-- 右侧：今日数据 + 实时动态 -->
       <aside class="stats-aside">
         <div class="stats-aside-title">今日数据</div>
         <div class="stats-cards">
@@ -123,10 +123,10 @@
             <div class="stat-card-label">{{ s.label }}</div>
           </div>
         </div>
+        <!-- 实时动态 Feed -->
+        <AgentLiveFeed style="margin-top:12px" />
       </aside>
     </div>
-
-    <!-- ── 5个部门入口卡片（横排） ── -->
     <section class="depts-section">
       <div class="section-hd">
         <h3 class="section-title">各部门</h3>
@@ -206,6 +206,7 @@ import { useBrandStore } from '@/stores/brand'
 import { useMeetingStore } from '@/stores/meeting'
 import CaptainBar from '@/components/CaptainBar.vue'
 import DeptBulletin from '@/components/agent/DeptBulletin.vue'
+import AgentLiveFeed from '@/components/agent/AgentLiveFeed.vue'
 
 const agentStore = useTrendingStore()
 const brandStore = useBrandStore()
