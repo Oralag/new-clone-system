@@ -1,90 +1,105 @@
 <template>
   <div class="dashboard">
 
-    <DeptBulletin dept-id="dashboard" />
-
-    <!-- ── 公司状态栏 ── -->
-    <div class="company-status-bar">
-      <span class="csb-item">
-        <span class="csb-dot csb-dot-green"></span>
-        今日已产出 <strong>{{ companyStatus.totalOutput }}</strong> 条
-      </span>
-      <span class="csb-sep">·</span>
-      <span class="csb-item" :class="{ 'csb-active': companyStatus.running > 0 }">
-        <span class="csb-dot" :class="companyStatus.running > 0 ? 'csb-dot-blue csb-pulse' : 'csb-dot-gray'"></span>
-        {{ companyStatus.running > 0 ? companyStatus.running + ' 条流水线运行中' : '无运行中的流水线' }}
-      </span>
-      <span class="csb-sep">·</span>
-      <span class="csb-item">
-        <span class="csb-dot csb-dot-green"></span>
-        AI 就绪
-      </span>
+    <!-- ── 品牌配置快捷栏 ── -->
+    <div class="brand-config-bar" :class="{ unconfigured: !brandStore.isConfigured }">
+      <template v-if="brandStore.isConfigured">
+        <div class="bcb-left">
+          <span class="bcb-logo">{{ brandStore.brand.name?.slice(0,1) || '品' }}</span>
+          <div class="bcb-info">
+            <span class="bcb-name">{{ brandStore.brand.name }}</span>
+            <span class="bcb-meta">{{ brandStore.brand.industry }}<template v-if="brandStore.brand.subIndustry"> · {{ brandStore.brand.subIndustry }}</template></span>
+          </div>
+        </div>
+        <div class="bcb-status">
+          <span class="bcb-dot"></span>
+          {{ companyStatus.running > 0 ? companyStatus.running + ' 条流水线运行中' : 'AI 就绪' }}
+        </div>
+        <button class="bcb-edit-btn" @click="$router.push('/agent/brand')">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M8.5 1.5l2 2L4 10H2v-2l6.5-6.5z"/></svg>
+          编辑品牌
+        </button>
+      </template>
+      <template v-else>
+        <div class="bcb-warn">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#f59e0b" stroke-width="1.3" stroke-linecap="round"><circle cx="7" cy="7" r="6"/><path d="M7 4.5v3M7 9.5v.5"/></svg>
+          尚未配置品牌信息，AI 专员无法了解你的公司
+        </div>
+        <button class="bcb-setup-btn" @click="$router.push('/agent/brand')">立即配置 →</button>
+      </template>
     </div>
 
-    <!-- ── 品牌未配置引导卡 ── -->
-    <div v-if="!brandStore.isConfigured" class="setup-guide-card">
-      <div class="guide-icon-wrap">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round">
-          <rect x="4" y="4" width="24" height="24" rx="6"/>
-          <path d="M16 11v8M16 22v1"/>
-        </svg>
-      </div>
-      <div class="guide-body">
-        <div class="guide-title">先配置品牌信息，让各部门专员了解你的公司</div>
-        <div class="guide-desc">品牌信息是AI专员工作的基础——配置后，所有内容生产将基于你的品牌调性进行。</div>
-      </div>
-      <button class="guide-btn" @click="$router.push('/agent/brand')">立即配置 →</button>
-    </div>
-
-    <!-- ── 顶部横幅 ── -->
-    <section class="company-banner">
-      <div class="banner-left">
-        <div class="banner-meta">
-          <!-- 公司名从 brandStore 读取，未配置显示"我的公司" -->
-          <span class="banner-company">{{ brandStore.isConfigured ? brandStore.brand.name : '我的公司' }}</span>
-          <span v-if="brandStore.isConfigured && (brandStore.brand.subIndustry || brandStore.brand.industry)" class="banner-industry">
-            · {{ brandStore.brand.subIndustry || brandStore.brand.industry }}
-          </span>
+    <!-- ── Hero Banner ── -->
+    <section class="hero-banner">
+      <div class="hero-left">
+        <div class="hero-eyebrow">
+          <span class="hero-dot"></span>
+          智能广告指挥中心
         </div>
-        <h1 class="banner-title">
-          {{ brandStore.isConfigured ? '智能广告部门' : '欢迎使用智能广告部门' }}
-        </h1>
-        <div class="banner-sub-row">
-          <span class="banner-date">{{ todayLabel }}</span>
-          <span class="banner-sep">·</span>
-          <span class="ai-online-badge">
-            <span class="ai-online-dot"></span>AI 就绪
-          </span>
+        <h1 class="hero-title">{{ brandStore.isConfigured ? brandStore.brand.name : '我的公司' }}<br/><span class="hero-title-sub">全流程 AI 驱动</span></h1>
+        <p class="hero-desc">Captain 统一调度 · 各部门协同作战 · 内容生产流水线全自动化</p>
+        <div class="hero-actions">
+          <button class="hero-btn primary" @click="$router.push('/agent/meeting')">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="12" height="8" rx="2"/><path d="M4.5 13h5M7 10v3"/></svg>
+            召开会议
+          </button>
+          <button class="hero-btn" @click="$router.push('/agent/trending')">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 10L4.5 6.5L7.5 9.5L13 3"/><path d="M10 3h3v3"/></svg>
+            查看热搜
+          </button>
+          <button class="hero-btn" @click="$router.push('/agent/publish')">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 1v8M4.5 3.5L7 1l2.5 2.5"/><path d="M1.5 10v2.5h11V10"/></svg>
+            发布管理
+          </button>
         </div>
       </div>
-      <div class="banner-quick-actions">
-        <button class="bqa-btn primary" @click="$router.push('/agent/meeting')">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <rect x="1" y="2" width="12" height="8" rx="2"/>
-            <path d="M4.5 13h5M7 10v3"/>
-          </svg>
-          召开会议
-        </button>
-        <button class="bqa-btn" @click="$router.push('/agent/trending')">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <path d="M1 10L4.5 6.5L7.5 9.5L13 3"/>
-            <path d="M10 3h3v3"/>
-          </svg>
-          查看热搜
-        </button>
-        <button class="bqa-btn" @click="$router.push('/agent/publish')">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <path d="M7 1v8M4.5 3.5L7 1l2.5 2.5"/>
-            <path d="M1.5 10v2.5h11V10"/>
-          </svg>
-          发布管理
-        </button>
+      <!-- KPI 大数字 -->
+      <div class="hero-kpi">
+        <div class="kpi-item">
+          <div class="kpi-value">{{ stats[0].value }}</div>
+          <div class="kpi-label">已抓热搜</div>
+        </div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-item">
+          <div class="kpi-value">{{ stats[1].value }}</div>
+          <div class="kpi-label">已生文案</div>
+        </div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-item">
+          <div class="kpi-value" :class="{ 'kpi-running': companyStatus.running > 0 }">{{ companyStatus.running > 0 ? companyStatus.running : stats[2].value }}</div>
+          <div class="kpi-label">{{ companyStatus.running > 0 ? '流水线运行中' : '已发布' }}</div>
+        </div>
       </div>
     </section>
 
-    <!-- ── 中部：Captain 指挥台 + 今日数据 ── -->
-    <div class="mid-grid">
-      <!-- 左侧：Captain 指挥台 -->
+    <!-- ── 部门卡片（首屏主角） ── -->
+    <section class="depts-section">
+      <div class="section-hd">
+        <h3 class="section-title">各部门</h3>
+        <span class="section-sub">点击进入对应部门工作间</span>
+      </div>
+      <div class="depts-row">
+        <div v-for="dept in departments" :key="dept.id" class="dept-card" :style="{ '--dc': dept.color }" @click="$router.push(dept.path)">
+          <div class="dept-illus" :style="{ background: dept.color }">
+            <svg :viewBox="'0 0 12 12'" width="88" height="88" style="image-rendering:pixelated;opacity:0.28" v-html="deptIllus[dept.id] || deptIllus.content"></svg>
+            <span class="dept-illus-label">{{ dept.name }}</span>
+            <span v-if="dept.outsource" class="dept-illus-outsource">外聘</span>
+          </div>
+          <div class="dept-body">
+            <div class="dept-card-top">
+              <div class="dept-icon-wrap"><component :is="dept.icon" /></div>
+              <span class="dept-status-dot"></span>
+            </div>
+            <div class="dept-name">{{ dept.name }}</div>
+            <div class="dept-desc">{{ dept.desc }}</div>
+            <div class="dept-enter-btn">进入 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6h8M7 3l3 3-3 3"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Captain 指令台 + 实时动态 ── -->
+    <div class="bottom-grid">
       <section class="command-section">
         <div class="command-header">
           <div class="command-title-group">
@@ -97,87 +112,17 @@
         </div>
         <CaptainBar />
       </section>
-
-      <!-- 右侧：今日数据 + 实时动态 -->
-      <aside class="stats-aside">
-        <div class="stats-aside-title">今日数据</div>
-        <div class="stats-cards">
-          <div v-for="s in stats" :key="s.label" class="stat-card">
-            <div class="stat-card-icon">
-              <!-- 细线条SVG图标 -->
-              <svg v-if="s.type==='trending'" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                <path d="M1 13L5.5 8.5L9 12L16 4"/><path d="M13 4h3v3"/>
-              </svg>
-              <svg v-else-if="s.type==='copy'" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                <rect x="3" y="5" width="12" height="12" rx="1.5"/><path d="M6 5V4a1 1 0 011-1h7a1 1 0 011 1v9a1 1 0 01-1 1h-1"/>
-                <path d="M6 9h6M6 12h4"/>
-              </svg>
-              <svg v-else-if="s.type==='publish'" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                <path d="M9 2v10M6 5l3-3 3 3"/><path d="M2 13v3h14v-3"/>
-              </svg>
-              <svg v-else width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                <circle cx="9" cy="9" r="7"/><path d="M9 6v4l2.5 2.5"/>
-              </svg>
-            </div>
-            <div class="stat-card-value">{{ s.value }}</div>
-            <div class="stat-card-label">{{ s.label }}</div>
-          </div>
-        </div>
-        <!-- 实时动态 Feed -->
-        <AgentLiveFeed style="margin-top:12px" />
+      <aside class="feed-aside">
+        <AgentLiveFeed />
+        <DeptBulletin dept-id="dashboard" style="margin-top:10px" />
       </aside>
     </div>
-    <section class="depts-section">
-      <div class="section-hd">
-        <h3 class="section-title">各部门</h3>
-        <span class="section-sub">点击进入对应部门工作间</span>
-      </div>
-      <div class="depts-row">
-        <div
-          v-for="dept in departments"
-          :key="dept.id"
-          class="dept-card"
-          :style="{ '--dc': dept.color }"
-          @click="$router.push(dept.path)"
-        >
-          <!-- 像素风插画头图 -->
-          <div class="dept-illus" :style="{ background: dept.color }">
-            <svg :viewBox="'0 0 12 12'" width="88" height="88" style="image-rendering:pixelated;opacity:0.28" v-html="deptIllus[dept.id] || deptIllus.content"></svg>
-            <span class="dept-illus-label">{{ dept.name }}</span>
-            <span v-if="dept.outsource" class="dept-illus-outsource">外聘</span>
-          </div>
-          <!-- 卡片内容区 -->
-          <div class="dept-body">
-            <div class="dept-card-top">
-              <div class="dept-icon-wrap">
-                <!-- 各部门细线条SVG图标 -->
-                <component :is="dept.icon" />
-              </div>
-              <span class="dept-status-dot"></span>
-            </div>
-            <div class="dept-name">{{ dept.name }}</div>
-            <div class="dept-desc">{{ dept.desc }}</div>
-            <div class="dept-enter-btn">
-              进入
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                <path d="M2 6h8M7 3l3 3-3 3"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- ── 底部：今日热搜快览 ── -->
+    <!-- ── 今日热搜快览 ── -->
     <div class="trending-panel">
       <div class="panel-hd">
         <span class="panel-title">今日热搜快览</span>
-        <router-link to="/agent/trending" class="panel-link">
-          查看全部
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <path d="M2 5.5h7M6 3l3 2.5L6 8"/>
-          </svg>
-        </router-link>
+        <router-link to="/agent/trending" class="panel-link">查看全部 <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5.5h7M6 3l3 2.5L6 8"/></svg></router-link>
       </div>
       <div class="trending-list" v-if="topTrending.length > 0">
         <div v-for="(item, i) in topTrending" :key="i" class="trending-item">
@@ -188,9 +133,7 @@
         </div>
       </div>
       <div class="trending-empty" v-else>
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="opacity:.25">
-          <path d="M2 14h4l3.5-10 5 20 3.5-10H26"/>
-        </svg>
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="opacity:.25"><path d="M2 14h4l3.5-10 5 20 3.5-10H26"/></svg>
         <div>暂无热搜数据</div>
         <router-link to="/agent/trending" class="panel-link" style="margin-top:6px">去情报部抓取 →</router-link>
       </div>
@@ -354,6 +297,104 @@ const topTrending = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+/* ── 品牌配置快捷栏 ── */
+.brand-config-bar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 18px;
+  background: #ffffff;
+  border: 1px solid #E8E8E8;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+.brand-config-bar.unconfigured { background: rgba(245,158,11,0.04); border-color: rgba(245,158,11,0.2); }
+.bcb-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.bcb-logo {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: #0071e3; color: #fff;
+  font-size: 14px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.bcb-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bcb-name { font-size: 13px; font-weight: 700; color: #1A1A1A; }
+.bcb-meta { font-size: 11px; color: #AAAAAA; }
+.bcb-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666666; flex-shrink: 0; }
+.bcb-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: bcbpulse 2.5s ease-in-out infinite; }
+@keyframes bcbpulse { 0%,100% { box-shadow: 0 0 0 2px rgba(52,211,153,0.2); } 50% { box-shadow: 0 0 0 4px rgba(52,211,153,0.05); } }
+.bcb-edit-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 8px;
+  border: 1px solid #E8E8E8; background: #F8F8F6;
+  font-size: 11px; font-weight: 600; color: #666666;
+  cursor: pointer; font-family: inherit; transition: all 0.15s; flex-shrink: 0;
+}
+.bcb-edit-btn:hover { border-color: #0071e3; color: #0071e3; background: rgba(0,113,227,0.04); }
+.bcb-warn { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #b45309; flex: 1; }
+.bcb-setup-btn {
+  padding: 7px 16px; border-radius: 8px;
+  background: #f59e0b; color: #fff; border: none;
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+  flex-shrink: 0; transition: opacity 0.15s;
+}
+.bcb-setup-btn:hover { opacity: 0.88; }
+
+/* ── Hero Banner ── */
+.hero-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 28px 30px;
+  background: #ffffff;
+  border: 1px solid #E8E8E8;
+  border-radius: 18px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  animation: fadeUp 0.25s ease both;
+}
+.hero-left { flex: 1; min-width: 0; }
+.hero-eyebrow {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; color: #AAAAAA;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+.hero-dot { width: 6px; height: 6px; border-radius: 50%; background: #0071e3; animation: bcbpulse 2s ease-in-out infinite; }
+.hero-title {
+  font-size: 28px; font-weight: 800; color: #1A1A1A;
+  letter-spacing: -0.04em; line-height: 1.15; margin: 0 0 8px;
+}
+.hero-title-sub { font-size: 20px; color: #0071e3; font-weight: 700; }
+.hero-desc { font-size: 13px; color: #888888; margin: 0 0 18px; line-height: 1.5; }
+.hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hero-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 18px; border-radius: 10px;
+  border: 1px solid #E8E8E8; background: #F8F8F6;
+  font-size: 13px; font-weight: 600; color: #444444;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.hero-btn:hover { background: #EFEFED; color: #1A1A1A; }
+.hero-btn.primary { background: #0071e3; color: #fff; border-color: transparent; }
+.hero-btn.primary:hover { background: #0066cc; }
+
+/* KPI 大数字 */
+.hero-kpi {
+  display: flex; align-items: center; gap: 0;
+  background: #F8F8F6; border-radius: 14px;
+  padding: 20px 24px; flex-shrink: 0;
+}
+.kpi-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 20px; }
+.kpi-value { font-size: 36px; font-weight: 800; color: #1A1A1A; letter-spacing: -0.05em; line-height: 1; }
+.kpi-value.kpi-running { color: #0071e3; animation: kpipulse 1.5s ease-in-out infinite; }
+@keyframes kpipulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+.kpi-label { font-size: 11px; font-weight: 700; color: #AAAAAA; text-transform: uppercase; letter-spacing: 0.06em; }
+.kpi-divider { width: 1px; height: 40px; background: #E8E8E8; flex-shrink: 0; }
+
+/* ── bottom-grid ── */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 14px;
+}
+.feed-aside { display: flex; flex-direction: column; gap: 0; }
   padding-bottom: 40px;
   max-width: 1200px;
 }
