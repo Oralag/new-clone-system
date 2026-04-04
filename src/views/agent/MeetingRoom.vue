@@ -31,7 +31,7 @@
           :key="key"
           class="participant-avatar"
           :class="{ speaking: speakingAgent === key }"
-          :style="{ background: staff.color + '18', color: staff.color, borderColor: speakingAgent === key ? staff.color : 'transparent' }"
+          :style="{ background: staff.color + '18', color: staff.color, borderColor: speakingAgent === key ? staff.color : 'transparent', '--speak-color': staff.color }"
           :title="staff.title"
         >{{ staff.emoji }}</div>
       </div>
@@ -1250,8 +1250,8 @@ onUnmounted(() => {
   animation: speakPulse 1.5s ease-in-out infinite;
 }
 @keyframes speakPulse {
-  0%,100% { box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 4px currentColor; }
-  50% { box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 7px color-mix(in srgb, currentColor 30%, transparent); }
+  0%,100% { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--speak-color, #6366f1); }
+  50%      { box-shadow: 0 0 0 2px #fff, 0 0 0 8px color-mix(in srgb, var(--speak-color, #6366f1) 25%, transparent); }
 }
 
 /* 纪要面板切换按钮 */
