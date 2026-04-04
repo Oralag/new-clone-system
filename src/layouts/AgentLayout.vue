@@ -108,6 +108,16 @@
           </span>
           <span class="nav-item-label">品牌部</span>
         </router-link>
+        <!-- 品牌配置（独立入口） -->
+        <router-link to="/agent/brand-settings" class="nav-item nav-item-settings" active-class="nav-item--active">
+          <span class="nav-item-icon">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+              <circle cx="7.5" cy="7.5" r="2"/>
+              <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M2.6 2.6l1 1M11.4 11.4l1 1M11.4 2.6l-1 1M2.6 11.4l1-1"/>
+            </svg>
+          </span>
+          <span class="nav-item-label">品牌配置</span>
+        </router-link>
 
         <!-- 情报部 -->
         <router-link to="/agent/trending" class="nav-item" active-class="nav-item--active">
@@ -451,6 +461,14 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广�
 .nav-item--active .nav-item-icon { color: #0071e3; }
 .nav-item-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .nav-item-label { flex: 1; letter-spacing: -0.01em; }
+.nav-item-settings {
+  opacity: 0.7;
+  font-size: 12px;
+}
+.nav-item-settings .nav-item-label { font-size: 11.5px; color: #AAAAAA; }
+.nav-item-settings:hover { opacity: 1; }
+.nav-item-settings.nav-item--active { opacity: 1; }
+
 .nav-item-outsource {
   font-size: 9px; font-weight: 700;
   color: #999999;
