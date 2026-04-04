@@ -3,6 +3,21 @@
 
     <DeptBulletin dept-id="content" />
 
+    <!-- 员工卡 -->
+    <DeptEmployeeCard
+      name="Maya"
+      role="文案专员"
+      emoji="✍️"
+      desc="文案 · 视频全链路内容生产"
+      color="#f59e0b"
+      illustId="content"
+      :stats="[
+        { value: copywritingResults.length, label: '已生文案' },
+        { value: videoResults.length, label: '已生脚本' },
+        { value: publishCount, label: '已发布' },
+      ]"
+    />
+
     <!-- ── 中部：文案专员指挥台 + 今日数据 ── -->
     <div class="mid-grid">
       <section class="command-section" :style="{ '--ac': '#f59e0b' }">
@@ -41,11 +56,6 @@
       </aside>
     </div>
 
-    <!-- 复制成功提示 -->
-    <div v-if="copySuccess" class="copy-toast">
-      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6.5l3 3 6-6"/></svg>
-      已复制到剪贴板
-    </div>
   </div>
 </template>
 
@@ -54,9 +64,9 @@ import { computed, ref } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptBulletin from '@/components/agent/DeptBulletin.vue'
+import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 
 const agentStore = useTrendingStore()
-const copySuccess = ref(false)
 const chatRef = ref<InstanceType<typeof AgentChat>>()
 
 const copywritingResults = computed(() => agentStore.copywritingResults)

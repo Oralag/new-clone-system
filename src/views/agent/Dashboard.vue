@@ -3,6 +3,24 @@
 
     <DeptBulletin dept-id="dashboard" />
 
+    <!-- ── 公司状态栏 ── -->
+    <div class="company-status-bar">
+      <span class="csb-item">
+        <span class="csb-dot csb-dot-green"></span>
+        今日已产出 <strong>{{ companyStatus.totalOutput }}</strong> 条
+      </span>
+      <span class="csb-sep">·</span>
+      <span class="csb-item" :class="{ 'csb-active': companyStatus.running > 0 }">
+        <span class="csb-dot" :class="companyStatus.running > 0 ? 'csb-dot-blue csb-pulse' : 'csb-dot-gray'"></span>
+        {{ companyStatus.running > 0 ? companyStatus.running + ' 条流水线运行中' : '无运行中的流水线' }}
+      </span>
+      <span class="csb-sep">·</span>
+      <span class="csb-item">
+        <span class="csb-dot csb-dot-green"></span>
+        AI 就绪
+      </span>
+    </div>
+
     <!-- ── 品牌未配置引导卡 ── -->
     <div v-if="!brandStore.isConfigured" class="setup-guide-card">
       <div class="guide-icon-wrap">
@@ -122,20 +140,29 @@
           :style="{ '--dc': dept.color }"
           @click="$router.push(dept.path)"
         >
-          <div class="dept-card-top">
-            <div class="dept-icon-wrap">
-              <!-- 各部门细线条SVG图标 -->
-              <component :is="dept.icon" />
-            </div>
-            <span class="dept-status-dot"></span>
+          <!-- 像素风插画头图 -->
+          <div class="dept-illus" :style="{ background: dept.color }">
+            <svg :viewBox="'0 0 12 12'" width="88" height="88" style="image-rendering:pixelated;opacity:0.28" v-html="deptIllus[dept.id] || deptIllus.content"></svg>
+            <span class="dept-illus-label">{{ dept.name }}</span>
+            <span v-if="dept.outsource" class="dept-illus-outsource">外聘</span>
           </div>
-          <div class="dept-name">{{ dept.name }}</div>
-          <div class="dept-desc">{{ dept.desc }}</div>
-          <div class="dept-enter-btn">
-            进入
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-              <path d="M2 6h8M7 3l3 3-3 3"/>
-            </svg>
+          <!-- 卡片内容区 -->
+          <div class="dept-body">
+            <div class="dept-card-top">
+              <div class="dept-icon-wrap">
+                <!-- 各部门细线条SVG图标 -->
+                <component :is="dept.icon" />
+              </div>
+              <span class="dept-status-dot"></span>
+            </div>
+            <div class="dept-name">{{ dept.name }}</div>
+            <div class="dept-desc">{{ dept.desc }}</div>
+            <div class="dept-enter-btn">
+              进入
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <path d="M2 6h8M7 3l3 3-3 3"/>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
@@ -176,11 +203,13 @@
 import { computed, defineComponent, h } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
 import { useBrandStore } from '@/stores/brand'
+import { useMeetingStore } from '@/stores/meeting'
 import CaptainBar from '@/components/CaptainBar.vue'
 import DeptBulletin from '@/components/agent/DeptBulletin.vue'
 
 const agentStore = useTrendingStore()
 const brandStore = useBrandStore()
+const meetingStore = useMeetingStore()
 
 // 今日日期
 const todayLabel = computed(() => {
@@ -223,7 +252,26 @@ const IconPublish  = defineComponent({ render: () => h('svg', { width:18, height
   h('path', { d:'M2 13v3h14v-3' }),
 ]) })
 
-// 5个部门定义
+// 各部门专属像素风插画（12x12 viewBox，白色像素块）
+const deptIllus: Record<string, string> = {
+  content:   `<rect x="2" y="1" width="5" height="1" fill="white"/><rect x="1" y="2" width="1" height="7" fill="white"/><rect x="6" y="2" width="1" height="7" fill="white"/><rect x="2" y="9" width="5" height="1" fill="white"/><rect x="2" y="3" width="4" height="1" fill="white"/><rect x="2" y="5" width="4" height="1" fill="white"/><rect x="2" y="7" width="3" height="1" fill="white"/><rect x="8" y="2" width="3" height="1" fill="white"/><rect x="8" y="4" width="3" height="1" fill="white"/><rect x="8" y="6" width="2" height="1" fill="white"/>`,
+  creative:  `<rect x="4" y="1" width="4" height="1" fill="white"/><rect x="3" y="2" width="1" height="1" fill="white"/><rect x="8" y="2" width="1" height="1" fill="white"/><rect x="2" y="3" width="1" height="4" fill="white"/><rect x="9" y="3" width="1" height="2" fill="white"/><rect x="2" y="7" width="1" height="1" fill="white"/><rect x="3" y="8" width="3" height="1" fill="white"/><rect x="7" y="6" width="3" height="1" fill="white"/><rect x="6" y="7" width="1" height="3" fill="white"/><rect x="7" y="9" width="3" height="1" fill="white"/><rect x="4" y="4" width="1" height="1" fill="white"/><rect x="6" y="3" width="1" height="1" fill="white"/>`,
+  brand:     `<rect x="5" y="1" width="2" height="2" fill="white"/><rect x="1" y="4" width="10" height="2" fill="white"/><rect x="3" y="6" width="2" height="1" fill="white"/><rect x="7" y="6" width="2" height="1" fill="white"/><rect x="2" y="7" width="2" height="2" fill="white"/><rect x="8" y="7" width="2" height="2" fill="white"/><rect x="5" y="8" width="2" height="1" fill="white"/>`,
+  intel:     `<rect x="1" y="8" width="1" height="1" fill="white"/><rect x="2" y="7" width="1" height="1" fill="white"/><rect x="3" y="6" width="1" height="1" fill="white"/><rect x="4" y="5" width="1" height="1" fill="white"/><rect x="5" y="6" width="1" height="1" fill="white"/><rect x="6" y="5" width="1" height="1" fill="white"/><rect x="7" y="4" width="1" height="1" fill="white"/><rect x="8" y="3" width="1" height="1" fill="white"/><rect x="9" y="2" width="2" height="1" fill="white"/><rect x="10" y="2" width="1" height="3" fill="white"/><rect x="1" y="9" width="10" height="1" fill="white"/>`,
+  publish:   `<rect x="5" y="1" width="2" height="1" fill="white"/><rect x="4" y="2" width="1" height="1" fill="white"/><rect x="7" y="2" width="1" height="1" fill="white"/><rect x="3" y="3" width="1" height="1" fill="white"/><rect x="8" y="3" width="1" height="1" fill="white"/><rect x="5" y="1" width="2" height="5" fill="white"/><rect x="2" y="6" width="8" height="1" fill="white"/><rect x="2" y="7" width="3" height="2" fill="white"/><rect x="7" y="7" width="3" height="2" fill="white"/><rect x="2" y="9" width="8" height="1" fill="white"/>`,
+  marketing: `<rect x="1" y="7" width="2" height="3" fill="white"/><rect x="4" y="5" width="2" height="5" fill="white"/><rect x="7" y="3" width="2" height="7" fill="white"/><rect x="1" y="10" width="10" height="1" fill="white"/><rect x="10" y="4" width="1" height="1" fill="white"/><rect x="11" y="3" width="1" height="1" fill="white"/>`,
+  designer:  `<rect x="1" y="1" width="6" height="4" fill="white"/><rect x="2" y="2" width="4" height="2" fill="none"/><rect x="8" y="3" width="1" height="6" fill="white"/><rect x="7" y="4" width="1" height="1" fill="white"/><rect x="9" y="4" width="1" height="1" fill="white"/><rect x="8" y="9" width="1" height="2" fill="white"/><rect x="1" y="6" width="6" height="4" fill="white"/>`,
+}
+
+// 公司今日状态
+const companyStatus = computed(() => {
+  const totalOutput = agentStore.copywritingResults.length +
+    Object.values(agentStore.trending).reduce((s: number, a: any[]) => s + a.length, 0)
+  const running = meetingStore?.isRunning ? 1 : 0
+  return { totalOutput, running }
+})
+
+// 7个部门定义
 const departments = [
   {
     id: 'content',
@@ -278,6 +326,7 @@ const departments = [
     color: '#059669',
     path: '/agent/marketing',
     icon: IconTrending,
+    outsource: true,
   },
   {
     id: 'designer',
@@ -287,6 +336,7 @@ const departments = [
     color: '#e11d48',
     path: '/agent/designer',
     icon: IconCreative,
+    outsource: true,
   },
 ]
 
@@ -376,7 +426,7 @@ const topTrending = computed(() => {
 /* ── 中部网格 ── */
 .mid-grid {
   display: grid;
-  grid-template-columns: 1fr 240px;
+  grid-template-columns: 1fr minmax(200px, 240px);
   gap: 14px;
   animation: fadeUp 0.3s 0.05s ease both;
 }
@@ -433,8 +483,8 @@ const topTrending = computed(() => {
   background: #f5f5f7; border-radius: 10px;
 }
 .stat-card-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(0,113,227,0.08); display: flex; align-items: center; justify-content: center; color: #0071e3; flex-shrink: 0; }
-.stat-card-value { font-size: 22px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.04em; line-height: 1; }
-.stat-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(29,29,31,0.35); }
+.stat-card-value { font-size: 20px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.04em; line-height: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(29,29,31,0.35); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── 部门入口卡片横排 ── */
 .depts-section {
@@ -447,21 +497,85 @@ const topTrending = computed(() => {
 
 .depts-row {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 10px;
 }
 
 .dept-card {
   background: #ffffff;
   border: 1px solid rgba(0,0,0,0.06);
-  border-top: 3px solid var(--dc, #0071e3);
   border-radius: 14px;
-  padding: 16px 14px 14px;
+  padding: 0;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
 }
 .dept-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.09); }
+
+/* 像素风插画头图 */
+.dept-illus {
+  height: 130px;
+  border-radius: 12px 12px 0 0;
+  background: var(--dc);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dept-illus-label {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.85);
+  text-transform: uppercase;
+}
+.dept-illus-outsource {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  border: 1px dashed rgba(255,255,255,0.5);
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0.05em;
+}
+
+/* 公司状态栏 */
+.company-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #ffffff;
+  border: 1px solid #E8E8E8;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #666666;
+  animation: fadeUp 0.2s ease both;
+}
+.csb-item { display: flex; align-items: center; gap: 5px; }
+.csb-item strong { color: #1A1A1A; font-weight: 700; }
+.csb-item.csb-active { color: #0071e3; }
+.csb-sep { color: #CCCCCC; }
+.csb-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.csb-dot-green { background: #34d399; }
+.csb-dot-blue  { background: #0071e3; }
+.csb-dot-gray  { background: #CCCCCC; }
+.csb-pulse { animation: aipulse 2s ease-in-out infinite; }
+
+/* 卡片内容区 */
+.dept-body {
+  padding: 14px 16px 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
 
 .dept-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .dept-icon-wrap {
@@ -540,20 +654,16 @@ const topTrending = computed(() => {
 
 /* 响应式 */
 @media (max-width: 1200px) {
-  .depts-row { grid-template-columns: repeat(4, 1fr); }
 }
 @media (max-width: 1100px) {
-  .depts-row { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 900px) {
   .mid-grid { grid-template-columns: 1fr; }
   .company-banner { flex-direction: column; align-items: flex-start; }
   .banner-quick-actions { width: 100%; }
-  .depts-row { grid-template-columns: repeat(2, 1fr); }
   .trending-list { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 560px) {
-  .depts-row { grid-template-columns: 1fr 1fr; }
   .trending-list { grid-template-columns: 1fr; }
 }
 </style>

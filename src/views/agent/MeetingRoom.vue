@@ -52,6 +52,29 @@
       </button>
     </div>
 
+    <!-- ── 流水线步骤条（执行阶段显示） ── -->
+    <div v-if="meetingStore.phase === 'executing' || meetingStore.phase === 'done'" class="pipeline-bar">
+      <div
+        v-for="(step, i) in pipelineSteps"
+        :key="i"
+        class="pb-step"
+        :class="{
+          'pb-done':    i < pipelineCurrentStep,
+          'pb-active':  i === pipelineCurrentStep && meetingStore.phase === 'executing',
+          'pb-pending': i > pipelineCurrentStep
+        }"
+      >
+        <div class="pb-dot">
+          <svg v-if="i < pipelineCurrentStep" width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M1.5 4l2 2 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <span v-else-if="i === pipelineCurrentStep && meetingStore.phase === 'executing'" class="pb-pulse"></span>
+        </div>
+        <span class="pb-label">{{ step.label }}</span>
+        <div v-if="i < pipelineSteps.length - 1" class="pb-line" :class="{ done: i < pipelineCurrentStep }"></div>
+      </div>
+    </div>
+
     <!-- ── 主体区域（消息流 + 可选纪要面板） ── -->
     <div class="meeting-body" :class="{ 'has-summary': showSummaryPanel }">
 
@@ -215,6 +238,7 @@
       <div class="brand-selector-row">
         <span class="brand-selector-label">品牌档案：</span>
         <div class="brand-selector-tabs">
+          <span v-if="brandStore.profiles.length === 0" class="brand-selector-empty">暂无品牌档案</span>
           <div
             v-for="b in brandStore.profiles"
             :key="b.id"
@@ -247,6 +271,7 @@
           v-model="topicInput"
           class="topic-input"
           :placeholder="meetingStore.isRunning ? '会议进行中，输入内容可插话补充…' : meetingStore.phase === 'done' ? '输入新议题，重新开始会议…' : '输入会议议题，例如：策划新品上线内容方案'"
+          :disabled="meetingStore.phase === 'executing'"
           rows="2"
           @keydown.enter.exact.prevent="meetingStore.isRunning ? handleInterject() : handleStart()"
         ></textarea>
@@ -352,6 +377,26 @@ function formatTime(ts: number) {
   const d = new Date(ts)
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
+
+// 流水线步骤条数据
+const pipelineSteps = [
+  { label: '情报' },
+  { label: '文案' },
+  { label: '海报' },
+  { label: '审核' },
+  { label: '发布' },
+]
+const pipelineCurrentStep = computed(() => {
+  const status = meetingStore.executionStatus as Record<string, string>
+  const order = ['trend', 'copywriter', 'poster', 'captain', 'publisher']
+  let last = 0
+  for (let i = 0; i < order.length; i++) {
+    if (status[order[i]] === 'done') last = i + 1
+    else if (status[order[i]] === 'running') { last = i; break }
+  }
+  if (meetingStore.phase === 'done') return pipelineSteps.length
+  return last
+})
 
 // 转义 HTML + 换行转 <br>，同时隐藏 @@DISPATCH:...@@ 指令行
 function renderContent(text: string) {
@@ -779,6 +824,15 @@ const EXEC_PROMPTS: Record<string, (topic: string, brandInfo: string) => string>
     `你是广告公司发布专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请直接输出一份完整的发布计划卡片，格式如下（可直接复制使用，不要有任何解释或提示词）：\n\n📅 发布计划\n\n平台优先级：\n1. [平台名] — [理由]\n2. [平台名] — [理由]\n3. [平台名] — [理由]\n\n⏰ 发布时间表：\n· [日期/时间] [平台] — [内容类型]\n· [日期/时间] [平台] — [内容类型]\n· [日期/时间] [平台] — [内容类型]\n\n🏷️ 话题标签（直接复制使用）：\n#[话题1] #[话题2] #[话题3] #[话题4] #[话题5]\n\n📊 预期效果：\n· 曝光量目标：[具体数字]\n· 互动率目标：[具体数字]\n· 转化目标：[具体描述]\n\n💡 互动引导语：\n[一句可直接用于评论区互动的引导语]\n\n请根据议题和品牌信息填入真实内容，所有内容都要具体可执行，不要留空或写示例。`,
 }
 
+const PLATFORM_NAMES: Record<string, string> = {
+  xiaohongshu: '小红书',
+  douyin: '抖音',
+  weibo: '微博',
+  bilibili: 'B站',
+  wechat: '微信公众号',
+  kuaishou: '快手',
+}
+
 const AGENT_TO_TYPE: Record<string, FlowResult['type']> = {
   copywriter: 'copy',
   poster: 'poster',
@@ -830,9 +884,11 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
     // 写入 flowResults（发布专员除外，它的产出是计划而非内容）
     const resultType = AGENT_TO_TYPE[agentId]
     if (resultType && output && !output.includes('网络异常')) {
+      const activeBrand = brandStore.activeBrand
+      const platformId = activeBrand?.mainPlatforms?.[0] || 'xiaohongshu'
       const result: FlowResult = {
-        platform: 'xiaohongshu',
-        platformName: '小红书',
+        platform: platformId,
+        platformName: PLATFORM_NAMES[platformId] || platformId,
         topic,
         type: resultType,
         content: cleanAgentOutput(output),
@@ -1010,10 +1066,6 @@ async function startBackgroundMeeting(topic: string) {
   }, 3000)
 }
 
-onUnmounted(() => {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
-})
-
 function handleInterject() {
   const text = topicInput.value.trim()
   if (!text) return
@@ -1094,6 +1146,57 @@ onUnmounted(() => {
   border-radius: 18px;
   overflow: hidden;
 }
+
+/* ── 流水线步骤条 ── */
+.pipeline-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background: #F8F8F6;
+  border-bottom: 1px solid #E8E8E8;
+  flex-shrink: 0;
+  gap: 0;
+}
+.pb-step {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+}
+.pb-step:last-child { flex: 0; }
+.pb-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.3s;
+  position: relative;
+}
+.pb-step.pb-done   .pb-dot { background: #34d399; }
+.pb-step.pb-active .pb-dot { background: #0071e3; }
+.pb-step.pb-pending .pb-dot { background: #E8E8E8; }
+.pb-pulse {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: white;
+  animation: pbpulse 1.2s ease-in-out infinite;
+}
+@keyframes pbpulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.7); opacity: 0.6; }
+}
+.pb-label {
+  font-size: 10px; font-weight: 600;
+  margin-left: 5px;
+  white-space: nowrap;
+}
+.pb-step.pb-done    .pb-label { color: #059669; }
+.pb-step.pb-active  .pb-label { color: #0071e3; }
+.pb-step.pb-pending .pb-label { color: #CCCCCC; }
+.pb-line {
+  flex: 1; height: 2px;
+  background: #E8E8E8;
+  margin: 0 4px;
+  transition: background 0.3s;
+}
+.pb-line.done { background: #34d399; }
 
 /* ── 顶部 ── */
 .meeting-header {
@@ -1220,7 +1323,7 @@ onUnmounted(() => {
 /* 消息行 */
 .message-row { display: flex; align-items: flex-start; gap: 10px; animation: slideIn 0.25s ease both; }
 .row-captain { flex-direction: row; }
-.row-member { flex-direction: row-reverse; }
+.row-member { flex-direction: row; }
 .row-user { flex-direction: row-reverse; }
 @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
@@ -1242,10 +1345,8 @@ onUnmounted(() => {
 
 .msg-bubble-wrap { max-width: 70%; display: flex; flex-direction: column; gap: 4px; }
 .row-captain .msg-bubble-wrap { max-width: 78%; }
-.row-member .msg-bubble-wrap { align-items: flex-end; }
 
 .msg-meta { display: flex; align-items: center; gap: 6px; padding: 0 4px; }
-.row-member .msg-meta { flex-direction: row-reverse; }
 .msg-name { font-size: 12px; font-weight: 700; }
 .msg-role-tag { font-size: 10px; color: var(--dim, rgba(29,29,31,0.3)); background: rgba(0,0,0,0.04); padding: 1px 7px; border-radius: 10px; }
 .msg-time { font-size: 10px; color: var(--dim, rgba(29,29,31,0.25)); }
@@ -1267,6 +1368,7 @@ onUnmounted(() => {
 .row-member .msg-bubble {
   background: color-mix(in srgb, var(--mc, #888) 7%, white);
   border-color: color-mix(in srgb, var(--mc, #888) 14%, white);
+  border-left: 3px solid var(--mc, #888);
 }
 .bubble-streaming { animation: streamPulse 1.5s ease-in-out infinite; }
 @keyframes streamPulse { 0%,100% { opacity:1; } 50% { opacity:0.85; } }
@@ -1391,6 +1493,7 @@ onUnmounted(() => {
 }
 .brand-selector-label { font-size: 12px; color: #94a3b8; flex-shrink: 0; }
 .brand-selector-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.brand-selector-empty { font-size: 12px; color: #cbd5e1; font-style: italic; }
 .brand-selector-tab {
   padding: 3px 12px; border-radius: 12px; font-size: 12px; cursor: pointer;
   background: #f1f5f9; color: #64748b; border: 1px solid transparent;

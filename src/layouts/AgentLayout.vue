@@ -56,6 +56,23 @@
             <span class="active-pulse"></span>
           </span>
         </router-link>
+        <router-link to="/agent/tasks" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <rect x="1" y="1" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M4 5h7M4 8h7M4 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="nav-item-label">任务中心</span>
+        </router-link>
+        <router-link to="/agent/triggers" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <path d="M8.5 1.5L4 8h5.5L6.5 13.5L12 7H6.5L8.5 1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-item-label">触发器</span>
+        </router-link>
 
         <!-- 各部门 -->
         <div class="nav-section-label" style="margin-top:10px">各部门</div>
@@ -114,8 +131,8 @@
           <span class="nav-item-label">发布部</span>
         </router-link>
 
-        <!-- 顾问 -->
-        <div class="nav-section-label" style="margin-top:10px">顾问</div>
+        <!-- 外聘 -->
+        <div class="nav-section-label" style="margin-top:10px">外聘</div>
 
         <!-- 营销顾问 -->
         <router-link to="/agent/marketing" class="nav-item" active-class="nav-item--active">
@@ -127,6 +144,7 @@
             </svg>
           </span>
           <span class="nav-item-label">营销顾问</span>
+          <span class="nav-item-outsource">外聘</span>
         </router-link>
 
         <!-- 平面设计师 -->
@@ -139,6 +157,7 @@
             </svg>
           </span>
           <span class="nav-item-label">平面设计师</span>
+          <span class="nav-item-outsource">外聘</span>
         </router-link>
       </nav>
 
@@ -304,6 +323,8 @@ const mobileNavItems = [
   { path: '/agent/brand',    label: '品牌部' },
   { path: '/agent/trending',   label: '情报部' },
   { path: '/agent/publish',    label: '发布部' },
+  { path: '/agent/tasks',      label: '任务中心' },
+  { path: '/agent/triggers',   label: '触发器' },
   { path: '/agent/marketing',  label: '营销顾问' },
   { path: '/agent/designer',   label: '平面设计师' },
   { path: '/agent/history',    label: '历史记录' },
@@ -318,6 +339,8 @@ const pageTitleMap: Record<string, string> = {
   '/agent/brand':     '品牌部',
   '/agent/trending':  '情报部',
   '/agent/publish':     '发布部',
+  '/agent/tasks':       '任务中心',
+  '/agent/triggers':    '触发器',
   '/agent/marketing':   '营销顾问',
   '/agent/designer':    '平面设计师',
   '/agent/history':     '历史记录',
@@ -332,7 +355,9 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广�
 .agent-layout {
   display: flex;
   height: 100vh;
-  background: var(--gray);
+  background-color: #F8F8F6;
+  background-image: radial-gradient(circle, #d4d4d4 1px, transparent 1px);
+  background-size: 20px 20px;
   font-family: 'Inter', 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--dark);
 }
@@ -340,8 +365,8 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广�
 /* ── 侧边栏 ── */
 .agent-sidebar {
   width: 200px;
-  background: var(--gray);
-  border-right: 1px solid var(--border);
+  background: #FFFFFF;
+  border-right: 1px solid #E8E8E8;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -426,6 +451,15 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广�
 .nav-item--active .nav-item-icon { color: #0071e3; }
 .nav-item-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .nav-item-label { flex: 1; letter-spacing: -0.01em; }
+.nav-item-outsource {
+  font-size: 9px; font-weight: 700;
+  color: #999999;
+  border: 1px dashed #CCCCCC;
+  border-radius: 4px;
+  padding: 1px 4px;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
 
 /* 工作流徽标 */
 .wf-badge { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -434,12 +468,6 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广�
   background: #0071e3;
   box-shadow: 0 0 0 2px rgba(0,113,227,0.2);
   animation: aipulse 2s ease-in-out infinite;
-}
-
-/* 底部 */
-.sidebar-footer {
-  padding: 10px 10px 16px;
-  border-top: 1px solid var(--border);
 }
 
 /* 公告栏 */
@@ -558,7 +586,7 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广�
 .ai-status-text { font-size: 11px; font-weight: 600; color: var(--mid); }
 
 /* 内容区 */
-.agent-content { flex: 1; overflow-y: auto; padding: 24px 28px; background: var(--gray); }
+.agent-content { flex: 1; overflow-y: auto; padding: 24px 28px; background: transparent; }
 
 /* ── 移动端 ── */
 .mobile-topbar {

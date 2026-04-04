@@ -190,6 +190,8 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'AgentDashboard', component: () => import('@/views/agent/Dashboard.vue'), meta: { title: '智能体工作台' } },
       { path: 'meeting', name: 'AgentMeeting', component: () => import('@/views/agent/MeetingRoom.vue'), meta: { title: '会议室' } },
+      { path: 'tasks', name: 'AgentTasks', component: () => import('@/views/agent/TaskCenter.vue'), meta: { title: '任务中心' } },
+      { path: 'triggers', name: 'AgentTriggers', component: () => import('@/views/agent/Triggers.vue'), meta: { title: '触发器' } },
       { path: 'content', name: 'AgentContent', component: () => import('@/views/agent/ContentDept.vue'), meta: { title: '内容部' } },
       { path: 'creative', name: 'AgentCreative', component: () => import('@/views/agent/CreativeDept.vue'), meta: { title: '创意部' } },
       { path: 'brand', name: 'AgentBrand', component: () => import('@/views/agent/Brand.vue'), meta: { title: '品牌设置' } },

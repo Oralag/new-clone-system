@@ -3,6 +3,20 @@
 
     <DeptBulletin dept-id="creative" />
 
+    <!-- 员工卡 -->
+    <DeptEmployeeCard
+      name="Leo"
+      role="创意设计师"
+      emoji="🎨"
+      desc="海报 · 视觉设计 · 创意策略"
+      color="#ec4899"
+      illustId="creative"
+      :stats="[
+        { value: posterCount, label: '已生海报' },
+        { value: publishCount, label: '已发布' },
+      ]"
+    />
+
     <!-- ── 中部：设计专员指挥台 + 今日数据 ── -->
     <div class="mid-grid">
       <section class="command-section" :style="{ '--ac': '#ec4899' }">
@@ -44,6 +58,7 @@ import { computed, ref } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptBulletin from '@/components/agent/DeptBulletin.vue'
+import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 
 const agentStore = useTrendingStore()
 const chatRef = ref<InstanceType<typeof AgentChat>>()

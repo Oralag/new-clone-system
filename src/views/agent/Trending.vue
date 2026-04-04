@@ -3,6 +3,21 @@
 
     <DeptBulletin dept-id="trending" />
 
+    <!-- 员工卡 -->
+    <DeptEmployeeCard
+      name="Rex"
+      role="情报专员"
+      emoji="📈"
+      desc="热点追踪 · 趋势分析 · 选题方向"
+      color="#06b6d4"
+      illustId="intel"
+      :busy="loading"
+      :stats="[
+        { value: trendingCount, label: '已抓热搜' },
+        { value: trendingStore.selectedTopics.length, label: '已选话题' },
+      ]"
+    />
+
     <!-- ── 中部：情报专员指挥台 + 今日数据 ── -->
     <div class="mid-grid">
       <section class="command-section" :style="{ '--ac': '#06b6d4' }">
@@ -110,6 +125,7 @@
 import { ref, computed } from 'vue'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptBulletin from '@/components/agent/DeptBulletin.vue'
+import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 import { useTrendingStore } from '@/stores/agent'
 import { ElMessage } from 'element-plus'
 

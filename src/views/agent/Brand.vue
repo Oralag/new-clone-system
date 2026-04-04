@@ -1,6 +1,20 @@
 <template>
   <div class="brand-page">
 
+    <!-- 员工卡 -->
+    <DeptEmployeeCard
+      name="Iris"
+      role="品牌策略师"
+      emoji="💎"
+      desc="品牌档案配置 · 调性把控 · 竞品分析"
+      color="#8b5cf6"
+      illustId="brand"
+      :stats="[
+        { value: store.profiles.length, label: '品牌数' },
+      ]"
+      style="margin-bottom: 4px"
+    />
+
     <!-- ── 多品牌切换栏 ── -->
     <div class="brand-tabs">
       <div
@@ -586,8 +600,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, defineComponent, h } from 'vue'
+import { ref, computed, reactive, defineComponent, h, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 import { useBrandStore } from '@/stores/brand'
 import { useTrendingStore } from '@/stores/agent'
 import { ElMessage } from 'element-plus'
@@ -749,6 +764,8 @@ async function startAutoFlow() {
   autoFlowLog.value = []
   flowCancelled = false
   agentStore.setFlowResults([])
+
+  const totalSteps = afSteps.value.length
 
   try {
     autoFlowLog.value[0] = '正在抓取热搜数据...'
@@ -918,7 +935,7 @@ ${sellingInfo}
     autoFlow.step = 4
   } catch (e: any) {
     autoFlow.error = e.message || 'AI 请求失败'
-    autoFlow.step = afSteps.value.length
+    autoFlow.step = totalSteps
     ElMessage.error('工作流执行失败：' + autoFlow.error)
     autoFlow.running = false
   }
@@ -1167,6 +1184,7 @@ async function generateVariants(field: keyof typeof brand) {
 
 // Animate typing for a chosen variant
 let typingTimer: ReturnType<typeof setInterval> | null = null
+onUnmounted(() => { if (typingTimer) { clearInterval(typingTimer); typingTimer = null } })
 function typeVariant(idx: number) {
   if (typingTimer) clearInterval(typingTimer)
   const text = aiModal.value.variants[idx]
