@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AdamChat: typeof import('./components/AdamChat.vue')['default']
     AgentChat: typeof import('./components/agent/AgentChat.vue')['default']
+    AgentLiveFeed: typeof import('./components/agent/AgentLiveFeed.vue')['default']
     AgentOnboardingGuide: typeof import('./components/AgentOnboardingGuide.vue')['default']
     AgentPageLayout: typeof import('./components/agent/AgentPageLayout.vue')['default']
     AiAssistant: typeof import('./components/AiAssistant.vue')['default']
@@ -24,6 +25,7 @@ declare module 'vue' {
     CommanderBar: typeof import('./components/CommanderBar.vue')['default']
     CustomerSelect: typeof import('./components/CustomerSelect.vue')['default']
     DeptBulletin: typeof import('./components/agent/DeptBulletin.vue')['default']
+    DeptEmployeeCard: typeof import('./components/agent/DeptEmployeeCard.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBadge: typeof import('element-plus/es')['ElBadge']
@@ -52,6 +54,7 @@ declare module 'vue' {
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElPagination: typeof import('element-plus/es')['ElPagination']
+    ElPopover: typeof import('element-plus/es')['ElPopover']
     ElProgress: typeof import('element-plus/es')['ElProgress']
     ElRadio: typeof import('element-plus/es')['ElRadio']
     ElRadioButton: typeof import('element-plus/es')['ElRadioButton']

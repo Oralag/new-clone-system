@@ -7,6 +7,7 @@ import { GoogleGenAI } from '@google/genai'
 import { getAgent } from '../agents/agentRegistry'
 import { allTools } from './erpTools'
 import { executeTool } from './toolExecutor'
+import { executeBrowserTool } from './browserExecutor'
 
 // ── 新浪财经实时行情 ──────────────────────────────────────────────────────────
 // symbol 格式: sh600519 / sz000858
@@ -777,6 +778,10 @@ export async function executeAdamTool(
       }
 
       default:
+        // 浏览器工具统一转发
+        if (name.startsWith('browser_')) {
+          return await executeBrowserTool(name, input)
+        }
         return JSON.stringify({ error: `未知工具：${name}` })
     }
   } catch (e: any) {

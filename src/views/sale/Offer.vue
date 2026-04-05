@@ -6,6 +6,7 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getOfferList"
           del-path="/shop/offerOrder/batchDel"
+          sort-by="offer_date" :sort-desc="true"
           export-file-name="报价单" :params="searchForm"
           :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''"
           :export-columns="{ remark: '报价单号', customer_name: '客户名称', offer_date: '报价日期', expire_date: '有效期至', admin_name: '经办人', total_amount: '报价金额', discount_amount: '优惠金额', after_offer: '实付金额', status: '状态' }">>
@@ -322,6 +323,7 @@ const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
+  if (Array.isArray(goodsInfo)) return goodsInfo
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
 }
 
@@ -424,7 +426,7 @@ function openEdit(row: any, readonly = false) {
   fd.remark = parseRemark(row.remark || '')
   // 解析 goods_info JSON
   try {
-    fd.items = JSON.parse(row.goods_info || '[]')
+    fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
   } catch {
     fd.items = []
   }
@@ -641,7 +643,7 @@ async function handleConvertToContract(row: any) {
   const offerNo = parseOfferNo(row)
   await ElMessageBox.confirm(`确定将报价单「${offerNo}」转为销售合同？`, '转销售合同', { type: 'info' })
   let items: any[] = []
-  try { items = JSON.parse(row.goods_info || '[]') } catch {}
+  try { items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch {}
   sessionStorage.setItem('sale_contract_draft_from_offer', JSON.stringify({
     source_offer_id: row.id,
     source_offer_no: offerNo,

@@ -560,6 +560,7 @@ const itemsVisible = ref(false)
 const itemsRow = ref<any>(null)
 
 function parseItems(info: any): any[] {
+  if (Array.isArray(info)) return info
   try { return JSON.parse(info || '[]') } catch { return [] }
 }
 

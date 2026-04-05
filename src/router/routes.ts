@@ -214,6 +214,8 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true },
     children: [
       { path: '', name: 'BrandIndex', component: () => import('@/views/brand/Index.vue'), meta: { title: 'NOMADIC DAIRY', public: true } },
+      { path: 'retail', name: 'BrandRetail', component: () => import('@/views/brand/Index.vue'), meta: { title: '零售商城 - NOMADIC DAIRY', public: true } },
+      { path: 'wholesale', name: 'BrandWholesale', component: () => import('@/views/brand/Index.vue'), meta: { title: '采购商主页 - NOMADIC DAIRY', public: true } },
       { path: 'products', name: 'BrandProducts', component: () => import('@/views/brand/Products.vue'), meta: { title: '全部产品 - NOMADIC DAIRY', public: true } },
       { path: 'product/:id', name: 'BrandProductDetail', component: () => import('@/views/brand/ProductDetail.vue'), meta: { title: '产品详情 - NOMADIC DAIRY', public: true } },
       { path: 'cart', name: 'BrandCart', component: () => import('@/views/brand/Cart.vue'), meta: { title: '购物车 - NOMADIC DAIRY', public: true } },

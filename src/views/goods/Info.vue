@@ -453,9 +453,9 @@
                 <el-table-column type="index" label="序号" width="55" align="center" />
                 <el-table-column label="辅助单位" min-width="130">
                   <template #default="{ row, $index }">
-                    <el-select v-if="!isView" v-model="row.unit_id" placeholder="请选择单位" size="small" style="width:100%"
+                    <el-select v-if="!isView" v-model="row.unit_name" placeholder="请选择单位" size="small" style="width:100%"
                       @change="(v:any) => onMultiUnitSelect(v, $index + 1)">
-                      <el-option v-for="u in unitOptions" :key="u.id" :label="u.name" :value="u.id" />
+                      <el-option v-for="u in auxUnitSelectOptions" :key="u" :label="u" :value="u" />
                     </el-select>
                     <span v-else>{{ row.unit_name || '—' }}</span>
                   </template>
@@ -1282,14 +1282,18 @@ async function confirmBatchMove() {
 // ── 品牌/单位选项 ─────────────────────────────────────────────────────────────
 const brandOptions = ref<any[]>([])
 const unitOptions = ref<any[]>([])
+let unitOptionsReady: Promise<void> | null = null
 
 async function loadOptions() {
-  const [b, u] = await Promise.all([
-    getBrandList({ list_rows: 200 }),
-    getUnitList({ list_rows: 200 }),
-  ])
-  brandOptions.value = b.data?.rows ?? []
-  unitOptions.value = u.data?.rows ?? []
+  unitOptionsReady = (async () => {
+    const [b, u] = await Promise.all([
+      getBrandList({ list_rows: 200 }),
+      getUnitList({ list_rows: 200 }),
+    ])
+    brandOptions.value = b.data?.rows ?? []
+    unitOptions.value = u.data?.rows ?? []
+  })()
+  await unitOptionsReady
 }
 
 onMounted(() => {
@@ -2251,21 +2255,39 @@ const defaultSaleUnitIdx = ref(0)
 // Auxiliary units = all rows except the base (index 0)
 const auxUnitRows = computed(() => multiUnitRows.value.slice(1))
 
+// 辅助单位下拉选项：unitOptions 里的名字 + 当前行已有的 unit_name，去重合并
+const auxUnitSelectOptions = computed(() => {
+  const names = new Set<string>()
+  unitOptions.value.forEach(u => u.name && names.add(u.name))
+  multiUnitRows.value.forEach(r => r.unit_name && names.add(r.unit_name))
+  return Array.from(names)
+})
+
 async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]> {
   try {
+    if (unitOptionsReady) await unitOptionsReady
     const res = await getUnitConvert(goodsId)
     const rows: any[] = res.data?.rows ?? []
     if (!rows.length) return []
-    return rows.map((r: any, i: number) => ({
-      is_base: i === 0,
-      unit_id: null,
-      unit_name: r.unit_name,
-      ratio: Number(r.ratio),
-      is_min_sale: i === 0,
-      is_default_sale: i === 0,
-      cost_price: 0,
-      sell_price: 0,
-    }))
+    // 找到基础单位行（匹配 fd.unit_name），放第一位；其余为辅助单位
+    const baseUnitName = fd.unit_name
+    const baseCostPrice = Number(fd.cost_price) || 0
+    const baseRow = rows.find(r => r.unit_name === baseUnitName)
+    const auxRows = rows.filter(r => r.unit_name !== baseUnitName)
+    const ordered = baseRow ? [baseRow, ...auxRows] : rows
+    return ordered.map((r: any, i: number) => {
+      const ratio = Number(r.ratio)
+      return {
+        is_base: i === 0,
+        unit_id: null,
+        unit_name: r.unit_name,
+        ratio,
+        is_min_sale: i === 0,
+        is_default_sale: i === 0,
+        cost_price: i === 0 ? baseCostPrice : Math.round(baseCostPrice * ratio * 100) / 100,
+        sell_price: 0,
+      }
+    })
   } catch { return [] }
 }
 
@@ -2346,9 +2368,8 @@ function removeMultiUnitRow(idx: number) {
   if (defaultSaleUnitIdx.value >= multiUnitRows.value.length) defaultSaleUnitIdx.value = 0
 }
 
-function onMultiUnitSelect(unitId: number, idx: number) {
-  const u = unitOptions.value.find(u => u.id === unitId)
-  if (u) multiUnitRows.value[idx].unit_name = u.name
+function onMultiUnitSelect(unitName: string, idx: number) {
+  if (unitName) multiUnitRows.value[idx].unit_name = unitName
 }
 
 function onMultiUnitRatioChange(row: MultiUnitRow) {

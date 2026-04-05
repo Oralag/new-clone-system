@@ -79,8 +79,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
+        skipWaiting: false,
+        clientsClaim: false,
         globPatterns: [],
         navigateFallback: null,
         runtimeCaching: [

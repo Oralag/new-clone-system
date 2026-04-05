@@ -18,6 +18,7 @@ export const auditProcureOrder = (id: number, status: number) => http.post('/sto
 
 export const getProcureInhouseList = (params?: any) => http.get('/procure/ProcureInhouse/index', { params })
 export const createProcureInhouse = (data: any) => http.post('/procure/ProcureInhouse/add', data)
+export const updateProcureInhouse = (data: any) => http.post('/procure/ProcureInhouse/edit', data)
 export const deleteProcureInhouse = (id: number) => http.post('/procure/ProcureInhouse/del', { id })
 export const auditProcureInhouse = (id: number, status: number) => http.post('/procure/ProcureInhouse/audit', { id, status })
 

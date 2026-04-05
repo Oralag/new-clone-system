@@ -4,14 +4,16 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getProcureOrderList"
+        <ScTable ref="tableRef" :api-obj="getProcureOrderListWithInhouse"
           :batch-del-api="batchDelProcureOrders"
-          sort-by="order_date" :sort-desc="true" :default-page-size="200"
+          sort-by="order_date" :sort-desc="true"
           export-file-name="采购订单" :params="searchForm"
           :export-columns="{ order_no: '采购单号', supplier_name: '供应商', warehouse_name: '仓库', order_date: '开单日期', delivery_date: '预计交期', admin_name: '采购人', total_amount: '含税合计', status: '状态', pay_amount: '已付金额' }">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="采购单号" clearable style="width:160px" />
-            <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />
+            <el-select v-model="searchForm.supplier_name" placeholder="供应商" clearable filterable style="width:160px">
+              <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.name" />
+            </el-select>
             <el-select v-model="searchForm.status" placeholder="状态" clearable style="width:110px">
               <el-option label="待审核" :value="0" />
               <el-option label="已审核" :value="1" />
@@ -103,10 +105,11 @@
               <el-tag :type="getPayStatus(row).type" size="small">{{ getPayStatus(row).label }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
+          <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
+              <el-button v-if="row.status === 1 && getPayStatus(row).label !== '已付清'" type="success" link size="small" @click="openPayDialog(row)">付款</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
@@ -125,8 +128,11 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">
-            保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
+          <el-button v-if="!isReadonly" :loading="saving" @click="handleSave(false)">
+            保存
+          </el-button>
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave(true)">
+            保存并审核
           </el-button>
         </div>
       </div>
@@ -546,7 +552,35 @@
       </template>
     </el-dialog>
 
-    <!-- BOM商品选择弹框 -->
+    <!-- 付款弹窗 -->
+    <el-dialog v-model="payDialogVisible" title="付款" width="400px" append-to-body>
+      <el-form :model="payForm" label-width="90px">
+        <el-form-item label="采购单">
+          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ payForm.orderSn }} · {{ payForm.supplierName }}</span>
+        </el-form-item>
+        <el-form-item label="待付金额">
+          <span style="font-size:15px;font-weight:700;color:#dc2626">¥{{ payForm.unpaid.toFixed(2) }}</span>
+        </el-form-item>
+        <el-form-item label="本次付款">
+          <el-input-number v-model="payForm.amount" :min="0.01" :max="payForm.unpaid" :precision="2" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="付款账户">
+          <el-select v-model="payForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onPayFundChange">
+            <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="付款日期">
+          <el-date-picker v-model="payForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="payForm.remark" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="payDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="paySubmitting" @click="submitPay">确认付款</el-button>
+      </template>
+    </el-dialog>
     <el-dialog v-model="bomPickerVisible" title="选择BOM商品（物料）" width="800px" append-to-body>
       <div style="display:flex;gap:12px;height:420px">
         <!-- 左：成品列表 -->
@@ -664,7 +698,7 @@ import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProc
 import { getWarehouseList } from '@/api/warehouse'
 import { getBomList, getBomByGoods, getSpecList, getUnitConvert } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getFundList, createFund, getPayReceiptList } from '@/api/finance'
+import { getFundList, createFund, getPayReceiptList, createPayReceipt } from '@/api/finance'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
@@ -761,6 +795,30 @@ async function handleBatchReverseAudit() {
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
+// 包装 API：加载完采购单后，批量查入库单并填充 inhouse_qty
+async function getProcureOrderListWithInhouse(params: any) {
+  const res = await getProcureOrderList(params)
+  const rows: any[] = res?.data?.rows ?? res?.data ?? []
+  if (rows.length) {
+    try {
+      const inhouseRes = await getProcureInhouseList({ list_rows: 10000 })
+      const inhouseRows: any[] = (inhouseRes?.data?.rows ?? []).filter((r: any) => r.status === 1)
+      const qtyMap: Record<number, number> = {}
+      for (const r of inhouseRows) {
+        const oid = Number(r.purchase_order_id)
+        if (!oid) continue
+        const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
+        const qty = items.reduce((s: number, g: any) => s + Number(g.num || 0), 0)
+        qtyMap[oid] = (qtyMap[oid] || 0) + qty
+      }
+      for (const row of rows) {
+        row.inhouse_qty = qtyMap[row.id] || 0
+      }
+    } catch { /* 查不到入库单不影响列表展示 */ }
+  }
+  return res
+}
+
 function getInhouseQty(row: any): number {
   return Number(row.inhouse_qty || 0)
 }
@@ -770,6 +828,74 @@ const paidMapByKey = ref<Record<string, number>>({})
 
 function payKey(orderSn: string, supplierName: string): string {
   return `${String(orderSn || '').trim()}@@${String(supplierName || '').trim()}`
+}
+
+// ── 付款弹窗 ─────────────────────────────────────────────────────────────────
+const payDialogVisible = ref(false)
+const paySubmitting = ref(false)
+const payForm = reactive({
+  orderId: 0,
+  orderSn: '',
+  supplierName: '',
+  unpaid: 0,
+  amount: 0,
+  fund_id: null as number | null,
+  fund_name: '',
+  pay_date: new Date().toISOString().slice(0, 10),
+  remark: '',
+})
+
+function openPayDialog(row: any) {
+  const total = Number(row.total_amount || 0)
+  const paid = getPaidAmount(row)
+  payForm.orderId = row.id
+  payForm.orderSn = row.order_sn || row.order_no || `PO${row.id}`
+  payForm.supplierName = row.supplier_name || ''
+  payForm.unpaid = Math.max(0, total - paid)
+  payForm.amount = payForm.unpaid
+  payForm.fund_id = null
+  payForm.fund_name = ''
+  payForm.pay_date = new Date().toISOString().slice(0, 10)
+  payForm.remark = ''
+  payDialogVisible.value = true
+}
+
+function onPayFundChange(id: number) {
+  const f = fundOptions.value.find((f: any) => f.id === id)
+  payForm.fund_name = f?.name || ''
+}
+
+async function submitPay() {
+  if (!payForm.amount || payForm.amount <= 0) { ElMessage.warning('请填写付款金额'); return }
+  if (!payForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  paySubmitting.value = true
+  try {
+    // 创建付款单
+    await createPayReceipt({
+      supplier_name: payForm.supplierName,
+      amount: payForm.amount,
+      pay_date: payForm.pay_date,
+      fund_id: payForm.fund_id,
+      fund_name: payForm.fund_name,
+      remark: `采购单付款 #${payForm.orderId}${payForm.remark ? ' ' + payForm.remark : ''}`,
+    })
+    // 扣减资金账户余额
+    const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+    const funds: any[] = fundRes.data?.rows ?? []
+    const fund = funds.find((f: any) => f.id === payForm.fund_id)
+    if (fund) {
+      const newBalance = Number(fund.balance || 0) - payForm.amount
+      await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+    }
+    ElMessage.success('付款成功')
+    payDialogVisible.value = false
+    loadPaidMap()
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '付款失败')
+  } finally {
+    paySubmitting.value = false
+  }
 }
 
 async function loadPaidMap() {
@@ -1111,8 +1237,8 @@ function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   fd.order_no = fd.order_no || row.order_sn || ''
   fd.order_sn = fd.order_sn || fd.order_no || ''
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
-  try { fd.attachments = JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
+  try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  try { fd.attachments = Array.isArray(row.attachments_info) ? row.attachments_info : JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
   calcTotal()
   fd.items.forEach((item: any) => {
     if (item.goods_id) {
@@ -1131,7 +1257,7 @@ function backToList() {
   loadPaidMap()
 }
 
-async function handleSave() {
+async function handleSave(andAudit = false) {
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项'); return
   }
@@ -1145,6 +1271,14 @@ async function handleSave() {
       })
     } catch { return }
   }
+  // 有付款金额但未选账户时提醒
+  if (Number(fd.pay_amount || 0) > 0 && !fd.fund_id) {
+    try {
+      await ElMessageBox.confirm('已填写付款金额但未选择付款账户，是否继续保存？', '提示', {
+        confirmButtonText: '继续保存', cancelButtonText: '去选择', type: 'warning'
+      })
+    } catch { return }
+  }
   saving.value = true
   try {
     const payload: Record<string, any> = {
@@ -1154,24 +1288,14 @@ async function handleSave() {
       supplier_name: fd.supplier_name,
       admin_name: fd.admin_name,
       order_date: fd.order_date,
-      delivery_date: fd.delivery_date || null,
       warehouse_id: fd.warehouse_id,
       warehouse_name: fd.warehouse_name,
-      need_invoice: fd.need_invoice ? 1 : 0,
       fund_id: fd.fund_id || 0,
       fund_name: fd.fund_name || '',
-      pay_account: fd.pay_account || '',
       pay_amount: Number(fd.pay_amount || 0),
       remark: fd.remark,
       total_amount: fd.total_amount,
       freight_amount: Number(fd.freight_amount || 0),
-      freight_bearer: fd.freight_bearer || 'buyer',
-      discount_type: fd.discount_type || 'none',
-      discount_value: Number(fd.discount_value || 0),
-      after_discount: Number(fd.after_discount || 0),
-      expense_amount: Number(fd.expense_amount || 0),
-      installment: fd.installment ? 1 : 0,
-      attachments_info: JSON.stringify(fd.attachments || []),
       goods_info: JSON.stringify(fd.items),
     }
     let orderId = fd.id
@@ -1185,6 +1309,75 @@ async function handleSave() {
     }
 
     ElMessage.success('保存成功')
+    if (andAudit && orderId) {
+      try {
+        await auditProcureOrder(orderId, 1)
+        // 审核后自动创建并审核入库记录，更新库存
+        try {
+          const items = fd.items
+          const existRes = await getProcureInhouseList({ order_id: orderId, list_rows: 5 })
+          const existRows: any[] = existRes.data?.rows ?? []
+          if (existRows.length === 0) {
+            const inhouseRes = await createProcureInhouse({
+              purchase_order_id: orderId,
+              supplier_id: fd.supplier_id,
+              supplier_name: fd.supplier_name,
+              warehouse_id: fd.warehouse_id || 0,
+              warehouse_name: fd.warehouse_name || '',
+              admin_name: fd.admin_name || '',
+              in_date: (fd.order_date || '').slice(0, 10),
+              total_amount: fd.total_amount,
+              remark: fd.remark || '',
+              goods_info: items,
+            })
+            const inhouseId = inhouseRes.data?.id
+            if (inhouseId) {
+              await auditProcureInhouse(inhouseId, 1)
+              await applyInhouseStockEffect(fd.warehouse_id || 0, fd.warehouse_name || '', items, 'in')
+            }
+          } else {
+            for (const r of existRows) {
+              if (r.status !== 1) {
+                await auditProcureInhouse(r.id, 1)
+                const rItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
+                await applyInhouseStockEffect(r.warehouse_id || fd.warehouse_id || 0, r.warehouse_name || fd.warehouse_name || '', rItems, 'in')
+              }
+            }
+          }
+        } catch (e: any) {
+          console.warn('自动入库失败', e?.message)
+        }
+        // 审核通过：创建付款单记录 + 扣减资金账户余额（如有本次付款金额）
+        const payAmount = Number(fd.pay_amount || 0)
+        const fundId = Number(fd.fund_id || 0)
+        if (payAmount > 0 && fundId) {
+          try {
+            const orderSn = fd.order_sn || fd.order_no || `PO${orderId}`
+            await createPayReceipt({
+              supplier_name: fd.supplier_name,
+              amount: payAmount,
+              pay_date: fd.order_date || new Date().toISOString().slice(0, 10),
+              fund_id: fundId,
+              fund_name: fd.fund_name || '',
+              remark: `采购单付款 #${orderId}`,
+              order_sn: orderSn,
+            })
+            const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+            const funds: any[] = fundRes.data?.rows ?? []
+            const fund = funds.find((f: any) => f.id === fundId)
+            if (fund) {
+              const newBalance = Number(fund.balance || 0) - payAmount
+              await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+            }
+          } catch (e: any) {
+            console.warn('财务入账失败', e?.message)
+          }
+        }
+        ElMessage.success('审核成功，已自动入库')
+      } catch (e: any) {
+        ElMessage.warning('保存成功，但审核失败：' + (e?.message || ''))
+      }
+    }
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')
@@ -1243,10 +1436,48 @@ async function batchDelProcureOrders({ ids }: { ids: number[] }) {
   return http.post('/stock/PurchaseOrder/batchDel', { ids })
 }
 
+async function applyInhouseStockEffect(warehouseId: number, warehouseName: string, items: any[], direction: 'in' | 'out') {
+  for (const item of items) {
+    if (!item.goods_id || !item.num) continue
+    try {
+      const stockParams: any = { goods_id: item.goods_id, list_rows: 10 }
+      if (warehouseId) stockParams.warehouse_id = warehouseId
+      const stockRes = await http.get('/stock/StockAll/index', { params: stockParams })
+      const stock = (stockRes.data?.rows ?? [])[0]
+      const delta = direction === 'in' ? Number(item.num) : -Number(item.num)
+      if (stock) {
+        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
+        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
+      } else if (direction === 'in') {
+        await http.post('/stock/StockAll/add', {
+          goods_id: item.goods_id,
+          goods_name: item.goods_name || '',
+          goods_sn: item.goods_sn || '',
+          warehouse_id: warehouseId,
+          warehouse_name: warehouseName,
+          qty: Number(item.num),
+        })
+      }
+    } catch (e: any) {
+      console.warn('库存更新失败', e?.message)
+    }
+  }
+}
+
 async function handleAudit(row: any, status: number) {
   const action = status === 1 ? '审核通过' : '驳回'
   await ElMessageBox.confirm(`确定${action}该采购单？`, '提示', { type: 'warning' })
   try {
+    // 后端要求 fund_id 不为 0 才能审核；pay_amount=0 时静默填第一个账户（不影响余额）
+    if (status === 1 && !Number(row.fund_id)) {
+      if (!fundOptions.value.length) await loadFunds()
+      const opts = fundOptions.value
+      if (opts.length) {
+        const f = opts[0]
+        await updateProcureOrder({ id: row.id, fund_id: f.id, fund_name: f.name })
+        row.fund_id = f.id
+      }
+    }
     await auditProcureOrder(row.id, status)
     // 审核通过后自动创建并审核采购入库记录（先检查是否已存在，避免重复）
     if (status === 1) {
@@ -1268,15 +1499,41 @@ async function handleAudit(row: any, status: number) {
             goods_info: items,
           })
           const inhouseId = inhouseRes.data?.id ?? inhouseRes.data
-          if (inhouseId) await auditProcureInhouse(inhouseId, 1)
+          if (inhouseId) {
+            await auditProcureInhouse(inhouseId, 1)
+            // 更新后端库存表
+            await applyInhouseStockEffect(row.warehouse_id || 0, row.warehouse_name || '', items, 'in')
+          }
         } else {
-          // 已有入库单，确保已审核
+          // 已有入库单，确保已审核，同时更新库存
           for (const r of existRows) {
-            if (r.status !== 1) await auditProcureInhouse(r.id, 1)
+            if (r.status !== 1) {
+              await auditProcureInhouse(r.id, 1)
+              const rItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
+              await applyInhouseStockEffect(r.warehouse_id || row.warehouse_id || 0, r.warehouse_name || row.warehouse_name || '', rItems, 'in')
+            }
           }
         }
       } catch (e: any) {
         console.warn('自动创建采购入库记录失败', e?.message)
+      }
+    }
+    // 审核通过：扣减资金账户余额（如有付款金额和账户）
+    if (status === 1) {
+      const payAmount = Number(row.pay_amount || 0)
+      const fundId = Number(row.fund_id || 0)
+      if (payAmount > 0 && fundId) {
+        try {
+          const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+          const funds: any[] = fundRes.data?.rows ?? []
+          const fund = funds.find((f: any) => f.id === fundId)
+          if (fund) {
+            const newBalance = Number(fund.balance || 0) - payAmount
+            await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+          }
+        } catch (e: any) {
+          console.warn('资金账户扣减失败', e?.message)
+        }
       }
     }
     stockRefreshStore.trigger()
@@ -1323,12 +1580,32 @@ async function handleReverseAudit(row: any) {
       const inhouseListRes = await getProcureInhouseList({ order_id: row.id, list_rows: 10 })
       const inhouseRows: any[] = inhouseListRes.data?.rows ?? []
       for (const r of inhouseRows) {
-        if (r.status === 1) await auditProcureInhouse(r.id, 0)
+        if (r.status === 1) {
+          await auditProcureInhouse(r.id, 0)
+          const rItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
+          await applyInhouseStockEffect(r.warehouse_id || 0, r.warehouse_name || '', rItems, 'out')
+        }
       }
     } catch (e: any) {
       console.warn('采购入库反审核失败', e?.message)
     }
     await auditProcureOrder(row.id, 0)
+    // 加回资金账户余额
+    const payAmount = Number(row.pay_amount || 0)
+    const fundId = Number(row.fund_id || 0)
+    if (payAmount > 0 && fundId) {
+      try {
+        const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+        const funds: any[] = fundRes.data?.rows ?? []
+        const fund = funds.find((f: any) => f.id === fundId)
+        if (fund) {
+          const newBalance = Number(fund.balance || 0) + payAmount
+          await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
+        }
+      } catch (e: any) {
+        console.warn('资金账户回滚失败', e?.message)
+      }
+    }
     stockRefreshStore.trigger()
     ElMessage.success('反审核成功，库存与财务已回滚')
     tableRef.value?.refresh()

@@ -5,6 +5,7 @@
     <div v-if="!showForm">
       <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureReturnList"
+          sort-by="return_date" :sort-desc="true"
           export-file-name="采购退货单" :params="searchForm"
           :export-columns="{ return_no: '退货单号', order_sn: '关联采购单', supplier_name: '供应商', return_date: '退货日期', total_amount: '退货金额', status: '状态' }">
           <template #search>
@@ -17,7 +18,6 @@
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">新增退货单</el-button>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
@@ -66,16 +66,9 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="80" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
-              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
-              <template v-if="row.status === 0">
-                <el-button type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
-              </template>
-              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该退货单') : handleDelete(row.id)">删除</el-button>
+              <el-button type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -91,9 +84,6 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">
-            保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
-          </el-button>
         </div>
       </div>
 
@@ -271,6 +261,7 @@ function hasValue(value: any) {
 }
 
 function parseItems(goodsInfo: any): any[] {
+  if (Array.isArray(goodsInfo)) return goodsInfo
   try { return (JSON.parse(goodsInfo || '[]') as any[]).filter((i: any) => !i._meta) } catch { return [] }
 }
 

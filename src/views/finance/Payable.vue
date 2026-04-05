@@ -170,6 +170,7 @@ async function load() {
       http.get('/stock/PurchaseOrder/index', {
         params: {
           list_rows: 2000,
+          status: 1,
           supplier_name: searchForm.supplier_name || undefined,
         }
       }),

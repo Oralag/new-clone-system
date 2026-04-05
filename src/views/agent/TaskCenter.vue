@@ -36,53 +36,112 @@
             </svg>
             进行中
           </div>
-          <div v-if="runningTasks.length === 0" class="bb-empty">暂无运行中的任务</div>
-          <div v-for="t in runningTasks" :key="t.id" class="bb-running-item">
+          <div v-if="activeTasks.length === 0" class="bb-empty">暂无运行中的任务</div>
+          <div v-for="t in activeTasks" :key="t.id" class="bb-running-item">
             <span class="bb-running-dot"></span>
-            <span>{{ t.name }}</span>
+            <span>{{ t.title }}</span>
+            <span class="bb-stage-tag" :style="{ background: currentStageColor(t) + '22', color: currentStageColor(t) }">
+              {{ currentStageLabel(t) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="bb-divider"></div>
+
+        <div class="bb-col bb-col-new">
+          <div class="bb-section-title">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M6.5 2v9M2 6.5h9"/>
+            </svg>
+            新建任务
+          </div>
+          <div class="bb-new-wrap">
+            <input
+              v-model="newTaskTitle"
+              class="bb-input"
+              placeholder="任务名称..."
+              @keydown.enter="createTask"
+            />
+            <button class="bb-create-btn" @click="createTask" :disabled="!newTaskTitle.trim()">创建</button>
+          </div>
+          <div class="bb-stats">
+            <span>共 {{ pipelineStore.tasks.length }} 条</span>
+            <span>·</span>
+            <span>完成 {{ doneTasks.length }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 流水线进度卡 -->
+    <!-- 流水线任务列表 -->
     <div class="section-hd">
       <h3 class="section-title">流水线任务</h3>
-      <span class="section-sub">{{ pipelines.length }} 条记录</span>
+      <span class="section-sub">{{ pipelineStore.tasks.length }} 条记录</span>
+      <button v-if="doneTasks.length > 0" class="clear-done-btn" @click="clearDone">清除已完成</button>
     </div>
 
-    <div v-if="pipelines.length === 0" class="empty-state">
+    <div v-if="pipelineStore.tasks.length === 0" class="empty-state">
       <div class="empty-icon">⚡</div>
       <div class="empty-title">暂无流水线任务</div>
-      <div class="empty-desc">在会议室发起工作流，任务进度会在这里显示</div>
+      <div class="empty-desc">在会议室发起工作流，或在上方创建任务</div>
       <button class="btn-goto" @click="$router.push('/agent/meeting')">前往会议室 →</button>
     </div>
 
     <div v-else class="pipeline-list">
-      <div v-for="p in pipelines" :key="p.id" class="pipeline-card">
+      <div v-for="task in pipelineStore.tasks" :key="task.id" class="pipeline-card">
         <div class="pipeline-card-top">
           <div class="pipeline-info">
-            <span class="pipeline-name">{{ p.topic }}</span>
-            <span class="pipeline-time">{{ p.time }}</span>
+            <span class="pipeline-name">{{ task.title }}</span>
+            <span class="pipeline-time">{{ fmtTime(task.createdAt) }}</span>
           </div>
-          <span class="pipeline-status" :class="p.status">{{ statusLabel(p.status) }}</span>
+          <div class="pipeline-card-actions">
+            <span class="pipeline-status" :class="task.status">{{ statusLabel(task.status) }}</span>
+            <button v-if="task.status !== 'done'" class="advance-btn" @click="pipelineStore.advanceStage(task.id)" title="推进到下一阶段">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <path d="M2 6h8M7 3l3 3-3 3"/>
+              </svg>
+              推进
+            </button>
+            <button class="del-btn" @click="pipelineStore.removeTask(task.id)" title="删除">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+                <path d="M2 2l7 7M9 2l-7 7"/>
+              </svg>
+            </button>
+          </div>
         </div>
+
         <!-- 步骤条 -->
         <div class="pipeline-steps">
-          <div
-            v-for="(step, i) in p.steps"
-            :key="i"
-            class="pipeline-step"
-            :class="{ done: i < p.current, active: i === p.current, pending: i > p.current }"
-          >
-            <div class="step-dot">
-              <svg v-if="i < p.current" width="8" height="8" viewBox="0 0 8 8" fill="none">
-                <path d="M1.5 4l2 2 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round"/>
-              </svg>
-              <span v-else-if="i === p.current" class="step-pulse"></span>
+          <template v-for="(stage, i) in PIPELINE_STAGES" :key="stage.id">
+            <div
+              class="pipeline-step"
+              :class="{
+                done: i < task.currentStage || task.status === 'done',
+                active: i === task.currentStage && task.status !== 'done',
+                pending: i > task.currentStage && task.status !== 'done'
+              }"
+            >
+              <div class="step-dot" :style="i < task.currentStage || task.status === 'done' ? { background: stage.color } : i === task.currentStage && task.status !== 'done' ? { background: stage.color } : {}">
+                <svg v-if="i < task.currentStage || task.status === 'done'" width="8" height="8" viewBox="0 0 8 8" fill="none">
+                  <path d="M1.5 4l2 2 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+                <span v-else-if="i === task.currentStage && task.status !== 'done'" class="step-pulse" :style="{ background: 'white' }"></span>
+              </div>
+              <span class="step-label" :style="(i <= task.currentStage || task.status === 'done') ? { color: stage.color } : {}">
+                {{ stage.emoji }} {{ stage.label }}
+              </span>
             </div>
-            <span class="step-label">{{ step }}</span>
-            <div v-if="i < p.steps.length - 1" class="step-line" :class="{ done: i < p.current }"></div>
+            <div v-if="i < PIPELINE_STAGES.length - 1" class="step-line" :class="{ done: i < task.currentStage || task.status === 'done' }" :style="i < task.currentStage || task.status === 'done' ? { background: PIPELINE_STAGES[i].color } : {}"></div>
+          </template>
+        </div>
+
+        <!-- 各阶段产出 -->
+        <div v-if="hasOutputs(task)" class="stage-outputs">
+          <div v-for="stage in PIPELINE_STAGES" :key="stage.id">
+            <div v-if="task.stageOutputs[stage.id]" class="output-item">
+              <span class="output-stage-tag" :style="{ background: stage.color + '18', color: stage.color }">{{ stage.emoji }} {{ stage.label }}</span>
+              <span class="output-text">{{ task.stageOutputs[stage.id] }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -93,9 +152,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useMeetingStore } from '@/stores/meeting'
+import { usePipelineStore, PIPELINE_STAGES } from '@/stores/pipeline'
 
-const meetingStore = useMeetingStore()
+const pipelineStore = usePipelineStore()
 
 // 今日重点
 const FOCUS_KEY = 'agent_today_focus'
@@ -106,32 +165,45 @@ function saveFocus() {
   editingFocus.value = false
 }
 
-// 进行中任务（从 meetingStore 读）
-const runningTasks = computed(() => {
-  if (meetingStore.isRunning) {
-    return [{ id: 'meeting', name: '会议室流水线运行中' }]
-  }
-  return []
-})
+// 新建任务
+const newTaskTitle = ref('')
+function createTask() {
+  if (!newTaskTitle.value.trim()) return
+  pipelineStore.createTask(newTaskTitle.value.trim())
+  newTaskTitle.value = ''
+}
 
-// 流水线历史（从 meetingStore 的 messages 构建）
-const pipelines = computed(() => {
-  const results = meetingStore.flowResults ?? []
-  if (results.length === 0 && !meetingStore.topic) return []
-  const steps = ['情报部', '文案', '海报', '审核', '发布']
-  const current = meetingStore.isRunning ? meetingStore.phase === 'executing' ? 2 : 1 : steps.length
-  return meetingStore.topic ? [{
-    id: 'current',
-    topic: meetingStore.topic || '当前任务',
-    time: '刚刚',
-    status: meetingStore.isRunning ? 'running' : meetingStore.phase === 'done' ? 'done' : 'pending',
-    steps,
-    current: meetingStore.phase === 'done' ? steps.length : current,
-  }] : []
-})
+// 计算属性
+const activeTasks = computed(() => pipelineStore.tasks.filter(t => t.status === 'running' || t.status === 'pending'))
+const doneTasks = computed(() => pipelineStore.tasks.filter(t => t.status === 'done'))
+
+function clearDone() {
+  doneTasks.value.forEach(t => pipelineStore.removeTask(t.id))
+}
+
+function currentStageLabel(task: typeof pipelineStore.tasks[0]) {
+  return PIPELINE_STAGES[task.currentStage]?.label || ''
+}
+function currentStageColor(task: typeof pipelineStore.tasks[0]) {
+  return PIPELINE_STAGES[task.currentStage]?.color || '#999'
+}
+
+function hasOutputs(task: typeof pipelineStore.tasks[0]) {
+  return Object.keys(task.stageOutputs).length > 0
+}
 
 function statusLabel(s: string) {
-  return { running: '运行中', done: '已完成', pending: '等待中', failed: '失败' }[s] || s
+  return { running: '运行中', done: '已完成', pending: '等待中', blocked: '已阻塞' }[s] || s
+}
+
+function fmtTime(ts: number) {
+  const d = new Date(ts)
+  const now = new Date()
+  const diff = now.getTime() - ts
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前'
+  if (d.toDateString() === now.toDateString()) return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
+  return `${d.getMonth()+1}/${d.getDate()}`
 }
 </script>
 
@@ -153,11 +225,12 @@ function statusLabel(s: string) {
 }
 .blackboard-inner {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
   gap: 24px;
   align-items: start;
 }
 .bb-col { display: flex; flex-direction: column; gap: 10px; }
+.bb-col-new { gap: 8px; }
 .bb-section-title {
   display: flex; align-items: center; gap: 6px;
   font-size: 11px; font-weight: 700;
@@ -170,39 +243,22 @@ function statusLabel(s: string) {
   align-self: stretch;
 }
 .bb-focus-text {
-  font-size: 15px;
-  color: rgba(255,255,255,0.85);
-  line-height: 1.6;
-  min-height: 60px;
-  cursor: pointer;
-  white-space: pre-wrap;
+  font-size: 15px; color: rgba(255,255,255,0.85);
+  line-height: 1.6; min-height: 60px; cursor: pointer; white-space: pre-wrap;
 }
 .bb-placeholder { color: rgba(255,255,255,0.2); font-style: italic; }
 .bb-textarea {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 14px;
-  color: rgba(255,255,255,0.9);
-  resize: none;
-  outline: none;
-  font-family: inherit;
-  line-height: 1.6;
-  width: 100%;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; padding: 10px 12px; font-size: 14px;
+  color: rgba(255,255,255,0.9); resize: none; outline: none;
+  font-family: inherit; line-height: 1.6; width: 100%;
 }
 .bb-textarea:focus { border-color: rgba(0,113,227,0.5); }
 .bb-edit-btn {
-  align-self: flex-start;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 6px;
-  padding: 4px 12px;
-  font-size: 11px;
-  color: rgba(255,255,255,0.4);
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.15s;
+  align-self: flex-start; background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+  padding: 4px 12px; font-size: 11px; color: rgba(255,255,255,0.4);
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
 .bb-edit-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
 .bb-empty { font-size: 13px; color: rgba(255,255,255,0.25); font-style: italic; }
@@ -211,11 +267,31 @@ function statusLabel(s: string) {
   font-size: 13px; color: rgba(255,255,255,0.7);
 }
 .bb-running-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: #34d399;
-  animation: pulse 2s ease-in-out infinite;
-  flex-shrink: 0;
+  width: 6px; height: 6px; border-radius: 50%; background: #34d399;
+  animation: pulse 2s ease-in-out infinite; flex-shrink: 0;
 }
+.bb-stage-tag {
+  font-size: 10px; font-weight: 700; padding: 2px 8px;
+  border-radius: 10px; flex-shrink: 0;
+}
+.bb-new-wrap { display: flex; gap: 6px; }
+.bb-input {
+  flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; padding: 8px 10px; font-size: 13px;
+  color: rgba(255,255,255,0.9); outline: none; font-family: inherit;
+}
+.bb-input:focus { border-color: rgba(0,113,227,0.5); }
+.bb-input::placeholder { color: rgba(255,255,255,0.25); }
+.bb-create-btn {
+  background: #0071e3; border: none; border-radius: 8px;
+  padding: 8px 14px; font-size: 12px; font-weight: 600;
+  color: white; cursor: pointer; font-family: inherit; white-space: nowrap;
+  transition: background 0.15s;
+}
+.bb-create-btn:hover:not(:disabled) { background: #0066cc; }
+.bb-create-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.bb-stats { font-size: 11px; color: rgba(255,255,255,0.3); display: flex; gap: 6px; }
+
 @keyframes pulse {
   0%,100% { box-shadow: 0 0 0 2px rgba(52,211,153,0.2); }
   50% { box-shadow: 0 0 0 5px rgba(52,211,153,0.06); }
@@ -225,6 +301,12 @@ function statusLabel(s: string) {
 .section-hd { display: flex; align-items: center; gap: 10px; }
 .section-title { font-size: 13px; font-weight: 700; color: #1A1A1A; margin: 0; }
 .section-sub { font-size: 11px; color: #999999; }
+.clear-done-btn {
+  margin-left: auto; background: none; border: 1px solid #E8E8E8;
+  border-radius: 8px; padding: 4px 12px; font-size: 11px; color: #999;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.clear-done-btn:hover { border-color: #ef4444; color: #ef4444; }
 
 /* 空状态 */
 .empty-state { text-align: center; padding: 60px 20px; }
@@ -240,72 +322,85 @@ function statusLabel(s: string) {
 /* 流水线卡片 */
 .pipeline-list { display: flex; flex-direction: column; gap: 12px; }
 .pipeline-card {
-  background: #ffffff;
-  border: 1px solid #E8E8E8;
-  border-radius: 14px;
-  padding: 18px 20px;
+  background: #ffffff; border: 1px solid #E8E8E8;
+  border-radius: 14px; padding: 18px 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 .pipeline-card-top {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .pipeline-info { display: flex; flex-direction: column; gap: 2px; }
 .pipeline-name { font-size: 14px; font-weight: 700; color: #1A1A1A; }
 .pipeline-time { font-size: 11px; color: #999999; }
+.pipeline-card-actions { display: flex; align-items: center; gap: 8px; }
 .pipeline-status {
-  font-size: 11px; font-weight: 700; padding: 3px 10px;
-  border-radius: 20px;
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
 }
 .pipeline-status.running { background: rgba(0,113,227,0.1); color: #0071e3; }
 .pipeline-status.done    { background: rgba(52,211,153,0.1); color: #059669; }
 .pipeline-status.pending { background: rgba(245,158,11,0.1); color: #d97706; }
-.pipeline-status.failed  { background: rgba(239,68,68,0.1);  color: #dc2626; }
+.pipeline-status.blocked { background: rgba(239,68,68,0.1);  color: #dc2626; }
+
+.advance-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: #F8F8F6; border: 1px solid #E8E8E8;
+  border-radius: 8px; padding: 4px 10px;
+  font-size: 11px; font-weight: 600; color: #555;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.advance-btn:hover { background: #0071e3; color: white; border-color: #0071e3; }
+.del-btn {
+  background: none; border: none; cursor: pointer;
+  color: #CCCCCC; padding: 4px; border-radius: 6px;
+  transition: color 0.15s; display: flex; align-items: center;
+}
+.del-btn:hover { color: #ef4444; }
 
 /* 步骤条 */
 .pipeline-steps {
-  display: flex;
-  align-items: center;
-  gap: 0;
+  display: flex; align-items: center; margin-bottom: 4px;
+  padding-bottom: 20px; position: relative;
 }
-.pipeline-step {
-  display: flex; align-items: center; gap: 0;
-  flex: 1;
-}
-.pipeline-step:last-child { flex: 0; }
+.pipeline-step { display: flex; align-items: center; position: relative; }
 .step-dot {
-  width: 20px; height: 20px; border-radius: 50%;
+  width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; transition: all 0.2s;
+  flex-shrink: 0; transition: all 0.2s; background: #E8E8E8;
 }
-.pipeline-step.done   .step-dot { background: #34d399; }
-.pipeline-step.active .step-dot { background: #0071e3; }
-.pipeline-step.pending .step-dot { background: #E8E8E8; }
 .step-pulse {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: white;
+  width: 7px; height: 7px; border-radius: 50%;
   animation: pulse 1.5s ease-in-out infinite;
 }
 .step-label {
-  font-size: 10px; font-weight: 600;
-  white-space: nowrap;
-  position: absolute;
-  transform: translateX(-50%) translateY(14px);
-  margin-left: 10px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+  position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
+  color: #CCCCCC; transition: color 0.2s;
 }
-.pipeline-step.done   .step-label { color: #059669; }
-.pipeline-step.active .step-label { color: #0071e3; }
-.pipeline-step.pending .step-label { color: #CCCCCC; }
 .step-line {
-  flex: 1;
-  height: 2px;
-  background: #E8E8E8;
-  margin: 0 2px;
-  transition: background 0.3s;
+  flex: 1; height: 2px; background: #E8E8E8;
+  margin: 0 4px; transition: background 0.3s; min-width: 24px;
 }
-.step-line.done { background: #34d399; }
 
-@media (max-width: 600px) {
+/* 阶段产出 */
+.stage-outputs {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid #F0F0EE;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.output-item {
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.output-stage-tag {
+  font-size: 10px; font-weight: 700; padding: 2px 8px;
+  border-radius: 10px; flex-shrink: 0; white-space: nowrap;
+}
+.output-text {
+  font-size: 12px; color: #555; line-height: 1.5;
+  flex: 1;
+}
+
+@media (max-width: 700px) {
   .blackboard-inner { grid-template-columns: 1fr; }
   .bb-divider { width: auto; height: 1px; }
 }

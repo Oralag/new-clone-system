@@ -45,6 +45,7 @@
         <div style="display:flex;gap:8px" v-if="selectedBom">
           <el-button size="small" @click="openEditBomInfo">编辑成品信息</el-button>
           <el-button type="primary" :icon="Plus" size="small" @click="openAddMaterial">添加物料</el-button>
+          <el-button type="success" size="small" :disabled="currentItems.length === 0" @click="handleGotoProcure">一键采购BOM</el-button>
         </div>
       </div>
 
@@ -225,11 +226,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Delete, List } from '@element-plus/icons-vue'
 import http from '@/api/http'
 
 // ── 左侧成品列表 ──────────────────────────────────────────────────
+const router = useRouter()
 const goodsLoading = ref(false)
 const goodsList = ref<any[]>([])
 const goodsKeyword = ref('')
@@ -522,6 +525,27 @@ async function submitMatItems() {
 }
 
 onMounted(loadGoodsList)
+
+// ── 一键采购 BOM ──────────────────────────────────────────────────
+function handleGotoProcure() {
+  if (!currentItems.value.length) { ElMessage.warning('当前BOM无物料'); return }
+  const items = currentItems.value.map(it => ({
+    goods_name: it.goods_name,
+    goods_sn: it.goods_sn || '',
+    spec: it.spec || '',
+    unit_name: it.unit_name || '',
+    num: Number(it.num || 0),
+    price_no_tax: Number(it.price || 0),
+    tax_rate: 0,
+    price: Number(it.price || 0),
+    remark: `BOM物料（${selectedBom.value?.goods_name ?? ''}）`
+  }))
+  sessionStorage.setItem('procure_order_from_bom', JSON.stringify({
+    goods_info: JSON.stringify(items),
+    remark: `来自BOM：${selectedBom.value?.goods_name ?? ''}`
+  }))
+  router.push({ name: 'ProcureOrder' })
+}
 </script>
 
 <style scoped>

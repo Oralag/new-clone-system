@@ -1,169 +1,160 @@
 <template>
-  <div class="designer-page">
-    <!-- 左侧：对话区 -->
-    <div class="chat-panel">
-      <div class="designer-header">
-        <div class="header-left">
-          <span class="header-emoji">🎨</span>
-          <div class="header-info">
-            <h2 class="header-title">平面设计工坊</h2>
-            <span class="header-sub">GRAPHIC DESIGN STUDIO · 独立设计师</span>
-          </div>
-        </div>
-        <div class="header-right">
-          <div class="header-badges">
-            <span class="badge">海报</span>
-            <span class="badge">Banner</span>
-            <span class="badge">包装</span>
-            <span class="badge">Logo</span>
-            <span class="badge">社媒图</span>
-          </div>
-          <button v-if="hasMessages" class="clear-chat-btn" @click="clearHistory">清空对话</button>
-        </div>
-      </div>
+  <div class="designer-dept">
 
-      <!-- 快捷提示 -->
-      <div v-if="!hasMessages" class="quick-prompts">
-        <div class="prompts-title">快速开始</div>
-        <div class="prompts-grid">
-          <button v-for="p in quickPrompts" :key="p.label" class="prompt-card" :disabled="isLoading" @click="sendMessage(p.prompt)">
+    <DeptEmployeeCard
+      name="Aria"
+      role="平面设计师"
+      emoji="🎨"
+      desc="海报 · Banner · Logo · 包装 · 社媒图"
+      color="#e11d48"
+      illustId="designer"
+      :busy="isLoading"
+      :stats="[
+        { value: designData.filter(d => d.type === 'image').length, label: '已生图' },
+        { value: designData.filter(d => d.type === 'palette').length, label: '配色方案' },
+      ]"
+    />
+
+    <div class="three-col">
+
+      <!-- 左侧 -->
+      <aside class="left-panel">
+        <div class="panel-card">
+          <div class="panel-hd"><span class="panel-dot" style="background:#e11d48"></span>今日目标</div>
+          <textarea v-model="todayGoal" class="goal-input" placeholder="今日设计目标..." rows="3" @blur="saveGoal"/>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-hd"><span class="panel-dot" style="background:#6366f1"></span>快捷指令</div>
+          <div class="quick-list">
+            <button v-for="q in quickPrompts" :key="q.label" class="quick-item" @click="sendMessage(q.prompt)">
+              <span class="quick-emoji">{{ q.icon }}</span>
+              <span class="quick-text">{{ q.label }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-hd"><span class="panel-dot" style="background:#10b981"></span>部门状态</div>
+          <div class="status-list">
+            <div class="status-row"><span class="status-label">设计专员</span><span class="status-badge green">待命</span></div>
+            <div class="status-row"><span class="status-label">今日生图</span><span class="status-badge red">{{ designData.filter(d=>d.type==='image').length }} 张</span></div>
+            <div class="status-row"><span class="status-label">配色方案</span><span class="status-badge blue">{{ designData.filter(d=>d.type==='palette').length }} 套</span></div>
+          </div>
+          <button v-if="hasMessages" class="clear-btn" @click="clearHistory">清空记录</button>
+        </div>
+      </aside>
+
+      <!-- 中间：对话 -->
+      <section class="chat-panel" :style="{ '--ac': '#e11d48' }">
+        <div class="chat-header">
+          <div class="chat-header-left">
+            <span class="chat-agent-emoji">🎨</span>
+            <div>
+              <div class="chat-agent-name">Aria · 平面设计师</div>
+              <div class="chat-agent-sub">外聘 · 海报 & 视觉设计 & 配色</div>
+            </div>
+          </div>
+          <span class="outsource-tag">外聘</span>
+        </div>
+
+        <div v-if="!hasMessages" class="quick-prompts-grid">
+          <button v-for="p in quickPrompts.slice(0,4)" :key="p.label" class="prompt-card" :disabled="isLoading" @click="sendMessage(p.prompt)">
             <span class="prompt-icon">{{ p.icon }}</span>
             <span class="prompt-label">{{ p.label }}</span>
           </button>
         </div>
-      </div>
 
-      <!-- 聊天区域 -->
-      <div v-else class="chat-area" ref="chatAreaRef">
-        <div v-for="(msg, idx) in messages" :key="idx" class="chat-msg" :class="msg.role">
-          <div class="msg-header">
-            <span class="msg-role">{{ msg.role === 'user' ? '你' : '🎨 设计师' }}</span>
-            <span class="msg-time">{{ formatTime(msg.time) }}</span>
+        <div class="chat-area" ref="chatAreaRef" v-show="hasMessages || isLoading">
+          <div v-for="(msg, idx) in messages" :key="idx" class="chat-msg" :class="msg.role">
+            <div class="msg-bubble" v-html="renderMarkdown(msg.content)"></div>
           </div>
-          <div v-if="msg.toolCalls?.length" class="tool-calls">
-            <div v-for="tc in msg.toolCalls" :key="tc.id" class="tool-card" :class="tc.status">
-              <span class="tool-icon">{{ tc.status === 'running' ? '⏳' : '✅' }}</span>
-              <span class="tool-name">{{ toolLabel(tc.name) }}</span>
+          <div v-if="isLoading && !isStreaming" class="chat-msg assistant">
+            <div class="msg-bubble typing">
+              <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
             </div>
           </div>
-          <div class="msg-content" v-html="renderMarkdown(msg.content)"></div>
         </div>
-        <div v-if="isLoading && !isStreaming" class="chat-msg assistant">
-          <div class="msg-header"><span class="msg-role">🎨 设计师</span></div>
-          <div class="msg-content typing">
-            <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+
+        <div class="chat-bar">
+          <textarea
+            v-model="inputText"
+            class="bar-input"
+            placeholder="描述你的设计需求..."
+            rows="1"
+            :disabled="isLoading"
+            @keydown.enter.exact.prevent="sendMessage(inputText)"
+            @input="autoResize"
+            ref="inputRef"
+          />
+          <button class="bar-send" :disabled="!inputText.trim() || isLoading" @click="sendMessage(inputText)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- 右侧：设计产出画布 -->
+      <aside class="right-panel">
+        <div class="panel-card output-card">
+          <div class="panel-hd">
+            <span class="panel-dot" style="background:#e11d48"></span>
+            设计产出
+            <span class="panel-count">{{ designData.length }}</span>
+            <button v-if="designData.length" class="clear-canvas-btn" @click="designData = []">清空</button>
+          </div>
+          <div v-if="!designData.length" class="output-empty">与设计师对话后<br>方案将在此展示</div>
+          <div v-else class="design-list">
+            <div v-for="(block, idx) in designData" :key="idx" class="design-block">
+
+              <!-- 配色方案 -->
+              <template v-if="block.type === 'palette'">
+                <div class="block-label">🎨 配色方案</div>
+                <div class="palette-grid">
+                  <div v-for="c in block.colors" :key="c.hex" class="palette-swatch" :style="{ background: c.hex }">
+                    <span class="swatch-hex">{{ c.hex }}</span>
+                    <span class="swatch-name">{{ c.name }}</span>
+                  </div>
+                </div>
+              </template>
+
+              <!-- AI 生图提示词 -->
+              <template v-if="block.type === 'prompt'">
+                <div class="block-label">✨ 生图提示词</div>
+                <div class="prompt-block">
+                  <pre class="prompt-text">{{ block.text }}</pre>
+                  <button class="copy-btn" @click="copyText(block.text, idx)">{{ copiedIdx === idx ? '已复制' : '复制' }}</button>
+                </div>
+              </template>
+
+              <!-- 生成图片 -->
+              <template v-if="block.type === 'image'">
+                <div class="block-label">🖼️ 生成图片</div>
+                <div class="image-block">
+                  <div v-if="block.imgLoading" class="img-loading">图片生成中...</div>
+                  <img v-show="!block.imgLoading && !block.imgError" :src="block.imageUrl" class="generated-image"
+                    @load="block.imgLoading = false" @error="block.imgLoading = false; block.imgError = true"
+                    @click="openImage(block.imageUrl)" />
+                  <div v-if="block.imgError" class="img-error">加载失败</div>
+                  <a v-if="!block.imgLoading && !block.imgError" :href="block.imageUrl" target="_blank" class="image-link">新窗口打开</a>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- 输入框 -->
-      <div class="input-area">
-        <textarea
-          v-model="inputText"
-          class="chat-input"
-          placeholder="描述你的设计需求..."
-          rows="1"
-          :disabled="isLoading"
-          @keydown.enter.exact.prevent="sendMessage(inputText)"
-          @input="autoResize"
-          ref="inputRef"
-        ></textarea>
-        <button class="send-btn" :disabled="!inputText.trim() || isLoading" @click="sendMessage(inputText)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
+      </aside>
     </div>
 
-    <!-- 右侧：画布预览区 -->
-    <div class="canvas-panel">
-      <div class="canvas-header">
-        <span class="canvas-title">设计预览</span>
-        <button v-if="designData.length" class="clear-canvas-btn" @click="designData = []">清空</button>
-      </div>
-      <div class="canvas-body">
-        <div v-if="!designData.length" class="canvas-empty">
-          <div class="empty-icon">🖌️</div>
-          <div class="empty-text">与设计师对话后<br>设计方案将在此展示</div>
-        </div>
-
-        <div v-for="(block, idx) in designData" :key="idx" class="design-block">
-          <!-- 配色方案 -->
-          <template v-if="block.type === 'palette'">
-            <div class="block-label">🎨 配色方案</div>
-            <div class="palette-grid">
-              <div v-for="c in block.colors" :key="c.hex" class="palette-swatch" :style="{ background: c.hex }">
-                <span class="swatch-hex">{{ c.hex }}</span>
-                <span class="swatch-name">{{ c.name }}</span>
-              </div>
-            </div>
-          </template>
-
-          <!-- AI 生图提示词 -->
-          <template v-if="block.type === 'prompt'">
-            <div class="block-label">✨ AI 生图提示词</div>
-            <div class="prompt-block">
-              <pre class="prompt-text">{{ block.text }}</pre>
-              <button class="copy-btn" @click="copyText(block.text)">{{ copiedIdx === idx ? '已复制' : '复制' }}</button>
-            </div>
-          </template>
-
-          <!-- 生成的图片 -->
-          <template v-if="block.type === 'image'">
-            <div class="block-label">🖼️ 生成图片</div>
-            <div class="image-block">
-              <div v-if="block.imgLoading" class="img-loading">⏳ 图片生成中，请稍候...</div>
-              <img
-                v-show="!block.imgLoading && !block.imgError"
-                :src="block.imageUrl"
-                alt="AI生成图片"
-                class="generated-image"
-                @load="block.imgLoading = false"
-                @error="block.imgLoading = false; block.imgError = true"
-                @click="openImage(block.imageUrl)"
-              />
-              <div v-if="block.imgError" class="img-error">
-                <span>图片加载失败</span>
-                <button class="image-action-btn" @click="block.imgError = false; block.imgLoading = true; block.imageUrl = block.imageUrl + ''">重试</button>
-              </div>
-              <div class="image-actions">
-                <a :href="block.imageUrl" target="_blank" class="image-action-btn">新窗口打开</a>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { marked } from 'marked'
+import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 
-interface ToolCall {
-  id: string
-  name: string
-  status: 'running' | 'done'
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-  time: string
-  toolCalls?: ToolCall[]
-}
-
+interface ChatMessage { role: 'user' | 'assistant'; content: string; time: string }
 interface PaletteColor { hex: string; name: string }
-interface DesignBlock {
-  type: 'palette' | 'prompt' | 'image'
-  colors?: PaletteColor[]
-  text?: string
-  imageUrl?: string
-  imgLoading?: boolean
-  imgError?: boolean
-}
+interface DesignBlock { type: 'palette' | 'prompt' | 'image'; colors?: PaletteColor[]; text?: string; imageUrl?: string; imgLoading?: boolean; imgError?: boolean }
 
 const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
@@ -175,9 +166,10 @@ const designData = ref<DesignBlock[]>([])
 const copiedIdx = ref<number | null>(null)
 
 const HISTORY_KEY = 'designer_agent_history'
+const todayGoal = ref(localStorage.getItem('designer_dept_goal') || '')
+function saveGoal() { localStorage.setItem('designer_dept_goal', todayGoal.value) }
 const hasMessages = computed(() => messages.value.length > 0)
 
-// 从 localStorage 恢复历史
 try {
   const raw = localStorage.getItem(HISTORY_KEY)
   if (raw) messages.value = JSON.parse(raw).slice(-50)
@@ -187,41 +179,16 @@ const quickPrompts = [
   { icon: '🛍️', label: '电商主图', prompt: '帮我设计一张电商主图，产品是[描述你的产品]，目标平台是淘宝' },
   { icon: '📱', label: '社媒海报', prompt: '帮我设计一张小红书封面图，主题是[描述主题]' },
   { icon: '🖼️', label: '活动Banner', prompt: '帮我设计一张促销活动Banner，活动主题是[描述活动]' },
-  { icon: '💳', label: '名片设计', prompt: '帮我设计一张商务名片，公司名称是[公司名]，风格偏简约现代' },
-  { icon: '📦', label: '包装设计', prompt: '帮我设计产品包装方案，产品是[描述产品]，目标受众是[描述受众]' },
-  { icon: '✦', label: 'Logo方案', prompt: '帮我设计Logo，品牌名是[品牌名]，行业是[行业]，希望传达[关键词]的感觉' },
-  { icon: '🌈', label: '配色方案', prompt: '帮我生成一套配色方案，风格是[现代/复古/清新/高端/活泼]，用途是[用途]' },
-  { icon: '📐', label: '排版建议', prompt: '帮我做排版设计建议，内容类型是[海报/宣传册/详情页]，信息量[多/中/少]' },
+  { icon: '🌈', label: '配色方案', prompt: '帮我生成一套配色方案，风格是现代简约，用途是品牌视觉系统' },
+  { icon: '✦', label: 'Logo方案', prompt: '帮我设计Logo，品牌名是[品牌名]，行业是[行业]' },
+  { icon: '📦', label: '包装设计', prompt: '帮我设计产品包装方案，产品是[描述产品]' },
 ]
 
 function saveHistory() {
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.value.slice(-50))) } catch {}
 }
 
-function formatTime(iso: string) {
-  if (!iso) return ''
-  try {
-    const d = new Date(iso)
-    const M = (d.getMonth() + 1).toString().padStart(2, '0')
-    const D = d.getDate().toString().padStart(2, '0')
-    const h = d.getHours().toString().padStart(2, '0')
-    const m = d.getMinutes().toString().padStart(2, '0')
-    return `${M}-${D} ${h}:${m}`
-  } catch { return '' }
-}
-
-function renderMarkdown(text: string): string {
-  if (!text) return ''
-  return marked.parse(text) as string
-}
-
-const toolLabelMap: Record<string, string> = {
-  query_customers: '查询客户', query_suppliers: '查询供应商', query_goods: '查询商品',
-  query_inventory: '查询库存', query_sales: '查询销售数据', query_purchases: '查询采购数据',
-  query_finance: '查询财务数据', query_staff: '查询员工', query_warehouses: '查询仓库',
-  generate_image: '生成图片',
-}
-function toolLabel(name: string) { return toolLabelMap[name] || name }
+function renderMarkdown(text: string) { return text ? marked.parse(text) as string : '' }
 
 function autoResize() {
   if (!inputRef.value) return
@@ -230,26 +197,20 @@ function autoResize() {
 }
 
 function scrollToBottom() {
-  nextTick(() => {
-    if (chatAreaRef.value) chatAreaRef.value.scrollTop = chatAreaRef.value.scrollHeight
-  })
+  nextTick(() => { if (chatAreaRef.value) chatAreaRef.value.scrollTop = chatAreaRef.value.scrollHeight })
 }
 
-/** 从 AI 回复中提取配色方案和生图提示词 */
 function extractDesignData(content: string) {
-  // 提取 ```palette ... ``` 块
   const paletteRe = /```palette\n([\s\S]*?)```/g
   let m: RegExpExecArray | null
   while ((m = paletteRe.exec(content)) !== null) {
-    const lines = m[1].trim().split('\n')
     const colors: PaletteColor[] = []
-    for (const line of lines) {
+    for (const line of m[1].trim().split('\n')) {
       const match = line.match(/(#[0-9A-Fa-f]{6})\s*\|\s*(.+)/)
       if (match) colors.push({ hex: match[1], name: match[2].trim() })
     }
     if (colors.length) designData.value.push({ type: 'palette', colors })
   }
-  // 提取 ```prompt ... ``` 块
   const promptRe = /```prompt\n([\s\S]*?)```/g
   while ((m = promptRe.exec(content)) !== null) {
     const text = m[1].trim()
@@ -257,18 +218,12 @@ function extractDesignData(content: string) {
   }
 }
 
-async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text || '')
-    const idx = designData.value.findIndex(b => b.text === text)
-    copiedIdx.value = idx
-    setTimeout(() => { copiedIdx.value = null }, 1500)
-  } catch {}
+async function copyText(text: string | undefined, idx: number) {
+  try { await navigator.clipboard.writeText(text || ''); copiedIdx.value = idx; setTimeout(() => { copiedIdx.value = null }, 1500) } catch {}
 }
 
-function openImage(url?: string) {
-  if (url) window.open(url, '_blank')
-}
+function openImage(url?: string) { if (url) window.open(url, '_blank') }
+
 function clearHistory() {
   messages.value = []
   designData.value = []
@@ -280,69 +235,44 @@ async function sendMessage(text: string) {
   if (!trimmed || isLoading.value) return
   inputText.value = ''
   if (inputRef.value) inputRef.value.style.height = 'auto'
-
-  const userMsg: ChatMessage = { role: 'user', content: trimmed, time: new Date().toISOString() }
-  messages.value.push(userMsg)
+  messages.value.push({ role: 'user', content: trimmed, time: new Date().toISOString() })
   scrollToBottom()
-
   isLoading.value = true
-  const assistantMsg: ChatMessage = { role: 'assistant', content: '', time: new Date().toISOString(), toolCalls: [] }
-
+  const assistantMsg: ChatMessage = { role: 'assistant', content: '', time: new Date().toISOString() }
   try {
     const token = localStorage.getItem('erp_token') || ''
-    const apiMessages = messages.value.slice(-10).map((m) => ({ role: m.role, content: m.content }))
     const res = await fetch('/api/agent-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
-      body: JSON.stringify({ messages: apiMessages, agentId: 'designer' }),
+      body: JSON.stringify({ messages: messages.value.slice(-10).map(m => ({ role: m.role, content: m.content })), agentId: 'designer' }),
     })
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
     const reader = res.body?.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
-    let streamDone = false
-
     messages.value.push(assistantMsg)
     isStreaming.value = true
-
-    while (reader && !streamDone) {
+    while (reader) {
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
-      // 按 SSE 双换行切割消息
       const parts = buffer.split('\n\n')
       buffer = parts.pop() || ''
       for (const part of parts) {
         const line = part.startsWith('data: ') ? part : part.split('\n').find(l => l.startsWith('data: ')) || ''
         if (!line.startsWith('data: ')) continue
         const payload = line.slice(6).trim()
-        if (payload === '[DONE]') { streamDone = true; break }
+        if (payload === '[DONE]') break
         try {
           const data = JSON.parse(payload)
-          if (data.type === 'text') {
-            assistantMsg.content += data.text
-            scrollToBottom()
-          } else if (data.type === 'tool_start') {
-            assistantMsg.toolCalls!.push({ id: data.id, name: data.name, status: 'running' })
-            scrollToBottom()
-          } else if (data.type === 'tool_result') {
-            const tc = assistantMsg.toolCalls!.find(t => t.id === data.id)
-            if (tc) tc.status = 'done'
-            if (data.result && typeof data.result === 'string' && data.result.startsWith('IMAGE_URL:')) {
-              const imageUrl = data.result.slice(10)
-              designData.value.push({ type: 'image', imageUrl, imgLoading: true, imgError: false })
-            }
-          } else if (data.type === 'error') {
-            assistantMsg.content += `\n⚠️ ${data.error}`
+          if (data.type === 'text') { assistantMsg.content += data.text; scrollToBottom() }
+          else if (data.type === 'tool_result' && data.result?.startsWith?.('IMAGE_URL:')) {
+            designData.value.push({ type: 'image', imageUrl: data.result.slice(10), imgLoading: true, imgError: false })
           }
         } catch {}
       }
     }
-
     if (!assistantMsg.content) assistantMsg.content = '设计师暂无回复'
-    // 提取设计数据到画布
     extractDesignData(assistantMsg.content)
   } catch (e: any) {
     assistantMsg.content = `设计咨询出错：${e.message}`
@@ -355,247 +285,96 @@ async function sendMessage(text: string) {
   }
 }
 </script>
+
 <style scoped>
-.designer-page {
-  height: 100%;
-  display: flex;
-  gap: 0;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-}
+.designer-dept { display: flex; flex-direction: column; gap: 14px; padding-bottom: 40px; max-width: 1400px; }
+.three-col { display: grid; grid-template-columns: 220px 1fr 260px; gap: 14px; align-items: start; }
 
-/* ── 左侧对话面板 ── */
-.chat-panel {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border);
-}
+.panel-card { background: #fff; border: 1px solid #E8E8E8; border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.04); }
+.panel-hd { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #AAAAAA; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; flex-wrap: wrap; }
+.panel-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.panel-count { margin-left: auto; background: #F0F0EE; color: #666; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
 
-.designer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(225,29,72,0.03) 0%, transparent 100%);
-}
-.header-left { display: flex; align-items: center; gap: 12px; }
-.header-emoji { font-size: 24px; }
-.header-info { display: flex; flex-direction: column; gap: 2px; }
-.header-title { font-size: 14px; font-weight: 700; color: var(--dark); margin: 0; }
-.header-sub {
-  font-size: 9px; color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.06em;
-}
-.header-badges { display: flex; gap: 4px; flex-wrap: wrap; }
-.badge {
-  font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
-  background: rgba(225,29,72,0.06); color: #e11d48;
-  border: 1px solid rgba(225,29,72,0.12);
-  font-family: 'SF Mono', 'Fira Code', monospace; letter-spacing: 0.05em;
-}
+.left-panel { display: flex; flex-direction: column; gap: 10px; }
+.goal-input { width: 100%; border: 1px solid #E8E8E8; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #333; background: #F8F8F6; resize: none; outline: none; font-family: inherit; line-height: 1.5; box-sizing: border-box; }
+.goal-input:focus { border-color: #e11d48; }
+.quick-list { display: flex; flex-direction: column; gap: 6px; }
+.quick-item { display: flex; align-items: flex-start; gap: 7px; padding: 8px 10px; border-radius: 8px; background: #F8F8F6; border: 1px solid transparent; cursor: pointer; text-align: left; font-family: inherit; transition: all 0.15s; }
+.quick-item:hover { background: rgba(225,29,72,0.06); border-color: rgba(225,29,72,0.2); }
+.quick-emoji { font-size: 13px; flex-shrink: 0; }
+.quick-text { font-size: 11px; color: #555; line-height: 1.4; }
+.status-list { display: flex; flex-direction: column; gap: 7px; }
+.status-row { display: flex; align-items: center; justify-content: space-between; }
+.status-label { font-size: 12px; color: #555; }
+.status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.status-badge.green { background: rgba(52,211,153,0.1); color: #059669; }
+.status-badge.red   { background: rgba(225,29,72,0.1);  color: #e11d48; }
+.status-badge.blue  { background: rgba(0,113,227,0.08); color: #0071e3; }
+.clear-btn { width: 100%; margin-top: 10px; padding: 7px; border: 1px solid #E8E8E8; border-radius: 8px; background: #F8F8F6; font-size: 11px; color: #999; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.clear-btn:hover { border-color: #e11d48; color: #e11d48; }
 
-/* 快捷提示 */
-.quick-prompts { padding: 24px 18px; flex: 1; overflow-y: auto; }
-.prompts-title {
-  font-size: 10px; font-weight: 700; color: var(--dim);
-  letter-spacing: 0.1em; font-family: 'SF Mono', 'Fira Code', monospace;
-  margin-bottom: 14px;
-}
-.prompts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
-.prompt-card {
-  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
-  border-radius: 6px; border: 1px solid var(--border); background: var(--faint);
-  cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit;
-}
-.prompt-card:hover { border-color: rgba(225,29,72,0.25); background: rgba(225,29,72,0.04); }
+.chat-panel { background: #fff; border: 1px solid #E8E8E8; border-left: 3px solid var(--ac, #e11d48); border-radius: 14px; padding: 16px 16px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; min-height: 500px; display: flex; flex-direction: column; }
+.chat-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-shrink: 0; }
+.chat-header-left { display: flex; align-items: center; gap: 10px; }
+.chat-agent-emoji { font-size: 24px; }
+.chat-agent-name { font-size: 14px; font-weight: 800; color: #1A1A1A; letter-spacing: -0.02em; }
+.chat-agent-sub { font-size: 11px; color: #AAAAAA; margin-top: 1px; }
+.outsource-tag { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px dashed rgba(225,29,72,0.4); color: #e11d48; flex-shrink: 0; }
+
+.quick-prompts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 0 16px; flex-shrink: 0; }
+.prompt-card { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid #E8E8E8; background: #F8F8F6; cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit; }
+.prompt-card:hover { border-color: rgba(225,29,72,0.3); background: rgba(225,29,72,0.04); }
 .prompt-card:disabled { opacity: 0.5; cursor: not-allowed; }
-.prompt-icon { font-size: 18px; flex-shrink: 0; }
-.prompt-label { font-size: 12px; color: var(--dark); font-weight: 500; }
-/* 聊天区域 */
-.chat-area {
-  flex: 1; overflow-y: auto; padding: 16px 18px;
-  display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin;
-}
-.chat-msg { max-width: 85%; }
+.prompt-icon { font-size: 16px; flex-shrink: 0; }
+.prompt-label { font-size: 11px; color: #444; font-weight: 500; line-height: 1.3; }
+
+.chat-area { flex: 1; overflow-y: auto; padding: 4px 0 12px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; }
+.chat-msg { max-width: 88%; }
 .chat-msg.user { align-self: flex-end; }
 .chat-msg.assistant { align-self: flex-start; }
-.msg-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.msg-role { font-size: 10px; font-weight: 700; color: var(--dim); font-family: 'SF Mono', 'Fira Code', monospace; }
-.msg-time { font-size: 9px; color: var(--dim); opacity: 0.6; font-family: 'SF Mono', 'Fira Code', monospace; }
-.msg-content {
-  font-size: 13px; line-height: 1.6; color: var(--dark);
-  padding: 10px 14px; border-radius: 8px; word-break: break-word;
-}
-.user .msg-content { background: rgba(225,29,72,0.06); border: 1px solid rgba(225,29,72,0.12); }
-.assistant .msg-content { background: var(--faint); border: 1px solid var(--border); }
+.msg-bubble { font-size: 13px; line-height: 1.6; color: #333; padding: 10px 14px; border-radius: 10px; word-break: break-word; }
+.user .msg-bubble { background: rgba(225,29,72,0.07); border: 1px solid rgba(225,29,72,0.14); }
+.assistant .msg-bubble { background: #F8F8F6; border: 1px solid #E8E8E8; }
+.msg-bubble :deep(p) { margin: 4px 0; }
+.msg-bubble :deep(ul), .msg-bubble :deep(ol) { padding-left: 18px; margin: 4px 0; }
+.msg-bubble :deep(li) { margin: 2px 0; }
 
-/* 打字动画 */
-.typing { display: flex; gap: 4px; padding: 12px 14px; }
-.typing-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: #e11d48; opacity: 0.4;
-  animation: typingBounce 1.4s ease-in-out infinite;
-}
+.typing { display: flex; gap: 4px; }
+.typing-dot { width: 5px; height: 5px; border-radius: 50%; background: #e11d48; opacity: 0.4; animation: typingBounce 1.4s ease-in-out infinite; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes typingBounce {
-  0%, 100% { opacity: 0.4; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-3px); }
-}
+@keyframes typingBounce { 0%,100% { opacity: 0.4; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
 
-/* 工具调用卡片 */
-.tool-calls { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-.tool-card {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 8px; border-radius: 4px; font-size: 10px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  border: 1px solid var(--border); background: var(--faint); color: var(--dim);
-}
-.tool-card.running { border-color: rgba(225,29,72,0.3); color: #e11d48; }
-.tool-card.done { border-color: rgba(225,29,72,0.15); opacity: 0.7; }
-.tool-icon { font-size: 11px; }
-.tool-name { white-space: nowrap; }
+.chat-bar { display: flex; align-items: flex-end; gap: 8px; padding: 10px 0 14px; border-top: 1px solid rgba(0,0,0,0.06); flex-shrink: 0; }
+.bar-input { flex: 1; border: 1px solid #E8E8E8; border-radius: 10px; padding: 9px 12px; font-size: 13px; font-family: inherit; color: #333; background: #F8F8F6; resize: none; outline: none; max-height: 120px; transition: border-color 0.15s; }
+.bar-input:focus { border-color: rgba(225,29,72,0.4); }
+.bar-input::placeholder { color: #AAAAAA; }
+.bar-send { width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(225,29,72,0.2); background: rgba(225,29,72,0.06); color: #e11d48; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+.bar-send:hover:not(:disabled) { background: #e11d48; color: white; border-color: #e11d48; }
+.bar-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Markdown */
-.msg-content :deep(h1), .msg-content :deep(h2), .msg-content :deep(h3) { font-size: 13px; font-weight: 700; margin: 8px 0 4px; color: var(--dark); }
-.msg-content :deep(ul), .msg-content :deep(ol) { padding-left: 18px; margin: 4px 0; }
-.msg-content :deep(li) { margin: 2px 0; }
-.msg-content :deep(code) { background: rgba(225,29,72,0.06); padding: 1px 4px; border-radius: 3px; font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; }
-.msg-content :deep(pre) { background: rgba(0,0,0,0.04); padding: 8px 10px; border-radius: 4px; overflow-x: auto; margin: 6px 0; font-size: 11px; }
-.msg-content :deep(table) { border-collapse: collapse; margin: 6px 0; font-size: 12px; width: 100%; }
-.msg-content :deep(th), .msg-content :deep(td) { border: 1px solid var(--border); padding: 4px 8px; text-align: left; }
-.msg-content :deep(th) { background: var(--faint); font-weight: 600; }
-.msg-content :deep(p) { margin: 4px 0; }
-/* 输入区域 */
-.input-area {
-  display: flex; align-items: flex-end; gap: 8px;
-  padding: 12px 18px 16px; border-top: 1px solid var(--border); flex-shrink: 0;
-}
-.chat-input {
-  flex: 1; border: 1px solid var(--border); border-radius: 6px;
-  padding: 8px 12px; font-size: 13px; font-family: inherit;
-  color: var(--dark); background: var(--faint); resize: none; outline: none;
-  transition: border-color 0.15s; max-height: 120px;
-}
-.chat-input:focus { border-color: rgba(225,29,72,0.4); }
-.chat-input::placeholder { color: var(--dim); }
-.send-btn {
-  width: 36px; height: 36px; border-radius: 6px;
-  border: 1px solid rgba(225,29,72,0.2); background: rgba(225,29,72,0.06);
-  color: #e11d48; cursor: pointer; display: flex; align-items: center;
-  justify-content: center; flex-shrink: 0; transition: all 0.15s;
-}
-.send-btn:hover:not(:disabled) { background: rgba(225,29,72,0.12); border-color: rgba(225,29,72,0.3); }
-.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.header-right { display: flex; align-items: center; gap: 10px; }
-.clear-chat-btn {
-  font-size: 10px; color: var(--dim); background: none; border: 1px solid var(--border);
-  border-radius: 4px; padding: 3px 10px; cursor: pointer; font-family: inherit; white-space: nowrap;
-}
-.clear-chat-btn:hover { color: #e11d48; border-color: rgba(225,29,72,0.3); }
-
-/* ── 右侧画布面板 ── */
-.canvas-panel {
-  width: 360px; flex-shrink: 0; display: flex; flex-direction: column;
-  background: var(--faint);
-}
-.canvas-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.canvas-title {
-  font-size: 11px; font-weight: 700; color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace; letter-spacing: 0.08em;
-}
-.clear-canvas-btn {
-  font-size: 10px; color: var(--dim); background: none; border: 1px solid var(--border);
-  border-radius: 4px; padding: 2px 8px; cursor: pointer; font-family: inherit;
-}
-.clear-canvas-btn:hover { color: #e11d48; border-color: rgba(225,29,72,0.3); }
-.canvas-body { flex: 1; overflow-y: auto; padding: 16px; scrollbar-width: thin; }
-
-/* 空状态 */
-.canvas-empty { text-align: center; padding: 60px 20px; color: var(--dim); }
-.empty-icon { font-size: 36px; margin-bottom: 12px; }
-.empty-text { font-size: 13px; line-height: 1.6; }
-
-/* 设计块 */
-.design-block { margin-bottom: 20px; }
-.block-label {
-  font-size: 11px; font-weight: 700; color: var(--dark); margin-bottom: 8px;
-}
-
-/* 配色方案 */
-.palette-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-.palette-swatch {
-  width: 100%; height: 56px; border-radius: 6px; position: relative;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  padding: 6px 8px; overflow: hidden;
-}
-.swatch-hex {
-  font-size: 11px; font-weight: 700; color: #fff;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-}
-.swatch-name {
-  font-size: 9px; color: rgba(255,255,255,0.8);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-/* 提示词块 */
+.right-panel { display: flex; flex-direction: column; gap: 0; }
+.output-empty { padding: 20px 0; text-align: center; font-size: 12px; color: #CCCCCC; font-style: italic; line-height: 1.6; }
+.design-list { display: flex; flex-direction: column; gap: 14px; }
+.design-block { }
+.block-label { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 7px; }
+.palette-grid { display: flex; flex-direction: column; gap: 5px; }
+.palette-swatch { width: 100%; height: 44px; border-radius: 7px; position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 5px 8px; overflow: hidden; }
+.swatch-hex { font-size: 10px; font-weight: 700; color: #fff; font-family: monospace; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.swatch-name { font-size: 9px; color: rgba(255,255,255,0.8); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
 .prompt-block { position: relative; }
-.prompt-text {
-  background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px;
-  padding: 10px 12px; font-size: 12px; line-height: 1.5;
-  font-family: 'SF Mono', 'Fira Code', monospace; color: var(--dark);
-  white-space: pre-wrap; word-break: break-word; margin: 0;
-}
-.copy-btn {
-  position: absolute; top: 6px; right: 6px;
-  font-size: 10px; padding: 2px 8px; border-radius: 3px;
-  border: 1px solid var(--border); background: var(--card-bg);
-  color: var(--dim); cursor: pointer; font-family: inherit;
-}
+.prompt-text { background: #F8F8F6; border: 1px solid #E8E8E8; border-radius: 7px; padding: 9px 10px; font-size: 11px; line-height: 1.5; font-family: monospace; color: #444; white-space: pre-wrap; word-break: break-word; margin: 0; }
+.copy-btn { position: absolute; top: 5px; right: 5px; font-size: 10px; padding: 2px 7px; border-radius: 4px; border: 1px solid #E8E8E8; background: #fff; color: #999; cursor: pointer; font-family: inherit; }
 .copy-btn:hover { color: #e11d48; border-color: rgba(225,29,72,0.3); }
-
-/* 生成图片 */
-.image-block { position: relative; }
-.generated-image {
-  width: 100%; border-radius: 6px; cursor: pointer;
-  border: 1px solid var(--border); transition: transform 0.15s;
-}
+.image-block { }
+.generated-image { width: 100%; border-radius: 8px; cursor: pointer; border: 1px solid #E8E8E8; transition: transform 0.15s; }
 .generated-image:hover { transform: scale(1.02); }
-.img-loading {
-  padding: 20px; text-align: center; font-size: 13px;
-  color: var(--dim); background: var(--faint); border-radius: 6px;
-  border: 1px dashed var(--border);
-}
-.img-error {
-  padding: 16px; text-align: center; font-size: 12px;
-  color: var(--dim); display: flex; flex-direction: column; gap: 8px; align-items: center;
-}
-.image-actions { display: flex; gap: 6px; margin-top: 6px; }
-.image-action-btn {
-  font-size: 10px; padding: 3px 10px; border-radius: 4px;
-  border: 1px solid var(--border); background: var(--card-bg);
-  color: var(--dim); cursor: pointer; text-decoration: none; font-family: inherit;
-}
-.image-action-btn:hover { color: #e11d48; border-color: rgba(225,29,72,0.3); }
+.img-loading { padding: 16px; text-align: center; font-size: 12px; color: #AAAAAA; background: #F8F8F6; border-radius: 8px; border: 1px dashed #E8E8E8; }
+.img-error { padding: 12px; text-align: center; font-size: 12px; color: #AAAAAA; }
+.image-link { display: block; margin-top: 5px; font-size: 10px; color: #0071e3; text-decoration: none; }
+.image-link:hover { opacity: 0.75; }
+.clear-canvas-btn { margin-left: auto; background: none; border: none; font-size: 10px; color: #CCCCCC; cursor: pointer; font-family: inherit; padding: 0 2px; }
+.clear-canvas-btn:hover { color: #e11d48; }
 
-@media (max-width: 767px) {
-  .designer-page { flex-direction: column; }
-  .chat-panel { border-right: none; border-bottom: 1px solid var(--border); min-height: 50vh; }
-  .canvas-panel { width: 100%; min-height: 40vh; }
-  .designer-header { flex-direction: column; gap: 8px; align-items: flex-start; }
-  .prompts-grid { grid-template-columns: 1fr; }
-}
+@media (max-width: 1100px) { .three-col { grid-template-columns: 1fr; } .left-panel, .right-panel { display: none; } }
 </style>
-

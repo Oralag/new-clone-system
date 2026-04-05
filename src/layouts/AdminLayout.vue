@@ -44,7 +44,7 @@
     <!-- 移动端底部导航 5Tab -->
     <div v-if="isMobile" class="mobile-bottom-nav">
       <!-- 首页 -->
-      <div class="mobile-nav-item" :class="{ active: route.path === '/dashboard' }" @click="router.push('/dashboard')">
+      <div class="mobile-nav-item" :class="{ active: route.path === '/dashboard' }" @click="navTo('/dashboard')">
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
@@ -53,7 +53,7 @@
       </div>
 
       <!-- 工作（应用） -->
-      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/apps' }" @click="router.push('/mobile/apps')">
+      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/apps' }" @click="navTo('/mobile/apps')">
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <rect x="3" y="3" width="7" height="7" rx="1.5"/>
           <rect x="14" y="3" width="7" height="7" rx="1.5"/>
@@ -75,7 +75,7 @@
       </div>
 
       <!-- 报表 -->
-      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/stats' }" @click="router.push('/mobile/stats')">
+      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/stats' }" @click="navTo('/mobile/stats')">
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <line x1="18" y1="20" x2="18" y2="10"/>
           <line x1="12" y1="20" x2="12" y2="4"/>
@@ -85,7 +85,7 @@
       </div>
 
       <!-- 我的 -->
-      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/profile' }" @click="router.push('/mobile/profile')">
+      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/profile' }" @click="navTo('/mobile/profile')">
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
@@ -207,6 +207,14 @@ function cycleTheme() {
 
 function goCreate(path: string) {
   showQuickCreate.value = false
+  router.push(path)
+}
+
+let lastNavTime = 0
+function navTo(path: string) {
+  const now = Date.now()
+  if (now - lastNavTime < 500) return
+  lastNavTime = now
   router.push(path)
 }
 

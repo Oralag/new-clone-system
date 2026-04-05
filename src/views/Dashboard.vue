@@ -256,7 +256,7 @@
               <div class="rank-bar" :style="{ width: (item.value / rankList[0].value * 100).toFixed(1) + '%' }" />
             </div>
             <div class="rank-val">
-              {{ rankMode === 'qty' ? item.value + (item.unit ? ' ' + item.unit : '') : '¥' + item.value.toFixed(2) }}
+              {{ rankMode === 'qty' ? (Number.isInteger(item.value) ? item.value : parseFloat(item.value.toFixed(4))) + (item.unit ? ' ' + item.unit : '') : '¥' + item.value.toFixed(2) }}
             </div>
           </div>
         </div>
@@ -847,7 +847,7 @@ const rankList = computed(() => {
     name: i.name,
     spec: i.spec,
     unit: i.unit,
-    value: rankMode.value === 'qty' ? i.qty : i.amt,
+    value: rankMode.value === 'qty' ? parseFloat(i.qty.toFixed(4)) : parseFloat(i.amt.toFixed(2)),
   }))
 })
 
@@ -931,12 +931,12 @@ async function fetchAllRows(path: string, params: Record<string, any> = {}, page
 async function loadRankData(fallbackSaleRows: any[], fallbackRetailRows: any[]) {
   const token = ++rankLoadToken
 
-  _rankSaleRows.value = fallbackSaleRows.filter((row: any) => Number(row.status ?? 1) === 1)
-  _rankRetailRows.value = fallbackRetailRows
+  _rankSaleRows.value = fallbackSaleRows.filter((row: any) => Number(row.status) === 1)
+  _rankRetailRows.value = fallbackRetailRows.filter((row: any) => Number(row.status) === 1)
 
   const [contractRes, retailRes] = await Promise.allSettled([
     fetchAllRows('/shop/ContractOrder/index', { status: 1 }),
-    fetchAllRows('/retail/order/index'),
+    fetchAllRows('/retail/order/index', { status: 1 }),
   ])
 
   if (token !== rankLoadToken) return
@@ -944,8 +944,9 @@ async function loadRankData(fallbackSaleRows: any[], fallbackRetailRows: any[]) 
   if (contractRes.status === 'fulfilled' && contractRes.value.length) {
     _rankSaleRows.value = contractRes.value
   }
-  if (retailRes.status === 'fulfilled' && retailRes.value.length) {
-    _rankRetailRows.value = retailRes.value
+  if (retailRes.status === 'fulfilled') {
+    const filtered = retailRes.value.filter((r: any) => Number(r.status) === 1)
+    if (filtered.length) _rankRetailRows.value = filtered
   }
 }
 
@@ -969,8 +970,8 @@ async function loadDashboardData(force = false) {
     const rows = (r: PromiseSettledResult<any>) =>
       r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
 
-    const saleRows: any[]   = rows(saleRes)
-    const retailRows: any[] = rows(retailRes)
+    const saleRows: any[]   = rows(saleRes).filter((r: any) => Number(r.status) === 1)
+    const retailRows: any[] = rows(retailRes).filter((r: any) => Number(r.status) === 1)
 
     const todaySale   = saleRows.filter((r: any) => (r.out_date   || '').slice(0, 10) === today)
     const todayRetail = retailRows.filter((r: any) => (r.order_date || '').slice(0, 10) === today)

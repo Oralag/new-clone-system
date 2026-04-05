@@ -244,10 +244,7 @@
     </div>
   </transition>
 
-  <!-- Backdrop — click to close -->
-  <transition name="fade">
-    <div v-if="isOpen" class="ai-backdrop" @click="isOpen = false" />
-  </transition>
+  <!-- Backdrop removed: use close button in header to close panel -->
 
   <!-- 语音通话覆盖层 -->
   <VoiceCallOverlay v-model:visible="voiceCallActive" />
@@ -475,6 +472,7 @@ function saveHistory(msgs: Message[]) {
 const router = useRouter()
 const route = useRoute()
 const isOpen = ref(false)
+const isMobile = ref(window.innerWidth < 768)
 const voiceCallActive = ref(false)
 const unread = ref(0)
 const inputText = ref('')
@@ -489,7 +487,8 @@ const fileInputRef = ref<HTMLInputElement>()
 watch(messages, (val) => saveHistory(val), { deep: true })
 
 // ── Drag positioning ──────────────────────────────────────────────────────────
-const triggerBottom = ref(32)
+// 手机端底部导航栏高度 60px，按钮需在其上方
+const triggerBottom = ref(window.innerWidth < 768 ? 80 : 32)
 const triggerRight = ref(32)
 const PANEL_HEIGHT = 580
 const PANEL_WIDTH = 400
@@ -580,8 +579,9 @@ function onDragMove(e: MouseEvent) {
     panelRight.value = Math.max(8, Math.min(window.innerWidth - PANEL_WIDTH - 8, startRight - dx))
     panelBottom.value = Math.max(8, Math.min(window.innerHeight - PANEL_HEIGHT - 8, startBottom - dy))
   } else {
+    const minBottom = isMobile.value ? 80 : 8
     triggerRight.value = Math.max(8, Math.min(window.innerWidth - 80, startRight - dx))
-    triggerBottom.value = Math.max(8, Math.min(window.innerHeight - 80, startBottom - dy))
+    triggerBottom.value = Math.max(minBottom, Math.min(window.innerHeight - 80, startBottom - dy))
   }
 }
 
@@ -599,8 +599,9 @@ function onTouchMove(e: TouchEvent) {
     panelRight.value = Math.max(8, Math.min(window.innerWidth - PANEL_WIDTH - 8, startRight - dx))
     panelBottom.value = Math.max(8, Math.min(window.innerHeight - PANEL_HEIGHT - 8, startBottom - dy))
   } else {
+    const minBottom = isMobile.value ? 80 : 8
     triggerRight.value = Math.max(8, Math.min(window.innerWidth - 80, startRight - dx))
-    triggerBottom.value = Math.max(8, Math.min(window.innerHeight - 80, startBottom - dy))
+    triggerBottom.value = Math.max(minBottom, Math.min(window.innerHeight - 80, startBottom - dy))
   }
 }
 

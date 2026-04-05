@@ -152,7 +152,7 @@ const quickPrompts = [
 ]
 
 const isExpanded = ref(false)
-const isCollapsed = ref(false)
+const isCollapsed = ref(true)
 const showHistory = ref(false)
 const quickText = ref('')
 const captainInput = ref('')

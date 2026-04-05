@@ -564,6 +564,7 @@ const allFlowItems = computed(() => {
   }
   // 2. 零售单（income）— 真实字段: member_name, pay_amount, order_sn, order_date
   for (const r of retailList.value) {
+    if (r.status !== 1) continue
     const amt = Number(r.pay_amount || r.total_amount || 0)
     if (amt <= 0) continue
     items.push({ type: 'income', source: '零售单', name: r.member_name || r.customer_name || '散客', amount: amt, date: fmtDt(r.order_date || r.created_at), order_no: r.order_sn || '' })
@@ -585,11 +586,11 @@ const allFlowItems = computed(() => {
     if (Number(r.amount || 0) <= 0) continue
     items.push({ type: 'expense', source: r.payment_status === 'paid' ? '费用(已付)' : '费用', name: r.name || '—', amount: Number(r.amount || 0), date: fmtDt(r.expense_date || r.created_at), order_no: r.order_sn || '' })
   }
-  // 6. 预收款（income）
+  // 6. 预收款/预付款 — 客户预收款是收入，供应商预付款是支出
   for (const r of prepayList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const isCustomer = r.pay_type === 'customer'
-    items.push({ type: 'income', source: isCustomer ? '客户预收款' : '供应商预付款', name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: fmtDt(r.create_time), order_no: r.prepay_no || '' })
+    items.push({ type: isCustomer ? 'income' : 'expense', source: isCustomer ? '客户预收款' : '供应商预付款', name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: fmtDt(r.create_time), order_no: r.prepay_no || '' })
   }
   // 7. 采购退货退款（income）
   for (const r of procureReturnFinanceList.value) {
@@ -1159,9 +1160,7 @@ async function loadAllData() {
       http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
       getCollectReceiptList({ list_rows: 1000 }),
       getPayReceiptList({ list_rows: 1000 }),
-      http.get('/finance/CollectAccounts/index', { params: { list_rows: 1000 } }),
-      http.get('/finance/PayAccounts/index', { params: { list_rows: 200, group_by_supplier: 1 } }),
-      http.get('/stock/PurchaseOrder/index', { params: { list_rows: 200 } }),
+      http.get('/stock/PurchaseOrder/index', { params: { list_rows: 2000, status: 1 } }),
       http.get('/stock/SaleOutOrder/index', { params: { list_rows: 50 } }),
       http.get('/retail/order/index', { params: { list_rows: 200 } }),
       getExpenseList({ list_rows: 1000 }),
@@ -1170,13 +1169,13 @@ async function loadAllData() {
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
-      getContractList({ list_rows: 500 }),
+      getContractList({ list_rows: 1000, status: 1 }),
       getGoodsList({ list_rows: 500 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
     ])
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
-    const [fundRes, prepayRes, collectRes, payRes, receivableRes, payableRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes, pGoodsRes, pInhouseRes, pBomRes] = settled.map((_,i) => ok(i))
+    const [fundRes, prepayRes, collectRes, payRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes, pGoodsRes, pInhouseRes, pBomRes] = settled.map((_,i) => ok(i))
     const rawFundList = fundRes.data?.rows ?? fundRes.data?.list ?? []
     const fundNameMap = new Map<number, string>(rawFundList.map((row: any) => [Number(row.id), String(row.name || '')]))
     prepayList.value = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
@@ -1184,7 +1183,14 @@ async function loadAllData() {
     const rawPayList = payRes.data?.rows ?? payRes.data?.list ?? []
     collectList.value = rawCollectList
     payList.value = rawPayList
-    const rawReceivableList = receivableRes.data?.rows ?? receivableRes.data?.list ?? []
+    const rawReceivableList = (contractRes.data?.rows ?? contractRes.data?.list ?? [])
+      .map((r: any) => ({
+        ...r,
+        un_pay_amount: Math.max(0, Number(r.total_amount || 0) - Number(r.pay_amount || 0)),
+        order_sn: r.order_sn || r.order_no || '',
+        out_date: r.order_date || r.created_at,
+      }))
+      .filter((r: any) => r.un_pay_amount > 0)
     procureReturnFinanceList.value = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [], fundNameMap)
     const normalizedSaleReturns = normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? [])
 
@@ -1219,11 +1225,25 @@ async function loadAllData() {
     })
     fundList.value = applyProcureReturnsToFundRows(fundListWithDynamic, procureReturnFinanceList.value)
     saleReturnFinanceList.value = buildSaleReturnSettlementRows(rawReceivableList, normalizedSaleReturns)
+    // 按供应商聚合采购订单计算应付
+    const supplierPayMap = new Map<string, any>()
+    for (const o of (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? [])) {
+      const key = o.supplier_id ? `id:${o.supplier_id}` : `name:${String(o.supplier_name || '').trim()}`
+      if (!supplierPayMap.has(key)) {
+        supplierPayMap.set(key, { supplier_id: o.supplier_id || 0, supplier_name: o.supplier_name || '—', order_amount: 0, paid_amount: 0, un_pay_amount: 0 })
+      }
+      const s = supplierPayMap.get(key)!
+      const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
+      const paidAmt = Number(o.pay_amount ?? 0)
+      s.order_amount += orderAmt
+      s.paid_amount += paidAmt
+      s.un_pay_amount += Math.max(0, orderAmt - paidAmt)
+    }
     payableList.value = [
-      ...applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], procureReturnFinanceList.value),
+      ...applyProcureReturnsToPayableRows(Array.from(supplierPayMap.values()), procureReturnFinanceList.value),
       ...buildExpensePayableRows(expenseRes.data?.rows ?? expenseRes.data?.list ?? []),
     ]
-    receivableList.value = applySaleReturnsToReceivableRows(rawReceivableList, normalizedSaleReturns)
+    receivableList.value = rawReceivableList
     adjustedCollectList.value = applySaleReturnsToCollectReceiptRows(collectList.value, normalizedSaleReturns, rawReceivableList)
     purchasePayList.value = purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []
     saleOutList.value = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
@@ -1234,7 +1254,7 @@ async function loadAllData() {
     supplierList.value = supplierRes.data?.rows ?? supplierRes.data?.list ?? []
     contractList.value = contractRes.data?.rows ?? contractRes.data?.list ?? []
     profitGoodsList.value = pGoodsRes.data?.rows ?? pGoodsRes.data?.list ?? []
-    profitInhouseList.value = pInhouseRes.data?.rows ?? pInhouseRes.data?.list ?? []
+    profitInhouseList.value = (pInhouseRes.data?.rows ?? pInhouseRes.data?.list ?? []).filter((r: any) => r.status === 1)
     profitBomList.value = pBomRes.data?.rows ?? pBomRes.data?.list ?? []
 
     // 过滤预付款：排除已删除的客户/供应商的记录

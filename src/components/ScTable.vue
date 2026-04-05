@@ -189,6 +189,8 @@ interface Props {
   batchDelApi?: (data: { ids: number[] }) => Promise<any>
   /** API path string for batch delete, e.g. "/shop/ShopCustomer/batchDel" — alternative to batchDelApi */
   delPath?: string
+  /** Whether records have an audit workflow — when false (default), status=1 does NOT block deletion */
+  hasAudit?: boolean
   /** POST function for creating a record — used for import */
   importApi?: (data: any) => Promise<any>
   /** API path string for import — alternative to importApi */
@@ -324,9 +326,11 @@ async function loadData() {
     const cleanParams = (obj: Record<string, any>) =>
       Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== '' && v !== null && v !== undefined))
 
+    // 后端不支持排序参数，有 sortBy 时拉全量数据前端排序+分页
+    const useFrontendSort = !!props.sortBy
     const res: any = await props.apiObj({
-      page: currentPage.value,
-      list_rows: pageSize.value,
+      page: useFrontendSort ? 1 : currentPage.value,
+      list_rows: useFrontendSort ? 10000 : pageSize.value,
       ...cleanParams(props.params),
       ...cleanParams(searchParams.value),
     })
@@ -342,15 +346,22 @@ async function loadData() {
     }
     if (Array.isArray(data)) {
       let rows = dedup(props.rowFilter ? data.filter(props.rowFilter) : data)
-      if (props.sortBy) rows = [...rows].sort(sortFn)
-      tableData.value = rows
+      if (useFrontendSort) rows = [...rows].sort(sortFn)
       total.value = rows.length
+      tableData.value = useFrontendSort
+        ? rows.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value)
+        : rows
     } else {
       let rows = dedup(data?.rows || data?.list || data?.data || [])
       if (props.rowFilter) rows = rows.filter(props.rowFilter)
-      if (props.sortBy) rows = [...rows].sort(sortFn)
-      tableData.value = rows
-      total.value = data?.total || 0
+      if (useFrontendSort) {
+        rows = [...rows].sort(sortFn)
+        total.value = data?.total || rows.length
+        tableData.value = rows.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value)
+      } else {
+        tableData.value = rows
+        total.value = data?.total || 0
+      }
     }
   } catch {
     // Error handled by interceptor
@@ -389,11 +400,13 @@ function clearSelection() {
 async function handleBatchDelete() {
   const ids = selectedRows.value.map((r: any) => r.id).filter(Boolean)
   if (!ids.length) { ElMessage.warning('请先勾选要删除的记录'); return }
-  // 拦截已审核记录
-  const auditedRows = selectedRows.value.filter((r: any) => Number(r.status) === 1)
-  if (auditedRows.length) {
-    ElMessage.error(`选中的 ${auditedRows.length} 条记录已审核，请先反审核后再删除`)
-    return
+  // 拦截已审核记录（仅限有审核流的模块）
+  if (props.hasAudit) {
+    const auditedRows = selectedRows.value.filter((r: any) => Number(r.status) === 1)
+    if (auditedRows.length) {
+      ElMessage.error(`选中的 ${auditedRows.length} 条记录已审核，请先反审核后再删除`)
+      return
+    }
   }
   await ElMessageBox.confirm(
     `确定要删除选中的 ${ids.length} 条记录吗？此操作不可恢复。`,

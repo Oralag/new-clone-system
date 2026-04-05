@@ -5,16 +5,13 @@
     <div v-if="!showForm">
       <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureInhouseList"
-          del-path="/procure/ProcureInhouse/batchDel"
+          sort-by="in_date" :sort-desc="true"
           export-file-name="采购入库单" :params="searchForm"
           :export-columns="{ in_no: '入库单号', supplier_name: '供应商', warehouse_name: '仓库', in_date: '入库日期', admin_name: '经办人', total_amount: '总金额', status: '状态' }">
           <template #search>
             <el-input v-model="searchForm.in_no" placeholder="入库单号" clearable style="width:160px" />
             <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />
             <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:150px" />
-          </template>
-          <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">新增入库单</el-button>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
@@ -68,18 +65,9 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="280" fixed="right">
+          <el-table-column label="操作" width="80" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
-              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
-              <template v-if="row.status === 0">
-                <el-button type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
-              </template>
-              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="router.push('/finance/payable')">查看应付</el-button>
-              <el-button v-if="row.status === 1" type="success" link size="small" @click="router.push('/warehouse/stock')">查看库存</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -96,9 +84,6 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">
-            保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
-          </el-button>
         </div>
       </div>
 
@@ -427,9 +412,10 @@ import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getProcureInhouseList, createProcureInhouse, deleteProcureInhouse, getSupplierList, createSupplier, auditProcureInhouse } from '@/api/procure'
+import { getProcureInhouseList, createProcureInhouse, updateProcureInhouse, deleteProcureInhouse, getSupplierList, createSupplier, auditProcureInhouse } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getFundList, createFund } from '@/api/finance'
+import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -443,6 +429,7 @@ const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 
 function parseItems(goodsInfo: any): any[] {
+  if (Array.isArray(goodsInfo)) return goodsInfo
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
 }
 
@@ -576,7 +563,7 @@ function openCreate() {
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   isReadonly.value = readonly
   showForm.value = true
@@ -587,12 +574,20 @@ function backToList() {
   tableRef.value?.refresh()
 }
 
-async function handleSave() {
+async function handleSave(andAudit = false) {
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项'); return
   }
   if (!fd.items.length) {
     ElMessage.warning('请至少添加一件商品'); return
+  }
+  // 有付款金额但未选账户时提醒
+  if (Number(fd.pay_amount || 0) > 0 && !fd.pay_account) {
+    try {
+      await ElMessageBox.confirm('已填写付款金额但未选择付款账户，是否继续保存？', '提示', {
+        confirmButtonText: '继续保存', cancelButtonText: '去选择', type: 'warning'
+      })
+    } catch { return }
   }
   saving.value = true
   try {
@@ -608,8 +603,25 @@ async function handleSave() {
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id
-    await createProcureInhouse(payload)
-    ElMessage.success('保存成功')
+    let savedId: number
+    if (fd.id) {
+      await updateProcureInhouse(payload)
+      savedId = fd.id
+    } else {
+      const res = await createProcureInhouse(payload)
+      savedId = res?.data?.id || 0
+    }
+    if (andAudit && savedId) {
+      try {
+        await auditProcureInhouse(savedId, 1)
+        await handleInhouseStockEffect({ ...payload, id: savedId }, 'audit')
+        ElMessage.success('保存并审核成功')
+      } catch (e: any) {
+        ElMessage.warning('保存成功，但审核失败：' + (e?.message || ''))
+      }
+    } else {
+      ElMessage.success('保存成功')
+    }
     stockRefreshStore.trigger()
     backToList()
   } catch (e: any) {
@@ -627,11 +639,47 @@ async function handleDelete(id: number) {
   tableRef.value?.refresh()
 }
 
+async function handleInhouseStockEffect(row: any, type: 'audit' | 'reverse') {
+  const items: any[] = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
+  for (const item of items) {
+    if (!item.goods_id || !item.num) continue
+    try {
+      const stockParams: any = { goods_id: item.goods_id, list_rows: 10 }
+      if (row.warehouse_id) stockParams.warehouse_id = row.warehouse_id
+      const stockRes = await http.get('/stock/StockAll/index', { params: stockParams })
+      const stockRows: any[] = stockRes.data?.rows ?? []
+      const stock = stockRows[0]
+      if (stock) {
+        const delta = type === 'audit' ? Number(item.num) : -Number(item.num)
+        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
+        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
+      } else if (type === 'audit') {
+        // 库存记录不存在，新建一条
+        await http.post('/stock/StockAll/add', {
+          goods_id: item.goods_id,
+          goods_name: item.goods_name || '',
+          goods_sn: item.goods_sn || '',
+          warehouse_id: row.warehouse_id || 0,
+          warehouse_name: row.warehouse_name || '',
+          qty: Number(item.num),
+        })
+      }
+    } catch (e: any) {
+      console.warn('入库库存变动失败', e?.message)
+    }
+  }
+}
+
 async function handleAudit(row: any, status: number) {
   const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
   await ElMessageBox.confirm(`确定${action}该入库单？`, '提示', { type: 'warning' })
   try {
     await auditProcureInhouse(row.id, status)
+    if (status === 1) {
+      await handleInhouseStockEffect(row, 'audit')
+    } else if (status === 0) {
+      await handleInhouseStockEffect(row, 'reverse')
+    }
     ElMessage.success(`${action}成功`)
     stockRefreshStore.trigger()
     tableRef.value?.refresh()

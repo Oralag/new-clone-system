@@ -79,6 +79,17 @@
               <div class="output-title">{{ r.title || r.topic || '未命名' }}</div>
             </div>
           </div>
+          <button
+            v-if="posterCount > 0"
+            class="send-next-btn"
+            @click="sendToPublish"
+            :class="{ sent: sentToPublish }"
+          >
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+              <path d="M2 5.5h7M6 3l3 2.5L6 8"/>
+            </svg>
+            {{ sentToPublish ? '已发给发布部 ✓' : '发给发布部 →' }}
+          </button>
         </div>
 
         <div class="panel-card" style="margin-top:10px">
@@ -103,11 +114,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
+import { usePipelineStore } from '@/stores/pipeline'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
+import { ElMessage } from 'element-plus'
 
 const agentStore = useTrendingStore()
+const pipelineStore = usePipelineStore()
 const chatRef = ref<InstanceType<typeof AgentChat>>()
+const sentToPublish = ref(false)
 
 const posterCount = computed(() => agentStore.flowResults.filter(r => r.type === 'poster').length)
 const publishCount = computed(() => agentStore.history.filter(h => h.status === 'published').length)
@@ -121,6 +136,28 @@ const quickPrompts = [
   { emoji: '🎨', text: '给新品发布设计一套视觉风格' },
   { emoji: '💡', text: '分析竞品的视觉风格，给出建议' },
 ]
+
+function sendToPublish() {
+  const posters = agentStore.flowResults.filter(r => r.type === 'poster')
+  if (posters.length === 0) return
+  const latest = posters[posters.length - 1]
+  const title = latest.title || latest.topic || '创意海报'
+  const task = pipelineStore.tasks.find(t => t.currentStage === 2 && t.status === 'running')
+  if (task) {
+    pipelineStore.recordOutput(task.id, 'creative', title)
+    pipelineStore.advanceStage(task.id)
+  } else {
+    pipelineStore.createTask(title)
+    const newTask = pipelineStore.tasks[0]
+    pipelineStore.advanceStage(newTask.id) // →content
+    pipelineStore.advanceStage(newTask.id) // →creative
+    pipelineStore.recordOutput(newTask.id, 'creative', title)
+    pipelineStore.advanceStage(newTask.id) // →publish
+  }
+  sentToPublish.value = true
+  ElMessage.success('已发给发布部，可在任务中心查看')
+  setTimeout(() => { sentToPublish.value = false }, 3000)
+}
 </script>
 
 <style scoped>
@@ -164,6 +201,15 @@ const quickPrompts = [
 .output-type.poster { background: rgba(236,72,153,0.1); color: #db2777; }
 .output-time { font-size: 10px; color: #CCCCCC; }
 .output-title { font-size: 12px; color: #333; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.send-next-btn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  width: 100%; margin-top: 10px; padding: 8px;
+  background: rgba(236,72,153,0.08); border: 1px solid rgba(236,72,153,0.3);
+  border-radius: 8px; font-size: 12px; font-weight: 600; color: #db2777;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.send-next-btn:hover:not(.sent) { background: #ec4899; color: white; border-color: #ec4899; }
+.send-next-btn.sent { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #059669; cursor: default; }
 .accuracy-bar { display: flex; align-items: center; gap: 8px; }
 .accuracy-label { font-size: 11px; color: #666; width: 56px; flex-shrink: 0; }
 .accuracy-track { flex: 1; height: 5px; background: #F0F0EE; border-radius: 3px; overflow: hidden; }

@@ -176,8 +176,8 @@ function calcRow(r:any){r.row_total=(r.num||0)*(r.in_price||0)}
 const totalNum=computed(()=>fd.items.reduce((s,r)=>s+(Number(r.num)||0),0))
 const totalPrice=computed(()=>fd.items.reduce((s,r)=>s+(Number(r.num)||0)*(Number(r.in_price)||0),0))
 async function openAdd(){Object.assign(fd,defaultFd());fd.items=[];isView.value=false;showForm.value=true;await loadInit()}
-async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=false;showForm.value=true;await loadInit()}
-async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=true;showForm.value=true;await loadInit()}
+async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=Array.isArray(row.goods_info)?row.goods_info:JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=false;showForm.value=true;await loadInit()}
+async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=Array.isArray(row.goods_info)?row.goods_info:JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=true;showForm.value=true;await loadInit()}
 function backToList(){showForm.value=false;tableRef.value?.refresh()}
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 function onGoodsConfirm(goods: any[]) {

@@ -2,32 +2,33 @@
   <div class="dashboard">
 
     <!-- ── 品牌配置快捷栏 ── -->
-    <div class="brand-config-bar" :class="{ unconfigured: !brandStore.isConfigured }">
-      <template v-if="brandStore.isConfigured">
-        <div class="bcb-left">
-          <span class="bcb-logo">{{ brandStore.brand.name?.slice(0,1) || '品' }}</span>
-          <div class="bcb-info">
-            <span class="bcb-name">{{ brandStore.brand.name }}</span>
-            <span class="bcb-meta">{{ brandStore.brand.industry }}<template v-if="brandStore.brand.subIndustry"> · {{ brandStore.brand.subIndustry }}</template></span>
-          </div>
+    <div class="brand-config-bar" :class="{ unconfigured: !brandStore.isConfigured }" @click="$router.push('/agent/brand-settings')">
+      <div class="bcb-left">
+        <div class="bcb-logo" :style="brandStore.isConfigured && brandStore.brand.primaryColor ? { background: brandStore.brand.primaryColor } : {}">
+          <span v-if="!brandStore.brand.logo">{{ (brandStore.brand.name || '品')[0] }}</span>
+          <img v-else :src="brandStore.brand.logo" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" />
         </div>
-        <div class="bcb-status">
-          <span class="bcb-dot"></span>
-          {{ companyStatus.running > 0 ? companyStatus.running + ' 条流水线运行中' : 'AI 就绪' }}
+        <div>
+          <div class="bcb-name">{{ brandStore.isConfigured ? brandStore.brand.name : '未配置品牌' }}</div>
+          <div class="bcb-hint">{{ brandStore.isConfigured ? (brandStore.brand.slogan || '点击编辑品牌信息') : '配置品牌信息后，AI将生成更精准的内容' }}</div>
         </div>
-        <button class="bcb-edit-btn" @click="$router.push('/agent/brand')">
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M8.5 1.5l2 2L4 10H2v-2l6.5-6.5z"/></svg>
-          编辑品牌
-        </button>
-      </template>
-      <template v-else>
-        <div class="bcb-warn">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#f59e0b" stroke-width="1.3" stroke-linecap="round"><circle cx="7" cy="7" r="6"/><path d="M7 4.5v3M7 9.5v.5"/></svg>
-          尚未配置品牌信息，AI 专员无法了解你的公司
-        </div>
-        <button class="bcb-setup-btn" @click="$router.push('/agent/brand')">立即配置 →</button>
-      </template>
+      </div>
+      <button class="bcb-btn">{{ brandStore.isConfigured ? '编辑品牌' : '立即配置' }}</button>
     </div>
+
+    <!-- ── Captain 指令台 ── -->
+    <section class="command-section">
+      <div class="command-header">
+        <div class="command-title-group">
+          <span class="captain-label">🎯 Captain 总指挥</span>
+          <p class="command-desc">输入指令，Captain 将协调各部门完成任务</p>
+        </div>
+        <div class="command-chips">
+          <button v-for="p in quickPrompts" :key="p" class="chip-btn" @click="fillCaptain(p)">{{ p }}</button>
+        </div>
+      </div>
+      <CaptainBar />
+    </section>
 
     <!-- ── Hero Banner ── -->
     <section class="hero-banner">
@@ -98,25 +99,8 @@
       </div>
     </section>
 
-    <!-- ── Captain 指令台 + 实时动态 ── -->
-    <div class="bottom-grid">
-      <section class="command-section">
-        <div class="command-header">
-          <div class="command-title-group">
-            <span class="captain-label">🎯 Captain 总指挥</span>
-            <p class="command-desc">输入指令，Captain 将协调各部门完成任务</p>
-          </div>
-          <div class="command-chips">
-            <button v-for="p in quickPrompts" :key="p" class="chip-btn" @click="fillCaptain(p)">{{ p }}</button>
-          </div>
-        </div>
-        <CaptainBar />
-      </section>
-      <aside class="feed-aside">
-        <AgentLiveFeed />
-        <DeptBulletin dept-id="dashboard" style="margin-top:10px" />
-      </aside>
-    </div>
+    <!-- ── 实时动态长条 ── -->
+    <AgentLiveFeed class="live-feed-strip" />
 
     <!-- ── 今日热搜快览 ── -->
     <div class="trending-panel">
@@ -148,7 +132,6 @@ import { useTrendingStore } from '@/stores/agent'
 import { useBrandStore } from '@/stores/brand'
 import { useMeetingStore } from '@/stores/meeting'
 import CaptainBar from '@/components/CaptainBar.vue'
-import DeptBulletin from '@/components/agent/DeptBulletin.vue'
 import AgentLiveFeed from '@/components/agent/AgentLiveFeed.vue'
 
 const agentStore = useTrendingStore()
@@ -306,7 +289,18 @@ const topTrending = computed(() => {
   border: 1px solid #E8E8E8;
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  cursor: pointer; transition: box-shadow 0.15s;
 }
+.brand-config-bar:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.bcb-hint { font-size: 11px; color: #AAAAAA; }
+.bcb-btn {
+  padding: 6px 14px; border-radius: 8px; flex-shrink: 0;
+  border: 1px solid #E8E8E8; background: #F8F8F6;
+  font-size: 12px; font-weight: 600; color: #555; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.bcb-btn:hover { border-color: #0071e3; color: #0071e3; background: rgba(0,113,227,0.04); }
+.brand-config-bar.unconfigured .bcb-btn { border-color: rgba(245,158,11,0.4); color: #d97706; background: rgba(245,158,11,0.06); }
 .brand-config-bar.unconfigured { background: rgba(245,158,11,0.04); border-color: rgba(245,158,11,0.2); }
 .bcb-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 .bcb-logo {
@@ -389,10 +383,17 @@ const topTrending = computed(() => {
 .kpi-divider { width: 1px; height: 40px; background: #E8E8E8; flex-shrink: 0; }
 
 /* ── bottom-grid ── */
-.bottom-grid {
-  display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 14px;
+.command-section {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.07);
+  border-left: 3px solid #6366f1;
+  border-radius: 14px;
+  padding: 18px 18px 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+.live-feed-strip {
+  width: 100%;
 }
 .feed-aside { display: flex; flex-direction: column; gap: 0; }
   padding-bottom: 40px;

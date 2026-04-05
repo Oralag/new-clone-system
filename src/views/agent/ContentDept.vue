@@ -128,6 +128,17 @@
               <div class="output-title">{{ r.topic || r.content?.slice(0, 30) || '无标题' }}{{ (r.topic || r.content || '').length > 30 ? '…' : '' }}</div>
             </div>
           </div>
+          <button
+            v-if="copywritingResults.length > 0"
+            class="send-next-btn"
+            @click="sendToCreative"
+            :class="{ sent: sentToCreative }"
+          >
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+              <path d="M2 5.5h7M6 3l3 2.5L6 8"/>
+            </svg>
+            {{ sentToCreative ? '已发给创意部 ✓' : '发给创意部 →' }}
+          </button>
         </div>
 
         <!-- 今日脚本 -->
@@ -186,11 +197,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
+import { usePipelineStore } from '@/stores/pipeline'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
+import { ElMessage } from 'element-plus'
 
 const agentStore = useTrendingStore()
+const pipelineStore = usePipelineStore()
 const chatRef = ref<InstanceType<typeof AgentChat>>()
+const sentToCreative = ref(false)
 
 const copywritingResults = computed(() => agentStore.copywritingResults)
 const videoResults = computed(() => agentStore.videoResults)
@@ -217,6 +232,29 @@ const quickPrompts = [
 
 function sendPrompt(text: string) {
   chatRef.value?.sendQuickPrompt?.(text)
+}
+
+function sendToCreative() {
+  const results = copywritingResults.value
+  if (results.length === 0) return
+  const latest = results[results.length - 1]
+  const title = latest.topic || latest.content?.slice(0, 20) || '内容文案'
+  // 找到 intel 阶段完成的任务，推进到 creative
+  const task = pipelineStore.tasks.find(t => t.currentStage === 1 && t.status === 'running')
+  if (task) {
+    pipelineStore.recordOutput(task.id, 'content', title)
+    pipelineStore.advanceStage(task.id)
+  } else {
+    // 没有流水线任务则新建
+    pipelineStore.createTask(title)
+    const newTask = pipelineStore.tasks[0]
+    pipelineStore.advanceStage(newTask.id) // intel→content
+    pipelineStore.recordOutput(newTask.id, 'content', title)
+    pipelineStore.advanceStage(newTask.id) // content→creative
+  }
+  sentToCreative.value = true
+  ElMessage.success('已发给创意部，可在任务中心查看')
+  setTimeout(() => { sentToCreative.value = false }, 3000)
 }
 </script>
 
@@ -367,6 +405,16 @@ function sendPrompt(text: string) {
   font-size: 12px; color: #333; line-height: 1.4;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+.send-next-btn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  width: 100%; margin-top: 10px; padding: 8px;
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 8px; font-size: 12px; font-weight: 600; color: #d97706;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.send-next-btn:hover:not(.sent) { background: #f59e0b; color: white; border-color: #f59e0b; }
+.send-next-btn.sent { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #059669; cursor: default; }
 
 /* 准确率 */
 .accuracy-bar { display: flex; align-items: center; gap: 8px; }

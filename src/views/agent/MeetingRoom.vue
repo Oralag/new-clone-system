@@ -406,9 +406,18 @@ function renderContent(text: string) {
     .replace(/\n/g, '<br>')
 }
 
-async function scrollToBottom() {
+// 只有用户在底部附近（200px内）才自动滚动，避免打断阅读
+function isNearBottom() {
+  if (!messagesEl.value) return true
+  const el = messagesEl.value
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 200
+}
+
+async function scrollToBottom(force = false) {
   await nextTick()
-  if (messagesEl.value) messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+  if (messagesEl.value && (force || isNearBottom())) {
+    messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+  }
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2) }
@@ -928,7 +937,7 @@ function finalizeMeeting(summaryText?: string) {
   meetingStore.endMeeting(summaryText || '')
   typingAgent.value = null
   speakingAgent.value = null
-  scrollToBottom()
+  scrollToBottom(true)
 }
 
 function handleStart() {
@@ -1085,7 +1094,7 @@ function handleInterject() {
   meetingStore.addMessage(msg)
   // 存入插话队列，下一个 agent 发言时会参考
   interjections.value.push(text)
-  scrollToBottom()
+  scrollToBottom(true)
 }
 
 function handleStop() {

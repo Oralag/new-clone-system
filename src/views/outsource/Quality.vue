@@ -153,8 +153,8 @@ function rowRate(row:any){const t=Number(row.num||0);if(!t)return 0;return Math.
 function defaultFd(){return{id:0,status:0,quality_no:'',supplier_id:null as any,supplier_name:'',quality_date:new Date().toISOString().slice(0,10),inspector:'',conclusion:'合格',remark:'',items:[] as any[]}}
 const fd=reactive(defaultFd())
 async function openAdd(){Object.assign(fd,defaultFd());fd.items=[];isView.value=false;showForm.value=true;await loadSuppliers()}
-async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};isView.value=false;showForm.value=true;await loadSuppliers()}
-async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};isView.value=true;showForm.value=true;await loadSuppliers()}
+async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=Array.isArray(row.goods_info)?row.goods_info:JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};isView.value=false;showForm.value=true;await loadSuppliers()}
+async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=Array.isArray(row.goods_info)?row.goods_info:JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};isView.value=true;showForm.value=true;await loadSuppliers()}
 function backToList(){showForm.value=false;tableRef.value?.refresh()}
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 function onGoodsConfirm(goods: any[]) {

@@ -36,35 +36,33 @@
       <el-table :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="customer_name" label="客户名称" min-width="150" />
-        <el-table-column prop="order_sn" label="出库单号" min-width="160">
+        <el-table-column prop="order_sn" label="合同单号" min-width="160">
           <template #default="{ row }">{{ row.order_sn || row.order_no || '—' }}</template>
         </el-table-column>
         <el-table-column label="应收金额" min-width="120" align="right">
           <template #default="{ row }">
-            <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.total_amount || row.amount) }}</span>
+            <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.total_amount) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="已收金额" min-width="120" align="right">
           <template #default="{ row }">
-            <span style="color:#16a34a">¥{{ fmt(row.paid_amount || 0) }}</span>
+            <span style="color:#16a34a">¥{{ fmt(row.paid_amount) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="退货金额" min-width="120" align="right">
           <template #default="{ row }">
-            <span :style="{ color: Number(row.return_amount || 0) > 0 ? '#d97706' : 'rgba(29,29,31,0.25)', fontWeight: '600' }">
-              ¥{{ fmt(row.return_amount || 0) }}
-            </span>
+            <span style="color:rgba(29,29,31,0.25);font-weight:600">¥0.00</span>
           </template>
         </el-table-column>
         <el-table-column label="待收欠款" min-width="120" align="right">
           <template #default="{ row }">
-            <span :style="{ color: Number(row.un_pay_amount || (row.total_amount - row.paid_amount)) > 0 ? '#dc2626' : '#16a34a', fontWeight: '600' }">
-              ¥{{ fmt(row.un_pay_amount ?? (Number(row.total_amount||0) - Number(row.paid_amount||0))) }}
+            <span :style="{ color: row.un_pay_amount > 0 ? '#dc2626' : '#16a34a', fontWeight: '600' }">
+              ¥{{ fmt(row.un_pay_amount) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="出库日期" min-width="150">
-          <template #default="{ row }">{{ fmtDt(row.out_date || row.created_at) }}</template>
+        <el-table-column label="签单日期" min-width="150">
+          <template #default="{ row }">{{ fmtDt(row.out_date) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
@@ -92,15 +90,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { getReceivableList } from '@/api/finance'
 import http from '@/api/http'
-import { applySaleReturnsToReceivableRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const loading = ref(false)
 const rows = ref<any[]>([])
-const saleReturnRows = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -110,46 +105,40 @@ function fmt(v: any) {
   return Number(v || 0).toFixed(2)
 }
 
-const displayRows = computed(() => {
-  const normalizedReturns = normalizeSaleReturnFinanceRows(saleReturnRows.value)
-  return applySaleReturnsToReceivableRows(rows.value, normalizedReturns)
-})
+const displayRows = computed(() => rows.value)
 
-const summaryTotal = computed(() => displayRows.value.reduce((s, r) => s + Number(r.total_amount || r.amount || 0), 0))
-const summaryPaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.paid_amount || 0), 0))
-const summaryReturn = computed(() => displayRows.value.reduce((s, r) => s + Number(r.return_amount || 0), 0))
-const summaryUnpaid = computed(() => displayRows.value.reduce((s, r) => {
-  const unpaid = r.un_pay_amount ?? (Number(r.total_amount || r.amount || 0) - Number(r.paid_amount || 0))
-  return s + Number(unpaid)
-}, 0))
+const summaryTotal = computed(() => displayRows.value.reduce((s, r) => s + Number(r.total_amount || 0), 0))
+const summaryPaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.pay_amount || 0), 0))
+const summaryReturn = computed(() => 0)
+const summaryUnpaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0))
 
 async function load() {
   loading.value = true
   try {
-    const params = {
-      page: page.value,
+    const params: any = {
       list_rows: pageSize.value,
-      customer_name: searchForm.customer_name || undefined,
-      order_sn: searchForm.order_sn || undefined,
-      date_from: searchForm.date_from || undefined,
-      date_to: searchForm.date_to || undefined,
+      page: page.value,
     }
-    const [res, saleReturnRes] = await Promise.all([
-      getReceivableList(params),
-      http.get('/stock/SaleReturnOrder/index', {
-        params: {
-          customer_name: searchForm.customer_name || undefined,
-          order_sn: searchForm.order_sn || undefined,
-          date_from: searchForm.date_from || undefined,
-          date_to: searchForm.date_to || undefined,
-          status: 1,
-          list_rows: 1000,
-        }
-      }),
-    ])
-    rows.value = res.data?.rows ?? []
-    saleReturnRows.value = saleReturnRes.data?.rows ?? []
-    total.value = res.data?.total ?? 0
+    if (searchForm.customer_name) params.customer_name = searchForm.customer_name
+    if (searchForm.order_sn) params.order_sn = searchForm.order_sn
+    const res = await http.get('/shop/ContractOrder/index', { params: { ...params, status: 1 } })
+    const allRows: any[] = res.data?.rows ?? []
+    const filtered = allRows
+      .map((r: any) => ({
+        ...r,
+        paid_amount: Number(r.pay_amount || 0),
+        un_pay_amount: Math.max(0, Number(r.total_amount || 0) - Number(r.pay_amount || 0)),
+        order_sn: r.order_sn || r.order_no || '',
+        out_date: r.order_date || r.created_at,
+      }))
+      .filter((r: any) => {
+        if (r.un_pay_amount <= 0) return false
+        if (searchForm.date_from && fmtDt(r.out_date) < searchForm.date_from) return false
+        if (searchForm.date_to && fmtDt(r.out_date) > searchForm.date_to) return false
+        return true
+      })
+    rows.value = filtered
+    total.value = filtered.length
   } finally {
     loading.value = false
   }

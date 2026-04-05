@@ -6,6 +6,7 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getSaleOutList"
           del-path="/stock/SaleOutOrder/batchDel"
+          sort-by="out_date" :sort-desc="true"
           export-file-name="销售出货单" :params="searchForm"
           :row-class-name="({ row }: any) => row.status === 1 ? 'row-audited' : ''"
           :export-columns="{ order_sn: '出库单号', customer_name: '客户名称', warehouse_name: '仓库', out_date: '出库日期', admin_name: '经办人', total_amount: '出库金额', after_discount: '折后金额', status: '状态', remark: '备注' }">>
@@ -510,6 +511,7 @@ const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
+  if (Array.isArray(goodsInfo)) return goodsInfo
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
 }
 
@@ -560,7 +562,7 @@ function tryLoadContractData() {
       fd.contract_id = Number(c.contract_id || 0)
       fd.discount_type = String(c.discount_type || 'none')
       fd.discount_value = Number(c.discount_value || 0)
-      const items = JSON.parse(String(c.goods_info || '[]'))
+      const items = Array.isArray(c.goods_info) ? c.goods_info : JSON.parse(String(c.goods_info || '[]'))
       fd.items = items.map((i: any) => ({
         goods_id: i.goods_id || 0,
         goods_name: i.goods_name || '',
@@ -736,7 +738,7 @@ function openEdit(row: any, readonly = false) {
     fd.order_no = m[1]
     fd.remark = (row.remark || '').replace(/^\[NO:[^\]]+\]\s*/, '')
   }
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach((item: any) => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
   isReadonly.value = readonly
@@ -806,6 +808,14 @@ async function handleSave() {
   }
   if (!fd.items.length) {
     ElMessage.warning('请至少添加一件商品'); return
+  }
+  // 有收款金额但未选账户时提醒
+  if (Number(fd.receive_amount || 0) > 0 && !fd.receive_account) {
+    try {
+      await ElMessageBox.confirm('已填写收款金额但未选择收款账户，是否继续保存？', '提示', {
+        confirmButtonText: '继续保存', cancelButtonText: '去选择', type: 'warning'
+      })
+    } catch { return }
   }
   saving.value = true
   try {

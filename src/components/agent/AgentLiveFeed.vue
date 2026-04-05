@@ -3,14 +3,19 @@
     <div class="lf-hd">
       <span class="lf-dot"></span>
       <span class="lf-title">实时动态</span>
+      <span class="lf-live-badge" v-if="storeItems.length > 0">LIVE</span>
     </div>
     <div class="lf-list" ref="listEl">
       <TransitionGroup name="feed">
-        <div v-for="item in displayItems" :key="item.id" class="lf-item">
-          <span class="lf-emoji">{{ item.emoji }}</span>
+        <div v-for="item in displayItems" :key="item.id" class="lf-item" :class="item.type">
+          <div class="lf-agent-dot" :style="{ background: item.color || '#6366f1' }"></div>
           <div class="lf-body">
+            <div class="lf-top">
+              <span class="lf-agent">{{ item.agent }}</span>
+              <span class="lf-time">{{ item.time }}</span>
+            </div>
             <span class="lf-text">{{ item.text }}</span>
-            <span class="lf-time">{{ item.time }}</span>
+            <span v-if="item.stage" class="lf-stage-tag" :style="{ background: item.color + '22', color: item.color }">{{ item.stage }}</span>
           </div>
         </div>
       </TransitionGroup>
@@ -20,51 +25,89 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed, ref } from 'vue'
 import { useMeetingStore } from '@/stores/meeting'
 import { useTrendingStore } from '@/stores/agent'
+import { usePipelineStore, PIPELINE_STAGES } from '@/stores/pipeline'
 
 const meetingStore = useMeetingStore()
 const agentStore   = useTrendingStore()
+const pipelineStore = usePipelineStore()
 
-// 从 store 派生真实动态
+const AGENT_MAP: Record<string, { name: string; color: string }> = {
+  trend:      { name: 'Rex · 情报', color: '#06b6d4' },
+  copywriter: { name: 'Maya · 内容', color: '#f59e0b' },
+  poster:     { name: 'Leo · 创意', color: '#ec4899' },
+  publisher:  { name: 'Nova · 发布', color: '#10b981' },
+  captain:    { name: 'Captain', color: '#6366f1' },
+}
+
 const storeItems = computed(() => {
-  const items: { id: string; emoji: string; text: string; time: string; ts: number }[] = []
+  const items: { id: string; agent: string; color: string; text: string; time: string; ts: number; type: string; stage?: string }[] = []
 
   // 会议室消息
   for (const m of meetingStore.messages.slice(-6)) {
     if (!m.content || m.isStreaming) continue
-    const short = m.content.replace(/\s+/g, ' ').slice(0, 28)
+    const short = m.content.replace(/\s+/g, ' ').slice(0, 40)
+    const agentInfo = AGENT_MAP[m.agentId || ''] || { name: m.agentName || '?', color: '#6366f1' }
     items.push({
-      id:    'm_' + m.id,
-      emoji: m.agentEmoji || '💬',
-      text:  `${m.agentName}：${short}${m.content.length > 28 ? '…' : ''}`,
-      time:  fmtTs(m.timestamp),
-      ts:    m.timestamp,
+      id: 'm_' + m.id,
+      agent: agentInfo.name,
+      color: agentInfo.color,
+      text: short + (m.content.length > 40 ? '…' : ''),
+      time: fmtTs(m.timestamp),
+      ts: m.timestamp,
+      type: 'meeting',
     })
+  }
+
+  // 流水线传递事件（从 pipeline store 的产出记录推断）
+  for (const task of pipelineStore.tasks.slice(0, 5)) {
+    for (const stage of PIPELINE_STAGES) {
+      const output = task.stageOutputs[stage.id]
+      if (!output) continue
+      const stageIdx = PIPELINE_STAGES.findIndex(s => s.id === stage.id)
+      const nextStage = PIPELINE_STAGES[stageIdx + 1]
+      items.push({
+        id: `p_${task.id}_${stage.id}`,
+        agent: stage.emoji + ' ' + stage.label,
+        color: stage.color,
+        text: output.slice(0, 35) + (output.length > 35 ? '…' : ''),
+        time: fmtTs(task.createdAt),
+        ts: task.createdAt,
+        type: 'handoff',
+        stage: nextStage ? `→ ${nextStage.label}` : '已完成',
+      })
+    }
   }
 
   // 发布产出
-  for (const r of agentStore.flowResults.slice(-4)) {
-    const typeMap: Record<string, string> = { copy: '✍️', poster: '🖼️', video: '🎬', summary: '📋', video_script: '🎬', image_text: '🖼️' }
-    const emoji = typeMap[r.type] || '📄'
+  for (const r of agentStore.flowResults.slice(-3)) {
+    const typeMap: Record<string, { emoji: string; color: string }> = {
+      copy: { emoji: '✍️', color: '#f59e0b' },
+      poster: { emoji: '🖼️', color: '#ec4899' },
+      video: { emoji: '🎬', color: '#ef4444' },
+      summary: { emoji: '📋', color: '#6366f1' },
+    }
+    const t = typeMap[r.type] || { emoji: '📄', color: '#999' }
     items.push({
-      id:    'r_' + (r.id || Math.random()),
-      emoji,
-      text:  `${emoji} ${r.title?.slice(0, 20) || r.type} 已生成`,
-      time:  '刚刚',
-      ts:    1,
+      id: 'r_' + (r.id || Math.random()),
+      agent: t.emoji + ' ' + (r.title?.slice(0, 12) || r.type),
+      color: t.color,
+      text: '已生成',
+      time: '刚刚',
+      ts: 1,
+      type: 'output',
     })
   }
 
-  return items.sort((a, b) => b.ts - a.ts).slice(0, 8)
+  return items.sort((a, b) => b.ts - a.ts).slice(0, 10)
 })
 
-// 静态占位（store 为空时显示）
 const placeholders = [
-  { id: 'p1', emoji: '🎯', text: 'Captain 等待新议题', time: '待命中', ts: 0 },
-  { id: 'p2', emoji: '📈', text: 'Rex 已就绪，等待抓取热搜', time: '待命中', ts: 0 },
-  { id: 'p3', emoji: '✍️', text: 'Maya 等待文案任务', time: '待命中', ts: 0 },
+  { id: 'p1', agent: '🎯 Captain', color: '#6366f1', text: '等待新议题', time: '待命中', ts: 0, type: 'idle' },
+  { id: 'p2', agent: '📈 Rex', color: '#06b6d4', text: '已就绪，等待抓取热搜', time: '待命中', ts: 0, type: 'idle' },
+  { id: 'p3', agent: '✍️ Maya', color: '#f59e0b', text: '等待文案任务', time: '待命中', ts: 0, type: 'idle' },
 ]
 
 const displayItems = computed(() =>
@@ -74,7 +117,10 @@ const displayItems = computed(() =>
 function fmtTs(ts: number) {
   if (!ts) return ''
   const d = new Date(ts)
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  const diff = Date.now() - ts
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm前'
+  return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
 }
 
 const listEl = ref<HTMLElement>()
@@ -82,8 +128,8 @@ const listEl = ref<HTMLElement>()
 
 <style scoped>
 .live-feed {
-  background: #ffffff;
-  border: 1px solid #E8E8E8;
+  background: #111827;
+  border: 1px solid rgba(255,255,255,0.07);
   border-radius: 14px;
   padding: 14px 16px;
   display: flex;
@@ -93,60 +139,64 @@ const listEl = ref<HTMLElement>()
 }
 
 .lf-hd {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+  display: flex; align-items: center; gap: 7px;
 }
 .lf-dot {
   width: 7px; height: 7px; border-radius: 50%;
-  background: #0071e3;
+  background: #34d399;
   animation: lfpulse 1.8s ease-in-out infinite;
   flex-shrink: 0;
 }
 @keyframes lfpulse {
-  0%,100% { box-shadow: 0 0 0 2px rgba(0,113,227,0.15); }
-  50%      { box-shadow: 0 0 0 5px rgba(0,113,227,0.04); }
+  0%,100% { box-shadow: 0 0 0 2px rgba(52,211,153,0.2); }
+  50%      { box-shadow: 0 0 0 5px rgba(52,211,153,0.05); }
 }
 .lf-title {
   font-size: 11px; font-weight: 700;
-  color: #AAAAAA; text-transform: uppercase; letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em;
+  flex: 1;
+}
+.lf-live-badge {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
+  background: rgba(52,211,153,0.15); color: #34d399;
+  padding: 2px 7px; border-radius: 6px;
 }
 
-.lf-list { display: flex; flex-direction: column; gap: 6px; }
-.lf-empty { font-size: 12px; color: #CCCCCC; font-style: italic; padding: 8px 0; }
+.lf-list { display: flex; flex-direction: column; gap: 5px; }
+.lf-empty { font-size: 12px; color: rgba(255,255,255,0.2); font-style: italic; padding: 8px 0; }
 
 .lf-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 7px 10px;
-  background: #F8F8F6;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.04);
   border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
   transition: background 0.15s;
 }
-.lf-item:hover { background: #F0F0EE; }
+.lf-item:hover { background: rgba(255,255,255,0.07); }
+.lf-item.handoff { border-color: rgba(255,255,255,0.08); }
+.lf-item.idle { opacity: 0.5; }
 
-.lf-emoji { font-size: 14px; flex-shrink: 0; line-height: 1.4; }
-.lf-body {
-  flex: 1; min-width: 0;
-  display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+.lf-agent-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 4px;
 }
-.lf-text {
-  font-size: 12px; color: #444444;
-  line-height: 1.4; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-  flex: 1; min-width: 0;
-}
-.lf-time {
-  font-size: 10px; color: #CCCCCC;
-  flex-shrink: 0;
+.lf-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lf-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.lf-agent { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lf-time { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; }
+.lf-text { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.4; }
+.lf-stage-tag {
+  align-self: flex-start;
+  font-size: 10px; font-weight: 700; padding: 1px 7px;
+  border-radius: 6px; margin-top: 2px;
 }
 
 /* TransitionGroup 动画 */
-.feed-enter-active { animation: feedIn 0.25s ease both; }
+.feed-enter-active { animation: feedIn 0.22s ease both; }
 .feed-leave-active { animation: feedIn 0.15s ease reverse both; position: absolute; }
 @keyframes feedIn {
-  from { opacity: 0; transform: translateY(-6px); }
+  from { opacity: 0; transform: translateY(-5px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 </style>

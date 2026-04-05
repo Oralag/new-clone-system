@@ -94,6 +94,17 @@
               <button class="topic-del" @click="removeTopic(i)">×</button>
             </div>
           </div>
+          <button
+            v-if="trendingStore.selectedTopics.length > 0"
+            class="send-next-btn"
+            @click="sendToContent"
+            :class="{ sent: sentToContent }"
+          >
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+              <path d="M2 5.5h7M6 3l3 2.5L6 8"/>
+            </svg>
+            {{ sentToContent ? '已发给内容部 ✓' : '发给内容部 →' }}
+          </button>
         </div>
       </aside>
     </div>
@@ -106,9 +117,12 @@ import { ref, computed } from 'vue'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 import { useTrendingStore } from '@/stores/agent'
+import { usePipelineStore } from '@/stores/pipeline'
 import { ElMessage } from 'element-plus'
 
 const trendingStore = useTrendingStore()
+const pipelineStore = usePipelineStore()
+const sentToContent = ref(false)
 const chatRef = ref<InstanceType<typeof AgentChat>>()
 const streaming = ref(false)
 const loading = ref(false)
@@ -163,6 +177,25 @@ function removeTopic(i: number) {
   const topics = [...trendingStore.selectedTopics]
   topics.splice(i, 1)
   trendingStore.setSelectedTopics(topics)
+}
+
+function sendToContent() {
+  const topics = trendingStore.selectedTopics
+  if (topics.length === 0) return
+  const title = topics[0].slice(0, 20) + (topics.length > 1 ? ` 等${topics.length}个话题` : '')
+  const existing = pipelineStore.tasks.find(t => t.title === title)
+  if (existing) {
+    pipelineStore.recordOutput(existing.id, 'intel', topics.join('、'))
+    ElMessage.success('已更新情报产出')
+  } else {
+    pipelineStore.createTask(title)
+    const task = pipelineStore.tasks[0]
+    pipelineStore.recordOutput(task.id, 'intel', topics.join('、'))
+    pipelineStore.advanceStage(task.id)
+  }
+  sentToContent.value = true
+  ElMessage.success('已发给内容部，可在任务中心查看')
+  setTimeout(() => { sentToContent.value = false }, 3000)
 }
 </script>
 
@@ -222,6 +255,16 @@ function removeTopic(i: number) {
 .topic-text { font-size: 12px; color: #0891b2; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topic-del { background: none; border: none; color: #AAAAAA; cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; flex-shrink: 0; }
 .topic-del:hover { color: #ef4444; }
+
+.send-next-btn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  width: 100%; margin-top: 10px; padding: 8px;
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 8px; font-size: 12px; font-weight: 600; color: #d97706;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.send-next-btn:hover:not(.sent) { background: #f59e0b; color: white; border-color: #f59e0b; }
+.send-next-btn.sent { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #059669; cursor: default; }
 
 @media (max-width: 1100px) { .three-col { grid-template-columns: 1fr; } .left-panel, .right-panel { display: none; } }
 </style>

@@ -58,8 +58,7 @@ function erpGoodsToShopProduct(item: any): ShopProduct {
 }
 
 export const useShopStore = defineStore('shop', () => {
-  const savedMode = localStorage.getItem('brand_shop_mode') as 'retail' | 'wholesale' | null
-  const shopMode = ref<'retail' | 'wholesale' | null>(savedMode)
+  const shopMode = ref<'retail' | 'wholesale' | null>(null)
   const cart = ref<ShopCartItem[]>([])
   const products = ref<ShopProduct[]>([])
   const checkoutSuccess = ref(false)

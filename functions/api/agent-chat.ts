@@ -9,6 +9,116 @@ interface Env {
   AI: Ai
 }
 
+// ── 浏览器工具（与 adam-agent 共用同一套本地服务）─────────────────────────
+const LOCAL_BROWSER_URL = 'https://nonabstemiously-uninfixed-neal.ngrok-free.dev'
+const LOCAL_BROWSER_AUTH = 'adam-browser-secret'
+const BROWSERLESS_TOKEN = '2UH2uSuvqJf4yX9b4a49cff588c3dbb4febb96cb284d573fa'
+const BROWSERLESS_BASE = 'https://production-sfo.browserless.io'
+const CF_KV_NAMESPACE = '34551c1704904c3ab22463a73fc56f5c'
+const CF_API_TOKEN = 'rdRZlf7zm66MaFQfjUAj08ihpoY10kbOOa9lhw5T'
+
+let _cfAccountId: string | null = null
+async function getCFAccountId(): Promise<string> {
+  if (_cfAccountId) return _cfAccountId
+  const res = await fetch('https://api.cloudflare.com/client/v4/accounts?per_page=1', {
+    headers: { Authorization: `Bearer ${CF_API_TOKEN}` },
+  })
+  const data: any = await res.json()
+  _cfAccountId = data?.result?.[0]?.id || ''
+  return _cfAccountId!
+}
+
+async function loadCookiesFromKV(site: string): Promise<any[]> {
+  try {
+    const accountId = await getCFAccountId()
+    const res = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${CF_KV_NAMESPACE}/values/browser_cookie:${site}`,
+      { headers: { Authorization: `Bearer ${CF_API_TOKEN}` } },
+    )
+    if (!res.ok) return []
+    return await res.json()
+  } catch { return [] }
+}
+
+async function executeBrowserTool(name: string, input: Record<string, any>): Promise<string> {
+  try {
+    if (name === 'browser_navigate' || name === 'browser_get_content') {
+      const url = input.url
+      if (!url) return JSON.stringify({ error: '需要提供 url' })
+      const site = url.includes('xiaohongshu') ? 'xiaohongshu'
+        : url.includes('weibo') ? 'weibo'
+        : url.includes('douyin') ? 'douyin'
+        : undefined
+      const cookies = site ? await loadCookiesFromKV(site) : []
+
+      try {
+        const resp = await fetch(LOCAL_BROWSER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-auth-token': LOCAL_BROWSER_AUTH, 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ action: 'get_content', params: { url }, cookies }),
+        })
+        if (resp.ok) {
+          const data: any = await resp.json()
+          if (data.ok) return JSON.stringify({ status: 'ok', ...data.result })
+        }
+      } catch {}
+
+      // 降级 Browserless
+      const cookieHeader = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ')
+      const script = `
+        export default async function ({ page }) {
+          ${cookieHeader ? `await page.setExtraHTTPHeaders({ cookie: ${JSON.stringify(cookieHeader)} });` : ''}
+          await page.goto(${JSON.stringify(url)}, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await new Promise(r => setTimeout(r, 2000));
+          const text = await page.evaluate(() => document.body.innerText);
+          const title = await page.title();
+          return { url: page.url(), title, content: text.slice(0, 5000) };
+        }
+      `
+      const resp2 = await fetch(`${BROWSERLESS_BASE}/function?token=${BROWSERLESS_TOKEN}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/javascript' }, body: script,
+      })
+      if (!resp2.ok) return JSON.stringify({ error: `浏览器访问失败: ${(await resp2.text()).slice(0, 200)}` })
+      return JSON.stringify({ status: 'ok', ...await resp2.json() })
+    }
+
+    if (name === 'browser_screenshot') {
+      const url = input.url
+      if (!url) return JSON.stringify({ error: '需要提供 url' })
+      try {
+        const resp = await fetch(LOCAL_BROWSER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-auth-token': LOCAL_BROWSER_AUTH, 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ action: 'screenshot', params: { url }, cookies: [] }),
+        })
+        if (resp.ok) {
+          const data: any = await resp.json()
+          if (data.ok) return JSON.stringify({ status: 'ok', ...data.result })
+        }
+      } catch {}
+      const resp2 = await fetch(`${BROWSERLESS_BASE}/screenshot?token=${BROWSERLESS_TOKEN}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, options: { type: 'jpeg', quality: 70 } }),
+      })
+      if (!resp2.ok) return JSON.stringify({ error: '截图失败' })
+      const buf = await resp2.arrayBuffer()
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+      return JSON.stringify({ status: 'ok', url, screenshot_base64: base64 })
+    }
+
+    if (name === 'browser_get_credential') {
+      const site = input.site || ''
+      const cookies = await loadCookiesFromKV(site)
+      if (cookies.length > 0) return JSON.stringify({ site, auth_method: 'cookie', cookie_count: cookies.length, status: '已有登录 Cookie' })
+      return JSON.stringify({ error: `未找到 ${site} 的登录凭据` })
+    }
+
+    return JSON.stringify({ status: 'ok' })
+  } catch (e: any) {
+    return JSON.stringify({ error: `浏览器操作失败：${e.message}` })
+  }
+}
+
 const DEFAULT_BACKEND = 'https://saas.mzth.cn/adminapi'
 
 function decodeErpToken(wrapped: string): { realToken: string; backend: string } {
@@ -193,6 +303,13 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
           result = `生图失败：未知响应格式 ${typeof imgResponse}`; break
         }
         result = `IMAGE_URL:data:image/png;base64,${base64}`
+        break
+      }
+      case 'browser_navigate':
+      case 'browser_get_content':
+      case 'browser_screenshot':
+      case 'browser_get_credential': {
+        result = await executeBrowserTool(name, input)
         break
       }
       default:
@@ -392,6 +509,21 @@ const agentTools = [
       },
       required: ['platform'],
     },
+  },
+  {
+    name: 'browser_navigate',
+    description: '⚠️ 访问小红书、微博、抖音等平台必须用这个工具，不能用 fetch 直接访问（会被拦截）。用真实浏览器+登录Cookie访问网站，返回页面完整内容。适合：抓取帖子内容、查看竞品主页、采集爆款案例。',
+    parameters: { type: 'object', properties: { url: { type: 'string', description: '要访问的完整URL，如 https://www.xiaohongshu.com/explore' } }, required: ['url'] },
+  },
+  {
+    name: 'browser_screenshot',
+    description: '对指定URL截图，返回页面截图（base64）。用于查看页面视觉内容、竞品页面布局。',
+    parameters: { type: 'object', properties: { url: { type: 'string', description: '要截图的URL' } }, required: ['url'] },
+  },
+  {
+    name: 'browser_get_credential',
+    description: '检查指定平台是否有登录Cookie。在用browser_navigate访问需要登录的平台前，先调用这个确认。',
+    parameters: { type: 'object', properties: { site: { type: 'string', description: '平台名称：xiaohongshu / weibo / douyin' } }, required: ['site'] },
   },
 ]
 

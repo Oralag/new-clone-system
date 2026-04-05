@@ -19,7 +19,7 @@
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button type="success" size="small" link @click="formRef?.openView(row)">查看</el-button>
-              <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -51,6 +51,7 @@ import ScForm from '@/components/ScForm.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getWarehouseList, createWarehouse, deleteWarehouse } from '@/api/warehouse'
+import http from '@/api/http'
 
 const tableRef = ref()
 const formRef = ref()
@@ -65,6 +66,14 @@ const openForm = () => {
 
 const handleSubmit = async (form: any, done: () => void) => {
   try {
+    // 检查同名仓库
+    const res = await getWarehouseList({ name: form.name, page: 1, page_size: 50 })
+    const rows: any[] = res?.rows ?? res?.data?.rows ?? []
+    const duplicate = rows.find((r: any) => r.name === form.name)
+    if (duplicate) {
+      ElMessage.error(`仓库"${form.name}"已存在，不可重复创建`)
+      return
+    }
     await createWarehouse(form)
     ElMessage.success('操作成功')
     done()
@@ -76,7 +85,7 @@ const handleSubmit = async (form: any, done: () => void) => {
 
 const handleDelete = async (id: number) => {
   await ElMessageBox.confirm('确定要删除该仓库吗？', '提示', { type: 'warning' })
-  await deleteWarehouse(id)
+  await http.post('/stock/WarehouseName/batchDel', { ids: [id] })
   ElMessage.success('删除成功')
   tableRef.value.refresh()
 }

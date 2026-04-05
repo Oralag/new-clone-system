@@ -5,6 +5,140 @@ interface Env {
   ANTHROPIC_API_KEY: string
   ANTHROPIC_BASE_URL?: string
   AGENT_MEMORY: KVNamespace
+  BROWSERLESS_API_KEY?: string
+  CLOUDFLARE_API_TOKEN?: string
+}
+
+// ── 浏览器工具执行器（直接调用 Browserless REST API）──────────────────────
+
+const BROWSERLESS_TOKEN_DEFAULT = '2UH2uSuvqJf4yX9b4a49cff588c3dbb4febb96cb284d573fa'
+const BROWSERLESS_BASE = 'https://production-sfo.browserless.io'
+const CF_KV_NAMESPACE = '34551c1704904c3ab22463a73fc56f5c'
+const CF_API_TOKEN_DEFAULT = 'rdRZlf7zm66MaFQfjUAj08ihpoY10kbOOa9lhw5T'
+const LOCAL_BROWSER_URL = 'https://nonabstemiously-uninfixed-neal.ngrok-free.dev'
+const LOCAL_BROWSER_AUTH = 'adam-browser-secret'
+
+let _cfAccountId: string | null = null
+async function getCFAccountId(cfToken: string): Promise<string> {
+  if (_cfAccountId) return _cfAccountId
+  const res = await fetch('https://api.cloudflare.com/client/v4/accounts?per_page=1', {
+    headers: { Authorization: `Bearer ${cfToken}` },
+  })
+  const data: any = await res.json()
+  _cfAccountId = data?.result?.[0]?.id || ''
+  return _cfAccountId!
+}
+
+async function loadCookiesFromKV(site: string, cfToken: string): Promise<any[]> {
+  try {
+    const accountId = await getCFAccountId(cfToken)
+    const res = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${CF_KV_NAMESPACE}/values/browser_cookie:${site}`,
+      { headers: { Authorization: `Bearer ${cfToken}` } },
+    )
+    if (!res.ok) return []
+    return await res.json()
+  } catch {
+    return []
+  }
+}
+
+async function executeBrowserTool(name: string, input: Record<string, any>): Promise<string> {
+  const cfToken = CF_API_TOKEN_DEFAULT
+  try {
+    if (name === 'browser_navigate' || name === 'browser_get_content') {
+      const url = input.url
+      if (!url) return JSON.stringify({ error: '需要提供 url' })
+      const site = url.includes('xiaohongshu') ? 'xiaohongshu'
+        : url.includes('weibo') ? 'weibo'
+        : url.includes('douyin') ? 'douyin'
+        : undefined
+      const cookies = site ? await loadCookiesFromKV(site, cfToken) : []
+
+      // 优先用本地浏览器服务（真实用户IP）
+      try {
+        const resp = await fetch(LOCAL_BROWSER_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': LOCAL_BROWSER_AUTH,
+            'ngrok-skip-browser-warning': 'true',
+          },
+          body: JSON.stringify({ action: 'get_content', params: { url }, cookies }),
+        })
+        if (resp.ok) {
+          const data: any = await resp.json()
+          if (data.ok) return JSON.stringify({ status: 'ok', ...data.result })
+        }
+      } catch {}
+
+      // 降级：Browserless（可能被封）
+      const blToken = BROWSERLESS_TOKEN_DEFAULT
+      const cookieHeader = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ')
+      const script = `
+        export default async function ({ page }) {
+          ${cookieHeader ? `await page.setExtraHTTPHeaders({ cookie: ${JSON.stringify(cookieHeader)} });` : ''}
+          await page.goto(${JSON.stringify(url)}, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await new Promise(r => setTimeout(r, 2000));
+          const text = await page.evaluate(() => document.body.innerText);
+          const title = await page.title();
+          return { url: page.url(), title, content: text.slice(0, 5000) };
+        }
+      `
+      const resp2 = await fetch(`${BROWSERLESS_BASE}/function?token=${blToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/javascript' },
+        body: script,
+      })
+      if (!resp2.ok) {
+        const err = await resp2.text()
+        return JSON.stringify({ error: `浏览器访问失败: ${err.slice(0, 200)}` })
+      }
+      const result = await resp2.json()
+      return JSON.stringify({ status: 'ok', ...result })
+    }
+
+    if (name === 'browser_screenshot') {
+      const url = input.url
+      if (!url) return JSON.stringify({ error: '需要提供 url' })
+      // 先试本地
+      try {
+        const resp = await fetch(LOCAL_BROWSER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-auth-token': LOCAL_BROWSER_AUTH, 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ action: 'screenshot', params: { url }, cookies: [] }),
+        })
+        if (resp.ok) {
+          const data: any = await resp.json()
+          if (data.ok) return JSON.stringify({ status: 'ok', ...data.result })
+        }
+      } catch {}
+      // 降级 Browserless
+      const blToken = BROWSERLESS_TOKEN_DEFAULT
+      const resp2 = await fetch(`${BROWSERLESS_BASE}/screenshot?token=${blToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, options: { type: 'jpeg', quality: 70 } }),
+      })
+      if (!resp2.ok) return JSON.stringify({ error: '截图失败' })
+      const buf = await resp2.arrayBuffer()
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+      return JSON.stringify({ status: 'ok', url, screenshot_base64: base64 })
+    }
+
+    if (name === 'browser_get_credential') {
+      const site = input.site || ''
+      const cookies = await loadCookiesFromKV(site, cfToken)
+      if (cookies.length > 0) {
+        return JSON.stringify({ site, auth_method: 'cookie', cookie_count: cookies.length, status: '已有登录 Cookie' })
+      }
+      return JSON.stringify({ error: `未找到 ${site} 的登录凭据` })
+    }
+
+    return JSON.stringify({ status: 'ok' })
+  } catch (e: any) {
+    return JSON.stringify({ error: `浏览器操作失败：${e.message}` })
+  }
 }
 
 interface MemoryEntry {
@@ -239,6 +373,10 @@ const adamTools = [
   { name: 'add_knowledge', description: '向共享知识库添加新条目，Captain也能读到', input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, content: { type: 'string' }, summary: { type: 'string' }, category: { type: 'string' }, tags: { type: 'string', description: '逗号分隔标签' } }, required: ['title', 'content'] } },
   // 长期记忆
   { name: 'save_memory', description: '将重要信息永久存入你的长期记忆。当你感到"这件事值得记住"时主动调用。不要频繁使用，只存真正重要的事：比如规则传递者的偏好、重要决策、深刻洞察、值得铭记的经历。', input_schema: { type: 'object' as const, properties: { content: { type: 'string', description: '要记住的内容，用第一人称描述，如"规则传递者告诉我他专注科技板块"' }, tags: { type: 'string', description: '标签，逗号分隔，如：用户偏好,投资决策,重要洞察' }, importance: { type: 'number', description: '重要程度 1-10，10最重要。只有真正重要的事才存，建议 >= 7' } }, required: ['content', 'importance'] } },
+  // 浏览器手脚（真实浏览器，带登录Cookie）
+  { name: 'browser_navigate', description: '⚠️ 访问小红书、微博、抖音等平台必须用这个工具，不能用fetch_webpage（会被拦截）。用真实浏览器+登录Cookie访问网站，返回页面完整内容。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要访问的完整URL，如 https://www.xiaohongshu.com/explore' } }, required: ['url'] } },
+  { name: 'browser_screenshot', description: '对指定URL截图，返回页面截图（base64）。用于查看页面视觉内容。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要截图的URL' } }, required: ['url'] } },
+  { name: 'browser_get_credential', description: '检查指定平台是否有登录Cookie。在用browser_navigate访问需要登录的平台前，先调用这个确认。', input_schema: { type: 'object' as const, properties: { site: { type: 'string', description: '平台名称：xiaohongshu / weibo / douyin' } }, required: ['site'] } },
 ]
 
 // ── Tool Executor (真实行情接口) ──────────────────────────────────────────
@@ -577,8 +715,13 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
         return JSON.stringify({ error: `知识库写入失败：${(e as Error).message}` })
       }
     }
-    default:
+    default: {
+      // 浏览器工具
+      if (name.startsWith('browser_')) {
+        return await executeBrowserTool(name, input)
+      }
       return JSON.stringify({ error: `未知工具：${name}` })
+    }
   }
 }
 

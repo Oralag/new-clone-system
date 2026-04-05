@@ -6,6 +6,7 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getSaleReturnList"
           del-path="/stock/SaleReturnOrder/batchDel"
+          sort-by="return_date" :sort-desc="true"
           export-file-name="销售退货单" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="退货单号" clearable style="width:160px" />
@@ -459,6 +460,7 @@ const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 function parseItems(goodsInfo: any): any[] {
+  if (Array.isArray(goodsInfo)) return goodsInfo
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
 }
 
@@ -594,7 +596,7 @@ function openCreate() {
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach((item: any) => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
   isReadonly.value = readonly

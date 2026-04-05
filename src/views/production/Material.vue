@@ -420,7 +420,7 @@ function buildFormFromRow(row: any) {
     warehouse_name: row.warehouse_name || '',
   })
   try {
-    fd.items = JSON.parse(row.goods_info || '[]').map((item: any) => normalizeItem(item))
+    fd.items = (Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')).map((item: any) => normalizeItem(item))
   } catch {
     fd.items = []
   }

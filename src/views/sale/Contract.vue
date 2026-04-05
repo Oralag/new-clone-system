@@ -6,6 +6,7 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getContractList"
           del-path="/shop/ContractOrder/batchDel"
+          sort-by="order_date" :sort-desc="true"
           export-file-name="销售合同" :params="searchForm"
           :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''"
           :export-columns="{ order_sn: '合同编号', customer_name: '客户名称', total_amount: '合同金额', sign_date: '签约日期', expire_date: '到期日期', admin_name: '经办人', status: '状态', remark: '备注' }">
@@ -59,7 +60,7 @@
           </el-table-column>
           <el-table-column label="签约日期" width="110">
             <template #default="{ row }">
-              {{ fmtDt(row.sign_date || row.contract_date || row.create_time) }}
+              {{ (row.sign_date || row.contract_date || row.order_date || row.create_time || '').slice(0, 10) }}
             </template>
           </el-table-column>
           <el-table-column label="到期日期" width="110">
@@ -124,8 +125,11 @@
         <div class="form-actions">
           <el-button v-if="isReadonly" @click="handleContractPrint">打印</el-button>
           <el-button v-if="isReadonly" @click="handleContractExport">导出</el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-contract-save">
-            保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
+          <el-button v-if="!isReadonly" :loading="saving" @click="handleSave(false)" data-guide-id="guide-contract-save">
+            保存
+          </el-button>
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave(true)">
+            保存并审核
           </el-button>
         </div>
       </div>
@@ -657,6 +661,7 @@ function isAutoContractReceiptRow(row: any, orderSn: string) {
 }
 
 function parseItems(goodsInfo: any): any[] {
+  if (Array.isArray(goodsInfo)) return goodsInfo
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
 }
 
@@ -1014,10 +1019,11 @@ async function openCreate() {
 async function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   fd.contract_no = getContractSn(row)
+  fd.sign_date = fd.sign_date || (row as any).order_date?.slice?.(0, 10) || fd.sign_date
   fd.remark = parseContractRemark(row.remark || '')
   fd.source_offer_id = parseSourceOfferId(row.remark || '')
   fd.prepay_amount = Number(row.prepay_amount || parsePrepayAmount(row.remark || '') || 0)
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
   isReadonly.value = readonly
@@ -1033,7 +1039,7 @@ async function openEdit(row: any, readonly = false) {
       fd.remark = parseContractRemark(full.remark || '')
       fd.source_offer_id = parseSourceOfferId(full.remark || '')
       fd.prepay_amount = Number(full.prepay_amount || parsePrepayAmount(full.remark || '') || fd.prepay_amount || 0)
-      fd.items = items.length ? items : (()=>{ try { return JSON.parse(full.goods_info||'[]') } catch { return [] } })()
+      fd.items = items.length ? items : (()=>{ try { return Array.isArray(full.goods_info) ? full.goods_info : JSON.parse(full.goods_info||'[]') } catch { return [] } })()
       calcTotal()
     }
   } catch { /* 详情拉取失败不影响基本展示 */ }
@@ -1228,7 +1234,7 @@ async function cleanupContractFreightExpense(row: any) {
   }
 }
 
-async function handleSave() {
+async function handleSave(andAudit = false) {
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项'); return
   }
@@ -1239,6 +1245,14 @@ async function handleSave() {
     try {
       await ElMessageBox.confirm('本次收款金额未填写，是否继续保存？', '提示', {
         confirmButtonText: '继续保存', cancelButtonText: '去填写', type: 'warning'
+      })
+    } catch { return }
+  }
+  // 有收款金额但未选账户时提醒
+  if (Number(fd.receive_amount || 0) > 0 && !fd.receive_account) {
+    try {
+      await ElMessageBox.confirm('已填写收款金额但未选择收款账户，是否继续保存？', '提示', {
+        confirmButtonText: '继续保存', cancelButtonText: '去选择', type: 'warning'
       })
     } catch { return }
   }
@@ -1286,6 +1300,13 @@ async function handleSave() {
         await ensureContractFreightExpense(row)
       } catch (e: any) {
         ElMessage.warning(`保存成功，但自动审核未完成：${e?.message || ''}，请手动审核`)
+      }
+    } else if (andAudit && newId) {
+      // 编辑后保存并审核
+      try {
+        await autoAuditContract(newId)
+      } catch (e: any) {
+        ElMessage.warning(`保存成功，但审核失败：${e?.message || ''}，请手动审核`)
       }
     }
     ElMessage.success('保存成功')

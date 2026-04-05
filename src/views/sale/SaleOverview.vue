@@ -662,7 +662,7 @@ async function loadData() {
   customerList.value = cust.status === 'fulfilled' ? (cust.value?.data?.rows ?? []) : []
   warehouseList.value = wh.status === 'fulfilled' ? (wh.value?.data?.rows ?? []) : []
   goodsList.value = g.status === 'fulfilled' ? (g.value?.data?.rows ?? []) : []
-  inhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []) : []
+  inhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []
   bomList.value = b.status === 'fulfilled' ? (b.value?.data?.rows ?? []) : []
   fundList.value = fd.status === 'fulfilled' ? (fd.value?.data?.rows ?? []) : []
 }

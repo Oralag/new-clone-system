@@ -12,6 +12,208 @@ import { executeAdamTool } from './tools/adamExecutor'
 import { adamAgent } from './agents/adamOrchestrator'
 import { detectIntent, getSystemPrompt } from './agents/orchestrator'
 
+// ── 通知队列（内存，dev环境用） ──────────────────────────────────────────────
+interface ScheduledNotification {
+  id: string
+  type: 'morning' | 'noon' | 'evening'
+  title: string
+  content: string
+  time: string
+  read: boolean
+}
+const notificationQueue: ScheduledNotification[] = []
+
+function pushNotification(n: Omit<ScheduledNotification, 'id' | 'read'>) {
+  notificationQueue.unshift({
+    ...n,
+    id: Date.now().toString(),
+    read: false,
+  })
+  if (notificationQueue.length > 20) notificationQueue.splice(20)
+}
+
+// ── Agent 记忆系统（五类）────────────────────────────────────────────────────
+type MemoryCategory = 'insight' | 'lesson' | 'strategy' | 'preference' | 'fact'
+// insight   = 洞察：从任务中提炼的规律性认知
+// lesson    = 教训：失败/被打回的经验，避免重蹈
+// strategy  = 策略：证明有效的执行方式
+// preference = 偏好：用户/品牌的明确喜好
+// fact      = 事实：客观数据基准（销量/价格/受众等）
+
+interface AgentMemory {
+  agentId: string
+  category: MemoryCategory
+  content: string
+  timestamp: number
+  weight: number  // 1-10，影响下次注入优先级
+}
+
+// 每个 Agent 最多保留 30 条记忆，超出按 weight 淘汰最低的
+const agentMemoryStore: Map<string, AgentMemory[]> = new Map()
+
+function addAgentMemory(agentId: string, category: MemoryCategory, content: string, weight = 5) {
+  if (!agentMemoryStore.has(agentId)) agentMemoryStore.set(agentId, [])
+  const memories = agentMemoryStore.get(agentId)!
+  memories.push({ agentId, category, content, timestamp: Date.now(), weight })
+  // 超出30条时淘汰 weight 最低的
+  if (memories.length > 30) {
+    memories.sort((a, b) => b.weight - a.weight)
+    memories.splice(30)
+  }
+}
+
+function getAgentMemoryPrompt(agentId: string): string {
+  const memories = agentMemoryStore.get(agentId)
+  if (!memories || memories.length === 0) return ''
+
+  // 按类别分组，各取 weight 最高的
+  const grouped: Record<MemoryCategory, AgentMemory[]> = {
+    insight: [], lesson: [], strategy: [], preference: [], fact: [],
+  }
+  for (const m of memories) grouped[m.category].push(m)
+
+  const categoryLabel: Record<MemoryCategory, string> = {
+    insight: '💡 洞察', lesson: '⚠️ 教训', strategy: '✅ 有效策略',
+    preference: '🎯 偏好', fact: '📊 数据基准',
+  }
+
+  const lines: string[] = []
+  for (const cat of Object.keys(grouped) as MemoryCategory[]) {
+    const items = grouped[cat].sort((a, b) => b.weight - a.weight).slice(0, 3)
+    if (items.length === 0) continue
+    lines.push(`${categoryLabel[cat]}：`)
+    items.forEach(m => lines.push(`  - ${m.content}`))
+  }
+
+  return lines.length > 0
+    ? `\n\n【你的经验记忆 — 过往任务沉淀，影响本次决策30%】\n${lines.join('\n')}`
+    : ''
+}
+
+// ── Agent 亲和度系统 ─────────────────────────────────────────────────────────
+interface AffinityRecord {
+  score: number       // -100 ~ 100，0 为中性
+  interactions: number
+}
+
+// key 格式：`agentA:agentB`（字母序，保证唯一）
+const affinityStore: Map<string, AffinityRecord> = new Map()
+
+function affinityKey(a: string, b: string): string {
+  return [a, b].sort().join(':')
+}
+
+function updateAffinity(agentA: string, agentB: string, outcome: 'agree' | 'conflict' | 'neutral') {
+  const key = affinityKey(agentA, agentB)
+  const record = affinityStore.get(key) ?? { score: 0, interactions: 0 }
+  const delta = outcome === 'agree' ? 5 : outcome === 'conflict' ? -3 : 1
+  record.score = Math.max(-100, Math.min(100, record.score + delta))
+  record.interactions++
+  affinityStore.set(key, record)
+}
+
+function getAffinity(agentA: string, agentB: string): number {
+  return affinityStore.get(affinityKey(agentA, agentB))?.score ?? 0
+}
+
+// Captain 分配子团队时，优先选亲和度高的组合
+function sortByAffinity(agentIds: string[]): string[] {
+  if (agentIds.length <= 1) return agentIds
+  // 计算每个 Agent 与其他人的平均亲和度，高的排前面
+  return [...agentIds].sort((a, b) => {
+    const avgA = agentIds.filter(x => x !== a).reduce((s, x) => s + getAffinity(a, x), 0) / (agentIds.length - 1)
+    const avgB = agentIds.filter(x => x !== b).reduce((s, x) => s + getAffinity(b, x), 0) / (agentIds.length - 1)
+    return avgB - avgA
+  })
+}
+
+// ── 定时触发（早09:00 / 午13:00 / 晚18:00）───────────────────────────────────
+function startScheduler(apiKey: string) {
+  const checkInterval = 60 * 1000 // 每分钟检查一次
+
+  let lastFiredHour = -1
+
+  setInterval(() => {
+    const now = new Date()
+    const h = now.getHours()
+    const m = now.getMinutes()
+
+    // 触发时间：9:00 / 13:00 / 18:00，每个整点只触发一次
+    const triggerHours = [9, 13, 18]
+    if (triggerHours.includes(h) && m === 0 && lastFiredHour !== h) {
+      lastFiredHour = h
+      runScheduledTrigger(h, apiKey)
+    }
+  }, checkInterval)
+}
+
+async function runScheduledTrigger(hour: number, apiKey: string) {
+  const type = hour === 9 ? 'morning' : hour === 13 ? 'noon' : 'evening'
+  const typeLabel = { morning: '早报', noon: '午检', evening: '晚结' }[type]
+
+  const prompts: Record<string, string> = {
+    morning: `现在是早上9点。请做今日早报：
+1. 用 query_sales 查询今日销售数据（今天的）
+2. 用 query_purchases 查询今日采购数据
+3. 用 query_finance 查询资金账户余额
+综合以上数据，生成一份简洁的今日经营早报，包含关键数字和今日需要关注的事项。200字以内。`,
+
+    noon: `现在是下午1点。请做午检报告：
+1. 用 query_sales 查询今日上午的销售情况
+2. 如有未完成的采购或销售订单，提醒跟进
+生成一份简洁的午检提醒，重点突出今天上午的进展和下午需要处理的事项。150字以内。`,
+
+    evening: `现在是下午6点。请做今日收盘总结：
+1. 用 query_sales 查询今日销售汇总
+2. 用 query_purchases 查询今日采购汇总
+3. 用 query_finance 查询今日资金变化
+生成一份今日经营日报，包含：今日成绩、待处理事项、明日建议。200字以内。`,
+  }
+
+  try {
+    const genAI = new GoogleGenAI({ apiKey })
+    const chat = genAI.chats.create({
+      model: 'gemini-2.0-flash',
+      config: {
+        systemInstruction: getSystemPrompt('query'),
+        tools: [{ functionDeclarations: allTools }],
+      },
+    })
+
+    let content = ''
+    let currentParts: any[] = [{ text: prompts[type] }]
+
+    for (let i = 0; i < 3; i++) {
+      const response = await chat.sendMessage({ message: currentParts })
+      const textParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
+      for (const part of textParts) {
+        if (part.text) content += part.text
+      }
+      const fnParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
+      if (fnParts.length === 0) break
+      const toolResultParts: any[] = []
+      for (const part of fnParts) {
+        const fc = part.functionCall
+        // 定时任务用空token，只读不写
+        const result = await executeTool(fc.name, fc.args as Record<string, any>, '')
+        toolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
+      }
+      currentParts = toolResultParts
+    }
+
+    if (content) {
+      pushNotification({
+        type,
+        title: `${typeLabel} · ${new Date().toLocaleDateString('zh-CN')}`,
+        content,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      })
+    }
+  } catch (e: any) {
+    console.error(`[scheduler] ${typeLabel} 触发失败:`, e.message)
+  }
+}
+
 // ── Local user store (dev only) ───────────────────────────────────────────────
 const USERS_FILE = resolve(process.cwd(), '.local-users.json')
 
@@ -42,6 +244,43 @@ export function aiChatPlugin(): Plugin {
     configureServer(server) {
       // Load .env so process.env has ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL
       loadDotenv({ path: resolve(process.cwd(), '.env') })
+
+      // ── 启动定时调度器 ──────────────────────────────────────────────────────
+      const geminiKey = process.env.GEMINI_API_KEY
+      if (geminiKey) {
+        startScheduler(geminiKey)
+        console.log('[scheduler] 早中晚定时触发已启动 (09:00 / 13:00 / 18:00)')
+      }
+
+      // ── /api/notifications — 获取未读通知 ──────────────────────────────────
+      server.middlewares.use('/api/notifications', async (req: any, res: any, next: any) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': 'Content-Type, x-erp-token' })
+          res.end(); return
+        }
+        // GET：拉取未读通知
+        if (req.method === 'GET') {
+          const unread = notificationQueue.filter(n => !n.read)
+          // 标记已读
+          unread.forEach(n => { n.read = true })
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
+          res.end(JSON.stringify({ messages: unread }))
+          return
+        }
+        // POST：手动触发（测试用）
+        if (req.method === 'POST') {
+          const chunks: Buffer[] = []
+          for await (const chunk of req) chunks.push(chunk)
+          const { hour } = JSON.parse(Buffer.concat(chunks).toString())
+          const key = process.env.GEMINI_API_KEY
+          if (!key) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY' })); return }
+          runScheduledTrigger(hour ?? new Date().getHours(), key)
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
+          res.end(JSON.stringify({ ok: true, message: '已触发，稍后刷新通知' }))
+          return
+        }
+        next()
+      })
 
       // ── Register endpoint ────────────────────────────────────────────────
       server.middlewares.use('/adminapi/login/register', async (req: any, res: any, next: any) => {
@@ -513,10 +752,16 @@ export function aiChatPlugin(): Plugin {
           send({ type: 'agent_start', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, task: taskPrompt })
           send({ type: 'agent_ack', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, text: '收到，开始执行。' })
 
+          // 注入该 Agent 的历史记忆（影响决策30%）
+          const memoryHint = getAgentMemoryPrompt(subAgentId)
+          const systemWithMemory = memoryHint
+            ? `${subAgent.systemPrompt}${memoryHint}\n\n注意：以上记忆供参考，影响你决策的30%，保留70%空间探索新方案。`
+            : subAgent.systemPrompt
+
           let agentOutput = ''
           const subChat = genAI.chats.create({
             model: 'gemini-2.0-flash',
-            config: { systemInstruction: subAgent.systemPrompt, tools: [{ functionDeclarations: allTools }] },
+            config: { systemInstruction: systemWithMemory, tools: [{ functionDeclarations: allTools }] },
           })
           let subParts: any[] = [{ text: taskPrompt }]
 
@@ -542,6 +787,13 @@ export function aiChatPlugin(): Plugin {
             }
             subParts = subToolResultParts
           }
+
+          // 执行完成后，把本次任务的关键产出存为策略记忆
+          if (agentOutput && agentOutput.length > 50 && subAgentId !== 'skeptic') {
+            const summary = agentOutput.slice(0, 120).replace(/\n/g, ' ').trim()
+            addAgentMemory(subAgentId, 'strategy', `任务"${taskPrompt.slice(0, 40)}..."的有效做法：${summary}`, 5)
+          }
+
           send({ type: 'agent_done', agentId: subAgent.id, agentName: subAgent.name, emoji: subAgent.emoji, output: agentOutput })
           return agentOutput
         }
@@ -623,9 +875,43 @@ export function aiChatPlugin(): Plugin {
                     }
                   }
 
-                  const output = await runSubAgent(step.agentId, taskPrompt)
+                  let output = await runSubAgent(step.agentId, taskPrompt)
                   stepOutputs[step.agentId] = output
+
+                  // 对抗审核：需要质疑官审核的步骤（非 skeptic 自身，非 captain）
+                  if (step.auto_review !== false && !['skeptic', 'captain', 'brand'].includes(step.agentId)) {
+                    const reviewPrompt = `请审核以下内容：\n\n【原始任务】\n${step.task}\n\n【${subAgent.name}的输出】\n${output}`
+                    const reviewOutput = await runSubAgent('skeptic', reviewPrompt)
+
+                    // REJECT：打回重做一次，记录教训，亲和度下降
+                    if (reviewOutput.includes('判断：REJECT') || reviewOutput.includes('判断:REJECT')) {
+                      send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: `\n\n🔄 **质疑官打回 ${subAgent.name} 的输出，要求重做...**\n` })
+                      // 记录教训
+                      const lessonText = reviewOutput.slice(0, 150).replace(/\n/g, ' ').trim()
+                      addAgentMemory(step.agentId, 'lesson', `被质疑官REJECT：${lessonText}`, 8)
+                      updateAffinity(step.agentId, 'skeptic', 'conflict')
+                      const retryPrompt = `${taskPrompt}\n\n---\n【质疑官审核意见，必须改进】\n${reviewOutput}`
+                      output = await runSubAgent(step.agentId, retryPrompt)
+                      stepOutputs[step.agentId] = output
+                    }
+                    // HOLD：附上审核意见供下游参考，亲和度轻微下降
+                    else if (reviewOutput.includes('判断：HOLD') || reviewOutput.includes('判断:HOLD')) {
+                      updateAffinity(step.agentId, 'skeptic', 'neutral')
+                      stepOutputs[step.agentId] = `${output}\n\n---\n【质疑官建议（HOLD，供参考）】\n${reviewOutput}`
+                    }
+                    // PASS：亲和度上升
+                    else {
+                      updateAffinity(step.agentId, 'skeptic', 'agree')
+                    }
+                  }
+
                   agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output })
+
+                  // 上下游协作成功 → 亲和度上升
+                  if (step.receives_from) {
+                    const upstreams = Array.isArray(step.receives_from) ? step.receives_from : [step.receives_from]
+                    upstreams.forEach((upId: string) => updateAffinity(step.agentId, upId, 'agree'))
+                  }
 
                   // 审核关卡：brand 审核不通过时，流水线终止并提示
                   if (step.is_gate && step.agentId === 'brand' && output.includes('❌ 不通过')) {
@@ -865,6 +1151,97 @@ ${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，�
           send({ type: 'error', error: e.message })
         } finally {
           res.end()
+        }
+      })
+
+      // ── 多平台发布接口 ────────────────────────────────────────────────────────
+      server.middlewares.use('/api/publish', async (req: any, res: any, next: any) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' })
+          res.end(); return
+        }
+        if (req.method !== 'POST') return next()
+
+        const chunks: Buffer[] = []
+        for await (const chunk of req as any) chunks.push(chunk)
+        const { platform, title, content, images } = JSON.parse(Buffer.concat(chunks).toString())
+
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
+
+        if (platform !== 'xiaohongshu') {
+          res.end(JSON.stringify({ status: 'pending', message: `「${platform}」平台暂未接入，敬请期待` })); return
+        }
+
+        try {
+          const { writeFileSync, mkdirSync } = await import('fs')
+          const { spawnSync } = await import('child_process')
+          const { homedir } = await import('os')
+          const home = homedir()
+
+          // 写临时文件
+          const tmpDir = '/tmp/xhs_publish'
+          mkdirSync(tmpDir, { recursive: true })
+          const titleFile = `${tmpDir}/title.txt`
+          const contentFile = `${tmpDir}/content.txt`
+          writeFileSync(titleFile, title || '', 'utf-8')
+          writeFileSync(contentFile, content || '', 'utf-8')
+
+          // 处理图片（网络 URL 需先下载到本地）
+          const localImages: string[] = []
+          if (images && images.length > 0) {
+            for (let i = 0; i < images.length; i++) {
+              const img = images[i]
+              if (img.startsWith('http')) {
+                const imgPath = `${tmpDir}/img_${i}.jpg`
+                const imgResp = await fetch(img)
+                const imgBuf = await imgResp.arrayBuffer()
+                writeFileSync(imgPath, Buffer.from(imgBuf))
+                localImages.push(imgPath)
+              } else {
+                localImages.push(img)
+              }
+            }
+          } else {
+            // 没有图片时使用占位空白图
+            const blankImg = `${tmpDir}/blank.jpg`
+            if (!existsSync(blankImg)) {
+              // 1x1 白色 JPEG
+              const jpeg1x1 = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k=', 'base64')
+              writeFileSync(blankImg, jpeg1x1)
+            }
+            localImages.push(blankImg)
+          }
+
+          // 构建命令参数
+          const args = [
+            'run', 'python', 'scripts/cli.py', 'publish',
+            '--title-file', titleFile,
+            '--content-file', contentFile,
+          ]
+          if (images && images.length > 0) {
+            for (const img of localImages) {
+              args.push('--images', img)
+            }
+          }
+
+          const result = spawnSync(
+            `${home}/.local/bin/uv`,
+            args,
+            {
+              cwd: `${home}/.agents/skills/xiaohongshu-skills`,
+              encoding: 'utf-8',
+              timeout: 60000,
+            }
+          )
+
+          if (result.status === 0) {
+            res.end(JSON.stringify({ status: 'ok', message: '发布成功', output: result.stdout }))
+          } else {
+            const errMsg = result.stderr || result.stdout || '未知错误'
+            res.end(JSON.stringify({ status: 'error', message: errMsg.slice(0, 300) }))
+          }
+        } catch (e: any) {
+          res.end(JSON.stringify({ status: 'error', message: e.message }))
         }
       })
 

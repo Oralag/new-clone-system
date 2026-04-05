@@ -310,7 +310,7 @@ async function openAdd() {
 }
 async function openEdit(row: any) {
   Object.assign(fd, { ...defaultFd(), ...row })
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   fd.items.forEach(calcRow)
   isView.value = false
   showForm.value = true
@@ -318,7 +318,7 @@ async function openEdit(row: any) {
 }
 async function openView(row: any) {
   Object.assign(fd, { ...defaultFd(), ...row })
-  try { fd.items = JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   fd.items.forEach(calcRow)
   isView.value = true
   showForm.value = true

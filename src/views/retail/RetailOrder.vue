@@ -18,6 +18,25 @@
         <template #toolbar>
           <el-button type="primary" :icon="Plus" @click="openForm()">新增订单</el-button>
         </template>
+        <el-table-column type="expand">
+          <template #default="{ row }">
+            <div style="padding:8px 48px 12px">
+              <el-table :data="parseGoods(row.goods_info)" size="small" border style="width:100%">
+                <el-table-column prop="goods_name" label="商品名称" min-width="140" />
+                <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+                <el-table-column prop="num" label="数量" width="80" align="right" />
+                <el-table-column label="单价" width="100" align="right">
+                  <template #default="{ row: item }">¥{{ Number(item.price).toFixed(2) }}</template>
+                </el-table-column>
+                <el-table-column label="小计" width="100" align="right">
+                  <template #default="{ row: item }">
+                    <span style="color:#0071e3">¥{{ (Number(item.num) * Number(item.price)).toFixed(2) }}</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column label="订单编号" min-width="160">
           <template #default="{ row }">{{ row.order_sn || `LS${(row.order_date || row.created_at || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
@@ -37,8 +56,17 @@
         </el-table-column>
         <el-table-column prop="pay_method" label="支付方式" width="100" align="center" />
         <el-table-column prop="order_date" label="订单日期" width="110" />
-        <el-table-column label="操作" width="80" fixed="right">
+        <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
+            <el-tag :type="row.status === 0 ? 'warning' : 'success'" size="small">
+              {{ row.status === 0 ? '未审核' : '已审核' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="130" fixed="right">
+          <template #default="{ row }">
+            <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
+            <el-button v-else type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
             <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -215,7 +243,6 @@ async function generateRetailNo(): Promise<string> {
   try {
     const res = await getRetailOrderList({ list_rows: 500, order_date: form.order_date })
     const rows: any[] = res.data?.rows ?? []
-    // 找当天已有的 LS 编号，取最大序号
     let maxSeq = 0
     const prefix = `LS${ymd}`
     for (const r of rows) {
@@ -236,27 +263,9 @@ async function handleSave() {
   saving.value = true
   try {
     const order_sn = await generateRetailNo()
-    await createRetailOrder({ ...form, order_sn, goods_info: JSON.stringify(form.items), items: undefined })
-    try {
-      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-      const funds: any[] = fundRes.data?.rows ?? []
-      const retailFund = funds.find((f: any) => f.name === RETAIL_FUND_NAME)
-      if (retailFund) {
-        const newBalance = Number(retailFund.balance || 0) + Number(form.pay_amount)
-        await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: newBalance })
-      } else {
-        await http.post('/finance/Fund/add', { name: RETAIL_FUND_NAME, type: 2, balance: Number(form.pay_amount), remark: '零售单自动累计' })
-      }
-    } catch (e: any) {
-      console.warn('零售账户更新失败', e?.message)
-    }
-    try {
-      await retailStockEffect(form.items, 'deduct')
-    } catch (e: any) {
-      ElMessage.warning('库存扣减失败，请手动更新')
-    }
-    stockRefreshStore.trigger()
-    ElMessage.success('保存成功')
+    // 新建订单默认未审核 status=0，审核时再触发库存和财务
+    await createRetailOrder({ ...form, order_sn, status: 0, goods_info: JSON.stringify(form.items), items: undefined })
+    ElMessage.success('保存成功，请审核后生效库存和财务')
     drawerVisible.value = false
     tableRef.value?.refresh()
   } finally { saving.value = false }
@@ -273,40 +282,59 @@ async function deductRetailFund(amount: number) {
   }
 }
 
+async function handleAudit(row: any, status: number) {
+  const items = parseGoods(row.goods_info)
+  const payAmount = Number(row.pay_amount || 0)
+  if (status === 1) {
+    await http.post('/retail/order/audit', { id: row.id, status: 1 })
+    try { await retailStockEffect(items, 'deduct') } catch (e: any) { ElMessage.warning('库存扣减失败，请手动处理') }
+    try {
+      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+      const funds: any[] = fundRes.data?.rows ?? []
+      const retailFund = funds.find((f: any) => f.name === RETAIL_FUND_NAME)
+      if (retailFund) {
+        await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: Number(retailFund.balance || 0) + payAmount })
+      } else {
+        await http.post('/finance/Fund/add', { name: RETAIL_FUND_NAME, type: 2, balance: payAmount, remark: '零售单自动累计' })
+      }
+    } catch (e: any) { ElMessage.warning('财务更新失败，请手动处理') }
+    ElMessage.success('审核成功')
+  } else {
+    await http.post('/retail/order/audit', { id: row.id, status: 0 })
+    try { await retailStockEffect(items, 'restore') } catch (e: any) { ElMessage.warning('库存还原失败，请手动处理') }
+    try { await deductRetailFund(payAmount) } catch (e: any) { ElMessage.warning('财务回滚失败，请手动处理') }
+    ElMessage.success('已反审核')
+  }
+  stockRefreshStore.trigger()
+  tableRef.value?.refresh()
+}
+
 async function handleDelete(row: any) {
+  if (row.status === 1) { ElMessage.warning('请先反审核再删除'); return }
   await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
-  try {
-    await deductRetailFund(Number(row.pay_amount || 0))
-  } catch (e: any) {
-    console.warn('零售账户余额回滚失败', e?.message)
-  }
-  try {
-    const items = JSON.parse(row.goods_info || '[]')
-    await retailStockEffect(items, 'restore')
-  } catch (e: any) {
-    console.warn('库存还原失败', e?.message)
-  }
   await deleteRetailOrder(row.id)
   ElMessage.success('删除成功')
-  stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
 
 async function batchDelRetailOrders({ ids }: { ids: number[] }) {
   const rows: any[] = tableRef.value?.selectedRows ?? []
-  const totalPay = rows.reduce((s: number, r: any) => s + Number(r.pay_amount || 0), 0)
-  try {
-    await deductRetailFund(totalPay)
-  } catch (e: any) {
-    console.warn('零售账户余额回滚失败', e?.message)
-  }
-  for (const row of rows) {
+  const auditedRows = rows.filter((r: any) => r.status === 1)
+  if (auditedRows.length) {
+    const totalPay = auditedRows.reduce((s: number, r: any) => s + Number(r.pay_amount || 0), 0)
     try {
-      const items = JSON.parse(row.goods_info || '[]')
-      await retailStockEffect(items, 'restore')
-    } catch { /* ignore */ }
+      await deductRetailFund(totalPay)
+    } catch (e: any) {
+      console.warn('零售账户余额回滚失败', e?.message)
+    }
+    for (const row of auditedRows) {
+      try {
+        const items = parseGoods(row.goods_info)
+        await retailStockEffect(items, 'restore')
+      } catch { /* ignore */ }
+    }
+    stockRefreshStore.trigger()
   }
-  stockRefreshStore.trigger()
   return http.post('/retail/order/batchDel', { ids })
 }
 
@@ -326,6 +354,12 @@ async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
       await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
     }
   }
+}
+
+function parseGoods(info: any): any[] {
+  if (!info) return []
+  if (Array.isArray(info)) return info
+  try { return JSON.parse(info) } catch { return [] }
 }
 
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()

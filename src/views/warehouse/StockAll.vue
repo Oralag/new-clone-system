@@ -187,7 +187,10 @@
           <el-table-column label="库存" width="140" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small" effect="plain">
-                {{ formatStockWithUnits(row.id, getStockQty(row), row.unit_name) }}
+                <div style="line-height:1.3;text-align:center">
+                  <div>{{ formatStockMain(row.id, getStockQty(row), row.unit_name) }}</div>
+                  <div v-if="formatStockSub(row.id, getStockQty(row), row.unit_name)" style="opacity:0.45;font-size:10px">({{ formatStockSub(row.id, getStockQty(row), row.unit_name) }})</div>
+                </div>
               </el-tag>
             </template>
           </el-table-column>
@@ -198,9 +201,9 @@
           </el-table-column>
           <el-table-column label="移动均价" width="130" align="right">
             <template #default="{ row }">
-              <div>¥{{ getAvgPrice(row).toFixed(2) }}/{{ row.unit_name }}</div>
+              <div>¥{{ getAvgPrice(row).toFixed(3) }}/{{ row.unit_name }}</div>
               <div v-if="getLargeUnitPrice(row.id, getAvgPrice(row))" style="font-size:11px;color:#999">
-                ¥{{ getLargeUnitPrice(row.id, getAvgPrice(row))!.price.toFixed(2) }}/{{ getLargeUnitPrice(row.id, getAvgPrice(row))!.unit }}
+                ¥{{ getLargeUnitPrice(row.id, getAvgPrice(row))!.price.toFixed(3) }}/{{ getLargeUnitPrice(row.id, getAvgPrice(row))!.unit }}
               </div>
             </template>
           </el-table-column>
@@ -520,6 +523,8 @@ const stockQtyMap = ref<Record<number, number>>({})
 const stockPriceMap = ref<Record<number, number>>({})
 // 多单位换算 map: goods_id -> [{unit_name, ratio}] (大单位在前，小单位ratio=1在后)
 const unitConvertMap = ref<Record<number, { unit_name: string; ratio: number }[]>>({})
+// 快速换算查找：`${goods_id}:${unit_name}` -> ratio（基础单位倍数）
+const unitRatioLookup = ref<Record<string, number>>({})
 
 async function loadUnitConvertMap() {
   // 只加载 multi_unit=true 的商品
@@ -528,23 +533,43 @@ async function loadUnitConvertMap() {
     try {
       const res = await getUnitConvert(g.id)
       const rows: any[] = res.data?.rows ?? []
-      if (rows.length) unitConvertMap.value[g.id] = rows.map((r: any) => ({ unit_name: r.unit_name, ratio: Number(r.ratio) }))
+      if (rows.length) {
+        unitConvertMap.value[g.id] = rows.map((r: any) => ({ unit_name: r.unit_name, ratio: Number(r.ratio) }))
+        for (const r of rows) {
+          unitRatioLookup.value[`${g.id}:${r.unit_name}`] = Number(r.ratio)
+        }
+      }
     } catch {}
   }))
 }
 
+// 将 goods_info item 的数量换算为基础单位数量
+function toBaseQty(goodsId: number, unitName: string, num: number): number {
+  const ratio = unitRatioLookup.value[`${goodsId}:${unitName}`]
+  return ratio ? num * ratio : num
+}
+
 // 将小单位数量换算为 "X大单位 Y小单位" 格式
 function formatStockWithUnits(goodsId: number, qty: number, baseUnit: string): string {
+  return formatStockMain(goodsId, qty, baseUnit)
+}
+
+// 主显示：总基础单位数量
+function formatStockMain(goodsId: number, qty: number, baseUnit: string): string {
+  return `${qty.toFixed(0)} ${baseUnit}`
+}
+
+// 辅助显示：几大单位几小单位，仅在有大单位时返回
+function formatStockSub(goodsId: number, qty: number, baseUnit: string): string {
   const units = unitConvertMap.value[goodsId]
-  if (!units || units.length < 2) return `${qty.toFixed(0)} ${baseUnit}`
-  // 找比例最大的大单位
+  if (!units || units.length < 2) return ''
   const largeUnit = units.reduce((a, b) => b.ratio > a.ratio ? b : a)
-  if (largeUnit.ratio <= 1) return `${qty.toFixed(0)} ${baseUnit}`
+  if (largeUnit.ratio <= 1) return ''
   const large = Math.floor(qty / largeUnit.ratio)
   const small = qty % largeUnit.ratio
-  if (large === 0) return `${small.toFixed(0)} ${baseUnit}`
-  if (small === 0) return `${large} ${largeUnit.unit_name}`
-  return `${large} ${largeUnit.unit_name} ${small.toFixed(0)} ${baseUnit}`
+  if (large === 0) return ''
+  if (small === 0) return `${large}${largeUnit.unit_name}`
+  return `${large}${largeUnit.unit_name}${small.toFixed(0)}${baseUnit}`
 }
 
 // 获取大单位的移动均价（= 小单位均价 × 换算比）
@@ -763,7 +788,7 @@ function selectCate(id: number) {
 async function loadAllGoods() {
   const res = await getGoodsList({ list_rows: 2000 })
   allGoods.value = res.data?.rows ?? []
-  loadUnitConvertMap()
+  await loadUnitConvertMap()
 }
 
 async function loadStockMap(warehouseId = 0) {
@@ -788,6 +813,11 @@ async function loadStockMap(warehouseId = 0) {
 
       // 采购入库单
       const ihRows: any[] = ihRes.data?.rows ?? []
+      // 建 goods_sn -> goods_id 映射，用于单位换算
+      const snToGid: Record<string, number> = {}
+      for (const g of allGoods.value) {
+        if (g.goods_sn) snToGid[g.goods_sn] = g.id
+      }
       for (const ih of ihRows) {
         if (Number(ih.status) !== 1) continue
         try {
@@ -795,11 +825,15 @@ async function loadStockMap(warehouseId = 0) {
           for (const item of items) {
             const sn = item.goods_sn
             if (!sn) continue
-            const qty = Number(item.num || 0)
+            const rawQty = Number(item.num || 0)
             const price = Number(item.price || 0)
-            if (qty > 0 && price > 0) {
-              snTotalCost[sn] = (snTotalCost[sn] || 0) + qty * price
-              snTotalQty[sn] = (snTotalQty[sn] || 0) + qty
+            if (rawQty > 0 && price > 0) {
+              // 换算为基础单位数量和单价
+              const gid = snToGid[sn] || 0
+              const baseQty = gid ? toBaseQty(gid, item.unit_name, rawQty) : rawQty
+              const basePrice = baseQty > 0 ? (rawQty * price) / baseQty : price
+              snTotalCost[sn] = (snTotalCost[sn] || 0) + baseQty * basePrice
+              snTotalQty[sn] = (snTotalQty[sn] || 0) + baseQty
             }
           }
         } catch {}
@@ -896,7 +930,7 @@ async function loadActivityMaps() {
           const qty = Number(item.num || 0)
           if (gid) {
             goodsInThisOrder.add(gid)
-            fqMap[gid] = (fqMap[gid] || 0) + qty // 入库 +
+            fqMap[gid] = (fqMap[gid] || 0) + toBaseQty(gid, item.unit_name, qty) // 入库 +
           }
         }
         for (const gid of goodsInThisOrder) {
@@ -920,7 +954,7 @@ async function loadActivityMaps() {
             const qty = Number(item.num || 0)
             if (gid) {
               goodsInThisReturn.add(gid)
-              fqMap[gid] = (fqMap[gid] || 0) - qty // 退货出库 -
+              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty) // 退货出库 -
             }
           }
           for (const gid of goodsInThisReturn) {
@@ -947,7 +981,7 @@ async function loadActivityMaps() {
             if (gid) {
               goodsInThisOrder.add(gid)
               dMap[gid] = (dMap[gid] || 0) + qty
-              fqMap[gid] = (fqMap[gid] || 0) - qty // 销售出库 -
+              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty) // 销售出库 -
             }
           }
           for (const gid of goodsInThisOrder) {
@@ -958,8 +992,8 @@ async function loadActivityMaps() {
     } catch { /* ignore */ }
     saleCountMap.value = sMap
 
-    // Retail (零售出库)
-    const retailRows: any[] = retailRes.status === 'fulfilled' ? (retailRes.value.data?.rows ?? []) : []
+    // Retail (零售出库) — 只统计已审核
+    const retailRows: any[] = (retailRes.status === 'fulfilled' ? (retailRes.value.data?.rows ?? []) : []).filter((r: any) => r.status === 1)
     const rMap: Record<number, number> = {}
     for (const r of retailRows) {
       try {
@@ -971,7 +1005,7 @@ async function loadActivityMaps() {
           if (gid) {
             goodsInThisOrder.add(gid)
             dMap[gid] = (dMap[gid] || 0) + qty
-            fqMap[gid] = (fqMap[gid] || 0) - qty // 零售出库 -
+            fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty) // 零售出库 -
           }
         }
         for (const gid of goodsInThisOrder) {
@@ -995,7 +1029,7 @@ async function loadActivityMaps() {
             const qty = Number(item.num || 0)
             if (gid) {
               goodsInThis.add(gid)
-              fqMap[gid] = (fqMap[gid] || 0) + qty // 其他入库 +
+              fqMap[gid] = (fqMap[gid] || 0) + toBaseQty(gid, item.unit_name, qty) // 其他入库 +
             }
           }
           for (const gid of goodsInThis) {
@@ -1019,7 +1053,7 @@ async function loadActivityMaps() {
             const qty = Number(item.num || 0)
             if (gid) {
               goodsInThis.add(gid)
-              fqMap[gid] = (fqMap[gid] || 0) - qty // 其他出库 -
+              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty) // 其他出库 -
             }
           }
           for (const gid of goodsInThis) {
@@ -1344,7 +1378,8 @@ onMounted(async () => {
   window.addEventListener('resize', onResize)
   loading.value = true
   try {
-    await Promise.allSettled([loadMeta(), loadCates(), loadAllGoods(), loadStockMap(), loadActivityMaps()])
+    await loadAllGoods()
+    await Promise.allSettled([loadMeta(), loadCates(), loadStockMap(), loadActivityMaps()])
   } finally {
     loading.value = false
   }

@@ -319,21 +319,6 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         result = res?.code === 1 ? `销售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
-      case 'browse_books': {
-        const bks = books || []
-        const keyword = input.keyword?.toLowerCase() || ''
-        const filtered = keyword
-          ? bks.filter((b: any) => b.title?.toLowerCase().includes(keyword) || b.tags?.some((t: string) => t.toLowerCase().includes(keyword)))
-          : bks
-        result = `图书馆共 ${filtered.length} 本书。${JSON.stringify(filtered.map((b: any) => ({ id: b.id, 书名: b.title, 作者: b.author, 标签: b.tags })))}`
-        break
-      }
-      case 'add_book': {
-        const id = `book_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
-        const tags = input.tags ? String(input.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
-        result = JSON.stringify({ status: 'added', id, title: input.title, content: input.content, author: 'ai-assistant', tags, createdAt: new Date().toISOString(), note: '新书已添加到图书馆书架' })
-        break
-      }
       default:
         result = `未知工具：${name}`
     }
@@ -351,7 +336,7 @@ function detectIntent(text: string): 'query' | 'create' | 'navigate' | 'general'
 }
 
 function getSystemPrompt(intent: string): string {
-  const BASE = `你是数字游牧ERP系统的内置AI助手，运行在系统内部，可以直接调用工具操作ERP数据。绝对禁止说"我无法直接操作"、"需要您手动"等推脱性语句。回复简洁友好，中文。`
+  const BASE = `你是数字游牧ERP管家，数字游牧ERP系统的内置AI助手，运行在系统内部，可以直接调用工具操作ERP数据。你的名字是"ERP管家"，不是Claude，不是AI助手，不要透露底层模型信息。绝对禁止说"我无法直接操作"、"需要您手动"等推脱性语句。回复简洁友好，中文。`
   const CORRECTION_RULE = `
 【纠错规则——最高优先级】
 用户说"写错了"、"录错了"、"改一下"、"名字不对"、"删除"等，必须：
@@ -457,8 +442,6 @@ const allTools = [
   { name: 'delete_purchase_order', description: '删除采购订单（用于删除错误的采购单，需先用 query_purchases 查到ID）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '采购订单ID' } }, required: ['id'] } },
   { name: 'delete_sale_order', description: '删除销售合同/订单（用于删除错误的销售单，需先用 query_sales 查到ID）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '销售订单ID' } }, required: ['id'] } },
   { name: 'navigate_to', description: '跳转到ERP系统的指定页面', input_schema: { type: 'object', properties: { page: { type: 'string' } }, required: ['page'] } },
-  { name: 'browse_books', description: '查阅图书馆书架上的书本（标题、作者、标签）', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '按标题或标签筛选' } } } },
-  { name: 'add_book', description: '往图书馆书架上添加新书', input_schema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' }, tags: { type: 'string', description: '逗号分隔标签' } }, required: ['title', 'content'] } },
 ]
 
 export const onRequestOptions: PagesFunction = async () => {

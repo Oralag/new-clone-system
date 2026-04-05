@@ -84,11 +84,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
-import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList, getReceivableList } from '@/api/finance'
+import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList } from '@/api/finance'
 import http from '@/api/http'
-import { normalizeProcureReturnFinanceRows, applyProcureReturnsToPayableRows } from '@/utils/procureReturnFinance'
+import { normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { fmtDt } from '@/utils/date'
@@ -101,8 +101,13 @@ const purchaseOrdersForLabel = ref<any[]>([])
 const supplierListForLabel = ref<any[]>([])
 
 const filterKeyword = ref('')
-const filterType = ref((route.query.type === 'income' || route.query.type === 'expense') ? route.query.type as string : '')
+const filterType = ref('')
 const filterSource = ref('')
+
+watchEffect(() => {
+  const t = route.query.type
+  filterType.value = (t === 'income' || t === 'expense') ? t as string : ''
+})
 const currentPage = ref(1)
 const pageSize = ref(20)
 
@@ -172,18 +177,15 @@ onMounted(async () => {
       getPayReceiptList({ list_rows: 1000 }),
       getExpenseList({ list_rows: 1000 }),
       http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
-      http.get('/finance/PayAccounts/index', { params: { list_rows: 500 } }),
       http.get('/finance/Prepay/index', { params: { list_rows: 1000 } }),
       getFundList({ list_rows: 200 }),
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
-      getReceivableList({ list_rows: 1000 }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
       http.get('/stock/PurchaseOrder/index', { params: { list_rows: 1000 } }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
-      http.get('/shop/ContractOrder/index', { params: { status: 1, list_rows: 1000 } }),
     ])
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
-    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, payableRes, prepayRes, fundRes, returnRes, receivableRes, saleReturnRes, procureRes, supRes, contractRes] = settled.map((_, i) => ok(i))
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, prepayRes, fundRes, returnRes, saleReturnRes, procureRes, supRes] = settled.map((_, i) => ok(i))
     purchaseOrdersForLabel.value = procureRes.data?.rows ?? []
     supplierListForLabel.value = supRes.data?.rows ?? []
 
@@ -206,30 +208,7 @@ onMounted(async () => {
       })
     }
 
-    // 已审核销售合同 —— 补充收款单缺失时的销售收入（使用折后金额）
-    const contracts: any[] = contractRes.data?.rows ?? contractRes.data?.list ?? []
-    const collectOrderSns = new Set(collects.map((r: any) => String(r?.order_sn || r?.order_no || '').trim()).filter(Boolean))
-    for (const r of contracts) {
-      // 从备注中提取合同编号，如 "[NO:HT20260321017]"
-      const remarkMatch = String(r.remark || '').match(/\[NO:([^\]]+)\]/)
-      const contractNo = remarkMatch?.[1] || String(r.order_sn || r.contract_no || '').trim()
-      // 如果已有对应收款单，跳过避免重复
-      if (contractNo && collectOrderSns.has(contractNo)) continue
-      const amt = Number(r.after_discount || r.total_amount || 0)
-      if (amt <= 0) continue
-      items.push({
-        date: fmtDt(r.sign_date || r.contract_date || r.created_at),
-        fund_name: r.receive_account || '—',
-        type: 'income',
-        source: '销售合同',
-        name: r.customer_name || '—',
-        order_no: contractNo || '',
-        amount: amt,
-        remark: r.remark || '',
-      })
-    }
-
-    const retails: any[] = retailRes.data?.rows ?? retailRes.data?.list ?? []
+    const retails: any[] = (retailRes.data?.rows ?? retailRes.data?.list ?? []).filter((r: any) => r.status === 1)
     for (const r of retails) {
       items.push({
         date: fmtDt(r.order_date || r.create_time),
@@ -238,7 +217,7 @@ onMounted(async () => {
         source: '零售单',
         name: r.customer_name || r.member_name || '散客',
         order_no: r.order_sn || r.order_no || '',
-        amount: Number(r.total_amount || r.pay_amount || 0),
+        amount: Number(r.pay_amount || r.total_amount || 0),
         remark: r.remark || '',
       })
     }
@@ -318,7 +297,7 @@ onMounted(async () => {
     }
 
     const saleReturnFinanceRows = buildSaleReturnSettlementRows(
-      receivableRes.data?.rows ?? receivableRes.data?.list ?? [],
+      [],
       normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? saleReturnRes.data?.list ?? [])
     )
     for (const r of saleReturnFinanceRows) {
@@ -344,12 +323,11 @@ onMounted(async () => {
     summary.income = incomeTotal
     summary.expense = expenseTotal
     summary.balance = incomeTotal - expenseTotal
-    // 未付款来源：应付账款（PayAccounts）+ 待付款费用
-    const payables = applyProcureReturnsToPayableRows(payableRes.data?.rows ?? payableRes.data?.list ?? [], normalizedReturns)
+    // 未付款来源：待付款费用（PayAccounts接口无数据，采购应付在Payable页面查看）
     const pendingExpenseTotal = expenses
       .filter((r: any) => r.payment_status === 'pending')
       .reduce((s: number, r: any) => s + Math.max(0, Number(r.amount || 0)), 0)
-    summary.unpaid = payables.reduce((s, r) => s + Math.max(0, Number(r.un_pay_amount || 0)), 0) + pendingExpenseTotal
+    summary.unpaid = pendingExpenseTotal
 
   } catch { /* ignore */ } finally {
     summaryLoading.value = false

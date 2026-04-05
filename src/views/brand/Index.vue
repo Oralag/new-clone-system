@@ -2,7 +2,7 @@
   <!-- 模式选择遮罩 -->
   <div v-if="shopStore.shopMode === null" class="brand-mode-overlay">
     <div class="brand-mode-grid">
-      <div class="brand-mode-card brand-mode-retail" @click="shopStore.setShopMode('retail')">
+      <div class="brand-mode-card brand-mode-retail" @click="router.push('/brand/retail')">
         <div class="brand-mode-icon retail">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
         </div>
@@ -13,7 +13,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
-      <div class="brand-mode-card brand-mode-wholesale" @click="shopStore.setShopMode('wholesale')">
+      <div class="brand-mode-card brand-mode-wholesale" @click="router.push('/brand/wholesale')">
         <div class="brand-mode-icon wholesale">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </div>

@@ -67,8 +67,10 @@ http.interceptors.response.use(
     const isMutation = method === 'POST' || method === 'PUT' || method === 'DELETE'
     if (status === 401 || status === 403) {
       localStorage.removeItem(TOKEN_NAME)
-      ElMessage.error('无访问权限，请重新登录')
-      router.push('/login')
+      if (router.currentRoute.value.path !== '/login') {
+        ElMessage.error('无访问权限，请重新登录')
+        router.push('/login')
+      }
     } else if (isMutation && status && status !== 404) {
       const messages: Record<number, string> = { 400: '请求参数错误', 500: '服务器内部错误' }
       ElMessage.error(messages[status] ?? '操作失败，请重试')

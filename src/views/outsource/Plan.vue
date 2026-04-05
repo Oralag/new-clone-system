@@ -196,8 +196,8 @@ const totalNum=computed(()=>fd.items.reduce((s,r)=>s+(Number(r.plan_num)||0),0))
 const totalAmount=computed(()=>fd.items.reduce((s,r)=>s+(Number(r.plan_num)||0)*(Number(r.unit_price)||0),0))
 
 async function openAdd(){Object.assign(fd,defaultFd());fd.items=[];isView.value=false;showForm.value=true;await loadSuppliers()}
-async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=false;showForm.value=true;await loadSuppliers()}
-async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=true;showForm.value=true;await loadSuppliers()}
+async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=Array.isArray(row.goods_info)?row.goods_info:JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=false;showForm.value=true;await loadSuppliers()}
+async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});try{fd.items=Array.isArray(row.goods_info)?row.goods_info:JSON.parse(row.goods_info||'[]')}catch{fd.items=[]};fd.items.forEach(calcRow);isView.value=true;showForm.value=true;await loadSuppliers()}
 function backToList(){showForm.value=false;tableRef.value?.refresh()}
 
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()

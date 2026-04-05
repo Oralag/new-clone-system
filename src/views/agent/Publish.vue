@@ -341,17 +341,50 @@ async function removeCard(idx: number) {
   }
 }
 
-function publishOne(idx: number) {
-  ElMessage.success(`「${filtered.value[idx].platformName}」发布成功（模拟）`)
+async function publishOne(idx: number) {
+  const item = filtered.value[idx]
+  try {
+    ElMessage.info(`正在发布到「${item.platformName}」...`)
+    let title = item.topic || '新内容'
+    let content = displayContent(item)
+    if (item.type === 'poster') {
+      try {
+        const obj = JSON.parse(item.content)
+        title = obj.title || title
+        content = obj.body || content
+      } catch {}
+    }
+    // 收集图片（poster 类型有 imageUrl）
+    const images: string[] = []
+    if (item.imageUrl) images.push(item.imageUrl)
+
+    const res = await fetch('/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: item.platform, title, content, images }),
+    })
+    const data = await res.json()
+    if (data.status === 'ok') {
+      ElMessage.success(`「${item.platformName}」发布成功！🎉`)
+    } else if (data.status === 'pending') {
+      ElMessage.warning(data.message)
+    } else {
+      ElMessage.error(`发布失败：${data.message || '未知错误'}`)
+    }
+  } catch (e: any) {
+    ElMessage.error(`发布失败：${e.message}`)
+  }
 }
 
 function previewCard(idx: number) {
   previewIdx.value = idx
 }
 
-function batchPublish() {
+async function batchPublish() {
   if (selected.value.length === 0) return
-  ElMessage.success(`已批量发布 ${selected.value.length} 条内容（模拟）`)
+  for (const idx of selected.value) {
+    await publishOne(idx)
+  }
   selected.value = []
 }
 </script>

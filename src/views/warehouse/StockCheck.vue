@@ -206,6 +206,7 @@ const fd = reactive({
 })
 
 function parseItems(info: any) {
+  if (Array.isArray(info)) return info
   if (!info) return []
   try { return typeof info === 'string' ? JSON.parse(info) : info } catch { return [] }
 }

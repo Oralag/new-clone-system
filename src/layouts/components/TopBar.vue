@@ -44,9 +44,31 @@
       </el-tooltip>
 
       <el-tooltip content="消息通知" placement="bottom">
-        <button class="action-btn">
-          <el-icon :size="18"><Bell /></el-icon>
-        </button>
+        <el-popover placement="bottom-end" :width="360" trigger="click" v-model:visible="notifVisible">
+          <template #reference>
+            <button class="action-btn notif-btn" @click="openNotifications">
+              <el-icon :size="18"><Bell /></el-icon>
+              <span v-if="unreadCount > 0" class="notif-badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+            </button>
+          </template>
+          <div class="notif-panel">
+            <div class="notif-header">
+              <span class="notif-title">智能体通知</span>
+              <el-button v-if="notifications.length > 0" link size="small" @click="notifications = []">清空</el-button>
+            </div>
+            <div v-if="notifications.length === 0" class="notif-empty">暂无新通知</div>
+            <div v-else class="notif-list">
+              <div v-for="n in notifications" :key="n.id" class="notif-item">
+                <div class="notif-item-header">
+                  <span class="notif-tag" :class="n.type">{{ { morning: '早报', noon: '午检', evening: '晚结' }[n.type] }}</span>
+                  <span class="notif-time">{{ n.time }}</span>
+                </div>
+                <div class="notif-item-title">{{ n.title }}</div>
+                <div class="notif-item-content">{{ n.content }}</div>
+              </div>
+            </div>
+          </div>
+        </el-popover>
       </el-tooltip>
 
       <el-dropdown trigger="click" @command="handleUserCmd">
@@ -149,9 +171,42 @@ onMounted(async () => {
       if (name) appStore.setCompanyName(name)
     } catch { /* 静默失败，不影响页面 */ }
   }
+  // 每5分钟拉一次通知（检测是否有早中晚推送）
+  await fetchNotifications()
+  notifTimer = setInterval(fetchNotifications, 5 * 60 * 1000)
 })
 
-onUnmounted(() => { if (clockTimer) clearInterval(clockTimer) })
+onUnmounted(() => {
+  if (clockTimer) clearInterval(clockTimer)
+  if (notifTimer) clearInterval(notifTimer)
+})
+
+// ── 智能体通知 ────────────────────────────────────────────────────────────────
+interface Notification { id: string; type: 'morning' | 'noon' | 'evening'; title: string; content: string; time: string }
+const notifications = ref<Notification[]>([])
+const notifVisible = ref(false)
+const unreadCount = ref(0)
+let notifTimer: ReturnType<typeof setInterval> | null = null
+
+async function fetchNotifications() {
+  try {
+    const res = await fetch('/api/notifications', {
+      headers: { 'x-erp-token': localStorage.getItem('erp_token') || '' }
+    })
+    if (!res.ok) return
+    const { messages } = await res.json()
+    if (messages?.length > 0) {
+      notifications.value.unshift(...messages)
+      if (notifications.value.length > 20) notifications.value.splice(20)
+      unreadCount.value += messages.length
+    }
+  } catch { /* 静默失败 */ }
+}
+
+function openNotifications() {
+  unreadCount.value = 0
+  notifVisible.value = !notifVisible.value
+}
 
 const SUPER_ADMIN = '17747344571'
 const isSuperAdmin = computed(() => {
@@ -356,4 +411,40 @@ async function handleUserCmd(cmd: string) {
   font-size: 11px;
   color: var(--dim);
 }
+
+/* 通知按钮 */
+.notif-btn { position: relative; }
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  pointer-events: none;
+}
+
+/* 通知面板 */
+.notif-panel { max-height: 480px; display: flex; flex-direction: column; }
+.notif-header { display: flex; align-items: center; justify-content: space-between; padding: 0 0 10px 0; border-bottom: 1px solid var(--gray, #f0f0f0); margin-bottom: 10px; }
+.notif-title { font-size: 14px; font-weight: 600; color: var(--dark, #1a1a1a); }
+.notif-empty { text-align: center; color: var(--dim, #aaa); font-size: 13px; padding: 24px 0; }
+.notif-list { overflow-y: auto; max-height: 400px; display: flex; flex-direction: column; gap: 12px; }
+.notif-item { padding: 12px; border-radius: 8px; background: var(--gray, #f8f8f6); border: 1px solid #ebebeb; }
+.notif-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.notif-tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+.notif-tag.morning { background: #FEF3C7; color: #D97706; }
+.notif-tag.noon { background: #DBEAFE; color: #2563EB; }
+.notif-tag.evening { background: #EDE9FE; color: #7C3AED; }
+.notif-time { font-size: 11px; color: var(--dim, #aaa); }
+.notif-item-title { font-size: 12px; font-weight: 600; color: var(--dark, #1a1a1a); margin-bottom: 4px; }
+.notif-item-content { font-size: 12px; color: var(--mid, #666); line-height: 1.6; white-space: pre-wrap; }
 </style>

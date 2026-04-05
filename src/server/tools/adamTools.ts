@@ -403,4 +403,104 @@ export const adamTools = [
       required: ['book_id', 'reason'],
     },
   },
+
+  // ── 浏览器手脚（Playwright） ──
+  {
+    name: 'browser_navigate',
+    description: '打开指定URL。用于访问任何网站，如小红书、微博、抖音等平台。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        url: { type: 'string' as const, description: '要打开的完整URL，如 https://www.xiaohongshu.com' },
+      },
+      required: ['url'],
+    },
+  },
+  {
+    name: 'browser_click',
+    description: '点击页面上的元素。可以用CSS选择器、文字内容或坐标定位。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        selector: { type: 'string' as const, description: 'CSS选择器（如 ".login-btn"、"#submit"）' },
+        text: { type: 'string' as const, description: '按文字内容点击（如 "登录"、"发布"）' },
+        x: { type: 'number' as const, description: '点击X坐标（与y一起用）' },
+        y: { type: 'number' as const, description: '点击Y坐标（与x一起用）' },
+      },
+    },
+  },
+  {
+    name: 'browser_type',
+    description: '在输入框中输入文字。可以用CSS选择器、label或placeholder定位输入框。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        text: { type: 'string' as const, description: '要输入的文字内容（必填）' },
+        selector: { type: 'string' as const, description: 'CSS选择器定位输入框' },
+        label: { type: 'string' as const, description: '按label文字定位输入框（如 "用户名"）' },
+        placeholder: { type: 'string' as const, description: '按placeholder定位输入框（如 "请输入手机号"）' },
+      },
+      required: ['text'],
+    },
+  },
+  {
+    name: 'browser_screenshot',
+    description: '对当前页面截图。用于查看页面当前状态，截图会以base64格式返回。',
+    parameters: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'browser_get_content',
+    description: '获取当前页面的文字内容。用于读取页面信息、确认操作结果。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        selector: { type: 'string' as const, description: '只提取指定区域的文字（CSS选择器，可选，默认整页）' },
+      },
+    },
+  },
+  {
+    name: 'browser_wait_for',
+    description: '等待页面上出现某个元素或文字。用于确认页面加载完成或操作成功。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        selector: { type: 'string' as const, description: '等待出现的CSS选择器' },
+        text: { type: 'string' as const, description: '等待出现的文字内容' },
+        timeout: { type: 'number' as const, description: '超时时间（毫秒），默认15000' },
+      },
+    },
+  },
+  {
+    name: 'browser_get_credential',
+    description: '从凭据保险箱获取指定平台的账号密码。在登录任何平台前，先调用这个工具获取凭据。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        site: { type: 'string' as const, description: '平台名称，如 xiaohongshu、weibo、douyin' },
+      },
+      required: ['site'],
+    },
+  },
+  {
+    name: 'browser_press_key',
+    description: '按下键盘按键，如回车、Tab等。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        key: { type: 'string' as const, description: '键名，如 Enter、Tab、Escape、ArrowDown' },
+      },
+      required: ['key'],
+    },
+  },
+  {
+    name: 'browser_close',
+    description: '关闭浏览器。任务完成后调用，释放资源。',
+    parameters: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
 ]

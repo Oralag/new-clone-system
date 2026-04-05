@@ -255,12 +255,15 @@ const isFromERP = computed(() => !!localStorage.getItem('erp_token'))
 
 // 每次进入品牌中心加载商品（不重置已有模式）
 onMounted(async () => {
-  // 从ERP跳转过来：强制重置模式，让用户每次选择
-  const fromERP = route.query.from === 'erp'
-  if (fromERP) {
+  // 根据当前路径设置模式
+  if (route.path === '/brand/retail') {
+    shopStore.setShopMode('retail')
+  } else if (route.path === '/brand/wholesale') {
+    shopStore.setShopMode('wholesale')
+  } else if (route.path === '/brand' || route.path === '/brand/') {
     shopStore.resetShopMode()
   }
-  // URL 参数 ?mode=wholesale|retail 直接设置模式
+  // URL 参数 ?mode=wholesale|retail 直接设置模式（优先级最高）
   const modeParam = route.query.mode as string
   if (modeParam === 'wholesale' || modeParam === 'retail') {
     shopStore.setShopMode(modeParam)
@@ -274,12 +277,21 @@ onMounted(async () => {
   updateMeta()
 })
 
-// 零售用户不能访问采购商申请页
+// 路径变化时同步模式
 watch(() => route.path, (path) => {
+  if (path === '/brand/retail') {
+    shopStore.setShopMode('retail')
+  } else if (path === '/brand/wholesale') {
+    shopStore.setShopMode('wholesale')
+  } else if (path === '/brand' || path === '/brand/') {
+    shopStore.resetShopMode()
+  }
+  // 零售用户不能访问采购商申请页
   if (shopStore.shopMode === 'retail' && path === '/brand/wholesale-apply') {
     router.replace('/brand/products')
   }
 }, { immediate: true })
+
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
   brandEdit.exitEditMode()
