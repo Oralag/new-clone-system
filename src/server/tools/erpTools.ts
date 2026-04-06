@@ -687,4 +687,64 @@ export const publishTools: FunctionDeclaration[] = [
   },
 ]
 
-export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools, ...publishTools]
+export const volcengineTools: FunctionDeclaration[] = [
+  {
+    name: 'generate_image_doubao',
+    description: '使用豆包 Seedream 模型生成高质量图片，适合小红书封面图、产品图、场景图。比 generate_image 质量更好，优先使用此工具生成图片。',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: '图片描述（中文或英文），越详细越好。包含：画面内容、风格、色调、构图、光线等',
+        },
+        ratio: {
+          type: 'string',
+          enum: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+          description: '图片比例。小红书封面用 3:4 或 1:1，横版用 16:9，默认 3:4',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'generate_video_jimeng',
+    description: '使用即梦 AI 生成真实感短视频（文字→视频），适合小红书/抖音短视频内容。异步生成，调用后返回任务ID，需要用 check_video_status 工具轮询结果。',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: '视频内容描述，越详细越好。包含：场景、人物动作、镜头运动、氛围、风格等',
+        },
+        duration: {
+          type: 'number',
+          enum: [5, 10],
+          description: '视频时长（秒），5秒或10秒，默认5',
+        },
+        ratio: {
+          type: 'string',
+          enum: ['16:9', '9:16', '1:1'],
+          description: '视频比例。竖屏短视频用 9:16，默认 9:16',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'check_video_status',
+    description: '查询即梦视频生成任务的状态，获取生成结果。在调用 generate_video_jimeng 后使用此工具轮询，直到状态为 succeeded。',
+    parameters: {
+      type: 'object',
+      properties: {
+        task_id: {
+          type: 'string',
+          description: 'generate_video_jimeng 返回的任务ID',
+        },
+      },
+      required: ['task_id'],
+    },
+  },
+]
+
+export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools, ...publishTools, ...volcengineTools]

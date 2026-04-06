@@ -28,6 +28,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
+const ready = ref(false)
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
@@ -101,7 +102,6 @@ onUnmounted(() => {
 })
 </script>
 
-<style>
 <style scoped>
 .ic-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99999;

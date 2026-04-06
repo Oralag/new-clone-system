@@ -47,6 +47,62 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
   )
 }
 
+// Volcengine HMAC-SHA256 request signing (compatible with AWS SigV4 style)
+async function volcSign(
+  accessKeyId: string,
+  secretAccessKey: string,
+  method: string,
+  path: string,
+  query: string,
+  body: string,
+  host: string,
+  service: string
+): Promise<Record<string, string>> {
+  const { createHmac, createHash } = await import('crypto')
+
+  const now = new Date()
+  const datestamp = now.toISOString().slice(0, 10).replace(/-/g, '')   // YYYYMMDD
+  const amzdate  = now.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z' // YYYYMMDDTHHmmssZ
+
+  const payloadHash = createHash('sha256').update(body).digest('hex')
+
+  // Canonical headers (must be sorted)
+  const canonicalHeaders = `content-type:application/json\nhost:${host}\nx-date:${amzdate}\n`
+  const signedHeaders = 'content-type;host;x-date'
+
+  const canonicalRequest = [
+    method,
+    path,
+    query,
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n')
+
+  const credentialScope = `${datestamp}/${service}/request`
+  const stringToSign = [
+    'HMAC-SHA256',
+    amzdate,
+    credentialScope,
+    createHash('sha256').update(canonicalRequest).digest('hex'),
+  ].join('\n')
+
+  const sign = (key: Buffer | string, msg: string) =>
+    createHmac('sha256', key).update(msg).digest()
+
+  const signingKey = sign(sign(sign(sign('volc' + secretAccessKey, datestamp), service), 'request'), 'aws4_request')
+  const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex')
+
+  const authorization = `HMAC-SHA256 Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+
+  return {
+    'Content-Type': 'application/json',
+    'Host': host,
+    'X-Date': amzdate,
+    'Authorization': authorization,
+  }
+}
+
 export interface ToolContext {
   flowResults?: Array<{
     platform: string
@@ -737,6 +793,99 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           return `${i + 1}. [${r.platform}] ${r.content_title}\n   ${r.publish_date} | 浏览${r.views.toLocaleString()} | 互动率${eng}%${r.notes ? ` | ${r.notes}` : ''}`
         }).join('\n')
         result = `📊 内容效果分析（共${records.length}条）\n\n总浏览量：${totalViews.toLocaleString()}\n平均互动率：${avgEngRate}%\n\n🏆 最高浏览：${topByViews?.content_title}（${topByViews?.views?.toLocaleString()}次）\n🔥 最高互动率：${topByEng?.content_title}\n\n近期内容列表：\n${list}`
+        break
+      }
+      case 'generate_image_doubao': {
+        const akId = process.env.VOLC_ACCESS_KEY_ID
+        const akSecret = process.env.VOLC_SECRET_KEY
+        if (!akId || !akSecret) { result = '❌ 未配置 VOLC_ACCESS_KEY_ID / VOLC_SECRET_KEY'; break }
+
+        const ratioMap: Record<string, { width: number; height: number }> = {
+          '1:1':  { width: 1024, height: 1024 },
+          '3:4':  { width: 768,  height: 1024 },
+          '4:3':  { width: 1024, height: 768  },
+          '9:16': { width: 576,  height: 1024 },
+          '16:9': { width: 1024, height: 576  },
+        }
+        const size = ratioMap[input.ratio || '3:4']
+        const body = JSON.stringify({
+          req_key: 'seedream_3_0_t2i_to_image',
+          prompt: input.prompt,
+          width: size.width,
+          height: size.height,
+          return_url: true,
+        })
+
+        try {
+          const headers = await volcSign(akId, akSecret, 'POST', '/', 'Action=CVProcess&Version=2022-08-31', body, 'visual.volcengineapi.com', 'cv')
+          const resp = await fetch('https://visual.volcengineapi.com/?Action=CVProcess&Version=2022-08-31', { method: 'POST', headers, body })
+          const data = await resp.json() as any
+          if (data?.code === 10000 && data?.data?.image_urls?.[0]) {
+            result = `IMAGE_URL:${data.data.image_urls[0]}\n✅ 豆包图片生成成功`
+          } else {
+            const encodedPrompt = encodeURIComponent(input.prompt || '')
+            const fallbackUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size.width}&height=${size.height}&nologo=true&model=flux`
+            result = `IMAGE_URL:${fallbackUrl}\n⚠️ 豆包暂不可用（${data?.message || JSON.stringify(data)}），已用备用生成`
+          }
+        } catch (e: any) {
+          const encodedPrompt = encodeURIComponent(input.prompt || '')
+          const fallbackUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size.width}&height=${size.height}&nologo=true&model=flux`
+          result = `IMAGE_URL:${fallbackUrl}\n⚠️ 豆包请求异常（${e.message}），已用备用生成`
+        }
+        break
+      }
+      case 'generate_video_jimeng': {
+        const akId = process.env.VOLC_ACCESS_KEY_ID
+        const akSecret = process.env.VOLC_SECRET_KEY
+        if (!akId || !akSecret) { result = '❌ 未配置 VOLC_ACCESS_KEY_ID / VOLC_SECRET_KEY'; break }
+
+        const ratioMap: Record<string, string> = { '16:9': '1280x720', '9:16': '720x1280', '1:1': '720x720' }
+        const body = JSON.stringify({
+          req_key: 'jimeng_video_t2v_async',
+          prompt: input.prompt,
+          duration: input.duration || 5,
+          resolution: ratioMap[input.ratio || '9:16'] || '720x1280',
+          return_url: true,
+        })
+
+        try {
+          const headers = await volcSign(akId, akSecret, 'POST', '/', 'Action=CVProcess&Version=2022-08-31', body, 'visual.volcengineapi.com', 'cv')
+          const resp = await fetch('https://visual.volcengineapi.com/?Action=CVProcess&Version=2022-08-31', { method: 'POST', headers, body })
+          const data = await resp.json() as any
+          if (data?.code === 10000 && data?.data?.task_id) {
+            result = `✅ 视频任务已提交\ntask_id: ${data.data.task_id}\n请用 check_video_status 工具查询进度（通常1-3分钟）`
+          } else {
+            result = `❌ 提交失败：${data?.message || JSON.stringify(data)}`
+          }
+        } catch (e: any) {
+          result = `❌ 请求异常：${e.message}`
+        }
+        break
+      }
+      case 'check_video_status': {
+        const akId = process.env.VOLC_ACCESS_KEY_ID
+        const akSecret = process.env.VOLC_SECRET_KEY
+        if (!akId || !akSecret) { result = '❌ 未配置 VOLC_ACCESS_KEY_ID / VOLC_SECRET_KEY'; break }
+
+        const body = JSON.stringify({ req_key: 'jimeng_video_t2v_async_result', task_id: input.task_id })
+
+        try {
+          const headers = await volcSign(akId, akSecret, 'POST', '/', 'Action=CVProcess&Version=2022-08-31', body, 'visual.volcengineapi.com', 'cv')
+          const resp = await fetch('https://visual.volcengineapi.com/?Action=CVProcess&Version=2022-08-31', { method: 'POST', headers, body })
+          const data = await resp.json() as any
+          const status = data?.data?.status
+          if (status === 'succeeded' && data?.data?.video_url) {
+            result = `VIDEO_URL:${data.data.video_url}\n✅ 视频生成完成！`
+          } else if (status === 'processing' || status === 'pending') {
+            result = `⏳ 仍在生成中（${status}），请稍后再查询`
+          } else if (status === 'failed') {
+            result = `❌ 生成失败：${data?.data?.message || '未知错误'}`
+          } else {
+            result = `查询结果：${JSON.stringify(data?.data || data)}`
+          }
+        } catch (e: any) {
+          result = `❌ 请求异常：${e.message}`
+        }
         break
       }
       case 'get_publish_queue': {

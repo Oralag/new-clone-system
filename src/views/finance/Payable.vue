@@ -125,7 +125,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import http from '@/api/http'
-import { getExpenseList } from '@/api/finance'
+import { getExpenseList, getPayReceiptList } from '@/api/finance'
 import { getSupplierList } from '@/api/procure'
 import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
@@ -183,9 +183,26 @@ async function load() {
       }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       getExpenseList({ list_rows: 1000 }),
+      getPayReceiptList({ list_rows: 2000 }),
     ])
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
-    const [orderRes, returnRes, supplierRes, expenseRes] = settled.map((_, i) => ok(i))
+    const [orderRes, returnRes, supplierRes, expenseRes, payReceiptRes] = settled.map((_, i) => ok(i))
+
+    // 构建已付 Map（3种匹配方式）
+    const paidById: Record<number, number> = {}
+    const paidByKey: Record<string, number> = {}
+    const paidBySn: Record<string, number> = {}
+    for (const r of (payReceiptRes.data?.rows ?? [])) {
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const sn = String(r.order_sn || '').trim()
+      const sup = String(r.supplier_name || r.contact_name || '').trim()
+      if (sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
+      const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
+      if (m1) { const id = Number(m1[1]); paidById[id] = (paidById[id] || 0) + amt }
+      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+      if (m2) { const s = m2[1].trim(); paidBySn[s] = (paidBySn[s] || 0) + amt }
+    }
 
     const orders: any[] = orderRes.data?.rows ?? []
 
@@ -209,7 +226,9 @@ async function load() {
       }
       const s = supplierMap.get(key)!
       const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-      const paidAmt = Number(o.pay_amount ?? 0)
+      const oSn = String(o.order_sn || o.order_no || '').trim()
+      const oSup = String(o.supplier_name || '').trim()
+      const paidAmt = paidById[o.id] || paidByKey[`${oSn}@@${oSup}`] || paidBySn[oSn] || 0
       const unpaid = Math.max(0, orderAmt - paidAmt)
       s.order_amount += orderAmt
       s.paid_amount += paidAmt

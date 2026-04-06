@@ -180,7 +180,7 @@
         <template v-if="editType === 'hero'">
           <div class="bi-field"><label>Hero 大图 URL</label><div class="bi-input-row"><input v-model="editData.heroImage" class="bi-input" placeholder="https://... 或点击上传" /><button class="bi-upload-btn" @click="upload(v => editData.heroImage = v)">上传</button></div><img v-if="editData.heroImage" :src="editData.heroImage" class="bi-preview" referrerpolicy="no-referrer" /></div>
           <div class="bi-field"><label>副标题标签（英文）</label><input v-model="editData.heroSubtitle" class="bi-input" placeholder="Future of Work" /></div>
-          <div class="bi-field"><label>主标题</label><input v-model="editData.heroTitle" class="bi-input" placeholder="重新定义数字游民生活" /></div>
+          <div class="bi-field"><label>主标题</label><textarea v-model="editData.heroTitle" class="bi-textarea" placeholder="重新定义数字游民生活" rows="2"></textarea></div>
           <div class="bi-field"><label>描述文字</label><textarea v-model="editData.heroDesc" class="bi-textarea"></textarea></div>
         </template>
         <!-- 故事图编辑 -->
@@ -324,7 +324,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 .brand-hero-content { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 60px; }
 .brand-hero-label { display: flex; align-items: center; gap: 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.25em; color: #0071e3; text-transform: uppercase; margin-bottom: 20px; }
 .brand-hero-line { width: 40px; height: 1px; background: rgba(0,113,227,0.6); }
-.brand-hero-title { font-size: clamp(36px, 5vw, 60px); font-weight: 800; color: #fff; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 20px; }
+.brand-hero-title { font-size: clamp(36px, 5vw, 60px); font-weight: 800; color: #fff; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 20px; white-space: pre-line; }
 .text-amber { color: #f59e0b; }
 .text-blue { color: #60a5fa; }
 .brand-hero-desc { font-size: 16px; color: rgba(255,255,255,0.75); max-width: 480px; line-height: 1.7; margin-bottom: 32px; border-left: 2px solid rgba(0,113,227,0.5); padding-left: 20px; }

@@ -658,7 +658,7 @@ export function aiChatPlugin(): Plugin {
 
         const chunks: Buffer[] = []
         for await (const chunk of req as any) chunks.push(chunk)
-        const { messages, agentId, brandContext } = JSON.parse(Buffer.concat(chunks).toString())
+        const { messages, agentId, brandContext, flowResults } = JSON.parse(Buffer.concat(chunks).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
         const agent = getAgent(agentId)
@@ -710,7 +710,12 @@ export function aiChatPlugin(): Plugin {
               } else if (fc.name === 'render_image') {
                 send({ type: 'text', text: '\n⏳ 图片渲染中，请稍候...\n' })
               }
-              const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken)
+              const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken, {
+                flowResults: flowResults || [],
+                onPublished: (index: number) => {
+                  send({ type: 'published', index })
+                },
+              })
               send({ type: 'tool_result', id: callId, name: fc.name, result })
               toolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
             }
@@ -1243,6 +1248,85 @@ ${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，�
         } catch (e: any) {
           res.end(JSON.stringify({ status: 'error', message: e.message }))
         }
+      })
+
+      // ── /api/generate-media — 豆包图片 / 即梦视频生成 ──────────────────────
+      server.middlewares.use('/api/generate-media', async (req, res, next) => {
+        if (req.method !== 'POST') return next()
+        res.setHeader('Content-Type', 'application/json')
+
+        let body = ''
+        req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+        req.on('end', async () => {
+          try {
+            const { type, prompt, ratio } = JSON.parse(body) as { type: 'image' | 'video'; prompt: string; ratio?: string }
+
+            const akId = process.env.VOLC_ACCESS_KEY_ID
+            const akSecret = process.env.VOLC_SECRET_KEY
+            if (!akId || !akSecret) {
+              res.end(JSON.stringify({ status: 'error', message: '未配置 VOLC_ACCESS_KEY_ID / VOLC_SECRET_KEY' }))
+              return
+            }
+
+            const { createHmac, createHash } = await import('crypto')
+            async function volcSign(
+              accessKeyId: string, secretAccessKey: string,
+              method: string, path: string, query: string,
+              bodyStr: string, host: string, service: string
+            ): Promise<Record<string, string>> {
+              const now = new Date()
+              const datestamp = now.toISOString().slice(0, 10).replace(/-/g, '')
+              const amzdate  = now.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
+              const payloadHash = createHash('sha256').update(bodyStr).digest('hex')
+              const canonicalHeaders = `content-type:application/json\nhost:${host}\nx-date:${amzdate}\n`
+              const signedHeaders = 'content-type;host;x-date'
+              const canonicalRequest = [method, path, query, canonicalHeaders, signedHeaders, payloadHash].join('\n')
+              const credentialScope = `${datestamp}/${service}/request`
+              const stringToSign = ['HMAC-SHA256', amzdate, credentialScope, createHash('sha256').update(canonicalRequest).digest('hex')].join('\n')
+              const sign = (key: Buffer | string, msg: string) => createHmac('sha256', key).update(msg).digest()
+              const signingKey = sign(sign(sign(sign('volc' + secretAccessKey, datestamp), service), 'request'), 'aws4_request')
+              const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex')
+              return {
+                'Content-Type': 'application/json', 'Host': host, 'X-Date': amzdate,
+                'Authorization': `HMAC-SHA256 Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
+              }
+            }
+
+            if (type === 'image') {
+              const ratioMap: Record<string, { width: number; height: number }> = {
+                '1:1': { width: 1024, height: 1024 }, '3:4': { width: 768, height: 1024 },
+                '4:3': { width: 1024, height: 768 }, '9:16': { width: 576, height: 1024 }, '16:9': { width: 1024, height: 576 },
+              }
+              const size = ratioMap[ratio || '3:4']
+              const reqBody = JSON.stringify({ req_key: 'seedream_3_0_t2i_to_image', prompt, width: size.width, height: size.height, return_url: true })
+              const headers = await volcSign(akId, akSecret, 'POST', '/', 'Action=CVProcess&Version=2022-08-31', reqBody, 'visual.volcengineapi.com', 'cv')
+              const resp = await fetch('https://visual.volcengineapi.com/?Action=CVProcess&Version=2022-08-31', { method: 'POST', headers, body: reqBody })
+              const data = await resp.json() as any
+              if (data?.code === 10000 && data?.data?.image_urls?.[0]) {
+                res.end(JSON.stringify({ status: 'ok', url: data.data.image_urls[0] }))
+              } else {
+                // 降级 Pollinations
+                const fallback = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${size.width}&height=${size.height}&nologo=true&model=flux`
+                res.end(JSON.stringify({ status: 'ok', url: fallback, fallback: true, reason: data?.message || JSON.stringify(data) }))
+              }
+            } else if (type === 'video') {
+              const ratioMap: Record<string, string> = { '16:9': '1280x720', '9:16': '720x1280', '1:1': '720x720' }
+              const reqBody = JSON.stringify({ req_key: 'jimeng_video_t2v_async', prompt, duration: 5, resolution: ratioMap[ratio || '9:16'] || '720x1280', return_url: true })
+              const headers = await volcSign(akId, akSecret, 'POST', '/', 'Action=CVProcess&Version=2022-08-31', reqBody, 'visual.volcengineapi.com', 'cv')
+              const resp = await fetch('https://visual.volcengineapi.com/?Action=CVProcess&Version=2022-08-31', { method: 'POST', headers, body: reqBody })
+              const data = await resp.json() as any
+              if (data?.code === 10000 && data?.data?.task_id) {
+                res.end(JSON.stringify({ status: 'ok', task_id: data.data.task_id }))
+              } else {
+                res.end(JSON.stringify({ status: 'error', message: data?.message || JSON.stringify(data) }))
+              }
+            } else {
+              res.end(JSON.stringify({ status: 'error', message: '不支持的 type' }))
+            }
+          } catch (e: any) {
+            res.end(JSON.stringify({ status: 'error', message: e.message }))
+          }
+        })
       })
 
       // ── WebSocket upgrade: OpenAI Realtime API 语音中继 ──────────────────

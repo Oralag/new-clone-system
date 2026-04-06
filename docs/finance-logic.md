@@ -1,6 +1,6 @@
 # 财务模块逻辑文档
 
-> 最后更新：2026-04-06  
+> 最后更新：2026-04-06（补充付款单 supplier_name 可能为空的注意事项）  
 > 用途：排查财务数据问题、修改计算逻辑时的参考手册
 
 ---
@@ -96,8 +96,10 @@ Overview.vue 的汇总数字必须与 FundFlow.vue 的明细合计一致。两�
 处理步骤：
   1. 先从 payRes（付款单）构建已付 Map（3种匹配）：
      - 方式1：`order_sn@@supplier_name` 精确匹配 → procurePaidByKey
-     - 方式2：备注 `采购单付款 #ID` → procurePaidById
+       ⚠️ 付款单的供应商名用 `supplier_name || contact_name`（两个字段都可能有值）
+     - 方式2：备注 `采购单付款 #ID` → procurePaidById（推荐，最可靠）
      - 方式3：备注 `采购单XXXXX审核自动生成` 提取单号 → procurePaidBySn（兼容历史数据）
+     - 优先级：方式2 > 方式1 > 方式3（取第一个非零值）
   2. 遍历采购订单，跳过 status !== 1（前端过滤）
   3. 按供应商 key 聚合：
      - key = `id:${supplier_id}` 或 `name:${supplier_name}`
@@ -319,7 +321,8 @@ getPayReceiptSupplierLabel(payRow, purchaseOrders, supplierList):
 **原因**：采购订单的付款状态是前端从付款单里反查计算的，`row.pay_amount` 字段是"审核时填的本次付款额"，不是累计已付。
 **正确算法**：
 1. 从 `/finance/PayReceipt/index` 取所有付款单
-2. 按 `order_sn@@supplier_name` 或备注 `采购单付款 #ID` 匹配累计已付金额
+2. 按备注 `采购单付款 #ID` 匹配（最可靠）或 `order_sn@@(supplier_name||contact_name)` 匹配累计已付金额
+   ⚠️ 付款单 `supplier_name` 字段可能为空（自动生成的记录），此时取 `contact_name`
 3. `欠款 = total_amount - 累计已付`
 4. 同时必须前端 `filter(r.status === 1)` 只算已审核单
 

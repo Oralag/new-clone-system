@@ -19,6 +19,7 @@ export interface FlowResult {
   videoStatus?: 'processing' | 'failed' | 'done' | 'idle' | 'generating'
   imageUrl?: string
   imageStatus?: 'processing' | 'failed' | 'done' | 'idle' | 'generating'
+  published?: boolean
 }
 
 export interface CopywritingResult {

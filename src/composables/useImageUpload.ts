@@ -57,8 +57,12 @@ export function useImageUpload() {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
-    input.onchange = async () => {
+    input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;'
+    document.body.appendChild(input)
+
+    const handler = async () => {
       const file = input.files?.[0]
+      document.body.removeChild(input)
       if (!file) return
       try {
         const dataUrl = await fileToDataUrl(file)
@@ -70,6 +74,7 @@ export function useImageUpload() {
         alert(e?.message || '图片处理失败，请重试')
       }
     }
+    input.addEventListener('change', handler)
     input.click()
   }
 

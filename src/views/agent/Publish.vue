@@ -29,7 +29,12 @@
             <button v-for="p in agentPrompts" :key="p" class="chip-btn" @click="publishChatRef?.sendQuickPrompt(p)">{{ p }}</button>
           </div>
         </div>
-        <AgentChat agent-id="publisher" ref="publishChatRef" />
+        <AgentChat
+          agent-id="publisher"
+          ref="publishChatRef"
+          :context-data="{ flowResults: agentStore.flowResults }"
+          @content-published="markPublished"
+        />
       </section>
 
       <aside class="stats-aside">
@@ -103,7 +108,8 @@
         <div class="card-header">
           <div class="card-header-left">
             <span class="type-badge" :class="item.type">{{ typeLabel(item.type) }}</span>
-            <span class="card-time">{{ cardTime(idx) }}</span>
+            <span v-if="item.published" class="published-badge">✅ 已发布</span>
+            <span v-else class="card-time">{{ cardTime(idx) }}</span>
           </div>
           <div class="card-menu" @click.stop="toggleMenu(idx)">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -126,7 +132,7 @@
             <img :src="item.imageUrl" :alt="item.topic" />
           </div>
           <!-- 视频脚本 / 文案 / 图文文字 -->
-          <div class="card-text" :class="{ compact: item.type === 'poster' && item.imageUrl }" v-html="renderMd(item)" />
+          <div class="card-text" :class="{ compact: item.type === 'poster' && item.imageUrl }" v-html="renderPublishMd(item)" />
         </div>
 
         <!-- 编辑弹层 -->
@@ -177,7 +183,7 @@
             <div v-if="filtered[previewIdx]?.type === 'poster' && filtered[previewIdx]?.imageUrl" class="preview-image">
               <img :src="filtered[previewIdx].imageUrl" :alt="filtered[previewIdx].topic" />
             </div>
-            <div class="preview-content" v-html="renderMd(filtered[previewIdx])" />
+            <div class="preview-content" v-html="renderPublishMd(filtered[previewIdx])" />
           </div>
           <div class="preview-footer">
             <button class="btn-cancel-edit" @click="previewIdx = -1">关闭</button>
@@ -218,8 +224,8 @@ const agentPrompts = [
 const router = useRouter()
 const agentStore = useTrendingStore()
 
-const publishedCount = computed(() => agentStore.history.filter(h => h.status === 'published').length)
-const pendingCount = computed(() => agentStore.flowResults.length)
+const publishedCount = computed(() => agentStore.flowResults.filter(r => r.published).length)
+const pendingCount = computed(() => agentStore.flowResults.filter(r => !r.published).length)
 
 const showFilter = ref(false)
 const filterType = ref('')
@@ -290,6 +296,47 @@ function displayContent(item: any) {
   return item.content
 }
 
+// 从 AI 生成的完整内容中提取可直接发布的部分（正文 + 话题标签）
+// 去掉"配图建议"、"视频脚本方向"、"Captain备注"等策划内容
+function extractPublishContent(item: any): string {
+  const raw = displayContent(item)
+  if (!raw) return ''
+
+  // 找到策划内容的起始位置，截掉后面的内容
+  const cutPatterns = [
+    /\n\n?#{1,3}\s*🎬\s*视频脚本/,
+    /\n\n?#{1,3}\s*视频脚本/,
+    /\n\n?配图建议[（(（].*?[）)）][:：]/,
+    /\n\n?📸\s*配图建议/,
+    /\n\n?🖼\s*配图建议/,
+    /\n\n?视频脚本方向[（(（].*?[）)）][:：]/,
+    /\n\n?---+\s*\n#{1,3}\s*🎬/,
+    /\n\n?---+\s*\n#{1,3}\s*视频/,
+    /\n\n?>\s*💡\s*\*?\*?Captain/,
+    /\n\n?💡\s*\*?\*?Captain/,
+    /\n\n?---+\s*\n>\s*💡/,
+  ]
+  let text = raw
+  for (const pat of cutPatterns) {
+    const match = text.search(pat)
+    if (match > 0) {
+      text = text.slice(0, match).trim()
+      break
+    }
+  }
+
+  // 去掉开头的引导语（"以下是完整可发布文案 👇" 之类）
+  text = text.replace(/^.*?(?:以下是|👇|完整可发布文案|---\n)/s, '').trim()
+  // 去掉开头多余的分割线
+  text = text.replace(/^---+\n?/, '').trim()
+
+  return text
+}
+
+function renderPublishMd(item: any) {
+  return marked.parse(extractPublishContent(item) || '') as string
+}
+
 function renderMd(item: any) {
   return marked.parse(displayContent(item) || '') as string
 }
@@ -325,7 +372,7 @@ function saveEdit(idx: number) {
 
 async function copyContent(item: any) {
   menuOpen.value = -1
-  await navigator.clipboard.writeText(displayContent(item))
+  await navigator.clipboard.writeText(extractPublishContent(item))
   ElMessage.success('已复制到剪贴板')
 }
 
@@ -343,37 +390,24 @@ async function removeCard(idx: number) {
 
 async function publishOne(idx: number) {
   const item = filtered.value[idx]
-  try {
-    ElMessage.info(`正在发布到「${item.platformName}」...`)
-    let title = item.topic || '新内容'
-    let content = displayContent(item)
-    if (item.type === 'poster') {
-      try {
-        const obj = JSON.parse(item.content)
-        title = obj.title || title
-        content = obj.body || content
-      } catch {}
-    }
-    // 收集图片（poster 类型有 imageUrl）
-    const images: string[] = []
-    if (item.imageUrl) images.push(item.imageUrl)
+  const publishText = extractPublishContent(item)
 
-    const res = await fetch('/api/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: item.platform, title, content, images }),
+  // 小红书：复制内容 + 打开发布页
+  if (item.platform === 'xiaohongshu') {
+    await navigator.clipboard.writeText(publishText)
+    window.open('https://creator.xiaohongshu.com/publish/publish', '_blank')
+    ElMessage({
+      message: '内容已复制，在小红书发布页粘贴即可 📋',
+      type: 'success',
+      duration: 4000,
     })
-    const data = await res.json()
-    if (data.status === 'ok') {
-      ElMessage.success(`「${item.platformName}」发布成功！🎉`)
-    } else if (data.status === 'pending') {
-      ElMessage.warning(data.message)
-    } else {
-      ElMessage.error(`发布失败：${data.message || '未知错误'}`)
-    }
-  } catch (e: any) {
-    ElMessage.error(`发布失败：${e.message}`)
+    const realIdx = agentStore.flowResults.indexOf(item)
+    markPublished(realIdx)
+    return
   }
+
+  // 其他平台：提示暂未接入
+  ElMessage.warning(`「${item.platformName}」暂未接入自动发布，请手动复制内容发布`)
 }
 
 function previewCard(idx: number) {
@@ -386,6 +420,13 @@ async function batchPublish() {
     await publishOne(idx)
   }
   selected.value = []
+}
+
+function markPublished(realIdx: number) {
+  if (realIdx < 0 || realIdx >= agentStore.flowResults.length) return
+  const updated = [...agentStore.flowResults]
+  updated[realIdx] = { ...updated[realIdx], published: true }
+  agentStore.setFlowResults(updated)
 }
 </script>
 
@@ -528,6 +569,7 @@ async function batchPublish() {
 .type-badge.video_script { background: rgba(239,68,68,0.1);   color: #dc2626; }
 
 .card-time { font-size: 11px; color: #999999; }
+.published-badge { font-size: 11px; color: #10b981; font-weight: 600; }
 
 .card-menu {
   position: relative; color: #999999; cursor: pointer; padding: 4px;

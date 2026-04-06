@@ -825,6 +825,7 @@ function getInhouseQty(row: any): number {
 
 const paidMapById = ref<Record<number, number>>({})
 const paidMapByKey = ref<Record<string, number>>({})
+const paidMapBySn = ref<Record<string, number>>({})
 
 function payKey(orderSn: string, supplierName: string): string {
   return `${String(orderSn || '').trim()}@@${String(supplierName || '').trim()}`
@@ -848,11 +849,16 @@ const payForm = reactive({
 function openPayDialog(row: any) {
   const total = Number(row.total_amount || 0)
   const paid = getPaidAmount(row)
+  const unpaid = Math.max(0, total - paid)
+  if (unpaid <= 0) {
+    ElMessage.info('该采购单已付清')
+    return
+  }
   payForm.orderId = row.id
   payForm.orderSn = row.order_sn || row.order_no || `PO${row.id}`
   payForm.supplierName = row.supplier_name || ''
-  payForm.unpaid = Math.max(0, total - paid)
-  payForm.amount = payForm.unpaid
+  payForm.unpaid = unpaid
+  payForm.amount = unpaid
   payForm.fund_id = null
   payForm.fund_name = ''
   payForm.pay_date = new Date().toISOString().slice(0, 10)
@@ -904,6 +910,7 @@ async function loadPaidMap() {
     const rows: any[] = res.data?.rows ?? []
     const idMap: Record<number, number> = {}
     const keyMap: Record<string, number> = {}
+    const snMap: Record<string, number> = {}
     for (const r of rows) {
       const amount = Number(r.amount || 0)
       if (!amount) continue
@@ -913,24 +920,33 @@ async function loadPaidMap() {
         const key = payKey(orderSn, supplierName)
         keyMap[key] = (keyMap[key] || 0) + amount
       }
-      // 兼容历史备注：采购单付款 #ID 或 采购单自动付款 #ID
-      const m = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
-      if (m) {
-        const id = Number(m[1])
+      // 兼容历史备注：采购单付款 #ID
+      const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
+      if (m1) {
+        const id = Number(m1[1])
         idMap[id] = (idMap[id] || 0) + amount
+      }
+      // 兼容历史备注：采购单XXXXX审核自动生成
+      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+      if (m2) {
+        const sn = m2[1].trim()
+        snMap[sn] = (snMap[sn] || 0) + amount
       }
     }
     paidMapById.value = idMap
     paidMapByKey.value = keyMap
+    paidMapBySn.value = snMap
   } catch {}
 }
 
 function getPaidAmount(row: any): number {
   const key = payKey(row.order_sn || row.order_no || '', row.supplier_name || '')
-  return paidMapByKey.value[key] || paidMapById.value[row.id] || 0
+  const sn = String(row.order_sn || row.order_no || '').trim()
+  return paidMapByKey.value[key] || paidMapById.value[row.id] || paidMapBySn.value[sn] || 0
 }
 
 function getPayStatus(row: any): { label: string; type: string } {
+  if (Number(row.status) !== 1) return { label: '—', type: 'info' }
   const total = Number(row.total_amount || 0)
   const paid = getPaidAmount(row)
   if (total <= 0) return { label: '—', type: 'info' }
@@ -1387,23 +1403,11 @@ async function handleSave(andAudit = false) {
 }
 
 async function handleDelete(row: any) {
-  await ElMessageBox.confirm('确定删除该采购单？', '提示', { type: 'warning' })
-  // 回滚资金账户余额（后端创建时已扣减，删除需加回）
-  try {
-    const payAmount = Number(row.pay_amount || 0)
-    const fundId = row.fund_id
-    if (payAmount > 0 && fundId) {
-      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-      const funds: any[] = fundRes.data?.rows ?? []
-      const fund = funds.find((f: any) => f.id === fundId)
-      if (fund) {
-        const newBalance = Number(fund.balance || 0) + payAmount
-        await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
-      }
-    }
-  } catch (e: any) {
-    console.warn('采购资金账户余额回滚失败', e?.message)
+  if (Number(row.status) === 1) {
+    ElMessage.warning('请先执行【反审核】，再删除该采购单')
+    return
   }
+  await ElMessageBox.confirm('确定删除该采购单？', '提示', { type: 'warning' })
   await deleteProcureOrder(row.id)
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
@@ -1411,27 +1415,10 @@ async function handleDelete(row: any) {
 
 async function batchDelProcureOrders({ ids }: { ids: number[] }) {
   const rows: any[] = tableRef.value?.selectedRows ?? []
-  // 按 fund_id 分组，分别加回余额
-  try {
-    const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-    const funds: any[] = fundRes.data?.rows ?? []
-    const refundMap: Record<number, number> = {}
-    for (const row of rows) {
-      const payAmount = Number(row.pay_amount || 0)
-      const fundId = Number(row.fund_id)
-      if (payAmount > 0 && fundId) {
-        refundMap[fundId] = (refundMap[fundId] || 0) + payAmount
-      }
-    }
-    for (const [fundId, amount] of Object.entries(refundMap)) {
-      const fund = funds.find((f: any) => f.id === Number(fundId))
-      if (fund) {
-        const newBalance = Number(fund.balance || 0) + amount
-        await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
-      }
-    }
-  } catch (e: any) {
-    console.warn('采购资金账户余额回滚失败', e?.message)
+  const auditedRows = rows.filter((r: any) => Number(r.status) === 1)
+  if (auditedRows.length) {
+    ElMessage.warning(`有 ${auditedRows.length} 条已审核的采购单无法删除，请先反审核再删除`)
+    return Promise.reject(new Error('存在已审核单据'))
   }
   return http.post('/stock/PurchaseOrder/batchDel', { ids })
 }
@@ -1518,12 +1505,23 @@ async function handleAudit(row: any, status: number) {
         console.warn('自动创建采购入库记录失败', e?.message)
       }
     }
-    // 审核通过：扣减资金账户余额（如有付款金额和账户）
+    // 审核通过：创建付款单记录 + 扣减资金账户余额（如有付款金额和账户）
     if (status === 1) {
       const payAmount = Number(row.pay_amount || 0)
       const fundId = Number(row.fund_id || 0)
       if (payAmount > 0 && fundId) {
         try {
+          const orderSn = row.order_sn || row.order_no || `PO${row.id}`
+          await createPayReceipt({
+            contact_type: 'supplier',
+            supplier_name: row.supplier_name || '',
+            amount: payAmount,
+            pay_date: (row.order_date || new Date().toISOString()).slice(0, 10),
+            fund_id: fundId,
+            fund_name: row.fund_name || '',
+            remark: `采购单${orderSn}审核自动生成`,
+            order_sn: orderSn,
+          })
           const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
           const funds: any[] = fundRes.data?.rows ?? []
           const fund = funds.find((f: any) => f.id === fundId)

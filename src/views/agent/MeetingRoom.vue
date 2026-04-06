@@ -582,6 +582,21 @@ function addUserMessage(text: string) {
   })
 }
 
+function addSystemMessage(agentId: keyof typeof STAFF, text: string) {
+  const staff = STAFF[agentId] || { title: '系统', emoji: '⚙️', color: '#888' }
+  meetingStore.addMessage({
+    id: uid(),
+    agentId,
+    agentName: staff.title,
+    agentEmoji: staff.emoji,
+    agentColor: staff.color,
+    role: 'assistant',
+    content: text,
+    timestamp: Date.now(),
+    isStreaming: false,
+  })
+}
+
 // ── 闲聊时 Captain 直接回复，不启动会议 ──
 async function handleCasualChat(text: string) {
   meetingStore.startMeeting(text)
@@ -703,7 +718,7 @@ async function runMeeting(topic: string) {
         trend: `你是广告公司的情报专员。Captain命令你就「${topic}」做营销策略分析。\n${brandContext || brandInfo}\n\n请从情报视角（200字以内）：\n- 核心问题诊断：品牌目前面临什么真实挑战\n- 2-3个可选策略方向及优劣势（结合品牌调性和竞品）\n- 优先推荐哪个方向，理由\n语气专业、有说服力，直接说分析，不客套。`,
         copywriter: `你是广告公司的文案专员。针对策略议题「${topic}」，给出内容层面的落地方案（150字以内）。\n${brandContext || brandInfo}\n- 核心传播信息（符合品牌调性和禁忌）\n- 推荐的内容形式和平台\n- 一个示范标题`,
         poster: `你是广告公司的设计专员。针对策略议题「${topic}」，给出视觉方向建议（150字以内）。\n${brandContext || brandInfo}\n- 视觉风格定位（符合品牌调性）\n- 关键视觉元素建议\n- 色调参考`,
-        video: `你是广告公司的视频专员。针对策略议题「${topic}」，给出视频内容策略（150字以内）。\n${brandContext || brandInfo}\n- 视频形式和时长建议\n- 核心叙事方向\n- 开头钩子设计`,
+        video: `你是广告公司的视频专员。针对策略议题「${topic}」，给出视频画面方向（150字以内）。\n${brandContext || brandInfo}\n- 建议的画面主题和氛围\n- 核心视觉元素\n- 目标平台\n注意：我们用即梦AI直接生成视频，不写脚本，说清楚画面方向即可。`,
         publisher: `你是广告公司的发布专员。针对策略议题「${topic}」，给出发布策略建议（150字以内）。\n${brandContext || brandInfo}\n- 平台优先级（结合品牌主要平台）\n- 发布时机建议\n- 话题标签策略`,
       }
 
@@ -723,14 +738,14 @@ async function runMeeting(topic: string) {
         .map(m => `【${m.agentName}】：${m.content}`)
         .join('\n\n')
       const captainSummary = await addStreamingMessage('captain',
-        `刚才的策略讨论内容如下：\n\n${strategyHistory}\n\n---\n议题：「${topic}」\n\n请作为Captain汇总（150字以内）：\n1. 明确推荐的策略方向\n2. 根据议题只分配真正需要的专员（不要全派）：需要文案才@文案专员，需要视频才@视频专员，需要图文/设计才@设计专员，需要排期才@发布专员\n3. 关键成功指标\n语气有决断力。`,
+        `刚才的策略讨论内容如下：\n\n${strategyHistory}\n\n---\n议题：「${topic}」\n\n请作为Captain汇总（150字以内）：\n1. 明确推荐的策略方向\n2. 根据议题只分配真正需要的专员：需要文案才@文案专员，需要AI生成视频才@视频专员（出视频生成词），需要AI生成配图才@设计专员（出图片生成词），需要排期才@发布专员\n3. 关键成功指标\n注意：视频专员出AI视频生成描述词，不写脚本。\n语气有决断力。`,
         brandContext
       )
       if (shouldStop) return finalizeMeeting()
 
       if (captainSummary.includes('@文案专员')) meetingStore.assignTask('copywriter', `围绕「${topic}」策略落地创作文案`)
-      if (captainSummary.includes('@视频专员')) meetingStore.assignTask('video', `制作「${topic}」相关视频脚本`)
-      if (captainSummary.includes('@设计专员')) meetingStore.assignTask('poster', `设计「${topic}」配套视觉物料`)
+      if (captainSummary.includes('@视频专员')) meetingStore.assignTask('video', `为「${topic}」生成视频画面描述词`)
+      if (captainSummary.includes('@设计专员')) meetingStore.assignTask('poster', `为「${topic}」生成配图描述词`)
       if (captainSummary.includes('@发布专员')) meetingStore.assignTask('publisher', `安排「${topic}」内容发布计划`)
 
       if (Object.keys(meetingStore.assignedTasks).length > 0 && !shouldStop) {
@@ -779,7 +794,7 @@ async function runMeeting(topic: string) {
       trend: `你是广告公司的情报专员。Captain命令你就议题「${topic}」分析市场趋势。\n${brandContext || brandInfo}\n\n请从情报视角（200字以内）：\n- 当前最相关的2-3个社交媒体热点或趋势\n- 内容机会窗口判断（结合品牌trendingFilters和主要平台）\n- 推荐最适合的平台和话题方向\n语气专业务实，直接说分析，不要客套话。`,
       copywriter: `你是广告公司的文案专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n基于前面的分析，请输出（200字以内）：\n- 核心文案方向（严格遵守品牌调性、禁忌词、禁用词）\n- 推荐2-3个平台专属文案角度\n- 一条示范标题（带emoji，符合品牌keywords）\n语气有创意感，体现专业文案风格。`,
       poster: `你是广告公司的设计专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n请输出视觉设计建议（150字以内）：\n- 海报/视觉内容的设计风格（符合品牌调性）\n- 1个最有创意的视觉表达方向\n- 色调/画面感参考\n语气有设计感，直接说建议。`,
-      video: `你是广告公司的视频专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n请输出视频内容方向（150字以内）：\n- 短视频形式和时长建议（针对品牌主要平台）\n- 前3秒钩子设计\n- 核心叙事节奏\n语气有节奏感，直接说方向。`,
+      video: `你是广告公司的视频专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n我们用AI直接生成视频，你负责给出视频生成描述词（150字以内）：\n- 画面核心元素（主体、场景、动作）\n- 视觉风格（色调、镜头感）\n- 情绪氛围\n格式：直接输出可给AI生成视频的画面描述词，不要写脚本，不要分镜，不要口播文案。`,
       publisher: `你是广告公司的发布专员。\n议题：「${topic}」\n${brandContext || brandInfo}\n\n请输出发布策略（150字以内）：\n- 平台优先级排序（参考品牌mainPlatforms和publishFreq）\n- 最佳发布时间建议\n- 话题标签策略\n语气实操性强。`,
     }
 
@@ -801,14 +816,14 @@ async function runMeeting(topic: string) {
       .map(m => `【${m.agentName}】：${m.content}`)
       .join('\n\n')
     const captainSummary = await addStreamingMessage('captain',
-      `刚才的会议讨论内容如下：\n\n${discussionHistory}\n\n---\n议题：「${topic}」\n\n请作为Captain进行最终汇总（200字以内）：\n1. 总结核心内容策略（2-3条）\n2. 根据议题需求，只分配真正需要的专员（不要全派）：\n   - 需要写文案才 @文案专员\n   - 需要视频脚本才 @视频专员\n   - 需要图文/海报/设计才 @设计专员\n   - 需要发布排期才 @发布专员\n   例如"小红书图文"只需要 @文案专员 和 @设计专员\n3. 强调品牌调性要点\n\n语气有决断力，体现总指挥风格。`,
+      `刚才的会议讨论内容如下：\n\n${discussionHistory}\n\n---\n议题：「${topic}」\n\n请作为Captain进行最终汇总（200字以内）：\n1. 总结核心内容策略（2-3条要点）\n2. 根据议题需求分配执行专员（只派真正需要的）：\n   - 需要写文案才 @文案专员\n   - 需要AI生成视频才 @视频专员（他出视频生成词，由即梦AI执行）\n   - 需要AI生成配图才 @设计专员（他出图片生成词，由豆包AI执行）\n   - 需要发布排期才 @发布专员\n   注意：视频专员不写脚本，他负责出AI视频生成描述词\n3. 强调品牌调性要点\n\n语气有决断力，体现总指挥风格。`,
       brandContext
     )
     if (shouldStop) return finalizeMeeting()
 
     if (captainSummary.includes('@文案专员')) meetingStore.assignTask('copywriter', `围绕「${topic}」创作文案`)
-    if (captainSummary.includes('@视频专员')) meetingStore.assignTask('video', `制作「${topic}」短视频脚本`)
-    if (captainSummary.includes('@设计专员')) meetingStore.assignTask('poster', `设计「${topic}」配套视觉方案`)
+    if (captainSummary.includes('@视频专员')) meetingStore.assignTask('video', `为「${topic}」生成视频画面描述词`)
+    if (captainSummary.includes('@设计专员')) meetingStore.assignTask('poster', `为「${topic}」生成配图描述词`)
     if (captainSummary.includes('@发布专员')) meetingStore.assignTask('publisher', `安排「${topic}」内容发布排期`)
 
     if (Object.keys(meetingStore.assignedTasks).length > 0 && !shouldStop) {
@@ -824,11 +839,11 @@ async function runMeeting(topic: string) {
 // ── 执行阶段：各专员并行生成内容 ──
 const EXEC_PROMPTS: Record<string, (topic: string, brandInfo: string) => string> = {
   copywriter: (topic, brandInfo) =>
-    `你是广告公司文案专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请直接输出一篇完整的小红书图文文案（300-500字），包含：\n- 吸引人的标题（带emoji）\n- 正文（有痛点→解决方案→产品植入的结构）\n- 5个精准话题标签\n\n不要解释，直接输出可发布的文案。`,
+    `你是广告公司文案专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请直接输出一篇完整的小红书图文文案（300-500字），包含：\n- 吸引人的标题（带emoji）\n- 正文（有痛点→解决方案→产品植入的结构）\n- 5个精准话题标签\n\n严格限制：\n- 只输出标题、正文、话题标签三部分，不要附加任何其他内容\n- 不要输出视频脚本、配图建议、备注说明、Captain分析\n- 不要加"以下是完整可发布文案"之类的引导语\n- 不要用分割线（---）分隔多个章节\n直接输出可粘贴发布的文案，其他什么都不要。`,
   poster: (topic, brandInfo) =>
     `你是广告公司设计专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请输出3张配图的详细描述方案：\n- 图1：封面图（描述画面构图、主体、文字、色调）\n- 图2：功能展示图（描述具体展示什么功能/场景）\n- 图3：金句图（描述背景+文案排版方式）\n\n每张图描述50-80字，要具体到可以直接用AI生图。`,
   video: (topic, brandInfo) =>
-    `你是广告公司视频专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请输出一个30秒短视频脚本，包含：\n- 开头钩子（前3秒）\n- 分镜头描述（5-6个镜头，每个标注时长和画面）\n- 口播文案\n- BGM建议\n\n按时长严格控制，直接输出脚本。`,
+    `你是广告公司视频专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n我们直接用即梦AI生成视频。请输出1条完整的视频生成prompt（英文，100字以内）：\n- 包含：主体、动作、场景、光线、氛围、镜头类型\n- 适合竖屏短视频（9:16）\n- 风格贴合品牌调性\n\n只输出英文prompt，不要解释，不要写脚本。`,
   publisher: (topic, brandInfo) =>
     `你是广告公司发布专员，Captain已指示你执行任务。\n议题：「${topic}」\n${brandInfo}\n\n请直接输出一份完整的发布计划卡片，格式如下（可直接复制使用，不要有任何解释或提示词）：\n\n📅 发布计划\n\n平台优先级：\n1. [平台名] — [理由]\n2. [平台名] — [理由]\n3. [平台名] — [理由]\n\n⏰ 发布时间表：\n· [日期/时间] [平台] — [内容类型]\n· [日期/时间] [平台] — [内容类型]\n· [日期/时间] [平台] — [内容类型]\n\n🏷️ 话题标签（直接复制使用）：\n#[话题1] #[话题2] #[话题3] #[话题4] #[话题5]\n\n📊 预期效果：\n· 曝光量目标：[具体数字]\n· 互动率目标：[具体数字]\n· 转化目标：[具体描述]\n\n💡 互动引导语：\n[一句可直接用于评论区互动的引导语]\n\n请根据议题和品牌信息填入真实内容，所有内容都要具体可执行，不要留空或写示例。`,
 }
@@ -890,6 +905,47 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
 
     const output = await addStreamingMessage(agentId as keyof typeof STAFF, prompt, brandContext)
 
+    // poster / video 专员执行完后，自动调用 AI 生成图片/视频
+    let generatedMediaUrl = ''
+    let generatedVideoTaskId = ''
+
+    if ((agentId === 'poster' || agentId === 'video') && output && !output.includes('网络异常')) {
+      const cleanPrompt = cleanAgentOutput(output).slice(0, 500)
+      try {
+        if (agentId === 'poster') {
+          addSystemMessage('poster', '🎨 正在用豆包 Seedream 生成配图…')
+          const resp = await fetch('/api/generate-media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'image', prompt: cleanPrompt, ratio: '3:4' }),
+          })
+          const data = await resp.json() as any
+          if (data?.url) {
+            generatedMediaUrl = data.url
+            addSystemMessage('poster', data.fallback
+              ? `⚠️ 豆包暂不可用，已用备用生成：${data.url}`
+              : `✅ 图片已生成`)
+          }
+        } else if (agentId === 'video') {
+          addSystemMessage('video', '🎬 正在提交即梦视频生成任务…')
+          const resp = await fetch('/api/generate-media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'video', prompt: cleanPrompt, ratio: '9:16' }),
+          })
+          const data = await resp.json() as any
+          if (data?.task_id) {
+            generatedVideoTaskId = data.task_id
+            addSystemMessage('video', `⏳ 视频生成中（task: ${data.task_id}），通常1-3分钟，生成后可在发布页查看`)
+          } else {
+            addSystemMessage('video', `❌ 视频提交失败：${data?.message || '未知错误'}`)
+          }
+        }
+      } catch (e: any) {
+        addSystemMessage(agentId as keyof typeof STAFF, `⚠️ 媒体生成请求失败：${e.message}`)
+      }
+    }
+
     // 写入 flowResults（发布专员除外，它的产出是计划而非内容）
     const resultType = AGENT_TO_TYPE[agentId]
     if (resultType && output && !output.includes('网络异常')) {
@@ -901,6 +957,9 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
         topic,
         type: resultType,
         content: cleanAgentOutput(output),
+        imageUrl: generatedMediaUrl || undefined,
+        videoRequestId: generatedVideoTaskId || undefined,
+        videoStatus: generatedVideoTaskId ? 'processing' : undefined,
       }
       const existing = [...agentStore.flowResults]
       existing.push(result)

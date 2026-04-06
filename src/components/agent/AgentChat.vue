@@ -108,11 +108,13 @@ const props = defineProps<{
   agentId: string
   quickPrompts?: string[]
   compact?: boolean
+  contextData?: Record<string, any>
 }>()
 
 const emit = defineEmits<{
   (e: 'streaming-change', v: boolean): void
   (e: 'message-sent'): void
+  (e: 'content-published', index: number): void
 }>()
 
 const agent = computed(() => AGENTS[props.agentId] ?? AGENTS.copywriter)
@@ -242,7 +244,7 @@ async function sendMessage() {
         'x-erp-token': token,
         'x-agent-id': props.agentId,
       },
-      body: JSON.stringify({ messages: history, agentId: props.agentId }),
+      body: JSON.stringify({ messages: history, agentId: props.agentId, ...(props.contextData || {}) }),
     })
 
     if (!resp.ok) {
@@ -284,6 +286,8 @@ async function sendMessage() {
             messages.value = [...messages.value]
           } else if (ev.type === 'error') {
             lastError.value = ev.error
+          } else if (ev.type === 'published') {
+            emit('content-published', ev.index)
           }
         } catch {}
       }

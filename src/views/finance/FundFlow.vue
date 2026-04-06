@@ -323,11 +323,35 @@ onMounted(async () => {
     summary.income = incomeTotal
     summary.expense = expenseTotal
     summary.balance = incomeTotal - expenseTotal
-    // 未付款来源：待付款费用（PayAccounts接口无数据，采购应付在Payable页面查看）
+    // 未付款 = 待付款费用 + 已审核采购单欠款（已付从付款单匹配）
     const pendingExpenseTotal = expenses
       .filter((r: any) => r.payment_status === 'pending')
       .reduce((s: number, r: any) => s + Math.max(0, Number(r.amount || 0)), 0)
-    summary.unpaid = pendingExpenseTotal
+    const payRows: any[] = payRes.data?.rows ?? payRes.data?.list ?? []
+    const procurePaidById: Record<number, number> = {}
+    const procurePaidByKey: Record<string, number> = {}
+    const procurePaidBySn: Record<string, number> = {}
+    for (const r of payRows) {
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const orderSn = String(r.order_sn || '').trim()
+      const supplierName = String(r.supplier_name || r.contact_name || '').trim()
+      if (orderSn && supplierName) procurePaidByKey[`${orderSn}@@${supplierName}`] = (procurePaidByKey[`${orderSn}@@${supplierName}`] || 0) + amt
+      const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
+      if (m1) { const id = Number(m1[1]); procurePaidById[id] = (procurePaidById[id] || 0) + amt }
+      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+      if (m2) { const sn = m2[1].trim(); procurePaidBySn[sn] = (procurePaidBySn[sn] || 0) + amt }
+    }
+    const purchaseUnpaidTotal = (procureRes.data?.rows ?? [])
+      .filter((r: any) => Number(r.status) === 1)
+      .reduce((s: number, r: any) => {
+        const orderAmt = Number(r.after_discount != null ? r.after_discount : r.total_amount)
+        const sn = String(r.order_sn || r.order_no || '').trim()
+        const sup = String(r.supplier_name || '').trim()
+        const paid = procurePaidById[r.id] || procurePaidByKey[`${sn}@@${sup}`] || procurePaidBySn[sn] || 0
+        return s + Math.max(0, orderAmt - paid)
+      }, 0)
+    summary.unpaid = pendingExpenseTotal + purchaseUnpaidTotal
 
   } catch { /* ignore */ } finally {
     summaryLoading.value = false
