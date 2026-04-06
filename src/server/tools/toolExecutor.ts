@@ -242,73 +242,191 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
       case 'audit_finance': {
-        // 财务数据逻辑审查：拉取真实数据，核查7条规则
+        // 财务数据逻辑审查：7条完整审查框架
         const issues: string[] = []
         const ok: string[] = []
         try {
-          const [collectRes, payRes, purchaseRes, expenseRes, contractRes, returnRes, saleReturnRes] = await Promise.all([
+          const [collectRes, payRes, purchaseRes, contractRes, fundRes, procureReturnRes, saleReturnRes] = await Promise.all([
             erpGet('/finance/CollectReceipt/index', { list_rows: 200 }, token),
             erpGet('/finance/PayReceipt/index', { list_rows: 500 }, token),
             erpGet('/stock/PurchaseOrder/index', { list_rows: 500 }, token),
-            erpGet('/finance/Expense/index', { list_rows: 200 }, token),
             erpGet('/shop/ContractOrder/index', { list_rows: 200 }, token),
+            erpGet('/finance/Fund/index', { list_rows: 50 }, token),
             erpGet('/procure/ProcureReturn/index', { list_rows: 200, status: 1 }, token),
             erpGet('/stock/SaleReturnOrder/index', { list_rows: 200, status: 1 }, token),
           ])
-          // ① 未审核采购单混入检查
+
           const allPurchase: any[] = purchaseRes?.data?.rows || []
-          const unauditedPurchase = allPurchase.filter((r: any) => Number(r.status) !== 1)
-          if (unauditedPurchase.length > 0) {
-            issues.push(`🔴 ① 采购订单中有 ${unauditedPurchase.length} 条未审核（status≠1），后端不过滤 status，若前端未手动 filter 会混入财务`)
-          } else {
-            ok.push('① 采购订单 status 过滤正常（全部为已审核）')
-          }
-          // ② 应收账款数据量检查
-          const contractRows: any[] = contractRes?.data?.rows || []
-          const receivableRows = contractRows.filter((r: any) => Number(r.status) === 1 && Math.max(0, Number(r.total_amount || 0) - Number(r.pay_amount || 0)) > 0)
-          ok.push(`② 应收账款来源正确（合同）：共 ${receivableRows.length} 笔待收`)
-          // ③ 付款单已付金额匹配检查
-          const payRows: any[] = payRes?.data?.rows || []
-          const withRemark = payRows.filter((r: any) => /采购单/.test(r.remark || ''))
-          ok.push(`③ 付款单中有 ${withRemark.length} 条含采购单备注可供匹配`)
-          // ④ 费用单 pending 过滤检查
-          const expenseRows: any[] = expenseRes?.data?.rows || []
-          const pendingExpense = expenseRows.filter((r: any) => (r.payment_status || '') === 'pending')
-          const paidExpense = expenseRows.filter((r: any) => (r.payment_status || '') !== 'pending')
-          ok.push(`④ 费用单：待付款 ${pendingExpense.length} 条（不计入支出），已付 ${paidExpense.length} 条（计入支出）`)
-          // ⑤ 退货数据检查
-          const returnRows: any[] = returnRes?.data?.rows || []
-          const saleReturnRows: any[] = saleReturnRes?.data?.rows || []
-          ok.push(`⑤ 采购退货 ${returnRows.length} 条、销售退货 ${saleReturnRows.length} 条，数据可用于冲减`)
-          // ⑥ 收款单数据量
-          const collectRows: any[] = collectRes?.data?.rows || []
-          ok.push(`⑥ 收款单共 ${collectRows.length} 条，数据正常`)
-          // ⑦ 应付：计算欠款总额
           const auditedPurchase = allPurchase.filter((r: any) => Number(r.status) === 1)
+          const payRows: any[] = payRes?.data?.rows || []
+          const collectRows: any[] = collectRes?.data?.rows || []
+          const allContracts: any[] = contractRes?.data?.rows || []
+          const auditedContracts = allContracts.filter((r: any) => Number(r.status) === 1)
+          const fundRows: any[] = fundRes?.data?.rows || []
+          const procureReturnRows: any[] = procureReturnRes?.data?.rows || []
+          const saleReturnRows: any[] = saleReturnRes?.data?.rows || []
+
+          // 构建付款单匹配索引（3种方式）
           const paidById: Record<number, number> = {}
           const paidByKey: Record<string, number> = {}
           const paidBySn: Record<string, number> = {}
           for (const r of payRows) {
             const amt = Number(r.amount || 0); if (!amt) continue
-            const sn = String(r.order_sn || '').trim(), sup = String(r.supplier_name || r.contact_name || '').trim()
+            const sn = String(r.order_sn || '').trim()
+            const sup = String(r.supplier_name || r.contact_name || '').trim()
             if (sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
             const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
             if (m1) paidById[Number(m1[1])] = (paidById[Number(m1[1])] || 0) + amt
             const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
             if (m2) paidBySn[m2[1].trim()] = (paidBySn[m2[1].trim()] || 0) + amt
           }
+
+          // ① 应付账款核查：已审核采购单合计 - 供应商付款合计 - 退货冲减 = 应付总额
+          const totalPurchaseAmt = auditedPurchase.reduce((s: number, o: any) => s + Number(o.after_discount ?? o.total_amount ?? 0), 0)
+          const supplierPayRows = payRows.filter((r: any) => (r.contact_type || '') === 'supplier')
+          const totalSupplierPaid = supplierPayRows.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+          const totalProcureReturn = procureReturnRows.reduce((s: number, r: any) => s + Number(r.total_amount || r.amount || 0), 0)
+          const calcPayable = totalPurchaseAmt - totalSupplierPaid - totalProcureReturn
           let totalPayable = 0
           for (const o of auditedPurchase) {
             const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-            const sn = String(o.order_sn || o.order_no || '').trim(), sup = String(o.supplier_name || '').trim()
+            const sn = String(o.order_sn || o.order_no || '').trim()
+            const sup = String(o.supplier_name || '').trim()
             const paid = paidById[o.id] || paidByKey[`${sn}@@${sup}`] || paidBySn[sn] || 0
             totalPayable += Math.max(0, orderAmt - paid)
           }
-          ok.push(`⑦ 应付账款（已审核采购单欠款）合计 ¥${totalPayable.toFixed(2)}`)
+          ok.push(`① 应付账款核查：采购合计 ¥${totalPurchaseAmt.toFixed(2)} - 供应商付款 ¥${totalSupplierPaid.toFixed(2)} - 退货冲减 ¥${totalProcureReturn.toFixed(2)} = 应付 ¥${calcPayable.toFixed(2)}（逐单计算应付 ¥${totalPayable.toFixed(2)}）`)
+
+          // ② 供应商付款单匹配：contact_type=supplier 的付款单必须能匹配到采购单
+          const unmatchedSupplierPay: any[] = []
+          for (const r of supplierPayRows) {
+            const amt = Number(r.amount || 0); if (!amt) continue
+            const sn = String(r.order_sn || '').trim()
+            const sup = String(r.supplier_name || r.contact_name || '').trim()
+            const remark = String(r.remark || '')
+            const matchById = remark.match(/采购单(?:自动)?付款\s+#(\d+)/)
+            const matchBySn = remark.match(/采购单([A-Za-z0-9]+)审核自动生成/)
+            const matchByKey = sn && sup && auditedPurchase.some((o: any) => {
+              const osn = String(o.order_sn || o.order_no || '').trim()
+              const osup = String(o.supplier_name || '').trim()
+              return osn === sn && osup === sup
+            })
+            const matchByIdFound = matchById && auditedPurchase.some((o: any) => o.id === Number(matchById[1]))
+            const matchBySnFound = matchBySn && auditedPurchase.some((o: any) => {
+              const osn = String(o.order_sn || o.order_no || '').trim()
+              return osn === matchBySn[1].trim()
+            })
+            if (!matchByKey && !matchByIdFound && !matchBySnFound) {
+              unmatchedSupplierPay.push(r)
+            }
+          }
+          if (unmatchedSupplierPay.length > 0) {
+            issues.push(`🔴 ② 有 ${unmatchedSupplierPay.length} 条供应商付款单无法匹配到任何采购单（ID: ${unmatchedSupplierPay.slice(0, 5).map((r: any) => r.id).join('、')}${unmatchedSupplierPay.length > 5 ? '...' : ''}）`)
+          } else {
+            ok.push(`② 供应商付款单匹配正常：${supplierPayRows.length} 条全部可匹配到采购单`)
+          }
+
+          // ③ 已全额付款采购单展示逻辑
+          const fullyPaidOrders = auditedPurchase.filter((o: any) => {
+            const unpay = Number(o.un_pay_amount ?? -1)
+            return unpay <= 0 && unpay !== -1
+          })
+          const hasUnPayField = auditedPurchase.some((o: any) => o.un_pay_amount !== undefined)
+          if (hasUnPayField && fullyPaidOrders.length > 0) {
+            ok.push(`③ 已全额付款采购单：共 ${fullyPaidOrders.length} 条（un_pay_amount≤0），前端应在应付账款页过滤隐藏`)
+          } else {
+            ok.push(`③ 已审核采购单 ${auditedPurchase.length} 条（un_pay_amount 字段${hasUnPayField ? '存在' : '不存在'}）`)
+          }
+
+          // ④ 应收账款核查：已审核合同合计 - 收款金额 - 销售退货冲减 = 应收总额
+          const totalContractAmt = auditedContracts.reduce((s: number, c: any) => s + Number(c.total_amount || 0), 0)
+          const customerCollectRows = collectRows.filter((r: any) => (r.contact_type || '') === 'customer')
+          const totalCollected = customerCollectRows.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+          const totalSaleReturn = saleReturnRows.reduce((s: number, r: any) => s + Number(r.total_amount || r.amount || 0), 0)
+          const calcReceivable = totalContractAmt - totalCollected - totalSaleReturn
+          ok.push(`④ 应收账款核查：合同合计 ¥${totalContractAmt.toFixed(2)} - 客户收款 ¥${totalCollected.toFixed(2)} - 销售退货 ¥${totalSaleReturn.toFixed(2)} = 应收 ¥${calcReceivable.toFixed(2)}`)
+          // 收款单匹配合同检查
+          const unmatchedCollect: any[] = []
+          for (const r of customerCollectRows) {
+            const amt = Number(r.amount || 0); if (!amt) continue
+            const contactId = r.contact_id || r.customer_id
+            const contactName = String(r.contact_name || r.customer_name || '').trim()
+            const matched = auditedContracts.some((c: any) => {
+              const cid = c.customer_id || c.contact_id
+              const cname = String(c.customer_name || c.contact_name || '').trim()
+              return (contactId && cid && String(contactId) === String(cid)) || (contactName && cname && contactName === cname)
+            })
+            if (!matched) unmatchedCollect.push(r)
+          }
+          if (unmatchedCollect.length > 0) {
+            issues.push(`🟡 ④ 有 ${unmatchedCollect.length} 条客户收款单无法匹配到已审核合同（ID: ${unmatchedCollect.slice(0, 5).map((r: any) => r.id).join('、')}${unmatchedCollect.length > 5 ? '...' : ''}）`)
+          }
+
+          // ⑤ 账户余额核查：系统余额 vs 收款-付款流水差额
+          const fundIssues: string[] = []
+          for (const fund of fundRows) {
+            const fid = fund.id
+            const sysBalance = Number(fund.balance || fund.amount || 0)
+            const inAmt = collectRows.filter((r: any) => String(r.fund_id) === String(fid)).reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+            const outAmt = payRows.filter((r: any) => String(r.fund_id) === String(fid)).reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
+            const calcBalance = inAmt - outAmt
+            const diff = Math.abs(sysBalance - calcBalance)
+            if (diff > 1) {
+              fundIssues.push(`账户「${fund.name}」系统余额 ¥${sysBalance.toFixed(2)} vs 流水计算 ¥${calcBalance.toFixed(2)}，差额 ¥${diff.toFixed(2)}`)
+            }
+          }
+          if (fundIssues.length > 0) {
+            issues.push(`🔴 ⑤ 账户余额异常：\n   ${fundIssues.join('\n   ')}`)
+          } else {
+            ok.push(`⑤ 账户余额核查正常：${fundRows.length} 个账户系统余额与流水吻合`)
+          }
+
+          // ⑥ 流水归类核查：contact_type 不能为空且必须是合法值
+          const validContactTypes = new Set(['supplier', 'customer', 'staff', 'other'])
+          const badPay = payRows.filter((r: any) => !r.contact_type || !validContactTypes.has(r.contact_type))
+          const badCollect = collectRows.filter((r: any) => !r.contact_type || !validContactTypes.has(r.contact_type))
+          if (badPay.length > 0 || badCollect.length > 0) {
+            issues.push(`🟡 ⑥ 流水归类异常：付款单 ${badPay.length} 条 contact_type 为空或非法，收款单 ${badCollect.length} 条 contact_type 为空或非法`)
+          } else {
+            ok.push(`⑥ 流水归类正常：付款单和收款单 contact_type 均为合法值`)
+          }
+
+          // ⑦ 退货异常：退货金额不应超过原始订单金额
+          const returnOverflow: string[] = []
+          for (const ret of procureReturnRows) {
+            const retAmt = Number(ret.total_amount || ret.amount || 0)
+            const origSn = String(ret.order_sn || ret.purchase_order_sn || '').trim()
+            if (!origSn) continue
+            const orig = auditedPurchase.find((o: any) => String(o.order_sn || o.order_no || '').trim() === origSn)
+            if (orig) {
+              const origAmt = Number(orig.after_discount ?? orig.total_amount ?? 0)
+              if (retAmt > origAmt + 0.01) {
+                returnOverflow.push(`采购退货 #${ret.id} ¥${retAmt.toFixed(2)} > 原单 ${origSn} ¥${origAmt.toFixed(2)}`)
+              }
+            }
+          }
+          for (const ret of saleReturnRows) {
+            const retAmt = Number(ret.total_amount || ret.amount || 0)
+            const origSn = String(ret.order_sn || ret.sale_order_sn || '').trim()
+            if (!origSn) continue
+            const orig = auditedContracts.find((c: any) => String(c.order_sn || c.order_no || '').trim() === origSn)
+            if (orig) {
+              const origAmt = Number(orig.total_amount || 0)
+              if (retAmt > origAmt + 0.01) {
+                returnOverflow.push(`销售退货 #${ret.id} ¥${retAmt.toFixed(2)} > 原单 ${origSn} ¥${origAmt.toFixed(2)}`)
+              }
+            }
+          }
+          if (returnOverflow.length > 0) {
+            issues.push(`🔴 ⑦ 退货金额异常（超过原始订单）：\n   ${returnOverflow.join('\n   ')}`)
+          } else {
+            ok.push(`⑦ 退货金额正常：采购退货 ${procureReturnRows.length} 条、销售退货 ${saleReturnRows.length} 条均未超原单金额`)
+          }
+
         } catch (e: any) {
           issues.push(`审查过程出错：${e?.message || String(e)}`)
         }
-        const summary = issues.length === 0 ? '✅ 未发现明显数据逻辑问题' : `⚠️ 发现 ${issues.length} 个问题需要关注`
+        const summary = issues.length === 0 ? '✅ 未发现问题' : `⚠️ 发现 ${issues.length} 个问题`
         result = `【财务数据审查报告】\n${summary}\n\n${issues.length > 0 ? '问题：\n' + issues.join('\n') + '\n\n' : ''}正常项：\n${ok.join('\n')}`
         break
       }
