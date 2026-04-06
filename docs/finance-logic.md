@@ -226,8 +226,9 @@ getBomList()                                     → pBomRes
 
 应付金额：
   orderAmt = after_discount ?? total_amount
-  paidAmt  = pay_amount
+  paidAmt  = 从付款单匹配（3种方式：paidById / paidByKey / paidBySn）
   un_pay_amount = max(0, orderAmt - paidAmt)
+  ⚠️ 禁止用 row.pay_amount 作为已付金额
 
 最终应付 = applyProcureReturnsToPayableRows(采购聚合, 退货) + 待付费用
 ```
