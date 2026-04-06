@@ -311,8 +311,8 @@
               <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/retail/order')">更多</el-button>
             </div>
           </template>
-          <div class="inline-list" v-if="retailList.length">
-            <div class="inline-item clickable" v-for="r in retailList.slice(0,6)" :key="r.id" @click="router.push('/retail/order')">
+          <div class="inline-list" v-if="retailList.filter((r:any)=>r.status===1).length">
+            <div class="inline-item clickable" v-for="r in retailList.filter((r:any)=>r.status===1).slice(0,6)" :key="r.id" @click="router.push('/retail/order')">
               <div class="inline-name">{{ r.member_name || r.customer_name || '散客' }}</div>
               <div class="inline-value green">¥{{ Number(r.pay_amount||r.total_amount||0).toFixed(2) }}</div>
               <div class="inline-sub">{{ r.order_sn || '' }}</div>
@@ -684,7 +684,7 @@ const saleOutTotal = computed(() =>
 )
 
 const retailTotal = computed(() =>
-  retailList.value.reduce((s, r) => s + Number(r.pay_amount || r.total_amount || 0), 0).toFixed(2)
+  retailList.value.filter((r: any) => r.status === 1).reduce((s, r) => s + Number(r.pay_amount || r.total_amount || 0), 0).toFixed(2)
 )
 
 // 近7天趋势数据 — 来自 allFlowItems，与 FundFlow.vue 一致
@@ -744,6 +744,7 @@ const profitTrendData = computed(() => {
     costMap[k] += myProfitFreight(c)
   }
   for (const r of retailList.value) {
+    if (r.status !== 1) continue
     const k = getDateKey(r.order_date || r.create_time || '')
     if (revenueMap[k] === undefined) continue
     try { for (const g of JSON.parse(r.goods_info||'[]')) {
@@ -813,7 +814,7 @@ const profitByGoods = computed(() => {
     try { for (const g of JSON.parse(c.goods_info || '[]')) rawTotal += Number(g.num || 0) * Number(g.price || 0) } catch {}
     add(c.goods_info, '合同', rawTotal > 0 ? actualAmount / rawTotal : 1)
   }
-  for (const r of retailList.value) add(r.goods_info, '零售')
+  for (const r of retailList.value) { if (r.status !== 1) continue; add(r.goods_info, '零售') }
   return Object.values(map).map((r: any) => ({
     ...r,
     cost_amount: r.num * r.unit_cost,
@@ -843,6 +844,7 @@ const profitByOrder = computed(() => {
     })
   }
   for (const r of retailList.value) {
+    if (r.status !== 1) continue
     let sale_amount = 0, cost_amount = 0
     try { for (const g of JSON.parse(r.goods_info || '[]')) { const q = Number(g.num || 0); sale_amount += q * Number(g.price || 0); cost_amount += q * getUnitCostFromMap(g.goods_id).unitCost } } catch {}
     const profit = sale_amount - cost_amount
@@ -871,6 +873,7 @@ const profitByMonth = computed(() => {
     map[m].freight += myProfitFreight(c)
   }
   for (const r of retailList.value) {
+    if (r.status !== 1) continue
     const m = (r.order_date || r.create_time || '').slice(0, 7)
     if (!m) continue
     ensure(m)
@@ -1225,16 +1228,46 @@ async function loadAllData() {
     })
     fundList.value = applyProcureReturnsToFundRows(fundListWithDynamic, procureReturnFinanceList.value)
     saleReturnFinanceList.value = buildSaleReturnSettlementRows(rawReceivableList, normalizedSaleReturns)
-    // 按供应商聚合采购订单计算应付
+    // 按供应商聚合采购订单计算应付（只算已审核 status===1 的单子）
+    // 已付金额从付款单里匹配（3种匹配方式）
+    const procurePaidById: Record<number, number> = {}
+    const procurePaidByKey: Record<string, number> = {}
+    const procurePaidBySn: Record<string, number> = {}
+    for (const r of rawPayList) {
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const orderSn = String(r.order_sn || '').trim()
+      const supplierName = String(r.supplier_name || r.contact_name || '').trim()
+      // 方式1：order_sn@@supplier_name 精确匹配
+      if (orderSn && supplierName) {
+        const k = `${orderSn}@@${supplierName}`
+        procurePaidByKey[k] = (procurePaidByKey[k] || 0) + amt
+      }
+      // 方式2：备注 "采购单付款 #ID"
+      const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
+      if (m1) {
+        const id = Number(m1[1])
+        procurePaidById[id] = (procurePaidById[id] || 0) + amt
+      }
+      // 方式3：备注 "采购单XXXXX审核自动生成" 提取单号
+      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+      if (m2) {
+        const sn = m2[1].trim()
+        procurePaidBySn[sn] = (procurePaidBySn[sn] || 0) + amt
+      }
+    }
     const supplierPayMap = new Map<string, any>()
     for (const o of (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? [])) {
+      if (Number(o.status) !== 1) continue
       const key = o.supplier_id ? `id:${o.supplier_id}` : `name:${String(o.supplier_name || '').trim()}`
       if (!supplierPayMap.has(key)) {
         supplierPayMap.set(key, { supplier_id: o.supplier_id || 0, supplier_name: o.supplier_name || '—', order_amount: 0, paid_amount: 0, un_pay_amount: 0 })
       }
       const s = supplierPayMap.get(key)!
       const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-      const paidAmt = Number(o.pay_amount ?? 0)
+      const sn = String(o.order_sn || o.order_no || '').trim()
+      const supName = String(o.supplier_name || '').trim()
+      const paidAmt = procurePaidById[o.id] || procurePaidByKey[`${sn}@@${supName}`] || procurePaidBySn[sn] || 0
       s.order_amount += orderAmt
       s.paid_amount += paidAmt
       s.un_pay_amount += Math.max(0, orderAmt - paidAmt)
@@ -1245,8 +1278,8 @@ async function loadAllData() {
     ]
     receivableList.value = rawReceivableList
     adjustedCollectList.value = applySaleReturnsToCollectReceiptRows(collectList.value, normalizedSaleReturns, rawReceivableList)
-    purchasePayList.value = purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []
-    saleOutList.value = saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []
+    purchasePayList.value = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
+    saleOutList.value = (saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
     retailList.value = retailRes.data?.rows ?? retailRes.data?.list ?? []
     expenseList.value = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
     rechargeList.value = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
@@ -1261,8 +1294,10 @@ async function loadAllData() {
     const clientIds = new Set(clientList.value.map((c: any) => c.id))
     const supplierIds = new Set(supplierList.value.map((s: any) => s.id))
     prepayList.value = prepayList.value.filter((r: any) => {
-      if (r.pay_type === 'customer') return r.customer_id && clientIds.has(r.customer_id)
-      if (r.pay_type === 'supplier') return r.supplier_id && supplierIds.has(r.supplier_id)
+      // 只过滤掉有 id 但 id 不在列表里的记录（已删除的客户/供应商）
+      // 没有绑定 id 的手动录入记录保留
+      if (r.pay_type === 'customer') return !r.customer_id || clientIds.has(r.customer_id)
+      if (r.pay_type === 'supplier') return !r.supplier_id || supplierIds.has(r.supplier_id)
       return true
     })
   } catch {}
