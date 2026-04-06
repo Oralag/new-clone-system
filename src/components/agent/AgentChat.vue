@@ -102,6 +102,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { AGENTS } from '@/server/agents/agentRegistry'
 import { useTrendingStore } from '@/stores/agent'
+import { useBrandStore } from '@/stores/brand'
 import { marked } from 'marked'
 
 const props = defineProps<{
@@ -119,6 +120,7 @@ const emit = defineEmits<{
 
 const agent = computed(() => AGENTS[props.agentId] ?? AGENTS.copywriter)
 const agentStore = useTrendingStore()
+const brandStore = useBrandStore()
 const router = useRouter()
 const savedIndexes = ref<Set<number>>(new Set())
 
@@ -244,7 +246,7 @@ async function sendMessage() {
         'x-erp-token': token,
         'x-agent-id': props.agentId,
       },
-      body: JSON.stringify({ messages: history, agentId: props.agentId, ...(props.contextData || {}) }),
+      body: JSON.stringify({ messages: history, agentId: props.agentId, brandContext: brandStore.systemPrompt, ...(props.contextData || {}) }),
     })
 
     if (!resp.ok) {
