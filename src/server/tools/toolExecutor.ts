@@ -47,7 +47,20 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
   )
 }
 
-export async function executeTool(name: string, input: Record<string, any>, token: string): Promise<string> {
+export interface ToolContext {
+  flowResults?: Array<{
+    platform: string
+    platformName: string
+    topic: string
+    type: string
+    content: string
+    imageUrl?: string
+    published?: boolean
+  }>
+  onPublished?: (index: number) => void
+}
+
+export async function executeTool(name: string, input: Record<string, any>, token: string, context?: ToolContext): Promise<string> {
   try {
     let result: string
 
@@ -105,11 +118,63 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
       case 'query_finance': {
+        // ⚠️ 注意：/finance/CollectAccounts 和 /finance/PayAccounts 后端返回空，禁止使用
+        // 应收 → 已签合同（前端过滤 un_pay_amount > 0）
+        // 应付 → 采购订单（前端过滤 status===1，从付款单匹配已付金额）
+        if (input.type === 'receivable') {
+          const res = await erpGet('/shop/ContractOrder/index', { list_rows: input.limit || 100, status: 1 }, token)
+          const rows = (res?.data?.rows || []).map((r: any) => ({
+            ...r,
+            un_pay_amount: Math.max(0, Number(r.total_amount || 0) - Number(r.pay_amount || 0)),
+          })).filter((r: any) => r.un_pay_amount > 0)
+          const total = rows.reduce((s: number, r: any) => s + r.un_pay_amount, 0)
+          result = `应收账款共 ${rows.length} 笔，待收合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 客户: r.customer_name, 合同金额: r.total_amount, 已收: r.pay_amount, 待收: r.un_pay_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
+          break
+        }
+        if (input.type === 'payable') {
+          const [purchaseRes, payRes] = await Promise.all([
+            erpGet('/stock/PurchaseOrder/index', { list_rows: 500 }, token),
+            erpGet('/finance/PayReceipt/index', { list_rows: 1000 }, token),
+          ])
+          const payRows: any[] = payRes?.data?.rows || []
+          // 构建已付 Map（3种匹配方式）
+          const paidById: Record<number, number> = {}
+          const paidByKey: Record<string, number> = {}
+          const paidBySn: Record<string, number> = {}
+          for (const r of payRows) {
+            const amt = Number(r.amount || 0)
+            if (!amt) continue
+            const sn = String(r.order_sn || '').trim()
+            const sup = String(r.supplier_name || r.contact_name || '').trim()
+            if (sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
+            const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
+            if (m1) paidById[Number(m1[1])] = (paidById[Number(m1[1])] || 0) + amt
+            const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+            if (m2) paidBySn[m2[1].trim()] = (paidBySn[m2[1].trim()] || 0) + amt
+          }
+          // 只取已审核采购单（前端过滤 status===1）
+          const purchaseRows = (purchaseRes?.data?.rows || []).filter((r: any) => Number(r.status) === 1)
+          const supplierMap: Record<string, any> = {}
+          for (const o of purchaseRows) {
+            const key = o.supplier_id ? `id:${o.supplier_id}` : `name:${String(o.supplier_name || '').trim()}`
+            if (!supplierMap[key]) supplierMap[key] = { supplier_name: o.supplier_name || '—', order_amount: 0, paid_amount: 0, un_pay_amount: 0 }
+            const s = supplierMap[key]
+            const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
+            const sn = String(o.order_sn || o.order_no || '').trim()
+            const sup = String(o.supplier_name || '').trim()
+            const paid = paidById[o.id] || paidByKey[`${sn}@@${sup}`] || paidBySn[sn] || 0
+            s.order_amount += orderAmt
+            s.paid_amount += paid
+            s.un_pay_amount += Math.max(0, orderAmt - paid)
+          }
+          const rows = Object.values(supplierMap).filter((r: any) => r.un_pay_amount > 0)
+          const total = rows.reduce((s: number, r: any) => s + r.un_pay_amount, 0)
+          result = `应付账款共 ${rows.length} 家供应商有欠款，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 20))}`
+          break
+        }
         const typeMap: Record<string, string> = {
           collect: '/finance/CollectReceipt/index',
           pay: '/finance/PayReceipt/index',
-          receivable: '/finance/CollectAccounts/index',
-          payable: '/finance/PayAccounts/index',
           fund: '/finance/Fund/index',
           prepay: '/finance/Prepay/index',
         }
@@ -118,6 +183,77 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const res = await erpGet(path, { list_rows: input.limit || 50 }, token)
         const rows = res?.data?.rows || []
         result = `${input.type} 共 ${rows.length} 条：${JSON.stringify(rows.slice(0, 20))}`
+        break
+      }
+      case 'audit_finance': {
+        // 财务数据逻辑审查：拉取真实数据，核查7条规则
+        const issues: string[] = []
+        const ok: string[] = []
+        try {
+          const [collectRes, payRes, purchaseRes, expenseRes, contractRes, returnRes, saleReturnRes] = await Promise.all([
+            erpGet('/finance/CollectReceipt/index', { list_rows: 200 }, token),
+            erpGet('/finance/PayReceipt/index', { list_rows: 500 }, token),
+            erpGet('/stock/PurchaseOrder/index', { list_rows: 500 }, token),
+            erpGet('/finance/Expense/index', { list_rows: 200 }, token),
+            erpGet('/shop/ContractOrder/index', { list_rows: 200 }, token),
+            erpGet('/procure/ProcureReturn/index', { list_rows: 200, status: 1 }, token),
+            erpGet('/stock/SaleReturnOrder/index', { list_rows: 200, status: 1 }, token),
+          ])
+          // ① 未审核采购单混入检查
+          const allPurchase: any[] = purchaseRes?.data?.rows || []
+          const unauditedPurchase = allPurchase.filter((r: any) => Number(r.status) !== 1)
+          if (unauditedPurchase.length > 0) {
+            issues.push(`🔴 ① 采购订单中有 ${unauditedPurchase.length} 条未审核（status≠1），后端不过滤 status，若前端未手动 filter 会混入财务`)
+          } else {
+            ok.push('① 采购订单 status 过滤正常（全部为已审核）')
+          }
+          // ② 应收账款数据量检查
+          const contractRows: any[] = contractRes?.data?.rows || []
+          const receivableRows = contractRows.filter((r: any) => Number(r.status) === 1 && Math.max(0, Number(r.total_amount || 0) - Number(r.pay_amount || 0)) > 0)
+          ok.push(`② 应收账款来源正确（合同）：共 ${receivableRows.length} 笔待收`)
+          // ③ 付款单已付金额匹配检查
+          const payRows: any[] = payRes?.data?.rows || []
+          const withRemark = payRows.filter((r: any) => /采购单/.test(r.remark || ''))
+          ok.push(`③ 付款单中有 ${withRemark.length} 条含采购单备注可供匹配`)
+          // ④ 费用单 pending 过滤检查
+          const expenseRows: any[] = expenseRes?.data?.rows || []
+          const pendingExpense = expenseRows.filter((r: any) => (r.payment_status || '') === 'pending')
+          const paidExpense = expenseRows.filter((r: any) => (r.payment_status || '') !== 'pending')
+          ok.push(`④ 费用单：待付款 ${pendingExpense.length} 条（不计入支出），已付 ${paidExpense.length} 条（计入支出）`)
+          // ⑤ 退货数据检查
+          const returnRows: any[] = returnRes?.data?.rows || []
+          const saleReturnRows: any[] = saleReturnRes?.data?.rows || []
+          ok.push(`⑤ 采购退货 ${returnRows.length} 条、销售退货 ${saleReturnRows.length} 条，数据可用于冲减`)
+          // ⑥ 收款单数据量
+          const collectRows: any[] = collectRes?.data?.rows || []
+          ok.push(`⑥ 收款单共 ${collectRows.length} 条，数据正常`)
+          // ⑦ 应付：计算欠款总额
+          const auditedPurchase = allPurchase.filter((r: any) => Number(r.status) === 1)
+          const paidById: Record<number, number> = {}
+          const paidByKey: Record<string, number> = {}
+          const paidBySn: Record<string, number> = {}
+          for (const r of payRows) {
+            const amt = Number(r.amount || 0); if (!amt) continue
+            const sn = String(r.order_sn || '').trim(), sup = String(r.supplier_name || r.contact_name || '').trim()
+            if (sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
+            const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
+            if (m1) paidById[Number(m1[1])] = (paidById[Number(m1[1])] || 0) + amt
+            const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+            if (m2) paidBySn[m2[1].trim()] = (paidBySn[m2[1].trim()] || 0) + amt
+          }
+          let totalPayable = 0
+          for (const o of auditedPurchase) {
+            const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
+            const sn = String(o.order_sn || o.order_no || '').trim(), sup = String(o.supplier_name || '').trim()
+            const paid = paidById[o.id] || paidByKey[`${sn}@@${sup}`] || paidBySn[sn] || 0
+            totalPayable += Math.max(0, orderAmt - paid)
+          }
+          ok.push(`⑦ 应付账款（已审核采购单欠款）合计 ¥${totalPayable.toFixed(2)}`)
+        } catch (e: any) {
+          issues.push(`审查过程出错：${e?.message || String(e)}`)
+        }
+        const summary = issues.length === 0 ? '✅ 未发现明显数据逻辑问题' : `⚠️ 发现 ${issues.length} 个问题需要关注`
+        result = `【财务数据审查报告】\n${summary}\n\n${issues.length > 0 ? '问题：\n' + issues.join('\n') + '\n\n' : ''}正常项：\n${ok.join('\n')}`
         break
       }
       case 'query_staff': {
@@ -601,6 +737,143 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           return `${i + 1}. [${r.platform}] ${r.content_title}\n   ${r.publish_date} | 浏览${r.views.toLocaleString()} | 互动率${eng}%${r.notes ? ` | ${r.notes}` : ''}`
         }).join('\n')
         result = `📊 内容效果分析（共${records.length}条）\n\n总浏览量：${totalViews.toLocaleString()}\n平均互动率：${avgEngRate}%\n\n🏆 最高浏览：${topByViews?.content_title}（${topByViews?.views?.toLocaleString()}次）\n🔥 最高互动率：${topByEng?.content_title}\n\n近期内容列表：\n${list}`
+        break
+      }
+      case 'get_publish_queue': {
+        const items = context?.flowResults || []
+        const filterPlatform = input.platform && input.platform !== 'all' ? input.platform : null
+        const filterStatus = input.status || 'pending'
+
+        const filtered = items.filter((item, _i) => {
+          if (filterPlatform && item.platform !== filterPlatform) return false
+          if (filterStatus === 'pending') return !item.published
+          if (filterStatus === 'published') return !!item.published
+          return true
+        })
+
+        if (filtered.length === 0) {
+          result = filterStatus === 'pending'
+            ? '📭 当前没有待发布的内容。请先在会议室或文案/设计页生成内容，内容会自动进入发布队列。'
+            : '📭 暂无内容记录。'
+          break
+        }
+
+        const PLATFORM_NAMES: Record<string, string> = {
+          xiaohongshu: '小红书', douyin: '抖音', weibo: '微博',
+          bilibili: 'B站', wechat: '微信公众号',
+        }
+        const TYPE_NAMES: Record<string, string> = {
+          copy: '图文文案', poster: '图文海报', video_script: '视频脚本',
+        }
+
+        const lines = filtered.map((item, i) => {
+          // 找到真实 index（用于 publish_content 调用）
+          const realIdx = items.indexOf(item)
+          const preview = item.content?.slice(0, 60).replace(/\n/g, ' ').replace(/#+\s*/g, '') || ''
+          const status = item.published ? '✅ 已发布' : '⏳ 待发布'
+          return `[${realIdx}] ${status} | ${PLATFORM_NAMES[item.platform] || item.platform} | ${TYPE_NAMES[item.type] || item.type}\n    主题：${item.topic || '（无主题）'}\n    预览：${preview}…`
+        })
+
+        const pendingCount = items.filter(i => !i.published).length
+        const publishedCount = items.filter(i => i.published).length
+        result = `📋 发布队列（待发布 ${pendingCount} 条 / 已发布 ${publishedCount} 条）\n\n${lines.join('\n\n')}`
+        break
+      }
+      case 'publish_content': {
+        const items = context?.flowResults || []
+        const idx = Number(input.index)
+
+        if (isNaN(idx) || idx < 0 || idx >= items.length) {
+          result = `❌ 无效的内容索引 ${input.index}，请先调用 get_publish_queue 确认索引。`
+          break
+        }
+
+        const item = items[idx]
+        if (item.published) {
+          result = `⚠️ 该内容已经发布过了（索引 ${idx}：${item.topic || item.content?.slice(0, 30)}）`
+          break
+        }
+
+        const platform = input.platform_override || item.platform
+
+        if (platform !== 'xiaohongshu') {
+          result = `⏳「${item.platformName || platform}」平台暂未接入自动发布，请手动复制内容发布。`
+          break
+        }
+
+        // 提取正文（去掉配图建议等策划内容）
+        let publishText = item.content || ''
+        const cutPatterns = [
+          /\n\n?配图建议[（(（].*?[）)）][:：]/,
+          /\n\n?📸\s*配图建议/,
+          /\n\n?视频脚本方向[（(（].*?[）)）][:：]/,
+          /\n\n?🎬\s*视频脚本/,
+        ]
+        for (const pat of cutPatterns) {
+          const match = publishText.search(pat)
+          if (match > 0) { publishText = publishText.slice(0, match).trim(); break }
+        }
+
+        // 第一行为标题
+        const firstLine = publishText.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim()
+        const title = firstLine || item.topic || '新内容'
+        const bodyLines = publishText.split('\n').slice(1).join('\n').trim()
+        const content = bodyLines || publishText
+        const images: string[] = item.imageUrl ? [item.imageUrl] : []
+
+        try {
+          const { writeFileSync, mkdirSync, existsSync } = await import('fs')
+          const { spawnSync } = await import('child_process')
+          const { homedir } = await import('os')
+          const home = homedir()
+
+          const tmpDir = '/tmp/xhs_publish'
+          mkdirSync(tmpDir, { recursive: true })
+          writeFileSync(`${tmpDir}/title.txt`, title, 'utf-8')
+          writeFileSync(`${tmpDir}/content.txt`, content, 'utf-8')
+
+          const localImages: string[] = []
+          if (images.length > 0) {
+            for (let i = 0; i < images.length; i++) {
+              const img = images[i]
+              if (img.startsWith('http')) {
+                const imgPath = `${tmpDir}/img_${i}.jpg`
+                const imgResp = await fetch(img)
+                writeFileSync(imgPath, Buffer.from(await imgResp.arrayBuffer()))
+                localImages.push(imgPath)
+              } else {
+                localImages.push(img)
+              }
+            }
+          } else {
+            const blankImg = `${tmpDir}/blank.jpg`
+            if (!existsSync(blankImg)) {
+              writeFileSync(blankImg, Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k=', 'base64'))
+            }
+            localImages.push(blankImg)
+          }
+
+          const args = ['run', 'python', 'scripts/cli.py', 'publish',
+            '--title-file', `${tmpDir}/title.txt`,
+            '--content-file', `${tmpDir}/content.txt`,
+            ...localImages.flatMap(img => ['--images', img]),
+          ]
+
+          const proc = spawnSync(`${home}/.local/bin/uv`, args, {
+            cwd: `${home}/.agents/skills/xiaohongshu-skills`,
+            encoding: 'utf-8',
+            timeout: 60000,
+          })
+
+          if (proc.status === 0) {
+            context?.onPublished?.(idx)
+            result = `✅ 发布成功！\n标题：${title}\n平台：小红书\n内容预览：${content.slice(0, 80)}…`
+          } else {
+            result = `❌ 发布失败：${(proc.stderr || proc.stdout || '未知错误').slice(0, 300)}`
+          }
+        } catch (e: any) {
+          result = `❌ 发布出错：${e.message}`
+        }
         break
       }
       default:

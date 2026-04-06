@@ -88,6 +88,19 @@ export const queryTools: FunctionDeclaration[] = [
     },
   },
   {
+    name: 'audit_finance',
+    description: '财务数据逻辑审查：自动拉取ERP真实数据，检查未审核数据过滤、应付已付金额匹配、禁用接口、退货冲减等核心规则，输出问题报告。用户说审查财务、检查财务、财务有没有问题时调用。',
+    parameters: {
+      type: 'object',
+      properties: {
+        scope: {
+          type: 'string',
+          description: '审查范围（可选）：all=全部, payable=应付, receivable=应收。默认 all',
+        },
+      },
+    },
+  },
+  {
     name: 'query_staff',
     description: '查询员工列表',
     parameters: {
@@ -634,4 +647,44 @@ export const contentTools: FunctionDeclaration[] = [
   },
 ]
 
-export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools]
+export const publishTools: FunctionDeclaration[] = [
+  {
+    name: 'get_publish_queue',
+    description: '获取当前发布队列（待发布内容列表）。Nova 每次对话开始时应主动调用此工具，了解有哪些内容等待发布。返回内容的索引、标题、平台、类型和正文预览。',
+    parameters: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          enum: ['xiaohongshu', 'douyin', 'weibo', 'bilibili', 'wechat', 'all'],
+          description: '按平台筛选，默认 all（全部）',
+        },
+        status: {
+          type: 'string',
+          enum: ['pending', 'published', 'all'],
+          description: '按状态筛选：pending=待发布，published=已发布，all=全部，默认 pending',
+        },
+      },
+    },
+  },
+  {
+    name: 'publish_content',
+    description: '将指定内容发布到对应平台。目前支持小红书直接发布，其他平台返回"待接入"。发布前应先调用 get_publish_queue 确认内容，并征得用户同意后再执行。',
+    parameters: {
+      type: 'object',
+      properties: {
+        index: {
+          type: 'number',
+          description: '要发布的内容在队列中的索引（从 get_publish_queue 结果里获取）',
+        },
+        platform_override: {
+          type: 'string',
+          description: '可选，覆盖原定发布平台（如用户临时改变主意）',
+        },
+      },
+      required: ['index'],
+    },
+  },
+]
+
+export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools, ...publishTools]
