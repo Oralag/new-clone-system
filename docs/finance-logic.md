@@ -1,6 +1,6 @@
 # 财务模块逻辑文档
 
-> 最后更新：2026-04-04  
+> 最后更新：2026-04-06  
 > 用途：排查财务数据问题、修改计算逻辑时的参考手册
 
 ---
@@ -90,14 +90,24 @@ Overview.vue 的汇总数字必须与 FundFlow.vue 的明细合计一致。两�
 
 #### payableList 计算（应付）
 ```
-数据来源：purchaseRes（/stock/PurchaseOrder/index?status=1）
-处理步骤：
-  1. 按供应商 key 聚合采购订单
-     - key = `id:${supplier_id}` 或 `name:${supplier_name}`
-  2. 每条订单：un_pay_amount = max(0, after_discount ?? total_amount - pay_amount)
-  3. applyProcureReturnsToPayableRows() 减去采购退货冲减额
-  4. 追加 buildExpensePayableRows() 的待付款费用（生产成本类）
+数据来源：purchaseRes（/stock/PurchaseOrder/index，list_rows=2000）
+⚠️ 注意：后端 status 参数无效（会被忽略），必须前端过滤！
 
+处理步骤：
+  1. 先从 payRes（付款单）构建已付 Map：
+     - 按 order_sn@@supplier_name 匹配 → procurePaidByKey
+     - 按备注 "采购单付款 #ID" 匹配 → procurePaidById
+  2. 遍历采购订单，跳过 status !== 1（前端过滤）
+  3. 按供应商 key 聚合：
+     - key = `id:${supplier_id}` 或 `name:${supplier_name}`
+  4. 每条订单：
+     - orderAmt = after_discount ?? total_amount
+     - paidAmt  = procurePaidById[id] || procurePaidByKey[sn@@sup] || 0
+     - un_pay_amount = max(0, orderAmt - paidAmt)
+  5. applyProcureReturnsToPayableRows() 减去采购退货冲减额
+  6. 追加 buildExpensePayableRows() 的待付款费用（生产成本类）
+
+⚠️ 禁止用 row.pay_amount 作为已付金额（该字段是"审核时填的本次付款额"，不是累计已付）
 禁止使用：/finance/PayAccounts/index（返回空）
 ```
 
@@ -127,10 +137,10 @@ Overview.vue 的汇总数字必须与 FundFlow.vue 的明细合计一致。两�
 getFundList()                                    → fundRes
 /finance/Prepay/index                            → prepayRes
 getCollectReceiptList()                          → collectRes
-getPayReceiptList()                              → payRes
-/stock/PurchaseOrder/index?status=1              → purchaseRes  ← 用于应付 + purchasePayList
+getPayReceiptList()                              → payRes       ← 也用于计算采购已付金额
+/stock/PurchaseOrder/index（list_rows=2000）     → purchaseRes  ← 前端过滤 status===1，用于应付
 /stock/SaleOutOrder/index                        → saleOutRes
-/retail/order/index                              → retailRes
+/retail/order/index                              → retailRes    ← 前端过滤 status===1
 getExpenseList()                                 → expenseRes
 /retail/recharge/index                           → rechargeRes
 /shop/ShopCustomer/index                         → clientRes
@@ -169,7 +179,8 @@ getBomList()                                     → pBomRes
 累计支出 = items.filter(expense).sum(amount)
 资金余额 = 收入 - 支出
 未付款   = 待付款费用(payment_status=pending)之和
-         （注：采购应付在 Payable 页查看，此处不重复计算）
+         + 已审核采购订单欠款（total_amount - 付款单累计已付，前端 status===1 过滤）
+         ⚠️ 采购欠款的已付金额必须从付款单匹配，不能用 row.pay_amount
 ```
 
 #### 不使用的接口（已清理）
@@ -302,10 +313,17 @@ getPayReceiptSupplierLabel(payRow, purchaseOrders, supplierList):
 - 重复计算（同一笔数据在多个来源里都出现）
 - 销售合同被误算为资金收入（合同是应收凭据，不是实际到账）
 
-### Q: 笔数和金额不匹配
-**排查**：
-- 逐个来源数一下各自的笔数
-- 重点检查零售单（410笔导入数据全是 status=0）、销售合同（77笔全是 status=0）
+### Q: 应付/未付款显示 ¥0，但采购订单列表里有"未付款"状态的单子
+**原因**：采购订单的付款状态是前端从付款单里反查计算的，`row.pay_amount` 字段是"审核时填的本次付款额"，不是累计已付。
+**正确算法**：
+1. 从 `/finance/PayReceipt/index` 取所有付款单
+2. 按 `order_sn@@supplier_name` 或备注 `采购单付款 #ID` 匹配累计已付金额
+3. `欠款 = total_amount - 累计已付`
+4. 同时必须前端 `filter(r.status === 1)` 只算已审核单
+
+### Q: 后端 status 参数过滤无效（采购订单）
+已确认后端 `/stock/PurchaseOrder/index?status=1` 会忽略 status 参数，返回全量数据。
+**必须在前端过滤**：`.filter(r => Number(r.status) === 1)`
 
 ---
 
