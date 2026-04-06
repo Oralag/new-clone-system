@@ -94,15 +94,16 @@ Overview.vue 的汇总数字必须与 FundFlow.vue 的明细合计一致。两�
 ⚠️ 注意：后端 status 参数无效（会被忽略），必须前端过滤！
 
 处理步骤：
-  1. 先从 payRes（付款单）构建已付 Map：
-     - 按 order_sn@@supplier_name 匹配 → procurePaidByKey
-     - 按备注 "采购单付款 #ID" 匹配 → procurePaidById
+  1. 先从 payRes（付款单）构建已付 Map（3种匹配）：
+     - 方式1：`order_sn@@supplier_name` 精确匹配 → procurePaidByKey
+     - 方式2：备注 `采购单付款 #ID` → procurePaidById
+     - 方式3：备注 `采购单XXXXX审核自动生成` 提取单号 → procurePaidBySn（兼容历史数据）
   2. 遍历采购订单，跳过 status !== 1（前端过滤）
   3. 按供应商 key 聚合：
      - key = `id:${supplier_id}` 或 `name:${supplier_name}`
   4. 每条订单：
      - orderAmt = after_discount ?? total_amount
-     - paidAmt  = procurePaidById[id] || procurePaidByKey[sn@@sup] || 0
+     - paidAmt  = procurePaidById[id] || procurePaidByKey[sn@@sup] || procurePaidBySn[sn] || 0
      - un_pay_amount = max(0, orderAmt - paidAmt)
   5. applyProcureReturnsToPayableRows() 减去采购退货冲减额
   6. 追加 buildExpensePayableRows() 的待付款费用（生产成本类）
