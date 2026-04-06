@@ -197,4 +197,10 @@ npm run deploy
 
 - [2026-03-22] AI助手创建商品/客户/供应商时允许重名 → `toolExecutor.ts` 中 `create_goods`/`create_customer`/`create_supplier` 必须先查询同名记录，已存在则拒绝创建；`orchestrator.ts` 的 create 提示词也要指导 AI 先检查重名
 
+- [2026-04-06] 未审核单据进了库存和财务 → **铁律：所有单据必须 status===1（已审核）才能影响库存和财务。** 具体规则：
+  - 零售单：审核后才扣库存、才计入财务流水和应收；`FundFlow.vue`/`Overview.vue` 统计零售单款必须 `.filter(r => r.status === 1)`
+  - 采购订单：审核后才入库存；应付账款/未付款统计必须只算 `status===1` 的单子（后端不过滤，必须前端 `.filter(r => Number(r.status) === 1)`）
+  - 销售合同/出库单/采购退货/销售退货：同理，未审核一律不进财务和库存
+  - **禁止**用后端 `status=1` 参数来过滤（后端忽略该参数），必须在前端过滤
+
 <!-- 在此继续追加纠错记录 -->
