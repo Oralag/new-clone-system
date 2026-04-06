@@ -78,7 +78,7 @@
         <el-table-column label="操作" width="130" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="viewDetail(row)">欠款详情</el-button>
-            <el-button v-if="row.__payable_source !== 'expense' && Number(row.un_pay_amount) > 0" type="warning" link size="small" @click="goPay(row)">付款</el-button>
+            <el-button v-if="row.__payable_source !== 'expense'" type="warning" link size="small" @click="goPay(row)">付款</el-button>
             <el-button v-else type="warning" link size="small" @click="router.push('/finance/expense')">费用</el-button>
           </template>
         </el-table-column>
@@ -150,7 +150,6 @@ const supplierOptions = ref<any[]>([])
 const displayRows = computed(() => {
   const normalizedReturns = normalizeProcureReturnFinanceRows(procureReturnRows.value)
   return applyProcureReturnsToPayableRows(rawRows.value, normalizedReturns)
-    .filter((r: any) => Number(r.un_pay_amount) > 0)
 })
 
 const searchForm = reactive({ supplier_name: '', date_from: '', date_to: '' })
