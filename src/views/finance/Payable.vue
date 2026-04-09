@@ -114,7 +114,12 @@
           <template #default="{ row }"><span style="color:#dc2626;font-weight:600">{{ fmt(row.un_pay_amount) }}</span></template>
         </el-table-column>
         <el-table-column prop="due_date" label="订单日期" min-width="110" />
-        <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+        <el-table-column label="操作" width="110" align="center">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="goToOrder(row.order_no)">查看原单</el-button>
+            <el-button v-if="Number(row.un_pay_amount) > 0" type="warning" link size="small" @click="goPaySingle(row)">付款</el-button>
+          </template>
+        </el-table-column>
       </el-table>
     </el-dialog>
   </div>
@@ -188,7 +193,7 @@ async function load() {
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
     const [orderRes, returnRes, supplierRes, expenseRes, payReceiptRes] = settled.map((_, i) => ok(i))
 
-    // 构建已付 Map（3种匹配方式）
+    // 构建已付 Map（每条记录只归一个 map，避免重复计算）
     const paidById: Record<number, number> = {}
     const paidByKey: Record<string, number> = {}
     const paidBySn: Record<string, number> = {}
@@ -197,11 +202,15 @@ async function load() {
       if (!amt) continue
       const sn = String(r.order_sn || '').trim()
       const sup = String(r.supplier_name || r.contact_name || '').trim()
-      if (sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
+      let matched = false
+      if (Number(r.order_id)) {
+        const id = Number(r.order_id); paidById[id] = (paidById[id] || 0) + amt; matched = true
+      }
       const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
-      if (m1) { const id = Number(m1[1]); paidById[id] = (paidById[id] || 0) + amt }
+      if (m1) { const id = Number(m1[1]); paidById[id] = (paidById[id] || 0) + amt; matched = true }
       const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
-      if (m2) { const s = m2[1].trim(); paidBySn[s] = (paidBySn[s] || 0) + amt }
+      if (m2) { const s = m2[1].trim(); paidBySn[s] = (paidBySn[s] || 0) + amt; matched = true }
+      if (!matched && sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
     }
 
     const orders: any[] = orderRes.data?.rows ?? []
@@ -228,7 +237,9 @@ async function load() {
       const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
       const oSn = String(o.order_sn || o.order_no || '').trim()
       const oSup = String(o.supplier_name || '').trim()
-      const paidAmt = paidById[o.id] || paidByKey[`${oSn}@@${oSup}`] || paidBySn[oSn] || 0
+      const paidAmt = (paidById[o.id] || 0)
+        + (paidBySn[oSn] || 0)
+        + (paidByKey[`${oSn}@@${oSup}`] || 0)
       const unpaid = Math.max(0, orderAmt - paidAmt)
       s.order_amount += orderAmt
       s.paid_amount += paidAmt
@@ -285,24 +296,51 @@ function resetSearch() {
 // 欠款详情
 const detailVisible = ref(false)
 const detailSupplier = ref('')
+const detailSupplierId = ref<any>(null)
 const detailRows = ref<any[]>([])
 
 async function viewDetail(row: any) {
   detailSupplier.value = row.supplier_name
+  detailSupplierId.value = row.supplier_id
   detailRows.value = row.orders ?? []
   detailVisible.value = true
 }
 
 // 跳转付款单新增页，带供应商参数
 function goPay(row: any) {
+  const unpaidOrders = (row.orders ?? []).filter((o: any) => Number(o.un_pay_amount) > 0)
+  const singleOrder = unpaidOrders.length === 1 ? unpaidOrders[0] : null
   router.push({
     path: '/finance/pay-receipt/new',
     query: {
       supplier_id: row.supplier_id,
       supplier_name: row.supplier_name,
       un_pay_amount: row.un_pay_amount,
+      order_id: singleOrder?.order_id ?? undefined,
+      order_no: singleOrder?.order_no ?? undefined,
     }
   })
+}
+
+// 从欠款详情弹框单笔付款（精确传 order_id）
+function goPaySingle(order: any) {
+  detailVisible.value = false
+  router.push({
+    path: '/finance/pay-receipt/new',
+    query: {
+      supplier_id: detailSupplierId.value,
+      supplier_name: detailSupplier.value,
+      un_pay_amount: order.un_pay_amount,
+      order_id: order.order_id,
+      order_no: order.order_no,
+    }
+  })
+}
+
+// 跳转到采购单列表并高亮对应单据
+function goToOrder(orderNo: string) {
+  detailVisible.value = false
+  router.push({ path: '/procure/order', query: { order_no: orderNo } })
 }
 
 onMounted(async () => {

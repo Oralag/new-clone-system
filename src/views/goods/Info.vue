@@ -1080,14 +1080,14 @@ function getCatePathText(row: any) {
 const leftView = ref<'cate' | 'bom'>('cate')
 const bomViewLoading = ref(false)
 const bomViewKeyword = ref('')
-// { goods_id, goods_name, goods_sn, material_count, materialIds: Set<number> }
+// { bomId, goods_name, goods_sn, material_count, materialSns: Set<string>, bomRows: [] }
 const bomGoodsList = ref<any[]>([])
-// 当前选中的成品（null = 全部）
+// 当前选中的 BOM id（null = 全部）
 const bomViewGoodsId = ref<number | null>(null)
-// materialIds of selected BOM product + the product itself
-const bomViewMaterialIds = ref<Set<number>>(new Set())
-// map: goods_id -> BOM rows (for usage display)
-const bomUsageMap = ref<Map<number, any>>(new Map())
+// goods_sn 集合：成品本身 + 所有物料（用于 rowFilter）
+const bomViewMaterialIds = ref<Set<string>>(new Set())
+// map: goods_sn -> BOM item row (for usage display)
+const bomUsageMap = ref<Map<string, any>>(new Map())
 
 const filteredBomGoodsList = computed(() => {
   if (!bomViewKeyword.value) return bomGoodsList.value
@@ -1100,56 +1100,58 @@ async function loadBomView() {
   bomViewLoading.value = true
   try {
     const res = await getBomList({ list_rows: 2000 })
-    const rows: any[] = res.data?.rows ?? []
-    // 聚合成品
-    const goodsMap = new Map<number, any>()
-    for (const r of rows) {
-      if (!r.goods_id) continue
-      if (!goodsMap.has(r.goods_id)) {
-        goodsMap.set(r.goods_id, {
-          goods_id: r.goods_id,
-          goods_name: r.goods_name,
-          goods_sn: r.goods_sn,
-          material_count: 0,
-          materialIds: new Set<number>(),
-          bomRows: [] as any[],
-        })
-      }
-      const g = goodsMap.get(r.goods_id)!
-      if (r.material_name && r.material_name !== '（待添加物料）' && r.num > 0) {
-        g.material_count++
-        if (r.material_id) g.materialIds.add(r.material_id)
-        g.bomRows.push(r)
-      }
-    }
-    bomGoodsList.value = Array.from(goodsMap.values())
-    // 重建 usageMap
-    const newUsageMap = new Map<number, any>()
-    for (const g of bomGoodsList.value) {
-      for (const r of g.bomRows) {
-        if (r.material_id) newUsageMap.set(r.material_id, r)
-      }
-    }
-    bomUsageMap.value = newUsageMap
+    const list: any[] = res.data?.list ?? res.data?.rows ?? []
+    bomGoodsList.value = list.map(b => ({
+      bomId: b.id,
+      goods_id: b.id,  // keep for template :key compatibility
+      goods_name: b.goods_name,
+      goods_sn: b.goods_sn,
+      material_count: 0,
+      materialSns: new Set<string>(),
+      bomRows: [] as any[],
+    }))
   } finally {
     bomViewLoading.value = false
   }
 }
 
-function selectBomGoods(g: any | null) {
+async function selectBomGoods(g: any | null) {
   if (g === null) {
     bomViewGoodsId.value = null
     bomViewMaterialIds.value = new Set()
-  } else {
-    bomViewGoodsId.value = g.goods_id
-    // 包含成品本身 + 所有物料
-    bomViewMaterialIds.value = new Set([g.goods_id, ...g.materialIds])
-    // 只为当前成品重建 usageMap（物料id -> bom行）
-    const m = new Map<number, any>()
-    for (const r of g.bomRows) {
-      if (r.material_id) m.set(r.material_id, r)
-    }
+    bomUsageMap.value = new Map()
+    delete searchForm.list_rows
+    tableRef.value?.refresh()
+    return
+  }
+  bomViewGoodsId.value = g.bomId
+  searchForm.list_rows = 10000
+  // 如果 bomRows 已加载，直接用缓存
+  if (g.bomRows.length > 0) {
+    const sns = new Set<string>([g.goods_sn, ...g.bomRows.map((r: any) => r.goods_sn).filter(Boolean)])
+    bomViewMaterialIds.value = sns
+    const m = new Map<string, any>()
+    for (const r of g.bomRows) { if (r.goods_sn) m.set(r.goods_sn, r) }
     bomUsageMap.value = m
+    tableRef.value?.refresh()
+    return
+  }
+  // 拉 detail
+  bomViewLoading.value = true
+  try {
+    const res = await getBomByGoods(g.bomId)
+    const detail = res.data ?? {}
+    const items: any[] = detail.items ?? []
+    g.bomRows = items
+    g.material_count = items.length + 1
+    const sns = new Set<string>([g.goods_sn, ...items.map((r: any) => r.goods_sn).filter(Boolean)])
+    g.materialSns = sns
+    bomViewMaterialIds.value = sns
+    const m = new Map<string, any>()
+    for (const r of items) { if (r.goods_sn) m.set(r.goods_sn, r) }
+    bomUsageMap.value = m
+  } finally {
+    bomViewLoading.value = false
   }
   tableRef.value?.refresh()
 }
@@ -1160,6 +1162,7 @@ function switchLeftView(view: 'cate' | 'bom') {
     // 重置分类筛选，切换到 BOM 模式
     selectedCateId.value = null
     searchForm.cate_id = ''
+    delete searchForm.list_rows
     bomViewGoodsId.value = null
     bomViewMaterialIds.value = new Set()
     loadBomView()
@@ -1167,12 +1170,13 @@ function switchLeftView(view: 'cate' | 'bom') {
     // 切回分类模式，重置 BOM 筛选
     bomViewGoodsId.value = null
     bomViewMaterialIds.value = new Set()
+    delete searchForm.list_rows
   }
   tableRef.value?.refresh()
 }
 
 function getBomUsage(row: any): string {
-  const r = bomUsageMap.value.get(row.id)
+  const r = bomUsageMap.value.get(row.goods_sn)
   if (!r) return ''
   return `${r.num} ${r.unit_name || ''}`
 }
@@ -1189,9 +1193,9 @@ const activeCateIds = computed<Set<number> | null>(() => {
 const rowFilter = computed(() => {
   const typeFilter = filterType.value ? (row: any) => getGoodsType(row) === filterType.value : null
   const cateFilter = activeCateIds.value ? (row: any) => activeCateIds.value!.has(row.cate_id) : null
-  // BOM视图：按物料ID集合筛选
-  const bomIds = leftView.value === 'bom' && bomViewGoodsId.value !== null ? bomViewMaterialIds.value : null
-  const bomFilter = bomIds ? (row: any) => bomIds.has(row.id) : null
+  // BOM视图：按物料 goods_sn 集合筛选
+  const bomSns = leftView.value === 'bom' && bomViewGoodsId.value !== null ? bomViewMaterialIds.value as Set<string> : null
+  const bomFilter = bomSns ? (row: any) => bomSns.has(row.goods_sn) : null
   if (!typeFilter && !cateFilter && !bomFilter) return undefined
   return (row: any) => {
     if (typeFilter && !typeFilter(row)) return false

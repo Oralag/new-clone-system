@@ -3,7 +3,57 @@
 
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
-      <el-card>
+      <!-- 合计栏 -->
+      <div class="summary-bar">
+        <!-- 主行：全部 -->
+        <div class="summary-main">
+          <div class="summary-item">
+            <span class="s-label">单据数</span>
+            <span class="s-value">{{ summaryData.count }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">采购数量</span>
+            <span class="s-value">{{ summaryData.totalQty }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">含税合计</span>
+            <span class="s-value primary">¥{{ summaryData.totalAmount.toFixed(2) }}</span>
+          </div>
+        </div>
+        <!-- 次行：已审核 + 待审核 -->
+        <div class="summary-sub">
+          <div class="summary-sub-group">
+            <span class="s-group-label audited">已审核</span>
+            <div class="summary-item sm">
+              <span class="s-label">{{ summaryData.auditedCount }} 单</span>
+            </div>
+            <div class="summary-item sm">
+              <span class="s-label">合计</span>
+              <span class="s-value-sm primary">¥{{ summaryData.auditedAmount.toFixed(2) }}</span>
+            </div>
+            <div class="summary-item sm">
+              <span class="s-label">已付</span>
+              <span class="s-value-sm success">¥{{ summaryData.totalPaid.toFixed(2) }}</span>
+            </div>
+            <div class="summary-item sm">
+              <span class="s-label">未付</span>
+              <span class="s-value-sm danger">¥{{ summaryData.totalUnpaid.toFixed(2) }}</span>
+            </div>
+          </div>
+          <div class="summary-sub-divider" />
+          <div class="summary-sub-group">
+            <span class="s-group-label pending">待审核</span>
+            <div class="summary-item sm">
+              <span class="s-label">{{ summaryData.pendingCount }} 单</span>
+            </div>
+            <div class="summary-item sm">
+              <span class="s-label">合计</span>
+              <span class="s-value-sm">¥{{ summaryData.pendingAmount.toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <el-card class="card-with-summary">
         <ScTable ref="tableRef" :api-obj="getProcureOrderListWithInhouse"
           :batch-del-api="batchDelProcureOrders"
           sort-by="order_date" :sort-desc="true"
@@ -97,7 +147,7 @@
           </el-table-column>
           <el-table-column label="已付金额" width="120" align="right">
             <template #default="{ row }">
-              <span v-if="Number(row.pay_amount) > 0" style="color:#16a34a;font-weight:600">¥{{ Number(row.pay_amount).toFixed(2) }}</span>
+              <span v-if="getPaidAmount(row) > 0" style="color:#16a34a;font-weight:600">¥{{ getPaidAmount(row).toFixed(2) }}</span>
               <span v-else style="color:rgba(29,29,31,0.2)">¥0.00</span>
             </template>
           </el-table-column>
@@ -799,6 +849,24 @@ const route = useRoute()
 const highlightSn = ref('')
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
+// 合计数据
+const summaryData = reactive({
+  count: 0,
+  totalQty: '0',
+  totalAmount: 0,
+  auditedCount: 0,
+  auditedAmount: 0,
+  totalPaid: 0,
+  totalUnpaid: 0,
+  pendingCount: 0,
+  pendingAmount: 0,
+})
+const lastSummaryRows = ref<any[]>([])
+
+function updateSummary() {
+  updateSummaryFromRows(lastSummaryRows.value)
+}
+
 // 包装 API：加载完采购单后，批量查入库单并填充 inhouse_qty
 async function getProcureOrderListWithInhouse(params: any) {
   const res = await getProcureOrderList(params)
@@ -820,7 +888,38 @@ async function getProcureOrderListWithInhouse(params: any) {
       }
     } catch { /* 查不到入库单不影响列表展示 */ }
   }
+  // 数据加载完后更新合计（用当前页 rows 计算）
+  lastSummaryRows.value = rows
+  updateSummaryFromRows(rows)
   return res
+}
+
+function updateSummaryFromRows(rows: any[]) {
+  let qty = 0, amount = 0
+  let auditedCount = 0, auditedAmount = 0, paid = 0
+  let pendingCount = 0, pendingAmount = 0
+  for (const row of rows) {
+    const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
+    qty += items.reduce((s: number, i: any) => s + (parseFloat(i.num) || 0), 0)
+    amount += Number(row.total_amount || 0)
+    if (Number(row.status) === 1) {
+      auditedCount++
+      auditedAmount += Number(row.total_amount || 0)
+      paid += getPaidAmount(row)
+    } else if (Number(row.status) !== 2) {
+      pendingCount++
+      pendingAmount += Number(row.total_amount || 0)
+    }
+  }
+  summaryData.count = rows.length
+  summaryData.totalQty = qty % 1 === 0 ? String(qty) : qty.toFixed(2)
+  summaryData.totalAmount = amount
+  summaryData.auditedCount = auditedCount
+  summaryData.auditedAmount = auditedAmount
+  summaryData.totalPaid = paid
+  summaryData.totalUnpaid = Math.max(0, auditedAmount - paid)
+  summaryData.pendingCount = pendingCount
+  summaryData.pendingAmount = pendingAmount
 }
 
 function getInhouseQty(row: any): number {
@@ -830,6 +929,7 @@ function getInhouseQty(row: any): number {
 const paidMapById = ref<Record<number, number>>({})
 const paidMapByKey = ref<Record<string, number>>({})
 const paidMapBySn = ref<Record<string, number>>({})
+const paidMapBySupplier = ref<Record<string, number>>({})
 
 function payKey(orderSn: string, supplierName: string): string {
   return `${String(orderSn || '').trim()}@@${String(supplierName || '').trim()}`
@@ -914,31 +1014,35 @@ async function loadPaidMap() {
       if (!amount) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
-      if (orderSn && supplierName) {
-        const key = payKey(orderSn, supplierName)
-        keyMap[key] = (keyMap[key] || 0) + amount
-      }
-      // 直接通过 order_id 字段匹配（PayReceiptNew.vue 保存时写入）
+      // 精确匹配到采购单ID的，只放idMap，不再放keyMap/snMap（避免重复计算）
+      let matched = false
       if (Number(r.order_id)) {
         const id = Number(r.order_id)
         idMap[id] = (idMap[id] || 0) + amount
+        matched = true
       }
-      // 兼容历史备注：采购单付款 #ID
       const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
       if (m1) {
         const id = Number(m1[1])
         idMap[id] = (idMap[id] || 0) + amount
+        matched = true
       }
-      // 兼容历史备注：采购单XXXXX审核自动生成
       const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
       if (m2) {
         const sn = m2[1].trim()
         snMap[sn] = (snMap[sn] || 0) + amount
+        matched = true
+      }
+      // 无精确匹配时，用 order_sn@@supplier 兜底
+      if (!matched && orderSn && supplierName) {
+        const key = payKey(orderSn, supplierName)
+        keyMap[key] = (keyMap[key] || 0) + amount
       }
     }
     paidMapById.value = idMap
     paidMapByKey.value = keyMap
     paidMapBySn.value = snMap
+    updateSummary()
   } catch {}
 }
 
@@ -946,10 +1050,9 @@ function getPaidAmount(row: any): number {
   const oSn = String(row.order_sn || '').trim()
   const oNo = String(row.order_no || '').trim()
   const sup = String(row.supplier_name || '').trim()
-  return paidMapById.value[row.id]
-    || paidMapByKey.value[payKey(oSn, sup)] || paidMapByKey.value[payKey(oNo, sup)]
-    || paidMapBySn.value[oSn] || paidMapBySn.value[oNo]
-    || 0
+  return (paidMapById.value[row.id] || 0)
+    + (paidMapBySn.value[oSn] || paidMapBySn.value[oNo] || 0)
+    + (paidMapByKey.value[payKey(oSn, sup)] || paidMapByKey.value[payKey(oNo, sup)] || 0)
 }
 
 function getPayStatus(row: any): { label: string; type: string } {
@@ -1939,6 +2042,94 @@ async function submitAddFund() {
 <style scoped>
 .order-page { height: 100%; }
 
+.summary-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 10px 10px 0 0;
+  border-bottom: none;
+  padding: 12px 20px 10px;
+}
+
+/* 主行 */
+.summary-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+.summary-main .summary-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 20px 0 0;
+  margin-right: 20px;
+  border-right: 1px solid #ebebeb;
+}
+.summary-main .summary-item:last-child {
+  border-right: none;
+}
+.summary-main .s-label {
+  font-size: 12px;
+  color: rgba(29,29,31,0.4);
+}
+.summary-main .s-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+.summary-main .s-value.primary { color: #0071e3; }
+
+/* 次行 */
+.summary-sub {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.summary-sub-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.summary-sub-divider {
+  width: 1px;
+  height: 14px;
+  background: #e4e7ed;
+  margin: 0 12px;
+}
+.s-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin-right: 8px;
+  color: rgba(29,29,31,0.4);
+  background: #f5f5f7;
+}
+.s-group-label.audited { color: #16a34a; background: #f0fdf4; }
+.s-group-label.pending { color: #d97706; background: #fffbeb; }
+
+.summary-item.sm {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 0 10px 0 0;
+  margin-right: 2px;
+}
+.summary-sub .s-label {
+  font-size: 11px;
+  color: rgba(29,29,31,0.4);
+}
+.s-value-sm {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+.s-value-sm.primary { color: #0071e3; }
+.s-value-sm.success { color: #16a34a; }
+.s-value-sm.danger  { color: #dc2626; }
+
 .expand-detail {
   padding: 12px 20px 12px 48px;
   background: #f8faff;
@@ -2135,6 +2326,9 @@ async function submitAddFund() {
 }
 .attach-del:hover { color: #dc2626; }
 
+:deep(.card-with-summary) {
+  border-radius: 0 0 10px 10px;
+}
 :deep(.row-highlight) { background-color: #ecf5ff !important; }
 :deep(.row-highlight td) { background-color: #ecf5ff !important; }
 </style>

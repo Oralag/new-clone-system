@@ -1,7 +1,4 @@
 // Cloudflare Pages Function — /adminapi/login/register
-// Stores users in KV (USERS_KV binding) and supports self-hosted registration
-
-import { hashPassword } from '../../utils/password.js'
 
 function corsHeaders() {
   return {
@@ -59,7 +56,7 @@ export async function onRequest(context) {
   const user = {
     company_name: company_name.trim(),
     mobile,
-    password: await hashPassword(password),
+    password: String(password),
     admin_id: Date.now(),
     created_at: new Date().toISOString(),
   }

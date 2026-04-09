@@ -278,7 +278,7 @@ async function loadSupplierFinance() {
     const payments: any[] = payRes.data?.rows ?? payRes.data?.list ?? []
     const pmMap: Record<number, number> = {}
     for (const p of payments) {
-      const sid = Number(p.supplier_id)
+      const sid = Number(p.supplier_id) || Number(p.contact_id)
       if (sid) pmMap[sid] = (pmMap[sid] || 0) + Number(p.amount || 0)
     }
     paidMap.value = pmMap

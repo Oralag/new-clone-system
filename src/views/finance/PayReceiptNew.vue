@@ -191,9 +191,13 @@ const route = useRoute()
 
 function fmt(v: any) { return Number(v || 0).toFixed(2) }
 
+// 从路由参数读采购单信息（从应付款页面跳转时携带）
+const routeOrderId = Number(route.query.order_id || 0)
+const routeOrderNo = String(route.query.order_no || '')
+
 // 初始化时从路由参数读供应商信息
 const fd = reactive({
-  order_sn: '',
+  order_sn: routeOrderNo,
   pay_date: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
   supplier_id: null as any,
   supplier_name: '',
@@ -202,7 +206,7 @@ const fd = reactive({
   discount_amount: 0,
   prepay_deduct: 0,
   verify_type: 'auto',
-  remark: '',
+  remark: routeOrderId ? `采购单付款 #${routeOrderId}` : '',
 })
 
 // 付款明细行
@@ -262,10 +266,11 @@ async function handleSave() {
   try {
     const totalLines = validPayLines.value.length
     for (const [idx, line] of validPayLines.value.entries()) {
-      const payload = {
+      const payload: Record<string, any> = {
         order_sn: fd.order_sn
           ? (totalLines === 1 ? fd.order_sn : `${fd.order_sn}-${String(idx + 1).padStart(2, '0')}`)
           : undefined,
+        order_id: routeOrderId || undefined,
         pay_date: fd.pay_date,
         supplier_id: fd.supplier_id,
         supplier_name: fd.supplier_name,

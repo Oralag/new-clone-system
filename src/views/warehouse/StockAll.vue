@@ -665,6 +665,7 @@ const filteredGoods = computed(() => {
 })
 
 const totalQty = computed(() => filteredGoods.value.reduce((s, r) => s + getStockQty(r), 0))
+const totalStockValue = computed(() => filteredGoods.value.reduce((s, r) => s + getStockQty(r) * getAvgPrice(r), 0))
 const negativeStockCount = computed(() => filteredGoods.value.filter(r => getStockQty(r) < 0).length)
 const lowStockCount = computed(() => filteredGoods.value.filter(r => Number(r.safe_min) > 0 && getStockQty(r) < Number(r.safe_min)).length)
 const zeroStockCount = computed(() => filteredGoods.value.filter(r => getStockQty(r) === 0).length)
@@ -673,6 +674,7 @@ const highStockCount = computed(() => filteredGoods.value.filter(r => Number(r.s
 const overviewStats = computed(() => [
   { label: '商品总数', value: filteredGoods.value.length },
   { label: '总库存', value: totalQty.value.toFixed(2) },
+  { label: '库存总值', value: '¥' + totalStockValue.value.toFixed(2) },
   { label: '负库存', value: negativeStockCount.value },
   { label: '库存不足', value: lowStockCount.value },
   { label: '零库存', value: zeroStockCount.value },

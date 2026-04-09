@@ -430,8 +430,8 @@ async function loadData() {
       getBomList({ list_rows: 500 }),
       getExpenseList(params),
     ])
-    saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
-    retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []) : []
+    saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1) : []
+    retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []).filter((r: any) => Number(r.status) === 1) : []
     goodsList.value          = g.status === 'fulfilled' ? (g.value?.data?.rows  ?? []) : []
     procureInhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []
     bomList.value            = b.status === 'fulfilled' ? (b.value?.data?.rows  ?? []) : []

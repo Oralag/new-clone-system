@@ -167,9 +167,28 @@ async function openView(row: any) {
       getPayReceiptList({ list_rows: 2000 }),
       getCollectReceiptList({ list_rows: 2000 }),
     ])
-    const payRows = (payRes.data?.rows ?? [])
-      .filter((r: any) => Number(r.fund_id) === fundId)
-      .map((r: any) => ({ ...r, _direction: 'expense', _source: sourceMap[r.contact_type] || r.contact_type || '' }))
+    // 检查是否有 contact_name 为空的供应商付款记录，若有则从采购单补全
+    const allPayRows: any[] = payRes.data?.rows ?? []
+    const filteredPayRows = allPayRows.filter((r: any) => Number(r.fund_id) === fundId)
+    const missingNameRows = filteredPayRows.filter(
+      (r: any) => r.contact_type === 'supplier' && !r.contact_name && r.order_sn
+    )
+    let snToSupplier: Record<string, string> = {}
+    if (missingNameRows.length > 0) {
+      try {
+        const poRes = await http.get('/stock/PurchaseOrder/index', { params: { list_rows: 1000 } })
+        const poRows: any[] = poRes.data?.rows ?? []
+        for (const po of poRows) {
+          if (po.order_sn) snToSupplier[po.order_sn] = po.supplier_name || ''
+        }
+      } catch {}
+    }
+    const payRows = filteredPayRows.map((r: any) => ({
+      ...r,
+      contact_name: r.contact_name || snToSupplier[r.order_sn] || '',
+      _direction: 'expense',
+      _source: sourceMap[r.contact_type] || r.contact_type || '',
+    }))
     const collectRows = (collectRes.data?.rows ?? [])
       .filter((r: any) => Number(r.fund_id) === fundId)
       .map((r: any) => ({ ...r, _direction: 'income', _source: sourceMap[r.contact_type] || r.contact_type || '' }))

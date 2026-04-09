@@ -1,7 +1,15 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import {
+  ArrowDown, ArrowRight, ArrowUp, Bell, Bottom, Box,
+  CircleCheck, CircleCheckFilled, CircleClose, Clock, Close, Cpu,
+  Delete, Document, DocumentChecked, Download, Edit, Filter,
+  Finished, GoodsFilled, Grid, InfoFilled, List, Loading,
+  Microphone, Minus, Money, Moon, OfficeBuilding, Picture,
+  Plus, Promotion, RefreshLeft, Search, Select, SetUp,
+  Shop, ShoppingCart, Sunny, TrendCharts, User, View, Wallet, Warning,
+} from '@element-plus/icons-vue'
 import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { registerSW } from 'virtual:pwa-register'
@@ -21,8 +29,16 @@ registerSW({
 
 const app = createApp(App)
 
-// Register all Element Plus icons globally
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+const usedIcons = {
+  ArrowDown, ArrowRight, ArrowUp, Bell, Bottom, Box,
+  CircleCheck, CircleCheckFilled, CircleClose, Clock, Close, Cpu,
+  Delete, Document, DocumentChecked, Download, Edit, Filter,
+  Finished, GoodsFilled, Grid, InfoFilled, List, Loading,
+  Microphone, Minus, Money, Moon, OfficeBuilding, Picture,
+  Plus, Promotion, RefreshLeft, Search, Select, SetUp,
+  Shop, ShoppingCart, Sunny, TrendCharts, User, View, Wallet, Warning,
+}
+for (const [key, component] of Object.entries(usedIcons)) {
   app.component(key, component)
 }
 

@@ -288,13 +288,13 @@
 
     <!-- 底部: 库存 + 采购供应商 -->
     <div class="ro-charts-row">
-      <div class="ro-chart-card" style="flex:1">
+      <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
         <div class="ro-card-header">
           <div class="ro-card-title">库存状况</div>
           <router-link to="/warehouse/stock" class="ro-link">查看库存 →</router-link>
         </div>
         <div v-if="stockRows.length === 0 && !loading" class="ro-empty">暂无库存数据</div>
-        <el-table v-else :data="stockRows.slice(0, 5)" size="small" style="width:100%" :max-height="280">
+        <el-table v-else :data="stockRows.slice(0, 5)" size="small" style="width:100%" :max-height="280" table-layout="fixed">
           <el-table-column prop="goods_name" label="商品" min-width="100" show-overflow-tooltip />
           <el-table-column label="库存量" align="right" width="70">
             <template #default="{ row }">
@@ -312,7 +312,7 @@
         </el-table>
       </div>
 
-      <div class="ro-chart-card" style="flex:1">
+      <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
         <div class="ro-card-header">
           <div class="ro-card-title">供应商采购排行</div>
           <router-link to="/procure/order" class="ro-link">查看采购 →</router-link>
@@ -582,11 +582,11 @@ async function loadAll() {
       http.get('/finance/CollectReceipt/index', { params: receiptParams }),
     ])
     saleContracts.value = contracts.status === 'fulfilled'
-      ? (contracts.value?.data?.rows ?? contracts.value?.data?.data ?? []) : []
+      ? (contracts.value?.data?.rows ?? contracts.value?.data?.data ?? []).filter((r: any) => Number(r.status) === 1) : []
     retailOrders.value = retail.status === 'fulfilled'
-      ? (retail.value?.data?.rows ?? retail.value?.data?.data ?? []) : []
+      ? (retail.value?.data?.rows ?? retail.value?.data?.data ?? []).filter((r: any) => Number(r.status) === 1) : []
     procureOrders.value = procure.status === 'fulfilled'
-      ? (procure.value?.data?.rows ?? procure.value?.data?.data ?? []) : []
+      ? (procure.value?.data?.rows ?? procure.value?.data?.data ?? []).filter((r: any) => Number(r.status) === 1) : []
     stockRows.value = stock.status === 'fulfilled'
       ? (stock.value?.data?.rows ?? []) : []
     goodsList.value = goods.status === 'fulfilled'
@@ -618,6 +618,8 @@ onActivated(loadAll)
   gap: 20px;
   min-height: 100%;
   background: #f5f6fa;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 .ro-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; }
 .ro-badge {
@@ -655,8 +657,8 @@ onActivated(loadAll)
 .ro-more { font-size:11px; color:rgba(29,29,31,0.3); padding:3px 0; }
 
 /* 利润核算 */
-.ro-profit-body { display:flex; gap:0; align-items:flex-start; }
-.ro-profit-col { flex:1; padding-right:20px; border-right:1px solid #f0f0f5; margin-right:20px; }
+.ro-profit-body { display:flex; gap:0; align-items:flex-start; overflow:hidden; }
+.ro-profit-col { flex:1; min-width:0; padding-right:20px; border-right:1px solid #f0f0f5; margin-right:20px; overflow:hidden; }
 .ro-profit-col:last-child { border-right:none; margin-right:0; }
 .ro-summary-col { width:230px; flex-shrink:0; }
 
