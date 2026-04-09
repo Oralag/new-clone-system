@@ -8,6 +8,7 @@
           :batch-del-api="batchDelProcureOrders"
           sort-by="order_date" :sort-desc="true"
           export-file-name="采购订单" :params="searchForm"
+          :row-class-name="({ row }: any) => (row.order_no || row.order_sn) === highlightSn ? 'row-highlight' : ''"
           :export-columns="{ order_no: '采购单号', supplier_name: '供应商', warehouse_name: '仓库', order_date: '开单日期', delivery_date: '预计交期', admin_name: '采购人', total_amount: '含税合计', status: '状态', pay_amount: '已付金额' }">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="采购单号" clearable style="width:160px" />
@@ -96,7 +97,7 @@
           </el-table-column>
           <el-table-column label="已付金额" width="120" align="right">
             <template #default="{ row }">
-              <span v-if="getPaidAmount(row) > 0" style="color:#16a34a;font-weight:600">¥{{ getPaidAmount(row).toFixed(2) }}</span>
+              <span v-if="Number(row.pay_amount) > 0" style="color:#16a34a;font-weight:600">¥{{ Number(row.pay_amount).toFixed(2) }}</span>
               <span v-else style="color:rgba(29,29,31,0.2)">¥0.00</span>
             </template>
           </el-table-column>
@@ -462,7 +463,7 @@
             <div v-if="isReadonly" class="settle-item">
               <span class="settle-label">已付金额</span>
               <span class="settle-value" style="color:#16a34a;font-weight:700">
-                ¥{{ getPaidAmount(fd).toFixed(2) }}
+                ¥{{ Number(fd.pay_amount || 0).toFixed(2) }}
               </span>
             </div>
             <div class="settle-item">
@@ -690,9 +691,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
@@ -793,6 +795,8 @@ async function handleBatchReverseAudit() {
 }
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
+const route = useRoute()
+const highlightSn = ref('')
 const tableRef = ref<InstanceType<typeof ScTable>>()
 
 // 包装 API：加载完采购单后，批量查入库单并填充 inhouse_qty
@@ -876,23 +880,17 @@ async function submitPay() {
   if (!payForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
   paySubmitting.value = true
   try {
-    // 创建付款单
+    // 创建付款单（后端会自动扣减资金账户余额）
     await createPayReceipt({
-      supplier_name: payForm.supplierName,
+      contact_type: 'supplier',
+      contact_name: payForm.supplierName,
+      order_sn: payForm.orderSn,
       amount: payForm.amount,
       pay_date: payForm.pay_date,
       fund_id: payForm.fund_id,
       fund_name: payForm.fund_name,
       remark: `采购单付款 #${payForm.orderId}${payForm.remark ? ' ' + payForm.remark : ''}`,
     })
-    // 扣减资金账户余额
-    const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-    const funds: any[] = fundRes.data?.rows ?? []
-    const fund = funds.find((f: any) => f.id === payForm.fund_id)
-    if (fund) {
-      const newBalance = Number(fund.balance || 0) - payForm.amount
-      await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
-    }
     ElMessage.success('付款成功')
     payDialogVisible.value = false
     loadPaidMap()
@@ -920,6 +918,11 @@ async function loadPaidMap() {
         const key = payKey(orderSn, supplierName)
         keyMap[key] = (keyMap[key] || 0) + amount
       }
+      // 直接通过 order_id 字段匹配（PayReceiptNew.vue 保存时写入）
+      if (Number(r.order_id)) {
+        const id = Number(r.order_id)
+        idMap[id] = (idMap[id] || 0) + amount
+      }
       // 兼容历史备注：采购单付款 #ID
       const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
       if (m1) {
@@ -940,9 +943,13 @@ async function loadPaidMap() {
 }
 
 function getPaidAmount(row: any): number {
-  const key = payKey(row.order_sn || row.order_no || '', row.supplier_name || '')
-  const sn = String(row.order_sn || row.order_no || '').trim()
-  return paidMapByKey.value[key] || paidMapById.value[row.id] || paidMapBySn.value[sn] || 0
+  const oSn = String(row.order_sn || '').trim()
+  const oNo = String(row.order_no || '').trim()
+  const sup = String(row.supplier_name || '').trim()
+  return paidMapById.value[row.id]
+    || paidMapByKey.value[payKey(oSn, sup)] || paidMapByKey.value[payKey(oNo, sup)]
+    || paidMapBySn.value[oSn] || paidMapBySn.value[oNo]
+    || 0
 }
 
 function getPayStatus(row: any): { label: string; type: string } {
@@ -1009,7 +1016,8 @@ async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
     }
   } catch { /* ignore */ }
 }
-const searchForm = reactive<any>({ order_no: '', supplier_name: '', status: '' })
+const searchForm = reactive<any>({ order_no: route.query.order_no ? String(route.query.order_no) : '', supplier_name: '', status: '' })
+if (route.query.order_no) highlightSn.value = String(route.query.order_no)
 const showForm = ref(false)
 const isReadonly = ref(false)
 
@@ -1040,6 +1048,18 @@ async function loadStaff() {
 
 onMounted(() => {
   loadSuppliers(); loadWarehouses(); loadFunds(); loadStaff(); loadPaidMap()
+  // 从付款单跳转过来，高亮对应采购单
+  if (route.query.order_no) {
+    const sn = String(route.query.order_no)
+    searchForm.order_no = sn
+    highlightSn.value = sn
+    nextTick(() => {
+      if (tableRef.value) {
+        tableRef.value.searchParams.order_no = sn
+        tableRef.value.refresh()
+      }
+    })
+  }
   // 从采购计划跳转过来，预填数据
   const planData = sessionStorage.getItem('procure_order_from_plan')
   if (planData) {
@@ -1114,6 +1134,12 @@ function checkBomData() {
 
 onActivated(() => {
   checkBomData()
+  if (route.query.order_no) {
+    const sn = String(route.query.order_no)
+    searchForm.order_no = sn
+    highlightSn.value = sn
+    tableRef.value?.refresh()
+  }
 })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
@@ -1251,6 +1277,7 @@ function openCreate() {
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
+  if (!fd.fund_id) fd.fund_id = null
   fd.order_no = fd.order_no || row.order_sn || ''
   fd.order_sn = fd.order_sn || fd.order_no || ''
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
@@ -1363,33 +1390,9 @@ async function handleSave(andAudit = false) {
         } catch (e: any) {
           console.warn('自动入库失败', e?.message)
         }
-        // 审核通过：创建付款单记录 + 扣减资金账户余额（如有本次付款金额）
-        const payAmount = Number(fd.pay_amount || 0)
-        const fundId = Number(fd.fund_id || 0)
-        if (payAmount > 0 && fundId) {
-          try {
-            const orderSn = fd.order_sn || fd.order_no || `PO${orderId}`
-            await createPayReceipt({
-              supplier_name: fd.supplier_name,
-              amount: payAmount,
-              pay_date: fd.order_date || new Date().toISOString().slice(0, 10),
-              fund_id: fundId,
-              fund_name: fd.fund_name || '',
-              remark: `采购单付款 #${orderId}`,
-              order_sn: orderSn,
-            })
-            const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-            const funds: any[] = fundRes.data?.rows ?? []
-            const fund = funds.find((f: any) => f.id === fundId)
-            if (fund) {
-              const newBalance = Number(fund.balance || 0) - payAmount
-              await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
-            }
-          } catch (e: any) {
-            console.warn('财务入账失败', e?.message)
-          }
-        }
-        ElMessage.success('审核成功，已自动入库')
+        const payAmount2 = Number(fd.pay_amount || 0)
+        const fundId2 = Number(fd.fund_id || 0)
+        ElMessage.success(payAmount2 > 0 && fundId2 ? '审核成功，已自动入库并记录财务' : '审核成功，已自动入库')
       } catch (e: any) {
         ElMessage.warning('保存成功，但审核失败：' + (e?.message || ''))
       }
@@ -1505,37 +1508,11 @@ async function handleAudit(row: any, status: number) {
         console.warn('自动创建采购入库记录失败', e?.message)
       }
     }
-    // 审核通过：创建付款单记录 + 扣减资金账户余额（如有付款金额和账户）
-    if (status === 1) {
-      const payAmount = Number(row.pay_amount || 0)
-      const fundId = Number(row.fund_id || 0)
-      if (payAmount > 0 && fundId) {
-        try {
-          const orderSn = row.order_sn || row.order_no || `PO${row.id}`
-          await createPayReceipt({
-            contact_type: 'supplier',
-            supplier_name: row.supplier_name || '',
-            amount: payAmount,
-            pay_date: (row.order_date || new Date().toISOString()).slice(0, 10),
-            fund_id: fundId,
-            fund_name: row.fund_name || '',
-            remark: `采购单${orderSn}审核自动生成`,
-            order_sn: orderSn,
-          })
-          const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-          const funds: any[] = fundRes.data?.rows ?? []
-          const fund = funds.find((f: any) => f.id === fundId)
-          if (fund) {
-            const newBalance = Number(fund.balance || 0) - payAmount
-            await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
-          }
-        } catch (e: any) {
-          console.warn('资金账户扣减失败', e?.message)
-        }
-      }
-    }
     stockRefreshStore.trigger()
-    ElMessage.success(`${action}成功`)
+    const auditMsg = status === 1
+      ? (Number(row.pay_amount || 0) > 0 && Number(row.fund_id || 0) ? '审核成功，已自动入库并记录财务' : '审核成功，已自动入库')
+      : `${action}成功`
+    ElMessage.success(auditMsg)
     tableRef.value?.refresh()
     loadPaidMap()
   } catch (e: any) {
@@ -1588,22 +1565,6 @@ async function handleReverseAudit(row: any) {
       console.warn('采购入库反审核失败', e?.message)
     }
     await auditProcureOrder(row.id, 0)
-    // 加回资金账户余额
-    const payAmount = Number(row.pay_amount || 0)
-    const fundId = Number(row.fund_id || 0)
-    if (payAmount > 0 && fundId) {
-      try {
-        const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-        const funds: any[] = fundRes.data?.rows ?? []
-        const fund = funds.find((f: any) => f.id === fundId)
-        if (fund) {
-          const newBalance = Number(fund.balance || 0) + payAmount
-          await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
-        }
-      } catch (e: any) {
-        console.warn('资金账户回滚失败', e?.message)
-      }
-    }
     stockRefreshStore.trigger()
     ElMessage.success('反审核成功，库存与财务已回滚')
     tableRef.value?.refresh()
@@ -2173,4 +2134,7 @@ async function submitAddFund() {
   flex-shrink: 0;
 }
 .attach-del:hover { color: #dc2626; }
+
+:deep(.row-highlight) { background-color: #ecf5ff !important; }
+:deep(.row-highlight td) { background-color: #ecf5ff !important; }
 </style>
