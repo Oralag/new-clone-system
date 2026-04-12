@@ -3,65 +3,17 @@
 
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
-      <!-- 合计栏 -->
-      <div class="summary-bar">
-        <!-- 主行：全部 -->
-        <div class="summary-main">
-          <div class="summary-item">
-            <span class="s-label">单据数</span>
-            <span class="s-value">{{ summaryData.count }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="s-label">采购数量</span>
-            <span class="s-value">{{ summaryData.totalQty }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="s-label">含税合计</span>
-            <span class="s-value primary">¥{{ summaryData.totalAmount.toFixed(2) }}</span>
-          </div>
-        </div>
-        <!-- 次行：已审核 + 待审核 -->
-        <div class="summary-sub">
-          <div class="summary-sub-group">
-            <span class="s-group-label audited">已审核</span>
-            <div class="summary-item sm">
-              <span class="s-label">{{ summaryData.auditedCount }} 单</span>
-            </div>
-            <div class="summary-item sm">
-              <span class="s-label">合计</span>
-              <span class="s-value-sm primary">¥{{ summaryData.auditedAmount.toFixed(2) }}</span>
-            </div>
-            <div class="summary-item sm">
-              <span class="s-label">已付</span>
-              <span class="s-value-sm success">¥{{ summaryData.totalPaid.toFixed(2) }}</span>
-            </div>
-            <div class="summary-item sm">
-              <span class="s-label">未付</span>
-              <span class="s-value-sm danger">¥{{ summaryData.totalUnpaid.toFixed(2) }}</span>
-            </div>
-          </div>
-          <div class="summary-sub-divider" />
-          <div class="summary-sub-group">
-            <span class="s-group-label pending">待审核</span>
-            <div class="summary-item sm">
-              <span class="s-label">{{ summaryData.pendingCount }} 单</span>
-            </div>
-            <div class="summary-item sm">
-              <span class="s-label">合计</span>
-              <span class="s-value-sm">¥{{ summaryData.pendingAmount.toFixed(2) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <el-card class="card-with-summary">
+      <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureOrderListWithInhouse"
           :batch-del-api="batchDelProcureOrders"
           sort-by="order_date" :sort-desc="true"
           export-file-name="采购订单" :params="searchForm"
+          show-summary :summary-method="getSummaryRow"
           :row-class-name="({ row }: any) => (row.order_no || row.order_sn) === highlightSn ? 'row-highlight' : ''"
           :export-columns="{ order_no: '采购单号', supplier_name: '供应商', warehouse_name: '仓库', order_date: '开单日期', delivery_date: '预计交期', admin_name: '采购人', total_amount: '含税合计', status: '状态', pay_amount: '已付金额' }">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="采购单号" clearable style="width:160px" />
+            <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:160px" />
             <el-select v-model="searchForm.supplier_name" placeholder="供应商" clearable filterable style="width:160px">
               <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.name" />
             </el-select>
@@ -70,6 +22,33 @@
               <el-option label="已审核" :value="1" />
               <el-option label="已驳回" :value="2" />
             </el-select>
+          </template>
+          <template #toolbar-right>
+            <div class="status-cards">
+              <div class="status-card audited" @click="searchForm.status = 1; tableRef?.refresh()">
+                <div class="sc-row">
+                  <span class="sc-dot audited" /><span class="sc-label">已审核</span>
+                </div>
+                <div class="sc-row">
+                  <b class="sc-num">{{ summaryData.auditedCount }}</b>
+                  <span class="sc-unit">单</span>
+                  <span class="sc-sep" />
+                  <span class="sc-money">¥{{ summaryData.auditedAmount.toFixed(2) }}</span>
+                  <span class="sc-sub">未付 <span class="c-red">¥{{ summaryData.totalUnpaid.toFixed(2) }}</span></span>
+                </div>
+              </div>
+              <div class="status-card pending" @click="searchForm.status = 0; tableRef?.refresh()">
+                <div class="sc-row">
+                  <span class="sc-dot pending" /><span class="sc-label">待审核</span>
+                </div>
+                <div class="sc-row">
+                  <b class="sc-num">{{ summaryData.pendingCount }}</b>
+                  <span class="sc-unit">单</span>
+                  <span class="sc-sep" />
+                  <span class="sc-money">¥{{ summaryData.pendingAmount.toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增采购单</el-button>
@@ -124,7 +103,7 @@
           </el-table-column>
           <el-table-column label="含税合计" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.after_discount ?? row.total_amount ?? 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -156,11 +135,40 @@
               <el-tag :type="getPayStatus(row).type" size="small">{{ getPayStatus(row).label }}</el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="单据支出" width="140" align="right">
+            <template #default="{ row }">
+              <template v-if="Number(row.expense_amount || 0) > 0">
+                <span style="color:#d97706;font-weight:600">¥{{ Number(row.expense_amount).toFixed(2) }}</span>
+                <el-tag
+                  :type="getExpensePayStatus(row).type"
+                  size="small"
+                  style="margin-left:4px"
+                >{{ getExpensePayStatus(row).label }}</el-tag>
+              </template>
+              <span v-else style="color:rgba(29,29,31,0.2)">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="运费" width="140" align="right">
+            <template #default="{ row }">
+              <template v-if="Number(row.freight_amount || 0) > 0">
+                <span style="color:#8b5cf6;font-weight:600">¥{{ Number(row.freight_amount).toFixed(2) }}</span>
+                <el-tag
+                  :type="getFreightPayStatus(row).type"
+                  size="small"
+                  style="margin-left:4px"
+                >{{ getFreightPayStatus(row).label }}</el-tag>
+              </template>
+              <span v-else style="color:rgba(29,29,31,0.2)">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
           <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && getPayStatus(row).label !== '已付清'" type="success" link size="small" @click="openPayDialog(row)">付款</el-button>
+              <el-button v-if="row.status === 1 && Number(row.expense_amount || 0) > 0 && getExpensePayStatus(row).label === '待付'" type="warning" link size="small" @click="openExpensePayDialog(row)">支出付款</el-button>
+              <el-button v-if="row.status === 1 && Number(row.freight_amount || 0) === 0" type="primary" link size="small" @click="openFreightDialog(row)">补录运费</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
@@ -179,10 +187,10 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button v-if="!isReadonly" :loading="saving" @click="handleSave(false)">
+          <el-button v-if="!isReadonly" :loading="saving" :disabled="saving" @click="handleSave(false)">
             保存
           </el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave(true)">
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" :disabled="saving" @click="handleSave(true)">
             保存并审核
           </el-button>
         </div>
@@ -509,6 +517,13 @@
               <span class="settle-label">单据支出</span>
               <el-input-number v-model="fd.expense_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" @change="calcSettle" />
+              <template v-if="isReadonly && Number(fd.expense_amount || 0) > 0">
+                <el-tag :type="getExpensePayStatus(fd).type" size="small" style="margin-left:8px">
+                  {{ getExpensePayStatus(fd).label }}
+                </el-tag>
+                <el-button v-if="getExpensePayStatus(fd).label === '待付'" type="warning" link size="small"
+                  style="margin-left:4px" @click="openExpensePayDialog(fd)">支出付款</el-button>
+              </template>
             </div>
             <div v-if="isReadonly" class="settle-item">
               <span class="settle-label">已付金额</span>
@@ -632,6 +647,103 @@
         <el-button type="primary" :loading="paySubmitting" @click="submitPay">确认付款</el-button>
       </template>
     </el-dialog>
+
+    <!-- 单据支出付款弹窗 -->
+    <el-dialog v-model="expensePayVisible" title="单据支出付款" width="400px" append-to-body>
+      <el-form :model="expensePayForm" label-width="90px">
+        <el-form-item label="采购单">
+          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ expensePayForm.orderSn }} · {{ expensePayForm.supplierName }}</span>
+        </el-form-item>
+        <el-form-item label="支出金额">
+          <span style="font-size:15px;font-weight:700;color:#d97706">¥{{ expensePayForm.amount.toFixed(2) }}</span>
+        </el-form-item>
+        <el-form-item label="付款账户">
+          <el-select v-model="expensePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onExpensePayFundChange">
+            <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="付款对象">
+          <el-select v-model="expensePayForm.contact_name" placeholder="采购单据支出" filterable allow-create default-first-option style="width:100%">
+            <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.name" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="付款日期">
+          <el-date-picker v-model="expensePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="expensePayForm.remark" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="expensePayVisible = false">取消</el-button>
+        <el-button type="primary" :loading="expensePaySubmitting" @click="submitExpensePay">确认付款</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 补录运费弹窗 -->
+    <el-dialog v-model="freightVisible" title="补录运费" width="420px" append-to-body>
+      <el-form :model="freightForm" label-width="90px">
+        <el-form-item label="采购单">
+          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ freightForm.orderSn }} · {{ freightForm.supplierName }}</span>
+        </el-form-item>
+        <el-form-item label="运费金额">
+          <el-input-number v-model="freightForm.amount" :min="0" :precision="2" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="运费承担">
+          <el-select v-model="freightForm.bearer" style="width:100%">
+            <el-option label="我方承担" value="buyer" />
+            <el-option label="供应商承担" value="seller" />
+            <el-option label="各半" value="half" />
+            <el-option label="免运费" value="free" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="freightForm.bearer === 'buyer' || freightForm.bearer === 'half'" label="付款账户">
+          <el-select v-model="freightForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onFreightFundChange">
+            <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="付款日期">
+          <el-date-picker v-model="freightForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="freightForm.remark" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="freightVisible = false">取消</el-button>
+        <el-button type="primary" :loading="freightSubmitting" @click="submitFreight">确认</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 批量付款弹窗 -->    <el-dialog v-model="batchPayVisible" title="批量审核完成 — 立即付款" width="600px" append-to-body>
+      <div style="margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <el-select v-model="batchPayFundId" placeholder="选择付款账户" filterable style="width:180px" @change="onBatchPayFundChange">
+          <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+        </el-select>
+        <el-date-picker v-model="batchPayDate" type="date" value-format="YYYY-MM-DD" style="width:150px" placeholder="付款日期" />
+        <span style="margin-left:auto;font-size:13px;color:#6b7280">共 {{ batchPayItems.length }} 笔 · 合计
+          <span style="font-weight:700;color:#dc2626">¥{{ batchPayTotal.toFixed(2) }}</span>
+        </span>
+      </div>
+      <el-table :data="batchPayItems" border size="small" max-height="320">
+        <el-table-column prop="supplierName" label="供应商" min-width="110" show-overflow-tooltip />
+        <el-table-column prop="orderSn" label="采购单号" min-width="130" show-overflow-tooltip />
+        <el-table-column label="待付金额" width="100" align="right">
+          <template #default="{ row }">
+            <span style="color:#dc2626">¥{{ row.unpaid.toFixed(2) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="本次付款" width="130">
+          <template #default="{ row }">
+            <el-input-number v-model="row.amount" :min="0" :max="row.unpaid" :precision="2" size="small" style="width:100%" controls-position="right" />
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="batchPayVisible = false">跳过不付款</el-button>
+        <el-button type="primary" :loading="batchPaySubmitting" @click="submitBatchPay">确认付款</el-button>
+      </template>
+    </el-dialog>
     <el-dialog v-model="bomPickerVisible" title="选择BOM商品（物料）" width="800px" append-to-body>
       <div style="display:flex;gap:12px;height:420px">
         <!-- 左：成品列表 -->
@@ -744,13 +856,13 @@
 import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getBomList, getBomByGoods, getSpecList, getUnitConvert } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getFundList, createFund, getPayReceiptList, createPayReceipt } from '@/api/finance'
+import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt } from '@/api/finance'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
@@ -789,8 +901,8 @@ async function handleBatchAudit() {
             purchase_order_id: row.id,
             supplier_id: row.supplier_id,
             supplier_name: row.supplier_name,
-            warehouse_id: row.warehouse_id || 0,
-            warehouse_name: row.warehouse_name || '',
+            warehouse_id: row.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id')) || 0,
+            warehouse_name: row.warehouse_name || warehouseOptions.value.find((w: any) => w.id === (row.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id'))))?.name || '',
             admin_name: row.admin_name || '',
             in_date: (row.order_date || row.created_at || '').slice(0, 10),
             total_amount: row.total_amount,
@@ -813,8 +925,9 @@ async function handleBatchAudit() {
   batchAuditing.value = false
   stockRefreshStore.trigger()
   tableRef.value?.refresh()
-  loadPaidMap()
+  await loadPaidMap()
   ElMessage.success(`批量审核完成：成功 ${success} 条${failed ? `，失败 ${failed} 条` : ''}`)
+  if (success > 0) openBatchPayDialog(pending)
 }
 
 async function handleBatchReverseAudit() {
@@ -853,6 +966,7 @@ const tableRef = ref<InstanceType<typeof ScTable>>()
 const summaryData = reactive({
   count: 0,
   totalQty: '0',
+  totalInhouseQty: '0',
   totalAmount: 0,
   auditedCount: 0,
   auditedAmount: 0,
@@ -860,6 +974,7 @@ const summaryData = reactive({
   totalUnpaid: 0,
   pendingCount: 0,
   pendingAmount: 0,
+  totalExpense: 0,
 })
 const lastSummaryRows = ref<any[]>([])
 
@@ -867,9 +982,24 @@ function updateSummary() {
   updateSummaryFromRows(lastSummaryRows.value)
 }
 
+function getSummaryRow({ columns }: { columns: any[] }) {
+  const d = summaryData
+  return columns.map((col, i) => {
+    if (i === 0) return '合计'
+    const label = col.label ?? ''
+    if (label === '含税合计') return `¥${d.totalAmount.toFixed(2)}`
+    if (label === '采购数量') return d.totalQty
+    if (label === '入库数量') return d.totalInhouseQty
+    if (label === '已付金额') return `¥${d.totalPaid.toFixed(2)}`
+    if (label === '单据支出') return `¥${d.totalExpense.toFixed(2)}`
+    return ''
+  })
+}
+
 // 包装 API：加载完采购单后，批量查入库单并填充 inhouse_qty
 async function getProcureOrderListWithInhouse(params: any) {
-  const res = await getProcureOrderList(params)
+  const fetchParams = params.goods_name ? { ...params, list_rows: 10000, page: 1 } : params
+  const res = await getProcureOrderList(fetchParams)
   const rows: any[] = res?.data?.rows ?? res?.data ?? []
   if (rows.length) {
     try {
@@ -880,7 +1010,7 @@ async function getProcureOrderListWithInhouse(params: any) {
         const oid = Number(r.purchase_order_id)
         if (!oid) continue
         const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
-        const qty = items.reduce((s: number, g: any) => s + Number(g.num || 0), 0)
+        const qty = items.reduce((s: number, g: any) => s + Number(g.num || 0) * Number(g.unit_ratio || 1), 0)
         qtyMap[oid] = (qtyMap[oid] || 0) + qty
       }
       for (const row of rows) {
@@ -889,35 +1019,55 @@ async function getProcureOrderListWithInhouse(params: any) {
     } catch { /* 查不到入库单不影响列表展示 */ }
   }
   // 数据加载完后更新合计（用当前页 rows 计算）
+  // 前端过滤：按商品名搜索
+  if (params.goods_name) {
+    const kw = params.goods_name.toLowerCase()
+    const filtered = rows.filter((row: any) => {
+      const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
+      return items.some((g: any) => (g.goods_name || '').toLowerCase().includes(kw))
+    })
+    lastSummaryRows.value = filtered
+    updateSummaryFromRows(filtered)
+    if (res?.data) {
+      const clone = { ...res, data: { ...res.data, rows: filtered, total: filtered.length } }
+      return clone
+    }
+  }
   lastSummaryRows.value = rows
   updateSummaryFromRows(rows)
   return res
 }
 
 function updateSummaryFromRows(rows: any[]) {
-  let qty = 0, amount = 0
+  let qty = 0, inhouseQty = 0, amount = 0
   let auditedCount = 0, auditedAmount = 0, paid = 0
-  let pendingCount = 0, pendingAmount = 0
+  let pendingCount = 0, pendingAmount = 0, expense = 0
   for (const row of rows) {
     const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
-    qty += items.reduce((s: number, i: any) => s + (parseFloat(i.num) || 0), 0)
-    amount += Number(row.total_amount || 0)
+    qty += items.reduce((s: number, i: any) => s + (parseFloat(i.num) || 0) * Number(i.unit_ratio || 1), 0)
+    inhouseQty += Number(row.inhouse_qty || 0)
+    const rowAmt = Number(row.after_discount ?? row.total_amount ?? 0)
+    amount += rowAmt
+    expense += Number(row.expense_amount || 0)
     if (Number(row.status) === 1) {
       auditedCount++
-      auditedAmount += Number(row.total_amount || 0)
+      auditedAmount += rowAmt
       paid += getPaidAmount(row)
     } else if (Number(row.status) !== 2) {
       pendingCount++
-      pendingAmount += Number(row.total_amount || 0)
+      pendingAmount += rowAmt
     }
   }
+  const fmtQty = (n: number) => n % 1 === 0 ? String(n) : n.toFixed(2)
   summaryData.count = rows.length
-  summaryData.totalQty = qty % 1 === 0 ? String(qty) : qty.toFixed(2)
+  summaryData.totalQty = fmtQty(qty)
+  summaryData.totalInhouseQty = fmtQty(inhouseQty)
   summaryData.totalAmount = amount
   summaryData.auditedCount = auditedCount
   summaryData.auditedAmount = auditedAmount
   summaryData.totalPaid = paid
   summaryData.totalUnpaid = Math.max(0, auditedAmount - paid)
+  summaryData.totalExpense = expense
   summaryData.pendingCount = pendingCount
   summaryData.pendingAmount = pendingAmount
 }
@@ -929,10 +1079,78 @@ function getInhouseQty(row: any): number {
 const paidMapById = ref<Record<number, number>>({})
 const paidMapByKey = ref<Record<string, number>>({})
 const paidMapBySn = ref<Record<string, number>>({})
+const paidMapMultiSup = ref<Record<string, number>>({})
 const paidMapBySupplier = ref<Record<string, number>>({})
+// 单据支出付款 Map：order_id → 已付金额
+const expensePaidById = ref<Record<number, number>>({})
+// 运费付款 Map：order_id → 已付金额
+const freightPaidById = ref<Record<number, number>>({})
 
 function payKey(orderSn: string, supplierName: string): string {
   return `${String(orderSn || '').trim()}@@${String(supplierName || '').trim()}`
+}
+
+// ── 批量付款弹窗 ──────────────────────────────────────────────────────────────
+const batchPayVisible = ref(false)
+const batchPaySubmitting = ref(false)
+const batchPayDate = ref(new Date().toISOString().slice(0, 10))
+const batchPayFundId = ref<number | null>(null)
+const batchPayFundName = ref('')
+const batchPayItems = ref<{ orderId: number; orderSn: string; supplierName: string; unpaid: number; amount: number }[]>([])
+
+function openBatchPayDialog(auditedRows: any[]) {
+  const items = auditedRows
+    .map(row => {
+      const total = Number(row.after_discount ?? row.total_amount ?? 0)
+      const paid = getPaidAmount(row)
+      const unpaid = Math.max(0, total - paid)
+      return { orderId: row.id, orderSn: row.order_sn || row.order_no || `PO${row.id}`, supplierName: row.supplier_name || '', unpaid, amount: unpaid }
+    })
+    .filter(item => item.unpaid > 0)
+  if (!items.length) return
+  batchPayItems.value = items
+  batchPayDate.value = new Date().toISOString().slice(0, 10)
+  batchPayFundId.value = null
+  batchPayFundName.value = ''
+  batchPayVisible.value = true
+}
+
+function onBatchPayFundChange(id: number) {
+  const f = fundOptions.value.find((f: any) => f.id === id)
+  batchPayFundName.value = f?.name || ''
+}
+
+const batchPayTotal = computed(() => batchPayItems.value.reduce((s, r) => s + Number(r.amount || 0), 0))
+
+async function submitBatchPay() {
+  if (!batchPayFundId.value) { ElMessage.warning('请选择付款账户'); return }
+  const validItems = batchPayItems.value.filter(r => Number(r.amount) > 0)
+  if (!validItems.length) { ElMessage.warning('请填写付款金额'); return }
+  batchPaySubmitting.value = true
+  let success = 0, failed = 0
+  try {
+    for (const item of validItems) {
+      try {
+        await createPayReceipt({
+          contact_type: 'supplier',
+          contact_name: item.supplierName,
+          order_sn: item.orderSn,
+          amount: Number(item.amount),
+          pay_date: batchPayDate.value,
+          fund_id: batchPayFundId.value,
+          fund_name: batchPayFundName.value,
+          remark: `采购单付款 #${item.orderId}`,
+        })
+        success++
+      } catch { failed++ }
+    }
+    ElMessage.success(`付款完成：成功 ${success} 条${failed ? `，失败 ${failed} 条` : ''}`)
+    batchPayVisible.value = false
+    loadPaidMap()
+    tableRef.value?.refresh()
+  } finally {
+    batchPaySubmitting.value = false
+  }
 }
 
 // ── 付款弹窗 ─────────────────────────────────────────────────────────────────
@@ -951,7 +1169,7 @@ const payForm = reactive({
 })
 
 function openPayDialog(row: any) {
-  const total = Number(row.total_amount || 0)
+  const total = Number(row.after_discount ?? row.total_amount ?? 0)
   const paid = getPaidAmount(row)
   const unpaid = Math.max(0, total - paid)
   if (unpaid <= 0) {
@@ -1009,22 +1227,25 @@ async function loadPaidMap() {
     const idMap: Record<number, number> = {}
     const keyMap: Record<string, number> = {}
     const snMap: Record<string, number> = {}
+    const multiSupMap: Record<string, number> = {}
     for (const r of rows) {
       const amount = Number(r.amount || 0)
       if (!amount) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
-      // 精确匹配到采购单ID的，只放idMap，不再放keyMap/snMap（避免重复计算）
       let matched = false
       if (Number(r.order_id)) {
         const id = Number(r.order_id)
         idMap[id] = (idMap[id] || 0) + amount
         matched = true
       }
-      const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
-      if (m1) {
-        const id = Number(m1[1])
+      const m1all = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
+      if (m1all.length === 1) {
+        const id = Number(m1all[0][1])
         idMap[id] = (idMap[id] || 0) + amount
+        matched = true
+      } else if (m1all.length > 1) {
+        if (supplierName) multiSupMap[supplierName] = (multiSupMap[supplierName] || 0) + amount
         matched = true
       }
       const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
@@ -1039,9 +1260,60 @@ async function loadPaidMap() {
         keyMap[key] = (keyMap[key] || 0) + amount
       }
     }
+    // 多ID付款：拉采购单数据，按欠款顺序冲销写入 idMap
+    if (Object.keys(multiSupMap).length > 0) {
+      try {
+        const orderRes = await getProcureOrderList({ list_rows: 1000 })
+        const allOrders: any[] = orderRes.data?.rows ?? []
+        for (const [supName, totalAmt] of Object.entries(multiSupMap)) {
+          const supOrders = allOrders
+            .filter(o => Number(o.status) === 1 && String(o.supplier_name || '').trim() === supName)
+            .sort((a, b) => a.id - b.id)
+          let remaining = totalAmt
+          for (const o of supOrders) {
+            if (remaining <= 0) break
+            const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
+            const alreadyPaid = (idMap[o.id] || 0)
+              + (snMap[String(o.order_sn || '').trim()] || snMap[String(o.order_no || '').trim()] || 0)
+              + (keyMap[payKey(String(o.order_sn || '').trim(), supName)] || keyMap[payKey(String(o.order_no || '').trim(), supName)] || 0)
+            const owe = Math.max(0, orderAmt - alreadyPaid)
+            const deduct = Math.min(remaining, owe)
+            if (deduct > 0) {
+              idMap[o.id] = (idMap[o.id] || 0) + deduct
+              remaining -= deduct
+            }
+          }
+        }
+      } catch {}
+    }
     paidMapById.value = idMap
     paidMapByKey.value = keyMap
     paidMapBySn.value = snMap
+    paidMapMultiSup.value = multiSupMap
+    // 单据支出付款 Map
+    const expenseIdMap: Record<number, number> = {}
+    for (const r of rows) {
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const m = String(r.remark || '').match(/采购单据支出\s*#(\d+)/)
+      if (m) {
+        const id = Number(m[1])
+        expenseIdMap[id] = (expenseIdMap[id] || 0) + amt
+      }
+    }
+    expensePaidById.value = expenseIdMap
+    // 运费付款 Map
+    const freightIdMap: Record<number, number> = {}
+    for (const r of rows) {
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const m = String(r.remark || '').match(/采购运费\s*#(\d+)/)
+      if (m) {
+        const id = Number(m[1])
+        freightIdMap[id] = (freightIdMap[id] || 0) + amt
+      }
+    }
+    freightPaidById.value = freightIdMap
     updateSummary()
   } catch {}
 }
@@ -1057,12 +1329,166 @@ function getPaidAmount(row: any): number {
 
 function getPayStatus(row: any): { label: string; type: string } {
   if (Number(row.status) !== 1) return { label: '—', type: 'info' }
-  const total = Number(row.total_amount || 0)
+  const total = Number(row.after_discount ?? row.total_amount ?? 0)
   const paid = getPaidAmount(row)
   if (total <= 0) return { label: '—', type: 'info' }
   if (paid <= 0) return { label: '未付款', type: 'danger' }
   if (paid >= total - 0.01) return { label: '已付清', type: 'success' }
   return { label: '部分付款', type: 'warning' }
+}
+
+function getExpensePayStatus(row: any): { label: string; type: string } {
+  if (Number(row.status) !== 1) return { label: '—', type: 'info' }
+  const expAmt = Number(row.expense_amount || 0)
+  if (expAmt <= 0) return { label: '—', type: 'info' }
+  const paid = expensePaidById.value[row.id] || 0
+  if (paid >= expAmt - 0.01) return { label: '已付', type: 'success' }
+  return { label: '待付', type: 'warning' }
+}
+
+function getFreightPayStatus(row: any): { label: string; type: string } {
+  if (Number(row.status) !== 1) return { label: '—', type: 'info' }
+  const freightAmt = Number(row.freight_amount || 0)
+  if (freightAmt <= 0) return { label: '—', type: 'info' }
+  const bearer = row.freight_bearer || 'buyer'
+  if (bearer === 'seller') return { label: '供应商承担', type: 'info' }
+  if (bearer === 'free') return { label: '免运费', type: 'info' }
+  const paid = freightPaidById.value[row.id] || 0
+  const needPay = bearer === 'half' ? freightAmt / 2 : freightAmt
+  if (paid >= needPay - 0.01) return { label: '已付', type: 'success' }
+  return { label: '待付', type: 'warning' }
+}
+
+// ── 单据支出付款弹窗 ──────────────────────────────────────────────────────────
+const expensePayVisible = ref(false)
+const expensePaySubmitting = ref(false)
+const expensePayForm = reactive({
+  orderId: 0,
+  orderSn: '',
+  supplierName: '',
+  contact_name: '',
+  amount: 0,
+  fund_id: null as number | null,
+  fund_name: '',
+  pay_date: new Date().toISOString().slice(0, 10),
+  remark: '',
+})
+
+function openExpensePayDialog(row: any) {
+  expensePayForm.orderId = row.id
+  expensePayForm.orderSn = row.order_sn || row.order_no || `PO${row.id}`
+  expensePayForm.supplierName = row.supplier_name || ''
+  expensePayForm.contact_name = '采购单据支出'
+  expensePayForm.amount = Number(row.expense_amount || 0)
+  expensePayForm.fund_id = null
+  expensePayForm.fund_name = ''
+  expensePayForm.pay_date = new Date().toISOString().slice(0, 10)
+  expensePayForm.remark = ''
+  expensePayVisible.value = true
+}
+
+function onExpensePayFundChange(id: number) {
+  const f = fundOptions.value.find((f: any) => f.id === id)
+  expensePayForm.fund_name = f?.name || ''
+}
+
+// ── 补录运费弹窗 ─────────────────────────────────────────────────────────────
+const freightVisible = ref(false)
+const freightSubmitting = ref(false)
+const freightForm = reactive({
+  orderId: 0,
+  orderSn: '',
+  supplierName: '',
+  amount: 0,
+  bearer: 'buyer' as string,
+  fund_id: null as number | null,
+  fund_name: '',
+  pay_date: new Date().toISOString().slice(0, 10),
+  remark: '',
+})
+
+function openFreightDialog(row: any) {
+  freightForm.orderId = row.id
+  freightForm.orderSn = row.order_sn || row.order_no || `PO${row.id}`
+  freightForm.supplierName = row.supplier_name || ''
+  freightForm.amount = 0
+  freightForm.bearer = 'buyer'
+  freightForm.fund_id = null
+  freightForm.fund_name = ''
+  freightForm.pay_date = new Date().toISOString().slice(0, 10)
+  freightForm.remark = ''
+  freightVisible.value = true
+}
+
+function onFreightFundChange(id: number) {
+  const f = fundOptions.value.find((f: any) => f.id === id)
+  freightForm.fund_name = f?.name || ''
+}
+
+async function submitFreight() {
+  if (freightForm.amount <= 0) { ElMessage.warning('请输入运费金额'); return }
+  const needPay = freightForm.bearer === 'buyer' || freightForm.bearer === 'half'
+  if (needPay && !freightForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+
+  freightSubmitting.value = true
+  try {
+    // 1. 更新采购单运费字段
+    await updateProcureOrder(freightForm.orderId, {
+      freight_amount: freightForm.amount,
+      freight_bearer: freightForm.bearer,
+    })
+
+    // 2. 创建运费付款记录（我方承担或各半时）
+    if (needPay && freightForm.fund_id) {
+      const payAmount = freightForm.bearer === 'half' ? freightForm.amount / 2 : freightForm.amount
+      await createPayReceipt({
+        contact_type: 'other',
+        contact_name: freightForm.supplierName || '采购运费',
+        order_sn: freightForm.orderSn,
+        order_id: freightForm.orderId,
+        amount: payAmount,
+        pay_date: freightForm.pay_date,
+        fund_id: freightForm.fund_id,
+        fund_name: freightForm.fund_name,
+        remark: `采购运费 #${freightForm.orderId}${freightForm.remark ? ' ' + freightForm.remark : ''}`,
+      })
+    }
+
+    ElMessage.success('运费补录成功')
+    freightVisible.value = false
+    loadPaidMap()
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '操作失败')
+  } finally {
+    freightSubmitting.value = false
+  }
+}
+
+async function submitExpensePay() {
+  if (!expensePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  expensePaySubmitting.value = true
+  try {
+    await createPayReceipt({
+      contact_type: 'other',
+      contact_name: expensePayForm.contact_name || expensePayForm.supplierName || '采购单据支出',
+      order_sn: expensePayForm.orderSn,
+      order_id: expensePayForm.orderId,
+      amount: expensePayForm.amount,
+      pay_date: expensePayForm.pay_date,
+      fund_id: expensePayForm.fund_id,
+      fund_name: expensePayForm.fund_name,
+      remark: `采购单据支出 #${expensePayForm.orderId}${expensePayForm.remark ? ' ' + expensePayForm.remark : ''}`,
+    })
+    ElMessage.success('支出付款成功')
+    expensePayVisible.value = false
+    loadPaidMap()
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '付款失败')
+  } finally {
+    expensePaySubmitting.value = false
+  }
 }
 
 function parseItems(goodsInfo: any): any[] {
@@ -1119,7 +1545,7 @@ async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
     }
   } catch { /* ignore */ }
 }
-const searchForm = reactive<any>({ order_no: route.query.order_no ? String(route.query.order_no) : '', supplier_name: '', status: '' })
+const searchForm = reactive<any>({ order_no: route.query.order_no ? String(route.query.order_no) : '', supplier_name: '', status: '', goods_name: '' })
 if (route.query.order_no) highlightSn.value = String(route.query.order_no)
 const showForm = ref(false)
 const isReadonly = ref(false)
@@ -1237,6 +1663,7 @@ function checkBomData() {
 
 onActivated(() => {
   checkBomData()
+  loadPaidMap()
   if (route.query.order_no) {
     const sn = String(route.query.order_no)
     searchForm.order_no = sn
@@ -1374,18 +1801,39 @@ function openCreate() {
   Object.assign(fd, defaultFd())
   fd.order_no = generateOrderNo()
   fd.order_sn = fd.order_no
+  // 应用默认仓库
+  const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
+  if (defaultWhId) {
+    const wh = warehouseOptions.value.find((w: any) => w.id === defaultWhId)
+    if (wh) { fd.warehouse_id = wh.id; fd.warehouse_name = wh.name }
+  }
   isReadonly.value = false
   showForm.value = true
 }
 
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
+  // 历史数据仓库为空时，补填默认仓库
+  if (!fd.warehouse_id) {
+    const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
+    if (defaultWhId) {
+      const wh = warehouseOptions.value.find((w: any) => w.id === defaultWhId)
+      if (wh) { fd.warehouse_id = wh.id; fd.warehouse_name = wh.name }
+    }
+  }
   if (!fd.fund_id) fd.fund_id = null
   fd.order_no = fd.order_no || row.order_sn || ''
   fd.order_sn = fd.order_sn || fd.order_no || ''
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   try { fd.attachments = Array.isArray(row.attachments_info) ? row.attachments_info : JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
-  calcTotal()
+  fd.total_amount = fd.items.reduce((s: number, r: any) => s + (r.num || 0) * (r.price || 0), 0)
+  fd.expense_amount = Number(fd.expense_amount || 0)
+  // 折扣字段从后端直接读取，不重新计算，避免覆盖已保存的折后金额
+  if (!row.after_discount && row.after_discount !== 0) {
+    fd.after_discount = fd.total_amount
+  } else {
+    fd.after_discount = Number(fd.after_discount)
+  }
   fd.items.forEach((item: any) => {
     if (item.goods_id) {
       fetchGoodsSpecs(item.goods_id)
@@ -1407,8 +1855,34 @@ async function handleSave(andAudit = false) {
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项'); return
   }
+  if (!fd.warehouse_id) {
+    const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
+    const fallback = defaultWhId
+      ? warehouseOptions.value.find((w: any) => w.id === defaultWhId)
+      : warehouseOptions.value[0]
+    if (fallback) {
+      fd.warehouse_id = fallback.id
+      fd.warehouse_name = fallback.name
+    } else {
+      ElMessage.warning('请选择仓库'); return
+    }
+  }
   if (!fd.items.length) {
     ElMessage.warning('请至少添加一件商品'); return
+  }
+  // 单号唯一性校验（仅新增时）
+  if (!fd.id) {
+    const autoNo = fd.order_no || fd.order_sn || ''
+    if (autoNo) {
+      try {
+        const checkRes = await getProcureOrderList({ order_no: autoNo, list_rows: 5 })
+        const existing = checkRes?.data?.rows ?? []
+        if (existing.length > 0) {
+          ElMessage.error(`采购单号 ${autoNo} 已存在，请修改后重试`)
+          return
+        }
+      } catch { /* 查询失败不阻断保存 */ }
+    }
   }
   if (!fd.pay_amount || fd.pay_amount <= 0) {
     try {
@@ -1428,8 +1902,6 @@ async function handleSave(andAudit = false) {
   saving.value = true
   try {
     const payload: Record<string, any> = {
-      order_no: fd.order_no || fd.order_sn || generateOrderNo(),
-      order_sn: fd.order_sn || fd.order_no || generateOrderNo(),
       supplier_id: fd.supplier_id,
       supplier_name: fd.supplier_name,
       admin_name: fd.admin_name,
@@ -1442,6 +1914,10 @@ async function handleSave(andAudit = false) {
       remark: fd.remark,
       total_amount: fd.total_amount,
       freight_amount: Number(fd.freight_amount || 0),
+      discount_type: fd.discount_type,
+      discount_value: Number(fd.discount_value || 0),
+      after_discount: fd.after_discount,
+      expense_amount: Number(fd.expense_amount || 0),
       goods_info: JSON.stringify(fd.items),
     }
     let orderId = fd.id
@@ -1449,6 +1925,9 @@ async function handleSave(andAudit = false) {
       payload.id = fd.id
       await updateProcureOrder(payload)
     } else {
+      const autoNo = fd.order_no || fd.order_sn || generateOrderNo()
+      payload.order_no = autoNo
+      payload.order_sn = autoNo
       const createRes = await createProcureOrder(payload)
       orderId = createRes?.data?.id || createRes?.data?.data?.id || 0
       if (orderId) fd.id = orderId
@@ -1468,8 +1947,8 @@ async function handleSave(andAudit = false) {
               purchase_order_id: orderId,
               supplier_id: fd.supplier_id,
               supplier_name: fd.supplier_name,
-              warehouse_id: fd.warehouse_id || 0,
-              warehouse_name: fd.warehouse_name || '',
+              warehouse_id: fd.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id')) || 0,
+              warehouse_name: fd.warehouse_name || warehouseOptions.value.find((w: any) => w.id === (fd.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id'))))?.name || '',
               admin_name: fd.admin_name || '',
               in_date: (fd.order_date || '').slice(0, 10),
               total_amount: fd.total_amount,
@@ -1495,6 +1974,7 @@ async function handleSave(andAudit = false) {
         }
         const payAmount2 = Number(fd.pay_amount || 0)
         const fundId2 = Number(fd.fund_id || 0)
+        // 付款单由后端审核时自动创建，前端不重复创建
         ElMessage.success(payAmount2 > 0 && fundId2 ? '审核成功，已自动入库并记录财务' : '审核成功，已自动入库')
       } catch (e: any) {
         ElMessage.warning('保存成功，但审核失败：' + (e?.message || ''))
@@ -1537,7 +2017,7 @@ async function applyInhouseStockEffect(warehouseId: number, warehouseName: strin
       if (warehouseId) stockParams.warehouse_id = warehouseId
       const stockRes = await http.get('/stock/StockAll/index', { params: stockParams })
       const stock = (stockRes.data?.rows ?? [])[0]
-      const delta = direction === 'in' ? Number(item.num) : -Number(item.num)
+      const delta = direction === 'in' ? Number(item.num) * Number(item.unit_ratio || 1) : -Number(item.num) * Number(item.unit_ratio || 1)
       if (stock) {
         const newQty = Math.max(0, Number(stock.qty || 0) + delta)
         await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
@@ -1583,8 +2063,8 @@ async function handleAudit(row: any, status: number) {
             purchase_order_id: row.id,
             supplier_id: row.supplier_id,
             supplier_name: row.supplier_name,
-            warehouse_id: row.warehouse_id || 0,
-            warehouse_name: row.warehouse_name || '',
+            warehouse_id: row.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id')) || 0,
+            warehouse_name: row.warehouse_name || warehouseOptions.value.find((w: any) => w.id === (row.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id'))))?.name || '',
             admin_name: row.admin_name || '',
             in_date: (row.order_date || row.created_at || '').slice(0, 10),
             total_amount: row.total_amount,
@@ -1612,6 +2092,23 @@ async function handleAudit(row: any, status: number) {
       }
     }
     stockRefreshStore.trigger()
+    // 审核通过且有付款金额，创建付款单记录
+    if (status === 1 && Number(row.pay_amount || 0) > 0 && Number(row.fund_id || 0)) {
+      try {
+        await createPayReceipt({
+          contact_type: 'supplier',
+          contact_name: row.supplier_name,
+          supplier_name: row.supplier_name,
+          order_sn: row.order_sn || row.order_no || '',
+          order_id: row.id,
+          amount: Number(row.pay_amount),
+          pay_date: (row.order_date || row.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+          fund_id: Number(row.fund_id),
+          fund_name: row.fund_name || '',
+          remark: `采购单付款 #${row.id}`,
+        })
+      } catch (e: any) { console.warn('创建付款单失败', e?.message) }
+    }
     const auditMsg = status === 1
       ? (Number(row.pay_amount || 0) > 0 && Number(row.fund_id || 0) ? '审核成功，已自动入库并记录财务' : '审核成功，已自动入库')
       : `${action}成功`
@@ -1653,6 +2150,47 @@ async function handleReverseAudit(row: any) {
   }
   await ElMessageBox.confirm('反审核将撤销入库与财务入账，确定继续？', '反审核确认', { type: 'warning' })
   try {
+    // 检查单据支出付款记录，若有则提示并撤销
+    const expensePaid = expensePaidById.value[row.id] || 0
+    if (expensePaid > 0) {
+      await ElMessageBox.confirm(
+        `该采购单存在单据支出付款记录（¥${expensePaid.toFixed(2)}），反审核将同时撤销该付款记录，确定继续？`,
+        '撤销单据支出付款',
+        { type: 'warning', confirmButtonText: '确定撤销', cancelButtonText: '取消' }
+      )
+      // 找到对应付款单并删除
+      try {
+        const payRes = await getPayReceiptList({ list_rows: 2000 })
+        const payRows: any[] = payRes.data?.rows ?? []
+        const expenseRecords = payRows.filter((r: any) =>
+          String(r.remark || '').match(new RegExp(`采购单据支出\\s*#${row.id}(?:\\D|$)`))
+        )
+        for (const rec of expenseRecords) {
+          await deletePayReceipt(rec.id)
+        }
+      } catch (e: any) { console.warn('撤销单据支出付款失败', e?.message) }
+    }
+
+    // 检查运费付款记录，若有则提示并撤销
+    const freightPaid = freightPaidById.value[row.id] || 0
+    if (freightPaid > 0) {
+      await ElMessageBox.confirm(
+        `该采购单存在运费付款记录（¥${freightPaid.toFixed(2)}），反审核将同时撤销该付款记录，确定继续？`,
+        '撤销运费付款',
+        { type: 'warning', confirmButtonText: '确定撤销', cancelButtonText: '取消' }
+      )
+      // 找到对应付款单并删除
+      try {
+        const payRes = await getPayReceiptList({ list_rows: 2000 })
+        const payRows: any[] = payRes.data?.rows ?? []
+        const freightRecords = payRows.filter((r: any) =>
+          String(r.remark || '').match(new RegExp(`采购运费\\s*#${row.id}(?:\\D|$)`))
+        )
+        for (const rec of freightRecords) {
+          await deletePayReceipt(rec.id)
+        }
+      } catch (e: any) { console.warn('撤销运费付款失败', e?.message) }
+    }
     // 先反审核关联的采购入库记录
     try {
       const inhouseListRes = await getProcureInhouseList({ order_id: row.id, list_rows: 10 })
@@ -2042,93 +2580,78 @@ async function submitAddFund() {
 <style scoped>
 .order-page { height: 100%; }
 
-.summary-bar {
+.status-cards {
+  display: flex;
+  gap: 10px;
+}
+.status-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   background: #fff;
   border: 1px solid #e4e7ed;
-  border-radius: 10px 10px 0 0;
-  border-bottom: none;
-  padding: 12px 20px 10px;
+  border-radius: 10px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+  white-space: nowrap;
 }
-
-/* 主行 */
-.summary-main {
-  display: flex;
-  align-items: baseline;
-  gap: 0;
-}
-.summary-main .summary-item {
+.status-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.status-card.audited { border-left: 3px solid #16a34a; }
+.status-card.pending { border-left: 3px solid #d97706; }
+.sc-row {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 0 20px 0 0;
-  margin-right: 20px;
-  border-right: 1px solid #ebebeb;
 }
-.summary-main .summary-item:last-child {
-  border-right: none;
+.sc-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
 }
-.summary-main .s-label {
-  font-size: 12px;
-  color: rgba(29,29,31,0.4);
-}
-.summary-main .s-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1d1d1f;
-}
-.summary-main .s-value.primary { color: #0071e3; }
+.sc-dot.audited { background: #16a34a; }
+.sc-dot.pending { background: #d97706; }
+.sc-label { font-size: 12px; color: rgba(29,29,31,0.45); }
+.sc-num { font-size: 22px; font-weight: 700; color: #1d1d1f; line-height: 1; }
+.sc-unit { font-size: 12px; color: rgba(29,29,31,0.4); }
+.sc-sep { width: 1px; height: 14px; background: #e4e7ed; align-self: center; }
+.sc-money { font-size: 14px; font-weight: 600; color: #1d1d1f; }
+.sc-sub { font-size: 12px; color: rgba(29,29,31,0.4); }
+.c-red { color: #dc2626; }
 
-/* 次行 */
-.summary-sub {
+/* 工具栏合计行 */
+:deep(.toolbar-left) {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.toolbar-summary-row {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 0;
+  padding: 6px 2px 0;
+  font-size: 13px;
+  flex-wrap: wrap;
 }
-.summary-sub-group {
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-.summary-sub-divider {
-  width: 1px;
-  height: 14px;
-  background: #e4e7ed;
-  margin: 0 12px;
-}
-.s-group-label {
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 3px;
-  padding: 1px 6px;
-  margin-right: 8px;
-  color: rgba(29,29,31,0.4);
-  background: #f5f5f7;
-}
-.s-group-label.audited { color: #16a34a; background: #f0fdf4; }
-.s-group-label.pending { color: #d97706; background: #fffbeb; }
-
-.summary-item.sm {
+.tsr-item {
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  padding: 0 10px 0 0;
-  margin-right: 2px;
+  gap: 5px;
+  padding: 0 14px 0 0;
 }
-.summary-sub .s-label {
-  font-size: 11px;
-  color: rgba(29,29,31,0.4);
+.tsr-item b { font-weight: 700; color: #1d1d1f; }
+.tsr-label { font-size: 12px; color: rgba(29,29,31,0.4); }
+.tsr-sep { width: 1px; height: 13px; background: #e4e7ed; margin: 0 14px 0 0; }
+.tsr-tag {
+  font-size: 11px; font-weight: 600;
+  border-radius: 3px; padding: 1px 6px;
 }
-.s-value-sm {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1d1d1f;
-}
-.s-value-sm.primary { color: #0071e3; }
-.s-value-sm.success { color: #16a34a; }
-.s-value-sm.danger  { color: #dc2626; }
+.tsr-tag.green  { color: #16a34a; background: #f0fdf4; }
+.tsr-tag.orange { color: #d97706; background: #fffbeb; }
+.c-blue  { color: #0071e3 !important; }
+.c-green { color: #16a34a !important; }
+.c-red   { color: #dc2626 !important; }
 
 .expand-detail {
   padding: 12px 20px 12px 48px;
@@ -2326,9 +2849,13 @@ async function submitAddFund() {
 }
 .attach-del:hover { color: #dc2626; }
 
-:deep(.card-with-summary) {
-  border-radius: 0 0 10px 10px;
-}
 :deep(.row-highlight) { background-color: #ecf5ff !important; }
 :deep(.row-highlight td) { background-color: #ecf5ff !important; }
+
+:deep(.el-table__footer-wrapper td) {
+  background: #f5f7ff !important;
+  font-weight: 600;
+  font-size: 13px;
+  color: #1d1d1f;
+}
 </style>
