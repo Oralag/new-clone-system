@@ -7,6 +7,7 @@
         <ScTable ref="tableRef" :api-obj="getProcureInhouseList"
           sort-by="in_date" :sort-desc="true"
           export-file-name="采购入库单" :params="searchForm"
+          :row-filter="(row: any) => Number(row.status) === 1"
           :export-columns="{ in_no: '入库单号', supplier_name: '供应商', warehouse_name: '仓库', in_date: '入库日期', admin_name: '经办人', total_amount: '总金额', status: '状态' }">
           <template #search>
             <el-input v-model="searchForm.in_no" placeholder="入库单号" clearable style="width:160px" />
@@ -55,7 +56,7 @@
           </el-table-column>
           <el-table-column label="总金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ calcRowTotal(row).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -431,6 +432,15 @@ const stockRefreshStore = useStockRefreshStore()
 function parseItems(goodsInfo: any): any[] {
   if (Array.isArray(goodsInfo)) return goodsInfo
   try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
+}
+
+function calcRowTotal(row: any): number {
+  if (row.total_amount && Number(row.total_amount) > 0) return Number(row.total_amount)
+  const items = parseItems(row.goods_info)
+  return items.reduce((s: number, i: any) => {
+    if (i.total_price !== undefined) return s + Number(i.total_price || 0)
+    return s + (Number(i.num || 0) * Number(i.price || 0))
+  }, 0)
 }
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────

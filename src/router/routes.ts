@@ -241,6 +241,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'designer', name: 'InvestmentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
       { path: 'archive', name: 'InvestmentArchive', component: () => import('@/views/investment/Archive.vue'), meta: { title: '档案馆' } },
       { path: 'library', name: 'InvestmentLibrary', component: () => import('@/views/investment/Library.vue'), meta: { title: '图书馆' } },
+      { path: 'workspace', redirect: '/investment/city' },
     ],
   },
 ]

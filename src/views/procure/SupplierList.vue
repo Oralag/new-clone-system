@@ -274,12 +274,54 @@ async function loadSupplierFinance() {
       }
     }
     purchaseMap.value = pMap
-    // 累计付款
+    // 付款单：按单匹配（同 Payable.vue 逻辑）
     const payments: any[] = payRes.data?.rows ?? payRes.data?.list ?? []
+    const paidById: Record<number, number> = {}
+    const paidBySn: Record<string, number> = {}
+    const paidByKey: Record<string, number> = {}
+    const paidMultiBySup: Record<string, number> = {}
+    for (const r of payments) {
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const sn = String(r.order_sn || '').trim()
+      const sup = String(r.supplier_name || r.contact_name || '').trim()
+      let matched = false
+      if (Number(r.order_id)) {
+        const id = Number(r.order_id); paidById[id] = (paidById[id] || 0) + amt; matched = true
+      }
+      const m1all = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
+      if (m1all.length === 1) {
+        const id = Number(m1all[0][1]); paidById[id] = (paidById[id] || 0) + amt; matched = true
+      } else if (m1all.length > 1) {
+        if (sup) paidMultiBySup[sup] = (paidMultiBySup[sup] || 0) + amt
+        matched = true
+      }
+      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+      if (m2) { const s = m2[1].trim(); paidBySn[s] = (paidBySn[s] || 0) + amt; matched = true }
+      if (!matched && sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
+    }
+    // 按已审核采购单汇总每个供应商的已付金额
     const pmMap: Record<number, number> = {}
-    for (const p of payments) {
-      const sid = Number(p.supplier_id) || Number(p.contact_id)
-      if (sid) pmMap[sid] = (pmMap[sid] || 0) + Number(p.amount || 0)
+    for (const o of orders) {
+      if (Number(o.status) !== 1) continue
+      const headSid = Number(o.supplier_id)
+      if (!headSid) continue
+      const oSn = String(o.order_sn || '').trim()
+      const oNo = String(o.order_no || '').trim()
+      const oSup = String(o.supplier_name || '').trim()
+      const paidAmt = (paidById[o.id] || 0)
+        + (paidBySn[oSn] || paidBySn[oNo] || 0)
+        + (paidByKey[`${oSn}@@${oSup}`] || paidByKey[`${oNo}@@${oSup}`] || 0)
+      if (paidAmt) pmMap[headSid] = (pmMap[headSid] || 0) + paidAmt
+    }
+    // 多ID付款：按供应商名称补充（需先找到 supplier_id）
+    const supNameToId: Record<string, number> = {}
+    for (const o of orders) {
+      if (o.supplier_id && o.supplier_name) supNameToId[String(o.supplier_name).trim()] = Number(o.supplier_id)
+    }
+    for (const [supName, amt] of Object.entries(paidMultiBySup)) {
+      const sid = supNameToId[supName]
+      if (sid) pmMap[sid] = (pmMap[sid] || 0) + amt
     }
     paidMap.value = pmMap
     // 欠款 = 采购 - 付款

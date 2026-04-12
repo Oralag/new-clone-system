@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAdamStore } from '@/stores/adam'
 import { applyToolResult } from '@/utils/adamToolSync'
 import { marked } from 'marked'
@@ -147,6 +147,14 @@ const inputText = ref('')
 const isLoading = ref(false)
 const pendingImages = ref<ImageItem[]>([])
 const isCollapsed = ref(true)
+
+// 外部触发打开（如 Workspace 点击亚当角色）
+watch(() => adamStore.chatOpen, (val) => {
+  if (val) {
+    isCollapsed.value = false
+    adamStore.chatOpen = false
+  }
+})
 
 let pollTimer: number | undefined
 

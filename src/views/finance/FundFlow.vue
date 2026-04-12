@@ -200,7 +200,7 @@ onMounted(async () => {
         date: fmtDt(r.receipt_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
-        source: isCustomerPrepayLike(r) ? '预收款' : (collectSourceMap[r.contact_type] || '收款单'),
+        source: isCustomerPrepayLike(r) ? '预收款' : (collectSourceMap[r.contact_type || r.category] || '收款单'),
         name: r.contact_name || r.customer_name || '—',
         order_no: r.receipt_no || r.order_no || '',
         amount: Number(r.amount || 0),

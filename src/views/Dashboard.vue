@@ -956,38 +956,65 @@ async function loadDashboardData(force = false) {
   if (!force && now - lastRefreshAt < 3000) return
 
   dashboardLoading.value = true
+  const today = getToday()
+
+  // ── 第一阶段：快速拉今日关键指标（小数据量，优先渲染） ──
   try {
-    const today = getToday()
-    const [saleRes, retailRes, customerRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
-      http.get('/stock/SaleOutOrder/index',     { params: { list_rows: 2000 } }),
-      http.get('/retail/order/index',           { params: { list_rows: 2000 } }),
-      http.get('/shop/ShopCustomer/index',      { params: { list_rows: 1 } }),
-      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 200 } }),
-      http.get('/goods/ShopGoods/index',        { params: { list_rows: 500, status: 1 } }),
-      http.get('/finance/fundFlow/index',       { params: { list_rows: 100 } }),
+    const [saleRes, retailRes, customerRes] = await Promise.allSettled([
+      http.get('/stock/SaleOutOrder/index',  { params: { list_rows: 100, out_date: today } }),
+      http.get('/retail/order/index',        { params: { list_rows: 100, order_date: today } }),
+      http.get('/shop/ShopCustomer/index',   { params: { list_rows: 1 } }),
     ])
 
     const rows = (r: PromiseSettledResult<any>) =>
       r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
 
-    const saleRows: any[]   = rows(saleRes).filter((r: any) => Number(r.status) === 1)
-    const retailRows: any[] = rows(retailRes).filter((r: any) => Number(r.status) === 1)
+    const todaySaleRows   = rows(saleRes).filter((r: any) => Number(r.status) === 1)
+    const todayRetailRows = rows(retailRes).filter((r: any) => Number(r.status) === 1)
 
-    const todaySale   = saleRows.filter((r: any) => (r.out_date   || '').slice(0, 10) === today)
-    const todayRetail = retailRows.filter((r: any) => (r.order_date || '').slice(0, 10) === today)
-    const saleAmt   = todaySale.reduce((s: number, r: any) => {
+    const saleAmt = todaySaleRows.reduce((s: number, r: any) => {
       const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
       return s + amt
     }, 0)
-    const retailAmt = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
+    const retailAmt = todayRetailRows.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
     stats.value[0].value = '¥' + (saleAmt + retailAmt).toFixed(2)
-    stats.value[1].value = String(todaySale.length + todayRetail.length)
+    stats.value[1].value = String(todaySaleRows.length + todayRetailRows.length)
 
     const custData = customerRes.status === 'fulfilled' ? (customerRes.value?.data ?? customerRes.value) : {}
     stats.value[2].value = String(custData?.total ?? 0)
 
+    // 第一阶段完成，关键指标已渲染，解锁 loading
+    dashboardLoading.value = false
+
+    // ── 第二阶段：异步加载全量数据（图表/排行/库存预警），不阻塞首屏 ──
+    const [saleAllRes, retailAllRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
+      http.get('/stock/SaleOutOrder/index',     { params: { list_rows: 2000 } }),
+      http.get('/retail/order/index',           { params: { list_rows: 2000 } }),
+      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 200 } }),
+      http.get('/goods/ShopGoods/index',        { params: { list_rows: 500, status: 1 } }),
+      http.get('/finance/fundFlow/index',       { params: { list_rows: 100 } }),
+    ])
+
+    const rowsAll = (r: PromiseSettledResult<any>) =>
+      r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
+
+    const saleRows: any[]   = rowsAll(saleAllRes).filter((r: any) => Number(r.status) === 1)
+    const retailRows: any[] = rowsAll(retailAllRes).filter((r: any) => Number(r.status) === 1)
+
+    // 更新今日指标（全量数据可能更准确，如后端日期参数不精确时）
+    const todaySaleFull   = saleRows.filter((r: any) => (r.out_date   || '').slice(0, 10) === today)
+    const todayRetailFull = retailRows.filter((r: any) => (r.order_date || '').slice(0, 10) === today)
+    const saleAmtFull = todaySaleFull.reduce((s: number, r: any) => {
+      const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
+      return s + amt
+    }, 0)
+    const retailAmtFull = todayRetailFull.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
+    stats.value[0].value = '¥' + (saleAmtFull + retailAmtFull).toFixed(2)
+    stats.value[1].value = String(todaySaleFull.length + todayRetailFull.length)
+
+    // 库存预警
     const stockMap: Record<number, number> = {}
-    rows(procureRes).forEach((r: any) => {
+    rowsAll(procureRes).forEach((r: any) => {
       if (Number(r.status) !== 1) return
       const items = parseGoodsInfo(r.goods_info)
       items.forEach((i: any) => { stockMap[i.goods_id] = (stockMap[i.goods_id] ?? 0) + Number(i.num || 0) })
@@ -997,7 +1024,7 @@ async function loadDashboardData(force = false) {
       const items = parseGoodsInfo(r.goods_info)
       items.forEach((i: any) => { stockMap[i.goods_id] = (stockMap[i.goods_id] ?? 0) - Number(i.num || 0) })
     })
-    const goodsList: any[] = rows(goodsRes)
+    const goodsList: any[] = rowsAll(goodsRes)
     const stockWarnCount = goodsList.filter(g => (stockMap[g.id] ?? 0) <= 0).length
     stats.value[3].value = String(stockWarnCount)
 
@@ -1010,12 +1037,11 @@ async function loadDashboardData(force = false) {
     void loadRankData(saleRows, retailRows)
     drawTrendChart(trendDays.value)
 
-    // Build AI insights from real data (skip extra API call on mobile)
     buildInsights({
-      todaySale: saleAmt + retailAmt,
+      todaySale: saleAmtFull + retailAmtFull,
       stockWarn: stockWarnCount,
       customerCount: Number(stats.value[2].value) || 0,
-      todayOrders: todaySale.length + todayRetail.length,
+      todayOrders: todaySaleFull.length + todayRetailFull.length,
       pendingReceivable: 0,
     })
     lastRefreshAt = Date.now()

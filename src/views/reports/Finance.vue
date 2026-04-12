@@ -48,6 +48,10 @@
         <div class="sum-label">运费（我方）</div>
         <div class="sum-val orange">−¥{{ fmt(totals.freight) }}</div>
       </div>
+      <div class="sum-item">
+        <div class="sum-label">单据支出</div>
+        <div class="sum-val orange">−¥{{ fmt(totals.docExpense) }}</div>
+      </div>
       <div class="sum-divider"></div>
       <div class="sum-item sum-item--big">
         <div class="sum-label" style="font-weight:700">净利润</div>
@@ -100,6 +104,9 @@
           </el-table-column>
           <el-table-column label="运费" align="right" min-width="100" sortable prop="freight">
             <template #default="{ row }"><span style="color:#f59e0b">{{ row.freight > 0 ? '−' : '' }}¥{{ fmt(row.freight) }}</span></template>
+          </el-table-column>
+          <el-table-column label="单据支出" align="right" min-width="100" sortable prop="docExpense">
+            <template #default="{ row }"><span style="color:#f59e0b">{{ row.docExpense > 0 ? '−' : '' }}¥{{ fmt(row.docExpense) }}</span></template>
           </el-table-column>
           <el-table-column label="净利润" align="right" min-width="120" sortable prop="netProfit">
             <template #default="{ row }">
@@ -234,7 +241,7 @@
         <!-- 说明 -->
         <div class="pl-note">
           <el-icon><InfoFilled /></el-icon>
-          收入来源：销售合同 + 零售订单；成本优先取库存移动均价，无均价时取商品采购价；净利润 = 毛利润 − 费用 − 我方运费
+          收入来源：销售合同 + 零售订单；成本优先取库存移动均价，无均价时取商品采购价；净利润 = 毛利润 − 费用 − 我方运费 − 单据支出（采购+销售）
         </div>
       </el-card>
     </template>
@@ -261,6 +268,7 @@ const goodsList = ref<any[]>([])
 const procureInhouseList = ref<any[]>([])
 const bomList = ref<any[]>([])
 const expenseList = ref<any[]>([])
+const procureOrders = ref<any[]>([])  // 已审核采购单（取 expense_amount）
 
 // 移动加权平均价：采购入库 + BOM物料成本，兜底商品 cost_price
 const goodsCostMap = computed(() => {
@@ -326,8 +334,8 @@ function myFreight(row: any): number {
 
 // ====== 按月份 ======
 const monthRows = computed(() => {
-  const map: Record<string, { month: string; revenue: number; cost: number; expense: number; freight: number }> = {}
-  const ensure = (m: string) => { if (!map[m]) map[m] = { month: m, revenue: 0, cost: 0, expense: 0, freight: 0 } }
+  const map: Record<string, { month: string; revenue: number; cost: number; expense: number; freight: number; docExpense: number }> = {}
+  const ensure = (m: string) => { if (!map[m]) map[m] = { month: m, revenue: 0, cost: 0, expense: 0, freight: 0, docExpense: 0 } }
   for (const c of saleContracts.value) {
     const m = (c.contract_date || c.create_time || '').slice(0, 7)
     if (!m) continue
@@ -335,6 +343,7 @@ const monthRows = computed(() => {
     map[m].revenue += Number(c.after_discount || c.total_amount || 0)
     try { for (const g of JSON.parse(c.goods_info || '[]')) map[m].cost += Number(g.num || 0) * (goodsCostMap.value[g.goods_id] || 0) } catch {}
     map[m].freight += myFreight(c)
+    map[m].docExpense += Number(c.expense_amount || 0)
   }
   for (const r of retailOrders.value) {
     const m = (r.order_date || r.create_time || '').slice(0, 7)
@@ -348,10 +357,16 @@ const monthRows = computed(() => {
     ensure(m)
     map[m].expense += Number(e.amount || 0)
   }
+  for (const o of procureOrders.value) {
+    const m = (o.order_date || o.create_time || '').slice(0, 7)
+    if (!m) continue
+    ensure(m)
+    map[m].docExpense += Number(o.expense_amount || 0)
+  }
   return Object.values(map).map(r => {
     const grossProfit = r.revenue - r.cost
     const grossRate = r.revenue > 0 ? (grossProfit / r.revenue * 100) : 0
-    const netProfit = grossProfit - r.expense - r.freight
+    const netProfit = grossProfit - r.expense - r.freight - r.docExpense
     const netRate = r.revenue > 0 ? (netProfit / r.revenue * 100) : 0
     return { ...r, grossProfit, grossRate, netProfit, netRate }
   }).sort((a, b) => b.month.localeCompare(a.month))
@@ -458,10 +473,11 @@ const totals = computed(() => {
   const cost = monthRows.value.reduce((s, r) => s + r.cost, 0)
   const expense = monthRows.value.reduce((s, r) => s + r.expense, 0)
   const freight = monthRows.value.reduce((s, r) => s + r.freight, 0)
+  const docExpense = monthRows.value.reduce((s, r) => s + r.docExpense, 0)
   const grossProfit = revenue - cost
-  const netProfit = grossProfit - expense - freight
+  const netProfit = grossProfit - expense - freight - docExpense
   return {
-    revenue, cost, expense, freight, grossProfit, netProfit,
+    revenue, cost, expense, freight, docExpense, grossProfit, netProfit,
     grossRate: revenue > 0 ? (grossProfit / revenue * 100) : 0,
     netRate: revenue > 0 ? (netProfit / revenue * 100) : 0,
   }
@@ -471,7 +487,7 @@ function getSummary() {
   const t = totals.value
   return ['合计', `¥${fmt(t.revenue)}`, `¥${fmt(t.cost)}`,
     `${t.grossProfit >= 0 ? '+' : ''}¥${fmt(t.grossProfit)}`, `${t.grossRate.toFixed(1)}%`,
-    `¥${fmt(t.expense)}`, `¥${fmt(t.freight)}`,
+    `¥${fmt(t.expense)}`, `¥${fmt(t.freight)}`, `¥${fmt(t.docExpense)}`,
     `${t.netProfit >= 0 ? '+' : ''}¥${fmt(t.netProfit)}`, `${t.netRate.toFixed(1)}%`]
 }
 
@@ -487,13 +503,14 @@ async function loadData() {
     params.end_date = dateRange.value[1]
   }
   try {
-    const [c, r, g, ih, b, e] = await Promise.allSettled([
+    const [c, r, g, ih, b, e, po] = await Promise.allSettled([
       getContractList(params),
       getRetailOrderList(params),
       getGoodsList({ list_rows: 500 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
       getExpenseList(params),
+      http.get('/stock/PurchaseOrder/index', { params: { ...params, list_rows: 1000 } }),
     ])
     saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1) : []
     retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []).filter((r: any) => Number(r.status) === 1) : []
@@ -501,6 +518,7 @@ async function loadData() {
     procureInhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []
     bomList.value            = b.status === 'fulfilled' ? (b.value?.data?.rows  ?? []) : []
     expenseList.value        = e.status === 'fulfilled' ? (e.value?.data?.rows  ?? []) : []
+    procureOrders.value      = po.status === 'fulfilled' ? (po.value?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1) : []
   } finally {
     loading.value = false
   }

@@ -439,6 +439,18 @@
               <span style="font-size:11px;color:rgba(29,29,31,0.35)">审核时自动核销</span>
             </div>
             <div class="settle-item">
+              <span class="settle-label">单据支出</span>
+              <el-input-number v-model="fd.expense_amount" :min="0" :precision="2" :disabled="isReadonly"
+                size="small" style="width:130px" />
+              <template v-if="isReadonly && Number(fd.expense_amount || 0) > 0">
+                <el-tag :type="getSaleExpensePayStatus(fd).type" size="small" style="margin-left:8px">
+                  {{ getSaleExpensePayStatus(fd).label }}
+                </el-tag>
+                <el-button v-if="getSaleExpensePayStatus(fd).label === '待付'" type="warning" link size="small"
+                  style="margin-left:4px" @click="openSaleExpensePayDialog(fd)">支出付款</el-button>
+              </template>
+            </div>
+            <div class="settle-item">
               <span class="settle-label">是否分期</span>
               <el-switch v-model="fd.installment" :disabled="isReadonly" active-text="是" inactive-text="否" />
             </div>
@@ -587,6 +599,38 @@
       </template>
     </el-dialog>
 
+    <!-- 销售单据支出付款弹窗 -->
+    <el-dialog v-model="saleExpensePayVisible" title="单据支出付款" width="400px" append-to-body>
+      <el-form :model="saleExpensePayForm" label-width="90px">
+        <el-form-item label="销售合同">
+          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ saleExpensePayForm.orderSn }} · {{ saleExpensePayForm.customerName }}</span>
+        </el-form-item>
+        <el-form-item label="支出金额">
+          <span style="font-size:15px;font-weight:700;color:#d97706">¥{{ saleExpensePayForm.amount.toFixed(2) }}</span>
+        </el-form-item>
+        <el-form-item label="付款账户">
+          <el-select v-model="saleExpensePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onSaleExpensePayFundChange">
+            <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="付款对象">
+          <el-select v-model="saleExpensePayForm.contact_name" placeholder="销售单据支出" filterable allow-create default-first-option style="width:100%">
+            <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.name || c.nickname" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="付款日期">
+          <el-date-picker v-model="saleExpensePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="saleExpensePayForm.remark" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="saleExpensePayVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saleExpensePaySubmitting" @click="submitSaleExpensePay">确认付款</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -602,7 +646,7 @@ import { getContractList, createContract, updateContract, deleteContract, auditC
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSpecList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
-import { getFundList, createCollectReceipt, getCollectReceiptList, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
+import { getFundList, createCollectReceipt, getCollectReceiptList, getPayReceiptList, createPayReceipt, deletePayReceipt, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
@@ -728,6 +772,8 @@ const isReadonly = ref(false)
 
 // ── 收款状态映射 ──────────────────────────────────────────────────────────────
 const receiptMap = ref<Record<string, number>>({}) // key: order_sn, value: total received
+// 单据支出付款 Map：contract_order id → 已付金额
+const saleExpensePaidById = ref<Record<number, number>>({})
 
 async function loadReceiptMap() {
   try {
@@ -740,6 +786,88 @@ async function loadReceiptMap() {
     }
     receiptMap.value = map
   } catch { /* ignore */ }
+  // 同时加载单据支出付款 map
+  try {
+    const res2 = await getPayReceiptList({ list_rows: 2000 })
+    const rows2: any[] = res2?.data?.rows ?? []
+    const expMap: Record<number, number> = {}
+    for (const r of rows2) {
+      const m = String(r?.remark || '').match(/销售单据支出 #(\d+)/)
+      if (m) {
+        const id = Number(m[1])
+        expMap[id] = (expMap[id] || 0) + Number(r.amount || 0)
+      }
+    }
+    saleExpensePaidById.value = expMap
+  } catch { /* ignore */ }
+}
+
+function getSaleExpensePayStatus(row: any): { label: string; type: string } {
+  if (Number(row.status) !== 1) return { label: '—', type: 'info' }
+  const expAmt = Number(row.expense_amount || 0)
+  if (expAmt <= 0) return { label: '—', type: 'info' }
+  const paid = saleExpensePaidById.value[row.id] || 0
+  if (paid >= expAmt - 0.01) return { label: '已付', type: 'success' }
+  return { label: '待付', type: 'warning' }
+}
+
+// ── 销售单据支出付款弹窗 ──────────────────────────────────────────────────────
+const saleExpensePayVisible = ref(false)
+const saleExpensePaySubmitting = ref(false)
+const saleExpensePayForm = reactive({
+  orderId: 0,
+  orderSn: '',
+  customerName: '',
+  contact_name: '销售单据支出',
+  amount: 0,
+  fund_id: null as number | null,
+  fund_name: '',
+  pay_date: new Date().toISOString().slice(0, 10),
+  remark: '',
+})
+
+function openSaleExpensePayDialog(row: any) {
+  saleExpensePayForm.orderId = row.id
+  saleExpensePayForm.orderSn = getContractSn(row)
+  saleExpensePayForm.customerName = row.customer_name || ''
+  saleExpensePayForm.contact_name = '销售单据支出'
+  saleExpensePayForm.amount = Number(row.expense_amount || 0)
+  saleExpensePayForm.fund_id = null
+  saleExpensePayForm.fund_name = ''
+  saleExpensePayForm.pay_date = new Date().toISOString().slice(0, 10)
+  saleExpensePayForm.remark = ''
+  saleExpensePayVisible.value = true
+}
+
+function onSaleExpensePayFundChange(id: number) {
+  const f = fundOptions.value.find((f: any) => f.id === id)
+  saleExpensePayForm.fund_name = f?.name || ''
+}
+
+async function submitSaleExpensePay() {
+  if (!saleExpensePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  saleExpensePaySubmitting.value = true
+  try {
+    await createPayReceipt({
+      contact_type: 'other',
+      contact_name: saleExpensePayForm.contact_name || '销售单据支出',
+      order_sn: saleExpensePayForm.orderSn,
+      order_id: saleExpensePayForm.orderId,
+      amount: saleExpensePayForm.amount,
+      pay_date: saleExpensePayForm.pay_date,
+      fund_id: saleExpensePayForm.fund_id,
+      fund_name: saleExpensePayForm.fund_name,
+      remark: `销售单据支出 #${saleExpensePayForm.orderId}${saleExpensePayForm.remark ? ' ' + saleExpensePayForm.remark : ''}`,
+    })
+    ElMessage.success('支出付款成功')
+    saleExpensePayVisible.value = false
+    loadReceiptMap()
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '付款失败')
+  } finally {
+    saleExpensePaySubmitting.value = false
+  }
 }
 
 function getContractSn(row: any): string {
@@ -842,6 +970,7 @@ const defaultFd = () => ({
   income_amount: 0,
   receive_amount: 0,
   prepay_amount: 0,   // 本次使用预付款金额
+  expense_amount: 0,
   installment: false,
   items: [] as ContractItem[],
 })
@@ -1023,6 +1152,7 @@ async function openEdit(row: any, readonly = false) {
   fd.remark = parseContractRemark(row.remark || '')
   fd.source_offer_id = parseSourceOfferId(row.remark || '')
   fd.prepay_amount = Number(row.prepay_amount || parsePrepayAmount(row.remark || '') || 0)
+  fd.expense_amount = Number(row.expense_amount || 0)
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
@@ -1273,6 +1403,7 @@ async function handleSave(andAudit = false) {
       receive_account: fd.receive_account || '',
       need_invoice: fd.need_invoice ? 1 : 0,
       installment: fd.installment ? 1 : 0,
+      expense_amount: Number(fd.expense_amount || 0),
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id

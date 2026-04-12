@@ -180,15 +180,6 @@
           </div>
         </div>
 
-        <!-- 完成后跳转按钮 -->
-        <div v-if="meetingStore.phase === 'done' && agentStore.flowResults.length > 0" class="goto-publish">
-          <button class="goto-publish-btn" @click="router.push('/agent/publish')">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M3 7h8M8 4l3 3-3 3"/>
-            </svg>
-            前往发布部 · 查看内容
-          </button>
-        </div>
       </div>
 
       <!-- 右侧纪要面板（可收起） -->
@@ -230,6 +221,16 @@
           导出纪要
         </button>
       </div>
+    </div>
+
+    <!-- 完成后跳转按钮（在输入区上方，避免被遮挡） -->
+    <div v-if="meetingStore.phase === 'done' && agentStore.flowResults.length > 0" class="goto-publish">
+      <button class="goto-publish-btn" @click="router.push('/agent/publish')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 7h8M8 4l3 3-3 3"/>
+        </svg>
+        前往发布部 · 查看内容
+      </button>
     </div>
 
     <!-- ── 底部：输入区 ── -->

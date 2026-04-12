@@ -204,8 +204,6 @@ import { useShopStore } from '@/stores/shopStore'
 import { useBrandEditStore } from '@/stores/brandEdit'
 import { useRouter } from 'vue-router'
 import type { ShopProduct } from '@/stores/shopStore'
-import ExcelJS from 'exceljs'
-import JSZip from 'jszip'
 import { useImageUpload } from '@/composables/useImageUpload'
 const { triggerUpload } = useImageUpload()
 function upload(setter: (v: string) => void) { triggerUpload(setter) }
@@ -369,6 +367,10 @@ function getImageExtension(url: string): string {
 }
 
 async function buildZipForProducts(products: ShopProduct[]): Promise<Blob> {
+  const [{ default: JSZip }, { default: ExcelJS }] = await Promise.all([
+    import('jszip'),
+    import('exceljs'),
+  ])
   const zip = new JSZip()
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet('产品资料')

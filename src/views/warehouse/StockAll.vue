@@ -321,10 +321,10 @@
             <el-button type="primary" link size="small" @click="goToDoc(row)">查看</el-button>
           </template>
         </el-table-column>
-        <el-table-column label="数量" width="90" align="right">
+        <el-table-column label="数量" width="110" align="right">
           <template #default="{ row }">
             <span :style="{ color: flowTypeMap[row._type]?.direction === '+' ? '#16a34a' : '#dc2626', fontWeight: 600 }">
-              {{ flowTypeMap[row._type]?.direction || '+' }}{{ row._qty }}
+              {{ flowTypeMap[row._type]?.direction || '+' }}{{ row._qty }}<span v-if="row._unit" style="font-weight:400;margin-left:2px">{{ row._unit }}</span>
             </span>
           </template>
         </el-table-column>
@@ -339,9 +339,11 @@
         </el-table-column>
       </el-table>
       <div v-if="!flowLoading && flowRows.length" style="display:flex;gap:20px;margin-top:10px;font-size:13px;color:#606266">
-        <span>入库合计：<b style="color:#16a34a">+{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '+').reduce((s, r) => s + r._qty, 0) }}</b></span>
-        <span>出库合计：<b style="color:#dc2626">-{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '-').reduce((s, r) => s + r._qty, 0) }}</b></span>
-        <span>净变动：<b>{{ flowRows.reduce((s, r) => s + (flowTypeMap[r._type]?.direction === '+' ? r._qty : -r._qty), 0) }}</b></span>
+        <template v-if="!flowHasMultiUnit">
+          <span>入库合计：<b style="color:#16a34a">+{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '+').reduce((s, r) => s + r._qty, 0) }}</b></span>
+          <span>出库合计：<b style="color:#dc2626">-{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '-').reduce((s, r) => s + r._qty, 0) }}</b></span>
+          <span>净变动：<b>{{ flowRows.reduce((s, r) => s + (flowTypeMap[r._type]?.direction === '+' ? r._qty : -r._qty), 0) }}</b></span>
+        </template>
         <span>共 <b>{{ flowRows.length }}</b> 笔</span>
       </div>
       <div v-if="!flowLoading && !flowRows.length" style="text-align:center;color:#c0c4cc;padding:20px">暂无记录</div>
@@ -526,6 +528,26 @@ const unitConvertMap = ref<Record<number, { unit_name: string; ratio: number }[]
 // 快速换算查找：`${goods_id}:${unit_name}` -> ratio（基础单位倍数）
 const unitRatioLookup = ref<Record<string, number>>({})
 
+// 自动翻页拉取所有数据（解决 list_rows=500 上限问题）
+async function fetchAllPages(url: string, params: Record<string, any> = {}): Promise<any[]> {
+  const pageSize = 500
+  const firstRes = await http.get(url, { params: { ...params, list_rows: pageSize, page: 1 } })
+  const firstData = firstRes.data
+  const rows: any[] = firstData?.rows ?? []
+  const total: number = Number(firstData?.total ?? firstData?.count ?? rows.length)
+  if (total <= pageSize) return rows
+  const totalPages = Math.ceil(total / pageSize)
+  const rest = await Promise.allSettled(
+    Array.from({ length: totalPages - 1 }, (_, i) =>
+      http.get(url, { params: { ...params, list_rows: pageSize, page: i + 2 } })
+    )
+  )
+  for (const r of rest) {
+    if (r.status === 'fulfilled') rows.push(...(r.value.data?.rows ?? []))
+  }
+  return rows
+}
+
 async function loadUnitConvertMap() {
   // 只加载 multi_unit=true 的商品
   const multiGoods = allGoods.value.filter(g => g.multi_unit)
@@ -559,17 +581,28 @@ function formatStockMain(goodsId: number, qty: number, baseUnit: string): string
   return `${qty.toFixed(0)} ${baseUnit}`
 }
 
-// 辅助显示：几大单位几小单位，仅在有大单位时返回
+// 辅助显示：有大单位时显示"X大单位"，有小单位时显示"X小单位"
 function formatStockSub(goodsId: number, qty: number, baseUnit: string): string {
   const units = unitConvertMap.value[goodsId]
   if (!units || units.length < 2) return ''
-  const largeUnit = units.reduce((a, b) => b.ratio > a.ratio ? b : a)
-  if (largeUnit.ratio <= 1) return ''
-  const large = Math.floor(qty / largeUnit.ratio)
-  const small = qty % largeUnit.ratio
-  if (large === 0) return ''
-  if (small === 0) return `${large}${largeUnit.unit_name}`
-  return `${large}${largeUnit.unit_name}${small.toFixed(0)}${baseUnit}`
+  // 找非基础单位（ratio !== 1）
+  const otherUnits = units.filter(u => u.ratio !== 1)
+  if (!otherUnits.length) return ''
+  // 优先显示大单位（ratio > 1）
+  const largeUnit = otherUnits.find(u => u.ratio > 1)
+  if (largeUnit) {
+    const large = Math.floor(qty / largeUnit.ratio)
+    const small = qty % largeUnit.ratio
+    if (large === 0) return ''
+    if (small === 0) return `${large}${largeUnit.unit_name}`
+    return `${large}${largeUnit.unit_name}${small.toFixed(0)}${baseUnit}`
+  }
+  // 没有大单位，显示小单位换算（如1斤=2袋）
+  const smallUnit = otherUnits.reduce((a, b) => a.ratio < b.ratio ? a : b)
+  if (smallUnit.ratio <= 0) return ''
+  const converted = qty / smallUnit.ratio
+  if (converted === 0) return ''
+  return `${converted % 1 === 0 ? converted.toFixed(0) : converted.toFixed(1)}${smallUnit.unit_name}`
 }
 
 // 获取大单位的移动均价（= 小单位均价 × 换算比）
@@ -618,6 +651,11 @@ function getCateIds(id: number): number[] {
 // Filtered list (client-side after loading all goods)
 const filteredGoods = computed(() => {
   let rows = allGoods.value
+
+  // 选了具体仓库时，隐藏零库存商品
+  if (selectedWarehouse.value) {
+    rows = rows.filter(r => getStockQty(r) > 0)
+  }
 
   if (selectedCate.value) {
     const matchIds = getCateIds(selectedCate.value)
@@ -778,7 +816,13 @@ function refreshWithFirstPage() {
 
 function selectWarehouse(id: number) {
   selectedWarehouse.value = id
-  loadStockMap(id)
+  if (id) {
+    // 选了具体仓库：先用后端 qty，同时刷新均价
+    loadStockMap(id)
+  } else {
+    // 切回全部：重算流水汇总
+    reloadStockRelatedData()
+  }
   page.value = 1
 }
 
@@ -795,14 +839,44 @@ async function loadAllGoods() {
 
 async function loadStockMap(warehouseId = 0) {
   try {
-    const params: any = { list_rows: 2000 }
-    if (warehouseId) params.warehouse_id = warehouseId
-    const res: any = await getStockList(params)
-    const rows: any[] = res?.data?.rows ?? res?.rows ?? []
-    // 用 goods_sn 做桥梁：先建 sn->qty 的 map
+    // 后端不支持 warehouse_id 过滤，全量拉取后前端过滤
+    const res: any = await getStockList({ list_rows: 2000 })
+    let rows: any[] = res?.data?.rows ?? res?.rows ?? []
+
+    // 按仓库过滤（前端过滤，后端不支持 warehouse_id 参数）
+    // 注意：StockAll 里默认仓库存的是 warehouse_id=0，不是 WarehouseName 表里的 id
+    let filteredRows = rows
+    if (warehouseId) {
+      // 先找该仓库名称，用名称匹配（因为 StockAll.warehouse_id 和 WarehouseName.id 可能对不上）
+      const whInfo = warehouses.value.find((w: any) => w.id === warehouseId)
+      const whName = whInfo?.name || ''
+      if (whName === '默认仓库' || warehouseId === 1) {
+        // 默认仓库在 StockAll 里存为 warehouse_id=0
+        filteredRows = rows.filter((r: any) => Number(r.warehouse_id) === 0 || r.warehouse_name === '默认仓库' || r.warehouse_name === '')
+      } else {
+        filteredRows = rows.filter((r: any) => Number(r.warehouse_id) === warehouseId || r.warehouse_name === whName)
+      }
+    }
+
+    // 当选择了具体仓库时，用 StockAll 的 qty 更新库存数量
+    // 字段名是 goods_id / goods_code（不是 goods_sn）
+    if (warehouseId) {
+      const idQtyMap: Record<number, number> = {}
+      for (const r of filteredRows) {
+        const gid = Number(r.goods_id || 0)
+        if (gid) idQtyMap[gid] = (idQtyMap[gid] || 0) + Number(r.qty ?? 0)
+      }
+      const qtyMap: Record<number, number> = {}
+      for (const g of allGoods.value) {
+        qtyMap[g.id] = idQtyMap[g.id] ?? 0
+      }
+      stockQtyMap.value = qtyMap
+    }
+
+    // goods_code -> qty map（均价计算用，保留兼容）
     const snQtyMap: Record<string, number> = {}
-    for (const r of rows) {
-      const sn = r.goods_sn
+    for (const r of filteredRows) {
+      const sn = r.goods_code || r.goods_sn
       if (!sn) continue
       snQtyMap[sn] = (snQtyMap[sn] || 0) + Number(r.qty ?? r.stock_num ?? 0)
     }
@@ -895,14 +969,14 @@ async function loadStockMap(warehouseId = 0) {
 
 async function loadActivityMaps() {
   try {
-    const [inhouseRes, retailRes, returnRes, otherInRes, otherOutRes, prodInRes, prodOutRes] = await Promise.allSettled([
-      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 500 } }),
-      http.get('/retail/order/index', { params: { list_rows: 500 } }),
-      http.get('/procure/ProcureReturn/index', { params: { list_rows: 500 } }),
-      http.get('/stock/OtherIn/index', { params: { list_rows: 500 } }),
-      http.get('/stock/OtherOut/index', { params: { list_rows: 500 } }),
-      http.get('/production/inhouse/index', { params: { list_rows: 500 } }),
-      http.get('/production/material/index', { params: { list_rows: 500 } }),
+    const [inhouseRows, retailRowsRaw, returnRows, otherInRows, otherOutRows, prodInRows, prodOutRows] = await Promise.all([
+      fetchAllPages('/procure/ProcureInhouse/index').catch(() => [] as any[]),
+      fetchAllPages('/retail/order/index').catch(() => [] as any[]),
+      fetchAllPages('/procure/ProcureReturn/index').catch(() => [] as any[]),
+      fetchAllPages('/stock/OtherIn/index').catch(() => [] as any[]),
+      fetchAllPages('/stock/OtherOut/index').catch(() => [] as any[]),
+      fetchAllPages('/production/inhouse/index').catch(() => [] as any[]),
+      fetchAllPages('/production/material/index').catch(() => [] as any[]),
     ])
 
     // 流水库存汇总：goods_id -> 净数量（入库为正，出库为负）
@@ -910,15 +984,12 @@ async function loadActivityMaps() {
 
     // 退货单涉及的入库单 id 集合，用于排除
     const returnInhouseIds = new Set<number>()
-    if (returnRes.status === 'fulfilled') {
-      for (const r of (returnRes.value.data?.rows ?? [])) {
-        const inhouseId = Number(r.inhouse_id || 0)
-        if (inhouseId) returnInhouseIds.add(inhouseId)
-      }
+    for (const r of returnRows) {
+      const inhouseId = Number(r.inhouse_id || 0)
+      if (inhouseId) returnInhouseIds.add(inhouseId)
     }
 
     // Inhouse (采购入库) — 排除退货触发的入库单
-    const inhouseRows: any[] = inhouseRes.status === 'fulfilled' ? (inhouseRes.value.data?.rows ?? []) : []
     const inMap: Record<number, number> = {}
     for (const r of inhouseRows) {
       if (Number(r.status) !== 1) continue  // 只统计已审核
@@ -944,8 +1015,7 @@ async function loadActivityMaps() {
 
     // Return (采购退货出库)
     const retMap: Record<number, number> = {}
-    if (returnRes.status === 'fulfilled') {
-      for (const r of (returnRes.value.data?.rows ?? [])) {
+    for (const r of returnRows) {
         if (r.status !== 1) continue
         try {
           const allItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
@@ -963,7 +1033,6 @@ async function loadActivityMaps() {
             retMap[gid] = (retMap[gid] || 0) + 1
           }
         } catch { /* ignore */ }
-      }
     }
     returnCountMap.value = retMap
 
@@ -971,9 +1040,9 @@ async function loadActivityMaps() {
     const dMap: Record<number, number> = {}
     const sMap: Record<number, number> = {}
     try {
-      const saleOutRes = await http.get('/stock/SaleOutOrder/index', { params: { list_rows: 500, status: 1 } })
-      const saleRows: any[] = saleOutRes.data?.rows ?? []
+      const saleRows: any[] = await fetchAllPages('/stock/SaleOutOrder/index', { status: 1 })
       for (const r of saleRows) {
+        if (Number(r.status) !== 1) continue  // 只统计已审核
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThisOrder = new Set<number>()
@@ -995,7 +1064,7 @@ async function loadActivityMaps() {
     saleCountMap.value = sMap
 
     // Retail (零售出库) — 只统计已审核
-    const retailRows: any[] = (retailRes.status === 'fulfilled' ? (retailRes.value.data?.rows ?? []) : []).filter((r: any) => r.status === 1)
+    const retailRows = retailRowsRaw.filter((r: any) => Number(r.status) === 1)
     const rMap: Record<number, number> = {}
     for (const r of retailRows) {
       try {
@@ -1020,8 +1089,7 @@ async function loadActivityMaps() {
 
     // Other In (其他入库)
     const oiMap: Record<number, number> = {}
-    if (otherInRes.status === 'fulfilled') {
-      for (const r of (otherInRes.value.data?.rows ?? [])) {
+    for (const r of otherInRows) {
         if (r.status !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
@@ -1038,14 +1106,12 @@ async function loadActivityMaps() {
             oiMap[gid] = (oiMap[gid] || 0) + 1
           }
         } catch { /* ignore */ }
-      }
     }
     otherInCountMap.value = oiMap
 
     // Other Out (其他出库)
     const ooMap: Record<number, number> = {}
-    if (otherOutRes.status === 'fulfilled') {
-      for (const r of (otherOutRes.value.data?.rows ?? [])) {
+    for (const r of otherOutRows) {
         if (r.status !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
@@ -1062,14 +1128,12 @@ async function loadActivityMaps() {
             ooMap[gid] = (ooMap[gid] || 0) + 1
           }
         } catch { /* ignore */ }
-      }
     }
     otherOutCountMap.value = ooMap
 
     // Production Inhouse (生产入库) — 单品记录
     const piMap: Record<number, number> = {}
-    if (prodInRes.status === 'fulfilled') {
-      for (const r of (prodInRes.value.data?.rows ?? [])) {
+    for (const r of prodInRows) {
         if (r.status !== 1) continue
         const gid = Number(r.goods_id)
         const qty = Number(r.inhouse_qty || r.qty || 0)
@@ -1077,14 +1141,12 @@ async function loadActivityMaps() {
           piMap[gid] = (piMap[gid] || 0) + 1
           fqMap[gid] = (fqMap[gid] || 0) + qty // 生产入库 +
         }
-      }
     }
     prodInCountMap.value = piMap
 
     // Production Material (生产领料)
     const pmMap: Record<number, number> = {}
-    if (prodOutRes.status === 'fulfilled') {
-      for (const r of (prodOutRes.value.data?.rows ?? [])) {
+    for (const r of prodOutRows) {
         if (r.status !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
@@ -1101,7 +1163,6 @@ async function loadActivityMaps() {
             pmMap[gid] = (pmMap[gid] || 0) + 1
           }
         } catch { /* ignore */ }
-      }
     }
     prodOutCountMap.value = pmMap
 
@@ -1120,6 +1181,7 @@ const flowDialogVisible = ref(false)
 const flowLoading = ref(false)
 const flowGoodsName = ref('')
 const flowRows = ref<any[]>([])
+const flowHasMultiUnit = ref(false)
 
 const flowTypeMap: Record<string, { label: string; tag: string; direction: '+' | '-' }> = {
   in: { label: '采购入库', tag: 'success', direction: '+' },
@@ -1158,51 +1220,48 @@ async function openFlowDialog(goods: any) {
   flowDialogVisible.value = true
   flowLoading.value = true
   flowRows.value = []
+  flowHasMultiUnit.value = !!goods.multi_unit
   try {
     const gid = Number(goods.id)
     const rows: any[] = []
 
-    const [inhouseRes, saleOutRes, retailRes, returnRes, otherInRes, otherOutRes, prodInRes, prodOutRes] = await Promise.allSettled([
-      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 500 } }),
-      http.get('/stock/SaleOutOrder/index', { params: { list_rows: 500, status: 1 } }),
-      http.get('/retail/order/index', { params: { list_rows: 500 } }),
-      http.get('/procure/ProcureReturn/index', { params: { list_rows: 500 } }),
-      http.get('/stock/OtherIn/index', { params: { list_rows: 500 } }),
-      http.get('/stock/OtherOut/index', { params: { list_rows: 500 } }),
-      http.get('/production/inhouse/index', { params: { list_rows: 500 } }),
-      http.get('/production/material/index', { params: { list_rows: 500 } }),
+    const [inhouseAllRows, saleOutAllRows, retailAllRows, returnAllRows, otherInAllRows, otherOutAllRows, prodInAllRows, prodOutAllRows] = await Promise.all([
+      fetchAllPages('/procure/ProcureInhouse/index').catch(() => [] as any[]),
+      fetchAllPages('/stock/SaleOutOrder/index', { status: 1 }).catch(() => [] as any[]),
+      fetchAllPages('/retail/order/index').catch(() => [] as any[]),
+      fetchAllPages('/procure/ProcureReturn/index').catch(() => [] as any[]),
+      fetchAllPages('/stock/OtherIn/index').catch(() => [] as any[]),
+      fetchAllPages('/stock/OtherOut/index').catch(() => [] as any[]),
+      fetchAllPages('/production/inhouse/index').catch(() => [] as any[]),
+      fetchAllPages('/production/material/index').catch(() => [] as any[]),
     ])
 
     // 采购入库
-    if (inhouseRes.status === 'fulfilled') {
-      for (const r of (inhouseRes.value.data?.rows ?? [])) {
-        if (Number(r.status) !== 1) continue  // 只统计已审核
-        try {
+    for (const r of inhouseAllRows) {
+      if (Number(r.status) !== 1) continue  // 只统计已审核
+      try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matchedItems = items.filter((i: any) =>
             (gid && Number(i.goods_id) === gid) ||
             (goods.goods_name && i.goods_name === goods.goods_name)
           )
-          // 同一入库单内同商品可能多行，合并数量
-          const totalQty = matchedItems.reduce((s: number, i: any) => s + Number(i.num || 0), 0)
-          const avgPrice = matchedItems.length > 0 ? Number(matchedItems[0].price || 0) : 0
-          if (matchedItems.length > 0) {
+          // 每行单独一条记录，保留原始单位和数量
+          for (const item of matchedItems) {
             rows.push({
               _type: 'in',
               _sn: r.in_no || r.inhouse_no || '',
-              _qty: totalQty,
-              _price: avgPrice,
+              _qty: Number(item.num || 0),
+              _unit: item.unit_name || '',
+              _price: Number(item.price || 0),
               _date: r.in_date || r.create_time || '',
               _partner: r.supplier_name || '',
             })
           }
         } catch { /* ignore */ }
-      }
     }
 
     // 采购退货（出库）
-    if (returnRes.status === 'fulfilled') {
-      for (const r of (returnRes.value.data?.rows ?? [])) {
+    for (const r of returnAllRows) {
         if (r.status !== 1) continue
         try {
           const allItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
@@ -1222,12 +1281,11 @@ async function openFlowDialog(goods: any) {
             })
           }
         } catch { /* ignore */ }
-      }
     }
 
     // 销售出库
-    if (saleOutRes.status === 'fulfilled') {
-      for (const r of (saleOutRes.value.data?.rows ?? [])) {
+    for (const r of saleOutAllRows) {
+        if (Number(r.status) !== 1) continue  // 只统计已审核
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -1246,12 +1304,11 @@ async function openFlowDialog(goods: any) {
             })
           }
         } catch { /* ignore */ }
-      }
     }
 
     // 零售出库
-    if (retailRes.status === 'fulfilled') {
-      for (const r of (retailRes.value.data?.rows ?? [])) {
+    for (const r of retailAllRows) {
+        if (Number(r.status) !== 1) continue  // 只统计已审核
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -1269,12 +1326,10 @@ async function openFlowDialog(goods: any) {
             })
           }
         } catch { /* ignore */ }
-      }
     }
 
     // 其他入库
-    if (otherInRes.status === 'fulfilled') {
-      for (const r of (otherInRes.value.data?.rows ?? [])) {
+    for (const r of otherInAllRows) {
         if (r.status !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
@@ -1293,12 +1348,10 @@ async function openFlowDialog(goods: any) {
             })
           }
         } catch { /* ignore */ }
-      }
     }
 
     // 其他出库
-    if (otherOutRes.status === 'fulfilled') {
-      for (const r of (otherOutRes.value.data?.rows ?? [])) {
+    for (const r of otherOutAllRows) {
         if (r.status !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
@@ -1317,12 +1370,10 @@ async function openFlowDialog(goods: any) {
             })
           }
         } catch { /* ignore */ }
-      }
     }
 
     // 生产入库（单品记录，不是 goods_info 数组）
-    if (prodInRes.status === 'fulfilled') {
-      for (const r of (prodInRes.value.data?.rows ?? [])) {
+    for (const r of prodInAllRows) {
         if (r.status !== 1) continue
         if ((gid && Number(r.goods_id) === gid) || (goods.goods_name && r.goods_name === goods.goods_name)) {
           rows.push({
@@ -1334,12 +1385,10 @@ async function openFlowDialog(goods: any) {
             _partner: r.remark?.replace(/\n【SYS_PI_META】.*/s, '') || '',
           })
         }
-      }
     }
 
     // 生产领料（goods_info 数组）
-    if (prodOutRes.status === 'fulfilled') {
-      for (const r of (prodOutRes.value.data?.rows ?? [])) {
+    for (const r of prodOutAllRows) {
         if (r.status !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
@@ -1358,7 +1407,6 @@ async function openFlowDialog(goods: any) {
             })
           }
         } catch { /* ignore */ }
-      }
     }
 
     // 按日期排序

@@ -419,6 +419,13 @@ export const useAdamStore = defineStore('adam', () => {
     adamPosition.isMoving = false
   }
 
+  // ── 对话框状态（供 Workspace 页面触发打开） ──
+  const chatOpen = ref(false)
+
+  function openChat() {
+    chatOpen.value = true
+  }
+
   /** 让亚当回到角落 */
   function adamGoHome() {
     adamPosition.targetGridX = HOME_GX
@@ -476,6 +483,8 @@ export const useAdamStore = defineStore('adam', () => {
     adamArrived,
     adamGoHome,
     setAdamActivity,
+    chatOpen,
+    openChat,
     reset,
     persist,
     syncCoreFromKV,

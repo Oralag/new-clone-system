@@ -7,6 +7,8 @@ export const deleteScrap = (id: number) => http.post('/stock/Scrap/del', { id })
 
 export const getTransferList = (params?: any) => http.get('/stock/Allocation/index', { params })
 export const createTransfer = (data: any) => http.post('/stock/Allocation/add', data)
+export const updateTransfer = (data: any) => http.post('/stock/Allocation/edit', data)
+export const auditTransfer = (data: any) => http.post('/stock/Allocation/audit', data)
 export const deleteTransfer = (id: number) => http.post('/stock/Allocation/del', { id })
 
 export const getFlowList = (params?: any) => http.get('/stock/InOutFlow/index', { params })
@@ -36,6 +38,7 @@ export const deleteLocation = (id: number) => http.post('/stock/Location/del', {
 
 export const getWarehouseList = (params?: any) => http.get('/stock/WarehouseName/index', { params })
 export const createWarehouse = (data: any) => http.post('/stock/WarehouseName/add', data)
+export const updateWarehouse = (data: any) => http.post('/stock/WarehouseName/edit', data)
 export const deleteWarehouse = (id: number) => http.post('/stock/WarehouseName/del', { id })
 
 export const getBatchList = (params?: any) => http.get('/stock/Batch/index', { params })

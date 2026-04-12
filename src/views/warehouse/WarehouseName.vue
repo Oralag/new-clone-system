@@ -11,27 +11,35 @@
           <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
         </template>
 
-        <el-table-column prop="name" label="仓库名称" min-width="150" />
-        <el-table-column prop="manager" label="负责人" width="120" />
+        <el-table-column label="仓库名称" min-width="150">
+          <template #default="{ row }">
+            <span>{{ row.name }}</span>
+            <el-tag v-if="row.id === defaultWarehouseId" type="success" size="small" style="margin-left: 8px">默认</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="address" label="地址" min-width="180" show-overflow-tooltip />
         <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
 
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
+            <el-button type="primary" size="small" link @click="openForm(row)">编辑</el-button>
             <el-button type="success" size="small" link @click="formRef?.openView(row)">查看</el-button>
+            <el-button
+              size="small" link
+              :type="row.id === defaultWarehouseId ? 'info' : 'warning'"
+              :disabled="row.id === defaultWarehouseId"
+              @click="setDefault(row)"
+            >{{ row.id === defaultWarehouseId ? '已默认' : '设为默认' }}</el-button>
             <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </ScTable>
     </el-card>
 
-    <ScForm ref="formRef" title="新增仓库" @submit="handleSubmit">
+    <ScForm ref="formRef" :title="editingRow ? '编辑仓库' : '新增仓库'" @submit="handleSubmit">
       <template #default="{ form }">
         <el-form-item label="仓库名称" prop="name" :rules="[{ required: true, message: '请输入仓库名称' }]">
           <el-input v-model="form.name" placeholder="请输入仓库名称" />
-        </el-form-item>
-        <el-form-item label="负责人" prop="manager">
-          <el-input v-model="form.manager" placeholder="请输入负责人" />
         </el-form-item>
         <el-form-item label="地址" prop="address">
           <el-input v-model="form.address" placeholder="请输入地址" />
@@ -50,32 +58,54 @@ import ScForm from '@/components/ScForm.vue'
 
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getWarehouseList, createWarehouse, deleteWarehouse } from '@/api/warehouse'
+import { getWarehouseList, createWarehouse, updateWarehouse, deleteWarehouse } from '@/api/warehouse'
 import http from '@/api/http'
+
+const DEFAULT_WAREHOUSE_KEY = 'erp_default_warehouse_id'
 
 const tableRef = ref()
 const formRef = ref()
+const editingRow = ref<any>(null)
+const defaultWarehouseId = ref<number | null>(
+  Number(localStorage.getItem(DEFAULT_WAREHOUSE_KEY)) || null
+)
 
 const searchForm = reactive({
   name: ''
 })
 
-const openForm = () => {
-  formRef.value.open()
+const openForm = (row?: any) => {
+  editingRow.value = row ?? null
+  if (row) {
+    formRef.value.open(row)
+  } else {
+    formRef.value.open()
+  }
+}
+
+const setDefault = (row: any) => {
+  defaultWarehouseId.value = row.id
+  localStorage.setItem(DEFAULT_WAREHOUSE_KEY, String(row.id))
+  ElMessage.success(`已将"${row.name}"设为默认仓库`)
 }
 
 const handleSubmit = async (form: any, done: () => void) => {
   try {
-    // 检查同名仓库
-    const res = await getWarehouseList({ name: form.name, page: 1, page_size: 50 })
-    const rows: any[] = res?.rows ?? res?.data?.rows ?? []
-    const duplicate = rows.find((r: any) => r.name === form.name)
-    if (duplicate) {
-      ElMessage.error(`仓库"${form.name}"已存在，不可重复创建`)
-      return
+    if (editingRow.value) {
+      await updateWarehouse({ ...form, id: editingRow.value.id })
+      ElMessage.success('修改成功')
+    } else {
+      // 检查同名仓库
+      const res = await getWarehouseList({ name: form.name, page: 1, page_size: 50 })
+      const rows: any[] = res?.rows ?? res?.data?.rows ?? []
+      const duplicate = rows.find((r: any) => r.name === form.name)
+      if (duplicate) {
+        ElMessage.error(`仓库"${form.name}"已存在，不可重复创建`)
+        return
+      }
+      await createWarehouse(form)
+      ElMessage.success('操作成功')
     }
-    await createWarehouse(form)
-    ElMessage.success('操作成功')
     done()
     tableRef.value.refresh()
   } catch {
@@ -87,6 +117,10 @@ const handleDelete = async (id: number) => {
   await ElMessageBox.confirm('确定要删除该仓库吗？', '提示', { type: 'warning' })
   await http.post('/stock/WarehouseName/batchDel', { ids: [id] })
   ElMessage.success('删除成功')
+  if (defaultWarehouseId.value === id) {
+    defaultWarehouseId.value = null
+    localStorage.removeItem(DEFAULT_WAREHOUSE_KEY)
+  }
   tableRef.value.refresh()
 }
 </script>

@@ -1233,27 +1233,33 @@ async function loadAllData() {
     const procurePaidById: Record<number, number> = {}
     const procurePaidByKey: Record<string, number> = {}
     const procurePaidBySn: Record<string, number> = {}
+    const procurePaidBySup: Record<string, number> = {}
     for (const r of rawPayList) {
       const amt = Number(r.amount || 0)
       if (!amt) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
-      // 方式1：order_sn@@supplier_name 精确匹配
-      if (orderSn && supplierName) {
+      let matched = false
+      // 方式2：order_id 直接匹配
+      if (Number(r.order_id)) {
+        const id = Number(r.order_id); procurePaidById[id] = (procurePaidById[id] || 0) + amt; matched = true
+      }
+      // 方式3：备注 "采购单付款 #ID"（单ID直接匹配单据，多ID按供应商维度存储）
+      const m1all = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
+      if (m1all.length === 1) {
+        const id = Number(m1all[0][1]); procurePaidById[id] = (procurePaidById[id] || 0) + amt; matched = true
+      } else if (m1all.length > 1) {
+        if (supplierName) procurePaidBySup[supplierName] = (procurePaidBySup[supplierName] || 0) + amt
+        matched = true
+      }
+      // 方式4：备注 "采购单XXXXX审核自动生成" 提取单号
+      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+      if (m2) { const sn = m2[1].trim(); procurePaidBySn[sn] = (procurePaidBySn[sn] || 0) + amt; matched = true }
+      // 方式1：order_sn@@supplier_name 精确匹配（兜底，付款单的 order_sn 可能对应采购单的 order_no）
+      if (!matched && orderSn && supplierName) {
         const k = `${orderSn}@@${supplierName}`
         procurePaidByKey[k] = (procurePaidByKey[k] || 0) + amt
-      }
-      // 方式2：备注 "采购单付款 #ID"
-      const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
-      if (m1) {
-        const id = Number(m1[1])
-        procurePaidById[id] = (procurePaidById[id] || 0) + amt
-      }
-      // 方式3：备注 "采购单XXXXX审核自动生成" 提取单号
-      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
-      if (m2) {
-        const sn = m2[1].trim()
-        procurePaidBySn[sn] = (procurePaidBySn[sn] || 0) + amt
+        matched = true
       }
     }
     const supplierPayMap = new Map<string, any>()
@@ -1265,12 +1271,23 @@ async function loadAllData() {
       }
       const s = supplierPayMap.get(key)!
       const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-      const sn = String(o.order_sn || o.order_no || '').trim()
+      const oSn = String(o.order_sn || '').trim()
+      const oNo = String(o.order_no || '').trim()
       const supName = String(o.supplier_name || '').trim()
-      const paidAmt = procurePaidById[o.id] || procurePaidByKey[`${sn}@@${supName}`] || procurePaidBySn[sn] || 0
+      const paidAmt = (procurePaidById[o.id] || 0)
+        + (procurePaidBySn[oSn] || procurePaidBySn[oNo] || 0)
+        + (procurePaidByKey[`${oSn}@@${supName}`] || procurePaidByKey[`${oNo}@@${supName}`] || 0)
       s.order_amount += orderAmt
       s.paid_amount += paidAmt
       s.un_pay_amount += Math.max(0, orderAmt - paidAmt)
+    }
+    // 多ID付款：按供应商维度补充已付金额
+    for (const s of supplierPayMap.values()) {
+      const extra = procurePaidBySup[String(s.supplier_name || '').trim()] || 0
+      if (extra > 0) {
+        s.paid_amount += extra
+        s.un_pay_amount = Math.max(0, s.un_pay_amount - extra)
+      }
     }
     payableList.value = [
       ...applyProcureReturnsToPayableRows(Array.from(supplierPayMap.values()), procureReturnFinanceList.value),

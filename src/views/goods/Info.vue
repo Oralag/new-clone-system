@@ -163,7 +163,8 @@
               <div v-for="row in rows" :key="row.id" class="goods-card" @click="openEdit(row)">
                 <div class="goods-card-title">
                   <span>{{ row.goods_name }}</span>
-                  <el-tag v-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
+                  <el-tag v-if="bomProductSns.has(row.goods_sn)" type="danger" size="small">BOM</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
                   <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">原材料</el-tag>
                   <el-tag v-else-if="getGoodsType(row) === 4" size="small">辅料</el-tag>
                   <el-tag v-else-if="getGoodsType(row) === 1" type="success" size="small">成品</el-tag>
@@ -192,7 +193,8 @@
           <el-table-column prop="goods_name" label="商品名称" :min-width="isMobileList ? 140 : 150" />
           <el-table-column label="类型" width="80" align="center">
             <template #default="{ row }">
-              <el-tag v-if="getGoodsType(row) === 0" type="info" size="small">未指定</el-tag>
+              <el-tag v-if="bomProductSns.has(row.goods_sn)" type="danger" size="small">BOM</el-tag>
+              <el-tag v-else-if="getGoodsType(row) === 0" type="info" size="small">未指定</el-tag>
               <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
               <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">原材料</el-tag>
               <el-tag v-else-if="getGoodsType(row) === 4" size="small">辅料</el-tag>
@@ -1082,8 +1084,14 @@ const bomViewLoading = ref(false)
 const bomViewKeyword = ref('')
 // { bomId, goods_name, goods_sn, material_count, materialSns: Set<string>, bomRows: [] }
 const bomGoodsList = ref<any[]>([])
+// 所有BOM成品的 goods_sn 集合（全局，用于类型列显示）
+const bomProductSns = ref<Set<string>>(new Set())
 // 当前选中的 BOM id（null = 全部）
 const bomViewGoodsId = ref<number | null>(null)
+// 当前选中 BOM 的成品 goods_sn
+const bomViewProductSn = computed(() =>
+  bomGoodsList.value.find(g => g.bomId === bomViewGoodsId.value)?.goods_sn ?? null
+)
 // goods_sn 集合：成品本身 + 所有物料（用于 rowFilter）
 const bomViewMaterialIds = ref<Set<string>>(new Set())
 // map: goods_sn -> BOM item row (for usage display)
@@ -1110,6 +1118,7 @@ async function loadBomView() {
       materialSns: new Set<string>(),
       bomRows: [] as any[],
     }))
+    bomProductSns.value = new Set(list.map(b => b.goods_sn).filter(Boolean))
   } finally {
     bomViewLoading.value = false
   }
@@ -1303,6 +1312,7 @@ async function loadOptions() {
 onMounted(() => {
   loadCates()
   loadOptions()
+  loadBomView()
   window.addEventListener('resize', handleMobileResize)
 })
 onUnmounted(() => window.removeEventListener('resize', handleMobileResize))

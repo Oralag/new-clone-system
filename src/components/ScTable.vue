@@ -28,6 +28,10 @@
       </div>
       <!-- 桌面端右侧操作 -->
       <div v-if="!isMobile" class="toolbar-right">
+        <div v-if="$slots['toolbar-right']" class="toolbar-right-top">
+          <slot name="toolbar-right" />
+        </div>
+        <div class="toolbar-right-btns">
         <el-tooltip content="导入Excel">
           <el-upload
             v-if="importApi || importPath"
@@ -61,6 +65,7 @@
         <el-tooltip content="刷新">
           <el-button :icon="Refresh" circle size="small" @click="refresh" style="margin-left:4px" />
         </el-tooltip>
+        </div>
       </div>
     </div>
 
@@ -171,7 +176,6 @@
 import { ref, computed, nextTick, onMounted, onUnmounted, onActivated, useSlots } from 'vue'
 import { Search, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import * as XLSX from 'xlsx'
 import http from '@/api/http'
 
 const checkMobile = () => window.innerWidth < 768
@@ -429,6 +433,7 @@ async function handleBatchDelete() {
 
 // ── Export ────────────────────────────────────────────────────────────────────
 async function handleExport() {
+  const XLSX = await import('xlsx')
   const colMap = getColumnMap()
   const skipKeys = new Set(['created_at', 'updated_at', 'password', 'token', 'id'])
 
@@ -607,6 +612,16 @@ watch(
 
 .toolbar-right {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.toolbar-right-top {
+  display: flex;
+  justify-content: flex-end;
+}
+.toolbar-right-btns {
+  display: flex;
   align-items: center;
   gap: 4px;
 }
@@ -627,6 +642,7 @@ watch(
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+  margin-bottom: 8px;
 }
 
 @media (max-width: 767px) {

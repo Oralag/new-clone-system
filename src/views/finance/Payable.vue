@@ -197,6 +197,8 @@ async function load() {
     const paidById: Record<number, number> = {}
     const paidByKey: Record<string, number> = {}
     const paidBySn: Record<string, number> = {}
+    // 多ID备注付款：按供应商维度存储，聚合时再冲销
+    const paidMultiBySup: Record<string, number> = {}
     for (const r of (payReceiptRes.data?.rows ?? [])) {
       const amt = Number(r.amount || 0)
       if (!amt) continue
@@ -206,8 +208,15 @@ async function load() {
       if (Number(r.order_id)) {
         const id = Number(r.order_id); paidById[id] = (paidById[id] || 0) + amt; matched = true
       }
-      const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
-      if (m1) { const id = Number(m1[1]); paidById[id] = (paidById[id] || 0) + amt; matched = true }
+      const m1all = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
+      if (m1all.length === 1) {
+        // 单个ID：直接归到该采购单
+        const id = Number(m1all[0][1]); paidById[id] = (paidById[id] || 0) + amt; matched = true
+      } else if (m1all.length > 1) {
+        // 多个ID：按供应商维度存储，后续在供应商聚合阶段冲销
+        if (sup) paidMultiBySup[sup] = (paidMultiBySup[sup] || 0) + amt
+        matched = true
+      }
       const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
       if (m2) { const s = m2[1].trim(); paidBySn[s] = (paidBySn[s] || 0) + amt; matched = true }
       if (!matched && sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
@@ -235,11 +244,12 @@ async function load() {
       }
       const s = supplierMap.get(key)!
       const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-      const oSn = String(o.order_sn || o.order_no || '').trim()
+      const oSn = String(o.order_sn || '').trim()
+      const oNo = String(o.order_no || '').trim()
       const oSup = String(o.supplier_name || '').trim()
       const paidAmt = (paidById[o.id] || 0)
-        + (paidBySn[oSn] || 0)
-        + (paidByKey[`${oSn}@@${oSup}`] || 0)
+        + (paidBySn[oSn] || paidBySn[oNo] || 0)
+        + (paidByKey[`${oSn}@@${oSup}`] || paidByKey[`${oNo}@@${oSup}`] || 0)
       const unpaid = Math.max(0, orderAmt - paidAmt)
       s.order_amount += orderAmt
       s.paid_amount += paidAmt
@@ -256,6 +266,22 @@ async function load() {
 
     // 日期过滤（前端）
     let aggregated = Array.from(supplierMap.values())
+
+    // 多ID付款：按供应商维度，依单据顺序冲销欠款
+    for (const s of aggregated) {
+      const supName = String(s.supplier_name || '').trim()
+      let remaining = paidMultiBySup[supName] || 0
+      if (remaining <= 0) continue
+      for (const o of s.orders) {
+        if (remaining <= 0) break
+        const deduct = Math.min(remaining, o.un_pay_amount)
+        o.paid_amount += deduct
+        o.un_pay_amount = Math.max(0, o.un_pay_amount - deduct)
+        remaining -= deduct
+      }
+      s.paid_amount = s.orders.reduce((sum: number, o: any) => sum + o.paid_amount, 0)
+      s.un_pay_amount = s.orders.reduce((sum: number, o: any) => sum + o.un_pay_amount, 0)
+    }
     if (searchForm.date_from || searchForm.date_to) {
       for (const s of aggregated) {
         s.orders = s.orders.filter((o: any) => {
@@ -279,7 +305,7 @@ async function load() {
         return true
       })
 
-    rawRows.value = [...aggregated, ...expensePayables]
+    rawRows.value = [...aggregated.filter(s => s.un_pay_amount > 0), ...expensePayables]
     procureReturnRows.value = returnRes.data?.rows ?? []
     total.value = rawRows.value.length
   } finally {
@@ -309,15 +335,14 @@ async function viewDetail(row: any) {
 // 跳转付款单新增页，带供应商参数
 function goPay(row: any) {
   const unpaidOrders = (row.orders ?? []).filter((o: any) => Number(o.un_pay_amount) > 0)
-  const singleOrder = unpaidOrders.length === 1 ? unpaidOrders[0] : null
+  const orderIds = unpaidOrders.map((o: any) => o.order_id).filter(Boolean).join(',')
   router.push({
     path: '/finance/pay-receipt/new',
     query: {
       supplier_id: row.supplier_id,
       supplier_name: row.supplier_name,
       un_pay_amount: row.un_pay_amount,
-      order_id: singleOrder?.order_id ?? undefined,
-      order_no: singleOrder?.order_no ?? undefined,
+      order_ids: orderIds || undefined,
     }
   })
 }

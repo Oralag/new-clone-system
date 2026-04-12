@@ -3,7 +3,8 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getPayReceiptListWithRefund"
           del-path="/finance/PayReceipt/batchDel"
-          export-file-name="付款记录" :params="searchForm">
+          export-file-name="付款记录" :params="searchForm"
+          sort-by="pay_date" :sort-desc="true">
         <template #search>
           <el-input v-model="searchForm.receipt_no" placeholder="付款单号" clearable style="width:160px" />
           <el-input v-model="searchForm.contact_name" placeholder="付款对象" clearable style="width:150px" />
@@ -54,7 +55,7 @@
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="danger" link size="small" @click="handleRevoke(row)">撤销付款</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -68,7 +69,7 @@ import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getPayReceiptList, deletePayReceipt } from '@/api/finance'
+import { getPayReceiptList, deletePayReceipt, unAuditPayReceipt } from '@/api/finance'
 import http from '@/api/http'
 import { applyProcureReturnsToPayReceiptRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
@@ -97,7 +98,7 @@ function typeLabel(type: string) {
 
 async function getPayReceiptListWithRefund(params: any) {
   const settled = await Promise.allSettled([
-    getPayReceiptList(params),
+    getPayReceiptList({ ...params, list_rows: 10000, page: 1 }),
     http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
     http.get('/stock/PurchaseOrder/index', { params: { list_rows: 1000 } }),
     http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
@@ -107,40 +108,45 @@ async function getPayReceiptListWithRefund(params: any) {
   purchaseOrders.value = procureRes.data?.rows ?? []
   supplierList.value = supRes.data?.rows ?? []
 
-  const rows: any[] = payRes.data?.rows ?? []
+  let rows: any[] = payRes.data?.rows ?? []
   const normalizedReturns = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [])
-  const nextRows = applyProcureReturnsToPayReceiptRows(rows, normalizedReturns)
+  rows = applyProcureReturnsToPayReceiptRows(rows, normalizedReturns)
+
+  // 后端不支持筛选字段，前端过滤
+  if (params.contact_type) rows = rows.filter(r => r.contact_type === params.contact_type)
+  if (params.contact_name) rows = rows.filter(r => (r.contact_name ?? '').includes(params.contact_name))
+  if (params.receipt_no) rows = rows.filter(r => (r.receipt_no ?? '').includes(params.receipt_no))
 
   return {
     ...payRes,
     data: {
       ...(payRes.data || {}),
-      rows: nextRows,
+      rows,
+      total: rows.length,
     },
   }
 }
 
-async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该付款单？删除后将回退对应资金账户余额。', '提示', { type: 'warning' })
-  // 先获取该行数据用于回退
-  const res = await getPayReceiptList({ id })
-  const row = res?.data?.rows?.[0] || res?.data?.list?.[0]
-  await deletePayReceipt(id)
-  // 回退资金账户余额（付款是支出，删除后要加回来）
-  if (row && Number(row.amount || 0) > 0) {
-    try {
-      await adjustFundBalance({
-        fundId: row.fund_id,
-        fundName: row.fund_name || row.account_name,
-        delta: Number(row.amount),
-      })
-    } catch { /* 回退失败不阻塞删除结果 */ }
+async function handleRevoke(row: any) {
+  await ElMessageBox.confirm(
+    `确定撤销付款单 ${row.receipt_no || row.order_sn || ''} ？\n\n将自动反审核并删除该付款单，¥${Number(row.amount || 0).toFixed(2)} 将回流至「${row.fund_name || row.account_name || '对应账户'}」，对应采购单恢复为未付款状态。`,
+    '撤销付款', { type: 'warning', confirmButtonText: '确定撤销', cancelButtonText: '取消' }
+  )
+  try {
+    await deletePayReceipt(row.id)
+    if (Number(row.amount || 0) > 0) {
+      try {
+        await adjustFundBalance({ fundId: row.fund_id, fundName: row.fund_name || row.account_name, delta: Number(row.amount) })
+      } catch { /* 回退失败不阻塞 */ }
+    }
+    ElMessage.success('已撤销，资金已回流，请重新付款')
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error(e?.message ?? '撤销失败')
   }
-  ElMessage.success('删除成功')
-  tableRef.value?.refresh()
 }
 </script>
 
 <style scoped>
-.receipt-page { height: 100%; }
+.receipt-page { min-height: 100%; }
 </style>

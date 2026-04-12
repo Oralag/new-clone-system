@@ -1,6 +1,6 @@
 # 财务模块逻辑文档
 
-> 最后更新：2026-04-06（补充付款单 supplier_name 可能为空的注意事项）  
+> 最后更新：2026-04-12（修复多采购单付款金额双重计数问题）  
 > 用途：排查财务数据问题、修改计算逻辑时的参考手册
 
 ---
@@ -33,7 +33,105 @@ Overview.vue 的汇总数字必须与 FundFlow.vue 的明细合计一致。两�
 
 ---
 
-## 二、资金收支来源（income/expense）
+## 二、基础财务恒等式与业务规则
+
+> 这是财务逻辑的地基。修改任何财务计算前，先对照这里的恒等式验证思路是否正确。
+
+### 2.1 核心恒等式
+
+```
+【应付账款】
+应付总额 = 已审核采购单金额合计 - 累计已付款 - 采购退货冲减
+欠款 ≥ 0（不能为负）
+超付部分 → 转为预付款，不是负欠款
+
+【应收账款】
+应收总额 = 已审核销售合同金额合计 - 累计已收款 - 销售退货冲减
+欠款 ≥ 0（不能为负）
+超收部分 → 转为预收款，不是负欠款
+
+【资金余额】
+资金余额 = 所有收入流水合计 - 所有支出流水合计
+（不使用后端 balance 字段，动态计算）
+
+【单账户余额】
+账户余额 = 该账户收款合计 - 该账户付款合计
+所有账户余额之和 = 资金余额（必须一致）
+
+【预付款 / 预收款】
+预付款 = max(0, 累计已付 - 应付总额)   ← 多付了才有预付款
+预收款 = max(0, 累计已收 - 应收总额)   ← 多收了才有预收款
+```
+
+### 2.2 单据维度规则（最容易出错）
+
+```
+欠款必须在【单据维度】计算，不能跨单据混算
+
+✅ 正确：
+  订单A 应付100，已付100 → 订单A 欠款 = 0
+  订单B 应付200，已付0   → 订单B 欠款 = 200
+  供应商总欠款 = 0 + 200 = 200
+
+❌ 错误（跨单据混算）：
+  供应商总应付 = 300，总已付 = 100 → 欠款 = 200（看似对，但付款没对应到具体单据，
+  一旦付款单没有 supplier_id 就会漏算）
+
+付款单必须通过 order_id / 备注 / 单号 匹配到具体采购单，才能抵扣该单欠款。
+未匹配到任何采购单的付款，不能计入欠款抵扣。
+```
+
+### 2.3 退货财务规则
+
+```
+【采购退货】
+退货金额 ≤ 原采购单金额
+若原单未付清：退货先冲减应付（deduct_amount），剩余才退款（refund_amount）
+  deduct_amount = min(退货金额, 未付余额)
+  refund_amount = max(0, 退货金额 - deduct_amount)
+
+【销售退货】
+退货金额 ≤ 原销售合同金额
+若原单未收清：退货先冲减应收（deduct_amount），剩余才退款（refund_amount）
+逻辑同采购退货对称
+```
+
+### 2.4 收支分类规则
+
+```
+【是资金流水的】（实际钱进出账户）
+  收入：收款单、零售实收、会员充值、采购退货退款（实际到账部分）
+  支出：付款单、费用单（已付）、销售退货退款（实际退出部分）
+
+【不是资金流水的】（只是凭据/权利）
+  销售合同 → 应收凭据，签了合同不等于钱到账
+  采购订单 → 应付凭据，下了订单不等于钱出去了
+  费用单(pending) → 只是记录待付，钱还没出去
+
+⚠️ 销售合同绝对不能计入资金收入，否则余额虚高
+⚠️ 采购订单绝对不能计入资金支出，否则余额虚低
+```
+
+### 2.5 金额字段优先级
+
+```
+采购订单金额：after_discount ?? total_amount
+  （有折扣时用折后价，无折扣用原价）
+
+销售合同金额：total_amount（合同总额）
+  已收：pay_amount
+  待收：max(0, total_amount - pay_amount)
+
+付款/收款单金额：amount字段（直接使用，无需计算）
+
+⚠️ 禁止使用 row.pay_amount 作为采购单"已付金额"
+   该字段是"审核时填写的本次付款额"，不是累计已付总额
+   累计已付必须从付款单列表匹配计算
+```
+
+---
+
+## 三、资金收支来源（income/expense）
 
 ### 收入来源（type: 'income'）
 
@@ -94,23 +192,42 @@ Overview.vue 的汇总数字必须与 FundFlow.vue 的明细合计一致。两�
 ⚠️ 注意：后端 status 参数无效（会被忽略），必须前端过滤！
 
 处理步骤：
-  1. 先从 payRes（付款单）构建已付 Map（3种匹配）：
-     - 方式1：`order_sn@@supplier_name` 精确匹配 → procurePaidByKey
-       ⚠️ 付款单的供应商名用 `supplier_name || contact_name`（两个字段都可能有值）
-     - 方式2：备注 `采购单付款 #ID` → procurePaidById（推荐，最可靠）
-     - 方式3：备注 `采购单XXXXX审核自动生成` 提取单号 → procurePaidBySn（兼容历史数据）
-     - 优先级：方式2 > 方式1 > 方式3（取第一个非零值）
+  1. 先从 payRes（付款单）构建已付 Map（3种方式，互斥分配）：
+
+     ⚠️ 互斥规则（每条付款记录只进一个 Map，防止双重计数）：
+       - 优先级1：order_id 直接匹配 → procurePaidById[order_id]
+       - 优先级2a：备注 `采购单付款 #ID`（单个ID）→ procurePaidById[id]
+       - 优先级2b：备注 `采购单付款 #ID1 采购单付款 #ID2`（多个ID）→ procurePaidMultiBySup[supplier_name]
+         ⚠️ 多ID不能把全额加给每个单（会导致金额 ×N 倍），必须存到供应商维度后再分摊
+       - 优先级3：备注 `采购单XXXXX审核自动生成` → procurePaidBySn[sn]（历史数据）
+       - 兜底（matched=false）：`order_sn@@supplier_name` → procurePaidByKey（手动付款）
+     ⚠️ 用 matched 标志位控制：一旦命中优先更高的匹配就不再放入低级 Map
+
   2. 遍历采购订单，跳过 status !== 1（前端过滤）
   3. 按供应商 key 聚合：
      - key = `id:${supplier_id}` 或 `name:${supplier_name}`
   4. 每条订单：
      - orderAmt = after_discount ?? total_amount
-     - paidAmt  = procurePaidById[id] || procurePaidByKey[sn@@sup] || procurePaidBySn[sn] || 0
+     - oSn = order_sn（内部编号）
+     - oNo = order_no（展示单号，审核自动生成的付款记录里存的是这个）
+     ⚠️ 必须同时查两个字段：
+     - paidAmt = (paidById[o.id] || 0)
+                 + (paidBySn[oSn] || paidBySn[oNo] || 0)
+                 + (paidByKey[oSn@@sup] || paidByKey[oNo@@sup] || 0)
      - un_pay_amount = max(0, orderAmt - paidAmt)
-  5. applyProcureReturnsToPayableRows() 减去采购退货冲减额
-  6. 追加 buildExpensePayableRows() 的待付款费用（生产成本类）
+  5. 多ID付款分摊（paidMultiBySup）：
+     - 聚合完成后，对 paidMultiBySup 里每个供应商的额外已付金额
+     - 按单据 id 升序，依次冲销各单 un_pay_amount（先欠的先还）
+     - Payable.vue：在 orders 循环后单独一个循环处理分摊
+     - Overview.vue：在 supplierPayMap 构建后，直接加到 supplier 的 paid_amount，减少 un_pay_amount
+     - Order.vue（采购单列表）：loadPaidMap 时额外查一次采购单，计算欠款后写入 idMap，再设 paidMapById
+  6. applyProcureReturnsToPayableRows() 减去采购退货冲减额
+  7. 追加 buildExpensePayableRows() 的待付款费用（生产成本类）
+  8. 最终只保留 un_pay_amount > 0 的行
 
 ⚠️ 禁止用 row.pay_amount 作为已付金额（该字段是"审核时填的本次付款额"，不是累计已付）
+⚠️ 禁止使用 ||（或）替代 +（加）来累加多笔付款——同一订单可能有多笔付款分布在不同 Map，
+   必须全部相加才是总已付金额
 禁止使用：/finance/PayAccounts/index（返回空）
 ```
 
@@ -228,16 +345,47 @@ getBomList()                                     → pBomRes
 
 应付金额：
   orderAmt = after_discount ?? total_amount
-  paidAmt  = 从付款单匹配（3种方式：paidById / paidByKey / paidBySn）
+  oSn = order_sn（内部编号）
+  oNo = order_no（展示单号）
+  ⚠️ 付款匹配必须同时查 oSn 和 oNo（审核自动生成的记录存的是 order_no）
+  paidAmt = (paidById[o.id] || 0)
+            + (paidBySn[oSn] || paidBySn[oNo] || 0)
+            + (paidByKey[oSn@@sup] || paidByKey[oNo@@sup] || 0)
+  ⚠️ 用 + 而不是 ||，同一订单多笔付款必须全部累加
+  ⚠️ paidMap 构建时每条记录用 matched 标志互斥分配，防止双重计数
   un_pay_amount = max(0, orderAmt - paidAmt)
   ⚠️ 禁止用 row.pay_amount 作为已付金额
 
 最终应付 = applyProcureReturnsToPayableRows(采购聚合, 退货) + 待付费用
+只显示 un_pay_amount > 0 的行
 ```
 
 ---
 
-## 四、工具函数说明
+### 3.5 SupplierList.vue — 供应商列表欠款
+
+**文件**：`src/views/procure/SupplierList.vue`
+
+```
+供应商列表和查看弹窗中显示的 欠款/累计采购/累计付款/预付款 计算规则：
+
+累计采购（purchaseMap）：
+  只算 status===1 的已审核采购单
+  单一供应商：整单 total_amount 归 supplier_id
+  多供应商（goods_info 含行级 supplier_id）：按行拆分，每行 num×price
+
+累计付款（paidMap）：
+  ⚠️ 必须按采购单匹配，不能直接按 supplier_id/contact_id 加总
+  匹配方式与 Payable.vue 完全一致（paidById / paidBySn / paidByKey / paidMultiBySup）
+  ⚠️ 同样需要同时匹配 order_sn 和 order_no 两个字段
+  ⚠️ 多ID备注付款需写入 paidMultiBySup，通过 supNameToId 映射到 supplier_id 后汇总
+  只统计匹配到已审核采购单的付款金额
+
+欠款 = max(0, 累计采购 - 累计付款)
+预付款 = max(0, 累计付款 - 累计采购)
+```
+
+---
 
 ### 4.1 procureReturnFinance.ts（采购退货财务处理）
 
@@ -391,21 +539,48 @@ getPayReceiptSupplierLabel(payRow, purchaseOrders, supplierList):
 | 总览 vs 资金流水 | 同一来源，数字必须一致 |
 | 账户余额合计 vs 资金余额 | 所有账户余额之和 = 资金流水余额 |
 
-### 6.8 已知问题（2026-04-06）
+**⚠️ 死规矩：任何财务计算逻辑修改，必须同步更新 Overview.vue 中对应的计算代码。**  
+两处逻辑必须完全一致，不允许有任何差异。  
+涉及文件：`Payable.vue` ↔ `Overview.vue`（payableList计算），`FundFlow.vue` ↔ `Overview.vue`（allFlowItems计算）
+
+### 6.8 已知问题 / 修复记录
+
+#### 已修复（2026-04-12）
+5. ✅ **应付款多采购单付款金额双重计数**
+   - 背景：从应付款页面对同一供应商多张欠款单点"付款"，生成的付款单备注为 `采购单付款 #474 采购单付款 #476 采购单付款 #478`
+   - 原因：matchAll 取到多个 ID 后，把全额（¥250）分别加给每个单，导致每张单都显示"已付 ¥250"，金额 ×N 倍
+   - 修复逻辑：
+     - 单个ID备注 → 直接归到 `paidById[id]`（不变）
+     - 多个ID备注 → 存入 `paidMultiBySup[supplier_name]`（按供应商维度）
+     - 聚合完成后，按单据 id 升序依次冲销：先算出该单已有匹配金额，剩余欠款再从 paidMultiBySup 里扣减
+   - 同步修复：`Payable.vue`、`Overview.vue`、`SupplierList.vue`、`Order.vue` 四个文件
+   - goPay 跳转也同步修改：多张单统一传 `order_ids`（逗号分隔），PayReceiptNew.vue 自动生成多ID备注
+
+#### 已修复（2026-04-11）
+4. ✅ **采购单付款单创建规则**
+   - 付款单**只由后端审核时自动创建**，前端不创建（避免双重）
+   - 编辑已有采购单时，payload **不传 order_no/order_sn**，只传 id 和其他字段
+   - 后端重复检测规则：同供应商 + 同金额 + **同采购单号**（order_sn）→ 拒绝；无 order_sn 的手动付款不做重复检测
+   - 收款单重复检测同理：同客户 + 同金额 + **同销售单号**（order_sn）→ 拒绝
+
+#### 未解决
 1. 🔴 **乌日力格账户余额差 ¥8,867.61**
    - 账户只有支出无收入，系统余额与流水不符
    - 原因：账户建立时疑似手动设置了初始余额，无对应收款单
    - 待处理：确认来源后补录收款单
 
-2. 🟡 **Payable.vue 展示逻辑缺过滤**（已撤回，待修）
-   - `displayRows` 未过滤 `un_pay_amount <= 0` 的行
-   - 付款按钮第81行缺少 `&& Number(row.un_pay_amount) > 0` 判断
-   - 文件：`src/views/finance/Payable.vue`
-
-3. 🟡 **收款单3条 contact_type 为空**
+2. 🟡 **收款单3条 contact_type 为空**
    - 单号：QTSR0000050、QTSR0000053、QTSR0000054
    - 备注里写了 [other] 但字段未存入
    - 待处理：补填 contact_type = 'other'
+
+#### 已修复（2026-04-10）
+3. ✅ **应付账款付清后仍显示欠款**（Payable.vue + Overview.vue）
+   - 原因1：付款 Map 构建没有互斥，同一笔记录同时进入多个 Map 导致双重计数
+   - 原因2：paidAmt 用 `||` 而不是 `+`，多笔付款只取第一个非零值
+   - 原因3：只查 `order_sn`（内部编号），未查 `order_no`（展示单号），审核自动生成的付款记录存的是 order_no
+   - 修复：改为互斥 matched 标志分配 Map，paidAmt 改用 `+` 累加，同时匹配 oSn 和 oNo
+   - 同步：Payable.vue 和 Overview.vue 两处逻辑同时修复，保持一致
 
 ---
 

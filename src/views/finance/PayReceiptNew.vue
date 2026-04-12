@@ -194,10 +194,18 @@ function fmt(v: any) { return Number(v || 0).toFixed(2) }
 // 从路由参数读采购单信息（从应付款页面跳转时携带）
 const routeOrderId = Number(route.query.order_id || 0)
 const routeOrderNo = String(route.query.order_no || '')
+// 多张欠款单时传 order_ids（逗号分隔）
+const routeOrderIds = String(route.query.order_ids || '')
+const parsedOrderIds = routeOrderIds
+  ? routeOrderIds.split(',').map(Number).filter(Boolean)
+  : routeOrderId ? [routeOrderId] : []
+const defaultRemark = parsedOrderIds.length > 0
+  ? parsedOrderIds.map(id => `采购单付款 #${id}`).join(' ')
+  : ''
 
 // 初始化时从路由参数读供应商信息
 const fd = reactive({
-  order_sn: routeOrderNo,
+  order_sn: '',
   pay_date: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
   supplier_id: null as any,
   supplier_name: '',
@@ -206,7 +214,7 @@ const fd = reactive({
   discount_amount: 0,
   prepay_deduct: 0,
   verify_type: 'auto',
-  remark: routeOrderId ? `采购单付款 #${routeOrderId}` : '',
+  remark: defaultRemark,
 })
 
 // 付款明细行

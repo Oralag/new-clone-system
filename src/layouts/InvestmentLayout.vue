@@ -53,6 +53,10 @@
           <Library :size="15" :stroke-width="1.5" />
           <span class="nav-item-label">图书馆</span>
         </router-link>
+        <router-link to="/investment/workspace" class="nav-item" active-class="nav-item--active">
+          <Home :size="15" :stroke-width="1.5" />
+          <span class="nav-item-label">工作室</span>
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">
@@ -132,11 +136,11 @@
         </div>
       </header>
 
-      <div class="inv-adam-wrap">
+      <div v-if="route.path !== '/investment/city'" class="inv-adam-wrap">
         <AdamChat />
       </div>
 
-      <section class="inv-content">
+      <section class="inv-content" :class="{ 'inv-content--workspace': route.path === '/investment/workspace' || route.path === '/investment/city' }">
         <router-view />
       </section>
     </main>
@@ -148,7 +152,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
 import { useAppStore } from '@/stores/app'
-import { Eye, TrendingUp, ChevronLeft, Menu, Map, BarChart3, BookOpen, Library, Palette } from 'lucide-vue-next'
+import { Eye, TrendingUp, ChevronLeft, Menu, Map, BarChart3, BookOpen, Library, Palette, Home } from 'lucide-vue-next'
 import CaptainBar from '@/components/CaptainBar.vue'
 import AdamChat from '@/components/AdamChat.vue'
 
@@ -186,6 +190,7 @@ const mobileNavItems = [
   { path: '/investment/designer', label: '平面设计师' },
   { path: '/investment/archive', label: '档案馆' },
   { path: '/investment/library', label: '图书馆' },
+  { path: '/investment/workspace', label: '工作室' },
 ]
 
 const pageTitleMap: Record<string, string> = {
@@ -196,6 +201,7 @@ const pageTitleMap: Record<string, string> = {
   '/investment/designer': '平面设计师',
   '/investment/archive': '档案馆',
   '/investment/library': '图书馆',
+  '/investment/workspace': '亚当工作室',
 }
 const currentPageTitle = computed(() => pageTitleMap[route.path] || '亚当观测舱')
 
@@ -492,6 +498,10 @@ const statusLabel = computed(() => {
   padding: 20px 24px;
   background: var(--gray);
   scrollbar-width: thin;
+}
+.inv-content--workspace {
+  padding: 0;
+  overflow: hidden;
 }
 
 /* ── 移动端 ── */

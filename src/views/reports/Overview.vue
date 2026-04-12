@@ -286,30 +286,42 @@
       </el-table>
     </div>
 
-    <!-- 底部: 库存 + 采购供应商 -->
+    <!-- 底部: 零售/销售/采购供应商 -->
     <div class="ro-charts-row">
       <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
         <div class="ro-card-header">
-          <div class="ro-card-title">库存状况</div>
-          <router-link to="/warehouse/stock" class="ro-link">查看库存 →</router-link>
+          <div class="ro-card-title">零售客户排行</div>
+          <router-link to="/retail/order" class="ro-link">查看零售 →</router-link>
         </div>
-        <div v-if="stockRows.length === 0 && !loading" class="ro-empty">暂无库存数据</div>
-        <el-table v-else :data="stockRows.slice(0, 5)" size="small" style="width:100%" :max-height="280" table-layout="fixed">
-          <el-table-column prop="goods_name" label="商品" min-width="100" show-overflow-tooltip />
-          <el-table-column label="库存量" align="right" width="70">
-            <template #default="{ row }">
-              <el-tag :type="Number(row.qty) > 0 ? 'success' : 'danger'" size="small">{{ Number(row.qty).toFixed(0) }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="均价" align="right" width="80">
-            <template #default="{ row }">¥{{ fmt(row.avg_price || 0) }}</template>
-          </el-table-column>
-          <el-table-column label="库存额" align="right" width="90">
-            <template #default="{ row }">
-              <span style="color:#ca8a04;font-weight:600">¥{{ fmt(Number(row.qty) * Number(row.avg_price || 0)) }}</span>
-            </template>
-          </el-table-column>
-        </el-table>
+        <div v-if="retailCustomerRows.length === 0 && !loading" class="ro-empty">暂无零售数据</div>
+        <div v-else class="ro-sale-list">
+          <div v-for="row in retailCustomerRows.slice(0, 8)" :key="row.customer_name" class="ro-sale-row">
+            <span class="ro-sale-name">{{ row.customer_name || '散客' }}</span>
+            <div class="ro-sale-bar-wrap">
+              <div class="ro-sale-bar" style="background:linear-gradient(to right,#0071e3,#34aadc)"
+                   :style="{ width: getBarWidth(retailCustomerRows, row.amount, 'amount') }" />
+            </div>
+            <span class="ro-sale-amt" style="color:#0071e3">¥{{ fmt(row.amount) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
+        <div class="ro-card-header">
+          <div class="ro-card-title">销售合同客户排行</div>
+          <router-link to="/sale/contract" class="ro-link">查看销售 →</router-link>
+        </div>
+        <div v-if="saleCustomerRows.length === 0 && !loading" class="ro-empty">暂无销售数据</div>
+        <div v-else class="ro-sale-list">
+          <div v-for="row in saleCustomerRows.slice(0, 8)" :key="row.customer_name" class="ro-sale-row">
+            <span class="ro-sale-name">{{ row.customer_name || '—' }}</span>
+            <div class="ro-sale-bar-wrap">
+              <div class="ro-sale-bar" style="background:linear-gradient(to right,#30d158,#34c759)"
+                   :style="{ width: getBarWidth(saleCustomerRows, row.amount, 'amount') }" />
+            </div>
+            <span class="ro-sale-amt" style="color:#30d158">¥{{ fmt(row.amount) }}</span>
+          </div>
+        </div>
       </div>
 
       <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
@@ -504,6 +516,28 @@ const supplierRows = computed(() => {
   }
   return Object.entries(map)
     .map(([supplier_name, amount]) => ({ supplier_name, amount }))
+    .sort((a, b) => b.amount - a.amount)
+})
+
+const retailCustomerRows = computed(() => {
+  const map: Record<string, number> = {}
+  for (const o of retailOrders.value) {
+    const k = o.customer_name || '散客'
+    map[k] = (map[k] || 0) + Number(o.pay_amount || o.total_amount || 0)
+  }
+  return Object.entries(map)
+    .map(([customer_name, amount]) => ({ customer_name, amount }))
+    .sort((a, b) => b.amount - a.amount)
+})
+
+const saleCustomerRows = computed(() => {
+  const map: Record<string, number> = {}
+  for (const o of saleContracts.value) {
+    const k = o.customer_name || '—'
+    map[k] = (map[k] || 0) + Number(o.total_amount || 0)
+  }
+  return Object.entries(map)
+    .map(([customer_name, amount]) => ({ customer_name, amount }))
     .sort((a, b) => b.amount - a.amount)
 })
 

@@ -108,6 +108,7 @@ export const deleteCollectReceipt = (id: number) => http.post('/finance/CollectR
 export const getPayReceiptList = (params?: any) => http.get('/finance/PayReceipt/index', { params })
 export const createPayReceipt = (data: any) => http.post('/finance/PayReceipt/add', data)
 export const deletePayReceipt = (id: number) => http.post('/finance/PayReceipt/del', { id })
+export const unAuditPayReceipt = (id: number) => http.post('/finance/PayReceipt/unAudit', { id })
 export const getInvoiceList = (params?: any) => http.get('/finance/Invoice/index', { params })
 export const createInvoice = (data: any) => http.post('/finance/Invoice/add', data)
 export const updateInvoice = (data: any) => http.post('/finance/Invoice/edit', data)
