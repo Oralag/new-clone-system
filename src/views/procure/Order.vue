@@ -704,6 +704,11 @@
             <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="付款对象">
+          <el-select v-model="freightForm.contact_name" placeholder="付款对象" filterable allow-create default-first-option style="width:100%">
+            <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.name" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="付款日期">
           <el-date-picker v-model="freightForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
@@ -1403,6 +1408,7 @@ const freightForm = reactive({
   supplierName: '',
   amount: 0,
   bearer: 'buyer' as string,
+  contact_name: '',
   fund_id: null as number | null,
   fund_name: '',
   pay_date: new Date().toISOString().slice(0, 10),
@@ -1415,6 +1421,7 @@ function openFreightDialog(row: any) {
   freightForm.supplierName = row.supplier_name || ''
   freightForm.amount = 0
   freightForm.bearer = 'buyer'
+  freightForm.contact_name = row.supplier_name || ''
   freightForm.fund_id = null
   freightForm.fund_name = ''
   freightForm.pay_date = new Date().toISOString().slice(0, 10)
@@ -1445,7 +1452,7 @@ async function submitFreight() {
       const payAmount = freightForm.bearer === 'half' ? freightForm.amount / 2 : freightForm.amount
       await createPayReceipt({
         contact_type: 'other',
-        contact_name: freightForm.supplierName || '采购运费',
+        contact_name: freightForm.contact_name || freightForm.supplierName || '采购运费',
         order_sn: freightForm.orderSn,
         order_id: freightForm.orderId,
         amount: payAmount,
