@@ -159,7 +159,7 @@
                 >{{ getFreightPayStatus(row).label }}</el-tag>
               </template>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="openFreightDialog(row)">
-                🚚 补录运费
+                添加运费
               </el-button>
               <span v-else-if="row.status === 0" style="color:rgba(29,29,31,0.2)">—</span>
             </template>
