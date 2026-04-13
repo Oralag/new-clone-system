@@ -869,7 +869,7 @@ import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProc
 import { getWarehouseList } from '@/api/warehouse'
 import { getBomList, getBomByGoods, getSpecList, getUnitConvert } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt } from '@/api/finance'
+import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt, createExpense } from '@/api/finance'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
@@ -1297,26 +1297,35 @@ async function loadPaidMap() {
     paidMapByKey.value = keyMap
     paidMapBySn.value = snMap
     paidMapMultiSup.value = multiSupMap
-    // 单据支出付款 Map
+    // 单据支出付款 Map（去重：按 order_id + amount + pay_date + fund_id 唯一性）
     const expenseIdMap: Record<number, number> = {}
+    const seenExpensePay = new Set<string>()
     for (const r of rows) {
       const amt = Number(r.amount || 0)
       if (!amt) continue
       const m = String(r.remark || '').match(/采购单据支出\s*#(\d+)/)
       if (m) {
         const id = Number(m[1])
+        // 去重：相同 order_id + amount + pay_date + fund_id 只计算一次
+        const uniqueKey = `${id}|${amt}|${r.pay_date}|${r.fund_id}`
+        if (seenExpensePay.has(uniqueKey)) continue
+        seenExpensePay.add(uniqueKey)
         expenseIdMap[id] = (expenseIdMap[id] || 0) + amt
       }
     }
     expensePaidById.value = expenseIdMap
-    // 运费付款 Map
+    // 运费付款 Map（去重）
     const freightIdMap: Record<number, number> = {}
+    const seenFreightPay = new Set<string>()
     for (const r of rows) {
       const amt = Number(r.amount || 0)
       if (!amt) continue
       const m = String(r.remark || '').match(/采购运费\s*#(\d+)/)
       if (m) {
         const id = Number(m[1])
+        const uniqueKey = `${id}|${amt}|${r.pay_date}|${r.fund_id}`
+        if (seenFreightPay.has(uniqueKey)) continue
+        seenFreightPay.add(uniqueKey)
         freightIdMap[id] = (freightIdMap[id] || 0) + amt
       }
     }
@@ -1476,6 +1485,14 @@ async function submitFreight() {
 
 async function submitExpensePay() {
   if (!expensePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  // 检查是否已付过款
+  const orderId = expensePayForm.orderId
+  const expAmt = Number(expensePayForm.amount || 0)
+  const alreadyPaid = expensePaidById.value[orderId] || 0
+  if (alreadyPaid >= expAmt - 0.01) {
+    ElMessage.warning('该单据已付过款，请勿重复付款')
+    return
+  }
   expensePaySubmitting.value = true
   try {
     await createPayReceipt({
@@ -1488,6 +1505,20 @@ async function submitExpensePay() {
       fund_id: expensePayForm.fund_id,
       fund_name: expensePayForm.fund_name,
       remark: `采购单据支出 #${expensePayForm.orderId}${expensePayForm.remark ? ' ' + expensePayForm.remark : ''}`,
+    })
+    // 同时创建费用记录，用于利润分析
+    await createExpense({
+      name: expensePayForm.contact_name || expensePayForm.supplierName || '采购单据支出',
+      amount: expensePayForm.amount,
+      expense_date: expensePayForm.pay_date,
+      remark: `采购单据支出 #${expensePayForm.orderId}${expensePayForm.remark ? ' ' + expensePayForm.remark : ''}`,
+      order_sn: expensePayForm.orderSn,
+    })
+    // 更新采购单的单据支出金额
+    const currentExpenseAmt = Number(expensePayForm.orderRow?.expense_amount || 0)
+    const newExpenseAmt = currentExpenseAmt + Number(expensePayForm.amount || 0)
+    await updateProcureOrder(expensePayForm.orderId, {
+      expense_amount: newExpenseAmt,
     })
     ElMessage.success('支出付款成功')
     expensePayVisible.value = false
