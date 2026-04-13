@@ -19,6 +19,11 @@ http.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(TOKEN_NAME)
     if (token) config.headers['token'] = token
+    // 带上用户 ID，方便 Worker 等边缘函数识别身份
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('erp_user') || 'null')
+      if (userInfo?.admin_id) config.headers['x-user-id'] = String(userInfo.admin_id)
+    } catch { /* 忽略 */ }
     return config
   },
   (error) => Promise.reject(error),

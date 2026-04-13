@@ -1519,3 +1519,4 @@ onActivated(() => loadAllData())
 .profit-entry-divider { width: 1px; height: 36px; background: #d8dde4; }
 .profit-entry-arrow { color: rgba(29,29,31,0.3); flex-shrink: 0; }
 </style>
+// cache-bust: 1776093932

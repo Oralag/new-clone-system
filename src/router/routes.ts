@@ -157,6 +157,24 @@ const routes: RouteRecordRaw[] = [
       { path: 'personnel/welfare', name: 'PersonnelWelfare', component: () => import('@/views/personnel/Welfare.vue'), meta: { title: '福利管理' } },
     ],
   },
+  // ── 移动协作模块（独立布局）────────────
+  {
+    path: '/mobile',
+    component: () => import('@/layouts/MobileLayout.vue'),
+    redirect: '/mobile/workbench',
+    children: [
+      { path: 'workbench', name: 'MobileWorkbench', component: () => import('@/views/mobile/MobileWorkbench.vue'), meta: { title: '工作台' } },
+      { path: 'chat', name: 'MobileChat', component: () => import('@/views/mobile/MobileChat.vue'), meta: { title: '消息' } },
+      { path: 'chat/:id', name: 'MobileGroupChat', component: () => import('@/views/mobile/MobileGroupChat.vue'), meta: { title: '群聊' } },
+      { path: 'contacts', name: 'MobileContacts', component: () => import('@/views/mobile/MobileContacts.vue'), meta: { title: '通讯录' } },
+      { path: 'meeting', name: 'MobileMeeting', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '会议室' } },
+      { path: 'meeting/instant', name: 'MobileMeetingInstant', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '立即开会' } },
+      { path: 'activity', name: 'MobileActivity', component: () => import('@/views/mobile/MobileActivity.vue'), meta: { title: '工作动态' } },
+      { path: 'ai-bot', name: 'MobileAIBot', component: () => import('@/views/mobile/MobileAIBot.vue'), meta: { title: 'AI 管家' } },
+      { path: 'my', name: 'MobileMy', component: () => import('@/views/mobile/MobileMy.vue'), meta: { title: '我的' } },
+    ],
+  },
+
   // Catch-all redirect
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 
