@@ -170,7 +170,7 @@
               <el-button v-if="row.status === 1 && Number(row.expense_amount || 0) > 0 && getExpensePayStatus(row).label === '待付'" type="warning" link size="small" @click="openExpensePayDialog(row)">支出付款</el-button>
               <el-tooltip v-if="row.status === 1 && Number(row.freight_amount || 0) === 0" content="添加运费" placement="top">
                 <el-button type="primary" link size="small" @click="openFreightDialog(row)">
-                  <Van />
+                  补录运费
                 </el-button>
               </el-tooltip>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
@@ -858,7 +858,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
-import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft, Van } from '@element-plus/icons-vue'
+import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
