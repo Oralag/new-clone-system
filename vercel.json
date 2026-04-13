@@ -1,24 +1,20 @@
 {
   "rewrites": [
-    {
-      "source": "/adminapi/:path*",
-      "destination": "/api/proxy/:path*"
-    },
-    {
-      "source": "/api/ai-chat",
-      "destination": "/api/ai-chat"
-    },
-    {
-      "source": "/((?!api).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/adminapi/chat/:path*", "destination": "/api/chat/:path*" },
+    { "source": "/adminapi/mobile/:path*", "destination": "/api/mobile/:path*" },
+    { "source": "/adminapi/ai/:path*", "destination": "/api/ai/:path*" },
+    { "source": "/adminapi/meeting/:path*", "destination": "/api/meeting/:path*" },
+    { "source": "/adminapi/warehouse/scan", "destination": "/api/warehouse/scan" },
+    { "source": "/adminapi/:path*", "destination": "/api/proxy/:path*" },
+    { "source": "/api/ai-chat", "destination": "/api/ai-chat" },
+    { "source": "/((?!api).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/ai-chat.ts": {
-      "maxDuration": 60
-    },
-    "api/proxy/[...path].ts": {
-      "maxDuration": 30
-    }
+    "api/ai-chat.ts": { "maxDuration": 60 },
+    "api/proxy/[...path].ts": { "maxDuration": 30 },
+    "api/chat.ts": { "maxDuration": 30 },
+    "api/mobile.ts": { "maxDuration": 30 },
+    "api/ai.ts": { "maxDuration": 60 },
+    "api/meeting.ts": { "maxDuration": 30 }
   }
 }
