@@ -158,7 +158,10 @@
                   style="margin-left:4px"
                 >{{ getFreightPayStatus(row).label }}</el-tag>
               </template>
-              <span v-else style="color:rgba(29,29,31,0.2)">—</span>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openFreightDialog(row)">
+                🚚 补录运费
+              </el-button>
+              <span v-else-if="row.status === 0" style="color:rgba(29,29,31,0.2)">—</span>
             </template>
           </el-table-column>
           <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
@@ -168,11 +171,6 @@
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && getPayStatus(row).label !== '已付清'" type="success" link size="small" @click="openPayDialog(row)">付款</el-button>
               <el-button v-if="row.status === 1 && Number(row.expense_amount || 0) > 0 && getExpensePayStatus(row).label === '待付'" type="warning" link size="small" @click="openExpensePayDialog(row)">支出付款</el-button>
-              <el-tooltip v-if="row.status === 1 && Number(row.freight_amount || 0) === 0" content="添加运费" placement="top">
-                <el-button type="primary" link size="small" @click="openFreightDialog(row)">
-                  补录运费
-                </el-button>
-              </el-tooltip>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
