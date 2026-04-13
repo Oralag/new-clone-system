@@ -168,7 +168,11 @@
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && getPayStatus(row).label !== '已付清'" type="success" link size="small" @click="openPayDialog(row)">付款</el-button>
               <el-button v-if="row.status === 1 && Number(row.expense_amount || 0) > 0 && getExpensePayStatus(row).label === '待付'" type="warning" link size="small" @click="openExpensePayDialog(row)">支出付款</el-button>
-              <el-button v-if="row.status === 1 && Number(row.freight_amount || 0) === 0" type="primary" link size="small" @click="openFreightDialog(row)">补录运费</el-button>
+              <el-tooltip v-if="row.status === 1 && Number(row.freight_amount || 0) === 0" content="添加运费" placement="top">
+                <el-button type="primary" link size="small" @click="openFreightDialog(row)">
+                  <Van />
+                </el-button>
+              </el-tooltip>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
@@ -680,8 +684,8 @@
       </template>
     </el-dialog>
 
-    <!-- 补录运费弹窗 -->
-    <el-dialog v-model="freightVisible" title="补录运费" width="420px" append-to-body>
+    <!-- 添加运费弹窗 -->
+    <el-dialog v-model="freightVisible" title="添加运费" width="420px" append-to-body>
       <el-form :model="freightForm" label-width="90px">
         <el-form-item label="采购单">
           <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ freightForm.orderSn }} · {{ freightForm.supplierName }}</span>
@@ -854,7 +858,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
-import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft } from '@element-plus/icons-vue'
+import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft, Van } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
