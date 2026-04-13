@@ -581,9 +581,12 @@ const allFlowItems = computed(() => {
     items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: getPayReceiptSupplierLabel(r, purchasePayList.value, supplierList.value), amount: Number(r.amount || 0), date: fmtDt(r.pay_date || r.created_at), order_no: r.order_sn || '' })
   }
   // 5. 费用单（expense）— 真实字段: name(非type_name), amount, expense_date, order_sn
+  // 注意：「单据支出」类型的费用已在 pay_receipt 中以「付款」口径计入，此处跳过避免重复
   for (const r of expenseList.value) {
     if (r.payment_status === 'pending') continue
     if (Number(r.amount || 0) <= 0) continue
+    // 如果是「单据支出」产生的费用记录，已在 pay_receipt 中展示，此处跳过
+    if (/采购单据支出\s*#\d+/.test(r.remark || '')) continue
     items.push({ type: 'expense', source: r.payment_status === 'paid' ? '费用(已付)' : '费用', name: r.name || '—', amount: Number(r.amount || 0), date: fmtDt(r.expense_date || r.created_at), order_no: r.order_sn || '' })
   }
   // 6. 预收款/预付款 — 客户预收款是收入，供应商预付款是支出
