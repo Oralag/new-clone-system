@@ -1,4 +1,5 @@
 {
+  "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
     { "source": "/adminapi/chat/:path*", "destination": "/api/chat/:path*" },
     { "source": "/adminapi/mobile/:path*", "destination": "/api/mobile/:path*" },
