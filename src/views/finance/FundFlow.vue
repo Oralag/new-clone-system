@@ -254,6 +254,8 @@ onMounted(async () => {
     const expenses: any[] = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
     for (const r of expenses) {
       if (r.payment_status === 'pending') continue
+      // 单据支出费用已从 pay_receipt 中展示，跳过避免重复
+      if (/^采购单据支出\s*#\d+$/.test(r.remark || '')) continue
       items.push({
         date: fmtDt(r.apply_date || r.expense_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
