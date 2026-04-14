@@ -8,6 +8,17 @@ import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { aiChatPlugin } from './src/server/viteAiPlugin'
 
+// 注入构建时间戳到 index.html，用于强制版本刷新
+function buildVersionPlugin() {
+  return {
+    name: 'build-version',
+    enforce: 'post' as const,
+    transformIndexHtml(html: string) {
+      return html.replace(/__BUILD_TIME__/g, Date.now().toString())
+    },
+  }
+}
+
 function emitReferenceAssets() {
   const assetNames = [
     'FixReceivable-BGwaItks.css',
@@ -49,6 +60,7 @@ export default defineConfig({
       dts: 'src/components.d.ts',
     }),
     aiChatPlugin(),
+    buildVersionPlugin(),
     emitReferenceAssets(),
   ],
   resolve: {

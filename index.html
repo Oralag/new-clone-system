@@ -12,15 +12,28 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
     <title>数字游牧ERP</title>
     <script>
-      // 注销所有旧的 Service Worker，防止缓存导致白屏
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(reg) { reg.unregister() })
-        })
-        caches.keys().then(function(keys) {
-          keys.forEach(function(key) { caches.delete(key) })
-        })
-      }
+      // 🔥 强制杀缓存：注销 SW + 清 Cache API + 清 localStorage 旧版本
+      (function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(reg) { reg.unregister() })
+          })
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(keys) {
+            keys.forEach(function(key) { caches.delete(key) })
+          })
+        }
+        var VER = '__BUILD_TIME__';
+        var stored = localStorage.getItem('_build_ver');
+        if (stored !== VER) {
+          localStorage.setItem('_build_ver', VER);
+          // 清掉所有可能缓存旧 JS 的 localStorage/sessionStorage
+          sessionStorage.clear();
+          // 强制硬刷新（绕过所有缓存）
+          location.reload(true);
+        }
+      })();
     </script>
     <style>
       #app-loading {
@@ -100,3 +113,4 @@
     </script>
   </body>
 </html>
+<!-- cache purge: 1776143883 -->
