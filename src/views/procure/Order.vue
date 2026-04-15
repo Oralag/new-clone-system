@@ -1506,11 +1506,11 @@ async function submitExpensePay() {
       fund_name: expensePayForm.fund_name,
       remark: `采购单据支出 #${expensePayForm.orderId}${expensePayForm.remark ? ' ' + expensePayForm.remark : ''}`,
     })
-    // 同时创建费用记录，用于利润分析
+    // 同时创建费用记录，用于利润分析（字段名需与费用管理表单一致）
     await createExpense({
-      name: expensePayForm.contact_name || expensePayForm.supplierName || '采购单据支出',
+      type_name: expensePayForm.contact_name || expensePayForm.supplierName || '采购单据支出',
+      apply_date: expensePayForm.pay_date,
       amount: expensePayForm.amount,
-      expense_date: expensePayForm.pay_date,
       remark: `采购单据支出 #${expensePayForm.orderId}${expensePayForm.remark ? ' ' + expensePayForm.remark : ''}`,
       order_sn: expensePayForm.orderSn,
     })
