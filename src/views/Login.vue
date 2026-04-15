@@ -237,6 +237,11 @@ const features = [
 const avatarColors = ['#f87171', '#fb923c', '#a78bfa', '#60a5fa', '#34d399']
 
 const activeTab = ref<'login' | 'register'>('login')
+function isMobile() {
+  if (typeof navigator === 'undefined') return false
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || (window.innerWidth <= 768)
+}
 function switchTab(tab: 'login' | 'register') {
   activeTab.value = tab
   registerTip.value = ''
@@ -259,7 +264,8 @@ async function handleLogin() {
   try {
     await authStore.login(loginForm.account, loginForm.password)
     ElMessage.success('登录成功')
-    const redirect = (route.query.redirect as string) || '/portal'
+    const savedRedirect = route.query.redirect as string
+    const redirect = savedRedirect || (isMobile() ? '/mobile/workbench' : '/portal')
     router.push(redirect)
   } catch (e: any) {
     ElMessage.error(e?.message || '账号或密码错误，请重试')

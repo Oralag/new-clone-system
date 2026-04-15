@@ -11,8 +11,19 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
+function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || (window.innerWidth <= 768)
+}
+
 router.beforeEach((to, _from, next) => {
   document.title = `${to.meta?.title || '页面'} - 数字游牧ERP`
+
+  // 移动端自动跳 /mobile/workbench
+  if (isMobileDevice() && !to.path.startsWith('/mobile') && to.path !== '/login') {
+    return next({ path: '/mobile/workbench' })
+  }
 
   if (to.meta?.public) {
     return next()
