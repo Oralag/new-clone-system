@@ -1,6 +1,67 @@
 <template>
   <div class="m-meeting-page">
-    <div class="m-meeting-hero">
+    <!-- 顶部返回栏（会议室主页面，区别于立即开会的蓝色小栏） -->
+    <div class="m-meeting-topbar">
+      <button class="m-meeting-topbar-back" @click="router.push('/mobile/chat')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="m-meeting-topbar-title">会议室</span>
+      <div style="width:40px"></div>
+    </div>
+
+    <!-- 返回按钮（立即开会模式） -->
+    <div v-if="isInstant" class="m-meeting-back-bar">
+      <button class="m-meeting-back-btn" @click="router.back()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="m-meeting-back-title">立即开会</span>
+    </div>
+
+    <!-- 立即开会全屏界面 -->
+    <div v-if="isInstant" class="m-instant-meeting">
+      <div class="m-instant-hero">
+        <div class="m-instant-icon">🎙️</div>
+        <div class="m-instant-title">发起视频会议</div>
+        <div class="m-instant-sub">快速发起，链接一键分享</div>
+      </div>
+
+      <!-- 会议名称 -->
+      <div class="m-instant-form">
+        <div class="m-form-item">
+          <label>会议名称</label>
+          <input v-model="form.title" class="m-input" placeholder="如：销售部周会" />
+        </div>
+        <!-- 参会人 -->
+        <div class="m-form-item">
+          <label>邀请参会人</label>
+          <div class="m-participant-tags">
+            <span
+              v-for="p in form.participants"
+              :key="p.id"
+              class="m-participant-tag"
+              @click="removeParticipant(p.id)"
+            >
+              {{ p.name }} ×
+            </span>
+            <span class="m-participant-add" @click="showPicker = true">+ 添加</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 发起按钮 -->
+      <div class="m-instant-actions">
+        <button
+          class="m-btn-primary m-instant-btn"
+          :disabled="loading || !form.title.trim()"
+          @click="createInstant"
+        >
+          {{ loading ? '创建中...' : '发起会议' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- 非立即开会模式 - 正常会议室列表 -->
+    <div v-if="!isInstant" class="m-meeting-hero">
       <div class="m-meeting-hero-icon">🎙️</div>
       <div class="m-meeting-hero-title">会议室</div>
       <div class="m-meeting-hero-sub">随时随地，发起或加入会议</div>
@@ -194,11 +255,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
+import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+const isInstant = computed(() => route.path.endsWith('/instant'))
 
 const showSchedule = ref(false)
 const showJoinByCode = ref(false)
@@ -245,6 +310,28 @@ function toggleParticipant(m: any) {
 
 function removeParticipant(id: number) {
   form.value.participants = form.value.participants.filter((p: any) => p.id !== id)
+}
+
+async function createInstant() {
+  loading.value = true
+  try {
+    const res = await http.post('/meeting/create', {
+      title: form.value.title || `${authStore.userName}的会议`,
+      type: 'instant',
+      participants: form.value.participants.map((p: any) => p.id),
+    })
+    const meetingId = res?.data?.id ?? res?.data?.meeting?.id
+    if (meetingId) {
+      ElMessage.success('会议已创建')
+      router.push(`/mobile/meeting/${meetingId}`)
+    } else {
+      ElMessage.error('创建失败')
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || '创建会议失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function createSchedule() {
@@ -575,3 +662,129 @@ onMounted(() => {
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 </style>
+
+/* ── 会议室主页面顶部栏 ── */
+.m-meeting-topbar {
+  background: #fff;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding-bottom: calc(12px + env(safe-area-inset-top, 0px));
+}
+.m-meeting-topbar-back {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #1d2129;
+  padding: 0;
+  flex-shrink: 0;
+}
+.m-meeting-topbar-title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1d2129;
+  margin-right: 40px; /* 平衡左右宽度 */
+}
+
+/* ── 立即开会返回栏 ── */
+.m-meeting-back-bar {
+  background: #2E6BE6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.m-meeting-back-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+}
+.m-meeting-back-title { font-size: 16px; font-weight: 700; color: #fff; }
+
+/* ── 立即开会全屏 ── */
+.m-instant-meeting {
+  background: linear-gradient(160deg, #2E6BE6 0%, #1B4FCC 100%);
+  min-height: 300px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.m-instant-hero { text-align: center; padding: 20px 0; }
+.m-instant-icon { font-size: 48px; margin-bottom: 10px; }
+.m-instant-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.m-instant-sub { font-size: 13px; color: rgba(255,255,255,0.7); }
+.m-instant-form {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.m-form-item label { font-size: 13px; font-weight: 600; color: #666; display: block; margin-bottom: 6px; }
+.m-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #333;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.m-input:focus { border-color: #2E6BE6; }
+.m-participant-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.m-participant-tag {
+  padding: 4px 10px;
+  background: #2E6BE6;
+  color: #fff;
+  border-radius: 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.m-participant-add {
+  padding: 4px 10px;
+  border: 1px dashed #ccc;
+  color: #999;
+  border-radius: 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.m-instant-actions { padding: 8px 0 12px; }
+.m-instant-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  background: #fff;
+  color: #2E6BE6;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.m-instant-btn:disabled { opacity: 0.6; }
+.m-instant-btn:not(:disabled):active { opacity: 0.85; }
