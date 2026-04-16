@@ -1,146 +1,114 @@
 <template>
-  <div class="m-contacts">
-    <!-- 搜索栏 -->
-    <div class="m-search-bar">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>
-      <input v-model="keyword" class="m-search-input" placeholder="搜索成员或部门..." @input="onSearch" />
-      <button v-if="keyword" class="m-search-clear" @click="keyword = ''">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <!-- 在线成员 -->
-    <div v-if="!keyword && onlineMembers.length > 0" class="m-section">
-      <div class="m-section-label">
-        <span class="m-online-dot" />在线成员 · {{ onlineMembers.length }}
-      </div>
-      <div class="m-online-scroll">
-        <div v-for="m in onlineMembers" :key="m.id" class="m-online-item" @click="openMember(m)">
-          <div class="m-online-avatar">{{ m.name?.[0] || '?' }}</div>
-          <div class="m-online-name">{{ m.name }}</div>
+  <div class="contacts-page">
+    <!-- 顶部栏：企业微信风格 -->
+    <div class="wx-nav-bar">
+      <div class="wx-nav-left">
+        <div class="wx-nav-search" @click="showSearch = !showSearch">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <span>搜索</span>
         </div>
       </div>
-    </div>
-
-    <!-- 搜索结果 -->
-    <div v-if="keyword && searchResults.length > 0" class="m-section">
-      <div class="m-section-label">搜索结果 · {{ searchResults.length }}</div>
-      <div class="m-member-list">
-        <div v-for="m in searchResults" :key="m.id" class="m-member-item" @click="openMember(m)">
-          <div class="m-member-avatar">{{ m.name?.[0] || '?' }}</div>
-          <div class="m-member-info">
-            <div class="m-member-name">{{ m.name }}</div>
-            <div class="m-member-sub">{{ m.dept || m.position || '成员' }}</div>
-          </div>
-          <div class="m-member-arrow">›</div>
-        </div>
+      <div class="wx-nav-title">通讯录</div>
+      <div class="wx-nav-right">
+        <button class="wx-nav-btn" @click="showNewGroup = true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
       </div>
     </div>
 
-    <!-- 部门列表（无搜索时） -->
-    <div v-if="!keyword">
-      <!-- 主账户显示全部组织架构 -->
-      <div v-for="dept in filteredDepts" :key="dept.id" class="m-dept-block">
-        <div class="m-dept-header" @click="toggleDept(dept.id)">
-          <div class="m-dept-left">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            </svg>
-            <span class="m-dept-name">{{ dept.name }}</span>
-            <span class="m-dept-count">{{ dept.members?.length || 0 }}</span>
-          </div>
-          <svg class="m-dept-arrow" :class="{ open: expandedDepts.has(dept.id) }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"/>
+    <!-- 搜索展开 -->
+    <div v-if="showSearch" class="contacts-search">
+      <div class="contacts-search-inner">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input v-model="keyword" class="contacts-search-input" placeholder="搜索联系人" @input="doFilter" />
+      </div>
+    </div>
+
+    <!-- 分组列表（企业微信风格：字母索引） -->
+    <div class="contacts-body">
+      <!-- 部门架构入口 -->
+      <div class="contacts-dept-entry" @click="router.push('/mobile/contacts/dept')">
+        <div class="contacts-dept-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
         </div>
-
-        <div v-if="expandedDepts.has(dept.id)" class="m-member-list">
-          <div v-for="m in dept.members" :key="m.id" class="m-member-item" @click="openMember(m)">
-            <div class="m-member-avatar-wrap">
-              <div class="m-member-avatar">{{ m.name?.[0] || '?' }}</div>
-              <div v-if="isOnline(m)" class="m-member-online-dot" />
-            </div>
-            <div class="m-member-info">
-              <div class="m-member-name">{{ m.name }}</div>
-              <div class="m-member-sub">{{ m.position || m.role || '成员' }}</div>
-            </div>
-            <div class="m-member-actions">
-              <button class="m-member-action-btn" @click.stop="callMember(m)" title="拨打电话">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00b42a" stroke-width="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                </svg>
-              </button>
-              <button class="m-member-action-btn" @click.stop="chatMember(m)" title="发消息">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div v-if="!dept.members?.length" class="m-dept-empty">暂无成员</div>
+        <div class="contacts-dept-info">
+          <span class="contacts-dept-name">组织架构</span>
+          <span class="contacts-dept-sub">查看全部部门和员工</span>
         </div>
+        <span class="contacts-arrow">›</span>
       </div>
 
-      <!-- 空状态 -->
-      <div v-if="filteredDepts.length === 0" class="m-empty">
-        <div class="m-empty-icon">👥</div>
-        <div class="m-empty-text">暂无成员</div>
+      <!-- 通讯录列表（子账户/员工） -->
+    <div v-if="filteredEmployees.length === 0 && !keyword" class="contacts-empty">
+      <div class="contacts-empty-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div class="contacts-empty-text">暂无子账户</div>
+    </div>
+
+    <div
+      v-for="c in filteredEmployees"
+      :key="c.id"
+      class="contacts-item"
+      @click="viewEmployee(c)"
+    >
+      <div class="contacts-avatar">{{ c.name?.[0] || '?' }}</div>
+      <div class="contacts-info">
+        <div class="contacts-name">{{ c.name }}</div>
+        <div class="contacts-sub" v-if="c.role_name || c.dept_name">
+          {{ c.role_name || '' }}{{ c.role_name && c.dept_name ? ' · ' : '' }}{{ c.dept_name || '' }}
+        </div>
+        </div>
+        <span class="contacts-arrow">›</span>
       </div>
     </div>
 
-    <!-- 成员详情弹窗 -->
-    <div v-if="showMemberDetail" class="m-modal-mask" @click.self="showMemberDetail = false">
-      <div class="m-member-detail-sheet">
-        <div class="m-detail-header">
-          <div class="m-detail-avatar">{{ selectedMember?.name?.[0] || '?' }}</div>
-          <div class="m-detail-name">{{ selectedMember?.name }}</div>
-          <div class="m-detail-sub">{{ selectedMember?.position || selectedMember?.role || '成员' }}</div>
-          <div class="m-detail-online-status" :class="{ online: isOnline(selectedMember) }">
-            {{ isOnline(selectedMember) ? '在线' : '离线' }}
-          </div>
+    <!-- 侧边字母索引（企业微信风格） -->
+    <div class="contacts-index">
+      <div
+        v-for="letter in letters"
+        :key="letter"
+        class="contacts-index-item"
+        :class="{ active: activeLetter === letter }"
+        @touchstart.prevent="scrollToLetter(letter)"
+        @click="scrollToLetter(letter)"
+      >{{ letter === '#' ? ' ' : letter }}</div>
+    </div>
+
+    <!-- 新建群聊弹窗 -->
+    <div v-if="showNewGroup" class="chat-new-mask" @click.self="showNewGroup = false">
+      <div class="chat-new-sheet">
+        <div class="chat-new-header">
+          <span>发起群聊</span>
+          <button @click="showNewGroup = false">取消</button>
         </div>
-        <div class="m-detail-info">
-          <div v-if="selectedMember?.phone" class="m-detail-info-row">
-            <span class="m-detail-info-label">手机</span>
-            <span class="m-detail-info-value">{{ selectedMember.phone }}</span>
-          </div>
-          <div v-if="selectedMember?.dept" class="m-detail-info-row">
-            <span class="m-detail-info-label">部门</span>
-            <span class="m-detail-info-value">{{ selectedMember.dept }}</span>
-          </div>
-          <div v-if="selectedMember?.account" class="m-detail-info-row">
-            <span class="m-detail-info-label">账号</span>
-            <span class="m-detail-info-value">{{ selectedMember.account }}</span>
-          </div>
-        </div>
-        <!-- 今日动态 -->
-        <div class="m-detail-activity">
-          <div class="m-detail-activity-title">今日动态</div>
-          <div v-if="memberActivities.length === 0" class="m-detail-activity-empty">今日无操作记录</div>
-          <div v-else class="m-detail-activity-list">
-            <div v-for="a in memberActivities" :key="a.id" class="m-detail-activity-item">
-              <span class="m-detail-activity-name">{{ a.action_name }}</span>
-              <span class="m-detail-activity-time">{{ formatTime(a.created_at) }}</span>
+        <div class="chat-new-body">
+          <div class="chat-new-item" @click="createGroup">
+            <div class="chat-new-icon" style="background:#2E6BE6;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
             </div>
+            <div class="chat-new-info">
+              <div class="chat-new-title">选择成员创建群聊</div>
+              <div class="chat-new-sub">邀请通讯录成员加入</div>
+            </div>
+            <span class="contacts-arrow">›</span>
           </div>
         </div>
-        <div class="m-detail-actions">
-          <button class="m-detail-action-btn m-detail-call" @click="callMember(selectedMember)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-            </svg>
-            拨打电话
-          </button>
-          <button class="m-detail-action-btn m-detail-chat" @click="chatMember(selectedMember)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            发消息
-          </button>
-        </div>
-        <button class="m-detail-close" @click="showMemberDetail = false">关闭</button>
       </div>
     </div>
   </div>
@@ -149,292 +117,271 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getAdminList } from '@/api/setting'
 import http from '@/api/http'
 
 const router = useRouter()
-
 const keyword = ref('')
-const departments = ref<any[]>([])
-const expandedDepts = ref(new Set<number>())
-const allMembers = ref<any[]>([])
-const onlineMemberIds = ref(new Set<number>())
-const showMemberDetail = ref(false)
-const selectedMember = ref<any>(null)
-const memberActivities = ref<any[]>([])
+const employees = ref<any[]>([])
+const groups = ref<any[]>([])
+const showSearch = ref(false)
+const showNewGroup = ref(false)
+const activeLetter = ref('')
+const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
-const searchResults = computed(() => {
-  if (!keyword.value) return []
-  const q = keyword.value.toLowerCase()
-  return allMembers.value.filter((m: any) =>
-    m.name?.toLowerCase().includes(q) ||
-    m.dept?.toLowerCase().includes(q) ||
-    m.account?.toLowerCase().includes(q)
+const filteredEmployees = computed(() => {
+  const kw = keyword.value.toLowerCase().trim()
+  if (!kw) return employees.value
+  return employees.value.filter((c: any) =>
+    (c.name || '').toLowerCase().includes(kw) ||
+    (c.phone || '').includes(kw)
   )
 })
 
-const filteredDepts = computed(() => {
-  return departments.value
-})
-
-function toggleDept(id: number) {
-  if (expandedDepts.value.has(id)) {
-    expandedDepts.value.delete(id)
+function viewEmployee(c: any) {
+  // 发起私聊：查找或创建与该联系人的 1:1 会话
+  const existing = groups.value.find((g: any) => g.member_ids?.includes(c.id))
+  if (existing) {
+    router.push(`/mobile/chat/${existing.id}`)
   } else {
-    expandedDepts.value.add(id)
+    router.push(`/mobile/chat/new?userId=${c.id}&name=${encodeURIComponent(c.name || '')}`)
   }
 }
 
-function onSearch() { /* computed handles it */ }
-
-function isOnline(m: any) {
-  return onlineMemberIds.value.has(m.id)
+function createGroup() {
+  showNewGroup.value = false
+  router.push('/mobile/meeting')
 }
 
-function formatTime(ts: string) {
-  if (!ts) return ''
-  const d = new Date(ts)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  return `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
-function openMember(m: any) {
-  selectedMember.value = m
-  showMemberDetail.value = true
-  loadMemberActivity(m.id)
-}
-
-async function loadMemberActivity(memberId: number) {
+async function loadEmployees() {
   try {
-    const res = await http.get('/mobile/operation-logs', { params: { user_id: memberId, list_rows: 10 } })
-    memberActivities.value = res?.data?.rows ?? res?.rows ?? []
-  } catch {
-    memberActivities.value = []
+    const res = await getAdminList({ list_rows: 500 })
+    const rows = res?.data?.rows ?? res?.rows ?? []
+    employees.value = rows.map((r: any) => ({
+      id: r.id,
+      name: r.name || r.admin_name || '未知用户',
+      phone: r.phone || '',
+      role_name: r.role_name || '',
+      dept_name: r.dept_name || '',
+      letter: (r.name || r.admin_name || '#')[0].toUpperCase(),
+    })).sort((a, b) => (a.letter || '#').localeCompare(b.letter || '#'))
+  } catch { employees.value = [] }
+}
+
+function scrollToLetter(letter: string) {
+  activeLetter.value = letter
+  const kw = letter === '#' ? '' : letter
+  if (!kw) {
+    document.querySelector('.contacts-body')?.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  const items = document.querySelectorAll('.contacts-item')
+  for (const item of items) {
+    const name = item.querySelector('.contacts-name')?.textContent?.[0]?.toUpperCase()
+    if (name === kw) {
+      item.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      break
+    }
   }
 }
-
-function callMember(m: any) {
-  if (m.phone) {
-    window.location.href = `tel:${m.phone}`
-  }
-}
-
-function chatMember(m: any) {
-  showMemberDetail.value = false
-  // 跳转到与该成员的私聊
-  router.push(`/mobile/chat/dm/${m.id}`)
-}
-
-const onlineMembers = computed(() => {
-  return allMembers.value.filter((m: any) => isOnline(m)).slice(0, 10)
-})
 
 onMounted(async () => {
-  // 加载成员列表（复用现有账号 API）
-  try {
-    const res = await http.get('/admin/Admin/index', { params: { list_rows: 200 } })
-    const users = res?.data?.rows ?? res?.rows ?? []
-    allMembers.value = users
-
-    // 尝试加载在线状态
-    try {
-      const statusRes = await http.get('/mobile/online-status')
-      const statuses = statusRes?.data ?? []
-      onlineMemberIds.value = new Set(statuses.map((s: any) => s.user_id))
-    } catch { /* 忽略 */ }
-
-    // 尝试从部门 API 获取组织架构
-    try {
-      const deptRes = await http.get('/admin/dept')
-      const depts = deptRes?.data ?? deptRes ?? []
-      departments.value = depts.map((d: any) => ({
-        ...d,
-        members: users.filter((u: any) => u.dept_id === d.id || u.department === d.name)
-      }))
-      // 全部展开第一个部门
-      if (departments.value.length > 0) {
-        expandedDepts.value.add(departments.value[0].id)
-      }
-    } catch {
-      // 兜底：按角色分组
-      const roleGroups = groupByRole(users)
-      departments.value = roleGroups
-      if (roleGroups.length > 0) {
-        expandedDepts.value.add(roleGroups[0].id)
-      }
-    }
-  } catch (e) {
-    console.error('Failed to load contacts', e)
-  }
+  loadEmployees()
+  const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
+  groups.value = res?.data?.rows ?? res?.rows ?? []
 })
+</script>
 
-function groupByRole(users: any[]) {
-  const map = new Map<string, any[]>()
-  users.forEach(u => {
-    const role = u.is_admin === 1 ? '管理员' : (u.position || '员工')
-    if (!map.has(role)) map.set(role, [])
-    map.get(role)!.push(u)
-  })
-  let id = 1
-  return Array.from(map.entries()).map(([name, members]) => ({
-    id: id++,
-    name,
-    members,
-  }))
-}
+<script lang="ts">
+export default { name: 'MobileContacts' }
 </script>
 
 <style scoped>
-.m-contacts {
+.contacts-page {
   min-height: 100%;
-  background: #f5f5f7;
-  padding-bottom: 80px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
 /* ── 搜索栏 ── */
-.m-search-bar {
-  background: #fff;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-bottom: 1px solid #f2f3f5;
+.contacts-search {
+  background: #fafafa;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e5e5;
   position: sticky;
   top: 0;
   z-index: 5;
 }
-.m-search-input {
-  flex: 1;
-  border: none;
-  background: #f5f5f7;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 14px;
-  color: #1d2129;
-  outline: none;
-}
-.m-search-clear { border: none; background: transparent; cursor: pointer; padding: 2px; display: flex; }
-
-/* ── 通用区块 ── */
-.m-section { padding: 12px 0 4px; }
-.m-section-label {
+.contacts-search-inner {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #86909c;
-  padding: 0 16px;
-  margin-bottom: 8px;
+  background: #ededed;
+  border-radius: 6px;
+  padding: 6px 10px;
 }
-.m-online-dot {
-  width: 6px; height: 6px;
-  background: #00b42a;
-  border-radius: 50%;
+.contacts-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #333;
+  outline: none;
 }
-.m-online-scroll {
+.contacts-search-input::placeholder { color: #999; }
+
+/* ── 部门入口 ── */
+.contacts-dept-entry {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 0 16px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.m-online-scroll::-webkit-scrollbar { display: none; }
-.m-online-item {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 12px;
+  padding: 12px 16px;
   cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+  -webkit-tap-highlight-color: transparent;
+  background: #fafafa;
 }
-.m-online-avatar {
-  width: 44px; height: 44px;
-  background: linear-gradient(135deg, #0071e3, #005bb5);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
+.contacts-dept-entry:active { background: #f0f0f0; }
+.contacts-dept-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(46,107,230,0.08);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.contacts-dept-info { flex: 1; }
+.contacts-dept-name { font-size: 15px; font-weight: 600; color: #1d2129; display: block; }
+.contacts-dept-sub { font-size: 12px; color: #999; }
+
+/* ── 客户列表 ── */
+.contacts-body { flex: 1; }
+.contacts-empty { text-align: center; padding: 40px 0; }
+.contacts-empty-icon { margin-bottom: 8px; }
+.contacts-empty-text { font-size: 13px; color: #999; }
+
+.contacts-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+.contacts-item:last-child { border-bottom: none; }
+.contacts-item:active { background: #f5f5f5; }
+
+.contacts-avatar {
+  width: 44px;
+  height: 44px;
+  background: #2E6BE6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   font-size: 16px;
   font-weight: 700;
-}
-.m-online-name { font-size: 11px; color: #4e5969; font-weight: 500; white-space: nowrap; }
-
-/* ── 部门 ── */
-.m-dept-block { margin-bottom: 4px; }
-.m-dept-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #fff;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.m-dept-header:active { background: #f5f5f7; }
-.m-dept-left { display: flex; align-items: center; gap: 8px; }
-.m-dept-name { font-size: 14px; font-weight: 600; color: #1d2129; }
-.m-dept-count {
-  font-size: 11px;
-  color: #86909c;
-  background: #f2f3f5;
-  padding: 1px 7px;
-  border-radius: 999px;
-}
-.m-dept-arrow { transition: transform 0.2s; }
-.m-dept-arrow.open { transform: rotate(180deg); }
-.m-member-list { background: #fff; }
-.m-member-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  border-bottom: 1px solid #f7f8fa;
-}
-.m-member-item:last-child { border-bottom: none; }
-.m-member-item:active { background: #f5f5f7; }
-.m-member-avatar-wrap { position: relative; flex-shrink: 0; }
-.m-member-avatar {
-  width: 40px; height: 40px;
-  background: linear-gradient(135deg, #0071e3, #005bb5);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
   flex-shrink: 0;
 }
-.m-member-online-dot {
-  position: absolute;
-  bottom: 0; right: 0;
-  width: 10px; height: 10px;
-  background: #00b42a;
-  border: 2px solid #fff;
-  border-radius: 50%;
+
+.contacts-info { flex: 1; min-width: 0; }
+.contacts-name { font-size: 15px; font-weight: 600; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.contacts-sub { font-size: 12px; color: #999; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.contacts-arrow { font-size: 18px; color: #ccc; flex-shrink: 0; }
+
+/* ── 侧边字母索引 ── */
+.contacts-index {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  z-index: 10;
+  padding: 8px 3px;
+  background: rgba(0,0,0,0.03);
+  border-radius: 4px 0 0 4px;
 }
-.m-member-info { flex: 1; min-width: 0; }
-.m-member-name { font-size: 14px; font-weight: 600; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.m-member-sub { font-size: 12px; color: #86909c; margin-top: 2px; }
-.m-member-arrow { font-size: 20px; color: #c2c8d5; flex-shrink: 0; }
-.m-member-actions { display: flex; gap: 4px; }
-.m-member-action-btn {
-  width: 30px; height: 30px;
-  border: none;
-  background: #f5f5f7;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
+.contacts-index-item {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2E6BE6;
+  width: 16px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  border-radius: 2px;
+  transition: background 0.1s;
+  user-select: none;
 }
-.m-dept-empty { text-align: center; padding: 16px; font-size: 13px; color: #86909c; }
+.contacts-index-item:active,
+.contacts-index-item.active { background: #2E6BE6; color: #fff; }
 
-/* ── 成员详情弹窗 ── */
-.m-modal-mask {
+/* ── 企业微信风格导航栏（复用 chat 样式） ── */
+.wx-nav-bar {
+  background: #fff;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 8px 0 4px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.wx-nav-left { flex: 1; }
+.wx-nav-title {
+  flex: 0 0 auto;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1d2129;
+  text-align: center;
+  padding: 0 8px;
+}
+.wx-nav-right { flex: 1; display: flex; justify-content: flex-end; }
+.wx-nav-search {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: #f2f3f5;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 80px;
+}
+.wx-nav-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #2E6BE6;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.wx-nav-btn:active { background: #f0f0f5; }
+
+/* ── 新建群聊弹窗（复用 chat 样式） ── */
+.chat-new-mask {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
@@ -442,92 +389,52 @@ function groupByRole(users: any[]) {
   display: flex;
   align-items: flex-end;
 }
-.m-member-detail-sheet {
+.chat-new-sheet {
   background: #fff;
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px 16px 0 0;
   width: 100%;
   animation: slideUp 0.25s ease;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.m-detail-header {
+.chat-new-header {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 28px 16px 16px;
-  background: linear-gradient(135deg, #0071e3, #005bb5);
-  border-radius: 20px 20px 0 0;
-}
-.m-detail-avatar {
-  width: 72px; height: 72px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  font-size: 28px;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #f2f3f5;
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 12px;
+  color: #1d2129;
 }
-.m-detail-name { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-.m-detail-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 8px; }
-.m-detail-online-status {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 12px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.8);
-}
-.m-detail-online-status.online { background: rgba(0,180,42,0.3); color: #fff; }
-
-.m-detail-info { padding: 16px; border-bottom: 1px solid #f2f3f5; }
-.m-detail-info-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f7f8fa; }
-.m-detail-info-row:last-child { border-bottom: none; }
-.m-detail-info-label { font-size: 13px; color: #86909c; width: 50px; flex-shrink: 0; }
-.m-detail-info-value { font-size: 14px; color: #1d2129; font-weight: 500; }
-
-.m-detail-activity { padding: 12px 16px; }
-.m-detail-activity-title { font-size: 13px; font-weight: 700; color: #1d2129; margin-bottom: 8px; }
-.m-detail-activity-empty { font-size: 13px; color: #86909c; text-align: center; padding: 12px; }
-.m-detail-activity-list { display: flex; flex-direction: column; gap: 6px; }
-.m-detail-activity-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #4e5969; }
-.m-detail-activity-name { font-weight: 500; }
-.m-detail-activity-time { color: #86909c; font-size: 12px; }
-
-.m-detail-actions { display: flex; gap: 12px; padding: 0 16px 12px; }
-.m-detail-action-btn {
-  flex: 1;
-  height: 48px;
+.chat-new-header button {
   border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
+  background: transparent;
+  color: #2E6BE6;
+  font-size: 14px;
+  cursor: pointer;
+}
+.chat-new-body { padding: 8px 0 calc(env(safe-area-inset-bottom, 0px) + 8px); }
+.chat-new-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+.chat-new-item:active { background: #fafafa; }
+.chat-new-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  cursor: pointer;
+  flex-shrink: 0;
 }
-.m-detail-call { background: #00b42a; color: #fff; }
-.m-detail-chat { background: #0071e3; color: #fff; }
-.m-detail-close {
-  display: block;
-  width: calc(100% - 32px);
-  margin: 0 16px 16px;
-  height: 48px;
-  background: #f5f5f7;
-  border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #4e5969;
-  cursor: pointer;
-}
-.m-detail-close:active { background: #e8e8ea; }
-
-/* ── 空状态 ── */
-.m-empty { text-align: center; padding: 60px 0; }
-.m-empty-icon { font-size: 48px; margin-bottom: 12px; }
-.m-empty-text { font-size: 14px; color: #86909c; }
+.chat-new-info { flex: 1; }
+.chat-new-title { font-size: 16px; font-weight: 600; color: #1d2129; margin-bottom: 2px; }
+.chat-new-sub { font-size: 12px; color: #86909c; }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 </style>

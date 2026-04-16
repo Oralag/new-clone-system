@@ -71,15 +71,15 @@
           <span class="wx-tab-label">{{ tab.label }}</span>
         </template>
 
-        <!-- 任务 -->
-        <template v-else-if="tab.key === 'task'">
+        <!-- 我的 -->
+        <template v-else-if="tab.key === 'my'">
           <div class="wx-tab-icon">
             <svg viewBox="0 0 24 24" fill="none">
-              <path v-if="activeTab !== 'task'" d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-else d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path v-if="activeTab !== 'my'" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path v-else d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle v-if="activeTab !== 'my'" cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/>
+              <circle v-else cx="12" cy="7" r="4" fill="currentColor" stroke="currentColor" stroke-width="1.8"/>
             </svg>
-            <span v-if="taskCount > 0" class="wx-tab-dot">{{ taskCount > 9 ? '9+' : taskCount }}</span>
           </div>
           <span class="wx-tab-label">{{ tab.label }}</span>
         </template>
@@ -100,14 +100,14 @@ const tabs = [
   { key: 'chat', label: '消息', path: '/mobile/chat' },
   { key: 'contacts', label: '通讯录', path: '/mobile/contacts' },
   { key: 'workbench', label: '工作台', path: '/mobile/workbench' },
-  { key: 'task', label: '任务', path: '/mobile/task' },
+  { key: 'my', label: '我的', path: '/mobile/my' },
 ]
 
 const activeTab = ref('chat')
 const unreadCount = ref(0)
 const pendingCount = ref(0)
 const taskCount = ref(0)
-const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileTask']
+const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileMy']
 
 // 判断当前是否为 Tab 主页面（主页面不显示返回按钮）
 const isMainTab = computed(() => {
