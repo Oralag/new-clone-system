@@ -21,9 +21,6 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/Dashboard.vue'), meta: { title: '工作台' } },
       { path: 'dashboard/today-sales', name: 'TodaySales', component: () => import('@/views/dashboard/TodaySales.vue'), meta: { title: '今日销售' } },
-      { path: 'mobile/stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '统计' } },
-      { path: 'mobile/apps', name: 'MobileApps', component: () => import('@/views/mobile/MobileApps.vue'), meta: { title: '应用' } },
-      { path: 'mobile/profile', name: 'MobileProfile', component: () => import('@/views/mobile/MobileProfile.vue'), meta: { title: '我的' } },
 
       // Sale
       { path: 'sale/overview', name: 'SaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
@@ -167,11 +164,42 @@ const routes: RouteRecordRaw[] = [
       { path: 'chat', name: 'MobileChat', component: () => import('@/views/mobile/MobileChat.vue'), meta: { title: '消息' } },
       { path: 'chat/:id', name: 'MobileGroupChat', component: () => import('@/views/mobile/MobileGroupChat.vue'), meta: { title: '群聊' } },
       { path: 'contacts', name: 'MobileContacts', component: () => import('@/views/mobile/MobileContacts.vue'), meta: { title: '通讯录' } },
-      { path: 'meeting', name: 'MobileMeeting', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '会议室' } },
-      { path: 'meeting/instant', name: 'MobileMeetingInstant', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '立即开会' } },
       { path: 'activity', name: 'MobileActivity', component: () => import('@/views/mobile/MobileActivity.vue'), meta: { title: '工作动态' } },
       { path: 'ai-bot', name: 'MobileAIBot', component: () => import('@/views/mobile/MobileAIBot.vue'), meta: { title: 'AI 管家' } },
       { path: 'my', name: 'MobileMy', component: () => import('@/views/mobile/MobileMy.vue'), meta: { title: '我的' } },
+      { path: 'task', name: 'MobileTask', component: () => import('@/views/mobile/MobileTask.vue'), meta: { title: '任务' } },
+      // ── 会议室（从底栏移除，通过消息页置顶/我的页面入口访问）──
+      { path: 'meeting', name: 'MobileMeeting', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '会议室' } },
+      { path: 'meeting/instant', name: 'MobileMeetingInstant', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '立即开会' } },
+      // ── 业务模块（复用 PC 端组件，MobileLayout 包裹）──
+      // Sale
+      { path: 'sale/overview', name: 'MobileSaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
+      { path: 'sale/client', name: 'MobileSaleClient', component: () => import('@/views/sale/ClientList.vue'), meta: { title: '客户管理' } },
+      { path: 'sale/out', name: 'MobileSaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
+      { path: 'sale/return', name: 'MobileSaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
+      // Procure
+      { path: 'procure/supplier', name: 'MobileProcureSupplier', component: () => import('@/views/procure/SupplierList.vue'), meta: { title: '供应商管理' } },
+      { path: 'procure/order', name: 'MobileProcureOrder', component: () => import('@/views/procure/Order.vue'), meta: { title: '采购订单' } },
+      { path: 'procure/inhouse', name: 'MobileProcureInhouse', component: () => import('@/views/procure/Inhouse.vue'), meta: { title: '采购入库' } },
+      // Warehouse
+      { path: 'warehouse/stock', name: 'MobileWarehouseStock', component: () => import('@/views/warehouse/StockAll.vue'), meta: { title: '库存总览' } },
+      { path: 'warehouse/warning', name: 'MobileWarehouseWarning', component: () => import('@/views/warehouse/StockWarning.vue'), meta: { title: '库存预警' } },
+      // Finance
+      { path: 'finance/overview', name: 'MobileFinanceOverview', component: () => import('@/views/finance/Overview.vue'), meta: { title: '财务总览' } },
+      { path: 'finance/receivable', name: 'MobileFinanceReceivable', component: () => import('@/views/finance/Receivable.vue'), meta: { title: '应收账款' } },
+      // Goods
+      { path: 'goods/info', name: 'MobileGoodsInfo', component: () => import('@/views/goods/Info.vue'), meta: { title: '商品资料' } },
+      { path: 'goods/brand', name: 'MobileGoodsBrand', component: () => import('@/views/goods/Brand.vue'), meta: { title: '品牌管理' } },
+      // Production
+      { path: 'production/plan', name: 'MobileProductionPlan', component: () => import('@/views/production/Plan.vue'), meta: { title: '生产计划' } },
+      // Personnel
+      { path: 'personnel/staff', name: 'MobilePersonnelStaff', component: () => import('@/views/personnel/Staff.vue'), meta: { title: '员工档案' } },
+      // Investment
+      { path: 'investment/overview', name: 'MobileInvestmentOverview', component: () => import('@/views/investment/Index.vue'), meta: { title: '投资管理' } },
+      // ── 其他移动端页面 ──
+      { path: 'stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '统计' } },
+      { path: 'apps', name: 'MobileApps', component: () => import('@/views/mobile/MobileApps.vue'), meta: { title: '应用' } },
+      { path: 'profile', name: 'MobileProfile', component: () => import('@/views/mobile/MobileProfile.vue'), meta: { title: '个人资料' } },
     ],
   },
 

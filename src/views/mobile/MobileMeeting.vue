@@ -1,15 +1,6 @@
 <template>
   <div class="m-meeting-page">
-    <!-- 顶部返回栏（会议室主页面，区别于立即开会的蓝色小栏） -->
-    <div class="m-meeting-topbar">
-      <button class="m-meeting-topbar-back" @click="router.push('/mobile/chat')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <span class="m-meeting-topbar-title">会议室</span>
-      <div style="width:40px"></div>
-    </div>
-
-    <!-- 返回按钮（立即开会模式） -->
+    <!-- 立即开会返回栏 -->
     <div v-if="isInstant" class="m-meeting-back-bar">
       <button class="m-meeting-back-btn" @click="router.back()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -61,13 +52,14 @@
     </div>
 
     <!-- 非立即开会模式 - 正常会议室列表 -->
-    <div v-if="!isInstant" class="m-meeting-hero">
-      <div class="m-meeting-hero-icon">🎙️</div>
-      <div class="m-meeting-hero-title">会议室</div>
-      <div class="m-meeting-hero-sub">随时随地，发起或加入会议</div>
-    </div>
+    <div v-if="!isInstant">
+      <div class="m-meeting-hero">
+        <div class="m-meeting-hero-icon">🎙️</div>
+        <div class="m-meeting-hero-title">会议室</div>
+        <div class="m-meeting-hero-sub">随时随地，发起或加入会议</div>
+      </div>
 
-    <!-- 三个主入口 -->
+      <!-- 三个主入口 -->
     <div class="m-meeting-cards">
       <div class="m-meeting-card m-meeting-card-blue" @click="router.push('/mobile/meeting/instant')">
         <div class="m-meeting-card-icon">
@@ -249,6 +241,7 @@
           </button>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </template>
@@ -660,44 +653,44 @@ onMounted(() => {
 }
 .m-btn-primary:disabled { background: #a0cfff; cursor: not-allowed; }
 
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-</style>
-
-/* ── 会议室主页面顶部栏 ── */
-.m-meeting-topbar {
+/* ── 立即开会全屏 ── */
+.m-instant-meeting {
+  background: linear-gradient(160deg, #2E6BE6 0%, #1B4FCC 100%);
+  min-height: 300px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.m-instant-hero { text-align: center; padding: 20px 0; }
+.m-instant-icon { font-size: 48px; margin-bottom: 10px; }
+.m-instant-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.m-instant-sub { font-size: 13px; color: rgba(255,255,255,0.7); }
+.m-instant-form {
   background: #fff;
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  padding-bottom: calc(12px + env(safe-area-inset-top, 0px));
+  flex-direction: column;
+  gap: 14px;
 }
-.m-meeting-topbar-back {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #1d2129;
-  padding: 0;
-  flex-shrink: 0;
-}
-.m-meeting-topbar-title {
-  flex: 1;
-  text-align: center;
+.m-instant-actions { padding: 8px 0 12px; }
+.m-instant-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 24px;
   font-size: 16px;
   font-weight: 700;
-  color: #1d2129;
-  margin-right: 40px; /* 平衡左右宽度 */
+  border: none;
+  background: #fff;
+  color: #2E6BE6;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
+.m-instant-btn:disabled { opacity: 0.6; }
+.m-instant-btn:not(:disabled):active { opacity: 0.85; }
 
-/* ── 立即开会返回栏 ── */
+/* ── 返回栏（立即开会） ── */
 .m-meeting-back-bar {
   background: #2E6BE6;
   display: flex;
@@ -722,69 +715,5 @@ onMounted(() => {
 }
 .m-meeting-back-title { font-size: 16px; font-weight: 700; color: #fff; }
 
-/* ── 立即开会全屏 ── */
-.m-instant-meeting {
-  background: linear-gradient(160deg, #2E6BE6 0%, #1B4FCC 100%);
-  min-height: 300px;
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.m-instant-hero { text-align: center; padding: 20px 0; }
-.m-instant-icon { font-size: 48px; margin-bottom: 10px; }
-.m-instant-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
-.m-instant-sub { font-size: 13px; color: rgba(255,255,255,0.7); }
-.m-instant-form {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.m-form-item label { font-size: 13px; font-weight: 600; color: #666; display: block; margin-bottom: 6px; }
-.m-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  font-size: 15px;
-  color: #333;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.15s;
-}
-.m-input:focus { border-color: #2E6BE6; }
-.m-participant-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-.m-participant-tag {
-  padding: 4px 10px;
-  background: #2E6BE6;
-  color: #fff;
-  border-radius: 14px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.m-participant-add {
-  padding: 4px 10px;
-  border: 1px dashed #ccc;
-  color: #999;
-  border-radius: 14px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.m-instant-actions { padding: 8px 0 12px; }
-.m-instant-btn {
-  width: 100%;
-  height: 48px;
-  border-radius: 24px;
-  font-size: 16px;
-  font-weight: 700;
-  border: none;
-  background: #fff;
-  color: #2E6BE6;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-.m-instant-btn:disabled { opacity: 0.6; }
-.m-instant-btn:not(:disabled):active { opacity: 0.85; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+</style>

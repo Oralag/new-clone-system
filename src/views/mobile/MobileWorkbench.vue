@@ -1,97 +1,127 @@
 <template>
-  <div class="m-workbench">
-    <!-- 个性化问候 -->
-    <div class="m-greeting">
-      <div class="m-greeting-text">
-        <div class="m-greeting-hi">{{ greeting }}, {{ authStore.userName }}</div>
-        <div class="m-greeting-date">{{ today }} {{ weekday }}</div>
+  <div class="wb-page">
+    <!-- 顶部背景区（企业微信蓝色头部，含头像卡片） -->
+    <div class="wb-header" @click="router.push('/mobile/my')">
+      <div class="wb-profile-row">
+        <div class="wb-avatar">{{ authStore.userName?.[0] || '我' }}</div>
+        <div class="wb-profile-info">
+          <span class="wb-hi">{{ greeting }}, {{ authStore.userName }}</span>
+          <span class="wb-company">{{ authStore.companyName || '数字游牧' }}</span>
+        </div>
+        <span class="wb-profile-arrow">›</span>
       </div>
-      <div class="m-greeting-avatar" @click="router.push('/mobile/my')">
-        {{ authStore.userName?.[0] || '我' }}
+      <div class="wb-date-row">
+        <span class="wb-date">{{ today }}</span>
+        <span class="wb-weekday">{{ weekday }}</span>
       </div>
     </div>
 
-    <!-- 今日核心指标 -->
-    <div class="m-kpi-row">
-      <div class="m-kpi-card m-kpi-primary" @click="router.push('/mobile/activity')">
-        <div class="m-kpi-label">今日销售</div>
-        <div class="m-kpi-value">¥{{ kpi.todaySale }}</div>
-        <div class="m-kpi-sub">{{ kpi.todayOrders }} 笔订单</div>
+    <!-- 今日概况（卡片式，企业微信风格） -->
+    <div class="wb-cards">
+      <div class="wb-card wb-card--primary" @click="go('/mobile/sale/overview')">
+        <div class="wb-card-label">今日销售</div>
+        <div class="wb-card-value">¥{{ kpi.todaySale }}</div>
+        <div class="wb-card-sub">{{ kpi.todayOrders }} 笔订单</div>
       </div>
-      <div class="m-kpi-right-stack">
-        <div class="m-kpi-card m-kpi-small" @click="router.push('/sale/client')">
-          <div class="m-kpi-label">客户总数</div>
-          <div class="m-kpi-value-sm">{{ kpi.customerTotal }}</div>
+      <div class="wb-card-sub-stack">
+        <div class="wb-card wb-card--sm" @click="go('/mobile/sale/client')">
+          <div class="wb-card-label">客户总数</div>
+          <div class="wb-card-value-sm">{{ kpi.customerTotal }}</div>
         </div>
-        <div class="m-kpi-card m-kpi-small" :class="{ warn: kpi.stockWarn > 0 }" @click="router.push('/warehouse/warning')">
-          <div class="m-kpi-label">库存预警</div>
-          <div class="m-kpi-value-sm">{{ kpi.stockWarn }}</div>
+        <div class="wb-card wb-card--sm" :class="{ warn: kpi.stockWarn > 0 }" @click="go('/mobile/warehouse/warning')">
+          <div class="wb-card-label">库存预警</div>
+          <div class="wb-card-value-sm">{{ kpi.stockWarn }}</div>
         </div>
       </div>
     </div>
 
-    <!-- 待处理 -->
-    <div v-if="pendingItems.length > 0" class="m-section">
-      <div class="m-section-header">
-        <span class="m-section-title">⏰ 待处理</span>
-        <span class="m-section-badge">{{ pendingItems.length }}</span>
-        <button class="m-section-more" @click="router.push('/mobile/activity')">全部 ›</button>
+    <!-- 待办提醒 -->
+    <div v-if="pendingItems.length > 0" class="wb-section">
+      <div class="wb-section-hd">
+        <span class="wb-section-dot"></span>
+        <span class="wb-section-title">待办提醒</span>
+        <span class="wb-section-count">{{ pendingItems.length }}</span>
       </div>
-      <div class="m-pending-list">
-        <div v-for="item in pendingItems" :key="item.id" class="m-pending-item" @click="handlePendingClick(item)">
-          <div class="m-pending-icon" :style="{ background: item.iconBg }">
+      <div class="wb-todo-list">
+        <div
+          v-for="item in pendingItems"
+          :key="item.id"
+          class="wb-todo-item"
+          @click="go(item.route)"
+        >
+          <div class="wb-todo-icon" :style="{ background: item.color }">
             <span v-html="item.icon" />
           </div>
-          <div class="m-pending-content">
-            <div class="m-pending-title">{{ item.title }}</div>
-            <div class="m-pending-sub">{{ item.sub }}</div>
+          <div class="wb-todo-body">
+            <div class="wb-todo-title">{{ item.title }}</div>
+            <div class="wb-todo-sub">{{ item.sub }}</div>
           </div>
-          <div class="m-pending-action">
-            <span class="m-pending-btn">{{ item.actionText }}</span>
-          </div>
+          <div class="wb-todo-arrow">›</div>
         </div>
       </div>
     </div>
 
-    <!-- 快捷入口 -->
-    <div class="m-section">
-      <div class="m-section-header">
-        <span class="m-section-title">📋 业务模块</span>
+    <!-- 快捷操作（企业微信九宫格） -->
+    <div class="wb-section">
+      <div class="wb-section-hd">
+        <span class="wb-section-dot" style="background: #F5A623"></span>
+        <span class="wb-section-title">快捷操作</span>
       </div>
-      <div class="m-app-grid">
-        <div v-for="app in appList" :key="app.path" class="m-app-item" @click="router.push(app.path)">
-          <div class="m-app-icon" :style="{ background: app.bg }">
+      <div class="wb-quick-grid">
+        <div
+          v-for="app in quickApps"
+          :key="app.path"
+          class="wb-quick-item"
+          @click="go(app.path)"
+        >
+          <div class="wb-quick-icon" :style="{ background: app.bg }">
             <span v-html="app.icon" />
           </div>
-          <div class="m-app-name">{{ app.name }}</div>
-          <div v-if="app.badge" class="m-app-badge">{{ app.badge }}</div>
+          <div class="wb-quick-name">{{ app.name }}</div>
+        </div>
+        <!-- 更多应用 -->
+        <div class="wb-quick-item" @click="go('/mobile/apps')">
+          <div class="wb-quick-icon" style="background: rgba(0,0,0,0.04)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.8">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </div>
+          <div class="wb-quick-name" style="color: #999">更多应用</div>
         </div>
       </div>
     </div>
 
     <!-- 工作动态 -->
-    <div class="m-section">
-      <div class="m-section-header">
-        <span class="m-section-title">📰 团队动态</span>
-        <button class="m-section-more" @click="router.push('/mobile/activity')">全部 ›</button>
+    <div class="wb-section">
+      <div class="wb-section-hd">
+        <span class="wb-section-dot" style="background: #52C41A"></span>
+        <span class="wb-section-title">团队动态</span>
+        <button class="wb-section-more" @click="go('/mobile/activity')">更多 ›</button>
       </div>
-      <div v-if="activities.length === 0" class="m-empty">
-        <div class="m-empty-icon">📭</div>
-        <div class="m-empty-text">暂无动态</div>
-      </div>
-      <div v-else class="m-activity-list">
-        <div v-for="a in activities" :key="a.id" class="m-activity-item" @click="handleActivityClick(a)">
-          <div class="m-activity-avatar">{{ a.user_name?.[0] || '?' }}</div>
-          <div class="m-activity-content">
-            <div class="m-activity-title">
-              <span class="m-activity-name">{{ a.user_name }}</span>
-              <span class="m-activity-action">{{ a.action_name }}</span>
+      <div v-if="activities.length === 0" class="wb-empty">暂无动态</div>
+      <div v-else class="wb-feed-list">
+        <div
+          v-for="a in activities"
+          :key="a.id"
+          class="wb-feed-item"
+          @click="handleActivityClick(a)"
+        >
+          <div class="wb-feed-avatar">{{ a.user_name?.[0] || '?' }}</div>
+          <div class="wb-feed-body">
+            <div class="wb-feed-top">
+              <span class="wb-feed-name">{{ a.user_name }}</span>
+              <span class="wb-feed-action">{{ a.action_name }}</span>
             </div>
-            <div class="m-activity-time">{{ formatTime(a.created_at) }}</div>
+            <div class="wb-feed-desc" v-if="a.description">{{ a.description }}</div>
+            <div class="wb-feed-time">{{ formatTime(a.created_at) }}</div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 底部占位 -->
+    <div style="height: 20px"></div>
   </div>
 </template>
 
@@ -125,20 +155,18 @@ const weekday = computed(() => {
   return days[new Date().getDay()]
 })
 
-const appList = [
-  { name: '销售出库', path: '/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
-  { name: '采购订单', path: '/procure/order', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
-  { name: '采购入库', path: '/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
-  { name: '仓库管理', path: '/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
-  { name: '财务总览', path: '/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
-  { name: '应收账款', path: '/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
-  { name: '客户管理', path: '/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
-  { name: '商品资料', path: '/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
-  { name: '品牌管理', path: '/brand/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
-  { name: '人事管理', path: '/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-  { name: '生产计划', path: '/production/plan', bg: 'rgba(5,150,105,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
-  { name: '投资管理', path: '/investment/overview', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+const quickApps = [
+  { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+  { name: '采购订单', path: '/mobile/procure/order', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
+  { name: '采购入库', path: '/mobile/procure/inhouse', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
+  { name: '库存查询', path: '/mobile/warehouse/stock', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
+  { name: '应收账款', path: '/mobile/finance/receivable', bg: 'rgba(245,63,63,0.06)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f53f3f" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
+  { name: '客户管理', path: '/mobile/sale/client', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
+  { name: '商品资料', path: '/mobile/goods/info', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+  { name: '财务总览', path: '/mobile/finance/overview', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
 ]
+
+function go(path: string) { router.push(path) }
 
 function formatTime(ts: string) {
   if (!ts) return ''
@@ -151,16 +179,9 @@ function formatTime(ts: string) {
   return `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-function handlePendingClick(item: any) {
-  if (item.route) router.push(item.route)
-}
-
 function handleActivityClick(a: any) {
-  if (a.related_type && a.related_id) {
-    // 跳转到相关单据
-    if (a.action_type?.startsWith('sale')) router.push('/sale/out')
-    else if (a.action_type?.startsWith('procure')) router.push('/procure/order')
-  }
+  if (a.action_type?.startsWith('sale')) router.push('/mobile/sale/out')
+  else if (a.action_type?.startsWith('procure')) router.push('/mobile/procure/order')
 }
 
 function fmt(n: number) {
@@ -169,8 +190,7 @@ function fmt(n: number) {
 }
 
 onMounted(async () => {
-  const today = new Date()
-  const todayStr = today.toISOString().slice(0, 10)
+  const todayStr = new Date().toISOString().slice(0, 10)
 
   const [saleRes, retailRes, custRes, goodsRes, procureRes] = await Promise.allSettled([
     http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
@@ -181,24 +201,24 @@ onMounted(async () => {
   ])
 
   const getRows = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
+
   const saleRows = getRows(saleRes)
   const retailRows = getRows(retailRes)
+  const goodsRows = getRows(goodsRes)
+  const procureRows = getRows(procureRes)
 
   const todaySales = saleRows.filter((r: any) => (r.out_date || '').slice(0, 10) === todayStr)
   const todayRetail = retailRows.filter((r: any) => (r.order_date || '').slice(0, 10) === todayStr)
+  kpi.value.todayOrders = todaySales.length + todayRetail.length
   const totalSale = todaySales.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
   const totalRetail = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
-
   kpi.value.todaySale = fmt(totalSale + totalRetail)
-  kpi.value.todayOrders = todaySales.length + todayRetail.length
 
   if (custRes.status === 'fulfilled') {
     kpi.value.customerTotal = custRes.value?.data?.total ?? custRes.value?.total ?? 0
   }
 
   // 库存预警
-  const goodsRows = getRows(goodsRes)
-  const procureRows = getRows(procureRes)
   const stockMap: Record<number, number> = {}
   procureRows.filter((r: any) => Number(r.status) === 1).forEach((r: any) => {
     (JSON.parse(r.goods_info || '[]')).forEach((i: any) => {
@@ -207,7 +227,7 @@ onMounted(async () => {
   })
   ;[...saleRows, ...retailRows].forEach((r: any) => {
     if (r.out_date !== undefined && Number(r.status) !== 1) return
-    (JSON.parse(r.goods_info || '[]')).forEach((i: any) => {
+    ;(JSON.parse(r.goods_info || '[]')).forEach((i: any) => {
       stockMap[i.goods_id] = (stockMap[i.goods_id] ?? 0) - Number(i.num || 0)
     })
   })
@@ -215,7 +235,6 @@ onMounted(async () => {
 
   // 待处理
   pendingItems.value = []
-  // 检查采购入库待审核
   const pendingProcure = procureRows.filter((r: any) => Number(r.status) === 0)
   if (pendingProcure.length > 0) {
     pendingItems.value.push({
@@ -223,12 +242,10 @@ onMounted(async () => {
       title: `采购入库待审核 ${pendingProcure.length} 笔`,
       sub: `合计 ¥${pendingProcure.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0).toFixed(0)}`,
       icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
-      iconBg: '#f97316',
-      actionText: '去审核',
-      route: '/procure/inhouse',
+      color: '#F5A623',
+      route: '/mobile/procure/inhouse',
     })
   }
-  // 销售待审核
   const pendingSales = saleRows.filter((r: any) => Number(r.status) === 0)
   if (pendingSales.length > 0) {
     pendingItems.value.push({
@@ -236,10 +253,14 @@ onMounted(async () => {
       title: `销售出库待审核 ${pendingSales.length} 笔`,
       sub: `合计 ¥${pendingSales.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0).toFixed(0)}`,
       icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
-      iconBg: '#0071e3',
-      actionText: '去审核',
-      route: '/sale/out',
+      color: '#2E6BE6',
+      route: '/mobile/sale/out',
     })
+  }
+
+  // 通知未读数
+  if (pendingItems.value.length > 0 && typeof uni !== 'undefined') {
+    uni.$emit('update:pending', pendingItems.value.length)
   }
 
   // 工作动态
@@ -251,192 +272,223 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.m-workbench {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding-bottom: 80px;
-  background: #f5f5f7;
+.wb-page {
+  background: #f5f5f5;
   min-height: 100%;
+  padding-bottom: 0;
 }
 
-/* ── 问候 ── */
-.m-greeting {
-  background: linear-gradient(135deg, #0071e3 0%, #005bb5 100%);
-  padding: 20px 16px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.m-greeting-hi { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.02em; margin-bottom: 4px; }
-.m-greeting-date { font-size: 13px; color: rgba(255,255,255,0.65); }
-.m-greeting-avatar {
-  width: 44px; height: 44px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-  border: 2px solid rgba(255,255,255,0.4);
-}
-
-/* ── KPI ── */
-.m-kpi-row {
-  display: flex;
-  gap: 10px;
-  padding: 12px 12px 0;
-}
-.m-kpi-card {
-  background: #fff;
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+/* ── 蓝色头部 ── */
+.wb-header {
+  background: linear-gradient(135deg, #2E6BE6 0%, #1B4FCC 100%);
+  padding: 20px 16px 28px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.m-kpi-card:active { background: #f0f5ff; }
-.m-kpi-primary { flex: 1.2; }
-.m-kpi-right-stack { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.m-kpi-small { padding: 10px 12px; }
-.m-kpi-label { font-size: 11px; font-weight: 600; color: #86909c; margin-bottom: 6px; }
-.m-kpi-value { font-size: 26px; font-weight: 800; color: #1d2129; letter-spacing: -0.03em; margin-bottom: 3px; }
-.m-kpi-sub { font-size: 11px; color: #86909c; }
-.m-kpi-value-sm { font-size: 18px; font-weight: 800; color: #1d2129; letter-spacing: -0.03em; }
-.m-kpi-card.warn .m-kpi-value-sm { color: #f53f3f; }
-
-/* ── 通用区块 ── */
-.m-section { padding: 16px 12px 0; }
-.m-section-header {
+.wb-profile-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
   margin-bottom: 10px;
 }
-.m-section-title { font-size: 15px; font-weight: 700; color: #1d2129; letter-spacing: -0.01em; }
-.m-section-badge {
-  background: #f53f3f;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 999px;
-  min-width: 18px;
-  text-align: center;
-}
-.m-section-more {
-  margin-left: auto;
-  border: none;
-  background: transparent;
-  color: #86909c;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-/* ── 待处理 ── */
-.m-pending-list { display: flex; flex-direction: column; gap: 8px; }
-.m-pending-item {
+.wb-avatar {
+  width: 48px;
+  height: 48px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.3);
 }
-.m-pending-item:active { background: #f5f5f7; }
-.m-pending-icon {
-  width: 34px; height: 34px;
-  border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
+.wb-profile-info { flex: 1; }
+.wb-hi {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+  display: block;
+  margin-bottom: 2px;
+}
+.wb-company {
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  display: block;
+}
+.wb-profile-arrow {
+  font-size: 22px;
+  color: rgba(255,255,255,0.5);
   flex-shrink: 0;
 }
-.m-pending-content { flex: 1; min-width: 0; }
-.m-pending-title { font-size: 13px; font-weight: 600; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.m-pending-sub { font-size: 11px; color: #86909c; margin-top: 2px; }
-.m-pending-btn {
-  font-size: 12px;
-  font-weight: 600;
-  color: #0071e3;
-  background: #e8f0fe;
-  padding: 4px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
+.wb-date-row { display: flex; align-items: center; gap: 8px; }
+.wb-date { font-size: 13px; color: rgba(255,255,255,0.75); }
+.wb-weekday { font-size: 13px; color: rgba(255,255,255,0.6); }
+
+/* ── KPI 卡片 ── */
+.wb-cards {
+  display: flex;
+  gap: 10px;
+  padding: 0 14px;
+  margin-top: -18px;
+  margin-bottom: 14px;
+}
+.wb-card {
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.wb-card:active { background: #fafafa; }
+.wb-card--primary {
+  flex: 1.3;
+  padding: 16px 16px 14px;
+}
+.wb-card-sub-stack { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.wb-card--sm { padding: 12px 14px; }
+.wb-card-label { font-size: 12px; color: #999; margin-bottom: 4px; }
+.wb-card-value { font-size: 26px; font-weight: 700; color: #1d2129; letter-spacing: -0.03em; line-height: 1.1; }
+.wb-card-sub { font-size: 11px; color: #999; margin-top: 2px; }
+.wb-card-value-sm { font-size: 18px; font-weight: 700; color: #1d2129; letter-spacing: -0.03em; }
+.wb-card.warn .wb-card-value-sm { color: #f53f3f; }
+
+/* ── 分区 ── */
+.wb-section {
+  background: #fff;
+  margin-bottom: 10px;
+}
+.wb-section-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.wb-section-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2E6BE6;
+  flex-shrink: 0;
+}
+.wb-section-title { font-size: 14px; font-weight: 600; color: #1d2129; flex: 1; }
+.wb-section-count {
+  min-width: 18px;
+  height: 18px;
+  background: #f53f3f;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+.wb-section-more {
+  border: none;
+  background: transparent;
+  color: #999;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
 }
 
-/* ── 应用网格 ── */
-.m-app-grid {
+/* ── 待办列表 ── */
+.wb-todo-list { padding: 4px 0; }
+.wb-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+.wb-todo-item:active { background: #f5f5f5; }
+.wb-todo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wb-todo-body { flex: 1; min-width: 0; }
+.wb-todo-title { font-size: 14px; font-weight: 600; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wb-todo-sub { font-size: 12px; color: #999; margin-top: 2px; }
+.wb-todo-arrow { font-size: 18px; color: #ccc; flex-shrink: 0; }
+
+/* ── 快捷操作九宫格 ── */
+.wb-quick-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 1px;
+  background: #f0f0f0;
+  padding: 1px 0;
 }
-.m-app-item {
+.wb-quick-item {
+  background: #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 14px 4px 10px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  padding: 16px 4px 12px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  position: relative;
+  transition: background 0.1s;
 }
-.m-app-item:active { background: #f5f5f7; }
-.m-app-icon {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
+.wb-quick-item:active { background: #f5f5f5; }
+.wb-quick-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.m-app-name { font-size: 11px; font-weight: 600; color: #4e5969; text-align: center; line-height: 1.2; }
-.m-app-badge {
-  position: absolute;
-  top: 6px; right: 6px;
-  min-width: 16px; height: 16px;
-  background: #f53f3f;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  padding: 0 3px;
+.wb-quick-name {
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+  line-height: 1.2;
 }
 
-/* ── 动态 ── */
-.m-activity-list { display: flex; flex-direction: column; gap: 0; }
-.m-activity-item {
+/* ── 动态列表 ── */
+.wb-empty { text-align: center; padding: 24px; color: #999; font-size: 13px; }
+.wb-feed-list { padding: 4px 0; }
+.wb-feed-item {
   display: flex;
-  align-items: flex-start;
   gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid #f2f3f5;
+  padding: 12px 16px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
 }
-.m-activity-item:last-child { border-bottom: none; }
-.m-activity-item:active { background: #f5f5f7; margin: 0 -12px; padding: 10px 12px; }
-.m-activity-avatar {
-  width: 32px; height: 32px;
-  background: #0071e3;
+.wb-feed-item:active { background: #f5f5f5; }
+.wb-feed-avatar {
+  width: 36px;
+  height: 36px;
+  background: #2E6BE6;
   border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   flex-shrink: 0;
 }
-.m-activity-content { flex: 1; min-width: 0; }
-.m-activity-title { font-size: 13px; color: #1d2129; line-height: 1.5; }
-.m-activity-name { font-weight: 600; }
-.m-activity-action { color: #4e5969; }
-.m-activity-time { font-size: 11px; color: #86909c; margin-top: 2px; }
-
-/* ── 空状态 ── */
-.m-empty { text-align: center; padding: 24px 0; }
-.m-empty-icon { font-size: 32px; margin-bottom: 8px; }
-.m-empty-text { font-size: 13px; color: #86909c; }
+.wb-feed-body { flex: 1; min-width: 0; }
+.wb-feed-top { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+.wb-feed-name { font-size: 14px; font-weight: 600; color: #1d2129; }
+.wb-feed-action { font-size: 13px; color: #666; }
+.wb-feed-desc { font-size: 13px; color: #666; margin-top: 3px; line-height: 1.4; }
+.wb-feed-time { font-size: 12px; color: #bbb; margin-top: 3px; }
 </style>
