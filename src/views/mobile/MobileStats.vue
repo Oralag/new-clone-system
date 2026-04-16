@@ -114,7 +114,7 @@
     <div class="ms-quick-links">
       <div class="ms-ql-title">报表中心</div>
       <div class="ms-ql-grid">
-        <div class="ms-ql-item" @click="router.push('/reports/sale-rate')">
+        <div class="ms-ql-item" @click="router.push('/mobile/stats')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span>销售统计</span>
         </div>
@@ -126,7 +126,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           <span>应收账款</span>
         </div>
-        <div class="ms-ql-item" @click="router.push('/warehouse/stock')">
+        <div class="ms-ql-item" @click="router.push('/mobile/warehouse/stock')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
           <span>库存总览</span>
         </div>
