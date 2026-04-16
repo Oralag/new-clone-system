@@ -1,16 +1,5 @@
 <template>
   <div class="new-chat-page">
-    <!-- 顶部栏 -->
-    <div class="wx-nav-bar">
-      <button class="wx-nav-back" @click="router.back()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-      </button>
-      <div class="wx-nav-title">发起会话</div>
-      <div class="wx-nav-right" />
-    </div>
-
     <!-- 联系人信息 -->
     <div class="new-chat-target" v-if="targetUser">
       <div class="new-chat-avatar">{{ targetUser.name?.[0] || '?' }}</div>
