@@ -12,17 +12,17 @@
 
     <!-- 数据卡片 -->
     <div class="m-my-stats">
-      <div class="m-my-stat" @click="router.push('/sale/client')">
+      <div class="m-my-stat" @click="router.push('/mobile/sale/client')">
         <div class="m-my-stat-val">{{ stats.customerCount }}</div>
         <div class="m-my-stat-label">客户</div>
       </div>
       <div class="m-my-stat-divider" />
-      <div class="m-my-stat" @click="router.push('/finance/receivable')">
+      <div class="m-my-stat" @click="router.push('/mobile/finance/receivable')">
         <div class="m-my-stat-val">¥{{ stats.receivable }}</div>
         <div class="m-my-stat-label">应收款</div>
       </div>
       <div class="m-my-stat-divider" />
-      <div class="m-my-stat" :class="{ warn: Number(stats.stockWarn) > 0 }" @click="router.push('/warehouse/warning')">
+      <div class="m-my-stat" :class="{ warn: Number(stats.stockWarn) > 0 }" @click="router.push('/mobile/warehouse/warning')">
         <div class="m-my-stat-val">{{ stats.stockWarn }}</div>
         <div class="m-my-stat-label">库存预警</div>
       </div>
@@ -37,7 +37,7 @@
           <div class="m-my-feature-name">工作动态</div>
           <div class="m-my-feature-desc">查看团队操作记录</div>
         </div>
-        <div class="m-my-feature-item" @click="router.push('/mobile/ai-bot')">
+        <div class="m-my-feature-item" @click="router.push('/mobile/ai')">
           <div class="m-my-feature-icon" style="background:rgba(124,58,237,0.1)">🦢</div>
           <div class="m-my-feature-name">AI 管家</div>
           <div class="m-my-feature-desc">动嘴就能录单</div>

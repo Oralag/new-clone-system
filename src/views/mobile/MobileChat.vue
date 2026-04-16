@@ -463,8 +463,8 @@ export default { name: 'MobileChat' }
 }
 .wx-nav-right { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 .nav-icon-btn {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border: none;
   background: transparent;
   display: flex;
@@ -781,8 +781,8 @@ export default { name: 'MobileChat' }
 }
 .plus-menu {
   position: fixed;
-  right: 8px;
-  top: 52px;
+  right: 16px;
+  bottom: 116px;
   background: #fff;
   border-radius: 8px;
   width: 150px;
@@ -794,7 +794,7 @@ export default { name: 'MobileChat' }
 .plus-menu::before {
   content: '';
   position: absolute;
-  top: -6px;
+  bottom: -6px;
   right: 16px;
   width: 12px;
   height: 12px;
@@ -836,56 +836,6 @@ export default { name: 'MobileChat' }
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .chat-fab:active { transform: scale(0.92); box-shadow: 0 2px 6px rgba(46,107,230,0.3); }
-
-/* ── 新建会话弹窗 ── */
-.chat-new-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 500;
-  display: flex;
-  align-items: flex-end;
-}
-.chat-new-sheet {
-  background: #fff;
-  border-radius: 16px 16px 0 0;
-  width: 100%;
-  animation: slideUp 0.25s ease;
-}
-.chat-new-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid #f2f3f5;
-  font-size: 16px;
-  font-weight: 700;
-  color: #1d2129;
-}
-.chat-new-header button { border: none; background: transparent; color: #2E6BE6; font-size: 14px; cursor: pointer; }
-.chat-new-body { padding: 8px 0 calc(env(safe-area-inset-bottom, 0px) + 8px); }
-.chat-new-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.1s;
-}
-.chat-new-item:active { background: #fafafa; }
-.chat-new-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.chat-new-info { flex: 1; }
-.chat-new-title { font-size: 16px; font-weight: 600; color: #1d2129; margin-bottom: 2px; }
-.chat-new-sub { font-size: 12px; color: #86909c; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
