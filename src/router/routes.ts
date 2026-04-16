@@ -168,10 +168,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'activity', name: 'MobileActivity', component: () => import('@/views/mobile/MobileActivity.vue'), meta: { title: '工作动态' } },
       { path: 'ai-bot', name: 'MobileAIBot', component: () => import('@/views/mobile/MobileAIBot.vue'), meta: { title: 'AI 管家' } },
       { path: 'my', name: 'MobileMy', component: () => import('@/views/mobile/MobileMy.vue'), meta: { title: '我的' } },
-      { path: 'task', name: 'MobileTask', component: () => import('@/views/mobile/MobileTask.vue'), meta: { title: '任务' } },
-      // ── 会议室（从底栏移除，通过消息页置顶/我的页面入口访问）──
-      { path: 'meeting', name: 'MobileMeeting', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '会议室' } },
-      { path: 'meeting/instant', name: 'MobileMeetingInstant', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '立即开会' } },
       // ── 业务模块（复用 PC 端组件，MobileLayout 包裹）──
       // Sale
       { path: 'sale/overview', name: 'MobileSaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
@@ -197,10 +193,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'personnel/staff', name: 'MobilePersonnelStaff', component: () => import('@/views/personnel/Staff.vue'), meta: { title: '员工档案' } },
       // Investment
       { path: 'investment/overview', name: 'MobileInvestmentOverview', component: () => import('@/views/investment/Index.vue'), meta: { title: '投资管理' } },
-      // ── 其他移动端页面 ──
-      { path: 'stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '统计' } },
-      { path: 'apps', name: 'MobileApps', component: () => import('@/views/mobile/MobileApps.vue'), meta: { title: '应用' } },
-      { path: 'profile', name: 'MobileProfile', component: () => import('@/views/mobile/MobileProfile.vue'), meta: { title: '个人资料' } },
     ],
   },
 

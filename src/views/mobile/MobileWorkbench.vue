@@ -23,14 +23,14 @@
         <div class="wb-card-value">¥{{ kpi.todaySale }}</div>
         <div class="wb-card-sub">{{ kpi.todayOrders }} 笔订单</div>
       </div>
-      <div class="wb-card-sub-stack">
-        <div class="wb-card wb-card--sm" @click="go('/mobile/sale/client')">
-          <div class="wb-card-label">客户总数</div>
-          <div class="wb-card-value-sm">{{ kpi.customerTotal }}</div>
+      <div class="m-kpi-right-stack">
+        <div class="m-kpi-card m-kpi-small" @click="router.push('/mobile/sale/client')">
+          <div class="m-kpi-label">客户总数</div>
+          <div class="m-kpi-value-sm">{{ kpi.customerTotal }}</div>
         </div>
-        <div class="wb-card wb-card--sm" :class="{ warn: kpi.stockWarn > 0 }" @click="go('/mobile/warehouse/warning')">
-          <div class="wb-card-label">库存预警</div>
-          <div class="wb-card-value-sm">{{ kpi.stockWarn }}</div>
+        <div class="m-kpi-card m-kpi-small" :class="{ warn: kpi.stockWarn > 0 }" @click="router.push('/mobile/warehouse/warning')">
+          <div class="m-kpi-label">库存预警</div>
+          <div class="m-kpi-value-sm">{{ kpi.stockWarn }}</div>
         </div>
       </div>
     </div>
@@ -155,15 +155,19 @@ const weekday = computed(() => {
   return days[new Date().getDay()]
 })
 
-const quickApps = [
-  { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
-  { name: '采购订单', path: '/mobile/procure/order', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
-  { name: '采购入库', path: '/mobile/procure/inhouse', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
-  { name: '库存查询', path: '/mobile/warehouse/stock', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
-  { name: '应收账款', path: '/mobile/finance/receivable', bg: 'rgba(245,63,63,0.06)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f53f3f" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
-  { name: '客户管理', path: '/mobile/sale/client', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
-  { name: '商品资料', path: '/mobile/goods/info', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
-  { name: '财务总览', path: '/mobile/finance/overview', bg: 'rgba(46,107,230,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
+const appList = [
+  { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+  { name: '采购订单', path: '/mobile/procure/order', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
+  { name: '采购入库', path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
+  { name: '仓库管理', path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
+  { name: '财务总览', path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
+  { name: '应收账款', path: '/mobile/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
+  { name: '客户管理', path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
+  { name: '商品资料', path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+  { name: '品牌管理', path: '/mobile/goods/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
+  { name: '人事管理', path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+  { name: '生产计划', path: '/mobile/production/plan', bg: 'rgba(5,150,105,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+  { name: '投资管理', path: '/mobile/investment/overview', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
 ]
 
 function go(path: string) { router.push(path) }
@@ -180,8 +184,20 @@ function formatTime(ts: string) {
 }
 
 function handleActivityClick(a: any) {
-  if (a.action_type?.startsWith('sale')) router.push('/mobile/sale/out')
-  else if (a.action_type?.startsWith('procure')) router.push('/mobile/procure/order')
+  const type = a.action_type?.split('_')[0] || ''
+  const routeMap: Record<string, string> = {
+    sale: '/mobile/sale/out',
+    procure: '/mobile/procure/order',
+    warehouse: '/mobile/warehouse/stock',
+    finance: '/mobile/finance/overview',
+    task: '/mobile/task',
+    ai: '/mobile/ai-bot',
+    investment: '/mobile/investment/overview',
+    personnel: '/mobile/personnel/staff',
+    goods: '/mobile/goods/info',
+  }
+  const route = routeMap[type] || '/mobile/workbench'
+  router.push(route)
 }
 
 function fmt(n: number) {
@@ -226,7 +242,7 @@ onMounted(async () => {
     })
   })
   ;[...saleRows, ...retailRows].forEach((r: any) => {
-    if (r.out_date !== undefined && Number(r.status) !== 1) return
+    if (Number(r.status) !== 1) return
     ;(JSON.parse(r.goods_info || '[]')).forEach((i: any) => {
       stockMap[i.goods_id] = (stockMap[i.goods_id] ?? 0) - Number(i.num || 0)
     })

@@ -12,6 +12,9 @@
       <div class="wx-nav-right"></div>
     </div>
 
+    <!-- 会议室置顶区（仅在消息页显示） -->
+    <MobileMeetingPinned v-if="activeTab === 'chat'" />
+
     <!-- 内容区 -->
     <div class="wx-content">
       <router-view v-slot="{ Component, route: r }">
@@ -30,59 +33,23 @@
         :class="{ active: activeTab === tab.key }"
         @click="switchTab(tab)"
       >
-        <!-- 工作台 -->
-        <template v-if="tab.key === 'workbench'">
-          <div class="wx-tab-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path v-if="activeTab !== 'workbench'" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-else d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span v-if="pendingCount > 0" class="wx-tab-dot">{{ pendingCount > 9 ? '9+' : pendingCount }}</span>
-          </div>
-          <span class="wx-tab-label">{{ tab.label }}</span>
-        </template>
-
-        <!-- 消息 -->
-        <template v-else-if="tab.key === 'chat'">
-          <div class="wx-tab-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path v-if="activeTab !== 'chat'" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-else d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span v-if="unreadCount > 0" class="wx-tab-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
-          </div>
-          <span class="wx-tab-label">{{ tab.label }}</span>
-        </template>
-
-        <!-- 通讯录 -->
-        <template v-else-if="tab.key === 'contacts'">
-          <div class="wx-tab-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path v-if="activeTab !== 'contacts'" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-else d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle v-if="activeTab !== 'contacts'" cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/>
-              <circle v-else cx="9" cy="7" r="4" fill="currentColor" stroke="currentColor" stroke-width="1.8"/>
-              <path v-if="activeTab !== 'contacts'" d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <path v-else d="M23 21v-2a4 4 0 0 0-3-3.87" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <path v-if="activeTab !== 'contacts'" d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <path v-else d="M16 3.13a4 4 0 0 1 0 7.75" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <span class="wx-tab-label">{{ tab.label }}</span>
-        </template>
-
-        <!-- 我的 -->
-        <template v-else-if="tab.key === 'my'">
-          <div class="wx-tab-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path v-if="activeTab !== 'my'" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-else d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle v-if="activeTab !== 'my'" cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/>
-              <circle v-else cx="12" cy="7" r="4" fill="currentColor" stroke="currentColor" stroke-width="1.8"/>
-            </svg>
-          </div>
-          <span class="wx-tab-label">{{ tab.label }}</span>
-        </template>
+        <div class="m-nav-icon-wrap">
+          <svg v-if="tab.key === 'workbench'" class="m-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <svg v-else-if="tab.key === 'chat'" class="m-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <svg v-else-if="tab.key === 'contacts'" class="m-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <svg v-else-if="tab.key === 'my'" class="m-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span v-if="tab.key === 'chat' && unreadCount > 0" class="m-nav-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+        </div>
+        <span class="m-nav-label">{{ tab.label }}</span>
       </div>
     </div>
   </div>
@@ -268,24 +235,21 @@ export default { name: 'MobileLayout' }
 
 .wx-tab.active { color: var(--wx-blue); }
 
-.wx-tab-icon {
+.m-nav-icon-wrap {
   position: relative;
+  width: 24px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.m-nav-icon {
   width: 22px;
   height: 22px;
 }
 
-.wx-tab-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.wx-tab-label {
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 500;
-}
-
-.wx-tab-badge {
+.m-nav-badge {
   position: absolute;
   top: -4px;
   right: -8px;
@@ -304,13 +268,9 @@ export default { name: 'MobileLayout' }
   transform: scale(0.85);
 }
 
-.wx-tab-dot {
-  position: absolute;
-  top: -4px;
-  right: -8px;
-  width: 8px;
-  height: 8px;
-  background: #f53f3f;
-  border-radius: 50%;
+.m-nav-label {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 500;
 }
 </style>

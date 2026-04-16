@@ -196,13 +196,17 @@ function formatDate(date: string) {
 function handleActivityClick(a: any) {
   if (!a.related_type) return
   const routeMap: Record<string, string> = {
-    sale: '/sale/out',
-    procure: '/procure/order',
-    warehouse: '/warehouse/stock',
-    finance: '/finance/overview',
-    task: '/agent/task-center',
+    sale: '/mobile/sale/out',
+    procure: '/mobile/procure/order',
+    warehouse: '/mobile/warehouse/stock',
+    finance: '/mobile/finance/overview',
+    task: '/mobile/task',
+    ai: '/mobile/ai-bot',
+    investment: '/mobile/investment/overview',
+    personnel: '/mobile/personnel/staff',
+    goods: '/mobile/goods/info',
   }
-  const base = routeMap[a.related_type.split('_')[0]] || '/dashboard'
+  const base = routeMap[a.related_type.split('_')[0]] || '/mobile/workbench'
   router.push(base)
 }
 

@@ -20,8 +20,8 @@ function isMobileDevice(): boolean {
 router.beforeEach((to, _from, next) => {
   document.title = `${to.meta?.title || '页面'} - 数字游牧ERP`
 
-  // 移动端自动跳 /mobile/workbench
-  if (isMobileDevice() && !to.path.startsWith('/mobile') && to.path !== '/login') {
+  // 移动端首页重定向：只对根路径和 portal 做跳转
+  if (isMobileDevice() && (to.path === '/' || to.path === '/portal')) {
     return next({ path: '/mobile/workbench' })
   }
 
