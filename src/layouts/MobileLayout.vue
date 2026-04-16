@@ -10,7 +10,7 @@
       <div v-else class="wx-nav-placeholder"></div>
       <span class="wx-nav-title">{{ route.meta?.title || '数字游牧' }}</span>
       <div class="wx-nav-right">
-        <div class="wx-nav-avatar" @click="router.push('/mobile/my')">
+        <div class="wx-nav-avatar nav-avatar-btn" @click="router.push('/mobile/my')">
           {{ authStore.userName?.[0] || '我' }}
         </div>
       </div>
