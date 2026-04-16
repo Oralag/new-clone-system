@@ -223,8 +223,8 @@ onMounted(async () => {
   const goodsRows = getRows(goodsRes)
   const procureRows = getRows(procureRes)
 
-  const todaySales = saleRows.filter((r: any) => (r.out_date || '').slice(0, 10) === todayStr)
-  const todayRetail = retailRows.filter((r: any) => (r.order_date || '').slice(0, 10) === todayStr)
+  const todaySales = saleRows.filter((r: any) => Number(r.status) === 1 && (r.out_date || '').slice(0, 10) === todayStr)
+  const todayRetail = retailRows.filter((r: any) => Number(r.status) === 1 && (r.order_date || '').slice(0, 10) === todayStr)
   kpi.value.todayOrders = todaySales.length + todayRetail.length
   const totalSale = todaySales.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
   const totalRetail = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
@@ -252,6 +252,7 @@ onMounted(async () => {
   // 待处理
   pendingItems.value = []
   const pendingProcure = procureRows.filter((r: any) => Number(r.status) === 0)
+  const pendingRetail = retailRows.filter((r: any) => Number(r.status) === 0)
   if (pendingProcure.length > 0) {
     pendingItems.value.push({
       id: 'procure',

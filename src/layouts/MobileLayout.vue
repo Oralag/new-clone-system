@@ -65,8 +65,8 @@ const route = useRoute()
 
 const tabs = [
   { key: 'chat', label: '消息', path: '/mobile/chat' },
-  { key: 'contacts', label: '通讯录', path: '/mobile/contacts' },
   { key: 'workbench', label: '工作台', path: '/mobile/workbench' },
+  { key: 'contacts', label: '通讯录', path: '/mobile/contacts' },
   { key: 'my', label: '我的', path: '/mobile/my' },
 ]
 

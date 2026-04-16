@@ -148,6 +148,10 @@ function viewEmployee(c: any) {
   }
 }
 
+function viewCustomer() {
+  router.push('/mobile/sale/client')
+}
+
 function createGroup() {
   showNewGroup.value = false
   router.push('/mobile/meeting')

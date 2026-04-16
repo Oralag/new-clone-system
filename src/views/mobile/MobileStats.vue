@@ -252,8 +252,8 @@ onMounted(async () => {
   _saleRows.value = saleRows
   _retailRows.value = retailRows
 
-  const todaySale = saleRows.filter((r: any) => (r.out_date||'').slice(0,10) === today)
-  const todayRetail = retailRows.filter((r: any) => (r.order_date||'').slice(0,10) === today)
+  const todaySale = saleRows.filter((r: any) => Number(r.status) === 1 && (r.out_date||'').slice(0,10) === today)
+  const todayRetail = retailRows.filter((r: any) => Number(r.status) === 1 && (r.order_date||'').slice(0,10) === today)
   const saleAmt = todaySale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
   const retailAmt = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
 
@@ -263,7 +263,7 @@ onMounted(async () => {
     parseGoodsInfo(r.goods_info).forEach((i: any) => { stockMap[i.goods_id] = (stockMap[i.goods_id] ?? 0) + Number(i.num||0) })
   })
   ;[...saleRows, ...retailRows].forEach((r: any) => {
-    if (r.out_date !== undefined && Number(r.status) !== 1) return
+    if (Number(r.status) !== 1) return
     parseGoodsInfo(r.goods_info).forEach((i: any) => { stockMap[i.goods_id] = (stockMap[i.goods_id] ?? 0) - Number(i.num||0) })
   })
   const goodsList = rows(goodsRes)

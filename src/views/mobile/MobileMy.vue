@@ -132,6 +132,26 @@
     <div class="m-my-logout-wrap">
       <button class="m-my-logout-btn" @click="handleLogout">退出登录</button>
     </div>
+
+    <!-- 数据概览 -->
+    <div class="m-my-cards">
+      <div class="m-my-card" @click="router.push('/mobile/sale/out')">
+        <div class="m-my-card-num">{{ (myStats.todaySale / 10000).toFixed(1) }}w</div>
+        <div class="m-my-card-label">本月销售额</div>
+      </div>
+      <div class="m-my-card" @click="router.push('/mobile/sale/out')">
+        <div class="m-my-card-num">{{ myStats.todayOrders }}</div>
+        <div class="m-my-card-label">本月订单</div>
+      </div>
+      <div class="m-my-card" @click="router.push('/mobile/procure/order')">
+        <div class="m-my-card-num">{{ myStats.pendingCount }}</div>
+        <div class="m-my-card-label">待审核</div>
+      </div>
+      <div class="m-my-card" @click="router.push('/mobile/finance/overview')">
+        <div class="m-my-card-num">{{ (myStats.receivable / 10000).toFixed(1) }}w</div>
+        <div class="m-my-card-label">应收款</div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -196,6 +216,37 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.m-my-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #eee;
+  margin: 0 16px 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.m-my-card {
+  background: #fff;
+  padding: 14px 8px;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+.m-my-card:active { background: #f5f5f5; }
+.m-my-card-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2E6BE6;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.m-my-card:nth-child(3) .m-my-card-num { color: #FF6B35; }
+.m-my-card-label {
+  font-size: 11px;
+  color: #999;
+}
 .m-my {
   min-height: 100%;
   background: #f5f5f7;
