@@ -1,7 +1,7 @@
 <template>
   <div class="wx-layout">
-    <!-- 顶部导航栏 -->
-    <div class="wx-navbar">
+    <!-- 顶部导航栏（消息页由MobileChat接管，不重复显示） -->
+    <div class="wx-navbar" v-if="activeTab !== 'chat'">
       <button v-if="!isMainTab" class="wx-nav-back" @click="goBack">
         <svg viewBox="0 0 24 24" fill="none">
           <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -9,7 +9,11 @@
       </button>
       <div v-else class="wx-nav-placeholder"></div>
       <span class="wx-nav-title">{{ route.meta?.title || '数字游牧' }}</span>
-      <div class="wx-nav-right"></div>
+      <div class="wx-nav-right">
+      <div class="wx-nav-avatar" @click="router.push('/mobile/my')">
+        {{ authStore.userName?.[0] || '我' }}
+      </div>
+    </div>
     </div>
 
     <!-- 会议室置顶区（仅在消息页显示） -->
@@ -44,6 +48,12 @@
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
+          <svg v-else-if="tab.key === 'stats'" class="m-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          <svg v-else-if="tab.key === 'modules'" class="m-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
           <svg v-else-if="tab.key === 'my'" class="m-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
           </svg>
@@ -59,15 +69,18 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 const tabs = [
   { key: 'chat', label: '消息', path: '/mobile/chat' },
-  { key: 'workbench', label: '工作台', path: '/mobile/workbench' },
   { key: 'contacts', label: '通讯录', path: '/mobile/contacts' },
-  { key: 'my', label: '我的', path: '/mobile/my' },
+  { key: 'workbench', label: '工作台', path: '/mobile/workbench' },
+  { key: 'stats', label: '统计', path: '/mobile/stats' },
+  { key: 'modules', label: '模块', path: '/mobile/modules' },
 ]
 
 const activeTab = ref('chat')
@@ -196,7 +209,27 @@ export default { name: 'MobileLayout' }
 
 .wx-nav-right {
   width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
+
+.wx-nav-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--wx-blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.wx-nav-avatar:active { opacity: 0.75; }
 
 /* ── 内容区 ── */
 .wx-content {
@@ -211,7 +244,6 @@ export default { name: 'MobileLayout' }
 /* ── 底部 Tab Bar ── */
 .wx-tabbar {
   height: 50px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: #fafafa;
   border-top: 1px solid #e0e0e0;
   display: flex;
@@ -272,5 +304,9 @@ export default { name: 'MobileLayout' }
   font-size: 10px;
   line-height: 1;
   font-weight: 500;
+}
+
+.wx-tabbar {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
 }
 </style>

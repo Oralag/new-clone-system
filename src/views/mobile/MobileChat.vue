@@ -248,43 +248,6 @@
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
     </div>
-
-    <!-- ── 新建会话弹窗 ── -->
-    <div v-if="showNewChat" class="chat-new-mask" @click.self="showNewChat = false">
-      <div class="chat-new-sheet">
-        <div class="chat-new-header">
-          <span>发起聊天</span>
-          <button @click="showNewChat = false">取消</button>
-        </div>
-        <div class="chat-new-body">
-          <div class="chat-new-item" @click="router.push('/mobile/meeting'); showNewChat = false">
-            <div class="chat-new-icon" style="background:#2E6BE6;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </div>
-            <div class="chat-new-info">
-              <div class="chat-new-title">发起群聊</div>
-              <div class="chat-new-sub">选择联系人创建群聊</div>
-            </div>
-            <span class="contacts-arrow">›</span>
-          </div>
-          <div class="chat-new-item" @click="router.push('/mobile/contacts'); showNewChat = false">
-            <div class="chat-new-icon" style="background:#52C41A;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-            </div>
-            <div class="chat-new-info">
-              <div class="chat-new-title">发起单聊</div>
-              <div class="chat-new-sub">从通讯录选择联系人</div>
-            </div>
-            <span class="contacts-arrow">›</span>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 

@@ -167,6 +167,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'contacts', name: 'MobileContacts', component: () => import('@/views/mobile/MobileContacts.vue'), meta: { title: '通讯录' } },
       { path: 'activity', name: 'MobileActivity', component: () => import('@/views/mobile/MobileActivity.vue'), meta: { title: '工作动态' } },
       { path: 'ai-bot', name: 'MobileAIBot', component: () => import('@/views/mobile/MobileAI.vue'), meta: { title: 'AI 管家' } },
+      { path: 'stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '数据统计' } },
+      { path: 'modules', name: 'MobileModules', component: () => import('@/views/mobile/MobileModules.vue'), meta: { title: '选择模块' } },
       { path: 'my', name: 'MobileMy', component: () => import('@/views/mobile/MobileMy.vue'), meta: { title: '我的' } },
       // ── 业务模块（复用 PC 端组件，MobileLayout 包裹）──
       // Sale
