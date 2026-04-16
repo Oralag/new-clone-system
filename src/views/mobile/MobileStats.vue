@@ -18,7 +18,7 @@
         <div class="ms-kpi-value">{{ customerTotal }}</div>
         <div class="ms-kpi-sub">全部客户</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/warehouse/stock')">
+      <div class="ms-kpi-card" @click="router.push('/mobile/warehouse/stock')">
         <div class="ms-kpi-label">库存预警</div>
         <div class="ms-kpi-value" :style="{ color: stockWarn > 0 ? '#f53f3f' : '#00b42a' }">{{ stockWarn }}</div>
         <div class="ms-kpi-sub">负库存+零库存</div>
@@ -107,7 +107,7 @@
           />
         </div>
       </div>
-      <div class="ms-report-btn" @click="router.push('/reports/sale-rate')">查看完整销售报表 →</div>
+      <div class="ms-report-btn" @click="router.push('/mobile/stats')">查看完整销售报表 →</div>
     </div>
 
     <!-- 快捷跳转 -->
@@ -118,11 +118,11 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span>销售统计</span>
         </div>
-        <div class="ms-ql-item" @click="router.push('/finance/overview')">
+        <div class="ms-ql-item" @click="router.push('/mobile/finance/overview')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           <span>财务总览</span>
         </div>
-        <div class="ms-ql-item" @click="router.push('/finance/receivable')">
+        <div class="ms-ql-item" @click="router.push('/mobile/finance/receivable')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           <span>应收账款</span>
         </div>
@@ -165,8 +165,8 @@ function parseGoodsInfo(g: any) {
 
 const todayStats = computed(() => {
   const today = getToday()
-  const fSale = _saleRows.value.filter((r: any) => (r.out_date||'').slice(0,10) === today)
-  const fRetail = _retailRows.value.filter((r: any) => (r.order_date||'').slice(0,10) === today)
+  const fSale = _saleRows.value.filter((r: any) => Number(r.status) === 1 && (r.out_date||'').slice(0,10) === today)
+  const fRetail = _retailRows.value.filter((r: any) => Number(r.status) === 1 && (r.order_date||'').slice(0,10) === today)
   const saleAmt = fSale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
   const retailAmt = fRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
   const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + 'w' : n.toFixed(2)
@@ -186,8 +186,8 @@ const salesStats = computed(() => {
   else if (statPeriod.value === '30d') { fromDate = cutoff(30); periodDays = 30 }
   else { fromDate = cutoff(90); periodDays = 90 }
 
-  const fSale = _saleRows.value.filter((r: any) => { const d = (r.out_date||'').slice(0,10); return d >= fromDate && d <= today })
-  const fRetail = _retailRows.value.filter((r: any) => { const d = (r.order_date||'').slice(0,10); return d >= fromDate && d <= today })
+  const fSale = _saleRows.value.filter((r: any) => Number(r.status) === 1 && (() => { const d = (r.out_date||'').slice(0,10); return d >= fromDate && d <= today })())
+  const fRetail = _retailRows.value.filter((r: any) => Number(r.status) === 1 && (() => { const d = (r.order_date||'').slice(0,10); return d >= fromDate && d <= today })())
   const saleAmt = fSale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
   const retailAmt = fRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
   const totalAmt = saleAmt + retailAmt
