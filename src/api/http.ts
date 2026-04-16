@@ -72,7 +72,7 @@ http.interceptors.response.use(
     const isMutation = method === 'POST' || method === 'PUT' || method === 'DELETE'
     if (status === 401 || status === 403) {
       localStorage.removeItem(TOKEN_NAME)
-      if (router.currentRoute.value.path !== '/login') {
+      if (router.currentRoute.value?.path !== '/login') {
         ElMessage.error('无访问权限，请重新登录')
         router.push('/login')
       }
