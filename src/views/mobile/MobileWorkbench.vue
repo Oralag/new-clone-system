@@ -80,7 +80,7 @@
           <div class="wb-quick-name">{{ app.name }}</div>
         </div>
         <!-- 更多应用 -->
-        <div class="wb-quick-item" @click="go('/mobile/apps')">
+        <div class="wb-quick-item" @click="go('/mobile/modules')">
           <div class="wb-quick-icon" style="background: rgba(0,0,0,0.04)">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.8">
               <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>

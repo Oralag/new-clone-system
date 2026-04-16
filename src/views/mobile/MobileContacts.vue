@@ -33,7 +33,31 @@
     <!-- 分组列表（企业微信风格：字母索引） -->
     <div class="contacts-body">
       <!-- 部门架构入口 -->
-      <div class="contacts-dept-entry" @click="router.push('/mobile/contacts/dept')">
+      
+      <!-- 机器人分类 -->
+      <div class="contacts-robot-section">
+        <div class="contacts-robot-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#722ED1" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="8.5" cy="16" r="1.5"/><circle cx="15.5" cy="16" r="1.5"/><path d="M12 2v6"/></svg>
+          机器人
+        </div>
+        <div
+          v-for="bot in robotAgents"
+          :key="bot.id"
+          class="contacts-item"
+          @click="router.push(bot.route)"
+        >
+          <div class="contacts-avatar" :style="{ background: bot.color }">{{ bot.avatar }}</div>
+          <div class="contacts-info">
+            <div class="contacts-name-row">
+              <span class="contacts-name">{{ bot.name }}</span>
+            </div>
+            <div class="contacts-dept">{{ bot.desc }}</div>
+          </div>
+          <span class="contacts-arrow">›</span>
+        </div>
+      </div>
+
+<div class="contacts-dept-entry" @click="router.push('/mobile/contacts/dept')">
         <div class="contacts-dept-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -442,3 +466,33 @@ export default { name: 'MobileContacts' }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 </style>
+
+/* ── 机器人分类 ── */
+.contacts-robot-section {
+  margin-top: 8px;
+}
+.contacts-robot-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #722ED1;
+  font-weight: 600;
+  background: #f9f0ff;
+}
+.contacts-item .contacts-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.contacts-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

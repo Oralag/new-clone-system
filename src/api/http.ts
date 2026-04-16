@@ -2,6 +2,7 @@ import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { TOKEN_NAME, API_URL } from '@/config'
 import router from '@/router'
+import { useAuthStore } from '@/stores/auth'
 
 const http = axios.create({
   baseURL: API_URL,
@@ -37,7 +38,6 @@ http.interceptors.response.use(
       // 清除 localStorage 和 Pinia store
       localStorage.removeItem(TOKEN_NAME)
       try {
-        const { useAuthStore } = require('@/stores/auth')
         const authStore = useAuthStore()
         authStore.token = ''
         authStore.userInfo = null
@@ -72,10 +72,12 @@ http.interceptors.response.use(
     const isMutation = method === 'POST' || method === 'PUT' || method === 'DELETE'
     if (status === 401 || status === 403) {
       localStorage.removeItem(TOKEN_NAME)
-      if (router.currentRoute.value?.path !== '/login') {
-        ElMessage.error('无访问权限，请重新登录')
-        router.push('/login')
-      }
+      try {
+        if (router.currentRoute && router.currentRoute.value && router.currentRoute.value.path !== '/login') {
+          ElMessage.error('无访问权限，请重新登录')
+          router.push('/login')
+        }
+      } catch { /* 忽略路由访问错误 */ }
     } else if (isMutation && status && status !== 404) {
       const messages: Record<number, string> = { 400: '请求参数错误', 500: '服务器内部错误' }
       ElMessage.error(messages[status] ?? '操作失败，请重试')

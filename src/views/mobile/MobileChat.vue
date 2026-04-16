@@ -72,7 +72,7 @@
           <div class="chat-empty-text">暂无消息</div>
         </div>
         <div
-          v-for="g in groups"
+          v-for="g in displayedGroups"
           :key="g.id"
           class="chat-item"
           @click="router.push(`/mobile/chat/${g.id}`)"
@@ -261,6 +261,13 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const groups = ref<any[]>([])
+const pinnedSessions = ref([
+  { id: 'ai-assistant', name: 'AI 管家', avatar_text: '🤖', last_msg: '随时为您服务', last_time: '', type: 'ai', unread: 0, route: '/mobile/ai' },
+  { id: 'captain', name: 'Captain', avatar_text: '⚓', last_msg: 'AI 船长，随时待命', last_time: '', type: 'ai', unread: 0, route: '/mobile/ai' },
+])
+
+// 显示列表：置顶 + 普通
+const displayedGroups = computed(() => [...pinnedSessions.value, ...groups.value])
 const contacts = ref<any[]>([])
 const searchKeyword = ref('')
 const searchResults = ref<any[]>([])
