@@ -619,6 +619,16 @@ const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广�
 .drawer-inner { padding: 10px 8px 14px; }
 .drawer-logo { display: flex; align-items: center; padding: 8px 6px 14px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
 
+/* 移动端抽屉样式限制 */
+:deep(.el-drawer) {
+  max-height: 100vh !important;
+}
+:deep(.el-drawer__body) {
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 !important;
+}
+
 @media (max-width: 767px) {
   .agent-layout { display: block; height: auto; min-height: 100vh; }
   .agent-main { min-height: calc(100vh - 50px); }

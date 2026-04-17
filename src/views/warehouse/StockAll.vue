@@ -1799,4 +1799,12 @@ watch(() => stockRefreshStore.version, () => {
     gap: 8px;
   }
 }
+/* 移动端抽屉高度限制 */
+:deep(.el-drawer) {
+  max-height: 100vh !important;
+}
+:deep(.el-drawer__body) {
+  height: 100%;
+  overflow-y: auto;
+}
 </style>
