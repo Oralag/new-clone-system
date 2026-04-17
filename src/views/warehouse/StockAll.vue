@@ -578,7 +578,9 @@ function formatStockWithUnits(goodsId: number, qty: number, baseUnit: string): s
 
 // 主显示：总基础单位数量
 function formatStockMain(goodsId: number, qty: number, baseUnit: string): string {
-  return `${qty.toFixed(0)} ${baseUnit}`
+  // 如果是整数直接显示，否则最多2位小数
+  const display = Number.isInteger(qty) ? qty.toString() : qty.toFixed(2).replace(/\.?0+$/, '')
+  return `${display} ${baseUnit}`
 }
 
 // 辅助显示：有大单位时显示"X大单位"，有小单位时显示"X小单位"
