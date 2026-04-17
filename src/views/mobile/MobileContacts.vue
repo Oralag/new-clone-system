@@ -162,7 +162,7 @@ const orgExpanded = ref(true)
 // ERP 系统真实 Agent（来自 agentRegistry.ts）
 const robotAgents = [
   { id: 'captain', name: 'Captain 总指挥', avatar: '🎯', color: '#6366f1', desc: '统一调度，协调各部门完成任务' },
-  { id: 'secretary', name: '广告秘书', avatar: '👩‍💼', color: '#f97316', desc: '广告部门秘书，协助处理广告事务' },
+  { id: 'secretary', name: '秘书', avatar: '👩‍💼', color: '#f97316', desc: '广告部门秘书，协助处理广告事务' },
   { id: 'copywriter', name: '文案Agent', avatar: '✍️', color: '#f59e0b', desc: '各平台爆款文案·标题·推广内容' },
   { id: 'poster', name: '海报Agent', avatar: '🎨', color: '#ec4899', desc: '海报创意·视觉设计·Remotion出图' },
   { id: 'video', name: '视频Agent', avatar: '🎬', color: '#ef4444', desc: '短视频脚本·分镜·Remotion视频' },

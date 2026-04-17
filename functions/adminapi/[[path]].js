@@ -83,6 +83,10 @@ function isChatPath(pathname) {
   return pathname.startsWith('/adminapi/chat/')
 }
 
+function isWorkPath(pathname) {
+  return pathname.startsWith('/adminapi/work/')
+}
+
 // Get user ID from token (JWT decode)
 function getUserId(request) {
   const headerId = request.headers.get('x-user-id')
@@ -197,6 +201,7 @@ async function logOperation(env, userId, actionType, actionName, extra = {}) {
 
 // Agent IDs（虚拟用户）
 const AGENT_IDS = new Set([
+  'ai-assistant-fixed',
   'captain', 'copywriter', 'poster', 'video', 'brand', 'trend', 'publisher', 'designer', 'marketing',
 ])
 
