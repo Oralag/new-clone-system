@@ -74,6 +74,36 @@
       </div>
     </div>
 
+    <!-- 常用功能 -->
+    <div class="wb-section">
+      <div class="wb-section-hd">
+        <span class="wb-section-dot" style="background: #F5A623"></span>
+        <span class="wb-section-title">常用功能</span>
+        <span class="wb-section-hint">长按可编辑</span>
+      </div>
+      <div class="wb-fav-scroll">
+        <div
+          v-for="fav in favoriteApps"
+          :key="fav.path"
+          class="wb-fav-item"
+          @click="go(fav.path)"
+        >
+          <div class="wb-fav-icon" :style="{ background: fav.bg }">
+            <span v-html="fav.icon" />
+          </div>
+          <div class="wb-fav-name">{{ fav.name }}</div>
+        </div>
+        <div class="wb-fav-item wb-fav-add" @click="go('/mobile/modules')">
+          <div class="wb-fav-icon" style="background: rgba(0,0,0,0.04)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.8">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+          <div class="wb-fav-name" style="color:#999">添加</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 快捷操作 -->
     <div class="wb-section">
       <div class="wb-section-hd">
@@ -144,6 +174,15 @@ const weekday = computed(() => {
   const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   return days[new Date().getDay()]
 })
+
+// 常用功能（横向滚动，用户可自行配置）
+const favoriteApps = ref([
+  { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+  { name: '采购入库', path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
+  { name: '仓库管理', path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
+  { name: '财务总览', path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
+  { name: '客户管理', path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
+])
 
 const quickApps = [
   { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
@@ -524,6 +563,52 @@ onMounted(async () => {
   text-align: center;
   line-height: 1.2;
 }
+
+/* ── 常用功能横向滚动 ── */
+.wb-section-hint {
+  font-size: 12px;
+  color: #bbb;
+  font-weight: 400;
+  margin-left: auto;
+}
+.wb-fav-scroll {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.wb-fav-scroll::-webkit-scrollbar { display: none; }
+.wb-fav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.wb-fav-item:active .wb-fav-icon { opacity: 0.7; }
+.wb-fav-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+.wb-fav-name {
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+  max-width: 52px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wb-fav-add .wb-fav-name { color: #bbb; }
 
 /* ── 动态列表 ── */
 .wb-empty { text-align: center; padding: 24px; color: #999; font-size: 13px; }

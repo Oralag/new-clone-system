@@ -238,11 +238,10 @@ export default { name: 'MobileLayout' }
 /* ── 内容区 ── */
 .wx-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  min-height: 0;
+  overflow: hidden;
   background: #fff;
+  position: relative;
 }
 
 /* ── 底部 Tab Bar ── */
