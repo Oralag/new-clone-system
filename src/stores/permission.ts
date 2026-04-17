@@ -41,10 +41,13 @@ export const usePermissionStore = defineStore('permission', {
 
     // Returns top-level menu items, with children filtered to only allowed sub-menus
     filteredMenuData(state): TopMenuItem[] {
-      if (!state.isSubAccount || !state.permConfig) return menuData
+      if (!state.isSubAccount) return menuData
+      // 子账号：无论有没有角色，始终隐藏设置菜单
+      const base = menuData.filter(m => m.key !== 'setting')
+      if (!state.permConfig) return base
       const allowed = new Set(state.permConfig.menus)
       const result: TopMenuItem[] = []
-      for (const menu of menuData) {
+      for (const menu of base) {
         const visibleChildren = menu.children.filter(c => allowed.has(c.key))
         if (visibleChildren.length > 0) {
           result.push({ ...menu, children: visibleChildren })
@@ -74,19 +77,24 @@ export const usePermissionStore = defineStore('permission', {
   actions: {
     // Called on login — parse remark field for sub-account permissions
     setFromUserInfo(userInfo: Record<string, any>) {
-      const remark: string = userInfo?.remark || ''
-      if (remark.startsWith(PERM_PREFIX)) {
-        try {
-          const json = remark.slice(PERM_PREFIX.length)
-          const parsed = JSON.parse(json) as PermConfig
-          // Migrate old top-level keys to sub-menu keys
-          const keys = expandLegacyKeys(parsed.menus || [])
-          this.permConfig = { menus: keys }
-          this.isSubAccount = true
-          return
-        } catch {
-          // invalid JSON, treat as main account
+      const SUPER_ADMIN = '17747344571'
+      // 非超管账号一律视为子账号
+      if (userInfo?.account !== SUPER_ADMIN) {
+        const remark: string = userInfo?.remark || ''
+        if (remark.startsWith(PERM_PREFIX)) {
+          try {
+            const json = remark.slice(PERM_PREFIX.length)
+            const parsed = JSON.parse(json) as PermConfig
+            const keys = expandLegacyKeys(parsed.menus || [])
+            this.permConfig = { menus: keys }
+          } catch {
+            this.permConfig = null
+          }
+        } else {
+          this.permConfig = null
         }
+        this.isSubAccount = true
+        return
       }
       this.isSubAccount = false
       this.permConfig = null

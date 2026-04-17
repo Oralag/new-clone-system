@@ -17,8 +17,11 @@
       <!-- 机器人分类 -->
       <div class="contacts-robot-section">
         <div class="contacts-robot-title" @click="robotExpanded = !robotExpanded">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#722ED1" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="8.5" cy="16" r="1.5"/><circle cx="15.5" cy="16" r="1.5"/><path d="M12 2v6"/></svg>
-          机器人
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#722ED1" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="8.5" cy="16" r="1.5"/><circle cx="15.5" cy="16" r="1.5"/><path d="M12 2v6"/></svg>
+          <div class="contacts-robot-title-text">
+            <span>机器人Agent</span>
+            <span class="contacts-robot-subtitle">AI 智能助手团队，随时为您服务</span>
+          </div>
           <span class="contacts-robot-count">{{ robotAgents.length }}</span>
           <span class="contacts-section-arrow" :class="{ collapsed: !robotExpanded }">▾</span>
         </div>
@@ -510,14 +513,25 @@ export default { name: 'MobileContacts' }
 .contacts-robot-title {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 16px;
-  font-size: 12px;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 15px;
   color: #722ED1;
-  font-weight: 600;
+  font-weight: 700;
   background: #f9f0ff;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+.contacts-robot-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.contacts-robot-subtitle {
+  font-size: 11px;
+  color: #b37feb;
+  font-weight: 400;
 }
 .contacts-robot-count {
   font-size: 11px;
