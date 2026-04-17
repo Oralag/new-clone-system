@@ -136,6 +136,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAdminList } from '@/api/setting'
+import { createChatGroup } from '@/api/chat'
 import http from '@/api/http'
 
 const router = useRouter()
@@ -149,17 +150,17 @@ const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 const robotExpanded = ref(true)
 
-// 系统所有 Agent/机器人员工
+// ERP 系统真实 Agent（来自 agentRegistry.ts）
 const robotAgents = [
-  { id: 'captain', name: 'Captain 总指挥', avatar: '🎯', color: '#722ED1', desc: '统一调度，协调各部门完成任务', route: '/agent/meeting' },
-  { id: 'ai-assistant', name: 'AI 管家', avatar: '🤖', color: '#0071e3', desc: '智能对话助手，随时为您服务', route: '/mobile/ai' },
-  { id: 'content', name: '内容部', avatar: '✍️', color: '#f59e0b', desc: '文案·视频全链路内容生产', route: '/agent/content' },
-  { id: 'creative', name: '创意部', avatar: '🎨', color: '#ec4899', desc: '海报·视觉设计·创意策略', route: '/agent/creative' },
-  { id: 'brand', name: '品牌部', avatar: '💎', color: '#8b5cf6', desc: '品牌战略·调性把控·竞品分析', route: '/agent/brand' },
-  { id: 'intel', name: '情报部', avatar: '📈', color: '#06b6d4', desc: '热点追踪·趋势分析·选题建议', route: '/agent/trending' },
-  { id: 'publish', name: '发布部', avatar: '🚀', color: '#10b981', desc: '多平台排期·发布计划·数据复盘', route: '/agent/publish' },
-  { id: 'marketing', name: '营销顾问', avatar: '📊', color: '#059669', desc: '营销战略·客户分析·定价策略', route: '/agent/marketing' },
-  { id: 'designer', name: '平面设计师', avatar: '🖼️', color: '#e11d48', desc: '海报·Banner·Logo·包装·社媒图', route: '/agent/designer' },
+  { id: 'captain', name: 'Captain 总指挥', avatar: '🎯', color: '#6366f1', desc: '统一调度，协调各部门完成任务' },
+  { id: 'copywriter', name: '文案Agent', avatar: '✍️', color: '#f59e0b', desc: '各平台爆款文案·标题·推广内容' },
+  { id: 'poster', name: '海报Agent', avatar: '🎨', color: '#ec4899', desc: '海报创意·视觉设计·Remotion出图' },
+  { id: 'video', name: '视频Agent', avatar: '🎬', color: '#ef4444', desc: '短视频脚本·分镜·Remotion视频' },
+  { id: 'brand', name: '品牌Agent', avatar: '💎', color: '#8b5cf6', desc: '品牌策略·调性审核·品牌守门人' },
+  { id: 'trend', name: '趋势Agent', avatar: '📈', color: '#06b6d4', desc: '热点追踪·选题建议·趋势洞察' },
+  { id: 'publisher', name: '发布Agent', avatar: '🚀', color: '#10b981', desc: '多平台排期·内容发布·数据复盘' },
+  { id: 'designer', name: '平面设计师', avatar: '🖼️', color: '#e11d48', desc: '海报·Banner·Logo·包装·社媒图' },
+  { id: 'marketing', name: '营销顾问', avatar: '📊', color: '#059669', desc: '营销战略·STP·4P·消费者行为' },
 ]
 
 const filteredEmployees = computed(() => {
@@ -183,20 +184,30 @@ function viewEmployee(c: any) {
   }
 }
 
-function openAgent(bot: any) {
-  // AI 管家跳转到 AI 对话页
-  if (bot.id === 'ai-assistant') {
-    router.push('/mobile/ai')
-    return
-  }
-  // 其他 Agent：与普通员工一样发起聊天
-  // bot.id 作为虚拟用户 id，在聊天中可以触发 AI 自动回复
-  const existing = groups.value.find((g: any) =>
-    g.member_ids?.includes(bot.id) && g.member_ids?.length === 2
-  )
-  if (existing) {
-    router.push(`/mobile/chat/${existing.id}`)
-  } else {
+async function openAgent(bot: any) {
+  // 查找是否已有与该 Agent 的私聊
+  try {
+    const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
+    const chatGroups: any[] = res?.data?.rows ?? res?.rows ?? []
+    const existing = chatGroups.find((g: any) =>
+      g.member_ids?.includes(bot.id) && g.member_ids?.length === 2
+    )
+    if (existing) {
+      router.push(`/mobile/chat/${existing.id}`)
+      return
+    }
+    // 没有则直接创建私聊
+    const newGroup = await createChatGroup({
+      name: bot.name,
+      member_ids: [bot.id],
+    })
+    const groupId = newGroup?.data?.id ?? newGroup?.id
+    if (groupId) {
+      router.push(`/mobile/chat/${groupId}`)
+    }
+  } catch (e) {
+    console.error('打开Agent聊天失败', e)
+    // fallback：走发起新会话页面
     router.push(`/mobile/chat/new?userId=${bot.id}&name=${encodeURIComponent(bot.name)}&isAgent=1`)
   }
 }

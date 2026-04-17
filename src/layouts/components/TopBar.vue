@@ -8,6 +8,9 @@
     </div>
 
     <div class="top-actions">
+      <!-- 当前账号名称 -->
+      <span class="account-label">{{ isSuperAdmin ? '管理员' : authStore.userName }}</span>
+
       <!-- 返回选择模块 -->
       <el-tooltip content="选择模块" placement="bottom">
         <button class="action-btn" @click="router.push('/portal')">
@@ -76,7 +79,7 @@
           <el-avatar :size="28" :src="authStore.avatar" class="avatar">
             {{ authStore.userName.charAt(0) }}
           </el-avatar>
-          <span class="user-name">{{ isSuperAdmin ? (appStore.companyName || authStore.userName) : authStore.userName }}</span>
+          <span class="user-name">{{ appStore.companyName || authStore.userName }}</span>
           <el-icon class="arrow-icon"><ArrowDown /></el-icon>
         </div>
         <template #dropdown>
@@ -352,6 +355,13 @@ async function handleUserCmd(cmd: string) {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.account-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary, #666);
+  margin-right: 2px;
 }
 
 .action-btn {
