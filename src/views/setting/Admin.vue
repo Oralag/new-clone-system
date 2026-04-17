@@ -2,7 +2,7 @@
   <div class="page-container">
     <el-card>
       <ScTable ref="tableRef" :api-obj="getAdminList"
-          del-path="/setting/admin/batchDel"
+          :batch-del-api="batchDeleteAdmin"
           export-file-name="管理员" :params="searchForm">
         <template #search>
           <el-form inline>
@@ -214,6 +214,12 @@ async function handleSubmit() {
     tableRef.value?.refresh()
   } finally {
     submitting.value = false
+  }
+}
+
+async function batchDeleteAdmin({ ids }: { ids: number[] }) {
+  for (const id of ids) {
+    await deleteAdmin(id)
   }
 }
 

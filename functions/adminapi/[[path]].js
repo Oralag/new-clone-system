@@ -1,5 +1,5 @@
 // Cloudflare Pages Function — /adminapi/[[path]]
-// Handles KV-based register/login and proxies all other requests to backend
+// Handles KV-based register/login, chat API, and proxies other requests to backend
 
 const DEFAULT_BACKEND = 'https://erp-server-xsji.onrender.com'
 
@@ -10,6 +10,12 @@ const TRIAL_PASSTHROUGH = [
   '/adminapi/auth/',
   '/adminapi/login/info',
   '/adminapi/setting/company',
+]
+
+// Chat API paths (handled locally, not proxied)
+const CHAT_PATHS = [
+  '/adminapi/chat/groups',
+  '/adminapi/chat/unread',
 ]
 
 function corsHeaders() {
@@ -24,6 +30,25 @@ function jsonRes(data) {
   return new Response(JSON.stringify(data), {
     headers: { 'Content-Type': 'application/json', ...corsHeaders() },
   })
+}
+
+function jsonSuccess(data) {
+  return new Response(JSON.stringify({ code: 1, data }), {
+    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+  })
+}
+
+function errRes(msg, code = 0) {
+  return new Response(JSON.stringify({ code, message: msg, data: [] }), {
+    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+  })
+}
+
+function nowMs() { return Date.now() }
+
+function extractGroupId(path) {
+  const m = path.match(/\/adminapi\/chat\/groups\/(\d+)/)
+  return m ? parseInt(m[1]) : null
 }
 
 // Decode wrapped token → { realToken, backend, account, trial }
@@ -52,6 +77,288 @@ function wrapToken(realToken, backend, account, company, trial = false) {
 
 function isTrialPassthrough(pathname) {
   return TRIAL_PASSTHROUGH.some(p => pathname.startsWith(p))
+}
+
+function isChatPath(pathname) {
+  return pathname.startsWith('/adminapi/chat/')
+}
+
+// Get user ID from token (JWT decode)
+function getUserId(request) {
+  const headerId = request.headers.get('x-user-id')
+  if (headerId) return parseInt(headerId)
+
+  let token = request.headers.get('token')
+  if (!token) {
+    const auth = request.headers.get('Authorization') || ''
+    token = auth.replace(/^Bearer\s+/i, '').trim()
+  }
+  if (!token) return null
+
+  // Wrapped token: decode to get realToken (JWT)
+  if (token.startsWith('erp_')) {
+    const decoded = decodeToken(token)
+    if (decoded?.realToken) token = decoded.realToken
+    else return null
+  }
+
+  // Local registered user
+  if (token.startsWith('local_')) {
+    try {
+      const payload = JSON.parse(atob(token.slice(6)))
+      return payload.admin_id || payload.userId || payload.id
+    } catch { return null }
+  }
+
+  // JWT token
+  try {
+    const parts = token.split('.')
+    if (parts.length === 3) {
+      const raw = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+      const padded = raw + '='.repeat((4 - raw.length % 4) % 4)
+      const payload = JSON.parse(atob(padded))
+      return payload.admin_id || payload.user_id || payload.id || null
+    }
+  } catch {
+    try {
+      const payload = JSON.parse(atob(token.replace(/-/g, '+').replace(/_/g, '/')))
+      return payload.admin_id || payload.user_id || payload.id || null
+    } catch {}
+  }
+  return null
+}
+
+async function getUserInfo(userId, env) {
+  if (!userId) return { name: '未知用户', position: '成员' }
+  const raw = await env.USERS_KV.get(`user_info:${userId}`)
+  if (raw) return JSON.parse(raw)
+  try {
+    const res = await fetch(`https://saas.mzth.cn/adminapi/admin/Admin/index?admin_id=${userId}`, {
+      headers: { 'Content-Type': 'application/json' }
+    })
+    const data = await res.json()
+    if (data?.data?.rows?.[0]) {
+      const u = data.data.rows[0]
+      const info = { name: u.name || u.account, position: u.position || '成员', dept: u.dept || '' }
+      await env.USERS_KV.put(`user_info:${userId}`, JSON.stringify(info), { expirationTtl: 3600 })
+      return info
+    }
+  } catch {}
+  return { name: `用户${userId}`, position: '成员' }
+}
+
+async function logOperation(env, userId, actionType, actionName, extra = {}) {
+  const raw = await env.USERS_KV.get('operation_logs')
+  const logs = raw ? JSON.parse(raw) : []
+  logs.push({
+    id: nowMs() + Math.floor(Math.random() * 1000),
+    user_id: userId,
+    action_type: actionType,
+    action_name: actionName,
+    extra,
+    created_at: new Date().toISOString(),
+  })
+  if (logs.length > 10000) logs.splice(0, logs.length - 10000)
+  await env.USERS_KV.put('operation_logs', JSON.stringify(logs))
+}
+
+// ════════════════════════════════════════════════
+// Chat API Handlers
+// ════════════════════════════════════════════════
+
+async function handleChatGroups(request, env) {
+  const userId = getUserId(request)
+  const url = new URL(request.url)
+  const listRows = parseInt(url.searchParams.get('list_rows') || '50')
+  const page = parseInt(url.searchParams.get('page') || '1')
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+
+  const userGroups = groups.filter(g => {
+    const members = memberMap[g.id] || []
+    return members.some(m => m.user_id === userId) || g.created_by === userId
+  }).slice((page - 1) * listRows, page * listRows)
+
+  const msgRaw = await env.USERS_KV.get('chat_messages')
+  const msgMap = msgRaw ? JSON.parse(msgRaw) : {}
+
+  const result = await Promise.all(userGroups.map(async g => {
+    const msgs = (msgMap[g.id] || []).slice(-1)
+    const lastMsg = msgs[0] || null
+    const unreadRaw = await env.USERS_KV.get(`chat_unread:${userId}:${g.id}`)
+    const members = memberMap[g.id] || []
+    return {
+      ...g,
+      member_ids: members.map(m => m.user_id),
+      last_message: lastMsg?.content || '',
+      last_message_at: lastMsg?.created_at || g.created_at,
+      unread: unreadRaw ? parseInt(unreadRaw) : 0,
+    }
+  }))
+
+  return jsonSuccess({ rows: result, total: userGroups.length })
+}
+
+async function handleCreateGroup(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  let body
+  try { body = await request.json() } catch { return errRes('请求格式错误') }
+
+  const { name, member_ids = [] } = body
+  if (!name?.trim()) return errRes('请输入群名称')
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+
+  const newId = nowMs() + Math.floor(Math.random() * 1000)
+  const now = new Date().toISOString()
+
+  const allMembers = [...new Set([userId, ...member_ids])].map(id => ({ user_id: id }))
+  const userInfo = await getUserInfo(userId, env)
+
+  const newGroup = {
+    id: newId,
+    name: name.trim(),
+    created_by: userId,
+    creator_name: userInfo.name,
+    created_at: now,
+    updated_at: now,
+  }
+
+  groups.push(newGroup)
+
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+  memberMap[newId] = allMembers
+
+  await Promise.all([
+    env.USERS_KV.put('chat_groups', JSON.stringify(groups)),
+    env.USERS_KV.put('chat_members', JSON.stringify(memberMap)),
+  ])
+
+  await logOperation(env, userId, 'chat_create', `创建群聊「${name}」`, { group_id: newId, group_name: name })
+
+  return jsonSuccess({ ...newGroup, member_ids: allMembers.map(m => m.user_id), unread: 0, last_message: '' })
+}
+
+async function handleGetGroup(request, env) {
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+  const group = groups.find(g => g.id === groupId)
+  if (!group) return errRes('群不存在')
+
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const members = memberRaw ? JSON.parse(memberRaw)[groupId] || [] : []
+
+  const membersWithInfo = await Promise.all(members.map(async m => {
+    const info = await getUserInfo(m.user_id, env)
+    return { ...m, ...info }
+  }))
+
+  return jsonSuccess({ ...group, members: membersWithInfo, member_ids: members.map(m => m.user_id) })
+}
+
+async function handleGetMessages(request, env) {
+  const userId = getUserId(request)
+  const url = new URL(request.url)
+  const groupId = extractGroupId(request.url)
+  const listRows = parseInt(url.searchParams.get('list_rows') || '50')
+
+  if (!groupId) return errRes('群不存在')
+
+  const raw = await env.USERS_KV.get('chat_messages')
+  const msgMap = raw ? JSON.parse(raw) : {}
+  let msgs = (msgMap[groupId] || []).slice(-listRows)
+
+  const msgsWithUser = await Promise.all(msgs.map(async m => {
+    const info = await getUserInfo(m.sender_id, env)
+    return { ...m, sender_name: info.name }
+  }))
+
+  if (userId) {
+    await env.USERS_KV.put(`chat_unread:${userId}:${groupId}`, '0')
+  }
+
+  return jsonSuccess({ rows: msgsWithUser, total: msgsWithUser.length })
+}
+
+async function handleSendMessage(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+
+  let body
+  try { body = await request.json() } catch { return errRes('请求格式错误') }
+
+  const { content, type = 'text' } = body
+  if (!content?.trim()) return errRes('消息内容不能为空')
+
+  const userInfo = await getUserInfo(userId, env)
+  const now = new Date().toISOString()
+
+  const msg = {
+    id: nowMs() + Math.floor(Math.random() * 1000),
+    group_id: groupId,
+    sender_id: userId,
+    sender_name: userInfo.name,
+    content: content.trim(),
+    type,
+    created_at: now,
+  }
+
+  const raw = await env.USERS_KV.get('chat_messages')
+  const msgMap = raw ? JSON.parse(raw) : {}
+  if (!msgMap[groupId]) msgMap[groupId] = []
+  msgMap[groupId].push(msg)
+
+  if (msgMap[groupId].length > 2000) {
+    msgMap[groupId] = msgMap[groupId].slice(-2000)
+  }
+
+  await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap))
+
+  const groupsRaw = await env.USERS_KV.get('chat_groups')
+  const groups = groupsRaw ? JSON.parse(groupsRaw) : []
+  const gIdx = groups.findIndex(g => g.id === groupId)
+  if (gIdx !== -1) {
+    groups[gIdx].last_message_at = now
+    await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+  }
+
+  await logOperation(env, userId, 'chat_message', content, { group_id: groupId, message_id: msg.id })
+
+  return jsonSuccess(msg)
+}
+
+async function handleChatUnread(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+
+  let total = 0
+  for (const g of groups) {
+    const members = memberMap[g.id] || []
+    if (members.some(m => m.user_id === userId) || g.created_by === userId) {
+      const unreadRaw = await env.USERS_KV.get(`chat_unread:${userId}:${g.id}`)
+      total += unreadRaw ? parseInt(unreadRaw) : 0
+    }
+  }
+
+  return jsonSuccess({ total })
 }
 
 // ── PBKDF2 password utils (Web Crypto) ──────────────────────────────────────
@@ -231,6 +538,38 @@ export async function onRequest(context) {
     let body
     try { body = await request.json() } catch { body = {} }
     return handleLogin(body, env)
+  }
+
+  // ════════════════════════════════════════════════
+  // Chat API (handled locally with KV storage)
+  // ════════════════════════════════════════════════
+  if (isChatPath(pathname)) {
+    // GET /adminapi/chat/groups - list groups
+    if (pathname === '/adminapi/chat/groups' && request.method === 'GET') {
+      return handleChatGroups(request, env)
+    }
+    // POST /adminapi/chat/groups - create group
+    if (pathname === '/adminapi/chat/groups' && request.method === 'POST') {
+      return handleCreateGroup(request, env)
+    }
+    // GET /adminapi/chat/groups/:id - get group detail
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && !pathname.includes('/messages') && request.method === 'GET') {
+      return handleGetGroup(request, env)
+    }
+    // GET /adminapi/chat/groups/:id/messages - get messages
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/messages$/) && request.method === 'GET') {
+      return handleGetMessages(request, env)
+    }
+    // POST /adminapi/chat/groups/:id/messages - send message
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/messages$/) && request.method === 'POST') {
+      return handleSendMessage(request, env)
+    }
+    // GET /adminapi/chat/groups/unread - get unread count
+    if (pathname === '/adminapi/chat/groups/unread' && request.method === 'GET') {
+      return handleChatUnread(request, env)
+    }
+    // Fallback for unhandled chat paths
+    return errRes('聊天功能暂不支持')
   }
 
   // All other requests: decode token and proxy to correct backend
