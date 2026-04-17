@@ -108,7 +108,7 @@
           />
         </div>
       </div>
-      <div class="ms-report-btn" @click="router.push('/mobile/stats')">查看完整销售报表 →</div>
+      <div class="ms-report-btn" @click="router.push('/reports/sale-rate')">查看完整销售报表 →</div>
     </div>
 
     <!-- 快捷跳转 -->

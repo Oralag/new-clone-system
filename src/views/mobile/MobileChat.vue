@@ -298,17 +298,15 @@ const showPlusMenu = ref(false)
 const activeTab = ref('all')
 
 // 显示列表：固定置顶 + 用户置顶/普通会话（按最新时间排序，置顶优先）
-// 只显示通讯录中有名字的聊天，且按 id 去重
+// 按 id 去重，保留所有聊天（包括不在通讯录的）
 const displayedGroups = computed(() => {
   const fixedIds = new Set(pinnedSessions.value.map(p => p.id))
-  const contactNames = new Set(contacts.value.map((c: any) => c.name))
   const seen = new Set<string>()
   const filtered = groups.value.filter(g => {
     if (!g.id) return false
     if (seen.has(g.id)) return false
     seen.add(g.id)
-    if (fixedIds.has(g.id)) return false
-    return contactNames.has(g.name)
+    return !fixedIds.has(g.id)
   })
   const sorted = [...filtered].sort((a, b) => {
     if (!!b.is_pinned !== !!a.is_pinned) return b.is_pinned ? 1 : -1
@@ -366,6 +364,10 @@ async function togglePin(g: any) {
 
 async function deleteGroup(g: any) {
   closeSwipe()
+  // 确认对话框
+  if (!confirm(`确定要删除与 "${g.name}" 的聊天吗？\n\n删除后聊天记录将无法恢复。`)) {
+    return
+  }
   try {
     await http.delete(`/chat/groups/${g.id}`)
     groups.value = groups.value.filter(x => x.id !== g.id)
