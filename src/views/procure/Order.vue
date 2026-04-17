@@ -148,11 +148,12 @@
             </template>
           </el-table-column>
           <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-          <el-table-column label="操作" width="220" fixed="right">
+          <el-table-column label="操作" width="260" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && getPayStatus(row).label !== '已付清'" type="success" link size="small" @click="openPayDialog(row)">付款</el-button>
+              <el-button v-if="row.status === 1" type="warning" link size="small" @click="openFeeManageDialog(row)">费用</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
@@ -653,6 +654,47 @@
       <template #footer>
         <el-button @click="payDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="paySubmitting" @click="submitPay">确认付款</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 附加费用管理弹窗（已审核后从列表补充） -->
+    <el-dialog v-model="feeManageVisible" title="管理附加费用" width="560px" append-to-body>
+      <div style="margin-bottom:8px;font-size:13px;color:rgba(29,29,31,0.5)">
+        {{ feeManageRow?.order_no || feeManageRow?.order_sn }} · {{ feeManageRow?.supplier_name }}
+      </div>
+      <div v-for="(fee, idx) in feeManageItems" :key="idx" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <el-select v-model="fee.name" size="small" style="width:130px" filterable allow-create default-first-option placeholder="费用类型">
+          <el-option label="运费" value="运费" />
+          <el-option label="装卸费" value="装卸费" />
+          <el-option label="检测费" value="检测费" />
+          <el-option label="包装费" value="包装费" />
+          <el-option label="仓储费" value="仓储费" />
+          <el-option label="单据支出" value="单据支出" />
+          <el-option label="其他费用" value="其他费用" />
+        </el-select>
+        <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:120px" placeholder="金额" />
+        <el-select v-model="fee.bearer" size="small" style="width:110px">
+          <el-option label="我方承担" value="buyer" />
+          <el-option label="供应商承担" value="seller" />
+          <el-option label="各半" value="half" />
+          <el-option label="免费" value="free" />
+        </el-select>
+        <el-tag v-if="getFeeItemPayStatus(feeManageRow, idx).label !== '—'" :type="getFeeItemPayStatus(feeManageRow, idx).type" size="small">
+          {{ getFeeItemPayStatus(feeManageRow, idx).label }}
+        </el-tag>
+        <el-button
+          v-if="getFeeItemPayStatus(feeManageRow, idx).label === '待付'"
+          type="warning" link size="small"
+          @click="feeManageVisible = false; openFeePayDialog({ ...feeManageRow, fee_items: feeManageItems }, idx)"
+        >付款</el-button>
+        <el-button type="danger" link :icon="Delete" size="small" @click="feeManageItems.splice(idx, 1)" />
+      </div>
+      <el-button type="primary" link size="small" :icon="Plus" @click="feeManageItems.push({ name: '运费', amount: 0, bearer: 'buyer' })">
+        添加费用项
+      </el-button>
+      <template #footer>
+        <el-button @click="feeManageVisible = false">取消</el-button>
+        <el-button type="primary" :loading="feeManageSaving" @click="submitFeeManage">保存</el-button>
       </template>
     </el-dialog>
 
@@ -1358,6 +1400,36 @@ function getFreightPayStatus(row: any): { label: string; type: string } {
   const needPay = bearer === 'half' ? freightAmt / 2 : freightAmt
   if (paid >= needPay - 0.01) return { label: '已付', type: 'success' }
   return { label: '待付', type: 'warning' }
+}
+
+// ── 附加费用管理弹窗（列表里已审核单补充费用）────────────────────────────────
+const feeManageVisible = ref(false)
+const feeManageSaving = ref(false)
+const feeManageRow = ref<any>(null)
+const feeManageItems = ref<{ name: string; amount: number; bearer: string }[]>([])
+
+function openFeeManageDialog(row: any) {
+  feeManageRow.value = row
+  feeManageItems.value = JSON.parse(JSON.stringify(getFeeItemsForRow(row)))
+  feeManageVisible.value = true
+}
+
+async function submitFeeManage() {
+  feeManageSaving.value = true
+  try {
+    await updateProcureOrder({
+      id: feeManageRow.value.id,
+      fee_items: JSON.stringify(feeManageItems.value),
+    })
+    ElMessage.success('费用保存成功')
+    feeManageVisible.value = false
+    tableRef.value?.refresh()
+    loadPaidMap()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '保存失败')
+  } finally {
+    feeManageSaving.value = false
+  }
 }
 
 // ── 费用付款弹窗（统一）────────────────────────────────────────────────────────
