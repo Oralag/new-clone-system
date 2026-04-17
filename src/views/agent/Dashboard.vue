@@ -709,4 +709,53 @@ const topTrending = computed(() => {
 @media (max-width: 560px) {
   .trending-list { grid-template-columns: 1fr; }
 }
+
+/* ── 移动端适配优化 ── */
+@media (max-width: 768px) {
+  .dashboard { padding: 12px; }
+  
+  /* 品牌配置栏 */
+  .brand-config-bar { flex-direction: column; gap: 12px; padding: 14px; }
+  .bcb-left { width: 100%; }
+  .bcb-btn { width: 100%; }
+  
+  /* 指令台 */
+  .command-section { padding: 16px; }
+  .command-header { flex-direction: column; gap: 12px; }
+  .command-chips { flex-wrap: wrap; }
+  
+  /* Hero Banner */
+  .hero-banner { flex-direction: column; padding: 20px; }
+  .hero-left { width: 100%; }
+  .hero-title { font-size: 22px; line-height: 1.3; }
+  .hero-title br { display: none; }
+  .hero-actions { flex-direction: column; gap: 8px; }
+  .hero-btn { width: 100%; justify-content: center; }
+  
+  /* 中间网格 */
+  .mid-grid { grid-template-columns: 1fr; gap: 12px; }
+  
+  /* 公司横幅 */
+  .company-banner { flex-direction: column; padding: 16px; gap: 12px; }
+  .banner-quick-actions { width: 100%; justify-content: stretch; }
+  .banner-quick-actions button { flex: 1; }
+  
+  /* 热搜列表 */
+  .trending-list { grid-template-columns: 1fr; }
+  
+  /* 部门卡片 */
+  .dept-grid { grid-template-columns: 1fr; gap: 12px; }
+  .dept-card { padding: 16px; }
+  
+  /* 状态网格 */
+  .status-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .status-card { padding: 12px; }
+  .status-value { font-size: 20px; }
+}
+
+@media (max-width: 480px) {
+  .hero-title { font-size: 18px; }
+  .hero-desc { font-size: 13px; }
+  .status-grid { grid-template-columns: 1fr; }
+}
 </style>

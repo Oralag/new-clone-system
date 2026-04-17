@@ -175,7 +175,18 @@ const routes: RouteRecordRaw[] = [
       // ── ERP 首页（复用 PC Dashboard，自带移动端适配）──
       { path: 'dashboard', name: 'MobileDashboard', component: () => import('@/views/Dashboard.vue'), meta: { title: '首页' } },
       // ── Agent / Investment / Brand（复用 PC 端组件）──
-      { path: 'agent', name: 'MobileAgent', component: () => import('@/layouts/AgentLayout.vue'), meta: { title: '智能体工作流' } },
+      {
+        path: 'agent',
+        component: () => import('@/layouts/AgentLayout.vue'),
+        children: [
+          { path: '', name: 'MobileAgent', component: () => import('@/views/agent/Dashboard.vue'), meta: { title: '智能体工作台' } },
+          { path: 'meeting', name: 'MobileAgentMeeting', component: () => import('@/views/agent/MeetingRoom.vue'), meta: { title: '会议室' } },
+          { path: 'tasks', name: 'MobileAgentTasks', component: () => import('@/views/agent/TaskCenter.vue'), meta: { title: '任务中心' } },
+          { path: 'content', name: 'MobileAgentContent', component: () => import('@/views/agent/ContentDept.vue'), meta: { title: '内容部' } },
+          { path: 'creative', name: 'MobileAgentCreative', component: () => import('@/views/agent/CreativeDept.vue'), meta: { title: '创意部' } },
+          { path: 'brand', name: 'MobileAgentBrand', component: () => import('@/views/agent/BrandDept.vue'), meta: { title: '品牌部' } },
+        ]
+      },
       { path: 'investment', name: 'MobileInvestment', component: () => import('@/layouts/InvestmentLayout.vue'), meta: { title: '对外投资' } },
       { path: 'brand', name: 'MobileBrand', component: () => import('@/layouts/BrandLayout.vue'), meta: { title: '品牌主页' } },
       // ── 业务模块（复用 PC 端组件，MobileLayout 包裹）──

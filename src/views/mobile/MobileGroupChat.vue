@@ -570,7 +570,10 @@ onUnmounted(() => {
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
+  overflow: hidden; /* 强制只有 flex 子元素可滚动 */
   background: #f5f5f7;
+  /* 防止 iOS 橡皮筋滚动导致页面整体被拖动 */
+  overscroll-behavior: none;
 }
 
 /* ── 顶部栏 ── */
@@ -616,6 +619,7 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: 12px 12px;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .m-gc-loading-more {
   text-align: center;
