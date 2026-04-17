@@ -1,40 +1,5 @@
 <template>
   <div class="wb-page">
-    <!-- 顶部背景区（企业微信蓝色头部，含头像卡片） -->
-    <div class="wb-header" @click="router.push('/mobile/my')">
-      <div class="wb-profile-row">
-        <div class="wb-avatar">{{ authStore.userName?.[0] || '我' }}</div>
-        <div class="wb-profile-info">
-          <span class="wb-hi">{{ greeting }}, {{ authStore.userName }}</span>
-          <span class="wb-company">{{ authStore.companyName || '数字游牧' }}</span>
-        </div>
-        <span class="wb-profile-arrow">›</span>
-      </div>
-      <div class="wb-date-row">
-        <span class="wb-date">{{ today }}</span>
-        <span class="wb-weekday">{{ weekday }}</span>
-      </div>
-    </div>
-
-    <!-- 今日概况（卡片式，企业微信风格） -->
-    <div class="wb-cards">
-      <div class="wb-card wb-card--primary" @click="go('/mobile/sale/overview')">
-        <div class="wb-card-label">今日销售</div>
-        <div class="wb-card-value">¥{{ kpi.todaySale }}</div>
-        <div class="wb-card-sub">{{ kpi.todayOrders }} 笔订单</div>
-      </div>
-      <div class="m-kpi-right-stack">
-        <div class="m-kpi-card m-kpi-small" @click="router.push('/mobile/sale/client')">
-          <div class="m-kpi-label">客户总数</div>
-          <div class="m-kpi-value-sm">{{ kpi.customerTotal }}</div>
-        </div>
-        <div class="m-kpi-card m-kpi-small" :class="{ warn: kpi.stockWarn > 0 }" @click="router.push('/mobile/warehouse/warning')">
-          <div class="m-kpi-label">库存预警</div>
-          <div class="m-kpi-value-sm">{{ kpi.stockWarn }}</div>
-        </div>
-      </div>
-    </div>
-
     <!-- 待办提醒 -->
     <div v-if="pendingItems.length > 0" class="wb-section">
       <div class="wb-section-hd">
@@ -61,38 +26,7 @@
       </div>
     </div>
 
-    <!-- 快捷操作（企业微信九宫格） -->
-    <div class="wb-section">
-      <div class="wb-section-hd">
-        <span class="wb-section-dot" style="background: #F5A623"></span>
-        <span class="wb-section-title">快捷操作</span>
-      </div>
-      <div class="wb-quick-grid">
-        <div
-          v-for="app in quickApps"
-          :key="app.path"
-          class="wb-quick-item"
-          @click="go(app.path)"
-        >
-          <div class="wb-quick-icon" :style="{ background: app.bg }">
-            <span v-html="app.icon" />
-          </div>
-          <div class="wb-quick-name">{{ app.name }}</div>
-        </div>
-        <!-- 更多应用 -->
-        <div class="wb-quick-item" @click="go('/mobile/modules')">
-          <div class="wb-quick-icon" style="background: rgba(0,0,0,0.04)">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.8">
-              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-            </svg>
-          </div>
-          <div class="wb-quick-name" style="color: #999">更多应用</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 工作动态 -->
+    <!-- 团队动态 -->
     <div class="wb-section">
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #52C41A"></span>
@@ -120,7 +54,36 @@
       </div>
     </div>
 
-    <!-- 底部占位 -->
+    <!-- 快捷操作 -->
+    <div class="wb-section">
+      <div class="wb-section-hd">
+        <span class="wb-section-dot" style="background: #F5A623"></span>
+        <span class="wb-section-title">快捷操作</span>
+      </div>
+      <div class="wb-quick-grid">
+        <div
+          v-for="app in quickApps"
+          :key="app.path"
+          class="wb-quick-item"
+          @click="go(app.path)"
+        >
+          <div class="wb-quick-icon" :style="{ background: app.bg }">
+            <span v-html="app.icon" />
+          </div>
+          <div class="wb-quick-name">{{ app.name }}</div>
+        </div>
+        <div class="wb-quick-item" @click="go('/mobile/modules')">
+          <div class="wb-quick-icon" style="background: rgba(0,0,0,0.04)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.8">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </div>
+          <div class="wb-quick-name" style="color: #999">更多应用</div>
+        </div>
+      </div>
+    </div>
+
     <div style="height: 20px"></div>
   </div>
 </template>
