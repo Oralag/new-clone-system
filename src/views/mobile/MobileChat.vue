@@ -944,14 +944,11 @@ export default { name: 'MobileChat' }
   right: 0;
   top: 0;
   bottom: 0;
-  display: flex;
+  display: none;
   z-index: 1;
-  opacity: 0;
-  pointer-events: none;
 }
 .chat-item-wrap.swiped .chat-item-actions {
-  opacity: 1;
-  pointer-events: auto;
+  display: flex;
 }
 .chat-item-wrap.swiped > .chat-item {
   transform: translateX(-160px);
