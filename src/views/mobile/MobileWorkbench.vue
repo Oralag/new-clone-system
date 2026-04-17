@@ -1,5 +1,6 @@
 <template>
   <div class="wb-page">
+    <div class="wb-scroll">
     <!-- 收银台入口 -->
     <div class="wb-cashier-card" @click="go('/cashregister')">
       <div class="wb-cashier-left">
@@ -104,6 +105,7 @@
     </div>
 
     <div style="height: 20px"></div>
+    </div>
   </div>
 </template>
 
@@ -278,9 +280,16 @@ onMounted(async () => {
 
 <style scoped>
 .wb-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background: #f5f5f5;
-  min-height: 100%;
-  padding-bottom: 0;
+  overflow: hidden;
+}
+.wb-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── 收银台入口卡片 ── */

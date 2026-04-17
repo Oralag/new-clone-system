@@ -1,5 +1,6 @@
 <template>
   <div class="mstats">
+    <div class="mstats-scroll">
 
     <!-- 今日核心指标 -->
     <div class="ms-kpi-grid">
@@ -131,6 +132,7 @@
           <span>库存总览</span>
         </div>
       </div>
+    </div>
     </div>
 
   </div>
@@ -290,10 +292,15 @@ onMounted(async () => {
 .mstats {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 80px;
+  height: 100%;
   background: #f5f5f7;
-  min-height: 100%;
+  overflow: hidden;
+}
+.mstats-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 20px;
 }
 
 /* 今日核心指标 */

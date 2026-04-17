@@ -1,5 +1,6 @@
 <template>
   <div class="mod-page">
+    <div class="mod-scroll">
     <div class="mod-content">
       <div
         v-for="m in modules"
@@ -17,6 +18,7 @@
         </div>
         <span class="mod-big-arrow">›</span>
       </div>
+    </div>
     </div>
   </div>
 </template>
@@ -63,7 +65,18 @@ const modules = [
 </script>
 
 <style scoped>
-.mod-page { min-height: 100%; background: #f0f2f5; }
+.mod-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f0f2f5;
+  overflow: hidden;
+}
+.mod-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .mod-content { padding: 14px 14px 24px; display: flex; flex-direction: column; gap: 12px; }
 
 .mod-big-card {

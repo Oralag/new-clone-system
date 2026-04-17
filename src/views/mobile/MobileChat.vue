@@ -241,12 +241,8 @@
         发起会议
       </div>
       <div class="plus-menu-item" @click="router.push('/mobile/contacts'); showPlusMenu = false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        发起会话
-      </div>
-      <div class="plus-menu-item" @click="handleScan(); showPlusMenu = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        扫码查库存
+        通讯录
       </div>
     </div>
 
@@ -413,11 +409,7 @@ async function loadGroups() {
   try {
     const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
     const rows = res?.data?.rows ?? res?.rows ?? []
-    // 调试：打印前3条数据的完整结构
-    console.log('[MobileChat] /chat/groups 前3条:', JSON.stringify(rows.slice(0, 3), null, 2))
-    // 只保留私聊（通讯录联系人的 1:1 会话），member_ids 长度 ≤ 2 才显示
-    const privateChats = rows.filter((r: any) => !r.member_ids || r.member_ids.length <= 2)
-    groups.value = privateChats.map((r: any) => ({
+    groups.value = rows.map((r: any) => ({
       id: r.id,
       name: r.name || r.group_name || '会话',
       avatar_text: r.name?.[0],
