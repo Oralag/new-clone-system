@@ -298,10 +298,18 @@ const showPlusMenu = ref(false)
 const activeTab = ref('all')
 
 // 显示列表：固定置顶 + 用户置顶/普通会话（按最新时间排序，置顶优先）
+// 只显示通讯录中有名字的聊天，且按 id 去重
 const displayedGroups = computed(() => {
-  // 从后端数据中排除已被固定项覆盖的 id
   const fixedIds = new Set(pinnedSessions.value.map(p => p.id))
-  const filtered = groups.value.filter(g => !fixedIds.has(g.id))
+  const contactNames = new Set(contacts.value.map((c: any) => c.name))
+  const seen = new Set<string>()
+  const filtered = groups.value.filter(g => {
+    if (!g.id) return false
+    if (seen.has(g.id)) return false
+    seen.add(g.id)
+    if (fixedIds.has(g.id)) return false
+    return contactNames.has(g.name)
+  })
   const sorted = [...filtered].sort((a, b) => {
     if (!!b.is_pinned !== !!a.is_pinned) return b.is_pinned ? 1 : -1
     return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime()
