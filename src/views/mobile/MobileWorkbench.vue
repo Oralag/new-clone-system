@@ -74,12 +74,12 @@
       </div>
     </div>
 
-    <!-- 常用功能 -->
+    <!-- 常用功能（横向滚动显示已选模块） -->
     <div class="wb-section">
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #F5A623"></span>
         <span class="wb-section-title">常用功能</span>
-        <button class="wb-section-more" @click="showFavPicker = true">添加 ›</button>
+        <button class="wb-section-more" @click="showPicker = true">管理 ›</button>
       </div>
       <div v-if="favoriteApps.length === 0" class="wb-empty-sm">暂无常用功能，点击右上角添加</div>
       <div v-else class="wb-fav-scroll">
@@ -99,11 +99,11 @@
 
     <!-- 常用功能选择器 -->
     <Teleport to="body">
-      <div v-if="showFavPicker" class="fav-overlay" @click.self="showFavPicker = false">
+      <div v-if="showPicker" class="fav-overlay" @click.self="showPicker = false">
         <div class="fav-sheet">
           <div class="fav-sheet-hd">
-            <span class="fav-sheet-title">添加到常用功能</span>
-            <button class="fav-sheet-close" @click="showFavPicker = false">完成</button>
+            <span class="fav-sheet-title">管理常用功能</span>
+            <button class="fav-sheet-close" @click="showPicker = false">完成</button>
           </div>
           <div class="fav-sheet-grid">
             <div
@@ -128,12 +128,12 @@
       </div>
     </Teleport>
 
-    <!-- 快捷操作 -->
+    <!-- 快捷操作（九宫格） -->
     <div class="wb-section">
       <div class="wb-section-hd">
-        <span class="wb-section-dot" style="background: #F5A623"></span>
+        <span class="wb-section-dot" style="background: #2E6BE6"></span>
         <span class="wb-section-title">快捷操作</span>
-        <button class="wb-section-more" @click="go('/mobile/modules')">更多 ›</button>
+        <button class="wb-section-more" @click="showPicker = true">管理 ›</button>
       </div>
       <div class="wb-quick-grid">
         <div
@@ -173,7 +173,7 @@ function parseGoodsInfo(g: any) {
 const kpi = ref({ todaySale: '0', todayOrders: 0, customerTotal: 0, stockWarn: 0 })
 const pendingItems = ref<any[]>([])
 const activities = ref<any[]>([])
-const showFavPicker = ref(false)
+const showPicker = ref(false)
 
 // 所有可用模块
 const allModuleApps = [
@@ -249,6 +249,9 @@ const quickApps = [
   { name: '人事管理', path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
   { name: '生产计划', path: '/mobile/production/plan', bg: 'rgba(5,150,105,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
   { name: '投资管理', path: '/mobile/investment/overview', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+  { name: '消息中心', path: '/mobile/message', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { name: '任务中心', path: '/mobile/task', bg: 'rgba(8,145,178,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+  { name: 'AI 助手', path: '/mobile/ai', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
 ]
 
 function go(path: string) { router.push(path) }

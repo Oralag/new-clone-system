@@ -48,7 +48,7 @@
     </div>
 
     <!-- ── 全部 Tab ── -->
-    <div v-show="activeTab === 'all'">
+    <div v-show="activeTab === 'all'" class="tab-panel">
       <!-- 消息列表 -->
       <div class="chat-list">
         <div v-if="displayedGroups.length === 0 && groups.length === 0" class="chat-empty">
@@ -547,6 +547,17 @@ export default { name: 'MobileChat' }
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   min-height: 0;
+  overscroll-behavior: contain;
+}
+
+/* tab 内容面板：撑满剩余空间，让内部滚动生效 */
+.tab-panel,
+.todo-tab,
+.ai-tab {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── 企业微信风格顶部导航栏 ── */
