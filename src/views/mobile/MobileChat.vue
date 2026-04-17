@@ -411,7 +411,7 @@ async function doCreateGroup() {
         ? `与${selectedMembers.value[0].name}的群聊`
         : `群聊(${memberIds.length + 1}人)`
     }
-    const res = await http.post('/adminapi/chat/groups', {
+    const res = await http.post('/chat/groups', {
       name,
       member_ids: memberIds
     })

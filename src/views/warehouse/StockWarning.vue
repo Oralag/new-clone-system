@@ -42,7 +42,7 @@ const bomGoodsSet = ref<Set<string>>(new Set())
 onMounted(async () => {
   try {
     const res = await http.get('/goods/BomGoods/index', { params: { list_rows: 500 } })
-    const rows = res.data?.rows ?? []
+    const rows = res.data?.list ?? res.data?.rows ?? []
     bomGoodsSet.value = new Set(rows.map((b: any) => b.goods_sn).filter(Boolean))
   } catch {}
 })

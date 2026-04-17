@@ -948,7 +948,7 @@ async function loadStockMap(warehouseId = 0) {
       let bomRows: any[] = []
       try {
         const bomRes = await http.get('/goods/BomGoods/index', { params: { list_rows: 500 } })
-        bomRows = bomRes.data?.rows ?? []
+        bomRows = bomRes.data?.list ?? bomRes.data?.rows ?? []
       } catch {}
       // 按 goods_sn 记录有BOM的成品
       const bomSnSet = new Set<string>()
