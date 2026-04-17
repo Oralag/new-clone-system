@@ -91,6 +91,7 @@
     </button>
 
     <!-- ── 新建任务弹窗 ── -->
+    <Teleport to="body">
     <div v-if="showAdd" class="task-modal-mask" @click.self="showAdd = false">
       <div class="task-modal-sheet">
         <div class="task-modal-header">
@@ -197,8 +198,10 @@
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- ── 任务详情弹窗 ── -->
+    <Teleport to="body">
     <div v-if="selectedPlan" class="task-modal-mask" @click.self="selectedPlan = null">
       <div class="task-modal-sheet">
         <div class="task-modal-header">
@@ -262,6 +265,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 

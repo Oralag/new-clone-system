@@ -10,7 +10,12 @@
         </template>
 
         <el-table-column prop="goods_sn" label="商品编码" width="150" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="160" />
+        <el-table-column label="商品名称" min-width="160">
+          <template #default="{ row }">
+            <span>{{ row.goods_name }}</span>
+            <el-tag v-if="bomGoodsSet.has(row.goods_id)" type="warning" size="small" style="margin-left:6px;vertical-align:middle">BOM</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="stock_num" label="当前库存" width="120" />
         <el-table-column prop="min_num" label="最低库存" width="120" />
         <el-table-column prop="max_num" label="最高库存" width="120" />
@@ -22,7 +27,7 @@
 
 <script setup lang="ts">
 import ScTable from '@/components/ScTable.vue'
-
+import http from '@/api/http'
 import { getWarningList } from '@/api/warehouse'
 
 const tableRef = ref()
@@ -30,5 +35,15 @@ const tableRef = ref()
 const searchForm = reactive({
   goods_name: '',
   warehouse_name: ''
+})
+
+const bomGoodsSet = ref<Set<number>>(new Set())
+
+onMounted(async () => {
+  try {
+    const res = await http.get('/goods/ShopBom/index', { params: { list_rows: 500 } })
+    const rows = res.data?.rows ?? []
+    bomGoodsSet.value = new Set(rows.map((b: any) => Number(b.goods_id)).filter(Boolean))
+  } catch {}
 })
 </script>

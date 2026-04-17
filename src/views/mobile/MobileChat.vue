@@ -405,7 +405,6 @@ async function doCreateGroup() {
   if (selectedMembers.value.length === 0) return
   try {
     const memberIds = selectedMembers.value.map(m => m.id)
-    // 自动生成群名：选了1人用"与xxx的群聊"，多人用"群聊(n人)"
     let name = newGroupName.value.trim()
     if (!name) {
       name = memberIds.length === 1
@@ -420,9 +419,11 @@ async function doCreateGroup() {
     selectedMembers.value = []
     groupSearchKeyword.value = ''
     newGroupName.value = ''
-    if (res?.data?.id) {
-      loadGroups()
-      router.push(`/mobile/chat/${res.data.id}`)
+    // 后端返回 { code:1, data: { id, name, ... } }
+    const groupId = res?.data?.id || res?.id
+    if (groupId) {
+      loadGroups() // 后台刷新列表
+      router.push(`/mobile/chat/${groupId}`)
     } else {
       loadGroups()
     }
