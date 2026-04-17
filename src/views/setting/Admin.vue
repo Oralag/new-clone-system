@@ -58,7 +58,7 @@
 
     <!-- 账号表单对话框 -->
     <el-dialog v-model="dialogVisible" :title="formTitle" :width="dialogWidth" :close-on-click-modal="false">
-      <el-form ref="elFormRef" :model="form" :label-width="isMobile ? '60px' : '80px'">
+      <el-form ref="elFormRef" :model="form" :label-width="isMobile ? '60px' : '80px'" autocomplete="off">
         <el-form-item label="账号" prop="account" :rules="[{ required: true, message: '请输入账号' }]">
           <el-input v-model="form.account" :disabled="!!form.id" />
         </el-form-item>

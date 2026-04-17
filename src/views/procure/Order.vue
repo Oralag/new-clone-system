@@ -135,13 +135,14 @@
               <el-tag :type="getPayStatus(row).type" size="small">{{ getPayStatus(row).label }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="附加费用" width="160" align="right">
+          <el-table-column label="附加费用" width="220" align="right">
             <template #default="{ row }">
               <template v-if="getFeeItemsForRow(row).length > 0">
                 <div v-for="(fee, idx) in getFeeItemsForRow(row)" :key="idx" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;line-height:1.6">
                   <span style="font-size:11px;color:rgba(29,29,31,0.5)">{{ fee.name }}</span>
                   <span style="color:#8b5cf6;font-weight:600">¥{{ Number(fee.amount).toFixed(2) }}</span>
                   <el-tag :type="getFeeItemPayStatus(row, idx).type" size="small">{{ getFeeItemPayStatus(row, idx).label }}</el-tag>
+                  <el-button v-if="getFeeItemPayStatus(row, idx).label === '待付'" type="warning" link size="small" style="font-size:11px;padding:0" @click="openFeePayDialog(row, idx)">付款</el-button>
                 </div>
               </template>
               <span v-else style="color:rgba(29,29,31,0.2)">—</span>

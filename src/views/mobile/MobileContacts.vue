@@ -24,12 +24,13 @@
           v-for="bot in robotAgents"
           :key="bot.id"
           class="contacts-item"
-          @click="router.push(bot.route)"
+          @click="openAgent(bot)"
         >
-          <div class="contacts-avatar" :style="{ background: bot.color }">{{ bot.avatar }}</div>
+          <div class="contacts-avatar robot-avatar" :style="{ background: bot.color }">{{ bot.avatar }}</div>
           <div class="contacts-info">
             <div class="contacts-name-row">
               <span class="contacts-name">{{ bot.name }}</span>
+              <span class="contacts-tag">AI</span>
             </div>
             <div class="contacts-dept">{{ bot.desc }}</div>
           </div>
@@ -139,6 +140,19 @@ const showNewGroup = ref(false)
 const activeLetter = ref('')
 const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
+// 系统所有 Agent/机器人员工
+const robotAgents = [
+  { id: 'captain', name: 'Captain 总指挥', avatar: '🎯', color: '#722ED1', desc: '统一调度，协调各部门完成任务', route: '/agent/meeting' },
+  { id: 'ai-assistant', name: 'AI 管家', avatar: '🤖', color: '#0071e3', desc: '智能对话助手，随时为您服务', route: '/mobile/ai' },
+  { id: 'content', name: '内容部', avatar: '✍️', color: '#f59e0b', desc: '文案·视频全链路内容生产', route: '/agent/content' },
+  { id: 'creative', name: '创意部', avatar: '🎨', color: '#ec4899', desc: '海报·视觉设计·创意策略', route: '/agent/creative' },
+  { id: 'brand', name: '品牌部', avatar: '💎', color: '#8b5cf6', desc: '品牌战略·调性把控·竞品分析', route: '/agent/brand' },
+  { id: 'intel', name: '情报部', avatar: '📈', color: '#06b6d4', desc: '热点追踪·趋势分析·选题建议', route: '/agent/trending' },
+  { id: 'publish', name: '发布部', avatar: '🚀', color: '#10b981', desc: '多平台排期·发布计划·数据复盘', route: '/agent/publish' },
+  { id: 'marketing', name: '营销顾问', avatar: '📊', color: '#059669', desc: '营销战略·客户分析·定价策略', route: '/agent/marketing' },
+  { id: 'designer', name: '平面设计师', avatar: '🖼️', color: '#e11d48', desc: '海报·Banner·Logo·包装·社媒图', route: '/agent/designer' },
+]
+
 const filteredEmployees = computed(() => {
   const kw = keyword.value.toLowerCase().trim()
   if (!kw) return employees.value
@@ -150,7 +164,6 @@ const filteredEmployees = computed(() => {
 
 function viewEmployee(c: any) {
   // 发起私聊：查找或创建与该联系人的 1:1 会话
-  // 只匹配2人私聊（member_ids 长度为2且包含该员工）
   const existing = groups.value.find((g: any) =>
     g.member_ids?.includes(c.id) && g.member_ids?.length === 2
   )
@@ -159,6 +172,16 @@ function viewEmployee(c: any) {
   } else {
     router.push(`/mobile/chat/new?userId=${c.id}&name=${encodeURIComponent(c.name || '')}`)
   }
+}
+
+function openAgent(bot: any) {
+  // AI 管家跳转到 AI 对话页
+  if (bot.id === 'ai-assistant') {
+    router.push('/mobile/ai')
+    return
+  }
+  // 其他 Agent：优先跳转到对应功能页面
+  router.push(bot.route)
 }
 
 function viewCustomer() {
@@ -502,5 +525,20 @@ export default { name: 'MobileContacts' }
   display: flex;
   align-items: center;
   gap: 4px;
+}
+/* ── 机器人头像 + AI标签 ── */
+.robot-avatar {
+  border-radius: 12px;
+  font-size: 22px;
+  box-shadow: 0 2px 8px rgba(114,46,209,0.15);
+}
+.contacts-tag {
+  font-size: 10px;
+  color: #722ED1;
+  background: #f3e8ff;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 </style>
