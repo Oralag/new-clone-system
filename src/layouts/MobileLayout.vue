@@ -104,8 +104,14 @@ function goBack() {
 }
 
 watch(() => route.path, (path) => {
-  const matched = tabs.find(t => t.path === path)
-  if (matched) activeTab.value = matched.key
+  // 先精确匹配，再前缀匹配（chat/:id 也算 chat tab）
+  const exact = tabs.find(t => t.path === path)
+  if (exact) {
+    activeTab.value = exact.key
+  } else {
+    const prefix = tabs.find(t => path.startsWith(t.path + '/') || path === t.path)
+    if (prefix) activeTab.value = prefix.key
+  }
 }, { immediate: true })
 
 function switchTab(tab: typeof tabs[0]) {
