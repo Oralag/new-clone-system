@@ -371,15 +371,8 @@ watch(showCreateGroup, (v) => { if (v && contacts.value.length === 0) loadContac
 
 const groupFilteredContacts = computed(() => {
   const kw = groupSearchKeyword.value.toLowerCase().trim()
-  const list = contacts.value.filter((c: any) => {
-    // 过滤机器人
-    const role = c.role_name || ''
-    if (role.includes('机器人') || role.includes('Bot') || role.includes('bot')) return false
-    if (kw) return c.name?.toLowerCase().includes(kw)
-    return true
-  })
-  if (!kw) return list
-  return list.filter((c: any) => c.name?.toLowerCase().includes(kw))
+  if (!kw) return contacts.value
+  return contacts.value.filter((c: any) => c.name?.toLowerCase().includes(kw))
 })
 
 function toggleMember(c: any) {
