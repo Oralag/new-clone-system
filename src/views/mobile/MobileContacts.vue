@@ -150,7 +150,10 @@ const filteredEmployees = computed(() => {
 
 function viewEmployee(c: any) {
   // 发起私聊：查找或创建与该联系人的 1:1 会话
-  const existing = groups.value.find((g: any) => g.member_ids?.includes(c.id))
+  // 只匹配2人私聊（member_ids 长度为2且包含该员工）
+  const existing = groups.value.find((g: any) =>
+    g.member_ids?.includes(c.id) && g.member_ids?.length === 2
+  )
   if (existing) {
     router.push(`/mobile/chat/${existing.id}`)
   } else {
