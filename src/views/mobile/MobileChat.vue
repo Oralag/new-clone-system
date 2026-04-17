@@ -1154,8 +1154,7 @@ export default { name: 'MobileChat' }
   display: flex;
   flex-direction: column;
   animation: slideUp 0.25s ease;
-  touch-action: none;
-  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
 }
 .m-modal-sheet-tall { height: 80vh; max-height: 85vh; }
 .m-modal-header {
@@ -1171,7 +1170,7 @@ export default { name: 'MobileChat' }
 }
 .m-modal-close { border: none; background: transparent; color: #0071e3; font-size: 14px; cursor: pointer; }
 .m-modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0; padding-bottom: env(safe-area-inset-bottom, 0px); touch-action: pan-y; -webkit-overflow-scrolling: touch; }
-.m-modal-footer { padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #f2f3f5; flex-shrink: 0; }
+.m-modal-footer { padding: 14px 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px)); border-top: 1px solid #f2f3f5; flex-shrink: 0; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .plus-menu {
   position: fixed;

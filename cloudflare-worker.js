@@ -112,6 +112,42 @@ export default {
     }
 
     // ════════════════════════════════════════════════
+    // 工作计划 API（@员工/agent 协作）
+    // ════════════════════════════════════════════════
+
+    // GET /adminapi/work/members — 员工 + agent 列表（@选择器用）
+    if (path === '/adminapi/work/members' && request.method === 'GET') {
+      return handleWorkMembers(request, env)
+    }
+    // GET /adminapi/work/plans — 任务列表
+    if (path === '/adminapi/work/plans' && request.method === 'GET') {
+      return handleWorkPlans(request, env)
+    }
+    // POST /adminapi/work/plans — 创建任务
+    if (path === '/adminapi/work/plans' && request.method === 'POST') {
+      return handleWorkPlanCreate(request, env)
+    }
+    // PUT /adminapi/work/plans/:id — 更新任务
+    const putMatch = path.match(/^\/adminapi\/work\/plans\/(\d+)$/)
+    if (putMatch && request.method === 'PUT') {
+      return handleWorkPlanUpdate(request, env, Number(putMatch[1]))
+    }
+    // DELETE /adminapi/work/plans/:id
+    const delMatch = path.match(/^\/adminapi\/work\/plans\/(\d+)$/)
+    if (delMatch && request.method === 'DELETE') {
+      return handleWorkPlanDelete(request, env, Number(delMatch[1]))
+    }
+    // POST /adminapi/work/plans/:id/remind — 手动提醒
+    const remindMatch = path.match(/^\/adminapi\/work\/plans\/(\d+)\/remind$/)
+    if (remindMatch && request.method === 'POST') {
+      return handleWorkPlanRemind(request, env, Number(remindMatch[1]))
+    }
+    // POST /adminapi/work/remind-daily — 秘书agent每日跟进（可定时触发）
+    if (path === '/adminapi/work/remind-daily' && request.method === 'POST') {
+      return handleWorkRemindDaily(request, env)
+    }
+
+    // ════════════════════════════════════════════════
     // 已有 API（保持不变）
     // ════════════════════════════════════════════════
 
@@ -1113,5 +1149,245 @@ async function handleAIChat(request, env) {
 
   return new Response(readable, {
     headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', ...corsHeaders() },
+  })
+}
+
+// ════════════════════════════════════════════════════════════
+// 工作计划 — 成员列表（员工 + agent，给 @ 选择器用）
+// ════════════════════════════════════════════════════════════
+async function handleWorkMembers(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('未登录', 401)
+
+  // 固定 agent 列表（系统内置）
+  const agents = [
+    { id: 'agent_content', name: '内容部', type: 'agent', avatar: '📝', dept: 'agent' },
+    { id: 'agent_creative', name: '创意部', type: 'agent', avatar: '🎨', dept: 'agent' },
+    { id: 'agent_brand', name: '品牌部', type: 'agent', avatar: '✨', dept: 'agent' },
+    { id: 'agent_secretary', name: '秘书', type: 'agent', avatar: '🤖', dept: 'agent' },
+    { id: 'agent_ai', name: 'AI助手', type: 'agent', avatar: '🧠', dept: 'agent' },
+  ]
+
+  // 从 KV 读取员工账号（register 接口写进去的）
+  const staffRaw = await env.USERS_KV.get('registered_users')
+  const staffList = staffRaw ? JSON.parse(staffRaw) : []
+
+  const members = [
+    ...agents,
+    ...staffList.map(s => ({
+      id: String(s.id || s.userId),
+      name: s.account || s.name || '未知',
+      type: 'staff',
+      avatar: '👤',
+      dept: s.dept || '',
+    })),
+  ]
+
+  return jsonRes({ members, total: members.length })
+}
+
+// ════════════════════════════════════════════════════════════
+// 工作计划 — 列表 / 创建
+// ════════════════════════════════════════════════════════════
+async function handleWorkPlans(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('未登录', 401)
+
+  const url = new URL(request.url)
+  const status = url.searchParams.get('status') || ''   // todo | doing | done
+  const assigned = url.searchParams.get('assigned')     // 'me' | ''
+
+  const raw = await env.USERS_KV.get('work_plans')
+  let plans = raw ? JSON.parse(raw) : []
+
+  // 过滤：只看被 @ 的人是自己，或自己创建的
+  if (assigned === 'me') {
+    plans = plans.filter(p =>
+      p.creator_id === userId || (p.mentions || []).some(m => m.id === String(userId))
+    )
+  }
+  if (status) {
+    plans = plans.filter(p => p.status === status)
+  }
+
+  // 按创建时间倒序
+  plans.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+  return jsonRes({ plans, total: plans.length })
+}
+
+async function handleWorkPlanCreate(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('未登录', 401)
+
+  const body = await request.json()
+  const { title, description, mentions = [], due_date } = body
+
+  if (!title?.trim()) return errRes('请填写任务标题')
+
+  const now = new Date().toISOString()
+  const plansRaw = await env.USERS_KV.get('work_plans')
+  const plans = plansRaw ? JSON.parse(plansRaw) : []
+
+  const newPlan = {
+    id: Date.now(),
+    creator_id: userId,
+    title: title.trim(),
+    description: description?.trim() || '',
+    status: 'todo',           // todo | doing | done
+    mentions,                  // [{ id, name, type, avatar }]
+    due_date: due_date || '',
+    follow_up: {
+      last_remind: null,
+      next_remind: null,
+      remind_count: 0,
+    },
+    created_at: now,
+    updated_at: now,
+  }
+
+  plans.unshift(newPlan)
+  await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+
+  return jsonRes({ plan: newPlan, message: '创建成功' }, 201)
+}
+
+// ════════════════════════════════════════════════════════════
+// 工作计划 — 更新（状态 / 跟进记录）
+// ════════════════════════════════════════════════════════════
+async function handleWorkPlanUpdate(request, env, planId) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('未登录', 401)
+
+  const body = await request.json()
+  const plansRaw = await env.USERS_KV.get('work_plans')
+  const plans = plansRaw ? JSON.parse(plansRaw) : []
+  const idx = plans.findIndex(p => p.id === planId)
+
+  if (idx === -1) return errRes('任务不存在', 404)
+
+  const plan = plans[idx]
+
+  // 允许更新的字段
+  if (body.title !== undefined) plan.title = body.title.trim()
+  if (body.description !== undefined) plan.description = body.description?.trim() || ''
+  if (body.status !== undefined) plan.status = body.status
+  if (body.mentions !== undefined) plan.mentions = body.mentions
+  if (body.due_date !== undefined) plan.due_date = body.due_date
+  if (body.follow_up !== undefined) plan.follow_up = { ...plan.follow_up, ...body.follow_up }
+  plan.updated_at = new Date().toISOString()
+
+  plans[idx] = plan
+  await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+
+  return jsonRes({ plan })
+}
+
+// ════════════════════════════════════════════════════════════
+// 工作计划 — 删除
+// ════════════════════════════════════════════════════════════
+async function handleWorkPlanDelete(request, env, planId) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('未登录', 401)
+
+  const plansRaw = await env.USERS_KV.get('work_plans')
+  const plans = plansRaw ? JSON.parse(plansRaw) : []
+  const idx = plans.findIndex(p => p.id === planId)
+
+  if (idx === -1) return errRes('任务不存在', 404)
+  if (plans[idx].creator_id !== userId) return errRes('无权限删除', 403)
+
+  plans.splice(idx, 1)
+  await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+
+  return jsonRes({ message: '删除成功' })
+}
+
+// ════════════════════════════════════════════════════════════
+// 工作计划 — 手动提醒
+// ════════════════════════════════════════════════════════════
+async function handleWorkPlanRemind(request, env, planId) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('未登录', 401)
+
+  const plansRaw = await env.USERS_KV.get('work_plans')
+  const plans = plansRaw ? JSON.parse(plansRaw) : []
+  const plan = plans.find(p => p.id === planId)
+  if (!plan) return errRes('任务不存在', 404)
+
+  const now = new Date().toISOString()
+  plan.follow_up = {
+    ...plan.follow_up,
+    last_remind: now,
+    remind_count: (plan.follow_up?.remind_count || 0) + 1,
+  }
+  plan.updated_at = now
+
+  const idx = plans.findIndex(p => p.id === planId)
+  plans[idx] = plan
+  await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+
+  // 生成提醒消息内容
+  const mentioned = plan.mentions?.map(m => m.name).join('、') || '未知'
+  const remindMsg = `📋 任务提醒：${plan.title}\n👥 执行人：${mentioned}\n⏰ 时间：${plan.due_date || '未设置'}\n💬 请及时跟进！`
+
+  return jsonRes({
+    plan,
+    remind_message: remindMsg,
+    message: '提醒已发送',
+  })
+}
+
+// ════════════════════════════════════════════════════════════
+// 秘书agent — 每日跟进（定时触发）
+// 遍历所有未完成任务，向被 @ 的人发送消息提醒
+// ════════════════════════════════════════════════════════════
+async function handleWorkRemindDaily(request, env) {
+  // 验证调用来源（可用 secret header 防刷）
+  const secret = request.headers.get('x-remind-secret')
+  if (secret !== env.REMINDSECRET) return errRes('无权限', 403)
+
+  const plansRaw = await env.USERS_KV.get('work_plans')
+  const plans = plansRaw ? JSON.parse(plansRaw) : []
+
+  // 过滤：未完成 且 未在当天提醒过的
+  const today = new Date().toISOString().slice(0, 10)
+  const pending = plans.filter(p => {
+    if (p.status === 'done') return false
+    if (!p.follow_up?.last_remind) return true
+    return !p.follow_up.last_remind.startsWith(today)
+  })
+
+  const results = []
+  for (const plan of pending) {
+    const now = new Date().toISOString()
+    plan.follow_up = {
+      ...plan.follow_up,
+      last_remind: now,
+      remind_count: (plan.follow_up?.remind_count || 0) + 1,
+    }
+    plan.updated_at = now
+
+    const mentioned = plan.mentions?.map(m => m.name).join('、') || ''
+    results.push({
+      plan_id: plan.id,
+      title: plan.title,
+      mentions: plan.mentions,
+      message: `📋【每日跟进】${plan.title}${mentioned ? `\n👥 @${mentioned}` : ''}${plan.due_date ? `\n⏰ 截止：${plan.due_date}` : ''}`,
+    })
+  }
+
+  if (plansRaw) {
+    const allPlans = JSON.parse(plansRaw)
+    for (const p of pending) {
+      const idx = allPlans.findIndex(ap => ap.id === p.id)
+      if (idx !== -1) allPlans[idx] = p
+    }
+    await env.USERS_KV.put('work_plans', JSON.stringify(allPlans))
+  }
+
+  return jsonRes({
+    message: `今日跟进完成，共处理 ${pending.length} 条任务`,
+    tasks: results,
   })
 }
