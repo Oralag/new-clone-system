@@ -234,8 +234,54 @@
     </div>
 
     <!-- ── + 号下拉菜单（快捷操作） ── -->
+    <!-- 发起群聊 - 联系人选择面板 -->
+    <div v-if="showCreateGroup" class="m-modal-mask" @click.self="showCreateGroup = false">
+      <div class="m-modal-sheet m-modal-sheet-tall" @touchmove.stop>
+        <div class="m-modal-header">
+          <span>发起群聊</span>
+          <button class="m-modal-close" @click="showCreateGroup = false">取消</button>
+        </div>
+        <div style="padding: 8px 16px; border-bottom: 1px solid #f2f3f5; flex-shrink: 0;">
+          <div class="group-search-input">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input v-model="groupSearchKeyword" placeholder="搜索联系人" />
+          </div>
+        </div>
+        <!-- 已选成员 -->
+        <div v-if="selectedMembers.length > 0" class="selected-members-bar">
+          <div class="selected-members-scroll">
+            <div v-for="m in selectedMembers" :key="m.id" class="selected-member-chip" @click="toggleMember(m)">
+              <span>{{ m.name?.[0] || '?' }}</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+          </div>
+        </div>
+        <!-- 联系人列表 -->
+        <div class="m-modal-body" style="padding: 0;">
+          <div v-for="c in groupFilteredContacts" :key="c.id" class="group-contact-item" :class="{ selected: selectedMembers.some(m => m.id === c.id) }" @click="toggleMember(c)">
+            <div class="group-contact-avatar">{{ c.name?.[0] || '?' }}</div>
+            <span class="group-contact-name">{{ c.name }}</span>
+            <div class="group-contact-check">
+              <svg v-if="selectedMembers.some(m => m.id === c.id)" width="18" height="18" viewBox="0 0 24 24" fill="#07c160" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>
+              <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+          </div>
+        </div>
+        <!-- 底部确认 -->
+        <div class="m-modal-footer">
+          <button class="group-create-btn" :disabled="selectedMembers.length === 0" @click="doCreateGroup">
+            确定（{{ selectedMembers.length }}）
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showPlusMenu" class="plus-menu-mask" @click="showPlusMenu = false"></div>
     <div v-if="showPlusMenu" class="plus-menu">
+      <div class="plus-menu-item" @click="showCreateGroup = true; showPlusMenu = false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#07c160" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        发起群聊
+      </div>
       <div class="plus-menu-item" @click="router.push('/mobile/procure/scan-in'); showPlusMenu = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="10" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
         扫码入库
@@ -303,6 +349,40 @@ const newChatKeyword = ref('')
 const activeMeetingCount = ref(0)
 const showDrawer = ref(false)
 const showPlusMenu = ref(false)
+const showCreateGroup = ref(false)
+const selectedMembers = ref<any[]>([])
+const groupSearchKeyword = ref('')
+
+const groupFilteredContacts = computed(() => {
+  const kw = groupSearchKeyword.value.toLowerCase().trim()
+  if (!kw) return contacts.value
+  return contacts.value.filter((c: any) => c.name?.toLowerCase().includes(kw))
+})
+
+function toggleMember(c: any) {
+  const idx = selectedMembers.value.findIndex(m => m.id === c.id)
+  if (idx >= 0) selectedMembers.value.splice(idx, 1)
+  else selectedMembers.value.push(c)
+}
+
+async function doCreateGroup() {
+  if (selectedMembers.value.length === 0) return
+  try {
+    const res = await http.post('/chat/create', {
+      type: 'group',
+      member_ids: selectedMembers.value.map(m => m.id)
+    })
+    showCreateGroup.value = false
+    selectedMembers.value = []
+    groupSearchKeyword.value = ''
+    if (res?.data?.id) router.push(`/mobile/chat/${res.data.id}`)
+    else loadGroups()
+  } catch {
+    showCreateGroup.value = false
+    selectedMembers.value = []
+    groupSearchKeyword.value = ''
+  }
+}
 const activeTab = ref('all')
 
 // 显示列表：固定置顶 + 用户置顶/普通会话（按最新时间排序，置顶优先）
@@ -511,7 +591,7 @@ function handleLogout() {
   showDrawer.value = false
 }
 
-const filteredContacts = computed(() => {
+const filteredContacts2 = computed(() => {
   const kw = newChatKeyword.value.toLowerCase()
   if (!kw) return contacts.value.slice(0, 20)
   return contacts.value.filter((c: any) => c.name?.toLowerCase().includes(kw))
@@ -526,7 +606,7 @@ function startChat(c: any) {
 
 function createGroupChat() {
   showNewChat.value = false
-  router.push('/mobile/meeting')
+  router.push('/mobile/agent/meeting')
 }
 
 import { watch } from 'vue'
@@ -933,6 +1013,127 @@ export default { name: 'MobileChat' }
   inset: 0;
   z-index: 198;
 }
+
+/* 发起群聊 */
+.group-search-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.group-search-input input {
+  border: none;
+  background: none;
+  outline: none;
+  flex: 1;
+  font-size: 14px;
+}
+.selected-members-bar {
+  padding: 8px 16px;
+  border-bottom: 1px solid #f2f3f5;
+  flex-shrink: 0;
+}
+.selected-members-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.selected-member-chip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #e8f5e9;
+  color: #07c160;
+  border-radius: 14px;
+  padding: 3px 8px 3px 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.selected-member-chip span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #07c160;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+.group-contact-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 10px;
+}
+.group-contact-item:active { background: #f5f5f5; }
+.group-contact-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #07c160;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.group-contact-name { flex: 1; font-size: 15px; color: #1d2129; }
+.group-contact-check { flex-shrink: 0; }
+.group-create-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #07c160;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.group-create-btn:disabled { background: #ccc; color: #fff; }
+
+/* Modal (same as MobileGroupChat) */
+.m-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+}
+.m-modal-sheet {
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.25s ease;
+  touch-action: none;
+}
+.m-modal-sheet-tall { max-height: 90vh; }
+.m-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #f2f3f5;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1d2129;
+  flex-shrink: 0;
+}
+.m-modal-close { border: none; background: transparent; color: #0071e3; font-size: 14px; cursor: pointer; }
+.m-modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px); touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+.m-modal-footer { padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid #f2f3f5; flex-shrink: 0; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .plus-menu {
   position: fixed;
   right: 16px;
