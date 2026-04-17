@@ -145,15 +145,17 @@
                 </div>
               </template>
               <span v-else style="color:rgba(29,29,31,0.2)">—</span>
+              <div v-if="row.status === 1 && getFeeItemsForRow(row).length === 0" style="margin-top:2px;text-align:right">
+                <el-button type="primary" link size="small" style="font-size:11px;padding:0" @click="openFeeManageDialog(row)">+ 补充费用</el-button>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-          <el-table-column label="操作" width="260" fixed="right">
+          <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && getPayStatus(row).label !== '已付清'" type="success" link size="small" @click="openPayDialog(row)">付款</el-button>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="openFeeManageDialog(row)">费用</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
@@ -1471,7 +1473,10 @@ function getFeeItemPayStatus(row: any, idx: number): { label: string; type: stri
   if (bearer === 'seller') return { label: '供应商承担', type: 'info' }
   if (bearer === 'free') return { label: '免费', type: 'info' }
   const needPay = bearer === 'half' ? Number(fee.amount) / 2 : Number(fee.amount)
-  const paid = feeItemPaidMap.value[`${row.id}:${idx}`] || feeItemPaidMap.value[`${row.id}:${fee.name}`] || 0
+  // 兼容旧格式付款记录（采购单据支出 / 采购运费）
+  const oldPaid = fee.name === '单据支出' ? (expensePaidById.value[row.id] || 0)
+    : fee.name === '运费' ? (freightPaidById.value[row.id] || 0) : 0
+  const paid = feeItemPaidMap.value[`${row.id}:${idx}`] || feeItemPaidMap.value[`${row.id}:${fee.name}`] || oldPaid
   if (paid >= needPay - 0.01) return { label: '已付', type: 'success' }
   return { label: '待付', type: 'warning' }
 }

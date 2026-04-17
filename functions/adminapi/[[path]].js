@@ -130,8 +130,34 @@ function getUserId(request) {
 
 async function getUserInfo(userId, env) {
   if (!userId) return { name: '未知用户', position: '成员' }
+  // 1. 尝试 KV 缓存
   const raw = await env.USERS_KV.get(`user_info:${userId}`)
   if (raw) return JSON.parse(raw)
+  // 2. 尝试后端 setting/admin/index API
+  try {
+    // 用 master token 调用后端
+    const CACHE_KEY = 'master_token_cache'
+    let realToken = await env.USERS_KV.get(CACHE_KEY)
+    if (!realToken && env.MASTER_ACCOUNT && env.MASTER_PASSWORD) {
+      const masterData = await loginBackend(DEFAULT_BACKEND, { account: env.MASTER_ACCOUNT, password: env.MASTER_PASSWORD })
+      realToken = masterData.code === 1 ? masterData.data.token : null
+      if (realToken) await env.USERS_KV.put(CACHE_KEY, realToken, { expirationTtl: 82800 })
+    }
+    if (realToken) {
+      const res = await fetch(`https://${new URL(DEFAULT_BACKEND).hostname}/adminapi/setting/admin/index?list_rows=500`, {
+        headers: { 'Content-Type': 'application/json', 'token': realToken, 'authori-zation': realToken }
+      })
+      const data = await res.json()
+      const rows = data?.data?.rows ?? []
+      const u = rows.find(r => String(r.id) === String(userId))
+      if (u) {
+        const info = { name: u.name || u.admin_name || u.account || `用户${userId}`, position: u.role_name || '成员', dept: u.dept_name || '' }
+        await env.USERS_KV.put(`user_info:${userId}`, JSON.stringify(info), { expirationTtl: 3600 })
+        return info
+      }
+    }
+  } catch {}
+  // 3. Fallback: 尝试旧 API
   try {
     const res = await fetch(`https://saas.mzth.cn/adminapi/admin/Admin/index?admin_id=${userId}`, {
       headers: { 'Content-Type': 'application/json' }
@@ -271,12 +297,20 @@ async function handleGetMessages(request, env) {
   const url = new URL(request.url)
   const groupId = extractGroupId(request.url)
   const listRows = parseInt(url.searchParams.get('list_rows') || '50')
+  const afterId = url.searchParams.get('after_id') ? parseInt(url.searchParams.get('after_id')) : null
 
   if (!groupId) return errRes('群不存在')
 
   const raw = await env.USERS_KV.get('chat_messages')
   const msgMap = raw ? JSON.parse(raw) : {}
-  let msgs = (msgMap[groupId] || []).slice(-listRows)
+  let allMsgs = msgMap[groupId] || []
+
+  // 支持 after_id 过滤：只返回 id > afterId 的消息
+  if (afterId) {
+    allMsgs = allMsgs.filter(m => m.id > afterId)
+  }
+
+  let msgs = allMsgs.slice(-listRows)
 
   const msgsWithUser = await Promise.all(msgs.map(async m => {
     const info = await getUserInfo(m.sender_id, env)
@@ -332,7 +366,19 @@ async function handleSendMessage(request, env) {
   const gIdx = groups.findIndex(g => g.id === groupId)
   if (gIdx !== -1) {
     groups[gIdx].last_message_at = now
+    groups[gIdx].last_message = content.trim().slice(0, 100)
     await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+  }
+
+  // 给群内其他成员增加未读计数
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+  const memberIds = (memberMap[groupId] || []).map(m => m.user_id)
+  for (const mid of memberIds) {
+    if (mid === userId) continue // 不给自己加未读
+    const unreadKey = `chat_unread:${mid}:${groupId}`
+    const cur = parseInt(await env.USERS_KV.get(unreadKey) || '0')
+    await env.USERS_KV.put(unreadKey, String(cur + 1))
   }
 
   await logOperation(env, userId, 'chat_message', content, { group_id: groupId, message_id: msg.id })

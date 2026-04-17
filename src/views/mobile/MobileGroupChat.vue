@@ -471,12 +471,14 @@ onMounted(async () => {
   pollTimer = setInterval(async () => {
     try {
       const res = await http.get(`/chat/groups/${groupId.value}/messages`, {
-        params: { list_rows: 20, after_id: lastMessageId || undefined }
+        params: { list_rows: 50 }
       })
       const rows = res?.data?.rows ?? res?.rows ?? []
-      if (rows.length > 0) {
-        messages.value.push(...rows)
-        lastMessageId = rows[rows.length - 1].id
+      // 找出比 lastMessageId 更新的消息
+      const newMsgs = rows.filter((m: any) => m.id > lastMessageId)
+      if (newMsgs.length > 0) {
+        messages.value.push(...newMsgs)
+        lastMessageId = newMsgs[newMsgs.length - 1].id
         await scrollToBottom()
       }
     } catch { /* 忽略 */ }

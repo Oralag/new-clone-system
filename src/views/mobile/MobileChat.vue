@@ -252,7 +252,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
@@ -330,7 +330,7 @@ async function loadGroups() {
       name: r.name || r.group_name || '会话',
       avatar_text: r.name?.[0],
       last_msg: r.last_message || r.last_msg || '暂无消息',
-      last_time: r.last_time ? formatTime(r.last_time) : '',
+      last_time: formatTime(r.last_message_at || r.last_time || ''),
       unread: r.unread ?? 0,
     }))
     const totalUnread = rows.reduce((s: number, r: any) => s + (r.unread ?? 0), 0)
@@ -426,11 +426,21 @@ function createGroupChat() {
 import { watch } from 'vue'
 watch(searchKeyword, (v) => { if (v) doSearch() })
 
+let listPollTimer: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   loadGroups()
   loadContacts()
   loadActiveMeetings()
   loadPendingItems()
+  // 每 10 秒刷新消息列表（检查新消息和未读）
+  listPollTimer = setInterval(() => {
+    loadGroups()
+  }, 10000)
+})
+
+onUnmounted(() => {
+  if (listPollTimer) clearInterval(listPollTimer)
 })
 </script>
 
