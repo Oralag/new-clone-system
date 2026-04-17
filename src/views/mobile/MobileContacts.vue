@@ -189,8 +189,16 @@ function openAgent(bot: any) {
     router.push('/mobile/ai')
     return
   }
-  // 其他 Agent：优先跳转到对应功能页面
-  router.push(bot.route)
+  // 其他 Agent：与普通员工一样发起聊天
+  // bot.id 作为虚拟用户 id，在聊天中可以触发 AI 自动回复
+  const existing = groups.value.find((g: any) =>
+    g.member_ids?.includes(bot.id) && g.member_ids?.length === 2
+  )
+  if (existing) {
+    router.push(`/mobile/chat/${existing.id}`)
+  } else {
+    router.push(`/mobile/chat/new?userId=${bot.id}&name=${encodeURIComponent(bot.name)}&isAgent=1`)
+  }
 }
 
 function viewCustomer() {

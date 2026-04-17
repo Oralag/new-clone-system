@@ -2,7 +2,10 @@
   <div class="new-chat-page">
     <!-- 联系人信息 -->
     <div class="new-chat-target" v-if="targetUser">
-      <div class="new-chat-avatar">{{ targetUser.name?.[0] || '?' }}</div>
+      <div class="new-chat-avatar" :class="{ 'agent-avatar': targetUser.isAgent }" :style="targetUser.isAgent ? { background: targetUser.color } : {}">
+        <template v-if="targetUser.isAgent">{{ targetUser.avatar }}</template>
+        <template v-else>{{ targetUser.name?.[0] || '?' }}</template>
+      </div>
       <div class="new-chat-info">
         <div class="new-chat-name">{{ targetUser.name }}</div>
         <div class="new-chat-sub" v-if="targetUser.role_name || targetUser.dept_name">
@@ -68,8 +71,10 @@ const targetUser = ref<any>(null)
 const loading = ref(false)
 
 // 有预填参数时直接加载目标用户
-const userId = Number(route.query.userId)
+const rawUserId = route.query.userId as string
+const userId = rawUserId && !isNaN(Number(rawUserId)) ? Number(rawUserId) : rawUserId
 const userName = route.query.name as string
+const isAgent = route.query.isAgent === '1'
 
 const filteredContacts = computed(() => {
   const kw = keyword.value.toLowerCase().trim()
@@ -116,15 +121,37 @@ async function startChat() {
 
 onMounted(async () => {
   if (userId) {
-    const res = await getAdminList({ list_rows: 500 })
-    const rows: any[] = res?.data?.rows ?? res?.rows ?? []
-    console.log('[MobileNewChat] getAdminList rows:', rows.length)
-    const user = rows.find((r: any) => r.id === userId)
-    console.log('[MobileNewChat] find user by id', userId, '->', user)
-    if (user) {
-      targetUser.value = user
+    if (isAgent) {
+      // Agent 虚拟用户，不需要从后端查
+      const botMap: Record<string, { name: string; avatar: string; color: string }> = {
+        'captain': { name: 'Captain 总指挥', avatar: '🎯', color: '#722ED1' },
+        'content': { name: '内容部', avatar: '✍️', color: '#f59e0b' },
+        'creative': { name: '创意部', avatar: '🎨', color: '#ec4899' },
+        'brand': { name: '品牌部', avatar: '💎', color: '#8b5cf6' },
+        'intel': { name: '情报部', avatar: '📈', color: '#06b6d4' },
+        'publish': { name: '发布部', avatar: '🚀', color: '#10b981' },
+        'marketing': { name: '营销顾问', avatar: '📊', color: '#059669' },
+        'designer': { name: '平面设计师', avatar: '🖼️', color: '#e11d48' },
+      }
+      const bot = botMap[userId as string]
+      targetUser.value = {
+        id: userId,
+        name: userName ? decodeURIComponent(userName) : (bot?.name || userId),
+        avatar: bot?.avatar || '🤖',
+        color: bot?.color || '#722ED1',
+        isAgent: true,
+      }
     } else {
-      targetUser.value = { id: userId, name: decodeURIComponent(userName || '未知') }
+      const res = await getAdminList({ list_rows: 500 })
+      const rows: any[] = res?.data?.rows ?? res?.rows ?? []
+      console.log('[MobileNewChat] getAdminList rows:', rows.length)
+      const user = rows.find((r: any) => r.id === userId)
+      console.log('[MobileNewChat] find user by id', userId, '->', user)
+      if (user) {
+        targetUser.value = user
+      } else {
+        targetUser.value = { id: userId, name: decodeURIComponent(userName || '未知') }
+      }
     }
   }
   const res2 = await getAdminList({ list_rows: 500 })
@@ -199,6 +226,11 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+.new-chat-avatar.agent-avatar {
+  border-radius: 14px;
+  font-size: 24px;
+  font-weight: 400;
 }
 .new-chat-name { font-size: 18px; font-weight: 700; color: #1d2129; }
 .new-chat-sub { font-size: 13px; color: #86909c; margin-top: 3px; }
