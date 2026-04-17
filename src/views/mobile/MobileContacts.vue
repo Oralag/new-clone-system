@@ -88,6 +88,7 @@
           </div>
         </template>
       </div>
+    </div><!-- end contacts-body -->
 
     <!-- 侧边字母索引（企业微信风格） -->
     <div class="contacts-index">
