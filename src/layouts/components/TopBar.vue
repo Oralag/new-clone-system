@@ -76,7 +76,7 @@
           <el-avatar :size="28" :src="authStore.avatar" class="avatar">
             {{ authStore.userName.charAt(0) }}
           </el-avatar>
-          <span class="user-name">{{ appStore.companyName || authStore.userName }}</span>
+          <span class="user-name">{{ isSuperAdmin ? (appStore.companyName || authStore.userName) : authStore.userName }}</span>
           <el-icon class="arrow-icon"><ArrowDown /></el-icon>
         </div>
         <template #dropdown>

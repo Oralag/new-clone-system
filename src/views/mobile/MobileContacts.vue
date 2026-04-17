@@ -16,26 +16,30 @@
       
       <!-- 机器人分类 -->
       <div class="contacts-robot-section">
-        <div class="contacts-robot-title">
+        <div class="contacts-robot-title" @click="robotExpanded = !robotExpanded">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#722ED1" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="8.5" cy="16" r="1.5"/><circle cx="15.5" cy="16" r="1.5"/><path d="M12 2v6"/></svg>
           机器人
+          <span class="contacts-robot-count">{{ robotAgents.length }}</span>
+          <span class="contacts-section-arrow" :class="{ collapsed: !robotExpanded }">▾</span>
         </div>
-        <div
-          v-for="bot in robotAgents"
-          :key="bot.id"
-          class="contacts-item"
-          @click="openAgent(bot)"
-        >
-          <div class="contacts-avatar robot-avatar" :style="{ background: bot.color }">{{ bot.avatar }}</div>
-          <div class="contacts-info">
-            <div class="contacts-name-row">
-              <span class="contacts-name">{{ bot.name }}</span>
-              <span class="contacts-tag">AI</span>
+        <template v-if="robotExpanded">
+          <div
+            v-for="bot in robotAgents"
+            :key="bot.id"
+            class="contacts-item"
+            @click="openAgent(bot)"
+          >
+            <div class="contacts-avatar robot-avatar" :style="{ background: bot.color }">{{ bot.avatar }}</div>
+            <div class="contacts-info">
+              <div class="contacts-name-row">
+                <span class="contacts-name">{{ bot.name }}</span>
+                <span class="contacts-tag">AI</span>
+              </div>
+              <div class="contacts-dept">{{ bot.desc }}</div>
             </div>
-            <div class="contacts-dept">{{ bot.desc }}</div>
+            <span class="contacts-arrow">›</span>
           </div>
-          <span class="contacts-arrow">›</span>
-        </div>
+        </template>
       </div>
 
 <div class="contacts-dept-entry" @click="router.push('/mobile/contacts/dept')">
@@ -139,6 +143,8 @@ const showSearch = ref(false)
 const showNewGroup = ref(false)
 const activeLetter = ref('')
 const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+
+const robotExpanded = ref(true)
 
 // 系统所有 Agent/机器人员工
 const robotAgents = [
@@ -510,6 +516,23 @@ export default { name: 'MobileContacts' }
   color: #722ED1;
   font-weight: 600;
   background: #f9f0ff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.contacts-robot-count {
+  font-size: 11px;
+  color: #999;
+  font-weight: 400;
+  margin-left: 2px;
+}
+.contacts-section-arrow {
+  margin-left: auto;
+  font-size: 12px;
+  color: #722ED1;
+  transition: transform 0.2s;
+}
+.contacts-section-arrow.collapsed {
+  transform: rotate(-90deg);
 }
 .contacts-item .contacts-avatar {
   width: 42px;
