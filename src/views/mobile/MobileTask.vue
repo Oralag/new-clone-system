@@ -36,11 +36,27 @@
       <div
         v-for="plan in filteredPlans"
         :key="plan.id"
-        class="task-item"
-        @click="openPlan(plan)"
+        class="task-item-wrap"
+        :class="{ swiped: swipedPlanId === plan.id }"
       >
+        <!-- 左滑操作按钮 -->
+        <div class="task-item-actions" v-if="swipedPlanId === plan.id">
+          <div class="action-btn pin-btn" @click.stop="togglePin(plan)">
+            {{ plan.is_pinned ? '取消置顶' : '置顶' }}
+          </div>
+          <div class="action-btn done-btn" @click.stop="toggleDone(plan)">
+            {{ plan.status === 'done' ? '标为未完成' : '标记完成' }}
+          </div>
+        </div>
+        <div
+          class="task-item"
+          @click="swipeMoved ? (swipeMoved = false) : openPlan(plan)"
+          @touchstart.passive="onSwipeStart($event, plan)"
+          @touchend.passive="onSwipeEnd"
+          @touchmove.passive="onSwipeMove"
+        >
         <!-- 完成状态 -->
-        <div class="task-check" @click.stop="toggleDone(plan)">
+        <div class="task-check">
           <svg v-if="plan.status === 'done'" width="20" height="20" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="11" fill="#00b42a"/>
             <polyline points="7 12 10 15 17 9" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -81,9 +97,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="#f53f3f"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
         </div>
       </div>
-    </div>
-
-    <!-- 新建任务按钮 -->
+      </div></div><!-- 新建任务按钮 -->
     <button class="task-fab" @click="openAdd">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
