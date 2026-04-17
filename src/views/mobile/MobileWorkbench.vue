@@ -97,35 +97,33 @@
     </div>
 
     <!-- 常用功能选择器 -->
-    <Teleport to="body">
-      <div v-if="showPicker" class="fav-overlay" @click.self="showPicker = false">
-        <div class="fav-sheet">
-          <div class="fav-sheet-hd">
-            <span class="fav-sheet-title">管理常用功能</span>
-            <button class="fav-sheet-close" @click="showPicker = false">完成</button>
-          </div>
-          <div class="fav-sheet-grid">
-            <div
-              v-for="app in allModuleApps"
-              :key="app.path"
-              class="fav-sheet-item"
-              :class="{ 'fav-sheet-item--on': isFav(app.path) }"
-              @click="toggleFav(app)"
-            >
-              <div class="fav-sheet-icon" :style="{ background: app.bg }">
-                <span v-html="app.icon" />
-                <div v-if="isFav(app.path)" class="fav-sheet-check">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                </div>
+    <div v-show="showPicker" class="picker-overlay" @click.self="showPicker = false">
+      <div class="picker-sheet">
+        <div class="picker-hd">
+          <span class="picker-title">管理常用功能</span>
+          <button class="picker-close" @click="showPicker = false">完成</button>
+        </div>
+        <div class="picker-grid">
+          <div
+            v-for="app in allModuleApps"
+            :key="app.path"
+            class="picker-item"
+            :class="{ 'picker-item--on': isFav(app.path) }"
+            @click="toggleFav(app)"
+          >
+            <div class="picker-icon" :style="{ background: app.bg }">
+              <span v-html="app.icon" />
+              <div v-if="isFav(app.path)" class="picker-check">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
               </div>
-              <div class="fav-sheet-name">{{ app.name }}</div>
             </div>
+            <div class="picker-name">{{ app.name }}</div>
           </div>
         </div>
       </div>
-    </Teleport>
+    </div>
 
     <!-- 快捷操作（九宫格） -->
     <div class="wb-section">
@@ -659,15 +657,15 @@ onMounted(async () => {
 }
 
 /* ── 常用功能选择器 ── */
-.fav-overlay {
+.picker-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 1000;
+  z-index: 9999;
   display: flex;
   align-items: flex-end;
 }
-.fav-sheet {
+.picker-sheet {
   background: #fff;
   border-radius: 16px 16px 0 0;
   width: 100%;
@@ -675,7 +673,7 @@ onMounted(async () => {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.fav-sheet-hd {
+.picker-hd {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -686,8 +684,8 @@ onMounted(async () => {
   background: #fff;
   z-index: 1;
 }
-.fav-sheet-title { font-size: 16px; font-weight: 600; color: #1d2129; }
-.fav-sheet-close {
+.picker-title { font-size: 16px; font-weight: 600; color: #1d2129; }
+.picker-close {
   border: none;
   background: #2E6BE6;
   color: #fff;
@@ -697,13 +695,13 @@ onMounted(async () => {
   border-radius: 16px;
   cursor: pointer;
 }
-.fav-sheet-grid {
+.picker-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
   padding: 12px 12px 24px;
 }
-.fav-sheet-item {
+.picker-item {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -713,9 +711,9 @@ onMounted(async () => {
   border-radius: 10px;
   transition: background 0.15s;
 }
-.fav-sheet-item:active { background: #f5f5f5; }
-.fav-sheet-item--on .fav-sheet-icon { box-shadow: 0 0 0 2px #2E6BE6; }
-.fav-sheet-icon {
+.picker-item:active { background: #f5f5f5; }
+.picker-item--on .picker-icon { box-shadow: 0 0 0 2px #2E6BE6; }
+.picker-icon {
   width: 46px;
   height: 46px;
   border-radius: 12px;
@@ -724,7 +722,7 @@ onMounted(async () => {
   justify-content: center;
   position: relative;
 }
-.fav-sheet-check {
+.picker-check {
   position: absolute;
   bottom: -4px;
   right: -4px;
@@ -737,7 +735,7 @@ onMounted(async () => {
   justify-content: center;
   border: 2px solid #fff;
 }
-.fav-sheet-name {
+.picker-name {
   font-size: 12px;
   color: #333;
   text-align: center;
