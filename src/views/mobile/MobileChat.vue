@@ -316,25 +316,28 @@ const displayedGroups = computed(() => {
 // ── 左滑操作 ──
 const swipedId = ref<string | null>(null)
 const swipeStartX = ref(0)
-const SWIPE_THRESHOLD = 60
+const currentSwipeItem = ref<any>(null)
+const SWIPE_THRESHOLD = 50
 
 function onSwipeStart(e: TouchEvent, g: any) {
   swipeStartX.value = e.touches[0].clientX
+  currentSwipeItem.value = g
 }
 function onSwipeMove(e: TouchEvent) {
   const dx = e.touches[0].clientX - swipeStartX.value
-  // 左滑（dx < -60）显示操作按钮
-  if (dx < -SWIPE_THRESHOLD) {
-    swipedId.value = g?.id
+  // 左滑（dx < -50）显示操作按钮
+  if (dx < -SWIPE_THRESHOLD && currentSwipeItem.value) {
+    swipedId.value = currentSwipeItem.value.id
   }
   // 右滑关闭
-  if (dx > SWIPE_THRESHOLD) {
+  if (dx > 10 && swipedId.value) {
     swipedId.value = null
   }
 }
 function onSwipeEnd() { /* handled by onSwipeMove */ }
 function closeSwipe() {
   swipedId.value = null
+  currentSwipeItem.value = null
 }
 
 async function togglePin(g: any) {
