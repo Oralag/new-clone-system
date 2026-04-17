@@ -239,9 +239,7 @@ export default { name: 'MobileLayout' }
 .wx-content {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   overscroll-behavior: contain;
   background: #fff;
   position: relative;

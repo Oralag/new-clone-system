@@ -79,9 +79,10 @@
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #F5A623"></span>
         <span class="wb-section-title">常用功能</span>
-        <button class="wb-section-more" @click="go('/mobile/modules')">添加 ›</button>
+        <button class="wb-section-more" @click="showFavPicker = true">添加 ›</button>
       </div>
-      <div class="wb-fav-scroll">
+      <div v-if="favoriteApps.length === 0" class="wb-empty-sm">暂无常用功能，点击右上角添加</div>
+      <div v-else class="wb-fav-scroll">
         <div
           v-for="fav in favoriteApps"
           :key="fav.path"
@@ -95,6 +96,37 @@
         </div>
       </div>
     </div>
+
+    <!-- 常用功能选择器 -->
+    <Teleport to="body">
+      <div v-if="showFavPicker" class="fav-overlay" @click.self="showFavPicker = false">
+        <div class="fav-sheet">
+          <div class="fav-sheet-hd">
+            <span class="fav-sheet-title">添加到常用功能</span>
+            <button class="fav-sheet-close" @click="showFavPicker = false">完成</button>
+          </div>
+          <div class="fav-sheet-grid">
+            <div
+              v-for="app in allModuleApps"
+              :key="app.path"
+              class="fav-sheet-item"
+              :class="{ 'fav-sheet-item--on': isFav(app.path) }"
+              @click="toggleFav(app)"
+            >
+              <div class="fav-sheet-icon" :style="{ background: app.bg }">
+                <span v-html="app.icon" />
+                <div v-if="isFav(app.path)" class="fav-sheet-check">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="fav-sheet-name">{{ app.name }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- 快捷操作 -->
     <div class="wb-section">
@@ -141,6 +173,51 @@ function parseGoodsInfo(g: any) {
 const kpi = ref({ todaySale: '0', todayOrders: 0, customerTotal: 0, stockWarn: 0 })
 const pendingItems = ref<any[]>([])
 const activities = ref<any[]>([])
+const showFavPicker = ref(false)
+
+// 所有可用模块
+const allModuleApps = [
+  { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+  { name: '采购订单', path: '/mobile/procure/order', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
+  { name: '采购入库', path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
+  { name: '仓库管理', path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
+  { name: '财务总览', path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
+  { name: '应收账款', path: '/mobile/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
+  { name: '客户管理', path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
+  { name: '商品资料', path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+  { name: '品牌管理', path: '/mobile/goods/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
+  { name: '人事管理', path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+  { name: '生产计划', path: '/mobile/production/plan', bg: 'rgba(5,150,105,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+  { name: '投资管理', path: '/mobile/investment/overview', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+  { name: '消息中心', path: '/mobile/message', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { name: '任务中心', path: '/mobile/task', bg: 'rgba(8,145,178,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+  { name: 'AI 助手', path: '/mobile/ai', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4l3 3"/></svg>' },
+]
+
+function loadFavs() {
+  try {
+    return JSON.parse(localStorage.getItem('wb_favs') || '[]')
+  } catch { return [] }
+}
+
+function saveFavs(paths: string[]) {
+  localStorage.setItem('wb_favs', JSON.stringify(paths))
+}
+
+const favoriteApps = ref<any[]>(loadFavs())
+
+function isFav(path: string) {
+  return favoriteApps.value.some(f => f.path === path)
+}
+
+function toggleFav(app: any) {
+  if (isFav(app.path)) {
+    favoriteApps.value = favoriteApps.value.filter(f => f.path !== app.path)
+  } else {
+    favoriteApps.value = [...favoriteApps.value, app]
+  }
+  saveFavs(favoriteApps.value.map(f => f.path))
+}
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -158,15 +235,6 @@ const weekday = computed(() => {
   const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   return days[new Date().getDay()]
 })
-
-// 常用功能（横向滚动，用户可自行配置）
-const favoriteApps = ref([
-  { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
-  { name: '采购入库', path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
-  { name: '仓库管理', path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
-  { name: '财务总览', path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
-  { name: '客户管理', path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
-])
 
 const quickApps = [
   { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
@@ -586,6 +654,96 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── 常用功能选择器 ── */
+.fav-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+.fav-sheet {
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-height: 70vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.fav-sheet-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+.fav-sheet-title { font-size: 16px; font-weight: 600; color: #1d2129; }
+.fav-sheet-close {
+  border: none;
+  background: #2E6BE6;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+}
+.fav-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  padding: 12px 12px 24px;
+}
+.fav-sheet-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+.fav-sheet-item:active { background: #f5f5f5; }
+.fav-sheet-item--on .fav-sheet-icon { box-shadow: 0 0 0 2px #2E6BE6; }
+.fav-sheet-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.fav-sheet-check {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  background: #2E6BE6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+}
+.fav-sheet-name {
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+  max-width: 60px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wb-empty-sm { text-align: center; padding: 16px; color: #bbb; font-size: 13px; }
 
 /* ── 动态列表 ── */
 .wb-empty { text-align: center; padding: 24px; color: #999; font-size: 13px; }
