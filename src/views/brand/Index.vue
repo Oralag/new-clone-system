@@ -424,4 +424,38 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
   .brand-hero { margin: 12px; height: 480px; }
   .brand-newsletter { margin: 24px; padding: 48px 24px; }
 }
+
+@media (max-width: 768px) {
+  .brand-hero { height: auto; min-height: 400px; padding: 40px 20px; }
+  .brand-hero-inner { padding: 0; }
+  .brand-hero-title { font-size: 28px; }
+  .brand-hero-subtitle { font-size: 15px; }
+  .brand-hero-desc { font-size: 14px; }
+  .brand-hero-actions { flex-direction: column; gap: 10px; }
+  .brand-hero-btn { width: 100%; justify-content: center; }
+  
+  .brand-cat-grid { grid-template-columns: 1fr; }
+  .brand-product-grid { grid-template-columns: 1fr; }
+  .brand-mode-grid { grid-template-columns: 1fr; }
+  
+  .brand-philosophy { padding: 32px 16px; }
+  .bp-card { padding: 24px; }
+  .bp-title { font-size: 20px; }
+  
+  .brand-categories, .brand-hot-inner { padding: 32px 16px; }
+  .bc-header { flex-direction: column; gap: 12px; }
+  .bc-title { font-size: 22px; }
+  
+  .brand-newsletter { margin: 16px; padding: 32px 20px; }
+  .bn-title { font-size: 22px; }
+  .bn-form { flex-direction: column; }
+  .bn-input { border-radius: 12px; }
+  .bn-btn { border-radius: 12px; padding: 14px; }
+}
+
+@media (max-width: 480px) {
+  .brand-hero-title { font-size: 24px; }
+  .brand-hero-subtitle { font-size: 14px; }
+  .bc-title, .bp-title, .bn-title { font-size: 20px; }
+}
 </style>

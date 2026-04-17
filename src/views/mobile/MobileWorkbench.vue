@@ -1,5 +1,24 @@
 <template>
   <div class="wb-page">
+    <!-- 收银台入口 -->
+    <div class="wb-cashier-card" @click="go('/cashregister')">
+      <div class="wb-cashier-left">
+        <div class="wb-cashier-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8">
+            <rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+            <line x1="6" y1="14" x2="12" y2="14"/><line x1="6" y1="17" x2="10" y2="17"/>
+          </svg>
+        </div>
+        <div class="wb-cashier-info">
+          <div class="wb-cashier-title">收银台</div>
+          <div class="wb-cashier-sub">扫码收款 · 订单结算 · 会员核销</div>
+        </div>
+      </div>
+      <div class="wb-cashier-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
     <!-- 待办提醒 -->
     <div v-if="pendingItems.length > 0" class="wb-section">
       <div class="wb-section-hd">
@@ -262,6 +281,56 @@ onMounted(async () => {
   background: #f5f5f5;
   min-height: 100%;
   padding-bottom: 0;
+}
+
+/* ── 收银台入口卡片 ── */
+.wb-cashier-card {
+  margin: 0 12px 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 50%, #FFB347 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.25);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.wb-cashier-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.15);
+}
+.wb-cashier-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.wb-cashier-icon {
+  width: 52px;
+  height: 52px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wb-cashier-info {}
+.wb-cashier-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 3px;
+}
+.wb-cashier-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+.wb-cashier-arrow {
+  color: #fff;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 /* ── 蓝色头部 ── */
