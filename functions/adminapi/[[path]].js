@@ -188,6 +188,38 @@ async function logOperation(env, userId, actionType, actionName, extra = {}) {
   await env.USERS_KV.put('operation_logs', JSON.stringify(logs))
 }
 
+// Agent IDs（虚拟用户）
+const AGENT_IDS = new Set([
+  'captain', 'copywriter', 'poster', 'video', 'brand', 'trend', 'publisher', 'designer', 'marketing',
+])
+
+// 获取通讯录成员（员工 + Agent）
+async function getContactIds(request, env, userId) {
+  const contactSet = new Set()
+
+  // 1. Agent
+  AGENT_IDS.forEach(id => contactSet.add(id))
+
+  // 2. 员工列表（从后端获取）
+  try {
+    const decoded = decodeToken(request.headers.get('token') || '')
+    const realToken = decoded?.token || decoded?.realToken
+    if (realToken) {
+      const res = await fetch(`${decoded.backend || DEFAULT_BACKEND}/adminapi/setting/admin/index?list_rows=500`, {
+        headers: { 'Content-Type': 'application/json', 'token': realToken, 'authorization': realToken }
+      })
+      const data = await res.json()
+      const rows = data?.data?.rows ?? []
+      rows.forEach(r => {
+        const id = r.id || r.admin_id
+        if (id) contactSet.add(String(id))
+      })
+    }
+  } catch {}
+
+  return contactSet
+}
+
 // ════════════════════════════════════════════════
 // Chat API Handlers
 // ════════════════════════════════════════════════
@@ -198,14 +230,20 @@ async function handleChatGroups(request, env) {
   const listRows = parseInt(url.searchParams.get('list_rows') || '50')
   const page = parseInt(url.searchParams.get('page') || '1')
 
+  // 获取通讯录（员工 + Agent）用于过滤
+  const contactIds = await getContactIds(request, env, userId)
+
   const raw = await env.USERS_KV.get('chat_groups')
   const groups = raw ? JSON.parse(raw) : []
   const memberRaw = await env.USERS_KV.get('chat_members')
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
 
+  // 只保留成员全部在通讯录内的群聊
   const userGroups = groups.filter(g => {
     const members = memberMap[g.id] || []
-    return members.some(m => m.user_id === userId) || g.created_by === userId
+    if (!members.some(m => m.user_id === userId || String(m.user_id) === String(userId)) && g.created_by !== userId) return false
+    // 所有成员必须都是通讯录里的人（或当前用户）
+    return members.every(m => contactIds.has(String(m.user_id)) || String(m.user_id) === String(userId))
   }).slice((page - 1) * listRows, page * listRows)
 
   const msgRaw = await env.USERS_KV.get('chat_messages')
@@ -237,6 +275,11 @@ async function handleCreateGroup(request, env) {
 
   const { name, member_ids = [] } = body
   if (!name?.trim()) return errRes('请输入群名称')
+
+  // 验证所有成员必须是通讯录里的人
+  const contactIds = await getContactIds(request, env, userId)
+  const invalid = member_ids.filter(id => !contactIds.has(String(id)))
+  if (invalid.length > 0) return errRes(`成员 ${invalid[0]} 不在通讯录中`)
 
   const raw = await env.USERS_KV.get('chat_groups')
   const groups = raw ? JSON.parse(raw) : []

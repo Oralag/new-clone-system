@@ -719,7 +719,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="付款对象">
-          <el-select v-model="feePayForm.contact_name" filterable allow-create default-first-option style="width:100%">
+          <el-select v-model="feePayForm.contact_name" filterable allow-create placeholder="可选，如：快递公司、检测机构等" style="width:100%" clearable>
             <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.name" />
           </el-select>
         </el-form-item>

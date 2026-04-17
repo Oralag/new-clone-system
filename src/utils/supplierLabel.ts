@@ -41,6 +41,10 @@ export function getPayReceiptSupplierLabel(
   purchaseOrders: any[],
   supplierList: any[] = []
 ): string {
+  // 附加费用付款：直接显示 contact_name，不反查供应商
+  if (/采购附加费用/.test(String(payRow.remark || ''))) {
+    return payRow.contact_name || '—'
+  }
   const sn = payRow.order_sn || payRow.order_no || ''
   const remarkId = String(payRow.remark || '').match(
     /采购单(?:自动)?付款\s+#(\d+)/
