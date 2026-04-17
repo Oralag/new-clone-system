@@ -283,6 +283,34 @@ const loading = ref(false)
 const submitting = ref(false)
 const activeFilter = ref('todo')
 const showAdd = ref(false)
+const swipedPlanId = ref<number | null>(null)
+const swipeStartX = ref(0)
+const swipeMoved = ref(false)
+const SWIPE_THRESHOLD = 50
+const swipingPlan = ref<any>(null)
+
+function onSwipeStart(e: TouchEvent, plan: any) {
+  swipeStartX.value = e.touches[0].clientX
+  swipeMoved.value = false
+  swipingPlan.value = plan
+}
+function onSwipeMove(e: TouchEvent) {
+  const dx = e.touches[0].clientX - swipeStartX.value
+  if (Math.abs(dx) > 5) swipeMoved.value = true
+  if (dx < -SWIPE_THRESHOLD && swipingPlan.value) {
+    swipedPlanId.value = swipingPlan.value.id
+  }
+  if (dx > 10 && swipedPlanId.value) {
+    swipedPlanId.value = null
+  }
+}
+function onSwipeEnd() {
+  swipingPlan.value = null
+}
+function closeSwipe() {
+  swipedPlanId.value = null
+  swipingPlan.value = null
+}
 const selectedPlan = ref<any>(null)
 const reminding = ref(false)
 
@@ -382,6 +410,13 @@ function openAdd() {
 
 function openPlan(plan: any) {
   selectedPlan.value = { ...plan }
+}
+
+async function togglePin(plan: any) {
+  const newPinned = !plan.is_pinned
+  await http.put(`/work/plans/${plan.id}`, { is_pinned: newPinned })
+  plan.is_pinned = newPinned
+  closeSwipe()
 }
 
 async function toggleDone(plan: any) {
@@ -704,4 +739,50 @@ export default { name: 'MobileTask' }
   border-radius: 10px; font-size: 15px; font-weight: 600; color: #2E6BE6; cursor: pointer; margin-top: 4px;
 }
 .remind-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* 左滑操作按钮样式 */
+.task-item-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.task-item-wrap > .task-item {
+  background: #fff;
+  transition: transform 0.2s;
+  position: relative;
+  z-index: 1;
+}
+.task-item-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+.action-btn.pin-btn {
+  background: #ffa033;
+  color: #fff;
+}
+.action-btn.done-btn {
+  background: #00b42a;
+  color: #fff;
+}
+.task-item-wrap.swiped > .task-item {
+  transform: translateX(-144px);
+}
+
 </style>

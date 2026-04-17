@@ -124,12 +124,15 @@
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                 </svg>
               </div>
+              <div class="m-gs-top-info">
+                <div class="m-gs-top-name">{{ group?.name }}</div>
+                <div class="m-gs-top-sub">{{ members.length }} 人</div>
+              </div>
               <div class="m-gs-add-btn-large" @click="showAddMember = true">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
                   <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
               </div>
-              <div class="m-gs-top-name">{{ group?.name }}</div>
             </div>
 
             <!-- 群成员列表（横向滚动） -->
@@ -154,46 +157,13 @@
             </div>
           </template>
 
-          <!-- 分组：查找与快捷入口 -->
+          <!-- 置顶开关（有后端API） -->
           <div class="m-gs-section">
-            <div class="m-gs-row">
-              <span class="m-gs-row-label">查找聊天记录</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-            <div class="m-gs-icons">
-              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文件</span></div>
-              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片/视频</span></div>
-              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>链接</span></div>
-            </div>
-          </div>
-
-          <!-- 分组：开关项 -->
-          <div class="m-gs-section">
-            <div class="m-gs-row">
-              <span class="m-gs-row-label">消息免打扰</span>
-              <div class="m-gs-switch" :class="{ active: muteEnabled }" @click="muteEnabled = !muteEnabled">
-                <div class="m-gs-switch-dot"></div>
-              </div>
-            </div>
             <div class="m-gs-row">
               <span class="m-gs-row-label">置顶聊天</span>
-              <div class="m-gs-switch" :class="{ active: pinEnabled }" @click="pinEnabled = !pinEnabled">
+              <div class="m-gs-switch" :class="{ active: pinEnabled }" @click="togglePin">
                 <div class="m-gs-switch-dot"></div>
               </div>
-            </div>
-            <div class="m-gs-row">
-              <span class="m-gs-row-label">标记</span>
-              <div class="m-gs-switch" :class="{ active: starEnabled }" @click="starEnabled = !starEnabled">
-                <div class="m-gs-switch-dot"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 设置当前聊天背景 -->
-          <div class="m-gs-section">
-            <div class="m-gs-row">
-              <span class="m-gs-row-label">设置当前聊天背景</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </div>
 
@@ -203,7 +173,7 @@
               <span>清空聊天记录</span>
             </div>
             <div v-if="isGroupChat" class="m-gs-row danger" @click="quitGroup">
-              <span>删除并退出</span>
+              <span>退出群聊</span>
             </div>
           </div>
         </div>
@@ -308,9 +278,7 @@ const addMemberSearch = ref('')
 const cleanupDays = ref(180)
 const cleaning = ref(false)
 const aiMode = ref(false)
-const muteEnabled = ref(false)
 const pinEnabled = ref(false)
-const starEnabled = ref(false)
 const showEditName = ref(false)
 
 const msgListRef = ref<HTMLElement>()
@@ -536,6 +504,18 @@ async function addMember(m: any) {
   }
 }
 
+async function togglePin() {
+  const newVal = !pinEnabled.value
+  try {
+    await http.post(`/chat/groups/${groupId.value}/pin`, { pinned: newVal })
+    pinEnabled.value = newVal
+    if (group.value) group.value.is_pinned = newVal
+    ElMessage.success(newVal ? '已置顶' : '已取消置顶')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败')
+  }
+}
+
 async function quitGroup() {
   try {
     await ElMessageBox.confirm('确定退出该群聊？', '退出群聊', { type: 'warning' })
@@ -591,7 +571,10 @@ async function loadGroup() {
       http.get(`/chat/groups/${groupId.value}`),
       http.get(`/chat/groups/${groupId.value}/members`),
     ])
-    if (groupRes.status === 'fulfilled') group.value = groupRes.value?.data ?? groupRes.value
+    if (groupRes.status === 'fulfilled') {
+      group.value = groupRes.value?.data ?? groupRes.value
+      pinEnabled.value = !!group.value?.is_pinned
+    }
     if (memberRes.status === 'fulfilled') members.value = memberRes.value?.data?.rows ?? memberRes.value?.rows ?? []
   } catch { /* 忽略 */ }
 }
