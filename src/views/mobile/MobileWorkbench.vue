@@ -79,7 +79,7 @@
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #F5A623"></span>
         <span class="wb-section-title">常用功能</span>
-        <span class="wb-section-hint">长按可编辑</span>
+        <button class="wb-section-more" @click="go('/mobile/modules')">添加 ›</button>
       </div>
       <div class="wb-fav-scroll">
         <div
@@ -93,14 +93,6 @@
           </div>
           <div class="wb-fav-name">{{ fav.name }}</div>
         </div>
-        <div class="wb-fav-item wb-fav-add" @click="go('/mobile/modules')">
-          <div class="wb-fav-icon" style="background: rgba(0,0,0,0.04)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.8">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </div>
-          <div class="wb-fav-name" style="color:#999">添加</div>
-        </div>
       </div>
     </div>
 
@@ -109,6 +101,7 @@
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #F5A623"></span>
         <span class="wb-section-title">快捷操作</span>
+        <button class="wb-section-more" @click="go('/mobile/modules')">更多 ›</button>
       </div>
       <div class="wb-quick-grid">
         <div
@@ -121,15 +114,6 @@
             <span v-html="app.icon" />
           </div>
           <div class="wb-quick-name">{{ app.name }}</div>
-        </div>
-        <div class="wb-quick-item" @click="go('/mobile/modules')">
-          <div class="wb-quick-icon" style="background: rgba(0,0,0,0.04)">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.8">
-              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-            </svg>
-          </div>
-          <div class="wb-quick-name" style="color: #999">更多应用</div>
         </div>
       </div>
     </div>
@@ -565,12 +549,6 @@ onMounted(async () => {
 }
 
 /* ── 常用功能横向滚动 ── */
-.wb-section-hint {
-  font-size: 12px;
-  color: #bbb;
-  font-weight: 400;
-  margin-left: auto;
-}
 .wb-fav-scroll {
   display: flex;
   gap: 12px;
@@ -608,7 +586,6 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.wb-fav-add .wb-fav-name { color: #bbb; }
 
 /* ── 动态列表 ── */
 .wb-empty { text-align: center; padding: 24px; color: #999; font-size: 13px; }
