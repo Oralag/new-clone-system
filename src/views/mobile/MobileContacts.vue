@@ -45,50 +45,47 @@
         </template>
       </div>
 
-      <!-- 组织架构分类（可展开/收起，员工归在里面） -->
-      <div class="contacts-dept-section">
-        <div class="contacts-dept-title" @click="deptExpanded = !deptExpanded">
-          <div class="contacts-dept-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-          </div>
-          <div class="contacts-dept-title-text">
-            <span>组织架构</span>
-            <span class="contacts-dept-subtitle">查看全部部门和员工</span>
-          </div>
-          <span class="contacts-dept-count">{{ filteredEmployees.length }}</span>
-          <span class="contacts-section-arrow dept-arrow" :class="{ collapsed: !deptExpanded }">▾</span>
+<div class="contacts-dept-entry" @click="router.push('/mobile/contacts/dept')">
+        <div class="contacts-dept-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
         </div>
-        <template v-if="deptExpanded">
-          <div v-if="filteredEmployees.length === 0 && !keyword" class="contacts-empty">
-            <div class="contacts-empty-icon">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-              </svg>
-            </div>
-            <div class="contacts-empty-text">暂无员工</div>
-          </div>
-          <div
-            v-for="c in filteredEmployees"
-            :key="c.id"
-            class="contacts-item"
-            @click="viewEmployee(c)"
-          >
-            <div class="contacts-avatar">{{ c.name?.[0] || '?' }}</div>
-            <div class="contacts-info">
-              <div class="contacts-name">{{ c.name }}</div>
-              <div class="contacts-sub" v-if="c.role_name || c.dept_name">
-                {{ c.role_name || '' }}{{ c.role_name && c.dept_name ? ' · ' : '' }}{{ c.dept_name || '' }}
-              </div>
-            </div>
-            <span class="contacts-arrow">›</span>
-          </div>
-        </template>
+        <div class="contacts-dept-info">
+          <span class="contacts-dept-name">组织架构</span>
+          <span class="contacts-dept-sub">查看全部部门和员工</span>
+        </div>
+        <span class="contacts-arrow">›</span>
       </div>
-    </div><!-- end contacts-body -->
+
+      <!-- 通讯录列表（子账户/员工） -->
+    <div v-if="filteredEmployees.length === 0 && !keyword" class="contacts-empty">
+      <div class="contacts-empty-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div class="contacts-empty-text">暂无子账户</div>
+    </div>
+
+    <div
+      v-for="c in filteredEmployees"
+      :key="c.id"
+      class="contacts-item"
+      @click="viewEmployee(c)"
+    >
+      <div class="contacts-avatar">{{ c.name?.[0] || '?' }}</div>
+      <div class="contacts-info">
+        <div class="contacts-name">{{ c.name }}</div>
+        <div class="contacts-sub" v-if="c.role_name || c.dept_name">
+          {{ c.role_name || '' }}{{ c.role_name && c.dept_name ? ' · ' : '' }}{{ c.dept_name || '' }}
+        </div>
+        </div>
+        <span class="contacts-arrow">›</span>
+      </div>
+    </div>
 
     <!-- 侧边字母索引（企业微信风格） -->
     <div class="contacts-index">
@@ -102,15 +99,14 @@
       >{{ letter === '#' ? ' ' : letter }}</div>
     </div>
 
+    <!-- 新建群聊弹窗 -->
+    <div v-if="showNewGroup" class="chat-new-mask" @click.self="showNewGroup = false">
     <!-- 悬浮 + 按钮 -->
     <button class="contacts-fab" @click="showNewGroup = true">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
     </button>
-
-    <!-- 新建群聊弹窗 -->
-    <div v-if="showNewGroup" class="chat-new-mask" @click.self="showNewGroup = false">
       <div class="chat-new-sheet">
         <div class="chat-new-header">
           <span>发起群聊</span>
@@ -152,8 +148,7 @@ const showNewGroup = ref(false)
 const activeLetter = ref('')
 const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
-const robotExpanded = ref(false)
-const deptExpanded = ref(true)
+const robotExpanded = ref(true)
 
 // ERP 系统真实 Agent（来自 agentRegistry.ts）
 const robotAgents = [
@@ -305,52 +300,31 @@ export default { name: 'MobileContacts' }
 }
 .contacts-search-input::placeholder { color: #999; }
 
-/* ── 组织架构分类 ── */
-.contacts-dept-section {
-  margin-top: 8px;
-}
-.contacts-dept-title {
+/* ── 部门入口 ── */
+.contacts-dept-entry {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   padding: 12px 16px;
-  font-size: 15px;
-  color: #2E6BE6;
-  font-weight: 700;
-  background: #f0f5ff;
   cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
   -webkit-tap-highlight-color: transparent;
+  background: #fafafa;
 }
-.contacts-dept-title-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-.contacts-dept-subtitle {
-  font-size: 11px;
-  color: #85b8ff;
-  font-weight: 400;
-}
-.contacts-dept-count {
-  font-size: 11px;
-  color: #999;
-  font-weight: 400;
-  margin-left: 2px;
-}
-.dept-arrow {
-  color: #2E6BE6;
-}
-.contacts-dept-title .contacts-dept-icon {
-  width: 28px;
-  height: 28px;
-  background: rgba(46,107,230,0.12);
-  border-radius: 6px;
+.contacts-dept-entry:active { background: #f0f0f0; }
+.contacts-dept-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(46,107,230,0.08);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
+.contacts-dept-info { flex: 1; }
+.contacts-dept-name { font-size: 15px; font-weight: 600; color: #1d2129; display: block; }
+.contacts-dept-sub { font-size: 12px; color: #999; }
 
 /* ── 客户列表 ── */
 .contacts-body { flex: 1; }
