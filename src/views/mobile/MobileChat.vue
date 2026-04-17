@@ -49,8 +49,8 @@
 
     <!-- ── 全部 Tab ── -->
     <div v-show="activeTab === 'all'">
-      <!-- 会议室置顶入口 -->
-      <div class="chat-meeting-bar" @click="router.push('/mobile/meeting')">
+      <!-- 会议室置顶入口（有进行中才显示） -->
+      <div v-if="activeMeetingCount > 0" class="chat-meeting-bar" @click="router.push('/mobile/meeting')">
         <div class="chat-meeting-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
             <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
@@ -75,7 +75,7 @@
           v-for="g in displayedGroups"
           :key="g.id"
           class="chat-item"
-          @click="router.push(`/mobile/chat/${g.id}`)"
+          @click="g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`)"
         >
           <div class="chat-avatar-wrap">
             <div class="chat-avatar" :style="avatarStyle(g)">{{ g.avatar_text || g.name?.[0] || '群' }}</div>

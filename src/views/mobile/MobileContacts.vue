@@ -1,25 +1,5 @@
 <template>
   <div class="contacts-page">
-    <!-- 顶部栏：企业微信风格 -->
-    <div class="wx-nav-bar">
-      <div class="wx-nav-left">
-        <div class="wx-nav-search" @click="showSearch = !showSearch">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <span>搜索</span>
-        </div>
-      </div>
-      <div class="wx-nav-title">通讯录</div>
-      <div class="wx-nav-right">
-        <button class="wx-nav-btn" @click="showNewGroup = true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-
     <!-- 搜索展开 -->
     <div v-if="showSearch" class="contacts-search">
       <div class="contacts-search-inner">
@@ -113,6 +93,12 @@
 
     <!-- 新建群聊弹窗 -->
     <div v-if="showNewGroup" class="chat-new-mask" @click.self="showNewGroup = false">
+    <!-- 悬浮 + 按钮 -->
+    <button class="contacts-fab" @click="showNewGroup = true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
       <div class="chat-new-sheet">
         <div class="chat-new-header">
           <span>发起群聊</span>
@@ -463,6 +449,25 @@ export default { name: 'MobileContacts' }
 .chat-new-info { flex: 1; }
 .chat-new-title { font-size: 16px; font-weight: 600; color: #1d2129; margin-bottom: 2px; }
 .chat-new-sub { font-size: 12px; color: #86909c; }
+
+.contacts-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 80px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2E6BE6;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(46,107,230,0.4);
+  cursor: pointer;
+  z-index: 50;
+  -webkit-tap-highlight-color: transparent;
+}
+.contacts-fab:active { opacity: 0.85; }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 </style>

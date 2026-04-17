@@ -201,7 +201,7 @@ function handleActivityClick(a: any) {
     warehouse: '/mobile/warehouse/stock',
     finance: '/mobile/finance/overview',
     task: '/mobile/task',
-    ai: '/mobile/ai-bot',
+    ai: '/mobile/ai',
     investment: '/mobile/investment/overview',
     personnel: '/mobile/personnel/staff',
     goods: '/mobile/goods/info',
