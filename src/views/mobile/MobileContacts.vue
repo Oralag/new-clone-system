@@ -102,14 +102,15 @@
       >{{ letter === '#' ? ' ' : letter }}</div>
     </div>
 
-    <!-- 新建群聊弹窗 -->
-    <div v-if="showNewGroup" class="chat-new-mask" @click.self="showNewGroup = false">
     <!-- 悬浮 + 按钮 -->
     <button class="contacts-fab" @click="showNewGroup = true">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
     </button>
+
+    <!-- 新建群聊弹窗 -->
+    <div v-if="showNewGroup" class="chat-new-mask" @click.self="showNewGroup = false">
       <div class="chat-new-sheet">
         <div class="chat-new-header">
           <span>发起群聊</span>

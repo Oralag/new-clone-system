@@ -49,6 +49,10 @@
 
     <!-- ── 全部 Tab ── -->
     <div v-show="activeTab === 'all'">
+      <!-- 调试信息 -->
+      <div style="background:#ff0;padding:4px;font-size:10px;color:#000">
+        activeTab={{ activeTab }} groups={{ groups.length }} displayed={{ displayedGroups.length }} pinned={{ pinnedSessions.length }}
+      </div>
       <!-- 消息列表 -->
       <div class="chat-list">
         <div v-if="displayedGroups.length === 0 && groups.length === 0" class="chat-empty">
