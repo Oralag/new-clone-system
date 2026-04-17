@@ -132,26 +132,6 @@
     <div class="m-my-logout-wrap">
       <button class="m-my-logout-btn" @click="handleLogout">退出登录</button>
     </div>
-
-    <!-- 数据概览 -->
-    <div class="m-my-cards">
-      <div class="m-my-card" @click="router.push('/mobile/sale/out')">
-        <div class="m-my-card-num">{{ (myStats.todaySale / 10000).toFixed(1) }}w</div>
-        <div class="m-my-card-label">本月销售额</div>
-      </div>
-      <div class="m-my-card" @click="router.push('/mobile/sale/out')">
-        <div class="m-my-card-num">{{ myStats.todayOrders }}</div>
-        <div class="m-my-card-label">本月订单</div>
-      </div>
-      <div class="m-my-card" @click="router.push('/mobile/procure/order')">
-        <div class="m-my-card-num">{{ myStats.pendingCount }}</div>
-        <div class="m-my-card-label">待审核</div>
-      </div>
-      <div class="m-my-card" @click="router.push('/mobile/finance/overview')">
-        <div class="m-my-card-num">{{ (myStats.receivable / 10000).toFixed(1) }}w</div>
-        <div class="m-my-card-label">应收款</div>
-      </div>
-    </div>
   </div>
 </template>
 
