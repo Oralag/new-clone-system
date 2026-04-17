@@ -135,33 +135,16 @@
               <el-tag :type="getPayStatus(row).type" size="small">{{ getPayStatus(row).label }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="单据支出" width="140" align="right">
+          <el-table-column label="附加费用" width="160" align="right">
             <template #default="{ row }">
-              <template v-if="Number(row.expense_amount || 0) > 0">
-                <span style="color:#d97706;font-weight:600">¥{{ Number(row.expense_amount).toFixed(2) }}</span>
-                <el-tag
-                  :type="getExpensePayStatus(row).type"
-                  size="small"
-                  style="margin-left:4px"
-                >{{ getExpensePayStatus(row).label }}</el-tag>
+              <template v-if="getFeeItemsForRow(row).length > 0">
+                <div v-for="(fee, idx) in getFeeItemsForRow(row)" :key="idx" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;line-height:1.6">
+                  <span style="font-size:11px;color:rgba(29,29,31,0.5)">{{ fee.name }}</span>
+                  <span style="color:#8b5cf6;font-weight:600">¥{{ Number(fee.amount).toFixed(2) }}</span>
+                  <el-tag :type="getFeeItemPayStatus(row, idx).type" size="small">{{ getFeeItemPayStatus(row, idx).label }}</el-tag>
+                </div>
               </template>
               <span v-else style="color:rgba(29,29,31,0.2)">—</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="运费" width="140" align="right">
-            <template #default="{ row }">
-              <template v-if="Number(row.freight_amount || 0) > 0">
-                <span style="color:#8b5cf6;font-weight:600">¥{{ Number(row.freight_amount).toFixed(2) }}</span>
-                <el-tag
-                  :type="getFreightPayStatus(row).type"
-                  size="small"
-                  style="margin-left:4px"
-                >{{ getFreightPayStatus(row).label }}</el-tag>
-              </template>
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openFreightDialog(row)">
-                添加运费
-              </el-button>
-              <span v-else-if="row.status === 0" style="color:rgba(29,29,31,0.2)">—</span>
             </template>
           </el-table-column>
           <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
@@ -170,7 +153,6 @@
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && getPayStatus(row).label !== '已付清'" type="success" link size="small" @click="openPayDialog(row)">付款</el-button>
-              <el-button v-if="row.status === 1 && Number(row.expense_amount || 0) > 0 && getExpensePayStatus(row).label === '待付'" type="warning" link size="small" @click="openExpensePayDialog(row)">支出付款</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
@@ -479,20 +461,6 @@
               <span class="settle-value primary">¥{{ fd.total_amount.toFixed(2) }}</span>
             </div>
             <div class="settle-item">
-              <span class="settle-label">运费</span>
-              <el-input-number v-model="fd.freight_amount" :min="0" :precision="2" :disabled="isReadonly"
-                size="small" style="width:110px" @change="calcSettle" />
-            </div>
-            <div class="settle-item">
-              <span class="settle-label">运费承担</span>
-              <el-select v-model="fd.freight_bearer" size="small" style="width:110px" :disabled="isReadonly">
-                <el-option label="我方承担" value="buyer" />
-                <el-option label="供应商承担" value="seller" />
-                <el-option label="各半" value="half" />
-                <el-option label="免运费" value="free" />
-              </el-select>
-            </div>
-            <div class="settle-item">
               <span class="settle-label">折扣方式</span>
               <el-select v-model="fd.discount_type" size="small" style="width:120px" :disabled="isReadonly" @change="calcSettle">
                 <el-option label="无折扣" value="none" />
@@ -515,17 +483,55 @@
               <el-input-number v-model="fd.pay_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" />
             </div>
-            <div class="settle-item">
-              <span class="settle-label">单据支出</span>
-              <el-input-number v-model="fd.expense_amount" :min="0" :precision="2" :disabled="isReadonly"
-                size="small" style="width:130px" @change="calcSettle" />
-              <template v-if="isReadonly && Number(fd.expense_amount || 0) > 0">
-                <el-tag :type="getExpensePayStatus(fd).type" size="small" style="margin-left:8px">
-                  {{ getExpensePayStatus(fd).label }}
-                </el-tag>
-                <el-button v-if="getExpensePayStatus(fd).label === '待付'" type="warning" link size="small"
-                  style="margin-left:4px" @click="openExpensePayDialog(fd)">支出付款</el-button>
-              </template>
+            <!-- 附加费用列表 -->
+            <div class="settle-item fee-items-row" style="align-items:flex-start">
+              <span class="settle-label" style="padding-top:6px">附加费用</span>
+              <div style="flex:1">
+                <div v-for="(fee, idx) in fd.fee_items" :key="idx" class="fee-item-line">
+                  <el-select
+                    v-model="fee.name"
+                    size="small"
+                    style="width:120px"
+                    :disabled="isReadonly"
+                    filterable
+                    allow-create
+                    default-first-option
+                    placeholder="费用类型"
+                  >
+                    <el-option label="运费" value="运费" />
+                    <el-option label="装卸费" value="装卸费" />
+                    <el-option label="检测费" value="检测费" />
+                    <el-option label="包装费" value="包装费" />
+                    <el-option label="仓储费" value="仓储费" />
+                    <el-option label="单据支出" value="单据支出" />
+                    <el-option label="其他费用" value="其他费用" />
+                  </el-select>
+                  <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small"
+                    style="width:110px;margin-left:6px" :disabled="isReadonly" placeholder="金额" />
+                  <el-select v-model="fee.bearer" size="small" style="width:110px;margin-left:6px" :disabled="isReadonly">
+                    <el-option label="我方承担" value="buyer" />
+                    <el-option label="供应商承担" value="seller" />
+                    <el-option label="各半" value="half" />
+                    <el-option label="免费" value="free" />
+                  </el-select>
+                  <template v-if="isReadonly">
+                    <el-tag :type="getFeeItemPayStatus(fd, idx).type" size="small" style="margin-left:6px">
+                      {{ getFeeItemPayStatus(fd, idx).label }}
+                    </el-tag>
+                    <el-button
+                      v-if="getFeeItemPayStatus(fd, idx).label === '待付'"
+                      type="warning" link size="small" style="margin-left:4px"
+                      @click="openFeePayDialog(fd, idx)"
+                    >付款</el-button>
+                  </template>
+                  <el-button v-if="!isReadonly" type="danger" link :icon="Delete" size="small"
+                    style="margin-left:6px" @click="fd.fee_items.splice(idx, 1)" />
+                </div>
+                <el-button v-if="!isReadonly" type="primary" link size="small" :icon="Plus"
+                  style="margin-top:4px" @click="fd.fee_items.push({ name: '运费', amount: 0, bearer: 'buyer' })">
+                  添加费用项
+                </el-button>
+              </div>
             </div>
             <div v-if="isReadonly" class="settle-item">
               <span class="settle-label">已付金额</span>
@@ -650,75 +656,38 @@
       </template>
     </el-dialog>
 
-    <!-- 单据支出付款弹窗 -->
-    <el-dialog v-model="expensePayVisible" title="单据支出付款" width="400px" append-to-body>
-      <el-form :model="expensePayForm" label-width="90px">
+    <!-- 费用付款弹窗（统一：运费/单据支出/其他附加费用） -->
+    <el-dialog v-model="feePayVisible" :title="`${feePayForm.feeName} 付款`" width="420px" append-to-body>
+      <el-form :model="feePayForm" label-width="90px">
         <el-form-item label="采购单">
-          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ expensePayForm.orderSn }} · {{ expensePayForm.supplierName }}</span>
+          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ feePayForm.orderSn }} · {{ feePayForm.supplierName }}</span>
         </el-form-item>
-        <el-form-item label="支出金额">
-          <span style="font-size:15px;font-weight:700;color:#d97706">¥{{ expensePayForm.amount.toFixed(2) }}</span>
+        <el-form-item label="费用类型">
+          <span style="font-weight:600">{{ feePayForm.feeName }}</span>
+        </el-form-item>
+        <el-form-item label="费用金额">
+          <span style="font-size:15px;font-weight:700;color:#8b5cf6">¥{{ feePayForm.amount.toFixed(2) }}</span>
         </el-form-item>
         <el-form-item label="付款账户">
-          <el-select v-model="expensePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onExpensePayFundChange">
+          <el-select v-model="feePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onFeePayFundChange">
             <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="付款对象">
-          <el-select v-model="expensePayForm.contact_name" placeholder="采购单据支出" filterable allow-create default-first-option style="width:100%">
+          <el-select v-model="feePayForm.contact_name" filterable allow-create default-first-option style="width:100%">
             <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.name" />
           </el-select>
         </el-form-item>
         <el-form-item label="付款日期">
-          <el-date-picker v-model="expensePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+          <el-date-picker v-model="feePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="expensePayForm.remark" placeholder="可选" />
+          <el-input v-model="feePayForm.remark" placeholder="可选" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="expensePayVisible = false">取消</el-button>
-        <el-button type="primary" :loading="expensePaySubmitting" @click="submitExpensePay">确认付款</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 添加运费弹窗 -->
-    <el-dialog v-model="freightVisible" title="添加运费" width="420px" append-to-body>
-      <el-form :model="freightForm" label-width="90px">
-        <el-form-item label="采购单">
-          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ freightForm.orderSn }} · {{ freightForm.supplierName }}</span>
-        </el-form-item>
-        <el-form-item label="运费金额">
-          <el-input-number v-model="freightForm.amount" :min="0" :precision="2" style="width:100%" />
-        </el-form-item>
-        <el-form-item label="运费承担">
-          <el-select v-model="freightForm.bearer" style="width:100%">
-            <el-option label="我方承担" value="buyer" />
-            <el-option label="供应商承担" value="seller" />
-            <el-option label="各半" value="half" />
-            <el-option label="免运费" value="free" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="freightForm.bearer === 'buyer' || freightForm.bearer === 'half'" label="付款账户">
-          <el-select v-model="freightForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onFreightFundChange">
-            <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="付款对象">
-          <el-select v-model="freightForm.contact_name" placeholder="付款对象" filterable allow-create default-first-option style="width:100%">
-            <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.name" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="付款日期">
-          <el-date-picker v-model="freightForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="freightForm.remark" placeholder="可选" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="freightVisible = false">取消</el-button>
-        <el-button type="primary" :loading="freightSubmitting" @click="submitFreight">确认</el-button>
+        <el-button @click="feePayVisible = false">取消</el-button>
+        <el-button type="primary" :loading="feePaySubmitting" @click="submitFeePay">确认付款</el-button>
       </template>
     </el-dialog>
 
@@ -1092,6 +1061,8 @@ const paidMapBySupplier = ref<Record<string, number>>({})
 const expensePaidById = ref<Record<number, number>>({})
 // 运费付款 Map：order_id → 已付金额
 const freightPaidById = ref<Record<number, number>>({})
+// 附加费用付款 Map："order_id:feeIndex" 或 "order_id:feeName" → 已付金额
+const feeItemPaidMap = ref<Record<string, number>>({})
 
 function payKey(orderSn: string, supplierName: string): string {
   return `${String(orderSn || '').trim()}@@${String(supplierName || '').trim()}`
@@ -1330,6 +1301,20 @@ async function loadPaidMap() {
       }
     }
     freightPaidById.value = freightIdMap
+    // 新格式附加费用付款 Map："order_id:feeName" → 已付金额
+    const feeMap: Record<string, number> = {}
+    for (const r of rows) {
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const m = String(r.remark || '').match(/采购附加费用\s*#(\d+):(.+?)(?:\s|$)/)
+      if (m) {
+        const id = Number(m[1])
+        const feeName = m[2].trim()
+        const key = `${id}:${feeName}`
+        feeMap[key] = (feeMap[key] || 0) + amt
+      }
+    }
+    feeItemPaidMap.value = feeMap
     updateSummary()
   } catch {}
 }
@@ -1375,159 +1360,104 @@ function getFreightPayStatus(row: any): { label: string; type: string } {
   return { label: '待付', type: 'warning' }
 }
 
-// ── 单据支出付款弹窗 ──────────────────────────────────────────────────────────
-const expensePayVisible = ref(false)
-const expensePaySubmitting = ref(false)
-const expensePayForm = reactive({
+// ── 费用付款弹窗（统一）────────────────────────────────────────────────────────
+const feePayVisible = ref(false)
+const feePaySubmitting = ref(false)
+const feePayForm = reactive({
   orderId: 0,
   orderSn: '',
   supplierName: '',
-  contact_name: '',
+  feeName: '',
+  feeIndex: -1,
   amount: 0,
+  bearer: 'buyer',
   fund_id: null as number | null,
   fund_name: '',
+  contact_name: '',
   pay_date: new Date().toISOString().slice(0, 10),
   remark: '',
 })
 
-function openExpensePayDialog(row: any) {
-  expensePayForm.orderId = row.id
-  expensePayForm.orderSn = row.order_sn || row.order_no || `PO${row.id}`
-  expensePayForm.supplierName = row.supplier_name || ''
-  expensePayForm.contact_name = '采购单据支出'
-  expensePayForm.amount = Number(row.expense_amount || 0)
-  expensePayForm.fund_id = null
-  expensePayForm.fund_name = ''
-  expensePayForm.pay_date = new Date().toISOString().slice(0, 10)
-  expensePayForm.remark = ''
-  expensePayVisible.value = true
-}
-
-function onExpensePayFundChange(id: number) {
-  const f = fundOptions.value.find((f: any) => f.id === id)
-  expensePayForm.fund_name = f?.name || ''
-}
-
-// ── 补录运费弹窗 ─────────────────────────────────────────────────────────────
-const freightVisible = ref(false)
-const freightSubmitting = ref(false)
-const freightForm = reactive({
-  orderId: 0,
-  orderSn: '',
-  supplierName: '',
-  amount: 0,
-  bearer: 'buyer' as string,
-  contact_name: '',
-  fund_id: null as number | null,
-  fund_name: '',
-  pay_date: new Date().toISOString().slice(0, 10),
-  remark: '',
-})
-
-function openFreightDialog(row: any) {
-  freightForm.orderId = row.id
-  freightForm.orderSn = row.order_sn || row.order_no || `PO${row.id}`
-  freightForm.supplierName = row.supplier_name || ''
-  freightForm.amount = 0
-  freightForm.bearer = 'buyer'
-  freightForm.contact_name = row.supplier_name || ''
-  freightForm.fund_id = null
-  freightForm.fund_name = ''
-  freightForm.pay_date = new Date().toISOString().slice(0, 10)
-  freightForm.remark = ''
-  freightVisible.value = true
-}
-
-function onFreightFundChange(id: number) {
-  const f = fundOptions.value.find((f: any) => f.id === id)
-  freightForm.fund_name = f?.name || ''
-}
-
-async function submitFreight() {
-  if (freightForm.amount <= 0) { ElMessage.warning('请输入运费金额'); return }
-  const needPay = freightForm.bearer === 'buyer' || freightForm.bearer === 'half'
-  if (needPay && !freightForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
-
-  freightSubmitting.value = true
-  try {
-    // 1. 更新采购单运费字段
-    await updateProcureOrder(freightForm.orderId, {
-      freight_amount: freightForm.amount,
-      freight_bearer: freightForm.bearer,
-    })
-
-    // 2. 创建运费付款记录（我方承担或各半时）
-    if (needPay && freightForm.fund_id) {
-      const payAmount = freightForm.bearer === 'half' ? freightForm.amount / 2 : freightForm.amount
-      await createPayReceipt({
-        contact_type: 'other',
-        contact_name: freightForm.contact_name || freightForm.supplierName || '采购运费',
-        order_sn: freightForm.orderSn,
-        order_id: freightForm.orderId,
-        amount: payAmount,
-        pay_date: freightForm.pay_date,
-        fund_id: freightForm.fund_id,
-        fund_name: freightForm.fund_name,
-        remark: `采购运费 #${freightForm.orderId}${freightForm.remark ? ' ' + freightForm.remark : ''}`,
-      })
-    }
-
-    ElMessage.success('运费补录成功')
-    freightVisible.value = false
-    loadPaidMap()
-    tableRef.value?.refresh()
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
-  } finally {
-    freightSubmitting.value = false
+function getFeeItemsForRow(row: any): { name: string; amount: number; bearer: string }[] {
+  let items: any[] = []
+  try { items = Array.isArray(row.fee_items) ? row.fee_items : JSON.parse(row.fee_items || '[]') } catch { items = [] }
+  if (!items.length) {
+    const freight = Number(row.freight_amount || 0)
+    const expense = Number(row.expense_amount || 0)
+    if (freight > 0) items.push({ name: '运费', amount: freight, bearer: row.freight_bearer || 'buyer' })
+    if (expense > 0) items.push({ name: '单据支出', amount: expense, bearer: 'buyer' })
   }
+  return items
 }
 
-async function submitExpensePay() {
-  if (!expensePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
-  // 检查是否已付过款
-  const orderId = expensePayForm.orderId
-  const expAmt = Number(expensePayForm.amount || 0)
-  const alreadyPaid = expensePaidById.value[orderId] || 0
-  if (alreadyPaid >= expAmt - 0.01) {
-    ElMessage.warning('该单据已付过款，请勿重复付款')
-    return
-  }
-  expensePaySubmitting.value = true
+function getFeeItemPayStatus(row: any, idx: number): { label: string; type: string } {
+  if (Number(row.status) !== 1) return { label: '—', type: 'info' }
+  const items = getFeeItemsForRow(row)
+  const fee = items[idx]
+  if (!fee || Number(fee.amount || 0) <= 0) return { label: '—', type: 'info' }
+  const bearer = fee.bearer || 'buyer'
+  if (bearer === 'seller') return { label: '供应商承担', type: 'info' }
+  if (bearer === 'free') return { label: '免费', type: 'info' }
+  const needPay = bearer === 'half' ? Number(fee.amount) / 2 : Number(fee.amount)
+  const paid = feeItemPaidMap.value[`${row.id}:${idx}`] || feeItemPaidMap.value[`${row.id}:${fee.name}`] || 0
+  if (paid >= needPay - 0.01) return { label: '已付', type: 'success' }
+  return { label: '待付', type: 'warning' }
+}
+
+function openFeePayDialog(row: any, idx: number) {
+  const items = getFeeItemsForRow(row)
+  const fee = items[idx]
+  feePayForm.orderId = row.id
+  feePayForm.orderSn = row.order_no || row.order_sn || `PO${row.id}`
+  feePayForm.supplierName = row.supplier_name || ''
+  feePayForm.feeName = fee.name
+  feePayForm.feeIndex = idx
+  feePayForm.amount = Number(fee.amount)
+  feePayForm.bearer = fee.bearer || 'buyer'
+  feePayForm.fund_id = null
+  feePayForm.fund_name = ''
+  feePayForm.contact_name = row.supplier_name || ''
+  feePayForm.pay_date = new Date().toISOString().slice(0, 10)
+  feePayForm.remark = ''
+  feePayVisible.value = true
+}
+
+function onFeePayFundChange(id: number) {
+  const f = fundOptions.value.find((f: any) => f.id === id)
+  feePayForm.fund_name = f?.name || ''
+}
+
+async function submitFeePay() {
+  if (!feePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  const needPay = feePayForm.bearer === 'half' ? feePayForm.amount / 2 : feePayForm.amount
+  feePaySubmitting.value = true
   try {
     await createPayReceipt({
       contact_type: 'other',
-      contact_name: expensePayForm.contact_name || expensePayForm.supplierName || '采购单据支出',
-      order_sn: expensePayForm.orderSn,
-      order_id: expensePayForm.orderId,
-      amount: expensePayForm.amount,
-      pay_date: expensePayForm.pay_date,
-      fund_id: expensePayForm.fund_id,
-      fund_name: expensePayForm.fund_name,
-      remark: `采购单据支出 #${expensePayForm.orderId}${expensePayForm.remark ? ' ' + expensePayForm.remark : ''}`,
+      contact_name: feePayForm.contact_name || feePayForm.supplierName || feePayForm.feeName,
+      order_sn: feePayForm.orderSn,
+      order_id: feePayForm.orderId,
+      amount: needPay,
+      pay_date: feePayForm.pay_date,
+      fund_id: feePayForm.fund_id,
+      fund_name: feePayForm.fund_name,
+      remark: `采购附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
     })
-    // 同时创建费用记录，用于利润分析（字段名需与费用管理表单一致）
     await createExpense({
-      type_name: expensePayForm.contact_name || expensePayForm.supplierName || '采购单据支出',
-      apply_date: expensePayForm.pay_date,
-      amount: expensePayForm.amount,
-      remark: `采购单据支出 #${expensePayForm.orderId}${expensePayForm.remark ? ' ' + expensePayForm.remark : ''}`,
-      order_sn: expensePayForm.orderSn,
+      type_name: feePayForm.feeName,
+      apply_date: feePayForm.pay_date,
+      amount: needPay,
+      remark: `采购附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
+      order_sn: feePayForm.orderSn,
     })
-    // 更新采购单的单据支出金额
-    const currentExpenseAmt = Number(expensePayForm.orderRow?.expense_amount || 0)
-    const newExpenseAmt = currentExpenseAmt + Number(expensePayForm.amount || 0)
-    await updateProcureOrder(expensePayForm.orderId, {
-      expense_amount: newExpenseAmt,
-    })
-    ElMessage.success('支出付款成功')
-    expensePayVisible.value = false
+    ElMessage.success('付款成功')
+    feePayVisible.value = false
     loadPaidMap()
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '付款失败')
   } finally {
-    expensePaySubmitting.value = false
+    feePaySubmitting.value = false
   }
 }
 
@@ -1753,6 +1683,7 @@ const defaultFd = () => ({
   expense_amount: 0,
   pay_amount: 0,
   installment: false,
+  fee_items: [] as { name: string; amount: number; bearer: string }[],
   attachments: [] as AttachFile[],
   items: [] as OrderItem[],
 })
@@ -1866,6 +1797,16 @@ function openEdit(row: any, readonly = false) {
   fd.order_sn = fd.order_sn || fd.order_no || ''
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   try { fd.attachments = Array.isArray(row.attachments_info) ? row.attachments_info : JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
+  // 加载 fee_items，若无则从旧 freight_amount/expense_amount 迁移
+  let feeItems: any[] = []
+  try { feeItems = Array.isArray(row.fee_items) ? row.fee_items : JSON.parse(row.fee_items || '[]') } catch { feeItems = [] }
+  if (!feeItems.length) {
+    const freight = Number(row.freight_amount || 0)
+    const expense = Number(row.expense_amount || 0)
+    if (freight > 0) feeItems.push({ name: '运费', amount: freight, bearer: row.freight_bearer || 'buyer' })
+    if (expense > 0) feeItems.push({ name: '单据支出', amount: expense, bearer: 'buyer' })
+  }
+  fd.fee_items = feeItems
   fd.total_amount = fd.items.reduce((s: number, r: any) => s + (r.num || 0) * (r.price || 0), 0)
   fd.expense_amount = Number(fd.expense_amount || 0)
   // 折扣字段从后端直接读取，不重新计算，避免覆盖已保存的折后金额
@@ -1959,6 +1900,7 @@ async function handleSave(andAudit = false) {
       after_discount: fd.after_discount,
       expense_amount: Number(fd.expense_amount || 0),
       goods_info: JSON.stringify(fd.items),
+      fee_items: JSON.stringify(fd.fee_items || []),
     }
     let orderId = fd.id
     if (fd.id) {
