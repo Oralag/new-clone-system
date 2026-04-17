@@ -26,9 +26,9 @@ function corsHeaders() {
   }
 }
 
-function jsonRes(data) {
-  return new Response(JSON.stringify(data), {
-    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+function jsonRes(data, status = 200) {
+  const body = { code: 1, data }
+  return new Response(JSON.stringify(body), {
   })
 }
 

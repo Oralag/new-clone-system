@@ -428,7 +428,7 @@ async function createPlan() {
       priority: form.value.priority,
       mentions: form.value.mentions,
     })
-    plans.value.unshift(res.plan)
+    plans.value.unshift(res.data.plan)
     showAdd.value = false
     activeFilter.value = 'todo'
   } catch (e: any) {
@@ -462,7 +462,7 @@ async function loadPlans() {
   loading.value = true
   try {
     const res = await http.get('/work/plans')
-    plans.value = res.plans || []
+    plans.value = res.data?.plans || []
   } catch {
     plans.value = []
   } finally {
