@@ -68,10 +68,10 @@
           <!-- 左滑操作按钮 -->
           <div class="chat-item-actions">
             <div class="action-btn pin-btn" @click.stop="togglePin(g)">
-              {{ g.is_pinned ? '📌' : '📌' }} {{ g.is_pinned ? '取消' : '置顶' }}
+              {{ g.is_pinned ? '取消置顶' : '置顶' }}
             </div>
             <div class="action-btn delete-btn" @click.stop="deleteGroup(g)">
-              🗑️ 删除
+              删除
             </div>
           </div>
           <!-- 聊天项主体 -->
