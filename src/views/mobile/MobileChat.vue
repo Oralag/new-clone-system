@@ -49,10 +49,6 @@
 
     <!-- ── 全部 Tab ── -->
     <div v-show="activeTab === 'all'">
-      <!-- 调试信息 -->
-      <div style="background:#ff0;padding:4px;font-size:10px;color:#000">
-        activeTab={{ activeTab }} groups={{ groups.length }} displayed={{ displayedGroups.length }} pinned={{ pinnedSessions.length }}
-      </div>
       <!-- 消息列表 -->
       <div class="chat-list">
         <div v-if="displayedGroups.length === 0 && groups.length === 0" class="chat-empty">
@@ -66,27 +62,41 @@
         <div
           v-for="g in displayedGroups"
           :key="g.id"
-          class="chat-item"
-          :class="{ 'chat-item--pinned': g.is_pinned }"
-          @click="g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`)"
-          @touchstart.passive="onTouchStart($event, g)"
-          @touchend.passive="onTouchEnd"
-          @touchmove.passive="onTouchMove"
-          @contextmenu.prevent="showContextMenu($event, g)"
+          class="chat-item-wrap"
+          :class="{ 'swiped': swipedId === g.id }"
         >
-          <span v-if="g.is_pinned" class="chat-pin-icon">📌</span>
-          <div class="chat-avatar-wrap">
-            <div class="chat-avatar" :style="avatarStyle(g)">{{ g.avatar_text || g.name?.[0] || '群' }}</div>
-            <span v-if="g.unread > 0" class="chat-unread-dot"></span>
-          </div>
-          <div class="chat-body">
-            <div class="chat-top">
-              <span class="chat-name">{{ g.name }}</span>
-              <span class="chat-time">{{ g.last_time }}</span>
+          <!-- 左滑操作按钮 -->
+          <div class="chat-item-actions">
+            <div class="action-btn pin-btn" @click.stop="togglePin(g)">
+              {{ g.is_pinned ? '📌' : '📌' }} {{ g.is_pinned ? '取消' : '置顶' }}
             </div>
-            <div class="chat-bottom">
-              <span class="chat-msg">{{ g.last_msg }}</span>
-              <span v-if="g.unread > 0" class="chat-badge">{{ g.unread > 99 ? '99+' : g.unread }}</span>
+            <div class="action-btn delete-btn" @click.stop="deleteGroup(g)">
+              🗑️ 删除
+            </div>
+          </div>
+          <!-- 聊天项主体 -->
+          <div
+            class="chat-item"
+            :class="{ 'chat-item--pinned': g.is_pinned }"
+            @click="closeSwipe(); g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`)"
+            @touchstart.passive="onSwipeStart($event, g)"
+            @touchend.passive="onSwipeEnd"
+            @touchmove.passive="onSwipeMove"
+          >
+            <span v-if="g.is_pinned" class="chat-pin-icon">📌</span>
+            <div class="chat-avatar-wrap">
+              <div class="chat-avatar" :style="avatarStyle(g)">{{ g.avatar_text || g.name?.[0] || '群' }}</div>
+              <span v-if="g.unread > 0" class="chat-unread-dot"></span>
+            </div>
+            <div class="chat-body">
+              <div class="chat-top">
+                <span class="chat-name">{{ g.name }}</span>
+                <span class="chat-time">{{ g.last_time }}</span>
+              </div>
+              <div class="chat-bottom">
+                <span class="chat-msg">{{ g.last_msg }}</span>
+                <span v-if="g.unread > 0" class="chat-badge">{{ g.unread > 99 ? '99+' : g.unread }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -249,7 +259,8 @@
   </div>
 
   <!-- ── 右键/长按菜单 ── -->
-  <div v-if="contextGroup" class="context-menu-mask" @click="closeContextMenu" @touchstart.passive="closeContextMenu"></div>
+  <!-- 右键菜单 mask（暂时隐藏） -->
+  <!-- <div v-if="contextGroup" class="context-menu-mask" @click="closeSwipe" @touchstart.passive="closeSwipe"></div> -->
   <div v-if="contextGroup" class="context-menu" :style="contextMenuStyle">
     <div class="ctx-item" @click="togglePin(contextGroup)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -302,35 +313,32 @@ const displayedGroups = computed(() => {
   return [...pinnedSessions.value, ...sorted]
 })
 
-// ── 右键/长按菜单 ──
-const contextGroup = ref<any>(null)
-const contextMenuStyle = ref<any>({})
-const touchStartX = ref(0)
-const touchStartY = ref(0)
-const LONG_PRESS_MS = 500
+// ── 左滑操作 ──
+const swipedId = ref<string | null>(null)
+const swipeStartX = ref(0)
+const SWIPE_THRESHOLD = 60
 
-function onTouchStart(e: TouchEvent, g: any) {
-  touchStartX.value = e.touches[0].clientX
-  touchStartY.value = e.touches[0].clientY
-  setTimeout(() => showContextMenu(e, g), LONG_PRESS_MS)
+function onSwipeStart(e: TouchEvent, g: any) {
+  swipeStartX.value = e.touches[0].clientX
 }
-function onTouchEnd() { /* cleared by onTouchMove */ }
-function onTouchMove(e: TouchEvent) {
-  const dx = Math.abs(e.touches[0].clientX - touchStartX.value)
-  const dy = Math.abs(e.touches[0].clientY - touchStartY.value)
-  if (dx > 10 || dy > 10) closeContextMenu()
+function onSwipeMove(e: TouchEvent) {
+  const dx = e.touches[0].clientX - swipeStartX.value
+  // 左滑（dx < -60）显示操作按钮
+  if (dx < -SWIPE_THRESHOLD) {
+    swipedId.value = g?.id
+  }
+  // 右滑关闭
+  if (dx > SWIPE_THRESHOLD) {
+    swipedId.value = null
+  }
 }
-function showContextMenu(e: any, g: any) {
-  e.preventDefault?.()
-  contextGroup.value = g
-  const x = e?.clientX ?? e?.touches?.[0]?.clientX ?? 120
-  const y = e?.clientY ?? e?.touches?.[0]?.clientY ?? 120
-  contextMenuStyle.value = { top: `${Math.min(y, window.innerHeight - 180)}px`, left: `${Math.min(x, window.innerWidth - 120)}px` }
+function onSwipeEnd() { /* handled by onSwipeMove */ }
+function closeSwipe() {
+  swipedId.value = null
 }
-function closeContextMenu() { contextGroup.value = null }
 
 async function togglePin(g: any) {
-  closeContextMenu()
+  closeSwipe()
   const pinned = !g.is_pinned
   if (pinned) {
     groups.value = groups.value.map(x => x.id === g.id ? { ...x, is_pinned: true } : x)
@@ -343,7 +351,7 @@ async function togglePin(g: any) {
 }
 
 async function deleteGroup(g: any) {
-  closeContextMenu()
+  closeSwipe()
   try {
     await http.delete(`/chat/groups/${g.id}`)
     groups.value = groups.value.filter(x => x.id !== g.id)
@@ -920,6 +928,38 @@ export default { name: 'MobileChat' }
 /* ── 置顶标识 ── */
 .chat-item--pinned { background: #fafafa; }
 .chat-pin-icon { position: absolute; top: 8px; left: 4px; font-size: 10px; }
+
+/* ── 左滑操作 ── */
+.chat-item-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.chat-item-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+}
+.chat-item-wrap.swiped .chat-item-actions {
+  transform: translateX(0);
+}
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  font-size: 13px;
+  color: #fff;
+}
+.pin-btn {
+  background: #f5a623;
+}
+.delete-btn {
+  background: #ff4d4f;
+}
 
 /* ── 右键/长按菜单 ── */
 .context-menu-mask {
