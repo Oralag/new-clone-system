@@ -948,7 +948,7 @@ export default { name: 'MobileChat' }
   z-index: 1;
 }
 .chat-item-wrap.swiped > .chat-item {
-  transform: translateX(-140px);
+  transform: translateX(-160px);
 }
 .chat-item {
   transition: transform 0.2s ease;
@@ -959,9 +959,10 @@ export default { name: 'MobileChat' }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 70px;
-  font-size: 13px;
+  width: 80px;
+  font-size: 14px;
   color: #fff;
+  white-space: nowrap;
 }
 .pin-btn {
   background: #f5a623;
