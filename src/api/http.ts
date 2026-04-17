@@ -23,7 +23,8 @@ http.interceptors.request.use(
     // 带上用户 ID，方便 Worker 等边缘函数识别身份
     try {
       const userInfo = JSON.parse(localStorage.getItem('erp_user') || 'null')
-      if (userInfo?.admin_id) config.headers['x-user-id'] = String(userInfo.admin_id)
+      const uid = userInfo?.admin_id || userInfo?.id
+      if (uid) config.headers['x-user-id'] = String(uid)
     } catch { /* 忽略 */ }
     return config
   },

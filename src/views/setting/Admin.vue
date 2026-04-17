@@ -21,7 +21,12 @@
         <template #toolbar>
           <el-button type="primary" :icon="Plus" @click="openForm()">新增子账号</el-button>
         </template>
-        <el-table-column prop="account" label="账号" min-width="120" />
+        <el-table-column label="账号" min-width="140">
+          <template #default="{ row }">
+            <span>{{ row.account }}</span>
+            <el-tag v-if="row.role_name === '超级管理员'" size="small" type="warning" style="margin-left:6px">主账户</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="name" label="姓名" min-width="100" />
         <el-table-column prop="role_name" label="角色" min-width="120" />
         <el-table-column prop="dept_name" label="部门" min-width="120" />
@@ -45,7 +50,7 @@
           <template #default="{ row }">
             <el-button type="success" size="small" link @click="openView(row)">查看</el-button>
             <el-button type="primary" size="small" link @click="openForm(row)">编辑</el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
+            <el-button v-if="row.role_name !== '超级管理员'" type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </ScTable>
