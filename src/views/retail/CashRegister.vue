@@ -563,13 +563,10 @@ const lastOrderNo = ref('')
 
 // 零售库存变动：deduct=扣减，restore=加回
 async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
-  const whRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 1 } })
-  const defaultWh = whRes.data?.rows?.[0]
-  if (!defaultWh) return
   for (const item of items) {
     if (!item.goods_id || !item.num) continue
     const stockRes = await http.get('/stock/StockAll/index', {
-      params: { goods_id: item.goods_id, warehouse_id: defaultWh.id, list_rows: 10 }
+      params: { goods_id: item.goods_id, list_rows: 10 }
     })
     const stock = stockRes.data?.rows?.[0]
     if (stock) {

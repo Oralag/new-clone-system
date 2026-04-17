@@ -413,6 +413,8 @@ async function loadGroups() {
   try {
     const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
     const rows = res?.data?.rows ?? res?.rows ?? []
+    // 调试：打印前3条数据的完整结构
+    console.log('[MobileChat] /chat/groups 前3条:', JSON.stringify(rows.slice(0, 3), null, 2))
     // 只保留私聊（通讯录联系人的 1:1 会话），member_ids 长度 ≤ 2 才显示
     const privateChats = rows.filter((r: any) => !r.member_ids || r.member_ids.length <= 2)
     groups.value = privateChats.map((r: any) => ({
