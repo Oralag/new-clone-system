@@ -58,20 +58,6 @@
           <span class="contacts-section-arrow" :class="{ collapsed: !orgExpanded }">▾</span>
         </div>
         <template v-if="orgExpanded">
-          <!-- 部门架构入口 -->
-          <div class="contacts-dept-entry" @click="router.push('/mobile/contacts/dept')">
-            <div class="contacts-dept-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-            </div>
-            <div class="contacts-dept-info">
-              <span class="contacts-dept-name">组织架构</span>
-              <span class="contacts-dept-sub">查看全部部门和员工</span>
-            </div>
-            <span class="contacts-arrow">›</span>
-          </div>
           <!-- 子账号列表 -->
           <div v-if="filteredEmployees.length === 0 && !keyword" class="contacts-empty" style="padding: 24px;">
             <div class="contacts-empty-text">暂无子账号</div>
@@ -146,8 +132,11 @@ import { useRouter } from 'vue-router'
 import { getAdminList } from '@/api/setting'
 import { createChatGroup } from '@/api/chat'
 import http from '@/api/http'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
+const currentUserId = computed(() => authStore.userInfo?.id || authStore.userInfo?.admin_id)
 const keyword = ref('')
 const employees = ref<any[]>([])
 const groups = ref<any[]>([])
@@ -156,7 +145,7 @@ const showNewGroup = ref(false)
 const activeLetter = ref('')
 const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
-const robotExpanded = ref(true)
+const robotExpanded = ref(false)
 const orgExpanded = ref(true)
 
 // ERP 系统真实 Agent（来自 agentRegistry.ts）
@@ -206,10 +195,15 @@ async function openAgent(bot: any) {
       router.push(`/mobile/chat/${existing.id}`)
       return
     }
-    // 没有则直接创建私聊
+    // 没有则直接创建私聊（包含当前用户和Agent）
+    const myId = currentUserId.value
+    if (!myId) {
+      router.push(`/mobile/chat/new?userId=${bot.id}&name=${encodeURIComponent(bot.name)}&isAgent=1`)
+      return
+    }
     const newGroup = await createChatGroup({
       name: bot.name,
-      member_ids: [bot.id],
+      member_ids: [myId, bot.id],
     })
     const groupId = newGroup?.data?.id ?? newGroup?.id
     if (groupId) {

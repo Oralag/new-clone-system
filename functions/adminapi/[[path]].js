@@ -139,8 +139,23 @@ function getUserId(request) {
   return null
 }
 
+const AGENT_INFO = {
+  'ai-assistant-fixed': { name: 'AI助手', position: '智能助手', avatar: '' },
+  'captain': { name: 'Captain 总指挥', position: '机器人', avatar: '' },
+  'copywriter': { name: '文案Agent', position: '机器人', avatar: '' },
+  'poster': { name: '海报Agent', position: '机器人', avatar: '' },
+  'video': { name: '视频Agent', position: '机器人', avatar: '' },
+  'brand': { name: '品牌Agent', position: '机器人', avatar: '' },
+  'trend': { name: '趋势Agent', position: '机器人', avatar: '' },
+  'publisher': { name: '发布Agent', position: '机器人', avatar: '' },
+  'designer': { name: '平面设计师', position: '机器人', avatar: '' },
+  'marketing': { name: '营销顾问', position: '机器人', avatar: '' },
+}
+
 async function getUserInfo(userId, env) {
   if (!userId) return { name: '未知用户', position: '成员' }
+  // 0. Agent 名字映射
+  if (AGENT_INFO[userId]) return AGENT_INFO[userId]
   // 1. 尝试 KV 缓存
   const raw = await env.USERS_KV.get(`user_info:${userId}`)
   if (raw) return JSON.parse(raw)

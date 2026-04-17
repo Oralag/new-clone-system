@@ -107,55 +107,68 @@
     </div>
 
     <!-- 群详情/设置 -->
-    <div v-if="showGroupInfo" class="m-modal-mask" @click.self="showGroupInfo = false">
-      <div class="m-modal-sheet m-modal-sheet-tall">
-        <div class="m-modal-header">
+    <!-- 群设置（微信风格） -->
+    <div v-if="showGroupInfo" class="m-gs-mask" @click.self="showGroupInfo = false">
+      <div class="m-gs-sheet">
+        <div class="m-gs-header">
           <span>群设置</span>
-          <button class="m-modal-close" @click="showGroupInfo = false">关闭</button>
+          <button class="m-gs-close" @click="showGroupInfo = false">×</button>
         </div>
-        <div class="m-modal-body">
-          <div class="m-group-info">
-            <div class="m-group-avatar">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        <div class="m-gs-body">
+          <!-- 成员头像网格 -->
+          <div class="m-gs-members">
+            <div v-for="m in members" :key="m.id" class="m-gs-member">
+              <div class="m-gs-avatar" :style="{ background: getAvatarColor(m.id) }">
+                {{ m.name?.[0] || '?' }}
+              </div>
+              <span class="m-gs-name">{{ m.name || m.id }}</span>
+            </div>
+            <!-- 添加成员按钮 -->
+            <div class="m-gs-member" @click="showAddMember = true">
+              <div class="m-gs-add-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </div>
+              <span class="m-gs-name" style="color:#999">添加</span>
+            </div>
+          </div>
+
+          <!-- 群聊名称 -->
+          <div class="m-gs-row" @click="showEditName = true">
+            <span class="m-gs-row-label">群聊名称</span>
+            <div class="m-gs-row-value">
+              <span>{{ group?.name }}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9cdd4" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"/>
               </svg>
             </div>
-            <div class="m-group-name">{{ group?.name }}</div>
           </div>
 
-          <div class="m-group-members">
-            <div class="m-group-members-title">成员 ({{ members.length }})</div>
-            <div class="m-group-member-list">
-              <div v-for="m in members" :key="m.id" class="m-group-member-item">
-                <div class="m-group-member-avatar">{{ m.name?.[0] || '?' }}</div>
-                <span class="m-group-member-name">{{ m.name }}</span>
-                <span v-if="m.role === 'owner'" class="m-group-member-role">群主</span>
-              </div>
-            </div>
-            <button class="m-group-add-member" @click="showAddMember = true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              添加成员
-            </button>
-          </div>
-
-          <!-- 消息清理 -->
-          <div class="m-group-danger">
-            <div class="m-group-danger-title">消息管理</div>
-            <div class="m-group-cleanup-row">
-              <div class="m-group-cleanup-info">
-                <div class="m-group-cleanup-label">清理历史消息</div>
-                <div class="m-group-cleanup-sub">清理后不可恢复，确定要清理吗？</div>
-              </div>
-              <button class="m-group-cleanup-btn" @click="showCleanupConfirm = true">清理</button>
+          <!-- 消息免打扰 -->
+          <div class="m-gs-row">
+            <span class="m-gs-row-label">消息免打扰</span>
+            <div class="m-gs-switch" :class="{ active: muteEnabled }" @click="muteEnabled = !muteEnabled">
+              <div class="m-gs-switch-dot"></div>
             </div>
           </div>
 
-          <!-- 退群 -->
-          <div v-if="group?.can_quit !== false" class="m-group-danger">
-            <button class="m-group-quit-btn" @click="quitGroup">退出群聊</button>
+          <!-- 置顶聊天 -->
+          <div class="m-gs-row">
+            <span class="m-gs-row-label">置顶聊天</span>
+            <div class="m-gs-switch" :class="{ active: pinEnabled }" @click="pinEnabled = !pinEnabled">
+              <div class="m-gs-switch-dot"></div>
+            </div>
+          </div>
+
+          <!-- 清空聊天记录 -->
+          <div class="m-gs-row danger" @click="showCleanupConfirm = true">
+            <span>清空聊天记录</span>
+          </div>
+
+          <!-- 退出群聊 -->
+          <div v-if="group?.can_quit !== false" class="m-gs-row danger" @click="quitGroup">
+            <span>删除并退出</span>
           </div>
         </div>
       </div>
@@ -252,6 +265,9 @@ const addMemberSearch = ref('')
 const cleanupDays = ref(180)
 const cleaning = ref(false)
 const aiMode = ref(false)
+const muteEnabled = ref(false)
+const pinEnabled = ref(false)
+const showEditName = ref(false)
 
 const msgListRef = ref<HTMLElement>()
 const bottomRef = ref<HTMLElement>()
@@ -259,6 +275,13 @@ const inputRef = ref<HTMLTextAreaElement>()
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let lastMessageId = 0
+
+// 头像颜色
+function getAvatarColor(id: string | number) {
+  const colors = ['#576b95', '#07c160', '#10aeff', '#fa5151', '#ff8f3f', '#ffc300']
+  const idx = String(id).split('').reduce((s, c) => s + c.charCodeAt(0), 0)
+  return colors[idx % colors.length]
+}
 
 const addableMembers = computed(() => {
   const existingIds = new Set(members.value.map((m: any) => m.id))
@@ -874,78 +897,66 @@ onUnmounted(() => {
 .m-modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
 .m-modal-footer { padding: 14px 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px)); border-top: 1px solid #f2f3f5; flex-shrink: 0; }
 
-.m-group-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f2f3f5;
-  margin-bottom: 16px;
+/* 微信风格群设置 */
+.m-gs-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; }
+.m-gs-sheet {
+  width: 100%; max-height: 85vh; background: #ededed; border-radius: 12px 12px 0 0;
+  display: flex; flex-direction: column; animation: slideUp 0.25s ease;
 }
-.m-group-avatar {
-  width: 64px; height: 64px;
-  background: linear-gradient(135deg, #0071e3, #005bb5);
-  border-radius: 16px;
+.m-gs-header {
+  display: flex; align-items: center; justify-content: center; height: 48px;
+  background: #ededed; border-radius: 12px 12px 0 0; position: relative;
+  font-size: 17px; font-weight: 500; color: #000;
+}
+.m-gs-close { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 28px; color: #000; cursor: pointer; }
+.m-gs-body { flex: 1; overflow-y: auto; padding: 0 16px 20px; -webkit-overflow-scrolling: touch; }
+
+/* 成员头像网格 */
+.m-gs-members {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px 8px;
+  padding: 20px 0; background: #fff; margin: 12px 0; border-radius: 8px;
+}
+.m-gs-member { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.m-gs-avatar {
+  width: 50px; height: 50px; border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 10px;
+  color: #fff; font-size: 18px; font-weight: 600;
 }
-.m-group-name { font-size: 18px; font-weight: 700; color: #1d2129; }
-.m-group-members-title { font-size: 14px; font-weight: 700; color: #1d2129; margin-bottom: 10px; }
-.m-group-member-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-.m-group-member-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
-.m-group-member-avatar {
-  width: 32px; height: 32px;
-  background: #0071e3;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-}
-.m-group-member-name { flex: 1; font-size: 14px; color: #1d2129; }
-.m-group-member-role { font-size: 11px; color: #86909c; background: #f2f3f5; padding: 2px 8px; border-radius: 999px; }
-.m-group-add-member {
-  width: 100%;
-  height: 40px;
-  border: 1px dashed #0071e3;
-  background: transparent;
-  border-radius: 10px;
-  color: #0071e3;
-  font-size: 14px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-}
-.m-group-danger { margin-top: 16px; padding-top: 16px; border-top: 1px solid #f2f3f5; }
-.m-group-danger-title { font-size: 13px; font-weight: 600; color: #86909c; margin-bottom: 10px; }
-.m-group-cleanup-row { display: flex; align-items: center; justify-content: space-between; }
-.m-group-cleanup-label { font-size: 14px; font-weight: 600; color: #1d2129; }
-.m-group-cleanup-sub { font-size: 12px; color: #86909c; margin-top: 2px; }
-.m-group-cleanup-btn {
-  padding: 6px 16px;
-  background: #f53f3f;
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.m-group-quit-btn {
-  width: 100%;
-  height: 44px;
-  background: #fff;
-  border: 1px solid #f53f3f;
-  border-radius: 10px;
-  color: #f53f3f;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
+.m-gs-name { font-size: 12px; color: #000; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+.m-gs-add-btn {
+  width: 50px; height: 50px; border: 1px dashed #999; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 
+/* 设置行 */
+.m-gs-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px; background: #fff; margin-bottom: 1px;
+  font-size: 17px; color: #000;
+}
+.m-gs-row:first-of-type { border-radius: 8px 8px 0 0; }
+.m-gs-row:last-of-type { border-radius: 0 0 8px 8px; }
+.m-gs-row:only-of-type { border-radius: 8px; }
+.m-gs-row-label { color: #000; }
+.m-gs-row-value { display: flex; align-items: center; gap: 6px; color: #888; font-size: 16px; }
+.m-gs-row.danger { color: #fa5151; margin-top: 12px; border-radius: 8px; justify-content: center; }
+
+/* 开关 */
+.m-gs-switch {
+  width: 51px; height: 31px; border-radius: 16px; background: #e5e5e5;
+  position: relative; cursor: pointer; transition: background 0.2s;
+}
+.m-gs-switch.active { background: #07c160; }
+.m-gs-switch-dot {
+  width: 27px; height: 27px; border-radius: 50%; background: #fff;
+  position: absolute; top: 2px; left: 2px; transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.m-gs-switch.active .m-gs-switch-dot { left: 22px; }
+
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* 旧的添加成员弹窗样式保留 */
 .m-pick-search { margin-bottom: 12px; }
 .m-pick-list { display: flex; flex-direction: column; }
 .m-pick-item {

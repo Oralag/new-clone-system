@@ -2066,6 +2066,16 @@ async function batchDelProcureOrders({ ids }: { ids: number[] }) {
 }
 
 async function applyInhouseStockEffect(warehouseId: number, warehouseName: string, items: any[], direction: 'in' | 'out') {
+  // 预加载BOM列表（按 goods_sn 建索引）
+  let bomSnMap: Record<string, number> = {} // goods_sn -> bom id
+  try {
+    const bomRes = await getBomList({ list_rows: 500 })
+    const bomList: any[] = bomRes.data?.list ?? bomRes.data?.rows ?? []
+    for (const b of bomList) {
+      if (b.goods_sn) bomSnMap[b.goods_sn] = b.id
+    }
+  } catch {}
+
   for (const item of items) {
     if (!item.goods_id || !item.num) continue
     try {
@@ -2089,6 +2099,35 @@ async function applyInhouseStockEffect(warehouseId: number, warehouseName: strin
       }
     } catch (e: any) {
       console.warn('库存更新失败', e?.message)
+    }
+
+    // 如果该成品有BOM，按用量扣减（或恢复）原材料库存
+    const bomId = bomSnMap[item.goods_sn || '']
+    if (!bomId) continue
+    try {
+      const detailRes = await getBomByGoods(bomId)
+      const bomItems: any[] = detailRes.data?.items ?? []
+      const finishedQty = Number(item.num) * Number(item.unit_ratio || 1)
+      for (const mat of bomItems) {
+        if (!mat.goods_sn || !mat.num) continue
+        const matDelta = direction === 'in'
+          ? -Number(mat.num) * finishedQty   // 入库成品 → 扣原材料
+          : Number(mat.num) * finishedQty    // 反审核 → 加回原材料
+        try {
+          const matStockParams: any = { goods_sn: mat.goods_sn, list_rows: 10 }
+          if (warehouseId) matStockParams.warehouse_id = warehouseId
+          const matStockRes = await http.get('/stock/StockAll/index', { params: matStockParams })
+          const matStock = (matStockRes.data?.rows ?? [])[0]
+          if (matStock) {
+            const newQty = Number(matStock.qty || 0) + matDelta
+            await http.post('/stock/StockAll/edit', { id: matStock.id, qty: newQty })
+          }
+        } catch (e: any) {
+          console.warn('BOM原材料库存更新失败', mat.goods_sn, e?.message)
+        }
+      }
+    } catch (e: any) {
+      console.warn('BOM详情加载失败', e?.message)
     }
   }
 }
