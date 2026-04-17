@@ -1254,6 +1254,9 @@ async function loadPaidMap() {
     for (const r of rows) {
       const amount = Number(r.amount || 0)
       if (!amount) continue
+      const remark = String(r.remark || '')
+      // 跳过单据支出/运费/附加费用付款，这些不计入货款
+      if (/采购单据支出|采购运费|采购附加费用/.test(remark)) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
       let matched = false
@@ -1520,13 +1523,6 @@ async function submitFeePay() {
       fund_id: feePayForm.fund_id,
       fund_name: feePayForm.fund_name,
       remark: `采购附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
-    })
-    await createExpense({
-      type_name: feePayForm.feeName,
-      apply_date: feePayForm.pay_date,
-      amount: needPay,
-      remark: `采购附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
-      order_sn: feePayForm.orderSn,
     })
     ElMessage.success('付款成功')
     feePayVisible.value = false
