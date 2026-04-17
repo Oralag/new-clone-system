@@ -68,6 +68,7 @@ const modules = [
 .mod-page {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
   height: 100%;
   background: #f0f2f5;
   overflow: hidden;
@@ -76,6 +77,7 @@ const modules = [
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  min-height: 0;
 }
 .mod-content { padding: 14px 14px 24px; display: flex; flex-direction: column; gap: 12px; }
 

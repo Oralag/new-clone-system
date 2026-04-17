@@ -266,11 +266,12 @@ export default { name: 'MobileContacts' }
 
 <style scoped>
 .contacts-page {
-  min-height: 100%;
+  height: 100%;
   background: #fff;
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden;
 }
 
 /* ── 搜索栏 ── */
@@ -278,9 +279,7 @@ export default { name: 'MobileContacts' }
   background: #fafafa;
   padding: 10px 12px;
   border-bottom: 1px solid #e5e5e5;
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  flex-shrink: 0;
 }
 .contacts-search-inner {
   display: flex;
@@ -327,7 +326,7 @@ export default { name: 'MobileContacts' }
 .contacts-dept-sub { font-size: 12px; color: #999; }
 
 /* ── 客户列表 ── */
-.contacts-body { flex: 1; }
+.contacts-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; }
 .contacts-empty { text-align: center; padding: 40px 0; }
 .contacts-empty-icon { margin-bottom: 8px; }
 .contacts-empty-text { font-size: 13px; color: #999; }

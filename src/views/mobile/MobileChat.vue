@@ -536,10 +536,17 @@ export default { name: 'MobileChat' }
 
 <style scoped>
 .chat-page {
-  min-height: 100%;
+  height: 100%;
   background: #f5f5f5;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+.chat-list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
 }
 
 /* ── 企业微信风格顶部导航栏 ── */
@@ -586,6 +593,7 @@ export default { name: 'MobileChat' }
   padding: 8px 16px;
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .chat-search-inner {
   display: flex;
@@ -602,6 +610,7 @@ export default { name: 'MobileChat' }
   background: #fff;
   display: flex;
   border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
 }
 .chat-sub-tab {
   flex: 1;

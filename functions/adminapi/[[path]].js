@@ -786,6 +786,9 @@ export async function onRequest(context) {
     }
     // DELETE /adminapi/chat/groups/:id/members/:userId - remove member
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members\/\d+$/) && request.method === 'DELETE') {
+      return handleRemoveGroupMember(request, env)
+    }
+
 // POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话
 async function handlePinGroup(request, env) {
   const groupId = extractGroupId(request.url)
@@ -876,10 +879,8 @@ const agentRegistry = [
 ]
 
 // ───────────────────────────────────────────────
-// Router
+// Router (continued from above)
 // ───────────────────────────────────────────────
-      return handleRemoveGroupMember(request, env)
-    }
     // POST /adminapi/chat/groups/:id/read - mark messages read
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/read$/) && request.method === 'POST') {
       return handleMarkRead(request, env)

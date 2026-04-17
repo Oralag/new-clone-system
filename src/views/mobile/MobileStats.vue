@@ -300,6 +300,7 @@ onMounted(async () => {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  min-height: 0;
   padding-bottom: 20px;
 }
 
