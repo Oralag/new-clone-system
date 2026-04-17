@@ -175,9 +175,8 @@
     padding: 12px 16px !important;
   }
 
-  /* 抽屉也自适应 */
+  /* 抽屉也自适应（改为不强制全屏，允许自定义宽度） */
   .el-drawer {
-    width: 100% !important;
     max-width: 100vw !important;
   }
 
