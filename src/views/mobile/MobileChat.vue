@@ -946,6 +946,12 @@ export default { name: 'MobileChat' }
   bottom: 0;
   display: flex;
   z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+.chat-item-wrap.swiped .chat-item-actions {
+  opacity: 1;
+  pointer-events: auto;
 }
 .chat-item-wrap.swiped > .chat-item {
   transform: translateX(-160px);
