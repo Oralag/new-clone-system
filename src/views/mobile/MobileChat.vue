@@ -297,7 +297,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="10" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
         扫码入库
       </div>
-      <div class="plus-menu-item" @click="router.push('/mobile/task/new'); showFabPlus = false">
+      <div class="plus-menu-item" @click="router.push('/mobile/task/new?new=1'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         新建工作计划
       </div>
@@ -338,6 +338,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '@/api/http'
+import { getAdminList } from '@/api/setting'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -539,11 +540,16 @@ async function loadGroups() {
   } catch { groups.value = [] }
 }
 
+// 加载内部员工通讯录
 async function loadContacts() {
   try {
-    const res = await http.get('/shop/ShopCustomer/index', { params: { list_rows: 200 } })
+    const res = await getAdminList({ list_rows: 500 })
     const rows = res?.data?.rows ?? res?.rows ?? []
-    contacts.value = rows.map((r: any) => ({ id: r.id, name: r.name || r.customer_name }))
+    contacts.value = rows.map((r: any) => ({
+      id: r.id,
+      name: r.name || r.admin_name || '未知用户',
+      role_name: r.role_name || '',
+    }))
   } catch { contacts.value = [] }
 }
 

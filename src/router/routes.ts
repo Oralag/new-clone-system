@@ -212,6 +212,9 @@ const routes: RouteRecordRaw[] = [
       // Warehouse
       { path: 'warehouse/stock', name: 'MobileWarehouseStock', component: () => import('@/views/warehouse/StockAll.vue'), meta: { title: '库存总览' } },
       { path: 'warehouse/warning', name: 'MobileWarehouseWarning', component: () => import('@/views/warehouse/StockWarning.vue'), meta: { title: '库存预警' } },
+      // Task / Work Plan
+      { path: 'task/new', name: 'MobileTaskNew', component: () => import('@/views/mobile/MobileTask.vue'), meta: { title: '新建任务' } },
+      { path: 'task', name: 'MobileTask', component: () => import('@/views/mobile/MobileTask.vue'), meta: { title: '工作计划' } },
       // Finance
       { path: 'finance/overview', name: 'MobileFinanceOverview', component: () => import('@/views/finance/Overview.vue'), meta: { title: '财务总览' } },
       { path: 'finance/receivable', name: 'MobileFinanceReceivable', component: () => import('@/views/finance/Receivable.vue'), meta: { title: '应收账款' } },

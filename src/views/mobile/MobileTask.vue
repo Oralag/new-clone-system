@@ -115,7 +115,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+onMounted(() => {
+  if (route.query.new === '1') {
+    showAdd.value = true
+  }
+})
 
 interface Task {
   id: number
