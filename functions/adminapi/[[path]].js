@@ -486,6 +486,59 @@ async function handleChatUnread(request, env) {
   return jsonSuccess({ total })
 }
 
+// GET /chat/groups/private/:targetUserId - 查找或创建私聊（2人群）
+async function handlePrivateChat(request, env, targetUserId) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+  if (!targetUserId) return errRes('缺少目标用户')
+
+  // 验证目标用户在通讯录中
+  const contactIds = await getContactIds(request, env, userId)
+  if (!contactIds.has(String(targetUserId))) return errRes('该用户不在通讯录中')
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+
+  // 查找已有的2人私聊：成员正好是[userId, targetUserId]
+  const uid = String(userId)
+  const tid = String(targetUserId)
+  for (const g of groups) {
+    const members = memberMap[g.id] || []
+    const mids = members.map(m => String(m.user_id)).sort()
+    if (mids.length === 2 && mids.includes(uid) && mids.includes(tid)) {
+      // 已有私聊，返回
+      return jsonSuccess({ ...g, member_ids: members.map(m => m.user_id), is_private: true, existed: true })
+    }
+  }
+
+  // 不存在，自动创建
+  const newId = nowMs() + Math.floor(Math.random() * 1000)
+  const now = new Date().toISOString()
+  const targetInfo = await getUserInfo(targetUserId, env)
+
+  const newGroup = {
+    id: newId,
+    name: `私聊:${targetInfo.name || targetUserId}`,
+    created_by: userId,
+    creator_name: (await getUserInfo(userId, env)).name,
+    created_at: now,
+    updated_at: now,
+    is_private: true,
+  }
+
+  groups.push(newGroup)
+  memberMap[newId] = [uid, tid].map(id => ({ user_id: id }))
+
+  await Promise.all([
+    env.USERS_KV.put('chat_groups', JSON.stringify(groups)),
+    env.USERS_KV.put('chat_members', JSON.stringify(memberMap)),
+  ])
+
+  return jsonSuccess({ ...newGroup, member_ids: [uid, tid], is_private: true, existed: false })
+}
+
 async function handleGetGroupMembers(request, env) {
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
@@ -795,6 +848,11 @@ export async function onRequest(context) {
     // GET /adminapi/chat/groups/unread - get unread count
     if (pathname === '/adminapi/chat/groups/unread' && request.method === 'GET') {
       return handleChatUnread(request, env)
+    }
+    // GET /adminapi/chat/groups/private/:targetUserId - find or create private chat
+    const privateMatch = pathname.match(/^\/adminapi\/chat\/groups\/private\/(.+)$/)
+    if (privateMatch && request.method === 'GET') {
+      return handlePrivateChat(request, env, privateMatch[1])
     }
     // GET /adminapi/chat/groups/:id/members - get group members
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members$/) && request.method === 'GET') {

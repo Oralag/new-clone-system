@@ -171,48 +171,33 @@ const filteredEmployees = computed(() => {
   )
 })
 
-function viewEmployee(c: any) {
-  // 发起私聊：查找或创建与该联系人的 1:1 会话
-  const existing = groups.value.find((g: any) =>
-    g.member_ids?.includes(c.id) && g.member_ids?.length === 2
-  )
-  if (existing) {
-    router.push(`/mobile/chat/${existing.id}`)
-  } else {
-    router.push(`/mobile/chat/new?userId=${c.id}&name=${encodeURIComponent(c.name || '')}`)
+async function viewEmployee(c: any) {
+  // 发起私聊：调用后端查找或创建2人群
+  try {
+    const res = await http.get(`/chat/groups/private/${c.id}`)
+    const group = res?.data ?? res
+    const groupId = group?.id
+    if (groupId) {
+      router.push(`/mobile/chat/${groupId}`)
+    }
+  } catch (e: any) {
+    console.error('发起私聊失败', e)
+    ElMessage.error(e?.message || '发起私聊失败')
   }
 }
 
 async function openAgent(bot: any) {
-  // 查找是否已有与该 Agent 的私聊
+  // 查找或创建与该 Agent 的私聊
   try {
-    const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
-    const chatGroups: any[] = res?.data?.rows ?? res?.rows ?? []
-    const existing = chatGroups.find((g: any) =>
-      g.member_ids?.includes(bot.id) && g.member_ids?.length === 2
-    )
-    if (existing) {
-      router.push(`/mobile/chat/${existing.id}`)
-      return
-    }
-    // 没有则直接创建私聊（包含当前用户和Agent）
-    const myId = currentUserId.value
-    if (!myId) {
-      router.push(`/mobile/chat/new?userId=${bot.id}&name=${encodeURIComponent(bot.name)}&isAgent=1`)
-      return
-    }
-    const newGroup = await createChatGroup({
-      name: bot.name,
-      member_ids: [myId, bot.id],
-    })
-    const groupId = newGroup?.data?.id ?? newGroup?.id
+    const res = await http.get(`/chat/groups/private/${bot.id}`)
+    const group = res?.data ?? res
+    const groupId = group?.id
     if (groupId) {
       router.push(`/mobile/chat/${groupId}`)
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('打开Agent聊天失败', e)
-    // fallback：走发起新会话页面
-    router.push(`/mobile/chat/new?userId=${bot.id}&name=${encodeURIComponent(bot.name)}&isAgent=1`)
+    ElMessage.error(e?.message || '打开聊天失败')
   }
 }
 

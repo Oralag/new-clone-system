@@ -90,7 +90,7 @@
             </div>
             <div class="chat-body">
               <div class="chat-top">
-                <span class="chat-name">{{ g.name }}<span v-if="g.type === 'group' || g.member_count > 2" class="group-badge">群</span></span>
+                <span class="chat-name">{{ g.name }}<span v-if="!g.is_private && (g.type === 'group' || g.member_count > 2)" class="group-badge">群</span></span>
                 <span class="chat-time">{{ g.last_time }}</span>
               </div>
               <div class="chat-bottom">
@@ -308,7 +308,7 @@
 
     <!-- ── 底部FAB+菜单：业务快捷操作 ── -->
     <div v-if="showFabPlus" class="plus-menu-mask" @click="showFabPlus = false"></div>
-    <div v-if="showFabPlus" class="plus-menu fab-plus-menu">
+    <div v-if="showFabPlus" class="plus-menu fab-plus-menu" :style="{ left: Math.min(fabPos.x, winWidth - 160) + 'px', bottom: (winHeight - fabPos.y + 10) + 'px' }">
       <div class="fab-plus-title">快捷操作</div>
       <div class="plus-menu-item" @click="router.push('/mobile/procure/scan-in'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="10" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
@@ -332,10 +332,9 @@
     <div
       class="chat-fab"
       :style="{ left: fabPos.x + 'px', top: fabPos.y + 'px', right: 'auto', bottom: 'auto' }"
-      @touchstart.prevent="onFabTouchStart"
-      @touchmove.prevent="onFabTouchMove"
+      @touchstart="onFabTouchStart"
+      @touchmove="onFabTouchMove"
       @touchend="onFabTouchEnd"
-      @click="onFabClick"
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -353,6 +352,10 @@ import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
+
+// 窗口尺寸（用于菜单定位）
+const winWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 375)
+const winHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 667)
 
 // 固定置顶项（如 AI 管家）
 const pinnedSessions = ref([
@@ -378,7 +381,7 @@ const groupSearchKeyword = ref('')
 const newGroupName = ref('')
 
 // 可拖动 FAB 状态
-const fabPos = ref({ x: window.innerWidth - 70, y: window.innerHeight - 116 })
+const fabPos = ref({ x: 300, y: 600 })
 const fabDragStart = ref({ x: 0, y: 0 })
 const fabDragging = ref(false)
 const fabMoved = ref(false)
@@ -570,22 +573,60 @@ async function loadPendingItems() {
   } catch { pendingItems.value = [] }
 }
 
+// 从通讯录/Agent列表中查找用户名
+const AGENT_NAMES: Record<string, string> = {
+  'captain': 'Captain 总指挥',
+  'copywriter': '文案Agent',
+  'poster': '海报Agent',
+  'video': '视频Agent',
+  'brand': '品牌Agent',
+  'trend': '趋势Agent',
+  'publisher': '发布Agent',
+  'designer': '平面设计师',
+  'marketing': '营销顾问',
+  'ai-assistant-fixed': 'AI 管家',
+  'meeting-fixed': 'AI会议室',
+}
+function findContactName(id: string): string | null {
+  // 1. Agent名
+  if (AGENT_NAMES[id]) return AGENT_NAMES[id]
+  // 2. 员工通讯录
+  const emp = contacts.value.find((c: any) => String(c.id) === id)
+  if (emp) return emp.name
+  return null
+}
+
 async function loadGroups() {
   try {
     const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
     const rows = res?.data?.rows ?? res?.rows ?? []
-    groups.value = rows.map((r: any) => ({
-      id: r.id,
-      name: r.name || r.group_name || '会话',
-      avatar_text: r.name?.[0],
-      last_msg: r.last_message || r.last_msg || '暂无消息',
-      last_time: formatTime(r.last_message_at || r.last_time || ''),
-      unread: r.unread ?? 0,
-      is_pinned: r.is_pinned ?? false,
-      last_message_at: r.last_message_at || '',
-      member_count: r.member_count ?? r.members?.length ?? 0,
-      type: r.member_count > 2 || r.members?.length > 2 ? 'group' : 'dm',
-    }))
+    groups.value = rows.map((r: any) => {
+      const memberIds = r.member_ids ?? []
+      const isPrivate = r.is_private || (memberIds.length === 2)
+      // 私聊显示对方名字
+      let displayName = r.name || '会话'
+      if (isPrivate && memberIds.length === 2) {
+        const otherId = memberIds.find((id: any) => String(id) !== String(authStore.userInfo?.id))
+        if (otherId) {
+          const found = findContactName(String(otherId))
+          if (found) displayName = found
+        }
+      }
+      return {
+        id: r.id,
+        name: displayName,
+        avatar_text: displayName?.[0],
+        last_msg: r.last_message || r.last_msg || '暂无消息',
+        last_time: formatTime(r.last_message_at || r.last_time || ''),
+        unread: r.unread ?? 0,
+        is_pinned: r.is_pinned ?? false,
+        last_message_at: r.last_message_at || '',
+        member_count: r.member_count ?? memberIds.length ?? 0,
+        member_ids: memberIds,
+        is_private: isPrivate,
+        type: memberIds.length > 2 ? 'group' : 'dm',
+      }
+    })
     const totalUnread = rows.reduce((s: number, r: any) => s + (r.unread ?? 0), 0)
     if (typeof uni !== 'undefined') uni.$emit('update:unread', totalUnread)
   } catch { groups.value = [] }
@@ -663,6 +704,61 @@ function handleLogout() {
   showDrawer.value = false
 }
 
+// ── 可拖动 FAB 事件处理 ──
+const fabStartPos = ref({ x: 0, y: 0 })
+
+function onFabTouchStart(e: TouchEvent) {
+  const touch = e.touches[0]
+  fabStartPos.value = { x: touch.clientX, y: touch.clientY }
+  fabDragStart.value = { x: touch.clientX - fabPos.value.x, y: touch.clientY - fabPos.value.y }
+  fabDragging.value = true
+  fabMoved.value = false
+}
+
+function onFabTouchMove(e: TouchEvent) {
+  if (!fabDragging.value) return
+  const touch = e.touches[0]
+  
+  // 判断是否移动超过阈值（10px）
+  const dx = touch.clientX - fabStartPos.value.x
+  const dy = touch.clientY - fabStartPos.value.y
+  if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+    fabMoved.value = true
+    e.preventDefault() // 只在真正拖动时阻止默认行为
+  }
+  
+  if (!fabMoved.value) return
+  
+  const newX = touch.clientX - fabDragStart.value.x
+  const newY = touch.clientY - fabDragStart.value.y
+  
+  // 限制在屏幕范围内
+  const margin = 10
+  const fabSize = 50
+  fabPos.value = {
+    x: Math.max(margin, Math.min(winWidth.value - fabSize - margin, newX)),
+    y: Math.max(60 + margin, Math.min(winHeight.value - fabSize - 66 - margin, newY))
+  }
+}
+
+function onFabTouchEnd() {
+  if (fabDragging.value && fabMoved.value) {
+    // 拖动结束，吸附到屏幕边缘
+    const fabSize = 50
+    const margin = 10
+    if (fabPos.value.x < winWidth.value / 2) {
+      fabPos.value.x = margin
+    } else {
+      fabPos.value.x = winWidth.value - fabSize - margin
+    }
+  } else {
+    // 没有拖动，视为点击
+    showFabPlus.value = !showFabPlus.value
+    showChatPlus.value = false
+  }
+  fabDragging.value = false
+}
+
 const filteredContacts2 = computed(() => {
   const kw = newChatKeyword.value.toLowerCase()
   if (!kw) return contacts.value.slice(0, 20)
@@ -687,6 +783,11 @@ watch(searchKeyword, (v) => { if (v) doSearch() })
 let listPollTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+  // 设置 FAB 初始位置（右下角）
+  winWidth.value = window.innerWidth
+  winHeight.value = window.innerHeight
+  fabPos.value = { x: winWidth.value - 60, y: winHeight.value - 116 }
+  
   loadGroups()
   loadContacts()
   loadActiveMeetings()
@@ -1344,11 +1445,9 @@ export default { name: 'MobileChat' }
 .ctx-item--danger { color: #ee4444; }
 .ctx-item--danger svg { color: #ee4444; }
 
-/* ── 右下角快捷操作按钮 ── */
+/* ── 右下角快捷操作按钮（可拖动） ── */
 .chat-fab {
   position: fixed;
-  bottom: 66px;
-  right: 20px;
   width: 50px;
   height: 50px;
   background: #2E6BE6;
@@ -1360,7 +1459,8 @@ export default { name: 'MobileChat' }
   box-shadow: 0 4px 12px rgba(46,107,230,0.4);
   -webkit-tap-highlight-color: transparent;
   z-index: 50;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, left 0.2s ease;
+  touch-action: none;
 }
 .chat-fab:active { transform: scale(0.92); box-shadow: 0 2px 6px rgba(46,107,230,0.3); }
 
@@ -1370,8 +1470,7 @@ export default { name: 'MobileChat' }
   right: 12px;
 }
 .fab-plus-menu {
-  bottom: 126px;
-  right: 12px;
+  right: auto;
   top: auto;
 }
 .fab-plus-title {
