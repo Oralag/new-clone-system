@@ -369,20 +369,48 @@ async function sendMessage() {
     // 2. 如果群里有 Agent，调用 Agent API 获取 AI 回复
     if (agentId) {
       try {
-        // 调用 /api/agent 获取 AI 回复
-        const aiRes = await http.post('/api/agent', {
-          agentId,
-          messages: [{ role: 'user', content: text }],
-        }, { baseURL: '' })  // 使用绝对路径
-        const aiData = aiRes?.data ?? aiRes
-        // agent-chat 返回的是流式响应，需要处理
-        // 这里简化处理：取最后一部分
-        if (aiData && aiData.text) {
+        // 调用 /api/agent-chat 获取 AI 回复（流式API）
+        const aiRes = await fetch('/api/agent-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agentId,
+            messages: [{ role: 'user', content: text }],
+          }),
+        })
+        
+        // 处理流式响应
+        const reader = aiRes.body?.getReader()
+        const decoder = new TextDecoder()
+        let aiText = ''
+        
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const chunk = decoder.decode(value, { stream: true })
+            // 解析 SSE 格式: data: {...}\n\n
+            const lines = chunk.split('\n')
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6))
+                  if (data.type === 'text' && data.text) {
+                    aiText += data.text
+                  }
+                } catch {}
+              }
+            }
+          }
+        }
+        
+        // 添加 AI 回复到消息列表
+        if (aiText) {
           messages.value.push({
             id: `ai-${Date.now()}`,
             sender_id: agentId,
             sender_name: agentInGroup.name,
-            content: aiData.text,
+            content: aiText,
             type: 'ai_reply',
             created_at: new Date().toISOString(),
           })
