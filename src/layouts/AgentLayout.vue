@@ -231,7 +231,7 @@
     </div>
 
     <!-- 移动端抽屉 -->
-    <el-drawer v-if="isMobile" v-model="drawerOpen" direction="ltr" size="75%" :with-header="false">
+    <el-drawer v-if="isMobile" v-model="drawerOpen" direction="ltr" size="260px" :with-header="false">
       <div class="drawer-inner">
         <div class="drawer-logo">
           <img src="/nomad-logo.png" alt="N" style="width:28px;height:28px;border-radius:7px;object-fit:contain" />

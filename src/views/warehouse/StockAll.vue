@@ -2,7 +2,7 @@
   <div class="stock-page">
 
     <!-- 手机端：分类筛选 drawer -->
-    <el-drawer v-if="isMobile" v-model="drawerVisible" title="分类筛选" direction="ltr" size="75%">
+    <el-drawer v-if="isMobile" v-model="drawerVisible" title="分类筛选" direction="ltr" size="260px">
       <div class="sidebar-col" style="padding:0 8px">
         <div class="sidebar-label-row">
           <span class="sidebar-label">分类</span>

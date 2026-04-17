@@ -80,7 +80,7 @@
     </div>
 
     <!-- 移动端抽屉 -->
-    <el-drawer v-if="isMobile" v-model="drawerOpen" direction="ltr" size="75%" :with-header="false" class="inv-drawer">
+    <el-drawer v-if="isMobile" v-model="drawerOpen" direction="ltr" size="260px" :with-header="false" class="inv-drawer">
       <div class="drawer-inner">
         <div class="drawer-logo">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
