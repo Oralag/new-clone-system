@@ -277,17 +277,7 @@ const pinnedSessions = ref([
   { id: 'ai-assistant-fixed', name: 'AI 管家', avatar_text: '🤖', last_msg: '随时为您服务', last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
 ])
 
-// 显示列表：固定置顶 + 用户置顶/普通会话（按最新时间排序，置顶优先）
-const displayedGroups = computed(() => {
-  // 从后端数据中排除已被固定项覆盖的 id
-  const fixedIds = new Set(pinnedSessions.value.map(p => p.id))
-  const filtered = groups.value.filter(g => !fixedIds.has(g.id))
-  const sorted = [...filtered].sort((a, b) => {
-    if (!!b.is_pinned !== !!a.is_pinned) return b.is_pinned ? 1 : -1
-    return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime()
-  })
-  return [...pinnedSessions.value, ...sorted]
-})
+const groups = ref<any[]>([])
 const contacts = ref<any[]>([])
 const searchKeyword = ref('')
 const searchResults = ref<any[]>([])
@@ -299,6 +289,18 @@ const activeMeetingCount = ref(0)
 const showDrawer = ref(false)
 const showPlusMenu = ref(false)
 const activeTab = ref('all')
+
+// 显示列表：固定置顶 + 用户置顶/普通会话（按最新时间排序，置顶优先）
+const displayedGroups = computed(() => {
+  // 从后端数据中排除已被固定项覆盖的 id
+  const fixedIds = new Set(pinnedSessions.value.map(p => p.id))
+  const filtered = groups.value.filter(g => !fixedIds.has(g.id))
+  const sorted = [...filtered].sort((a, b) => {
+    if (!!b.is_pinned !== !!a.is_pinned) return b.is_pinned ? 1 : -1
+    return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime()
+  })
+  return [...pinnedSessions.value, ...sorted]
+})
 
 // ── 右键/长按菜单 ──
 const contextGroup = ref<any>(null)
