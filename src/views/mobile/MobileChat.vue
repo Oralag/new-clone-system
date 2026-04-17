@@ -365,6 +365,9 @@ const showCreateGroup = ref(false)
 const selectedMembers = ref<any[]>([])
 const groupSearchKeyword = ref('')
 
+// 打开群聊面板时确保通讯录已加载
+watch(showCreateGroup, (v) => { if (v && contacts.value.length === 0) loadContacts() })
+
 const groupFilteredContacts = computed(() => {
   const kw = groupSearchKeyword.value.toLowerCase().trim()
   if (!kw) return contacts.value
