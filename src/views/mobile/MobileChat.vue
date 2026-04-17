@@ -318,6 +318,8 @@ const swipedId = ref<string | null>(null)
 const swipeStartX = ref(0)
 const currentSwipeItem = ref<any>(null)
 const SWIPE_THRESHOLD = 50
+const contextGroup = ref<any>(null)
+const contextMenuStyle = ref<any>({})
 
 function onSwipeStart(e: TouchEvent, g: any) {
   swipeStartX.value = e.touches[0].clientX
