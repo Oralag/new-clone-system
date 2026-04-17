@@ -217,7 +217,7 @@ async function logOperation(env, userId, actionType, actionName, extra = {}) {
 // Agent IDs（虚拟用户）
 const AGENT_IDS = new Set([
   'ai-assistant-fixed',
-  'captain', 'copywriter', 'poster', 'video', 'brand', 'trend', 'publisher', 'designer', 'marketing',
+  'captain', 'secretary', 'copywriter', 'poster', 'video', 'brand', 'trend', 'publisher', 'designer', 'marketing',
 ])
 
 // 获取通讯录成员（员工 + Agent）

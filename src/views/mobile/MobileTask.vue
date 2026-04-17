@@ -428,12 +428,12 @@ async function createPlan() {
       priority: form.value.priority,
       mentions: form.value.mentions,
     })
-    plans.value.unshift(res.data.plan)
+    plans.value.unshift(res.plan)
     showAdd.value = false
     activeFilter.value = 'todo'
-  } catch (e) {
-    alert('创建失败')
-  } finally {
+  } catch (e: any) {
+    console.error('[createPlan] error:', e?.message, e?.response?.data)
+    alert('创建失败: ' + (e?.message || '未知'))
     submitting.value = false
   }
 }
@@ -462,7 +462,7 @@ async function loadPlans() {
   loading.value = true
   try {
     const res = await http.get('/work/plans')
-    plans.value = res.data.plans || []
+    plans.value = res.plans || []
   } catch {
     plans.value = []
   } finally {

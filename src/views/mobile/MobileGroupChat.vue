@@ -111,64 +111,89 @@
     <div v-if="showGroupInfo" class="m-gs-mask" @click.self="showGroupInfo = false">
       <div class="m-gs-sheet">
         <div class="m-gs-header">
-          <span>群设置</span>
-          <button class="m-gs-close" @click="showGroupInfo = false">×</button>
+          <span>聊天信息</span>
         </div>
         <div class="m-gs-body">
-          <!-- 成员头像网格 -->
-          <div class="m-gs-members">
-            <div v-for="m in members" :key="m.id" class="m-gs-member">
-              <div class="m-gs-avatar" :style="{ background: getAvatarColor(m.id) }">
-                {{ m.name?.[0] || '?' }}
-              </div>
-              <span class="m-gs-name">{{ m.name || m.id }}</span>
-            </div>
-            <!-- 添加成员按钮 -->
-            <div class="m-gs-member" @click="showAddMember = true">
-              <div class="m-gs-add-btn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </div>
-              <span class="m-gs-name" style="color:#999">添加</span>
-            </div>
-          </div>
-
-          <!-- 群聊名称 -->
-          <div class="m-gs-row" @click="showEditName = true">
-            <span class="m-gs-row-label">群聊名称</span>
-            <div class="m-gs-row-value">
-              <span>{{ group?.name }}</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9cdd4" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
+          <!-- 顶部：群头像 + 群名 + 添加按钮 -->
+          <div class="m-gs-top">
+            <div class="m-gs-top-avatar" :style="{ background: getAvatarColor(groupId.value || 'group') }">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
             </div>
+            <div class="m-gs-add-btn-large" @click="showAddMember = true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </div>
+            <div class="m-gs-top-name">{{ group?.name }}</div>
           </div>
 
-          <!-- 消息免打扰 -->
-          <div class="m-gs-row">
-            <span class="m-gs-row-label">消息免打扰</span>
-            <div class="m-gs-switch" :class="{ active: muteEnabled }" @click="muteEnabled = !muteEnabled">
-              <div class="m-gs-switch-dot"></div>
+          <!-- 成员列表（横向滚动） -->
+          <div class="m-gs-members-scroll">
+            <div v-for="m in members" :key="m.id" class="m-gs-member-inline">
+              <div class="m-gs-avatar-sm" :style="{ background: getAvatarColor(m.id) }">{{ m.name?.[0] || '?' }}</div>
+              <span class="m-gs-member-inline-name">{{ m.name }}</span>
             </div>
           </div>
 
-          <!-- 置顶聊天 -->
-          <div class="m-gs-row">
-            <span class="m-gs-row-label">置顶聊天</span>
-            <div class="m-gs-switch" :class="{ active: pinEnabled }" @click="pinEnabled = !pinEnabled">
-              <div class="m-gs-switch-dot"></div>
+          <!-- 分组：查找与快捷入口 -->
+          <div class="m-gs-section">
+            <div class="m-gs-row" @click="">
+              <span class="m-gs-row-label">查找聊天记录</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="m-gs-icons">
+              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文件</span></div>
+              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片/视频</span></div>
+              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>链接</span></div>
+              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>小程序</span></div>
             </div>
           </div>
 
-          <!-- 清空聊天记录 -->
-          <div class="m-gs-row danger" @click="showCleanupConfirm = true">
-            <span>清空聊天记录</span>
+          <!-- 分组：开关项 -->
+          <div class="m-gs-section">
+            <div class="m-gs-row">
+              <span class="m-gs-row-label">消息免打扰</span>
+              <div class="m-gs-switch" :class="{ active: muteEnabled }" @click="muteEnabled = !muteEnabled">
+                <div class="m-gs-switch-dot"></div>
+              </div>
+            </div>
+            <div class="m-gs-row">
+              <span class="m-gs-row-label">置顶聊天</span>
+              <div class="m-gs-switch" :class="{ active: pinEnabled }" @click="pinEnabled = !pinEnabled">
+                <div class="m-gs-switch-dot"></div>
+              </div>
+            </div>
+            <div class="m-gs-row">
+              <span class="m-gs-row-label">标记</span>
+              <div class="m-gs-switch" :class="{ active: starEnabled }" @click="starEnabled = !starEnabled">
+                <div class="m-gs-switch-dot"></div>
+              </div>
+            </div>
+            <div class="m-gs-row" @click="">
+              <span class="m-gs-row-label">标签</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
           </div>
 
-          <!-- 退出群聊 -->
-          <div v-if="group?.can_quit !== false" class="m-gs-row danger" @click="quitGroup">
-            <span>删除并退出</span>
+          <!-- 设置当前聊天背景 -->
+          <div class="m-gs-section">
+            <div class="m-gs-row" @click="">
+              <span class="m-gs-row-label">设置当前聊天背景</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+
+          <!-- 危险操作 -->
+          <div class="m-gs-section">
+            <div class="m-gs-row danger" @click="showCleanupConfirm = true">
+              <span>清空聊天记录</span>
+            </div>
+            <div v-if="group?.can_quit !== false" class="m-gs-row danger" @click="quitGroup">
+              <span>删除并退出</span>
+            </div>
           </div>
         </div>
       </div>
@@ -267,6 +292,7 @@ const cleaning = ref(false)
 const aiMode = ref(false)
 const muteEnabled = ref(false)
 const pinEnabled = ref(false)
+const starEnabled = ref(false)
 const showEditName = ref(false)
 
 const msgListRef = ref<HTMLElement>()
@@ -900,57 +926,79 @@ onUnmounted(() => {
 /* 微信风格群设置 */
 .m-gs-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; }
 .m-gs-sheet {
-  width: 100%; max-height: 85vh; background: #ededed; border-radius: 12px 12px 0 0;
+  width: 100%; max-height: 90vh; background: #111; border-radius: 12px 12px 0 0;
   display: flex; flex-direction: column; animation: slideUp 0.25s ease;
 }
 .m-gs-header {
-  display: flex; align-items: center; justify-content: center; height: 48px;
-  background: #ededed; border-radius: 12px 12px 0 0; position: relative;
-  font-size: 17px; font-weight: 500; color: #000;
+  display: flex; align-items: center; justify-content: center; height: 52px;
+  position: relative; font-size: 17px; font-weight: 400; color: #fff;
 }
-.m-gs-close { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 28px; color: #000; cursor: pointer; }
-.m-gs-body { flex: 1; overflow-y: auto; padding: 0 16px 20px; -webkit-overflow-scrolling: touch; }
+.m-gs-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-/* 成员头像网格 */
-.m-gs-members {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px 8px;
-  padding: 20px 0; background: #fff; margin: 12px 0; border-radius: 8px;
+/* 顶部：群头像 + 群名 */
+.m-gs-top {
+  display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+  border-bottom: 1px solid #2a2a2a;
 }
-.m-gs-member { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.m-gs-avatar {
-  width: 50px; height: 50px; border-radius: 6px;
+.m-gs-top-avatar {
+  width: 56px; height: 56px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 18px; font-weight: 600;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #576b95, #3a4a6b);
 }
-.m-gs-name { font-size: 12px; color: #000; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
-.m-gs-add-btn {
-  width: 50px; height: 50px; border: 1px dashed #999; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
+.m-gs-add-btn-large {
+  width: 36px; height: 36px; border: 1.5px dashed #555; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
 }
+.m-gs-top-name { font-size: 18px; color: #fff; }
+
+/* 成员横向滚动列表 */
+.m-gs-members-scroll {
+  display: flex; gap: 14px; padding: 12px 20px; overflow-x: auto;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.m-gs-members-scroll::-webkit-scrollbar { display: none; }
+.m-gs-member-inline { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+.m-gs-avatar-sm {
+  width: 40px; height: 40px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; font-weight: 600;
+}
+.m-gs-member-inline-name { font-size: 11px; color: #999; max-width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+
+/* 分组容器 */
+.m-gs-section { margin: 8px 12px; border-radius: 8px; overflow: hidden; }
 
 /* 设置行 */
 .m-gs-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px; background: #fff; margin-bottom: 1px;
-  font-size: 17px; color: #000;
+  padding: 13px 16px; background: #1c1c1e; margin-bottom: 1px;
+  font-size: 15px; color: #fff;
 }
-.m-gs-row:first-of-type { border-radius: 8px 8px 0 0; }
-.m-gs-row:last-of-type { border-radius: 0 0 8px 8px; }
-.m-gs-row:only-of-type { border-radius: 8px; }
-.m-gs-row-label { color: #000; }
-.m-gs-row-value { display: flex; align-items: center; gap: 6px; color: #888; font-size: 16px; }
-.m-gs-row.danger { color: #fa5151; margin-top: 12px; border-radius: 8px; justify-content: center; }
+.m-gs-section .m-gs-row:first-child { border-radius: 8px 8px 0 0; }
+.m-gs-section .m-gs-row:last-child { border-radius: 0 0 8px 8px; margin-bottom: 0; }
+.m-gs-section .m-gs-row:only-child { border-radius: 8px; }
+.m-gs-row-label { color: #fff; }
+.m-gs-row.danger { color: #fa5151; justify-content: center; }
+
+/* 快捷图标行 */
+.m-gs-icons {
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 10px 4px; background: #1c1c1e;
+}
+.m-gs-icon-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.m-gs-icon-item span { font-size: 11px; color: #888; }
 
 /* 开关 */
 .m-gs-switch {
-  width: 51px; height: 31px; border-radius: 16px; background: #e5e5e5;
-  position: relative; cursor: pointer; transition: background 0.2s;
+  width: 51px; height: 31px; border-radius: 16px; background: #3a3a3c;
+  position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0;
 }
 .m-gs-switch.active { background: #07c160; }
 .m-gs-switch-dot {
   width: 27px; height: 27px; border-radius: 50%; background: #fff;
   position: absolute; top: 2px; left: 2px; transition: left 0.2s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .m-gs-switch.active .m-gs-switch-dot { left: 22px; }
 

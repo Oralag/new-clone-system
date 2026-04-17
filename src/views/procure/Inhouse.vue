@@ -417,7 +417,6 @@ import { getProcureInhouseList, createProcureInhouse, updateProcureInhouse, dele
 import { getWarehouseList } from '@/api/warehouse'
 import { getFundList, createFund } from '@/api/finance'
 import http from '@/api/http'
-import { getBomList, getBomByGoods } from '@/api/goods'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -652,17 +651,6 @@ async function handleDelete(id: number) {
 
 async function handleInhouseStockEffect(row: any, type: 'audit' | 'reverse') {
   const items: any[] = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
-
-  // 预加载BOM列表（按 goods_sn 建索引）
-  let bomSnMap: Record<string, number> = {}
-  try {
-    const bomRes = await getBomList({ list_rows: 500 })
-    const bomList: any[] = bomRes.data?.list ?? bomRes.data?.rows ?? []
-    for (const b of bomList) {
-      if (b.goods_sn) bomSnMap[b.goods_sn] = b.id
-    }
-  } catch {}
-
   for (const item of items) {
     if (!item.goods_id || !item.num) continue
     try {
@@ -676,6 +664,7 @@ async function handleInhouseStockEffect(row: any, type: 'audit' | 'reverse') {
         const newQty = Math.max(0, Number(stock.qty || 0) + delta)
         await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
       } else if (type === 'audit') {
+        // 库存记录不存在，新建一条
         await http.post('/stock/StockAll/add', {
           goods_id: item.goods_id,
           goods_name: item.goods_name || '',
@@ -687,34 +676,6 @@ async function handleInhouseStockEffect(row: any, type: 'audit' | 'reverse') {
       }
     } catch (e: any) {
       console.warn('入库库存变动失败', e?.message)
-    }
-
-    // 如果该成品有BOM，扣减（或恢复）原材料库存
-    const bomId = bomSnMap[item.goods_sn || '']
-    if (!bomId) continue
-    try {
-      const detailRes = await getBomByGoods(bomId)
-      const bomItems: any[] = detailRes.data?.items ?? []
-      const finishedQty = Number(item.num)
-      for (const mat of bomItems) {
-        if (!mat.goods_sn || !mat.num) continue
-        const matDelta = type === 'audit'
-          ? -Number(mat.num) * finishedQty   // 入库成品 → 扣原材料
-          : Number(mat.num) * finishedQty    // 反审核 → 加回原材料
-        try {
-          const matStockRes = await http.get('/stock/StockAll/index', {
-            params: { goods_sn: mat.goods_sn, ...(row.warehouse_id ? { warehouse_id: row.warehouse_id } : {}), list_rows: 10 }
-          })
-          const matStock = (matStockRes.data?.rows ?? [])[0]
-          if (matStock) {
-            await http.post('/stock/StockAll/edit', { id: matStock.id, qty: Number(matStock.qty || 0) + matDelta })
-          }
-        } catch (e: any) {
-          console.warn('BOM原材料库存更新失败', mat.goods_sn, e?.message)
-        }
-      }
-    } catch (e: any) {
-      console.warn('BOM详情加载失败', e?.message)
     }
   }
 }
