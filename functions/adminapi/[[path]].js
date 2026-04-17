@@ -361,6 +361,109 @@ async function handleChatUnread(request, env) {
   return jsonSuccess({ total })
 }
 
+async function handleGetGroupMembers(request, env) {
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+  const group = groups.find(g => g.id === groupId)
+  if (!group) return errRes('群不存在')
+
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const members = memberRaw ? JSON.parse(memberRaw)[groupId] || [] : []
+
+  const membersWithInfo = await Promise.all(members.map(async m => {
+    const info = await getUserInfo(m.user_id, env)
+    return { id: m.user_id, user_id: m.user_id, ...info }
+  }))
+
+  return jsonSuccess({ rows: membersWithInfo, total: membersWithInfo.length })
+}
+
+async function handleAddGroupMember(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+
+  let body
+  try { body = await request.json() } catch { return errRes('请求格式错误') }
+
+  const newUserId = body.user_id
+  if (!newUserId) return errRes('缺少 user_id')
+
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+  if (!memberMap[groupId]) memberMap[groupId] = []
+
+  if (memberMap[groupId].some(m => m.user_id === newUserId)) {
+    return errRes('该用户已在群中')
+  }
+
+  memberMap[groupId].push({ user_id: newUserId })
+  await env.USERS_KV.put('chat_members', JSON.stringify(memberMap))
+
+  return jsonSuccess({ success: true })
+}
+
+async function handleRemoveGroupMember(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+
+  // Extract the target user ID from the path
+  const m = request.url.match(/\/members\/(\d+)$/)
+  const targetUserId = m ? parseInt(m[1]) : null
+  if (!targetUserId) return errRes('缺少用户ID')
+
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+  if (!memberMap[groupId]) return errRes('群不存在')
+
+  memberMap[groupId] = memberMap[groupId].filter(m => m.user_id !== targetUserId)
+  await env.USERS_KV.put('chat_members', JSON.stringify(memberMap))
+
+  return jsonSuccess({ success: true })
+}
+
+async function handleMarkRead(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+
+  await env.USERS_KV.put(`chat_unread:${userId}:${groupId}`, '0')
+  return jsonSuccess({ success: true })
+}
+
+async function handleCleanupMessages(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+
+  let body
+  try { body = await request.json() } catch { return errRes('请求格式错误') }
+
+  const days = body.days || 30
+  const cutoff = Date.now() - days * 86400000
+
+  const raw = await env.USERS_KV.get('chat_messages')
+  const msgMap = raw ? JSON.parse(raw) : {}
+  if (msgMap[groupId]) {
+    msgMap[groupId] = msgMap[groupId].filter(m => m.created_at && new Date(m.created_at).getTime() > cutoff)
+    await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap))
+  }
+
+  return jsonSuccess({ success: true, removed_before: new Date(cutoff).toISOString() })
+}
+
 // ── PBKDF2 password utils (Web Crypto) ──────────────────────────────────────
 const PBKDF2_ITERATIONS = 120000
 const encoder = new TextEncoder()
@@ -567,6 +670,26 @@ export async function onRequest(context) {
     // GET /adminapi/chat/groups/unread - get unread count
     if (pathname === '/adminapi/chat/groups/unread' && request.method === 'GET') {
       return handleChatUnread(request, env)
+    }
+    // GET /adminapi/chat/groups/:id/members - get group members
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members$/) && request.method === 'GET') {
+      return handleGetGroupMembers(request, env)
+    }
+    // POST /adminapi/chat/groups/:id/members - add member
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members$/) && request.method === 'POST') {
+      return handleAddGroupMember(request, env)
+    }
+    // DELETE /adminapi/chat/groups/:id/members/:userId - remove member
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members\/\d+$/) && request.method === 'DELETE') {
+      return handleRemoveGroupMember(request, env)
+    }
+    // POST /adminapi/chat/groups/:id/read - mark messages read
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/read$/) && request.method === 'POST') {
+      return handleMarkRead(request, env)
+    }
+    // POST /adminapi/chat/groups/:id/cleanup - cleanup old messages
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/cleanup$/) && request.method === 'POST') {
+      return handleCleanupMessages(request, env)
     }
     // Fallback for unhandled chat paths
     return errRes('聊天功能暂不支持')
