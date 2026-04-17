@@ -118,7 +118,9 @@ onMounted(async () => {
   if (userId) {
     const res = await getAdminList({ list_rows: 500 })
     const rows: any[] = res?.data?.rows ?? res?.rows ?? []
+    console.log('[MobileNewChat] getAdminList rows:', rows.length)
     const user = rows.find((r: any) => r.id === userId)
+    console.log('[MobileNewChat] find user by id', userId, '->', user)
     if (user) {
       targetUser.value = user
     } else {
