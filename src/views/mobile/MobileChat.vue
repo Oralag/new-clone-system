@@ -276,32 +276,43 @@
       </div>
     </div>
 
-    <div v-if="showPlusMenu" class="plus-menu-mask" @click="showPlusMenu = false"></div>
-    <div v-if="showPlusMenu" class="plus-menu">
-      <div class="plus-menu-item" @click="showCreateGroup = true; showPlusMenu = false">
+    <!-- ── 顶栏+菜单：聊天操作 ── -->
+    <div v-if="showChatPlus" class="plus-menu-mask" @click="showChatPlus = false"></div>
+    <div v-if="showChatPlus" class="plus-menu chat-plus-menu">
+      <div class="plus-menu-item" @click="showCreateGroup = true; showChatPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#07c160" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         发起群聊
       </div>
-      <div class="plus-menu-item" @click="router.push('/mobile/procure/scan-in'); showPlusMenu = false">
+      <div class="plus-menu-item" @click="router.push('/mobile/chat/new'); showChatPlus = false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        新的聊天
+      </div>
+    </div>
+
+    <!-- ── 底部FAB+菜单：业务快捷操作 ── -->
+    <div v-if="showFabPlus" class="plus-menu-mask" @click="showFabPlus = false"></div>
+    <div v-if="showFabPlus" class="plus-menu fab-plus-menu">
+      <div class="fab-plus-title">快捷操作</div>
+      <div class="plus-menu-item" @click="router.push('/mobile/procure/scan-in'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="10" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
         扫码入库
       </div>
-      <div class="plus-menu-item" @click="router.push('/mobile/task/new'); showPlusMenu = false">
+      <div class="plus-menu-item" @click="router.push('/mobile/task/new'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         新建工作计划
       </div>
-      <div class="plus-menu-item" @click="router.push('/mobile/sale/out'); showPlusMenu = false">
+      <div class="plus-menu-item" @click="router.push('/mobile/sale/out'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         新建销售出库
       </div>
-      <div class="plus-menu-item" @click="router.push('/cashregister'); showPlusMenu = false">
+      <div class="plus-menu-item" @click="router.push('/cashregister'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="14" x2="12" y2="14"/><line x1="6" y1="17" x2="10" y2="17"/></svg>
         快捷收款
       </div>
     </div>
 
-    <!-- ── 右下角新建按钮 ── -->
-    <div class="chat-fab" @click="showPlusMenu = !showPlusMenu">
+    <!-- ── 右下角快捷操作按钮 ── -->
+    <div class="chat-fab" @click="showFabPlus = !showFabPlus; showChatPlus = false">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
@@ -348,7 +359,8 @@ const showNewChat = ref(false)
 const newChatKeyword = ref('')
 const activeMeetingCount = ref(0)
 const showDrawer = ref(false)
-const showPlusMenu = ref(false)
+const showChatPlus = ref(false)
+const showFabPlus = ref(false)
 const showCreateGroup = ref(false)
 const selectedMembers = ref<any[]>([])
 const groupSearchKeyword = ref('')
@@ -1258,7 +1270,7 @@ export default { name: 'MobileChat' }
 .ctx-item--danger { color: #ee4444; }
 .ctx-item--danger svg { color: #ee4444; }
 
-/* ── 右下角新建按钮 ── */
+/* ── 右下角快捷操作按钮 ── */
 .chat-fab {
   position: fixed;
   bottom: 66px;
@@ -1277,6 +1289,23 @@ export default { name: 'MobileChat' }
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .chat-fab:active { transform: scale(0.92); box-shadow: 0 2px 6px rgba(46,107,230,0.3); }
+
+/* ── 菜单定位区分 ── */
+.chat-plus-menu {
+  top: 50px;
+  right: 12px;
+}
+.fab-plus-menu {
+  bottom: 126px;
+  right: 12px;
+  top: auto;
+}
+.fab-plus-title {
+  padding: 10px 16px 6px;
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
