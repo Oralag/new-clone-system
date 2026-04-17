@@ -151,7 +151,7 @@ const showNewGroup = ref(false)
 const activeLetter = ref('')
 const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
-const robotExpanded = ref(true)
+const robotExpanded = ref(false)
 const deptExpanded = ref(true)
 
 // ERP 系统真实 Agent（来自 agentRegistry.ts）

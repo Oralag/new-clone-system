@@ -243,11 +243,20 @@ async function handleChatGroups(request, env) {
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
 
   // 只保留：自己是成员 OR 是自己发起的
+  const debug = url.searchParams.get('debug') === '1'
   const userGroups = groups.filter(g => {
     const members = memberMap[g.id] || []
     const isMe = m => String(m.user_id) === String(userId)
     return members.some(isMe) || String(g.created_by) === String(userId)
   }).slice((page - 1) * listRows, page * listRows)
+
+  const debugInfo = debug ? {
+    userId,
+    totalGroups: groups.length,
+    filteredCount: userGroups.length,
+    memberSample: Object.entries(memberMap).slice(0, 3),
+    sampleGroup: userGroups[0] || null,
+  } : null
 
   const msgRaw = await env.USERS_KV.get('chat_messages')
   const msgMap = msgRaw ? JSON.parse(msgRaw) : {}
@@ -270,7 +279,7 @@ async function handleChatGroups(request, env) {
     return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
   })
 
-  return jsonSuccess({ rows: result, total: userGroups.length })
+  return jsonSuccess({ rows: result, total: userGroups.length, _debug: debugInfo })
 }
 
 async function handleCreateGroup(request, env) {

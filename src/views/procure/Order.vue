@@ -1524,13 +1524,6 @@ async function submitFeePay() {
       fund_name: feePayForm.fund_name,
       remark: `采购附加费用 #${feePayForm.orderId}:${feePayForm.feeName} [${feePayForm.supplierName}]${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
     })
-    await createExpense({
-      type_name: feePayForm.feeName,
-      apply_date: feePayForm.pay_date,
-      amount: needPay,
-      remark: `采购附加费用 #${feePayForm.orderId}:${feePayForm.feeName} [${feePayForm.supplierName}]${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
-      order_sn: feePayForm.orderSn,
-    })
     ElMessage.success('付款成功')
     feePayVisible.value = false
     loadPaidMap()
