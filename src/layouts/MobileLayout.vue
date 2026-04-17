@@ -84,7 +84,7 @@ const activeTab = ref('chat')
 const unreadCount = ref(0)
 const pendingCount = ref(0)
 const taskCount = ref(0)
-const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileStats', 'MobileModules']
+const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileStats', 'MobileModules']
 
 // 判断当前是否为 Tab 主页面（主页面不显示返回按钮）
 const isMainTab = computed(() => {
