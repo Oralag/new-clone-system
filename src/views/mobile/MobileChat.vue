@@ -943,11 +943,15 @@ export default { name: 'MobileChat' }
   top: 0;
   bottom: 0;
   display: flex;
-  transform: translateX(100%);
-  transition: transform 0.2s ease;
+  z-index: 1;
 }
-.chat-item-wrap.swiped .chat-item-actions {
-  transform: translateX(0);
+.chat-item-wrap.swiped > .chat-item {
+  transform: translateX(-140px);
+}
+.chat-item {
+  transition: transform 0.2s ease;
+  position: relative;
+  z-index: 2;
 }
 .action-btn {
   display: flex;
