@@ -136,7 +136,7 @@
 
         <div v-if="isMobile" v-loading="loading" class="mobile-stock-list">
           <div v-if="!tableData.length" class="mobile-stock-empty">暂无数据</div>
-          <div v-for="row in tableData" :key="row.id" :class="['mobile-stock-card', bomGoodsSet.has(row.id) ? 'is-bom' : '']">
+          <div v-for="row in tableData" :key="row.id" :class="['mobile-stock-card', bomGoodsSet.has(row.goods_sn) ? 'is-bom' : '']">
             <div class="mobile-stock-card__head">
               <div class="mobile-stock-card__title-wrap">
                 <div class="mobile-stock-card__title">{{ row.goods_name || '—' }}</div>
@@ -145,7 +145,7 @@
                   <span v-if="row.cate_name">{{ row.cate_name }}</span>
                 </div>
               </div>
-              <el-tag v-if="bomGoodsSet.has(row.id)" size="small" class="mobile-stock-card__bom">BOM</el-tag>
+              <el-tag v-if="bomGoodsSet.has(row.goods_sn)" size="small" class="mobile-stock-card__bom">BOM</el-tag>
             </div>
             <div class="mobile-stock-card__grid">
               <div class="mobile-stock-card__item">
@@ -178,13 +178,13 @@
         </div>
 
         <el-table v-else v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px"
-          :row-class-name="({ row }: any) => bomGoodsSet.has(row.id) ? 'bom-row' : ''"
+          :row-class-name="({ row }: any) => bomGoodsSet.has(row.goods_sn) ? 'bom-row' : ''"
           @sort-change="handleSortChange">
           <el-table-column type="index" label="序号" width="55" align="center" />
           <el-table-column prop="goods_name" label="商品名称" min-width="120" sortable="custom">
             <template #default="{ row }">
               <span>{{ row.goods_name }}</span>
-              <el-tag v-if="bomGoodsSet.has(row.id)" size="small" style="margin-left:6px;vertical-align:middle;background:#e6a23c;color:#fff;border-color:#e6a23c">BOM</el-tag>
+              <el-tag v-if="bomGoodsSet.has(row.goods_sn)" size="small" style="margin-left:6px;vertical-align:middle;background:#e6a23c;color:#fff;border-color:#e6a23c">BOM</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="goods_sn" label="商品编码" width="130" />
@@ -526,7 +526,7 @@ async function handleDeleteCate(id: number) {
 
 // All goods (from goods table - includes zero-stock items)
 const allGoods = ref<any[]>([])
-const bomGoodsSet = ref<Set<number>>(new Set())
+const bomGoodsSet = ref<Set<string>>(new Set())
 // Stock qty map: goods_id -> qty (from stock/StockAll - updated by inhouse audit)
 const stockQtyMap = ref<Record<number, number>>({})
 const stockPriceMap = ref<Record<number, number>>({})
@@ -947,26 +947,28 @@ async function loadStockMap(warehouseId = 0) {
       // 查BOM表
       let bomRows: any[] = []
       try {
-        const bomRes = await http.get('/goods/ShopBom/index', { params: { list_rows: 500 } })
+        const bomRes = await http.get('/goods/BomGoods/index', { params: { list_rows: 500 } })
         bomRows = bomRes.data?.rows ?? []
       } catch {}
-      // 按 goods_id 分组BOM物料
-      const bomMap: Record<number, { material_sn: string; num: number }[]> = {}
+      // 按 goods_sn 记录有BOM的成品
+      const bomSnSet = new Set<string>()
       for (const b of bomRows) {
-        const gid = Number(b.goods_id || 0)
-        if (!gid) continue
-        if (!bomMap[gid]) bomMap[gid] = []
-        bomMap[gid].push({ material_sn: b.material_sn || '', num: Number(b.num || 0) })
+        const sn = b.goods_sn || ''
+        if (sn) bomSnSet.add(sn)
       }
-      // 记录有BOM的商品ID
-      bomGoodsSet.value = new Set(Object.keys(bomMap).map(Number))
-      // 有BOM定义的商品，用BOM物料成本算均价
-      for (const gid in bomMap) {
-        const g = allGoods.value.find(x => x.id === Number(gid))
-        const sn = g?.goods_sn
+      bomGoodsSet.value = bomSnSet
+      // 按 goods_sn 分组BOM物料
+      const bomMap: Record<string, { material_sn: string; num: number }[]> = {}
+      for (const b of bomRows) {
+        const sn = b.goods_sn || ''
         if (!sn) continue
+        if (!bomMap[sn]) bomMap[sn] = []
+        bomMap[sn].push({ material_sn: b.material_sn || '', num: Number(b.num || 0) })
+      }
+      // 有BOM定义的商品，用BOM物料成本算均价
+      for (const sn in bomMap) {
         let bomCost = 0
-        for (const mat of bomMap[Number(gid)]) {
+        for (const mat of bomMap[sn]) {
           bomCost += mat.num * (snAvgPrice[mat.material_sn] || 0)
         }
         if (bomCost > 0) {

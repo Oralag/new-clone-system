@@ -13,7 +13,7 @@
         <el-table-column label="商品名称" min-width="160">
           <template #default="{ row }">
             <span>{{ row.goods_name }}</span>
-            <el-tag v-if="bomGoodsSet.has(row.goods_id)" type="warning" size="small" style="margin-left:6px;vertical-align:middle">BOM</el-tag>
+            <el-tag v-if="bomGoodsSet.has(row.goods_sn)" type="warning" size="small" style="margin-left:6px;vertical-align:middle">BOM</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="stock_num" label="当前库存" width="120" />
@@ -37,13 +37,13 @@ const searchForm = reactive({
   warehouse_name: ''
 })
 
-const bomGoodsSet = ref<Set<number>>(new Set())
+const bomGoodsSet = ref<Set<string>>(new Set())
 
 onMounted(async () => {
   try {
-    const res = await http.get('/goods/ShopBom/index', { params: { list_rows: 500 } })
+    const res = await http.get('/goods/BomGoods/index', { params: { list_rows: 500 } })
     const rows = res.data?.rows ?? []
-    bomGoodsSet.value = new Set(rows.map((b: any) => Number(b.goods_id)).filter(Boolean))
+    bomGoodsSet.value = new Set(rows.map((b: any) => b.goods_sn).filter(Boolean))
   } catch {}
 })
 </script>

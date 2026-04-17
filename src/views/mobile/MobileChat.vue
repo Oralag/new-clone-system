@@ -415,6 +415,7 @@ async function doCreateGroup() {
       name,
       member_ids: memberIds
     })
+    console.log('[doCreateGroup] res:', JSON.stringify(res))
     showCreateGroup.value = false
     selectedMembers.value = []
     groupSearchKeyword.value = ''
@@ -427,7 +428,9 @@ async function doCreateGroup() {
     } else {
       loadGroups()
     }
-  } catch {
+  } catch (e) {
+    console.error('[doCreateGroup] error:', e)
+    alert('创建群聊失败：' + (e?.message || '未知错误'))
     showCreateGroup.value = false
     selectedMembers.value = []
     groupSearchKeyword.value = ''
