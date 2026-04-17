@@ -12,8 +12,6 @@
 
     <!-- 分组列表（企业微信风格：字母索引） -->
     <div class="contacts-body">
-      <!-- 部门架构入口 -->
-      
       <!-- 机器人分类 -->
       <div class="contacts-robot-section">
         <div class="contacts-robot-title" @click="robotExpanded = !robotExpanded">
@@ -45,45 +43,55 @@
         </template>
       </div>
 
-<div class="contacts-dept-entry" @click="router.push('/mobile/contacts/dept')">
-        <div class="contacts-dept-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
+      <!-- 组织框架分类（包含子账号） -->
+      <div class="contacts-robot-section">
+        <div class="contacts-robot-title" @click="orgExpanded = !orgExpanded">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
             <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
+          <div class="contacts-robot-title-text">
+            <span>组织框架</span>
+            <span class="contacts-robot-subtitle">子账号、部门架构</span>
+          </div>
+          <span class="contacts-robot-count">{{ filteredEmployees.length }}</span>
+          <span class="contacts-section-arrow" :class="{ collapsed: !orgExpanded }">▾</span>
         </div>
-        <div class="contacts-dept-info">
-          <span class="contacts-dept-name">组织架构</span>
-          <span class="contacts-dept-sub">查看全部部门和员工</span>
-        </div>
-        <span class="contacts-arrow">›</span>
-      </div>
-
-      <!-- 通讯录列表（子账户/员工） -->
-    <div v-if="filteredEmployees.length === 0 && !keyword" class="contacts-empty">
-      <div class="contacts-empty-icon">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-        </svg>
-      </div>
-      <div class="contacts-empty-text">暂无子账户</div>
-    </div>
-
-    <div
-      v-for="c in filteredEmployees"
-      :key="c.id"
-      class="contacts-item"
-      @click="viewEmployee(c)"
-    >
-      <div class="contacts-avatar">{{ c.name?.[0] || '?' }}</div>
-      <div class="contacts-info">
-        <div class="contacts-name">{{ c.name }}</div>
-        <div class="contacts-sub" v-if="c.role_name || c.dept_name">
-          {{ c.role_name || '' }}{{ c.role_name && c.dept_name ? ' · ' : '' }}{{ c.dept_name || '' }}
-        </div>
-        </div>
-        <span class="contacts-arrow">›</span>
+        <template v-if="orgExpanded">
+          <!-- 部门架构入口 -->
+          <div class="contacts-dept-entry" @click="router.push('/mobile/contacts/dept')">
+            <div class="contacts-dept-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
+            <div class="contacts-dept-info">
+              <span class="contacts-dept-name">组织架构</span>
+              <span class="contacts-dept-sub">查看全部部门和员工</span>
+            </div>
+            <span class="contacts-arrow">›</span>
+          </div>
+          <!-- 子账号列表 -->
+          <div v-if="filteredEmployees.length === 0 && !keyword" class="contacts-empty" style="padding: 24px;">
+            <div class="contacts-empty-text">暂无子账号</div>
+          </div>
+          <div
+            v-for="c in filteredEmployees"
+            :key="c.id"
+            class="contacts-item"
+            @click="viewEmployee(c)"
+          >
+            <div class="contacts-avatar">{{ c.name?.[0] || '?' }}</div>
+            <div class="contacts-info">
+              <div class="contacts-name">{{ c.name }}</div>
+              <div class="contacts-sub" v-if="c.role_name || c.dept_name">
+                {{ c.role_name || '' }}{{ c.role_name && c.dept_name ? ' · ' : '' }}{{ c.dept_name || '' }}
+              </div>
+            </div>
+            <span class="contacts-arrow">›</span>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -149,6 +157,7 @@ const activeLetter = ref('')
 const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 const robotExpanded = ref(true)
+const orgExpanded = ref(true)
 
 // ERP 系统真实 Agent（来自 agentRegistry.ts）
 const robotAgents = [

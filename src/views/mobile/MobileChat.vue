@@ -258,6 +258,7 @@
           <button class="m-modal-close" @click="showCreateGroup = false">取消</button>
         </div>
         <div style="padding: 8px 16px; border-bottom: 1px solid #f2f3f5; flex-shrink: 0;">
+          <input v-model="newGroupName" placeholder="群聊名称（选填）" class="group-name-input" />
           <div class="group-search-input">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input v-model="groupSearchKeyword" placeholder="搜索联系人" />
@@ -367,6 +368,7 @@ const showFabPlus = ref(false)
 const showCreateGroup = ref(false)
 const selectedMembers = ref<any[]>([])
 const groupSearchKeyword = ref('')
+const newGroupName = ref('')
 
 // 打开群聊面板时确保通讯录已加载
 watch(showCreateGroup, (v) => { if (v && contacts.value.length === 0) loadContacts() })
@@ -402,19 +404,33 @@ function toggleMember(c: any) {
 async function doCreateGroup() {
   if (selectedMembers.value.length === 0) return
   try {
-    const res = await http.post('/chat/create', {
-      type: 'group',
-      member_ids: selectedMembers.value.map(m => m.id)
+    const memberIds = selectedMembers.value.map(m => m.id)
+    // 自动生成群名：选了1人用"与xxx的群聊"，多人用"群聊(n人)"
+    let name = newGroupName.value.trim()
+    if (!name) {
+      name = memberIds.length === 1
+        ? `与${selectedMembers.value[0].name}的群聊`
+        : `群聊(${memberIds.length + 1}人)`
+    }
+    const res = await http.post('/adminapi/chat/groups', {
+      name,
+      member_ids: memberIds
     })
     showCreateGroup.value = false
     selectedMembers.value = []
     groupSearchKeyword.value = ''
-    if (res?.data?.id) router.push(`/mobile/chat/${res.data.id}`)
-    else loadGroups()
+    newGroupName.value = ''
+    if (res?.data?.id) {
+      loadGroups()
+      router.push(`/mobile/chat/${res.data.id}`)
+    } else {
+      loadGroups()
+    }
   } catch {
     showCreateGroup.value = false
     selectedMembers.value = []
     groupSearchKeyword.value = ''
+    newGroupName.value = ''
   }
 }
 const activeTab = ref('all')
@@ -1061,6 +1077,7 @@ export default { name: 'MobileChat' }
   background: #f5f5f5;
   border-radius: 8px;
   padding: 6px 10px;
+  margin-top: 6px;
 }
 .group-search-input input {
   border: none;
@@ -1068,6 +1085,16 @@ export default { name: 'MobileChat' }
   outline: none;
   flex: 1;
   font-size: 14px;
+}
+.group-name-input {
+  width: 100%;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
 }
 .selected-members-bar {
   padding: 8px 16px;

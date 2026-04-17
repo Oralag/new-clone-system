@@ -587,8 +587,17 @@ export default { name: 'MobileTask' }
 }
 .task-modal-sheet {
   background: #fff; border-radius: 16px 16px 0 0;
-  width: 100%; max-height: 92vh; display: flex; flex-direction: column;
+  width: 100%;
+  /* iOS Safari 兼容：用 dvh + min */
+  height: auto;
+  max-height: min(92vh, 100dvh);
+  min-height: 60vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
   animation: slideUp 0.2s ease;
+  /* iOS 安全区适配 */
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
 }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .task-modal-header {
@@ -600,10 +609,16 @@ export default { name: 'MobileTask' }
   font-size: 14px; color: #2E6BE6; background: none; border: none;
   cursor: pointer; padding: 4px 8px;
 }
-.task-modal-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.task-modal-body {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  /* iOS 滚动弹性 */
+  -webkit-overflow-scrolling: touch;
+}
 .task-modal-footer {
-  padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
-  border-top: 1px solid #f2f3f5; flex-shrink: 0;
+  padding: 12px 16px; border-top: 1px solid #f2f3f5; flex-shrink: 0;
+  /* 固定在底部 */
+  position: sticky; bottom: 0; background: #fff;
 }
 .task-input {
   width: 100%; height: 48px; background: #f5f5f7; border: 1px solid transparent;
