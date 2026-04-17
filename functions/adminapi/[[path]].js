@@ -910,6 +910,95 @@ const agentRegistry = [
     return errRes('聊天功能暂不支持')
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // Work Plans API — handled locally with KV storage
+  // ═══════════════════════════════════════════════════════════════
+  if (isWorkPath(pathname)) {
+    const userId = getUserId(request)
+    if (!userId) return errRes('未登录', 401)
+
+    // GET /adminapi/work/plans — list
+    if (pathname === '/adminapi/work/plans' && request.method === 'GET') {
+      const url = new URL(request.url)
+      const status = url.searchParams.get('status') || ''
+      const assigned = url.searchParams.get('assigned')
+      const raw = await env.USERS_KV.get('work_plans')
+      let plans = raw ? JSON.parse(raw) : []
+      if (assigned === 'me') {
+        plans = plans.filter(p =>
+          p.creator_id === userId || (p.mentions || []).some(m => String(m.id) === String(userId))
+        )
+      }
+      if (status) plans = plans.filter(p => p.status === status)
+      plans.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      return jsonRes({ plans, total: plans.length })
+    }
+
+    // POST /adminapi/work/plans — create
+    if (pathname === '/adminapi/work/plans' && request.method === 'POST') {
+      let body
+      try { body = await request.json() } catch { return errRes('请求格式错误') }
+      const { title, description, mentions = [], due_date, priority } = body
+      if (!title?.trim()) return errRes('请填写任务标题')
+      const now = new Date().toISOString()
+      const plansRaw = await env.USERS_KV.get('work_plans')
+      const plans = plansRaw ? JSON.parse(plansRaw) : []
+      const newPlan = {
+        id: Date.now(), creator_id: userId,
+        title: title.trim(), description: description?.trim() || '',
+        status: 'todo', priority: priority || 'normal',
+        mentions, due_date: due_date || '',
+        follow_up: { last_remind: null, next_remind: null, remind_count: 0 },
+        created_at: now, updated_at: now,
+      }
+      plans.unshift(newPlan)
+      await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+      return jsonRes({ plan: newPlan }, 201)
+    }
+
+    // PUT /adminapi/work/plans/:id
+    const putMatch = pathname.match(/^\/adminapi\/work\/plans\/(\d+)$/)
+    if (putMatch && request.method === 'PUT') {
+      const planId = Number(putMatch[1])
+      const body = await request.json()
+      const plansRaw = await env.USERS_KV.get('work_plans')
+      const plans = plansRaw ? JSON.parse(plansRaw) : []
+      const idx = plans.findIndex(p => p.id === planId)
+      if (idx === -1) return errRes('任务不存在')
+      plans[idx] = { ...plans[idx], ...body, updated_at: new Date().toISOString() }
+      await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+      return jsonRes({ plan: plans[idx] })
+    }
+
+    // DELETE /adminapi/work/plans/:id
+    if (putMatch && request.method === 'DELETE') {
+      const planId = Number(putMatch[1])
+      const plansRaw = await env.USERS_KV.get('work_plans')
+      const plans = plansRaw ? JSON.parse(plansRaw) : []
+      await env.USERS_KV.put('work_plans', JSON.stringify(plans.filter(p => p.id !== planId)))
+      return jsonRes({ message: '已删除' })
+    }
+
+    // POST /adminapi/work/plans/:id/remind
+    const remindMatch = pathname.match(/^\/adminapi\/work\/plans\/(\d+)\/remind$/)
+    if (remindMatch && request.method === 'POST') {
+      const planId = Number(remindMatch[1])
+      const plansRaw = await env.USERS_KV.get('work_plans')
+      const plans = plansRaw ? JSON.parse(plansRaw) : []
+      const idx = plans.findIndex(p => p.id === planId)
+      if (idx === -1) return errRes('任务不存在')
+      plans[idx].follow_up = {
+        ...plans[idx].follow_up,
+        last_remind: new Date().toISOString(),
+        remind_count: (plans[idx].follow_up?.remind_count || 0) + 1,
+      }
+      await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+      return jsonRes({ plan: plans[idx] })
+    }
+
+    return errRes('工作计划功能暂不支持')
+  }
+
   // All other requests: decode token and proxy to correct backend
   const wrappedToken = request.headers.get('token') || ''
   const decoded = decodeToken(wrappedToken)
