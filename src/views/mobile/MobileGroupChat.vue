@@ -866,7 +866,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 .m-modal-close { border: none; background: transparent; color: #0071e3; font-size: 14px; cursor: pointer; }
-.m-modal-body { flex: 1; overflow-y: auto; padding: 16px; }
+.m-modal-body { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px); }
 .m-modal-footer { padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid #f2f3f5; flex-shrink: 0; }
 
 .m-group-info {
