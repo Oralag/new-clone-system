@@ -87,8 +87,14 @@
           v-for="g in displayedGroups"
           :key="g.id"
           class="chat-item"
+          :class="{ 'chat-item--pinned': g.is_pinned }"
           @click="g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`)"
+          @touchstart.passive="onTouchStart($event, g)"
+          @touchend.passive="onTouchEnd"
+          @touchmove.passive="onTouchMove"
+          @contextmenu.prevent="showContextMenu($event, g)"
         >
+          <span v-if="g.is_pinned" class="chat-pin-icon">📌</span>
           <div class="chat-avatar-wrap">
             <div class="chat-avatar" :style="avatarStyle(g)">{{ g.avatar_text || g.name?.[0] || '群' }}</div>
             <span v-if="g.unread > 0" class="chat-unread-dot"></span>
@@ -261,6 +267,19 @@
       </svg>
     </div>
   </div>
+
+  <!-- ── 右键/长按菜单 ── -->
+  <div v-if="contextGroup" class="context-menu-mask" @click="closeContextMenu" @touchstart.passive="closeContextMenu"></div>
+  <div v-if="contextGroup" class="context-menu" :style="contextMenuStyle">
+    <div class="ctx-item" @click="togglePin(contextGroup)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      {{ contextGroup.is_pinned ? '取消置顶' : '置顶聊天' }}
+    </div>
+    <div class="ctx-item ctx-item--danger" @click="deleteGroup(contextGroup)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      删除会话
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -272,14 +291,22 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 
-const groups = ref<any[]>([])
+// 固定置顶项（如 AI 管家）
 const pinnedSessions = ref([
-  { id: 'ai-assistant', name: 'AI 管家', avatar_text: '🤖', last_msg: '随时为您服务', last_time: '', type: 'ai', unread: 0, route: '/mobile/ai' },
-  { id: 'captain', name: 'Captain', avatar_text: '⚓', last_msg: 'AI 船长，随时待命', last_time: '', type: 'ai', unread: 0, route: '/mobile/ai' },
+  { id: 'ai-assistant-fixed', name: 'AI 管家', avatar_text: '🤖', last_msg: '随时为您服务', last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
 ])
 
-// 显示列表：置顶 + 普通
-const displayedGroups = computed(() => [...pinnedSessions.value, ...groups.value])
+// 显示列表：固定置顶 + 用户置顶/普通会话（按最新时间排序，置顶优先）
+const displayedGroups = computed(() => {
+  // 从后端数据中排除已被固定项覆盖的 id
+  const fixedIds = new Set(pinnedSessions.value.map(p => p.id))
+  const filtered = groups.value.filter(g => !fixedIds.has(g.id))
+  const sorted = [...filtered].sort((a, b) => {
+    if (!!b.is_pinned !== !!a.is_pinned) return b.is_pinned ? 1 : -1
+    return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime()
+  })
+  return [...pinnedSessions.value, ...sorted]
+})
 const contacts = ref<any[]>([])
 const searchKeyword = ref('')
 const searchResults = ref<any[]>([])
@@ -291,6 +318,54 @@ const activeMeetingCount = ref(0)
 const showDrawer = ref(false)
 const showPlusMenu = ref(false)
 const activeTab = ref('all')
+
+// ── 右键/长按菜单 ──
+const contextGroup = ref<any>(null)
+const contextMenuStyle = ref<any>({})
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const LONG_PRESS_MS = 500
+
+function onTouchStart(e: TouchEvent, g: any) {
+  touchStartX.value = e.touches[0].clientX
+  touchStartY.value = e.touches[0].clientY
+  setTimeout(() => showContextMenu(e, g), LONG_PRESS_MS)
+}
+function onTouchEnd() { /* cleared by onTouchMove */ }
+function onTouchMove(e: TouchEvent) {
+  const dx = Math.abs(e.touches[0].clientX - touchStartX.value)
+  const dy = Math.abs(e.touches[0].clientY - touchStartY.value)
+  if (dx > 10 || dy > 10) closeContextMenu()
+}
+function showContextMenu(e: any, g: any) {
+  e.preventDefault?.()
+  contextGroup.value = g
+  const x = e?.clientX ?? e?.touches?.[0]?.clientX ?? 120
+  const y = e?.clientY ?? e?.touches?.[0]?.clientY ?? 120
+  contextMenuStyle.value = { top: `${Math.min(y, window.innerHeight - 180)}px`, left: `${Math.min(x, window.innerWidth - 120)}px` }
+}
+function closeContextMenu() { contextGroup.value = null }
+
+async function togglePin(g: any) {
+  closeContextMenu()
+  const pinned = !g.is_pinned
+  if (pinned) {
+    groups.value = groups.value.map(x => x.id === g.id ? { ...x, is_pinned: true } : x)
+  } else {
+    groups.value = groups.value.map(x => x.id === g.id ? { ...x, is_pinned: false } : x)
+  }
+  try {
+    await http.post(`/chat/groups/${g.id}/pin`, { pinned })
+  } catch { /* 静默失败，前端已更新 */ }
+}
+
+async function deleteGroup(g: any) {
+  closeContextMenu()
+  try {
+    await http.delete(`/chat/groups/${g.id}`)
+    groups.value = groups.value.filter(x => x.id !== g.id)
+  } catch { /* 静默失败 */ }
+}
 
 const pendingItems = ref<any[]>([])
 
@@ -344,6 +419,8 @@ async function loadGroups() {
       last_msg: r.last_message || r.last_msg || '暂无消息',
       last_time: formatTime(r.last_message_at || r.last_time || ''),
       unread: r.unread ?? 0,
+      is_pinned: r.is_pinned ?? false,
+      last_message_at: r.last_message_at || '',
     }))
     const totalUnread = rows.reduce((s: number, r: any) => s + (r.unread ?? 0), 0)
     if (typeof uni !== 'undefined') uni.$emit('update:unread', totalUnread)
@@ -594,6 +671,7 @@ export default { name: 'MobileChat' }
   border-bottom: 1px solid #f5f5f5;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
+  position: relative;
 }
 .chat-item:last-child { border-bottom: none; }
 .chat-item:active { background: #f0f0f0; }
@@ -855,6 +933,38 @@ export default { name: 'MobileChat' }
 .plus-menu-item:active { background: #f5f5f5; }
 .plus-menu-item + .plus-menu-item { border-top: 1px solid #f0f0f0; }
 .plus-menu-item svg { color: #666; flex-shrink: 0; }
+
+/* ── 置顶标识 ── */
+.chat-item--pinned { background: #fafafa; }
+.chat-pin-icon { position: absolute; top: 8px; left: 4px; font-size: 10px; }
+
+/* ── 右键/长按菜单 ── */
+.context-menu-mask {
+  position: fixed; inset: 0; z-index: 999;
+  background: transparent;
+}
+.context-menu {
+  position: fixed; z-index: 1000;
+  background: rgba(255,255,255,0.98);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+  overflow: hidden;
+  min-width: 140px;
+  backdrop-filter: blur(10px);
+}
+.ctx-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px;
+  font-size: 14px; color: #333;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-bottom: 1px solid #f0f0f0;
+}
+.ctx-item:last-child { border-bottom: none; }
+.ctx-item:active { background: #f5f5f5; }
+.ctx-item svg { color: #666; flex-shrink: 0; }
+.ctx-item--danger { color: #ee4444; }
+.ctx-item--danger svg { color: #ee4444; }
 
 /* ── 右下角新建按钮 ── */
 .chat-fab {

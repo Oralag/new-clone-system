@@ -230,26 +230,22 @@ async function handleChatGroups(request, env) {
   const listRows = parseInt(url.searchParams.get('list_rows') || '50')
   const page = parseInt(url.searchParams.get('page') || '1')
 
-  // 获取通讯录（员工 + Agent）用于过滤
-  const contactIds = await getContactIds(request, env, userId)
-
   const raw = await env.USERS_KV.get('chat_groups')
   const groups = raw ? JSON.parse(raw) : []
   const memberRaw = await env.USERS_KV.get('chat_members')
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
 
-  // 只保留成员全部在通讯录内的群聊
+  // 只保留：自己是成员 OR 是自己发起的
   const userGroups = groups.filter(g => {
     const members = memberMap[g.id] || []
-    if (!members.some(m => m.user_id === userId || String(m.user_id) === String(userId)) && g.created_by !== userId) return false
-    // 所有成员必须都是通讯录里的人（或当前用户）
-    return members.every(m => contactIds.has(String(m.user_id)) || String(m.user_id) === String(userId))
+    const isMe = m => String(m.user_id) === String(userId)
+    return members.some(isMe) || String(g.created_by) === String(userId)
   }).slice((page - 1) * listRows, page * listRows)
 
   const msgRaw = await env.USERS_KV.get('chat_messages')
   const msgMap = msgRaw ? JSON.parse(msgRaw) : {}
 
-  const result = await Promise.all(userGroups.map(async g => {
+  const result = (await Promise.all(userGroups.map(async g => {
     const msgs = (msgMap[g.id] || []).slice(-1)
     const lastMsg = msgs[0] || null
     const unreadRaw = await env.USERS_KV.get(`chat_unread:${userId}:${g.id}`)
@@ -258,10 +254,14 @@ async function handleChatGroups(request, env) {
       ...g,
       member_ids: members.map(m => m.user_id),
       last_message: lastMsg?.content || '',
-      last_message_at: lastMsg?.created_at || g.created_at,
+      last_message_at: lastMsg?.created_at || g.updated_at || g.created_at,
       unread: unreadRaw ? parseInt(unreadRaw) : 0,
+      is_pinned: g.is_pinned || false,
     }
-  }))
+  }))).sort((a, b) => {
+    if (b.is_pinned !== a.is_pinned) return b.is_pinned ? 1 : -1
+    return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+  })
 
   return jsonSuccess({ rows: result, total: userGroups.length })
 }
@@ -332,7 +332,7 @@ async function handleGetGroup(request, env) {
     return { ...m, ...info }
   }))
 
-  return jsonSuccess({ ...group, members: membersWithInfo, member_ids: members.map(m => m.user_id) })
+  return jsonSuccess({ ...group, members: membersWithInfo, member_ids: members.map(m => m.user_id), is_pinned: group.is_pinned || false })
 }
 
 async function handleGetMessages(request, env) {
@@ -770,6 +770,98 @@ export async function onRequest(context) {
     }
     // DELETE /adminapi/chat/groups/:id/members/:userId - remove member
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members\/\d+$/) && request.method === 'DELETE') {
+// POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话
+async function handlePinGroup(request, env) {
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  let body
+  try { body = await request.json() } catch { return errRes('请求格式错误') }
+  const pinned = body.pinned !== false // 默认置顶
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+  const idx = groups.findIndex(g => String(g.id) === String(groupId))
+  if (idx < 0) return errRes('群不存在')
+
+  // 非创建者/成员不能操作
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+  const members = memberMap[groupId] || []
+  if (!members.some(m => String(m.user_id) === String(userId)) && String(groups[idx].created_by) !== String(userId)) {
+    return errRes('无权限')
+  }
+
+  groups[idx] = { ...groups[idx], is_pinned: pinned, updated_at: new Date().toISOString() }
+  await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+  return jsonSuccess({ is_pinned: pinned })
+}
+
+// DELETE /adminapi/chat/groups/:id - 删除会话
+async function handleDeleteGroup(request, env) {
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+  const idx = groups.findIndex(g => String(g.id) === String(groupId))
+  if (idx < 0) return errRes('群不存在')
+
+  // 非创建者/成员不能删除
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
+  const members = memberMap[groupId] || []
+  if (!members.some(m => String(m.user_id) === String(userId)) && String(groups[idx].created_by) !== String(userId)) {
+    return errRes('无权限')
+  }
+
+  groups.splice(idx, 1)
+  delete memberMap[groupId]
+  await Promise.all([
+    env.USERS_KV.put('chat_groups', JSON.stringify(groups)),
+    env.USERS_KV.put('chat_members', JSON.stringify(memberMap)),
+    env.USERS_KV.delete(`chat_messages:${groupId}`),
+    env.USERS_KV.delete(`chat_unread:${userId}:${groupId}`),
+  ])
+  return jsonSuccess({ deleted: true })
+}
+
+// GET /adminapi/chat/contacts - 获取通讯录成员（员工 + Agent）用于发起会话
+async function handleGetContacts(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+  const contactIds = await getContactIds(request, env, userId)
+
+  const contacts = await Promise.all([...contactIds].map(async id => {
+    const agent = agentRegistry.find(a => a.id === id)
+    if (agent) return { id, name: agent.name, role: agent.role, type: 'agent' }
+    const info = await getUserInfo(id, env)
+    return { id, name: info.name || `用户${id}`, position: info.position || '', type: 'user' }
+  }))
+
+  return jsonSuccess({ contacts })
+}
+
+// Agent 列表（内联，避免 require）
+const agentRegistry = [
+  { id: 'captain', name: '总指挥', role: 'AI 指挥官' },
+  { id: 'copywriter', name: '内容部', role: 'AI 文案' },
+  { id: 'poster', name: '发布部', role: 'AI 发布' },
+  { id: 'video', name: '视频部', role: 'AI 视频' },
+  { id: 'brand', name: '品牌部', role: 'AI 品牌' },
+  { id: 'trend', name: '情报部', role: 'AI 情报' },
+  { id: 'publisher', name: '发布官', role: 'AI 发布' },
+  { id: 'designer', name: '平面设计师', role: 'AI 设计' },
+  { id: 'marketing', name: '营销顾问', role: 'AI 营销' },
+]
+
+// ───────────────────────────────────────────────
+// Router
+// ───────────────────────────────────────────────
       return handleRemoveGroupMember(request, env)
     }
     // POST /adminapi/chat/groups/:id/read - mark messages read
@@ -779,6 +871,18 @@ export async function onRequest(context) {
     // POST /adminapi/chat/groups/:id/cleanup - cleanup old messages
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/cleanup$/) && request.method === 'POST') {
       return handleCleanupMessages(request, env)
+    }
+    // POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/pin$/) && request.method === 'POST') {
+      return handlePinGroup(request, env)
+    }
+    // DELETE /adminapi/chat/groups/:id - 删除会话
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'DELETE') {
+      return handleDeleteGroup(request, env)
+    }
+    // GET /adminapi/chat/contacts - 获取通讯录成员（员工 + Agent）
+    if (pathname === '/adminapi/chat/contacts' && request.method === 'GET') {
+      return handleGetContacts(request, env)
     }
     // Fallback for unhandled chat paths
     return errRes('聊天功能暂不支持')
