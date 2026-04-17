@@ -1514,8 +1514,8 @@ async function submitFeePay() {
   feePaySubmitting.value = true
   try {
     await createPayReceipt({
-      contact_type: 'other',
-      contact_name: feePayForm.contact_name || feePayForm.supplierName || feePayForm.feeName,
+      contact_type: 'supplier',
+      contact_name: feePayForm.contact_name || feePayForm.supplierName,
       order_sn: feePayForm.orderSn,
       order_id: feePayForm.orderId,
       amount: needPay,
