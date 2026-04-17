@@ -1148,11 +1148,9 @@ export default { name: 'MobileChat' }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .plus-menu {
   position: fixed;
-  right: 16px;
-  bottom: 116px;
   background: #fff;
-  border-radius: 8px;
-  width: 150px;
+  border-radius: 10px;
+  width: 140px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   z-index: 199;
   overflow: hidden;
@@ -1161,19 +1159,19 @@ export default { name: 'MobileChat' }
 .plus-menu::before {
   content: '';
   position: absolute;
-  bottom: -6px;
-  right: 16px;
   width: 12px;
   height: 12px;
   background: #fff;
   transform: rotate(45deg);
   box-shadow: -2px -2px 4px rgba(0,0,0,0.06);
 }
+.chat-plus-menu::before { top: -6px; right: 16px; }
+.fab-plus-menu::before { bottom: -6px; right: 16px; }
 .plus-menu-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 13px 14px;
+  padding: 11px 14px;
   font-size: 14px;
   color: #333;
   cursor: pointer;
