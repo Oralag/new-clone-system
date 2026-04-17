@@ -353,7 +353,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Search, Delete, CircleCheckFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getGoodsList, getGoodsCateList } from '@/api/goods'
+import { getGoodsList, getGoodsCateList, getUnitConvert } from '@/api/goods'
 import { getMemberList, createRetailOrder, getRetailOrderList, getStoreList } from '@/api/retail'
 import { getSaleContractList } from '@/api/reports'
 import http from '@/api/http'
@@ -637,26 +637,44 @@ const wcGoodsId = ref<any>(null)
 const wcGoodsName = ref('')
 const wcGoodsUnit = ref('斤')
 const wcPricePerJin = ref(0)
+const wcGramsPerBaseUnit = ref(500) // 换算表里 g 对应基础单位的克数，默认500g=1斤
 const wcMode = ref<'weight' | 'amount'>('weight')
 const wcWeightGrams = ref(0)    // 正向：输入克数
 const wcTargetAmount = ref(0)   // 反向：输入金额
 // 正向：克数 → 金额
 const wcAmount = computed(() => {
   if (!wcPricePerJin.value || !wcWeightGrams.value) return 0
-  return (wcWeightGrams.value / 500) * wcPricePerJin.value
+  return (wcWeightGrams.value / wcGramsPerBaseUnit.value) * wcPricePerJin.value
 })
 // 反向：金额 → 克数
 const wcReverseGrams = computed(() => {
   if (!wcPricePerJin.value || !wcTargetAmount.value) return 0
-  return (wcTargetAmount.value / wcPricePerJin.value) * 500
+  return (wcTargetAmount.value / wcPricePerJin.value) * wcGramsPerBaseUnit.value
 })
 
-function openWeightCalc(g?: any) {
+async function openWeightCalc(g?: any) {
   const target = g ?? selectedGoods.value
   wcGoodsId.value = target?.id ?? null
   wcGoodsName.value = target?.goods_name ?? ''
   wcGoodsUnit.value = target?.unit_name || '斤'
   wcPricePerJin.value = target ? Number(target.sell_price) || 0 : 0
+  wcGramsPerBaseUnit.value = 500 // 先 reset 默认值
+  // 从换算表加载 g 单位的换算比例
+  if (target?.id) {
+    try {
+      const res = await getUnitConvert(target.id)
+      const units: any[] = res.data?.rows ?? []
+      // 找 unit_name='g' 的行，ratio 是相对于基础单位的倍数
+      // 例：ratio=0.002 表示 1g = 0.002斤，即 500g=1斤
+      // 或：ratio=500 表示 1基础单位=500g，即 gramsPerBase=500
+      const gUnit = units.find((u: any) => u.unit_name === 'g')
+      if (gUnit) {
+        const r = Number(gUnit.ratio)
+        // ratio > 1：1基础单位 = ratio 克；ratio < 1：1g = ratio 基础单位
+        wcGramsPerBaseUnit.value = r > 1 ? r : (r > 0 ? 1 / r : 500)
+      }
+    } catch { /* 加载失败用默认500 */ }
+  }
   wcMode.value = 'weight'
   wcWeightGrams.value = 0
   wcTargetAmount.value = 0
@@ -674,13 +692,14 @@ function addWeightItemToCart() {
     goods_sn: '',
     unit_name: wcGoodsUnit.value,
     price: finalAmount,
-    num: parseFloat((finalGrams / 500).toFixed(4)),
+    num: parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4)),
   })
   calcTotal()
   weightCalcVisible.value = false
   wcGoodsId.value = null
   wcGoodsName.value = ''
   wcGoodsUnit.value = '斤'
+  wcGramsPerBaseUnit.value = 500
   wcPricePerJin.value = 0
   wcWeightGrams.value = 0
   wcTargetAmount.value = 0

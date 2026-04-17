@@ -20,25 +20,153 @@
       </div>
     </div>
 
-    <!-- 快捷入口：一排三个 -->
+    <!-- 快捷收款/支出 -->
     <div class="wb-quick-row">
-      <div class="wb-quick-card" @click="go('/finance/other-income')">
+      <div class="wb-quick-card" @click="openQuickReceive">
         <div class="wb-quick-icon wb-icon-income">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
             <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
           </svg>
         </div>
-        <div class="wb-quick-label">其他收款</div>
+        <div class="wb-quick-label">快速收款</div>
       </div>
-      <div class="wb-quick-card" @click="go('/finance/other-expense')">
+      <div class="wb-quick-card" @click="openQuickPay">
         <div class="wb-quick-icon wb-icon-expense">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
           </svg>
         </div>
-        <div class="wb-quick-label">其他支出</div>
+        <div class="wb-quick-label">快速支出</div>
       </div>
     </div>
+
+    <!-- 快速收款弹窗（底部抽屉） -->
+    <Teleport to="body">
+      <div v-if="collectDialogVisible" class="wb-drawer-overlay" @click.self="collectDialogVisible = false">
+        <div class="wb-drawer">
+          <div class="wb-drawer-head">
+            <span>快速收款</span>
+            <span class="wb-drawer-close" @click="collectDialogVisible = false">✕</span>
+          </div>
+          <div class="wb-drawer-body">
+            <!-- 类型切换 -->
+            <div class="wb-form-group">
+              <div class="wb-type-tabs">
+                <button :class="['wb-tab', collectForm.category === 'receipt' ? 'active' : '']" @click="collectForm.category = 'receipt'; collectForm.contact_id = null">收款单</button>
+                <button :class="['wb-tab', collectForm.category === 'other' ? 'active' : '']" @click="collectForm.category = 'other'; collectForm.contact_id = null">其他收入</button>
+              </div>
+            </div>
+            <!-- 收款对象（收款单时） -->
+            <div v-if="collectForm.category === 'receipt'" class="wb-form-group">
+              <label class="wb-form-label">收款对象</label>
+              <select v-model="collectForm.contact_id" class="wb-form-select">
+                <option value="">选择客户</option>
+                <option v-for="c in clientList" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+            </div>
+            <!-- 收入说明（其他收入时） -->
+            <div v-if="collectForm.category === 'other'" class="wb-form-group">
+              <label class="wb-form-label">收入说明</label>
+              <input v-model="collectForm.contact_name" class="wb-form-input" placeholder="如：利息收入、赔偿金" />
+            </div>
+            <!-- 收款账户 -->
+            <div class="wb-form-group">
+              <label class="wb-form-label">收款账户</label>
+              <select v-model="collectForm.fund_id" class="wb-form-select">
+                <option value="">选择账户</option>
+                <option v-for="f in fundList" :key="f.id" :value="f.id">{{ f.name }}</option>
+              </select>
+            </div>
+            <!-- 收款金额 -->
+            <div class="wb-form-group">
+              <label class="wb-form-label">收款金额</label>
+              <input v-model.number="collectForm.amount" type="number" class="wb-form-input wb-form-input-money" placeholder="0.00" />
+            </div>
+            <!-- 收款日期 -->
+            <div class="wb-form-group">
+              <label class="wb-form-label">收款日期</label>
+              <input v-model="collectForm.receipt_date" type="date" class="wb-form-input" />
+            </div>
+            <!-- 备注 -->
+            <div class="wb-form-group">
+              <label class="wb-form-label">备注</label>
+              <input v-model="collectForm.remark" class="wb-form-input" placeholder="备注说明（选填）" />
+            </div>
+          </div>
+          <div class="wb-drawer-foot">
+            <button class="wb-btn wb-btn-cancel" @click="collectDialogVisible = false">取消</button>
+            <button class="wb-btn wb-btn-confirm" :disabled="collectSaving" @click="saveCollect">
+              <span v-if="collectSaving">保存中…</span>
+              <span v-else>确认收款</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- 快速支出弹窗（底部抽屉） -->
+    <Teleport to="body">
+      <div v-if="payDialogVisible" class="wb-drawer-overlay" @click.self="payDialogVisible = false">
+        <div class="wb-drawer">
+          <div class="wb-drawer-head">
+            <span>快速支出</span>
+            <span class="wb-drawer-close" @click="payDialogVisible = false">✕</span>
+          </div>
+          <div class="wb-drawer-body">
+            <!-- 类型切换 -->
+            <div class="wb-form-group">
+              <div class="wb-type-tabs">
+                <button :class="['wb-tab', payForm.category === 'receipt' ? 'active' : '']" @click="payForm.category = 'receipt'; payForm.contact_id = null">付款单</button>
+                <button :class="['wb-tab', payForm.category === 'other' ? 'active' : '']" @click="payForm.category = 'other'; payForm.contact_id = null">其他支出</button>
+              </div>
+            </div>
+            <!-- 付款对象（付款单时） -->
+            <div v-if="payForm.category === 'receipt'" class="wb-form-group">
+              <label class="wb-form-label">付款对象</label>
+              <select v-model="payForm.contact_id" class="wb-form-select">
+                <option value="">选择供应商</option>
+                <option v-for="s in supplierList" :key="s.id" :value="s.id">{{ s.name }}</option>
+              </select>
+            </div>
+            <!-- 支出说明（其他支出时） -->
+            <div v-if="payForm.category === 'other'" class="wb-form-group">
+              <label class="wb-form-label">支出说明</label>
+              <input v-model="payForm.contact_name" class="wb-form-input" placeholder="如：办公用品、快递费" />
+            </div>
+            <!-- 付款账户 -->
+            <div class="wb-form-group">
+              <label class="wb-form-label">付款账户</label>
+              <select v-model="payForm.fund_id" class="wb-form-select">
+                <option value="">选择账户</option>
+                <option v-for="f in fundList" :key="f.id" :value="f.id">{{ f.name }}</option>
+              </select>
+            </div>
+            <!-- 付款金额 -->
+            <div class="wb-form-group">
+              <label class="wb-form-label">付款金额</label>
+              <input v-model.number="payForm.amount" type="number" class="wb-form-input wb-form-input-money" placeholder="0.00" />
+            </div>
+            <!-- 付款日期 -->
+            <div class="wb-form-group">
+              <label class="wb-form-label">付款日期</label>
+              <input v-model="payForm.pay_date" type="date" class="wb-form-input" />
+            </div>
+            <!-- 备注 -->
+            <div class="wb-form-group">
+              <label class="wb-form-label">备注</label>
+              <input v-model="payForm.remark" class="wb-form-input" placeholder="备注说明（选填）" />
+            </div>
+          </div>
+          <div class="wb-drawer-foot">
+            <button class="wb-btn wb-btn-cancel" @click="payDialogVisible = false">取消</button>
+            <button class="wb-btn wb-btn-danger" :disabled="paySaving" @click="savePay">
+              <span v-if="paySaving">保存中…</span>
+              <span v-else>确认支出</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- 待办提醒 -->
     <div v-if="pendingItems.length > 0" class="wb-section">
@@ -176,7 +304,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { ElMessageBox } from 'element-plus'
 import http from '@/api/http'
+import { getFundList } from '@/api/finance'
+import { getSaleCustomerList } from '@/api/sale'
+import { getSupplierList } from '@/api/procure'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -273,6 +405,75 @@ const quickApps = [
 
 function go(path: string) { router.push(path) }
 
+// ── 快速收款/支出 ──
+const clientList = ref<any[]>([])
+const supplierList = ref<any[]>([])
+const fundList = ref<any[]>([])
+
+const collectDialogVisible = ref(false)
+const collectSaving = ref(false)
+const collectForm = ref({ category: 'receipt', contact_id: '', contact_name: '', fund_id: '', amount: 0, receipt_date: new Date().toISOString().slice(0, 10), remark: '' })
+
+const payDialogVisible = ref(false)
+const paySaving = ref(false)
+const payForm = ref({ category: 'receipt', contact_id: '', contact_name: '', fund_id: '', amount: 0, pay_date: new Date().toISOString().slice(0, 10), remark: '' })
+
+function openQuickReceive() {
+  collectForm.value = { category: 'receipt', contact_id: '', contact_name: '', fund_id: '', amount: 0, receipt_date: new Date().toISOString().slice(0, 10), remark: '' }
+  collectDialogVisible.value = true
+}
+function openQuickPay() {
+  payForm.value = { category: 'receipt', contact_id: '', contact_name: '', fund_id: '', amount: 0, pay_date: new Date().toISOString().slice(0, 10), remark: '' }
+  payDialogVisible.value = true
+}
+
+async function saveCollect() {
+  if (!collectForm.value.amount) { ElMessageBox.alert('请输入收款金额', '提示'); return }
+  const isOther = collectForm.value.category === 'other'
+  const name = isOther
+    ? collectForm.value.contact_name
+    : (clientList.value.find((x: any) => x.id == collectForm.value.contact_id)?.name || collectForm.value.contact_name || '')
+  if (isOther && !name) { ElMessageBox.alert('请输入收入说明', '提示'); return }
+  const fundName = collectForm.value.fund_id ? (fundList.value.find((x: any) => x.id == collectForm.value.fund_id)?.name || '') : ''
+  collectSaving.value = true
+  try {
+    await http.post('/finance/CollectReceipt/add', isOther ? {
+      contact_name: name, contact_type: 'other',
+      fund_id: collectForm.value.fund_id || null, fund_name: fundName,
+      amount: collectForm.value.amount, receipt_date: collectForm.value.receipt_date,
+      remark: collectForm.value.remark,
+    } : {
+      customer_id: collectForm.value.contact_id || 0, customer_name: name, contact_type: 'customer',
+      fund_id: collectForm.value.fund_id || null, fund_name: fundName,
+      amount: collectForm.value.amount, receipt_date: collectForm.value.receipt_date,
+      remark: collectForm.value.remark,
+    })
+    collectDialogVisible.value = false
+  } catch { ElMessageBox.alert('保存失败，请重试', '错误'); }
+  finally { collectSaving.value = false }
+}
+
+async function savePay() {
+  if (!payForm.value.amount) { ElMessageBox.alert('请输入付款金额', '提示'); return }
+  const isOther = payForm.value.category === 'other'
+  const name = isOther
+    ? payForm.value.contact_name
+    : (supplierList.value.find((x: any) => x.id == payForm.value.contact_id)?.name || payForm.value.contact_name || '')
+  if (isOther && !name) { ElMessageBox.alert('请输入支出说明', '提示'); return }
+  const fundName = payForm.value.fund_id ? (fundList.value.find((x: any) => x.id == payForm.value.fund_id)?.name || '') : ''
+  paySaving.value = true
+  try {
+    await http.post('/finance/PayReceipt/add', {
+      contact_name: name, contact_type: isOther ? 'other' : 'supplier',
+      fund_id: payForm.value.fund_id || null, fund_name: fundName,
+      amount: payForm.value.amount, pay_date: payForm.value.pay_date,
+      remark: payForm.value.remark,
+    })
+    payDialogVisible.value = false
+  } catch { ElMessageBox.alert('保存失败，请重试', '错误'); }
+  finally { paySaving.value = false }
+}
+
 function formatTime(ts: string) {
   if (!ts) return ''
   const d = new Date(ts)
@@ -306,7 +507,20 @@ function fmt(n: number) {
   return n >= 0 ? n.toFixed(2) : '0'
 }
 
+// 加载快速收款/支出需要的基础数据
+async function loadQuickData() {
+  const [fundRes, custRes, supRes] = await Promise.allSettled([
+    getFundList({ list_rows: 100 }),
+    getSaleCustomerList({ list_rows: 200 }),
+    getSupplierList({ list_rows: 200 }),
+  ])
+  if (fundRes.status === 'fulfilled') fundList.value = fundRes.value?.data?.rows ?? fundRes.value?.data?.list ?? []
+  if (custRes.status === 'fulfilled') clientList.value = custRes.value?.data?.rows ?? custRes.value?.data?.list ?? []
+  if (supRes.status === 'fulfilled') supplierList.value = supRes.value?.data?.rows ?? supRes.value?.data?.list ?? []
+}
+
 onMounted(async () => {
+  loadQuickData()
   const todayStr = new Date().toISOString().slice(0, 10)
 
   const [saleRes, retailRes, custRes, goodsRes, procureRes] = await Promise.allSettled([
@@ -435,6 +649,48 @@ onMounted(async () => {
 .wb-icon-income { background: linear-gradient(135deg, #16A34A, #22C55E); }
 .wb-icon-expense { background: linear-gradient(135deg, #DC2626, #EF4444); }
 .wb-quick-label { font-size: 13px; color: #374151; font-weight: 500; }
+
+/* ── 底部抽屉 ── */
+.wb-drawer-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: flex-end;
+}
+.wb-drawer {
+  width: 100%; max-height: 85vh;
+  background: #fff; border-radius: 16px 16px 0 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.wb-drawer-head {
+  padding: 16px 16px 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #f0f0f0; font-size: 16px; font-weight: 600; color: #1a1a1a;
+}
+.wb-drawer-close { font-size: 18px; color: #999; cursor: pointer; padding: 4px; }
+.wb-drawer-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+.wb-drawer-foot { padding: 12px 16px; padding-bottom: max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #f0f0f0; display: flex; gap: 10px; }
+
+/* ── 表单样式 ── */
+.wb-type-tabs { display: flex; gap: 8px; }
+.wb-tab { flex: 1; padding: 8px 0; border-radius: 8px; border: 1.5px solid #e5e7eb; background: #fff; color: #6b7280; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.wb-tab.active { border-color: #2563EB; background: #EFF6FF; color: #2563EB; font-weight: 600; }
+.wb-form-group { margin-top: 14px; }
+.wb-form-label { display: block; font-size: 13px; color: #6b7280; margin-bottom: 6px; }
+.wb-form-input, .wb-form-select {
+  width: 100%; box-sizing: border-box; padding: 10px 12px;
+  border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 15px; color: #1a1a1a;
+  background: #fff; outline: none;
+}
+.wb-form-input:focus, .wb-form-select:focus { border-color: #2563EB; }
+.wb-form-input-money { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+
+/* ── 按钮 ── */
+.wb-btn { flex: 1; padding: 12px 0; border-radius: 10px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
+.wb-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.wb-btn-cancel { background: #f3f4f6; color: #374151; }
+.wb-btn-confirm { background: #16a34a; color: #fff; }
+.wb-btn-danger { background: #dc2626; color: #fff; }
 
 /* ── 收银台入口卡片 ── */
 .wb-cashier-card {
