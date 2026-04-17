@@ -234,6 +234,22 @@
     </div>
 
     <!-- ── + 号下拉菜单（快捷操作） ── -->
+  </div>
+
+  <!-- ── 右键/长按菜单 ── -->
+  <div v-if="contextGroup" class="context-menu" :style="contextMenuStyle">
+    <div class="ctx-item" @click="togglePin(contextGroup)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      {{ contextGroup.is_pinned ? '取消置顶' : '置顶聊天' }}
+    </div>
+    <div class="ctx-item ctx-item--danger" @click="deleteGroup(contextGroup)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      删除会话
+    </div>
+  </div>
+
+  <!-- 所有弹窗通过 Teleport 渲染到 body，避免被 .wx-layout 的 overflow:hidden 裁剪 -->
+  <Teleport to="body">
     <!-- 发起群聊 - 联系人选择面板 -->
     <div v-if="showCreateGroup" class="m-modal-mask" @click.self="showCreateGroup = false">
       <div class="m-modal-sheet m-modal-sheet-tall" @touchmove.stop>
@@ -317,21 +333,7 @@
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
     </div>
-  </div>
-
-  <!-- ── 右键/长按菜单 ── -->
-  <!-- 右键菜单 mask（暂时隐藏） -->
-  <!-- <div v-if="contextGroup" class="context-menu-mask" @click="closeSwipe" @touchstart.passive="closeSwipe"></div> -->
-  <div v-if="contextGroup" class="context-menu" :style="contextMenuStyle">
-    <div class="ctx-item" @click="togglePin(contextGroup)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-      {{ contextGroup.is_pinned ? '取消置顶' : '置顶聊天' }}
-    </div>
-    <div class="ctx-item ctx-item--danger" @click="deleteGroup(contextGroup)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-      删除会话
-    </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -1141,7 +1143,7 @@ export default { name: 'MobileChat' }
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
-  z-index: 500;
+  z-index: 999;
   display: flex;
   align-items: flex-end;
 }

@@ -840,7 +840,7 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
-  z-index: 500;
+  z-index: 999;
   display: flex;
   align-items: flex-end;
 }

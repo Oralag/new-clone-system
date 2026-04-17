@@ -222,6 +222,34 @@
       </div>
     </div>
 
+    <!-- 组织框架 -->
+    <div class="wb-section">
+      <div class="wb-section-hd">
+        <span class="wb-section-dot" style="background: #8B5CF6"></span>
+        <span class="wb-section-title">组织框架</span>
+      </div>
+      <div class="wb-grid-3">
+        <div class="wb-grid-item" @click="go('/setting/admin')">
+          <div class="wb-grid-icon" style="background: rgba(139,92,246,0.1)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          </div>
+          <div class="wb-grid-label">子账号</div>
+        </div>
+        <div class="wb-grid-item" @click="go('/setting/department')">
+          <div class="wb-grid-icon" style="background: rgba(59,130,246,0.1)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </div>
+          <div class="wb-grid-label">部门管理</div>
+        </div>
+        <div class="wb-grid-item" @click="go('/setting/role')">
+          <div class="wb-grid-icon" style="background: rgba(16,185,129,0.1)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="wb-grid-label">角色权限</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 常用功能（横向滚动显示全部模块） -->
     <div class="wb-section">
       <div class="wb-section-hd">
@@ -888,6 +916,12 @@ onMounted(async () => {
 .wb-todo-title { font-size: 14px; font-weight: 600; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wb-todo-sub { font-size: 12px; color: #999; margin-top: 2px; }
 .wb-todo-arrow { font-size: 18px; color: #ccc; flex-shrink: 0; }
+
+/* ── 组织框架 ── */
+.wb-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 12px; }
+.wb-grid-item { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; padding: 8px 0; }
+.wb-grid-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+.wb-grid-label { font-size: 12px; color: #374151; text-align: center; }
 
 /* ── 快捷操作九宫格 ── */
 .wb-quick-grid {
