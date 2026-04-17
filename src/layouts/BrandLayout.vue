@@ -584,6 +584,7 @@ function doSearch() {
 .brand-footer {
   background: #1d1d1f; color: rgba(255,255,255,0.65);
   padding: 0;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .brand-footer-inner { max-width: 1200px; margin: 0 auto; padding: 64px 48px 32px; }
 .brand-footer-top {

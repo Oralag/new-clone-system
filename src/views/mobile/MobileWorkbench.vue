@@ -383,6 +383,7 @@ onMounted(async () => {
 .wb-scroll {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   min-height: 0;
 }

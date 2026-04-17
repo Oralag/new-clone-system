@@ -326,7 +326,8 @@ export default { name: 'MobileContacts' }
 .contacts-dept-sub { font-size: 12px; color: #999; }
 
 /* ── 客户列表 ── */
-.contacts-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; }
+.contacts-body { flex: 1; overflow-y: auto;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch; min-height: 0; }
 .contacts-empty { text-align: center; padding: 40px 0; }
 .contacts-empty-icon { margin-bottom: 8px; }
 .contacts-empty-text { font-size: 13px; color: #999; }
