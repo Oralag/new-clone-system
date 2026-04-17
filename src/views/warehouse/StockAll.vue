@@ -591,11 +591,13 @@ function formatStockSub(goodsId: number, qty: number, baseUnit: string): string 
   // 优先显示大单位（ratio > 1）
   const largeUnit = otherUnits.find(u => u.ratio > 1)
   if (largeUnit) {
-    const large = Math.floor(qty / largeUnit.ratio)
-    const small = qty % largeUnit.ratio
+    const sign = qty < 0 ? -1 : 1
+    const absQty = Math.abs(qty)
+    const large = Math.floor(absQty / largeUnit.ratio)
+    const small = absQty % largeUnit.ratio
     if (large === 0) return ''
-    if (small === 0) return `${large}${largeUnit.unit_name}`
-    return `${large}${largeUnit.unit_name}${small.toFixed(0)}${baseUnit}`
+    if (small === 0) return `${sign < 0 ? '-' : ''}${large}${largeUnit.unit_name}`
+    return `${sign < 0 ? '-' : ''}${large}${largeUnit.unit_name}${small.toFixed(0)}${baseUnit}`
   }
   // 没有大单位，显示小单位换算（如1斤=2袋）
   const smallUnit = otherUnits.reduce((a, b) => a.ratio < b.ratio ? a : b)
