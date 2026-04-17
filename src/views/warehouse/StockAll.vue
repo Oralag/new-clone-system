@@ -766,7 +766,7 @@ function stockStatusLabel(row: any) {
   const stock = getStockQty(row)
   const safeMin = Number(row.safe_min || 0)
   const safeMax = Number(row.safe_max || 0)
-  if (stock < 0) return '库存负数'
+  if (stock < 0) return '负库存'
   if (stock === 0) return '零库存'
   if (safeMin > 0 && stock < safeMin) return '库存不足'
   if (safeMax > 0 && stock > safeMax) return '库存过高'

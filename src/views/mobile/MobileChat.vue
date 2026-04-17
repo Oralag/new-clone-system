@@ -371,10 +371,22 @@ watch(showCreateGroup, (v) => { if (v && contacts.value.length === 0) loadContac
 
 const groupFilteredContacts = computed(() => {
   const kw = groupSearchKeyword.value.toLowerCase().trim()
-  // 合并员工 + 机器人
-  const bots = pinnedSessions.value.filter(s => s.type === 'ai' || s.type === 'meeting')
-  const botContacts = bots.map(b => ({ id: b.id, name: b.name, role_name: b.type === 'meeting' ? '会议助手' : 'AI助手', _isBot: true }))
-  const all = [...botContacts, ...contacts.value]
+  // 合并 AI助手 + 机器人Agent + 员工
+  const aiBot = pinnedSessions.value.find(s => s.type === 'ai')
+  const botContacts = aiBot ? [{ id: aiBot.id, name: aiBot.name, role_name: 'AI助手', _isBot: true }] : []
+  // 通讯录中的机器人Agent
+  const robotAgents = [
+    { id: 'captain', name: 'Captain 总指挥', role_name: '机器人' },
+    { id: 'copywriter', name: '文案Agent', role_name: '机器人' },
+    { id: 'poster', name: '海报Agent', role_name: '机器人' },
+    { id: 'video', name: '视频Agent', role_name: '机器人' },
+    { id: 'brand', name: '品牌Agent', role_name: '机器人' },
+    { id: 'trend', name: '趋势Agent', role_name: '机器人' },
+    { id: 'publisher', name: '发布Agent', role_name: '机器人' },
+    { id: 'designer', name: '平面设计师', role_name: '机器人' },
+    { id: 'marketing', name: '营销顾问', role_name: '机器人' },
+  ]
+  const all = [...botContacts, ...robotAgents, ...contacts.value]
   if (!kw) return all
   return all.filter((c: any) => c.name?.toLowerCase().includes(kw))
 })
