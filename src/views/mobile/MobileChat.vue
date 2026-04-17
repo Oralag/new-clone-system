@@ -233,16 +233,24 @@
       </div>
     </div>
 
-    <!-- ── + 号下拉菜单 ── -->
+    <!-- ── + 号下拉菜单（快捷操作） ── -->
     <div v-if="showPlusMenu" class="plus-menu-mask" @click="showPlusMenu = false"></div>
     <div v-if="showPlusMenu" class="plus-menu">
-      <div class="plus-menu-item" @click="router.push('/mobile/meeting'); showPlusMenu = false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        发起会议
+      <div class="plus-menu-item" @click="router.push('/mobile/procure/scan-in'); showPlusMenu = false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="10" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
+        扫码入库
       </div>
-      <div class="plus-menu-item" @click="router.push('/mobile/contacts'); showPlusMenu = false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        通讯录
+      <div class="plus-menu-item" @click="router.push('/mobile/task/new'); showPlusMenu = false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        新建工作计划
+      </div>
+      <div class="plus-menu-item" @click="router.push('/mobile/sale/out'); showPlusMenu = false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        新建销售出库
+      </div>
+      <div class="plus-menu-item" @click="router.push('/cashregister'); showPlusMenu = false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="14" x2="12" y2="14"/><line x1="6" y1="17" x2="10" y2="17"/></svg>
+        快捷收款
       </div>
     </div>
 

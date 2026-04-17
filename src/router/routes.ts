@@ -215,6 +215,8 @@ const routes: RouteRecordRaw[] = [
       // Finance
       { path: 'finance/overview', name: 'MobileFinanceOverview', component: () => import('@/views/finance/Overview.vue'), meta: { title: '财务总览' } },
       { path: 'finance/receivable', name: 'MobileFinanceReceivable', component: () => import('@/views/finance/Receivable.vue'), meta: { title: '应收账款' } },
+      { path: 'finance/other-income', name: 'MobileFinanceOtherIncome', component: () => import('@/views/finance/OtherIncome.vue'), meta: { title: '其他收款' } },
+      { path: 'finance/other-expense', name: 'MobileFinanceOtherExpense', component: () => import('@/views/finance/OtherExpense.vue'), meta: { title: '其他支出' } },
       // Goods
       { path: 'goods/info', name: 'MobileGoodsInfo', component: () => import('@/views/goods/Info.vue'), meta: { title: '商品资料' } },
       { path: 'goods/brand', name: 'MobileGoodsBrand', component: () => import('@/views/goods/Brand.vue'), meta: { title: '品牌管理' } },

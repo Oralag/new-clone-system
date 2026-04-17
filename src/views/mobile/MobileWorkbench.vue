@@ -20,6 +20,26 @@
       </div>
     </div>
 
+    <!-- 快捷入口：一排三个 -->
+    <div class="wb-quick-row">
+      <div class="wb-quick-card" @click="go('/finance/other-income')">
+        <div class="wb-quick-icon wb-icon-income">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </div>
+        <div class="wb-quick-label">其他收款</div>
+      </div>
+      <div class="wb-quick-card" @click="go('/finance/other-expense')">
+        <div class="wb-quick-icon wb-icon-expense">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+          </svg>
+        </div>
+        <div class="wb-quick-label">其他支出</div>
+      </div>
+    </div>
+
     <!-- 待办提醒 -->
     <div v-if="pendingItems.length > 0" class="wb-section">
       <div class="wb-section-hd">
@@ -384,6 +404,37 @@ onMounted(async () => {
   -webkit-overflow-scrolling: touch;
   min-height: 0;
 }
+
+/* ── 快捷入口：一排三个 ── */
+.wb-quick-row {
+  display: flex;
+  gap: 10px;
+  margin: 0 12px 12px;
+  padding: 0;
+}
+.wb-quick-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.wb-quick-card:active { opacity: 0.75; }
+.wb-quick-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.wb-icon-income { background: linear-gradient(135deg, #16A34A, #22C55E); }
+.wb-icon-expense { background: linear-gradient(135deg, #DC2626, #EF4444); }
+.wb-quick-label { font-size: 13px; color: #374151; font-weight: 500; }
 
 /* ── 收银台入口卡片 ── */
 .wb-cashier-card {
