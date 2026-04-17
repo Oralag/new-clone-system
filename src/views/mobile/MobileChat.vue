@@ -1146,6 +1146,7 @@ export default { name: 'MobileChat' }
   flex-direction: column;
   animation: slideUp 0.25s ease;
   touch-action: none;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .m-modal-sheet-tall { height: 80vh; max-height: 85vh; }
 .m-modal-header {
