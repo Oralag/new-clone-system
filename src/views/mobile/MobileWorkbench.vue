@@ -287,19 +287,19 @@ onMounted(async () => {
 .wb-cashier-card {
   margin: 0 12px 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 50%, #FFB347 100%);
+  background: linear-gradient(135deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.25);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .wb-cashier-card:active {
   transform: scale(0.98);
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.15);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
 }
 .wb-cashier-left {
   display: flex;

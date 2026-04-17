@@ -337,9 +337,8 @@ function onSwipeMove(e: TouchEvent) {
   }
 }
 function onSwipeEnd() {
-  if (swipedId.value) {
-    swipedId.value = null
-  }
+  // 只在未触发左滑按钮时清空（防止误触关闭）；左滑后手指松开保持显示
+  // 右滑关闭由 onSwipeMove 处理，onSwipeEnd 不再强制清空
   currentSwipeItem.value = null
 }
 function closeSwipe() {
