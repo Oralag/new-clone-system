@@ -107,48 +107,63 @@
     </div>
 
     <!-- 群详情/设置 -->
-    <!-- 群设置（微信风格） -->
+    <!-- 聊天设置（微信风格） -->
     <div v-if="showGroupInfo" class="m-gs-mask" @click.self="showGroupInfo = false">
       <div class="m-gs-sheet">
         <div class="m-gs-header">
           <span>聊天信息</span>
         </div>
         <div class="m-gs-body">
-          <!-- 顶部：群头像 + 群名 + 添加按钮 -->
-          <div class="m-gs-top">
-            <div class="m-gs-top-avatar" :style="{ background: getAvatarColor(groupId.value || 'group') }">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </div>
-            <div class="m-gs-add-btn-large" @click="showAddMember = true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </div>
-            <div class="m-gs-top-name">{{ group?.name }}</div>
-          </div>
 
-          <!-- 成员列表（横向滚动） -->
-          <div class="m-gs-members-scroll">
-            <div v-for="m in members" :key="m.id" class="m-gs-member-inline">
-              <div class="m-gs-avatar-sm" :style="{ background: getAvatarColor(m.id) }">{{ m.name?.[0] || '?' }}</div>
-              <span class="m-gs-member-inline-name">{{ m.name }}</span>
+          <!-- ========== 群聊顶部 ========== -->
+          <template v-if="isGroupChat">
+            <div class="m-gs-top">
+              <div class="m-gs-top-avatar" :style="{ background: getAvatarColor(groupId.value || 'group') }">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <div class="m-gs-add-btn-large" @click="showAddMember = true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </div>
+              <div class="m-gs-top-name">{{ group?.name }}</div>
             </div>
-          </div>
+
+            <!-- 群成员列表（横向滚动） -->
+            <div class="m-gs-members-scroll">
+              <div v-for="m in members" :key="m.id" class="m-gs-member-inline">
+                <div class="m-gs-avatar-sm" :style="{ background: getAvatarColor(m.id) }">{{ m.name?.[0] || '?' }}</div>
+                <span class="m-gs-member-inline-name">{{ m.name }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- ========== 私聊顶部 ========== -->
+          <template v-else>
+            <div class="m-gs-top">
+              <div class="m-gs-top-avatar" :style="{ background: getAvatarColor(otherUser?.id || 'user') }">
+                {{ otherUser?.name?.[0] || '?' }}
+              </div>
+              <div class="m-gs-top-info">
+                <div class="m-gs-top-name">{{ otherUser?.name || '未知用户' }}</div>
+                <div class="m-gs-top-sub">{{ otherUser?.position || '' }}</div>
+              </div>
+            </div>
+          </template>
 
           <!-- 分组：查找与快捷入口 -->
           <div class="m-gs-section">
-            <div class="m-gs-row" @click="">
+            <div class="m-gs-row">
               <span class="m-gs-row-label">查找聊天记录</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             <div class="m-gs-icons">
-              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文件</span></div>
-              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片/视频</span></div>
-              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>链接</span></div>
-              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>小程序</span></div>
+              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文件</span></div>
+              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片/视频</span></div>
+              <div class="m-gs-icon-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>链接</span></div>
             </div>
           </div>
 
@@ -172,15 +187,11 @@
                 <div class="m-gs-switch-dot"></div>
               </div>
             </div>
-            <div class="m-gs-row" @click="">
-              <span class="m-gs-row-label">标签</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
           </div>
 
           <!-- 设置当前聊天背景 -->
           <div class="m-gs-section">
-            <div class="m-gs-row" @click="">
+            <div class="m-gs-row">
               <span class="m-gs-row-label">设置当前聊天背景</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
@@ -191,7 +202,7 @@
             <div class="m-gs-row danger" @click="showCleanupConfirm = true">
               <span>清空聊天记录</span>
             </div>
-            <div v-if="group?.can_quit !== false" class="m-gs-row danger" @click="quitGroup">
+            <div v-if="isGroupChat" class="m-gs-row danger" @click="quitGroup">
               <span>删除并退出</span>
             </div>
           </div>
@@ -268,13 +279,20 @@ const messages = ref<any[]>([])
 const group = ref<any>(null)
 const members = ref<any[]>([])
 
+// 是否群聊（3人及以上）
+const isGroupChat = computed(() => members.value.length > 2)
+
+// 私聊时的对方信息
+const otherUser = computed(() => {
+  if (isGroupChat.value) return null
+  return members.value.find((m: any) => String(m.id) !== String(authStore.userInfo?.id)) || null
+})
+
 // 私聊时标题显示对方名字，群聊显示群名
 const chatTitle = computed(() => {
   if (!members.value.length) return group.value?.name || '加载中...'
-  // 2人=私聊，取对方名字
-  if (members.value.length <= 2) {
-    const other = members.value.find((m: any) => String(m.id) !== String(authStore.userInfo?.id))
-    return other?.name || group.value?.name || '聊天'
+  if (!isGroupChat.value) {
+    return otherUser.value?.name || group.value?.name || '聊天'
   }
   return group.value?.name || '群聊'
 })
@@ -951,6 +969,8 @@ onUnmounted(() => {
   display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
 }
 .m-gs-top-name { font-size: 18px; color: #fff; }
+.m-gs-top-info { display: flex; flex-direction: column; gap: 2px; }
+.m-gs-top-sub { font-size: 13px; color: #999; }
 
 /* 成员横向滚动列表 */
 .m-gs-members-scroll {
