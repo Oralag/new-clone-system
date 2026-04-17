@@ -168,32 +168,6 @@
       </div>
     </Teleport>
 
-    <!-- 待办提醒 -->
-    <div v-if="pendingItems.length > 0" class="wb-section">
-      <div class="wb-section-hd">
-        <span class="wb-section-dot"></span>
-        <span class="wb-section-title">待办提醒</span>
-        <span class="wb-section-count">{{ pendingItems.length }}</span>
-      </div>
-      <div class="wb-todo-list">
-        <div
-          v-for="item in pendingItems"
-          :key="item.id"
-          class="wb-todo-item"
-          @click="go(item.route)"
-        >
-          <div class="wb-todo-icon" :style="{ background: item.color }">
-            <span v-html="item.icon" />
-          </div>
-          <div class="wb-todo-body">
-            <div class="wb-todo-title">{{ item.title }}</div>
-            <div class="wb-todo-sub">{{ item.sub }}</div>
-          </div>
-          <div class="wb-todo-arrow">›</div>
-        </div>
-      </div>
-    </div>
-
     <!-- 团队动态 -->
     <div class="wb-section">
       <div class="wb-section-hd">
@@ -320,7 +294,7 @@ function parseGoodsInfo(g: any) {
 }
 
 const kpi = ref({ todaySale: '0', todayOrders: 0, customerTotal: 0, stockWarn: 0 })
-const pendingItems = ref<any[]>([])
+
 const activities = ref<any[]>([])
 const showPicker = ref(false)
 
@@ -563,37 +537,6 @@ onMounted(async () => {
     })
   })
   kpi.value.stockWarn = goodsRows.filter((g: any) => (stockMap[g.id] ?? 0) <= 0).length
-
-  // 待处理
-  pendingItems.value = []
-  const pendingProcure = procureRows.filter((r: any) => Number(r.status) === 0)
-  const pendingRetail = retailRows.filter((r: any) => Number(r.status) === 0)
-  if (pendingProcure.length > 0) {
-    pendingItems.value.push({
-      id: 'procure',
-      title: `采购入库待审核 ${pendingProcure.length} 笔`,
-      sub: `合计 ¥${pendingProcure.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0).toFixed(0)}`,
-      icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
-      color: '#F5A623',
-      route: '/mobile/procure/inhouse',
-    })
-  }
-  const pendingSales = saleRows.filter((r: any) => Number(r.status) === 0)
-  if (pendingSales.length > 0) {
-    pendingItems.value.push({
-      id: 'sale',
-      title: `销售出库待审核 ${pendingSales.length} 笔`,
-      sub: `合计 ¥${pendingSales.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0).toFixed(0)}`,
-      icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
-      color: '#2E6BE6',
-      route: '/mobile/sale/out',
-    })
-  }
-
-  // 通知未读数
-  if (pendingItems.value.length > 0 && typeof uni !== 'undefined') {
-    uni.$emit('update:pending', pendingItems.value.length)
-  }
 
   // 工作动态
   try {
