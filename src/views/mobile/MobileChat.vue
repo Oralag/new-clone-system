@@ -66,7 +66,7 @@
           :class="{ 'swiped': swipedId === g.id }"
         >
           <!-- 左滑操作按钮 -->
-          <div class="chat-item-actions" v-show="swipedId === g.id">
+          <div class="chat-item-actions" v-if="!!swipedId && swipedId === g.id && !!g.id">
             <div class="action-btn pin-btn" @click.stop="togglePin(g)">
               {{ g.is_pinned ? '取消置顶' : '置顶' }}
             </div>
