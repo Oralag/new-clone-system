@@ -74,25 +74,24 @@
       </div>
     </div>
 
-    <!-- 常用功能（横向滚动显示已选模块） -->
+    <!-- 常用功能（横向滚动显示全部模块） -->
     <div class="wb-section">
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #F5A623"></span>
         <span class="wb-section-title">常用功能</span>
         <button class="wb-section-more" @click="showPicker = true">管理 ›</button>
       </div>
-      <div v-if="favoriteApps.length === 0" class="wb-empty-sm">暂无常用功能，点击右上角添加</div>
-      <div v-else class="wb-fav-scroll">
+      <div class="wb-fav-scroll">
         <div
-          v-for="fav in favoriteApps"
-          :key="fav.path"
+          v-for="app in allModuleApps"
+          :key="app.path"
           class="wb-fav-item"
-          @click="go(fav.path)"
+          @click="go(app.path)"
         >
-          <div class="wb-fav-icon" :style="{ background: fav.bg }">
-            <span v-html="fav.icon" />
+          <div class="wb-fav-icon" :style="{ background: app.bg }">
+            <span v-html="app.icon" />
           </div>
-          <div class="wb-fav-name">{{ fav.name }}</div>
+          <div class="wb-fav-name">{{ app.name }}</div>
         </div>
       </div>
     </div>
