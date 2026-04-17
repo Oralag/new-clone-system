@@ -838,7 +838,10 @@ onUnmounted(() => {
 /* ── 弹窗通用 ── */
 .m-modal-mask {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100dvh;
   background: rgba(0,0,0,0.5);
   z-index: 999;
   display: flex;
@@ -848,14 +851,14 @@ onUnmounted(() => {
   background: #fff;
   border-radius: 16px 16px 0 0;
   width: 100%;
-  height: 80vh;
-  max-height: 85vh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   animation: slideUp 0.25s ease;
   box-sizing: border-box;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.m-modal-sheet-tall { height: 80vh; max-height: 85vh; }
+.m-modal-sheet-tall { max-height: 100dvh; }
 .m-modal-header {
   display: flex;
   align-items: center;

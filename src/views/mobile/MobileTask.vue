@@ -269,6 +269,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import http from '@/api/http'
+import { getAdminList } from '@/api/setting'
 
 const route = useRoute()
 
@@ -437,8 +438,15 @@ async function loadStaffMembers() {
   if (staffMembers.value.length > 0) return
   staffLoading.value = true
   try {
-    const res = await http.get('/work/members')
-    staffMembers.value = res.data.members.filter((m: any) => m.type === 'staff')
+    const res = await getAdminList({ list_rows: 500 })
+    const rows = res?.data?.rows ?? res?.data ?? []
+    staffMembers.value = rows.map((r: any) => ({
+      id: String(r.id),
+      name: r.name || r.admin_name || '未知',
+      type: 'staff',
+      avatar: '👤',
+      dept: r.dept_name || '',
+    }))
   } catch {
     staffMembers.value = []
   } finally {

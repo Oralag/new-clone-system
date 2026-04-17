@@ -1154,14 +1154,15 @@ export default { name: 'MobileChat' }
   background: #fff;
   border-radius: 16px 16px 0 0;
   width: 100%;
-  height: 80vh;
-  max-height: 85vh;
+  /* 高度用 dvh 配合 bottom padding，确保底部按钮不被 TabBar 遮挡 */
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   animation: slideUp 0.25s ease;
   box-sizing: border-box;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.m-modal-sheet-tall { height: 80vh; max-height: 85vh; }
+.m-modal-sheet-tall { max-height: 100dvh; }
 .m-modal-header {
   display: flex;
   align-items: center;
