@@ -70,6 +70,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
+import MobileMeetingPinned from './MobileMeetingPinned.vue'
 
 const router = useRouter()
 const route = useRoute()

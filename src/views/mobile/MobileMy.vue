@@ -168,6 +168,7 @@ const authStore = useAuthStore()
 const appStore = useAppStore()
 
 const stats = ref({ customerCount: 0, receivable: '0', stockWarn: 0 })
+const myStats = ref({ todaySale: 0, todayOrders: 0, pendingCount: 0, receivable: 0 })
 
 function handleTheme() { /* 由内联按钮处理 */ }
 

@@ -6,7 +6,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        <input v-model="keyword" class="contacts-search-input" placeholder="搜索联系人" @input="doFilter" />
+        <input v-model="keyword" class="contacts-search-input" placeholder="搜索联系人" />
       </div>
     </div>
 

@@ -3,17 +3,17 @@
 
     <!-- 今日核心指标 -->
     <div class="ms-kpi-grid">
-      <div class="ms-kpi-card" @click="router.push('/dashboard/today-sales')">
+      <div class="ms-kpi-card" @click="router.push('/mobile/sale/overview')">
         <div class="ms-kpi-label">今日销售额</div>
         <div class="ms-kpi-value">¥{{ todayStats.saleAmt }}</div>
         <div class="ms-kpi-sub">含销售+零售</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/dashboard/today-sales')">
+      <div class="ms-kpi-card" @click="router.push('/mobile/sale/overview')">
         <div class="ms-kpi-label">今日订单</div>
         <div class="ms-kpi-value">{{ todayStats.orderCount }}</div>
         <div class="ms-kpi-sub">销售+零售单数</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/sale/client')">
+      <div class="ms-kpi-card" @click="router.push('/mobile/sale/client')">
         <div class="ms-kpi-label">客户总数</div>
         <div class="ms-kpi-value">{{ customerTotal }}</div>
         <div class="ms-kpi-sub">全部客户</div>
