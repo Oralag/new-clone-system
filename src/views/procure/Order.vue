@@ -2076,13 +2076,13 @@ async function applyInhouseStockEffect(warehouseId: number, warehouseName: strin
     }
   } catch {}
 
-  // 预加载全部库存，按 goods_code 建 Map（后端 goods_sn/goods_id 过滤不可靠）
-  const stockByCode: Record<string, any> = {}
+  // 预加载商品表，建 goods_sn -> goods_id 映射（用于BOM原材料查库存）
+  const snToGoodsId: Record<string, number> = {}
   try {
-    const allStockRes = await http.get('/stock/StockAll/index', { params: { list_rows: 2000 } })
-    const allStocks: any[] = allStockRes.data?.rows ?? []
-    for (const s of allStocks) {
-      if (s.goods_code) stockByCode[s.goods_code] = s
+    const goodsRes = await http.get('/goods/ShopGoods/index', { params: { list_rows: 2000 } })
+    const goodsList: any[] = goodsRes.data?.rows ?? []
+    for (const g of goodsList) {
+      if (g.goods_sn && g.id) snToGoodsId[g.goods_sn] = g.id
     }
   } catch {}
 
@@ -2122,17 +2122,24 @@ async function applyInhouseStockEffect(warehouseId: number, warehouseName: strin
       const finishedQty = Number(item.num) * Number(item.unit_ratio || 1)
       for (const mat of bomItems) {
         if (!mat.goods_sn || !mat.num) continue
+        const matGoodsId = snToGoodsId[mat.goods_sn]
+        if (!matGoodsId) { console.warn('BOM原材料找不到goods_id', mat.goods_sn); continue }
         const matDelta = direction === 'in'
-          ? -Number(mat.num) * finishedQty   // 入库成品 → 扣原材料
-          : Number(mat.num) * finishedQty    // 反审核 → 加回原材料
-        const matStock = stockByCode[mat.goods_sn]
-        if (matStock) {
-          const newQty = Number(matStock.qty || 0) + matDelta
-          await http.post('/stock/StockAll/edit', { id: matStock.id, qty: newQty })
-          // 更新本地缓存，避免同一种材料在多个成品里重复计算时拿到旧值
-          matStock.qty = newQty
-        } else {
-          console.warn('BOM原材料无库存记录', mat.goods_sn)
+          ? -Number(mat.num) * finishedQty
+          : Number(mat.num) * finishedQty
+        try {
+          const matStockParams: any = { goods_id: matGoodsId, list_rows: 10 }
+          if (warehouseId) matStockParams.warehouse_id = warehouseId
+          const matStockRes = await http.get('/stock/StockAll/index', { params: matStockParams })
+          const matStockRows: any[] = matStockRes.data?.rows ?? []
+          const matStock = matStockRows.find((r: any) => r.goods_id === matGoodsId) ?? matStockRows[0]
+          if (matStock) {
+            await http.post('/stock/StockAll/edit', { id: matStock.id, qty: Number(matStock.qty || 0) + matDelta })
+          } else {
+            console.warn('BOM原材料无库存记录', mat.goods_sn)
+          }
+        } catch (e: any) {
+          console.warn('BOM原材料库存更新失败', mat.goods_sn, e?.message)
         }
       }
     } catch (e: any) {

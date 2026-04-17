@@ -96,8 +96,11 @@
         <div v-if="plan.priority === 'high'" class="task-priority-high">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="#f53f3f"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
         </div>
+        </div>
       </div>
-      </div></div><!-- 新建任务按钮 -->
+    </div>
+
+    <!-- 新建任务按钮 -->
     <button class="task-fab" @click="openAdd">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
