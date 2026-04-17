@@ -78,7 +78,7 @@
           <div
             class="chat-item"
             :class="{ 'chat-item--pinned': g.is_pinned }"
-            @click="closeSwipe(); g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`)"
+            @click="swipeMoved ? (swipeMoved = false) : (closeSwipe(), g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`))"
             @touchstart.passive="onSwipeStart($event, g)"
             @touchend.passive="onSwipeEnd"
             @touchmove.passive="onSwipeMove"
@@ -317,16 +317,19 @@ const displayedGroups = computed(() => {
 const swipedId = ref<string | null>(null)
 const swipeStartX = ref(0)
 const currentSwipeItem = ref<any>(null)
+const swipeMoved = ref(false) // 区分滑动 vs 点击，防止 click 事件误关
 const SWIPE_THRESHOLD = 50
 const contextGroup = ref<any>(null)
 const contextMenuStyle = ref<any>({})
 
 function onSwipeStart(e: TouchEvent, g: any) {
   swipeStartX.value = e.touches[0].clientX
+  swipeMoved.value = false
   currentSwipeItem.value = g
 }
 function onSwipeMove(e: TouchEvent) {
   const dx = e.touches[0].clientX - swipeStartX.value
+  if (Math.abs(dx) > 5) swipeMoved.value = true // 有实际滑动
   // 左滑（dx < -50）显示操作按钮
   if (dx < -SWIPE_THRESHOLD && currentSwipeItem.value) {
     swipedId.value = currentSwipeItem.value.id
@@ -337,8 +340,6 @@ function onSwipeMove(e: TouchEvent) {
   }
 }
 function onSwipeEnd() {
-  // 只在未触发左滑按钮时清空（防止误触关闭）；左滑后手指松开保持显示
-  // 右滑关闭由 onSwipeMove 处理，onSwipeEnd 不再强制清空
   currentSwipeItem.value = null
 }
 function closeSwipe() {
@@ -410,9 +411,11 @@ async function loadPendingItems() {
 
 async function loadGroups() {
   try {
-    const res = await http.get('/chat/groups', { params: { list_rows: 50 } })
+    const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
     const rows = res?.data?.rows ?? res?.rows ?? []
-    groups.value = rows.map((r: any) => ({
+    // 只保留私聊（通讯录联系人的 1:1 会话），member_ids 长度 ≤ 2 才显示
+    const privateChats = rows.filter((r: any) => !r.member_ids || r.member_ids.length <= 2)
+    groups.value = privateChats.map((r: any) => ({
       id: r.id,
       name: r.name || r.group_name || '会话',
       avatar_text: r.name?.[0],

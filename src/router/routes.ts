@@ -188,7 +188,17 @@ const routes: RouteRecordRaw[] = [
         ]
       },
       { path: 'investment', name: 'MobileInvestment', component: () => import('@/layouts/InvestmentLayout.vue'), meta: { title: '对外投资' } },
-      { path: 'brand', name: 'MobileBrand', component: () => import('@/layouts/BrandLayout.vue'), meta: { title: '品牌主页' } },
+      {
+        path: 'brand',
+        component: () => import('@/layouts/BrandLayout.vue'),
+        children: [
+          { path: '', name: 'MobileBrand', component: () => import('@/views/brand/Index.vue'), meta: { title: '品牌主页' } },
+          { path: 'products', name: 'MobileBrandProducts', component: () => import('@/views/brand/Products.vue'), meta: { title: '全部产品' } },
+          { path: 'product/:id', name: 'MobileBrandProductDetail', component: () => import('@/views/brand/ProductDetail.vue'), meta: { title: '产品详情' } },
+          { path: 'cart', name: 'MobileBrandCart', component: () => import('@/views/brand/Cart.vue'), meta: { title: '购物车' } },
+          { path: 'story', name: 'MobileBrandStory', component: () => import('@/views/brand/Story.vue'), meta: { title: '品牌故事' } },
+        ]
+      },
       // ── 业务模块（复用 PC 端组件，MobileLayout 包裹）──
       // Sale
       { path: 'sale/overview', name: 'MobileSaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
