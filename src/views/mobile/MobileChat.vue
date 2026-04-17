@@ -371,8 +371,12 @@ watch(showCreateGroup, (v) => { if (v && contacts.value.length === 0) loadContac
 
 const groupFilteredContacts = computed(() => {
   const kw = groupSearchKeyword.value.toLowerCase().trim()
-  if (!kw) return contacts.value
-  return contacts.value.filter((c: any) => c.name?.toLowerCase().includes(kw))
+  // 合并员工 + 机器人
+  const bots = pinnedSessions.value.filter(s => s.type === 'ai' || s.type === 'meeting')
+  const botContacts = bots.map(b => ({ id: b.id, name: b.name, role_name: b.type === 'meeting' ? '会议助手' : 'AI助手', _isBot: true }))
+  const all = [...botContacts, ...contacts.value]
+  if (!kw) return all
+  return all.filter((c: any) => c.name?.toLowerCase().includes(kw))
 })
 
 function toggleMember(c: any) {
