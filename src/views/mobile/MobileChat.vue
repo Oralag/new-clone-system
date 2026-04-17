@@ -66,7 +66,7 @@
           :class="{ 'swiped': swipedId === g.id }"
         >
           <!-- 左滑操作按钮 -->
-          <div class="chat-item-actions">
+          <div class="chat-item-actions" v-show="swipedId === g.id">
             <div class="action-btn pin-btn" @click.stop="togglePin(g)">
               {{ g.is_pinned ? '取消置顶' : '置顶' }}
             </div>
@@ -336,7 +336,12 @@ function onSwipeMove(e: TouchEvent) {
     swipedId.value = null
   }
 }
-function onSwipeEnd() { /* handled by onSwipeMove */ }
+function onSwipeEnd() {
+  if (swipedId.value) {
+    swipedId.value = null
+  }
+  currentSwipeItem.value = null
+}
 function closeSwipe() {
   swipedId.value = null
   currentSwipeItem.value = null

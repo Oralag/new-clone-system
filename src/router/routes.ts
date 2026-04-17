@@ -172,6 +172,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '数据统计' } },
       { path: 'modules', name: 'MobileModules', component: () => import('@/views/mobile/MobileModules.vue'), meta: { title: '选择模块' } },
       { path: 'my', name: 'MobileMy', component: () => import('@/views/mobile/MobileMy.vue'), meta: { title: '我的' } },
+      // ── ERP 首页（复用 PC Dashboard，自带移动端适配）──
+      { path: 'dashboard', name: 'MobileDashboard', component: () => import('@/views/Dashboard.vue'), meta: { title: '首页' } },
       // ── Agent / Investment / Brand（复用 PC 端组件）──
       { path: 'agent', name: 'MobileAgent', component: () => import('@/layouts/AgentLayout.vue'), meta: { title: '智能体工作流' } },
       { path: 'investment', name: 'MobileInvestment', component: () => import('@/layouts/InvestmentLayout.vue'), meta: { title: '对外投资' } },
