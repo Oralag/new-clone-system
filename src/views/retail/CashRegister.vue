@@ -635,6 +635,7 @@ async function handleCheckout() {
 const weightCalcVisible = ref(false)
 const wcGoodsId = ref<any>(null)
 const wcGoodsName = ref('')
+const wcGoodsUnit = ref('斤')
 const wcPricePerJin = ref(0)
 const wcMode = ref<'weight' | 'amount'>('weight')
 const wcWeightGrams = ref(0)    // 正向：输入克数
@@ -654,6 +655,7 @@ function openWeightCalc(g?: any) {
   const target = g ?? selectedGoods.value
   wcGoodsId.value = target?.id ?? null
   wcGoodsName.value = target?.goods_name ?? ''
+  wcGoodsUnit.value = target?.unit_name || '斤'
   wcPricePerJin.value = target ? Number(target.sell_price) || 0 : 0
   wcMode.value = 'weight'
   wcWeightGrams.value = 0
@@ -670,14 +672,15 @@ function addWeightItemToCart() {
     goods_id: wcGoodsId.value ?? -1,
     goods_name: `${name} ${finalGrams.toFixed(1)}g`,
     goods_sn: '',
-    unit_name: 'g',
+    unit_name: wcGoodsUnit.value,
     price: finalAmount,
-    num: 1,
+    num: parseFloat((finalGrams / 500).toFixed(4)),
   })
   calcTotal()
   weightCalcVisible.value = false
   wcGoodsId.value = null
   wcGoodsName.value = ''
+  wcGoodsUnit.value = '斤'
   wcPricePerJin.value = 0
   wcWeightGrams.value = 0
   wcTargetAmount.value = 0
