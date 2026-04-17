@@ -523,6 +523,22 @@ function doSearch() {
   .edit-mode-bar { display: none; }
   .brand-topnav { padding: 0 16px; }
   .topnav-hamburger { display: flex; }
+  /* 移动端：限制在 .wx-content 可用高度内，禁止撑破 */
+  .brand-layout {
+    min-height: 0 !important;
+    height: 100%;
+    overflow: hidden;
+  }
+  .brand-main {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  .brand-footer {
+    /* footer 变成普通文档流，在 .brand-main 内部滚动 */
+    flex-shrink: 0;
+  }
 }
 
 /* ── Hamburger ─────────────────────────────────── */
