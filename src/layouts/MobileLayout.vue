@@ -16,9 +16,6 @@
       </div>
     </div>
 
-    <!-- 会议室置顶区（仅在消息页显示） -->
-    <MobileMeetingPinned v-if="activeTab === 'chat'" />
-
     <!-- 内容区 -->
     <div class="wx-content">
       <router-view v-slot="{ Component, route: r }">
@@ -70,7 +67,6 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
-import MobileMeetingPinned from './MobileMeetingPinned.vue'
 
 const router = useRouter()
 const route = useRoute()

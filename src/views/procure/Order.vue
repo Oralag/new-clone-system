@@ -1497,7 +1497,7 @@ function openFeePayDialog(row: any, idx: number) {
   feePayForm.bearer = fee.bearer || 'buyer'
   feePayForm.fund_id = null
   feePayForm.fund_name = ''
-  feePayForm.contact_name = row.supplier_name || ''
+  feePayForm.contact_name = ''
   feePayForm.pay_date = new Date().toISOString().slice(0, 10)
   feePayForm.remark = ''
   feePayVisible.value = true
@@ -1514,8 +1514,8 @@ async function submitFeePay() {
   feePaySubmitting.value = true
   try {
     await createPayReceipt({
-      contact_type: 'supplier',
-      contact_name: feePayForm.contact_name || feePayForm.supplierName,
+      contact_type: 'other',
+      contact_name: feePayForm.contact_name,
       order_sn: feePayForm.orderSn,
       order_id: feePayForm.orderId,
       amount: needPay,

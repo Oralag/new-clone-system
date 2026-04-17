@@ -49,20 +49,32 @@
 
     <!-- ── 全部 Tab ── -->
     <div v-show="activeTab === 'all'">
-      <!-- 会议室置顶入口（有进行中才显示） -->
-      <div v-if="activeMeetingCount > 0" class="chat-meeting-bar" @click="router.push('/mobile/meeting')">
-        <div class="chat-meeting-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="1.8">
-            <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-          </svg>
-        </div>
-        <span class="chat-meeting-text">会议室</span>
-        <span class="chat-meeting-sub" v-if="activeMeetingCount > 0">{{ activeMeetingCount }} 个进行中</span>
-        <span class="chat-meeting-arrow">›</span>
-      </div>
-
       <!-- 消息列表 -->
       <div class="chat-list">
+        <!-- AI会议室入口（置顶） -->
+        <div class="chat-item chat-item--meeting" @click="router.push('/agent/meeting')">
+          <div class="chat-avatar-wrap">
+            <div class="chat-avatar chat-avatar--meeting">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round">
+                <rect x="2" y="3" width="16" height="11" rx="2.5"/>
+                <path d="M7 17h6M10 14v3"/>
+                <circle cx="5.5" cy="8.5" r="1.3" fill="#6366f1" opacity=".7"/>
+                <circle cx="10" cy="8.5" r="1.3" fill="#6366f1" opacity=".7"/>
+                <circle cx="14.5" cy="8.5" r="1.3" fill="#6366f1" opacity=".7"/>
+              </svg>
+            </div>
+          </div>
+          <div class="chat-body">
+            <div class="chat-top">
+              <span class="chat-name">AI会议室</span>
+              <span class="chat-time"></span>
+            </div>
+            <div class="chat-bottom">
+              <span class="chat-msg">多Agent协同 · Captain主持</span>
+            </div>
+          </div>
+        </div>
+
         <div v-if="groups.length === 0" class="chat-empty">
           <div class="chat-empty-icon">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
@@ -599,6 +611,16 @@ export default { name: 'MobileChat' }
   background: #2E6BE6;
 }
 .chat-avatar--sm { width: 40px; height: 40px; font-size: 14px; border-radius: 6px; }
+.chat-avatar--meeting {
+  background: rgba(99,102,241,0.12);
+  color: #6366f1;
+}
+.chat-item--meeting {
+  background: linear-gradient(135deg, rgba(99,102,241,0.04) 0%, rgba(139,92,246,0.04) 100%);
+}
+.chat-item--meeting:active {
+  background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.08) 100%);
+}
 .chat-unread-dot {
   position: absolute;
   top: -2px;
