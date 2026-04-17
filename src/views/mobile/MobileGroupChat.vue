@@ -8,8 +8,8 @@
         </svg>
       </button>
       <div class="m-gc-title-area" @click="showGroupInfo = true">
-        <div class="m-gc-title">{{ group?.name || '加载中...' }}</div>
-        <div class="m-gc-sub">{{ members.length }} 人</div>
+        <div class="m-gc-title">{{ chatTitle }}</div>
+        <div v-if="members.length > 2" class="m-gc-sub">{{ members.length }} 人</div>
       </div>
       <button class="m-gc-more" @click="showGroupInfo = true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -229,6 +229,18 @@ const groupId = computed(() => Number(route.params.id))
 const messages = ref<any[]>([])
 const group = ref<any>(null)
 const members = ref<any[]>([])
+
+// 私聊时标题显示对方名字，群聊显示群名
+const chatTitle = computed(() => {
+  if (!members.value.length) return group.value?.name || '加载中...'
+  // 2人=私聊，取对方名字
+  if (members.value.length <= 2) {
+    const other = members.value.find((m: any) => String(m.id) !== String(authStore.userInfo?.id))
+    return other?.name || group.value?.name || '聊天'
+  }
+  return group.value?.name || '群聊'
+})
+
 const inputText = ref('')
 const sending = ref(false)
 const loadingMore = ref(false)
