@@ -51,31 +51,7 @@
     <div v-show="activeTab === 'all'">
       <!-- 消息列表 -->
       <div class="chat-list">
-        <!-- AI会议室入口（置顶） -->
-        <div class="chat-item chat-item--meeting" @click="router.push('/agent/meeting')">
-          <div class="chat-avatar-wrap">
-            <div class="chat-avatar chat-avatar--meeting">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round">
-                <rect x="2" y="3" width="16" height="11" rx="2.5"/>
-                <path d="M7 17h6M10 14v3"/>
-                <circle cx="5.5" cy="8.5" r="1.3" fill="#6366f1" opacity=".7"/>
-                <circle cx="10" cy="8.5" r="1.3" fill="#6366f1" opacity=".7"/>
-                <circle cx="14.5" cy="8.5" r="1.3" fill="#6366f1" opacity=".7"/>
-              </svg>
-            </div>
-          </div>
-          <div class="chat-body">
-            <div class="chat-top">
-              <span class="chat-name">AI会议室</span>
-              <span class="chat-time"></span>
-            </div>
-            <div class="chat-bottom">
-              <span class="chat-msg">多Agent协同 · Captain主持</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="groups.length === 0" class="chat-empty">
+        <div v-if="displayedGroups.length === 0 && groups.length === 0" class="chat-empty">
           <div class="chat-empty-icon">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -293,6 +269,7 @@ const authStore = useAuthStore()
 
 // 固定置顶项（如 AI 管家）
 const pinnedSessions = ref([
+  { id: 'meeting-fixed', name: 'AI会议室', avatar_text: '🏛', last_msg: '多Agent协同 · Captain主持', last_time: '', type: 'meeting', unread: 0, is_pinned: true, route: '/mobile/meeting' },
   { id: 'ai-assistant-fixed', name: 'AI 管家', avatar_text: '🤖', last_msg: '随时为您服务', last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
 ])
 

@@ -95,11 +95,18 @@ function getUserId(request) {
   }
   if (!token) return null
 
-  // Wrapped token: decode to get realToken (JWT)
+  // Wrapped token: erp_ + base64(JSON) → contains realToken (JWT) or local user data
   if (token.startsWith('erp_')) {
-    const decoded = decodeToken(token)
-    if (decoded?.realToken) token = decoded.realToken
-    else return null
+    try {
+      const json = decodeURIComponent(escape(atob(token.slice(4))))
+      const payload = JSON.parse(json)
+      if (payload.admin_id || payload.userId || payload.id) {
+        return payload.admin_id || payload.userId || payload.id
+      }
+      if (payload.t) {
+        token = payload.t
+      }
+    } catch {}
   }
 
   // Local registered user
