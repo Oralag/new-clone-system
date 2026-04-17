@@ -639,9 +639,11 @@ function doSearch() {
 .brand-footer-icp { font-size: 11px; color: rgba(255,255,255,0.2); }
 
 @media (max-width: 768px) {
-  .brand-footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .brand-footer-top { grid-template-columns: 1fr 1fr; gap: 24px; }
   .brand-footer-brand { grid-column: 1 / -1; }
-  .brand-footer-inner { padding: 40px 24px 24px; }
+  .brand-footer-inner { padding: 28px 20px 20px; }
   .brand-footer-bottom { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .brand-footer-col h4 { margin-bottom: 10px; }
+  .brand-footer-col a { margin-bottom: 8px; }
 }
 </style>

@@ -69,8 +69,8 @@
       </div>
       <div class="ai-input-row">
         <div class="ai-input-actions">
-          <el-button :icon="Picture" circle size="small" plain @click="fileInputRef?.click()" :disabled="isLoading" />
-          <el-button v-if="voiceSupported" :icon="Microphone" circle size="small"
+          <el-button tabindex="-1" :icon="Picture" circle size="small" plain @click="fileInputRef?.click()" :disabled="isLoading" />
+          <el-button tabindex="-1" v-if="voiceSupported" :icon="Microphone" circle size="small"
             :type="isRecording ? 'danger' : ''" :plain="!isRecording"
             :class="{ 'mic-active': isRecording }"
             @click.prevent="toggleVoice" :disabled="isLoading" />
@@ -82,6 +82,10 @@
           rows="1"
           :placeholder="isRecording ? '正在聆听...' : '问我任何事...'"
           :disabled="isLoading"
+          enterkeyhint="send"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
           @keydown.enter.exact.prevent="sendMessage"
           @input="autoResize"
         />

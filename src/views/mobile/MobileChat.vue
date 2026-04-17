@@ -90,7 +90,7 @@
             </div>
             <div class="chat-body">
               <div class="chat-top">
-                <span class="chat-name">{{ g.name }}</span>
+                <span class="chat-name">{{ g.name }}<span v-if="g.type === 'group' || g.member_count > 2" class="group-badge">群</span></span>
                 <span class="chat-time">{{ g.last_time }}</span>
               </div>
               <div class="chat-bottom">
@@ -428,6 +428,8 @@ async function loadGroups() {
       unread: r.unread ?? 0,
       is_pinned: r.is_pinned ?? false,
       last_message_at: r.last_message_at || '',
+      member_count: r.member_count ?? r.members?.length ?? 0,
+      type: r.member_count > 2 || r.members?.length > 2 ? 'group' : 'dm',
     }))
     const totalUnread = rows.reduce((s: number, r: any) => s + (r.unread ?? 0), 0)
     if (typeof uni !== 'undefined') uni.$emit('update:unread', totalUnread)
@@ -964,6 +966,20 @@ export default { name: 'MobileChat' }
 /* ── 置顶标识 ── */
 .chat-item--pinned { background: #fafafa; }
 .chat-pin-icon { position: absolute; top: 8px; left: 4px; font-size: 10px; }
+.group-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 0 5px;
+  height: 16px;
+  background: #2E6BE6;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 3px;
+  vertical-align: middle;
+}
 
 /* ── 左滑操作 ── */
 .chat-item-wrap {
