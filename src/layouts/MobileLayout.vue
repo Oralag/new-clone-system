@@ -26,7 +26,7 @@
     </div>
 
     <!-- 底部 Tab Bar（企业微信风格） -->
-    <div class="wx-tabbar">
+    <div class="wx-tabbar" v-show="!hideTabbar">
       <div
         v-for="tab in tabs"
         :key="tab.key"
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
@@ -72,6 +72,10 @@ import MobileMeetingPinned from './MobileMeetingPinned.vue'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+
+// 弹窗时隐藏 TabBar
+const hideTabbar = ref(false)
+provide('hideTabbar', hideTabbar)
 
 const tabs = [
   { key: 'chat', label: '消息', path: '/mobile/chat' },

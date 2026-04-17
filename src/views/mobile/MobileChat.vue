@@ -328,8 +328,15 @@
       </div>
     </div>
 
-    <!-- ── 右下角快捷操作按钮 ── -->
-    <div class="chat-fab" @click="showFabPlus = !showFabPlus; showChatPlus = false">
+    <!-- ── 右下角可拖动快捷操作按钮 ── -->
+    <div
+      class="chat-fab"
+      :style="{ left: fabPos.x + 'px', top: fabPos.y + 'px', right: 'auto', bottom: 'auto' }"
+      @touchstart.prevent="onFabTouchStart"
+      @touchmove.prevent="onFabTouchMove"
+      @touchend="onFabTouchEnd"
+      @click="onFabClick"
+    >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
@@ -369,6 +376,12 @@ const showCreateGroup = ref(false)
 const selectedMembers = ref<any[]>([])
 const groupSearchKeyword = ref('')
 const newGroupName = ref('')
+
+// 可拖动 FAB 状态
+const fabPos = ref({ x: window.innerWidth - 70, y: window.innerHeight - 116 })
+const fabDragStart = ref({ x: 0, y: 0 })
+const fabDragging = ref(false)
+const fabMoved = ref(false)
 
 // 打开群聊面板时确保通讯录已加载
 watch(showCreateGroup, (v) => { if (v && contacts.value.length === 0) loadContacts() })

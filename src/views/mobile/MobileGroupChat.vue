@@ -233,7 +233,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, inject, watch, type Ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import http from '@/api/http'
@@ -273,6 +273,13 @@ const loadingMore = ref(false)
 const showGroupInfo = ref(false)
 const showAddMember = ref(false)
 const showCleanupConfirm = ref(false)
+
+// 弹窗时隐藏底部 TabBar
+const hideTabbar = inject<Ref<boolean>>('hideTabbar', ref(false))
+watch([showGroupInfo, showAddMember, showCleanupConfirm], ([a, b, c]) => {
+  hideTabbar.value = a || b || c
+})
+onUnmounted(() => { hideTabbar.value = false })
 const showAtPicker = ref(false)
 const addMemberSearch = ref('')
 const cleanupDays = ref(180)
