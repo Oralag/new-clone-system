@@ -317,10 +317,10 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 .brand-mode-cta { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
 .retail-cta { color: #0071e3; }
 .wholesale-cta { color: #d97706; }
-@media (max-width: 600px) { .brand-mode-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height: 100%; } }
+@media (max-width: 600px) { .brand-mode-grid { grid-template-columns: 1fr 1fr; flex: 1; min-height: 0; } }
 @media (max-width: 768px) {
-  .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; padding: 12px; }
-  .brand-mode-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; border-radius: 14px; max-width: none; height: 100%; }
+  .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; padding: 12px; overflow: hidden; }
+  .brand-mode-grid { grid-template-columns: 1fr 1fr; gap: 10px; border-radius: 14px; max-width: none; flex: 1; min-height: 0; align-content: center; }
   .brand-mode-card { padding: 16px; border-radius: 14px; flex: none; overflow-y: visible; align-items: center; }
   .brand-mode-card:first-child { border-radius: 14px; }
   .brand-mode-card:last-child { border-radius: 14px; }
@@ -450,7 +450,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
   
   .brand-cat-grid { grid-template-columns: 1fr; }
   .brand-product-grid { grid-template-columns: 1fr 1fr; }
-  .brand-mode-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height: 100%; }
+  .brand-mode-grid { grid-template-columns: 1fr 1fr; flex: 1; min-height: 0; align-content: center; }
   
   .brand-philosophy { padding: 32px 16px; }
   .bp-card { padding: 24px; }

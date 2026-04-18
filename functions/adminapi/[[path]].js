@@ -627,17 +627,27 @@ async function handleSendMessage(request, env) {
   let body
   try { body = await request.json() } catch { return errRes('请求格式错误') }
 
-  const { content, type = 'text' } = body
+  const { content, type = 'text', sender_name: clientSenderName } = body
   if (!content?.trim()) return errRes('消息内容不能为空')
 
-  const userInfo = await getUserInfo(userId, env)
+  // 优先用前端传来的 sender_name（避免调后端API），其次查 KV 缓存
+  let senderName = clientSenderName
+  if (!senderName) {
+    const cached = await env.USERS_KV.get(`user_info:${userId}`)
+    senderName = cached ? JSON.parse(cached).name : null
+  }
+  if (!senderName) {
+    // 最后才调 getUserInfo（可能慢）
+    const userInfo = await getUserInfo(userId, env)
+    senderName = userInfo.name
+  }
   const now = new Date().toISOString()
 
   const msg = {
     id: nowMs() + Math.floor(Math.random() * 1000),
     group_id: groupId,
     sender_id: userId,
-    sender_name: userInfo.name,
+    sender_name: senderName || '用户',
     content: content.trim(),
     type,
     created_at: now,

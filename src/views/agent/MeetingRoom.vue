@@ -1601,6 +1601,7 @@ onUnmounted(() => {
   color: var(--dark, #1d1d1f); background: var(--gray, #f5f5f7);
   resize: none; line-height: 1.5; outline: none;
   transition: border-color 0.15s;
+  min-height: 44px; max-height: 120px; overflow-y: auto;
 }
 .topic-input:focus { border-color: #6366f1; background: #fff; }
 .topic-input:disabled { opacity: 0.5; cursor: not-allowed; }

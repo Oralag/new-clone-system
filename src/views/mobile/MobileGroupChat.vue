@@ -1,5 +1,5 @@
 <template>
-  <div class="m-gc">
+  <div class="m-gc" @touchstart.passive="initAudio" @click.capture.passive="initAudio">
     <!-- 顶部栏 -->
     <div class="m-gc-topbar">
       <button class="m-gc-back" @click="router.back()">
@@ -602,7 +602,10 @@ async function sendMessage() {
 
   try {
     // 1. 先发送用户消息到群
-    const res = await http.post(`/chat/groups/${groupId.value}/messages`, { content: text })
+    const res = await http.post(`/chat/groups/${groupId.value}/messages`, {
+      content: text,
+      sender_name: authStore.userInfo?.name || authStore.userName || '用户'
+    })
     const sent = res?.data ?? res
     // 替换本地消息（用 id 去重，避免轮询重复）
     const idx = messages.value.findIndex(m => m.id === localMsg.id)
@@ -834,22 +837,26 @@ async function loadMessages(reset = false) {
 }
 
 // ── 新消息提示音（Web Audio API 合成）──
+let audioCtx: AudioContext | null = null
+function initAudio() {
+  if (audioCtx) return
+  try { audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)() } catch {}
+}
 function playNotifySound() {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const beep = (startTime: number, freq: number, duration: number) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(freq, startTime)
-      gain.gain.setValueAtTime(0, startTime)
-      gain.gain.linearRampToValueAtTime(0.3, startTime + 0.01)
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
-      osc.start(startTime); osc.stop(startTime + duration)
+    if (!audioCtx) return
+    if (audioCtx.state === 'suspended') audioCtx.resume()
+    const t = audioCtx.currentTime
+    const beep = (start: number, freq: number, dur: number) => {
+      const osc = audioCtx!.createOscillator(); const gain = audioCtx!.createGain()
+      osc.connect(gain); gain.connect(audioCtx!.destination)
+      osc.type = 'sine'; osc.frequency.setValueAtTime(freq, start)
+      gain.gain.setValueAtTime(0, start)
+      gain.gain.linearRampToValueAtTime(0.3, start + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur)
+      osc.start(start); osc.stop(start + dur)
     }
-    beep(ctx.currentTime, 880, 0.12)
-    beep(ctx.currentTime + 0.14, 1100, 0.1)
+    beep(t, 880, 0.12); beep(t + 0.14, 1100, 0.1)
   } catch { /* ignore */ }
 }
 

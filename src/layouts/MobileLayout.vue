@@ -1,5 +1,5 @@
 <template>
-  <div class="wx-layout">
+  <div class="wx-layout" @touchstart.passive="initAudio" @click.capture.passive="initAudio">
     <!-- 顶部导航栏（消息页由MobileChat接管，不重复显示） -->
     <div class="wx-navbar" v-if="activeTab !== 'chat'">
       <button v-if="!isMainTab" class="wx-nav-back" @click="goBack">
@@ -97,6 +97,30 @@ let unreadPoll: ReturnType<typeof setInterval> | null = null
 const taskCount = ref(0)
 const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileStats', 'MobileModules']
 
+// ── 提示音：在首次用户手势里初始化 AudioContext（iOS Safari 要求）──
+let audioCtx: AudioContext | null = null
+function initAudio() {
+  if (audioCtx) return
+  try { audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)() } catch {}
+}
+function playNotify() {
+  try {
+    if (!audioCtx) return
+    if (audioCtx.state === 'suspended') audioCtx.resume()
+    const t = audioCtx.currentTime
+    const beep = (start: number, freq: number, dur: number) => {
+      const osc = audioCtx!.createOscillator(); const gain = audioCtx!.createGain()
+      osc.connect(gain); gain.connect(audioCtx!.destination)
+      osc.type = 'sine'; osc.frequency.setValueAtTime(freq, start)
+      gain.gain.setValueAtTime(0, start)
+      gain.gain.linearRampToValueAtTime(0.3, start + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur)
+      osc.start(start); osc.stop(start + dur)
+    }
+    beep(t, 880, 0.12); beep(t + 0.14, 1100, 0.1)
+  } catch {}
+}
+
 // 返回按钮
 function goBack() {
   if (window.history.length > 1) {
@@ -149,23 +173,7 @@ onMounted(async () => {
     try {
       const res = await http.get('/chat/groups/unread', { silent: true })
       const newCount = res?.data?.unread ?? 0
-      if (newCount > unreadCount.value) {
-        // 未读数增加 → 有新消息，播提示音
-        try {
-          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-          const beep = (t: number, freq: number, dur: number) => {
-            const osc = ctx.createOscillator(); const gain = ctx.createGain()
-            osc.connect(gain); gain.connect(ctx.destination)
-            osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t)
-            gain.gain.setValueAtTime(0, t)
-            gain.gain.linearRampToValueAtTime(0.25, t + 0.01)
-            gain.gain.exponentialRampToValueAtTime(0.001, t + dur)
-            osc.start(t); osc.stop(t + dur)
-          }
-          beep(ctx.currentTime, 880, 0.12)
-          beep(ctx.currentTime + 0.14, 1100, 0.1)
-        } catch { /* ignore */ }
-      }
+      if (newCount > unreadCount.value) playNotify()
       unreadCount.value = newCount
     } catch { /* 忽略 */ }
   }, 30000)
