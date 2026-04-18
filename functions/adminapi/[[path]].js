@@ -668,7 +668,8 @@ async function handleSendMessage(request, env) {
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   const memberIds = (memberMap[groupId] || []).map(m => m.user_id)
   for (const mid of memberIds) {
-    if (mid === userId) continue // 不给自己加未读
+    if (String(mid) === String(userId)) continue // 不给自己加未读
+    if (AGENT_IDS.has(String(mid))) continue // Agent不需要未读计数
     const unreadKey = `chat_unread:${mid}:${groupId}`
     const cur = parseInt(await env.USERS_KV.get(unreadKey) || '0')
     await env.USERS_KV.put(unreadKey, String(cur + 1))

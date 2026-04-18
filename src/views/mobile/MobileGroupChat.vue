@@ -803,7 +803,15 @@ async function cleanupMessages() {
 
 async function scrollToBottom() {
   await nextTick()
-  bottomRef.value?.scrollIntoView({ behavior: 'smooth' })
+  // 使用 scrollTop 直接定位，比 scrollIntoView 更可靠
+  const el = msgListRef.value
+  if (el) {
+    el.scrollTop = el.scrollHeight
+  }
+  // 二次确认（等待图片等内容加载后重新定位）
+  requestAnimationFrame(() => {
+    if (el) el.scrollTop = el.scrollHeight
+  })
 }
 
 async function loadMessages(reset = false) {
@@ -823,6 +831,26 @@ async function loadMessages(reset = false) {
     }
     if (rows.length > 0) lastMessageId = rows[rows.length - 1].id
   } catch { /* 忽略 */ }
+}
+
+// ── 新消息提示音（Web Audio API 合成）──
+function playNotifySound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const beep = (startTime: number, freq: number, duration: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, startTime)
+      gain.gain.setValueAtTime(0, startTime)
+      gain.gain.linearRampToValueAtTime(0.3, startTime + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
+      osc.start(startTime); osc.stop(startTime + duration)
+    }
+    beep(ctx.currentTime, 880, 0.12)
+    beep(ctx.currentTime + 0.14, 1100, 0.1)
+  } catch { /* ignore */ }
 }
 
 async function fetchNewMessages() {
@@ -871,6 +899,8 @@ function onScroll() {
 onMounted(async () => {
   await Promise.all([loadGroup(), loadMessages(true)])
   await scrollToBottom()
+  // 延迟二次滚动（等待图片等内容渲染）
+  setTimeout(() => scrollToBottom(), 100)
 
   // 轮询新消息（每 5 秒）
   pollTimer = setInterval(() => fetchNewMessages(), 5000)
