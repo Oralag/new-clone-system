@@ -578,13 +578,20 @@ async function handleSendMessage(request, env) {
   await logOperation(env, userId, 'chat_message', content, { group_id: groupId, message_id: msg.id })
 
   // 🤖 触发 Agent 自动回复（必须在 response 前完成，Pages Functions 返回后 worker 会终止）
+  let agentReplyStatus = 'no_agents'
   try {
-    await triggerAgentReplies(groupId, userId, content.trim(), memberIds, env)
+    const agentIds = memberIds.filter(id => AGENT_IDS.has(String(id)) && String(id) !== String(userId))
+    if (agentIds.length > 0) {
+      agentReplyStatus = 'triggered_' + agentIds.join(',')
+      await triggerAgentReplies(groupId, userId, content.trim(), memberIds, env)
+      agentReplyStatus = 'ok'
+    }
   } catch (e) {
+    agentReplyStatus = 'error: ' + String(e?.message || e)
     console.error('Agent reply error:', e)
   }
 
-  return jsonSuccess(msg)
+  return jsonSuccess({ ...msg, _agentStatus: agentReplyStatus })
 }
 
 async function handleChatUnread(request, env) {

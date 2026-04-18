@@ -408,6 +408,7 @@ async function saveCollect() {
     ? collectForm.value.contact_name
     : (clientList.value.find((x: any) => x.id == collectForm.value.contact_id)?.name || collectForm.value.contact_name || '')
   if (isOther && !name) { ElMessageBox.alert('请输入收入说明', '提示'); return }
+  if (!collectForm.value.fund_id) { ElMessageBox.alert('请选择收款账户', '提示'); return }
   const fundName = collectForm.value.fund_id ? (fundList.value.find((x: any) => x.id == collectForm.value.fund_id)?.name || '') : ''
   collectSaving.value = true
   try {
@@ -434,6 +435,7 @@ async function savePay() {
     ? payForm.value.contact_name
     : (supplierList.value.find((x: any) => x.id == payForm.value.contact_id)?.name || payForm.value.contact_name || '')
   if (isOther && !name) { ElMessageBox.alert('请输入支出说明', '提示'); return }
+  if (!payForm.value.fund_id) { ElMessageBox.alert('请选择付款账户', '提示'); return }
   const fundName = payForm.value.fund_id ? (fundList.value.find((x: any) => x.id == payForm.value.fund_id)?.name || '') : ''
   paySaving.value = true
   try {

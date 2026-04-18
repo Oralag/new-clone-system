@@ -83,7 +83,6 @@
             @touchend.passive="onSwipeEnd"
             @touchmove.passive="onSwipeMove"
           >
-            <span v-if="g.is_pinned" class="chat-pin-icon">📌</span>
             <div class="chat-avatar-wrap">
               <div class="chat-avatar" :style="avatarStyle(g)">{{ g.avatar_text || g.name?.[0] || '群' }}</div>
               <span v-if="g.unread > 0" class="chat-unread-dot"></span>

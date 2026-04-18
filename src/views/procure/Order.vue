@@ -2339,7 +2339,8 @@ async function handleReverseAudit(row: any) {
           for (const o of relatedOtherOut) {
             try {
               if (o.status === 1) await http.post('/stock/OtherOut/audit', { id: o.id, status: 0 })
-            } catch (e: any) { console.warn('反审核BOM扣料单失败', o.id, e?.message) }
+              await http.post('/stock/OtherOut/del', { id: o.id })
+            } catch (e: any) { console.warn('删除BOM扣料单失败', o.id, e?.message) }
           }
         }
       }
