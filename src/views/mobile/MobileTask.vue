@@ -347,7 +347,7 @@ const agents = ref<any[]>([
   { id: 'agent_creative', name: '创意部', type: 'agent', avatar: '🎨' },
   { id: 'agent_brand', name: '品牌部', type: 'agent', avatar: '✨' },
   { id: 'agent_secretary', name: '秘书', type: 'agent', avatar: '🤖' },
-  { id: 'agent_ai', name: 'AI助手', type: 'agent', avatar: '🧠' },
+  { id: 'agent_ai', name: 'ERP管家', type: 'agent', avatar: '🦢' },
 ])
 const staffMembers = ref<any[]>([])
 const staffLoading = ref(false)

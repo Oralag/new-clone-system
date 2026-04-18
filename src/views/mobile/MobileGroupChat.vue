@@ -353,6 +353,7 @@ let contactsLoaded = false
 const cleanupDays = ref(180)
 
 const ROBOT_AGENTS = [
+  { id: 'ai-assistant-fixed', name: 'ERP管家', position: 'ERP智能管家' },
   { id: 'captain', name: 'Captain 总指挥', position: '统一调度' },
   { id: 'secretary', name: '秘书', position: '广告部门秘书' },
   { id: 'copywriter', name: '文案Agent', position: '爆款文案' },

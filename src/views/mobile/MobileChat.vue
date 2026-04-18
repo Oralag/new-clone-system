@@ -425,7 +425,7 @@ const winHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 667)
 // 固定置顶项（如 AI 管家）
 const pinnedSessions = ref([
   { id: 'meeting-fixed', name: 'AI会议室', avatar_text: '🏛', last_msg: '多Agent协同 · Captain主持', last_time: '', type: 'meeting', unread: 0, is_pinned: true, route: '/mobile/meeting' },
-  { id: 'ai-assistant-fixed', name: 'AI 管家', avatar_text: '🤖', last_msg: '随时为您服务', last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
+  { id: 'ai-assistant-fixed', name: 'ERP管家', avatar_text: '🦢', last_msg: '随时为您服务', last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
 ])
 
 const groups = ref<any[]>([])
@@ -686,7 +686,7 @@ const AGENT_NAMES: Record<string, string> = {
   'publisher': '发布Agent',
   'designer': '平面设计师',
   'marketing': '营销顾问',
-  'ai-assistant-fixed': 'AI 管家',
+  'ai-assistant-fixed': 'ERP管家',
   'meeting-fixed': 'AI会议室',
 }
 function findContactName(id: string): string | null {
