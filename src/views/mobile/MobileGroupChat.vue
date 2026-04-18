@@ -869,6 +869,9 @@ async function fetchNewMessages() {
       messages.value = messages.value.filter((m: any) => !m._pending)
       messages.value.push(...newMsgs)
       lastMessageId = Math.max(lastMessageId, ...newMsgs.map((m: any) => m.id))
+      // 有对方发的新消息才播音（自己发的不播）
+      const hasOtherMsg = newMsgs.some((m: any) => String(m.sender_id) !== String(currentUserId.value))
+      if (hasOtherMsg) playNotifySound()
       await scrollToBottom()
     }
   } catch { /* 忽略 */ }

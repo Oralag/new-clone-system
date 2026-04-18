@@ -144,11 +144,29 @@ onMounted(async () => {
     unreadCount.value = res?.data?.unread ?? 0
   } catch { /* 忽略 */ }
 
-  // 每30秒刷新未读数
+  // 每30秒刷新未读数，有新消息播提示音
   unreadPoll = setInterval(async () => {
     try {
       const res = await http.get('/chat/groups/unread', { silent: true })
-      unreadCount.value = res?.data?.unread ?? 0
+      const newCount = res?.data?.unread ?? 0
+      if (newCount > unreadCount.value) {
+        // 未读数增加 → 有新消息，播提示音
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+          const beep = (t: number, freq: number, dur: number) => {
+            const osc = ctx.createOscillator(); const gain = ctx.createGain()
+            osc.connect(gain); gain.connect(ctx.destination)
+            osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t)
+            gain.gain.setValueAtTime(0, t)
+            gain.gain.linearRampToValueAtTime(0.25, t + 0.01)
+            gain.gain.exponentialRampToValueAtTime(0.001, t + dur)
+            osc.start(t); osc.stop(t + dur)
+          }
+          beep(ctx.currentTime, 880, 0.12)
+          beep(ctx.currentTime + 0.14, 1100, 0.1)
+        } catch { /* ignore */ }
+      }
+      unreadCount.value = newCount
     } catch { /* 忽略 */ }
   }, 30000)
 })
