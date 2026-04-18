@@ -376,7 +376,7 @@
     <div v-if="showFabPlus" class="plus-menu-mask" @click="showFabPlus = false"></div>
     <div v-if="showFabPlus" class="plus-menu fab-plus-menu" :style="{ left: Math.min(fabPos.x, winWidth - 160) + 'px', bottom: (winHeight - fabPos.y + 10) + 'px' }">
       <div class="fab-plus-title">快捷操作</div>
-      <div class="plus-menu-item" @click="router.push('/mobile/procure/scan-in'); showFabPlus = false">
+      <div class="plus-menu-item" @click="router.push('/mobile/procure/order'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="10" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
         扫码入库
       </div>

@@ -130,7 +130,7 @@
                 </svg>
               </div>
               <div class="m-gs-top-info">
-                <div class="m-gs-top-name">{{ group?.name }}</div>
+                <div class="m-gs-top-name" @click="startRename">{{ group?.name }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" style="vertical-align:middle;margin-left:4px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
                 <div class="m-gs-top-sub">{{ members.length }} 人</div>
               </div>
               <div class="m-gs-add-btn-large" @click="showAddMember = true">
@@ -244,6 +244,22 @@
     </div>
 
     <!-- 清理确认 -->
+    <!-- 修改群名 -->
+    <div v-if="renamingGroup" class="m-modal-mask" @click.self="renamingGroup = false">
+      <div class="m-modal-sheet">
+        <div class="m-modal-header">
+          <span>修改群名</span>
+          <button class="m-modal-close" @click="renamingGroup = false">取消</button>
+        </div>
+        <div class="m-modal-body">
+          <input v-model="renameText" class="m-input" placeholder="输入新群名" maxlength="30" autofocus @keyup.enter="confirmRename" />
+        </div>
+        <div class="m-modal-footer">
+          <button class="m-btn-danger" @click="confirmRename">确认修改</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showCleanupConfirm" class="m-modal-mask" @click.self="showCleanupConfirm = false">
       <div class="m-modal-sheet">
         <div class="m-modal-header">
@@ -312,6 +328,8 @@ const loadingMore = ref(false)
 const showGroupInfo = ref(false)
 const showAddMember = ref(false)
 const showCleanupConfirm = ref(false)
+const renamingGroup = ref(false)
+const renameText = ref('')
 const showMemberAction = ref(false)
 const memberActionTarget = ref<any>(null)
 
@@ -609,6 +627,21 @@ function cancelAddMember() {
 
 // 打开选择器时加载通讯录
 watch(showAddMember, (v) => { if (v) loadAllContacts() })
+
+function startRename() {
+  renameText.value = group.value?.name || ''
+  renamingGroup.value = true
+}
+async function confirmRename() {
+  const name = renameText.value.trim()
+  if (!name || name === group.value?.name) { renamingGroup.value = false; return }
+  try {
+    await http.put(`/chat/groups/${groupId.value}`, { name })
+    group.value = { ...group.value, name }
+    renamingGroup.value = false
+    ElMessage.success('群名已修改')
+  } catch { ElMessage.error('修改失败') }
+}
 
 async function confirmAddMembers() {
   if (!addSelectedIds.value.size) return
@@ -1273,6 +1306,17 @@ onUnmounted(() => {
   outline: none;
   box-sizing: border-box;
 }
+.m-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .2s;
+}
+.m-input:focus { border-color: #3370ff; }
 .m-form-item { margin-bottom: 8px; }
 .m-form-item label { display: block; font-size: 13px; font-weight: 600; color: #4e5969; margin-bottom: 8px; }
 .m-form-tags { display: flex; gap: 8px; }
