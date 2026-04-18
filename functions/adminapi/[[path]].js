@@ -1143,6 +1143,20 @@ const agentRegistry = [
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // Operation Logs API — read logs from KV
+  // ═══════════════════════════════════════════════════════════════
+  if (pathname === '/adminapi/operation-logs' && request.method === 'GET') {
+    const raw = await env.USERS_KV.get('operation_logs')
+    const logs = raw ? JSON.parse(raw) : []
+    const limit = parseInt(url.searchParams.get('limit') || '50', 10)
+    const type = url.searchParams.get('type') || ''
+    let result = logs
+    if (type) result = result.filter(l => l.action_type === type)
+    result = result.slice(-limit).reverse()
+    return jsonRes({ logs: result, total: result.length })
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // Work Plans API — handled locally with KV storage
   // ═══════════════════════════════════════════════════════════════
   if (isWorkPath(pathname)) {
@@ -1229,6 +1243,57 @@ const agentRegistry = [
     }
 
     return errRes('工作计划功能暂不支持')
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Finance Receipt Logging — proxy to backend, then log operation
+  // ═══════════════════════════════════════════════════════════════
+  const financeReceiptMatch = pathname.match(/^\/adminapi\/finance\/(CollectReceipt|PayReceipt)\/add$/)
+  if (financeReceiptMatch && request.method === 'POST') {
+    const wrappedToken2 = request.headers.get('token') || ''
+    const decoded2 = decodeToken(wrappedToken2)
+    const userId2 = decoded2?.userId || decoded2?.id || null
+    const receiptType = financeReceiptMatch[1]
+
+    // Clone request body (it can only be read once)
+    let bodyText = ''
+    try { bodyText = await request.text() } catch { bodyText = '{}' }
+    const bodyData = JSON.parse(bodyText || '{}')
+
+    const backend2 = decoded2?.backend || DEFAULT_BACKEND
+    const realToken2 = decoded2?.realToken || (decoded2 ? null : wrappedToken2)
+    const targetUrl2 = backend2 + pathname + url.search
+    const headers2 = new Headers(request.headers)
+    headers2.set('host', new URL(backend2).host)
+    if (realToken2) headers2.set('token', realToken2)
+    else headers2.delete('token')
+    ;['origin', 'referer', 'cf-connecting-ip', 'cf-ipcountry', 'cf-ray', 'cf-visitor', 'x-forwarded-for', 'x-forwarded-proto'].forEach(h => headers2.delete(h))
+
+    try {
+      const proxyRes = await fetch(targetUrl2, { method: 'POST', headers: headers2, body: bodyText })
+      const resBody = await proxyRes.text()
+      const resJson = JSON.parse(resBody)
+
+      // Log operation on success
+      if (resJson.code === 1 || resJson.code === 200) {
+        const amount = bodyData.amount || '0'
+        const remark = bodyData.remark || bodyData.memo || ''
+        const actionName = receiptType === 'CollectReceipt'
+          ? `快速收款 ¥${amount}${remark ? '（' + remark + '）' : ''}`
+          : `快速付款 ¥${amount}${remark ? '（' + remark + '）' : ''}`
+        if (userId2) {
+          await logOperation(env, userId2, receiptType === 'CollectReceipt' ? 'quick_collect' : 'quick_pay', actionName, { amount, remark, receipt_type: receiptType, ...bodyData })
+        }
+      }
+
+      const newHeaders = new Headers(proxyRes.headers)
+      Object.entries(corsHeaders()).forEach(([k, v]) => newHeaders.set(k, v))
+      return new Response(resBody, { status: proxyRes.status, headers: newHeaders })
+    } catch (e) {
+      return new Response(JSON.stringify({ code: 0, show: 0, message: 'Proxy error: ' + (e?.message || e), data: [] }), {
+        status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      })
+    }
   }
 
   // All other requests: decode token and proxy to correct backend

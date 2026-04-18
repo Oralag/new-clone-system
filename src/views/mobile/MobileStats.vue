@@ -279,8 +279,8 @@ onMounted(async () => {
     const recRes = await http.get('/finance/Receivable/index', { params: { list_rows: 1000 } })
     const recRows = recRes?.data?.rows ?? []
     const pendingReceivable = recRows
-      .filter((r: any) => Number(r.status) === 1 && Number(r.un_collect||r.amount||0) > 0)
-      .reduce((s: number, r: any) => s + Number(r.un_collect||r.amount||0), 0)
+      .filter((r: any) => Number(r.status) === 1 && Number(r.un_collect || 0) > 0)
+      .reduce((s: number, r: any) => s + Number(r.un_collect || 0), 0)
     buildInsights({ todaySale: saleAmt + retailAmt, stockWarn: stockWarn.value, customerCount, todayOrders: todaySale.length + todayRetail.length, pendingReceivable })
   } catch {
     buildInsights({ todaySale: saleAmt + retailAmt, stockWarn: stockWarn.value, customerCount, todayOrders: todaySale.length + todayRetail.length, pendingReceivable: 0 })

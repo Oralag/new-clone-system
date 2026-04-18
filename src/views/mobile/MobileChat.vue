@@ -959,23 +959,31 @@ export default { name: 'MobileChat' }
 /* 内联新建表单 */
 .inline-add-form {
   background: #f7f8fa;
-  border-radius: 8px;
-  padding: 12px;
-  margin: 8px 16px;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .inline-form-title {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #1d2129;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e6eb;
 }
 .inline-form-cancel {
   font-size: 14px;
-  color: #2E6BE6;
+  color: #86909c;
   cursor: pointer;
+  padding: 4px 8px;
+}
+.inline-form-cancel:active {
+  color: #2E6BE6;
 }
 
 /* 切换按钮行 */
@@ -1677,29 +1685,85 @@ export default { name: 'MobileChat' }
   -webkit-overflow-scrolling: touch;
 }
 .task-input {
-  width: 100%; height: 48px; background: #f5f5f7; border: 1px solid transparent;
-  border-radius: 8px; padding: 0 14px; font-size: 15px; box-sizing: border-box;
-  outline: none; transition: border-color 0.2s;
+  width: 100%;
+  height: 44px;
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 15px;
+  color: #1d2129;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
 }
 .task-input:focus { border-color: #2E6BE6; }
 .task-textarea {
-  width: 100%; background: #f5f5f7; border: 1px solid transparent;
-  border-radius: 8px; padding: 12px 14px; font-size: 15px; resize: none;
-  box-sizing: border-box; outline: none; transition: border-color 0.2s;
+  width: 100%;
+  min-height: 60px;
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: #1d2129;
+  resize: none;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
 }
 .task-textarea:focus { border-color: #2E6BE6; }
 .task-field-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
 }
-.task-field-row label { font-size: 14px; color: #4e5969; white-space: nowrap; }
+.task-field-row label {
+  font-size: 14px;
+  color: #1d2129;
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 70px;
+}
 .task-select {
-  flex: 1; height: 40px; background: #f5f5f7; border: 1px solid transparent;
-  border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none;
+  flex: 1;
+  height: 44px;
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 15px;
+  color: #1d2129;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386909c' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.task-select:focus {
+  border-color: #2E6BE6;
 }
 .task-submit-btn {
-  width: 100%; height: 48px; background: #2E6BE6; color: white;
-  border: none; border-radius: 10px; font-size: 16px; font-weight: 600;
-  cursor: pointer; margin-top: 4px;
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(135deg, #2E6BE6 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  box-shadow: 0 2px 8px rgba(46, 107, 230, 0.25);
 }
-.task-submit-btn:active { opacity: 0.85; }
-.task-submit-btn:disabled { background: #C9CDD4; cursor: not-allowed; }
+.task-submit-btn:active {
+  transform: scale(0.98);
+  opacity: 0.95;
+}
+.task-submit-btn:disabled {
+  background: #C9CDD4;
+  cursor: not-allowed;
+  box-shadow: none;
+}

@@ -431,9 +431,15 @@ function openPlan(plan: any) {
 
 async function togglePin(plan: any) {
   const newPinned = !plan.is_pinned
-  await http.put(`/work/plans/${plan.id}`, { is_pinned: newPinned })
-  plan.is_pinned = newPinned
-  closeSwipe()
+  const oldPinned = plan.is_pinned
+  try {
+    await http.put(`/work/plans/${plan.id}`, { is_pinned: newPinned })
+    plan.is_pinned = newPinned
+    closeSwipe()
+  } catch {
+    plan.is_pinned = oldPinned
+    ElMessage.error('置顶操作失败，请重试')
+  }
 }
 
 async function toggleDone(plan: any) {
