@@ -95,7 +95,7 @@
           class="m-gc-textarea"
           :placeholder="aiMode ? '@管家 + 描述业务，如：录销售单给老王，奶茶5箱' : '输入消息...'"
           rows="1"
-          @keydown.enter.exact.prevent="sendMessage"
+          @keydown.enter.exact.prevent="sendMessage()"
           @input="autoResize"
         />
         <button class="m-gc-send-btn" :disabled="!inputText.trim() || sending" @click="sendMessage">
@@ -485,9 +485,9 @@ function insertAt(member: any) {
 async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || sending.value) return
+  sending.value = true  // 立即锁定，防止重复触发
   inputText.value = ''
   if (inputRef.value) inputRef.value.style.height = 'auto'
-  sending.value = true
 
   // 检查群里是否有 Agent（captain, copywriter, poster 等）
   const agentInGroup = members.value.find((m: any) => 
@@ -531,9 +531,8 @@ async function sendMessage() {
       console.warn('[Agent] reply error:', agentStatus)
     }
     if (agentStatus && agentStatus === 'ok') {
-      // Agent 已回复，重新加载消息
-      await loadMessages(false)
-      await scrollToBottom()
+      // Agent 已回复，拉取新消息（用 fetchNewMessages 而非 loadMessages，避免 before_id 方向错误）
+      await fetchNewMessages()
     }
   } catch (e: any) {
     ElMessage.error('发送失败')
@@ -735,6 +734,22 @@ async function loadMessages(reset = false) {
   } catch { /* 忽略 */ }
 }
 
+async function fetchNewMessages() {
+  try {
+    const res = await http.get(`/chat/groups/${groupId.value}/messages`, {
+      params: { list_rows: 50 }
+    })
+    const rows = res?.data?.rows ?? res?.rows ?? []
+    const existingIds = new Set(messages.value.map((m: any) => String(m.id)))
+    const newMsgs = rows.filter((m: any) => !existingIds.has(String(m.id)))
+    if (newMsgs.length > 0) {
+      messages.value.push(...newMsgs)
+      lastMessageId = Math.max(lastMessageId, ...newMsgs.map((m: any) => m.id))
+      await scrollToBottom()
+    }
+  } catch { /* 忽略 */ }
+}
+
 async function loadGroup() {
   try {
     const [groupRes, memberRes] = await Promise.allSettled([
@@ -762,22 +777,7 @@ onMounted(async () => {
   await scrollToBottom()
 
   // 轮询新消息（每 5 秒）
-  pollTimer = setInterval(async () => {
-    try {
-      const res = await http.get(`/chat/groups/${groupId.value}/messages`, {
-        params: { list_rows: 50 }
-      })
-      const rows = res?.data?.rows ?? res?.rows ?? []
-      // 去重：只添加本地不存在的消息
-      const existingIds = new Set(messages.value.map((m: any) => String(m.id)))
-      const newMsgs = rows.filter((m: any) => !existingIds.has(String(m.id)))
-      if (newMsgs.length > 0) {
-        messages.value.push(...newMsgs)
-        lastMessageId = Math.max(lastMessageId, ...newMsgs.map((m: any) => m.id))
-        await scrollToBottom()
-      }
-    } catch { /* 忽略 */ }
-  }, 5000)
+  pollTimer = setInterval(() => fetchNewMessages(), 5000)
 })
 
 onUnmounted(() => {

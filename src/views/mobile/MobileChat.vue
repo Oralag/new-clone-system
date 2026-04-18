@@ -314,7 +314,7 @@
   </div>
 
   <!-- 所有弹窗通过 Teleport 渲染到 body，避免被 .wx-layout 的 overflow:hidden 裁剪 -->
-  <Teleport to="body">
+  <Teleport to="body" v-if="isChatPage">
     <!-- 发起群聊 - 联系人选择面板 -->
     <div v-if="showCreateGroup" class="m-modal-mask" @click.self="showCreateGroup = false">
       <div class="m-modal-sheet m-modal-sheet-tall" @touchmove.stop>
@@ -406,13 +406,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import { getAdminList } from '@/api/setting'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+
+// 是否在消息页（控制FAB和弹窗只在消息页显示）
+const isChatPage = computed(() => route.path === '/mobile/chat')
 
 // 窗口尺寸（用于菜单定位）
 const winWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 375)

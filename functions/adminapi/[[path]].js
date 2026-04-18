@@ -450,9 +450,33 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
     content: `${m.sender_name}: ${m.content}`
   }))
 
-  // 为每个 Agent 调用 AI（带随机延迟模拟打字）
+  // 为每个 Agent 调用 AI（只取第一个有效 Agent，避免串行超时）
   const isWelcome = content === '__group_created__'
-  for (const agentId of agentIds) {
+
+  // 检测 @mention：如果消息里 @了某个 Agent 名字，优先让那个 Agent 回复
+  let activeAgentIds = []
+  if (!isWelcome) {
+    const mentionedAgentId = agentIds.find(id => {
+      const config = AGENT_CONFIGS[String(id)]
+      const info = AGENT_INFO[String(id)]
+      if (!config) return false
+      // 匹配 @config.name、@AGENT_INFO名字 或 @id
+      return content.includes(`@${config.name}`) ||
+             (info && content.includes(`@${info.name}`)) ||
+             content.includes(`@${id}`)
+    })
+    if (mentionedAgentId) {
+      activeAgentIds = [mentionedAgentId]
+    } else {
+      // 没有 @mention，取第一个有效 Agent 回复
+      const firstAgentId = agentIds.find(id => AGENT_CONFIGS[String(id)] && env.ANTHROPIC_API_KEY)
+      activeAgentIds = firstAgentId ? [firstAgentId] : []
+    }
+  } else {
+    const firstAgentId = agentIds.find(id => AGENT_CONFIGS[String(id)] && env.ANTHROPIC_API_KEY)
+    activeAgentIds = firstAgentId ? [firstAgentId] : []
+  }
+  for (const agentId of activeAgentIds) {
     const config = AGENT_CONFIGS[String(agentId)]
     if (!config || !env.ANTHROPIC_API_KEY) {
       console.log(`[AgentReply] skip ${agentId}: noConfig=${!config}, noKey=${!env.ANTHROPIC_API_KEY}`)
@@ -460,16 +484,14 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
     }
     console.log(`[AgentReply] calling AI for ${agentId}...`)
 
-    // 随机延迟 1-3 秒
-    await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000))
-
     // 欢迎消息 vs 正常回复
     const userMessage = isWelcome
       ? `你好！我是${config.name}。有什么可以帮你的？`
       : content
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const apiBase = (env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/$/, '')
+      const res = await fetch(`${apiBase}/v1/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

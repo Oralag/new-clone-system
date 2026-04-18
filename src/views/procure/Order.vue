@@ -1842,11 +1842,12 @@ function onFundChange(id: any) {
   fd.pay_account = f?.name ?? ''
 }
 
-function openCreate() {
+async function openCreate() {
   Object.assign(fd, defaultFd())
   fd.order_no = generateOrderNo()
   fd.order_sn = fd.order_no
   // 应用默认仓库
+  if (!warehouseOptions.value.length) await loadWarehouses()
   const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
   if (defaultWhId) {
     const wh = warehouseOptions.value.find((w: any) => w.id === defaultWhId)
@@ -1856,8 +1857,10 @@ function openCreate() {
   showForm.value = true
 }
 
-function openEdit(row: any, readonly = false) {
+async function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
+  // 确保仓库列表已加载
+  if (!warehouseOptions.value.length) await loadWarehouses()
   // 历史数据仓库为空时，补填默认仓库
   if (!fd.warehouse_id) {
     const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
