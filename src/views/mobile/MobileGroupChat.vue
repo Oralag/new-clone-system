@@ -86,12 +86,12 @@
       <div class="m-gc-input-row">
         <!-- 麦克风/键盘切换 -->
         <button class="m-gc-at-btn" @click="voiceMode = !voiceMode">
-          <svg v-if="!voiceMode" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
+          <svg v-if="!voiceMode" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
             <line x1="8" y1="23" x2="16" y2="23"/>
           </svg>
-          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
+          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
             <line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/>
             <line x1="15" y1="9" x2="15" y2="21"/>
@@ -125,12 +125,12 @@
           <span v-else>松开 发送 · {{ voiceSeconds }}s</span>
         </div>
         <button class="m-gc-at-btn" @click="showAtPicker = !showAtPicker">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
             <circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/>
           </svg>
         </button>
         <button class="m-gc-send-btn" :disabled="!inputText.trim() || sending" @click="sendMessage">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
           </svg>
         </button>
@@ -1150,32 +1150,33 @@ onUnmounted(() => {
 
 /* ── 输入区 ── */
 .m-gc-input-area {
-  background: #fff;
+  background: #f7f7f7;
   border-top: 1px solid #e5e6eb;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
 }
 .m-gc-input-row {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
 }
 .m-gc-at-btn {
-  width: 36px; height: 36px;
+  width: 40px; height: 40px;
   border: none;
-  background: #f5f5f7;
-  border-radius: 10px;
+  background: none;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .m-gc-textarea {
   flex: 1;
-  background: #f5f5f7;
+  background: #fff;
   border: 1px solid transparent;
-  border-radius: 18px;
-  padding: 8px 14px;
-  font-size: 15px;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 16px;
   color: #1d2129;
   outline: none;
   resize: none;
@@ -1183,24 +1184,26 @@ onUnmounted(() => {
   max-height: 120px;
   font-family: inherit;
   transition: border 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-.m-gc-textarea:focus { border-color: #0071e3; background: #fff; }
+.m-gc-textarea:focus { border-color: #c8c8c8; }
 .m-gc-send-btn {
-  width: 36px; height: 36px;
+  width: 40px; height: 40px;
   background: #0071e3;
   border: none;
-  border-radius: 50%;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .m-gc-send-btn:disabled { background: #d1d5db; cursor: not-allowed; }
 
 /* ── 语音按住说话 ── */
 .m-gc-voice-btn {
   flex: 1;
-  height: 44px;
-  background: #f5f5f7;
+  height: 50px;
+  background: #fff;
   border: 1px solid transparent;
   border-radius: 6px;
   display: flex;
