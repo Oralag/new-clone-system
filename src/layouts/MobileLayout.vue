@@ -266,7 +266,8 @@ export default { name: 'MobileLayout' }
 
 /* ── 底部 Tab Bar ── */
 .wx-tabbar {
-  height: 50px;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: #fafafa;
   border-top: 1px solid #e0e0e0;
   display: flex;
@@ -327,9 +328,5 @@ export default { name: 'MobileLayout' }
   font-size: 10px;
   line-height: 1;
   font-weight: 500;
-}
-
-.wx-tabbar {
-  margin-bottom: env(safe-area-inset-bottom, 0px);
 }
 </style>

@@ -8,7 +8,7 @@
         </svg>
       </button>
       <div class="m-ai-title-area">
-        <div class="m-ai-title">🦢 管家</div>
+        <div class="m-ai-title">🦢 ERP管家</div>
         <div class="m-ai-sub">AI 业务助手</div>
       </div>
       <div style="width:36px" />
@@ -29,7 +29,7 @@
       <!-- 欢迎 -->
       <div v-if="messages.length === 0" class="m-ai-welcome">
         <div class="m-ai-welcome-icon">🦢</div>
-        <div class="m-ai-welcome-title">你好，我是管家</div>
+        <div class="m-ai-welcome-title">你好，我是ERP管家</div>
         <div class="m-ai-welcome-sub">用自然语言告诉我您要做什么，我来帮您录入业务数据</div>
       </div>
 
