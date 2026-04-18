@@ -319,13 +319,13 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 .wholesale-cta { color: #d97706; }
 @media (max-width: 600px) { .brand-mode-grid { grid-template-columns: 1fr; } }
 @media (max-width: 768px) {
-  .brand-mode-overlay { inset: 48px 0 0 0; padding: 16px; }
-  .brand-mode-grid { gap: 14px; border-radius: 16px; }
-  .brand-mode-card { padding: 32px 24px; border-radius: 24px; }
-  .brand-mode-icon { width: 72px; height: 72px; border-radius: 20px; margin-bottom: 18px; }
-  .brand-mode-icon svg { width: 36px; height: 36px; }
-  .brand-mode-title { font-size: 22px; }
-  .brand-mode-desc { font-size: 13px; margin-bottom: 22px; }
+  .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; padding: 10px; }
+  .brand-mode-grid { gap: 10px; border-radius: 14px; }
+  .brand-mode-card { padding: 20px 16px; border-radius: 18px; }
+  .brand-mode-icon { width: 56px; height: 56px; border-radius: 16px; margin-bottom: 12px; }
+  .brand-mode-icon svg { width: 28px; height: 28px; }
+  .brand-mode-title { font-size: 18px; margin-bottom: 8px; }
+  .brand-mode-desc { font-size: 12px; margin-bottom: 16px; }
 }
 
 .brand-home { background: #fff; }

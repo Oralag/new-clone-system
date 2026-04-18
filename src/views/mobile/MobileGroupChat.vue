@@ -363,15 +363,16 @@ const ROBOT_AGENTS = [
   { id: 'publisher', name: '发布Agent', position: '多平台发布' },
   { id: 'designer', name: '平面设计师', position: '海报·Banner' },
   { id: 'marketing', name: '营销顾问', position: '营销战略' },
+  { id: 'adam', name: '亚当', position: '投资决策' },
+  { id: 'nova', name: 'Nova', position: '品牌主页' },
 ]
 
 async function loadAllContacts() {
   if (contactsLoaded) return
   try {
     const [{ getAdminList }] = await Promise.all([import('@/api/setting')])
-    const [adminRes, groupsRes] = await Promise.all([
+    const [adminRes] = await Promise.all([
       getAdminList({ list_rows: 500 }),
-      http.get('/chat/groups', { params: { list_rows: 200 }, silent: true }),
     ])
     // 员工
     const rows = adminRes?.data?.rows ?? adminRes?.rows ?? []
@@ -380,14 +381,8 @@ async function loadAllContacts() {
       name: r.name || r.admin_name || '未知用户',
       position: r.dept_name || r.role_name || '',
     }))
-    // 已有群聊
-    const groups = (groupsRes?.data?.rows ?? groupsRes?.rows ?? []).map((g: any) => ({
-      id: `group_${g.id}`,
-      name: g.name || '群聊',
-      position: '群聊',
-    }))
-    // 合并：机器人 + 群聊 + 员工
-    allContacts.value = [...ROBOT_AGENTS, ...groups, ...humans]
+    // 合并：机器人 + 员工
+    allContacts.value = [...ROBOT_AGENTS, ...humans]
     contactsLoaded = true
   } catch {
     allContacts.value = [...ROBOT_AGENTS]

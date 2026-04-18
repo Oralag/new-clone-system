@@ -160,6 +160,8 @@ const robotAgents = [
   { id: 'publisher', name: '发布Agent', avatar: '🚀', color: '#10b981', desc: '多平台排期·内容发布·数据复盘' },
   { id: 'designer', name: '平面设计师', avatar: '🖼️', color: '#e11d48', desc: '海报·Banner·Logo·包装·社媒图' },
   { id: 'marketing', name: '营销顾问', avatar: '📊', color: '#059669', desc: '营销战略·STP·4P·消费者行为' },
+  { id: 'adam', name: '亚当', avatar: '🌱', color: '#b45309', desc: '投资决策中枢·商业分析·市场判断' },
+  { id: 'nova', name: 'Nova', avatar: '✨', color: '#7c3aed', desc: '品牌主页形象·品牌故事·对外表达' },
 ]
 
 const filteredEmployees = computed(() => {
