@@ -1668,11 +1668,18 @@ onUnmounted(() => {
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .meeting-room { height: auto; min-height: 100vh; border-radius: 12px; }
+  .meeting-room { height: 100vh; border-radius: 0; display: flex; flex-direction: column; }
   .messages-area { min-height: 50vh; }
   .participants { display: none; }
   .msg-bubble-wrap { max-width: 88%; }
   .summary-panel { display: none; }
   .has-summary .messages-area { flex: 1; }
+  /* 移动端输入框固定底部 */
+  .meeting-input-area {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    position: sticky;
+    bottom: 0;
+  }
 }
 </style>
