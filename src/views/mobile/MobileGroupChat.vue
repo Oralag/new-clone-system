@@ -531,8 +531,8 @@ async function sendMessage() {
       console.warn('[Agent] reply error:', agentStatus)
     }
     if (agentStatus && agentStatus === 'ok') {
-      // Agent 已回复，拉取新消息（用 fetchNewMessages 而非 loadMessages，避免 before_id 方向错误）
-      await fetchNewMessages()
+      // Agent 已回复，等一小会再拉（Agent 写入 KV 需要时间）
+      setTimeout(() => fetchNewMessages(), 1500)
     }
   } catch (e: any) {
     ElMessage.error('发送失败')
@@ -740,9 +740,14 @@ async function fetchNewMessages() {
       params: { list_rows: 50 }
     })
     const rows = res?.data?.rows ?? res?.rows ?? []
-    const existingIds = new Set(messages.value.map((m: any) => String(m.id)))
+    // 只统计非 pending 的本地消息做去重
+    const existingIds = new Set(
+      messages.value.filter((m: any) => !m._pending).map((m: any) => String(m.id))
+    )
     const newMsgs = rows.filter((m: any) => !existingIds.has(String(m.id)))
     if (newMsgs.length > 0) {
+      // 先移除已被服务器确认的 pending 消息
+      messages.value = messages.value.filter((m: any) => !m._pending)
       messages.value.push(...newMsgs)
       lastMessageId = Math.max(lastMessageId, ...newMsgs.map((m: any) => m.id))
       await scrollToBottom()

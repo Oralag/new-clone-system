@@ -298,6 +298,9 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 
 <style scoped>
 .brand-mode-overlay { position: fixed; inset: 60px 0 0 0; z-index: 200; background: #fff; display: flex; align-items: center; justify-content: center; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 768px) {
+  .brand-mode-overlay { inset: 48px 0 0 0; }
+}
 .brand-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 800px; width: 100%; overflow: hidden; border-radius: 20px; }
 .brand-mode-card { padding: 48px; border-radius: 32px; border: 2px solid transparent; cursor: pointer; transition: all 0.4s cubic-bezier(0.23,1,0.32,1); display: flex; flex-direction: column; align-items: center; text-align: center; }
 .brand-mode-retail { background: #f5f5f7; }
@@ -315,6 +318,15 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 .retail-cta { color: #0071e3; }
 .wholesale-cta { color: #d97706; }
 @media (max-width: 600px) { .brand-mode-grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) {
+  .brand-mode-overlay { inset: 48px 0 0 0; padding: 16px; }
+  .brand-mode-grid { gap: 14px; border-radius: 16px; }
+  .brand-mode-card { padding: 32px 24px; border-radius: 24px; }
+  .brand-mode-icon { width: 72px; height: 72px; border-radius: 20px; margin-bottom: 18px; }
+  .brand-mode-icon svg { width: 36px; height: 36px; }
+  .brand-mode-title { font-size: 22px; }
+  .brand-mode-desc { font-size: 13px; margin-bottom: 22px; }
+}
 
 .brand-home { background: #fff; }
 .brand-hero { position: relative; height: 620px; border-radius: 32px; overflow: hidden; margin: 24px; box-shadow: 0 40px 80px rgba(0,0,0,0.15); }

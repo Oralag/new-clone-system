@@ -1149,6 +1149,7 @@ async function handleGetContacts(request, env) {
 // Agent 列表（内联，避免 require）
 const agentRegistry = [
   { id: 'captain', name: '总指挥', role: 'AI 指挥官' },
+  { id: 'secretary', name: '秘书', role: '广告部门秘书' },
   { id: 'copywriter', name: '内容部', role: 'AI 文案' },
   { id: 'poster', name: '发布部', role: 'AI 发布' },
   { id: 'video', name: '视频部', role: 'AI 视频' },
