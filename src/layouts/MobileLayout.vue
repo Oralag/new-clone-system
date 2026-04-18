@@ -73,8 +73,8 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-// 弹窗时隐藏 TabBar
-const hideTabbar = ref(false)
+// 根据路由判断是否隐藏 TabBar（非主tab页面隐藏）
+const hideTabbar = computed(() => !isMainTab.value)
 provide('hideTabbar', hideTabbar)
 
 const tabs = [
