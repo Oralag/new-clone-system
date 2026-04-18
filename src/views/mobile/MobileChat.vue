@@ -351,8 +351,8 @@
         </div>
         <!-- 底部确认 -->
         <div class="m-modal-footer">
-          <button class="group-create-btn" :disabled="selectedMembers.length === 0" @click="doCreateGroup">
-            确定（{{ selectedMembers.length }}）
+          <button class="group-create-btn" :disabled="selectedMembers.length === 0 || creatingGroup" @click="doCreateGroup">
+            {{ creatingGroup ? '创建中...' : `确定（${selectedMembers.length}）` }}
           </button>
         </div>
       </div>
@@ -482,8 +482,12 @@ function toggleMember(c: any) {
   else selectedMembers.value.push(c)
 }
 
+const creatingGroup = ref(false)
+
 async function doCreateGroup() {
   if (selectedMembers.value.length === 0) return
+  if (creatingGroup.value) return  // 防重复
+  creatingGroup.value = true
   try {
     const memberIds = selectedMembers.value.map(m => m.id)
     let name = newGroupName.value.trim()
@@ -496,26 +500,25 @@ async function doCreateGroup() {
       name,
       member_ids: memberIds
     })
-    console.log('[doCreateGroup] res:', JSON.stringify(res))
     showCreateGroup.value = false
     selectedMembers.value = []
     groupSearchKeyword.value = ''
     newGroupName.value = ''
-    // 后端返回 { code:1, data: { id, name, ... } }
     const groupId = res?.data?.id || res?.id
     if (groupId) {
-      loadGroups() // 后台刷新列表
+      loadGroups()
       router.push(`/mobile/chat/${groupId}`)
     } else {
       loadGroups()
     }
   } catch (e) {
-    console.error('[doCreateGroup] error:', e)
     alert('创建群聊失败：' + (e?.message || '未知错误'))
     showCreateGroup.value = false
     selectedMembers.value = []
     groupSearchKeyword.value = ''
     newGroupName.value = ''
+  } finally {
+    creatingGroup.value = false
   }
 }
 const activeTab = ref('all')

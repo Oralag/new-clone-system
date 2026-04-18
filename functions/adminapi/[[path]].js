@@ -397,20 +397,16 @@ async function handleCreateGroup(request, env) {
 
   await logOperation(env, userId, 'chat_create', `创建群聊「${name}」`, { group_id: newId, group_name: name })
 
-  // 🤖 Agent 发欢迎消息
+  // 先立即返回，Agent 欢迎消息异步发（不阻塞建群响应）
+  const result = jsonSuccess({ ...newGroup, member_ids: allMembers.map(m => m.user_id), unread: 0, last_message: '' })
+
+  // 🤖 Agent 发欢迎消息（fire-and-forget，不等待）
   const agentIds = member_ids.filter(id => AGENT_IDS.has(String(id)))
-  let welcomeStatus = 'no_agents'
   if (agentIds.length > 0) {
-    try {
-      welcomeStatus = 'triggered'
-      await triggerAgentReplies(newId, userId, '__group_created__', allMembers.map(m => m.user_id), env)
-      welcomeStatus = 'ok'
-    } catch (e) {
-      welcomeStatus = 'error: ' + String(e?.message || e)
-    }
+    triggerAgentReplies(newId, userId, '__group_created__', allMembers.map(m => m.user_id), env).catch(() => {})
   }
 
-  return jsonSuccess({ ...newGroup, member_ids: allMembers.map(m => m.user_id), unread: 0, last_message: '', _welcomeStatus: welcomeStatus })
+  return result
 }
 
 async function handleGetGroup(request, env) {
