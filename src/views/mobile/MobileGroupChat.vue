@@ -323,7 +323,24 @@ watch([showGroupInfo, showAddMember, showCleanupConfirm, showMemberAction], ([a,
 const showAtPicker = ref(false)
 const addMemberSearch = ref('')
 const addSelectedIds = ref<Set<string>>(new Set())
+const allContacts = ref<any[]>([])
+let contactsLoaded = false
 const cleanupDays = ref(180)
+
+async function loadAllContacts() {
+  if (contactsLoaded) return
+  try {
+    const { getAdminList } = await import('@/api/setting')
+    const res = await getAdminList({ list_rows: 500 })
+    const rows = res?.data?.rows ?? res?.rows ?? []
+    allContacts.value = rows.map((r: any) => ({
+      id: r.id,
+      name: r.name || r.admin_name || '未知用户',
+      position: r.dept_name || r.role_name || '',
+    }))
+    contactsLoaded = true
+  } catch { allContacts.value = [] }
+}
 const cleaning = ref(false)
 const aiMode = ref(false)
 const pinEnabled = ref(false)
@@ -345,7 +362,7 @@ function getAvatarColor(id: string | number) {
 
 const addableMembers = computed(() => {
   const existingIds = new Set(members.value.map((m: any) => m.id))
-  const all = members.value // 复用已有成员数据
+  const all = allContacts.value
   if (!addMemberSearch.value) return all.filter((m: any) => !existingIds.has(m.id))
   const q = addMemberSearch.value.toLowerCase()
   return all.filter((m: any) => !existingIds.has(m.id) && m.name?.toLowerCase().includes(q))
@@ -444,10 +461,16 @@ async function sendMessage() {
     // 1. 先发送用户消息到群
     const res = await http.post(`/chat/groups/${groupId.value}/messages`, { content: text })
     const sent = res?.data ?? res
-    // 替换本地消息
+    // 替换本地消息（用 id 去重，避免轮询重复）
     const idx = messages.value.findIndex(m => m.id === localMsg.id)
-    if (idx !== -1) messages.value.splice(idx, 1, sent)
-    lastMessageId = sent.id
+    if (idx !== -1) {
+      messages.value.splice(idx, 1, sent)
+    } else {
+      // 本地消息已被轮询替换，检查是否已有服务器消息
+      const exists = messages.value.some((m: any) => String(m.id) === String(sent.id))
+      if (!exists) messages.value.push(sent)
+    }
+    lastMessageId = Math.max(lastMessageId, sent.id)
 
     // 2. 如果群里有 Agent，调用 Agent API 获取 AI 回复
     if (agentId) {
@@ -553,6 +576,9 @@ function cancelAddMember() {
   addSelectedIds.value = new Set()
   addMemberSearch.value = ''
 }
+
+// 打开选择器时加载通讯录
+watch(showAddMember, (v) => { if (v) loadAllContacts() })
 
 async function confirmAddMembers() {
   if (!addSelectedIds.value.size) return
@@ -716,11 +742,12 @@ onMounted(async () => {
         params: { list_rows: 50 }
       })
       const rows = res?.data?.rows ?? res?.rows ?? []
-      // 找出比 lastMessageId 更新的消息
-      const newMsgs = rows.filter((m: any) => m.id > lastMessageId)
+      // 去重：只添加本地不存在的消息
+      const existingIds = new Set(messages.value.map((m: any) => String(m.id)))
+      const newMsgs = rows.filter((m: any) => !existingIds.has(String(m.id)))
       if (newMsgs.length > 0) {
         messages.value.push(...newMsgs)
-        lastMessageId = newMsgs[newMsgs.length - 1].id
+        lastMessageId = Math.max(lastMessageId, ...newMsgs.map((m: any) => m.id))
         await scrollToBottom()
       }
     } catch { /* 忽略 */ }
