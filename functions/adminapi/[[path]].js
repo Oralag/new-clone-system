@@ -896,6 +896,39 @@ async function handlePinGroup(request, env) {
   return jsonSuccess({ is_pinned: pinned })
 }
 
+// PUT /adminapi/chat/groups/:id - 修改群名
+async function handleRenameGroup(request, env) {
+  const groupId = extractGroupId(request.url)
+  if (!groupId) return errRes('群不存在')
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+
+  let body
+  try { body = await request.json() } catch { return errRes('请求格式错误') }
+  const name = (body.name || '').trim()
+  if (!name) return errRes('群名不能为空')
+
+  const raw = await env.USERS_KV.get('chat_groups')
+  const groups = raw ? JSON.parse(raw) : []
+  const idx = groups.findIndex(g => String(g.id) === String(groupId))
+  if (idx < 0) return errRes('群不存在')
+
+  // 非创建者/成员不能操作
+  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberMap = memberRaw ? JSON.parse(memberMap) : {}
+  const members = memberMap[groupId] || []
+  if (!members.some(m => String(m.user_id) === String(userId)) && String(groups[idx].created_by) !== String(userId)) {
+    return errRes('无权限')
+  }
+
+  groups[idx] = { ...groups[idx], name, updated_at: new Date().toISOString() }
+  await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+
+  await logOperation(env, userId, 'chat_rename', `修改群名「${name}」`, { group_id: groupId, group_name: name })
+
+  return jsonSuccess({ name, id: groupId })
+}
+
 // DELETE /adminapi/chat/groups/:id - 删除会话
 async function handleDeleteGroup(request, env) {
   const groupId = extractGroupId(request.url)
@@ -970,6 +1003,10 @@ const agentRegistry = [
     // POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/pin$/) && request.method === 'POST') {
       return handlePinGroup(request, env)
+    }
+    // PUT /adminapi/chat/groups/:id - 修改群名
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'PUT') {
+      return handleRenameGroup(request, env)
     }
     // DELETE /adminapi/chat/groups/:id - 删除会话
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'DELETE') {
