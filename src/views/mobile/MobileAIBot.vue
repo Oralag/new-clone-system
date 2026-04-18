@@ -203,11 +203,19 @@ function startVoice(e: TouchEvent | MouseEvent) {
   recognition.interimResults = false
   recognition.onresult = (ev: any) => {
     const text = ev.results[0]?.[0]?.transcript || ''
-    if (text && !voiceCancel.value) { inputText.value = text; nextTick(() => sendMessage()) }
+    if (text && !voiceCancel.value) {
+      inputText.value = text
+      voiceMode.value = false
+      nextTick(() => { autoResize(); sendMessage() })
+    }
   }
-  recognition.onerror = () => { isRecording.value = false }
+  recognition.onerror = (ev: any) => {
+    if (ev.error !== 'aborted') ElMessage.warning('语音识别失败，请重试')
+    isRecording.value = false
+    if (voiceTimer) clearInterval(voiceTimer)
+  }
   recognition.onend = () => { isRecording.value = false; if (voiceTimer) clearInterval(voiceTimer) }
-  recognition.start()
+  try { recognition.start() } catch(e) { isRecording.value = false }
 }
 
 function checkVoiceCancel(e: TouchEvent) {

@@ -380,7 +380,7 @@ function startVoice(e: TouchEvent | MouseEvent) {
   voiceTimer = setInterval(() => { voiceSeconds.value++ }, 1000)
 
   const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-  if (!SR) { ElMessage.warning('当前浏览器不支持语音'); return }
+  if (!SR) { ElMessage.warning('当前浏览器不支持语音'); isRecording.value = false; return }
   recognition = new SR()
   recognition.lang = 'zh-CN'
   recognition.continuous = false
@@ -389,12 +389,21 @@ function startVoice(e: TouchEvent | MouseEvent) {
     const text = ev.results[0]?.[0]?.transcript || ''
     if (text && !voiceCancel.value) {
       inputText.value = text
-      nextTick(() => sendMessage())
+      voiceMode.value = false  // 切回文字模式显示识别结果
+      nextTick(() => {
+        autoResize()
+        sendMessage()          // 自动发送
+      })
     }
   }
-  recognition.onerror = () => { isRecording.value = false }
+  recognition.onerror = (ev: any) => {
+    console.error('[Voice]', ev.error)
+    if (ev.error !== 'aborted') ElMessage.warning('语音识别失败，请重试')
+    isRecording.value = false
+    if (voiceTimer) clearInterval(voiceTimer)
+  }
   recognition.onend = () => { isRecording.value = false; if (voiceTimer) clearInterval(voiceTimer) }
-  recognition.start()
+  try { recognition.start() } catch(e) { isRecording.value = false }
 }
 
 function checkVoiceCancel(e: TouchEvent) {

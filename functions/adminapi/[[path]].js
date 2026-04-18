@@ -477,7 +477,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
   // 获取历史消息作为上下文（最近 8 条，全部作为 user 角色带发言人名字，避免AI误认身份）
   const raw = await env.USERS_KV.get('chat_messages')
   const msgMap = raw ? JSON.parse(raw) : {}
-  const history = (msgMap[groupId] || []).slice(-8).map(m => ({
+  const history = (msgMap[groupId] || []).slice(-20).map(m => ({
     role: 'user',
     content: `[${m.sender_name}]: ${m.content}`
   }))
@@ -485,9 +485,10 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
   // 为每个 Agent 调用 AI（只取第一个有效 Agent，避免串行超时）
   const isWelcome = content === '__group_created__'
 
-  // 检测 @mention：只有被@到才回复，没有@则不回复（群聊不主动插嘴）
+  // 检测触发逻辑
   let activeAgentIds = []
   if (!isWelcome) {
+    // 1. 先检测 @mention（任何人发都有效）
     const mentionedAgentId = agentIds.find(id => {
       const config = AGENT_CONFIGS[String(id)]
       const info = AGENT_INFO[String(id)]
@@ -499,10 +500,26 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
     if (mentionedAgentId) {
       activeAgentIds = [mentionedAgentId]
     } else {
-      // 没有@mention：秘书兜底回复（如果群里有秘书）；否则不回复
-      const secretaryInGroup = agentIds.find(id => String(id) === 'secretary')
-      if (secretaryInGroup && AGENT_CONFIGS['secretary'] && env.ANTHROPIC_API_KEY) {
-        activeAgentIds = ['secretary']
+      // 2. 只有人类发的消息才检测名字提及 / 秘书兜底（防止 Agent 互相触发死循环）
+      const senderIsAgent = AGENT_IDS.has(String(senderId))
+      if (!senderIsAgent) {
+        // 检测消息里是否直接出现 Agent 名字（无需@符号）
+        const namedAgentId = agentIds.find(id => {
+          const config = AGENT_CONFIGS[String(id)]
+          const info = AGENT_INFO[String(id)]
+          if (!config) return false
+          const name = info?.name || config.name
+          return content.includes(name) && String(id) !== 'secretary'
+        })
+        if (namedAgentId) {
+          activeAgentIds = [namedAgentId]
+        } else {
+          // 3. 秘书兜底
+          const secretaryInGroup = agentIds.find(id => String(id) === 'secretary')
+          if (secretaryInGroup && AGENT_CONFIGS['secretary'] && env.ANTHROPIC_API_KEY) {
+            activeAgentIds = ['secretary']
+          }
+        }
       }
     }
   } else {
