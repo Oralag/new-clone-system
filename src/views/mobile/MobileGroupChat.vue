@@ -111,6 +111,11 @@
     <div v-if="showGroupInfo" class="m-gs-mask" @click.self="showGroupInfo = false">
       <div class="m-gs-sheet">
         <div class="m-gs-header">
+          <span class="m-gs-back" @click="showGroupInfo = false">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </span>
           <span>聊天信息</span>
         </div>
         <div class="m-gs-body">
@@ -303,10 +308,12 @@ const showCleanupConfirm = ref(false)
 const showMemberAction = ref(false)
 const memberActionTarget = ref<any>(null)
 
-// 弹窗时隐藏底部 TabBar
+// 聊天时隐藏底部 TabBar（进入即隐藏，弹窗也隐藏）
 const hideTabbar = inject<Ref<boolean>>('hideTabbar', ref(false))
+hideTabbar.value = true
 watch([showGroupInfo, showAddMember, showCleanupConfirm, showMemberAction], ([a, b, c, d]) => {
-  hideTabbar.value = a || b || c || d
+  // 弹窗关闭时不恢复 TabBar（因为还在聊天页），只在离开页面时恢复
+  if (a || b || c || d) hideTabbar.value = true
 })
 const showAtPicker = ref(false)
 const addMemberSearch = ref('')
@@ -967,7 +974,7 @@ onUnmounted(() => {
   right: 0;
   height: 100dvh;
   background: rgba(0,0,0,0.5);
-  z-index: 999;
+  z-index: 1002;
   display: flex;
   align-items: flex-end;
 }
@@ -1004,13 +1011,17 @@ onUnmounted(() => {
   position: fixed; top: 0; right: 0; bottom: 0; width: 90%; max-width: 400px;
   background: #111; border-radius: 0;
   display: flex; flex-direction: column; animation: slideRight 0.25s ease;
-  z-index: 1001;
+  z-index: 1001; padding-top: env(safe-area-inset-top);
 }
 .m-gs-header {
   display: flex; align-items: center; justify-content: center; height: 52px;
   position: relative; font-size: 17px; font-weight: 400; color: #fff;
 }
-.m-gs-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.m-gs-back {
+  position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+  color: #fff; cursor: pointer; display: flex; align-items: center;
+}
+.m-gs-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: env(safe-area-inset-bottom); }
 
 /* 顶部：群头像 + 群名 */
 .m-gs-top {
