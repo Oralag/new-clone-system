@@ -1118,7 +1118,9 @@ export async function onRequest(context) {
     if (pathname === '/adminapi/chat/contacts' && request.method === 'GET') {
       return handleGetContacts(request, env)
     }
-    return errRes('聊天功能暂不支持')
+    // 未匹配的chat路径，打日志后返回空成功（避免前端弹错误提示）
+    console.warn('[Chat fallback] unmatched path:', pathname, request.method)
+    return jsonSuccess({ rows: [], total: 0 })
 async function handlePinGroup(request, env) {
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
