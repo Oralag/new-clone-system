@@ -299,7 +299,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 <style scoped>
 .brand-mode-overlay { position: fixed; inset: 60px 0 0 0; z-index: 200; background: #fff; display: flex; align-items: center; justify-content: center; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 @media (max-width: 768px) {
-  .brand-mode-overlay { inset: 48px 0 0 0; }
+  .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; }
 }
 .brand-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 800px; width: 100%; overflow: hidden; border-radius: 20px; }
 .brand-mode-card { padding: 48px; border-radius: 32px; border: 2px solid transparent; cursor: pointer; transition: all 0.4s cubic-bezier(0.23,1,0.32,1); display: flex; flex-direction: column; align-items: center; text-align: center; }

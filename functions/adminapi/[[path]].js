@@ -1036,8 +1036,31 @@ export async function onRequest(context) {
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members\/\d+$/) && request.method === 'DELETE') {
       return handleRemoveGroupMember(request, env)
     }
-
-// POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话
+    // POST /adminapi/chat/groups/:id/read - mark messages read
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/read$/) && request.method === 'POST') {
+      return handleMarkRead(request, env)
+    }
+    // POST /adminapi/chat/groups/:id/cleanup - cleanup old messages
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/cleanup$/) && request.method === 'POST') {
+      return handleCleanupMessages(request, env)
+    }
+    // POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/pin$/) && request.method === 'POST') {
+      try { return await handlePinGroup(request, env) } catch (e) { return errRes('置顶操作失败: ' + (e?.message || e)) }
+    }
+    // PUT /adminapi/chat/groups/:id - 修改群名
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'PUT') {
+      try { return await handleRenameGroup(request, env) } catch (e) { return errRes('修改群名失败: ' + (e?.message || e)) }
+    }
+    // DELETE /adminapi/chat/groups/:id - 删除会话
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'DELETE') {
+      return handleDeleteGroup(request, env)
+    }
+    // GET /adminapi/chat/contacts - 获取通讯录成员
+    if (pathname === '/adminapi/chat/contacts' && request.method === 'GET') {
+      return handleGetContacts(request, env)
+    }
+    return errRes('聊天功能暂不支持')
 async function handlePinGroup(request, env) {
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
@@ -1160,35 +1183,7 @@ const agentRegistry = [
   { id: 'marketing', name: '营销顾问', role: 'AI 营销' },
 ]
 
-// ───────────────────────────────────────────────
-// Router (continued from above)
-// ───────────────────────────────────────────────
-    // POST /adminapi/chat/groups/:id/read - mark messages read
-    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/read$/) && request.method === 'POST') {
-      return handleMarkRead(request, env)
-    }
-    // POST /adminapi/chat/groups/:id/cleanup - cleanup old messages
-    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/cleanup$/) && request.method === 'POST') {
-      return handleCleanupMessages(request, env)
-    }
-    // POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话
-    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/pin$/) && request.method === 'POST') {
-      try { return await handlePinGroup(request, env) } catch (e) { return errRes('置顶操作失败: ' + (e?.message || e)) }
-    }
-    // PUT /adminapi/chat/groups/:id - 修改群名
-    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'PUT') {
-      try { return await handleRenameGroup(request, env) } catch (e) { return errRes('修改群名失败: ' + (e?.message || e)) }
-    }
-    // DELETE /adminapi/chat/groups/:id - 删除会话
-    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'DELETE') {
-      return handleDeleteGroup(request, env)
-    }
-    // GET /adminapi/chat/contacts - 获取通讯录成员（员工 + Agent）
-    if (pathname === '/adminapi/chat/contacts' && request.method === 'GET') {
-      return handleGetContacts(request, env)
-    }
-    // Fallback for unhandled chat paths
-    return errRes('聊天功能暂不支持')
+
   }
 
   // ═══════════════════════════════════════════════════════════════
