@@ -329,19 +329,33 @@ const allContacts = ref<any[]>([])
 let contactsLoaded = false
 const cleanupDays = ref(180)
 
+const ROBOT_AGENTS = [
+  { id: 'captain', name: 'Captain 总指挥', position: '统一调度' },
+  { id: 'secretary', name: '秘书', position: '广告部门秘书' },
+  { id: 'copywriter', name: '文案Agent', position: '爆款文案' },
+  { id: 'poster', name: '海报Agent', position: '视觉设计' },
+  { id: 'video', name: '视频Agent', position: '短视频' },
+  { id: 'brand', name: '品牌Agent', position: '品牌策略' },
+  { id: 'trend', name: '趋势Agent', position: '热点追踪' },
+  { id: 'publisher', name: '发布Agent', position: '多平台发布' },
+  { id: 'designer', name: '平面设计师', position: '海报·Banner' },
+  { id: 'marketing', name: '营销顾问', position: '营销战略' },
+]
+
 async function loadAllContacts() {
   if (contactsLoaded) return
   try {
     const { getAdminList } = await import('@/api/setting')
     const res = await getAdminList({ list_rows: 500 })
     const rows = res?.data?.rows ?? res?.rows ?? []
-    allContacts.value = rows.map((r: any) => ({
+    const humans = rows.map((r: any) => ({
       id: r.id,
       name: r.name || r.admin_name || '未知用户',
       position: r.dept_name || r.role_name || '',
     }))
+    allContacts.value = [...ROBOT_AGENTS, ...humans]
     contactsLoaded = true
-  } catch { allContacts.value = [] }
+  } catch { allContacts.value = [...ROBOT_AGENTS] }
 }
 const cleaning = ref(false)
 const aiMode = ref(false)

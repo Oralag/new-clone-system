@@ -2075,6 +2075,20 @@ async function applyInhouseStockEffect(warehouseId: number, warehouseName: strin
     }
   } catch {}
 
+  // 全量拉库存，按 goods_id 找该商品的第一条库存记录（用于确定仓库）
+  const stockByGoodsId: Record<number, any> = {}
+  try {
+    const allStockRes = await http.get('/stock/StockAll/index', { params: { list_rows: 2000 } })
+    for (const s of allStockRes.data?.rows ?? []) {
+      const gid = s.goods_id
+      if (!gid) continue
+      // 优先取有库存的记录，没有则取第一条
+      if (!stockByGoodsId[gid] || Number(s.qty) > Number(stockByGoodsId[gid].qty)) {
+        stockByGoodsId[gid] = s
+      }
+    }
+  } catch {}
+
   // 预加载BOM列表
   const bomSnMap: Record<string, number> = {}
   try {
@@ -2095,12 +2109,18 @@ async function applyInhouseStockEffect(warehouseId: number, warehouseName: strin
       const bomItems: any[] = detailRes.data?.items ?? []
       const finishedQty = Number(item.num) * Number(item.unit_ratio || 1)
 
-      const matGoods: any[] = []
+      // 按材料实际所在仓库分组（不用采购单仓库，避免扣错记录）
+      const byWarehouse: Record<string, { wh_id: number; wh_name: string; goods: any[] }> = {}
       for (const mat of bomItems) {
         if (!mat.goods_sn || !mat.num) continue
         const matGoodsId = snToGoodsId[mat.goods_sn]
         if (!matGoodsId) continue
-        matGoods.push({
+        const matStock = stockByGoodsId[matGoodsId]
+        const whId = matStock?.warehouse_id ?? 0
+        const whName = matStock?.warehouse_name ?? ''
+        const key = String(whId)
+        if (!byWarehouse[key]) byWarehouse[key] = { wh_id: whId, wh_name: whName, goods: [] }
+        byWarehouse[key].goods.push({
           goods_id: matGoodsId,
           goods_name: mat.goods_name || '',
           goods_sn: mat.goods_sn,
@@ -2109,21 +2129,23 @@ async function applyInhouseStockEffect(warehouseId: number, warehouseName: strin
           price: 0,
         })
       }
-      if (!matGoods.length) continue
 
-      const remark = `BOM${direction === 'in' ? '扣料' : '反审核恢复'}-${item.goods_name || item.goods_sn}`
-      if (direction === 'in') {
-        const addRes = await http.post('/stock/OtherOut/add', {
-          warehouse_id: warehouseId || 0, warehouse_name: warehouseName || '', remark, goods_info: matGoods,
-        })
-        const outId = addRes.data?.id
-        if (outId) await http.post('/stock/OtherOut/audit', { id: outId, status: 1 })
-      } else {
-        const addRes = await http.post('/stock/OtherIn/add', {
-          warehouse_id: warehouseId || 0, warehouse_name: warehouseName || '', remark, goods_info: matGoods,
-        })
-        const inId = addRes.data?.id
-        if (inId) await http.post('/stock/OtherIn/audit', { id: inId, status: 1 })
+      for (const wk of Object.values(byWarehouse)) {
+        if (!wk.goods.length) continue
+        const remark = `BOM${direction === 'in' ? '扣料' : '反审核恢复'}-${item.goods_name || item.goods_sn}`
+        if (direction === 'in') {
+          const addRes = await http.post('/stock/OtherOut/add', {
+            warehouse_id: wk.wh_id, warehouse_name: wk.wh_name, remark, goods_info: wk.goods,
+          })
+          const outId = addRes.data?.id
+          if (outId) await http.post('/stock/OtherOut/audit', { id: outId, status: 1 })
+        } else {
+          const addRes = await http.post('/stock/OtherIn/add', {
+            warehouse_id: wk.wh_id, warehouse_name: wk.wh_name, remark, goods_info: wk.goods,
+          })
+          const inId = addRes.data?.id
+          if (inId) await http.post('/stock/OtherIn/audit', { id: inId, status: 1 })
+        }
       }
     } catch (e: any) {
       console.warn('BOM原材料库存操作失败', item.goods_sn, e?.message)
