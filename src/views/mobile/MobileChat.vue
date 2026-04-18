@@ -105,33 +105,109 @@
 
     <!-- ── 待办 Tab ── -->
     <div v-show="activeTab === 'todo'" class="todo-tab">
-      <div v-if="pendingItems.length === 0" class="chat-empty">
+      <!-- 审核待办 -->
+      <div v-if="pendingItems.length > 0" class="todo-section">
+        <div class="todo-section-title">审核待办</div>
+        <div
+          v-for="item in pendingItems"
+          :key="item.key"
+          class="chat-item todo-item"
+          @click="item.onClick?.()"
+        >
+          <div class="chat-avatar" :style="{ background: item.color || '#2E6BE6' }">{{ item.icon }}</div>
+          <div class="chat-body">
+            <div class="chat-top">
+              <span class="chat-name">{{ item.label }}</span>
+              <span class="chat-badge">{{ item.count }}</span>
+            </div>
+            <div class="chat-bottom">
+              <span class="chat-msg">点击查看详情</span>
+            </div>
+          </div>
+          <span class="chat-meeting-arrow">›</span>
+        </div>
+      </div>
+
+      <!-- 工作计划 -->
+      <div class="todo-section">
+        <div class="todo-section-title">工作计划</div>
+        <div v-if="todoPlans.length === 0" class="chat-empty" style="padding:16px 0">
+          <div class="chat-empty-text" style="color:#999;font-size:13px">暂无待办计划</div>
+        </div>
+        <div
+          v-for="plan in todoPlans"
+          :key="plan.id"
+          class="chat-item todo-item"
+          @click="openPlanDetail(plan)"
+        >
+          <div class="chat-avatar" :style="{ background: plan.priority === 'high' ? '#F53F3F' : plan.status === 'doing' ? '#2E6BE6' : '#C9CDD4' }">
+            {{ plan.status === 'done' ? '✅' : plan.priority === 'high' ? '🔴' : '📋' }}
+          </div>
+          <div class="chat-body">
+            <div class="chat-top">
+              <span class="chat-name" :class="{ done: plan.status === 'done' }">{{ plan.title }}</span>
+              <span v-if="plan.due_date" class="chat-time" :class="{ overdue: isPlanOverdue(plan) }">{{ plan.due_date }}</span>
+            </div>
+            <div class="chat-bottom">
+              <span class="chat-msg">
+                <span v-if="plan.status === 'todo'" style="color:#86909C">待开始</span>
+                <span v-if="plan.status === 'doing'" style="color:#2E6BE6">进行中</span>
+                <span v-if="plan.status === 'done'" style="color:#00B42A">已完成</span>
+                <span v-if="plan.mentions?.length"> · {{ plan.mentions.map((m: any) => m.name).join(', ') }}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 完全为空 -->
+      <div v-if="pendingItems.length === 0 && todoPlans.length === 0" class="chat-empty">
         <div class="chat-empty-icon">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
             <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
           </svg>
         </div>
-        <div class="chat-empty-text">暂无待审核事项</div>
+        <div class="chat-empty-text">暂无待办事项</div>
       </div>
-      <div
-        v-for="item in pendingItems"
-        :key="item.key"
-        class="chat-item todo-item"
-        @click="item.onClick?.()"
-      >
-        <div class="chat-avatar" :style="{ background: item.color || '#2E6BE6' }">{{ item.icon }}</div>
-        <div class="chat-body">
-          <div class="chat-top">
-            <span class="chat-name">{{ item.label }}</span>
-            <span class="chat-badge">{{ item.count }}</span>
+
+      <!-- 新建计划按钮 -->
+      <button class="todo-add-btn" @click="showAddPlan = true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        新建计划
+      </button>
+    </div>
+
+    <!-- 新建计划弹窗 -->
+    <Teleport to="body">
+      <div v-if="showAddPlan" class="task-modal-mask" @click.self="showAddPlan = false">
+        <div class="task-modal-sheet">
+          <div class="task-modal-header">
+            <span>新建工作计划</span>
+            <button class="task-modal-close" @click="showAddPlan = false">取消</button>
           </div>
-          <div class="chat-bottom">
-            <span class="chat-msg">点击查看详情</span>
+          <div class="task-modal-body">
+            <input v-model="newPlan.title" class="task-input" placeholder="计划标题" />
+            <textarea v-model="newPlan.description" class="task-textarea" placeholder="描述（选填）" rows="2" />
+            <div class="task-field-row">
+              <label>优先级</label>
+              <select v-model="newPlan.priority" class="task-select">
+                <option value="normal">普通</option>
+                <option value="high">紧急</option>
+              </select>
+            </div>
+            <div class="task-field-row">
+              <label>截止日期</label>
+              <input v-model="newPlan.due_date" type="date" class="task-input" />
+            </div>
+            <button class="task-submit-btn" @click="createPlanFromChat" :disabled="!newPlan.title.trim()">
+              创建
+            </button>
           </div>
         </div>
-        <span class="chat-meeting-arrow">›</span>
       </div>
-    </div>
+    </Teleport>
 
     <!-- ── AI管家 Tab ── -->
     <div v-show="activeTab === 'ai'" class="ai-tab" @click="router.push('/mobile/ai')">
@@ -533,6 +609,38 @@ async function deleteGroup(g: any) {
 }
 
 const pendingItems = ref<any[]>([])
+const todoPlans = ref<any[]>([])
+const showAddPlan = ref(false)
+const newPlan = ref({ title: '', description: '', priority: 'normal', due_date: '' })
+
+function isPlanOverdue(plan: any) {
+  if (!plan.due_date || plan.status === 'done') return false
+  return new Date(plan.due_date) < new Date()
+}
+
+function openPlanDetail(plan: any) {
+  router.push(`/mobile/task?plan=${plan.id}`)
+}
+
+async function loadTodoPlans() {
+  try {
+    const res = await http.get('/adminapi/work/plans', { params: { list_rows: 50 } })
+    const plans = res?.data?.plans ?? res?.plans ?? []
+    todoPlans.value = plans.filter((p: any) => p.status !== 'done')
+  } catch { todoPlans.value = [] }
+}
+
+async function createPlanFromChat() {
+  if (!newPlan.value.title.trim()) return
+  try {
+    await http.post('/adminapi/work/plans', newPlan.value)
+    newPlan.value = { title: '', description: '', priority: 'normal', due_date: '' }
+    showAddPlan.value = false
+    await loadTodoPlans()
+  } catch (e: any) {
+    alert('创建失败：' + (e?.message || '未知错误'))
+  }
+}
 
 const subTabs = [
   { key: 'all', label: '全部' },
