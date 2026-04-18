@@ -140,7 +140,7 @@ function getUserId(request) {
 }
 
 const AGENT_INFO = {
-  'ai-assistant-fixed': { name: 'AI助手', position: '智能助手', avatar: '' },
+  'ai-assistant-fixed': { name: 'ERP管家', position: 'ERP智能管家', avatar: '' },
   'captain': { name: 'Captain 总指挥', position: '机器人', avatar: '' },
   'secretary': { name: '秘书', position: '广告部门秘书', avatar: '' },
   'copywriter': { name: '文案Agent', position: '机器人', avatar: '' },
@@ -474,37 +474,34 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
   }
   console.log(`[AgentReply] found agents: ${JSON.stringify(agentIds)}`)
 
-  // 获取历史消息作为上下文（最近 5 条）
+  // 获取历史消息作为上下文（最近 8 条，全部作为 user 角色带发言人名字，避免AI误认身份）
   const raw = await env.USERS_KV.get('chat_messages')
   const msgMap = raw ? JSON.parse(raw) : {}
-  const history = (msgMap[groupId] || []).slice(-5).map(m => ({
-    role: String(m.sender_id) === String(senderId) ? 'user' : 'assistant',
-    content: `${m.sender_name}: ${m.content}`
+  const history = (msgMap[groupId] || []).slice(-8).map(m => ({
+    role: 'user',
+    content: `[${m.sender_name}]: ${m.content}`
   }))
 
   // 为每个 Agent 调用 AI（只取第一个有效 Agent，避免串行超时）
   const isWelcome = content === '__group_created__'
 
-  // 检测 @mention：如果消息里 @了某个 Agent 名字，优先让那个 Agent 回复
+  // 检测 @mention：只有被@到才回复，没有@则不回复（群聊不主动插嘴）
   let activeAgentIds = []
   if (!isWelcome) {
     const mentionedAgentId = agentIds.find(id => {
       const config = AGENT_CONFIGS[String(id)]
       const info = AGENT_INFO[String(id)]
       if (!config) return false
-      // 匹配 @config.name、@AGENT_INFO名字 或 @id
       return content.includes(`@${config.name}`) ||
              (info && content.includes(`@${info.name}`)) ||
              content.includes(`@${id}`)
     })
     if (mentionedAgentId) {
       activeAgentIds = [mentionedAgentId]
-    } else {
-      // 没有 @mention，取第一个有效 Agent 回复
-      const firstAgentId = agentIds.find(id => AGENT_CONFIGS[String(id)] && env.ANTHROPIC_API_KEY)
-      activeAgentIds = firstAgentId ? [firstAgentId] : []
     }
+    // 没有@mention：不回复
   } else {
+    // 欢迎消息：第一个Agent发欢迎
     const firstAgentId = agentIds.find(id => AGENT_CONFIGS[String(id)] && env.ANTHROPIC_API_KEY)
     activeAgentIds = firstAgentId ? [firstAgentId] : []
   }
