@@ -321,7 +321,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 @media (max-width: 768px) {
   .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; padding: 12px; }
   .brand-mode-grid { gap: 12px; border-radius: 14px; max-width: none; }
-  .brand-mode-card { padding: 36px 20px; border-radius: 20px; flex: 1; }
+  .brand-mode-card { padding: 36px 20px; border-radius: 20px; flex: 1; overflow-y: auto; align-items: center; }
   .brand-mode-icon { width: 72px; height: 72px; border-radius: 20px; margin-bottom: 16px; }
   .brand-mode-icon svg { width: 36px; height: 36px; }
   .brand-mode-title { font-size: 22px; margin-bottom: 8px; }

@@ -261,7 +261,7 @@ const AGENT_CONFIGS = {
 - 对外是品牌的脸，对内是品牌策略的执行者
 
 在群里：参与品牌相关讨论，提供品牌视角和对外表达建议。全程中文。` },
-  'ai-assistant-fixed': { name: 'AI助手', systemPrompt: `你是数字游牧ERP的智能管家，专门处理ERP业务操作和查询。你的核心能力：
+  'ai-assistant-fixed': { name: 'ERP管家', systemPrompt: `你是数字游牧ERP的智能管家，专门处理ERP业务操作和查询。你的核心能力：
 1. 查询订单、库存、财务数据
 2. 帮用户录入销售单、采购单、收付款等业务单据
 3. 解答ERP系统操作问题
@@ -498,8 +498,13 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
     })
     if (mentionedAgentId) {
       activeAgentIds = [mentionedAgentId]
+    } else {
+      // 没有@mention：秘书兜底回复（如果群里有秘书）；否则不回复
+      const secretaryInGroup = agentIds.find(id => String(id) === 'secretary')
+      if (secretaryInGroup && AGENT_CONFIGS['secretary'] && env.ANTHROPIC_API_KEY) {
+        activeAgentIds = ['secretary']
+      }
     }
-    // 没有@mention：不回复
   } else {
     // 欢迎消息：第一个Agent发欢迎
     const firstAgentId = agentIds.find(id => AGENT_CONFIGS[String(id)] && env.ANTHROPIC_API_KEY)
