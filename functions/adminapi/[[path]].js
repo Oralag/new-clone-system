@@ -418,6 +418,90 @@ async function handleGetMessages(request, env) {
   return jsonSuccess({ rows: msgsWithUser, total: msgsWithUser.length })
 }
 
+// 🤖 Agent 自动回复触发器
+async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
+  // 找出群里的 Agent 成员（排除发送者）
+  const agentIds = memberIds.filter(id => AGENT_IDS.has(id) && id !== senderId)
+  if (agentIds.length === 0) return
+
+  // 获取历史消息作为上下文（最近 5 条）
+  const raw = await env.USERS_KV.get('chat_messages')
+  const msgMap = raw ? JSON.parse(raw) : {}
+  const history = (msgMap[groupId] || []).slice(-5).map(m => ({
+    role: m.sender_id === senderId ? 'user' : 'assistant',
+    content: `${m.sender_name}: ${m.content}`
+  }))
+
+  // 为每个 Agent 调用 AI（带随机延迟模拟打字）
+  for (const agentId of agentIds) {
+    const config = AGENT_CONFIGS[agentId]
+    if (!config || !env.ANTHROPIC_API_KEY) continue
+
+    // 随机延迟 1-3 秒
+    await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000))
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 500,
+          system: config.systemPrompt,
+          messages: [...history, { role: 'user', content }],
+        }),
+      })
+
+      if (!res.ok) continue
+      const data = await res.json()
+      const replyText = data.content?.find(b => b.type === 'text')?.text
+      if (!replyText) continue
+
+      // 保存 Agent 回复消息
+      const now = new Date().toISOString()
+      const agentMsg = {
+        id: nowMs() + Math.floor(Math.random() * 1000),
+        group_id: groupId,
+        sender_id: agentId,
+        sender_name: config.name,
+        content: replyText,
+        type: 'text',
+        created_at: now,
+      }
+
+      const raw2 = await env.USERS_KV.get('chat_messages')
+      const msgMap2 = raw2 ? JSON.parse(raw2) : {}
+      if (!msgMap2[groupId]) msgMap2[groupId] = []
+      msgMap2[groupId].push(agentMsg)
+      await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap2))
+
+      // 更新群最后消息
+      const groupsRaw = await env.USERS_KV.get('chat_groups')
+      const groups = groupsRaw ? JSON.parse(groupsRaw) : []
+      const idx = groups.findIndex(g => g.id === groupId)
+      if (idx !== -1) {
+        groups[idx].last_message_at = now
+        groups[idx].last_message = replyText.slice(0, 100)
+        await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+      }
+
+      // 给群成员加未读（除了 Agent 自己）
+      for (const mid of memberIds) {
+        if (AGENT_IDS.has(mid)) continue
+        const unreadKey = `chat_unread:${mid}:${groupId}`
+        const cur = parseInt(await env.USERS_KV.get(unreadKey) || '0')
+        await env.USERS_KV.put(unreadKey, String(cur + 1))
+      }
+    } catch (e) {
+      console.error(`Agent ${agentId} reply failed:`, e)
+    }
+  }
+}
+
 async function handleSendMessage(request, env) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')

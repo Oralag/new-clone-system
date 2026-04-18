@@ -105,9 +105,10 @@ onMounted(async () => {
     }
     if (recRes.status === 'fulfilled') {
       const rows = recRes.value?.data?.rows ?? []
+      // 已审核(status===1)且有未收款金额的才是真正的应收账款
       const pending = rows
-        .filter((r: any) => Number(r.status) !== 1 && Number(r.un_collect || r.amount || 0) > 0)
-        .reduce((s: number, r: any) => s + Number(r.un_collect || r.amount || 0), 0)
+        .filter((r: any) => Number(r.status) === 1 && Number(r.un_collect || 0) > 0)
+        .reduce((s: number, r: any) => s + Number(r.un_collect || 0), 0)
       const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + 'w' : n.toFixed(0)
       statData.value.receivable = fmt(pending)
     }
