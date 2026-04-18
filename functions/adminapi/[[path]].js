@@ -465,8 +465,42 @@ async function handleGetMessages(request, env) {
   return jsonSuccess({ rows: msgs, total: msgs.length })
 }
 
+// 查询 ERP 商品信息（供 ERP管家 使用）
+async function queryErpGoods(keywords, erpCtx) {
+  if (!erpCtx?.realToken || keywords.length === 0) return []
+  const results = []
+  for (const kw of keywords.slice(0, 5)) { // 最多查5个词
+    try {
+      const url = `${erpCtx.backend}/adminapi/goods/ShopGoods/index?list_rows=5&name=${encodeURIComponent(kw)}`
+      const res = await fetch(url, {
+        headers: { 'token': erpCtx.realToken, 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      const rows = data?.data?.rows ?? []
+      for (const r of rows) {
+        if (r.name) results.push({
+          name: r.name,
+          price: r.price ?? r.sale_price ?? r.retail_price,
+          unit: r.unit_name || r.unit || '',
+          spec: r.spec || '',
+          stock: r.stock ?? null,
+        })
+      }
+    } catch {}
+  }
+  return results
+}
+
+// 从消息里提取可能是商品名的关键词（中文名词，2-10字）
+function extractProductKeywords(text) {
+  // 简单策略：匹配2-8个汉字的词组，跳过常见非商品词
+  const stopWords = new Set(['今天','明天','昨天','客户','订单','一共','多少','什么','谢谢','好的','可以','没有','有没有','知道','需要','帮我','帮你','告诉','现在','已经','如果','这个','那个','一个','两个','三个'])
+  const matches = text.match(/[\u4e00-\u9fa5]{2,8}/g) || []
+  return [...new Set(matches.filter(w => !stopWords.has(w)))]
+}
+
 // 🤖 Agent 自动回复触发器
-async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
+async function triggerAgentReplies(groupId, senderId, content, memberIds, env, erpCtx = null) {
   // 找出群里的 Agent 成员（排除发送者）
   console.log(`[AgentReply] group=${groupId}, sender=${senderId}, allMembers=${JSON.stringify(memberIds)}, hasApiKey=${!!env.ANTHROPIC_API_KEY}`)
   const agentIds = memberIds.filter(id => AGENT_IDS.has(String(id)) && String(id) !== String(senderId))
@@ -555,32 +589,101 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
       : content
 
     try {
-      const apiBase = (env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/$/, '')
-      const res = await fetch(`${apiBase}/v1/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 500,
-          system: config.systemPrompt,
-          messages: [...history, { role: 'user', content: userMessage }],
-        }),
-      })
+      let replyText = ''
 
-      if (!res.ok) {
-        console.error(`[AgentReply] API error for ${agentId}: ${res.status} ${await res.text()}`)
-        continue
+      if (!isWelcome && String(agentId) === 'ai-assistant-fixed' && erpCtx) {
+        // ERP管家走完整 tool_use agentic loop（内部调 /api/ai-chat SSE）
+        // 把历史消息转成正确的 user/assistant role
+        const rawMsgs = (msgMap[groupId] || []).slice(-30)
+        const apiMessages = []
+        for (const m of rawMsgs) {
+          const isAgent = AGENT_IDS.has(String(m.sender_id))
+          // agent消息用assistant role不带前缀，人类消息带发送人名字
+          apiMessages.push({
+            role: isAgent ? 'assistant' : 'user',
+            content: isAgent ? m.content : `${m.sender_name}: ${m.content}`
+          })
+        }
+        // 当前消息（已在历史里了，不重复加）
+        const origin = 'https://nomaderp.pages.dev'
+        const wrappedToken = erpCtx.realToken  // 这里直接传真实token，ai-chat会处理
+        // 构造 wrapped token（含 backend 信息）
+        const payload = { t: erpCtx.realToken, b: erpCtx.backend }
+        const wrapped = 'erp_' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
+
+        const chatRes = await fetch(`${origin}/api/ai-chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-erp-token': wrapped,
+          },
+          body: JSON.stringify({ messages: apiMessages }),
+        })
+
+        if (!chatRes.ok || !chatRes.body) {
+          console.error(`[AgentReply] ai-chat error: ${chatRes.status}`)
+          continue
+        }
+
+        // 消费 SSE 流，收集文本
+        const reader = chatRes.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() || ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6)
+            if (data === '[DONE]') break
+            try {
+              const evt = JSON.parse(data)
+              if (evt.type === 'text') replyText += evt.text
+            } catch {}
+          }
+        }
+        // 去掉 Markdown 格式和 [角色名]: 前缀（手机群聊显示）
+        replyText = replyText
+          .replace(/^\[.+?\]:\s*/gm, '')  // 去掉 [ERP管家]: 这类前缀
+          .replace(/\*\*(.+?)\*\*/g, '$1')
+          .replace(/^#{1,3}\s+/gm, '')
+          .replace(/---+/g, '')
+          .replace(/\|.+\|/g, (m) => m.replace(/\|/g, ' ').trim())  // 表格 | 改成空格分隔
+          .trim()
+      } else {
+        // 其他 Agent 走原来的直接 Claude 调用
+        const apiBase = (env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/$/, '')
+        const res = await fetch(`${apiBase}/v1/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 500,
+            system: config.systemPrompt,
+            messages: [...history, { role: 'user', content: userMessage }],
+          }),
+        })
+
+        if (!res.ok) {
+          console.error(`[AgentReply] API error for ${agentId}: ${res.status} ${await res.text()}`)
+          continue
+        }
+        const data = await res.json()
+        replyText = data.content?.find(b => b.type === 'text')?.text || ''
+        if (!replyText) {
+          console.error(`[AgentReply] no text in response for ${agentId}: ${JSON.stringify(data).slice(0,200)}`)
+          continue
+        }
       }
-      const data = await res.json()
-      const replyText = data.content?.find(b => b.type === 'text')?.text
-      if (!replyText) {
-        console.error(`[AgentReply] no text in response for ${agentId}: ${JSON.stringify(data).slice(0,200)}`)
-        continue
-      }
+
+      if (!replyText) { console.error(`[AgentReply] empty reply for ${agentId}`); continue }
       console.log(`[AgentReply] ${agentId} replied: ${replyText.slice(0, 50)}...`)
 
       // 保存 Agent 回复消息
@@ -700,7 +803,9 @@ async function handleSendMessage(request, env) {
     const agentIds = memberIds.filter(id => AGENT_IDS.has(String(id)) && String(id) !== String(userId))
     if (agentIds.length > 0) {
       agentReplyStatus = 'triggered_' + agentIds.join(',')
-      await triggerAgentReplies(groupId, userId, content.trim(), memberIds, env)
+      const decoded = decodeToken(request.headers.get('token') || '')
+      const erpCtx = decoded ? { realToken: decoded.realToken, backend: decoded.backend || DEFAULT_BACKEND } : null
+      await triggerAgentReplies(groupId, userId, content.trim(), memberIds, env, erpCtx)
       agentReplyStatus = 'ok'
     }
   } catch (e) {

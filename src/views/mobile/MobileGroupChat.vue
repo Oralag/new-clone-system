@@ -385,15 +385,23 @@ function startVoice(e: TouchEvent | MouseEvent) {
   recognition.lang = 'zh-CN'
   recognition.continuous = false
   recognition.interimResults = false
+
+  // 用闭包变量跟踪状态，避免异步竞态
+  let cancelled = false
+  let gotResult = false
+  let resultText = ''
+
+  // 把取消标志注入闭包，stopVoice 通过 recognition.__cancelled 传递
+  ;(recognition as any).__setCancelled = (v: boolean) => { cancelled = v }
+
   recognition.onresult = (ev: any) => {
-    const text = ev.results[0]?.[0]?.transcript || ''
-    if (text && !voiceCancel.value) {
-      inputText.value = text
-      voiceMode.value = false  // 切回文字模式显示识别结果
-      nextTick(() => {
-        autoResize()
-        sendMessage()          // 自动发送
-      })
+    resultText = ev.results[0]?.[0]?.transcript || ''
+    gotResult = true
+    // onresult 里直接发送，不等 onend
+    if (resultText && !cancelled) {
+      inputText.value = resultText
+      voiceMode.value = false
+      nextTick(() => { autoResize(); sendMessage() })
     }
   }
   recognition.onerror = (ev: any) => {
@@ -402,24 +410,34 @@ function startVoice(e: TouchEvent | MouseEvent) {
     isRecording.value = false
     if (voiceTimer) clearInterval(voiceTimer)
   }
-  recognition.onend = () => { isRecording.value = false; if (voiceTimer) clearInterval(voiceTimer) }
+  recognition.onend = () => {
+    isRecording.value = false
+    if (voiceTimer) clearInterval(voiceTimer)
+    // onresult 没触发时才在 onend 里兜底提示
+    if (!gotResult && !cancelled) {
+      ElMessage.warning('未识别到语音，请重试')
+    }
+  }
   try { recognition.start() } catch(e) { isRecording.value = false }
 }
 
 function checkVoiceCancel(e: TouchEvent) {
   const dy = voiceStartY - e.touches[0].clientY
-  voiceCancel.value = dy > 50
+  voiceCancel.value = dy > 40
 }
 
 function stopVoice() {
   if (!isRecording.value) return
   if (voiceCancel.value) { cancelVoice(); return }
+  // 告知闭包：正常停止，不取消
+  ;(recognition as any)?.__setCancelled?.(false)
   recognition?.stop()
   if (voiceTimer) clearInterval(voiceTimer)
   isRecording.value = false
 }
 
 function cancelVoice() {
+  ;(recognition as any)?.__setCancelled?.(true)
   recognition?.abort()
   if (voiceTimer) clearInterval(voiceTimer)
   isRecording.value = false
@@ -606,6 +624,7 @@ async function sendMessage() {
       content: text,
       sender_name: authStore.userInfo?.name || authStore.userName || '用户'
     })
+    sending.value = false  // 消息发出去就解锁，不等Agent回复
     const sent = res?.data ?? res
     // 替换本地消息（用 id 去重，避免轮询重复）
     const idx = messages.value.findIndex(m => m.id === localMsg.id)
@@ -633,7 +652,7 @@ async function sendMessage() {
     const idx = messages.value.findIndex(m => m.id === localMsg.id)
     if (idx !== -1) messages.value.splice(idx, 1)
   } finally {
-    sending.value = false
+    sending.value = false  // 兜底确保解锁
   }
 }
 
@@ -1180,14 +1199,15 @@ onUnmounted(() => {
 /* ── 语音按住说话 ── */
 .m-gc-voice-btn {
   flex: 1;
-  height: 36px;
+  height: 44px;
   background: #f5f5f7;
   border: 1px solid transparent;
-  border-radius: 18px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 500;
   color: #1d2129;
   user-select: none;
   -webkit-user-select: none;
@@ -1195,12 +1215,12 @@ onUnmounted(() => {
   transition: background 0.1s, border-color 0.1s;
 }
 .m-gc-voice-btn.recording {
-  background: #e8f0fe;
+  background: #d0e4ff;
   border-color: #0071e3;
   color: #0071e3;
 }
 .m-gc-voice-btn.cancel {
-  background: #fff0f0;
+  background: #ffe0e0;
   border-color: #f53f3f;
   color: #f53f3f;
 }

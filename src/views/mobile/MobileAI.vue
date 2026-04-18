@@ -5,7 +5,7 @@
       <div class="ai-topbar-info">
         <div class="ai-avatar"><el-icon :size="18"><Cpu /></el-icon></div>
         <div>
-          <div class="ai-name">数字游牧 AI 助手</div>
+          <div class="ai-name">ERP管家</div>
           <div class="ai-status">{{ isLoading ? '正在输入...' : '在线' }}</div>
         </div>
       </div>
@@ -19,7 +19,7 @@
       <!-- 欢迎界面 -->
       <div v-if="messages.length === 0" class="ai-welcome">
         <div class="ai-welcome-icon"><el-icon :size="44" color="#0071e3"><Cpu /></el-icon></div>
-        <div class="ai-welcome-title">你好！我是数字游牧 AI 助手</div>
+        <div class="ai-welcome-title">你好！我是ERP管家</div>
         <div class="ai-welcome-sub">用自然语言描述需求，我来帮你查询或录入数据</div>
         <div class="ai-quick-prompts">
           <div v-for="p in quickPrompts" :key="p" class="ai-quick-tag" @click="sendQuickPrompt(p)">{{ p }}</div>
@@ -241,9 +241,13 @@ function startVoice(e: TouchEvent | MouseEvent) {
   if (!SR) { ElMessage.warning('当前浏览器不支持语音'); isRecording.value = false; return }
   recognition = new SR()
   recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = false
+  let cancelled = false
+  let gotResult = false
+  ;(recognition as any).__setCancelled = (v: boolean) => { cancelled = v }
   recognition.onresult = (ev: any) => {
     const text = ev.results[0]?.[0]?.transcript || ''
-    if (text && !voiceCancel.value) {
+    gotResult = true
+    if (text && !cancelled) {
       inputText.value = text
       voiceMode.value = false
       nextTick(() => { autoResize(); sendMessage() })
@@ -254,18 +258,24 @@ function startVoice(e: TouchEvent | MouseEvent) {
     isRecording.value = false
     if (voiceTimer) clearInterval(voiceTimer)
   }
-  recognition.onend = () => { isRecording.value = false; if (voiceTimer) clearInterval(voiceTimer) }
+  recognition.onend = () => {
+    isRecording.value = false
+    if (voiceTimer) clearInterval(voiceTimer)
+    if (!gotResult && !cancelled) ElMessage.warning('未识别到语音，请重试')
+  }
   try { recognition.start() } catch { isRecording.value = false }
 }
 function checkVoiceCancel(e: TouchEvent) { voiceCancel.value = (voiceStartY - e.touches[0].clientY) > 50 }
 function stopVoice() {
   if (!isRecording.value) return
   if (voiceCancel.value) { cancelVoice(); return }
+  ;(recognition as any)?.__setCancelled?.(false)
   recognition?.stop()
   if (voiceTimer) clearInterval(voiceTimer)
   isRecording.value = false
 }
 function cancelVoice() {
+  ;(recognition as any)?.__setCancelled?.(true)
   recognition?.abort()
   if (voiceTimer) clearInterval(voiceTimer)
   isRecording.value = false; voiceCancel.value = false

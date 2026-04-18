@@ -190,7 +190,12 @@ async function viewEmployee(c: any) {
 }
 
 async function openAgent(bot: any) {
-  // 查找或创建与该 Agent 的私聊
+  // ERP管家直接跳独立AI聊天页（和消息首页一致，带完整tool_use能力）
+  if (bot.id === 'ai-assistant-fixed') {
+    router.push('/mobile/ai')
+    return
+  }
+  // 其他Agent：查找或创建私聊群
   try {
     const res = await http.get(`/chat/groups/private/${bot.id}`)
     const group = res?.data ?? res

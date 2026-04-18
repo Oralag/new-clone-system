@@ -116,47 +116,51 @@
           <button class="task-modal-close" @click="showAdd = false">取消</button>
         </div>
         <div class="task-modal-body">
-          <!-- 任务标题 -->
-          <input
-            v-model="form.title"
-            class="task-input"
-            placeholder="任务名称...（必填）"
-            autofocus
-          />
-
-          <!-- 任务描述 -->
-          <textarea
-            v-model="form.description"
-            class="task-input task-textarea"
-            placeholder="补充说明（选填）..."
-            rows="3"
-          ></textarea>
-
-          <!-- 截止日期 -->
-          <div class="task-form-row">
-            <label>截止日期</label>
-            <input v-model="form.due_date" class="task-input-sm" type="date" />
+          <!-- 基础信息 -->
+          <div class="form-section">
+            <div class="form-section-title">基础信息</div>
+            <!-- 任务标题 -->
+            <input
+              v-model="form.title"
+              class="task-input task-input-title"
+              placeholder="例如：完成Q2销售目标"
+              autofocus
+            />
+            <!-- 任务描述 -->
+            <textarea
+              v-model="form.description"
+              class="task-input task-textarea"
+              placeholder="补充说明（可选）"
+              rows="2"
+            ></textarea>
           </div>
 
-          <!-- 优先级 -->
-          <div class="task-form-row">
-            <label>优先级</label>
-            <div class="task-priority-btns">
-              <button
-                v-for="p in priorities"
-                :key="p.key"
-                :class="['task-priority-btn', { active: form.priority === p.key }]"
-                :style="form.priority === p.key ? { background: p.color, color: '#fff', borderColor: p.color } : {}"
-                @click="form.priority = p.key"
-              >{{ p.label }}</button>
+          <!-- 时间与优先级 -->
+          <div class="form-section">
+            <div class="form-section-title">时间与优先级</div>
+            <div class="task-form-row">
+              <label>截止日期</label>
+              <input v-model="form.due_date" class="task-input-sm" type="date" />
+            </div>
+            <div class="task-form-row">
+              <label>优先级</label>
+              <div class="task-priority-btns">
+                <button
+                  v-for="p in priorities"
+                  :key="p.key"
+                  :class="['task-priority-btn', { active: form.priority === p.key }]"
+                  :style="form.priority === p.key ? { background: p.color, color: '#fff', borderColor: p.color } : {}"
+                  @click="form.priority = p.key"
+                >{{ p.label }}</button>
+              </div>
             </div>
           </div>
 
-          <!-- @执行人 -->
-          <div class="task-form-row task-form-row-top">
-            <label>@执行人</label>
+          <!-- 执行人 -->
+          <div class="form-section">
+            <div class="form-section-title">执行人</div>
             <button class="at-btn" @click="showAtPicker = !showAtPicker">
-              <span v-if="form.mentions.length === 0" class="at-placeholder">点击选择执行人</span>
+              <span v-if="form.mentions.length === 0" class="at-placeholder">点击选择执行人（可选）</span>
               <div v-else class="at-selected-list">
                 <span v-for="m in form.mentions" :key="m.id" class="at-chip">
                   <span>{{ m.avatar }}</span> {{ m.name }}
@@ -682,29 +686,94 @@ export default { name: 'MobileTask' }
   /* 固定在底部 */
   position: sticky; bottom: 0; background: #fff;
 }
+/* 表单分组 */
+.form-section {
+  margin-bottom: 16px;
+}
+.form-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #86909c;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
 .task-input {
-  width: 100%; height: 48px; background: #f5f5f7; border: 1px solid transparent;
+  width: 100%; height: 44px; background: #fff; border: 1px solid #e5e6eb;
   border-radius: 10px; padding: 0 14px; font-size: 15px; color: #1d2129;
-  outline: none; box-sizing: border-box; transition: border-color 0.15s;
+  outline: none; box-sizing: border-box; transition: all 0.15s;
 }
-.task-input:focus { border-color: #2E6BE6; background: #fff; }
-.task-textarea { height: auto; padding: 12px 14px; resize: none; line-height: 1.5; }
-.task-input-sm { height: 36px; background: #f5f5f7; border: 1px solid transparent; border-radius: 8px; padding: 0 10px; font-size: 14px; color: #1d2129; outline: none; }
-.task-input-sm:focus { border-color: #2E6BE6; background: #fff; }
-.task-form-row { display: flex; align-items: center; gap: 12px; }
+.task-input:focus { border-color: #2E6BE6; box-shadow: 0 0 0 3px rgba(46,107,230,0.1); }
+.task-input-title {
+  height: 52px;
+  font-size: 17px;
+  font-weight: 500;
+  border-width: 1.5px;
+}
+.task-input-title::placeholder {
+  font-weight: 400;
+  color: #c9cdd4;
+}
+.task-textarea {
+  height: auto;
+  padding: 12px 14px;
+  resize: none;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+.task-input-sm {
+  height: 38px;
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #1d2129;
+  outline: none;
+  flex: 1;
+  transition: all 0.15s;
+}
+.task-input-sm:focus { border-color: #2E6BE6; box-shadow: 0 0 0 3px rgba(46,107,230,0.1); }
+.task-form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.task-form-row:last-child { margin-bottom: 0; }
 .task-form-row-top { align-items: flex-start; }
-.task-form-row label { font-size: 13px; font-weight: 600; color: #4e5969; width: 52px; flex-shrink: 0; padding-top: 6px; }
-.task-priority-btns, .task-status-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.task-priority-btn, .status-btn {
-  padding: 5px 12px; border: 1px solid #e5e6eb; border-radius: 999px;
-  font-size: 13px; color: #4e5969; background: #fff; cursor: pointer; transition: all 0.15s;
+.task-form-row label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4e5969;
+  width: 60px;
+  flex-shrink: 0;
 }
+.task-priority-btns, .task-status-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.task-priority-btn, .status-btn {
+  padding: 6px 14px;
+  border: 1px solid #e5e6eb;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4e5969;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.task-priority-btn:hover { border-color: #c9cdd4; }
 .status-btn.active { background: #2E6BE6; color: #fff; border-color: #2E6BE6; }
 .task-btn-primary {
-  width: 100%; height: 48px; background: #2E6BE6; border: none; border-radius: 12px;
+  width: 100%; height: 50px; background: linear-gradient(135deg, #2E6BE6 0%, #1a56db 100%);
+  border: none; border-radius: 14px;
   font-size: 16px; font-weight: 600; color: #fff; cursor: pointer;
+  transition: all 0.2s; box-shadow: 0 4px 12px rgba(46,107,230,0.3);
 }
-.task-btn-primary:disabled { background: #a0cfff; cursor: not-allowed; }
+.task-btn-primary:active { transform: scale(0.98); }
+.task-btn-primary:disabled { background: #a0cfff; cursor: not-allowed; box-shadow: none; }
 .task-btn-danger {
   width: 100%; height: 44px; background: #fff; border: 1px solid #f53f3f;
   border-radius: 10px; font-size: 15px; font-weight: 500; color: #f53f3f; cursor: pointer;
@@ -712,17 +781,23 @@ export default { name: 'MobileTask' }
 
 /* ── @选择器 ── */
 .at-btn {
-  flex: 1; min-height: 44px; background: #f5f5f7; border: 1px solid transparent;
-  border-radius: 10px; padding: 8px 12px; cursor: pointer; text-align: left;
-  transition: border-color 0.15s;
+  width: 100%;
+  min-height: 44px;
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
 }
-.at-btn:focus { border-color: #2E6BE6; background: #fff; }
-.at-placeholder { font-size: 14px; color: #86909c; }
-.at-selected-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.at-btn:focus { border-color: #2E6BE6; box-shadow: 0 0 0 3px rgba(46,107,230,0.1); }
+.at-placeholder { font-size: 14px; color: #c9cdd4; }
+.at-selected-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .at-chip {
-  display: inline-flex; align-items: center; gap: 2px;
+  display: inline-flex; align-items: center; gap: 3px;
   font-size: 13px; color: #2E6BE6; background: #e8f0ff;
-  padding: 2px 6px 2px 6px; border-radius: 999px;
+  padding: 4px 8px 4px 6px; border-radius: 999px;
 }
 .at-chip-del { font-size: 16px; line-height: 1; cursor: pointer; margin-left: 2px; }
 .at-picker {
