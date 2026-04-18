@@ -321,7 +321,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 @media (max-width: 768px) {
   .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; padding: 12px; overflow: hidden; display: flex; flex-direction: column; }
   .brand-mode-grid { grid-template-columns: 1fr !important; gap: 10px; border-radius: 14px; max-width: none; flex: 1; min-height: 0; width: 100%; align-content: center; }
-  .brand-mode-card { aspect-ratio: 1; width: 100%; }
+  .brand-mode-card { aspect-ratio: 1; width: 100%; display: flex; flex-direction: column; justify-content: center; }
   .brand-mode-card { padding: 16px; border-radius: 14px; flex: 1; min-height: 0; overflow-y: visible; align-items: center; }
   .brand-mode-card:first-child { border-radius: 14px; }
   .brand-mode-card:last-child { border-radius: 14px; }
