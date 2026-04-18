@@ -527,16 +527,16 @@ function doSearch() {
   .brand-layout {
     min-height: 0 !important;
     height: 100%;
-    overflow: hidden;
-  }
-  .brand-main {
-    height: 100%;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
+  .brand-main {
+    flex: 1;
+    /* 底部留出 TabBar 空间，内容滚动到底时不会被遮挡 */
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
+  }
   .brand-footer {
-    /* footer 变成普通文档流，在 .brand-main 内部滚动 */
     flex-shrink: 0;
   }
 }
