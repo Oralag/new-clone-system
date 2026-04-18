@@ -104,97 +104,75 @@
 
     <!-- ── 待办 Tab ── -->
     <div v-show="activeTab === 'todo'" class="todo-tab">
-      <!-- 审核待办 -->
-      <div v-if="pendingItems.length > 0" class="todo-section">
-        <div class="todo-section-title">审核待办</div>
-        <div
-          v-for="item in pendingItems"
-          :key="item.key"
-          class="chat-item todo-item"
-          @click="item.onClick?.()"
-        >
-          <div class="chat-avatar" :style="{ background: item.color || '#2E6BE6' }">{{ item.icon }}</div>
-          <div class="chat-body">
-            <div class="chat-top">
-              <span class="chat-name">{{ item.label }}</span>
-              <span class="chat-badge">{{ item.count }}</span>
-            </div>
-            <div class="chat-bottom">
-              <span class="chat-msg">点击查看详情</span>
-            </div>
-          </div>
-          <span class="chat-meeting-arrow">›</span>
+
+      <!-- 审核待办（紧凑条目） -->
+      <div v-if="pendingItems.length > 0" class="pending-section">
+        <div v-for="item in pendingItems" :key="item.key" class="pending-row" @click="item.onClick?.()">
+          <div class="pending-dot" :style="{ background: item.color }"></div>
+          <span class="pending-label">{{ item.label }}</span>
+          <span class="pending-count">{{ item.count }}条待审</span>
+          <span style="color:#ccc;font-size:16px">›</span>
         </div>
       </div>
 
-      <!-- 工作计划 -->
-      <div class="todo-section">
-        <div class="todo-section-title">工作计划</div>
-        <div v-if="todoPlans.length === 0" class="chat-empty" style="padding:16px 0">
-          <div class="chat-empty-text" style="color:#999;font-size:13px">暂无待办计划</div>
-        </div>
+      <!-- 状态筛选 pills -->
+      <div class="task-filter-row">
         <div
-          v-for="plan in todoPlans"
+          v-for="f in taskFilters"
+          :key="f.key"
+          class="task-filter-pill"
+          :class="{ active: taskFilter === f.key }"
+          @click="taskFilter = f.key"
+        >{{ f.label }}<span v-if="f.count > 0" class="task-pill-badge">{{ f.count }}</span></div>
+      </div>
+
+      <!-- 任务列表（简洁行式） -->
+      <div class="task-list-body">
+        <div v-if="filteredTodoPlans.length === 0" class="task-empty-state">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d8d8d8" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span>暂无任务</span>
+        </div>
+
+        <div
+          v-for="plan in filteredTodoPlans"
           :key="plan.id"
-          class="chat-item todo-item"
-          @click="openPlanDetail(plan)"
+          class="task-row-wrap"
+          :class="{ swiped: swipedTaskId === plan.id }"
         >
-          <div class="chat-avatar" :style="{ background: plan.priority === 'high' ? '#F53F3F' : plan.status === 'doing' ? '#2E6BE6' : '#C9CDD4' }">
-            {{ plan.status === 'done' ? '✅' : plan.priority === 'high' ? '🔴' : '📋' }}
+          <div class="task-row-actions" v-if="swipedTaskId === plan.id">
+            <div class="task-row-btn btn-start" @click.stop="updatePlanStatus(plan, plan.status === 'doing' ? 'todo' : 'doing')">{{ plan.status === 'doing' ? '暂停' : '开始' }}</div>
+            <div class="task-row-btn btn-done" @click.stop="updatePlanStatus(plan, plan.status === 'done' ? 'todo' : 'done')">{{ plan.status === 'done' ? '撤销' : '完成' }}</div>
           </div>
-          <div class="chat-body">
-            <div class="chat-top">
-              <span class="chat-name" :class="{ done: plan.status === 'done' }">{{ plan.title }}</span>
-              <span v-if="plan.due_date" class="chat-time" :class="{ overdue: isPlanOverdue(plan) }">{{ plan.due_date }}</span>
+          <div
+            class="task-row"
+            @click="swipedTaskMoved ? (swipedTaskMoved = false) : openPlanDetail(plan)"
+            @touchstart.passive="onTaskSwipeStart($event, plan)"
+            @touchend.passive="onTaskSwipeEnd"
+            @touchmove.passive="onTaskSwipeMove"
+          >
+            <div class="task-row-dot" :class="'dot-' + plan.status"></div>
+            <div class="task-row-body">
+              <div class="task-row-title" :class="{ 'task-row-done': plan.status === 'done' }">{{ plan.title }}</div>
+              <div v-if="plan.mentions?.length || plan.due_date" class="task-row-meta">
+                <span v-if="plan.mentions?.length" class="task-meta-assignee">@{{ plan.mentions.map((m:any) => m.name).join(' ') }}</span>
+                <span v-if="plan.due_date" class="task-meta-due" :class="{ overdue: isPlanOverdue(plan) }">{{ plan.due_date }}</span>
+              </div>
             </div>
-            <div class="chat-bottom">
-              <span class="chat-msg">
-                <span v-if="plan.status === 'todo'" style="color:#86909C">待开始</span>
-                <span v-if="plan.status === 'doing'" style="color:#2E6BE6">进行中</span>
-                <span v-if="plan.status === 'done'" style="color:#00B42A">已完成</span>
-                <span v-if="plan.mentions?.length"> · {{ plan.mentions.map((m: any) => m.name).join(', ') }}</span>
-              </span>
-            </div>
+            <span class="task-row-status-tag" :class="'stag-' + plan.status">
+              <span v-if="plan.status==='todo'">待办</span>
+              <span v-if="plan.status==='doing'">进行中</span>
+              <span v-if="plan.status==='done'">完成</span>
+            </span>
           </div>
         </div>
       </div>
 
-      <!-- 完全为空 -->
-      <div v-if="pendingItems.length === 0 && todoPlans.length === 0 && !showAddPlan" class="chat-empty">
-        <div class="chat-empty-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
-            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
-        </div>
-        <div class="chat-empty-text">暂无待办事项</div>
-      </div>
-
-      <!-- 内联新建表单 -->
-      <div v-if="showAddPlan" class="inline-add-form">
-        <div class="inline-form-title">
-          <span>新建工作计划</span>
-          <span class="inline-form-cancel" @click="showAddPlan = false">取消</span>
-        </div>
-        <input v-model="newPlan.title" class="task-input" placeholder="计划标题" />
-        <textarea v-model="newPlan.description" class="task-textarea" placeholder="描述（选填）" rows="2" />
-        <div class="task-field-row">
-          <label>优先级</label>
-          <select v-model="newPlan.priority" class="task-select">
-            <option value="normal">普通</option>
-            <option value="high">紧急</option>
-          </select>
-        </div>
-        <div class="task-field-row">
-          <label>截止日期</label>
-          <input v-model="newPlan.due_date" type="date" class="task-input" />
-        </div>
-        <button class="task-submit-btn" @click="createPlanFromChat" :disabled="!newPlan.title.trim()">创建</button>
-      </div>
-
-      <!-- 切换按钮 -->
-      <div v-if="!showAddPlan" class="todo-toggle-row">
-        <button class="todo-add-btn" @click="showAddPlan = true">新建计划</button>
-        <button v-if="todoPlans.length > 0" class="todo-done-btn" @click="router.push('/mobile/task')">查看已完成</button>
+      <!-- 新建按钮 -->
+      <div class="task-add-row">
+        <button class="task-add-btn" @click="openAddPlan">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新建任务
+        </button>
       </div>
     </div>
 
@@ -315,6 +293,97 @@
 
   <!-- 所有弹窗通过 Teleport 渲染到 body，避免被 .wx-layout 的 overflow:hidden 裁剪 -->
   <Teleport to="body" v-if="isChatPage">
+    <!-- 新建任务底部抽屉 -->
+    <div v-if="showAddPlan" class="m-modal-mask" @click.self="showAddPlan = false">
+      <div class="m-modal-sheet add-plan-sheet" @touchmove.stop>
+        <div class="m-modal-header">
+          <span>新建工作计划</span>
+          <button class="m-modal-close" @click="showAddPlan = false">取消</button>
+        </div>
+        <div class="m-modal-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <input v-model="newPlan.title" class="plan-input" placeholder="计划标题（必填）" autofocus />
+          <textarea v-model="newPlan.description" class="plan-textarea" placeholder="描述（选填）" rows="2" />
+          <div class="plan-field-row">
+            <label>负责人</label>
+            <div class="plan-assignee-wrap">
+              <div v-if="newPlan.mentions.length === 0" class="plan-assignee-placeholder" @click="showAssigneePicker = !showAssigneePicker">点击选择（可选）</div>
+              <div v-else class="plan-assignee-chips" @click="showAssigneePicker = !showAssigneePicker">
+                <span v-for="m in newPlan.mentions" :key="m.id" class="plan-chip">
+                  {{ m.name }}
+                  <span @click.stop="newPlan.mentions = newPlan.mentions.filter(x => x.id !== m.id)">×</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <!-- 负责人选择器 -->
+          <div v-if="showAssigneePicker" class="plan-assignee-picker">
+            <div v-if="contacts.length === 0" style="font-size:13px;color:#999;padding:8px">加载中...</div>
+            <div
+              v-for="c in contacts"
+              :key="c.id"
+              class="plan-assignee-item"
+              :class="{ selected: newPlan.mentions.some(m => m.id === c.id) }"
+              @click="toggleAssignee(c)"
+            >
+              <span class="plan-assignee-avatar">{{ c.name?.[0] }}</span>
+              <span>{{ c.name }}</span>
+              <svg v-if="newPlan.mentions.some(m => m.id === c.id)" width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#2E6BE6" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+            </div>
+          </div>
+          <div class="plan-field-row">
+            <label>优先级</label>
+            <div class="plan-priority-btns">
+              <button :class="['plan-priority-btn', { active: newPlan.priority === 'high' }]" @click="newPlan.priority = 'high'">🔴 紧急</button>
+              <button :class="['plan-priority-btn', { active: newPlan.priority === 'normal' }]" @click="newPlan.priority = 'normal'">📋 普通</button>
+              <button :class="['plan-priority-btn', { active: newPlan.priority === 'low' }]" @click="newPlan.priority = 'low'">📌 低优</button>
+            </div>
+          </div>
+          <div class="plan-field-row">
+            <label>截止日期</label>
+            <input v-model="newPlan.due_date" type="date" class="plan-input-sm" />
+          </div>
+        </div>
+        <div class="m-modal-footer">
+          <button class="plan-submit-btn" @click="createPlanFromChat" :disabled="!newPlan.title.trim() || planSubmitting">
+            {{ planSubmitting ? '创建中...' : '创建任务' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务详情底部抽屉 -->
+    <div v-if="selectedPlan" class="m-modal-mask" @click.self="selectedPlan = null">
+      <div class="m-modal-sheet add-plan-sheet" @touchmove.stop>
+        <div class="m-modal-header">
+          <span>任务详情</span>
+          <button class="m-modal-close" @click="selectedPlan = null">关闭</button>
+        </div>
+        <div class="m-modal-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-size:17px;font-weight:600;color:#1d2129;line-height:1.4">{{ selectedPlan.title }}</div>
+          <div v-if="selectedPlan.description" style="font-size:14px;color:#4e5969;background:#f5f5f7;padding:10px;border-radius:8px">{{ selectedPlan.description }}</div>
+          <div class="plan-field-row">
+            <label>状态</label>
+            <div class="plan-priority-btns">
+              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'todo' }]" @click="updatePlanStatus(selectedPlan, 'todo')">待开始</button>
+              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'doing' }]" @click="updatePlanStatus(selectedPlan, 'doing')">进行中</button>
+              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'done' }]" @click="updatePlanStatus(selectedPlan, 'done')">已完成</button>
+            </div>
+          </div>
+          <div v-if="selectedPlan.due_date" class="plan-field-row">
+            <label>截止日期</label>
+            <span style="font-size:14px">{{ selectedPlan.due_date }}</span>
+          </div>
+          <div v-if="selectedPlan.mentions?.length" class="plan-field-row">
+            <label>执行人</label>
+            <span style="font-size:14px;color:#2E6BE6">{{ selectedPlan.mentions.map((m: any) => m.name).join('、') }}</span>
+          </div>
+        </div>
+        <div class="m-modal-footer" style="display:flex;gap:10px">
+          <button class="plan-delete-btn" style="flex:1" @click="deletePlan(selectedPlan)">删除任务</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 发起群聊 - 联系人选择面板 -->
     <div v-if="showCreateGroup" class="m-modal-mask" @click.self="showCreateGroup = false">
       <div class="m-modal-sheet m-modal-sheet-tall" @touchmove.stop>
@@ -603,7 +672,52 @@ async function deleteGroup(g: any) {
 const pendingItems = ref<any[]>([])
 const todoPlans = ref<any[]>([])
 const showAddPlan = ref(false)
-const newPlan = ref({ title: '', description: '', priority: 'normal', due_date: '' })
+const planSubmitting = ref(false)
+const selectedPlan = ref<any>(null)
+const newPlan = ref({ title: '', description: '', priority: 'normal', due_date: '', mentions: [] as any[] })
+const showAssigneePicker = ref(false)
+
+function toggleAssignee(c: any) {
+  const idx = newPlan.value.mentions.findIndex(m => m.id === c.id)
+  if (idx >= 0) newPlan.value.mentions.splice(idx, 1)
+  else newPlan.value.mentions.push({ id: c.id, name: c.name })
+}
+
+function openAddPlan() {
+  newPlan.value = { title: '', description: '', priority: 'normal', due_date: '', mentions: [] }
+  showAssigneePicker.value = false
+  showAddPlan.value = true
+}
+const taskFilter = ref('all')
+const taskFilters = computed(() => [
+  { key: 'all', label: '全部', count: todoPlans.value.length },
+  { key: 'todo', label: '待办', count: todoPlans.value.filter(p => p.status === 'todo').length },
+  { key: 'doing', label: '进行中', count: todoPlans.value.filter(p => p.status === 'doing').length },
+  { key: 'done', label: '已完成', count: todoPlans.value.filter(p => p.status === 'done').length },
+])
+const filteredTodoPlans = computed(() => {
+  if (taskFilter.value === 'all') return todoPlans.value
+  return todoPlans.value.filter(p => p.status === taskFilter.value)
+})
+
+// 任务左滑
+const swipedTaskId = ref<any>(null)
+const swipeTaskStartX = ref(0)
+const swipedTaskMoved = ref(false)
+const swipingTask = ref<any>(null)
+
+function onTaskSwipeStart(e: TouchEvent, plan: any) {
+  swipeTaskStartX.value = e.touches[0].clientX
+  swipedTaskMoved.value = false
+  swipingTask.value = plan
+}
+function onTaskSwipeMove(e: TouchEvent) {
+  const dx = e.touches[0].clientX - swipeTaskStartX.value
+  if (Math.abs(dx) > 5) swipedTaskMoved.value = true
+  if (dx < -50 && swipingTask.value) swipedTaskId.value = swipingTask.value.id
+  if (dx > 10 && swipedTaskId.value) swipedTaskId.value = null
+}
+function onTaskSwipeEnd() { swipingTask.value = null }
 
 function isPlanOverdue(plan: any) {
   if (!plan.due_date || plan.status === 'done') return false
@@ -611,30 +725,76 @@ function isPlanOverdue(plan: any) {
 }
 
 function openPlanDetail(plan: any) {
-  router.push(`/mobile/task?plan=${plan.id}`)
+  swipedTaskId.value = null
+  selectedPlan.value = { ...plan }
+}
+
+async function updatePlanStatus(plan: any, status: string) {
+  try {
+    await http.put(`/work/plans/${plan.id}`, { status })
+    plan.status = status
+    const idx = todoPlans.value.findIndex(p => p.id === plan.id)
+    if (idx >= 0) todoPlans.value[idx].status = status
+    if (selectedPlan.value?.id === plan.id) selectedPlan.value.status = status
+    swipedTaskId.value = null
+  } catch { /* 静默 */ }
+}
+
+async function sendPlanRemind(plan: any) {
+  try {
+    const res = await http.get('/chat/groups/private/secretary')
+    const groupId = res?.data?.id ?? res?.id
+    if (!groupId) return
+    const msg = `🔔 请跟进任务：「${plan.title}」${plan.due_date ? '，截止 ' + plan.due_date : ''}`
+    await http.post('/chat/messages', { group_id: groupId, content: msg })
+    alert('已通知秘书跟进')
+  } catch { alert('通知失败') }
+}
+
+async function deletePlan(plan: any) {
+  if (!confirm(`确定删除「${plan.title}」？`)) return
+  try {
+    await http.delete(`/work/plans/${plan.id}`)
+    todoPlans.value = todoPlans.value.filter(p => p.id !== plan.id)
+    selectedPlan.value = null
+  } catch { alert('删除失败') }
 }
 
 async function createPlanFromChat() {
   if (!newPlan.value.title.trim()) return
+  planSubmitting.value = true
   try {
-    await http.post('/work/plans', newPlan.value)
-    newPlan.value = { title: '', description: '', priority: 'normal', due_date: '' }
+    const res = await http.post('/work/plans', newPlan.value)
+    const created = res?.data?.plan || res?.data || {}
+    todoPlans.value.unshift(created)
+    newPlan.value = { title: '', description: '', priority: 'normal', due_date: '', mentions: [] }
     showAddPlan.value = false
-    await loadTodoPlans()
+    showAssigneePicker.value = false
+    // 通知秘书，带负责人
+    try {
+      const secRes = await http.get('/chat/groups/private/secretary')
+      const gid = secRes?.data?.id ?? secRes?.id
+      if (gid) {
+        const due = created.due_date ? `，截止 ${created.due_date}` : ''
+        const assignees = newPlan.value.mentions.length
+          ? `，负责人：${newPlan.value.mentions.map(m => m.name).join('、')}`
+          : ''
+        await http.post('/chat/messages', { group_id: gid, content: `📋 新任务已创建：「${created.title || newPlan.value.title}」${assignees}${due}。请跟进。` })
+      }
+    } catch { /* 通知失败不阻断 */ }
   } catch (e: any) {
     alert('创建失败：' + (e?.message || '未知错误'))
+  } finally {
+    planSubmitting.value = false
   }
 }
 
 async function loadTodoPlans() {
   try {
-    const res = await http.get('/work/plans', { params: { list_rows: 50 } })
-    console.log('[DEBUG loadTodoPlans] res =', JSON.stringify(res))
+    const res = await http.get('/work/plans', { params: { list_rows: 100 } })
     const plans = res?.data?.plans ?? res?.plans ?? []
-    console.log('[DEBUG loadTodoPlans] plans =', plans.length, plans.map((p: any) => ({ id: p.id, title: p.title, status: p.status })))
-    todoPlans.value = plans.filter((p: any) => p.status !== 'done')
-  } catch (e) {
-    console.error('[DEBUG loadTodoPlans] error =', e)
+    todoPlans.value = plans
+  } catch {
     todoPlans.value = []
   }
 }
@@ -916,7 +1076,7 @@ export default { name: 'MobileChat' }
 <style scoped>
 .chat-page {
   height: 100%;
-  background: #f5f5f5;
+  background: #f7f8fa;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -939,6 +1099,7 @@ export default { name: 'MobileChat' }
   flex-direction: column;
 }
 .todo-section { padding: 0 0 8px; }
+.todo-tab { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .todo-section-title {
   padding: 10px 16px 4px;
   font-size: 12px;
@@ -951,18 +1112,158 @@ export default { name: 'MobileChat' }
   justify-content: center;
   gap: 6px;
   margin: 12px 16px;
-  padding: 10px;
+  padding: 12px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #2E6BE6;
   color: white;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  width: calc(100% - 32px);
 }
 .todo-add-btn:active { opacity: 0.85; }
+.todo-bottom-row { padding: 8px 0 16px; }
 
-/* 内联新建表单 */
+/* 状态筛选条 */
+.task-status-filter {
+  display: flex;
+  gap: 6px;
+  padding: 6px 16px 8px;
+  overflow-x: auto;
+}
+.task-status-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: #86909c;
+  background: #f2f3f5;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s;
+}
+.task-status-filter-item.active { background: #2E6BE6; color: #fff; }
+.task-filter-badge {
+  font-size: 11px;
+  background: rgba(245,63,63,0.9);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 5px;
+  min-width: 16px;
+  text-align: center;
+}
+.task-status-filter-item.active .task-filter-badge { background: rgba(255,255,255,0.3); }
+
+/* 任务左滑 */
+.task-item-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.task-swipe-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+  z-index: 1;
+}
+.task-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.task-action-doing { background: #2E6BE6; }
+.task-action-done { background: #00b42a; }
+.task-item-wrap.swiped > .chat-item {
+  transform: translateX(-144px);
+  transition: transform 0.2s;
+}
+.task-done-item { opacity: 0.7; }
+.task-title-done { text-decoration: line-through; color: #c9cdd4 !important; }
+
+/* 新建/详情表单样式 */
+.add-plan-sheet { max-height: 75dvh; min-height: auto; }
+.plan-input {
+  width: 100%; height: 46px; background: #f5f5f7; border: none;
+  border-radius: 10px; padding: 0 14px; font-size: 15px; color: #1d2129;
+  outline: none; box-sizing: border-box;
+}
+.plan-input:focus { background: #eef2ff; }
+.plan-textarea {
+  width: 100%; min-height: 60px; background: #f5f5f7; border: none;
+  border-radius: 10px; padding: 12px 14px; font-size: 14px; color: #1d2129;
+  resize: none; box-sizing: border-box; outline: none;
+}
+.plan-textarea:focus { background: #eef2ff; }
+.plan-field-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.plan-field-row label {
+  font-size: 13px; color: #86909c; font-weight: 500; white-space: nowrap; min-width: 52px;
+}
+.plan-input-sm {
+  flex: 1; height: 38px; background: #f5f5f7; border: none;
+  border-radius: 8px; padding: 0 12px; font-size: 14px; color: #1d2129; outline: none;
+}
+.plan-priority-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.plan-priority-btn {
+  padding: 5px 12px; border: 1px solid #e5e6eb; border-radius: 999px;
+  font-size: 13px; color: #4e5969; background: #fff; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.plan-priority-btn.active { background: #2E6BE6; color: #fff; border-color: #2E6BE6; }
+.plan-assignee-wrap { flex: 1; cursor: pointer; }
+.plan-assignee-placeholder { font-size: 14px; color: #c9cdd4; padding: 6px 0; }
+.plan-assignee-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.plan-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 13px; color: #2E6BE6; background: #e8f0ff;
+  padding: 3px 8px; border-radius: 999px;
+}
+.plan-chip span { cursor: pointer; font-size: 15px; line-height: 1; }
+.plan-assignee-picker {
+  background: #f7f8fa; border-radius: 10px; padding: 6px 0;
+  max-height: 180px; overflow-y: auto;
+}
+.plan-assignee-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.plan-assignee-item:active { background: #f0f4ff; }
+.plan-assignee-item.selected { background: #f0f4ff; }
+.plan-assignee-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #2E6BE6; color: #fff; display: flex;
+  align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0;
+}
+.plan-assignee-item span:nth-child(2) { flex: 1; font-size: 14px; color: #1d2129; }
+
+.plan-submit-btn {
+  width: 100%; height: 50px; background: #2E6BE6; border: none;
+  border-radius: 12px; font-size: 16px; font-weight: 600; color: #fff; cursor: pointer;
+}
+.plan-submit-btn:disabled { background: #c9cdd4; cursor: not-allowed; }
+.plan-remind-btn {
+  flex: 1; height: 44px; background: #fff; border: 1px solid #2E6BE6;
+  border-radius: 10px; font-size: 14px; font-weight: 500; color: #2E6BE6; cursor: pointer;
+}
+.plan-delete-btn {
+  height: 44px; padding: 0 20px; background: #fff; border: 1px solid #ff4d4f;
+  border-radius: 10px; font-size: 14px; font-weight: 500; color: #ff4d4f; cursor: pointer;
+}
+
+/* 内联新建表单（旧，保留兼容） */
 .inline-add-form {
   background: #f7f8fa;
   border-radius: 12px;
@@ -1017,9 +1318,8 @@ export default { name: 'MobileChat' }
   background: #fff;
   display: flex;
   align-items: center;
-  height: 44px;
-  padding: 0 4px;
-  border-bottom: 1px solid #f0f0f0;
+  height: 48px;
+  padding: 0 8px;
   position: sticky;
   top: 0;
   z-index: 20;
@@ -1053,8 +1353,7 @@ export default { name: 'MobileChat' }
 /* ── 搜索栏 ── */
 .chat-search-bar {
   background: #fff;
-  padding: 8px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 10px 16px;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -1062,41 +1361,40 @@ export default { name: 'MobileChat' }
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #f2f3f5;
-  border-radius: 6px;
-  padding: 7px 12px;
+  background: #f5f6f8;
+  border-radius: 10px;
+  padding: 9px 14px;
 }
-.chat-search-placeholder { font-size: 14px; color: #999; }
+.chat-search-placeholder { font-size: 14px; color: #b4bbc5; }
 
 /* ── 子Tab ── */
 .chat-sub-tabs {
   background: #fff;
   display: flex;
-  border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 }
 .chat-sub-tab {
   flex: 1;
   text-align: center;
-  padding: 10px 0;
+  padding: 11px 0;
   font-size: 15px;
-  color: #666;
+  color: #86909c;
   cursor: pointer;
   position: relative;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s;
 }
-.chat-sub-tab.active { color: #2E6BE6; font-weight: 700; }
+.chat-sub-tab.active { color: #1d2129; font-weight: 700; }
 .chat-sub-tab.active::after {
   content: '';
   position: absolute;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 32px;
-  height: 2px;
+  width: 28px;
+  height: 3px;
   background: #2E6BE6;
-  border-radius: 1px;
+  border-radius: 2px;
 }
 
 /* ── 会议室入口 ── */
@@ -1127,7 +1425,7 @@ export default { name: 'MobileChat' }
 .chat-meeting-arrow { font-size: 18px; color: #ccc; }
 
 /* ── 消息列表 ── */
-.chat-list { background: #fff; }
+.chat-list { background: #f7f8fa; }
 .chat-empty { text-align: center; padding: 60px 0; color: #999; }
 .chat-empty-icon { margin-bottom: 10px; }
 .chat-empty-text { font-size: 14px; }
@@ -1135,27 +1433,29 @@ export default { name: 'MobileChat' }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 16px;
   cursor: pointer;
-  border-bottom: 1px solid #f5f5f5;
+  background: #fff;
+  margin-bottom: 1px;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
   position: relative;
 }
-.chat-item:last-child { border-bottom: none; }
-.chat-item:active { background: #f0f0f0; }
+.chat-item:last-child { margin-bottom: 0; }
+.chat-item:active { background: #f5f7fa; }
 .chat-avatar-wrap { position: relative; flex-shrink: 0; }
 .chat-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   background: #2E6BE6;
+  box-shadow: 0 2px 8px rgba(46,107,230,0.18);
 }
 .chat-avatar--sm { width: 40px; height: 40px; font-size: 14px; border-radius: 6px; }
 .chat-avatar--meeting {
@@ -1179,24 +1479,25 @@ export default { name: 'MobileChat' }
   border: 2px solid #fff;
 }
 .chat-body { flex: 1; min-width: 0; }
-.chat-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.chat-name { font-size: 15px; font-weight: 600; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-time { font-size: 12px; color: #bbb; flex-shrink: 0; }
+.chat-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+.chat-name { font-size: 15.5px; font-weight: 600; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.2px; }
+.chat-time { font-size: 12px; color: #c9cdd4; flex-shrink: 0; }
 .chat-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.chat-msg { font-size: 13px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.chat-msg { font-size: 13px; color: #86909c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .chat-badge {
-  min-width: 18px;
-  height: 18px;
-  background: #f53f3f;
-  border-radius: 9px;
+  min-width: 19px;
+  height: 19px;
+  background: linear-gradient(135deg, #ff4d4f, #f53f3f);
+  border-radius: 10px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 5px;
+  padding: 0 5.5px;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(245,63,63,0.35);
 }
 .todo-item .chat-body { min-width: 0; }
 .todo-item .chat-name { font-size: 14px; }

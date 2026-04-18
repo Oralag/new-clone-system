@@ -14,12 +14,7 @@
       </div>
     </div>
 
-    <!-- 今日待跟进提示条 -->
-    <div v-if="pendingTodayCount > 0 && activeFilter === 'todo'" class="followup-bar" @click="activeFilter = 'today'">
-      <span class="followup-icon">📌</span>
-      <span>今日待跟进 <strong>{{ pendingTodayCount }} 条</strong></span>
-      <span class="followup-arrow">›</span>
-    </div>
+
 
     <!-- 任务列表 -->
     <div class="task-list">
@@ -29,7 +24,7 @@
       <div v-else-if="filteredPlans.length === 0" class="task-empty">
         <div class="task-empty-icon">{{ activeFilter === 'done' ? '🎉' : '📋' }}</div>
         <div class="task-empty-text">
-          {{ activeFilter === 'done' ? '暂无已完成任务' : activeFilter === 'today' ? '今日无待跟进任务' : '暂无任务' }}
+          {{ activeFilter === 'done' ? '暂无已完成任务' : activeFilter === 'doing' ? '暂无进行中任务' : '暂无任务' }}
         </div>
       </div>
 
@@ -302,7 +297,7 @@ const route = useRoute()
 const plans = ref<any[]>([])
 const loading = ref(false)
 const submitting = ref(false)
-const activeFilter = ref('todo')
+const activeFilter = ref('all')
 const showAdd = ref(false)
 const swipedPlanId = ref<number | null>(null)
 const swipeStartX = ref(0)
@@ -382,21 +377,15 @@ const todoCount = computed(() => plans.value.filter(p => p.status !== 'done').le
 const doneCount = computed(() => plans.value.filter(p => p.status === 'done').length)
 
 const filters = computed(() => [
-  { key: 'todo', label: '全部待办', count: todoCount.value },
-  { key: 'today', label: '今日跟进', count: pendingTodayCount.value },
-  { key: 'done', label: '已完成', count: doneCount.value },
+  { key: 'all', label: '全部', count: plans.value.length },
+  { key: 'todo', label: '待办', count: plans.value.filter(p => p.status === 'todo').length },
+  { key: 'doing', label: '进行中', count: plans.value.filter(p => p.status === 'doing').length },
+  { key: 'done', label: '已完成', count: plans.value.filter(p => p.status === 'done').length },
 ])
 
 const filteredPlans = computed(() => {
-  if (activeFilter.value === 'done') return plans.value.filter(p => p.status === 'done')
-  if (activeFilter.value === 'today') {
-    const t = new Date().toISOString().slice(0, 10)
-    return plans.value.filter(p =>
-      p.status !== 'done' &&
-      (p.due_date === t || !p.follow_up?.last_remind || !p.follow_up.last_remind.startsWith(t))
-    )
-  }
-  return plans.value.filter(p => p.status !== 'done')
+  if (activeFilter.value === 'all') return plans.value
+  return plans.value.filter(p => p.status === activeFilter.value)
 })
 
 // ── 方法 ──
@@ -490,13 +479,33 @@ async function createPlan() {
       priority: form.value.priority,
       mentions: form.value.mentions,
     })
-    plans.value.unshift(res.data.plan)
+    const newPlan = res.data?.plan || res.data || {}
+    plans.value.unshift(newPlan)
     showAdd.value = false
     activeFilter.value = 'todo'
+    // 通知秘书跟进新任务
+    notifySecretary(newPlan)
   } catch (e: any) {
     console.error('[createPlan] error:', e?.message, e?.response?.data)
     alert('创建失败: ' + (e?.message || '未知'))
     submitting.value = false
+  }
+}
+
+async function notifySecretary(plan: any) {
+  try {
+    // 找到秘书的私聊群，发送任务通知
+    const res = await http.get('/chat/groups/private/secretary')
+    const groupId = res?.data?.id ?? res?.id
+    if (!groupId) return
+    const mentions = plan.mentions?.length
+      ? `，执行人：${plan.mentions.map((m: any) => m.name).join('、')}`
+      : ''
+    const due = plan.due_date ? `，截止 ${plan.due_date}` : ''
+    const msg = `📋 新任务已创建：「${plan.title}」${mentions}${due}。请记录并跟进。`
+    await http.post('/chat/messages', { group_id: groupId, content: msg })
+  } catch {
+    // 秘书通知失败不影响主流程
   }
 }
 

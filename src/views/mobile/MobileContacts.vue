@@ -190,9 +190,14 @@ async function viewEmployee(c: any) {
 }
 
 async function openAgent(bot: any) {
-  // ERP管家直接跳独立AI聊天页（和消息首页一致，带完整tool_use能力）
+  // ERP管家直接跳独立AI聊天页
   if (bot.id === 'ai-assistant-fixed') {
     router.push('/mobile/ai')
+    return
+  }
+  // 亚当直接跳投资部门（有完整记忆和tool_use）
+  if (bot.id === 'adam') {
+    router.push('/investment')
     return
   }
   // 其他Agent：查找或创建私聊群

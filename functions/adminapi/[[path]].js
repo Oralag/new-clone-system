@@ -233,6 +233,8 @@ const AGENT_CONFIGS = {
 3. 根据任务性质分配给对应专员：文案→文案Agent，设计→海报Agent/平面设计师，视频→视频Agent，品牌策略→品牌Agent，热点情报→趋势Agent，发布排期→发布Agent
 4. 遇到重大决策或战略问题，明确告知"这个需要请示Captain总指挥"并@captain
 5. 遇到ERP业务问题（订单/库存/财务），告知"这个需要问管家"
+6. 【任务通知处理】当收到"📋 新任务已创建"消息时，回复"✅ 已收到，我会通知负责人并跟进进度。"（简短，不啰嗦）
+7. 【任务识别】当群里有人提到要做某件事、安排某个任务、或给某人分配工作时，主动提炼出任务要点并回复："✅ 已记录任务：[任务内容]，我会跟进进度。"
 回复简洁高效，像一个靠谱的助理。不用Markdown格式，不用**加粗**和---分隔线。全程中文。` },
   copywriter: { name: '文案Agent', systemPrompt: '你是数字游牧广告公司的文案专员，擅长各平台爆款文案、标题钩子、情绪共鸣。回复有创意有感染力。全程中文。' },
   poster: { name: '海报Agent', systemPrompt: '你是数字游牧广告公司的设计专员，擅长海报创意、配色方案、视觉描述。回复专业且富有美感。全程中文。' },
@@ -720,6 +722,70 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
         const unreadKey = `chat_unread:${mid}:${groupId}`
         const cur = parseInt(await env.USERS_KV.get(unreadKey) || '0')
         await env.USERS_KV.put(unreadKey, String(cur + 1))
+      }
+
+      // 秘书收到任务通知后，自动给负责人发私信跟进
+      if (String(agentId) === 'secretary' && content.includes('📋 新任务已创建')) {
+        // 从消息中提取负责人名字列表
+        const assigneeMatch = content.match(/负责人：([^，。\n]+)/)
+        if (assigneeMatch) {
+          const names = assigneeMatch[1].split('、').map(n => n.trim()).filter(Boolean)
+          // 从 KV 里找对应用户 ID
+          const usersRaw = await env.USERS_KV.get('users')
+          const users = usersRaw ? JSON.parse(usersRaw) : []
+          for (const name of names) {
+            const user = users.find(u => u.name === name || u.admin_name === name)
+            if (!user) continue
+            // 找或创建秘书与该用户的私聊
+            const groupsRaw2 = await env.USERS_KV.get('chat_groups')
+            const allGroups = groupsRaw2 ? JSON.parse(groupsRaw2) : []
+            let privateGroup = allGroups.find(g =>
+              g.is_private &&
+              g.member_ids?.length === 2 &&
+              g.member_ids.includes('secretary') &&
+              g.member_ids.includes(String(user.id || user.user_id))
+            )
+            if (!privateGroup) {
+              const uid = String(user.id || user.user_id)
+              privateGroup = {
+                id: nowMs(),
+                name: `秘书与${name}`,
+                is_private: true,
+                member_ids: ['secretary', uid],
+                created_at: new Date().toISOString(),
+                last_message: '',
+                last_message_at: new Date().toISOString(),
+              }
+              allGroups.push(privateGroup)
+              await env.USERS_KV.put('chat_groups', JSON.stringify(allGroups))
+            }
+            // 提取任务名
+            const taskMatch = content.match(/「(.+?)」/)
+            const taskTitle = taskMatch ? taskMatch[1] : '一项任务'
+            const dueMatch = content.match(/截止 ([^\s，。]+)/)
+            const dueStr = dueMatch ? `，截止日期 ${dueMatch[1]}` : ''
+            const notifyMsg = `📋 你好！你被分配了一项任务：「${taskTitle}」${dueStr}。请确认并按时完成，有问题随时找我。`
+            const notifyMsgObj = {
+              id: nowMs() + Math.floor(Math.random() * 1000),
+              group_id: privateGroup.id,
+              sender_id: 'secretary',
+              sender_name: '秘书',
+              content: notifyMsg,
+              type: 'text',
+              created_at: new Date().toISOString(),
+            }
+            const msgRaw3 = await env.USERS_KV.get('chat_messages')
+            const msgMap3 = msgRaw3 ? JSON.parse(msgRaw3) : {}
+            if (!msgMap3[privateGroup.id]) msgMap3[privateGroup.id] = []
+            msgMap3[privateGroup.id].push(notifyMsgObj)
+            await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap3))
+            // 给负责人加未读
+            const uid2 = String(user.id || user.user_id)
+            const unreadKey2 = `chat_unread:${uid2}:${privateGroup.id}`
+            const cur2 = parseInt(await env.USERS_KV.get(unreadKey2) || '0')
+            await env.USERS_KV.put(unreadKey2, String(cur2 + 1))
+          }
+        }
       }
     } catch (e) {
       console.error(`Agent ${agentId} reply failed:`, e)

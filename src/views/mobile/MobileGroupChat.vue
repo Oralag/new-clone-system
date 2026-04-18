@@ -368,6 +368,8 @@ const isRecording = ref(false)
 const voiceCancel = ref(false)
 const voiceSeconds = ref(0)
 let voiceTimer: ReturnType<typeof setInterval> | null = null
+let voiceInterimText = ''  // 实时识别文字，供 stopVoice 松手时直接使用
+let voiceSent = false       // 防止 onend 重复发送
 let recognition: any = null
 let voiceStartY = 0
 
@@ -384,25 +386,17 @@ function startVoice(e: TouchEvent | MouseEvent) {
   recognition = new SR()
   recognition.lang = 'zh-CN'
   recognition.continuous = false
-  recognition.interimResults = false
+  recognition.interimResults = true  // 实时拿中间结果，松手时直接用
 
-  // 用闭包变量跟踪状态，避免异步竞态
   let cancelled = false
-  let gotResult = false
   let resultText = ''
-
-  // 把取消标志注入闭包，stopVoice 通过 recognition.__cancelled 传递
-  ;(recognition as any).__setCancelled = (v: boolean) => { cancelled = v }
+  voiceInterimText = ''
+  voiceSent = false
 
   recognition.onresult = (ev: any) => {
-    resultText = ev.results[0]?.[0]?.transcript || ''
-    gotResult = true
-    if (resultText && !cancelled) {
-      sending.value = false  // 确保不被上一条消息的 sending 锁住
-      inputText.value = resultText
-      voiceMode.value = false
-      nextTick(() => { autoResize(); sendMessage() })
-    }
+    let t = ''
+    for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript
+    if (t) { resultText = t; voiceInterimText = t }
   }
   recognition.onerror = (ev: any) => {
     console.error('[Voice]', ev.error)
@@ -413,8 +407,13 @@ function startVoice(e: TouchEvent | MouseEvent) {
   recognition.onend = () => {
     isRecording.value = false
     if (voiceTimer) clearInterval(voiceTimer)
-    if (!gotResult && !cancelled) {
-      // 静默处理，不弹提示
+    voiceInterimText = ''
+    if (!voiceSent && resultText && !voiceCancel.value) {
+      voiceSent = true
+      sending.value = false
+      inputText.value = resultText
+      voiceMode.value = false
+      nextTick(() => { autoResize(); sendMessage() })
     }
   }
   try { recognition.start() } catch(e) { isRecording.value = false }
@@ -428,15 +427,25 @@ function checkVoiceCancel(e: TouchEvent) {
 function stopVoice() {
   if (!isRecording.value) return
   if (voiceCancel.value) { cancelVoice(); return }
-  // 告知闭包：正常停止，不取消
-  ;(recognition as any)?.__setCancelled?.(false)
-  recognition?.stop()
-  if (voiceTimer) clearInterval(voiceTimer)
   isRecording.value = false
+  if (voiceTimer) clearInterval(voiceTimer)
+  // 松手时有识别文字就立刻发，不等 onend（消除服务端延迟）
+  if (voiceInterimText) {
+    const text = voiceInterimText
+    voiceInterimText = ''
+    voiceSent = true
+    sending.value = false
+    inputText.value = text
+    voiceMode.value = false
+    recognition?.abort()
+    nextTick(() => { autoResize(); sendMessage() })
+  } else {
+    recognition?.stop()  // 没有中间结果时正常 stop，等 onend
+  }
 }
 
 function cancelVoice() {
-  ;(recognition as any)?.__setCancelled?.(true)
+  voiceInterimText = ''
   recognition?.abort()
   if (voiceTimer) clearInterval(voiceTimer)
   isRecording.value = false

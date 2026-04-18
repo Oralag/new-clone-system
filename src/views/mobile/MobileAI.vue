@@ -241,15 +241,11 @@ function startVoice(e: TouchEvent | MouseEvent) {
   if (!SR) { ElMessage.warning('当前浏览器不支持语音'); isRecording.value = false; return }
   recognition = new SR()
   recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = false
-  let cancelled = false
-  let gotResult = false
-  ;(recognition as any).__setCancelled = (v: boolean) => { cancelled = v }
+  let resultText = ''
   recognition.onresult = (ev: any) => {
-    const text = ev.results[0]?.[0]?.transcript || ''
-    gotResult = true
-    if (text && !cancelled) {
-      isLoading.value = false  // 确保不被锁住
-      inputText.value = text
+    resultText = ev.results[0]?.[0]?.transcript || ''
+    if (resultText && !voiceCancel.value) {
+      inputText.value = resultText
       voiceMode.value = false
       nextTick(() => { autoResize(); sendMessage() })
     }
@@ -262,7 +258,11 @@ function startVoice(e: TouchEvent | MouseEvent) {
   recognition.onend = () => {
     isRecording.value = false
     if (voiceTimer) clearInterval(voiceTimer)
-    if (!gotResult && !cancelled) { /* 静默 */ }
+    if (resultText && !voiceCancel.value && inputText.value !== resultText) {
+      inputText.value = resultText
+      voiceMode.value = false
+      nextTick(() => { autoResize(); sendMessage() })
+    }
   }
   try { recognition.start() } catch { isRecording.value = false }
 }
