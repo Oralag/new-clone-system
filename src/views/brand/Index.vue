@@ -297,7 +297,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 </script>
 
 <style scoped>
-.brand-mode-overlay { position: fixed; inset: 60px 0 0 0; z-index: 200; background: #fff; display: flex; align-items: center; justify-content: center; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.brand-mode-overlay { position: fixed; inset: 60px 0 0 0; z-index: 200; background: #fff; display: flex; align-items: flex-start; justify-content: center; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 @media (max-width: 768px) {
   .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; }
 }

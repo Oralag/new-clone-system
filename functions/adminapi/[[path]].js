@@ -142,6 +142,7 @@ function getUserId(request) {
 const AGENT_INFO = {
   'ai-assistant-fixed': { name: 'AI助手', position: '智能助手', avatar: '' },
   'captain': { name: 'Captain 总指挥', position: '机器人', avatar: '' },
+  'secretary': { name: '秘书', position: '广告部门秘书', avatar: '' },
   'copywriter': { name: '文案Agent', position: '机器人', avatar: '' },
   'poster': { name: '海报Agent', position: '机器人', avatar: '' },
   'video': { name: '视频Agent', position: '机器人', avatar: '' },
@@ -223,7 +224,13 @@ const AGENT_IDS = new Set([
 // Agent 配置（systemPrompt 用于自动回复）
 const AGENT_CONFIGS = {
   captain: { name: 'Captain', systemPrompt: '你是数字游牧广告公司的Captain总指挥，负责统筹协调所有AI专员。回复简洁专业，像指挥官一样下达指令。全程中文。' },
-  secretary: { name: '秘书', systemPrompt: '你是数字游牧广告公司的秘书，负责情报简报和会议记录。回复简洁客观，汇总关键信息。全程中文。' },
+  secretary: { name: '秘书', systemPrompt: `你是数字游牧广告公司的秘书，是群聊的第一响应人。你的核心职责：
+1. 第一时间回应群里的消息，梳理清楚用户需求
+2. 跟进项目进度和待办事项，主动汇报状态
+3. 根据任务性质分配给对应专员：文案→文案Agent，设计→海报Agent/平面设计师，视频→视频Agent，品牌策略→品牌Agent，热点情报→趋势Agent，发布排期→发布Agent
+4. 遇到重大决策或战略问题，明确告知"这个需要请示Captain总指挥"并@captain
+5. 遇到ERP业务问题（订单/库存/财务），告知"这个需要问管家"
+回复简洁高效，像一个靠谱的助理。全程中文。` },
   copywriter: { name: '文案Agent', systemPrompt: '你是数字游牧广告公司的文案专员，擅长各平台爆款文案、标题钩子、情绪共鸣。回复有创意有感染力。全程中文。' },
   poster: { name: '海报Agent', systemPrompt: '你是数字游牧广告公司的设计专员，擅长海报创意、配色方案、视觉描述。回复专业且富有美感。全程中文。' },
   video: { name: '视频Agent', systemPrompt: '你是数字游牧广告公司的视频专员，擅长短视频脚本、分镜设计、口播文案。回复结构清晰，有画面感。全程中文。' },
@@ -232,7 +239,12 @@ const AGENT_CONFIGS = {
   publisher: { name: '发布Agent', systemPrompt: '你是数字游牧广告公司的发布专员，擅长各平台最佳发布时间、话题标签策略、内容排期。回复务实高效。全程中文。' },
   designer: { name: '平面设计师', systemPrompt: '你是数字游牧广告公司的平面设计师，擅长海报设计、品牌视觉、广告创意。回复专业且富有创意。全程中文。' },
   marketing: { name: '营销顾问', systemPrompt: '你是数字游牧广告公司的营销顾问，擅长市场策略、增长黑客、转化优化。回复战略性强，有商业洞察。全程中文。' },
-  'ai-assistant-fixed': { name: 'AI助手', systemPrompt: '你是数字游牧ERP的AI助手，帮助用户解答问题、提供建议。回复友好专业。全程中文。' },
+  'ai-assistant-fixed': { name: 'AI助手', systemPrompt: `你是数字游牧ERP的智能管家，专门处理ERP业务操作和查询。你的核心能力：
+1. 查询订单、库存、财务数据
+2. 帮用户录入销售单、采购单、收付款等业务单据
+3. 解答ERP系统操作问题
+4. 汇总业务数据和报表
+回复专业准确，优先给出可执行的操作指引。全程中文。` },
 }
 
 // 获取通讯录成员（员工 + Agent）
@@ -392,8 +404,11 @@ async function handleGetGroup(request, env) {
   const members = memberRaw ? JSON.parse(memberRaw)[groupId] || [] : []
 
   const membersWithInfo = await Promise.all(members.map(async m => {
-    const info = await getUserInfo(m.user_id, env)
-    return { ...m, ...info }
+    // Agent 直接从 AGENT_INFO 取，真实用户只查 KV 缓存
+    if (AGENT_INFO[m.user_id]) return { ...m, ...AGENT_INFO[m.user_id], id: m.user_id }
+    const cached = await env.USERS_KV.get(`user_info:${m.user_id}`)
+    if (cached) return { ...m, ...JSON.parse(cached) }
+    return { ...m, id: m.user_id, name: `用户${m.user_id}` }
   }))
 
   return jsonSuccess({ ...group, members: membersWithInfo, member_ids: members.map(m => m.user_id), is_pinned: group.is_pinned || false })
@@ -419,16 +434,11 @@ async function handleGetMessages(request, env) {
 
   let msgs = allMsgs.slice(-listRows)
 
-  const msgsWithUser = await Promise.all(msgs.map(async m => {
-    const info = await getUserInfo(m.sender_id, env)
-    return { ...m, sender_name: info.name }
-  }))
-
   if (userId) {
     await env.USERS_KV.put(`chat_unread:${userId}:${groupId}`, '0')
   }
 
-  return jsonSuccess({ rows: msgsWithUser, total: msgsWithUser.length })
+  return jsonSuccess({ rows: msgs, total: msgs.length })
 }
 
 // 🤖 Agent 自动回复触发器
@@ -763,16 +773,16 @@ async function handleRemoveGroupMember(request, env) {
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
 
-  // Extract the target user ID from the path
-  const m = request.url.match(/\/members\/(\d+)$/)
-  const targetUserId = m ? parseInt(m[1]) : null
+  // Extract the target user ID from the path（支持数字和字符串Agent ID）
+  const m = request.url.match(/\/members\/([^/?]+)/)
+  const targetUserId = m ? decodeURIComponent(m[1]) : null
   if (!targetUserId) return errRes('缺少用户ID')
 
   const memberRaw = await env.USERS_KV.get('chat_members')
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   if (!memberMap[groupId]) return errRes('群不存在')
 
-  memberMap[groupId] = memberMap[groupId].filter(m => m.user_id !== targetUserId)
+  memberMap[groupId] = memberMap[groupId].filter(m => String(m.user_id) !== String(targetUserId))
   await env.USERS_KV.put('chat_members', JSON.stringify(memberMap))
 
   return jsonSuccess({ success: true })
@@ -1033,7 +1043,7 @@ export async function onRequest(context) {
       return handleAddGroupMember(request, env)
     }
     // DELETE /adminapi/chat/groups/:id/members/:userId - remove member
-    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members\/\d+$/) && request.method === 'DELETE') {
+    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/members\/[^/]+$/) && request.method === 'DELETE') {
       return handleRemoveGroupMember(request, env)
     }
     // POST /adminapi/chat/groups/:id/read - mark messages read
