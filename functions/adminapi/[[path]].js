@@ -477,17 +477,23 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
   // 获取历史消息作为上下文（最近 8 条，全部作为 user 角色带发言人名字，避免AI误认身份）
   const raw = await env.USERS_KV.get('chat_messages')
   const msgMap = raw ? JSON.parse(raw) : {}
-  const history = (msgMap[groupId] || []).slice(-20).map(m => ({
+  const history = (msgMap[groupId] || []).slice(-50).map(m => ({
     role: 'user',
     content: `[${m.sender_name}]: ${m.content}`
   }))
 
   // 为每个 Agent 调用 AI（只取第一个有效 Agent，避免串行超时）
   const isWelcome = content === '__group_created__'
+  // 私聊：只有2个成员（1个Agent + 1个人），直接让Agent回复，不需要@
+  const isPrivateChat = memberIds.length === 2 && agentIds.length === 1
 
   // 检测触发逻辑
   let activeAgentIds = []
   if (!isWelcome) {
+    if (isPrivateChat) {
+      // 私聊：直接让对方Agent回复
+      activeAgentIds = [agentIds[0]]
+    } else {
     // 1. 先检测 @mention（任何人发都有效）
     const mentionedAgentId = agentIds.find(id => {
       const config = AGENT_CONFIGS[String(id)]
@@ -522,6 +528,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
         }
       }
     }
+    } // end else (群聊)
   } else {
     // 欢迎消息：第一个Agent发欢迎
     const firstAgentId = agentIds.find(id => AGENT_CONFIGS[String(id)] && env.ANTHROPIC_API_KEY)
