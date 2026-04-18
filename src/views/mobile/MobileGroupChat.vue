@@ -999,10 +999,12 @@ onUnmounted(() => {
 .m-modal-footer { padding: 14px 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px)); border-top: 1px solid #f2f3f5; flex-shrink: 0; }
 
 /* 微信风格群设置 */
-.m-gs-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; }
+.m-gs-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; }
 .m-gs-sheet {
-  width: 100%; max-height: 90vh; background: #111; border-radius: 12px 12px 0 0;
-  display: flex; flex-direction: column; animation: slideUp 0.25s ease;
+  position: fixed; top: 0; right: 0; bottom: 0; width: 90%; max-width: 400px;
+  background: #111; border-radius: 0;
+  display: flex; flex-direction: column; animation: slideRight 0.25s ease;
+  z-index: 1001;
 }
 .m-gs-header {
   display: flex; align-items: center; justify-content: center; height: 52px;
@@ -1080,6 +1082,7 @@ onUnmounted(() => {
 .m-gs-switch.active .m-gs-switch-dot { left: 22px; }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes slideRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
 /* 旧的添加成员弹窗样式保留 */
 .m-pick-search { margin-bottom: 12px; }
@@ -1148,7 +1151,7 @@ onUnmounted(() => {
   z-index: 2000 !important;
   padding-bottom: env(safe-area-inset-bottom);
 }
-.m-modal-mask.m-gs-member-mask { z-index: 1001; }
+.m-modal-mask.m-gs-member-mask { z-index: 1002; }
 .m-gs-member-action-info { text-align: center; padding: 16px 0 12px; }
 .m-gs-avatar-lg { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: 600; }
 .m-gs-member-action-name { font-size: 16px; font-weight: 600; color: #1d2129; margin-top: 8px; }
