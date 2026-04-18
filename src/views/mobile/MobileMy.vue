@@ -187,7 +187,7 @@ onMounted(async () => {
   if (recRes.status === 'fulfilled') {
     const rows = recRes.value?.data?.rows ?? recRes.value?.rows ?? []
     const uncollected = rows
-      .filter((r: any) => Number(r.status) !== 1 && Number(r.un_collect || r.amount || 0) > 0)
+      .filter((r: any) => Number(r.status) === 1 && Number(r.un_collect || r.amount || 0) > 0)
       .reduce((s: number, r: any) => s + Number(r.un_collect || r.amount || 0), 0)
     stats.value.receivable = uncollected >= 10000
       ? (uncollected / 10000).toFixed(1) + 'w'

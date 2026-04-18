@@ -627,9 +627,14 @@ async function createPlanFromChat() {
 async function loadTodoPlans() {
   try {
     const res = await http.get('/adminapi/work/plans', { params: { list_rows: 50 } })
+    console.log('[DEBUG loadTodoPlans] res =', JSON.stringify(res))
     const plans = res?.data?.plans ?? res?.plans ?? []
+    console.log('[DEBUG loadTodoPlans] plans =', plans.length, plans.map((p: any) => ({ id: p.id, title: p.title, status: p.status })))
     todoPlans.value = plans.filter((p: any) => p.status !== 'done')
-  } catch { todoPlans.value = [] }
+  } catch (e) {
+    console.error('[DEBUG loadTodoPlans] error =', e)
+    todoPlans.value = []
+  }
 }
 
 const subTabs = [

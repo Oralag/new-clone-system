@@ -345,17 +345,31 @@ const ROBOT_AGENTS = [
 async function loadAllContacts() {
   if (contactsLoaded) return
   try {
-    const { getAdminList } = await import('@/api/setting')
-    const res = await getAdminList({ list_rows: 500 })
-    const rows = res?.data?.rows ?? res?.rows ?? []
+    const [{ getAdminList }] = await Promise.all([import('@/api/setting')])
+    const [adminRes, groupsRes] = await Promise.all([
+      getAdminList({ list_rows: 500 }),
+      http.get('/chat/groups', { params: { list_rows: 200 }, silent: true }),
+    ])
+    // 员工
+    const rows = adminRes?.data?.rows ?? adminRes?.rows ?? []
     const humans = rows.map((r: any) => ({
-      id: r.id,
+      id: String(r.id),
       name: r.name || r.admin_name || '未知用户',
       position: r.dept_name || r.role_name || '',
     }))
-    allContacts.value = [...ROBOT_AGENTS, ...humans]
+    // 已有群聊
+    const groups = (groupsRes?.data?.rows ?? groupsRes?.rows ?? []).map((g: any) => ({
+      id: `group_${g.id}`,
+      name: g.name || '群聊',
+      position: '群聊',
+    }))
+    // 合并：机器人 + 群聊 + 员工
+    allContacts.value = [...ROBOT_AGENTS, ...groups, ...humans]
     contactsLoaded = true
-  } catch { allContacts.value = [...ROBOT_AGENTS] }
+  } catch {
+    allContacts.value = [...ROBOT_AGENTS]
+  }
+}
 }
 const cleaning = ref(false)
 const aiMode = ref(false)
