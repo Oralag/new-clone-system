@@ -157,6 +157,14 @@ async function initCamera() {
 
 async function scanLoop() {
   if (!codeReader || !videoEl.value) return
+  // 超时停止，避免无限循环
+  if (scanFrameCount >= SCAN_MAX_FRAMES) {
+    scanError.value = '扫描超时，请重试'
+    stopCamera()
+    mode.value = 'manual'
+    return
+  }
+  scanFrameCount++
   try {
     const result = await codeReader.decodeFromVideoElement(videoEl.value)
     if (result) {
@@ -164,10 +172,10 @@ async function scanLoop() {
       stopCamera()
       await doSearchByBarcode(barcode)
     } else {
-      requestAnimationFrame(scanLoop)
+      scanAnimationId = requestAnimationFrame(scanLoop)
     }
   } catch {
-    requestAnimationFrame(scanLoop)
+    scanAnimationId = requestAnimationFrame(scanLoop)
   }
 }
 
@@ -177,6 +185,11 @@ function stopCamera() {
     scanStream = null
   }
   cameraReady.value = false
+  scanFrameCount = 0
+  if (scanAnimationId) {
+    cancelAnimationFrame(scanAnimationId)
+    scanAnimationId = null
+  }
 }
 
 async function doSearch() {
