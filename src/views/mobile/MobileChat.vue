@@ -161,7 +161,7 @@
       </div>
 
       <!-- 完全为空 -->
-      <div v-if="pendingItems.length === 0 && todoPlans.length === 0" class="chat-empty">
+      <div v-if="pendingItems.length === 0 && todoPlans.length === 0 && !showAddPlan" class="chat-empty">
         <div class="chat-empty-icon">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
             <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
@@ -170,8 +170,33 @@
         <div class="chat-empty-text">暂无待办事项</div>
       </div>
 
-      <!-- 新建计划按钮 - 跳转到完整页面 -->
-      <button class="todo-add-btn" @click="router.push('/mobile/task/new?new=1')">新建计划</button>
+      <!-- 内联新建表单 -->
+      <div v-if="showAddPlan" class="inline-add-form">
+        <div class="inline-form-title">
+          <span>新建工作计划</span>
+          <span class="inline-form-cancel" @click="showAddPlan = false">取消</span>
+        </div>
+        <input v-model="newPlan.title" class="task-input" placeholder="计划标题" />
+        <textarea v-model="newPlan.description" class="task-textarea" placeholder="描述（选填）" rows="2" />
+        <div class="task-field-row">
+          <label>优先级</label>
+          <select v-model="newPlan.priority" class="task-select">
+            <option value="normal">普通</option>
+            <option value="high">紧急</option>
+          </select>
+        </div>
+        <div class="task-field-row">
+          <label>截止日期</label>
+          <input v-model="newPlan.due_date" type="date" class="task-input" />
+        </div>
+        <button class="task-submit-btn" @click="createPlanFromChat" :disabled="!newPlan.title.trim()">创建</button>
+      </div>
+
+      <!-- 切换按钮 -->
+      <div v-if="!showAddPlan" class="todo-toggle-row">
+        <button class="todo-add-btn" @click="showAddPlan = true">新建计划</button>
+        <button v-if="todoPlans.length > 0" class="todo-done-btn" @click="router.push('/mobile/task')">查看已完成</button>
+      </div>
     </div>
 
     <!-- ── AI管家 Tab ── -->
@@ -575,6 +600,8 @@ async function deleteGroup(g: any) {
 
 const pendingItems = ref<any[]>([])
 const todoPlans = ref<any[]>([])
+const showAddPlan = ref(false)
+const newPlan = ref({ title: '', description: '', priority: 'normal', due_date: '' })
 
 function isPlanOverdue(plan: any) {
   if (!plan.due_date || plan.status === 'done') return false
@@ -583,6 +610,18 @@ function isPlanOverdue(plan: any) {
 
 function openPlanDetail(plan: any) {
   router.push(`/mobile/task?plan=${plan.id}`)
+}
+
+async function createPlanFromChat() {
+  if (!newPlan.value.title.trim()) return
+  try {
+    await http.post('/adminapi/work/plans', newPlan.value)
+    newPlan.value = { title: '', description: '', priority: 'normal', due_date: '' }
+    showAddPlan.value = false
+    await loadTodoPlans()
+  } catch (e: any) {
+    alert('创建失败：' + (e?.message || '未知错误'))
+  }
 }
 
 async function loadTodoPlans() {
@@ -915,6 +954,46 @@ export default { name: 'MobileChat' }
   cursor: pointer;
 }
 .todo-add-btn:active { opacity: 0.85; }
+
+/* 内联新建表单 */
+.inline-add-form {
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 16px;
+}
+.inline-form-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d2129;
+}
+.inline-form-cancel {
+  font-size: 14px;
+  color: #2E6BE6;
+  cursor: pointer;
+}
+
+/* 切换按钮行 */
+.todo-toggle-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px 16px;
+}
+.todo-done-btn {
+  flex: 1;
+  height: 38px;
+  background: #fff;
+  border: 1px solid #2E6BE6;
+  border-radius: 6px;
+  color: #2E6BE6;
+  font-size: 14px;
+  cursor: pointer;
+}
+.todo-done-btn:active { opacity: 0.85; }
 .chat-name.done { text-decoration: line-through; color: #C9CDD4; }
 .chat-time.overdue { color: #F53F3F; font-weight: 500; }
 

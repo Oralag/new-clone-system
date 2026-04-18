@@ -186,26 +186,31 @@
     </div>
 
     <!-- 添加成员弹窗 -->
-    <div v-if="showAddMember" class="m-modal-mask" @click.self="showAddMember = false">
-      <div class="m-modal-sheet">
-        <div class="m-modal-header">
-          <span>添加成员</span>
-          <button class="m-modal-close" @click="showAddMember = false">取消</button>
-        </div>
-        <div class="m-modal-body">
-          <div class="m-pick-search">
-            <input v-model="addMemberSearch" class="m-input" placeholder="搜索成员..." />
+    <!-- 微信风格选择联系人 -->
+    <div v-if="showAddMember" class="m-pick-overlay">
+      <div class="m-pick-topbar">
+        <button class="m-pick-close" @click="cancelAddMember">✕</button>
+        <span class="m-pick-title">选择联系人</span>
+        <span class="m-pick-count">{{ addSelectedIds.size ? `(${addSelectedIds.size})` : '' }}</span>
+      </div>
+      <div class="m-pick-search-bar">
+        <input v-model="addMemberSearch" class="m-pick-search-input" placeholder="搜索" />
+      </div>
+      <div class="m-pick-body">
+        <div v-for="m in addableMembers" :key="m.id" class="m-pick-row" @click="toggleAddSelect(m)">
+          <div class="m-pick-check" :class="{ checked: addSelectedIds.has(m.id) }">
+            <svg v-if="addSelectedIds.has(m.id)" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#07c160"/><path d="M5 8l2 2 4-4" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
-          <div class="m-pick-list">
-            <div v-for="m in addableMembers" :key="m.id" class="m-pick-item" @click="addMember(m)">
-              <div class="m-pick-avatar">{{ m.name?.[0] || '?' }}</div>
-              <div class="m-pick-info">
-                <div class="m-pick-name">{{ m.name }}</div>
-                <div class="m-pick-sub">{{ m.position || '成员' }}</div>
-              </div>
-            </div>
+          <div class="m-pick-avatar2">{{ m.name?.[0] || '?' }}</div>
+          <div class="m-pick-info2">
+            <div class="m-pick-name2">{{ m.name }}</div>
+            <div class="m-pick-sub2">{{ m.position || '' }}</div>
           </div>
         </div>
+        <div v-if="!addableMembers.length" class="m-pick-empty">没有可添加的联系人</div>
+      </div>
+      <div class="m-pick-footer">
+        <button class="m-pick-done" :disabled="!addSelectedIds.size" @click="confirmAddMembers">完成{{ addSelectedIds.size ? `(${addSelectedIds.size})` : '' }}</button>
       </div>
     </div>
 
@@ -317,6 +322,7 @@ watch([showGroupInfo, showAddMember, showCleanupConfirm, showMemberAction], ([a,
 })
 const showAtPicker = ref(false)
 const addMemberSearch = ref('')
+const addSelectedIds = ref<Set<string>>(new Set())
 const cleanupDays = ref(180)
 const cleaning = ref(false)
 const aiMode = ref(false)
@@ -533,6 +539,38 @@ async function confirmAIMessage(msg: any) {
 function cancelAIMessage(msg: any) {
   // 删除这条AI消息
   messages.value = messages.value.filter(m => m.id !== msg.id)
+}
+
+function toggleAddSelect(m: any) {
+  const s = new Set(addSelectedIds.value)
+  if (s.has(m.id)) s.delete(m.id)
+  else s.add(m.id)
+  addSelectedIds.value = s
+}
+
+function cancelAddMember() {
+  showAddMember.value = false
+  addSelectedIds.value = new Set()
+  addMemberSearch.value = ''
+}
+
+async function confirmAddMembers() {
+  if (!addSelectedIds.value.size) return
+  const ids = [...addSelectedIds.value]
+  try {
+    for (const uid of ids) {
+      await http.post(`/chat/groups/${groupId.value}/members`, { user_id: uid })
+    }
+    // 刷新成员列表
+    const { data: refreshed } = await http.get(`/chat/groups/${groupId.value}`)
+    if (refreshed?.members) members.value = refreshed.members
+    ElMessage.success(`已添加 ${ids.length} 人`)
+    showAddMember.value = false
+    addSelectedIds.value = new Set()
+    addMemberSearch.value = ''
+  } catch {
+    ElMessage.error('添加失败')
+  }
 }
 
 async function addMember(m: any) {
@@ -1096,28 +1134,71 @@ onUnmounted(() => {
 @keyframes slideRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
 /* 旧的添加成员弹窗样式保留 */
-.m-pick-search { margin-bottom: 12px; }
-.m-pick-list { display: flex; flex-direction: column; }
-.m-pick-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  cursor: pointer;
-  border-bottom: 1px solid #f2f3f5;
+/* 微信风格选择联系人 */
+.m-pick-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: #fff;
+  display: flex; flex-direction: column;
 }
-.m-pick-avatar {
-  width: 36px; height: 36px;
-  background: #0071e3;
-  border-radius: 50%;
+.m-pick-topbar {
+  height: 52px; display: flex; align-items: center; justify-content: center;
+  position: relative; flex-shrink: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  border-bottom: 1px solid #f0f0f0;
+}
+.m-pick-close {
+  position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; font-size: 18px; color: #4e5969; cursor: pointer;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.m-pick-title { font-size: 17px; font-weight: 600; color: #1d2129; }
+.m-pick-count { font-size: 14px; color: #86909c; margin-left: 4px; }
+.m-pick-search-bar {
+  padding: 8px 16px; flex-shrink: 0;
+}
+.m-pick-search-input {
+  width: 100%; height: 36px; background: #f5f5f7;
+  border: none; border-radius: 8px; padding: 0 12px;
+  font-size: 15px; color: #1d2129; outline: none;
+  box-sizing: border-box;
+}
+.m-pick-body {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 0 16px;
+}
+.m-pick-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; cursor: pointer;
+  border-bottom: 1px solid #f5f5f7;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-pick-row:active { background: #f5f5f7; }
+.m-pick-check {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid #c9cdd4; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+  transition: all .15s;
 }
-.m-pick-info { flex: 1; }
-.m-pick-name { font-size: 14px; font-weight: 600; color: #1d2129; }
-.m-pick-sub { font-size: 12px; color: #86909c; }
+.m-pick-check.checked { border-color: #07c160; }
+.m-pick-avatar2 {
+  width: 40px; height: 40px; background: #0071e3;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 16px; font-weight: 600; flex-shrink: 0;
+}
+.m-pick-info2 { flex: 1; }
+.m-pick-name2 { font-size: 16px; color: #1d2129; }
+.m-pick-sub2 { font-size: 12px; color: #86909c; margin-top: 2px; }
+.m-pick-empty { text-align: center; color: #86909c; padding: 40px 0; font-size: 14px; }
+.m-pick-footer {
+  padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0; border-top: 1px solid #f0f0f0;
+}
+.m-pick-done {
+  width: 100%; height: 48px; background: #07c160; border: none;
+  border-radius: 8px; font-size: 17px; font-weight: 600;
+  color: #fff; cursor: pointer;
+}
+.m-pick-done:disabled { background: #a8e6c1; cursor: not-allowed; }
 .m-input {
   width: 100%;
   height: 44px;
