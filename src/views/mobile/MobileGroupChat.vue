@@ -524,59 +524,16 @@ async function sendMessage() {
     }
     lastMessageId = Math.max(lastMessageId, sent.id)
 
-    // 2. 如果群里有 Agent，调用 Agent API 获取 AI 回复
-    if (agentId) {
-      try {
-        // 调用 /api/agent-chat 获取 AI 回复（流式API）
-        const aiRes = await fetch('/api/agent-chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            agentId,
-            messages: [{ role: 'user', content: text }],
-          }),
-        })
-        
-        // 处理流式响应
-        const reader = aiRes.body?.getReader()
-        const decoder = new TextDecoder()
-        let aiText = ''
-        
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            const chunk = decoder.decode(value, { stream: true })
-            // 解析 SSE 格式: data: {...}\n\n
-            const lines = chunk.split('\n')
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.slice(6))
-                  if (data.type === 'text' && data.text) {
-                    aiText += data.text
-                  }
-                } catch {}
-              }
-            }
-          }
-        }
-        
-        // 添加 AI 回复到消息列表
-        if (aiText) {
-          messages.value.push({
-            id: `ai-${Date.now()}`,
-            sender_id: agentId,
-            sender_name: agentInGroup.name,
-            content: aiText,
-            type: 'ai_reply',
-            created_at: new Date().toISOString(),
-          })
-          await scrollToBottom()
-        }
-      } catch (aiErr) {
-        console.error('AI 回复失败', aiErr)
-      }
+    // 2. Agent 回复由后端 triggerAgentReplies 处理（同步 await，在 sendMessage 响应前完成）
+    //    回复消息直接写入 KV，这里重新加载即可看到
+    const agentStatus = (sent as any)?._agentStatus
+    if (agentStatus && agentStatus.startsWith('error:')) {
+      console.warn('[Agent] reply error:', agentStatus)
+    }
+    if (agentStatus && agentStatus === 'ok') {
+      // Agent 已回复，重新加载消息
+      await loadMessages(false)
+      await scrollToBottom()
     }
   } catch (e: any) {
     ElMessage.error('发送失败')
