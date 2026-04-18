@@ -2322,11 +2322,26 @@ async function handleReverseAudit(row: any) {
       const inhouseListRes = await getProcureInhouseList({ list_rows: 2000 })
       const allInhouse: any[] = inhouseListRes.data?.rows ?? []
       const inhouseRows = allInhouse.filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
+
+      // 拉所有 BOM 扣料的其他出库单，准备删除
+      const otherOutRes = await http.get('/stock/OtherOut/index', { params: { list_rows: 2000 } })
+      const allOtherOut: any[] = otherOutRes.data?.rows ?? []
+
       for (const r of inhouseRows) {
         if (r.status === 1) {
           await auditProcureInhouse(r.id, 0)
+          // 找到该入库单对应的 BOM 扣料单（通过 remark 匹配商品名），反审核并删除
           const rItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
-          await applyInhouseStockEffect(r.warehouse_id || 0, r.warehouse_name || '', rItems, 'out')
+          const bomGoodsNames = rItems.map((i: any) => i.goods_name || i.goods_sn).filter(Boolean)
+          const relatedOtherOut = allOtherOut.filter((o: any) =>
+            bomGoodsNames.some((name: string) => String(o.remark || '').includes(`BOM扣料-${name}`))
+          )
+          for (const o of relatedOtherOut) {
+            try {
+              if (o.status === 1) await http.post('/stock/OtherOut/audit', { id: o.id, status: 0 })
+              await http.post('/stock/OtherOut/del', { id: o.id })
+            } catch (e: any) { console.warn('删除BOM扣料单失败', o.id, e?.message) }
+          }
         }
       }
     } catch (e: any) {

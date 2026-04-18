@@ -577,10 +577,12 @@ async function handleSendMessage(request, env) {
 
   await logOperation(env, userId, 'chat_message', content, { group_id: groupId, message_id: msg.id })
 
-  // 🤖 触发 Agent 自动回复（异步，不阻塞响应）
-  triggerAgentReplies(groupId, userId, content.trim(), memberIds, env).catch(e => 
+  // 🤖 触发 Agent 自动回复（必须在 response 前完成，Pages Functions 返回后 worker 会终止）
+  try {
+    await triggerAgentReplies(groupId, userId, content.trim(), memberIds, env)
+  } catch (e) {
     console.error('Agent reply error:', e)
-  )
+  }
 
   return jsonSuccess(msg)
 }
