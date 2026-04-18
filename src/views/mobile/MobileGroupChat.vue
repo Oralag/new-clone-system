@@ -191,7 +191,8 @@
       <div class="m-pick-topbar">
         <button class="m-pick-close" @click="cancelAddMember">✕</button>
         <span class="m-pick-title">选择联系人</span>
-        <span class="m-pick-count">{{ addSelectedIds.size ? `(${addSelectedIds.size})` : '' }}</span>
+        <span class="m-pick-count">[{{ allContacts.length }}]</span>
+        <span v-if="addSelectedIds.size > 0" class="m-pick-count">{{ addSelectedIds.size }}</span>
       </div>
       <div class="m-pick-search-bar">
         <input v-model="addMemberSearch" class="m-pick-search-input" placeholder="搜索" />
@@ -207,7 +208,8 @@
             <div class="m-pick-sub2">{{ m.position || '' }}</div>
           </div>
         </div>
-        <div v-if="!addableMembers.length" class="m-pick-empty">没有可添加的联系人</div>
+        <div v-if="!allContacts.length" class="m-pick-empty">加载中...</div>
+        <div v-else-if="!addableMembers.length" class="m-pick-empty">没有可添加的联系人（共{{ allContacts.length }}人，已在群中或无匹配）</div>
       </div>
       <div class="m-pick-footer">
         <button class="m-pick-done" :disabled="!addSelectedIds.size" @click="confirmAddMembers">完成{{ addSelectedIds.size ? `(${addSelectedIds.size})` : '' }}</button>
@@ -810,8 +812,13 @@ onUnmounted(() => {
 .m-gc-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 12px 12px;
   -webkit-overflow-scrolling: touch;
+  /* 关键：允许 flex 子元素收缩到内容以下 */
+  min-height: 0;
+  /* 键盘弹出时安全适配 */
+  overscroll-behavior: contain;
 }
 .m-gc-loading-more {
   text-align: center;
