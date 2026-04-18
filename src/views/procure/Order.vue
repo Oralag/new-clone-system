@@ -914,8 +914,8 @@ async function handleBatchAudit() {
     try {
       await auditProcureOrder(row.id, 1)
       try {
-        const existRes = await getProcureInhouseList({ order_id: row.id, list_rows: 5 })
-        const existRows: any[] = existRes.data?.rows ?? []
+        const _allInhouse1 = await getProcureInhouseList({ list_rows: 2000 })
+        const existRows: any[] = (_allInhouse1.data?.rows ?? []).filter((r: any) => Number(r.order_id) === Number(row.id))
         if (existRows.length === 0) {
           const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
           const inhouseRes = await createProcureInhouse({
@@ -962,8 +962,8 @@ async function handleBatchReverseAudit() {
   for (const row of audited) {
     try {
       try {
-        const inhouseListRes = await getProcureInhouseList({ order_id: row.id, list_rows: 10 })
-        for (const r of (inhouseListRes.data?.rows ?? [])) {
+        const _allInhouse2 = await getProcureInhouseList({ list_rows: 2000 })
+        for (const r of (_allInhouse2.data?.rows ?? []).filter((r: any) => Number(r.order_id) === Number(row.id))) {
           if (r.status === 1) await auditProcureInhouse(r.id, 0)
         }
       } catch {}
@@ -1996,8 +1996,8 @@ async function handleSave(andAudit = false) {
         // 审核后自动创建并审核入库记录，更新库存
         try {
           const items = fd.items
-          const existRes = await getProcureInhouseList({ order_id: orderId, list_rows: 5 })
-          const existRows: any[] = existRes.data?.rows ?? []
+          const _allInhouse3 = await getProcureInhouseList({ list_rows: 2000 })
+          const existRows: any[] = (_allInhouse3.data?.rows ?? []).filter((r: any) => Number(r.order_id) === Number(orderId))
           if (existRows.length === 0) {
             const inhouseRes = await createProcureInhouse({
               purchase_order_id: orderId,
@@ -2171,8 +2171,8 @@ async function handleAudit(row: any, status: number) {
     // 审核通过后自动创建并审核采购入库记录（先检查是否已存在，避免重复）
     if (status === 1) {
       try {
-        const existRes = await getProcureInhouseList({ order_id: row.id, list_rows: 5 })
-        const existRows: any[] = existRes.data?.rows ?? []
+        const _allInhouse4 = await getProcureInhouseList({ list_rows: 2000 })
+        const existRows: any[] = (_allInhouse4.data?.rows ?? []).filter((r: any) => Number(r.order_id) === Number(row.id))
         if (existRows.length === 0) {
           const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
           const inhouseRes = await createProcureInhouse({
@@ -2307,10 +2307,11 @@ async function handleReverseAudit(row: any) {
         }
       } catch (e: any) { console.warn('撤销运费付款失败', e?.message) }
     }
-    // 先反审核关联的采购入库记录
+    // 先反审核关联的采购入库记录（后端过滤参数无效，全量拉取后前端过滤）
     try {
-      const inhouseListRes = await getProcureInhouseList({ order_id: row.id, list_rows: 10 })
-      const inhouseRows: any[] = inhouseListRes.data?.rows ?? []
+      const inhouseListRes = await getProcureInhouseList({ list_rows: 2000 })
+      const allInhouse: any[] = inhouseListRes.data?.rows ?? []
+      const inhouseRows = allInhouse.filter((r: any) => Number(r.order_id) === Number(row.id))
       for (const r of inhouseRows) {
         if (r.status === 1) {
           await auditProcureInhouse(r.id, 0)
