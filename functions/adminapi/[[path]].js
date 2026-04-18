@@ -502,7 +502,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
     if (mentionedAgentId) {
       activeAgentIds = [mentionedAgentId]
     } else {
-      // 2. 只有人类发的消息才检测名字提及 / 秘书兜底（防止 Agent 互相触发死循环）
+      // 2. 只有人类发的消息才检测（防止 Agent 互相触发死循环）
       const senderIsAgent = AGENT_IDS.has(String(senderId))
       if (!senderIsAgent) {
         // 检测消息里是否直接出现 Agent 名字（无需@符号）
@@ -516,10 +516,15 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
         if (namedAgentId) {
           activeAgentIds = [namedAgentId]
         } else {
-          // 3. 秘书兜底
-          const secretaryInGroup = agentIds.find(id => String(id) === 'secretary')
-          if (secretaryInGroup && AGENT_CONFIGS['secretary'] && env.ANTHROPIC_API_KEY) {
-            activeAgentIds = ['secretary']
+          // 3. 找最近回复过的 Agent 兜底；没有就用秘书；还没有就用群里第一个 Agent
+          const recentAgentId = (msgMap[groupId] || []).slice().reverse()
+            .find(m => AGENT_IDS.has(String(m.sender_id)) && agentIds.includes(String(m.sender_id)))
+            ?.sender_id
+          const fallback = recentAgentId ||
+            agentIds.find(id => String(id) === 'secretary') ||
+            agentIds.find(id => AGENT_CONFIGS[String(id)])
+          if (fallback && AGENT_CONFIGS[String(fallback)] && env.ANTHROPIC_API_KEY) {
+            activeAgentIds = [String(fallback)]
           }
         }
       }
