@@ -424,7 +424,8 @@ onMounted(() => {
 .m-meeting-page {
   min-height: 100%;
   background: #f5f5f7;
-  padding-bottom: 80px;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .m-meeting-hero {

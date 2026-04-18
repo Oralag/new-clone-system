@@ -111,7 +111,22 @@
 
     <!-- 输入区 -->
     <div class="m-ai-input-area">
+      <!-- 麦克风/键盘切换 -->
+      <button class="m-ai-icon-btn" @click="voiceMode = !voiceMode">
+        <svg v-if="!voiceMode" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/>
+          <line x1="15" y1="9" x2="15" y2="21"/>
+        </svg>
+      </button>
+      <!-- 文字输入 -->
       <textarea
+        v-if="!voiceMode"
         ref="inputRef"
         v-model="inputText"
         class="m-ai-textarea"
@@ -120,6 +135,22 @@
         @keydown.enter.exact.prevent="sendMessage"
         @input="autoResize"
       />
+      <!-- 语音按住说话 -->
+      <div
+        v-else
+        class="m-ai-voice-btn"
+        :class="{ recording: isRecording, cancel: voiceCancel }"
+        @touchstart.prevent="startVoice"
+        @touchmove.prevent="checkVoiceCancel"
+        @touchend.prevent="stopVoice"
+        @touchcancel.prevent="cancelVoice"
+        @mousedown="startVoice"
+        @mouseup="stopVoice"
+      >
+        <span v-if="!isRecording">按住 说话</span>
+        <span v-else-if="voiceCancel">松开 取消</span>
+        <span v-else>松开 发送 · {{ voiceSeconds }}s</span>
+      </div>
       <button class="m-ai-send-btn" :disabled="!inputText.trim() || loading" @click="sendMessage">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
           <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -147,6 +178,56 @@ const bottomRef = ref<HTMLElement>()
 const inputRef = ref<HTMLTextAreaElement>()
 const editingMsg = ref<number | null>(null)
 const editFields = ref<any[]>([])
+
+// ── 语音输入 ──
+const voiceMode = ref(false)
+const isRecording = ref(false)
+const voiceCancel = ref(false)
+const voiceSeconds = ref(0)
+let voiceTimer: ReturnType<typeof setInterval> | null = null
+let recognition: any = null
+let voiceStartY = 0
+
+function startVoice(e: TouchEvent | MouseEvent) {
+  if (isRecording.value) return
+  voiceStartY = (e instanceof TouchEvent ? e.touches[0].clientY : (e as MouseEvent).clientY)
+  voiceCancel.value = false
+  isRecording.value = true
+  voiceSeconds.value = 0
+  voiceTimer = setInterval(() => { voiceSeconds.value++ }, 1000)
+  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  if (!SR) { ElMessage.warning('当前浏览器不支持语音'); isRecording.value = false; return }
+  recognition = new SR()
+  recognition.lang = 'zh-CN'
+  recognition.continuous = false
+  recognition.interimResults = false
+  recognition.onresult = (ev: any) => {
+    const text = ev.results[0]?.[0]?.transcript || ''
+    if (text && !voiceCancel.value) { inputText.value = text; nextTick(() => sendMessage()) }
+  }
+  recognition.onerror = () => { isRecording.value = false }
+  recognition.onend = () => { isRecording.value = false; if (voiceTimer) clearInterval(voiceTimer) }
+  recognition.start()
+}
+
+function checkVoiceCancel(e: TouchEvent) {
+  voiceCancel.value = (voiceStartY - e.touches[0].clientY) > 50
+}
+
+function stopVoice() {
+  if (!isRecording.value) return
+  if (voiceCancel.value) { cancelVoice(); return }
+  recognition?.stop()
+  if (voiceTimer) clearInterval(voiceTimer)
+  isRecording.value = false
+}
+
+function cancelVoice() {
+  recognition?.abort()
+  if (voiceTimer) clearInterval(voiceTimer)
+  isRecording.value = false
+  voiceCancel.value = false
+}
 
 const prompts = [
   { text: '录销售单，客户老王，奶茶5箱，200元' },
@@ -406,7 +487,7 @@ onMounted(() => {
 .m-ai-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 12px;
+  padding: 16px 12px 20px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -611,6 +692,32 @@ onMounted(() => {
   flex-shrink: 0;
 }
 .m-ai-send-btn:disabled { background: #d1d5db; cursor: not-allowed; }
+
+.m-ai-icon-btn {
+  width: 36px; height: 36px;
+  border: none;
+  background: #f5f5f7;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.m-ai-voice-btn {
+  flex: 1;
+  height: 36px;
+  background: #f5f5f7;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  color: #1d2129;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+.m-ai-voice-btn.recording { background: #e8f0fe; border-color: #0071e3; color: #0071e3; }
+.m-ai-voice-btn.cancel { background: #fff0f0; border-color: #f53f3f; color: #f53f3f; }
 
 /* ── 弹窗 ── */
 .m-modal-mask {

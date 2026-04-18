@@ -361,7 +361,7 @@ async function fetchContextData(text: string): Promise<string> {
 .ai-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px); /* bottom nav */
+  height: 100dvh;
   background: #f5f5f7;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -400,7 +400,7 @@ async function fetchContextData(text: string): Promise<string> {
 .ai-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 12px;
+  padding: 16px 12px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
