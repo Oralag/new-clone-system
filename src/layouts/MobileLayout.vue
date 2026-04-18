@@ -97,16 +97,23 @@ let unreadPoll: ReturnType<typeof setInterval> | null = null
 const taskCount = ref(0)
 const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileStats', 'MobileModules']
 
-// ── 提示音：在首次用户手势里初始化 AudioContext（iOS Safari 要求）──
+// ── 提示音：在首次用户手势里初始化 AudioContext（iOS/Chrome 要求）──
 let audioCtx: AudioContext | null = null
+let audioUnlocked = false
 function initAudio() {
-  if (audioCtx) return
-  try { audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)() } catch {}
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    if (!audioUnlocked && audioCtx) {
+      const buf = audioCtx.createBuffer(1, 1, 22050)
+      const src = audioCtx.createBufferSource()
+      src.buffer = buf; src.connect(audioCtx.destination); src.start(0)
+      audioCtx.resume().then(() => { audioUnlocked = true })
+    }
+  } catch {}
 }
 function playNotify() {
+  if (!audioCtx || !audioUnlocked) return
   try {
-    if (!audioCtx) return
-    if (audioCtx.state === 'suspended') audioCtx.resume()
     const t = audioCtx.currentTime
     const beep = (start: number, freq: number, dur: number) => {
       const osc = audioCtx!.createOscillator(); const gain = audioCtx!.createGain()

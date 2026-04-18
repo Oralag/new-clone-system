@@ -838,26 +838,40 @@ async function loadMessages(reset = false) {
 
 // ── 新消息提示音（Web Audio API 合成）──
 let audioCtx: AudioContext | null = null
+let audioUnlocked = false
+
 function initAudio() {
-  if (audioCtx) return
-  try { audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)() } catch {}
-}
-function playNotifySound() {
   try {
-    if (!audioCtx) return
-    if (audioCtx.state === 'suspended') audioCtx.resume()
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    if (!audioUnlocked && audioCtx) {
+      // 播一个静音音符解锁 AudioContext（iOS/Chrome 要求手势内同步操作）
+      const buf = audioCtx.createBuffer(1, 1, 22050)
+      const src = audioCtx.createBufferSource()
+      src.buffer = buf
+      src.connect(audioCtx.destination)
+      src.start(0)
+      audioCtx.resume().then(() => { audioUnlocked = true })
+    }
+  } catch {}
+}
+
+function playNotifySound() {
+  if (!audioCtx || !audioUnlocked) return
+  try {
     const t = audioCtx.currentTime
     const beep = (start: number, freq: number, dur: number) => {
       const osc = audioCtx!.createOscillator(); const gain = audioCtx!.createGain()
       osc.connect(gain); gain.connect(audioCtx!.destination)
       osc.type = 'sine'; osc.frequency.setValueAtTime(freq, start)
       gain.gain.setValueAtTime(0, start)
-      gain.gain.linearRampToValueAtTime(0.3, start + 0.01)
+      gain.gain.linearRampToValueAtTime(0.35, start + 0.01)
       gain.gain.exponentialRampToValueAtTime(0.001, start + dur)
       osc.start(start); osc.stop(start + dur)
     }
     beep(t, 880, 0.12); beep(t + 0.14, 1100, 0.1)
-  } catch { /* ignore */ }
+  } catch {}
 }
 
 async function fetchNewMessages() {
@@ -913,7 +927,7 @@ onMounted(async () => {
   setTimeout(() => scrollToBottom(), 100)
 
   // 轮询新消息（每 5 秒）
-  pollTimer = setInterval(() => fetchNewMessages(), 5000)
+  pollTimer = setInterval(() => fetchNewMessages(), 2000)
 })
 
 onUnmounted(() => {
