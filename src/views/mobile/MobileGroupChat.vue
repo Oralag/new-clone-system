@@ -130,7 +130,7 @@
                 </svg>
               </div>
               <div class="m-gs-top-info">
-                <div class="m-gs-top-name" @click="startRename">{{ group?.name }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" style="vertical-align:middle;margin-left:4px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+                <div class="m-gs-top-name" @click="startRename">{{ displayName(group?.name) }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" style="vertical-align:middle;margin-left:4px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
                 <div class="m-gs-top-sub">{{ members.length }} 人</div>
               </div>
               <div class="m-gs-add-btn-large" @click="showAddMember = true">
@@ -305,6 +305,11 @@ const group = ref<any>(null)
 const members = ref<any[]>([])
 
 // 是否群聊（3人及以上）
+// 去掉群名中的"(X人)"后缀
+function displayName(name?: string) {
+  return name?.replace(/（\d+人）|\(\d+人\)/g, '') || name
+}
+
 const isGroupChat = computed(() => members.value.length > 2)
 
 // 私聊时的对方信息
@@ -315,11 +320,11 @@ const otherUser = computed(() => {
 
 // 私聊时标题显示对方名字，群聊显示群名
 const chatTitle = computed(() => {
-  if (!members.value.length) return group.value?.name || '加载中...'
+  if (!members.value.length) return displayName(group.value?.name) || '加载中...'
   if (!isGroupChat.value) {
-    return otherUser.value?.name || group.value?.name || '聊天'
+    return otherUser.value?.name || displayName(group.value?.name) || '聊天'
   }
-  return group.value?.name || '群聊'
+  return displayName(group.value?.name) || '群聊'
 })
 
 const inputText = ref('')

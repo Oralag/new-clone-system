@@ -491,7 +491,7 @@ async function doCreateGroup() {
     if (!name) {
       name = memberIds.length === 1
         ? `与${selectedMembers.value[0].name}的群聊`
-        : `群聊(${memberIds.length + 1}人)`
+        : `群聊`
     }
     const res = await http.post('/chat/groups', {
       name,
