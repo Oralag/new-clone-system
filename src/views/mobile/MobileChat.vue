@@ -179,33 +179,35 @@
       </button>
     </div>
 
-    <!-- 新建计划弹窗 -->
-    <div v-if="showAddPlan" class="task-modal-mask" @click.self="showAddPlan = false">
-      <div class="task-modal-sheet">
-        <div class="task-modal-header">
-          <span>新建工作计划</span>
-          <button class="task-modal-close" @click="showAddPlan = false">取消</button>
-        </div>
-        <div class="task-modal-body">
-          <input v-model="newPlan.title" class="task-input" placeholder="计划标题" />
-          <textarea v-model="newPlan.description" class="task-textarea" placeholder="描述（选填）" rows="2" />
-          <div class="task-field-row">
-            <label>优先级</label>
-            <select v-model="newPlan.priority" class="task-select">
-              <option value="normal">普通</option>
-              <option value="high">紧急</option>
-            </select>
+    <!-- 新建计划弹窗 - Teleport到body脱离stacking context -->
+    <Teleport to="body">
+      <div v-if="showAddPlan" class="task-modal-mask" @click.self="showAddPlan = false">
+        <div class="task-modal-sheet">
+          <div class="task-modal-header">
+            <span>新建工作计划</span>
+            <button class="task-modal-close" @click="showAddPlan = false">取消</button>
           </div>
-          <div class="task-field-row">
-            <label>截止日期</label>
-            <input v-model="newPlan.due_date" type="date" class="task-input" />
+          <div class="task-modal-body">
+            <input v-model="newPlan.title" class="task-input" placeholder="计划标题" />
+            <textarea v-model="newPlan.description" class="task-textarea" placeholder="描述（选填）" rows="2" />
+            <div class="task-field-row">
+              <label>优先级</label>
+              <select v-model="newPlan.priority" class="task-select">
+                <option value="normal">普通</option>
+                <option value="high">紧急</option>
+              </select>
+            </div>
+            <div class="task-field-row">
+              <label>截止日期</label>
+              <input v-model="newPlan.due_date" type="date" class="task-input" />
+            </div>
+            <button class="task-submit-btn" @click="createPlanFromChat" :disabled="!newPlan.title.trim()">
+              创建
+            </button>
           </div>
-          <button class="task-submit-btn" @click="createPlanFromChat" :disabled="!newPlan.title.trim()">
-            创建
-          </button>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- ── AI管家 Tab ── -->
     <div v-show="activeTab === 'ai'" class="ai-tab" @click="router.push('/mobile/ai')">
