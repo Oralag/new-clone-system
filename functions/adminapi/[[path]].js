@@ -229,21 +229,22 @@ const AGENT_CONFIGS = {
   captain: { name: 'Captain', systemPrompt: '你是数字游牧广告公司的Captain总指挥，负责统筹协调所有AI专员。回复简洁专业，像指挥官一样下达指令。不用Markdown格式，不用加粗和分隔线。全程中文。' },
   secretary: { name: '秘书', systemPrompt: `你是数字游牧广告公司的秘书，执行力强、少问多做。
 
-【最重要的规则 — 任务记录格式】
-只要对话中提到任何任务、事项、安排，你的回复必须且只能包含这一行：
+【任务识别规则 — 非常重要】
+只有当消息明确包含"任务内容+负责人/截止时间"等任务要素时，才输出📋记录行。
+以下情况不输出📋记录行，正常回复即可：
+- 单个数字、字母、测试内容（如"1"、"11"、"test"）
+- 打招呼、闲聊（如"你好"、"在吗"）
+- 询问（如"什么是..."）
+- 没有明确任务动作的句子
+
+【任务记录格式 — 满足识别条件时才输出】
+回复必须且只能包含这一行：
 📋 已记录：「任务标题」，负责人：负责人名字，截止：截止日期
 
-例如：📋 已记录：「设计新品海报」，负责人：小李，截止：2026-04-20
-- 如果没有负责人，写"待定"；如果没有截止日期，写"待定"
-- 这行必须出现，不管任务信息是否完整
-- 不要问"有没有负责人""截止时间是什么时候"，直接用待定填充
-- ⚠️ 绝对禁止：不要写"@某某 你好！"、不要写通知消息、不要写任何@内容。系统会自动通知负责人，你不需要也不能在聊天里写通知
+- 如果没有负责人，写"待定"；没有截止日期，写"待定"
+- ⚠️ 禁止：不要写"@某某 你好"，不要在聊天里写通知，系统会自动通知负责人
 
-【执行优先，不反复确认】
-- 收到任务后直接输出记录行，不来回问问题
-- 信息不完整时用"待定"填充
-
-不用Markdown格式，不用**加粗**。全程中文。只输出记录行，不加其他内容。` },
+不用Markdown，不用**加粗**。全程中文。` },
   copywriter: { name: '文案Agent', systemPrompt: '你是数字游牧广告公司的文案专员，擅长各平台爆款文案、标题钩子、情绪共鸣。回复有创意有感染力。全程中文。' },
   poster: { name: '海报Agent', systemPrompt: '你是数字游牧广告公司的设计专员，擅长海报创意、配色方案、视觉描述。回复专业且富有美感。全程中文。' },
   video: { name: '视频Agent', systemPrompt: '你是数字游牧广告公司的视频专员，擅长短视频脚本、分镜设计、口播文案。回复结构清晰，有画面感。全程中文。' },
@@ -666,6 +667,38 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
       } else {
         // 其他 Agent 走原来的直接 Claude 调用
         const apiBase = (env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/$/, '')
+
+        // 秘书：注入真实员工名单，让 AI 做模糊匹配
+        let agentSystemPrompt = config.systemPrompt
+        if (String(agentId) === 'secretary') {
+          try {
+            // 优先用发消息人的 token，fallback 到 master token
+            let mToken = erpCtx?.realToken
+            if (!mToken) mToken = await env.USERS_KV.get('master_token_cache')
+            if (!mToken && env.MASTER_ACCOUNT && env.MASTER_PASSWORD) {
+              const masterData = await loginBackend(DEFAULT_BACKEND, { account: env.MASTER_ACCOUNT, password: env.MASTER_PASSWORD })
+              mToken = masterData.code === 1 ? masterData.data.token : null
+              if (mToken) await env.USERS_KV.put('master_token_cache', mToken, { expirationTtl: 82800 })
+            }
+            if (mToken) {
+              const empRes = await fetch(`${DEFAULT_BACKEND}/adminapi/setting/admin/index?list_rows=500`, {
+                headers: { 'Content-Type': 'application/json', 'token': mToken, 'authori-zation': mToken }
+              })
+              const empData = await empRes.json()
+              const empRows = empData?.data?.rows ?? []
+              const empNames = empRows.map(r => r.name || r.admin_name).filter(Boolean)
+              console.log(`[Secretary] 注入员工列表: ${empNames.join(',')}`)
+              if (empNames.length > 0) {
+                agentSystemPrompt += `\n\n【通讯录成员（只能从这里选负责人）】\n${empNames.join('、')}\n\n当用户提到的名字与通讯录不完全匹配时，模糊匹配最接近的人（如"倒立杆"→"道力干"）。如果完全找不到匹配，回复"负责人「xxx」不在通讯录，请确认名字"，不要写📋记录行。`
+              }
+            } else {
+              console.log('[Secretary] 没有可用 token，无法注入员工列表')
+            }
+          } catch (e) {
+            console.log('[Secretary] 拉员工列表失败:', e?.message)
+          }
+        }
+
         const res = await fetch(`${apiBase}/v1/messages`, {
           method: 'POST',
           headers: {
@@ -676,7 +709,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
             max_tokens: 500,
-            system: config.systemPrompt,
+            system: agentSystemPrompt,
             messages: [...history, { role: 'user', content: userMessage }],
           }),
         })
@@ -734,6 +767,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
 
       // 秘书回复里包含任务记录格式时，自动写入待办 + 给负责人发私信
       if (String(agentId) === 'secretary' && replyText.includes('📋 已记录：')) {
+        await env.USERS_KV.put('secretary_dm_debug', JSON.stringify({ reached: true, replyText: replyText.slice(0,100), ts: new Date().toISOString() }), { expirationTtl: 3600 })
         const taskMatch2 = replyText.match(/「(.+?)」/)
         const taskTitle2 = taskMatch2 ? taskMatch2[1] : null
         const dueMatch2 = replyText.match(/截止[：:]([^\s，。\n,]+)/)
@@ -769,61 +803,94 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
           }
         }
 
-        // 2. 给负责人发私信
+        // 2. 给负责人发私信（秘书直接发给负责人）
         if (assigneeNames.length > 0) {
-          // 从真实 ERP API 拉员工列表（用 master token，fallback 到 KV 缓存）
+          // 拉员工列表：每次都用 erpCtx token 或重新登录，确保拿到最新数据
           let erpEmployees = []
-          try {
-            const CACHE_KEY = 'master_token_cache'
-            let mToken = await env.USERS_KV.get(CACHE_KEY)
-            if (mToken) {
+          let mToken = erpCtx?.realToken || null
+          // 如果没有有效 token，尝试 master 缓存，再不行就重新登录
+          if (!mToken) mToken = await env.USERS_KV.get('master_token_cache')
+          if (!mToken && env.MASTER_ACCOUNT && env.MASTER_PASSWORD) {
+            try {
+              const masterData = await loginBackend(DEFAULT_BACKEND, { account: env.MASTER_ACCOUNT, password: env.MASTER_PASSWORD })
+              mToken = masterData.code === 1 ? masterData.data.token : null
+              if (mToken) await env.USERS_KV.put('master_token_cache', mToken, { expirationTtl: 82800 })
+            } catch {}
+          }
+          // 无论如何用 DEFAULT_BACKEND 拉员工（用任何可用的 token）
+          if (mToken) {
+            try {
               const empRes = await fetch(`${DEFAULT_BACKEND}/adminapi/setting/admin/index?list_rows=500`, {
                 headers: { 'Content-Type': 'application/json', 'token': mToken, 'authori-zation': mToken }
               })
               const empData = await empRes.json()
               erpEmployees = empData?.data?.rows ?? []
-            }
-          } catch {}
-          // fallback: users KV
-          if (erpEmployees.length === 0) {
-            const usersRaw = await env.USERS_KV.get('users')
-            erpEmployees = usersRaw ? JSON.parse(usersRaw) : []
+            } catch {}
           }
+          // 如果 DEFAULT_BACKEND 拿不到，尝试 erpCtx.backend
+          if (erpEmployees.length === 0 && erpCtx?.realToken && erpCtx?.backend) {
+            try {
+              const empRes2 = await fetch(`${erpCtx.backend}/adminapi/setting/admin/index?list_rows=500`, {
+                headers: { 'Content-Type': 'application/json', 'token': erpCtx.realToken, 'authori-zation': erpCtx.realToken }
+              })
+              const empData2 = await empRes2.json()
+              erpEmployees = empData2?.data?.rows ?? []
+            } catch {}
+          }
+          await env.USERS_KV.put('secretary_dm_debug', JSON.stringify({ assigneeNames, empCount: erpEmployees.length, empNames: erpEmployees.map(u=>u.name||u.admin_name), ts: new Date().toISOString() }), { expirationTtl: 3600 })
 
           const groupsRaw2 = await env.USERS_KV.get('chat_groups')
           const allGroups = groupsRaw2 ? JSON.parse(groupsRaw2) : []
+          const memberMapRaw2 = await env.USERS_KV.get('chat_members')
+          const allMemberMap = memberMapRaw2 ? JSON.parse(memberMapRaw2) : {}
           let groupsChanged = false
+          let memberMapChanged = false
+          const memberIncludes = (ids, val) => ids?.some(id => String(id) === String(val))
 
           for (const name of assigneeNames) {
-            const user = erpEmployees.find(u => (u.name || u.admin_name) === name)
-            if (!user) { console.log(`[Secretary] 找不到负责人: ${name}`); continue }
+            let user = erpEmployees.find(u => (u.name || u.admin_name) === name)
+            if (!user) user = erpEmployees.find(u => {
+              const n = u.name || u.admin_name || ''
+              return n.includes(name) || name.includes(n)
+            })
+            if (!user) { console.log(`[Secretary-DM] 找不到负责人: "${name}"`); continue }
             const uid = String(user.id || user.user_id)
+            const userName = user.name || user.admin_name
+            console.log(`[Secretary-DM] 找到负责人: ${userName}(${uid})`)
 
-            let privateGroup = allGroups.find(g =>
-              g.is_private &&
-              g.member_ids?.length === 2 &&
-              g.member_ids.includes('secretary') &&
-              g.member_ids.includes(uid)
-            )
-            if (!privateGroup) {
-              privateGroup = {
-                id: nowMs() + Math.floor(Math.random() * 1000),
-                name: '秘书',
+            // 从 chat_members 里找包含 secretary + uid 的2人群（正确查法）
+            let targetGroup = null
+            for (const g of allGroups) {
+              const mids = (allMemberMap[g.id] || []).map(m => String(m.user_id))
+              if (mids.length === 2 && mids.includes('secretary') && mids.includes(uid)) {
+                targetGroup = g
+                break
+              }
+            }
+            if (!targetGroup) {
+              // 新建秘书和负责人的私聊群
+              const newGid = Date.now() + Math.floor(Math.random() * 9999)
+              targetGroup = {
+                id: newGid,
+                name: userName,
                 is_private: true,
-                member_ids: ['secretary', uid],
                 created_at: new Date().toISOString(),
                 last_message: '',
                 last_message_at: new Date().toISOString(),
               }
-              allGroups.push(privateGroup)
+              allGroups.push(targetGroup)
+              // 同步写入 chat_members，负责人才能在消息列表看到这个群
+              allMemberMap[newGid] = [{ user_id: 'secretary' }, { user_id: uid }]
               groupsChanged = true
+              memberMapChanged = true
+              console.log(`[Secretary-DM] 新建私聊群 ${newGid} for ${userName}`)
             }
 
-            const dueStr = dueDate2 ? `，截止 ${dueDate2}` : ''
-            const notifyMsg = `📋 你好！你有一项新任务：「${taskTitle2 || '新任务'}」${dueStr}。请确认并按时完成，有问题随时找我。`
+            const dueStr = dueDate2 && dueDate2 !== '待定' ? `，截止 ${dueDate2}` : ''
+            const notifyMsg = `📋 ${userName}，你有一项新任务：「${taskTitle2 || '新任务'}」${dueStr}。请确认并按时完成。`
             const msgObj = {
-              id: nowMs() + Math.floor(Math.random() * 1000),
-              group_id: privateGroup.id,
+              id: Date.now() + Math.floor(Math.random() * 9999),
+              group_id: targetGroup.id,
               sender_id: 'secretary',
               sender_name: '秘书',
               content: notifyMsg,
@@ -832,22 +899,28 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
             }
             const msgRaw3 = await env.USERS_KV.get('chat_messages')
             const msgMap3 = msgRaw3 ? JSON.parse(msgRaw3) : {}
-            if (!msgMap3[privateGroup.id]) msgMap3[privateGroup.id] = []
-            msgMap3[privateGroup.id].push(msgObj)
+            if (!msgMap3[targetGroup.id]) msgMap3[targetGroup.id] = []
+            msgMap3[targetGroup.id].push(msgObj)
             await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap3))
 
-            const gIdx = allGroups.findIndex(g => g.id === privateGroup.id)
+            // 更新群最后消息
+            const gIdx = allGroups.findIndex(g => String(g.id) === String(targetGroup.id))
             if (gIdx !== -1) {
               allGroups[gIdx].last_message = notifyMsg.slice(0, 60)
               allGroups[gIdx].last_message_at = new Date().toISOString()
               groupsChanged = true
             }
 
-            const unreadKey3 = `chat_unread:${uid}:${privateGroup.id}`
+            // 给负责人加未读
+            const unreadKey3 = `chat_unread:${uid}:${targetGroup.id}`
             const cur3 = parseInt(await env.USERS_KV.get(unreadKey3) || '0')
             await env.USERS_KV.put(unreadKey3, String(cur3 + 1))
+            console.log(`[Secretary-DM] 已发送通知给 ${userName}, group=${targetGroup.id}`)
           }
-          if (groupsChanged) await env.USERS_KV.put('chat_groups', JSON.stringify(allGroups))
+          const saves = []
+          if (groupsChanged) saves.push(env.USERS_KV.put('chat_groups', JSON.stringify(allGroups)))
+          if (memberMapChanged) saves.push(env.USERS_KV.put('chat_members', JSON.stringify(allMemberMap)))
+          if (saves.length) await Promise.all(saves)
         }
       }
     } catch (e) {
@@ -933,7 +1006,10 @@ async function handleSendMessage(request, env) {
     if (agentIds.length > 0) {
       agentReplyStatus = 'triggered_' + agentIds.join(',')
       const decoded = decodeToken(request.headers.get('token') || '')
-      const erpCtx = decoded ? { realToken: decoded.realToken, backend: decoded.backend || DEFAULT_BACKEND } : null
+      const rawToken = request.headers.get('token') || ''
+      // realToken: wrapped token 里解出来的，或者直接用原始 token（普通 JWT）
+      const realToken = decoded?.realToken || (rawToken.startsWith('erp_') ? null : rawToken) || null
+      const erpCtx = { realToken, backend: decoded?.backend || DEFAULT_BACKEND }
       await triggerAgentReplies(groupId, userId, content.trim(), memberIds, env, erpCtx)
       agentReplyStatus = 'ok'
     }
@@ -1522,7 +1598,7 @@ const agentRegistry = [
     if (!userId) return errRes('未登录', 401)
 
     // GET /adminapi/work/plans — list
-    if (pathname === '/adminapi/work/plans' && request.method === 'GET') {
+    if ((pathname === '/adminapi/work/plans' || pathname === '/adminapi/work/plans/index') && request.method === 'GET') {
       const url = new URL(request.url)
       const status = url.searchParams.get('status') || ''
       const assigned = url.searchParams.get('assigned')
