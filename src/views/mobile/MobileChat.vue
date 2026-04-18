@@ -171,12 +171,7 @@
       </div>
 
       <!-- 新建计划按钮 - 跳转到完整页面 -->
-      <button class="todo-add-btn" @click="router.push('/mobile/task/new?new=1')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        新建计划
-      </button>
+      <button class="todo-add-btn" @click="router.push('/mobile/task/new?new=1')">新建计划</button>
     </div>
 
     <!-- ── AI管家 Tab ── -->

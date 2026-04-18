@@ -2066,16 +2066,6 @@ async function batchDelProcureOrders({ ids }: { ids: number[] }) {
 }
 
 async function applyInhouseStockEffect(warehouseId: number, warehouseName: string, items: any[], direction: 'in' | 'out') {
-  // 预加载BOM列表（按 goods_sn 建索引）
-  const bomSnMap: Record<string, number> = {} // goods_sn -> bom id
-  try {
-    const bomRes = await getBomList({ list_rows: 500 })
-    const bomList: any[] = bomRes.data?.list ?? bomRes.data?.rows ?? []
-    for (const b of bomList) {
-      if (b.goods_sn) bomSnMap[b.goods_sn] = b.id
-    }
-  } catch {}
-
   // 全量拉商品表，自建 goods_sn -> goods_id 映射（后端不支持按goods_sn过滤）
   const snToGoodsId: Record<string, number> = {}
   try {
@@ -2086,74 +2076,67 @@ async function applyInhouseStockEffect(warehouseId: number, warehouseName: strin
     }
   } catch {}
 
-  // 全量拉库存，自建 goods_id -> 库存记录 映射（后端不支持按goods_id过滤）
-  const stockByGoodsId: Record<number, any> = {}
+  // 预加载BOM列表（按 goods_sn 建索引）
+  const bomSnMap: Record<string, number> = {}
   try {
-    const allStockRes = await http.get('/stock/StockAll/index', { params: { list_rows: 2000 } })
-    const allStocks: any[] = allStockRes.data?.rows ?? []
-    for (const s of allStocks) {
-      // 同一商品可能有多个仓库，优先保留有库存的，或指定仓库的
-      const gid = s.goods_id
-      if (!gid) continue
-      if (!stockByGoodsId[gid]) {
-        stockByGoodsId[gid] = s
-      } else if (warehouseId && s.warehouse_id === warehouseId) {
-        stockByGoodsId[gid] = s // 优先匹配指定仓库
-      } else if (!warehouseId && Number(s.qty || 0) > Number(stockByGoodsId[gid].qty || 0)) {
-        stockByGoodsId[gid] = s // 无指定仓库时取库存最多的
-      }
+    const bomRes = await getBomList({ list_rows: 500 })
+    const bomList: any[] = bomRes.data?.list ?? bomRes.data?.rows ?? []
+    for (const b of bomList) {
+      if (b.goods_sn) bomSnMap[b.goods_sn] = b.id
     }
   } catch {}
 
+  // 成品库存由后端 auditProcureInhouse 自动维护，此处只处理BOM原材料
   for (const item of items) {
-    if (!item.goods_id || !item.num) continue
-
-    // 更新成品库存
-    try {
-      const stock = stockByGoodsId[item.goods_id]
-      const delta = direction === 'in'
-        ? Number(item.num) * Number(item.unit_ratio || 1)
-        : -Number(item.num) * Number(item.unit_ratio || 1)
-      if (stock) {
-        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
-        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-        stock.qty = newQty
-      } else if (direction === 'in') {
-        await http.post('/stock/StockAll/add', {
-          goods_id: item.goods_id,
-          goods_name: item.goods_name || '',
-          goods_sn: item.goods_sn || '',
-          warehouse_id: warehouseId,
-          warehouse_name: warehouseName,
-          qty: Number(item.num),
-        })
-      }
-    } catch (e: any) {
-      console.warn('库存更新失败', e?.message)
-    }
-
-    // 如果该成品有BOM，扣减（或恢复）原材料库存
+    if (!item.num) continue
     const bomId = bomSnMap[item.goods_sn || '']
     if (!bomId) continue
+
     try {
       const detailRes = await getBomByGoods(bomId)
       const bomItems: any[] = detailRes.data?.items ?? []
       const finishedQty = Number(item.num) * Number(item.unit_ratio || 1)
+
+      // 收集本次要操作的原材料
+      const matGoods: any[] = []
       for (const mat of bomItems) {
         if (!mat.goods_sn || !mat.num) continue
         const matGoodsId = snToGoodsId[mat.goods_sn]
         if (!matGoodsId) { console.warn('BOM原材料找不到goods_id', mat.goods_sn); continue }
-        const matStock = stockByGoodsId[matGoodsId]
-        if (!matStock) { console.warn('BOM原材料无库存记录', mat.goods_sn, matGoodsId); continue }
-        const matDelta = direction === 'in'
-          ? -Number(mat.num) * finishedQty
-          : Number(mat.num) * finishedQty
-        const newQty = Number(matStock.qty || 0) + matDelta
-        await http.post('/stock/StockAll/edit', { id: matStock.id, qty: newQty })
-        matStock.qty = newQty // 更新本地缓存防止同材料多次计算错误
+        matGoods.push({
+          goods_id: matGoodsId,
+          goods_name: mat.goods_name || '',
+          goods_sn: mat.goods_sn,
+          num: Number(mat.num) * finishedQty,
+          unit_name: mat.unit_name || '',
+          price: 0,
+        })
+      }
+      if (!matGoods.length) continue
+
+      if (direction === 'in') {
+        // 审核成品入库 → 原材料出库（扣料）
+        const addRes = await http.post('/stock/OtherOut/add', {
+          warehouse_id: warehouseId || 0,
+          warehouse_name: warehouseName || '',
+          remark: `BOM扣料-${item.goods_name || item.goods_sn}`,
+          goods_info: matGoods,
+        })
+        const outId = addRes.data?.id
+        if (outId) await http.post('/stock/OtherOut/audit', { id: outId, status: 1 })
+      } else {
+        // 反审核 → 原材料入库（加回）
+        const addRes = await http.post('/stock/OtherIn/add', {
+          warehouse_id: warehouseId || 0,
+          warehouse_name: warehouseName || '',
+          remark: `BOM反审核恢复-${item.goods_name || item.goods_sn}`,
+          goods_info: matGoods,
+        })
+        const inId = addRes.data?.id
+        if (inId) await http.post('/stock/OtherIn/audit', { id: inId, status: 1 })
       }
     } catch (e: any) {
-      console.warn('BOM详情加载失败', e?.message)
+      console.warn('BOM原材料库存操作失败', item.goods_sn, e?.message)
     }
   }
 }
