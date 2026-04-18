@@ -363,7 +363,20 @@ async function handleCreateGroup(request, env) {
 
   await logOperation(env, userId, 'chat_create', `创建群聊「${name}」`, { group_id: newId, group_name: name })
 
-  return jsonSuccess({ ...newGroup, member_ids: allMembers.map(m => m.user_id), unread: 0, last_message: '' })
+  // 🤖 Agent 发欢迎消息
+  const agentIds = member_ids.filter(id => AGENT_IDS.has(String(id)))
+  let welcomeStatus = 'no_agents'
+  if (agentIds.length > 0) {
+    try {
+      welcomeStatus = 'triggered'
+      await triggerAgentReplies(newId, userId, '__group_created__', allMembers.map(m => m.user_id), env)
+      welcomeStatus = 'ok'
+    } catch (e) {
+      welcomeStatus = 'error: ' + String(e?.message || e)
+    }
+  }
+
+  return jsonSuccess({ ...newGroup, member_ids: allMembers.map(m => m.user_id), unread: 0, last_message: '', _welcomeStatus: welcomeStatus })
 }
 
 async function handleGetGroup(request, env) {
@@ -438,6 +451,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
   }))
 
   // 为每个 Agent 调用 AI（带随机延迟模拟打字）
+  const isWelcome = content === '__group_created__'
   for (const agentId of agentIds) {
     const config = AGENT_CONFIGS[String(agentId)]
     if (!config || !env.ANTHROPIC_API_KEY) {
@@ -448,6 +462,11 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
 
     // 随机延迟 1-3 秒
     await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000))
+
+    // 欢迎消息 vs 正常回复
+    const userMessage = isWelcome
+      ? `你好！我是${config.name}。有什么可以帮你的？`
+      : content
 
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -461,7 +480,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
           model: 'claude-sonnet-4-6',
           max_tokens: 500,
           system: config.systemPrompt,
-          messages: [...history, { role: 'user', content }],
+          messages: [...history, { role: 'user', content: userMessage }],
         }),
       })
 
