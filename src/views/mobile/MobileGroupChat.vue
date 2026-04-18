@@ -682,10 +682,11 @@ function openMemberAction(m: any) {
   showMemberAction.value = true
 }
 
-// 不能移除自己
+// 群聊（>2人）才能移除成员，且只能移除非自己
 const canRemoveMember = computed(() => {
   if (!memberActionTarget.value) return false
-  return String(memberActionTarget.value.id) !== String(authStore.userInfo?.id)
+  if (String(memberActionTarget.value.id) === String(authStore.userInfo?.id)) return false
+  return members.value.length > 2 // 群聊才能移除成员
 })
 
 async function chatWithMember() {
@@ -741,10 +742,11 @@ async function cleanupMessages() {
   cleaning.value = true
   try {
     await http.post(`/chat/groups/${groupId.value}/cleanup`, { days: cleanupDays.value })
-    ElMessage.success('清理成功')
+    // 后端成功后再清本地
     messages.value = []
     showCleanupConfirm.value = false
     showGroupInfo.value = false
+    ElMessage.success('清理成功')
   } catch (e: any) {
     ElMessage.error(e?.message || '清理失败')
   } finally {

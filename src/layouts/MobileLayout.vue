@@ -88,6 +88,7 @@ const tabs = [
 const activeTab = ref('chat')
 const unreadCount = ref(0)
 const pendingCount = ref(0)
+let unreadPoll: ReturnType<typeof setInterval> | null = null
 const taskCount = ref(0)
 const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileStats', 'MobileModules']
 
@@ -142,11 +143,23 @@ onMounted(async () => {
     const res = await http.get('/chat/groups/unread')
     unreadCount.value = res?.data?.unread ?? 0
   } catch { /* 忽略 */ }
+
+  // 每30秒刷新未读数
+  unreadPoll.value = setInterval(async () => {
+    try {
+      const res = await http.get('/chat/groups/unread', { silent: true })
+      unreadCount.value = res?.data?.unread ?? 0
+    } catch { /* 忽略 */ }
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (unreadPoll.value) clearInterval(unreadPoll.value)
 })
 </script>
 
 <script lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 export default { name: 'MobileLayout' }
 </script>
 

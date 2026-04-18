@@ -915,7 +915,7 @@ async function handleBatchAudit() {
       await auditProcureOrder(row.id, 1)
       try {
         const _allInhouse1 = await getProcureInhouseList({ list_rows: 2000 })
-        const existRows: any[] = (_allInhouse1.data?.rows ?? []).filter((r: any) => Number(r.order_id) === Number(row.id))
+        const existRows: any[] = (_allInhouse1.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
         if (existRows.length === 0) {
           const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
           const inhouseRes = await createProcureInhouse({
@@ -933,9 +933,9 @@ async function handleBatchAudit() {
           const inhouseId = inhouseRes.data?.id ?? inhouseRes.data
           if (inhouseId) await auditProcureInhouse(inhouseId, 1)
         } else {
-          for (const r of existRows) {
-            if (r.status !== 1) await auditProcureInhouse(r.id, 1)
-          }
+          const sorted = [...existRows].sort((a, b) => b.id - a.id)
+          for (const r of sorted.slice(1)) { try { await http.post('/stock/ProcureInhouse/del', { ids: r.id }) } catch {} }
+          if (sorted[0].status !== 1) await auditProcureInhouse(sorted[0].id, 1)
         }
       } catch (e: any) {
         console.warn('自动创建入库单失败', e?.message)
@@ -963,7 +963,7 @@ async function handleBatchReverseAudit() {
     try {
       try {
         const _allInhouse2 = await getProcureInhouseList({ list_rows: 2000 })
-        for (const r of (_allInhouse2.data?.rows ?? []).filter((r: any) => Number(r.order_id) === Number(row.id))) {
+        for (const r of (_allInhouse2.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(row.id))) {
           if (r.status === 1) await auditProcureInhouse(r.id, 0)
         }
       } catch {}
@@ -1997,7 +1997,7 @@ async function handleSave(andAudit = false) {
         try {
           const items = fd.items
           const _allInhouse3 = await getProcureInhouseList({ list_rows: 2000 })
-          const existRows: any[] = (_allInhouse3.data?.rows ?? []).filter((r: any) => Number(r.order_id) === Number(orderId))
+          const existRows: any[] = (_allInhouse3.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(orderId))
           if (existRows.length === 0) {
             const inhouseRes = await createProcureInhouse({
               purchase_order_id: orderId,
@@ -2017,12 +2017,13 @@ async function handleSave(andAudit = false) {
               await applyInhouseStockEffect(fd.warehouse_id || 0, fd.warehouse_name || '', items, 'in')
             }
           } else {
-            for (const r of existRows) {
-              if (r.status !== 1) {
-                await auditProcureInhouse(r.id, 1)
-                const rItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
-                await applyInhouseStockEffect(r.warehouse_id || fd.warehouse_id || 0, r.warehouse_name || fd.warehouse_name || '', rItems, 'in')
-              }
+            const sorted = [...existRows].sort((a, b) => b.id - a.id)
+            for (const r of sorted.slice(1)) { try { await http.post('/stock/ProcureInhouse/del', { ids: r.id }) } catch {} }
+            const keep = sorted[0]
+            if (keep.status !== 1) {
+              await auditProcureInhouse(keep.id, 1)
+              const rItems = Array.isArray(keep.goods_info) ? keep.goods_info : JSON.parse(keep.goods_info || '[]')
+              await applyInhouseStockEffect(keep.warehouse_id || fd.warehouse_id || 0, keep.warehouse_name || fd.warehouse_name || '', rItems, 'in')
             }
           }
         } catch (e: any) {
@@ -2172,7 +2173,13 @@ async function handleAudit(row: any, status: number) {
     if (status === 1) {
       try {
         const _allInhouse4 = await getProcureInhouseList({ list_rows: 2000 })
-        const existRows: any[] = (_allInhouse4.data?.rows ?? []).filter((r: any) => Number(r.order_id) === Number(row.id))
+        const existRows: any[] = (_allInhouse4.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
+        const alreadyAudited = existRows.filter((r: any) => r.status === 1)
+        if (alreadyAudited.length > 0) {
+          ElMessage.warning('该采购单已审核入库，请勿重复操作')
+          tableRef.value?.refresh()
+          return
+        }
         if (existRows.length === 0) {
           const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
           const inhouseRes = await createProcureInhouse({
@@ -2194,13 +2201,16 @@ async function handleAudit(row: any, status: number) {
             await applyInhouseStockEffect(row.warehouse_id || 0, row.warehouse_name || '', items, 'in')
           }
         } else {
-          // 已有入库单，确保已审核，同时更新库存
-          for (const r of existRows) {
-            if (r.status !== 1) {
-              await auditProcureInhouse(r.id, 1)
-              const rItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
-              await applyInhouseStockEffect(r.warehouse_id || row.warehouse_id || 0, r.warehouse_name || row.warehouse_name || '', rItems, 'in')
-            }
+          // 已有入库单，只取最新一条操作，多余的删掉（防重复）
+          const sorted = [...existRows].sort((a, b) => b.id - a.id)
+          const keep = sorted[0]
+          for (const r of sorted.slice(1)) {
+            try { await http.post('/stock/ProcureInhouse/del', { ids: r.id }) } catch {}
+          }
+          if (keep.status !== 1) {
+            await auditProcureInhouse(keep.id, 1)
+            const rItems = Array.isArray(keep.goods_info) ? keep.goods_info : JSON.parse(keep.goods_info || '[]')
+            await applyInhouseStockEffect(keep.warehouse_id || row.warehouse_id || 0, keep.warehouse_name || row.warehouse_name || '', rItems, 'in')
           }
         }
       } catch (e: any) {
@@ -2311,7 +2321,7 @@ async function handleReverseAudit(row: any) {
     try {
       const inhouseListRes = await getProcureInhouseList({ list_rows: 2000 })
       const allInhouse: any[] = inhouseListRes.data?.rows ?? []
-      const inhouseRows = allInhouse.filter((r: any) => Number(r.order_id) === Number(row.id))
+      const inhouseRows = allInhouse.filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
       for (const r of inhouseRows) {
         if (r.status === 1) {
           await auditProcureInhouse(r.id, 0)

@@ -175,9 +175,10 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
-  const [custRes, recRes] = await Promise.allSettled([
+  const [custRes, recRes, warnRes] = await Promise.allSettled([
     http.get('/shop/ShopCustomer/index', { params: { list_rows: 1 } }),
     http.get('/finance/Receivable/index', { params: { list_rows: 100 } }),
+    http.get('/stock/StockWarning/index', { params: { list_rows: 1 } }),
   ])
 
   if (custRes.status === 'fulfilled') {
@@ -192,6 +193,11 @@ onMounted(async () => {
     stats.value.receivable = uncollected >= 10000
       ? (uncollected / 10000).toFixed(1) + 'w'
       : uncollected.toFixed(0)
+  }
+
+  // 库存预警数量
+  if (warnRes.status === 'fulfilled') {
+    stats.value.stockWarn = warnRes.value?.data?.total ?? warnRes.value?.total ?? 0
   }
 })
 </script>

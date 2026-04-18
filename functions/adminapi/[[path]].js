@@ -1002,11 +1002,11 @@ const agentRegistry = [
     }
     // POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/pin$/) && request.method === 'POST') {
-      return handlePinGroup(request, env)
+      try { return await handlePinGroup(request, env) } catch (e) { return errRes('置顶操作失败: ' + (e?.message || e)) }
     }
     // PUT /adminapi/chat/groups/:id - 修改群名
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'PUT') {
-      return handleRenameGroup(request, env)
+      try { return await handleRenameGroup(request, env) } catch (e) { return errRes('修改群名失败: ' + (e?.message || e)) }
     }
     // DELETE /adminapi/chat/groups/:id - 删除会话
     if (pathname.match(/^\/adminapi\/chat\/groups\/\d+$/) && request.method === 'DELETE') {

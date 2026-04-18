@@ -896,10 +896,10 @@ onMounted(() => {
   loadActiveMeetings()
   loadPendingItems()
   loadTodoPlans()
-  // 每 10 秒刷新消息列表（检查新消息和未读）
+  // 每 5 秒刷新消息列表（检查新消息和未读）
   listPollTimer = setInterval(() => {
     loadGroups()
-  }, 10000)
+  }, 5000)
 })
 
 onUnmounted(() => {
