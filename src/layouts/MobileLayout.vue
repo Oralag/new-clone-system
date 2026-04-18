@@ -145,7 +145,7 @@ onMounted(async () => {
   } catch { /* 忽略 */ }
 
   // 每30秒刷新未读数
-  unreadPoll.value = setInterval(async () => {
+  unreadPoll = setInterval(async () => {
     try {
       const res = await http.get('/chat/groups/unread', { silent: true })
       unreadCount.value = res?.data?.unread ?? 0
@@ -154,7 +154,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (unreadPoll.value) clearInterval(unreadPoll.value)
+  if (unreadPoll) clearInterval(unreadPoll)
 })
 </script>
 

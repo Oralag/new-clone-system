@@ -1115,7 +1115,7 @@ async function loadActivityMaps() {
     // Other In (其他入库)
     const oiMap: Record<number, number> = {}
     for (const r of otherInRows) {
-        if (r.status !== 1) continue
+        if (Number(r.status) !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThis = new Set<number>()
@@ -1137,7 +1137,7 @@ async function loadActivityMaps() {
     // Other Out (其他出库)
     const ooMap: Record<number, number> = {}
     for (const r of otherOutRows) {
-        if (r.status !== 1) continue
+        if (Number(r.status) !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThis = new Set<number>()
@@ -1355,7 +1355,7 @@ async function openFlowDialog(goods: any) {
 
     // 其他入库
     for (const r of otherInAllRows) {
-        if (r.status !== 1) continue
+        if (Number(r.status) !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -1365,7 +1365,7 @@ async function openFlowDialog(goods: any) {
           if (matched) {
             rows.push({
               _type: 'other_in',
-              _sn: r.order_sn || '',
+              _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
               _date: r.in_date || r.created_at || '',
@@ -1377,7 +1377,7 @@ async function openFlowDialog(goods: any) {
 
     // 其他出库
     for (const r of otherOutAllRows) {
-        if (r.status !== 1) continue
+        if (Number(r.status) !== 1) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -1387,7 +1387,7 @@ async function openFlowDialog(goods: any) {
           if (matched) {
             rows.push({
               _type: 'other_out',
-              _sn: r.order_sn || '',
+              _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
               _date: r.out_date || r.created_at || '',

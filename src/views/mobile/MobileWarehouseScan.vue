@@ -125,6 +125,9 @@ const videoEl = ref<HTMLVideoElement>()
 
 let codeReader: any = null
 let scanStream: MediaStream | null = null
+let scanFrameCount = 0
+let scanAnimationId: number | null = null
+const SCAN_MAX_FRAMES = 300 // 约5分钟(300帧/60fps)
 
 async function initCamera() {
   scanError.value = ''

@@ -915,7 +915,7 @@ async function handleRenameGroup(request, env) {
 
   // 非创建者/成员不能操作
   const memberRaw = await env.USERS_KV.get('chat_members')
-  const memberMap = memberRaw ? JSON.parse(memberMap) : {}
+  const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   const members = memberMap[groupId] || []
   if (!members.some(m => String(m.user_id) === String(userId)) && String(groups[idx].created_by) !== String(userId)) {
     return errRes('无权限')
