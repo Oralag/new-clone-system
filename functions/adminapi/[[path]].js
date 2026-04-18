@@ -421,21 +421,30 @@ async function handleGetMessages(request, env) {
 // 🤖 Agent 自动回复触发器
 async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
   // 找出群里的 Agent 成员（排除发送者）
-  const agentIds = memberIds.filter(id => AGENT_IDS.has(id) && id !== senderId)
-  if (agentIds.length === 0) return
+  console.log(`[AgentReply] group=${groupId}, sender=${senderId}, allMembers=${JSON.stringify(memberIds)}, hasApiKey=${!!env.ANTHROPIC_API_KEY}`)
+  const agentIds = memberIds.filter(id => AGENT_IDS.has(String(id)) && String(id) !== String(senderId))
+  if (agentIds.length === 0) {
+    console.log(`[AgentReply] no agents found in group`)
+    return
+  }
+  console.log(`[AgentReply] found agents: ${JSON.stringify(agentIds)}`)
 
   // 获取历史消息作为上下文（最近 5 条）
   const raw = await env.USERS_KV.get('chat_messages')
   const msgMap = raw ? JSON.parse(raw) : {}
   const history = (msgMap[groupId] || []).slice(-5).map(m => ({
-    role: m.sender_id === senderId ? 'user' : 'assistant',
+    role: String(m.sender_id) === String(senderId) ? 'user' : 'assistant',
     content: `${m.sender_name}: ${m.content}`
   }))
 
   // 为每个 Agent 调用 AI（带随机延迟模拟打字）
   for (const agentId of agentIds) {
-    const config = AGENT_CONFIGS[agentId]
-    if (!config || !env.ANTHROPIC_API_KEY) continue
+    const config = AGENT_CONFIGS[String(agentId)]
+    if (!config || !env.ANTHROPIC_API_KEY) {
+      console.log(`[AgentReply] skip ${agentId}: noConfig=${!config}, noKey=${!env.ANTHROPIC_API_KEY}`)
+      continue
+    }
+    console.log(`[AgentReply] calling AI for ${agentId}...`)
 
     // 随机延迟 1-3 秒
     await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000))
@@ -456,10 +465,17 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env) {
         }),
       })
 
-      if (!res.ok) continue
+      if (!res.ok) {
+        console.error(`[AgentReply] API error for ${agentId}: ${res.status} ${await res.text()}`)
+        continue
+      }
       const data = await res.json()
       const replyText = data.content?.find(b => b.type === 'text')?.text
-      if (!replyText) continue
+      if (!replyText) {
+        console.error(`[AgentReply] no text in response for ${agentId}: ${JSON.stringify(data).slice(0,200)}`)
+        continue
+      }
+      console.log(`[AgentReply] ${agentId} replied: ${replyText.slice(0, 50)}...`)
 
       // 保存 Agent 回复消息
       const now = new Date().toISOString()
