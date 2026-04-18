@@ -1617,3 +1617,58 @@ export default { name: 'MobileChat' }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 </style>
+
+/* ── 新建计划弹窗样式 ── */
+.task-modal-mask {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.task-modal-sheet {
+  background: #fff; border-radius: 16px 16px 0 0;
+  width: 100%; height: auto;
+  max-height: min(92vh, 100dvh); min-height: 60vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: slideUp 0.2s ease;
+  padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;
+}
+.task-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 16px 12px; border-bottom: 1px solid #f2f3f5; flex-shrink: 0;
+  font-size: 16px; font-weight: 600; color: #1d2129;
+}
+.task-modal-close {
+  font-size: 14px; color: #2E6BE6; background: none; border: none;
+  cursor: pointer; padding: 4px 8px;
+}
+.task-modal-body {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+.task-input {
+  width: 100%; height: 48px; background: #f5f5f7; border: 1px solid transparent;
+  border-radius: 8px; padding: 0 14px; font-size: 15px; box-sizing: border-box;
+  outline: none; transition: border-color 0.2s;
+}
+.task-input:focus { border-color: #2E6BE6; }
+.task-textarea {
+  width: 100%; background: #f5f5f7; border: 1px solid transparent;
+  border-radius: 8px; padding: 12px 14px; font-size: 15px; resize: none;
+  box-sizing: border-box; outline: none; transition: border-color 0.2s;
+}
+.task-textarea:focus { border-color: #2E6BE6; }
+.task-field-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.task-field-row label { font-size: 14px; color: #4e5969; white-space: nowrap; }
+.task-select {
+  flex: 1; height: 40px; background: #f5f5f7; border: 1px solid transparent;
+  border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none;
+}
+.task-submit-btn {
+  width: 100%; height: 48px; background: #2E6BE6; color: white;
+  border: none; border-radius: 10px; font-size: 16px; font-weight: 600;
+  cursor: pointer; margin-top: 4px;
+}
+.task-submit-btn:active { opacity: 0.85; }
+.task-submit-btn:disabled { background: #C9CDD4; cursor: not-allowed; }
