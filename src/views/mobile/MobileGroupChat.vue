@@ -137,7 +137,7 @@
 
             <!-- 群成员列表（横向滚动） -->
             <div class="m-gs-members-scroll">
-              <div v-for="m in members" :key="m.id" class="m-gs-member-inline">
+              <div v-for="m in members" :key="m.id" class="m-gs-member-inline" @click="openMemberAction(m)">
                 <div class="m-gs-avatar-sm" :style="{ background: getAvatarColor(m.id) }">{{ m.name?.[0] || '?' }}</div>
                 <span class="m-gs-member-inline-name">{{ m.name }}</span>
               </div>
@@ -199,6 +199,33 @@
                 <div class="m-pick-sub">{{ m.position || '成员' }}</div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 成员操作菜单 -->
+    <div v-if="showMemberAction" class="m-modal-mask" @click.self="showMemberAction = false">
+      <div class="m-modal-sheet m-modal-sheet-sm">
+        <div class="m-modal-header">
+          <span>成员操作</span>
+          <button class="m-modal-close" @click="showMemberAction = false">关闭</button>
+        </div>
+        <div class="m-gs-member-action-info">
+          <div class="m-gs-avatar-lg" :style="{ background: getAvatarColor(memberActionTarget?.id || '') }">
+            {{ memberActionTarget?.name?.[0] || '?' }}
+          </div>
+          <div class="m-gs-member-action-name">{{ memberActionTarget?.name }}</div>
+          <div class="m-gs-member-action-pos">{{ memberActionTarget?.position || '成员' }}</div>
+        </div>
+        <div class="m-gs-member-action-list">
+          <div class="m-gs-member-action-row" @click="chatWithMember">
+            <span>💬 发消息</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+          <div v-if="canRemoveMember" class="m-gs-member-action-row danger" @click="removeMember">
+            <span>🗑 移出群聊</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f53f3f" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
         </div>
       </div>
@@ -273,11 +300,13 @@ const loadingMore = ref(false)
 const showGroupInfo = ref(false)
 const showAddMember = ref(false)
 const showCleanupConfirm = ref(false)
+const showMemberAction = ref(false)
+const memberActionTarget = ref<any>(null)
 
 // 弹窗时隐藏底部 TabBar
 const hideTabbar = inject<Ref<boolean>>('hideTabbar', ref(false))
-watch([showGroupInfo, showAddMember, showCleanupConfirm], ([a, b, c]) => {
-  hideTabbar.value = a || b || c
+watch([showGroupInfo, showAddMember, showCleanupConfirm, showMemberAction], ([a, b, c, d]) => {
+  hideTabbar.value = a || b || c || d
 })
 onUnmounted(() => { hideTabbar.value = false })
 const showAtPicker = ref(false)
@@ -381,7 +410,7 @@ async function sendMessage() {
 
   // 检查群里是否有 Agent（captain, copywriter, poster 等）
   const agentInGroup = members.value.find((m: any) => 
-    ['captain', 'copywriter', 'poster', 'video', 'brand', 'trend', 'publisher', 'designer', 'marketing'].includes(String(m.id))
+    ['ai-assistant-fixed', 'captain', 'copywriter', 'poster', 'video', 'brand', 'trend', 'publisher', 'designer', 'marketing'].includes(String(m.id))
   )
   const agentId = agentInGroup ? String(agentInGroup.id) : null
 
@@ -509,6 +538,44 @@ async function addMember(m: any) {
   } catch {
     ElMessage.error('添加失败')
   }
+}
+
+function openMemberAction(m: any) {
+  memberActionTarget.value = m
+  showMemberAction.value = true
+}
+
+// 不能移除自己
+const canRemoveMember = computed(() => {
+  if (!memberActionTarget.value) return false
+  return String(memberActionTarget.value.id) !== String(authStore.userInfo?.id)
+})
+
+async function chatWithMember() {
+  const target = memberActionTarget.value
+  showMemberAction.value = false
+  if (!target) return
+  try {
+    const res = await http.get(`/chat/groups/private/${target.id}`)
+    const g = res?.data ?? res
+    if (g?.id) {
+      router.push(`/mobile/chat/${g.id}`)
+    }
+  } catch {
+    ElMessage.error('打开私聊失败')
+  }
+}
+
+async function removeMember() {
+  const target = memberActionTarget.value
+  if (!target) return
+  try {
+    await ElMessageBox.confirm(`确定将「${target.name}」移出群聊？`, '移出成员', { type: 'warning' })
+    await http.delete(`/chat/groups/${groupId.value}/members/${target.id}`)
+    members.value = members.value.filter((m: any) => String(m.id) !== String(target.id))
+    showMemberAction.value = false
+    ElMessage.success(`已移出 ${target.name}`)
+  } catch { /* 取消 */ }
 }
 
 async function togglePin() {
@@ -1075,4 +1142,17 @@ onUnmounted(() => {
 .m-btn-danger:disabled { background: #fca5a5; cursor: not-allowed; }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* 成员操作菜单 */
+.m-gs-member-action-info { text-align: center; padding: 16px 0 12px; }
+.m-gs-avatar-lg { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: 600; }
+.m-gs-member-action-name { font-size: 16px; font-weight: 600; color: #1d2129; margin-top: 8px; }
+.m-gs-member-action-pos { font-size: 13px; color: #86909c; margin-top: 2px; }
+.m-gs-member-action-list { padding: 0 16px; }
+.m-gs-member-action-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f2f3f5; cursor: pointer; font-size: 15px; color: #1d2129; }
+.m-gs-member-action-row:last-child { border-bottom: none; }
+.m-gs-member-action-row.danger { color: #f53f3f; }
+.m-gs-member-action-row.danger svg { stroke: #f53f3f; }
+.m-modal-sheet-sm { max-height: 320px; }
+.m-member-inline { cursor: pointer; }
 </style>
