@@ -205,8 +205,8 @@
     </div>
 
     <!-- 成员操作菜单 -->
-    <div v-if="showMemberAction" class="m-modal-mask" @click.self="showMemberAction = false">
-      <div class="m-modal-sheet m-modal-sheet-sm">
+    <div v-if="showMemberAction" class="m-modal-mask m-gs-member-mask" @click.self="showMemberAction = false">
+      <div class="m-modal-sheet m-modal-sheet-sm m-gs-member-sheet">
         <div class="m-modal-header">
           <span>成员操作</span>
           <button class="m-modal-close" @click="showMemberAction = false">关闭</button>
@@ -1144,6 +1144,10 @@ onUnmounted(() => {
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 /* 成员操作菜单 */
+.m-modal-sheet.m-gs-member-sheet {
+  z-index: 2000 !important;
+}
+.m-modal-mask.m-gs-member-mask { z-index: 1001; }
 .m-gs-member-action-info { text-align: center; padding: 16px 0 12px; }
 .m-gs-avatar-lg { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: 600; }
 .m-gs-member-action-name { font-size: 16px; font-weight: 600; color: #1d2129; margin-top: 8px; }
