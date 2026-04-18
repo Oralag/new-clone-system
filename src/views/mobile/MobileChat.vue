@@ -615,7 +615,7 @@ function openPlanDetail(plan: any) {
 async function createPlanFromChat() {
   if (!newPlan.value.title.trim()) return
   try {
-    await http.post('/adminapi/work/plans', newPlan.value)
+    await http.post('/work/plans', newPlan.value)
     newPlan.value = { title: '', description: '', priority: 'normal', due_date: '' }
     showAddPlan.value = false
     await loadTodoPlans()
@@ -626,7 +626,7 @@ async function createPlanFromChat() {
 
 async function loadTodoPlans() {
   try {
-    const res = await http.get('/adminapi/work/plans', { params: { list_rows: 50 } })
+    const res = await http.get('/work/plans', { params: { list_rows: 50 } })
     console.log('[DEBUG loadTodoPlans] res =', JSON.stringify(res))
     const plans = res?.data?.plans ?? res?.plans ?? []
     console.log('[DEBUG loadTodoPlans] plans =', plans.length, plans.map((p: any) => ({ id: p.id, title: p.title, status: p.status })))
