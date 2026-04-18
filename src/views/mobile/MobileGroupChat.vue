@@ -397,8 +397,8 @@ function startVoice(e: TouchEvent | MouseEvent) {
   recognition.onresult = (ev: any) => {
     resultText = ev.results[0]?.[0]?.transcript || ''
     gotResult = true
-    // onresult 里直接发送，不等 onend
     if (resultText && !cancelled) {
+      sending.value = false  // 确保不被上一条消息的 sending 锁住
       inputText.value = resultText
       voiceMode.value = false
       nextTick(() => { autoResize(); sendMessage() })
@@ -413,9 +413,8 @@ function startVoice(e: TouchEvent | MouseEvent) {
   recognition.onend = () => {
     isRecording.value = false
     if (voiceTimer) clearInterval(voiceTimer)
-    // onresult 没触发时才在 onend 里兜底提示
     if (!gotResult && !cancelled) {
-      ElMessage.warning('未识别到语音，请重试')
+      // 静默处理，不弹提示
     }
   }
   try { recognition.start() } catch(e) { isRecording.value = false }
@@ -1152,7 +1151,7 @@ onUnmounted(() => {
 .m-gc-input-area {
   background: #f7f7f7;
   border-top: 1px solid #e5e6eb;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 12px calc(20px + env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
 }
 .m-gc-input-row {

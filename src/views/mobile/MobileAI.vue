@@ -248,6 +248,7 @@ function startVoice(e: TouchEvent | MouseEvent) {
     const text = ev.results[0]?.[0]?.transcript || ''
     gotResult = true
     if (text && !cancelled) {
+      isLoading.value = false  // 确保不被锁住
       inputText.value = text
       voiceMode.value = false
       nextTick(() => { autoResize(); sendMessage() })
@@ -261,7 +262,7 @@ function startVoice(e: TouchEvent | MouseEvent) {
   recognition.onend = () => {
     isRecording.value = false
     if (voiceTimer) clearInterval(voiceTimer)
-    if (!gotResult && !cancelled) ElMessage.warning('未识别到语音，请重试')
+    if (!gotResult && !cancelled) { /* 静默 */ }
   }
   try { recognition.start() } catch { isRecording.value = false }
 }

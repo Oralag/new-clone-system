@@ -688,14 +688,15 @@ export default { name: 'MobileTask' }
 }
 /* 表单分组 */
 .form-section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 4px;
 }
 .form-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #86909c;
-  margin-bottom: 10px;
-  letter-spacing: 0.5px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1d2129;
+  margin-bottom: 12px;
+  padding-left: 2px;
 }
 .task-input {
   width: 100%; height: 44px; background: #fff; border: 1px solid #e5e6eb;
