@@ -73,10 +73,6 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-// 根据路由判断是否隐藏 TabBar（非主tab页面隐藏）
-const hideTabbar = computed(() => !isMainTab.value)
-provide('hideTabbar', hideTabbar)
-
 const tabs = [
   { key: 'chat', label: '消息', path: '/mobile/chat' },
   { key: 'contacts', label: '通讯录', path: '/mobile/contacts' },
@@ -85,17 +81,21 @@ const tabs = [
   { key: 'modules', label: '模块', path: '/mobile/modules' },
 ]
 
+// 判断当前是否为 Tab 主页面
+const isMainTab = computed(() => {
+  return tabs.some(t => t.path === route.path)
+})
+
+// 根据路由判断是否隐藏 TabBar（非主tab页面隐藏）
+const hideTabbar = computed(() => !isMainTab.value)
+provide('hideTabbar', hideTabbar)
+
 const activeTab = ref('chat')
 const unreadCount = ref(0)
 const pendingCount = ref(0)
 let unreadPoll: ReturnType<typeof setInterval> | null = null
 const taskCount = ref(0)
 const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileStats', 'MobileModules']
-
-// 判断当前是否为 Tab 主页面（主页面不显示返回按钮）
-const isMainTab = computed(() => {
-  return tabs.some(t => t.path === route.path)
-})
 
 // 返回按钮
 function goBack() {
