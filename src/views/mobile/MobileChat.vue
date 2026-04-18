@@ -170,44 +170,14 @@
         <div class="chat-empty-text">暂无待办事项</div>
       </div>
 
-      <!-- 新建计划按钮 -->
-      <button class="todo-add-btn" @click="showAddPlan = true">
+      <!-- 新建计划按钮 - 跳转到完整页面 -->
+      <button class="todo-add-btn" @click="router.push('/mobile/task/new?new=1')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
         新建计划
       </button>
     </div>
-
-    <!-- 新建计划弹窗 - Teleport到body脱离stacking context -->
-    <Teleport to="body">
-      <div v-if="showAddPlan" class="task-modal-mask" @click.self="showAddPlan = false">
-        <div class="task-modal-sheet">
-          <div class="task-modal-header">
-            <span>新建工作计划</span>
-            <button class="task-modal-close" @click="showAddPlan = false">取消</button>
-          </div>
-          <div class="task-modal-body">
-            <input v-model="newPlan.title" class="task-input" placeholder="计划标题" />
-            <textarea v-model="newPlan.description" class="task-textarea" placeholder="描述（选填）" rows="2" />
-            <div class="task-field-row">
-              <label>优先级</label>
-              <select v-model="newPlan.priority" class="task-select">
-                <option value="normal">普通</option>
-                <option value="high">紧急</option>
-              </select>
-            </div>
-            <div class="task-field-row">
-              <label>截止日期</label>
-              <input v-model="newPlan.due_date" type="date" class="task-input" />
-            </div>
-            <button class="task-submit-btn" @click="createPlanFromChat" :disabled="!newPlan.title.trim()">
-              创建
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
 
     <!-- ── AI管家 Tab ── -->
     <div v-show="activeTab === 'ai'" class="ai-tab" @click="router.push('/mobile/ai')">
@@ -610,8 +580,6 @@ async function deleteGroup(g: any) {
 
 const pendingItems = ref<any[]>([])
 const todoPlans = ref<any[]>([])
-const showAddPlan = ref(false)
-const newPlan = ref({ title: '', description: '', priority: 'normal', due_date: '' })
 
 function isPlanOverdue(plan: any) {
   if (!plan.due_date || plan.status === 'done') return false
@@ -628,18 +596,6 @@ async function loadTodoPlans() {
     const plans = res?.data?.plans ?? res?.plans ?? []
     todoPlans.value = plans.filter((p: any) => p.status !== 'done')
   } catch { todoPlans.value = [] }
-}
-
-async function createPlanFromChat() {
-  if (!newPlan.value.title.trim()) return
-  try {
-    await http.post('/adminapi/work/plans', newPlan.value)
-    newPlan.value = { title: '', description: '', priority: 'normal', due_date: '' }
-    showAddPlan.value = false
-    await loadTodoPlans()
-  } catch (e: any) {
-    alert('创建失败：' + (e?.message || '未知错误'))
-  }
 }
 
 const subTabs = [
