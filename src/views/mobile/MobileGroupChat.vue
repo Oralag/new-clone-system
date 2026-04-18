@@ -1146,6 +1146,7 @@ onUnmounted(() => {
 /* 成员操作菜单 */
 .m-modal-sheet.m-gs-member-sheet {
   z-index: 2000 !important;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .m-modal-mask.m-gs-member-mask { z-index: 1001; }
 .m-gs-member-action-info { text-align: center; padding: 16px 0 12px; }
