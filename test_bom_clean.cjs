@@ -1,204 +1,146 @@
 const { chromium } = require('playwright');
 
-const BASE_URL = 'https://nomaderp.pages.dev';
-const API_BASE = `${BASE_URL}/adminapi`;
-const TOKEN_NAME = 'erp_token';
+const BASE = 'https://nomaderp.pages.dev';
+const API = BASE + '/adminapi';
 
-async function apiGet(page, path) {
-  const token = await page.evaluate((key) => localStorage.getItem(key), TOKEN_NAME);
-  const resp = await page.evaluate(async ({ url, token }) => {
-    const r = await fetch(url, { headers: { token } });
+async function fetchAPI(page, method, path, body) {
+  return page.evaluate(async ([method, url, body]) => {
+    const token = localStorage.getItem('erp_token');
+    const opts = { method, headers: { 'token': token, 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
     return r.json();
-  }, { url: `${API_BASE}${path}`, token });
-  return resp;
+  }, [method, API + path, body]);
 }
 
-async function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+const get = (page, path) => fetchAPI(page, 'GET', path, null);
+const post = (page, path, body) => fetchAPI(page, 'POST', path, body);
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
-  // Login
-  console.log('Logging in...');
-  await page.goto(`${BASE_URL}/#/login`);
-  await page.waitForLoadState('networkidle');
-  await page.fill('input[placeholder*="账号"], input[type="text"]', '17747344571');
-  await page.fill('input[placeholder*="密码"], input[type="password"]', 'Oral6421');
-  await page.click('button[type="submit"], .login-btn, button:has-text("登录")');
-  await page.waitForURL(/\#\/(dashboard|index|home)/, { timeout: 15000 }).catch(() => {});
-  await sleep(2000);
+  // Login via API
+  await page.goto(BASE);
+  await page.waitForTimeout(2000);
 
-  // Set warehouse
-  await page.evaluate(() => localStorage.setItem('erp_default_warehouse_id', '1'));
-  console.log('Warehouse set to 1');
+  const lr = await page.evaluate(async () => {
+    const r = await fetch('https://nomaderp.pages.dev/adminapi/login/account', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: '17747344571', password: 'Oral6421', terminal: 1 })
+    });
+    return r.json();
+  });
 
-  // Step 1: Baseline
+  const token = lr?.data?.token;
+  if (!token) { console.error('NO TOKEN:', JSON.stringify(lr)); await browser.close(); return; }
+  await page.evaluate(t => {
+    localStorage.setItem('erp_token', t);
+    localStorage.setItem('erp_default_warehouse_id', '1');
+  }, token);
+  console.log('Logged in OK');
+
+  // === STEP 1: Baseline ===
   console.log('\n=== STEP 1: Baseline ===');
-  const baseOut = await apiGet(page, '/stock/OtherOut/index?list_rows=200');
-  const baseIn = await apiGet(page, '/stock/OtherIn/index?list_rows=200');
+  const baseOutResp = await get(page, '/stock/OtherOut/index?list_rows=200');
+  const baseInResp = await get(page, '/stock/OtherIn/index?list_rows=200');
 
-  const baseOutIds = new Set((baseOut?.data?.data || []).map(r => r.id));
-  const baseInIds = new Set((baseIn?.data?.data || []).map(r => r.id));
+  const baseOutRows = baseOutResp?.data?.rows ?? baseOutResp?.data?.data ?? [];
+  const baseInRows = baseInResp?.data?.rows ?? baseInResp?.data?.data ?? [];
+
+  const baseOutIds = new Set(baseOutRows.map(r => r.id));
+  const baseInIds = new Set(baseInRows.map(r => r.id));
+
   console.log(`Baseline OtherOut count: ${baseOutIds.size}`);
   console.log(`Baseline OtherIn count: ${baseInIds.size}`);
 
-  // Step 2: Navigate to purchase order list and find CG202603313284
-  console.log('\n=== STEP 2: Navigate to purchase order ===');
-  await page.goto(`${BASE_URL}/#/procure/order`);
-  await sleep(3000);
+  // Find the purchase order
+  const orderListResp = await get(page, '/stock/PurchaseOrder/index?list_rows=999');
+  const orderRows = orderListResp?.data?.rows ?? orderListResp?.data?.data ?? [];
+  const order = orderRows.find(o => o.order_no === 'CG202603313284');
 
-  // Search for the order
-  const searchInput = page.locator('input[placeholder*="单号"], input[placeholder*="搜索"], .search-input input').first();
-  if (await searchInput.isVisible()) {
-    await searchInput.fill('CG202603313284');
-    await page.keyboard.press('Enter');
-    await sleep(2000);
-  }
-
-  // Find the row with this order number
-  const orderRow = page.locator('tr').filter({ hasText: 'CG202603313284' }).first();
-  const rowVisible = await orderRow.isVisible().catch(() => false);
-  console.log(`Order row visible: ${rowVisible}`);
-
-  if (!rowVisible) {
-    // Try scrolling or pagination
-    console.log('Order not visible, trying direct API audit...');
-  }
-
-  // Find the audit button in the row
-  let auditBtn = orderRow.locator('button, .el-button').filter({ hasText: /审核|Audit/ }).first();
-  let auditVisible = await auditBtn.isVisible().catch(() => false);
-
-  if (!auditVisible) {
-    // Try finding the row's action buttons
-    const allAuditBtns = page.locator('button').filter({ hasText: '审核' });
-    const count = await allAuditBtns.count();
-    console.log(`Found ${count} audit buttons`);
-    if (count > 0) {
-      // Find the one associated with our order
-      for (let i = 0; i < count; i++) {
-        const btn = allAuditBtns.nth(i);
-        const row = btn.locator('xpath=ancestor::tr').first();
-        const rowText = await row.textContent().catch(() => '');
-        if (rowText.includes('CG202603313284')) {
-          auditBtn = btn;
-          auditVisible = true;
-          break;
-        }
-      }
-    }
-  }
-
-  console.log(`Audit button visible: ${auditVisible}`);
-
-  if (auditVisible) {
-    await auditBtn.click();
-    await sleep(1000);
-    // Confirm dialog if any
-    const confirmBtn = page.locator('.el-message-box button').filter({ hasText: /确定|确认|OK/ }).first();
-    if (await confirmBtn.isVisible().catch(() => false)) {
-      await confirmBtn.click();
-    }
-    await sleep(3000);
-    console.log('Audit clicked');
-  } else {
-    console.log('ERROR: Could not find audit button');
+  if (!order) {
+    console.error('Order CG202603313284 NOT FOUND!');
+    console.log('Sample orders:', orderRows.slice(0, 3).map(o => o.order_no));
     await browser.close();
     return;
   }
+  console.log(`\nOrder found: id=${order.id}, status=${order.status}`);
 
-  // Step 3: Record new OtherOut ids after audit
-  console.log('\n=== STEP 3: OtherOut after audit ===');
-  const afterAuditOut = await apiGet(page, '/stock/OtherOut/index?list_rows=200');
-  const afterAuditOutIds = new Set((afterAuditOut?.data?.data || []).map(r => r.id));
-  const newOutIds = [...afterAuditOutIds].filter(id => !baseOutIds.has(id));
-  console.log(`OtherOut count after audit: ${afterAuditOutIds.size}`);
-  console.log(`New OtherOut IDs from audit: ${JSON.stringify(newOutIds)}`);
+  // Ensure order is un-audited (status=0)
+  if (Number(order.status) === 1) {
+    console.log('Order is audited, reversing first...');
+    const reverseResp = await post(page, '/stock/PurchaseOrder/audit', { id: order.id, status: 0 });
+    console.log('Reverse result:', JSON.stringify(reverseResp));
+    await page.waitForTimeout(2000);
+  }
 
-  // Step 4: Reverse audit
+  // Re-check baseline after potential reverse
+  const baseOutResp2 = await get(page, '/stock/OtherOut/index?list_rows=200');
+  const baseInResp2 = await get(page, '/stock/OtherIn/index?list_rows=200');
+  const baseOutRows2 = baseOutResp2?.data?.rows ?? baseOutResp2?.data?.data ?? [];
+  const baseInRows2 = baseInResp2?.data?.rows ?? baseInResp2?.data?.data ?? [];
+  const baseOutIds2 = new Set(baseOutRows2.map(r => r.id));
+  const baseInIds2 = new Set(baseInRows2.map(r => r.id));
+  console.log(`\nFinal Baseline OtherOut count: ${baseOutIds2.size}`);
+  console.log(`Final Baseline OtherIn count: ${baseInIds2.size}`);
+
+  // === STEP 2: Audit ===
+  console.log('\n=== STEP 2: Audit order ===');
+  const auditResp = await post(page, '/stock/PurchaseOrder/audit', { id: order.id, status: 1 });
+  console.log('Audit result:', JSON.stringify(auditResp));
+  await page.waitForTimeout(2000);
+
+  // === STEP 3: Record new OtherOut after audit ===
+  console.log('\n=== STEP 3: OtherOut/OtherIn after audit ===');
+  const afterAuditOutResp = await get(page, '/stock/OtherOut/index?list_rows=200');
+  const afterAuditInResp = await get(page, '/stock/OtherIn/index?list_rows=200');
+  const afterAuditOutRows = afterAuditOutResp?.data?.rows ?? afterAuditOutResp?.data?.data ?? [];
+  const afterAuditInRows = afterAuditInResp?.data?.rows ?? afterAuditInResp?.data?.data ?? [];
+  const afterAuditOutIds = new Set(afterAuditOutRows.map(r => r.id));
+  const afterAuditInIds = new Set(afterAuditInRows.map(r => r.id));
+  const newOutIds = [...afterAuditOutIds].filter(id => !baseOutIds2.has(id));
+  const newInIds = [...afterAuditInIds].filter(id => !baseInIds2.has(id));
+
+  console.log(`OtherOut count after audit: ${afterAuditOutIds.size} (new: ${newOutIds.length})`);
+  console.log(`OtherOut new IDs: ${JSON.stringify(newOutIds)}`);
+  console.log(`OtherIn count after audit: ${afterAuditInIds.size} (new: ${newInIds.length})`);
+  console.log(`OtherIn new IDs: ${JSON.stringify(newInIds)}`);
+
+  // === STEP 4: Reverse audit ===
   console.log('\n=== STEP 4: Reverse audit ===');
-  // Find the reverse audit button
-  let reverseBtn = orderRow.locator('button, .el-button').filter({ hasText: /反审|撤审/ }).first();
-  let reverseVisible = await reverseBtn.isVisible().catch(() => false);
+  const reverseResp2 = await post(page, '/stock/PurchaseOrder/audit', { id: order.id, status: 0 });
+  console.log('Reverse audit result:', JSON.stringify(reverseResp2));
+  await page.waitForTimeout(2000);
 
-  if (!reverseVisible) {
-    const allReverseBtns = page.locator('button').filter({ hasText: /反审|撤审/ });
-    const count = await allReverseBtns.count();
-    console.log(`Found ${count} reverse audit buttons`);
-    if (count > 0) {
-      for (let i = 0; i < count; i++) {
-        const btn = allReverseBtns.nth(i);
-        const row = btn.locator('xpath=ancestor::tr').first();
-        const rowText = await row.textContent().catch(() => '');
-        if (rowText.includes('CG202603313284')) {
-          reverseBtn = btn;
-          reverseVisible = true;
-          break;
-        }
-      }
-    }
-    // If still not found, just take first one
-    if (!reverseVisible && count > 0) {
-      reverseBtn = allReverseBtns.first();
-      reverseVisible = true;
-    }
-  }
-
-  console.log(`Reverse audit button visible: ${reverseVisible}`);
-
-  if (reverseVisible) {
-    await reverseBtn.click();
-    await sleep(1000);
-    const confirmBtn2 = page.locator('.el-message-box button').filter({ hasText: /确定|确认|OK/ }).first();
-    if (await confirmBtn2.isVisible().catch(() => false)) {
-      await confirmBtn2.click();
-    }
-    await sleep(3000);
-    console.log('Reverse audit clicked');
-  } else {
-    console.log('ERROR: Could not find reverse audit button');
-    await browser.close();
-    return;
-  }
-
-  // Step 5: Verify cleanup
+  // === STEP 5: Verify cleanup ===
   console.log('\n=== STEP 5: Verify cleanup ===');
-  const afterReverseOut = await apiGet(page, '/stock/OtherOut/index?list_rows=200');
-  const afterReverseIn = await apiGet(page, '/stock/OtherIn/index?list_rows=200');
+  const afterRevOutResp = await get(page, '/stock/OtherOut/index?list_rows=200');
+  const afterRevInResp = await get(page, '/stock/OtherIn/index?list_rows=200');
+  const afterRevOutRows = afterRevOutResp?.data?.rows ?? afterRevOutResp?.data?.data ?? [];
+  const afterRevInRows = afterRevInResp?.data?.rows ?? afterRevInResp?.data?.data ?? [];
+  const afterRevOutIds = new Set(afterRevOutRows.map(r => r.id));
+  const afterRevInIds = new Set(afterRevInRows.map(r => r.id));
 
-  const afterReverseOutIds = new Set((afterReverseOut?.data?.data || []).map(r => r.id));
-  const afterReverseInIds = new Set((afterReverseIn?.data?.data || []).map(r => r.id));
+  const remainingBomIds = newOutIds.filter(id => afterRevOutIds.has(id));
+  const newInAfterReverse = [...afterRevInIds].filter(id => !baseInIds2.has(id));
+  const outBackToBaseline = afterRevOutIds.size === baseOutIds2.size;
 
-  // Check if BOM deduction records are cleaned up
-  const remainingNewOutIds = newOutIds.filter(id => afterReverseOutIds.has(id));
-  const newInIdsAfterReverse = [...afterReverseInIds].filter(id => !baseInIds.has(id));
+  console.log('\n--- RESULTS ---');
+  console.log(`OtherOut baseline: ${baseOutIds2.size}`);
+  console.log(`OtherOut after audit: ${afterAuditOutIds.size} (+${newOutIds.length} BOM records)`);
+  console.log(`OtherOut after reverse: ${afterRevOutIds.size}`);
+  console.log(`OtherOut back to baseline: ${outBackToBaseline}`);
+  console.log(`BOM records still present after reverse: ${remainingBomIds.length} (should be 0)`);
+  console.log(`New OtherIn after reverse: ${newInAfterReverse.length} (should be 0)`);
 
-  const outCountMatch = afterReverseOutIds.size === baseOutIds.size;
+  const isClean = outBackToBaseline && remainingBomIds.length === 0 && newInAfterReverse.length === 0;
 
-  console.log(`\n--- RESULTS ---`);
-  console.log(`OtherOut baseline: ${baseOutIds.size}`);
-  console.log(`OtherOut after audit: ${afterAuditOutIds.size} (new: ${newOutIds.length})`);
-  console.log(`OtherOut after reverse: ${afterReverseOutIds.size}`);
-  console.log(`OtherOut back to baseline: ${outCountMatch}`);
-  console.log(`BOM records from audit still exist: ${remainingNewOutIds.length} (should be 0)`);
-  console.log(`New OtherIn after reverse: ${newInIdsAfterReverse.length} (should be 0)`);
-
-  const isClean = outCountMatch && remainingNewOutIds.length === 0 && newInIdsAfterReverse.length === 0;
-  console.log(`\n=== FINAL CONCLUSION: Flow is ${isClean ? 'CLEAN ✓' : 'DIRTY ✗'} ===`);
-
+  console.log(`\n=== FINAL CONCLUSION: BOM flow is ${isClean ? 'CLEAN ✓' : 'DIRTY ✗'} ===`);
   if (!isClean) {
-    if (!outCountMatch) {
-      console.log(`  - OtherOut count mismatch: expected ${baseOutIds.size}, got ${afterReverseOutIds.size}`);
-    }
-    if (remainingNewOutIds.length > 0) {
-      console.log(`  - BOM records NOT cleaned up: IDs ${JSON.stringify(remainingNewOutIds)}`);
-    }
-    if (newInIdsAfterReverse.length > 0) {
-      console.log(`  - Unexpected OtherIn created: IDs ${JSON.stringify(newInIdsAfterReverse)}`);
-    }
+    if (!outBackToBaseline) console.log(`  ISSUE: OtherOut not back to baseline (${afterRevOutIds.size} vs ${baseOutIds2.size})`);
+    if (remainingBomIds.length > 0) console.log(`  ISSUE: BOM OtherOut records not deleted: ${JSON.stringify(remainingBomIds)}`);
+    if (newInAfterReverse.length > 0) console.log(`  ISSUE: Unexpected OtherIn created: ${JSON.stringify(newInAfterReverse)}`);
   }
 
   await browser.close();
