@@ -308,7 +308,6 @@ const hideTabbar = inject<Ref<boolean>>('hideTabbar', ref(false))
 watch([showGroupInfo, showAddMember, showCleanupConfirm, showMemberAction], ([a, b, c, d]) => {
   hideTabbar.value = a || b || c || d
 })
-onUnmounted(() => { hideTabbar.value = false })
 const showAtPicker = ref(false)
 const addMemberSearch = ref('')
 const cleanupDays = ref(180)
@@ -684,6 +683,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  hideTabbar.value = false
   if (pollTimer) clearInterval(pollTimer)
 })
 </script>

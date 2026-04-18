@@ -900,6 +900,7 @@ onMounted(() => {
   loadContacts()
   loadActiveMeetings()
   loadPendingItems()
+  loadTodoPlans()
   // 每 10 秒刷新消息列表（检查新消息和未读）
   listPollTimer = setInterval(() => {
     loadGroups()
@@ -940,6 +941,31 @@ export default { name: 'MobileChat' }
   display: flex;
   flex-direction: column;
 }
+.todo-section { padding: 0 0 8px; }
+.todo-section-title {
+  padding: 10px 16px 4px;
+  font-size: 12px;
+  color: #86909C;
+  font-weight: 500;
+}
+.todo-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px 16px;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #2E6BE6;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.todo-add-btn:active { opacity: 0.85; }
+.chat-name.done { text-decoration: line-through; color: #C9CDD4; }
+.chat-time.overdue { color: #F53F3F; font-weight: 500; }
 
 /* ── 企业微信风格顶部导航栏 ── */
 .wx-nav-bar {
