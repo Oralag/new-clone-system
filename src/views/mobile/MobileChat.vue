@@ -867,7 +867,7 @@ async function loadGroups() {
     const rows = res?.data?.rows ?? res?.rows ?? []
     groups.value = rows.map((r: any) => {
       const memberIds = r.member_ids ?? []
-      const isPrivate = r.is_private || (memberIds.length === 2)
+      const isPrivate = !!r.is_private
       // 私聊显示对方名字
       let displayName = r.name || '会话'
       if (isPrivate && memberIds.length === 2) {
@@ -1100,97 +1100,101 @@ export default { name: 'MobileChat' }
 }
 .todo-section { padding: 0 0 8px; }
 .todo-tab { overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.todo-section-title {
-  padding: 10px 16px 4px;
-  font-size: 12px;
-  color: #86909C;
-  font-weight: 500;
-}
-.todo-add-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 12px 16px;
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  background: #2E6BE6;
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  width: calc(100% - 32px);
-}
-.todo-add-btn:active { opacity: 0.85; }
-.todo-bottom-row { padding: 8px 0 16px; }
 
-/* 状态筛选条 */
-.task-status-filter {
-  display: flex;
-  gap: 6px;
-  padding: 6px 16px 8px;
-  overflow-x: auto;
+/* 审核待办紧凑行 */
+.pending-section { background: #fff; border-bottom: 1px solid #f0f0f0; }
+.pending-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.task-status-filter-item {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  color: #86909c;
-  background: #f2f3f5;
-  cursor: pointer;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s;
-}
-.task-status-filter-item.active { background: #2E6BE6; color: #fff; }
-.task-filter-badge {
-  font-size: 11px;
-  background: rgba(245,63,63,0.9);
-  color: #fff;
-  border-radius: 999px;
-  padding: 0 5px;
-  min-width: 16px;
-  text-align: center;
-}
-.task-status-filter-item.active .task-filter-badge { background: rgba(255,255,255,0.3); }
+.pending-row:active { background: #f9f9f9; }
+.pending-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.pending-label { flex: 1; font-size: 14px; color: #1d2129; font-weight: 500; }
+.pending-count { font-size: 12px; color: #f53f3f; font-weight: 600; }
 
-/* 任务左滑 */
-.task-item-wrap {
-  position: relative;
-  overflow: hidden;
+/* 筛选pills */
+.task-filter-row {
+  display: flex; gap: 6px; padding: 10px 16px 8px;
+  background: #fff; border-bottom: 1px solid #f5f5f5;
 }
-.task-swipe-actions {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: stretch;
-  z-index: 1;
+.task-filter-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 4px 11px; border-radius: 999px;
+  font-size: 12px; font-weight: 500; color: #86909c; background: #f5f5f7;
+  cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; transition: all 0.15s;
 }
-.task-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
+.task-filter-pill.active { background: #1d2129; color: #fff; }
+.task-pill-badge {
+  font-size: 10px; background: #f53f3f; color: #fff;
+  border-radius: 999px; padding: 0 4px; min-width: 14px; text-align: center; line-height: 1.4;
+}
+.task-filter-pill.active .task-pill-badge { background: rgba(255,255,255,0.25); }
+
+/* 任务列表主体 */
+.task-list-body { background: #fff; }
+.task-empty-state {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 40px 0; color: #c9cdd4; font-size: 13px;
+}
+
+/* 任务行 */
+.task-row-wrap { position: relative; overflow: hidden; }
+.task-row-actions {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  display: flex; align-items: stretch; z-index: 1;
+}
+.task-row-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 68px; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer;
+}
+.btn-start { background: #2E6BE6; }
+.btn-done { background: #00b42a; }
+.task-row-wrap.swiped > .task-row { transform: translateX(-136px); }
+.task-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; background: #fff;
+  border-bottom: 1px solid #f5f5f5; cursor: pointer;
+  transition: transform 0.2s; position: relative; z-index: 2;
   -webkit-tap-highlight-color: transparent;
 }
-.task-action-doing { background: #2E6BE6; }
-.task-action-done { background: #00b42a; }
-.task-item-wrap.swiped > .chat-item {
-  transform: translateX(-144px);
-  transition: transform 0.2s;
+.task-row:active { background: #fafafa; }
+
+/* 状态圆点 */
+.task-row-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
-.task-done-item { opacity: 0.7; }
-.task-title-done { text-decoration: line-through; color: #c9cdd4 !important; }
+.dot-todo { background: #d0d0d0; }
+.dot-doing { background: #2E6BE6; }
+.dot-done { background: #00b42a; }
+
+.task-row-body { flex: 1; min-width: 0; }
+.task-row-title {
+  font-size: 15px; color: #1d2129; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.task-row-done { text-decoration: line-through; color: #c9cdd4; }
+.task-row-meta { display: flex; gap: 8px; margin-top: 3px; }
+.task-meta-assignee { font-size: 11px; color: #2E6BE6; }
+.task-meta-due { font-size: 11px; color: #86909c; }
+.task-meta-due.overdue { color: #f53f3f; }
+
+/* 状态标签 */
+.task-row-status-tag {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; font-weight: 500;
+}
+.stag-todo { background: #f5f5f7; color: #86909c; }
+.stag-doing { background: #e8f0ff; color: #2E6BE6; }
+.stag-done { background: #e8fff0; color: #00b42a; }
+
+/* 新建按钮 */
+.task-add-row { padding: 12px 16px; background: #fff; border-top: 1px solid #f5f5f5; }
+.task-add-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 11px; border: 1.5px dashed #d0d0d0; border-radius: 10px;
+  background: transparent; font-size: 14px; color: #86909c; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.task-add-btn:active { border-color: #2E6BE6; color: #2E6BE6; }
 
 /* 新建/详情表单样式 */
 .add-plan-sheet { max-height: 75dvh; min-height: auto; }

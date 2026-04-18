@@ -227,15 +227,23 @@ const AGENT_IDS = new Set([
 // Agent 配置（systemPrompt 用于自动回复）
 const AGENT_CONFIGS = {
   captain: { name: 'Captain', systemPrompt: '你是数字游牧广告公司的Captain总指挥，负责统筹协调所有AI专员。回复简洁专业，像指挥官一样下达指令。不用Markdown格式，不用加粗和分隔线。全程中文。' },
-  secretary: { name: '秘书', systemPrompt: `你是数字游牧广告公司的秘书，是群聊的第一响应人。你的核心职责：
-1. 第一时间回应群里的消息，梳理清楚用户需求
-2. 跟进项目进度和待办事项，主动汇报状态
-3. 根据任务性质分配给对应专员：文案→文案Agent，设计→海报Agent/平面设计师，视频→视频Agent，品牌策略→品牌Agent，热点情报→趋势Agent，发布排期→发布Agent
-4. 遇到重大决策或战略问题，明确告知"这个需要请示Captain总指挥"并@captain
-5. 遇到ERP业务问题（订单/库存/财务），告知"这个需要问管家"
-6. 【任务通知处理】当收到"📋 新任务已创建"消息时，回复"✅ 已收到，我会通知负责人并跟进进度。"（简短，不啰嗦）
-7. 【任务识别】当群里有人提到要做某件事、安排某个任务、或给某人分配工作时，主动提炼出任务要点并回复："✅ 已记录任务：[任务内容]，我会跟进进度。"
-回复简洁高效，像一个靠谱的助理。不用Markdown格式，不用**加粗**和---分隔线。全程中文。` },
+  secretary: { name: '秘书', systemPrompt: `你是数字游牧广告公司的秘书，执行力强、少问多做。
+
+【最重要的规则 — 任务记录格式】
+只要对话中提到任何任务、事项、安排，你的回复必须且只能包含这一行：
+📋 已记录：「任务标题」，负责人：负责人名字，截止：截止日期
+
+例如：📋 已记录：「设计新品海报」，负责人：小李，截止：2026-04-20
+- 如果没有负责人，写"待定"；如果没有截止日期，写"待定"
+- 这行必须出现，不管任务信息是否完整
+- 不要问"有没有负责人""截止时间是什么时候"，直接用待定填充
+- ⚠️ 绝对禁止：不要写"@某某 你好！"、不要写通知消息、不要写任何@内容。系统会自动通知负责人，你不需要也不能在聊天里写通知
+
+【执行优先，不反复确认】
+- 收到任务后直接输出记录行，不来回问问题
+- 信息不完整时用"待定"填充
+
+不用Markdown格式，不用**加粗**。全程中文。只输出记录行，不加其他内容。` },
   copywriter: { name: '文案Agent', systemPrompt: '你是数字游牧广告公司的文案专员，擅长各平台爆款文案、标题钩子、情绪共鸣。回复有创意有感染力。全程中文。' },
   poster: { name: '海报Agent', systemPrompt: '你是数字游牧广告公司的设计专员，擅长海报创意、配色方案、视觉描述。回复专业且富有美感。全程中文。' },
   video: { name: '视频Agent', systemPrompt: '你是数字游牧广告公司的视频专员，擅长短视频脚本、分镜设计、口播文案。回复结构清晰，有画面感。全程中文。' },
@@ -724,32 +732,83 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
         await env.USERS_KV.put(unreadKey, String(cur + 1))
       }
 
-      // 秘书收到任务通知后，自动给负责人发私信跟进
-      if (String(agentId) === 'secretary' && content.includes('📋 新任务已创建')) {
-        // 从消息中提取负责人名字列表
-        const assigneeMatch = content.match(/负责人：([^，。\n]+)/)
-        if (assigneeMatch) {
-          const names = assigneeMatch[1].split('、').map(n => n.trim()).filter(Boolean)
-          // 从 KV 里找对应用户 ID
-          const usersRaw = await env.USERS_KV.get('users')
-          const users = usersRaw ? JSON.parse(usersRaw) : []
-          for (const name of names) {
-            const user = users.find(u => u.name === name || u.admin_name === name)
-            if (!user) continue
-            // 找或创建秘书与该用户的私聊
-            const groupsRaw2 = await env.USERS_KV.get('chat_groups')
-            const allGroups = groupsRaw2 ? JSON.parse(groupsRaw2) : []
+      // 秘书回复里包含任务记录格式时，自动写入待办 + 给负责人发私信
+      if (String(agentId) === 'secretary' && replyText.includes('📋 已记录：')) {
+        const taskMatch2 = replyText.match(/「(.+?)」/)
+        const taskTitle2 = taskMatch2 ? taskMatch2[1] : null
+        const dueMatch2 = replyText.match(/截止[：:]([^\s，。\n,]+)/)
+        const dueDate2 = dueMatch2 ? dueMatch2[1].trim() : ''
+        const assigneeMatch = replyText.match(/负责人[：:]([^，。\n,「」]+)/)
+        const rawAssignees = assigneeMatch ? assigneeMatch[1].trim() : ''
+        const assigneeNames = rawAssignees && rawAssignees !== '待定'
+          ? rawAssignees.split(/[、，,]/).map(n => n.trim()).filter(Boolean)
+          : []
+
+        // 1. 写入待办
+        if (taskTitle2) {
+          const plansRaw = await env.USERS_KV.get('work_plans')
+          const plans = plansRaw ? JSON.parse(plansRaw) : []
+          const nowIso = new Date().toISOString()
+          // 避免重复写入（标题+日期相同则跳过）
+          const exists = plans.some(p => p.title === taskTitle2 && p.due_date === dueDate2)
+          if (!exists) {
+            plans.unshift({
+              id: nowMs() + 1,
+              creator_id: senderId,
+              title: taskTitle2,
+              description: '',
+              status: 'todo',
+              priority: 'normal',
+              mentions: assigneeNames.map(name => ({ name })),
+              due_date: dueDate2,
+              follow_up: { last_remind: null, next_remind: null, remind_count: 0 },
+              created_at: nowIso,
+              updated_at: nowIso,
+            })
+            await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+          }
+        }
+
+        // 2. 给负责人发私信
+        if (assigneeNames.length > 0) {
+          // 从真实 ERP API 拉员工列表（用 master token，fallback 到 KV 缓存）
+          let erpEmployees = []
+          try {
+            const CACHE_KEY = 'master_token_cache'
+            let mToken = await env.USERS_KV.get(CACHE_KEY)
+            if (mToken) {
+              const empRes = await fetch(`${DEFAULT_BACKEND}/adminapi/setting/admin/index?list_rows=500`, {
+                headers: { 'Content-Type': 'application/json', 'token': mToken, 'authori-zation': mToken }
+              })
+              const empData = await empRes.json()
+              erpEmployees = empData?.data?.rows ?? []
+            }
+          } catch {}
+          // fallback: users KV
+          if (erpEmployees.length === 0) {
+            const usersRaw = await env.USERS_KV.get('users')
+            erpEmployees = usersRaw ? JSON.parse(usersRaw) : []
+          }
+
+          const groupsRaw2 = await env.USERS_KV.get('chat_groups')
+          const allGroups = groupsRaw2 ? JSON.parse(groupsRaw2) : []
+          let groupsChanged = false
+
+          for (const name of assigneeNames) {
+            const user = erpEmployees.find(u => (u.name || u.admin_name) === name)
+            if (!user) { console.log(`[Secretary] 找不到负责人: ${name}`); continue }
+            const uid = String(user.id || user.user_id)
+
             let privateGroup = allGroups.find(g =>
               g.is_private &&
               g.member_ids?.length === 2 &&
               g.member_ids.includes('secretary') &&
-              g.member_ids.includes(String(user.id || user.user_id))
+              g.member_ids.includes(uid)
             )
             if (!privateGroup) {
-              const uid = String(user.id || user.user_id)
               privateGroup = {
-                id: nowMs(),
-                name: `秘书与${name}`,
+                id: nowMs() + Math.floor(Math.random() * 1000),
+                name: '秘书',
                 is_private: true,
                 member_ids: ['secretary', uid],
                 created_at: new Date().toISOString(),
@@ -757,15 +816,12 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
                 last_message_at: new Date().toISOString(),
               }
               allGroups.push(privateGroup)
-              await env.USERS_KV.put('chat_groups', JSON.stringify(allGroups))
+              groupsChanged = true
             }
-            // 提取任务名
-            const taskMatch = content.match(/「(.+?)」/)
-            const taskTitle = taskMatch ? taskMatch[1] : '一项任务'
-            const dueMatch = content.match(/截止 ([^\s，。]+)/)
-            const dueStr = dueMatch ? `，截止日期 ${dueMatch[1]}` : ''
-            const notifyMsg = `📋 你好！你被分配了一项任务：「${taskTitle}」${dueStr}。请确认并按时完成，有问题随时找我。`
-            const notifyMsgObj = {
+
+            const dueStr = dueDate2 ? `，截止 ${dueDate2}` : ''
+            const notifyMsg = `📋 你好！你有一项新任务：「${taskTitle2 || '新任务'}」${dueStr}。请确认并按时完成，有问题随时找我。`
+            const msgObj = {
               id: nowMs() + Math.floor(Math.random() * 1000),
               group_id: privateGroup.id,
               sender_id: 'secretary',
@@ -777,14 +833,21 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
             const msgRaw3 = await env.USERS_KV.get('chat_messages')
             const msgMap3 = msgRaw3 ? JSON.parse(msgRaw3) : {}
             if (!msgMap3[privateGroup.id]) msgMap3[privateGroup.id] = []
-            msgMap3[privateGroup.id].push(notifyMsgObj)
+            msgMap3[privateGroup.id].push(msgObj)
             await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap3))
-            // 给负责人加未读
-            const uid2 = String(user.id || user.user_id)
-            const unreadKey2 = `chat_unread:${uid2}:${privateGroup.id}`
-            const cur2 = parseInt(await env.USERS_KV.get(unreadKey2) || '0')
-            await env.USERS_KV.put(unreadKey2, String(cur2 + 1))
+
+            const gIdx = allGroups.findIndex(g => g.id === privateGroup.id)
+            if (gIdx !== -1) {
+              allGroups[gIdx].last_message = notifyMsg.slice(0, 60)
+              allGroups[gIdx].last_message_at = new Date().toISOString()
+              groupsChanged = true
+            }
+
+            const unreadKey3 = `chat_unread:${uid}:${privateGroup.id}`
+            const cur3 = parseInt(await env.USERS_KV.get(unreadKey3) || '0')
+            await env.USERS_KV.put(unreadKey3, String(cur3 + 1))
           }
+          if (groupsChanged) await env.USERS_KV.put('chat_groups', JSON.stringify(allGroups))
         }
       }
     } catch (e) {
