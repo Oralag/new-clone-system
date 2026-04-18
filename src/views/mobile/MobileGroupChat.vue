@@ -388,7 +388,6 @@ async function loadAllContacts() {
     allContacts.value = [...ROBOT_AGENTS]
   }
 }
-}
 const cleaning = ref(false)
 const aiMode = ref(false)
 const pinEnabled = ref(false)
