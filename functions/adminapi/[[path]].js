@@ -723,20 +723,18 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
           }),
         })
 
-        if (!res.ok) {
-          console.error(`[AgentReply] API error for ${agentId}: ${res.status} ${await res.text()}`)
-          continue
+        if (res.ok) {
+          const data = await res.json()
+          replyText = data.content?.find(b => b.type === 'text')?.text || ''
+          if (!replyText) {
+            console.warn(`[AgentReply] Anthropic returned no text for ${agentId}, trying Workers AI...`)
+          }
+        } else {
+          console.warn(`[AgentReply] Anthropic API error ${await res.text()}, trying Workers AI...`)
         }
-        const data = await res.json()
-        replyText = data.content?.find(b => b.type === 'text')?.text || ''
-        if (!replyText) {
-          console.error(`[AgentReply] no text in response for ${agentId}: ${JSON.stringify(data).slice(0,200)}`)
-          continue
-        }
-        // Workers AI fallback（当 ANTHROPIC_API_KEY 缺失时）
         if (!replyText && env.AI) {
           try {
-            // 构造 Workers AI 格式的消息上下文
+            // Workers AI fallback（当 Anthropic 失败时）
             // 系统提示：角色定义 + 历史
             const sysWithHistory = `【角色】${agentSystemPrompt}\n\n【最近对话】（参考上下文）\n${history.map(m => m.content).join('\n')}`
 
