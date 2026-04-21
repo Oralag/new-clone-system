@@ -584,7 +584,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
           const fallback = recentAgentId ||
             agentIds.find(id => String(id) === 'secretary') ||
             agentIds.find(id => AGENT_CONFIGS[String(id)])
-          if (fallback && AGENT_CONFIGS[String(fallback)] && env.ANTHROPIC_API_KEY) {
+          if (fallback && AGENT_CONFIGS[String(fallback)] && (env.ANTHROPIC_API_KEY || env.AI)) {
             activeAgentIds = [String(fallback)]
           }
         }
@@ -593,7 +593,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
     } // end else (群聊)
   } else {
     // 欢迎消息：第一个Agent发欢迎
-    const firstAgentId = agentIds.find(id => AGENT_CONFIGS[String(id)] && env.ANTHROPIC_API_KEY)
+    const firstAgentId = agentIds.find(id => AGENT_CONFIGS[String(id)] && (env.ANTHROPIC_API_KEY || env.AI))
     activeAgentIds = firstAgentId ? [firstAgentId] : []
   }
   for (const agentId of activeAgentIds) {
