@@ -227,52 +227,77 @@
 
     <!-- ── 左侧抽屉 ── -->
     <div class="drawer" :class="{ open: showDrawer }">
-      <!-- 顶部用户卡片 -->
-      <div class="drawer-hero">
-        <div class="drawer-avatar-wrap">
+      <div class="drawer-scroll">
+        <!-- 用户卡片 -->
+        <div class="drawer-hero">
           <div class="drawer-avatar">{{ authStore.userName?.[0] || '我' }}</div>
-          <div class="drawer-status"></div>
+          <div class="drawer-name">{{ authStore.userName || '用户' }}</div>
+          <div class="drawer-company">{{ authStore.userInfo?.dept || authStore.userInfo?.position || '成员' }}</div>
         </div>
-        <div class="drawer-name">{{ authStore.userName || '用户' }}</div>
-        <div class="drawer-company">{{ authStore.companyName || '数字游牧' }}</div>
-        <!-- 右上角工具图标 -->
-        <div class="drawer-top-actions">
-          <button class="drawer-action-btn" @click="router.push('/'); showDrawer = false" title="PC端">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-          </button>
-          <button class="drawer-action-btn" @click="handleScan(); showDrawer = false" title="扫一扫">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-            </svg>
-          </button>
-        </div>
-      </div>
 
-      <!-- 中间菜单 -->
-      <div class="drawer-menu">
-        <div class="drawer-item" @click="router.push('/mobile/stats'); showDrawer = false">
-          <span class="drawer-item-icon">📊</span>
-          <span>数据报表</span>
+        <!-- 数据卡片 -->
+        <div class="drawer-stats">
+          <div class="drawer-stat" @click="router.push('/mobile/sale/client'); showDrawer = false">
+            <div class="drawer-stat-val">{{ myStats.customerCount }}</div>
+            <div class="drawer-stat-label">客户</div>
+          </div>
+          <div class="drawer-stat-divider" />
+          <div class="drawer-stat" @click="router.push('/mobile/finance/receivable'); showDrawer = false">
+            <div class="drawer-stat-val">¥{{ myStats.receivable }}</div>
+            <div class="drawer-stat-label">应收款</div>
+          </div>
+          <div class="drawer-stat-divider" />
+          <div class="drawer-stat" @click="router.push('/mobile/warehouse/stock'); showDrawer = false">
+            <div class="drawer-stat-val" :style="{ color: Number(myStats.stockWarn) > 0 ? '#f53f3f' : '#1d2129' }">{{ myStats.stockWarn }}</div>
+            <div class="drawer-stat-label">库存预警</div>
+          </div>
         </div>
-        <div class="drawer-item" @click="router.push('/mobile/my'); showDrawer = false">
-          <span class="drawer-item-icon">👤</span>
-          <span>个人信息</span>
-        </div>
-      </div>
 
-      <!-- 底部固定 -->
-      <div class="drawer-footer">
-        <div class="drawer-item" @click="router.push('/mobile/my'); showDrawer = false">
-          <span class="drawer-item-icon">⚙️</span>
-          <span>设置</span>
+        <!-- 协作工具 -->
+        <div class="drawer-section-title">协作工具</div>
+        <div class="drawer-grid">
+          <div class="drawer-grid-item" @click="router.push('/mobile/activity'); showDrawer = false">工作动态</div>
+          <div class="drawer-grid-item" @click="router.push('/mobile/ai'); showDrawer = false">AI 管家</div>
+          <div class="drawer-grid-item" @click="router.push('/mobile/meeting'); showDrawer = false">会议室</div>
+          <div class="drawer-grid-item" @click="router.push('/mobile/contacts'); showDrawer = false">通讯录</div>
         </div>
-        <div class="drawer-item danger" @click="handleLogout">
-          <span class="drawer-item-icon">🚪</span>
-          <span>退出登录</span>
+
+        <!-- 业务管理 -->
+        <div class="drawer-section-title">业务管理</div>
+        <div class="drawer-menu-list">
+          <div class="drawer-menu-item" @click="router.push('/dashboard'); showDrawer = false">
+            <span>首页工作台</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="drawer-menu-item" @click="router.push('/portal'); showDrawer = false">
+            <span>切换工作台</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="drawer-menu-item" @click="router.push('/mobile/stats'); showDrawer = false">
+            <span>数据报表</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         </div>
+
+        <!-- 系统 -->
+        <div class="drawer-section-title">系统</div>
+        <div class="drawer-menu-list">
+          <div class="drawer-menu-item" @click="router.push('/setting'); showDrawer = false">
+            <span>系统设置</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="drawer-menu-item" @click="copyDrawerLink">
+            <span>复制链接</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <!-- 退出 -->
+        <div class="drawer-logout-wrap">
+          <button class="drawer-logout-btn" @click="handleLogout">退出登录</button>
+        </div>
+
+        <div class="drawer-version">数字游牧 ERP v3.0</div>
       </div>
     </div>
 
@@ -507,6 +532,29 @@ const showNewChat = ref(false)
 const newChatKeyword = ref('')
 const activeMeetingCount = ref(0)
 const showDrawer = ref(false)
+const myStats = ref({ customerCount: 0, receivable: '0', stockWarn: 0 })
+
+function copyDrawerLink() {
+  const url = window.location.href
+  navigator.clipboard.writeText(url).then(() => {
+    ElMessage.success('链接已复制')
+  }).catch(() => { ElMessage.info(url) })
+  showDrawer.value = false
+}
+
+async function loadDrawerStats() {
+  const [custRes, recRes] = await Promise.allSettled([
+    http.get('/shop/ShopCustomer/index', { params: { list_rows: 1 } }),
+    http.get('/finance/Receivable/index', { params: { list_rows: 100 } }),
+  ])
+  if (custRes.status === 'fulfilled') myStats.value.customerCount = custRes.value?.data?.total ?? 0
+  if (recRes.status === 'fulfilled') {
+    const rows = recRes.value?.data?.rows ?? []
+    const total = rows.filter((r: any) => Number(r.status) === 1 && Number(r.un_collect || 0) > 0)
+      .reduce((s: number, r: any) => s + Number(r.un_collect || 0), 0)
+    myStats.value.receivable = total >= 10000 ? (total / 10000).toFixed(1) + 'w' : total.toFixed(0)
+  }
+}
 const showChatPlus = ref(false)
 const showFabPlus = ref(false)
 const showCreateGroup = ref(false)
@@ -867,7 +915,7 @@ async function loadGroups() {
     const rows = res?.data?.rows ?? res?.rows ?? []
     groups.value = rows.map((r: any) => {
       const memberIds = r.member_ids ?? []
-      const isPrivate = !!r.is_private
+      const isPrivate = !!r.is_private || (memberIds.length === 2)
       // 私聊显示对方名字
       let displayName = r.name || '会话'
       if (isPrivate && memberIds.length === 2) {
@@ -1047,14 +1095,16 @@ watch(searchKeyword, (v) => { if (v) doSearch() })
 
 let listPollTimer: ReturnType<typeof setInterval> | null = null
 
-onMounted(() => {
+onMounted(async () => {
+  loadDrawerStats()
   // 设置 FAB 初始位置（右下角）
   winWidth.value = window.innerWidth
   winHeight.value = window.innerHeight
   fabPos.value = { x: winWidth.value - 60, y: winHeight.value - 116 }
-  
+
+  // 先加载通讯录，再加载群组（保证私聊名字能正确显示对方名字）
+  await loadContacts()
   loadGroups()
-  loadContacts()
   loadActiveMeetings()
   loadPendingItems()
   loadTodoPlans()
@@ -1582,9 +1632,9 @@ export default { name: 'MobileChat' }
   left: 0;
   top: 0;
   bottom: 0;
-  width: 75vw;
-  max-width: 280px;
-  background: #1B3A8C;
+  width: 82vw;
+  max-width: 320px;
+  background: #f5f5f7;
   z-index: 301;
   transform: translateX(-100%);
   transition: transform 0.25s ease;
@@ -1593,76 +1643,107 @@ export default { name: 'MobileChat' }
   padding-top: env(safe-area-inset-top, 0px);
 }
 .drawer.open { transform: translateX(0); }
-.drawer-hero {
-  background: linear-gradient(135deg, #1B3A8C 0%, #2A52BE 100%);
-  padding: 24px 16px 16px;
-  position: relative;
-  flex-shrink: 0;
+
+.drawer-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
 }
-.drawer-avatar-wrap { position: relative; width: 60px; margin-bottom: 10px; }
+
+/* 用户卡片 */
+.drawer-hero {
+  background: linear-gradient(135deg, #0071e3 0%, #005bb5 100%);
+  padding: 28px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 .drawer-avatar {
-  width: 60px;
-  height: 60px;
+  width: 60px; height: 60px;
   border-radius: 50%;
   background: rgba(255,255,255,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
   border: 2px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700; color: #fff;
+  margin-bottom: 10px;
 }
-.drawer-status {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 14px;
-  height: 14px;
-  background: #52C41A;
-  border-radius: 50%;
-  border: 2px solid #1B3A8C;
+.drawer-name { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.drawer-company { font-size: 12px; color: rgba(255,255,255,0.7); }
+
+/* 数据卡片 */
+.drawer-stats {
+  display: flex; align-items: center;
+  background: #fff;
+  margin: -14px 12px 0;
+  border-radius: 12px;
+  padding: 14px 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  position: relative; z-index: 1;
+  margin-bottom: 14px;
 }
-.drawer-name { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-.drawer-company { font-size: 13px; color: rgba(255,255,255,0.7); }
-.drawer-top-actions {
-  position: absolute;
-  top: 16px;
-  right: 12px;
-  display: flex;
+.drawer-stat { flex: 1; text-align: center; cursor: pointer; }
+.drawer-stat:active { opacity: 0.7; }
+.drawer-stat-val { font-size: 17px; font-weight: 800; color: #1d2129; }
+.drawer-stat-label { font-size: 10px; color: #86909c; margin-top: 2px; }
+.drawer-stat-divider { width: 1px; height: 24px; background: #f2f3f5; }
+
+/* 区块标题 */
+.drawer-section-title {
+  font-size: 11px; font-weight: 700; color: #86909c;
+  padding: 0 14px 6px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* 协作工具 2x2 grid */
+.drawer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
+  padding: 0 12px 14px;
 }
-.drawer-action-btn {
-  width: 34px;
-  height: 34px;
-  border: none;
-  background: rgba(255,255,255,0.15);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: rgba(255,255,255,0.9);
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
-}
-.drawer-action-btn:active { background: rgba(255,255,255,0.25); }
-.drawer-menu { flex: 1; padding: 8px 0; }
-.drawer-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  color: rgba(255,255,255,0.9);
-  font-size: 15px;
+.drawer-grid-item {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px; font-weight: 600; color: #1d2129;
+  text-align: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
 }
-.drawer-item:active { background: rgba(255,255,255,0.08); }
-.drawer-item-icon { font-size: 18px; }
-.drawer-item.danger { color: #ff7875; }
-.drawer-footer { border-top: 1px solid rgba(255,255,255,0.15); padding: 8px 0 calc(env(safe-area-inset-bottom, 0px) + 8px); }
+.drawer-grid-item:active { background: #f0f5ff; }
+
+/* 菜单列表 */
+.drawer-menu-list {
+  background: #fff;
+  border-radius: 12px;
+  margin: 0 12px 14px;
+  overflow: hidden;
+}
+.drawer-menu-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 14px;
+  font-size: 14px; font-weight: 600; color: #1d2129;
+  cursor: pointer;
+  border-bottom: 1px solid #f7f8fa;
+  -webkit-tap-highlight-color: transparent;
+}
+.drawer-menu-item:last-child { border-bottom: none; }
+.drawer-menu-item:active { background: #f5f5f7; }
+
+/* 退出 */
+.drawer-logout-wrap { padding: 0 12px; margin-bottom: 10px; }
+.drawer-logout-btn {
+  width: 100%; height: 44px;
+  background: #fff; border: 1px solid #e5e6eb; border-radius: 10px;
+  font-size: 14px; font-weight: 600; color: #f53f3f; cursor: pointer;
+}
+.drawer-logout-btn:active { background: #fff5f5; }
+
+/* 版本 */
+.drawer-version {
+  text-align: center; font-size: 11px; color: #c2c8d5; padding-bottom: 8px;
+}
 
 /* ── + 号下拉菜单 ── */
 .plus-menu-mask {

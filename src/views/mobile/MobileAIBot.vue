@@ -666,56 +666,59 @@ onMounted(() => {
 
 /* ── 输入区 ── */
 .m-ai-input-area {
-  background: #fff;
+  background: #f7f7f7;
   border-top: 1px solid #e5e6eb;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 12px calc(20px + env(safe-area-inset-bottom, 0px));
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   flex-shrink: 0;
 }
 .m-ai-textarea {
   flex: 1;
-  background: #f5f5f7;
-  border: 1.5px solid transparent;
-  border-radius: 20px;
-  padding: 10px 16px;
-  font-size: 15px;
+  background: #fff;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 16px;
   color: #1d2129;
   outline: none;
   resize: none;
   line-height: 1.5;
-  max-height: 100px;
+  max-height: 120px;
   font-family: inherit;
   transition: border 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-.m-ai-textarea:focus { border-color: #0071e3; background: #fff; }
+.m-ai-textarea:focus { border-color: #c8c8c8; }
 .m-ai-send-btn {
   width: 40px; height: 40px;
   background: #0071e3;
   border: none;
-  border-radius: 50%;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .m-ai-send-btn:disabled { background: #d1d5db; cursor: not-allowed; }
 
 .m-ai-icon-btn {
-  width: 36px; height: 36px;
+  width: 40px; height: 40px;
   border: none;
-  background: #f5f5f7;
-  border-radius: 10px;
+  background: none;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .m-ai-voice-btn {
   flex: 1;
-  height: 36px;
-  background: #f5f5f7;
+  height: 50px;
+  background: #fff;
   border: 1px solid transparent;
-  border-radius: 18px;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   font-size: 15px;
   color: #1d2129;
@@ -723,6 +726,7 @@ onMounted(() => {
   -webkit-user-select: none;
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 .m-ai-voice-btn.recording { background: #e8f0fe; border-color: #0071e3; color: #0071e3; }
 .m-ai-voice-btn.cancel { background: #fff0f0; border-color: #f53f3f; color: #f53f3f; }

@@ -133,6 +133,7 @@
               <el-option label="半成品" :value="2" />
               <el-option label="原材料" :value="3" />
               <el-option label="辅料" :value="4" />
+              <el-option label="散装" :value="5" />
             </el-select>
           </template>
           <template #toolbar>
@@ -167,6 +168,7 @@
                   <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
                   <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">原材料</el-tag>
                   <el-tag v-else-if="getGoodsType(row) === 4" size="small">辅料</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 5" type="danger" size="small">散装</el-tag>
                   <el-tag v-else-if="getGoodsType(row) === 1" type="success" size="small">成品</el-tag>
                   <el-tag v-else type="info" size="small">未指定</el-tag>
                 </div>
@@ -198,6 +200,7 @@
               <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
               <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">原材料</el-tag>
               <el-tag v-else-if="getGoodsType(row) === 4" size="small">辅料</el-tag>
+              <el-tag v-else-if="getGoodsType(row) === 5" type="danger" size="small">散装</el-tag>
               <el-tag v-else type="success" size="small">成品</el-tag>
             </template>
           </el-table-column>
@@ -279,6 +282,7 @@
                     <el-option label="半成品" :value="2" />
                     <el-option label="原材料" :value="3" />
                     <el-option label="辅料" :value="4" />
+                    <el-option label="散装" :value="5" />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -1615,7 +1619,7 @@ const IMPORT_FIELD_LABELS: Record<string, string> = {
 const IMPORT_REQUIRED_FIELDS = ['goods_name', 'cate_name', 'unit_name'] as const
 
 const GOODS_TYPE_TEXT_MAP: Record<string, number> = {
-  '成品': 1, '半成品': 2, '原材料': 3, '辅料': 4,
+  '成品': 1, '半成品': 2, '原材料': 3, '辅料': 4, '散装': 5,
 }
 
 const IMPORT_ALIAS_TO_FIELD = Object.entries(IMPORT_COL_ALIASES).reduce<Record<string, string>>((acc, [field, aliases]) => {
@@ -1740,7 +1744,7 @@ function buildImportRow(cells: any[], fieldKeys: string[], rowNo: number) {
       mapped.goods_type = GOODS_TYPE_TEXT_MAP[String(mapped.goods_type).trim()] ?? undefined
     } else {
       const num = Number(mapped.goods_type)
-      mapped.goods_type = [1, 2, 3, 4].includes(num) ? num : undefined
+      mapped.goods_type = [1, 2, 3, 4, 5].includes(num) ? num : undefined
     }
   }
   // 商品类型缺失时，遍历已有类型映射，匹配商品名称中包含的类型名（"半成品"优先于"成品"）

@@ -167,7 +167,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'contacts', name: 'MobileContacts', component: () => import('@/views/mobile/MobileContacts.vue'), meta: { title: '通讯录' } },
       { path: 'activity', name: 'MobileActivity', component: () => import('@/views/mobile/MobileActivity.vue'), meta: { title: '工作动态' } },
       { path: 'ai', name: 'MobileAI', component: () => import('@/views/mobile/MobileAI.vue'), meta: { title: 'AI 管家' } },
-      { path: 'sale/overview', redirect: '/mobile/sale/out' }, // 修复：/mobile/sale/overview 不存在，重定向到 /mobile/sale/out
+      { path: 'sale/today', name: 'MobileTodaySale', component: () => import('@/views/mobile/MobileTodaySale.vue'), meta: { title: '今日销售' } },
+      { path: 'sale/overview', redirect: '/mobile/sale/today' },
       { path: 'meeting', redirect: '/mobile/agent/meeting' },
       { path: 'warehouse/scan', name: 'MobileWarehouseScan', component: () => import('@/views/mobile/MobileWarehouseScan.vue'), meta: { title: '扫码查库存' } },
       { path: 'stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '数据统计' } },

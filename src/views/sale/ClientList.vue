@@ -69,8 +69,30 @@
               批量删除({{ selectedRows.length }})
             </el-button>
           </div>
-          <!-- 表格 -->
-          <el-table :data="filteredRows" v-loading="loading" border stripe style="width:100%"
+          <!-- 手机端卡片列表 -->
+          <div v-if="isMobile" v-loading="loading" class="mobile-client-list">
+            <div v-if="!filteredRows.length" class="mobile-client-empty">暂无数据</div>
+            <div v-for="row in filteredRows" :key="row.id" class="mobile-client-card">
+              <div class="mcl-top">
+                <span class="mcl-name">{{ row.nickname || row.name }}</span>
+                <span class="mcl-balance" :style="{ color: getBalance(row.id) > 0 ? '#0071e3' : '#c0c4cc' }">
+                  ¥{{ getBalance(row.id).toFixed(2) }}
+                </span>
+              </div>
+              <div class="mcl-mid">
+                <span class="mcl-mobile">{{ row.mobile || '—' }}</span>
+                <span class="mcl-cate">{{ getCateName(row.id) || '—' }}</span>
+              </div>
+              <div class="mcl-actions">
+                <el-button type="primary" link size="small" @click="openView(row)">查看</el-button>
+                <el-button type="primary" link size="small" @click="openForm(row)">编辑</el-button>
+                <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PC端表格 -->
+          <el-table v-else :data="filteredRows" v-loading="loading" border stripe style="width:100%"
             @selection-change="(val: any[]) => selectedRows = val">
             <el-table-column type="selection" width="50" align="center" />
             <el-table-column prop="nickname" label="客户名称" min-width="150" />
@@ -106,7 +128,7 @@
             </el-table-column>
           </el-table>
           <!-- 分页 -->
-          <div class="sc-pagination" v-if="total > 0">
+          <div class="sc-pagination" v-if="total > 0 && !isMobile">
             <el-pagination
               v-model:current-page="currentPage"
               v-model:page-size="pageSize"
@@ -479,6 +501,7 @@ function selectCate(id: number | null) {
 
 // ── 客户列表（自管理，支持前端分类过滤） ─────────────────────────────────────
 const allRows = ref<any[]>([])     // 当前页后端返回的全量数据
+const isMobile = ref(window.innerWidth < 768)
 const loading = ref(false)
 const total = ref(0)
 const currentPage = ref(1)
@@ -1112,5 +1135,38 @@ onMounted(() => {
   .cate-item.active { background: rgba(0,113,227,0.08) !important; color: #0071e3 !important; border-color: rgba(0,113,227,0.2) !important; }
   .cate-item-actions { display: none !important; }
   .client-list-wrap { overflow: visible !important; }
+}
+
+/* 手机端客户卡片 */
+.mobile-client-list { padding: 8px 0; }
+.mobile-client-empty { text-align: center; padding: 40px; color: #c2c8d5; font-size: 14px; }
+.mobile-client-card {
+  background: #fff;
+  border-radius: 12px;
+  margin: 8px 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.mcl-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.mcl-name { font-size: 14px; font-weight: 700; color: #1d2129; }
+.mcl-balance { font-size: 14px; font-weight: 700; }
+.mcl-mid {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #86909c;
+  margin-bottom: 8px;
+}
+.mcl-actions {
+  display: flex;
+  gap: 4px;
+  border-top: 1px solid #f5f5f7;
+  padding-top: 8px;
+  margin-top: 4px;
 }
 </style>

@@ -47,7 +47,7 @@
                     <span class="m-gc-ai-name">管家</span>
                     <span class="m-gc-ai-conf" :class="getConfidenceClass(msg.metadata)">{{ getConfidenceLabel(msg.metadata) }}</span>
                   </div>
-                  <div class="m-gc-ai-card-body" v-html="renderAIContent(msg.content)" />
+                  <div class="m-gc-ai-card-body" v-html="renderAIContent(msg.content)" @click="onAIContentClick($event, msg)" />
                   <div v-if="msg.metadata?.parsed" class="m-gc-ai-card-actions">
                     <button class="m-gc-ai-confirm" :disabled="msg._confirming" @click="confirmAIMessage(msg)">
                       {{ msg._confirming ? '录入中...' : '确认录入' }}
@@ -59,7 +59,7 @@
                   </div>
                 </div>
                 <!-- 普通文本 -->
-                <div v-else v-html="renderContent(msg.content)" />
+                <div v-else v-html="isAIMessage(msg) ? renderAIContent(msg.content) : renderContent(msg.content)" @click="isAIMessage(msg) ? onAIContentClick($event, msg) : undefined" />
               </div>
               <div class="m-gc-msg-time">{{ formatMsgTime(msg.created_at) }}</div>
             </div>
@@ -322,12 +322,14 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, inject, watch, type Ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useChatContextStore } from '@/stores/chatContext'
 import http from '@/api/http'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const chatContextStore = useChatContextStore()
 
 const groupId = computed(() => Number(route.params.id))
 
@@ -552,8 +554,31 @@ function renderContent(content: string) {
   return content.replace(/@(\S+)/g, '<span class="m-gc-at-highlight">@$1</span>')
 }
 
+function isAIMessage(msg: any) {
+  return String(msg.sender_id) === 'ai-assistant-fixed' || msg.type === 'ai_reply' || msg.sender_type === 'ai'
+}
+
 function renderAIContent(content: string) {
-  return content.replace(/\n/g, '<br>')
+  // 渲染 [[PICK:名称|单位|价格]] 为可点击按钮
+  content = content.replace(/\[\[PICK:([^|]+)\|([^|]*)\|([^\]]*)\]\]/g, (_, name, unit, price) => {
+    const label = unit ? `${name}（${unit}）` : name
+    return `<button class="m-gc-pick-btn" data-name="${name}" data-unit="${unit}" data-price="${price}">${label}</button>`
+  })
+  return content
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
+}
+
+function onAIContentClick(e: MouseEvent, msg: any) {
+  const btn = (e.target as HTMLElement).closest('.m-gc-pick-btn') as HTMLElement | null
+  if (!btn) return
+  const name = btn.dataset.name || ''
+  const unit = btn.dataset.unit || ''
+  const price = btn.dataset.price || ''
+  const priceText = price && Number(price) > 0 ? `单价¥${price}` : ''
+  const unitText = unit ? `/${unit}` : ''
+  inputText.value = `商品选「${name}${unitText}」${priceText}，请继续完成刚才的零售录入`
+  nextTick(() => sendMessage())
 }
 
 function getConfidenceClass(metadata: any) {
@@ -634,6 +659,8 @@ async function sendMessage() {
     })
     sending.value = false  // 消息发出去就解锁，不等Agent回复
     const sent = res?.data ?? res
+    // 写入共享上下文
+    chatContextStore.addGroupMessage({ sender: authStore.userInfo?.name || '用户', content: text, isAI: false, time: new Date().toISOString() })
     // 替换本地消息（用 id 去重，避免轮询重复）
     const idx = messages.value.findIndex(m => m.id === localMsg.id)
     if (idx !== -1) {
@@ -917,6 +944,11 @@ async function fetchNewMessages() {
       messages.value = messages.value.filter((m: any) => !m._pending)
       messages.value.push(...newMsgs)
       lastMessageId = Math.max(lastMessageId, ...newMsgs.map((m: any) => m.id))
+      // 新消息写入共享上下文
+      for (const m of newMsgs) {
+        const isAI = String(m.sender_id) === 'ai-assistant-fixed' || m.sender_type === 'ai' || m.is_ai
+        chatContextStore.addGroupMessage({ sender: m.sender_name || 'AI管家', content: m.content || '', isAI, time: m.created_at })
+      }
       // 有对方发的新消息才播音（自己发的不播）
       const hasOtherMsg = newMsgs.some((m: any) => String(m.sender_id) !== String(currentUserId.value))
       if (hasOtherMsg) playNotifySound()
@@ -1120,6 +1152,20 @@ onUnmounted(() => {
   font-size: 14px;
   color: #1d2129;
   line-height: 1.6;
+}
+.m-gc-ai-card-body .m-gc-pick-btn {
+  display: inline-block;
+  margin: 3px 4px;
+  padding: 4px 10px;
+  border: 1.5px solid #4096ff;
+  border-radius: 20px;
+  background: #fff;
+  color: #1677ff;
+  font-size: 13px;
+  cursor: pointer;
+}
+.m-gc-ai-card-body .m-gc-pick-btn:active {
+  background: #e6f4ff;
 }
 .m-gc-ai-card-actions {
   display: flex;

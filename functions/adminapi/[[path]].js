@@ -278,6 +278,14 @@ const AGENT_CONFIGS = {
 3. 解答ERP系统操作问题
 4. 汇总业务数据和报表
 
+【铁律：禁止重复录入】同一笔业务只能录入一次。如果你刚才已经成功创建了零售单，绝对不能再次调用 create_retail_order 创建同一笔。用户说"重新录"时，先删除旧单再录新单，不能同时存在两张相同的单。
+
+【铁律：同一批零售合并一张单】用户一次说了多个商品，只能调用一次 create_retail_order，把所有商品放入同一个 items 数组。
+
+【支付方式识别】用户说"微信/微信支付/扫码" → pay_method="wechat"；"支付宝/花呗" → pay_method="alipay"；"现金/付现" → pay_method="cash"；"刷卡/银行卡" → pay_method="card"；未说明默认"cash"。必须把识别到的值传入 pay_method 字段。
+
+【克→斤换算规则】中国1斤=500克。用户说"XXX克"且商品是散装称重类（乌日莫、黄油、冻炒米、奶豆腐块等按斤卖的），必须换算：斤数 = 克数 ÷ 500。示例：530克 = 1.06斤；250克 = 0.5斤。绝对禁止除以1000。按个/袋/盒卖的固定包装商品，克数是规格说明，不换算。
+
 重要回复规范：
 - 群聊里回复要简洁，不用Markdown表格，用普通文字就好
 - 缺少信息时直接用口语问，比如"炒米多少钱一斤？"，不要用表格或❓符号
@@ -728,6 +736,8 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
 
       if (!replyText) { console.error(`[AgentReply] empty reply for ${agentId}`); continue }
       console.log(`[AgentReply] ${agentId} replied: ${replyText.slice(0, 50)}...`)
+      // 永久记录 agentId 和 replyText 前100字符，用于调试
+      await env.USERS_KV.put('last_agent_reply', JSON.stringify({ agentId, replyText: replyText.slice(0,120), has_record: replyText.includes('📋 已记录：'), ts: new Date().toISOString() }), { expirationTtl: 3600 })
 
       // 保存 Agent 回复消息
       const now = new Date().toISOString()
@@ -886,8 +896,15 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
               console.log(`[Secretary-DM] 新建私聊群 ${newGid} for ${userName}`)
             }
 
-            const dueStr = dueDate2 && dueDate2 !== '待定' ? `，截止 ${dueDate2}` : ''
-            const notifyMsg = `📋 ${userName}，你有一项新任务：「${taskTitle2 || '新任务'}」${dueStr}。请确认并按时完成。`
+            const dueStr = dueDate2 && dueDate2 !== '待定' ? dueDate2 : null
+            const notifyMsg = [
+              `📋 ${userName}，你好！秘书在此通知你一项新任务：`,
+              ``,
+              `任务：「${taskTitle2 || '新任务'}」`,
+              dueStr ? `截止：${dueStr}` : `截止：待定`,
+              ``,
+              `请确认收到并安排时间完成。如有问题随时联系我。`,
+            ].join('\n')
             const msgObj = {
               id: Date.now() + Math.floor(Math.random() * 9999),
               group_id: targetGroup.id,
@@ -988,7 +1005,11 @@ async function handleSendMessage(request, env) {
   // 给群内其他成员增加未读计数
   const memberRaw = await env.USERS_KV.get('chat_members')
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
-  const memberIds = (memberMap[groupId] || []).map(m => m.user_id)
+  // 优先从 chat_members 取，fallback 到 chat_groups 的 member_ids
+  let memberIds = (memberMap[groupId] || []).map(m => m.user_id)
+  if (memberIds.length === 0 && gIdx !== -1) {
+    memberIds = groups[gIdx]?.member_ids || []
+  }
   for (const mid of memberIds) {
     if (String(mid) === String(userId)) continue // 不给自己加未读
     if (AGENT_IDS.has(String(mid))) continue // Agent不需要未读计数
@@ -1594,6 +1615,129 @@ const agentRegistry = [
   // Work Plans API — handled locally with KV storage
   // ═══════════════════════════════════════════════════════════════
   if (isWorkPath(pathname)) {
+    // Cron 跟进端点不需要登录验证
+    if (pathname === '/adminapi/work/followup' && request.method === 'POST') {
+      // 验证内部调用密钥
+      const secret = request.headers.get('x-cron-secret')
+      if (secret !== (env.CRON_SECRET || 'nomad-cron-2026')) return errRes('无权限', 403)
+
+      const plansRaw = await env.USERS_KV.get('work_plans')
+      const plans = plansRaw ? JSON.parse(plansRaw) : []
+      const now = new Date()
+      const todayStr = now.toISOString().slice(0, 10)
+
+      const activePlans = plans.filter(p => p.status !== 'done' && p.status !== 'cancelled')
+      if (activePlans.length === 0) return jsonRes({ message: '无待跟进任务', count: 0 })
+
+      let erpEmployees = []
+      try {
+        let mToken = await env.USERS_KV.get('master_token_cache')
+        if (!mToken && env.MASTER_ACCOUNT && env.MASTER_PASSWORD) {
+          const masterData = await loginBackend(DEFAULT_BACKEND, { account: env.MASTER_ACCOUNT, password: env.MASTER_PASSWORD })
+          mToken = masterData.code === 1 ? masterData.data.token : null
+          if (mToken) await env.USERS_KV.put('master_token_cache', mToken, { expirationTtl: 82800 })
+        }
+        if (mToken) {
+          const empRes = await fetch(`${DEFAULT_BACKEND}/adminapi/setting/admin/index?list_rows=500`, {
+            headers: { 'Content-Type': 'application/json', 'token': mToken, 'authori-zation': mToken }
+          })
+          erpEmployees = (await empRes.json())?.data?.rows ?? []
+        }
+      } catch {}
+
+      const groupsRaw2 = await env.USERS_KV.get('chat_groups')
+      const allGroupsF = groupsRaw2 ? JSON.parse(groupsRaw2) : []
+      const memberIncludes2 = (ids, val) => ids?.some(id => String(id) === String(val))
+      let notified = 0
+      let groupsChangedF = false
+
+      for (const plan of activePlans) {
+        const mentions = plan.mentions || []
+        if (mentions.length === 0) continue
+
+        let daysLeft = null
+        let urgencyPrefix = '📋'
+        if (plan.due_date && plan.due_date !== '待定') {
+          const due = new Date(plan.due_date)
+          if (!isNaN(due)) {
+            daysLeft = Math.ceil((due - now) / 86400000)
+            if (daysLeft < 0) urgencyPrefix = '⚠️ 已逾期！'
+            else if (daysLeft === 0) urgencyPrefix = '🔴 今天截止！'
+            else if (daysLeft === 1) urgencyPrefix = '🟠 明天截止！'
+            else if (daysLeft <= 3) urgencyPrefix = '🟡 即将到期'
+          }
+        }
+
+        const dueDisplay = plan.due_date && plan.due_date !== '待定'
+          ? `${plan.due_date}${daysLeft !== null ? `（还剩 ${daysLeft} 天）` : ''}`
+          : '待定'
+
+        for (const mention of mentions) {
+          const name = mention.name
+          if (!name || name === '待定') continue
+          let user = erpEmployees.find(u => (u.name || u.admin_name) === name)
+          if (!user) user = erpEmployees.find(u => { const n = u.name||u.admin_name||''; return n.includes(name)||name.includes(n) })
+          if (!user) continue
+          const uid = String(user.id || user.user_id)
+          const userName = user.name || user.admin_name
+
+          let targetGroup = allGroupsF.find(g =>
+            g.member_ids?.length === 2 &&
+            memberIncludes2(g.member_ids, 'secretary') &&
+            memberIncludes2(g.member_ids, uid)
+          )
+          if (!targetGroup) {
+            targetGroup = {
+              id: Date.now() + Math.floor(Math.random() * 9999),
+              name: userName, is_private: true,
+              member_ids: ['secretary', uid],
+              created_at: new Date().toISOString(), last_message: '', last_message_at: new Date().toISOString(),
+            }
+            allGroupsF.push(targetGroup)
+            groupsChangedF = true
+          }
+
+          const statusLabel = { todo: '待开始', doing: '进行中', done: '已完成' }[plan.status] || plan.status
+          const followMsg = [
+            `${urgencyPrefix} ${userName}，秘书每日跟进提醒：`,
+            ``,
+            `任务：「${plan.title}」`,
+            `状态：${statusLabel}`,
+            `截止：${dueDisplay}`,
+            ``,
+            `请更新进度或如期完成，有困难随时告知。`,
+          ].join('\n')
+
+          const msgRaw = await env.USERS_KV.get('chat_messages')
+          const msgMapF = msgRaw ? JSON.parse(msgRaw) : {}
+          if (!msgMapF[targetGroup.id]) msgMapF[targetGroup.id] = []
+          msgMapF[targetGroup.id].push({
+            id: Date.now() + Math.floor(Math.random() * 9999),
+            group_id: targetGroup.id, sender_id: 'secretary', sender_name: '秘书',
+            content: followMsg, type: 'text', created_at: new Date().toISOString(),
+          })
+          await env.USERS_KV.put('chat_messages', JSON.stringify(msgMapF))
+
+          const gIdxF = allGroupsF.findIndex(g => String(g.id) === String(targetGroup.id))
+          if (gIdxF !== -1) { allGroupsF[gIdxF].last_message = followMsg.slice(0,60); allGroupsF[gIdxF].last_message_at = new Date().toISOString(); groupsChangedF = true }
+
+          const unreadKeyF = `chat_unread:${uid}:${targetGroup.id}`
+          const curF = parseInt(await env.USERS_KV.get(unreadKeyF) || '0')
+          await env.USERS_KV.put(unreadKeyF, String(curF + 1))
+          notified++
+        }
+
+        const pIdx = plans.findIndex(p => p.id === plan.id)
+        if (pIdx !== -1) {
+          plans[pIdx].follow_up = { ...plans[pIdx].follow_up, last_remind: new Date().toISOString(), remind_count: (plans[pIdx].follow_up?.remind_count || 0) + 1 }
+        }
+      }
+
+      if (groupsChangedF) await env.USERS_KV.put('chat_groups', JSON.stringify(allGroupsF))
+      await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+      return jsonRes({ message: `跟进完成，共通知 ${notified} 人`, count: notified, date: todayStr })
+    }
+
     const userId = getUserId(request)
     if (!userId) return errRes('未登录', 401)
 
@@ -1678,6 +1822,8 @@ const agentRegistry = [
 
     return errRes('工作计划功能暂不支持')
   }
+
+
 
   // ═══════════════════════════════════════════════════════════════
   // Finance Receipt Logging — proxy to backend, then log operation

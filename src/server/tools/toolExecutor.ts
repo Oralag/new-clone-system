@@ -23,6 +23,38 @@ async function erpPost(path: string, body: Record<string, any>, token: string) {
   return res.json()
 }
 
+// 删除权限检查：只有管理员（role_name 含"管理"）才能删除，非管理员返回拒绝消息
+async function checkDeletePermission(token: string): Promise<string | null> {
+  try {
+    const res = await fetch(ERP_BASE + '/setting/admin/my', {
+      headers: { token, 'Content-Type': 'application/json' },
+    })
+    const data = await res.json()
+    if (data?.code !== 1) return '无法验证身份，请重新登录'
+    const role = data?.data?.role_name || data?.data?.role_type || ''
+    // 管理员角色：包含"管理"关键字即为管理员
+    if (typeof role === 'string' && role.includes('管理')) return null // 允许删除
+    return `⛔ 删除操作需要管理员权限。当前账号角色为「${role || '未知'}」，无权删除。请联系管理员操作。`
+  } catch {
+    return '无法验证身份，请重新登录'
+  }
+}
+
+// 过滤掉包装/原材料类商品（用户没有明确说"袋""标签""专用"等词时不显示）
+const PACKAGING_KEYWORDS = ['袋', '盒装', '标签', '不干胶', '塑膜', '专用', '包装', '纸箱', '封口', '捆', '膜']
+function isPackagingGoods(name: string): boolean {
+  return PACKAGING_KEYWORDS.some(kw => name.includes(kw)) && !name.includes('成品')
+}
+
+// 计算两个字符串的字符重叠率（用于语音识别模糊匹配）
+function charSimilarity(a: string, b: string): number {
+  if (!a || !b) return 0
+  const setA = new Set(a)
+  let overlap = 0
+  for (const ch of setA) if (b.includes(ch)) overlap++
+  return overlap / Math.max(setA.size, new Set(b).size)
+}
+
 async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
   return Promise.all(
     items.map(async (item) => {
@@ -33,13 +65,42 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
 
       if (!normalized.goods_name || normalized.goods_id) return normalized
       try {
-        const res = await erpGet('/goods/ShopGoods/index', { keyword: normalized.goods_name, list_rows: 5 }, token)
-        const rows = res?.data?.rows || []
-        const matched = rows.find((g: any) =>
+        // 第一次：精确关键词搜索
+        const res = await erpGet('/goods/ShopGoods/index', { keyword: normalized.goods_name, list_rows: 10 }, token)
+        let rows = res?.data?.rows || []
+        let matched = rows.find((g: any) =>
           g.goods_name === normalized.goods_name ||
           g.goods_name?.includes(normalized.goods_name) ||
           normalized.goods_name?.includes(g.goods_name)
         )
+
+        // 第二次：精确匹配失败，取前2字模糊搜索 + 字符相似度
+        if (!matched && normalized.goods_name.length >= 2) {
+          const fuzzyKeyword = normalized.goods_name.slice(0, 2)
+          const res2 = await erpGet('/goods/ShopGoods/index', { keyword: fuzzyKeyword, list_rows: 30 }, token)
+          const rows2 = res2?.data?.rows || []
+          let bestScore = 0
+          let bestMatch = null
+          for (const g of rows2) {
+            const score = charSimilarity(normalized.goods_name, g.goods_name)
+            if (score > bestScore) { bestScore = score; bestMatch = g }
+          }
+          if (bestScore >= 0.6) {
+            matched = bestMatch
+            normalized._fuzzy_matched = `语音识别已纠正：「${normalized.goods_name}」→「${matched.goods_name}」`
+            normalized.goods_name = matched.goods_name
+          } else {
+            // 完全匹配失败：返回候选列表（过滤包装/原材料），供用户选择
+            const candidates = rows2.filter((g: any) => !isPackagingGoods(g.goods_name))
+              .slice(0, 8)
+              .map((g: any) => ({ id: g.id, name: g.goods_name, unit: g.unit_name, price: g.sell_price }))
+            if (candidates.length > 0) {
+              normalized._unresolved = true
+              normalized._candidates = candidates
+            }
+          }
+        }
+
         if (matched) return { ...normalized, goods_id: matched.id, goods_sn: matched.goods_sn, unit_name: normalized.unit_name || matched.unit_name, cate_name: matched.cate_name }
       } catch { /* ignore */ }
       return normalized
@@ -134,9 +195,10 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
       case 'query_goods': {
-        const res = await erpGet('/goods/ShopGoods/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
-        const rows = res?.data?.rows || []
-        result = `共 ${res?.data?.total || rows.length} 种商品。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 商品名: r.goods_name, 编码: r.goods_sn, 售价: r.sell_price, 分类: r.cate_name })))}`
+        const NON_SALE_CATES = new Set(['塑料袋', '袋子', '亚克力', '广告物料', '标签纸', '设备', '其他成本', '样品采购'])
+        const res = await erpGet('/goods/ShopGoods/index', { list_rows: input.limit || 50, keyword: input.keyword }, token)
+        const rows = (res?.data?.rows || []).filter((r: any) => !NON_SALE_CATES.has(r.cate_name))
+        result = `共 ${rows.length} 种商品。${JSON.stringify(rows.slice(0, 50).map((r: any) => ({ id: r.id, 商品名: r.goods_name, 编码: r.goods_sn, 售价: r.sell_price, 分类: r.cate_name })))}`
         break
       }
       case 'query_inventory': {
@@ -673,7 +735,121 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
 
-      // ── 编辑工具 ──────────────────────────────────────
+      // ── 零售单 ──────────────────────────────────────
+      case 'create_retail_order': {
+        // 1. 解析商品明细
+        const rawItems = Array.isArray(input.items) ? input.items : []
+        if (!rawItems.length) { result = '请提供商品明细'; break }
+        const resolvedItems = await resolveGoodsIds(rawItems, token)
+
+        // 有商品未匹配：返回候选列表供用户选择，不创建订单
+        const unresolved = resolvedItems.filter((i: any) => i._unresolved)
+        if (unresolved.length > 0) {
+          const picks = unresolved.map((i: any) => {
+            const list = (i._candidates || []).map((c: any) => `[[PICK:${c.name}|${c.unit}|${c.price}]]`).join('')
+            return `「${i.goods_name}」找不到，请选择：\n${list}`
+          }).join('\n\n')
+          result = picks
+          break
+        }
+
+        // 补充售价
+        for (const item of resolvedItems) {
+          if (item.goods_id && !item.price) {
+            try {
+              const gRes = await erpGet('/goods/ShopGoods/index', { keyword: item.goods_name, list_rows: 5 }, token)
+              const g = (gRes?.data?.rows || []).find((r: any) => r.id === item.goods_id)
+              if (g) item.price = Number(g.sell_price) || 0
+            } catch { /* ignore */ }
+          }
+          if (!item.price) item.price = 0
+        }
+
+        // 2. 计算金额
+        const today = new Date().toISOString().slice(0, 10) // 强制用服务器今天，忽略 AI 可能传入的 order_date
+        const goodsTotal = resolvedItems.reduce((s: number, r: any) => s + (r.num || 1) * (r.price || 0), 0)
+        const discountAmt = Number(input.discount_amount) || 0
+        const payAmount = Math.max(0, goodsTotal - discountAmt)
+        const orderSn = `LS${today.replace(/-/g, '')}${String(Date.now()).slice(-3)}`
+
+        // 2.5 重复录入检测：5分钟内同金额+同商品数量的零售单视为重复
+        try {
+          const existRes = await erpGet('/retail/order/index', { list_rows: 20, page: 1 }, token)
+          const existRows = existRes?.data?.rows || []
+          const fiveMinAgo = Date.now() - 5 * 60 * 1000
+          const duplicate = existRows.find((r: any) => {
+            const createdAt = new Date(r.create_time || r.order_date).getTime()
+            if (createdAt < fiveMinAgo) return false
+            if (Math.abs(Number(r.pay_amount) - payAmount) > 0.01) return false
+            // 商品数量也相同（通过 goods_info 条数判断）
+            try {
+              const gi = JSON.parse(r.goods_info || '[]')
+              if (gi.length === resolvedItems.length) return true
+            } catch { return false }
+            return false
+          })
+          if (duplicate) {
+            result = `⚠️ 检测到重复录入！5分钟内已存在相同金额(¥${payAmount})的零售单(ID:${duplicate.id})，本次取消创建。如需重新录请先删除旧单。`
+            break
+          }
+        } catch { /* 检测失败不阻断，继续创建 */ }
+
+        // 3. 创建零售单（status=0 未审核）
+        const goodsInfo = JSON.stringify(resolvedItems.map((i: any) => ({
+          goods_id: i.goods_id, goods_name: i.goods_name, goods_sn: i.goods_sn || '',
+          unit_name: i.unit_name || '', num: i.num || 1, price: i.price,
+        })))
+        const createRes = await erpPost('/retail/order/add', {
+          store_id: null, store_name: '',
+          member_id: null, member_name: input.member_name || '',
+          order_date: today, order_sn: orderSn,
+          pay_type: input.pay_method || input.pay_type || 'cash',
+          remark: input.remark || '',
+          status: 0,
+          goods_info: goodsInfo,
+          total_amount: goodsTotal,
+          discount_amount: discountAmt,
+          pay_amount: payAmount,
+        }, token)
+        const retailOrderId = createRes?.data?.id || createRes?.data?.lastId
+        if (!retailOrderId) { result = `零售单创建失败：${createRes?.msg || JSON.stringify(createRes)}`; break }
+
+        // 4. 审核零售单
+        await erpPost('/retail/order/audit', { id: retailOrderId, status: 1 }, token)
+
+        // 5. 扣减库存（取第一个仓库）
+        try {
+          const whRes = await erpGet('/stock/WarehouseName/index', { list_rows: 1 }, token)
+          const defaultWh = whRes?.data?.rows?.[0]
+          if (defaultWh) {
+            for (const item of resolvedItems) {
+              if (!item.goods_id || !item.num) continue
+              const stockRes = await erpGet('/stock/StockAll/index', { goods_id: item.goods_id, warehouse_id: defaultWh.id, list_rows: 10 }, token)
+              const stock = stockRes?.data?.rows?.[0]
+              if (stock) {
+                const newQty = Math.max(0, Number(stock.qty || 0) - Number(item.num))
+                await erpPost('/stock/StockAll/edit', { id: stock.id, qty: newQty }, token)
+              }
+            }
+          }
+        } catch { /* 库存扣减失败不中断 */ }
+
+        // 6. 更新零售收款账户
+        try {
+          const fundRes = await erpGet('/finance/Fund/index', { list_rows: 100 }, token)
+          const funds: any[] = fundRes?.data?.rows || []
+          const retailFund = funds.find((f: any) => f.name === '零售收款账户')
+          if (retailFund) {
+            await erpPost('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: Number(retailFund.balance || 0) + payAmount }, token)
+          } else {
+            await erpPost('/finance/Fund/add', { name: '零售收款账户', type: 2, balance: payAmount, remark: '零售单自动累计' }, token)
+          }
+        } catch { /* 财务更新失败不中断 */ }
+
+        const itemsSummary = resolvedItems.map((i: any) => `@ ${i.goods_name} × ${i.num || 1} ¥${((i.num || 1) * (i.price || 0)).toFixed(2)}`).join('\n')
+        result = `零售单录入完成！\n单号：${orderSn}\n${itemsSummary}${discountAmt > 0 ? `\n折扣 -¥${discountAmt.toFixed(2)}` : ''}\n合计：¥${payAmount.toFixed(2)}\n支付方式：${input.pay_method || 'cash'}\n已自动审核，库存和账户已更新。`
+        break
+      }
       case 'update_goods': {
         const res = await erpPost('/goods/ShopGoods/edit', input, token)
         result = res?.code === 1 ? `商品编辑成功！` : `编辑失败：${res?.msg || JSON.stringify(res)}`
@@ -721,47 +897,63 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
 
-      // ── 删除工具 ──────────────────────────────────────
+      // ── 删除工具（需要管理员权限）────────────────────────
       case 'navigate_to': {
         result = `导航指令：${input.page}`
         break
       }
       case 'delete_purchase_order': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
         const res = await erpPost('/stock/PurchaseOrder/del', { id: input.id }, token)
         result = res?.code === 1 ? `采购订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_supplier': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
         const res = await erpPost('/procure/supplier/del', { id: input.id }, token)
         result = res?.code === 1 ? `供应商已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_sale_order': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
         const res = await erpPost('/shop/ContractOrder/del', { id: input.id }, token)
         result = res?.code === 1 ? `销售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_customer': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
         const res = await erpPost('/shop/ShopCustomer/del', { id: input.id }, token)
         result = res?.code === 1 ? `客户已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_goods': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
         const res = await erpPost('/goods/ShopGoods/del', { id: input.id }, token)
         result = res?.code === 1 ? `商品已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_staff': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
         const res = await erpPost('/personnel/staff/del', { id: input.id }, token)
         result = res?.code === 1 ? `员工已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_warehouse': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
         const res = await erpPost('/stock/WarehouseName/del', { id: input.id }, token)
         result = res?.code === 1 ? `仓库已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_fund_account': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
         const res = await erpPost('/finance/Fund/del', { id: input.id }, token)
         result = res?.code === 1 ? `资金账户已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break

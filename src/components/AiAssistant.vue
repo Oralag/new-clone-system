@@ -135,8 +135,9 @@
               :input="tc.input"
               :result="tc.result"
               :status="tc.status"
+              @pick="(text) => { inputText = text; nextTick(() => sendMessage()) }"
             />
-            <div class="message-content" v-html="renderMarkdown(msg.content)" />
+            <div class="message-content" v-html="renderMarkdown(msg.content)" @click="onMessageClick($event)" />
             <div v-if="msg.navRoute" class="message-nav-btn">
               <el-button type="primary" size="small" @click="navigateTo(msg.navRoute!)">立即查看 →</el-button>
             </div>
@@ -367,6 +368,7 @@ import { createProductionPlan, auditProductionPlan, createMaterial, auditMateria
 import { applyMaterialStockDelta } from '@/utils/materialStock'
 import { createProductionInhouseAndAutoAudit } from '@/utils/productionInhouse'
 import { useUserMemoryStore } from '@/stores/userMemory'
+import { useChatContextStore } from '@/stores/chatContext'
 import { extractAndMerge } from './ai/composables/useMemoryExtractor'
 import adamAvatarUrl from '@/assets/adam-avatar.png'
 
@@ -1019,6 +1021,11 @@ async function sendMessage() {
     time: getNow(),
     images: previewUrls.length ? previewUrls : undefined,
   })
+  // 写入共享上下文
+  if (text) {
+    const chatCtx = useChatContextStore()
+    chatCtx.addPrivateMessage({ sender: '用户', content: text, isAI: false, time: new Date().toISOString() })
+  }
   inputText.value = ''
   pendingImages.value = []
   isLoading.value = true
@@ -1043,6 +1050,7 @@ async function sendMessage() {
   try {
     const erpToken = localStorage.getItem('erp_token') || ''
     const memoryStore = useUserMemoryStore()
+    const chatContextStore = useChatContextStore()
     const response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: {
@@ -1054,7 +1062,7 @@ async function sendMessage() {
         images: imagesToSend.length > 0
           ? imagesToSend.map(i => ({ data: i.data, mediaType: i.mediaType }))
           : undefined,
-        userMemory: memoryStore.systemPromptFragment || undefined,
+        userMemory: (memoryStore.systemPromptFragment || '') + chatContextStore.getContextSummary(),
       }),
     })
 
@@ -1493,6 +1501,11 @@ function scrollToBottom() {
 }
 
 function renderMarkdown(text: string): string {
+  // 渲染商品候选按钮 [[PICK:名称|单位|价格]]
+  text = text.replace(/\[\[PICK:([^|]+)\|([^|]*)\|([^\]]*)\]\]/g, (_, name, unit, price) => {
+    const label = unit ? `${name}（${unit}）` : name
+    return `<button class="goods-pick-btn" data-name="${name}" data-unit="${unit}" data-price="${price}">${label}</button>`
+  })
   // Basic markdown rendering
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -1500,6 +1513,19 @@ function renderMarkdown(text: string): string {
     .replace(/`(.*?)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br>')
     .replace(/^- (.+)/gm, '• $1')
+}
+
+function onMessageClick(e: MouseEvent) {
+  const btn = (e.target as HTMLElement).closest('.goods-pick-btn') as HTMLElement | null
+  if (!btn) return
+  const name = btn.dataset.name || ''
+  const unit = btn.dataset.unit || ''
+  const price = btn.dataset.price || ''
+  // 直接自动发送选中商品，让AI继续录入
+  const priceText = price && Number(price) > 0 ? `单价¥${price}` : ''
+  const unitText = unit ? `/${unit}` : ''
+  inputText.value = `商品选「${name}${unitText}」${priceText}，请继续完成刚才的零售录入`
+  nextTick(() => sendMessage())
 }
 </script>
 
@@ -1681,6 +1707,25 @@ function renderMarkdown(text: string): string {
 .quick-tag {
   cursor: pointer;
   transition: all 0.15s;
+}
+
+:deep(.goods-pick-btn) {
+  display: inline-block;
+  margin: 3px 4px;
+  padding: 4px 10px;
+  background: #f0f5ff;
+  border: 1px solid #adc6ff;
+  border-radius: 14px;
+  color: #165dff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+:deep(.goods-pick-btn:hover) {
+  background: #165dff;
+  color: #fff;
+  border-color: #165dff;
 }
 
 .quick-tag:hover {

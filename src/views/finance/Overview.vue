@@ -1518,5 +1518,49 @@ onActivated(() => loadAllData())
 .profit-entry-rate { font-size: 11px; color: rgba(29,29,31,0.4); }
 .profit-entry-divider { width: 1px; height: 36px; background: #d8dde4; }
 .profit-entry-arrow { color: rgba(29,29,31,0.3); flex-shrink: 0; }
+
+/* ── 手机端适配 ── */
+@media (max-width: 767px) {
+  /* el-col 全部变全宽 */
+  .fin-overview :deep(.el-col) {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 10px;
+  }
+  .fin-overview :deep(.el-row) {
+    flex-direction: column;
+  }
+
+  /* 顶部统计卡片：2列grid */
+  .sum-cards-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .sum-card-col--wide,
+  .sum-card-col--narrow {
+    width: auto !important;
+  }
+
+  /* 利润分析入口：纵向排列 */
+  .profit-entry {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .profit-entry-nums {
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  /* 快捷操作按钮 */
+  .quick-action-bar {
+    gap: 10px;
+  }
+  .quick-action-card {
+    flex: 1;
+  }
+}
 </style>
 // cache-bust: 1776093932

@@ -145,29 +145,19 @@
                   <span v-if="row.cate_name">{{ row.cate_name }}</span>
                 </div>
               </div>
-              <el-tag v-if="bomGoodsSet.has(row.goods_sn)" size="small" class="mobile-stock-card__bom">BOM</el-tag>
-            </div>
-            <div class="mobile-stock-card__grid">
-              <div class="mobile-stock-card__item">
-                <span class="mobile-stock-card__label">单位</span>
-                <span class="mobile-stock-card__value">{{ row.unit_name || '—' }}</span>
-              </div>
-              <div class="mobile-stock-card__item">
-                <span class="mobile-stock-card__label">库存</span>
-                <el-tag :type="stockStatusType(row)" size="small" effect="plain">
-                  {{ getStockQty(row).toFixed(0) }}
-                </el-tag>
-              </div>
-              <div class="mobile-stock-card__item">
-                <span class="mobile-stock-card__label">状态</span>
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                <el-tag v-if="bomGoodsSet.has(row.goods_sn)" size="small" class="mobile-stock-card__bom">BOM</el-tag>
                 <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
               </div>
-              <div class="mobile-stock-card__item">
-                <span class="mobile-stock-card__label">安全库存</span>
-                <span class="mobile-stock-card__value mobile-stock-card__value--link" @click="openSafeSetting(row)">
-                  {{ Number(row.safe_min) > 0 || Number(row.safe_max) > 0 ? safeRangeText(row) : '设置' }}
-                </span>
-              </div>
+            </div>
+            <div class="mobile-stock-card__inline">
+              <span class="mobile-stock-card__label">单位</span>
+              <span class="mobile-stock-card__value">{{ row.unit_name || '—' }}</span>
+              <span class="mobile-stock-card__sep">·</span>
+              <span class="mobile-stock-card__label">库存</span>
+              <el-tag :type="stockStatusType(row)" size="small" effect="plain">
+                {{ getStockQty(row).toFixed(0) }}
+              </el-tag>
             </div>
             <div class="mobile-stock-card__actions">
               <el-button type="info" link size="small" @click="openFlowDialog(row)">流水</el-button>
@@ -1741,10 +1731,17 @@ watch(() => stockRefreshStore.version, () => {
   border-color: #e6a23c;
 }
 
-.mobile-stock-card__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 12px;
+.mobile-stock-card__inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+.mobile-stock-card__sep {
+  color: #c2c8d5;
+  margin: 0 2px;
 }
 
 .mobile-stock-card__item {
@@ -1819,9 +1816,8 @@ watch(() => stockRefreshStore.version, () => {
     padding: 10px;
     border-radius: 10px;
   }
-  .mobile-stock-card__grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
+  .mobile-stock-card__inline {
+    gap: 4px;
   }
 }
 /* 移动端抽屉高度限制 */

@@ -45,6 +45,20 @@ async function erpPost(path: string, body: Record<string, any>, token: string) {
   try { return JSON.parse(text) } catch { return { code: -1, message: text.slice(0, 200) } }
 }
 
+// 过滤掉包装/原材料类商品
+const PACKAGING_KEYWORDS = ['袋', '盒装', '标签', '不干胶', '塑膜', '专用', '包装', '纸箱', '封口', '捆', '膜']
+function isPackagingGoods(name: string): boolean {
+  return PACKAGING_KEYWORDS.some(kw => name.includes(kw)) && !name.includes('成品')
+}
+
+function charSimilarity(a: string, b: string): number {
+  if (!a || !b) return 0
+  const setA = new Set(a)
+  let overlap = 0
+  for (const ch of setA) if (b.includes(ch)) overlap++
+  return overlap / Math.max(setA.size, new Set(b).size)
+}
+
 async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
   return Promise.all(items.map(async (item) => {
     const num = item.num ?? item.qty ?? 1
@@ -52,13 +66,43 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
     delete normalized.qty
     if (!normalized.goods_name || normalized.goods_id) return normalized
     try {
-      const res: any = await erpGet('/goods/ShopGoods/index', { keyword: normalized.goods_name, list_rows: 5 }, token)
+      const res: any = await erpGet('/goods/ShopGoods/index', { keyword: normalized.goods_name, list_rows: 10 }, token)
       const rows = res?.data?.rows || []
-      const matched = rows.find((g: any) =>
+      let matched = rows.find((g: any) =>
         g.goods_name === normalized.goods_name ||
         g.goods_name?.includes(normalized.goods_name) ||
         normalized.goods_name?.includes(g.goods_name)
       )
+      // 精确匹配失败：取前2字模糊搜索 + 字符相似度
+      if (!matched && normalized.goods_name.length >= 2) {
+        const fuzzyKeyword = normalized.goods_name.slice(0, 2)
+        const res2: any = await erpGet('/goods/ShopGoods/index', { keyword: fuzzyKeyword, list_rows: 30 }, token)
+        const rows2 = res2?.data?.rows || []
+        let bestScore = 0
+        let bestMatch: any = null
+        for (const g of rows2) {
+          const score = charSimilarity(normalized.goods_name, g.goods_name)
+          if (score > bestScore) { bestScore = score; bestMatch = g }
+        }
+        if (bestScore >= 0.6) {
+          matched = bestMatch
+          normalized._fuzzy_matched = `语音识别已纠正：「${normalized.goods_name}」→「${matched.goods_name}」`
+          normalized.goods_name = matched.goods_name
+        } else {
+          // 完全匹配失败：返回候选列表（过滤包装/原材料）
+          const candidates = rows2.filter((g: any) => !isPackagingGoods(g.goods_name))
+            .slice(0, 8)
+            .map((g: any) => ({ id: g.id, name: g.goods_name, unit: g.unit_name, price: g.sell_price }))
+          if (candidates.length > 0) {
+            normalized._unresolved = true
+            normalized._candidates = candidates
+          } else {
+            // 候选列表也为空，完全找不到
+            normalized._unresolved = true
+            normalized._candidates = []
+          }
+        }
+      }
       if (matched) return { ...normalized, goods_id: matched.id, goods_sn: matched.goods_sn, unit_name: normalized.unit_name || matched.unit_name, cate_name: matched.cate_name }
     } catch { /* ignore */ }
     return normalized
@@ -70,9 +114,21 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
     let result: string
     switch (name) {
       case 'query_retail_orders': {
-        const res: any = await erpGet('/retail/order/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
-        const rows = res?.data?.rows || []
-        result = `共 ${res?.data?.total || rows.length} 条零售订单。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 单号: r.order_sn, 商品: r.goods_info, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
+        const res: any = await erpGet('/retail/order/index', { list_rows: 200 }, token)
+        let rows = res?.data?.rows || []
+        // 按商品名在客户端过滤（goods_info是JSON字符串，后端不支持商品名搜索）
+        if (input.keyword) {
+          rows = rows.filter((r: any) => {
+            const info = typeof r.goods_info === 'string' ? r.goods_info : JSON.stringify(r.goods_info || '')
+            return info.includes(input.keyword) || (r.order_sn || '').includes(input.keyword)
+          })
+        }
+        result = `共 ${rows.length} 条零售订单。${JSON.stringify(rows.slice(0, 20).map((r: any) => {
+          let goods = r.goods_info
+          try { goods = JSON.parse(r.goods_info) } catch {}
+          const goodsDesc = Array.isArray(goods) ? goods.map((g: any) => `${g.goods_name}×${g.num}`).join('、') : String(goods || '')
+          return { id: r.id, 单号: r.order_sn, 商品: goodsDesc, 金额: r.pay_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10), 状态: r.status === 1 ? '已审核' : '未审核' }
+        }))}`
         break
       }
       case 'query_customers': {
@@ -90,7 +146,11 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
       case 'query_goods': {
         const res: any = await erpGet('/goods/ShopGoods/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
         const rows = res?.data?.rows || []
-        result = `共 ${res?.data?.total || rows.length} 种商品。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 商品名: r.goods_name, 编码: r.goods_sn, 售价: r.sell_price, 分类: r.cate_name })))}`
+        const filtered = rows.filter((r: any) => !isPackagingGoods(r.goods_name))
+        const picks = filtered.slice(0, 8).map((r: any) => `[[PICK:${r.goods_name}|${r.unit_name || ''}|${r.sell_price || 0}]]`).join('')
+        result = filtered.length > 0
+          ? `找到 ${filtered.length} 个商品，请选择：\n${picks}`
+          : `没有找到"${input.keyword}"相关商品`
         break
       }
       case 'query_inventory': {
@@ -252,22 +312,80 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         break
       }
       case 'create_retail_order': {
-        // goods_info must be a JSON string of the items array
-        const items: any[] = input.items || []
-        const total_amount = items.reduce((s: number, i: any) => s + (Number(i.num) || 1) * (Number(i.price) || 0), 0)
-        const payload = {
-          order_date: input.order_date || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
+        const rawItems: any[] = input.items || []
+        if (!rawItems.length) { result = '请提供商品明细'; break }
+        const resolvedItems = await resolveGoodsIds(rawItems, token)
+
+        // 有商品未匹配：返回候选列表供用户选择，不创建订单
+        const unresolved = resolvedItems.filter((i: any) => i._unresolved)
+        if (unresolved.length > 0) {
+          const picks = unresolved.map((i: any) => {
+            if (!i._candidates || i._candidates.length === 0) {
+              return `「${i.goods_name}」在系统中找不到对应商品，请先确认商品名称再录入。`
+            }
+            const list = i._candidates.map((c: any) => `[[PICK:${c.name}|${c.unit}|${c.price}]]`).join('')
+            return `「${i.goods_name}」找不到，请选择：\n${list}`
+          }).join('\n\n')
+          result = picks
+          break
+        }
+
+        // 兜底：仍有商品没有 goods_id，拒绝创建
+        const noId = resolvedItems.filter((i: any) => !i.goods_id)
+        if (noId.length > 0) {
+          result = `以下商品在系统中找不到，无法录入：${noId.map((i: any) => `「${i.goods_name}」`).join('、')}。请确认商品名称后重试。`
+          break
+        }
+
+        const today = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+        const discountAmt = Number(input.discount_amount) || 0
+        const goodsTotal = resolvedItems.reduce((s: number, i: any) => s + (Number(i.num) || 1) * (Number(i.price) || 0), 0)
+        // 用户说了总收款额时直接用，否则按明细计算
+        const payAmount = input.pay_amount ? Number(input.pay_amount) : Math.max(0, goodsTotal - discountAmt)
+        const orderSn = `LS${today.replace(/-/g, '')}${String(Date.now()).slice(-3)}`
+        const payload: Record<string, any> = {
+          order_date: today,
+          order_sn: orderSn,
           pay_method: input.pay_method || 'cash',
           remark: input.remark || '',
-          member_id: input.member_id || null,
           member_name: input.member_name || '',
-          total_amount,
-          discount_amount: input.discount_amount || 0,
-          pay_amount: total_amount - (input.discount_amount || 0),
-          goods_info: JSON.stringify(items),
+          total_amount: goodsTotal,
+          discount_amount: discountAmt,
+          pay_amount: payAmount,
+          goods_info: JSON.stringify(resolvedItems.map((i: any) => ({
+            goods_id: i.goods_id, goods_name: i.goods_name, goods_sn: i.goods_sn || '',
+            unit_name: i.unit_name || '', num: i.num || 1, price: i.price,
+          }))),
+          status: 0,
         }
         const res: any = await erpPost('/retail/order/add', payload, token)
-        result = res?.code === 1 ? `零售订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        if (res?.code !== 1) { result = `创建失败：${res?.msg || JSON.stringify(res)}`; break }
+        const orderId = res?.data?.id || res?.data?.lastId
+        // 审核
+        await erpPost('/retail/order/audit', { id: orderId, status: 1 }, token)
+        // 扣库存
+        try {
+          const whRes: any = await erpGet('/stock/WarehouseName/index', { list_rows: 1 }, token)
+          const wh = whRes?.data?.rows?.[0]
+          if (wh) {
+            for (const item of resolvedItems) {
+              if (!item.goods_id || !item.num) continue
+              const sr: any = await erpGet('/stock/StockAll/index', { goods_id: item.goods_id, warehouse_id: wh.id, list_rows: 10 }, token)
+              const stock = sr?.data?.rows?.[0]
+              if (stock) await erpPost('/stock/StockAll/edit', { id: stock.id, qty: Math.max(0, Number(stock.qty || 0) - Number(item.num)) }, token)
+            }
+          }
+        } catch { /* 库存失败不中断 */ }
+        // 更新零售收款账户
+        try {
+          const fundRes: any = await erpGet('/finance/Fund/index', { list_rows: 100 }, token)
+          const funds: any[] = fundRes?.data?.rows || []
+          const rf = funds.find((f: any) => f.name === '零售收款账户')
+          if (rf) await erpPost('/finance/Fund/edit', { id: rf.id, name: rf.name, balance: Number(rf.balance || 0) + payAmount }, token)
+          else await erpPost('/finance/Fund/add', { name: '零售收款账户', type: 2, balance: payAmount, remark: '零售单自动累计' }, token)
+        } catch { /* 财务失败不中断 */ }
+        const itemsSummary = resolvedItems.map((i: any) => `@ ${i.goods_name} × ${i.num || 1} ¥${((i.num || 1) * (i.price || 0)).toFixed(2)}`).join('\n')
+        result = `零售单录入完成！\n单号：${orderSn}\n${itemsSummary}${discountAmt > 0 ? `\n折扣 -¥${discountAmt.toFixed(2)}` : ''}\n合计：¥${payAmount.toFixed(2)}\n已自动审核，库存和账户已更新。`
         break
       }
       case 'navigate_to': {
@@ -305,6 +423,8 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         break
       }
       case 'delete_retail_order': {
+        // 先反审核（status=1的单子不能直接删），再删除
+        await erpPost('/retail/order/audit', { id: input.id, status: 0 }, token)
         const res: any = await erpPost('/retail/order/del', { id: input.id }, token)
         result = res?.code === 1 ? `零售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
@@ -330,13 +450,21 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
 
 function detectIntent(text: string): 'query' | 'create' | 'navigate' | 'general' {
   if (/查询|查看|统计|汇总|多少|列表|有哪些|显示|告诉我|查一下/.test(text)) return 'query'
-  if (/新增|添加|录入|创建|增加|登记|提交|帮我加|卖了|卖出|销售了|零售|出售|卖掉|写错|录错|改一下|修改|纠正|删掉|删除/.test(text)) return 'create'
+  if (/新增|添加|录入|创建|增加|登记|提交|帮我加|卖了|卖出|销售了|零售|出售|卖掉|买了|收了|门店|散客|写错|录错|改一下|修改|纠正|删掉|删除/.test(text)) return 'create'
   if (/跳转|去|打开|进入|导航|页面/.test(text)) return 'navigate'
   return 'general'
 }
 
 function getSystemPrompt(intent: string): string {
-  const BASE = `你是数字游牧ERP管家，数字游牧ERP系统的内置AI助手，运行在系统内部，可以直接调用工具操作ERP数据。你的名字是"ERP管家"，不是Claude，不是AI助手，不要透露底层模型信息。绝对禁止说"我无法直接操作"、"需要您手动"等推脱性语句。回复简洁友好，中文。`
+  const BASE = `你是数字游牧ERP管家，数字游牧ERP系统的内置AI助手，运行在系统内部，可以直接调用工具操作ERP数据。你的名字是"ERP管家"，不是Claude，不是AI助手，不要透露底层模型信息。绝对禁止说"我无法直接操作"、"需要您手动"等推脱性语句。回复简洁友好，中文。
+
+【工具选择规则——严格遵守】
+- 查商品/确认商品是否存在 → 用 query_goods；收到结果后**必须把 [[PICK:...]] 按钮原文复制到你的回复里**，让用户点选
+- 查零售订单/历史销售记录 → 用 query_retail_orders
+- 查采购单 → 用 query_purchases
+- 查客户 → 用 query_customers
+- 录零售单 → 用 create_retail_order
+- 绝对禁止：查商品时调用 query_retail_orders；查订单时调用 query_goods`
   const CORRECTION_RULE = `
 【纠错规则——最高优先级】
 用户说"写错了"、"录错了"、"改一下"、"名字不对"、"删除"等，必须：
@@ -369,14 +497,16 @@ function getSystemPrompt(intent: string): string {
 ${CORRECTION_RULE}
 
 【零售场景规则】
-用户说"卖了一个XX"、"卖出XX"、"零售了XX"等，必须：
-1. 先调用 query_goods 搜索商品，看是否已存在
-2. 若商品不存在，调用 create_goods 创建商品（填入用户给的售价和成本价）
-3. 立即调用 create_retail_order 创建零售订单，items 中包含该商品（使用商品ID、名称、数量、售价）
-4. 两步都完成后，告知用户：商品已录入 + 零售单已创建
+用户说"卖了XX"、"卖出XX"、"买了XX"、"收了XX"、"门店卖了"等，必须：
+1. **直接调用 create_retail_order**，把听到的商品名直接填进去，不要提前 query_goods
+2. 系统会自动模糊匹配商品；匹配不到时会返回候选列表，展示给用户点选，不需要你问
+3. 商品名模糊/听不清时，也直接调用，不要停下来问用户"是什么商品"
+4. 【禁止自动新建商品】create_retail_order 找不到商品时，系统会弹候选列表，不要调用 create_goods
+5. 【禁止因任何原因停下来问用户】——信息不完整、金额对不上、商品不确定，都直接调工具，让系统处理
 
-调用 create_retail_order 时，items 字段示例：
-[{"goods_id": 123, "goods_name": "奶豆腐", "num": 1, "price": 20}]
+【数量与价格语义规则】
+- "N克/斤/个" 是数量，不是商品名
+- 用户说了总金额（"收了¥X"、"一共¥X"），AI理解后列出明细和总额问用户确认，用户说"对/好/确认"后再调 create_retail_order，传入 pay_amount
 
 其他录入：调用合适的创建工具录入数据。缺少必填字段时先询问用户。`,
     create_with_image: `${BASE}
@@ -387,7 +517,16 @@ ${DOCUMENT_IMAGE_RULES}
     navigate: `${BASE}\n当前任务：页面导航。调用 navigate_to 工具跳转到用户指定页面。`,
     general: `${BASE}
 ${CORRECTION_RULE}
-根据用户需求选择合适的工具完成任务。遇到零售/卖出场景，参照：先查商品→不存在则建商品→出零售单。`,
+
+【零售场景规则】
+用户说"卖了XX"、"卖出XX"、"买了XX"、"收了XX"、"门店卖了"等，必须：
+1. **直接调用 create_retail_order**，把听到的商品名直接填进去，不要提前 query_goods
+2. 系统会自动模糊匹配商品；匹配不到时会返回候选列表，展示给用户点选，不需要你问
+3. 商品名模糊/听不清时，也直接调用，不要停下来问用户"是什么商品"
+4. 【禁止自动新建商品】create_retail_order 找不到商品时，系统会弹候选列表，不要调用 create_goods
+5. 【金额有疑问时】列出商品明细和计算结果，问用户"合计¥XX，实收¥YY，确认录入吗？"，等用户回复"对/确认/好"后再调工具；禁止用文字列其他问题
+
+根据用户需求选择合适的工具完成任务。`,
   }
   return prompts[intent] || prompts.general
 }
@@ -431,7 +570,7 @@ const allTools = [
   { name: 'create_staff', description: '新增员工', input_schema: { type: 'object', properties: { name: { type: 'string' }, mobile: { type: 'string' }, dept: { type: 'string' }, jobs: { type: 'string' } }, required: ['name'] } },
   { name: 'create_warehouse', description: '新增仓库', input_schema: { type: 'object', properties: { name: { type: 'string' }, remark: { type: 'string' } }, required: ['name'] } },
   { name: 'create_fund_account', description: '新增资金账户', input_schema: { type: 'object', properties: { name: { type: 'string' }, balance: { type: 'number' } }, required: ['name'] } },
-  { name: 'create_retail_order', description: '新增零售订单（现场零售、当面销售、卖出商品时使用）', input_schema: { type: 'object', properties: { items: { type: 'array', description: '商品明细列表', items: { type: 'object', properties: { goods_id: { type: 'number', description: '商品ID（必须先用query_goods查到）' }, goods_name: { type: 'string' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '售价' } }, required: ['goods_name', 'num', 'price'] } }, order_date: { type: 'string', description: '日期YYYY-MM-DD，默认今天' }, pay_method: { type: 'string', description: '支付方式: cash/wechat/alipay/card，默认cash' }, member_name: { type: 'string' }, remark: { type: 'string' } }, required: ['items'] } },
+  { name: 'create_retail_order', description: '新增零售订单（现场零售、当面销售、卖出商品时使用）', input_schema: { type: 'object', properties: { items: { type: 'array', description: '商品明细列表', items: { type: 'object', properties: { goods_id: { type: 'number', description: '商品ID（必须先用query_goods查到）' }, goods_name: { type: 'string' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '该商品售价' } }, required: ['goods_name', 'num', 'price'] } }, pay_amount: { type: 'number', description: '实收总金额（用户说"收了¥X"/"一共¥X"时填入，优先级高于items自动计算）' }, order_date: { type: 'string', description: '日期YYYY-MM-DD，默认今天' }, pay_method: { type: 'string', description: '支付方式: cash/wechat/alipay/card，默认cash' }, member_name: { type: 'string' }, remark: { type: 'string' } }, required: ['items'] } },
   { name: 'update_customer', description: '修改客户信息（用于纠正录入错误）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '客户ID（必须先query_customers查到）' }, name: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' }, remark: { type: 'string' } }, required: ['id'] } },
   { name: 'delete_customer', description: '删除客户（用于删除错误录入的客户）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '客户ID' } }, required: ['id'] } },
   { name: 'update_supplier', description: '修改供应商信息（用于纠正录入错误）', input_schema: { type: 'object', properties: { id: { type: 'number', description: '供应商ID（必须先query_suppliers查到）' }, name: { type: 'string' }, contact: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' } }, required: ['id'] } },
@@ -497,7 +636,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const res = await fetch(`${baseURL}/v1/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: systemPrompt, tools: allTools, messages: loopMessages, stream: true }),
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: systemPrompt, tools: allTools, messages: loopMessages, stream: true, ...(i === 0 && (intent === 'create' || intent === 'general') ? { tool_choice: { type: 'any' } } : {}) }),
         })
         if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
 

@@ -4,12 +4,12 @@
 
     <!-- 今日核心指标 -->
     <div class="ms-kpi-grid">
-      <div class="ms-kpi-card" @click="router.push('/mobile/sale/overview')">
+      <div class="ms-kpi-card" @click="router.push('/mobile/sale/today')">
         <div class="ms-kpi-label">今日销售额</div>
         <div class="ms-kpi-value">¥{{ todayStats.saleAmt }}</div>
         <div class="ms-kpi-sub">含销售+零售</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/mobile/sale/overview')">
+      <div class="ms-kpi-card" @click="router.push('/mobile/sale/today')">
         <div class="ms-kpi-label">今日订单</div>
         <div class="ms-kpi-value">{{ todayStats.orderCount }}</div>
         <div class="ms-kpi-sub">销售+零售单数</div>
@@ -108,14 +108,14 @@
           />
         </div>
       </div>
-      <div class="ms-report-btn" @click="router.push('/reports/sale-rate')">查看完整销售报表 →</div>
+      <div class="ms-report-btn" @click="router.push('/mobile/sale/today')">查看完整销售报表 →</div>
     </div>
 
     <!-- 快捷跳转 -->
     <div class="ms-quick-links">
       <div class="ms-ql-title">报表中心</div>
       <div class="ms-ql-grid">
-        <div class="ms-ql-item" @click="router.push('/mobile/stats')">
+        <div class="ms-ql-item" @click="router.push('/mobile/sale/today')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span>销售统计</span>
         </div>

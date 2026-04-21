@@ -9,11 +9,7 @@
       </button>
       <div v-else class="wx-nav-placeholder"></div>
       <span class="wx-nav-title">{{ route.meta?.title || '数字游牧' }}</span>
-      <div class="wx-nav-right">
-        <div class="wx-nav-avatar nav-avatar-btn" @click="router.push('/mobile/my')">
-          {{ authStore.userName?.[0] || '我' }}
-        </div>
-      </div>
+      <div class="wx-nav-right"></div>
     </div>
 
     <!-- 内容区 -->
@@ -95,7 +91,7 @@ const unreadCount = ref(0)
 const pendingCount = ref(0)
 let unreadPoll: ReturnType<typeof setInterval> | null = null
 const taskCount = ref(0)
-const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileStats', 'MobileModules']
+const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileModules']
 
 // ── 提示音：在首次用户手势里初始化 AudioContext（iOS/Chrome 要求）──
 let audioCtx: AudioContext | null = null

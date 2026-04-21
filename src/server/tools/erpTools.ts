@@ -339,6 +339,33 @@ export const createTools: FunctionDeclaration[] = [
       required: ['customer_name', 'items'],
     },
   },
+  {
+    name: 'create_retail_order',
+    description: '创建零售单并自动审核（含库存扣减和资金账户更新）。适用于门店零售场景，不需要客户信息',
+    parameters: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          description: '商品明细列表（必填）',
+          items: {
+            type: 'object',
+            properties: {
+              goods_name: { type: 'string', description: '商品名称' },
+              num: { type: 'number', description: '数量' },
+              price: { type: 'number', description: '单价（不填则用系统售价）' },
+              unit_name: { type: 'string', description: '单位' },
+            },
+          },
+        },
+        discount_amount: { type: 'number', description: '折扣金额（可选，默认0）' },
+        pay_method: { type: 'string', enum: ['cash', 'wechat', 'alipay', 'balance', 'card'], description: '支付方式：cash=现金，wechat=微信，alipay=支付宝，balance=会员余额，card=银行卡。默认cash' },
+        member_name: { type: 'string', description: '会员名称（可选）' },
+        remark: { type: 'string', description: '备注' },
+      },
+      required: ['items'],
+    },
+  },
 ]
 
 export const navigateTools: FunctionDeclaration[] = [

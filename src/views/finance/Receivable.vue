@@ -1,7 +1,7 @@
 <template>
   <div class="receivable-page">
     <!-- 顶部汇总 -->
-    <div class="summary-bar">
+    <div :class="['summary-bar', isMobile ? 'summary-bar--mobile' : '']">
       <span class="summary-item">应收总金额：<strong class="blue">{{ fmt(summaryTotal) }}</strong></span>
       <span class="summary-item">已收总金额：<strong class="green">{{ fmt(summaryPaid) }}</strong></span>
       <span class="summary-item">退货总金额：<strong class="orange">{{ fmt(summaryReturn) }}</strong></span>
@@ -33,7 +33,28 @@
         </div>
       </div>
 
-      <el-table :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
+      <!-- 手机端：卡片列表 -->
+      <div v-if="isMobile" v-loading="loading" class="mobile-rec-list">
+        <div v-if="!displayRows.length" class="mobile-rec-empty">暂无数据</div>
+        <div v-for="row in displayRows" :key="row.id" class="mobile-rec-card">
+          <div class="mrc-top">
+            <span class="mrc-name">{{ row.customer_name || '—' }}</span>
+            <span class="mrc-unpaid" :style="{ color: row.un_pay_amount > 0 ? '#dc2626' : '#16a34a' }">
+              欠款 ¥{{ fmt(row.un_pay_amount) }}
+            </span>
+          </div>
+          <div class="mrc-mid">{{ row.order_sn || '—' }}</div>
+          <div class="mrc-row">
+            <span class="mrc-label">应收</span><span class="mrc-val blue">¥{{ fmt(row.total_amount) }}</span>
+            <span class="mrc-label">已收</span><span class="mrc-val green">¥{{ fmt(row.paid_amount) }}</span>
+            <span class="mrc-label">日期</span><span class="mrc-val">{{ fmtDt(row.out_date) }}</span>
+          </div>
+        </div>
+        <div class="mobile-rec-total">共 {{ displayRows.length }} 条 · 待收合计 ¥{{ fmt(summaryUnpaid) }}</div>
+      </div>
+
+      <!-- PC端：表格 -->
+      <el-table v-else :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="customer_name" label="客户名称" min-width="150" />
         <el-table-column prop="order_sn" label="合同单号" min-width="160">
@@ -72,7 +93,7 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrap">
+      <div class="pagination-wrap" v-if="!isMobile">
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="pageSize"
@@ -100,6 +121,7 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
 const searchForm = reactive({ customer_name: '', order_sn: '', date_from: '', date_to: '' })
+const isMobile = ref(window.innerWidth < 768)
 
 function fmt(v: any) {
   return Number(v || 0).toFixed(2)
@@ -186,6 +208,60 @@ onMounted(load)
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.summary-bar--mobile {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px;
+}
+.summary-bar--mobile .summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+.summary-bar--mobile .summary-item strong {
+  font-size: 16px;
+}
+
+/* 手机端卡片列表 */
+.mobile-rec-list { padding: 8px 0; }
+.mobile-rec-empty { text-align: center; padding: 40px; color: #c2c8d5; font-size: 14px; }
+.mobile-rec-card {
+  background: #fff;
+  border-radius: 12px;
+  margin: 8px 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.mrc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.mrc-name { font-size: 14px; font-weight: 700; color: #1d2129; }
+.mrc-unpaid { font-size: 13px; font-weight: 700; }
+.mrc-mid { font-size: 12px; color: #86909c; margin-bottom: 8px; }
+.mrc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.mrc-label { color: #86909c; }
+.mrc-val { font-weight: 600; color: #1d2129; margin-right: 6px; }
+.mrc-val.blue { color: #0071e3; }
+.mrc-val.green { color: #16a34a; }
+.mobile-rec-total {
+  text-align: center;
+  padding: 12px;
+  font-size: 13px;
+  color: #4e5969;
+  font-weight: 600;
 }
 
 .pagination-wrap {

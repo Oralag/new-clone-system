@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
+import { ref, nextTick, watch, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Cpu, User, Close, Picture, Microphone, Promotion } from '@element-plus/icons-vue'
@@ -191,6 +191,9 @@ function scrollToBottom() {
   nextTick(() => { if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight })
 }
 
+onMounted(() => scrollToBottom())
+onActivated(() => scrollToBottom())
+
 function clearMessages() { messages.value = []; localStorage.removeItem(HISTORY_KEY) }
 
 function autoResize() {
@@ -229,6 +232,10 @@ const voiceSeconds = ref(0)
 let voiceTimer: ReturnType<typeof setInterval> | null = null
 let recognition: any = null
 let voiceStartY = 0
+let voiceInterimText = ''
+let voiceResultText = ''
+let voiceSent = false
+let recognitionEnded = false
 
 function startVoice(e: TouchEvent | MouseEvent) {
   if (isRecording.value) return
@@ -236,19 +243,19 @@ function startVoice(e: TouchEvent | MouseEvent) {
   voiceCancel.value = false
   isRecording.value = true
   voiceSeconds.value = 0
+  voiceInterimText = ''
+  voiceResultText = ''
+  voiceSent = false
+  recognitionEnded = false
   voiceTimer = setInterval(() => { voiceSeconds.value++ }, 1000)
   const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   if (!SR) { ElMessage.warning('当前浏览器不支持语音'); isRecording.value = false; return }
   recognition = new SR()
-  recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = false
-  let resultText = ''
+  recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = true
   recognition.onresult = (ev: any) => {
-    resultText = ev.results[0]?.[0]?.transcript || ''
-    if (resultText && !voiceCancel.value) {
-      inputText.value = resultText
-      voiceMode.value = false
-      nextTick(() => { autoResize(); sendMessage() })
-    }
+    let t = ''
+    for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript
+    if (t) { voiceResultText = t; voiceInterimText = t }
   }
   recognition.onerror = (ev: any) => {
     if (ev.error !== 'aborted') ElMessage.warning('语音识别失败，请重试')
@@ -256,30 +263,44 @@ function startVoice(e: TouchEvent | MouseEvent) {
     if (voiceTimer) clearInterval(voiceTimer)
   }
   recognition.onend = () => {
-    isRecording.value = false
     if (voiceTimer) clearInterval(voiceTimer)
-    if (resultText && !voiceCancel.value && inputText.value !== resultText) {
-      inputText.value = resultText
+    recognitionEnded = true
+    // 用户还在按着（isRecording 仍为 true），说明是浏览器自动停，不发送，等用户松手
+    if (isRecording.value) return
+    isRecording.value = false
+    voiceInterimText = ''
+    if (!voiceSent && voiceResultText && !voiceCancel.value) {
+      voiceSent = true
+      inputText.value = voiceResultText
       voiceMode.value = false
       nextTick(() => { autoResize(); sendMessage() })
     }
   }
   try { recognition.start() } catch { isRecording.value = false }
 }
-function checkVoiceCancel(e: TouchEvent) { voiceCancel.value = (voiceStartY - e.touches[0].clientY) > 50 }
+function checkVoiceCancel(e: TouchEvent) { voiceCancel.value = (voiceStartY - e.touches[0].clientY) > 40 }
 function stopVoice() {
   if (!isRecording.value) return
   if (voiceCancel.value) { cancelVoice(); return }
-  ;(recognition as any)?.__setCancelled?.(false)
-  recognition?.stop()
-  if (voiceTimer) clearInterval(voiceTimer)
   isRecording.value = false
+  if (voiceTimer) clearInterval(voiceTimer)
+  const textToSend = voiceInterimText || voiceResultText
+  if (textToSend && !voiceSent) {
+    voiceInterimText = ''
+    voiceSent = true
+    inputText.value = textToSend
+    voiceMode.value = false
+    nextTick(() => { autoResize(); sendMessage() })
+    if (!recognitionEnded) recognition?.abort()
+  } else if (!recognitionEnded) {
+    recognition?.stop()  // 等 onend
+  }
+  // recognitionEnded && 没有文字 → 什么都不发（用户按住没说话）
 }
 function cancelVoice() {
-  ;(recognition as any)?.__setCancelled?.(true)
   recognition?.abort()
   if (voiceTimer) clearInterval(voiceTimer)
-  isRecording.value = false; voiceCancel.value = false
+  isRecording.value = false; voiceCancel.value = false; voiceInterimText = ''
 }
 
 // ── 发送消息 ──
@@ -546,9 +567,9 @@ async function fetchContextData(text: string): Promise<string> {
 
 /* ── 输入区 ── */
 .ai-input-area {
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
-  padding: 10px 12px 14px;
+  background: #f7f7f7;
+  border-top: 1px solid #e5e6eb;
+  padding: 10px 12px calc(20px + env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
 }
 .ai-pending-images { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -564,49 +585,53 @@ async function fetchContextData(text: string): Promise<string> {
 
 .ai-input-row {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
 }
 .ai-input-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .ai-mic-toggle {
-  width: 32px; height: 32px;
-  border: 1px solid #dcdfe6;
-  background: #fff;
-  border-radius: 50%;
+  width: 40px; height: 40px;
+  border: none;
+  background: none;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; color: #86909c;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .ai-mic-toggle:active { background: #f5f5f7; }
 .ai-voice-btn {
   flex: 1;
-  height: 36px;
-  background: #f5f5f7;
+  height: 50px;
+  background: #fff;
   border: 1px solid transparent;
-  border-radius: 18px;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; color: #1d2129;
   user-select: none; -webkit-user-select: none;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 .ai-voice-btn.recording { background: #e8f0fe; border-color: #0071e3; color: #0071e3; }
 .ai-voice-btn.cancel { background: #fff0f0; border-color: #f53f3f; color: #f53f3f; }
 .ai-textarea {
   flex: 1;
-  background: #f5f5f7;
-  border: none;
+  background: #fff;
+  border: 1px solid transparent;
   outline: none;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-size: 14px;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 16px;
   color: #1d2129;
   resize: none;
   line-height: 1.5;
   min-height: 40px;
   max-height: 120px;
   font-family: inherit;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: border 0.15s;
 }
-.ai-textarea::placeholder { color: #c2c8d5; }
+.ai-textarea:focus { border-color: #c8c8c8; }
 .ai-send-btn { flex-shrink: 0; }
 
 /* ── 图片预览 ── */

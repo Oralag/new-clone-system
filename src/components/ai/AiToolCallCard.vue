@@ -41,9 +41,7 @@
         <a :href="imageSrc" download="image.png" class="video-download-btn">⬇ 下载图片</a>
       </div>
       <!-- 普通文本结果 -->
-      <div v-else class="card-result" :class="{ collapsed: !isExpanded && result.length > 200 }">
-        {{ result }}
-      </div>
+      <div v-else class="card-result" :class="{ collapsed: !isExpanded && result.length > 200 }" v-html="renderResult(result)" @click="onResultClick"></div>
       <div v-if="!isVideoResult && !isImageResult && !isExpanded && result.length > 200" class="collapse-tip" @click="isExpanded = true">
         内容过长，点击展开查看全部
       </div>
@@ -65,7 +63,33 @@ const props = defineProps<{
   status: 'running' | 'success' | 'error'
 }>()
 
+const emit = defineEmits<{ pick: [text: string] }>()
+
 const isExpanded = ref(false)
+
+function renderResult(text: string): string {
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return escaped.replace(/\[\[PICK:([^\]]+)\]\]/g, (_, inner) => {
+    const parts = inner.split('|')
+    const name = parts[0] || ''
+    const unit = parts[1] || ''
+    const price = parts[2] || ''
+    const priceText = price && Number(price) > 0 ? ` ¥${price}` : ''
+    const unitText = unit ? `/${unit}` : ''
+    return `<button class="goods-pick-btn" data-name="${name}" data-unit="${unit}" data-price="${price}" style="display:inline-block;margin:3px;padding:4px 10px;border-radius:16px;border:1px solid #409eff;background:#ecf5ff;color:#409eff;cursor:pointer;font-size:12px">${name}${unitText}${priceText}</button>`
+  })
+}
+
+function onResultClick(e: MouseEvent) {
+  const btn = (e.target as HTMLElement).closest('.goods-pick-btn') as HTMLElement | null
+  if (!btn) return
+  const name = btn.dataset.name || ''
+  const unit = btn.dataset.unit || ''
+  const price = btn.dataset.price || ''
+  const priceText = price && Number(price) > 0 ? `单价¥${price}` : ''
+  const unitText = unit ? `/${unit}` : ''
+  emit('pick', `商品选「${name}${unitText}」${priceText}，请继续完成刚才的零售录入`)
+}
 
 // VIDEO_BASE64: prefix detection
 const isVideoResult = computed(() => props.result?.startsWith('VIDEO_BASE64:') ?? false)
