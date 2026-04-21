@@ -28,7 +28,7 @@
       <div ref="pageContentRef" class="page-content" :class="{ 'is-mobile': isMobile }">
         <router-view v-slot="{ Component, route: r }">
           <keep-alive>
-            <component :is="Component" :key="r.path" />
+            <component :is="Component" :key="Object.keys(r.query).length ? r.fullPath : r.path" />
           </keep-alive>
         </router-view>
         <div class="page-footer" v-if="!isMobile">

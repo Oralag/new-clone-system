@@ -385,8 +385,8 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 .brand-product-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
 .brand-product-card { background: #fff; border-radius: 24px; overflow: hidden; cursor: pointer; transition: all 0.4s cubic-bezier(0.23,1,0.32,1); border: 1px solid rgba(0,0,0,0.05); }
 .brand-product-card:hover { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(0,0,0,0.1); }
-.brand-product-img-wrap { aspect-ratio: 4/3; overflow: hidden; }
-.brand-product-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s ease; }
+.brand-product-img-wrap { aspect-ratio: 1/1; overflow: hidden; background: #f5f5f7; }
+.brand-product-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.8s ease; }
 .brand-product-card:hover .brand-product-img { transform: scale(1.08); }
 .brand-product-info { padding: 16px; }
 .brand-product-name { font-size: 14px; font-weight: 700; margin-bottom: 6px; }

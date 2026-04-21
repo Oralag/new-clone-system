@@ -109,6 +109,9 @@
           <div class="card-header-left">
             <span class="type-badge" :class="item.type">{{ typeLabel(item.type) }}</span>
             <span v-if="item.published" class="published-badge">✅ 已发布</span>
+            <span v-else-if="item.videoStatus === 'processing'" class="video-status-badge processing">⏳ 视频生成中</span>
+            <span v-else-if="item.videoStatus === 'done'" class="video-status-badge done">🎬 视频已生成</span>
+            <span v-else-if="item.videoStatus === 'failed'" class="video-status-badge failed">❌ 视频失败</span>
             <span v-else class="card-time">{{ cardTime(idx) }}</span>
           </div>
           <div class="card-menu" @click.stop="toggleMenu(idx)">
@@ -127,12 +130,25 @@
 
         <!-- 卡片内容 -->
         <div class="card-body" @click="toggleSelect(idx)">
-          <!-- 图片 -->
-          <div v-if="item.type === 'poster' && item.imageUrl" class="card-image">
-            <img :src="item.imageUrl" :alt="item.topic" />
+          <!-- 视频 -->
+          <div v-if="item.type === 'video_script' && item.videoUrl" class="card-video">
+            <video :src="item.videoUrl" controls playsinline preload="metadata" />
           </div>
-          <!-- 视频脚本 / 文案 / 图文文字 -->
-          <div class="card-text" :class="{ compact: item.type === 'poster' && item.imageUrl }" v-html="renderPublishMd(item)" />
+          <!-- 视频生成中占位 -->
+          <div v-else-if="item.type === 'video_script' && item.videoStatus === 'processing'" class="card-video-placeholder">
+            <span class="video-spinner"></span>
+            <span>视频生成中，请稍候…</span>
+          </div>
+          <!-- 图片 -->
+          <div v-else-if="item.type === 'poster' && item.imageUrl" class="card-image">
+            <img :src="item.imageUrl" :alt="item.topic" />
+            <!-- ERP 截图备选 -->
+            <button v-if="item.erpScreenshotUrl" class="btn-switch-img" @click.stop="switchToErpScreenshot(idx)" title="切换为ERP数据截图">
+              📊 用ERP截图
+            </button>
+          </div>
+          <!-- 文案 / prompt 文字 -->
+          <div class="card-text" :class="{ compact: (item.type === 'poster' && item.imageUrl) || (item.type === 'video_script' && item.videoUrl) }" v-html="renderPublishMd(item)" />
         </div>
 
         <!-- 编辑弹层 -->
@@ -166,6 +182,63 @@
       </div>
     </div>
 
+    <!-- 发布引导弹窗（有图片时） -->
+    <Teleport to="body">
+      <div v-if="publishGuide.show" class="preview-overlay" @click.self="cancelPublish">
+        <div class="preview-modal publish-guide-modal">
+          <div class="preview-header">
+            <div class="preview-header-left">
+              <span class="type-badge poster">发布到小红书</span>
+            </div>
+            <button class="preview-close" @click="cancelPublish">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="preview-body">
+            <!-- 图片预览 -->
+            <div v-if="publishGuide.imageUrl" class="publish-guide-image">
+              <img :src="publishGuide.imageUrl" alt="配图" />
+            </div>
+            <!-- 分步操作 -->
+            <div class="publish-steps">
+              <div class="publish-step" :class="{ done: publishGuide.imageCopied, active: !publishGuide.imageCopied }">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">{{ publishGuide.imageCopied ? '✅ 图片已复制' : '复制图片' }}</div>
+                  <div class="step-desc">{{ publishGuide.imageCopied ? '去小红书创作页 Ctrl+V 粘贴图片' : '点击后可在小红书创作页直接粘贴' }}</div>
+                </div>
+                <button v-if="!publishGuide.imageCopied" class="step-btn" @click="copyPublishImage">复制图片</button>
+                <button v-else class="step-btn step-btn-done" disabled>已复制</button>
+              </div>
+              <div class="publish-step" :class="{ done: publishGuide.textCopied, active: publishGuide.imageCopied && !publishGuide.textCopied }">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">{{ publishGuide.textCopied ? '✅ 文案已复制' : '复制文案' }}</div>
+                  <div class="step-desc">{{ publishGuide.textCopied ? '去小红书标题/正文框粘贴' : '复制图片后再复制文案' }}</div>
+                </div>
+                <button class="step-btn" :class="{ 'step-btn-secondary': !publishGuide.imageCopied }" @click="copyPublishText">
+                  {{ publishGuide.textCopied ? '重新复制' : '复制文案' }}
+                </button>
+              </div>
+              <div class="publish-step" :class="{ active: publishGuide.textCopied }">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">打开小红书发布页</div>
+                  <div class="step-desc">粘贴图片和文案后点发布</div>
+                </div>
+                <button class="step-btn step-btn-primary" @click="openXhs">打开 →</button>
+              </div>
+            </div>
+            <!-- 图片不支持复制时的降级提示 -->
+            <div v-if="publishGuide.downloadFallback" class="download-fallback">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#f59e0b" stroke-width="1.3"/><path d="M7 4v3.5M7 9.5v.5" stroke="#f59e0b" stroke-width="1.3" stroke-linecap="round"/></svg>
+              浏览器不支持直接复制图片，已自动下载到本地，请手动上传
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- 预览弹窗 -->
     <Teleport to="body">
       <div v-if="previewIdx >= 0" class="preview-overlay" @click.self="previewIdx = -1">
@@ -180,7 +253,10 @@
             </button>
           </div>
           <div class="preview-body">
-            <div v-if="filtered[previewIdx]?.type === 'poster' && filtered[previewIdx]?.imageUrl" class="preview-image">
+            <div v-if="filtered[previewIdx]?.type === 'video_script' && filtered[previewIdx]?.videoUrl" class="preview-video">
+              <video :src="filtered[previewIdx].videoUrl" controls playsinline style="width:100%;border-radius:10px;" />
+            </div>
+            <div v-else-if="filtered[previewIdx]?.type === 'poster' && filtered[previewIdx]?.imageUrl" class="preview-image">
               <img :src="filtered[previewIdx].imageUrl" :alt="filtered[previewIdx].topic" />
             </div>
             <div class="preview-content" v-html="renderPublishMd(filtered[previewIdx])" />
@@ -204,7 +280,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useTrendingStore } from '@/stores/agent'
@@ -235,6 +311,17 @@ const menuOpen = ref(-1)
 const editingIdx = ref(-1)
 const editContent = ref('')
 const previewIdx = ref(-1)
+
+// 发布引导弹窗状态
+const publishGuide = ref({
+  show: false,
+  imageUrl: '',
+  publishText: '',
+  imageCopied: false,
+  textCopied: false,
+  downloadFallback: false,
+  itemRealIdx: -1,
+})
 
 const typeOptions = [
   { key: 'copy', name: '文案' },
@@ -391,23 +478,95 @@ async function removeCard(idx: number) {
 async function publishOne(idx: number) {
   const item = filtered.value[idx]
   const publishText = extractPublishContent(item)
+  const realIdx = agentStore.flowResults.indexOf(item)
 
-  // 小红书：复制内容 + 打开发布页
   if (item.platform === 'xiaohongshu') {
+    // 有图片：弹出分步引导弹窗
+    if (item.imageUrl) {
+      publishGuide.value = {
+        show: true,
+        imageUrl: item.imageUrl,
+        publishText,
+        imageCopied: false,
+        textCopied: false,
+        downloadFallback: false,
+        itemRealIdx: realIdx,
+      }
+      return
+    }
+    // 无图片：原有逻辑，直接复制文案跳转
     await navigator.clipboard.writeText(publishText)
     window.open('https://creator.xiaohongshu.com/publish/publish', '_blank')
-    ElMessage({
-      message: '内容已复制，在小红书发布页粘贴即可 📋',
-      type: 'success',
-      duration: 4000,
-    })
-    const realIdx = agentStore.flowResults.indexOf(item)
+    ElMessage({ message: '文案已复制，在小红书发布页粘贴即可 📋', type: 'success', duration: 4000 })
     markPublished(realIdx)
     return
   }
 
-  // 其他平台：提示暂未接入
   ElMessage.warning(`「${item.platformName}」暂未接入自动发布，请手动复制内容发布`)
+}
+
+function switchToErpScreenshot(idx: number) {
+  const item = filtered.value[idx]
+  const realIdx = agentStore.flowResults.indexOf(item)
+  if (realIdx < 0 || !item.erpScreenshotUrl) return
+  const updated = [...agentStore.flowResults]
+  // 交换 AI 生成图和 ERP 截图
+  const prev = updated[realIdx].imageUrl
+  updated[realIdx] = { ...updated[realIdx], imageUrl: item.erpScreenshotUrl, erpScreenshotUrl: prev }
+  agentStore.setFlowResults(updated)
+  ElMessage.success('已切换为ERP数据截图')
+}
+
+function cancelPublish() {
+  publishGuide.value.show = false
+}
+
+async function copyPublishImage() {
+  const url = publishGuide.value.imageUrl
+  try {
+    // 用 Canvas 把图片画出来，写入剪贴板
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve()
+      img.onerror = () => reject(new Error('图片加载失败'))
+      img.src = url
+    })
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(img, 0, 0)
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('转换失败')), 'image/png')
+    })
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+    publishGuide.value.imageCopied = true
+    ElMessage.success('图片已复制，去小红书粘贴')
+  } catch {
+    // 降级：触发下载
+    publishGuide.value.downloadFallback = true
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'cover.jpg'
+    a.target = '_blank'
+    a.click()
+    publishGuide.value.imageCopied = true
+    ElMessage({ message: '图片已下载，请手动上传到小红书', type: 'warning', duration: 5000 })
+  }
+}
+
+async function copyPublishText() {
+  await navigator.clipboard.writeText(publishGuide.value.publishText)
+  publishGuide.value.textCopied = true
+  ElMessage.success('文案已复制')
+}
+
+function openXhs() {
+  window.open('https://creator.xiaohongshu.com/publish/publish', '_blank')
+  if (publishGuide.value.itemRealIdx >= 0) markPublished(publishGuide.value.itemRealIdx)
+  publishGuide.value.show = false
+  ElMessage.success('发布引导完成 ✅')
 }
 
 function previewCard(idx: number) {
@@ -428,6 +587,49 @@ function markPublished(realIdx: number) {
   updated[realIdx] = { ...updated[realIdx], published: true }
   agentStore.setFlowResults(updated)
 }
+
+// ── 视频状态轮询 ──
+let videoPoller: ReturnType<typeof setInterval> | null = null
+
+async function pollVideoStatuses() {
+  const results = agentStore.flowResults
+  const pending = results
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.videoRequestId && r.videoStatus === 'processing')
+
+  if (pending.length === 0) return
+
+  for (const { r, i } of pending) {
+    try {
+      const resp = await fetch('/api/video-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: r.videoRequestId }),
+      })
+      const data = await resp.json() as any
+      if (data.status === 'done' && data.video_url) {
+        const updated = [...agentStore.flowResults]
+        updated[i] = { ...updated[i], videoStatus: 'done', videoUrl: data.video_url }
+        agentStore.setFlowResults(updated)
+        ElMessage({ message: '🎬 视频已生成完成，可以发布了！', type: 'success', duration: 5000 })
+      } else if (data.status === 'failed') {
+        const updated = [...agentStore.flowResults]
+        updated[i] = { ...updated[i], videoStatus: 'failed' }
+        agentStore.setFlowResults(updated)
+      }
+    } catch { /* 轮询失败静默处理 */ }
+  }
+}
+
+onMounted(() => {
+  // 页面加载时立即查一次，之后每30秒轮询
+  pollVideoStatuses()
+  videoPoller = setInterval(pollVideoStatuses, 30000)
+})
+
+onUnmounted(() => {
+  if (videoPoller) clearInterval(videoPoller)
+})
 </script>
 
 <style scoped>
@@ -570,6 +772,10 @@ function markPublished(realIdx: number) {
 
 .card-time { font-size: 11px; color: #999999; }
 .published-badge { font-size: 11px; color: #10b981; font-weight: 600; }
+.video-status-badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; }
+.video-status-badge.processing { background: rgba(245,158,11,.1); color: #d97706; }
+.video-status-badge.done       { background: rgba(16,185,129,.1);  color: #059669; }
+.video-status-badge.failed     { background: rgba(239,68,68,.1);   color: #dc2626; }
 
 .card-menu {
   position: relative; color: #999999; cursor: pointer; padding: 4px;
@@ -597,9 +803,36 @@ function markPublished(realIdx: number) {
 }
 .card-image {
   border-radius: 10px; overflow: hidden; margin-bottom: 10px;
-  background: #F8F8F6; aspect-ratio: 4/3;
+  background: #F8F8F6; aspect-ratio: 4/3; position: relative;
 }
 .card-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.btn-switch-img {
+  position: absolute; bottom: 8px; right: 8px;
+  background: rgba(0,0,0,0.6); color: #fff;
+  border: none; border-radius: 8px; padding: 4px 10px;
+  font-size: 11px; cursor: pointer; font-family: inherit;
+  backdrop-filter: blur(4px);
+}
+.btn-switch-img:hover { background: rgba(0,0,0,0.8); }
+
+.card-video {
+  border-radius: 10px; overflow: hidden; margin-bottom: 10px;
+  background: #000; aspect-ratio: 9/16; max-height: 280px;
+}
+.card-video video { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.card-video-placeholder {
+  border-radius: 10px; margin-bottom: 10px;
+  background: #F8F8F6; aspect-ratio: 9/16; max-height: 180px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; font-size: 12px; color: #999;
+}
+.video-spinner {
+  width: 20px; height: 20px; border: 2px solid #e8e8e8;
+  border-top-color: #0071e3; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .card-text {
   font-size: 13px; color: #333333; line-height: 1.7;
@@ -666,6 +899,61 @@ function markPublished(realIdx: number) {
   transition: all .15s;
 }
 .btn-preview:hover { background: #F8F8F6; color: #1A1A1A; }
+
+/* 发布引导弹窗 */
+.publish-guide-modal { max-width: 480px; }
+
+.publish-guide-image {
+  border-radius: 10px; overflow: hidden; margin-bottom: 20px;
+  background: #F8F8F6; max-height: 240px;
+  display: flex; align-items: center; justify-content: center;
+}
+.publish-guide-image img { width: 100%; max-height: 240px; object-fit: contain; display: block; }
+
+.publish-steps { display: flex; flex-direction: column; gap: 12px; }
+
+.publish-step {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 12px;
+  border: 1px solid #E8E8E8; background: #fafafa;
+  transition: all .2s;
+}
+.publish-step.active { border-color: #0071e3; background: rgba(0,113,227,.03); }
+.publish-step.done { border-color: #10b981; background: rgba(16,185,129,.03); }
+
+.step-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #E8E8E8; color: #999;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.publish-step.active .step-num { background: #0071e3; color: #fff; }
+.publish-step.done .step-num { background: #10b981; color: #fff; }
+
+.step-body { flex: 1; }
+.step-title { font-size: 13px; font-weight: 600; color: #1A1A1A; margin-bottom: 2px; }
+.step-desc { font-size: 11px; color: #999; }
+
+.step-btn {
+  padding: 6px 14px; border-radius: 8px;
+  background: #0071e3; color: #fff;
+  border: none; font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; font-family: inherit;
+  transition: background .15s;
+}
+.step-btn:hover:not(:disabled) { background: #0066cc; }
+.step-btn:disabled { opacity: .5; cursor: not-allowed; }
+.step-btn-done { background: #10b981; }
+.step-btn-secondary { background: #F8F8F6; color: #666; border: 1px solid #E8E8E8; }
+.step-btn-secondary:hover { background: #eee; }
+.step-btn-primary { background: #0071e3; }
+
+.download-fallback {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 12px; padding: 10px 12px;
+  background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2);
+  border-radius: 8px; font-size: 12px; color: #92400e;
+}
 
 /* 预览弹窗 */
 .preview-overlay {

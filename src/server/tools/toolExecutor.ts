@@ -335,13 +335,31 @@ export async function executeTool(name: string, input: Record<string, any>, toke
 
           const allPurchase: any[] = purchaseRes?.data?.rows || []
           const auditedPurchase = allPurchase.filter((r: any) => Number(r.status) === 1)
-          const payRows: any[] = payRes?.data?.rows || []
-          const collectRows: any[] = collectRes?.data?.rows || []
+          const allPayRows: any[] = payRes?.data?.rows || []
+          // 付款单/收款单本身无需审核状态过滤（流水即事实），但来源单据必须已审核
+          const payRows = allPayRows
+          const allCollectRows: any[] = collectRes?.data?.rows || []
+          const collectRows = allCollectRows
           const allContracts: any[] = contractRes?.data?.rows || []
           const auditedContracts = allContracts.filter((r: any) => Number(r.status) === 1)
           const fundRows: any[] = fundRes?.data?.rows || []
-          const procureReturnRows: any[] = procureReturnRes?.data?.rows || []
-          const saleReturnRows: any[] = saleReturnRes?.data?.rows || []
+          // 退货单：后端 status 参数无效，必须前端过滤（铁律：未审核不计入财务）
+          const procureReturnRows: any[] = (procureReturnRes?.data?.rows || []).filter((r: any) => Number(r.status) === 1)
+          const saleReturnRows: any[] = (saleReturnRes?.data?.rows || []).filter((r: any) => Number(r.status) === 1)
+
+          // ⑧ 未审核单据数量统计（提示哪些数据被排除在外）
+          const unauditedPurchase = allPurchase.filter((r: any) => Number(r.status) !== 1)
+          const unauditedContracts = allContracts.filter((r: any) => Number(r.status) !== 1)
+          const allProcureReturn: any[] = procureReturnRes?.data?.rows || []
+          const allSaleReturn: any[] = saleReturnRes?.data?.rows || []
+          const unauditedProcureReturn = allProcureReturn.filter((r: any) => Number(r.status) !== 1)
+          const unauditedSaleReturn = allSaleReturn.filter((r: any) => Number(r.status) !== 1)
+          const unauditedTotal = unauditedPurchase.length + unauditedContracts.length + unauditedProcureReturn.length + unauditedSaleReturn.length
+          if (unauditedTotal > 0) {
+            ok.push(`⑧ 未审核单据已自动排除（不计入库存和财务）：采购单 ${unauditedPurchase.length} 条、销售合同 ${unauditedContracts.length} 条、采购退货 ${unauditedProcureReturn.length} 条、销售退货 ${unauditedSaleReturn.length} 条`)
+          } else {
+            ok.push(`⑧ 未审核单据：0 条（所有单据均已审核）`)
+          }
 
           // 构建付款单匹配索引（3种方式）
           const paidById: Record<number, number> = {}

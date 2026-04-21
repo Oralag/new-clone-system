@@ -8,7 +8,7 @@
           del-path="/shop/ContractOrder/batchDel"
           sort-by="order_date" :sort-desc="true"
           export-file-name="销售合同" :params="searchForm"
-          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''"
+          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : (row.customer_name === highlightName && highlightName ? 'row-highlight' : '')"
           :export-columns="{ order_sn: '合同编号', customer_name: '客户名称', total_amount: '合同金额', sign_date: '签约日期', expire_date: '到期日期', admin_name: '经办人', status: '状态', remark: '备注' }">
           <template #search>
             <el-input v-model="searchForm.contract_no" placeholder="合同编号" clearable style="width:160px" />
@@ -635,7 +635,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
@@ -766,7 +766,9 @@ function goToCommissionSetting() {
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const searchForm = reactive<any>({ contract_no: '', customer_name: '', status: '' })
+const highlightName = ref('')
+const searchForm = reactive<any>({ contract_no: '', customer_name: route.query.customer_name ? String(route.query.customer_name) : '', status: '' })
+if (route.query.customer_name) highlightName.value = String(route.query.customer_name)
 const showForm = ref(false)
 const isReadonly = ref(false)
 
@@ -936,6 +938,29 @@ onMounted(async () => {
   await Promise.all([loadCustomers(), loadStaff(), loadFunds(), loadReceiptMap()])
   handleRouteFromOffer()
   if (route.query.contract_no) searchForm.contract_no = String(route.query.contract_no)
+  if (route.query.customer_name) {
+    const name = String(route.query.customer_name)
+    searchForm.customer_name = name
+    highlightName.value = name
+    nextTick(() => {
+      if (tableRef.value) {
+        tableRef.value.searchParams.customer_name = name
+        tableRef.value.refresh()
+      }
+    })
+  }
+})
+
+onActivated(() => {
+  if (route.query.customer_name) {
+    const name = String(route.query.customer_name)
+    searchForm.customer_name = name
+    highlightName.value = name
+    tableRef.value?.refresh()
+  } else if (route.query.contract_no) {
+    searchForm.contract_no = String(route.query.contract_no)
+    tableRef.value?.refresh()
+  }
 })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
@@ -1953,6 +1978,9 @@ function applyOfferToForm(offer: any) {
 :deep(.row-converted) td { color: #aaa !important; }
 :deep(.row-converted) .el-tag { opacity: 0.7; }
 :deep(.row-converted) .el-button { opacity: 0.7; }
+
+:deep(.row-highlight) { background-color: #ecf5ff !important; }
+:deep(.row-highlight) td { background-color: #ecf5ff !important; }
 
 .expand-detail {
   padding: 12px 20px 12px 48px;

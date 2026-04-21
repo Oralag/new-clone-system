@@ -61,9 +61,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <template v-if="!row._isPrepay">
+              <el-button v-if="getRowContactType(row) === 'customer'" type="primary" link size="small" @click="goToContract(row)">原单</el-button>
               <el-button v-if="Number(row.status) === 1" type="warning" link size="small" @click="handleUnaudit(row)">反审核</el-button>
               <el-button type="danger" link size="small" :disabled="Number(row.status) === 1" @click="handleDelete(row.id)">删除</el-button>
             </template>
@@ -171,6 +172,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund, getReceivableList } from '@/api/finance'
@@ -183,6 +185,13 @@ import { adjustFundBalance } from '@/utils/fund'
 import { fmtDt } from '@/utils/date'
 
 // ── 数据加载 ──────────────────────────────────────────────────────────────────
+const router = useRouter()
+
+function goToContract(row: any) {
+  const customerName = getRowContactName(row)
+  router.push({ path: '/sale/contract', query: { customer_name: customerName } })
+}
+
 const loading = ref(false)
 const allRows = ref<any[]>([])
 const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '' })

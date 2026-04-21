@@ -477,8 +477,8 @@ async function downloadSelected() {
 .bp-card-dragging { opacity: 0.4; transform: scale(0.97); }
 .bp-card-dragover { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.2); transform: translateY(-4px); }
 
-.bp-card-img-wrap { position: relative; aspect-ratio: 4/3; overflow: hidden; background: #f5f5f7; }
-.bp-card-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s ease; }
+.bp-card-img-wrap { position: relative; aspect-ratio: 1/1; overflow: hidden; background: #f5f5f7; }
+.bp-card-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.8s ease; }
 .bp-card:hover .bp-card-img { transform: scale(1.07); }
 
 .bp-drag-handle { position: absolute; top: 10px; left: 10px; z-index: 3; width: 28px; height: 28px; border-radius: 8px; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; color: #fff; cursor: grab; }

@@ -68,13 +68,24 @@
           加入购物车
         </button>
 
-        <div class="bd-detail-img-wrap editable-block" style="position:relative" v-if="product.detailImage || brandEdit.editMode">
-          <img v-if="product.detailImage" :src="product.detailImage" :alt="product.name + ' 详情'" class="bd-detail-img" referrerpolicy="no-referrer" />
+        <!-- 详情图：多张切片竖排拼成长图效果 -->
+        <div class="bd-detail-img-wrap editable-block" style="position:relative"
+          v-if="detailImageList.length > 0 || brandEdit.editMode">
+          <template v-if="detailImageList.length > 0">
+            <img
+              v-for="(src, i) in detailImageList"
+              :key="i"
+              :src="src"
+              :alt="product.name + ' 详情'"
+              class="bd-detail-img"
+              referrerpolicy="no-referrer"
+            />
+          </template>
           <div v-else-if="brandEdit.editMode" class="bd-detail-placeholder" @click="openEdit('detail')">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(29,29,31,0.25)" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span>添加详情长图</span>
           </div>
-          <button v-if="brandEdit.editMode && product.detailImage" class="edit-trigger bd-edit-inline-btn" @click="openEdit('detail')" title="编辑详情图">
+          <button v-if="brandEdit.editMode && detailImageList.length > 0" class="edit-trigger bd-edit-inline-btn" @click="openEdit('detail')" title="编辑详情图">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             编辑详情图
           </button>
@@ -98,8 +109,20 @@
               <button class="bed-upload-btn" @click="upload(v => { editData.image = v; activeImg = v })">上传</button>
             </div>
             <img v-if="editData.image" :src="editData.image" class="bed-preview-img" referrerpolicy="no-referrer" />
-            <label class="bed-label">轮播图（最多4张）</label>
-            <div v-for="(img, i) in editData.headerImages" :key="i" class="bed-input-row" style="margin-bottom:6px">
+            <label class="bed-label">轮播图（最多4张，可拖拽排序）</label>
+            <div
+              v-for="(img, i) in editData.headerImages"
+              :key="i"
+              class="bed-input-row bed-carousel-row"
+              style="margin-bottom:6px"
+              draggable="true"
+              @dragstart="carouselDragStart(i)"
+              @dragenter.prevent="carouselDragEnter(i)"
+              @dragend="carouselDragEnd"
+              @dragover.prevent
+              :class="{ 'bed-drag-over': carouselDragOver === i }"
+            >
+              <span class="bed-drag-handle" title="拖拽排序">⠿</span>
               <input v-model="editData.headerImages[i]" type="url" class="bed-input" :placeholder="`第 ${i+1} 张`" />
               <button class="bed-upload-btn" @click="upload(v => editData.headerImages[i] = v)">上传</button>
             </div>
@@ -164,6 +187,15 @@ const product = computed(() => shopStore.products.find(p => p.id === route.param
 const activeImg = ref('')
 const qty = ref(1)
 
+// 详情图列表：优先用 detailImages 数组，兼容旧的单张 detailImage
+const detailImageList = computed(() => {
+  const p = product.value
+  if (!p) return []
+  if ((p as any).detailImages?.length) return (p as any).detailImages as string[]
+  if (p.detailImage) return [p.detailImage]
+  return []
+})
+
 // 当产品数据加载完成后初始化
 watch(product, (p) => {
   if (p && !activeImg.value) {
@@ -177,6 +209,25 @@ const editVisible = ref(false)
 const editType = ref('')
 const editData = ref<any>({})
 const saving = ref(false)
+
+// 轮播图拖拽排序
+const carouselDragIdx = ref<number | null>(null)
+const carouselDragOver = ref<number | null>(null)
+
+function carouselDragStart(i: number) { carouselDragIdx.value = i }
+function carouselDragEnter(i: number) { carouselDragOver.value = i }
+function carouselDragEnd() {
+  const from = carouselDragIdx.value
+  const to = carouselDragOver.value
+  if (from !== null && to !== null && from !== to) {
+    const arr = [...editData.value.headerImages]
+    const [moved] = arr.splice(from, 1)
+    arr.splice(to, 0, moved)
+    editData.value.headerImages = arr
+  }
+  carouselDragIdx.value = null
+  carouselDragOver.value = null
+}
 
 const editTitle = computed(() => {
   const map: Record<string, string> = { images: '编辑商品图片', info: '编辑商品信息', detail: '编辑详情长图' }
@@ -254,7 +305,7 @@ function addAndGo() {
 .bd-back:hover { color: #0071e3; }
 .bd-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
 .bd-main-img-wrap { border-radius: 28px; overflow: hidden; aspect-ratio: 1; background: #f5f5f7; }
-.bd-main-img { width: 100%; height: 100%; object-fit: cover; }
+.bd-main-img { width: 100%; height: 100%; object-fit: contain; }
 .bd-thumbs { display: flex; gap: 10px; margin-top: 12px; }
 .bd-thumb { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
 .bd-thumb.active { border-color: #0071e3; }
@@ -325,6 +376,10 @@ function addAndGo() {
 .bed-textarea { padding: 10px 14px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px; font-size: 14px; outline: none; resize: vertical; font-family: inherit; }
 .bed-textarea:focus { border-color: #7c3aed; }
 .bed-preview-img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; }
+.bed-carousel-row { cursor: default; border-radius: 8px; transition: background 0.15s; }
+.bed-carousel-row.bed-drag-over { background: rgba(124,58,237,0.08); outline: 2px dashed rgba(124,58,237,0.4); }
+.bed-drag-handle { font-size: 16px; color: rgba(29,29,31,0.3); cursor: grab; padding: 0 4px; flex-shrink: 0; user-select: none; }
+.bed-drag-handle:active { cursor: grabbing; }
 .bed-tags-row { display: flex; gap: 16px; }
 .bed-tag-check { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .bed-footer { padding: 16px 24px; border-top: 1px solid rgba(0,0,0,0.06); display: flex; gap: 10px; justify-content: flex-end; }

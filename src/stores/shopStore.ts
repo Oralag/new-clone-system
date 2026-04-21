@@ -14,6 +14,7 @@ export interface ShopProduct {
   image: string
   headerImages: string[]
   detailImage: string
+  detailImages: string[]
   category: string
   tags: string[]         // 'new' | 'hot' | 'sale'
   rating: number
@@ -49,11 +50,13 @@ function erpGoodsToShopProduct(item: any): ShopProduct {
     image: brand.image || (item.images ? item.images.split(',')[0] : '') || '',
     headerImages: brand.headerImages || [],
     detailImage: brand.detailImage || '',
+    detailImages: brand.detailImages || [],
     category: item.cate_name || '',
     tags: brand.tags || [],
     rating: brand.rating || 5.0,
     reviewsCount: brand.reviewsCount || 0,
     sort: item.sort || 0,
+    show: brand.show === true,
   }
 }
 
@@ -93,7 +96,7 @@ export const useShopStore = defineStore('shop', () => {
       if (json.code === 1 && json.data?.rows) {
         const rows: ShopProduct[] = json.data.rows
           .map(erpGoodsToShopProduct)
-          .filter((p: ShopProduct) => p.name)
+          .filter((p: ShopProduct) => p.name && (p as any).show === true)
           .sort((a: ShopProduct, b: ShopProduct) => a.sort - b.sort)
         products.value = rows
       }

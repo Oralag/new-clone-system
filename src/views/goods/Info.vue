@@ -220,6 +220,15 @@
               <el-switch :model-value="row.status === 1" disabled size="small" />
             </template>
           </el-table-column>
+          <el-table-column v-if="!isMobileList" label="品牌展示" width="90" align="center">
+            <template #default="{ row }">
+              <el-switch
+                :model-value="getBrandShow(row)"
+                size="small"
+                @change="(val: boolean) => toggleBrandShow(row, val)"
+              />
+            </template>
+          </el-table-column>
           <!-- BOM视图：显示用量 -->
           <el-table-column v-if="leftView === 'bom' && bomViewGoodsId !== null" label="用量" width="110" align="center">
             <template #default="{ row }">
@@ -968,18 +977,13 @@ async function loadCates() {
 
 function selectCate(id: number | null) {
   selectedCateId.value = id
-  // Find all descendant IDs of the selected cate
+  // Always use frontend rowFilter; pull full data when a category is selected
   if (id === null) {
     searchForm.cate_id = ''
+    delete searchForm.list_rows
   } else {
-    const children = cateOptions.value.filter(c => c.parent_id === id)
-    if (children.length > 0) {
-      // Parent category: don't filter by cate_id in API (get all), use rowFilter instead
-      searchForm.cate_id = ''
-    } else {
-      // Leaf category: filter directly by cate_id
-      searchForm.cate_id = id
-    }
+    searchForm.cate_id = ''
+    searchForm.list_rows = 10000
   }
   tableRef.value?.refresh()
 }
@@ -1060,6 +1064,26 @@ function getGoodsType(row: any): number {
   if (Number(row.goods_type ?? 0)) return Number(row.goods_type)
   if (Object.prototype.hasOwnProperty.call(goodsTypeMap.value, row.id)) return Number(goodsTypeMap.value[row.id] ?? 0)
   return 0
+}
+
+function getBrandShow(row: any): boolean {
+  try {
+    const remark = JSON.parse(row.remark || '{}')
+    return remark.__brand__?.show === true
+  } catch { return false }
+}
+
+async function toggleBrandShow(row: any, val: boolean) {
+  try {
+    let remark: any = {}
+    try { remark = JSON.parse(row.remark || '{}') } catch { /* ignore */ }
+    remark.__brand__ = { ...(remark.__brand__ || {}), show: val }
+    await http.post('/goods/ShopGoods/edit', { id: row.id, remark: JSON.stringify(remark) })
+    row.remark = JSON.stringify(remark)
+    ElMessage.success(val ? '已在品牌主页展示' : '已从品牌主页隐藏')
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
 
 function getCatePathText(row: any) {
@@ -1197,9 +1221,14 @@ function getBomUsage(row: any): string {
 const activeCateIds = computed<Set<number> | null>(() => {
   const id = selectedCateId.value
   if (id === null) return null
-  const children = cateOptions.value.filter(c => c.parent_id === id)
-  if (children.length === 0) return null  // leaf: handled by API param
-  const ids = new Set<number>([id, ...children.map(c => c.id)])
+  // Collect the selected cate and all descendants recursively
+  const ids = new Set<number>()
+  const queue = [id]
+  while (queue.length) {
+    const cur = queue.shift()!
+    ids.add(cur)
+    cateOptions.value.filter(c => Number(c.parent_id) === cur).forEach(c => queue.push(c.id))
+  }
   return ids
 })
 

@@ -17,7 +17,9 @@ export interface FlowResult {
   content: string
   videoRequestId?: string
   videoStatus?: 'processing' | 'failed' | 'done' | 'idle' | 'generating'
+  videoUrl?: string
   imageUrl?: string
+  erpScreenshotUrl?: string
   imageStatus?: 'processing' | 'failed' | 'done' | 'idle' | 'generating'
   published?: boolean
 }

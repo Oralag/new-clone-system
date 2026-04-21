@@ -338,19 +338,22 @@ onMounted(async () => {
       if (!amt) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
-      if (orderSn && supplierName) procurePaidByKey[`${orderSn}@@${supplierName}`] = (procurePaidByKey[`${orderSn}@@${supplierName}`] || 0) + amt
       const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
-      if (m1) { const id = Number(m1[1]); procurePaidById[id] = (procurePaidById[id] || 0) + amt }
       const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
-      if (m2) { const sn = m2[1].trim(); procurePaidBySn[sn] = (procurePaidBySn[sn] || 0) + amt }
+      if (m1) { const id = Number(m1[1]); procurePaidById[id] = (procurePaidById[id] || 0) + amt }
+      else if (m2) { const sn = m2[1].trim(); procurePaidBySn[sn] = (procurePaidBySn[sn] || 0) + amt }
+      else if (orderSn && supplierName) procurePaidByKey[`${orderSn}@@${supplierName}`] = (procurePaidByKey[`${orderSn}@@${supplierName}`] || 0) + amt
     }
     const purchaseUnpaidTotal = (procureRes.data?.rows ?? [])
       .filter((r: any) => Number(r.status) === 1)
       .reduce((s: number, r: any) => {
         const orderAmt = Number(r.after_discount != null ? r.after_discount : r.total_amount)
-        const sn = String(r.order_sn || r.order_no || '').trim()
+        const oSn = String(r.order_sn || '').trim()
+        const oNo = String(r.order_no || '').trim()
         const sup = String(r.supplier_name || '').trim()
-        const paid = procurePaidById[r.id] || procurePaidByKey[`${sn}@@${sup}`] || procurePaidBySn[sn] || 0
+        const paid = (procurePaidById[r.id] || 0)
+          + (procurePaidBySn[oSn] || procurePaidBySn[oNo] || 0)
+          + (procurePaidByKey[`${oSn}@@${sup}`] || procurePaidByKey[`${oNo}@@${sup}`] || 0)
         return s + Math.max(0, orderAmt - paid)
       }, 0)
     summary.unpaid = pendingExpenseTotal + purchaseUnpaidTotal
