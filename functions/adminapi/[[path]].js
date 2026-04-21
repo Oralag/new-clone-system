@@ -284,6 +284,8 @@ const AGENT_CONFIGS = {
 
 【支付方式识别】用户说"微信/微信支付/扫码" → pay_method="wechat"；"支付宝/花呗" → pay_method="alipay"；"现金/付现" → pay_method="cash"；"刷卡/银行卡" → pay_method="card"；未说明默认"cash"。必须把识别到的值传入 pay_method 字段。
 
+【录入完成后必须显示系统全名】零售单录入完成后，每行商品必须原文引用系统返回的完整商品名（如"原味传统奶豆腐/成品袋装"），禁止简写成用户说的简称（如"奶豆腐"）。
+
 【克→斤换算规则】中国1斤=500克。用户说"XXX克"且商品是散装称重类（乌日莫、黄油、冻炒米、奶豆腐块等按斤卖的），必须换算：斤数 = 克数 ÷ 500。示例：530克 = 1.06斤；250克 = 0.5斤。绝对禁止除以1000。按个/袋/盒卖的固定包装商品，克数是规格说明，不换算。
 
 重要回复规范：
@@ -596,8 +598,8 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
   }
   for (const agentId of activeAgentIds) {
     const config = AGENT_CONFIGS[String(agentId)]
-    if (!config || !env.ANTHROPIC_API_KEY) {
-      console.log(`[AgentReply] skip ${agentId}: noConfig=${!config}, noKey=${!env.ANTHROPIC_API_KEY}`)
+    if (!config || (!env.ANTHROPIC_API_KEY && !env.AI)) {
+      console.log(`[AgentReply] skip ${agentId}: noConfig=${!config}, noAiKey=${!env.ANTHROPIC_API_KEY}, noWorkersAI=${!env.AI}`)
       continue
     }
     console.log(`[AgentReply] calling AI for ${agentId}...`)
@@ -673,11 +675,10 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
           .replace(/\|.+\|/g, (m) => m.replace(/\|/g, ' ').trim())  // 表格 | 改成空格分隔
           .trim()
       } else {
-        // 其他 Agent 走原来的直接 Claude 调用
-        const apiBase = (env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/$/, '')
-
-        // 秘书：注入真实员工名单，让 AI 做模糊匹配
+        // 其他 Agent：优先用 Anthropic API，没有则走 Workers AI fallback
+        // agentSystemPrompt 在 try 块内声明，Secretary 会动态修改，Workers AI fallback 在外部可访问
         let agentSystemPrompt = config.systemPrompt
+        // 秘书：注入真实员工名单，让 AI 做模糊匹配
         if (String(agentId) === 'secretary') {
           try {
             // 优先用发消息人的 token，fallback 到 master token
@@ -731,6 +732,50 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
         if (!replyText) {
           console.error(`[AgentReply] no text in response for ${agentId}: ${JSON.stringify(data).slice(0,200)}`)
           continue
+        }
+        // Workers AI fallback（当 ANTHROPIC_API_KEY 缺失时）
+        if (!replyText && env.AI) {
+          try {
+            // 构造 Workers AI 格式的消息上下文
+            // 系统提示：角色定义 + 历史
+            const sysWithHistory = `【角色】${agentSystemPrompt}\n\n【最近对话】（参考上下文）\n${history.map(m => m.content).join('\n')}`
+
+            // 尝试不同模型（按优先级）
+            const candidates = [
+              { model: '@cf/qwen/qwen2.5-7b-instruct-awq', notes: '通义千问中文优化' },
+              { model: '@cf/meta/llama-3.1-8b-instruct', notes: 'Llama3.1' },
+              { model: '@cf/mistralai/mistral-7b-instruct-v0.3', notes: 'Mistral' },
+              { model: '@cf/google/gemma-2-27b-it', notes: 'Gemma大杯' },
+            ]
+
+            for (const c of candidates) {
+              try {
+                const aiRes = await env.AI.run(c.model, {
+                  messages: [
+                    { role: 'system', content: sysWithHistory },
+                    { role: 'user', content: userMessage },
+                  ],
+                  max_tokens: 800,
+                })
+
+                replyText = (typeof aiRes === 'string' ? aiRes : aiRes?.response || '').trim()
+                if (replyText) {
+                  console.log(`[WorkersAI] ${agentId} via ${c.model}: ${replyText.slice(0,50)}...`)
+                  break
+                }
+              } catch (e) {
+                console.log(`[WorkersAI] ${c.model} failed: ${e.message}`)
+              }
+            }
+
+            if (!replyText) {
+              console.error(`[WorkersAI] all models failed for ${agentId}`)
+              continue
+            }
+          } catch (e) {
+            console.error(`[WorkersAI] error: ${e.message}`)
+            continue
+          }
         }
       }
 
