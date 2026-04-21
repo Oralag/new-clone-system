@@ -1501,10 +1501,10 @@ function scrollToBottom() {
 }
 
 function renderMarkdown(text: string): string {
-  // 渲染商品候选按钮 [[PICK:名称|单位|价格]]
-  text = text.replace(/\[\[PICK:([^|]+)\|([^|]*)\|([^\]]*)\]\]/g, (_, name, unit, price) => {
+  // 渲染商品候选按钮 [[PICK:名称|单位|价格|id]]（id可选）
+  text = text.replace(/\[\[PICK:([^|]+)\|([^|]*)\|([^|\]]*)\|?(\d*)\]\]/g, (_, name, unit, price, id) => {
     const label = unit ? `${name}（${unit}）` : name
-    return `<button class="goods-pick-btn" data-name="${name}" data-unit="${unit}" data-price="${price}">${label}</button>`
+    return `<button class="goods-pick-btn" data-name="${name}" data-unit="${unit}" data-price="${price}" data-id="${id}">${label}</button>`
   })
   // Basic markdown rendering
   return text
@@ -1521,10 +1521,11 @@ function onMessageClick(e: MouseEvent) {
   const name = btn.dataset.name || ''
   const unit = btn.dataset.unit || ''
   const price = btn.dataset.price || ''
-  // 直接自动发送选中商品，让AI继续录入
+  const id = btn.dataset.id || ''
   const priceText = price && Number(price) > 0 ? `单价¥${price}` : ''
   const unitText = unit ? `/${unit}` : ''
-  inputText.value = `商品选「${name}${unitText}」${priceText}，请继续完成刚才的零售录入`
+  const idText = id ? ` goods_id=${id}` : ''
+  inputText.value = `商品选「${name}${unitText}」${priceText}${idText}，请继续完成刚才的零售录入`
   nextTick(() => sendMessage())
 }
 </script>

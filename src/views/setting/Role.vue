@@ -119,7 +119,7 @@ import { ref, reactive, computed } from 'vue'
 import { Plus, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
-import { getRoleList, createRole, updateRole, deleteRole } from '@/api/setting'
+import { getRoleList, createRole, updateRole, deleteRole, getAdminList, updateAdmin } from '@/api/setting'
 import { menuData } from '@/layouts/components/menuData'
 import { PERM_PREFIX, type PermConfig } from '@/stores/permission'
 
@@ -336,6 +336,17 @@ async function handleSubmit() {
   try {
     const data = { id: form.id, name: form.name, remark }
     data.id ? await updateRole(data) : await createRole(data)
+
+    // 同步更新所有使用该角色的管理员账号 remark
+    if (form.id) {
+      try {
+        const adminsRes: any = await getAdminList({ list_rows: 500 })
+        const admins: any[] = adminsRes?.data?.rows || adminsRes?.data?.list || adminsRes?.data || []
+        const targets = admins.filter((a: any) => a.role_id === form.id)
+        await Promise.all(targets.map((a: any) => updateAdmin({ id: a.id, remark })))
+      } catch {}
+    }
+
     ElMessage.success('操作成功')
     dialogVisible.value = false
     tableRef.value?.refresh()

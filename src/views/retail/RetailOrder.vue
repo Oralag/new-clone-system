@@ -55,7 +55,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="pay_method" label="支付方式" width="100" align="center" />
-        <el-table-column prop="order_date" label="订单日期" width="110" />
+        <el-table-column label="订单日期" width="160">
+          <template #default="{ row }">{{ fmtDt(row.created_at || row.order_date) }}</template>
+        </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 0 ? 'warning' : 'success'" size="small">
@@ -176,6 +178,14 @@ import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList
 import http from '@/api/http'
 import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+
+function fmtDt(val: string) {
+  if (!val) return '-'
+  const d = new Date(val)
+  if (isNaN(d.getTime())) return val.slice(0, 10)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const stockRefreshStore = useStockRefreshStore()

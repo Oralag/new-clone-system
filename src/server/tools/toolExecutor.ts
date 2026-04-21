@@ -56,6 +56,9 @@ function charSimilarity(a: string, b: string): number {
 }
 
 async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
+  const NON_SALE_CATES = new Set(['塑料袋', '袋子', '亚克力', '广告物料', '标签纸', '设备', '其他成本', '样品采购'])
+  const isSaleable = (g: any) => !NON_SALE_CATES.has(g.cate_name)
+
   return Promise.all(
     items.map(async (item) => {
       // 统一数量字段：qty → num
@@ -65,9 +68,9 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
 
       if (!normalized.goods_name || normalized.goods_id) return normalized
       try {
-        // 第一次：精确关键词搜索
+        // 第一次：精确关键词搜索，过滤非销售类分类
         const res = await erpGet('/goods/ShopGoods/index', { keyword: normalized.goods_name, list_rows: 10 }, token)
-        let rows = res?.data?.rows || []
+        let rows = (res?.data?.rows || []).filter(isSaleable)
         let matched = rows.find((g: any) =>
           g.goods_name === normalized.goods_name ||
           g.goods_name?.includes(normalized.goods_name) ||
@@ -78,7 +81,7 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
         if (!matched && normalized.goods_name.length >= 2) {
           const fuzzyKeyword = normalized.goods_name.slice(0, 2)
           const res2 = await erpGet('/goods/ShopGoods/index', { keyword: fuzzyKeyword, list_rows: 30 }, token)
-          const rows2 = res2?.data?.rows || []
+          const rows2 = (res2?.data?.rows || []).filter(isSaleable)
           let bestScore = 0
           let bestMatch = null
           for (const g of rows2) {
@@ -90,7 +93,7 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
             normalized._fuzzy_matched = `语音识别已纠正：「${normalized.goods_name}」→「${matched.goods_name}」`
             normalized.goods_name = matched.goods_name
           } else {
-            // 完全匹配失败：返回候选列表（过滤包装/原材料），供用户选择
+            // 完全匹配失败：返回候选列表（已过滤包装/原材料），供用户选择
             const candidates = rows2.filter((g: any) => !isPackagingGoods(g.goods_name))
               .slice(0, 8)
               .map((g: any) => ({ id: g.id, name: g.goods_name, unit: g.unit_name, price: g.sell_price }))
@@ -206,6 +209,18 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const rows = res?.data?.rows || []
         const totalVal = rows.reduce((s: number, r: any) => s + Number(r.qty || 0) * Number(r.avg_price || 0), 0)
         result = `共 ${rows.length} 种商品，库存总价值约 ¥${totalVal.toFixed(2)}。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ 商品: r.goods_name, 库存: r.qty, 单位: r.unit_name, 仓库: r.warehouse_name, 均价: r.avg_price })))}`
+        break
+      }
+      case 'query_retail_orders': {
+        const today = new Date().toISOString().slice(0, 10)
+        const params: any = { list_rows: input.limit || 20 }
+        if (input.date) params.order_date = input.date
+        const res = await erpGet('/retail/order/index', params, token)
+        const rows = res?.data?.rows || []
+        const filtered = input.date
+          ? rows.filter((r: any) => (r.order_date || '').slice(0, 10) === input.date)
+          : rows.filter((r: any) => (r.order_date || '').slice(0, 10) === today)
+        result = `共 ${filtered.length} 张零售单。${JSON.stringify(filtered.map((r: any) => ({ id: r.id, 单号: r.order_sn, 金额: r.pay_amount, 客户: r.member_name || '散客', 时间: r.created_at, 状态: r.status === 1 ? '已审核' : '未审核' })))}`
         break
       }
       case 'query_sales': {
@@ -746,7 +761,7 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const unresolved = resolvedItems.filter((i: any) => i._unresolved)
         if (unresolved.length > 0) {
           const picks = unresolved.map((i: any) => {
-            const list = (i._candidates || []).map((c: any) => `[[PICK:${c.name}|${c.unit}|${c.price}]]`).join('')
+            const list = (i._candidates || []).map((c: any) => `[[PICK:${c.name}|${c.unit}|${c.price}|${c.id}]]`).join('')
             return `「${i.goods_name}」找不到，请选择：\n${list}`
           }).join('\n\n')
           result = picks
@@ -778,12 +793,11 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           const existRows = existRes?.data?.rows || []
           const fiveMinAgo = Date.now() - 5 * 60 * 1000
           const duplicate = existRows.find((r: any) => {
-            const createdAt = new Date(r.create_time || r.order_date).getTime()
-            if (createdAt < fiveMinAgo) return false
+            const createdAt = new Date(r.created_at || r.create_time || r.order_date).getTime()
+            if (isNaN(createdAt) || createdAt < fiveMinAgo) return false
             if (Math.abs(Number(r.pay_amount) - payAmount) > 0.01) return false
-            // 商品数量也相同（通过 goods_info 条数判断）
             try {
-              const gi = JSON.parse(r.goods_info || '[]')
+              const gi = typeof r.goods_info === 'string' ? JSON.parse(r.goods_info) : (r.goods_info || [])
               if (gi.length === resolvedItems.length) return true
             } catch { return false }
             return false
@@ -907,6 +921,13 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         if (denied) { result = denied; break }
         const res = await erpPost('/stock/PurchaseOrder/del', { id: input.id }, token)
         result = res?.code === 1 ? `采购订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'delete_retail_order': {
+        const denied = await checkDeletePermission(token)
+        if (denied) { result = denied; break }
+        const res = await erpPost('/retail/order/del', { id: input.id }, token)
+        result = res?.code === 1 ? `零售单(ID:${input.id})已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_supplier': {

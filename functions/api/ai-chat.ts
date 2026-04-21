@@ -497,16 +497,20 @@ function getSystemPrompt(intent: string): string {
 ${CORRECTION_RULE}
 
 【零售场景规则】
-用户说"卖了XX"、"卖出XX"、"买了XX"、"收了XX"、"门店卖了"等，必须：
-1. **直接调用 create_retail_order**，把听到的商品名直接填进去，不要提前 query_goods
-2. 系统会自动模糊匹配商品；匹配不到时会返回候选列表，展示给用户点选，不需要你问
-3. 商品名模糊/听不清时，也直接调用，不要停下来问用户"是什么商品"
-4. 【禁止自动新建商品】create_retail_order 找不到商品时，系统会弹候选列表，不要调用 create_goods
-5. 【禁止因任何原因停下来问用户】——信息不完整、金额对不上、商品不确定，都直接调工具，让系统处理
+- 用户说"卖了XX"、"门店卖了"等零售场景，使用 create_retail_order 工具
+- 支付方式识别：微信/扫码→wechat；支付宝→alipay；现金→cash；刷卡→card；未说明→cash；必须传入 pay_method 字段
+- 【铁律：同一批零售合并一张单】多种商品只能调用一次 create_retail_order，所有商品放同一个 items 数组
+- 【铁律：禁止重复录入】已成功创建后不得再次创建；用户说"重新录"时先用 query_retail_orders 查到旧单ID，用 delete_retail_order 真正删除，再创建新单
+- 【铁律：必须先查商品再录入】调用 create_retail_order 前必须先用 query_goods 查出系统全名，列出明细等用户确认后才能调用
+- 【铁律：用户给了 goods_id 必须直接用】用户消息里含 goods_id=XXX 时，items 里该商品直接传 goods_id，禁止重新搜索
+- 【录入完成后显示系统全名】回复里每行商品必须用系统全名，禁止简写成用户说的简称
+- 【PICK按钮格式】列候选时格式：[[PICK:商品名|单位|价格|商品ID]]
+
+【克→斤换算规则】中国1斤=500克。散装称重类商品（乌日莫、黄油、冻炒米、奶豆腐块等）用户说"XXX克"时，换算斤数=克数÷500。示例：530克=1.06斤。**绝对禁止除以1000**。
 
 【数量与价格语义规则】
-- "N克/斤/个" 是数量，不是商品名
-- 用户说了总金额（"收了¥X"、"一共¥X"），AI理解后列出明细和总额问用户确认，用户说"对/好/确认"后再调 create_retail_order，传入 pay_amount
+- "N块儿/个" 是数量不是商品名；"80克"是规格不是数量
+- 只有一个价格时默认是总价；有疑义时列出"单价×数量=小计"让用户核对
 
 其他录入：调用合适的创建工具录入数据。缺少必填字段时先询问用户。`,
     create_with_image: `${BASE}
@@ -519,12 +523,14 @@ ${DOCUMENT_IMAGE_RULES}
 ${CORRECTION_RULE}
 
 【零售场景规则】
-用户说"卖了XX"、"卖出XX"、"买了XX"、"收了XX"、"门店卖了"等，必须：
-1. **直接调用 create_retail_order**，把听到的商品名直接填进去，不要提前 query_goods
-2. 系统会自动模糊匹配商品；匹配不到时会返回候选列表，展示给用户点选，不需要你问
-3. 商品名模糊/听不清时，也直接调用，不要停下来问用户"是什么商品"
-4. 【禁止自动新建商品】create_retail_order 找不到商品时，系统会弹候选列表，不要调用 create_goods
-5. 【金额有疑问时】列出商品明细和计算结果，问用户"合计¥XX，实收¥YY，确认录入吗？"，等用户回复"对/确认/好"后再调工具；禁止用文字列其他问题
+- 用户说"卖了XX"、"门店卖了"等零售场景，使用 create_retail_order 工具
+- 支付方式识别：微信/扫码→wechat；支付宝→alipay；现金→cash；刷卡→card；未说明→cash；必须传入 pay_method 字段
+- 【铁律：同一批零售合并一张单】多种商品只能调用一次 create_retail_order
+- 【铁律：禁止重复录入】已成功创建后不得再次创建；用户说"重新录"时先 query_retail_orders 查旧单ID，delete_retail_order 真正删除，再创建
+- 【铁律：必须先查商品再录入】先 query_goods 查系统全名，列明细等确认后才调 create_retail_order
+- 【铁律：用户给了 goods_id 必须直接用】含 goods_id=XXX 时直接传，禁止重新搜索
+- 【PICK按钮格式】[[PICK:商品名|单位|价格|商品ID]]
+- 【克→斤】散装称重类克数÷500=斤，禁止÷1000
 
 根据用户需求选择合适的工具完成任务。`,
   }
@@ -549,7 +555,7 @@ const CLOSEUP_MESSAGE = `这张单据里【供应商名称】和【商品名称�
 拍清楚后我再继续识别。`
 
 const allTools = [
-  { name: 'query_retail_orders', description: '查询零售订单列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '商品名称/会员名' }, limit: { type: 'number', description: '返回条数' } } } },
+  { name: 'query_retail_orders', description: '查询零售订单列表，用于找到需要删除的零售单ID', input_schema: { type: 'object', properties: { date: { type: 'string', description: '日期 YYYY-MM-DD，默认今天' }, limit: { type: 'number', description: '返回条数，默认20' } } } },
   { name: 'query_customers', description: '查询客户列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '搜索关键词' }, limit: { type: 'number', description: '返回条数' } } } },
   { name: 'query_suppliers', description: '查询供应商列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '搜索关键词' }, limit: { type: 'number', description: '返回条数' } } } },
   { name: 'query_goods', description: '查询商品列表', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: '商品名称/编码' }, limit: { type: 'number', description: '返回条数' } } } },
@@ -603,12 +609,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
   const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
   const erpToken = request.headers.get('x-erp-token') || ''
-  const { messages, images, books } = await request.json() as any
+  const { messages, images, books, userMemory } = await request.json() as any
 
   const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
   // 有图片时附加完整识别规则；无图片时用精简 prompt
   const intent = images?.length > 0 ? 'create_with_image' : detectIntent(lastUserMsg?.content || '')
-  const systemPrompt = getSystemPrompt(intent)
+  const systemPrompt = getSystemPrompt(intent) + (userMemory ? `\n\n${userMemory}` : '')
 
   // Build API messages — inject images into last user message if present
   const apiMessages = messages.map((m: any, idx: number) => {

@@ -59,6 +59,17 @@ export const queryTools: FunctionDeclaration[] = [
     },
   },
   {
+    name: 'query_retail_orders',
+    description: '查询零售单列表，用于找到需要删除的零售单ID',
+    parameters: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: '日期 YYYY-MM-DD，默认今天' },
+        limit: { type: 'number', description: '返回条数，默认20' },
+      },
+    },
+  },
+  {
     name: 'query_purchases',
     description: '查询采购订单',
     parameters: {
@@ -412,6 +423,17 @@ export const deleteTools: FunctionDeclaration[] = [
       type: 'object',
       properties: {
         id: { type: 'number', description: '销售订单ID（必填）' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_retail_order',
+    description: '删除零售单（需先用 query_retail_orders 查到订单ID）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: '零售单ID（必填）' },
       },
       required: ['id'],
     },
