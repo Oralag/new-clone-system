@@ -755,11 +755,16 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
                   ],
                   max_tokens: 800,
                 })
+                console.log(`[WorkersAI] ${agentId} @${c.model} rawRes type=${typeof aiRes}, keys=${aiRes ? Object.keys(aiRes).join(',') : 'null'}, val=${JSON.stringify(aiRes)?.slice(0,100)}`)
 
                 replyText = (typeof aiRes === 'string' ? aiRes : aiRes?.response || '').trim()
-                if (replyText) {
-                  console.log(`[WorkersAI] ${agentId} via ${c.model}: ${replyText.slice(0,50)}...`)
+                // 防御：拒绝字面量 "undefined" / "null" / 空字符串
+                if (replyText && replyText !== 'undefined' && replyText !== 'null') {
+                  console.log(`[WorkersAI] ${agentId} via ${c.model}: ${replyText.slice(0, 60)}...`)
                   break
+                } else {
+                  console.log(`[WorkersAI] ${c.model} returned empty/undefined response, trying next...`)
+                  replyText = ''
                 }
               } catch (e) {
                 console.log(`[WorkersAI] ${c.model} failed: ${e.message}`)
