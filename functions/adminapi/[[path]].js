@@ -708,6 +708,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
           }
         }
 
+        const apiBase = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
         const res = await fetch(`${apiBase}/v1/messages`, {
           method: 'POST',
           headers: {
