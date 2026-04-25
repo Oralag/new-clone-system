@@ -1994,6 +1994,7 @@ export default { name: 'MobileChat' }
   align-items: center;
   justify-content: center;
   width: 80px;
+  height: 100%;
   font-size: 14px;
   color: #fff;
   white-space: nowrap;
