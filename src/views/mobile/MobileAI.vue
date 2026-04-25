@@ -253,7 +253,14 @@ function scrollToBottom() {
 }
 
 onMounted(() => scrollToBottom())
-onActivated(() => scrollToBottom())
+onActivated(() => {
+  scrollToBottom()
+  // 处理从消息列表页传来的清空参数（keep-alive缓存时watch可能不触发）
+  if (route.query.clear === '1') {
+    clearMessages()
+    router.replace('/mobile/ai')
+  }
+})
 
 
 function autoResize() {
