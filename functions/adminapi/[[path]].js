@@ -1249,7 +1249,9 @@ async function handleCleanupMessages(request, env) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
 
-  const groupId = extractGroupId(request.url)
+  // 支持数字和非数字群组ID（如 ai-assistant-fixed）
+  const idMatch = request.url.match(/\/adminapi\/chat\/groups\/([\w-]+)\/cleanup/)
+  const groupId = idMatch ? idMatch[1] : null
   if (!groupId) return errRes('群不存在')
 
   let body
@@ -1260,12 +1262,20 @@ async function handleCleanupMessages(request, env) {
 
   const raw = await env.USERS_KV.get('chat_messages')
   const msgMap = raw ? JSON.parse(raw) : {}
+  let removed = 0
   if (msgMap[groupId]) {
-    msgMap[groupId] = msgMap[groupId].filter(m => m.created_at && new Date(m.created_at).getTime() > cutoff)
+    const before = msgMap[groupId].length
+    msgMap[groupId] = msgMap[groupId].filter(m => {
+      if (!m.created_at) return false // 没有时间戳的消息直接清理掉
+      const ts = new Date(m.created_at).getTime()
+      if (isNaN(ts)) return false // 时间戳格式异常的消息也清理掉
+      return ts > cutoff
+    })
+    removed = before - msgMap[groupId].length
     await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap))
   }
 
-  return jsonSuccess({ success: true, removed_before: new Date(cutoff).toISOString() })
+  return jsonSuccess({ success: true, removed_count: removed, removed_before: new Date(cutoff).toISOString() })
 }
 
 // ── PBKDF2 password utils (Web Crypto) ──────────────────────────────────────
@@ -1497,7 +1507,7 @@ export async function onRequest(context) {
       return handleMarkRead(request, env)
     }
     // POST /adminapi/chat/groups/:id/cleanup - cleanup old messages
-    if (pathname.match(/^\/adminapi\/chat\/groups\/\d+\/cleanup$/) && request.method === 'POST') {
+    if (pathname.match(/^\/adminapi\/chat\/groups\/[\w-]+\/cleanup$/) && request.method === 'POST') {
       return handleCleanupMessages(request, env)
     }
     // POST /adminapi/chat/groups/:id/pin - 置顶/取消置顶会话

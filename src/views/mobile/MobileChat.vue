@@ -688,6 +688,7 @@ function onSwipeMove(e: TouchEvent) {
   }
 }
 function onSwipeEnd() {
+  swipeMoved.value = false // 每次抬手都重置，防止永远拦截点击
   currentSwipeItem.value = null
 }
 function closeSwipe() {
@@ -695,11 +696,17 @@ function closeSwipe() {
   currentSwipeItem.value = null
 }
 
-function clearAiHistory() {
-  localStorage.removeItem('erp_ai_chat_history')
-  // 跳转到AI页面并带上clear参数，触发MobileAI组件清空内存中的消息
-  router.push('/mobile/ai?clear=1')
-  ElMessage.success('ERP管家对话已清空')
+async function clearAiHistory() {
+  try {
+    // 清空前端本地缓存
+    localStorage.removeItem('erp_ai_chat_history')
+    localStorage.setItem('_ai_clear_flag', '1')
+    ElMessage.success('ERP管家对话已清空')
+    // 用整页跳转强制刷新，绕过缓存和 keep-alive 问题
+    setTimeout(() => { window.location.href = '/mobile/ai' }, 300)
+  } catch (e: any) {
+    ElMessage.error('清空失败：' + (e.message || '未知错误'))
+  }
 }
 
 async function togglePin(g: any) {
@@ -1964,12 +1971,13 @@ export default { name: 'MobileChat' }
   bottom: 0;
   display: none;
   z-index: 1;
+  align-items: center;
 }
 .chat-item-wrap.swiped .chat-item-actions {
   display: flex;
 }
 .chat-item-wrap.swiped > .chat-item {
-  transform: translateX(-160px);
+  transform: translateX(-240px);
 }
 .chat-item {
   transition: transform 0.2s ease;

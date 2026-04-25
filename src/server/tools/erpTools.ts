@@ -188,6 +188,8 @@ export const createTools: any[] = [
         total_amount: { type: 'number', description: '金额' },
         admin_name: { type: 'string', description: '经办人/业务员姓名' },
         remark: { type: 'string', description: '备注' },
+        pay_amount: { type: 'number', description: '本次收款金额（部分收款时填写，不填则为0）' },
+        fund_name: { type: 'string', description: '收款账户名称，如"公司收入账号"、"现金"' },
         auto_audit: { type: 'boolean', description: '是否自动审核（默认false，审核后触发库存和财务）' },
         items: {
           type: 'array',

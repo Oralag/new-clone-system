@@ -1925,11 +1925,14 @@ async function openEdit(row: any, readonly = false) {
   fd.fee_items = feeItems
   fd.total_amount = fd.items.reduce((s: number, r: any) => s + (r.num || 0) * (r.price || 0), 0)
   fd.expense_amount = Number(fd.expense_amount || 0)
-  // 折扣字段从后端直接读取，不重新计算，避免覆盖已保存的折后金额
   if (!row.after_discount && row.after_discount !== 0) {
     fd.after_discount = fd.total_amount
   } else {
     fd.after_discount = Number(fd.after_discount)
+  }
+  // 无折扣时折后金额必须等于应付，防止浮点误差导致折后>应付
+  if (fd.discount_type === 'none') {
+    fd.after_discount = fd.total_amount
   }
   fd.items.forEach((item: any) => {
     if (item.goods_id) {

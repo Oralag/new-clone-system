@@ -148,14 +148,7 @@ import AiToolCallCard from '@/components/ai/AiToolCallCard.vue'
 const router = useRouter()
 const route = useRoute()
 
-// 监听从消息列表页传来的清空参数
-watch(() => route.query.clear, (val) => {
-  if (val === '1') {
-    clearMessages()
-    // 清掉URL中的clear参数，避免重复触发
-    router.replace('/mobile/ai')
-  }
-})
+// 清空标志通过 onMounted/onActivated 检查，不依赖 watch（localStorage 非响应式）
 const authStore = useAuthStore()
 
 interface ToolCallState { id: string; name: string; input: any; result: any; status: 'running'|'success'|'error' }
@@ -190,6 +183,11 @@ function saveHistory(msgs: Message[]) {
 const messagesRef = ref<HTMLDivElement>()
 const textareaRef = ref<HTMLTextAreaElement>()
 const fileInputRef = ref<HTMLInputElement>()
+// setup 阶段立即检查清空标志（最早的介入点）
+if (localStorage.getItem('_ai_clear_flag') === '1') {
+  localStorage.removeItem('_ai_clear_flag')
+  localStorage.removeItem(HISTORY_KEY)
+}
 const messages = ref<Message[]>(loadHistory())
 const inputText = ref('')
 const isLoading = ref(false)
@@ -252,13 +250,21 @@ function scrollToBottom() {
   nextTick(() => { if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight })
 }
 
-onMounted(() => scrollToBottom())
+onMounted(() => {
+  scrollToBottom()
+  // 检查 localStorage 清空标志
+  const flag = localStorage.getItem('_ai_clear_flag')
+  if (flag === '1') {
+    localStorage.removeItem('_ai_clear_flag')
+    clearMessages()
+  }
+})
 onActivated(() => {
   scrollToBottom()
-  // 处理从消息列表页传来的清空参数（keep-alive缓存时watch可能不触发）
-  if (route.query.clear === '1') {
+  // 检查 localStorage 清空标志（keep-alive 缓存时）
+  if (localStorage.getItem('_ai_clear_flag') === '1') {
+    localStorage.removeItem('_ai_clear_flag')
     clearMessages()
-    router.replace('/mobile/ai')
   }
 })
 

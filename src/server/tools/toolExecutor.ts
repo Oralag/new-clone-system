@@ -159,7 +159,7 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const outTotal = outRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
         const contractRows = contractRes?.data?.rows || []
         const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售合同 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ id: r.id, 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}`
+        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售合同 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ id: r.id, 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}。合同明细：${JSON.stringify(contractRows.slice(0, 20).map((r: any) => ({ id: r.id, 合同号: r.order_sn, 客户: r.customer_name, 金额: r.total_amount, 状态: r.status, 日期: String(r.sign_date || r.order_date || r.create_time || '').slice(0, 10) })))}`
         break
       }
       case 'query_purchases': {
@@ -509,6 +509,9 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         // 自动根据 goods_name 查找 goods_id，并序列化为 goods_info
         const rawItems = Array.isArray(input.items) ? input.items : []
         const resolvedItems = rawItems.length > 0 ? await resolveGoodsIds(rawItems, token) : []
+        const today = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+        const receiveAmount = Number(input.pay_amount || input.receive_amount || 0)
+        const receiveAccount = String(input.fund_name || input.receive_account || '')
         const payload: Record<string, any> = {
           customer_id: input.customer_id,
           customer_name: input.customer_name,
@@ -516,6 +519,10 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           admin_name: input.admin_name || '',
           remark: input.remark || '',
           goods_info: JSON.stringify(resolvedItems),
+          sign_date: input.sign_date || today,
+          contract_date: input.sign_date || today,
+          receive_amount: receiveAmount,
+          receive_account: receiveAccount,
         }
         const res = await erpPost('/shop/ContractOrder/add', payload, token)
         if (res?.code !== 1) { result = `创建失败：${res?.msg || JSON.stringify(res)}`; break }
@@ -523,9 +530,40 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const orderSn = res?.data?.order_sn || '已生成'
         if (input.auto_audit && orderId) {
           await erpPost('/shop/ContractOrder/audit', { id: orderId, status: 1 }, token)
-          result = `销售订单创建并审核成功！单号: ${orderSn}`
+          // 审核后自动创建收款单
+          if (receiveAmount > 0) {
+            try {
+              // 查资金账户 ID
+              let fundId = 0
+              if (receiveAccount) {
+                const fundRes = await erpGet('/finance/Fund/index', { list_rows: 50 }, token)
+                const funds: any[] = fundRes?.data?.rows || []
+                const matched = funds.find((f: any) => f.name === receiveAccount || String(f.name).includes(receiveAccount))
+                if (matched) fundId = matched.id
+              }
+              await erpPost('/finance/CollectReceipt/add', {
+                contact_type: 'customer',
+                customer_id: input.customer_id,
+                customer_name: input.customer_name,
+                contact_id: input.customer_id,
+                contact_name: input.customer_name,
+                amount: receiveAmount,
+                order_sn: orderSn,
+                order_no: orderSn,
+                fund_id: fundId,
+                fund_name: receiveAccount,
+                receipt_date: today,
+                remark: `合同自动收款 - ${orderSn}`,
+              }, token)
+              result = `销售合同创建并审核成功！单号: ${orderSn}，已记录收款 ¥${receiveAmount.toFixed(2)}`
+            } catch {
+              result = `销售合同创建并审核成功！单号: ${orderSn}（收款单创建失败，请手动补录）`
+            }
+          } else {
+            result = `销售合同创建并审核成功！单号: ${orderSn}`
+          }
         } else {
-          result = `销售订单创建成功！单号: ${orderSn}`
+          result = `销售合同创建成功！单号: ${orderSn}`
         }
         break
       }
@@ -664,7 +702,8 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         if (!contractId) { result = `合同创建失败：${contractRes?.msg || JSON.stringify(contractRes)}`; break }
 
         // 6. 审核合同
-        await erpPost('/shop/ContractOrder/audit', { id: contractId, status: 1 }, token)
+        const auditContractRes = await erpPost('/shop/ContractOrder/audit', { id: contractId, status: 1 }, token)
+        if (auditContractRes?.code !== 1) { result = `合同审核失败：${auditContractRes?.msg || JSON.stringify(auditContractRes)}`; break }
 
         // 7. 创建出库单
         const saleOutRes = await erpPost('/stock/SaleOutOrder/add', {
@@ -679,7 +718,8 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         if (!saleOutId) { result = `出库单创建失败：${saleOutRes?.msg || JSON.stringify(saleOutRes)}`; break }
 
         // 8. 审核出库单（触发库存扣减）
-        await erpPost('/stock/SaleOutOrder/audit', { id: saleOutId, status: 1 }, token)
+        const auditOutRes = await erpPost('/stock/SaleOutOrder/audit', { id: saleOutId, status: 1 }, token)
+        if (auditOutRes?.code !== 1) { result = `出库单审核失败（库存未扣减）：${auditOutRes?.msg || JSON.stringify(auditOutRes)}`; break }
 
         const itemsSummary = resolvedItems.map((i: any) => `${i.goods_name}×${i.num || 1}`).join('、')
         let totalDetail = `商品合计 ¥${goodsTotal.toFixed(2)}`
@@ -743,6 +783,15 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
       case 'delete_purchase_order': {
+        // 已审核的采购单先反审核再删
+        try {
+          const detail = await erpGet('/stock/PurchaseOrder/detail', { id: input.id }, token)
+          const row = detail?.data?.row || detail?.data || {}
+          if (Number(row?.status) === 1) {
+            const unauditRes = await erpPost('/stock/PurchaseOrder/audit', { id: input.id, status: 0 }, token)
+            if (unauditRes?.code !== 1) { result = `删除失败，反审核失败：${unauditRes?.msg || JSON.stringify(unauditRes)}`; break }
+          }
+        } catch { /* 查不到详情直接尝试删除 */ }
         const res = await erpPost('/stock/PurchaseOrder/del', { id: input.id }, token)
         result = res?.code === 1 ? `采购订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
@@ -753,8 +802,37 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
       case 'delete_sale_order': {
+        // 先查合同详情，获取 status 和 order_sn
+        let orderSn = ''
+        let unauditErr = ''
+        try {
+          const detail = await erpGet('/shop/ContractOrder/detail', { id: input.id }, token)
+          const row = detail?.data?.row || detail?.data || {}
+          orderSn = String(row?.order_sn || '').trim()
+          // 已审核或已转单，先反审核
+          if (Number(row?.status) === 1 || Number(row?.status) === 4) {
+            if (Number(row?.status) === 4) {
+              await erpPost('/shop/ContractOrder/edit', { id: input.id, status: 1 }, token)
+            }
+            const unauditRes = await erpPost('/shop/ContractOrder/audit', { id: input.id, status: 0 }, token)
+            if (unauditRes?.code !== 1) unauditErr = `反审核失败：${unauditRes?.msg || JSON.stringify(unauditRes)}`
+          }
+        } catch (e: any) { unauditErr = `反审核异常：${e.message}` }
+        if (unauditErr) { result = `删除失败，${unauditErr}`; break }
+        // 删除关联收款单
+        if (orderSn) {
+          try {
+            const rcRes = await erpGet('/finance/CollectReceipt/index', { keyword: orderSn, list_rows: 500 }, token)
+            const rcRows: any[] = rcRes?.data?.rows || []
+            for (const r of rcRows) {
+              if (String(r?.order_sn || r?.order_no || '').trim() === orderSn) {
+                await erpPost('/finance/CollectReceipt/del', { id: Number(r.id) }, token)
+              }
+            }
+          } catch { /* 收款单删除失败不阻塞合同删除 */ }
+        }
         const res = await erpPost('/shop/ContractOrder/del', { id: input.id }, token)
-        result = res?.code === 1 ? `销售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        result = res?.code === 1 ? `销售合同已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_customer': {
