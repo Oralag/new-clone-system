@@ -241,6 +241,7 @@ import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { adjustFundBalance } from '@/utils/fund'
 import { useRoute } from 'vue-router'
 import { fmtDt } from '@/utils/date'
+import { stockEffect } from '@/utils/stockEffect'
 
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
@@ -333,44 +334,14 @@ function buildProcureOrderPayload(order: any, overrides: Record<string, any>) {
 }
 
 async function applyStockDelta(items: any[], warehouseId: number, direction: 'audit' | 'reverse') {
-  const qtyMap = new Map<number, { goods_name: string, qty: number }>()
-  for (const item of items) {
-    const goodsId = Number(item.goods_id || 0)
-    const qty = Number(item.num || 0)
-    if (!goodsId || !qty) continue
-    const current = qtyMap.get(goodsId)
-    qtyMap.set(goodsId, {
-      goods_name: item.goods_name || current?.goods_name || '商品',
-      qty: roundMoney((current?.qty || 0) + qty),
-    })
-  }
-
-  const snapshots: Array<{ id: number, qty: number }> = []
-
-  for (const [goodsId, info] of qtyMap.entries()) {
-    const stockRes = await http.get('/stock/StockAll/index', {
-      params: { goods_id: goodsId, warehouse_id: warehouseId, list_rows: 10 }
-    })
-    const stockRows: any[] = stockRes.data?.rows ?? []
-    const stock = stockRows.find((item: any) => Number(item.goods_id) === goodsId) || stockRows[0]
-    if (!stock) throw new Error(`${info.goods_name}未找到库存记录`)
-
-    const currentQty = Number(stock.qty || 0)
-    const delta = direction === 'audit' ? -info.qty : info.qty
-    const nextQty = roundMoney(currentQty + delta)
-    if (nextQty < 0) throw new Error(`${info.goods_name}库存不足，当前库存 ${currentQty}`)
-
-    snapshots.push({ id: Number(stock.id), qty: currentQty })
-    await http.post('/stock/StockAll/edit', { id: stock.id, qty: nextQty })
-  }
-
-  return snapshots
+  // 采购退货审核=扣库存；反审核=加回库存
+  await stockEffect(items, direction === 'audit' ? 'deduct' : 'restore', warehouseId, direction === 'audit' ? '采购退货出库' : '采购退货反审核')
+  return { items, warehouseId, direction }
 }
 
-async function rollbackStockDelta(snapshots: Array<{ id: number, qty: number }>) {
-  for (const item of snapshots) {
-    await http.post('/stock/StockAll/edit', { id: item.id, qty: item.qty })
-  }
+async function rollbackStockDelta(snapshot: { items: any[], warehouseId: number, direction: 'audit' | 'reverse' }) {
+  const reverseMode = snapshot.direction === 'audit' ? 'restore' : 'deduct'
+  await stockEffect(snapshot.items, reverseMode, snapshot.warehouseId, '采购退货库存回滚').catch(() => {})
 }
 
 async function applyProcureReturnEffect(row: any, direction: 'audit' | 'reverse') {

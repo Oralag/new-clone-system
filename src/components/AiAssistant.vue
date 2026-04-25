@@ -40,7 +40,7 @@
             <el-button :icon="Setting" circle size="small" plain @click="showMemory = !showMemory; showHistory = false" />
           </el-tooltip>
           <el-tooltip content="清空对话">
-            <el-button :icon="Delete" circle size="small" plain @click="clearMessages" />
+            <el-button :icon="Delete" size="small" plain @click="clearMessages" style="font-size:12px;padding:4px 8px;">清空</el-button>
           </el-tooltip>
           <el-button :icon="Close" circle size="small" plain @click="isOpen = false" />
         </div>
@@ -357,6 +357,7 @@
 import { ChatRound, Cpu, Delete, Close, User, Promotion, Check, Picture, Loading, Microphone, Clock, GoodsFilled, SetUp, Document, CircleCheck, CircleClose, Select, MagicStick, Setting, Phone } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
+import { nextTick } from 'vue'
 import http from '@/api/http'
 import { fmtDt } from '@/utils/date'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
@@ -1501,8 +1502,13 @@ function scrollToBottom() {
 }
 
 function renderMarkdown(text: string): string {
-  // 渲染商品候选按钮 [[PICK:名称|单位|价格|id]]（id可选）
-  text = text.replace(/\[\[PICK:([^|]+)\|([^|]*)\|([^|\]]*)\|?(\d*)\]\]/g, (_, name, unit, price, id) => {
+  // 渲染商品候选按钮 [[PICK:...]] — 兼容有无管道符两种格式
+  text = text.replace(/\[\[PICK:([^\]]+)\]\]/g, (_, content) => {
+    const parts = content.split('|')
+    const name = parts[0] || ''
+    const unit = parts[1] || ''
+    const price = parts[2] || ''
+    const id = parts[3] || ''
     const label = unit ? `${name}（${unit}）` : name
     return `<button class="goods-pick-btn" data-name="${name}" data-unit="${unit}" data-price="${price}" data-id="${id}">${label}</button>`
   })
@@ -1525,7 +1531,7 @@ function onMessageClick(e: MouseEvent) {
   const priceText = price && Number(price) > 0 ? `单价¥${price}` : ''
   const unitText = unit ? `/${unit}` : ''
   const idText = id ? ` goods_id=${id}` : ''
-  inputText.value = `商品选「${name}${unitText}」${priceText}${idText}，请继续完成刚才的零售录入`
+  inputText.value = `商品选「${name}${unitText}」${priceText}${idText}`
   nextTick(() => sendMessage())
 }
 </script>

@@ -106,8 +106,8 @@
             <div class="cr-cart-item-bottom">
               <div class="cr-qty-ctrl">
                 <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
-                <el-input-number v-model="item.num" :min="1" :precision="0"
-                  controls-position="right" size="small" style="width:64px"
+                <el-input-number v-model="item.num" :min="0.001" :step="0.001" :precision="3"
+                  controls-position="right" size="small" style="width:72px"
                   @change="calcTotal" />
                 <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
               </div>
@@ -187,8 +187,8 @@
                 <div class="cr-cart-item-bottom">
                   <div class="cr-qty-ctrl">
                     <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
-                    <el-input-number v-model="item.num" :min="1" :precision="0"
-                      controls-position="right" size="small" style="width:64px"
+                    <el-input-number v-model="item.num" :min="0.001" :step="0.001" :precision="3"
+                      controls-position="right" size="small" style="width:72px"
                       @change="calcTotal" />
                     <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
                   </div>
@@ -284,7 +284,7 @@
         <div style="color:rgba(29,29,31,0.35);font-size:13px">订单号：{{ lastOrderNo }}</div>
       </div>
       <template #footer>
-        <el-button type="primary" style="width:100%" @click="successVisible = false; clearCart()">
+        <el-button type="primary" style="width:100%" @click="successVisible = false">
           继续收银
         </el-button>
       </template>
@@ -360,6 +360,7 @@ import http from '@/api/http'
 import { adjustFundBalance } from '@/utils/fund'
 import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { stockEffect } from '@/utils/stockEffect'
 
 // ── 商品 ──────────────────────────────────────────────────────────────────────
 const keyword = ref('')
@@ -387,10 +388,14 @@ function selectParentCate(id: any) {
 // 手机端购物车抽屉
 const cartDrawerOpen = ref(false)
 
-// 点击商品卡片：选中高亮，同时加入购物车
+// 点击商品卡片：散装商品打开换算弹窗，普通商品直接加购物车
 function selectGoods(g: any) {
   selectedGoods.value = g
-  addToCart(g)
+  if (Number(g.goods_type) === 5) {
+    openWeightCalc(g)
+  } else {
+    addToCart(g)
+  }
 }
 const cateList = ref<any[]>([])
 const searchInputRef = ref<HTMLInputElement>()
@@ -514,7 +519,7 @@ function addToCart(g: any) {
 }
 
 function changeQty(idx: number, delta: number) {
-  cartItems[idx].num = Math.max(1, cartItems[idx].num + delta)
+  cartItems[idx].num = Math.max(0.001, parseFloat((cartItems[idx].num + delta).toFixed(3)))
   calcTotal()
 }
 
@@ -563,18 +568,7 @@ const lastOrderNo = ref('')
 
 // 零售库存变动：deduct=扣减，restore=加回
 async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
-  for (const item of items) {
-    if (!item.goods_id || !item.num) continue
-    const stockRes = await http.get('/stock/StockAll/index', {
-      params: { goods_id: item.goods_id, list_rows: 10 }
-    })
-    const stock = stockRes.data?.rows?.[0]
-    if (stock) {
-      const delta = mode === 'deduct' ? -Number(item.num) : Number(item.num)
-      const newQty = Math.max(0, Number(stock.qty || 0) + delta)
-      await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-    }
-  }
+  await stockEffect(items, mode, undefined, mode === 'deduct' ? '零售出库' : '零售退货入库')
 }
 
 async function handleCheckout() {
@@ -602,7 +596,7 @@ async function handleCheckout() {
       total_amount: totalAmount.value,
       discount_amount: discountAmount.value,
       pay_amount: payAmount.value,
-      pay_method: payMethod.value,
+      pay_type: payMethod.value,
       goods_info: JSON.stringify(cartItems.map(i => ({ ...i }))),
       status: 1,
     })
@@ -623,6 +617,7 @@ async function handleCheckout() {
       })
     } catch { /* 资金更新失败不阻塞 */ }
     stockRefreshStore.trigger()
+    clearCart()
     successVisible.value = true
   } catch (e: any) {
     ElMessage.error(e?.message ?? '结算失败')
@@ -691,7 +686,7 @@ function addWeightItemToCart() {
     goods_name: `${name} ${finalGrams.toFixed(1)}g`,
     goods_sn: '',
     unit_name: wcGoodsUnit.value,
-    price: finalAmount,
+    price: wcPricePerJin.value,
     num: parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4)),
   })
   calcTotal()

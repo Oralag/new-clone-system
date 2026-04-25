@@ -55,6 +55,7 @@ import { adjustFundBalance } from '@/utils/fund'
 import { RETAIL_FUND_NAME } from '@/config'
 import http from '@/api/http'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { stockEffect } from '@/utils/stockEffect'
 
 const scTable = ref()
 const stockRefreshStore = useStockRefreshStore()
@@ -68,33 +69,24 @@ async function handleAudit(row: any, status: number) {
     // 审核通过时：恢复库存 + 回退资金
     if (status === 1) {
       const amount = Number(row.amount || 0)
-      // 回退资金账户
       if (amount > 0) {
-        try {
-          await adjustFundBalance({ fundName: RETAIL_FUND_NAME, delta: -amount })
-        } catch { /* ignore */ }
+        try { await adjustFundBalance({ fundName: RETAIL_FUND_NAME, delta: -amount }) } catch { /* ignore */ }
       }
-      // 恢复库存
       try {
         const items: any[] = JSON.parse(row.goods_info || '[]')
-        if (items.length) {
-          const whRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 1 } })
-          const defaultWh = whRes.data?.rows?.[0]
-          if (defaultWh) {
-            for (const item of items) {
-              if (!item.goods_id || !item.num) continue
-              const stockRes = await http.get('/stock/StockAll/index', {
-                params: { goods_id: item.goods_id, warehouse_id: defaultWh.id, list_rows: 10 }
-              })
-              const stock = stockRes.data?.rows?.[0]
-              if (stock) {
-                const newQty = Number(stock.qty || 0) + Number(item.num)
-                await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-              }
-            }
-          }
-        }
-      } catch { /* 库存恢复失败不阻塞 */ }
+        if (items.length) await stockEffect(items, 'restore', undefined, '零售退货入库')
+      } catch { /* ignore */ }
+    }
+    // 反审核：撤销库存恢复 + 撤销资金回退
+    if (status === 0) {
+      try {
+        const items: any[] = JSON.parse(row.goods_info || '[]')
+        if (items.length) await stockEffect(items, 'deduct', undefined, '零售退货反审核')
+      } catch { /* ignore */ }
+      const amount = Number(row.amount || 0)
+      if (amount > 0) {
+        try { await adjustFundBalance({ fundName: RETAIL_FUND_NAME, delta: amount }) } catch { /* ignore */ }
+      }
     }
     ElMessage.success(`${action}成功`)
     stockRefreshStore.trigger()

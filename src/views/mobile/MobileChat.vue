@@ -67,10 +67,13 @@
         >
           <!-- 左滑操作按钮 -->
           <div class="chat-item-actions" v-if="!!swipedId && swipedId === g.id && !!g.id">
-            <div class="action-btn pin-btn" @click.stop="togglePin(g)">
+            <div v-if="g.type === 'ai'" class="action-btn clear-btn" @click.stop="clearAiHistory(); closeSwipe()">
+              清空
+            </div>
+            <div v-if="!g.type" class="action-btn pin-btn" @click.stop="togglePin(g)">
               {{ g.is_pinned ? '取消置顶' : '置顶' }}
             </div>
-            <div class="action-btn delete-btn" @click.stop="deleteGroup(g)">
+            <div v-if="!g.type" class="action-btn delete-btn" @click.stop="deleteGroup(g)">
               删除
             </div>
           </div>
@@ -690,6 +693,13 @@ function onSwipeEnd() {
 function closeSwipe() {
   swipedId.value = null
   currentSwipeItem.value = null
+}
+
+function clearAiHistory() {
+  localStorage.removeItem('erp_ai_chat_history')
+  // 跳转到AI页面并带上clear参数，触发MobileAI组件清空内存中的消息
+  router.push('/mobile/ai?clear=1')
+  ElMessage.success('ERP管家对话已清空')
 }
 
 async function togglePin(g: any) {
@@ -1977,6 +1987,9 @@ export default { name: 'MobileChat' }
 }
 .pin-btn {
   background: #f5a623;
+}
+.clear-btn {
+  background: #909399;
 }
 .delete-btn {
   background: #ff4d4f;

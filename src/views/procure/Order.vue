@@ -93,7 +93,7 @@
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="开单日期" width="110">
-            <template #default="{ row }">{{ (row.order_date || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ (row.order_date || row.created_at || row.create_time || '').slice(0, 10) }}</template>
           </el-table-column>
           <el-table-column label="预计交期" width="110">
             <template #default="{ row }">{{ fmtDt(row.delivery_date) || '—' }}</template>
@@ -103,7 +103,7 @@
           </el-table-column>
           <el-table-column label="含税合计" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.after_discount ?? row.total_amount ?? 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ (Number(row.after_discount) > 0 ? Number(row.after_discount) : Number(row.total_amount ?? 0)).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -890,6 +890,7 @@ import { getStaffList } from '@/api/personnel'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { stockEffect } from '@/utils/stockEffect'
 import { fmtDt } from '@/utils/date'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
@@ -959,15 +960,53 @@ async function handleBatchReverseAudit() {
   await ElMessageBox.confirm(`确定批量反审核选中的 ${audited.length} 条采购单？反审核将撤销入库与财务入账。`, '提示', { type: 'warning' })
   batchReverseAuditing.value = true
   let success = 0, failed = 0
+
+  const [inhouseRes, payRes, otherOutRes] = await Promise.all([
+    getProcureInhouseList({ list_rows: 2000 }),
+    getPayReceiptList({ list_rows: 2000 }),
+    http.get('/stock/OtherOut/index', { params: { list_rows: 2000 } }),
+  ])
+  const allInhouse: any[] = inhouseRes.data?.rows ?? []
+  const allPay: any[] = payRes.data?.rows ?? []
+  const allOtherOut: any[] = otherOutRes.data?.rows ?? []
+
   for (const row of audited) {
     try {
-      try {
-        const _allInhouse2 = await getProcureInhouseList({ list_rows: 2000 })
-        for (const r of (_allInhouse2.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(row.id))) {
-          if (r.status === 1) await auditProcureInhouse(r.id, 0)
+      // 1. 反审核入库单 + 删除对应 BOM 扣料单（不创建反向单，直接删原始单据）
+      const inhouseRows = allInhouse.filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
+      for (const r of inhouseRows) {
+        if (r.status === 1) {
+          await auditProcureInhouse(r.id, 0)
+          const rItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
+          const bomNames = rItems.map((i: any) => i.goods_name || i.goods_sn).filter(Boolean)
+          const relatedOut = allOtherOut.filter((o: any) =>
+            bomNames.some((name: string) => String(o.remark || '').includes(`BOM扣料-${name}`))
+          )
+          for (const o of relatedOut) {
+            try {
+              if (o.status === 1) await http.post('/stock/OtherOut/audit', { id: o.id, status: 0 })
+              await http.post('/stock/OtherOut/del', { id: o.id })
+            } catch (e: any) { console.warn('删除BOM扣料单失败', o.id, e?.message) }
+          }
         }
-      } catch {}
+      }
+
+      // 2. 反审核采购单
       await auditProcureOrder(row.id, 0)
+
+      // 3. 回流财务：删除关联付款单
+      const orderSn = String(row.order_no || row.order_sn || '').trim()
+      const toDelete = allPay.filter((r: any) => {
+        if (Number(r.order_id) === Number(row.id)) return true
+        const remark = String(r.remark || '')
+        if (new RegExp(`#${row.id}\\b`).test(remark)) return true
+        if (orderSn && String(r.order_sn || '').trim() === orderSn) return true
+        return false
+      })
+      for (const pay of toDelete) {
+        try { await deletePayReceipt(pay.id) } catch {}
+      }
+
       success++
     } catch { failed++ }
   }
@@ -1067,7 +1106,7 @@ function updateSummaryFromRows(rows: any[]) {
     const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
     qty += items.reduce((s: number, i: any) => s + (parseFloat(i.num) || 0) * Number(i.unit_ratio || 1), 0)
     inhouseQty += Number(row.inhouse_qty || 0)
-    const rowAmt = Number(row.after_discount ?? row.total_amount ?? 0)
+    const rowAmt = (Number(row.after_discount) > 0 ? Number(row.after_discount) : Number(row.total_amount ?? 0))
     amount += rowAmt
     expense += Number(row.expense_amount || 0)
     if (Number(row.status) === 1) {
@@ -1124,7 +1163,7 @@ const batchPayItems = ref<{ orderId: number; orderSn: string; supplierName: stri
 function openBatchPayDialog(auditedRows: any[]) {
   const items = auditedRows
     .map(row => {
-      const total = Number(row.after_discount ?? row.total_amount ?? 0)
+      const total = (Number(row.after_discount) > 0 ? Number(row.after_discount) : Number(row.total_amount ?? 0))
       const paid = getPaidAmount(row)
       const unpaid = Math.max(0, total - paid)
       return { orderId: row.id, orderSn: row.order_sn || row.order_no || `PO${row.id}`, supplierName: row.supplier_name || '', unpaid, amount: unpaid }
@@ -1192,7 +1231,7 @@ const payForm = reactive({
 })
 
 function openPayDialog(row: any) {
-  const total = Number(row.after_discount ?? row.total_amount ?? 0)
+  const total = (Number(row.after_discount) > 0 ? Number(row.after_discount) : Number(row.total_amount ?? 0))
   const paid = getPaidAmount(row)
   const unpaid = Math.max(0, total - paid)
   if (unpaid <= 0) {
@@ -1298,7 +1337,7 @@ async function loadPaidMap() {
           let remaining = totalAmt
           for (const o of supOrders) {
             if (remaining <= 0) break
-            const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
+            const orderAmt = (Number(o.after_discount) > 0 ? Number(o.after_discount) : Number(o.total_amount ?? 0))
             const alreadyPaid = (idMap[o.id] || 0)
               + (snMap[String(o.order_sn || '').trim()] || snMap[String(o.order_no || '').trim()] || 0)
               + (keyMap[payKey(String(o.order_sn || '').trim(), supName)] || keyMap[payKey(String(o.order_no || '').trim(), supName)] || 0)
@@ -1378,7 +1417,7 @@ function getPaidAmount(row: any): number {
 
 function getPayStatus(row: any): { label: string; type: string } {
   if (Number(row.status) !== 1) return { label: '—', type: 'info' }
-  const total = Number(row.after_discount ?? row.total_amount ?? 0)
+  const total = (Number(row.after_discount) > 0 ? Number(row.after_discount) : Number(row.total_amount ?? 0))
   const paid = getPaidAmount(row)
   if (total <= 0) return { label: '—', type: 'info' }
   if (paid <= 0) return { label: '未付款', type: 'danger' }

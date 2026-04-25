@@ -96,7 +96,7 @@
                   <span style="color:#0071e3;font-weight:600">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="pay_method" label="支付" width="80" align="center" />
+              <el-table-column prop="pay_type" label="支付" width="80" align="center" />
               <el-table-column prop="order_date" label="日期" width="100" />
             </el-table>
           </template>
@@ -119,7 +119,7 @@
                 </div>
                 <div class="mobile-card-row">
                   <span class="mobile-card-label">支付方式</span>
-                  <span class="mobile-card-val">{{ row.pay_method || '—' }}</span>
+                  <span class="mobile-card-val">{{ row.pay_type || '—' }}</span>
                 </div>
                 <div class="mobile-card-row">
                   <span class="mobile-card-label">收银员</span>

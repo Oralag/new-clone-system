@@ -178,6 +178,7 @@ import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList
 import http from '@/api/http'
 import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { stockEffect } from '@/utils/stockEffect'
 
 function fmtDt(val: string) {
   if (!val) return '-'
@@ -349,21 +350,7 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
 }
 
 async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
-  const whRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 1 } })
-  const defaultWh = whRes.data?.rows?.[0]
-  if (!defaultWh) return
-  for (const item of items) {
-    if (!item.goods_id || !item.num) continue
-    const stockRes = await http.get('/stock/StockAll/index', {
-      params: { goods_id: item.goods_id, warehouse_id: defaultWh.id, list_rows: 10 }
-    })
-    const stock = stockRes.data?.rows?.[0]
-    if (stock) {
-      const delta = mode === 'deduct' ? -Number(item.num) : Number(item.num)
-      const newQty = Math.max(0, Number(stock.qty || 0) + delta)
-      await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-    }
-  }
+  await stockEffect(items, mode, undefined, mode === 'deduct' ? '零售出库' : '零售退货入库')
 }
 
 function parseGoods(info: any): any[] {

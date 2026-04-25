@@ -169,54 +169,44 @@ function findStockRow(rows: any[], group: StockGroup) {
 
 export async function applyMaterialStockDelta(items: any[], options: MaterialStockOptions) {
   const groups = groupItems(items, options)
-  const snapshots: MaterialStockSnapshot[] = []
+  const processed: Array<{ group: StockGroup, direction: MaterialStockDirection }> = []
   let changedCount = 0
 
   try {
     for (const group of groups) {
-      const rows = await fetchStockRows(group)
-      const stockRow = findStockRow(rows, group)
-      if (!stockRow) {
-        if (options.direction === 'restore') {
-          const createRes = await http.post('/stock/StockAll/add', {
-            goods_id: group.goods_id,
-            goods_sn: group.goods_sn,
-            goods_name: group.goods_name,
-            unit_name: group.unit_name,
-            warehouse_id: group.warehouse_id,
-            warehouse_name: group.warehouse_name,
-            qty: group.qty,
-            avg_price: group.avg_price.toFixed(4),
-          })
-          const createdId = toNumber(createRes?.data?.id ?? createRes?.data?.data?.id ?? createRes?.data)
-          if (createdId) snapshots.push({ id: createdId, qty: 0 })
-          changedCount += 1
-          continue
-        }
-        throw new Error(`${group.goods_name}未找到库存记录`)
-      }
-
-      const currentQty = toNumber(stockRow.qty ?? stockRow.stock_num)
-      const delta = options.direction === 'deduct' ? -group.qty : group.qty
-      const nextQty = toNumber(currentQty + delta)
-      if (nextQty < 0) {
-        throw new Error(`${group.goods_name}库存不足，当前库存 ${currentQty}`)
-      }
-
-      snapshots.push({ id: toNumber(stockRow.id), qty: currentQty })
-      await http.post('/stock/StockAll/edit', { id: stockRow.id, qty: nextQty })
+      const endpoint = options.direction === 'deduct' ? '/stock/OtherOut' : '/stock/OtherIn'
+      const addRes = await http.post(`${endpoint}/add`, {
+        warehouse_id: group.warehouse_id || 0,
+        goods_info: [{ goods_id: group.goods_id, num: group.qty, goods_name: group.goods_name }],
+        remark: options.direction === 'deduct' ? '生产领料出库' : '生产入库',
+      })
+      const orderId = toNumber(addRes?.data?.id)
+      if (!orderId) throw new Error(`${group.goods_name}创建出入库单失败`)
+      await http.post(`${endpoint}/audit`, { id: orderId, status: 1 })
+      processed.push({ group, direction: options.direction })
       changedCount += 1
     }
   } catch (error) {
-    if (snapshots.length) await rollbackMaterialStockDelta(snapshots)
+    if (processed.length) await rollbackMaterialStockDelta(processed)
     throw error
   }
 
-  return { changedCount, snapshots }
+  return { changedCount, snapshots: processed as any }
 }
 
-export async function rollbackMaterialStockDelta(snapshots: MaterialStockSnapshot[]) {
-  for (const snapshot of snapshots || []) {
-    await http.post('/stock/StockAll/edit', { id: snapshot.id, qty: snapshot.qty })
+export async function rollbackMaterialStockDelta(snapshots: Array<{ group: StockGroup, direction: MaterialStockDirection }> | MaterialStockSnapshot[]) {
+  for (const item of snapshots || []) {
+    if ('group' in item) {
+      const reverseMode = item.direction === 'deduct' ? 'restore' : 'deduct'
+      const endpoint = reverseMode === 'deduct' ? '/stock/OtherOut' : '/stock/OtherIn'
+      try {
+        const addRes = await http.post(`${endpoint}/add`, {
+          warehouse_id: item.group.warehouse_id || 0,
+          goods_info: [{ goods_id: item.group.goods_id, num: item.group.qty, goods_name: item.group.goods_name }],
+          remark: '库存回滚',
+        })
+        if (addRes?.data?.id) await http.post(`${endpoint}/audit`, { id: addRes.data.id, status: 1 })
+      } catch { /* ignore rollback errors */ }
+    }
   }
 }

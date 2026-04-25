@@ -9,9 +9,15 @@
           <div class="ai-status">{{ isLoading ? '正在输入...' : '在线' }}</div>
         </div>
       </div>
-      <button class="ai-topbar-back" @click="router.back()" title="返回首页">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-      </button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="ai-topbar-clear" @click="clearMessages" title="清空对话">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          <span style="font-size:13px;">清空</span>
+        </button>
+        <button class="ai-topbar-back" @click="router.back()" title="返回首页">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+      </div>
     </div>
 
     <!-- 消息列表 -->
@@ -40,7 +46,7 @@
             v-for="tc in msg.toolCalls" :key="tc.id"
             :name="tc.name" :input="tc.input" :result="tc.result" :status="tc.status"
           />
-          <div class="ai-msg-content" v-html="renderMarkdown(msg.content)" />
+          <div class="ai-msg-content" v-html="renderMarkdown(msg.content)" @click="onMessageClick($event)" />
           <div v-if="msg.navRoute" class="ai-msg-nav">
             <el-button type="primary" size="small" @click="router.push(msg.navRoute!)">立即查看 →</el-button>
           </div>
@@ -132,7 +138,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, watch, onMounted, onActivated } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Cpu, User, Close, Picture, Microphone, Promotion } from '@element-plus/icons-vue'
 import http from '@/api/http'
@@ -140,6 +146,16 @@ import { useAuthStore } from '@/stores/auth'
 import AiToolCallCard from '@/components/ai/AiToolCallCard.vue'
 
 const router = useRouter()
+const route = useRoute()
+
+// 监听从消息列表页传来的清空参数
+watch(() => route.query.clear, (val) => {
+  if (val === '1') {
+    clearMessages()
+    // 清掉URL中的clear参数，避免重复触发
+    router.replace('/mobile/ai')
+  }
+})
 const authStore = useAuthStore()
 
 interface ToolCallState { id: string; name: string; input: any; result: any; status: 'running'|'success'|'error' }
@@ -155,11 +171,20 @@ interface ImageItem { previewUrl: string; data: string; mediaType: string }
 
 const HISTORY_KEY = 'erp_ai_chat_history'
 function loadHistory(): Message[] {
-  try { const r = localStorage.getItem(HISTORY_KEY); if (r) return JSON.parse(r) } catch {}
+  try {
+    const r = localStorage.getItem(HISTORY_KEY)
+    if (r) {
+      const msgs = JSON.parse(r) as Message[]
+      return msgs.filter(m => m.role === 'user' || (m.content && m.content.trim()))
+    }
+  } catch {}
   return []
 }
 function saveHistory(msgs: Message[]) {
-  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(msgs.slice(-100))) } catch {}
+  try {
+    const clean = msgs.filter(m => m.role === 'user' || (m.content && m.content.trim()))
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(clean.slice(-100)))
+  } catch {}
 }
 
 const messagesRef = ref<HTMLDivElement>()
@@ -171,7 +196,19 @@ const isLoading = ref(false)
 const pendingImages = ref<ImageItem[]>([])
 const previewImg = ref('')
 
-watch(messages, val => saveHistory(val), { deep: true })
+watch(messages, val => {
+  if (skipNextSave) return
+  saveHistory(val)
+}, { deep: true })
+
+let skipNextSave = false
+
+function clearMessages() {
+  skipNextSave = true
+  localStorage.removeItem(HISTORY_KEY)
+  messages.value = []
+  nextTick(() => { skipNextSave = false })
+}
 
 const quickPrompts = ['新增一个客户','本月销售总额','查询库存商品','录入采购订单','录入一笔预付款']
 
@@ -179,12 +216,36 @@ function getNow() { return new Date().toLocaleTimeString('zh-CN', { hour: '2-dig
 
 function renderMarkdown(text: string) {
   if (!text) return ''
+  // 渲染商品候选按钮 [[PICK:...]] — 兼容有无管道符两种格式
+  text = text.replace(/\[\[PICK:([^\]]+)\]\]/g, (_, content) => {
+    const parts = content.split('|')
+    const name = parts[0] || ''
+    const unit = parts[1] || ''
+    const price = parts[2] || ''
+    const id = parts[3] || ''
+    const label = unit ? `${name}（${unit}）` : name
+    return `<button class="goods-pick-btn" data-name="${name}" data-unit="${unit}" data-price="${price}" data-id="${id}">${label}</button>`
+  })
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`(.*?)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br>')
     .replace(/^- (.+)/gm, '• $1')
+}
+
+function onMessageClick(e: MouseEvent) {
+  const btn = (e.target as HTMLElement).closest('.goods-pick-btn') as HTMLElement | null
+  if (!btn) return
+  const name = btn.dataset.name || ''
+  const unit = btn.dataset.unit || ''
+  const price = btn.dataset.price || ''
+  const id = btn.dataset.id || ''
+  const priceText = price && Number(price) > 0 ? `单价¥${price}` : ''
+  const unitText = unit ? `/${unit}` : ''
+  const idText = id ? ` goods_id=${id}` : ''
+  inputText.value = `商品选「${name}${unitText}」${priceText}${idText}`
+  nextTick(() => sendMessage())
 }
 
 function scrollToBottom() {
@@ -194,7 +255,6 @@ function scrollToBottom() {
 onMounted(() => scrollToBottom())
 onActivated(() => scrollToBottom())
 
-function clearMessages() { messages.value = []; localStorage.removeItem(HISTORY_KEY) }
 
 function autoResize() {
   nextTick(() => {
@@ -458,6 +518,14 @@ async function fetchContextData(text: string): Promise<string> {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+.ai-topbar-clear {
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px 10px;
+  background: #f5f5f7; border: none; border-radius: 8px;
+  color: #86909c; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ai-topbar-clear:active { background: #e8e8e8; color: #f53f3f; }
 .ai-topbar-back {
   width: 34px; height: 34px;
   background: #f5f5f7; border: none; border-radius: 50%;
@@ -547,6 +615,8 @@ async function fetchContextData(text: string): Promise<string> {
 .ai-msg-content :deep(p) { margin: 4px 0; }
 .ai-msg-content :deep(ul), .ai-msg-content :deep(ol) { padding-left: 18px; margin: 4px 0; }
 .ai-msg-content :deep(code) { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.ai-msg-content :deep(.goods-pick-btn) { display: inline-block; margin: 3px 4px 3px 0; padding: 5px 12px; background: #e8f0fe; color: #1a56db; border: 1px solid #c3d4f8; border-radius: 16px; font-size: 13px; cursor: pointer; }
+.ai-msg-content :deep(.goods-pick-btn:active) { background: #c3d4f8; }
 .ai-msg-time { font-size: 10px; color: rgba(0,0,0,0.25); margin-top: 4px; text-align: right; }
 .ai-msg-user .ai-msg-time { color: rgba(255,255,255,0.5); }
 

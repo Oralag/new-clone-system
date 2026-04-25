@@ -278,6 +278,7 @@ import { getGoodsList, getBomList } from '@/api/goods'
 import { createCollectReceipt } from '@/api/finance'
 import http from '@/api/http'
 import GoodsSelect from '@/components/GoodsSelect.vue'
+import { stockEffect } from '@/utils/stockEffect'
 
 const router = useRouter()
 
@@ -578,19 +579,9 @@ async function submitQuickSale() {
     await http.post('/shop/ContractOrder/edit', { id: contractId, status: 4, order_sn: contractSn }).catch(() => {})
 
     // 5. 库存扣减
-    for (const item of qs.items) {
-      if (!item.goods_id || !item.num) continue
-      try {
-        const stockRes = await http.get('/stock/StockAll/index', {
-          params: { goods_id: item.goods_id, warehouse_id: qs.warehouse_id, list_rows: 10 }
-        })
-        const stock = (stockRes.data?.rows ?? [])[0]
-        if (stock) {
-          const newQty = Math.max(0, Number(stock.qty || 0) - Number(item.num))
-          await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-        }
-      } catch {}
-    }
+    try {
+      await stockEffect(qs.items, 'deduct', qs.warehouse_id, '一键销售出库')
+    } catch {}
 
     // 6. 收款单用 contractSn 关联（已在 step 4.5 设置）
 

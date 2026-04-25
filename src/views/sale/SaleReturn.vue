@@ -450,6 +450,7 @@ import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { stockEffect } from '@/utils/stockEffect'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -656,13 +657,29 @@ async function handleAudit(row: any, status: number) {
   try {
     await auditSaleReturn(row.id, status)
 
-    // 审核通过：退货=库存加回
+    // 审核通过：退货=库存加回 + 增加客户余额（退款）
     if (status === 1) {
       await handleReturnStockEffect(row, 'audit')
+      if (row.customer_id) {
+        try {
+          const res = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
+          const cur = Number(res.data?.balance || 0)
+          const amt = Number(row.total_amount || 0)
+          await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: cur + amt })
+        } catch (e: any) { console.warn('客户余额更新失败', e?.message) }
+      }
     }
-    // 反审核：撤销库存加回（重新扣减）
+    // 反审核：撤销库存加回 + 撤销客户余额增加
     if (status === 0) {
       await handleReturnStockEffect(row, 'reverse')
+      if (row.customer_id) {
+        try {
+          const res = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
+          const cur = Number(res.data?.balance || 0)
+          const amt = Number(row.total_amount || 0)
+          await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: cur - amt })
+        } catch (e: any) { console.warn('客户余额更新失败', e?.message) }
+      }
     }
 
     ElMessage.success(`${action}成功`)
@@ -676,20 +693,8 @@ async function handleAudit(row: any, status: number) {
 async function handleReturnStockEffect(row: any, type: 'audit' | 'reverse') {
   const items = parseItems(row.goods_info)
   try {
-    for (const item of items) {
-      if (!item.goods_id || !item.num) continue
-      const stockRes = await http.get('/stock/StockAll/index', {
-        params: { goods_id: item.goods_id, warehouse_id: row.warehouse_id, list_rows: 10 }
-      })
-      const stockRows: any[] = stockRes.data?.rows ?? []
-      const stock = stockRows[0]
-      if (stock) {
-        // 退货审核通过=库存加回(+num)；反审核=扣减(-num)
-        const delta = type === 'audit' ? Number(item.num) : -Number(item.num)
-        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
-        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-      }
-    }
+    // 退货审核通过=库存加回；反审核=扣减
+    await stockEffect(items, type === 'audit' ? 'restore' : 'deduct', row.warehouse_id, type === 'audit' ? '销售退货入库' : '销售退货反审核')
   } catch (e: any) {
     console.warn('销售退货库存变动失败', e?.message)
   }

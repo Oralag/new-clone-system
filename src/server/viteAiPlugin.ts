@@ -1,5 +1,4 @@
 import type { Plugin } from 'vite'
-import { GoogleGenAI, type Content } from '@google/genai'
 import { config as loadDotenv } from 'dotenv'
 import { resolve } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
@@ -11,6 +10,53 @@ import { adamTools } from './tools/adamTools'
 import { executeAdamTool } from './tools/adamExecutor'
 import { adamAgent } from './agents/adamOrchestrator'
 import { detectIntent, getSystemPrompt } from './agents/orchestrator'
+
+// ── Anthropic fetch helper ────────────────────────────────────────────────────
+function getAnthropicConfig() {
+  return {
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+    baseURL: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
+  }
+}
+
+function toAnthropicTools(tools: any[]) {
+  return tools.map((t: any) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.parameters || { type: 'object', properties: {} },
+  }))
+}
+
+async function anthropicCall(opts: {
+  model: string
+  system: string
+  messages: any[]
+  tools?: any[]
+  max_tokens?: number
+}): Promise<any> {
+  const { apiKey, baseURL } = getAnthropicConfig()
+  const response = await fetch(`${baseURL}/v1/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: opts.model,
+      max_tokens: opts.max_tokens ?? 4096,
+      system: opts.system,
+      tools: opts.tools,
+      messages: opts.messages,
+    }),
+  })
+  if (!response.ok) {
+    const errText = await response.text()
+    throw new Error(`Anthropic API 错误: ${response.status} ${errText}`)
+  }
+  return response.json()
+}
+
 
 // ── 通知队列（内存，dev环境用） ──────────────────────────────────────────────
 interface ScheduledNotification {
@@ -171,34 +217,30 @@ async function runScheduledTrigger(hour: number, apiKey: string) {
   }
 
   try {
-    const genAI = new GoogleGenAI({ apiKey })
-    const chat = genAI.chats.create({
-      model: 'gemini-2.0-flash',
-      config: {
-        systemInstruction: getSystemPrompt('query'),
-        tools: [{ functionDeclarations: allTools }],
-      },
-    })
-
+    const anthropicTools = toAnthropicTools(allTools)
+    let currentMessages: any[] = [{ role: 'user', content: prompts[type] }]
     let content = ''
-    let currentParts: any[] = [{ text: prompts[type] }]
 
     for (let i = 0; i < 3; i++) {
-      const response = await chat.sendMessage({ message: currentParts })
-      const textParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
-      for (const part of textParts) {
-        if (part.text) content += part.text
+      const data = await anthropicCall({
+        model: 'claude-haiku-4-5-20251001',
+        system: getSystemPrompt('query'),
+        tools: anthropicTools,
+        messages: currentMessages,
+      })
+      const blocks = data.content || []
+      for (const block of blocks) {
+        if (block.type === 'text' && block.text) content += block.text
       }
-      const fnParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
-      if (fnParts.length === 0) break
-      const toolResultParts: any[] = []
-      for (const part of fnParts) {
-        const fc = part.functionCall
-        // 定时任务用空token，只读不写
-        const result = await executeTool(fc.name, fc.args as Record<string, any>, '')
-        toolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
+      const toolUses = blocks.filter((b: any) => b.type === 'tool_use')
+      if (toolUses.length === 0 || data.stop_reason === 'end_turn') break
+      currentMessages.push({ role: 'assistant', content: blocks })
+      const toolResults: any[] = []
+      for (const toolUse of toolUses) {
+        const result = await executeTool(toolUse.name, toolUse.input || {}, '')
+        toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
       }
-      currentParts = toolResultParts
+      currentMessages.push({ role: 'user', content: toolResults })
     }
 
     if (content) {
@@ -246,9 +288,9 @@ export function aiChatPlugin(): Plugin {
       loadDotenv({ path: resolve(process.cwd(), '.env') })
 
       // ── 启动定时调度器 ──────────────────────────────────────────────────────
-      const geminiKey = process.env.GEMINI_API_KEY
-      if (geminiKey) {
-        startScheduler(geminiKey)
+      const anthropicKey = process.env.ANTHROPIC_API_KEY
+      if (anthropicKey) {
+        startScheduler(anthropicKey)
         console.log('[scheduler] 早中晚定时触发已启动 (09:00 / 13:00 / 18:00)')
       }
 
@@ -272,8 +314,8 @@ export function aiChatPlugin(): Plugin {
           const chunks: Buffer[] = []
           for await (const chunk of req) chunks.push(chunk)
           const { hour } = JSON.parse(Buffer.concat(chunks).toString())
-          const key = process.env.GEMINI_API_KEY
-          if (!key) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY' })); return }
+          const key = process.env.ANTHROPIC_API_KEY
+          if (!key) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
           runScheduledTrigger(hour ?? new Date().getHours(), key)
           res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
           res.end(JSON.stringify({ ok: true, message: '已触发，稍后刷新通知' }))
@@ -513,14 +555,12 @@ export function aiChatPlugin(): Plugin {
         const { messages, images, userMemory } = JSON.parse(Buffer.concat(body).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
-        const apiKey = process.env.GEMINI_API_KEY
+        const { apiKey, baseURL } = getAnthropicConfig()
         if (!apiKey) {
           res.writeHead(500, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY，请在 .env 文件中设置' }))
+          res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }))
           return
         }
-
-        const genAI = new GoogleGenAI({ apiKey })
 
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
@@ -537,60 +577,49 @@ export function aiChatPlugin(): Plugin {
           let systemPrompt = getSystemPrompt(intent)
           if (userMemory) systemPrompt += '\n\n' + userMemory
 
-          // Convert messages to Gemini Content format
-          const history: Content[] = messages.slice(0, -1).map((m: any) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }],
-          }))
-
-          // Build last user message parts (may include images)
+          // Build Anthropic messages — inject images into last user message if present
           const lastMsg = messages[messages.length - 1]
-          const lastParts: any[] = []
-          if (images?.length > 0) {
-            for (const img of images) {
-              lastParts.push({ inlineData: { mimeType: img.mediaType, data: img.data } })
+          const anthropicMessages = messages.map((m: any, idx: number) => {
+            const isLastUser = m.role === 'user' && idx === messages.length - 1
+            if (isLastUser && images?.length > 0) {
+              const parts: any[] = images.map((img: any) => ({
+                type: 'image',
+                source: { type: 'base64', media_type: img.mediaType, data: img.data },
+              }))
+              parts.push({ type: 'text', text: m.content || '请识别这张单据图片并帮我录入系统。' })
+              return { role: 'user', content: parts }
             }
-          }
-          lastParts.push({ text: lastMsg?.content || '请识别这张单据图片并帮我录入系统。' })
-
-          const chat = genAI.chats.create({
-            model: 'gemini-2.0-flash',
-            config: {
-              systemInstruction: systemPrompt,
-              tools: [{ functionDeclarations: allTools }],
-            },
-            history,
+            return { role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }
           })
 
-          // Agentic loop — up to 5 iterations
-          let currentParts: any[] = lastParts
+          const anthropicTools = toAnthropicTools(allTools)
+          let currentMessages = [...anthropicMessages]
+
           for (let i = 0; i < 5; i++) {
-            const response = await chat.sendMessage({ message: currentParts })
+            const data = await anthropicCall({
+              model: 'claude-haiku-4-5-20251001',
+              system: systemPrompt,
+              tools: anthropicTools,
+              messages: currentMessages,
+            })
+            const blocks = data.content || []
 
-            // Stream text parts
-            const textParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
-            for (const part of textParts) {
-              if (part.text) send({ type: 'text', text: part.text })
+            for (const block of blocks) {
+              if (block.type === 'text' && block.text) send({ type: 'text', text: block.text })
             }
 
-            // Check for function calls
-            const fnParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
-            if (fnParts.length === 0) break
+            const toolUses = blocks.filter((b: any) => b.type === 'tool_use')
+            if (toolUses.length === 0 || data.stop_reason === 'end_turn') break
 
-            // Execute tool calls
-            const toolResultParts: any[] = []
-            for (const part of fnParts) {
-              const fc = part.functionCall
-              const callId = fc.id || fc.name
-              send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
-              const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken)
-              send({ type: 'tool_result', id: callId, name: fc.name, result })
-              toolResultParts.push({
-                functionResponse: { name: fc.name, response: { result } },
-              })
+            currentMessages.push({ role: 'assistant', content: blocks })
+            const toolResults: any[] = []
+            for (const toolUse of toolUses) {
+              send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
+              const result = await executeTool(toolUse.name, toolUse.input || {}, erpToken)
+              send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
+              toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
             }
-
-            currentParts = toolResultParts
+            currentMessages.push({ role: 'user', content: toolResults })
           }
 
           res.write('data: [DONE]\n\n')
@@ -613,16 +642,13 @@ export function aiChatPlugin(): Plugin {
         for await (const chunk of req as any) body.push(chunk)
         const { conversationSummary } = JSON.parse(Buffer.concat(body).toString())
 
-        const apiKey = process.env.GEMINI_API_KEY
-        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY' })); return }
+        const { apiKey } = getAnthropicConfig()
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
 
         try {
-          const genAI = new GoogleGenAI({ apiKey })
-          const result = await genAI.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: [{ role: 'user', parts: [{ text: conversationSummary }] }],
-            config: {
-              systemInstruction: `你是偏好提取引擎。分析以下ERP对话，提取用户的使用偏好。
+          const data = await anthropicCall({
+            model: 'claude-haiku-4-5-20251001',
+            system: `你是偏好提取引擎。分析以下ERP对话，提取用户的使用偏好。
 只输出纯JSON（不要markdown代码块），格式如下（省略无法判断的字段）：
 {
   "nickName": "用户希望被称呼的方式",
@@ -634,11 +660,11 @@ export function aiChatPlugin(): Plugin {
   "language": "简洁或详细"
 }
 不要猜测，只提取对话中明确体现的偏好。没有体现的字段不要输出。`,
-            },
+            messages: [{ role: 'user', content: conversationSummary }],
+            max_tokens: 512,
           })
-
-          const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
-          const cleaned = text.replace(/```json?\s*/g, '').replace(/```\s*/g, '').trim()
+          const text = data.content?.[0]?.text || '{}'
+          const cleaned = text.replace(/\`\`\`json?\s*/g, '').replace(/\`\`\`\s*/g, '').trim()
           const preferences = JSON.parse(cleaned)
           res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
           res.end(JSON.stringify({ preferences }))
@@ -664,10 +690,8 @@ export function aiChatPlugin(): Plugin {
         const agent = getAgent(agentId)
         if (!agent) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: `Unknown agent: ${agentId}` })); return }
 
-        const apiKey = process.env.GEMINI_API_KEY
-        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY' })); return }
-
-        const genAI = new GoogleGenAI({ apiKey })
+        const { apiKey } = getAnthropicConfig()
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
         const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
@@ -677,49 +701,43 @@ export function aiChatPlugin(): Plugin {
             ? `${agent.systemPrompt}\n\n---\n【当前品牌信息】\n${brandContext}`
             : agent.systemPrompt
 
-          const history: Content[] = messages.slice(0, -1).map((m: any) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }],
+          const anthropicTools = toAnthropicTools(allTools)
+          const anthropicMessages = messages.map((m: any) => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content,
           }))
-
-          const chat = genAI.chats.create({
-            model: 'gemini-2.0-flash',
-            config: { systemInstruction, tools: [{ functionDeclarations: allTools }] },
-            history,
-          })
-
-          const lastMsg = messages[messages.length - 1]
-          let currentParts: any[] = [{ text: lastMsg?.content || '' }]
+          let currentMessages = [...anthropicMessages]
 
           for (let i = 0; i < 5; i++) {
-            const response = await chat.sendMessage({ message: currentParts })
-            const textParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
-            for (const part of textParts) {
-              if (part.text) send({ type: 'text', text: part.text })
+            const data = await anthropicCall({
+              model: 'claude-haiku-4-5-20251001',
+              system: systemInstruction,
+              tools: anthropicTools,
+              messages: currentMessages,
+            })
+            const blocks = data.content || []
+            for (const block of blocks) {
+              if (block.type === 'text' && block.text) send({ type: 'text', text: block.text })
             }
-            const fnParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
-            if (fnParts.length === 0) break
-            const toolResultParts: any[] = []
-            for (const part of fnParts) {
-              const fc = part.functionCall
-              const callId = fc.id || fc.name
-              send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
-              // render_video / render_image take 1-3 minutes — send progress hint
-              if (fc.name === 'render_video') {
+            const toolUses = blocks.filter((b: any) => b.type === 'tool_use')
+            if (toolUses.length === 0 || data.stop_reason === 'end_turn') break
+            currentMessages.push({ role: 'assistant', content: blocks })
+            const toolResults: any[] = []
+            for (const toolUse of toolUses) {
+              send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
+              if (toolUse.name === 'render_video') {
                 send({ type: 'text', text: '\n⏳ 视频渲染中，通常需要 1~3 分钟，请稍候...\n' })
-              } else if (fc.name === 'render_image') {
+              } else if (toolUse.name === 'render_image') {
                 send({ type: 'text', text: '\n⏳ 图片渲染中，请稍候...\n' })
               }
-              const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken, {
+              const result = await executeTool(toolUse.name, toolUse.input || {}, erpToken, {
                 flowResults: flowResults || [],
-                onPublished: (index: number) => {
-                  send({ type: 'published', index })
-                },
+                onPublished: (index: number) => { send({ type: 'published', index }) },
               })
-              send({ type: 'tool_result', id: callId, name: fc.name, result })
-              toolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
+              send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
+              toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
             }
-            currentParts = toolResultParts
+            currentMessages.push({ role: 'user', content: toolResults })
           }
           res.write('data: [DONE]\n\n')
         } catch (e: any) {
@@ -742,10 +760,8 @@ export function aiChatPlugin(): Plugin {
         const { messages } = JSON.parse(Buffer.concat(chunks).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
-        const apiKey = process.env.GEMINI_API_KEY
-        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 GEMINI_API_KEY' })); return }
-
-        const genAI = new GoogleGenAI({ apiKey })
+        const { apiKey, baseURL } = getAnthropicConfig()
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
         const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
@@ -764,33 +780,31 @@ export function aiChatPlugin(): Plugin {
             : subAgent.systemPrompt
 
           let agentOutput = ''
-          const subChat = genAI.chats.create({
-            model: 'gemini-2.0-flash',
-            config: { systemInstruction: systemWithMemory, tools: [{ functionDeclarations: allTools }] },
-          })
-          let subParts: any[] = [{ text: taskPrompt }]
+          const subMessages: any[] = [{ role: 'user', content: taskPrompt }]
 
           for (let i = 0; i < 3; i++) {
-            const subResp = await subChat.sendMessage({ message: subParts })
-            const subTextParts = subResp.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
-            for (const part of subTextParts) {
-              if (part.text) {
-                agentOutput += part.text
-                send({ type: 'agent_thinking', agentId: subAgent.id, agentName: subAgent.name, text: part.text })
-              }
+            const subResp = await anthropicCall({
+              model: 'claude-haiku-4-5-20251001',
+              system: systemWithMemory,
+              messages: subMessages,
+              tools: toAnthropicTools(allTools),
+            })
+            const textBlocks = subResp.content?.filter((b: any) => b.type === 'text') ?? []
+            for (const b of textBlocks) {
+              agentOutput += b.text
+              send({ type: 'agent_thinking', agentId: subAgent.id, agentName: subAgent.name, text: b.text })
             }
-            const subFnParts = subResp.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
-            if (subFnParts.length === 0) break
-            const subToolResultParts: any[] = []
-            for (const part of subFnParts) {
-              const fc = part.functionCall
-              const callId = fc.id || fc.name
-              send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
-              const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken)
-              send({ type: 'tool_result', id: callId, name: fc.name, result })
-              subToolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
+            const toolBlocks = subResp.content?.filter((b: any) => b.type === 'tool_use') ?? []
+            if (toolBlocks.length === 0) break
+            subMessages.push({ role: 'assistant', content: subResp.content })
+            const toolResults: any[] = []
+            for (const tb of toolBlocks) {
+              send({ type: 'tool_start', id: tb.id, name: tb.name, input: tb.input })
+              const result = await executeTool(tb.name, tb.input as Record<string, any>, erpToken)
+              send({ type: 'tool_result', id: tb.id, name: tb.name, result })
+              toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: JSON.stringify(result) })
             }
-            subParts = subToolResultParts
+            subMessages.push({ role: 'user', content: toolResults })
           }
 
           // 执行完成后，把本次任务的关键产出存为策略记忆
@@ -806,44 +820,38 @@ export function aiChatPlugin(): Plugin {
         try {
           const captain = AGENTS.captain
 
-          const captainHistory: Content[] = messages.slice(0, -1).map((m: any) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }],
+          const captainMessages: any[] = messages.map((m: any) => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content,
           }))
-
-          const captainChat = genAI.chats.create({
-            model: 'gemini-2.0-flash',
-            config: { systemInstruction: captain.systemPrompt, tools: [{ functionDeclarations: allTools }] },
-            history: captainHistory,
-          })
 
           // Phase 1: Captain 分析任务
           send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '' })
           let captainResponse = ''
-          const lastMsg = messages[messages.length - 1]
-          let currentParts: any[] = [{ text: lastMsg?.content || '' }]
 
           for (let i = 0; i < 3; i++) {
-            const response = await captainChat.sendMessage({ message: currentParts })
-            const textParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
-            for (const part of textParts) {
-              if (part.text) {
-                captainResponse += part.text
-                send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: part.text })
-              }
+            const response = await anthropicCall({
+              model: 'claude-sonnet-4-6',
+              system: captain.systemPrompt,
+              messages: captainMessages,
+              tools: toAnthropicTools(allTools),
+            })
+            const textBlocks = response.content?.filter((b: any) => b.type === 'text') ?? []
+            for (const b of textBlocks) {
+              captainResponse += b.text
+              send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: b.text })
             }
-            const fnParts = response.candidates?.[0]?.content?.parts?.filter((p: any) => p.functionCall) ?? []
-            if (fnParts.length === 0) break
-            const toolResultParts: any[] = []
-            for (const part of fnParts) {
-              const fc = part.functionCall
-              const callId = fc.id || fc.name
-              send({ type: 'tool_start', id: callId, name: fc.name, input: fc.args })
-              const result = await executeTool(fc.name, fc.args as Record<string, any>, erpToken)
-              send({ type: 'tool_result', id: callId, name: fc.name, result })
-              toolResultParts.push({ functionResponse: { name: fc.name, response: { result } } })
+            const toolBlocks = response.content?.filter((b: any) => b.type === 'tool_use') ?? []
+            if (toolBlocks.length === 0) break
+            captainMessages.push({ role: 'assistant', content: response.content })
+            const toolResults: any[] = []
+            for (const tb of toolBlocks) {
+              send({ type: 'tool_start', id: tb.id, name: tb.name, input: tb.input })
+              const result = await executeTool(tb.name, tb.input as Record<string, any>, erpToken)
+              send({ type: 'tool_result', id: tb.id, name: tb.name, result })
+              toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: JSON.stringify(result) })
             }
-            currentParts = toolResultParts
+            captainMessages.push({ role: 'user', content: toolResults })
           }
 
           // Phase 2: 解析调度指令（支持JSON流水线 + 旧格式兼容）
@@ -952,14 +960,13 @@ export function aiChatPlugin(): Plugin {
             const summaryPrompt = `原始指令：${messages[messages.length - 1]?.content}\n\n各团队成员已完成任务，汇总如下：\n\n${summaryContext}\n\n请以Captain身份，简洁有力地综合以上成果，直接呈现给决策者。不要逐个复述，给出整体判断和可执行建议。`
             send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '\n\n---\n**📋 Captain 综合汇报**\n\n' })
 
-            const summaryChat = genAI.chats.create({
-              model: 'gemini-2.0-flash',
-              config: { systemInstruction: AGENTS.captain.systemPrompt },
+            const summaryResp = await anthropicCall({
+              model: 'claude-sonnet-4-6',
+              system: AGENTS.captain.systemPrompt,
+              messages: [{ role: 'user', content: summaryPrompt }],
             })
-            const summaryResp = await summaryChat.sendMessage({ message: summaryPrompt })
-            const summaryTextParts = summaryResp.candidates?.[0]?.content?.parts?.filter((p: any) => p.text) ?? []
-            for (const part of summaryTextParts) {
-              if (part.text) send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: part.text })
+            for (const b of summaryResp.content ?? []) {
+              if (b.type === 'text') send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: b.text })
             }
           }
 

@@ -500,6 +500,7 @@ import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { stockEffect } from '@/utils/stockEffect'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -962,20 +963,7 @@ async function removeAutoSaleOutReceipts(receipts: any[]) {
 async function handleSaleOutStockEffect(row: any, type: 'audit' | 'reverse') {
   const items = parseItems(row.goods_info)
   try {
-    for (const item of items) {
-      if (!item.goods_id || !item.num) continue
-      const stockRes = await http.get('/stock/StockAll/index', {
-        params: { goods_id: item.goods_id, warehouse_id: row.warehouse_id, list_rows: 10 }
-      })
-      const stockRows: any[] = stockRes.data?.rows ?? []
-      const stock = stockRows[0]
-      if (stock) {
-        // 出库审核通过=库存扣减(-num)；反审核=库存加回(+num)
-        const delta = type === 'audit' ? -Number(item.num) : Number(item.num)
-        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
-        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-      }
-    }
+    await stockEffect(items, type === 'audit' ? 'deduct' : 'restore', row.warehouse_id, type === 'audit' ? '销售出库' : '销售出库反审核')
   } catch (e: any) {
     console.warn('销售出库库存变动失败', e?.message)
   }

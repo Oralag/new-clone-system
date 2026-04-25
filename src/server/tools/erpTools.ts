@@ -1,6 +1,5 @@
-import type { FunctionDeclaration } from '@google/genai'
-
-export const queryTools: FunctionDeclaration[] = [
+// Tool definitions — Anthropic input_schema format
+export const queryTools: any[] = [
   {
     name: 'query_customers',
     description: '查询客户列表',
@@ -131,7 +130,7 @@ export const queryTools: FunctionDeclaration[] = [
   },
 ]
 
-export const createTools: FunctionDeclaration[] = [
+export const createTools: any[] = [
   {
     name: 'create_customer',
     description: '新增客户',
@@ -189,6 +188,7 @@ export const createTools: FunctionDeclaration[] = [
         total_amount: { type: 'number', description: '金额' },
         admin_name: { type: 'string', description: '经办人/业务员姓名' },
         remark: { type: 'string', description: '备注' },
+        auto_audit: { type: 'boolean', description: '是否自动审核（默认false，审核后触发库存和财务）' },
         items: {
           type: 'array',
           description: '商品明细列表',
@@ -216,6 +216,7 @@ export const createTools: FunctionDeclaration[] = [
         total_amount: { type: 'number', description: '金额' },
         admin_name: { type: 'string', description: '经办人/采购人姓名' },
         remark: { type: 'string', description: '备注' },
+        auto_audit: { type: 'boolean', description: '是否自动审核（默认false，审核后触发入库和财务）' },
         items: {
           type: 'array',
           description: '商品明细列表',
@@ -379,7 +380,7 @@ export const createTools: FunctionDeclaration[] = [
   },
 ]
 
-export const navigateTools: FunctionDeclaration[] = [
+export const navigateTools: any[] = [
   {
     name: 'navigate_to',
     description: '跳转到ERP系统的指定页面',
@@ -393,7 +394,7 @@ export const navigateTools: FunctionDeclaration[] = [
   },
 ]
 
-export const deleteTools: FunctionDeclaration[] = [
+export const deleteTools: any[] = [
   {
     name: 'delete_purchase_order',
     description: '删除采购订单（需先用 query_purchases 查到订单ID）',
@@ -495,7 +496,7 @@ export const deleteTools: FunctionDeclaration[] = [
   },
 ]
 
-export const editTools: FunctionDeclaration[] = [
+export const editTools: any[] = [
   {
     name: 'update_goods',
     description: '编辑商品信息（需先用 query_goods 查到商品ID）',
@@ -584,7 +585,7 @@ export const editTools: FunctionDeclaration[] = [
   },
 ]
 
-export const searchTools: FunctionDeclaration[] = [
+export const searchTools: any[] = [
   {
     name: 'web_search',
     description: '联网搜索最新信息，包括新闻、市场行情、商品价格、行业动态、政策法规等实时数据',
@@ -613,7 +614,7 @@ export const searchTools: FunctionDeclaration[] = [
   },
 ]
 
-export const imageTools: FunctionDeclaration[] = [
+export const imageTools: any[] = [
   {
     name: 'render_image',
     description: '将 Remotion Still TSX 代码渲染成 PNG 图片，在服务器端执行渲染并返回可显示的图片。当你写完海报/Banner/社媒图代码后，调用此工具直接生成图片文件，无需用户手动执行命令。',
@@ -631,7 +632,7 @@ export const imageTools: FunctionDeclaration[] = [
   },
 ]
 
-export const videoRenderTools: FunctionDeclaration[] = [
+export const videoRenderTools: any[] = [
   {
     name: 'render_video',
     description: '将 Remotion TSX 代码渲染成 MP4 视频，在服务器端执行渲染并返回可播放视频。当你写完视频代码后，调用此工具直接生成视频文件，无需用户手动执行命令。',
@@ -650,7 +651,7 @@ export const videoRenderTools: FunctionDeclaration[] = [
   },
 ]
 
-export const contentTools: FunctionDeclaration[] = [
+export const contentTools: any[] = [
   {
     name: 'record_content_performance',
     description: '记录内容发布后的效果数据，用于分析哪类内容效果最好，帮助优化后续创作方向',
@@ -696,7 +697,7 @@ export const contentTools: FunctionDeclaration[] = [
   },
 ]
 
-export const publishTools: FunctionDeclaration[] = [
+export const publishTools: any[] = [
   {
     name: 'get_publish_queue',
     description: '获取当前发布队列（待发布内容列表）。Nova 每次对话开始时应主动调用此工具，了解有哪些内容等待发布。返回内容的索引、标题、平台、类型和正文预览。',
@@ -736,7 +737,7 @@ export const publishTools: FunctionDeclaration[] = [
   },
 ]
 
-export const volcengineTools: FunctionDeclaration[] = [
+export const volcengineTools: any[] = [
   {
     name: 'generate_image_doubao',
     description: '使用豆包 Seedream 模型生成高质量图片，适合小红书封面图、产品图、场景图。比 generate_image 质量更好，优先使用此工具生成图片。',
@@ -796,4 +797,4 @@ export const volcengineTools: FunctionDeclaration[] = [
   },
 ]
 
-export const allTools: FunctionDeclaration[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools, ...publishTools, ...volcengineTools]
+export const allTools: any[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools, ...publishTools, ...volcengineTools]

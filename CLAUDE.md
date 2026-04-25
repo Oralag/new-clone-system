@@ -212,3 +212,4 @@ npm run deploy
 - [2026-04-12] 做调拨管理没有先访问原网站对照 → **铁律第二条：修改或新增任何功能前，先在原网站（https://saas.mzth.cn/admin/）查看参考逻辑和字段，再在我们自己的网站（nomaderp.pages.dev）实际操作一遍确认现状，然后再动手开发**
 
 - [2026-04-17] 附加费用付款同时调用 createPayReceipt + createExpense 导致流水重复 → 附加费用付款只调用 createPayReceipt（FK单），禁止再调用 createExpense；两个函数都调用会在资金流水明细里产生两条记录
+- [2026-04-25] 反审核用 OtherOut 抵消库存，流水出现两条脏记录 → **铁律：反审核后库存流水里不可以有任何记录**；反审核 = 找到审核时创建的原始单据直接删除，流水自然清空；禁止用 OtherOut/OtherIn 创建反向单来抵消

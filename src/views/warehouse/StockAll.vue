@@ -1124,10 +1124,12 @@ async function loadActivityMaps() {
     }
     otherInCountMap.value = oiMap
 
-    // Other Out (其他出库)
+    // Other Out (其他出库) — 跳过为零售/销售出库单创建的 OtherOut（对应单据已在各自流水中计入）
     const ooMap: Record<number, number> = {}
     for (const r of otherOutRows) {
         if (Number(r.status) !== 1) continue
+        const _rem = String(r.remark || '')
+        if (_rem.startsWith('零售') || _rem.startsWith('销售出库')) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThis = new Set<number>()
@@ -1268,7 +1270,7 @@ async function openFlowDialog(goods: any) {
               _qty: Number(item.num || 0),
               _unit: item.unit_name || '',
               _price: Number(item.price || 0),
-              _date: r.in_date || r.create_time || '',
+              _date: r.created_at || r.create_time || r.in_date || '',
               _partner: r.supplier_name || '',
             })
           }
@@ -1291,7 +1293,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.return_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.return_date || r.create_time || '',
+              _date: r.created_at || r.create_time || r.return_date || '',
               _partner: r.supplier_name || '',
             })
           }
@@ -1314,7 +1316,7 @@ async function openFlowDialog(goods: any) {
               _sn: m ? m[1] : (r.order_sn || r.order_no || ''),
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.out_date || r.create_time || '',
+              _date: r.created_at || r.create_time || r.out_date || '',
               _partner: r.customer_name || '',
             })
           }
@@ -1336,7 +1338,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.order_date || r.create_time || '',
+              _date: r.created_at || r.create_time || r.order_date || '',
               _partner: r.member_name || '散客',
             })
           }
@@ -1358,16 +1360,18 @@ async function openFlowDialog(goods: any) {
               _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.in_date || r.created_at || '',
+              _date: r.created_at || r.in_date || '',
               _partner: r.remark || '',
             })
           }
         } catch { /* ignore */ }
     }
 
-    // 其他出库
+    // 其他出库 — 跳过为零售/销售出库单创建的 OtherOut（对应单据已在各自流水中显示）
     for (const r of otherOutAllRows) {
         if (Number(r.status) !== 1) continue
+        const _rem = String(r.remark || '')
+        if (_rem.startsWith('零售') || _rem.startsWith('销售出库')) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -1380,7 +1384,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.out_date || r.created_at || '',
+              _date: r.created_at || r.out_date || '',
               _partner: r.remark || '',
             })
           }
@@ -1396,7 +1400,7 @@ async function openFlowDialog(goods: any) {
             _sn: r.inhouse_no || r.order_sn || '',
             _qty: Number(r.inhouse_qty || r.qty || 0),
             _price: 0,
-            _date: r.inhouse_date || r.create_time || '',
+            _date: r.created_at || r.create_time || r.inhouse_date || '',
             _partner: r.remark?.replace(/\n【SYS_PI_META】.*/s, '') || '',
           })
         }
@@ -1417,7 +1421,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.order_sn || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.out_price || 0),
-              _date: r.pick_date || r.created_at || '',
+              _date: r.created_at || r.pick_date || '',
               _partner: r.remark || '',
             })
           }

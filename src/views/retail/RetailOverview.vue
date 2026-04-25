@@ -100,7 +100,7 @@
             </el-table-column>
             <el-table-column label="支付方式" align="center" width="90">
               <template #default="{ row }">
-                <el-tag size="small" :type="payTagType(row.pay_method)">{{ payLabel(row.pay_method) }}</el-tag>
+                <el-tag size="small" :type="payTagType(row.pay_type)">{{ payLabel(row.pay_type) }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
@@ -176,7 +176,7 @@
           <div class="detail-kv"><span class="detail-k">单号</span><span class="detail-v">{{ detailRow.order_sn || `LS${(detailRow.order_date || detailRow.created_at || '').slice(0, 10).replace(/-/g, '')}${String(detailRow.id).padStart(3,'0')}` }}</span></div>
           <div class="detail-kv"><span class="detail-k">日期</span><span class="detail-v">{{ fmtDt(detailRow.order_date || detailRow.create_time) }}</span></div>
           <div class="detail-kv"><span class="detail-k">会员</span><span class="detail-v">{{ detailRow.member_name || '散客' }}</span></div>
-          <div class="detail-kv"><span class="detail-k">支付方式</span><span class="detail-v">{{ payLabel(detailRow.pay_method) }}</span></div>
+          <div class="detail-kv"><span class="detail-k">支付方式</span><span class="detail-v">{{ payLabel(detailRow.pay_type) }}</span></div>
         </div>
         <el-table :data="detailGoods" size="small" border style="margin:12px 0">
           <el-table-column prop="goods_name" label="商品" min-width="140" show-overflow-tooltip />
@@ -281,7 +281,7 @@ const kpi = computed(() => {
       const pay = Number(o.pay_amount || 0)
       revenue += pay
       orderCount++
-      const pm = o.pay_method || 'cash'
+      const pm = o.pay_type || 'cash'
       payAmountMap[pm] = (payAmountMap[pm] || 0) + pay
       payCountMap[pm] = (payCountMap[pm] || 0) + 1
       if (o.member_id && o.member_id !== 0) memberRevenue += pay

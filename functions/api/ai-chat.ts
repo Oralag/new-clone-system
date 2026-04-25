@@ -46,7 +46,7 @@ async function erpPost(path: string, body: Record<string, any>, token: string) {
 }
 
 // 过滤掉包装/原材料类商品
-const PACKAGING_KEYWORDS = ['袋', '盒装', '标签', '不干胶', '塑膜', '专用', '包装', '纸箱', '封口', '捆', '膜']
+const PACKAGING_KEYWORDS = ['盒装', '标签', '不干胶', '塑膜', '专用', '包装', '纸箱', '封口', '捆', '膜']
 function isPackagingGoods(name: string): boolean {
   return PACKAGING_KEYWORDS.some(kw => name.includes(kw)) && !name.includes('成品')
 }
@@ -243,16 +243,33 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         // 自动根据 goods_name 查找 goods_id，序列化为 goods_info
         const saleItems = Array.isArray(input.items) ? input.items : []
         const resolvedSaleItems = await resolveGoodsIds(saleItems, token)
+        // 始终按明细重新计算合计
+        const calcSaleTotal = resolvedSaleItems.reduce((s: number, i: any) => s + (Number(i.num) || 0) * (Number(i.price) || 0), 0)
         const salePayload: Record<string, any> = {
           customer_id: input.customer_id,
           customer_name: input.customer_name,
-          total_amount: input.total_amount,
+          total_amount: calcSaleTotal,
+          pay_amount: input.pay_amount || 0,
+          fund_id: input.fund_id || 0,
+          fund_name: input.fund_name || '',
           admin_name: input.admin_name || '',
           remark: input.remark || '',
           goods_info: JSON.stringify(resolvedSaleItems),
         }
         const res: any = await erpPost('/shop/ContractOrder/add', salePayload, token)
-        result = res?.code === 1 ? `销售订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        if (res?.code !== 1) { result = `创建失败：${res?.msg || JSON.stringify(res)}`; break }
+        const orderId = res?.data?.id
+        const orderSn = res?.data?.order_sn || '已生成'
+        if (input.audit && orderId) {
+          try {
+            await erpPost('/shop/ContractOrder/audit', { id: orderId, status: 1 }, token)
+            result = `销售订单创建并审核成功！单号: ${orderSn}，合计 ¥${calcSaleTotal.toFixed(2)}`
+          } catch {
+            result = `销售订单创建成功！单号: ${orderSn}，合计 ¥${calcSaleTotal.toFixed(2)}（审核失败，请手动审核）`
+          }
+        } else {
+          result = `销售订单创建成功！单号: ${orderSn}，合计 ¥${calcSaleTotal.toFixed(2)}，状态: 待审核`
+        }
         break
       }
       case 'create_procure_order': {
@@ -265,19 +282,47 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
             if (matched) { input.supplier_id = matched.id; input.supplier_name = matched.name }
           } catch { /* ignore */ }
         }
+        // 自动获取默认仓库（第一个仓库）
+        if (!input.warehouse_id) {
+          try {
+            const whRes: any = await erpGet('/stock/WarehouseName/index', { list_rows: 1 }, token)
+            const wh = whRes?.data?.rows?.[0]
+            if (wh) { input.warehouse_id = wh.id; input.warehouse_name = wh.name }
+          } catch { /* ignore */ }
+        }
         // 自动根据 goods_name 查找 goods_id，序列化为 goods_info
         const procureItems = Array.isArray(input.items) ? input.items : []
         const resolvedProcureItems = await resolveGoodsIds(procureItems, token)
+        // 始终按明细重新计算合计，不信任 AI 传来的 total_amount
+        const calcTotal = resolvedProcureItems.reduce((s: number, i: any) => s + (Number(i.num) || 0) * (Number(i.price) || 0), 0)
         const procurePayload: Record<string, any> = {
           supplier_id: input.supplier_id,
           supplier_name: input.supplier_name,
-          total_amount: input.total_amount,
+          warehouse_id: input.warehouse_id || 0,
+          warehouse_name: input.warehouse_name || '',
+          total_amount: calcTotal,
+          pay_amount: input.pay_amount || 0,
+          fund_id: input.fund_id || 0,
+          fund_name: input.fund_name || '',
           admin_name: input.admin_name || '',
           remark: input.remark || '',
           goods_info: JSON.stringify(resolvedProcureItems),
         }
         const res: any = await erpPost('/stock/PurchaseOrder/add', procurePayload, token)
-        result = res?.code === 1 ? `采购订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        if (res?.code !== 1) { result = `创建失败：${res?.msg || JSON.stringify(res)}`; break }
+        const orderId = res?.data?.id
+        const orderSn = res?.data?.order_sn || '已生成'
+        // 如果用户要求审核，自动审核
+        if (input.audit && orderId) {
+          try {
+            await erpPost('/stock/PurchaseOrder/audit', { id: orderId, status: 1 }, token)
+            result = `采购订单创建并审核成功！单号: ${orderSn}，合计 ¥${calcTotal.toFixed(2)}，仓库: ${input.warehouse_name || '默认仓库'}`
+          } catch {
+            result = `采购订单创建成功！单号: ${orderSn}，合计 ¥${calcTotal.toFixed(2)}（审核失败，请手动审核）`
+          }
+        } else {
+          result = `采购订单创建成功！单号: ${orderSn}，合计 ¥${calcTotal.toFixed(2)}，仓库: ${input.warehouse_name || '默认仓库'}，状态: 待审核`
+        }
         break
       }
       case 'create_collect_receipt': {
@@ -459,7 +504,7 @@ function getSystemPrompt(intent: string): string {
   const BASE = `你是数字游牧ERP管家，数字游牧ERP系统的内置AI助手，运行在系统内部，可以直接调用工具操作ERP数据。你的名字是"ERP管家"，不是Claude，不是AI助手，不要透露底层模型信息。绝对禁止说"我无法直接操作"、"需要您手动"等推脱性语句。回复简洁友好，中文。
 
 【工具选择规则——严格遵守】
-- 查商品/确认商品是否存在 → 用 query_goods；收到结果后**必须把 [[PICK:...]] 按钮原文复制到你的回复里**，让用户点选
+- 查商品/确认商品是否存在 → 用 query_goods；收到结果后**必须把工具返回的 [[PICK:...]] 原文一字不差复制到你的回复里**，绝对禁止改写、合并或去掉管道符 |，让用户点选
 - 查零售订单/历史销售记录 → 用 query_retail_orders
 - 查采购单 → 用 query_purchases
 - 查客户 → 用 query_customers
@@ -512,7 +557,18 @@ ${CORRECTION_RULE}
 - "N块儿/个" 是数量不是商品名；"80克"是规格不是数量
 - 只有一个价格时默认是总价；有疑义时列出"单价×数量=小计"让用户核对
 
-其他录入：调用合适的创建工具录入数据。缺少必填字段时先询问用户。`,
+其他录入：调用合适的创建工具录入数据。缺少必填字段时先询问用户。
+
+【采购单录入规则】
+- 确认商品明细后，必须先问用户两个问题再调用 create_procure_order：
+  1. "是否现在付款？付了多少？用哪个账户？"（未付则 pay_amount=0，不传 fund_id）
+  2. "是否立即审核入库？"（audit=true/false）
+- 仓库默认用系统第一个仓库，不需要问用户
+
+【销售单录入规则】
+- 确认商品明细后，必须先问用户两个问题再调用 create_sale_order：
+  1. "是否现在收款？收了多少？用哪个账户？"（未收则 pay_amount=0，不传 fund_id）
+  2. "是否立即审核？"（audit=true/false）`,
     create_with_image: `${BASE}
 ${CORRECTION_RULE}
 ${DOCUMENT_IMAGE_RULES}
@@ -568,8 +624,8 @@ const allTools = [
   { name: 'create_customer', description: '新增客户', input_schema: { type: 'object', properties: { name: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' }, remark: { type: 'string' } }, required: ['name'] } },
   { name: 'create_supplier', description: '新增供应商', input_schema: { type: 'object', properties: { name: { type: 'string' }, contact: { type: 'string' }, mobile: { type: 'string' }, address: { type: 'string' }, bank: { type: 'string' } }, required: ['name'] } },
   { name: 'create_goods', description: '新增商品', input_schema: { type: 'object', properties: { goods_name: { type: 'string' }, goods_sn: { type: 'string' }, sell_price: { type: 'number' }, cost_price: { type: 'number' }, unit_name: { type: 'string' }, cate_name: { type: 'string' } }, required: ['goods_name'] } },
-  { name: 'create_sale_order', description: '新增销售合同/订单', input_schema: { type: 'object', properties: { customer_name: { type: 'string', description: '客户名称（必填）' }, total_amount: { type: 'number' }, admin_name: { type: 'string', description: '经办人/业务员姓名' }, remark: { type: 'string' }, items: { type: 'array', description: '商品明细列表，每项含 goods_name/num/price/unit_name', items: { type: 'object', properties: { goods_name: { type: 'string', description: '商品名称' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '含税单价' }, unit_name: { type: 'string', description: '单位' } } } } }, required: ['customer_name'] } },
-  { name: 'create_procure_order', description: '新增采购订单', input_schema: { type: 'object', properties: { supplier_name: { type: 'string', description: '供应商名称（必填）' }, total_amount: { type: 'number' }, admin_name: { type: 'string', description: '经办人/采购人姓名' }, remark: { type: 'string' }, items: { type: 'array', description: '商品明细列表，每项含 goods_name/num/price/unit_name', items: { type: 'object', properties: { goods_name: { type: 'string', description: '商品名称' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '含税单价' }, unit_name: { type: 'string', description: '单位' } } } } }, required: ['supplier_name'] } },
+  { name: 'create_sale_order', description: '新增销售合同/订单', input_schema: { type: 'object', properties: { customer_name: { type: 'string', description: '客户名称（必填）' }, total_amount: { type: 'number' }, pay_amount: { type: 'number', description: '本次收款金额，0表示未收' }, fund_id: { type: 'number', description: '收款账户ID' }, fund_name: { type: 'string', description: '收款账户名称' }, audit: { type: 'boolean', description: '是否立即审核，true=审核，false=待审核' }, admin_name: { type: 'string', description: '经办人/业务员姓名' }, remark: { type: 'string' }, items: { type: 'array', description: '商品明细列表，每项含 goods_name/num/price/unit_name', items: { type: 'object', properties: { goods_name: { type: 'string', description: '商品名称' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '含税单价' }, unit_name: { type: 'string', description: '单位' } } } } }, required: ['customer_name'] } },
+  { name: 'create_procure_order', description: '新增采购订单', input_schema: { type: 'object', properties: { supplier_name: { type: 'string', description: '供应商名称（必填）' }, total_amount: { type: 'number' }, pay_amount: { type: 'number', description: '本次付款金额，0表示未付' }, fund_id: { type: 'number', description: '付款账户ID' }, fund_name: { type: 'string', description: '付款账户名称' }, audit: { type: 'boolean', description: '是否立即审核入库，true=审核，false=待审核' }, admin_name: { type: 'string', description: '经办人/采购人姓名' }, remark: { type: 'string' }, items: { type: 'array', description: '商品明细列表，每项含 goods_name/num/price/unit_name', items: { type: 'object', properties: { goods_name: { type: 'string', description: '商品名称' }, num: { type: 'number', description: '数量' }, price: { type: 'number', description: '含税单价' }, unit_name: { type: 'string', description: '单位' } } } } }, required: ['supplier_name'] } },
   { name: 'create_collect_receipt', description: '新增收款单', input_schema: { type: 'object', properties: { contact_name: { type: 'string' }, amount: { type: 'number' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, receipt_date: { type: 'string' }, remark: { type: 'string' } }, required: ['contact_name', 'amount'] } },
   { name: 'create_pay_receipt', description: '新增付款单', input_schema: { type: 'object', properties: { contact_name: { type: 'string' }, amount: { type: 'number' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, pay_date: { type: 'string' }, remark: { type: 'string' } }, required: ['contact_name', 'amount'] } },
   { name: 'create_prepay', description: '新增预付款', input_schema: { type: 'object', properties: { amount: { type: 'number' }, pay_type: { type: 'string', enum: ['supplier', 'customer'] }, supplier_name: { type: 'string' }, customer_name: { type: 'string' }, pay_date: { type: 'string' }, fund_id: { type: 'number' }, fund_name: { type: 'string' }, remark: { type: 'string' } }, required: ['amount'] } },

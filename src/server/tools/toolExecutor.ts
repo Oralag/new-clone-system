@@ -518,7 +518,15 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           goods_info: JSON.stringify(resolvedItems),
         }
         const res = await erpPost('/shop/ContractOrder/add', payload, token)
-        result = res?.code === 1 ? `销售订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `创建失败：${res?.msg || JSON.stringify(res)}`
+        if (res?.code !== 1) { result = `创建失败：${res?.msg || JSON.stringify(res)}`; break }
+        const orderId = res?.data?.id || res?.data?.lastId
+        const orderSn = res?.data?.order_sn || '已生成'
+        if (input.auto_audit && orderId) {
+          await erpPost('/shop/ContractOrder/audit', { id: orderId, status: 1 }, token)
+          result = `销售订单创建并审核成功！单号: ${orderSn}`
+        } else {
+          result = `销售订单创建成功！单号: ${orderSn}`
+        }
         break
       }
       case 'create_procure_order': {
@@ -546,7 +554,15 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           goods_info: JSON.stringify(resolvedItems),
         }
         const res = await erpPost('/stock/PurchaseOrder/add', payload, token)
-        result = res?.code === 1 ? `采购订单创建成功！单号: ${res?.data?.order_sn || '已生成'}` : `[FAILED] 采购订单创建失败：${res?.msg || JSON.stringify(res)}`
+        if (res?.code !== 1) { result = `[FAILED] 采购订单创建失败：${res?.msg || JSON.stringify(res)}`; break }
+        const orderId = res?.data?.id || res?.data?.lastId
+        const orderSn = res?.data?.order_sn || '已生成'
+        if (input.auto_audit && orderId) {
+          await erpPost('/stock/PurchaseOrder/audit', { id: orderId, status: 1 }, token)
+          result = `采购订单创建并审核成功！单号: ${orderSn}`
+        } else {
+          result = `采购订单创建成功！单号: ${orderSn}`
+        }
         break
       }
       case 'create_collect_receipt': {
@@ -764,6 +780,126 @@ export async function executeTool(name: string, input: Record<string, any>, toke
       case 'delete_fund_account': {
         const res = await erpPost('/finance/Fund/del', { id: input.id }, token)
         result = res?.code === 1 ? `资金账户已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        break
+      }
+      case 'query_retail_orders': {
+        const today = new Date().toISOString().slice(0, 10)
+        const params: any = { list_rows: input.limit || 20 }
+        if (input.date) { params.start_time = input.date; params.end_time = input.date }
+        else { params.start_time = today; params.end_time = today }
+        const res = await erpGet('/retail/order/index', params, token)
+        const rows = res?.data?.rows || []
+        result = `共 ${res?.data?.total || rows.length} 条零售单。${JSON.stringify(rows.slice(0, 20).map((r: any) => ({ id: r.id, 单号: r.order_no, 金额: r.pay_amount, 支付: r.pay_method, 日期: String(r.order_date || r.created_at || '').slice(0, 10), 状态: r.status })))}`
+        break
+      }
+      case 'create_retail_order': {
+        // 1. 解析商品明细，查找 goods_id
+        const rawItems = Array.isArray(input.items) ? input.items : []
+        if (!rawItems.length) { result = '请提供商品明细'; break }
+        const resolvedItems = await resolveGoodsIds(rawItems, token)
+        // 2. 补充售价
+        for (const item of resolvedItems) {
+          if (item.goods_id && !item.price) {
+            try {
+              const gRes = await erpGet('/goods/ShopGoods/index', { keyword: item.goods_name, list_rows: 5 }, token)
+              const g = (gRes?.data?.rows || []).find((r: any) => r.id === item.goods_id)
+              if (g) item.price = Number(g.sell_price) || 0
+            } catch { /* ignore */ }
+          }
+          if (!item.price) item.price = 0
+        }
+        const totalAmount = resolvedItems.reduce((s: number, i: any) => s + (i.num || 1) * (i.price || 0), 0)
+        const discountAmount = Number(input.discount_amount) || 0
+        const payAmount = Math.max(0, totalAmount - discountAmount)
+        const today = new Date().toISOString().slice(0, 10)
+        // 3. 创建零售单（status:1 直接审核）
+        const orderRes = await erpPost('/retail/order/add', {
+          order_date: today,
+          member_id: 0,
+          member_name: input.member_name || '',
+          store_id: null,
+          store_name: '',
+          total_amount: totalAmount,
+          discount_amount: discountAmount,
+          pay_amount: payAmount,
+          pay_method: input.pay_method || 'cash',
+          goods_info: JSON.stringify(resolvedItems.map((i: any) => ({
+            goods_id: i.goods_id, goods_name: i.goods_name, goods_sn: i.goods_sn || '',
+            num: i.num || 1, price: i.price, unit_name: i.unit_name || '',
+          }))),
+          status: 1,
+          remark: input.remark || '',
+        }, token)
+        if (orderRes?.code !== 1) { result = `[FAILED] 零售单创建失败：${orderRes?.msg || JSON.stringify(orderRes)}`; break }
+        // 4. 扣减库存（取第一个仓库）
+        try {
+          const whRes = await erpGet('/stock/WarehouseName/index', { list_rows: 1 }, token)
+          const defaultWh = whRes?.data?.rows?.[0]
+          if (defaultWh) {
+            const goodsInfo = resolvedItems.filter((i: any) => i.goods_id && i.num).map((i: any) => ({
+              goods_id: Number(i.goods_id), num: Number(i.num), goods_name: i.goods_name || '',
+            }))
+            if (goodsInfo.length) {
+              const addRes = await erpPost('/stock/OtherOut/add', { warehouse_id: defaultWh.id, goods_info: goodsInfo, remark: '零售出库' }, token)
+              if (addRes?.data?.id) await erpPost('/stock/OtherOut/audit', { id: addRes.data.id, status: 1 }, token)
+            }
+          }
+        } catch { /* 库存扣减失败不阻塞 */ }
+        // 5. 更新零售收款账户
+        try {
+          const fundRes = await erpGet('/finance/Fund/index', { list_rows: 500 }, token)
+          const funds: any[] = fundRes?.data?.rows || []
+          const retailFund = funds.find((f: any) => f.name === '零售收款账户')
+          if (retailFund) {
+            const newBalance = Math.round((Number(retailFund.balance || 0) + payAmount) * 100) / 100
+            await erpPost('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, type: retailFund.type, balance: newBalance }, token)
+          } else {
+            await erpPost('/finance/Fund/add', { name: '零售收款账户', type: 2, balance: payAmount }, token)
+          }
+        } catch { /* 资金更新失败不阻塞 */ }
+        const itemsSummary = resolvedItems.map((i: any) => `${i.goods_name}×${i.num || 1}`).join('、')
+        const payMethodMap: Record<string, string> = { cash: '现金', wechat: '微信', alipay: '支付宝', balance: '会员余额', card: '银行卡' }
+        result = `零售单创建成功！\n单号：${orderRes?.data?.order_no || orderRes?.data?.id || '已生成'}\n商品：${itemsSummary}\n${discountAmount > 0 ? `优惠：-¥${discountAmount.toFixed(2)}\n` : ''}实收：¥${payAmount.toFixed(2)}（${payMethodMap[input.pay_method || 'cash'] || input.pay_method || '现金'}）\n库存已扣减，账户已更新。`
+        break
+      }
+      case 'delete_retail_order': {
+        // 删除前先查单据，回滚库存和资金
+        try {
+          const orderRes = await erpGet('/retail/order/index', { id: input.id, list_rows: 1 }, token)
+          const order = orderRes?.data?.rows?.[0]
+          if (order && Number(order.status) === 1) {
+            const payAmount = Number(order.pay_amount || 0)
+            // 还原库存
+            try {
+              const items = typeof order.goods_info === 'string' ? JSON.parse(order.goods_info) : (order.goods_info || [])
+              const whRes = await erpGet('/stock/WarehouseName/index', { list_rows: 1 }, token)
+              const defaultWh = whRes?.data?.rows?.[0]
+              if (defaultWh) {
+                const goodsInfo = items.filter((i: any) => i.goods_id && i.num).map((i: any) => ({
+                  goods_id: Number(i.goods_id), num: Number(i.num), goods_name: i.goods_name || '',
+                }))
+                if (goodsInfo.length) {
+                  const addRes = await erpPost('/stock/OtherIn/add', { warehouse_id: defaultWh.id, goods_info: goodsInfo, remark: '零售退货入库' }, token)
+                  if (addRes?.data?.id) await erpPost('/stock/OtherIn/audit', { id: addRes.data.id, status: 1 }, token)
+                }
+              }
+            } catch { /* ignore */ }
+            // 回滚资金账户
+            if (payAmount > 0) {
+              try {
+                const fundRes = await erpGet('/finance/Fund/index', { list_rows: 500 }, token)
+                const funds: any[] = fundRes?.data?.rows || []
+                const retailFund = funds.find((f: any) => f.name === '零售收款账户')
+                if (retailFund) {
+                  const newBalance = Math.max(0, Math.round((Number(retailFund.balance || 0) - payAmount) * 100) / 100)
+                  await erpPost('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, type: retailFund.type, balance: newBalance }, token)
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        } catch { /* 回滚失败不阻塞删除 */ }
+        const res = await erpPost('/retail/order/del', { id: input.id }, token)
+        result = res?.code === 1 ? `零售单已删除，库存和账户已回滚！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'web_search': {

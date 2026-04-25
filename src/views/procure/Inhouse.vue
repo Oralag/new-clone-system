@@ -422,6 +422,7 @@ import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { TAX_RATES } from '@/config'
 import { fmtDt } from '@/utils/date'
+import { stockEffect } from '@/utils/stockEffect'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -651,33 +652,8 @@ async function handleDelete(id: number) {
 
 async function handleInhouseStockEffect(row: any, type: 'audit' | 'reverse') {
   const items: any[] = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
-  for (const item of items) {
-    if (!item.goods_id || !item.num) continue
-    try {
-      const stockParams: any = { goods_id: item.goods_id, list_rows: 10 }
-      if (row.warehouse_id) stockParams.warehouse_id = row.warehouse_id
-      const stockRes = await http.get('/stock/StockAll/index', { params: stockParams })
-      const stockRows: any[] = stockRes.data?.rows ?? []
-      const stock = stockRows[0]
-      if (stock) {
-        const delta = type === 'audit' ? Number(item.num) : -Number(item.num)
-        const newQty = Math.max(0, Number(stock.qty || 0) + delta)
-        await http.post('/stock/StockAll/edit', { id: stock.id, qty: newQty })
-      } else if (type === 'audit') {
-        // 库存记录不存在，新建一条
-        await http.post('/stock/StockAll/add', {
-          goods_id: item.goods_id,
-          goods_name: item.goods_name || '',
-          goods_sn: item.goods_sn || '',
-          warehouse_id: row.warehouse_id || 0,
-          warehouse_name: row.warehouse_name || '',
-          qty: Number(item.num),
-        })
-      }
-    } catch (e: any) {
-      console.warn('入库库存变动失败', e?.message)
-    }
-  }
+  // 采购入库审核=加库存；反审核=扣库存
+  await stockEffect(items, type === 'audit' ? 'restore' : 'deduct', row.warehouse_id, type === 'audit' ? '采购入库' : '采购入库反审核')
 }
 
 async function handleAudit(row: any, status: number) {
