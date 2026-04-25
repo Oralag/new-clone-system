@@ -70,14 +70,15 @@ export const queryTools: any[] = [
   },
   {
     name: 'query_purchases',
-    description: '查询采购订单',
+    description: '查询采购订单。可按供应商名或商品名搜索历史采购记录，返回包含商品明细的完整信息',
     parameters: {
       type: 'object',
       properties: {
         start_date: { type: 'string', description: '开始日期 YYYY-MM-DD' },
         end_date: { type: 'string', description: '结束日期 YYYY-MM-DD' },
         supplier: { type: 'string', description: '供应商名称' },
-        limit: { type: 'number', description: '返回条数，默认20' },
+        goods_name: { type: 'string', description: '商品名称（按商品名搜索历史采购，如查某商品的供应商）' },
+        limit: { type: 'number', description: '返回条数，默认50' },
       },
     },
   },

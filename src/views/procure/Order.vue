@@ -486,6 +486,9 @@
               <span class="settle-label">本次付款</span>
               <el-input-number v-model="fd.pay_amount" :min="0" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" />
+              <el-button v-if="!isReadonly" size="small" type="primary" plain
+                style="margin-left:6px;padding:4px 8px;font-size:12px"
+                @click="fd.pay_amount = fd.after_discount">全额</el-button>
             </div>
             <!-- 附加费用列表 -->
             <div class="settle-item fee-items-row" style="align-items:flex-start">
@@ -1900,7 +1903,7 @@ async function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   // 确保仓库列表已加载
   if (!warehouseOptions.value.length) await loadWarehouses()
-  // 历史数据仓库为空时，补填默认仓库
+  // 历史数据仓库为空时，补填用户设置的默认仓库
   if (!fd.warehouse_id) {
     const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
     if (defaultWhId) {
@@ -2321,6 +2324,27 @@ async function handleReverseAudit(row: any) {
   }
   await ElMessageBox.confirm('反审核将撤销入库与财务入账，确定继续？', '反审核确认', { type: 'warning' })
   try {
+    // 检查主付款记录（采购单付款 #ID），若有则提示并撤销
+    const mainPaid = paidMapById.value[row.id] || 0
+    if (mainPaid > 0) {
+      await ElMessageBox.confirm(
+        `该采购单存在付款记录（¥${mainPaid.toFixed(2)}），反审核将同时撤销该付款记录，确定继续？`,
+        '撤销付款记录',
+        { type: 'warning', confirmButtonText: '确定撤销', cancelButtonText: '取消' }
+      )
+      try {
+        const payRes = await getPayReceiptList({ list_rows: 2000 })
+        const payRows: any[] = payRes.data?.rows ?? []
+        const mainRecords = payRows.filter((r: any) =>
+          Number(r.order_id) === Number(row.id) ||
+          String(r.remark || '').match(new RegExp(`采购单(?:自动)?付款\\s+#${row.id}(?:\\D|$)`))
+        )
+        for (const rec of mainRecords) {
+          await deletePayReceipt(rec.id)
+        }
+      } catch (e: any) { console.warn('撤销主付款记录失败', e?.message) }
+    }
+
     // 检查单据支出付款记录，若有则提示并撤销
     const expensePaid = expensePaidById.value[row.id] || 0
     if (expensePaid > 0) {

@@ -163,14 +163,34 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         break
       }
       case 'query_purchases': {
-        const params: any = { list_rows: input.limit || 20 }
+        // 按商品名搜索时拉更多记录（历史数据可能较旧）
+        const fetchLimit = input.goods_name ? 500 : (input.limit || 50)
+        const params: any = { list_rows: fetchLimit }
         if (input.start_date) params.start_time = input.start_date
         if (input.end_date) params.end_time = input.end_date
         if (input.supplier) params.supplier_name = input.supplier
         const res = await erpGet('/stock/PurchaseOrder/index', params, token)
-        const rows = res?.data?.rows || []
+        let rows: any[] = res?.data?.rows || []
+        // 按商品名过滤：搜索 goods_info 字段
+        if (input.goods_name) {
+          const kw = String(input.goods_name).toLowerCase()
+          rows = rows.filter((r: any) => {
+            const info = typeof r.goods_info === 'string' ? r.goods_info : JSON.stringify(r.goods_info || '')
+            return info.toLowerCase().includes(kw)
+          })
+        }
         const total = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-        result = `共 ${rows.length} 条采购订单，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 10).map((r: any) => ({ id: r.id, 供应商: r.supplier_name, 金额: r.total_amount, 日期: String(r.order_date || r.created_at || '').slice(0, 10) })))}`
+        result = `共 ${rows.length} 条采购订单，合计 ¥${total.toFixed(2)}。${JSON.stringify(rows.slice(0, 20).map((r: any) => {
+          let goodsDetail: any[] = []
+          try { goodsDetail = typeof r.goods_info === 'string' ? JSON.parse(r.goods_info) : (r.goods_info || []) } catch { /* ignore */ }
+          return {
+            id: r.id,
+            供应商: r.supplier_name,
+            金额: r.total_amount,
+            日期: String(r.order_date || r.created_at || '').slice(0, 10),
+            商品明细: goodsDetail.map((g: any) => `${g.goods_name || ''}×${g.num || 1}@¥${g.price || 0}`),
+          }
+        }))}`
         break
       }
       case 'query_finance': {
@@ -576,12 +596,43 @@ export async function executeTool(name: string, input: Record<string, any>, toke
             const matched = suppliers.find((s: any) => s.name === input.supplier_name || s.name?.includes(input.supplier_name))
             if (matched) {
               input.supplier_id = matched.id
-              input.supplier_name = matched.name  // 回填标准名称
+              input.supplier_name = matched.name
             }
           } catch { /* ignore */ }
         }
-        // 自动根据 goods_name 查找 goods_id，并序列化为 goods_info
+        // 如果没有供应商或商品价格缺失，从历史采购记录自动填入
         const rawItems = Array.isArray(input.items) ? input.items : []
+        const itemsNeedingHistory = rawItems.filter((i: any) => !i.price || !input.supplier_name)
+        if (itemsNeedingHistory.length > 0) {
+          try {
+            const histRes = await erpGet('/stock/PurchaseOrder/index', { list_rows: 500 }, token)
+            const histRows: any[] = histRes?.data?.rows || []
+            for (const item of rawItems) {
+              if (!item.goods_name) continue
+              const kw = String(item.goods_name).toLowerCase()
+              // 找最近一条含该商品的采购单
+              const histOrder = histRows.find((r: any) => {
+                const info = typeof r.goods_info === 'string' ? r.goods_info : JSON.stringify(r.goods_info || '')
+                return info.toLowerCase().includes(kw)
+              })
+              if (histOrder) {
+                // 自动填入供应商
+                if (!input.supplier_name && histOrder.supplier_name) {
+                  input.supplier_name = histOrder.supplier_name
+                  input.supplier_id = histOrder.supplier_id
+                }
+                // 自动填入价格
+                if (!item.price) {
+                  try {
+                    const goods = typeof histOrder.goods_info === 'string' ? JSON.parse(histOrder.goods_info) : (histOrder.goods_info || [])
+                    const matched = goods.find((g: any) => String(g.goods_name || '').toLowerCase().includes(kw))
+                    if (matched?.price) item.price = matched.price
+                  } catch { /* ignore */ }
+                }
+              }
+            }
+          } catch { /* 历史查询失败不阻塞创建 */ }
+        }
         const resolvedItems = rawItems.length > 0 ? await resolveGoodsIds(rawItems, token) : []
         const payload: Record<string, any> = {
           supplier_id: input.supplier_id,

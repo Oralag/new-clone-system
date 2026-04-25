@@ -933,13 +933,18 @@ async function loadGroups() {
     groups.value = rows.map((r: any) => {
       const memberIds = r.member_ids ?? []
       const isPrivate = !!r.is_private || (memberIds.length === 2)
-      // 私聊显示对方名字
+      // 私聊显示对方名字（去掉"私聊:"前缀）
       let displayName = r.name || '会话'
       if (isPrivate && memberIds.length === 2) {
         const otherId = memberIds.find((id: any) => String(id) !== String(authStore.userInfo?.id))
         if (otherId) {
           const found = findContactName(String(otherId))
-          if (found) displayName = found
+          if (found) {
+            displayName = found
+          } else if (displayName.startsWith('私聊:')) {
+            // 去掉"私聊:"前缀
+            displayName = displayName.slice(3)
+          }
         }
       }
       return {
