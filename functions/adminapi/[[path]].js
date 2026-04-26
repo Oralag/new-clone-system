@@ -87,6 +87,26 @@ function isWorkPath(pathname) {
   return pathname.startsWith('/adminapi/work/')
 }
 
+function retailOrderOverrideKey(backend, id) {
+  return `retail_order_override:${backend}:${id}`
+}
+
+async function applyRetailOrderOverrides(data, env, backend) {
+  const rows = data?.data?.rows
+  if (!env.USERS_KV || !Array.isArray(rows) || rows.length === 0) return data
+  await Promise.all(rows.map(async (row) => {
+    const id = row?.id
+    if (!id) return
+    const raw = await env.USERS_KV.get(retailOrderOverrideKey(backend, id))
+    if (!raw) return
+    try {
+      const override = JSON.parse(raw)
+      Object.assign(row, override)
+    } catch {}
+  }))
+  return data
+}
+
 // Get user ID from token (JWT decode)
 function getUserId(request) {
   const headerId = request.headers.get('x-user-id')
@@ -1882,6 +1902,31 @@ const agentRegistry = [
     return errRes('工作计划功能暂不支持')
   }
 
+  // Retail order original-detail override. The upstream backend does not expose
+  // a retail order edit route, so persist safe goods_info corrections at the API
+  // layer and merge them into subsequent retail order list responses.
+  if (pathname === '/adminapi/retail/order/edit' && request.method === 'POST') {
+    if (!env.USERS_KV) return errRes('KV 未配置，无法改写零售单原始明细')
+    const wrappedToken = request.headers.get('token') || ''
+    const decoded = decodeToken(wrappedToken)
+    if (decoded?.trial && !isTrialPassthrough(pathname)) {
+      return jsonRes({ code: 0, show: 1, message: '体验版暂不支持该功能，请升级正式版后使用', data: [] })
+    }
+    let body
+    try { body = await request.json() } catch { body = {} }
+    const id = Number(body?.id || 0)
+    if (!id) return errRes('缺少零售单 ID')
+    if (body.goods_info === undefined) return errRes('缺少 goods_info')
+    const backend = decoded?.backend || DEFAULT_BACKEND
+    const override = {
+      goods_info: typeof body.goods_info === 'string' ? body.goods_info : JSON.stringify(body.goods_info || []),
+      updated_at: new Date().toISOString(),
+      _goods_info_overridden: true,
+    }
+    await env.USERS_KV.put(retailOrderOverrideKey(backend, id), JSON.stringify(override))
+    return jsonSuccess({ id, ...override })
+  }
+
 
 
   // ═══════════════════════════════════════════════════════════════
@@ -1974,6 +2019,15 @@ const agentRegistry = [
     const response = await fetch(proxyRequest)
     const newHeaders = new Headers(response.headers)
     Object.entries(corsHeaders()).forEach(([k, v]) => newHeaders.set(k, v))
+    if (pathname === '/adminapi/retail/order/index' && request.method === 'GET') {
+      const text = await response.text()
+      try {
+        const data = await applyRetailOrderOverrides(JSON.parse(text), env, backend)
+        return new Response(JSON.stringify(data), { status: response.status, headers: newHeaders })
+      } catch {
+        return new Response(text, { status: response.status, headers: newHeaders })
+      }
+    }
     return new Response(response.body, { status: response.status, headers: newHeaders })
   } catch {
     return new Response(JSON.stringify({ code: 0, show: 0, message: 'Proxy error', data: [] }), {
