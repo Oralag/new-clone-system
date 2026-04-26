@@ -884,7 +884,7 @@ import { useRoute, useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getBomList, getBomByGoods, getSpecList, getUnitConvert, updateGoods, saveUnitConvert } from '@/api/goods'
+import { getBomList, getBomByGoods, getSpecList, getUnitConvert, updateGoods, saveUnitConvert, getGoodsList, getUnitList } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt, createExpense } from '@/api/finance'
 import http from '@/api/http'
@@ -908,9 +908,20 @@ const KAONAIPI_AUX_UNIT = '盒'
 const KAONAIPI_BASE_COST = 22
 const KAONAIPI_AUX_RATIO = 0.5 // 1盒=0.5斤（1斤=2盒）
 const kaonaiPiRepairDone = new Set<number>()
+const kaonaiPiUnitMigrating = ref(false)
+let kaonaiPiJinUnitId: number | null = null
 
 function isKaoNaiPiGoods(input: any): boolean {
   return String(input?.goods_sn || '').trim().toUpperCase() === KAONAIPI_SN
+}
+
+function shouldForceKaoNaiPiJinUnit(item: any): boolean {
+  if (!isKaoNaiPiGoods(item)) return false
+  const priceNoTax = Number(item?.price_no_tax || 0)
+  const price = Number(item?.price || 0)
+  const unitName = String(item?.unit_name || '').trim()
+  if (unitName === KAONAIPI_BASE_UNIT) return false
+  return Math.abs(priceNoTax - KAONAIPI_BASE_COST) < 0.0001 || Math.abs(price - KAONAIPI_BASE_COST) < 0.0001
 }
 
 function applyKaoNaiPiRowDefaults(row: any) {
@@ -923,14 +934,32 @@ function applyKaoNaiPiRowDefaults(row: any) {
   calcItemTax(row)
 }
 
+function normalizeKaoNaiPiLegacyItem(item: any): boolean {
+  if (!shouldForceKaoNaiPiJinUnit(item)) return false
+  item.unit_name = KAONAIPI_BASE_UNIT
+  item.unit_ratio = 1
+  item._base_price_no_tax = KAONAIPI_BASE_COST
+  item.price_no_tax = KAONAIPI_BASE_COST
+  if (!(Number(item.tax_rate) >= 0)) item.tax_rate = 0
+  item.price = Number((KAONAIPI_BASE_COST * (1 + Number(item.tax_rate || 0) / 100)).toFixed(4))
+  return true
+}
+
 async function repairKaoNaiPiMasterData(goods: any) {
   if (!isKaoNaiPiGoods(goods)) return
   const goodsId = Number(goods?.id || 0)
   if (!goodsId || kaonaiPiRepairDone.has(goodsId)) return
   kaonaiPiRepairDone.add(goodsId)
   try {
+    if (!kaonaiPiJinUnitId) {
+      const unitRes = await getUnitList({ list_rows: 500 })
+      const units: any[] = unitRes?.data?.rows ?? []
+      const jin = units.find((u: any) => String(u?.name || '').trim() === KAONAIPI_BASE_UNIT)
+      kaonaiPiJinUnitId = jin?.id ? Number(jin.id) : null
+    }
     await updateGoods({
       id: goodsId,
+      unit_id: kaonaiPiJinUnitId || undefined,
       unit_name: KAONAIPI_BASE_UNIT,
       cost_price: KAONAIPI_BASE_COST,
     })
@@ -947,6 +976,17 @@ async function repairKaoNaiPiMasterData(goods: any) {
     ]
   } catch (e: any) {
     console.warn('修复烤奶皮单位主数据失败', e?.message)
+  }
+}
+
+async function ensureKaoNaiPiMasterData() {
+  try {
+    const res = await getGoodsList({ keyword: KAONAIPI_SN, list_rows: 50 })
+    const rows: any[] = res?.data?.rows ?? []
+    const target = rows.find((r: any) => isKaoNaiPiGoods(r))
+    if (target) await repairKaoNaiPiMasterData(target)
+  } catch (e: any) {
+    console.warn('检查烤奶皮主数据失败', e?.message)
   }
 }
 
@@ -983,6 +1023,47 @@ async function syncGoodsCostPriceFromItems(items: any[]) {
         console.warn('回写商品成本价失败', goodsId, e?.message)
       }
     }
+  }
+}
+
+async function migrateKaoNaiPiUnitsInPurchaseOrders() {
+  if (kaonaiPiUnitMigrating.value) return
+  const todayKey = new Date().toISOString().slice(0, 10)
+  const migrateKey = `erp_kaonai_pi_unit_migrated_${todayKey}`
+  if (localStorage.getItem(migrateKey) === '1') return
+
+  kaonaiPiUnitMigrating.value = true
+  try {
+    const res = await getProcureOrderList({ list_rows: 5000, page: 1 })
+    const rows: any[] = res?.data?.rows ?? []
+    let fixedOrders = 0
+    for (const row of rows) {
+      let items: any[] = []
+      try { items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { items = [] }
+      if (!items.length) continue
+      let changed = false
+      const normalized = items.map((item: any) => {
+        const next = { ...item }
+        if (normalizeKaoNaiPiLegacyItem(next)) changed = true
+        return next
+      })
+      if (!changed) continue
+      try {
+        await updateProcureOrder({ id: row.id, goods_info: JSON.stringify(normalized) })
+        fixedOrders++
+      } catch (e: any) {
+        console.warn('修复采购单烤奶皮单位失败', row?.id, e?.message)
+      }
+    }
+    localStorage.setItem(migrateKey, '1')
+    if (fixedOrders > 0) {
+      ElMessage.success(`已修复 ${fixedOrders} 条采购单中的烤奶皮单位为“斤”`)
+      tableRef.value?.refresh()
+    }
+  } catch (e: any) {
+    console.warn('批量修复采购单单位失败', e?.message)
+  } finally {
+    kaonaiPiUnitMigrating.value = false
   }
 }
 
@@ -1757,6 +1838,8 @@ async function loadStaff() {
 
 onMounted(() => {
   loadSuppliers(); loadWarehouses(); loadFunds(); loadStaff(); loadPaidMap()
+  ensureKaoNaiPiMasterData()
+  migrateKaoNaiPiUnitsInPurchaseOrders()
   // 从付款单跳转过来，高亮对应采购单
   if (route.query.order_no) {
     const sn = String(route.query.order_no)
@@ -2072,6 +2155,7 @@ async function openEdit(row: any, readonly = false) {
       supplier_name: String(item?.supplier_name || ''),
     }
     normalizeOrderItemMoney(normalized)
+    normalizeKaoNaiPiLegacyItem(normalized)
     const ratio = Math.max(0.0001, Number(normalized.unit_ratio || 1))
     if (!(Number(normalized._base_price_no_tax || 0) > 0)) {
       normalized._base_price_no_tax = Number((Number(normalized.price_no_tax || 0) / ratio).toFixed(6))
