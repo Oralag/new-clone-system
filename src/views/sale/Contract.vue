@@ -1130,7 +1130,12 @@ const freightCostSeller = computed(() =>
     : fd.freight_bearer === 'half' ? Number(fd.freight_amount || 0) / 2
     : 0
 )
-const netProfit = computed(() => fd.after_discount - totalCost.value - freightCostSeller.value)
+const netProfit = computed(() =>
+  Number(fd.after_discount || 0)
+  - totalCost.value
+  - freightCostSeller.value
+  - Number(fd.expense_amount || 0)
+)
 const profitRate = computed(() => fd.after_discount > 0 ? (netProfit.value / fd.after_discount * 100) : 0)
 
 function normalizeReceiptAllocation() {
