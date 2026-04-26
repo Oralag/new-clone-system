@@ -1817,6 +1817,13 @@ function generateOrderNo(): string {
   return `PO${body}`
 }
 
+function normalizeDateValue(value: any): string {
+  if (value === null || value === undefined) return ''
+  const raw = String(value).trim()
+  if (!raw || raw === 'null' || raw === 'undefined' || raw === '0000-00-00') return ''
+  return raw.slice(0, 10)
+}
+
 // 计算汇总
 const totalNoTax = computed(() =>
   fd.items.reduce((s, r) => s + (r.num || 0) * (r.price_no_tax || 0), 0)
@@ -1903,6 +1910,8 @@ async function openCreate() {
 
 async function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
+  fd.order_date = normalizeDateValue(fd.order_date || row?.created_at || row?.create_time)
+  fd.delivery_date = normalizeDateValue(fd.delivery_date)
   // 确保仓库列表已加载
   if (!warehouseOptions.value.length) await loadWarehouses()
   // 历史数据仓库为空时，补填用户设置的默认仓库
@@ -2008,11 +2017,13 @@ async function handleSave(andAudit = false) {
   }
   saving.value = true
   try {
+    const normalizedOrderDate = normalizeDateValue(fd.order_date) || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+    const normalizedDeliveryDate = normalizeDateValue(fd.delivery_date)
     const payload: Record<string, any> = {
       supplier_id: fd.supplier_id,
       supplier_name: fd.supplier_name,
       admin_name: fd.admin_name,
-      order_date: fd.order_date,
+      order_date: normalizedOrderDate,
       warehouse_id: fd.warehouse_id,
       warehouse_name: fd.warehouse_name,
       fund_id: fd.fund_id || 0,
@@ -2028,6 +2039,7 @@ async function handleSave(andAudit = false) {
       goods_info: JSON.stringify(fd.items),
       fee_items: JSON.stringify(fd.fee_items || []),
     }
+    if (normalizedDeliveryDate) payload.delivery_date = normalizedDeliveryDate
     let orderId = fd.id
     if (fd.id) {
       payload.id = fd.id

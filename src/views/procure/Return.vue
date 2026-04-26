@@ -261,6 +261,13 @@ function hasValue(value: any) {
   return value !== undefined && value !== null && value !== ''
 }
 
+function normalizeDateValue(value: any): string {
+  if (value === null || value === undefined) return ''
+  const raw = String(value).trim()
+  if (!raw || raw === 'null' || raw === 'undefined' || raw === '0000-00-00') return ''
+  return raw.slice(0, 10)
+}
+
 function parseItems(goodsInfo: any): any[] {
   if (Array.isArray(goodsInfo)) return goodsInfo
   try { return (JSON.parse(goodsInfo || '[]') as any[]).filter((i: any) => !i._meta) } catch { return [] }
@@ -298,6 +305,8 @@ async function getProcureOrderRow(orderId: number, orderSn = '') {
 }
 
 function buildProcureOrderPayload(order: any, overrides: Record<string, any>) {
+  const orderDate = normalizeDateValue(order.order_date || order.created_at || order.create_time)
+  const deliveryDate = normalizeDateValue(order.delivery_date)
   return {
     id: order.id,
     order_no: order.order_no || order.order_sn || '',
@@ -305,8 +314,7 @@ function buildProcureOrderPayload(order: any, overrides: Record<string, any>) {
     supplier_id: order.supplier_id,
     supplier_name: order.supplier_name || '',
     admin_name: order.admin_name || '',
-    order_date: order.order_date || '',
-    delivery_date: order.delivery_date || null,
+    order_date: orderDate,
     warehouse_id: order.warehouse_id || null,
     warehouse_name: order.warehouse_name || '',
     need_invoice: Number(order.need_invoice || 0),
@@ -329,6 +337,7 @@ function buildProcureOrderPayload(order: any, overrides: Record<string, any>) {
     goods_info: typeof order.goods_info === 'string'
       ? order.goods_info
       : JSON.stringify(order.goods_info || []),
+    ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
     ...overrides,
   }
 }
