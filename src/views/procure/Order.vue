@@ -884,7 +884,7 @@ import { useRoute, useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getBomList, getBomByGoods, getSpecList, getUnitConvert, updateGoods } from '@/api/goods'
+import { getBomList, getBomByGoods, getSpecList, getUnitConvert, updateGoods, saveUnitConvert } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt, createExpense } from '@/api/finance'
 import http from '@/api/http'
@@ -901,6 +901,54 @@ const taxRates = TAX_RATES
 
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
+
+const KAONAIPI_SN = 'SP0000053'
+const KAONAIPI_BASE_UNIT = '斤'
+const KAONAIPI_AUX_UNIT = '盒'
+const KAONAIPI_BASE_COST = 22
+const KAONAIPI_AUX_RATIO = 0.5 // 1盒=0.5斤（1斤=2盒）
+const kaonaiPiRepairDone = new Set<number>()
+
+function isKaoNaiPiGoods(input: any): boolean {
+  return String(input?.goods_sn || '').trim().toUpperCase() === KAONAIPI_SN
+}
+
+function applyKaoNaiPiRowDefaults(row: any) {
+  if (!isKaoNaiPiGoods(row)) return
+  row.unit_name = KAONAIPI_BASE_UNIT
+  row.unit_ratio = 1
+  row._base_price_no_tax = KAONAIPI_BASE_COST
+  row.price_no_tax = KAONAIPI_BASE_COST
+  if (!(Number(row.tax_rate) >= 0)) row.tax_rate = 0
+  calcItemTax(row)
+}
+
+async function repairKaoNaiPiMasterData(goods: any) {
+  if (!isKaoNaiPiGoods(goods)) return
+  const goodsId = Number(goods?.id || 0)
+  if (!goodsId || kaonaiPiRepairDone.has(goodsId)) return
+  kaonaiPiRepairDone.add(goodsId)
+  try {
+    await updateGoods({
+      id: goodsId,
+      unit_name: KAONAIPI_BASE_UNIT,
+      cost_price: KAONAIPI_BASE_COST,
+    })
+    await saveUnitConvert({
+      goods_id: goodsId,
+      units: [
+        { unit_name: KAONAIPI_BASE_UNIT, ratio: 1 },
+        { unit_name: KAONAIPI_AUX_UNIT, ratio: KAONAIPI_AUX_RATIO },
+      ],
+    })
+    goodsUnitMap[goodsId] = [
+      { unit_name: KAONAIPI_BASE_UNIT, ratio: 1, cost_price: KAONAIPI_BASE_COST },
+      { unit_name: KAONAIPI_AUX_UNIT, ratio: KAONAIPI_AUX_RATIO, cost_price: Number((KAONAIPI_BASE_COST * KAONAIPI_AUX_RATIO).toFixed(2)) },
+    ]
+  } catch (e: any) {
+    console.warn('修复烤奶皮单位主数据失败', e?.message)
+  }
+}
 
 async function syncGoodsCostPriceFromItems(items: any[]) {
   const statMap = new Map<number, { qty: number; amount: number; fallback: number }>()
@@ -2625,14 +2673,16 @@ const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
-    const priceNoTax = Number(g.cost_price) || 0
+    const priceNoTax = isKaoNaiPiGoods(g) ? KAONAIPI_BASE_COST : (Number(g.cost_price) || 0)
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
-      spec: g.spec || '', cate_name: g.cate_name || '', unit_name: g.unit_name || '',
+      spec: g.spec || '', cate_name: g.cate_name || '', unit_name: isKaoNaiPiGoods(g) ? KAONAIPI_BASE_UNIT : (g.unit_name || ''),
       num: 1, price_no_tax: priceNoTax, tax_rate: 0, unit_ratio: 1, _base_price_no_tax: priceNoTax,
       price: Number((priceNoTax * 1.13).toFixed(4)), remark: '',
       supplier_id: null, supplier_name: '' })
     fetchGoodsSpecs(g.id)
     fetchGoodsUnits(g.id, g.unit_name || '')
+    repairKaoNaiPiMasterData(g)
+    applyKaoNaiPiRowDefaults(fd.items[fd.items.length - 1])
   }
   calcTotal()
 }
@@ -2646,6 +2696,11 @@ function onUnitChange(row: any, unitName: string) {
   row.unit_ratio = nextRatio
 
   let nextPriceNoTax = Number(found?.cost_price || 0)
+  if (!(nextPriceNoTax > 0) && isKaoNaiPiGoods(row)) {
+    nextPriceNoTax = unitName === KAONAIPI_AUX_UNIT
+      ? Number((KAONAIPI_BASE_COST * KAONAIPI_AUX_RATIO).toFixed(4))
+      : KAONAIPI_BASE_COST
+  }
   if (!(nextPriceNoTax > 0)) {
     const basePriceNoTax = Number(row._base_price_no_tax || 0) > 0
       ? Number(row._base_price_no_tax)
