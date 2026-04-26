@@ -1,3 +1,5 @@
+import { isNaiDoufuAliasName, NAIDOUFU_CANONICAL } from '../../utils/goodsAlias'
+
 const ERP_BASE = 'https://erp-server-xsji.onrender.com/adminapi'
 
 // 内容效果数据内存存储（进程级别，重启清空）
@@ -33,6 +35,22 @@ async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
 
       if (!normalized.goods_name || normalized.goods_id) return normalized
       try {
+        if (isNaiDoufuAliasName(normalized.goods_name)) {
+          const canonRes = await erpGet('/goods/ShopGoods/index', { keyword: NAIDOUFU_CANONICAL.goods_sn, list_rows: 10 }, token)
+          const canonRows = canonRes?.data?.rows || []
+          const canonical = canonRows.find((g: any) => Number(g.id) === NAIDOUFU_CANONICAL.id)
+            || canonRows.find((g: any) => g.goods_sn === NAIDOUFU_CANONICAL.goods_sn)
+          if (canonical) {
+            return {
+              ...normalized,
+              goods_id: canonical.id,
+              goods_name: canonical.goods_name,
+              goods_sn: canonical.goods_sn,
+              unit_name: normalized.unit_name || canonical.unit_name,
+              cate_name: canonical.cate_name,
+            }
+          }
+        }
         const res = await erpGet('/goods/ShopGoods/index', { keyword: normalized.goods_name, list_rows: 5 }, token)
         const rows = res?.data?.rows || []
         const matched = rows.find((g: any) =>

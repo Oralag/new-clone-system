@@ -248,6 +248,7 @@ import { getRetailOrderList } from '@/api/retail'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { getExpenseList } from '@/api/finance'
 import http from '@/api/http'
+import { findNaiDoufuGoods } from '@/utils/goodsAlias'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
@@ -397,6 +398,8 @@ function getUnitCost(goodsId: number): { unitCost: number; hasBom: boolean; cost
 
 function resolveGoodsId(item: any): number {
   const id = Number(item?.goods_id || item?.id || item?.product_id || item?.shop_goods_id || 0)
+  const canonical = findNaiDoufuGoods(item, goodsList.value)
+  if (canonical?.id) return Number(canonical.id)
   if (id > 0) return id
   const sn = itemSn(item)
   const name = itemName(item)
@@ -435,7 +438,7 @@ const rows = computed(() => {
     try {
       for (const g of items) {
         const goodsId = resolveGoodsId(g)
-        const goodsName = itemName(g) || goodsList.value.find(x => x.id === goodsId)?.goods_name || '-'
+        const goodsName = goodsList.value.find(x => x.id === goodsId)?.goods_name || itemName(g) || '-'
         const key = `${goodsId || itemSn(g) || goodsName}_${source}`
         const { unitCost, hasBom, costSource } = getItemUnitCost(g)
         if (!map[key]) {
@@ -493,9 +496,9 @@ function buildOrderItems(goodsInfo: any, saleAmount: number) {
     return {
       key: `${goodsId || itemSn(g) || itemName(g) || index}_${index}`,
       goods_id: goodsId,
-      goods_name: itemName(g) || goods?.goods_name || '-',
-      goods_sn: itemSn(g) || goods?.goods_sn || '',
-      unit_name: toText(g?.unit_name, g?.unit, goods?.unit_name),
+      goods_name: goods?.goods_name || itemName(g) || '-',
+      goods_sn: goods?.goods_sn || itemSn(g) || '',
+      unit_name: toText(goods?.unit_name, g?.unit_name, g?.unit),
       qty,
       sale_amount: lineSale,
       unit_cost: cost.unitCost,

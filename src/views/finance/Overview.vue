@@ -500,6 +500,7 @@ import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
 import { fmtDt } from '@/utils/date'
+import { findNaiDoufuGoods } from '@/utils/goodsAlias'
 
 const router = useRouter()
 
@@ -860,6 +861,8 @@ function getUnitCostFromMap(goodsId: number): { unitCost: number; costSource: st
 
 function resolveProfitGoodsId(item: any): number {
   const id = Number(item?.goods_id || item?.id || item?.product_id || item?.shop_goods_id || 0)
+  const canonical = findNaiDoufuGoods(item, profitGoodsList.value)
+  if (canonical?.id) return Number(canonical.id)
   if (id > 0) return id
   const sn = profitItemSn(item)
   const name = profitItemName(item)
@@ -893,7 +896,7 @@ const profitByGoods = computed(() => {
     try {
       for (const g of items) {
         const goodsId = resolveProfitGoodsId(g)
-        const goodsName = profitItemName(g) || profitGoodsList.value.find(x => x.id === goodsId)?.goods_name || '-'
+        const goodsName = profitGoodsList.value.find(x => x.id === goodsId)?.goods_name || profitItemName(g) || '-'
         const key = `${goodsId || profitItemSn(g) || goodsName}_${source}`
         const { unitCost, costSource } = getItemUnitCostFromMap(g)
         if (!map[key]) map[key] = { goods_name: goodsName, goods_id: goodsId, num: 0, sale_amount: 0, unit_cost: unitCost, cost_source: costSource, source }

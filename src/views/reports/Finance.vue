@@ -257,6 +257,7 @@ import { getRetailOrderList } from '@/api/retail'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { getExpenseList } from '@/api/finance'
 import http from '@/api/http'
+import { findNaiDoufuGoods } from '@/utils/goodsAlias'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
@@ -390,6 +391,8 @@ function getUnitCost(gid: number): { unitCost: number; costSource: string } {
 
 function resolveGoodsId(item: any): number {
   const id = Number(item?.goods_id || item?.id || item?.product_id || item?.shop_goods_id || 0)
+  const canonical = findNaiDoufuGoods(item, goodsList.value)
+  if (canonical?.id) return Number(canonical.id)
   if (id > 0) return id
   const sn = itemSn(item)
   const name = itemName(item)
@@ -520,7 +523,7 @@ const goodsRows = computed(() => {
     try {
       for (const g of items) {
         const goodsId = resolveGoodsId(g)
-        const goodsName = itemName(g) || goodsList.value.find(x => x.id === goodsId)?.goods_name || '-'
+        const goodsName = goodsList.value.find(x => x.id === goodsId)?.goods_name || itemName(g) || '-'
         const key = `${goodsId || itemSn(g) || goodsName}_${source}`
         const { unitCost, costSource } = getItemUnitCost(g)
         if (!map[key]) map[key] = { goods_name: goodsName, goods_id: goodsId, num: 0, sale_amount: 0, unit_cost: unitCost, cost_source: costSource, source }
