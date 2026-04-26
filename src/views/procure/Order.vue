@@ -1657,8 +1657,8 @@ async function fetchGoodsSpecs(goodsId: number) {
   } catch { /* ignore */ }
 }
 
-// 商品多单位换算缓存：goods_id -> [{unit_name, ratio}]
-const goodsUnitMap = reactive<Record<number, { unit_name: string; ratio: number }[]>>({})
+// 商品多单位换算缓存：goods_id -> [{unit_name, ratio, cost_price?}]
+const goodsUnitMap = reactive<Record<number, { unit_name: string; ratio: number; cost_price?: number }[]>>({})
 async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
   if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
   goodsUnitMap[goodsId] = []
@@ -1666,7 +1666,11 @@ async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
     const res = await getUnitConvert(goodsId)
     const rows: any[] = res.data?.rows ?? []
     if (rows.length) {
-      goodsUnitMap[goodsId] = rows.map(r => ({ unit_name: r.unit_name, ratio: Number(r.ratio) }))
+      goodsUnitMap[goodsId] = rows.map(r => ({
+        unit_name: r.unit_name,
+        ratio: Number(r.ratio),
+        cost_price: Number(r.cost_price || 0),
+      }))
     } else {
       // 没有配置多单位，只有基础单位
       goodsUnitMap[goodsId] = baseUnitName ? [{ unit_name: baseUnitName, ratio: 1 }] : []
@@ -1805,6 +1809,7 @@ interface OrderItem {
   goods_id: number; goods_name: string; goods_sn: string
   spec: string; cate_name: string; unit_name: string; batch_no: string
   num: number; price_no_tax: number; tax_rate: number; price: number; remark: string
+  unit_ratio?: number; _base_price_no_tax?: number
   supplier_id: number | null; supplier_name: string
 }
 
@@ -1922,6 +1927,8 @@ function calcItemTax(row: OrderItem) {
 }
 
 function onPriceNoTaxChange(row: OrderItem) {
+  const unitRatio = Math.max(0.0001, Number((row as any).unit_ratio || 1))
+  ;(row as any)._base_price_no_tax = Number((Number(row.price_no_tax || 0) / unitRatio).toFixed(6))
   calcItemTax(row)
   calcTotal()
 }
@@ -1938,6 +1945,8 @@ function onPriceChange(row: OrderItem) {
   } else {
     row.price_no_tax = row.price
   }
+  const unitRatio = Math.max(0.0001, Number((row as any).unit_ratio || 1))
+  ;(row as any)._base_price_no_tax = Number((Number(row.price_no_tax || 0) / unitRatio).toFixed(6))
   calcTotal()
 }
 
@@ -2009,10 +2018,16 @@ async function openEdit(row: any, readonly = false) {
       tax_rate: toSafeNumber(item?.tax_rate),
       price: toSafeNumber(item?.price),
       remark: String(item?.remark || ''),
+      unit_ratio: toSafeNumber(item?.unit_ratio) || 1,
+      _base_price_no_tax: toSafeNumber(item?._base_price_no_tax),
       supplier_id: item?.supplier_id ?? null,
       supplier_name: String(item?.supplier_name || ''),
     }
     normalizeOrderItemMoney(normalized)
+    const ratio = Math.max(0.0001, Number(normalized.unit_ratio || 1))
+    if (!(Number(normalized._base_price_no_tax || 0) > 0)) {
+      normalized._base_price_no_tax = Number((Number(normalized.price_no_tax || 0) / ratio).toFixed(6))
+    }
     return normalized
   })
   try { fd.attachments = Array.isArray(row.attachments_info) ? row.attachments_info : JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
@@ -2613,7 +2628,7 @@ function onGoodsConfirm(goods: any[]) {
     const priceNoTax = Number(g.cost_price) || 0
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
       spec: g.spec || '', cate_name: g.cate_name || '', unit_name: g.unit_name || '',
-      num: 1, price_no_tax: priceNoTax, tax_rate: 0,
+      num: 1, price_no_tax: priceNoTax, tax_rate: 0, unit_ratio: 1, _base_price_no_tax: priceNoTax,
       price: Number((priceNoTax * 1.13).toFixed(4)), remark: '',
       supplier_id: null, supplier_name: '' })
     fetchGoodsSpecs(g.id)
@@ -2625,8 +2640,29 @@ function onGoodsConfirm(goods: any[]) {
 // 切换采购单位时，更新 unit_ratio 字段供入库换算使用
 function onUnitChange(row: any, unitName: string) {
   const units = goodsUnitMap[row.goods_id] ?? []
+  const prevRatio = Math.max(0.0001, Number(row.unit_ratio || 1))
   const found = units.find(u => u.unit_name === unitName)
-  row.unit_ratio = found ? found.ratio : 1
+  const nextRatio = found ? Number(found.ratio || 1) : 1
+  row.unit_ratio = nextRatio
+
+  let nextPriceNoTax = Number(found?.cost_price || 0)
+  if (!(nextPriceNoTax > 0)) {
+    const basePriceNoTax = Number(row._base_price_no_tax || 0) > 0
+      ? Number(row._base_price_no_tax)
+      : Number(row.price_no_tax || 0) / prevRatio
+    if (basePriceNoTax > 0) {
+      row._base_price_no_tax = Number(basePriceNoTax.toFixed(6))
+      nextPriceNoTax = basePriceNoTax * nextRatio
+    }
+  } else {
+    row._base_price_no_tax = Number((nextPriceNoTax / Math.max(0.0001, nextRatio)).toFixed(6))
+  }
+
+  if (nextPriceNoTax > 0) {
+    row.price_no_tax = Number(nextPriceNoTax.toFixed(4))
+    calcItemTax(row)
+  }
+  calcTotal()
 }
 
 // ── 手动新增商品 ──────────────────────────────────────────────────────────────
