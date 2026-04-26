@@ -676,7 +676,7 @@ import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList, createSaleOut, auditSaleOut } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getSpecList } from '@/api/goods'
+import { getSpecList, getGoodsList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import { getFundList, createCollectReceipt, getCollectReceiptList, getPayReceiptList, createPayReceipt, deletePayReceipt, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
 import http from '@/api/http'
@@ -1067,7 +1067,7 @@ onActivated(() => {
 interface ContractItem {
   goods_id: number; goods_name: string; goods_sn: string
   spec: string; cate_name: string; unit_name: string
-  num: number; price_no_tax: number; tax_rate: number; price: number; remark: string
+  num: number; price_no_tax: number; tax_rate: number; price: number; cost_price: number; remark: string
 }
 
 const defaultFd = () => ({
@@ -1103,6 +1103,49 @@ const defaultFd = () => ({
 const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
+const goodsCostPriceMap = reactive<Record<number, number>>({})
+let goodsCostLoaded = false
+let goodsCostLoading: Promise<void> | null = null
+
+function applyMissingItemCosts(items: ContractItem[]) {
+  for (const item of items) {
+    const gid = Number(item.goods_id || 0)
+    if (!gid) continue
+    if (Number(item.cost_price || 0) > 0) continue
+    const cached = Number(goodsCostPriceMap[gid] || 0)
+    if (cached > 0) item.cost_price = cached
+  }
+}
+
+async function loadGoodsCostMapOnce() {
+  if (goodsCostLoaded) return
+  if (!goodsCostLoading) {
+    goodsCostLoading = (async () => {
+      try {
+        const res = await getGoodsList({ list_rows: 3000 })
+        const rows: any[] = res?.data?.rows ?? res?.data?.list ?? []
+        for (const g of rows) {
+          const gid = Number(g?.id || 0)
+          if (!gid) continue
+          goodsCostPriceMap[gid] = Number(g?.cost_price || 0)
+        }
+      } finally {
+        goodsCostLoaded = true
+        goodsCostLoading = null
+      }
+    })()
+  }
+  await goodsCostLoading
+}
+
+async function ensureItemCosts(items: ContractItem[]) {
+  if (!Array.isArray(items) || !items.length) return
+  applyMissingItemCosts(items)
+  const hasMissing = items.some(item => Number(item.goods_id || 0) > 0 && Number(item.cost_price || 0) <= 0)
+  if (!hasMissing) return
+  await loadGoodsCostMapOnce()
+  applyMissingItemCosts(items)
+}
 
 // 计算汇总
 const totalNoTax = computed(() =>
@@ -1293,6 +1336,7 @@ async function openEdit(row: any, readonly = false) {
   fd.prepay_amount = Number(row.prepay_amount || parsePrepayAmount(row.remark || '') || 0)
   fd.expense_amount = Number(row.expense_amount || 0)
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  await ensureItemCosts(fd.items as ContractItem[])
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
   isReadonly.value = readonly
@@ -1309,6 +1353,7 @@ async function openEdit(row: any, readonly = false) {
       fd.source_offer_id = parseSourceOfferId(full.remark || '')
       fd.prepay_amount = Number(full.prepay_amount || parsePrepayAmount(full.remark || '') || fd.prepay_amount || 0)
       fd.items = items.length ? items : (()=>{ try { return Array.isArray(full.goods_info) ? full.goods_info : JSON.parse(full.goods_info||'[]') } catch { return [] } })()
+      await ensureItemCosts(fd.items as ContractItem[])
       calcTotal()
     }
   } catch { /* 详情拉取失败不影响基本展示 */ }
@@ -1674,6 +1719,7 @@ async function handleRouteFromOffer() {
       fd.discount_value = Number(draft.discount_amount)
     }
     fd.items = Array.isArray(draft.items) ? draft.items.map(normalizeItem) : []
+    await ensureItemCosts(fd.items as ContractItem[])
     calcTotal()
     fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
     // 生成合同编号
@@ -1721,6 +1767,7 @@ function normalizeItem(t: any): ContractItem {
     price_no_tax: Number(t?.price_no_tax || (taxRate > 0 ? Number((price / (1 + taxRate / 100)).toFixed(4)) : price)),
     tax_rate: taxRate,
     price,
+    cost_price: Number(t?.cost_price || 0),
     remark: t?.remark || '',
   }
 }
@@ -1955,6 +2002,7 @@ function onGoodsConfirm(goods: any[]) {
       price: Number(levelPrice.toFixed(4)), cost_price: Number(g.cost_price) || 0, remark: '' })
     fetchGoodsSpecs(g.id)
   }
+  void ensureItemCosts(fd.items as ContractItem[])
   calcTotal()
 }
 
@@ -1982,6 +2030,7 @@ function confirmManualAdd() {
     price_no_tax: Number(manualForm.price.toFixed(4)),
     tax_rate: 0,
     price: manualForm.price,
+    cost_price: 0,
     remark: '',
   })
   calcTotal()
@@ -2130,6 +2179,7 @@ function applyOfferToForm(offer: any) {
   fd.source_offer_no = offer.offer_no || ''
   fd.remark = offer.offer_no ? `来源报价单：${offer.offer_no}` : fd.remark || ''
   fd.items = items
+  void ensureItemCosts(fd.items as ContractItem[])
   calcTotal()
   const discVal = Number(offer.discount_amount || offer.discount_value || 0)
   const afterOffer = offer.after_offer ?? offer.after_discount
