@@ -884,7 +884,7 @@ import { useRoute, useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getBomList, getBomByGoods, getSpecList, getUnitConvert } from '@/api/goods'
+import { getBomList, getBomByGoods, getSpecList, getUnitConvert, updateGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt, createExpense } from '@/api/finance'
 import http from '@/api/http'
@@ -902,6 +902,42 @@ const taxRates = TAX_RATES
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 
+async function syncGoodsCostPriceFromItems(items: any[]) {
+  const statMap = new Map<number, { qty: number; amount: number; fallback: number }>()
+  for (const rawItem of (items || [])) {
+    const goodsId = Number(rawItem?.goods_id || 0)
+    if (!goodsId) continue
+    const qty = Math.max(0, Number(rawItem?.num || 0))
+    const taxRate = Math.max(0, Number(rawItem?.tax_rate || 0))
+    const price = Number(rawItem?.price || 0)
+    const priceNoTax = Number(rawItem?.price_no_tax || 0)
+    const unitCost = priceNoTax > 0
+      ? priceNoTax
+      : (price > 0 ? (taxRate > 0 ? price / (1 + taxRate / 100) : price) : 0)
+    if (unitCost <= 0) continue
+
+    const current = statMap.get(goodsId) || { qty: 0, amount: 0, fallback: unitCost }
+    if (qty > 0) {
+      current.qty += qty
+      current.amount += unitCost * qty
+    } else {
+      current.fallback = unitCost
+    }
+    statMap.set(goodsId, current)
+  }
+
+  for (const [goodsId, stat] of statMap.entries()) {
+    const avg = stat.qty > 0 ? (stat.amount / stat.qty) : stat.fallback
+    if (avg > 0) {
+      try {
+        await updateGoods({ id: goodsId, cost_price: Number(avg.toFixed(2)) })
+      } catch (e: any) {
+        console.warn('回写商品成本价失败', goodsId, e?.message)
+      }
+    }
+  }
+}
+
 // ── 批量审核 / 反审核 ────────────────────────────────────────────────────────
 const batchAuditing = ref(false)
 const batchReverseAuditing = ref(false)
@@ -917,6 +953,12 @@ async function handleBatchAudit() {
   for (const row of pending) {
     try {
       await auditProcureOrder(row.id, 1)
+      try {
+        const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
+        await syncGoodsCostPriceFromItems(items)
+      } catch (e: any) {
+        console.warn('批量审核回写成本价失败', row?.id, e?.message)
+      }
       try {
         const _allInhouse1 = await getProcureInhouseList({ list_rows: 2000 })
         const existRows: any[] = (_allInhouse1.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
@@ -1817,6 +1859,32 @@ function generateOrderNo(): string {
   return `PO${body}`
 }
 
+function toSafeNumber(value: any): number {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : 0
+}
+
+function normalizeOrderItemMoney(item: any) {
+  const taxRate = Math.max(0, toSafeNumber(item.tax_rate))
+  let priceNoTax = toSafeNumber(item.price_no_tax)
+  let price = toSafeNumber(item.price)
+
+  if (priceNoTax <= 0 && price > 0) {
+    priceNoTax = taxRate > 0 ? price / (1 + taxRate / 100) : price
+  }
+  if (price <= 0 && priceNoTax > 0) {
+    price = priceNoTax * (1 + taxRate / 100)
+  }
+  if (taxRate === 0 && price > 0) {
+    priceNoTax = price
+  }
+
+  item.tax_rate = taxRate
+  item.price_no_tax = Number(priceNoTax.toFixed(4))
+  item.price = Number(price.toFixed(4))
+  item.num = toSafeNumber(item.num)
+}
+
 function normalizeDateValue(value: any): string {
   if (value === null || value === undefined) return ''
   const raw = String(value).trim()
@@ -1833,6 +1901,7 @@ const totalTax = computed(() =>
 )
 
 function calcTotal() {
+  fd.items.forEach((item: any) => normalizeOrderItemMoney(item))
   fd.total_amount = fd.items.reduce((s, r) => s + (r.num || 0) * (r.price || 0), 0)
   calcSettle()
 }
@@ -1926,6 +1995,26 @@ async function openEdit(row: any, readonly = false) {
   fd.order_no = fd.order_no || row.order_sn || ''
   fd.order_sn = fd.order_sn || fd.order_no || ''
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  fd.items = (fd.items || []).map((item: any) => {
+    const normalized = {
+      goods_id: toSafeNumber(item?.goods_id),
+      goods_name: String(item?.goods_name || ''),
+      goods_sn: String(item?.goods_sn || ''),
+      spec: String(item?.spec || ''),
+      cate_name: String(item?.cate_name || ''),
+      unit_name: String(item?.unit_name || ''),
+      batch_no: String(item?.batch_no || ''),
+      num: toSafeNumber(item?.num),
+      price_no_tax: toSafeNumber(item?.price_no_tax),
+      tax_rate: toSafeNumber(item?.tax_rate),
+      price: toSafeNumber(item?.price),
+      remark: String(item?.remark || ''),
+      supplier_id: item?.supplier_id ?? null,
+      supplier_name: String(item?.supplier_name || ''),
+    }
+    normalizeOrderItemMoney(normalized)
+    return normalized
+  })
   try { fd.attachments = Array.isArray(row.attachments_info) ? row.attachments_info : JSON.parse(row.attachments_info || '[]') } catch { fd.attachments = [] }
   // 加载 fee_items，若无则从旧 freight_amount/expense_amount 迁移
   let feeItems: any[] = []
@@ -1937,7 +2026,7 @@ async function openEdit(row: any, readonly = false) {
     if (expense > 0) feeItems.push({ name: '单据支出', amount: expense, bearer: 'buyer' })
   }
   fd.fee_items = feeItems
-  fd.total_amount = fd.items.reduce((s: number, r: any) => s + (r.num || 0) * (r.price || 0), 0)
+  calcTotal()
   fd.expense_amount = Number(fd.expense_amount || 0)
   if (!row.after_discount && row.after_discount !== 0) {
     fd.after_discount = fd.total_amount
@@ -2019,6 +2108,7 @@ async function handleSave(andAudit = false) {
   try {
     const normalizedOrderDate = normalizeDateValue(fd.order_date) || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
     const normalizedDeliveryDate = normalizeDateValue(fd.delivery_date)
+    calcTotal()
     const payload: Record<string, any> = {
       supplier_id: fd.supplier_id,
       supplier_name: fd.supplier_name,
@@ -2057,6 +2147,11 @@ async function handleSave(andAudit = false) {
     if (andAudit && orderId) {
       try {
         await auditProcureOrder(orderId, 1)
+        try {
+          await syncGoodsCostPriceFromItems(fd.items)
+        } catch (e: any) {
+          console.warn('保存并审核回写商品成本价失败', orderId, e?.message)
+        }
         // 审核后自动创建并审核入库记录，更新库存
         try {
           const items = fd.items
@@ -2235,6 +2330,12 @@ async function handleAudit(row: any, status: number) {
     await auditProcureOrder(row.id, status)
     // 审核通过后自动创建并审核采购入库记录（先检查是否已存在，避免重复）
     if (status === 1) {
+      try {
+        const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
+        await syncGoodsCostPriceFromItems(items)
+      } catch (e: any) {
+        console.warn('审核回写商品成本价失败', row?.id, e?.message)
+      }
       try {
         const _allInhouse4 = await getProcureInhouseList({ list_rows: 2000 })
         const existRows: any[] = (_allInhouse4.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
