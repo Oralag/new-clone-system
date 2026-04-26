@@ -1811,7 +1811,9 @@ const saving = ref(false)
 function generateOrderNo(): string {
   const d = new Date()
   const p = (n: number) => String(n).padStart(2, '0')
-  const body = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+  const ms = String(d.getMilliseconds()).padStart(3, '0')
+  const rand = Math.floor(Math.random() * 100)
+  const body = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${ms}${rand}`
   return `PO${body}`
 }
 

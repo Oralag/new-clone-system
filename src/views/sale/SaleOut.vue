@@ -20,7 +20,7 @@
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate" data-guide-id="guide-saleout-create">新增出库</el-button>
+            <!-- 新增按钮已移除：出库单由销售合同审核时自动生成 -->
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">

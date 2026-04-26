@@ -104,8 +104,7 @@
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 || row.status === 4" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button v-if="row.status === 1 && getPendingAmount(row) > 0.01" type="success" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="handleConvertToSaleOut(row)">转出库单</el-button>
+              <el-button v-if="(row.status === 1 || row.status === 4) && getPendingAmount(row) > 0.01" type="success" link size="small" @click="openCollectDialog(row)">去收款</el-button>
               <el-button type="danger" link size="small" :disabled="row.status === 1 || row.status === 4" :title="row.status === 1 || row.status === 4 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -498,6 +497,9 @@
             <template v-if="fd.prepay_amount > 0 || fd.receive_amount > 0">
               <span style="margin-left:24px">实际待收：<b style="color:#dc2626;font-size:16px">¥{{ finalPending.toFixed(2) }}</b></span>
             </template>
+            <span style="margin-left:24px">商品成本：<b style="color:rgba(29,29,31,0.35)">¥{{ totalCost.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">净利润：<b :style="{ color: netProfit >= 0 ? '#16a34a' : '#dc2626', fontSize: '16px' }">¥{{ netProfit.toFixed(2) }}</b></span>
+            <span style="margin-left:12px">利润率：<b :style="{ color: profitRate >= 0 ? '#16a34a' : '#dc2626' }">{{ profitRate.toFixed(1) }}%</b></span>
           </div>
         </div>
 
@@ -631,6 +633,36 @@
       </template>
     </el-dialog>
 
+    <!-- 收款弹窗 -->
+    <el-dialog v-model="collectDialogVisible" title="收款" width="400px" append-to-body>
+      <el-form :model="collectForm" label-width="90px">
+        <el-form-item label="合同">
+          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ collectForm.orderSn }} · {{ collectForm.customerName }}</span>
+        </el-form-item>
+        <el-form-item label="待收金额">
+          <span style="font-size:15px;font-weight:700;color:#dc2626">¥{{ collectForm.unpaid.toFixed(2) }}</span>
+        </el-form-item>
+        <el-form-item label="本次收款">
+          <el-input-number v-model="collectForm.amount" :min="0.01" :max="collectForm.unpaid" :precision="2" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="收款账户">
+          <el-select v-model="collectForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onCollectFundChange">
+            <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="收款日期">
+          <el-date-picker v-model="collectForm.collect_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="collectForm.remark" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="collectDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="collectSubmitting" @click="submitCollect">确认收款</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -642,7 +674,7 @@ import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList } from '@/api/sale'
+import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList, createSaleOut, auditSaleOut } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSpecList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
@@ -653,6 +685,7 @@ import { getCommissionRate } from '@/utils/commission'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { stockEffect } from '@/utils/stockEffect'
 
 const DRAFT_KEY = 'sale_contract_draft_from_offer'
 const permStore = usePermissionStore()
@@ -895,6 +928,73 @@ function getPendingAmount(row: any): number {
   return Math.max(0, calcContractAmount(row) - getReceivedAmount(row))
 }
 
+// ── 收款弹窗 ──────────────────────────────────────────────────────────────────
+const collectDialogVisible = ref(false)
+const collectSubmitting = ref(false)
+const collectForm = reactive({
+  orderId: 0,
+  orderSn: '',
+  customerName: '',
+  customerId: 0,
+  unpaid: 0,
+  amount: 0,
+  fund_id: null as number | null,
+  fund_name: '',
+  collect_date: new Date().toISOString().slice(0, 10),
+  remark: '',
+})
+
+function openCollectDialog(row: any) {
+  const unpaid = getPendingAmount(row)
+  if (unpaid <= 0) { ElMessage.info('该合同已收清'); return }
+  collectForm.orderId = row.id
+  collectForm.orderSn = row.order_sn || row.order_no || `XS${row.id}`
+  collectForm.customerName = row.customer_name || ''
+  collectForm.customerId = row.customer_id || 0
+  collectForm.unpaid = unpaid
+  collectForm.amount = unpaid
+  collectForm.fund_id = null
+  collectForm.fund_name = ''
+  collectForm.collect_date = new Date().toISOString().slice(0, 10)
+  collectForm.remark = ''
+  collectDialogVisible.value = true
+}
+
+function onCollectFundChange(id: number) {
+  const f = fundOptions.value.find((f: any) => f.id === id)
+  collectForm.fund_name = f?.name || ''
+}
+
+async function submitCollect() {
+  if (!collectForm.amount || collectForm.amount <= 0) { ElMessage.warning('请填写收款金额'); return }
+  if (!collectForm.fund_id) { ElMessage.warning('请选择收款账户'); return }
+  collectSubmitting.value = true
+  try {
+    await createCollectReceipt({
+      contact_type: 'customer',
+      contact_id: collectForm.customerId,
+      contact_name: collectForm.customerName,
+      customer_id: collectForm.customerId,
+      customer_name: collectForm.customerName,
+      order_sn: collectForm.orderSn,
+      order_no: collectForm.orderSn,
+      amount: collectForm.amount,
+      receipt_date: collectForm.collect_date,
+      fund_id: collectForm.fund_id,
+      fund_name: collectForm.fund_name,
+      remark: `合同收款 #${collectForm.orderId}${collectForm.remark ? ' ' + collectForm.remark : ''}`,
+    })
+    ElMessage.success('收款成功')
+    collectDialogVisible.value = false
+    loadReceiptMap()
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '收款失败')
+  } finally {
+    collectSubmitting.value = false
+  }
+}
+
 function getReceiveStatus(row: any): { label: string; type: string } {
   const total = calcContractAmount(row)
   const received = getReceivedAmount(row)
@@ -1019,10 +1119,19 @@ const freightCharge = computed(() =>
 const finalReceivable = computed(() =>
   Math.max(0, Number(fd.after_discount || 0) + freightCharge.value - Number(fd.income_amount || 0))
 )
-// 实际待收 = 应收 - 预付款核销 - 本次收款
 const finalPending = computed(() =>
   Math.max(0, finalReceivable.value - Number(fd.prepay_amount || 0) - Number(fd.receive_amount || 0))
 )
+const totalCost = computed(() =>
+  (fd.items as any[]).reduce((s: number, r: any) => s + (r.num || 0) * (r.cost_price || 0), 0)
+)
+const freightCostSeller = computed(() =>
+  fd.freight_bearer === 'seller' ? Number(fd.freight_amount || 0)
+    : fd.freight_bearer === 'half' ? Number(fd.freight_amount || 0) / 2
+    : 0
+)
+const netProfit = computed(() => fd.after_discount - totalCost.value - freightCostSeller.value)
+const profitRate = computed(() => fd.after_discount > 0 ? (netProfit.value / fd.after_discount * 100) : 0)
 
 function normalizeReceiptAllocation() {
   const currentPrepay = Math.max(0, Number(fd.prepay_amount || 0))
@@ -1648,6 +1757,70 @@ async function handleDelete(id: number) {
   tableRef.value?.refresh()
 }
 
+async function autoCreateSaleOut(row: any) {
+  const items = parseItems(row.goods_info)
+  if (!items.length) return
+  // 取仓库：合同上有就用，没有就取第一个
+  let warehouseId = row.warehouse_id || 0
+  let warehouseName = row.warehouse_name || ''
+  if (!warehouseId) {
+    try {
+      const whRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 1 } })
+      const wh = whRes?.data?.rows?.[0]
+      if (wh) { warehouseId = wh.id; warehouseName = wh.name }
+    } catch { /* ignore */ }
+  }
+  const today = new Date().toISOString().slice(0, 10)
+  const orderSn = getContractSn(row)
+  const goodsInfo = items.map((i: any) => ({
+    goods_id: i.goods_id, goods_name: i.goods_name, goods_sn: i.goods_sn || '',
+    spec: i.spec || '', unit_name: i.unit_name || '',
+    num: i.num || 1, price: i.price || 0, price_no_tax: i.price_no_tax || i.price || 0,
+    tax_rate: i.tax_rate || 0, cost_price: i.cost_price || 0, remark: i.remark || '',
+  }))
+  const outRes = await createSaleOut({
+    customer_id: row.customer_id,
+    customer_name: row.customer_name,
+    admin_name: row.admin_name || '',
+    out_date: today,
+    warehouse_id: warehouseId,
+    warehouse_name: warehouseName,
+    total_amount: row.total_amount,
+    after_discount: row.after_discount ?? row.total_amount,
+    discount_amount: row.discount_value || 0,
+    freight_amount: row.freight_amount || 0,
+    freight_bearer: row.freight_bearer || 'buyer',
+    remark: `来自销售合同 ${orderSn}`,
+    goods_info: JSON.stringify(goodsInfo),
+  })
+  const outId = outRes?.data?.id || outRes?.data?.lastId
+  if (!outId) throw new Error(`出库单创建失败：${outRes?.data?.msg || '未知错误'}`)
+  await auditSaleOut(outId, 1)
+  await stockEffect(
+    items.filter((i: any) => i.goods_id && i.num).map((i: any) => ({ goods_id: i.goods_id, num: i.num, goods_name: i.goods_name })),
+    'deduct', warehouseId, '销售出库'
+  )
+}
+
+async function autoReverseSaleOut(row: any) {
+  const orderSn = getContractSn(row)
+  if (!orderSn) return
+  try {
+    const outListRes = await getSaleOutList({ keyword: orderSn, list_rows: 50 })
+    const outRows: any[] = (outListRes?.data?.rows ?? []).filter((o: any) =>
+      String(o.remark || '').includes(orderSn) && Number(o.status) === 1
+    )
+    for (const out of outRows) {
+      const items = parseItems(out.goods_info)
+      await auditSaleOut(out.id, 0)
+      await stockEffect(
+        items.filter((i: any) => i.goods_id && i.num).map((i: any) => ({ goods_id: i.goods_id, num: i.num, goods_name: i.goods_name })),
+        'restore', out.warehouse_id, '销售出库反审核'
+      )
+    }
+  } catch { /* 反出库失败不阻塞合同反审核 */ }
+}
+
 async function handleAudit(row: any, status: number) {
   if (status === 2) { ElMessage.warning('驳回操作已禁用'); return }
   const action = status === 1 ? '审核通过' : '反审核'
@@ -1703,10 +1876,12 @@ async function handleAudit(row: any, status: number) {
       freshRow = detail?.data?.row || detail?.data || row
     } catch { /* ignore */ }
     if (status === 1) {
-      try { await autoCreateReceipt(freshRow) } catch (e: any) { errMsg = e?.message || '自动创建收款失败' }
+      try { await autoCreateSaleOut(freshRow) } catch (e: any) { errMsg = `自动出库失败：${e?.message || '未知'}` }
+      try { await autoCreateReceipt(freshRow) } catch (e: any) { errMsg = errMsg || e?.message || '自动创建收款失败' }
       try { await ensureContractFreightExpense(freshRow) } catch (e: any) { errMsg = errMsg || e?.message || '自动写入销售运费失败' }
     } else if (status === 0) {
-      try { await cancelAutoReceipt(freshRow) } catch (e: any) { errMsg = e?.message || '自动撤回收款失败' }
+      try { await autoReverseSaleOut(freshRow) } catch (e: any) { errMsg = `自动反出库失败：${e?.message || '未知'}` }
+      try { await cancelAutoReceipt(freshRow) } catch (e: any) { errMsg = errMsg || e?.message || '自动撤回收款失败' }
       try { await cleanupContractFreightExpense(freshRow) } catch (e: any) { errMsg = errMsg || e?.message || '自动撤回销售运费失败' }
       // 反审核后把来源报价单状态恢复为已审核（1）
       const offerId = parseSourceOfferId(freshRow.remark || '') || parseSourceOfferId(row.remark || '')
@@ -1772,7 +1947,7 @@ function onGoodsConfirm(goods: any[]) {
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
       spec: g.spec || '', cate_name: g.cate_name || '', unit_name: g.unit_name || '',
       num: 1, price_no_tax: Number(levelPrice.toFixed(4)), tax_rate: 0,
-      price: Number(levelPrice.toFixed(4)), remark: '' })
+      price: Number(levelPrice.toFixed(4)), cost_price: Number(g.cost_price) || 0, remark: '' })
     fetchGoodsSpecs(g.id)
   }
   calcTotal()

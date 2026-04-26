@@ -13,7 +13,7 @@
         </div>
         <div class="logo-text-wrap">
           <span class="logo-text">ADAM</span>
-          <span class="logo-sub">Investment Observatory</span>
+          <span class="logo-sub">实验体</span>
         </div>
         <span class="life-dot" :class="{ alive: adamStore.isAlive, dormant: !adamStore.isAlive }"></span>
       </div>

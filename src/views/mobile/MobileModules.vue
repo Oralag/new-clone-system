@@ -46,7 +46,7 @@ const modules = [
     icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="#722ED1" opacity="0.9"/></svg>',
   },
   {
-    label: '对外投资',
+    label: '实验体',
     sub: '市场分析 · 智能决策 · 资产管理',
     path: '/mobile/investment',
     color: '#F5A623',

@@ -139,7 +139,7 @@
         </div>
       </div>
 
-      <!-- 对外投资 -->
+      <!-- 实验体 -->
       <div class="portal-card portal-card-gold" :class="{ 'card-pressed': pressedCard === 'investment' }"
         @click="go('/investment')"
         @touchstart.passive="pressedCard = 'investment'"
@@ -152,7 +152,7 @@
             <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
           </svg>
         </div>
-        <h2 class="card-title">对外投资</h2>
+        <h2 class="card-title">实验体</h2>
         <p class="card-desc">AI 智能投资决策中枢。市场研判、交易指令、资产管理、生命体观测一体化。</p>
         <div class="card-tags">
           <span class="tag tag-gold">市场分析</span>
@@ -160,7 +160,7 @@
           <span class="tag tag-gold">资产管理</span>
         </div>
         <div class="card-arrow">
-          <span>进入投资中枢</span>
+          <span>进入实验体</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>

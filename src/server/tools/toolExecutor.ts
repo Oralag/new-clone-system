@@ -539,6 +539,7 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           admin_name: input.admin_name || '',
           remark: input.remark || '',
           goods_info: JSON.stringify(resolvedItems),
+          order_date: input.sign_date || today,
           sign_date: input.sign_date || today,
           contract_date: input.sign_date || today,
           receive_amount: receiveAmount,
