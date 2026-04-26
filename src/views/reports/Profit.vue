@@ -134,6 +134,59 @@
 
       <!-- 单据维度 -->
       <el-table v-else :data="orderRows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
+        <el-table-column type="expand" width="42">
+          <template #default="{ row }">
+            <div class="order-detail">
+              <div class="order-detail-head">
+                <span>{{ row.order_no }} 商品利润明细</span>
+                <span>销售额 ¥{{ fmt(row.sale_amount) }} / 成本 ¥{{ fmt(row.cost_amount) }} / 毛利 {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}</span>
+              </div>
+              <el-table :data="row.items" size="small" border style="width:100%">
+                <el-table-column prop="goods_name" label="商品名称" min-width="160" show-overflow-tooltip />
+                <el-table-column prop="goods_sn" label="编码" min-width="110" show-overflow-tooltip />
+                <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+                <el-table-column label="数量" width="90" align="right">
+                  <template #default="{ row: item }">{{ fmtQty(item.qty) }}</template>
+                </el-table-column>
+                <el-table-column label="销售额" width="110" align="right">
+                  <template #default="{ row: item }"><span class="blue">¥{{ fmt(item.sale_amount) }}</span></template>
+                </el-table-column>
+                <el-table-column label="单位成本" width="110" align="right">
+                  <template #default="{ row: item }">
+                    <el-tooltip :content="item.cost_source" placement="top">
+                      <span class="purple" style="cursor:help">¥{{ fmt(item.unit_cost) }}</span>
+                    </el-tooltip>
+                  </template>
+                </el-table-column>
+                <el-table-column label="总成本" width="110" align="right">
+                  <template #default="{ row: item }"><span class="purple">¥{{ fmt(item.cost_amount) }}</span></template>
+                </el-table-column>
+                <el-table-column label="毛利润" width="110" align="right">
+                  <template #default="{ row: item }">
+                    <span :style="{ color: item.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
+                      {{ item.profit >= 0 ? '+' : '' }}¥{{ fmt(item.profit) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="毛利率" width="90" align="right">
+                  <template #default="{ row: item }">
+                    <el-tag :type="item.profit_rate >= 20 ? 'success' : item.profit_rate > 0 ? 'warning' : 'danger'" size="small">
+                      {{ item.profit_rate.toFixed(1) }}%
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="成本来源" width="120" align="center" show-overflow-tooltip>
+                  <template #default="{ row: item }">
+                    <el-tag size="small" :type="item.has_bom ? 'warning' : item.unit_cost > 0 ? 'info' : 'danger'">
+                      {{ item.has_bom ? 'BOM' : item.unit_cost > 0 ? '成本价' : '缺成本' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <template #empty><div style="padding:20px 0;color:#aaa">这张单没有可解析的商品明细</div></template>
+              </el-table>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="单据类型" align="center" width="80">
           <template #default="{ row }">
             <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
@@ -421,19 +474,48 @@ const rows = computed(() => {
     .sort((a, b) => b.profit - a.profit)
 })
 
+function buildOrderItems(goodsInfo: any, saleAmount: number) {
+  const items = parseItems(goodsInfo)
+  const rawTotal = items.reduce((s, g) => s + itemQty(g) * itemPrice(g), 0)
+  const totalQty = items.reduce((s, g) => s + itemQty(g), 0)
+  const ratio = rawTotal > 0 ? saleAmount / rawTotal : 1
+
+  return items.map((g, index) => {
+    const qty = itemQty(g)
+    const goodsId = resolveGoodsId(g)
+    const goods = goodsList.value.find(x => x.id === goodsId)
+    const cost = getItemUnitCost(g)
+    const lineSale = rawTotal > 0
+      ? qty * itemPrice(g) * ratio
+      : (totalQty > 0 ? saleAmount * qty / totalQty : 0)
+    const costAmount = qty * cost.unitCost
+    const profit = lineSale - costAmount
+    return {
+      key: `${goodsId || itemSn(g) || itemName(g) || index}_${index}`,
+      goods_id: goodsId,
+      goods_name: itemName(g) || goods?.goods_name || '-',
+      goods_sn: itemSn(g) || goods?.goods_sn || '',
+      unit_name: toText(g?.unit_name, g?.unit, goods?.unit_name),
+      qty,
+      sale_amount: lineSale,
+      unit_cost: cost.unitCost,
+      cost_amount: costAmount,
+      profit,
+      profit_rate: lineSale > 0 ? (profit / lineSale * 100) : 0,
+      has_bom: cost.hasBom,
+      cost_source: cost.costSource,
+    }
+  })
+}
+
 // 单据维度：按每张合同/零售单一行
 const orderRows = computed(() => {
   const result: any[] = []
 
   for (const c of saleContracts.value) {
-    let cost_amount = 0
-    try {
-      for (const g of parseItems(c.goods_info)) {
-        const qty = itemQty(g)
-        cost_amount += qty * getItemUnitCost(g).unitCost
-      }
-    } catch {}
     const sale_amount = Number(c.after_discount || c.total_amount || 0)
+    const items = buildOrderItems(c.goods_info, sale_amount)
+    const cost_amount = items.reduce((s, item) => s + item.cost_amount, 0)
     const freight = myFreight(c)
     const profit = sale_amount - cost_amount
     const net_profit = profit - freight
@@ -445,22 +527,23 @@ const orderRows = computed(() => {
       sale_amount, cost_amount, profit, freight, net_profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
       net_rate: sale_amount > 0 ? (net_profit / sale_amount * 100) : 0,
+      items,
     })
   }
 
   for (const r of retailOrders.value) {
     let sale_amount = 0
-    let cost_amount = 0
     try {
       for (const g of parseItems(r.goods_info)) {
         const qty = itemQty(g)
         sale_amount += qty * itemPrice(g)
-        cost_amount += qty * getItemUnitCost(g).unitCost
       }
     } catch {}
     if (sale_amount <= 0) {
       sale_amount = Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
     }
+    const items = buildOrderItems(r.goods_info, sale_amount)
+    const cost_amount = items.reduce((s, item) => s + item.cost_amount, 0)
     const profit = sale_amount - cost_amount
     result.push({
       source: '零售',
@@ -470,6 +553,7 @@ const orderRows = computed(() => {
       sale_amount, cost_amount, profit, freight: 0, net_profit: profit,
       profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
       net_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+      items,
     })
   }
 
@@ -500,6 +584,11 @@ const netRate = computed(() => totalSale.value > 0 ? (netProfit.value / totalSal
 function fmt(v: number | string): string {
   const n = Number(v)
   return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function fmtQty(v: number | string): string {
+  const n = Number(v)
+  return isNaN(n) ? '0' : n.toLocaleString('zh-CN', { maximumFractionDigits: 3 })
 }
 
 async function loadData() {
@@ -552,5 +641,19 @@ onMounted(loadData)
 .pf-note {
   display:flex; align-items:center; gap:6px; font-size:12px;
   color:rgba(29,29,31,0.4); padding:6px 0 12px;
+}
+.order-detail {
+  padding: 12px 20px 16px 58px;
+  background: #fafbff;
+}
+.order-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 0 10px;
 }
 </style>
