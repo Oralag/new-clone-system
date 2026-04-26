@@ -364,7 +364,7 @@ function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {
     if (form.items.some((i: any) => i.goods_id === g.id)) continue
     form.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
-      unit_name: g.unit_name || '', price: Number(g.sell_price) || 0, num: 1 })
+      unit_name: g.unit_name || '', price: Number(g.sell_price) || 0, cost_price: Number(g.cost_price || 0), num: 1 })
   }
   calcFormTotal()
 }

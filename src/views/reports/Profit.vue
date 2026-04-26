@@ -287,6 +287,22 @@ function getUnitCost(goodsId: number): { unitCost: number; hasBom: boolean; cost
   }
 }
 
+function getItemUnitCost(item: any): ReturnType<typeof getUnitCost> {
+  const direct = Number(item?.cost_price || 0)
+  if (direct > 0) {
+    return { unitCost: direct, hasBom: false, costSource: `单据成本 ¥${direct.toFixed(2)}` }
+  }
+  const byId = getUnitCost(Number(item?.goods_id || 0))
+  if (byId.unitCost > 0) return byId
+  const sn = String(item?.goods_sn || '').trim()
+  const name = String(item?.goods_name || '').trim()
+  const matched = goodsList.value.find(g =>
+    (sn && String(g.goods_sn || '').trim() === sn) ||
+    (name && String(g.goods_name || '').trim() === name)
+  )
+  return matched ? getUnitCost(Number(matched.id || 0)) : byId
+}
+
 const rows = computed(() => {
   const map: Record<string, {
     goods_name: string; goods_id: number; num: number; sale_amount: number
@@ -299,7 +315,7 @@ const rows = computed(() => {
       const items = JSON.parse(goodsInfo)
       for (const g of items) {
         const key = `${g.goods_id}_${source}`
-        const { unitCost, hasBom, costSource } = getUnitCost(g.goods_id)
+        const { unitCost, hasBom, costSource } = getItemUnitCost(g)
         if (!map[key]) {
           map[key] = {
             goods_name: g.goods_name || '-', goods_id: g.goods_id,
@@ -345,7 +361,7 @@ const orderRows = computed(() => {
     try {
       for (const g of JSON.parse(c.goods_info || '[]')) {
         const qty = Number(g.num || 0)
-        cost_amount += qty * getUnitCost(g.goods_id).unitCost
+        cost_amount += qty * getItemUnitCost(g).unitCost
       }
     } catch {}
     const sale_amount = Number(c.after_discount || c.total_amount || 0)
@@ -370,7 +386,7 @@ const orderRows = computed(() => {
       for (const g of JSON.parse(r.goods_info || '[]')) {
         const qty = Number(g.num || 0)
         sale_amount += qty * Number(g.price || 0)
-        cost_amount += qty * getUnitCost(g.goods_id).unitCost
+        cost_amount += qty * getItemUnitCost(g).unitCost
       }
     } catch {}
     if (sale_amount <= 0) {
@@ -428,7 +444,7 @@ async function loadData() {
     const [c, r, g, ih, b, e] = await Promise.allSettled([
       getContractList(params),
       getRetailOrderList(params),
-      getGoodsList({ list_rows: 500 }),
+      getGoodsList({ list_rows: 3000 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
       getExpenseList(params),

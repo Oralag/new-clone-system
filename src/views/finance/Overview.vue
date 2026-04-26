@@ -743,7 +743,7 @@ const profitTrendData = computed(() => {
     const k = getDateKey(c.contract_date || c.create_time || '')
     if (revenueMap[k] === undefined) continue
     revenueMap[k] += Number(c.after_discount || c.total_amount || 0)
-    try { for (const g of JSON.parse(c.goods_info||'[]')) costMap[k] += Number(g.num||0) * (profitCostMap.value[g.goods_id]||0) } catch {}
+    try { for (const g of JSON.parse(c.goods_info||'[]')) costMap[k] += Number(g.num||0) * getItemUnitCostFromMap(g).unitCost } catch {}
     costMap[k] += myProfitFreight(c)
   }
   for (const r of retailList.value) {
@@ -753,7 +753,7 @@ const profitTrendData = computed(() => {
     try { for (const g of JSON.parse(r.goods_info||'[]')) {
       const q = Number(g.num||0)
       revenueMap[k] += q * Number(g.price||0)
-      costMap[k] += q * (profitCostMap.value[g.goods_id]||0)
+      costMap[k] += q * getItemUnitCostFromMap(g).unitCost
     }} catch {}
   }
   for (const e of expenseList.value) {
@@ -795,6 +795,20 @@ function getUnitCostFromMap(goodsId: number): { unitCost: number; costSource: st
   }
 }
 
+function getItemUnitCostFromMap(item: any): { unitCost: number; costSource: string } {
+  const direct = Number(item?.cost_price || 0)
+  if (direct > 0) return { unitCost: direct, costSource: `单据成本 ¥${direct.toFixed(2)}` }
+  const byId = getUnitCostFromMap(Number(item?.goods_id || 0))
+  if (byId.unitCost > 0) return byId
+  const sn = String(item?.goods_sn || '').trim()
+  const name = String(item?.goods_name || '').trim()
+  const matched = profitGoodsList.value.find(g =>
+    (sn && String(g.goods_sn || '').trim() === sn) ||
+    (name && String(g.goods_name || '').trim() === name)
+  )
+  return matched ? getUnitCostFromMap(Number(matched.id || 0)) : byId
+}
+
 // 按单品
 const profitByGoods = computed(() => {
   const map: Record<string, any> = {}
@@ -803,7 +817,7 @@ const profitByGoods = computed(() => {
     try {
       for (const g of JSON.parse(goodsInfo)) {
         const key = `${g.goods_id}_${source}`
-        const { unitCost, costSource } = getUnitCostFromMap(g.goods_id)
+        const { unitCost, costSource } = getItemUnitCostFromMap(g)
         if (!map[key]) map[key] = { goods_name: g.goods_name || '-', goods_id: g.goods_id, num: 0, sale_amount: 0, unit_cost: unitCost, cost_source: costSource, source }
         const qty = Number(g.num || 0)
         map[key].num += qty
@@ -831,7 +845,7 @@ const profitByOrder = computed(() => {
   const result: any[] = []
   for (const c of contractList.value) {
     let cost_amount = 0
-    try { for (const g of JSON.parse(c.goods_info || '[]')) cost_amount += Number(g.num || 0) * getUnitCostFromMap(g.goods_id).unitCost } catch {}
+    try { for (const g of JSON.parse(c.goods_info || '[]')) cost_amount += Number(g.num || 0) * getItemUnitCostFromMap(g).unitCost } catch {}
     const sale_amount = Number(c.after_discount || c.total_amount || 0)
     const freight = myProfitFreight(c)
     const profit = sale_amount - cost_amount
@@ -849,7 +863,7 @@ const profitByOrder = computed(() => {
   for (const r of retailList.value) {
     if (r.status !== 1) continue
     let sale_amount = 0, cost_amount = 0
-    try { for (const g of JSON.parse(r.goods_info || '[]')) { const q = Number(g.num || 0); sale_amount += q * Number(g.price || 0); cost_amount += q * getUnitCostFromMap(g.goods_id).unitCost } } catch {}
+    try { for (const g of JSON.parse(r.goods_info || '[]')) { const q = Number(g.num || 0); sale_amount += q * Number(g.price || 0); cost_amount += q * getItemUnitCostFromMap(g).unitCost } } catch {}
     if (sale_amount <= 0) {
       sale_amount = Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
     }
@@ -875,7 +889,7 @@ const profitByMonth = computed(() => {
     if (!m) continue
     ensure(m)
     map[m].revenue += Number(c.after_discount || c.total_amount || 0)
-    try { for (const g of JSON.parse(c.goods_info || '[]')) map[m].cost += Number(g.num || 0) * (profitCostMap.value[g.goods_id] || 0) } catch {}
+    try { for (const g of JSON.parse(c.goods_info || '[]')) map[m].cost += Number(g.num || 0) * getItemUnitCostFromMap(g).unitCost } catch {}
     map[m].freight += myProfitFreight(c)
   }
   for (const r of retailList.value) {
@@ -883,7 +897,7 @@ const profitByMonth = computed(() => {
     const m = (r.order_date || r.create_time || '').slice(0, 7)
     if (!m) continue
     ensure(m)
-    try { for (const g of JSON.parse(r.goods_info || '[]')) { const q = Number(g.num || 0); map[m].revenue += q * Number(g.price || 0); map[m].cost += q * (profitCostMap.value[g.goods_id] || 0) } } catch {}
+    try { for (const g of JSON.parse(r.goods_info || '[]')) { const q = Number(g.num || 0); map[m].revenue += q * Number(g.price || 0); map[m].cost += q * getItemUnitCostFromMap(g).unitCost } } catch {}
   }
   for (const e of expenseList.value) {
     const m = (e.expense_date || e.create_time || '').slice(0, 7)
@@ -1179,7 +1193,7 @@ async function loadAllData() {
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
       getContractList({ list_rows: 1000, status: 1 }),
-      getGoodsList({ list_rows: 500 }),
+      getGoodsList({ list_rows: 3000 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
     ])

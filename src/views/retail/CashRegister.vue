@@ -484,7 +484,7 @@ function onBarcodeEnter() {
 }
 
 // ── 购物车 ────────────────────────────────────────────────────────────────────
-interface CartItem { goods_id: number; goods_name: string; goods_sn: string; unit_name: string; price: number; num: number }
+interface CartItem { goods_id: number; goods_name: string; goods_sn: string; unit_name: string; price: number; num: number; cost_price?: number }
 
 const cartItems = reactive<CartItem[]>([])
 
@@ -512,6 +512,7 @@ function addToCart(g: any) {
     goods_sn: g.goods_sn || '',
     unit_name: g.unit_name || '',
     price: usePrice,
+    cost_price: Number(g.cost_price || 0),
     num: 1,
   })
   calcTotal()
@@ -687,6 +688,7 @@ function addWeightItemToCart() {
     goods_sn: '',
     unit_name: wcGoodsUnit.value,
     price: wcPricePerJin.value,
+    cost_price: Number(goodsList.value.find((g: any) => g.id === wcGoodsId.value)?.cost_price || 0),
     num: parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4)),
   })
   calcTotal()
