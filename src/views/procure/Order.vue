@@ -1975,7 +1975,7 @@ async function handleSave(andAudit = false) {
   if (!fd.items.length) {
     ElMessage.warning('请至少添加一件商品'); return
   }
-  // 单号唯一性校验（仅新增时）
+  // 单号唯一性校验（仅新增时，重复则自动重新生成）
   if (!fd.id) {
     const autoNo = fd.order_no || fd.order_sn || ''
     if (autoNo) {
@@ -1983,8 +1983,10 @@ async function handleSave(andAudit = false) {
         const checkRes = await getProcureOrderList({ order_no: autoNo, list_rows: 5 })
         const existing = checkRes?.data?.rows ?? []
         if (existing.length > 0) {
-          ElMessage.error(`采购单号 ${autoNo} 已存在，请修改后重试`)
-          return
+          // 单号重复 → 自动生成新单号后重试
+          fd.order_no = generateOrderNo()
+          ElMessage.warning(`采购单号 ${autoNo} 已存在，已自动更换为 ${fd.order_no}`)
+          return handleSave() // 递归重试
         }
       } catch { /* 查询失败不阻断保存 */ }
     }
