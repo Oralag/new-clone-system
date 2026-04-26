@@ -319,23 +319,40 @@ const goodsCostMap = computed(() => {
   return m
 })
 
+const hasBomSet = computed(() => {
+  const s = new Set<number>()
+  for (const b of bomList.value) {
+    if (b.goods_id) s.add(Number(b.goods_id))
+  }
+  return s
+})
+
 function getUnitCost(gid: number): { unitCost: number; costSource: string } {
   const c = goodsCostMap.value[gid] || 0
-  return { unitCost: c, costSource: c > 0 ? `成本 ¥${c.toFixed(2)}` : '未设置成本价' }
+  const hasBom = hasBomSet.value.has(gid)
+  return { unitCost: c, costSource: c > 0 ? `成本 ¥${c.toFixed(2)}${hasBom ? '（含BOM）' : ''}` : '未设置成本价' }
 }
 
-function getItemUnitCost(item: any): ReturnType<typeof getUnitCost> {
-  const direct = Number(item?.cost_price || 0)
-  if (direct > 0) return { unitCost: direct, costSource: `单据成本 ¥${direct.toFixed(2)}` }
-  const byId = getUnitCost(Number(item?.goods_id || 0))
-  if (byId.unitCost > 0) return byId
+function resolveGoodsId(item: any): number {
+  const id = Number(item?.goods_id || 0)
+  if (id > 0) return id
   const sn = String(item?.goods_sn || '').trim()
   const name = String(item?.goods_name || '').trim()
   const matched = goodsList.value.find(g =>
     (sn && String(g.goods_sn || '').trim() === sn) ||
     (name && String(g.goods_name || '').trim() === name)
   )
-  return matched ? getUnitCost(Number(matched.id || 0)) : byId
+  return Number(matched?.id || 0)
+}
+
+function getItemUnitCost(item: any): ReturnType<typeof getUnitCost> {
+  const goodsId = resolveGoodsId(item)
+  const byId = getUnitCost(goodsId)
+  if (hasBomSet.value.has(goodsId) && byId.unitCost > 0) return byId
+  const direct = Number(item?.cost_price || 0)
+  if (direct > 0) return { unitCost: direct, costSource: `单据成本 ¥${direct.toFixed(2)}` }
+  if (byId.unitCost > 0) return byId
+  return byId
 }
 
 function myFreight(row: any): number {

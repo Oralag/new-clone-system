@@ -287,20 +287,28 @@ function getUnitCost(goodsId: number): { unitCost: number; hasBom: boolean; cost
   }
 }
 
-function getItemUnitCost(item: any): ReturnType<typeof getUnitCost> {
-  const direct = Number(item?.cost_price || 0)
-  if (direct > 0) {
-    return { unitCost: direct, hasBom: false, costSource: `单据成本 ¥${direct.toFixed(2)}` }
-  }
-  const byId = getUnitCost(Number(item?.goods_id || 0))
-  if (byId.unitCost > 0) return byId
+function resolveGoodsId(item: any): number {
+  const id = Number(item?.goods_id || 0)
+  if (id > 0) return id
   const sn = String(item?.goods_sn || '').trim()
   const name = String(item?.goods_name || '').trim()
   const matched = goodsList.value.find(g =>
     (sn && String(g.goods_sn || '').trim() === sn) ||
     (name && String(g.goods_name || '').trim() === name)
   )
-  return matched ? getUnitCost(Number(matched.id || 0)) : byId
+  return Number(matched?.id || 0)
+}
+
+function getItemUnitCost(item: any): ReturnType<typeof getUnitCost> {
+  const goodsId = resolveGoodsId(item)
+  const byId = getUnitCost(goodsId)
+  if (byId.hasBom && byId.unitCost > 0) return byId
+  const direct = Number(item?.cost_price || 0)
+  if (direct > 0) {
+    return { unitCost: direct, hasBom: false, costSource: `单据成本 ¥${direct.toFixed(2)}` }
+  }
+  if (byId.unitCost > 0) return byId
+  return byId
 }
 
 const rows = computed(() => {

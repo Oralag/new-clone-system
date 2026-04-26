@@ -713,6 +713,14 @@ const profitCostMap = computed(() => {
   return m
 })
 
+const profitHasBomSet = computed(() => {
+  const s = new Set<number>()
+  for (const b of profitBomList.value) {
+    if (b.goods_id) s.add(Number(b.goods_id))
+  }
+  return s
+})
+
 function getDateKey(dateStr: string) { return (dateStr || '').slice(0, 10) }
 
 function myProfitFreight(row: any): number {
@@ -789,24 +797,33 @@ function profitFmt(v: number): string {
 
 function getUnitCostFromMap(goodsId: number): { unitCost: number; costSource: string } {
   const c = profitCostMap.value[goodsId] || 0
+  const hasBom = profitHasBomSet.value.has(goodsId)
   return {
     unitCost: c,
-    costSource: c > 0 ? `成本 ¥${c.toFixed(2)}` : '未设置成本价',
+    costSource: c > 0 ? `成本 ¥${c.toFixed(2)}${hasBom ? '（含BOM）' : ''}` : '未设置成本价',
   }
 }
 
-function getItemUnitCostFromMap(item: any): { unitCost: number; costSource: string } {
-  const direct = Number(item?.cost_price || 0)
-  if (direct > 0) return { unitCost: direct, costSource: `单据成本 ¥${direct.toFixed(2)}` }
-  const byId = getUnitCostFromMap(Number(item?.goods_id || 0))
-  if (byId.unitCost > 0) return byId
+function resolveProfitGoodsId(item: any): number {
+  const id = Number(item?.goods_id || 0)
+  if (id > 0) return id
   const sn = String(item?.goods_sn || '').trim()
   const name = String(item?.goods_name || '').trim()
   const matched = profitGoodsList.value.find(g =>
     (sn && String(g.goods_sn || '').trim() === sn) ||
     (name && String(g.goods_name || '').trim() === name)
   )
-  return matched ? getUnitCostFromMap(Number(matched.id || 0)) : byId
+  return Number(matched?.id || 0)
+}
+
+function getItemUnitCostFromMap(item: any): { unitCost: number; costSource: string } {
+  const goodsId = resolveProfitGoodsId(item)
+  const byId = getUnitCostFromMap(goodsId)
+  if (profitHasBomSet.value.has(goodsId) && byId.unitCost > 0) return byId
+  const direct = Number(item?.cost_price || 0)
+  if (direct > 0) return { unitCost: direct, costSource: `单据成本 ¥${direct.toFixed(2)}` }
+  if (byId.unitCost > 0) return byId
+  return byId
 }
 
 // 按单品
