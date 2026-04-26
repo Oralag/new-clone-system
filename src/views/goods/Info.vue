@@ -901,6 +901,12 @@ import {
 } from '@/api/goods'
 import { getStockList } from '@/api/warehouse'
 
+const KAONAIPI_SN = 'SP0000053'
+const KAONAIPI_BASE_UNIT = '斤'
+const KAONAIPI_AUX_UNIT = '盒'
+const KAONAIPI_BASE_COST = 22
+const KAONAIPI_AUX_RATIO = 0.5 // 1盒=0.5斤
+
 // ── 分类面板 ─────────────────────────────────────────────────────────────────
 const cateOptions = ref<any[]>([])
 const cateLoading = ref(false)
@@ -1342,9 +1348,49 @@ async function loadOptions() {
   await unitOptionsReady
 }
 
+async function ensureKaoNaiPiMasterUnitOnGoodsPage() {
+  try {
+    const goodsRes = await getGoodsList({ keyword: KAONAIPI_SN, list_rows: 50 })
+    const rows: any[] = goodsRes?.data?.rows ?? []
+    const target = rows.find((r: any) => String(r?.goods_sn || '').trim().toUpperCase() === KAONAIPI_SN)
+    if (!target?.id) return
+
+    const jin = unitOptions.value.find((u: any) => String(u?.name || '').trim() === KAONAIPI_BASE_UNIT)
+    const nextUnitId = jin?.id ? Number(jin.id) : Number(target.unit_id || 0)
+    const nextUnitName = KAONAIPI_BASE_UNIT
+    const nextCost = KAONAIPI_BASE_COST
+    const needFix = String(target.unit_name || '') !== nextUnitName
+      || Number(target.unit_id || 0) !== Number(nextUnitId || 0)
+      || Math.abs(Number(target.cost_price || 0) - nextCost) > 0.0001
+
+    if (needFix) {
+      await updateGoods({
+        id: Number(target.id),
+        unit_id: nextUnitId || undefined,
+        unit_name: nextUnitName,
+        cost_price: nextCost,
+      })
+      await saveUnitConvert({
+        goods_id: Number(target.id),
+        units: [
+          { unit_name: KAONAIPI_BASE_UNIT, ratio: 1 },
+          { unit_name: KAONAIPI_AUX_UNIT, ratio: KAONAIPI_AUX_RATIO },
+        ],
+      })
+      tableRef.value?.refresh()
+      ElMessage.success('已修复烤奶皮主数据：基础单位=斤，采购价=22')
+    }
+  } catch (e: any) {
+    console.warn('修复烤奶皮主数据失败', e?.message)
+  }
+}
+
 onMounted(() => {
   loadCates()
-  loadOptions()
+  ;(async () => {
+    await loadOptions()
+    await ensureKaoNaiPiMasterUnitOnGoodsPage()
+  })()
   loadBomView()
   window.addEventListener('resize', handleMobileResize)
 })
