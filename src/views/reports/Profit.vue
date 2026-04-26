@@ -373,6 +373,9 @@ const orderRows = computed(() => {
         cost_amount += qty * getUnitCost(g.goods_id).unitCost
       }
     } catch {}
+    if (sale_amount <= 0) {
+      sale_amount = Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
+    }
     const profit = sale_amount - cost_amount
     result.push({
       source: '零售',
