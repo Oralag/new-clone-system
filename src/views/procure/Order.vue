@@ -2073,20 +2073,32 @@ async function handleSave(andAudit = false) {
   if (!fd.items.length) {
     ElMessage.warning('请至少添加一件商品'); return
   }
-  // 单号唯一性校验（仅新增时，重复则自动重新生成）
+  // 单号唯一性校验（仅新增时；精确匹配碰撞；最多重试 6 次，避免递归连环弹窗）
   if (!fd.id) {
-    const autoNo = fd.order_no || fd.order_sn || ''
-    if (autoNo) {
+    let attempts = 0
+    const maxAttempts = 6
+    while (attempts < maxAttempts) {
+      const autoNo = fd.order_no || fd.order_sn || generateOrderNo()
+      fd.order_no = autoNo
+      fd.order_sn = autoNo
+      attempts++
       try {
-        const checkRes = await getProcureOrderList({ order_no: autoNo, list_rows: 5 })
-        const existing = checkRes?.data?.rows ?? []
-        if (existing.length > 0) {
-          // 单号重复 → 自动生成新单号后重试
-          fd.order_no = generateOrderNo()
-          ElMessage.warning(`采购单号 ${autoNo} 已存在，已自动更换为 ${fd.order_no}`)
-          return handleSave() // 递归重试
-        }
-      } catch { /* 查询失败不阻断保存 */ }
+        const checkRes = await getProcureOrderList({ order_no: autoNo, order_sn: autoNo, list_rows: 20 })
+        const rows = checkRes?.data?.rows ?? []
+        const duplicated = rows.some((r: any) => String(r.order_no || r.order_sn || '') === autoNo)
+        if (!duplicated) break
+        const nextNo = generateOrderNo()
+        fd.order_no = nextNo
+        fd.order_sn = nextNo
+        ElMessage.warning(`采购单号 ${autoNo} 已存在，已自动更换为 ${nextNo}`)
+      } catch {
+        // 查询失败不阻断保存，避免被接口异常卡死
+        break
+      }
+    }
+    if (attempts >= maxAttempts) {
+      ElMessage.error('采购单号生成冲突过多，请稍后重试')
+      return
     }
   }
   if (!fd.pay_amount || fd.pay_amount <= 0) {
