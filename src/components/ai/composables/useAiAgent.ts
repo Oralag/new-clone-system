@@ -30,6 +30,11 @@ function getNow() {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
+function isToolResultError(result: unknown): boolean {
+  const text = String(result ?? '')
+  return /\[FAILED\]|失败|错误|出错|Error|error/.test(text)
+}
+
 export function useAiAgent(messagesRef: ReturnType<typeof ref<HTMLDivElement | undefined>>) {
   const adamStore = useAdamStore()
   const messages = ref<ChatMessage[]>(loadHistory())
@@ -143,7 +148,7 @@ export function useAiAgent(messagesRef: ReturnType<typeof ref<HTMLDivElement | u
                 const tc = assistantMsg.toolCalls!.find(t => t.id === parsed.id)
                 if (tc) {
                   tc.result = parsed.result
-                  tc.status = parsed.result?.startsWith('工具执行出错') || parsed.result?.startsWith('创建失败') ? 'error' : 'success'
+                  tc.status = isToolResultError(parsed.result) ? 'error' : 'success'
                 }
                 scrollToBottom()
               } else if (parsed.type === 'error') {

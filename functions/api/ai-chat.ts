@@ -147,7 +147,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const res: any = await erpGet('/goods/ShopGoods/index', { list_rows: input.limit || 20, keyword: input.keyword }, token)
         const rows = res?.data?.rows || []
         const filtered = rows.filter((r: any) => !isPackagingGoods(r.goods_name))
-        const picks = filtered.slice(0, 8).map((r: any) => `[[PICK:${r.goods_name}|${r.unit_name || ''}|${r.sell_price || 0}]]`).join('')
+        const picks = filtered.slice(0, 8).map((r: any) => `[[PICK:${r.goods_name}|${r.unit_name || ''}|${r.sell_price || 0}|${r.id || ''}]]`).join('')
         result = filtered.length > 0
           ? `找到 ${filtered.length} 个商品，请选择：\n${picks}`
           : `没有找到"${input.keyword}"相关商品`
@@ -368,7 +368,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
             if (!i._candidates || i._candidates.length === 0) {
               return `「${i.goods_name}」在系统中找不到对应商品，请先确认商品名称再录入。`
             }
-            const list = i._candidates.map((c: any) => `[[PICK:${c.name}|${c.unit}|${c.price}]]`).join('')
+            const list = i._candidates.map((c: any) => `[[PICK:${c.name}|${c.unit}|${c.price}|${c.id || ''}]]`).join('')
             return `「${i.goods_name}」找不到，请选择：\n${list}`
           }).join('\n\n')
           result = picks

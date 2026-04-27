@@ -381,6 +381,11 @@ function getResponseOrderSn(res: any) {
   return String(res?.data?.order_sn || res?.data?.data?.order_sn || '')
 }
 
+function isToolResultError(result: unknown): boolean {
+  const text = String(result ?? '')
+  return /\[FAILED\]|失败|错误|出错|Error|error/.test(text)
+}
+
 interface Message {
   role: 'user' | 'assistant'
   content: string
@@ -1149,7 +1154,7 @@ async function sendMessage() {
                 const tc = msg.toolCalls?.find(t => t.id === parsed.id)
                 if (tc) {
                   tc.result = parsed.result
-                  tc.status = (parsed.result?.startsWith('工具执行出错') || parsed.result?.startsWith('创建失败')) ? 'error' : 'success'
+                  tc.status = isToolResultError(parsed.result) ? 'error' : 'success'
                   break
                 }
               }

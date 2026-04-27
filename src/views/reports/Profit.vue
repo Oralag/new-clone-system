@@ -120,7 +120,7 @@
         <el-table-column label="成本来源" align="center" width="80">
           <template #default="{ row }">
             <el-tag size="small" :type="row.has_bom ? 'warning' : 'info'">
-              {{ row.has_bom ? 'BOM' : '采购价' }}
+              {{ row.has_bom ? 'BOM' : (row.cost_source?.includes('采购均价') ? '采购均价' : '采购价') }}
             </el-tag>
           </template>
         </el-table-column>

@@ -208,6 +208,11 @@ interface ImageItem {
   mediaType: string
 }
 
+function isToolResultError(result: unknown): boolean {
+  const text = String(result ?? '')
+  return /\[FAILED\]|失败|错误|出错|Error|error/.test(text)
+}
+
 // ── Persistence ────────────────────────────────────────────────────────────────
 const HISTORY_KEY = 'erp_ai_chat_history'
 const MAX_HISTORY = 100
@@ -493,7 +498,7 @@ async function sendMessage() {
               const tc = assistantMsg.toolCalls!.find(t => t.id === parsed.id)
               if (tc) {
                 tc.result = parsed.result
-                tc.status = (parsed.result?.startsWith('工具执行出错') || parsed.result?.startsWith('创建失败')) ? 'error' : 'success'
+                tc.status = isToolResultError(parsed.result) ? 'error' : 'success'
               }
               nextTick(() => scrollToBottom())
             } else if (parsed.type === 'error') {
