@@ -88,15 +88,57 @@
           <!-- 桌面端表格 -->
           <template v-if="!isMobile">
             <el-table :data="retailRows" v-loading="loading" border size="small" style="width:100%" :max-height="400">
+              <el-table-column type="expand">
+                <template #default="{ row }">
+                  <div class="detail-panel">
+                    <div class="detail-title">
+                      <span>商品明细</span>
+                      <span class="detail-summary">
+                        {{ retailOrderNo(row) }} · {{ row.member_name || row.customer_name || '散客' }}
+                      </span>
+                    </div>
+                    <el-table :data="parseGoods(row.goods_info)" size="small" border style="width:100%" empty-text="暂无商品明细">
+                      <el-table-column prop="goods_name" label="商品名称" min-width="160" show-overflow-tooltip />
+                      <el-table-column prop="goods_sn" label="编码" min-width="110" show-overflow-tooltip />
+                      <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+                      <el-table-column label="数量" width="80" align="right">
+                        <template #default="{ row: item }">{{ Number(item.num || item.quantity || 0) }}</template>
+                      </el-table-column>
+                      <el-table-column label="单价" width="100" align="right">
+                        <template #default="{ row: item }">¥{{ itemPrice(item).toFixed(2) }}</template>
+                      </el-table-column>
+                      <el-table-column label="小计" width="110" align="right">
+                        <template #default="{ row: item }">
+                          <span style="color:#0071e3;font-weight:600">¥{{ lineAmount(item).toFixed(2) }}</span>
+                        </template>
+                      </el-table-column>
+                    </el-table>
+                    <div class="detail-footer">
+                      <span>商品合计 ¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+                      <span>优惠 ¥{{ Number(row.discount_amount || 0).toFixed(2) }}</span>
+                      <b>实付 ¥{{ Number(row.pay_amount || row.total_amount || 0).toFixed(2) }}</b>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
               <el-table-column type="index" width="40" align="center" />
-              <el-table-column prop="order_no" label="单号" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="member_name" label="会员" min-width="100" show-overflow-tooltip />
+              <el-table-column label="单号" min-width="120" show-overflow-tooltip>
+                <template #default="{ row }">{{ retailOrderNo(row) }}</template>
+              </el-table-column>
+              <el-table-column label="会员" min-width="100" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.member_name || row.customer_name || '散客' }}</template>
+              </el-table-column>
+              <el-table-column label="商品数" width="80" align="center">
+                <template #default="{ row }">{{ parseGoods(row.goods_info).length }}</template>
+              </el-table-column>
               <el-table-column label="实付" width="110" align="right">
                 <template #default="{ row }">
                   <span style="color:#0071e3;font-weight:600">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="pay_type" label="支付" width="80" align="center" />
+              <el-table-column label="支付" width="80" align="center">
+                <template #default="{ row }">{{ fmtPayType(row.pay_type || row.pay_method) }}</template>
+              </el-table-column>
               <el-table-column prop="order_date" label="日期" width="100" />
             </el-table>
           </template>
@@ -106,8 +148,9 @@
             <div v-else-if="retailRows.length === 0" style="padding:20px;text-align:center;color:#999">今日暂无零售订单</div>
             <div v-else class="mobile-list">
               <div v-for="(row, i) in retailRows" :key="i" class="mobile-card">
-                <div class="mobile-card-header">
-                  <span class="mobile-card-no">{{ row.order_no || '—' }}</span>
+                <div class="mobile-card-header" @click="toggleRetail(row)">
+                  <span class="mobile-card-no">{{ retailOrderNo(row) }}</span>
+                  <el-button link type="primary" size="small">{{ isRetailExpanded(row) ? '收起' : '明细' }}</el-button>
                 </div>
                 <div class="mobile-card-row">
                   <span class="mobile-card-label">会员</span>
@@ -133,6 +176,18 @@
                   <span class="mobile-card-label">实付</span>
                   <span class="mobile-card-amount">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
                 </div>
+                <div v-if="isRetailExpanded(row)" class="mobile-detail">
+                  <div v-if="parseGoods(row.goods_info).length === 0" class="mobile-detail-empty">暂无商品明细</div>
+                  <div v-for="(item, idx) in parseGoods(row.goods_info)" :key="idx" class="mobile-detail-row">
+                    <div>
+                      <div class="mobile-detail-name">{{ item.goods_name || '未命名商品' }}</div>
+                      <div class="mobile-detail-meta">
+                        {{ item.goods_sn || '—' }} · {{ item.unit_name || '—' }} · {{ Number(item.num || item.quantity || 0) }}
+                      </div>
+                    </div>
+                    <div class="mobile-detail-amount">¥{{ lineAmount(item).toFixed(2) }}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </template>
@@ -154,6 +209,7 @@ const loading = ref(false)
 const activeTab = ref('sale')
 const saleRows = ref<any[]>([])
 const retailRows = ref<any[]>([])
+const expandedRetailIds = ref<any[]>([])
 const isMobile = ref(window.innerWidth <= 768)
 
 const today = (() => {
@@ -168,6 +224,62 @@ const saleAmount = computed(() => saleRows.value.reduce((s, r) => {
 }, 0))
 const retailAmount = computed(() => retailRows.value.reduce((s, r) => s + Number(r.pay_amount||r.total_amount||0), 0))
 const totalAmount = computed(() => saleAmount.value + retailAmount.value)
+
+function parseGoods(info: any): any[] {
+  if (!info) return []
+  if (Array.isArray(info)) return info
+  try {
+    const parsed = JSON.parse(info)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function retailOrderNo(row: any) {
+  if (row.order_sn || row.order_no) return row.order_sn || row.order_no
+  const date = (row.order_date || row.created_at || '').slice(0, 10).replace(/-/g, '')
+  if (date || row.id) return `LS${date}${String(row.id || '').padStart(3, '0')}`
+  return '—'
+}
+
+const PAY_TYPE_MAP: Record<string, string> = {
+  cash: '现金',
+  wechat: '微信',
+  alipay: '支付宝',
+  balance: '余额',
+  card: '银行卡',
+}
+
+function fmtPayType(val: any) {
+  if (!val) return '—'
+  return PAY_TYPE_MAP[val] || val
+}
+
+function itemPrice(item: any) {
+  return Number(item.price ?? item.sell_price ?? item.sale_price ?? item.unit_price ?? item.retail_price ?? 0)
+}
+
+function lineAmount(item: any) {
+  const direct = Number(item.amount ?? item.total_amount ?? item.subtotal ?? 0)
+  if (direct > 0) return direct
+  return Number(item.num || item.quantity || 0) * itemPrice(item)
+}
+
+function retailExpandKey(row: any) {
+  return row.id ?? retailOrderNo(row)
+}
+
+function isRetailExpanded(row: any) {
+  return expandedRetailIds.value.includes(retailExpandKey(row))
+}
+
+function toggleRetail(row: any) {
+  const key = retailExpandKey(row)
+  expandedRetailIds.value = isRetailExpanded(row)
+    ? expandedRetailIds.value.filter(id => id !== key)
+    : [...expandedRetailIds.value, key]
+}
 
 async function fetchToday() {
   loading.value = true
@@ -260,5 +372,67 @@ onUnmounted(() => clearInterval(timer))
   font-size: 18px;
   font-weight: 700;
   color: #0071e3;
+}
+.detail-panel {
+  padding: 10px 48px 14px;
+  background: #fafafa;
+}
+.detail-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+.detail-summary {
+  font-weight: 400;
+  color: rgba(29,29,31,0.5);
+}
+.detail-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  padding-top: 8px;
+  font-size: 13px;
+  color: rgba(29,29,31,0.65);
+}
+.detail-footer b {
+  color: #0071e3;
+}
+.mobile-detail {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #d8dde6;
+}
+.mobile-detail-empty {
+  padding: 8px 0;
+  text-align: center;
+  color: #999;
+  font-size: 12px;
+}
+.mobile-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+}
+.mobile-detail-name {
+  color: #1d1d1f;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mobile-detail-meta {
+  margin-top: 2px;
+  color: #999;
+  font-size: 12px;
+}
+.mobile-detail-amount {
+  color: #0071e3;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 </style>

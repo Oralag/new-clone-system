@@ -56,8 +56,9 @@
       <template v-if="activeTab === 'retail'">
         <div v-if="retailRows.length === 0" class="ts-empty">暂无数据</div>
         <div v-for="row in retailRows" :key="row.id" class="ts-row">
-          <div class="ts-row-top">
-            <span class="ts-order-no">{{ row.order_no || '-' }}</span>
+          <div class="ts-row-top" @click="toggleRetail(row)">
+            <span class="ts-order-no">{{ retailOrderNo(row) }}</span>
+            <button class="ts-detail-btn" type="button">{{ isRetailExpanded(row) ? '收起' : '明细' }}</button>
           </div>
           <div class="ts-row-mid">
             <span class="ts-customer">{{ row.member_name || row.customer_name || '散客' }}</span>
@@ -68,6 +69,18 @@
             <span class="ts-amount">¥{{ fmt(row.pay_amount || row.total_amount) }}</span>
             <span class="ts-label" style="margin-left:12px">支付</span>
             <span class="ts-pay-type">{{ fmtPayType(row.pay_type || row.pay_method) }}</span>
+          </div>
+          <div v-if="isRetailExpanded(row)" class="ts-detail">
+            <div v-if="parseGoods(row.goods_info).length === 0" class="ts-detail-empty">暂无商品明细</div>
+            <div v-for="(item, idx) in parseGoods(row.goods_info)" :key="idx" class="ts-detail-row">
+              <div class="ts-detail-main">
+                <div class="ts-detail-name">{{ item.goods_name || '未命名商品' }}</div>
+                <div class="ts-detail-meta">
+                  {{ item.goods_sn || '-' }} · {{ item.unit_name || '-' }} · {{ Number(item.num || item.quantity || 0) }}
+                </div>
+              </div>
+              <div class="ts-detail-price">¥{{ fmt(lineAmount(item)) }}</div>
+            </div>
           </div>
         </div>
         <div class="ts-foot-total">实付合计 ¥{{ fmt(retailAmt) }}</div>
@@ -88,6 +101,7 @@ const activeTab = ref<'sale' | 'retail'>('sale')
 
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
+const expandedRetailIds = ref<any[]>([])
 
 function getToday() {
   const d = new Date()
@@ -113,6 +127,49 @@ const PAY_TYPE_MAP: Record<string, string> = {
 function fmtPayType(val: any) {
   if (!val) return '-'
   return PAY_TYPE_MAP[val] || val
+}
+
+function parseGoods(info: any): any[] {
+  if (!info) return []
+  if (Array.isArray(info)) return info
+  try {
+    const parsed = JSON.parse(info)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function retailOrderNo(row: any) {
+  if (row.order_sn || row.order_no) return row.order_sn || row.order_no
+  const date = (row.order_date || row.created_at || '').slice(0, 10).replace(/-/g, '')
+  if (date || row.id) return `LS${date}${String(row.id || '').padStart(3, '0')}`
+  return '-'
+}
+
+function itemPrice(item: any) {
+  return Number(item.price ?? item.sell_price ?? item.sale_price ?? item.unit_price ?? item.retail_price ?? 0)
+}
+
+function lineAmount(item: any) {
+  const direct = Number(item.amount ?? item.total_amount ?? item.subtotal ?? 0)
+  if (direct > 0) return direct
+  return Number(item.num || item.quantity || 0) * itemPrice(item)
+}
+
+function retailExpandKey(row: any) {
+  return row.id ?? retailOrderNo(row)
+}
+
+function isRetailExpanded(row: any) {
+  return expandedRetailIds.value.includes(retailExpandKey(row))
+}
+
+function toggleRetail(row: any) {
+  const key = retailExpandKey(row)
+  expandedRetailIds.value = isRetailExpanded(row)
+    ? expandedRetailIds.value.filter(id => id !== key)
+    : [...expandedRetailIds.value, key]
 }
 
 const today = getToday()
@@ -277,6 +334,54 @@ onMounted(async () => {
 .ts-label { font-size: 11px; color: #86909c; }
 .ts-amount { font-size: 15px; font-weight: 700; color: #1d2129; }
 .ts-pay-type { font-size: 12px; color: #86909c; }
+.ts-detail-btn {
+  border: 0;
+  background: transparent;
+  color: #0071e3;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 0;
+}
+.ts-detail {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e6eb;
+}
+.ts-detail-empty {
+  padding: 8px 0;
+  text-align: center;
+  color: #c2c8d5;
+  font-size: 12px;
+}
+.ts-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+}
+.ts-detail-main {
+  min-width: 0;
+}
+.ts-detail-name {
+  color: #1d2129;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ts-detail-meta {
+  margin-top: 2px;
+  color: #86909c;
+  font-size: 11px;
+}
+.ts-detail-price {
+  color: #0071e3;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 .ts-foot-total {
   text-align: right;
