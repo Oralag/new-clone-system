@@ -205,6 +205,7 @@ const routes: RouteRecordRaw[] = [
       // Sale
       { path: 'sale/overview', name: 'MobileSaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
       { path: 'sale/client', name: 'MobileSaleClient', component: () => import('@/views/sale/ClientList.vue'), meta: { title: '客户管理' } },
+      { path: 'sale/contract', name: 'MobileSaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售合同' } },
       { path: 'sale/out', name: 'MobileSaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'MobileSaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
       // Procure
