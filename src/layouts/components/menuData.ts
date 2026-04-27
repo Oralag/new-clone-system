@@ -131,6 +131,7 @@ export const menuData: TopMenuItem[] = [
       { key: 'finance-expense', title: '费用管理', path: '/finance/expense' },
       { key: 'finance-fund', title: '资金账户', path: '/finance/fund' },
       { key: 'finance-fund-flow', title: '资金流水', path: '/finance/fund-flow' },
+      { key: 'finance-income-expense-flow', title: '收支流水', path: '/finance/income-expense-flow' },
       { key: 'finance-cost', title: '成本核算', path: '/finance/cost' },
       { key: 'finance-prepay', title: '预收款', path: '/finance/prepay' },
       { key: 'finance-supplier-prepay', title: '预付款', path: '/finance/supplier-prepay' },

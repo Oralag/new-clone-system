@@ -91,6 +91,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'finance/expense', name: 'FinanceExpense', component: () => import('@/views/finance/Expense.vue'), meta: { title: '费用管理' } },
       { path: 'finance/fund', name: 'FinanceFund', component: () => import('@/views/finance/Fund.vue'), meta: { title: '资金账户' } },
       { path: 'finance/fund-flow', name: 'FinanceFundFlow', component: () => import('@/views/finance/FundFlow.vue'), meta: { title: '资金流水' } },
+      { path: 'finance/income-expense-flow', name: 'FinanceIncomeExpenseFlow', component: () => import('@/views/finance/IncomeExpenseFlow.vue'), meta: { title: '收支流水' } },
       { path: 'finance/cost', name: 'FinanceCost', component: () => import('@/views/finance/Cost.vue'), meta: { title: '成本核算' } },
       { path: 'finance/prepay', name: 'FinancePrepay', component: () => import('@/views/finance/Prepay.vue'), props: { fixedType: 'customer' }, meta: { title: '预收款' } },
       { path: 'finance/supplier-prepay', name: 'FinanceSupplierPrepay', component: () => import('@/views/finance/Prepay.vue'), props: { fixedType: 'supplier' }, meta: { title: '预付款' } },
@@ -221,6 +222,7 @@ const routes: RouteRecordRaw[] = [
       // Finance
       { path: 'finance/overview', name: 'MobileFinanceOverview', component: () => import('@/views/finance/Overview.vue'), meta: { title: '财务总览' } },
       { path: 'finance/receivable', name: 'MobileFinanceReceivable', component: () => import('@/views/finance/Receivable.vue'), meta: { title: '应收账款' } },
+      { path: 'finance/income-expense-flow', name: 'MobileFinanceIncomeExpenseFlow', component: () => import('@/views/finance/IncomeExpenseFlow.vue'), meta: { title: '收支流水' } },
       { path: 'finance/other-income', name: 'MobileFinanceOtherIncome', component: () => import('@/views/finance/OtherIncome.vue'), meta: { title: '其他收款' } },
       { path: 'finance/other-expense', name: 'MobileFinanceOtherExpense', component: () => import('@/views/finance/OtherExpense.vue'), meta: { title: '其他支出' } },
       // Goods
