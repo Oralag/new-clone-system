@@ -408,6 +408,19 @@
                   <b v-else>{{ Number(row.price || 0).toFixed(4) }}</b>
                 </div>
                 <div class="mobile-field">
+                  <span>含税合计</span>
+                  <el-input-number
+                    v-if="!isReadonly"
+                    :model-value="getLineTotal(row)"
+                    :min="0"
+                    :precision="2"
+                    size="small"
+                    controls-position="right"
+                    @change="(v: any) => onLineTotalChange(row, v)"
+                  />
+                  <b v-else>¥{{ getLineTotal(row).toFixed(2) }}</b>
+                </div>
+                <div class="mobile-field">
                   <span>批次</span>
                   <el-input v-if="!isReadonly" v-model="row.batch_no" size="small" placeholder="批次/打码日期" />
                   <b v-else>{{ row.batch_no || '—' }}</b>
@@ -557,9 +570,19 @@
                   <span>{{ ((row.num||0) * (row.price_no_tax||0)).toFixed(2) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="含税合计" width="110" align="right">
+              <el-table-column label="含税合计" width="130" align="right">
                 <template #default="{ row }">
-                  <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+                  <el-input-number
+                    v-if="!isReadonly"
+                    :model-value="getLineTotal(row)"
+                    :min="0"
+                    :precision="2"
+                    size="small"
+                    controls-position="right"
+                    style="width:100%"
+                    @change="(v: any) => onLineTotalChange(row, v)"
+                  />
+                  <span v-else style="color:#0071e3;font-weight:500">{{ getLineTotal(row).toFixed(2) }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="批次" width="130">
@@ -2223,6 +2246,24 @@ function onPriceChange(row: OrderItem) {
   const unitRatio = Math.max(0.0001, Number((row as any).unit_ratio || 1))
   ;(row as any)._base_price_no_tax = Number((Number(row.price_no_tax || 0) / unitRatio).toFixed(6))
   calcTotal()
+}
+
+function getLineTotal(row: OrderItem): number {
+  return Number(((Number(row.num || 0)) * (Number(row.price || 0))).toFixed(2))
+}
+
+function onLineTotalChange(row: OrderItem, value: any) {
+  const qty = Number(row.num || 0)
+  const total = Number(value || 0)
+  if (!(qty > 0)) {
+    row.price = 0
+    row.price_no_tax = 0
+    ElMessage.warning('请先填写采购数量，再填写含税合计')
+    calcTotal()
+    return
+  }
+  row.price = Number((total / qty).toFixed(4))
+  onPriceChange(row)
 }
 
 function removeItem(index: number) {
