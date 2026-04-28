@@ -40,7 +40,7 @@
         </div>
         <span class="table-count">共 {{ filteredItems.length }} 条</span>
       </div>
-      <el-table :data="pagedItems" v-loading="tableLoading" border stripe style="width:100%">
+      <el-table class="desktop-flow-table" :data="pagedItems" v-loading="tableLoading" border stripe style="width:100%">
         <el-table-column label="日期" width="150">
           <template #default="{ row }">{{ row.date }}</template>
         </el-table-column>
@@ -69,7 +69,33 @@
           <template #default="{ row }">{{ row.remark || '—' }}</template>
         </el-table-column>
       </el-table>
-      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+
+      <div v-loading="tableLoading" class="mobile-flow-list">
+        <div v-if="pagedItems.length === 0 && !tableLoading" class="mobile-flow-empty">暂无资金流水</div>
+        <div
+          v-for="row in pagedItems"
+          :key="`${row.type}-${row.source}-${row.order_no}-${row.date}-${row.amount}-${row.name}`"
+          class="mobile-flow-card"
+        >
+          <div class="mf-head">
+            <div class="mf-title">
+              <span class="mf-source" :class="row.type">{{ row.source }}</span>
+              <span class="mf-date">{{ row.date }}</span>
+            </div>
+            <div class="mf-amount" :class="row.type">
+              {{ row.type === 'income' ? '+' : '-' }}¥{{ Number(row.amount).toFixed(2) }}
+            </div>
+          </div>
+          <div class="mf-name">{{ row.name || '—' }}</div>
+          <div class="mf-meta">
+            <span>账户：{{ row.fund_name || '—' }}</span>
+            <span v-if="row.order_no">单号：{{ row.order_no }}</span>
+          </div>
+          <div v-if="row.remark" class="mf-remark">备注：{{ row.remark }}</div>
+        </div>
+      </div>
+
+      <div class="pagination-wrap">
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
@@ -401,8 +427,167 @@ onMounted(async () => {
 }
 .toolbar-filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .table-count { font-size: 13px; color: rgba(29,29,31,0.35); }
+.mobile-flow-list { display: none; }
+.pagination-wrap { display:flex; justify-content:flex-end; margin-top:12px; }
 
 @media (max-width: 767px) {
-  .summary-bar { grid-template-columns: repeat(2, 1fr); }
+  .page-container {
+    gap: 12px;
+    padding: 0 10px 12px;
+    overflow-x: hidden;
+  }
+  .page-title {
+    font-size: 18px;
+    padding: 2px 0;
+  }
+  .summary-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .summary-card {
+    min-width: 0;
+    padding: 12px;
+    border-radius: 10px;
+  }
+  .s-value {
+    font-size: clamp(18px, 6vw, 24px);
+    line-height: 1.15;
+    word-break: break-all;
+  }
+  .s-formula {
+    line-height: 1.35;
+  }
+  :deep(.el-card__body) {
+    padding: 12px;
+  }
+  .table-toolbar {
+    align-items: stretch;
+  }
+  .toolbar-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+    gap: 8px;
+    width: 100%;
+  }
+  .toolbar-filters :deep(.el-input),
+  .toolbar-filters :deep(.el-select) {
+    width: 100% !important;
+  }
+  .toolbar-filters :deep(.el-select:nth-child(3)) {
+    grid-column: 1 / -1;
+  }
+  .table-count {
+    width: 100%;
+    text-align: right;
+  }
+  .desktop-flow-table {
+    display: none;
+  }
+  .mobile-flow-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 80px;
+  }
+  .mobile-flow-empty {
+    padding: 28px 0;
+    text-align: center;
+    color: rgba(29,29,31,0.35);
+    font-size: 13px;
+  }
+  .mobile-flow-card {
+    background: #fff;
+    border: 1px solid #edf0f5;
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    min-width: 0;
+  }
+  .mf-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .mf-title {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+  }
+  .mf-source {
+    display: inline-flex;
+    align-items: center;
+    max-width: 120px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mf-source.income {
+    color: #16a34a;
+    background: rgba(22,163,74,0.1);
+  }
+  .mf-source.expense {
+    color: #dc2626;
+    background: rgba(220,38,38,0.1);
+  }
+  .mf-date {
+    color: #9ca3af;
+    font-size: 12px;
+    line-height: 24px;
+  }
+  .mf-amount {
+    flex-shrink: 0;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.4;
+    text-align: right;
+  }
+  .mf-amount.income { color: #16a34a; }
+  .mf-amount.expense { color: #dc2626; }
+  .mf-name {
+    margin-top: 9px;
+    color: #1d2129;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+  .mf-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 7px;
+    color: #6b7280;
+    font-size: 12px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .mf-remark {
+    margin-top: 7px;
+    color: #9ca3af;
+    font-size: 12px;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+  .pagination-wrap {
+    justify-content: center;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .pagination-wrap :deep(.el-pagination) {
+    --el-pagination-button-width: 28px;
+    --el-pagination-button-height: 28px;
+    flex-wrap: nowrap;
+  }
+  .pagination-wrap :deep(.el-pagination__sizes),
+  .pagination-wrap :deep(.el-pagination__total) {
+    display: none;
+  }
 }
 </style>
