@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div class="page-container fund-flow-page">
     <div class="page-title">资金明细</div>
     <!-- 顶部汇总卡片 -->
     <div class="summary-bar" v-loading="summaryLoading">
@@ -26,7 +26,7 @@
     </div>
 
     <!-- 明细表格 -->
-    <el-card>
+    <el-card class="flow-list-card">
       <div class="table-toolbar">
         <div class="toolbar-filters">
           <el-input v-model="filterKeyword" placeholder="搜索名称/单号" clearable style="width:180px" />
@@ -453,21 +453,35 @@ onMounted(async () => {
 .pagination-wrap { display:flex; justify-content:flex-end; margin-top:12px; }
 
 @media (max-width: 767px) {
-  .page-container {
+  .fund-flow-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     gap: 12px;
     padding: 0 10px 12px;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
+  }
+  .fund-flow-page,
+  .fund-flow-page * {
+    box-sizing: border-box;
   }
   .page-title {
     font-size: 18px;
     padding: 2px 0;
   }
   .summary-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
   .summary-card {
-    min-width: 0;
+    flex: none !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     padding: 12px;
     border-radius: 10px;
   }
@@ -482,18 +496,41 @@ onMounted(async () => {
   :deep(.el-card__body) {
     padding: 12px;
   }
+  .flow-list-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden !important;
+  }
+  .flow-list-card :deep(.el-card__body) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden !important;
+  }
   .table-toolbar {
     align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
   .toolbar-filters {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
     gap: 8px;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .toolbar-filters > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
   .toolbar-filters :deep(.el-input),
   .toolbar-filters :deep(.el-select) {
     width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
   .toolbar-filters :deep(.el-select:nth-child(3)) {
     grid-column: 1 / -1;
@@ -507,13 +544,17 @@ onMounted(async () => {
     text-align: right;
   }
   .desktop-flow-table {
-    display: none;
+    display: none !important;
   }
   .mobile-flow-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
     min-height: 80px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
   }
   .mobile-flow-empty {
     padding: 28px 0;
@@ -534,11 +575,13 @@ onMounted(async () => {
     justify-content: space-between;
     gap: 10px;
     align-items: flex-start;
+    min-width: 0;
   }
   .mf-title {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    flex: 1 1 auto;
     min-width: 0;
   }
   .mf-source {
@@ -568,11 +611,13 @@ onMounted(async () => {
     line-height: 24px;
   }
   .mf-amount {
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: 17px;
     font-weight: 800;
     line-height: 1.4;
     text-align: right;
+    word-break: break-word;
   }
   .mf-amount.income { color: #16a34a; }
   .mf-amount.expense { color: #dc2626; }
@@ -603,16 +648,19 @@ onMounted(async () => {
   }
   .pagination-wrap {
     justify-content: center;
-    overflow-x: auto;
+    overflow-x: hidden;
     padding-bottom: 2px;
   }
   .pagination-wrap :deep(.el-pagination) {
     --el-pagination-button-width: 28px;
     --el-pagination-button-height: 28px;
+    max-width: 100%;
     flex-wrap: nowrap;
+    justify-content: center;
   }
   .pagination-wrap :deep(.el-pagination__sizes),
-  .pagination-wrap :deep(.el-pagination__total) {
+  .pagination-wrap :deep(.el-pagination__total),
+  .pagination-wrap :deep(.el-pager) {
     display: none;
   }
 }
