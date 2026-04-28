@@ -63,17 +63,17 @@
           v-for="g in displayedGroups"
           :key="g.id"
           class="chat-item-wrap"
-          :class="{ 'swiped': swipedId === g.id }"
+          :class="{ 'swiped': swipedId === g.id, 'one-action': canClearGroup(g) }"
         >
           <!-- 左滑操作按钮 -->
           <div class="chat-item-actions" v-if="!!swipedId && swipedId === g.id && !!g.id">
-            <div v-if="g.type === 'ai'" class="action-btn clear-btn" @click.stop="clearAiHistory(); closeSwipe()">
+            <div v-if="canClearGroup(g)" class="action-btn clear-btn" @click.stop="clearAiHistory(); closeSwipe()">
               清空
             </div>
-            <div v-if="!g.type" class="action-btn pin-btn" @click.stop="togglePin(g)">
+            <div v-if="canManageGroup(g)" class="action-btn pin-btn" @click.stop="togglePin(g)">
               {{ g.is_pinned ? '取消置顶' : '置顶' }}
             </div>
-            <div v-if="!g.type" class="action-btn delete-btn" @click.stop="deleteGroup(g)">
+            <div v-if="canManageGroup(g)" class="action-btn delete-btn" @click.stop="deleteGroup(g)">
               删除
             </div>
           </div>
@@ -670,6 +670,19 @@ const SWIPE_THRESHOLD = 50
 const contextGroup = ref<any>(null)
 const contextMenuStyle = ref<any>({})
 
+function canClearGroup(g: any) {
+  return g?.type === 'ai'
+}
+
+function canManageGroup(g: any) {
+  if (!g?.id || g.route) return false
+  return g.type === 'group' || g.type === 'dm' || g.is_private || Number(g.member_count || 0) > 0
+}
+
+function canSwipeGroup(g: any) {
+  return canClearGroup(g) || canManageGroup(g)
+}
+
 function onSwipeStart(e: TouchEvent, g: any) {
   swipeStartX.value = e.touches[0].clientX
   swipeMoved.value = false
@@ -679,7 +692,7 @@ function onSwipeMove(e: TouchEvent) {
   const dx = e.touches[0].clientX - swipeStartX.value
   if (Math.abs(dx) > 5) swipeMoved.value = true // 有实际滑动
   // 左滑（dx < -50）显示操作按钮
-  if (dx < -SWIPE_THRESHOLD && currentSwipeItem.value) {
+  if (dx < -SWIPE_THRESHOLD && currentSwipeItem.value && canSwipeGroup(currentSwipeItem.value)) {
     swipedId.value = currentSwipeItem.value.id
   }
   // 右滑关闭
@@ -1982,7 +1995,10 @@ export default { name: 'MobileChat' }
   display: flex;
 }
 .chat-item-wrap.swiped > .chat-item {
-  transform: translateX(-240px);
+  transform: translateX(-160px);
+}
+.chat-item-wrap.swiped.one-action > .chat-item {
+  transform: translateX(-80px);
 }
 .chat-item {
   transition: transform 0.2s ease;
