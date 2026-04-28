@@ -301,159 +301,161 @@
           </div>
 
           <!-- 商品表格 -->
-          <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请点击上方按钮添加商品">
-            <el-table-column type="index" width="45" align="center" fixed="left" />
-            <el-table-column label="商品名称" min-width="150" fixed="left">
-              <template #default="{ row }">
-                <el-input v-model="row.goods_name" size="small" placeholder="商品名称" />
-              </template>
-            </el-table-column>
-            <el-table-column label="商品编码" width="120">
-              <template #default="{ row }">
-                <el-input v-model="row.goods_sn" size="small" placeholder="编码" />
-              </template>
-            </el-table-column>
-            <el-table-column label="规格型号" width="140">
-              <template #default="{ row }">
-                <el-select
-                  v-if="row.goods_id && goodsSpecMap[row.goods_id]?.length"
-                  v-model="row.spec"
-                  size="small"
-                  placeholder="请选择规格"
-                  clearable
-                  style="width:100%"
-                  @focus="fetchGoodsSpecs(row.goods_id)"
-                >
-                  <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
-                </el-select>
-                <el-input v-else v-model="row.spec" size="small" placeholder="规格"
-                  @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)" />
-              </template>
-            </el-table-column>
-            <el-table-column label="分类" width="100">
-              <template #default="{ row }">
-                <span style="font-size:12px;color:#666">{{ row.cate_name || '—' }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="单位" width="90" align="center">
-              <template #default="{ row }">
-                <el-select
-                  v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
-                  v-model="row.unit_name"
-                  size="small"
-                  style="width:100%"
-                  @change="(v: string) => onUnitChange(row, v)"
-                >
-                  <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u.unit_name" :label="u.unit_name" :value="u.unit_name" />
-                </el-select>
-                <el-input v-else v-model="row.unit_name" size="small" placeholder="单位" />
-              </template>
-            </el-table-column>
-            <el-table-column width="120">
-              <template #header>
-                <div class="batch-header">
-                  <span>采购数量</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('num')">批量</el-button>
-                </div>
-              </template>
-              <template #default="{ row }">
-                <el-input-number v-model="row.num" :min="0" :precision="2" size="small"
-                  controls-position="right" style="width:100%" @change="calcItemTax(row); calcTotal()" />
-              </template>
-            </el-table-column>
-            <el-table-column width="130">
-              <template #header>
-                <div class="batch-header">
-                  <span>未税单价</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('price_no_tax')">批量</el-button>
-                </div>
-              </template>
-              <template #default="{ row }">
-                <el-input-number v-model="row.price_no_tax" :min="0" :precision="4" size="small"
-                  controls-position="right" style="width:100%" @change="onPriceNoTaxChange(row)" />
-              </template>
-            </el-table-column>
-            <el-table-column width="110">
-              <template #header>
-                <div class="batch-header">
-                  <span>税率(%)</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('tax_rate')">批量</el-button>
-                </div>
-              </template>
-              <template #default="{ row }">
-                <el-select v-model="row.tax_rate" size="small" style="width:100%" @change="onTaxRateChange(row)">
-                  <el-option v-for="t in taxRates" :key="t" :label="`${t}%`" :value="t" />
-                </el-select>
-              </template>
-            </el-table-column>
-            <el-table-column label="税额" width="100" align="right">
-              <template #default="{ row }">
-                <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column width="130">
-              <template #header>
-                <div class="batch-header">
-                  <span>含税单价</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('price')">批量</el-button>
-                </div>
-              </template>
-              <template #default="{ row }">
-                <el-input-number v-model="row.price" :min="0" :precision="4" size="small"
-                  controls-position="right" style="width:100%" @change="onPriceChange(row)" />
-              </template>
-            </el-table-column>
-            <el-table-column width="120" align="right">
-              <template #header>
-                <div class="batch-header">
-                  <span>未税合计</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('subtotal_no_tax')">批量</el-button>
-                </div>
-              </template>
-              <template #default="{ row }">
-                <span>{{ ((row.num||0) * (row.price_no_tax||0)).toFixed(2) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="含税合计" width="110" align="right">
-              <template #default="{ row }">
-                <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="批次" width="130">
-              <template #default="{ row }">
-                <el-input v-model="row.batch_no" size="small" placeholder="批次/打码日期" />
-              </template>
-            </el-table-column>
-            <el-table-column label="行供应商" width="150">
-              <template #default="{ row }">
-                <template v-if="isReadonly">
-                  <span>{{ row.supplier_name || (supplierOptions.find((s:any) => s.id === row.supplier_id)?.name) || '同整体' }}</span>
+          <div class="goods-table-wrap">
+            <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请点击上方按钮添加商品">
+              <el-table-column type="index" width="45" align="center" fixed="left" />
+              <el-table-column label="商品名称" min-width="150" fixed="left">
+                <template #default="{ row }">
+                  <el-input v-model="row.goods_name" size="small" placeholder="商品名称" />
                 </template>
-                <el-select
-                  v-else
-                  v-model="row.supplier_id"
-                  size="small"
-                  placeholder="同整体"
-                  clearable
-                  filterable
-                  style="width:100%"
-                  @change="(val: any) => { row.supplier_name = supplierOptions.find(s => s.id === val)?.name || '' }"
-                >
-                  <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
-                </el-select>
-              </template>
-            </el-table-column>
-            <el-table-column label="备注" min-width="110">
-              <template #default="{ row }">
-                <el-input v-model="row.remark" size="small" placeholder="备注" />
-              </template>
-            </el-table-column>
-            <el-table-column width="45" align="center" fixed="right">
-              <template #default="{ $index }">
-                <el-button type="danger" link :icon="Delete" @click="removeItem($index)" />
-              </template>
-            </el-table-column>
-          </el-table>
+              </el-table-column>
+              <el-table-column label="商品编码" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.goods_sn" size="small" placeholder="编码" />
+                </template>
+              </el-table-column>
+              <el-table-column label="规格型号" width="140">
+                <template #default="{ row }">
+                  <el-select
+                    v-if="row.goods_id && goodsSpecMap[row.goods_id]?.length"
+                    v-model="row.spec"
+                    size="small"
+                    placeholder="请选择规格"
+                    clearable
+                    style="width:100%"
+                    @focus="fetchGoodsSpecs(row.goods_id)"
+                  >
+                    <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
+                  </el-select>
+                  <el-input v-else v-model="row.spec" size="small" placeholder="规格"
+                    @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)" />
+                </template>
+              </el-table-column>
+              <el-table-column label="分类" width="100">
+                <template #default="{ row }">
+                  <span style="font-size:12px;color:#666">{{ row.cate_name || '—' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="单位" width="90" align="center">
+                <template #default="{ row }">
+                  <el-select
+                    v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
+                    v-model="row.unit_name"
+                    size="small"
+                    style="width:100%"
+                    @change="(v: string) => onUnitChange(row, v)"
+                  >
+                    <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u.unit_name" :label="u.unit_name" :value="u.unit_name" />
+                  </el-select>
+                  <el-input v-else v-model="row.unit_name" size="small" placeholder="单位" />
+                </template>
+              </el-table-column>
+              <el-table-column width="120">
+                <template #header>
+                  <div class="batch-header">
+                    <span>采购数量</span>
+                    <el-button link type="primary" size="small" @click="batchEditField('num')">批量</el-button>
+                  </div>
+                </template>
+                <template #default="{ row }">
+                  <el-input-number v-model="row.num" :min="0" :precision="2" size="small"
+                    controls-position="right" style="width:100%" @change="calcItemTax(row); calcTotal()" />
+                </template>
+              </el-table-column>
+              <el-table-column width="130">
+                <template #header>
+                  <div class="batch-header">
+                    <span>未税单价</span>
+                    <el-button link type="primary" size="small" @click="batchEditField('price_no_tax')">批量</el-button>
+                  </div>
+                </template>
+                <template #default="{ row }">
+                  <el-input-number v-model="row.price_no_tax" :min="0" :precision="4" size="small"
+                    controls-position="right" style="width:100%" @change="onPriceNoTaxChange(row)" />
+                </template>
+              </el-table-column>
+              <el-table-column width="110">
+                <template #header>
+                  <div class="batch-header">
+                    <span>税率(%)</span>
+                    <el-button link type="primary" size="small" @click="batchEditField('tax_rate')">批量</el-button>
+                  </div>
+                </template>
+                <template #default="{ row }">
+                  <el-select v-model="row.tax_rate" size="small" style="width:100%" @change="onTaxRateChange(row)">
+                    <el-option v-for="t in taxRates" :key="t" :label="`${t}%`" :value="t" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="税额" width="100" align="right">
+                <template #default="{ row }">
+                  <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column width="130">
+                <template #header>
+                  <div class="batch-header">
+                    <span>含税单价</span>
+                    <el-button link type="primary" size="small" @click="batchEditField('price')">批量</el-button>
+                  </div>
+                </template>
+                <template #default="{ row }">
+                  <el-input-number v-model="row.price" :min="0" :precision="4" size="small"
+                    controls-position="right" style="width:100%" @change="onPriceChange(row)" />
+                </template>
+              </el-table-column>
+              <el-table-column width="120" align="right">
+                <template #header>
+                  <div class="batch-header">
+                    <span>未税合计</span>
+                    <el-button link type="primary" size="small" @click="batchEditField('subtotal_no_tax')">批量</el-button>
+                  </div>
+                </template>
+                <template #default="{ row }">
+                  <span>{{ ((row.num||0) * (row.price_no_tax||0)).toFixed(2) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="含税合计" width="110" align="right">
+                <template #default="{ row }">
+                  <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="批次" width="130">
+                <template #default="{ row }">
+                  <el-input v-model="row.batch_no" size="small" placeholder="批次/打码日期" />
+                </template>
+              </el-table-column>
+              <el-table-column label="行供应商" width="150">
+                <template #default="{ row }">
+                  <template v-if="isReadonly">
+                    <span>{{ row.supplier_name || (supplierOptions.find((s:any) => s.id === row.supplier_id)?.name) || '同整体' }}</span>
+                  </template>
+                  <el-select
+                    v-else
+                    v-model="row.supplier_id"
+                    size="small"
+                    placeholder="同整体"
+                    clearable
+                    filterable
+                    style="width:100%"
+                    @change="(val: any) => { row.supplier_name = supplierOptions.find(s => s.id === val)?.name || '' }"
+                  >
+                    <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="备注" min-width="110">
+                <template #default="{ row }">
+                  <el-input v-model="row.remark" size="small" placeholder="备注" />
+                </template>
+              </el-table-column>
+              <el-table-column width="45" align="center" fixed="right">
+                <template #default="{ $index }">
+                  <el-button type="danger" link :icon="Delete" @click="removeItem($index)" />
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
 
         <!-- 结算信息卡片 -->
@@ -3093,7 +3095,10 @@ async function submitAddFund() {
 </script>
 
 <style scoped>
-.order-page { height: 100%; }
+.order-page {
+  height: 100%;
+  min-width: 0;
+}
 
 .status-cards {
   display: flex;
@@ -3188,6 +3193,9 @@ async function submitAddFund() {
   flex-direction: column;
   height: calc(100vh - 110px);
   background: #f5f6fa;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .form-topbar {
@@ -3207,10 +3215,12 @@ async function submitAddFund() {
 .form-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 14px 20px 40px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 
 .form-section {
@@ -3218,6 +3228,8 @@ async function submitAddFund() {
   border-radius: 12px;
   border: 1px solid #e4e7ed;
   padding: 16px 18px 14px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .sec-title {
@@ -3244,6 +3256,13 @@ async function submitAddFund() {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.goods-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .goods-count {
@@ -3301,6 +3320,71 @@ async function submitAddFund() {
   color: rgba(29,29,31,0.5);
   display: flex;
   align-items: center;
+}
+
+@media (max-width: 767px) {
+  .order-page {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .form-page,
+  .form-body,
+  .form-section {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .form-section {
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  :deep(.form-section .el-row) {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  :deep(.form-section .el-col) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  :deep(.el-form-item) {
+    margin-right: 0;
+  }
+
+  .goods-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .goods-table-wrap :deep(.el-table) {
+    min-width: 1120px;
+  }
+
+  .settlement-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .settle-item,
+  .fee-item-line {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .settle-summary {
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .settle-summary span {
+    margin-left: 0 !important;
+  }
 }
 
 /* 附件 */

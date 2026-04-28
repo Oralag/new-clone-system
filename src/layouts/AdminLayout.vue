@@ -306,7 +306,13 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
 .mobile-nav-add .nav-label { color: #0071e3; font-weight: 600; }
 
 /* ── 移动端内容区 ── */
-.page-content.is-mobile { overflow-x: auto; padding: 0; }
+.page-content.is-mobile {
+  overflow-x: hidden;
+  padding: 0;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
 /* 手机端表格横向可滚动 */
 .page-content.is-mobile :deep(.el-table) { width: 100% !important; }
 .page-content.is-mobile :deep(.el-table__body-wrapper),
