@@ -20,7 +20,7 @@
         <div class="mh-kpi-card mh-kpi-main" @click="router.push('/dashboard/today-sales')">
           <div class="mh-kpi-label">今日销售额</div>
           <div class="mh-kpi-value">{{ stats[0].value }}</div>
-          <div class="mh-kpi-sub">含销售 + 零售</div>
+          <div class="mh-kpi-sub">{{ stats[0].sub }}</div>
           <svg class="mh-kpi-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
         </div>
         <!-- 收银台按钮 -->
@@ -39,8 +39,8 @@
 
       <!-- 三个小指标 -->
       <div class="mh-kpi-mini-row">
-        <div class="mh-kpi-small" @click="router.push('/dashboard/today-sales')">
-          <div class="mh-kpi-small-label">今日订单</div>
+        <div class="mh-kpi-small" @click="router.push('/finance/fund-flow?type=expense')">
+          <div class="mh-kpi-small-label">今日支出</div>
           <div class="mh-kpi-small-value">{{ stats[1].value }}</div>
         </div>
         <div class="mh-kpi-small" :class="{ warn: Number(stats[3].value) > 0 }" @click="router.push('/warehouse/stock')">
@@ -558,8 +558,8 @@ const mobileQuickActions = [
 ]
 
 const stats = ref([
-  { key: 'sale',     label: '今日销售额', value: '--', sub: '含销售+零售',   icon: 'Money',         link: '/dashboard/today-sales' },
-  { key: 'order',    label: '今日订单',   value: '--', sub: '销售+零售单数', icon: 'ShoppingCart',  link: '/dashboard/today-sales' },
+  { key: 'sale',     label: '今日销售额', value: '--', sub: '今日订单 -- 笔',   icon: 'Money',         link: '/dashboard/today-sales' },
+  { key: 'expense',  label: '今日支出',   value: '--', sub: '付款+费用支出',   icon: 'Wallet',        link: '/finance/fund-flow?type=expense' },
   { key: 'customer', label: '客户总数',   value: '--', sub: '全部客户',      icon: 'User',          link: '/sale/client' },
   { key: 'stock',    label: '库存预警',   value: '--', sub: '负库存+零库存', icon: 'WarningFilled', link: '/warehouse/stock' },
 ])
@@ -881,6 +881,31 @@ function extractRows(payload: any) {
   return []
 }
 
+function getFlowDate(row: any) {
+  return String(
+    row?.flow_date ||
+    row?.pay_date ||
+    row?.expense_date ||
+    row?.apply_date ||
+    row?.created_at ||
+    row?.create_time ||
+    row?.date ||
+    '',
+  ).slice(0, 10)
+}
+
+function isExpenseFlow(row: any) {
+  const type = String(row?.flow_type || row?.type || row?._direction || '').toLowerCase()
+  if (type) return type !== 'income'
+  return Number(row?.amount || 0) < 0
+}
+
+function calcTodayExpense(rows: any[], today: string) {
+  return rows
+    .filter((row: any) => getFlowDate(row) === today && isExpenseFlow(row))
+    .reduce((sum: number, row: any) => sum + Math.abs(Number(row.amount || 0)), 0)
+}
+
 function extractTotal(payload: any) {
   const data = payload?.data ?? payload
   const total = Number(
@@ -960,10 +985,11 @@ async function loadDashboardData(force = false) {
 
   // ── 第一阶段：快速拉今日关键指标（小数据量，优先渲染） ──
   try {
-    const [saleRes, retailRes, customerRes] = await Promise.allSettled([
+    const [saleRes, retailRes, customerRes, quickFundFlowRes] = await Promise.allSettled([
       http.get('/stock/SaleOutOrder/index',  { params: { list_rows: 100, out_date: today } }),
       http.get('/retail/order/index',        { params: { list_rows: 100, order_date: today } }),
       http.get('/shop/ShopCustomer/index',   { params: { list_rows: 1 } }),
+      http.get('/finance/fundFlow/index',    { params: { list_rows: 500 } }),
     ])
 
     const rows = (r: PromiseSettledResult<any>) =>
@@ -977,8 +1003,10 @@ async function loadDashboardData(force = false) {
       return s + amt
     }, 0)
     const retailAmt = todayRetailRows.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
+    const todayOrderCount = todaySaleRows.length + todayRetailRows.length
     stats.value[0].value = '¥' + (saleAmt + retailAmt).toFixed(2)
-    stats.value[1].value = String(todaySaleRows.length + todayRetailRows.length)
+    stats.value[0].sub = `今日订单 ${todayOrderCount} 笔`
+    stats.value[1].value = '¥' + calcTodayExpense(rows(quickFundFlowRes), today).toFixed(2)
 
     const custData = customerRes.status === 'fulfilled' ? (customerRes.value?.data ?? customerRes.value) : {}
     stats.value[2].value = String(custData?.total ?? 0)
@@ -1009,8 +1037,9 @@ async function loadDashboardData(force = false) {
       return s + amt
     }, 0)
     const retailAmtFull = todayRetailFull.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
+    const todayOrderCountFull = todaySaleFull.length + todayRetailFull.length
     stats.value[0].value = '¥' + (saleAmtFull + retailAmtFull).toFixed(2)
-    stats.value[1].value = String(todaySaleFull.length + todayRetailFull.length)
+    stats.value[0].sub = `今日订单 ${todayOrderCountFull} 笔`
 
     // 库存预警
     const stockMap: Record<number, number> = {}
@@ -1030,6 +1059,7 @@ async function loadDashboardData(force = false) {
 
     if (fundFlowRes.status === 'fulfilled') {
       fundFlowList.value = fundFlowRes.value?.data?.rows ?? fundFlowRes.value?.rows ?? []
+      stats.value[1].value = '¥' + calcTodayExpense(fundFlowList.value, today).toFixed(2)
     }
 
     _saleRows.value = saleRows
@@ -1041,7 +1071,7 @@ async function loadDashboardData(force = false) {
       todaySale: saleAmtFull + retailAmtFull,
       stockWarn: stockWarnCount,
       customerCount: Number(stats.value[2].value) || 0,
-      todayOrders: todaySaleFull.length + todayRetailFull.length,
+      todayOrders: todayOrderCountFull,
       pendingReceivable: 0,
     })
     lastRefreshAt = Date.now()

@@ -7,12 +7,12 @@
       <div class="ms-kpi-card" @click="router.push('/mobile/sale/today')">
         <div class="ms-kpi-label">今日销售额</div>
         <div class="ms-kpi-value">¥{{ todayStats.saleAmt }}</div>
-        <div class="ms-kpi-sub">含销售+零售</div>
+        <div class="ms-kpi-sub">今日订单 {{ todayStats.orderCount }} 笔</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/mobile/sale/today')">
-        <div class="ms-kpi-label">今日订单</div>
-        <div class="ms-kpi-value">{{ todayStats.orderCount }}</div>
-        <div class="ms-kpi-sub">销售+零售单数</div>
+      <div class="ms-kpi-card" @click="router.push('/finance/fund-flow?type=expense')">
+        <div class="ms-kpi-label">今日支出</div>
+        <div class="ms-kpi-value">¥{{ todayExpense }}</div>
+        <div class="ms-kpi-sub">付款+费用支出</div>
       </div>
       <div class="ms-kpi-card" @click="router.push('/mobile/sale/client')">
         <div class="ms-kpi-label">客户总数</div>
@@ -149,6 +149,7 @@ const insightItems = ref([{ tag: '加载中...', text: 'AI 正在分析您的业
 const statPeriod = ref<'today' | '7d' | '30d' | '3m'>('today')
 const stockWarn = ref(0)
 const customerTotal = ref(0)
+const todayExpense = ref('0.00')
 
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
@@ -163,6 +164,31 @@ function parseGoodsInfo(g: any) {
   if (Array.isArray(g)) return g
   if (typeof g !== 'string' || !g) return []
   try { return JSON.parse(g) } catch { return [] }
+}
+
+function getFlowDate(row: any) {
+  return String(
+    row?.flow_date ||
+    row?.pay_date ||
+    row?.expense_date ||
+    row?.apply_date ||
+    row?.created_at ||
+    row?.create_time ||
+    row?.date ||
+    '',
+  ).slice(0, 10)
+}
+
+function isExpenseFlow(row: any) {
+  const type = String(row?.flow_type || row?.type || row?._direction || '').toLowerCase()
+  if (type) return type !== 'income'
+  return Number(row?.amount || 0) < 0
+}
+
+function calcTodayExpense(rows: any[], today: string) {
+  return rows
+    .filter((row: any) => getFlowDate(row) === today && isExpenseFlow(row))
+    .reduce((sum: number, row: any) => sum + Math.abs(Number(row.amount || 0)), 0)
 }
 
 const todayStats = computed(() => {
@@ -241,12 +267,13 @@ function buildInsights(data: { todaySale: number, stockWarn: number, customerCou
 
 onMounted(async () => {
   const today = getToday()
-  const [saleRes, retailRes, customerRes, procureRes, goodsRes] = await Promise.allSettled([
+  const [saleRes, retailRes, customerRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
     http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
     http.get('/retail/order/index', { params: { list_rows: 2000 } }),
     http.get('/shop/ShopCustomer/index', { params: { list_rows: 1 } }),
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 2000 } }),
     http.get('/goods/ShopGoods/index', { params: { list_rows: 2000, status: 1 } }),
+    http.get('/finance/fundFlow/index', { params: { list_rows: 500 } }),
   ])
   const rows = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
   const saleRows = rows(saleRes)
@@ -258,6 +285,7 @@ onMounted(async () => {
   const todayRetail = retailRows.filter((r: any) => Number(r.status) === 1 && (r.order_date||'').slice(0,10) === today)
   const saleAmt = todaySale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
   const retailAmt = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
+  todayExpense.value = calcTodayExpense(rows(fundFlowRes), today).toFixed(2)
 
   const stockMap: Record<number, number> = {}
   rows(procureRes).forEach((r: any) => {
