@@ -9,7 +9,7 @@
         <div class="ms-kpi-value">¥{{ todayStats.saleAmt }}</div>
         <div class="ms-kpi-sub">今日订单 {{ todayStats.orderCount }} 笔</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/finance/fund-flow?type=expense')">
+      <div class="ms-kpi-card" @click="router.push('/finance/fund-flow?type=expense&date=today')">
         <div class="ms-kpi-label">今日支出</div>
         <div class="ms-kpi-value">¥{{ todayExpense }}</div>
         <div class="ms-kpi-sub">付款+费用支出</div>

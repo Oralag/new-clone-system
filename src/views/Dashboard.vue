@@ -39,7 +39,7 @@
 
       <!-- 三个小指标 -->
       <div class="mh-kpi-mini-row">
-        <div class="mh-kpi-small" @click="router.push('/finance/fund-flow?type=expense')">
+        <div class="mh-kpi-small" @click="router.push('/finance/fund-flow?type=expense&date=today')">
           <div class="mh-kpi-small-label">今日支出</div>
           <div class="mh-kpi-small-value">{{ stats[1].value }}</div>
         </div>
@@ -559,7 +559,7 @@ const mobileQuickActions = [
 
 const stats = ref([
   { key: 'sale',     label: '今日销售额', value: '--', sub: '今日订单 -- 笔',   icon: 'Money',         link: '/dashboard/today-sales' },
-  { key: 'expense',  label: '今日支出',   value: '--', sub: '付款+费用支出',   icon: 'Wallet',        link: '/finance/fund-flow?type=expense' },
+  { key: 'expense',  label: '今日支出',   value: '--', sub: '付款+费用支出',   icon: 'Wallet',        link: '/finance/fund-flow?type=expense&date=today' },
   { key: 'customer', label: '客户总数',   value: '--', sub: '全部客户',      icon: 'User',          link: '/sale/client' },
   { key: 'stock',    label: '库存预警',   value: '--', sub: '负库存+零库存', icon: 'WarningFilled', link: '/warehouse/stock' },
 ])

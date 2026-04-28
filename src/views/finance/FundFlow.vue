@@ -37,6 +37,7 @@
           <el-select v-model="filterSource" placeholder="来源" clearable style="width:130px">
             <el-option v-for="item in sourceOptions" :key="item" :label="item" :value="item" />
           </el-select>
+          <el-tag v-if="dateScopeLabel" class="date-scope-tag" type="info" effect="plain">{{ dateScopeLabel }}</el-tag>
         </div>
         <span class="table-count">共 {{ filteredItems.length }} 条</span>
       </div>
@@ -110,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watchEffect } from 'vue'
+import { ref, reactive, computed, onMounted, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList } from '@/api/finance'
 import http from '@/api/http'
@@ -129,13 +130,28 @@ const supplierListForLabel = ref<any[]>([])
 const filterKeyword = ref('')
 const filterType = ref('')
 const filterSource = ref('')
+const filterDate = ref('')
+
+function getTodayKey() {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function getDateKey(value: string) {
+  const text = String(value || '').trim()
+  const match = text.match(/\d{4}-\d{2}-\d{2}/)
+  return match ? match[0] : text.slice(0, 10)
+}
 
 watchEffect(() => {
   const t = route.query.type
   filterType.value = (t === 'income' || t === 'expense') ? t as string : ''
+  filterDate.value = route.query.date === 'today' ? getTodayKey() : ''
 })
 const currentPage = ref(1)
 const pageSize = ref(20)
+const dateScopeLabel = computed(() => filterDate.value === getTodayKey() ? '今日' : '')
 
 interface FlowItem {
   date: string
@@ -176,12 +192,17 @@ function isCustomerPrepayLike(row: any) {
 const filteredItems = computed(() => {
   let list = allItems.value
   if (filterType.value) list = list.filter(i => i.type === filterType.value)
+  if (filterDate.value) list = list.filter(i => getDateKey(i.date) === filterDate.value)
   if (filterSource.value) list = list.filter(i => i.source === filterSource.value)
   if (filterKeyword.value) {
     const kw = filterKeyword.value.toLowerCase()
     list = list.filter(i => i.name.toLowerCase().includes(kw) || (i.order_no || '').toLowerCase().includes(kw))
   }
   return list
+})
+
+watch([filterKeyword, filterType, filterSource, filterDate], () => {
+  currentPage.value = 1
 })
 
 const sourceOptions = computed(() =>
@@ -427,6 +448,7 @@ onMounted(async () => {
 }
 .toolbar-filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .table-count { font-size: 13px; color: rgba(29,29,31,0.35); }
+.date-scope-tag { align-self: center; }
 .mobile-flow-list { display: none; }
 .pagination-wrap { display:flex; justify-content:flex-end; margin-top:12px; }
 
@@ -475,6 +497,10 @@ onMounted(async () => {
   }
   .toolbar-filters :deep(.el-select:nth-child(3)) {
     grid-column: 1 / -1;
+  }
+  .date-scope-tag {
+    grid-column: 1 / -1;
+    justify-self: flex-start;
   }
   .table-count {
     width: 100%;
