@@ -300,8 +300,150 @@
             <span class="goods-count">共 <b>{{ fd.items.length }}</b> 件商品</span>
           </div>
 
-          <!-- 商品表格 -->
-          <div class="goods-table-wrap">
+          <!-- 手机端商品列表 -->
+          <div class="mobile-goods-list">
+            <div v-if="fd.items.length === 0" class="mobile-goods-empty">请点击上方按钮添加商品</div>
+            <div v-for="(row, index) in fd.items" :key="row.goods_id || row.goods_sn || index" class="mobile-goods-card">
+              <div class="mobile-goods-head">
+                <span class="mobile-goods-index">{{ index + 1 }}</span>
+                <el-input
+                  v-if="!isReadonly"
+                  v-model="row.goods_name"
+                  size="small"
+                  class="mobile-goods-name-input"
+                  placeholder="商品名称"
+                />
+                <div v-else class="mobile-goods-name">{{ row.goods_name || '未命名商品' }}</div>
+                <el-button v-if="!isReadonly" type="danger" link :icon="Delete" @click="removeItem(index)" />
+              </div>
+
+              <div class="mobile-goods-fields">
+                <div class="mobile-field">
+                  <span>商品编码</span>
+                  <el-input v-if="!isReadonly" v-model="row.goods_sn" size="small" placeholder="编码" />
+                  <b v-else>{{ row.goods_sn || '—' }}</b>
+                </div>
+                <div class="mobile-field">
+                  <span>分类</span>
+                  <b>{{ row.cate_name || '—' }}</b>
+                </div>
+                <div class="mobile-field mobile-field-full">
+                  <span>规格型号</span>
+                  <el-select
+                    v-if="!isReadonly && row.goods_id && goodsSpecMap[row.goods_id]?.length"
+                    v-model="row.spec"
+                    size="small"
+                    placeholder="请选择规格"
+                    clearable
+                    @focus="fetchGoodsSpecs(row.goods_id)"
+                  >
+                    <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
+                  </el-select>
+                  <el-input
+                    v-else-if="!isReadonly"
+                    v-model="row.spec"
+                    size="small"
+                    placeholder="规格"
+                    @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)"
+                  />
+                  <b v-else>{{ row.spec || '—' }}</b>
+                </div>
+                <div class="mobile-field">
+                  <span>单位</span>
+                  <el-select
+                    v-if="!isReadonly && row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
+                    v-model="row.unit_name"
+                    size="small"
+                    @change="(v: string) => onUnitChange(row, v)"
+                  >
+                    <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u.unit_name" :label="u.unit_name" :value="u.unit_name" />
+                  </el-select>
+                  <el-input v-else-if="!isReadonly" v-model="row.unit_name" size="small" placeholder="单位" />
+                  <b v-else>{{ row.unit_name || '—' }}</b>
+                </div>
+                <div class="mobile-field">
+                  <span>采购数量</span>
+                  <el-input-number
+                    v-if="!isReadonly"
+                    v-model="row.num"
+                    :min="0"
+                    :precision="2"
+                    size="small"
+                    controls-position="right"
+                    @change="calcItemTax(row); calcTotal()"
+                  />
+                  <b v-else>{{ row.num || 0 }}</b>
+                </div>
+                <div class="mobile-field">
+                  <span>未税单价</span>
+                  <el-input-number
+                    v-if="!isReadonly"
+                    v-model="row.price_no_tax"
+                    :min="0"
+                    :precision="4"
+                    size="small"
+                    controls-position="right"
+                    @change="onPriceNoTaxChange(row)"
+                  />
+                  <b v-else>{{ Number(row.price_no_tax || 0).toFixed(4) }}</b>
+                </div>
+                <div class="mobile-field">
+                  <span>税率</span>
+                  <el-select v-if="!isReadonly" v-model="row.tax_rate" size="small" @change="onTaxRateChange(row)">
+                    <el-option v-for="t in taxRates" :key="t" :label="`${t}%`" :value="t" />
+                  </el-select>
+                  <b v-else>{{ row.tax_rate || 0 }}%</b>
+                </div>
+                <div class="mobile-field">
+                  <span>含税单价</span>
+                  <el-input-number
+                    v-if="!isReadonly"
+                    v-model="row.price"
+                    :min="0"
+                    :precision="4"
+                    size="small"
+                    controls-position="right"
+                    @change="onPriceChange(row)"
+                  />
+                  <b v-else>{{ Number(row.price || 0).toFixed(4) }}</b>
+                </div>
+                <div class="mobile-field">
+                  <span>批次</span>
+                  <el-input v-if="!isReadonly" v-model="row.batch_no" size="small" placeholder="批次/打码日期" />
+                  <b v-else>{{ row.batch_no || '—' }}</b>
+                </div>
+                <div class="mobile-field mobile-field-full">
+                  <span>行供应商</span>
+                  <el-select
+                    v-if="!isReadonly"
+                    v-model="row.supplier_id"
+                    size="small"
+                    placeholder="同整体"
+                    clearable
+                    filterable
+                    @change="(val: any) => { row.supplier_name = supplierOptions.find(s => s.id === val)?.name || '' }"
+                  >
+                    <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
+                  </el-select>
+                  <b v-else>{{ row.supplier_name || (supplierOptions.find((s:any) => s.id === row.supplier_id)?.name) || '同整体' }}</b>
+                </div>
+                <div class="mobile-field mobile-field-full">
+                  <span>备注</span>
+                  <el-input v-if="!isReadonly" v-model="row.remark" size="small" placeholder="备注" />
+                  <b v-else>{{ row.remark || '—' }}</b>
+                </div>
+              </div>
+
+              <div class="mobile-goods-total">
+                <span>未税 <b>¥{{ ((row.num||0) * (row.price_no_tax||0)).toFixed(2) }}</b></span>
+                <span>税额 <b class="c-red">¥{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</b></span>
+                <span>含税 <b class="c-blue">¥{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</b></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 桌面端商品表格 -->
+          <div class="goods-table-wrap desktop-goods-table">
             <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请点击上方按钮添加商品">
               <el-table-column type="index" width="45" align="center" fixed="left" />
               <el-table-column label="商品名称" min-width="150" fixed="left">
@@ -3265,6 +3407,10 @@ async function submitAddFund() {
   overflow: hidden;
 }
 
+.mobile-goods-list {
+  display: none;
+}
+
 .goods-count {
   font-size: 13px;
   color: rgba(29,29,31,0.35);
@@ -3362,6 +3508,147 @@ async function submitAddFund() {
 
   .goods-table-wrap :deep(.el-table) {
     min-width: 1120px;
+  }
+
+  .desktop-goods-table {
+    display: none;
+  }
+
+  .mobile-goods-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobile-goods-empty {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(29,29,31,0.35);
+    font-size: 13px;
+    border: 1px dashed #dcdfe6;
+    border-radius: 10px;
+    background: #fafbff;
+  }
+
+  .mobile-goods-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .mobile-goods-head {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 10px 8px;
+    border-bottom: 1px solid #f2f4f7;
+    background: #fbfcff;
+  }
+
+  .mobile-goods-index {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: #eef5ff;
+    color: #0071e3;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-goods-name {
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1d1d1f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-goods-name-input :deep(.el-input__wrapper) {
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .mobile-goods-name-input :deep(.el-input__inner) {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1d1d1f;
+  }
+
+  .mobile-goods-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .mobile-field {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .mobile-field-full {
+    grid-column: 1 / -1;
+  }
+
+  .mobile-field > span {
+    font-size: 12px;
+    color: rgba(29,29,31,0.45);
+    line-height: 1.2;
+  }
+
+  .mobile-field > b {
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d1d1f;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-field :deep(.el-select),
+  .mobile-field :deep(.el-input),
+  .mobile-field :deep(.el-input-number) {
+    width: 100%;
+  }
+
+  .mobile-field :deep(.el-input-number .el-input__inner) {
+    text-align: center;
+  }
+
+  .mobile-goods-total {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 9px 10px 10px;
+    border-top: 1px solid #f2f4f7;
+    background: #fafafa;
+  }
+
+  .mobile-goods-total span {
+    min-width: 0;
+    font-size: 12px;
+    color: rgba(29,29,31,0.5);
+    white-space: nowrap;
+  }
+
+  .mobile-goods-total b {
+    margin-left: 2px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #1d1d1f;
   }
 
   .settlement-grid {
