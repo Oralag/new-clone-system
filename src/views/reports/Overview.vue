@@ -360,6 +360,7 @@ import { getGoodsList, getBomList } from '@/api/goods'
 import { getExpenseList } from '@/api/finance'
 import http from '@/api/http'
 import { buildCustomerPrepayBreakdown } from '@/utils/prepay'
+import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
@@ -616,7 +617,7 @@ async function loadAll() {
       http.get('/finance/CollectReceipt/index', { params: receiptParams }),
     ])
     saleContracts.value = contracts.status === 'fulfilled'
-      ? (contracts.value?.data?.rows ?? contracts.value?.data?.data ?? []).filter((r: any) => Number(r.status) === 1) : []
+      ? (contracts.value?.data?.rows ?? contracts.value?.data?.data ?? []).filter(isEffectiveSaleContract) : []
     retailOrders.value = retail.status === 'fulfilled'
       ? (retail.value?.data?.rows ?? retail.value?.data?.data ?? []).filter((r: any) => Number(r.status) === 1) : []
     procureOrders.value = procure.status === 'fulfilled'

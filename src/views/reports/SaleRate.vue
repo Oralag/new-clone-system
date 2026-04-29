@@ -103,6 +103,7 @@ import { BarChart, LineChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { getSaleContractList } from '@/api/reports'
+import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
 
 echarts.use([BarChart, LineChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer])
 
@@ -125,7 +126,7 @@ const filteredRows = computed(() => {
     const d = r.contract_date || r.created_at || ''
     const yearOk = d.startsWith(String(searchYear.value))
     const custOk = !searchCustomer.value || (r.customer_name || '').includes(searchCustomer.value)
-    return r.status === 1 && yearOk && custOk
+    return isEffectiveSaleContract(r) && yearOk && custOk
   })
 })
 

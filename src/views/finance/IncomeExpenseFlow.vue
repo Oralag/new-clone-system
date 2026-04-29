@@ -106,6 +106,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getContractList } from '@/api/sale'
 import { getProcureOrderList } from '@/api/procure'
+import { getSaleContractStatusText, isEffectiveSaleContract } from '@/utils/saleContractStatus'
 
 interface FlowRow {
   id: number | string
@@ -210,7 +211,7 @@ async function loadData() {
     const procureRows = procureRes.status === 'fulfilled' ? getRows(procureRes.value) : []
 
     const saleItems: FlowRow[] = saleRows
-      .filter((row: any) => Number(row.status) === 1)
+      .filter(isEffectiveSaleContract)
       .map((row: any) => ({
         id: `sale-${row.id || orderNo(row, 'XS')}`,
         date: fmtDate(row.sign_date || row.contract_date || row.order_date || row.created_at || row.create_time),
@@ -219,7 +220,7 @@ async function loadData() {
         name: row.customer_name || '—',
         order_no: orderNo(row, 'XS'),
         amount: saleAmount(row),
-        statusText: '已审核',
+        statusText: getSaleContractStatusText(row.status),
         remark: row.remark || '',
         link: '/sale/contract',
       }))

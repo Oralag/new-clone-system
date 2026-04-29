@@ -131,6 +131,7 @@ import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from
 import { CanvasRenderer } from 'echarts/renderers'
 import { getSaleContractList } from '@/api/reports'
 import { getSaleCustomerList } from '@/api/sale'
+import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
 
 echarts.use([PieChart, LineChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer])
 
@@ -177,7 +178,7 @@ function filterRows(rows: any[]) {
     const d = (r.contract_date || r.created_at || '')
     const yearMatch = d.startsWith(String(searchYear.value))
     const custMatch = !searchCustomerId.value || r.customer_id === searchCustomerId.value
-    return r.status === 1 && yearMatch && custMatch
+    return isEffectiveSaleContract(r) && yearMatch && custMatch
   })
 }
 

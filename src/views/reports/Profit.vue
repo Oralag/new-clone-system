@@ -249,6 +249,7 @@ import { getGoodsList, getBomList } from '@/api/goods'
 import { getExpenseList } from '@/api/finance'
 import http from '@/api/http'
 import { findNaiDoufuGoods } from '@/utils/goodsAlias'
+import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
@@ -610,7 +611,7 @@ async function loadData() {
       getBomList({ list_rows: 500 }),
       getExpenseList(params),
     ])
-    saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1) : []
+    saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []).filter(isEffectiveSaleContract) : []
     retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []).filter((r: any) => Number(r.status) === 1) : []
     goodsList.value          = g.status === 'fulfilled' ? (g.value?.data?.rows  ?? []) : []
     procureInhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []

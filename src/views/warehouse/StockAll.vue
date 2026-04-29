@@ -1260,8 +1260,19 @@ async function openFlowDialog(goods: any) {
     const gid = Number(goods.id)
     const rows: any[] = []
 
-    const [inhouseAllRows, saleOutAllRows, retailAllRows, returnAllRows, otherInAllRows, otherOutAllRows, prodInAllRows, prodOutAllRows] = await Promise.all([
+    const [
+      inhouseAllRows,
+      procureOrderAllRows,
+      saleOutAllRows,
+      retailAllRows,
+      returnAllRows,
+      otherInAllRows,
+      otherOutAllRows,
+      prodInAllRows,
+      prodOutAllRows,
+    ] = await Promise.all([
       fetchAllPages('/procure/ProcureInhouse/index').catch(() => [] as any[]),
+      fetchAllPages('/stock/PurchaseOrder/index').catch(() => [] as any[]),
       fetchAllPages('/stock/SaleOutOrder/index', { status: 1 }).catch(() => [] as any[]),
       fetchAllPages('/retail/order/index').catch(() => [] as any[]),
       fetchAllPages('/procure/ProcureReturn/index').catch(() => [] as any[]),
@@ -1270,6 +1281,11 @@ async function openFlowDialog(goods: any) {
       fetchAllPages('/production/inhouse/index').catch(() => [] as any[]),
       fetchAllPages('/production/material/index').catch(() => [] as any[]),
     ])
+    const procureOrderById: Record<number, any> = {}
+    for (const order of procureOrderAllRows) {
+      const id = Number(order.id || 0)
+      if (id) procureOrderById[id] = order
+    }
 
     // 采购入库
     for (const r of inhouseAllRows) {
@@ -1282,13 +1298,14 @@ async function openFlowDialog(goods: any) {
           )
           // 每行单独一条记录，保留原始单位和数量
           for (const item of matchedItems) {
+            const procureOrder = procureOrderById[Number(r.purchase_order_id || 0)]
             rows.push({
               _type: 'in',
               _sn: r.in_no || r.inhouse_no || '',
               _qty: Number(item.num || 0),
               _unit: item.unit_name || '',
               _price: Number(item.price || 0),
-              _date: r.created_at || r.create_time || r.in_date || '',
+              _date: procureOrder?.order_date || r.order_date || r.in_date || r.inhouse_date || r.created_at || r.create_time || '',
               _partner: r.supplier_name || '',
             })
           }
@@ -1311,7 +1328,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.return_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.created_at || r.create_time || r.return_date || '',
+              _date: r.return_date || r.created_at || r.create_time || '',
               _partner: r.supplier_name || '',
             })
           }
@@ -1334,7 +1351,7 @@ async function openFlowDialog(goods: any) {
               _sn: m ? m[1] : (r.order_sn || r.order_no || ''),
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.created_at || r.create_time || r.out_date || '',
+              _date: r.out_date || r.created_at || r.create_time || '',
               _partner: r.customer_name || '',
             })
           }
@@ -1356,7 +1373,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.created_at || r.create_time || r.order_date || '',
+              _date: r.order_date || r.created_at || r.create_time || '',
               _partner: r.member_name || '散客',
             })
           }
@@ -1378,7 +1395,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.created_at || r.in_date || '',
+              _date: r.in_date || r.created_at || '',
               _partner: r.remark || '',
             })
           }
@@ -1402,7 +1419,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.order_no || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.price || 0),
-              _date: r.created_at || r.out_date || '',
+              _date: r.out_date || r.created_at || '',
               _partner: r.remark || '',
             })
           }
@@ -1418,7 +1435,7 @@ async function openFlowDialog(goods: any) {
             _sn: r.inhouse_no || r.order_sn || '',
             _qty: Number(r.inhouse_qty || r.qty || 0),
             _price: 0,
-            _date: r.created_at || r.create_time || r.inhouse_date || '',
+            _date: r.inhouse_date || r.created_at || r.create_time || '',
             _partner: r.remark?.replace(/\n【SYS_PI_META】.*/s, '') || '',
           })
         }
@@ -1439,7 +1456,7 @@ async function openFlowDialog(goods: any) {
               _sn: r.order_sn || '',
               _qty: Number(matched.num || 0),
               _price: Number(matched.out_price || 0),
-              _date: r.created_at || r.pick_date || '',
+              _date: r.pick_date || r.created_at || '',
               _partner: r.remark || '',
             })
           }

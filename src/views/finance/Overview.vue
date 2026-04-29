@@ -502,6 +502,7 @@ import { buildExpensePayableRows } from '@/utils/expensePayable'
 import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
 import { findNaiDoufuGoods } from '@/utils/goodsAlias'
+import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
 
 const router = useRouter()
 
@@ -1285,7 +1286,7 @@ async function loadAllData() {
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
-      getContractList({ list_rows: 1000, status: 1 }),
+      getContractList({ list_rows: 1000 }),
       getGoodsList({ list_rows: 3000 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
@@ -1300,6 +1301,7 @@ async function loadAllData() {
     collectList.value = rawCollectList
     payList.value = rawPayList
     const rawReceivableList = (contractRes.data?.rows ?? contractRes.data?.list ?? [])
+      .filter(isEffectiveSaleContract)
       .map((r: any) => ({
         ...r,
         un_pay_amount: Math.max(0, Number(r.total_amount || 0) - Number(r.pay_amount || 0)),
