@@ -6,7 +6,7 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getProcureOrderListWithInhouse"
           :batch-del-api="batchDelProcureOrders"
-          sort-by="order_date" :sort-desc="true"
+          sort-by="_order_date_sort" :sort-desc="true"
           export-file-name="采购订单" :params="searchForm"
           show-summary :summary-method="getSummaryRow"
           :row-class-name="({ row }: any) => (row.order_no || row.order_sn) === highlightSn ? 'row-highlight' : ''"
@@ -93,7 +93,7 @@
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
           </el-table-column>
           <el-table-column label="开单日期" width="110">
-            <template #default="{ row }">{{ (row.order_date || row.created_at || row.create_time || '').slice(0, 10) }}</template>
+            <template #default="{ row }">{{ getOrderListDate(row) || '—' }}</template>
           </el-table-column>
           <el-table-column label="预计交期" width="110">
             <template #default="{ row }">{{ fmtDt(row.delivery_date) || '—' }}</template>
@@ -1397,11 +1397,22 @@ function getSummaryRow({ columns }: { columns: any[] }) {
   })
 }
 
+function getOrderListDate(row: any) {
+  return fmtDt(row?.order_date || row?.created_at || row?.create_time || row?.add_time || row?.updated_at).slice(0, 10)
+}
+
+function hydrateOrderListSortDates(rows: any[]) {
+  for (const row of rows) {
+    row._order_date_sort = getOrderListDate(row)
+  }
+}
+
 // 包装 API：加载完采购单后，批量查入库单并填充 inhouse_qty
 async function getProcureOrderListWithInhouse(params: any) {
   const fetchParams = params.goods_name ? { ...params, list_rows: 10000, page: 1 } : params
   const res = await getProcureOrderList(fetchParams)
   const rows: any[] = res?.data?.rows ?? res?.data ?? []
+  hydrateOrderListSortDates(rows)
   if (rows.length) {
     try {
       const inhouseRes = await getProcureInhouseList({ list_rows: 10000 })
