@@ -831,7 +831,7 @@
     </el-dialog>
 
     <!-- 附加费用管理弹窗（已审核后从列表补充） -->
-    <el-dialog v-model="feeManageVisible" title="管理附加费用" width="560px" append-to-body>
+    <el-dialog v-model="feeManageVisible" title="管理附加费用" width="620px" append-to-body>
       <div style="margin-bottom:8px;font-size:13px;color:rgba(29,29,31,0.5)">
         {{ feeManageRow?.order_no || feeManageRow?.order_sn }} · {{ feeManageRow?.supplier_name }}
       </div>
@@ -858,13 +858,44 @@
         <el-button
           v-if="getFeeItemPayStatus(feeManageRow, idx).label === '待付'"
           type="warning" link size="small"
-          @click="feeManageVisible = false; openFeePayDialog({ ...feeManageRow, fee_items: feeManageItems }, idx)"
+          @click="openFeeManagePay(idx)"
         >付款</el-button>
-        <el-button type="danger" link :icon="Delete" size="small" @click="feeManageItems.splice(idx, 1)" />
+        <el-button type="danger" link :icon="Delete" size="small" @click="removeFeeManageItem(idx)" />
       </div>
       <el-button type="primary" link size="small" :icon="Plus" @click="feeManageItems.push({ name: '运费', amount: 0, bearer: 'buyer' })">
         添加费用项
       </el-button>
+      <div v-if="feeManagePayIndex >= 0" class="fee-manage-pay">
+        <div class="fee-manage-pay-title">
+          <span>{{ feePayForm.feeName }}付款</span>
+          <el-button link size="small" @click="feeManagePayIndex = -1">收起</el-button>
+        </div>
+        <el-form :model="feePayForm" label-width="90px">
+          <el-form-item label="费用金额">
+            <span style="font-size:15px;font-weight:700;color:#8b5cf6">¥{{ feePayForm.amount.toFixed(2) }}</span>
+          </el-form-item>
+          <el-form-item label="付款账户">
+            <el-select v-model="feePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onFeePayFundChange">
+              <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="付款对象">
+            <el-select v-model="feePayForm.contact_name" filterable allow-create placeholder="可选，如：快递公司、检测机构等" style="width:100%" clearable>
+              <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.name" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="付款日期">
+            <el-date-picker v-model="feePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="feePayForm.remark" placeholder="可选" />
+          </el-form-item>
+        </el-form>
+        <div class="fee-manage-pay-actions">
+          <el-button @click="feeManagePayIndex = -1">取消付款</el-button>
+          <el-button type="primary" :loading="feePaySubmitting" @click="submitFeeManagePay">确认付款</el-button>
+        </div>
+      </div>
       <template #footer>
         <el-button @click="feeManageVisible = false">取消</el-button>
         <el-button type="primary" :loading="feeManageSaving" @click="submitFeeManage">保存</el-button>
@@ -1804,20 +1835,47 @@ const feeManageVisible = ref(false)
 const feeManageSaving = ref(false)
 const feeManageRow = ref<any>(null)
 const feeManageItems = ref<{ name: string; amount: number; bearer: string }[]>([])
+const feeManagePayIndex = ref(-1)
 
 function openFeeManageDialog(row: any) {
   feeManageRow.value = row
   feeManageItems.value = JSON.parse(JSON.stringify(getFeeItemsForRow(row)))
+  feeManagePayIndex.value = -1
   feeManageVisible.value = true
+}
+
+function removeFeeManageItem(idx: number) {
+  feeManageItems.value.splice(idx, 1)
+  if (feeManagePayIndex.value === idx) feeManagePayIndex.value = -1
+  if (feeManagePayIndex.value > idx) feeManagePayIndex.value--
+}
+
+function cleanFeeManageItems() {
+  return feeManageItems.value
+    .map((fee) => ({
+      name: String(fee.name || '').trim(),
+      amount: Number(fee.amount || 0),
+      bearer: fee.bearer || 'buyer',
+    }))
+    .filter((fee) => fee.name && fee.amount > 0)
+}
+
+async function saveFeeManageItems() {
+  if (!feeManageRow.value?.id) throw new Error('采购单不存在')
+  const items = cleanFeeManageItems()
+  await updateProcureOrder({
+    id: feeManageRow.value.id,
+    fee_items: JSON.stringify(items),
+  })
+  feeManageItems.value = items
+  feeManageRow.value = { ...feeManageRow.value, fee_items: items }
+  return items
 }
 
 async function submitFeeManage() {
   feeManageSaving.value = true
   try {
-    await updateProcureOrder({
-      id: feeManageRow.value.id,
-      fee_items: JSON.stringify(feeManageItems.value),
-    })
+    await saveFeeManageItems()
     ElMessage.success('费用保存成功')
     feeManageVisible.value = false
     tableRef.value?.refresh()
@@ -1879,6 +1937,10 @@ function getFeeItemPayStatus(row: any, idx: number): { label: string; type: stri
 function openFeePayDialog(row: any, idx: number) {
   const items = getFeeItemsForRow(row)
   const fee = items[idx]
+  if (!fee) { ElMessage.warning('费用项不存在'); return }
+  if (Number(fee.amount || 0) <= 0) { ElMessage.warning('费用金额必须大于 0'); return }
+  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning('该费用无需我方付款'); return }
+  if (getFeeItemPayStatus(row, idx).label !== '待付') { ElMessage.warning('该费用当前不需要付款'); return }
   feePayForm.orderId = row.id
   feePayForm.orderSn = row.order_no || row.order_sn || `PO${row.id}`
   feePayForm.supplierName = row.supplier_name || ''
@@ -1892,6 +1954,17 @@ function openFeePayDialog(row: any, idx: number) {
   feePayForm.pay_date = new Date().toISOString().slice(0, 10)
   feePayForm.remark = ''
   feePayVisible.value = true
+}
+
+function openFeeManagePay(idx: number) {
+  if (!feeManageRow.value) return
+  const fee = feeManageItems.value[idx]
+  if (!fee) { ElMessage.warning('费用项不存在'); return }
+  if (Number(fee.amount || 0) <= 0) { ElMessage.warning('费用金额必须大于 0'); return }
+  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning('该费用无需我方付款'); return }
+  openFeePayDialog({ ...feeManageRow.value, fee_items: feeManageItems.value }, idx)
+  feePayVisible.value = false
+  feeManagePayIndex.value = idx
 }
 
 function onFeePayFundChange(id: number) {
@@ -1918,6 +1991,46 @@ async function submitFeePay() {
     ElMessage.success('付款成功')
     feePayVisible.value = false
     loadPaidMap()
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '付款失败')
+  } finally {
+    feePaySubmitting.value = false
+  }
+}
+
+async function submitFeeManagePay() {
+  if (feeManagePayIndex.value < 0) return
+  if (!feePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  const fee = feeManageItems.value[feeManagePayIndex.value]
+  if (!fee) { ElMessage.warning('费用项不存在'); return }
+  if (Number(fee.amount || 0) <= 0) { ElMessage.warning('费用金额必须大于 0'); return }
+  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning('该费用无需我方付款'); return }
+  if (getFeeItemPayStatus({ ...feeManageRow.value, fee_items: feeManageItems.value }, feeManagePayIndex.value).label !== '待付') {
+    ElMessage.warning('该费用当前不需要付款')
+    return
+  }
+  feePayForm.feeName = String(fee.name || '').trim()
+  feePayForm.amount = Number(fee.amount || 0)
+  feePayForm.bearer = fee.bearer || 'buyer'
+  feePaySubmitting.value = true
+  try {
+    await saveFeeManageItems()
+    const needPay = feePayForm.bearer === 'half' ? feePayForm.amount / 2 : feePayForm.amount
+    await createPayReceipt({
+      contact_type: 'other',
+      contact_name: feePayForm.contact_name,
+      order_sn: feePayForm.orderSn,
+      order_id: feePayForm.orderId,
+      amount: needPay,
+      pay_date: feePayForm.pay_date,
+      fund_id: feePayForm.fund_id,
+      fund_name: feePayForm.fund_name,
+      remark: `采购附加费用 #${feePayForm.orderId}:${feePayForm.feeName} [${feePayForm.supplierName}]${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
+    })
+    ElMessage.success('付款成功')
+    feeManagePayIndex.value = -1
+    await loadPaidMap()
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '付款失败')
@@ -3333,6 +3446,30 @@ async function submitAddFund() {
 .sc-money { font-size: 14px; font-weight: 600; color: #1d1d1f; }
 .sc-sub { font-size: 12px; color: rgba(29,29,31,0.4); }
 .c-red { color: #dc2626; }
+
+.fee-manage-pay {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background: #fafbff;
+}
+
+.fee-manage-pay-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.fee-manage-pay-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 
 /* 工具栏合计行 */
 :deep(.toolbar-left) {
