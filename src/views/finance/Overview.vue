@@ -499,6 +499,7 @@ import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, app
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
+import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
 import { findNaiDoufuGoods } from '@/utils/goodsAlias'
 
@@ -1346,9 +1347,11 @@ async function loadAllData() {
     const procurePaidByKey: Record<string, number> = {}
     const procurePaidBySn: Record<string, number> = {}
     const procurePaidBySup: Record<string, number> = {}
+    const procureFeePaidById = buildProcureFeePaidByOrder(rawPayList)
     for (const r of rawPayList) {
       const amt = Number(r.amount || 0)
       if (!amt) continue
+      if (isProcureExtraFeePayment(r)) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
       let matched = false
@@ -1389,9 +1392,12 @@ async function loadAllData() {
       const paidAmt = (procurePaidById[o.id] || 0)
         + (procurePaidBySn[oSn] || procurePaidBySn[oNo] || 0)
         + (procurePaidByKey[`${oSn}@@${supName}`] || procurePaidByKey[`${oNo}@@${supName}`] || 0)
-      s.order_amount += orderAmt
-      s.paid_amount += paidAmt
-      s.un_pay_amount += Math.max(0, orderAmt - paidAmt)
+      const feeNeedPay = getProcureFeeNeedPayAmount(o)
+      const feePaid = procureFeePaidById[o.id] || 0
+      const feeUnpaid = Math.max(0, feeNeedPay - feePaid)
+      s.order_amount += orderAmt + feeNeedPay
+      s.paid_amount += paidAmt + feePaid
+      s.un_pay_amount += Math.max(0, orderAmt - paidAmt) + feeUnpaid
     }
     // 多ID付款：按供应商维度补充已付金额
     for (const s of supplierPayMap.values()) {

@@ -118,6 +118,7 @@ import http from '@/api/http'
 import { normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
+import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
 
 const route = useRoute()
@@ -380,9 +381,11 @@ onMounted(async () => {
     const procurePaidById: Record<number, number> = {}
     const procurePaidByKey: Record<string, number> = {}
     const procurePaidBySn: Record<string, number> = {}
+    const procureFeePaidById = buildProcureFeePaidByOrder(payRows)
     for (const r of payRows) {
       const amt = Number(r.amount || 0)
       if (!amt) continue
+      if (isProcureExtraFeePayment(r)) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
       const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
@@ -401,7 +404,8 @@ onMounted(async () => {
         const paid = (procurePaidById[r.id] || 0)
           + (procurePaidBySn[oSn] || procurePaidBySn[oNo] || 0)
           + (procurePaidByKey[`${oSn}@@${sup}`] || procurePaidByKey[`${oNo}@@${sup}`] || 0)
-        return s + Math.max(0, orderAmt - paid)
+        const feeUnpaid = Math.max(0, getProcureFeeNeedPayAmount(r) - (procureFeePaidById[r.id] || 0))
+        return s + Math.max(0, orderAmt - paid) + feeUnpaid
       }, 0)
     summary.unpaid = pendingExpenseTotal + purchaseUnpaidTotal
 
