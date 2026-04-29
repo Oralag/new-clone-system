@@ -1605,26 +1605,24 @@ async function handleSave(andAudit = false) {
         await http.post('/shop/offerOrder/edit', { id: fd.source_offer_id, status: 4 })
       } catch { /* ignore */ }
     }
-    // 新建合同自动审核
-    if (isNew && newId) {
+    let auditSucceeded = false
+    if (andAudit && newId) {
       try {
         await autoAuditContract(newId)
-        const detail = await getContractDetail(newId)
-        const row = detail?.data?.row || detail?.data || {}
-        await autoCreateReceipt(row)
-        await ensureContractFreightExpense(row)
-      } catch (e: any) {
-        ElMessage.warning(`保存成功，但自动审核未完成：${e?.message || ''}，请手动审核`)
-      }
-    } else if (andAudit && newId) {
-      // 编辑后保存并审核
-      try {
-        await autoAuditContract(newId)
+        if (isNew) {
+          const detail = await getContractDetail(newId)
+          const row = detail?.data?.row || detail?.data || {}
+          await autoCreateReceipt(row)
+          await ensureContractFreightExpense(row)
+        }
+        auditSucceeded = true
       } catch (e: any) {
         ElMessage.warning(`保存成功，但审核失败：${e?.message || ''}，请手动审核`)
       }
     }
-    ElMessage.success('保存成功')
+    if (!andAudit || auditSucceeded) {
+      ElMessage.success(andAudit ? '保存并审核成功' : '保存成功')
+    }
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')

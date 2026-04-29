@@ -92,7 +92,8 @@
           <el-tag v-else-if="fd.status === 2" type="danger" size="small">已驳回</el-tag>
         </div>
         <div class="form-topbar-right" v-if="!isView">
-          <el-button type="primary" :loading="saving" @click="handleSave">保存并审核（Ctrl+S）</el-button>
+          <el-button :loading="saving" @click="handleSave(false)">保存</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave(true)">保存并审核</el-button>
         </div>
       </div>
 
@@ -689,7 +690,7 @@ function applyBatch() {
 }
 
 // ── 保存 ─────────────────────────────────────────────────────────────────────
-async function handleSave() {
+async function handleSave(andAudit = false) {
   if (!fd.plan_id) {
     ElMessage.warning('请选择生产计划单')
     return
@@ -763,89 +764,93 @@ async function handleSave() {
       }
     }
 
-    const { changedCount } = await autoAuditSavedRows(savedRows)
+    if (andAudit) {
+      const { changedCount } = await autoAuditSavedRows(savedRows)
 
-    await syncProductionLaborExpense({
-      order_sn: savedRows[0]?.order_sn || sharedOrderSn,
-      inhouse_date: fd.in_date || new Date().toISOString().slice(0, 10),
-      admin_name: fd.admin_name || '',
-      items: fd.items,
-      active: true,
-    })
+      await syncProductionLaborExpense({
+        order_sn: savedRows[0]?.order_sn || sharedOrderSn,
+        inhouse_date: fd.in_date || new Date().toISOString().slice(0, 10),
+        admin_name: fd.admin_name || '',
+        items: fd.items,
+        active: true,
+      })
 
-    // 倒冲领料：按 BOM 自动生成领料单并扣减库存
-    if (fd.back_flush && fd.warehouse_id) {
-      try {
-        // 汇总所有成品需要的原材料（BOM × 本次入库数量）
-        const materialMap = new Map<number, any>()
-        for (const item of fd.items) {
-          const qty = Number(item.num) || 0
-          if (!qty || !item.goods_id) continue
-          const bomRes = await getBomByGoods(item.goods_id)
-          const bomItems: any[] = bomRes.data?.list ?? bomRes.data?.rows ?? bomRes.data ?? []
-          for (const bom of bomItems) {
-            const matId = Number(bom.material_id || bom.goods_id)
-            const need = (Number(bom.num) || 0) * qty
-            if (!matId || need <= 0) continue
-            if (materialMap.has(matId)) {
-              materialMap.get(matId).num += need
-            } else {
-              materialMap.set(matId, {
-                goods_id: matId,
-                goods_name: bom.material_name || bom.goods_name || '',
-                goods_sn: bom.material_sn || bom.goods_sn || '',
-                unit_name: bom.unit_name || '',
-                num: need,
-                out_price: Number(bom.cost_price || bom.price || 0),
-                warehouse_id: fd.warehouse_id,
-                warehouse_name: fd.warehouse_name || '',
-              })
+      // 倒冲领料：按 BOM 自动生成领料单并扣减库存
+      if (fd.back_flush && fd.warehouse_id) {
+        try {
+          // 汇总所有成品需要的原材料（BOM × 本次入库数量）
+          const materialMap = new Map<number, any>()
+          for (const item of fd.items) {
+            const qty = Number(item.num) || 0
+            if (!qty || !item.goods_id) continue
+            const bomRes = await getBomByGoods(item.goods_id)
+            const bomItems: any[] = bomRes.data?.list ?? bomRes.data?.rows ?? bomRes.data ?? []
+            for (const bom of bomItems) {
+              const matId = Number(bom.material_id || bom.goods_id)
+              const need = (Number(bom.num) || 0) * qty
+              if (!matId || need <= 0) continue
+              if (materialMap.has(matId)) {
+                materialMap.get(matId).num += need
+              } else {
+                materialMap.set(matId, {
+                  goods_id: matId,
+                  goods_name: bom.material_name || bom.goods_name || '',
+                  goods_sn: bom.material_sn || bom.goods_sn || '',
+                  unit_name: bom.unit_name || '',
+                  num: need,
+                  out_price: Number(bom.cost_price || bom.price || 0),
+                  warehouse_id: fd.warehouse_id,
+                  warehouse_name: fd.warehouse_name || '',
+                })
+              }
             }
           }
-        }
 
-        // 补充查商品 cost_price，作为 BOM 里 out_price=0 时的 fallback
-        const matItems = [...materialMap.values()]
-        const missingPriceIds = matItems.filter(i => !i.out_price).map(i => i.goods_id)
-        if (missingPriceIds.length) {
-          try {
-            const gRes = await http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } })
-            const gRows: any[] = gRes.data?.rows ?? []
-            const costMap: Record<number, number> = {}
-            for (const g of gRows) costMap[g.id] = Number(g.cost_price || 0)
-            for (const i of matItems) {
-              if (!i.out_price && costMap[i.goods_id]) i.out_price = costMap[i.goods_id]
-            }
-          } catch {}
-        }
-        if (matItems.length) {
-          const matRes = await createMaterial({
-            pick_date: fd.in_date || new Date().toISOString().slice(0, 10),
-            production_plan_id: fd.plan_id || 0,
-            admin_name: fd.admin_name || '',
-            remark: `倒冲领料 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
-            goods_info: JSON.stringify(matItems),
-            goods_name: matItems.map(i => i.goods_name).join('、').slice(0, 100),
-            total_price: matItems.reduce((s, i) => s + i.num * i.out_price, 0),
-          })
-          const matId = Number(matRes.data?.id || matRes.data?.data?.id || matRes.data)
-          if (matId) {
-            await auditMaterial(matId, 1)
+          // 补充查商品 cost_price，作为 BOM 里 out_price=0 时的 fallback
+          const matItems = [...materialMap.values()]
+          const missingPriceIds = matItems.filter(i => !i.out_price).map(i => i.goods_id)
+          if (missingPriceIds.length) {
+            try {
+              const gRes = await http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } })
+              const gRows: any[] = gRes.data?.rows ?? []
+              const costMap: Record<number, number> = {}
+              for (const g of gRows) costMap[g.id] = Number(g.cost_price || 0)
+              for (const i of matItems) {
+                if (!i.out_price && costMap[i.goods_id]) i.out_price = costMap[i.goods_id]
+              }
+            } catch {}
           }
-          await applyMaterialStockDelta(matItems, {
-            direction: 'deduct',
-            defaultWarehouseId: fd.warehouse_id,
-            defaultWarehouseName: fd.warehouse_name || '',
-          })
-          stockRefreshStore.trigger()
-          ElMessage.success(`倒冲领料完成，已扣减 ${matItems.length} 种原材料`)
+          if (matItems.length) {
+            const matRes = await createMaterial({
+              pick_date: fd.in_date || new Date().toISOString().slice(0, 10),
+              production_plan_id: fd.plan_id || 0,
+              admin_name: fd.admin_name || '',
+              remark: `倒冲领料 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
+              goods_info: JSON.stringify(matItems),
+              goods_name: matItems.map(i => i.goods_name).join('、').slice(0, 100),
+              total_price: matItems.reduce((s, i) => s + i.num * i.out_price, 0),
+            })
+            const matId = Number(matRes.data?.id || matRes.data?.data?.id || matRes.data)
+            if (matId) {
+              await auditMaterial(matId, 1)
+            }
+            await applyMaterialStockDelta(matItems, {
+              direction: 'deduct',
+              defaultWarehouseId: fd.warehouse_id,
+              defaultWarehouseName: fd.warehouse_name || '',
+            })
+            stockRefreshStore.trigger()
+            ElMessage.success(`倒冲领料完成，已扣减 ${matItems.length} 种原材料`)
+          }
+        } catch (e: any) {
+          ElMessage.warning(`倒冲领料失败：${e?.message ?? '未知错误'}，请手工补录领料单`)
         }
-      } catch (e: any) {
-        ElMessage.warning(`倒冲领料失败：${e?.message ?? '未知错误'}，请手工补录领料单`)
       }
+      ElMessage.success(`保存并审核成功，库存已增加 ${changedCount} 项`)
+      stockRefreshStore.trigger()
+    } else {
+      ElMessage.success('保存成功')
     }
-    ElMessage.success(`保存并审核成功，库存已增加 ${changedCount} 项`)
-    stockRefreshStore.trigger()
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')

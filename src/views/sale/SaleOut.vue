@@ -111,8 +111,11 @@
         </div>
         <div class="form-actions">
           <el-button :icon="Document" @click="handlePrint">打印出库单</el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-saleout-save">
+          <el-button v-if="!isReadonly" :loading="saving" @click="handleSave(false)" data-guide-id="guide-saleout-save">
             保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
+          </el-button>
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave(true)">
+            保存并审核
           </el-button>
         </div>
       </div>
@@ -803,7 +806,7 @@ function handlePrint() {
   w?.document.close()
 }
 
-async function handleSave() {
+async function handleSave(andAudit = false) {
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项'); return
   }
@@ -844,17 +847,20 @@ async function handleSave() {
       const res = await createSaleOut(payload)
       savedId = res?.data?.id || 0
     }
-    // 保存后自动审核 + 扣减库存
-    if (savedId) {
+    let auditSucceeded = false
+    if (andAudit && savedId) {
       try {
         await auditSaleOut(savedId, 1)
         await handleSaleOutStockEffect({ ...payload, id: savedId, goods_info: JSON.stringify(fd.items) }, 'audit')
         stockRefreshStore.trigger()
+        auditSucceeded = true
       } catch (e: any) {
-        ElMessage.warning('保存成功，但自动审核/库存扣减失败：' + (e?.message || ''))
+        ElMessage.warning('保存成功，但审核/库存扣减失败：' + (e?.message || ''))
       }
     }
-    ElMessage.success('保存并审核成功')
+    if (!andAudit || auditSucceeded) {
+      ElMessage.success(andAudit ? '保存并审核成功' : '保存成功')
+    }
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')

@@ -85,6 +85,12 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
+          <el-button v-if="!isReadonly" :loading="saving" :disabled="saving" @click="handleSave(false)">
+            保存
+          </el-button>
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" :disabled="saving" @click="handleSave(true)">
+            保存并审核
+          </el-button>
         </div>
       </div>
 
