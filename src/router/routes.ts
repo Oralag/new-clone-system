@@ -29,6 +29,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/level', name: 'SaleLevel', component: () => import('@/views/sale/CustomerLevel.vue'), meta: { title: '客户等级' } },
       { path: 'sale/commission-setting', name: 'SaleCommissionSetting', component: () => import('@/views/sale/CommissionSetting.vue'), meta: { title: '提成设置' } },
       { path: 'sale/offer', name: 'SaleOffer', component: () => import('@/views/sale/Offer.vue'), meta: { title: '销售报价' } },
+      { path: 'sale/sample', name: 'SaleSample', component: () => import('@/views/sale/Sample.vue'), meta: { title: '样品管理' } },
       { path: 'sale/contract', name: 'SaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售合同' } },
       { path: 'sale/out', name: 'SaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'SaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
@@ -206,6 +207,7 @@ const routes: RouteRecordRaw[] = [
       // Sale
       { path: 'sale/overview', name: 'MobileSaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
       { path: 'sale/client', name: 'MobileSaleClient', component: () => import('@/views/sale/ClientList.vue'), meta: { title: '客户管理' } },
+      { path: 'sale/sample', name: 'MobileSaleSample', component: () => import('@/views/sale/Sample.vue'), meta: { title: '样品管理' } },
       { path: 'sale/contract', name: 'MobileSaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售合同' } },
       { path: 'sale/out', name: 'MobileSaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'MobileSaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },

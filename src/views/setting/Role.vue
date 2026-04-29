@@ -139,7 +139,7 @@ const PRESET_ROLES: Record<string, string[]> = {
   销售员: [
     'dashboard',
     'sale-client','sale-sea','sale-level',
-    'sale-offer','sale-contract','sale-out','sale-return',
+    'sale-offer','sale-sample','sale-contract','sale-out','sale-return',
     'retail-order','retail-return',
     'goods-info',
     'warehouse-stock',
@@ -149,7 +149,7 @@ const PRESET_ROLES: Record<string, string[]> = {
   店长: [
     'dashboard',
     'sale-client','sale-level',
-    'sale-offer','sale-contract','sale-out','sale-return',
+    'sale-offer','sale-sample','sale-contract','sale-out','sale-return',
     'retail-store','retail-order','retail-return','retail-customer',
     'retail-recharge','retail-points','retail-coupon',
     'goods-info',

@@ -57,7 +57,8 @@
       <el-table v-else :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="customer_name" label="客户名称" min-width="150" />
-        <el-table-column prop="order_sn" label="合同单号" min-width="160">
+        <el-table-column prop="source" label="来源" width="100" />
+        <el-table-column prop="order_sn" label="单据号" min-width="160">
           <template #default="{ row }">{{ row.order_sn || row.order_no || '—' }}</template>
         </el-table-column>
         <el-table-column label="应收金额" min-width="120" align="right">
@@ -88,7 +89,7 @@
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="router.push('/finance/collect-receipt')">去收款</el-button>
-            <el-button type="success" link size="small" @click="router.push('/sale/out')">查看出库</el-button>
+            <el-button type="success" link size="small" @click="router.push(row.source === '样品单' ? '/sale/sample' : '/sale/out')">查看单据</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -143,17 +144,36 @@ async function load() {
     }
     if (searchForm.customer_name) params.customer_name = searchForm.customer_name
     if (searchForm.order_sn) params.order_sn = searchForm.order_sn
-    const res = await http.get('/shop/ContractOrder/index', { params: { ...params, status: 1 } })
-    const allRows: any[] = res.data?.rows ?? []
-    const filtered = allRows
+    const receivableParams = {
+      ...params,
+      keyword: searchForm.customer_name || searchForm.order_sn || '',
+    }
+    const [contractRes, receivableRes] = await Promise.allSettled([
+      http.get('/shop/ContractOrder/index', { params: { ...params, status: 1 } }),
+      http.get('/finance/CollectAccounts/index', { params: receivableParams }),
+    ])
+    const contractRows: any[] = contractRes.status === 'fulfilled' ? (contractRes.value.data?.rows ?? []) : []
+    const sampleRows: any[] = receivableRes.status === 'fulfilled' ? (receivableRes.value.data?.rows ?? []) : []
+    const contractItems = contractRows
       .map((r: any) => ({
         ...r,
+        source: '销售合同',
         paid_amount: Number(r.pay_amount || 0),
         un_pay_amount: Math.max(0, Number(r.total_amount || 0) - Number(r.pay_amount || 0)),
         order_sn: r.order_sn || r.order_no || '',
         out_date: r.order_date || r.created_at,
       }))
+    const sampleItems = sampleRows.map((r: any) => ({
+      ...r,
+      source: String(r.order_sn || '').startsWith('YP') ? '样品单' : '应收单',
+      paid_amount: Number(r.paid_amount || 0),
+      un_pay_amount: Number(r.un_pay_amount || 0),
+      out_date: r.due_date || r.created_at,
+    }))
+    const filtered = [...contractItems, ...sampleItems]
       .filter((r: any) => {
+        if (searchForm.customer_name && !String(r.customer_name || '').includes(searchForm.customer_name)) return false
+        if (searchForm.order_sn && !String(r.order_sn || r.order_no || '').includes(searchForm.order_sn)) return false
         if (r.un_pay_amount <= 0) return false
         if (searchForm.date_from && fmtDt(r.out_date) < searchForm.date_from) return false
         if (searchForm.date_to && fmtDt(r.out_date) > searchForm.date_to) return false

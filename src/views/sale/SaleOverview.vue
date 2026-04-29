@@ -1,35 +1,31 @@
 <template>
   <div class="page-container">
     <!-- 顶部：一键销售 + 快捷操作 -->
-    <el-row :gutter="14" style="margin-bottom:14px">
-      <el-col :span="8">
-        <div class="quick-card quick-card-main" @click="openQuickSale">
-          <el-icon :size="28"><ShoppingCart /></el-icon>
-          <div class="quick-card-text">
-            <div class="quick-card-title">一键销售</div>
-            <div class="quick-card-sub">选客户 → 选商品 → 自动生成合同+出库</div>
-          </div>
+    <div class="sale-quick-grid">
+      <div class="quick-card quick-card-main" @click="openQuickSale">
+        <el-icon :size="28"><ShoppingCart /></el-icon>
+        <div class="quick-card-text">
+          <div class="quick-card-title">一键销售</div>
+          <div class="quick-card-sub">选客户 → 选商品 → 自动生成合同+出库</div>
         </div>
-      </el-col>
-      <el-col :span="5">
-        <div class="quick-card quick-card-blue" @click="router.push('/sale/offer')">
-          <el-icon :size="20"><Document /></el-icon>
-          <span>新增报价</span>
-        </div>
-      </el-col>
-      <el-col :span="5">
-        <div class="quick-card quick-card-green" @click="router.push('/sale/contract')">
-          <el-icon :size="20"><DocumentChecked /></el-icon>
-          <span>新增合同</span>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="quick-card quick-card-orange" @click="router.push('/sale/out')">
-          <el-icon :size="20"><Box /></el-icon>
-          <span>新增出库</span>
-        </div>
-      </el-col>
-    </el-row>
+      </div>
+      <div class="quick-card quick-card-blue" @click="router.push('/sale/offer')">
+        <el-icon :size="20"><Document /></el-icon>
+        <span>新增报价</span>
+      </div>
+      <div class="quick-card quick-card-green" @click="router.push('/sale/contract')">
+        <el-icon :size="20"><DocumentChecked /></el-icon>
+        <span>新增合同</span>
+      </div>
+      <div class="quick-card quick-card-orange" @click="router.push('/sale/out')">
+        <el-icon :size="20"><Box /></el-icon>
+        <span>新增出库</span>
+      </div>
+      <div class="quick-card quick-card-cyan" @click="router.push('/sale/sample')">
+        <el-icon :size="20"><Plus /></el-icon>
+        <span>样品单</span>
+      </div>
+    </div>
 
     <!-- KPI 卡片 -->
     <div class="kpi-row">
@@ -672,6 +668,26 @@ onMounted(loadData)
 .quick-card-blue { background: #0071e3; justify-content: center; min-height: 72px; }
 .quick-card-green { background: #16a34a; justify-content: center; min-height: 72px; }
 .quick-card-orange { background: #f59e0b; justify-content: center; min-height: 72px; }
+.quick-card-cyan { background: #06b6d4; justify-content: center; min-height: 72px; }
+
+.sale-quick-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) repeat(4, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1400px) {
+  .sale-quick-grid {
+    grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .sale-quick-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 .quick-card-text { display: flex; flex-direction: column; gap: 2px; }
 .quick-card-title { font-size: 18px; font-weight: 700; }
 .quick-card-sub { font-size: 12px; opacity: 0.85; font-weight: 400; }

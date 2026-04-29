@@ -562,9 +562,24 @@ async function loadUnitConvertMap() {
   }))
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function inferRatioFromSpec(unitName: string, spec?: string): number | null {
+  if (!unitName || !spec) return null
+  const escapedUnit = escapeRegExp(unitName)
+  const match = String(spec).match(new RegExp(`(^|[^\\d.])(\\d+(?:\\.\\d+)?)\\s*[/／]\\s*${escapedUnit}($|[^\\u4e00-\\u9fa5A-Za-z0-9_])`))
+  const ratio = match ? Number(match[2]) : 0
+  return ratio > 0 ? ratio : null
+}
+
 // 将 goods_info item 的数量换算为基础单位数量
-function toBaseQty(goodsId: number, unitName: string, num: number): number {
-  const ratio = unitRatioLookup.value[`${goodsId}:${unitName}`]
+function toBaseQty(goodsId: number, unitName: string, num: number, spec?: string, unitRatio?: any): number {
+  const explicitRatio = Number(unitRatio || 0)
+  const ratio = (explicitRatio > 0 ? explicitRatio : null)
+    ?? unitRatioLookup.value[`${goodsId}:${unitName}`]
+    ?? inferRatioFromSpec(unitName, spec)
   return ratio ? num * ratio : num
 }
 
@@ -877,7 +892,10 @@ async function loadStockMap(warehouseId = 0) {
       const idQtyMap: Record<number, number> = {}
       for (const r of filteredRows) {
         const gid = Number(r.goods_id || 0)
-        if (gid) idQtyMap[gid] = (idQtyMap[gid] || 0) + Number(r.qty ?? 0)
+        if (gid) {
+          const goods = allGoods.value.find((g: any) => Number(g.id) === gid)
+          idQtyMap[gid] = (idQtyMap[gid] || 0) + toBaseQty(gid, r.unit_name || '', Number(r.qty ?? 0), goods?.spec)
+        }
       }
       const qtyMap: Record<number, number> = {}
       for (const g of allGoods.value) {
@@ -919,7 +937,7 @@ async function loadStockMap(warehouseId = 0) {
             if (rawQty > 0 && price > 0) {
               // 换算为基础单位数量和单价
               const gid = snToGid[sn] || 0
-              const baseQty = gid ? toBaseQty(gid, item.unit_name, rawQty) : rawQty
+              const baseQty = gid ? toBaseQty(gid, item.unit_name, rawQty, item.spec, item.unit_ratio) : rawQty
               const basePrice = baseQty > 0 ? (rawQty * price) / baseQty : price
               snTotalCost[sn] = (snTotalCost[sn] || 0) + baseQty * basePrice
               snTotalQty[sn] = (snTotalQty[sn] || 0) + baseQty
@@ -1018,7 +1036,7 @@ async function loadActivityMaps() {
           const qty = Number(item.num || 0)
           if (gid) {
             goodsInThisOrder.add(gid)
-            fqMap[gid] = (fqMap[gid] || 0) + toBaseQty(gid, item.unit_name, qty) // 入库 +
+            fqMap[gid] = (fqMap[gid] || 0) + toBaseQty(gid, item.unit_name, qty, item.spec, item.unit_ratio) // 入库 +
           }
         }
         for (const gid of goodsInThisOrder) {
@@ -1041,7 +1059,7 @@ async function loadActivityMaps() {
             const qty = Number(item.num || 0)
             if (gid) {
               goodsInThisReturn.add(gid)
-              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty) // 退货出库 -
+              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty, item.spec, item.unit_ratio) // 退货出库 -
             }
           }
           for (const gid of goodsInThisReturn) {
@@ -1067,7 +1085,7 @@ async function loadActivityMaps() {
             if (gid) {
               goodsInThisOrder.add(gid)
               dMap[gid] = (dMap[gid] || 0) + qty
-              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty) // 销售出库 -
+              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty, item.spec, item.unit_ratio) // 销售出库 -
             }
           }
           for (const gid of goodsInThisOrder) {
@@ -1091,7 +1109,7 @@ async function loadActivityMaps() {
           if (gid) {
             goodsInThisOrder.add(gid)
             dMap[gid] = (dMap[gid] || 0) + qty
-            fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty) // 零售出库 -
+            fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty, item.spec, item.unit_ratio) // 零售出库 -
           }
         }
         for (const gid of goodsInThisOrder) {
@@ -1114,7 +1132,7 @@ async function loadActivityMaps() {
             const qty = Number(item.num || 0)
             if (gid) {
               goodsInThis.add(gid)
-              fqMap[gid] = (fqMap[gid] || 0) + toBaseQty(gid, item.unit_name, qty) // 其他入库 +
+              fqMap[gid] = (fqMap[gid] || 0) + toBaseQty(gid, item.unit_name, qty, item.spec, item.unit_ratio) // 其他入库 +
             }
           }
           for (const gid of goodsInThis) {
@@ -1138,7 +1156,7 @@ async function loadActivityMaps() {
             const qty = Number(item.num || 0)
             if (gid) {
               goodsInThis.add(gid)
-              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty) // 其他出库 -
+              fqMap[gid] = (fqMap[gid] || 0) - toBaseQty(gid, item.unit_name, qty, item.spec, item.unit_ratio) // 其他出库 -
             }
           }
           for (const gid of goodsInThis) {

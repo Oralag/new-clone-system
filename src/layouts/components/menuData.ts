@@ -39,6 +39,7 @@ export const menuData: TopMenuItem[] = [
     children: [
       { key: 'sale-overview', title: '销售总览', path: '/sale/overview' },
       { key: 'sale-offer', title: '销售报价', path: '/sale/offer' },
+      { key: 'sale-sample', title: '样品管理', path: '/sale/sample' },
       { key: 'sale-contract', title: '销售合同', path: '/sale/contract' },
       { key: 'sale-out', title: '销售出库', path: '/sale/out' },
       { key: 'sale-return', title: '销售退货', path: '/sale/return' },
