@@ -312,6 +312,7 @@ import GoodsSelect from '@/components/GoodsSelect.vue'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getWarehouseList } from '@/api/warehouse'
 import { auditSample, createSample, deleteSample, getSampleList, updateSample, getSaleCustomerList } from '@/api/sale'
+import { getBomByGoods, getBomList } from '@/api/goods'
 import { getFundList } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -328,6 +329,8 @@ const showForm = ref(false)
 const isView = ref(false)
 const saving = ref(false)
 const summary = reactive({ count: 0, pending: 0, receivable: 0, companyCost: 0 })
+const bomListCache = ref<any[] | null>(null)
+const bomCostCache = new Map<string, number>()
 
 function defaultFd() {
   return {
@@ -497,8 +500,65 @@ function onExpenseFundChange(id: any) {
   fd.expense_fund_name = f?.name || ''
 }
 
-function onGoodsConfirm(goods: any[]) {
+function firstPositiveNumber(...values: any[]) {
+  for (const value of values) {
+    const num = Number(value)
+    if (Number.isFinite(num) && num > 0) return num
+  }
+  return 0
+}
+
+async function resolveBomCost(goods: any) {
+  const key = String(goods.id || goods.goods_id || goods.goods_sn || goods.goods_name || '')
+  if (!key) return 0
+  if (bomCostCache.has(key)) return bomCostCache.get(key) || 0
+  if (!bomListCache.value) {
+    const res = await getBomList({ list_rows: 2000 })
+    bomListCache.value = res.data?.rows ?? res.data?.list ?? []
+  }
+  const bom = bomListCache.value.find((item: any) =>
+    (goods.id && Number(item.goods_id) === Number(goods.id)) ||
+    (goods.goods_sn && item.goods_sn === goods.goods_sn) ||
+    (goods.goods_name && item.goods_name === goods.goods_name)
+  )
+  if (!bom) {
+    bomCostCache.set(key, 0)
+    return 0
+  }
+  const detailRes = await getBomByGoods(bom.id || bom.goods_id || goods.id)
+  const rows: any[] = detailRes.data?.items ?? detailRes.data?.rows ?? detailRes.data?.list ?? []
+  const localPrices: Record<number, number> = (() => {
+    try { return JSON.parse(localStorage.getItem('erp_bom_prices') || '{}') } catch { return {} }
+  })()
+  const cost = rows.reduce((sum, row) => {
+    const price = firstPositiveNumber(row.price, row.cost_price, row.out_price, row.in_price, localPrices[row.id])
+    return sum + Number(row.num || 0) * price
+  }, 0)
+  const fixedCost = Number(cost.toFixed(4))
+  bomCostCache.set(key, fixedCost)
+  return fixedCost
+}
+
+async function resolveGoodsCost(goods: any) {
+  const directCost = firstPositiveNumber(
+    goods.cost_price,
+    goods.costPrice,
+    goods.purchase_price,
+    goods.avg_price,
+    goods.in_price,
+    goods.out_price,
+  )
+  if (directCost > 0) return directCost
+  try {
+    return await resolveBomCost(goods)
+  } catch {
+    return 0
+  }
+}
+
+async function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {
+    const costPrice = await resolveGoodsCost(g)
     fd.items.push({
       goods_id: g.id,
       goods_name: g.goods_name || g.name || '',
@@ -506,8 +566,8 @@ function onGoodsConfirm(goods: any[]) {
       spec: g.spec || '',
       unit_name: g.unit_name || '',
       num: 1,
-      cost_price: Number(g.cost_price || 0),
-      out_price: Number(g.cost_price || 0),
+      cost_price: costPrice,
+      out_price: costPrice,
       price: Number(g.sell_price || 0),
       remark: '',
     })
