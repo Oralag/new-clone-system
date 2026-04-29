@@ -89,7 +89,7 @@
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ fmtDt(row.contract_date || row.create_time) }}</template>
+              <template #default="{ row }">{{ fmtDt(getContractDate(row)) }}</template>
             </el-table-column>
             <el-table-column label="状态" align="center" width="80">
               <template #default="{ row }">
@@ -121,7 +121,7 @@
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ fmtDt(row.offer_date || row.create_time) }}</template>
+              <template #default="{ row }">{{ fmtDt(getOfferDate(row)) }}</template>
             </el-table-column>
             <el-table-column label="状态" align="center" width="80">
               <template #default="{ row }">
@@ -152,7 +152,7 @@
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ fmtDt(row.out_date || row.create_time) }}</template>
+              <template #default="{ row }">{{ fmtDt(getSaleOutDate(row)) }}</template>
             </el-table-column>
             <el-table-column label="状态" align="center" width="80">
               <template #default="{ row }">
@@ -311,6 +311,22 @@ function getSaleOutSn(row: any): string {
   return row?.order_sn || row?.order_no || (row?.id ? `CK${String(row.id).padStart(4, '0')}` : '')
 }
 
+function firstDate(...values: any[]): string {
+  return String(values.find(v => v !== undefined && v !== null && String(v).trim()) || '')
+}
+
+function getContractDate(row: any): string {
+  return firstDate(row?.sign_date, row?.contract_date, row?.order_date, row?.create_time, row?.created_at)
+}
+
+function getOfferDate(row: any): string {
+  return firstDate(row?.offer_date, row?.order_date, row?.create_time, row?.created_at)
+}
+
+function getSaleOutDate(row: any): string {
+  return firstDate(row?.out_date, row?.order_date, row?.create_time, row?.created_at)
+}
+
 // ── 成本计算 ──────────────────────────────────────────────────────────────────
 const goodsCostMap = computed(() => {
   const m: Record<number, number> = {}
@@ -373,7 +389,7 @@ const kpi = computed(() => {
   let orders = 0
 
   for (const c of contractRows.value) {
-    const d = c.contract_date || c.create_time || ''
+    const d = getContractDate(c)
     if (inPeriod(d)) {
       sale += Number(c.after_discount || c.total_amount || 0)
       try { for (const g of JSON.parse(c.goods_info || '[]')) cost += Number(g.num || 0) * (goodsCostMap.value[g.goods_id] || 0) } catch {}
