@@ -273,12 +273,34 @@ async function handleSave() {
   if (!form.items.length) { ElMessage.warning('请添加商品'); return }
   saving.value = true
   try {
-    const order_sn = await generateRetailNo()
+    const storeIdNum = Number(form.store_id)
+    const memberIdNum = Number(form.member_id)
+    const normalizedItems = (form.items || []).map((i: any) => {
+      const goodsIdNum = Number(i.goods_id ?? i.id)
+      const num = Number(i.num || 0)
+      const price = Number(i.price || 0)
+      return {
+        ...i,
+        goods_id: Number.isFinite(goodsIdNum) && goodsIdNum > 0 ? goodsIdNum : 0,
+        num: Number.isFinite(num) && num > 0 ? num : 0,
+        price: Number.isFinite(price) && price >= 0 ? price : 0,
+      }
+    })
     // 新建订单默认未审核 status=0，审核时再触发库存和财务
-    await createRetailOrder({ ...form, order_sn, status: 0, goods_info: JSON.stringify(form.items), items: undefined })
+    await createRetailOrder({
+      ...form,
+      store_id: Number.isFinite(storeIdNum) && storeIdNum > 0 ? storeIdNum : 0,
+      member_id: Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : 0,
+      pay_type: form.pay_method,
+      status: 0,
+      goods_info: JSON.stringify(normalizedItems),
+      items: undefined,
+    })
     ElMessage.success('保存成功，请审核后生效库存和财务')
     drawerVisible.value = false
     tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '创建失败')
   } finally { saving.value = false }
 }
 

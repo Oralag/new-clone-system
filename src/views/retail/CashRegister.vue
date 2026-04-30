@@ -572,6 +572,16 @@ async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
   await stockEffect(items, mode, undefined, mode === 'deduct' ? '零售出库' : '零售退货入库')
 }
 
+function extractRows(res: any): any[] {
+  if (Array.isArray(res?.data?.rows)) return res.data.rows
+  if (Array.isArray(res?.data?.list)) return res.data.list
+  if (Array.isArray(res?.data?.data?.rows)) return res.data.data.rows
+  if (Array.isArray(res?.data?.data?.list)) return res.data.data.list
+  if (Array.isArray(res?.rows)) return res.rows
+  if (Array.isArray(res?.list)) return res.list
+  return []
+}
+
 async function handleCheckout() {
   if (!cartItems.length) { ElMessage.warning('购物车为空'); return }
   // 会员余额支付验证
@@ -588,21 +598,36 @@ async function handleCheckout() {
   }
   paying.value = true
   try {
+    const storeIdNum = Number(selectedStoreId.value)
+    const memberIdNum = Number(selectedMemberId.value)
     const res = await createRetailOrder({
       order_date: new Date().toLocaleDateString('sv-SE'),
-      member_id: selectedMemberId.value ?? 0,
+      member_id: Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : 0,
       member_name: selectedMember.value?.name ?? '',
-      store_id: selectedStoreId.value ?? null,
+      store_id: Number.isFinite(storeIdNum) && storeIdNum > 0 ? storeIdNum : 0,
       store_name: selectedStore.value?.name ?? '',
       total_amount: totalAmount.value,
       discount_amount: discountAmount.value,
       pay_amount: payAmount.value,
+      pay_method: payMethod.value,
       pay_type: payMethod.value,
       goods_info: JSON.stringify(cartItems.map(i => ({ ...i }))),
       status: 1,
     })
+    if (!res?.data?.id && !res?.data?.order_no && !res?.data?.order_sn) {
+      throw new Error('订单创建返回异常，请重试')
+    }
+    const createdId = Number(res.data?.id || 0)
+    const check = await getRetailOrderList({ list_rows: 200 })
+    const rows: any[] = extractRows(check)
+    const created = rows.find((r: any) =>
+      (createdId > 0 && Number(r.id) === createdId)
+    )
+    if (!created) {
+      throw new Error('收银失败：系统未找到新零售单，请重试')
+    }
     lastPayAmount.value = payAmount.value
-    lastOrderNo.value = res.data?.order_no ?? res.data?.id ?? ''
+    lastOrderNo.value = created.order_sn || created.id || res.data?.order_no || res.data?.id || ''
     // 收银台扣减库存
     try {
       await retailStockEffect(cartItems, 'deduct')

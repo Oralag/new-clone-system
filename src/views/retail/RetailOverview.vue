@@ -100,11 +100,11 @@
             </el-table-column>
             <el-table-column label="支付方式" align="center" width="90">
               <template #default="{ row }">
-                <el-tag size="small" :type="payTagType(row.pay_type)">{{ payLabel(row.pay_type) }}</el-tag>
+                <el-tag size="small" :type="payTagType(row.pay_method || row.pay_type)">{{ payLabel(row.pay_method || row.pay_type) }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="日期" width="100">
-              <template #default="{ row }">{{ fmtDt(row.order_date || row.create_time) }}</template>
+              <template #default="{ row }">{{ fmtDt(row.order_date || row.created_at || row.create_time) }}</template>
             </el-table-column>
             <el-table-column label="商品明细" min-width="200" show-overflow-tooltip>
               <template #default="{ row }">
@@ -174,9 +174,9 @@
       <div v-if="detailRow" class="order-detail">
         <div class="detail-header">
           <div class="detail-kv"><span class="detail-k">单号</span><span class="detail-v">{{ detailRow.order_sn || `LS${(detailRow.order_date || detailRow.created_at || '').slice(0, 10).replace(/-/g, '')}${String(detailRow.id).padStart(3,'0')}` }}</span></div>
-          <div class="detail-kv"><span class="detail-k">日期</span><span class="detail-v">{{ fmtDt(detailRow.order_date || detailRow.create_time) }}</span></div>
+          <div class="detail-kv"><span class="detail-k">日期</span><span class="detail-v">{{ fmtDt(detailRow.order_date || detailRow.created_at || detailRow.create_time) }}</span></div>
           <div class="detail-kv"><span class="detail-k">会员</span><span class="detail-v">{{ detailRow.member_name || '散客' }}</span></div>
-          <div class="detail-kv"><span class="detail-k">支付方式</span><span class="detail-v">{{ payLabel(detailRow.pay_type) }}</span></div>
+          <div class="detail-kv"><span class="detail-k">支付方式</span><span class="detail-v">{{ payLabel(detailRow.pay_method || detailRow.pay_type) }}</span></div>
         </div>
         <el-table :data="detailGoods" size="small" border style="margin:12px 0">
           <el-table-column prop="goods_name" label="商品" min-width="140" show-overflow-tooltip />
@@ -205,7 +205,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ShoppingCart, Document, User, RefreshLeft } from '@element-plus/icons-vue'
 import { getRetailOrderList, getRetailReturnList } from '@/api/retail'
@@ -233,22 +233,25 @@ const periodLabel = computed(() => {
   return map[activePeriod.value]
 })
 
+function normalizeDate(input: any): Date | null {
+  if (!input) return null
+  if (input instanceof Date) return Number.isNaN(input.getTime()) ? null : input
+  const raw = String(input).trim()
+  if (!raw) return null
+  const d = new Date(raw.replace(/\./g, '-').replace(/\//g, '-'))
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 function inPeriod(dateStr: string): boolean {
   if (activePeriod.value === 'all') return true
+  const d = normalizeDate(dateStr)
+  if (!d) return false
   const now = new Date()
   const y = now.getFullYear(), m = now.getMonth()
-  const prefix = dateStr?.slice(0, 10) || ''
-  if (!prefix) return false
-  if (activePeriod.value === 'month') return prefix.slice(0, 7) === `${y}-${String(m + 1).padStart(2, '0')}`
-  if (activePeriod.value === 'year') return prefix.startsWith(String(y))
+  if (activePeriod.value === 'month') return d.getFullYear() === y && d.getMonth() === m
+  if (activePeriod.value === 'year') return d.getFullYear() === y
   // quarter
-  const qStart = Math.floor(m / 3) * 3
-  const from = `${y}-${String(qStart + 1).padStart(2, '0')}-01`
-  const toMonth = qStart + 3
-  const to = toMonth > 11
-    ? `${y + 1}-01-01`
-    : `${y}-${String(toMonth + 1).padStart(2, '0')}-01`
-  return prefix >= from && prefix < to
+  return d.getFullYear() === y && Math.floor(d.getMonth() / 3) === Math.floor(m / 3)
 }
 
 // ── 支付方式映射 ──────────────────────────────────────────────────────────────
@@ -276,12 +279,12 @@ const kpi = computed(() => {
   const payCountMap: Record<string, number> = {}
 
   for (const o of orderRows.value) {
-    const d = o.order_date || o.create_time || ''
+    const d = o.order_date || o.created_at || o.create_time || ''
     if (inPeriod(d)) {
       const pay = Number(o.pay_amount || 0)
       revenue += pay
       orderCount++
-      const pm = o.pay_type || 'cash'
+      const pm = o.pay_method || o.pay_type || 'cash'
       payAmountMap[pm] = (payAmountMap[pm] || 0) + pay
       payCountMap[pm] = (payCountMap[pm] || 0) + 1
       if (o.member_id && o.member_id !== 0) memberRevenue += pay
@@ -319,7 +322,7 @@ const kpi = computed(() => {
 const hotGoodsRows = computed(() => {
   const map: Record<string, { goods_name: string; totalQty: number; totalAmount: number }> = {}
   for (const o of orderRows.value) {
-    const d = o.order_date || o.create_time || ''
+    const d = o.order_date || o.created_at || o.create_time || ''
     if (!inPeriod(d)) continue
     try {
       const items = JSON.parse(o.goods_info || '[]')
@@ -355,17 +358,28 @@ function fmt(v: number): string {
   return isNaN(v) ? '0.00' : v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function extractRows(res: any): any[] {
+  if (Array.isArray(res?.data?.rows)) return res.data.rows
+  if (Array.isArray(res?.data?.list)) return res.data.list
+  if (Array.isArray(res?.data?.data?.rows)) return res.data.data.rows
+  if (Array.isArray(res?.data?.data?.list)) return res.data.data.list
+  if (Array.isArray(res?.rows)) return res.rows
+  if (Array.isArray(res?.list)) return res.list
+  return []
+}
+
 // ── 加载 ──────────────────────────────────────────────────────────────────────
 async function loadData() {
   const [o, r] = await Promise.allSettled([
     getRetailOrderList({ list_rows: 200 }),
     getRetailReturnList({ list_rows: 100 }),
   ])
-  orderRows.value = o.status === 'fulfilled' ? (o.value?.data?.rows ?? []) : []
-  returnRows.value = r.status === 'fulfilled' ? (r.value?.data?.rows ?? []) : []
+  orderRows.value = o.status === 'fulfilled' ? extractRows(o.value) : []
+  returnRows.value = r.status === 'fulfilled' ? extractRows(r.value) : []
 }
 
 onMounted(loadData)
+onActivated(loadData)
 </script>
 
 <style scoped>
