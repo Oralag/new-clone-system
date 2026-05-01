@@ -382,12 +382,36 @@ function extractRows(res: any): any[] {
 }
 
 // ── 加载 ──────────────────────────────────────────────────────────────────────
+async function fetchRetailOrdersFallback(): Promise<any[]> {
+  const first = await getRetailOrderList({ page: 1, list_rows: 2000, _t: Date.now() })
+  const firstRows = extractRows(first)
+  if (firstRows.length > 0) return firstRows
+
+  // fallback: paginate to avoid single-call/proxy edge cases
+  const merged: any[] = []
+  const seen = new Set<any>()
+  for (let page = 1; page <= 20; page++) {
+    const res = await getRetailOrderList({ page, list_rows: 200, _t: Date.now() + page })
+    const rows = extractRows(res)
+    if (!rows.length) break
+    for (const row of rows) {
+      const k = row?.id ?? row?.order_sn ?? JSON.stringify(row)
+      if (seen.has(k)) continue
+      seen.add(k)
+      merged.push(row)
+    }
+    const total = Number(res?.data?.total ?? res?.total ?? 0)
+    if (total > 0 && merged.length >= total) break
+  }
+  return merged
+}
+
 async function loadData() {
   const [o, r] = await Promise.allSettled([
-    getRetailOrderList({ list_rows: 2000 }),
-    getRetailReturnList({ list_rows: 500 }),
+    fetchRetailOrdersFallback(),
+    getRetailReturnList({ list_rows: 500, _t: Date.now() + 999 }),
   ])
-  orderRows.value = o.status === 'fulfilled' ? extractRows(o.value) : []
+  orderRows.value = o.status === 'fulfilled' ? (o.value || []) : []
   returnRows.value = r.status === 'fulfilled' ? extractRows(r.value) : []
 }
 
