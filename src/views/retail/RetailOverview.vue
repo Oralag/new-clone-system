@@ -226,7 +226,7 @@ const periods = [
   { key: 'all', label: '全部' },
 ] as const
 type PeriodKey = typeof periods[number]['key']
-const activePeriod = ref<PeriodKey>('month')
+const activePeriod = ref<PeriodKey>('all')
 
 const periodLabel = computed(() => {
   const map: Record<PeriodKey, string> = { month: '本月', quarter: '本季', year: '本年', all: '' }
