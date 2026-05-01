@@ -525,6 +525,23 @@ const unitConvertMap = ref<Record<number, { unit_name: string; ratio: number }[]
 // 快速换算查找：`${goods_id}:${unit_name}` -> ratio（基础单位倍数）
 const unitRatioLookup = ref<Record<string, number>>({})
 
+// 反审核/取消/作废单据不计入库存流水展示与统计
+function isReversedOrCanceledDoc(row: any): boolean {
+  const text = [
+    row?.remark,
+    row?.type_name,
+    row?.flow_type,
+    row?.biz_type,
+    row?.order_type,
+    row?.source_type,
+    row?.order_no,
+    row?.in_no,
+    row?.return_no,
+    row?.order_sn,
+  ].map(v => String(v || '')).join(' ')
+  return /(反审核|取消|作废|撤销|_reverse|reverse)/i.test(text)
+}
+
 // 自动翻页拉取所有数据（解决 list_rows=500 上限问题）
 async function fetchAllPages(url: string, params: Record<string, any> = {}): Promise<any[]> {
   const pageSize = 500
@@ -1026,6 +1043,7 @@ async function loadActivityMaps() {
     const inMap: Record<number, number> = {}
     for (const r of inhouseRows) {
       if (Number(r.status) !== 1) continue  // 只统计已审核
+      if (isReversedOrCanceledDoc(r)) continue
       if (returnInhouseIds.has(Number(r.id))) continue
       if (String(r.remark || '').includes('退货')) continue
       try {
@@ -1050,6 +1068,7 @@ async function loadActivityMaps() {
     const retMap: Record<number, number> = {}
     for (const r of returnRows) {
         if (r.status !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const allItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const items = allItems.filter((i: any) => !i._meta)
@@ -1076,6 +1095,7 @@ async function loadActivityMaps() {
       const saleRows: any[] = await fetchAllPages('/stock/SaleOutOrder/index', { status: 1 })
       for (const r of saleRows) {
         if (Number(r.status) !== 1) continue  // 只统计已审核
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThisOrder = new Set<number>()
@@ -1100,6 +1120,7 @@ async function loadActivityMaps() {
     const retailRows = retailRowsRaw.filter((r: any) => Number(r.status) === 1)
     const rMap: Record<number, number> = {}
     for (const r of retailRows) {
+      if (isReversedOrCanceledDoc(r)) continue
       try {
         const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
         const goodsInThisOrder = new Set<number>()
@@ -1124,6 +1145,7 @@ async function loadActivityMaps() {
     const oiMap: Record<number, number> = {}
     for (const r of otherInRows) {
         if (Number(r.status) !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThis = new Set<number>()
@@ -1146,6 +1168,7 @@ async function loadActivityMaps() {
     const ooMap: Record<number, number> = {}
     for (const r of otherOutRows) {
         if (Number(r.status) !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         const _rem = String(r.remark || '')
         if (_rem.startsWith('零售') || _rem.startsWith('销售出库')) continue
         try {
@@ -1170,6 +1193,7 @@ async function loadActivityMaps() {
     const piMap: Record<number, number> = {}
     for (const r of prodInRows) {
         if (r.status !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         const gid = Number(r.goods_id)
         const qty = Number(r.inhouse_qty || r.qty || 0)
         if (gid) {
@@ -1183,6 +1207,7 @@ async function loadActivityMaps() {
     const pmMap: Record<number, number> = {}
     for (const r of prodOutRows) {
         if (r.status !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const goodsInThis = new Set<number>()
@@ -1290,6 +1315,7 @@ async function openFlowDialog(goods: any) {
     // 采购入库
     for (const r of inhouseAllRows) {
       if (Number(r.status) !== 1) continue  // 只统计已审核
+      if (isReversedOrCanceledDoc(r)) continue
       try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matchedItems = items.filter((i: any) =>
@@ -1315,6 +1341,7 @@ async function openFlowDialog(goods: any) {
     // 采购退货（出库）
     for (const r of returnAllRows) {
         if (r.status !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const allItems = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const items = allItems.filter((i: any) => !i._meta)
@@ -1338,6 +1365,7 @@ async function openFlowDialog(goods: any) {
     // 销售出库
     for (const r of saleOutAllRows) {
         if (Number(r.status) !== 1) continue  // 只统计已审核
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -1361,6 +1389,7 @@ async function openFlowDialog(goods: any) {
     // 零售出库
     for (const r of retailAllRows) {
         if (Number(r.status) !== 1) continue  // 只统计已审核
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -1383,6 +1412,7 @@ async function openFlowDialog(goods: any) {
     // 其他入库
     for (const r of otherInAllRows) {
         if (Number(r.status) !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>
@@ -1405,6 +1435,7 @@ async function openFlowDialog(goods: any) {
     // 其他出库 — 跳过为零售/销售出库单创建的 OtherOut（对应单据已在各自流水中显示）
     for (const r of otherOutAllRows) {
         if (Number(r.status) !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         const _rem = String(r.remark || '')
         if (_rem.startsWith('零售') || _rem.startsWith('销售出库')) continue
         try {
@@ -1429,6 +1460,7 @@ async function openFlowDialog(goods: any) {
     // 生产入库（单品记录，不是 goods_info 数组）
     for (const r of prodInAllRows) {
         if (r.status !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         if ((gid && Number(r.goods_id) === gid) || (goods.goods_name && r.goods_name === goods.goods_name)) {
           rows.push({
             _type: 'prod_in',
@@ -1444,6 +1476,7 @@ async function openFlowDialog(goods: any) {
     // 生产领料（goods_info 数组）
     for (const r of prodOutAllRows) {
         if (r.status !== 1) continue
+        if (isReversedOrCanceledDoc(r)) continue
         try {
           const items = Array.isArray(r.goods_info) ? r.goods_info : JSON.parse(r.goods_info || '[]')
           const matched = items.find((i: any) =>

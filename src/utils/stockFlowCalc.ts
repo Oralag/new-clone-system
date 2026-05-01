@@ -14,6 +14,22 @@
  */
 import http from '@/api/http'
 
+function isReversedOrCanceledDoc(row: any): boolean {
+  const text = [
+    row?.remark,
+    row?.type_name,
+    row?.flow_type,
+    row?.biz_type,
+    row?.order_type,
+    row?.source_type,
+    row?.order_no,
+    row?.in_no,
+    row?.return_no,
+    row?.order_sn,
+  ].map(v => String(v || '')).join(' ')
+  return /(反审核|取消|作废|撤销|_reverse|reverse)/i.test(text)
+}
+
 function parseGoodsInfo(raw: any): any[] {
   if (!raw) return []
   if (typeof raw === 'string') {
@@ -58,6 +74,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
   // 采购入库 +
   if (inhouseRes.status === 'fulfilled') {
     for (const r of (inhouseRes.value.data?.rows ?? [])) {
+      if (isReversedOrCanceledDoc(r)) continue
       if (returnInhouseIds.has(Number(r.id))) continue
       if (String(r.remark || '').includes('退货')) continue
       const items = parseGoodsInfo(r.goods_info)
@@ -73,6 +90,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
   if (returnRes.status === 'fulfilled') {
     for (const r of (returnRes.value.data?.rows ?? [])) {
       if (r.status !== 1) continue
+      if (isReversedOrCanceledDoc(r)) continue
       const items = parseGoodsInfo(r.goods_info).filter((i: any) => !i._meta)
       for (const item of items) {
         const gid = Number(item.goods_id)
@@ -85,6 +103,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
   // 销售出库 -
   if (saleOutRes.status === 'fulfilled') {
     for (const r of (saleOutRes.value.data?.rows ?? [])) {
+      if (isReversedOrCanceledDoc(r)) continue
       const items = parseGoodsInfo(r.goods_info)
       for (const item of items) {
         const gid = Number(item.goods_id)
@@ -97,6 +116,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
   // 零售出库 -
   if (retailRes.status === 'fulfilled') {
     for (const r of (retailRes.value.data?.rows ?? [])) {
+      if (isReversedOrCanceledDoc(r)) continue
       const items = parseGoodsInfo(r.goods_info)
       for (const item of items) {
         const gid = Number(item.goods_id)
@@ -110,6 +130,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
   if (otherInRes.status === 'fulfilled') {
     for (const r of (otherInRes.value.data?.rows ?? [])) {
       if (r.status !== 1) continue
+      if (isReversedOrCanceledDoc(r)) continue
       const items = parseGoodsInfo(r.goods_info)
       for (const item of items) {
         const gid = Number(item.goods_id)
@@ -123,6 +144,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
   if (otherOutRes.status === 'fulfilled') {
     for (const r of (otherOutRes.value.data?.rows ?? [])) {
       if (r.status !== 1) continue
+      if (isReversedOrCanceledDoc(r)) continue
       const items = parseGoodsInfo(r.goods_info)
       for (const item of items) {
         const gid = Number(item.goods_id)
@@ -136,6 +158,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
   if (prodInRes.status === 'fulfilled') {
     for (const r of (prodInRes.value.data?.rows ?? [])) {
       if (r.status !== 1) continue
+      if (isReversedOrCanceledDoc(r)) continue
       const gid = Number(r.goods_id)
       const qty = Number(r.inhouse_qty || r.qty || 0)
       if (gid && qty) fqMap[gid] = (fqMap[gid] || 0) + qty
@@ -146,6 +169,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
   if (prodOutRes.status === 'fulfilled') {
     for (const r of (prodOutRes.value.data?.rows ?? [])) {
       if (r.status !== 1) continue
+      if (isReversedOrCanceledDoc(r)) continue
       const items = parseGoodsInfo(r.goods_info)
       for (const item of items) {
         const gid = Number(item.goods_id)
