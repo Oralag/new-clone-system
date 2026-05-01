@@ -358,21 +358,34 @@ function fmt(v: number): string {
   return isNaN(v) ? '0.00' : v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function parseMaybeJson(v: any): any {
+  if (typeof v !== 'string') return v
+  const s = v.trim()
+  if (!s) return v
+  if (!(s.startsWith('{') || s.startsWith('['))) return v
+  try { return JSON.parse(s) } catch { return v }
+}
+
 function extractRows(res: any): any[] {
-  if (Array.isArray(res?.data?.rows)) return res.data.rows
-  if (Array.isArray(res?.data?.list)) return res.data.list
-  if (Array.isArray(res?.data?.data?.rows)) return res.data.data.rows
-  if (Array.isArray(res?.data?.data?.list)) return res.data.data.list
-  if (Array.isArray(res?.rows)) return res.rows
-  if (Array.isArray(res?.list)) return res.list
+  const seen = new Set<any>()
+  const q: any[] = [res, parseMaybeJson(res), res?.data, parseMaybeJson(res?.data)]
+  while (q.length) {
+    const cur = q.shift()
+    if (!cur || seen.has(cur)) continue
+    seen.add(cur)
+    if (Array.isArray(cur?.rows)) return cur.rows
+    if (Array.isArray(cur?.list)) return cur.list
+    if (Array.isArray(cur?.data)) return cur.data
+    q.push(cur?.data, parseMaybeJson(cur?.data), cur?.result, cur?.payload)
+  }
   return []
 }
 
 // ── 加载 ──────────────────────────────────────────────────────────────────────
 async function loadData() {
   const [o, r] = await Promise.allSettled([
-    getRetailOrderList({ list_rows: 200 }),
-    getRetailReturnList({ list_rows: 100 }),
+    getRetailOrderList({ list_rows: 2000 }),
+    getRetailReturnList({ list_rows: 500 }),
   ])
   orderRows.value = o.status === 'fulfilled' ? extractRows(o.value) : []
   returnRows.value = r.status === 'fulfilled' ? extractRows(r.value) : []

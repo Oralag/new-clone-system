@@ -2011,6 +2011,11 @@ const agentRegistry = [
   headers.delete('x-forwarded-proto')
 
   try {
+    // For routes where we need to parse the response body (retail order overrides),
+    // force identity encoding so response.text() gets plain JSON, not compressed bytes.
+    const needsBodyParse = pathname === '/adminapi/retail/order/index' && request.method === 'GET'
+    if (needsBodyParse) headers.set('Accept-Encoding', 'identity')
+
     const proxyRequest = new Request(targetUrl, {
       method: request.method,
       headers,
@@ -2019,12 +2024,14 @@ const agentRegistry = [
     const response = await fetch(proxyRequest)
     const newHeaders = new Headers(response.headers)
     Object.entries(corsHeaders()).forEach(([k, v]) => newHeaders.set(k, v))
-    if (pathname === '/adminapi/retail/order/index' && request.method === 'GET') {
+    if (needsBodyParse) {
       const text = await response.text()
       try {
         const data = await applyRetailOrderOverrides(JSON.parse(text), env, backend)
+        newHeaders.delete('content-encoding')
         return new Response(JSON.stringify(data), { status: response.status, headers: newHeaders })
       } catch {
+        newHeaders.delete('content-encoding')
         return new Response(text, { status: response.status, headers: newHeaders })
       }
     }
