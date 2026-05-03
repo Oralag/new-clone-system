@@ -19,7 +19,22 @@ export const auditOffer = (id: number, status: number) => http.post('/shop/offer
 export const getContractList = (params?: any) => http.get('/shop/ContractOrder/index', { params })
 export const getContractDetail = (id: number) => http.get('/shop/ContractOrder/detail', { params: { id } })
 export const createContract = (data: any) => http.post('/shop/ContractOrder/add', data)
-export const updateContract = (data: any) => http.post('/shop/ContractOrder/edit', data)
+export async function updateContract(data: any) {
+  const payload = { ...(data || {}) }
+  for (let i = 0; i < 12; i++) {
+    try {
+      return await http.post('/shop/ContractOrder/edit', payload)
+    } catch (error: any) {
+      const msg = String(error?.message || '')
+      const m = msg.match(/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i)
+      if (!m) throw error
+      const missingCol = m[1]
+      if (!(missingCol in payload)) throw error
+      delete payload[missingCol]
+    }
+  }
+  return http.post('/shop/ContractOrder/edit', payload)
+}
 export const deleteContract = (id: number) => http.post('/shop/ContractOrder/del', { id })
 export async function auditContract(id: number, status: number) {
   try {
