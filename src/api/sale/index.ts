@@ -18,7 +18,41 @@ export const auditOffer = (id: number, status: number) => http.post('/shop/offer
 
 export const getContractList = (params?: any) => http.get('/shop/ContractOrder/index', { params })
 export const getContractDetail = (id: number) => http.get('/shop/ContractOrder/detail', { params: { id } })
-export const createContract = (data: any) => http.post('/shop/ContractOrder/add', data)
+export async function createContract(data: any) {
+  const payload = { ...(data || {}) }
+  const legacyPayload: any = {}
+  const legacyCols = [
+    'order_sn',
+    'order_no',
+    'customer_id',
+    'customer_name',
+    'admin_name',
+    'order_date',
+    'total_amount',
+    'pay_amount',
+    'goods_info',
+    'remark',
+    'status',
+  ]
+  for (const key of legacyCols) {
+    if (payload[key] !== undefined) legacyPayload[key] = payload[key]
+  }
+  for (let i = 0; i < 12; i++) {
+    try {
+      return await http.post('/shop/ContractOrder/add', payload)
+    } catch (error: any) {
+      const msg = String(error?.message || '')
+      const m = msg.match(/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i)
+      if (!m) throw error
+      const missingCol = m[1]
+      if (!(missingCol in payload)) {
+        return http.post('/shop/ContractOrder/add', legacyPayload)
+      }
+      delete payload[missingCol]
+    }
+  }
+  return http.post('/shop/ContractOrder/add', legacyPayload)
+}
 export async function updateContract(data: any) {
   const payload = { ...(data || {}) }
   const legacyPayload: any = {}
