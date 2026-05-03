@@ -1594,7 +1594,11 @@ async function handleSave(andAudit = false) {
     if (fd.contract_no) payload.order_sn = fd.contract_no
     if (fd.customer_name) payload.customer_name = fd.customer_name
     if (fd.admin_name) payload.admin_name = fd.admin_name
-    if (fd.sign_date) { payload.sign_date = fd.sign_date; payload.contract_date = fd.sign_date }
+    if (fd.sign_date) {
+      payload.sign_date = fd.sign_date
+      payload.contract_date = fd.sign_date
+      payload.order_date = fd.sign_date
+    }
     const isNew = !fd.id
     const res = fd.id ? await updateContract(payload) : await createContract(payload)
     const newId = Number(res?.data?.id || res?.data?.row?.id || res?.data?.data?.id || fd.id || 0)
@@ -1634,10 +1638,6 @@ async function handleSave(andAudit = false) {
 async function autoAuditContract(id: number) {
   if (!id) throw new Error('合同ID无效')
   await auditContract(id, 1)
-  const detail = await getContractDetail(id)
-  if (Number(detail?.data?.row?.status ?? detail?.data?.status ?? 0) !== 1) {
-    throw new Error('自动审核未完成，请在列表手动审核')
-  }
 }
 
 async function autoCreateReceipt(row: any) {
