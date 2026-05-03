@@ -21,8 +21,27 @@ export const getContractDetail = (id: number) => http.get('/shop/ContractOrder/d
 export const createContract = (data: any) => http.post('/shop/ContractOrder/add', data)
 export const updateContract = (data: any) => http.post('/shop/ContractOrder/edit', data)
 export const deleteContract = (id: number) => http.post('/shop/ContractOrder/del', { id })
-export const auditContract = (id: number, status: number) => http.post('/shop/ContractOrder/audit', { id, status })
-export const auditContractSilent = (id: number, status: number) => http.post('/shop/ContractOrder/audit', { id, status }, { silent: true } as any)
+export async function auditContract(id: number, status: number) {
+  try {
+    return await http.post('/shop/ContractOrder/audit', { id, status })
+  } catch (error: any) {
+    // 兼容老后端：无 audit 路由时，降级为 edit + status 更新
+    if (Number(error?.response?.status) === 404) {
+      return http.post('/shop/ContractOrder/edit', { id, status })
+    }
+    throw error
+  }
+}
+export async function auditContractSilent(id: number, status: number) {
+  try {
+    return await http.post('/shop/ContractOrder/audit', { id, status }, { silent: true } as any)
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 404) {
+      return http.post('/shop/ContractOrder/edit', { id, status }, { silent: true } as any)
+    }
+    throw error
+  }
+}
 
 export const getSaleOutList = (params?: any) => http.get('/stock/SaleOutOrder/index', { params })
 export const getSaleOutDetail = (id: number) => http.get('/stock/SaleOutOrder/detail', { params: { id } })
