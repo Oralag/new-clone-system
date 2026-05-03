@@ -1600,7 +1600,40 @@ async function handleSave(andAudit = false) {
       payload.order_date = fd.sign_date
     }
     const isNew = !fd.id
-    const res = fd.id ? await updateContract(payload) : await createContract(payload)
+    let res: any
+    if (fd.id) {
+      try {
+        res = await updateContract(payload)
+      } catch (e: any) {
+        const msg = String(e?.message || '')
+        // 双保险：即使 API 层兼容未生效，也在页面层降级为老字段保存
+        if (/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i.test(msg)) {
+          const legacyPayload: Record<string, any> = {}
+          const legacyCols = [
+            'id',
+            'order_sn',
+            'order_no',
+            'customer_id',
+            'customer_name',
+            'admin_name',
+            'order_date',
+            'total_amount',
+            'pay_amount',
+            'goods_info',
+            'remark',
+            'status',
+          ]
+          for (const key of legacyCols) {
+            if (payload[key] !== undefined) legacyPayload[key] = payload[key]
+          }
+          res = await http.post('/shop/ContractOrder/edit', legacyPayload)
+        } else {
+          throw e
+        }
+      }
+    } else {
+      res = await createContract(payload)
+    }
     const newId = Number(res?.data?.id || res?.data?.row?.id || res?.data?.data?.id || fd.id || 0)
     if (!fd.id && newId) fd.id = newId
     // 报价单转合同：标记报价单为已转换
