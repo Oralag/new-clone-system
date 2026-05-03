@@ -37,21 +37,14 @@ export async function createContract(data: any) {
   for (const key of legacyCols) {
     if (payload[key] !== undefined) legacyPayload[key] = payload[key]
   }
-  for (let i = 0; i < 12; i++) {
-    try {
-      return await http.post('/shop/ContractOrder/add', payload)
-    } catch (error: any) {
-      const msg = String(error?.message || '')
-      const m = msg.match(/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i)
-      if (!m) throw error
-      const missingCol = m[1]
-      if (!(missingCol in payload)) {
-        return http.post('/shop/ContractOrder/add', legacyPayload)
-      }
-      delete payload[missingCol]
-    }
+  try {
+    return await http.post('/shop/ContractOrder/add', payload, { silent: true } as any)
+  } catch (error: any) {
+    const msg = String(error?.message || '')
+    const m = msg.match(/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i)
+    if (!m) throw error
+    return http.post('/shop/ContractOrder/add', legacyPayload)
   }
-  return http.post('/shop/ContractOrder/add', legacyPayload)
 }
 export async function updateContract(data: any) {
   const payload = { ...(data || {}) }
@@ -73,22 +66,15 @@ export async function updateContract(data: any) {
   for (const key of legacyCols) {
     if (payload[key] !== undefined) legacyPayload[key] = payload[key]
   }
-  for (let i = 0; i < 12; i++) {
-    try {
-      return await http.post('/shop/ContractOrder/edit', payload)
-    } catch (error: any) {
-      const msg = String(error?.message || '')
-      const m = msg.match(/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i)
-      if (!m) throw error
-      const missingCol = m[1]
-      if (!(missingCol in payload)) {
-        // 老库兼容兜底：直接按旧字段集合保存
-        return http.post('/shop/ContractOrder/edit', legacyPayload)
-      }
-      delete payload[missingCol]
-    }
+  try {
+    return await http.post('/shop/ContractOrder/edit', payload, { silent: true } as any)
+  } catch (error: any) {
+    const msg = String(error?.message || '')
+    const m = msg.match(/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i)
+    if (!m) throw error
+    // 老库兼容兜底：直接按旧字段集合保存
+    return http.post('/shop/ContractOrder/edit', legacyPayload)
   }
-  return http.post('/shop/ContractOrder/edit', legacyPayload)
 }
 export const deleteContract = (id: number) => http.post('/shop/ContractOrder/del', { id })
 export async function auditContract(id: number, status: number) {
