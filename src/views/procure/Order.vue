@@ -461,12 +461,12 @@
               <el-table-column type="index" width="45" align="center" fixed="left" />
               <el-table-column label="商品名称" min-width="150" fixed="left">
                 <template #default="{ row }">
-                  <el-input v-model="row.goods_name" size="small" placeholder="商品名称" />
+                  <el-input v-model="row.goods_name" size="small" placeholder="商品名称" :disabled="isReadonly" />
                 </template>
               </el-table-column>
               <el-table-column label="商品编码" width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.goods_sn" size="small" placeholder="编码" />
+                  <el-input v-model="row.goods_sn" size="small" placeholder="编码" :disabled="isReadonly" />
                 </template>
               </el-table-column>
               <el-table-column label="规格型号" width="140">
@@ -477,12 +477,13 @@
                     size="small"
                     placeholder="请选择规格"
                     clearable
+                    :disabled="isReadonly"
                     style="width:100%"
                     @focus="fetchGoodsSpecs(row.goods_id)"
                   >
                     <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
                   </el-select>
-                  <el-input v-else v-model="row.spec" size="small" placeholder="规格"
+                  <el-input v-else v-model="row.spec" size="small" placeholder="规格" :disabled="isReadonly"
                     @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)" />
                 </template>
               </el-table-column>
@@ -497,47 +498,48 @@
                     v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
                     v-model="row.unit_name"
                     size="small"
+                    :disabled="isReadonly"
                     style="width:100%"
                     @change="(v: string) => onUnitChange(row, v)"
                   >
                     <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u.unit_name" :label="u.unit_name" :value="u.unit_name" />
                   </el-select>
-                  <el-input v-else v-model="row.unit_name" size="small" placeholder="单位" />
+                  <el-input v-else v-model="row.unit_name" size="small" placeholder="单位" :disabled="isReadonly" />
                 </template>
               </el-table-column>
               <el-table-column width="120">
                 <template #header>
                   <div class="batch-header">
                     <span>采购数量</span>
-                    <el-button link type="primary" size="small" @click="batchEditField('num')">批量</el-button>
+                    <el-button v-if="!isReadonly" link type="primary" size="small" @click="batchEditField('num')">批量</el-button>
                   </div>
                 </template>
                 <template #default="{ row }">
                   <el-input-number v-model="row.num" :min="0" :precision="2" size="small"
-                    controls-position="right" style="width:100%" @change="calcItemTax(row); calcTotal()" />
+                    controls-position="right" style="width:100%" :disabled="isReadonly" @change="calcItemTax(row); calcTotal()" />
                 </template>
               </el-table-column>
               <el-table-column width="130">
                 <template #header>
                   <div class="batch-header">
                     <span>未税单价</span>
-                    <el-button link type="primary" size="small" @click="batchEditField('price_no_tax')">批量</el-button>
+                    <el-button v-if="!isReadonly" link type="primary" size="small" @click="batchEditField('price_no_tax')">批量</el-button>
                   </div>
                 </template>
                 <template #default="{ row }">
                   <el-input-number v-model="row.price_no_tax" :min="0" :precision="4" size="small"
-                    controls-position="right" style="width:100%" @change="onPriceNoTaxChange(row)" />
+                    controls-position="right" style="width:100%" :disabled="isReadonly" @change="onPriceNoTaxChange(row)" />
                 </template>
               </el-table-column>
               <el-table-column width="110">
                 <template #header>
                   <div class="batch-header">
                     <span>税率(%)</span>
-                    <el-button link type="primary" size="small" @click="batchEditField('tax_rate')">批量</el-button>
+                    <el-button v-if="!isReadonly" link type="primary" size="small" @click="batchEditField('tax_rate')">批量</el-button>
                   </div>
                 </template>
                 <template #default="{ row }">
-                  <el-select v-model="row.tax_rate" size="small" style="width:100%" @change="onTaxRateChange(row)">
+                  <el-select v-model="row.tax_rate" size="small" style="width:100%" :disabled="isReadonly" @change="onTaxRateChange(row)">
                     <el-option v-for="t in taxRates" :key="t" :label="`${t}%`" :value="t" />
                   </el-select>
                 </template>
@@ -551,19 +553,19 @@
                 <template #header>
                   <div class="batch-header">
                     <span>含税单价</span>
-                    <el-button link type="primary" size="small" @click="batchEditField('price')">批量</el-button>
+                    <el-button v-if="!isReadonly" link type="primary" size="small" @click="batchEditField('price')">批量</el-button>
                   </div>
                 </template>
                 <template #default="{ row }">
                   <el-input-number v-model="row.price" :min="0" :precision="4" size="small"
-                    controls-position="right" style="width:100%" @change="onPriceChange(row)" />
+                    controls-position="right" style="width:100%" :disabled="isReadonly" @change="onPriceChange(row)" />
                 </template>
               </el-table-column>
               <el-table-column width="120" align="right">
                 <template #header>
                   <div class="batch-header">
                     <span>未税合计</span>
-                    <el-button link type="primary" size="small" @click="batchEditField('subtotal_no_tax')">批量</el-button>
+                    <el-button v-if="!isReadonly" link type="primary" size="small" @click="batchEditField('subtotal_no_tax')">批量</el-button>
                   </div>
                 </template>
                 <template #default="{ row }">
@@ -587,7 +589,7 @@
               </el-table-column>
               <el-table-column label="批次" width="130">
                 <template #default="{ row }">
-                  <el-input v-model="row.batch_no" size="small" placeholder="批次/打码日期" />
+                  <el-input v-model="row.batch_no" size="small" placeholder="批次/打码日期" :disabled="isReadonly" />
                 </template>
               </el-table-column>
               <el-table-column label="行供应商" width="150">
@@ -611,10 +613,10 @@
               </el-table-column>
               <el-table-column label="备注" min-width="110">
                 <template #default="{ row }">
-                  <el-input v-model="row.remark" size="small" placeholder="备注" />
+                  <el-input v-model="row.remark" size="small" placeholder="备注" :disabled="isReadonly" />
                 </template>
               </el-table-column>
-              <el-table-column width="45" align="center" fixed="right">
+              <el-table-column v-if="!isReadonly" width="45" align="center" fixed="right">
                 <template #default="{ $index }">
                   <el-button type="danger" link :icon="Delete" @click="removeItem($index)" />
                 </template>
