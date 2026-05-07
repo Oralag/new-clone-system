@@ -1714,6 +1714,14 @@ async function handleSave(andAudit = false) {
     if (andAudit && newId) {
       try {
         await autoAuditContract(newId)
+        // 保存并审核时同步自动生成销售出库（扣库存）
+        try {
+          const detail = await getContractDetail(newId)
+          const row = detail?.data?.row || detail?.data || {}
+          await autoCreateSaleOut(row)
+        } catch (e: any) {
+          throw new Error(`自动出库失败：${e?.message || '未知'}`)
+        }
         if (isNew) {
           const detail = await getContractDetail(newId)
           const row = detail?.data?.row || detail?.data || {}
