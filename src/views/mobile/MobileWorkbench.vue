@@ -301,6 +301,7 @@ const showPicker = ref(false)
 // 所有可用模块
 const allModuleApps = [
   { name: '销售合同', path: '/mobile/sale/contract', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+  { name: '样品单', path: '/mobile/sale/sample', bg: 'rgba(236,72,153,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>' },
   { name: '商品资料', path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
   { name: '库存总览', path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
   { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
@@ -362,6 +363,7 @@ const weekday = computed(() => {
 
 const quickApps = [
   { name: '销售合同', path: '/mobile/sale/contract', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+  { name: '样品单', path: '/mobile/sale/sample', bg: 'rgba(236,72,153,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>' },
   { name: '商品资料', path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
   { name: '库存总览', path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
   { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
@@ -437,12 +439,16 @@ async function savePay() {
     ? payForm.value.contact_name
     : (supplierList.value.find((x: any) => x.id == payForm.value.contact_id)?.name || payForm.value.contact_name || '')
   if (isOther && !name) { ElMessageBox.alert('请输入支出说明', '提示'); return }
+  if (!isOther && !payForm.value.contact_id) { ElMessageBox.alert('请选择供应商', '提示'); return }
   if (!payForm.value.fund_id) { ElMessageBox.alert('请选择付款账户', '提示'); return }
   const fundName = payForm.value.fund_id ? (fundList.value.find((x: any) => x.id == payForm.value.fund_id)?.name || '') : ''
   paySaving.value = true
   try {
     await http.post('/finance/PayReceipt/add', {
       contact_name: name, contact_type: isOther ? 'other' : 'supplier',
+      supplier_id: isOther ? null : (payForm.value.contact_id || null),
+      supplier_name: isOther ? null : name,
+      contact_id: isOther ? null : (payForm.value.contact_id || null),
       fund_id: payForm.value.fund_id || null, fund_name: fundName,
       amount: payForm.value.amount, pay_date: payForm.value.pay_date,
       remark: payForm.value.remark,
@@ -476,7 +482,7 @@ function handleActivityClick(a: any) {
     personnel: '/mobile/personnel/staff',
     goods: '/mobile/goods/info',
   }
-  const route = routeMap[type] || '/mobile/workbench'
+  const route = routeMap[type] || '/mobile/dashboard'
   router.push(route)
 }
 

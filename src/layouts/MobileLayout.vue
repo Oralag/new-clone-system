@@ -72,7 +72,7 @@ const authStore = useAuthStore()
 const tabs = [
   { key: 'chat', label: '消息', path: '/mobile/chat' },
   { key: 'contacts', label: '通讯录', path: '/mobile/contacts' },
-  { key: 'workbench', label: '工作台', path: '/mobile/workbench' },
+  { key: 'workbench', label: '首页', path: '/mobile/dashboard' },
   { key: 'stats', label: '统计', path: '/mobile/stats' },
   { key: 'modules', label: '模块', path: '/mobile/modules' },
 ]
@@ -129,7 +129,7 @@ function goBack() {
   if (window.history.length > 1) {
     router.back()
   } else {
-    router.replace('/mobile/workbench')
+    router.replace('/mobile/dashboard')
   }
 }
 
@@ -162,7 +162,7 @@ watch(unreadCount, (n) => {
 onMounted(async () => {
   // 默认跳工作台
   if (route.path === '/' || !tabs.find(t => route.path.startsWith(t.path))) {
-    router.replace('/mobile/workbench')
+    router.replace('/mobile/dashboard')
   }
 
   // 加载未读消息数

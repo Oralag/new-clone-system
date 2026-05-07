@@ -206,7 +206,7 @@ function handleActivityClick(a: any) {
     personnel: '/mobile/personnel/staff',
     goods: '/mobile/goods/info',
   }
-  const base = routeMap[a.related_type.split('_')[0]] || '/mobile/workbench'
+  const base = routeMap[a.related_type.split('_')[0]] || '/mobile/dashboard'
   router.push(base)
 }
 

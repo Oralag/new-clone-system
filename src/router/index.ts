@@ -22,7 +22,7 @@ router.beforeEach((to, _from, next) => {
 
   // 移动端首页重定向：只对根路径和 portal 做跳转
   if (isMobileDevice() && (to.path === '/' || to.path === '/portal')) {
-    return next({ path: '/mobile/workbench' })
+    return next({ path: '/mobile/dashboard' })
   }
 
   if (to.meta?.public) {

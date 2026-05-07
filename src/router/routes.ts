@@ -160,9 +160,9 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/mobile',
     component: () => import('@/layouts/MobileLayout.vue'),
-    redirect: '/mobile/workbench',
+    redirect: '/mobile/dashboard',
     children: [
-      { path: 'workbench', name: 'MobileWorkbench', component: () => import('@/views/mobile/MobileWorkbench.vue'), meta: { title: '工作台' } },
+      { path: 'workbench', redirect: '/mobile/dashboard' },
       { path: 'chat', name: 'MobileChat', component: () => import('@/views/mobile/MobileChat.vue'), meta: { title: '消息' } },
       { path: 'chat/new', name: 'MobileNewChat', component: () => import('@/views/mobile/MobileNewChat.vue'), meta: { title: '发起会话' } },
       { path: 'chat/:id', name: 'MobileGroupChat', component: () => import('@/views/mobile/MobileGroupChat.vue'), meta: { title: '会话详情' } },
@@ -207,7 +207,7 @@ const routes: RouteRecordRaw[] = [
       // Sale
       { path: 'sale/overview', name: 'MobileSaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
       { path: 'sale/client', name: 'MobileSaleClient', component: () => import('@/views/sale/ClientList.vue'), meta: { title: '客户管理' } },
-      { path: 'sale/sample', name: 'MobileSaleSample', component: () => import('@/views/sale/Sample.vue'), meta: { title: '样品管理' } },
+      { path: 'sale/sample', name: 'MobileSaleSample', component: () => import('@/views/mobile/MobileSample.vue'), meta: { title: '样品管理' } },
       { path: 'sale/contract', name: 'MobileSaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售合同' } },
       { path: 'sale/out', name: 'MobileSaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'MobileSaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },

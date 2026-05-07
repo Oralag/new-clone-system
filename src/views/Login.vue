@@ -265,7 +265,7 @@ async function handleLogin() {
     await authStore.login(loginForm.account, loginForm.password)
     ElMessage.success('登录成功')
     const savedRedirect = route.query.redirect as string
-    const redirect = savedRedirect || (isMobile() ? '/mobile/workbench' : '/portal')
+    const redirect = savedRedirect || (isMobile() ? '/mobile/dashboard' : '/portal')
     router.push(redirect)
   } catch (e: any) {
     ElMessage.error(e?.message || '账号或密码错误，请重试')

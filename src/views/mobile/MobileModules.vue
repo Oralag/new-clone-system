@@ -32,7 +32,7 @@ const modules = [
   {
     label: '游牧 ERP',
     sub: '销售 · 采购 · 仓库 · 财务 · 人事',
-    path: '/mobile/workbench',
+    path: '/mobile/dashboard',
     color: '#2E6BE6',
     bg: 'rgba(46,107,230,0.1)',
     icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="#2E6BE6"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="#2E6BE6" opacity="0.6"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="#2E6BE6" opacity="0.6"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="#2E6BE6" opacity="0.35"/></svg>',
