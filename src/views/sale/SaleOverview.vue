@@ -440,28 +440,34 @@ const kpi = computed(() => {
     const d = getContractDate(c)
     if (inPeriod(d)) {
       sale += Number(c.after_discount || c.total_amount || 0)
-      try {
-        for (const g of JSON.parse(c.goods_info || '[]')) {
-          const qty = Number(g.num || 0)
-          const unitCost = Number(
-            stockAvgCostMap.value.idMap[g.goods_id] ||
-            stockAvgCostMap.value.snMap[g.goods_sn] ||
-            g.cost_price ||
-            g.cost ||
-            g.purchase_price ||
-            g.in_price ||
-            g.avg_price ||
-            goodsCostMap.value[g.goods_id] ||
-            goodsCostBySn.value[g.goods_sn] ||
-            0
-          )
-          cost += qty * unitCost
-        }
-      } catch {}
       if (c.freight_bearer === 'seller') sellerFreight += Number(c.freight_amount || 0)
       if (c.customer_id) customerSet.add(c.customer_id)
       orders++
     }
+  }
+
+  // 成本以“销售出库”口径核算（与库存扣减一致），避免历史合同缺少明细导致成本为0
+  for (const so of saleOutRows.value) {
+    const d = getSaleOutDate(so)
+    if (!inPeriod(d) || Number(so.status) !== 1) continue
+    try {
+      for (const g of JSON.parse(so.goods_info || '[]')) {
+        const qty = Number(g.num || 0)
+        const unitCost = Number(
+          stockAvgCostMap.value.idMap[g.goods_id] ||
+          stockAvgCostMap.value.snMap[g.goods_sn] ||
+          g.cost_price ||
+          g.cost ||
+          g.purchase_price ||
+          g.in_price ||
+          g.avg_price ||
+          goodsCostMap.value[g.goods_id] ||
+          goodsCostBySn.value[g.goods_sn] ||
+          0
+        )
+        cost += qty * unitCost
+      }
+    } catch {}
   }
 
   const pendingOffer = offerRows.value.filter(r => Number(r.status) === 0).length
