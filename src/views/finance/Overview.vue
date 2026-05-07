@@ -42,7 +42,7 @@
             </div>
           </template>
           <div class="inline-list" v-if="fundList.length">
-            <div class="inline-item clickable" v-for="f in fundList" :key="f.id" @click="openFundDetail(f)">
+            <div class="inline-item clickable" v-for="f in fundList" :key="f.id" @click.stop="openFundDetail(f)">
               <div class="inline-name">{{ f.name }}</div>
               <div class="inline-value blue">¥{{ Number(f.display_balance ?? f.balance ?? 0).toFixed(2) }}</div>
               <div class="inline-sub">{{ { '1': '银行账户', '2': '现金', '3': '第三方' }[f.type] || '账户' }}</div>
