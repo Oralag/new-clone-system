@@ -392,7 +392,13 @@ const kpi = computed(() => {
     const d = getContractDate(c)
     if (inPeriod(d)) {
       sale += Number(c.after_discount || c.total_amount || 0)
-      try { for (const g of JSON.parse(c.goods_info || '[]')) cost += Number(g.num || 0) * (goodsCostMap.value[g.goods_id] || 0) } catch {}
+      try {
+        for (const g of JSON.parse(c.goods_info || '[]')) {
+          const qty = Number(g.num || 0)
+          const unitCost = Number(g.cost_price || goodsCostMap.value[g.goods_id] || 0)
+          cost += qty * unitCost
+        }
+      } catch {}
       if (c.freight_bearer === 'seller') sellerFreight += Number(c.freight_amount || 0)
       if (c.customer_id) customerSet.add(c.customer_id)
       orders++
@@ -654,9 +660,9 @@ async function loadData() {
     getSaleOutList({ list_rows: 2000 }),
     http.get('/shop/ShopCustomer/index', { params: { list_rows: 500 } }),
     http.get('/stock/WarehouseName/index', { params: { list_rows: 100 } }),
-    getGoodsList({ list_rows: 500 }),
+    getGoodsList({ list_rows: 5000 }),
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
-    getBomList({ list_rows: 500 }),
+    getBomList({ list_rows: 5000 }),
     http.get('/finance/Fund/index', { params: { list_rows: 200 } }),
   ])
   contractRows.value = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
