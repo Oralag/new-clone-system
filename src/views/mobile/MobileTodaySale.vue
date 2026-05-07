@@ -37,8 +37,9 @@
       <template v-if="activeTab === 'sale'">
         <div v-if="saleRows.length === 0" class="ts-empty">暂无数据</div>
         <div v-for="row in saleRows" :key="row.id" class="ts-row">
-          <div class="ts-row-top">
+          <div class="ts-row-top" @click="toggleSale(row)">
             <span class="ts-order-no">{{ row.out_order_no || row.order_no || '-' }}</span>
+            <button class="ts-detail-btn" type="button">{{ isSaleExpanded(row) ? '收起' : '明细' }}</button>
           </div>
           <div class="ts-row-mid">
             <span class="ts-customer">{{ row.customer_name || '-' }}</span>
@@ -46,10 +47,28 @@
           </div>
           <div class="ts-row-bot">
             <span class="ts-label">实付</span>
-            <span class="ts-amount">¥{{ fmt(row.total_amount) }}</span>
+            <span class="ts-amount">¥{{ fmt(salePaid(row)) }}</span>
+            <span class="ts-label" style="margin-left:12px">未收款</span>
+            <span class="ts-pay-type" :style="{ color: saleUnpaid(row) > 0 ? '#f53f3f' : '#00b42a', fontWeight: 600 }">
+              ¥{{ fmt(saleUnpaid(row)) }}
+            </span>
+          </div>
+          <div v-if="isSaleExpanded(row)" class="ts-detail">
+            <div v-if="parseGoods(row.goods_info).length === 0" class="ts-detail-empty">暂无商品明细</div>
+            <div v-for="(item, idx) in parseGoods(row.goods_info)" :key="idx" class="ts-detail-row">
+              <div class="ts-detail-main">
+                <div class="ts-detail-name">{{ item.goods_name || '未命名商品' }}</div>
+                <div class="ts-detail-meta">
+                  {{ item.goods_sn || '-' }} · {{ item.unit_name || '-' }} · {{ Number(item.num || item.quantity || 0) }}
+                </div>
+              </div>
+              <div class="ts-detail-price">¥{{ fmt(lineAmount(item)) }}</div>
+            </div>
           </div>
         </div>
-        <div class="ts-foot-total">实付合计 ¥{{ fmt(saleAmt) }}</div>
+        <div class="ts-foot-total">
+          实付合计 ¥{{ fmt(saleAmt) }} ｜ 未收款合计 ¥{{ fmt(saleUnpaidAmt) }}
+        </div>
       </template>
 
       <!-- 零售订单 -->
@@ -101,6 +120,7 @@ const activeTab = ref<'sale' | 'retail'>('sale')
 
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
+const expandedSaleIds = ref<any[]>([])
 const expandedRetailIds = ref<any[]>([])
 
 function getToday() {
@@ -161,6 +181,21 @@ function retailExpandKey(row: any) {
   return row.id ?? retailOrderNo(row)
 }
 
+function saleExpandKey(row: any) {
+  return row.id ?? row.order_no ?? row.out_order_no
+}
+
+function isSaleExpanded(row: any) {
+  return expandedSaleIds.value.includes(saleExpandKey(row))
+}
+
+function toggleSale(row: any) {
+  const key = saleExpandKey(row)
+  expandedSaleIds.value = isSaleExpanded(row)
+    ? expandedSaleIds.value.filter(id => id !== key)
+    : [...expandedSaleIds.value, key]
+}
+
 function isRetailExpanded(row: any) {
   return expandedRetailIds.value.includes(retailExpandKey(row))
 }
@@ -182,12 +217,28 @@ const retailRows = computed(() =>
 )
 
 const saleAmt = computed(() =>
-  saleRows.value.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
+  saleRows.value.reduce((s: number, r: any) => s + salePaid(r), 0)
+)
+const saleUnpaidAmt = computed(() =>
+  saleRows.value.reduce((s: number, r: any) => s + saleUnpaid(r), 0)
 )
 const retailAmt = computed(() =>
   retailRows.value.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
 )
 const totalAmt = computed(() => saleAmt.value + retailAmt.value)
+
+function saleTotal(row: any) {
+  return Number(row.after_discount ?? row.total_amount ?? 0)
+}
+function salePaid(row: any) {
+  // 兼容不同后端字段：pay_amount / receive_amount / paid_amount
+  return Number(row.pay_amount ?? row.receive_amount ?? row.paid_amount ?? saleTotal(row))
+}
+function saleUnpaid(row: any) {
+  const total = saleTotal(row)
+  const paid = salePaid(row)
+  return Math.max(0, total - paid)
+}
 
 onMounted(async () => {
   const [saleRes, retailRes] = await Promise.allSettled([
