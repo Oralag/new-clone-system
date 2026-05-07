@@ -44,7 +44,11 @@
     <!-- 移动端底部导航 5Tab -->
     <div v-if="isMobile" class="mobile-bottom-nav">
       <!-- 首页 -->
-      <div class="mobile-nav-item" :class="{ active: route.path === '/dashboard' }" @click="navTo('/dashboard')">
+      <div
+        class="mobile-nav-item"
+        :class="{ active: route.path === '/dashboard' }"
+        @click="navTo(isLegacyMode ? '/dashboard?legacy=1&from=legacy_nav' : '/dashboard')"
+      >
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
@@ -53,7 +57,11 @@
       </div>
 
       <!-- 工作（应用） -->
-      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/apps' }" @click="navTo('/mobile/apps')">
+      <div
+        class="mobile-nav-item"
+        :class="{ active: isLegacyMode ? route.path === '/mobile/modules' : route.path === '/mobile/apps' }"
+        @click="navTo(isLegacyMode ? '/mobile/modules?legacy=1&from=legacy_nav' : '/mobile/apps')"
+      >
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <rect x="3" y="3" width="7" height="7" rx="1.5"/>
           <rect x="14" y="3" width="7" height="7" rx="1.5"/>
@@ -89,7 +97,11 @@
       </div>
 
       <!-- 我的 -->
-      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/profile' }" @click="navTo('/mobile/profile')">
+      <div
+        class="mobile-nav-item"
+        :class="{ active: isLegacyMode ? route.path === '/mobile/my' : route.path === '/mobile/profile' }"
+        @click="navTo(isLegacyMode ? '/mobile/my?legacy=1&from=legacy_nav' : '/mobile/profile')"
+      >
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
