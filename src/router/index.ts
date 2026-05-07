@@ -24,6 +24,13 @@ router.beforeEach((to, _from, next) => {
   if (isMobileDevice() && (to.path === '/' || to.path === '/portal')) {
     return next({ path: '/mobile/dashboard' })
   }
+  // 移动端禁止进入旧 PC 首页链路，统一到新手机首页
+  if (isMobileDevice() && to.path === '/dashboard') {
+    return next({ path: '/mobile/dashboard' })
+  }
+  if (isMobileDevice() && to.path === '/dashboard/today-sales') {
+    return next({ path: '/mobile/sale/today' })
+  }
 
   if (to.meta?.public) {
     return next()
