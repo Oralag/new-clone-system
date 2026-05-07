@@ -126,6 +126,18 @@
             <el-input-number v-model="discountAmount" :min="0" :max="totalAmount" :precision="2"
               controls-position="right" size="small" style="width:100px" @change="calcPay" />
           </div>
+          <div class="cr-settle-row">
+            <span>结账金额</span>
+            <el-input-number
+              v-model="payAmount"
+              :min="0"
+              :precision="2"
+              controls-position="right"
+              size="small"
+              style="width:120px"
+              @change="onPayAmountChange"
+            />
+          </div>
           <div class="cr-pay-methods">
             <div v-for="m in payMethods" :key="m.value" class="cr-pay-btn"
               :class="{ active: payMethod === m.value }" @click="payMethod = m.value">
@@ -209,6 +221,18 @@
               <el-input-number v-model="discountAmount" :min="0" :max="totalAmount" :precision="2"
                 controls-position="right" size="small" style="width:100px" @change="calcPay" />
             </div>
+            <div class="cr-settle-row">
+              <span>结账金额</span>
+              <el-input-number
+                v-model="payAmount"
+                :min="0"
+                :precision="2"
+                controls-position="right"
+                size="small"
+                style="width:120px"
+                @change="onPayAmountChange"
+              />
+            </div>
             <div class="cr-pay-methods">
               <div v-for="m in payMethods" :key="m.value" class="cr-pay-btn"
                 :class="{ active: payMethod === m.value }" @click="payMethod = m.value">
@@ -262,6 +286,9 @@
                 <span class="cr-goods-price">¥{{ Number(g.sell_price).toFixed(2) }}</span>
                 <span v-if="Number(g.member_price) > 0" class="cr-goods-member-price">
                   ¥{{ Number(g.member_price).toFixed(2) }}会员价
+                </span>
+                <span v-if="isAdmin && Number(g.cost_price) > 0" class="cr-goods-cost-price">
+                  成本¥{{ Number(g.cost_price).toFixed(2) }}
                 </span>
               </div>
             </div>
@@ -361,6 +388,9 @@ import { adjustFundBalance } from '@/utils/fund'
 import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
+import { usePermissionStore } from '@/stores/permission'
+
+const isAdmin = computed(() => !usePermissionStore().isSubAccount)
 
 // ── 商品 ──────────────────────────────────────────────────────────────────────
 const keyword = ref('')
@@ -502,10 +532,11 @@ const payAmount = ref(0)
 function addToCart(g: any) {
   const exist = cartItems.find(i => i.goods_id === g.id)
   if (exist) { exist.num++; calcTotal(); return }
-  // 有会员时使用会员价
-  const usePrice = selectedMemberId.value && Number(g.member_price) > 0
+  // 有会员时使用会员价，价格截断到2位小数避免浮点误差
+  const rawPrice = selectedMemberId.value && Number(g.member_price) > 0
     ? Number(g.member_price)
     : Number(g.sell_price) || 0
+  const usePrice = Math.round(rawPrice * 100) / 100
   cartItems.push({
     goods_id: g.id,
     goods_name: g.goods_name,
@@ -525,12 +556,16 @@ function changeQty(idx: number, delta: number) {
 }
 
 function calcTotal() {
-  totalAmount.value = cartItems.reduce((s, i) => s + i.num * i.price, 0)
+  totalAmount.value = Math.round(cartItems.reduce((s, i) => s + i.num * i.price, 0) * 100) / 100
   calcPay()
 }
 
 function calcPay() {
-  payAmount.value = Math.max(0, totalAmount.value - (discountAmount.value || 0))
+  payAmount.value = Math.max(0, (Number(totalAmount.value) || 0) - (Number(discountAmount.value) || 0))
+}
+
+function onPayAmountChange(v: number | null | undefined) {
+  payAmount.value = Math.max(0, Number(v || 0))
 }
 
 function clearCart() {
@@ -568,8 +603,9 @@ const lastPayAmount = ref(0)
 const lastOrderNo = ref('')
 
 // 零售库存变动：deduct=扣减，restore=加回
-async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
-  await stockEffect(items, mode, undefined, mode === 'deduct' ? '零售出库' : '零售退货入库')
+async function retailStockEffect(items: any[], mode: 'deduct' | 'restore', orderId?: number) {
+  const remark = mode === 'deduct' ? (orderId ? `零售出库#${orderId}` : '零售出库') : '零售退货入库'
+  await stockEffect(items, mode, undefined, remark)
 }
 
 function extractRows(res: any): any[] {
@@ -606,9 +642,9 @@ async function handleCheckout() {
       member_name: selectedMember.value?.name ?? '',
       store_id: Number.isFinite(storeIdNum) && storeIdNum > 0 ? storeIdNum : 0,
       store_name: selectedStore.value?.name ?? '',
-      total_amount: totalAmount.value,
-      discount_amount: discountAmount.value,
-      pay_amount: payAmount.value,
+      total_amount: Number(totalAmount.value) || 0,
+      discount_amount: Number(discountAmount.value) || 0,
+      pay_amount: Number(payAmount.value) || 0,
       pay_method: payMethod.value,
       pay_type: payMethod.value,
       goods_info: JSON.stringify(cartItems.map(i => ({ ...i }))),
@@ -630,7 +666,7 @@ async function handleCheckout() {
     lastOrderNo.value = created.order_sn || created.id || res.data?.order_no || res.data?.id || ''
     // 收银台扣减库存
     try {
-      await retailStockEffect(cartItems, 'deduct')
+      await retailStockEffect(cartItems, 'deduct', createdId || 0)
     } catch {
       ElMessage.warning('库存扣减失败，请手动更新')
     }
@@ -646,7 +682,11 @@ async function handleCheckout() {
     clearCart()
     successVisible.value = true
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '结算失败')
+    const msg = e?.message ?? ''
+    // 503 already shows a warning toast from http.ts — don't duplicate
+    if (!msg.includes('503') && !msg.includes('正在启动')) {
+      ElMessage.error(msg || '结算失败')
+    }
   } finally {
     paying.value = false
   }
@@ -1023,6 +1063,7 @@ onMounted(async () => {
 .cr-goods-prices { display: flex; flex-direction: column; gap: 2px; }
 .cr-goods-price { font-size: 15px; font-weight: 700; color: #1e293b; }
 .cr-goods-member-price { font-size: 11px; color: #d97706; font-weight: 500; }
+.cr-goods-cost-price { font-size: 11px; color: #94a3b8; font-weight: 500; }
 
 .cr-goods-empty {
   grid-column: 1/-1; text-align: center;

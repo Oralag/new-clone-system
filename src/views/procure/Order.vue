@@ -659,10 +659,27 @@
                 style="margin-left:6px;padding:4px 8px;font-size:12px"
                 @click="fd.pay_amount = fd.after_discount">全额</el-button>
             </div>
-            <!-- 附加费用列表 -->
-            <div class="settle-item fee-items-row" style="align-items:flex-start">
+            <div v-if="isReadonly" class="settle-item">
+              <span class="settle-label">已付金额</span>
+              <span class="settle-value" style="color:#16a34a;font-weight:700">
+                ¥{{ Number(fd.pay_amount || 0).toFixed(2) }}
+              </span>
+            </div>
+            <div class="settle-item">
+              <span class="settle-label">是否分期</span>
+              <el-switch v-model="fd.installment" :disabled="isReadonly" active-text="是" inactive-text="否" />
+            </div>
+          </div>
+          <div class="settle-summary" style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span>未税合计：<b>¥{{ totalNoTax.toFixed(2) }}</b></span>
+              <span style="margin-left:24px">税额合计：<b style="color:#dc2626">¥{{ totalTax.toFixed(2) }}</b></span>
+              <span style="margin-left:24px">含税合计：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            </div>
+            <!-- 附加费用：编辑时始终显示，只读时有费用才显示 -->
+            <div v-if="!isReadonly || fd.fee_items.length > 0" class="settle-item fee-items-row" style="align-items:flex-start;margin-left:48px">
               <span class="settle-label" style="padding-top:6px">附加费用</span>
-              <div style="flex:1">
+              <div style="margin-left:8px">
                 <div v-for="(fee, idx) in fd.fee_items" :key="idx" class="fee-item-line">
                   <el-select
                     v-model="fee.name"
@@ -709,21 +726,6 @@
                 </el-button>
               </div>
             </div>
-            <div v-if="isReadonly" class="settle-item">
-              <span class="settle-label">已付金额</span>
-              <span class="settle-value" style="color:#16a34a;font-weight:700">
-                ¥{{ Number(fd.pay_amount || 0).toFixed(2) }}
-              </span>
-            </div>
-            <div class="settle-item">
-              <span class="settle-label">是否分期</span>
-              <el-switch v-model="fd.installment" :disabled="isReadonly" active-text="是" inactive-text="否" />
-            </div>
-          </div>
-          <div class="settle-summary">
-            <span>未税合计：<b>¥{{ totalNoTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">税额合计：<b style="color:#dc2626">¥{{ totalTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">含税合计：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
           </div>
         </div>
 

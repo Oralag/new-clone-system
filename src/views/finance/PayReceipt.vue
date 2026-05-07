@@ -14,6 +14,10 @@
             <el-option label="员工" value="staff" />
             <el-option label="其他" value="other" />
           </el-select>
+          <el-select v-model="searchForm.source" placeholder="付款来源" clearable style="width:140px">
+            <el-option label="应付款付出" value="payable" />
+            <el-option label="其他付款" value="other" />
+          </el-select>
         </template>
         <template #toolbar>
           <el-button type="primary" :icon="Plus" @click="router.push('/finance/pay-receipt/new')">新增付款单</el-button>
@@ -27,6 +31,13 @@
         </el-table-column>
         <el-table-column label="付款对象" min-width="130">
           <template #default="{ row }">{{ getPaySupplierLabel(row) }}</template>
+        </el-table-column>
+        <el-table-column label="关联采购单" min-width="140">
+          <template #default="{ row }">
+            <span :style="{ color: getRelatedOrder(row) !== '—' ? '#0071e3' : 'rgba(29,29,31,0.25)' }">
+              {{ getRelatedOrder(row) }}
+            </span>
+          </template>
         </el-table-column>
         <el-table-column prop="amount" label="付款金额" width="120" align="right">
           <template #default="{ row }">
@@ -84,8 +95,23 @@ function getPaySupplierLabel(row: any) {
   return getPayReceiptSupplierLabel(row, purchaseOrders.value, supplierList.value)
 }
 
+function getRelatedOrder(row: any) {
+  if (Number(row.order_id)) {
+    const order = purchaseOrders.value.find((o: any) => o.id === Number(row.order_id))
+    if (order) return order.order_no || order.order_sn || `#${row.order_id}`
+  }
+  const allMatches = [...String(row.remark || '').matchAll(/采购单(?:自动)?付款\s*#(\d+)/g)]
+  if (allMatches.length > 0) {
+    return allMatches.map(m => {
+      const order = purchaseOrders.value.find((o: any) => o.id === Number(m[1]))
+      return order ? (order.order_no || order.order_sn || `#${m[1]}`) : `#${m[1]}`
+    }).join(', ')
+  }
+  return '—'
+}
+
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '' })
+const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '', source: '' })
 
 const typeTagMap: Record<string, string> = {
   supplier: 'warning', customer: 'success', staff: 'info', other: ''
@@ -113,6 +139,14 @@ async function getPayReceiptListWithRefund(params: any) {
   rows = applyProcureReturnsToPayReceiptRows(rows, normalizedReturns)
 
   // 后端不支持筛选字段，前端过滤
+  const isPayablePayment = (r: any) => {
+    if (r.contact_type !== 'supplier') return false
+    if (Number(r.order_id)) return true
+    if (/采购单(?:自动)?付款\s*#\d+/.test(String(r.remark || ''))) return true
+    return false
+  }
+  if (params.source === 'payable') rows = rows.filter(isPayablePayment)
+  else if (params.source === 'other') rows = rows.filter(r => !isPayablePayment(r))
   if (params.contact_type) rows = rows.filter(r => r.contact_type === params.contact_type)
   if (params.contact_name) rows = rows.filter(r => (r.contact_name ?? '').includes(params.contact_name))
   if (params.receipt_no) rows = rows.filter(r => (r.receipt_no ?? '').includes(params.receipt_no))

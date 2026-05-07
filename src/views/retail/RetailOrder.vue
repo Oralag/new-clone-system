@@ -178,7 +178,7 @@ import { getRetailOrderList, createRetailOrder, deleteRetailOrder, getMemberList
 import http from '@/api/http'
 import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
-import { stockEffect } from '@/utils/stockEffect'
+import { stockEffect, deleteRetailStockFlows } from '@/utils/stockEffect'
 
 function fmtDt(val: string) {
   if (!val) return '-'
@@ -320,7 +320,7 @@ async function handleAudit(row: any, status: number) {
   const payAmount = Number(row.pay_amount || 0)
   if (status === 1) {
     await http.post('/retail/order/audit', { id: row.id, status: 1 })
-    try { await retailStockEffect(items, 'deduct') } catch (e: any) { ElMessage.warning('库存扣减失败，请手动处理') }
+    try { await retailStockEffect(items, 'deduct', row.id) } catch (e: any) { ElMessage.warning('库存扣减失败，请手动处理') }
     try {
       const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
       const funds: any[] = fundRes.data?.rows ?? []
@@ -334,7 +334,10 @@ async function handleAudit(row: any, status: number) {
     ElMessage.success('审核成功')
   } else {
     await http.post('/retail/order/audit', { id: row.id, status: 0 })
-    try { await retailStockEffect(items, 'restore') } catch (e: any) { ElMessage.warning('库存还原失败，请手动处理') }
+    try {
+      const found = await deleteRetailStockFlows(row.id)
+      if (!found) ElMessage.warning('未找到对应库存流水，库存未变动，请手动核查')
+    } catch (e: any) { ElMessage.warning('库存还原失败，请手动处理') }
     try { await deductRetailFund(payAmount) } catch (e: any) { ElMessage.warning('财务回滚失败，请手动处理') }
     ElMessage.success('已反审核')
   }
@@ -362,8 +365,7 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
     }
     for (const row of auditedRows) {
       try {
-        const items = parseGoods(row.goods_info)
-        await retailStockEffect(items, 'restore')
+        await deleteRetailStockFlows(row.id)
       } catch { /* ignore */ }
     }
     stockRefreshStore.trigger()
@@ -371,8 +373,9 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
   return http.post('/retail/order/batchDel', { ids })
 }
 
-async function retailStockEffect(items: any[], mode: 'deduct' | 'restore') {
-  await stockEffect(items, mode, undefined, mode === 'deduct' ? '零售出库' : '零售退货入库')
+async function retailStockEffect(items: any[], mode: 'deduct' | 'restore', orderId?: number) {
+  const remark = mode === 'deduct' ? (orderId ? `零售出库#${orderId}` : '零售出库') : '零售退货入库'
+  await stockEffect(items, mode, undefined, remark)
 }
 
 function parseGoods(info: any): any[] {

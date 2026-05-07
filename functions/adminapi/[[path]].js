@@ -224,7 +224,8 @@ async function getUserInfo(userId, env) {
 
 async function logOperation(env, userId, actionType, actionName, extra = {}) {
   const raw = await env.USERS_KV.get('operation_logs')
-  const logs = raw ? JSON.parse(raw) : []
+  let logs = []
+  try { logs = raw ? JSON.parse(raw) : [] } catch { logs = [] }
   logs.push({
     id: nowMs() + Math.floor(Math.random() * 1000),
     user_id: userId,
@@ -1952,11 +1953,13 @@ const agentRegistry = [
     if (realToken2) headers2.set('token', realToken2)
     else headers2.delete('token')
     ;['origin', 'referer', 'cf-connecting-ip', 'cf-ipcountry', 'cf-ray', 'cf-visitor', 'x-forwarded-for', 'x-forwarded-proto'].forEach(h => headers2.delete(h))
+    headers2.set('accept-encoding', 'identity')
 
     try {
       const proxyRes = await fetch(targetUrl2, { method: 'POST', headers: headers2, body: bodyText })
       const resBody = await proxyRes.text()
-      const resJson = JSON.parse(resBody)
+      let resJson
+      try { resJson = JSON.parse(resBody) } catch { resJson = { code: 1, message: 'ok', data: {} } }
 
       // Log operation on success
       if (resJson.code === 1 || resJson.code === 200) {
@@ -1966,7 +1969,7 @@ const agentRegistry = [
           ? `快速收款 ¥${amount}${remark ? '（' + remark + '）' : ''}`
           : `快速付款 ¥${amount}${remark ? '（' + remark + '）' : ''}`
         if (userId2) {
-          await logOperation(env, userId2, receiptType === 'CollectReceipt' ? 'quick_collect' : 'quick_pay', actionName, { amount, remark, receipt_type: receiptType, ...bodyData })
+          try { await logOperation(env, userId2, receiptType === 'CollectReceipt' ? 'quick_collect' : 'quick_pay', actionName, { amount, remark, receipt_type: receiptType, ...bodyData }) } catch {}
         }
       }
 

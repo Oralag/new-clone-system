@@ -185,6 +185,7 @@ import { Plus, Delete, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { createPayReceipt, getFundList, createFund } from '@/api/finance'
 import { getSupplierList, createSupplier } from '@/api/procure'
+import { adjustFundBalance } from '@/utils/fund'
 
 const router = useRouter()
 const route = useRoute()
@@ -297,6 +298,9 @@ async function handleSave() {
           : `${fd.remark || ''}${fd.remark ? ' ' : ''}[分账户 ${idx + 1}/${totalLines}]`.trim(),
       }
       await createPayReceipt(payload)
+      try {
+        await adjustFundBalance({ fundId: line.fund_id, fundName: line.fund_name, delta: -Number(line.amount || 0) })
+      } catch { /* 扣减失败不阻断 */ }
     }
     ElMessage.success(totalLines > 1 ? `已按付款账户拆分保存 ${totalLines} 笔付款单` : '付款单保存成功')
     router.back()
@@ -373,6 +377,13 @@ onMounted(async () => {
     fd.supplier_id = Number(route.query.supplier_id)
     fd.supplier_name = String(route.query.supplier_name || '')
     fd.un_pay_amount = Number(route.query.un_pay_amount || 0)
+  }
+  // 预填付款账户（从欠款详情页选好后带过来）
+  if (route.query.fund_id) {
+    const fid = Number(route.query.fund_id)
+    const fname = String(route.query.fund_name || '')
+    payLines.value[0].fund_id = fid
+    payLines.value[0].fund_name = fname || (fundOptions.value.find(f => f.id === fid)?.name ?? '')
   }
 })
 </script>

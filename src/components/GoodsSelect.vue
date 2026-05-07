@@ -1,5 +1,6 @@
 <template>
-  <el-dialog v-model="visible" title="选择商品" width="1100px" destroy-on-close>
+  <!-- ── 桌面端：el-dialog ── -->
+  <el-dialog v-if="!isMobile" v-model="visible" title="选择商品" width="1100px" destroy-on-close>
     <div class="gs-body">
       <!-- 左侧分类树 -->
       <div class="gs-cate">
@@ -64,16 +65,71 @@
       <el-button type="primary" @click="confirm">确定 ({{ selected.length }})</el-button>
     </template>
   </el-dialog>
+
+  <!-- ── 手机端：底部抽屉 ── -->
+  <Teleport v-else to="body">
+    <div v-if="visible" class="mgs-overlay" @click.self="visible = false">
+      <div class="mgs-drawer">
+        <div class="mgs-head">
+          <span>选择商品</span>
+          <span class="mgs-close" @click="visible = false">✕</span>
+        </div>
+        <div class="mgs-search-bar">
+          <input v-model="keyword" class="mgs-search-input" placeholder="商品名称 / 编码" @input="search" />
+        </div>
+        <div class="mgs-list">
+          <div v-if="loading" class="mgs-empty">加载中…</div>
+          <div v-else-if="list.length === 0" class="mgs-empty">无结果</div>
+          <div
+            v-for="g in list"
+            :key="g.id"
+            :class="['mgs-row', isSelected(g) ? 'mgs-row--on' : '']"
+            @click="toggleMobile(g)"
+          >
+            <div class="mgs-check">
+              <svg v-if="isSelected(g)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <div v-else class="mgs-uncheck"></div>
+            </div>
+            <div class="mgs-info">
+              <div class="mgs-name">{{ g.goods_name }}</div>
+              <div class="mgs-meta">{{ g.goods_sn }}{{ g.unit_name ? ' · ' + g.unit_name : '' }} · 库存{{ g.stock_num ?? 0 }}</div>
+            </div>
+            <div class="mgs-price-col">
+              <template v-if="getEffectivePrice(g) !== null && getEffectivePrice(g) !== Number(g.sell_price || 0)">
+                <span class="mgs-level-price">¥{{ fmtPrice(getEffectivePrice(g)) }}</span>
+                <span class="mgs-sell-price-origin">¥{{ fmtPrice(g.sell_price) }}</span>
+              </template>
+              <span v-else class="mgs-price">¥{{ fmtPrice(g.sell_price) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="mgs-foot">
+          <button class="mgs-btn-cancel" @click="visible = false">取消</button>
+          <button class="mgs-btn-confirm" @click="confirm">确定 ({{ selected.length }})</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import http from '@/api/http'
 import { getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
+import { getPriceByCustomer } from '@/utils/customerLevel'
+
+const props = defineProps<{ customerId?: number | null }>()
 
 const emit = defineEmits<{
   (e: 'confirm', val: any[]): void
 }>()
+
+// ── 响应式检测 ──
+const isMobile = ref(window.innerWidth <= 768)
+function onResize() { isMobile.value = window.innerWidth <= 768 }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const visible = ref(false)
 const loading = ref(false)
@@ -85,8 +141,9 @@ const selected = ref<any[]>([])
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
-// StockAll 库存 map: goods_id -> qty，打开弹窗时加载一次
 const stockQtyMap = ref<Record<number, number>>({})
+// 手机端用 Set 跟踪选中（桌面端用 el-table selection-change）
+const mobileSelectedIds = ref<Set<number>>(new Set())
 
 interface CateNode { id: number; name: string; parent_id: any; children: CateNode[] }
 function buildCateTree(source: any[]): CateNode[] {
@@ -111,7 +168,6 @@ async function loadCates() {
   } catch {}
 }
 
-// 选分类时收集该分类及所有子分类 id
 function collectIds(id: number): number[] {
   const result = [id]
   const children = cateOptions.value.filter(c => Number(c.parent_id) === id)
@@ -119,29 +175,39 @@ function collectIds(id: number): number[] {
   return result
 }
 
+// 全量商品缓存（手机端用于本地过滤）
+let allGoodsCache: any[] = []
+
 async function loadData() {
   loading.value = true
   try {
-    const params: any = { page: page.value, list_rows: pageSize.value, keyword: keyword.value }
-    if (selectedCateId.value) params.cate_id = selectedCateId.value
-    const res: any = await http.get('/goods/ShopGoods/index', { params })
-    const data = res?.data || {}
-    let rows = data.rows || data.list || []
-    if (selectedCateId.value) {
-      const ids = collectIds(selectedCateId.value)
-      rows = rows.filter((g: any) => ids.includes(Number(g.cate_id)))
+    if (isMobile.value) {
+      // 手机端：全量加载一次，本地过滤
+      if (!allGoodsCache.length) {
+        const res: any = await http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } })
+        allGoodsCache = (res?.data?.rows || res?.data?.list || []).map((g: any) => ({
+          ...g,
+          stock_num: stockQtyMap.value[Number(g.id)] ?? 0,
+        }))
+      }
+      list.value = fuzzyFilterGoods(allGoodsCache, keyword.value)
+    } else {
+      const params: any = { page: page.value, list_rows: pageSize.value, keyword: keyword.value }
+      if (selectedCateId.value) params.cate_id = selectedCateId.value
+      const res: any = await http.get('/goods/ShopGoods/index', { params })
+      const data = res?.data || {}
+      let rows = data.rows || data.list || []
+      if (selectedCateId.value) {
+        const ids = collectIds(selectedCateId.value)
+        rows = rows.filter((g: any) => ids.includes(Number(g.cate_id)))
+      }
+      rows = fuzzyFilterGoods(rows, keyword.value)
+      rows = rows.map((g: any) => ({ ...g, stock_num: stockQtyMap.value[Number(g.id)] ?? 0 }))
+      list.value = rows
+      total.value = data.total || 0
     }
-    rows = fuzzyFilterGoods(rows, keyword.value)
-    // 用 StockAll 表的真实库存覆盖商品表的 stock_num
-    rows = rows.map((g: any) => ({
-      ...g,
-      stock_num: stockQtyMap.value[Number(g.id)] ?? 0
-    }))
-    list.value = rows
-    total.value = data.total || 0
   } finally {
-    loading.value = false
-  }
+    loading.value = false }
 }
 
 function selectCate(id: number | null) {
@@ -155,8 +221,22 @@ function search() {
   loadData()
 }
 
+// 桌面端 table selection
 function handleSelect(val: any[]) {
   selected.value = val
+}
+
+// 手机端 toggle
+function isSelected(g: any) { return mobileSelectedIds.value.has(Number(g.id)) }
+function toggleMobile(g: any) {
+  const id = Number(g.id)
+  if (mobileSelectedIds.value.has(id)) {
+    mobileSelectedIds.value.delete(id)
+    selected.value = selected.value.filter(x => Number(x.id) !== id)
+  } else {
+    mobileSelectedIds.value.add(id)
+    selected.value = [...selected.value, g]
+  }
 }
 
 function confirm() {
@@ -164,13 +244,28 @@ function confirm() {
   visible.value = false
 }
 
+function fmtPrice(v: any) {
+  return Number(v || 0).toFixed(2)
+}
+
+// 返回该商品对当前客户的有效价格（等级价 > 零售价）
+function getEffectivePrice(g: any): number | null {
+  if (props.customerId) {
+    const lp = getPriceByCustomer(Number(props.customerId), Number(g.id))
+    if (lp !== null) return lp
+  }
+  return null
+}
+
 async function open() {
   visible.value = true
   keyword.value = ''
   selectedCateId.value = null
   page.value = 1
-  loadCates()
-  // 从 StockAll 表加载真实库存数据
+  selected.value = []
+  mobileSelectedIds.value = new Set()
+  allGoodsCache = []
+  if (!isMobile.value) loadCates()
   loading.value = true
   try {
     const res = await http.get('/stock/StockAll/index', { params: { list_rows: 500 } })
@@ -191,13 +286,12 @@ defineExpose({ open })
 </script>
 
 <style scoped>
+/* ── 桌面端样式（不变） ── */
 .gs-body {
   display: flex;
   gap: 0;
   height: 540px;
 }
-
-/* 左侧分类 */
 .gs-cate {
   width: 160px;
   flex-shrink: 0;
@@ -210,36 +304,18 @@ defineExpose({ open })
   font-size: 13px;
   color: #333;
   cursor: pointer;
-  border-radius: 0;
   line-height: 1.4;
 }
-.gs-cate-item:hover,
-.gs-cate-item.active {
+.gs-cate-item:hover, .gs-cate-item.active {
   background: #ecf5ff;
   color: #409eff;
   font-weight: 500;
 }
-.gs-tree-node {
-  font-size: 13px;
-  color: #333;
-  line-height: 1.4;
-}
-.gs-tree-node.active {
-  color: #409eff;
-  font-weight: 500;
-}
-:deep(.el-tree-node__content) {
-  height: 32px;
-}
-:deep(.el-tree-node__content:hover) {
-  background: #ecf5ff;
-}
-:deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background: #ecf5ff;
-  color: #409eff;
-}
-
-/* 右侧主区 */
+.gs-tree-node { font-size: 13px; color: #333; line-height: 1.4; }
+.gs-tree-node.active { color: #409eff; font-weight: 500; }
+:deep(.el-tree-node__content) { height: 32px; }
+:deep(.el-tree-node__content:hover) { background: #ecf5ff; }
+:deep(.el-tree-node.is-current > .el-tree-node__content) { background: #ecf5ff; color: #409eff; }
 .gs-main {
   flex: 1;
   min-width: 0;
@@ -247,16 +323,70 @@ defineExpose({ open })
   flex-direction: column;
   padding-left: 12px;
 }
-.gs-search {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+.gs-search { display: flex; gap: 8px; margin-bottom: 10px; flex-shrink: 0; }
+.gs-footer { display: flex; justify-content: flex-end; margin-top: 10px; flex-shrink: 0; }
+
+/* ── 手机端抽屉样式 ── */
+.mgs-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: flex-end;
+}
+.mgs-drawer {
+  width: 100%; max-height: 82vh; background: #fff;
+  border-radius: 16px 16px 0 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.mgs-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 16px; font-weight: 600; color: #1a1a1a;
   flex-shrink: 0;
 }
-.gs-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
+.mgs-close { font-size: 20px; color: #999; cursor: pointer; line-height: 1; }
+.mgs-search-bar { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+.mgs-search-input {
+  width: 100%; box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1.5px solid #e5e7eb; border-radius: 8px;
+  font-size: 15px; outline: none; background: #f9fafb;
+}
+.mgs-search-input:focus { border-color: #2563EB; background: #fff; }
+.mgs-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.mgs-empty { text-align: center; padding: 32px; color: #bbb; font-size: 14px; }
+.mgs-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.mgs-row:active { background: #f0f6ff; }
+.mgs-row--on { background: #eff6ff; }
+.mgs-check { width: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.mgs-uncheck { width: 16px; height: 16px; border: 2px solid #d1d5db; border-radius: 4px; }
+.mgs-info { flex: 1; min-width: 0; }
+.mgs-name { font-size: 14px; font-weight: 500; color: #1d2129; }
+.mgs-meta { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+.mgs-price-col { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; gap: 2px; }
+.mgs-price { font-size: 13px; color: #d97706; font-weight: 500; }
+.mgs-level-price { font-size: 13px; color: #2563EB; font-weight: 600; }
+.mgs-sell-price-origin { font-size: 11px; color: #9ca3af; text-decoration: line-through; }
+.mgs-foot {
+  display: flex; gap: 10px;
+  padding: 12px 14px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid #f0f0f0;
   flex-shrink: 0;
+}
+.mgs-btn-cancel {
+  flex: 1; padding: 13px 0; border-radius: 10px; border: none;
+  background: #f3f4f6; color: #374151; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.mgs-btn-confirm {
+  flex: 2; padding: 13px 0; border-radius: 10px; border: none;
+  background: #2563EB; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
 }
 </style>

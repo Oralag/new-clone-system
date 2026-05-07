@@ -113,6 +113,14 @@
         <el-table-column label="应付金额" min-width="110" align="right">
           <template #default="{ row }"><span style="color:#dc2626;font-weight:600">{{ fmt(row.un_pay_amount) }}</span></template>
         </el-table-column>
+        <el-table-column label="付款账户" min-width="120">
+          <template #default="{ row }">
+            <span v-if="row.fund_names && row.fund_names.length" style="color:rgba(29,29,31,0.7);font-size:12px">
+              {{ row.fund_names.join('、') }}
+            </span>
+            <span v-else style="color:rgba(29,29,31,0.3);font-size:12px">—</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="due_date" label="订单日期" min-width="110" />
         <el-table-column label="操作" width="110" align="center">
           <template #default="{ row }">
@@ -147,6 +155,7 @@ const loading = ref(false)
 const rows = ref<any[]>([])
 const rawRows = ref<any[]>([])
 const procureReturnRows = ref<any[]>([])
+const allPayReceipts = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -307,6 +316,7 @@ async function load() {
 
     rawRows.value = [...aggregated.filter(s => s.un_pay_amount > 0), ...expensePayables]
     procureReturnRows.value = returnRes.data?.rows ?? []
+    allPayReceipts.value = payReceiptRes.data?.rows ?? []
     total.value = rawRows.value.length
   } finally {
     loading.value = false
@@ -328,7 +338,23 @@ const detailRows = ref<any[]>([])
 async function viewDetail(row: any) {
   detailSupplier.value = row.supplier_name
   detailSupplierId.value = row.supplier_id
-  detailRows.value = row.orders ?? []
+  // 给每行订单匹配付款账户名
+  detailRows.value = (row.orders ?? []).map((o: any) => {
+    const receipts = allPayReceipts.value.filter(r => {
+      if (!Number(r.amount)) return false
+      const sn = String(r.order_sn || '').trim()
+      const oSn = String(o.order_no || '').trim()
+      if (Number(r.order_id) && Number(r.order_id) === o.order_id) return true
+      const m = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
+      if (m.some(x => Number(x[1]) === o.order_id)) return true
+      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
+      if (m2 && m2[1].trim() === oSn) return true
+      if (sn && oSn && sn === oSn) return true
+      return false
+    })
+    const fundNames = [...new Set(receipts.map(r => r.fund_name).filter(Boolean))]
+    return { ...o, fund_names: fundNames }
+  })
   detailVisible.value = true
 }
 

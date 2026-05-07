@@ -31,6 +31,12 @@ http.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
+// 503 auto-retry: Render free tier cold-starts return 503 before the process is ready
+async function retryRequest(config: any): Promise<any> {
+  await new Promise(r => setTimeout(r, 5000))
+  return http(config)
+}
+
 http.interceptors.response.use(
   (response) => {
     const res = response.data
@@ -67,9 +73,16 @@ http.interceptors.response.use(
     }
     return Promise.reject(new Error(res.message || '请求失败'))
   },
-  (error) => {
+  async (error) => {
     const status = error.response?.status
-    const method = error.config?.method?.toUpperCase()
+    const config = error.config
+    // 503: Render cold-start — retry once automatically
+    if (status === 503 && !config?._retried) {
+      config._retried = true
+      ElMessage({ message: '服务器正在启动，5秒后自动重试…', type: 'warning', duration: 4500, showClose: true })
+      return retryRequest(config)
+    }
+    const method = config?.method?.toUpperCase()
     const isMutation = method === 'POST' || method === 'PUT' || method === 'DELETE'
     if (status === 401 || status === 403) {
       localStorage.removeItem(TOKEN_NAME)
