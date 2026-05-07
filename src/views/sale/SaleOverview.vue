@@ -288,6 +288,7 @@ const goodsList = ref<any[]>([])
 const fundList = ref<any[]>([])
 const inhouseList = ref<any[]>([])
 const bomList = ref<any[]>([])
+const stockRows = ref<any[]>([])
 const activeTab = ref('contract')
 
 // ── 合同单号解析 ──────────────────────────────────────────────────────────────
@@ -362,6 +363,40 @@ const goodsCostBySn = computed(() => {
   return m
 })
 
+// goods_id / goods_sn -> 库存均价（优先口径）
+const stockAvgCostMap = computed(() => {
+  const byId: Record<number, { totalAmt: number; totalQty: number }> = {}
+  const bySn: Record<string, { totalAmt: number; totalQty: number }> = {}
+  for (const r of stockRows.value) {
+    const gid = Number(r.goods_id || 0)
+    const sn = String(r.goods_sn || '')
+    const qty = Number(r.qty || r.stock_num || 0)
+    const avg = Number(r.avg_price || 0)
+    if (qty <= 0 || avg <= 0) continue
+    if (gid > 0) {
+      if (!byId[gid]) byId[gid] = { totalAmt: 0, totalQty: 0 }
+      byId[gid].totalAmt += qty * avg
+      byId[gid].totalQty += qty
+    }
+    if (sn) {
+      if (!bySn[sn]) bySn[sn] = { totalAmt: 0, totalQty: 0 }
+      bySn[sn].totalAmt += qty * avg
+      bySn[sn].totalQty += qty
+    }
+  }
+  const idMap: Record<number, number> = {}
+  const snMap: Record<string, number> = {}
+  for (const gid of Object.keys(byId)) {
+    const t = byId[Number(gid)]
+    if (t.totalQty > 0) idMap[Number(gid)] = t.totalAmt / t.totalQty
+  }
+  for (const sn of Object.keys(bySn)) {
+    const t = bySn[sn]
+    if (t.totalQty > 0) snMap[sn] = t.totalAmt / t.totalQty
+  }
+  return { idMap, snMap }
+})
+
 // ── 时间维度切换 ──────────────────────────────────────────────────────────────
 const periods = [
   { key: 'month', label: '本月' },
@@ -409,6 +444,8 @@ const kpi = computed(() => {
         for (const g of JSON.parse(c.goods_info || '[]')) {
           const qty = Number(g.num || 0)
           const unitCost = Number(
+            stockAvgCostMap.value.idMap[g.goods_id] ||
+            stockAvgCostMap.value.snMap[g.goods_sn] ||
             g.cost_price ||
             g.cost ||
             g.purchase_price ||
@@ -676,7 +713,7 @@ function fmt(v: number): string {
 
 // ── 加载 ──────────────────────────────────────────────────────────────────────
 async function loadData() {
-  const [c, o, s, cust, wh, g, ih, b, fd] = await Promise.allSettled([
+  const [c, o, s, cust, wh, g, ih, b, fd, st] = await Promise.allSettled([
     getContractList({ list_rows: 2000 }),
     getOfferList({ list_rows: 2000 }),
     getSaleOutList({ list_rows: 2000 }),
@@ -686,6 +723,7 @@ async function loadData() {
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
     getBomList({ list_rows: 5000 }),
     http.get('/finance/Fund/index', { params: { list_rows: 200 } }),
+    http.get('/stock/StockAll/index', { params: { list_rows: 5000 } }),
   ])
   contractRows.value = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
   offerRows.value = o.status === 'fulfilled' ? (o.value?.data?.rows ?? []) : []
@@ -696,6 +734,7 @@ async function loadData() {
   inhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []
   bomList.value = b.status === 'fulfilled' ? (b.value?.data?.rows ?? []) : []
   fundList.value = fd.status === 'fulfilled' ? (fd.value?.data?.rows ?? []) : []
+  stockRows.value = st.status === 'fulfilled' ? (st.value?.data?.rows ?? []) : []
 }
 
 onMounted(loadData)
