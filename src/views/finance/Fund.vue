@@ -123,7 +123,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -137,6 +138,7 @@ const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
 const formTitle = ref('新增')
 const searchForm = reactive<any>({ name: '' })
+const route = useRoute()
 
 // ── 查看弹窗 ──
 const viewVisible = ref(false)
@@ -202,6 +204,13 @@ async function openView(row: any) {
   } finally {
     viewLoading.value = false
   }
+}
+
+async function openFundById(fundId: number) {
+  if (!fundId) return
+  const res = await getFundList({ list_rows: 200, id: fundId })
+  const row = (res.data?.rows ?? res.data?.list ?? []).find((r: any) => Number(r.id) === fundId)
+  if (row) await openView(row)
 }
 
 function openForm(row?: any) {
@@ -279,6 +288,17 @@ async function handleDelete(row: any) {
   ElMessage.success('删除成功')
   tableRef.value?.refresh()
 }
+
+function syncRouteFundDetail() {
+  const fundId = Number(route.query.fund_id || 0)
+  if (!fundId) return
+  if (!viewVisible.value && !viewLoading.value) {
+    openFundById(fundId).catch(() => {})
+  }
+}
+
+onMounted(syncRouteFundDetail)
+watch(() => route.query.fund_id, syncRouteFundDetail)
 </script>
 
 <style scoped>

@@ -42,7 +42,7 @@
             </div>
           </template>
           <div class="inline-list" v-if="fundList.length">
-            <div class="inline-item clickable" v-for="f in fundList" :key="f.id" @click="router.push('/finance/fund')">
+            <div class="inline-item clickable" v-for="f in fundList" :key="f.id" @click="openFundDetail(f)">
               <div class="inline-name">{{ f.name }}</div>
               <div class="inline-value blue">¥{{ Number(f.display_balance ?? f.balance ?? 0).toFixed(2) }}</div>
               <div class="inline-sub">{{ { '1': '银行账户', '2': '现金', '3': '第三方' }[f.type] || '账户' }}</div>
@@ -677,6 +677,10 @@ function getPayableUnpaidAmount(r: any): number {
   const orderAmount = Number(r?.order_amount || 0)
   const paidAmount = Number(r?.paid_amount || 0)
   return Math.max(0, orderAmount - paidAmount)
+}
+
+function openFundDetail(fund: any) {
+  router.push({ path: '/finance/fund', query: { fund_id: String(fund.id) } })
 }
 const payableTotal = computed(() =>
   payableList.value.reduce((s, r) => s + getPayableUnpaidAmount(r), 0).toFixed(2)
