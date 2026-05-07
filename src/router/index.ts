@@ -25,7 +25,7 @@ router.beforeEach((to, _from, next) => {
     return next({ path: '/mobile/dashboard' })
   }
   // 移动端禁止进入旧 PC 首页链路，统一到新手机首页
-  if (isMobileDevice() && to.path === '/dashboard') {
+  if (isMobileDevice() && to.path === '/dashboard' && String(to.query?.legacy || '') !== '1') {
     return next({ path: '/mobile/dashboard' })
   }
   if (isMobileDevice() && to.path === '/dashboard/today-sales') {

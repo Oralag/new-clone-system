@@ -6,6 +6,11 @@
 
       <!-- 顶部欢迎 Banner -->
       <div class="mh-banner">
+        <button v-if="isLegacyFromModules" class="mh-back" @click="router.push('/mobile/modules')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
         <div class="mh-banner-left">
           <div class="mh-greet">你好，{{ authStore.userName || '用户' }}</div>
           <div class="mh-date">{{ mobileToday }}</div>
@@ -514,13 +519,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, onDeactivated, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import http from '@/api/http'
 import { useGuideStore } from '@/stores/guide'
 import { useAuthStore } from '@/stores/auth'
 import { menuData } from '@/layouts/components/menuData'
 
 const router = useRouter()
+const route = useRoute()
 const guideStore = useGuideStore()
 const authStore = useAuthStore()
 const currentGuideStep = computed(() => guideStore.currentStepData)
@@ -544,6 +550,9 @@ const mobileToday = computed(() => {
   const week = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]
   return `${d.getMonth()+1}月${d.getDate()}日 ${week}`
 })
+const isLegacyFromModules = computed(() =>
+  isMobile.value && String(route.query?.legacy || '') === '1'
+)
 
 // 手机端快捷操作（4+4=8个，比常用应用更高频）
 const mobileQuickActions = [
@@ -2368,6 +2377,22 @@ function drawTrendChart(n: number) {
   justify-content: space-between;
   padding: 18px 16px 14px;
   background: #fff;
+}
+.mh-back {
+  width: 30px;
+  height: 30px;
+  margin-right: 8px;
+  border: none;
+  background: #f5f5f7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4e5969;
+  flex-shrink: 0;
+}
+.mh-banner-left {
+  flex: 1;
 }
 .mh-greet {
   font-size: 20px;
