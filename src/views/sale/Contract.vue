@@ -260,8 +260,8 @@
             <span class="goods-count">共 <b>{{ fd.items.length }}</b> 件商品</span>
           </div>
 
-          <!-- 商品表格 -->
-          <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请点击上方按钮添加商品">
+          <!-- 商品表格（桌面） -->
+          <el-table v-if="!isMobile" :data="fd.items" border size="small" style="width:100%" empty-text="请点击上方按钮添加商品">
             <el-table-column type="index" width="45" align="center" fixed="left" />
             <el-table-column label="商品名称" min-width="150" fixed="left">
               <template #default="{ row }">
@@ -382,6 +382,68 @@
               </template>
             </el-table-column>
           </el-table>
+
+          <!-- 商品卡片列表（手机端） -->
+          <div v-else class="mobile-goods-list">
+            <div v-if="fd.items.length === 0" class="mobile-goods-empty">请点击上方按钮添加商品</div>
+            <div v-for="(row, idx) in fd.items" :key="idx" class="mobile-goods-card">
+              <div class="mgc-header">
+                <span class="mgc-index">{{ idx + 1 }}</span>
+                <span class="mgc-name">{{ row.goods_name || '未命名商品' }}</span>
+                <el-button v-if="!isReadonly" type="danger" link :icon="Delete" size="small" @click="removeItem(idx)" />
+              </div>
+              <div class="mgc-row" v-if="row.spec || !isReadonly">
+                <span class="mgc-label">规格</span>
+                <el-select
+                  v-if="row.goods_id && goodsSpecMap[row.goods_id]?.length"
+                  v-model="row.spec"
+                  size="small"
+                  placeholder="请选择"
+                  clearable
+                  :disabled="isReadonly"
+                  style="flex:1"
+                  @focus="fetchGoodsSpecs(row.goods_id)"
+                >
+                  <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
+                </el-select>
+                <el-input v-else v-model="row.spec" size="small" placeholder="规格型号" :disabled="isReadonly"
+                  style="flex:1" @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)" />
+              </div>
+              <div class="mgc-row">
+                <span class="mgc-label">单位</span>
+                <el-input v-model="row.unit_name" size="small" placeholder="单位" :disabled="isReadonly" style="flex:1" />
+              </div>
+              <div class="mgc-row">
+                <span class="mgc-label">数量</span>
+                <el-input-number v-model="row.num" :min="0" :precision="2" size="small"
+                  controls-position="right" style="flex:1" :disabled="isReadonly"
+                  @change="calcItemTax(row); calcTotal()" />
+              </div>
+              <div class="mgc-row">
+                <span class="mgc-label">含税单价</span>
+                <el-input-number v-model="row.price" :min="0" :precision="4" size="small"
+                  controls-position="right" style="flex:1" :disabled="isReadonly" @change="onPriceChange(row)" />
+              </div>
+              <div class="mgc-row">
+                <span class="mgc-label">税率</span>
+                <el-select v-model="row.tax_rate" size="small" style="flex:1" :disabled="isReadonly" @change="onTaxRateChange(row)">
+                  <el-option v-for="t in taxRates" :key="t" :label="`${t}%`" :value="t" />
+                </el-select>
+              </div>
+              <div class="mgc-row">
+                <span class="mgc-label">含税合计</span>
+                <span class="mgc-total">¥{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+              </div>
+              <div class="mgc-row" v-if="!isReadonly">
+                <span class="mgc-label">备注</span>
+                <el-input v-model="row.remark" size="small" placeholder="备注" style="flex:1" />
+              </div>
+              <div class="mgc-row" v-else-if="row.remark">
+                <span class="mgc-label">备注</span>
+                <span style="flex:1;font-size:13px;color:#555">{{ row.remark }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 结算信息卡片 -->
@@ -507,7 +569,7 @@
       </div>
     </div>
 
-    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
+    <GoodsSelect ref="goodsSelectRef" :customer-id="fd.customer_id" @confirm="onGoodsConfirm" />
 
     <!-- 手动新增商品弹框 -->
     <el-dialog v-model="manualAddVisible" title="新增商品行" width="420px" append-to-body>
@@ -668,7 +730,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
@@ -686,7 +748,11 @@ import { getCommissionRate } from '@/utils/commission'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
-import { stockEffect } from '@/utils/stockEffect'
+
+const isMobile = ref(window.innerWidth <= 768)
+function onResize() { isMobile.value = window.innerWidth <= 768 }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const DRAFT_KEY = 'sale_contract_draft_from_offer'
 const permStore = usePermissionStore()
@@ -736,6 +802,7 @@ function isAutoContractReceiptRow(row: any, orderSn: string) {
   return remark.includes(`合同自动收款 - ${orderSn}`)
     || remark.includes(`预付款核销 - ${orderSn}`)
     || remark.includes(`一键销售收款 - ${orderSn}`)
+    || remark.includes(`审核自动生成`)
 }
 
 function parseItems(goodsInfo: any): any[] {
@@ -1880,10 +1947,6 @@ async function autoCreateSaleOut(row: any) {
   const outId = outRes?.data?.id || outRes?.data?.lastId
   if (!outId) throw new Error(`出库单创建失败：${outRes?.data?.msg || '未知错误'}`)
   await auditSaleOut(outId, 1)
-  await stockEffect(
-    items.filter((i: any) => i.goods_id && i.num).map((i: any) => ({ goods_id: i.goods_id, num: i.num, goods_name: i.goods_name })),
-    'deduct', warehouseId, '销售出库'
-  )
 }
 
 async function autoReverseSaleOut(row: any) {
@@ -1895,12 +1958,7 @@ async function autoReverseSaleOut(row: any) {
       String(o.remark || '').includes(orderSn) && Number(o.status) === 1
     )
     for (const out of outRows) {
-      const items = parseItems(out.goods_info)
       await auditSaleOut(out.id, 0)
-      await stockEffect(
-        items.filter((i: any) => i.goods_id && i.num).map((i: any) => ({ goods_id: i.goods_id, num: i.num, goods_name: i.goods_name })),
-        'restore', out.warehouse_id, '销售出库反审核'
-      )
     }
   } catch { /* 反出库失败不阻塞合同反审核 */ }
 }
@@ -2377,5 +2435,73 @@ function applyOfferToForm(offer: any) {
   color: rgba(29,29,31,0.5);
   display: flex;
   align-items: center;
+}
+
+/* ── 手机端商品卡片 ── */
+.mobile-goods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+.mobile-goods-empty {
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+  padding: 24px 0;
+}
+.mobile-goods-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mgc-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.mgc-index {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #0071e3;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mgc-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mgc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mgc-label {
+  font-size: 12px;
+  color: rgba(29,29,31,0.45);
+  width: 52px;
+  flex-shrink: 0;
+}
+.mgc-total {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0071e3;
 }
 </style>
