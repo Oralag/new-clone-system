@@ -101,7 +101,7 @@
             <el-table-column label="操作" align="center" width="140">
               <template #default="{ row }">
                 <el-button v-if="row.status == 0" type="primary" link size="small" @click="quickAuditContract(row)">审核</el-button>
-                <el-button v-if="row.status == 1" type="success" link size="small" @click="quickConvertToOut(row)">转出库</el-button>
+                <el-button v-if="canConvertToOut(row)" type="success" link size="small" @click="quickConvertToOut(row)">转出库</el-button>
                 <el-button link size="small" @click="router.push('/sale/contract')">查看</el-button>
               </template>
             </el-table-column>
@@ -290,6 +290,39 @@ const inhouseList = ref<any[]>([])
 const bomList = ref<any[]>([])
 const stockRows = ref<any[]>([])
 const activeTab = ref('contract')
+
+function hasLinkedSaleOut(contractRow: any): boolean {
+  const contractId = Number(contractRow?.id || 0)
+  const contractSn = String(getContractSn(contractRow) || '').trim()
+  if (!contractId && !contractSn) return false
+
+  return saleOutRows.value.some((so: any) => {
+    const soContractId = Number(
+      so?.contract_id ||
+      so?.source_contract_id ||
+      so?.from_contract_id ||
+      0
+    )
+    if (contractId > 0 && soContractId === contractId) return true
+
+    if (!contractSn) return false
+    const soContractSn = String(
+      so?.contract_sn ||
+      so?.source_contract_sn ||
+      so?.source_order_sn ||
+      so?.order_sn ||
+      ''
+    ).trim()
+    if (soContractSn && soContractSn === contractSn) return true
+
+    const remark = String(so?.remark || '')
+    return !!remark && remark.includes(contractSn)
+  })
+}
+
+function canConvertToOut(contractRow: any): boolean {
+  return Number(contractRow?.status) === 1 && !hasLinkedSaleOut(contractRow)
+}
 
 // ── 合同单号解析 ──────────────────────────────────────────────────────────────
 function getContractSn(row: any): string {
