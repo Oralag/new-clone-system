@@ -178,8 +178,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '数据统计' } },
       { path: 'modules', name: 'MobileModules', component: () => import('@/views/mobile/MobileModules.vue'), meta: { title: '选择模块' } },
       { path: 'my', name: 'MobileMy', component: () => import('@/views/mobile/MobileMy.vue'), meta: { title: '我的' } },
-      // ── ERP 手机首页（新）──
-      { path: 'dashboard', name: 'MobileDashboard', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '首页' } },
+      // ── ERP 手机首页（工作台）──
+      { path: 'dashboard', name: 'MobileDashboard', component: () => import('@/views/mobile/MobileWorkbench.vue'), meta: { title: '首页' } },
       // ── 旧版手机首页（仅模块页进入，保留返回按钮）──
       { path: 'legacy-dashboard', name: 'MobileLegacyDashboard', component: () => import('@/views/Dashboard.vue'), meta: { title: '旧版首页' } },
       // ── Agent / Investment / Brand（复用 PC 端组件）──
