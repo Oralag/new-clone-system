@@ -46,8 +46,12 @@
             <span class="ts-date">{{ (row.out_date || '').slice(0, 10) }}</span>
           </div>
           <div class="ts-row-bot">
-            <span class="ts-label">实付</span>
-            <span class="ts-amount">¥{{ fmt(salePaid(row)) }}</span>
+            <span class="ts-label">应收</span>
+            <span class="ts-amount">¥{{ fmt(saleTotal(row)) }}</span>
+            <span class="ts-label" style="margin-left:12px">已收</span>
+            <span class="ts-pay-type" :style="{ color: '#00b42a', fontWeight: 600 }">
+              ¥{{ fmt(salePaid(row)) }}
+            </span>
             <span class="ts-label" style="margin-left:12px">未收款</span>
             <span class="ts-pay-type" :style="{ color: saleUnpaid(row) > 0 ? '#f53f3f' : '#00b42a', fontWeight: 600 }">
               ¥{{ fmt(saleUnpaid(row)) }}
@@ -67,7 +71,7 @@
           </div>
         </div>
         <div class="ts-foot-total">
-          实付合计 ¥{{ fmt(saleAmt) }} ｜ 未收款合计 ¥{{ fmt(saleUnpaidAmt) }}
+          应收合计 ¥{{ fmt(saleAmt) }} ｜ 已收合计 ¥{{ fmt(salePaidAmt) }} ｜ 未收款合计 ¥{{ fmt(saleUnpaidAmt) }}
         </div>
       </template>
 
@@ -217,6 +221,9 @@ const retailRows = computed(() =>
 )
 
 const saleAmt = computed(() =>
+  saleRows.value.reduce((s: number, r: any) => s + saleTotal(r), 0)
+)
+const salePaidAmt = computed(() =>
   saleRows.value.reduce((s: number, r: any) => s + salePaid(r), 0)
 )
 const saleUnpaidAmt = computed(() =>
