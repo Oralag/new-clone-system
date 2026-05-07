@@ -59,8 +59,8 @@
       <!-- 工作（应用） -->
       <div
         class="mobile-nav-item"
-        :class="{ active: isLegacyMode ? route.path === '/mobile/modules' : route.path === '/mobile/apps' }"
-        @click="navTo(isLegacyMode ? '/mobile/modules?legacy=1&from=legacy_nav' : '/mobile/apps')"
+        :class="{ active: isLegacyMode ? route.path === '/dashboard' : route.path === '/mobile/apps' }"
+        @click="navTo(isLegacyMode ? '/dashboard?legacy=1&from=legacy_nav&tab=work' : '/mobile/apps')"
       >
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <rect x="3" y="3" width="7" height="7" rx="1.5"/>
@@ -99,8 +99,8 @@
       <!-- 我的 -->
       <div
         class="mobile-nav-item"
-        :class="{ active: isLegacyMode ? route.path === '/mobile/my' : route.path === '/mobile/profile' }"
-        @click="navTo(isLegacyMode ? '/mobile/my?legacy=1&from=legacy_nav' : '/mobile/profile')"
+        :class="{ active: isLegacyMode ? route.path === '/dashboard' : route.path === '/mobile/profile' }"
+        @click="navTo(isLegacyMode ? '/dashboard?legacy=1&from=legacy_nav&tab=my' : '/mobile/profile')"
       >
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
