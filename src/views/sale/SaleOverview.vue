@@ -93,8 +93,8 @@
             </el-table-column>
             <el-table-column label="状态" align="center" width="80">
               <template #default="{ row }">
-                <el-tag :type="row.status == 1 ? 'success' : row.status == 2 ? 'danger' : row.status == 4 ? 'warning' : 'info'" size="small">
-                  {{ row.status == 1 ? '已审核' : row.status == 2 ? '已驳回' : row.status == 4 ? '✓ 已转单' : '待审核' }}
+                <el-tag :type="getContractStatusType(row)" size="small">
+                  {{ getContractStatusLabel(row) }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -318,6 +318,22 @@ function hasLinkedSaleOut(contractRow: any): boolean {
     const remark = String(so?.remark || '')
     return !!remark && remark.includes(contractSn)
   })
+}
+
+function getContractStatusLabel(contractRow: any): string {
+  const status = Number(contractRow?.status)
+  if (status === 4) return '✓ 已转单'
+  if (status === 1) return hasLinkedSaleOut(contractRow) ? '已审核并出库' : '已审核'
+  if (status === 2) return '已驳回'
+  return '待审核'
+}
+
+function getContractStatusType(contractRow: any): string {
+  const status = Number(contractRow?.status)
+  if (status === 4) return 'warning'
+  if (status === 1) return 'success'
+  if (status === 2) return 'danger'
+  return 'info'
 }
 
 function canConvertToOut(contractRow: any): boolean {

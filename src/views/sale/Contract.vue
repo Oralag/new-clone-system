@@ -71,8 +71,8 @@
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 4 ? 'warning' : 'info'" size="small">
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : row.status === 4 ? '已转单' : '待审核' }}
+              <el-tag :type="getContractStatusType(row)" size="small">
+                {{ getContractStatusLabel(row) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -977,6 +977,33 @@ function getContractSn(row: any): string {
   const taggedSn = parseRemarkTag(row?.remark || '', 'NO')
   if (taggedSn) return taggedSn
   return String(row?.order_sn || row?.contract_no || (row?.id ? `HT${String(row.id).padStart(4,'0')}` : '')).trim()
+}
+
+function hasLinkedSaleOut(row: any): boolean {
+  return Boolean(
+    row?.sale_out_id ||
+    row?.saleout_id ||
+    row?.out_id ||
+    row?.linked_sale_out_id ||
+    row?.converted_out_id ||
+    row?.contract_out_id
+  )
+}
+
+function getContractStatusLabel(row: any): string {
+  const status = Number(row?.status)
+  if (status === 4) return '已转单'
+  if (status === 1) return hasLinkedSaleOut(row) ? '已审核并出库' : '已审核'
+  if (status === 2) return '已驳回'
+  return '待审核'
+}
+
+function getContractStatusType(row: any): string {
+  const status = Number(row?.status)
+  if (status === 4) return 'warning'
+  if (status === 1) return 'success'
+  if (status === 2) return 'danger'
+  return 'info'
 }
 
 function parseContractRemark(remark: string): string {
