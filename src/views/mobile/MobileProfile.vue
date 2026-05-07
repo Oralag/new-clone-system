@@ -31,21 +31,21 @@
       <!-- 功能入口 -->
       <div class="profile-menu-card">
         <div class="pmenu-group-title">工作台</div>
-        <div class="pmenu-item" @click="router.push('/dashboard')">
+        <div class="pmenu-item" @click="router.push(withLegacy('/dashboard'))">
           <div class="pmenu-icon" style="background:rgba(0,113,227,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
           <span class="pmenu-label">首页工作台</span>
           <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
-        <div class="pmenu-item" @click="router.push('/portal')">
+        <div class="pmenu-item" @click="router.push(withLegacy('/mobile/apps'))">
           <div class="pmenu-icon" style="background:rgba(124,58,237,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           </div>
           <span class="pmenu-label">切换工作台</span>
           <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
-        <div class="pmenu-item pmenu-item--last" @click="router.push('/mobile/stats')">
+        <div class="pmenu-item pmenu-item--last" @click="router.push(withLegacy('/dashboard/today-sales'))">
           <div class="pmenu-icon" style="background:rgba(5,150,105,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           </div>
@@ -84,12 +84,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const statData = ref({ customerCount: '--', receivable: '--', stockWarn: '--' })
@@ -114,6 +115,13 @@ onMounted(async () => {
     }
   } catch {}
 })
+
+function withLegacy(path: string) {
+  if (String(route.query?.legacy || '') === '1') {
+    return `${path}${path.includes('?') ? '&' : '?'}legacy=1&from=legacy_profile`
+  }
+  return path
+}
 
 function copyUrl() {
   const url = 'https://nomaderp.pages.dev'
