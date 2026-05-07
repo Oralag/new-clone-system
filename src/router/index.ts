@@ -28,7 +28,7 @@ router.beforeEach((to, _from, next) => {
   if (isMobileDevice() && to.path === '/dashboard' && String(to.query?.legacy || '') !== '1') {
     return next({ path: '/mobile/dashboard' })
   }
-  if (isMobileDevice() && to.path === '/dashboard/today-sales') {
+  if (isMobileDevice() && to.path === '/dashboard/today-sales' && String(to.query?.legacy || '') !== '1') {
     return next({ path: '/mobile/sale/today' })
   }
 

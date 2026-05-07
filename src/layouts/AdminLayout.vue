@@ -75,7 +75,11 @@
       </div>
 
       <!-- 报表 -->
-      <div class="mobile-nav-item" :class="{ active: route.path === '/mobile/stats' }" @click="navTo('/mobile/stats')">
+      <div
+        class="mobile-nav-item"
+        :class="{ active: route.path === '/mobile/stats' || (isLegacyMode && route.path === '/dashboard/today-sales') }"
+        @click="navTo(isLegacyMode ? '/dashboard/today-sales?legacy=1&from=legacy_nav' : '/mobile/stats')"
+      >
         <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <line x1="18" y1="20" x2="18" y2="10"/>
           <line x1="12" y1="20" x2="12" y2="4"/>
@@ -194,6 +198,7 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 
 // 底部Tab页不在顶栏重复显示标题，其他页面显示当前路由标题
 const TAB_PATHS = ['/dashboard', '/mobile/apps', '/mobile/stats', '/mobile/profile']
+const isLegacyMode = computed(() => String(route.query?.legacy || '') === '1')
 const mobilePageTitle = computed(() => {
   if (TAB_PATHS.includes(route.path)) return '数字游牧 ERP'
   return (route.meta?.title as string) || '数字游牧 ERP'
