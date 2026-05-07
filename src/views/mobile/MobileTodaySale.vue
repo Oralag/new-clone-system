@@ -231,8 +231,8 @@ function saleTotal(row: any) {
   return Number(row.after_discount ?? row.total_amount ?? 0)
 }
 function salePaid(row: any) {
-  // 兼容不同后端字段：pay_amount / receive_amount / paid_amount
-  return Number(row.pay_amount ?? row.receive_amount ?? row.paid_amount ?? saleTotal(row))
+  // 兼容不同后端字段：pay_amount / receive_amount / paid_amount；未提供则视为未收款(0)
+  return Number(row.pay_amount ?? row.receive_amount ?? row.paid_amount ?? 0)
 }
 function saleUnpaid(row: any) {
   const total = saleTotal(row)
