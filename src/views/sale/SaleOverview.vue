@@ -330,7 +330,9 @@ function getSaleOutDate(row: any): string {
 // ── 成本计算 ──────────────────────────────────────────────────────────────────
 const goodsCostMap = computed(() => {
   const m: Record<number, number> = {}
-  for (const g of goodsList.value) m[g.id] = Number(g.cost_price || 0)
+  for (const g of goodsList.value) {
+    m[g.id] = Number(g.cost_price || g.purchase_price || g.avg_price || g.in_price || 0)
+  }
   const snTC: Record<string, number> = {}, snTQ: Record<string, number> = {}
   for (const ih of inhouseList.value) {
     if (Number(ih.status) !== 1) continue
@@ -346,6 +348,17 @@ const goodsCostMap = computed(() => {
   for (const b of bomList.value) { const gid = Number(b.goods_id || 0); if (!gid) continue; if (!bomMap[gid]) bomMap[gid] = []; bomMap[gid].push({ sn: b.material_sn || '', num: Number(b.num || 0) }) }
   for (const gid in bomMap) { const g = goodsList.value.find(x => x.id === Number(gid)); if (!g?.goods_sn) continue; let bc = 0; for (const mt of bomMap[Number(gid)]) bc += mt.num * (snAvg[mt.sn] || 0); if (bc > 0) { snTC[g.goods_sn] = bc; snTQ[g.goods_sn] = 1 } }
   for (const g of goodsList.value) { const sn = g.goods_sn; if (sn && snTQ[sn] > 0) m[g.id] = snTC[sn] / snTQ[sn] }
+  return m
+})
+
+const goodsCostBySn = computed(() => {
+  const m: Record<string, number> = {}
+  for (const g of goodsList.value) {
+    const sn = String(g.goods_sn || '')
+    if (!sn) continue
+    const c = Number(goodsCostMap.value[g.id] || g.cost_price || g.purchase_price || g.avg_price || g.in_price || 0)
+    if (c > 0) m[sn] = c
+  }
   return m
 })
 
@@ -395,7 +408,16 @@ const kpi = computed(() => {
       try {
         for (const g of JSON.parse(c.goods_info || '[]')) {
           const qty = Number(g.num || 0)
-          const unitCost = Number(g.cost_price || goodsCostMap.value[g.goods_id] || 0)
+          const unitCost = Number(
+            g.cost_price ||
+            g.cost ||
+            g.purchase_price ||
+            g.in_price ||
+            g.avg_price ||
+            goodsCostMap.value[g.goods_id] ||
+            goodsCostBySn.value[g.goods_sn] ||
+            0
+          )
           cost += qty * unitCost
         }
       } catch {}
