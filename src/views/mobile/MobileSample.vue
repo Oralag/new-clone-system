@@ -484,23 +484,42 @@ async function resolveBomCost(goods: any): Promise<number> {
   }
   const bom = bomListCache.find((item: any) =>
     (goods.id && Number(item.goods_id) === Number(goods.id)) ||
-    (goods.goods_sn && item.goods_sn === goods.goods_sn)
+    (goods.goods_sn && item.goods_sn === goods.goods_sn) ||
+    (goods.goods_name && item.goods_name === goods.goods_name)
   )
-  if (!bom) { bomCostCache.set(key, 0); return 0 }
-  try {
-    const detailRes = await http.get('/goods/Bom/detail', { params: { id: bom.id || bom.goods_id || goods.id } })
-    const rows: any[] = detailRes.data?.items ?? detailRes.data?.rows ?? []
-    const localPrices: Record<number, number> = (() => {
-      try { return JSON.parse(localStorage.getItem('erp_bom_prices') || '{}') } catch { return {} }
-    })()
+  const localPrices: Record<number, number> = (() => {
+    try { return JSON.parse(localStorage.getItem('erp_bom_prices') || '{}') } catch { return {} }
+  })()
+  const calcRowsCost = (rows: any[]) => {
     const cost = rows.reduce((sum, row) => {
-      const price = firstPositiveNumber(row.price, row.cost_price, row.out_price, row.in_price, localPrices[row.id])
-      return sum + Number(row.num || 0) * price
+      const price = firstPositiveNumber(
+        row.price, row.cost_price, row.out_price, row.in_price, row.purchase_price, row.avg_price, localPrices[row.id],
+      )
+      const qty = Number(row.num ?? row.qty ?? row.quantity ?? row.material_num ?? 0)
+      return sum + qty * price
     }, 0)
-    const fixed = Number(cost.toFixed(4))
-    bomCostCache.set(key, fixed)
-    return fixed
-  } catch { return 0 }
+    return Number(cost.toFixed(4))
+  }
+  try {
+    const detailId = bom?.id || bom?.goods_id || goods.id
+    if (detailId) {
+      const detailRes = await http.get('/goods/Bom/detail', { params: { id: detailId } })
+      const rows: any[] = detailRes.data?.items ?? detailRes.data?.rows ?? detailRes.data?.list ?? []
+      const fixed = calcRowsCost(rows)
+      bomCostCache.set(key, fixed)
+      if (fixed > 0) return fixed
+    }
+    // 兜底：按商品ID直接尝试明细接口
+    if (goods.id) {
+      const fallbackRes = await http.get('/goods/Bom/detail', { params: { id: goods.id } })
+      const fallbackRows: any[] = fallbackRes.data?.items ?? fallbackRes.data?.rows ?? fallbackRes.data?.list ?? []
+      const fixed = calcRowsCost(fallbackRows)
+      bomCostCache.set(key, fixed)
+      return fixed
+    }
+  } catch {}
+  bomCostCache.set(key, 0)
+  return 0
 }
 
 async function resolveGoodsCost(goods: any): Promise<number> {
