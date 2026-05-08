@@ -491,6 +491,10 @@ async function resolveBomCost(goods: any): Promise<number> {
     (goods.goods_sn && item.goods_sn === goods.goods_sn) ||
     (goods.goods_name && item.goods_name === goods.goods_name)
   )
+  if (!bom) {
+    bomCostCache.set(key, 0)
+    return 0
+  }
   const localPrices: Record<number, number> = (() => {
     try { return JSON.parse(localStorage.getItem('erp_bom_prices') || '{}') } catch { return {} }
   })()
@@ -512,14 +516,6 @@ async function resolveBomCost(goods: any): Promise<number> {
       const fixed = calcRowsCost(rows)
       bomCostCache.set(key, fixed)
       if (fixed > 0) return fixed
-    }
-    // 兜底：按商品ID直接尝试明细接口
-    if (goods.id) {
-      const fallbackRes = await getBomByGoods(goods.id)
-      const fallbackRows: any[] = fallbackRes.data?.items ?? fallbackRes.data?.rows ?? fallbackRes.data?.list ?? []
-      const fixed = calcRowsCost(fallbackRows)
-      bomCostCache.set(key, fixed)
-      return fixed
     }
   } catch {}
   bomCostCache.set(key, 0)
