@@ -2,8 +2,8 @@
 // Handles single specialist agent conversation with ERP tool access + KV memory
 
 interface Env {
-  ANTHROPIC_API_KEY: string
-  ANTHROPIC_BASE_URL?: string
+  AI_API_KEY: string
+  AI_BASE_URL?: string
   REPLICATE_API_TOKEN?: string
   AGENT_MEMORY: KVNamespace
   AI: Ai
@@ -602,9 +602,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const apiKey = env.ANTHROPIC_API_KEY
+  const apiKey = env.AI_API_KEY
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), { status: 500 })
+    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), { status: 500 })
   }
 
   const body = await request.json() as any
@@ -619,7 +619,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const { messages, agentId } = body
   const erpToken = request.headers.get('x-erp-token') || ''
   const { realToken, backend } = decodeErpToken(erpToken)
-  const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
   const replicateToken = env.REPLICATE_API_TOKEN || ''
   const cfAI = env.AI
 
@@ -635,38 +635,39 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   ;(async () => {
     try {
-      // 截取最近 10 条，避免超出 200k token 限制
       const apiMessages = messages.slice(-10).map((m: any) => ({ role: m.role, content: m.content }))
-      // 确保第一条是 user 消息（Anthropic 要求）
-      const firstUserIdx = apiMessages.findIndex((m: any) => m.role === 'user')
-      const trimmedMessages = firstUserIdx > 0 ? apiMessages.slice(firstUserIdx) : apiMessages
-      let loopMessages = [...trimmedMessages]
+      const oaiTools = getToolsForAgent(agentId).map((t: any) => ({
+        type: 'function' as const,
+        function: { name: t.name, description: t.description, parameters: t.parameters || { type: 'object', properties: {} } },
+      }))
+      let loopMessages: any[] = [{ role: 'system', content: agent.systemPrompt }, ...apiMessages]
       let fullAssistantText = ''
 
       for (let i = 0; i < 5; i++) {
-        const res = await fetch(`${baseURL}/v1/messages`, {
+        const res = await fetch(`${baseURL}/v1/chat/completions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: agent.systemPrompt, tools: getToolsForAgent(agentId), messages: loopMessages }),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 4096, messages: loopMessages, tools: oaiTools, tool_choice: 'auto' }),
         })
         if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
         const data: any = await res.json()
-        for (const block of data.content || []) {
-          if (block.type === 'text' && block.text) {
-            fullAssistantText += block.text
-            await send({ type: 'text', text: block.text })
-          }
-        }
-        if (data.stop_reason !== 'tool_use') break
-        const toolUseBlocks = (data.content || []).filter((b: any) => b.type === 'tool_use')
+        const choice = data.choices?.[0]
+        if (!choice) break
+        const text = choice.message?.content || ''
+        if (text) { fullAssistantText += text; await send({ type: 'text', text }) }
+        if (choice.finish_reason !== 'tool_calls' || !choice.message?.tool_calls?.length) break
+        const toolCalls = choice.message.tool_calls
+        loopMessages.push({ role: 'assistant', content: text || null, tool_calls: toolCalls })
         const toolResults: any[] = []
-        for (const toolUse of toolUseBlocks) {
-          await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
-          const result = await executeTool(toolUse.name, toolUse.input, realToken, backend, cfAI, env.AGENT_MEMORY)
-          await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
-          toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
+        for (const tc of toolCalls) {
+          const name = tc.function.name
+          const input = JSON.parse(tc.function.arguments || '{}')
+          await send({ type: 'tool_start', id: tc.id, name, input })
+          const result = await executeTool(name, input, realToken, backend, cfAI, env.AGENT_MEMORY)
+          await send({ type: 'tool_result', id: tc.id, name, result })
+          toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
         }
-        loopMessages = [...loopMessages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }]
+        loopMessages = [...loopMessages, ...toolResults]
       }
 
       if (erpToken && fullAssistantText) {

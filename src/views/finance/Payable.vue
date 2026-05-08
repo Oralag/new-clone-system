@@ -129,7 +129,7 @@
         <el-table-column prop="due_date" label="订单日期" min-width="110" />
         <el-table-column label="操作" width="110" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="goToOrder(row.order_no)">查看原单</el-button>
+            <el-button type="primary" link size="small" @click="goToOrder(row)">查看原单</el-button>
             <el-button v-if="Number(row.un_pay_amount) > 0" type="warning" link size="small" @click="goPaySingle(row)">付款</el-button>
           </template>
         </el-table-column>
@@ -455,9 +455,17 @@ function goPaySingle(order: any) {
 }
 
 // 跳转到采购单列表并高亮对应单据
-function goToOrder(orderNo: string) {
+function goToOrder(order: any) {
   detailVisible.value = false
-  router.push({ path: '/procure/order', query: { order_no: orderNo } })
+  const sn = String(order.order_no || '').trim()
+  const id = order.order_id
+  // 合同附加费 → 销售合同查看页
+  if (String(order.source_name || '').includes('合同附加')) {
+    const rn = String(order.order_no || '').trim()
+    router.push({ path: `/sale/contract/view/${id}`, query: rn ? { receipt_no: rn } : {} })
+  } else {
+    router.push(`/procure/order/view/${id}`)
+  }
 }
 
 onMounted(async () => {

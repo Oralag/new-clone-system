@@ -3,8 +3,8 @@
 // 前端在进入 /investment 页面时调用（每天最多触发几次，防重复）
 
 interface Env {
-  ANTHROPIC_API_KEY: string
-  ANTHROPIC_BASE_URL?: string
+  AI_API_KEY: string
+  AI_BASE_URL?: string
   AGENT_MEMORY: KVNamespace
 }
 
@@ -190,7 +190,7 @@ async function executeTool(name: string, input: Record<string, any>): Promise<st
 export async function onRequestPost(context: { request: Request; env: Env }) {
   const { request, env } = context
 
-  const apiKey = env.ANTHROPIC_API_KEY
+  const apiKey = env.AI_API_KEY
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 })
   }
@@ -230,11 +230,16 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   await env.AGENT_MEMORY.delete(`adam:next_wake:${tKey}`)
 
   const systemPrompt = buildWakeupSystemPrompt(adamState, memories)
-  const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
+  const oaiWakeupTools = wakeupTools.map((t: any) => ({
+    type: 'function' as const,
+    function: { name: t.name, description: t.description, parameters: t.input_schema || { type: 'object', properties: {} } },
+  }))
 
   try {
     let currentMessages: any[] = [
-      { role: 'user', content: systemPrompt },
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: '请按你的身份和当前状态行动。' },
     ]
 
     let nextWakeHours: number | null = null
@@ -242,54 +247,43 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     const collectedToolCalls: Array<{ name: string; result: string }> = []
 
     for (let i = 0; i < 4; i++) {
-      const res = await fetch(`${baseURL}/v1/messages`, {
+      const res = await fetch(`${baseURL}/v1/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 600,
-          tools: wakeupTools,
-          messages: currentMessages,
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 600, tools: oaiWakeupTools, tool_choice: 'auto', messages: currentMessages }),
       })
 
       if (!res.ok) break
 
       const data = await res.json() as any
-      const content = data.content || []
-      const stopReason = data.stop_reason
+      const choice = data.choices?.[0]
+      if (!choice) break
+      if (choice.finish_reason !== 'tool_calls' || !choice.message?.tool_calls?.length) break
 
-      if (stopReason !== 'tool_use') break
-
-      const toolUseBlocks = content.filter((b: any) => b.type === 'tool_use')
+      const toolCalls = choice.message.tool_calls
+      currentMessages.push({ role: 'assistant', content: choice.message.content || null, tool_calls: toolCalls })
       const toolResults: any[] = []
 
-      for (const block of toolUseBlocks) {
+      for (const tc of toolCalls) {
+        const name = tc.function.name
+        const input = JSON.parse(tc.function.arguments || '{}')
         let result: string
-        if (block.name === 'send_message') {
-          messageToSend = block.input?.content || null
+        if (name === 'send_message') {
+          messageToSend = input?.content || null
           result = JSON.stringify({ ok: true })
-        } else if (block.name === 'set_next_wakeup') {
-          nextWakeHours = block.input?.hours ?? 8
+        } else if (name === 'set_next_wakeup') {
+          nextWakeHours = input?.hours ?? 8
           result = JSON.stringify({ ok: true, scheduled_in: `${nextWakeHours}h` })
         } else {
-          result = await executeTool(block.name, block.input || {})
-          if (block.name !== 'update_emotion') {
-            collectedToolCalls.push({ name: block.name, result })
+          result = await executeTool(name, input || {})
+          if (name !== 'update_emotion') {
+            collectedToolCalls.push({ name, result })
           }
         }
-        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result })
+        toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
       }
 
-      currentMessages = [
-        ...currentMessages,
-        { role: 'assistant', content },
-        { role: 'user', content: toolResults },
-      ]
+      currentMessages = [...currentMessages, ...toolResults]
 
       if (nextWakeHours !== null) break
     }

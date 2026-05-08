@@ -97,14 +97,21 @@ function toOpenAIMessages(anthropicMessages: any[]): any[] {
   return result
 }
 
-async function openaiCall(opts: {
+function getNvidiaConfig() {
+  return {
+    apiKey: process.env.NVIDIA_API_KEY || '',
+    baseURL: 'https://integrate.api.nvidia.com',
+    model: 'minimaxai/minimax-m2.7',
+  }
+}
+
+async function doOpenaiCall(opts: {
   model: string
   system: string
   messages: any[]
   tools?: any[]
   max_tokens?: number
-}): Promise<any> {
-  const { apiKey, baseURL } = getAIConfig()
+}, cfg: { apiKey: string; baseURL: string }): Promise<any> {
   const body: any = {
     model: opts.model,
     max_tokens: opts.max_tokens ?? 4096,
@@ -117,11 +124,11 @@ async function openaiCall(opts: {
     body.tools = toOpenAITools(opts.tools)
     body.tool_choice = 'auto'
   }
-  const response = await fetch(`${baseURL}/v1/chat/completions`, {
+  const response = await fetch(`${cfg.baseURL}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${cfg.apiKey}`,
     },
     body: JSON.stringify(body),
   })
@@ -130,6 +137,23 @@ async function openaiCall(opts: {
     throw new Error(`AI API 错误: ${response.status} ${errText}`)
   }
   return response.json()
+}
+
+async function openaiCall(opts: {
+  model: string
+  system: string
+  messages: any[]
+  tools?: any[]
+  max_tokens?: number
+}): Promise<any> {
+  try {
+    return await doOpenaiCall(opts, getAIConfig())
+  } catch (primaryErr: any) {
+    const nvidia = getNvidiaConfig()
+    if (!nvidia.apiKey) throw primaryErr
+    console.warn('[ai] 主API失败，切换NVIDIA备用:', primaryErr.message)
+    return await doOpenaiCall({ ...opts, model: nvidia.model }, nvidia)
+  }
 }
 
 /** Convert OpenAI response format to the same shape anthropicCall returned.

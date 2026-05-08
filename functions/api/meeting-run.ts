@@ -2,8 +2,8 @@
 // Runs the full meeting workflow in the background, stores results in KV
 
 interface Env {
-  ANTHROPIC_API_KEY: string
-  ANTHROPIC_BASE_URL?: string
+  AI_API_KEY: string
+  AI_BASE_URL?: string
   AGENT_MEMORY: KVNamespace
 }
 
@@ -18,19 +18,18 @@ export const onRequestOptions: PagesFunction = async () =>
 
 // ── Simple AI call (no streaming, returns full text) ──
 async function aiCall(apiKey: string, baseURL: string, systemPrompt: string, messages: any[]): Promise<string> {
-  const res = await fetch(`${baseURL}/v1/messages`, {
+  const res = await fetch(`${baseURL}/v1/chat/completions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'deepseek-chat',
       max_tokens: 1500,
-      system: systemPrompt,
-      messages,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
     }),
   })
   if (!res.ok) throw new Error(`AI API error: ${res.status}`)
   const data: any = await res.json()
-  return data?.content?.[0]?.text || ''
+  return data?.choices?.[0]?.message?.content || ''
 }
 
 const AGENT_PROMPTS: Record<string, string> = {
@@ -213,14 +212,14 @@ async function runMeetingJob(
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUntil }) => {
-  const apiKey = env.ANTHROPIC_API_KEY
-  if (!apiKey) return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), { status: 500, headers: CORS })
+  const apiKey = env.AI_API_KEY
+  if (!apiKey) return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), { status: 500, headers: CORS })
 
   const { topic, brandInfo, brandContext } = await request.json() as any
   if (!topic) return new Response(JSON.stringify({ error: '缺少 topic' }), { status: 400, headers: CORS })
 
   const jobId = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
-  const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
 
   // 写入初始状态
   await env.AGENT_MEMORY.put(`meeting:${jobId}`, JSON.stringify({

@@ -1,0 +1,9 @@
+export DBURL='postgresql://neondb_owner:npg_u4JolQeAUK1W@ep-steep-dew-a1iir071.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=8'
+
+PGCONNECT_TIMEOUT=8 /opt/homebrew/opt/libpq/bin/psql "$DBURL" -Atc "select now(), count(*) from public.retail_orders;"
+
+PGCONNECT_TIMEOUT=8 /opt/homebrew/opt/libpq/bin/pg_dump "$DBURL" -F p -t public.retail_orders > /tmp/retail_orders_test.sql
+
+wc -l /tmp/retail_orders_test.sql
+
+bash scripts/restore_retail_orders_safe.sh

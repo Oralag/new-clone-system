@@ -1427,6 +1427,70 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         }
         break
       }
+
+      // ── 运营工具 ──────────────────────────────────────
+      case 'query_stock_warning': {
+        try {
+          const { threshold = 10, warehouse } = args as { threshold?: number; warehouse?: string }
+          const r = await http.post('/erp/stock/warning', { threshold, warehouse }, { silent: true })
+          if (r.data?.list?.length) {
+            const items = r.data.list.map((i: any) =>
+              `⚠️ [${i.goods_name}] 当前库存 ${i.stock} 件（预警线 ${i.threshold} 件）`
+            ).join('\n')
+            result = `📦 **库存预警报告**\n\n${items}\n\n共 ${r.data.list.length} 个商品低于预警线，建议立即处理。`
+          } else {
+            result = '✅ 当前无库存预警，所有商品库存充足。'
+          }
+        } catch (e: any) {
+          result = `❌ 查询失败：${e.message}`
+        }
+        break
+      }
+
+      case 'suggest_restock': {
+        try {
+          const { days = 30, min_urgency = 'all' } = args as { days?: number; min_urgency?: string }
+          const r = await http.post('/erp/stock/restock_suggest', { days, min_urgency }, { silent: true })
+          if (r.data?.list?.length) {
+            const items = r.data.list.map((i: any) => {
+              const emoji = i.urgency === 'high' ? '🔴' : i.urgency === 'medium' ? '🟡' : '🟢'
+              return `${emoji} [${i.goods_name}] 建议补货 ${i.qty} 件（库存 ${i.stock} 件，预计可售 ${i.days_left} 天）`
+            }).join('\n')
+            result = `📋 **补货建议报告**（参考过去 ${days} 天销量）\n\n${items}`
+          } else {
+            result = '✅ 当前无需补货，库存状况良好。'
+          }
+        } catch (e: any) {
+          result = `❌ 生成补货建议失败：${e.message}`
+        }
+        break
+      }
+
+      case 'create_purchase_draft': {
+        try {
+          const { supplier_name, items, remark, auto_audit = false } = args as any
+          if (!supplier_name || !items?.length) {
+            result = '❌ 缺少必填参数：supplier_name 和 items（至少1条）'
+            break
+          }
+          const r = await http.post('/erp/purchase/create', {
+            supplier_name,
+            items,
+            remark,
+            status: auto_audit ? 1 : 0,
+          }, { silent: true })
+          if (r.data?.id) {
+            const status = auto_audit ? '已自动审核' : '待审核（草稿）'
+            result = `✅ 采购单${status}\n单号：${r.data.id}\n供应商：${supplier_name}\n商品：${items.map((i: any) => `${i.goods_name}×${i.qty}`).join('、')}`
+          } else {
+            result = `❌ 创建失败：${r.message || '未知错误'}`
+          }
+        } catch (e: any) {
+          result = `❌ 创建采购单失败：${e.message}`
+        }
+        break
+      }
+
       default:
         result = `未知工具：${name}`
     }

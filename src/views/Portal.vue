@@ -192,6 +192,35 @@
         </div>
       </div>
 
+      <!-- 智能运营部门 -->
+      <div class="portal-card portal-card-ops" :class="{ 'card-pressed': pressedCard === 'ecommerce' }"
+        @click="go('/ecommerce')"
+        @touchstart.passive="pressedCard = 'ecommerce'"
+        @touchend.passive="pressedCard = ''"
+        @touchcancel.passive="pressedCard = ''">
+        <div class="card-icon card-icon-ops">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="3" width="20" height="14" rx="2" stroke="white" stroke-width="1.8"/>
+            <path d="M8 21h8M12 17v4" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M6 8l4 3-4 3V8z" fill="white" opacity="0.8"/>
+          </svg>
+        </div>
+        <h2 class="card-title">智能运营部门</h2>
+        <p class="card-desc">6大电商平台统一运营中枢。库存同步、订单聚合、AI智能运营，让数据驱动增长。</p>
+        <div class="card-tags">
+          <span class="tag tag-ops">淘宝</span>
+          <span class="tag tag-ops">京东</span>
+          <span class="tag tag-ops">拼多多</span>
+          <span class="tag tag-ops">抖音</span>
+          <span class="tag tag-ops">快手</span>
+          <span class="tag tag-ops">微信小店</span>
+        </div>
+        <div class="card-arrow">
+          <span>进入运营中心</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
       </div><!-- /cards-grid -->
       </div><!-- /cards-col -->
 
@@ -1028,6 +1057,32 @@ const TOOL_LABELS: Record<string, string> = {
   .portal-card-brand:hover {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #9333ea 100%);
     border-color: rgba(124,58,237,0.3);
+    box-shadow: none;
+  }
+}
+
+.portal-card-ops {
+  background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #155e75 100%);
+  border-color: rgba(8,145,178,0.3);
+  grid-column: 1 / -1;
+}
+.portal-card-ops .card-title { color: #fff; }
+.portal-card-ops .card-desc  { color: rgba(255,255,255,0.55); }
+.portal-card-ops .card-arrow { color: rgba(255,255,255,0.35); }
+.card-icon-ops { background: rgba(255,255,255,0.15); }
+.tag-ops { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+.portal-card-ops:hover,
+.portal-card-ops.card-pressed {
+  background: linear-gradient(135deg, #0e7490 0%, #0891b2 50%, #06b6d4 100%);
+  border-color: rgba(6,182,212,0.4);
+  box-shadow: 0 40px 80px rgba(8,145,178,0.3);
+}
+.portal-card-ops:hover .card-arrow,
+.portal-card-ops.card-pressed .card-arrow { color: #fff; gap: 12px; }
+@media (hover: none) {
+  .portal-card-ops:hover {
+    background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #155e75 100%);
+    border-color: rgba(8,145,178,0.3);
     box-shadow: none;
   }
 }

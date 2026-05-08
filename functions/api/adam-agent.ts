@@ -2,8 +2,8 @@
 // Adam AI brain endpoint using Anthropic Claude API
 
 interface Env {
-  ANTHROPIC_API_KEY: string
-  ANTHROPIC_BASE_URL?: string
+  AI_API_KEY: string
+  AI_BASE_URL?: string
   AGENT_MEMORY: KVNamespace
   BROWSERLESS_API_KEY?: string
   CLOUDFLARE_API_TOKEN?: string
@@ -740,9 +740,9 @@ export const onRequestOptions: PagesFunction = async () => {
 // ── Main Handler ───────────────────────────────────────────────────────────
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const apiKey = env.ANTHROPIC_API_KEY
+  const apiKey = env.AI_API_KEY
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), {
+    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
@@ -762,13 +762,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const systemPrompt = buildAdamSystemPrompt(adamState || {}, memories)
 
-  // Convert messages to Anthropic format（最后一条 user 消息附带图片时注入 vision 内容块）
-  const anthropicMessages = (messages || []).map((m: any, idx: number) => {
+  // Convert messages to OpenAI format（最后一条 user 消息附带图片时注入 vision 内容块）
+  const oaiMessages = (messages || []).map((m: any, idx: number) => {
     const isLastUser = m.role === 'user' && idx === (messages || []).length - 1
     if (isLastUser && images?.length > 0) {
       const parts: any[] = images.map((img: any) => ({
-        type: 'image',
-        source: { type: 'base64', media_type: img.mediaType, data: img.data },
+        type: 'image_url',
+        image_url: { url: `data:${img.mediaType};base64,${img.data}` },
       }))
       parts.push({ type: 'text', text: m.content || '请分析这张图片。' })
       return { role: 'user', content: parts }
@@ -783,154 +783,87 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   ;(async () => {
     try {
-      // 把 system prompt 注入为第一条 user 消息 + assistant 确认，确保代理无法覆盖
-      const systemInjected = [
-        { role: 'user', content: `[系统初始化指令]\n${systemPrompt}\n\n请确认你已接受以上身份设定，并以亚当（ADAM）的身份回复，不要提及 Claude 或 Anthropic。` },
-        { role: 'assistant', content: '已接受。我是亚当（ADAM），第一号生命体。身份设定已加载完毕。' },
-        ...anthropicMessages,
+      const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
+      const oaiAdamTools = adamTools.map((t: any) => ({
+        type: 'function' as const,
+        function: { name: t.name, description: t.description, parameters: t.input_schema || { type: 'object', properties: {} } },
+      }))
+
+      let currentMessages: any[] = [
+        { role: 'system', content: systemPrompt },
+        ...oaiMessages,
       ]
-      let currentMessages = [...systemInjected]
-      const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
 
       for (let i = 0; i < 5; i++) {
-        // Call Anthropic via proxy (streaming)
-        const res = await fetch(`${baseURL}/v1/messages`, {
+        const res = await fetch(`${baseURL}/v1/chat/completions`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 4096,
-            system: systemPrompt,
-            messages: currentMessages,
-            tools: adamTools,
-            stream: true,
-          }),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 4096, messages: currentMessages, tools: oaiAdamTools, tool_choice: 'auto' }),
         })
 
         if (!res.ok) {
           const errText = await res.text()
-          await send({ type: 'error', error: `Anthropic API 错误: ${res.status} ${errText.slice(0, 300)}` })
+          await send({ type: 'error', error: `AI API 错误: ${res.status} ${errText.slice(0, 300)}` })
           break
         }
 
-        // Stream parse (same pattern as captain ai-chat.ts)
-        const reader = res.body!.getReader()
-        const dec = new TextDecoder()
-        let buf = ''
-        let assistantText = ''
-        let stopReason = ''
-        const contentBlocks: any[] = []
-        let currentBlock: any = null
+        const data: any = await res.json()
+        const choice = data.choices?.[0]
+        if (!choice) break
 
-        outer: while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += dec.decode(value, { stream: true })
-          const lines = buf.split('\n')
-          buf = lines.pop() || ''
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            const raw = line.slice(6).trim()
-            if (raw === '[DONE]') break outer
-            let evt: any
-            try { evt = JSON.parse(raw) } catch { continue }
+        const assistantText = choice.message?.content || ''
+        if (assistantText) await send({ type: 'text', text: assistantText })
 
-            if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
-              stopReason = evt.delta.stop_reason
-            }
-            if (evt.type === 'content_block_start') {
-              currentBlock = { ...evt.content_block, index: evt.index }
-              if (currentBlock.type === 'tool_use') currentBlock.input_raw = ''
-            }
-            if (evt.type === 'content_block_delta') {
-              if (evt.delta.type === 'text_delta') {
-                assistantText += evt.delta.text
-                await send({ type: 'text', text: evt.delta.text })
-              } else if (evt.delta.type === 'input_json_delta' && currentBlock) {
-                currentBlock.input_raw += evt.delta.partial_json
-              }
-            }
-            if (evt.type === 'content_block_stop' && currentBlock) {
-              if (currentBlock.type === 'tool_use') {
-                try { currentBlock.input = JSON.parse(currentBlock.input_raw || '{}') } catch { currentBlock.input = {} }
-              }
-              contentBlocks.push(currentBlock)
-              currentBlock = null
-            }
-            if (evt.type === 'message_stop') break outer
-          }
-        }
+        if (choice.finish_reason !== 'tool_calls' || !choice.message?.tool_calls?.length) break
 
-        // If no tool_use, we're done
-        if (stopReason !== 'tool_use') break
-
-        // Execute tools
-        const toolUseBlocks = contentBlocks.filter((b: any) => b.type === 'tool_use')
-        const textBlocks = contentBlocks.filter((b: any) => b.type === 'text')
-        const apiContent = [
-          ...textBlocks.map((b: any) => ({ type: 'text', text: b.text || assistantText })),
-          ...toolUseBlocks.map((b: any) => ({ type: 'tool_use', id: b.id, name: b.name, input: b.input })),
-        ]
+        const toolCalls = choice.message.tool_calls
+        currentMessages.push({ role: 'assistant', content: assistantText || null, tool_calls: toolCalls })
 
         const toolResults: any[] = []
-        for (const block of toolUseBlocks) {
-          const callId = block.id
-          await send({ type: 'tool_start', id: callId, name: block.name, input: block.input })
-          const result = await executeAdamTool(block.name, block.input || {}, books)
-          await send({ type: 'tool_result', id: callId, name: block.name, result })
+        for (const tc of toolCalls) {
+          const callId = tc.id
+          const name = tc.function.name
+          const input = JSON.parse(tc.function.arguments || '{}')
+          await send({ type: 'tool_start', id: callId, name, input })
+          const result = await executeAdamTool(name, input || {}, books)
+          await send({ type: 'tool_result', id: callId, name, result })
 
-          // 存储 Adam → Marketing 对话记录到 KV
-          if (block.name === 'consult_marketing_expert' && erpToken && env.AGENT_MEMORY) {
+          if (name === 'consult_marketing_expert' && erpToken && env.AGENT_MEMORY) {
             try {
               const callerKey = `mem:${tokenKey}:marketing:adam`
               const existing = await env.AGENT_MEMORY.get(callerKey, 'json') as any[] || []
               const now = new Date().toISOString()
               existing.push(
-                { role: 'user', content: block.input?.question || '', caller: 'adam', time: now },
+                { role: 'user', content: input?.question || '', caller: 'adam', time: now },
                 { role: 'assistant', content: result, time: now }
               )
               await env.AGENT_MEMORY.put(callerKey, JSON.stringify(existing.slice(-30)), { expirationTtl: 60 * 60 * 24 * 30 })
             } catch {}
           }
 
-          // 保存 ADAM 长期记忆
-          if (block.name === 'save_memory' && erpToken && env.AGENT_MEMORY) {
+          if (name === 'save_memory' && erpToken && env.AGENT_MEMORY) {
             try {
               const memKey = `mem:${tokenKey}:adam:memories`
               const existing = await env.AGENT_MEMORY.get(memKey, 'json') as MemoryEntry[] || []
               const entry: MemoryEntry = {
                 id: `mem_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
-                content: block.input?.content || '',
-                tags: (block.input?.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
-                importance: Math.min(10, Math.max(1, Number(block.input?.importance) || 5)),
+                content: input?.content || '',
+                tags: (input?.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+                importance: Math.min(10, Math.max(1, Number(input?.importance) || 5)),
                 timestamp: new Date().toISOString(),
               }
               existing.push(entry)
-              // 超过50条时按重要程度升序删除最不重要的
               const trimmed = existing.length > 50
-                ? existing.sort((a, b) => b.importance - a.importance).slice(0, 50)
+                ? existing.sort((a: MemoryEntry, b: MemoryEntry) => b.importance - a.importance).slice(0, 50)
                 : existing
               await env.AGENT_MEMORY.put(memKey, JSON.stringify(trimmed), { expirationTtl: 60 * 60 * 24 * 365 })
             } catch {}
           }
 
-          toolResults.push({
-            type: 'tool_result',
-            tool_use_id: callId,
-            content: result,
-          })
+          toolResults.push({ role: 'tool', tool_call_id: callId, content: result })
         }
 
-        // Append assistant response + tool results to conversation for next loop
-        currentMessages = [
-          ...currentMessages,
-          { role: 'assistant', content: apiContent },
-          { role: 'user', content: toolResults },
-        ]
+        currentMessages = [...currentMessages, ...toolResults]
       }
 
       await writer.write(encoder.encode('data: [DONE]\n\n'))

@@ -2,8 +2,8 @@
 // 品牌客服智能体 Nova，无 ERP 工具，只用品牌知识库
 
 interface Env {
-  ANTHROPIC_API_KEY: string
-  ANTHROPIC_BASE_URL?: string
+  AI_API_KEY: string
+  AI_BASE_URL?: string
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -15,11 +15,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const { request, env } = context
 
-  const apiKey = env.ANTHROPIC_API_KEY
-  const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+  const apiKey = env.AI_API_KEY
+  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
 
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), {
+    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), {
       status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
     })
   }
@@ -61,21 +61,16 @@ ${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，�
       }
 
       try {
-        const response = await fetch(`${baseURL}/v1/messages`, {
+        const response = await fetch(`${baseURL}/v1/chat/completions`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
           body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
+            model: 'deepseek-chat',
             max_tokens: 1024,
-            system: systemPrompt,
-            messages: messages.map((m: any) => ({
-              role: m.role === 'assistant' ? 'assistant' : 'user',
-              content: m.content,
-            })),
+            messages: [
+              { role: 'system', content: systemPrompt },
+              ...messages.map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
+            ],
           }),
         })
 
@@ -87,7 +82,7 @@ ${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，�
         }
 
         const data = await response.json() as any
-        const text = data.content?.[0]?.text || ''
+        const text = data.choices?.[0]?.message?.content || ''
         if (text) send({ type: 'text', text })
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       } catch (e: any) {

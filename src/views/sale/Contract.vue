@@ -501,34 +501,62 @@
               <span style="font-size:11px;color:rgba(29,29,31,0.35)">审核时自动核销</span>
             </div>
             <div class="settle-item">
-              <span class="settle-label">单据支出</span>
-              <el-input-number v-model="fd.expense_amount" :min="0" :precision="2" :disabled="isReadonly"
-                size="small" style="width:130px" />
-              <template v-if="isReadonly && Number(fd.expense_amount || 0) > 0">
-                <el-tag :type="getSaleExpensePayStatus(fd).type" size="small" style="margin-left:8px">
-                  {{ getSaleExpensePayStatus(fd).label }}
-                </el-tag>
-                <el-button v-if="getSaleExpensePayStatus(fd).label === '待付'" type="warning" link size="small"
-                  style="margin-left:4px" @click="openSaleExpensePayDialog(fd)">支出付款</el-button>
-              </template>
-            </div>
-            <div class="settle-item">
               <span class="settle-label">是否分期</span>
               <el-switch v-model="fd.installment" :disabled="isReadonly" active-text="是" inactive-text="否" />
             </div>
-            <div class="settle-item">
-              <span class="settle-label">物流费用</span>
-              <el-input-number v-model="fd.freight_amount" :min="0" :precision="2" :disabled="isReadonly"
-                size="small" style="width:130px" @change="calcSettle" />
-            </div>
-            <div class="settle-item">
-              <span class="settle-label">费用承担</span>
-              <el-select v-model="fd.freight_bearer" size="small" style="width:120px" :disabled="isReadonly">
-                <el-option label="买方承担" value="buyer" />
-                <el-option label="卖方承担" value="seller" />
-                <el-option label="各付一半" value="half" />
-                <el-option label="免运费" value="free" />
-              </el-select>
+            <!-- 附加费用：编辑时始终显示，只读时有费用才显示 -->
+            <div v-if="!isReadonly || fd.fee_items.length > 0" class="settle-item fee-items-row" style="align-items:flex-start">
+              <span class="settle-label" style="padding-top:6px">附加费用</span>
+              <div style="margin-left:8px">
+                <div v-for="(fee, idx) in fd.fee_items" :key="idx" class="fee-item-line">
+                  <el-select
+                    v-model="fee.name"
+                    size="small"
+                    style="width:120px"
+                    :disabled="isReadonly"
+                    filterable
+                    allow-create
+                    default-first-option
+                    placeholder="支出类型"
+                  >
+                    <el-option label="快递/物流" value="快递/物流" />
+                    <el-option label="包装支出" value="包装支出" />
+                    <el-option label="推广费/线上" value="推广费/线上" />
+                    <el-option label="路费/收费站" value="路费/收费站" />
+                    <el-option label="劳务费" value="劳务费" />
+                    <el-option label="其他支出" value="其他支出" />
+                  </el-select>
+                  <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small"
+                    style="width:110px;margin-left:6px" :disabled="isReadonly" placeholder="金额" />
+                  <el-select v-model="fee.bearer" size="small" style="width:100px;margin-left:6px" :disabled="isReadonly">
+                    <el-option label="我方承担" value="buyer" />
+                    <el-option label="对方承担" value="seller" />
+                  </el-select>
+                  <el-input
+                    v-model="fee.supplier_name"
+                    size="small"
+                    style="width:120px;margin-left:6px"
+                    :disabled="isReadonly"
+                    placeholder="收款单位"
+                  />
+                  <template v-if="isReadonly">
+                    <el-tag :type="getFeeItemPayStatus(fd, idx).type" size="small" style="margin-left:6px">
+                      {{ getFeeItemPayStatus(fd, idx).label }}
+                    </el-tag>
+                    <el-button
+                      v-if="getFeeItemPayStatus(fd, idx).label === '待付'"
+                      type="warning" link size="small" style="margin-left:4px"
+                      @click="openFeePayDialog(fd, idx)"
+                    >付款</el-button>
+                  </template>
+                  <el-button v-if="!isReadonly" type="danger" link :icon="Delete" size="small"
+                    style="margin-left:6px" @click="fd.fee_items.splice(idx, 1)" />
+                </div>
+                <el-button v-if="!isReadonly" type="primary" link size="small" :icon="Plus"
+                  style="margin-top:4px" @click="fd.fee_items.push({ name: '快递/物流', amount: 0, bearer: 'buyer', supplier_name: '' })">
+                  添加费用项
+                </el-button>
+              </div>
             </div>
           </div>
           <div class="settle-summary">
@@ -539,13 +567,9 @@
               <span style="margin-left:24px">折扣额：<b style="color:#16a34a">-¥{{ Number(fd.discount_type === 'percent' ? fd.total_amount * (fd.discount_value || 0) / 100 : fd.discount_value).toFixed(2) }}</b></span>
             </template>
             <span style="margin-left:24px">折后金额：<b>¥{{ fd.after_discount.toFixed(2) }}</b></span>
-            <template v-if="fd.freight_amount > 0">
-              <span style="margin-left:24px">物流费：<b style="color:#7c3aed">¥{{ freightCharge.toFixed(2) }}</b></span>
-              <span style="margin-left:8px;font-size:12px;color:rgba(29,29,31,0.35)">（{{
-                fd.freight_bearer === 'buyer' ? '买方承担' :
-                fd.freight_bearer === 'seller' ? '卖方承担' :
-                fd.freight_bearer === 'half' ? '各付一半' : '免运费'
-              }}）</span>
+            <template v-if="fd.fee_items.length > 0">
+              <span style="margin-left:24px">我方承担支出：<b style="color:#7c3aed">¥{{ feeBuyerCost.toFixed(2) }}</b></span>
+              <span v-if="feeSellerCost > 0" style="margin-left:12px">对方承担：<b style="color:#6b7280">¥{{ feeSellerCost.toFixed(2) }}</b></span>
             </template>
             <template v-if="Number(fd.income_amount) !== 0">
               <span style="margin-left:24px">其他收支影响：<b :style="{ color: Number(fd.income_amount) > 0 ? '#16a34a' : '#dc2626' }">{{ Number(fd.income_amount) > 0 ? '-' : '+' }}¥{{ Math.abs(Number(fd.income_amount)).toFixed(2) }}</b></span>
@@ -664,35 +688,36 @@
       </template>
     </el-dialog>
 
-    <!-- 销售单据支出付款弹窗 -->
-    <el-dialog v-model="saleExpensePayVisible" title="单据支出付款" width="400px" append-to-body>
-      <el-form :model="saleExpensePayForm" label-width="90px">
+    <!-- 附加费用付款弹窗 -->
+    <el-dialog v-model="feePayVisible" :title="`${feePayForm.feeName} 付款`" width="420px" append-to-body>
+      <el-form :model="feePayForm" label-width="90px">
         <el-form-item label="销售合同">
-          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ saleExpensePayForm.orderSn }} · {{ saleExpensePayForm.customerName }}</span>
+          <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ feePayForm.orderSn }} · {{ feePayForm.customerName }}</span>
         </el-form-item>
-        <el-form-item label="支出金额">
-          <span style="font-size:15px;font-weight:700;color:#d97706">¥{{ saleExpensePayForm.amount.toFixed(2) }}</span>
+        <el-form-item label="费用类型">
+          <span style="font-weight:600">{{ feePayForm.feeName }}</span>
+        </el-form-item>
+        <el-form-item label="费用金额">
+          <span style="font-size:15px;font-weight:700;color:#8b5cf6">¥{{ feePayForm.amount.toFixed(2) }}</span>
         </el-form-item>
         <el-form-item label="付款账户">
-          <el-select v-model="saleExpensePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onSaleExpensePayFundChange">
+          <el-select v-model="feePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onFeePayFundChange">
             <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="付款对象">
-          <el-select v-model="saleExpensePayForm.contact_name" placeholder="销售单据支出" filterable allow-create default-first-option style="width:100%">
-            <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.name || c.nickname" />
-          </el-select>
+          <el-input v-model="feePayForm.contact_name" placeholder="如：圆通快递、泰成物流等" />
         </el-form-item>
         <el-form-item label="付款日期">
-          <el-date-picker v-model="saleExpensePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+          <el-date-picker v-model="feePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="saleExpensePayForm.remark" placeholder="可选" />
+          <el-input v-model="feePayForm.remark" placeholder="可选" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="saleExpensePayVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saleExpensePaySubmitting" @click="submitSaleExpensePay">确认付款</el-button>
+        <el-button @click="feePayVisible = false">取消</el-button>
+        <el-button type="primary" :loading="feePaySubmitting" @click="submitFeePay">确认付款</el-button>
       </template>
     </el-dialog>
 
@@ -877,6 +902,8 @@ const isReadonly = ref(false)
 const receiptMap = ref<Record<string, number>>({}) // key: order_sn, value: total received
 // 单据支出付款 Map：contract_order id → 已付金额
 const saleExpensePaidById = ref<Record<number, number>>({})
+// 附加费用付款 Map："orderId:feeName" → 已付金额
+const feeItemPaidMap = ref<Record<string, number>>({})
 
 async function loadReceiptMap() {
   try {
@@ -889,87 +916,115 @@ async function loadReceiptMap() {
     }
     receiptMap.value = map
   } catch { /* ignore */ }
-  // 同时加载单据支出付款 map
+  // 同时加载付款 map（单据支出 + 附加费用）
   try {
     const res2 = await getPayReceiptList({ list_rows: 2000 })
     const rows2: any[] = res2?.data?.rows ?? []
     const expMap: Record<number, number> = {}
+    const feeMap: Record<string, number> = {}
     for (const r of rows2) {
-      const m = String(r?.remark || '').match(/销售单据支出 #(\d+)/)
-      if (m) {
-        const id = Number(m[1])
-        expMap[id] = (expMap[id] || 0) + Number(r.amount || 0)
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const remark = String(r?.remark || '')
+      const mExp = remark.match(/销售单据支出 #(\d+)/)
+      if (mExp) {
+        const id = Number(mExp[1])
+        expMap[id] = (expMap[id] || 0) + amt
+      }
+      const mFee = remark.match(/销售合同附加费用\s*#(\d+):(.+?)(?:\s|\[|$)/)
+      if (mFee) {
+        const id = Number(mFee[1])
+        const feeName = mFee[2].trim()
+        const key = `${id}:${feeName}`
+        feeMap[key] = (feeMap[key] || 0) + amt
       }
     }
     saleExpensePaidById.value = expMap
+    feeItemPaidMap.value = feeMap
   } catch { /* ignore */ }
 }
 
-function getSaleExpensePayStatus(row: any): { label: string; type: string } {
+function getFeeItemPayStatus(row: any, idx: number): { label: string; type: string } {
   if (Number(row.status) !== 1) return { label: '—', type: 'info' }
-  const expAmt = Number(row.expense_amount || 0)
-  if (expAmt <= 0) return { label: '—', type: 'info' }
-  const paid = saleExpensePaidById.value[row.id] || 0
-  if (paid >= expAmt - 0.01) return { label: '已付', type: 'success' }
+  let items: any[] = []
+  try { items = Array.isArray(row.fee_items) ? row.fee_items : JSON.parse(row.fee_items || '[]') } catch { items = [] }
+  const fee = items[idx]
+  if (!fee || Number(fee.amount || 0) <= 0) return { label: '—', type: 'info' }
+  if (fee.bearer === 'seller' || fee.bearer === 'free') return { label: '对方承担', type: 'info' }
+  const needPay = fee.bearer === 'half' ? Number(fee.amount) / 2 : Number(fee.amount)
+  const key = `${row.id}:${String(fee.name || '').trim()}`
+  const paid = feeItemPaidMap.value[key] || 0
+  if (paid >= needPay - 0.01) return { label: '已付', type: 'success' }
   return { label: '待付', type: 'warning' }
 }
 
-// ── 销售单据支出付款弹窗 ──────────────────────────────────────────────────────
-const saleExpensePayVisible = ref(false)
-const saleExpensePaySubmitting = ref(false)
-const saleExpensePayForm = reactive({
+// ── 附加费用付款弹窗 ──────────────────────────────────────────────────────────
+const feePayVisible = ref(false)
+const feePaySubmitting = ref(false)
+const feePayForm = reactive({
   orderId: 0,
   orderSn: '',
   customerName: '',
-  contact_name: '销售单据支出',
+  feeName: '',
+  feeIndex: -1,
   amount: 0,
+  bearer: 'buyer',
+  contact_name: '',
   fund_id: null as number | null,
   fund_name: '',
   pay_date: new Date().toISOString().slice(0, 10),
   remark: '',
 })
 
-function openSaleExpensePayDialog(row: any) {
-  saleExpensePayForm.orderId = row.id
-  saleExpensePayForm.orderSn = getContractSn(row)
-  saleExpensePayForm.customerName = row.customer_name || ''
-  saleExpensePayForm.contact_name = '销售单据支出'
-  saleExpensePayForm.amount = Number(row.expense_amount || 0)
-  saleExpensePayForm.fund_id = null
-  saleExpensePayForm.fund_name = ''
-  saleExpensePayForm.pay_date = new Date().toISOString().slice(0, 10)
-  saleExpensePayForm.remark = ''
-  saleExpensePayVisible.value = true
+function openFeePayDialog(row: any, idx: number) {
+  let items: any[] = []
+  try { items = Array.isArray(row.fee_items) ? row.fee_items : JSON.parse(row.fee_items || '[]') } catch { items = [] }
+  const fee = items[idx]
+  if (!fee) return
+  feePayForm.orderId = row.id
+  feePayForm.orderSn = getContractSn(row)
+  feePayForm.customerName = row.customer_name || ''
+  feePayForm.feeName = String(fee.name || '').trim()
+  feePayForm.feeIndex = idx
+  feePayForm.amount = Number(fee.amount || 0)
+  feePayForm.bearer = fee.bearer || 'buyer'
+  feePayForm.contact_name = fee.supplier_name || ''
+  feePayForm.fund_id = null
+  feePayForm.fund_name = ''
+  feePayForm.pay_date = new Date().toISOString().slice(0, 10)
+  feePayForm.remark = ''
+  feePayVisible.value = true
 }
 
-function onSaleExpensePayFundChange(id: number) {
+function onFeePayFundChange(id: number) {
   const f = fundOptions.value.find((f: any) => f.id === id)
-  saleExpensePayForm.fund_name = f?.name || ''
+  feePayForm.fund_name = f?.name || ''
 }
 
-async function submitSaleExpensePay() {
-  if (!saleExpensePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
-  saleExpensePaySubmitting.value = true
+async function submitFeePay() {
+  if (!feePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  const needPay = feePayForm.bearer === 'half' ? feePayForm.amount / 2 : feePayForm.amount
+  feePaySubmitting.value = true
   try {
     await createPayReceipt({
       contact_type: 'other',
-      contact_name: saleExpensePayForm.contact_name || '销售单据支出',
-      order_sn: saleExpensePayForm.orderSn,
-      order_id: saleExpensePayForm.orderId,
-      amount: saleExpensePayForm.amount,
-      pay_date: saleExpensePayForm.pay_date,
-      fund_id: saleExpensePayForm.fund_id,
-      fund_name: saleExpensePayForm.fund_name,
-      remark: `销售单据支出 #${saleExpensePayForm.orderId}${saleExpensePayForm.remark ? ' ' + saleExpensePayForm.remark : ''}`,
+      contact_name: feePayForm.contact_name || feePayForm.feeName,
+      order_sn: feePayForm.orderSn,
+      order_id: feePayForm.orderId,
+      amount: needPay,
+      pay_date: feePayForm.pay_date,
+      fund_id: feePayForm.fund_id,
+      fund_name: feePayForm.fund_name,
+      remark: `销售合同附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.contact_name ? ' [' + feePayForm.contact_name + ']' : ''}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
     })
-    ElMessage.success('支出付款成功')
-    saleExpensePayVisible.value = false
+    ElMessage.success('付款成功')
+    feePayVisible.value = false
     loadReceiptMap()
     tableRef.value?.refresh()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '付款失败')
   } finally {
-    saleExpensePaySubmitting.value = false
+    feePaySubmitting.value = false
   }
 }
 
@@ -1129,6 +1184,20 @@ async function loadCustomerPrepay(customerId: number) {
   } catch { customerPrepayBalance.value = 0 }
 }
 
+function tryAutoOpen() {
+  if (!route.query.auto_open) return
+  const sn = String(route.query.contract_no || '').trim()
+  if (!sn) return
+  const attempt = (n = 0) => {
+    const row = (tableRef.value?.tableData ?? []).find((r: any) =>
+      r.order_sn === sn || r.order_no === sn || r.contract_code === sn
+    )
+    if (row) { openEdit(row, true); return }
+    if (n < 15) setTimeout(() => attempt(n + 1), 400)
+  }
+  attempt()
+}
+
 onMounted(async () => {
   await Promise.all([loadCustomers(), loadStaff(), loadFunds(), loadReceiptMap()])
   handleRouteFromOffer()
@@ -1144,6 +1213,7 @@ onMounted(async () => {
       }
     })
   }
+  tryAutoOpen()
 })
 
 onActivated(() => {
@@ -1156,6 +1226,7 @@ onActivated(() => {
     searchForm.contract_no = String(route.query.contract_no)
     tableRef.value?.refresh()
   }
+  tryAutoOpen()
 })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
@@ -1192,6 +1263,7 @@ const defaultFd = () => ({
   prepay_amount: 0,   // 本次使用预付款金额
   expense_amount: 0,
   installment: false,
+  fee_items: [] as { name: string; amount: number; bearer: string; supplier_name: string }[],
   items: [] as ContractItem[],
 })
 
@@ -1249,13 +1321,9 @@ const totalNoTax = computed(() =>
 const totalTax = computed(() =>
   fd.items.reduce((s, r) => s + (r.num || 0) * (r.price_no_tax || 0) * (r.tax_rate || 0) / 100, 0)
 )
-const freightCharge = computed(() =>
-  fd.freight_bearer === 'buyer' ? Number(fd.freight_amount || 0)
-    : fd.freight_bearer === 'half' ? Number(fd.freight_amount || 0) / 2
-    : 0
-)
+const freightCharge = computed(() => 0) // legacy: freight now tracked via fee_items
 const finalReceivable = computed(() =>
-  Math.max(0, Number(fd.after_discount || 0) + freightCharge.value - Number(fd.income_amount || 0))
+  Math.max(0, Number(fd.after_discount || 0) - Number(fd.income_amount || 0))
 )
 const finalPending = computed(() =>
   Math.max(0, finalReceivable.value - Number(fd.prepay_amount || 0) - Number(fd.receive_amount || 0))
@@ -1263,16 +1331,24 @@ const finalPending = computed(() =>
 const totalCost = computed(() =>
   (fd.items as any[]).reduce((s: number, r: any) => s + (r.num || 0) * (r.cost_price || 0), 0)
 )
-const freightCostSeller = computed(() =>
-  fd.freight_bearer === 'seller' ? Number(fd.freight_amount || 0)
-    : fd.freight_bearer === 'half' ? Number(fd.freight_amount || 0) / 2
-    : 0
+const freightCostSeller = computed(() => 0) // legacy: freight now tracked via fee_items
+const feeBuyerCost = computed(() =>
+  fd.fee_items.reduce((s, f) => {
+    if (f.bearer === 'seller' || f.bearer === 'free') return s
+    return s + (f.bearer === 'half' ? Number(f.amount || 0) / 2 : Number(f.amount || 0))
+  }, 0)
+)
+const feeSellerCost = computed(() =>
+  fd.fee_items.reduce((s, f) => {
+    if (f.bearer === 'buyer' || f.bearer === 'free') return s
+    return s + (f.bearer === 'half' ? Number(f.amount || 0) / 2 : Number(f.amount || 0))
+  }, 0)
 )
 const netProfit = computed(() =>
   Number(fd.after_discount || 0)
   - totalCost.value
   - freightCostSeller.value
-  - Number(fd.expense_amount || 0)
+  - feeBuyerCost.value
 )
 const profitRate = computed(() => fd.after_discount > 0 ? (netProfit.value / fd.after_discount * 100) : 0)
 
@@ -1430,6 +1506,22 @@ async function openEdit(row: any, readonly = false) {
   fd.source_offer_id = parseSourceOfferId(row.remark || '')
   fd.prepay_amount = Number(row.prepay_amount || parsePrepayAmount(row.remark || '') || 0)
   fd.expense_amount = Number(row.expense_amount || 0)
+  // 解析 fee_items；若没有则从旧的 expense_amount/freight_amount 迁移
+  try {
+    const raw = row.fee_items
+    fd.fee_items = raw && (Array.isArray(raw) ? raw.length : raw !== '[]' && raw !== '' && raw !== 'null')
+      ? (Array.isArray(raw) ? raw : JSON.parse(raw))
+      : []
+  } catch { fd.fee_items = [] }
+  if (!fd.fee_items.length) {
+    // 迁移旧字段：freight_amount + bearer，以及 expense_amount
+    if (Number(row.freight_amount || 0) > 0) {
+      fd.fee_items.push({ name: '运费', amount: Number(row.freight_amount), bearer: row.freight_bearer || 'buyer', supplier_name: '' })
+    }
+    if (Number(row.expense_amount || 0) > 0) {
+      fd.fee_items.push({ name: '单据支出', amount: Number(row.expense_amount), bearer: 'buyer', supplier_name: '' })
+    }
+  }
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   await ensureItemCosts(fd.items as ContractItem[])
   calcTotal()
@@ -1448,6 +1540,18 @@ async function openEdit(row: any, readonly = false) {
       fd.source_offer_id = parseSourceOfferId(full.remark || '')
       fd.prepay_amount = Number(full.prepay_amount || parsePrepayAmount(full.remark || '') || fd.prepay_amount || 0)
       fd.items = items.length ? items : (()=>{ try { return Array.isArray(full.goods_info) ? full.goods_info : JSON.parse(full.goods_info||'[]') } catch { return [] } })()
+      // 重新解析 fee_items（详情可能带有已保存的 fee_items）
+      try {
+        const rawFull = full.fee_items
+        const parsed = rawFull && (Array.isArray(rawFull) ? rawFull.length : rawFull !== '[]' && rawFull !== '' && rawFull !== 'null')
+          ? (Array.isArray(rawFull) ? rawFull : JSON.parse(rawFull))
+          : []
+        if (parsed.length) fd.fee_items = parsed
+      } catch { /* keep existing */ }
+      if (!fd.fee_items.length) {
+        if (Number(full.freight_amount || 0) > 0) fd.fee_items.push({ name: '运费', amount: Number(full.freight_amount), bearer: full.freight_bearer || 'buyer', supplier_name: '' })
+        if (Number(full.expense_amount || 0) > 0) fd.fee_items.push({ name: '单据支出', amount: Number(full.expense_amount), bearer: 'buyer', supplier_name: '' })
+      }
       await ensureItemCosts(fd.items as ContractItem[])
       calcTotal()
     }
@@ -1683,6 +1787,7 @@ async function handleSave(andAudit = false) {
       need_invoice: fd.need_invoice ? 1 : 0,
       installment: fd.installment ? 1 : 0,
       expense_amount: Number(fd.expense_amount || 0),
+      fee_items: JSON.stringify(fd.fee_items),
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id

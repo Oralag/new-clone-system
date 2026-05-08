@@ -33,6 +33,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/offer', name: 'SaleOffer', component: () => import('@/views/sale/Offer.vue'), meta: { title: '销售报价' } },
       { path: 'sale/sample', name: 'SaleSample', component: () => import('@/views/sale/Sample.vue'), meta: { title: '样品管理' } },
       { path: 'sale/contract', name: 'SaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售合同' } },
+      { path: 'sale/contract/view/:id', name: 'SaleContractView', component: () => import('@/views/sale/ContractView.vue'), meta: { title: '查看合同' } },
       { path: 'sale/out', name: 'SaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'SaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
 
@@ -50,6 +51,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'procure/supplier', name: 'ProcureSupplier', component: () => import('@/views/procure/SupplierList.vue'), meta: { title: '供应商管理' } },
       { path: 'procure/plan', name: 'ProcurePlan', component: () => import('@/views/procure/Plan.vue'), meta: { title: '采购计划' } },
       { path: 'procure/order', name: 'ProcureOrder', component: () => import('@/views/procure/Order.vue'), meta: { title: '采购订单' } },
+      { path: 'procure/order/view/:id', name: 'ProcureOrderView', component: () => import('@/views/procure/OrderView.vue'), meta: { title: '查看采购单' } },
       { path: 'procure/inhouse', name: 'ProcureInhouse', component: () => import('@/views/procure/Inhouse.vue'), meta: { title: '采购入库' } },
       { path: 'procure/return', name: 'ProcureReturn', component: () => import('@/views/procure/Return.vue'), meta: { title: '采购退货' } },
 
@@ -156,6 +158,15 @@ const routes: RouteRecordRaw[] = [
       { path: 'personnel/contract', name: 'PersonnelContract', component: () => import('@/views/personnel/Contract.vue'), meta: { title: '劳动合同' } },
       { path: 'personnel/social', name: 'PersonnelSocial', component: () => import('@/views/personnel/Social.vue'), meta: { title: '社保管理' } },
       { path: 'personnel/welfare', name: 'PersonnelWelfare', component: () => import('@/views/personnel/Welfare.vue'), meta: { title: '福利管理' } },
+
+      // 电商运营
+      { path: 'ecommerce', redirect: '/ecommerce/overview' },
+      { path: 'ecommerce/overview', name: 'EcommerceOverview', component: () => import('@/views/ecommerce/Overview.vue'), meta: { title: '运营大屏' } },
+      { path: 'ecommerce/platforms', name: 'EcommercePlatforms', component: () => import('@/views/ecommerce/Platforms.vue'), meta: { title: '平台管理' } },
+      { path: 'ecommerce/orders', name: 'EcommerceOrders', component: () => import('@/views/ecommerce/Orders.vue'), meta: { title: '订单中心' } },
+      { path: 'ecommerce/stock', name: 'EcommerceStock', component: () => import('@/views/ecommerce/Stock.vue'), meta: { title: '库存同步' } },
+      { path: 'ecommerce/offline', name: 'EcommerceOffline', component: () => import('@/views/ecommerce/Offline.vue'), meta: { title: '线下运营' } },
+      { path: 'ecommerce/agent', name: 'EcommerceAgent', component: () => import('@/views/ecommerce/Agent.vue'), meta: { title: '智能运营' } },
     ],
   },
   // ── 移动协作模块（独立布局）────────────

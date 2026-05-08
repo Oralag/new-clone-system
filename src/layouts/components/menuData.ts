@@ -217,4 +217,17 @@ export const menuData: TopMenuItem[] = [
       { key: 'personnel-welfare', title: '福利管理', path: '/personnel/welfare' },
     ],
   },
+  {
+    key: 'ecommerce',
+    title: '电商运营',
+    icon: 'DataLine',
+    children: [
+      { key: 'ecommerce-overview', title: '运营大屏', path: '/ecommerce/overview' },
+      { key: 'ecommerce-platforms', title: '平台管理', path: '/ecommerce/platforms' },
+      { key: 'ecommerce-orders', title: '订单中心', path: '/ecommerce/orders' },
+      { key: 'ecommerce-stock', title: '库存同步', path: '/ecommerce/stock' },
+      { key: 'ecommerce-offline', title: '线下运营', path: '/ecommerce/offline' },
+      { key: 'ecommerce-agent', title: '智能运营', path: '/ecommerce/agent' },
+    ],
+  },
 ]

@@ -2,8 +2,8 @@
 // Mirrors the logic in src/server/viteAiPlugin.ts
 
 interface Env {
-  ANTHROPIC_API_KEY: string
-  ANTHROPIC_BASE_URL?: string
+  AI_API_KEY: string
+  AI_BASE_URL?: string
 }
 
 const DEFAULT_ERP_BASE = 'https://saas.mzth.cn/adminapi'
@@ -656,35 +656,42 @@ export const onRequestOptions: PagesFunction = async () => {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const apiKey = env.ANTHROPIC_API_KEY
+  const apiKey = env.AI_API_KEY
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }), {
+    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
   }
-  const baseURL = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
   const erpToken = request.headers.get('x-erp-token') || ''
   const { messages, images, books, userMemory } = await request.json() as any
 
   const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
-  // 有图片时附加完整识别规则；无图片时用精简 prompt
   const intent = images?.length > 0 ? 'create_with_image' : detectIntent(lastUserMsg?.content || '')
-  const systemPrompt = getSystemPrompt(intent) + (userMemory ? `\n\n${userMemory}` : '')
+  const systemContent = getSystemPrompt(intent) + (userMemory ? `\n\n${userMemory}` : '')
 
-  // Build API messages — inject images into last user message if present
-  const apiMessages = messages.map((m: any, idx: number) => {
+  // Convert Anthropic-style tools to OpenAI-style functions
+  const openAITools = allTools.map((t: any) => ({
+    type: 'function' as const,
+    function: { name: t.name, description: t.description, parameters: t.input_schema },
+  }))
+
+  // Build API messages with system prompt + inject images
+  const apiMessages: any[] = [{ role: 'system', content: systemContent }]
+  for (const [idx, m] of messages.entries()) {
     const isLastUser = m.role === 'user' && idx === messages.length - 1
     if (isLastUser && images?.length > 0) {
       const content: any[] = images.map((img: any) => ({
-        type: 'image',
-        source: { type: 'base64', media_type: img.mediaType, data: img.data },
+        type: 'image_url',
+        image_url: { url: `data:${img.mediaType};base64,${img.data}` },
       }))
       content.push({ type: 'text', text: m.content || '请识别这张单据图片并帮我录入系统。' })
-      return { role: 'user', content }
+      apiMessages.push({ role: 'user', content })
+    } else {
+      apiMessages.push({ role: m.role, content: m.content })
     }
-    return { role: m.role, content: m.content }
-  })
+  }
 
   const { readable, writable } = new TransformStream()
   const writer = writable.getWriter()
@@ -695,22 +702,31 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     try {
       let loopMessages = [...apiMessages]
       for (let i = 0; i < 5; i++) {
-        const res = await fetch(`${baseURL}/v1/messages`, {
+        const body: any = {
+          model: 'deepseek-chat',
+          max_tokens: 4096,
+          messages: loopMessages,
+          tools: openAITools,
+          stream: true,
+        }
+        if (i === 0 && (intent === 'create' || intent === 'general')) {
+          body.tool_choice = 'required'
+        }
+        const res = await fetch(`${baseURL}/v1/chat/completions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: systemPrompt, tools: allTools, messages: loopMessages, stream: true, ...(i === 0 && (intent === 'create' || intent === 'general') ? { tool_choice: { type: 'any' } } : {}) }),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify(body),
         })
         if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
 
-        // 流式解析
         const reader = res.body!.getReader()
         const dec = new TextDecoder()
         let buf = ''
         let assistantText = ''
-        let stopReason = ''
-        const contentBlocks: any[] = []
-        let currentBlock: any = null
+        let finishReason = ''
+        const toolCalls: { index: number; id: string; type: string; function: { name: string; arguments: string } }[] = []
 
+        let deltaBuf = ''
         outer: while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -724,54 +740,56 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
             let evt: any
             try { evt = JSON.parse(raw) } catch { continue }
 
-            if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
-              stopReason = evt.delta.stop_reason
-            }
-            if (evt.type === 'content_block_start') {
-              currentBlock = { ...evt.content_block, index: evt.index }
-              if (currentBlock.type === 'tool_use') currentBlock.input_raw = ''
-            }
-            if (evt.type === 'content_block_delta') {
-              if (evt.delta.type === 'text_delta') {
-                assistantText += evt.delta.text
-                await send({ type: 'text', text: evt.delta.text })
-              } else if (evt.delta.type === 'input_json_delta' && currentBlock) {
-                currentBlock.input_raw += evt.delta.partial_json
+            for (const choice of evt.choices || []) {
+              const delta = choice.delta || {}
+              if (delta.content) {
+                assistantText += delta.content
+                await send({ type: 'text', text: delta.content })
+              }
+              if (delta.tool_calls) {
+                for (const tc of delta.tool_calls) {
+                  if (tc.function?.name) {
+                    toolCalls[tc.index] = { index: tc.index, id: tc.id || `call_${tc.index}`, type: 'function', function: { name: tc.function.name, arguments: tc.function.arguments || '' } }
+                  } else if (tc.function?.arguments) {
+                    if (!toolCalls[tc.index]) toolCalls[tc.index] = { index: tc.index, id: `call_${tc.index}`, type: 'function', function: { name: '', arguments: '' } }
+                    toolCalls[tc.index].function.arguments += tc.function.arguments
+                  }
+                }
+              }
+              if (choice.finish_reason) {
+                finishReason = choice.finish_reason
               }
             }
-            if (evt.type === 'content_block_stop' && currentBlock) {
-              if (currentBlock.type === 'tool_use') {
-                try { currentBlock.input = JSON.parse(currentBlock.input_raw || '{}') } catch { currentBlock.input = {} }
-              }
-              contentBlocks.push(currentBlock)
-              currentBlock = null
-            }
-            if (evt.type === 'message_stop') break outer
           }
         }
 
-        if (stopReason !== 'tool_use') {
+        if (finishReason !== 'tool_calls') {
           if (images?.length > 0 && shouldAskForCloseup(assistantText)) {
-            // 清掉已发的文字，发补拍提示（覆盖）
             await send({ type: 'text_replace', text: CLOSEUP_MESSAGE })
           }
           break
         }
 
-        const toolUseBlocks = contentBlocks.filter((b: any) => b.type === 'tool_use')
-        const textBlocks = contentBlocks.filter((b: any) => b.type === 'text')
-        const apiContent = [
-          ...textBlocks.map((b: any) => ({ type: 'text', text: b.text || assistantText })),
-          ...toolUseBlocks.map((b: any) => ({ type: 'tool_use', id: b.id, name: b.name, input: b.input })),
-        ]
-        const toolResults: any[] = []
-        for (const toolUse of toolUseBlocks) {
-          await send({ type: 'tool_start', id: toolUse.id, name: toolUse.name, input: toolUse.input })
-          const result = await executeTool(toolUse.name, toolUse.input, erpToken, books)
-          await send({ type: 'tool_result', id: toolUse.id, name: toolUse.name, result })
-          toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result })
+        const validToolCalls = toolCalls.filter(Boolean)
+        const assistantMsg: any = { role: 'assistant', content: assistantText || null }
+        if (validToolCalls.length > 0) {
+          assistantMsg.tool_calls = validToolCalls.map((tc: any) => ({
+            id: tc.id,
+            type: 'function',
+            function: { name: tc.function.name, arguments: tc.function.arguments },
+          }))
         }
-        loopMessages = [...loopMessages, { role: 'assistant', content: apiContent }, { role: 'user', content: toolResults }]
+
+        const toolResults: any[] = []
+        for (const tc of validToolCalls) {
+          let args: any = {}
+          try { args = JSON.parse(tc.function.arguments || '{}') } catch {}
+          await send({ type: 'tool_start', id: tc.id, name: tc.function.name, input: args })
+          const result = await executeTool(tc.function.name, args, erpToken, books)
+          await send({ type: 'tool_result', id: tc.id, name: tc.function.name, result })
+          toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
+        }
+        loopMessages = [...loopMessages, assistantMsg, ...toolResults]
       }
       await writer.write(encoder.encode('data: [DONE]\n\n'))
     } catch (e: any) {

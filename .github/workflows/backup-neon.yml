@@ -31,6 +31,7 @@ jobs:
           mkdir -p backups/db
           DATE=$(date +%Y%m%d_%H%M%S)
           /usr/lib/postgresql/17/bin/pg_dump "$NEON_URL" -F p --no-password > "backups/db/neon_backup_$DATE.sql"
+          test -s "backups/db/neon_backup_$DATE.sql"
           echo "BACKUP_FILE=neon_backup_$DATE.sql" >> $GITHUB_ENV
 
       - name: Keep only last 30 backups

@@ -1,4 +1,55 @@
 // Tool definitions — Anthropic input_schema format
+export const opsTools: any[] = [
+  {
+    name: 'query_stock_warning',
+    description: '查询当前库存低于预警值的商品，触发补货分析流程',
+    parameters: {
+      type: 'object',
+      properties: {
+        threshold: { type: 'number', description: '预警阈值（低于此数量则预警），默认10' },
+        warehouse: { type: 'string', description: '仓库名称（可选）' },
+      },
+    },
+  },
+  {
+    name: 'suggest_restock',
+    description: '根据库存数据+历史销量，生成补货建议列表（包含商品、数量、建议理由）',
+    parameters: {
+      type: 'object',
+      properties: {
+        days: { type: 'number', description: '参考历史天数，默认30天' },
+        min_urgency: { type: 'string', enum: ['all', 'medium', 'high'], description: '最小紧急度：all=全部, medium=中危以上, high=高危，默认为all' },
+      },
+    },
+  },
+  {
+    name: 'create_purchase_draft',
+    description: '创建采购单草稿（草稿状态需人工审核后才执行），用于补货专员生成补货单',
+    parameters: {
+      type: 'object',
+      properties: {
+        supplier_name: { type: 'string', description: '供应商名称（必填）' },
+        items: {
+          type: 'array',
+          description: '采购商品明细列表',
+          items: {
+            type: 'object',
+            properties: {
+              goods_name: { type: 'string', description: '商品名称' },
+              qty: { type: 'number', description: '采购数量' },
+              price: { type: 'number', description: '采购单价' },
+              unit_name: { type: 'string', description: '单位' },
+            },
+          },
+        },
+        remark: { type: 'string', description: '备注（如：补货原因）' },
+        auto_audit: { type: 'boolean', description: '是否自动审核，默认false（草稿模式）' },
+      },
+      required: ['supplier_name', 'items'],
+    },
+  },
+]
+
 export const queryTools: any[] = [
   {
     name: 'query_customers',
@@ -800,4 +851,4 @@ export const volcengineTools: any[] = [
   },
 ]
 
-export const allTools: any[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools, ...publishTools, ...volcengineTools]
+export const allTools: any[] = [...queryTools, ...createTools, ...editTools, ...deleteTools, ...navigateTools, ...searchTools, ...imageTools, ...videoRenderTools, ...contentTools, ...publishTools, ...volcengineTools, ...opsTools]
