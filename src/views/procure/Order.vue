@@ -1097,6 +1097,7 @@ import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
 import { fmtDt } from '@/utils/date'
+import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -2421,7 +2422,7 @@ async function openCreate() {
   fd.order_sn = fd.order_no
   // 应用默认仓库
   if (!warehouseOptions.value.length) await loadWarehouses()
-  const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
+  const defaultWhId = await getSyncedDefaultWarehouseId()
   if (defaultWhId) {
     const wh = warehouseOptions.value.find((w: any) => w.id === defaultWhId)
     if (wh) { fd.warehouse_id = wh.id; fd.warehouse_name = wh.name }
@@ -2438,7 +2439,7 @@ async function openEdit(row: any, readonly = false) {
   if (!warehouseOptions.value.length) await loadWarehouses()
   // 历史数据仓库为空时，补填用户设置的默认仓库
   if (!fd.warehouse_id) {
-    const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
+    const defaultWhId = await getSyncedDefaultWarehouseId()
     if (defaultWhId) {
       const wh = warehouseOptions.value.find((w: any) => w.id === defaultWhId)
       if (wh) { fd.warehouse_id = wh.id; fd.warehouse_name = wh.name }
@@ -2519,7 +2520,7 @@ async function handleSave(andAudit = false) {
     ElMessage.warning('请填写必填项'); return
   }
   if (!fd.warehouse_id) {
-    const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
+    const defaultWhId = await getSyncedDefaultWarehouseId()
     const fallback = defaultWhId
       ? warehouseOptions.value.find((w: any) => w.id === defaultWhId)
       : warehouseOptions.value[0]

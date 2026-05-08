@@ -317,6 +317,7 @@ import { getBomByGoods, getBomList } from '@/api/goods'
 import { getFundList } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
@@ -333,7 +334,6 @@ const summary = reactive({ count: 0, pending: 0, receivable: 0, companyCost: 0 }
 const bomListCache = ref<any[] | null>(null)
 const bomCostCache = new Map<string, number>()
 const INTERNAL_CUSTOMER_VALUE = '__internal__'
-const DEFAULT_WAREHOUSE_KEY = 'erp_default_warehouse_id'
 
 function defaultFd() {
   return {
@@ -438,7 +438,7 @@ async function loadBaseData() {
   customerOptions.value = customers.status === 'fulfilled' ? (customers.value.data?.rows ?? []) : []
   warehouseOptions.value = warehouses.status === 'fulfilled' ? (warehouses.value.data?.rows ?? []) : []
   fundOptions.value = funds.status === 'fulfilled' ? (funds.value.data?.rows ?? []) : []
-  applyDefaultWarehouse()
+  await applyDefaultWarehouse()
 }
 
 async function loadSummary() {
@@ -456,7 +456,7 @@ async function openCreate() {
   Object.assign(fd, defaultFd())
   fd.items = []
   await ensureWarehouseOptionsLoaded()
-  applyDefaultWarehouse()
+  await applyDefaultWarehouse()
   isView.value = false
   showForm.value = true
 }
@@ -511,11 +511,10 @@ function onExpenseFundChange(id: any) {
   fd.expense_fund_name = f?.name || ''
 }
 
-function applyDefaultWarehouse() {
+async function applyDefaultWarehouse() {
   if (fd.warehouse_id) return
-  const defaultWhId = Number(localStorage.getItem(DEFAULT_WAREHOUSE_KEY)) || 0
+  const defaultWhId = await getSyncedDefaultWarehouseId()
   const wh = warehouseOptions.value.find(item => Number(item.id) === defaultWhId)
-    || warehouseOptions.value.find(item => String(item.name || '').trim() === '默认仓库')
     || warehouseOptions.value[0]
   if (!wh) return
   fd.warehouse_id = wh.id

@@ -275,6 +275,7 @@ import { auditSample, createSample, deleteSample, getSampleList, updateSample, g
 import { getBomByGoods, getBomList } from '@/api/goods'
 import { getFundList } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
+import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 
 // ── 列表 ──
@@ -332,7 +333,6 @@ const customerOptions = ref<any[]>([])
 const warehouseOptions = ref<any[]>([])
 const fundOptions = ref<any[]>([])
 const INTERNAL_CUSTOMER_VALUE = '__internal__'
-const DEFAULT_WAREHOUSE_KEY = 'erp_default_warehouse_id'
 
 function defaultFd() {
   return {
@@ -397,11 +397,10 @@ function onExpenseFundChange(e: any) {
   if (f) fd.expense_fund_name = f.name
 }
 
-function applyDefaultWarehouse() {
+async function applyDefaultWarehouse() {
   if (fd.warehouse_id) return
-  const defaultWhId = Number(localStorage.getItem(DEFAULT_WAREHOUSE_KEY)) || 0
+  const defaultWhId = await getSyncedDefaultWarehouseId()
   const wh = warehouseOptions.value.find(x => Number(x.id) === defaultWhId)
-    || warehouseOptions.value.find(x => String(x.name || '').trim() === '默认仓库')
     || warehouseOptions.value[0]
   if (!wh) return
   fd.warehouse_id = wh.id
@@ -452,7 +451,7 @@ async function ensureWarehouseOptionsLoaded() {
 async function openCreate() {
   Object.assign(fd, defaultFd()); fd.items = []
   await ensureWarehouseOptionsLoaded()
-  applyDefaultWarehouse()
+  await applyDefaultWarehouse()
   isView.value = false; showForm.value = true
 }
 function openEdit(row: any) {
@@ -669,10 +668,10 @@ async function loadBaseData() {
   if (c.status === 'fulfilled') customerOptions.value = c.value.data?.rows ?? []
   if (w.status === 'fulfilled') warehouseOptions.value = w.value.data?.rows ?? []
   if (f.status === 'fulfilled') fundOptions.value = f.value.data?.rows ?? []
-  applyDefaultWarehouse()
+  await applyDefaultWarehouse()
 }
 
-onMounted(() => { loadBaseData(); loadList() })
+onMounted(() => { void loadBaseData(); loadList() })
 </script>
 
 <style scoped>

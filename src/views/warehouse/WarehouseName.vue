@@ -56,22 +56,24 @@
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
 
+import { onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getWarehouseList, createWarehouse, updateWarehouse, deleteWarehouse } from '@/api/warehouse'
 import http from '@/api/http'
-
-const DEFAULT_WAREHOUSE_KEY = 'erp_default_warehouse_id'
+import { getSyncedDefaultWarehouseId, saveSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 
 const tableRef = ref()
 const formRef = ref()
 const editingRow = ref<any>(null)
-const defaultWarehouseId = ref<number | null>(
-  Number(localStorage.getItem(DEFAULT_WAREHOUSE_KEY)) || null
-)
+const defaultWarehouseId = ref<number | null>(null)
 
 const searchForm = reactive({
   name: ''
+})
+
+onMounted(async () => {
+  defaultWarehouseId.value = await getSyncedDefaultWarehouseId(true) || null
 })
 
 const openForm = (row?: any) => {
@@ -83,9 +85,9 @@ const openForm = (row?: any) => {
   }
 }
 
-const setDefault = (row: any) => {
+const setDefault = async (row: any) => {
+  await saveSyncedDefaultWarehouseId(row.id)
   defaultWarehouseId.value = row.id
-  localStorage.setItem(DEFAULT_WAREHOUSE_KEY, String(row.id))
   ElMessage.success(`已将"${row.name}"设为默认仓库`)
 }
 
@@ -119,7 +121,7 @@ const handleDelete = async (id: number) => {
   ElMessage.success('删除成功')
   if (defaultWarehouseId.value === id) {
     defaultWarehouseId.value = null
-    localStorage.removeItem(DEFAULT_WAREHOUSE_KEY)
+    await saveSyncedDefaultWarehouseId(0)
   }
   tableRef.value.refresh()
 }
