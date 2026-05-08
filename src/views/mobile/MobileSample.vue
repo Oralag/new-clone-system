@@ -132,7 +132,20 @@
           <div class="ms-goods-nums">
             <div class="ms-goods-field">
               <span>数量</span>
-              <input v-model.number="item.num" type="number" class="ms-mini-input" :disabled="isView" @change="calcTotals" />
+              <div class="ms-stepper" :class="{ disabled: isView }">
+                <button class="ms-stepper-btn" :disabled="isView" @click="adjustItemNum(item, -1)">−</button>
+                <input
+                  :value="formatItemNum(item.num)"
+                  type="number"
+                  inputmode="decimal"
+                  step="0.01"
+                  class="ms-stepper-input"
+                  :disabled="isView"
+                  @input="onItemNumInput(item, $event)"
+                  @blur="normalizeItemNum(item)"
+                />
+                <button class="ms-stepper-btn" :disabled="isView" @click="adjustItemNum(item, 1)">+</button>
+              </div>
             </div>
             <div class="ms-goods-field">
               <span>成本价</span>
@@ -377,6 +390,35 @@ function onExpenseFundChange(e: any) {
 }
 
 function removeRow(idx: number) { fd.items.splice(idx, 1); calcTotals() }
+
+function roundNum(value: number, precision = 2) {
+  const factor = 10 ** precision
+  return Math.round(value * factor) / factor
+}
+
+function formatItemNum(value: any) {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return '0'
+  return Number.isInteger(num) ? String(num) : String(roundNum(num, 2))
+}
+
+function normalizeItemNum(item: any) {
+  const raw = Number(item.num)
+  item.num = Number.isFinite(raw) && raw >= 0 ? roundNum(raw, 2) : 0
+  calcTotals()
+}
+
+function onItemNumInput(item: any, event: Event) {
+  const target = event.target as HTMLInputElement
+  item.num = target.value
+}
+
+function adjustItemNum(item: any, delta: number) {
+  const current = Number(item.num || 0)
+  const next = Math.max(0, roundNum(current + delta, 2))
+  item.num = next
+  calcTotals()
+}
 
 function openCreate() {
   Object.assign(fd, defaultFd()); fd.items = []
@@ -746,11 +788,53 @@ onMounted(() => { loadBaseData(); loadList() })
 .ms-goods-nums { display: flex; gap: 12px; flex-wrap: wrap; }
 .ms-goods-field { display: flex; align-items: center; gap: 6px; }
 .ms-goods-field span { font-size: 12px; color: #6b7280; white-space: nowrap; }
-.ms-mini-input {
-  width: 72px; padding: 6px 8px; border: 1.5px solid #e5e7eb; border-radius: 6px;
-  font-size: 14px; text-align: right; outline: none;
+.ms-stepper {
+  display: inline-flex;
+  align-items: center;
+  width: 156px;
+  height: 42px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
 }
-.ms-mini-input:focus { border-color: #2563EB; }
+.ms-stepper.disabled {
+  opacity: 0.7;
+}
+.ms-stepper-btn {
+  width: 42px;
+  height: 100%;
+  border: 0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 22px;
+  line-height: 1;
+}
+.ms-stepper-btn:active {
+  background: #eef2ff;
+}
+.ms-stepper-btn:disabled {
+  background: #f8fafc;
+  color: #cbd5e1;
+}
+.ms-stepper-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: #fff;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+  -moz-appearance: textfield;
+}
+.ms-stepper-input::-webkit-outer-spin-button,
+.ms-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 .ms-cost-val { font-size: 14px; color: #374151; font-weight: 500; min-width: 64px; text-align: right; }
 .ms-empty-sm { text-align: center; padding: 20px; color: #bbb; font-size: 13px; }
 
