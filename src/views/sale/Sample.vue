@@ -145,6 +145,7 @@
               <el-col :span="6">
                 <el-form-item label="客户">
                   <el-select v-model="fd.customer_id" filterable clearable style="width:100%" @change="onCustomerChange">
+                    <el-option label="内部领用" :value="INTERNAL_CUSTOMER_VALUE" />
                     <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
                   </el-select>
                 </el-form-item>
@@ -331,6 +332,7 @@ const saving = ref(false)
 const summary = reactive({ count: 0, pending: 0, receivable: 0, companyCost: 0 })
 const bomListCache = ref<any[] | null>(null)
 const bomCostCache = new Map<string, number>()
+const INTERNAL_CUSTOMER_VALUE = '__internal__'
 
 function defaultFd() {
   return {
@@ -480,6 +482,11 @@ function backToList() {
 }
 
 function onCustomerChange(id: any) {
+  if (id === INTERNAL_CUSTOMER_VALUE) {
+    fd.customer_name = '内部'
+    fd.contact_name = ''
+    return
+  }
   const c = customerOptions.value.find(item => item.id === id)
   fd.customer_name = c?.name || c?.nickname || fd.customer_name
   fd.contact_name = c?.contact || ''
@@ -597,6 +604,8 @@ async function handleSave() {
   try {
     const payload = {
       ...fd,
+      customer_id: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? null : fd.customer_id,
+      customer_name: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? (fd.customer_name || '内部') : fd.customer_name,
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) await updateSample(payload)

@@ -94,6 +94,7 @@
           <label>客户</label>
           <select v-model="fd.customer_id" class="ms-input" :disabled="isView" @change="onCustomerChange">
             <option value="">请选择客户</option>
+            <option :value="INTERNAL_CUSTOMER_VALUE">内部领用</option>
             <option v-for="c in customerOptions" :key="c.id" :value="c.id">{{ c.name || c.nickname }}</option>
           </select>
         </div>
@@ -330,6 +331,7 @@ const saving = ref(false)
 const customerOptions = ref<any[]>([])
 const warehouseOptions = ref<any[]>([])
 const fundOptions = ref<any[]>([])
+const INTERNAL_CUSTOMER_VALUE = '__internal__'
 
 function defaultFd() {
   return {
@@ -370,6 +372,11 @@ function calcTotals() {
 
 function onCustomerChange(e: any) {
   const id = e.target?.value ?? e
+  if (id === INTERNAL_CUSTOMER_VALUE) {
+    fd.customer_name = '内部'
+    fd.contact_name = ''
+    return
+  }
   const c = customerOptions.value.find(x => String(x.id) === String(id))
   if (c) fd.customer_name = c.name || c.nickname || fd.customer_name
 }
@@ -449,7 +456,12 @@ async function handleSave() {
   calcTotals()
   saving.value = true
   try {
-    const payload = { ...fd, goods_info: JSON.stringify(fd.items) }
+    const payload = {
+      ...fd,
+      customer_id: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? '' : fd.customer_id,
+      customer_name: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? (fd.customer_name || '内部') : fd.customer_name,
+      goods_info: JSON.stringify(fd.items),
+    }
     if (fd.id) await updateSample(payload)
     else await createSample(payload)
     ElMessage.success('保存成功')
