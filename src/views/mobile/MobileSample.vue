@@ -238,7 +238,7 @@
                 <div class="ms-goods-row-name">{{ g.goods_name }}</div>
                 <div class="ms-goods-row-meta">{{ g.goods_sn }} · {{ g.unit_name }} · 库存{{ g.stock_num ?? 0 }}</div>
               </div>
-              <div class="ms-goods-row-price">¥{{ fmt(g.cost_price || g.sell_price) }}</div>
+              <div class="ms-goods-row-price">¥{{ fmt(getDisplayCost(g)) }}</div>
             </div>
           </div>
           <div class="ms-drawer-foot">
@@ -436,6 +436,7 @@ const goodsKeyword = ref('')
 const goodsList = ref<any[]>([])
 const goodsLoading = ref(false)
 const pickerSelected = ref<any[]>([])
+const pickerCostMap = ref<Record<number, number>>({})
 let allGoods: any[] = []
 
 function isGoodsSelected(g: any) { return pickerSelected.value.some(x => x.id === g.id) }
@@ -454,11 +455,13 @@ async function openGoodsPicker() {
     const res = await http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } })
     allGoods = res.data?.rows ?? []
     goodsList.value = allGoods
+    void warmupGoodsCosts(goodsList.value.slice(0, 80))
   } finally { goodsLoading.value = false }
 }
 
 function searchGoods() {
   goodsList.value = fuzzyFilterGoods(allGoods, goodsKeyword.value)
+  void warmupGoodsCosts(goodsList.value.slice(0, 80))
 }
 
 // ── BOM 成本解析（同桌面端逻辑） ──
@@ -530,6 +533,35 @@ async function resolveGoodsCost(goods: any): Promise<number> {
   )
   if (direct > 0) return direct
   try { return await resolveBomCost(goods) } catch { return 0 }
+}
+
+function getDisplayCost(goods: any) {
+  const id = Number(goods.id || goods.goods_id || 0)
+  if (id && Number.isFinite(pickerCostMap.value[id])) return pickerCostMap.value[id]
+  return firstPositiveNumber(
+    goods.cost_price, goods.costPrice, goods.purchase_price,
+    goods.avg_price, goods.in_price, goods.out_price,
+  )
+}
+
+async function warmupGoodsCosts(rows: any[]) {
+  const targets = rows.filter((goods: any) => {
+    const id = Number(goods.id || goods.goods_id || 0)
+    if (!id) return false
+    if (Number.isFinite(pickerCostMap.value[id])) return false
+    return !firstPositiveNumber(
+      goods.cost_price, goods.costPrice, goods.purchase_price,
+      goods.avg_price, goods.in_price, goods.out_price,
+    )
+  })
+  await Promise.all(targets.map(async (goods: any) => {
+    const id = Number(goods.id || goods.goods_id || 0)
+    const cost = await resolveGoodsCost(goods)
+    pickerCostMap.value = {
+      ...pickerCostMap.value,
+      [id]: cost,
+    }
+  }))
 }
 
 async function confirmGoods() {
