@@ -47,8 +47,11 @@
         <el-table-column v-if="!isMobile" type="index" label="序号" width="60" align="center" />
         <el-table-column v-if="!isMobile" label="来源" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.__payable_source === 'expense' ? 'warning' : 'primary'" size="small">
-              {{ row.source_name || (row.__payable_source === 'expense' ? '生产成本' : '采购') }}
+            <el-tag
+              :type="row.__payable_source === 'expense' ? 'warning' : row.__payable_source === 'contract_fee' ? 'info' : 'primary'"
+              size="small"
+            >
+              {{ row.source_name || (row.__payable_source === 'expense' ? '生产成本' : row.__payable_source === 'contract_fee' ? '合同附加费' : '采购') }}
             </el-tag>
           </template>
         </el-table-column>
@@ -78,8 +81,9 @@
         <el-table-column label="操作" width="130" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="viewDetail(row)">欠款详情</el-button>
-            <el-button v-if="row.__payable_source !== 'expense'" type="warning" link size="small" @click="goPay(row)">付款</el-button>
-            <el-button v-else type="warning" link size="small" @click="router.push('/finance/expense')">费用</el-button>
+            <el-button v-if="row.__payable_source !== 'expense' && row.__payable_source !== 'contract_fee'" type="warning" link size="small" @click="goPay(row)">付款</el-button>
+            <el-button v-else-if="row.__payable_source === 'expense'" type="warning" link size="small" @click="router.push('/finance/expense')">费用</el-button>
+            <el-button v-else type="warning" link size="small" @click="router.push('/sale/contract')">合同</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -92,7 +96,8 @@
           :total="total"
           :page-sizes="[20, 50, 100]"
           layout="total, sizes, prev, pager, next"
-          @change="load"
+          @size-change="(s: number) => { pageSize.value = s; page.value = 1 }"
+          @current-change="(p: number) => { page.value = p }"
         />
       </div>
     </el-card>
@@ -161,9 +166,15 @@ const page = ref(1)
 const pageSize = ref(20)
 const supplierOptions = ref<any[]>([])
 
-const displayRows = computed(() => {
+const filteredRows = computed(() => {
   const normalizedReturns = normalizeProcureReturnFinanceRows(procureReturnRows.value)
   return applyProcureReturnsToPayableRows(rawRows.value, normalizedReturns)
+})
+
+const displayRows = computed(() => {
+  const all = filteredRows.value
+  const start = (page.value - 1) * pageSize.value
+  return all.slice(start, start + pageSize.value)
 })
 
 const searchForm = reactive({ supplier_name: '', date_from: '', date_to: '' })
@@ -172,10 +183,10 @@ function fmt(v: any) {
   return Number(v || 0).toFixed(2)
 }
 
-const summaryOrder = computed(() => displayRows.value.reduce((s, r) => s + Number(r.order_amount || 0), 0))
-const summaryPaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.paid_amount || 0), 0))
-const summaryUnpaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0))
-const summaryReturn = computed(() => displayRows.value.reduce((s, r) => s + Number(r.return_amount || 0), 0))
+const summaryOrder = computed(() => filteredRows.value.reduce((s, r) => s + Number(r.order_amount || 0), 0))
+const summaryPaid = computed(() => filteredRows.value.reduce((s, r) => s + Number(r.paid_amount || 0), 0))
+const summaryUnpaid = computed(() => filteredRows.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0))
+const summaryReturn = computed(() => filteredRows.value.reduce((s, r) => s + Number(r.return_amount || 0), 0))
 
 async function load() {
   loading.value = true
@@ -198,9 +209,10 @@ async function load() {
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
       getExpenseList({ list_rows: 1000 }),
       getPayReceiptList({ list_rows: 2000 }),
+      http.get('/shop/ContractOrder/index', { params: { list_rows: 2000 } }),
     ])
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
-    const [orderRes, returnRes, supplierRes, expenseRes, payReceiptRes] = settled.map((_, i) => ok(i))
+    const [orderRes, returnRes, supplierRes, expenseRes, payReceiptRes, contractRes] = settled.map((_, i) => ok(i))
 
     // 构建已付 Map（每条记录只归一个 map，避免重复计算）
     const paidById: Record<number, number> = {}
@@ -314,10 +326,57 @@ async function load() {
         return true
       })
 
-    rawRows.value = [...aggregated.filter(s => s.un_pay_amount > 0), ...expensePayables]
+    // 聚合合同附加费用（fee_items）按 supplier_name
+    const contracts: any[] = contractRes.data?.rows ?? []
+    const feeMap = new Map<string, { order_amount: number; orders: any[] }>()
+    for (const c of contracts) {
+      let feeItems: any[] = []
+      try {
+        const raw = c.fee_items
+        if (typeof raw === 'string' && raw && raw !== '[]') feeItems = JSON.parse(raw)
+        else if (Array.isArray(raw)) feeItems = raw
+      } catch { feeItems = [] }
+      for (const f of feeItems) {
+        if (f.bearer !== 'seller') continue
+        const supplierName = String(f.supplier_name || '').trim()
+        if (!supplierName) continue
+        const amt = Number(f.amount || 0)
+        if (!amt) continue
+        if (!feeMap.has(supplierName)) feeMap.set(supplierName, { order_amount: 0, orders: [] })
+        const entry = feeMap.get(supplierName)!
+        entry.order_amount += amt
+        entry.orders.push({
+          order_id: c.id,
+          order_no: f.receipt_no || c.order_sn || c.order_no || '',
+          order_amount: amt,
+          paid_amount: 0,
+          un_pay_amount: amt,
+          due_date: f.order_date || fmtDt(c.order_date || c.created_at),
+          source_name: `合同附加-${f.name || '费用'}`,
+        })
+      }
+    }
+    const contractFeeRows = Array.from(feeMap.entries())
+      .map(([supplierName, entry]) => ({
+        supplier_id: 0,
+        supplier_name: supplierName,
+        contact_name: '',
+        contact_mobile: '',
+        order_amount: entry.order_amount,
+        paid_amount: 0,
+        un_pay_amount: entry.order_amount,
+        prepay: 0,
+        orders: entry.orders,
+        __payable_source: 'contract_fee',
+        source_name: '合同附加费',
+      }))
+      .filter(r => !searchForm.supplier_name || r.supplier_name.includes(searchForm.supplier_name))
+      .filter(r => r.un_pay_amount > 0)
+
+    rawRows.value = [...aggregated.filter(s => s.un_pay_amount > 0), ...expensePayables, ...contractFeeRows]
     procureReturnRows.value = returnRes.data?.rows ?? []
     allPayReceipts.value = payReceiptRes.data?.rows ?? []
-    total.value = rawRows.value.length
+    total.value = filteredRows.value.length
   } finally {
     loading.value = false
   }

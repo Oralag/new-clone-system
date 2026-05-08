@@ -50,7 +50,7 @@
             <span class="mrc-label">日期</span><span class="mrc-val">{{ fmtDt(row.out_date) }}</span>
           </div>
         </div>
-        <div class="mobile-rec-total">共 {{ displayRows.length }} 条 · 待收合计 ¥{{ fmt(summaryUnpaid) }}</div>
+        <div class="mobile-rec-total">共 {{ total }} 条 · 待收合计 ¥{{ fmt(summaryUnpaid) }}</div>
       </div>
 
       <!-- PC端：表格 -->
@@ -101,7 +101,8 @@
           :total="total"
           :page-sizes="[20, 50, 100]"
           layout="total, sizes, prev, pager, next"
-          @change="load"
+          @size-change="(s: number) => { pageSize = s; page = 1 }"
+          @current-change="(p: number) => { page = p }"
         />
       </div>
     </el-card>
@@ -117,7 +118,7 @@ import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const loading = ref(false)
-const rows = ref<any[]>([])
+const allRows = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -128,19 +129,22 @@ function fmt(v: any) {
   return Number(v || 0).toFixed(2)
 }
 
-const displayRows = computed(() => rows.value)
+const filteredRows = computed(() => allRows.value)
+const displayRows = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filteredRows.value.slice(start, start + pageSize.value)
+})
 
-const summaryTotal = computed(() => displayRows.value.reduce((s, r) => s + Number(r.total_amount || 0), 0))
-const summaryPaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.pay_amount || 0), 0))
+const summaryTotal = computed(() => filteredRows.value.reduce((s, r) => s + Number(r.total_amount || 0), 0))
+const summaryPaid = computed(() => filteredRows.value.reduce((s, r) => s + Number(r.paid_amount || r.pay_amount || 0), 0))
 const summaryReturn = computed(() => 0)
-const summaryUnpaid = computed(() => displayRows.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0))
+const summaryUnpaid = computed(() => filteredRows.value.reduce((s, r) => s + Number(r.un_pay_amount || 0), 0))
 
 async function load() {
   loading.value = true
   try {
     const params: any = {
-      list_rows: pageSize.value,
-      page: page.value,
+      list_rows: 2000,
     }
     if (searchForm.customer_name) params.customer_name = searchForm.customer_name
     if (searchForm.order_sn) params.order_sn = searchForm.order_sn
@@ -179,7 +183,7 @@ async function load() {
         if (searchForm.date_to && fmtDt(r.out_date) > searchForm.date_to) return false
         return true
       })
-    rows.value = filtered
+    allRows.value = filtered
     total.value = filtered.length
   } finally {
     loading.value = false
