@@ -1413,9 +1413,55 @@ async function loadAllData() {
         s.un_pay_amount = Math.max(0, s.un_pay_amount - extra)
       }
     }
+    const contracts: any[] = contractRes.data?.rows ?? contractRes.data?.list ?? []
+    const feeMap = new Map<string, { order_amount: number; orders: any[] }>()
+    for (const c of contracts) {
+      let feeItems: any[] = []
+      try {
+        const raw = c.fee_items
+        if (typeof raw === 'string' && raw && raw !== '[]') feeItems = JSON.parse(raw)
+        else if (Array.isArray(raw)) feeItems = raw
+      } catch { feeItems = [] }
+      for (const f of feeItems) {
+        if (f.bearer !== 'seller') continue
+        const supplierName = String(f.supplier_name || '').trim()
+        if (!supplierName) continue
+        const amt = Number(f.amount || 0)
+        if (!amt) continue
+        if (!feeMap.has(supplierName)) feeMap.set(supplierName, { order_amount: 0, orders: [] })
+        const entry = feeMap.get(supplierName)!
+        entry.order_amount += amt
+        entry.orders.push({
+          order_id: c.id,
+          order_no: f.receipt_no || c.order_sn || c.order_no || '',
+          order_amount: amt,
+          paid_amount: 0,
+          un_pay_amount: amt,
+          due_date: f.order_date || fmtDt(c.order_date || c.created_at),
+          source_name: `合同附加-${f.name || '费用'}`,
+        })
+      }
+    }
+    const contractFeeRows = Array.from(feeMap.entries())
+      .map(([supplierName, entry]) => ({
+        supplier_id: 0,
+        supplier_name: supplierName,
+        contact_name: '',
+        contact_mobile: '',
+        order_amount: entry.order_amount,
+        paid_amount: 0,
+        un_pay_amount: entry.order_amount,
+        prepay: 0,
+        orders: entry.orders,
+        __payable_source: 'contract_fee',
+        source_name: '合同附加费',
+      }))
+      .filter((r) => r.un_pay_amount > 0)
+
     payableList.value = [
       ...applyProcureReturnsToPayableRows(Array.from(supplierPayMap.values()), procureReturnFinanceList.value),
       ...buildExpensePayableRows(expenseRes.data?.rows ?? expenseRes.data?.list ?? []),
+      ...contractFeeRows,
     ]
     receivableList.value = rawReceivableList
     adjustedCollectList.value = applySaleReturnsToCollectReceiptRows(collectList.value, normalizedSaleReturns, rawReceivableList)
