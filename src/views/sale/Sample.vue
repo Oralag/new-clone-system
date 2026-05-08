@@ -514,8 +514,9 @@ function onExpenseFundChange(id: any) {
 function applyDefaultWarehouse() {
   if (fd.warehouse_id) return
   const defaultWhId = Number(localStorage.getItem(DEFAULT_WAREHOUSE_KEY)) || 0
-  if (!defaultWhId) return
   const wh = warehouseOptions.value.find(item => Number(item.id) === defaultWhId)
+    || warehouseOptions.value.find(item => String(item.name || '').trim() === '默认仓库')
+    || warehouseOptions.value[0]
   if (!wh) return
   fd.warehouse_id = wh.id
   fd.warehouse_name = wh.name
