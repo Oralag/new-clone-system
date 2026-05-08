@@ -452,9 +452,10 @@ async function loadSummary() {
   } catch {}
 }
 
-function openCreate() {
+async function openCreate() {
   Object.assign(fd, defaultFd())
   fd.items = []
+  await ensureWarehouseOptionsLoaded()
   applyDefaultWarehouse()
   isView.value = false
   showForm.value = true
@@ -518,6 +519,16 @@ function applyDefaultWarehouse() {
   if (!wh) return
   fd.warehouse_id = wh.id
   fd.warehouse_name = wh.name
+}
+
+async function ensureWarehouseOptionsLoaded() {
+  if (warehouseOptions.value.length) return
+  try {
+    const res = await getWarehouseList({ list_rows: 200 })
+    warehouseOptions.value = res.data?.rows ?? []
+  } catch {
+    //
+  }
 }
 
 function firstPositiveNumber(...values: any[]) {

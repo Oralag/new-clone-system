@@ -438,8 +438,19 @@ function adjustItemNum(item: any, delta: number) {
   calcTotals()
 }
 
-function openCreate() {
+async function ensureWarehouseOptionsLoaded() {
+  if (warehouseOptions.value.length) return
+  try {
+    const res = await getWarehouseList({ list_rows: 200 })
+    warehouseOptions.value = res.data?.rows ?? []
+  } catch {
+    //
+  }
+}
+
+async function openCreate() {
   Object.assign(fd, defaultFd()); fd.items = []
+  await ensureWarehouseOptionsLoaded()
   applyDefaultWarehouse()
   isView.value = false; showForm.value = true
 }
