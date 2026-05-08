@@ -332,6 +332,7 @@ const customerOptions = ref<any[]>([])
 const warehouseOptions = ref<any[]>([])
 const fundOptions = ref<any[]>([])
 const INTERNAL_CUSTOMER_VALUE = '__internal__'
+const DEFAULT_WAREHOUSE_KEY = 'erp_default_warehouse_id'
 
 function defaultFd() {
   return {
@@ -396,6 +397,16 @@ function onExpenseFundChange(e: any) {
   if (f) fd.expense_fund_name = f.name
 }
 
+function applyDefaultWarehouse() {
+  if (fd.warehouse_id) return
+  const defaultWhId = Number(localStorage.getItem(DEFAULT_WAREHOUSE_KEY)) || 0
+  if (!defaultWhId) return
+  const wh = warehouseOptions.value.find(x => Number(x.id) === defaultWhId)
+  if (!wh) return
+  fd.warehouse_id = wh.id
+  fd.warehouse_name = wh.name
+}
+
 function removeRow(idx: number) { fd.items.splice(idx, 1); calcTotals() }
 
 function roundNum(value: number, precision = 2) {
@@ -429,6 +440,7 @@ function adjustItemNum(item: any, delta: number) {
 
 function openCreate() {
   Object.assign(fd, defaultFd()); fd.items = []
+  applyDefaultWarehouse()
   isView.value = false; showForm.value = true
 }
 function openEdit(row: any) {
@@ -645,6 +657,7 @@ async function loadBaseData() {
   if (c.status === 'fulfilled') customerOptions.value = c.value.data?.rows ?? []
   if (w.status === 'fulfilled') warehouseOptions.value = w.value.data?.rows ?? []
   if (f.status === 'fulfilled') fundOptions.value = f.value.data?.rows ?? []
+  applyDefaultWarehouse()
 }
 
 onMounted(() => { loadBaseData(); loadList() })
