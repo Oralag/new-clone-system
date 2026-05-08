@@ -258,6 +258,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
 import { getWarehouseList } from '@/api/warehouse'
 import { auditSample, createSample, deleteSample, getSampleList, updateSample, getSaleCustomerList } from '@/api/sale'
+import { getBomByGoods, getBomList } from '@/api/goods'
 import { getFundList } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
@@ -336,7 +337,7 @@ function defaultFd() {
 const fd = reactive(defaultFd())
 
 const goodsCost = computed(() =>
-  fd.items.reduce((s, i) => s + Number(i.num || 0) * Number(i.cost_price || 0), 0)
+  fd.items.reduce((s, i) => s + Number(i.num || 0) * Number(i.cost_price || i.out_price || 0), 0)
 )
 const chargeAmount = computed(() =>
   fd.sample_type === 'paid'
@@ -478,7 +479,7 @@ async function resolveBomCost(goods: any): Promise<number> {
   if (bomCostCache.has(key)) return bomCostCache.get(key) || 0
   if (!bomListCache) {
     try {
-      const res = await http.get('/goods/Bom/index', { params: { list_rows: 2000 } })
+      const res = await getBomList({ list_rows: 2000 })
       bomListCache = res.data?.rows ?? res.data?.list ?? []
     } catch { bomListCache = []; return 0 }
   }
@@ -503,7 +504,7 @@ async function resolveBomCost(goods: any): Promise<number> {
   try {
     const detailId = bom?.id || bom?.goods_id || goods.id
     if (detailId) {
-      const detailRes = await http.get('/goods/Bom/detail', { params: { id: detailId } })
+      const detailRes = await getBomByGoods(detailId)
       const rows: any[] = detailRes.data?.items ?? detailRes.data?.rows ?? detailRes.data?.list ?? []
       const fixed = calcRowsCost(rows)
       bomCostCache.set(key, fixed)
@@ -511,7 +512,7 @@ async function resolveBomCost(goods: any): Promise<number> {
     }
     // 兜底：按商品ID直接尝试明细接口
     if (goods.id) {
-      const fallbackRes = await http.get('/goods/Bom/detail', { params: { id: goods.id } })
+      const fallbackRes = await getBomByGoods(goods.id)
       const fallbackRows: any[] = fallbackRes.data?.items ?? fallbackRes.data?.rows ?? fallbackRes.data?.list ?? []
       const fixed = calcRowsCost(fallbackRows)
       bomCostCache.set(key, fixed)
