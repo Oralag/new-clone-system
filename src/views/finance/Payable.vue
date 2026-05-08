@@ -148,6 +148,7 @@ import { getSupplierList } from '@/api/procure'
 import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
+import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
@@ -220,9 +221,12 @@ async function load() {
     const paidBySn: Record<string, number> = {}
     // 多ID备注付款：按供应商维度存储，聚合时再冲销
     const paidMultiBySup: Record<string, number> = {}
-    for (const r of (payReceiptRes.data?.rows ?? [])) {
+    const rawPayList = payReceiptRes.data?.rows ?? []
+    const procureFeePaidById = buildProcureFeePaidByOrder(rawPayList)
+    for (const r of rawPayList) {
       const amt = Number(r.amount || 0)
       if (!amt) continue
+      if (isProcureExtraFeePayment(r)) continue
       const sn = String(r.order_sn || '').trim()
       const sup = String(r.supplier_name || r.contact_name || '').trim()
       let matched = false
@@ -271,16 +275,19 @@ async function load() {
       const paidAmt = (paidById[o.id] || 0)
         + (paidBySn[oSn] || paidBySn[oNo] || 0)
         + (paidByKey[`${oSn}@@${oSup}`] || paidByKey[`${oNo}@@${oSup}`] || 0)
+      const feeNeedPay = getProcureFeeNeedPayAmount(o)
+      const feePaid = procureFeePaidById[o.id] || 0
+      const feeUnpaid = Math.max(0, feeNeedPay - feePaid)
       const unpaid = Math.max(0, orderAmt - paidAmt)
-      s.order_amount += orderAmt
-      s.paid_amount += paidAmt
-      s.un_pay_amount += unpaid
+      s.order_amount += orderAmt + feeNeedPay
+      s.paid_amount += paidAmt + feePaid
+      s.un_pay_amount += unpaid + feeUnpaid
       s.orders.push({
         order_id: o.id,
         order_no: o.order_no || o.order_sn || '',
-        order_amount: orderAmt,
-        paid_amount: paidAmt,
-        un_pay_amount: unpaid,
+        order_amount: orderAmt + feeNeedPay,
+        paid_amount: paidAmt + feePaid,
+        un_pay_amount: unpaid + feeUnpaid,
         due_date: fmtDt(o.order_date || o.create_time),
       })
     }
