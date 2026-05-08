@@ -11,50 +11,143 @@ import { executeAdamTool } from './tools/adamExecutor'
 import { adamAgent } from './agents/adamOrchestrator'
 import { detectIntent, getSystemPrompt } from './agents/orchestrator'
 
-// ── Anthropic fetch helper ────────────────────────────────────────────────────
-function getAnthropicConfig() {
+// ── OpenAI-compatible API helper ───────────────────────────────────────────────
+const AI_MODEL_FAST = 'deepseek-chat'   // 原 claude-haiku
+const AI_MODEL_BEST = 'deepseek-chat'   // 原 claude-sonnet
+
+function getAIConfig() {
   return {
-    apiKey: process.env.ANTHROPIC_API_KEY || '',
-    baseURL: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
+    apiKey: process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY || '',
+    baseURL: (process.env.AI_BASE_URL || process.env.ANTHROPIC_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, ''),
   }
 }
 
-function toAnthropicTools(tools: any[]) {
+function toOpenAITools(tools: any[]) {
   return tools.map((t: any) => ({
-    name: t.name,
-    description: t.description,
-    input_schema: t.parameters || { type: 'object', properties: {} },
+    type: 'function',
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.input_schema || t.parameters || { type: 'object', properties: {} },
+    },
   }))
 }
 
-async function anthropicCall(opts: {
+/** Convert Anthropic-format messages to OpenAI-format messages.
+ *  Each message: { role: 'user'|'assistant', content: string|array }
+ *   - Anthropic content blocks (type:'text', type:'image', type:'tool_use', type:'tool_result')
+ *   - OpenAI content is string for text, or array of {type:'text'|'image_url'} parts
+ */
+function toOpenAIMessages(anthropicMessages: any[]): any[] {
+  const result: any[] = []
+  for (const m of anthropicMessages) {
+    if (!m || !m.role) continue
+    const role = m.role === 'assistant' ? 'assistant' : 'user'
+    const content = m.content
+    if (!content) {
+      result.push({ role, content: '' })
+      continue
+    }
+    // Already a string — use as-is
+    if (typeof content === 'string') {
+      result.push({ role, content })
+      continue
+    }
+    // Array of content blocks
+    if (Array.isArray(content)) {
+      const oaiParts: any[] = []
+      let toolCalls: any[] | undefined
+      for (const block of content) {
+        if (!block || !block.type) continue
+        if (block.type === 'text') {
+          oaiParts.push({ type: 'text', text: block.text })
+        } else if (block.type === 'image' && block.source) {
+          const src = block.source
+          if (src.type === 'base64') {
+            oaiParts.push({ type: 'image_url', image_url: { url: `data:${src.media_type || 'image/png'};base64,${src.data}` } })
+          } else if (src.type === 'url') {
+            oaiParts.push({ type: 'image_url', image_url: { url: src.url } })
+          }
+        } else if (block.type === 'tool_use') {
+          toolCalls = toolCalls || []
+          toolCalls.push({
+            id: block.id,
+            type: 'function',
+            function: { name: block.name, arguments: JSON.stringify(block.input || {}) },
+          })
+        } else if (block.type === 'tool_result') {
+          // OpenAI tool_results → role: 'tool'
+          result.push({ role: 'tool', tool_call_id: block.tool_use_id, content: typeof block.content === 'string' ? block.content : JSON.stringify(block.content) })
+        }
+      }
+      if (oaiParts.length > 0) {
+        if (toolCalls) {
+          result.push({ role, content: oaiParts, tool_calls: toolCalls })
+        } else {
+          result.push({ role, content: oaiParts })
+        }
+      } else if (toolCalls) {
+        result.push({ role, content: null, tool_calls: toolCalls })
+      }
+      continue
+    }
+    // Fallback
+    result.push({ role, content: String(content) })
+  }
+  return result
+}
+
+async function openaiCall(opts: {
   model: string
   system: string
   messages: any[]
   tools?: any[]
   max_tokens?: number
 }): Promise<any> {
-  const { apiKey, baseURL } = getAnthropicConfig()
-  const response = await fetch(`${baseURL}/v1/messages`, {
+  const { apiKey, baseURL } = getAIConfig()
+  const body: any = {
+    model: opts.model,
+    max_tokens: opts.max_tokens ?? 4096,
+    messages: [
+      { role: 'system', content: opts.system },
+      ...toOpenAIMessages(opts.messages),
+    ],
+  }
+  if (opts.tools && opts.tools.length > 0) {
+    body.tools = toOpenAITools(opts.tools)
+    body.tool_choice = 'auto'
+  }
+  const response = await fetch(`${baseURL}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.max_tokens ?? 4096,
-      system: opts.system,
-      tools: opts.tools,
-      messages: opts.messages,
-    }),
+    body: JSON.stringify(body),
   })
   if (!response.ok) {
     const errText = await response.text()
-    throw new Error(`Anthropic API 错误: ${response.status} ${errText}`)
+    throw new Error(`AI API 错误: ${response.status} ${errText}`)
   }
   return response.json()
+}
+
+/** Convert OpenAI response format to the same shape anthropicCall returned.
+ *  The rest of the code expects: { content: [{ type:'text', text:... }, { type:'tool_use', id, name, input }] }
+ */
+function fromOpenAIResponse(data: any): any {
+  const choice = data.choices?.[0]
+  if (!choice) return { content: [], stop_reason: 'end_turn' }
+  const content: any[] = []
+  if (choice.message?.content) {
+    content.push({ type: 'text', text: choice.message.content })
+  }
+  if (choice.message?.tool_calls) {
+    for (const tc of choice.message.tool_calls) {
+      content.push({ type: 'tool_use', id: tc.id, name: tc.function.name, input: JSON.parse(tc.function.arguments) })
+    }
+  }
+  return { content, stop_reason: choice.finish_reason === 'tool_calls' ? 'tool_use' : 'end_turn' }
 }
 
 
@@ -217,15 +310,15 @@ async function runScheduledTrigger(hour: number, apiKey: string) {
   }
 
   try {
-    const anthropicTools = toAnthropicTools(allTools)
+    const oaiTools = toOpenAITools(allTools)
     let currentMessages: any[] = [{ role: 'user', content: prompts[type] }]
     let content = ''
 
     for (let i = 0; i < 3; i++) {
-      const data = await anthropicCall({
-        model: 'claude-haiku-4-5-20251001',
+      const data = await openaiCall({
+        model: AI_MODEL_FAST,
         system: getSystemPrompt('query'),
-        tools: anthropicTools,
+        tools: oaiTools,
         messages: currentMessages,
       })
       const blocks = data.content || []
@@ -284,13 +377,13 @@ export function aiChatPlugin(): Plugin {
   return {
     name: 'ai-chat-plugin',
     configureServer(server) {
-      // Load .env so process.env has ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL
+      // Load .env so process.env has AI_API_KEY / ANTHROPIC_API_KEY
       loadDotenv({ path: resolve(process.cwd(), '.env') })
 
       // ── 启动定时调度器 ──────────────────────────────────────────────────────
-      const anthropicKey = process.env.ANTHROPIC_API_KEY
-      if (anthropicKey) {
-        startScheduler(anthropicKey)
+      const aiApiKey = process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY
+      if (aiApiKey) {
+        startScheduler(aiApiKey)
         console.log('[scheduler] 早中晚定时触发已启动 (09:00 / 13:00 / 18:00)')
       }
 
@@ -314,8 +407,8 @@ export function aiChatPlugin(): Plugin {
           const chunks: Buffer[] = []
           for await (const chunk of req) chunks.push(chunk)
           const { hour } = JSON.parse(Buffer.concat(chunks).toString())
-          const key = process.env.ANTHROPIC_API_KEY
-          if (!key) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
+          const key = process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY
+          if (!key) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 AI_API_KEY' })); return }
           runScheduledTrigger(hour ?? new Date().getHours(), key)
           res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
           res.end(JSON.stringify({ ok: true, message: '已触发，稍后刷新通知' }))
@@ -555,10 +648,10 @@ export function aiChatPlugin(): Plugin {
         const { messages, images, userMemory } = JSON.parse(Buffer.concat(body).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
-        const { apiKey, baseURL } = getAnthropicConfig()
+        const { apiKey, baseURL } = getAIConfig()
         if (!apiKey) {
           res.writeHead(500, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' }))
+          res.end(JSON.stringify({ error: '未配置 AI_API_KEY' }))
           return
         }
 
@@ -577,9 +670,9 @@ export function aiChatPlugin(): Plugin {
           let systemPrompt = getSystemPrompt(intent)
           if (userMemory) systemPrompt += '\n\n' + userMemory
 
-          // Build Anthropic messages — inject images into last user message if present
+          // Build messages — inject images into last user message if present
           const lastMsg = messages[messages.length - 1]
-          const anthropicMessages = messages.map((m: any, idx: number) => {
+          const rawMessages = messages.map((m: any, idx: number) => {
             const isLastUser = m.role === 'user' && idx === messages.length - 1
             if (isLastUser && images?.length > 0) {
               const parts: any[] = images.map((img: any) => ({
@@ -592,14 +685,14 @@ export function aiChatPlugin(): Plugin {
             return { role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }
           })
 
-          const anthropicTools = toAnthropicTools(allTools)
-          let currentMessages = [...anthropicMessages]
+          const oaiTools = toOpenAITools(allTools)
+          let currentMessages = [...rawMessages]
 
           for (let i = 0; i < 5; i++) {
-            const data = await anthropicCall({
-              model: 'claude-haiku-4-5-20251001',
+            const data = await openaiCall({
+              model: AI_MODEL_FAST,
               system: systemPrompt,
-              tools: anthropicTools,
+              tools: oaiTools,
               messages: currentMessages,
             })
             const blocks = data.content || []
@@ -642,12 +735,12 @@ export function aiChatPlugin(): Plugin {
         for await (const chunk of req as any) body.push(chunk)
         const { conversationSummary } = JSON.parse(Buffer.concat(body).toString())
 
-        const { apiKey } = getAnthropicConfig()
-        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
+        const { apiKey } = getAIConfig()
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 AI_API_KEY' })); return }
 
         try {
-          const data = await anthropicCall({
-            model: 'claude-haiku-4-5-20251001',
+          const data = await openaiCall({
+            model: AI_MODEL_FAST,
             system: `你是偏好提取引擎。分析以下ERP对话，提取用户的使用偏好。
 只输出纯JSON（不要markdown代码块），格式如下（省略无法判断的字段）：
 {
@@ -690,8 +783,8 @@ export function aiChatPlugin(): Plugin {
         const agent = getAgent(agentId)
         if (!agent) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: `Unknown agent: ${agentId}` })); return }
 
-        const { apiKey } = getAnthropicConfig()
-        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
+        const { apiKey } = getAIConfig()
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 AI_API_KEY' })); return }
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
         const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
@@ -701,18 +794,18 @@ export function aiChatPlugin(): Plugin {
             ? `${agent.systemPrompt}\n\n---\n【当前品牌信息】\n${brandContext}`
             : agent.systemPrompt
 
-          const anthropicTools = toAnthropicTools(allTools)
-          const anthropicMessages = messages.map((m: any) => ({
+          const oaiTools = toOpenAITools(allTools)
+          const oaiMessages = messages.map((m: any) => ({
             role: m.role === 'assistant' ? 'assistant' : 'user',
             content: m.content,
           }))
-          let currentMessages = [...anthropicMessages]
+          let currentMessages = [...oaiMessages]
 
           for (let i = 0; i < 5; i++) {
-            const data = await anthropicCall({
-              model: 'claude-haiku-4-5-20251001',
+            const data = await openaiCall({
+              model: AI_MODEL_FAST,
               system: systemInstruction,
-              tools: anthropicTools,
+              tools: oaiTools,
               messages: currentMessages,
             })
             const blocks = data.content || []
@@ -760,8 +853,8 @@ export function aiChatPlugin(): Plugin {
         const { messages } = JSON.parse(Buffer.concat(chunks).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
-        const { apiKey, baseURL } = getAnthropicConfig()
-        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
+        const { apiKey, baseURL } = getAIConfig()
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 AI_API_KEY' })); return }
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
         const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
@@ -783,11 +876,11 @@ export function aiChatPlugin(): Plugin {
           const subMessages: any[] = [{ role: 'user', content: taskPrompt }]
 
           for (let i = 0; i < 3; i++) {
-            const subResp = await anthropicCall({
-              model: 'claude-haiku-4-5-20251001',
+            const subResp = await openaiCall({
+              model: AI_MODEL_FAST,
               system: systemWithMemory,
               messages: subMessages,
-              tools: toAnthropicTools(allTools),
+              tools: toOpenAITools(allTools),
             })
             const textBlocks = subResp.content?.filter((b: any) => b.type === 'text') ?? []
             for (const b of textBlocks) {
@@ -830,11 +923,11 @@ export function aiChatPlugin(): Plugin {
           let captainResponse = ''
 
           for (let i = 0; i < 3; i++) {
-            const response = await anthropicCall({
-              model: 'claude-sonnet-4-6',
+            const response = await openaiCall({
+              model: AI_MODEL_BEST,
               system: captain.systemPrompt,
               messages: captainMessages,
-              tools: toAnthropicTools(allTools),
+              tools: toOpenAITools(allTools),
             })
             const textBlocks = response.content?.filter((b: any) => b.type === 'text') ?? []
             for (const b of textBlocks) {
@@ -960,8 +1053,8 @@ export function aiChatPlugin(): Plugin {
             const summaryPrompt = `原始指令：${messages[messages.length - 1]?.content}\n\n各团队成员已完成任务，汇总如下：\n\n${summaryContext}\n\n请以Captain身份，简洁有力地综合以上成果，直接呈现给决策者。不要逐个复述，给出整体判断和可执行建议。`
             send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '\n\n---\n**📋 Captain 综合汇报**\n\n' })
 
-            const summaryResp = await anthropicCall({
-              model: 'claude-sonnet-4-6',
+            const summaryResp = await openaiCall({
+              model: AI_MODEL_BEST,
               system: AGENTS.captain.systemPrompt,
               messages: [{ role: 'user', content: summaryPrompt }],
             })
@@ -991,9 +1084,8 @@ export function aiChatPlugin(): Plugin {
         const { messages, images, adamState } = JSON.parse(Buffer.concat(chunks).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
-        const apiKey = process.env.ANTHROPIC_API_KEY
-        const baseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
-        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return }
+        const { apiKey, baseURL } = getAIConfig()
+        if (!apiKey) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '未配置 AI_API_KEY' })); return }
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
         const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
@@ -1001,15 +1093,18 @@ export function aiChatPlugin(): Plugin {
         try {
           const systemPrompt = adamAgent.buildSystemPrompt(adamState || {})
 
-          // 构建 Anthropic tools 格式
-          const anthropicTools = adamTools.map((t: any) => ({
-            name: t.name,
-            description: t.description,
-            input_schema: t.parameters || { type: 'object', properties: {} },
+          // 构建 OpenAI tools 格式
+          const oaiAdamTools = adamTools.map((t: any) => ({
+            type: 'function',
+            function: {
+              name: t.name,
+              description: t.description,
+              parameters: t.parameters || { type: 'object', properties: {} },
+            },
           }))
 
           // 构建消息历史：最后一条 user 消息如有图片则插入 vision 内容块
-          const anthropicMessages = messages.map((m: any, idx: number) => {
+          const rawAdamMessages = messages.map((m: any, idx: number) => {
             const isLastUser = m.role === 'user' && idx === messages.length - 1
             if (isLastUser && images?.length > 0) {
               const parts: any[] = images.map((img: any) => ({
@@ -1026,31 +1121,17 @@ export function aiChatPlugin(): Plugin {
           })
 
           // 工具调用循环（最多5轮）
-          let currentMessages = [...anthropicMessages]
+          let currentMessages = [...rawAdamMessages]
           for (let i = 0; i < 5; i++) {
-            const response = await fetch(`${baseURL}/v1/messages`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-              },
-              body: JSON.stringify({
-                model: 'claude-sonnet-4-6',
-                max_tokens: 4096,
-                system: systemPrompt,
-                tools: anthropicTools,
-                messages: currentMessages,
-              }),
+            const resp = await openaiCall({
+              model: AI_MODEL_BEST,
+              system: systemPrompt,
+              messages: currentMessages,
+              tools: oaiAdamTools,
+              max_tokens: 4096,
             })
 
-            if (!response.ok) {
-              const errText = await response.text()
-              send({ type: 'error', error: `Anthropic API 错误: ${response.status} ${errText}` })
-              break
-            }
-
-            const data = await response.json() as any
+            const data = fromOpenAIResponse(resp)
             const content = data.content || []
 
             // 流式输出文本
@@ -1100,11 +1181,10 @@ export function aiChatPlugin(): Plugin {
         for await (const chunk of req as any) chunks.push(chunk)
         const { messages, brandContext } = JSON.parse(Buffer.concat(chunks).toString())
 
-        const apiKey = process.env.ANTHROPIC_API_KEY
-        const baseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
+        const { apiKey, baseURL } = getAIConfig()
         if (!apiKey) {
           res.writeHead(500, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ error: '未配置 ANTHROPIC_API_KEY' })); return
+          res.end(JSON.stringify({ error: '未配置 AI_API_KEY' })); return
         }
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' })
@@ -1132,30 +1212,15 @@ ${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，�
 - 批发询价 → 引导填写采购商申请表
 - 订单问题 → 引导去订单查询页面输入手机号或订单号`
 
-          const response = await fetch(`${baseURL}/v1/messages`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': apiKey,
-              'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-              model: 'claude-haiku-4-5-20251001',
-              max_tokens: 1024,
-              system: systemPrompt,
-              messages: messages.map((m: any) => ({
-                role: m.role === 'assistant' ? 'assistant' : 'user',
-                content: m.content,
-              })),
-            }),
+          const data = await openaiCall({
+            model: AI_MODEL_FAST,
+            system: systemPrompt,
+            messages: messages.map((m: any) => ({
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.content,
+            })),
+            max_tokens: 1024,
           })
-
-          if (!response.ok) {
-            send({ type: 'error', error: `API 错误: ${response.status}` })
-            res.write('data: [DONE]\n\n'); res.end(); return
-          }
-
-          const data = await response.json() as any
           const text = data.content?.[0]?.text || ''
           if (text) send({ type: 'text', text })
           res.write('data: [DONE]\n\n')

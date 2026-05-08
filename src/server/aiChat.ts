@@ -1,8 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
+const client = new OpenAI({
+  apiKey: process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY || '',
+  baseURL: (process.env.AI_BASE_URL || process.env.ANTHROPIC_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '') + '/v1',
 })
 
 export async function handleAIChat(req: IncomingMessage, res: ServerResponse) {
@@ -26,19 +27,23 @@ export async function handleAIChat(req: IncomingMessage, res: ServerResponse) {
   })
 
   try {
-    const stream = await client.messages.stream({
-      model: 'claude-sonnet-4-6',
+    const stream = await client.chat.completions.create({
+      model: 'deepseek-chat',
       max_tokens: 2048,
-      system: systemPrompt,
-      messages,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages.map((m: any) => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content,
+        })),
+      ],
+      stream: true,
     })
 
     for await (const chunk of stream) {
-      if (
-        chunk.type === 'content_block_delta' &&
-        chunk.delta.type === 'text_delta'
-      ) {
-        res.write(`data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`)
+      const text = chunk.choices?.[0]?.delta?.content
+      if (text) {
+        res.write(`data: ${JSON.stringify({ text })}\n\n`)
       }
     }
     res.write('data: [DONE]\n\n')
