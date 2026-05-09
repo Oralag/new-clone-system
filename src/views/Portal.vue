@@ -205,15 +205,13 @@
             <path d="M6 8l4 3-4 3V8z" fill="white" opacity="0.8"/>
           </svg>
         </div>
-        <h2 class="card-title">智能运营部门</h2>
-        <p class="card-desc">6大电商平台统一运营中枢。库存同步、订单聚合、AI智能运营，让数据驱动增长。</p>
+        <h2 class="card-title">运营驾驶舱</h2>
+        <p class="card-desc">经营总览、库存补货、客户增长与 ERP 管家统一入口。这里看问题、定动作，再回真实业务模块处理。</p>
         <div class="card-tags">
-          <span class="tag tag-ops">淘宝</span>
-          <span class="tag tag-ops">京东</span>
-          <span class="tag tag-ops">拼多多</span>
-          <span class="tag tag-ops">抖音</span>
-          <span class="tag tag-ops">快手</span>
-          <span class="tag tag-ops">微信小店</span>
+          <span class="tag tag-ops">经营总览</span>
+          <span class="tag tag-ops">库存补货</span>
+          <span class="tag tag-ops">客户增长</span>
+          <span class="tag tag-ops">ERP管家</span>
         </div>
         <div class="card-arrow">
           <span>进入运营中心</span>
@@ -611,11 +609,13 @@ const TOOL_LABELS: Record<string, string> = {
 * { box-sizing: border-box; }
 
 .portal-page {
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   background: var(--card-bg, #ffffff);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--dark, #1d1d1f);
-  overflow-x: hidden;
   padding-top: 0;
 }
 
@@ -1064,7 +1064,6 @@ const TOOL_LABELS: Record<string, string> = {
 .portal-card-ops {
   background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #155e75 100%);
   border-color: rgba(8,145,178,0.3);
-  grid-column: 1 / -1;
 }
 .portal-card-ops .card-title { color: #fff; }
 .portal-card-ops .card-desc  { color: rgba(255,255,255,0.55); }

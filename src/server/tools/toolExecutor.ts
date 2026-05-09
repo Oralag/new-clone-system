@@ -1430,63 +1430,62 @@ export async function executeTool(name: string, input: Record<string, any>, toke
 
       // ── 运营工具 ──────────────────────────────────────
       case 'query_stock_warning': {
-        try {
-          const { threshold = 10, warehouse } = args as { threshold?: number; warehouse?: string }
-          const r = await http.post('/erp/stock/warning', { threshold, warehouse }, { silent: true })
-          if (r.data?.list?.length) {
-            const items = r.data.list.map((i: any) =>
-              `⚠️ [${i.goods_name}] 当前库存 ${i.stock} 件（预警线 ${i.threshold} 件）`
-            ).join('\n')
-            result = `📦 **库存预警报告**\n\n${items}\n\n共 ${r.data.list.length} 个商品低于预警线，建议立即处理。`
-          } else {
-            result = '✅ 当前无库存预警，所有商品库存充足。'
-          }
-        } catch (e: any) {
-          result = `❌ 查询失败：${e.message}`
+        const params: any = { list_rows: 100 }
+        if (input.warehouse) params.warehouse_name = input.warehouse
+        const r = await erpGet('/stock/StockWarning/index', params, token)
+        const rows: any[] = r?.data?.rows || []
+        if (rows.length) {
+          const items = rows.map((i: any) =>
+            `⚠️ [${i.goods_name}] 当前库存 ${i.stock_num} 件（最低预警 ${i.min_num} 件，仓库：${i.warehouse_name || '—'}）`
+          ).join('\n')
+          result = `📦 **库存预警报告**\n\n${items}\n\n共 ${rows.length} 个商品低于预警线，建议立即处理。`
+        } else {
+          result = '✅ 当前无库存预警，所有商品库存充足。'
         }
         break
       }
 
       case 'suggest_restock': {
-        try {
-          const { days = 30, min_urgency = 'all' } = args as { days?: number; min_urgency?: string }
-          const r = await http.post('/erp/stock/restock_suggest', { days, min_urgency }, { silent: true })
-          if (r.data?.list?.length) {
-            const items = r.data.list.map((i: any) => {
-              const emoji = i.urgency === 'high' ? '🔴' : i.urgency === 'medium' ? '🟡' : '🟢'
-              return `${emoji} [${i.goods_name}] 建议补货 ${i.qty} 件（库存 ${i.stock} 件，预计可售 ${i.days_left} 天）`
-            }).join('\n')
-            result = `📋 **补货建议报告**（参考过去 ${days} 天销量）\n\n${items}`
-          } else {
-            result = '✅ 当前无需补货，库存状况良好。'
-          }
-        } catch (e: any) {
-          result = `❌ 生成补货建议失败：${e.message}`
+        // 从库存预警表推算补货建议（stock_num < min_num 的商品补至 max_num）
+        const r = await erpGet('/stock/StockWarning/index', { list_rows: 100 }, token)
+        const rows: any[] = r?.data?.rows || []
+        if (rows.length) {
+          const items = rows.map((i: any) => {
+            const need = Math.max(0, (i.max_num || i.min_num * 2) - (i.stock_num || 0))
+            const urgency = i.stock_num <= 0 ? '🔴 紧急' : i.stock_num < i.min_num / 2 ? '🟡 较急' : '🟢 建议'
+            return `${urgency} [${i.goods_name}] 建议补货 ${need} 件（当前 ${i.stock_num} 件，目标 ${i.max_num || i.min_num * 2} 件）`
+          }).join('\n')
+          result = `📋 **补货建议报告**\n\n${items}\n\n可告知供应商后生成采购单草稿。`
+        } else {
+          result = '✅ 当前无需补货，库存状况良好。'
         }
         break
       }
 
       case 'create_purchase_draft': {
-        try {
-          const { supplier_name, items, remark, auto_audit = false } = args as any
-          if (!supplier_name || !items?.length) {
-            result = '❌ 缺少必填参数：supplier_name 和 items（至少1条）'
-            break
-          }
-          const r = await http.post('/erp/purchase/create', {
-            supplier_name,
-            items,
-            remark,
-            status: auto_audit ? 1 : 0,
-          }, { silent: true })
-          if (r.data?.id) {
-            const status = auto_audit ? '已自动审核' : '待审核（草稿）'
-            result = `✅ 采购单${status}\n单号：${r.data.id}\n供应商：${supplier_name}\n商品：${items.map((i: any) => `${i.goods_name}×${i.qty}`).join('、')}`
-          } else {
-            result = `❌ 创建失败：${r.message || '未知错误'}`
-          }
-        } catch (e: any) {
-          result = `❌ 创建采购单失败：${e.message}`
+        const { supplier_name, supplier_id, items: rawItems, remark, auto_audit = false } = input
+        if (!supplier_name || !rawItems?.length) {
+          result = '❌ 缺少必填参数：supplier_name 和 items（至少1条）'
+          break
+        }
+        const resolvedItems = rawItems.length > 0 ? await resolveGoodsIds(rawItems, token) : []
+        const payload: Record<string, any> = {
+          supplier_id: supplier_id || '',
+          supplier_name,
+          total_amount: resolvedItems.reduce((s: number, i: any) => s + Number(i.price || 0) * Number(i.num || 1), 0),
+          admin_name: '',
+          remark: remark || '智能运营部门补货草稿',
+          goods_info: JSON.stringify(resolvedItems),
+        }
+        const res = await erpPost('/stock/PurchaseOrder/add', payload, token)
+        if (res?.code !== 1) { result = `❌ 创建失败：${res?.msg || JSON.stringify(res)}`; break }
+        const orderId = res?.data?.id || res?.data?.lastId
+        const orderSn = res?.data?.order_sn || '已生成'
+        if (auto_audit && orderId) {
+          await erpPost('/stock/PurchaseOrder/audit', { id: orderId, status: 1 }, token)
+          result = `✅ 采购单已创建并审核！单号：${orderSn}`
+        } else {
+          result = `✅ 采购草稿已创建（待审核）！单号：${orderSn}\n供应商：${supplier_name}\n商品：${resolvedItems.map((i: any) => `${i.goods_name}×${i.num || 1}`).join('、')}`
         }
         break
       }

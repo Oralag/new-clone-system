@@ -159,14 +159,20 @@ const routes: RouteRecordRaw[] = [
       { path: 'personnel/social', name: 'PersonnelSocial', component: () => import('@/views/personnel/Social.vue'), meta: { title: '社保管理' } },
       { path: 'personnel/welfare', name: 'PersonnelWelfare', component: () => import('@/views/personnel/Welfare.vue'), meta: { title: '福利管理' } },
 
-      // 电商运营
-      { path: 'ecommerce', redirect: '/ecommerce/overview' },
-      { path: 'ecommerce/overview', name: 'EcommerceOverview', component: () => import('@/views/ecommerce/Overview.vue'), meta: { title: '运营大屏' } },
-      { path: 'ecommerce/platforms', name: 'EcommercePlatforms', component: () => import('@/views/ecommerce/Platforms.vue'), meta: { title: '平台管理' } },
-      { path: 'ecommerce/orders', name: 'EcommerceOrders', component: () => import('@/views/ecommerce/Orders.vue'), meta: { title: '订单中心' } },
-      { path: 'ecommerce/stock', name: 'EcommerceStock', component: () => import('@/views/ecommerce/Stock.vue'), meta: { title: '库存同步' } },
-      { path: 'ecommerce/offline', name: 'EcommerceOffline', component: () => import('@/views/ecommerce/Offline.vue'), meta: { title: '线下运营' } },
-      { path: 'ecommerce/agent', name: 'EcommerceAgent', component: () => import('@/views/ecommerce/Agent.vue'), meta: { title: '智能运营' } },
+    ],
+  },
+  // ── 运营驾驶舱（独立布局）────────────
+  {
+    path: '/ecommerce',
+    component: () => import('@/layouts/EcommerceLayout.vue'),
+    redirect: '/ecommerce/overview',
+    children: [
+      { path: 'overview', name: 'EcommerceOverview', component: () => import('@/views/ecommerce/Overview.vue'), meta: { title: '经营总览' } },
+      { path: 'platforms', name: 'EcommercePlatforms', component: () => import('@/views/ecommerce/Platforms.vue'), meta: { title: '平台管理' } },
+      { path: 'orders', name: 'EcommerceOrders', component: () => import('@/views/ecommerce/Orders.vue'), meta: { title: '订单中心' } },
+      { path: 'stock', name: 'EcommerceStock', component: () => import('@/views/ecommerce/Stock.vue'), meta: { title: '库存与补货' } },
+      { path: 'offline', name: 'EcommerceOffline', component: () => import('@/views/ecommerce/Offline.vue'), meta: { title: '客户增长' } },
+      { path: 'agent', name: 'EcommerceAgent', component: () => import('@/views/ecommerce/Agent.vue'), meta: { title: 'ERP管家' } },
     ],
   },
   // ── 移动协作模块（独立布局）────────────

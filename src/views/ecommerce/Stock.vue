@@ -1,174 +1,355 @@
 <template>
-  <div class="stock-page">
-    <div class="page-header">
-      <div class="page-title">📦 库存同步</div>
-      <div class="page-desc">各平台库存统一管理、智能预警、自动补货建议</div>
-    </div>
-
-    <!-- 快捷统计 -->
-    <div class="stat-row">
-      <div class="stat-chip green">{{ stats.total }} <span>商品</span></div>
-      <div class="stat-chip">{{ stats.normal }} <span>正常</span></div>
-      <div class="stat-chip yellow">{{ stats.warning }} <span>预警</span></div>
-      <div class="stat-chip red">{{ stats.critical }} <span>紧急补货</span></div>
-    </div>
-
-    <!-- 操作栏 -->
-    <div class="action-bar">
-      <el-button size="small" @click="syncAll" :loading="syncing">同步全平台库存</el-button>
-      <el-button size="small" type="primary" @click="$router.push('/ecommerce/agent')">🤖 AI智能分析</el-button>
-      <div class="action-right">
-        <el-input v-model="keyword" size="small" placeholder="搜索商品" style="width:160px" clearable />
+  <div class="ops-stock-page">
+    <section class="hero">
+      <div>
+        <div class="hero-title">库存与补货</div>
+        <div class="hero-desc">只看真实库存预警和补货动作，不再做一层假的平台库存同步壳。</div>
       </div>
-    </div>
+      <div class="hero-actions">
+        <button class="ghost-btn" @click="router.push('/warehouse/stock')">库存总览</button>
+        <button class="primary-btn" @click="sendCaptainPrompt('根据当前库存预警，给我一版补货优先级和采购建议')">让管家补货分析</button>
+      </div>
+    </section>
 
-    <!-- 库存列表 -->
-    <div class="stock-list">
-      <div v-if="loading" class="loading-state">加载中…</div>
-      <div v-else-if="!stockList.length" class="empty-state">暂无库存数据</div>
-      <div v-else>
-        <div v-for="item in stockList" :key="item.goodsId" class="stock-card">
-          <div class="stock-info">
-            <div class="stock-name">{{ item.goodsName }}</div>
-            <div class="stock-meta">
-              <span>SKU：{{ item.sku || '-' }}</span>
-              <span>·</span>
-              <span>仓库：{{ item.warehouse || '默认仓库' }}</span>
+    <section class="stats-grid">
+      <article class="stat-card">
+        <div class="stat-label">库存预警商品</div>
+        <div class="stat-value">{{ stats.warning }}</div>
+        <div class="stat-sub">当前低于安全线的商品数</div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">紧急补货</div>
+        <div class="stat-value danger">{{ stats.critical }}</div>
+        <div class="stat-sub">当前库存小于等于 0 的商品</div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">涉及仓库</div>
+        <div class="stat-value">{{ stats.warehouseCount }}</div>
+        <div class="stat-sub">预警分布的仓库数量</div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">预警清单</div>
+            <div class="panel-sub">先处理最缺货的商品，再让管家生成草稿。</div>
+          </div>
+          <button class="link-btn" @click="router.push('/warehouse/warning')">查看完整库存预警</button>
+        </div>
+
+        <div class="toolbar">
+          <input v-model.trim="keyword" class="keyword-input" placeholder="搜索商品名称" />
+          <button class="ghost-btn" @click="loadWarnings">刷新</button>
+        </div>
+
+        <div v-if="loading" class="empty-state">加载中...</div>
+        <div v-else-if="warnings.length === 0" class="empty-state">没有匹配到库存预警商品。</div>
+        <div v-else class="warning-list">
+          <div v-for="item in warnings" :key="`${item.goods_name}-${item.warehouse_name}`" class="warning-card">
+            <div class="warning-main">
+              <div class="warning-title">{{ item.goods_name }}</div>
+              <div class="warning-meta">{{ item.goods_sn || '未编码' }} · {{ item.warehouse_name || '未分仓' }}</div>
             </div>
-          </div>
-          <div class="stock-level">
-            <div class="stock-num" :class="getStockClass(item.stock, item.threshold)">{{ item.stock }}</div>
-            <div class="stock-unit">{{ item.unit || '件' }}</div>
-          </div>
-          <div class="stock-threshold">
-            <div class="threshold-label">预警线</div>
-            <div class="threshold-val">{{ item.threshold }} {{ item.unit || '件' }}</div>
-          </div>
-          <div class="stock-status">
-            <span class="status-tag" :class="getStockClass(item.stock, item.threshold)">
-              {{ getStockStatus(item.stock, item.threshold) }}
-            </span>
-          </div>
-          <div class="stock-platforms">
-            <span v-for="p in item.platforms?.slice(0,3)" :key="p" class="plat-chip">{{ p }}</span>
-            <span v-if="(item.platforms?.length || 0) > 3" class="plat-more">+{{ (item.platforms?.length || 0) - 3 }}</span>
-          </div>
-          <div class="stock-actions">
-            <el-button size="small" @click="editThreshold(item)">设预警</el-button>
+            <div class="warning-values">
+              <span class="chip chip-current">当前 {{ item.stock_num }}</span>
+              <span class="chip">最低 {{ item.min_num }}</span>
+              <span class="chip">建议到 {{ item.max_num || Number(item.min_num || 0) * 2 }}</span>
+            </div>
+            <button class="primary-btn small" @click="sendCaptainPrompt(`针对商品${item.goods_name}和仓库${item.warehouse_name || '默认仓库'}做补货分析，如果需要请准备采购草稿`)">
+              补货判断
+            </button>
           </div>
         </div>
-      </div>
-    </div>
+      </article>
 
-    <!-- 分页 -->
-    <div class="pagination-wrap">
-      <el-pagination
-        v-model:current-page="page" v-model:page-size="pageSize"
-        :total="total" :page-sizes="[20, 50, 100]"
-        layout="total, sizes, prev, pager, next"
-        @size-change="loadStock" @current-change="loadStock"
-      />
-    </div>
+      <article class="panel action-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">下一步动作</div>
+            <div class="panel-sub">回到原有 ERP 模块处理，不在这里造第二套库存系统。</div>
+          </div>
+        </div>
+
+        <div class="action-list">
+          <button class="action-card" @click="router.push('/procure/order')">
+            <div class="action-title">进入采购订单</div>
+            <div class="action-desc">已经确认补货需求后，回到采购模块继续处理。</div>
+          </button>
+          <button class="action-card" @click="router.push('/warehouse/warning')">
+            <div class="action-title">进入库存预警页</div>
+            <div class="action-desc">查看完整清单、仓库分布和安全线情况。</div>
+          </button>
+          <button class="action-card" @click="sendCaptainPrompt('把当前库存预警整理成一份补货优先级清单，简明一点')">
+            <div class="action-title">让管家排优先级</div>
+            <div class="action-desc">适合你先看今天要先补什么。</div>
+          </button>
+          <button class="action-card" @click="sendCaptainPrompt('根据当前库存预警，帮我生成一份采购单草稿所需的商品建议')">
+            <div class="action-title">让管家准备草稿</div>
+            <div class="action-desc">给出商品、数量和建议动作，但仍回采购单审核链路。</div>
+          </button>
+        </div>
+      </article>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import http from '@/api/http'
 
+const router = useRouter()
 const loading = ref(false)
-const syncing = ref(false)
-const stockList = ref<any[]>([])
-const total = ref(0)
-const page = ref(1)
-const pageSize = ref(20)
 const keyword = ref('')
+const warnings = ref<any[]>([])
 
-const stats = ref({ total: 0, normal: 0, warning: 0, critical: 0 })
+const stats = computed(() => {
+  const warning = warnings.value.length
+  const critical = warnings.value.filter((item: any) => Number(item.stock_num || 0) <= 0).length
+  const warehouseCount = new Set(warnings.value.map((item: any) => item.warehouse_name).filter(Boolean)).size
+  return { warning, critical, warehouseCount }
+})
 
-onMounted(() => loadStock())
+function sendCaptainPrompt(prompt: string) {
+  window.dispatchEvent(new CustomEvent('captain-fill', { detail: prompt }))
+}
 
-async function loadStock() {
+async function loadWarnings() {
   loading.value = true
   try {
-    const r = await http.post('/erp/ecommerce/stock', {
-      page: page.value,
-      pageSize: pageSize.value,
-      keyword: keyword.value,
-    }, { silent: true })
-    stockList.value = r.data?.list || []
-    total.value = r.data?.total || 0
-    if (r.data?.stats) stats.value = r.data.stats
-  } catch { stockList.value = [] }
-  finally { loading.value = false }
+    const response = await http.get('/stock/StockWarning/index', {
+      params: {
+        list_rows: 50,
+        goods_name: keyword.value || undefined,
+      },
+    })
+    warnings.value = response.data?.rows ?? response.rows ?? []
+  } catch {
+    warnings.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
-async function syncAll() {
-  syncing.value = true
-  try {
-    await http.post('/erp/ecommerce/stock/sync_all', {}, { silent: true })
-    ElMessage({ message: '全平台库存同步完成', type: 'success' })
-    loadStock()
-  } catch (e: any) {
-    ElMessage({ message: `同步失败：${e.message}`, type: 'error' })
-  } finally { syncing.value = false }
-}
-
-function getStockClass(stock: number, threshold: number): string {
-  if (stock === 0) return 'red'
-  if (stock <= threshold * 0.5) return 'red'
-  if (stock <= threshold) return 'yellow'
-  return 'green'
-}
-
-function getStockStatus(stock: number, threshold: number): string {
-  if (stock === 0) return '已售罄'
-  if (stock <= threshold * 0.5) return '紧急补货'
-  if (stock <= threshold) return '库存预警'
-  return '库存充足'
-}
-
-function editThreshold(item: any) {
-  ElMessage({ message: `设置 ${item.goodsName} 预警线功能开发中`, type: 'info' })
-}
+onMounted(() => {
+  loadWarnings()
+})
 </script>
 
 <style scoped>
-.stock-page { padding: 16px; }
-.page-header { margin-bottom: 14px; }
-.page-title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-.page-desc { font-size: 13px; color: #999; }
-.stat-row { display: flex; gap: 8px; margin-bottom: 14px; }
-.stat-chip { background: #fff; border-radius: 10px; padding: 8px 14px; font-size: 16px; font-weight: 700; color: #333; }
-.stat-chip span { font-size: 12px; font-weight: 400; color: #999; margin-left: 4px; }
-.stat-chip.green { border-left: 3px solid #10b981; }
-.stat-chip.yellow { border-left: 3px solid #f59e0b; }
-.stat-chip.red { border-left: 3px solid #ef4444; }
-.action-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
-.action-right { flex: 1; display: flex; justify-content: flex-end; }
-.stock-list { display: flex; flex-direction: column; gap: 8px; }
-.stock-card { background: #fff; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-.stock-info { flex: 1; min-width: 0; }
-.stock-name { font-size: 14px; font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stock-meta { font-size: 12px; color: #999; margin-top: 2px; display: flex; gap: 6px; }
-.stock-level { display: flex; align-items: baseline; gap: 4px; min-width: 60px; }
-.stock-num { font-size: 20px; font-weight: 800; }
-.stock-num.green { color: #10b981; }
-.stock-num.yellow { color: #f59e0b; }
-.stock-num.red { color: #ef4444; }
-.stock-unit { font-size: 11px; color: #999; }
-.stock-threshold { min-width: 70px; text-align: center; }
-.threshold-label { font-size: 10px; color: #999; }
-.threshold-val { font-size: 12px; color: #666; }
-.stock-status { min-width: 70px; }
-.status-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
-.status-tag.green { background: #d1fae5; color: #059669; }
-.status-tag.yellow { background: #fef3c7; color: #d97706; }
-.status-tag.red { background: #fee2e2; color: #dc2626; }
-.stock-platforms { display: flex; gap: 4px; min-width: 80px; flex-wrap: wrap; }
-.plat-chip { font-size: 10px; background: #f3f4f6; color: #666; padding: 2px 6px; border-radius: 6px; }
-.plat-more { font-size: 10px; color: #999; }
-.loading-state, .empty-state { text-align: center; padding: 40px; color: #999; }
-.pagination-wrap { margin-top: 14px; display: flex; justify-content: flex-end; }
+.ops-stock-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero,
+.stat-card,
+.panel {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+}
+
+.hero-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.hero-desc {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.hero-actions,
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.stats-grid,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.grid {
+  grid-template-columns: 1.25fr 0.9fr;
+}
+
+.stat-card {
+  padding: 18px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.stat-value {
+  margin-top: 14px;
+  font-size: 34px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.stat-value.danger {
+  color: #dc2626;
+}
+
+.stat-sub {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.panel {
+  padding: 20px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.panel-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.panel-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.warning-list,
+.action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.warning-card,
+.action-card {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 18px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.warning-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.warning-main {
+  flex: 1;
+}
+
+.warning-title,
+.action-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.warning-meta,
+.action-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.warning-values {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #334155;
+}
+
+.chip-current {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.keyword-input {
+  width: 220px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.primary-btn,
+.ghost-btn,
+.link-btn {
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-btn {
+  border: none;
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #fff;
+}
+
+.primary-btn.small {
+  padding: 9px 12px;
+  font-size: 12px;
+}
+
+.ghost-btn {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #fff;
+  color: #334155;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: #0f766e;
+}
+
+.empty-state {
+  padding: 36px 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.action-card {
+  text-align: left;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  cursor: pointer;
+}
 </style>
