@@ -89,7 +89,14 @@ interface Platform {
   lastSync?: string
 }
 
-const platforms = ref<Platform[]>([])
+const platforms = ref<Platform[]>([
+  { id: 'taobao', name: '淘宝', emoji: '🛒', color: '#ff5000', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
+  { id: 'jd', name: '京东', emoji: '📦', color: '#e2231a', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
+  { id: 'pdd', name: '拼多多', emoji: '💚', color: '#e2231a', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
+  { id: 'douyin', name: '抖音', emoji: '🎵', color: '#000000', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
+  { id: 'kuaishou', name: '快手', emoji: '📱', color: '#ff0000', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
+  { id: 'wxd', name: '微信小店', emoji: '💬', color: '#07c160', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
+])
 const syncingId = ref('')
 const config = ref({
   autoSync: true,
@@ -115,7 +122,6 @@ onMounted(async () => {
 function togglePlatform(p: Platform) {
   if (p.connected) {
     p.connected = false
-    http.post('/erp/ecommerce/platforms/toggle', { platform: p.id, connected: false }, { silent: true }).catch(() => {})
     ElMessage({ message: `${p.name} 已断开`, type: 'info' })
   } else {
     showConfig(p)
