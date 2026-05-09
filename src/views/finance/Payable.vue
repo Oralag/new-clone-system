@@ -240,7 +240,7 @@ async function load() {
         })
       }
       const s = supplierMap.get(key)!
-      const orderAmt = Number(o.total_amount ?? 0)
+      const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
       const paidAmt = Number(o.pay_amount || 0)
       const feeNeedPay = getProcureFeeNeedPayAmount(o)
       const feePaid = procureFeePaidById[o.id] || 0
