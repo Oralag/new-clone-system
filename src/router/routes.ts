@@ -172,7 +172,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'orders', name: 'EcommerceOrders', component: () => import('@/views/ecommerce/Orders.vue'), meta: { title: '订单中心' } },
       { path: 'stock', name: 'EcommerceStock', component: () => import('@/views/ecommerce/Stock.vue'), meta: { title: '库存与补货' } },
       { path: 'offline', name: 'EcommerceOffline', component: () => import('@/views/ecommerce/Offline.vue'), meta: { title: '客户增长' } },
-      { path: 'agent', name: 'EcommerceAgent', component: () => import('@/views/ecommerce/Agent.vue'), meta: { title: 'ERP管家' } },
+      { path: 'agent', name: 'EcommerceAgent', component: () => import('@/views/ecommerce/Agent.vue'), meta: { title: '运营专员' } },
     ],
   },
   // ── 移动协作模块（独立布局）────────────

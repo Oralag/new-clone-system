@@ -9,7 +9,7 @@
         </svg>
         <div class="ecom-logo-text">
           <span class="ecom-logo-name">运营驾驶舱</span>
-          <span class="ecom-logo-sub">ERP 数据 + 管家行动</span>
+          <span class="ecom-logo-sub">ERP 数据 + 管家 + 运营专员</span>
         </div>
       </div>
 
@@ -43,14 +43,14 @@
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
             <path d="M18 6l3 3-3 3" />
           </svg>
-          <span>ERP管家</span>
+          <span>运营专员</span>
         </router-link>
       </nav>
 
       <div class="ecom-sidebar-footer">
         <div class="ecom-foot-card">
           <div class="ecom-foot-title">这一区不再造第二套 ERP</div>
-          <div class="ecom-foot-desc">看数据、发现问题、交给管家推进。</div>
+          <div class="ecom-foot-desc">看数据、发现问题，再交给管家和运营专员推进。</div>
         </div>
         <div class="ecom-back-btn" @click="router.push('/portal')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -65,7 +65,7 @@
       <div class="ecom-topbar">
         <div class="ecom-topbar-copy">
           <div class="ecom-topbar-title">运营看板</div>
-          <div class="ecom-topbar-sub">实时看业务，动作交给 ERP 管家和原有模块处理。</div>
+          <div class="ecom-topbar-sub">实时看业务，动作交给 ERP 管家、运营专员和原有模块处理。</div>
         </div>
         <CaptainBar class="ecom-captain" />
       </div>

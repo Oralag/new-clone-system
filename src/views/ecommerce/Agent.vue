@@ -2,9 +2,9 @@
   <div class="ops-agent-page">
     <section class="hero">
       <div>
-        <div class="hero-title">ERP 管家</div>
+        <div class="hero-title">ERP 管家 · 运营专员团队</div>
         <div class="hero-desc">
-          运营区不再维护一套单独的“智能运营部门对话系统”。销售、库存、客户、补货这些动作，直接由 ERP 管家接住，再按场景切换工作方式。
+          运营人员还是要有，只是不再单独造一套平行系统。这里的做法是：由 ERP 管家统筹，下面挂数据官、补货专员、客户运营专员、活动策划专员这些工作身份。
         </div>
       </div>
       <div class="hero-actions">
@@ -17,8 +17,8 @@
       <article class="panel">
         <div class="panel-head">
           <div>
-            <div class="panel-title">管家工作模式</div>
-            <div class="panel-sub">还是同一个 ERP 管家，只是你给它不同运营任务。</div>
+            <div class="panel-title">运营专员席位</div>
+            <div class="panel-sub">还是同一个 ERP 管家，但你可以按岗位把它切成不同运营人员来用。</div>
           </div>
         </div>
         <div class="mode-grid">
@@ -33,8 +33,8 @@
       <article class="panel">
         <div class="panel-head">
           <div>
-            <div class="panel-title">高频任务</div>
-            <div class="panel-sub">点一下就把上下文塞给管家，不再另外维护假聊天页。</div>
+            <div class="panel-title">运营任务</div>
+            <div class="panel-sub">点一下就把任务交给管家和对应专员，不再另外维护假聊天页。</div>
           </div>
         </div>
         <div class="task-list">
@@ -50,11 +50,12 @@
       <div class="panel-head">
         <div>
           <div class="panel-title">处理原则</div>
-          <div class="panel-sub">这块以后只做“驾驶舱 + 管家 + ERP模块跳转”，不再平行造模块。</div>
+          <div class="panel-sub">这块以后只做“驾驶舱 + 管家 + 运营专员 + ERP模块跳转”，不再平行造模块。</div>
         </div>
       </div>
       <div class="principle-list">
-        <div class="principle-item">查询 ERP 数据，优先交给管家，不单独新造一个运营数据查询页。</div>
+        <div class="principle-item">运营人员存在，但它们是 ERP 管家的岗位身份，不是另一套独立系统。</div>
+        <div class="principle-item">查询 ERP 数据，优先交给管家和对应专员，不单独新造一个运营数据查询页。</div>
         <div class="principle-item">真正落单据、审核、收款、出库，回到原有 ERP 模块走完整业务链路。</div>
         <div class="principle-item">运营页只负责发现问题、汇总信息、触发动作，不做假的平台状态、假的订单壳、假的客户壳。</div>
       </div>
@@ -70,27 +71,27 @@ const router = useRouter()
 const modes = [
   {
     emoji: '📊',
-    title: '数据官模式',
-    desc: '销售、订单、库存异常判断。',
-    prompt: '切到数据官模式，给我看今天销售、订单和库存异常。',
+    title: '数据官',
+    desc: '盯销售、订单、库存异常，给经营判断。',
+    prompt: '切到数据官身份，给我看今天销售、订单和库存异常。',
   },
   {
     emoji: '📦',
-    title: '补货专员模式',
-    desc: '看库存预警并给出补货建议。',
-    prompt: '切到补货专员模式，分析库存预警并给出补货动作。',
+    title: '补货专员',
+    desc: '看库存预警，判断先补什么、补多少。',
+    prompt: '切到补货专员身份，分析库存预警并给出补货动作。',
   },
   {
     emoji: '💬',
-    title: '客户运营模式',
-    desc: '跟进客户、私域和活动建议。',
-    prompt: '切到客户运营模式，帮我整理近期客户跟进和活动建议。',
+    title: '客户运营专员',
+    desc: '盯客户跟进、私域动作和样品转化。',
+    prompt: '切到客户运营专员身份，帮我整理近期客户跟进和活动建议。',
   },
   {
     emoji: '🎯',
-    title: '活动策划模式',
-    desc: '围绕销售目标出活动方案。',
-    prompt: '切到活动策划模式，结合当前业务给我一版近期促销动作建议。',
+    title: '活动策划专员',
+    desc: '围绕销售目标和客户节奏出活动方案。',
+    prompt: '切到活动策划专员身份，结合当前业务给我一版近期促销动作建议。',
   },
 ]
 
