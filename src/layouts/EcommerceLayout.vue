@@ -19,14 +19,30 @@
             <rect x="3" y="3" width="18" height="18" rx="3" />
             <path d="M7 15l3-3 2 2 5-5" />
           </svg>
-          <span>经营总览</span>
+          <span>电商总览</span>
+        </router-link>
+        <router-link to="/ecommerce/platforms" class="ecom-nav-item" active-class="ecom-nav-active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+          <span>平台管理</span>
+        </router-link>
+        <router-link to="/ecommerce/orders" class="ecom-nav-item" active-class="ecom-nav-active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+            <path d="M9 12h6M9 16h4" />
+          </svg>
+          <span>订单中心</span>
         </router-link>
         <router-link to="/ecommerce/stock" class="ecom-nav-item" active-class="ecom-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
             <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" />
           </svg>
-          <span>库存与补货</span>
+          <span>库存同步</span>
         </router-link>
         <router-link to="/ecommerce/offline" class="ecom-nav-item" active-class="ecom-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -35,7 +51,7 @@
             <path d="M17 8h4M19 6v4" />
             <path d="M15 18h6" />
           </svg>
-          <span>客户增长</span>
+          <span>线下与私域</span>
         </router-link>
         <router-link to="/ecommerce/agent" class="ecom-nav-item" active-class="ecom-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -50,7 +66,7 @@
       <div class="ecom-sidebar-footer">
         <div class="ecom-foot-card">
           <div class="ecom-foot-title">这一区不再造第二套 ERP</div>
-          <div class="ecom-foot-desc">看数据、发现问题，再交给管家和运营专员推进。</div>
+          <div class="ecom-foot-desc">先盯线上平台、订单、库存，再交给管家和运营专员推进。</div>
         </div>
         <div class="ecom-back-btn" @click="router.push('/portal')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -64,8 +80,8 @@
     <main class="ecom-main">
       <div class="ecom-topbar">
         <div class="ecom-topbar-copy">
-          <div class="ecom-topbar-title">运营看板</div>
-          <div class="ecom-topbar-sub">实时看业务，动作交给 ERP 管家、运营专员和原有模块处理。</div>
+          <div class="ecom-topbar-title">电商运营看板</div>
+          <div class="ecom-topbar-sub">先处理线上平台、订单、库存，再让 ERP 管家和运营专员继续推进。</div>
         </div>
         <CaptainBar class="ecom-captain" />
       </div>

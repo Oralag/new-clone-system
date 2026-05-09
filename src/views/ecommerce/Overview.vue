@@ -2,10 +2,10 @@
   <div class="ops-dashboard">
     <section class="hero-card">
       <div class="hero-copy">
-        <span class="hero-kicker">运营驾驶舱</span>
-        <h1>先看经营信号，再把动作交给 ERP 管家。</h1>
+        <span class="hero-kicker">线上电商运营</span>
+        <h1>先看平台、订单、库存，再把动作交给管家。</h1>
         <p>
-          这里不重复造订单、客户、库存系统，只聚合真实业务数据，帮你快速发现问题、进入原有 ERP 模块，或者直接让管家继续推进。
+          这里的主轴还是线上电商运营。平台接入、订单处理、库存同步、活动动作放前面；客户和线下作为辅助，不再抢主线。
         </p>
       </div>
       <div class="hero-actions">
@@ -31,8 +31,8 @@
       <article class="panel">
         <div class="panel-head">
           <div>
-            <div class="panel-title">关键提醒</div>
-            <div class="panel-sub">从真实 ERP 数据里筛出今天最值得处理的事。</div>
+            <div class="panel-title">线上关键提醒</div>
+            <div class="panel-sub">优先从订单、库存和待处理事项里找今天最该动的点。</div>
           </div>
           <button class="panel-link" @click="sendCaptainPrompt('把当前关键提醒按优先级排一下，并告诉我先做哪三件事')">交给管家判断</button>
         </div>
@@ -51,8 +51,8 @@
       <article class="panel">
         <div class="panel-head">
           <div>
-            <div class="panel-title">运营动作</div>
-            <div class="panel-sub">常用动作都回到原有模块或管家，不另起一套系统。</div>
+            <div class="panel-title">线上运营动作</div>
+            <div class="panel-sub">平台、订单、库存是主轴，动作都回到原有模块或管家。</div>
           </div>
         </div>
         <div class="action-grid">
@@ -70,7 +70,7 @@
         <div class="panel-head">
           <div>
             <div class="panel-title">库存预警前排</div>
-            <div class="panel-sub">先盯最紧急的商品，再决定是否补货。</div>
+            <div class="panel-sub">线上单量起来后，先盯最紧急的商品，再决定是否补货。</div>
           </div>
           <button class="panel-link" @click="router.push('/warehouse/warning')">查看全部</button>
         </div>
@@ -92,8 +92,8 @@
       <article class="panel steward-panel">
         <div class="panel-head">
           <div>
-            <div class="panel-title">管家预设角色</div>
-            <div class="panel-sub">不是单独的智能运营部门，而是 ERP 管家的几种运营工作方式。</div>
+            <div class="panel-title">运营专员团队</div>
+            <div class="panel-sub">线上运营仍然有人，只是统一挂在 ERP 管家下面协同工作。</div>
           </div>
         </div>
         <div class="mode-list">
@@ -128,7 +128,7 @@ const warnings = ref<any[]>([])
 const kpis = computed(() => [
   {
     key: 'sales',
-    label: '今日销售额',
+    label: '今日线上销售',
     value: `¥${metrics.value.todaySales.toFixed(2)}`,
     sub: `今日订单 ${metrics.value.todayOrders} 笔`,
     tag: '经营',
@@ -146,16 +146,16 @@ const kpis = computed(() => [
   },
   {
     key: 'contracts',
-    label: '待审核合同',
+    label: '待处理单据',
     value: String(metrics.value.pendingContracts),
-    sub: '未审核单据不进统计',
+    sub: '先清理待处理，再看增长动作',
     tag: '审核',
     tone: 'slate',
     path: '/sale/contract',
   },
   {
     key: 'customers',
-    label: '客户总数',
+    label: '客户沉淀',
     value: String(metrics.value.customerCount),
     sub: '进入客户管理继续跟进',
     tag: '客户',
@@ -169,7 +169,7 @@ const signals = computed(() => {
   if (metrics.value.lowStockCount > 0) {
     items.push({
       title: `有 ${metrics.value.lowStockCount} 个商品库存预警`,
-      desc: '先看库存预警页，再决定是否让管家生成补货建议或采购草稿。',
+      desc: '线上缺货最伤转化，先看库存预警页，再决定是否生成补货建议或采购草稿。',
       tone: 'danger',
       action: () => router.push('/warehouse/warning'),
     })
@@ -177,14 +177,14 @@ const signals = computed(() => {
   if (metrics.value.pendingContracts > 0) {
     items.push({
       title: `有 ${metrics.value.pendingContracts} 份合同待审核`,
-      desc: '未审核数据不应进入经营判断，建议先清理审核链路。',
+      desc: '线上运营节奏里，待处理单据会拖慢发货和判断，建议先清理。',
       tone: 'warn',
       action: () => router.push('/sale/contract'),
     })
   }
   items.push({
-    title: `当前共有 ${metrics.value.customerCount} 位客户`,
-    desc: '想做跟进或私域动作，直接回客户模块，不单独造一套客户壳页。',
+    title: `当前沉淀 ${metrics.value.customerCount} 位客户`,
+    desc: '客户和私域是辅助链路，想做跟进时再回客户模块，不抢线上主轴。',
     tone: 'safe',
     action: () => router.push('/sale/client'),
   })
@@ -201,28 +201,28 @@ const signals = computed(() => {
 
 const actionItems = [
   {
+    icon: '🔗',
+    title: '看平台接入',
+    desc: '先看各平台接入和同步状态',
+    action: () => router.push('/ecommerce/platforms'),
+  },
+  {
+    icon: '📋',
+    title: '看订单中心',
+    desc: '查看平台订单与待发货',
+    action: () => router.push('/ecommerce/orders'),
+  },
+  {
     icon: '📦',
-    title: '查库存预警',
-    desc: '打开真实库存预警页',
-    action: () => router.push('/warehouse/warning'),
-  },
-  {
-    icon: '🧾',
-    title: '看待发与出库',
-    desc: '进入销售出库模块处理',
-    action: () => router.push('/sale/out'),
-  },
-  {
-    icon: '👥',
-    title: '跟客户',
-    desc: '进入客户管理继续跟进',
-    action: () => router.push('/sale/client'),
+    title: '查库存同步',
+    desc: '先看库存风险与补货动作',
+    action: () => router.push('/ecommerce/stock'),
   },
   {
     icon: '🤖',
-    title: '让管家排优先级',
-    desc: '自动给出今日行动顺序',
-    action: () => sendCaptainPrompt('根据当前经营情况，给我排一个今日运营优先级'),
+    title: '让管家排线上优先级',
+    desc: '自动给出平台、订单、库存的处理顺序',
+    action: () => sendCaptainPrompt('根据当前线上电商情况，给我排一个平台、订单、库存的处理优先级'),
   },
 ]
 

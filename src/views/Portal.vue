@@ -206,11 +206,11 @@
           </svg>
         </div>
         <h2 class="card-title">运营驾驶舱</h2>
-        <p class="card-desc">经营总览、库存补货、客户增长与 ERP 管家运营专员统一入口。这里看问题、定动作，再回真实业务模块处理。</p>
+        <p class="card-desc">面向线上电商运营的统一入口。平台管理、订单中心、库存同步与运营专员放在一条主线上，客户与线下作为辅助。</p>
         <div class="card-tags">
-          <span class="tag tag-ops">经营总览</span>
-          <span class="tag tag-ops">库存补货</span>
-          <span class="tag tag-ops">客户增长</span>
+          <span class="tag tag-ops">平台管理</span>
+          <span class="tag tag-ops">订单中心</span>
+          <span class="tag tag-ops">库存同步</span>
           <span class="tag tag-ops">运营专员</span>
         </div>
         <div class="card-arrow">
