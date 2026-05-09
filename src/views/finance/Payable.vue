@@ -81,9 +81,8 @@
         <el-table-column label="操作" width="130" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="viewDetail(row)">欠款详情</el-button>
-            <el-button v-if="row.__payable_source !== 'expense' && row.__payable_source !== 'contract_fee'" type="warning" link size="small" @click="goPay(row)">付款</el-button>
-            <el-button v-else-if="row.__payable_source === 'expense'" type="warning" link size="small" @click="router.push('/finance/expense')">费用</el-button>
-            <el-button v-else type="warning" link size="small" @click="router.push('/sale/contract')">合同</el-button>
+            <el-button v-if="row.__payable_source !== 'expense'" type="warning" link size="small" @click="goPay(row)">付款</el-button>
+            <el-button v-else type="warning" link size="small" @click="router.push('/finance/expense')">费用</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -148,7 +147,7 @@ import { getSupplierList } from '@/api/procure'
 import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
-import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
+import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
@@ -215,41 +214,14 @@ async function load() {
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
     const [orderRes, returnRes, supplierRes, expenseRes, payReceiptRes, contractRes] = settled.map((_, i) => ok(i))
 
-    // 构建已付 Map（每条记录只归一个 map，避免重复计算）
-    const paidById: Record<number, number> = {}
-    const paidByKey: Record<string, number> = {}
-    const paidBySn: Record<string, number> = {}
-    // 多ID备注付款：按供应商维度存储，聚合时再冲销
-    const paidMultiBySup: Record<string, number> = {}
+    // 用付款单数据做两件事：1) 费用项已付统计 2) 详情弹框的付款账户显示
     const rawPayList = payReceiptRes.data?.rows ?? []
     const procureFeePaidById = buildProcureFeePaidByOrder(rawPayList)
-    for (const r of rawPayList) {
-      const amt = Number(r.amount || 0)
-      if (!amt) continue
-      if (isProcureExtraFeePayment(r)) continue
-      const sn = String(r.order_sn || '').trim()
-      const sup = String(r.supplier_name || r.contact_name || '').trim()
-      let matched = false
-      if (Number(r.order_id)) {
-        const id = Number(r.order_id); paidById[id] = (paidById[id] || 0) + amt; matched = true
-      }
-      const m1all = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
-      if (m1all.length === 1) {
-        // 单个ID：直接归到该采购单
-        const id = Number(m1all[0][1]); paidById[id] = (paidById[id] || 0) + amt; matched = true
-      } else if (m1all.length > 1) {
-        // 多个ID：按供应商维度存储，后续在供应商聚合阶段冲销
-        if (sup) paidMultiBySup[sup] = (paidMultiBySup[sup] || 0) + amt
-        matched = true
-      }
-      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
-      if (m2) { const s = m2[1].trim(); paidBySn[s] = (paidBySn[s] || 0) + amt; matched = true }
-      if (!matched && sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
-    }
 
     const orders: any[] = orderRes.data?.rows ?? []
 
     // 按供应商聚合采购订单
+    // 已付金额直接取 PO 自身的 pay_amount（与原系统口径一致，是后端权威字段）
     const supplierMap = new Map<string, any>()
     for (const o of orders) {
       const displayName = getProcureOrderSupplierLabel(o, supplierRes.data?.rows ?? [])
@@ -268,13 +240,8 @@ async function load() {
         })
       }
       const s = supplierMap.get(key)!
-      const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-      const oSn = String(o.order_sn || '').trim()
-      const oNo = String(o.order_no || '').trim()
-      const oSup = String(o.supplier_name || '').trim()
-      const paidAmt = (paidById[o.id] || 0)
-        + (paidBySn[oSn] || paidBySn[oNo] || 0)
-        + (paidByKey[`${oSn}@@${oSup}`] || paidByKey[`${oNo}@@${oSup}`] || 0)
+      const orderAmt = Number(o.total_amount ?? 0)
+      const paidAmt = Number(o.pay_amount || 0)
       const feeNeedPay = getProcureFeeNeedPayAmount(o)
       const feePaid = procureFeePaidById[o.id] || 0
       const feeUnpaid = Math.max(0, feeNeedPay - feePaid)
@@ -295,21 +262,6 @@ async function load() {
     // 日期过滤（前端）
     let aggregated = Array.from(supplierMap.values())
 
-    // 多ID付款：按供应商维度，依单据顺序冲销欠款
-    for (const s of aggregated) {
-      const supName = String(s.supplier_name || '').trim()
-      let remaining = paidMultiBySup[supName] || 0
-      if (remaining <= 0) continue
-      for (const o of s.orders) {
-        if (remaining <= 0) break
-        const deduct = Math.min(remaining, o.un_pay_amount)
-        o.paid_amount += deduct
-        o.un_pay_amount = Math.max(0, o.un_pay_amount - deduct)
-        remaining -= deduct
-      }
-      s.paid_amount = s.orders.reduce((sum: number, o: any) => sum + o.paid_amount, 0)
-      s.un_pay_amount = s.orders.reduce((sum: number, o: any) => sum + o.un_pay_amount, 0)
-    }
     if (searchForm.date_from || searchForm.date_to) {
       for (const s of aggregated) {
         s.orders = s.orders.filter((o: any) => {

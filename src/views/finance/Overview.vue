@@ -1391,7 +1391,7 @@ async function loadAllData() {
         supplierPayMap.set(key, { supplier_id: o.supplier_id || 0, supplier_name: o.supplier_name || '—', order_amount: 0, paid_amount: 0, un_pay_amount: 0 })
       }
       const s = supplierPayMap.get(key)!
-      const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
+      const orderAmt = Number(o.total_amount ?? 0)
       const oSn = String(o.order_sn || '').trim()
       const oNo = String(o.order_no || '').trim()
       const supName = String(o.supplier_name || '').trim()
