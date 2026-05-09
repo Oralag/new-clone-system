@@ -5,14 +5,14 @@
         <span class="hero-kicker">线上电商运营</span>
         <h1>先看平台、订单、库存，再把动作交给管家。</h1>
         <p>
-          这里的主轴还是线上电商运营。平台接入、订单处理、库存同步、活动动作放前面；客户和线下作为辅助，不再抢主线。
+          这里的总览只看电商运营数据，不再混读 ERP 线下销售、客户和仓库数据。平台接入、订单处理、库存同步、活动动作放前面；客户和线下作为辅助。
         </p>
       </div>
       <div class="hero-actions">
-        <button class="hero-btn hero-btn-primary" @click="sendCaptainPrompt('分析今天的销售、库存预警和待处理事项，给我一个简短行动建议')">
-          让管家做晨报
+        <button class="hero-btn hero-btn-primary" @click="sendCaptainPrompt('基于当前线上电商运营数据，给我一个简短行动建议')">
+          让管家做电商晨报
         </button>
-        <button class="hero-btn" @click="router.push('/dashboard')">进入 ERP 首页</button>
+        <button class="hero-btn" @click="router.push('/ecommerce/orders')">进入订单中心</button>
       </div>
     </section>
 
@@ -31,19 +31,35 @@
       <article class="panel">
         <div class="panel-head">
           <div>
-            <div class="panel-title">线上关键提醒</div>
-            <div class="panel-sub">优先从订单、库存和待处理事项里找今天最该动的点。</div>
+            <div class="panel-title">平台概况</div>
+            <div class="panel-sub">只展示线上平台状态，不再掺 ERP 线下业务数字。</div>
           </div>
-          <button class="panel-link" @click="sendCaptainPrompt('把当前关键提醒按优先级排一下，并告诉我先做哪三件事')">交给管家判断</button>
+          <button class="panel-link" @click="router.push('/ecommerce/platforms')">查看平台管理</button>
         </div>
-        <div class="signal-list">
-          <div v-for="signal in signals" :key="signal.title" class="signal-item">
-            <span class="signal-dot" :class="signal.tone"></span>
-            <div class="signal-body">
-              <div class="signal-title">{{ signal.title }}</div>
-              <div class="signal-desc">{{ signal.desc }}</div>
+        <div v-if="loading" class="empty-state">加载中...</div>
+        <div v-else-if="platforms.length === 0" class="empty-state">暂无线上平台数据。</div>
+        <div v-else class="platform-grid">
+          <div v-for="platform in platforms" :key="platform.id || platform.name" class="platform-card">
+            <div class="platform-head">
+              <div class="platform-name">{{ platform.name }}</div>
+              <span class="platform-badge" :class="platform.connected ? 'ok' : 'idle'">
+                {{ platform.connected ? '已接入' : '未接入' }}
+              </span>
             </div>
-            <button class="signal-action" @click="signal.action()">处理</button>
+            <div class="platform-meta">
+              <span>店铺：{{ platform.shopName || platform.shop_name || '未配置' }}</span>
+              <span>同步：{{ platform.syncCycle || platform.sync_cycle || '未设置' }}</span>
+            </div>
+            <div class="platform-stats">
+              <div class="platform-stat">
+                <small>今日订单</small>
+                <strong>{{ platform.orders ?? 0 }}</strong>
+              </div>
+              <div class="platform-stat">
+                <small>今日销售</small>
+                <strong>¥{{ formatMoney(platform.sales ?? 0) }}</strong>
+              </div>
+            </div>
           </div>
         </div>
       </article>
@@ -52,7 +68,7 @@
         <div class="panel-head">
           <div>
             <div class="panel-title">线上运营动作</div>
-            <div class="panel-sub">平台、订单、库存是主轴，动作都回到原有模块或管家。</div>
+            <div class="panel-sub">平台、订单、库存是主轴，动作都回到电商模块或管家。</div>
           </div>
         </div>
         <div class="action-grid">
@@ -69,22 +85,21 @@
       <article class="panel">
         <div class="panel-head">
           <div>
-            <div class="panel-title">库存预警前排</div>
-            <div class="panel-sub">线上单量起来后，先盯最紧急的商品，再决定是否补货。</div>
+            <div class="panel-title">电商提醒</div>
+            <div class="panel-sub">基于电商总览接口返回的提醒，不再读 ERP 线下预警。</div>
           </div>
-          <button class="panel-link" @click="router.push('/warehouse/warning')">查看全部</button>
+          <button class="panel-link" @click="sendCaptainPrompt('根据当前线上电商数据，帮我排一个今天的处理优先级')">交给管家排优先级</button>
         </div>
         <div v-if="loading" class="empty-state">加载中...</div>
-        <div v-else-if="warnings.length === 0" class="empty-state">当前没有库存预警。</div>
-        <div v-else class="warning-list">
-          <div v-for="item in warnings" :key="`${item.goods_name}-${item.warehouse_name}`" class="warning-item">
-            <div>
-              <div class="warning-title">{{ item.goods_name }}</div>
-              <div class="warning-meta">{{ item.warehouse_name || '未分仓' }} · 当前 {{ item.stock_num }} / 最低 {{ item.min_num }}</div>
+        <div v-else-if="alerts.length === 0" class="empty-state">当前没有可用的线上提醒。</div>
+        <div v-else class="signal-list">
+          <div v-for="alert in alerts" :key="alert.title" class="signal-item">
+            <span class="signal-dot" :class="alert.tone"></span>
+            <div class="signal-body">
+              <div class="signal-title">{{ alert.title }}</div>
+              <div class="signal-desc">{{ alert.desc }}</div>
             </div>
-            <button class="signal-action" @click="sendCaptainPrompt(`针对商品${item.goods_name}做补货判断，并告诉我是否需要生成采购草稿`)">
-              补货判断
-            </button>
+            <button class="signal-action" @click="alert.action()">处理</button>
           </div>
         </div>
       </article>
@@ -93,7 +108,7 @@
         <div class="panel-head">
           <div>
             <div class="panel-title">运营专员团队</div>
-            <div class="panel-sub">线上运营仍然有人，只是统一挂在 ERP 管家下面协同工作。</div>
+            <div class="panel-sub">线上运营有人负责，只是统一挂在 ERP 管家下面协同工作。</div>
           </div>
         </div>
         <div class="mode-list">
@@ -115,89 +130,55 @@ import http from '@/api/http'
 
 const router = useRouter()
 const loading = ref(false)
-const metrics = ref({
-  todaySales: 0,
+
+const kpiState = ref({
   todayOrders: 0,
-  customerCount: 0,
+  todaySales: 0,
   lowStockCount: 0,
-  pendingContracts: 0,
-  pendingShipments: 0,
+  pendingOrders: 0,
 })
-const warnings = ref<any[]>([])
+
+const platforms = ref<any[]>([])
+const alerts = ref<Array<{ title: string; desc: string; tone: 'danger' | 'warn' | 'safe'; action: () => void }>>([])
 
 const kpis = computed(() => [
   {
     key: 'sales',
     label: '今日线上销售',
-    value: `¥${metrics.value.todaySales.toFixed(2)}`,
-    sub: `今日订单 ${metrics.value.todayOrders} 笔`,
+    value: `¥${formatMoney(kpiState.value.todaySales)}`,
+    sub: `今日订单 ${kpiState.value.todayOrders} 笔`,
     tag: '经营',
     tone: 'teal',
-    path: '/dashboard/today-sales',
+    path: '/ecommerce/orders',
+  },
+  {
+    key: 'pending',
+    label: '待处理订单',
+    value: String(kpiState.value.pendingOrders),
+    sub: '优先清理待发货与异常单',
+    tag: '订单',
+    tone: kpiState.value.pendingOrders > 0 ? 'amber' : 'slate',
+    path: '/ecommerce/orders',
   },
   {
     key: 'warning',
-    label: '库存预警',
-    value: String(metrics.value.lowStockCount),
-    sub: metrics.value.lowStockCount > 0 ? '建议优先检查预警商品' : '当前库存状态平稳',
-    tag: metrics.value.lowStockCount > 0 ? '需处理' : '正常',
-    tone: metrics.value.lowStockCount > 0 ? 'amber' : 'slate',
-    path: '/warehouse/warning',
+    label: '库存同步风险',
+    value: String(kpiState.value.lowStockCount),
+    sub: kpiState.value.lowStockCount > 0 ? '建议优先检查补货与同步状态' : '当前库存状态平稳',
+    tag: '库存',
+    tone: kpiState.value.lowStockCount > 0 ? 'amber' : 'slate',
+    path: '/ecommerce/stock',
   },
   {
-    key: 'contracts',
-    label: '待处理单据',
-    value: String(metrics.value.pendingContracts),
-    sub: '先清理待处理，再看增长动作',
-    tag: '审核',
-    tone: 'slate',
-    path: '/sale/contract',
-  },
-  {
-    key: 'customers',
-    label: '客户沉淀',
-    value: String(metrics.value.customerCount),
-    sub: '进入客户管理继续跟进',
-    tag: '客户',
+    key: 'platforms',
+    label: '已接入平台',
+    value: String(platforms.value.filter((item: any) => !!item.connected).length),
+    sub: `共 ${platforms.value.length} 个平台入口`,
+    tag: '平台',
     tone: 'teal',
-    path: '/sale/client',
+    path: '/ecommerce/platforms',
   },
 ])
-
-const signals = computed(() => {
-  const items = []
-  if (metrics.value.lowStockCount > 0) {
-    items.push({
-      title: `有 ${metrics.value.lowStockCount} 个商品库存预警`,
-      desc: '线上缺货最伤转化，先看库存预警页，再决定是否生成补货建议或采购草稿。',
-      tone: 'danger',
-      action: () => router.push('/warehouse/warning'),
-    })
-  }
-  if (metrics.value.pendingContracts > 0) {
-    items.push({
-      title: `有 ${metrics.value.pendingContracts} 份合同待审核`,
-      desc: '线上运营节奏里，待处理单据会拖慢发货和判断，建议先清理。',
-      tone: 'warn',
-      action: () => router.push('/sale/contract'),
-    })
-  }
-  items.push({
-    title: `当前沉淀 ${metrics.value.customerCount} 位客户`,
-    desc: '客户和私域是辅助链路，想做跟进时再回客户模块，不抢线上主轴。',
-    tone: 'safe',
-    action: () => router.push('/sale/client'),
-  })
-  if (items.length === 1) {
-    items.push({
-      title: '今日经营面相对平稳',
-      desc: '可以让管家从销售、库存、客户三个角度给你补一版运营建议。',
-      tone: 'safe',
-      action: () => sendCaptainPrompt('从销售、库存、客户三个角度给我一版今日运营建议'),
-    })
-  }
-  return items
-})
 
 const actionItems = [
   {
@@ -230,20 +211,20 @@ const captainModes = [
   {
     emoji: '📊',
     title: '数据官模式',
-    desc: '看销售、订单、库存异常，输出经营判断。',
-    prompt: '切到数据官模式，帮我看今天销售、库存预警和异常点。',
+    desc: '看平台销售、订单和库存异常，输出经营判断。',
+    prompt: '切到数据官模式，帮我看今天各平台销售、订单和库存异常点。',
   },
   {
     emoji: '📦',
     title: '补货专员模式',
-    desc: '根据库存预警和销量判断是否补货。',
-    prompt: '切到补货专员模式，分析当前库存预警并给我补货建议。',
+    desc: '根据库存同步和缺货风险判断补货动作。',
+    prompt: '切到补货专员模式，结合当前电商库存风险给我补货建议。',
   },
   {
     emoji: '🎯',
     title: '活动策划模式',
-    desc: '围绕客户和销售目标生成活动动作。',
-    prompt: '切到活动策划模式，结合现有客户和销售情况给我一个近期活动建议。',
+    desc: '围绕线上平台和销售目标生成活动动作。',
+    prompt: '切到活动策划模式，结合当前线上平台情况给我一个近期活动建议。',
   },
 ]
 
@@ -251,47 +232,73 @@ function sendCaptainPrompt(prompt: string) {
   window.dispatchEvent(new CustomEvent('captain-fill', { detail: prompt }))
 }
 
-async function loadData() {
+function formatMoney(value: number | string) {
+  const num = Number(value || 0)
+  return num.toFixed(2)
+}
+
+function buildAlertsFromKpi() {
+  const items: Array<{ title: string; desc: string; tone: 'danger' | 'warn' | 'safe'; action: () => void }> = []
+
+  if (kpiState.value.pendingOrders > 0) {
+    items.push({
+      title: `有 ${kpiState.value.pendingOrders} 笔待处理订单`,
+      desc: '建议先回订单中心检查待发货、退款或异常订单。',
+      tone: 'warn',
+      action: () => router.push('/ecommerce/orders'),
+    })
+  }
+
+  if (kpiState.value.lowStockCount > 0) {
+    items.push({
+      title: `有 ${kpiState.value.lowStockCount} 项库存同步风险`,
+      desc: '建议先回库存同步检查缺货、预警和补货动作。',
+      tone: 'danger',
+      action: () => router.push('/ecommerce/stock'),
+    })
+  }
+
+  if (!items.length) {
+    items.push({
+      title: '当前线上看板相对平稳',
+      desc: '可以让管家从平台、订单、库存三个角度补一版电商运营建议。',
+      tone: 'safe',
+      action: () => sendCaptainPrompt('从平台、订单、库存三个角度给我一版电商运营建议'),
+    })
+  }
+
+  alerts.value = items
+}
+
+async function loadOverview() {
   loading.value = true
-  const today = new Date().toISOString().slice(0, 10)
   try {
-    const [saleRes, retailRes, customerRes, warningRes, contractRes] = await Promise.allSettled([
-      http.get('/stock/SaleOutOrder/index', { params: { list_rows: 200, out_date: today } }),
-      http.get('/retail/order/index', { params: { list_rows: 200, order_date: today } }),
-      http.get('/shop/ShopCustomer/index', { params: { list_rows: 1 } }),
-      http.get('/stock/StockWarning/index', { params: { list_rows: 8 } }),
-      http.get('/shop/ContractOrder/index', { params: { list_rows: 200 } }),
-    ])
-
-    const rows = (result: PromiseSettledResult<any>) =>
-      result.status === 'fulfilled' ? (result.value?.data?.rows ?? result.value?.rows ?? []) : []
-    const total = (result: PromiseSettledResult<any>) =>
-      result.status === 'fulfilled' ? Number(result.value?.data?.total ?? result.value?.total ?? 0) : 0
-
-    const saleRows = rows(saleRes).filter((item: any) => Number(item.status) === 1)
-    const retailRows = rows(retailRes).filter((item: any) => Number(item.status) === 1)
-    const todaySales = saleRows.reduce((sum: number, item: any) => {
-      const amount = item.after_discount != null && item.after_discount !== '' ? Number(item.after_discount) : Number(item.total_amount || 0)
-      return sum + amount
-    }, 0) + retailRows.reduce((sum: number, item: any) => sum + Number(item.pay_amount || item.total_amount || 0), 0)
-
-    const contractRows = rows(contractRes)
-    metrics.value = {
-      todaySales,
-      todayOrders: saleRows.length + retailRows.length,
-      customerCount: total(customerRes),
-      lowStockCount: total(warningRes) || rows(warningRes).length,
-      pendingContracts: contractRows.filter((item: any) => Number(item.status) === 0).length,
-      pendingShipments: 0,
+    const response = await http.post('/erp/ecommerce/overview', {}, { silent: true })
+    const data = response.data || {}
+    kpiState.value = {
+      todayOrders: Number(data.kpi?.todayOrders || 0),
+      todaySales: Number(data.kpi?.todaySales || 0),
+      lowStockCount: Number(data.kpi?.lowStockCount || 0),
+      pendingOrders: Number(data.kpi?.pendingOrders || 0),
     }
-    warnings.value = rows(warningRes).slice(0, 6)
+    platforms.value = Array.isArray(data.platforms) ? data.platforms : []
+    buildAlertsFromKpi()
+  } catch {
+    kpiState.value = {
+      todayOrders: 0,
+      todaySales: 0,
+      lowStockCount: 0,
+      pendingOrders: 0,
+    }
+    platforms.value = []
+    buildAlertsFromKpi()
   } finally {
     loading.value = false
   }
 }
 
 onMounted(() => {
-  loadData()
+  loadOverview()
 })
 </script>
 
@@ -473,22 +480,86 @@ onMounted(() => {
   cursor: pointer;
 }
 
+.platform-grid,
 .signal-list,
-.warning-list,
 .mode-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.signal-item,
-.warning-item {
+.platform-card,
+.signal-item {
+  border-radius: 16px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.platform-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.platform-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.platform-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.platform-badge.ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.platform-badge.idle {
+  background: rgba(148, 163, 184, 0.12);
+  color: #64748b;
+}
+
+.platform-meta {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.platform-stats {
+  display: flex;
+  gap: 20px;
+  margin-top: 12px;
+}
+
+.platform-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.platform-stat small {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.platform-stat strong {
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.signal-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px;
-  border-radius: 16px;
-  background: #f8fafc;
 }
 
 .signal-dot {
@@ -515,7 +586,6 @@ onMounted(() => {
 }
 
 .signal-title,
-.warning-title,
 .action-title,
 .mode-title {
   font-size: 14px;
@@ -524,7 +594,6 @@ onMounted(() => {
 }
 
 .signal-desc,
-.warning-meta,
 .action-desc,
 .mode-desc {
   margin-top: 4px;

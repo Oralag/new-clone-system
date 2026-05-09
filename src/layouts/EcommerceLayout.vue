@@ -102,7 +102,8 @@ const router = useRouter()
 <style scoped>
 .ecom-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(20, 184, 166, 0.08), transparent 24%),
     linear-gradient(180deg, #f4f7f6 0%, #eef2f0 100%);
@@ -222,6 +223,7 @@ const router = useRouter()
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .ecom-topbar {
@@ -258,5 +260,7 @@ const router = useRouter()
   flex: 1;
   min-width: 0;
   padding: 0 18px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 </style>
