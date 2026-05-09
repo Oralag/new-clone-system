@@ -9,7 +9,7 @@
       </div>
       <div class="hero-actions">
         <button class="primary-btn" @click="sendCaptainPrompt('从运营视角看一下今天的销售、客户和库存，给我一个行动建议')">开始经营分析</button>
-        <button class="ghost-btn" @click="router.push('/mobile/ai')">打开移动端管家</button>
+        <button class="ghost-btn" @click="router.push('/mobile')">打开移动端管家</button>
       </div>
     </section>
 

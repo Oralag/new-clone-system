@@ -211,6 +211,7 @@
           <span class="tag tag-ops">平台管理</span>
           <span class="tag tag-ops">订单中心</span>
           <span class="tag tag-ops">库存同步</span>
+          <span class="tag tag-ops">客户运营</span>
           <span class="tag tag-ops">运营专员</span>
         </div>
         <div class="card-arrow">

@@ -36,8 +36,7 @@
           </div>
           <button class="panel-link" @click="router.push('/ecommerce/platforms')">查看平台管理</button>
         </div>
-        <div v-if="loading" class="empty-state">加载中...</div>
-        <div v-else-if="platforms.length === 0" class="empty-state">暂无线上平台数据。</div>
+        <div v-if="loadingPlatforms" class="empty-state">加载中...</div>
         <div v-else class="platform-grid">
           <div v-for="platform in platforms" :key="platform.id || platform.name" class="platform-card">
             <div class="platform-head">
@@ -90,8 +89,7 @@
           </div>
           <button class="panel-link" @click="sendCaptainPrompt('根据当前线上电商数据，帮我排一个今天的处理优先级')">交给管家排优先级</button>
         </div>
-        <div v-if="loading" class="empty-state">加载中...</div>
-        <div v-else-if="alerts.length === 0" class="empty-state">当前没有可用的线上提醒。</div>
+        <div v-if="loadingAlerts" class="empty-state">加载中...</div>
         <div v-else class="signal-list">
           <div v-for="alert in alerts" :key="alert.title" class="signal-item">
             <span class="signal-dot" :class="alert.tone"></span>
@@ -129,7 +127,10 @@ import { useRouter } from 'vue-router'
 import http from '@/api/http'
 
 const router = useRouter()
-const loading = ref(false)
+const loadingPlatforms = ref(false)
+const loadingOrders = ref(false)
+const loadingAlerts = ref(false)
+
 
 const kpiState = ref({
   todayOrders: 0,
@@ -271,7 +272,8 @@ function buildAlertsFromKpi() {
 }
 
 async function loadOverview() {
-  loading.value = true
+  loadingPlatforms.value = true
+  loadingAlerts.value = true
   try {
     const response = await http.post('/erp/ecommerce/overview', {}, { silent: true })
     const data = response.data || {}
@@ -293,7 +295,8 @@ async function loadOverview() {
     platforms.value = []
     buildAlertsFromKpi()
   } finally {
-    loading.value = false
+    loadingPlatforms.value = false
+    loadingAlerts.value = false
   }
 }
 

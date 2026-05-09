@@ -2,8 +2,9 @@
   <div class="ops-customer-page">
     <section class="hero">
       <div>
+        <span class="hero-kicker">客户运营</span>
         <div class="hero-title">客户增长</div>
-        <div class="hero-desc">线下客户、私域跟进、样品与活动动作，统一回到原有 ERP 客户链路和管家里处理。</div>
+        <div class="hero-desc">查看客户数据并跟进，详细管理回到原有客户模块。</div>
       </div>
       <div class="hero-actions">
         <button class="ghost-btn" @click="router.push('/sale/client')">客户管理</button>
@@ -24,7 +25,7 @@
       </article>
       <article class="stat-card">
         <div class="stat-label">可直接动作</div>
-        <div class="stat-value">4</div>
+        <div class="stat-value">{{ actionableCount }}</div>
         <div class="stat-sub">客户、样品、合同、管家跟进</div>
       </article>
     </section>
@@ -40,7 +41,7 @@
         </div>
 
         <div class="toolbar">
-          <input v-model.trim="keyword" class="keyword-input" placeholder="搜索客户名称" @keyup.enter="loadCustomers" />
+          <input v-model.trim="keyword" class="keyword-input" placeholder="搜索客户名称" @keyup.enter="debouncedSearch" />
           <button class="ghost-btn" @click="loadCustomers">查询</button>
         </div>
 
@@ -84,8 +85,8 @@
             <div class="action-title">销售转化</div>
             <div class="action-desc">跟进成熟客户后，直接进入合同模块，不另造订单壳。</div>
           </button>
-          <button class="action-card" @click="sendCaptainPrompt('站在线下私域运营的角度，给我一版客户跟进话术和活动建议')">
-            <div class="action-title">私域建议</div>
+          <button class="action-card" @click="sendCaptainPrompt('站在客户运营的角度，给我一版客户跟进话术和活动建议')">
+            <div class="action-title">跟进建议</div>
             <div class="action-desc">让管家给你客户跟进、社群和活动建议。</div>
           </button>
           <button class="action-card" @click="sendCaptainPrompt('帮我整理一个本周客户跟进清单，按优先级列出来')">
@@ -99,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '@/api/http'
 
@@ -108,6 +109,20 @@ const loading = ref(false)
 const keyword = ref('')
 const customers = ref<any[]>([])
 const stats = reactive({ total: 0 })
+
+let debounceTimer: ReturnType<typeof setTimeout>
+function debouncedSearch() {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => loadCustomers(), 300)
+}
+
+const actionableCount = computed(() => {
+  let count = 0
+  if (customers.value.length > 0) count += 1
+  count += 3 // 样品、合同、管家跟进
+  
+  return count
+})
 
 function sendCaptainPrompt(prompt: string) {
   window.dispatchEvent(new CustomEvent('captain-fill', { detail: prompt }))
@@ -158,6 +173,20 @@ onMounted(() => {
   justify-content: space-between;
   gap: 16px;
   padding: 20px 22px;
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.18), transparent 30%),
+    linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+}
+
+.hero-kicker {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.1);
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 
 .hero-title {

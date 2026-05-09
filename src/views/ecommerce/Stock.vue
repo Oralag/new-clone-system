@@ -119,7 +119,7 @@ function sendCaptainPrompt(prompt: string) {
 async function loadWarnings() {
   loading.value = true
   try {
-    const response = await http.get('/stock/StockWarning/index', {
+    const response = await http.get('/erp/ecommerce/stockWarnings', {
       params: {
         list_rows: 50,
         goods_name: keyword.value || undefined,

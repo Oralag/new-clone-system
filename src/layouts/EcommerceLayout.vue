@@ -51,7 +51,7 @@
             <path d="M17 8h4M19 6v4" />
             <path d="M15 18h6" />
           </svg>
-          <span>线下与私域</span>
+          <span>客户运营</span>
         </router-link>
         <router-link to="/ecommerce/agent" class="ecom-nav-item" active-class="ecom-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">

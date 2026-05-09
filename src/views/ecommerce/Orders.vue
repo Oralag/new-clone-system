@@ -1,12 +1,17 @@
 <template>
-  <div class="orders-page">
-    <div class="page-header">
-      <div class="page-title">📋 订单中心</div>
-      <div class="page-desc">聚合6平台订单，统一处理发货、退款、退货</div>
-    </div>
+  <div class="ops-orders-page">
+    <section class="hero">
+      <div>
+        <span class="hero-kicker">订单中心</span>
+        <div class="hero-title">聚合多平台订单</div>
+        <div class="hero-desc">统一处理各平台订单，回到原有 ERP 发货和审核链路。</div>
+      </div>
+      <div class="hero-actions">
+        <button class="ghost-btn" @click="router.push('/ecommerce/overview')">返回总览</button>
+      </div>
+    </section>
 
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
+    <section class="filter-bar">
       <el-select v-model="filter.platform" size="small" placeholder="全部平台" style="width:120px" clearable>
         <el-option label="全部平台" value="" />
         <el-option label="淘宝" value="taobao" />
@@ -26,11 +31,10 @@
       </el-select>
       <el-date-picker v-model="filter.dateRange" type="daterange" size="small" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" style="width:220px" />
       <el-input v-model="filter.keyword" size="small" placeholder="订单号/商品/客户" style="width:160px" clearable />
-      <el-button size="small" type="primary" @click="loadOrders">搜索</el-button>
-    </div>
+      <button class="ghost-btn small" @click="loadOrders">搜索</button>
+    </section>
 
-    <!-- 统计卡片 -->
-    <div class="stat-row">
+    <section class="stat-row">
       <div class="stat-chip">
         <span class="chip-val">{{ stats.total }}</span>
         <span class="chip-lbl">总订单</span>
@@ -51,12 +55,11 @@
         <span class="chip-val">{{ stats.refunded }}</span>
         <span class="chip-lbl">退款</span>
       </div>
-    </div>
+    </section>
 
-    <!-- 订单列表 -->
-    <div class="orders-list">
-      <div v-if="loading" class="loading-state">加载中…</div>
-      <div v-else-if="!orders.length" class="empty-state">暂无订单</div>
+    <section class="orders-list">
+      <div v-if="loading" class="empty-state">加载中...</div>
+      <div v-else-if="!orders.length" class="empty-state">暂无匹配到订单。</div>
       <div v-else>
         <div v-for="order in orders" :key="order.id" class="order-card">
           <div class="order-hd">
@@ -77,38 +80,39 @@
               </div>
             </div>
             <div class="order-amount">
-              <div class="amount-val">¥{{ order.amount.toFixed(2) }}</div>
+              <div class="amount-val">¥{{ order.amount?.toFixed(2) }}</div>
               <div class="amount-lbl">{{ order.goods.length }}件商品</div>
             </div>
           </div>
           <div class="order-ft">
             <span class="customer-name">{{ order.customerName }}</span>
             <div class="order-actions">
-              <el-button v-if="order.status === 'pending'" size="small" type="primary" @click="shipOrder(order)">发货</el-button>
-              <el-button size="small" @click="viewOrder(order)">详情</el-button>
+              <button v-if="order.status === 'pending'" class="ghost-btn small" @click="shipOrder(order)">去发货</button>
+              <button class="ghost-btn small" @click="viewOrder(order)">查看</button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- 分页 -->
-    <div class="pagination-wrap">
+    <section class="pagination-wrap">
       <el-pagination
         v-model:current-page="page" v-model:page-size="pageSize"
         :total="total" :page-sizes="[10, 20, 50]"
         layout="total, sizes, prev, pager, next"
         @size-change="loadOrders" @current-change="loadOrders"
       />
-    </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 
+const router = useRouter()
 const loading = ref(false)
 const orders = ref<any[]>([])
 const total = ref(0)
@@ -166,52 +170,248 @@ async function loadOrders() {
 }
 
 function shipOrder(order: any) {
-  ElMessage({ message: `订单 ${order.orderNo} 发货功能开发中`, type: 'info' })
+  router.push('/sale/order')
 }
 
 function viewOrder(order: any) {
-  ElMessage({ message: `查看订单 ${order.orderNo} 详情`, type: 'info' })
+  router.push('/sale/order')
 }
 </script>
 
 <style scoped>
-.orders-page { padding: 16px; }
-.page-header { margin-bottom: 14px; }
-.page-title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-.page-desc { font-size: 13px; color: #999; }
-.filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-.stat-row { display: flex; gap: 8px; margin-bottom: 14px; }
-.stat-chip { background: #fff; border-radius: 10px; padding: 8px 14px; display: flex; align-items: center; gap: 6px; }
-.chip-val { font-size: 16px; font-weight: 700; color: #333; }
-.chip-lbl { font-size: 11px; color: #999; }
+.ops-orders-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.18), transparent 30%),
+    linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.hero-kicker {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.1);
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.hero-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.hero-desc {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stat-row {
+  display: flex;
+  gap: 10px;
+}
+
+.stat-chip {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.chip-lbl {
+  font-size: 11px;
+  color: #64748b;
+}
+
 .stat-chip.pending { border-left: 3px solid #f59e0b; }
 .stat-chip.shipped { border-left: 3px solid #3b82f6; }
 .stat-chip.completed { border-left: 3px solid #10b981; }
 .stat-chip.refunded { border-left: 3px solid #ef4444; }
-.orders-list { display: flex; flex-direction: column; gap: 10px; }
-.order-card { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-.order-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.order-left { display: flex; align-items: center; gap: 8px; }
-.platform-tag { font-size: 11px; color: #fff; padding: 2px 8px; border-radius: 8px; }
-.order-no { font-size: 13px; color: #555; font-weight: 500; }
-.order-right { display: flex; align-items: center; gap: 8px; }
-.order-time { font-size: 12px; color: #999; }
-.status-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-card {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  padding: 16px;
+}
+
+.order-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.order-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.platform-tag {
+  font-size: 11px;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.order-no {
+  font-size: 13px;
+  color: #334155;
+  font-weight: 500;
+}
+
+.order-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-time {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.status-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
 .status-pending { background: #fef3c7; color: #d97706; }
 .status-shipped { background: #dbeafe; color: #2563eb; }
 .status-completed { background: #d1fae5; color: #059669; }
 .status-refunded { background: #fee2e2; color: #dc2626; }
 .status-cancelled { background: #f3f4f6; color: #9ca3af; }
-.order-body { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.order-goods { flex: 1; }
-.goods-item { display: flex; gap: 8px; font-size: 13px; color: #333; margin-bottom: 2px; }
-.goods-qty { color: #999; }
-.order-amount { text-align: right; }
-.amount-val { font-size: 16px; font-weight: 700; color: #333; }
-.amount-lbl { font-size: 11px; color: #999; }
-.order-ft { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f3f4f6; padding-top: 10px; }
-.customer-name { font-size: 12px; color: #555; }
-.order-actions { display: flex; gap: 6px; }
-.loading-state, .empty-state { text-align: center; padding: 40px; color: #999; font-size: 14px; }
-.pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+.order-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.order-goods {
+  flex: 1;
+}
+
+.goods-item {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.goods-qty {
+  color: #64748b;
+}
+
+.order-amount {
+  text-align: right;
+}
+
+.amount-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.amount-lbl {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.order-ft {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+}
+
+.customer-name {
+  font-size: 12px;
+  color: #475569;
+}
+
+.order-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.ghost-btn {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #334155;
+}
+.ghost-btn.small {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.ghost-btn:hover {
+  background: #f1f5f9;
+}
 </style>
