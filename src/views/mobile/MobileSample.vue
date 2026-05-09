@@ -337,16 +337,16 @@ const INTERNAL_CUSTOMER_VALUE = '__internal__'
 function defaultFd() {
   return {
     id: 0, sample_no: '', sample_type: 'free',
-    customer_id: '' as any, customer_name: '', contact_name: '', admin_name: '',
+    customer_id: null as any, customer_name: '', contact_name: '', admin_name: '',
     sample_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
-    return_date: '', warehouse_id: '' as any, warehouse_name: '',
+    return_date: '', warehouse_id: null as any, warehouse_name: '',
     items: [] as any[],
     sample_amount: 0, freight_amount: 0, freight_bearer: 'seller',
     courier: '', tracking_no: '',
     receivable_amount: 0, paid_amount: 0, company_cost: 0,
-    receipt_fund_id: '' as any, receipt_fund_name: '',
+    receipt_fund_id: null as any, receipt_fund_name: '',
     expense_payment_status: 'pending',
-    expense_fund_id: '' as any, expense_fund_name: '',
+    expense_fund_id: null as any, expense_fund_name: '',
     remark: '', status: 0,
   }
 }
@@ -369,6 +369,15 @@ function calcTotals() {
   fd.receivable_amount = Number((fd.sample_amount + custFreight).toFixed(2))
   fd.company_cost = Number(((fd.sample_type === 'paid' ? 0 : goodsCost.value) + coFreight).toFixed(2))
   if (fd.paid_amount > fd.receivable_amount) fd.paid_amount = fd.receivable_amount
+  if (fd.paid_amount <= 0) {
+    fd.receipt_fund_id = null
+    fd.receipt_fund_name = ''
+  }
+  if (fd.company_cost <= 0) {
+    fd.expense_payment_status = 'pending'
+    fd.expense_fund_id = null
+    fd.expense_fund_name = ''
+  }
 }
 
 function onCustomerChange(e: any) {
@@ -477,12 +486,16 @@ async function handleSave() {
   if (!fd.warehouse_id) { ElMessage.warning('请选择仓库'); return }
   if (!fd.items.length) { ElMessage.warning('请添加样品明细'); return }
   calcTotals()
+  if (fd.paid_amount > 0 && !fd.receipt_fund_id) { ElMessage.warning('已收金额大于0时请选择收款账户'); return }
+  if (fd.company_cost > 0 && fd.expense_payment_status === 'paid' && !fd.expense_fund_id) { ElMessage.warning('公司费用已付款时请选择付款账户'); return }
   saving.value = true
   try {
     const payload = {
       ...fd,
-      customer_id: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? '' : fd.customer_id,
+      customer_id: fd.customer_id && fd.customer_id !== INTERNAL_CUSTOMER_VALUE ? fd.customer_id : null,
       customer_name: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? (fd.customer_name || '内部') : fd.customer_name,
+      receipt_fund_id: fd.receipt_fund_id || null,
+      expense_fund_id: fd.expense_fund_id || null,
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) await updateSample(payload)
