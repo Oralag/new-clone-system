@@ -302,6 +302,10 @@ function itemPrice(item: any): number {
   return toNum(item?.price, item?.sell_price, item?.sale_price, item?.unit_price, item?.retail_price, item?.amount_price)
 }
 
+function itemLineAmount(item: any): number {
+  return toNum(item?.line_amount)
+}
+
 function itemCost(item: any): number {
   return toNum(item?.cost_price, item?.cost, item?.costPrice, item?.purchase_price, item?.in_price, item?.avg_price)
 }
@@ -450,7 +454,10 @@ const rows = computed(() => {
           }
         }
         const qty = itemQty(g)
-        const price = rawTotal > 0 ? itemPrice(g) * discountRatio : (totalQty > 0 ? fallbackAmount / totalQty : 0)
+        const lineAmount = itemLineAmount(g)
+        const price = lineAmount > 0
+          ? lineAmount / Math.max(qty, 1)
+          : (rawTotal > 0 ? itemPrice(g) * discountRatio : (totalQty > 0 ? fallbackAmount / totalQty : 0))
         map[key].num += qty
         map[key].sale_amount += qty * price
       }

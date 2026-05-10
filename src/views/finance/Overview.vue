@@ -739,6 +739,10 @@ function profitItemPrice(item: any): number {
   return profitNum(item?.price, item?.sell_price, item?.sale_price, item?.unit_price, item?.retail_price, item?.amount_price)
 }
 
+function profitItemLineAmount(item: any): number {
+  return profitNum(item?.line_amount)
+}
+
 function profitItemCost(item: any): number {
   return profitNum(item?.cost_price, item?.cost, item?.costPrice, item?.purchase_price, item?.in_price, item?.avg_price)
 }
@@ -820,7 +824,7 @@ const profitTrendData = computed(() => {
     let itemRevenue = 0
     try { for (const g of parseProfitItems(r.goods_info)) {
       const q = profitItemQty(g)
-      itemRevenue += q * profitItemPrice(g)
+      itemRevenue += profitItemLineAmount(g) || (q * profitItemPrice(g))
       costMap[k] += q * getItemUnitCostFromMap(g).unitCost
     }} catch {}
     revenueMap[k] += itemRevenue > 0 ? itemRevenue : Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
@@ -992,7 +996,7 @@ const profitByMonth = computed(() => {
     let itemRevenue = 0
     for (const g of parseProfitItems(r.goods_info)) {
       const q = profitItemQty(g)
-      itemRevenue += q * profitItemPrice(g)
+      itemRevenue += profitItemLineAmount(g) || (q * profitItemPrice(g))
       map[m].cost += q * getItemUnitCostFromMap(g).unitCost
     }
     map[m].revenue += itemRevenue > 0 ? itemRevenue : Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)

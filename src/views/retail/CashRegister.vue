@@ -97,21 +97,26 @@
           <div v-if="cartItems.length === 0" class="cr-drawer-empty">
             <span>🛒</span> 还没有商品，点击下方商品加入
           </div>
-          <div v-for="(item, idx) in cartItems" :key="idx" class="cr-cart-item">
+          <div v-for="(item, idx) in displayCartItems" :key="idx" class="cr-cart-item">
             <div class="cr-cart-item-top">
-              <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+              <div class="cr-cart-item-title">
+                <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+                <span v-if="item.original_price !== item.price" class="cr-cart-item-price-note">
+                  原价 ¥{{ formatMoney(item.original_price) }} → 成交 ¥{{ formatMoney(item.price) }}
+                </span>
+              </div>
               <el-button type="danger" link size="small" :icon="Delete"
                 @click="cartItems.splice(idx,1); calcTotal()" />
             </div>
             <div class="cr-cart-item-bottom">
               <div class="cr-qty-ctrl">
                 <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
-                <el-input-number v-model="item.num" :min="0.001" :step="0.001" :precision="3"
+                <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
                   controls-position="right" size="small" style="width:72px"
                   @change="calcTotal" />
                 <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
               </div>
-              <span class="cr-cart-item-sub">¥{{ (item.num * item.price).toFixed(2) }}</span>
+              <span class="cr-cart-item-sub">¥{{ formatMoney(item.line_amount || (item.num * item.price)) }}</span>
             </div>
           </div>
         </div>
@@ -190,21 +195,26 @@
               <div class="cr-empty-text">扫码/点选右侧商品，加入购物车结账</div>
             </div>
             <div v-else class="cr-cart-list">
-              <div v-for="(item, idx) in cartItems" :key="idx" class="cr-cart-item">
+              <div v-for="(item, idx) in displayCartItems" :key="idx" class="cr-cart-item">
                 <div class="cr-cart-item-top">
-                  <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+                  <div class="cr-cart-item-title">
+                    <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+                    <span v-if="item.original_price !== item.price" class="cr-cart-item-price-note">
+                      原价 ¥{{ formatMoney(item.original_price) }} → 成交 ¥{{ formatMoney(item.price) }}
+                    </span>
+                  </div>
                   <el-button type="danger" link size="small" :icon="Delete"
                     @click="cartItems.splice(idx,1); calcTotal()" />
                 </div>
                 <div class="cr-cart-item-bottom">
                   <div class="cr-qty-ctrl">
                     <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
-                    <el-input-number v-model="item.num" :min="0.001" :step="0.001" :precision="3"
+                    <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
                       controls-position="right" size="small" style="width:72px"
                       @change="calcTotal" />
                     <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
                   </div>
-                  <span class="cr-cart-item-sub">¥{{ (item.num * item.price).toFixed(2) }}</span>
+                  <span class="cr-cart-item-sub">¥{{ formatMoney(item.line_amount || (item.num * item.price)) }}</span>
                 </div>
               </div>
             </div>
@@ -389,6 +399,7 @@ import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
 import { usePermissionStore } from '@/stores/permission'
+import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
 
 const isAdmin = computed(() => !usePermissionStore().isSubAccount)
 
@@ -528,6 +539,7 @@ function onStoreChange(id: number) {
 const totalAmount = ref(0)
 const discountAmount = ref(0)
 const payAmount = ref(0)
+const displayCartItems = computed(() => distributeRetailItems(cartItems, payAmount.value).items)
 
 function addToCart(g: any) {
   const exist = cartItems.find(i => i.goods_id === g.id)
@@ -557,15 +569,21 @@ function changeQty(idx: number, delta: number) {
 
 function calcTotal() {
   totalAmount.value = Math.round(cartItems.reduce((s, i) => s + i.num * i.price, 0) * 100) / 100
-  calcPay()
+  const settlement = normalizeRetailSettlement(totalAmount.value, totalAmount.value - discountAmount.value)
+  payAmount.value = settlement.payAmount
+  discountAmount.value = settlement.discountAmount
 }
 
 function calcPay() {
-  payAmount.value = Math.max(0, (Number(totalAmount.value) || 0) - (Number(discountAmount.value) || 0))
+  const settlement = normalizeRetailSettlement(totalAmount.value, (Number(totalAmount.value) || 0) - (Number(discountAmount.value) || 0))
+  payAmount.value = settlement.payAmount
+  discountAmount.value = settlement.discountAmount
 }
 
 function onPayAmountChange(v: number | null | undefined) {
-  payAmount.value = Math.max(0, Number(v || 0))
+  const settlement = normalizeRetailSettlement(totalAmount.value, Number(v || 0))
+  payAmount.value = settlement.payAmount
+  discountAmount.value = settlement.discountAmount
 }
 
 function formatMoney(value: unknown) {
@@ -640,18 +658,19 @@ async function handleCheckout() {
   try {
     const storeIdNum = Number(selectedStoreId.value)
     const memberIdNum = Number(selectedMemberId.value)
+    const settled = distributeRetailItems(cartItems, payAmount.value)
     const res = await createRetailOrder({
       order_date: new Date().toLocaleDateString('sv-SE'),
       member_id: Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : 0,
       member_name: selectedMember.value?.name ?? '',
       store_id: Number.isFinite(storeIdNum) && storeIdNum > 0 ? storeIdNum : 0,
       store_name: selectedStore.value?.name ?? '',
-      total_amount: Number(totalAmount.value) || 0,
-      discount_amount: Number(discountAmount.value) || 0,
-      pay_amount: Number(payAmount.value) || 0,
+      total_amount: settled.totalAmount,
+      discount_amount: settled.discountAmount,
+      pay_amount: settled.payAmount,
       pay_method: payMethod.value,
       pay_type: payMethod.value,
-      goods_info: JSON.stringify(cartItems.map(i => ({ ...i }))),
+      goods_info: JSON.stringify(settled.items),
       status: 1,
     })
     if (!res?.data?.id && !res?.data?.order_no && !res?.data?.order_sn) {
@@ -666,7 +685,7 @@ async function handleCheckout() {
     if (!created) {
       throw new Error('收银失败：系统未找到新零售单，请重试')
     }
-    lastPayAmount.value = payAmount.value
+    lastPayAmount.value = settled.payAmount
     lastOrderNo.value = created.order_sn || created.id || res.data?.order_no || res.data?.id || ''
     // 收银台扣减库存
     try {
@@ -678,7 +697,7 @@ async function handleCheckout() {
     try {
       await adjustFundBalance({
         fundName: RETAIL_FUND_NAME,
-        delta: payAmount.value,
+        delta: settled.payAmount,
         allowCreate: true,
       })
     } catch { /* 资金更新失败不阻塞 */ }
@@ -957,7 +976,15 @@ onMounted(async () => {
   display: flex; align-items: center;
   justify-content: space-between; margin-bottom: 6px;
 }
+.cr-cart-item-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
 .cr-cart-item-name { font-size: 13px; font-weight: 500; color: #1e293b; flex: 1; }
+.cr-cart-item-price-note { font-size: 11px; color: #64748b; line-height: 1.3; }
 
 .cr-cart-item-bottom {
   display: flex; align-items: center; justify-content: space-between;

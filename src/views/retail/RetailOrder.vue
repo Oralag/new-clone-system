@@ -179,6 +179,7 @@ import http from '@/api/http'
 import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect, deleteRetailStockFlows } from '@/utils/stockEffect'
+import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
 
 function fmtDt(val: string) {
   if (!val) return '-'
@@ -245,8 +246,11 @@ function onMemberChange(id: any) {
 }
 
 function calcFormTotal() {
-  form.total_amount = form.items.reduce((s: number, i: any) => s + i.num * i.price, 0)
-  form.pay_amount = Math.max(0, form.total_amount - (form.discount_amount || 0))
+  const total = form.items.reduce((s: number, i: any) => s + i.num * i.price, 0)
+  const settlement = normalizeRetailSettlement(total, total - (form.discount_amount || 0))
+  form.total_amount = settlement.totalAmount
+  form.discount_amount = settlement.discountAmount
+  form.pay_amount = settlement.payAmount
 }
 
 async function generateRetailNo(): Promise<string> {
@@ -286,14 +290,18 @@ async function handleSave() {
         price: Number.isFinite(price) && price >= 0 ? price : 0,
       }
     })
+    const settled = distributeRetailItems(normalizedItems, form.pay_amount)
     // 新建订单默认未审核 status=0，审核时再触发库存和财务
     await createRetailOrder({
       ...form,
+      total_amount: settled.totalAmount,
+      discount_amount: settled.discountAmount,
+      pay_amount: settled.payAmount,
       store_id: Number.isFinite(storeIdNum) && storeIdNum > 0 ? storeIdNum : 0,
       member_id: Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : 0,
       pay_type: form.pay_method,
       status: 0,
-      goods_info: JSON.stringify(normalizedItems),
+      goods_info: JSON.stringify(settled.items),
       items: undefined,
     })
     ElMessage.success('保存成功，请审核后生效库存和财务')
