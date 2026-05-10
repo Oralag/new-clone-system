@@ -97,7 +97,13 @@
           <div v-if="cartItems.length === 0" class="cr-drawer-empty">
             <span>🛒</span> 还没有商品，点击下方商品加入
           </div>
-          <div v-for="(item, idx) in displayCartItems" :key="idx" class="cr-cart-item">
+          <div
+            v-for="(item, idx) in displayCartItems"
+            :key="idx"
+            class="cr-cart-item"
+            :class="{ active: pricingTargetIndex === idx }"
+            @click="setPricingTarget(idx)"
+          >
             <div class="cr-cart-item-top">
               <div class="cr-cart-item-title">
                 <span class="cr-cart-item-name">{{ item.goods_name }}</span>
@@ -106,15 +112,15 @@
                 </span>
               </div>
               <el-button type="danger" link size="small" :icon="Delete"
-                @click="cartItems.splice(idx,1); calcTotal()" />
+                @click.stop="removeCartItem(idx)" />
             </div>
             <div class="cr-cart-item-bottom">
               <div class="cr-qty-ctrl">
-                <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
+                <button class="cr-qty-btn" @click.stop="changeQty(idx,-1)">−</button>
                 <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
                   controls-position="right" size="small" style="width:72px"
                   @change="calcTotal" />
-                <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
+                <button class="cr-qty-btn" @click.stop="changeQty(idx,1)">+</button>
               </div>
               <div class="cr-cart-item-amounts">
                 <span class="cr-cart-item-unit">单价 ¥{{ formatMoney(item.price) }}</span>
@@ -130,7 +136,7 @@
             <span>¥{{ formatMoney(totalAmount) }}</span>
           </div>
           <div class="cr-settle-row">
-            <span>{{ adjustmentLabel }}</span>
+            <span>{{ adjustmentScopeLabel }}</span>
             <el-input-number v-model="adjustmentAmount" :min="0" :precision="2"
               controls-position="right" size="small" style="width:100px" @change="calcPay" />
           </div>
@@ -198,7 +204,13 @@
               <div class="cr-empty-text">扫码/点选右侧商品，加入购物车结账</div>
             </div>
             <div v-else class="cr-cart-list">
-              <div v-for="(item, idx) in displayCartItems" :key="idx" class="cr-cart-item">
+              <div
+                v-for="(item, idx) in displayCartItems"
+                :key="idx"
+                class="cr-cart-item"
+                :class="{ active: pricingTargetIndex === idx }"
+                @click="setPricingTarget(idx)"
+              >
                 <div class="cr-cart-item-top">
                   <div class="cr-cart-item-title">
                     <span class="cr-cart-item-name">{{ item.goods_name }}</span>
@@ -207,15 +219,15 @@
                     </span>
                   </div>
                   <el-button type="danger" link size="small" :icon="Delete"
-                    @click="cartItems.splice(idx,1); calcTotal()" />
+                    @click.stop="removeCartItem(idx)" />
                 </div>
                 <div class="cr-cart-item-bottom">
                   <div class="cr-qty-ctrl">
-                    <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
+                    <button class="cr-qty-btn" @click.stop="changeQty(idx,-1)">−</button>
                     <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
                       controls-position="right" size="small" style="width:72px"
                       @change="calcTotal" />
-                    <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
+                    <button class="cr-qty-btn" @click.stop="changeQty(idx,1)">+</button>
                   </div>
                   <div class="cr-cart-item-amounts">
                     <span class="cr-cart-item-unit">单价 ¥{{ formatMoney(item.price) }}</span>
@@ -233,7 +245,7 @@
               <span>¥{{ formatMoney(totalAmount) }}</span>
             </div>
             <div class="cr-settle-row">
-              <span>{{ adjustmentLabel }}</span>
+              <span>{{ adjustmentScopeLabel }}</span>
               <el-input-number v-model="adjustmentAmount" :min="0" :precision="2"
                 controls-position="right" size="small" style="width:100px" @change="calcPay" />
             </div>
@@ -545,8 +557,12 @@ function onStoreChange(id: number) {
 const totalAmount = ref(0)
 const discountAmount = ref(0)
 const payAmount = ref(0)
-const displayCartItems = computed(() => distributeRetailItems(cartItems, payAmount.value).items)
+const pricingTargetIndex = ref<number | null>(null)
+const displayCartItems = computed(() => distributeRetailItems(cartItems, payAmount.value, {
+  targetIndex: pricingTargetIndex.value,
+}).items)
 const adjustmentLabel = computed(() => discountAmount.value < 0 ? '加价' : '折扣')
+const adjustmentScopeLabel = computed(() => `${adjustmentLabel.value}（${pricingTargetIndex.value === null ? '整单' : '当前商品'}）`)
 const adjustmentAmount = computed({
   get: () => Math.abs(Number(discountAmount.value || 0)),
   set: (value: number) => {
@@ -557,7 +573,12 @@ const adjustmentAmount = computed({
 
 function addToCart(g: any) {
   const exist = cartItems.find(i => i.goods_id === g.id)
-  if (exist) { exist.num++; calcTotal(); return }
+  if (exist) {
+    exist.num++
+    pricingTargetIndex.value = cartItems.findIndex(i => i.goods_id === g.id)
+    calcTotal()
+    return
+  }
   // 有会员时使用会员价，价格截断到2位小数避免浮点误差
   const rawPrice = selectedMemberId.value && Number(g.member_price) > 0
     ? Number(g.member_price)
@@ -572,12 +593,32 @@ function addToCart(g: any) {
     cost_price: Number(g.cost_price || 0),
     num: 1,
   })
+  pricingTargetIndex.value = cartItems.length - 1
   calcTotal()
   // 手机端：加入购物车后短暂提示，不自动跳转（让用户继续选商品）
 }
 
+function setPricingTarget(idx: number) {
+  pricingTargetIndex.value = pricingTargetIndex.value === idx ? null : idx
+}
+
 function changeQty(idx: number, delta: number) {
+  pricingTargetIndex.value = idx
   cartItems[idx].num = Math.max(0.001, parseFloat((cartItems[idx].num + delta).toFixed(3)))
+  calcTotal()
+}
+
+function removeCartItem(idx: number) {
+  cartItems.splice(idx, 1)
+  if (pricingTargetIndex.value === null) {
+    calcTotal()
+    return
+  }
+  if (pricingTargetIndex.value === idx) {
+    pricingTargetIndex.value = cartItems.length ? Math.min(idx, cartItems.length - 1) : null
+  } else if (pricingTargetIndex.value > idx) {
+    pricingTargetIndex.value -= 1
+  }
   calcTotal()
 }
 
@@ -606,6 +647,7 @@ function formatMoney(value: unknown) {
 
 function clearCart() {
   cartItems.splice(0)
+  pricingTargetIndex.value = null
   discountAmount.value = 0
   totalAmount.value = 0
   payAmount.value = 0
@@ -672,7 +714,9 @@ async function handleCheckout() {
   try {
     const storeIdNum = Number(selectedStoreId.value)
     const memberIdNum = Number(selectedMemberId.value)
-    const settled = distributeRetailItems(cartItems, payAmount.value)
+    const settled = distributeRetailItems(cartItems, payAmount.value, {
+      targetIndex: pricingTargetIndex.value,
+    })
     const res = await createRetailOrder({
       order_date: new Date().toLocaleDateString('sv-SE'),
       member_id: Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : 0,
@@ -793,6 +837,7 @@ function addWeightItemToCart() {
     cost_price: Number(goodsList.value.find((g: any) => g.id === wcGoodsId.value)?.cost_price || 0),
     num: parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4)),
   })
+  pricingTargetIndex.value = cartItems.length - 1
   calcTotal()
   weightCalcVisible.value = false
   wcGoodsId.value = null
@@ -982,9 +1027,14 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 9px 10px;
   background: #fff;
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.15s, border-color 0.15s, background 0.15s;
 }
 .cr-cart-item:hover { box-shadow: 0 2px 8px rgba(59,130,246,0.08); }
+.cr-cart-item.active {
+  border-color: #93c5fd;
+  background: #f8fbff;
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.12);
+}
 
 .cr-cart-item-top {
   display: flex; align-items: center;
