@@ -130,8 +130,8 @@
             <span>¥{{ formatMoney(totalAmount) }}</span>
           </div>
           <div class="cr-settle-row">
-            <span>折扣</span>
-            <el-input-number v-model="discountAmount" :precision="2"
+            <span>{{ adjustmentLabel }}</span>
+            <el-input-number v-model="adjustmentAmount" :min="0" :precision="2"
               controls-position="right" size="small" style="width:100px" @change="calcPay" />
           </div>
           <div class="cr-settle-row">
@@ -233,8 +233,8 @@
               <span>¥{{ formatMoney(totalAmount) }}</span>
             </div>
             <div class="cr-settle-row">
-              <span>折扣</span>
-              <el-input-number v-model="discountAmount" :precision="2"
+              <span>{{ adjustmentLabel }}</span>
+              <el-input-number v-model="adjustmentAmount" :min="0" :precision="2"
                 controls-position="right" size="small" style="width:100px" @change="calcPay" />
             </div>
             <div class="cr-settle-row">
@@ -546,6 +546,14 @@ const totalAmount = ref(0)
 const discountAmount = ref(0)
 const payAmount = ref(0)
 const displayCartItems = computed(() => distributeRetailItems(cartItems, payAmount.value).items)
+const adjustmentLabel = computed(() => discountAmount.value < 0 ? '加价' : '折扣')
+const adjustmentAmount = computed({
+  get: () => Math.abs(Number(discountAmount.value || 0)),
+  set: (value: number) => {
+    const amount = Math.max(0, Number(value || 0))
+    discountAmount.value = payAmount.value > totalAmount.value ? -amount : amount
+  },
+})
 
 function addToCart(g: any) {
   const exist = cartItems.find(i => i.goods_id === g.id)
