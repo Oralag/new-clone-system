@@ -119,7 +119,7 @@
         <div class="cr-settle cr-drawer-settle">
           <div class="cr-settle-row">
             <span>商品合计</span>
-            <span>¥{{ totalAmount.toFixed(2) }}</span>
+            <span>¥{{ formatMoney(totalAmount) }}</span>
           </div>
           <div class="cr-settle-row">
             <span>折扣</span>
@@ -135,7 +135,7 @@
               controls-position="right"
               size="small"
               style="width:120px"
-              @change="onPayAmountChange"
+              @update:model-value="onPayAmountChange"
             />
           </div>
           <div class="cr-pay-methods">
@@ -147,7 +147,7 @@
           <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
             @click="handleCheckout">
             <span v-if="paying">处理中…</span>
-            <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ payAmount.toFixed(2) }}</span>
+            <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ formatMoney(payAmount) }}</span>
           </button>
         </div>
       </div>
@@ -164,7 +164,7 @@
       </div>
       <div class="cr-float-info">
         <span v-if="!cartItems.length" class="cr-float-empty">点击商品加入购物车</span>
-        <span v-else class="cr-float-total">¥{{ payAmount.toFixed(2) }}</span>
+        <span v-else class="cr-float-total">¥{{ formatMoney(payAmount) }}</span>
         <span v-if="cartItems.length" class="cr-float-count">共 {{ cartItems.reduce((s,i)=>s+i.num,0) }} 件</span>
       </div>
       <button v-if="cartItems.length" class="cr-float-checkout" :disabled="paying"
@@ -214,7 +214,7 @@
           <div class="cr-settle">
             <div class="cr-settle-row">
               <span>商品合计</span>
-              <span>¥{{ totalAmount.toFixed(2) }}</span>
+              <span>¥{{ formatMoney(totalAmount) }}</span>
             </div>
             <div class="cr-settle-row">
               <span>折扣</span>
@@ -230,7 +230,7 @@
                 controls-position="right"
                 size="small"
                 style="width:120px"
-                @change="onPayAmountChange"
+                @update:model-value="onPayAmountChange"
               />
             </div>
             <div class="cr-pay-methods">
@@ -242,7 +242,7 @@
             <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
               @click="handleCheckout">
               <span v-if="paying">处理中…</span>
-              <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ payAmount.toFixed(2) }}</span>
+              <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ formatMoney(payAmount) }}</span>
             </button>
           </div>
         </div>
@@ -306,7 +306,7 @@
       <div style="text-align:center;padding:16px 0">
         <el-icon style="font-size:56px;color:#16a34a"><CircleCheckFilled /></el-icon>
         <div style="font-size:26px;font-weight:700;margin:14px 0 6px;color:#1d1d1f">
-          ¥{{ lastPayAmount.toFixed(2) }}
+          ¥{{ formatMoney(lastPayAmount) }}
         </div>
         <div style="color:rgba(29,29,31,0.35);font-size:13px">订单号：{{ lastOrderNo }}</div>
       </div>
@@ -566,6 +566,10 @@ function calcPay() {
 
 function onPayAmountChange(v: number | null | undefined) {
   payAmount.value = Math.max(0, Number(v || 0))
+}
+
+function formatMoney(value: unknown) {
+  return (Number(value) || 0).toFixed(2)
 }
 
 function clearCart() {
