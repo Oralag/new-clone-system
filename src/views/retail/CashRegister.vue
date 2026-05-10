@@ -116,7 +116,10 @@
                   @change="calcTotal" />
                 <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
               </div>
-              <span class="cr-cart-item-sub">¥{{ formatMoney(item.line_amount || (item.num * item.price)) }}</span>
+              <div class="cr-cart-item-amounts">
+                <span class="cr-cart-item-unit">单价 ¥{{ formatMoney(item.price) }}</span>
+                <span class="cr-cart-item-sub">小计 ¥{{ formatMoney(item.line_amount || (item.num * item.price)) }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -214,7 +217,10 @@
                       @change="calcTotal" />
                     <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
                   </div>
-                  <span class="cr-cart-item-sub">¥{{ formatMoney(item.line_amount || (item.num * item.price)) }}</span>
+                  <div class="cr-cart-item-amounts">
+                    <span class="cr-cart-item-unit">单价 ¥{{ formatMoney(item.price) }}</span>
+                    <span class="cr-cart-item-sub">小计 ¥{{ formatMoney(item.line_amount || (item.num * item.price)) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -989,6 +995,14 @@ onMounted(async () => {
 .cr-cart-item-bottom {
   display: flex; align-items: center; justify-content: space-between;
 }
+.cr-cart-item-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: 8px;
+}
+.cr-cart-item-unit { font-size: 11px; color: #64748b; line-height: 1.2; }
 
 .cr-qty-ctrl { display: flex; align-items: center; gap: 4px; }
 .cr-qty-btn {
@@ -1000,7 +1014,7 @@ onMounted(async () => {
 }
 .cr-qty-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
 
-.cr-cart-item-sub { font-size: 14px; font-weight: 700; color: #2563eb; }
+.cr-cart-item-sub { font-size: 14px; font-weight: 700; color: #2563eb; line-height: 1.2; }
 
 /* ── 结算区 ──────────────────────────────────────────────────────────────── */
 .cr-settle {
