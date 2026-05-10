@@ -2,13 +2,9 @@ function roundMoney(value: number) {
   return Math.round((Number(value) || 0) * 100) / 100
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
-
 export function normalizeRetailSettlement(totalAmount: number, payAmount?: number | null) {
   const total = Math.max(0, roundMoney(totalAmount))
-  const pay = clamp(roundMoney(Number(payAmount ?? total) || 0), 0, total)
+  const pay = Math.max(0, roundMoney(Number(payAmount ?? total) || 0))
   const discount = roundMoney(total - pay)
   return { totalAmount: total, payAmount: pay, discountAmount: discount }
 }

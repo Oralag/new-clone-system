@@ -131,7 +131,7 @@
           </div>
           <div class="cr-settle-row">
             <span>折扣</span>
-            <el-input-number v-model="discountAmount" :min="0" :max="totalAmount" :precision="2"
+            <el-input-number v-model="discountAmount" :precision="2"
               controls-position="right" size="small" style="width:100px" @change="calcPay" />
           </div>
           <div class="cr-settle-row">
@@ -234,7 +234,7 @@
             </div>
             <div class="cr-settle-row">
               <span>折扣</span>
-              <el-input-number v-model="discountAmount" :min="0" :max="totalAmount" :precision="2"
+              <el-input-number v-model="discountAmount" :precision="2"
                 controls-position="right" size="small" style="width:100px" @change="calcPay" />
             </div>
             <div class="cr-settle-row">

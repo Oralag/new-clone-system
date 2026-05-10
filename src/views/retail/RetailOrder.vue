@@ -152,7 +152,7 @@
 
         <div style="display:flex;justify-content:flex-end;gap:20px;padding:10px 4px;font-size:13px">
           <span>合计：<b>¥{{ form.total_amount.toFixed(2) }}</b></span>
-          <span>折扣：<el-input-number v-model="form.discount_amount" :min="0" :precision="2" size="small"
+          <span>折扣：<el-input-number v-model="form.discount_amount" :precision="2" size="small"
             controls-position="right" style="width:100px" @change="calcFormTotal" /></span>
           <span>实付：<b style="color:#dc2626;font-size:15px">¥{{ form.pay_amount.toFixed(2) }}</b></span>
         </div>
