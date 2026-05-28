@@ -3,28 +3,128 @@
 
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
+
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getContractList"
+        <ScTable ref="tableRef" :api-obj="filteredContractApi"
+          @selection-change="(rows: any[]) => contractSelectedRows = rows"
+          show-summary :summary-method="getContractSummary"
           del-path="/shop/ContractOrder/batchDel"
-          sort-by="order_date" :sort-desc="true"
-          export-file-name="销售合同" :params="searchForm"
-          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : (row.customer_name === highlightName && highlightName ? 'row-highlight' : '')"
+          export-file-name="销售订单" :params="searchForm" @reset="onSearchReset"
+          :row-class-name="({ row }: any) => row._isGroup ? 'row-group' : (row.status === 4 ? 'row-converted' : (row.customer_name === highlightName && highlightName ? 'row-highlight' : ''))"
           :export-columns="{ order_sn: '合同编号', customer_name: '客户名称', total_amount: '合同金额', sign_date: '签约日期', expire_date: '到期日期', admin_name: '经办人', status: '状态', remark: '备注' }">
           <template #search>
             <el-input v-model="searchForm.contract_no" placeholder="合同编号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
+            <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:150px" />
             <el-select v-model="searchForm.status" placeholder="状态" clearable style="width:110px">
               <el-option label="待审核" :value="0" />
               <el-option label="已审核" :value="1" />
-              <el-option label="已驳回" :value="2" />
+              <el-option label="未收款" value="unpaid" />
+              <el-option label="已收款" value="paid" />
             </el-select>
+            <el-date-picker :key="datePickerKey" v-model="dateRange" type="daterange" range-separator="至"
+              start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
+              style="width:240px" unlink-panels :shortcuts="dateShortcuts" @change="onDateChange" />
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate" data-guide-id="guide-contract-create">新增合同</el-button>
+            <el-dropdown @command="handleGroupToolbarCmd">
+              <el-button type="warning">
+                编组<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="__new__">新建空白分组</el-dropdown-item>
+                  <el-dropdown-item v-if="foldedGroupsMeta.length > 0" divided disabled style="font-size:11px;color:#9ca3af">解散分组</el-dropdown-item>
+                  <el-dropdown-item v-for="g in foldedGroupsMeta" :key="g.key" :command="`__dissolve__${g.key}`">
+                    {{ g.name }}（{{ g.count }} 条）
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </template>
+          <template #selection-actions="{ selectedRows: selRows, clearSelection }">
+            <el-dropdown size="small" @command="(cmd: string) => handleBatchShareCmd(cmd, selRows)">
+              <el-button type="success" size="small">
+                分享给客户({{ selRows.filter((r: any) => !r._isGroup).length }})<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="link">🔗 复制分享链接</el-dropdown-item>
+                  <el-dropdown-item command="pdf">📄 生成 PDF 下载</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button
+              type="primary" size="small"
+              :loading="batchAuditing"
+              @click="handleBatchAudit(selRows, clearSelection)"
+            >批量审核({{ selRows.filter((r: any) => r.status === 0).length }})</el-button>
+            <el-dropdown split-button type="warning" size="small"
+              @click="collapseSelected(selRows, clearSelection)"
+              @command="(key:string) => addToGroup(key, selRows, clearSelection)">
+              加入分组
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item disabled style="font-size:11px;color:#9ca3af">加入已有分组</el-dropdown-item>
+                  <el-dropdown-item v-if="foldedGroupsMeta.length === 0" disabled>暂无分组</el-dropdown-item>
+                  <el-dropdown-item v-for="g in foldedGroupsMeta" :key="g.key" :command="g.key">
+                    {{ g.name }}（{{ g.count }} 条）
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
-              <div class="expand-detail">
+              <div v-if="row._isGroup" class="expand-detail">
+                <div class="expand-title">分组内合同（{{ row._groupRows.length }} 条）</div>
+                <el-table :data="row._groupRows" border size="small" class="expand-table">
+                  <el-table-column type="expand">
+                    <template #default="{row:r}">
+                      <div style="padding:10px 16px">
+                        <div style="font-size:12px;color:#6b7280;margin-bottom:6px">商品明细</div>
+                        <el-table :data="parseItems(r.goods_info)" border size="small">
+                          <el-table-column prop="goods_name" label="商品名称" min-width="140" />
+                          <el-table-column prop="goods_sn" label="编码" width="110" />
+                          <el-table-column prop="spec" label="规格" width="100" />
+                          <el-table-column prop="unit_name" label="单位" width="65" align="center" />
+                          <el-table-column prop="num" label="数量" width="80" align="right" />
+                          <el-table-column label="含税单价" width="110" align="right">
+                            <template #default="{row:item}">¥{{ Number(item.price||0).toFixed(2) }}</template>
+                          </el-table-column>
+                          <el-table-column label="含税合计" width="110" align="right">
+                            <template #default="{row:item}">
+                              <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
+                            </template>
+                          </el-table-column>
+                        </el-table>
+                      </div>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="合同编号" min-width="160">
+                    <template #default="{row:r}">{{ r.order_sn || r.contract_sn || '—' }}</template>
+                  </el-table-column>
+                  <el-table-column label="客户名称" min-width="110">
+                    <template #default="{row:r}">{{ r.customer_name || '—' }}</template>
+                  </el-table-column>
+                  <el-table-column label="合同金额" width="110" align="right">
+                    <template #default="{row:r}"><span style="color:#0071e3">¥{{ calcContractAmount(r).toFixed(2) }}</span></template>
+                  </el-table-column>
+                  <el-table-column label="已收" width="100" align="right">
+                    <template #default="{row:r}"><span style="color:#16a34a">¥{{ getReceivedAmount(r).toFixed(2) }}</span></template>
+                  </el-table-column>
+                  <el-table-column label="签约日期" width="105">
+                    <template #default="{row:r}">{{ (r.sign_date||r.order_date||'').slice(0,10) }}</template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="80" align="center">
+                    <template #default="{row:r}">
+                      <el-button size="small" link type="primary" @click="openEdit(r, true)">查看</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+              <div v-else class="expand-detail">
                 <div class="expand-title">商品明细</div>
                 <el-table :data="parseItems(row.goods_info)" border size="small" class="expand-table">
                   <el-table-column type="index" width="40" align="center" />
@@ -46,66 +146,96 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column label="合同编号" min-width="150">
-            <template #default="{ row }">{{ getContractSn(row) }}</template>
-          </el-table-column>
-          <el-table-column label="客户名称" min-width="140">
-            <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
-          </el-table-column>
-          <el-table-column prop="total_amount" label="合同金额" width="120" align="right">
-            <template #default="{ row }">
-              <span style="color:#0071e3;font-weight:500">¥{{ calcContractAmount(row).toFixed(2) }}</span>
+          <el-table-column label="序号" width="60" align="center">
+            <template #default="{ row, $index }">
+              <span v-if="!row._isGroup" style="color:#6b7280">{{ $index + 1 }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="签约日期" width="110">
+          <el-table-column label="合同编号" min-width="200">
             <template #default="{ row }">
-              {{ (row.sign_date || row.contract_date || row.order_date || row.create_time || '').slice(0, 10) }}
+              <template v-if="row._isGroup">
+                <el-input v-if="editingGroupKey === row._groupKey"
+                  v-model="editingGroupName" size="small" style="width:160px"
+                  @keyup.enter="saveGroupName" @blur="saveGroupName" ref="groupNameInputRef" />
+                <span v-else style="color:#d97706;font-weight:600;font-size:13px;cursor:pointer"
+                  title="点击重命名" @click="startEditGroupName(row._groupKey, row._groupName)">
+                  {{ row._groupName || '分组' }}（{{ row._groupRows.length }} 条）
+                </span>
+              </template>
+              <template v-else>{{ getContractSn(row) }}</template>
+            </template>
+          </el-table-column>
+          <el-table-column label="客户名称" min-width="140">
+            <template #default="{ row }">
+              <template v-if="!row._isGroup">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
+            </template>
+          </el-table-column>
+          <el-table-column label="合同金额" width="120" align="right">
+            <template #default="{ row }">
+              <span v-if="row._isGroup" style="color:#d97706;font-size:12px">共 ¥{{ row._groupRows.reduce((s:number,r:any)=>s+calcContractAmount(r),0).toFixed(2) }}</span>
+              <span v-else style="color:#0071e3;font-weight:500">¥{{ calcContractAmount(row).toFixed(2) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="签约日期" width="180">
+            <template #default="{ row }">
+              <template v-if="row._isGroup">
+                <span style="color:#92400e;font-size:12px">{{ row._maxDate }} - {{ row._minDate }}</span>
+              </template>
+              <template v-else>{{ (row.sign_date || row.contract_date || row.order_date || row.create_time || '').slice(0, 10) }}</template>
             </template>
           </el-table-column>
           <el-table-column label="到期日期" width="110">
-            <template #default="{ row }">{{ fmtDt(row.expire_date) || '—' }}</template>
+            <template #default="{ row }">
+              <template v-if="!row._isGroup">{{ fmtDt(row.expire_date) || '—' }}</template>
+            </template>
           </el-table-column>
           <el-table-column label="经办人" width="90">
-            <template #default="{ row }">{{ row.admin_name || '—' }}</template>
+            <template #default="{ row }">
+              <template v-if="!row._isGroup">{{ row.admin_name || '—' }}</template>
+            </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="getContractStatusType(row)" size="small">
+              <el-tag v-if="!row._isGroup" :type="getContractStatusType(row)" size="small">
                 {{ getContractStatusLabel(row) }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="已收金额" width="110" align="right">
             <template #default="{ row }">
-              <span style="color:#16a34a;font-weight:500">¥{{ getReceivedAmount(row).toFixed(2) }}</span>
+              <span v-if="!row._isGroup" style="color:#16a34a;font-weight:500">¥{{ getReceivedAmount(row).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="待收金额" width="110" align="right">
             <template #default="{ row }">
-              <span :style="{ color: getPendingAmount(row) > 0 ? '#dc2626' : '#6b7280', fontWeight: '500' }">
+              <span v-if="!row._isGroup" :style="{ color: getPendingAmount(row) > 0 ? '#dc2626' : '#6b7280', fontWeight: '500' }">
                 ¥{{ getPendingAmount(row).toFixed(2) }}
               </span>
             </template>
           </el-table-column>
           <el-table-column label="收款状态" width="100" align="center">
             <template #default="{ row }">
-              <el-tag v-if="row.status === 1" :type="getReceiveStatus(row).type" size="small">
-                {{ getReceiveStatus(row).label }}
-              </el-tag>
-              <span v-else style="color:#c0c4cc;font-size:12px">—</span>
+              <template v-if="!row._isGroup">
+                <el-tag v-if="row.status === 1" :type="getReceiveStatus(row).type" size="small">{{ getReceiveStatus(row).label }}</el-tag>
+                <span v-else style="color:#c0c4cc;font-size:12px">—</span>
+              </template>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="300" fixed="right">
             <template #default="{ row }">
-              <span v-if="row.status === 4" style="color:#16a34a;margin-right:4px;font-weight:700">✓</span>
-              <el-tag v-if="row.status === 4" type="warning" size="small" style="margin-right:8px">已转单</el-tag>
-              <el-button v-if="row.status === 1 || row.status === 4" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
-              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
-              <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-              <el-button v-if="row.status === 1 || row.status === 4" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button v-if="(row.status === 1 || row.status === 4) && getPendingAmount(row) > 0.01" type="success" link size="small" @click="openCollectDialog(row)">去收款</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1 || row.status === 4" :title="row.status === 1 || row.status === 4 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <template v-if="row._isGroup">
+                <el-button type="warning" link size="small" @click="unfoldGroup(row._groupKey)">解散分组</el-button>
+              </template>
+              <template v-else>
+                <span v-if="row.status === 4" style="color:#16a34a;margin-right:4px;font-weight:700">✓</span>
+                <el-tag v-if="row.status === 4" type="warning" size="small" style="margin-right:8px">已转单</el-tag>
+                <el-button v-if="row.status === 1 || row.status === 4" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+                <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
+                <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
+                <el-button v-if="row.status === 1 || row.status === 4" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+                <el-button v-if="(row.status === 1 || row.status === 4) && getPendingAmount(row) > 0.01" type="success" link size="small" @click="openCollectDialog(row)">去收款</el-button>
+                <el-button type="danger" link size="small" :disabled="row.status === 1 || row.status === 4" :title="row.status === 1 || row.status === 4 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              </template>
             </template>
           </el-table-column>
         </ScTable>
@@ -122,12 +252,21 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
+          <el-dropdown v-if="isReadonly" @command="handleShareCommand">
+            <el-button type="primary">分享 <el-icon class="el-icon--right"><arrow-down /></el-icon></el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="link">🔗 分享链接（客户在线查看）</el-dropdown-item>
+                <el-dropdown-item command="pdf">📄 生成PDF发送</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-button v-if="isReadonly" @click="handleContractPrint">打印</el-button>
           <el-button v-if="isReadonly" @click="handleContractExport">导出</el-button>
-          <el-button v-if="!isReadonly" :loading="saving" @click="handleSave(false)" data-guide-id="guide-contract-save">
+          <el-button v-if="!isReadonly" :loading="saving && !savingAndAuditing" @click="handleSave(false)" data-guide-id="guide-contract-save">
             保存
           </el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave(true)">
+          <el-button v-if="!isReadonly" type="primary" :loading="savingAndAuditing" @click="handleSave(true)">
             保存并审核
           </el-button>
         </div>
@@ -135,115 +274,152 @@
 
       <div class="form-body">
 
-        <!-- 基本信息卡片 -->
-        <div class="form-section">
-          <div class="sec-title">基本信息</div>
-          <el-form ref="formRef" :model="fd" label-width="80px" :disabled="isReadonly">
-            <el-row :gutter="16">
-              <!-- 行1 -->
-              <el-col :span="6">
-                <el-form-item label="合同编号">
-                  <el-input :value="fd.id ? fd.contract_no : '（保存后自动生成）'" disabled placeholder="自动生成" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="客户名称" prop="customer_id"
-                  :rules="[{ required: true, message: '请选择客户' }]"
-                  data-guide-id="guide-contract-customer">
-                  <div style="display:flex;gap:4px;width:100%">
-                    <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
-                      @change="onCustomerChange">
-                      <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
-                    </el-select>
-                    <el-button type="primary" :icon="Plus" @click="quickAddCustomerVisible = true" />
-                  </div>
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="客户等级">
-                  <el-select v-model="fd.level_id" placeholder="请选择等级（可选）" clearable style="width:100%"
-                    @change="onLevelChange">
+        <!-- 基本信息：4列面板布局 -->
+        <div class="form-section info-header-section">
+          <el-form ref="formRef" :model="fd" :disabled="isReadonly">
+            <div class="info-panels">
+
+              <!-- 面板1：客户信息 -->
+              <div class="info-panel">
+                <div class="info-panel-title">客户信息</div>
+                <div class="info-field">
+                  <span class="info-label"><span style="color:#f56c6c">*</span>&nbsp;客户</span>
+                  <el-form-item prop="customer_id" :rules="[{ required: true, message: '请选择客户' }]"
+                    style="margin:0;flex:1" data-guide-id="guide-contract-customer">
+                    <div style="display:flex;gap:4px;width:100%">
+                      <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
+                        :disabled="isReadonly" @change="onCustomerChange">
+                        <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
+                      </el-select>
+                      <el-button v-if="!isReadonly" type="primary" :icon="Plus" @click="quickAddCustomerVisible = true" />
+                    </div>
+                  </el-form-item>
+                </div>
+                <div class="info-field">
+                  <span class="info-label">客户等级</span>
+                  <el-select v-model="fd.level_id" placeholder="等级（可选）" clearable style="flex:1"
+                    :disabled="isReadonly" @change="onLevelChange">
                     <el-option v-for="lv in levelOptions" :key="lv.id" :label="lv.name" :value="lv.id" />
                   </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="经办人" prop="admin_name">
-                  <el-select v-model="fd.admin_id" placeholder="请选择经办人" filterable clearable style="width:100%"
-                    @change="onAdminChange">
+                </div>
+              </div>
+
+              <!-- 面板2：合同信息 -->
+              <div class="info-panel">
+                <div class="info-panel-title">
+                  合同信息
+                  <span v-if="fd.id && fd.contract_no" class="info-panel-sn">（{{ fd.contract_no }}）</span>
+                  <span v-else class="info-panel-sn">（保存后生成编号）</span>
+                </div>
+                <div class="info-field">
+                  <span class="info-label">经办人</span>
+                  <el-select v-model="fd.admin_id" placeholder="请选择" filterable clearable style="flex:1"
+                    :disabled="isReadonly" @change="onAdminChange">
                     <el-option v-for="s in staffOptions" :key="s.id" :label="s.name" :value="s.id" />
                   </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="提成比例">
-                  <div style="display:flex;gap:4px;width:100%;align-items:center">
-                    <el-input-number
-                      v-model="fd.commission_rate"
-                      :min="0" :max="100" :precision="1"
-                      controls-position="right"
-                      style="flex:1"
-                      :placeholder="fd.admin_id ? String(getCommissionRate(fd.admin_id)) : '0'"
-                    />
-                    <span style="font-size:13px;color:rgba(29,29,31,0.35)">%</span>
-                    <el-button link size="small" @click="goToCommissionSetting" style="font-size:12px;padding:0 2px">设置</el-button>
-                  </div>
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="签约日期" prop="sign_date">
+                </div>
+                <div class="info-field">
+                  <span class="info-label">签约日期</span>
                   <el-date-picker v-model="fd.sign_date" type="date" value-format="YYYY-MM-DD"
-                    style="width:100%" placeholder="请选择日期" />
-                </el-form-item>
-              </el-col>
-
-              <!-- 行2 -->
-              <el-col :span="6">
-                <el-form-item label="到期日期" prop="expire_date">
+                    style="flex:1" placeholder="请选择日期" :disabled="isReadonly" />
+                </div>
+                <div class="info-field">
+                  <span class="info-label">到期日期</span>
                   <el-date-picker v-model="fd.expire_date" type="date" value-format="YYYY-MM-DD"
-                    style="width:100%" placeholder="请选择日期" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="是否开票">
-                  <el-switch v-model="fd.need_invoice" active-text="是" inactive-text="否" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="收款账户">
-                  <div style="display:flex;gap:4px;width:100%">
-                    <el-select v-model="fd.receive_account" placeholder="请选择账户" clearable style="flex:1">
-                      <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.name" />
-                      <el-option label="现金" value="现金" />
-                    </el-select>
-                    <el-button :icon="Plus" @click="openAddFund" />
+                    style="flex:1" placeholder="请选择日期" :disabled="isReadonly" />
+                </div>
+                <div class="info-field">
+                  <span class="info-label">提成比例</span>
+                  <div style="display:flex;gap:4px;flex:1;align-items:center">
+                    <el-input-number v-model="fd.commission_rate" :min="0" :max="100" :precision="1"
+                      controls-position="right" style="flex:1" :disabled="isReadonly"
+                      :placeholder="fd.admin_id ? String(getCommissionRate(fd.admin_id)) : '0'" />
+                    <span style="font-size:13px;color:rgba(29,29,31,0.35)">%</span>
+                    <el-button v-if="!isReadonly" link size="small" @click="goToCommissionSetting"
+                      style="font-size:12px;padding:0 2px">设置</el-button>
                   </div>
-                </el-form-item>
-              </el-col>
-              <el-col :span="6" />
-
-              <!-- 行3 -->
-              <el-col :span="6" v-if="fd.source_offer_no">
-                <el-form-item label="来源报价">
-                  <div style="display:flex;align-items:center;gap:6px;width:100%">
+                </div>
+                <div v-if="fd.source_offer_no" class="info-field">
+                  <span class="info-label">来源报价</span>
+                  <div style="display:flex;align-items:center;gap:6px;flex:1">
                     <el-input :value="fd.source_offer_no" disabled style="flex:1" />
-                    <span v-if="calcOfferDisplayAmount > 0" style="font-size:13px;color:#0071e3;font-weight:600;white-space:nowrap">
+                    <span v-if="calcOfferDisplayAmount > 0"
+                      style="font-size:13px;color:#0071e3;font-weight:600;white-space:nowrap">
                       ¥{{ calcOfferDisplayAmount.toFixed(2) }}
                     </span>
                   </div>
-                </el-form-item>
-              </el-col>
-              <el-col :span="fd.source_offer_no ? 12 : 18">
-                <el-form-item label="备注">
-                  <el-input v-model="fd.remark" type="textarea" :rows="2" placeholder="请输入备注" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="附件">
-                  <el-button :icon="Paperclip">上传附件</el-button>
-                </el-form-item>
-              </el-col>
-            </el-row>
+                </div>
+              </div>
+
+              <!-- 面板3：账户信息 -->
+              <div class="info-panel">
+                <div class="info-panel-title">账户信息</div>
+                <div class="info-field">
+                  <span class="info-label">收款账户</span>
+                  <div style="display:flex;gap:4px;flex:1">
+                    <el-select v-model="fd.receive_account" placeholder="请选择账户" clearable style="flex:1"
+                      :disabled="isReadonly">
+                      <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.name" />
+                      <el-option label="现金" value="现金" />
+                    </el-select>
+                    <el-button v-if="!isReadonly" :icon="Plus" @click="openAddFund" />
+                  </div>
+                </div>
+                <div class="info-field">
+                  <span class="info-label">是否开票</span>
+                  <el-switch v-model="fd.need_invoice" :disabled="isReadonly" active-text="是" inactive-text="否" />
+                </div>
+                <div class="info-field">
+                  <span class="info-label">是否分期</span>
+                  <el-switch v-model="fd.installment" :disabled="isReadonly" active-text="是" inactive-text="否" />
+                </div>
+              </div>
+
+              <!-- 面板4：金额摘要 -->
+              <div class="info-panel amount-summary-panel">
+                <div class="info-panel-title">金额摘要</div>
+                <div class="amount-stat-row">
+                  <span class="amount-stat-label">种类</span>
+                  <b class="amount-stat-value">{{ goodsKindCount }}</b>
+                  <span class="amount-stat-label" style="margin-left:16px">数量</span>
+                  <b class="amount-stat-value" style="color:#0071e3">{{ totalGoodsNum }}</b>
+                </div>
+                <div v-if="fd.discount_type !== 'none' && Number(fd.discount_value) > 0" class="amount-stat-row">
+                  <span class="amount-stat-label">优惠金额</span>
+                  <span style="color:#16a34a;font-weight:600">
+                    ¥{{ Number(fd.discount_type === 'percent' ? fd.total_amount * (fd.discount_value || 0) / 100 : fd.discount_value).toFixed(2) }}
+                  </span>
+                </div>
+                <div v-if="fd.discount_type === 'percent' && Number(fd.discount_value) > 0" class="amount-stat-row">
+                  <span class="amount-stat-label">折扣率(%)</span>
+                  <span style="color:rgba(29,29,31,0.7);font-size:13px">
+                    {{ fd.discount_value }}%（{{ (fd.total_amount * (fd.discount_value || 0) / 100).toFixed(2) }}）
+                  </span>
+                </div>
+                <div class="amount-stat-row">
+                  <span class="amount-stat-label">累计收款</span>
+                  <span style="color:#16a34a;font-weight:600">
+                    ¥{{ (Number(fd.receive_amount || 0) + Number(fd.prepay_amount || 0)).toFixed(2) }}
+                  </span>
+                </div>
+                <div class="amount-receivable-row">
+                  <div class="amount-stat-label" style="margin-bottom:4px">本单应收</div>
+                  <div class="amount-receivable-value">¥ {{ finalReceivable.toFixed(2) }}</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- 备注 & 附件 -->
+            <div class="remark-row">
+              <span class="remark-label">备注</span>
+              <el-input v-model="fd.remark" type="textarea" :rows="2" placeholder="请输入备注"
+                :disabled="isReadonly" style="flex:1" />
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                <span class="remark-label">附件</span>
+                <el-button :icon="Paperclip" :disabled="isReadonly">上传附件</el-button>
+              </div>
+            </div>
           </el-form>
         </div>
 
@@ -296,9 +472,14 @@
                 <span style="font-size:12px;color:#666">{{ row.cate_name || '—' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="单位" width="70" align="center">
+            <el-table-column label="单位" width="90" align="center">
               <template #default="{ row }">
-                <el-input v-model="row.unit_name" size="small" placeholder="单位" :disabled="isReadonly" />
+                <el-select v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
+                  v-model="row.unit_name" size="small" :disabled="isReadonly" style="width:100%"
+                  @change="(v: string) => onItemUnitChange(row, v)">
+                  <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u.unit_name" :label="u.unit_name" :value="u.unit_name" />
+                </el-select>
+                <el-input v-else v-model="row.unit_name" size="small" placeholder="单位" :disabled="isReadonly" />
               </template>
             </el-table-column>
             <el-table-column width="120">
@@ -309,8 +490,13 @@
                 </div>
               </template>
               <template #default="{ row }">
-                <el-input-number v-model="row.num" :min="0" :precision="2" size="small"
-                  controls-position="right" style="width:100%" :disabled="isReadonly" @change="calcItemTax(row); calcTotal()" />
+                <div style="display:flex;gap:4px;align-items:center">
+                  <el-input-number v-model="row.num" :min="0" :precision="4" size="small"
+                    controls-position="right" style="flex:1;min-width:0" :disabled="isReadonly" @change="calcItemTax(row); calcTotal()" />
+                  <el-button v-if="!isReadonly && isWeightUnit(row.unit_name)"
+                    size="small" circle style="flex-shrink:0;width:24px;height:24px;padding:0;font-size:12px"
+                    title="克重换算" @click="openWC(row)">g</el-button>
+                </div>
               </template>
             </el-table-column>
             <el-table-column width="130">
@@ -371,9 +557,15 @@
                 <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="备注" min-width="110">
+            <el-table-column label="备注" min-width="140">
               <template #default="{ row }">
-                <el-input v-model="row.remark" size="small" placeholder="备注" :disabled="isReadonly" />
+                <div style="display:flex;gap:4px;align-items:center">
+                  <el-input v-model="row.remark" size="small" placeholder="备注" :disabled="isReadonly" style="flex:1" />
+                  <el-tooltip v-if="!isReadonly && fd.level_id && row.goods_id > 0 && !hasLevelPrice(row.goods_id)"
+                    content="此商品无代理价，点击将当前价格记录为固定代理价" placement="top">
+                    <el-button type="warning" link size="small" @click="saveAsLevelPrice(row)">记录代理价</el-button>
+                  </el-tooltip>
+                </div>
               </template>
             </el-table-column>
             <el-table-column v-if="!isReadonly" width="45" align="center" fixed="right">
@@ -411,11 +603,16 @@
               </div>
               <div class="mgc-row">
                 <span class="mgc-label">单位</span>
-                <el-input v-model="row.unit_name" size="small" placeholder="单位" :disabled="isReadonly" style="flex:1" />
+                <el-select v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
+                  v-model="row.unit_name" size="small" :disabled="isReadonly" style="flex:1"
+                  @change="(v: string) => onItemUnitChange(row, v)">
+                  <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u.unit_name" :label="u.unit_name" :value="u.unit_name" />
+                </el-select>
+                <el-input v-else v-model="row.unit_name" size="small" placeholder="单位" :disabled="isReadonly" style="flex:1" />
               </div>
               <div class="mgc-row">
                 <span class="mgc-label">数量</span>
-                <el-input-number v-model="row.num" :min="0" :precision="2" size="small"
+                <el-input-number v-model="row.num" :min="0" :precision="4" size="small"
                   controls-position="right" style="flex:1" :disabled="isReadonly"
                   @change="calcItemTax(row); calcTotal()" />
               </div>
@@ -482,6 +679,9 @@
               <span class="settle-label">本次收款</span>
               <el-input-number v-model="fd.receive_amount" :min="0" :max="finalReceivable" :precision="2" :disabled="isReadonly"
                 size="small" style="width:130px" />
+              <el-button v-if="!isReadonly" size="small" type="primary" plain
+                style="margin-left:6px;padding:4px 8px;font-size:12px"
+                @click="fd.receive_amount = finalReceivable">全部</el-button>
             </div>
             <div class="settle-item" v-if="customerPrepayBalance > 0 || fd.prepay_amount > 0">
               <span class="settle-label" style="color:#16a34a">
@@ -499,10 +699,6 @@
                 placeholder="0"
               />
               <span style="font-size:11px;color:rgba(29,29,31,0.35)">审核时自动核销</span>
-            </div>
-            <div class="settle-item">
-              <span class="settle-label">是否分期</span>
-              <el-switch v-model="fd.installment" :disabled="isReadonly" active-text="是" inactive-text="否" />
             </div>
             <!-- 附加费用：编辑时始终显示，只读时有费用才显示 -->
             <div v-if="!isReadonly || fd.fee_items.length > 0" class="settle-item fee-items-row" style="align-items:flex-start">
@@ -584,9 +780,45 @@
             <template v-if="fd.prepay_amount > 0 || fd.receive_amount > 0">
               <span style="margin-left:24px">实际待收：<b style="color:#dc2626;font-size:16px">¥{{ finalPending.toFixed(2) }}</b></span>
             </template>
-            <span style="margin-left:24px">商品成本：<b style="color:rgba(29,29,31,0.35)">¥{{ totalCost.toFixed(2) }}</b></span>
+            <span class="cost-summary-item" style="margin-left:24px">
+              商品成本：<b style="color:rgba(29,29,31,0.35)">¥{{ totalCost.toFixed(2) }}</b>
+              <el-button type="primary" link size="small" class="cost-detail-toggle" @click="costDetailVisible = !costDetailVisible">
+                {{ costDetailVisible ? '收起明细' : '成本明细' }}
+                <el-icon class="cost-detail-arrow" :class="{ open: costDetailVisible }"><ArrowDown /></el-icon>
+              </el-button>
+            </span>
             <span style="margin-left:24px">净利润：<b :style="{ color: netProfit >= 0 ? '#16a34a' : '#dc2626', fontSize: '16px' }">¥{{ netProfit.toFixed(2) }}</b></span>
             <span style="margin-left:12px">利润率：<b :style="{ color: profitRate >= 0 ? '#16a34a' : '#dc2626' }">{{ profitRate.toFixed(1) }}%</b></span>
+          </div>
+          <div v-if="costDetailVisible" class="cost-detail-panel">
+            <div class="cost-detail-head">
+              <span>商品成本明细</span>
+              <small>优先取仓库平均成本，未找到时使用商品档案成本价</small>
+            </div>
+            <el-table :data="costDetailRows" size="small" border style="width:100%">
+              <el-table-column prop="goods_name" label="商品名称" min-width="180" show-overflow-tooltip />
+              <el-table-column prop="goods_sn" label="编码" width="110" show-overflow-tooltip />
+              <el-table-column label="数量" width="90" align="right">
+                <template #default="{ row }">{{ Number(row.num || 0).toFixed(2) }} {{ row.unit_name || '' }}</template>
+              </el-table-column>
+              <el-table-column label="平均成本" width="110" align="right">
+                <template #default="{ row }">¥{{ Number(row.base_unit_cost || 0).toFixed(4) }}</template>
+              </el-table-column>
+              <el-table-column label="销售单位成本" width="120" align="right">
+                <template #default="{ row }">¥{{ Number(row.unit_cost || 0).toFixed(4) }}</template>
+              </el-table-column>
+              <el-table-column label="成本小计" width="110" align="right">
+                <template #default="{ row }"><strong>¥{{ Number(row.total_cost || 0).toFixed(2) }}</strong></template>
+              </el-table-column>
+              <el-table-column prop="warehouse_name" label="仓库" width="120" show-overflow-tooltip />
+              <el-table-column prop="cost_source" label="来源" width="120">
+                <template #default="{ row }">
+                  <el-tag size="small" :type="row.cost_source === '仓库平均成本' ? 'success' : row.cost_source === '商品档案成本价' ? 'info' : 'warning'">
+                    {{ row.cost_source }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
           </div>
         </div>
 
@@ -691,7 +923,7 @@
     <!-- 附加费用付款弹窗 -->
     <el-dialog v-model="feePayVisible" :title="`${feePayForm.feeName} 付款`" width="420px" append-to-body>
       <el-form :model="feePayForm" label-width="90px">
-        <el-form-item label="销售合同">
+        <el-form-item label="销售订单">
           <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ feePayForm.orderSn }} · {{ feePayForm.customerName }}</span>
         </el-form-item>
         <el-form-item label="费用类型">
@@ -751,24 +983,95 @@
       </template>
     </el-dialog>
 
+    <!-- 克重换算弹窗 -->
+    <el-dialog v-model="wcVisible" title="散装克重计价" width="340px" align-center append-to-body>
+      <div style="display:flex;flex-direction:column;gap:16px;padding:8px 0">
+        <div style="background:#f8fafc;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;font-weight:600;color:#1e293b">{{ wcRow?.goods_name }}</span>
+          <span style="font-size:13px;color:#2563eb;font-weight:700">¥{{ wcRow?.price }}/{{ wcRow?.unit_name }}</span>
+        </div>
+        <div style="display:flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+          <div @click="wcMode='weight'"
+            style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
+            :style="wcMode==='weight' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
+            输入克数
+          </div>
+          <div v-if="!isGramUnit(wcRow?.unit_name)" @click="wcMode='unit'"
+            style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
+            :style="wcMode==='unit' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
+            输入{{ wcRow?.unit_name }}数
+          </div>
+          <div @click="wcMode='amount'"
+            style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
+            :style="wcMode==='amount' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
+            输入金额
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:64px;font-size:13px;color:#64748b;flex-shrink:0">
+            {{ wcMode === 'weight' ? '克数' : wcMode === 'unit' ? wcRow?.unit_name : '金额（元）' }}
+          </span>
+          <el-input-number v-if="wcMode==='weight'" v-model="wcGrams"
+            :min="0" :precision="1" controls-position="right" style="flex:1" />
+          <el-input-number v-else-if="wcMode==='unit'" v-model="wcDirectUnit"
+            :min="0" :precision="4" controls-position="right" style="flex:1" />
+          <el-input-number v-else v-model="wcTargetAmount"
+            :min="0" :precision="2" controls-position="right" style="flex:1" />
+        </div>
+        <div v-if="wcMode==='weight'" style="display:flex;flex-wrap:wrap;gap:6px">
+          <div v-for="preset in wcJinPresets" :key="preset.label"
+            @click="wcGrams = preset.grams"
+            :style="wcGrams === preset.grams
+              ? 'background:#2563eb;color:#fff;border-color:#2563eb'
+              : 'background:#f8fafc;color:#64748b;border-color:#e2e8f0'"
+            style="padding:5px 12px;border:1.5px solid;border-radius:20px;font-size:13px;cursor:pointer;transition:all 0.12s;user-select:none">
+            {{ preset.label }}
+          </div>
+        </div>
+        <div style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
+          <template v-if="wcMode==='weight'">
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">换算数量</div>
+            <div style="font-size:28px;font-weight:700;color:#2563eb">{{ wcResultNum.toFixed(isGramUnit(wcRow?.unit_name) ? 1 : 4) }} {{ wcRow?.unit_name }}</div>
+            <div v-if="!isGramUnit(wcRow?.unit_name)" style="font-size:12px;color:#94a3b8;margin-top:4px">{{ wcGrams }}克 ÷ {{ wcGramsPerBase }}克/{{ wcRow?.unit_name }}</div>
+          </template>
+          <template v-else-if="wcMode==='unit'">
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">对应金额</div>
+            <div style="font-size:28px;font-weight:700;color:#2563eb">¥{{ (wcDirectUnit * (wcRow?.price || 0)).toFixed(2) }}</div>
+          </template>
+          <template v-else>
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">需要称重</div>
+            <div style="font-size:28px;font-weight:700;color:#059669">{{ wcReverseGrams.toFixed(1) }} 克</div>
+            <div v-if="!isGramUnit(wcRow?.unit_name)" style="font-size:12px;color:#94a3b8;margin-top:4px">¥{{ wcTargetAmount }} ÷ ¥{{ wcRow?.price }}/{{ wcRow?.unit_name }} × {{ wcGramsPerBase }}</div>
+          </template>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="wcVisible = false">取消</el-button>
+        <el-button type="primary"
+          :disabled="wcMode==='weight' ? wcResultNum <= 0 : wcMode==='unit' ? wcDirectUnit <= 0 : wcReverseNum <= 0"
+          @click="confirmWC">填入数量</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onActivated, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
+import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip, ArrowDown } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList, createSaleOut, auditSaleOut } from '@/api/sale'
+import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList, createSaleOut, auditSaleOut, deleteSaleOut } from '@/api/sale'
+import { getUnitConvert } from '@/api/goods'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSpecList, getGoodsList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import { getFundList, createCollectReceipt, getCollectReceiptList, getPayReceiptList, createPayReceipt, deletePayReceipt, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
 import http from '@/api/http'
-import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
+import { loadLevels, loadLevelMap, getLevelPrice, setLevelPrice, hasCustomLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
@@ -793,8 +1096,16 @@ function parseRemarkTag(remark: string, tag: string): string {
 
 function stripContractRemarkTags(remark: string): string {
   return String(remark || '')
-    .replace(/\[(NO|OID|PP):[^\]]+\]\s*/g, '')
+    .replace(/\[(NO|OID|PP|FI):[^\]]+\]\s*/g, '')
     .trim()
+}
+
+function encodeFeeItems(items: any[]): string {
+  return btoa(encodeURIComponent(JSON.stringify(items)))
+}
+
+function decodeFeeItems(encoded: string): any[] {
+  try { return JSON.parse(decodeURIComponent(atob(encoded))) } catch { return [] }
 }
 
 function buildContractRemark() {
@@ -802,6 +1113,7 @@ function buildContractRemark() {
     fd.contract_no ? `[NO:${fd.contract_no}]` : '',
     fd.source_offer_id ? `[OID:${fd.source_offer_id}]` : '',
     Number(fd.prepay_amount || 0) > 0 ? `[PP:${Number(fd.prepay_amount || 0).toFixed(2)}]` : '',
+    fd.fee_items.length > 0 ? `[FI:${encodeFeeItems(fd.fee_items)}]` : '',
     String(fd.remark || '').trim(),
   ].filter(Boolean)
   return parts.join(' ')
@@ -817,7 +1129,7 @@ function parsePrepayAmount(remark: string): number {
 
 function buildContractExpenseRemark(row: any) {
   const orderSn = getContractOrderSn(row)
-  return `${row?.customer_name || ''} 销售合同运费（我方承担） - ${orderSn}`.trim()
+  return `${row?.customer_name || ''} 销售订单运费（我方承担） - ${orderSn}`.trim()
 }
 
 function isAutoContractReceiptRow(row: any, orderSn: string) {
@@ -838,8 +1150,115 @@ function parseItems(goodsInfo: any): any[] {
 // ── 规格选项缓存（goods_id → string[]） ──────────────────────────────────────
 const goodsSpecMap = reactive<Record<number, string[]>>({})
 
+// ── 单位换算缓存（goods_id → [{unit_name, ratio}]，ratio = 1本单位=ratio基础单位） ──
+const goodsUnitMap = reactive<Record<number, { unit_name: string; ratio: number }[]>>({})
+
+async function fetchGoodsUnits(goodsId: number) {
+  if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
+  goodsUnitMap[goodsId] = []
+  try {
+    const res = await getUnitConvert(goodsId)
+    const rows: any[] = res.data?.rows ?? res.data ?? []
+    if (rows.length > 1) goodsUnitMap[goodsId] = rows.map((r: any) => ({ unit_name: r.unit_name, ratio: Number(r.ratio) }))
+  } catch { /* ignore */ }
+}
+
+function onItemUnitChange(row: any, unitName: string) {
+  const units = goodsUnitMap[row.goods_id] || []
+  const targetUnit = units.find(u => u.unit_name === unitName)
+  const baseUnit = units.find(u => u.ratio === 1)
+  if (!targetUnit || !baseUnit) return
+  // 还原基础单价，再乘以新单位换算比
+  const basePrice = row.unit_ratio > 0 ? Number((row.price / row.unit_ratio).toFixed(6)) : row.price
+  const baseCost = row.unit_ratio > 0 ? Number((row.cost_price / row.unit_ratio).toFixed(6)) : row.cost_price
+  row.unit_ratio = targetUnit.ratio
+  row.price = Number((basePrice * targetUnit.ratio).toFixed(4))
+  row.cost_price = Number((baseCost * targetUnit.ratio).toFixed(4))
+  row.price_no_tax = row.tax_rate > 0 ? Number((row.price / (1 + row.tax_rate / 100)).toFixed(4)) : row.price
+  calcTotal()
+}
+
+// ── 克重换算（散装商品） ───────────────────────────────────────────────────────
+const WEIGHT_UNITS = ['斤', 'kg', '千克', '公斤', 'KG', '克', 'g', 'G', '两']
+const GRAM_UNITS = ['克', 'g', 'G']  // 本身就是克，gramsPerBase=1
+function isWeightUnit(unit: string) { return WEIGHT_UNITS.includes((unit || '').trim()) }
+function isGramUnit(unit: string) { return GRAM_UNITS.includes((unit || '').trim()) }
+
+const wcVisible = ref(false)
+const wcRow = ref<any>(null)
+const wcMode = ref<'weight' | 'unit' | 'amount'>('weight')
+const wcGrams = ref(0)
+const wcDirectUnit = ref(0)
+const wcTargetAmount = ref(0)
+const wcGramsPerBase = ref(500) // 默认500克=1斤；克单位时=1
+
+const wcResultNum = computed(() => {
+  if (!wcGrams.value || !wcGramsPerBase.value) return 0
+  return wcGrams.value / wcGramsPerBase.value
+})
+const wcReverseGrams = computed(() => {
+  if (!wcTargetAmount.value || !wcRow.value?.price) return 0
+  return (wcTargetAmount.value / wcRow.value.price) * wcGramsPerBase.value
+})
+const wcReverseNum = computed(() => wcReverseGrams.value / wcGramsPerBase.value)
+
+const wcJinPresets = computed(() => {
+  if (isGramUnit(wcRow.value?.unit_name)) {
+    return [50, 100, 150, 200, 250, 500].map(g => ({ label: `${g}克`, grams: g }))
+  }
+  const base = wcGramsPerBase.value || 500
+  return [
+    { label: '半斤', grams: base * 0.5 },
+    { label: '1斤', grams: base * 1 },
+    { label: '2斤', grams: base * 2 },
+    { label: '3斤', grams: base * 3 },
+    { label: '4斤', grams: base * 4 },
+    { label: '5斤', grams: base * 5 },
+  ]
+})
+
+async function openWC(row: any) {
+  wcRow.value = row
+  wcMode.value = 'weight'
+  wcGrams.value = 0
+  wcDirectUnit.value = 0
+  wcTargetAmount.value = 0
+  wcGramsPerBase.value = isGramUnit(row.unit_name) ? 1 : 500
+  if (row.goods_id && !isGramUnit(row.unit_name)) {
+    const units = goodsUnitMap[row.goods_id] || []
+    const gUnit = units.find((u: any) => u.unit_name === 'g')
+    if (gUnit) {
+      const r = Number(gUnit.ratio)
+      wcGramsPerBase.value = r > 1 ? r : (r > 0 ? 1 / r : 500)
+    }
+  }
+  wcVisible.value = true
+}
+
+function confirmWC() {
+  if (!wcRow.value) return
+  let num: number
+  let grams: number
+  if (wcMode.value === 'weight') {
+    num = wcResultNum.value
+    grams = wcGrams.value
+  } else if (wcMode.value === 'unit') {
+    num = wcDirectUnit.value
+    grams = num * wcGramsPerBase.value
+  } else {
+    num = wcReverseNum.value
+    grams = wcReverseGrams.value
+  }
+  wcRow.value.num = parseFloat(num.toFixed(4))
+  const baseName = wcRow.value.goods_name.replace(/ \d+(\.\d+)?g$/, '')
+  wcRow.value.goods_name = `${baseName} ${grams.toFixed(1)}g`
+  calcItemTax(wcRow.value)
+  calcTotal()
+  wcVisible.value = false
+}
+
 async function fetchGoodsSpecs(goodsId: number) {
-  if (!goodsId || goodsSpecMap[goodsId] !== undefined) return
+  if (!goodsId || goodsSpecMap[goodsId]?.length > 0) return
   goodsSpecMap[goodsId] = []
   try {
     const res = await getSpecList({ goods_id: goodsId, list_rows: 100 })
@@ -859,6 +1278,21 @@ const taxRates = TAX_RATES
 // ── 客户等级 ──────────────────────────────────────────────────────────────────
 const levelOptions = ref<LevelItem[]>(loadLevels())
 const levelMap = loadLevelMap()
+
+const savedLevelPriceIds = ref<Set<number>>(new Set())
+
+function hasLevelPrice(goodsId: number): boolean {
+  if (savedLevelPriceIds.value.has(goodsId)) return true
+  if (!fd.level_id) return true
+  return hasCustomLevelPrice(Number(fd.level_id), goodsId)
+}
+
+function saveAsLevelPrice(row: any) {
+  if (!fd.level_id || !row.goods_id) return
+  setLevelPrice(Number(fd.level_id), row.goods_id, row.price)
+  savedLevelPriceIds.value = new Set([...savedLevelPriceIds.value, row.goods_id])
+  ElMessage.success(`已记录：${row.goods_name} 代理价 ¥${row.price}`)
+}
 
 // ── 资金账户 ──────────────────────────────────────────────────────────────────
 const fundOptions = ref<any[]>([])
@@ -893,7 +1327,202 @@ function goToCommissionSetting() {
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const highlightName = ref('')
-const searchForm = reactive<any>({ contract_no: '', customer_name: route.query.customer_name ? String(route.query.customer_name) : '', status: '' })
+const contractSelectedRows = ref<any[]>([])
+
+const GROUPS_STORAGE_KEY = 'contract_folded_groups'
+function loadGroups(): Array<{key: string, ids: Set<number>, name: string}> {
+  try {
+    const raw = localStorage.getItem(GROUPS_STORAGE_KEY)
+    if (!raw) return []
+    return JSON.parse(raw).map((g: any) => ({ ...g, ids: new Set<number>(g.ids) }))
+  } catch { return [] }
+}
+function persistGroups() {
+  try {
+    const s = foldedGroups.value.map(g => ({ key: g.key, name: g.name, ids: [...g.ids] }))
+    localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(s))
+  } catch {}
+}
+const foldedGroups = ref<Array<{key: string, ids: Set<number>, name: string}>>(loadGroups())
+const lastAllRows = ref<any[]>([])
+const editingGroupKey = ref('')
+const editingGroupName = ref('')
+const groupNameInputRef = ref<any>(null)
+function startEditGroupName(key: string, currentName: string) {
+  editingGroupKey.value = key
+  editingGroupName.value = currentName || ''
+  nextTick(() => groupNameInputRef.value?.focus())
+}
+function saveGroupName() {
+  const group = foldedGroups.value.find(g => g.key === editingGroupKey.value)
+  if (group) group.name = editingGroupName.value.trim() || group.name
+  editingGroupKey.value = ''
+  editingGroupName.value = ''
+  persistGroups()
+  tableRef.value?.refresh()
+}
+function unfoldGroup(groupKey: string) {
+  foldedGroups.value = foldedGroups.value.filter(g => g.key !== groupKey)
+  persistGroups()
+  tableRef.value?.refresh()
+}
+function collapseSelected(selRows: any[], clearSelection: () => void) {
+  const realRows = selRows.filter((r: any) => !r._isGroup)
+  if (!realRows.length) return
+  const ids = new Set<number>(realRows.map((r: any) => r.id))
+  const name = `分组${foldedGroups.value.length + 1}`
+  foldedGroups.value.push({ key: `group_${Date.now()}`, ids, name })
+  persistGroups()
+  clearSelection()
+  tableRef.value?.refresh()
+}
+function addToGroup(groupKey: string, selRows: any[], clearSelection: () => void) {
+  const realRows = selRows.filter((r: any) => !r._isGroup)
+  if (!realRows.length) return
+  const group = foldedGroups.value.find(g => g.key === groupKey)
+  if (!group) return
+  realRows.forEach((r: any) => group.ids.add(r.id))
+  persistGroups()
+  clearSelection()
+  tableRef.value?.refresh()
+}
+function addRowToGroup(rowId: number, groupKey: string) {
+  if (groupKey === '__new__') {
+    const name = `分组${foldedGroups.value.length + 1}`
+    foldedGroups.value.push({ key: `group_${Date.now()}`, ids: new Set([rowId]), name })
+  } else {
+    const group = foldedGroups.value.find(g => g.key === groupKey)
+    if (!group) return
+    group.ids.add(rowId)
+  }
+  persistGroups()
+  tableRef.value?.refresh()
+}
+function handleGroupToolbarCmd(cmd: string) {
+  if (cmd === '__new__') {
+    const name = `分组${foldedGroups.value.length + 1}`
+    foldedGroups.value.push({ key: `group_${Date.now()}`, ids: new Set(), name })
+    persistGroups()
+    tableRef.value?.refresh()
+  } else if (cmd.startsWith('__dissolve__')) {
+    unfoldGroup(cmd.replace('__dissolve__', ''))
+  }
+}
+const foldedGroupsMeta = computed(() => foldedGroups.value.map(g => {
+  const rows = lastAllRows.value.filter((r: any) => g.ids.has(r.id))
+  const dates = rows.map((r: any) => (r.order_date || r.sign_date || r.created_at || '').slice(0, 10)).filter(Boolean).sort()
+  return { key: g.key, name: g.name, count: g.ids.size, minDate: dates[0] || '', maxDate: dates[dates.length - 1] || '' }
+}))
+const searchForm = reactive<any>({ contract_no: '', customer_name: route.query.customer_name ? String(route.query.customer_name) : '', goods_name: '', status: '', start_date: '', end_date: '' })
+const dateRange = ref<any>([])
+const datePickerKey = ref(0)
+const dateShortcuts = [
+  { text: '最近一个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 1); return [s, e] } },
+  { text: '最近三个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 3); return [s, e] } },
+  { text: '最近六个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 6); return [s, e] } },
+  { text: '今年', value: () => { const e = new Date(); const s = new Date(e.getFullYear(), 0, 1); return [s, e] } },
+  { text: '去年', value: () => { const y = new Date().getFullYear() - 1; return [new Date(y, 0, 1), new Date(y, 11, 31)] } },
+]
+function getContractRowDate(row: any): string {
+  return String(row?.order_date || row?.sign_date || row?.created_at || row?.create_time || '').slice(0, 10)
+}
+function onDateChange(val: any) {
+  if (val && val.length === 2) { searchForm.start_date = val[0]; searchForm.end_date = val[1] }
+  else { searchForm.start_date = ''; searchForm.end_date = '' }
+}
+function onSearchReset() {
+  dateRange.value = []
+  datePickerKey.value++
+  searchForm.start_date = ''
+  searchForm.end_date = ''
+  searchForm.goods_name = ''
+}
+const filteredContractApi = async (params: any) => {
+  const { page: reqPage, list_rows: reqSize, ...restParams } = params
+  // 未收款是客户端筛选，传给后端时转为 status=1（只拉已审核）
+  const apiParams = { ...restParams, page: 1, list_rows: 10000 }
+  if (restParams.status === 'unpaid' || restParams.status === 'paid') apiParams.status = 1
+  const res = await getContractList(apiParams)
+  const allRows: any[] = res.data?.rows ?? []
+  lastAllRows.value = allRows
+  const allFoldedIds = new Set(foldedGroups.value.flatMap(g => [...g.ids]))
+  const s = searchForm.start_date
+  const e = searchForm.end_date
+  let filtered = (s || e)
+    ? allRows.filter((row: any) => {
+        const date = getContractRowDate(row)
+        if (s && date < s) return false
+        if (e && date > e) return false
+        return true
+      })
+    : allRows
+  const gn = (searchForm.goods_name || '').trim()
+  if (gn) {
+    const kw = gn.toLowerCase()
+    filtered = filtered.filter((row: any) => {
+      const items: any[] = Array.isArray(row.goods_info) ? row.goods_info
+        : (typeof row.goods_info === 'string' ? (() => { try { return JSON.parse(row.goods_info) } catch { return [] } })() : [])
+      return items.some((item: any) => (item.goods_name || '').toLowerCase().includes(kw) || (item.goods_sn || '').toLowerCase().includes(kw))
+    })
+  }
+  // 未收款：只保留已审核且收款状态为"未收款"的行
+  if (searchForm.status === 'unpaid') {
+    filtered = filtered.filter((row: any) => getReceiveStatus(row).label === '未收款')
+  }
+  // 已收款：只保留已审核且收款状态为"已收清"的行
+  if (searchForm.status === 'paid') {
+    filtered = filtered.filter((row: any) => getReceiveStatus(row).label === '已收清')
+  }
+  // 按日期降序排列（原先由 sort-by prop 处理，现移至此处）
+  filtered.sort((a: any, b: any) => {
+    const da = getContractRowDate(a), db = getContractRowDate(b)
+    return db.localeCompare(da) || Number(b.id || 0) - Number(a.id || 0)
+  })
+  // 排除已编组的行
+  if (allFoldedIds.size > 0) {
+    filtered = filtered.filter((row: any) => !allFoldedIds.has(row.id))
+  }
+  // 商品关键词匹配函数（复用，用于穿透分组）
+  const matchesGoods = (row: any) => {
+    if (!gn) return true
+    const kw = gn.toLowerCase()
+    const items: any[] = Array.isArray(row.goods_info) ? row.goods_info
+      : (typeof row.goods_info === 'string' ? (() => { try { return JSON.parse(row.goods_info) } catch { return [] } })() : [])
+    return items.some((item: any) => (item.goods_name || '').toLowerCase().includes(kw) || (item.goods_sn || '').toLowerCase().includes(kw))
+  }
+
+  // 未收款筛选时不注入分组行；商品关键词筛选穿透分组内部
+  const groupRows = (searchForm.status === 'unpaid' || searchForm.status === 'paid') ? [] : foldedGroups.value.map(g => {
+    let rows = allRows
+      .filter((r: any) => g.ids.has(r.id))
+      .sort((a: any, b: any) => getContractRowDate(b).localeCompare(getContractRowDate(a)) || Number(b.id || 0) - Number(a.id || 0))
+    if (gn) rows = rows.filter(matchesGoods)  // 商品关键词穿透
+    if (!rows.length) return null              // 组内无匹配则整组不显示
+    const dates = rows.map((r: any) => getContractRowDate(r)).filter(Boolean).sort()
+    const minDate = dates[0] || ''
+    const maxDate = dates[dates.length - 1] || ''
+    return {
+      _isGroup: true,
+      _groupKey: g.key,
+      _groupName: g.name,
+      _groupRows: rows,
+      _minDate: minDate,
+      _maxDate: maxDate,
+      id: `_grp_${g.key}`,
+      order_date: maxDate,
+      sign_date: maxDate,
+    }
+  }).filter(Boolean) as any[]
+  const allWithGroups = [...groupRows, ...filtered]
+  const page = Number(reqPage) || 1
+  // 有筛选条件时不分页，直接显示全部
+  const hasFilter = !!(searchForm.contract_no || searchForm.customer_name || searchForm.goods_name || searchForm.status !== '' || searchForm.start_date || searchForm.end_date)
+  if (hasFilter) {
+    return { data: { rows: allWithGroups, total: allWithGroups.length } }
+  }
+  const size = Number(reqSize) || 20
+  return { data: { rows: allWithGroups.slice((page - 1) * size, page * size), total: allWithGroups.length } }
+}
 if (route.query.customer_name) highlightName.value = String(route.query.customer_name)
 const showForm = ref(false)
 const isReadonly = ref(false)
@@ -910,10 +1539,58 @@ async function loadReceiptMap() {
     const res = await getCollectReceiptList({ list_rows: 2000 })
     const rows: any[] = res?.data?.rows ?? []
     const map: Record<string, number> = {}
+    const noSnReceipts: any[] = []
+
     for (const r of rows) {
       const sn = String(r?.order_sn || r?.order_no || '').trim()
-      if (sn) map[sn] = (map[sn] || 0) + Number(r.amount || 0)
+      if (sn) {
+        map[sn] = (map[sn] || 0) + Number(r.amount || 0)
+      } else {
+        noSnReceipts.push(r)
+      }
     }
+
+    // 来自应收款模块的收款单没有 order_sn，用 FIFO 按客户分配到最老的未收合同
+    if (noSnReceipts.length > 0) {
+      let contracts = lastAllRows.value.filter((r: any) => Number(r.status) === 1)
+      if (!contracts.length) {
+        const cRes = await getContractList({ list_rows: 10000, status: 1 })
+        contracts = (cRes?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1)
+      }
+
+      // 按客户分组，汇总无 order_sn 的收款金额
+      const byCustomer = new Map<string, number>()
+      for (const r of noSnReceipts) {
+        const key = String(r.customer_id || r.contact_id || r.customer_name || '')
+        if (!key) continue
+        byCustomer.set(key, (byCustomer.get(key) || 0) + Number(r.amount || 0))
+      }
+
+      for (const [custKey, pool] of byCustomer) {
+        const custContracts = contracts.filter((c: any) =>
+          String(c.customer_id || '') === custKey || c.customer_name === custKey
+        )
+        custContracts.sort((a: any, b: any) => {
+          const da = String(a.sign_date || a.create_time || '')
+          const db = String(b.sign_date || b.create_time || '')
+          return da < db ? -1 : da > db ? 1 : 0
+        })
+        let remaining = pool
+        for (const c of custContracts) {
+          if (remaining <= 0.005) break
+          const sn = String(c.order_sn || c.order_no || '').trim()
+          if (!sn) continue
+          const contractTotal = calcContractAmount(c)
+          const alreadyPaid = map[sn] || 0
+          const unpaid = Math.max(0, contractTotal - alreadyPaid)
+          if (unpaid <= 0.005) continue
+          const apply = Math.min(unpaid, remaining)
+          map[sn] = alreadyPaid + apply
+          remaining -= apply
+        }
+      }
+    }
+
     receiptMap.value = map
   } catch { /* ignore */ }
   // 同时加载付款 map（单据支出 + 附加费用）
@@ -931,7 +1608,7 @@ async function loadReceiptMap() {
         const id = Number(mExp[1])
         expMap[id] = (expMap[id] || 0) + amt
       }
-      const mFee = remark.match(/销售合同附加费用\s*#(\d+):(.+?)(?:\s|\[|$)/)
+      const mFee = remark.match(/销售订单附加费用\s*#(\d+):(.+?)(?:\s|\[|$)/)
       if (mFee) {
         const id = Number(mFee[1])
         const feeName = mFee[2].trim()
@@ -1015,7 +1692,7 @@ async function submitFeePay() {
       pay_date: feePayForm.pay_date,
       fund_id: feePayForm.fund_id,
       fund_name: feePayForm.fund_name,
-      remark: `销售合同附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.contact_name ? ' [' + feePayForm.contact_name + ']' : ''}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
+      remark: `销售订单附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.contact_name ? ' [' + feePayForm.contact_name + ']' : ''}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
     })
     ElMessage.success('付款成功')
     feePayVisible.value = false
@@ -1081,6 +1758,34 @@ function getPendingAmount(row: any): number {
 // ── 收款弹窗 ──────────────────────────────────────────────────────────────────
 const collectDialogVisible = ref(false)
 const collectSubmitting = ref(false)
+const batchAuditing = ref(false)
+
+function getContractSummary({ columns, data }: { columns: any[], data: any[] }) {
+  const sel = contractSelectedRows.value
+  const source = sel.length > 0 ? sel : data
+  const label = sel.length > 0 ? `已选 ${sel.length} 笔` : null
+  const rowCount = source.reduce((s, r) => s + (r._isGroup ? (r._groupRows?.length ?? 1) : 1), 0)
+  const totalAmt = source.reduce((s, r) => {
+    if (r._isGroup) return s + (r._groupRows ?? []).reduce((gs: number, gr: any) => gs + calcContractAmount(gr), 0)
+    return s + calcContractAmount(r)
+  }, 0)
+  const totalRcv = source.reduce((s, r) => {
+    if (r._isGroup) return s + (r._groupRows ?? []).reduce((gs: number, gr: any) => gs + getReceivedAmount(gr), 0)
+    return s + getReceivedAmount(r)
+  }, 0)
+  const totalPend = source.reduce((s, r) => {
+    if (r._isGroup) return s + (r._groupRows ?? []).reduce((gs: number, gr: any) => gs + getPendingAmount(gr), 0)
+    return s + getPendingAmount(r)
+  }, 0)
+  return columns.map((_col: any, i: number) => {
+    if (i === 2) return label ?? '合计'
+    if (i === 3) return label ? '' : `${rowCount} 笔`
+    if (i === 5) return `¥${totalAmt.toFixed(2)}`
+    if (i === 10) return `¥${totalRcv.toFixed(2)}`
+    if (i === 11) return `¥${totalPend.toFixed(2)}`
+    return ''
+  })
+}
 const collectForm = reactive({
   orderId: 0,
   orderSn: '',
@@ -1232,7 +1937,7 @@ onActivated(() => {
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface ContractItem {
   goods_id: number; goods_name: string; goods_sn: string
-  spec: string; cate_name: string; unit_name: string
+  spec: string; cate_name: string; unit_name: string; unit_ratio: number
   num: number; price_no_tax: number; tax_rate: number; price: number; cost_price: number; remark: string
 }
 
@@ -1270,7 +1975,12 @@ const defaultFd = () => ({
 const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
+const savingAndAuditing = ref(false)
+const costDetailVisible = ref(false)
 const goodsCostPriceMap = reactive<Record<number, number>>({})
+const goodsCostSourceMap = reactive<Record<number, string>>({})
+const goodsCostStockQtyMap = reactive<Record<number, number>>({})
+const goodsCostWarehouseMap = reactive<Record<number, string>>({})
 let goodsCostLoaded = false
 let goodsCostLoading: Promise<void> | null = null
 
@@ -1289,12 +1999,53 @@ async function loadGoodsCostMapOnce() {
   if (!goodsCostLoading) {
     goodsCostLoading = (async () => {
       try {
-        const res = await getGoodsList({ list_rows: 3000 })
-        const rows: any[] = res?.data?.rows ?? res?.data?.list ?? []
-        for (const g of rows) {
+        const [goodsResult, stockResult] = await Promise.allSettled([
+          getGoodsList({ list_rows: 3000 }),
+          http.get('/stock/StockAll/index', { params: { list_rows: 5000 } }),
+        ])
+
+        const goodsRows: any[] = goodsResult.status === 'fulfilled'
+          ? (goodsResult.value?.data?.rows ?? goodsResult.value?.data?.list ?? [])
+          : []
+        for (const g of goodsRows) {
           const gid = Number(g?.id || 0)
+          const cost = Number(g?.cost_price || 0)
+          if (!gid || cost <= 0) continue
+          goodsCostPriceMap[gid] = cost
+          goodsCostSourceMap[gid] = '商品档案成本价'
+        }
+
+        const stockRows: any[] = stockResult.status === 'fulfilled'
+          ? (stockResult.value?.data?.rows ?? stockResult.value?.data?.list ?? stockResult.value?.data ?? [])
+          : []
+        const stockCostAgg: Record<number, { amount: number; qty: number; prices: number[]; warehouses: Set<string> }> = {}
+        for (const r of stockRows) {
+          const gid = Number(r?.goods_id || r?.id || 0)
           if (!gid) continue
-          goodsCostPriceMap[gid] = Number(g?.cost_price || 0)
+          const avgCost = Number(r?.avg_price ?? r?.average_price ?? r?.cost ?? r?.cost_price ?? 0)
+          if (avgCost <= 0) continue
+          const qty = Math.max(0, Number(r?.qty ?? r?.stock_num ?? r?.stock ?? 0))
+          if (!stockCostAgg[gid]) stockCostAgg[gid] = { amount: 0, qty: 0, prices: [], warehouses: new Set<string>() }
+          if (qty > 0) {
+            stockCostAgg[gid].amount += avgCost * qty
+            stockCostAgg[gid].qty += qty
+          }
+          stockCostAgg[gid].prices.push(avgCost)
+          const warehouseName = String(r?.warehouse_name || '').trim()
+          if (warehouseName) stockCostAgg[gid].warehouses.add(warehouseName)
+        }
+
+        for (const gidText of Object.keys(stockCostAgg)) {
+          const gid = Number(gidText)
+          const agg = stockCostAgg[gid]
+          const cost = agg.qty > 0
+            ? agg.amount / agg.qty
+            : agg.prices.reduce((s, p) => s + p, 0) / Math.max(agg.prices.length, 1)
+          if (cost <= 0) continue
+          goodsCostPriceMap[gid] = cost
+          goodsCostSourceMap[gid] = '仓库平均成本'
+          goodsCostStockQtyMap[gid] = agg.qty
+          goodsCostWarehouseMap[gid] = [...agg.warehouses].join('、') || '全部仓库'
         }
       } finally {
         goodsCostLoaded = true
@@ -1307,11 +2058,34 @@ async function loadGoodsCostMapOnce() {
 
 async function ensureItemCosts(items: ContractItem[]) {
   if (!Array.isArray(items) || !items.length) return
-  applyMissingItemCosts(items)
-  const hasMissing = items.some(item => Number(item.goods_id || 0) > 0 && Number(item.cost_price || 0) <= 0)
-  if (!hasMissing) return
   await loadGoodsCostMapOnce()
   applyMissingItemCosts(items)
+}
+
+function resolveItemCost(row: any) {
+  const gid = Number(row?.goods_id || 0)
+  const baseCost = gid > 0 ? Number(goodsCostPriceMap[gid] || 0) : 0
+  const unitRatio = Number(row?.unit_ratio) || 1
+  if (baseCost > 0) {
+    return {
+      baseUnitCost: baseCost,
+      unitCost: baseCost * unitRatio,
+      source: goodsCostSourceMap[gid] || '仓库平均成本',
+      warehouseName: goodsCostWarehouseMap[gid] || (goodsCostSourceMap[gid] === '仓库平均成本' ? '全部仓库' : '—'),
+      stockQty: goodsCostStockQtyMap[gid] || 0,
+    }
+  }
+  const itemCost = Number(row?.cost_price || 0)
+  if (itemCost > 0) {
+    return {
+      baseUnitCost: itemCost,
+      unitCost: itemCost,
+      source: '单据成本',
+      warehouseName: '—',
+      stockQty: 0,
+    }
+  }
+  return { baseUnitCost: 0, unitCost: 0, source: '未找到成本', warehouseName: '—', stockQty: 0 }
 }
 
 // 计算汇总
@@ -1329,7 +2103,28 @@ const finalPending = computed(() =>
   Math.max(0, finalReceivable.value - Number(fd.prepay_amount || 0) - Number(fd.receive_amount || 0))
 )
 const totalCost = computed(() =>
-  (fd.items as any[]).reduce((s: number, r: any) => s + (r.num || 0) * (r.cost_price || 0), 0)
+  (fd.items as any[]).reduce((s: number, r: any) => {
+    return s + Number(r.num || 0) * resolveItemCost(r).unitCost
+  }, 0)
+)
+const costDetailRows = computed(() =>
+  (fd.items as any[]).map((r: any, index: number) => {
+    const cost = resolveItemCost(r)
+    const num = Number(r.num || 0)
+    return {
+      key: `${Number(r.goods_id || 0)}_${index}`,
+      goods_name: r.goods_name || '-',
+      goods_sn: r.goods_sn || '',
+      unit_name: r.unit_name || '',
+      num,
+      base_unit_cost: cost.baseUnitCost,
+      unit_cost: cost.unitCost,
+      total_cost: num * cost.unitCost,
+      cost_source: cost.source,
+      warehouse_name: cost.warehouseName,
+      stock_qty: cost.stockQty,
+    }
+  })
 )
 const freightCostSeller = computed(() => 0) // legacy: freight now tracked via fee_items
 const feeBuyerCost = computed(() =>
@@ -1351,6 +2146,8 @@ const netProfit = computed(() =>
   - feeBuyerCost.value
 )
 const profitRate = computed(() => fd.after_discount > 0 ? (netProfit.value / fd.after_discount * 100) : 0)
+const goodsKindCount = computed(() => fd.items.length)
+const totalGoodsNum = computed(() => fd.items.reduce((s: number, r: any) => s + Number(r.num || 0), 0))
 
 function normalizeReceiptAllocation() {
   const currentPrepay = Math.max(0, Number(fd.prepay_amount || 0))
@@ -1371,7 +2168,7 @@ function calcContractAmount(row: any): number {
   const bearer = String(row.freight_bearer || 'seller')
   const income = Number(row.income_amount || 0)
   let base = total
-  if (Number.isFinite(afterDisc) && afterDisc >= 0) base = afterDisc
+  if (Number.isFinite(afterDisc) && afterDisc > 0) base = afterDisc
   else if (discType === 'amount' && discVal > 0) base = Math.max(0, total - discVal)
   else if (discType === 'percent' && discVal > 0) base = Math.max(0, total * (1 - discVal / 100))
   const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
@@ -1506,13 +2303,17 @@ async function openEdit(row: any, readonly = false) {
   fd.source_offer_id = parseSourceOfferId(row.remark || '')
   fd.prepay_amount = Number(row.prepay_amount || parsePrepayAmount(row.remark || '') || 0)
   fd.expense_amount = Number(row.expense_amount || 0)
-  // 解析 fee_items；若没有则从旧的 expense_amount/freight_amount 迁移
+  // 解析 fee_items；优先用字段，再从 remark [FI:] 标签恢复，最后从旧字段迁移
   try {
     const raw = row.fee_items
     fd.fee_items = raw && (Array.isArray(raw) ? raw.length : raw !== '[]' && raw !== '' && raw !== 'null')
       ? (Array.isArray(raw) ? raw : JSON.parse(raw))
       : []
   } catch { fd.fee_items = [] }
+  if (!fd.fee_items.length) {
+    const fiTag = parseRemarkTag(row.remark || '', 'FI')
+    if (fiTag) fd.fee_items = decodeFeeItems(fiTag)
+  }
   if (!fd.fee_items.length) {
     // 迁移旧字段：freight_amount + bearer，以及 expense_amount
     if (Number(row.freight_amount || 0) > 0) {
@@ -1525,7 +2326,7 @@ async function openEdit(row: any, readonly = false) {
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   await ensureItemCosts(fd.items as ContractItem[])
   calcTotal()
-  fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  fd.items.forEach(item => { if (item.goods_id) { fetchGoodsSpecs(item.goods_id); fetchGoodsUnits(item.goods_id) } })
   isReadonly.value = readonly
   showForm.value = true
   // 拉取完整详情，补全列表里缺失的字段（如 prepay_amount）
@@ -1541,14 +2342,22 @@ async function openEdit(row: any, readonly = false) {
       fd.prepay_amount = Number(full.prepay_amount || parsePrepayAmount(full.remark || '') || fd.prepay_amount || 0)
       fd.items = items.length ? items : (()=>{ try { return Array.isArray(full.goods_info) ? full.goods_info : JSON.parse(full.goods_info||'[]') } catch { return [] } })()
       // 重新解析 fee_items（详情可能带有已保存的 fee_items）
+      // 必须在 Object.assign 之后立即修正，否则 fd.fee_items 是 API 返回的原始字符串/null，
+      // 导致 await 续点处 re-render 时 .reduce()/.length 报 TypeError 使页面空白
       try {
         const rawFull = full.fee_items
         const parsed = rawFull && (Array.isArray(rawFull) ? rawFull.length : rawFull !== '[]' && rawFull !== '' && rawFull !== 'null')
           ? (Array.isArray(rawFull) ? rawFull : JSON.parse(rawFull))
           : []
-        if (parsed.length) fd.fee_items = parsed
-      } catch { /* keep existing */ }
-      if (!fd.fee_items.length) {
+        fd.fee_items = parsed  // 始终赋值，保证是数组
+      } catch { fd.fee_items = [] }
+      if (!Array.isArray(fd.fee_items) || !fd.fee_items.length) {
+        // 从 remark [FI:] 标签恢复（后端模型可能未持久化 fee_items 字段）
+        const fiTag = parseRemarkTag(full.remark || '', 'FI')
+        if (fiTag) fd.fee_items = decodeFeeItems(fiTag)
+      }
+      if (!Array.isArray(fd.fee_items) || !fd.fee_items.length) {
+        fd.fee_items = []
         if (Number(full.freight_amount || 0) > 0) fd.fee_items.push({ name: '运费', amount: Number(full.freight_amount), bearer: full.freight_bearer || 'buyer', supplier_name: '' })
         if (Number(full.expense_amount || 0) > 0) fd.fee_items.push({ name: '单据支出', amount: Number(full.expense_amount), bearer: 'buyer', supplier_name: '' })
       }
@@ -1568,7 +2377,7 @@ async function openEdit(row: any, readonly = false) {
 
 function backToList() {
   showForm.value = false
-  tableRef.value?.refresh()
+  nextTick(() => tableRef.value?.refresh())
 }
 
 function buildContractHtml() {
@@ -1590,7 +2399,7 @@ function buildContractHtml() {
       <td>${item.remark || ''}</td>
     </tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>销售合同 ${(fd as any).contract_no || ''}</title><link rel="icon" href="data:,">
+  <title>销售订单 ${(fd as any).contract_no || ''}</title><link rel="icon" href="data:,">
   <style>
     *{box-sizing:border-box}
     body{font-family:SimSun,"Microsoft YaHei",Arial;font-size:12px;color:#000;margin:0;padding:12px 20px}
@@ -1678,6 +2487,287 @@ function buildContractHtml() {
   </body></html>`
 }
 
+async function handleBatchShareCmd(cmd: string, selRows: any[]) {
+  if (cmd === 'link') await handleBatchShare(selRows)
+  else if (cmd === 'pdf') await handleBatchSharePdf(selRows)
+}
+
+async function handleBatchSharePdf(selRows: any[]) {
+  const rows = selRows.filter((r: any) => !r._isGroup)
+  if (!rows.length) { ElMessage.warning('请先勾选订单'); return }
+  const msg = ElMessage({ message: `正在生成 ${rows.length} 份合同PDF，请稍候…`, duration: 0, type: 'info' })
+  try {
+    const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas')])
+    const fmt2 = (v: any) => Number(v || 0).toFixed(2)
+    const fmtD = (d: any) => d ? String(d).slice(0, 10) : '—'
+
+    const grandTotal = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
+    const grandPending = rows.reduce((s: number, r: any) => s + Math.max(0, Number(r.total_amount || 0) - Number(r.receive_amount || 0)), 0)
+    const customerName = rows[0]?.customer_name || ''
+    const dateStr = new Date().toLocaleDateString('zh-CN')
+
+    // 封面汇总区
+    const coverBlock = `
+      <div style="background:#1d1d1f;border-radius:12px;padding:32px 40px;margin-bottom:36px;color:#fff">
+        <div style="font-size:11px;letter-spacing:4px;opacity:0.5;margin-bottom:8px">数字游牧 DIGITAL NOMAD</div>
+        <div style="font-size:32px;font-weight:700;letter-spacing:1px;margin-bottom:6px">销售订单</div>
+        <div style="font-size:13px;opacity:0.55;margin-bottom:24px">客户：${customerName} &nbsp;·&nbsp; 共 ${rows.length} 份 &nbsp;·&nbsp; ${dateStr}</div>
+        <div style="display:flex;gap:40px;align-items:baseline">
+          <div>
+            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">合计金额</div>
+            <div style="font-size:36px;font-weight:700;color:#5ac8fa">¥${fmt2(grandTotal)}</div>
+          </div>
+          <div>
+            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">待收余额</div>
+            <div style="font-size:22px;font-weight:700;color:${grandPending > 0 ? '#ff9f9f' : '#7ddf9e'}">${grandPending > 0 ? '¥' + fmt2(grandPending) : '全部已收清'}</div>
+          </div>
+          <div>
+            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">单据数量</div>
+            <div style="font-size:22px;font-weight:700;color:#fff">${rows.length} 份</div>
+          </div>
+        </div>
+      </div>`
+
+    const contractBlocks = rows.map((row: any, idx: number) => {
+      const items: any[] = (() => { try { return Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { return [] } })()
+      const totalAmt = Number(row.total_amount || 0)
+      const receivedAmt = Number(row.receive_amount || 0)
+      const balance = Math.max(0, totalAmt - receivedAmt)
+      const goodsRows = items.map((item: any, i: number) => `
+        <tr style="background:${i % 2 === 0 ? '#f9f9fb' : '#fff'}">
+          <td style="padding:7px 6px">${item.goods_name || ''}</td>
+          <td style="padding:7px 6px;text-align:center">${item.spec || '—'}</td>
+          <td style="padding:7px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
+          <td style="padding:7px 6px;text-align:right">¥${fmt2(item.price)}</td>
+          <td style="padding:7px 6px;text-align:right;font-weight:600;color:#0071e3">¥${fmt2(Number(item.price) * Number(item.num))}</td>
+        </tr>`).join('')
+      const divider = idx > 0 ? '<div style="border-top:2px dashed #e5e5ea;margin:32px 0"></div>' : ''
+      return `${divider}
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:13px;color:#86868b;margin-bottom:3px">合同编号：${row.order_sn || row.contract_no || ''}</div>
+            <div style="font-size:15px;font-weight:700;color:#1d1d1f">${row.customer_name || '—'}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:#86868b">${fmtD(row.sign_date || row.order_date)}</div>
+            <div style="font-size:11px;color:#86868b">${row.admin_name || ''}</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px">
+          <thead>
+            <tr style="background:#1d1d1f;color:#fff">
+              <th style="padding:8px 6px;text-align:left">商品名称</th>
+              <th style="padding:8px 6px;text-align:center">规格</th>
+              <th style="padding:8px 6px;text-align:center">数量</th>
+              <th style="padding:8px 6px;text-align:right">单价</th>
+              <th style="padding:8px 6px;text-align:right">小计</th>
+            </tr>
+          </thead>
+          <tbody>${goodsRows}</tbody>
+        </table>
+        <div style="text-align:right;padding-top:10px;border-top:1px solid #f2f2f7">
+          <div style="font-size:18px;font-weight:700;color:#0071e3;margin-bottom:3px">合计 ¥${fmt2(totalAmt)}</div>
+          ${receivedAmt > 0 ? `<div style="font-size:12px;color:#86868b">已收款 <span style="color:#34c759;font-weight:600">¥${fmt2(receivedAmt)}</span> &nbsp; 待收 <span style="color:#ff3b30;font-weight:700">¥${fmt2(balance)}</span></div>` : ''}
+        </div>`
+    }).join('')
+
+    const wrap = document.createElement('div')
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:PingFang SC,Microsoft YaHei,sans-serif;color:#1d1d1f;padding:40px 50px;box-sizing:border-box;'
+    wrap.innerHTML = coverBlock + contractBlocks + `<div style="margin-top:32px;padding-top:14px;border-top:1px solid #e5e5ea;font-size:11px;color:#c7c7cc;text-align:center">本文件由数字游牧ERP系统生成 · ${dateStr}</div>`
+    document.body.appendChild(wrap)
+
+    const canvas = await (html2canvas as any).default(wrap, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false })
+    document.body.removeChild(wrap)
+
+    const imgW = 210; const imgH = (canvas.height * imgW) / canvas.width
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageH = 297; let remainH = imgH, srcY = 0
+    while (remainH > 0) {
+      const sliceH = Math.min(remainH, pageH)
+      const sliceCanvas = document.createElement('canvas')
+      sliceCanvas.width = canvas.width
+      sliceCanvas.height = Math.round((sliceH / imgH) * canvas.height)
+      const ctx = sliceCanvas.getContext('2d')!
+      ctx.drawImage(canvas, 0, srcY, canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height)
+      if (srcY > 0) doc.addPage()
+      doc.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, imgW, sliceH)
+      srcY += sliceCanvas.height; remainH -= sliceH
+    }
+
+    msg.close()
+    const filename = `销售订单_${customerName}_共${rows.length}份_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.pdf`
+    const blob = doc.output('blob')
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('PDF已下载')
+  } catch (e) {
+    msg.close()
+    console.error(e)
+    ElMessage.error('PDF生成失败，请重试')
+  }
+}
+
+async function handleBatchShare(selRows: any[]) {
+  const rows = selRows.filter((r: any) => !r._isGroup)
+  if (!rows.length) { ElMessage.warning('请先勾选订单'); return }
+  const token = localStorage.getItem('erp_token') || ''
+  if (!token) { ElMessage.warning('登录已过期，请重新登录'); return }
+  const ids = rows.map((r: any) => r.id).join(',')
+  const base = window.location.origin + window.location.pathname
+  const url = `${base}#/share/contracts?ids=${encodeURIComponent(ids)}&token=${encodeURIComponent(token)}`
+  try {
+    await navigator.clipboard.writeText(url)
+    ElMessage.success(`已复制分享链接，共 ${rows.length} 份订单，发给客户即可查看`)
+  } catch {
+    ElMessage.info('请手动复制：' + url)
+  }
+}
+
+async function handleShareCommand(cmd: string) {
+  if (cmd === 'link') await handleShareLink()
+  else if (cmd === 'pdf') await handleSharePdf()
+}
+
+async function handleShareLink() {
+  const token = localStorage.getItem('erp_token') || ''
+  const id = (fd as any).id
+  if (!id || !token) { ElMessage.warning('无法生成分享链接'); return }
+  const base = window.location.origin + window.location.pathname
+  const url = `${base}#/share/contract/${id}?token=${encodeURIComponent(token)}`
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: `销售订单 ${(fd as any).contract_no || (fd as any).order_sn || ''}`,
+        text: `客户：${(fd as any).customer_name || ''}\n合同金额：¥${Number((fd as any).total_amount || 0).toFixed(2)}`,
+        url,
+      })
+      return
+    } catch { /* fallthrough to clipboard */ }
+  }
+  try {
+    await navigator.clipboard.writeText(url)
+    ElMessage.success('分享链接已复制，发给客户即可查看')
+  } catch {
+    ElMessage.info('请手动复制：' + url)
+  }
+}
+
+async function handleSharePdf() {
+  const id = (fd as any).id
+  if (!id) { ElMessage.warning('请先保存合同'); return }
+  const msg = ElMessage({ message: '正在生成PDF，请稍候…', duration: 0, type: 'info' })
+  try {
+    const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas')])
+
+    const fmt2 = (v: any) => Number(v || 0).toFixed(2)
+    const fmtD = (d: any) => d ? String(d).slice(0, 10) : '—'
+    const contractNo = (fd as any).contract_no || (fd as any).order_sn || ''
+    const customerName = (fd as any).customer_name || customerOptions.value.find((c: any) => c.id === (fd as any).customer_id)?.name || ''
+    const signDate = fmtD((fd as any).sign_date || (fd as any).order_date)
+    const items: any[] = Array.isArray((fd as any).items) ? (fd as any).items : []
+    const totalAmt = Number((fd as any).total_amount || 0)
+    const receivedAmt = Number((fd as any).receive_amount || 0)
+    const balance = Math.max(0, totalAmt - receivedAmt)
+
+    // ── 构建隐藏 HTML 渲染层 ──
+    const wrap = document.createElement('div')
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:PingFang SC,Microsoft YaHei,sans-serif;color:#1d1d1f;font-size:13px;padding:40px 50px;box-sizing:border-box;'
+
+    const goodsRows = items.map((item: any, i: number) => `
+      <tr style="background:${i % 2 === 0 ? '#f9f9fb' : '#fff'}">
+        <td style="padding:8px 6px">${item.goods_name || ''}</td>
+        <td style="padding:8px 6px;text-align:center">${item.spec || '—'}</td>
+        <td style="padding:8px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
+        <td style="padding:8px 6px;text-align:right">¥${fmt2(item.price)}</td>
+        <td style="padding:8px 6px;text-align:right;font-weight:600;color:#0071e3">¥${fmt2(Number(item.price) * Number(item.num))}</td>
+      </tr>`).join('')
+
+    wrap.innerHTML = `
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:11px;letter-spacing:4px;color:#86868b;margin-bottom:6px">数字游牧 DIGITAL NOMAD</div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:1px;margin-bottom:8px">销售订单</div>
+        <div style="font-size:12px;color:#86868b">合同编号：${contractNo}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:20px;font-size:13px">
+        <div><span style="color:#86868b">客户名称：</span><strong>${customerName}</strong></div>
+        <div><span style="color:#86868b">签约日期：</span>${signDate}</div>
+        <div><span style="color:#86868b">经办人：</span>${(fd as any).admin_name || '—'}</div>
+        <div><span style="color:#86868b">到期日期：</span>${fmtD((fd as any).expire_date)}</div>
+        <div><span style="color:#86868b">是否开票：</span>${(fd as any).need_invoice ? '是' : '否'}</div>
+        ${(fd as any).remark ? `<div style="grid-column:1/-1"><span style="color:#86868b">备注：</span>${(fd as any).remark}</div>` : ''}
+      </div>
+
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#86868b;letter-spacing:0.5px">商品明细</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#1d1d1f;color:#fff">
+            <th style="padding:9px 6px;text-align:left;font-weight:600">商品名称</th>
+            <th style="padding:9px 6px;text-align:center;font-weight:600">规格</th>
+            <th style="padding:9px 6px;text-align:center;font-weight:600">数量</th>
+            <th style="padding:9px 6px;text-align:right;font-weight:600">单价</th>
+            <th style="padding:9px 6px;text-align:right;font-weight:600">小计</th>
+          </tr>
+        </thead>
+        <tbody>${goodsRows}</tbody>
+      </table>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:2px solid #f2f2f7;text-align:right">
+        <div style="font-size:22px;font-weight:700;color:#0071e3;margin-bottom:6px">合计 ¥${fmt2(totalAmt)}</div>
+        ${receivedAmt > 0 ? `<div style="font-size:13px;color:#86868b;margin-bottom:4px">已收款 <span style="color:#34c759;font-weight:600">¥${fmt2(receivedAmt)}</span></div>
+        <div style="font-size:15px;font-weight:700;color:#ff3b30">待收余额 ¥${fmt2(balance)}</div>` : ''}
+      </div>
+
+      <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e5ea;display:flex;justify-content:space-between;align-items:flex-end">
+        <div style="font-size:11px;color:#c7c7cc">本合同由数字游牧ERP系统生成 · ${new Date().toLocaleDateString('zh-CN')}</div>
+        <div style="font-size:11px;color:#c7c7cc">状态：${(fd as any).status === 1 ? '✓ 已审核' : '待审核'}</div>
+      </div>`
+
+    document.body.appendChild(wrap)
+
+    const canvas = await (html2canvas as any).default(wrap, {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false
+    })
+    document.body.removeChild(wrap)
+
+    const imgW = 210; const imgH = (canvas.height * imgW) / canvas.width
+    const doc = new jsPDF({ orientation: imgH > 297 ? 'portrait' : 'portrait', unit: 'mm', format: 'a4' })
+
+    let remainH = imgH; let pageH = 297; let srcY = 0
+    while (remainH > 0) {
+      const sliceH = Math.min(remainH, pageH)
+      const sliceCanvas = document.createElement('canvas')
+      sliceCanvas.width = canvas.width
+      sliceCanvas.height = (sliceH / imgH) * canvas.height
+      const ctx = sliceCanvas.getContext('2d')!
+      ctx.drawImage(canvas, 0, srcY, canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height)
+      const imgData = sliceCanvas.toDataURL('image/jpeg', 0.92)
+      if (srcY > 0) doc.addPage()
+      doc.addImage(imgData, 'JPEG', 0, 0, imgW, sliceH)
+      srcY += sliceCanvas.height; remainH -= sliceH
+    }
+
+    const filename = `合同_${contractNo || customerName}_${signDate}.pdf`
+    const blob = doc.output('blob')
+    const file = new File([blob], filename, { type: 'application/pdf' })
+
+    msg.close()
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: filename })
+    } else {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
+      URL.revokeObjectURL(url)
+      ElMessage.success('PDF已下载')
+    }
+  } catch (e) {
+    msg.close()
+    console.error(e)
+    ElMessage.error('PDF生成失败，请使用打印功能导出')
+  }
+}
+
 async function handleContractPrint() {
   // 从收款单反查预付款核销金额
   try {
@@ -1708,7 +2798,7 @@ function handleContractExport() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `销售合同_${(fd as any).order_sn || (fd as any).customer_name || ''}.html`
+  a.download = `销售订单_${(fd as any).order_sn || (fd as any).customer_name || ''}.html`
   a.click()
   URL.revokeObjectURL(url)
   ElMessage.success('已导出，用浏览器打开后可另存为PDF')
@@ -1723,7 +2813,7 @@ async function ensureContractFreightExpense(row: any) {
   const remark = buildContractExpenseRemark({ ...row, order_sn: orderSn })
   const existing = await getExpenseList({ list_rows: 1000 })
   const rows: any[] = existing?.data?.rows ?? existing?.data?.list ?? []
-  if (rows.some((item: any) => String(item?.remark || '').includes(`销售合同运费（我方承担） - ${orderSn}`))) return
+  if (rows.some((item: any) => String(item?.remark || '').includes(`销售订单运费（我方承担） - ${orderSn}`))) return
 
   const expenseDate = String(row?.sign_date || row?.contract_date || row?.create_time || '').slice(0, 10)
     || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
@@ -1741,13 +2831,14 @@ async function cleanupContractFreightExpense(row: any) {
   if (!orderSn) return
   const existing = await getExpenseList({ list_rows: 1000 })
   const rows: any[] = existing?.data?.rows ?? existing?.data?.list ?? []
-  const targets = rows.filter((item: any) => String(item?.remark || '').includes(`销售合同运费（我方承担） - ${orderSn}`))
+  const targets = rows.filter((item: any) => String(item?.remark || '').includes(`销售订单运费（我方承担） - ${orderSn}`))
   for (const item of targets) {
     await deleteExpense(Number(item.id))
   }
 }
 
 async function handleSave(andAudit = false) {
+  calcTotal()  // 确保 fd.total_amount / fd.after_discount 在发送前已从 items 重新计算
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项'); return
   }
@@ -1761,15 +2852,13 @@ async function handleSave(andAudit = false) {
       })
     } catch { return }
   }
-  // 有收款金额但未选账户时提醒
+  // 有收款金额必须选账户，否则收款单无法入账
   if (Number(fd.receive_amount || 0) > 0 && !fd.receive_account) {
-    try {
-      await ElMessageBox.confirm('已填写收款金额但未选择收款账户，是否继续保存？', '提示', {
-        confirmButtonText: '继续保存', cancelButtonText: '去选择', type: 'warning'
-      })
-    } catch { return }
+    ElMessage.error('已填写收款金额，请先选择收款账户')
+    return
   }
   saving.value = true
+  if (andAudit) savingAndAuditing.value = true
   try {
     normalizeReceiptAllocation()
     const payload: Record<string, any> = {
@@ -1854,12 +2943,11 @@ async function handleSave(andAudit = false) {
         } catch (e: any) {
           throw new Error(`自动出库失败：${e?.message || '未知'}`)
         }
-        if (isNew) {
-          const detail = await getContractDetail(newId)
-          const row = detail?.data?.row || detail?.data || {}
-          await autoCreateReceipt(row)
-          await ensureContractFreightExpense(row)
-        }
+        // 新建和编辑都要执行：内部有去重校验，不会重复创建
+        const detail2 = await getContractDetail(newId)
+        const row2 = detail2?.data?.row || detail2?.data || {}
+        await autoCreateReceipt(row2)
+        await ensureContractFreightExpense(row2)
         auditSucceeded = true
       } catch (e: any) {
         ElMessage.warning(`保存成功，但审核失败：${e?.message || ''}，请手动审核`)
@@ -1873,6 +2961,7 @@ async function handleSave(andAudit = false) {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
     saving.value = false
+    savingAndAuditing.value = false
   }
 }
 
@@ -1960,7 +3049,7 @@ async function handleRouteFromOffer() {
     fd.items = Array.isArray(draft.items) ? draft.items.map(normalizeItem) : []
     await ensureItemCosts(fd.items as ContractItem[])
     calcTotal()
-    fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+    fd.items.forEach(item => { if (item.goods_id) { fetchGoodsSpecs(item.goods_id); fetchGoodsUnits(item.goods_id) } })
     // 生成合同编号
     try {
       const today = new Date(Date.now() + 8*3600000).toISOString().slice(0,10)
@@ -2061,19 +3150,46 @@ async function autoCreateSaleOut(row: any) {
       if (wh) { warehouseId = wh.id; warehouseName = wh.name }
     } catch { /* ignore */ }
   }
-  const today = new Date().toISOString().slice(0, 10)
+  const outDate = String(row.sign_date || row.contract_date || row.order_date || '').slice(0, 10) || new Date().toISOString().slice(0, 10)
   const orderSn = getContractSn(row)
-  const goodsInfo = items.map((i: any) => ({
-    goods_id: i.goods_id, goods_name: i.goods_name, goods_sn: i.goods_sn || '',
-    spec: i.spec || '', unit_name: i.unit_name || '',
-    num: i.num || 1, price: i.price || 0, price_no_tax: i.price_no_tax || i.price || 0,
-    tax_rate: i.tax_rate || 0, cost_price: i.cost_price || 0, remark: i.remark || '',
-  }))
+  // 去重：反审核后重新审核时，旧出库单仅被设为 status=0 未删除，若不清理会产生重复
+  try {
+    const existOut = await getSaleOutList({ keyword: orderSn, list_rows: 50 })
+    const staleOuts = (existOut?.data?.rows ?? []).filter((o: any) =>
+      String(o.remark || '').includes(orderSn) && Number(o.status) === 0
+    )
+    for (const o of staleOuts) {
+      try { await deleteSaleOut(Number(o.id)) } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
+  // 构建出库goods_info：若该单位有关联BOM成品，替换为成品扣库存
+  const goodsInfo: any[] = []
+  for (const i of items) {
+    let effectiveGoodsId = i.goods_id
+    let effectiveGoodsName = i.goods_name
+    let effectiveRatio = i.unit_ratio || 1
+    try {
+      const goodsRes = await http.get('/goods/ShopGoods/read', { params: { id: i.goods_id } })
+      const specObj = JSON.parse(goodsRes.data?.spec || '{}')
+      const linked = specObj.unit_linked_goods?.[i.unit_name]
+      if (linked?.id) {
+        effectiveGoodsId = linked.id
+        effectiveGoodsName = linked.name
+        effectiveRatio = 1
+      }
+    } catch { /* 查询失败，用原始商品 */ }
+    goodsInfo.push({
+      goods_id: effectiveGoodsId, goods_name: effectiveGoodsName, goods_sn: i.goods_sn || '',
+      spec: i.spec || '', unit_name: i.unit_name || '', unit_ratio: effectiveRatio,
+      num: i.num || 1, price: i.price || 0, price_no_tax: i.price_no_tax || i.price || 0,
+      tax_rate: i.tax_rate || 0, cost_price: i.cost_price || 0, remark: i.remark || '',
+    })
+  }
   const outRes = await createSaleOut({
     customer_id: row.customer_id,
     customer_name: row.customer_name,
     admin_name: row.admin_name || '',
-    out_date: today,
+    out_date: outDate,
     warehouse_id: warehouseId,
     warehouse_name: warehouseName,
     total_amount: row.total_amount,
@@ -2081,7 +3197,7 @@ async function autoCreateSaleOut(row: any) {
     discount_amount: row.discount_value || 0,
     freight_amount: row.freight_amount || 0,
     freight_bearer: row.freight_bearer || 'buyer',
-    remark: `来自销售合同 ${orderSn}`,
+    remark: `来自销售订单 ${orderSn}`,
     goods_info: JSON.stringify(goodsInfo),
   })
   const outId = outRes?.data?.id || outRes?.data?.lastId
@@ -2101,6 +3217,36 @@ async function autoReverseSaleOut(row: any) {
       await auditSaleOut(out.id, 0)
     }
   } catch { /* 反出库失败不阻塞合同反审核 */ }
+}
+
+async function handleBatchAudit(selRows: any[], clearSelection: () => void) {
+  const pendingRows = selRows.filter((r: any) => r.status === 0)
+  if (pendingRows.length === 0) { ElMessage.warning('所选合同中没有待审核的单据'); return }
+  try {
+    await ElMessageBox.confirm(`确定批量审核 ${pendingRows.length} 笔待审核合同？审核后自动扣减库存。`, '批量审核', { type: 'warning' })
+  } catch { return }
+  batchAuditing.value = true
+  let ok = 0; let fail = 0
+  for (const row of pendingRows) {
+    try {
+      await auditContract(row.id, 1)
+      const detail = await getContractDetail(Number(row.id))
+      const freshRow = detail?.data?.row || detail?.data || row
+      await autoCreateSaleOut(freshRow)
+      try { await autoCreateReceipt(freshRow) } catch { /* ignore */ }
+      try { await ensureContractFreightExpense(freshRow) } catch { /* ignore */ }
+      ok++
+    } catch {
+      fail++
+    }
+  }
+  batchAuditing.value = false
+  clearSelection()
+  stockRefreshStore.trigger()
+  tableRef.value?.refresh()
+  loadReceiptMap()
+  if (fail === 0) ElMessage.success(`批量审核完成，成功 ${ok} 笔`)
+  else ElMessage.warning(`完成：成功 ${ok} 笔，失败 ${fail} 笔`)
 }
 
 async function handleAudit(row: any, status: number) {
@@ -2181,7 +3327,7 @@ async function handleAudit(row: any, status: number) {
 }
 
 async function handleConvertToSaleOut(row: any) {
-  await ElMessageBox.confirm(`确定将销售合同「${getContractSn(row)}」转为销售出库单？`, '转出库单', { type: 'info' })
+  await ElMessageBox.confirm(`确定将销售订单「${getContractSn(row)}」转为销售出库单？`, '转出库单', { type: 'info' })
   sessionStorage.setItem('saleout_from_contract', JSON.stringify({
     contract_id: row.id,
     contract_sn: row.order_sn || '',
@@ -2227,10 +3373,12 @@ function onGoodsConfirm(goods: any[]) {
     const basePrice = Number(g.sell_price) || 0
     const levelPrice = fd.level_id ? (getLevelPrice(fd.level_id, g.id) ?? basePrice) : basePrice
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
-      spec: g.spec || '', cate_name: g.cate_name || '', unit_name: g.unit_name || '',
+      spec: '', cate_name: g.cate_name || '', unit_name: g.unit_name || '', unit_ratio: 1,
       num: 1, price_no_tax: Number(levelPrice.toFixed(4)), tax_rate: 0,
       price: Number(levelPrice.toFixed(4)), cost_price: Number(g.cost_price) || 0, remark: '' })
-    fetchGoodsSpecs(g.id)
+    if (g.multi_spec === 1) fetchGoodsSpecs(g.id)
+    else goodsSpecMap[g.id] = []  // 规格未开启，清空缓存避免误显示
+    fetchGoodsUnits(g.id)
   }
   void ensureItemCosts(fd.items as ContractItem[])
   calcTotal()
@@ -2424,7 +3572,7 @@ function applyOfferToForm(offer: any) {
     fd.discount_value = 0
   }
   calcSettle()
-  fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  fd.items.forEach(item => { if (item.goods_id) { fetchGoodsSpecs(item.goods_id); fetchGoodsUnits(item.goods_id) } })
 }
 </script>
 
@@ -2441,6 +3589,8 @@ function applyOfferToForm(offer: any) {
 
 :deep(.row-highlight) { background-color: #ecf5ff !important; }
 :deep(.row-highlight) td { background-color: #ecf5ff !important; }
+:deep(.row-group) { background-color: #fffbeb !important; }
+:deep(.row-group) td { background-color: #fffbeb !important; border-bottom: 1px solid #fcd34d !important; }
 
 .expand-detail {
   padding: 12px 20px 12px 48px;
@@ -2575,6 +3725,163 @@ function applyOfferToForm(offer: any) {
   color: rgba(29,29,31,0.5);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 0;
+}
+
+.cost-summary-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.cost-detail-toggle {
+  margin-left: 6px;
+  padding: 0;
+  font-size: 12px;
+}
+
+.cost-detail-arrow {
+  margin-left: 2px;
+  font-size: 12px;
+  transition: transform 0.16s ease;
+}
+
+.cost-detail-arrow.open {
+  transform: rotate(180deg);
+}
+
+.cost-detail-panel {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fbfbfd;
+}
+
+.cost-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.cost-detail-head small {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(29,29,31,0.45);
+}
+
+/* ── 4列信息面板布局 ── */
+.info-header-section {
+  padding: 0;
+  overflow: hidden;
+}
+.info-panels {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr 1fr;
+}
+.info-panel {
+  padding: 16px 18px;
+  border-right: 1px solid #f0f0f5;
+  min-width: 0;
+}
+.info-panel:last-child {
+  border-right: none;
+}
+.info-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f5f5f7;
+}
+.info-panel-sn {
+  font-size: 12px;
+  color: rgba(29,29,31,0.4);
+  font-weight: 400;
+}
+.info-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+.info-label {
+  font-size: 12px;
+  color: rgba(29,29,31,0.5);
+  white-space: nowrap;
+  width: 58px;
+  flex-shrink: 0;
+}
+.amount-summary-panel {
+  background: #fafbfc;
+}
+.amount-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.amount-stat-label {
+  color: rgba(29,29,31,0.5);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.amount-stat-value {
+  font-weight: 600;
+  color: #1d1d1f;
+}
+.amount-receivable-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #ebebef;
+}
+.amount-receivable-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ff4d4f;
+  letter-spacing: -0.5px;
+}
+.remark-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 18px 14px;
+  border-top: 1px solid #f5f5f7;
+}
+.remark-label {
+  font-size: 12px;
+  color: rgba(29,29,31,0.5);
+  white-space: nowrap;
+  padding-top: 6px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .info-panels {
+    grid-template-columns: 1fr 1fr;
+  }
+  .info-panel {
+    border-bottom: 1px solid #f0f0f5;
+  }
+  .info-panel:nth-child(even) {
+    border-right: none;
+  }
+}
+@media (max-width: 600px) {
+  .info-panels {
+    grid-template-columns: 1fr;
+  }
+  .info-panel {
+    border-right: none;
+  }
 }
 
 /* ── 手机端商品卡片 ── */
