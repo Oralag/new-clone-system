@@ -8,7 +8,7 @@
           del-path="/stock/SaleOutOrder/batchDel"
           sort-by="out_date" :sort-desc="true"
           export-file-name="销售出货单" :params="searchForm"
-          :row-class-name="({ row }: any) => row.status === 1 ? 'row-audited' : ''"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : (row.status === 1 ? 'row-audited' : '')"
           :export-columns="{ order_sn: '出库单号', customer_name: '客户名称', warehouse_name: '仓库', out_date: '出库日期', admin_name: '经办人', total_amount: '出库金额', after_discount: '折后金额', status: '状态', remark: '备注' }">>
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="出库单号" clearable style="width:160px" />
@@ -67,7 +67,7 @@
               <span style="color:#0071e3;font-weight:500">¥{{ (Number(row.after_discount) || Number(row.total_amount || 0)).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="320" fixed="right">
+          <el-table-column label="操作" width="370" fixed="right">
             <template #default="{ row }">
               <span v-if="row.status === 1" style="color:#16a34a;margin-right:4px;font-weight:700">✓</span>
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small" style="margin-right:8px">
@@ -85,6 +85,7 @@
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="router.push('/finance/receivable')">查看应收</el-button>
               <el-button v-if="row.status === 1" type="success" link size="small" @click="router.push('/warehouse/stock')">查看库存</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button
                 type="danger"
                 link
@@ -486,6 +487,7 @@
 </template>
 
 <script setup lang="ts">
+import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
@@ -513,6 +515,7 @@ const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile } = useReconcile('reconcile_sale_out', tableRef)
 
 function parseItems(goodsInfo: any): any[] {
   if (Array.isArray(goodsInfo)) return goodsInfo

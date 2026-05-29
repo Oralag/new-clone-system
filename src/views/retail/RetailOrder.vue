@@ -4,6 +4,7 @@
       <ScTable ref="tableRef" :api-obj="filteredApi"
           :batch-del-api="batchDelRetailOrders"
           export-file-name="零售订单" :params="searchForm" @reset="onSearchReset"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''"
           :export-columns="{ order_no: '订单编号', member_name: '会员名称', store_name: '门店', order_date: '日期', total_amount: '商品合计', discount_amount: '折扣', pay_amount: '实付金额', pay_method: '支付方式', status: '状态' }">
         <template #search>
           <el-input v-model="searchForm.order_no" placeholder="订单编号" clearable style="width:160px" />
@@ -88,11 +89,12 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="170" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
             <el-button v-else type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
             <el-button v-if="row.status === 0" type="success" link size="small" @click="openForm(row)">编辑</el-button>
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
             <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -337,6 +339,7 @@
 </template>
 
 <script setup lang="ts">
+import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
@@ -370,6 +373,7 @@ function fmtOrderDate(row: any) {
 }
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile } = useReconcile('reconcile_retail_order', tableRef)
 const stockRefreshStore = useStockRefreshStore()
 // date filter stored locally — backend ignores date params, handled in filteredApi
 const searchForm = reactive<any>({ order_no: '', member_name: '', store_id: '', start_date: '', end_date: '' })

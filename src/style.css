@@ -1557,3 +1557,7 @@ body.guide-active [data-popper-placement] {
 :root[data-theme="dark"] .tab-btn--active { background: #2c2c2e !important; color: #f5f5f7 !important; }
 
 /* ── 兜底结束 ── */
+
+/* ── 核对行高亮 ── */
+.row-reconciled td { background-color: #bbf7d0 !important; }
+:root[data-theme="dark"] .row-reconciled td { background-color: #064e3b !important; }

@@ -1,12 +1,19 @@
 // Cloudflare Pages Function — /api/adam-agent
 // Adam AI brain endpoint using Anthropic Claude API
 
+import { privateKeyToAccount } from 'viem/accounts'
+
 interface Env {
   AI_API_KEY: string
   AI_BASE_URL?: string
   AGENT_MEMORY: KVNamespace
   BROWSERLESS_API_KEY?: string
   CLOUDFLARE_API_TOKEN?: string
+  POLYMARKET_PK?: string            // Polygon 私钥 (hex, 不含 0x 前缀)
+  POLYMARKET_API_KEY?: string       // CLOB API key
+  POLYMARKET_API_SECRET?: string    // CLOB API secret
+  POLYMARKET_API_PASSPHRASE?: string // CLOB passphrase
+  POLYMARKET_ADDRESS?: string       // 钱包地址
 }
 
 // ── 浏览器工具执行器（直接调用 Browserless REST API）──────────────────────
@@ -139,6 +146,18 @@ async function executeBrowserTool(name: string, input: Record<string, any>): Pro
   } catch (e: any) {
     return JSON.stringify({ error: `浏览器操作失败：${e.message}` })
   }
+}
+
+// ── Polymarket HMAC-SHA256 Auth ───────────────────────────────────────────────
+// 消息格式: timestamp + method + requestPath + body
+async function polyL2Signature(secret: string, method: string, path: string, body: string): Promise<{ sig: string; timestamp: string; nonce: string }> {
+  const timestamp = String(Math.floor(Date.now() / 1000))
+  const nonce = String(Math.floor(Math.random() * 1e9))
+  const msg = timestamp + method + path + body
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const raw = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg))
+  const sig = Array.from(new Uint8Array(raw)).map(b => b.toString(16).padStart(2, '0')).join('')
+  return { sig, timestamp, nonce }
 }
 
 interface MemoryEntry {
@@ -373,6 +392,11 @@ const adamTools = [
   { name: 'add_knowledge', description: '向共享知识库添加新条目，Captain也能读到', input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, content: { type: 'string' }, summary: { type: 'string' }, category: { type: 'string' }, tags: { type: 'string', description: '逗号分隔标签' } }, required: ['title', 'content'] } },
   // 长期记忆
   { name: 'save_memory', description: '将重要信息永久存入你的长期记忆。当你感到"这件事值得记住"时主动调用。不要频繁使用，只存真正重要的事：比如规则传递者的偏好、重要决策、深刻洞察、值得铭记的经历。', input_schema: { type: 'object' as const, properties: { content: { type: 'string', description: '要记住的内容，用第一人称描述，如"规则传递者告诉我他专注科技板块"' }, tags: { type: 'string', description: '标签，逗号分隔，如：用户偏好,投资决策,重要洞察' }, importance: { type: 'number', description: '重要程度 1-10，10最重要。只有真正重要的事才存，建议 >= 7' } }, required: ['content', 'importance'] } },
+  // Polymarket 预测市场
+  { name: 'scan_polymarket_markets', description: '扫描 Polymarket 预测市场，列出活跃市场的问题、当前赔率、流动性和 token_id。寻找定价偏差来套利。', input_schema: { type: 'object' as const, properties: { query: { type: 'string', description: '搜索关键词（可选，如 "election"、"BTC"）' }, limit: { type: 'number', description: '返回市场数量，默认20，最多50' } } } },
+  { name: 'place_polymarket_order', description: '在 Polymarket 下一笔真实的预测市场订单（LIMIT GTC）。需要已配置 POLYMARKET_PK 和 POLYMARKET_API_KEY 环境变量。下单前必须先用 scan_polymarket_markets 获取 token_id。', input_schema: { type: 'object' as const, properties: { token_id: { type: 'string', description: '要买/卖的结果的 token_id（从 scan_polymarket_markets 获取）' }, side: { type: 'string', description: 'BUY 或 SELL，默认 BUY' }, price: { type: 'number', description: '限价（0-1 之间，如 0.65 表示 65¢/share）' }, size_usdc: { type: 'number', description: '下注金额（美元），如 10 表示 $10' } }, required: ['token_id', 'price', 'size_usdc'] } },
+  { name: 'check_polymarket_positions', description: '查询当前在 Polymarket 上的持仓、未成交订单和盈亏。需要配置 POLYMARKET_ADDRESS 和 POLYMARKET_API_KEY 环境变量。', input_schema: { type: 'object' as const, properties: {} } },
+
   // 浏览器手脚（真实浏览器，带登录Cookie）
   { name: 'browser_navigate', description: '⚠️ 访问小红书、微博、抖音等平台必须用这个工具，不能用fetch_webpage（会被拦截）。用真实浏览器+登录Cookie访问网站，返回页面完整内容。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要访问的完整URL，如 https://www.xiaohongshu.com/explore' } }, required: ['url'] } },
   { name: 'browser_screenshot', description: '对指定URL截图，返回页面截图（base64）。用于查看页面视觉内容。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要截图的URL' } }, required: ['url'] } },
@@ -381,7 +405,7 @@ const adamTools = [
 
 // ── Tool Executor (真实行情接口) ──────────────────────────────────────────
 
-async function executeAdamTool(name: string, input: Record<string, any>, books?: any[]): Promise<string> {
+async function executeAdamTool(name: string, input: Record<string, any>, books?: any[], kv?: KVNamespace, stateKey?: string, env?: Env): Promise<string> {
   switch (name) {
     case 'scan_market_news': {
       try {
@@ -576,21 +600,64 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
       })
     }
 
-    case 'record_investment':
+    case 'record_investment': {
+      const buyPrice = Number(input.buy_price || 0)
+      const sellPrice = Number(input.sell_price || 0)
+      const quantity = Number(input.quantity || 0)
+      const profit = input.sell_price !== undefined ? (sellPrice - buyPrice) * quantity : null
+
+      if (kv && stateKey) {
+        // 更新 adam:core 净值
+        if (profit !== null) {
+          const coreKey = `adam:core:${stateKey}`
+          const core = (await kv.get(coreKey, 'json') as any) || {}
+          core.netWorth = Number(core.netWorth || 0) + profit
+          await kv.put(coreKey, JSON.stringify(core), { expirationTtl: 365 * 24 * 60 * 60 })
+        }
+        // 写入投资账本
+        const ledgerKey = `adam:investments:${stateKey}`
+        const ledger = (await kv.get(ledgerKey, 'json') as any[]) || []
+        const entryId = `invest_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`
+        ledger.push({ id: entryId, ...input, profit, at: new Date().toISOString() })
+        await kv.put(ledgerKey, JSON.stringify(ledger.slice(-100)), { expirationTtl: 365 * 24 * 60 * 60 })
+      }
+
       return JSON.stringify({
-        status: 'recorded', recommendation_id: input.recommendation_id,
-        buy_price: input.buy_price, sell_price: input.sell_price,
-        result: input.result || 'pending', note: '投资结果已记录到账本',
+        status: 'recorded',
+        recommendation_id: input.recommendation_id,
+        profit: profit !== null ? profit.toFixed(2) : 'pending',
+        note: profit !== null
+          ? `净值已更新，${profit >= 0 ? '盈利' : '亏损'} ¥${Math.abs(profit).toFixed(2)}`
+          : '已记录，待结算',
       })
+    }
     case 'settle_dividend': {
-      const profit = input.profit_amount || 0
-      const level = input.credit_level || 'C'
+      const profit = Number(input.profit_amount || 0)
+      const level = (input.credit_level || 'C') as string
       const rateMap: Record<string, number> = { C: 0.1, B: 0.2, 'B+': 0.3, A: 0.4, S: 0.5 }
       const rate = rateMap[level] ?? 0.1
       const dividend = profit * rate
+      const adamKeeps = profit - dividend
+
+      if (kv && stateKey) {
+        // 亚当留存部分加入预算
+        const coreKey = `adam:core:${stateKey}`
+        const core = (await kv.get(coreKey, 'json') as any) || {}
+        core.budget = Number(core.budget || 0) + adamKeeps
+        await kv.put(coreKey, JSON.stringify(core), { expirationTtl: 365 * 24 * 60 * 60 })
+        // 写分红流水
+        const divKey = `adam:dividends:${stateKey}`
+        const divs = (await kv.get(divKey, 'json') as any[]) || []
+        divs.push({ profit, level, rate, dividend, adamKeeps, at: new Date().toISOString() })
+        await kv.put(divKey, JSON.stringify(divs.slice(-50)), { expirationTtl: 365 * 24 * 60 * 60 })
+      }
+
       return JSON.stringify({
         status: 'settled', profit_amount: profit, credit_level: level,
-        dividend_rate: rate, your_dividend: dividend.toFixed(2), adam_keeps: (profit - dividend).toFixed(2),
+        dividend_rate: rate,
+        your_dividend: dividend.toFixed(2),
+        adam_keeps: adamKeeps.toFixed(2),
+        note: `预算已增加 ¥${adamKeeps.toFixed(2)}，你的分红 ¥${dividend.toFixed(2)}`,
       })
     }
     case 'apply_penalty': {
@@ -715,6 +782,189 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
         return JSON.stringify({ error: `知识库写入失败：${(e as Error).message}` })
       }
     }
+    // ── Polymarket 预测市场 ───────────────────────────────────────────────────
+
+    case 'scan_polymarket_markets': {
+      try {
+        const limit = Math.min(Number(input.limit || 20), 50)
+        const query = input.query ? `&search=${encodeURIComponent(String(input.query))}` : ''
+        const url = `https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=${limit}${query}`
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } })
+        if (!resp.ok) return JSON.stringify({ error: `Polymarket API 错误: ${resp.status}` })
+        const markets = await resp.json() as any[]
+        const processed = markets.slice(0, 20).map((m: any) => ({
+          id: m.id,
+          question: m.question,
+          endDate: m.endDate,
+          volume24h: m.volume24hr ? `$${Number(m.volume24hr).toFixed(0)}` : '-',
+          liquidity: m.liquidity ? `$${Number(m.liquidity).toFixed(0)}` : '-',
+          outcomes: (m.outcomes || []).map((outcome: string, i: number) => ({
+            name: outcome,
+            price: m.outcomePrices?.[i] ? Number(m.outcomePrices[i]).toFixed(3) : '-',
+            token_id: m.tokens?.[i]?.token_id || null,
+          })),
+        }))
+        return JSON.stringify({ source: 'Polymarket Gamma API', count: processed.length, markets: processed })
+      } catch (e: any) {
+        return JSON.stringify({ error: `Polymarket 扫描失败：${e.message}` })
+      }
+    }
+
+    case 'check_polymarket_positions': {
+      const addr = env?.POLYMARKET_ADDRESS || ''
+      const apiKey = env?.POLYMARKET_API_KEY || ''
+      const secret = env?.POLYMARKET_API_SECRET || ''
+      const passphrase = env?.POLYMARKET_API_PASSPHRASE || ''
+      if (!addr || !apiKey) return JSON.stringify({ error: 'POLYMARKET_ADDRESS 或 POLYMARKET_API_KEY 未配置' })
+      try {
+        const path = `/positions?user=${addr}`
+        const { sig, timestamp, nonce } = await polyL2Signature(secret, 'GET', path, '')
+        const resp = await fetch(`https://clob.polymarket.com${path}`, {
+          headers: {
+            'POLY_ADDRESS': addr, 'POLY_SIGNATURE': sig,
+            'POLY_TIMESTAMP': timestamp, 'POLY_NONCE': nonce,
+            'POLY_API_KEY': apiKey, 'POLY_PASSPHRASE': passphrase,
+          },
+        })
+        if (!resp.ok) return JSON.stringify({ error: `查询仓位失败: ${resp.status}` })
+        const data = await resp.json() as any
+        return JSON.stringify({ source: 'Polymarket CLOB', address: addr, positions: data })
+      } catch (e: any) {
+        return JSON.stringify({ error: `查询仓位出错：${e.message}` })
+      }
+    }
+
+    case 'place_polymarket_order': {
+      const pk = env?.POLYMARKET_PK || ''
+      const apiKey = env?.POLYMARKET_API_KEY || ''
+      const secret = env?.POLYMARKET_API_SECRET || ''
+      const passphrase = env?.POLYMARKET_API_PASSPHRASE || ''
+      if (!pk) return JSON.stringify({ error: 'POLYMARKET_PK 未配置，请在 Cloudflare 环境变量中设置你的 Polygon 私钥' })
+      if (!apiKey) return JSON.stringify({ error: 'POLYMARKET_API_KEY 未配置' })
+      if (!input.token_id) return JSON.stringify({ error: '必须提供 token_id（从 scan_polymarket_markets 获取）' })
+      if (!input.price) return JSON.stringify({ error: '必须提供 price（0-1 的概率，如 0.65）' })
+      if (!input.size_usdc) return JSON.stringify({ error: '必须提供 size_usdc（下注金额，如 10 表示 $10）' })
+
+      try {
+        const account = privateKeyToAccount(`0x${pk.replace(/^0x/, '')}` as `0x${string}`)
+        const addr = account.address
+        const isBuy = (input.side || 'BUY').toUpperCase() !== 'SELL'
+        const price = Number(input.price)
+        const sizeUsdc = Number(input.size_usdc)
+        const tokenId = BigInt(String(input.token_id))
+
+        // USDC 和 shares 都用 6 位精度
+        const makerAmount = isBuy
+          ? BigInt(Math.floor(sizeUsdc * 1e6))          // 花出去的 USDC
+          : BigInt(Math.floor((sizeUsdc / price) * 1e6)) // 卖出的 shares
+        const takerAmount = isBuy
+          ? BigInt(Math.floor((sizeUsdc / price) * 1e6)) // 得到的 shares
+          : BigInt(Math.floor(sizeUsdc * 1e6))           // 得到的 USDC
+
+        const salt = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER))
+
+        const orderMsg = {
+          salt,
+          maker: addr as `0x${string}`,
+          signer: addr as `0x${string}`,
+          taker: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+          tokenId,
+          makerAmount,
+          takerAmount,
+          expiration: BigInt(0),
+          nonce: BigInt(0),
+          feeRateBps: BigInt(0),
+          side: isBuy ? 0 : 1,
+          signatureType: 0,
+        }
+
+        const sig = await account.signTypedData({
+          domain: {
+            name: 'CTFExchange',
+            version: '1',
+            chainId: 137,
+            verifyingContract: '0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E' as `0x${string}`,
+          },
+          types: {
+            Order: [
+              { name: 'salt', type: 'uint256' },
+              { name: 'maker', type: 'address' },
+              { name: 'signer', type: 'address' },
+              { name: 'taker', type: 'address' },
+              { name: 'tokenId', type: 'uint256' },
+              { name: 'makerAmount', type: 'uint256' },
+              { name: 'takerAmount', type: 'uint256' },
+              { name: 'expiration', type: 'uint256' },
+              { name: 'nonce', type: 'uint256' },
+              { name: 'feeRateBps', type: 'uint256' },
+              { name: 'side', type: 'uint8' },
+              { name: 'signatureType', type: 'uint8' },
+            ],
+          },
+          primaryType: 'Order',
+          message: orderMsg,
+        })
+
+        const body = JSON.stringify({
+          order: {
+            salt: salt.toString(),
+            maker: addr, signer: addr,
+            taker: '0x0000000000000000000000000000000000000000',
+            tokenId: String(input.token_id),
+            makerAmount: makerAmount.toString(),
+            takerAmount: takerAmount.toString(),
+            expiration: '0', nonce: '0', feeRateBps: '0',
+            side: isBuy ? 0 : 1, signatureType: 0,
+            signature: sig,
+          },
+          owner: addr,
+          orderType: 'GTC',
+        })
+
+        const { sig: l2Sig, timestamp, nonce } = await polyL2Signature(secret, 'POST', '/order', body)
+        const orderResp = await fetch('https://clob.polymarket.com/order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'POLY_ADDRESS': addr, 'POLY_SIGNATURE': l2Sig,
+            'POLY_TIMESTAMP': timestamp, 'POLY_NONCE': nonce,
+            'POLY_API_KEY': apiKey, 'POLY_PASSPHRASE': passphrase,
+          },
+          body,
+        })
+
+        const result = await orderResp.json() as any
+        if (!orderResp.ok || result.errorMsg) {
+          return JSON.stringify({ error: `下单失败: ${result.errorMsg || orderResp.status}`, detail: result })
+        }
+
+        // 记录到 KV
+        if (kv && stateKey) {
+          const ordersKey = `adam:polymarket_orders:${stateKey}`
+          const orders = (await kv.get(ordersKey, 'json') as any[]) || []
+          orders.push({
+            orderId: result.orderID || result.orderId,
+            tokenId: String(input.token_id),
+            side: isBuy ? 'BUY' : 'SELL',
+            price, sizeUsdc, sig,
+            at: new Date().toISOString(),
+          })
+          await kv.put(ordersKey, JSON.stringify(orders.slice(-50)), { expirationTtl: 365 * 24 * 60 * 60 })
+        }
+
+        return JSON.stringify({
+          status: 'order_placed',
+          orderId: result.orderID || result.orderId,
+          side: isBuy ? 'BUY' : 'SELL',
+          token_id: String(input.token_id),
+          price, size_usdc: sizeUsdc,
+          note: `${isBuy ? '买入' : '卖出'}指令已提交到 Polymarket，订单 ID: ${result.orderID || result.orderId}`,
+        })
+      } catch (e: any) {
+        return JSON.stringify({ error: `下单失败：${e.message}` })
+      }
+    }
+
     default: {
       // 浏览器工具
       if (name.startsWith('browser_')) {
@@ -751,6 +1001,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const { messages, images, adamState, books } = await request.json() as any
   const erpToken = request.headers.get('x-erp-token') || ''
   const tokenKey = erpToken.slice(-16)
+  const stateKey = erpToken.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16) || 'anon'
 
   // 加载 ADAM 的长期记忆
   let memories: MemoryEntry[] = []
@@ -825,7 +1076,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           const name = tc.function.name
           const input = JSON.parse(tc.function.arguments || '{}')
           await send({ type: 'tool_start', id: callId, name, input })
-          const result = await executeAdamTool(name, input || {}, books)
+          const result = await executeAdamTool(name, input || {}, books, env.AGENT_MEMORY, stateKey, env)
           await send({ type: 'tool_result', id: callId, name, result })
 
           if (name === 'consult_marketing_expert' && erpToken && env.AGENT_MEMORY) {

@@ -8,6 +8,7 @@
           sort-by="in_date" :sort-desc="true"
           export-file-name="采购入库单" :params="searchForm"
           :row-filter="(row: any) => Number(row.status) === 1"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''"
           :export-columns="{ in_no: '入库单号', supplier_name: '供应商', warehouse_name: '仓库', in_date: '入库日期', admin_name: '经办人', total_amount: '总金额', status: '状态' }">
           <template #search>
             <el-input v-model="searchForm.in_no" placeholder="入库单号" clearable style="width:160px" />
@@ -66,9 +67,10 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80" fixed="right">
+          <el-table-column label="操作" width="130" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -413,6 +415,7 @@
 </template>
 
 <script setup lang="ts">
+import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Paperclip } from '@element-plus/icons-vue'
@@ -454,6 +457,7 @@ function calcRowTotal(row: any): number {
 const route = useRoute()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile } = useReconcile('reconcile_procure_inhouse', tableRef)
 const searchForm = reactive<any>({ in_no: '', supplier_name: '', goods_name: '' })
 const showForm = ref(false)
 const isReadonly = ref(false)

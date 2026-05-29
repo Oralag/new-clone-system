@@ -10,7 +10,7 @@
           show-summary :summary-method="getContractSummary"
           del-path="/shop/ContractOrder/batchDel"
           export-file-name="销售订单" :params="searchForm" @reset="onSearchReset"
-          :row-class-name="({ row }: any) => row._isGroup ? 'row-group' : (row.status === 4 ? 'row-converted' : (row.customer_name === highlightName && highlightName ? 'row-highlight' : ''))"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : (row._isGroup ? 'row-group' : (row.status === 4 ? 'row-converted' : (row.customer_name === highlightName && highlightName ? 'row-highlight' : '')))"
           :export-columns="{ order_sn: '合同编号', customer_name: '客户名称', total_amount: '合同金额', sign_date: '签约日期', expire_date: '到期日期', admin_name: '经办人', status: '状态', remark: '备注' }">
           <template #search>
             <el-input v-model="searchForm.contract_no" placeholder="合同编号" clearable style="width:160px" />
@@ -239,7 +239,7 @@
               </template>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="300" fixed="right">
+          <el-table-column label="操作" width="350" fixed="right">
             <template #default="{ row }">
               <template v-if="row._isGroup">
                 <el-button type="warning" link size="small" @click="unfoldGroup(row._groupKey)">解散分组</el-button>
@@ -252,6 +252,7 @@
                 <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
                 <el-button v-if="row.status === 1 || row.status === 4" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
                 <el-button v-if="(row.status === 1 || row.status === 4) && getPendingAmount(row) > 0.01" type="success" link size="small" @click="openCollectDialog(row)">去收款</el-button>
+                <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
                 <el-button type="danger" link size="small" :disabled="row.status === 1 || row.status === 4" :title="row.status === 1 || row.status === 4 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
               </template>
             </template>
@@ -1110,6 +1111,7 @@
 </template>
 
 <script setup lang="ts">
+import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted, onActivated, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip, ArrowDown } from '@element-plus/icons-vue'
@@ -1379,6 +1381,7 @@ function goToCommissionSetting() {
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile } = useReconcile('reconcile_sale_contract', tableRef)
 const highlightName = ref('')
 const contractSelectedRows = ref<any[]>([])
 

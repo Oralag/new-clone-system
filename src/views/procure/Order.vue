@@ -9,7 +9,7 @@
           sort-by="_order_date_sort" :sort-desc="true"
           export-file-name="采购订单" :params="searchForm" @reset="onSearchReset"
           show-summary :summary-method="getSummaryRow"
-          :row-class-name="({ row }: any) => (row.order_no || row.order_sn) === highlightSn ? 'row-highlight' : ''"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ((row.order_no || row.order_sn) === highlightSn ? 'row-highlight' : '')"
           :export-columns="{ order_no: '采购单号', supplier_name: '供应商', warehouse_name: '仓库', order_date: '开单日期', delivery_date: '预计交期', admin_name: '采购人', total_amount: '含税合计', status: '状态', pay_amount: '已付金额' }">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="采购单号" clearable style="width:160px" />
@@ -155,12 +155,13 @@
             </template>
           </el-table-column>
           <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-          <el-table-column label="操作" width="220" fixed="right">
+          <el-table-column label="操作" width="270" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? '查看' : '编辑' }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1 && getPayStatus(row).label !== '已付清'" type="success" link size="small" @click="openPayDialog(row)">付款</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">反审核</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该采购合同') : handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
@@ -1084,6 +1085,7 @@
 </template>
 
 <script setup lang="ts">
+import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
@@ -1411,6 +1413,7 @@ async function handleBatchReverseAudit() {
 const route = useRoute()
 const highlightSn = ref('')
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile } = useReconcile('reconcile_procure_order', tableRef)
 
 // 合计数据
 const summaryData = reactive({

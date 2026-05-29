@@ -7,6 +7,7 @@
         <ScTable ref="tableRef" :api-obj="getProcureReturnList"
           sort-by="return_date" :sort-desc="true"
           export-file-name="采购退货单" :params="searchForm"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''"
           :export-columns="{ return_no: '退货单号', order_sn: '关联采购单', supplier_name: '供应商', return_date: '退货日期', total_amount: '退货金额', status: '状态' }">
           <template #search>
             <el-input v-model="searchForm.return_no" placeholder="退货单号" clearable style="width:160px" />
@@ -66,9 +67,10 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80" fixed="right">
+          <el-table-column label="操作" width="130" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -230,6 +232,7 @@
 </template>
 
 <script setup lang="ts">
+import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -247,6 +250,7 @@ const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const route = useRoute()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile } = useReconcile('reconcile_procure_return', tableRef)
 
 onMounted(() => {
   if (route.query.return_no) searchForm.return_no = String(route.query.return_no)

@@ -7,7 +7,8 @@
         <ScTable ref="tableRef" :api-obj="getSaleReturnList"
           del-path="/stock/SaleReturnOrder/batchDel"
           sort-by="return_date" :sort-desc="true"
-          export-file-name="销售退货单" :params="searchForm">
+          export-file-name="销售退货单" :params="searchForm"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''">
           <template #search>
             <el-input v-model="searchForm.order_no" placeholder="退货单号" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
@@ -68,7 +69,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="250" fixed="right">
             <template #default="{ row }">
               <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
@@ -77,6 +78,7 @@
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该退货单') : handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -94,8 +96,11 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave">
+          <el-button v-if="!isReadonly" :loading="saving && !savingAndAuditing" @click="handleSave(false)">
             保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
+          </el-button>
+          <el-button v-if="!isReadonly" type="primary" :loading="savingAndAuditing" @click="handleSave(true)">
+            保存并审核
           </el-button>
         </div>
       </div>
@@ -448,6 +453,7 @@
 </template>
 
 <script setup lang="ts">
+import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
@@ -473,6 +479,7 @@ const taxRates = TAX_RATES
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile } = useReconcile('reconcile_sale_return', tableRef)
 
 function parseItems(goodsInfo: any): any[] {
   if (Array.isArray(goodsInfo)) return goodsInfo
@@ -572,6 +579,7 @@ const defaultFd = () => ({
 const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
+const savingAndAuditing = ref(false)
 
 function calcTotal() {
   fd.total_amount = fd.items.reduce((s, r) => s + (r.num || 0) * (r.price || 0), 0)
@@ -675,7 +683,7 @@ function openEdit(row: any, readonly = false) {
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   // 若 DB 没存 level_id，从 levelMap 自动补
   if (!fd.level_id && row.customer_id) {
-    const bound = levelMap.value[row.customer_id]
+    const bound = levelMap[row.customer_id]
     fd.level_id = bound || null
   }
   calcTotal()
@@ -697,7 +705,7 @@ function backToList() {
   tableRef.value?.refresh()
 }
 
-async function handleSave() {
+async function handleSave(andAudit = false) {
   try { await formRef.value?.validate() } catch {
     ElMessage.warning('请填写必填项'); return
   }
@@ -705,7 +713,9 @@ async function handleSave() {
     ElMessage.warning('请至少添加一件商品'); return
   }
   saving.value = true
+  if (andAudit) savingAndAuditing.value = true
   try {
+    const filteredItems = fd.items.filter(i => (i.num || 0) > 0)
     const payload: Record<string, any> = {
       sale_out_order_id: fd.order_id,
       order_sn: fd.order_sn,
@@ -720,20 +730,44 @@ async function handleSave() {
       remark: fd.remark,
       total_amount: fd.total_amount,
       level_id: fd.level_id || 0,
-      goods_info: JSON.stringify(fd.items.filter(i => (i.num || 0) > 0)),
+      goods_info: JSON.stringify(filteredItems),
     }
+    let savedId = fd.id
     if (fd.id) {
       payload.id = fd.id
       await updateSaleReturn(payload)
     } else {
-      await createSaleReturn(payload)
+      const res = await createSaleReturn(payload)
+      savedId = Number(res?.data?.id || res?.data?.row?.id || res?.data?.data?.id || 0)
     }
-    ElMessage.success('保存成功')
+
+    if (andAudit && savedId) {
+      try {
+        await auditSaleReturn(savedId, 1)
+        // 库存加回
+        await stockEffect(filteredItems, 'restore', fd.warehouse_id, '销售退货入库')
+        // 客户余额增加
+        if (fd.customer_id) {
+          try {
+            const res = await http.get('/shop/ShopCustomer/detail', { params: { id: fd.customer_id } })
+            const cur = Number(res.data?.balance || 0)
+            await http.post('/shop/ShopCustomer/edit', { id: fd.customer_id, balance: cur + fd.total_amount })
+          } catch (e: any) { console.warn('客户余额更新失败', e?.message) }
+        }
+        stockRefreshStore.trigger()
+        ElMessage.success('保存并审核成功')
+      } catch (e: any) {
+        ElMessage.warning(`保存成功，但审核失败：${e?.message || ''}，请手动审核`)
+      }
+    } else {
+      ElMessage.success('保存成功')
+    }
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
     saving.value = false
+    savingAndAuditing.value = false
   }
 }
 
