@@ -213,3 +213,9 @@ npm run deploy
 
 - [2026-04-17] 附加费用付款同时调用 createPayReceipt + createExpense 导致流水重复 → 附加费用付款只调用 createPayReceipt（FK单），禁止再调用 createExpense；两个函数都调用会在资金流水明细里产生两条记录
 - [2026-04-25] 反审核用 OtherOut 抵消库存，流水出现两条脏记录 → **铁律：反审核后库存流水里不可以有任何记录**；反审核 = 找到审核时创建的原始单据直接删除，流水自然清空；禁止用 OtherOut/OtherIn 创建反向单来抵消
+
+- [2026-05-29] **铁律：任何 git 操作（备份/分支/reset）之前，必须先手动 build + deploy 保存当前线上版本，操作完成后再 build + deploy 一次恢复** → Cloudflare Pages 绑定了 GitHub，向任何分支 push 都会自动触发重新部署，会用旧 commit 的代码覆盖线上的最新版本（即使用户已手动部署了未提交的修改）。具体禁止事项：
+  - **禁止在没有先 build+deploy 的情况下做任何 git push**
+  - **禁止用 `git checkout`、`git reset --hard` 切换本地文件状态，除非已确认线上版本安全**
+  - 备份操作只做本地 commit，**不 push 到 GitHub**，或 push 前先确认 Cloudflare 不会自动部署该分支
+  - 如果必须 push，先问用户："这会触发 Cloudflare 重新部署，是否先 build+deploy 当前版本？"
