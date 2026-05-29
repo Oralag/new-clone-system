@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && git add src functions public package.json package-lock.json vite.config.ts tsconfig*.json index.html 2>/dev/null || true && git commit -m \"deploy: $(date '+%Y-%m-%d %H:%M')\" --allow-empty && git push origin main && npx wrangler pages deploy dist --project-name digital-nomad --commit-dirty=true",
+    "deploy": "npm run build && git add -A && git commit -m \"deploy: $(date '+%Y-%m-%d %H:%M')\" --allow-empty && git push origin main && npx wrangler pages deploy dist --project-name digital-nomad --commit-dirty=true",
     "android": "npm run build && npx cap sync android && npx cap open android",
     "android:sync": "npm run build && npx cap sync android",
     "ios": "npm run build && npx cap sync ios && npx cap open ios"
