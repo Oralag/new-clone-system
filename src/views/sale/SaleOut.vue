@@ -20,7 +20,7 @@
             </el-select>
           </template>
           <template #toolbar>
-            <!-- 新增按钮已移除：出库单由销售合同审核时自动生成 -->
+            <!-- 新增按钮已移除：出库单由销售订单审核时自动生成 -->
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
@@ -111,10 +111,10 @@
         </div>
         <div class="form-actions">
           <el-button :icon="Document" @click="handlePrint">打印出库单</el-button>
-          <el-button v-if="!isReadonly" :loading="saving" @click="handleSave(false)" data-guide-id="guide-saleout-save">
+          <el-button v-if="!isReadonly" :loading="saving && !savingAndAuditing" @click="handleSave(false)" data-guide-id="guide-saleout-save">
             保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
           </el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave(true)">
+          <el-button v-if="!isReadonly" type="primary" :loading="savingAndAuditing" @click="handleSave(true)">
             保存并审核
           </el-button>
         </div>
@@ -490,7 +490,7 @@ import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getSaleOutList, createSaleOut, updateSaleOut, deleteSaleOut, auditSaleOut, getSaleReturnList } from '@/api/sale'
@@ -503,7 +503,7 @@ import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
-import { stockEffect } from '@/utils/stockEffect'
+import { stockEffect, deleteSaleOutStockFlows } from '@/utils/stockEffect'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -562,7 +562,7 @@ function tryLoadContractData() {
       if (c.customer_id) { fd.customer_id = Number(c.customer_id); fd.customer_name = String(c.customer_name || '') }
       if (c.warehouse_id) { fd.warehouse_id = Number(c.warehouse_id); fd.warehouse_name = String(c.warehouse_name || '') }
       fd.admin_name = String(c.admin_name || '')
-      fd.remark = `来自销售合同 ${c.contract_sn}`
+      fd.remark = `来自销售订单 ${c.contract_sn}`
       fd.contract_id = Number(c.contract_id || 0)
       fd.discount_type = String(c.discount_type || 'none')
       fd.discount_value = Number(c.discount_value || 0)
@@ -631,6 +631,7 @@ const defaultFd = () => ({
 const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
+const savingAndAuditing = ref(false)
 
 // 计算汇总
 const totalNoTax = computed(() =>
@@ -822,6 +823,7 @@ async function handleSave(andAudit = false) {
     } catch { return }
   }
   saving.value = true
+  if (andAudit) savingAndAuditing.value = true
   try {
     const payload: Record<string, any> = {
       customer_id: fd.customer_id,
@@ -866,6 +868,7 @@ async function handleSave(andAudit = false) {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
     saving.value = false
+    savingAndAuditing.value = false
   }
 }
 
@@ -969,7 +972,11 @@ async function removeAutoSaleOutReceipts(receipts: any[]) {
 async function handleSaleOutStockEffect(row: any, type: 'audit' | 'reverse') {
   const items = parseItems(row.goods_info)
   try {
-    await stockEffect(items, type === 'audit' ? 'deduct' : 'restore', row.warehouse_id, type === 'audit' ? '销售出库' : '销售出库反审核')
+    if (type === 'audit') {
+      await stockEffect(items, 'deduct', row.warehouse_id, `销售出库#${row.id}`)
+    } else {
+      await deleteSaleOutStockFlows(row.id)
+    }
   } catch (e: any) {
     console.warn('销售出库库存变动失败', e?.message)
   }
@@ -1069,7 +1076,22 @@ async function handleAudit(row: any, status: number) {
       }
     }
 
-    financeWarning ? ElMessage.warning(`${action}成功，但${financeWarning}`) : ElMessage.success(`${action}成功`)
+    if (financeWarning) {
+      ElMessage.warning(`${action}成功，但${financeWarning}`)
+    } else {
+      const items = parseItems(row.goods_info)
+      const stockDesc = items.map((i: any) => `${i.goods_name || '商品'} ×${i.num}`).join('、')
+      const amount = Number(row.after_discount || row.total_amount || 0)
+      const customerLine = row.customer_name
+        ? (status === 1 ? `客户应收 +¥${amount.toFixed(2)}（${row.customer_name}）` : `客户应收 -¥${amount.toFixed(2)}（${row.customer_name}）`)
+        : ''
+      const stockLine = status === 1 ? `📦 库存已扣减：${stockDesc}` : `📦 库存已恢复：${stockDesc}`
+      ElNotification({
+        title: `${action}成功`, dangerouslyUseHTMLString: true,
+        type: status === 1 ? 'success' : 'warning', duration: 5000,
+        message: `<div style="font-size:12px;line-height:2">${stockLine}${customerLine ? `<br>💰 ${customerLine}` : ''}</div>`,
+      })
+    }
     stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch (e: any) {

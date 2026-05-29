@@ -269,8 +269,8 @@
         <div class="form-actions">
           <el-button @click="backToList">返回</el-button>
           <template v-if="!isView">
-            <el-button type="primary" :loading="saving" @click="handleSave">保存 (Ctrl+S)</el-button>
-            <el-button type="success" :loading="saving" @click="handleSaveAndNew">保存并继续新增</el-button>
+            <el-button type="primary" :loading="saving && !savingAndNew" @click="handleSave">保存 (Ctrl+S)</el-button>
+            <el-button type="success" :loading="savingAndNew" @click="handleSaveAndNew">保存并继续新增</el-button>
           </template>
           <el-button v-else type="primary" @click="isView = false">编辑</el-button>
         </div>
@@ -466,24 +466,40 @@
               <!-- 辅助单位表格 -->
               <el-table :data="auxUnitRows" border size="small" style="width:100%">
                 <el-table-column type="index" label="序号" width="55" align="center" />
-                <el-table-column label="辅助单位" min-width="130">
+                <el-table-column label="辅助单位" min-width="180">
                   <template #default="{ row, $index }">
-                    <el-select v-if="!isView" v-model="row.unit_name" placeholder="请选择单位" size="small" style="width:100%"
-                      @change="(v:any) => onMultiUnitSelect(v, $index + 1)">
-                      <el-option v-for="u in auxUnitSelectOptions" :key="u" :label="u" :value="u" />
+                    <el-select v-if="!isView" v-model="row.unit_name" filterable allow-create default-first-option
+                      placeholder="选BOM成品或输入单位名" size="small" style="width:100%"
+                      @focus="ensureBomGoods"
+                      @change="(v:string) => onUnitNameOrBomChange(row, v, $index + 1)">
+                      <el-option-group label="BOM成品（选后自动关联库存）">
+                        <el-option v-for="g in bomAllGoods" :key="'g'+g.id" :label="g.goods_name" :value="g.goods_name">
+                          <span>{{ g.goods_name }}</span>
+                          <span style="color:#94a3b8;font-size:12px;float:right">¥{{ Number(g.cost_price||0).toFixed(2) }}</span>
+                        </el-option>
+                      </el-option-group>
+                      <el-option-group label="已有单位名">
+                        <el-option v-for="u in auxUnitSelectOptions" :key="'u'+u" :label="u" :value="u" />
+                      </el-option-group>
                     </el-select>
                     <span v-else>{{ row.unit_name || '—' }}</span>
+                    <div v-if="row.linked_goods_id" style="font-size:11px;color:#0071e3;margin-top:2px">BOM成品已关联</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="换算关系" min-width="200" align="center">
+                <el-table-column label="换算关系" min-width="260" align="center">
                   <template #default="{ row }">
-                    <div style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;flex-wrap:wrap">
                       <span>1 {{ row.unit_name || '辅助单位' }}</span>
                       <span>=</span>
                       <el-input-number v-if="!isView" v-model="row.ratio" :min="0.0001" :precision="4" :controls="false"
-                        size="small" style="width:80px" @change="onMultiUnitRatioChange(row)" />
+                        size="small" style="width:75px" @change="onMultiUnitRatioChange(row)" />
                       <span v-else>{{ row.ratio }}</span>
                       <span style="color:#0071e3;font-weight:500">{{ fd.unit_name || '基础单位' }}</span>
+                      <span v-if="!isView" style="color:#94a3b8;margin-left:4px">或填</span>
+                      <el-input-number v-if="!isView" v-model="row._grams" :min="1" :precision="0" :controls="false"
+                        placeholder="克数" size="small" style="width:60px"
+                        @change="(v:number) => { if(v>0){ row.ratio = Math.round(v/500*10000)/10000; onMultiUnitRatioChange(row) } }" />
+                      <span v-if="!isView" style="color:#94a3b8">克</span>
                     </div>
                   </template>
                 </el-table-column>
@@ -534,6 +550,7 @@
                 </el-checkbox>
               </div>
               <el-button v-if="fd.multi_spec && !isView" size="small" type="primary" @click="addSpecAttr">+ 添加规格属性</el-button>
+              <el-button v-if="fd.multi_spec && fd.id && specAttrs.filter(a=>a.values.length>0).length>0" size="small" type="success" :loading="specSyncing" @click="manualSyncSpec">同步到云端</el-button>
             </div>
 
             <!-- 单规格模式 -->
@@ -974,8 +991,9 @@ async function loadCates() {
   cateLoading.value = true
   try {
     const res = await getGoodsCateList({ list_rows: 200 })
-    const rows = res.data?.rows ?? []
-    cateOptions.value = rows.sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+    const rows: any[] = res.data?.rows ?? []
+    const sorted = rows.sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+    cateOptions.value = sorted.filter((c: any, i: number) => sorted.findIndex((x: any) => x.name === c.name && String(x.parent_id ?? '0') === String(c.parent_id ?? '0')) === i)
   } finally {
     cateLoading.value = false
   }
@@ -1163,14 +1181,16 @@ async function selectBomGoods(g: any | null) {
     bomViewGoodsId.value = null
     bomViewMaterialIds.value = new Set()
     bomUsageMap.value = new Map()
-    delete searchForm.list_rows
+    // list_rows stays at 10000 (set by switchLeftView); just refresh to show all goods
     tableRef.value?.refresh()
     return
   }
   bomViewGoodsId.value = g.bomId
-  searchForm.list_rows = 10000
-  // 如果 bomRows 已加载，直接用缓存
+  // DO NOT change searchForm here — list_rows=10000 was already set by switchLeftView.
+  // Changing searchForm would trigger ScTable's params watch before materials are ready,
+  // causing a loadData with an empty Set filter that hides all rows.
   if (g.bomRows.length > 0) {
+    // cached: set materials first, then refresh (filter is ready when loadData runs)
     const sns = new Set<string>([g.goods_sn, ...g.bomRows.map((r: any) => r.goods_sn).filter(Boolean)])
     bomViewMaterialIds.value = sns
     const m = new Map<string, any>()
@@ -1179,7 +1199,7 @@ async function selectBomGoods(g: any | null) {
     tableRef.value?.refresh()
     return
   }
-  // 拉 detail
+  // 拉 detail: set materials BEFORE refresh so filter is ready
   bomViewLoading.value = true
   try {
     const res = await getBomByGoods(g.bomId)
@@ -1202,10 +1222,10 @@ async function selectBomGoods(g: any | null) {
 function switchLeftView(view: 'cate' | 'bom') {
   leftView.value = view
   if (view === 'bom') {
-    // 重置分类筛选，切换到 BOM 模式
+    // 重置分类筛选，切换到 BOM 模式；设 list_rows=10000 确保全量加载，后续 selectBomGoods 不再改 searchForm
     selectedCateId.value = null
     searchForm.cate_id = ''
-    delete searchForm.list_rows
+    searchForm.list_rows = 10000
     bomViewGoodsId.value = null
     bomViewMaterialIds.value = new Set()
     loadBomView()
@@ -1233,14 +1253,14 @@ const activeCateIds = computed<Set<number> | null>(() => {
   while (queue.length) {
     const cur = queue.shift()!
     ids.add(cur)
-    cateOptions.value.filter(c => Number(c.parent_id) === cur).forEach(c => queue.push(c.id))
+    cateOptions.value.filter(c => Number(c.parent_id) === cur).forEach(c => queue.push(Number(c.id)))
   }
   return ids
 })
 
 const rowFilter = computed(() => {
   const typeFilter = filterType.value ? (row: any) => getGoodsType(row) === filterType.value : null
-  const cateFilter = activeCateIds.value ? (row: any) => activeCateIds.value!.has(row.cate_id) : null
+  const cateFilter = activeCateIds.value ? (row: any) => activeCateIds.value!.has(Number(row.cate_id)) : null
   // BOM视图：按物料 goods_sn 集合筛选
   const bomSns = leftView.value === 'bom' && bomViewGoodsId.value !== null ? bomViewMaterialIds.value as Set<string> : null
   const bomFilter = bomSns ? (row: any) => bomSns.has(row.goods_sn) : null
@@ -1393,7 +1413,42 @@ onMounted(() => {
   })()
   loadBomView()
   window.addEventListener('resize', handleMobileResize)
+  // 后台自动同步：把本地 localStorage 里的规格数据推送到后端
+  autoSyncAllLocalSpecs()
 })
+
+async function autoSyncAllLocalSpecs() {
+  try {
+    const attrsMap = JSON.parse(localStorage.getItem('erp_spec_attrs') || '{}')
+    const goodsIds = Object.keys(attrsMap).filter(id => {
+      const attrs = attrsMap[id]
+      return Array.isArray(attrs) && attrs.some((a: any) => a.values?.length > 0)
+    })
+    if (!goodsIds.length) return
+    for (const gid of goodsIds) {
+      try {
+        // 检查后端是否已有数据，没有就同步
+        const existing = await getSpecList({ goods_id: Number(gid), list_rows: 1 })
+        if ((existing.data?.total ?? 0) > 0) continue
+        const attrs = attrsMap[gid]
+        // 删旧记录（理论上是空的，但防御性清一下）
+        // 写入规格属性
+        for (const attr of attrs) {
+          if (attr.name && attr.values?.length > 0) {
+            await createSpec({ goods_id: Number(gid), name: attr.name, values: attr.values.join(',') })
+          }
+        }
+        // 同时把 sku 价格写入 goods.spec 字段
+        const skuMap = JSON.parse(localStorage.getItem('erp_sku_map') || '{}')[gid] ?? {}
+        const specJson = JSON.stringify({
+          attrs: attrs.map((a: any) => ({ name: a.name, values: a.values })),
+          skus: skuMap,
+        })
+        await updateGoods({ id: Number(gid), spec: specJson })
+      } catch { /* 单个商品失败不影响其他 */ }
+    }
+  } catch { /* 整体失败静默 */ }
+}
 onUnmounted(() => window.removeEventListener('resize', handleMobileResize))
 
 // ── 表单数据 ─────────────────────────────────────────────────────────────────
@@ -1416,6 +1471,7 @@ const defaultFd = () => ({
 const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
+const savingAndNew = ref(false)
 
 function openCreate() {
   Object.assign(fd, defaultFd())
@@ -1565,7 +1621,7 @@ async function handleSave() {
     // Save brand center fields to localStorage
     if (fd.id) saveBrandFd(fd.id)
     // Persist spec data (localStorage + backend sync)
-    if (fd.id) persistSpecData(fd.id)
+    if (fd.id) await persistSpecData(fd.id)
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '保存失败')
@@ -1579,6 +1635,7 @@ async function handleSaveAndNew() {
     ElMessage.warning('请填写必填项'); return
   }
   saving.value = true
+  savingAndNew.value = true
   try {
     const payload: any = { ...fd }
     payload.multi_unit = fd.multi_unit ? 1 : 0
@@ -1592,6 +1649,7 @@ async function handleSaveAndNew() {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
     saving.value = false
+    savingAndNew.value = false
   }
 }
 
@@ -2116,7 +2174,11 @@ function quickAdd(type: string) {
 async function submitQuick() {
   if (!quickName.value.trim()) return
   let res: any
-  if (quickType === 'cate') { res = await createGoodsCate({ name: quickName.value }); await loadCates() }
+  if (quickType === 'cate') {
+    const dup = cateOptions.value.find(c => c.name.trim() === quickName.value.trim() && !Number(c.parent_id ?? 0))
+    if (dup) { ElMessage.warning(`根级分类下已存在"${quickName.value}"，请使用其他名称`); return }
+    res = await createGoodsCate({ name: quickName.value }); await loadCates()
+  }
   else if (quickType === 'brand') { res = await createBrand({ name: quickName.value }); await loadOptions() }
   else { res = await createUnit({ name: quickName.value }); await loadOptions() }
   const id = res.data?.id ?? res.data?.rows?.[0]?.id
@@ -2137,6 +2199,19 @@ interface SpecAttr {
 }
 
 const specAttrs = ref<SpecAttr[]>([])
+const specSyncing = ref(false)
+async function manualSyncSpec() {
+  if (!fd.id) return
+  specSyncing.value = true
+  try {
+    await syncSpecToBackend(fd.id)
+    ElMessage.success('规格已同步到云端')
+  } catch {
+    ElMessage.error('同步失败，请重试')
+  } finally {
+    specSyncing.value = false
+  }
+}
 const SKU_KEY = 'erp_sku_map'  // { goods_id: { skuKey: {sku_sn, sell_price, cost_price, stock, barcode} } }
 
 interface SkuRow {
@@ -2194,6 +2269,10 @@ async function loadSpecs() {
   // Auto-enable multi_spec if saved spec attrs exist
   if (specAttrs.value.length > 0) fd.multi_spec = true
   rebuildSkuList()
+  // 自动同步：本地有规格数据就同步到后端（await 确保完成）
+  if (specAttrs.value.filter(a => a.values.length > 0).length > 0) {
+    await syncSpecToBackend(fd.id)
+  }
   // Load multi-unit：优先从服务端取，没有再降级到 localStorage
   const serverUnits = await loadMultiUnitsFromServer(fd.id)
   const saved = serverUnits.length ? serverUnits : loadMultiUnits(fd.id)
@@ -2296,15 +2375,15 @@ function confirmBatchPrice() {
 }
 
 // Save spec data along with goods save
-function persistSpecData(goodsId: number) {
+async function persistSpecData(goodsId: number) {
   if (fd.multi_spec) {
     saveSpecAttrs(goodsId)
     saveSkuData(goodsId)
-    syncSpecToBackend(goodsId)
+    await syncSpecToBackend(goodsId)
   }
   if (fd.multi_unit) {
     saveMultiUnits(goodsId)
-    saveMultiUnitsToServer(goodsId)
+    await saveMultiUnitsToServer(goodsId)
   }
 }
 
@@ -2318,9 +2397,23 @@ async function syncSpecToBackend(goodsId: number) {
     // Re-create from specAttrs
     for (const attr of specAttrs.value) {
       if (attr.name && attr.values.length > 0) {
-        await createSpec({ goods_id: goodsId, goods_name: fd.goods_name, spec_name: attr.name, spec_value: attr.values.join(',') })
+        await createSpec({ goods_id: goodsId, name: attr.name, values: attr.values.join(',') })
       }
     }
+    // Write full spec+sku JSON to goods.spec field so all devices can read it
+    const skuMap: Record<string, any> = {}
+    for (const row of skuList.value) {
+      skuMap[row.vals.join('|')] = { sell_price: row.sell_price, cost_price: row.cost_price, sku_sn: row.sku_sn, barcode: row.barcode }
+    }
+    // 保留 unit_linked_goods 不被覆盖
+    let existingUnitLinked: any = {}
+    try { existingUnitLinked = JSON.parse(fd.spec || '{}').unit_linked_goods || {} } catch {}
+    const specJson = JSON.stringify({
+      attrs: specAttrs.value.filter(a => a.values.length > 0).map(a => ({ name: a.name, values: a.values })),
+      skus: skuMap,
+      unit_linked_goods: existingUnitLinked,
+    })
+    await updateGoods({ id: goodsId, spec: specJson })
   } catch {}
 }
 
@@ -2334,11 +2427,14 @@ interface MultiUnitRow {
   is_base: boolean
   unit_id: number | null
   unit_name: string
-  ratio: number          // 换算关系：1 本单位 = ratio 基础单位
+  ratio: number            // 换算关系：1 本单位 = ratio 基础单位
+  _grams?: number          // UI 辅助字段：克数，自动换算 ratio
+  linked_goods_id?: number    // 关联BOM成品：出售此单位时扣减该商品库存（而非基础商品）
+  linked_goods_name?: string
   is_min_sale: boolean
   is_default_sale: boolean
-  cost_price: number     // 该单位对应的采购/成本价（自动换算）
-  sell_price: number     // 该单位对应的销售价（自动换算）
+  cost_price: number
+  sell_price: number
 }
 
 const multiUnitRows = ref<MultiUnitRow[]>([])
@@ -2347,6 +2443,32 @@ const defaultSaleUnitIdx = ref(0)
 
 // Auxiliary units = all rows except the base (index 0)
 const auxUnitRows = computed(() => multiUnitRows.value.slice(1))
+
+// ── BOM 成品关联 ──────────────────────────────────────────────────────────────
+const bomAllGoods = ref<any[]>([])
+
+async function ensureBomGoods() {
+  if (bomAllGoods.value.length) return
+  try {
+    const res = await getGoodsList({ list_rows: 500 })
+    bomAllGoods.value = res.data?.rows ?? []
+  } catch {}
+}
+
+function onUnitNameOrBomChange(row: MultiUnitRow, name: string, idx: number) {
+  // 检查是否匹配了商品列表里的成品
+  const matched = bomAllGoods.value.find((g: any) => g.goods_name === name)
+  if (matched) {
+    row.linked_goods_id = matched.id
+    row.linked_goods_name = matched.goods_name
+    row.cost_price = Number(matched.cost_price) || 0  // 直接用BOM成品采购价，未设置则为0
+  } else {
+    // 手动输入的单位名，清除BOM关联
+    row.linked_goods_id = undefined
+    row.linked_goods_name = undefined
+  }
+  onMultiUnitSelect(name, idx)
+}
 
 // 辅助单位下拉选项：unitOptions 里的名字 + 当前行已有的 unit_name，去重合并
 const auxUnitSelectOptions = computed(() => {
@@ -2362,6 +2484,9 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
     const res = await getUnitConvert(goodsId)
     const rows: any[] = res.data?.rows ?? []
     if (!rows.length) return []
+    // 从 goods.spec 读关联BOM成品
+    let unitLinked: Record<string, { id: number; name: string }> = {}
+    try { unitLinked = JSON.parse(fd.spec || '{}').unit_linked_goods || {} } catch {}
     // 找到基础单位行（匹配 fd.unit_name），放第一位；其余为辅助单位
     const baseUnitName = fd.unit_name
     const baseCostPrice = Number(fd.cost_price) || 0
@@ -2370,11 +2495,14 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
     const ordered = baseRow ? [baseRow, ...auxRows] : rows
     return ordered.map((r: any, i: number) => {
       const ratio = Number(r.ratio)
+      const linked = unitLinked[r.unit_name]
       return {
         is_base: i === 0,
         unit_id: null,
         unit_name: r.unit_name,
         ratio,
+        linked_goods_id: linked?.id,
+        linked_goods_name: linked?.name,
         is_min_sale: i === 0,
         is_default_sale: i === 0,
         cost_price: i === 0 ? baseCostPrice : Math.round(baseCostPrice * ratio * 100) / 100,
@@ -2388,6 +2516,17 @@ async function saveMultiUnitsToServer(goodsId: number) {
   try {
     const units = multiUnitRows.value.map(r => ({ unit_name: r.unit_name, ratio: r.ratio }))
     await saveUnitConvert({ goods_id: goodsId, units })
+    // 把关联BOM成品写入 goods.spec
+    const unitLinked: Record<string, { id: number; name: string }> = {}
+    multiUnitRows.value.forEach(r => {
+      if (r.linked_goods_id) unitLinked[r.unit_name] = { id: r.linked_goods_id, name: r.linked_goods_name || '' }
+    })
+    let specObj: any = {}
+    try { specObj = JSON.parse(fd.spec || '{}') } catch {}
+    specObj.unit_linked_goods = unitLinked
+    const newSpec = JSON.stringify(specObj)
+    fd.spec = newSpec
+    await updateGoods({ id: goodsId, spec: newSpec })
   } catch { /* 静默失败，不影响主流程 */ }
 }
 
@@ -2466,7 +2605,7 @@ function onMultiUnitSelect(unitName: string, idx: number) {
 }
 
 function onMultiUnitRatioChange(row: MultiUnitRow) {
-  // Auto-calculate prices: aux_price = base_price * ratio
+  if (row.linked_goods_id) return  // BOM成品用自己的价格，不按ratio换算
   const baseCost = Number(fd.cost_price) || 0
   const baseSell = Number(fd.sell_price) || 0
   row.cost_price = Math.round(baseCost * row.ratio * 100) / 100
@@ -2479,9 +2618,10 @@ watch(() => fd.cost_price, (newCost) => {
   const base = Number(newCost) || 0
   // Also sync base unit row (index 0)
   if (multiUnitRows.value[0]) multiUnitRows.value[0].cost_price = base
-  // Recalc aux rows (index 1+)
+  // Recalc aux rows (index 1+)，BOM关联成品跳过（用成品自己的采购价）
   for (let i = 1; i < multiUnitRows.value.length; i++) {
     const row = multiUnitRows.value[i]
+    if (row.linked_goods_id) continue
     row.cost_price = Math.round(base * row.ratio * 100) / 100
   }
 })

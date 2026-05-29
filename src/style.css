@@ -17,7 +17,7 @@ html, body {
   overscroll-behavior: none;
 }
 
-#app { height: 100%; overflow: hidden; }
+#app { height: 100%; }
 
 /* ══════════════════════════════════════════════════════════
    Design Tokens

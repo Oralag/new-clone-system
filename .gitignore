@@ -28,3 +28,4 @@ dist.bak
 *.sw?
 .vercel
 .adam-credentials/
+.agent-memory.json

@@ -1,0 +1,364 @@
+{
+  "categories": [
+    {
+      "id": "奶豆腐",
+      "name": "奶豆腐",
+      "groups": [
+        {
+          "id": "拍摄",
+          "name": "拍摄",
+          "images": [
+            {
+              "name": "包装+牛奶杯+叠片",
+              "path": "/brand-images/奶豆腐/拍摄/包装+牛奶杯+叠片.jpg",
+              "w": 1440,
+              "h": 960
+            },
+            {
+              "name": "牛奶浇淋创意",
+              "path": "/brand-images/奶豆腐/拍摄/牛奶浇淋创意.jpg",
+              "w": 959,
+              "h": 1440
+            },
+            {
+              "name": "手拆独立包装",
+              "path": "/brand-images/奶豆腐/拍摄/手拆独立包装.jpg",
+              "w": 960,
+              "h": 1440
+            },
+            {
+              "name": "俯拍散铺金叉",
+              "path": "/brand-images/奶豆腐/拍摄/俯拍散铺金叉.jpg",
+              "w": 1440,
+              "h": 960
+            },
+            {
+              "name": "包装盒正面",
+              "path": "/brand-images/奶豆腐/拍摄/包装盒正面.jpg",
+              "w": 1440,
+              "h": 960
+            },
+            {
+              "name": "产品侧面",
+              "path": "/brand-images/奶豆腐/拍摄/产品侧面.jpg",
+              "w": 1440,
+              "h": 960
+            },
+            {
+              "name": "产品特写",
+              "path": "/brand-images/奶豆腐/拍摄/产品特写.jpg",
+              "w": 1440,
+              "h": 960
+            }
+          ]
+        },
+        {
+          "id": "电商",
+          "name": "电商图",
+          "images": [
+            {
+              "name": "头图1",
+              "path": "/brand-images/奶豆腐/头图1.jpg",
+              "w": 802,
+              "h": 799
+            },
+            {
+              "name": "头图2",
+              "path": "/brand-images/奶豆腐/头图2.jpg",
+              "w": 802,
+              "h": 799
+            },
+            {
+              "name": "头图3",
+              "path": "/brand-images/奶豆腐/头图3.jpg",
+              "w": 802,
+              "h": 799
+            },
+            {
+              "name": "头图4",
+              "path": "/brand-images/奶豆腐/头图4.jpg",
+              "w": 802,
+              "h": 799
+            },
+            {
+              "name": "详情01",
+              "path": "/brand-images/奶豆腐/详情01.jpg",
+              "w": 658,
+              "h": 802
+            },
+            {
+              "name": "详情02",
+              "path": "/brand-images/奶豆腐/详情02.jpg",
+              "w": 658,
+              "h": 826
+            },
+            {
+              "name": "详情03",
+              "path": "/brand-images/奶豆腐/详情03.jpg",
+              "w": 658,
+              "h": 1398
+            },
+            {
+              "name": "详情04",
+              "path": "/brand-images/奶豆腐/详情04.jpg",
+              "w": 658,
+              "h": 947
+            },
+            {
+              "name": "详情05",
+              "path": "/brand-images/奶豆腐/详情05.jpg",
+              "w": 658,
+              "h": 1505
+            },
+            {
+              "name": "详情06",
+              "path": "/brand-images/奶豆腐/详情06.jpg",
+              "w": 658,
+              "h": 1360
+            },
+            {
+              "name": "详情07",
+              "path": "/brand-images/奶豆腐/详情07.jpg",
+              "w": 658,
+              "h": 1441
+            },
+            {
+              "name": "详情08",
+              "path": "/brand-images/奶豆腐/详情08.jpg",
+              "w": 658,
+              "h": 689
+            },
+            {
+              "name": "详情09",
+              "path": "/brand-images/奶豆腐/详情09.jpg",
+              "w": 658,
+              "h": 1197
+            },
+            {
+              "name": "详情10",
+              "path": "/brand-images/奶豆腐/详情10.jpg",
+              "w": 658,
+              "h": 823
+            },
+            {
+              "name": "详情11",
+              "path": "/brand-images/奶豆腐/详情11.jpg",
+              "w": 658,
+              "h": 1083
+            },
+            {
+              "name": "详情12",
+              "path": "/brand-images/奶豆腐/详情12.jpg",
+              "w": 658,
+              "h": 562
+            },
+            {
+              "name": "详情13",
+              "path": "/brand-images/奶豆腐/详情13.jpg",
+              "w": 658,
+              "h": 855
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "奶条",
+      "name": "奶条",
+      "groups": [
+        {
+          "id": "拍摄",
+          "name": "拍摄",
+          "images": [
+            {
+              "name": "粉色包装蒙古包",
+              "path": "/brand-images/奶条/拍摄/粉色包装蒙古包.jpg",
+              "w": 960,
+              "h": 1440
+            },
+            {
+              "name": "包装+牛奶杯桌面",
+              "path": "/brand-images/奶条/拍摄/包装+牛奶杯桌面.jpg",
+              "w": 960,
+              "h": 1440
+            },
+            {
+              "name": "奶条特写堆叠",
+              "path": "/brand-images/奶条/拍摄/奶条特写堆叠.jpg",
+              "w": 960,
+              "h": 1440
+            },
+            {
+              "name": "奶条散落俯拍",
+              "path": "/brand-images/奶条/拍摄/奶条散落俯拍.jpg",
+              "w": 960,
+              "h": 1440
+            },
+            {
+              "name": "产品+小摆件",
+              "path": "/brand-images/奶条/拍摄/产品+小摆件.jpg",
+              "w": 960,
+              "h": 1440
+            },
+            {
+              "name": "双袋并排",
+              "path": "/brand-images/奶条/拍摄/双袋并排.jpg",
+              "w": 960,
+              "h": 1440
+            },
+            {
+              "name": "大碗满满奶条",
+              "path": "/brand-images/奶条/拍摄/大碗满满奶条.jpg",
+              "w": 961,
+              "h": 1440
+            }
+          ]
+        },
+        {
+          "id": "电商",
+          "name": "电商图",
+          "images": [
+            {
+              "name": "头图1",
+              "path": "/brand-images/奶条/头图1.jpg",
+              "w": 800,
+              "h": 800
+            },
+            {
+              "name": "头图2",
+              "path": "/brand-images/奶条/头图2.jpg",
+              "w": 800,
+              "h": 800
+            },
+            {
+              "name": "头图3",
+              "path": "/brand-images/奶条/头图3.jpg",
+              "w": 800,
+              "h": 800
+            },
+            {
+              "name": "头图4",
+              "path": "/brand-images/奶条/头图4.jpg",
+              "w": 800,
+              "h": 800
+            },
+            {
+              "name": "详情01",
+              "path": "/brand-images/奶条/详情01.jpg",
+              "w": 658,
+              "h": 1103
+            },
+            {
+              "name": "详情02",
+              "path": "/brand-images/奶条/详情02.jpg",
+              "w": 658,
+              "h": 956
+            },
+            {
+              "name": "详情03",
+              "path": "/brand-images/奶条/详情03.jpg",
+              "w": 658,
+              "h": 1235
+            },
+            {
+              "name": "详情04",
+              "path": "/brand-images/奶条/详情04.jpg",
+              "w": 658,
+              "h": 1457
+            },
+            {
+              "name": "详情05",
+              "path": "/brand-images/奶条/详情05.jpg",
+              "w": 658,
+              "h": 1512
+            },
+            {
+              "name": "详情06",
+              "path": "/brand-images/奶条/详情06.jpg",
+              "w": 658,
+              "h": 1353
+            },
+            {
+              "name": "详情07",
+              "path": "/brand-images/奶条/详情07.jpg",
+              "w": 658,
+              "h": 1441
+            },
+            {
+              "name": "详情08",
+              "path": "/brand-images/奶条/详情08.jpg",
+              "w": 658,
+              "h": 689
+            },
+            {
+              "name": "详情09",
+              "path": "/brand-images/奶条/详情09.jpg",
+              "w": 658,
+              "h": 1197
+            },
+            {
+              "name": "详情10",
+              "path": "/brand-images/奶条/详情10.jpg",
+              "w": 658,
+              "h": 823
+            },
+            {
+              "name": "详情11",
+              "path": "/brand-images/奶条/详情11.jpg",
+              "w": 658,
+              "h": 1083
+            },
+            {
+              "name": "详情12",
+              "path": "/brand-images/奶条/详情12.jpg",
+              "w": 658,
+              "h": 562
+            },
+            {
+              "name": "详情13",
+              "path": "/brand-images/奶条/详情13.jpg",
+              "w": 658,
+              "h": 855
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "品牌手册",
+      "name": "品牌手册",
+      "groups": [
+        {
+          "id": "通用",
+          "name": "通用",
+          "images": [
+            {
+              "name": "奶豆腐产品展示页",
+              "path": "/brand-images/品牌手册/奶豆腐产品展示页.jpg",
+              "w": 1440,
+              "h": 810
+            },
+            {
+              "name": "奶条立体展示页",
+              "path": "/brand-images/品牌手册/奶条立体展示页.jpg",
+              "w": 1440,
+              "h": 810
+            },
+            {
+              "name": "奶条产品信息页",
+              "path": "/brand-images/品牌手册/奶条产品信息页.jpg",
+              "w": 1440,
+              "h": 810
+            },
+            {
+              "name": "无任何添加实物页",
+              "path": "/brand-images/品牌手册/无任何添加实物页.jpg",
+              "w": 1440,
+              "h": 810
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

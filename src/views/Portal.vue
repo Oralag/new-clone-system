@@ -125,7 +125,7 @@
             <path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="white" opacity="0.9"/>
           </svg>
         </div>
-        <h2 class="card-title card-title-ai">智能体工作流</h2>
+        <h2 class="card-title card-title-ai">广告部门</h2>
         <p class="card-desc">多 Agent 协同作业，热搜抓取、文案生成、海报制作全自动流转。你只需设定目标，其余交给 AI。</p>
         <div class="card-tags">
           <span class="tag tag-ai">多Agent协作</span>
@@ -610,10 +610,8 @@ const TOOL_LABELS: Record<string, string> = {
 * { box-sizing: border-box; }
 
 .portal-page {
-  height: 100%;
-  overflow-y: auto;
+  min-height: 100vh;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
   background: var(--card-bg, #ffffff);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--dark, #1d1d1f);
@@ -1083,6 +1081,31 @@ const TOOL_LABELS: Record<string, string> = {
   .portal-card-ops:hover {
     background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #155e75 100%);
     border-color: rgba(8,145,178,0.3);
+    box-shadow: none;
+  }
+}
+
+.portal-card-content {
+  background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #8b5cf6 100%);
+  border-color: rgba(124,58,237,0.3);
+}
+.portal-card-content .card-title { color: #fff; }
+.portal-card-content .card-desc  { color: rgba(255,255,255,0.55); }
+.portal-card-content .card-arrow { color: rgba(255,255,255,0.35); }
+.card-icon-content { background: rgba(255,255,255,0.15); }
+.tag-content { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+.portal-card-content:hover,
+.portal-card-content.card-pressed {
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+  border-color: rgba(167,139,250,0.4);
+  box-shadow: 0 40px 80px rgba(124,58,237,0.3);
+}
+.portal-card-content:hover .card-arrow,
+.portal-card-content.card-pressed .card-arrow { color: #fff; gap: 12px; }
+@media (hover: none) {
+  .portal-card-content:hover {
+    background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #8b5cf6 100%);
+    border-color: rgba(124,58,237,0.3);
     box-shadow: none;
   }
 }

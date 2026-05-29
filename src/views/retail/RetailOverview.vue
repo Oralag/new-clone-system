@@ -350,7 +350,7 @@ function showOrderDetail(row: any) {
 
 // ── 收银台 ──────────────────────────────────────────────────────────────────
 function openCashRegister() {
-  window.open(router.resolve('/cashregister').href, '_blank')
+  router.push('/cashregister')
 }
 
 // ── 工具 ──────────────────────────────────────────────────────────────────────

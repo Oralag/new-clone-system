@@ -50,14 +50,14 @@
             <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
           </el-table-column>
           <el-table-column label="退货日期" width="110">
-            <template #default="{ row }">{{ fmtDt(row.return_date || row.create_time) }}</template>
+            <template #default="{ row }">{{ fmtDt(row.created_at || row.return_date) }}</template>
           </el-table-column>
           <el-table-column label="退货人" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
           </el-table-column>
           <el-table-column prop="return_amount" label="退货金额" width="120" align="right">
             <template #default="{ row }">
-              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.return_amount || 0).toFixed(2) }}</span>
+              <span style="color:#0071e3;font-weight:500">¥{{ calcRowAmount(row).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="reason" label="退货原因" min-width="140" show-overflow-tooltip />
@@ -142,6 +142,13 @@
                     </el-select>
                     <el-button type="primary" :icon="Plus" @click="quickAddCustomerVisible = true" />
                   </div>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="客户等级">
+                  <el-select v-model="fd.level_id" placeholder="等级（可选）" clearable style="width:100%" :disabled="isReadonly" @change="onLevelChange">
+                    <el-option v-for="lv in levelOptions" :key="lv.id" :label="lv.name" :value="lv.id" />
+                  </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
@@ -303,9 +310,15 @@
                 <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="备注" min-width="110">
+            <el-table-column label="备注" min-width="140">
               <template #default="{ row }">
-                <el-input v-model="row.remark" size="small" placeholder="备注" />
+                <div style="display:flex;gap:4px;align-items:center">
+                  <el-input v-model="row.remark" size="small" placeholder="备注" style="flex:1" />
+                  <el-tooltip v-if="fd.level_id && row.goods_id > 0 && !hasLevelPrice(row.goods_id)"
+                    content="此商品无代理价，点击将当前价格记录为固定代理价" placement="top">
+                    <el-button type="warning" link size="small" @click="saveAsLevelPrice(row)">记录代理价</el-button>
+                  </el-tooltip>
+                </div>
               </template>
             </el-table-column>
             <el-table-column width="45" align="center" fixed="right">
@@ -352,7 +365,7 @@
       </div>
     </div>
 
-    <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
+    <GoodsSelect ref="goodsSelectRef" :customer-id="fd.customer_id" :filter-goods-ids="customerGoodsIds" @confirm="onGoodsConfirm" />
 
     <!-- 手动新增商品弹框 -->
     <el-dialog v-model="manualAddVisible" title="新增商品行" width="420px" append-to-body>
@@ -441,7 +454,7 @@ import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
-import { getSaleReturnList, createSaleReturn, deleteSaleReturn, auditSaleReturn, getSaleOutList } from '@/api/sale'
+import { getSaleReturnList, createSaleReturn, updateSaleReturn, deleteSaleReturn, auditSaleReturn, getSaleOutList } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getSpecList } from '@/api/goods'
 import { getWarehouseList } from '@/api/warehouse'
@@ -451,6 +464,7 @@ import { usePermissionStore } from '@/stores/permission'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
+import { loadLevels, loadLevelMap, getLevelPrice, setLevelPrice, hasCustomLevelPrice, type LevelItem } from '@/utils/customerLevel'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -491,6 +505,30 @@ async function loadCustomers() {
   customerOptions.value = res.data?.rows ?? []
 }
 
+// ── 客户等级 ──────────────────────────────────────────────────────────────────
+const levelOptions = ref<LevelItem[]>(loadLevels())
+const levelMap = loadLevelMap()
+
+// ── 客户历史购买商品过滤 ───────────────────────────────────────────────────────
+const customerGoodsIds = ref<number[] | null>(null)
+
+async function loadCustomerHistoryGoods(customerId: number) {
+  if (!customerId) { customerGoodsIds.value = null; return }
+  try {
+    const res = await getSaleOutList({ customer_id: customerId, status: 1, list_rows: 500 })
+    const orders = res.data?.rows ?? []
+    const ids = new Set<number>()
+    for (const order of orders) {
+      for (const item of parseItems(order.goods_info)) {
+        if (item.goods_id) ids.add(Number(item.goods_id))
+      }
+    }
+    customerGoodsIds.value = ids.size > 0 ? Array.from(ids) : null
+  } catch {
+    customerGoodsIds.value = null
+  }
+}
+
 // ── 仓库选项 ──────────────────────────────────────────────────────────────────
 const warehouseOptions = ref<any[]>([])
 async function loadWarehouses() {
@@ -516,6 +554,7 @@ const defaultFd = () => ({
   order_collected_amount: 0,
   customer_id: null as any,
   customer_name: '',
+  level_id: null as any,
   admin_name: '',
   return_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
   reason: '',
@@ -582,6 +621,41 @@ function removeItem(index: number) {
 function onCustomerChange(id: any) {
   const c = customerOptions.value.find(x => x.id === id)
   fd.customer_name = c?.name || c?.nickname || ''
+  const bound = levelMap[id]
+  if (bound && levelOptions.value.some(l => l.id === bound)) {
+    fd.level_id = bound
+  } else {
+    fd.level_id = null
+  }
+  loadCustomerHistoryGoods(Number(id))
+}
+
+const savedLevelPriceIds = ref<Set<number>>(new Set())
+
+function hasLevelPrice(goodsId: number): boolean {
+  if (savedLevelPriceIds.value.has(goodsId)) return true
+  if (!fd.level_id) return true
+  return getLevelPrice(Number(fd.level_id), goodsId) !== null
+}
+
+function saveAsLevelPrice(row: any) {
+  if (!fd.level_id || !row.goods_id) return
+  setLevelPrice(Number(fd.level_id), row.goods_id, row.price)
+  savedLevelPriceIds.value = new Set([...savedLevelPriceIds.value, row.goods_id])
+  ElMessage.success(`已记录：${row.goods_name} 代理价 ¥${row.price}`)
+}
+
+function onLevelChange() {
+  if (!fd.items.length || !fd.level_id) return
+  for (const row of fd.items) {
+    if (!row.goods_id) continue
+    const lp = getLevelPrice(fd.level_id, row.goods_id)
+    if (lp !== null) {
+      row.price = lp
+      row.price_no_tax = row.tax_rate > 0 ? Number((lp / (1 + row.tax_rate / 100)).toFixed(4)) : lp
+    }
+  }
+  calcTotal()
 }
 
 function onWarehouseChange(id: any) {
@@ -591,6 +665,7 @@ function onWarehouseChange(id: any) {
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  customerGoodsIds.value = null
   isReadonly.value = false
   showForm.value = true
 }
@@ -598,10 +673,23 @@ function openCreate() {
 function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
+  // 若 DB 没存 level_id，从 levelMap 自动补
+  if (!fd.level_id && row.customer_id) {
+    const bound = levelMap.value[row.customer_id]
+    fd.level_id = bound || null
+  }
   calcTotal()
   fd.items.forEach((item: any) => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  if (row.customer_id) loadCustomerHistoryGoods(Number(row.customer_id))
+  else customerGoodsIds.value = null
   isReadonly.value = readonly
   showForm.value = true
+}
+
+function calcRowAmount(row: any): number {
+  if (row.return_amount && Number(row.return_amount) > 0) return Number(row.return_amount)
+  const items = Array.isArray(row.goods_info) ? row.goods_info : (typeof row.goods_info === 'string' ? JSON.parse(row.goods_info || '[]') : [])
+  return items.reduce((s: number, it: any) => s + (Number(it.num) || 0) * (Number(it.price) || 0), 0)
 }
 
 function backToList() {
@@ -619,7 +707,7 @@ async function handleSave() {
   saving.value = true
   try {
     const payload: Record<string, any> = {
-      order_id: fd.order_id,
+      sale_out_order_id: fd.order_id,
       order_sn: fd.order_sn,
       customer_id: fd.customer_id,
       customer_name: fd.customer_name,
@@ -631,10 +719,15 @@ async function handleSave() {
       return_amount: fd.return_amount,
       remark: fd.remark,
       total_amount: fd.total_amount,
+      level_id: fd.level_id || 0,
       goods_info: JSON.stringify(fd.items.filter(i => (i.num || 0) > 0)),
     }
-    if (fd.id) payload.id = fd.id
-    await createSaleReturn(payload)
+    if (fd.id) {
+      payload.id = fd.id
+      await updateSaleReturn(payload)
+    } else {
+      await createSaleReturn(payload)
+    }
     ElMessage.success('保存成功')
     backToList()
   } catch (e: any) {
@@ -706,7 +799,8 @@ const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
-    const priceNoTax = Number(g.sell_price) || 0
+    const basePrice = Number(g.sell_price) || 0
+    const levelPrice = fd.level_id ? (getLevelPrice(fd.level_id, g.id) ?? basePrice) : basePrice
     fd.items.push({
       goods_id: g.id,
       goods_name: g.goods_name,
@@ -714,9 +808,9 @@ function onGoodsConfirm(goods: any[]) {
       spec: g.spec || '',
       unit_name: g.unit_name || '',
       num: 1,
-      price_no_tax: priceNoTax,
+      price_no_tax: Number(levelPrice.toFixed(4)),
       tax_rate: 0,
-      price: Number((priceNoTax * 1.13).toFixed(4)),
+      price: Number(levelPrice.toFixed(4)),
       remark: '',
     })
     fetchGoodsSpecs(g.id)
@@ -859,6 +953,7 @@ function confirmSaleOutSelect() {
   fd.customer_name = order.customer_name || ''
   fd.warehouse_id = order.warehouse_id
   fd.warehouse_name = order.warehouse_name || ''
+  onCustomerChange(order.customer_id)
 
   // 从销售出库单商品明细生成退货行（num默认0，origin_num=出库数量）
   const items = parseItems(order.goods_info)

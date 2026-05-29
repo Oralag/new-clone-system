@@ -158,6 +158,7 @@ import {
   loadLevels, saveLevels, loadLevelPrices, saveLevelPrices,
   type LevelItem
 } from '@/utils/customerLevel'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 
 // ── 等级列表 ──────────────────────────────────────────────────────────────────
 const levels = ref<LevelItem[]>(loadLevels())
@@ -314,15 +315,25 @@ const pickerTableRef = ref()
 const cateOptions = ref<any[]>([])
 let pickerTimer: any
 
+function getGoodsTypeMap(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem('erp_goods_type_map') || '{}') } catch { return {} }
+}
+
 async function loadPickerGoods() {
   pickerLoading.value = true
   try {
+    const keyword = pickerKeyword.value.trim()
     const res = await getGoodsList({
-      keyword: pickerKeyword.value || undefined,
+      keyword: keyword || undefined,
       cate_id: pickerCate.value || undefined,
-      list_rows: 50,
+      list_rows: keyword ? 2000 : 50,
     })
-    pickerGoods.value = res.data?.rows ?? []
+    const typeMap = getGoodsTypeMap()
+    const rows = (res.data?.rows ?? []).map((g: any) => ({
+      ...g,
+      goods_type: g.goods_type ?? typeMap[Number(g.id)] ?? 2,
+    }))
+    pickerGoods.value = keyword ? fuzzyFilterGoods(rows, keyword) : rows
   } finally {
     pickerLoading.value = false
   }

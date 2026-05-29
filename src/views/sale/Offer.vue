@@ -90,7 +90,7 @@
                 <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button v-if="row.status === 1" type="success" link size="small" @click="handleConvertToContract(row)">转销售合同</el-button>
+              <el-button v-if="row.status === 1" type="success" link size="small" @click="handleConvertToContract(row)">转销售订单</el-button>
               <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -235,9 +235,18 @@
                     @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)" />
                 </template>
               </el-table-column>
-              <el-table-column label="单位" width="80">
+              <el-table-column label="单位" width="90">
                 <template #default="{ row }">
-                  <el-input v-model="row.unit_name" placeholder="单位" />
+                  <el-select
+                    v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
+                    v-model="row.unit_name"
+                    size="small"
+                    style="width:100%"
+                  >
+                    <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u" :label="u" :value="u" />
+                  </el-select>
+                  <el-input v-else v-model="row.unit_name" placeholder="单位"
+                    @focus="row.goods_id && fetchGoodsUnits(row.goods_id, row.unit_name)" />
                 </template>
               </el-table-column>
               <el-table-column label="数量" width="110">
@@ -311,7 +320,7 @@ import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getOfferList, createOffer, updateOffer, deleteOffer, auditOffer } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getSpecList } from '@/api/goods'
+import { getSpecList, getUnitConvert } from '@/api/goods'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import StaffSelect from '@/components/StaffSelect.vue'
@@ -338,8 +347,10 @@ function parseRemark(remark: string): string {
 }
 
 const goodsSpecMap = reactive<Record<number, string[]>>({})
-async function fetchGoodsSpecs(goodsId: number) {
-  if (!goodsId || goodsSpecMap[goodsId] !== undefined) return
+async function fetchGoodsSpecs(goodsId: number, goodsSpec?: string) {
+  if (!goodsId) return
+  // 已有数据不重复拉；空数组允许重试（数据可能后来才写入后端）
+  if (goodsSpecMap[goodsId]?.length > 0) return
   goodsSpecMap[goodsId] = []
   try {
     const res = await getSpecList({ goods_id: goodsId, list_rows: 100 })
@@ -349,8 +360,31 @@ async function fetchGoodsSpecs(goodsId: number) {
       const vals = (s.spec_value || s.values || '').split(/[,，]/).map((v: string) => v.trim()).filter(Boolean)
       options.push(...vals)
     }
+    // 降级：从 goods.spec JSON 字段解析（跨设备兼容）
+    if (options.length === 0 && goodsSpec) {
+      try {
+        const parsed = JSON.parse(goodsSpec)
+        if (Array.isArray(parsed.attrs)) {
+          for (const attr of parsed.attrs) {
+            options.push(...(attr.values ?? []))
+          }
+        }
+      } catch {}
+    }
     goodsSpecMap[goodsId] = [...new Set(options)]
-  } catch { /* ignore */ }
+  } catch {}
+}
+
+const goodsUnitMap = reactive<Record<number, string[]>>({})
+async function fetchGoodsUnits(goodsId: number, baseUnit: string) {
+  if (!goodsId || goodsUnitMap[goodsId]?.length > 1) return
+  goodsUnitMap[goodsId] = []
+  try {
+    const res = await getUnitConvert(goodsId)
+    const rows: any[] = res.data?.rows ?? []
+    const units = [baseUnit, ...rows.map((r: any) => r.unit_name).filter(Boolean)]
+    goodsUnitMap[goodsId] = [...new Set(units)]
+  } catch {}
 }
 const searchForm = reactive<any>({ offer_no: '', customer_name: '', status: '' })
 const showForm = ref(false)
@@ -641,7 +675,7 @@ async function handleAudit(row: any, status: number) {
 
 async function handleConvertToContract(row: any) {
   const offerNo = parseOfferNo(row)
-  await ElMessageBox.confirm(`确定将报价单「${offerNo}」转为销售合同？`, '转销售合同', { type: 'info' })
+  await ElMessageBox.confirm(`确定将报价单「${offerNo}」转为销售订单？`, '转销售订单', { type: 'info' })
   let items: any[] = []
   try { items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch {}
   sessionStorage.setItem('sale_contract_draft_from_offer', JSON.stringify({
@@ -672,13 +706,15 @@ function onGoodsConfirm(goods: any[]) {
       goods_id: g.id,
       goods_name: g.goods_name,
       goods_sn: g.goods_sn || '',
-      spec: g.spec || '',
+      spec: '',
       unit_name: g.unit_name || '',
       num: 1,
       price: levelPrice,
       remark: '',
     })
-    fetchGoodsSpecs(g.id)
+    if (g.multi_spec === 1) fetchGoodsSpecs(g.id, g.spec)
+    else goodsSpecMap[g.id] = []  // 规格未开启，清空缓存避免误显示
+    if (g.multi_unit) fetchGoodsUnits(g.id, g.unit_name || '')
   }
   calcTotal()
 }

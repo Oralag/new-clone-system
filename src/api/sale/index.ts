@@ -109,6 +109,7 @@ export const auditSaleOutSilent = (id: number, status: number) => http.post('/st
 
 export const getSaleReturnList = (params?: any) => http.get('/stock/SaleReturnOrder/index', { params })
 export const createSaleReturn = (data: any) => http.post('/stock/SaleReturnOrder/add', data)
+export const updateSaleReturn = (data: any) => http.post('/stock/SaleReturnOrder/edit', data)
 export const deleteSaleReturn = (id: number) => http.post('/stock/SaleReturnOrder/del', { id })
 export const auditSaleReturn = (id: number, status: number) => http.post('/stock/SaleReturnOrder/audit', { id, status })
 

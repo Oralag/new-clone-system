@@ -85,10 +85,10 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button v-if="!isReadonly" :loading="saving" :disabled="saving" @click="handleSave(false)">
+          <el-button v-if="!isReadonly" :loading="saving && !savingAndAuditing" :disabled="saving" @click="handleSave(false)">
             保存
           </el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" :disabled="saving" @click="handleSave(true)">
+          <el-button v-if="!isReadonly" type="primary" :loading="savingAndAuditing" :disabled="saving" @click="handleSave(true)">
             保存并审核
           </el-button>
         </div>
@@ -507,6 +507,7 @@ const defaultFd = () => ({
 const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
+const savingAndAuditing = ref(false)
 
 // 计算汇总
 const totalNoTax = computed(() =>
@@ -607,6 +608,7 @@ async function handleSave(andAudit = false) {
     } catch { return }
   }
   saving.value = true
+  if (andAudit) savingAndAuditing.value = true
   try {
     const payload: Record<string, any> = {
       supplier_id: fd.supplier_id,
@@ -645,6 +647,7 @@ async function handleSave(andAudit = false) {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
     saving.value = false
+    savingAndAuditing.value = false
   }
 }
 

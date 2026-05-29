@@ -19,7 +19,7 @@
           <div class="sum-inner">
             <div class="sum-info">
               <div class="sum-label">{{ card.label }}</div>
-              <div class="sum-value" :style="{ color: card.color }">¥{{ card.value }}</div>
+              <div class="sum-value" :style="{ color: card.color }">{{ card.key === 'pay' ? '-' : '' }}¥{{ card.value }}</div>
               <div class="sum-sub">{{ card.sub }}</div>
             </div>
             <div class="sum-icon" :style="{ background: card.bg, color: card.color }">
@@ -44,12 +44,12 @@
           <div class="inline-list" v-if="fundList.length">
             <div class="inline-item clickable" v-for="f in fundList" :key="f.id" @click.stop="openFundDetail(f)">
               <div class="inline-name">{{ f.name }}</div>
-              <div class="inline-value blue">¥{{ Number(f.display_balance ?? f.balance ?? 0).toFixed(2) }}</div>
+              <div class="inline-value" :class="Number(f.display_balance ?? f.balance ?? 0) < 0 ? 'red' : 'green'">¥{{ Number(f.display_balance ?? f.balance ?? 0).toFixed(2) }}</div>
               <div class="inline-sub">{{ { '1': '银行账户', '2': '现金', '3': '第三方' }[f.type] || '账户' }}</div>
             </div>
             <div class="inline-item total-item">
               <div class="inline-name">合计</div>
-              <div class="inline-value red">¥{{ accountTotal }}</div>
+              <div class="inline-value" :class="Number(accountTotal) < 0 ? 'red' : 'green'">¥{{ accountTotal }}</div>
               <div class="inline-sub">{{ fundList.length }} 个账户</div>
             </div>
           </div>
@@ -175,14 +175,14 @@
             <div class="card-header">
               <el-icon :size="15"><Money /></el-icon>
               <span>预付款</span>
-              <span class="header-total orange">¥{{ supplierPrepayTotal }}</span>
+              <span class="header-total blue">¥{{ supplierPrepayTotal }}</span>
               <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/supplier-prepay')">更多</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="prepayList.filter(r=>r.pay_type==='supplier').length">
             <div class="inline-item clickable" v-for="r in prepayList.filter(r=>r.pay_type==='supplier').slice(0,4)" :key="r.id" @click="router.push('/finance/supplier-prepay')">
               <div class="inline-name">{{ r.supplier_name || '—' }}</div>
-              <div class="inline-value orange">¥{{ Number(r.amount||0).toFixed(2) }}</div>
+              <div class="inline-value blue">¥{{ Number(r.amount||0).toFixed(2) }}</div>
               <div class="inline-sub">供应商预付</div>
             </div>
           </div>
@@ -243,14 +243,14 @@
             <div class="card-header">
               <el-icon :size="15"><DocumentChecked /></el-icon>
               <span>应收账款</span>
-              <span class="header-total orange">¥{{ receivableTotal }}</span>
+              <span class="header-total blue">¥{{ receivableTotal }}</span>
               <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/receivable')">更多</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="receivableList.length">
             <div class="inline-item clickable" v-for="r in receivableList.slice(0,6)" :key="r.id" @click="router.push('/finance/receivable')">
               <div class="inline-name">{{ r.customer_name || '—' }}</div>
-              <div class="inline-value orange">¥{{ Number(r.un_pay_amount ?? (Number(r.total_amount||r.amount||0) - Number(r.paid_amount||0))).toFixed(2) }}</div>
+              <div class="inline-value blue">¥{{ Number(r.un_pay_amount ?? (Number(r.total_amount||r.amount||0) - Number(r.paid_amount||0))).toFixed(2) }}</div>
               <div class="inline-sub">{{ r.order_sn || r.order_no || '' }}</div>
             </div>
           </div>
@@ -672,11 +672,11 @@ function getPurchaseSupplierLabel(row: any): string {
 
 function getPayableUnpaidAmount(r: any): number {
   if (r?.un_pay_amount !== undefined && r?.un_pay_amount !== null && r?.un_pay_amount !== '') {
-    return Math.max(0, Number(r.un_pay_amount || 0))
+    return Number(r.un_pay_amount || 0)
   }
   const orderAmount = Number(r?.order_amount || 0)
   const paidAmount = Number(r?.paid_amount || 0)
-  return Math.max(0, orderAmount - paidAmount)
+  return orderAmount - paidAmount
 }
 
 function openFundDetail(fund: any) {
@@ -737,6 +737,10 @@ function profitItemQty(item: any): number {
 
 function profitItemPrice(item: any): number {
   return profitNum(item?.price, item?.sell_price, item?.sale_price, item?.unit_price, item?.retail_price, item?.amount_price)
+}
+
+function profitItemLineAmount(item: any): number {
+  return profitNum(item?.line_amount)
 }
 
 function profitItemCost(item: any): number {
@@ -820,7 +824,7 @@ const profitTrendData = computed(() => {
     let itemRevenue = 0
     try { for (const g of parseProfitItems(r.goods_info)) {
       const q = profitItemQty(g)
-      itemRevenue += q * profitItemPrice(g)
+      itemRevenue += profitItemLineAmount(g) || (q * profitItemPrice(g))
       costMap[k] += q * getItemUnitCostFromMap(g).unitCost
     }} catch {}
     revenueMap[k] += itemRevenue > 0 ? itemRevenue : Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
@@ -992,7 +996,7 @@ const profitByMonth = computed(() => {
     let itemRevenue = 0
     for (const g of parseProfitItems(r.goods_info)) {
       const q = profitItemQty(g)
-      itemRevenue += q * profitItemPrice(g)
+      itemRevenue += profitItemLineAmount(g) || (q * profitItemPrice(g))
       map[m].cost += q * getItemUnitCostFromMap(g).unitCost
     }
     map[m].revenue += itemRevenue > 0 ? itemRevenue : Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
@@ -1040,7 +1044,7 @@ const summaryCards = computed(() => {
   const expense = Number(payTotal.value)
   const balance = fundTotal.value
   return [
-  { key: 'fund', label: '资金余额', value: balance, sub: `= 收入 ¥${income.toFixed(2)} − 支出 ¥${expense.toFixed(2)}`, color: '#0071e3', bg: 'rgba(0,113,227,0.08)', icon: 'Wallet', route: '/finance/fund-flow' },
+  { key: 'fund', label: '资金余额', value: balance, sub: `= 收入 ¥${income.toFixed(2)} − 支出 ¥${expense.toFixed(2)}`, color: Number(balance) < 0 ? '#dc2626' : '#16a34a', bg: Number(balance) < 0 ? '#fff0f0' : '#e6f7f0', icon: 'Wallet', route: '/finance/fund-flow' },
   { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'income').length} 笔收入`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow?type=income' },
   { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'expense').length} 笔支出`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow?type=expense' },
   { key: 'payable', label: '应付总额', value: payableTotal.value, sub: `${payableList.value.filter((r) => getPayableUnpaidAmount(r) > 0).length} 笔欠款`, color: '#ff4d4f', bg: '#fff1f0', icon: 'DocumentChecked', route: '/finance/payable' },
@@ -1358,14 +1362,16 @@ async function loadAllData() {
       const amt = Number(r.amount || 0)
       if (!amt) continue
       if (isProcureExtraFeePayment(r)) continue
+      // 审核自动生成的付款单是系统预付记录，不计入应付欠款（与 Payable.vue 逻辑一致）
+      if (/审核自动生成/.test(String(r.remark || ''))) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
       let matched = false
-      // 方式2：order_id 直接匹配
+      // 方式1：order_id 直接匹配
       if (Number(r.order_id)) {
         const id = Number(r.order_id); procurePaidById[id] = (procurePaidById[id] || 0) + amt; matched = true
       }
-      // 方式3：备注 "采购单付款 #ID"（单ID直接匹配单据，多ID按供应商维度存储）
+      // 方式2：备注 "采购单付款 #ID"（单ID直接匹配单据，多ID按供应商维度存储）
       const m1all = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
       if (m1all.length === 1) {
         const id = Number(m1all[0][1]); procurePaidById[id] = (procurePaidById[id] || 0) + amt; matched = true
@@ -1373,10 +1379,7 @@ async function loadAllData() {
         if (supplierName) procurePaidBySup[supplierName] = (procurePaidBySup[supplierName] || 0) + amt
         matched = true
       }
-      // 方式4：备注 "采购单XXXXX审核自动生成" 提取单号
-      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
-      if (m2) { const sn = m2[1].trim(); procurePaidBySn[sn] = (procurePaidBySn[sn] || 0) + amt; matched = true }
-      // 方式1：order_sn@@supplier_name 精确匹配（兜底，付款单的 order_sn 可能对应采购单的 order_no）
+      // 方式3：order_sn@@supplier_name 精确匹配（兜底）
       if (!matched && orderSn && supplierName) {
         const k = `${orderSn}@@${supplierName}`
         procurePaidByKey[k] = (procurePaidByKey[k] || 0) + amt
@@ -1395,50 +1398,61 @@ async function loadAllData() {
       const oSn = String(o.order_sn || '').trim()
       const oNo = String(o.order_no || '').trim()
       const supName = String(o.supplier_name || '').trim()
-      const paidAmt = (procurePaidById[o.id] || 0)
-        + (procurePaidBySn[oSn] || procurePaidBySn[oNo] || 0)
-        + (procurePaidByKey[`${oSn}@@${supName}`] || procurePaidByKey[`${oNo}@@${supName}`] || 0)
+      const paidAmt = Number(o.pay_amount || 0)
       const feeNeedPay = getProcureFeeNeedPayAmount(o)
       const feePaid = procureFeePaidById[o.id] || 0
       const feeUnpaid = Math.max(0, feeNeedPay - feePaid)
+      const unpaid = orderAmt - paidAmt
+      if (unpaid <= 0 && feeUnpaid <= 0) continue
       s.order_amount += orderAmt + feeNeedPay
       s.paid_amount += paidAmt + feePaid
-      s.un_pay_amount += Math.max(0, orderAmt - paidAmt) + feeUnpaid
+      s.un_pay_amount += unpaid + feeUnpaid
     }
-    // 多ID付款：按供应商维度补充已付金额
-    for (const s of supplierPayMap.values()) {
-      const extra = procurePaidBySup[String(s.supplier_name || '').trim()] || 0
-      if (extra > 0) {
-        s.paid_amount += extra
-        s.un_pay_amount = Math.max(0, s.un_pay_amount - extra)
+    // 聚合合同附加费用（对方承担、有收款方的）按 supplier_name，计算已付/未付
+    const auditedContracts: any[] = contractRes.data?.rows ?? contractRes.data?.list ?? []
+    const saleFeePaidMap: Record<string, number> = {}
+    for (const r of rawPayList) {
+      const m = String(r.remark || '').match(/销售订单附加费用\s*#(\d+):(.+?)(?:\s|\[|$)/)
+      if (m) {
+        const key = `${Number(m[1])}:${m[2].trim()}`
+        saleFeePaidMap[key] = (saleFeePaidMap[key] || 0) + Number(r.amount || 0)
       }
     }
-    const contracts: any[] = contractRes.data?.rows ?? contractRes.data?.list ?? []
-    const feeMap = new Map<string, { order_amount: number; orders: any[] }>()
-    for (const c of contracts) {
+    const feeMap = new Map<string, { order_amount: number; paid_amount: number; orders: any[] }>()
+    for (const c of auditedContracts) {
       let feeItems: any[] = []
       try {
         const raw = c.fee_items
         if (typeof raw === 'string' && raw && raw !== '[]') feeItems = JSON.parse(raw)
         else if (Array.isArray(raw)) feeItems = raw
       } catch { feeItems = [] }
+      if (!feeItems.length) {
+        try {
+          const fiMatch = String(c.remark || '').match(/\[FI:([^\]]+)\]/)
+          if (fiMatch) feeItems = JSON.parse(decodeURIComponent(atob(fiMatch[1])))
+        } catch { /* ignore */ }
+      }
       for (const f of feeItems) {
-        if (f.bearer !== 'seller') continue
-        const supplierName = String(f.supplier_name || '').trim()
-        if (!supplierName) continue
+        if (f.bearer === 'buyer') continue
         const amt = Number(f.amount || 0)
         if (!amt) continue
-        if (!feeMap.has(supplierName)) feeMap.set(supplierName, { order_amount: 0, orders: [] })
+        const feeName = String(f.name || '费用').trim()
+        const paid = saleFeePaidMap[`${c.id}:${feeName}`] || 0
+        const unpaid = amt - paid
+        if (unpaid <= 0.001) continue
+        const supplierName = String(f.supplier_name || '').trim() || `合同附加-${feeName}`
+        if (!feeMap.has(supplierName)) feeMap.set(supplierName, { order_amount: 0, paid_amount: 0, orders: [] })
         const entry = feeMap.get(supplierName)!
         entry.order_amount += amt
+        entry.paid_amount += paid
         entry.orders.push({
           order_id: c.id,
-          order_no: f.receipt_no || c.order_sn || c.order_no || '',
+          order_no: c.order_sn || c.order_no || '',
           order_amount: amt,
-          paid_amount: 0,
-          un_pay_amount: amt,
-          due_date: f.order_date || fmtDt(c.order_date || c.created_at),
-          source_name: `合同附加-${f.name || '费用'}`,
+          paid_amount: paid,
+          un_pay_amount: unpaid,
+          due_date: fmtDt(c.sign_date || c.order_date || c.created_at),
+          source_name: `合同附加-${feeName}`,
         })
       }
     }
@@ -1449,14 +1463,14 @@ async function loadAllData() {
         contact_name: '',
         contact_mobile: '',
         order_amount: entry.order_amount,
-        paid_amount: 0,
-        un_pay_amount: entry.order_amount,
+        paid_amount: entry.paid_amount,
+        un_pay_amount: entry.order_amount - entry.paid_amount,
         prepay: 0,
         orders: entry.orders,
         __payable_source: 'contract_fee',
         source_name: '合同附加费',
       }))
-      .filter((r) => r.un_pay_amount > 0)
+      .filter((r) => r.un_pay_amount > 0.001)
 
     payableList.value = [
       ...applyProcureReturnsToPayableRows(Array.from(supplierPayMap.values()), procureReturnFinanceList.value),

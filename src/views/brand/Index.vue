@@ -35,6 +35,7 @@
       <img :src="cfg.heroImage" alt="Brand Hero" class="brand-hero-img" referrerpolicy="no-referrer" />
       <div class="brand-hero-overlay"></div>
       <div class="brand-hero-content">
+        <span class="hero-badge">{{ shopStore.shopMode === 'wholesale' ? '批发中心' : '数字游牧 ERP' }}</span>
         <div class="brand-hero-label">
           <span class="brand-hero-line"></span>
           <span>{{ shopStore.shopMode === 'wholesale' ? 'Wholesale Center' : cfg.heroSubtitle }}</span>
@@ -116,6 +117,7 @@
     <section class="brand-hot">
       <div class="brand-hot-inner">
         <div class="brand-hot-header">
+          <span class="section-badge">热销精选</span>
           <h2>本季热销</h2>
           <p>全球游民社区票选出的最受欢迎单品</p>
         </div>
@@ -147,11 +149,20 @@
       </div>
     </section>
 
+    <!-- 主题色彩编辑入口（仅编辑模式显示） -->
+    <div v-if="brandEdit.editMode" class="theme-edit-bar">
+      <button class="theme-edit-btn" @click="openEdit('theme')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="13.5" cy="6.5" r="3.5"/><path d="M7 17c0-2.2 1.6-4 3.5-4h5c1.9 0 3.5 1.8 3.5 4"/><path d="M2 20h20"/></svg>
+        编辑主题色彩
+      </button>
+    </div>
+
     <!-- Newsletter -->
     <section class="brand-newsletter">
       <div class="brand-newsletter-glow"></div>
       <div class="brand-newsletter-inner">
-        <svg class="brand-newsletter-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <svg class="brand-newsletter-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1A1E32" stroke-width="1.5" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <span class="section-badge">加入社区</span>
         <h2>加入游牧社区</h2>
         <p>订阅我们的周报，获取最新的游牧装备资讯、旅行攻略和独家折扣。</p>
         <div v-if="!newsletterDone" class="brand-newsletter-form">
@@ -192,6 +203,32 @@
         <template v-if="editType === 'cat'">
           <div class="bi-field"><label>分类名称</label><input v-model="editData.catName" class="bi-input" /></div>
           <div class="bi-field"><label>分类图片 URL</label><div class="bi-input-row"><input v-model="editData.catImg" class="bi-input" placeholder="https://... 或点击上传" /><button class="bi-upload-btn" @click="upload(v => editData.catImg = v)">上传</button></div><img v-if="editData.catImg" :src="editData.catImg" class="bi-preview" referrerpolicy="no-referrer" /></div>
+        </template>
+        <!-- 主题色彩编辑 -->
+        <template v-if="editType === 'theme'">
+          <div class="theme-editor">
+            <div class="theme-editor-title">主题色彩</div>
+            <div class="theme-row">
+              <span class="theme-label">底色</span>
+              <input type="color" :value="editData.themeCream" @input="(e: Event) => editData.themeCream = (e.target as HTMLInputElement).value" class="theme-color-input" />
+              <span class="theme-hex">{{ editData.themeCream }}</span>
+            </div>
+            <div class="theme-row">
+              <span class="theme-label">主色</span>
+              <input type="color" :value="editData.themeNavy" @input="(e: Event) => editData.themeNavy = (e.target as HTMLInputElement).value" class="theme-color-input" />
+              <span class="theme-hex">{{ editData.themeNavy }}</span>
+            </div>
+            <div class="theme-row">
+              <span class="theme-label">强调色</span>
+              <input type="color" :value="editData.themeOrange" @input="(e: Event) => editData.themeOrange = (e.target as HTMLInputElement).value" class="theme-color-input" />
+              <span class="theme-hex">{{ editData.themeOrange }}</span>
+            </div>
+            <div class="theme-row">
+              <span class="theme-label">点缀色</span>
+              <input type="color" :value="editData.themeBlue" @input="(e: Event) => editData.themeBlue = (e.target as HTMLInputElement).value" class="theme-color-input" />
+              <span class="theme-hex">{{ editData.themeBlue }}</span>
+            </div>
+          </div>
         </template>
       </div>
       <div class="bi-edit-footer">
@@ -234,6 +271,7 @@ const editData = reactive({
   heroImage: '', heroSubtitle: '', heroTitle: '', heroDesc: '',
   storyImage: '', storyText: '',
   catName: '', catImg: '',
+  themeCream: '#EDE6D5', themeNavy: '#1A1E32', themeOrange: '#D14B0A', themeBlue: '#8BBDD6',
 })
 
 function openEdit(type: string, idx?: number) {
@@ -254,6 +292,12 @@ function openEdit(type: string, idx?: number) {
     editTitle.value = `编辑分类 ${idx + 1}`
     editData.catName = cfg.value.categories[idx].name
     editData.catImg = cfg.value.categories[idx].img
+  } else if (type === 'theme') {
+    editTitle.value = '编辑主题色彩'
+    editData.themeCream = cfg.value.theme?.cream || '#EDE6D5'
+    editData.themeNavy = cfg.value.theme?.navy || '#1A1E32'
+    editData.themeOrange = cfg.value.theme?.orange || '#D14B0A'
+    editData.themeBlue = cfg.value.theme?.blue || '#8BBDD6'
   }
   editVisible.value = true
 }
@@ -272,6 +316,15 @@ function saveEdit() {
     const cats = [...cfg.value.categories]
     cats[editCatIdx.value] = { name: editData.catName, img: editData.catImg }
     brandEdit.updateConfig({ categories: cats })
+  } else if (editType.value === 'theme') {
+    brandEdit.updateConfig({
+      theme: {
+        cream: editData.themeCream,
+        navy: editData.themeNavy,
+        orange: editData.themeOrange,
+        blue: editData.themeBlue,
+      },
+    })
   }
   editVisible.value = false
 }
@@ -297,180 +350,378 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 </script>
 
 <style scoped>
-.brand-mode-overlay { position: fixed; inset: 60px 0 0 0; z-index: 200; background: #fff; display: flex; flex-direction: column; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-@media (max-width: 768px) {
-  .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; }
-}
-.brand-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 800px; width: 100%; overflow: hidden; border-radius: 20px; align-self: stretch; }
-.brand-mode-card { padding: 48px; border-radius: 32px; border: 2px solid transparent; cursor: pointer; transition: all 0.4s cubic-bezier(0.23,1,0.32,1); display: flex; flex-direction: column; align-items: center; text-align: center; }
-.brand-mode-retail { background: #f5f5f7; }
-.brand-mode-wholesale { background: #fffbf0; }
-.brand-mode-card:hover { transform: translateY(-8px); box-shadow: 0 40px 80px rgba(0,0,0,0.1); }
-.brand-mode-retail:hover { border-color: #0071e3; }
-.brand-mode-wholesale:hover { border-color: #f59e0b; }
-.brand-mode-icon { width: 96px; height: 96px; border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform 0.4s; }
-.brand-mode-card:hover .brand-mode-icon { transform: rotate(6deg); }
-.retail { background: #0071e3; box-shadow: 0 20px 40px rgba(0,113,227,0.3); }
-.wholesale { background: #f59e0b; box-shadow: 0 20px 40px rgba(245,158,11,0.3); }
-.brand-mode-title { font-size: 28px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.02em; }
-.brand-mode-desc { font-size: 15px; color: rgba(29,29,31,0.5); line-height: 1.6; margin-bottom: 32px; }
-.brand-mode-cta { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
-.retail-cta { color: #0071e3; }
-.wholesale-cta { color: #d97706; }
-@media (max-width: 600px) { .brand-mode-grid { grid-template-columns: 1fr !important; grid-template-rows: auto auto; flex: 1; min-height: 0; width: 100%; } }
-@media (max-width: 768px) {
-  .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px)) 0; padding: 12px; overflow: hidden; display: flex; flex-direction: column; }
-  .brand-mode-grid { grid-template-columns: 1fr !important; gap: 10px; border-radius: 14px; max-width: none; flex: 1; min-height: 0; width: 100%; align-content: center; }
-  .brand-mode-card { aspect-ratio: 1; width: 100%; display: flex; flex-direction: column; justify-content: center; }
-  .brand-mode-card { padding: 16px; border-radius: 14px; flex: 1; min-height: 0; overflow-y: visible; align-items: center; }
-  .brand-mode-card:first-child { border-radius: 14px; }
-  .brand-mode-card:last-child { border-radius: 14px; }
-  .brand-mode-icon { width: 56px; height: 56px; border-radius: 16px; margin-bottom: 10px; }
-  .brand-mode-icon svg { width: 28px; height: 28px; }
-  .brand-mode-title { font-size: 15px; margin-bottom: 4px; }
-  .brand-mode-desc { font-size: 11px; margin-bottom: 10px; }
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700;900&display=swap');
+
+/* ── 设计变量（Two Leaves 同款配色）── */
+:root {
+  --blue:   #8BBDD6;
+  --cream:  #EDE6D5;
+  --orange: #D14B0A;
+  --navy:   #1A1E32;
+  --yellow: #EDBA3A;
+  --serif:  'Noto Serif SC', 'SimSun', serif;
 }
 
-.brand-home { background: #fff; }
-.brand-hero { position: relative; height: 620px; border-radius: 32px; overflow: hidden; margin: 24px; box-shadow: 0 40px 80px rgba(0,0,0,0.15); }
+/* ── 模式选择遮罩 ── */
+.brand-mode-overlay {
+  position: fixed; inset: 60px 0 0 0; z-index: 200;
+  background: var(--cream);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px; box-sizing: border-box;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 768px) {
+  .brand-mode-overlay { inset: calc(44px + env(safe-area-inset-top,0px)) 0 calc(50px + env(safe-area-inset-bottom,0px)) 0; }
+}
+.brand-mode-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 20px; max-width: 760px; width: 100%;
+}
+.brand-mode-card {
+  padding: 48px 40px; border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer; transition: border-color 0.2s, transform 0.2s;
+  display: flex; flex-direction: column; align-items: flex-start; text-align: left;
+}
+.brand-mode-retail   { background: var(--blue); }
+.brand-mode-wholesale{ background: var(--navy); }
+.brand-mode-card:hover { transform: translateY(-3px); }
+.brand-mode-retail:hover   { border-color: var(--orange); }
+.brand-mode-wholesale:hover{ border-color: var(--yellow); }
+.brand-mode-icon {
+  width: 56px; height: 56px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+}
+.retail   { background: var(--navy); }
+.wholesale{ background: var(--orange); }
+.brand-mode-title { font-size: 26px; font-weight: 700; margin-bottom: 10px; color: var(--navy); letter-spacing: -0.02em; }
+.brand-mode-wholesale .brand-mode-title { color: #fff; }
+.brand-mode-desc { font-size: 14px; color: rgba(26,30,50,0.6); line-height: 1.65; margin-bottom: 28px; }
+.brand-mode-wholesale .brand-mode-desc { color: rgba(255,255,255,0.55); }
+.brand-mode-cta { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+.retail-cta    { color: var(--orange); }
+.wholesale-cta { color: var(--yellow); }
+
+@media (max-width: 600px) { .brand-mode-grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) {
+  .brand-mode-overlay { padding: 16px; }
+  .brand-mode-grid { gap: 12px; }
+  .brand-mode-card { padding: 28px 24px; }
+  .brand-mode-icon { width: 44px; height: 44px; margin-bottom: 14px; }
+  .brand-mode-icon svg { width: 24px; height: 24px; }
+  .brand-mode-title { font-size: 18px; margin-bottom: 6px; }
+  .brand-mode-desc  { font-size: 12px; margin-bottom: 16px; }
+}
+
+/* ── 品牌主页 ── */
+.brand-home { background: var(--cream); }
+
+/* Hero */
+.brand-hero {
+  position: relative; height: 600px;
+  overflow: hidden; margin: 0;
+  border-radius: 0;
+}
 .brand-hero-img { width: 100%; height: 100%; object-fit: cover; transition: transform 3s ease-out; }
-.brand-hero:hover .brand-hero-img { transform: scale(1.05); }
-.brand-hero-overlay { position: absolute; inset: 0; background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,113,227,0.1) 60%, transparent 100%); }
-.brand-hero-content { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 60px; }
-.brand-hero-label { display: flex; align-items: center; gap: 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.25em; color: #0071e3; text-transform: uppercase; margin-bottom: 20px; }
-.brand-hero-line { width: 40px; height: 1px; background: rgba(0,113,227,0.6); }
-.brand-hero-title { font-size: clamp(36px, 5vw, 60px); font-weight: 800; color: #fff; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 20px; white-space: pre-line; }
-.text-amber { color: #f59e0b; }
-.text-blue { color: #60a5fa; }
-.brand-hero-desc { font-size: 16px; color: rgba(255,255,255,0.75); max-width: 480px; line-height: 1.7; margin-bottom: 32px; border-left: 2px solid rgba(0,113,227,0.5); padding-left: 20px; }
-.brand-hero-btns { display: flex; gap: 16px; flex-wrap: wrap; }
-.brand-btn-primary { padding: 14px 32px; background: #0071e3; color: #fff; border-radius: 999px; font-size: 14px; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s; box-shadow: 0 10px 30px rgba(0,113,227,0.3); }
-.brand-btn-primary:hover { background: rgba(0,113,227,0.85); transform: scale(1.02); }
-.brand-btn-ghost { padding: 14px 32px; background: rgba(255,255,255,0.12); color: #fff; border-radius: 999px; font-size: 14px; font-weight: 700; border: 1px solid rgba(255,255,255,0.25); cursor: pointer; transition: all 0.3s; backdrop-filter: blur(8px); }
-.brand-btn-ghost:hover { background: rgba(255,255,255,0.2); }
+.brand-hero:hover .brand-hero-img { transform: scale(1.04); }
+.brand-hero-overlay {
+  position: absolute; inset: 0;
+  /* 蓝色调遮罩，保留照片质感，去掉黑色压暗感 */
+  background: linear-gradient(
+    135deg,
+    rgba(139,189,214,0.82) 0%,
+    rgba(139,189,214,0.55) 50%,
+    rgba(139,189,214,0.3) 100%
+  );
+}
+.brand-hero-content {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 72px 80px;
+}
+/* 原来的 hero-label 用 badge 替代，保留 label 结构避免删除 */
+.brand-hero-label { display: none; }
+.brand-hero-label + .brand-hero-title,
+.brand-hero-title { margin-top: 0; }
 
-.brand-philosophy { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; padding: 80px 48px; max-width: 1200px; margin: 0 auto; }
-.brand-philosophy-img-wrap { position: relative; border-radius: 36px; overflow: hidden; aspect-ratio: 1; }
+/* 徽章 stamp */
+.hero-badge, .section-badge {
+  display: inline-block;
+  background: var(--orange); color: #fff;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 2px;
+  margin-bottom: 16px; align-self: flex-start;
+}
+.section-badge { display: block; width: fit-content; margin-bottom: 12px; }
+
+.brand-hero-title {
+  font-family: var(--serif);
+  font-size: clamp(52px, 7vw, 88px);   /* 大 + 更 editorial */
+  font-weight: 900; color: #1A1E32;    /* 深色字，因为底色改成蓝色调了 */
+  line-height: 1.0; letter-spacing: -0.03em;
+  margin-bottom: 20px; white-space: pre-line;
+}
+.text-amber { color: #D14B0A; }        /* 橙色强调 */
+.text-blue  { color: #1A1E32; }
+.brand-hero-desc {
+  font-size: 17px; color: rgba(26,30,50,0.72);
+  max-width: 480px; line-height: 1.75; margin-bottom: 36px;
+  border-left: 3px solid #D14B0A; padding-left: 18px;
+}
+.brand-hero-btns { display: flex; gap: 14px; flex-wrap: wrap; }
+.brand-btn-primary {
+  padding: 14px 32px; background: #1A1E32; color: #fff;
+  border-radius: 3px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em;
+  border: none; cursor: pointer; transition: background 0.2s;
+}
+.brand-btn-primary:hover { background: #2e3456; }
+.brand-btn-ghost {
+  padding: 14px 32px; background: transparent; color: #1A1E32;
+  border-radius: 3px; font-size: 14px; font-weight: 700;
+  border: 2px solid rgba(26,30,50,0.4); cursor: pointer; transition: border-color 0.2s;
+}
+.brand-btn-ghost:hover { border-color: #1A1E32; }
+
+/* Philosophy */
+.brand-philosophy {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 60px; align-items: center;
+  padding: 80px 56px; background: var(--cream);
+}
+.brand-philosophy-img-wrap {
+  position: relative; border-radius: 4px; overflow: hidden; aspect-ratio: 1;
+}
 .brand-philosophy-img { width: 100%; height: 100%; object-fit: cover; }
-.brand-philosophy-badge { position: absolute; top: 24px; left: 24px; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); padding: 16px 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-.brand-badge-num { font-size: 32px; font-weight: 800; color: #0071e3; line-height: 1; }
-.brand-badge-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(29,29,31,0.4); margin-top: 4px; }
-.brand-section-eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: #0071e3; margin-bottom: 16px; }
-.brand-section-title { font-size: clamp(28px,3.5vw,48px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 20px; }
-.brand-section-desc { font-size: 16px; color: rgba(29,29,31,0.45); line-height: 1.7; margin-bottom: 28px; }
-.brand-feature-list { display: flex; flex-direction: column; gap: 20px; }
-.brand-feature-item { display: flex; gap: 16px; align-items: flex-start; }
-.brand-feature-icon { width: 44px; height: 44px; border-radius: 14px; background: rgba(0,113,227,0.08); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.brand-feature-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-.brand-feature-desc { font-size: 13px; color: rgba(29,29,31,0.45); line-height: 1.5; }
+.brand-philosophy-badge {
+  position: absolute; top: 20px; left: 20px;
+  background: var(--orange); padding: 10px 16px; border-radius: 2px;
+}
+.brand-badge-num   { font-size: 28px; font-weight: 900; color: #fff; line-height: 1; font-family: var(--serif); }
+.brand-badge-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.75); margin-top: 3px; }
 
-.brand-categories { padding: 60px 48px; max-width: 1200px; margin: 0 auto; }
+.brand-section-eyebrow {
+  display: inline-block;
+  background: var(--orange); color: #fff;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 2px; margin-bottom: 16px;
+}
+.brand-section-title {
+  font-family: var(--serif);
+  font-size: clamp(26px, 3vw, 42px);
+  font-weight: 900; line-height: 1.15; margin-bottom: 18px;
+  letter-spacing: -0.01em; color: var(--navy);
+}
+.brand-section-desc { font-size: 15px; color: rgba(26,30,50,0.55); line-height: 1.75; margin-bottom: 28px; }
+.brand-feature-list  { display: flex; flex-direction: column; gap: 0; }
+.brand-feature-item  {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 16px 0; border-bottom: 1px solid rgba(26,30,50,0.1);
+}
+.brand-feature-item:last-child { border-bottom: none; }
+/* 隐藏原来的 SVG 图标盒子，用 CSS 点替代 */
+.brand-feature-icon  {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #D14B0A; flex-shrink: 0; margin-top: 7px;
+  /* 隐藏内部 SVG */
+  overflow: hidden; font-size: 0;
+}
+.brand-feature-icon svg { display: none; }
+.brand-feature-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #1A1E32; }
+.brand-feature-desc  { font-size: 14px; color: rgba(26,30,50,0.52); line-height: 1.6; }
+
+/* Categories */
+.brand-categories { padding: 72px 56px; background: var(--blue); }
 .brand-cat-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
-.brand-cat-all { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: rgba(29,29,31,0.4); background: none; border: none; cursor: pointer; transition: color 0.2s; }
-.brand-cat-all:hover { color: #0071e3; }
-.brand-cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
-.brand-cat-card { position: relative; height: 360px; border-radius: 28px; overflow: hidden; cursor: pointer; }
+.brand-cat-header .brand-section-eyebrow { background: var(--navy); }
+.brand-cat-header .brand-section-title { margin-bottom: 0; color: var(--navy); }
+.brand-cat-all {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--navy);
+  background: none; border: none; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
+}
+.brand-cat-all:hover { opacity: 1; }
+.brand-cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.brand-cat-card {
+  position: relative; height: 340px;
+  border-radius: 4px; overflow: hidden; cursor: pointer;
+}
 .brand-cat-img { width: 100%; height: 100%; object-fit: cover; transition: transform 1s ease; }
-.brand-cat-card:hover .brand-cat-img { transform: scale(1.1); }
-.brand-cat-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.2); transition: background 0.3s; }
-.brand-cat-card:hover .brand-cat-overlay { background: rgba(0,0,0,0.4); }
-.brand-cat-info { position: absolute; bottom: 24px; left: 24px; color: #fff; }
-.brand-cat-info h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.brand-cat-card:hover .brand-cat-img { transform: scale(1.07); }
+.brand-cat-overlay { position: absolute; inset: 0; background: rgba(26,30,50,0.18); transition: background 0.3s; }
+.brand-cat-card:hover .brand-cat-overlay { background: rgba(26,30,50,0.38); }
+.brand-cat-info { position: absolute; bottom: 20px; left: 20px; color: #fff; }
+.brand-cat-info h3 { font-size: 18px; font-weight: 700; }
 
-.brand-hot { background: #f5f5f7; padding: 80px 0; }
-.brand-hot-inner { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
-.brand-hot-header { text-align: center; margin-bottom: 48px; }
-.brand-hot-header h2 { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 8px; }
-.brand-hot-header p { font-size: 15px; color: rgba(29,29,31,0.45); }
-.brand-product-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
-.brand-product-card { background: #fff; border-radius: 24px; overflow: hidden; cursor: pointer; transition: all 0.4s cubic-bezier(0.23,1,0.32,1); border: 1px solid rgba(0,0,0,0.05); }
-.brand-product-card:hover { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(0,0,0,0.1); }
-.brand-product-img-wrap { aspect-ratio: 1/1; overflow: hidden; background: #f5f5f7; }
-.brand-product-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.8s ease; }
-.brand-product-card:hover .brand-product-img { transform: scale(1.08); }
-.brand-product-info { padding: 16px; }
-.brand-product-name { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-.brand-product-price { font-size: 16px; font-weight: 800; color: #0071e3; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-.brand-product-moq { font-size: 10px; font-weight: 600; color: #d97706; background: rgba(245,158,11,0.1); padding: 2px 7px; border-radius: 999px; }
+/* Hot products */
+.brand-hot { background: var(--cream); padding: 72px 0; }
+.brand-hot-inner { max-width: 1200px; margin: 0 auto; padding: 0 56px; }
+.brand-hot-header { margin-bottom: 40px; }
+.brand-hot-header h2 {
+  font-family: var(--serif);
+  font-size: 36px; font-weight: 900;
+  letter-spacing: -0.02em; margin-bottom: 6px;
+  margin-top: 0; color: var(--navy);
+}
+.brand-hot-header p { font-size: 14px; color: rgba(26,30,50,0.5); }
+.brand-product-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+.brand-product-card {
+  background: var(--blue); border-radius: 4px;
+  overflow: hidden; cursor: pointer;
+  transition: transform 0.2s; border: none;
+}
+.brand-product-card:hover { transform: translateY(-4px); }
+.brand-product-img-wrap { aspect-ratio: 1; overflow: hidden; background: rgba(255,255,255,0.3); }
+.brand-product-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.6s ease; }
+.brand-product-card:hover .brand-product-img { transform: scale(1.06); }
+.brand-product-info { padding: 14px 16px 16px; background: var(--cream); }
+.brand-product-name { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--navy); }
+.brand-product-price {
+  font-size: 16px; font-weight: 800; color: var(--orange);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+}
+.brand-product-moq {
+  font-size: 10px; font-weight: 600; color: var(--navy);
+  background: var(--yellow); padding: 2px 7px; border-radius: 2px;
+}
 .brand-product-rating { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
-.brand-product-rating span { font-size: 11px; font-weight: 600; color: rgba(29,29,31,0.4); }
-.brand-add-btn { width: 100%; padding: 10px; border-radius: 12px; background: #1d1d1f; color: #fff; font-size: 12px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.2s; }
-.brand-add-btn:hover { background: #0071e3; }
+.brand-product-rating span { font-size: 11px; font-weight: 600; color: rgba(26,30,50,0.4); }
+.brand-add-btn {
+  width: 100%; padding: 10px; border-radius: 3px;
+  background: var(--navy); color: #fff;
+  font-size: 12px; font-weight: 700; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background 0.2s;
+}
+.brand-add-btn:hover { background: var(--orange); }
 
-.brand-newsletter { background: #1d1d1f; padding: 80px 48px; text-align: center; position: relative; overflow: hidden; margin: 40px 48px; border-radius: 40px; }
-.brand-newsletter-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 500px; height: 500px; background: #0071e3; border-radius: 50%; opacity: 0.08; filter: blur(80px); pointer-events: none; }
-.brand-newsletter-inner { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; }
-.brand-newsletter-icon { margin: 0 auto 24px; display: block; }
-.brand-newsletter-inner h2 { font-size: 36px; font-weight: 800; color: #fff; letter-spacing: -0.03em; margin-bottom: 12px; }
-.brand-newsletter-inner p { font-size: 15px; color: rgba(255,255,255,0.4); line-height: 1.7; margin-bottom: 32px; }
-.brand-newsletter-form { display: flex; gap: 12px; }
-.brand-newsletter-input { flex: 1; padding: 14px 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; color: #fff; font-size: 14px; outline: none; }
-.brand-newsletter-input::placeholder { color: rgba(255,255,255,0.35); }
-.brand-newsletter-input:focus { border-color: #0071e3; }
-.brand-newsletter-thanks { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.9); margin-top: 8px; }
+/* Newsletter */
+.brand-newsletter {
+  background: var(--blue); padding: 80px 56px;
+  text-align: center; position: relative; overflow: hidden;
+  margin: 0; border-radius: 0;
+}
+.brand-newsletter-glow { display: none; }
+.brand-newsletter-inner { position: relative; z-index: 1; max-width: 540px; margin: 0 auto; }
+.brand-newsletter-icon { margin: 0 auto 20px; display: block; }
+.brand-newsletter-icon svg { stroke: var(--navy) !important; }
+.brand-newsletter-inner h2 {
+  font-family: var(--serif);
+  font-size: 34px; font-weight: 900; color: var(--navy);
+  letter-spacing: -0.02em; margin-bottom: 10px;
+}
+.brand-newsletter-inner > p:not(.brand-newsletter-thanks) {
+  font-size: 15px; color: rgba(26,30,50,0.6); line-height: 1.7; margin-bottom: 28px;
+}
+.brand-newsletter-form { display: flex; gap: 10px; }
+.brand-newsletter-input {
+  flex: 1; padding: 13px 18px;
+  background: rgba(255,255,255,0.55);
+  border: 1.5px solid rgba(26,30,50,0.2);
+  border-radius: 3px; color: var(--navy);
+  font-size: 14px; outline: none;
+}
+.brand-newsletter-input::placeholder { color: rgba(26,30,50,0.4); }
+.brand-newsletter-input:focus { border-color: var(--orange); }
+.brand-newsletter-inner .brand-btn-primary { flex-shrink: 0; }
+.brand-newsletter-thanks {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; font-size: 15px; font-weight: 600; color: var(--navy); margin-top: 8px;
+}
 
-/* 编辑弹框 */
-.bi-edit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.bi-edit-dialog { background: #fff; border-radius: 24px; width: 100%; max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 40px 80px rgba(0,0,0,0.2); }
-.bi-edit-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid rgba(0,0,0,0.06); }
-.bi-edit-header h3 { font-size: 16px; font-weight: 800; }
-.bi-edit-close { width: 32px; height: 32px; border-radius: 8px; background: #f5f5f7; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: rgba(29,29,31,0.5); }
+/* 编辑弹框（逻辑不变，视觉微调）*/
+.bi-edit-overlay { position: fixed; inset: 0; background: rgba(26,30,50,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.bi-edit-dialog { background: var(--cream); border-radius: 6px; width: 100%; max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(26,30,50,0.2); }
+.bi-edit-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid rgba(26,30,50,0.1); }
+.bi-edit-header h3 { font-size: 16px; font-weight: 700; color: var(--navy); }
+.bi-edit-close { width: 32px; height: 32px; border-radius: 4px; background: rgba(26,30,50,0.08); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--navy); }
 .bi-edit-body { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
 .bi-field { display: flex; flex-direction: column; gap: 6px; }
-.bi-field label { font-size: 12px; font-weight: 700; color: rgba(29,29,31,0.6); }
-.bi-input { padding: 9px 12px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px; font-size: 13px; outline: none; transition: border-color 0.2s; flex: 1; }
-.bi-input:focus { border-color: #7c3aed; }
+.bi-field label { font-size: 12px; font-weight: 700; color: rgba(26,30,50,0.55); }
+.bi-input { padding: 9px 12px; border: 1.5px solid rgba(26,30,50,0.15); border-radius: 4px; font-size: 13px; outline: none; transition: border-color 0.2s; flex: 1; background: #fff; }
+.bi-input:focus { border-color: var(--orange); }
 .bi-input-row { display: flex; gap: 8px; align-items: center; }
-.bi-upload-btn { padding: 9px 14px; background: #f5f5f7; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
-.bi-upload-btn:hover { background: #e8e8ed; }
-.bi-textarea { padding: 9px 12px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px; font-size: 13px; outline: none; min-height: 80px; resize: vertical; }
-.bi-textarea:focus { border-color: #7c3aed; }
-.bi-preview { width: 100%; max-height: 120px; object-fit: cover; border-radius: 10px; margin-top: 4px; }
-.bi-edit-footer { display: flex; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid rgba(0,0,0,0.06); }
-.bi-cancel { flex: 1; padding: 12px; border-radius: 12px; background: #f5f5f7; color: rgba(29,29,31,0.6); font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
-.bi-save { flex: 2; padding: 12px; border-radius: 12px; background: #7c3aed; color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
-.bi-save:hover { background: #6d28d9; }
+.bi-upload-btn { padding: 9px 14px; background: rgba(26,30,50,0.07); border: 1.5px solid rgba(26,30,50,0.15); border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
+.bi-upload-btn:hover { background: rgba(26,30,50,0.12); }
+.bi-textarea { padding: 9px 12px; border: 1.5px solid rgba(26,30,50,0.15); border-radius: 4px; font-size: 13px; outline: none; min-height: 80px; resize: vertical; background: #fff; }
+.bi-textarea:focus { border-color: var(--orange); }
+.bi-preview { width: 100%; max-height: 120px; object-fit: cover; border-radius: 4px; margin-top: 4px; }
+.bi-edit-footer { display: flex; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid rgba(26,30,50,0.1); }
+.bi-cancel { flex: 1; padding: 12px; border-radius: 4px; background: rgba(26,30,50,0.08); color: var(--navy); font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
+.bi-save { flex: 2; padding: 12px; border-radius: 4px; background: var(--orange); color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
+.bi-save:hover { background: #b83e08; }
 
+/* 编辑触发按钮 */
+.edit-trigger {
+  position: absolute; top: 12px; right: 12px;
+  width: 30px; height: 30px; border-radius: 3px;
+  background: rgba(26,30,50,0.55); border: none;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; cursor: pointer; z-index: 10;
+  opacity: 0; transition: opacity 0.2s;
+}
+.editable-block:hover .edit-trigger { opacity: 1; }
+
+/* 响应式 */
 @media (max-width: 900px) {
-  .brand-philosophy { grid-template-columns: 1fr; padding: 48px 24px; }
+  .brand-philosophy { grid-template-columns: 1fr; padding: 48px 28px; }
   .brand-cat-grid { grid-template-columns: 1fr 1fr; }
   .brand-product-grid { grid-template-columns: 1fr 1fr; }
-  .brand-categories, .brand-hot-inner { padding: 40px 24px; }
-  .brand-hero { margin: 12px; height: 480px; }
-  .brand-newsletter { margin: 24px; padding: 48px 24px; }
+  .brand-categories { padding: 48px 28px; }
+  .brand-hot-inner { padding: 0 28px; }
+  .brand-hero { height: 480px; }
 }
 
 @media (max-width: 768px) {
-  .brand-hero { height: auto; min-height: 400px; padding: 40px 20px; }
-  .brand-hero-inner { padding: 0; }
+  .brand-hero { height: auto; min-height: 380px; }
+  .brand-hero-content { padding: 40px 28px; }
   .brand-hero-title { font-size: 28px; }
-  .brand-hero-subtitle { font-size: 15px; }
   .brand-hero-desc { font-size: 14px; }
-  .brand-hero-actions { flex-direction: column; gap: 10px; }
-  .brand-hero-btn { width: 100%; justify-content: center; }
-  
+  .brand-hero-btns { flex-direction: column; gap: 10px; }
   .brand-cat-grid { grid-template-columns: 1fr; }
   .brand-product-grid { grid-template-columns: 1fr 1fr; }
-  .brand-mode-grid { grid-template-columns: 1fr !important; flex: 1; min-height: 0; width: 100%; align-content: center; }
-  
-  .brand-philosophy { padding: 32px 16px; }
-  .bp-card { padding: 24px; }
-  .bp-title { font-size: 20px; }
-  
-  .brand-categories, .brand-hot-inner { padding: 32px 16px; }
-  .bc-header { flex-direction: column; gap: 12px; }
-  .bc-title { font-size: 22px; }
-  
-  .brand-newsletter { margin: 16px; padding: 32px 20px; }
-  .bn-title { font-size: 22px; }
-  .bn-form { flex-direction: column; }
-  .bn-input { border-radius: 12px; }
-  .bn-btn { border-radius: 12px; padding: 14px; }
+  .brand-categories { padding: 40px 20px; }
+  .brand-hot-inner { padding: 0 20px; }
+  .brand-hot { padding: 48px 0; }
+  .brand-newsletter { padding: 56px 24px; }
+  .brand-newsletter-form { flex-direction: column; }
 }
 
 @media (max-width: 480px) {
   .brand-hero-title { font-size: 24px; }
-  .brand-hero-subtitle { font-size: 14px; }
-  .bc-title, .bp-title, .bn-title { font-size: 20px; }
+  .brand-section-title { font-size: 22px; }
+  .brand-hot-header h2 { font-size: 26px; }
 }
+
+/* 主题色彩编辑 */
+.theme-edit-bar {
+  display: flex; justify-content: center;
+  padding: 12px 56px; background: var(--cream);
+  border-top: 1px solid rgba(26,30,50,0.08);
+}
+.theme-edit-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 18px; border-radius: 4px;
+  background: rgba(26,30,50,0.07); border: 1.5px solid rgba(26,30,50,0.15);
+  font-size: 12px; font-weight: 700; color: var(--navy);
+  cursor: pointer; transition: background 0.2s;
+}
+.theme-edit-btn:hover { background: rgba(26,30,50,0.12); }
+
+.theme-editor {
+  background: var(--cream, #EDE6D5);
+  border: 1px solid rgba(26,30,50,0.1);
+  border-radius: 8px; padding: 20px;
+}
+.theme-editor-title {
+  font-size: 12px; font-weight: 700; color: var(--navy, #1A1E32);
+  margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.1em;
+}
+.theme-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.theme-row:last-child { margin-bottom: 0; }
+.theme-label { font-size: 13px; color: rgba(26,30,50,0.6); width: 60px; flex-shrink: 0; }
+.theme-color-input { width: 40px; height: 32px; border: none; border-radius: 4px; cursor: pointer; padding: 2px; }
+.theme-hex { font-size: 12px; font-family: monospace; color: rgba(26,30,50,0.5); }
 </style>

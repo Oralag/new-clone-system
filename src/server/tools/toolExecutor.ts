@@ -177,7 +177,7 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         const outTotal = outRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
         const contractRows = contractRes?.data?.rows || []
         const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售合同 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ id: r.id, 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}。合同明细：${JSON.stringify(contractRows.slice(0, 20).map((r: any) => ({ id: r.id, 合同号: r.order_sn, 客户: r.customer_name, 金额: r.total_amount, 状态: r.status, 日期: String(r.sign_date || r.order_date || r.create_time || '').slice(0, 10) })))}`
+        result = `出货单 ${outRows.length} 条合计 ¥${outTotal.toFixed(2)}，销售订单 ${contractRows.length} 份合计 ¥${contractTotal.toFixed(2)}。出货明细：${JSON.stringify(outRows.slice(0, 10).map((r: any) => ({ id: r.id, 客户: r.customer_name, 金额: r.total_amount, 日期: String(r.out_date || r.created_at || '').slice(0, 10) })))}。合同明细：${JSON.stringify(contractRows.slice(0, 20).map((r: any) => ({ id: r.id, 合同号: r.order_sn, 客户: r.customer_name, 金额: r.total_amount, 状态: r.status, 日期: String(r.sign_date || r.order_date || r.create_time || '').slice(0, 10) })))}`
         break
       }
       case 'query_purchases': {
@@ -594,15 +594,15 @@ export async function executeTool(name: string, input: Record<string, any>, toke
                 receipt_date: today,
                 remark: `合同自动收款 - ${orderSn}`,
               }, token)
-              result = `销售合同创建并审核成功！单号: ${orderSn}，已记录收款 ¥${receiveAmount.toFixed(2)}`
+              result = `销售订单创建并审核成功！单号: ${orderSn}，已记录收款 ¥${receiveAmount.toFixed(2)}`
             } catch {
-              result = `销售合同创建并审核成功！单号: ${orderSn}（收款单创建失败，请手动补录）`
+              result = `销售订单创建并审核成功！单号: ${orderSn}（收款单创建失败，请手动补录）`
             }
           } else {
-            result = `销售合同创建并审核成功！单号: ${orderSn}`
+            result = `销售订单创建并审核成功！单号: ${orderSn}`
           }
         } else {
-          result = `销售合同创建成功！单号: ${orderSn}`
+          result = `销售订单创建成功！单号: ${orderSn}`
         }
         break
       }
@@ -902,7 +902,7 @@ export async function executeTool(name: string, input: Record<string, any>, toke
           } catch { /* 收款单删除失败不阻塞合同删除 */ }
         }
         const res = await erpPost('/shop/ContractOrder/del', { id: input.id }, token)
-        result = res?.code === 1 ? `销售合同已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        result = res?.code === 1 ? `销售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'delete_customer': {

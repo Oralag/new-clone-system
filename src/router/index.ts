@@ -20,13 +20,13 @@ function isMobileDevice(): boolean {
 router.beforeEach((to, _from, next) => {
   document.title = `${to.meta?.title || '页面'} - 数字游牧ERP`
 
-  // 移动端首页重定向：只对根路径和 portal 做跳转
+  // 移动端：根路径 / portal → 模块选择页（第一落地页）
   if (isMobileDevice() && (to.path === '/' || to.path === '/portal')) {
-    return next({ path: '/mobile/dashboard' })
+    return next({ path: '/mobile/modules' })
   }
-  // 移动端禁止进入旧 PC 首页链路，统一到新手机首页
+  // 移动端禁止进入旧 PC 首页链路，统一到模块选择页
   if (isMobileDevice() && to.path === '/dashboard' && String(to.query?.legacy || '') !== '1') {
-    return next({ path: '/mobile/dashboard' })
+    return next({ path: '/mobile/modules' })
   }
   if (isMobileDevice() && to.path === '/dashboard/today-sales' && String(to.query?.legacy || '') !== '1') {
     return next({ path: '/mobile/sale/today' })

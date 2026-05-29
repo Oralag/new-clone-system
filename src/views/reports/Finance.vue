@@ -241,7 +241,7 @@
         <!-- 说明 -->
         <div class="pl-note">
           <el-icon><InfoFilled /></el-icon>
-          收入来源：销售合同 + 零售订单；成本优先取库存移动均价，无均价时取商品采购价；净利润 = 毛利润 − 费用 − 我方运费 − 单据支出（采购+销售）
+          收入来源：销售订单 + 零售订单；成本优先取库存移动均价，无均价时取商品采购价；净利润 = 毛利润 − 费用 − 我方运费 − 单据支出（采购+销售）
         </div>
       </el-card>
     </template>
@@ -310,6 +310,10 @@ function itemQty(item: any): number {
 
 function itemPrice(item: any): number {
   return toNum(item?.price, item?.sell_price, item?.sale_price, item?.unit_price, item?.retail_price, item?.amount_price)
+}
+
+function itemLineAmount(item: any): number {
+  return toNum(item?.line_amount)
 }
 
 function itemCost(item: any): number {
@@ -443,7 +447,7 @@ const monthRows = computed(() => {
     let itemRevenue = 0
     for (const g of parseItems(r.goods_info)) {
       const q = itemQty(g)
-      itemRevenue += q * itemPrice(g)
+      itemRevenue += itemLineAmount(g) || (q * itemPrice(g))
       map[m].cost += q * getItemUnitCost(g).unitCost
     }
     map[m].revenue += itemRevenue > 0 ? itemRevenue : Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
@@ -493,7 +497,7 @@ const orderRows = computed(() => {
     let sale_amount = 0, cost_amount = 0
     for (const g of parseItems(r.goods_info)) {
       const q = itemQty(g)
-      sale_amount += q * itemPrice(g)
+      sale_amount += itemLineAmount(g) || (q * itemPrice(g))
       cost_amount += q * getItemUnitCost(g).unitCost
     }
     if (sale_amount <= 0) {
@@ -529,7 +533,10 @@ const goodsRows = computed(() => {
         const { unitCost, costSource } = getItemUnitCost(g)
         if (!map[key]) map[key] = { goods_name: goodsName, goods_id: goodsId, num: 0, sale_amount: 0, unit_cost: unitCost, cost_source: costSource, source }
         const qty = itemQty(g)
-        const price = rawTotal > 0 ? itemPrice(g) * discountRatio : (totalQty > 0 ? fallbackAmount / totalQty : 0)
+        const lineAmount = itemLineAmount(g)
+        const price = lineAmount > 0
+          ? lineAmount / Math.max(qty, 1)
+          : (rawTotal > 0 ? itemPrice(g) * discountRatio : (totalQty > 0 ? fallbackAmount / totalQty : 0))
         map[key].num += qty
         map[key].sale_amount += qty * price
       }
@@ -568,7 +575,7 @@ const customerRows = computed(() => {
     let itemRevenue = 0
     for (const g of parseItems(r.goods_info)) {
       const q = itemQty(g)
-      itemRevenue += q * itemPrice(g)
+      itemRevenue += itemLineAmount(g) || (q * itemPrice(g))
       map[name].cost_amount += q * getItemUnitCost(g).unitCost
     }
     map[name].sale_amount += itemRevenue > 0 ? itemRevenue : Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)

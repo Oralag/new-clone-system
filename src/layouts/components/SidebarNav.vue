@@ -34,7 +34,7 @@ const currentMenu = computed(() =>
 
 function navigate(path: string) {
   if (path === '/retail/cashregister') {
-    window.open('/#/cashregister', '_blank')
+    router.push('/cashregister')
     return
   }
   router.push(path)

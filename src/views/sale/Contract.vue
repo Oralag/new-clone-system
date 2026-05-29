@@ -221,6 +221,24 @@
               </template>
             </template>
           </el-table-column>
+          <el-table-column label="附加费用" width="220" align="right">
+            <template #default="{ row }">
+              <template v-if="!row._isGroup">
+                <template v-if="getContractFeeItems(row).length > 0">
+                  <div v-for="(fee, idx) in getContractFeeItems(row)" :key="idx" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;line-height:1.6">
+                    <span style="font-size:11px;color:rgba(29,29,31,0.5)">{{ fee.name }}</span>
+                    <span style="color:#8b5cf6;font-weight:600">¥{{ Number(fee.amount).toFixed(2) }}</span>
+                    <el-tag :type="getFeeItemPayStatus(row, idx).type" size="small">{{ getFeeItemPayStatus(row, idx).label }}</el-tag>
+                    <el-button v-if="getFeeItemPayStatus(row, idx).label === '待付'" type="warning" link size="small" style="font-size:11px;padding:0" @click="openFeePayDialog(row, idx)">付款</el-button>
+                  </div>
+                </template>
+                <span v-else style="color:rgba(29,29,31,0.2)">—</span>
+                <div v-if="row.status === 1" style="margin-top:2px;text-align:right">
+                  <el-button type="primary" link size="small" style="font-size:11px;padding:0" @click="openFeeManageDialog(row)">{{ getContractFeeItems(row).length > 0 ? '管理费用' : '+ 补充费用' }}</el-button>
+                </div>
+              </template>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="300" fixed="right">
             <template #default="{ row }">
               <template v-if="row._isGroup">
@@ -793,7 +811,7 @@
           <div v-if="costDetailVisible" class="cost-detail-panel">
             <div class="cost-detail-head">
               <span>商品成本明细</span>
-              <small>优先取仓库平均成本，未找到时使用商品档案成本价</small>
+              <small>优先取仓库平均成本，未找到时使用商品档案成本价或BOM核算成本</small>
             </div>
             <el-table :data="costDetailRows" size="small" border style="width:100%">
               <el-table-column prop="goods_name" label="商品名称" min-width="180" show-overflow-tooltip />
@@ -813,7 +831,7 @@
               <el-table-column prop="warehouse_name" label="仓库" width="120" show-overflow-tooltip />
               <el-table-column prop="cost_source" label="来源" width="120">
                 <template #default="{ row }">
-                  <el-tag size="small" :type="row.cost_source === '仓库平均成本' ? 'success' : row.cost_source === '商品档案成本价' ? 'info' : 'warning'">
+                  <el-tag size="small" :type="row.cost_source === '仓库平均成本' ? 'success' : row.cost_source === '商品档案成本价' ? 'info' : row.cost_source === 'BOM核算' ? 'primary' : 'warning'">
                     {{ row.cost_source }}
                   </el-tag>
                 </template>
@@ -953,6 +971,41 @@
       </template>
     </el-dialog>
 
+    <!-- 附加费用管理弹窗（列表已审核后补充/编辑费用） -->
+    <el-dialog v-model="feeManageVisible" title="管理附加费用" width="620px" append-to-body>
+      <div style="font-size:13px;color:rgba(29,29,31,0.5);margin-bottom:12px">
+        {{ feeManageRow?.customer_name }} · {{ getContractSn(feeManageRow || {}) }}
+      </div>
+      <div v-for="(fee, idx) in feeManageItems" :key="idx" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <el-select v-model="fee.name" size="small" style="width:130px" filterable allow-create default-first-option placeholder="支出类型">
+          <el-option label="快递/物流" value="快递/物流" />
+          <el-option label="包装支出" value="包装支出" />
+          <el-option label="推广费/线上" value="推广费/线上" />
+          <el-option label="路费/收费站" value="路费/收费站" />
+          <el-option label="劳务费" value="劳务费" />
+          <el-option label="其他支出" value="其他支出" />
+        </el-select>
+        <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:110px" placeholder="金额" />
+        <el-select v-model="fee.bearer" size="small" style="width:100px">
+          <el-option label="我方承担" value="buyer" />
+          <el-option label="对方承担" value="seller" />
+        </el-select>
+        <el-input v-model="fee.supplier_name" size="small" style="width:120px" placeholder="收款单位" />
+        <el-tag v-if="feeManageRow && getFeeItemPayStatus({ ...feeManageRow, fee_items: feeManageItems }, idx).label !== '—'"
+          :type="getFeeItemPayStatus({ ...feeManageRow, fee_items: feeManageItems }, idx).type" size="small">
+          {{ getFeeItemPayStatus({ ...feeManageRow, fee_items: feeManageItems }, idx).label }}
+        </el-tag>
+        <el-button type="danger" link size="small" :icon="Delete" @click="feeManageItems.splice(idx, 1)" />
+      </div>
+      <el-button type="primary" link size="small" :icon="Plus" @click="feeManageItems.push({ name: '快递/物流', amount: 0, bearer: 'buyer', supplier_name: '' })">
+        添加费用项
+      </el-button>
+      <template #footer>
+        <el-button @click="feeManageVisible = false">取消</el-button>
+        <el-button type="primary" :loading="feeManageSaving" @click="submitFeeManage">保存</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 收款弹窗 -->
     <el-dialog v-model="collectDialogVisible" title="收款" width="400px" append-to-body>
       <el-form :model="collectForm" label-width="90px">
@@ -1067,7 +1120,7 @@ import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList, createSaleOut, auditSaleOut, deleteSaleOut } from '@/api/sale'
 import { getUnitConvert } from '@/api/goods'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getSpecList, getGoodsList } from '@/api/goods'
+import { getSpecList, getGoodsList, getBomList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import { getFundList, createCollectReceipt, getCollectReceiptList, getPayReceiptList, createPayReceipt, deletePayReceipt, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
 import http from '@/api/http'
@@ -1284,7 +1337,7 @@ const savedLevelPriceIds = ref<Set<number>>(new Set())
 function hasLevelPrice(goodsId: number): boolean {
   if (savedLevelPriceIds.value.has(goodsId)) return true
   if (!fd.level_id) return true
-  return hasCustomLevelPrice(Number(fd.level_id), goodsId)
+  return getLevelPrice(Number(fd.level_id), goodsId) !== null
 }
 
 function saveAsLevelPrice(row: any) {
@@ -1513,7 +1566,10 @@ const filteredContractApi = async (params: any) => {
       sign_date: maxDate,
     }
   }).filter(Boolean) as any[]
-  const allWithGroups = [...groupRows, ...filtered]
+  const allWithGroups = [...groupRows, ...filtered].sort((a: any, b: any) => {
+    const da = getContractRowDate(a), db = getContractRowDate(b)
+    return db.localeCompare(da) || Number(b.id || 0) - Number(a.id || 0)
+  })
   const page = Number(reqPage) || 1
   // 有筛选条件时不分页，直接显示全部
   const hasFilter = !!(searchForm.contract_no || searchForm.customer_name || searchForm.goods_name || searchForm.status !== '' || searchForm.start_date || searchForm.end_date)
@@ -1621,10 +1677,19 @@ async function loadReceiptMap() {
   } catch { /* ignore */ }
 }
 
-function getFeeItemPayStatus(row: any, idx: number): { label: string; type: string } {
-  if (Number(row.status) !== 1) return { label: '—', type: 'info' }
+function getContractFeeItems(row: any): { name: string; amount: number; bearer: string; supplier_name: string }[] {
   let items: any[] = []
   try { items = Array.isArray(row.fee_items) ? row.fee_items : JSON.parse(row.fee_items || '[]') } catch { items = [] }
+  if (!items.length) {
+    const fiTag = parseRemarkTag(row.remark || '', 'FI')
+    if (fiTag) items = decodeFeeItems(fiTag)
+  }
+  return items
+}
+
+function getFeeItemPayStatus(row: any, idx: number): { label: string; type: string } {
+  if (Number(row.status) !== 1) return { label: '—', type: 'info' }
+  const items = getContractFeeItems(row)
   const fee = items[idx]
   if (!fee || Number(fee.amount || 0) <= 0) return { label: '—', type: 'info' }
   if (fee.bearer === 'seller' || fee.bearer === 'free') return { label: '对方承担', type: 'info' }
@@ -1702,6 +1767,46 @@ async function submitFeePay() {
     ElMessage.error(e?.message ?? '付款失败')
   } finally {
     feePaySubmitting.value = false
+  }
+}
+
+// ── 附加费用管理弹窗（列表已审核单补充费用）────────────────────────────────
+const feeManageVisible = ref(false)
+const feeManageSaving = ref(false)
+const feeManageRow = ref<any>(null)
+const feeManageItems = ref<{ name: string; amount: number; bearer: string; supplier_name: string }[]>([])
+
+function openFeeManageDialog(row: any) {
+  feeManageRow.value = row
+  feeManageItems.value = JSON.parse(JSON.stringify(getContractFeeItems(row)))
+  feeManageVisible.value = true
+}
+
+async function submitFeeManage() {
+  const row = feeManageRow.value
+  if (!row?.id) return
+  const items = feeManageItems.value.filter(f => f.name && Number(f.amount) > 0)
+  feeManageSaving.value = true
+  try {
+    // 更新 remark 里的 [FI:] 标签（主要持久化途径）
+    const rawRemark = String(row.remark || '')
+    const baseRemark = rawRemark.replace(/\[FI:[^\]]+\]\s*/g, '').trim()
+    const fiTag = items.length > 0 ? `[FI:${encodeFeeItems(items)}]` : ''
+    const newRemark = [fiTag, baseRemark].filter(Boolean).join(' ')
+    await http.post('/shop/ContractOrder/edit', {
+      id: row.id,
+      remark: newRemark,
+      fee_items: JSON.stringify(items),
+    })
+    feeManageRow.value = { ...row, remark: newRemark, fee_items: items }
+    ElMessage.success('费用保存成功')
+    feeManageVisible.value = false
+    tableRef.value?.refresh()
+    loadReceiptMap()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '保存失败')
+  } finally {
+    feeManageSaving.value = false
   }
 }
 
@@ -1984,6 +2089,18 @@ const goodsCostWarehouseMap = reactive<Record<number, string>>({})
 let goodsCostLoaded = false
 let goodsCostLoading: Promise<void> | null = null
 
+function cleanCostKey(value: any): string {
+  return String(value || '').trim().replace(/\s+/g, '').toLowerCase()
+}
+
+function firstPositiveNumber(...values: any[]): number {
+  for (const value of values) {
+    const num = Number(value)
+    if (Number.isFinite(num) && num > 0) return num
+  }
+  return 0
+}
+
 function applyMissingItemCosts(items: ContractItem[]) {
   for (const item of items) {
     const gid = Number(item.goods_id || 0)
@@ -2007,12 +2124,53 @@ async function loadGoodsCostMapOnce() {
         const goodsRows: any[] = goodsResult.status === 'fulfilled'
           ? (goodsResult.value?.data?.rows ?? goodsResult.value?.data?.list ?? [])
           : []
+        const goodsById = new Map<number, any>()
+        const goodsIdBySn = new Map<string, number>()
+        const goodsIdByName = new Map<string, number>()
         for (const g of goodsRows) {
           const gid = Number(g?.id || 0)
-          const cost = Number(g?.cost_price || 0)
-          if (!gid || cost <= 0) continue
-          goodsCostPriceMap[gid] = cost
-          goodsCostSourceMap[gid] = '商品档案成本价'
+          if (!gid) continue
+          goodsById.set(gid, g)
+          const snKey = cleanCostKey(g?.goods_sn)
+          const nameKey = cleanCostKey(g?.goods_name || g?.name)
+          if (snKey) goodsIdBySn.set(snKey, gid)
+          if (nameKey && !goodsIdByName.has(nameKey)) goodsIdByName.set(nameKey, gid)
+          const cost = firstPositiveNumber(g?.cost_price, g?.purchase_price, g?.avg_price, g?.in_price)
+          if (cost > 0) {
+            goodsCostPriceMap[gid] = cost
+            goodsCostSourceMap[gid] = '商品档案成本价'
+          }
+        }
+
+        const resolveGoodsId = (row: any, idFields: string[], snFields: string[], nameFields: string[]) => {
+          for (const field of idFields) {
+            const gid = Number(row?.[field] || 0)
+            if (gid > 0 && goodsById.has(gid)) return gid
+          }
+          for (const field of snFields) {
+            const gid = goodsIdBySn.get(cleanCostKey(row?.[field]))
+            if (gid) return gid
+          }
+          for (const field of nameFields) {
+            const gid = goodsIdByName.get(cleanCostKey(row?.[field]))
+            if (gid) return gid
+          }
+          return 0
+        }
+        const resolveGoodsIdByTextFirst = (row: any, idFields: string[], snFields: string[], nameFields: string[]) => {
+          for (const field of snFields) {
+            const gid = goodsIdBySn.get(cleanCostKey(row?.[field]))
+            if (gid) return gid
+          }
+          for (const field of nameFields) {
+            const gid = goodsIdByName.get(cleanCostKey(row?.[field]))
+            if (gid) return gid
+          }
+          for (const field of idFields) {
+            const gid = Number(row?.[field] || 0)
+            if (gid > 0 && goodsById.has(gid)) return gid
+          }
+          return 0
         }
 
         const stockRows: any[] = stockResult.status === 'fulfilled'
@@ -2047,6 +2205,89 @@ async function loadGoodsCostMapOnce() {
           goodsCostStockQtyMap[gid] = agg.qty
           goodsCostWarehouseMap[gid] = [...agg.warehouses].join('、') || '全部仓库'
         }
+
+        // BOM核算成本 fallback：并发拉取各BOM计划的物料明细，用物料录入单价算成品成本
+        try {
+          const bomPlansResult = await getBomList({ list_rows: 500 })
+          const bomPlans: any[] = bomPlansResult?.data?.list ?? bomPlansResult?.data?.rows ?? []
+
+          const getFinishedGoodsId = (row: any) => resolveGoodsIdByTextFirst(
+            row,
+            ['goods_id', 'finished_goods_id', 'product_goods_id'],
+            ['goods_sn', 'finished_goods_sn', 'product_sn'],
+            ['goods_name', 'finished_goods_name', 'product_name'],
+          )
+          const getMaterialGoodsId = (row: any) => resolveGoodsId(
+            row,
+            ['material_id', 'material_goods_id', 'goods_id'],
+            ['material_sn', 'material_goods_sn', 'goods_sn', 'sn'],
+            ['material_name', 'material_goods_name', 'goods_name', 'name'],
+          )
+          const getMaterialCost = (row: any) => {
+            const mid = getMaterialGoodsId(row)
+            return firstPositiveNumber(
+              row?.price,
+              row?.cost_price,
+              row?.out_price,
+              row?.in_price,
+              row?.purchase_price,
+              row?.avg_price,
+              mid ? goodsCostPriceMap[mid] : 0,
+            )
+          }
+          const calcBomItemsCost = (items: any[]) => {
+            return items.reduce((sum, mt) => {
+              const num = firstPositiveNumber(mt?.num, mt?.qty, mt?.quantity)
+              const unitPrice = getMaterialCost(mt)
+              return sum + (num > 0 && unitPrice > 0 ? num * unitPrice : 0)
+            }, 0)
+          }
+          const hasMaterialFields = (row: any) => Boolean(
+            row?.material_id || row?.material_goods_id || row?.material_sn ||
+            row?.material_goods_sn || row?.material_name || row?.material_goods_name
+          )
+
+          // 只处理还没有成本的成品；BOM成品可能只维护了商品编码，没有 goods_id。
+          const plansNeedCost = bomPlans
+            .map(p => ({ plan: p, finishedGoodsId: getFinishedGoodsId(p) }))
+            .filter(({ finishedGoodsId }) => finishedGoodsId > 0 && !(goodsCostPriceMap[finishedGoodsId] > 0))
+          if (plansNeedCost.length > 0) {
+            const directGroups = new Map<number, any[]>()
+            for (const item of plansNeedCost) {
+              if (!hasMaterialFields(item.plan)) continue
+              const group = directGroups.get(item.finishedGoodsId) ?? []
+              group.push(item.plan)
+              directGroups.set(item.finishedGoodsId, group)
+            }
+            for (const [finishedGoodsId, rows] of directGroups) {
+              const directCost = calcBomItemsCost(rows)
+              if (directCost > 0) {
+                goodsCostPriceMap[finishedGoodsId] = directCost
+                goodsCostSourceMap[finishedGoodsId] = 'BOM核算'
+                goodsCostWarehouseMap[finishedGoodsId] = '—'
+              }
+            }
+            const detailResults = await Promise.allSettled(
+              plansNeedCost
+                .filter(item => !(goodsCostPriceMap[item.finishedGoodsId] > 0))
+                .map(item => http.get('/goods/BomGoods/detail', { params: { id: item.plan.id } }))
+            )
+            const detailPlans = plansNeedCost.filter(item => !(goodsCostPriceMap[item.finishedGoodsId] > 0))
+            for (let i = 0; i < detailPlans.length; i++) {
+              const { finishedGoodsId } = detailPlans[i]
+              const result = detailResults[i]
+              if (result.status !== 'fulfilled') continue
+              const data = result.value?.data ?? {}
+              const items: any[] = data?.items ?? data?.rows ?? data?.list ?? []
+              const bomCost = calcBomItemsCost(items)
+              if (bomCost > 0) {
+                goodsCostPriceMap[finishedGoodsId] = bomCost
+                goodsCostSourceMap[finishedGoodsId] = 'BOM核算'
+                goodsCostWarehouseMap[finishedGoodsId] = '—'
+              }
+            }
+          }
+        } catch (e) { console.warn('[BOM成本] 异常:', e) }
       } finally {
         goodsCostLoaded = true
         goodsCostLoading = null

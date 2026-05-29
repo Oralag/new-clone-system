@@ -54,7 +54,7 @@
 
       <div v-if="reportRows.length === 0 && !loading"
         style="text-align:center;color:rgba(29,29,31,0.35);padding:40px 0;font-size:14px">
-        暂无提成数据。请先在「提成设置」中配置员工提成比例，并在销售合同中选择经办人。
+        暂无提成数据。请先在「提成设置」中配置员工提成比例，并在销售订单中选择经办人。
       </div>
 
       <!-- 汇总行 -->

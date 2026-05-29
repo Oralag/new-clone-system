@@ -35,6 +35,13 @@ export interface BrandPageConfig {
   // 品牌基本
   brandName: string
   brandSlogan: string
+  // 主题色彩
+  theme?: {
+    cream: string
+    navy: string
+    orange: string
+    blue: string
+  }
 }
 
 const DEFAULT_CONFIG: BrandPageConfig = {
@@ -106,6 +113,12 @@ const DEFAULT_CONFIG: BrandPageConfig = {
   ],
   brandName: 'NOMADIC',
   brandSlogan: '专为数字游民而生',
+  theme: {
+    cream: '#EDE6D5',
+    navy: '#1A1E32',
+    orange: '#D14B0A',
+    blue: '#8BBDD6',
+  },
 }
 
 function loadConfig(): BrandPageConfig {

@@ -204,7 +204,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
@@ -265,10 +265,31 @@ async function handleLogin() {
     await authStore.login(loginForm.account, loginForm.password)
     ElMessage.success('登录成功')
     const savedRedirect = route.query.redirect as string
-    const redirect = savedRedirect || (isMobile() ? '/mobile/dashboard' : '/portal')
+    const redirect = savedRedirect || (isMobile() ? '/mobile/modules' : '/portal')
     router.push(redirect)
   } catch (e: any) {
-    ElMessage.error(e?.message || '账号或密码错误，请重试')
+    const message = e?.message || '账号或密码错误，请重试'
+    if (message.includes('账号不存在')) {
+      registerForm.mobile = loginForm.account.trim()
+      registerTip.value = '该账号尚未注册，请先创建账户'
+      registerTipType.value = 'info'
+      try {
+        await ElMessageBox.confirm(
+          '该账号尚未注册，是否立即切换到注册页？',
+          '未找到账号',
+          {
+            confirmButtonText: '去注册',
+            cancelButtonText: '取消',
+            type: 'warning',
+          },
+        )
+        switchTab('register')
+      } catch {
+        // User cancelled the prompt.
+      }
+    } else {
+      ElMessage.error(message)
+    }
   } finally {
     loginLoading.value = false
   }

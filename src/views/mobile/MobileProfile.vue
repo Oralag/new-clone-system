@@ -56,6 +56,16 @@
 
       <div class="profile-menu-card">
         <div class="pmenu-group-title">系统</div>
+        <div class="pmenu-item" @click="router.push('/setting/admin')">
+          <div class="pmenu-icon" style="background:rgba(245,158,11,0.1)">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="pmenu-label-wrap">
+            <span class="pmenu-label">子账户管理</span>
+            <span class="pmenu-sublabel">添加成员·共享通讯录·分配权限</span>
+          </div>
+          <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
         <div class="pmenu-item" @click="copyUrl">
           <div class="pmenu-icon" style="background:rgba(8,145,178,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
@@ -233,7 +243,10 @@ async function handleLogout() {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.pmenu-label { flex: 1; font-size: 15px; color: #1d2129; font-weight: 500; }
+.pmenu-label { font-size: 15px; color: #1d2129; font-weight: 500; }
+.pmenu-label-wrap { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.pmenu-label-wrap .pmenu-label { flex: none; }
+.pmenu-sublabel { font-size: 11px; color: #86909c; font-weight: 400; }
 .pmenu-right-text { font-size: 12px; color: #0071e3; font-weight: 600; margin-right: 2px; }
 .pmenu-arrow { flex-shrink: 0; }
 

@@ -29,29 +29,31 @@
         <button class="bar-tool-btn" @click="clearCurrent" title="清空对话">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
         </button>
-        <button class="bar-tool-btn" @click.stop="showHistory = !showHistory" title="历史会话">
+        <button ref="historyBtnRef" class="bar-tool-btn" @click.stop="toggleHistory" title="历史会话">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         </button>
-        <!-- 历史会话下拉面板 -->
-        <div v-if="showHistory" class="history-dropdown" @click.stop>
-          <div class="history-header">
-            <span class="history-title">历史会话</span>
-            <button v-if="historyList.length > 0" class="history-clear-btn" @click="clearAllHistory">清空</button>
-          </div>
-          <div v-if="historyList.length === 0" class="history-empty">暂无历史会话</div>
-          <div v-else class="history-list">
-            <div
-              v-for="(item, idx) in historyList"
-              :key="idx"
-              class="history-item"
-              :class="{ active: historyActiveIdx === idx }"
-              @click="loadHistory(idx)"
-            >
-              <div class="history-item-title">{{ item.title }}</div>
-              <div class="history-item-time">{{ item.time }}</div>
+        <!-- 历史会话下拉面板：Teleport 到 body 避免被父容器裁切 -->
+        <Teleport to="body">
+          <div v-if="showHistory" class="history-dropdown-portal" :style="dropdownStyle" @click.stop>
+            <div class="history-header">
+              <span class="history-title">历史会话</span>
+              <button v-if="historyList.length > 0" class="history-clear-btn" @click="clearAllHistory">清空</button>
+            </div>
+            <div v-if="historyList.length === 0" class="history-empty">暂无历史会话</div>
+            <div v-else class="history-list">
+              <div
+                v-for="(item, idx) in historyList"
+                :key="idx"
+                class="history-item"
+                :class="{ active: historyActiveIdx === idx }"
+                @click="loadHistory(idx)"
+              >
+                <div class="history-item-title">{{ item.title }}</div>
+                <div class="history-item-time">{{ item.time }}</div>
+              </div>
             </div>
           </div>
-        </div>
+        </Teleport>
         <button v-if="captainMessages.length > 0" class="bar-tool-btn" @click="newSession" title="新建对话">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -154,7 +156,22 @@ const quickPrompts = [
 const isExpanded = ref(false)
 const isCollapsed = ref(true)
 const showHistory = ref(false)
+const historyBtnRef = ref<HTMLButtonElement>()
+const dropdownStyle = ref<Record<string, string>>({})
 const quickText = ref('')
+
+function toggleHistory() {
+  showHistory.value = !showHistory.value
+  if (showHistory.value && historyBtnRef.value) {
+    const rect = historyBtnRef.value.getBoundingClientRect()
+    dropdownStyle.value = {
+      position: 'fixed',
+      top: `${rect.bottom + 6}px`,
+      right: `${window.innerWidth - rect.right}px`,
+      zIndex: '9999',
+    }
+  }
+}
 const captainInput = ref('')
 const captainLoading = ref(false)
 const captainMessages = ref<CaptainMsg[]>([])
@@ -634,18 +651,14 @@ async function sendCaptain(text?: string) {
 }
 .bar-tool-btn:hover { background: var(--gray, #f5f5f7); color: var(--dark, #1d1d1f); border-color: rgba(0,0,0,0.15); }
 
-/* ── 历史会话下拉 ── */
+/* ── 历史会话下拉（portal，挂 body，不受父容器裁切） ── */
 .history-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 60px;
   width: 280px;
   max-height: 320px;
   background: var(--card-bg, #fff);
   border: 1px solid var(--border, rgba(0,0,0,0.08));
   border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-  z-index: 200;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -728,4 +741,78 @@ async function sendCaptain(text?: string) {
   display: inline-block; opacity: 0.7;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<!-- portal 样式不能 scoped，单独一块全局 style -->
+<style>
+.history-dropdown-portal {
+  width: 280px;
+  max-height: 320px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.history-dropdown-portal .history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.history-dropdown-portal .history-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+.history-dropdown-portal .history-clear-btn {
+  font-size: 11px;
+  color: #ef4444;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.history-dropdown-portal .history-clear-btn:hover { background: rgba(239,68,68,0.08); }
+.history-dropdown-portal .history-empty {
+  padding: 24px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(29,29,31,0.3);
+}
+.history-dropdown-portal .history-list {
+  overflow-y: auto;
+  flex: 1;
+}
+.history-dropdown-portal .history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
+}
+.history-dropdown-portal .history-item:hover { background: rgba(0,113,227,0.04); }
+.history-dropdown-portal .history-item.active { background: rgba(0,113,227,0.08); }
+.history-dropdown-portal .history-item-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1d1d1f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.history-dropdown-portal .history-item-time {
+  font-size: 11px;
+  color: rgba(29,29,31,0.35);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
 </style>

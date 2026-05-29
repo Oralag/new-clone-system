@@ -92,8 +92,8 @@
           <el-tag v-else-if="fd.status === 2" type="danger" size="small">已驳回</el-tag>
         </div>
         <div class="form-topbar-right" v-if="!isView">
-          <el-button :loading="saving" @click="handleSave(false)">保存</el-button>
-          <el-button type="primary" :loading="saving" @click="handleSave(true)">保存并审核</el-button>
+          <el-button :loading="saving && !savingAndAuditing" @click="handleSave(false)">保存</el-button>
+          <el-button type="primary" :loading="savingAndAuditing" @click="handleSave(true)">保存并审核</el-button>
         </div>
       </div>
 
@@ -319,6 +319,7 @@ const searchForm = reactive<any>({})
 const showForm = ref(false)
 const isView = ref(false)
 const saving = ref(false)
+const savingAndAuditing = ref(false)
 const hasMaterial = ref(false) // 该计划是否已有手工领料单
 
 // ── 表单数据 ─────────────────────────────────────────────────────────────────
@@ -700,6 +701,7 @@ async function handleSave(andAudit = false) {
     return
   }
   saving.value = true
+  if (andAudit) savingAndAuditing.value = true
   try {
     const sharedOrderSn = fd.order_sn || generateProductionInhouseOrderSn()
     fd.order_sn = sharedOrderSn
@@ -856,6 +858,7 @@ async function handleSave(andAudit = false) {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
     saving.value = false
+    savingAndAuditing.value = false
   }
 }
 

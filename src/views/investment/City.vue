@@ -1,9 +1,15 @@
 <template>
   <div class="city-page">
     <!-- 左侧状态栏 -->
-    <aside class="city-sidebar">
+    <aside class="city-sidebar" :class="{ collapsed: sidebarCollapsed }">
+      <button class="city-sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? '展开机构栏' : '收起机构栏'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path v-if="sidebarCollapsed" d="M9 18l6-6-6-6"/>
+          <path v-else d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
       <!-- 详情面板（选中机构时） -->
-      <div v-if="selectedInst" class="detail-panel">
+      <div v-if="!sidebarCollapsed && selectedInst" class="detail-panel">
         <div class="detail-header">
           <span class="detail-emoji">{{ getEmoji(selectedInst.institutionId) }}</span>
           <div class="detail-title-wrap">
@@ -147,7 +153,7 @@
       </div>
 
       <!-- 机构列表（未选中时） -->
-      <div v-show="!selectedInst" class="inst-list-wrap">
+      <div v-show="!sidebarCollapsed && !selectedInst" class="inst-list-wrap">
         <div class="sidebar-title-bar">
           <span class="sidebar-title">INSTITUTIONS</span>
           <span class="sidebar-count">{{ adamStore.institutions.length }}</span>
@@ -175,520 +181,213 @@
       </div>
     </aside>
 
-    <!-- 右侧像素场景 -->
+    <!-- 右侧城市等轴测地图 -->
     <div class="city-main">
-      <div class="px-scene" @click="selectedId = null; adamSelected = false">
+      <div class="iso-viewport" ref="viewportRef"
+           @wheel.prevent="onWheel"
+           @mousedown="onDragStart"
+           @contextmenu.prevent
+           @touchstart.prevent="onTouchStart">
 
-        <!-- ── 背景层 ── -->
-        <div class="px-bg">
-          <!-- 四个区域房间 -->
-          <div class="px-room px-room-tl"></div><!-- 指挥中心 -->
-          <div class="px-room px-room-tr"></div><!-- 情报研究 -->
-          <div class="px-room px-room-bl"></div><!-- 商业生态 -->
-          <div class="px-room px-room-br"></div><!-- 亚当领地 -->
-          <!-- 区域标签 -->
-          <div class="px-zone-label px-zone-tl">COMMAND_CENTER</div>
-          <div class="px-zone-label px-zone-tr">INTELLIGENCE</div>
-          <div class="px-zone-label px-zone-bl">COMMERCE</div>
-          <div class="px-zone-label px-zone-br">ADAM_DOMAIN</div>
+        <!-- 区域浮动标签 -->
+        <div class="zone-labels">
+          <div class="zone-float-label command">COMMAND_CENTER</div>
+          <div class="zone-float-label intelligence">INTELLIGENCE</div>
+          <div class="zone-float-label commerce">COMMERCE</div>
+          <div class="zone-float-label adam">ADAM_DOMAIN</div>
         </div>
 
-        <!-- ── 机构建筑层 ── -->
+        <!-- ── 等轴测场景 ── -->
+        <div class="iso-scene" :style="sceneStyle">
 
-        <!-- 指挥中心：左上 -->
-        <!-- 投资局 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'bureau', locked: !instMap['bureau'] || instMap['bureau'].status === 'locked' }"
-          style="left:3%;top:5%" @click.stop="selectedId = 'bureau'; adamSelected = false">
-          <svg width="88" height="80" viewBox="0 0 88 80" class="pixel-svg">
-            <!-- 柱廊式建筑 -->
-            <rect x="4" y="40" width="80" height="32" fill="#2A1E10"/>
-            <rect x="6" y="42" width="76" height="28" fill="#3A2A16"/>
-            <!-- 柱子 x4 -->
-            <rect x="10" y="20" width="10" height="22" fill="#C8A060"/>
-            <rect x="26" y="20" width="10" height="22" fill="#B89050"/>
-            <rect x="52" y="20" width="10" height="22" fill="#B89050"/>
-            <rect x="68" y="20" width="10" height="22" fill="#C8A060"/>
-            <!-- 屋顶三角 -->
-            <polygon points="4,20 44,4 84,20" fill="#D4A84A"/>
-            <polygon points="8,20 44,8 80,20" fill="#E8C070"/>
-            <!-- 门 -->
-            <rect x="36" y="50" width="16" height="22" fill="#1A1008"/>
-            <rect x="38" y="52" width="5" height="18" fill="#2A1A08"/>
-            <rect x="45" y="52" width="5" height="18" fill="#2A1A08"/>
-            <!-- 窗户 -->
-            <rect x="12" y="44" width="8" height="6" fill="#D4A84A" opacity="0.6"/>
-            <rect x="68" y="44" width="8" height="6" fill="#D4A84A" opacity="0.6"/>
-            <!-- 台阶 -->
-            <rect x="28" y="72" width="32" height="4" fill="#4A3820"/>
-            <rect x="24" y="76" width="40" height="4" fill="#3A2810"/>
-          </svg>
-          <div class="px-label">🏛 投资局</div>
-        </div>
-
-        <!-- 金融机构 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'finance_gateway', locked: !instMap['finance_gateway'] || instMap['finance_gateway'].status === 'locked' }"
-          style="left:20%;top:3%" @click.stop="selectedId = 'finance_gateway'; adamSelected = false">
-          <svg width="80" height="80" viewBox="0 0 80 80" class="pixel-svg">
-            <!-- 银行建筑 -->
-            <rect x="4" y="36" width="72" height="36" fill="#2A2010"/>
-            <rect x="6" y="38" width="68" height="32" fill="#3A3018"/>
-            <!-- 金色屋顶 -->
-            <rect x="4" y="28" width="72" height="10" fill="#C8A030"/>
-            <rect x="2" y="26" width="76" height="4" fill="#E0B840"/>
-            <!-- 顶部装饰 -->
-            <rect x="30" y="12" width="20" height="16" fill="#B89020"/>
-            <rect x="34" y="8" width="12" height="6" fill="#D4A830"/>
-            <!-- 窗户 2x2 -->
-            <rect x="10" y="42" width="14" height="10" fill="#F0C040" opacity="0.5"/>
-            <rect x="28" y="42" width="14" height="10" fill="#F0C040" opacity="0.5"/>
-            <rect x="46" y="42" width="14" height="10" fill="#F0C040" opacity="0.5"/>
-            <!-- 门 -->
-            <rect x="32" y="54" width="16" height="18" fill="#1A1408"/>
-            <circle cx="40" cy="63" r="2" fill="#C8A030"/>
-            <!-- 台阶 -->
-            <rect x="24" y="72" width="32" height="4" fill="#4A3820"/>
-            <rect x="20" y="76" width="40" height="4" fill="#3A2810"/>
-          </svg>
-          <div class="px-label">🏦 金融机构</div>
-        </div>
-
-        <!-- 反应堆 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'reactor', locked: !instMap['reactor'] || instMap['reactor'].status === 'locked' }"
-          style="left:9%;top:36%" @click.stop="selectedId = 'reactor'; adamSelected = false">
-          <svg width="72" height="80" viewBox="0 0 72 80" class="pixel-svg">
-            <!-- 圆柱塔 -->
-            <ellipse cx="36" cy="72" rx="28" ry="8" fill="#1A1208"/>
-            <rect x="8" y="24" width="56" height="48" fill="#1E1A30" rx="4"/>
-            <ellipse cx="36" cy="24" rx="28" ry="8" fill="#2A2640"/>
-            <!-- 发光核心 -->
-            <circle cx="36" cy="44" r="14" fill="#0A0818"/>
-            <circle cx="36" cy="44" r="10" fill="#1A0A3E" opacity="0.9"/>
-            <circle cx="36" cy="44" r="6" fill="#F5A623" opacity="0.8"/>
-            <circle cx="36" cy="44" r="3" fill="#FFD700"/>
-            <!-- 能量环 -->
-            <circle cx="36" cy="44" r="18" fill="none" stroke="#F5A623" stroke-width="1" opacity="0.3"/>
-            <circle cx="36" cy="44" r="22" fill="none" stroke="#F5A623" stroke-width="0.5" opacity="0.15"/>
-            <!-- 散热管 -->
-            <rect x="4" y="30" width="6" height="20" fill="#2A2030" rx="2"/>
-            <rect x="62" y="30" width="6" height="20" fill="#2A2030" rx="2"/>
-            <!-- 管道 -->
-            <rect x="10" y="36" width="14" height="4" fill="#3A3050"/>
-            <rect x="48" y="36" width="14" height="4" fill="#3A3050"/>
-          </svg>
-          <div class="px-label">⚡ 反应堆</div>
-        </div>
-
-        <!-- 情报研究区：右上 -->
-        <!-- 情报站 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'intel_station', locked: !instMap['intel_station'] || instMap['intel_station'].status === 'locked' }"
-          style="left:53%;top:3%" @click.stop="selectedId = 'intel_station'; adamSelected = false">
-          <svg width="80" height="88" viewBox="0 0 80 88" class="pixel-svg">
-            <!-- 基座 -->
-            <rect x="24" y="60" width="32" height="24" fill="#1A2A3A"/>
-            <rect x="26" y="62" width="28" height="20" fill="#1E3A50"/>
-            <!-- 卫星天线杆 -->
-            <rect x="37" y="16" width="6" height="46" fill="#2A4A6A"/>
-            <!-- 碟形天线 -->
-            <ellipse cx="40" cy="14" rx="22" ry="12" fill="#1A3A5A"/>
-            <ellipse cx="40" cy="12" rx="20" ry="10" fill="#2A5A8A"/>
-            <ellipse cx="40" cy="12" rx="10" ry="5" fill="#4A8AB8" opacity="0.6"/>
-            <circle cx="40" cy="12" r="3" fill="#00D4FF" opacity="0.9"/>
-            <!-- 信号发射圈 -->
-            <circle cx="40" cy="12" r="14" fill="none" stroke="#00D4FF" stroke-width="0.8" opacity="0.3" class="signal-ring"/>
-            <circle cx="40" cy="12" r="20" fill="none" stroke="#00D4FF" stroke-width="0.5" opacity="0.15" class="signal-ring-2"/>
-            <!-- 建筑细节 -->
-            <rect x="30" y="64" width="8" height="6" fill="#00D4FF" opacity="0.3"/>
-            <rect x="42" y="64" width="8" height="6" fill="#00D4FF" opacity="0.3"/>
-            <!-- 门 -->
-            <rect x="34" y="70" width="12" height="14" fill="#0A1A2A"/>
-          </svg>
-          <div class="px-label">📡 情报站</div>
-        </div>
-
-        <!-- 研究院 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'research_institute', locked: !instMap['research_institute'] || instMap['research_institute'].status === 'locked' }"
-          style="left:68%;top:5%" @click.stop="selectedId = 'research_institute'; adamSelected = false">
-          <svg width="80" height="84" viewBox="0 0 80 84" class="pixel-svg">
-            <!-- 现代实验楼 -->
-            <rect x="4" y="28" width="72" height="48" fill="#0E1E2E"/>
-            <rect x="6" y="30" width="68" height="44" fill="#142030"/>
-            <!-- 玻璃窗格 3x3 -->
-            <rect x="10" y="34" width="16" height="12" fill="#00D4FF" opacity="0.25"/>
-            <rect x="30" y="34" width="20" height="12" fill="#00D4FF" opacity="0.2"/>
-            <rect x="54" y="34" width="16" height="12" fill="#00D4FF" opacity="0.25"/>
-            <rect x="10" y="50" width="16" height="12" fill="#00E5A0" opacity="0.2"/>
-            <rect x="30" y="50" width="20" height="12" fill="#00D4FF" opacity="0.15"/>
-            <rect x="54" y="50" width="16" height="12" fill="#00E5A0" opacity="0.2"/>
-            <!-- 顶部装饰条 -->
-            <rect x="4" y="24" width="72" height="6" fill="#0A4060"/>
-            <rect x="4" y="22" width="72" height="4" fill="#00D4FF" opacity="0.4"/>
-            <!-- DNA螺旋标志 -->
-            <path d="M36,8 Q42,12 36,16 Q30,20 36,24" fill="none" stroke="#00E5A0" stroke-width="1.5"/>
-            <path d="M40,8 Q34,12 40,16 Q46,20 40,24" fill="none" stroke="#00D4FF" stroke-width="1.5"/>
-            <!-- 门 -->
-            <rect x="32" y="64" width="16" height="14" fill="#071018"/>
-            <rect x="34" y="66" width="5" height="10" fill="#0A1820"/>
-            <rect x="41" y="66" width="5" height="10" fill="#0A1820"/>
-          </svg>
-          <div class="px-label">🔬 研究院</div>
-        </div>
-
-        <!-- 数据仓库 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'data_center', locked: !instMap['data_center'] || instMap['data_center'].status === 'locked' }"
-          style="left:55%;top:34%" @click.stop="selectedId = 'data_center'; adamSelected = false">
-          <svg width="80" height="80" viewBox="0 0 80 80" class="pixel-svg">
-            <!-- 服务器机房 -->
-            <rect x="6" y="12" width="68" height="60" fill="#0A1020" rx="2"/>
-            <rect x="8" y="14" width="64" height="56" fill="#0E1830" rx="1"/>
-            <!-- 服务器排 x4 -->
-            <rect x="12" y="18" width="56" height="8" fill="#0A2040" rx="1"/>
-            <rect x="12" y="29" width="56" height="8" fill="#0A2040" rx="1"/>
-            <rect x="12" y="40" width="56" height="8" fill="#0A2040" rx="1"/>
-            <rect x="12" y="51" width="56" height="8" fill="#0A2040" rx="1"/>
-            <!-- 状态灯 -->
-            <circle cx="64" cy="22" r="2" fill="#00E5A0" class="blink-light"/>
-            <circle cx="64" cy="33" r="2" fill="#F5A623" class="blink-light blink-delay-1"/>
-            <circle cx="64" cy="44" r="2" fill="#00D4FF" class="blink-light blink-delay-2"/>
-            <circle cx="64" cy="55" r="2" fill="#00E5A0" class="blink-light"/>
-            <!-- 进度条 -->
-            <rect x="14" y="20" width="28" height="2" fill="#00E5A0" opacity="0.6"/>
-            <rect x="14" y="31" width="36" height="2" fill="#F5A623" opacity="0.5"/>
-            <rect x="14" y="42" width="20" height="2" fill="#00D4FF" opacity="0.6"/>
-            <rect x="14" y="53" width="32" height="2" fill="#00E5A0" opacity="0.5"/>
-          </svg>
-          <div class="px-label">💾 数据仓库</div>
-        </div>
-
-        <!-- 风险实验室 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'risk_lab', locked: !instMap['risk_lab'] || instMap['risk_lab'].status === 'locked' }"
-          style="left:72%;top:34%" @click.stop="selectedId = 'risk_lab'; adamSelected = false">
-          <svg width="72" height="80" viewBox="0 0 72 80" class="pixel-svg">
-            <!-- 实验室 -->
-            <rect x="4" y="24" width="64" height="48" fill="#1A0A0A"/>
-            <rect x="6" y="26" width="60" height="44" fill="#220E0E"/>
-            <!-- 危险条纹屋顶 -->
-            <rect x="4" y="16" width="64" height="10" fill="#3A0808"/>
-            <rect x="8" y="16" width="8" height="10" fill="#FF4D4D" opacity="0.6"/>
-            <rect x="24" y="16" width="8" height="10" fill="#FF4D4D" opacity="0.6"/>
-            <rect x="40" y="16" width="8" height="10" fill="#FF4D4D" opacity="0.6"/>
-            <rect x="56" y="16" width="8" height="10" fill="#FF4D4D" opacity="0.6"/>
-            <!-- 烧杯/试管图案 -->
-            <rect x="20" y="32" width="6" height="16" fill="#FF4D4D" opacity="0.4" rx="1"/>
-            <ellipse cx="23" cy="48" rx="6" ry="4" fill="#FF4D4D" opacity="0.5"/>
-            <rect x="38" y="28" width="4" height="20" fill="#F5A623" opacity="0.5" rx="1"/>
-            <rect x="36" y="48" width="8" height="3" fill="#F5A623" opacity="0.4"/>
-            <!-- 警告符号 -->
-            <polygon points="44,34 50,44 38,44" fill="none" stroke="#FF4D4D" stroke-width="1.5"/>
-            <rect x="43.5" y="36" width="1" height="5" fill="#FF4D4D"/>
-            <circle cx="44" cy="43" r="0.8" fill="#FF4D4D"/>
-            <!-- 窗户 -->
-            <rect x="10" y="30" width="12" height="8" fill="#FF4D4D" opacity="0.15"/>
-            <!-- 门 -->
-            <rect x="28" y="56" width="16" height="16" fill="#0A0404"/>
-          </svg>
-          <div class="px-label">⚗️ 风险实验室</div>
-        </div>
-
-        <!-- 商业生态区：左下 -->
-        <!-- 营销顾问所 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'marketing_consultancy', locked: !instMap['marketing_consultancy'] || instMap['marketing_consultancy'].status === 'locked' }"
-          style="left:3%;top:52%" @click.stop="selectedId = 'marketing_consultancy'; adamSelected = false">
-          <svg width="80" height="80" viewBox="0 0 80 80" class="pixel-svg">
-            <!-- 现代办公楼 -->
-            <rect x="4" y="20" width="72" height="52" fill="#0E1A2E"/>
-            <rect x="6" y="22" width="68" height="48" fill="#122030"/>
-            <!-- 落地玻璃窗 -->
-            <rect x="8" y="24" width="30" height="22" fill="#4A8AB8" opacity="0.3"/>
-            <rect x="42" y="24" width="30" height="22" fill="#4A8AB8" opacity="0.3"/>
-            <!-- 窗框 -->
-            <line x1="23" y1="24" x2="23" y2="46" stroke="#2A5080" stroke-width="1"/>
-            <line x1="57" y1="24" x2="57" y2="46" stroke="#2A5080" stroke-width="1"/>
-            <line x1="8" y1="35" x2="38" y2="35" stroke="#2A5080" stroke-width="1"/>
-            <line x1="42" y1="35" x2="72" y2="35" stroke="#2A5080" stroke-width="1"/>
-            <!-- 图表标志 -->
-            <rect x="18" y="50" width="4" height="12" fill="#4A8CFF" opacity="0.8"/>
-            <rect x="24" y="46" width="4" height="16" fill="#F5A623" opacity="0.8"/>
-            <rect x="30" y="48" width="4" height="14" fill="#00E5A0" opacity="0.8"/>
-            <!-- 入口 -->
-            <rect x="34" y="58" width="12" height="14" fill="#071018"/>
-            <rect x="4" y="16" width="72" height="6" fill="#0A3060"/>
-          </svg>
-          <div class="px-label">📊 营销顾问所</div>
-        </div>
-
-        <!-- 广告公司 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'ad_company', locked: !instMap['ad_company'] || instMap['ad_company'].status === 'locked' }"
-          style="left:19%;top:54%" @click.stop="selectedId = 'ad_company'; adamSelected = false">
-          <svg width="72" height="76" viewBox="0 0 72 76" class="pixel-svg">
-            <!-- 广告楼 -->
-            <rect x="4" y="24" width="64" height="44" fill="#1A0A1A"/>
-            <rect x="6" y="26" width="60" height="40" fill="#220E22"/>
-            <!-- 大广告牌 -->
-            <rect x="4" y="8" width="64" height="18" fill="#2A0A2A"/>
-            <rect x="6" y="10" width="60" height="14" fill="#E91E8C" opacity="0.7"/>
-            <rect x="10" y="12" width="16" height="10" fill="#FFD700" opacity="0.6"/>
-            <rect x="30" y="12" width="12" height="10" fill="#FF6B35" opacity="0.7"/>
-            <rect x="46" y="12" width="16" height="10" fill="#00D4FF" opacity="0.5"/>
-            <!-- 霓虹边框 -->
-            <rect x="4" y="8" width="64" height="2" fill="#E91E8C" opacity="0.9"/>
-            <rect x="4" y="24" width="64" height="2" fill="#E91E8C" opacity="0.6"/>
-            <!-- 窗户 -->
-            <rect x="10" y="30" width="14" height="10" fill="#E91E8C" opacity="0.2"/>
-            <rect x="28" y="30" width="14" height="10" fill="#FFD700" opacity="0.15"/>
-            <rect x="46" y="30" width="14" height="10" fill="#E91E8C" opacity="0.2"/>
-            <!-- 门 -->
-            <rect x="28" y="52" width="16" height="14" fill="#0A040A"/>
-          </svg>
-          <div class="px-label">📺 广告公司</div>
-        </div>
-
-        <!-- 仲裁所 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'arbitration_hall', locked: !instMap['arbitration_hall'] || instMap['arbitration_hall'].status === 'locked' }"
-          style="left:8%;top:72%" @click.stop="selectedId = 'arbitration_hall'; adamSelected = false">
-          <svg width="80" height="72" viewBox="0 0 80 72" class="pixel-svg">
-            <!-- 古典建筑 -->
-            <rect x="4" y="28" width="72" height="36" fill="#1E1A08"/>
-            <rect x="6" y="30" width="68" height="32" fill="#2A2410"/>
-            <!-- 天平标志 -->
-            <rect x="38" y="8" width="4" height="22" fill="#C8A830"/>
-            <line x1="20" y1="18" x2="60" y2="18" stroke="#C8A830" stroke-width="2"/>
-            <rect x="12" y="18" width="16" height="8" fill="#B89020"/>
-            <rect x="52" y="18" width="16" height="8" fill="#B89020"/>
-            <!-- 柱子 -->
-            <rect x="8" y="20" width="8" height="10" fill="#C8A060"/>
-            <rect x="64" y="20" width="8" height="10" fill="#C8A060"/>
-            <!-- 顶部 -->
-            <rect x="4" y="20" width="72" height="10" fill="#3A3018"/>
-            <!-- 窗户 -->
-            <rect x="10" y="34" width="12" height="8" fill="#F0C040" opacity="0.3"/>
-            <rect x="58" y="34" width="12" height="8" fill="#F0C040" opacity="0.3"/>
-            <!-- 门 -->
-            <rect x="32" y="46" width="16" height="18" fill="#0A0804"/>
-            <rect x="32" y="46" width="16" height="4" fill="#C8A030" opacity="0.5"/>
-          </svg>
-          <div class="px-label">⚖️ 仲裁所</div>
-        </div>
-
-        <!-- 亚当领地：右下 -->
-        <!-- 亚当学院 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'adam_academy', locked: !instMap['adam_academy'] || instMap['adam_academy'].status === 'locked' }"
-          style="left:53%;top:52%" @click.stop="selectedId = 'adam_academy'; adamSelected = false">
-          <svg width="80" height="84" viewBox="0 0 80 84" class="pixel-svg">
-            <!-- 学院主楼 -->
-            <rect x="4" y="24" width="72" height="52" fill="#1A0A3E"/>
-            <rect x="6" y="26" width="68" height="48" fill="#200E4A"/>
-            <!-- 尖顶 -->
-            <polygon points="40,4 60,24 20,24" fill="#2A1460"/>
-            <polygon points="40,6 58,24 22,24" fill="#3A1E70"/>
-            <!-- 魔法圆窗 -->
-            <circle cx="40" cy="14" r="6" fill="#8B5CF6" opacity="0.6"/>
-            <circle cx="40" cy="14" r="4" fill="#C0A0FF" opacity="0.4"/>
-            <circle cx="40" cy="14" r="2" fill="#FFD700" opacity="0.8"/>
-            <!-- 星形图案 -->
-            <circle cx="40" cy="14" r="8" fill="none" stroke="#8B5CF6" stroke-width="0.8" opacity="0.4"/>
-            <!-- 窗户 -->
-            <rect x="10" y="32" width="14" height="10" fill="#8B5CF6" opacity="0.3"/>
-            <rect x="56" y="32" width="14" height="10" fill="#8B5CF6" opacity="0.3"/>
-            <rect x="10" y="48" width="14" height="10" fill="#C0A0FF" opacity="0.2"/>
-            <rect x="56" y="48" width="14" height="10" fill="#C0A0FF" opacity="0.2"/>
-            <!-- 大门 -->
-            <rect x="30" y="56" width="20" height="20" fill="#0A0418"/>
-            <rect x="32" y="58" width="7" height="16" fill="#120828"/>
-            <rect x="41" y="58" width="7" height="16" fill="#120828"/>
-            <rect x="30" y="56" width="20" height="4" fill="#8B5CF6" opacity="0.5"/>
-          </svg>
-          <div class="px-label">🎓 亚当学院</div>
-        </div>
-
-        <!-- 档案馆 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'archive', locked: !instMap['archive'] || instMap['archive'].status === 'locked' }"
-          style="left:67%;top:54%" @click.stop="selectedId = 'archive'; adamSelected = false">
-          <svg width="72" height="80" viewBox="0 0 72 80" class="pixel-svg">
-            <!-- 档案馆（类书架建筑） -->
-            <rect x="4" y="20" width="64" height="52" fill="#2A1810"/>
-            <rect x="6" y="22" width="60" height="48" fill="#342010"/>
-            <!-- 木制屋顶 -->
-            <rect x="2" y="12" width="68" height="10" fill="#4A2E16"/>
-            <rect x="4" y="10" width="64" height="4" fill="#6B4C2A"/>
-            <!-- 书架窗格 -->
-            <rect x="8" y="26" width="10" height="14" fill="#C0392B" opacity="0.7"/>
-            <rect x="20" y="26" width="10" height="14" fill="#2980B9" opacity="0.7"/>
-            <rect x="32" y="26" width="10" height="14" fill="#27AE60" opacity="0.7"/>
-            <rect x="44" y="26" width="10" height="14" fill="#8E44AD" opacity="0.7"/>
-            <rect x="56" y="26" width="10" height="14" fill="#E67E22" opacity="0.7"/>
-            <rect x="8" y="44" width="10" height="12" fill="#E74C3C" opacity="0.6"/>
-            <rect x="20" y="44" width="10" height="12" fill="#3498DB" opacity="0.6"/>
-            <rect x="32" y="44" width="10" height="12" fill="#F39C12" opacity="0.6"/>
-            <rect x="44" y="44" width="10" height="12" fill="#1ABC9C" opacity="0.6"/>
-            <rect x="56" y="44" width="10" height="12" fill="#9B59B6" opacity="0.6"/>
-            <!-- 搁板线 -->
-            <rect x="6" y="40" width="60" height="2" fill="#4A2E16"/>
-            <!-- 门 -->
-            <rect x="28" y="58" width="16" height="16" fill="#1A0C08"/>
-          </svg>
-          <div class="px-label">📚 档案馆</div>
-        </div>
-
-        <!-- 亚当的角落 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'corner', locked: !instMap['corner'] || instMap['corner'].status === 'locked' }"
-          style="left:53%;top:72%" @click.stop="selectedId = 'corner'; adamSelected = false">
-          <svg width="80" height="72" viewBox="0 0 80 72" class="pixel-svg">
-            <!-- 小木屋 -->
-            <rect x="8" y="28" width="64" height="36" fill="#2A1808"/>
-            <rect x="10" y="30" width="60" height="32" fill="#341E0A"/>
-            <!-- 木质三角屋顶 -->
-            <polygon points="4,28 40,8 76,28" fill="#4A2E14"/>
-            <polygon points="8,28 40,12 72,28" fill="#6B4C2A"/>
-            <!-- 烟囱 -->
-            <rect x="52" y="4" width="10" height="20" fill="#3A2810"/>
-            <rect x="50" y="2" width="14" height="4" fill="#2A1808"/>
-            <!-- 烟 -->
-            <circle cx="57" cy="0" r="3" fill="#888" opacity="0.4"/>
-            <circle cx="60" cy="-4" r="2" fill="#888" opacity="0.25"/>
-            <!-- 窗户（温暖黄光） -->
-            <rect x="12" y="34" width="18" height="14" fill="#F0A030" opacity="0.5"/>
-            <rect x="14" y="36" width="6" height="10" fill="#F5B840" opacity="0.4"/>
-            <rect x="22" y="36" width="6" height="10" fill="#F5B840" opacity="0.4"/>
-            <rect x="50" y="34" width="18" height="14" fill="#F0A030" opacity="0.5"/>
-            <!-- 门 -->
-            <rect x="32" y="46" width="16" height="18" fill="#1A0C04"/>
-            <circle cx="45" cy="55" r="1.5" fill="#C8A030"/>
-            <!-- 门廊阶梯 -->
-            <rect x="28" y="64" width="24" height="4" fill="#4A2E14"/>
-            <rect x="24" y="68" width="32" height="4" fill="#3A2010"/>
-            <!-- 小花盆 -->
-            <rect x="10" y="60" width="8" height="6" fill="#7A4F2E" rx="1"/>
-            <ellipse cx="14" cy="58" rx="6" ry="5" fill="#4A8C3F"/>
-            <rect x="62" y="60" width="8" height="6" fill="#7A4F2E" rx="1"/>
-            <ellipse cx="66" cy="58" rx="6" ry="5" fill="#56A044"/>
-          </svg>
-          <div class="px-label">🏠 亚当的角落</div>
-        </div>
-
-        <!-- 图书馆 -->
-        <div class="px-inst" :class="{ selected: selectedId === 'library', locked: !instMap['library'] || instMap['library'].status === 'locked' }"
-          style="left:70%;top:72%" @click.stop="selectedId = 'library'; adamSelected = false">
-          <svg width="72" height="76" viewBox="0 0 72 76" class="pixel-svg">
-            <!-- 图书馆建筑 -->
-            <rect x="4" y="20" width="64" height="48" fill="#2A1E08"/>
-            <rect x="6" y="22" width="60" height="44" fill="#342410"/>
-            <!-- 拱形屋顶 -->
-            <rect x="4" y="12" width="64" height="10" fill="#4A3018"/>
-            <ellipse cx="36" cy="14" rx="32" ry="8" fill="#5A3A20" opacity="0.8"/>
-            <!-- 彩色书背窗 -->
-            <rect x="8" y="26" width="8" height="18" fill="#C0392B" opacity="0.7"/>
-            <rect x="18" y="26" width="6" height="18" fill="#2980B9" opacity="0.7"/>
-            <rect x="26" y="26" width="8" height="18" fill="#27AE60" opacity="0.7"/>
-            <rect x="36" y="26" width="6" height="18" fill="#8E44AD" opacity="0.7"/>
-            <rect x="44" y="26" width="8" height="18" fill="#E67E22" opacity="0.7"/>
-            <rect x="54" y="26" width="10" height="18" fill="#16A085" opacity="0.7"/>
-            <!-- 台灯光晕 -->
-            <ellipse cx="36" cy="48" rx="14" ry="6" fill="#F5E070" opacity="0.25"/>
-            <rect x="34" y="44" width="4" height="6" fill="#C8A878"/>
-            <!-- 门 -->
-            <rect x="28" y="52" width="16" height="18" fill="#1A1004"/>
-            <rect x="28" y="52" width="16" height="4" fill="#6B4C2A" opacity="0.6"/>
-          </svg>
-          <div class="px-label">📖 图书馆</div>
-        </div>
-
-        <!-- ═══ 亚当像素小人 ═══ -->
-        <div
-          v-if="adamStore.core.status !== 'shutdown'"
-          class="px-adam"
-          :class="{
-            moving: adamStore.adamPosition.isMoving,
-            dormant: adamStore.core.status === 'dormant',
-            survival: adamStore.core.status === 'survival',
-            working: adamWorking,
-            selected: adamSelected,
-          }"
-          :style="adamPixelStyle"
-          @click.stop="selectAdam()"
-        >
-          <svg width="32" height="48" viewBox="0 0 32 48" class="pixel-svg adam-px-sprite">
-            <rect x="10" y="2" width="12" height="4" fill="#2A1A08"/>
-            <rect x="8" y="4" width="16" height="2" fill="#2A1A08"/>
-            <rect x="8" y="6" width="16" height="12" fill="#F5C18A"/>
-            <rect x="10" y="10" width="3" height="3" fill="#1A1A1A"/>
-            <rect x="19" y="10" width="3" height="3" fill="#1A1A1A"/>
-            <rect x="11" y="10" width="1" height="1" fill="white"/>
-            <rect x="20" y="10" width="1" height="1" fill="white"/>
-            <rect x="13" y="15" width="6" height="2" fill="#C87050"/>
-            <rect x="6" y="10" width="2" height="4" fill="#F0B070"/>
-            <rect x="24" y="10" width="2" height="4" fill="#F0B070"/>
-            <rect x="8" y="18" width="16" height="14" fill="#F5A623"/>
-            <rect x="6" y="18" width="4" height="12" fill="#E08B14"/>
-            <rect x="22" y="18" width="4" height="12" fill="#E08B14"/>
-            <rect x="14" y="18" width="4" height="14" fill="#D4901A"/>
-            <rect x="12" y="17" width="8" height="3" fill="#F0F0F0"/>
-            <rect x="4" y="24" width="4" height="4" fill="#F5C18A"/>
-            <rect x="24" y="24" width="4" height="4" fill="#F5C18A"/>
-            <rect x="8" y="32" width="7" height="12" fill="#2A3A5A"/>
-            <rect x="17" y="32" width="7" height="12" fill="#2A3A5A"/>
-            <rect x="6" y="44" width="10" height="3" fill="#1A1A1A"/>
-            <rect x="16" y="44" width="10" height="3" fill="#1A1A1A"/>
-          </svg>
-          <!-- 移动拖尾 -->
-          <div v-if="adamStore.adamPosition.isMoving" class="px-adam-trail">
-            <span v-for="i in 3" :key="i" class="trail-dot" :style="{ animationDelay: (i * 0.12) + 's' }"></span>
+          <!-- 地面格子 -->
+          <div v-for="c in groundCells" :key="c.key" class="iso-ground" :class="c.type" :style="c.style">
+            <div class="ground-top"></div>
+            <div class="ground-left"></div>
+            <div class="ground-right"></div>
           </div>
-          <!-- 活动气泡 -->
-          <div v-if="!adamSelected && adamStore.adamPosition.activity" class="px-adam-bubble">
-            {{ adamStore.adamPosition.activity }}
+
+          <!-- 装饰树木 -->
+          <div v-for="t in decorTrees" :key="t.key" class="deco-tree" :class="t.size"
+               :style="{ left: t.x + 'px', top: t.y + 'px', zIndex: 50 }">
+            <div class="tree-top"></div>
+            <div class="tree-trunk"></div>
           </div>
-          <!-- 点击弹出状态卡 -->
-          <div v-if="adamSelected" class="adam-popup" @click.stop>
-            <button class="adam-popup-close" @click.stop="clearSelection()">×</button>
-            <div class="adam-popup-header">
-              <span class="adam-popup-name">ADAM #1</span>
-              <span class="adam-popup-tag" :class="adamStore.core.status">{{ adamStatusLabel }}</span>
+
+          <!-- 建筑物（深度排序后渲染） -->
+          <div v-for="b in sortedBuildings" :key="b.key"
+               class="iso-bldg"
+               :class="['bldg-type-' + b.instId, { locked: b.locked, selected: selectedId === b.instId }]"
+               :style="b.posStyle"
+               @click.stop="selectedId = b.instId; adamSelected = false">
+
+            <!-- 屋顶菱形 -->
+            <div class="roof" :style="{ background: b.colorTop }">
+              <!-- 投资局：金色圆顶 -->
+              <div v-if="b.instId === 'bureau'" class="bldg-roof-dome"></div>
+              <!-- 情报站：天线 -->
+              <div v-if="b.instId === 'intel_station'" class="bldg-roof-antenna"></div>
+              <!-- 反应堆：核心 -->
+              <div v-if="b.instId === 'reactor'" class="bldg-roof-core"></div>
+              <!-- 研究院：圆顶观测站 -->
+              <div v-if="b.instId === 'research_institute'" class="bldg-roof-observatory"></div>
+              <!-- 亚当角落：烟囱 -->
+              <div v-if="b.instId === 'corner'" class="bldg-roof-chimney"></div>
             </div>
-            <div class="adam-popup-metrics">
-              <div class="adam-metric">
-                <span class="adam-metric-label">预算</span>
-                <span class="adam-metric-val" :class="{ warn: adamStore.core.budget <= 0 }">¥{{ adamStore.core.budget.toLocaleString() }}</span>
+
+            <!-- 左墙 -->
+            <div class="wall wall-left" :style="{ height: b.wallH + 'px', background: b.colorLeft }">
+              <div class="windows">
+                <div v-for="row in b.windowRows" :key="row" class="win-row">
+                  <div class="win" :class="'win-' + b.instId"></div>
+                  <div class="win" :class="'win-' + b.instId"></div>
+                </div>
               </div>
-              <div class="adam-metric">
-                <span class="adam-metric-label">信用</span>
-                <span class="adam-metric-val" :style="{ color: creditColorMap[adamStore.core.creditLevel] }">{{ adamStore.core.creditLevel }}</span>
-              </div>
-              <div class="adam-metric">
-                <span class="adam-metric-label">能量</span>
-                <span class="adam-metric-val">{{ adamStore.core.energy }}%</span>
-              </div>
-              <div class="adam-metric">
-                <span class="adam-metric-label">存活</span>
-                <span class="adam-metric-val">{{ adamStore.core.survivalDays }}天</span>
-              </div>
+              <!-- 特殊门 -->
+              <div v-if="b.instId === 'bureau'" class="bldg-door-pillars"></div>
             </div>
-            <div class="adam-popup-section">
-              <span class="adam-popup-section-title">EMOTION</span>
-              <div class="adam-popup-emotions">
-                <div v-for="(val, key) in adamStore.core.emotionState" :key="key" class="adam-emo-item">
-                  <span class="adam-emo-label">{{ emotionLabelMap[key] }}</span>
-                  <div class="adam-emo-track"><div class="adam-emo-fill" :style="{ width: val + '%', background: emotionColorMap[key] }"></div></div>
+
+            <!-- 右墙 -->
+            <div class="wall wall-right" :style="{ height: b.wallH + 'px', background: b.colorRight }">
+              <div class="windows">
+                <div v-for="row in b.windowRows" :key="row" class="win-row">
+                  <div class="win" :class="'win-' + b.instId"></div>
                 </div>
               </div>
             </div>
-            <div class="adam-popup-section">
-              <span class="adam-popup-section-title">MESSAGES</span>
-              <div v-if="latestReflections.length" class="adam-popup-messages">
-                <div v-for="r in latestReflections" :key="r.id" class="adam-msg-item">
-                  <span class="adam-msg-time">{{ formatTime(r.at) }}</span>
-                  <span class="adam-msg-text">{{ r.content }}</span>
+
+            <!-- 图标（浮在屋顶上方） -->
+            <div class="bldg-icon" :style="{ bottom: (b.wallH + 24) + 'px' }">{{ b.emoji }}</div>
+
+            <!-- 名称标签 -->
+            <div class="bldg-name">{{ b.name }}</div>
+
+            <!-- 锁定遮罩 -->
+            <div v-if="b.locked" class="bldg-locked-overlay">🔒</div>
+          </div>
+
+          <!-- ── 亚当等轴测角色 ── -->
+          <div
+            v-if="adamStore.core.status !== 'shutdown'"
+            class="adam-character"
+            :class="{
+              moving: adamStore.adamPosition.isMoving,
+              dormant: adamStore.core.status === 'dormant',
+              survival: adamStore.core.status === 'survival',
+              working: adamWorking,
+              selected: adamSelected,
+            }"
+            :style="adamPixelStyle"
+            @click.stop="selectAdam()"
+          >
+            <svg class="adam-body-svg" width="80" height="120" viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg">
+              <!-- 帽子 -->
+              <rect x="26" y="8" width="28" height="6" :fill="adamCoatColor" rx="2"/>
+              <rect x="22" y="12" width="36" height="4" :fill="adamCoatColor" rx="1"/>
+              <!-- 头部 -->
+              <rect x="20" y="16" width="40" height="30" :fill="adamHeadColor" rx="6"/>
+              <!-- 眼睛 -->
+              <rect class="adam-eye-l" x="26" y="26" width="8" height="7" :fill="adamEyeColor" rx="2"/>
+              <rect class="adam-eye-r" x="46" y="26" width="8" height="7" :fill="adamEyeColor" rx="2"/>
+              <rect x="27" y="27" width="3" height="3" fill="white" opacity="0.6"/>
+              <rect x="47" y="27" width="3" height="3" fill="white" opacity="0.6"/>
+              <!-- 嘴 -->
+              <rect v-if="adamMouth === 'smile'" x="30" y="38" width="20" height="3" :fill="adamEyeColor" rx="2"/>
+              <rect v-if="adamMouth === 'neutral'" x="30" y="40" width="20" height="2" fill="#8E99A4" rx="1"/>
+              <rect v-if="adamMouth === 'sad'" x="30" y="42" width="20" height="3" fill="#5B8DEF" rx="2"/>
+              <!-- 耳朵 -->
+              <rect x="14" y="24" width="6" height="10" :fill="adamHeadColor" rx="3"/>
+              <rect x="60" y="24" width="6" height="10" :fill="adamHeadColor" rx="3"/>
+              <!-- 身体 -->
+              <rect class="adam-leg-l" x="20" y="46" width="36" height="36" :fill="adamCoatColor" rx="4"/>
+              <!-- 标志 -->
+              <rect x="34" y="50" width="12" height="6" fill="white" opacity="0.15" rx="2"/>
+              <!-- 手臂 -->
+              <rect class="adam-arm-l" x="8" y="48" width="12" height="28" :fill="adamCoatColor" rx="4"/>
+              <rect class="adam-arm-r" x="60" y="48" width="12" height="28" :fill="adamCoatColor" rx="4"/>
+              <!-- 手 -->
+              <rect x="9" y="74" width="10" height="8" :fill="adamHeadColor" rx="3"/>
+              <rect x="61" y="74" width="10" height="8" :fill="adamHeadColor" rx="3"/>
+              <!-- 腿 -->
+              <rect class="adam-leg-l" x="22" y="82" width="14" height="28" :fill="adamLegColor" rx="4"/>
+              <rect class="adam-leg-r" x="44" y="82" width="14" height="28" :fill="adamLegColor" rx="4"/>
+              <!-- 鞋 -->
+              <rect x="18" y="106" width="20" height="8" fill="#1A1A1A" rx="3"/>
+              <rect x="42" y="106" width="20" height="8" fill="#1A1A1A" rx="3"/>
+              <!-- 发光眼效果 -->
+              <ellipse cx="30" cy="29" rx="5" ry="4" :fill="adamEyeColor" opacity="0.25"/>
+              <ellipse cx="50" cy="29" rx="5" ry="4" :fill="adamEyeColor" opacity="0.25"/>
+            </svg>
+            <div class="adam-shadow">
+              <svg width="40" height="10" viewBox="0 0 40 10"><ellipse cx="20" cy="5" rx="18" ry="4" fill="rgba(0,0,0,0.18)"/></svg>
+            </div>
+            <div v-if="adamStore.adamPosition.isMoving" class="adam-trail">
+              <span v-for="i in 3" :key="i" class="trail-dot" :style="{ animationDelay: (i * 0.12) + 's', color: adamGlowColor }"></span>
+            </div>
+            <div v-if="!adamSelected && adamStore.adamPosition.activity" class="adam-bubble">
+              <span class="bubble-text">{{ adamStore.adamPosition.activity }}</span>
+            </div>
+            <div v-if="adamSelected" class="adam-popup" @click.stop>
+              <button class="adam-popup-close" @click.stop="clearSelection()">×</button>
+              <div class="adam-popup-header">
+                <span class="adam-popup-name">ADAM #1</span>
+                <span class="adam-popup-tag" :class="adamStore.core.status">{{ adamStatusLabel }}</span>
+              </div>
+              <div class="adam-popup-metrics">
+                <div class="adam-metric">
+                  <span class="adam-metric-label">预算</span>
+                  <span class="adam-metric-val" :class="{ warn: adamStore.core.budget <= 0 }">¥{{ adamStore.core.budget.toLocaleString() }}</span>
+                </div>
+                <div class="adam-metric">
+                  <span class="adam-metric-label">信用</span>
+                  <span class="adam-metric-val" :style="{ color: creditColorMap[adamStore.core.creditLevel] }">{{ adamStore.core.creditLevel }}</span>
+                </div>
+                <div class="adam-metric">
+                  <span class="adam-metric-label">能量</span>
+                  <span class="adam-metric-val">{{ adamStore.core.energy }}%</span>
+                </div>
+                <div class="adam-metric">
+                  <span class="adam-metric-label">存活</span>
+                  <span class="adam-metric-val">{{ adamStore.core.survivalDays }}天</span>
                 </div>
               </div>
-              <div v-else class="adam-msg-empty">还没有留言...</div>
+              <div class="adam-popup-section">
+                <span class="adam-popup-section-title">EMOTION</span>
+                <div class="adam-popup-emotions">
+                  <div v-for="(val, key) in adamStore.core.emotionState" :key="key" class="adam-emo-item">
+                    <span class="adam-emo-label">{{ emotionLabelMap[key] }}</span>
+                    <div class="adam-emo-track"><div class="adam-emo-fill" :style="{ width: val + '%', background: emotionColorMap[key] }"></div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="adam-popup-section">
+                <span class="adam-popup-section-title">MESSAGES</span>
+                <div v-if="latestReflections.length" class="adam-popup-messages">
+                  <div v-for="r in latestReflections" :key="r.id" class="adam-msg-item">
+                    <span class="adam-msg-time">{{ formatTime(r.at) }}</span>
+                    <span class="adam-msg-text">{{ r.content }}</span>
+                  </div>
+                </div>
+                <div v-else class="adam-msg-empty">还没有留言...</div>
+              </div>
             </div>
           </div>
-        </div>
+
+        </div><!-- /iso-scene -->
 
         <!-- HUD -->
-        <div class="px-hud">
-          <span class="px-hud-dot" :class="adamStore.core.status"></span>
-          {{ adamHudText }}
+        <div class="iso-hud">
+          <div class="hud-item">
+            <div class="hud-dot" :class="adamStore.core.status"></div>
+            {{ adamHudText }}
+          </div>
         </div>
+        <div class="iso-controls">
+          <span>滚轮缩放</span>
+          <span>拖拽平移</span>
+          <span>右键旋转</span>
+        </div>
+
       </div>
     </div>
 
@@ -1071,7 +770,8 @@ marked.setOptions({ breaks: true, gfm: true })
 const adamStore = useAdamStore()
 
 // ── 右侧对话面板 ──
-const chatCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
+const chatCollapsed = ref(true)
 const chatStore = adamStore  // alias for template clarity
 const chatMessagesDiv = ref<HTMLDivElement>()
 const chatInputRef = ref<HTMLTextAreaElement>()
@@ -1246,7 +946,7 @@ const latestReflections = computed(() =>
 )
 
 // ── 亚当位置 (等距坐标 → 屏幕坐标) ──
-const adamCharStyle = computed(() => {
+const adamPixelStyle = computed(() => {
   const pos = adamStore.adamPosition
   // 当移动时使用目标坐标（CSS transition会平滑过渡）
   const gx = pos.isMoving ? pos.targetGridX : pos.gridX
@@ -1853,6 +1553,12 @@ async function executeTool(tid: string) {
   }
 }
 
+const instMap = computed(() => {
+  const map: Record<string, typeof adamStore.institutions[0]> = {}
+  for (const inst of adamStore.institutions) map[inst.institutionId] = inst
+  return map
+})
+
 const selectedInst = computed(() =>
   selectedId.value ? adamStore.institutions.find((i) => i.institutionId === selectedId.value) || null : null,
 )
@@ -2039,22 +1745,36 @@ interface BldgDef {
   right: string
 }
 const bldgDefs: Record<string, BldgDef> = {
-  bureau:             { emoji: '🏛', h: 56, top: '#E8F4FD', left: '#B8D4E8', right: '#92BAD8' },
-  finance_gateway:    { emoji: '🏦', h: 64, top: '#FFF3CD', left: '#F0CC70', right: '#D4A840' },
-  reactor:            { emoji: '⚡', h: 68, top: '#FFE0CC', left: '#F4A460', right: '#D4844A' },
-  intel_station:      { emoji: '📡', h: 72, top: '#D0F4FF', left: '#78CCEA', right: '#4AAED0' },
-  research_institute: { emoji: '🔬', h: 60, top: '#E0F7FA', left: '#80DEEA', right: '#4DB6C8' },
-  adam_academy:       { emoji: '🎓', h: 52, top: '#F3E5F5', left: '#CE93D8', right: '#AB5DBE' },
-  data_center:        { emoji: '💾', h: 44, top: '#E0F2F1', left: '#80CBC4', right: '#4DB6AC' },
-  risk_lab:           { emoji: '⚗️', h: 48, top: '#FFEBEE', left: '#EF9A9A', right: '#E57373' },
-  arbitration_hall:   { emoji: '⚖️', h: 54, top: '#FFFDE7', left: '#FFF176', right: '#F9D900' },
-  ad_company:         { emoji: '📺', h: 46, top: '#FCE4EC', left: '#F48FB1', right: '#E91E8C' },
-  archive:            { emoji: '📚', h: 40, top: '#EFEBE9', left: '#BCAAA4', right: '#8D6E63' },
-  corner:             { emoji: '🏠', h: 34, top: '#F1F8E9', left: '#AED581', right: '#8BC34A' },
-  marketing_consultancy: { emoji: '📊', h: 58, top: '#E8F5E9', left: '#81C784', right: '#4CAF50' },
-  library:               { emoji: '📖', h: 50, top: '#FFF8E1', left: '#FFD54F', right: '#FFC107' },
+  // 指挥中心 — 金色政府风
+  bureau:             { emoji: '🏛', h: 64, top: '#F5E6B8', left: '#D4A84A', right: '#A07820' },
+  // 金融机构 — 琥珀黄金融塔
+  finance_gateway:    { emoji: '🏦', h: 72, top: '#FFF3C0', left: '#E8C040', right: '#C09020' },
+  // 反应堆 — 深色工业橙
+  reactor:            { emoji: '⚡', h: 80, top: '#2A1E08', left: '#4A2A08', right: '#3A2010' },
+  // 情报站 — 青色科技
+  intel_station:      { emoji: '📡', h: 76, top: '#B8EEFF', left: '#4AAED0', right: '#2880A0' },
+  // 研究院 — 冷蓝实验室
+  research_institute: { emoji: '🔬', h: 68, top: '#C8F0F8', left: '#5ABCCE', right: '#3A96B0' },
+  // 亚当学院 — 紫色神秘
+  adam_academy:       { emoji: '🎓', h: 60, top: '#E8D0FF', left: '#9B59D6', right: '#7030B0' },
+  // 数据仓库 — 深蓝矩阵
+  data_center:        { emoji: '💾', h: 48, top: '#1A2A3A', left: '#0A1828', right: '#081420' },
+  // 风险实验室 — 深红危险
+  risk_lab:           { emoji: '⚗️', h: 52, top: '#3A0808', left: '#280606', right: '#1A0404' },
+  // 仲裁所 — 古朴米黄
+  arbitration_hall:   { emoji: '⚖️', h: 58, top: '#FFF8D0', left: '#D4B860', right: '#A89030' },
+  // 广告公司 — 霓虹粉
+  ad_company:         { emoji: '📺', h: 50, top: '#2A0A1A', left: '#4A0A2A', right: '#3A0618' },
+  // 档案馆 — 暖棕木质
+  archive:            { emoji: '📚', h: 44, top: '#8B6040', left: '#6B4820', right: '#4A3010' },
+  // 亚当角落 — 温暖绿
+  corner:             { emoji: '🏠', h: 38, top: '#A8C870', left: '#7A9848', right: '#5A7830' },
+  // 营销顾问所 — 商业蓝
+  marketing_consultancy: { emoji: '📊', h: 62, top: '#D0E8FF', left: '#5080C0', right: '#3060A0' },
+  // 图书馆 — 古典棕
+  library:               { emoji: '📖', h: 54, top: '#C8A060', left: '#A07840', right: '#785820' },
 }
-const defaultDef: BldgDef = { emoji: '🏗️', h: 36, top: '#F5F5F5', left: '#E0E0E0', right: '#BDBDBD' }
+const defaultDef: BldgDef = { emoji: '🏗️', h: 36, top: '#E0D8C8', left: '#B0A890', right: '#8A8070' }
 
 // 等轴测坐标转屏幕坐标
 function isoToScreen(gx: number, gy: number) {
@@ -2315,6 +2035,33 @@ onUnmounted(() => {
   overflow-y: auto;
   margin-right: 16px;
   scrollbar-width: thin;
+  transition: width 0.2s ease, margin-right 0.2s ease;
+}
+.city-sidebar.collapsed {
+  width: 40px;
+  margin-right: 8px;
+  overflow: hidden;
+}
+.city-sidebar-toggle {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  background: var(--card-bg);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: #F5A623;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.city-sidebar-toggle:hover {
+  background: rgba(245,166,35,0.05);
 }
 
 .sidebar-title-bar {
@@ -3653,4 +3400,257 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .city-chat { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════
+   Flipbook 风格建筑增强
+   ═══════════════════════════════════════════════════ */
+
+/* 建筑锁定遮罩 */
+.bldg-locked-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  z-index: 20;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+/* ── 窗口颜色 per 建筑类型 ── */
+.win-bureau          { background: rgba(245,166,35,0.75) !important; }
+.win-finance_gateway { background: rgba(240,204,112,0.85) !important; animation: winBlink 3s ease-in-out infinite; }
+.win-reactor         { background: rgba(245,166,35,0.9) !important; animation: winBlink 1.5s ease-in-out infinite; }
+.win-intel_station   { background: rgba(0,212,255,0.75) !important; animation: winBlink 2.8s ease-in-out infinite; }
+.win-research_institute { background: rgba(0,229,160,0.65) !important; }
+.win-data_center     { background: rgba(0,212,255,0.6) !important; animation: winBlink 2s ease-in-out infinite; }
+.win-risk_lab        { background: rgba(255,77,77,0.5) !important; }
+.win-marketing_consultancy { background: rgba(74,140,255,0.65) !important; }
+.win-ad_company      { background: rgba(233,30,140,0.5) !important; animation: winBlink 0.8s ease-in-out infinite; }
+.win-arbitration_hall { background: rgba(240,192,64,0.6) !important; }
+.win-adam_academy    { background: rgba(139,92,246,0.65) !important; }
+.win-archive         { background: rgba(192,57,43,0.7) !important; }
+.win-corner          { background: rgba(245,180,64,0.8) !important; }
+.win-library         { background: rgba(192,57,43,0.7) !important; }
+
+@keyframes winBlink {
+  0%, 90%, 100% { opacity: 1; }
+  95% { opacity: 0.4; }
+}
+
+/* ── 整体建筑发光 per 类型 ── */
+.bldg-type-bureau.iso-bldg {
+  filter: drop-shadow(0 0 10px rgba(245,166,35,0.35)) drop-shadow(2px 4px 6px rgba(80,60,20,0.3));
+}
+.bldg-type-finance_gateway.iso-bldg {
+  filter: drop-shadow(0 0 8px rgba(212,168,64,0.3)) drop-shadow(2px 4px 5px rgba(60,50,20,0.25));
+}
+.bldg-type-reactor.iso-bldg {
+  filter: drop-shadow(0 0 14px rgba(245,166,35,0.5)) drop-shadow(0 0 6px rgba(255,200,0,0.4));
+  animation: reactorPulse 2s ease-in-out infinite;
+}
+.bldg-type-intel_station.iso-bldg {
+  filter: drop-shadow(0 0 10px rgba(0,212,255,0.4)) drop-shadow(2px 4px 5px rgba(0,40,60,0.3));
+}
+.bldg-type-research_institute.iso-bldg {
+  filter: drop-shadow(0 0 8px rgba(0,229,160,0.3)) drop-shadow(2px 4px 5px rgba(0,30,40,0.25));
+}
+.bldg-type-data_center.iso-bldg {
+  filter: drop-shadow(0 0 8px rgba(0,212,255,0.3));
+}
+.bldg-type-risk_lab.iso-bldg {
+  filter: drop-shadow(0 0 10px rgba(255,77,77,0.35));
+}
+.bldg-type-ad_company.iso-bldg {
+  filter: drop-shadow(0 0 12px rgba(233,30,140,0.45));
+  animation: neonFlicker 3s linear infinite;
+}
+.bldg-type-reactor.iso-bldg .roof {
+  animation: reactorRoofGlow 2s ease-in-out infinite;
+}
+.bldg-type-corner.iso-bldg {
+  filter: drop-shadow(0 0 8px rgba(245,180,64,0.35)) drop-shadow(2px 4px 6px rgba(40,20,0,0.3));
+}
+.bldg-type-adam_academy.iso-bldg {
+  filter: drop-shadow(0 0 12px rgba(139,92,246,0.4));
+}
+
+@keyframes reactorPulse {
+  0%, 100% { filter: drop-shadow(0 0 14px rgba(245,166,35,0.5)) drop-shadow(0 0 6px rgba(255,200,0,0.4)); }
+  50% { filter: drop-shadow(0 0 22px rgba(245,166,35,0.75)) drop-shadow(0 0 12px rgba(255,200,0,0.6)); }
+}
+@keyframes reactorRoofGlow {
+  0%, 100% { background: #FFE0CC; }
+  50% { background: #FFB870; }
+}
+@keyframes neonFlicker {
+  0%, 96%, 100% { opacity: 1; }
+  97% { opacity: 0.7; }
+  98% { opacity: 1; }
+  99% { opacity: 0.5; }
+}
+
+/* ── 屋顶装饰 ── */
+.bldg-roof-dome {
+  position: absolute;
+  width: 16px;
+  height: 10px;
+  background: radial-gradient(ellipse, #FFD700 0%, #C8A030 60%, #A07820 100%);
+  border-radius: 50% 50% 0 0;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 6px rgba(245,166,35,0.6);
+}
+.bldg-roof-antenna {
+  position: absolute;
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to top, #4A8AB8, #00D4FF);
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.bldg-roof-antenna::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  background: #00D4FF;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(0,212,255,0.8);
+  animation: antennaBlink 1.2s ease-in-out infinite;
+}
+@keyframes antennaBlink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(0,212,255,0.8); }
+  50% { opacity: 0.3; box-shadow: 0 0 2px rgba(0,212,255,0.3); }
+}
+.bldg-roof-core {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle, #FFD700 0%, #F5A623 50%, transparent 100%);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px rgba(245,166,35,0.9), 0 0 24px rgba(245,166,35,0.4);
+  animation: coreGlow 1.5s ease-in-out infinite;
+}
+@keyframes coreGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(245,166,35,0.9), 0 0 24px rgba(245,166,35,0.4); transform: translate(-50%,-50%) scale(1); }
+  50% { box-shadow: 0 0 20px rgba(245,166,35,1), 0 0 40px rgba(245,166,35,0.6); transform: translate(-50%,-50%) scale(1.15); }
+}
+.bldg-roof-observatory {
+  position: absolute;
+  width: 18px;
+  height: 9px;
+  background: linear-gradient(to top, #4DB6C8, #80DEEA);
+  border-radius: 50% 50% 0 0;
+  top: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  overflow: hidden;
+}
+.bldg-roof-observatory::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 12px;
+  background: #E0F7FA;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.7;
+}
+.bldg-roof-chimney {
+  position: absolute;
+  width: 8px;
+  height: 16px;
+  background: linear-gradient(to top, #4A2E14, #3A2010);
+  top: -14px;
+  right: 8px;
+  border-radius: 2px 2px 0 0;
+}
+.bldg-roof-chimney::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 3px;
+  background: #2A1808;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+/* ── 门廊柱子（投资局） ── */
+.bldg-door-pillars {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 60%;
+  display: flex;
+  justify-content: space-between;
+}
+.bldg-door-pillars::before,
+.bldg-door-pillars::after {
+  content: '';
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to right, rgba(255,220,140,0.9), rgba(200,160,80,0.7));
+  border-radius: 2px;
+}
+
+/* ── 等轴测地面提升 ── */
+.iso-ground.grass .ground-top {
+  background: radial-gradient(ellipse at 30% 30%, #8BC34A, #6D9E2A);
+}
+.iso-ground.path .ground-top {
+  background: repeating-linear-gradient(
+    45deg,
+    #B5CC8E,
+    #B5CC8E 4px,
+    #C8D9A0 4px,
+    #C8D9A0 8px
+  );
+}
+.iso-ground.road .ground-top {
+  background: repeating-linear-gradient(
+    90deg,
+    #D0D8DC,
+    #D0D8DC 6px,
+    #C4CDD0 6px,
+    #C4CDD0 12px
+  );
+}
+
+/* ── 选中建筑光晕 ── */
+.iso-bldg.selected .roof {
+  filter: brightness(1.3);
+  box-shadow: inset 0 3px 0 rgba(255,255,255,0.8), 0 0 12px rgba(245,166,35,0.6);
+}
+.iso-bldg.selected .bldg-name {
+  color: #F5A623;
+  text-shadow: 0 0 8px rgba(245,166,35,0.6), 0 1px 0 rgba(255,255,255,0.9);
+}
+
+/* ── 树木增强 ── */
+.tree-top {
+  width: 22px;
+  height: 22px;
+  background: radial-gradient(circle at 40% 30%, #8BC34A, #4CAF50, #2E7D32);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset -2px -2px 0 rgba(0,0,0,0.1);
+}
+.deco-tree.md .tree-top {
+  width: 30px;
+  height: 30px;
+  background: radial-gradient(circle at 35% 30%, #A5D6A7, #66BB6A, #388E3C);
 }</style>

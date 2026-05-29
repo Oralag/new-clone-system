@@ -145,9 +145,9 @@ const builtinTemplates = [
   },
   {
     key: 'contract',
-    name: '销售合同',
+    name: '销售订单',
     icon: '📄',
-    desc: '「销售 > 销售合同」审核后点"打印"按钮输出',
+    desc: '「销售 > 销售订单」审核后点"打印"按钮输出',
     navPath: '/sale/contract',
     sampleHtml: `<div style="font-family:SimSun,Arial;padding:16px;border:1px solid #e0e0e0;border-radius:8px;font-size:12px">
       <h3 style="text-align:center;margin:0 0 6px;font-size:16px">销 售 合 同</h3>

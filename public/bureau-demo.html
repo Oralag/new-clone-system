@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>投资局 · v7</title>
+  <style>
+    :root {
+      --ink:#201e18; --line:#26221a;
+      --stone-lt:#eeead8; --stone-md:#ccc6b0; --stone-dk:#aca698;
+      --col-face:#f4f2ea; --col-hl:#ffffff;  --col-sh:#989088;
+      --portico-bg:#1c1810;
+      --roof-lt:#6a6258; --roof-dk:#32302a;
+      --win:#181612; --win-bar:#363028;
+      --gold:#c49018; --green:#4a7840;
+      --step-lt:#e8e4d0; --step-dk:#b4aea0;
+      --grass:#88b456;
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{
+      margin:0;min-height:100vh;display:grid;place-items:center;
+      background:
+        radial-gradient(ellipse at 48% 22%,rgba(255,252,236,.92) 0%,transparent 50%),
+        linear-gradient(150deg,#e8dfc6 0%,#f4f0e0 60%,#ddd4ba 100%);
+      font-family:"Noto Sans SC","PingFang SC",system-ui,sans-serif;
+    }
+    .stage{width:min(100vw,1200px);aspect-ratio:16/9;}
+    svg{display:block;width:100%;height:100%;}
+    .e {stroke:var(--line);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;fill:none;}
+    .ef{stroke:var(--line);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+    .em{stroke:var(--line);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+    .th{stroke:var(--line);stroke-width:.9;stroke-linecap:round;stroke-linejoin:round;fill:none;}
+    .lbl-cn{font-size:20px;font-weight:900;}
+    .lbl-en{font-size:12px;letter-spacing:.3px;}
+    .lbl-st{font-size:11px;font-weight:800;fill:var(--green);letter-spacing:.9px;}
+  </style>
+</head>
+<body>
+<main class="stage">
+<!--
+  Viewbox zoomed to show building larger
+-->
+<svg viewBox="30 30 900 545">
+<defs>
+
+  <filter id="fShadow" x="-20%" y="-20%" width="140%" height="160%">
+    <feDropShadow dx="0" dy="14" stdDeviation="11" flood-color="#161210" flood-opacity=".24"/>
+  </filter>
+
+  <!-- Charcoal roof tiles -->
+  <pattern id="pRoofL" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(27)">
+    <line x1="0" y1="0" x2="0" y2="10" stroke="#181614" stroke-width="1.2" opacity=".5"/>
+  </pattern>
+  <pattern id="pRoofR" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-27)">
+    <line x1="0" y1="0" x2="0" y2="10" stroke="#121010" stroke-width="1.2" opacity=".6"/>
+  </pattern>
+
+  <!-- Stone wall hatch (subtle texture) -->
+  <pattern id="pWall" width="16" height="10" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="5"  x2="16" y2="5"  stroke="#8a8478" stroke-width=".35" opacity=".3"/>
+    <line x1="8" y1="0"  x2="8"  y2="5"  stroke="#8a8478" stroke-width=".28" opacity=".22"/>
+    <line x1="4" y1="5"  x2="4"  y2="10" stroke="#8a8478" stroke-width=".28" opacity=".22"/>
+    <line x1="12" y1="5" x2="12" y2="10" stroke="#8a8478" stroke-width=".28" opacity=".22"/>
+  </pattern>
+
+  <!-- Grass -->
+  <pattern id="pGrass" width="28" height="28" patternUnits="userSpaceOnUse">
+    <rect width="28" height="28" fill="#88b456"/>
+    <path d="M3 20l3-9M11 25l2-8M21 12l2-6M7 6l2-5M25 23l2-6"
+          stroke="#4c7028" stroke-width="1" opacity=".35"/>
+  </pattern>
+
+  <!-- Plaza stone -->
+  <pattern id="pPlaza" width="18" height="11" patternUnits="userSpaceOnUse">
+    <rect width="18" height="11" fill="#ccc4ae"/>
+    <line x1="0" y1="5.5" x2="18" y2="5.5" stroke="#a09880" stroke-width=".38" opacity=".38"/>
+    <line x1="9" y1="0"   x2="9"  y2="5.5"  stroke="#a09880" stroke-width=".3"  opacity=".28"/>
+    <line x1="4" y1="5.5" x2="4"  y2="11"   stroke="#a09880" stroke-width=".3"  opacity=".26"/>
+    <line x1="13" y1="5.5" x2="13" y2="11"  stroke="#a09880" stroke-width=".3"  opacity=".26"/>
+  </pattern>
+
+  <!-- Gradient: right wall face shading -->
+  <linearGradient id="gWallR" x1="0" x2="1" y1="0" y2="0">
+    <stop offset="0%"   stop-color="#d8d2bc"/>
+    <stop offset="100%" stop-color="#c4bea8"/>
+  </linearGradient>
+
+  <!-- Label -->
+  <linearGradient id="gLabel" x1="0" x2="0" y1="0" y2="1">
+    <stop offset="0%"   stop-color="#f8f4e0"/>
+    <stop offset="100%" stop-color="#e2d8bc"/>
+  </linearGradient>
+
+  <!-- Tree -->
+  <g id="tree">
+    <ellipse cx="0" cy="23" rx="18" ry="7" fill="rgba(22,16,4,.14)"/>
+    <rect x="-4" y="5" width="8" height="20" rx="3" fill="#7a6040" stroke="#503e28" stroke-width="1.4"/>
+    <circle cx="0"   cy="-3" r="17"   fill="#86a856" stroke="#486626" stroke-width="2"/>
+    <circle cx="-14" cy="7"  r="12"   fill="#96ba5e" stroke="#486626" stroke-width="1.8"/>
+    <circle cx="14"  cy="7"  r="12"   fill="#96ba5e" stroke="#486626" stroke-width="1.8"/>
+    <circle cx="-4"  cy="-8" r="7.5"  fill="#b4d468" opacity=".38"/>
+  </g>
+
+  <!--
+  ═══════════════════════════════════════════════════════════════════════
+    BUREAU v6
+
+    Isometric: N=(-62,-31)/tile   E=(+62,-31)/tile   UP=(0,-1)/px
+    Plan: 3N × 3E (square)
+    Body height H = 148px
+
+    5 ROUND COLUMNS  (wider: 0.15 tiles per col, gap=0.05)
+      margin=0.025 on each end
+      t_l = [0.025, 0.225, 0.425, 0.625, 0.825]
+      t_r = [0.175, 0.375, 0.575, 0.775, 0.975]
+      Column height: 122px (entablature starts at Z=122)
+
+      N-face vector: (-186,-93) per 3 tiles → (-62,-31) per tile
+      At t: base = (-186t, -93t)
+      hl strip: t_l + 0.15*(t_r-t_l) = t_l + 0.0225  → 15% of width
+      sh strip: t_l + 0.82*(t_r-t_l) = t_l + 0.123   → last 18% of width
+
+    Capital: 8px band at top of shaft (z=114..122) extends ±6px beyond shaft
+    Base: 10px band at bottom of shaft (z=0..10) extends ±6px beyond shaft
+  ═══════════════════════════════════════════════════════════════════════
+  -->
+  <g id="bureau">
+
+    <!-- Shadow -->
+    <ellipse cx="0" cy="20" rx="195" ry="52" fill="rgba(20,16,6,.18)"/>
+
+    <!-- ═══ STEPS (3 tiers) ═══ -->
+    <!-- Outermost +28px -->
+    <polygon points="34,22 -220,-85 202,-107 0,-214" fill="var(--step-lt)" class="ef" stroke-width="1.5"/>
+    <polygon points="34,22 202,-85 202,-107 34,0"    fill="var(--step-dk)" class="ef" stroke-width="1.4"/>
+    <polygon points="202,-85 0,-192 0,-214 202,-107"  fill="var(--stone-dk)" class="ef" stroke-width="1.4"/>
+    <!-- Middle +14px -->
+    <polygon points="18,12 -204,-80 188,-96 0,-196" fill="var(--step-lt)" class="ef" stroke-width="1.3"/>
+    <polygon points="18,12 188,-80 188,-96 18,0"    fill="var(--step-dk)" class="ef" stroke-width="1.3"/>
+    <polygon points="188,-80 0,-176 0,-196 188,-96"  fill="var(--stone-dk)" class="ef" stroke-width="1.3"/>
+    <!-- Inner +5px -->
+    <polygon points="6,4 -192,-77 186,-90 0,-182" fill="var(--step-lt)" class="ef" stroke-width="1.2"/>
+    <polygon points="6,4 186,-77 186,-90 6,0"     fill="var(--step-dk)" class="ef" stroke-width="1.2"/>
+    <polygon points="186,-77 0,-170 0,-182 186,-90" fill="var(--stone-dk)" class="ef" stroke-width="1.2"/>
+
+    <!-- ═══ RIGHT FACE — stone wall with hatch + 3 dark windows ═══ -->
+    <polygon points="0,0 186,-93 186,-241 0,-148" fill="url(#gWallR)" class="ef"/>
+    <polygon points="0,0 186,-93 186,-241 0,-148" fill="url(#pWall)" opacity=".6"/>
+
+    <!-- 3 cols × 2 rows of dark windows (e=[.11..33, .44..66, .77..97], h=[30..86, 96..152]) -->
+    <!-- W-A1 -->
+    <polygon points="20,-40 61,-61 61,-121 20,-100" fill="var(--win)" class="em" stroke-width="1.1"/>
+    <line x1="34"  y1="-40" x2="34"  y2="-121" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <line x1="47"  y1="-40" x2="47"  y2="-121" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <line x1="20"  y1="-76" x2="61"  y2="-97"  stroke="var(--win-bar)" stroke-width="1.1"/>
+    <!-- W-B1 -->
+    <polygon points="82,-111 122,-131 122,-191 82,-171" fill="var(--win)" class="em" stroke-width="1.1"/>
+    <line x1="96"  y1="-111" x2="96"  y2="-191" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <line x1="109" y1="-111" x2="109" y2="-191" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <line x1="82"  y1="-147" x2="122" y2="-167" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <!-- W-C1 -->
+    <polygon points="143,-163 180,-182 180,-241 143,-222" fill="var(--win)" class="em" stroke-width="1.1"/>
+    <line x1="156" y1="-163" x2="156" y2="-241" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <line x1="168" y1="-163" x2="168" y2="-241" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <!-- W-A2 -->
+    <polygon points="20,-100 61,-121 61,-181 20,-160" fill="var(--win)" class="em" stroke-width="1.1"/>
+    <line x1="34"  y1="-100" x2="34"  y2="-181" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <line x1="47"  y1="-100" x2="47"  y2="-181" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <line x1="20"  y1="-136" x2="61"  y2="-157" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <!-- W-B2 -->
+    <polygon points="82,-171 122,-191 122,-241 82,-221" fill="var(--win)" class="em" stroke-width="1.1"/>
+    <line x1="96"  y1="-171" x2="96"  y2="-241" stroke="var(--win-bar)" stroke-width="1.1"/>
+    <line x1="109" y1="-171" x2="109" y2="-241" stroke="var(--win-bar)" stroke-width="1.1"/>
+
+    <!-- Right face outline -->
+    <polygon points="0,0 186,-93 186,-241 0,-148" class="e" stroke-width="2.5"/>
+
+    <!-- ═══ LEFT FACE — TEMPLE PORTICO ═══ -->
+
+    <!-- Very dark interior -->
+    <polygon points="0,0 -186,-93 -186,-241 0,-148" fill="var(--portico-bg)" class="ef"/>
+    <!-- Ceiling (deeper dark) -->
+    <polygon points="0,-112 -186,-205 -186,-241 0,-148"
+             fill="#100e0a" class="ef" stroke-width="1"/>
+
+    <!--
+    5 ROUND COLUMNS  (t ranges as above, height=122px)
+    Each = Main shaft + HL strip (15%) + SH strip (last 18%)
+
+    Computed values:
+      C1: tl=.025, tr=.175, hl=.047, sh=.148
+        front=(-4.7,-2.3), rear=(-32.6,-16.3), hl=(-8.7,-4.4), sh=(-27.5,-13.7)
+      C2: tl=.225, tr=.375, hl=.247, sh=.348
+        front=(-41.9,-20.9), rear=(-69.8,-34.9), hl=(-45.9,-22.9), sh=(-64.7,-32.4)
+      C3: tl=.425, tr=.575, hl=.447, sh=.548
+        front=(-79.1,-39.5), rear=(-107.0,-53.5), hl=(-83.1,-41.6), sh=(-101.9,-50.9)
+      C4: tl=.625, tr=.775, hl=.647, sh=.748
+        front=(-116.3,-58.1), rear=(-144.2,-72.1), hl=(-120.3,-60.2), sh=(-139.1,-69.6)
+      C5: tl=.825, tr=.975, hl=.847, sh=.948
+        front=(-153.5,-76.7), rear=(-181.4,-90.7), hl=(-157.5,-78.8), sh=(-176.3,-88.1)
+
+    Capital (z=114..122, extends 6px each side):
+      front_ext = col_front - (0.032 tiles in face dir) ≈ col_front + (6×0.895, 6×0.448) ≈ col_front+(5.4,2.7)
+      rear_ext  = col_rear  + (0.032 tiles)             ≈ col_rear  - (5.4,2.7)
+    Base (z=0..10):
+      same extension logic
+    -->
+
+    <!-- ─── COL 1 ─── -->
+    <polygon points="-5,-2 -33,-16 -33,-138 -5,-124"    fill="var(--col-face)" class="ef" stroke-width="1.9"/>
+    <polygon points="-5,-2 -9,-4 -9,-126 -5,-124"       fill="var(--col-hl)" opacity=".65" stroke="none"/>
+    <polygon points="-28,-14 -33,-16 -33,-138 -28,-136"  fill="var(--col-sh)" opacity=".50" stroke="none"/>
+    <!-- Cap C1 -->
+    <polygon points="0,-122 -38,-137 -38,-126 0,-111"   fill="var(--col-face)" class="em" stroke-width="1.4"/>
+    <!-- Base C1 -->
+    <polygon points="0,0 -38,-19 -38,-9 0,10"           fill="var(--col-face)" class="em" stroke-width="1.4"/>
+
+    <!-- ─── COL 2 ─── -->
+    <polygon points="-42,-21 -70,-35 -70,-157 -42,-143"  fill="var(--col-face)" class="ef" stroke-width="1.9"/>
+    <polygon points="-42,-21 -46,-23 -46,-145 -42,-143"  fill="var(--col-hl)" opacity=".65" stroke="none"/>
+    <polygon points="-65,-33 -70,-35 -70,-157 -65,-155"  fill="var(--col-sh)" opacity=".50" stroke="none"/>
+    <!-- Cap C2 -->
+    <polygon points="-37,-139 -75,-156 -75,-145 -37,-128" fill="var(--col-face)" class="em" stroke-width="1.4"/>
+    <!-- Base C2 -->
+    <polygon points="-37,-19 -75,-37 -75,-27 -37,-9"     fill="var(--col-face)" class="em" stroke-width="1.4"/>
+
+    <!-- ─── COL 3 ─── -->
+    <polygon points="-79,-40 -107,-54 -107,-176 -79,-162"  fill="var(--col-face)" class="ef" stroke-width="1.9"/>
+    <polygon points="-79,-40 -83,-42 -83,-164 -79,-162"    fill="var(--col-hl)" opacity=".65" stroke="none"/>
+    <polygon points="-102,-51 -107,-54 -107,-176 -102,-174" fill="var(--col-sh)" opacity=".50" stroke="none"/>
+    <!-- Cap C3 -->
+    <polygon points="-74,-158 -112,-175 -112,-164 -74,-147" fill="var(--col-face)" class="em" stroke-width="1.4"/>
+    <!-- Base C3 -->
+    <polygon points="-74,-38 -112,-55 -112,-45 -74,-28"    fill="var(--col-face)" class="em" stroke-width="1.4"/>
+
+    <!-- ─── COL 4 ─── -->
+    <polygon points="-116,-58 -144,-72 -144,-194 -116,-180"  fill="var(--col-face)" class="ef" stroke-width="1.9"/>
+    <polygon points="-116,-58 -120,-60 -120,-182 -116,-180"  fill="var(--col-hl)" opacity=".65" stroke="none"/>
+    <polygon points="-139,-70 -144,-72 -144,-194 -139,-192"  fill="var(--col-sh)" opacity=".50" stroke="none"/>
+    <!-- Cap C4 -->
+    <polygon points="-111,-176 -149,-193 -149,-182 -111,-165" fill="var(--col-face)" class="em" stroke-width="1.4"/>
+    <!-- Base C4 -->
+    <polygon points="-111,-56 -149,-73 -149,-63 -111,-46"    fill="var(--col-face)" class="em" stroke-width="1.4"/>
+
+    <!-- ─── COL 5 ─── -->
+    <polygon points="-154,-77 -181,-91 -181,-213 -154,-199"  fill="var(--col-face)" class="ef" stroke-width="1.9"/>
+    <polygon points="-154,-77 -158,-79 -158,-201 -154,-199"  fill="var(--col-hl)" opacity=".65" stroke="none"/>
+    <polygon points="-176,-88 -181,-91 -181,-213 -176,-211"  fill="var(--col-sh)" opacity=".50" stroke="none"/>
+    <!-- Cap C5 -->
+    <polygon points="-149,-195 -186,-211 -186,-200 -149,-184" fill="var(--col-face)" class="em" stroke-width="1.4"/>
+    <!-- Base C5 -->
+    <polygon points="-149,-75 -186,-92 -186,-82 -149,-65"    fill="var(--col-face)" class="em" stroke-width="1.4"/>
+
+    <!-- Entablature horizontal cap line -->
+    <line x1="0" y1="-122" x2="-186" y2="-215" stroke="var(--col-face)" stroke-width="3" opacity=".7" stroke-linecap="round"/>
+
+    <!-- ═══ ENTABLATURE (Z=122..148) ═══ -->
+    <polygon points="0,-122 -186,-215 -186,-241 0,-148" fill="var(--stone-lt)" class="ef" stroke-width="2"/>
+    <polygon points="0,-122 -186,-215 -186,-215 0,-122" fill="none"/>
+    <!-- Architrave band -->
+    <polygon points="0,-122 -186,-215 -186,-224 0,-131" fill="var(--stone-md)" class="ef" stroke-width="1.1"/>
+    <!-- Triglyphs (5, above each column) -->
+    <polygon points="-8,-132  -18,-137  -18,-151  -8,-146"  fill="var(--stone-dk)" class="em" stroke-width=".9"/>
+    <polygon points="-46,-151 -56,-156  -56,-170 -46,-165"  fill="var(--stone-dk)" class="em" stroke-width=".9"/>
+    <polygon points="-84,-170 -94,-175  -94,-189 -84,-184"  fill="var(--stone-dk)" class="em" stroke-width=".9"/>
+    <polygon points="-122,-189 -132,-194 -132,-208 -122,-203" fill="var(--stone-dk)" class="em" stroke-width=".9"/>
+    <polygon points="-160,-208 -170,-213 -170,-227 -160,-222" fill="var(--stone-dk)" class="em" stroke-width=".9"/>
+    <!-- Cornice top line -->
+    <line x1="0" y1="-148" x2="-186" y2="-241" stroke="var(--line)" stroke-width="3.8" stroke-linecap="round"/>
+
+    <!-- Left face outline -->
+    <polygon points="0,0 -186,-93 -186,-241 0,-148" class="e" stroke-width="2.8"/>
+
+    <!-- ═══ GABLE ROOF — 双坡屋脊，先画屋顶再覆山花 ═══
+         屋脊沿 E 方向、N=1.5 中线走：
+           前脊端 (N=1.5,E=0,Z=220): (-93,-266)  ← 即山花顶点
+           后脊端 (N=1.5,E=3,Z=220): ( 93,-359)
+
+         可见 N=0 坡面:
+           前檐(0,-148) → 右檐(186,-241) → 后脊(93,-359) → 前脊(-93,-266)
+    ═══ -->
+
+    <!-- N=0 坡面 (上方/右侧可见主坡) -->
+    <polygon points="0,-148 186,-241 93,-359 -93,-266"
+             fill="var(--roof-lt)" class="ef" stroke-width="2"/>
+    <polygon points="0,-148 186,-241 93,-359 -93,-266"
+             fill="url(#pRoofL)" opacity=".44"/>
+
+    <!-- 右侧封檐板 -->
+    <polygon points="0,-148 186,-241 186,-233 0,-140"
+             fill="var(--roof-dk)" class="ef" stroke-width="1.4"/>
+
+    <!-- 屋脊线 -->
+    <line x1="-93" y1="-266" x2="93" y2="-359"
+          stroke="var(--line)" stroke-width="2.4" stroke-linecap="round"/>
+
+    <!-- ═══ 山花 PEDIMENT — 画在屋顶之后，遮盖覆盖屋顶前端 ═══
+         前山墙顶端 = 屋脊前端 = (-93,-266)
+    ═══ -->
+    <polygon points="0,-148 -186,-241 -93,-266"
+             fill="var(--stone-lt)" class="ef" stroke-width="2.3"/>
+    <!-- 鼓室 tympanum -->
+    <polygon points="-10,-153 -176,-242 -93,-261"
+             fill="var(--stone-md)" class="ef" stroke-width="1.2"/>
+    <!-- 斜坡线 rake cornice -->
+    <line x1="0"    y1="-148" x2="-93" y2="-266"
+          stroke="var(--line)" stroke-width="2.4" stroke-linecap="round"/>
+    <line x1="-186" y1="-241" x2="-93" y2="-266"
+          stroke="var(--line)" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- 顶饰 acroteria -->
+    <circle cx="0"    cy="-148" r="6.5" fill="var(--stone-lt)" stroke="var(--line)" stroke-width="2.2"/>
+    <circle cx="-186" cy="-241" r="6.5" fill="var(--stone-lt)" stroke="var(--line)" stroke-width="2.2"/>
+    <circle cx="-93"  cy="-266" r="8"   fill="var(--stone-lt)" stroke="var(--line)" stroke-width="2.4"/>
+    <!-- 山花顶竖针 -->
+    <line   x1="-93" y1="-274" x2="-93" y2="-285"
+            stroke="var(--line)" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="-93" cy="-287" r="4"    fill="var(--stone-lt)" stroke="var(--line)" stroke-width="1.9"/>
+
+  </g><!-- #bureau -->
+</defs>
+
+<!-- ════════════════════════ SCENE ════════════════════════ -->
+<g filter="url(#fShadow)">
+
+  <!-- Grass island -->
+  <polygon points="600,98 990,292 600,490 210,292"
+    fill="url(#pGrass)" stroke="var(--line)" stroke-width="2.4" stroke-linejoin="round"/>
+
+  <!-- Plaza -->
+  <polygon points="600,166 848,290 600,416 352,292"
+    fill="url(#pPlaza)" stroke="#8a8268" stroke-width="2.2" stroke-linejoin="round"/>
+
+  <!-- Entry path -->
+  <polygon points="600,398 636,416 600,416 564,416"
+    fill="#c4bc9e" stroke="#8a8268" stroke-width="1.2"/>
+
+  <!-- Building -->
+  <use href="#bureau" x="600" y="408"/>
+
+  <!-- Trees -->
+  <use href="#tree" transform="translate(374,390) scale(.82)"/>
+  <use href="#tree" transform="translate(818,372) scale(.82)"/>
+  <use href="#tree" transform="translate(440,444) scale(.63)"/>
+  <use href="#tree" transform="translate(756,446) scale(.63)"/>
+
+</g>
+
+<!-- LABEL -->
+<g>
+  <polyline points="402,218 348,192 242,196"
+    fill="none" stroke="var(--line)" stroke-width="1.9"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="402" cy="218" r="4" fill="var(--line)"/>
+  <rect x="54" y="152" width="188" height="84" rx="9"
+    fill="url(#gLabel)" stroke="#b09858" stroke-width="2.2"/>
+  <rect x="54" y="152" width="188" height="18" rx="9" fill="var(--gold)" opacity=".22"/>
+  <rect x="54" y="163" width="188" height="7"  fill="var(--gold)" opacity=".16"/>
+  <text x="80" y="174" fill="var(--ink)" class="lbl-cn"
+    font-family="'Noto Serif SC','Songti SC',serif">🏛 投资局</text>
+  <text x="80" y="198" fill="#5a4e38" class="lbl-en"
+    font-family="'Noto Sans SC',sans-serif">Investment Bureau</text>
+  <circle cx="80" cy="216" r="4.5" fill="#50aa34"/>
+  <text x="91" y="220" class="lbl-st"
+    font-family="'Courier New',monospace">ACTIVE</text>
+</g>
+
+<text x="600" y="568" text-anchor="middle" fill="#908878" opacity=".5"
+  font-family="'Courier New',monospace" font-size="9" letter-spacing="2.8">
+  INVESTMENT BUREAU · ISO SVG v7
+</text>
+
+</svg>
+</main>
+</body>
+</html>

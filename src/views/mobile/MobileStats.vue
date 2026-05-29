@@ -46,7 +46,7 @@
     <!-- 销售统计 -->
     <div class="ms-sale-card">
       <div class="ms-sale-top">
-        <div class="ms-sale-title">销售统计</div>
+        <div class="ms-sale-title">经营概况</div>
         <div class="ms-sale-tabs">
           <button :class="['ms-tab', statPeriod === 'today' ? 'active' : '']" @click="statPeriod = 'today'">今天</button>
           <button :class="['ms-tab', statPeriod === '7d' ? 'active' : '']" @click="statPeriod = '7d'">7天</button>
@@ -64,8 +64,8 @@
           <div class="ms-main-value">{{ salesStats.orderCount }}</div>
         </div>
         <div class="ms-main-item">
-          <div class="ms-main-label">均单金额</div>
-          <div class="ms-main-value">¥{{ salesStats.avgAmt }}</div>
+          <div class="ms-main-label">支出金额</div>
+          <div class="ms-main-value">¥{{ salesStats.expenseAmt }}</div>
         </div>
       </div>
       <div class="ms-sub-row">
@@ -153,6 +153,7 @@ const todayExpense = ref('0.00')
 
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
+const _fundFlowRows = ref<any[]>([])
 
 function getToday() {
   const d = new Date()
@@ -180,6 +181,9 @@ function getFlowDate(row: any) {
 }
 
 function isExpenseFlow(row: any) {
+  const flowNo = String(row?.flow_no || '').toUpperCase()
+  if (flowNo.startsWith('SK')) return false
+  if (flowNo.startsWith('FK')) return true
   const type = String(row?.flow_type || row?.type || row?._direction || '').toLowerCase()
   if (type) return type !== 'income'
   return Number(row?.amount || 0) < 0
@@ -236,12 +240,16 @@ const salesStats = computed(() => {
   fRetail.forEach((r: any) => { const d = (r.order_date||'').slice(0,10); if (dayMap[d] !== undefined) dayMap[d] += Number(r.pay_amount||r.total_amount||0) })
   const sparkData = days.map(d => ({ date: d.slice(5), amt: dayMap[d], isToday: d === today }))
   const sparkMax = Math.max(...sparkData.map(b => b.amt), 1)
+  const expenseAmt = _fundFlowRows.value
+    .filter((row: any) => { const d = getFlowDate(row); return d >= fromDate && d <= today && isExpenseFlow(row) })
+    .reduce((sum: number, row: any) => sum + Math.abs(Number(row.amount || 0)), 0)
+
   const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + 'w' : n.toFixed(2)
 
   return {
     totalAmt: fmt(totalAmt), saleAmt: fmt(saleAmt), retailAmt: fmt(retailAmt),
     orderCount, saleCount: fSale.length, retailCount: fRetail.length,
-    avgAmt: fmt(avgAmt), customerCount: custSet.size, sparkData, sparkMax,
+    avgAmt: fmt(avgAmt), expenseAmt: fmt(expenseAmt), customerCount: custSet.size, sparkData, sparkMax,
   }
 })
 
@@ -250,7 +258,7 @@ function buildInsights(data: { todaySale: number, stockWarn: number, customerCou
   if (data.todaySale > 0) {
     items.push({ tag: '今日销售', text: `今日已完成销售 ¥${data.todaySale.toFixed(2)}，共 ${data.todayOrders} 笔订单。` })
   } else {
-    items.push({ tag: '营业提醒', text: '今日暂无销售记录，可前往收银台或新建销售合同开始营业。' })
+    items.push({ tag: '营业提醒', text: '今日暂无销售记录，可前往收银台或新建销售订单开始营业。' })
   }
   if (data.stockWarn > 0) {
     items.push({ tag: '⚠️ 库存预警', text: `当前有 ${data.stockWarn} 种商品库存不足或为零，建议及时采购补货。` })
@@ -285,7 +293,8 @@ onMounted(async () => {
   const todayRetail = retailRows.filter((r: any) => Number(r.status) === 1 && (r.order_date||'').slice(0,10) === today)
   const saleAmt = todaySale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
   const retailAmt = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
-  todayExpense.value = calcTodayExpense(rows(fundFlowRes), today).toFixed(2)
+  _fundFlowRows.value = rows(fundFlowRes)
+  todayExpense.value = calcTodayExpense(_fundFlowRows.value, today).toFixed(2)
 
   const stockMap: Record<number, number> = {}
   rows(procureRes).forEach((r: any) => {

@@ -218,11 +218,11 @@ const today = (() => {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
 })()
 
-const saleAmount = computed(() => saleRows.value.reduce((s, r) => {
+const saleAmount = computed(() => saleRows.value.filter((r: any) => Number(r.status) === 1).reduce((s: number, r: any) => {
   const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
   return s + amt
 }, 0))
-const retailAmount = computed(() => retailRows.value.reduce((s, r) => s + Number(r.pay_amount||r.total_amount||0), 0))
+const retailAmount = computed(() => retailRows.value.filter((r: any) => Number(r.status) === 1).reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0))
 const totalAmount = computed(() => saleAmount.value + retailAmount.value)
 
 function parseGoods(info: any): any[] {

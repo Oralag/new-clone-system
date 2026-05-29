@@ -177,7 +177,7 @@ export async function applyMaterialStockDelta(items: any[], options: MaterialSto
       const endpoint = options.direction === 'deduct' ? '/stock/OtherOut' : '/stock/OtherIn'
       const addRes = await http.post(`${endpoint}/add`, {
         warehouse_id: group.warehouse_id || 0,
-        goods_info: [{ goods_id: group.goods_id, num: group.qty, goods_name: group.goods_name }],
+        goods_info: [{ goods_id: group.goods_id, num: group.qty, goods_name: group.goods_name, in_price: group.avg_price || 0 }],
         remark: options.direction === 'deduct' ? '生产领料出库' : '生产入库',
       })
       const orderId = toNumber(addRes?.data?.id)

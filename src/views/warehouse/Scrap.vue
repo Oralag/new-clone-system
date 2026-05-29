@@ -64,8 +64,8 @@
     <el-dialog v-model="stockSelectVisible" title="选择仓库商品" width="800px" destroy-on-close>
       <div style="display: flex; gap: 8px; margin-bottom: 12px">
         <el-input v-model="stockKeyword" placeholder="商品名称/编码" clearable style="width: 220px"
-          @keyup.enter="loadStockData" />
-        <el-button type="primary" @click="loadStockData">搜索</el-button>
+          @keyup.enter="searchStockData" />
+        <el-button type="primary" @click="searchStockData">搜索</el-button>
       </div>
       <el-table v-loading="stockLoading" :data="stockList" border stripe highlight-current-row
         @row-click="onStockRowClick" style="cursor: pointer">
@@ -104,6 +104,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getScrapList, createScrap, deleteScrap, getWarehouseList, getStockList } from '@/api/warehouse'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 const stockRefreshStore = useStockRefreshStore()
 
 const tableRef = ref()
@@ -133,6 +134,10 @@ const stockPageSize = ref(20)
 const stockTotal = ref(0)
 let currentWarehouseId = 0
 
+function getGoodsTypeMap(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem('erp_goods_type_map') || '{}') } catch { return {} }
+}
+
 async function loadWarehouseOptions() {
   const res = await getWarehouseList({ list_rows: 200 })
   warehouseOptions.value = res.data?.rows || []
@@ -161,18 +166,36 @@ function openStockSelect(form: any) {
 async function loadStockData() {
   stockLoading.value = true
   try {
+    const keyword = stockKeyword.value.trim()
     const params: any = {
-      page: stockPage.value,
-      list_rows: stockPageSize.value,
+      page: keyword ? 1 : stockPage.value,
+      list_rows: keyword ? 500 : stockPageSize.value,
       warehouse_id: currentWarehouseId
     }
-    if (stockKeyword.value) params.goods_name = stockKeyword.value
+    if (keyword) params.goods_name = keyword
     const res = await getStockList(params)
-    stockList.value = res.data?.rows || []
-    stockTotal.value = res.data?.total || 0
+    const typeMap = getGoodsTypeMap()
+    const rows = (res.data?.rows || []).map((row: any) => ({
+      ...row,
+      goods_type: row.goods_type ?? typeMap[Number(row.goods_id || row.id)] ?? 2,
+    }))
+    if (keyword) {
+      const filtered = fuzzyFilterGoods(rows, keyword)
+      stockTotal.value = filtered.length
+      const start = (stockPage.value - 1) * stockPageSize.value
+      stockList.value = filtered.slice(start, start + stockPageSize.value)
+    } else {
+      stockList.value = rows
+      stockTotal.value = res.data?.total || 0
+    }
   } finally {
     stockLoading.value = false
   }
+}
+
+function searchStockData() {
+  stockPage.value = 1
+  loadStockData()
 }
 
 function onStockRowClick(row: any) {

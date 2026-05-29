@@ -92,7 +92,7 @@ const guideSteps: GuideStep[] = [
   },
   {
     id: 'sale-contract-create',
-    title: '创建销售合同',
+    title: '创建销售订单',
     short: '合同',
     path: '/sale/contract',
     selector: '[data-guide-id=”guide-contract-create”]',

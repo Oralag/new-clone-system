@@ -76,7 +76,7 @@
             <el-table-column prop="bank" label="银行账户" min-width="160" show-overflow-tooltip />
             <el-table-column label="欠款" width="110" align="right">
               <template #default="{ row }">
-                <span :style="getDebtBalance(row.id) > 0 ? 'color:#dc2626;font-weight:600' : ''">
+                <span :style="getDebtBalance(row.id) > 0 ? 'color:#dc2626;font-weight:600' : getDebtBalance(row.id) < 0 ? 'color:#d97706;font-weight:600' : ''">
                   ¥{{ getDebtBalance(row.id).toFixed(2) }}
                 </span>
               </template>
@@ -328,7 +328,7 @@ async function loadSupplierFinance() {
     const dMap: Record<number, number> = {}
     const allIds = new Set([...Object.keys(pMap), ...Object.keys(pmMap)].map(Number))
     for (const sid of allIds) {
-      dMap[sid] = Math.max(0, (pMap[sid] || 0) - (pmMap[sid] || 0))
+      dMap[sid] = (pMap[sid] || 0) - (pmMap[sid] || 0)
     }
     debtMap.value = dMap
   } catch { /* ignore */ }
@@ -534,12 +534,13 @@ async function handleSubmit() {
   try { await formRef.value?.validate() } catch { return }
   formSaving.value = true
   try {
-    const { cate_id, ...payload } = formData
+    const { cate_id, id: _id, ...createPayload } = formData
+    const payload = { ...createPayload, id: formData.id }
     let supplierId = formData.id
     if (supplierId) {
       await updateSupplier(payload)
     } else {
-      const res = await createSupplier(payload)
+      const res = await createSupplier(createPayload)
       // Handle various response shapes
       supplierId = res?.data?.id ?? res?.data?.data?.id ?? res?.id ?? (typeof res?.data === 'number' ? res.data : null)
     }

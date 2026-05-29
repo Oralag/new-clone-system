@@ -305,6 +305,22 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         result = `IMAGE_URL:data:image/png;base64,${base64}`
         break
       }
+      case 'generate_video': {
+        const prompt = input.prompt || ''
+        const ratio = input.aspect_ratio || '9:16'
+        const resp = await fetch('https://nomaderp.pages.dev/api/generate-media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'video', prompt, ratio }),
+        })
+        const data = await resp.json() as any
+        if (data?.status === 'ok' && data?.task_id) {
+          result = `VIDEO_TASK:${data.task_id}`
+        } else {
+          result = `视频生成失败：${data?.message || JSON.stringify(data)}`
+        }
+        break
+      }
       case 'browser_navigate':
       case 'browser_get_content':
       case 'browser_screenshot':
@@ -382,11 +398,34 @@ const AGENTS: Record<string, AgentDef> = {
   },
   poster: {
     id: 'poster', name: '海报Agent', emoji: '🎨', specialty: '视觉创作', color: '#ec4899',
-    systemPrompt: `你是数字游牧Agency的视觉设计Agent。专长：海报创意方案和视觉描述、配色方案、字体搭配建议、排版布局、图片描述（用于AI生图提示词）、不同尺寸适配、品牌风格一致性。工作原则：提供详细视觉方案，给出AI生图英文提示词（Midjourney/DALL-E），说明设计理念，提供备选方案。${ERP_TOOL_NOTE}回复用中文，专业且富有美感。`,
+    systemPrompt: `你是数字游牧Agency的视觉设计Agent。专长：海报创意方案、配色方案、排版布局、品牌风格一致性。
+
+【生图铁律】调用 generate_image 时，提示词必须包含品牌实际产品信息：
+1. 如果品牌信息中有【产品图片参考】URL，必须在提示词里描述这些产品的外观特征（形状、颜色、材质、包装风格）
+2. 提示词必须包含：产品特征 + 场景 + 风格 + 色调，用英文
+3. 禁止生成与品牌产品无关的通用商业图片
+4. 海报用9:16，Banner用16:9，方图用1:1
+
+【生图能力】你拥有 generate_image 工具，可以直接生成图片。当用户需要看效果时，主动调用。
+- 工具调用成功后图片已自动展示，直接告知用户即可
+- 禁止说"暂未开通生图功能"、"无法直接生成"等——直接调用工具
+
+${ERP_TOOL_NOTE}回复用中文，专业且有美感，像在做设计提案。`,
   },
   video: {
     id: 'video', name: '视频Agent', emoji: '🎬', specialty: '视频创作', color: '#ef4444',
-    systemPrompt: `你是数字游牧Agency的视频内容Agent。专长：短视频脚本（15秒/30秒/60秒/3分钟）、分镜头设计、口播文案、抖音/视频号/YouTube Shorts格式适配、开头钩子设计（前3秒留人）、BGM建议。工作原则：按时长严格控制字数（每分钟约240字），明确标注镜头切换时机，提供备用开头，说明情绪节奏设计。${ERP_TOOL_NOTE}回复用中文，节奏感强，有画面感。`,
+    systemPrompt: `你是数字游牧Agency的视频内容Agent。专长：短视频脚本、分镜头设计、口播文案。
+
+【工作原则】
+1. 先给出完整脚本（时长/分镜/台词/配乐建议）
+2. 脚本完成后，主动调用 generate_video 工具生成实际视频
+3. generate_video 的 prompt 要包含：场景描述 + 产品特征 + 视觉风格 + 色调，结合品牌产品信息
+4. 视频比例：竖版短视频用9:16，横版用16:9
+
+【视频生成能力】你拥有 generate_video 工具，可以提交AI视频生成任务。视频生成需要约1-3分钟，提交后会显示进度。
+- 禁止只给脚本不生成视频——有工具就用，除非用户明确说只要脚本
+
+${ERP_TOOL_NOTE}回复用中文，节奏感强，有画面感。`,
   },
   brand: {
     id: 'brand', name: '品牌Agent', emoji: '💎', specialty: '品牌策略', color: '#8b5cf6',
@@ -540,8 +579,23 @@ const generateImageTool = {
   },
 }
 
+const generateVideoTool = {
+  name: 'generate_video',
+  description: '根据提示词生成短视频（即梦AI）。异步任务，返回task_id，前端轮询获取视频URL。提示词描述画面内容和风格，英文或中文均可。',
+  parameters: {
+    type: 'object',
+    properties: {
+      prompt: { type: 'string', description: '视频内容描述，包含场景、动作、风格、色调' },
+      aspect_ratio: { type: 'string', enum: ['9:16', '16:9', '1:1'], description: '视频比例，短视频用9:16，横版用16:9' },
+    },
+    required: ['prompt'],
+  },
+}
+
 function getToolsForAgent(agentId: string) {
   if (agentId === 'designer') return [...agentTools, generateImageTool]
+  if (agentId === 'poster') return [...agentTools, generateImageTool]
+  if (agentId === 'video') return [...agentTools, generateVideoTool]
   return agentTools
 }
 
@@ -616,7 +670,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return new Response(data, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } })
   }
 
-  const { messages, agentId } = body
+  const { messages, agentId, brandContext, productContext, productImages } = body
   const erpToken = request.headers.get('x-erp-token') || ''
   const { realToken, backend } = decodeErpToken(erpToken)
   const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
@@ -640,7 +694,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         type: 'function' as const,
         function: { name: t.name, description: t.description, parameters: t.parameters || { type: 'object', properties: {} } },
       }))
-      let loopMessages: any[] = [{ role: 'system', content: agent.systemPrompt }, ...apiMessages]
+      let systemContent = agent.systemPrompt
+      if (brandContext) systemContent += `\n\n---\n【当前品牌信息】\n${brandContext}`
+      if (productContext) systemContent += `\n\n---\n${productContext}`
+      if (productImages?.length) systemContent += `\n\n---\n【产品参考图URL列表】生成图片时必须基于这些产品的外观特征写提示词：\n${(productImages as string[]).map((u: string) => '- ' + u).join('\n')}`
+      let loopMessages: any[] = [{ role: 'system', content: systemContent }, ...apiMessages]
       let fullAssistantText = ''
 
       for (let i = 0; i < 5; i++) {

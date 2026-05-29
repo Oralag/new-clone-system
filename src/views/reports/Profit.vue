@@ -76,6 +76,7 @@
       <el-tabs v-model="viewMode" style="margin-bottom:4px">
         <el-tab-pane label="按单品" name="goods" />
         <el-tab-pane label="按单据" name="order" />
+        <el-tab-pane label="按客户" name="customer" />
       </el-tabs>
 
       <div v-if="loading" style="text-align:center;padding:40px 0">
@@ -133,7 +134,7 @@
       </el-table>
 
       <!-- 单据维度 -->
-      <el-table v-else :data="orderRows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
+      <el-table v-else-if="viewMode === 'order'" :data="orderRows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
         <el-table-column type="expand" width="42">
           <template #default="{ row }">
             <div class="order-detail">
@@ -235,6 +236,102 @@
         </el-table-column>
         <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
       </el-table>
+
+      <!-- 客户维度 -->
+      <el-table v-else-if="viewMode === 'customer'" :data="customerRows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
+        <el-table-column type="expand" width="42">
+          <template #default="{ row }">
+            <div class="order-detail">
+              <div class="order-detail-head">
+                <span>{{ row.customer_name }} 单据明细（共 {{ row.orders.length }} 张）</span>
+                <span>销售额 ¥{{ fmt(row.sale_amount) }} / 成本 ¥{{ fmt(row.cost_amount) }} / 毛利 {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}</span>
+              </div>
+              <el-table :data="row.orders" size="small" border style="width:100%">
+                <el-table-column label="单据类型" align="center" width="80">
+                  <template #default="{ row: o }">
+                    <el-tag size="small" :type="o.source === '零售' ? 'success' : o.source === '出库单' ? 'warning' : 'primary'">{{ o.source }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="order_no" label="单号" min-width="150" show-overflow-tooltip />
+                <el-table-column prop="order_date" label="日期" width="100" />
+                <el-table-column label="销售额" width="110" align="right">
+                  <template #default="{ row: o }"><span class="blue">¥{{ fmt(o.sale_amount) }}</span></template>
+                </el-table-column>
+                <el-table-column label="成本" width="110" align="right">
+                  <template #default="{ row: o }"><span class="purple">¥{{ fmt(o.cost_amount) }}</span></template>
+                </el-table-column>
+                <el-table-column label="毛利润" width="110" align="right">
+                  <template #default="{ row: o }">
+                    <span :style="{ color: o.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
+                      {{ o.profit >= 0 ? '+' : '' }}¥{{ fmt(o.profit) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="毛利率" width="80" align="right">
+                  <template #default="{ row: o }">
+                    <el-tag :type="o.profit_rate >= 20 ? 'success' : o.profit_rate > 0 ? 'warning' : 'danger'" size="small">
+                      {{ o.profit_rate.toFixed(1) }}%
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="净利润" width="110" align="right">
+                  <template #default="{ row: o }">
+                    <span :style="{ color: o.net_profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
+                      {{ o.net_profit >= 0 ? '+' : '' }}¥{{ fmt(o.net_profit) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <template #empty><div style="padding:20px 0;color:#aaa">无单据数据</div></template>
+              </el-table>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="customer_name" label="客户" min-width="140" show-overflow-tooltip />
+        <el-table-column label="单据数" align="right" width="70">
+          <template #default="{ row }">
+            <span style="color:#64748b">{{ row.orders.length }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="销售额" align="right" width="130">
+          <template #default="{ row }">
+            <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.sale_amount) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="成本" align="right" width="130">
+          <template #default="{ row }">
+            <span style="color:#7c3aed">¥{{ fmt(row.cost_amount) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="毛利润" align="right" width="130" sortable prop="profit">
+          <template #default="{ row }">
+            <span :style="{ color: row.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
+              {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="毛利率" align="right" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.profit_rate >= 20 ? 'success' : row.profit_rate > 0 ? 'warning' : 'danger'" size="small">
+              {{ row.profit_rate.toFixed(1) }}%
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="净利润" align="right" width="130" sortable prop="net_profit">
+          <template #default="{ row }">
+            <span :style="{ color: row.net_profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
+              {{ row.net_profit >= 0 ? '+' : '' }}¥{{ fmt(row.net_profit) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="净利率" align="right" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.net_rate >= 20 ? 'success' : row.net_rate > 0 ? 'warning' : 'danger'" size="small">
+              {{ row.net_rate.toFixed(1) }}%
+            </el-tag>
+          </template>
+        </el-table-column>
+        <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
+      </el-table>
     </el-card>
   </div>
 </template>
@@ -253,7 +350,7 @@ import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
-const viewMode = ref<'goods' | 'order'>('goods')
+const viewMode = ref<'goods' | 'order' | 'customer'>('goods')
 
 const saleContracts = ref<any[]>([])
 const retailOrders = ref<any[]>([])
@@ -261,6 +358,7 @@ const goodsList = ref<any[]>([])
 const procureInhouseList = ref<any[]>([])
 const bomList = ref<any[]>([])
 const expenseList = ref<any[]>([])
+const unitConvertList = ref<any[]>([])
 
 function toNum(...values: any[]): number {
   for (const v of values) {
@@ -302,6 +400,10 @@ function itemPrice(item: any): number {
   return toNum(item?.price, item?.sell_price, item?.sale_price, item?.unit_price, item?.retail_price, item?.amount_price)
 }
 
+function itemLineAmount(item: any): number {
+  return toNum(item?.line_amount)
+}
+
 function itemCost(item: any): number {
   return toNum(item?.cost_price, item?.cost, item?.costPrice, item?.purchase_price, item?.in_price, item?.avg_price)
 }
@@ -314,13 +416,42 @@ function itemSn(item: any): string {
   return toText(item?.goods_sn, item?.sn, item?.goods_code, item?.code, item?.barcode)
 }
 
+// 从 spec 字段解析大单位→基础单位的换算比
+// 格式 "400/箱/0.423/球" 或 "24/盒" → 首段为纯整数时即为换算比
+function parseSpecRatio(spec: string): number {
+  if (!spec) return 1
+  const first = (spec.split('/')[0] || '').trim()
+  const n = Number(first)
+  return Number.isInteger(n) && n > 1 ? n : 1
+}
+
+// goods_sn -> goods 快查表（用于采购成本地图的 spec 换算）
+const goodsBySnMap = computed(() => {
+  const m: Record<string, any> = {}
+  for (const g of goodsList.value) { if (g.goods_sn) m[g.goods_sn] = g }
+  return m
+})
+
+// goods_id -> { unit_name -> ratio } 换算表（来自 GoodsUnitConvert）
+const unitConvertMap = computed(() => {
+  const m: Record<number, Record<string, number>> = {}
+  for (const r of unitConvertList.value) {
+    const gid = Number(r.goods_id)
+    const ratio = Number(r.ratio)
+    if (!gid || !r.unit_name || !ratio) continue
+    if (!m[gid]) m[gid] = {}
+    m[gid][r.unit_name] = ratio
+  }
+  return m
+})
+
 // goods_id -> 移动加权平均价（采购入库 + BOM物料成本），兜底商品 cost_price
 const goodsCostMap = computed(() => {
   const m: Record<number, number> = {}
   for (const g of goodsList.value) {
     m[g.id] = toNum(g.cost_price, g.purchase_price, g.avg_price, g.in_price)
   }
-  // 采购入库移动均价
+  // 采购入库移动均价（含多单位换算）
   const snTotalCost: Record<string, number> = {}
   const snTotalQty: Record<string, number> = {}
   for (const ih of procureInhouseList.value) {
@@ -332,8 +463,18 @@ const goodsCostMap = computed(() => {
         const qty = itemQty(item)
         const price = toNum(item.price, item.price_no_tax, item.cost_price, item.in_price, item.avg_price)
         if (qty > 0 && price > 0) {
+          // 多单位换算：1大单位 = ratio 个基础单位
+          // 优先用 GoodsUnitConvert 表，其次 item.unit_ratio，最后从 spec 解析
+          const goodsId = Number(item.goods_id || goodsBySnMap.value[sn]?.id || 0)
+          const unitName = String(item.unit_name || '')
+          const convertRatio = goodsId && unitName ? (unitConvertMap.value[goodsId]?.[unitName] ?? 0) : 0
+          const ratio = Math.max(1, convertRatio > 1
+            ? convertRatio
+            : Number(item.unit_ratio || 1) > 1
+              ? Number(item.unit_ratio)
+              : parseSpecRatio(item.spec || goodsBySnMap.value[sn]?.spec || ''))
           snTotalCost[sn] = (snTotalCost[sn] || 0) + qty * price
-          snTotalQty[sn] = (snTotalQty[sn] || 0) + qty
+          snTotalQty[sn] = (snTotalQty[sn] || 0) + qty * ratio  // 换算为基础单位数量
         }
       }
     } catch {}
@@ -415,12 +556,15 @@ function resolveGoodsId(item: any): number {
 function getItemUnitCost(item: any): ReturnType<typeof getUnitCost> {
   const goodsId = resolveGoodsId(item)
   const byId = getUnitCost(goodsId)
+  // BOM 优先
   if (byId.hasBom && byId.unitCost > 0) return byId
+  // 采购均价优先（已含多单位换算，比合同里存的旧 cost_price 更准确）
+  if (byId.unitCost > 0) return byId
+  // 兜底：合同/单据里存的直接成本价
   const direct = itemCost(item)
   if (direct > 0) {
     return { unitCost: direct, hasBom: false, costSource: `单据成本 ¥${direct.toFixed(2)}` }
   }
-  if (byId.unitCost > 0) return byId
   return byId
 }
 
@@ -450,7 +594,10 @@ const rows = computed(() => {
           }
         }
         const qty = itemQty(g)
-        const price = rawTotal > 0 ? itemPrice(g) * discountRatio : (totalQty > 0 ? fallbackAmount / totalQty : 0)
+        const lineAmount = itemLineAmount(g)
+        const price = lineAmount > 0
+          ? lineAmount / Math.max(qty, 1)
+          : (rawTotal > 0 ? itemPrice(g) * discountRatio : (totalQty > 0 ? fallbackAmount / totalQty : 0))
         map[key].num += qty
         map[key].sale_amount += qty * price
       }
@@ -459,9 +606,15 @@ const rows = computed(() => {
 
   for (const c of saleContracts.value) {
     // 计算优惠比例：实际金额 / 商品原价合计
-    const actualAmount = Number(c.after_discount || c.total_amount || 0)
+    let actualAmount = toNum(c.after_discount, c.total_amount, c.goods_amount, c.contract_amount, c.amount)
+    const contractItems = parseItems(c.goods_info)
+    if (!actualAmount) {
+      const lineSum = contractItems.reduce((s, g) => s + toNum(g.line_amount), 0)
+      if (lineSum > 0) actualAmount = lineSum
+    }
+    if (!actualAmount) continue
     let rawTotal = 0
-    for (const g of parseItems(c.goods_info)) rawTotal += itemQty(g) * itemPrice(g)
+    for (const g of contractItems) rawTotal += itemQty(g) * itemPrice(g)
     const ratio = rawTotal > 0 ? actualAmount / rawTotal : 1
     add(c.goods_info, '合同', ratio, actualAmount)
   }
@@ -512,12 +665,22 @@ function buildOrderItems(goodsInfo: any, saleAmount: number) {
   })
 }
 
+// 销售额为0的合同数量（数据不完整，排除出利润报表）
+const skippedContractCount = ref(0)
+
 // 单据维度：按每张合同/零售单一行
 const orderRows = computed(() => {
   const result: any[] = []
+  let skipped = 0
 
   for (const c of saleContracts.value) {
-    const sale_amount = Number(c.after_discount || c.total_amount || 0)
+    // toNum 逐个尝试字段，只接受 > 0 的值，避免 "0.00" 字符串短路 || 链的问题
+    let sale_amount = toNum(c.after_discount, c.total_amount, c.goods_amount, c.contract_amount, c.amount)
+    if (!sale_amount) {
+      const lineSum = parseItems(c.goods_info).reduce((s, g) => s + toNum(g.line_amount), 0)
+      if (lineSum > 0) sale_amount = lineSum
+    }
+    if (!sale_amount) { skipped++; continue }
     const items = buildOrderItems(c.goods_info, sale_amount)
     const cost_amount = items.reduce((s, item) => s + item.cost_amount, 0)
     const freight = myFreight(c)
@@ -534,6 +697,7 @@ const orderRows = computed(() => {
       items,
     })
   }
+  skippedContractCount.value = skipped
 
   for (const r of retailOrders.value) {
     let sale_amount = 0
@@ -562,6 +726,32 @@ const orderRows = computed(() => {
   }
 
   return result.sort((a, b) => b.profit - a.profit)
+})
+
+// 客户维度：按客户聚合单据
+const customerRows = computed(() => {
+  const map: Record<string, { customer_name: string; orders: any[] }> = {}
+  for (const o of orderRows.value) {
+    const key = o.customer_name || '—'
+    if (!map[key]) map[key] = { customer_name: key, orders: [] }
+    map[key].orders.push(o)
+  }
+  return Object.values(map).map(c => {
+    const sale_amount = c.orders.reduce((s, o) => s + o.sale_amount, 0)
+    const cost_amount = c.orders.reduce((s, o) => s + o.cost_amount, 0)
+    const profit = c.orders.reduce((s, o) => s + o.profit, 0)
+    const net_profit = c.orders.reduce((s, o) => s + o.net_profit, 0)
+    return {
+      customer_name: c.customer_name,
+      orders: c.orders,
+      sale_amount,
+      cost_amount,
+      profit,
+      net_profit,
+      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
+      net_rate: sale_amount > 0 ? (net_profit / sale_amount * 100) : 0,
+    }
+  }).sort((a, b) => b.profit - a.profit)
 })
 
 const totalSale = computed(() => rows.value.reduce((s, r) => s + r.sale_amount, 0))
@@ -603,13 +793,14 @@ async function loadData() {
     params.end_date = dateRange.value[1]
   }
   try {
-    const [c, r, g, ih, b, e] = await Promise.allSettled([
+    const [c, r, g, ih, b, e, uc] = await Promise.allSettled([
       getContractList(params),
       getRetailOrderList(params),
       getGoodsList({ list_rows: 3000 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
       getExpenseList(params),
+      http.get('/goods/GoodsUnitConvert/index', { params: { list_rows: 2000 } }),
     ])
     saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []).filter(isEffectiveSaleContract) : []
     retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []).filter((r: any) => Number(r.status) === 1) : []
@@ -617,6 +808,7 @@ async function loadData() {
     procureInhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []
     bomList.value            = b.status === 'fulfilled' ? (b.value?.data?.rows  ?? []) : []
     expenseList.value        = e.status === 'fulfilled' ? (e.value?.data?.rows  ?? []) : []
+    unitConvertList.value    = uc.status === 'fulfilled' ? (uc.value?.data?.rows ?? []) : []
   } finally {
     loading.value = false
   }

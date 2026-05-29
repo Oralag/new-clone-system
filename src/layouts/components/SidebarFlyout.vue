@@ -48,7 +48,7 @@ const flyoutTop = computed(() => {
 function navigate(path: string) {
   appStore.setHoverTopMenu('')
   if (path === '/retail/cashregister') {
-    window.open('/#/cashregister', '_blank')
+    router.push('/cashregister')
     return
   }
   for (const menu of menuData) {

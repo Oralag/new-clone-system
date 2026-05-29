@@ -488,7 +488,7 @@ async function fetchContextData(text: string): Promise<string> {
       const outRows: any[] = outRes?.data?.rows || []
       results.push(`【销售出货单】共${outRows.length}条，合计¥${outRows.reduce((s:number,r:any)=>s+Number(r.total_amount||0),0).toFixed(2)}`)
       const cRows: any[] = contractRes?.data?.rows || []
-      results.push(`【销售合同】共${cRows.length}份，合计¥${cRows.reduce((s:number,r:any)=>s+Number(r.total_amount||0),0).toFixed(2)}`)
+      results.push(`【销售订单】共${cRows.length}份，合计¥${cRows.reduce((s:number,r:any)=>s+Number(r.total_amount||0),0).toFixed(2)}`)
     }
     if (lower.includes('库存')) {
       const res: any = await http.get('/stock/StockAll/index', { params: { list_rows: 100 } })

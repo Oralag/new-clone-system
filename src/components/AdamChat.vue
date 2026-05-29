@@ -108,6 +108,7 @@ import { useAdamStore } from '@/stores/adam'
 import { applyToolResult } from '@/utils/adamToolSync'
 import { marked } from 'marked'
 import adamAvatarUrl from '@/assets/adam-avatar.png'
+import { getScopedStorageKey } from '@/utils/storageScope'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -161,7 +162,7 @@ let pollTimer: number | undefined
 onMounted(async () => {
   // 先从本地缓存快速渲染，再从云端拉最新
   try {
-    const raw = localStorage.getItem(HISTORY_KEY)
+    const raw = localStorage.getItem(getScopedStorageKey(HISTORY_KEY))
     if (raw) messages.value = JSON.parse(raw)
   } catch { /* ignore */ }
 
@@ -186,7 +187,7 @@ async function loadHistoryFromCloud() {
     if (data.messages?.length) {
       // 云端数据覆盖本地（云端是权威来源）
       messages.value = data.messages
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(data.messages.slice(-MAX_HISTORY)))
+      localStorage.setItem(getScopedStorageKey(HISTORY_KEY), JSON.stringify(data.messages.slice(-MAX_HISTORY)))
     }
   } catch { /* 云端不可用时静默降级到本地缓存 */ }
 }
@@ -250,7 +251,7 @@ function formatMsgTime(iso: string): string {
 
 function persistHistory() {
   const trimmed = messages.value.slice(-MAX_HISTORY)
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed))
+  localStorage.setItem(getScopedStorageKey(HISTORY_KEY), JSON.stringify(trimmed))
   // 异步同步到云端，不阻塞 UI
   syncHistoryToCloud(trimmed)
 }

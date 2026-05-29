@@ -372,6 +372,7 @@ import { useUserMemoryStore } from '@/stores/userMemory'
 import { useChatContextStore } from '@/stores/chatContext'
 import { extractAndMerge } from './ai/composables/useMemoryExtractor'
 import adamAvatarUrl from '@/assets/adam-avatar.png'
+import { getScopedStorageKey } from '@/utils/storageScope'
 
 function getResponseId(res: any) {
   return Number(res?.data?.id || res?.data?.data?.id || res?.data || 0)
@@ -432,7 +433,7 @@ const sessions = ref<Session[]>(loadSessions())
 
 function loadSessions(): Session[] {
   try {
-    const raw = localStorage.getItem(SESSIONS_KEY)
+    const raw = localStorage.getItem(getScopedStorageKey(SESSIONS_KEY))
     if (raw) return JSON.parse(raw) as Session[]
   } catch {}
   return []
@@ -440,7 +441,7 @@ function loadSessions(): Session[] {
 
 function saveSessions(list: Session[]) {
   try {
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(list.slice(-MAX_SESSIONS)))
+    localStorage.setItem(getScopedStorageKey(SESSIONS_KEY), JSON.stringify(list.slice(-MAX_SESSIONS)))
   } catch {}
 }
 
@@ -464,7 +465,7 @@ function restoreSession(index: number) {
 
 function loadHistory(): Message[] {
   try {
-    const raw = localStorage.getItem(HISTORY_KEY)
+    const raw = localStorage.getItem(getScopedStorageKey(HISTORY_KEY))
     if (raw) return JSON.parse(raw) as Message[]
   } catch {}
   return []
@@ -473,7 +474,7 @@ function loadHistory(): Message[] {
 function saveHistory(msgs: Message[]) {
   try {
     const toSave = msgs.slice(-MAX_HISTORY)
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(toSave))
+    localStorage.setItem(getScopedStorageKey(HISTORY_KEY), JSON.stringify(toSave))
   } catch {}
 }
 
@@ -800,7 +801,7 @@ const SYSTEM_PROMPT = `你是数字游牧ERP系统的内置AI助手。你运行�
 【你的能力】
 你可以直接录入和查询以下所有数据（通过系统API实时操作）：
 - 基础资料：客户、供应商、商品、品牌、分类、单位、员工、仓库
-- 销售业务：销售报价、销售合同、销售出库
+- 销售业务：销售报价、销售订单、销售出库
 - 采购业务：采购计划、采购订单
 - 生产业务：生产计划
 - 财务：预付款、收款单、付款单、资金账户
@@ -891,7 +892,7 @@ async function fetchContextData(text: string): Promise<string> {
       results.push(`【销售出货单】共 ${outRows.length} 条，合计 ¥${outTotal.toFixed(2)}。最近5条：${JSON.stringify(outRows.slice(0, 5).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: fmtDt(r.out_date || r.created_at) })))}`)
       const contractRows: any[] = contractRes?.data?.rows || []
       const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-      results.push(`【销售合同】共 ${contractRows.length} 份，合计 ¥${contractTotal.toFixed(2)}`)
+      results.push(`【销售订单】共 ${contractRows.length} 份，合计 ¥${contractTotal.toFixed(2)}`)
     }
     // Stock/inventory data
     if (lower.includes('库存') || lower.includes('库') || lower.includes('存货') || lower.includes('库存总览')) {
@@ -1497,7 +1498,7 @@ function clearMessages() {
   archiveSession()
   messages.value = []
   pendingAction.value = null
-  localStorage.removeItem(HISTORY_KEY)
+  localStorage.removeItem(getScopedStorageKey(HISTORY_KEY))
 }
 
 function scrollToBottom() {

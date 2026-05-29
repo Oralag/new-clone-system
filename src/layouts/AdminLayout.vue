@@ -144,7 +144,7 @@
             <div class="qc-icon" style="background:rgba(0,113,227,0.08)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             </div>
-            <span>销售合同</span>
+            <span>销售订单</span>
           </div>
           <div class="qc-item" @click="goCreate('/procure/inhouse')">
             <div class="qc-icon" style="background:rgba(8,145,178,0.1)">

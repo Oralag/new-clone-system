@@ -126,7 +126,7 @@
     </div>
 
     <!-- Pagination -->
-    <div v-if="total > 0" class="sc-pagination">
+    <div v-if="total > 0 && tableData.length < total" class="sc-pagination">
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
@@ -173,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted, onActivated, useSlots } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, onActivated, useSlots, watch } from 'vue'
 import { Search, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
@@ -213,6 +213,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'selection-change', val: any[]): void
+  (e: 'reset'): void
 }>()
 
 const slots = useSlots()
@@ -225,6 +226,7 @@ const pageSize = ref(props.defaultPageSize)
 const searchParams = ref<Record<string, any>>({})
 const selectedRows = ref<any[]>([])
 const elTableRef = ref<any>()
+const initialParams = ref<Record<string, any>>({})
 
 // ── Auto-detect column prop→label from slot vnodes ────────────────────────────
 function getColumnMap(): Record<string, string> {
@@ -376,7 +378,19 @@ async function loadData() {
 
 // ── Search / pagination ───────────────────────────────────────────────────────
 function handleSearch() { currentPage.value = 1; loadData() }
-function handleReset() { searchParams.value = {}; currentPage.value = 1; loadData() }
+function handleReset() {
+  searchParams.value = {}
+  if (props.params && typeof props.params === 'object') {
+    const init = initialParams.value
+    Object.keys(props.params).forEach(k => {
+      const v = init[k]
+      props.params[k] = (v === undefined ? null : Array.isArray(v) ? [] : typeof v === 'string' ? '' : v === null ? null : v)
+    })
+  }
+  currentPage.value = 1
+  emit('reset')
+  loadData()
+}
 function handleSizeChange() { currentPage.value = 1; loadData().then(scrollToTop) }
 function handleCurrentChange() { loadData().then(scrollToTop) }
 function refresh() { loadData() }
@@ -562,7 +576,12 @@ async function confirmImport() {
 // ── Expose ────────────────────────────────────────────────────────────────────
 defineExpose({ refresh, loadData, tableData, searchParams, selectedRows })
 
-onMounted(() => { isMobile.value = checkMobile(); loadData(); window.addEventListener('resize', onResize) })
+onMounted(() => {
+  if (props.params && typeof props.params === 'object') {
+    initialParams.value = JSON.parse(JSON.stringify(props.params))
+  }
+  isMobile.value = checkMobile(); loadData(); window.addEventListener('resize', onResize)
+})
 onActivated(() => { isMobile.value = checkMobile() })
 onUnmounted(() => { window.removeEventListener('resize', onResize) })
 

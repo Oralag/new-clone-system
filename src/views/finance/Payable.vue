@@ -73,7 +73,7 @@
         </el-table-column>
         <el-table-column label="应付欠款" min-width="120" align="right">
           <template #default="{ row }">
-            <span :style="{ color: Number(row.un_pay_amount) > 0 ? '#dc2626' : '#16a34a', fontWeight: '600' }">
+            <span :style="{ color: Number(row.un_pay_amount) > 0 ? '#dc2626' : Number(row.un_pay_amount) < 0 ? '#d97706' : '#16a34a', fontWeight: '600' }">
               {{ fmt(row.un_pay_amount) }}
             </span>
           </template>
@@ -102,8 +102,9 @@
     </el-card>
 
     <!-- 欠款详情弹框 -->
-    <el-dialog v-model="detailVisible" :title="`${detailSupplier} - 欠款详情`" width="760px" destroy-on-close>
+    <el-dialog v-model="detailVisible" :title="`${detailSupplier} - 欠款详情`" width="min(960px, 95vw)" destroy-on-close>
       <el-table :data="detailRows" border size="small">
+        <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="source_name" label="来源" min-width="100">
           <template #default="{ row }">{{ row.source_name || '采购' }}</template>
         </el-table-column>
@@ -115,11 +116,11 @@
           <template #default="{ row }"><span style="color:#0071e3">{{ fmt(row.paid_amount) }}</span></template>
         </el-table-column>
         <el-table-column label="应付金额" min-width="110" align="right">
-          <template #default="{ row }"><span style="color:#dc2626;font-weight:600">{{ fmt(row.un_pay_amount) }}</span></template>
+          <template #default="{ row }"><span :style="{ color: Number(row.un_pay_amount) < 0 ? '#d97706' : '#dc2626', fontWeight: '600' }">{{ fmt(row.un_pay_amount) }}</span></template>
         </el-table-column>
         <el-table-column label="付款账户" min-width="120">
           <template #default="{ row }">
-            <span v-if="row.fund_names && row.fund_names.length" style="color:rgba(29,29,31,0.7);font-size:12px">
+            <span v-if="Number(row.paid_amount) > 0 && row.fund_names && row.fund_names.length" style="color:rgba(29,29,31,0.7);font-size:12px">
               {{ row.fund_names.join('、') }}
             </span>
             <span v-else style="color:rgba(29,29,31,0.3);font-size:12px">—</span>
@@ -147,7 +148,7 @@ import { getSupplierList } from '@/api/procure'
 import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
-import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount } from '@/utils/procureFeeFinance'
+import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
@@ -161,6 +162,7 @@ const rows = ref<any[]>([])
 const rawRows = ref<any[]>([])
 const procureReturnRows = ref<any[]>([])
 const allPayReceipts = ref<any[]>([])
+const fundNameMap = ref<Map<number, string>>(new Map())
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -214,14 +216,40 @@ async function load() {
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
     const [orderRes, returnRes, supplierRes, expenseRes, payReceiptRes, contractRes] = settled.map((_, i) => ok(i))
 
-    // 用付款单数据做两件事：1) 费用项已付统计 2) 详情弹框的付款账户显示
-    const rawPayList = payReceiptRes.data?.rows ?? []
-    const procureFeePaidById = buildProcureFeePaidByOrder(rawPayList)
+    // 构建资金账户 id→name 映射，用于付款单 fund_name 缺失时的回退
+    const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 200 } }).catch(() => ({ data: { rows: [] } }))
+    fundNameMap.value = new Map((fundRes.data?.rows ?? []).map((f: any) => [Number(f.id), String(f.name || '')]))
 
-    const orders: any[] = orderRes.data?.rows ?? []
+    const rawPayList = payReceiptRes.data?.rows ?? []
+    // 审核自动生成的付款单是系统预付记录，不计入应付欠款（与原系统口径一致）
+    const manualPayList = rawPayList.filter((r: any) =>
+      !/审核自动生成/.test(String(r.remark || ''))
+    )
+    const procureFeePaidById = buildProcureFeePaidByOrder(manualPayList)
+
+    // 构建手动付款匹配 map（按 order_id 优先，其次 order_sn）
+    const manualPaidById: Record<number, number> = {}
+    const manualPaidBySn: Record<string, number> = {}
+    for (const r of manualPayList) {
+      if (String(r.contact_type || '') !== 'supplier') continue
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      if (Number(r.order_id)) {
+        manualPaidById[Number(r.order_id)] = (manualPaidById[Number(r.order_id)] || 0) + amt
+      } else {
+        const sn = String(r.order_sn || '').trim()
+        if (sn) manualPaidBySn[sn] = (manualPaidBySn[sn] || 0) + amt
+        const m = String(r.remark || '').match(/采购单(?:自动)?付款\s*#(\d+)/)
+        if (m) {
+          const rid = Number(m[1])
+          if (rid) manualPaidById[rid] = (manualPaidById[rid] || 0) + amt
+        }
+      }
+    }
+
+    const orders: any[] = (orderRes.data?.rows ?? []).filter((o: any) => Number(o.status) === 1)
 
     // 按供应商聚合采购订单
-    // 已付金额直接取 PO 自身的 pay_amount（与原系统口径一致，是后端权威字段）
     const supplierMap = new Map<string, any>()
     for (const o of orders) {
       const displayName = getProcureOrderSupplierLabel(o, supplierRes.data?.rows ?? [])
@@ -241,11 +269,14 @@ async function load() {
       }
       const s = supplierMap.get(key)!
       const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
+      const oNo = String(o.order_no || '').trim()
+      const oSn = String(o.order_sn || '').trim()
       const paidAmt = Number(o.pay_amount || 0)
       const feeNeedPay = getProcureFeeNeedPayAmount(o)
       const feePaid = procureFeePaidById[o.id] || 0
       const feeUnpaid = Math.max(0, feeNeedPay - feePaid)
-      const unpaid = Math.max(0, orderAmt - paidAmt)
+      const unpaid = orderAmt - paidAmt
+      if (unpaid <= 0 && feeUnpaid <= 0) continue
       s.order_amount += orderAmt + feeNeedPay
       s.paid_amount += paidAmt + feePaid
       s.un_pay_amount += unpaid + feeUnpaid
@@ -255,7 +286,7 @@ async function load() {
         order_amount: orderAmt + feeNeedPay,
         paid_amount: paidAmt + feePaid,
         un_pay_amount: unpaid + feeUnpaid,
-        due_date: fmtDt(o.order_date || o.create_time),
+        due_date: fmtDt(o.order_date),
       })
     }
 
@@ -285,9 +316,18 @@ async function load() {
         return true
       })
 
-    // 聚合合同附加费用（fee_items）按 supplier_name
+    // 聚合合同附加费用（对方承担、有收款方的）按 supplier_name，计算已付/未付
     const contracts: any[] = contractRes.data?.rows ?? []
-    const feeMap = new Map<string, { order_amount: number; orders: any[] }>()
+    // 构建销售附加费已付 Map：orderId:feeName → 已付金额
+    const saleFeePaidMap: Record<string, number> = {}
+    for (const r of manualPayList) {
+      const m = String(r.remark || '').match(/销售订单附加费用\s*#(\d+):(.+?)(?:\s|\[|$)/)
+      if (m) {
+        const key = `${Number(m[1])}:${m[2].trim()}`
+        saleFeePaidMap[key] = (saleFeePaidMap[key] || 0) + Number(r.amount || 0)
+      }
+    }
+    const feeMap = new Map<string, { order_amount: number; paid_amount: number; orders: any[] }>()
     for (const c of contracts) {
       let feeItems: any[] = []
       try {
@@ -295,23 +335,34 @@ async function load() {
         if (typeof raw === 'string' && raw && raw !== '[]') feeItems = JSON.parse(raw)
         else if (Array.isArray(raw)) feeItems = raw
       } catch { feeItems = [] }
+      // 从 remark [FI:] 标签恢复（后端未持久化 fee_items 字段时的兜底）
+      if (!feeItems.length) {
+        try {
+          const fiMatch = String(c.remark || '').match(/\[FI:([^\]]+)\]/)
+          if (fiMatch) feeItems = JSON.parse(decodeURIComponent(atob(fiMatch[1])))
+        } catch { /* ignore */ }
+      }
       for (const f of feeItems) {
-        if (f.bearer !== 'seller') continue
-        const supplierName = String(f.supplier_name || '').trim()
-        if (!supplierName) continue
+        if (f.bearer === 'buyer') continue  // 我方承担走采购付款，合同附加费只收录对方承担的
         const amt = Number(f.amount || 0)
         if (!amt) continue
-        if (!feeMap.has(supplierName)) feeMap.set(supplierName, { order_amount: 0, orders: [] })
+        const feeName = String(f.name || '费用').trim()
+        const paid = saleFeePaidMap[`${c.id}:${feeName}`] || 0
+        const unpaid = amt - paid
+        if (unpaid <= 0.001) continue  // 已付清，跳过
+        const supplierName = String(f.supplier_name || '').trim() || `合同附加-${feeName}`
+        if (!feeMap.has(supplierName)) feeMap.set(supplierName, { order_amount: 0, paid_amount: 0, orders: [] })
         const entry = feeMap.get(supplierName)!
         entry.order_amount += amt
+        entry.paid_amount += paid
         entry.orders.push({
           order_id: c.id,
-          order_no: f.receipt_no || c.order_sn || c.order_no || '',
+          order_no: c.order_sn || c.order_no || '',
           order_amount: amt,
-          paid_amount: 0,
-          un_pay_amount: amt,
-          due_date: f.order_date || fmtDt(c.order_date || c.created_at),
-          source_name: `合同附加-${f.name || '费用'}`,
+          paid_amount: paid,
+          un_pay_amount: unpaid,
+          due_date: fmtDt(c.sign_date || c.order_date || c.created_at),
+          source_name: `合同附加-${feeName}`,
         })
       }
     }
@@ -322,19 +373,19 @@ async function load() {
         contact_name: '',
         contact_mobile: '',
         order_amount: entry.order_amount,
-        paid_amount: 0,
-        un_pay_amount: entry.order_amount,
+        paid_amount: entry.paid_amount,
+        un_pay_amount: entry.order_amount - entry.paid_amount,
         prepay: 0,
         orders: entry.orders,
         __payable_source: 'contract_fee',
         source_name: '合同附加费',
       }))
       .filter(r => !searchForm.supplier_name || r.supplier_name.includes(searchForm.supplier_name))
-      .filter(r => r.un_pay_amount > 0)
+      .filter(r => r.un_pay_amount > 0.001)
 
-    rawRows.value = [...aggregated.filter(s => s.un_pay_amount > 0), ...expensePayables, ...contractFeeRows]
+    rawRows.value = [...aggregated.filter(s => s.un_pay_amount !== 0), ...expensePayables, ...contractFeeRows]
     procureReturnRows.value = returnRes.data?.rows ?? []
-    allPayReceipts.value = payReceiptRes.data?.rows ?? []
+    allPayReceipts.value = rawPayList
     total.value = filteredRows.value.length
   } finally {
     loading.value = false
@@ -353,24 +404,28 @@ const detailSupplier = ref('')
 const detailSupplierId = ref<any>(null)
 const detailRows = ref<any[]>([])
 
-async function viewDetail(row: any) {
+function viewDetail(row: any) {
   detailSupplier.value = row.supplier_name
   detailSupplierId.value = row.supplier_id
-  // 给每行订单匹配付款账户名
-  detailRows.value = (row.orders ?? []).map((o: any) => {
+  detailRows.value = (row.orders ?? []).filter((o: any) => Number(o.un_pay_amount) !== 0).map((o: any) => {
     const receipts = allPayReceipts.value.filter(r => {
       if (!Number(r.amount)) return false
       const sn = String(r.order_sn || '').trim()
-      const oSn = String(o.order_no || '').trim()
+      const oNo = String(o.order_no || '').trim()
       if (Number(r.order_id) && Number(r.order_id) === o.order_id) return true
       const m = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
       if (m.some(x => Number(x[1]) === o.order_id)) return true
-      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
-      if (m2 && m2[1].trim() === oSn) return true
-      if (sn && oSn && sn === oSn) return true
+      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9-]+)审核自动生成/)
+      if (m2 && m2[1].trim() === oNo) return true
+      if (sn && oNo && sn === oNo) return true
       return false
     })
-    const fundNames = [...new Set(receipts.map(r => r.fund_name).filter(Boolean))]
+    const fundNames = [...new Set(receipts.map(r => {
+      const name = String(r.fund_name || '').trim()
+      if (name) return name
+      const fid = Number(r.fund_id)
+      return fid ? (fundNameMap.value.get(fid) || '') : ''
+    }).filter(Boolean))]
     return { ...o, fund_names: fundNames }
   })
   detailVisible.value = true
@@ -411,7 +466,7 @@ function goToOrder(order: any) {
   detailVisible.value = false
   const sn = String(order.order_no || '').trim()
   const id = order.order_id
-  // 合同附加费 → 销售合同查看页
+  // 合同附加费 → 销售订单查看页
   if (String(order.source_name || '').includes('合同附加')) {
     const rn = String(order.order_no || '').trim()
     router.push({ path: `/sale/contract/view/${id}`, query: rn ? { receipt_no: rn } : {} })

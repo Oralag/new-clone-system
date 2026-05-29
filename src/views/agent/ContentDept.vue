@@ -81,6 +81,26 @@
           </div>
         </div>
 
+        <!-- 近期发布计划 -->
+        <div class="panel-card">
+          <div class="panel-hd">
+            <span class="panel-dot" style="background:#7c3aed"></span>
+            近期发布计划
+            <router-link to="/agent/calendar" class="panel-link-sm">查看全部</router-link>
+          </div>
+          <div class="cal-mini-list">
+            <div v-for="p in upcomingPlans(3)" :key="p.id" class="cal-mini-item">
+              <span class="cal-mini-ch">{{ CH_EMOJI[p.channel] ?? '📄' }}</span>
+              <div class="cal-mini-body">
+                <div class="cal-mini-title">{{ p.title }}</div>
+                <div class="cal-mini-meta">{{ p.date }}</div>
+              </div>
+              <span class="cal-mini-status" :class="'cms-' + p.status">{{ STATUS_LABEL[p.status] }}</span>
+            </div>
+            <div v-if="upcomingPlans(3).length === 0" class="cal-mini-empty">暂无待发布内容</div>
+          </div>
+        </div>
+
       </aside>
 
       <!-- 中间：对话区 -->
@@ -98,7 +118,10 @@
             <button class="chip-btn" @click="$router.push('/agent/video')">视频脚本</button>
           </div>
         </div>
-        <AgentChat agent-id="copywriter" ref="chatRef" />
+        <div class="product-selector-row">
+          <ProductSelector @change="selectedProduct = $event" />
+        </div>
+        <AgentChat agent-id="copywriter" ref="chatRef" :context-data="agentContext" />
       </section>
 
       <!-- 右侧：产出列表 -->
@@ -200,12 +223,40 @@ import { useTrendingStore } from '@/stores/agent'
 import { usePipelineStore } from '@/stores/pipeline'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
+import ProductSelector from '@/components/agent/ProductSelector.vue'
+import type { SelectedGoods } from '@/components/agent/ProductSelector.vue'
 import { ElMessage } from 'element-plus'
+import { useContentCalendar } from '@/composables/useContentCalendar'
+
+const { upcomingPlans } = useContentCalendar()
+
+const CH_EMOJI: Record<string, string> = {
+  '公众号': '📗', '微信公众号': '📗', '视频号': '📹',
+  '抖音号': '🎵', '小红书': '📕', '快手号': '📱', '微博': '🌐',
+}
+const STATUS_LABEL: Record<string, string> = {
+  idea: '选题中', draft: '创作中', scheduled: '待发布', published: '已发布',
+}
 
 const agentStore = useTrendingStore()
 const pipelineStore = usePipelineStore()
 const chatRef = ref<InstanceType<typeof AgentChat>>()
 const sentToCreative = ref(false)
+const selectedProduct = ref<SelectedGoods | null>(null)
+
+const agentContext = computed(() => {
+  if (!selectedProduct.value) return {}
+  const g = selectedProduct.value
+  const lines = [`【内容主角商品】`]
+  lines.push(`商品名称：${g.name}`)
+  if (g.price) lines.push(`售价：¥${g.price}`)
+  if (g.spec_name) lines.push(`规格：${g.spec_name}`)
+  if (g.cate_name) lines.push(`分类：${g.cate_name}`)
+  if (g.unit_name) lines.push(`单位：${g.unit_name}`)
+  if (g.remark) lines.push(`备注/描述：${g.remark}`)
+  lines.push(`\n请基于以上商品信息生成内容，文案中必须体现该商品的名称和核心卖点。`)
+  return { productContext: lines.join('\n') }
+})
 
 const copywritingResults = computed(() => agentStore.copywritingResults)
 const videoResults = computed(() => agentStore.videoResults)
@@ -369,6 +420,12 @@ function sendToCreative() {
   cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s;
 }
 .chip-btn:hover { border-color: var(--ac, #f59e0b); color: var(--ac, #f59e0b); }
+.product-selector-row {
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  background: rgba(245,158,11,0.03);
+}
+
 .chat-panel :deep(.agent-bar) {
   border: none !important; border-radius: 0 !important;
   box-shadow: none !important; background: transparent !important;
@@ -429,4 +486,24 @@ function sendToCreative() {
   .three-col { grid-template-columns: 1fr; }
   .left-panel, .right-panel { display: none; }
 }
+
+.panel-link-sm {
+  margin-left: auto; font-size: 10px; font-weight: 600;
+  color: #7c3aed; text-decoration: none;
+}
+.panel-link-sm:hover { text-decoration: underline; }
+
+.cal-mini-list { display: flex; flex-direction: column; gap: 6px; }
+.cal-mini-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+.cal-mini-item:last-child { border-bottom: none; }
+.cal-mini-ch { font-size: 16px; flex-shrink: 0; }
+.cal-mini-body { flex: 1; min-width: 0; }
+.cal-mini-title { font-size: 11px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-mini-meta { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+.cal-mini-status { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+.cms-idea      { background: rgba(148,163,184,0.12); color: #64748b; }
+.cms-draft     { background: rgba(245,158,11,0.1); color: #d97706; }
+.cms-scheduled { background: rgba(124,58,237,0.1); color: #7c3aed; }
+.cms-published { background: rgba(16,185,129,0.1); color: #059669; }
+.cal-mini-empty { font-size: 11px; color: #94a3b8; padding: 8px 0; text-align: center; }
 </style>

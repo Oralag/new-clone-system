@@ -211,18 +211,36 @@ interface AgentMemory {
   weight: number  // 1-10，影响下次注入优先级
 }
 
-// 每个 Agent 最多保留 30 条记忆，超出按 weight 淘汰最低的
-const agentMemoryStore: Map<string, AgentMemory[]> = new Map()
+// 每个 Agent 最多保留 30 条记忆，超出按 weight 淘汰最低的；持久化到本地文件
+const MEMORY_FILE = resolve(process.cwd(), '.agent-memory.json')
+
+function loadMemoryStore(): Map<string, AgentMemory[]> {
+  try {
+    if (existsSync(MEMORY_FILE)) {
+      const raw = JSON.parse(readFileSync(MEMORY_FILE, 'utf-8'))
+      return new Map(Object.entries(raw))
+    }
+  } catch (_) {}
+  return new Map()
+}
+
+function saveMemoryStore(store: Map<string, AgentMemory[]>) {
+  try {
+    writeFileSync(MEMORY_FILE, JSON.stringify(Object.fromEntries(store)), 'utf-8')
+  } catch (_) {}
+}
+
+const agentMemoryStore: Map<string, AgentMemory[]> = loadMemoryStore()
 
 function addAgentMemory(agentId: string, category: MemoryCategory, content: string, weight = 5) {
   if (!agentMemoryStore.has(agentId)) agentMemoryStore.set(agentId, [])
   const memories = agentMemoryStore.get(agentId)!
   memories.push({ agentId, category, content, timestamp: Date.now(), weight })
-  // 超出30条时淘汰 weight 最低的
   if (memories.length > 30) {
     memories.sort((a, b) => b.weight - a.weight)
     memories.splice(30)
   }
+  saveMemoryStore(agentMemoryStore)
 }
 
 function getAgentMemoryPrompt(agentId: string): string {
@@ -801,7 +819,7 @@ export function aiChatPlugin(): Plugin {
 
         const chunks: Buffer[] = []
         for await (const chunk of req as any) chunks.push(chunk)
-        const { messages, agentId, brandContext, flowResults } = JSON.parse(Buffer.concat(chunks).toString())
+        const { messages, agentId, brandContext, productContext, flowResults } = JSON.parse(Buffer.concat(chunks).toString())
         const erpToken = ((req as any).headers['x-erp-token'] as string) || ''
 
         const agent = getAgent(agentId)
@@ -814,9 +832,9 @@ export function aiChatPlugin(): Plugin {
         const send = (obj: object) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
 
         try {
-          const systemInstruction = brandContext
-            ? `${agent.systemPrompt}\n\n---\n【当前品牌信息】\n${brandContext}`
-            : agent.systemPrompt
+          let systemInstruction = agent.systemPrompt
+          if (brandContext) systemInstruction += `\n\n---\n【当前品牌信息】\n${brandContext}`
+          if (productContext) systemInstruction += `\n\n---\n${productContext}`
 
           const oaiTools = toOpenAITools(allTools)
           const oaiMessages = messages.map((m: any) => ({
@@ -974,6 +992,26 @@ export function aiChatPlugin(): Plugin {
           // Phase 2: 解析调度指令（支持JSON流水线 + 旧格式兼容）
           const agentOutputs: Array<{ agentId: string; agentName: string; output: string }> = []
 
+          // 按 receives_from 依赖关系将 pipeline 分层，同层无依赖可并行执行
+          function groupByDependency(pipeline: any[]): any[][] {
+            const layers: any[][] = []
+            const placed = new Set<string>()
+            let remaining = [...pipeline]
+            while (remaining.length > 0) {
+              const layer = remaining.filter(step => {
+                const deps = step.receives_from
+                  ? (Array.isArray(step.receives_from) ? step.receives_from : [step.receives_from])
+                  : []
+                return deps.every((d: string) => placed.has(d))
+              })
+              if (layer.length === 0) break
+              layer.forEach(s => placed.add(s.agentId))
+              layers.push(layer)
+              remaining = remaining.filter(s => !placed.has(s.agentId))
+            }
+            return layers
+          }
+
           // 尝试解析 JSON 流水线
           const pipelineMatch = captainResponse.match(/```dispatch-plan\s*([\s\S]*?)```/)
           if (pipelineMatch) {
@@ -981,70 +1019,76 @@ export function aiChatPlugin(): Plugin {
             try {
               const plan = JSON.parse(pipelineMatch[1].trim())
               if (plan.mode === 'pipeline' && Array.isArray(plan.pipeline)) {
-                // 上一步输出缓存（用于 pipe_output_to_next）
                 const stepOutputs: Record<string, string> = {}
+                const layers = groupByDependency(plan.pipeline)
+                let gateTriggered = false
 
-                for (const step of plan.pipeline) {
-                  const subAgent = getAgent(step.agentId)
-                  if (!subAgent) continue
+                for (const layer of layers) {
+                  if (gateTriggered) break
 
-                  // 构建任务提示词：如有上游输出则附加
-                  let taskPrompt = `Captain指令：${step.task}\n\n请直接执行并交付成果。`
-                  const upstream = step.receives_from
-                  if (upstream) {
-                    const sources = Array.isArray(upstream) ? upstream : [upstream]
-                    const upstreamContext = sources
-                      .filter((id: string) => stepOutputs[id])
-                      .map((id: string) => {
-                        const ag = getAgent(id)
-                        return `【${ag?.name || id}的产出】\n${stepOutputs[id]}`
-                      })
-                      .join('\n\n---\n\n')
-                    if (upstreamContext) {
-                      taskPrompt += `\n\n---\n上游输出供参考：\n${upstreamContext}`
-                    }
+                  if (layer.length > 1) {
+                    send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: `\n⚡ **并行执行** ${layer.map(s => getAgent(s.agentId)?.name || s.agentId).join(' / ')}\n` })
                   }
 
-                  let output = await runSubAgent(step.agentId, taskPrompt)
-                  stepOutputs[step.agentId] = output
+                  await Promise.all(layer.map(async (step) => {
+                    const subAgent = getAgent(step.agentId)
+                    if (!subAgent) return
 
-                  // 对抗审核：需要质疑官审核的步骤（非 skeptic 自身，非 captain）
-                  if (step.auto_review !== false && !['skeptic', 'captain', 'brand'].includes(step.agentId)) {
-                    const reviewPrompt = `请审核以下内容：\n\n【原始任务】\n${step.task}\n\n【${subAgent.name}的输出】\n${output}`
-                    const reviewOutput = await runSubAgent('skeptic', reviewPrompt)
-
-                    // REJECT：打回重做一次，记录教训，亲和度下降
-                    if (reviewOutput.includes('判断：REJECT') || reviewOutput.includes('判断:REJECT')) {
-                      send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: `\n\n🔄 **质疑官打回 ${subAgent.name} 的输出，要求重做...**\n` })
-                      // 记录教训
-                      const lessonText = reviewOutput.slice(0, 150).replace(/\n/g, ' ').trim()
-                      addAgentMemory(step.agentId, 'lesson', `被质疑官REJECT：${lessonText}`, 8)
-                      updateAffinity(step.agentId, 'skeptic', 'conflict')
-                      const retryPrompt = `${taskPrompt}\n\n---\n【质疑官审核意见，必须改进】\n${reviewOutput}`
-                      output = await runSubAgent(step.agentId, retryPrompt)
-                      stepOutputs[step.agentId] = output
+                    // 构建任务提示词：如有上游输出则附加
+                    let taskPrompt = `Captain指令：${step.task}\n\n请直接执行并交付成果。`
+                    const upstream = step.receives_from
+                    if (upstream) {
+                      const sources = Array.isArray(upstream) ? upstream : [upstream]
+                      const upstreamContext = sources
+                        .filter((id: string) => stepOutputs[id])
+                        .map((id: string) => {
+                          const ag = getAgent(id)
+                          return `【${ag?.name || id}的产出】\n${stepOutputs[id]}`
+                        })
+                        .join('\n\n---\n\n')
+                      if (upstreamContext) {
+                        taskPrompt += `\n\n---\n上游输出供参考：\n${upstreamContext}`
+                      }
                     }
-                    // HOLD：附上审核意见供下游参考，亲和度轻微下降
-                    else if (reviewOutput.includes('判断：HOLD') || reviewOutput.includes('判断:HOLD')) {
-                      updateAffinity(step.agentId, 'skeptic', 'neutral')
-                      stepOutputs[step.agentId] = `${output}\n\n---\n【质疑官建议（HOLD，供参考）】\n${reviewOutput}`
+
+                    let output = await runSubAgent(step.agentId, taskPrompt)
+                    stepOutputs[step.agentId] = output
+
+                    // 对抗审核：需要质疑官审核的步骤（非 skeptic 自身，非 captain）
+                    if (step.auto_review !== false && !['skeptic', 'captain', 'brand'].includes(step.agentId)) {
+                      const reviewPrompt = `请审核以下内容：\n\n【原始任务】\n${step.task}\n\n【${subAgent.name}的输出】\n${output}`
+                      const reviewOutput = await runSubAgent('skeptic', reviewPrompt)
+
+                      if (reviewOutput.includes('判断：REJECT') || reviewOutput.includes('判断:REJECT')) {
+                        send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: `\n\n🔄 **质疑官打回 ${subAgent.name} 的输出，要求重做...**\n` })
+                        const lessonText = reviewOutput.slice(0, 150).replace(/\n/g, ' ').trim()
+                        addAgentMemory(step.agentId, 'lesson', `被质疑官REJECT：${lessonText}`, 8)
+                        updateAffinity(step.agentId, 'skeptic', 'conflict')
+                        const retryPrompt = `${taskPrompt}\n\n---\n【质疑官审核意见，必须改进】\n${reviewOutput}`
+                        output = await runSubAgent(step.agentId, retryPrompt)
+                        stepOutputs[step.agentId] = output
+                      } else if (reviewOutput.includes('判断：HOLD') || reviewOutput.includes('判断:HOLD')) {
+                        updateAffinity(step.agentId, 'skeptic', 'neutral')
+                        stepOutputs[step.agentId] = `${output}\n\n---\n【质疑官建议（HOLD，供参考）】\n${reviewOutput}`
+                      } else {
+                        updateAffinity(step.agentId, 'skeptic', 'agree')
+                      }
                     }
-                    // PASS：亲和度上升
-                    else {
-                      updateAffinity(step.agentId, 'skeptic', 'agree')
+
+                    agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output })
+
+                    if (step.receives_from) {
+                      const upstreams = Array.isArray(step.receives_from) ? step.receives_from : [step.receives_from]
+                      upstreams.forEach((upId: string) => updateAffinity(step.agentId, upId, 'agree'))
                     }
-                  }
 
-                  agentOutputs.push({ agentId: subAgent.id, agentName: subAgent.name, output })
+                    // brand 审核关卡：设标志，层结束后统一处理
+                    if (step.is_gate && step.agentId === 'brand' && output.includes('❌ 不通过')) {
+                      gateTriggered = true
+                    }
+                  }))
 
-                  // 上下游协作成功 → 亲和度上升
-                  if (step.receives_from) {
-                    const upstreams = Array.isArray(step.receives_from) ? step.receives_from : [step.receives_from]
-                    upstreams.forEach((upId: string) => updateAffinity(step.agentId, upId, 'agree'))
-                  }
-
-                  // 审核关卡：brand 审核不通过时，流水线终止并提示
-                  if (step.is_gate && step.agentId === 'brand' && output.includes('❌ 不通过')) {
+                  if (gateTriggered) {
                     send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '\n\n⚠️ **品牌审核未通过**，流水线暂停。请根据品牌Agent的意见修改后重新提交。\n' })
                     res.write('data: [DONE]\n\n')
                     res.end()
@@ -1377,10 +1421,11 @@ ${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，�
               const canonicalHeaders = `content-type:application/json\nhost:${host}\nx-date:${amzdate}\n`
               const signedHeaders = 'content-type;host;x-date'
               const canonicalRequest = [method, path, query, canonicalHeaders, signedHeaders, payloadHash].join('\n')
-              const credentialScope = `${datestamp}/${service}/request`
+              const region = 'cn-north-1'
+              const credentialScope = `${datestamp}/${region}/${service}/request`
               const stringToSign = ['HMAC-SHA256', amzdate, credentialScope, createHash('sha256').update(canonicalRequest).digest('hex')].join('\n')
               const sign = (key: Buffer | string, msg: string) => createHmac('sha256', key).update(msg).digest()
-              const signingKey = sign(sign(sign(sign('volc' + secretAccessKey, datestamp), service), 'request'), 'aws4_request')
+              const signingKey = sign(sign(sign(sign(secretAccessKey, datestamp), region), service), 'request')
               const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex')
               return {
                 'Content-Type': 'application/json', 'Host': host, 'X-Date': amzdate,

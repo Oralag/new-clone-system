@@ -27,10 +27,14 @@ export interface BrandData {
   trendingFilters: string[]
   publishFreq: string
   mainPlatforms: string[]
+  productImages?: string[]
+  logoUrl?: string        // 品牌标准logo（透明底PNG），用于图片水印
+  logoUrlWhite?: string   // 白色版logo，用于深色背景
 }
 
 const STORAGE_KEY = 'brand_profiles_v2'
 const ACTIVE_KEY = 'brand_active_id'
+const TOKEN_NAME = 'erp_token'
 
 // 预置：数字游牧ERP完整品牌档案
 const DEFAULT_ERP_BRAND: BrandData = {
@@ -80,26 +84,111 @@ const DEFAULT_ERP_BRAND: BrandData = {
   trendingFilters: ['ERP', '进销存', '数字游牧', '创业工具', 'AI办公', '效率提升'],
   publishFreq: '每天1-2条',
   mainPlatforms: ['xiaohongshu', 'douyin', 'weibo'],
+  productImages: [],
 }
 
-function loadProfiles(): BrandData[] {
+// 预置：牧区纯坊品牌档案
+const DEFAULT_NOMADIC_BRAND: BrandData = {
+  id: 'mucq_default',
+  name: '牧区纯坊',
+  slogan: '从草原到你手里，只做了一件事',
+  intro: '牧区纯坊来自内蒙古赤峰市阿鲁科尔沁旗，由非物质文化遗产传承人用传统手艺制作，不含任何添加剂。核心产品奶豆腐和奶条均以纯鲜牛乳为原料，蛋白质高达18-52%，钙含量远超普通零食。每一块都是牧区直发，真实原产地溯源，是健康高蛋白零食赛道中少有的"只有一行配料表"的产品。',
+  foundYear: '2020',
+  scale: '小微企业',
+  region: '内蒙古赤峰市阿鲁科尔沁旗',
+  priceLevel: '中端定价',
+  industry: '食品/乳制品',
+  subIndustry: '健康零食 / 民族特产',
+  products: [
+    '牧区奶豆腐（独立小包装，240g/盒，配料：生牛乳）',
+    '牧区奶条（52条独立包装，250g/袋，配料：生牛乳）',
+  ],
+  sellingPoints: `高钙：582mg/100g，NRV 73%，远超普通乳制品
+高蛋白：奶豆腐蛋白质18.19g/100g（30%含量）；奶条蛋白质52%
+零添加：配料表只有一行——生牛乳，无防腐剂/糖/香精
+传统手艺：非物质文化遗产传承人制作，不是工厂流水线
+产地直发：内蒙古牧区直达，草原原产地溯源
+独立包装：奶豆腐独立袋装，奶条52条独立小包，携带方便`,
+  competitors: ['普通奶酪棒', '蛋白棒', '鸡胸肉干', '市售奶片'],
+  referenceAccounts: '健身博主、内蒙古美食博主、健康零食测评账号',
+  targetAge: ['25-35岁', '35-45岁'],
+  targetGender: '女性为主',
+  audienceDesc: '25-38岁，关注健康饮食、高蛋白零食、地域特产美食的女性。有一定健身/健康意识，希望找到"好吃又没有负罪感"的零食替代品。',
+  audiencePain: `健康零食要么难吃要么全是添加剂
+蛋白棒口感差，像在嚼纸板
+想买内蒙古特产但不知道哪家靠谱
+想送礼但普通特产太普通
+零食吃多了有负罪感`,
+  tones: ['真实', '接地气', '有温度', '种草感', '生活化'],
+  taboos: '不要用过于医疗/药品感的语气，不要夸大疗效，不要说"治疗""降血脂"等医疗词汇',
+  adForbiddenWords: ['最健康', '第一', '最好', '治疗', '降血压', '降血糖', '纯天然100%'],
+  keywords: ['奶豆腐', '奶条', '内蒙古特产', '高蛋白零食', '健康零食', '零添加', '非遗传承'],
+  trendingFilters: ['高蛋白零食', '内蒙古美食', '健康零食', '地域美食', '零添加', '健身零食'],
+  publishFreq: '每周3-5条',
+  mainPlatforms: ['xiaohongshu', 'douyin'],
+  productImages: [
+    '/brand-images/奶豆腐/拍摄/包装+牛奶杯+叠片.jpg',
+    '/brand-images/奶豆腐/拍摄/牛奶浇淋创意.jpg',
+    '/brand-images/奶豆腐/拍摄/手拆独立包装.jpg',
+    '/brand-images/奶条/拍摄/粉色包装蒙古包.jpg',
+    '/brand-images/奶条/拍摄/包装+牛奶杯桌面.jpg',
+  ],
+  logoUrl:      '/brand-images/logo/mucq_logo_black.png',
+  logoUrlWhite: '/brand-images/logo/mucq_logo_white.png',
+}
+
+function mergeWithDefault(list: BrandData[]): BrandData[] {
+  if (!list.find(b => b.id === DEFAULT_ERP_BRAND.id)) {
+    list.unshift(DEFAULT_ERP_BRAND)
+  }
+  if (!list.find(b => b.id === DEFAULT_NOMADIC_BRAND.id)) {
+    list.push(DEFAULT_NOMADIC_BRAND)
+  }
+  return list
+}
+
+function loadLocal(): { profiles: BrandData[]; activeId: string } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const list: BrandData[] = JSON.parse(raw)
-      // 确保预置品牌始终存在
-      if (!list.find(b => b.id === DEFAULT_ERP_BRAND.id)) {
-        list.unshift(DEFAULT_ERP_BRAND)
-      }
-      return list
-    }
-  } catch { /* ignore */ }
-  return [DEFAULT_ERP_BRAND]
+    const profiles = raw ? mergeWithDefault(JSON.parse(raw)) : [DEFAULT_ERP_BRAND, DEFAULT_NOMADIC_BRAND]
+    const activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ERP_BRAND.id
+    return { profiles, activeId }
+  } catch {
+    return { profiles: [DEFAULT_ERP_BRAND, DEFAULT_NOMADIC_BRAND], activeId: DEFAULT_ERP_BRAND.id }
+  }
 }
 
-function saveProfiles(list: BrandData[]) {
+function saveLocal(profiles: BrandData[], activeId: string) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles))
+    localStorage.setItem(ACTIVE_KEY, activeId)
+  } catch { /* ignore */ }
+}
+
+async function fetchFromCloud(): Promise<{ profiles: BrandData[]; activeId: string } | null> {
+  const token = localStorage.getItem(TOKEN_NAME)
+  if (!token) return null
+  try {
+    const res = await fetch('/api/brand-profiles', {
+      headers: { 'x-erp-token': token },
+    })
+    const json = await res.json() as any
+    if (json.code === 1 && Array.isArray(json.data?.profiles) && json.data.profiles.length > 0) {
+      return { profiles: mergeWithDefault(json.data.profiles), activeId: json.data.activeId || DEFAULT_ERP_BRAND.id }
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+async function syncToCloud(profiles: BrandData[], activeId: string) {
+  const token = localStorage.getItem(TOKEN_NAME)
+  if (!token) return
+  try {
+    await fetch('/api/brand-profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({ profiles, activeId }),
+    })
   } catch { /* ignore */ }
 }
 
@@ -130,20 +219,31 @@ function emptyBrand(): BrandData {
     trendingFilters: [],
     publishFreq: '每天1条',
     mainPlatforms: ['douyin', 'xiaohongshu'],
+    productImages: [],
   }
 }
 
 export const useBrandStore = defineStore('brand', () => {
-  const profiles = ref<BrandData[]>(loadProfiles())
-  const activeId = ref<string>(localStorage.getItem(ACTIVE_KEY) || DEFAULT_ERP_BRAND.id)
+  const local = loadLocal()
+  const profiles = ref<BrandData[]>(local.profiles)
+  const activeId = ref<string>(local.activeId)
   const savedAt = ref('')
+  const synced = ref(false)
 
-  // 当前激活的品牌
+  // 启动后异步从云端拉取，若有数据则覆盖本地
+  fetchFromCloud().then(cloud => {
+    if (cloud) {
+      profiles.value = cloud.profiles
+      activeId.value = cloud.activeId
+      saveLocal(cloud.profiles, cloud.activeId)
+    }
+    synced.value = true
+  })
+
   const activeBrand = computed<BrandData>(() =>
     profiles.value.find(b => b.id === activeId.value) || profiles.value[0]
   )
 
-  // 兼容旧代码：brand / isConfigured / systemPrompt
   const brand = computed(() => activeBrand.value)
   const isConfigured = computed(() => !!activeBrand.value?.name && !!activeBrand.value?.industry)
 
@@ -169,13 +269,15 @@ export const useBrandStore = defineStore('brand', () => {
     if (b.keywords.length) lines.push(`必须包含关键词：${b.keywords.join('、')}`)
     if (b.taboos) lines.push(`内容禁忌：${b.taboos}`)
     if (b.adForbiddenWords.length) lines.push(`广告违禁词（绝对不能使用）：${b.adForbiddenWords.join('、')}`)
+    if (b.productImages?.length) lines.push(`【产品图片参考】以下是品牌真实产品图URL，生成图片/海报时必须参考这些产品的外观风格：\n${b.productImages.map(u => '- ' + u).join('\n')}`)
     lines.push('请根据以上品牌信息生成符合品牌调性的内容。')
     return lines.join('\n')
   })
 
   function setActive(id: string) {
     activeId.value = id
-    localStorage.setItem(ACTIVE_KEY, id)
+    saveLocal(profiles.value, id)
+    syncToCloud(profiles.value, id)
   }
 
   function saveBrand(data: BrandData) {
@@ -185,29 +287,31 @@ export const useBrandStore = defineStore('brand', () => {
     } else {
       profiles.value.push({ ...data })
     }
-    saveProfiles(profiles.value)
+    saveLocal(profiles.value, activeId.value)
+    syncToCloud(profiles.value, activeId.value)
     savedAt.value = new Date().toLocaleString('zh-CN')
   }
 
   function deleteBrand(id: string) {
-    if (id === DEFAULT_ERP_BRAND.id) return // 预置品牌不可删除
+    if (id === DEFAULT_ERP_BRAND.id || id === DEFAULT_NOMADIC_BRAND.id) return
     profiles.value = profiles.value.filter(b => b.id !== id)
-    saveProfiles(profiles.value)
     if (activeId.value === id) {
-      setActive(profiles.value[0]?.id || DEFAULT_ERP_BRAND.id)
+      activeId.value = profiles.value[0]?.id || DEFAULT_ERP_BRAND.id
     }
+    saveLocal(profiles.value, activeId.value)
+    syncToCloud(profiles.value, activeId.value)
   }
 
   function createBrand(): BrandData {
     return emptyBrand()
   }
 
-  // 兼容旧代码
   function resetBrand() {
     const idx = profiles.value.findIndex(b => b.id === activeId.value)
     if (idx >= 0 && activeId.value !== DEFAULT_ERP_BRAND.id) {
       profiles.value[idx] = emptyBrand()
-      saveProfiles(profiles.value)
+      saveLocal(profiles.value, activeId.value)
+      syncToCloud(profiles.value, activeId.value)
     }
   }
 
@@ -217,6 +321,7 @@ export const useBrandStore = defineStore('brand', () => {
     activeBrand,
     brand,
     savedAt,
+    synced,
     isConfigured,
     systemPrompt,
     setActive,

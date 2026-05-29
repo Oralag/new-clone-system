@@ -5,7 +5,7 @@
       <div>
         <div class="ro-badge">Reports Dashboard</div>
         <h2 class="ro-title">报表总览</h2>
-        <p class="ro-sub">基于销售合同 · 零售订单 · 采购订单的实时核算</p>
+        <p class="ro-sub">基于销售订单 · 零售订单 · 采购订单的实时核算</p>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <el-date-picker
@@ -25,32 +25,32 @@
     <!-- KPI Cards -->
     <div class="ro-kpi-grid">
       <div class="ro-kpi-card ro-kpi-clickable" @click="$router.push('/sale/contract')">
-        <div class="ro-kpi-icon" style="background:rgba(0,113,227,0.08)">
-          <el-icon :size="22" color="#0071e3"><Money /></el-icon>
+        <div class="ro-kpi-icon" style="background:rgba(22,163,74,0.08)">
+          <el-icon :size="22" color="#16a34a"><Money /></el-icon>
         </div>
         <div>
-          <div class="ro-kpi-label">销售合同收入</div>
-          <div class="ro-kpi-value" style="color:#0071e3">¥{{ fmt(saleTotal) }}</div>
+          <div class="ro-kpi-label">销售订单收入</div>
+          <div class="ro-kpi-value" style="color:#16a34a">¥{{ fmt(saleTotal) }}</div>
           <div class="ro-kpi-sub">{{ saleContracts.length }} 笔合同 · 点击查看</div>
         </div>
       </div>
       <div class="ro-kpi-card ro-kpi-clickable" @click="$router.push('/retail/order')">
-        <div class="ro-kpi-icon" style="background:rgba(16,185,129,0.08)">
-          <el-icon :size="22" color="#10b981"><Shop /></el-icon>
+        <div class="ro-kpi-icon" style="background:rgba(22,163,74,0.08)">
+          <el-icon :size="22" color="#16a34a"><Shop /></el-icon>
         </div>
         <div>
           <div class="ro-kpi-label">零售订单收入</div>
-          <div class="ro-kpi-value" style="color:#10b981">¥{{ fmt(retailTotal) }}</div>
+          <div class="ro-kpi-value" style="color:#16a34a">¥{{ fmt(retailTotal) }}</div>
           <div class="ro-kpi-sub">{{ retailOrders.length }} 笔订单 · 点击查看</div>
         </div>
       </div>
       <div class="ro-kpi-card ro-kpi-clickable" @click="$router.push('/procure/order')">
-        <div class="ro-kpi-icon" style="background:rgba(124,58,237,0.08)">
-          <el-icon :size="22" color="#7c3aed"><ShoppingCart /></el-icon>
+        <div class="ro-kpi-icon" style="background:rgba(220,38,38,0.08)">
+          <el-icon :size="22" color="#dc2626"><ShoppingCart /></el-icon>
         </div>
         <div>
           <div class="ro-kpi-label">采购总支出</div>
-          <div class="ro-kpi-value" style="color:#7c3aed">¥{{ fmt(procureTotal) }}</div>
+          <div class="ro-kpi-value" style="color:#dc2626">¥{{ fmt(procureTotal) }}</div>
           <div class="ro-kpi-sub">{{ procureOrders.length }} 笔采购 · 点击查看</div>
         </div>
       </div>
@@ -81,16 +81,16 @@
       <div class="ro-profit-body">
         <!-- 收入 -->
         <div class="ro-profit-col">
-          <div class="ro-col-header blue">
+          <div class="ro-col-header green-header">
             <span>收入来源</span>
             <span>¥{{ fmt(saleTotal + retailTotal) }}</span>
           </div>
-          <div class="ro-section-label">销售合同（{{ saleContracts.length }} 单）</div>
+          <div class="ro-section-label">销售订单（{{ saleContracts.length }} 单）</div>
           <div v-if="saleContracts.length === 0 && !loading" class="ro-empty-sm">暂无已审核合同</div>
           <div v-for="row in saleContracts.slice(0, 6)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.customer_name || row.order_sn || '-' }}</span>
             <span class="ro-dr-date">{{ fmtDt(row.sign_date || row.created_at) }}</span>
-            <span class="ro-dr-amt blue">+¥{{ fmt(row.total_amount || 0) }}</span>
+            <span class="ro-dr-amt green">+¥{{ fmt(row.total_amount || 0) }}</span>
           </div>
           <div v-if="saleContracts.length > 6" class="ro-more">还有 {{ saleContracts.length - 6 }} 笔合同...</div>
 
@@ -106,7 +106,7 @@
 
         <!-- 支出 -->
         <div class="ro-profit-col">
-          <div class="ro-col-header purple">
+          <div class="ro-col-header red-header">
             <span>支出明细</span>
             <span>¥{{ fmt(procureTotal + freightTotal + expenseTotal) }}</span>
           </div>
@@ -145,20 +145,20 @@
           <div class="ro-sum-block">
             <div class="ro-sum-row">
               <span class="ro-sum-label">合同收入</span>
-              <span style="color:#0071e3;font-weight:600">¥{{ fmt(saleTotal) }}</span>
+              <span style="color:#16a34a;font-weight:600">¥{{ fmt(saleTotal) }}</span>
             </div>
             <div class="ro-sum-row">
               <span class="ro-sum-label">零售收入</span>
-              <span style="color:#10b981;font-weight:600">¥{{ fmt(retailTotal) }}</span>
+              <span style="color:#16a34a;font-weight:600">¥{{ fmt(retailTotal) }}</span>
             </div>
             <div class="ro-sum-row ro-sum-total">
               <span class="ro-sum-label">总收入</span>
-              <span style="color:#0071e3;font-size:17px;font-weight:800">¥{{ fmt(saleTotal + retailTotal) }}</span>
+              <span style="color:#16a34a;font-size:17px;font-weight:800">¥{{ fmt(saleTotal + retailTotal) }}</span>
             </div>
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row">
               <span class="ro-sum-label">采购支出</span>
-              <span style="color:#7c3aed;font-weight:600">−¥{{ fmt(procureTotal) }}</span>
+              <span style="color:#dc2626;font-weight:600">−¥{{ fmt(procureTotal) }}</span>
             </div>
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row ro-sum-total">
@@ -171,11 +171,11 @@
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row">
               <span class="ro-sum-label">我方运费</span>
-              <span style="color:#f59e0b;font-weight:600">−¥{{ fmt(freightTotal) }}</span>
+              <span style="color:#dc2626;font-weight:600">−¥{{ fmt(freightTotal) }}</span>
             </div>
             <div class="ro-sum-row">
               <span class="ro-sum-label">费用支出</span>
-              <span style="color:#f59e0b;font-weight:600">−¥{{ fmt(expenseTotal) }}</span>
+              <span style="color:#dc2626;font-weight:600">−¥{{ fmt(expenseTotal) }}</span>
             </div>
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row ro-sum-total">
@@ -259,13 +259,13 @@
         </el-table-column>
         <el-table-column label="销售额" align="right" width="100">
           <template #default="{ row }">
-            <span style="color:#0071e3">¥{{ fmt(row.sale_amount) }}</span>
+            <span style="color:#16a34a">¥{{ fmt(row.sale_amount) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="成本" align="right" width="110">
           <template #default="{ row }">
             <el-tooltip :content="row.has_bom ? 'BOM物料成本' : '商品采购价'" placement="top">
-              <span style="color:#7c3aed">¥{{ fmt(row.cost_amount) }}</span>
+              <span style="color:#dc2626">¥{{ fmt(row.cost_amount) }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -298,17 +298,17 @@
           <div v-for="row in retailCustomerRows.slice(0, 8)" :key="row.customer_name" class="ro-sale-row">
             <span class="ro-sale-name">{{ row.customer_name || '散客' }}</span>
             <div class="ro-sale-bar-wrap">
-              <div class="ro-sale-bar" style="background:linear-gradient(to right,#0071e3,#34aadc)"
+              <div class="ro-sale-bar" style="background:linear-gradient(to right,#16a34a,#4ade80)"
                    :style="{ width: getBarWidth(retailCustomerRows, row.amount, 'amount') }" />
             </div>
-            <span class="ro-sale-amt" style="color:#0071e3">¥{{ fmt(row.amount) }}</span>
+            <span class="ro-sale-amt" style="color:#16a34a">¥{{ fmt(row.amount) }}</span>
           </div>
         </div>
       </div>
 
       <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
         <div class="ro-card-header">
-          <div class="ro-card-title">销售合同客户排行</div>
+          <div class="ro-card-title">销售订单客户排行</div>
           <router-link to="/sale/contract" class="ro-link">查看销售 →</router-link>
         </div>
         <div v-if="saleCustomerRows.length === 0 && !loading" class="ro-empty">暂无销售数据</div>
@@ -316,10 +316,10 @@
           <div v-for="row in saleCustomerRows.slice(0, 8)" :key="row.customer_name" class="ro-sale-row">
             <span class="ro-sale-name">{{ row.customer_name || '—' }}</span>
             <div class="ro-sale-bar-wrap">
-              <div class="ro-sale-bar" style="background:linear-gradient(to right,#30d158,#34c759)"
+              <div class="ro-sale-bar" style="background:linear-gradient(to right,#16a34a,#4ade80)"
                    :style="{ width: getBarWidth(saleCustomerRows, row.amount, 'amount') }" />
             </div>
-            <span class="ro-sale-amt" style="color:#30d158">¥{{ fmt(row.amount) }}</span>
+            <span class="ro-sale-amt" style="color:#16a34a">¥{{ fmt(row.amount) }}</span>
           </div>
         </div>
       </div>
@@ -334,10 +334,10 @@
           <div v-for="row in supplierRows.slice(0, 8)" :key="row.supplier_name" class="ro-sale-row">
             <span class="ro-sale-name">{{ row.supplier_name || '无供应商' }}</span>
             <div class="ro-sale-bar-wrap">
-              <div class="ro-sale-bar" style="background:linear-gradient(to right,#7c3aed,#a78bfa)"
+              <div class="ro-sale-bar" style="background:linear-gradient(to right,#dc2626,#f87171)"
                    :style="{ width: getBarWidth(supplierRows, row.amount, 'amount') }" />
             </div>
-            <span class="ro-sale-amt" style="color:#7c3aed">¥{{ fmt(row.amount) }}</span>
+            <span class="ro-sale-amt" style="color:#dc2626">¥{{ fmt(row.amount) }}</span>
           </div>
         </div>
       </div>
@@ -702,7 +702,8 @@ onActivated(loadAll)
   padding:8px 12px; border-radius:8px; margin-bottom:12px; font-size:13px; font-weight:700;
 }
 .ro-col-header.blue { background:rgba(0,113,227,0.06); color:#0071e3; }
-.ro-col-header.purple { background:rgba(124,58,237,0.06); color:#7c3aed; }
+.ro-col-header.green-header { background:rgba(22,163,74,0.06); color:#16a34a; }
+.ro-col-header.red-header { background:rgba(220,38,38,0.06); color:#dc2626; }
 
 .ro-section-label {
   font-size:11px; font-weight:600; color:rgba(29,29,31,0.4); text-transform:uppercase;
@@ -713,7 +714,7 @@ onActivated(loadAll)
 .ro-dr-date { font-size:11px; color:rgba(29,29,31,0.3); flex-shrink:0; }
 .ro-dr-amt { font-size:12px; font-weight:600; flex-shrink:0; }
 .blue { color:#0071e3; }
-.green { color:#10b981; }
+.green { color:#16a34a; }
 .red { color:#dc2626; }
 
 .ro-sum-block { background:#f8fafc; border-radius:12px; padding:16px; }

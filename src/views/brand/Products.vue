@@ -450,7 +450,7 @@ async function downloadSelected() {
 </script>
 
 <style scoped>
-.brand-products { padding: 32px 48px 80px; max-width: 1400px; }
+.brand-products { padding: 32px 48px 80px; max-width: 1400px; width: 100%; box-sizing: border-box; }
 .bp-header { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
 .bp-title { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
 .bp-sub { font-size: 13px; color: rgba(29,29,31,0.45); margin-top: 4px; }

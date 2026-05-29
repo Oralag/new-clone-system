@@ -3,7 +3,7 @@
     <div class="flow-header">
       <div>
         <div class="page-title">收支流水</div>
-        <div class="flow-sub">仅统计销售合同收入与采购订单支出，不包含收款单、付款单、费用、零售或其他流水。</div>
+        <div class="flow-sub">仅统计销售订单收入与采购订单支出，不包含收款单、付款单、费用、零售或其他流水。</div>
       </div>
       <el-button :loading="loading" type="primary" @click="loadData">刷新</el-button>
     </div>
@@ -13,7 +13,7 @@
         <el-card shadow="never" class="summary-card">
           <div class="summary-label">销售收入</div>
           <div class="summary-value green">¥{{ fmt(incomeTotal) }}</div>
-          <div class="summary-sub">{{ incomeCount }} 笔销售合同</div>
+          <div class="summary-sub">{{ incomeCount }} 笔销售订单</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="8">
@@ -216,7 +216,7 @@ async function loadData() {
         id: `sale-${row.id || orderNo(row, 'XS')}`,
         date: fmtDate(row.sign_date || row.contract_date || row.order_date || row.created_at || row.create_time),
         type: 'income',
-        source: '销售合同',
+        source: '销售订单',
         name: row.customer_name || '—',
         order_no: orderNo(row, 'XS'),
         amount: saleAmount(row),

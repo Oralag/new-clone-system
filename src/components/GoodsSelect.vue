@@ -24,6 +24,14 @@
         <div class="gs-search">
           <el-input v-model="keyword" placeholder="商品名称/编码" clearable style="width: 220px" @keyup.enter="search" />
           <el-button type="primary" @click="search">搜索</el-button>
+          <template v-if="props.filterGoodsIds?.length">
+            <el-tag v-if="!showAllGoods" type="success" style="cursor:pointer" @click="showAllGoods = true; page = 1; loadData()">
+              仅显示历史购买商品（{{ props.filterGoodsIds.length }}种）点击显示全部
+            </el-tag>
+            <el-tag v-else type="info" style="cursor:pointer" @click="showAllGoods = false; page = 1; loadData()">
+              显示全部商品，点击返回历史
+            </el-tag>
+          </template>
         </div>
 
         <el-table
@@ -119,7 +127,7 @@ import { getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { getPriceByCustomer } from '@/utils/customerLevel'
 
-const props = defineProps<{ customerId?: number | null }>()
+const props = defineProps<{ customerId?: number | null; filterGoodsIds?: number[] | null }>()
 
 const emit = defineEmits<{
   (e: 'confirm', val: any[]): void
@@ -144,8 +152,16 @@ const total = ref(0)
 const stockQtyMap = ref<Record<number, number>>({})
 // 手机端用 Set 跟踪选中（桌面端用 el-table selection-change）
 const mobileSelectedIds = ref<Set<number>>(new Set())
+const searchListRows = 2000
 
 interface CateNode { id: number; name: string; parent_id: any; children: CateNode[] }
+function sortCateList(list: CateNode[]): CateNode[] {
+  return list.slice().sort((a, b) => {
+    const aFinished = a.name === '成品' ? 0 : 1
+    const bFinished = b.name === '成品' ? 0 : 1
+    return aFinished - bFinished
+  })
+}
 function buildCateTree(source: any[]): CateNode[] {
   const all: CateNode[] = source.map(c => ({ ...c, children: [] }))
   const map: Record<number, CateNode> = {}
@@ -156,7 +172,10 @@ function buildCateTree(source: any[]): CateNode[] {
     if (pid && map[pid]) map[pid].children.push(c)
     else roots.push(c)
   })
-  return roots
+  function sortTree(nodes: CateNode[]): CateNode[] {
+    return sortCateList(nodes).map(n => ({ ...n, children: sortTree(n.children) }))
+  }
+  return sortTree(roots)
 }
 const cateTree = computed(() => buildCateTree(cateOptions.value))
 
@@ -175,24 +194,50 @@ function collectIds(id: number): number[] {
   return result
 }
 
-// 全量商品缓存（手机端用于本地过滤）
+// 全量商品缓存（手机端 & 历史过滤模式用于本地过滤）
 let allGoodsCache: any[] = []
+const showAllGoods = ref(false)
+
+function getGoodsTypeMap(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem('erp_goods_type_map') || '{}') } catch { return {} }
+}
+
+function enrichGoods(rows: any[]): any[] {
+  const typeMap = getGoodsTypeMap()
+  return rows.map((g: any) => ({
+    ...g,
+    goods_type: g.goods_type ?? typeMap[Number(g.id)] ?? 2,
+    stock_num: stockQtyMap.value[Number(g.id)] ?? 0,
+  }))
+}
 
 async function loadData() {
   loading.value = true
   try {
-    if (isMobile.value) {
-      // 手机端：全量加载一次，本地过滤
+    const activeFilter = !showAllGoods.value && props.filterGoodsIds?.length
+      ? new Set(props.filterGoodsIds) : null
+
+    if (isMobile.value || activeFilter) {
+      // 全量本地模式：手机端 或 客户历史过滤
       if (!allGoodsCache.length) {
         const res: any = await http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } })
-        allGoodsCache = (res?.data?.rows || res?.data?.list || []).map((g: any) => ({
-          ...g,
-          stock_num: stockQtyMap.value[Number(g.id)] ?? 0,
-        }))
+        allGoodsCache = enrichGoods(res?.data?.rows || res?.data?.list || [])
       }
-      list.value = fuzzyFilterGoods(allGoodsCache, keyword.value)
+      let rows = allGoodsCache
+      if (activeFilter) rows = rows.filter((g: any) => activeFilter.has(Number(g.id)))
+      if (selectedCateId.value) {
+        const ids = collectIds(selectedCateId.value)
+        rows = rows.filter((g: any) => ids.includes(Number(g.cate_id)))
+      }
+      rows = fuzzyFilterGoods(rows, keyword.value)
+      total.value = rows.length
+      const start = (page.value - 1) * pageSize.value
+      list.value = rows.slice(start, start + pageSize.value)
     } else {
-      const params: any = { page: page.value, list_rows: pageSize.value, keyword: keyword.value }
+      const kw = keyword.value.trim()
+      const params: any = kw
+        ? { page: 1, list_rows: searchListRows, keyword: kw }
+        : { page: page.value, list_rows: pageSize.value, keyword: keyword.value }
       if (selectedCateId.value) params.cate_id = selectedCateId.value
       const res: any = await http.get('/goods/ShopGoods/index', { params })
       const data = res?.data || {}
@@ -201,13 +246,20 @@ async function loadData() {
         const ids = collectIds(selectedCateId.value)
         rows = rows.filter((g: any) => ids.includes(Number(g.cate_id)))
       }
-      rows = fuzzyFilterGoods(rows, keyword.value)
-      rows = rows.map((g: any) => ({ ...g, stock_num: stockQtyMap.value[Number(g.id)] ?? 0 }))
-      list.value = rows
-      total.value = data.total || 0
+      rows = enrichGoods(rows)
+      if (kw) {
+        rows = fuzzyFilterGoods(rows, kw)
+        total.value = rows.length
+        const start = (page.value - 1) * pageSize.value
+        list.value = rows.slice(start, start + pageSize.value)
+      } else {
+        list.value = rows
+        total.value = data.total || 0
+      }
     }
   } finally {
-    loading.value = false }
+    loading.value = false
+  }
 }
 
 function selectCate(id: number | null) {
@@ -265,6 +317,7 @@ async function open() {
   selected.value = []
   mobileSelectedIds.value = new Set()
   allGoodsCache = []
+  showAllGoods.value = false
   if (!isMobile.value) loadCates()
   loading.value = true
   try {

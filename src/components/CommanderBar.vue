@@ -332,7 +332,7 @@ async function fetchContextData(text: string): Promise<string> {
       results.push(`【销售出货单】共 ${outRows.length} 条，合计 ¥${outTotal.toFixed(2)}。最近5条：${JSON.stringify(outRows.slice(0, 5).map((r: any) => ({ 客户: r.customer_name, 金额: r.total_amount, 日期: fmtDt(r.out_date || r.created_at) })))}`)
       const contractRows: any[] = contractRes?.data?.rows || []
       const contractTotal = contractRows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
-      results.push(`【销售合同】共 ${contractRows.length} 份，合计 ¥${contractTotal.toFixed(2)}`)
+      results.push(`【销售订单】共 ${contractRows.length} 份，合计 ¥${contractTotal.toFixed(2)}`)
     }
     if (lower.includes('库存') || lower.includes('存货')) {
       const res: any = await http.get('/stock/StockAll/index', { params: { list_rows: 100 } })

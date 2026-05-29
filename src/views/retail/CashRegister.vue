@@ -73,6 +73,10 @@
             </svg>
           </div>
         </div>
+        <div class="cr-new-goods-btn" @click="openQuickAdd" title="新建商品（可同时录入采购入库）">
+          <el-icon><Plus /></el-icon>
+          <span class="cr-new-goods-text">新建商品</span>
+        </div>
       </div>
     </div>
 
@@ -97,33 +101,65 @@
           <div v-if="cartItems.length === 0" class="cr-drawer-empty">
             <span>🛒</span> 还没有商品，点击下方商品加入
           </div>
-          <div v-for="(item, idx) in cartItems" :key="idx" class="cr-cart-item">
+          <div
+            v-for="(item, idx) in displayCartItems"
+            :key="idx"
+            class="cr-cart-item"
+            :class="{ active: pricingTargetIndex === idx }"
+            @click="setPricingTarget(idx)"
+          >
             <div class="cr-cart-item-top">
-              <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+              <div class="cr-cart-item-title">
+                <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+                <span v-if="item.original_price !== item.price" class="cr-cart-item-price-note">
+                  原价 ¥{{ formatMoney(item.original_price) }} → 成交 ¥{{ formatMoney(item.price) }}
+                </span>
+              </div>
               <el-button type="danger" link size="small" :icon="Delete"
-                @click="cartItems.splice(idx,1); calcTotal()" />
+                @click.stop="removeCartItem(idx)" />
             </div>
             <div class="cr-cart-item-bottom">
               <div class="cr-qty-ctrl">
-                <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
-                <el-input-number v-model="item.num" :min="0.001" :step="0.001" :precision="3"
+                <button class="cr-qty-btn" @click.stop="changeQty(idx,-1)">−</button>
+                <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
                   controls-position="right" size="small" style="width:72px"
                   @change="calcTotal" />
-                <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
+                <button class="cr-qty-btn" @click.stop="changeQty(idx,1)">+</button>
               </div>
-              <span class="cr-cart-item-sub">¥{{ (item.num * item.price).toFixed(2) }}</span>
+              <div class="cr-cart-item-amounts">
+                <div class="cr-cart-item-price-row">
+                  <span class="cr-cart-item-unit-label">单价</span>
+                  <el-input-number
+                    :model-value="item.price"
+                    :min="0"
+                    :precision="2"
+                    :step="1"
+                    controls-position="right"
+                    size="small"
+                    style="width:88px"
+                    @change="(v) => { cartItems[idx].price = Number(v); calcTotal() }"
+                    @click.stop
+                  />
+                </div>
+                <span class="cr-cart-item-sub">小计 ¥{{ formatMoney(item.line_amount) }}</span>
+              </div>
             </div>
           </div>
         </div>
         <!-- 汇总 + 支付 -->
         <div class="cr-settle cr-drawer-settle">
           <div class="cr-settle-row">
-            <span>商品合计</span>
-            <span>¥{{ totalAmount.toFixed(2) }}</span>
+            <span>单据日期</span>
+            <el-date-picker v-model="orderDate" type="date" value-format="YYYY-MM-DD"
+              size="small" style="width:130px" :clearable="false" />
           </div>
           <div class="cr-settle-row">
-            <span>折扣</span>
-            <el-input-number v-model="discountAmount" :min="0" :max="totalAmount" :precision="2"
+            <span>商品合计</span>
+            <span>¥{{ formatMoney(totalAmount) }}</span>
+          </div>
+          <div class="cr-settle-row">
+            <span>{{ adjustmentScopeLabel }}</span>
+            <el-input-number v-model="adjustmentAmount" :min="0" :precision="2"
               controls-position="right" size="small" style="width:100px" @change="calcPay" />
           </div>
           <div class="cr-settle-row">
@@ -135,7 +171,7 @@
               controls-position="right"
               size="small"
               style="width:120px"
-              @change="onPayAmountChange"
+              @update:model-value="onPayAmountChange"
             />
           </div>
           <div class="cr-pay-methods">
@@ -147,7 +183,7 @@
           <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
             @click="handleCheckout">
             <span v-if="paying">处理中…</span>
-            <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ payAmount.toFixed(2) }}</span>
+            <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ formatMoney(payAmount) }}</span>
           </button>
         </div>
       </div>
@@ -164,7 +200,7 @@
       </div>
       <div class="cr-float-info">
         <span v-if="!cartItems.length" class="cr-float-empty">点击商品加入购物车</span>
-        <span v-else class="cr-float-total">¥{{ payAmount.toFixed(2) }}</span>
+        <span v-else class="cr-float-total">¥{{ formatMoney(payAmount) }}</span>
         <span v-if="cartItems.length" class="cr-float-count">共 {{ cartItems.reduce((s,i)=>s+i.num,0) }} 件</span>
       </div>
       <button v-if="cartItems.length" class="cr-float-checkout" :disabled="paying"
@@ -190,21 +226,48 @@
               <div class="cr-empty-text">扫码/点选右侧商品，加入购物车结账</div>
             </div>
             <div v-else class="cr-cart-list">
-              <div v-for="(item, idx) in cartItems" :key="idx" class="cr-cart-item">
+              <div
+                v-for="(item, idx) in displayCartItems"
+                :key="idx"
+                class="cr-cart-item"
+                :class="{ active: pricingTargetIndex === idx }"
+                @click="setPricingTarget(idx)"
+              >
                 <div class="cr-cart-item-top">
-                  <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+                  <div class="cr-cart-item-title">
+                    <span class="cr-cart-item-name">{{ item.goods_name }}</span>
+                    <span v-if="item.original_price !== item.price" class="cr-cart-item-price-note">
+                      原价 ¥{{ formatMoney(item.original_price) }} → 成交 ¥{{ formatMoney(item.price) }}
+                    </span>
+                  </div>
                   <el-button type="danger" link size="small" :icon="Delete"
-                    @click="cartItems.splice(idx,1); calcTotal()" />
+                    @click.stop="removeCartItem(idx)" />
                 </div>
                 <div class="cr-cart-item-bottom">
                   <div class="cr-qty-ctrl">
-                    <button class="cr-qty-btn" @click="changeQty(idx,-1)">−</button>
-                    <el-input-number v-model="item.num" :min="0.001" :step="0.001" :precision="3"
+                    <button class="cr-qty-btn" @click.stop="changeQty(idx,-1)">−</button>
+                    <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
                       controls-position="right" size="small" style="width:72px"
                       @change="calcTotal" />
-                    <button class="cr-qty-btn" @click="changeQty(idx,1)">+</button>
+                    <button class="cr-qty-btn" @click.stop="changeQty(idx,1)">+</button>
                   </div>
-                  <span class="cr-cart-item-sub">¥{{ (item.num * item.price).toFixed(2) }}</span>
+                  <div class="cr-cart-item-amounts">
+                    <div class="cr-cart-item-price-row">
+                      <span class="cr-cart-item-unit-label">单价</span>
+                      <el-input-number
+                        :model-value="item.price"
+                        :min="0"
+                        :precision="2"
+                        :step="1"
+                        controls-position="right"
+                        size="small"
+                        style="width:88px"
+                        @change="(v) => { cartItems[idx].price = Number(v); calcTotal() }"
+                        @click.stop
+                      />
+                    </div>
+                    <span class="cr-cart-item-sub">小计 ¥{{ formatMoney(item.line_amount) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -213,12 +276,17 @@
           <!-- 汇总 + 支付 -->
           <div class="cr-settle">
             <div class="cr-settle-row">
-              <span>商品合计</span>
-              <span>¥{{ totalAmount.toFixed(2) }}</span>
+              <span>单据日期</span>
+              <el-date-picker v-model="orderDate" type="date" value-format="YYYY-MM-DD"
+                size="small" style="width:130px" :clearable="false" />
             </div>
             <div class="cr-settle-row">
-              <span>折扣</span>
-              <el-input-number v-model="discountAmount" :min="0" :max="totalAmount" :precision="2"
+              <span>商品合计</span>
+              <span>¥{{ formatMoney(totalAmount) }}</span>
+            </div>
+            <div class="cr-settle-row">
+              <span>{{ adjustmentScopeLabel }}</span>
+              <el-input-number v-model="adjustmentAmount" :min="0" :precision="2"
                 controls-position="right" size="small" style="width:100px" @change="calcPay" />
             </div>
             <div class="cr-settle-row">
@@ -230,8 +298,29 @@
                 controls-position="right"
                 size="small"
                 style="width:120px"
-                @change="onPayAmountChange"
+                @update:model-value="onPayAmountChange"
               />
+            </div>
+            <!-- 附加费用 -->
+            <div class="cr-settle-row" style="align-items:flex-start;padding-top:4px">
+              <span style="padding-top:6px">附加费用</span>
+              <div style="flex:1">
+                <div v-for="(fee, idx) in feeItems" :key="idx" style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+                  <el-select v-model="fee.name" size="small" style="width:100px" filterable allow-create default-first-option placeholder="类型">
+                    <el-option label="运费" value="运费" />
+                    <el-option label="跑腿费" value="跑腿费" />
+                    <el-option label="装卸费" value="装卸费" />
+                    <el-option label="其他费用" value="其他费用" />
+                  </el-select>
+                  <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:88px" placeholder="金额" />
+                  <el-button type="danger" link size="small" @click="feeItems.splice(idx,1)" style="padding:0;min-width:20px">×</el-button>
+                </div>
+                <el-button type="primary" link size="small" style="padding:0;font-size:12px" @click="feeItems.push({ name: '运费', amount: 0, bearer: 'buyer' })">+ 添加</el-button>
+              </div>
+            </div>
+            <div v-if="feeItems.filter(f=>f.amount>0).length" class="cr-settle-row" style="font-weight:700;border-top:1px solid rgba(255,255,255,0.15);padding-top:8px;margin-top:4px">
+              <span>实付合计</span>
+              <span style="font-size:15px">¥{{ formatMoney(payAmount + feeItems.filter(f=>f.amount>0).reduce((s,f)=>s+Number(f.amount),0)) }}</span>
             </div>
             <div class="cr-pay-methods">
               <div v-for="m in payMethods" :key="m.value" class="cr-pay-btn"
@@ -242,7 +331,7 @@
             <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
               @click="handleCheckout">
               <span v-if="paying">处理中…</span>
-              <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ payAmount.toFixed(2) }}</span>
+              <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ formatMoney(payAmount + feeItems.filter(f=>f.amount>0).reduce((s,f)=>s+Number(f.amount),0)) }}</span>
             </button>
           </div>
         </div>
@@ -293,7 +382,10 @@
               </div>
             </div>
             <div v-if="!goodsLoading && goodsList.length === 0" class="cr-goods-empty">
-              暂无商品
+              <div>暂无商品</div>
+              <div class="cr-goods-empty-add" @click="openQuickAdd">
+                <el-icon><Plus /></el-icon> 新建商品并加入购物车
+              </div>
             </div>
           </div>
         </div>
@@ -306,7 +398,7 @@
       <div style="text-align:center;padding:16px 0">
         <el-icon style="font-size:56px;color:#16a34a"><CircleCheckFilled /></el-icon>
         <div style="font-size:26px;font-weight:700;margin:14px 0 6px;color:#1d1d1f">
-          ¥{{ lastPayAmount.toFixed(2) }}
+          ¥{{ formatMoney(lastPayAmount) }}
         </div>
         <div style="color:rgba(29,29,31,0.35);font-size:13px">订单号：{{ lastOrderNo }}</div>
       </div>
@@ -317,12 +409,107 @@
       </template>
     </el-dialog>
 
+    <!-- 新建商品（含可选采购入库） -->
+    <el-dialog v-model="quickAddVisible" title="新建商品" width="500px" align-center :close-on-click-modal="false">
+      <div style="display:flex;flex-direction:column;gap:0;padding:4px 0">
+
+        <!-- ── 商品信息 ── -->
+        <el-form label-width="72px">
+          <el-form-item label="商品名称" required>
+            <el-input v-model="quickAddForm.goods_name" placeholder="请输入商品名称" clearable />
+          </el-form-item>
+          <el-form-item label="售价" required>
+            <el-input-number v-model="quickAddForm.sell_price" :min="0" :precision="2" :step="1"
+              controls-position="right" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="成本价">
+            <el-input-number v-model="quickAddForm.cost_price" :min="0" :precision="2" :step="1"
+              controls-position="right" style="width:100%" placeholder="可不填" />
+          </el-form-item>
+          <el-form-item label="单位" required>
+            <el-select v-model="quickAddForm.unit_id" placeholder="请选择单位" style="width:100%">
+              <el-option v-for="u in unitList" :key="u.id" :label="u.name" :value="u.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="商品分类">
+            <el-select v-model="quickAddForm.cate_id" placeholder="可不选" clearable style="width:100%">
+              <el-option v-for="c in cateTreeOptions" :key="c.id" :label="c.label" :value="c.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="条形码">
+            <el-input v-model="quickAddForm.barcode" placeholder="可不填" clearable />
+          </el-form-item>
+        </el-form>
+
+        <!-- ── 采购入库（可选）── -->
+        <div class="qa-procure-section">
+          <div class="qa-procure-header" @click="quickAddForm.showProcure = !quickAddForm.showProcure">
+            <div style="display:flex;align-items:center;gap:6px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/>
+                <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+              </svg>
+              <span>同时录入采购入库</span>
+              <span class="qa-optional-badge">可选</span>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              :style="quickAddForm.showProcure ? 'transform:rotate(180deg)' : ''" style="transition:0.2s">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+
+          <div v-if="quickAddForm.showProcure" class="qa-procure-body">
+            <el-form label-width="72px">
+              <el-form-item label="采购数量" required>
+                <el-input-number v-model="quickAddForm.procure_qty" :min="0" :precision="3" :step="1"
+                  controls-position="right" style="width:100%" placeholder="填0或留空=不录采购" />
+              </el-form-item>
+              <el-form-item label="采购单价">
+                <el-input-number v-model="quickAddForm.procure_price" :min="0" :precision="2" :step="1"
+                  controls-position="right" style="width:100%"
+                  @change="(v: number) => { quickAddForm.cost_price = v || 0 }" />
+              </el-form-item>
+              <el-form-item label="供应商">
+                <el-autocomplete
+                  v-model="quickAddForm.procure_supplier"
+                  :fetch-suggestions="(q: string, cb: any) => cb(supplierOptions.filter((s: any) => s.name.includes(q)).map((s: any) => ({ value: s.name })))"
+                  placeholder="手输或选已有供应商，可不填"
+                  clearable style="width:100%"
+                />
+              </el-form-item>
+              <el-form-item label="入库仓库">
+                <el-select v-model="quickAddForm.procure_warehouse_id" placeholder="请选择仓库" style="width:100%"
+                  @change="(id: number) => { const w = warehouseList.find((w: any) => w.id === id); quickAddForm.procure_warehouse_name = w?.name ?? '' }">
+                  <el-option v-for="w in warehouseList" :key="w.id" :label="w.name" :value="w.id" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="采购日期">
+                <el-date-picker v-model="quickAddForm.procure_date" type="date" value-format="YYYY-MM-DD"
+                  style="width:100%" :clearable="false" />
+              </el-form-item>
+            </el-form>
+            <div class="qp-tip" style="margin-top:4px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+              填写采购数量后提交，系统自动审核入库、更新库存；付款后续在采购管理录入
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <template #footer>
+        <el-button @click="quickAddVisible = false">取消</el-button>
+        <el-button type="primary" :loading="quickAddSaving" @click="submitQuickAdd">
+          建档并加入购物车
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- 克重计算器 -->
     <el-dialog v-model="weightCalcVisible" title="散装克重计价" width="340px" align-center>
       <div style="display:flex;flex-direction:column;gap:16px;padding:8px 0">
         <!-- 当前商品信息 -->
         <div v-if="wcGoodsName" style="background:#f8fafc;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:13px;font-weight:600;color:#1e293b">{{ wcGoodsName }}</span>
+          <span style="font-size:13px;font-weight:600;color:#1e293b">{{ wcGoodsName }}{{ wcSpecLabel ? ' · ' + wcSpecLabel : '' }}</span>
           <span style="font-size:13px;color:#2563eb;font-weight:700">¥{{ wcPricePerJin }}/斤</span>
         </div>
         <!-- 无商品时提示 -->
@@ -336,6 +523,11 @@
             :style="wcMode==='weight' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
             输入克数
           </div>
+          <div @click="wcMode='unit'"
+            style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
+            :style="wcMode==='unit' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
+            输入{{ wcGoodsUnit }}数
+          </div>
           <div @click="wcMode='amount'"
             style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
             :style="wcMode==='amount' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
@@ -345,29 +537,100 @@
         <!-- 输入框 -->
         <div style="display:flex;align-items:center;gap:12px">
           <span style="width:64px;font-size:13px;color:#64748b;flex-shrink:0">
-            {{ wcMode === 'weight' ? '称重（克）' : '金额（元）' }}
+            {{ wcMode === 'weight' ? '称重（克）' : wcMode === 'unit' ? wcGoodsUnit : '金额（元）' }}
           </span>
           <el-input-number v-if="wcMode==='weight'" v-model="wcWeightGrams"
             :min="0" :precision="1" controls-position="right" style="flex:1" />
+          <el-input-number v-else-if="wcMode==='unit'" v-model="wcDirectUnit"
+            :min="0" :precision="4" controls-position="right" style="flex:1" />
           <el-input-number v-else v-model="wcTargetAmount"
             :min="0" :precision="2" controls-position="right" style="flex:1" />
+        </div>
+        <!-- 快捷选量（仅称重模式） -->
+        <div v-if="wcMode==='weight'" style="display:flex;flex-wrap:wrap;gap:6px">
+          <div v-for="preset in wcJinPresets" :key="preset.label"
+            @click="wcWeightGrams = preset.grams"
+            :style="wcWeightGrams === preset.grams
+              ? 'background:#2563eb;color:#fff;border-color:#2563eb'
+              : 'background:#f8fafc;color:#64748b;border-color:#e2e8f0'"
+            style="padding:5px 12px;border:1.5px solid;border-radius:20px;font-size:13px;cursor:pointer;transition:all 0.12s;user-select:none">
+            {{ preset.label }}
+          </div>
         </div>
         <!-- 结果展示 -->
         <div style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
           <template v-if="wcMode==='weight'">
             <div style="font-size:12px;color:#64748b;margin-bottom:4px">应付金额</div>
             <div style="font-size:28px;font-weight:700;color:#2563eb">¥{{ wcAmount.toFixed(2) }}</div>
-            <div style="font-size:12px;color:#94a3b8;margin-top:4px">{{ wcWeightGrams }}克 ÷ 500 × ¥{{ wcPricePerJin }}/斤</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:4px">{{ wcWeightGrams }}克 ÷ {{ wcGramsPerBaseUnit }} × ¥{{ wcPricePerJin }}/{{ wcGoodsUnit }}</div>
+          </template>
+          <template v-else-if="wcMode==='unit'">
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">应付金额</div>
+            <div style="font-size:28px;font-weight:700;color:#2563eb">¥{{ (wcDirectUnit * wcPricePerJin).toFixed(2) }}</div>
           </template>
           <template v-else>
             <div style="font-size:12px;color:#64748b;margin-bottom:4px">需要称重</div>
             <div style="font-size:28px;font-weight:700;color:#059669">{{ wcReverseGrams.toFixed(1) }} 克</div>
-            <div style="font-size:12px;color:#94a3b8;margin-top:4px">¥{{ wcTargetAmount }} ÷ ¥{{ wcPricePerJin }}/斤 × 500</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:4px">¥{{ wcTargetAmount }} ÷ ¥{{ wcPricePerJin }}/{{ wcGoodsUnit }} × {{ wcGramsPerBaseUnit }}</div>
           </template>
         </div>
+        <!-- 桶装快捷选项 -->
+        <div v-if="wcAuxUnits.length" style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:12px;color:#64748b;font-weight:500">按包装出售</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <div v-for="u in wcAuxUnits" :key="u.unit_name"
+              @click="addPackageToCart(u)"
+              style="padding:8px 16px;background:#f0f9ff;border:1.5px solid #93c5fd;border-radius:20px;font-size:13px;cursor:pointer;transition:all 0.12s;user-select:none;color:#1d4ed8">
+              {{ u.unit_name }}
+              <span style="font-size:12px;color:#3b82f6;margin-left:4px">
+                ¥{{ (u.sell_price && u.sell_price > 0 ? u.sell_price : wcPricePerJin * u.ratio).toFixed(2) }}
+              </span>
+            </div>
+          </div>
+        </div>
         <el-button type="primary"
-          :disabled="(wcMode==='weight' ? wcAmount : wcTargetAmount) <= 0 || !wcGoodsName"
+          :disabled="(wcMode==='weight' ? wcAmount : wcMode==='unit' ? wcDirectUnit * wcPricePerJin : wcTargetAmount) <= 0 || !wcGoodsName"
           @click="addWeightItemToCart" style="width:100%">
+          散装加入购物车
+        </el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 规格选择弹窗 -->
+    <el-dialog v-model="specSelectVisible" title="选择规格" width="340px" align-center>
+      <div style="display:flex;flex-direction:column;gap:16px;padding:8px 0">
+        <!-- 商品名 -->
+        <div style="background:#f8fafc;border-radius:10px;padding:12px 14px">
+          <span style="font-size:13px;font-weight:600;color:#1e293b">{{ ssGoods?.goods_name }}</span>
+        </div>
+        <!-- 每个规格属性 -->
+        <div v-for="(attr, idx) in ssSpecAttrs" :key="idx" style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:12px;color:#64748b;font-weight:500">{{ attr.name }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <div v-for="val in attr.values" :key="val"
+              @click="ssSelectVal(idx, val)"
+              :style="ssSelectedVals[idx] === val
+                ? 'background:#2563eb;color:#fff;border-color:#2563eb'
+                : 'background:#f8fafc;color:#64748b;border-color:#e2e8f0'"
+              style="padding:6px 16px;border:1.5px solid;border-radius:20px;font-size:13px;cursor:pointer;transition:all 0.12s;user-select:none">
+              {{ val }}
+            </div>
+          </div>
+        </div>
+        <!-- 无规格数据提示 -->
+        <div v-if="!ssSpecAttrs.length" style="font-size:13px;color:#94a3b8;text-align:center;padding:12px 0">
+          该商品未配置规格，请先在商品管理中设置
+        </div>
+        <!-- 价格预览 -->
+        <div v-if="ssSpecLabel" style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:12px;color:#64748b;margin-bottom:4px">{{ ssSpecLabel }}</div>
+          <div style="font-size:28px;font-weight:700;color:#2563eb">
+            ¥{{ (ssCurrentSku?.sell_price != null ? Number(ssCurrentSku.sell_price) : Number(ssGoods?.sell_price || 0)).toFixed(2) }}
+          </div>
+        </div>
+        <el-button type="primary"
+          :disabled="ssSelectedVals.some(v => !v) || !ssSpecAttrs.length"
+          @click="addSpecItemToCart" style="width:100%">
           加入购物车
         </el-button>
       </div>
@@ -378,17 +641,20 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Search, Delete, CircleCheckFilled } from '@element-plus/icons-vue'
+import { Search, Delete, CircleCheckFilled, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getGoodsList, getGoodsCateList, getUnitConvert } from '@/api/goods'
+import { getGoodsList, getGoodsCateList, getUnitConvert, createGoods, getUnitList, readGoods, getSpecList } from '@/api/goods'
 import { getMemberList, createRetailOrder, getRetailOrderList, getStoreList } from '@/api/retail'
 import { getSaleContractList } from '@/api/reports'
+import { createProcureOrder, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getSupplierList, createSupplier } from '@/api/procure'
+import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { adjustFundBalance } from '@/utils/fund'
 import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
 import { usePermissionStore } from '@/stores/permission'
+import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
 
 const isAdmin = computed(() => !usePermissionStore().isSubAccount)
 
@@ -403,6 +669,26 @@ const selectedGoods = ref<any>(null)
 
 // 分类树计算
 const cateRoots = computed(() => cateList.value.filter((c: any) => !c.parent_id || c.parent_id === 0))
+
+// 分类树：递归拍平，按层级加缩进前缀，支持任意深度
+const cateTreeOptions = computed(() => {
+  const result: any[] = []
+  function walk(parentId: number | null, depth: number) {
+    const nodes = cateList.value.filter((c: any) =>
+      depth === 0 ? (!c.parent_id || c.parent_id === 0) : c.parent_id === parentId
+    )
+    for (const node of nodes) {
+      result.push({
+        id: node.id,
+        label: depth === 0 ? node.name : ('　'.repeat(depth) + '└ ' + node.name),
+        depth,
+      })
+      walk(node.id, depth + 1)
+    }
+  }
+  walk(null, 0)
+  return result
+})
 const activePCateChildren = computed(() => {
   if (!activePCate.value) return []
   return cateList.value.filter((c: any) => c.parent_id === activePCate.value)
@@ -418,14 +704,133 @@ function selectParentCate(id: any) {
 // 手机端购物车抽屉
 const cartDrawerOpen = ref(false)
 
-// 点击商品卡片：散装商品打开换算弹窗，普通商品直接加购物车
+// 点击商品卡片：散装+规格→先选规格再称重；纯规格→规格弹窗；纯散装→称重弹窗；普通→直接加购物车
 function selectGoods(g: any) {
   selectedGoods.value = g
-  if (Number(g.goods_type) === 5) {
+  const isSpec = Number(g.multi_spec) === 1
+  const isBulk = Number(g.goods_type) === 5
+  if (isSpec && isBulk) {
+    ssWeighAfter.value = true
+    openSpecSelect(g)
+  } else if (isSpec) {
+    ssWeighAfter.value = false
+    openSpecSelect(g)
+  } else if (isBulk) {
     openWeightCalc(g)
   } else {
     addToCart(g)
   }
+}
+
+// ── 规格选择弹窗 ──────────────────────────────────────────────────────────────
+const specSelectVisible = ref(false)
+const ssGoods = ref<any>(null)
+const ssSpecAttrs = ref<{ name: string; values: string[] }[]>([])
+const ssSelectedVals = ref<string[]>([])
+const ssSkuMap = ref<Record<string, any>>({})
+const ssWeighAfter = ref(false) // 散装+规格：选完规格后进称重弹窗
+
+const ssCurrentSku = computed(() => {
+  const key = ssSelectedVals.value.join('|')
+  return ssSkuMap.value[key] ?? null
+})
+
+const ssSpecLabel = computed(() => ssSelectedVals.value.filter(Boolean).join(' · '))
+
+async function openSpecSelect(g: any) {
+  ssGoods.value = g
+  ssSpecAttrs.value = []
+  ssSkuMap.value = {}
+  ssSelectedVals.value = []
+  specSelectVisible.value = true
+
+  // 从后端拉完整商品数据（列表接口可能不返回 spec 大字段）
+  let specSource = g.spec || ''
+  try {
+    const res = await readGoods(g.id)
+    specSource = res.data?.spec || specSource
+  } catch {}
+
+  let loaded = false
+  try {
+    if (specSource) {
+      const specData = JSON.parse(specSource)
+      if (Array.isArray(specData.attrs) && specData.attrs.length > 0) {
+        ssSpecAttrs.value = specData.attrs.filter((a: any) => a.values?.length > 0)
+        ssSkuMap.value = specData.skus ?? {}
+        loaded = true
+      }
+    }
+  } catch {}
+
+  if (!loaded) {
+    // 兜底1：localStorage（同设备且已设置过规格）
+    try {
+      const attrsMap = JSON.parse(localStorage.getItem('erp_spec_attrs') || '{}')
+      const localAttrs = (attrsMap[g.id] ?? []).filter((a: any) => a.values?.length > 0)
+      if (localAttrs.length > 0) {
+        ssSpecAttrs.value = localAttrs
+        try {
+          const skuMap = JSON.parse(localStorage.getItem('erp_sku_map') || '{}')
+          ssSkuMap.value = skuMap[g.id] ?? {}
+        } catch { ssSkuMap.value = {} }
+        loaded = true
+      }
+    } catch {}
+  }
+
+  if (!loaded) {
+    // 兜底2：从 ShopSpec 结构化表读规格属性（不含SKU价格）
+    try {
+      const specRes = await getSpecList({ goods_id: g.id, list_rows: 100 })
+      const specRows: any[] = specRes.data?.rows ?? []
+      if (specRows.length > 0) {
+        ssSpecAttrs.value = specRows.map((r: any) => ({
+          name: r.name,
+          values: typeof r.values === 'string' ? r.values.split(',').map((v: string) => v.trim()).filter(Boolean) : (r.values ?? []),
+        })).filter((a: any) => a.values.length > 0)
+      }
+    } catch {}
+  }
+
+  ssSelectedVals.value = ssSpecAttrs.value.map(() => '')
+}
+
+function ssSelectVal(attrIdx: number, val: string) {
+  ssSelectedVals.value[attrIdx] = val
+}
+
+function addSpecItemToCart() {
+  const sku = ssCurrentSku.value
+  const g = ssGoods.value
+  if (!g) return
+  const specLabel = ssSpecLabel.value
+  specSelectVisible.value = false
+
+  // 散装+规格：选完规格后进入称重弹窗，把规格标签带进去
+  if (ssWeighAfter.value) {
+    ssWeighAfter.value = false
+    const price = sku?.sell_price != null ? Number(sku.sell_price) : Number(g.sell_price) || 0
+    openWeightCalc(g, specLabel, price)
+    return
+  }
+
+  const price = sku?.sell_price != null ? Number(sku.sell_price) : (selectedMemberId.value && Number(g.member_price) > 0 ? Number(g.member_price) : Number(g.sell_price) || 0)
+  const goodsName = specLabel ? `${g.goods_name} · ${specLabel}` : g.goods_name
+  const skuKey = ssSelectedVals.value.join('|')
+  cartItems.push({
+    goods_id: g.id,
+    goods_name: goodsName,
+    goods_sn: sku?.sku_sn || g.goods_sn || '',
+    unit_name: g.unit_name || '',
+    price: Math.round(price * 100) / 100,
+    cost_price: sku?.cost_price != null ? Number(sku.cost_price) : Number(g.cost_price || 0),
+    num: 1,
+    _sku_key: skuKey,
+  } as any)
+  pricingTargetIndex.value = cartItems.length - 1
+  calcTotal()
+  ElMessage.success(`已加入：${goodsName}`)
 }
 const cateList = ref<any[]>([])
 const searchInputRef = ref<HTMLInputElement>()
@@ -446,38 +851,41 @@ async function loadGoods() {
   }
 }
 
-// 热销产品：从零售单+销售单统计实际销量，按频次排序商品
+// 热销产品：从零售单统计实际销量，按销量排序商品
 async function loadHotGoods() {
   goodsLoading.value = true
   try {
-    // 并行拉取：全部商品 + 近期零售订单 + 近期销售合同
-    const [goodsRes, retailRes, saleRes] = await Promise.all([
-      getGoodsList({ status: 1, list_rows: 60 }),
-      getRetailOrderList({ list_rows: 200 }).catch(() => ({ data: { rows: [] } })),
-      getSaleContractList({ list_rows: 200 }).catch(() => ({ data: { rows: [] } })),
+    // 全部商品（500条），+ 近期零售订单（500条，后端不支持 status 过滤，前端筛）
+    const [goodsRes, retailRes] = await Promise.all([
+      getGoodsList({ list_rows: 500 }),
+      getRetailOrderList({ list_rows: 500 }).catch(() => ({ data: { rows: [] } })),
     ])
     const allGoods: any[] = goodsRes.data?.rows ?? []
 
-    // 统计每个商品的销量
+    // 仅统计已审核/已完成订单（status === 1）
+    const orders: any[] = (retailRes.data?.rows ?? []).filter((o: any) => Number(o.status) === 1)
+
     const salesCount: Record<string, number> = {}
-    const orders = [
-      ...(retailRes.data?.rows ?? []),
-      ...(saleRes.data?.rows ?? []),
-    ]
     for (const order of orders) {
       try {
         const items = typeof order.goods_info === 'string'
           ? JSON.parse(order.goods_info)
           : (order.goods_info ?? [])
         for (const item of items) {
+          if (!item.goods_id) continue
           const gid = String(item.goods_id)
-          salesCount[gid] = (salesCount[gid] || 0) + Number(item.num || 1)
+          salesCount[gid] = (salesCount[gid] || 0) + Math.max(0, Number(item.num || 1))
         }
-      } catch { /* ignore parse errors */ }
+      } catch { /* 单条订单解析失败不影响整体 */ }
     }
 
-    // 按销量降序排序，没销量的排后面
-    allGoods.sort((a, b) => (salesCount[String(b.id)] || 0) - (salesCount[String(a.id)] || 0))
+    // 有销量的排前面（降序），无销量的按商品ID排后面
+    allGoods.sort((a, b) => {
+      const ca = salesCount[String(a.id)] || 0
+      const cb = salesCount[String(b.id)] || 0
+      if (cb !== ca) return cb - ca
+      return a.id - b.id
+    })
     goodsList.value = allGoods
   } finally {
     goodsLoading.value = false
@@ -514,7 +922,7 @@ function onBarcodeEnter() {
 }
 
 // ── 购物车 ────────────────────────────────────────────────────────────────────
-interface CartItem { goods_id: number; goods_name: string; goods_sn: string; unit_name: string; price: number; num: number; cost_price?: number }
+interface CartItem { goods_id: number; goods_name: string; goods_sn: string; unit_name: string; price: number; num: number; cost_price?: number; unit_ratio?: number }
 
 const cartItems = reactive<CartItem[]>([])
 
@@ -528,10 +936,29 @@ function onStoreChange(id: number) {
 const totalAmount = ref(0)
 const discountAmount = ref(0)
 const payAmount = ref(0)
+const feeItems = reactive<{ name: string; amount: number; bearer: string }[]>([])
+const pricingTargetIndex = ref<number | null>(null)
+const displayCartItems = computed(() => distributeRetailItems(cartItems, payAmount.value, {
+  targetIndex: pricingTargetIndex.value,
+}).items)
+const adjustmentLabel = computed(() => discountAmount.value < 0 ? '加价' : '折扣')
+const adjustmentScopeLabel = computed(() => `${adjustmentLabel.value}（${pricingTargetIndex.value === null ? '整单' : '当前商品'}）`)
+const adjustmentAmount = computed({
+  get: () => Math.abs(Number(discountAmount.value || 0)),
+  set: (value: number) => {
+    const amount = Math.max(0, Number(value || 0))
+    discountAmount.value = payAmount.value > totalAmount.value ? -amount : amount
+  },
+})
 
 function addToCart(g: any) {
   const exist = cartItems.find(i => i.goods_id === g.id)
-  if (exist) { exist.num++; calcTotal(); return }
+  if (exist) {
+    exist.num++
+    pricingTargetIndex.value = cartItems.findIndex(i => i.goods_id === g.id)
+    calcTotal()
+    return
+  }
   // 有会员时使用会员价，价格截断到2位小数避免浮点误差
   const rawPrice = selectedMemberId.value && Number(g.member_price) > 0
     ? Number(g.member_price)
@@ -546,30 +973,63 @@ function addToCart(g: any) {
     cost_price: Number(g.cost_price || 0),
     num: 1,
   })
+  pricingTargetIndex.value = cartItems.length - 1
   calcTotal()
   // 手机端：加入购物车后短暂提示，不自动跳转（让用户继续选商品）
 }
 
+function setPricingTarget(idx: number) {
+  pricingTargetIndex.value = pricingTargetIndex.value === idx ? null : idx
+}
+
 function changeQty(idx: number, delta: number) {
+  pricingTargetIndex.value = idx
   cartItems[idx].num = Math.max(0.001, parseFloat((cartItems[idx].num + delta).toFixed(3)))
+  calcTotal()
+}
+
+function removeCartItem(idx: number) {
+  cartItems.splice(idx, 1)
+  if (pricingTargetIndex.value === null) {
+    calcTotal()
+    return
+  }
+  if (pricingTargetIndex.value === idx) {
+    pricingTargetIndex.value = cartItems.length ? Math.min(idx, cartItems.length - 1) : null
+  } else if (pricingTargetIndex.value > idx) {
+    pricingTargetIndex.value -= 1
+  }
   calcTotal()
 }
 
 function calcTotal() {
   totalAmount.value = Math.round(cartItems.reduce((s, i) => s + i.num * i.price, 0) * 100) / 100
-  calcPay()
+  const settlement = normalizeRetailSettlement(totalAmount.value, totalAmount.value - discountAmount.value)
+  payAmount.value = settlement.payAmount
+  discountAmount.value = settlement.discountAmount
 }
 
 function calcPay() {
-  payAmount.value = Math.max(0, (Number(totalAmount.value) || 0) - (Number(discountAmount.value) || 0))
+  const settlement = normalizeRetailSettlement(totalAmount.value, (Number(totalAmount.value) || 0) - (Number(discountAmount.value) || 0))
+  payAmount.value = settlement.payAmount
+  discountAmount.value = settlement.discountAmount
 }
 
 function onPayAmountChange(v: number | null | undefined) {
-  payAmount.value = Math.max(0, Number(v || 0))
+  pricingTargetIndex.value = null  // 改结账金额时整单比例分摊，不优先扣选中商品
+  const settlement = normalizeRetailSettlement(totalAmount.value, Number(v || 0))
+  payAmount.value = settlement.payAmount
+  discountAmount.value = settlement.discountAmount
+}
+
+function formatMoney(value: unknown) {
+  return (Number(value) || 0).toFixed(2)
 }
 
 function clearCart() {
   cartItems.splice(0)
+  feeItems.splice(0)
+  pricingTargetIndex.value = null
   discountAmount.value = 0
   totalAmount.value = 0
   payAmount.value = 0
@@ -585,6 +1045,9 @@ const selectedMember = ref<any>(null)
 function onMemberChange(id: any) {
   selectedMember.value = memberList.value.find(m => m.id === id) ?? null
 }
+
+// ── 单据日期 ──────────────────────────────────────────────────────────────────
+const orderDate = ref(new Date().toLocaleDateString('sv-SE'))
 
 // ── 支付方式 ──────────────────────────────────────────────────────────────────
 const payMethods = [
@@ -636,18 +1099,22 @@ async function handleCheckout() {
   try {
     const storeIdNum = Number(selectedStoreId.value)
     const memberIdNum = Number(selectedMemberId.value)
+    const settled = distributeRetailItems(cartItems, payAmount.value, {
+      targetIndex: pricingTargetIndex.value,
+    })
     const res = await createRetailOrder({
-      order_date: new Date().toLocaleDateString('sv-SE'),
+      order_date: orderDate.value,
       member_id: Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : 0,
       member_name: selectedMember.value?.name ?? '',
       store_id: Number.isFinite(storeIdNum) && storeIdNum > 0 ? storeIdNum : 0,
       store_name: selectedStore.value?.name ?? '',
-      total_amount: Number(totalAmount.value) || 0,
-      discount_amount: Number(discountAmount.value) || 0,
-      pay_amount: Number(payAmount.value) || 0,
+      total_amount: settled.totalAmount,
+      discount_amount: settled.discountAmount,
+      pay_amount: settled.payAmount,
       pay_method: payMethod.value,
       pay_type: payMethod.value,
-      goods_info: JSON.stringify(cartItems.map(i => ({ ...i }))),
+      goods_info: JSON.stringify(settled.items),
+      fee_items: JSON.stringify(feeItems.filter(f => f.name && f.amount > 0)),
       status: 1,
     })
     if (!res?.data?.id && !res?.data?.order_no && !res?.data?.order_sn) {
@@ -662,7 +1129,8 @@ async function handleCheckout() {
     if (!created) {
       throw new Error('收银失败：系统未找到新零售单，请重试')
     }
-    lastPayAmount.value = payAmount.value
+    const feesTotal = feeItems.filter(f => f.name && f.amount > 0).reduce((s, f) => s + Number(f.amount), 0)
+    lastPayAmount.value = settled.payAmount + feesTotal
     lastOrderNo.value = created.order_sn || created.id || res.data?.order_no || res.data?.id || ''
     // 收银台扣减库存
     try {
@@ -670,11 +1138,11 @@ async function handleCheckout() {
     } catch {
       ElMessage.warning('库存扣减失败，请手动更新')
     }
-    // 更新资金账户（零售收款账户）
+    // 更新资金账户：商品实付 + 客户附加费用（如跑腿费）
     try {
       await adjustFundBalance({
         fundName: RETAIL_FUND_NAME,
-        delta: payAmount.value,
+        delta: settled.payAmount + feesTotal,
         allowCreate: true,
       })
     } catch { /* 资金更新失败不阻塞 */ }
@@ -692,15 +1160,22 @@ async function handleCheckout() {
   }
 }
 
+// ── 新建商品（含可选采购入库）────────────────────────────────────────────────
+const warehouseList = ref<any[]>([])
+const supplierOptions = ref<any[]>([])
+
 // ── 克重计算器 ────────────────────────────────────────────────────────────────
 const weightCalcVisible = ref(false)
 const wcGoodsId = ref<any>(null)
 const wcGoodsName = ref('')
+const wcSpecLabel = ref('') // 散装+规格时携带的规格标签
 const wcGoodsUnit = ref('斤')
 const wcPricePerJin = ref(0)
-const wcGramsPerBaseUnit = ref(500) // 换算表里 g 对应基础单位的克数，默认500g=1斤
-const wcMode = ref<'weight' | 'amount'>('weight')
+const wcGramsPerBaseUnit = ref(500)
+const wcAuxUnits = ref<{ unit_name: string; ratio: number; sell_price?: number; cost_price?: number; linked_goods_id?: number; linked_goods_name?: string }[]>([]) // 换算表里 g 对应基础单位的克数，默认500g=1斤
+const wcMode = ref<'weight' | 'unit' | 'amount'>('weight')
 const wcWeightGrams = ref(0)    // 正向：输入克数
+const wcDirectUnit = ref(0)     // 直接输斤数
 const wcTargetAmount = ref(0)   // 反向：输入金额
 // 正向：克数 → 金额
 const wcAmount = computed(() => {
@@ -712,41 +1187,79 @@ const wcReverseGrams = computed(() => {
   if (!wcPricePerJin.value || !wcTargetAmount.value) return 0
   return (wcTargetAmount.value / wcPricePerJin.value) * wcGramsPerBaseUnit.value
 })
+// 快捷选量预设：半斤 + 1~5 整斤
+const wcJinPresets = computed(() => {
+  const base = wcGramsPerBaseUnit.value || 500
+  return [
+    { label: '半斤', grams: base * 0.5 },
+    { label: '1斤', grams: base * 1 },
+    { label: '2斤', grams: base * 2 },
+    { label: '3斤', grams: base * 3 },
+    { label: '4斤', grams: base * 4 },
+    { label: '5斤', grams: base * 5 },
+  ]
+})
 
-async function openWeightCalc(g?: any) {
+async function openWeightCalc(g?: any, specLabel?: string, overridePrice?: number) {
   const target = g ?? selectedGoods.value
   wcGoodsId.value = target?.id ?? null
   wcGoodsName.value = target?.goods_name ?? ''
+  wcSpecLabel.value = specLabel || ''
   wcGoodsUnit.value = target?.unit_name || '斤'
-  wcPricePerJin.value = target ? Number(target.sell_price) || 0 : 0
+  wcPricePerJin.value = overridePrice != null ? overridePrice : (target ? Number(target.sell_price) || 0 : 0)
   wcGramsPerBaseUnit.value = 500 // 先 reset 默认值
-  // 从换算表加载 g 单位的换算比例
+  wcAuxUnits.value = []
+  // 从换算表加载单位换算比例
   if (target?.id) {
     try {
       const res = await getUnitConvert(target.id)
       const units: any[] = res.data?.rows ?? []
-      // 找 unit_name='g' 的行，ratio 是相对于基础单位的倍数
-      // 例：ratio=0.002 表示 1g = 0.002斤，即 500g=1斤
-      // 或：ratio=500 表示 1基础单位=500g，即 gramsPerBase=500
       const gUnit = units.find((u: any) => u.unit_name === 'g')
       if (gUnit) {
         const r = Number(gUnit.ratio)
-        // ratio > 1：1基础单位 = ratio 克；ratio < 1：1g = ratio 基础单位
         wcGramsPerBaseUnit.value = r > 1 ? r : (r > 0 ? 1 / r : 500)
       }
-    } catch { /* 加载失败用默认500 */ }
+      // 非 g 的辅助单位作为桶装快捷选项，优先使用关联BOM成品的价格
+      const specObj = (() => { try { return JSON.parse(target.spec || '{}') } catch { return {} } })()
+      const unitLinked: Record<string, { id: number; name: string }> = specObj.unit_linked_goods || {}
+      wcAuxUnits.value = units
+        .filter((u: any) => u.unit_name !== 'g')
+        .map((u: any) => {
+          const linked = unitLinked[u.unit_name]
+          const linkedGoods = linked?.id ? goodsList.value.find((g: any) => g.id === linked.id) : null
+          return {
+            unit_name: u.unit_name,
+            ratio: Number(u.ratio),
+            sell_price: linkedGoods ? Number(linkedGoods.sell_price) || 0 : Number(u.sell_price) || 0,
+            cost_price: linkedGoods ? Number(linkedGoods.cost_price) || 0 : Number(u.cost_price) || 0,
+            linked_goods_id: linked?.id,
+            linked_goods_name: linked?.name,
+          }
+        })
+    } catch { /* 加载失败不影响散装称重 */ }
   }
   wcMode.value = 'weight'
   wcWeightGrams.value = 0
+  wcDirectUnit.value = 0
   wcTargetAmount.value = 0
   weightCalcVisible.value = true
 }
 
 function addWeightItemToCart() {
-  const finalAmount = wcMode.value === 'weight' ? wcAmount.value : wcTargetAmount.value
-  const finalGrams = wcMode.value === 'weight' ? wcWeightGrams.value : wcReverseGrams.value
+  let finalAmount: number, finalGrams: number
+  if (wcMode.value === 'weight') {
+    finalAmount = wcAmount.value
+    finalGrams = wcWeightGrams.value
+  } else if (wcMode.value === 'unit') {
+    finalGrams = wcDirectUnit.value * wcGramsPerBaseUnit.value
+    finalAmount = wcDirectUnit.value * wcPricePerJin.value
+  } else {
+    finalAmount = wcTargetAmount.value
+    finalGrams = wcReverseGrams.value
+  }
   if (finalAmount <= 0) return
-  const name = wcGoodsName.value || '散装商品'
+  const baseName = wcGoodsName.value || '散装商品'
+  const name = wcSpecLabel.value ? `${baseName} · ${wcSpecLabel.value}` : baseName
   cartItems.push({
     goods_id: wcGoodsId.value ?? -1,
     goods_name: `${name} ${finalGrams.toFixed(1)}g`,
@@ -756,16 +1269,224 @@ function addWeightItemToCart() {
     cost_price: Number(goodsList.value.find((g: any) => g.id === wcGoodsId.value)?.cost_price || 0),
     num: parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4)),
   })
+  pricingTargetIndex.value = cartItems.length - 1
   calcTotal()
   weightCalcVisible.value = false
   wcGoodsId.value = null
   wcGoodsName.value = ''
+  wcSpecLabel.value = ''
   wcGoodsUnit.value = '斤'
   wcGramsPerBaseUnit.value = 500
   wcPricePerJin.value = 0
   wcWeightGrams.value = 0
   wcTargetAmount.value = 0
   ElMessage.success('已加入购物车')
+}
+
+// 按桶装单位加购物车
+function addPackageToCart(unit: { unit_name: string; ratio: number; sell_price?: number; cost_price?: number; linked_goods_id?: number; linked_goods_name?: string }) {
+  const g = goodsList.value.find((x: any) => x.id === wcGoodsId.value)
+  const price = unit.sell_price && unit.sell_price > 0
+    ? unit.sell_price
+    : Math.round(wcPricePerJin.value * unit.ratio * 100) / 100
+  // 有关联BOM成品 → 扣成品库存；否则 → 扣基础商品（按ratio换算）
+  const linkedSpec = (() => {
+    try { return JSON.parse(g?.spec || '{}').unit_linked_goods?.[unit.unit_name] } catch { return null }
+  })()
+  const effectiveGoodsId = linkedSpec?.id || unit.linked_goods_id || wcGoodsId.value
+  const effectiveGoodsName = linkedSpec?.name || unit.linked_goods_name || `${wcGoodsName.value} · ${unit.unit_name}`
+  const effectiveRatio = (linkedSpec?.id || unit.linked_goods_id) ? 1 : unit.ratio
+  const cost = unit.cost_price && unit.cost_price > 0 ? unit.cost_price : Number(g?.cost_price || 0) * unit.ratio
+  cartItems.push({
+    goods_id: effectiveGoodsId ?? -1,
+    goods_name: effectiveGoodsName,
+    goods_sn: '',
+    unit_name: unit.unit_name,
+    price,
+    cost_price: cost,
+    num: 1,
+    unit_ratio: effectiveRatio,
+  })
+  pricingTargetIndex.value = cartItems.length - 1
+  calcTotal()
+  weightCalcVisible.value = false
+  ElMessage.success(`已加入：${wcGoodsName.value} · ${unit.unit_name}`)
+}
+
+// ── 新建商品（含可选采购入库）────────────────────────────────────────────────
+const quickAddVisible = ref(false)
+const quickAddSaving = ref(false)
+const unitList = ref<any[]>([])
+const quickAddForm = reactive({
+  goods_name: '',
+  sell_price: 0,
+  cost_price: 0,
+  cate_id: null as any,
+  unit_id: null as any,
+  barcode: '',
+  // 采购部分（可选）
+  showProcure: false,
+  procure_qty: 0,
+  procure_price: 0,
+  procure_supplier: '',
+  procure_warehouse_id: null as number | null,
+  procure_warehouse_name: '',
+  procure_date: new Date().toLocaleDateString('sv-SE'),
+})
+
+async function openQuickAdd() {
+  quickAddForm.goods_name = keyword.value.trim()
+  quickAddForm.sell_price = 0
+  quickAddForm.cost_price = 0
+  quickAddForm.cate_id = null
+  quickAddForm.unit_id = null
+  quickAddForm.barcode = ''
+  quickAddForm.showProcure = false
+  quickAddForm.procure_qty = 0
+  quickAddForm.procure_price = 0
+  quickAddForm.procure_supplier = ''
+  quickAddForm.procure_date = orderDate.value
+  if (!unitList.value.length) {
+    const r = await getUnitList({ list_rows: 100 })
+    unitList.value = r.data?.rows ?? []
+  }
+  if (unitList.value.length) quickAddForm.unit_id = unitList.value[0].id
+  if (!warehouseList.value.length) {
+    const r = await getWarehouseList({ list_rows: 100 })
+    warehouseList.value = r.data?.rows ?? []
+  }
+  const saved = Number(localStorage.getItem('erp_default_warehouse_id'))
+  const wMatch = warehouseList.value.find((w: any) => w.id === saved) ?? warehouseList.value[0]
+  quickAddForm.procure_warehouse_id = wMatch?.id ?? null
+  quickAddForm.procure_warehouse_name = wMatch?.name ?? ''
+  if (!supplierOptions.value.length) {
+    const r = await getSupplierList({ list_rows: 200 })
+    supplierOptions.value = r.data?.rows ?? []
+  }
+  quickAddVisible.value = true
+}
+
+async function submitQuickAdd() {
+  const name = quickAddForm.goods_name.trim()
+  if (!name) { ElMessage.warning('请输入商品名称'); return }
+  if (!quickAddForm.sell_price || quickAddForm.sell_price <= 0) { ElMessage.warning('请输入售价'); return }
+  if (!quickAddForm.unit_id) { ElMessage.warning('请选择单位'); return }
+
+  const doProcure = quickAddForm.showProcure && quickAddForm.procure_qty > 0
+  if (doProcure && !quickAddForm.procure_warehouse_id) {
+    ElMessage.warning('录入采购需要选择入库仓库'); return
+  }
+
+  // 防止重名
+  const dupCheck = await getGoodsList({ keyword: name, status: 1, list_rows: 10 })
+  const dupRows: any[] = dupCheck.data?.rows ?? []
+  if (dupRows.some((g: any) => g.goods_name === name)) {
+    ElMessage.warning(`商品「${name}」已存在，请直接从列表选择`)
+    return
+  }
+  quickAddSaving.value = true
+  try {
+    // 1. 建商品档案
+    // 成本价优先用采购单价，其次用手填的成本价
+    const finalCostPrice = doProcure ? quickAddForm.procure_price : quickAddForm.cost_price
+    const res = await createGoods({
+      goods_name: name,
+      sell_price: quickAddForm.sell_price,
+      cost_price: finalCostPrice,
+      cate_id: quickAddForm.cate_id || 0,
+      unit_id: quickAddForm.unit_id,
+      barcode: quickAddForm.barcode || '',
+      status: 1,
+      goods_type: 1,
+    })
+    const newId = res?.data?.id
+    if (!newId) throw new Error('商品创建失败，请重试')
+    const unit = unitList.value.find((u: any) => u.id === quickAddForm.unit_id)
+
+    // 2. 采购入库（可选）
+    if (doProcure) {
+      let supplierId = 0
+      let supplierName = quickAddForm.procure_supplier.trim()
+      if (supplierName) {
+        const existing = supplierOptions.value.find((s: any) => s.name === supplierName)
+        if (existing) {
+          supplierId = existing.id
+        } else {
+          const sr = await createSupplier({ name: supplierName, contact: '', mobile: '', status: 1 })
+          supplierId = sr?.data?.id ?? 0
+          if (supplierId) supplierOptions.value.push({ id: supplierId, name: supplierName })
+        }
+      }
+      const procureDate = quickAddForm.procure_date
+      const orderNo = `PO${Date.now()}`
+      const totalAmount = Math.round(quickAddForm.procure_qty * quickAddForm.procure_price * 100) / 100
+      const goodsInfo = [{
+        goods_id: newId,
+        goods_name: name,
+        goods_sn: '',
+        unit_name: unit?.name ?? '',
+        num: quickAddForm.procure_qty,
+        price: quickAddForm.procure_price,
+        total_price: totalAmount,
+      }]
+      // 创建采购订单
+      const orderRes = await createProcureOrder({
+        order_no: orderNo,
+        order_sn: orderNo,
+        order_date: procureDate,
+        supplier_id: supplierId,
+        supplier_name: supplierName,
+        warehouse_id: quickAddForm.procure_warehouse_id,
+        warehouse_name: quickAddForm.procure_warehouse_name,
+        total_amount: totalAmount,
+        after_discount: totalAmount,
+        pay_amount: 0,
+        remark: '收银台建档采购入库',
+        goods_info: JSON.stringify(goodsInfo),
+        status: 0,
+      })
+      const orderId = orderRes?.data?.id ?? orderRes?.data?.data?.id
+      if (!orderId) throw new Error('创建采购单失败')
+      // 审核采购单
+      await auditProcureOrder(orderId, 1)
+      // 创建入库单并审核（新单不可能已有入库单，直接建）
+      const inhouseRes = await createProcureInhouse({
+        purchase_order_id: orderId,
+        supplier_id: supplierId,
+        supplier_name: supplierName,
+        warehouse_id: quickAddForm.procure_warehouse_id,
+        warehouse_name: quickAddForm.procure_warehouse_name,
+        in_date: procureDate,
+        total_amount: totalAmount,
+        remark: '收银台建档采购入库',
+        goods_info: goodsInfo,
+      })
+      const inhouseId = inhouseRes?.data?.id ?? inhouseRes?.data
+      if (inhouseId) await auditProcureInhouse(inhouseId, 1)
+      stockRefreshStore.trigger()
+    }
+
+    // 3. 加入购物车
+    addToCart({
+      id: newId,
+      goods_name: name,
+      goods_sn: '',
+      sell_price: quickAddForm.sell_price,
+      member_price: 0,
+      cost_price: finalCostPrice,
+      unit_name: unit?.name ?? '',
+      goods_type: 1,
+    })
+    quickAddVisible.value = false
+    keyword.value = ''
+    ElMessage.success(doProcure
+      ? `「${name}」已建档、采购入库并加入购物车`
+      : `「${name}」已建档并加入购物车`)
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败，请重试')
+  } finally {
+    quickAddSaving.value = false
+  }
 }
 
 onMounted(async () => {
@@ -945,18 +1666,50 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 9px 10px;
   background: #fff;
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.15s, border-color 0.15s, background 0.15s;
 }
 .cr-cart-item:hover { box-shadow: 0 2px 8px rgba(59,130,246,0.08); }
+.cr-cart-item.active {
+  border-color: #93c5fd;
+  background: #f8fbff;
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.12);
+}
 
 .cr-cart-item-top {
   display: flex; align-items: center;
   justify-content: space-between; margin-bottom: 6px;
 }
+.cr-cart-item-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
 .cr-cart-item-name { font-size: 13px; font-weight: 500; color: #1e293b; flex: 1; }
+.cr-cart-item-price-note { font-size: 11px; color: #64748b; line-height: 1.3; }
 
 .cr-cart-item-bottom {
   display: flex; align-items: center; justify-content: space-between;
+}
+.cr-cart-item-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: 8px;
+}
+.cr-cart-item-unit { font-size: 11px; color: #64748b; line-height: 1.2; }
+.cr-cart-item-price-row {
+  display: flex; align-items: center; gap: 4px; margin-bottom: 2px;
+}
+.cr-cart-item-unit-label { font-size: 11px; color: #64748b; flex-shrink: 0; }
+:deep(.cr-cart-item-price-row .el-input-number .el-input__wrapper) {
+  padding: 0 22px 0 4px; font-size: 12px;
+}
+:deep(.cr-cart-item-price-row .el-input-number__increase),
+:deep(.cr-cart-item-price-row .el-input-number__decrease) {
+  width: 18px;
 }
 
 .cr-qty-ctrl { display: flex; align-items: center; gap: 4px; }
@@ -969,7 +1722,7 @@ onMounted(async () => {
 }
 .cr-qty-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
 
-.cr-cart-item-sub { font-size: 14px; font-weight: 700; color: #2563eb; }
+.cr-cart-item-sub { font-size: 14px; font-weight: 700; color: #2563eb; line-height: 1.2; }
 
 /* ── 结算区 ──────────────────────────────────────────────────────────────── */
 .cr-settle {
@@ -1068,6 +1821,67 @@ onMounted(async () => {
 .cr-goods-empty {
   grid-column: 1/-1; text-align: center;
   color: #cbd5e1; padding: 60px 0; font-size: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+
+.cr-goods-empty-add {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 20px; border-radius: 20px;
+  background: #eff6ff; border: 1.5px dashed #93c5fd;
+  color: #2563eb; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+.cr-goods-empty-add:hover { background: #dbeafe; border-color: #3b82f6; }
+
+.cr-new-goods-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 500; color: #059669;
+  background: #ecfdf5; border: 1px solid #6ee7b7;
+  cursor: pointer; transition: all 0.12s; user-select: none; flex-shrink: 0;
+}
+.cr-new-goods-btn:hover { background: #d1fae5; border-color: #34d399; }
+
+.cr-procure-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 500; color: #d97706;
+  background: #fffbeb; border: 1px solid #fcd34d;
+  cursor: pointer; transition: all 0.12s; user-select: none; flex-shrink: 0;
+}
+.cr-procure-btn:hover { background: #fef3c7; border-color: #f59e0b; }
+
+.qp-tip {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #94a3b8;
+  background: #f8fafc; border-radius: 8px; padding: 8px 12px;
+}
+
+/* 弹窗内采购折叠区 */
+.qa-procure-section {
+  border: 1.5px dashed #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.qa-procure-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 13px; font-weight: 600; color: #475569;
+  cursor: pointer; user-select: none;
+  background: #f8fafc;
+  transition: background 0.12s;
+}
+.qa-procure-header:hover { background: #f1f5f9; }
+.qa-optional-badge {
+  font-size: 11px; font-weight: 500;
+  background: #fef3c7; color: #d97706;
+  border-radius: 4px; padding: 1px 6px;
+}
+.qa-procure-body {
+  padding: 12px 14px 4px;
+  border-top: 1px solid #f0f2f7;
+  background: #fff;
 }
 
 /* ── 手机端悬浮购物车（桌面隐藏） ───────────────────────────────────────── */
@@ -1105,6 +1919,20 @@ onMounted(async () => {
 
   .cr-calc-text { display: none; }
   .cr-calc-btn {
+    padding: 6px 8px; border-radius: 50%;
+    width: 32px; height: 32px;
+    justify-content: center; flex-shrink: 0;
+  }
+
+  .cr-new-goods-text { display: none; }
+  .cr-new-goods-btn {
+    padding: 6px 8px; border-radius: 50%;
+    width: 32px; height: 32px;
+    justify-content: center; flex-shrink: 0;
+  }
+
+  .cr-procure-text { display: none; }
+  .cr-procure-btn {
     padding: 6px 8px; border-radius: 50%;
     width: 32px; height: 32px;
     justify-content: center; flex-shrink: 0;

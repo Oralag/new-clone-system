@@ -7,7 +7,7 @@
         <ScTable ref="tableRef" :api-obj="getProcureOrderListWithInhouse"
           :batch-del-api="batchDelProcureOrders"
           sort-by="_order_date_sort" :sort-desc="true"
-          export-file-name="采购订单" :params="searchForm"
+          export-file-name="采购订单" :params="searchForm" @reset="onSearchReset"
           show-summary :summary-method="getSummaryRow"
           :row-class-name="({ row }: any) => (row.order_no || row.order_sn) === highlightSn ? 'row-highlight' : ''"
           :export-columns="{ order_no: '采购单号', supplier_name: '供应商', warehouse_name: '仓库', order_date: '开单日期', delivery_date: '预计交期', admin_name: '采购人', total_amount: '含税合计', status: '状态', pay_amount: '已付金额' }">
@@ -22,6 +22,9 @@
               <el-option label="已审核" :value="1" />
               <el-option label="已驳回" :value="2" />
             </el-select>
+            <el-date-picker :key="datePickerKey" v-model="dateRange" type="daterange" range-separator="至"
+              start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
+              style="width:240px" unlink-panels :shortcuts="dateShortcuts" @change="onDateChange" />
           </template>
           <template #toolbar-right>
             <div class="status-cards">
@@ -175,10 +178,10 @@
           <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
         </div>
         <div class="form-actions">
-          <el-button v-if="!isReadonly" :loading="saving" :disabled="saving" @click="handleSave(false)">
+          <el-button v-if="!isReadonly" :loading="saving && !savingAndAuditing" :disabled="saving" @click="handleSave(false)">
             保存
           </el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" :disabled="saving" @click="handleSave(true)">
+          <el-button v-if="!isReadonly" type="primary" :loading="savingAndAuditing" :disabled="saving" @click="handleSave(true)">
             保存并审核
           </el-button>
         </div>
@@ -336,6 +339,7 @@
                     placeholder="请选择规格"
                     clearable
                     @focus="fetchGoodsSpecs(row.goods_id)"
+                    @change="(v: string) => onSpecChange(row, v)"
                   >
                     <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
                   </el-select>
@@ -480,6 +484,7 @@
                     :disabled="isReadonly"
                     style="width:100%"
                     @focus="fetchGoodsSpecs(row.goods_id)"
+                    @change="(v: string) => onSpecChange(row, v)"
                   >
                     <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
                   </el-select>
@@ -758,7 +763,7 @@
       </el-form>
       <template #footer>
         <el-button @click="manualAddVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmManualAdd">确认添加</el-button>
+        <el-button type="primary" :loading="manualAddLoading" @click="confirmManualAdd">确认添加</el-button>
       </template>
     </el-dialog>
 
@@ -1081,12 +1086,12 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperclip, Download, Close, Check, RefreshLeft } from '@element-plus/icons-vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getBomList, getBomByGoods, getSpecList, getUnitConvert, updateGoods, saveUnitConvert, getGoodsList, getUnitList } from '@/api/goods'
+import { getBomList, getBomByGoods, getUnitConvert, updateGoods, saveUnitConvert, getGoodsList, getUnitList, createGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt, createExpense } from '@/api/finance'
 import http from '@/api/http'
@@ -1199,20 +1204,28 @@ async function syncGoodsCostPriceFromItems(items: any[]) {
     const goodsId = Number(rawItem?.goods_id || 0)
     if (!goodsId) continue
     const qty = Math.max(0, Number(rawItem?.num || 0))
+    // unit_ratio: 采购单位相对于基础单位的倍率（基础单位=1）
+    const unitRatio = Math.max(0.0001, Number(rawItem?.unit_ratio || 1))
     const taxRate = Math.max(0, Number(rawItem?.tax_rate || 0))
     const price = Number(rawItem?.price || 0)
     const priceNoTax = Number(rawItem?.price_no_tax || 0)
-    const unitCost = priceNoTax > 0
+    const purchaseUnitCost = priceNoTax > 0
       ? priceNoTax
       : (price > 0 ? (taxRate > 0 ? price / (1 + taxRate / 100) : price) : 0)
-    if (unitCost <= 0) continue
+    if (purchaseUnitCost <= 0) continue
 
-    const current = statMap.get(goodsId) || { qty: 0, amount: 0, fallback: unitCost }
-    if (qty > 0) {
-      current.qty += qty
-      current.amount += unitCost * qty
+    // cost_price 始终存基础单位单价；_base_price_no_tax 是 onUnitChange 维护的基础单价，优先用
+    const baseUnitCost = Number(rawItem?._base_price_no_tax || 0) > 0
+      ? Number(rawItem._base_price_no_tax)
+      : purchaseUnitCost / unitRatio
+    const baseQty = qty * unitRatio  // 换算为基础单位数量
+
+    const current = statMap.get(goodsId) || { qty: 0, amount: 0, fallback: baseUnitCost }
+    if (baseQty > 0) {
+      current.qty += baseQty
+      current.amount += baseUnitCost * baseQty
     } else {
-      current.fallback = unitCost
+      current.fallback = baseUnitCost
     }
     statMap.set(goodsId, current)
   }
@@ -1221,7 +1234,7 @@ async function syncGoodsCostPriceFromItems(items: any[]) {
     const avg = stat.qty > 0 ? (stat.amount / stat.qty) : stat.fallback
     if (avg > 0) {
       try {
-        await updateGoods({ id: goodsId, cost_price: Number(avg.toFixed(2)) })
+        await updateGoods({ id: goodsId, cost_price: Number(avg.toFixed(4)) })
       } catch (e: any) {
         console.warn('回写商品成本价失败', goodsId, e?.message)
       }
@@ -1316,6 +1329,7 @@ async function handleBatchAudit() {
           if (sorted[0].status !== 1) await auditProcureInhouse(sorted[0].id, 1)
         }
       } catch (e: any) {
+        ElMessage.error(`入库失败，请检查商品是否已正确建档：${e?.message || '未知错误'}`)
         console.warn('自动创建入库单失败', e?.message)
       }
       success++
@@ -1361,8 +1375,7 @@ async function handleBatchReverseAudit() {
           )
           for (const o of relatedOut) {
             try {
-              if (o.status === 1) await http.post('/stock/OtherOut/audit', { id: o.id, status: 0 })
-              await http.post('/stock/OtherOut/del', { id: o.id })
+              await http.post('/stock/OtherOut/annul', { id: o.id })
             } catch (e: any) { console.warn('删除BOM扣料单失败', o.id, e?.message) }
           }
         }
@@ -1445,7 +1458,8 @@ function hydrateOrderListSortDates(rows: any[]) {
 
 // 包装 API：加载完采购单后，批量查入库单并填充 inhouse_qty
 async function getProcureOrderListWithInhouse(params: any) {
-  const fetchParams = params.goods_name ? { ...params, list_rows: 10000, page: 1 } : params
+  const needClientFilter = !!(params.goods_name || params.start_date || params.end_date)
+  const fetchParams = needClientFilter ? { ...params, list_rows: 10000, page: 1 } : params
   const res = await getProcureOrderList(fetchParams)
   const rows: any[] = res?.data?.rows ?? res?.data ?? []
   hydrateOrderListSortDates(rows)
@@ -1466,19 +1480,32 @@ async function getProcureOrderListWithInhouse(params: any) {
       }
     } catch { /* 查不到入库单不影响列表展示 */ }
   }
-  // 数据加载完后更新合计（用当前页 rows 计算）
-  // 前端过滤：按商品名搜索
-  if (params.goods_name) {
-    const kw = params.goods_name.toLowerCase()
-    const filtered = rows.filter((row: any) => {
-      const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
-      return items.some((g: any) => (g.goods_name || '').toLowerCase().includes(kw))
-    })
+  // 前端过滤：按商品名 + 日期范围
+  if (needClientFilter) {
+    let filtered = rows
+    if (params.goods_name) {
+      const kw = params.goods_name.toLowerCase()
+      filtered = filtered.filter((row: any) => {
+        const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
+        return items.some((g: any) => (g.goods_name || '').toLowerCase().includes(kw))
+      })
+    }
+    if (params.start_date || params.end_date) {
+      const s = params.start_date
+      const e = params.end_date
+      filtered = filtered.filter((row: any) => {
+        const date = (row.order_date || row.created_at || '').slice(0, 10)
+        if (s && date < s) return false
+        if (e && date > e) return false
+        return true
+      })
+    }
+    const page = Number(params.page) || 1
+    const size = Number(params.list_rows) || 20
     lastSummaryRows.value = filtered
     updateSummaryFromRows(filtered)
     if (res?.data) {
-      const clone = { ...res, data: { ...res.data, rows: filtered, total: filtered.length } }
-      return clone
+      return { ...res, data: { ...res.data, rows: filtered.slice((page - 1) * size, page * size), total: filtered.length } }
     }
   }
   lastSummaryRows.value = rows
@@ -2045,8 +2072,8 @@ async function submitFeeManagePay() {
 }
 
 function parseItems(goodsInfo: any): any[] {
-  if (Array.isArray(goodsInfo)) return goodsInfo
-  try { return JSON.parse(goodsInfo || '[]') } catch { return [] }
+  const raw = Array.isArray(goodsInfo) ? goodsInfo : (() => { try { return JSON.parse(goodsInfo || '[]') } catch { return [] } })()
+  return raw.map((item: any) => ({ ...item, spec: sanitizeSpec(String(item.spec || '')) }))
 }
 
 function getOrderSupplierLabel(row: any): string {
@@ -2067,19 +2094,44 @@ function calcOrderQty(row: any): string {
 }
 
 const goodsSpecMap = reactive<Record<number, string[]>>({})
+// stores parsed skus from spec JSON: { goodsId: { specVal: { sku_sn, sell_price, cost_price } } }
+const goodsSkuDataMap = reactive<Record<number, Record<string, any>>>({})
+
+function parseSpecJson(specStr: string): { options: string[]; skus: Record<string, any> } {
+  try {
+    const parsed = JSON.parse(specStr)
+    const options: string[] = []
+    for (const attr of parsed.attrs ?? []) {
+      options.push(...(attr.values ?? []).filter(Boolean))
+    }
+    return { options: [...new Set(options)], skus: parsed.skus ?? {} }
+  } catch {
+    return { options: [], skus: {} }
+  }
+}
+
 async function fetchGoodsSpecs(goodsId: number) {
   if (!goodsId || goodsSpecMap[goodsId] !== undefined) return
   goodsSpecMap[goodsId] = []
   try {
-    const res = await getSpecList({ goods_id: goodsId, list_rows: 100 })
-    const specs: any[] = res.data?.rows ?? []
-    const options: string[] = []
-    for (const s of specs) {
-      const vals = (s.spec_value || s.values || '').split(/[,，]/).map((v: string) => v.trim()).filter(Boolean)
-      options.push(...vals)
-    }
-    goodsSpecMap[goodsId] = [...new Set(options)]
+    const res = await getGoodsList({ id: goodsId, list_rows: 1 })
+    const rows = res.data?.rows ?? []
+    const g = rows[0]
+    if (!g || !g.multi_spec) return
+    const { options, skus } = parseSpecJson(String(g.spec || ''))
+    goodsSpecMap[goodsId] = options
+    goodsSkuDataMap[goodsId] = skus
   } catch { /* ignore */ }
+}
+
+function sanitizeSpec(s: string): string {
+  const t = (s || '').trim()
+  return (t.startsWith('{') || t.startsWith('[')) ? '' : t
+}
+
+function onSpecChange(row: any, specVal: string) {
+  const sku = goodsSkuDataMap[row.goods_id]?.[specVal]
+  if (sku?.sku_sn) row.goods_sn = sku.sku_sn
 }
 
 // 商品多单位换算缓存：goods_id -> [{unit_name, ratio, cost_price?}]
@@ -2102,7 +2154,26 @@ async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
     }
   } catch { /* ignore */ }
 }
-const searchForm = reactive<any>({ order_no: route.query.order_no ? String(route.query.order_no) : '', supplier_name: '', status: '', goods_name: '' })
+const searchForm = reactive<any>({ order_no: route.query.order_no ? String(route.query.order_no) : '', supplier_name: '', status: '', goods_name: '', start_date: '', end_date: '' })
+const dateRange = ref<any>([])
+const dateShortcuts = [
+  { text: '最近一个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 1); return [s, e] } },
+  { text: '最近三个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 3); return [s, e] } },
+  { text: '最近六个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 6); return [s, e] } },
+  { text: '今年', value: () => { const e = new Date(); const s = new Date(e.getFullYear(), 0, 1); return [s, e] } },
+  { text: '去年', value: () => { const y = new Date().getFullYear() - 1; return [new Date(y, 0, 1), new Date(y, 11, 31)] } },
+]
+const datePickerKey = ref(0)
+function onDateChange(val: any) {
+  if (val && val.length === 2) { searchForm.start_date = val[0]; searchForm.end_date = val[1] }
+  else { searchForm.start_date = ''; searchForm.end_date = '' }
+}
+function onSearchReset() {
+  dateRange.value = []
+  datePickerKey.value++
+  searchForm.start_date = ''
+  searchForm.end_date = ''
+}
 if (route.query.order_no) highlightSn.value = String(route.query.order_no)
 const showForm = ref(false)
 const isReadonly = ref(false)
@@ -2167,22 +2238,31 @@ onMounted(() => {
       fd.remark = String(p.remark || '')
       fd.plan_id = Number(p.plan_id || 0)
       const items = JSON.parse(String(p.goods_info || '[]'))
-      fd.items = items.map((i: any) => ({
-        goods_id: i.goods_id || 0,
-        goods_name: i.goods_name || '',
-        goods_sn: i.goods_sn || '',
-        spec: i.spec || '',
-        cate_name: i.cate_name || '',
-        unit_name: i.unit_name || '',
-        batch_no: '',
-        num: i.num || 0,
-        price_no_tax: i.price_no_tax || i.price || 0,
-        tax_rate: i.tax_rate || 0,
-        price: i.price || 0,
-        remark: i.remark || '',
-        supplier_id: i.supplier_id || null,
-        supplier_name: i.supplier_name || '',
-      }))
+      fd.items = items.map((i: any) => {
+        const specStr = String(i.spec || '')
+        const gid = i.goods_id || 0
+        if (gid && specStr.trim().startsWith('{') && goodsSpecMap[gid] === undefined) {
+          const { options, skus } = parseSpecJson(specStr)
+          goodsSpecMap[gid] = options
+          goodsSkuDataMap[gid] = skus
+        }
+        return {
+          goods_id: gid,
+          goods_name: i.goods_name || '',
+          goods_sn: i.goods_sn || '',
+          spec: sanitizeSpec(specStr),
+          cate_name: i.cate_name || '',
+          unit_name: i.unit_name || '',
+          batch_no: '',
+          num: i.num || 0,
+          price_no_tax: i.price_no_tax || i.price || 0,
+          tax_rate: i.tax_rate || 0,
+          price: i.price || 0,
+          remark: i.remark || '',
+          supplier_id: i.supplier_id || null,
+          supplier_name: i.supplier_name || '',
+        }
+      })
       calcTotal()
     } catch { /* ignore */ }
   }
@@ -2199,22 +2279,31 @@ function checkBomData() {
       openCreate()
       fd.remark = String(b.remark || '')
       const items = JSON.parse(String(b.goods_info || '[]'))
-      fd.items = items.map((i: any) => ({
-        goods_id: i.goods_id || 0,
-        goods_name: i.goods_name || '',
-        goods_sn: i.goods_sn || '',
-        spec: i.spec || '',
-        cate_name: i.cate_name || '',
-        unit_name: i.unit_name || '',
-        batch_no: '',
-        num: i.num || 0,
-        price_no_tax: i.price_no_tax || i.price || 0,
-        tax_rate: i.tax_rate || 0,
-        price: i.price || 0,
-        remark: i.remark || '',
-        supplier_id: i.supplier_id || null,
-        supplier_name: i.supplier_name || '',
-      }))
+      fd.items = items.map((i: any) => {
+        const specStr = String(i.spec || '')
+        const gid = i.goods_id || 0
+        if (gid && specStr.trim().startsWith('{') && goodsSpecMap[gid] === undefined) {
+          const { options, skus } = parseSpecJson(specStr)
+          goodsSpecMap[gid] = options
+          goodsSkuDataMap[gid] = skus
+        }
+        return {
+          goods_id: gid,
+          goods_name: i.goods_name || '',
+          goods_sn: i.goods_sn || '',
+          spec: sanitizeSpec(specStr),
+          cate_name: i.cate_name || '',
+          unit_name: i.unit_name || '',
+          batch_no: '',
+          num: i.num || 0,
+          price_no_tax: i.price_no_tax || i.price || 0,
+          tax_rate: i.tax_rate || 0,
+          price: i.price || 0,
+          remark: i.remark || '',
+          supplier_id: i.supplier_id || null,
+          supplier_name: i.supplier_name || '',
+        }
+      })
       calcTotal()
     } catch { /* ignore */ }
   }
@@ -2281,6 +2370,7 @@ const defaultFd = () => ({
 const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
+const savingAndAuditing = ref(false)
 
 function generateOrderNo(): string {
   const d = new Date()
@@ -2450,11 +2540,18 @@ async function openEdit(row: any, readonly = false) {
   fd.order_sn = fd.order_sn || fd.order_no || ''
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
   fd.items = (fd.items || []).map((item: any) => {
+    const specStr = String(item?.spec || '')
+    const gid = toSafeNumber(item?.goods_id)
+    if (gid && specStr.trim().startsWith('{') && goodsSpecMap[gid] === undefined) {
+      const { options, skus } = parseSpecJson(specStr)
+      goodsSpecMap[gid] = options
+      goodsSkuDataMap[gid] = skus
+    }
     const normalized = {
-      goods_id: toSafeNumber(item?.goods_id),
+      goods_id: gid,
       goods_name: String(item?.goods_name || ''),
       goods_sn: String(item?.goods_sn || ''),
-      spec: String(item?.spec || ''),
+      spec: sanitizeSpec(specStr),
       cate_name: String(item?.cate_name || ''),
       unit_name: String(item?.unit_name || ''),
       batch_no: String(item?.batch_no || ''),
@@ -2578,6 +2675,7 @@ async function handleSave(andAudit = false) {
     } catch { return }
   }
   saving.value = true
+  if (andAudit) savingAndAuditing.value = true
   try {
     const normalizedOrderDate = normalizeDateValue(fd.order_date) || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
     const normalizedDeliveryDate = normalizeDateValue(fd.delivery_date)
@@ -2674,6 +2772,7 @@ async function handleSave(andAudit = false) {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
     saving.value = false
+    savingAndAuditing.value = false
   }
 }
 
@@ -2852,6 +2951,7 @@ async function handleAudit(row: any, status: number) {
           }
         }
       } catch (e: any) {
+        ElMessage.error(`入库失败，请检查商品是否已正确建档：${e?.message || '未知错误'}`)
         console.warn('自动创建采购入库记录失败', e?.message)
       }
     }
@@ -2873,10 +2973,15 @@ async function handleAudit(row: any, status: number) {
         })
       } catch (e: any) { console.warn('创建付款单失败', e?.message) }
     }
-    const auditMsg = status === 1
-      ? (Number(row.pay_amount || 0) > 0 && Number(row.fund_id || 0) ? '审核成功，已自动入库并记录财务' : '审核成功，已自动入库')
-      : `${action}成功`
-    ElMessage.success(auditMsg)
+    const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
+    const stockDesc = items.map((i: any) => `${i.goods_name || '商品'} ×${i.num}`).join('、')
+    const payAmount = Number(row.pay_amount || 0)
+    const fundLine = payAmount > 0 && row.fund_name ? `💰 ${row.fund_name} -¥${payAmount.toFixed(2)}（采购付款）` : ''
+    ElNotification({
+      title: status === 1 ? '审核成功' : `${action}成功`,
+      dangerouslyUseHTMLString: true, type: 'success', duration: 5000,
+      message: `<div style="font-size:12px;line-height:2">📦 库存已入库：${stockDesc}${fundLine ? `<br>${fundLine}` : ''}</div>`,
+    })
     tableRef.value?.refresh()
     loadPaidMap()
   } catch (e: any) {
@@ -2997,8 +3102,7 @@ async function handleReverseAudit(row: any) {
           )
           for (const o of relatedOtherOut) {
             try {
-              if (o.status === 1) await http.post('/stock/OtherOut/audit', { id: o.id, status: 0 })
-              await http.post('/stock/OtherOut/del', { id: o.id })
+              await http.post('/stock/OtherOut/annul', { id: o.id })
             } catch (e: any) { console.warn('删除BOM扣料单失败', o.id, e?.message) }
           }
         }
@@ -3008,7 +3112,12 @@ async function handleReverseAudit(row: any) {
     }
     await auditProcureOrder(row.id, 0)
     stockRefreshStore.trigger()
-    ElMessage.success('反审核成功，库存与财务已回滚')
+    const rItems = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
+    const rStockDesc = rItems.map((i: any) => `${i.goods_name || '商品'} ×${i.num}`).join('、')
+    ElNotification({
+      title: '反审核成功', dangerouslyUseHTMLString: true, type: 'warning', duration: 5000,
+      message: `<div style="font-size:12px;line-height:2">📦 库存已恢复：${rStockDesc}<br>💰 财务付款单已撤回</div>`,
+    })
     tableRef.value?.refresh()
     loadPaidMap()
   } catch (e: any) {
@@ -3071,13 +3180,21 @@ const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
-    const priceNoTax = isKaoNaiPiGoods(g) ? KAONAIPI_BASE_COST : (Number(g.cost_price) || 0)
+    const priceNoTax = isKaoNaiPiGoods(g)
+      ? KAONAIPI_BASE_COST
+      : (Number(g.cost_price) || 0)
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
-      spec: g.spec || '', cate_name: g.cate_name || '', unit_name: isKaoNaiPiGoods(g) ? KAONAIPI_BASE_UNIT : (g.unit_name || ''),
+      spec: '', cate_name: g.cate_name || '', unit_name: isKaoNaiPiGoods(g) ? KAONAIPI_BASE_UNIT : (g.unit_name || ''),
       num: 1, price_no_tax: priceNoTax, tax_rate: 0, unit_ratio: 1, _base_price_no_tax: priceNoTax,
       price: Number((priceNoTax * 1.13).toFixed(4)), remark: '',
       supplier_id: null, supplier_name: '' })
-    fetchGoodsSpecs(g.id)
+    if (g.multi_spec) {
+      const { options, skus } = parseSpecJson(String(g.spec || ''))
+      goodsSpecMap[g.id] = options
+      goodsSkuDataMap[g.id] = skus
+    } else {
+      goodsSpecMap[g.id] = []
+    }
     fetchGoodsUnits(g.id, g.unit_name || '')
     repairKaoNaiPiMasterData(g)
     applyKaoNaiPiRowDefaults(fd.items[fd.items.length - 1])
@@ -3120,6 +3237,7 @@ function onUnitChange(row: any, unitName: string) {
 
 // ── 手动新增商品 ──────────────────────────────────────────────────────────────
 const manualAddVisible = ref(false)
+const manualAddLoading = ref(false)
 const manualForm = reactive({
   goods_name: '', goods_sn: '', spec: '', unit_name: '', num: 1, price: 0
 })
@@ -3129,12 +3247,32 @@ function openManualAdd() {
   manualAddVisible.value = true
 }
 
-function confirmManualAdd() {
+async function confirmManualAdd() {
   if (!manualForm.goods_name.trim()) { ElMessage.warning('请输入商品名称'); return }
+  manualAddLoading.value = true
+  let goods_id = 0
+  let goods_sn = manualForm.goods_sn
+  try {
+    const res = await createGoods({
+      goods_name: manualForm.goods_name,
+      goods_sn: manualForm.goods_sn,
+      spec: manualForm.spec,
+      unit_name: manualForm.unit_name,
+      cost_price: manualForm.price,
+      sell_price: manualForm.price,
+    })
+    goods_id = res.data?.id ?? 0
+    if (res.data?.goods_sn) goods_sn = res.data.goods_sn
+    if (goods_id) ElMessage.success(`已自动建档：${manualForm.goods_name}`)
+  } catch {
+    ElMessage.warning('商品建档失败，已以临时方式录入（不入库存）')
+  } finally {
+    manualAddLoading.value = false
+  }
   fd.items.push({
-    goods_id: 0,
+    goods_id,
     goods_name: manualForm.goods_name,
-    goods_sn: manualForm.goods_sn,
+    goods_sn,
     spec: manualForm.spec,
     cate_name: '',
     unit_name: manualForm.unit_name,

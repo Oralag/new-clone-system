@@ -1,24 +1,39 @@
 <template>
   <div class="mod-page">
     <div class="mod-scroll">
-    <div class="mod-content">
-      <div
-        v-for="m in modules"
-        :key="m.path"
-        class="mod-big-card"
-        @click="go(m.path)"
-        :style="{ borderLeftColor: m.color }"
-      >
-        <div class="mod-big-icon" :style="{ background: m.bg }">
-          <span v-html="m.icon" />
+      <!-- 品牌 Header -->
+      <div class="mod-header">
+        <div class="mod-logo-row">
+          <div class="mod-logo">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" fill="rgba(255,255,255,0.2)"/>
+              <path d="M8 12l3 3 5-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="mod-brand">数字游牧</span>
         </div>
-        <div class="mod-big-info">
-          <div class="mod-big-title">{{ m.label }}</div>
-          <div class="mod-big-sub">{{ m.sub }}</div>
-        </div>
-        <span class="mod-big-arrow">›</span>
+        <div class="mod-headline">选择你需要的功能模块</div>
+        <div class="mod-subline">覆盖销售、采购、仓库、财务、AI 等全业务场景</div>
       </div>
-    </div>
+
+      <div class="mod-content">
+        <div
+          v-for="m in modules"
+          :key="m.path"
+          class="mod-big-card"
+          @click="go(m.path)"
+          :style="{ borderLeftColor: m.color }"
+        >
+          <div class="mod-big-icon" :style="{ background: m.bg }">
+            <span v-html="m.icon" />
+          </div>
+          <div class="mod-big-info">
+            <div class="mod-big-title">{{ m.label }}</div>
+            <div class="mod-big-sub">{{ m.sub }}</div>
+          </div>
+          <span class="mod-big-arrow">›</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -80,6 +95,47 @@ const modules = [
   -webkit-overflow-scrolling: touch;
   min-height: 0;
 }
+
+/* ── 品牌 Header ── */
+.mod-header {
+  background: linear-gradient(135deg, #2E6BE6 0%, #1B4FCC 100%);
+  padding: 28px 20px 24px;
+}
+.mod-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.mod-logo {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mod-brand {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+.mod-headline {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.mod-subline {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.5;
+}
+
 .mod-content { padding: 14px 14px 24px; display: flex; flex-direction: column; gap: 12px; }
 
 .mod-big-card {

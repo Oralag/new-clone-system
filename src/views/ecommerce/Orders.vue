@@ -170,11 +170,11 @@ async function loadOrders() {
 }
 
 function shipOrder(order: any) {
-  router.push('/sale/order')
+  router.push('/sale/out')
 }
 
 function viewOrder(order: any) {
-  router.push('/sale/order')
+  router.push('/sale/contract')
 }
 </script>
 

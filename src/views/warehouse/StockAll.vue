@@ -179,7 +179,11 @@
           </el-table-column>
           <el-table-column prop="goods_sn" label="商品编码" width="130" />
           <el-table-column prop="cate_name" label="分类" width="100" sortable="custom" />
-          <el-table-column prop="spec" label="规格" width="90" />
+          <el-table-column label="规格" width="90">
+            <template #default="{ row }">
+              <span>{{ formatSpecDisplay(row.spec) }}</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="unit_name" label="单位" width="65" align="center" />
           <el-table-column label="库存" width="140" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
@@ -579,6 +583,18 @@ async function loadUnitConvertMap() {
   }))
 }
 
+function formatSpecDisplay(spec: string): string {
+  if (!spec) return ''
+  try {
+    const obj = JSON.parse(spec)
+    if (obj.attrs && Array.isArray(obj.attrs) && obj.attrs.length > 0) {
+      return obj.attrs.map((a: any) => (a.values || []).join('/')).join('; ')
+    }
+    return ''
+  } catch {}
+  return spec
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -591,11 +607,23 @@ function inferRatioFromSpec(unitName: string, spec?: string): number | null {
   return ratio > 0 ? ratio : null
 }
 
+// 从 spec 里提取"X斤"数值（用于旧导入记录，explicit unit_ratio 缺失时优先读 spec）
+function inferBaseQtyFromSpec(spec?: string): number | null {
+  if (!spec) return null
+  const m = String(spec).match(/(\d+(?:\.\d+)?)\s*斤/)
+  return m ? Number(m[1]) : null
+}
+
 // 将 goods_info item 的数量换算为基础单位数量
 function toBaseQty(goodsId: number, unitName: string, num: number, spec?: string, unitRatio?: any): number {
   const explicitRatio = Number(unitRatio || 0)
-  const ratio = (explicitRatio > 0 ? explicitRatio : null)
-    ?? unitRatioLookup.value[`${goodsId}:${unitName}`]
+  // 有明确 unit_ratio → 直接使用
+  if (explicitRatio > 0) return num * explicitRatio
+  // 没有 explicit unit_ratio 时，先读 spec 里的"X斤"（旧导入记录 spec 比查表更准确）
+  const specRatio = inferBaseQtyFromSpec(spec)
+  if (specRatio !== null) return num * specRatio
+  // 最后兜底：GoodsUnitConvert 查表或 spec 格式推断
+  const ratio = unitRatioLookup.value[`${goodsId}:${unitName}`]
     ?? inferRatioFromSpec(unitName, spec)
   return ratio ? num * ratio : num
 }
@@ -1325,11 +1353,22 @@ async function openFlowDialog(goods: any) {
           // 每行单独一条记录，保留原始单位和数量
           for (const item of matchedItems) {
             const procureOrder = procureOrderById[Number(r.purchase_order_id || 0)]
+            let displayQty = Number(item.num || 0)
+            let displayUnit = item.unit_name || ''
+            // 老数据：unit_ratio 未配置（≤1），但当前换算表该单位是大单位 → qty 实际是基础单位，改用基础单位label显示
+            const storedRatio = Number(item.unit_ratio || 0)
+            if (storedRatio <= 1 && displayUnit) {
+              const currentRatio = unitRatioLookup.value[`${gid}:${displayUnit}`]
+              if (currentRatio && currentRatio > 1) {
+                const baseUnit = unitConvertMap.value[gid]?.find(u => u.ratio === 1)
+                if (baseUnit) displayUnit = baseUnit.unit_name
+              }
+            }
             rows.push({
               _type: 'in',
               _sn: r.in_no || r.inhouse_no || '',
-              _qty: Number(item.num || 0),
-              _unit: item.unit_name || '',
+              _qty: displayQty,
+              _unit: displayUnit,
               _price: Number(item.price || 0),
               _date: procureOrder?.order_date || r.order_date || r.in_date || r.inhouse_date || r.created_at || r.create_time || '',
               _partner: r.supplier_name || '',

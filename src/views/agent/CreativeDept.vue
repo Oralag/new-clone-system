@@ -58,7 +58,10 @@
             <button class="chip-btn" @click="$router.push('/agent/meeting')">发起会议</button>
           </div>
         </div>
-        <AgentChat agent-id="poster" ref="chatRef" />
+        <div class="product-selector-row">
+          <ProductSelector @change="selectedProduct = $event" />
+        </div>
+        <AgentChat agent-id="poster" ref="chatRef" :context-data="agentContext" />
       </section>
 
       <!-- 右侧：海报产出 -->
@@ -117,12 +120,28 @@ import { useTrendingStore } from '@/stores/agent'
 import { usePipelineStore } from '@/stores/pipeline'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
+import ProductSelector from '@/components/agent/ProductSelector.vue'
+import type { SelectedGoods } from '@/components/agent/ProductSelector.vue'
 import { ElMessage } from 'element-plus'
 
 const agentStore = useTrendingStore()
 const pipelineStore = usePipelineStore()
 const chatRef = ref<InstanceType<typeof AgentChat>>()
 const sentToPublish = ref(false)
+const selectedProduct = ref<SelectedGoods | null>(null)
+
+const agentContext = computed(() => {
+  if (!selectedProduct.value) return {}
+  const g = selectedProduct.value
+  const lines = [`【内容主角商品】`]
+  lines.push(`商品名称：${g.name}`)
+  if (g.price) lines.push(`售价：¥${g.price}`)
+  if (g.spec_name) lines.push(`规格：${g.spec_name}`)
+  if (g.cate_name) lines.push(`分类：${g.cate_name}`)
+  if (g.remark) lines.push(`商品描述：${g.remark}`)
+  lines.push(`\n请基于以上商品信息设计海报，海报标题必须体现该商品名称，视觉风格需符合商品特性。`)
+  return { productContext: lines.join('\n') }
+})
 
 const posterCount = computed(() => agentStore.flowResults.filter(r => r.type === 'poster').length)
 const publishCount = computed(() => agentStore.history.filter(h => h.status === 'published').length)
@@ -190,6 +209,11 @@ function sendToPublish() {
 .chat-chips { display: flex; gap: 5px; }
 .chip-btn { background: #F8F8F6; border: 1px solid #E8E8E8; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 500; color: #666; cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
 .chip-btn:hover { border-color: #ec4899; color: #ec4899; }
+.product-selector-row {
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  background: rgba(236,72,153,0.03);
+}
 .chat-panel :deep(.agent-bar) { border: none !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; margin-bottom: 0 !important; border-top: 1px solid rgba(0,0,0,0.06) !important; }
 .right-panel { display: flex; flex-direction: column; gap: 0; }
 .output-empty { padding: 14px 0; text-align: center; font-size: 12px; color: #CCCCCC; font-style: italic; }

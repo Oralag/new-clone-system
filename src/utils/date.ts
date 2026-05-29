@@ -10,7 +10,6 @@ export function fmtDt(v: string | undefined | null): string {
   const utcStr = hasTimezone ? s : s.replace(' ', 'T') + 'Z'
   const d = new Date(utcStr)
   if (isNaN(d.getTime())) {
-    // Fallback: return raw string sliced
     if (s.length >= 10) return s.slice(0, 10)
     return s
   }

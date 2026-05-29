@@ -146,21 +146,27 @@ export function applyProcureReturnsToPayableRows(payableRows: AnyRow[], returnRo
           ? toNumber(order.un_pay_amount)
           : Math.max(0, roundMoney(orderAmount - paidAmount))
 
+        const orderUnpaid = unpaidAmount <= 0
+          ? unpaidAmount
+          : Math.max(0, roundMoney(unpaidAmount - orderAgg.deduct_amount))
         return {
           ...order,
           order_amount: Math.max(0, roundMoney(orderAmount - orderAgg.return_amount)),
           paid_amount: Math.max(0, roundMoney(paidAmount - orderAgg.refund_amount)),
-          un_pay_amount: Math.max(0, roundMoney(unpaidAmount - orderAgg.deduct_amount)),
+          un_pay_amount: orderUnpaid,
           return_amount: roundMoney(orderAgg.return_amount),
         }
       })
       : row.orders
 
+    const supplierUnpaid = baseUnpaidAmount <= 0
+      ? baseUnpaidAmount
+      : Math.max(0, roundMoney(baseUnpaidAmount - supplierAgg.deduct_amount))
     return {
       ...row,
       order_amount: Math.max(0, roundMoney(baseOrderAmount - supplierAgg.return_amount)),
       paid_amount: Math.max(0, roundMoney(basePaidAmount - supplierAgg.refund_amount)),
-      un_pay_amount: Math.max(0, roundMoney(baseUnpaidAmount - supplierAgg.deduct_amount)),
+      un_pay_amount: supplierUnpaid,
       return_amount: roundMoney(supplierAgg.return_amount),
       orders,
     }

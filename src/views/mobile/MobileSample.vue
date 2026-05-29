@@ -49,6 +49,9 @@
           <div class="ms-card-bot">
             <span class="ms-meta">{{ fmtDt(row.sample_date || row.created_at) }}</span>
             <span class="ms-meta">{{ row.warehouse_name || '' }}</span>
+          </div>
+          <div class="ms-card-amounts">
+            <span class="ms-amount orange">成本 ¥{{ fmt(row.company_cost) }}</span>
             <span class="ms-amount blue">应收 ¥{{ fmt(row.receivable_amount) }}</span>
           </div>
           <!-- 操作按钮 -->
@@ -195,13 +198,14 @@
         </div>
         <div v-if="fd.company_cost > 0" class="ms-field">
           <label>费用状态</label>
-          <select v-model="fd.expense_payment_status" class="ms-input" :disabled="isView">
-            <option value="pending">待付款</option>
-            <option value="paid">已付款</option>
+          <select v-model="fd.expense_payment_status" class="ms-input" :disabled="isView" @change="onExpenseStatusChange">
+            <option value="pending">待收款</option>
+            <option value="paid">已收款</option>
+            <option value="free">无需付款</option>
           </select>
         </div>
         <div v-if="fd.company_cost > 0 && fd.expense_payment_status === 'paid'" class="ms-field">
-          <label>付款账户</label>
+          <label>收款账户</label>
           <select v-model="fd.expense_fund_id" class="ms-input" :disabled="isView" @change="onExpenseFundChange">
             <option value="">请选择账户</option>
             <option v-for="f in fundOptions" :key="f.id" :value="f.id">{{ f.name }}</option>
@@ -374,7 +378,7 @@ function calcTotals() {
     fd.receipt_fund_name = ''
   }
   if (fd.company_cost <= 0) {
-    fd.expense_payment_status = 'pending'
+    fd.expense_payment_status = 'free'
     fd.expense_fund_id = null
     fd.expense_fund_name = ''
   }
@@ -404,6 +408,13 @@ function onExpenseFundChange(e: any) {
   const id = e.target?.value ?? e
   const f = fundOptions.value.find(x => String(x.id) === String(id))
   if (f) fd.expense_fund_name = f.name
+}
+
+function onExpenseStatusChange() {
+  if (fd.expense_payment_status !== 'paid') {
+    fd.expense_fund_id = null
+    fd.expense_fund_name = ''
+  }
 }
 
 async function applyDefaultWarehouse() {
@@ -496,6 +507,7 @@ async function handleSave() {
       customer_name: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? (fd.customer_name || '内部') : fd.customer_name,
       receipt_fund_id: fd.receipt_fund_id || null,
       expense_fund_id: fd.expense_fund_id || null,
+      return_date: fd.return_date || null,
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) await updateSample(payload)
@@ -543,7 +555,8 @@ async function openGoodsPicker() {
   goodsLoading.value = true
   try {
     const res = await http.get('/goods/ShopGoods/index', { params: { list_rows: 500 } })
-    allGoods = res.data?.rows ?? []
+    const typeMap: Record<number, number> = (() => { try { return JSON.parse(localStorage.getItem('erp_goods_type_map') || '{}') } catch { return {} } })()
+    allGoods = (res.data?.rows ?? []).map((g: any) => ({ ...g, goods_type: g.goods_type ?? typeMap[Number(g.id)] ?? 2 }))
     goodsList.value = allGoods
     void warmupGoodsCosts(goodsList.value.slice(0, 80))
   } finally { goodsLoading.value = false }
@@ -652,7 +665,63 @@ async function warmupGoodsCosts(rows: any[]) {
 
 async function confirmGoods() {
   goodsPickerVisible.value = false
+
+  if (!bomListCache) {
+    try {
+      const res = await getBomList({ list_rows: 2000 })
+      bomListCache = res.data?.rows ?? res.data?.list ?? []
+    } catch { bomListCache = [] }
+  }
+
   for (const g of pickerSelected.value) {
+    const bom = bomListCache!.find((item: any) =>
+      (g.id && Number(item.goods_id) === Number(g.id)) ||
+      (g.goods_sn && item.goods_sn === g.goods_sn) ||
+      (g.goods_name && item.goods_name === g.goods_name)
+    )
+
+    if (bom?.id) {
+      let expand = false
+      try {
+        await ElMessageBox.confirm(
+          `「${g.goods_name || g.name}」有BOM配置，是否展开BOM明细加入样品？\n（礼盒组装选"展开"，普通成品选"不展开"）`,
+          '展开BOM',
+          { confirmButtonText: '展开', cancelButtonText: '不展开', type: 'info', closeOnClickModal: false }
+        )
+        expand = true
+      } catch { expand = false }
+
+      if (expand) {
+        try {
+          const detailRes = await getBomByGoods(bom.id)
+          const bomItems: any[] = detailRes.data?.items ?? []
+          if (bomItems.length > 0) {
+            for (const item of bomItems) {
+              const matched = allGoods.find((ag: any) =>
+                (item.goods_sn && ag.goods_sn === item.goods_sn) ||
+                (!item.goods_sn && ag.goods_name === item.goods_name)
+              )
+              const costPrice = await resolveGoodsCost(matched || item)
+              fd.items.push({
+                goods_id: matched?.id || item.goods_id || 0,
+                goods_name: item.goods_name || '',
+                goods_sn: item.goods_sn || matched?.goods_sn || '',
+                spec: item.spec || matched?.spec || '',
+                unit_name: item.unit_name || '',
+                num: Number(item.num || 1),
+                cost_price: costPrice || Number(item.price || 0),
+                out_price: costPrice || Number(item.price || 0),
+                price: Number(matched?.sell_price || 0),
+                remark: '',
+              })
+            }
+            calcTotals()
+            continue
+          }
+        } catch {}
+      }
+    }
+
     const costPrice = await resolveGoodsCost(g)
     fd.items.push({
       goods_id: g.id,
@@ -764,7 +833,8 @@ onMounted(() => { void loadBaseData(); loadList() })
 .ms-order-no { font-size: 14px; font-weight: 600; color: #1d2129; }
 .ms-card-mid { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .ms-customer { font-size: 14px; color: #374151; }
-.ms-card-bot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.ms-card-bot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.ms-card-amounts { display: flex; justify-content: space-between; margin-bottom: 10px; }
 .ms-meta { font-size: 12px; color: #9ca3af; }
 .ms-amount { font-size: 13px; font-weight: 600; margin-left: auto; }
 .ms-badge {

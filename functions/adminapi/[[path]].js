@@ -1907,7 +1907,6 @@ const agentRegistry = [
   // a retail order edit route, so persist safe goods_info corrections at the API
   // layer and merge them into subsequent retail order list responses.
   if (pathname === '/adminapi/retail/order/edit' && request.method === 'POST') {
-    if (!env.USERS_KV) return errRes('KV 未配置，无法改写零售单原始明细')
     const wrappedToken = request.headers.get('token') || ''
     const decoded = decodeToken(wrappedToken)
     if (decoded?.trial && !isTrialPassthrough(pathname)) {
@@ -1919,13 +1918,37 @@ const agentRegistry = [
     if (!id) return errRes('缺少零售单 ID')
     if (body.goods_info === undefined) return errRes('缺少 goods_info')
     const backend = decoded?.backend || DEFAULT_BACKEND
-    const override = {
-      goods_info: typeof body.goods_info === 'string' ? body.goods_info : JSON.stringify(body.goods_info || []),
-      updated_at: new Date().toISOString(),
-      _goods_info_overridden: true,
+    const realToken = decoded?.realToken || (decoded ? null : wrappedToken)
+
+    // 先把 goods_info 写入 KV（维持原有的 override 机制）
+    if (env.USERS_KV) {
+      const override = {
+        goods_info: typeof body.goods_info === 'string' ? body.goods_info : JSON.stringify(body.goods_info || []),
+        updated_at: new Date().toISOString(),
+        _goods_info_overridden: true,
+      }
+      await env.USERS_KV.put(retailOrderOverrideKey(backend, id), JSON.stringify(override))
     }
-    await env.USERS_KV.put(retailOrderOverrideKey(backend, id), JSON.stringify(override))
-    return jsonSuccess({ id, ...override })
+
+    // 再转发到后端保存所有字段（order_date、remark 等）
+    const targetUrl = backend + pathname
+    const fwdHeaders = new Headers()
+    fwdHeaders.set('content-type', 'application/json')
+    if (realToken) fwdHeaders.set('token', realToken)
+    try {
+      const backendRes = await fetch(targetUrl, {
+        method: 'POST',
+        headers: fwdHeaders,
+        body: JSON.stringify(body),
+      })
+      const text = await backendRes.text()
+      return new Response(text, {
+        status: backendRes.status,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      })
+    } catch {
+      return jsonSuccess({ id, _goods_info_overridden: true })
+    }
   }
 
 

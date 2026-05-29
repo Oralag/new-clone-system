@@ -73,6 +73,34 @@
       </div>
     </section>
 
+    <!-- ── 快捷工作台入口 ── -->
+    <section class="wb-row">
+      <div class="workflow-banner" @click="$router.push('/agent/studio')">
+        <div class="wb-left">
+          <div class="wb-badge" style="background:#10b981">HOT</div>
+          <div class="wb-text">
+            <div class="wb-title">🖼️ 内容工作台</div>
+            <div class="wb-desc">上传产品图 · 自动裁切 · AI生文案 · 多平台打包下载</div>
+          </div>
+        </div>
+        <div class="wb-arrow">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </div>
+      </div>
+      <div class="workflow-banner" @click="$router.push('/agent/workflow')">
+        <div class="wb-left">
+          <div class="wb-badge">NEW</div>
+          <div class="wb-text">
+            <div class="wb-title">一站式发布工作台</div>
+            <div class="wb-desc">选品 → 生成文案 → 生成海报 → 一键发布，全流程不离开此页面</div>
+          </div>
+        </div>
+        <div class="wb-arrow">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </div>
+      </div>
+    </section>
+
     <!-- ── 部门卡片（首屏主角） ── -->
     <section class="depts-section">
       <div class="section-hd">
@@ -96,6 +124,55 @@
             <div class="dept-enter-btn">进入 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6h8M7 3l3 3-3 3"/></svg></div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ── 内容运营 ── -->
+    <section class="content-ops-section">
+      <div class="section-hd">
+        <h3 class="section-title">内容运营</h3>
+        <span class="section-sub">{{ connectedCount }} 个渠道已登记 · {{ pendingCount }} 条待发布</span>
+      </div>
+      <div class="co-panel-row">
+
+        <!-- 渠道状态 -->
+        <div class="co-panel">
+          <div class="co-panel-hd">
+            <span class="co-panel-title">渠道接入状态</span>
+            <router-link to="/agent/channels" class="co-panel-link">管理 →</router-link>
+          </div>
+          <div class="co-channels-grid">
+            <div v-for="c in channels" :key="c.id" class="co-ch-item">
+              <div class="co-ch-icon" :style="{ background: c.connected ? c.color : '#e2e8f0' }">{{ c.emoji }}</div>
+              <div class="co-ch-name">{{ c.name }}</div>
+              <div class="co-ch-status" :class="c.connected ? 'chs-on' : 'chs-off'">
+                {{ c.connected ? '已登记' : '未登记' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 近期发布计划 -->
+        <div class="co-panel">
+          <div class="co-panel-hd">
+            <span class="co-panel-title">近期发布计划</span>
+            <router-link to="/agent/calendar" class="co-panel-link">查看全部 →</router-link>
+          </div>
+          <div class="co-cal-list">
+            <div v-for="p in upcomingDashboard" :key="p.id" class="co-cal-item">
+              <span class="co-cal-ch">{{ CH_EMOJI[p.channel] ?? '📄' }}</span>
+              <div class="co-cal-body">
+                <div class="co-cal-title">{{ p.title }}</div>
+                <div class="co-cal-meta">{{ p.channel }} · {{ p.date }}</div>
+              </div>
+              <span class="co-cal-tag" :class="'cct-' + p.status">{{ STATUS_ZH[p.status] }}</span>
+            </div>
+            <div v-if="upcomingDashboard.length === 0" class="co-cal-empty">
+              <router-link to="/agent/calendar" class="co-panel-link">+ 新建内容计划</router-link>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -131,8 +208,24 @@ import { computed, defineComponent, h } from 'vue'
 import { useTrendingStore } from '@/stores/agent'
 import { useBrandStore } from '@/stores/brand'
 import { useMeetingStore } from '@/stores/meeting'
+import { useChannels } from '@/composables/useChannels'
+import { useContentCalendar } from '@/composables/useContentCalendar'
 import CaptainBar from '@/components/CaptainBar.vue'
 import AgentLiveFeed from '@/components/agent/AgentLiveFeed.vue'
+
+const { channels } = useChannels()
+const { plans, upcomingPlans } = useContentCalendar()
+const connectedCount = computed(() => channels.value.filter(c => c.connected).length)
+const pendingCount = computed(() => plans.value.filter(p => p.status === 'scheduled').length)
+const upcomingDashboard = computed(() => upcomingPlans(4))
+
+const CH_EMOJI: Record<string, string> = {
+  '公众号': '📗', '微信公众号': '📗', '视频号': '📹',
+  '抖音号': '🎵', '小红书': '📕', '快手号': '📱', '微博': '🌐',
+}
+const STATUS_ZH: Record<string, string> = {
+  idea: '选题中', draft: '创作中', scheduled: '待发布', published: '已发布',
+}
 
 const agentStore = useTrendingStore()
 const brandStore = useBrandStore()
@@ -529,6 +622,27 @@ const topTrending = computed(() => {
 .stat-card-value { font-size: 20px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.04em; line-height: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stat-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(29,29,31,0.35); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ── 工作台入口行 ── */
+.wb-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 768px) { .wb-row { grid-template-columns: 1fr; } }
+
+.workflow-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(135deg, #1d1d1f 0%, #2d2d30 100%);
+  border-radius: 14px; padding: 16px 20px; cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  animation: fadeUp 0.3s 0.05s ease both;
+}
+.workflow-banner:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.wb-left { display: flex; align-items: center; gap: 14px; }
+.wb-badge {
+  background: #ff3b30; color: #fff; font-size: 9px; font-weight: 800;
+  padding: 2px 6px; border-radius: 4px; letter-spacing: 0.05em; flex-shrink: 0;
+}
+.wb-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.wb-desc { font-size: 11px; color: rgba(255,255,255,0.55); }
+.wb-arrow { color: rgba(255,255,255,0.7); flex-shrink: 0; }
+
 /* ── 部门入口卡片横排 ── */
 .depts-section {
   display: flex; flex-direction: column; gap: 10px;
@@ -758,4 +872,42 @@ const topTrending = computed(() => {
   .hero-desc { font-size: 13px; }
   .status-grid { grid-template-columns: 1fr; }
 }
+
+.content-ops-section { margin-top: 4px; }
+.co-panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+
+.co-panel {
+  background: #fff; border: 1px solid rgba(148,163,184,0.14);
+  border-radius: 16px; padding: 16px 18px;
+  box-shadow: 0 2px 12px rgba(15,23,42,0.04);
+}
+.co-panel-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.co-panel-title { font-size: 13px; font-weight: 700; color: #0f172a; }
+.co-panel-link { font-size: 11px; font-weight: 600; color: #7c3aed; text-decoration: none; }
+.co-panel-link:hover { text-decoration: underline; }
+
+.co-channels-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.co-ch-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.co-ch-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; transition: background 0.2s; }
+.co-ch-name { font-size: 10px; color: #334155; font-weight: 600; text-align: center; }
+.co-ch-status { font-size: 9px; padding: 1px 6px; border-radius: 999px; }
+.chs-on  { background: rgba(16,185,129,0.1); color: #059669; }
+.chs-off { background: rgba(148,163,184,0.1); color: #94a3b8; }
+
+.co-cal-list { display: flex; flex-direction: column; gap: 8px; }
+.co-cal-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #f8fafc; border-radius: 10px; }
+.co-cal-ch { font-size: 18px; flex-shrink: 0; }
+.co-cal-body { flex: 1; min-width: 0; }
+.co-cal-title { font-size: 12px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.co-cal-meta { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+.co-cal-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+.cct-idea      { background: rgba(148,163,184,0.12); color: #64748b; }
+.cct-draft     { background: rgba(245,158,11,0.1); color: #d97706; }
+.cct-scheduled { background: rgba(124,58,237,0.1); color: #7c3aed; }
+.cct-published { background: rgba(16,185,129,0.1); color: #059669; }
+.co-cal-empty  { padding: 16px 0; text-align: center; }
 </style>

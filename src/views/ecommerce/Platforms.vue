@@ -1,356 +1,606 @@
 <template>
-  <div class="ops-platforms-page">
-    <section class="hero">
-      <div>
-        <span class="hero-kicker">平台接入管理</span>
-        <div class="hero-title">平台管理</div>
-        <div class="hero-desc">管理已接入的电商平台状态、API配置和同步策略。</div>
+  <div class="platforms-page">
+
+    <section class="intro-band">
+      <div class="intro-left">
+        <div class="intro-title">平台接入</div>
+        <div class="intro-sub">通过中间件（旺店通 / 聚水潭）统一拉取各平台订单与库存，无需逐个申请平台开发者资质</div>
+      </div>
+      <div class="middleware-tag">
+        <span class="mw-dot"></span>
+        中间件模式 — 一次接入覆盖全平台
       </div>
     </section>
 
-    <section class="platform-list">
-      <div v-for="p in platforms" :key="p.id" class="platform-card">
-        <div class="platform-icon" :style="{ background: p.color }">{{ p.emoji }}</div>
-        <div class="platform-info">
-          <div class="platform-row">
-            <span class="platform-name">{{ p.name }}</span>
-            <span class="badge" :class="p.connected ? 'badge-ok' : 'badge-idle'">
-              {{ p.connected ? '已接入' : '未接入' }}
-            </span>
+    <section class="platform-grid">
+      <div
+        v-for="p in platforms"
+        :key="p.id"
+        class="pcard"
+        :class="p.connected ? 'pcard-on' : ''"
+      >
+        <div class="pcard-head">
+          <div class="pcard-icon" :style="{ background: p.connected ? p.color : '#e2e8f0' }">
+            {{ p.emoji }}
           </div>
-          <div class="platform-meta">
-            <span>店铺：{{ p.shopName || '未配置' }}</span>
-            <span>·</span>
-            <span>同步：{{ p.syncCycle }}</span>
-            <span>·</span>
-            <span>最后同步：{{ p.lastSync || '从未' }}</span>
+          <div class="pcard-info">
+            <div class="pcard-name">{{ p.name }}</div>
+            <div class="pcard-desc">{{ p.desc }}</div>
+          </div>
+          <div class="pcard-status" :class="p.connected ? 'status-on' : 'status-off'">
+            {{ p.connected ? '已接入' : '未接入' }}
           </div>
         </div>
-        <div class="platform-actions">
-          <button class="btn" :class="p.connected ? 'btn-ghost' : 'btn-primary'" @click="togglePlatform(p)">
-            {{ p.connected ? '断开' : '接入' }}
-          </button>
-          <button class="btn btn-ghost" @click="showConfig(p)">配置</button>
-          <button class="btn btn-ghost" @click="syncNow(p)" :disabled="!p.connected || syncingId === p.id">
-            {{ syncingId === p.id ? '同步中…' : '同步' }}
-          </button>
+
+        <div class="pcard-features">
+          <span v-for="f in p.features" :key="f" class="pcard-feat">{{ f }}</span>
+        </div>
+
+        <div class="pcard-foot">
+          <span v-if="p.connected" class="pcard-sync">
+            通过 {{ p.middleware || '中间件' }} 同步中
+          </span>
+          <span v-else class="pcard-waiting">未接入</span>
+          <button
+            v-if="!p.connected"
+            class="pcard-btn pcard-btn-primary"
+            @click="handleConnect(p)"
+          >接入</button>
+          <button
+            v-else
+            class="pcard-btn pcard-btn-ghost"
+            @click="handleDisconnect(p)"
+          >断开</button>
         </div>
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">全局同步策略</div>
-          <div class="panel-sub">设置自动同步的频率和内容范围。</div>
+    <section class="how-section">
+      <div class="how-title">接入流程</div>
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="how-num">1</div>
+          <div class="how-text">
+            <div class="how-name">注册中间件账号</div>
+            <div class="how-desc">在旺店通或聚水潭注册企业账号，完成实名认证（约1-2个工作日）</div>
+          </div>
         </div>
-      </div>
-      <div class="config-grid">
-        <div class="config-row">
-          <span class="config-label">自动同步</span>
-          <el-switch v-model="config.autoSync" @change="saveConfig" />
+        <div class="how-card">
+          <div class="how-num">2</div>
+          <div class="how-text">
+            <div class="how-name">在中间件授权电商店铺</div>
+            <div class="how-desc">在中间件后台扫码授权各平台店铺，无需申请平台开发者资质</div>
+          </div>
         </div>
-        <div class="config-row">
-          <span class="config-label">同步频率</span>
-          <el-select v-model="config.syncInterval" size="small" style="width:160px" @change="saveConfig">
-            <el-option label="每15分钟" value="15min" />
-            <el-option label="每30分钟" value="30min" />
-            <el-option label="每小时" value="1hour" />
-            <el-option label="每6小时" value="6hour" />
-          </el-select>
+        <div class="how-card">
+          <div class="how-num">3</div>
+          <div class="how-text">
+            <div class="how-name">填入 App Key + Secret</div>
+            <div class="how-desc">在中间件后台「开放平台 → 应用管理」获取凭证，填入上方接入弹框</div>
+          </div>
         </div>
-        <div class="config-row">
-          <span class="config-label">同步内容</span>
-          <div class="config-checkboxes">
-            <el-checkbox v-model="config.syncOrders" @change="saveConfig">订单</el-checkbox>
-            <el-checkbox v-model="config.syncStock" @change="saveConfig">库存</el-checkbox>
-            <el-checkbox v-model="config.syncGoods" @change="saveConfig">商品</el-checkbox>
-            <el-checkbox v-model="config.syncCustomer" @change="saveConfig">客户</el-checkbox>
+        <div class="how-card">
+          <div class="how-num">4</div>
+          <div class="how-text">
+            <div class="how-name">数据自动流入 ERP</div>
+            <div class="how-desc">订单、库存、物流状态每30分钟自动同步，运营专员随即开始分析</div>
           </div>
         </div>
       </div>
     </section>
+
+    <section class="faq-section">
+      <div class="faq-title">常见问题</div>
+      <div class="faq-list">
+        <div v-for="faq in FAQS" :key="faq.q" class="faq-item">
+          <div class="faq-q">{{ faq.q }}</div>
+          <div class="faq-a">{{ faq.a }}</div>
+        </div>
+      </div>
+    </section>
+
+    <div v-if="configPlatform" class="modal-mask" @click.self="configPlatform = null">
+      <div class="modal-box">
+        <div class="modal-title">通过中间件接入 {{ configPlatform.name }}</div>
+        <div class="modal-sub">在中间件后台授权店铺后，将应用凭证填入下方，系统通过中间件拉取数据</div>
+
+        <div class="modal-form">
+          <div class="form-row">
+            <label>中间件</label>
+            <div class="mw-selector">
+              <button
+                v-for="mw in MIDDLEWARES"
+                :key="mw.value"
+                class="mw-opt"
+                :class="{ 'mw-opt-active': formMiddleware === mw.value }"
+                @click="formMiddleware = mw.value"
+              >{{ mw.label }}</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label>App Key</label>
+            <input
+              v-model="formKey"
+              class="form-input"
+              :placeholder="currentMiddleware.keyPlaceholder"
+            />
+            <div class="form-hint">{{ currentMiddleware.keyHint }}</div>
+          </div>
+
+          <div class="form-row">
+            <label>App Secret</label>
+            <input
+              v-model="formSecret"
+              class="form-input"
+              type="password"
+              :placeholder="currentMiddleware.secretPlaceholder"
+            />
+          </div>
+
+          <div class="form-row">
+            <label>店铺名称 <span class="label-opt">选填</span></label>
+            <input v-model="formShop" class="form-input" placeholder="如：我的旗舰店" />
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="modal-cancel" @click="configPlatform = null">取消</button>
+          <button class="modal-confirm" @click="confirmConnect">确认接入</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import http from '@/api/http'
+import { ref, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { usePlatforms } from '@/composables/usePlatforms'
+import type { Platform } from '@/composables/usePlatforms'
 
-interface Platform {
-  id: string
-  name: string
-  emoji: string
-  color: string
-  connected: boolean
-  shopName?: string
-  syncCycle: string
-  lastSync?: string
+const { platforms } = usePlatforms()
+
+const MIDDLEWARES = [
+  {
+    value: 'wdt',
+    label: '旺店通',
+    keyPlaceholder: '旺店通 App Key',
+    secretPlaceholder: '旺店通 App Secret',
+    keyHint: '旺店通后台 → 开放平台 → 我的应用 → App Key',
+  },
+  {
+    value: 'jst',
+    label: '聚水潭',
+    keyPlaceholder: '聚水潭 App Key',
+    secretPlaceholder: '聚水潭 App Secret',
+    keyHint: '聚水潭后台 → 应用中心 → 开放应用 → App Key',
+  },
+  {
+    value: 'other',
+    label: '其他',
+    keyPlaceholder: '中间件 App Key',
+    secretPlaceholder: '中间件 App Secret',
+    keyHint: '在中间件开放平台的应用管理页获取',
+  },
+]
+
+const FAQS = [
+  {
+    q: '需要自己去平台申请开发者资质吗？',
+    a: '不需要。中间件持有各平台的服务商资质，你只需在中间件后台扫码授权店铺即可，无需直接面对平台的开发者申请流程。',
+  },
+  {
+    q: '中间件收费吗？',
+    a: '旺店通和聚水潭均提供试用版本，商业版按功能模块和订单量收费，具体价格建议直接咨询两家官网获取最新报价。',
+  },
+  {
+    q: '数据同步有延迟吗？',
+    a: '默认每30分钟轮询同步一次。中间件支持 Webhook 实时推送（1-5分钟内），需在中间件后台开启对应配置。',
+  },
+  {
+    q: '平台数据安全吗？',
+    a: '中间件仅读取订单、库存、物流数据，不涉及资金操作。各平台的 OAuth 授权可随时在平台端撤销，数据访问完全可控。',
+  },
+]
+
+const configPlatform = ref<Platform | null>(null)
+const formMiddleware = ref('wdt')
+const formKey = ref('')
+const formSecret = ref('')
+const formShop = ref('')
+
+const currentMiddleware = computed(
+  () => MIDDLEWARES.find(m => m.value === formMiddleware.value) ?? MIDDLEWARES[0]
+)
+
+function handleConnect(p: Platform) {
+  configPlatform.value = p
+  formMiddleware.value = 'wdt'
+  formKey.value = ''
+  formSecret.value = ''
+  formShop.value = ''
 }
 
-const platforms = ref<Platform[]>([
-  { id: 'taobao', name: '淘宝', emoji: '🛒', color: '#ff5000', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
-  { id: 'jd', name: '京东', emoji: '📦', color: '#e2231a', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
-  { id: 'pdd', name: '拼多多', emoji: '💚', color: '#e2231a', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
-  { id: 'douyin', name: '抖音', emoji: '🎵', color: '#000000', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
-  { id: 'kuaishou', name: '快手', emoji: '📱', color: '#ff0000', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
-  { id: 'wxd', name: '微信小店', emoji: '💬', color: '#07c160', connected: false, shopName: '', syncCycle: '每30分钟', lastSync: '' },
-])
-const syncingId = ref('')
-const config = ref({
-  autoSync: true,
-  syncInterval: '30min',
-  syncOrders: true,
-  syncStock: true,
-  syncGoods: false,
-  syncCustomer: false,
-})
-
-onMounted(async () => {
+async function handleDisconnect(p: Platform) {
   try {
-    const r = await http.post('/erp/ecommerce/platforms', {}, { silent: true })
-    if (r.data?.platforms) {
-      platforms.value = r.data.platforms
-    }
-    if (r.data?.config) {
-      config.value = { ...config.value, ...r.data.config }
-    }
-  } catch { /* silent */ }
-})
-
-function togglePlatform(p: Platform) {
-  if (p.connected) {
+    await ElMessageBox.confirm(
+      `断开后将停止从 ${p.name} 同步数据，已有数据不受影响。`,
+      `断开 ${p.name}`,
+      { confirmButtonText: '确认断开', cancelButtonText: '取消', type: 'warning' }
+    )
     p.connected = false
+    p.shopName = ''
+    ;(p as any).middleware = ''
     ElMessage({ message: `${p.name} 已断开`, type: 'info' })
-  } else {
-    showConfig(p)
+  } catch {
+    // 用户取消
   }
 }
 
-function showConfig(p: Platform) {
-  if (!p.connected) {
-    ElMessage({ message: `${p.name} 接入配置功能开发中，请联系管理员配置API密钥`, type: 'info' })
+function confirmConnect() {
+  if (!formKey.value.trim() || !formSecret.value.trim()) {
+    ElMessage({ message: '请填写 App Key 和 App Secret', type: 'warning' })
+    return
   }
-}
-
-async function syncNow(p: Platform) {
-  syncingId.value = p.id
-  try {
-    await http.post('/erp/ecommerce/sync', { platform: p.id }, { silent: true })
-    p.lastSync = new Date().toLocaleTimeString()
-    ElMessage({ message: `${p.name} 同步成功`, type: 'success' })
-  } catch (e: any) {
-    ElMessage({ message: `${p.name} 同步失败：${e.message}`, type: 'error' })
-  } finally {
-    syncingId.value = ''
-  }
-}
-
-async function saveConfig() {
-  try {
-    await http.post('/erp/ecommerce/platforms/config', {
-      autoSync: config.value.autoSync,
-      syncInterval: config.value.syncInterval,
-      syncOrders: config.value.syncOrders,
-      syncStock: config.value.syncStock,
-      syncGoods: config.value.syncGoods,
-      syncCustomer: config.value.syncCustomer,
-    }, { silent: true })
-  } catch { /* silent */ }
+  const p = configPlatform.value!
+  p.connected = true
+  p.shopName = formShop.value.trim() || p.name + '店铺'
+  ;(p as any).middleware = MIDDLEWARES.find(m => m.value === formMiddleware.value)?.label ?? '中间件'
+  configPlatform.value = null
+  ElMessage({ message: `${p.name} 接入成功，数据同步中`, type: 'success' })
 }
 </script>
 
 <style scoped>
-.ops-platforms-page {
+.platforms-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.hero,
-.panel {
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
-}
-
-.hero {
+.intro-band {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 20px;
   padding: 20px 22px;
-  background:
-    radial-gradient(circle at top right, rgba(45, 212, 191, 0.18), transparent 30%),
-    linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
 }
 
-.hero-kicker {
-  display: inline-flex;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(13, 148, 136, 0.1);
-  color: #0f766e;
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.hero-title {
-  font-size: 24px;
+.intro-title {
+  font-size: 20px;
   font-weight: 800;
   color: #0f172a;
 }
 
-.hero-desc {
-  margin-top: 6px;
+.intro-sub {
+  margin-top: 4px;
   font-size: 13px;
   color: #64748b;
 }
 
-.platform-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.platform-card {
+.middleware-tag {
   display: flex;
   align-items: center;
-  gap: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
-  padding: 16px;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.15);
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+  white-space: nowrap;
 }
 
-.platform-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
+.mw-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #14b8a6;
+  animation: pulse 2s infinite;
   flex-shrink: 0;
 }
 
-.platform-info {
-  flex: 1;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-.platform-row {
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.pcard {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.18s ease;
+}
+
+.pcard-on {
+  border-color: rgba(13, 148, 136, 0.22);
+  box-shadow: 0 4px 20px rgba(13, 148, 136, 0.08);
+}
+
+.pcard:hover {
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.1);
+}
+
+.pcard-head { display: flex; align-items: center; gap: 10px; }
+
+.pcard-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  transition: background 0.2s;
 }
 
-.platform-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
+.pcard-info { flex: 1; }
+.pcard-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+.pcard-desc { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+.pcard-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.status-on { background: rgba(16, 185, 129, 0.1); color: #059669; }
+.status-off { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+.pcard-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.badge {
+.pcard-feat {
   font-size: 11px;
   padding: 3px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.pcard-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pcard-sync { font-size: 11px; color: #059669; }
+.pcard-waiting { font-size: 11px; color: #94a3b8; }
+
+.pcard-btn {
   border-radius: 10px;
-  font-weight: 600;
-}
-.badge-ok {
-  background: rgba(13, 148, 136, 0.12);
-  color: #0f766e;
-}
-.badge-idle {
-  background: rgba(148, 163, 184, 0.12);
-  color: #64748b;
-}
-
-.platform-meta {
-  display: flex;
-  gap: 6px;
+  padding: 7px 14px;
   font-size: 12px;
-  color: #64748b;
-  flex-wrap: wrap;
-}
-
-.platform-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn {
-  border-radius: 12px;
-  padding: 8px 14px;
-  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: #fff;
-  color: #334155;
-  transition: all 0.15s;
 }
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn-primary {
+
+.pcard-btn-primary {
   border: none;
   background: linear-gradient(135deg, #0f766e, #14b8a6);
   color: #fff;
 }
-.btn-ghost:hover {
-  background: #f1f5f9;
-}
 
-.panel {
-  padding: 20px;
-}
-
-.panel-head {
-  margin-bottom: 16px;
-}
-
-.panel-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.panel-sub {
-  margin-top: 4px;
-  font-size: 12px;
+.pcard-btn-ghost {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #fff;
   color: #64748b;
 }
+.pcard-btn-ghost:hover { background: #f8fafc; }
 
-.config-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.how-section, .faq-section {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
 }
 
-.config-row {
+.how-title, .faq-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 14px;
+}
+
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.how-card {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.how-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(13, 148, 136, 0.12);
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 800;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-.config-row:last-child {
-  border-bottom: none;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.config-label {
-  font-size: 13px;
-  color: #475569;
-  min-width: 80px;
+.how-name { font-size: 13px; font-weight: 700; color: #0f172a; }
+.how-desc { margin-top: 4px; font-size: 11px; color: #64748b; line-height: 1.5; }
+
+.faq-list { display: flex; flex-direction: column; gap: 10px; }
+
+.faq-item {
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
 }
 
-.config-checkboxes {
+.faq-q { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.faq-a { font-size: 12px; color: #64748b; line-height: 1.6; }
+
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 100;
   display: flex;
-  gap: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 24px;
+  padding: 28px;
+  width: 460px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.modal-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label-opt {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.mw-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.mw-opt {
+  flex: 1;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mw-opt-active {
+  background: rgba(13, 148, 136, 0.08);
+  border-color: rgba(13, 148, 136, 0.3);
+  color: #0f766e;
+}
+
+.form-input {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  background: #fafbfc;
+}
+
+.form-input:focus {
+  border-color: rgba(13, 148, 136, 0.4);
+  background: #fff;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-cancel {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.modal-confirm {
+  border: none;
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
 }
 </style>

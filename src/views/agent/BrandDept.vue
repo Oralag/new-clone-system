@@ -40,11 +40,28 @@
             <div class="bs-row" v-if="store.brand.slogan"><span class="bs-label">Slogan</span><span class="bs-val">{{ store.brand.slogan }}</span></div>
           </div>
           <div v-else class="output-empty">尚未配置品牌信息</div>
-          <button class="config-btn" @click="$router.push('/agent/brand-settings')">
+          <button class="config-btn" @click="goToBrandSettings()">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M8.5 1.5l2 2L4 10H2v-2l6.5-6.5z"/></svg>
             编辑品牌配置
           </button>
         </div>
+
+        <!-- 渠道接入状态 -->
+        <div class="panel-card">
+          <div class="panel-hd">
+            <span class="panel-dot" style="background:#7c3aed"></span>
+            渠道登记状态
+            <router-link to="/agent/channels" class="panel-link-sm">管理</router-link>
+          </div>
+          <div class="ch-mini-list">
+            <div v-for="c in channels" :key="c.id" class="ch-mini-item">
+              <span class="ch-mini-icon" :style="{ background: c.connected ? c.color : '#e2e8f0' }">{{ c.emoji }}</span>
+              <span class="ch-mini-name">{{ c.name }}</span>
+              <span class="ch-mini-dot" :class="c.connected ? 'dot-on' : 'dot-off'"></span>
+            </div>
+          </div>
+        </div>
+
       </aside>
 
       <!-- 中间：对话 -->
@@ -112,11 +129,20 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBrandStore } from '@/stores/brand'
+import { useChannels } from '@/composables/useChannels'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 
+const { channels } = useChannels()
+
+const router = useRouter()
 const store = useBrandStore()
+const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
+function goToBrandSettings() {
+  router.push(isMobile ? '/mobile/agent/brand-settings' : '/agent/brand-settings')
+}
 const chatRef = ref<InstanceType<typeof AgentChat>>()
 
 const todayGoal = ref(localStorage.getItem('brand_dept_goal') || '')
@@ -177,4 +203,14 @@ const quickPrompts = [
 .accuracy-fill { height: 100%; background: #8b5cf6; border-radius: 3px; }
 .accuracy-pct { font-size: 11px; font-weight: 700; color: #8b5cf6; width: 30px; text-align: right; flex-shrink: 0; }
 @media (max-width: 1100px) { .three-col { grid-template-columns: 1fr; } .left-panel, .right-panel { display: none; } }
+
+.panel-link-sm { margin-left: auto; font-size: 10px; font-weight: 600; color: #7c3aed; text-decoration: none; }
+.panel-link-sm:hover { text-decoration: underline; }
+.ch-mini-list { display: flex; flex-direction: column; gap: 6px; }
+.ch-mini-item { display: flex; align-items: center; gap: 8px; }
+.ch-mini-icon { width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; transition: background 0.2s; }
+.ch-mini-name { flex: 1; font-size: 11px; color: #334155; font-weight: 600; }
+.ch-mini-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-on  { background: #10b981; }
+.dot-off { background: #cbd5e1; }
 </style>

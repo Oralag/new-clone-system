@@ -521,18 +521,22 @@ function doSearch() {
   .topnav-center { display: none; }
   .topnav-edit-btn { display: none; }
   .edit-mode-bar { display: none; }
+  .topnav-switch-btn { display: none; }
+  .topnav-mode-badge { display: none; }
   .brand-topnav { padding: 0 16px; }
   .topnav-hamburger { display: flex; }
   /* 移动端：限制在 .wx-content 可用高度内，禁止撑破 */
   .brand-layout {
     min-height: 0 !important;
     height: 100%;
+    overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
   .brand-main {
-    flex: 1;
+    flex: 0 0 auto;
+    overflow-x: hidden;
     /* 底部留出 TabBar 空间，内容滚动到底时不会被遮挡 */
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
   }

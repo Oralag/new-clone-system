@@ -2,7 +2,7 @@
   <div class="contract-view-page">
     <div class="page-header">
       <el-button link :icon="ArrowLeft" @click="router.back()">返回</el-button>
-      <span class="page-title">查看销售合同</span>
+      <span class="page-title">查看销售订单</span>
       <el-tag v-if="contract.status === 1" type="success" size="small">已审核</el-tag>
       <el-tag v-else type="warning" size="small">待审核</el-tag>
     </div>

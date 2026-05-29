@@ -232,7 +232,7 @@ export const createTools: any[] = [
   },
   {
     name: 'create_sale_order',
-    description: '新增销售合同/订单',
+    description: '新增销售订单/订单',
     parameters: {
       type: 'object',
       properties: {
@@ -378,7 +378,7 @@ export const createTools: any[] = [
   },
   {
     name: 'quick_sale',
-    description: '一键销售：自动创建销售合同并审核、创建出库单并审核（含库存扣减）。支持优惠和运费',
+    description: '一键销售：自动创建销售订单并审核、创建出库单并审核（含库存扣减）。支持优惠和运费',
     parameters: {
       type: 'object',
       properties: {
@@ -473,7 +473,7 @@ export const deleteTools: any[] = [
   },
   {
     name: 'delete_sale_order',
-    description: '删除销售合同/订单（需先用 query_sales 查到订单ID）',
+    description: '删除销售订单/订单（需先用 query_sales 查到订单ID）',
     parameters: {
       type: 'object',
       properties: {

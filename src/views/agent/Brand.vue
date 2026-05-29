@@ -297,6 +297,22 @@
             placeholder="例：&#10;草原纯天然原料&#10;零添加防腐剂&#10;传统工艺发酵48小时"
             v-model="brand.sellingPoints"
           />
+
+          <!-- 产品图片 -->
+          <div class="field">
+            <label class="field-label">产品图片（粘贴图片URL）</label>
+            <p class="field-hint">AI生成海报/图文时会参考这些产品图的外观风格</p>
+            <div class="product-img-grid" v-if="brand.productImages?.length">
+              <div v-for="(url, i) in brand.productImages" :key="i" class="product-img-item">
+                <img :src="url" @error="(e: Event) => (e.target as HTMLImageElement).style.display='none'" />
+                <span class="img-del" @click="brand.productImages!.splice(i, 1)">×</span>
+              </div>
+            </div>
+            <div class="tag-input-row">
+              <input v-model="newProductImage" class="tag-input" placeholder="粘贴产品图片URL，回车添加..." @keydown.enter="addProductImage" />
+              <button class="btn-add" @click="addProductImage">添加</button>
+            </div>
+          </div>
         </div>
 
         <!-- 竞品参考 -->
@@ -945,6 +961,7 @@ const newProduct = ref('')
 const newCompetitor = ref('')
 const newKeyword = ref('')
 const newFilter = ref('')
+const newProductImage = ref('')
 const newForbiddenWord = ref('')
 
 // ── AI Modal State ─────────────────────────────────────
@@ -1410,6 +1427,7 @@ function addProduct() { const v = newProduct.value.trim(); if (v && !brand.produ
 function addCompetitor() { const v = newCompetitor.value.trim(); if (v && !brand.competitors.includes(v)) brand.competitors.push(v); newCompetitor.value = '' }
 function addKeyword() { const v = newKeyword.value.trim(); if (v && !brand.keywords.includes(v)) brand.keywords.push(v); newKeyword.value = '' }
 function addFilter() { const v = newFilter.value.trim(); if (v && !brand.trendingFilters.includes(v)) brand.trendingFilters.push(v); newFilter.value = '' }
+function addProductImage() { const v = newProductImage.value.trim(); if (v) { if (!brand.productImages) brand.productImages = []; if (!brand.productImages.includes(v)) brand.productImages.push(v) }; newProductImage.value = '' }
 
 const completeness = computed(() => {
   let s = 0
@@ -1841,6 +1859,11 @@ function handleSave() {
 @keyframes dot-bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
 
 .tag-input-row { display: flex; gap: 6px; }
+.field-hint { font-size: 11px; color: rgba(29,29,31,0.45); margin: 2px 0 8px; }
+.product-img-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.product-img-item { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.1); background: #f5f5f7; }
+.product-img-item img { width: 100%; height: 100%; object-fit: cover; }
+.img-del { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.5); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; }
 .tag-input { flex: 1; background: var(--c-input-bg); border: 1px solid var(--c-border); border-radius: 12px; padding: 7px 11px; color: var(--c-text); font-size: 12px; outline: none; transition: border-color 0.2s; }
 .tag-input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
 .tag-input::placeholder { color: #bbb; }

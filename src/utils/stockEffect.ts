@@ -4,6 +4,7 @@ export interface StockItem {
   goods_id: number | string
   goods_name?: string
   num: number | string
+  unit_ratio?: number  // 1销售单位 = unit_ratio 基础单位，默认1
 }
 
 export async function stockEffect(
@@ -24,7 +25,7 @@ export async function stockEffect(
 
   const goodsInfo = validItems.map(i => ({
     goods_id: Number(i.goods_id),
-    num: Number(i.num),
+    num: Math.round(Number(i.num) * (Number(i.unit_ratio) || 1) * 10000) / 10000,
     goods_name: i.goods_name || '',
   }))
 
@@ -39,19 +40,21 @@ export async function stockEffect(
   await http.post(`${endpoint}/audit`, { id: flowId, status: 1 })
 }
 
-// 反审核时删除原始 OtherOut 流水（根据 remark 标记 "零售出库#orderId"）
-// 先反审核（恢复库存）再删除（清除流水），不产生任何新流水
-export async function deleteRetailStockFlows(orderId: number): Promise<boolean> {
-  const marker = `零售出库#${orderId}`
+async function annulOtherOutByMarker(marker: string): Promise<boolean> {
   const res = await http.get('/stock/OtherOut/index', { params: { list_rows: 1000 } })
   const rows: any[] = res.data?.rows ?? []
   const targets = rows.filter((r: any) => String(r.remark) === marker)
   if (!targets.length) return false
   for (const r of targets) {
-    if (Number(r.status) === 1) {
-      try { await http.post('/stock/OtherOut/audit', { id: r.id, status: 0 }) } catch { /* ignore */ }
-    }
-    await http.post('/stock/OtherOut/del', { id: r.id })
+    await http.post('/stock/OtherOut/annul', { id: r.id })
   }
   return true
+}
+
+export async function deleteRetailStockFlows(orderId: number): Promise<boolean> {
+  return annulOtherOutByMarker(`零售出库#${orderId}`)
+}
+
+export async function deleteSaleOutStockFlows(orderId: number): Promise<boolean> {
+  return annulOtherOutByMarker(`销售出库#${orderId}`)
 }

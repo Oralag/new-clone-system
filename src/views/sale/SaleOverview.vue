@@ -697,7 +697,7 @@ async function submitQuickSale() {
       after_discount: qs.total,
       freight_amount: qs.freight || 0,
       freight_bearer: qs.freightPayer,
-      remark: qs.remark || '来自销售合同',
+      remark: qs.remark || '来自销售订单',
       goods_info: goodsInfo,
     })
     const saleOutId = saleOutRes?.data?.id || saleOutRes?.data?.lastId
@@ -743,7 +743,7 @@ async function submitQuickSale() {
           amount: qs.freight,
           expense_date: today,
           order_sn: contractSn,
-          remark: `${qs.customer_name} 销售合同运费（我方承担） - ${contractSn}`,
+          remark: `${qs.customer_name} 销售订单运费（我方承担） - ${contractSn}`,
         })
       } catch {}
     }

@@ -214,11 +214,13 @@
                 <div class="step-num">2</div>
                 <div class="step-body">
                   <div class="step-title">{{ publishGuide.textCopied ? '✅ 文案已复制' : '复制文案' }}</div>
-                  <div class="step-desc">{{ publishGuide.textCopied ? '去小红书标题/正文框粘贴' : '复制图片后再复制文案' }}</div>
+                  <div v-if="publishGuide.publishText" class="step-desc">{{ publishGuide.textCopied ? '去小红书标题/正文框粘贴' : '复制图片后再复制文案' }}</div>
+                  <div v-else class="step-desc step-desc-hint">海报无配套文案 — 请在文案部生成后一并发布，或在小红书自行填写</div>
                 </div>
-                <button class="step-btn" :class="{ 'step-btn-secondary': !publishGuide.imageCopied }" @click="copyPublishText">
+                <button v-if="publishGuide.publishText" class="step-btn" :class="{ 'step-btn-secondary': !publishGuide.imageCopied }" @click="copyPublishText">
                   {{ publishGuide.textCopied ? '重新复制' : '复制文案' }}
                 </button>
+                <span v-else class="step-btn step-btn-na">跳过</span>
               </div>
               <div class="publish-step" :class="{ active: publishGuide.textCopied }">
                 <div class="step-num">3</div>
@@ -375,10 +377,12 @@ function platformEmoji(platform: string): string {
 
 function displayContent(item: any) {
   if (item.type === 'poster') {
+    // 新版存的是HTML，旧版存的是JSON
+    if (!item.content || item.content.trim().startsWith('<')) return ''
     try {
       const obj = JSON.parse(item.content)
       return obj.title ? `${obj.title}\n\n${obj.body ?? ''}` : item.content
-    } catch { return item.content }
+    } catch { return '' }
   }
   return item.content
 }
@@ -933,6 +937,7 @@ onUnmounted(() => {
 .step-body { flex: 1; }
 .step-title { font-size: 13px; font-weight: 600; color: #1A1A1A; margin-bottom: 2px; }
 .step-desc { font-size: 11px; color: #999; }
+.step-desc-hint { color: #f59e0b; font-style: italic; }
 
 .step-btn {
   padding: 6px 14px; border-radius: 8px;
@@ -947,6 +952,7 @@ onUnmounted(() => {
 .step-btn-secondary { background: #F8F8F6; color: #666; border: 1px solid #E8E8E8; }
 .step-btn-secondary:hover { background: #eee; }
 .step-btn-primary { background: #0071e3; }
+.step-btn-na { display: inline-flex; align-items: center; padding: 5px 12px; font-size: 11px; color: #bbb; background: #f5f5f5; border-radius: 8px; }
 
 .download-fallback {
   display: flex; align-items: center; gap: 6px;

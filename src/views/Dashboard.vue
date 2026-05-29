@@ -251,17 +251,17 @@
         </div>
         <div v-if="rankList.length === 0" class="rank-empty">暂无销售数据</div>
         <div v-else class="rank-list">
-          <div v-for="(item, idx) in rankList" :key="item.name" class="rank-row">
+          <div v-for="(item, idx) in rankList" :key="item.key" class="rank-row">
             <div class="rank-no" :class="idx < 3 ? `rank-top${idx+1}` : ''">{{ idx + 1 }}</div>
             <div class="rank-name">
               <span>{{ item.name }}</span>
-              <span v-if="item.spec" class="rank-spec">{{ item.spec }}</span>
+              <span v-if="item.specLabel" class="rank-spec">{{ item.specLabel }}</span>
             </div>
             <div class="rank-bar-wrap">
-              <div class="rank-bar" :style="{ width: (item.value / rankList[0].value * 100).toFixed(1) + '%' }" />
+              <div class="rank-bar" :style="{ width: (rankList[0].value > 0 ? item.value / rankList[0].value * 100 : 0).toFixed(1) + '%' }" />
             </div>
             <div class="rank-val">
-              {{ rankMode === 'qty' ? (Number.isInteger(item.value) ? item.value : parseFloat(item.value.toFixed(4))) + (item.unit ? ' ' + item.unit : '') : '¥' + item.value.toFixed(2) }}
+              {{ rankMode === 'qty' ? formatRankQty(item.qty) + (item.unit ? ' ' + item.unit : '') : '¥' + item.amount.toFixed(2) }}
             </div>
           </div>
         </div>
@@ -560,7 +560,7 @@ const mobileQuickActions = [
   { label: '采购入库', path: '/procure/inhouse', bg: 'rgba(8,145,178,0.1)', color: '#0891b2', svg: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>' },
   { label: '收款单',  path: '/finance/collect-receipt', bg: 'rgba(5,150,105,0.1)',  color: '#059669', svg: '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>' },
   { label: '库存总览', path: '/warehouse/stock', bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', svg: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
-  { label: '销售合同', path: '/sale/contract',  bg: 'rgba(0,113,227,0.08)', color: '#0071e3', svg: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
+  { label: '销售订单', path: '/sale/contract',  bg: 'rgba(0,113,227,0.08)', color: '#0071e3', svg: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
   { label: '应收账款', path: '/finance/receivable', bg: 'rgba(5,150,105,0.08)', color: '#059669', svg: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
   { label: '报销申请', path: '/office/expense', bg: 'rgba(220,38,38,0.08)',  color: '#dc2626', svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' },
   { label: '零售收银', path: '/cashregister',   bg: 'rgba(249,115,22,0.1)', color: '#f97316', svg: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h2M10 15h4"/>' },
@@ -599,11 +599,11 @@ const salesStats = computed(() => {
 
   const filteredSale = _saleRows.value.filter((r: any) => {
     const d = (r.out_date || '').slice(0, 10)
-    return d >= fromDate && d <= today
+    return Number(r.status) === 1 && d >= fromDate && d <= today
   })
   const filteredRetail = _retailRows.value.filter((r: any) => {
     const d = (r.order_date || '').slice(0, 10)
-    return d >= fromDate && d <= today
+    return Number(r.status) === 1 && d >= fromDate && d <= today
   })
 
   const saleAmt = filteredSale.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
@@ -655,7 +655,7 @@ function buildInsights(data: {
   if (data.todaySale > 0) {
     items.push({ tag: '今日销售', text: `今日已完成销售 ¥${data.todaySale.toFixed(2)}，共 ${data.todayOrders} 笔订单。` })
   } else {
-    items.push({ tag: '营业提醒', text: '今日暂无销售记录，可前往收银台或新建销售合同开始营业。' })
+    items.push({ tag: '营业提醒', text: '今日暂无销售记录，可前往收银台或新建销售订单开始营业。' })
   }
   if (data.stockWarn > 0) {
     items.push({ tag: '⚠️ 库存预警', text: `当前有 ${data.stockWarn} 种商品库存不足或为零，建议及时采购补货。` })
@@ -713,7 +713,7 @@ const quickItems = [
   },
 ]
 
-function openNewWindow() { window.open('/#/cashregister', '_blank') }
+function openNewWindow() { router.push('/cashregister') }
 
 // ── 自定义快捷应用 ────────────────────────────────────────────────
 const CUSTOM_KEY = 'erp_mobile_quick_items'
@@ -828,35 +828,113 @@ const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
 const _rankSaleRows = ref<any[]>([])
 const _rankRetailRows = ref<any[]>([])
+const _goodsRows = ref<any[]>([])
 
-// 商品排行（按全系统销售订单 + 零售订单聚合，避免只统计当前页/部分单据）
+type RankBucket = {
+  key: string
+  name: string
+  unit: string
+  qty: number
+  amount: number
+  specs: Set<string>
+}
+
+function normalizeRankName(name: string) {
+  return String(name || '').replace(/\s+/g, '').trim().toLowerCase()
+}
+
+function getRankKey(item: any, name: string) {
+  const goodsId = Number(item.goods_id || item.id || 0)
+  if (Number.isFinite(goodsId) && goodsId > 0) return `goods:${goodsId}`
+  return `name:${normalizeRankName(name)}`
+}
+
+function getDashboardGoodsTypeMap(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem('erp_goods_type_map') || '{}') } catch { return {} }
+}
+
+function resolveRankGoodsType(item: any, name: string) {
+  const directType = Number(item.goods_type || 0)
+  if (directType) return directType
+
+  const goodsId = Number(item.goods_id || item.id || 0)
+  const typeMap = getDashboardGoodsTypeMap()
+  if (goodsId && Object.prototype.hasOwnProperty.call(typeMap, goodsId)) {
+    const mappedType = Number(typeMap[goodsId] || 0)
+    if (mappedType) return mappedType
+  }
+
+  const goods = goodsId
+    ? _goodsRows.value.find((g: any) => Number(g.id) === goodsId)
+    : _goodsRows.value.find((g: any) => normalizeRankName(g.goods_name || g.name || '') === normalizeRankName(name))
+  const goodsType = Number(goods?.goods_type || typeMap[Number(goods?.id)] || 0)
+  return goodsType || 0
+}
+
+function isFinishedRankGoods(item: any, name: string) {
+  const type = resolveRankGoodsType(item, name)
+  if (type) return type === 1 || type === 5
+
+  const text = `${name} ${item.cate_name || item.category_name || ''}`
+  return (text.includes('成品') || text.includes('散装')) && !text.includes('半成品')
+}
+
+function getRankOrderAmount(row: any, rawItemsAmount: number) {
+  const amount = row.after_discount ?? row.pay_amount ?? row.total_amount
+  const numericAmount = Number(amount)
+  if (Number.isFinite(numericAmount) && numericAmount > 0) return numericAmount
+  return rawItemsAmount
+}
+
+function formatRankQty(value: number) {
+  const qty = parseFloat(value.toFixed(4))
+  return Number.isInteger(qty) ? String(qty) : String(qty)
+}
+
+// 商品排行（按真实销售订单 + 零售订单聚合，同一 goods_id/商品名合并，规格不拆行）
 const rankList = computed(() => {
   const saleRankRows = _rankSaleRows.value.length ? _rankSaleRows.value : _saleRows.value
   const retailRankRows = _rankRetailRows.value.length ? _rankRetailRows.value : _retailRows.value
-  const map: Record<string, { name: string; spec: string; unit: string; qty: number; amt: number }> = {}
-  const parseGoods = (r: any) => {
-    const items: any[] = parseGoodsInfo(r.goods_info)
-    items.forEach(i => {
-      const baseName = i.goods_name || i.name || `商品${i.goods_id}`
-      const spec = i.spec || ''
-      const key = spec ? `${baseName}||${spec}` : baseName
-      if (!map[key]) map[key] = { name: baseName, spec, unit: i.unit_name || '', qty: 0, amt: 0 }
-      const qty = Number(i.num || 0)
-      const price = Number(i.price || i.sale_price || 0)
-      map[key].qty += qty
-      map[key].amt += qty * price
+  const map = new Map<string, RankBucket>()
+  const parseGoods = (row: any) => {
+    const items: any[] = parseGoodsInfo(row.goods_info).filter((item: any) => !item?._meta)
+    const normalized = items.map((item: any) => {
+      const name = String(item.goods_name || item.name || `商品${item.goods_id || item.id}`).trim()
+      const qty = Number(item.num || item.qty || item.quantity || 0)
+      const price = Number(item.price || item.sale_price || item.sell_price || 0)
+      return { item, name, qty, lineAmount: qty * price }
+    }).filter(({ item, name, qty }) => qty > 0 && name && isFinishedRankGoods(item, name))
+    if (!normalized.length) return
+
+    const rawItemsAmount = normalized.reduce((sum, current) => sum + current.lineAmount, 0)
+    const orderAmount = getRankOrderAmount(row, rawItemsAmount)
+
+    normalized.forEach(({ item, name, qty, lineAmount }) => {
+      const key = getRankKey(item, name)
+      if (!map.has(key)) {
+        map.set(key, { key, name, unit: item.unit_name || item.unit || '', qty: 0, amount: 0, specs: new Set<string>() })
+      }
+
+      const bucket = map.get(key)!
+      bucket.qty += qty
+      bucket.amount += rawItemsAmount > 0 ? (lineAmount / rawItemsAmount) * orderAmount : lineAmount
+      if (!bucket.unit && (item.unit_name || item.unit)) bucket.unit = item.unit_name || item.unit
+      if (item.spec) bucket.specs.add(String(item.spec))
     })
   }
   saleRankRows.forEach(r => parseGoods(r))
   retailRankRows.forEach(r => parseGoods(r))
-  const sorted = Object.values(map).sort((a, b) =>
-    rankMode.value === 'qty' ? b.qty - a.qty : b.amt - a.amt
+  const sorted = Array.from(map.values()).sort((a, b) =>
+    rankMode.value === 'qty' ? b.qty - a.qty || b.amount - a.amount : b.amount - a.amount || b.qty - a.qty
   ).slice(0, 10)
   return sorted.map(i => ({
+    key: i.key,
     name: i.name,
-    spec: i.spec,
+    specLabel: i.specs.size > 1 ? `已合并 ${i.specs.size} 个规格` : (Array.from(i.specs)[0] || ''),
     unit: i.unit,
-    value: rankMode.value === 'qty' ? parseFloat(i.qty.toFixed(4)) : parseFloat(i.amt.toFixed(2)),
+    qty: parseFloat(i.qty.toFixed(4)),
+    amount: parseFloat(i.amount.toFixed(2)),
+    value: rankMode.value === 'qty' ? parseFloat(i.qty.toFixed(4)) : parseFloat(i.amount.toFixed(2)),
   }))
 })
 
@@ -904,6 +982,10 @@ function getFlowDate(row: any) {
 }
 
 function isExpenseFlow(row: any) {
+  // SK前缀 = 收款单（客户进账 = 收入）; FK前缀 = 付款单（付出 = 支出）
+  const flowNo = String(row?.flow_no || '').toUpperCase()
+  if (flowNo.startsWith('SK')) return false
+  if (flowNo.startsWith('FK')) return true
   const type = String(row?.flow_type || row?.type || row?._direction || '').toLowerCase()
   if (type) return type !== 'income'
   return Number(row?.amount || 0) < 0
@@ -1004,8 +1086,8 @@ async function loadDashboardData(force = false) {
     const rows = (r: PromiseSettledResult<any>) =>
       r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
 
-    const todaySaleRows   = rows(saleRes).filter((r: any) => Number(r.status) === 1)
-    const todayRetailRows = rows(retailRes).filter((r: any) => Number(r.status) === 1)
+    const todaySaleRows   = rows(saleRes).filter((r: any) => Number(r.status) === 1 && (r.out_date   || '').slice(0, 10) === today)
+    const todayRetailRows = rows(retailRes).filter((r: any) => Number(r.status) === 1 && (r.order_date || '').slice(0, 10) === today)
 
     const saleAmt = todaySaleRows.reduce((s: number, r: any) => {
       const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)

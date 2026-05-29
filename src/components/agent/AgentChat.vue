@@ -73,8 +73,35 @@
                 <img :src="url" class="step-image" alt="AI生成图片" />
               </a>
             </div>
-            <!-- 存入发布按钮 -->
-            <div v-if="msg.content && !msg.streaming" class="step-actions">
+            <!-- 视频任务卡片 -->
+            <div v-if="msg.videoTasks?.length" class="step-videos">
+              <div v-for="(vt, vi) in msg.videoTasks" :key="vi" class="video-task-card">
+                <template v-if="vt.status === 'done' && vt.videoUrl">
+                  <video :src="vt.videoUrl" controls class="step-video" />
+                  <a :href="vt.videoUrl" target="_blank" class="video-dl">下载视频</a>
+                </template>
+                <template v-else-if="vt.status === 'failed'">
+                  <span class="video-status failed">视频生成失败</span>
+                </template>
+                <template v-else>
+                  <span class="video-status pending">🎬 视频生成中{{ vt.status === 'processing' ? '...' : '（排队中）' }}</span>
+                </template>
+              </div>
+            </div>
+            <!-- 海报渲染器 -->
+            <PosterRenderer
+              v-if="msg.posterHtml && !msg.streaming"
+              :poster-html="msg.posterHtml"
+              @saved="savedIndexes.add(idx)"
+            />
+            <!-- 发布卡 -->
+            <CopyPublishCard
+              v-if="msg.publishCard && !msg.streaming"
+              :card="msg.publishCard"
+              @saved="savedIndexes.add(idx)"
+            />
+            <!-- 存入发布按钮（没有发布卡/海报时才显示） -->
+            <div v-if="msg.content && !msg.streaming && !msg.publishCard && !msg.posterHtml" class="step-actions">
               <button class="btn-save-publish" @click="saveToPublish(msg, idx)">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v10M8 8l4 4 4-4M3 16v4h18v-4"/></svg>
                 存入发布
@@ -104,6 +131,9 @@ import { AGENTS } from '@/server/agents/agentRegistry'
 import { useTrendingStore } from '@/stores/agent'
 import { useBrandStore } from '@/stores/brand'
 import { marked } from 'marked'
+import PosterRenderer from '@/components/agent/PosterRenderer.vue'
+import CopyPublishCard from '@/components/agent/CopyPublishCard.vue'
+import type { PublishCardData } from '@/components/agent/CopyPublishCard.vue'
 
 const props = defineProps<{
   agentId: string
@@ -116,6 +146,7 @@ const emit = defineEmits<{
   (e: 'streaming-change', v: boolean): void
   (e: 'message-sent'): void
   (e: 'content-published', index: number): void
+  (e: 'message-complete', payload: { publishCard?: PublishCardData; posterHtml?: string }): void
 }>()
 
 const agent = computed(() => AGENTS[props.agentId] ?? AGENTS.copywriter)
@@ -158,12 +189,37 @@ interface ToolCall {
   name: string
   status: 'running' | 'done' | 'error'
 }
+interface VideoTask {
+  taskId: string
+  status: 'pending' | 'processing' | 'done' | 'failed'
+  videoUrl?: string
+}
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   toolCalls?: ToolCall[]
   images?: string[]
+  videoTasks?: VideoTask[]
   streaming?: boolean
+  posterHtml?: string
+  publishCard?: PublishCardData
+}
+
+// 从AI回复中提取 poster-html 和 publish-card 特殊块
+function processSpecialBlocks(msg: ChatMessage) {
+  const { content } = msg
+
+  const posterMatch = content.match(/```poster-html\r?\n([\s\S]*?)```/)
+  if (posterMatch) {
+    msg.posterHtml = posterMatch[1].trim()
+  }
+
+  const cardMatch = content.match(/```publish-card\r?\n([\s\S]*?)```/)
+  if (cardMatch) {
+    try {
+      msg.publishCard = JSON.parse(cardMatch[1].trim())
+    } catch {}
+  }
 }
 
 const messages = ref<ChatMessage[]>([])
@@ -181,7 +237,12 @@ const displayMessages = computed(() =>
 
 function renderMd(text: string) {
   if (!text) return ''
-  return marked.parse(text) as string
+  // 特殊块由对应Vue组件渲染，从markdown文本中移除
+  const cleaned = text
+    .replace(/```poster-html[\s\S]*?```/g, '')
+    .replace(/```publish-card[\s\S]*?```/g, '')
+    .trim()
+  return marked.parse(cleaned) as string
 }
 
 function formatToolName(name: string) {
@@ -246,7 +307,7 @@ async function sendMessage() {
         'x-erp-token': token,
         'x-agent-id': props.agentId,
       },
-      body: JSON.stringify({ messages: history, agentId: props.agentId, brandContext: brandStore.systemPrompt, ...(props.contextData || {}) }),
+      body: JSON.stringify({ messages: history, agentId: props.agentId, brandContext: brandStore.systemPrompt, productImages: brandStore.brand?.productImages || [], ...(props.contextData || {}) }),
     })
 
     if (!resp.ok) {
@@ -285,6 +346,13 @@ async function sendMessage() {
               if (!assistantMsg.images) assistantMsg.images = []
               assistantMsg.images.push(ev.result.slice(10))
             }
+            if (ev.result && typeof ev.result === 'string' && ev.result.startsWith('VIDEO_TASK:')) {
+              const taskId = ev.result.slice(11)
+              if (!assistantMsg.videoTasks) assistantMsg.videoTasks = []
+              const task: VideoTask = { taskId, status: 'pending' }
+              assistantMsg.videoTasks.push(task)
+              pollVideoTask(task, assistantMsg)
+            }
             messages.value = [...messages.value]
           } else if (ev.type === 'error') {
             lastError.value = ev.error
@@ -301,8 +369,29 @@ async function sendMessage() {
     streaming.value = false
     emit('streaming-change', false)
     emit('message-sent')
+    processSpecialBlocks(assistantMsg)
+    emit('message-complete', { publishCard: assistantMsg.publishCard, posterHtml: assistantMsg.posterHtml })
     messages.value = [...messages.value]
     await scrollBottom()
+  }
+}
+
+async function pollVideoTask(task: VideoTask, msg: ChatMessage) {
+  const maxAttempts = 60
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 3000))
+    try {
+      const resp = await fetch('/api/video-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: task.taskId }),
+      })
+      const data = await resp.json() as any
+      task.status = data.status === 'done' ? 'done' : data.status === 'failed' ? 'failed' : 'processing'
+      if (data.video_url) task.videoUrl = data.video_url
+      messages.value = [...messages.value]
+      if (task.status === 'done' || task.status === 'failed') break
+    } catch { break }
   }
 }
 
@@ -544,6 +633,12 @@ defineExpose({ sendQuickPrompt, clearChat })
 .step-text :deep(blockquote) { border-left: 3px solid var(--faint, #e2e8f0); padding-left: 10px; color: var(--mid, #64748b); margin: 6px 0; }
 .step-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .step-image { max-width: 100%; border-radius: 6px; border: 1px solid var(--faint, #e2e8f0); cursor: pointer; display: block; }
+.step-videos { margin-top: 8px; }
+.video-task-card { background: #f5f5f7; border-radius: 8px; padding: 10px; margin-bottom: 6px; }
+.step-video { width: 100%; max-width: 320px; border-radius: 6px; display: block; }
+.video-dl { display: inline-block; margin-top: 6px; font-size: 12px; color: #6366f1; }
+.video-status { font-size: 12px; color: rgba(29,29,31,0.5); }
+.video-status.failed { color: #ef4444; }
 
 .step-tool {
   display: inline-flex;
