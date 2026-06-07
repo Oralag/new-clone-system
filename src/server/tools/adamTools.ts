@@ -503,4 +503,24 @@ export const adamTools = [
       properties: {},
     },
   },
+
+  // ── KDP 出版业务 ──
+  {
+    name: 'write_kdp_book',
+    description: '自动完成KDP电子书的完整流程：选题调研→写书稿→质疑官审核→存入发布队列+图书馆。审核通过后通知你上传。可指定细分方向，不指定则自主选题。',
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        niche_hint: { type: 'string' as const, description: '细分方向提示（可选），如"freelance designer passive income"；不填则亚当自主选题' },
+      },
+    },
+  },
+  {
+    name: 'check_kdp_queue',
+    description: '查看KDP发布队列——哪些书已写完等待你上传，哪些还在生产中。',
+    parameters: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
 ]

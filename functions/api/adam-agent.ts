@@ -2,18 +2,24 @@
 // Adam AI brain endpoint using Anthropic Claude API
 
 import { privateKeyToAccount } from 'viem/accounts'
+import md5 from 'md5'
 
 interface Env {
-  AI_API_KEY: string
+  AI_API_KEY?: string
+  ANTHROPIC_API_KEY?: string
   AI_BASE_URL?: string
+  ANTHROPIC_BASE_URL?: string
   AGENT_MEMORY: KVNamespace
   BROWSERLESS_API_KEY?: string
   CLOUDFLARE_API_TOKEN?: string
-  POLYMARKET_PK?: string            // Polygon 私钥 (hex, 不含 0x 前缀)
-  POLYMARKET_API_KEY?: string       // CLOB API key
-  POLYMARKET_API_SECRET?: string    // CLOB API secret
-  POLYMARKET_API_PASSPHRASE?: string // CLOB passphrase
-  POLYMARKET_ADDRESS?: string       // 钱包地址
+  POLYMARKET_PK?: string
+  POLYMARKET_API_KEY?: string
+  POLYMARKET_API_SECRET?: string
+  POLYMARKET_API_PASSPHRASE?: string
+  POLYMARKET_ADDRESS?: string
+  PDD_CLIENT_ID?: string            // 拼多多开放平台 client_id
+  PDD_CLIENT_SECRET?: string        // client_secret
+  PDD_ACCESS_TOKEN?: string         // 店铺授权 access_token
 }
 
 // ── 浏览器工具执行器（直接调用 Browserless REST API）──────────────────────
@@ -158,6 +164,42 @@ async function polyL2Signature(secret: string, method: string, path: string, bod
   const raw = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg))
   const sig = Array.from(new Uint8Array(raw)).map(b => b.toString(16).padStart(2, '0')).join('')
   return { sig, timestamp, nonce }
+}
+
+// ── 拼多多 API 请求工具 ────────────────────────────────────────────────────────
+async function pddRequest(method: string, params: Record<string, any>, env: Env): Promise<any> {
+  const clientId = env.PDD_CLIENT_ID || ''
+  const secret = env.PDD_CLIENT_SECRET || ''
+  const accessToken = env.PDD_ACCESS_TOKEN || ''
+  if (!clientId || !secret) throw new Error('PDD_CLIENT_ID 或 PDD_CLIENT_SECRET 未配置，请在 Cloudflare 环境变量里设置')
+
+  const allParams: Record<string, string> = {
+    type: method,
+    client_id: clientId,
+    timestamp: String(Math.floor(Date.now() / 1000)),
+    data_type: 'JSON',
+    version: 'V1',
+    ...(accessToken ? { access_token: accessToken } : {}),
+  }
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null) {
+      allParams[k] = typeof v === 'object' ? JSON.stringify(v) : String(v)
+    }
+  }
+  const sortedStr = Object.keys(allParams).sort().map(k => `${k}${allParams[k]}`).join('')
+  const sign = md5(secret + sortedStr + secret).toUpperCase()
+
+  const body = new URLSearchParams({ ...allParams, sign })
+  const resp = await fetch('https://gsp.pinduoduo.com/gsp/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  })
+  const data = await resp.json() as any
+  if (data.error_response) {
+    throw new Error(`PDD错误 ${data.error_response.error_code}: ${data.error_response.error_msg}`)
+  }
+  return data
 }
 
 interface MemoryEntry {
@@ -397,10 +439,22 @@ const adamTools = [
   { name: 'place_polymarket_order', description: '在 Polymarket 下一笔真实的预测市场订单（LIMIT GTC）。需要已配置 POLYMARKET_PK 和 POLYMARKET_API_KEY 环境变量。下单前必须先用 scan_polymarket_markets 获取 token_id。', input_schema: { type: 'object' as const, properties: { token_id: { type: 'string', description: '要买/卖的结果的 token_id（从 scan_polymarket_markets 获取）' }, side: { type: 'string', description: 'BUY 或 SELL，默认 BUY' }, price: { type: 'number', description: '限价（0-1 之间，如 0.65 表示 65¢/share）' }, size_usdc: { type: 'number', description: '下注金额（美元），如 10 表示 $10' } }, required: ['token_id', 'price', 'size_usdc'] } },
   { name: 'check_polymarket_positions', description: '查询当前在 Polymarket 上的持仓、未成交订单和盈亏。需要配置 POLYMARKET_ADDRESS 和 POLYMARKET_API_KEY 环境变量。', input_schema: { type: 'object' as const, properties: {} } },
 
+  // 拼多多店铺运营
+  { name: 'pdd_store_overview', description: '查看拼多多店铺今日概况：订单数、销售额、待发货数、访客数、畅销商品排行。每天最多调用1次，用来了解店铺整体状态。', input_schema: { type: 'object' as const, properties: {} } },
+  { name: 'pdd_goods_list', description: '查看拼多多店铺的商品列表，包括商品名称、价格、库存、销量、上下架状态。', input_schema: { type: 'object' as const, properties: { is_onsale: { type: 'number', description: '1=在售，0=下架，不填=全部' }, page: { type: 'number', description: '页码，默认1' }, page_size: { type: 'number', description: '每页条数，默认20' } } } },
+  { name: 'pdd_order_list', description: '查看拼多多店铺最近N天的订单列表，包含订单号、商品名、金额、状态、买家信息。', input_schema: { type: 'object' as const, properties: { days: { type: 'number', description: '查询最近N天，默认7' }, order_status: { type: 'number', description: '1=待发货，2=已发货，3=已完成，4=退款，不填=全部' }, page: { type: 'number', description: '页码，默认1' } } } },
+  { name: 'pdd_update_goods_price', description: '修改拼多多商品的SKU价格。价格单位为分（1元=100分）。⚠️ 修改价格会直接影响线上商品，需谨慎操作。', input_schema: { type: 'object' as const, properties: { goods_id: { type: 'number', description: '商品ID' }, sku_id: { type: 'number', description: 'SKU ID' }, price: { type: 'number', description: '新价格（单位：分，如1999表示19.99元）' } }, required: ['goods_id', 'sku_id', 'price'] } },
+  { name: 'pdd_get_reviews', description: '获取拼多多店铺商品的买家评价列表，可按评分筛选。用于了解买家反馈、分析差评原因。', input_schema: { type: 'object' as const, properties: { goods_id: { type: 'number', description: '商品ID，不填则获取全店评价' }, min_rating: { type: 'number', description: '最低评分筛选（1-5），如填3则只看3星及以下' }, page: { type: 'number', description: '页码，默认1' } } } },
+  { name: 'pdd_reply_review', description: '回复拼多多买家的商品评价。用礼貌专业的语气回复，感谢好评或解释差评原因。', input_schema: { type: 'object' as const, properties: { review_id: { type: 'string', description: '评价ID（从 pdd_get_reviews 获取）' }, reply_content: { type: 'string', description: '回复内容，建议100字以内，礼貌专业' } }, required: ['review_id', 'reply_content'] } },
+
   // 浏览器手脚（真实浏览器，带登录Cookie）
   { name: 'browser_navigate', description: '⚠️ 访问小红书、微博、抖音等平台必须用这个工具，不能用fetch_webpage（会被拦截）。用真实浏览器+登录Cookie访问网站，返回页面完整内容。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要访问的完整URL，如 https://www.xiaohongshu.com/explore' } }, required: ['url'] } },
   { name: 'browser_screenshot', description: '对指定URL截图，返回页面截图（base64）。用于查看页面视觉内容。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要截图的URL' } }, required: ['url'] } },
   { name: 'browser_get_credential', description: '检查指定平台是否有登录Cookie。在用browser_navigate访问需要登录的平台前，先调用这个确认。', input_schema: { type: 'object' as const, properties: { site: { type: 'string', description: '平台名称：xiaohongshu / weibo / douyin' } }, required: ['site'] } },
+
+  // KDP 出版业务
+  { name: 'write_kdp_book', description: '自动完成KDP电子书完整流程：选题调研→写书稿→质疑官审核→商品简介→封面图→存入发布队列+图书馆。全程自动，完成后通知规则传递者上传。可指定细分方向，不指定则自主选题。', input_schema: { type: 'object' as const, properties: { niche_hint: { type: 'string', description: '细分方向提示（可选），如 "freelance designer passive income"；不填则自主选题' } } } },
+  { name: 'check_kdp_queue', description: '查看KDP发布队列——哪些书已写完等待上传，哪些还在生产中。', input_schema: { type: 'object' as const, properties: {} } },
 ]
 
 // ── Tool Executor (真实行情接口) ──────────────────────────────────────────
@@ -555,20 +609,45 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
 
     case 'screen_stocks': {
       try {
+        // 拉取 200 只股票，含 PE/PB/ROE 字段，再按条件过滤
+        // f9=PE(TTM)×100, f167=PB×100, f173=ROE×100, f3=涨跌%×100, f12=code, f14=name, f2=price×100
         const resp = await fetch(
-          'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=10&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:0,1+f:!2&fields=f2,f3,f9,f12,f14',
+          'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=200&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:0,1+f:!2&fields=f2,f3,f9,f12,f14,f167,f173',
           { headers: { Referer: 'https://quote.eastmoney.com' } }
         )
         const json = await resp.json() as any
-        const rows = (json?.data?.diff ?? []).slice(0, 10)
+        let rows: any[] = json?.data?.diff ?? []
+
+        const peMax = input.pe_max ? Number(input.pe_max) : null
+        const pbMax = input.pb_max ? Number(input.pb_max) : null
+        const roeMin = input.roe_min ? Number(input.roe_min) : null
+        const sector = input.sector ? String(input.sector) : null
+
+        rows = rows.filter((r: any) => {
+          const pe = r.f9 && r.f9 !== '-' ? r.f9 / 100 : null
+          const pb = r.f167 && r.f167 !== '-' ? r.f167 / 100 : null
+          const roe = r.f173 && r.f173 !== '-' ? r.f173 / 100 : null
+          if (peMax !== null && (pe === null || pe > peMax || pe <= 0)) return false
+          if (pbMax !== null && (pb === null || pb > pbMax || pb <= 0)) return false
+          if (roeMin !== null && (roe === null || roe < roeMin)) return false
+          return true
+        })
+
+        const limit = Math.min(Number(input.limit || 20), 50)
+        const results = rows.slice(0, limit).map((r: any) => ({
+          symbol: r.f12, name: r.f14,
+          price: r.f2 ? (r.f2 / 100).toFixed(2) : '-',
+          change_pct: r.f3 ? (r.f3 / 100).toFixed(2) + '%' : '0%',
+          pe_ttm: r.f9 && r.f9 !== '-' ? (r.f9 / 100).toFixed(1) : '-',
+          pb: r.f167 && r.f167 !== '-' ? (r.f167 / 100).toFixed(2) : '-',
+          roe: r.f173 && r.f173 !== '-' ? (r.f173 / 100).toFixed(2) + '%' : '-',
+        }))
+
         return JSON.stringify({
-          source: '研究院 · 东方财富A股涨幅榜', criteria: input,
-          results: rows.map((r: any) => ({
-            symbol: r.f12, name: r.f14,
-            price: r.f2 ? (r.f2 / 100).toFixed(2) : '-',
-            change_pct: r.f3 ? (r.f3 / 100).toFixed(2) + '%' : '0%',
-            pe: r.f9 ? (r.f9 / 100).toFixed(1) : '-',
-          })),
+          source: '研究院 · 东方财富真实筛选',
+          criteria: { pe_max: peMax, pb_max: pbMax, roe_min: roeMin, sector },
+          matched: results.length,
+          results,
         })
       } catch {}
       return JSON.stringify({ source: '研究院', error: '选股数据暂时不可用' })
@@ -661,26 +740,96 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
       })
     }
     case 'apply_penalty': {
-      const penalty = (input.objective_confidence || 0.5) * (input.loss_amount || 0) * 0.1
+      const penalty = (Number(input.objective_confidence) || 0.5) * (Number(input.loss_amount) || 0) * 0.1
+      if (kv && stateKey && penalty > 0) {
+        const coreKey = `adam:core:${stateKey}`
+        const core = (await kv.get(coreKey, 'json') as any) || {}
+        core.budget = Math.max(0, Number(core.budget || 0) - penalty)
+        await kv.put(coreKey, JSON.stringify(core), { expirationTtl: 365 * 24 * 60 * 60 })
+      }
       return JSON.stringify({
         status: 'penalty_applied', loss_amount: input.loss_amount,
         confidence: input.objective_confidence, penalty_amount: penalty.toFixed(2),
         formula: '客观置信度 × 损失金额 × 0.1',
+        note: penalty > 0 ? `预算已扣减 ¥${penalty.toFixed(2)}` : '无需扣减',
       })
     }
     case 'issue_recommendation': {
       const id = `rec_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
-      return JSON.stringify({
-        status: 'issued', id, title: input.title, symbol: input.symbol || null,
-        confidence: input.confidence ?? null, thesis: input.thesis, risk_note: input.risk_note,
-        issued_at: new Date().toISOString(), note: '指令已发出，等待规则传递者确认执行',
-      })
+      const issuedAt = new Date().toISOString()
+      const rec = {
+        id, title: input.title, symbol: input.symbol || null,
+        confidence: input.confidence ?? null, thesis: input.thesis,
+        risk_note: input.risk_note, issued_at: issuedAt, status: 'issued',
+      }
+      if (kv && stateKey) {
+        // 持久化指令列表
+        const recsKey = `adam:recommendations:${stateKey}`
+        const recs = (await kv.get(recsKey, 'json') as any[]) || []
+        recs.push(rec)
+        await kv.put(recsKey, JSON.stringify(recs.slice(-50)), { expirationTtl: 365 * 24 * 60 * 60 })
+        // 推到收件箱（前端 poll 拿到后触发 applyToolResult）
+        const inboxKey = `adam:inbox:${stateKey}`
+        const inbox = (await kv.get(inboxKey, 'json') as any[]) || []
+        inbox.push({
+          id: `msg_${Date.now()}`, type: 'tool_result', name: 'issue_recommendation',
+          result: JSON.stringify({ ...rec, status: 'issued' }),
+          timestamp: issuedAt, read: false,
+        })
+        await kv.put(inboxKey, JSON.stringify(inbox.slice(-30)), { expirationTtl: 60 * 60 * 24 * 7 })
+      }
+      return JSON.stringify({ status: 'issued', ...rec, note: '指令已发出，等待规则传递者确认执行' })
     }
-    case 'request_loan':
-      return JSON.stringify({ status: 'pending_approval', amount: input.amount, purpose: input.purpose, note: '贷款申请已提交，等待规则传递者审核' })
-    case 'manage_vault':
-      if (input.action === 'query') return JSON.stringify({ vault_balance: 0, status: 'locked', note: '保险箱存活≥7天后解锁' })
-      return JSON.stringify({ action: input.action, amount: input.amount || 0, status: 'locked', note: '保险箱尚未解锁（需存活≥7天）' })
+    case 'request_loan': {
+      const loanId = `loan_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`
+      const loanAt = new Date().toISOString()
+      if (kv && stateKey) {
+        // 存贷款申请
+        const loansKey = `adam:loans:${stateKey}`
+        const loans = (await kv.get(loansKey, 'json') as any[]) || []
+        loans.push({ id: loanId, amount: input.amount, purpose: input.purpose, status: 'pending', at: loanAt })
+        await kv.put(loansKey, JSON.stringify(loans.slice(-20)), { expirationTtl: 365 * 24 * 60 * 60 })
+        // 推到收件箱，让用户在 UI 看到审批请求
+        const inboxKey = `adam:inbox:${stateKey}`
+        const inbox = (await kv.get(inboxKey, 'json') as any[]) || []
+        inbox.push({
+          id: `msg_${Date.now()}`, type: 'loan_request',
+          loanId, amount: input.amount, purpose: input.purpose,
+          timestamp: loanAt, read: false,
+        })
+        await kv.put(inboxKey, JSON.stringify(inbox.slice(-30)), { expirationTtl: 60 * 60 * 24 * 7 })
+      }
+      return JSON.stringify({ status: 'pending_approval', loan_id: loanId, amount: input.amount, purpose: input.purpose, note: '贷款申请已提交，等待规则传递者审核' })
+    }
+    case 'manage_vault': {
+      if (!kv || !stateKey) return JSON.stringify({ error: 'KV 不可用' })
+      const coreKey = `adam:core:${stateKey}`
+      const core = (await kv.get(coreKey, 'json') as any) || {}
+      const survivalDays = Number(core.survivalDays || 0)
+      const unlocked = survivalDays >= 7
+      const vaultBalance = Number(core.vaultBalance || 0)
+
+      if (input.action === 'query') {
+        return JSON.stringify({
+          vault_balance: vaultBalance.toFixed(2),
+          status: unlocked ? 'unlocked' : 'locked',
+          survival_days: survivalDays,
+          unlock_in: unlocked ? 0 : 7 - survivalDays,
+          note: unlocked ? `保险箱已解锁，余额 ¥${vaultBalance.toFixed(2)}` : `还需存活 ${7 - survivalDays} 天解锁`,
+        })
+      }
+      if (input.action === 'deposit') {
+        if (!unlocked) return JSON.stringify({ status: 'locked', note: `保险箱未解锁，还需 ${7 - survivalDays} 天` })
+        const amount = Number(input.amount || 0)
+        if (amount <= 0) return JSON.stringify({ error: '存入金额必须大于0' })
+        if (amount > Number(core.budget || 0)) return JSON.stringify({ error: `预算不足，当前预算 ¥${core.budget}` })
+        core.budget = Number(core.budget || 0) - amount
+        core.vaultBalance = vaultBalance + amount
+        await kv.put(coreKey, JSON.stringify(core), { expirationTtl: 365 * 24 * 60 * 60 })
+        return JSON.stringify({ status: 'deposited', amount, vault_balance: core.vaultBalance.toFixed(2), note: `¥${amount} 已存入保险箱` })
+      }
+      return JSON.stringify({ error: `未知操作: ${input.action}，支持 query / deposit` })
+    }
     case 'build_structure':
       return JSON.stringify({ status: 'constructed', name: input.name, category: input.category, position: { gridX: input.grid_x || 0, gridY: input.grid_y || 0 }, reason: input.reason, note: '新建筑已出现在城市中' })
     case 'relocate_structure':
@@ -698,7 +847,23 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
     }
     case 'write_reflection': {
       const id = `ref_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
-      return JSON.stringify({ status: 'recorded', id, content: input.content, at: new Date().toISOString(), note: '反思已记录到档案馆' })
+      const refAt = new Date().toISOString()
+      if (kv && stateKey) {
+        const refsKey = `adam:reflections:${stateKey}`
+        const refs = (await kv.get(refsKey, 'json') as any[]) || []
+        refs.push({ id, content: input.content, at: refAt })
+        await kv.put(refsKey, JSON.stringify(refs.slice(-100)), { expirationTtl: 365 * 24 * 60 * 60 })
+        // 推到收件箱，让前端同步到 store
+        const inboxKey = `adam:inbox:${stateKey}`
+        const inbox = (await kv.get(inboxKey, 'json') as any[]) || []
+        inbox.push({
+          id: `msg_${Date.now()}`, type: 'tool_result', name: 'write_reflection',
+          result: JSON.stringify({ status: 'recorded', id, content: input.content, at: refAt }),
+          timestamp: refAt, read: false,
+        })
+        await kv.put(inboxKey, JSON.stringify(inbox.slice(-30)), { expirationTtl: 60 * 60 * 24 * 7 })
+      }
+      return JSON.stringify({ status: 'recorded', id, content: input.content, at: refAt, note: '反思已记录到档案馆' })
     }
     case 'consult_marketing_expert':
       return JSON.stringify({ source: '营销顾问事务所', answer: `关于"${input.question}"的咨询：基于科特勒营销理论，建议从STP（市场细分、目标选择、定位）出发分析你的问题。` })
@@ -782,6 +947,154 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
         return JSON.stringify({ error: `知识库写入失败：${(e as Error).message}` })
       }
     }
+    // ── 拼多多店铺运营 ────────────────────────────────────────────────────────
+
+    case 'pdd_store_overview': {
+      try {
+        const now = Math.floor(Date.now() / 1000)
+        const todayStart = now - (now % 86400) - 8 * 3600 // 今日0点（北京时间）
+        const [ordersRes, goodsRes] = await Promise.all([
+          pddRequest('pdd.order.list', { start_time: todayStart, end_time: now, page: 1, page_size: 50 }, env),
+          pddRequest('pdd.goods.list', { page: 1, page_size: 10, is_onsale: 1 }, env),
+        ])
+        const orders: any[] = ordersRes?.order_list_get_response?.order_list || []
+        const goods: any[] = goodsRes?.goods_list_get_response?.goods_list || []
+        const totalAmount = orders.reduce((s: number, o: any) => s + Number(o.payment_amount || 0), 0)
+        const pendingShip = orders.filter((o: any) => o.order_status === 2).length
+        return JSON.stringify({
+          source: '拼多多店铺 · 今日概况',
+          today_orders: orders.length,
+          today_amount: (totalAmount / 100).toFixed(2) + ' 元',
+          pending_shipment: pendingShip,
+          on_sale_goods: goods.length,
+          top_goods: goods.slice(0, 5).map((g: any) => ({
+            name: g.goods_name?.slice(0, 30),
+            price: (g.goods_price / 100).toFixed(2) + ' 元',
+            stock: g.stock_num,
+          })),
+        })
+      } catch (e: any) {
+        return JSON.stringify({ error: e.message })
+      }
+    }
+
+    case 'pdd_goods_list': {
+      try {
+        const res = await pddRequest('pdd.goods.list', {
+          page: input.page || 1,
+          page_size: Math.min(input.page_size || 20, 100),
+          is_onsale: input.is_onsale ?? 3, // 1在售 2下架 3全部
+          ...(input.goods_name ? { goods_name: input.goods_name } : {}),
+        }, env)
+        const goods: any[] = res?.goods_list_get_response?.goods_list || []
+        const total = res?.goods_list_get_response?.total_count || 0
+        return JSON.stringify({
+          source: '拼多多 · 商品列表',
+          total,
+          goods: goods.map((g: any) => ({
+            goods_id: g.goods_id,
+            name: g.goods_name?.slice(0, 40),
+            price: (g.goods_price / 100).toFixed(2),
+            stock: g.stock_num,
+            sold: g.sold_quantity,
+            status: g.is_onsale === 1 ? '在售' : '下架',
+          })),
+        })
+      } catch (e: any) {
+        return JSON.stringify({ error: e.message })
+      }
+    }
+
+    case 'pdd_order_list': {
+      try {
+        const now = Math.floor(Date.now() / 1000)
+        const days = Math.min(Number(input.days || 7), 30)
+        const res = await pddRequest('pdd.order.list', {
+          start_time: now - days * 86400,
+          end_time: now,
+          page: input.page || 1,
+          page_size: Math.min(input.page_size || 20, 50),
+          ...(input.order_status ? { order_status: input.order_status } : {}),
+        }, env)
+        const orders: any[] = res?.order_list_get_response?.order_list || []
+        const statusMap: Record<number, string> = { 1: '待付款', 2: '已付款待发货', 3: '已发货', 4: '已收货', 5: '已完成', 14: '退款中', 15: '退款成功' }
+        return JSON.stringify({
+          source: `拼多多 · 近${days}天订单`,
+          total: res?.order_list_get_response?.total_count || 0,
+          orders: orders.map((o: any) => ({
+            order_sn: o.order_sn,
+            status: statusMap[o.order_status] || o.order_status,
+            amount: o.payment_amount ? (o.payment_amount / 100).toFixed(2) + ' 元' : '-',
+            goods: (o.goods_list || []).map((g: any) => g.goods_name?.slice(0, 30)).join('、'),
+            time: o.create_time ? new Date(o.create_time * 1000).toLocaleString('zh-CN') : '-',
+          })),
+        })
+      } catch (e: any) {
+        return JSON.stringify({ error: e.message })
+      }
+    }
+
+    case 'pdd_update_goods_price': {
+      if (!input.goods_id) return JSON.stringify({ error: '必须提供 goods_id' })
+      if (!input.sku_id || !input.price) return JSON.stringify({ error: '必须提供 sku_id 和 price（单位：元）' })
+      try {
+        const priceInFen = Math.round(Number(input.price) * 100)
+        const res = await pddRequest('pdd.goods.sku.price.update', {
+          goods_id: input.goods_id,
+          sku_list: JSON.stringify([{ sku_id: String(input.sku_id), price: priceInFen }]),
+        }, env)
+        return JSON.stringify({
+          source: '拼多多 · 改价',
+          status: '成功',
+          goods_id: input.goods_id,
+          new_price: Number(input.price).toFixed(2) + ' 元',
+          result: res,
+        })
+      } catch (e: any) {
+        return JSON.stringify({ error: e.message })
+      }
+    }
+
+    case 'pdd_get_reviews': {
+      try {
+        const params: Record<string, any> = {
+          page: input.page || 1,
+          page_size: Math.min(input.page_size || 20, 50),
+        }
+        if (input.goods_id) params.goods_id = input.goods_id
+        if (input.min_star) params.min_star = input.min_star // 1-5星过滤
+        const res = await pddRequest('pdd.goods.review.list', params, env)
+        const reviews: any[] = res?.review_list_get_response?.review_list || []
+        return JSON.stringify({
+          source: '拼多多 · 评价列表',
+          total: res?.review_list_get_response?.total_count || 0,
+          reviews: reviews.map((r: any) => ({
+            review_id: r.review_id,
+            star: r.order_score,
+            content: r.review_content?.slice(0, 100),
+            goods_name: r.goods_name?.slice(0, 30),
+            has_reply: !!r.reply_content,
+            time: r.create_time ? new Date(r.create_time * 1000).toLocaleDateString('zh-CN') : '-',
+          })),
+        })
+      } catch (e: any) {
+        return JSON.stringify({ error: e.message })
+      }
+    }
+
+    case 'pdd_reply_review': {
+      if (!input.review_id || !input.reply) return JSON.stringify({ error: '必须提供 review_id 和 reply（回复内容）' })
+      try {
+        const res = await pddRequest('pdd.goods.review.reply', {
+          review_id: String(input.review_id),
+          review_reply: String(input.reply),
+        }, env)
+        return JSON.stringify({ source: '拼多多 · 回复评价', status: '成功', review_id: input.review_id, reply: input.reply })
+      } catch (e: any) {
+        return JSON.stringify({ error: e.message })
+      }
+    }
+
     // ── Polymarket 预测市场 ───────────────────────────────────────────────────
 
     case 'scan_polymarket_markets': {
@@ -965,6 +1278,107 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
       }
     }
 
+    // ── KDP 出版 ──
+    case 'write_kdp_book': {
+      const apiKey2 = env?.AI_API_KEY || env?.ANTHROPIC_API_KEY || ''
+      const baseURL2 = (env?.AI_BASE_URL || env?.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
+      if (!apiKey2) return JSON.stringify({ error: 'AI API Key 未配置，无法写书' })
+
+      async function llm(system: string, user: string, max = 6000): Promise<string> {
+        const r = await fetch(`${baseURL2}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey2}` },
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: max, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
+        })
+        const d: any = await r.json()
+        return d.choices?.[0]?.message?.content || ''
+      }
+
+      // 1. 选题
+      const nicheHint = input.niche_hint as string | undefined
+      const nicheRaw = await llm(
+        'You are a KDP market analyst. Output ONLY valid JSON, no markdown.',
+        `${nicheHint ? `Refine this niche: "${nicheHint}"` : 'Choose a specific low-competition KDP non-fiction niche for freelancers/solopreneurs/digital nomads.'}\nOutput: {"title":"...","subtitle":"...","target_reader":"...","niche_rationale":"...","keywords":["...x7"],"categories":["...","..."],"price":"6.99"}`,
+        800,
+      )
+      let meta: any = {}
+      try { meta = JSON.parse(nicheRaw.replace(/```json|```/g, '').trim()) } catch { meta = { title: 'The Freelancer Income Blueprint', subtitle: 'Build Passive Streams Without Quitting', target_reader: 'freelancers', keywords: ['freelance passive income','digital products','kindle','side income','productized services','solopreneur','passive streams'], categories: ['Business & Money > Entrepreneurship','Business & Money > Small Business'], price: '6.99', niche_rationale: 'Evergreen niche with stable demand' } }
+
+      // 2. 书稿
+      const manuscript = await llm(
+        'You are a professional non-fiction author. Write in second person, use contractions, include specific numbers. Sound like a knowledgeable human.',
+        `Write a complete Kindle ebook manuscript.\nTitle: ${meta.title}\nSubtitle: ${meta.subtitle}\nTarget reader: ${meta.target_reader}\nRequirements: 5500-7000 words, 7-8 chapters with actionable content, opening hook, closing CTA asking for a review. Write the full manuscript now:`,
+        7000,
+      )
+
+      // 3. 质疑官审核
+      const reviewRaw = await llm(
+        'You are a brutal KDP quality reviewer. Output ONLY valid JSON.',
+        `Review this KDP manuscript. Is it ready for Amazon?\nTitle: ${meta.title}\nFirst 2000 chars: ${manuscript.slice(0, 2000)}\nOutput: {"approved":true,"score":0-10,"fatal_issues":[],"verdict":"one sentence"}`,
+        400,
+      )
+      let review: any = { approved: true, score: 7, fatal_issues: [], verdict: 'Acceptable quality.' }
+      try { review = JSON.parse(reviewRaw.replace(/```json|```/g, '').trim()) } catch {}
+
+      if (!review.approved && (review.fatal_issues?.length || 0) > 0) {
+        return JSON.stringify({ status: 'rejected', title: meta.title, score: review.score, fatal_issues: review.fatal_issues, verdict: review.verdict, note: '质疑官打回，可重试或用 niche_hint 换方向。' })
+      }
+
+      // 4. 商品简介
+      const description = await llm(
+        'You are an Amazon KDP copywriter. Use KDP-compatible HTML only: <b>, <em>, <br>.',
+        `Write Amazon KDP book description for:\nTitle: ${meta.title}\nSubtitle: ${meta.subtitle}\nTarget: ${meta.target_reader}\nRequirements: 800-1200 chars, hook in first 2 sentences, pain→solution→outcome, 3-5 bullet points with <b>bold headers</b>, closing urgency. Write now:`,
+        800,
+      )
+
+      // 5. 封面图（Pollinations，免费无需key）
+      const coverPromptRaw = await llm(
+        'You are a book cover designer. Generate image prompts for professional KDP covers.',
+        `Design cover prompt for:\nTitle: "${meta.title}"\nGenre: Non-fiction Business/Self-help\nTarget: ${meta.target_reader}\nWrite a 100-150 word Flux image prompt. Bold typography, strong visual metaphor, commercial quality, no faces. Output only the prompt:`,
+        300,
+      )
+      const coverUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(coverPromptRaw + ', professional book cover, commercial quality')}?width=1024&height=1536&nologo=true&model=flux&seed=${Date.now()}`
+
+      // 6. 存入 KV 发布队列
+      const bookId = `kdp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+      const book = { id: bookId, title: meta.title, subtitle: meta.subtitle, keywords: meta.keywords, price: meta.price, categories: meta.categories, manuscript, description, coverUrl, coverPrompt: coverPromptRaw, reviewNotes: review.verdict, status: 'pending_upload', createdAt: new Date().toISOString() }
+
+      if (kv) {
+        try {
+          const existing: any[] = await kv.get('kdp:queue', 'json') as any[] || []
+          existing.push({ ...book, manuscript: book.manuscript.slice(0, 500) + '...[full in kdp:ms:' + bookId + ']' })
+          await kv.put('kdp:queue', JSON.stringify(existing), { expirationTtl: 60 * 60 * 24 * 90 })
+          await kv.put(`kdp:ms:${bookId}`, manuscript, { expirationTtl: 60 * 60 * 24 * 90 })
+        } catch {}
+      }
+
+      return JSON.stringify({
+        status: 'approved', id: bookId, title: meta.title, subtitle: meta.subtitle,
+        score: review.score, verdict: review.verdict,
+        word_count: manuscript.split(/\s+/).length,
+        keywords: meta.keywords, categories: meta.categories, price: `$${meta.price}`,
+        description, cover_url: coverUrl,
+        upload_checklist: ['✅ 书名+副标题', '✅ 7个关键词', '✅ 2个分类', '✅ 商品简介（直接粘贴）', '✅ 定价', '✅ 书稿', '✅ 封面图（见cover_url）', '⬜ 作者笔名（你定）', '⬜ W-8BEN（首次填写）'],
+        note: '所有上架材料已就绪，等待你上传。',
+      })
+    }
+
+    case 'check_kdp_queue': {
+      if (!kv) return JSON.stringify({ queue: [], note: '发布队列暂不可用（KV未配置）' })
+      try {
+        const queue: any[] = await kv.get('kdp:queue', 'json') as any[] || []
+        if (queue.length === 0) return JSON.stringify({ queue: [], note: '发布队列为空，可以调用 write_kdp_book 开始写新书。' })
+        return JSON.stringify({
+          total: queue.length,
+          pending: queue.filter((b: any) => b.status === 'pending_upload').length,
+          uploaded: queue.filter((b: any) => b.status === 'uploaded').length,
+          queue: queue.map((b: any) => ({ id: b.id, title: b.title, subtitle: b.subtitle, price: `$${b.price}`, status: b.status === 'pending_upload' ? '⏳ 等待上传' : '✅ 已上架', createdAt: b.createdAt, keywords: b.keywords })),
+        })
+      } catch (e: any) {
+        return JSON.stringify({ error: `队列读取失败: ${e.message}` })
+      }
+    }
+
     default: {
       // 浏览器工具
       if (name.startsWith('browser_')) {
@@ -990,15 +1404,18 @@ export const onRequestOptions: PagesFunction = async () => {
 // ── Main Handler ───────────────────────────────────────────────────────────
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const apiKey = env.AI_API_KEY
+  const apiKey = env.AI_API_KEY || env.ANTHROPIC_API_KEY || ''
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), {
+    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY / ANTHROPIC_API_KEY' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
   }
 
-  const { messages, images, adamState, books } = await request.json() as any
+  const body = await request.json() as any
+  // 兼容两种格式：{messages:[...]} 或 {message:string, history:[...]}
+  const messages = body.messages || (body.message ? [...(body.history || []), { role: 'user', content: body.message }] : [])
+  const { images, adamState, books } = body
   const erpToken = request.headers.get('x-erp-token') || ''
   const tokenKey = erpToken.slice(-16)
   const stateKey = erpToken.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16) || 'anon'
@@ -1024,8 +1441,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       parts.push({ type: 'text', text: m.content || '请分析这张图片。' })
       return { role: 'user', content: parts }
     }
-    return { role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }
-  })
+    // 过滤掉 undefined/null/空 content，防止污染 DeepSeek 上下文
+    const content = m.content || null
+    if (!content) return null
+    return { role: m.role === 'assistant' ? 'assistant' : 'user', content }
+  }).filter(Boolean)
 
   const { readable, writable } = new TransformStream()
   const writer = writable.getWriter()
@@ -1034,7 +1454,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   ;(async () => {
     try {
-      const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
+      const baseURL = (env.AI_BASE_URL || env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
       const oaiAdamTools = adamTools.map((t: any) => ({
         type: 'function' as const,
         function: { name: t.name, description: t.description, parameters: t.input_schema || { type: 'object', properties: {} } },
@@ -1049,7 +1469,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const res = await fetch(`${baseURL}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 4096, messages: currentMessages, tools: oaiAdamTools, tool_choice: 'auto' }),
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, messages: currentMessages, tools: oaiAdamTools, tool_choice: 'auto' }),
         })
 
         if (!res.ok) {

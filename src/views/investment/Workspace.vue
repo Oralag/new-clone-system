@@ -420,7 +420,11 @@ let pollTimer: number | undefined
 function loadHistoryFromStorage() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY)
-    if (raw) messages.value = JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      // 过滤掉 content 为 undefined/null/纯"undefined"字符串的坏消息
+      messages.value = parsed.filter((m: any) => m.content && m.content !== 'undefined' && !m.content.match(/^(undefined)+$/))
+    }
   } catch { /* ignore */ }
 }
 
@@ -494,7 +498,11 @@ async function handleSend() {
   }
 
   try {
-    const body: any = { message: text, history: messages.value.slice(-20).map(m => ({ role: m.role, content: m.content })) }
+    const cleanHistory = messages.value
+      .filter(m => m.content && !/^(undefined)+$/.test(m.content) && m.content !== 'undefined')
+      .slice(-20)
+      .map(m => ({ role: m.role, content: m.content }))
+    const body: any = { message: text, history: cleanHistory }
     if (sentImages.length) body.images = sentImages.map(i => ({ data: i.data, mediaType: i.mediaType }))
 
     const res = await fetch('/api/adam-agent', {
@@ -524,15 +532,15 @@ async function handleSend() {
         try {
           const ev = JSON.parse(raw)
           if (ev.type === 'text') {
-            assistantMsg.content += ev.content
+            assistantMsg.content += (ev.text ?? ev.content ?? '')
             scrollToBottom()
           } else if (ev.type === 'tool_start') {
             assistantMsg.toolCalls!.push({ id: ev.id, name: ev.name, input: ev.input, status: 'running' })
             scrollToBottom()
           } else if (ev.type === 'tool_result') {
             const tc = assistantMsg.toolCalls!.find(t => t.id === ev.id)
-            if (tc) { tc.status = ev.isError ? 'error' : 'success'; tc.result = ev.content }
-            if (!ev.isError) applyToolResult(ev.name, ev.input, ev.content, adamStore)
+            if (tc) { tc.status = ev.isError ? 'error' : 'success'; tc.result = ev.result ?? ev.content }
+            if (!ev.isError) applyToolResult(adamStore, ev.name, ev.result ?? ev.content ?? '')
             scrollToBottom()
           }
         } catch { /* ignore parse */ }

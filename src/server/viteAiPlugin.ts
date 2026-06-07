@@ -7,7 +7,7 @@ import { executeTool } from './tools/toolExecutor'
 import { handleRealtimeUpgrade } from './realtimeRelay'
 import { getAgent, AGENTS } from './agents/agentRegistry'
 import { adamTools } from './tools/adamTools'
-import { executeAdamTool } from './tools/adamExecutor'
+import { executeAdamTool, kdpPublishQueue } from './tools/adamExecutor'
 import { adamAgent } from './agents/adamOrchestrator'
 import { detectIntent, getSystemPrompt } from './agents/orchestrator'
 
@@ -1300,6 +1300,51 @@ ${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，�
       })
 
       // ── 多平台发布接口 ────────────────────────────────────────────────────────
+      // ── /api/kdp/queue — KDP 发布队列 ──────────────────────────────────────
+      server.middlewares.use('/api/kdp/queue', async (req: any, res: any, next: any) => {
+        const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, PATCH', 'Access-Control-Allow-Headers': 'Content-Type' }
+        if (req.method === 'OPTIONS') { res.writeHead(200, cors); res.end(); return }
+
+        // GET — 查询队列
+        if (req.method === 'GET') {
+          res.writeHead(200, { 'Content-Type': 'application/json', ...cors })
+          res.end(JSON.stringify({
+            total: kdpPublishQueue.length,
+            books: kdpPublishQueue.map(b => ({
+              id: b.id, title: b.title, subtitle: b.subtitle,
+              price: b.price, keywords: b.keywords, categories: b.categories,
+              status: b.status, createdAt: b.createdAt,
+              manuscript_preview: b.manuscript.slice(0, 300) + '...',
+            })),
+          }))
+          return
+        }
+
+        // PATCH — 标记已上架 / 获取完整书稿
+        if (req.method === 'PATCH') {
+          const chunks: Buffer[] = []
+          for await (const chunk of req as any) chunks.push(chunk)
+          const { id, action } = JSON.parse(Buffer.concat(chunks).toString())
+          const book = kdpPublishQueue.find(b => b.id === id)
+          if (!book) { res.writeHead(404, { 'Content-Type': 'application/json', ...cors }); res.end(JSON.stringify({ error: '书不存在' })); return }
+
+          if (action === 'get_manuscript') {
+            res.writeHead(200, { 'Content-Type': 'application/json', ...cors })
+            res.end(JSON.stringify({ id: book.id, title: book.title, manuscript: book.manuscript }))
+            return
+          }
+          if (action === 'mark_uploaded') {
+            book.status = 'uploaded'
+            res.writeHead(200, { 'Content-Type': 'application/json', ...cors })
+            res.end(JSON.stringify({ status: 'ok', message: `《${book.title}》已标记为已上架` }))
+            return
+          }
+          res.writeHead(400, { 'Content-Type': 'application/json', ...cors }); res.end(JSON.stringify({ error: '未知 action' })); return
+        }
+
+        next()
+      })
+
       server.middlewares.use('/api/publish', async (req: any, res: any, next: any) => {
         if (req.method === 'OPTIONS') {
           res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' })
