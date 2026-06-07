@@ -99,6 +99,61 @@
       </div>
     </section>
 
+    <!-- 拼多多直连模态框 -->
+    <div v-if="pddModal" class="modal-mask" @click.self="pddModal = false">
+      <div class="modal-box">
+        <div class="modal-title">直连拼多多开放平台</div>
+        <div class="modal-sub">
+          在
+          <a href="https://open.pinduoduo.com/application/developermanage" target="_blank" class="modal-link">拼多多开放平台</a>
+          创建应用，获取以下三项凭证后填入
+        </div>
+
+        <div class="modal-form">
+          <div class="form-row">
+            <label>Client ID（App Key）</label>
+            <input v-model="pddClientId" class="form-input" placeholder="开放平台应用的 Client ID" />
+            <div class="form-hint">开放平台 → 应用管理 → 应用详情 → Client ID</div>
+          </div>
+
+          <div class="form-row">
+            <label>Client Secret</label>
+            <input v-model="pddClientSecret" class="form-input" type="password" placeholder="Client Secret" />
+          </div>
+
+          <div class="form-row">
+            <label>Access Token</label>
+            <div class="token-row">
+              <input v-model="pddAccessToken" class="form-input token-input" placeholder="店铺授权后获取的 access_token" />
+              <button
+                class="oauth-btn"
+                :disabled="!pddClientId"
+                :title="pddClientId ? '跳转 PDD 授权页获取 token' : '请先填写 Client ID'"
+                @click="startOAuth"
+              >去授权</button>
+            </div>
+            <div class="form-hint">
+              先填好 Client ID，点「去授权」在新标签完成授权后 token 会自动写入；
+              也可在 PDD 开放平台手动复制 access_token 填入
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label>店铺名称 <span class="label-opt">选填</span></label>
+            <input v-model="pddShopName" class="form-input" placeholder="如：我的拼多多旗舰店" />
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="modal-cancel" @click="pddModal = false">取消</button>
+          <button class="modal-confirm" :disabled="pddSaving" @click="savePddConfig">
+            {{ pddSaving ? '保存中...' : '保存并接入' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 其他平台中间件模态框 -->
     <div v-if="configPlatform" class="modal-mask" @click.self="configPlatform = null">
       <div class="modal-box">
         <div class="modal-title">通过中间件接入 {{ configPlatform.name }}</div>
@@ -155,13 +210,110 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePlatforms } from '@/composables/usePlatforms'
 import type { Platform } from '@/composables/usePlatforms'
 
 const { platforms } = usePlatforms()
+const route = useRoute()
 
+// ── 拼多多直连 ──────────────────────────────────────────────────────────────
+const pddModal = ref(false)
+const pddClientId = ref('')
+const pddClientSecret = ref('')
+const pddAccessToken = ref('')
+const pddShopName = ref('')
+const pddSaving = ref(false)
+
+const PDD_OAUTH_CALLBACK = `${location.origin}/api/pdd/oauth-callback`
+
+function openPddModal() {
+  // 预填已保存的 client_id（不回填 secret）
+  fetch('/api/pdd/config').then(r => r.json()).then((d: any) => {
+    if (d.client_id) pddClientId.value = d.client_id
+    if (d.shop_name) pddShopName.value = d.shop_name
+  }).catch(() => {})
+  pddModal.value = true
+}
+
+function startOAuth() {
+  if (!pddClientId.value.trim()) return
+  const authUrl = `https://mms.pinduoduo.com/open.html?response_type=token&client_id=${encodeURIComponent(pddClientId.value.trim())}&redirect_uri=${encodeURIComponent(PDD_OAUTH_CALLBACK)}&state=pdd_auth`
+  window.open(authUrl, '_blank', 'width=900,height=700')
+}
+
+async function savePddConfig() {
+  if (!pddClientId.value.trim() || !pddClientSecret.value.trim()) {
+    ElMessage({ message: '请填写 Client ID 和 Client Secret', type: 'warning' })
+    return
+  }
+  if (!pddAccessToken.value.trim()) {
+    ElMessage({ message: '请填写 Access Token（点「去授权」获取）', type: 'warning' })
+    return
+  }
+  pddSaving.value = true
+  try {
+    const res = await fetch('/api/pdd/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: pddClientId.value.trim(),
+        client_secret: pddClientSecret.value.trim(),
+        access_token: pddAccessToken.value.trim(),
+        shop_name: pddShopName.value.trim(),
+      }),
+    })
+    const data = await res.json() as any
+    if (!res.ok) throw new Error(data.error || '保存失败')
+
+    const pdd = platforms.value.find(p => p.id === 'pdd')!
+    pdd.connected = true
+    pdd.shopName = pddShopName.value.trim() || '我的拼多多店铺'
+    pddModal.value = false
+    ElMessage({ message: '拼多多直连配置已保存，订单数据开始同步', type: 'success' })
+  } catch (e: any) {
+    ElMessage({ message: e.message, type: 'error' })
+  } finally {
+    pddSaving.value = false
+  }
+}
+
+async function disconnectPdd() {
+  try {
+    await ElMessageBox.confirm(
+      '断开后将删除已保存的 PDD 凭证，停止同步订单数据，已有数据不受影响。',
+      '断开拼多多',
+      { confirmButtonText: '确认断开', cancelButtonText: '取消', type: 'warning' },
+    )
+    await fetch('/api/pdd/config', { method: 'DELETE' })
+    const pdd = platforms.value.find(p => p.id === 'pdd')!
+    pdd.connected = false
+    pdd.shopName = ''
+    ElMessage({ message: '拼多多已断开', type: 'info' })
+  } catch {
+    // 用户取消
+  }
+}
+
+// OAuth 回调后携带 ?pdd_auth=success，检测并提示
+onMounted(() => {
+  if (route.query.pdd_auth === 'success') {
+    fetch('/api/pdd/config').then(r => r.json()).then((d: any) => {
+      const pdd = platforms.value.find(p => p.id === 'pdd')
+      if (pdd && d.configured && d.has_access_token) {
+        pdd.connected = true
+        if (d.shop_name) pdd.shopName = d.shop_name
+      }
+    }).catch(() => {})
+    ElMessage({ message: 'PDD 授权成功，access_token 已保存', type: 'success' })
+  } else if (route.query.pdd_auth === 'fail') {
+    ElMessage({ message: 'PDD 授权失败，请重试', type: 'error' })
+  }
+})
+
+// ── 其他平台（中间件模式）──────────────────────────────────────────────────
 const MIDDLEWARES = [
   {
     value: 'wdt',
@@ -188,20 +340,20 @@ const MIDDLEWARES = [
 
 const FAQS = [
   {
-    q: '需要自己去平台申请开发者资质吗？',
-    a: '不需要。中间件持有各平台的服务商资质，你只需在中间件后台扫码授权店铺即可，无需直接面对平台的开发者申请流程。',
+    q: '拼多多是直连还是中间件？',
+    a: '拼多多使用直连模式——通过拼多多开放平台的 OAuth 授权，直接调用官方 API 拉取订单和商品数据，无需中间件。',
   },
   {
-    q: '中间件收费吗？',
-    a: '旺店通和聚水潭均提供试用版本，商业版按功能模块和订单量收费，具体价格建议直接咨询两家官网获取最新报价。',
+    q: '其他平台需要自己申请开发者资质吗？',
+    a: '不需要。其他平台通过旺店通/聚水潭等中间件接入，中间件持有服务商资质，你只需在中间件后台扫码授权店铺即可。',
   },
   {
     q: '数据同步有延迟吗？',
-    a: '默认每30分钟轮询同步一次。中间件支持 Webhook 实时推送（1-5分钟内），需在中间件后台开启对应配置。',
+    a: '默认按需拉取，每次进入订单页自动请求最新数据。中间件支持 Webhook 实时推送（1-5分钟内），需在中间件后台开启。',
   },
   {
     q: '平台数据安全吗？',
-    a: '中间件仅读取订单、库存、物流数据，不涉及资金操作。各平台的 OAuth 授权可随时在平台端撤销，数据访问完全可控。',
+    a: '凭证加密存储在 Cloudflare KV，仅读取订单、库存、物流数据，不涉及资金操作。OAuth 授权可随时在平台端撤销。',
   },
 ]
 
@@ -212,10 +364,14 @@ const formSecret = ref('')
 const formShop = ref('')
 
 const currentMiddleware = computed(
-  () => MIDDLEWARES.find(m => m.value === formMiddleware.value) ?? MIDDLEWARES[0]
+  () => MIDDLEWARES.find(m => m.value === formMiddleware.value) ?? MIDDLEWARES[0],
 )
 
 function handleConnect(p: Platform) {
+  if (p.id === 'pdd') {
+    openPddModal()
+    return
+  }
   configPlatform.value = p
   formMiddleware.value = 'wdt'
   formKey.value = ''
@@ -224,11 +380,15 @@ function handleConnect(p: Platform) {
 }
 
 async function handleDisconnect(p: Platform) {
+  if (p.id === 'pdd') {
+    await disconnectPdd()
+    return
+  }
   try {
     await ElMessageBox.confirm(
       `断开后将停止从 ${p.name} 同步数据，已有数据不受影响。`,
       `断开 ${p.name}`,
-      { confirmButtonText: '确认断开', cancelButtonText: '取消', type: 'warning' }
+      { confirmButtonText: '确认断开', cancelButtonText: '取消', type: 'warning' },
     )
     p.connected = false
     p.shopName = ''
@@ -602,5 +762,44 @@ function confirmConnect() {
   font-weight: 700;
   color: #fff;
   cursor: pointer;
+}
+
+.modal-confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.modal-link {
+  color: #0f766e;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.token-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.token-input {
+  flex: 1;
+}
+
+.oauth-btn {
+  border: none;
+  background: linear-gradient(135deg, #e02020, #f97316);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.oauth-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>

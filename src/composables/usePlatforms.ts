@@ -9,9 +9,9 @@ export interface Platform {
   features: string[]
   connected: boolean
   shopName?: string
+  directConnect?: boolean  // true = 直连模式，false/undefined = 中间件模式
 }
 
-// Module-level ref — shared across all components that import this
 const platforms = ref<Platform[]>([
   {
     id: 'taobao', name: '淘宝天猫', emoji: '🛍', color: '#ff5000',
@@ -30,6 +30,7 @@ const platforms = ref<Platform[]>([
     desc: '拼多多店铺，支持商城和直播',
     features: ['订单同步', '库存推送', '退款处理'],
     connected: false,
+    directConnect: true,
   },
   {
     id: 'douyin', name: '抖音小店', emoji: '🎵', color: '#161823',
@@ -75,6 +76,27 @@ const platforms = ref<Platform[]>([
   },
 ])
 
+let pddChecked = false
+
+async function checkPddStatus() {
+  if (pddChecked) return
+  pddChecked = true
+  try {
+    const res = await fetch('/api/pdd/config')
+    if (res.ok) {
+      const data = await res.json() as any
+      const pdd = platforms.value.find(p => p.id === 'pdd')
+      if (pdd) {
+        pdd.connected = data.configured && data.has_access_token
+        if (data.shop_name) pdd.shopName = data.shop_name
+      }
+    }
+  } catch {
+    // 离线或未部署时忽略
+  }
+}
+
 export function usePlatforms() {
+  checkPddStatus()
   return { platforms }
 }

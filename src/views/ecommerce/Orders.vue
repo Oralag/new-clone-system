@@ -59,6 +59,12 @@
 
     <section class="orders-list">
       <div v-if="loading" class="empty-state">加载中...</div>
+      <div v-else-if="notConfigured" class="empty-state config-tip">
+        <div class="tip-icon">🔌</div>
+        <div class="tip-text">拼多多尚未接入</div>
+        <div class="tip-sub">请先在「平台接入」页保存 PDD 开放平台凭证</div>
+        <button class="ghost-btn" style="margin-top:12px" @click="router.push('/ecommerce/platforms')">去接入 →</button>
+      </div>
       <div v-else-if="!orders.length" class="empty-state">暂无匹配到订单。</div>
       <div v-else>
         <div v-for="order in orders" :key="order.id" class="order-card">
@@ -109,8 +115,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import http from '@/api/http'
 
 const router = useRouter()
 const loading = ref(false)
@@ -118,9 +122,10 @@ const orders = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+const notConfigured = ref(false)
 
 const filter = reactive({
-  platform: '',
+  platform: 'pdd',  // 目前只有 PDD 直连，默认筛选 PDD
   status: '',
   dateRange: [] as string[],
   keyword: '',
@@ -131,10 +136,15 @@ const stats = ref({ total: 0, pending: 0, shipped: 0, completed: 0, refunded: 0 
 const platformMap: Record<string, { name: string; color: string }> = {
   taobao: { name: '淘宝', color: '#ff5000' },
   jd: { name: '京东', color: '#e2231a' },
-  pdd: { name: '拼多多', color: '#e2231a' },
-  douyin: { name: '抖音', color: '#000000' },
-  kuaishou: { name: '快手', color: '#ff0000' },
+  pdd: { name: '拼多多', color: '#e02020' },
+  douyin: { name: '抖音', color: '#161823' },
+  kuaishou: { name: '快手', color: '#ff6600' },
   wxd: { name: '微信小店', color: '#07c160' },
+}
+
+// PDD 状态码 → 通用状态
+const PDD_STATUS_MAP: Record<string, number> = {
+  pending: 2, shipped: 3, completed: 5, refunded: 14,
 }
 
 const statusMap: Record<string, string> = {
@@ -146,34 +156,65 @@ function getPlatformName(p: string) { return platformMap[p]?.name || p }
 function getPlatformColor(p: string) { return platformMap[p]?.color || '#999' }
 function getStatusText(s: string) { return statusMap[s] || s }
 
+// 日期范围 → 天数（最近 N 天）
+function datesToDays(): number {
+  if (filter.dateRange?.length === 2 && filter.dateRange[0]) {
+    const start = new Date(filter.dateRange[0]).getTime()
+    return Math.max(1, Math.ceil((Date.now() - start) / 86400000))
+  }
+  return 7
+}
+
 onMounted(() => {
   loadOrders()
 })
 
 async function loadOrders() {
   loading.value = true
+  notConfigured.value = false
   try {
-    const r = await http.post('/erp/ecommerce/orders', {
-      page: page.value,
-      pageSize: pageSize.value,
-      platform: filter.platform,
-      status: filter.status,
-      keyword: filter.keyword,
-      startDate: filter.dateRange?.[0],
-      endDate: filter.dateRange?.[1],
-    }, { silent: true })
-    orders.value = r.data?.list || []
-    total.value = r.data?.total || 0
-    if (r.data?.stats) stats.value = r.data.stats
-  } catch { orders.value = [] }
-  finally { loading.value = false }
+    // 当前只支持 PDD 直连，其他平台暂时显示空
+    if (filter.platform && filter.platform !== 'pdd') {
+      orders.value = []
+      total.value = 0
+      return
+    }
+
+    const params = new URLSearchParams({
+      page: String(page.value),
+      page_size: String(pageSize.value),
+      days: String(datesToDays()),
+    })
+    if (filter.status) params.set('order_status', String(PDD_STATUS_MAP[filter.status] ?? ''))
+    if (filter.keyword) params.set('keyword', filter.keyword)
+
+    const res = await fetch(`/api/pdd/orders?${params}`)
+    const data = await res.json() as any
+
+    if (!res.ok) {
+      if (data.not_configured) {
+        notConfigured.value = true
+        orders.value = []
+        return
+      }
+      throw new Error(data.error || '拉取失败')
+    }
+
+    orders.value = data.list || []
+    total.value = data.total || 0
+    if (data.stats) stats.value = data.stats
+  } catch (e: any) {
+    orders.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
-function shipOrder(order: any) {
+function shipOrder(_order: any) {
   router.push('/sale/out')
 }
 
-function viewOrder(order: any) {
+function viewOrder(_order: any) {
   router.push('/sale/contract')
 }
 </script>
@@ -396,6 +437,21 @@ function viewOrder(order: any) {
   color: #94a3b8;
   font-size: 13px;
 }
+
+.config-tip {
+  padding: 48px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.94);
+  border-radius: 20px;
+  border: 1px solid rgba(148,163,184,0.14);
+}
+
+.tip-icon { font-size: 36px; margin-bottom: 4px; }
+.tip-text { font-size: 16px; font-weight: 700; color: #0f172a; }
+.tip-sub  { font-size: 13px; color: #64748b; }
 
 .ghost-btn {
   border: 1px solid rgba(148, 163, 184, 0.2);
