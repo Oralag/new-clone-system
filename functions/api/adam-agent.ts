@@ -1285,13 +1285,13 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
       if (!apiKey2) return JSON.stringify({ error: 'AI API Key 未配置，无法写书' })
 
       async function llm(system: string, user: string, max = 6000): Promise<string> {
-        const r = await fetch(`${baseURL2}/v1/chat/completions`, {
+        const r = await fetch(`${baseURL2}/v1/messages`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey2}` },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: max, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey2, 'Authorization': `Bearer ${apiKey2}`, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: max, system, messages: [{ role: 'user', content: user }] }),
         })
         const d: any = await r.json()
-        return d.choices?.[0]?.message?.content || ''
+        return d.content?.[0]?.text || d.error?.message || ''
       }
 
       // 1. 选题
@@ -1455,21 +1455,26 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   ;(async () => {
     try {
       const baseURL = (env.AI_BASE_URL || env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
-      const oaiAdamTools = adamTools.map((t: any) => ({
-        type: 'function' as const,
-        function: { name: t.name, description: t.description, parameters: t.input_schema || { type: 'object', properties: {} } },
-      }))
 
-      let currentMessages: any[] = [
-        { role: 'system', content: systemPrompt },
-        ...oaiMessages,
-      ]
+      // 使用 Anthropic 原生格式（/v1/messages）
+      let convMessages: any[] = [...oaiMessages]
 
       for (let i = 0; i < 5; i++) {
-        const res = await fetch(`${baseURL}/v1/chat/completions`, {
+        const res = await fetch(`${baseURL}/v1/messages`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, messages: currentMessages, tools: oaiAdamTools, tool_choice: 'auto' }),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'Authorization': `Bearer ${apiKey}`,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: convMessages,
+            tools: adamTools,
+          }),
         })
 
         if (!res.ok) {
@@ -1479,24 +1484,26 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         }
 
         const data: any = await res.json()
-        const choice = data.choices?.[0]
-        if (!choice) break
+        const stopReason = data.stop_reason
+        const contentBlocks: any[] = data.content || []
 
-        const assistantText = choice.message?.content || ''
+        const assistantText = contentBlocks.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
         if (assistantText) await send({ type: 'text', text: assistantText })
 
-        if (choice.finish_reason !== 'tool_calls' || !choice.message?.tool_calls?.length) break
+        const toolUseBlocks = contentBlocks.filter((b: any) => b.type === 'tool_use')
+        if (stopReason !== 'tool_use' || toolUseBlocks.length === 0) break
 
-        const toolCalls = choice.message.tool_calls
-        currentMessages.push({ role: 'assistant', content: assistantText || null, tool_calls: toolCalls })
+        // assistant 消息含完整 content 块
+        convMessages.push({ role: 'assistant', content: contentBlocks })
 
-        const toolResults: any[] = []
-        for (const tc of toolCalls) {
+        // 处理所有工具调用，收集结果
+        const toolResultContent: any[] = []
+        for (const tc of toolUseBlocks) {
           const callId = tc.id
-          const name = tc.function.name
-          const input = JSON.parse(tc.function.arguments || '{}')
+          const name = tc.name
+          const input = tc.input || {}
           await send({ type: 'tool_start', id: callId, name, input })
-          const result = await executeAdamTool(name, input || {}, books, env.AGENT_MEMORY, stateKey, env)
+          const result = await executeAdamTool(name, input, books, env.AGENT_MEMORY, stateKey, env)
           await send({ type: 'tool_result', id: callId, name, result })
 
           if (name === 'consult_marketing_expert' && erpToken && env.AGENT_MEMORY) {
@@ -1531,10 +1538,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
             } catch {}
           }
 
-          toolResults.push({ role: 'tool', tool_call_id: callId, content: result })
+          toolResultContent.push({ type: 'tool_result', tool_use_id: callId, content: result })
         }
 
-        currentMessages = [...currentMessages, ...toolResults]
+        // 所有工具结果合并为一条 user 消息（Anthropic 格式要求）
+        convMessages.push({ role: 'user', content: toolResultContent })
       }
 
       await writer.write(encoder.encode('data: [DONE]\n\n'))
