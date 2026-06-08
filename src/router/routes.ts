@@ -36,6 +36,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/contract/view/:id', name: 'SaleContractView', component: () => import('@/views/sale/ContractView.vue'), meta: { title: '查看合同' } },
       { path: 'sale/out', name: 'SaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'SaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
+      { path: 'sale/mini-orders', name: 'MiniOrders', component: () => import('@/views/sale/MiniOrders.vue'), meta: { title: '小程序订单' } },
+      { path: 'sale/mini-videos', name: 'MiniVideos', component: () => import('@/views/sale/MiniVideos.vue'), meta: { title: '看看视频管理' } },
+      { path: 'sale/mini-qrcode', name: 'MiniQrcode', component: () => import('@/views/sale/MiniQrcode.vue'), meta: { title: '包装二维码' } },
 
       // Retail
       { path: 'retail/overview', name: 'RetailOverview', component: () => import('@/views/retail/RetailOverview.vue'), meta: { title: '零售总览' } },
@@ -323,7 +326,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'BrandIndex', component: () => import('@/views/brand/Index.vue'), meta: { title: 'NOMADIC DAIRY', public: true } },
       { path: 'retail', name: 'BrandRetail', component: () => import('@/views/brand/Index.vue'), meta: { title: '零售商城 - NOMADIC DAIRY', public: true } },
-      { path: 'wholesale', name: 'BrandWholesale', component: () => import('@/views/brand/Index.vue'), meta: { title: '采购商主页 - NOMADIC DAIRY', public: true } },
+      { path: 'wholesale', name: 'BrandWholesale', component: () => import('@/views/brand/Wholesale.vue'), meta: { title: '批发合作 - NOMADIC DAIRY', public: true } },
       { path: 'products', name: 'BrandProducts', component: () => import('@/views/brand/Products.vue'), meta: { title: '全部产品 - NOMADIC DAIRY', public: true } },
       { path: 'product/:id', name: 'BrandProductDetail', component: () => import('@/views/brand/ProductDetail.vue'), meta: { title: '产品详情 - NOMADIC DAIRY', public: true } },
       { path: 'cart', name: 'BrandCart', component: () => import('@/views/brand/Cart.vue'), meta: { title: '购物车 - NOMADIC DAIRY', public: true } },
@@ -349,7 +352,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'designer', name: 'InvestmentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
       { path: 'archive', name: 'InvestmentArchive', component: () => import('@/views/investment/Archive.vue'), meta: { title: '档案馆' } },
       { path: 'library', name: 'InvestmentLibrary', component: () => import('@/views/investment/Library.vue'), meta: { title: '图书馆' } },
-      { path: 'workspace', redirect: '/investment/city' },
+      { path: 'workspace', name: 'InvestmentWorkspace', component: () => import('@/views/investment/Workspace.vue'), meta: { title: '与亚当对话' } },
     ],
   },
   {

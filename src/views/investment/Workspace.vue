@@ -423,7 +423,15 @@ function loadHistoryFromStorage() {
     if (raw) {
       const parsed = JSON.parse(raw)
       // 过滤掉 content 为 undefined/null/纯"undefined"字符串的坏消息
-      messages.value = parsed.filter((m: any) => m.content && m.content !== 'undefined' && !m.content.match(/^(undefined)+$/))
+      messages.value = parsed.filter((m: any) => {
+        if (!m.content || !m.role) return false
+        const c = String(m.content).trim()
+        // 过滤掉纯由 "undefined" 重复组成的坏消息（各种变体）
+        if (!c || /^(\s*undefined\s*)+$/i.test(c)) return false
+        // 过滤掉以 "undefined" 开头的消息（未来防污染）
+        if (/^undefined/i.test(c)) return false
+        return true
+      })
     }
   } catch { /* ignore */ }
 }
@@ -499,7 +507,12 @@ async function handleSend() {
 
   try {
     const cleanHistory = messages.value
-      .filter(m => m.content && !/^(undefined)+$/.test(m.content) && m.content !== 'undefined')
+      .filter(m => {
+        if (!m.content || !m.role) return false
+        const c = String(m.content).trim()
+        if (!c || /^(\s*undefined\s*)+$/i.test(c) || /^undefined/i.test(c)) return false
+        return true
+      })
       .slice(-20)
       .map(m => ({ role: m.role, content: m.content }))
     const body: any = { message: text, history: cleanHistory }
@@ -541,6 +554,9 @@ async function handleSend() {
             const tc = assistantMsg.toolCalls!.find(t => t.id === ev.id)
             if (tc) { tc.status = ev.isError ? 'error' : 'success'; tc.result = ev.result ?? ev.content }
             if (!ev.isError) applyToolResult(adamStore, ev.name, ev.result ?? ev.content ?? '')
+            scrollToBottom()
+          } else if (ev.type === 'error') {
+            assistantMsg.content += `\n[错误: ${ev.error}]`
             scrollToBottom()
           }
         } catch { /* ignore parse */ }
