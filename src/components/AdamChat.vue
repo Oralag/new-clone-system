@@ -160,10 +160,24 @@ watch(() => adamStore.chatOpen, (val) => {
 let pollTimer: number | undefined
 
 onMounted(async () => {
+  // 版本升级时清除污染历史
+  const VER_KEY = getScopedStorageKey('adam_chat_v3')
+  if (!localStorage.getItem(VER_KEY)) {
+    localStorage.removeItem(getScopedStorageKey(HISTORY_KEY))
+    localStorage.setItem(VER_KEY, '1')
+  }
+
   // 先从本地缓存快速渲染，再从云端拉最新
   try {
     const raw = localStorage.getItem(getScopedStorageKey(HISTORY_KEY))
-    if (raw) messages.value = JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      messages.value = parsed.filter((m: any) => {
+        if (!m.content || !m.role) return false
+        const c = String(m.content).trim()
+        return c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c)
+      })
+    }
   } catch { /* ignore */ }
 
   // 从云端拉取（跨设备同步）
@@ -321,8 +335,9 @@ async function handleSend() {
   }
 
   try {
+    const isCleanContent = (c: string) => c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c)
     const apiMessages = messages.value
-      .filter((m) => m.role === 'user' || (m.role === 'assistant' && m.content))
+      .filter((m) => (m.role === 'user' || m.role === 'assistant') && isCleanContent(m.content))
       .slice(-20)
       .map((m) => ({ role: m.role, content: m.content }))
 

@@ -296,6 +296,7 @@
           </button>
         </div>
         <input ref="fileInputRef" type="file" accept="image/*" multiple style="display:none" @change="onFileChange"/>
+        <div style="font-size:9px;color:#888;text-align:right;padding:2px 8px 0;opacity:0.5;">v2026-06-08c</div>
       </div>
     </div>
 
@@ -402,7 +403,14 @@ function formatBudget(v: number) {
 
 // ── 对话逻辑（复用 AdamChat 的核心逻辑） ──
 const HISTORY_KEY = 'adam_chat_history'
+const HISTORY_VERSION = 'adam_chat_v2'
 const MAX_HISTORY = 80
+
+// 首次加载时若版本不匹配，清除旧的污染历史
+if (!localStorage.getItem(HISTORY_VERSION)) {
+  localStorage.removeItem(HISTORY_KEY)
+  localStorage.setItem(HISTORY_VERSION, '1')
+}
 
 interface ToolCallState { id: string; name: string; input: Record<string, any>; status: 'running' | 'success' | 'error'; result?: string }
 interface ImageItem { previewUrl: string; data: string; mediaType: string }
@@ -545,7 +553,9 @@ async function handleSend() {
         try {
           const ev = JSON.parse(raw)
           if (ev.type === 'text') {
-            assistantMsg.content += (ev.text ?? ev.content ?? '')
+            // DEBUG: 临时显示原始字段值，用于排查
+            const debugVal = `[t=${JSON.stringify(ev.text)},c=${JSON.stringify(ev.content)}]`
+            assistantMsg.content += debugVal + (ev.text ?? ev.content ?? '')
             scrollToBottom()
           } else if (ev.type === 'tool_start') {
             assistantMsg.toolCalls!.push({ id: ev.id, name: ev.name, input: ev.input, status: 'running' })
