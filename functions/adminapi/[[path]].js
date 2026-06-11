@@ -1,7 +1,9 @@
 // Cloudflare Pages Function — /adminapi/[[path]]
 // Handles KV-based register/login, chat API, and proxies other requests to backend
+// v2 — trial isolation: each trial user gets their own isolated account on TRIAL_BACKEND
 
 const DEFAULT_BACKEND = 'https://erp-server-xsji.onrender.com'
+const TRIAL_BACKEND = 'https://erp-trial.onrender.com'
 
 // Paths that trial users MUST be able to call (auth / user info)
 const TRIAL_PASSTHROUGH = [
@@ -27,8 +29,9 @@ function corsHeaders() {
 }
 
 function jsonRes(data, status = 200) {
-  const body = { code: 1, data }
-  return new Response(JSON.stringify(body), {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
   })
 }
 
@@ -91,6 +94,33 @@ function retailOrderOverrideKey(backend, id) {
   return `retail_order_override:${backend}:${id}`
 }
 
+// Tenant-namespaced KV key — each account gets its own data space
+function kvKey(account, key) {
+  return account ? `${account}:${key}` : key
+}
+
+// Try to log a trial user into their own isolated backend account.
+// 1. Direct login (account already exists on backend).
+// 2. If that fails, register them first then retry.
+// Returns the backend realToken on success, null on failure.
+async function tryGetOwnToken(backend, account, password, companyName) {
+  try {
+    const data = await loginBackend(backend, { account, password })
+    if (data.code === 1) return data.data.token
+  } catch {}
+  // Account doesn't exist on backend yet — create it, then retry once
+  try {
+    await fetch(`${backend}/adminapi/login/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company_name: companyName, account, password }),
+    })
+    const data2 = await loginBackend(backend, { account, password })
+    if (data2.code === 1) return data2.data.token
+  } catch {}
+  return null
+}
+
 async function applyRetailOrderOverrides(data, env, backend) {
   const rows = data?.data?.rows
   if (!env.USERS_KV || !Array.isArray(rows) || rows.length === 0) return data
@@ -126,6 +156,11 @@ function getUserId(request) {
       const payload = JSON.parse(json)
       if (payload.admin_id || payload.userId || payload.id) {
         return payload.admin_id || payload.userId || payload.id
+      }
+      // Trial users: use phone number (payload.a) as unique ID to avoid
+      // all trial accounts sharing the same master admin_id
+      if (payload.trial && payload.a) {
+        return payload.a
       }
       if (payload.t) {
         token = payload.t
@@ -206,24 +241,12 @@ async function getUserInfo(userId, env) {
       }
     }
   } catch {}
-  // 3. Fallback: 尝试旧 API
-  try {
-    const res = await fetch(`https://saas.mzth.cn/adminapi/admin/Admin/index?admin_id=${userId}`, {
-      headers: { 'Content-Type': 'application/json' }
-    })
-    const data = await res.json()
-    if (data?.data?.rows?.[0]) {
-      const u = data.data.rows[0]
-      const info = { name: u.name || u.account, position: u.position || '成员', dept: u.dept || '' }
-      await env.USERS_KV.put(`user_info:${userId}`, JSON.stringify(info), { expirationTtl: 3600 })
-      return info
-    }
-  } catch {}
   return { name: `用户${userId}`, position: '成员' }
 }
 
-async function logOperation(env, userId, actionType, actionName, extra = {}) {
-  const raw = await env.USERS_KV.get('operation_logs')
+async function logOperation(env, userId, account, actionType, actionName, extra = {}) {
+  const logsKey = kvKey(account, 'operation_logs')
+  const raw = await env.USERS_KV.get(logsKey)
   let logs = []
   try { logs = raw ? JSON.parse(raw) : [] } catch { logs = [] }
   logs.push({
@@ -235,7 +258,7 @@ async function logOperation(env, userId, actionType, actionName, extra = {}) {
     created_at: new Date().toISOString(),
   })
   if (logs.length > 10000) logs.splice(0, logs.length - 10000)
-  await env.USERS_KV.put('operation_logs', JSON.stringify(logs))
+  await env.USERS_KV.put(logsKey, JSON.stringify(logs))
 }
 
 // Agent IDs（虚拟用户）
@@ -350,13 +373,14 @@ async function getContactIds(request, env, userId) {
 
 async function handleChatGroups(request, env) {
   const userId = getUserId(request)
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
   const url = new URL(request.url)
   const listRows = parseInt(url.searchParams.get('list_rows') || '50')
   const page = parseInt(url.searchParams.get('page') || '1')
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
 
   // 只保留：自己是成员 OR 是自己发起的
@@ -375,7 +399,7 @@ async function handleChatGroups(request, env) {
     sampleGroup: userGroups[0] || null,
   } : null
 
-  const msgRaw = await env.USERS_KV.get('chat_messages')
+  const msgRaw = await env.USERS_KV.get(kvKey(account, 'chat_messages'))
   const msgMap = msgRaw ? JSON.parse(msgRaw) : {}
 
   const result = (await Promise.all(userGroups.map(async g => {
@@ -402,6 +426,7 @@ async function handleChatGroups(request, env) {
 async function handleCreateGroup(request, env) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
   let body
   try { body = await request.json() } catch { return errRes('请求格式错误') }
@@ -414,7 +439,7 @@ async function handleCreateGroup(request, env) {
   const invalid = member_ids.filter(id => !contactIds.has(String(id)))
   if (invalid.length > 0) return errRes(`成员 ${invalid[0]} 不在通讯录中`)
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
 
   const newId = nowMs() + Math.floor(Math.random() * 1000)
@@ -434,16 +459,16 @@ async function handleCreateGroup(request, env) {
 
   groups.push(newGroup)
 
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   memberMap[newId] = allMembers
 
   await Promise.all([
-    env.USERS_KV.put('chat_groups', JSON.stringify(groups)),
-    env.USERS_KV.put('chat_members', JSON.stringify(memberMap)),
+    env.USERS_KV.put(kvKey(account, 'chat_groups'), JSON.stringify(groups)),
+    env.USERS_KV.put(kvKey(account, 'chat_members'), JSON.stringify(memberMap)),
   ])
 
-  await logOperation(env, userId, 'chat_create', `创建群聊「${name}」`, { group_id: newId, group_name: name })
+  await logOperation(env, userId, account, 'chat_create', `创建群聊「${name}」`, { group_id: newId, group_name: name })
 
   // 先立即返回，Agent 欢迎消息异步发（不阻塞建群响应）
   const result = jsonSuccess({ ...newGroup, member_ids: allMembers.map(m => m.user_id), unread: 0, last_message: '' })
@@ -460,13 +485,14 @@ async function handleCreateGroup(request, env) {
 async function handleGetGroup(request, env) {
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
   const group = groups.find(g => g.id === groupId)
   if (!group) return errRes('群不存在')
 
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const members = memberRaw ? JSON.parse(memberRaw)[groupId] || [] : []
 
   const membersWithInfo = await Promise.all(members.map(async m => {
@@ -482,6 +508,7 @@ async function handleGetGroup(request, env) {
 
 async function handleGetMessages(request, env) {
   const userId = getUserId(request)
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
   const url = new URL(request.url)
   const groupId = extractGroupId(request.url)
   const listRows = parseInt(url.searchParams.get('list_rows') || '50')
@@ -489,7 +516,20 @@ async function handleGetMessages(request, env) {
 
   if (!groupId) return errRes('群不存在')
 
-  const raw = await env.USERS_KV.get('chat_messages')
+  // 跨租户私聊：消息存全局 xt_msg:{groupId}
+  const groupsCheckRaw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
+  const groupsCheck = groupsCheckRaw ? JSON.parse(groupsCheckRaw) : []
+  const groupCheck = groupsCheck.find(g => String(g.id) === String(groupId))
+  if (groupCheck?.cross_tenant) {
+    const xtRaw = await env.USERS_KV.get(`xt_msg:${groupId}`)
+    let allMsgs = xtRaw ? JSON.parse(xtRaw) : []
+    if (afterId) allMsgs = allMsgs.filter(m => m.id > afterId)
+    const msgs = allMsgs.slice(-listRows)
+    if (userId) await env.USERS_KV.put(`chat_unread:${userId}:${groupId}`, '0')
+    return jsonSuccess({ rows: msgs, total: msgs.length })
+  }
+
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_messages'))
   const msgMap = raw ? JSON.parse(raw) : {}
   let allMsgs = msgMap[groupId] || []
 
@@ -542,7 +582,7 @@ function extractProductKeywords(text) {
 }
 
 // 🤖 Agent 自动回复触发器
-async function triggerAgentReplies(groupId, senderId, content, memberIds, env, erpCtx = null) {
+async function triggerAgentReplies(groupId, senderId, content, memberIds, env, erpCtx = null, account = '') {
   // 找出群里的 Agent 成员（排除发送者）
   console.log(`[AgentReply] group=${groupId}, sender=${senderId}, allMembers=${JSON.stringify(memberIds)}, hasApiKey=${!!env.ANTHROPIC_API_KEY}`)
   const agentIds = memberIds.filter(id => AGENT_IDS.has(String(id)) && String(id) !== String(senderId))
@@ -552,13 +592,9 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
   }
   console.log(`[AgentReply] found agents: ${JSON.stringify(agentIds)}`)
 
-  // 获取历史消息作为上下文（最近 8 条，全部作为 user 角色带发言人名字，避免AI误认身份）
-  const raw = await env.USERS_KV.get('chat_messages')
+  // 获取历史消息
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_messages'))
   const msgMap = raw ? JSON.parse(raw) : {}
-  const history = (msgMap[groupId] || []).slice(-50).map(m => ({
-    role: 'user',
-    content: `[${m.sender_name}]: ${m.content}`
-  }))
 
   // 为每个 Agent 调用 AI（只取第一个有效 Agent，避免串行超时）
   const isWelcome = content === '__group_created__'
@@ -624,6 +660,22 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
       continue
     }
     console.log(`[AgentReply] calling AI for ${agentId}...`)
+
+    // 按当前 agent 视角构建历史：自己的消息用 assistant role（不加前缀），别人的用 user role
+    const rawHistory = (msgMap[groupId] || []).slice(-20)
+    const history = []
+    for (const m of rawHistory) {
+      const isMe = String(m.sender_id) === String(agentId)
+      const role = isMe ? 'assistant' : 'user'
+      const content = isMe ? m.content : `[${m.sender_name}]: ${m.content}`
+      if (history.length > 0 && history[history.length - 1].role === role) {
+        history[history.length - 1].content += '\n' + content
+      } else {
+        history.push({ role, content })
+      }
+    }
+    // Anthropic 要求第一条必须是 user
+    if (history.length > 0 && history[0].role === 'assistant') history.shift()
 
     // 欢迎消息 vs 正常回复
     const userMessage = isWelcome
@@ -805,6 +857,8 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
       }
 
       if (!replyText) { console.error(`[AgentReply] empty reply for ${agentId}`); continue }
+      // 去掉 AI 可能生成的 [名字]: 前缀，防止下一轮历史里前缀累加
+      replyText = replyText.replace(/^\[.+?\]:\s*/m, '').trim()
       console.log(`[AgentReply] ${agentId} replied: ${replyText.slice(0, 50)}...`)
       // 永久记录 agentId 和 replyText 前100字符，用于调试
       await env.USERS_KV.put('last_agent_reply', JSON.stringify({ agentId, replyText: replyText.slice(0,120), has_record: replyText.includes('📋 已记录：'), ts: new Date().toISOString() }), { expirationTtl: 3600 })
@@ -821,20 +875,20 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
         created_at: now,
       }
 
-      const raw2 = await env.USERS_KV.get('chat_messages')
+      const raw2 = await env.USERS_KV.get(kvKey(account, 'chat_messages'))
       const msgMap2 = raw2 ? JSON.parse(raw2) : {}
       if (!msgMap2[groupId]) msgMap2[groupId] = []
       msgMap2[groupId].push(agentMsg)
-      await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap2))
+      await env.USERS_KV.put(kvKey(account, 'chat_messages'), JSON.stringify(msgMap2))
 
       // 更新群最后消息
-      const groupsRaw = await env.USERS_KV.get('chat_groups')
+      const groupsRaw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
       const groups = groupsRaw ? JSON.parse(groupsRaw) : []
       const idx = groups.findIndex(g => g.id === groupId)
       if (idx !== -1) {
         groups[idx].last_message_at = now
         groups[idx].last_message = replyText.slice(0, 100)
-        await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+        await env.USERS_KV.put(kvKey(account, 'chat_groups'), JSON.stringify(groups))
       }
 
       // 给群成员加未读（除了 Agent 自己）
@@ -860,7 +914,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
 
         // 1. 写入待办
         if (taskTitle2) {
-          const plansRaw = await env.USERS_KV.get('work_plans')
+          const plansRaw = await env.USERS_KV.get(kvKey(account, 'work_plans'))
           const plans = plansRaw ? JSON.parse(plansRaw) : []
           const nowIso = new Date().toISOString()
           // 避免重复写入（标题+日期相同则跳过）
@@ -879,7 +933,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
               created_at: nowIso,
               updated_at: nowIso,
             })
-            await env.USERS_KV.put('work_plans', JSON.stringify(plans))
+            await env.USERS_KV.put(kvKey(account, 'work_plans'), JSON.stringify(plans))
           }
         }
 
@@ -919,9 +973,9 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
           }
           await env.USERS_KV.put('secretary_dm_debug', JSON.stringify({ assigneeNames, empCount: erpEmployees.length, empNames: erpEmployees.map(u=>u.name||u.admin_name), ts: new Date().toISOString() }), { expirationTtl: 3600 })
 
-          const groupsRaw2 = await env.USERS_KV.get('chat_groups')
+          const groupsRaw2 = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
           const allGroups = groupsRaw2 ? JSON.parse(groupsRaw2) : []
-          const memberMapRaw2 = await env.USERS_KV.get('chat_members')
+          const memberMapRaw2 = await env.USERS_KV.get(kvKey(account, 'chat_members'))
           const allMemberMap = memberMapRaw2 ? JSON.parse(memberMapRaw2) : {}
           let groupsChanged = false
           let memberMapChanged = false
@@ -984,11 +1038,11 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
               type: 'text',
               created_at: new Date().toISOString(),
             }
-            const msgRaw3 = await env.USERS_KV.get('chat_messages')
+            const msgRaw3 = await env.USERS_KV.get(kvKey(account, 'chat_messages'))
             const msgMap3 = msgRaw3 ? JSON.parse(msgRaw3) : {}
             if (!msgMap3[targetGroup.id]) msgMap3[targetGroup.id] = []
             msgMap3[targetGroup.id].push(msgObj)
-            await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap3))
+            await env.USERS_KV.put(kvKey(account, 'chat_messages'), JSON.stringify(msgMap3))
 
             // 更新群最后消息
             const gIdx = allGroups.findIndex(g => String(g.id) === String(targetGroup.id))
@@ -1005,8 +1059,8 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
             console.log(`[Secretary-DM] 已发送通知给 ${userName}, group=${targetGroup.id}`)
           }
           const saves = []
-          if (groupsChanged) saves.push(env.USERS_KV.put('chat_groups', JSON.stringify(allGroups)))
-          if (memberMapChanged) saves.push(env.USERS_KV.put('chat_members', JSON.stringify(allMemberMap)))
+          if (groupsChanged) saves.push(env.USERS_KV.put(kvKey(account, 'chat_groups'), JSON.stringify(allGroups)))
+          if (memberMapChanged) saves.push(env.USERS_KV.put(kvKey(account, 'chat_members'), JSON.stringify(allMemberMap)))
           if (saves.length) await Promise.all(saves)
         }
       }
@@ -1019,6 +1073,7 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
 async function handleSendMessage(request, env) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
@@ -1052,7 +1107,40 @@ async function handleSendMessage(request, env) {
     created_at: now,
   }
 
-  const raw = await env.USERS_KV.get('chat_messages')
+  // 跨租户私聊：消息存全局，并同步双方 last_message
+  const sendGroupsRaw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
+  const sendGroups = sendGroupsRaw ? JSON.parse(sendGroupsRaw) : []
+  const sendGroup = sendGroups.find(g => String(g.id) === String(groupId))
+  if (sendGroup?.cross_tenant) {
+    const xtKey = `xt_msg:${groupId}`
+    const xtRaw = await env.USERS_KV.get(xtKey)
+    const xtMsgs = xtRaw ? JSON.parse(xtRaw) : []
+    xtMsgs.push(msg)
+    if (xtMsgs.length > 2000) xtMsgs.splice(0, xtMsgs.length - 2000)
+    await env.USERS_KV.put(xtKey, JSON.stringify(xtMsgs))
+    // 更新双方 chat_groups 最新消息
+    const otherAccount = sendGroup.other_account
+    for (const acc of [account, otherAccount]) {
+      const gRaw = await env.USERS_KV.get(kvKey(acc, 'chat_groups'))
+      const gs = gRaw ? JSON.parse(gRaw) : []
+      const idx = gs.findIndex(g => String(g.id) === String(groupId))
+      if (idx !== -1) {
+        gs[idx].last_message_at = now
+        gs[idx].last_message = content.trim().slice(0, 100)
+        await env.USERS_KV.put(kvKey(acc, 'chat_groups'), JSON.stringify(gs))
+      }
+    }
+    // 对方未读 +1
+    const otherMembers = (sendGroup.members || []).filter(m => String(m.user_id) !== String(userId))
+    for (const m of otherMembers) {
+      const unreadKey = `chat_unread:${m.user_id}:${groupId}`
+      const cur = parseInt(await env.USERS_KV.get(unreadKey) || '0')
+      await env.USERS_KV.put(unreadKey, String(cur + 1))
+    }
+    return jsonSuccess({ ...msg })
+  }
+
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_messages'))
   const msgMap = raw ? JSON.parse(raw) : {}
   if (!msgMap[groupId]) msgMap[groupId] = []
   msgMap[groupId].push(msg)
@@ -1061,19 +1149,19 @@ async function handleSendMessage(request, env) {
     msgMap[groupId] = msgMap[groupId].slice(-2000)
   }
 
-  await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap))
+  await env.USERS_KV.put(kvKey(account, 'chat_messages'), JSON.stringify(msgMap))
 
-  const groupsRaw = await env.USERS_KV.get('chat_groups')
+  const groupsRaw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = groupsRaw ? JSON.parse(groupsRaw) : []
   const gIdx = groups.findIndex(g => g.id === groupId)
   if (gIdx !== -1) {
     groups[gIdx].last_message_at = now
     groups[gIdx].last_message = content.trim().slice(0, 100)
-    await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+    await env.USERS_KV.put(kvKey(account, 'chat_groups'), JSON.stringify(groups))
   }
 
   // 给群内其他成员增加未读计数
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   // 优先从 chat_members 取，fallback 到 chat_groups 的 member_ids
   let memberIds = (memberMap[groupId] || []).map(m => m.user_id)
@@ -1088,7 +1176,7 @@ async function handleSendMessage(request, env) {
     await env.USERS_KV.put(unreadKey, String(cur + 1))
   }
 
-  await logOperation(env, userId, 'chat_message', content, { group_id: groupId, message_id: msg.id })
+  await logOperation(env, userId, account, 'chat_message', content, { group_id: groupId, message_id: msg.id })
 
   // 🤖 触发 Agent 自动回复（必须在 response 前完成，Pages Functions 返回后 worker 会终止）
   let agentReplyStatus = 'no_agents'
@@ -1101,7 +1189,7 @@ async function handleSendMessage(request, env) {
       // realToken: wrapped token 里解出来的，或者直接用原始 token（普通 JWT）
       const realToken = decoded?.realToken || (rawToken.startsWith('erp_') ? null : rawToken) || null
       const erpCtx = { realToken, backend: decoded?.backend || DEFAULT_BACKEND }
-      await triggerAgentReplies(groupId, userId, content.trim(), memberIds, env, erpCtx)
+      await triggerAgentReplies(groupId, userId, content.trim(), memberIds, env, erpCtx, account)
       agentReplyStatus = 'ok'
     }
   } catch (e) {
@@ -1115,10 +1203,11 @@ async function handleSendMessage(request, env) {
 async function handleChatUnread(request, env) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
 
   let total = 0
@@ -1138,14 +1227,15 @@ async function handlePrivateChat(request, env, targetUserId) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
   if (!targetUserId) return errRes('缺少目标用户')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
   // 验证目标用户在通讯录中
   const contactIds = await getContactIds(request, env, userId)
   if (!contactIds.has(String(targetUserId))) return errRes('该用户不在通讯录中')
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
 
   // 查找已有的2人私聊：成员正好是[userId, targetUserId]
@@ -1179,8 +1269,8 @@ async function handlePrivateChat(request, env, targetUserId) {
   memberMap[newId] = [uid, tid].map(id => ({ user_id: id }))
 
   await Promise.all([
-    env.USERS_KV.put('chat_groups', JSON.stringify(groups)),
-    env.USERS_KV.put('chat_members', JSON.stringify(memberMap)),
+    env.USERS_KV.put(kvKey(account, 'chat_groups'), JSON.stringify(groups)),
+    env.USERS_KV.put(kvKey(account, 'chat_members'), JSON.stringify(memberMap)),
   ])
 
   return jsonSuccess({ ...newGroup, member_ids: [uid, tid], is_private: true, existed: false })
@@ -1189,13 +1279,14 @@ async function handlePrivateChat(request, env, targetUserId) {
 async function handleGetGroupMembers(request, env) {
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
   const group = groups.find(g => g.id === groupId)
   if (!group) return errRes('群不存在')
 
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const members = memberRaw ? JSON.parse(memberRaw)[groupId] || [] : []
 
   const membersWithInfo = await Promise.all(members.map(async m => {
@@ -1209,6 +1300,7 @@ async function handleGetGroupMembers(request, env) {
 async function handleAddGroupMember(request, env) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
@@ -1219,7 +1311,7 @@ async function handleAddGroupMember(request, env) {
   const newUserId = body.user_id
   if (!newUserId) return errRes('缺少 user_id')
 
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   if (!memberMap[groupId]) memberMap[groupId] = []
 
@@ -1228,7 +1320,7 @@ async function handleAddGroupMember(request, env) {
   }
 
   memberMap[groupId].push({ user_id: newUserId })
-  await env.USERS_KV.put('chat_members', JSON.stringify(memberMap))
+  await env.USERS_KV.put(kvKey(account, 'chat_members'), JSON.stringify(memberMap))
 
   return jsonSuccess({ success: true })
 }
@@ -1236,6 +1328,7 @@ async function handleAddGroupMember(request, env) {
 async function handleRemoveGroupMember(request, env) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
   const groupId = extractGroupId(request.url)
   if (!groupId) return errRes('群不存在')
@@ -1245,12 +1338,12 @@ async function handleRemoveGroupMember(request, env) {
   const targetUserId = m ? decodeURIComponent(m[1]) : null
   if (!targetUserId) return errRes('缺少用户ID')
 
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   if (!memberMap[groupId]) return errRes('群不存在')
 
   memberMap[groupId] = memberMap[groupId].filter(m => String(m.user_id) !== String(targetUserId))
-  await env.USERS_KV.put('chat_members', JSON.stringify(memberMap))
+  await env.USERS_KV.put(kvKey(account, 'chat_members'), JSON.stringify(memberMap))
 
   return jsonSuccess({ success: true })
 }
@@ -1269,6 +1362,7 @@ async function handleMarkRead(request, env) {
 async function handleCleanupMessages(request, env) {
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
   // 支持数字和非数字群组ID（如 ai-assistant-fixed）
   const idMatch = request.url.match(/\/adminapi\/chat\/groups\/([\w-]+)\/cleanup/)
@@ -1281,7 +1375,7 @@ async function handleCleanupMessages(request, env) {
   const days = body.days || 30
   const cutoff = Date.now() - days * 86400000
 
-  const raw = await env.USERS_KV.get('chat_messages')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_messages'))
   const msgMap = raw ? JSON.parse(raw) : {}
   let removed = 0
   if (msgMap[groupId]) {
@@ -1293,7 +1387,7 @@ async function handleCleanupMessages(request, env) {
       return ts > cutoff
     })
     removed = before - msgMap[groupId].length
-    await env.USERS_KV.put('chat_messages', JSON.stringify(msgMap))
+    await env.USERS_KV.put(kvKey(account, 'chat_messages'), JSON.stringify(msgMap))
   }
 
   return jsonSuccess({ success: true, removed_count: removed, removed_before: new Date(cutoff).toISOString() })
@@ -1364,6 +1458,14 @@ async function handleRegister(body, env) {
     created_at: new Date().toISOString(),
   }
   await kv.put(`user:${mobile}`, JSON.stringify(user))
+
+  // 同步在试用后端创建独立公司账号，保证 ERP 数据隔离（fire-and-forget，不阻塞注册响应）
+  fetch(`${TRIAL_BACKEND}/adminapi/login/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ company_name: company_name.trim(), account: mobile, password }),
+  }).catch(() => {})
+
   return jsonRes({ code: 1, show: 0, message: '注册成功', data: {} })
 }
 
@@ -1410,41 +1512,34 @@ async function handleLogin(body, env) {
         return jsonRes({ code: 0, show: 1, message: '专属后端暂时无法连接，请稍后重试', data: [] })
       }
 
-      // Trial user: use cached master token
-      const masterAccount = env.MASTER_ACCOUNT
-      const masterPassword = env.MASTER_PASSWORD
-      if (!masterAccount || !masterPassword) {
-        return jsonRes({ code: 0, show: 1, message: '试用账号未配置管理员凭证，请联系管理员处理', data: [] })
+      // Trial user: log them into their own isolated backend account on TRIAL_BACKEND
+      const ownToken = await tryGetOwnToken(TRIAL_BACKEND, account, password, user.company_name)
+      if (ownToken) {
+        const trialToken = wrapToken(ownToken, TRIAL_BACKEND, account, user.company_name, true)
+        return jsonRes({
+          code: 1, show: 0, message: '',
+          data: {
+            token: trialToken,
+            name: user.company_name,
+            avatar: '',
+            role_name: '体验用户',
+            is_paid: false,
+            is_trial: true,
+            userInfo: { name: user.company_name, account, role_name: '体验用户', token: trialToken },
+          },
+        })
       }
-      const CACHE_KEY = 'master_token_cache'
-      let realToken = null
-      const cached = await kv.get(CACHE_KEY)
-      if (cached) {
-        realToken = cached
-      } else {
-        const masterData = await loginBackend(DEFAULT_BACKEND, { account: masterAccount, password: masterPassword })
-        realToken = masterData.code === 1 ? masterData.data.token : null
-        if (realToken) await kv.put(CACHE_KEY, realToken, { expirationTtl: 82800 })
-      }
-      if (!realToken) return jsonRes({ code: 0, show: 1, message: '登录失败，请重试', data: [] })
 
-      const trialToken = wrapToken(realToken, DEFAULT_BACKEND, account, user.company_name, true)
-      return jsonRes({
-        code: 1, show: 0, message: '',
-        data: {
-          token: trialToken,
-          name: user.company_name,
-          avatar: '',
-          role_name: '体验用户',
-          is_paid: false,
-          is_trial: true,
-          userInfo: { name: user.company_name, account, role_name: '体验用户', token: trialToken },
-        },
-      })
+      // Fallback: if TRIAL_BACKEND is unavailable (cold start), tell user to retry
+      return jsonRes({ code: 0, show: 1, message: '试用服务器启动中，约60秒后可登录，请稍候重试', data: [] })
     }
   }
 
-  // Not in KV — proxy to default backend (existing admin accounts)
+  // Not in KV — only allow the master admin account to use the production backend.
+  // All other accounts must register through the trial flow.
+  if (account !== '17747344571') {
+    return jsonRes({ code: 0, show: 1, message: '账号不存在，请先注册', data: [] })
+  }
   const data = await loginBackend(DEFAULT_BACKEND, body)
   if (data.code === 1) {
     const wrapped = wrapToken(data.data.token, DEFAULT_BACKEND, account, data.data.name || '')
@@ -1547,6 +1642,32 @@ export async function onRequest(context) {
     if (pathname === '/adminapi/chat/contacts' && request.method === 'GET') {
       return handleGetContacts(request, env)
     }
+    // GET /adminapi/chat/users/search?phone=xxx - 按手机号跨租户搜索用户
+    if (pathname === '/adminapi/chat/users/search' && request.method === 'GET') {
+      return handleSearchUser(request, env)
+    }
+    // GET /adminapi/chat/friends - 获取好友列表
+    if (pathname === '/adminapi/chat/friends' && request.method === 'GET') {
+      return handleGetFriends(request, env)
+    }
+    // POST /adminapi/chat/friend-requests - 发送好友申请
+    if (pathname === '/adminapi/chat/friend-requests' && request.method === 'POST') {
+      return handleSendFriendRequest(request, env)
+    }
+    // GET /adminapi/chat/friend-requests/pending - 查收到的申请
+    if (pathname === '/adminapi/chat/friend-requests/pending' && request.method === 'GET') {
+      return handleGetFriendRequests(request, env)
+    }
+    // POST /adminapi/chat/friend-requests/:id/accept
+    const frAcceptMatch = pathname.match(/^\/adminapi\/chat\/friend-requests\/([^/]+)\/accept$/)
+    if (frAcceptMatch && request.method === 'POST') {
+      return handleAcceptFriendRequest(request, env, frAcceptMatch[1])
+    }
+    // POST /adminapi/chat/friend-requests/:id/reject
+    const frRejectMatch = pathname.match(/^\/adminapi\/chat\/friend-requests\/([^/]+)\/reject$/)
+    if (frRejectMatch && request.method === 'POST') {
+      return handleRejectFriendRequest(request, env, frRejectMatch[1])
+    }
     // 未匹配的chat路径，打日志后返回空成功（避免前端弹错误提示）
     console.warn('[Chat fallback] unmatched path:', pathname, request.method)
     return jsonSuccess({ rows: [], total: 0 })
@@ -1555,18 +1676,19 @@ async function handlePinGroup(request, env) {
   if (!groupId) return errRes('群不存在')
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
   let body
   try { body = await request.json() } catch { return errRes('请求格式错误') }
   const pinned = body.pinned !== false // 默认置顶
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
   const idx = groups.findIndex(g => String(g.id) === String(groupId))
   if (idx < 0) return errRes('群不存在')
 
   // 非创建者/成员不能操作
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   const members = memberMap[groupId] || []
   if (!members.some(m => String(m.user_id) === String(userId)) && String(groups[idx].created_by) !== String(userId)) {
@@ -1574,7 +1696,7 @@ async function handlePinGroup(request, env) {
   }
 
   groups[idx] = { ...groups[idx], is_pinned: pinned, updated_at: new Date().toISOString() }
-  await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+  await env.USERS_KV.put(kvKey(account, 'chat_groups'), JSON.stringify(groups))
   return jsonSuccess({ is_pinned: pinned })
 }
 
@@ -1584,19 +1706,20 @@ async function handleRenameGroup(request, env) {
   if (!groupId) return errRes('群不存在')
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
   let body
   try { body = await request.json() } catch { return errRes('请求格式错误') }
   const name = (body.name || '').trim()
   if (!name) return errRes('群名不能为空')
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
   const idx = groups.findIndex(g => String(g.id) === String(groupId))
   if (idx < 0) return errRes('群不存在')
 
   // 非创建者/成员不能操作
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   const members = memberMap[groupId] || []
   if (!members.some(m => String(m.user_id) === String(userId)) && String(groups[idx].created_by) !== String(userId)) {
@@ -1604,7 +1727,7 @@ async function handleRenameGroup(request, env) {
   }
 
   groups[idx] = { ...groups[idx], name, updated_at: new Date().toISOString() }
-  await env.USERS_KV.put('chat_groups', JSON.stringify(groups))
+  await env.USERS_KV.put(kvKey(account, 'chat_groups'), JSON.stringify(groups))
 
   await logOperation(env, userId, 'chat_rename', `修改群名「${name}」`, { group_id: groupId, group_name: name })
 
@@ -1617,14 +1740,15 @@ async function handleDeleteGroup(request, env) {
   if (!groupId) return errRes('群不存在')
   const userId = getUserId(request)
   if (!userId) return errRes('请先登录')
+  const account = decodeToken(request.headers.get('token') || '')?.account || ''
 
-  const raw = await env.USERS_KV.get('chat_groups')
+  const raw = await env.USERS_KV.get(kvKey(account, 'chat_groups'))
   const groups = raw ? JSON.parse(raw) : []
   const idx = groups.findIndex(g => String(g.id) === String(groupId))
   if (idx < 0) return errRes('群不存在')
 
   // 非创建者/成员不能删除
-  const memberRaw = await env.USERS_KV.get('chat_members')
+  const memberRaw = await env.USERS_KV.get(kvKey(account, 'chat_members'))
   const memberMap = memberRaw ? JSON.parse(memberRaw) : {}
   const members = memberMap[groupId] || []
   if (!members.some(m => String(m.user_id) === String(userId)) && String(groups[idx].created_by) !== String(userId)) {
@@ -1633,10 +1757,16 @@ async function handleDeleteGroup(request, env) {
 
   groups.splice(idx, 1)
   delete memberMap[groupId]
+
+  // 只删这个群的消息记录，不能删整个 chat_messages key
+  const msgRaw = await env.USERS_KV.get(kvKey(account, 'chat_messages'))
+  const msgMap = msgRaw ? JSON.parse(msgRaw) : {}
+  delete msgMap[groupId]
+
   await Promise.all([
-    env.USERS_KV.put('chat_groups', JSON.stringify(groups)),
-    env.USERS_KV.put('chat_members', JSON.stringify(memberMap)),
-    env.USERS_KV.delete(`chat_messages:${groupId}`),
+    env.USERS_KV.put(kvKey(account, 'chat_groups'), JSON.stringify(groups)),
+    env.USERS_KV.put(kvKey(account, 'chat_members'), JSON.stringify(memberMap)),
+    env.USERS_KV.put(kvKey(account, 'chat_messages'), JSON.stringify(msgMap)),
     env.USERS_KV.delete(`chat_unread:${userId}:${groupId}`),
   ])
   return jsonSuccess({ deleted: true })
@@ -1656,6 +1786,164 @@ async function handleGetContacts(request, env) {
   }))
 
   return jsonSuccess({ contacts })
+}
+
+// ════════════════════════════════════════════════
+// Friend Request & Cross-Tenant Chat Handlers
+// ════════════════════════════════════════════════
+
+async function handleSearchUser(request, env) {
+  const url = new URL(request.url)
+  const phone = url.searchParams.get('phone')?.trim()
+  if (!phone) return errRes('请输入手机号')
+  const decoded = decodeToken(request.headers.get('token') || '')
+  if (!decoded) return errRes('请先登录')
+  if (phone === decoded.account) return errRes('不能搜索自己')
+  const raw = await env.USERS_KV.get(`user:${phone}`)
+  if (!raw) return jsonSuccess(null)
+  const user = JSON.parse(raw)
+  return jsonSuccess({ phone, company_name: user.company_name || phone })
+}
+
+async function handleSendFriendRequest(request, env) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+  const decoded = decodeToken(request.headers.get('token') || '')
+  const myAccount = decoded?.account || ''
+  const myCompany = decoded?.company || ''
+  let body
+  try { body = await request.json() } catch { return errRes('请求格式错误') }
+  const { to_phone } = body
+  if (!to_phone) return errRes('请输入对方手机号')
+  if (to_phone === myAccount) return errRes('不能添加自己')
+  const targetRaw = await env.USERS_KV.get(`user:${to_phone}`)
+  if (!targetRaw) return errRes('该手机号未注册本系统')
+  // 已是好友
+  const friendsRaw = await env.USERS_KV.get(`friends:${myAccount}`)
+  const friends = friendsRaw ? JSON.parse(friendsRaw) : []
+  if (friends.some(f => f.account === to_phone)) return errRes('已经是好友了')
+  // 已发过申请
+  const sentKey = `fr_sent:${myAccount}:${to_phone}`
+  const existing = await env.USERS_KV.get(sentKey)
+  if (existing) return errRes('已发送过申请，请等待对方确认')
+  const reqId = `fr_${Date.now()}_${Math.floor(Math.random() * 1000)}`
+  const now = new Date().toISOString()
+  const myInfo = await getUserInfo(userId, env)
+  const friendRequest = {
+    id: reqId, from_account: myAccount, from_company: myCompany,
+    from_name: myInfo.name || myCompany || myAccount,
+    from_user_id: String(userId), to_phone, status: 'pending', created_at: now,
+  }
+  await env.USERS_KV.put(`fr:${reqId}`, JSON.stringify(friendRequest))
+  const inboxKey = `fr_inbox:${to_phone}`
+  const inboxRaw = await env.USERS_KV.get(inboxKey)
+  const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+  inbox.push(reqId)
+  await env.USERS_KV.put(inboxKey, JSON.stringify(inbox))
+  await env.USERS_KV.put(sentKey, reqId, { expirationTtl: 86400 * 7 })
+  return jsonSuccess({ id: reqId, message: '申请已发送' })
+}
+
+async function handleGetFriendRequests(request, env) {
+  const decoded = decodeToken(request.headers.get('token') || '')
+  const myAccount = decoded?.account || ''
+  if (!myAccount) return errRes('请先登录')
+  const inboxRaw = await env.USERS_KV.get(`fr_inbox:${myAccount}`)
+  const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+  const requests = []
+  for (const reqId of inbox) {
+    const raw = await env.USERS_KV.get(`fr:${reqId}`)
+    if (!raw) continue
+    const req = JSON.parse(raw)
+    if (req.status === 'pending') requests.push(req)
+  }
+  return jsonSuccess({ rows: requests, total: requests.length })
+}
+
+async function handleAcceptFriendRequest(request, env, reqId) {
+  const userId = getUserId(request)
+  if (!userId) return errRes('请先登录')
+  const decoded = decodeToken(request.headers.get('token') || '')
+  const myAccount = decoded?.account || ''
+  const myCompany = decoded?.company || ''
+  const raw = await env.USERS_KV.get(`fr:${reqId}`)
+  if (!raw) return errRes('申请不存在')
+  const req = JSON.parse(raw)
+  if (req.to_phone !== myAccount) return errRes('无权操作')
+  if (req.status !== 'pending') return errRes('申请已处理')
+  req.status = 'accepted'
+  req.accepted_at = new Date().toISOString()
+  await env.USERS_KV.put(`fr:${reqId}`, JSON.stringify(req))
+  const now = new Date().toISOString()
+  const groupId = nowMs() + Math.floor(Math.random() * 1000)
+  // 互相加好友列表
+  const myFriendsKey = `friends:${myAccount}`
+  const myFriendsRaw = await env.USERS_KV.get(myFriendsKey)
+  const myFriends = myFriendsRaw ? JSON.parse(myFriendsRaw) : []
+  myFriends.push({ account: req.from_account, company: req.from_company, name: req.from_name, user_id: req.from_user_id, chat_group_id: String(groupId), added_at: now })
+  await env.USERS_KV.put(myFriendsKey, JSON.stringify(myFriends))
+  const theirFriendsKey = `friends:${req.from_account}`
+  const theirFriendsRaw = await env.USERS_KV.get(theirFriendsKey)
+  const theirFriends = theirFriendsRaw ? JSON.parse(theirFriendsRaw) : []
+  const myInfo = await getUserInfo(userId, env)
+  theirFriends.push({ account: myAccount, company: myCompany, name: myInfo.name || myCompany || myAccount, user_id: String(userId), chat_group_id: String(groupId), added_at: now })
+  await env.USERS_KV.put(theirFriendsKey, JSON.stringify(theirFriends))
+  // 在双方 chat_groups 里创建跨租户私聊
+  const crossGroupBase = {
+    id: groupId, cross_tenant: true, is_private: true,
+    members: [
+      { user_id: String(userId), account: myAccount, name: myInfo.name || myCompany },
+      { user_id: String(req.from_user_id), account: req.from_account, name: req.from_name },
+    ],
+    created_at: now, updated_at: now, last_message: '', last_message_at: now,
+  }
+  // 我方：群名显示对方公司
+  const myGroupsKey = kvKey(myAccount, 'chat_groups')
+  const myGroupsRaw = await env.USERS_KV.get(myGroupsKey)
+  const myGroups = myGroupsRaw ? JSON.parse(myGroupsRaw) : []
+  myGroups.push({ ...crossGroupBase, name: req.from_company || req.from_account, other_account: req.from_account })
+  await env.USERS_KV.put(myGroupsKey, JSON.stringify(myGroups))
+  const myMembersKey = kvKey(myAccount, 'chat_members')
+  const myMembersRaw = await env.USERS_KV.get(myMembersKey)
+  const myMemberMap = myMembersRaw ? JSON.parse(myMembersRaw) : {}
+  myMemberMap[groupId] = crossGroupBase.members.map(m => ({ user_id: m.user_id }))
+  await env.USERS_KV.put(myMembersKey, JSON.stringify(myMemberMap))
+  // 对方：群名显示我方公司
+  const theirGroupsKey = kvKey(req.from_account, 'chat_groups')
+  const theirGroupsRaw = await env.USERS_KV.get(theirGroupsKey)
+  const theirGroups = theirGroupsRaw ? JSON.parse(theirGroupsRaw) : []
+  theirGroups.push({ ...crossGroupBase, name: myCompany || myAccount, other_account: myAccount })
+  await env.USERS_KV.put(theirGroupsKey, JSON.stringify(theirGroups))
+  const theirMembersKey = kvKey(req.from_account, 'chat_members')
+  const theirMembersRaw = await env.USERS_KV.get(theirMembersKey)
+  const theirMemberMap = theirMembersRaw ? JSON.parse(theirMembersRaw) : {}
+  theirMemberMap[groupId] = crossGroupBase.members.map(m => ({ user_id: m.user_id }))
+  await env.USERS_KV.put(theirMembersKey, JSON.stringify(theirMemberMap))
+  await env.USERS_KV.delete(`fr_sent:${req.from_account}:${myAccount}`)
+  return jsonSuccess({ message: '已同意', group_id: String(groupId) })
+}
+
+async function handleRejectFriendRequest(request, env, reqId) {
+  const decoded = decodeToken(request.headers.get('token') || '')
+  const myAccount = decoded?.account || ''
+  const raw = await env.USERS_KV.get(`fr:${reqId}`)
+  if (!raw) return errRes('申请不存在')
+  const req = JSON.parse(raw)
+  if (req.to_phone !== myAccount) return errRes('无权操作')
+  if (req.status !== 'pending') return errRes('申请已处理')
+  req.status = 'rejected'
+  await env.USERS_KV.put(`fr:${reqId}`, JSON.stringify(req))
+  await env.USERS_KV.delete(`fr_sent:${req.from_account}:${myAccount}`)
+  return jsonSuccess({ message: '已拒绝' })
+}
+
+async function handleGetFriends(request, env) {
+  const decoded = decodeToken(request.headers.get('token') || '')
+  const myAccount = decoded?.account || ''
+  if (!myAccount) return errRes('请先登录')
+  const raw = await env.USERS_KV.get(`friends:${myAccount}`)
+  const friends = raw ? JSON.parse(raw) : []
+  return jsonSuccess({ rows: friends, total: friends.length })
 }
 
 // Agent 列表（内联，避免 require）
@@ -1909,8 +2197,11 @@ const agentRegistry = [
   if (pathname === '/adminapi/retail/order/edit' && request.method === 'POST') {
     const wrappedToken = request.headers.get('token') || ''
     const decoded = decodeToken(wrappedToken)
-    if (decoded?.trial && !isTrialPassthrough(pathname)) {
-      return jsonRes({ code: 0, show: 1, message: '体验版暂不支持该功能，请升级正式版后使用', data: [] })
+    if (decoded?.trial && decoded.backend && !decoded.backend.includes('erp-trial')) {
+      return new Response(JSON.stringify({ code: -1, message: 'token已过期，请重新登录', data: [] }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      })
     }
     let body
     try { body = await request.json() } catch { body = {} }
@@ -2010,12 +2301,12 @@ const agentRegistry = [
   const wrappedToken = request.headers.get('token') || ''
   const decoded = decodeToken(wrappedToken)
 
-  if (decoded?.trial && !isTrialPassthrough(pathname)) {
-    return jsonRes({
-      code: 0,
-      show: 1,
-      message: '体验版暂不支持该功能，请升级正式版后使用',
-      data: [],
+  // Server-side guard: trial tokens that still point to the old production backend
+  // must be rejected so the client is forced to re-login regardless of JS cache.
+  if (decoded?.trial && decoded.backend && !decoded.backend.includes('erp-trial') && !isTrialPassthrough(pathname)) {
+    return new Response(JSON.stringify({ code: -1, message: 'token已过期，请重新登录', data: [] }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     })
   }
 

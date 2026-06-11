@@ -108,6 +108,22 @@
     <!-- ── 待办 Tab ── -->
     <div v-show="activeTab === 'todo'" class="todo-tab">
 
+      <!-- 好友申请 -->
+      <div v-if="friendRequests.length > 0" class="fr-section">
+        <div class="fr-section-title">好友申请</div>
+        <div v-for="req in friendRequests" :key="req.id" class="fr-row">
+          <div class="fr-avatar">{{ req.from_name?.[0] || req.from_company?.[0] || '?' }}</div>
+          <div class="fr-info">
+            <div class="fr-name">{{ req.from_name || req.from_company }}</div>
+            <div class="fr-sub">{{ req.from_company }} · {{ req.from_account }}</div>
+          </div>
+          <div class="fr-actions">
+            <button class="fr-btn fr-reject" @click="rejectFriendRequest(req)">拒绝</button>
+            <button class="fr-btn fr-accept" @click="acceptFriendRequest(req)">同意</button>
+          </div>
+        </div>
+      </div>
+
       <!-- 审核待办（紧凑条目） -->
       <div v-if="pendingItems.length > 0" class="pending-section">
         <div v-for="item in pendingItems" :key="item.key" class="pending-row" @click="item.onClick?.()">
@@ -455,6 +471,45 @@
       </div>
     </div>
 
+    <!-- ── 添加朋友弹窗 ── -->
+    <div v-if="showAddFriend" class="m-modal-mask" @click.self="closeAddFriend">
+      <div class="m-modal-sheet" @touchmove.stop>
+        <div class="m-modal-header">
+          <span>添加朋友</span>
+          <button class="m-modal-close" @click="closeAddFriend">取消</button>
+        </div>
+        <div class="add-friend-body">
+          <p class="add-friend-hint">输入对方在系统中注册的手机号</p>
+          <div class="add-friend-input-row">
+            <input
+              v-model="addFriendPhone"
+              type="tel"
+              maxlength="11"
+              placeholder="请输入手机号"
+              class="add-friend-input"
+              @keyup.enter="searchFriend"
+            />
+            <button class="add-friend-search-btn" :disabled="addFriendLoading" @click="searchFriend">
+              {{ addFriendLoading ? '搜索中…' : '搜索' }}
+            </button>
+          </div>
+          <!-- 搜索结果 -->
+          <div v-if="addFriendSearched">
+            <div v-if="addFriendResult" class="add-friend-result">
+              <div class="add-friend-avatar">{{ addFriendResult.company_name?.[0] || '?' }}</div>
+              <div class="add-friend-info">
+                <div class="add-friend-name">{{ addFriendResult.company_name }}</div>
+                <div class="add-friend-role">{{ addFriendPhone }}</div>
+              </div>
+              <button v-if="!addFriendSent" class="add-friend-chat-btn" @click="sendFriendRequest">发送申请</button>
+              <span v-else style="color:#07c160;font-size:13px;font-weight:500">已发送</span>
+            </div>
+            <div v-else class="add-friend-empty">未找到该手机号对应的用户</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── 顶栏+菜单：聊天操作 ── -->
     <div v-if="showChatPlus" class="plus-menu-mask" @click="showChatPlus = false"></div>
     <div v-if="showChatPlus" class="plus-menu chat-plus-menu">
@@ -465,6 +520,10 @@
       <div class="plus-menu-item" @click="router.push('/mobile/chat/new'); showChatPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         新的聊天
+      </div>
+      <div class="plus-menu-item" @click="showAddFriend = true; showChatPlus = false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        添加朋友
       </div>
     </div>
 
@@ -502,7 +561,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import { getAdminList } from '@/api/setting'
@@ -521,8 +580,8 @@ const winHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 667)
 
 // 固定置顶项（如 AI 管家）
 const pinnedSessions = ref([
+  { id: 'ai-assistant-fixed', name: 'ERP管家', avatar_text: '🤖', last_msg: 'AI 智能管家，随时为您服务', last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
   { id: 'meeting-fixed', name: 'AI会议室', avatar_text: '🏛', last_msg: '多Agent协同 · Captain主持', last_time: '', type: 'meeting', unread: 0, is_pinned: true, route: '/mobile/meeting' },
-  { id: 'ai-assistant-fixed', name: 'ERP管家', avatar_text: '🦢', last_msg: '随时为您服务', last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
 ])
 
 const groups = ref<any[]>([])
@@ -561,6 +620,12 @@ async function loadDrawerStats() {
 const showChatPlus = ref(false)
 const showFabPlus = ref(false)
 const showCreateGroup = ref(false)
+const showAddFriend = ref(false)
+const addFriendPhone = ref('')
+const addFriendResult = ref<any>(null)
+const addFriendLoading = ref(false)
+const addFriendSearched = ref(false)
+const addFriendSent = ref(false)
 const selectedMembers = ref<any[]>([])
 const groupSearchKeyword = ref('')
 const newGroupName = ref('')
@@ -641,7 +706,75 @@ async function doCreateGroup() {
     creatingGroup.value = false
   }
 }
+function closeAddFriend() {
+  showAddFriend.value = false
+  addFriendPhone.value = ''
+  addFriendResult.value = null
+  addFriendSearched.value = false
+  addFriendSent.value = false
+}
+
+async function searchFriend() {
+  const phone = addFriendPhone.value.trim()
+  if (!phone) return
+  addFriendLoading.value = true
+  addFriendSearched.value = false
+  addFriendResult.value = null
+  addFriendSent.value = false
+  try {
+    const res = await http.get('/chat/users/search', { params: { phone } })
+    addFriendResult.value = res?.data ?? null
+  } catch {
+    addFriendResult.value = null
+  } finally {
+    addFriendLoading.value = false
+    addFriendSearched.value = true
+  }
+}
+
+async function sendFriendRequest() {
+  try {
+    await http.post('/chat/friend-requests', { to_phone: addFriendPhone.value.trim() })
+    addFriendSent.value = true
+    ElMessage.success('好友申请已发送')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '发送失败')
+  }
+}
+
+const friendRequests = ref<any[]>([])
+
+async function loadFriendRequests() {
+  try {
+    const res = await http.get('/chat/friend-requests/pending')
+    friendRequests.value = res?.data?.rows ?? []
+  } catch { friendRequests.value = [] }
+}
+
+async function acceptFriendRequest(req: any) {
+  try {
+    const res = await http.post(`/chat/friend-requests/${req.id}/accept`)
+    ElMessage.success('已同意好友申请')
+    friendRequests.value = friendRequests.value.filter(r => r.id !== req.id)
+    loadGroups()
+    const groupId = res?.data?.group_id
+    if (groupId) router.push(`/mobile/chat/${groupId}`)
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败')
+  }
+}
+
+async function rejectFriendRequest(req: any) {
+  try {
+    await http.post(`/chat/friend-requests/${req.id}/reject`)
+    friendRequests.value = friendRequests.value.filter(r => r.id !== req.id)
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败')
+  }
+}
+
 const activeTab = ref('all')
+watch(activeTab, (v) => { if (v === 'todo') loadFriendRequests() })
 
 // 显示列表：固定置顶 + 用户置顶/普通会话（按最新时间排序，置顶优先）
 // 按 id 去重，保留所有聊天（包括不在通讯录的）
@@ -1125,7 +1258,6 @@ function createGroupChat() {
   router.push('/mobile/agent/meeting')
 }
 
-import { watch } from 'vue'
 watch(searchKeyword, (v) => { if (v) doSearch() })
 
 let listPollTimer: ReturnType<typeof setInterval> | null = null
@@ -1143,6 +1275,7 @@ onMounted(async () => {
   loadActiveMeetings()
   loadPendingItems()
   loadTodoPlans()
+  loadFriendRequests()
   // 每 5 秒刷新消息列表（检查新消息和未读）
   listPollTimer = setInterval(() => {
     loadGroups()
@@ -1882,6 +2015,109 @@ export default { name: 'MobileChat' }
   cursor: pointer;
 }
 .group-create-btn:disabled { background: #ccc; color: #fff; }
+
+/* 添加朋友弹窗 */
+.add-friend-body { padding: 20px 16px 16px; }
+.add-friend-hint { font-size: 13px; color: #86909c; margin: 0 0 12px; }
+.add-friend-input-row { display: flex; gap: 8px; }
+.add-friend-input {
+  flex: 1;
+  height: 40px;
+  border: 1.5px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 15px;
+  outline: none;
+  color: #1d2129;
+}
+.add-friend-input:focus { border-color: #2E6BE6; }
+.add-friend-search-btn {
+  height: 40px;
+  padding: 0 16px;
+  background: #2E6BE6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.add-friend-search-btn:disabled { background: #ccc; }
+.add-friend-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 14px;
+  background: #f7f8fa;
+  border-radius: 10px;
+}
+.add-friend-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2E6BE6, #07c160);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.add-friend-info { flex: 1; min-width: 0; }
+.add-friend-name { font-size: 15px; font-weight: 600; color: #1d2129; }
+.add-friend-role { font-size: 12px; color: #86909c; margin-top: 2px; }
+.add-friend-chat-btn {
+  padding: 8px 14px;
+  background: #07c160;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.add-friend-empty { margin-top: 20px; text-align: center; color: #86909c; font-size: 14px; padding: 20px 0; }
+
+/* 好友申请区块 */
+.fr-section { background: #fff; margin-bottom: 8px; }
+.fr-section-title { padding: 12px 16px 6px; font-size: 12px; color: #86909c; font-weight: 500; }
+.fr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f7f8fa;
+}
+.fr-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.fr-info { flex: 1; min-width: 0; }
+.fr-name { font-size: 14px; font-weight: 600; color: #1d2129; }
+.fr-sub { font-size: 12px; color: #86909c; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.fr-btn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+.fr-reject { background: #f2f3f5; color: #4e5969; }
+.fr-accept { background: #07c160; color: #fff; }
 
 /* Modal (same as MobileGroupChat) */
 .m-modal-mask {
