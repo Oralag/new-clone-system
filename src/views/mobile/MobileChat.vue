@@ -44,7 +44,10 @@
         class="chat-sub-tab"
         :class="{ active: activeTab === tab.key }"
         @click="activeTab = tab.key"
-      >{{ tab.label }}</div>
+      >
+        {{ tab.label }}
+        <span v-if="tab.key === 'todo' && friendRequests.length > 0" class="tab-badge">{{ friendRequests.length }}</span>
+      </div>
     </div>
 
     <!-- ── 全部 Tab ── -->
@@ -1607,6 +1610,22 @@ export default { name: 'MobileChat' }
   transition: color 0.15s;
 }
 .chat-sub-tab.active { color: #1d2129; font-weight: 700; }
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: #f53f3f;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  margin-left: 4px;
+  vertical-align: middle;
+  line-height: 1;
+}
 .chat-sub-tab.active::after {
   content: '';
   position: absolute;

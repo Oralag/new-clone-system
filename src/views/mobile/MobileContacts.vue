@@ -43,6 +43,34 @@
         </template>
       </div>
 
+      <!-- 好友（跨公司） -->
+      <div v-if="friends.length > 0" class="contacts-robot-section">
+        <div class="contacts-robot-title" @click="friendsExpanded = !friendsExpanded">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#07c160" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <div class="contacts-robot-title-text">
+            <span>好友</span>
+            <span class="contacts-robot-subtitle">跨公司联系人</span>
+          </div>
+          <span class="contacts-robot-count">{{ friends.length }}</span>
+          <span class="contacts-section-arrow" :class="{ collapsed: !friendsExpanded }">▾</span>
+        </div>
+        <template v-if="friendsExpanded">
+          <div
+            v-for="f in friends"
+            :key="f.account"
+            class="contacts-item"
+            @click="chatWithFriend(f)"
+          >
+            <div class="contacts-avatar" style="background:linear-gradient(135deg,#07c160,#2E6BE6);">{{ f.name?.[0] || f.company?.[0] || '?' }}</div>
+            <div class="contacts-info">
+              <div class="contacts-name">{{ f.name || f.company }}</div>
+              <div class="contacts-sub">{{ f.company }}</div>
+            </div>
+            <span class="contacts-arrow">›</span>
+          </div>
+        </template>
+      </div>
+
       <!-- 组织框架分类（包含子账号） -->
       <div class="contacts-robot-section">
         <div class="contacts-robot-title" @click="orgExpanded = !orgExpanded">
@@ -147,6 +175,8 @@ const letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 const robotExpanded = ref(false)
 const orgExpanded = ref(true)
+const friendsExpanded = ref(true)
+const friends = ref<any[]>([])
 
 // ERP 系统真实 Agent（来自 agentRegistry.ts）
 const robotAgents = [
@@ -195,12 +225,7 @@ async function openAgent(bot: any) {
     router.push('/mobile/ai')
     return
   }
-  // 亚当直接跳投资部门（有完整记忆和tool_use）
-  if (bot.id === 'adam') {
-    router.push('/investment')
-    return
-  }
-  // 其他Agent：查找或创建私聊群
+  // Agent：查找或创建私聊群
   try {
     const res = await http.get(`/chat/groups/private/${bot.id}`)
     const group = res?.data ?? res
@@ -255,8 +280,22 @@ function scrollToLetter(letter: string) {
   }
 }
 
+async function loadFriends() {
+  try {
+    const res = await http.get('/chat/friends')
+    friends.value = res?.data?.rows ?? []
+  } catch { friends.value = [] }
+}
+
+async function chatWithFriend(f: any) {
+  if (f.chat_group_id) {
+    router.push(`/mobile/chat/${f.chat_group_id}`)
+  }
+}
+
 onMounted(async () => {
   loadEmployees()
+  loadFriends()
   const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
   groups.value = res?.data?.rows ?? res?.rows ?? []
 })
