@@ -1545,6 +1545,17 @@ async function handleLogin(body, env) {
     const wrapped = wrapToken(data.data.token, DEFAULT_BACKEND, account, data.data.name || '')
     data.data.token = wrapped
     if (data.data.userInfo) data.data.userInfo.token = wrapped
+    // 确保主账号在 KV 里有 user: 记录，使其可被好友搜索发现
+    if (kv) {
+      const exists = await kv.get(`user:${account}`)
+      if (!exists) {
+        await kv.put(`user:${account}`, JSON.stringify({
+          company_name: data.data.name || data.data.userInfo?.name || account,
+          mobile: account,
+          created_at: new Date().toISOString(),
+        }))
+      }
+    }
   }
   return jsonRes(data)
 }
