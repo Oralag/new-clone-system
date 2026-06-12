@@ -1,5 +1,7 @@
 // Cloudflare Pages Function — /adminapi/login/register
 
+const TRIAL_BACKEND = 'https://erp-trial.onrender.com'
+
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -61,6 +63,13 @@ export async function onRequest(context) {
     created_at: new Date().toISOString(),
   }
   await kv.put(`user:${mobile}`, JSON.stringify(user))
+
+  // Pre-create isolated company on trial backend (fire-and-forget)
+  fetch(`${TRIAL_BACKEND}/adminapi/login/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ company_name: company_name.trim(), account: mobile, password: String(password) }),
+  }).catch(() => {})
 
   return jsonRes({ code: 1, show: 0, message: '注册成功', data: {} })
 }

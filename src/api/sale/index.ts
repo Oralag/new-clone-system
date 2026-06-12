@@ -18,63 +18,29 @@ export const auditOffer = (id: number, status: number) => http.post('/shop/offer
 
 export const getContractList = (params?: any) => http.get('/shop/ContractOrder/index', { params })
 export const getContractDetail = (id: number) => http.get('/shop/ContractOrder/detail', { params: { id } })
-export async function createContract(data: any) {
+// 通用：遇到"列不存在"错误时，只删除该列并重试，保留所有其他字段（包括 discount/receive 等）
+async function postWithColumnFallback(url: string, data: any): Promise<any> {
   const payload = { ...(data || {}) }
-  const legacyPayload: any = {}
-  const legacyCols = [
-    'order_sn',
-    'order_no',
-    'customer_id',
-    'customer_name',
-    'admin_name',
-    'order_date',
-    'total_amount',
-    'pay_amount',
-    'goods_info',
-    'remark',
-    'status',
-  ]
-  for (const key of legacyCols) {
-    if (payload[key] !== undefined) legacyPayload[key] = payload[key]
+  const badCols = new Set<string>()
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const body = Object.fromEntries(Object.entries(payload).filter(([k]) => !badCols.has(k)))
+    try {
+      return await http.post(url, body, { silent: true } as any)
+    } catch (error: any) {
+      const msg = String(error?.message || '')
+      const m = msg.match(/column \"([^\"]+)\" of relation \"[^\"]+\" does not exist/i)
+      if (!m) throw error
+      badCols.add(m[1])
+    }
   }
-  try {
-    return await http.post('/shop/ContractOrder/add', payload, { silent: true } as any)
-  } catch (error: any) {
-    const msg = String(error?.message || '')
-    const m = msg.match(/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i)
-    if (!m) throw error
-    return http.post('/shop/ContractOrder/add', legacyPayload)
-  }
+  throw new Error('保存失败：字段兼容重试次数超限')
+}
+
+export async function createContract(data: any) {
+  return postWithColumnFallback('/shop/ContractOrder/add', data)
 }
 export async function updateContract(data: any) {
-  const payload = { ...(data || {}) }
-  const legacyPayload: any = {}
-  const legacyCols = [
-    'id',
-    'order_sn',
-    'order_no',
-    'customer_id',
-    'customer_name',
-    'admin_name',
-    'order_date',
-    'total_amount',
-    'pay_amount',
-    'goods_info',
-    'remark',
-    'status',
-  ]
-  for (const key of legacyCols) {
-    if (payload[key] !== undefined) legacyPayload[key] = payload[key]
-  }
-  try {
-    return await http.post('/shop/ContractOrder/edit', payload, { silent: true } as any)
-  } catch (error: any) {
-    const msg = String(error?.message || '')
-    const m = msg.match(/column \"([^\"]+)\" of relation \"sale_contracts\" does not exist/i)
-    if (!m) throw error
-    // 老库兼容兜底：直接按旧字段集合保存
-    return http.post('/shop/ContractOrder/edit', legacyPayload)
-  }
+  return postWithColumnFallback('/shop/ContractOrder/edit', data)
 }
 export const deleteContract = (id: number) => http.post('/shop/ContractOrder/del', { id })
 export async function auditContract(id: number, status: number) {

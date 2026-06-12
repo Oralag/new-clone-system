@@ -499,10 +499,10 @@
           <!-- 搜索结果 -->
           <div v-if="addFriendSearched">
             <div v-if="addFriendResult" class="add-friend-result">
-              <div class="add-friend-avatar">{{ addFriendResult.company_name?.[0] || '?' }}</div>
+              <div class="add-friend-avatar">{{ (addFriendResult.name || addFriendResult.company_name)?.[0] || '?' }}</div>
               <div class="add-friend-info">
-                <div class="add-friend-name">{{ addFriendResult.company_name }}</div>
-                <div class="add-friend-role">{{ addFriendPhone }}</div>
+                <div class="add-friend-name">{{ addFriendResult.name || addFriendResult.company_name }}</div>
+                <div class="add-friend-role">{{ addFriendResult.name ? addFriendResult.company_name : addFriendPhone }}</div>
               </div>
               <button v-if="!addFriendSent" class="add-friend-chat-btn" @click="sendFriendRequest">发送申请</button>
               <span v-else style="color:#07c160;font-size:13px;font-weight:500">已发送</span>
@@ -1100,7 +1100,7 @@ async function loadGroups() {
         id: r.id,
         name: displayName,
         avatar_text: displayName?.[0],
-        last_msg: r.last_message || r.last_msg || '暂无消息',
+        last_msg: r.last_message || r.last_msg || (r.cross_tenant ? '发消息打个招呼～' : ''),
         last_time: formatTime(r.last_message_at || r.last_time || ''),
         unread: r.unread ?? 0,
         is_pinned: r.is_pinned ?? false,

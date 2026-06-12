@@ -244,14 +244,19 @@ function normalizeDate(input: any): Date | null {
 
 function inPeriod(dateStr: string): boolean {
   if (activePeriod.value === 'all') return true
-  const d = normalizeDate(dateStr)
-  if (!d) return false
-  const now = new Date()
-  const y = now.getFullYear(), m = now.getMonth()
-  if (activePeriod.value === 'month') return d.getFullYear() === y && d.getMonth() === m
-  if (activePeriod.value === 'year') return d.getFullYear() === y
+  // 取日期前10位字符 (YYYY-MM-DD)，避免时区转换问题
+  const raw = String(dateStr || '').trim()
+  const datePart = raw.slice(0, 10) // "YYYY-MM-DD"
+  if (!datePart || datePart.length < 10) return false
+  const nowStr = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10) // UTC+8 今日
+  const y = nowStr.slice(0, 4)
+  const ym = nowStr.slice(0, 7) // "YYYY-MM"
+  const q = Math.floor(Number(nowStr.slice(5, 7)) / 3) // 当前季度 0-3
+  const orderQ = Math.floor(Number(datePart.slice(5, 7)) / 3)
+  if (activePeriod.value === 'month') return datePart.slice(0, 7) === ym
+  if (activePeriod.value === 'year') return datePart.slice(0, 4) === y
   // quarter
-  return d.getFullYear() === y && Math.floor(d.getMonth() / 3) === Math.floor(m / 3)
+  return datePart.slice(0, 4) === y && orderQ === q
 }
 
 // ── 支付方式映射 ──────────────────────────────────────────────────────────────
@@ -279,6 +284,7 @@ const kpi = computed(() => {
   const payCountMap: Record<string, number> = {}
 
   for (const o of orderRows.value) {
+    if (Number(o.status) !== 1) continue
     const d = o.order_date || o.created_at || o.create_time || ''
     if (inPeriod(d)) {
       const pay = Number(o.pay_amount || 0)
@@ -322,6 +328,7 @@ const kpi = computed(() => {
 const hotGoodsRows = computed(() => {
   const map: Record<string, { goods_name: string; totalQty: number; totalAmount: number }> = {}
   for (const o of orderRows.value) {
+    if (Number(o.status) !== 1) continue
     const d = o.order_date || o.created_at || o.create_time || ''
     if (!inPeriod(d)) continue
     try {

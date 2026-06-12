@@ -4,11 +4,11 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getOfferList"
+        <ScTable ref="tableRef" :api-obj="reconcileFilteredApi"
           del-path="/shop/offerOrder/batchDel"
           sort-by="offer_date" :sort-desc="true"
           export-file-name="报价单" :params="searchForm"
-          :row-class-name="({ row }: any) => row.status === 4 ? 'row-converted' : ''"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : (row.status === 4 ? 'row-converted' : '')"
           :export-columns="{ remark: '报价单号', customer_name: '客户名称', offer_date: '报价日期', expire_date: '有效期至', admin_name: '经办人', total_amount: '报价金额', discount_amount: '优惠金额', after_offer: '实付金额', status: '状态' }">>
           <template #search>
             <el-input v-model="searchForm.offer_no" placeholder="报价单号" clearable style="width:160px" />
@@ -17,6 +17,7 @@
               <el-option label="待审核" :value="0" />
               <el-option label="已审核" :value="1" />
               <el-option label="已驳回" :value="2" />
+              <el-option label="未核对" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
@@ -91,6 +92,7 @@
               </template>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1" type="success" link size="small" @click="handleConvertToContract(row)">转销售订单</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -317,10 +319,11 @@ import { Plus, Delete, Printer, Download } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getOfferList, createOffer, updateOffer, deleteOffer, auditOffer } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getSpecList, getUnitConvert } from '@/api/goods'
+import { getSpecList, getUnitConvert, getGoodsList } from '@/api/goods'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import StaffSelect from '@/components/StaffSelect.vue'
@@ -330,6 +333,8 @@ import { usePermissionStore } from '@/stores/permission'
 const permStore = usePermissionStore()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_sale_offer', tableRef)
+const reconcileFilteredApi = createFilteredApi(getOfferList)
 
 function parseItems(goodsInfo: any): any[] {
   if (Array.isArray(goodsInfo)) return goodsInfo
@@ -454,7 +459,30 @@ async function openCreate() {
   }
 }
 
-function openEdit(row: any, readonly = false) {
+async function fillMissingSpecs(items: any[]) {
+  const missing = items.filter(i => i.goods_id && !i.spec)
+  if (!missing.length) return
+  const needIds = new Set(missing.map(i => Number(i.goods_id)))
+  const specMap: Record<number, string> = {}
+  for (let page = 1; page <= 20 && needIds.size > 0; page++) {
+    try {
+      const res = await getGoodsList({ page, size: 20 })
+      const rows: any[] = res.data?.rows ?? []
+      if (!rows.length) break
+      for (const g of rows) {
+        if (needIds.has(Number(g.id)) && g.spec) {
+          specMap[Number(g.id)] = g.spec
+          needIds.delete(Number(g.id))
+        }
+      }
+    } catch { break }
+  }
+  for (const item of missing) {
+    if (specMap[Number(item.goods_id)]) item.spec = specMap[Number(item.goods_id)]
+  }
+}
+
+async function openEdit(row: any, readonly = false) {
   Object.assign(fd, defaultFd(), row)
   fd.offer_no = parseOfferNo(row)
   fd.remark = parseRemark(row.remark || '')
@@ -466,6 +494,7 @@ function openEdit(row: any, readonly = false) {
   }
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) fetchGoodsSpecs(item.goods_id) })
+  await fillMissingSpecs(fd.items)
   isReadonly.value = readonly
   showForm.value = true
 }
@@ -706,7 +735,7 @@ function onGoodsConfirm(goods: any[]) {
       goods_id: g.id,
       goods_name: g.goods_name,
       goods_sn: g.goods_sn || '',
-      spec: '',
+      spec: g.spec || '',
       unit_name: g.unit_name || '',
       num: 1,
       price: levelPrice,

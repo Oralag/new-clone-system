@@ -3,6 +3,12 @@ import { ref, computed } from 'vue'
 
 const API_BASE = 'https://nomaderp.pages.dev/adminapi'
 
+export interface SkuVariant {
+  label: string    // 如 "1盒" "2盒"
+  price: number    // 该规格零售价
+  erpId?: number
+}
+
 export interface ShopProduct {
   id: string
   erpId: number          // ERP 商品 id
@@ -15,6 +21,8 @@ export interface ShopProduct {
   headerImages: string[]
   detailImage: string
   detailImages: string[]
+  skuImages: string[]    // SKU白底图
+  skuVariants: SkuVariant[] // 规格列表（含各自价格）
   category: string
   tags: string[]         // 'new' | 'hot' | 'sale'
   rating: number
@@ -51,6 +59,8 @@ function erpGoodsToShopProduct(item: any): ShopProduct {
     headerImages: brand.headerImages || [],
     detailImage: brand.detailImage || '',
     detailImages: brand.detailImages || [],
+    skuImages: brand.skuImages || [],
+    skuVariants: brand.skuVariants || [],
     category: item.cate_name || '',
     tags: brand.tags || [],
     rating: brand.rating || 5.0,
@@ -83,13 +93,16 @@ export const useShopStore = defineStore('shop', () => {
 
       if (token) {
         // 已登录：走正常 adminapi 代理（支持编辑权限）
-        const res = await fetch(`${API_BASE}/goods/ShopGoods/index?list_rows=200&can_sale=1&status=1&goods_type=1&page=1`, {
+        const res = await fetch(`${API_BASE}/goods/ShopGoods/index?list_rows=1000&can_sale=1&status=1&page=1`, {
           headers: { token }
         })
         json = await res.json()
       } else {
-        // 未登录：走公开接口
-        const res = await fetch('/api/brand-goods')
+        // 未登录：走公开接口，带上 shop 参数路由到对应租户
+        const shopCode = new URLSearchParams(window.location.hash.split('?')[1] || '').get('shop')
+          || localStorage.getItem('brand_shop_code') || ''
+        const goodsUrl = shopCode ? `/api/brand-goods?shop=${encodeURIComponent(shopCode)}` : '/api/brand-goods'
+        const res = await fetch(goodsUrl)
         json = await res.json()
       }
 

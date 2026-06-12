@@ -1559,5 +1559,9 @@ body.guide-active [data-popper-placement] {
 /* ── 兜底结束 ── */
 
 /* ── 核对行高亮 ── */
-.row-reconciled td { background-color: #bbf7d0 !important; }
-:root[data-theme="dark"] .row-reconciled td { background-color: #064e3b !important; }
+.el-table .el-table__body tr.row-reconciled td.el-table__cell,
+.el-table .el-table__body tr.row-reconciled:hover td.el-table__cell,
+.el-table .el-table__body tr.row-reconciled.hover-row td.el-table__cell { background-color: #bbf7d0 !important; }
+:root[data-theme="dark"] .el-table .el-table__body tr.row-reconciled td.el-table__cell,
+:root[data-theme="dark"] .el-table .el-table__body tr.row-reconciled:hover td.el-table__cell,
+:root[data-theme="dark"] .el-table .el-table__body tr.row-reconciled.hover-row td.el-table__cell { background-color: #064e3b !important; }

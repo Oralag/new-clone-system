@@ -4,7 +4,7 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getProcureInhouseList"
+        <ScTable ref="tableRef" :api-obj="reconcileFilteredApi"
           sort-by="in_date" :sort-desc="true"
           export-file-name="采购入库单" :params="searchForm"
           :row-filter="(row: any) => Number(row.status) === 1"
@@ -14,6 +14,9 @@
             <el-input v-model="searchForm.in_no" placeholder="入库单号" clearable style="width:160px" />
             <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />
             <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:150px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+              <el-option label="未核对" value="unreconciled" />
+            </el-select>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
@@ -395,6 +398,26 @@
       </template>
     </el-dialog>
 
+    <!-- BOM 生产建议弹窗 -->
+    <el-dialog v-model="bomSuggestVisible" title="检测到可生产的成品" width="580px" append-to-body :close-on-click-modal="false">
+      <p style="color:#666;margin-bottom:16px;font-size:13px">原料已入库，以下成品可以生产。确认数量后点击「确认生产」，将自动补充成品库存并扣减原料。</p>
+      <el-table :data="bomSuggestItems" border size="small">
+        <el-table-column prop="goods_name" label="成品名称" min-width="160" />
+        <el-table-column label="最多可生产" width="110">
+          <template #default="{ row }">{{ row.max_qty }} {{ row.unit_name }}</template>
+        </el-table-column>
+        <el-table-column label="本次生产数量" width="160">
+          <template #default="{ row }">
+            <el-input-number v-model="row.produce_qty" :min="0" :max="row.max_qty" :precision="0" size="small" style="width:130px" />
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="bomSuggestVisible = false">跳过</el-button>
+        <el-button type="primary" :loading="bomSuggestLoading" @click="executeBomProduction">确认生产</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 新增资金账户弹框 -->
     <el-dialog v-model="addFundVisible" title="新增资金账户" width="360px" append-to-body>
       <el-form :model="fundForm" label-width="90px">
@@ -432,6 +455,9 @@ import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { TAX_RATES } from '@/config'
 import { fmtDt } from '@/utils/date'
 import { stockEffect } from '@/utils/stockEffect'
+import { applyMaterialStockDelta } from '@/utils/materialStock'
+import { getBomByGoods } from '@/api/goods'
+import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -457,8 +483,9 @@ function calcRowTotal(row: any): number {
 const route = useRoute()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const { toggle: toggleReconcile } = useReconcile('reconcile_procure_inhouse', tableRef)
-const searchForm = reactive<any>({ in_no: '', supplier_name: '', goods_name: '' })
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_procure_inhouse', tableRef)
+const reconcileFilteredApi = createFilteredApi(getProcureInhouseList, 'reconcile_filter')
+const searchForm = reactive<any>({ in_no: '', supplier_name: '', goods_name: '', reconcile_filter: '' })
 const showForm = ref(false)
 const isReadonly = ref(false)
 
@@ -638,6 +665,7 @@ async function handleSave(andAudit = false) {
       try {
         await auditProcureInhouse(savedId, 1)
         await handleInhouseStockEffect({ ...payload, id: savedId }, 'audit')
+        checkBomAfterInhouse({ ...payload, id: savedId }).catch(() => {})
         ElMessage.success('保存并审核成功')
       } catch (e: any) {
         ElMessage.warning('保存成功，但审核失败：' + (e?.message || ''))
@@ -652,6 +680,106 @@ async function handleSave(andAudit = false) {
   } finally {
     saving.value = false
     savingAndAuditing.value = false
+  }
+}
+
+// ── BOM 生产建议 ──────────────────────────────────────────────────────────────
+const bomSuggestVisible = ref(false)
+const bomSuggestLoading = ref(false)
+const bomSuggestItems = ref<any[]>([])
+
+async function checkBomAfterInhouse(row: any) {
+  try {
+    const purchasedItems: any[] = Array.isArray(row.goods_info)
+      ? row.goods_info : JSON.parse(row.goods_info || '[]')
+    const purchasedSns = new Set(purchasedItems.map((i: any) => i.goods_sn).filter(Boolean))
+    if (!purchasedSns.size) return
+
+    const bomListRes = await http.get('/goods/BomGoods/index', { params: { page: 1, list_rows: 200 } })
+    const bomList: any[] = bomListRes.data?.list || []
+    if (!bomList.length) return
+
+    const [detailResults, stockRes, defaultWhId] = await Promise.all([
+      Promise.allSettled(bomList.map((bom: any) => getBomByGoods(bom.id))),
+      http.get('/stock/StockAll/index', { params: { list_rows: 2000 } }),
+      getSyncedDefaultWarehouseId(),
+    ])
+
+    const stockBySn: Record<string, number> = {}
+    for (const s of (stockRes.data?.rows || [])) {
+      if (s.goods_sn) stockBySn[s.goods_sn] = (stockBySn[s.goods_sn] || 0) + Number(s.qty || 0)
+    }
+
+    const whListRes = await http.get('/stock/WarehouseName/index', { params: { list_rows: 100 } })
+    const whList: any[] = whListRes.data?.rows || []
+    const defaultWh = whList.find((w: any) => w.id === defaultWhId) || whList[0] || { id: 0, name: '' }
+
+    const suggests: any[] = []
+    for (let i = 0; i < bomList.length; i++) {
+      const result = detailResults[i]
+      if (result.status !== 'fulfilled') continue
+      const detail = result.value?.data
+      if (!detail?.items?.length) continue
+      // 只处理原料中包含本次采购商品的 BOM
+      if (!detail.items.some((item: any) => purchasedSns.has(item.goods_sn))) continue
+
+      let maxQty = Infinity
+      for (const item of detail.items) {
+        const needed = Number(item.num) || 0
+        if (needed <= 0) continue
+        maxQty = Math.min(maxQty, Math.floor((stockBySn[item.goods_sn] || 0) / needed))
+      }
+      if (!isFinite(maxQty) || maxQty <= 0) continue
+
+      suggests.push({
+        goods_name: bomList[i].goods_name,
+        goods_sn: bomList[i].goods_sn,
+        unit_name: bomList[i].unit_name || '',
+        max_qty: maxQty,
+        produce_qty: maxQty,
+        rawMaterials: detail.items.map((item: any) => ({
+          goods_sn: item.goods_sn || '',
+          goods_name: item.goods_name || '',
+          unit_name: item.unit_name || '',
+          num: Number(item.num) || 0,
+        })),
+        warehouse_id: defaultWh.id,
+        warehouse_name: defaultWh.name,
+      })
+    }
+
+    if (!suggests.length) return
+    bomSuggestItems.value = suggests
+    bomSuggestVisible.value = true
+  } catch { /* 静默失败，不影响主流程 */ }
+}
+
+async function executeBomProduction() {
+  const activeItems = bomSuggestItems.value.filter(i => i.produce_qty > 0)
+  if (!activeItems.length) { bomSuggestVisible.value = false; return }
+  bomSuggestLoading.value = true
+  try {
+    for (const item of activeItems) {
+      const opts = { defaultWarehouseId: item.warehouse_id, defaultWarehouseName: item.warehouse_name }
+      // 成品入库
+      await applyMaterialStockDelta([{
+        goods_sn: item.goods_sn, goods_name: item.goods_name, unit_name: item.unit_name,
+        num: item.produce_qty, warehouse_id: item.warehouse_id, warehouse_name: item.warehouse_name,
+      }], { direction: 'restore', ...opts })
+      // 原料扣减
+      const matItems = item.rawMaterials.map((m: any) => ({
+        goods_sn: m.goods_sn, goods_name: m.goods_name, unit_name: m.unit_name,
+        num: m.num * item.produce_qty, warehouse_id: item.warehouse_id, warehouse_name: item.warehouse_name,
+      }))
+      await applyMaterialStockDelta(matItems, { direction: 'deduct', ...opts })
+    }
+    ElMessage.success(`生产完成，已生产 ${activeItems.length} 种成品`)
+    bomSuggestVisible.value = false
+    stockRefreshStore.trigger()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '生产失败')
+  } finally {
+    bomSuggestLoading.value = false
   }
 }
 
@@ -676,6 +804,7 @@ async function handleAudit(row: any, status: number) {
     await auditProcureInhouse(row.id, status)
     if (status === 1) {
       await handleInhouseStockEffect(row, 'audit')
+      checkBomAfterInhouse(row).catch(() => {})
     } else if (status === 0) {
       await handleInhouseStockEffect(row, 'reverse')
     }

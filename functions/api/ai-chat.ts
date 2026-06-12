@@ -4,9 +4,10 @@
 interface Env {
   AI_API_KEY: string
   AI_BASE_URL?: string
+  AI_MODEL?: string
 }
 
-const DEFAULT_ERP_BASE = 'https://saas.mzth.cn/adminapi'
+const DEFAULT_ERP_BASE = 'https://erp-server-xsji.onrender.com/adminapi'
 
 // Decode erp_xxx wrapped token → { base, realToken }
 function decodeToken(raw: string): { base: string; realToken: string } {
@@ -664,34 +665,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     })
   }
   const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
+  // Anthropic proxies: not a known OpenAI-compatible provider → use /v1/messages + Anthropic format
+  const isAnthropic = !/deepseek|openai\.com|groq\.com|together\.ai|mistral\.ai/.test(baseURL)
   const erpToken = request.headers.get('x-erp-token') || ''
   const { messages, images, books, userMemory } = await request.json() as any
 
   const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')
   const intent = images?.length > 0 ? 'create_with_image' : detectIntent(lastUserMsg?.content || '')
   const systemContent = getSystemPrompt(intent) + (userMemory ? `\n\n${userMemory}` : '')
-
-  // Convert Anthropic-style tools to OpenAI-style functions
-  const openAITools = allTools.map((t: any) => ({
-    type: 'function' as const,
-    function: { name: t.name, description: t.description, parameters: t.input_schema },
-  }))
-
-  // Build API messages with system prompt + inject images
-  const apiMessages: any[] = [{ role: 'system', content: systemContent }]
-  for (const [idx, m] of messages.entries()) {
-    const isLastUser = m.role === 'user' && idx === messages.length - 1
-    if (isLastUser && images?.length > 0) {
-      const content: any[] = images.map((img: any) => ({
-        type: 'image_url',
-        image_url: { url: `data:${img.mediaType};base64,${img.data}` },
-      }))
-      content.push({ type: 'text', text: m.content || '请识别这张单据图片并帮我录入系统。' })
-      apiMessages.push({ role: 'user', content })
-    } else {
-      apiMessages.push({ role: m.role, content: m.content })
-    }
-  }
 
   const { readable, writable } = new TransformStream()
   const writer = writable.getWriter()
@@ -700,97 +681,220 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   ;(async () => {
     try {
-      let loopMessages = [...apiMessages]
-      for (let i = 0; i < 5; i++) {
-        const body: any = {
-          model: 'deepseek-chat',
-          max_tokens: 4096,
-          messages: loopMessages,
-          tools: openAITools,
-          stream: true,
-        }
-        if (i === 0 && (intent === 'create' || intent === 'general')) {
-          body.tool_choice = 'required'
-        }
-        const res = await fetch(`${baseURL}/v1/chat/completions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify(body),
+      if (isAnthropic) {
+        // ── Anthropic /v1/messages path ─────────────────────────────────────────
+        const model = env.AI_MODEL || 'claude-sonnet-4-6'
+
+        // Build Anthropic-format messages; inject images into last user message
+        let loopMessages: any[] = messages.map((m: any, idx: number) => {
+          const isLastUser = m.role === 'user' && idx === messages.length - 1
+          if (isLastUser && images?.length > 0) {
+            const content: any[] = images.map((img: any) => ({
+              type: 'image',
+              source: { type: 'base64', media_type: img.mediaType, data: img.data },
+            }))
+            content.push({ type: 'text', text: m.content || '请识别这张单据图片并帮我录入系统。' })
+            return { role: 'user', content }
+          }
+          return { role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }
         })
-        if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
 
-        const reader = res.body!.getReader()
-        const dec = new TextDecoder()
-        let buf = ''
-        let assistantText = ''
-        let finishReason = ''
-        const toolCalls: { index: number; id: string; type: string; function: { name: string; arguments: string } }[] = []
+        for (let i = 0; i < 5; i++) {
+          const res = await fetch(`${baseURL}/v1/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model,
+              max_tokens: 4096,
+              system: systemContent,
+              messages: loopMessages,
+              tools: allTools,
+              stream: true,
+            }),
+          })
+          if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
 
-        let deltaBuf = ''
-        outer: while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += dec.decode(value, { stream: true })
-          const lines = buf.split('\n')
-          buf = lines.pop() || ''
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            const raw = line.slice(6).trim()
-            if (raw === '[DONE]') break outer
-            let evt: any
-            try { evt = JSON.parse(raw) } catch { continue }
+          const reader = res.body!.getReader()
+          const dec = new TextDecoder()
+          let buf = ''
+          let assistantText = ''
+          let stopReason = 'end_turn'
+          const contentBlocks: any[] = []
+          const toolInputBufs: Record<number, string> = {}
 
-            for (const choice of evt.choices || []) {
-              const delta = choice.delta || {}
-              if (delta.content) {
-                assistantText += delta.content
-                await send({ type: 'text', text: delta.content })
-              }
-              if (delta.tool_calls) {
-                for (const tc of delta.tool_calls) {
-                  if (tc.function?.name) {
-                    toolCalls[tc.index] = { index: tc.index, id: tc.id || `call_${tc.index}`, type: 'function', function: { name: tc.function.name, arguments: tc.function.arguments || '' } }
-                  } else if (tc.function?.arguments) {
-                    if (!toolCalls[tc.index]) toolCalls[tc.index] = { index: tc.index, id: `call_${tc.index}`, type: 'function', function: { name: '', arguments: '' } }
-                    toolCalls[tc.index].function.arguments += tc.function.arguments
-                  }
+          outer: while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buf += dec.decode(value, { stream: true })
+            const lines = buf.split('\n')
+            buf = lines.pop() || ''
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              const raw = line.slice(6).trim()
+              let evt: any
+              try { evt = JSON.parse(raw) } catch { continue }
+
+              if (evt.type === 'message_stop') break outer
+
+              if (evt.type === 'content_block_start') {
+                contentBlocks[evt.index] = { ...evt.content_block }
+                if (evt.content_block.type === 'tool_use') toolInputBufs[evt.index] = ''
+              } else if (evt.type === 'content_block_delta') {
+                const delta = evt.delta
+                if (delta.type === 'text_delta') {
+                  if (!contentBlocks[evt.index]) contentBlocks[evt.index] = { type: 'text', text: '' }
+                  contentBlocks[evt.index].text = (contentBlocks[evt.index].text || '') + delta.text
+                  assistantText += delta.text
+                  await send({ type: 'text', text: delta.text })
+                } else if (delta.type === 'input_json_delta') {
+                  toolInputBufs[evt.index] = (toolInputBufs[evt.index] || '') + delta.partial_json
                 }
-              }
-              if (choice.finish_reason) {
-                finishReason = choice.finish_reason
+              } else if (evt.type === 'content_block_stop') {
+                const block = contentBlocks[evt.index]
+                if (block?.type === 'tool_use') {
+                  try { block.input = JSON.parse(toolInputBufs[evt.index] || '{}') } catch { block.input = {} }
+                }
+              } else if (evt.type === 'message_delta') {
+                if (evt.delta?.stop_reason) stopReason = evt.delta.stop_reason
               }
             }
           }
-        }
 
-        if (finishReason !== 'tool_calls') {
-          if (images?.length > 0 && shouldAskForCloseup(assistantText)) {
-            await send({ type: 'text_replace', text: CLOSEUP_MESSAGE })
+          const toolBlocks = contentBlocks.filter((b: any) => b?.type === 'tool_use')
+          if (toolBlocks.length === 0 || stopReason === 'end_turn') {
+            if (images?.length > 0 && i === 0 && shouldAskForCloseup(assistantText)) {
+              await send({ type: 'text_replace', text: CLOSEUP_MESSAGE })
+            }
+            break
           }
-          break
+
+          loopMessages.push({ role: 'assistant', content: contentBlocks.filter(Boolean) })
+          const toolResults: any[] = []
+          for (const toolBlock of toolBlocks) {
+            await send({ type: 'tool_start', id: toolBlock.id, name: toolBlock.name, input: toolBlock.input })
+            const result = await executeTool(toolBlock.name, toolBlock.input || {}, erpToken, books)
+            await send({ type: 'tool_result', id: toolBlock.id, name: toolBlock.name, result })
+            toolResults.push({ type: 'tool_result', tool_use_id: toolBlock.id, content: result })
+          }
+          loopMessages.push({ role: 'user', content: toolResults })
         }
 
-        const validToolCalls = toolCalls.filter(Boolean)
-        const assistantMsg: any = { role: 'assistant', content: assistantText || null }
-        if (validToolCalls.length > 0) {
-          assistantMsg.tool_calls = validToolCalls.map((tc: any) => ({
-            id: tc.id,
-            type: 'function',
-            function: { name: tc.function.name, arguments: tc.function.arguments },
-          }))
+      } else {
+        // ── OpenAI /v1/chat/completions path (DeepSeek, etc.) ──────────────────
+        const openAITools = allTools.map((t: any) => ({
+          type: 'function' as const,
+          function: { name: t.name, description: t.description, parameters: t.input_schema },
+        }))
+
+        const apiMessages: any[] = [{ role: 'system', content: systemContent }]
+        for (const [idx, m] of messages.entries()) {
+          const isLastUser = m.role === 'user' && idx === messages.length - 1
+          if (isLastUser && images?.length > 0) {
+            const content: any[] = images.map((img: any) => ({
+              type: 'image_url',
+              image_url: { url: `data:${img.mediaType};base64,${img.data}` },
+            }))
+            content.push({ type: 'text', text: m.content || '请识别这张单据图片并帮我录入系统。' })
+            apiMessages.push({ role: 'user', content })
+          } else {
+            apiMessages.push({ role: m.role, content: m.content })
+          }
         }
 
-        const toolResults: any[] = []
-        for (const tc of validToolCalls) {
-          let args: any = {}
-          try { args = JSON.parse(tc.function.arguments || '{}') } catch {}
-          await send({ type: 'tool_start', id: tc.id, name: tc.function.name, input: args })
-          const result = await executeTool(tc.function.name, args, erpToken, books)
-          await send({ type: 'tool_result', id: tc.id, name: tc.function.name, result })
-          toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
+        let loopMessages = [...apiMessages]
+        for (let i = 0; i < 5; i++) {
+          const body: any = {
+            model: env.AI_MODEL || 'deepseek-chat',
+            max_tokens: 4096,
+            messages: loopMessages,
+            tools: openAITools,
+            stream: true,
+          }
+          if (i === 0 && (intent === 'create' || intent === 'general')) {
+            body.tool_choice = 'required'
+          }
+          const res = await fetch(`${baseURL}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify(body),
+          })
+          if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
+
+          const reader = res.body!.getReader()
+          const dec = new TextDecoder()
+          let buf = ''
+          let assistantText = ''
+          let finishReason = ''
+          const toolCalls: { index: number; id: string; type: string; function: { name: string; arguments: string } }[] = []
+
+          outer: while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buf += dec.decode(value, { stream: true })
+            const lines = buf.split('\n')
+            buf = lines.pop() || ''
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              const raw = line.slice(6).trim()
+              if (raw === '[DONE]') break outer
+              let evt: any
+              try { evt = JSON.parse(raw) } catch { continue }
+
+              for (const choice of evt.choices || []) {
+                const delta = choice.delta || {}
+                if (delta.content) {
+                  assistantText += delta.content
+                  await send({ type: 'text', text: delta.content })
+                }
+                if (delta.tool_calls) {
+                  for (const tc of delta.tool_calls) {
+                    if (tc.function?.name) {
+                      toolCalls[tc.index] = { index: tc.index, id: tc.id || `call_${tc.index}`, type: 'function', function: { name: tc.function.name, arguments: tc.function.arguments || '' } }
+                    } else if (tc.function?.arguments) {
+                      if (!toolCalls[tc.index]) toolCalls[tc.index] = { index: tc.index, id: `call_${tc.index}`, type: 'function', function: { name: '', arguments: '' } }
+                      toolCalls[tc.index].function.arguments += tc.function.arguments
+                    }
+                  }
+                }
+                if (choice.finish_reason) finishReason = choice.finish_reason
+              }
+            }
+          }
+
+          if (finishReason !== 'tool_calls') {
+            if (images?.length > 0 && shouldAskForCloseup(assistantText)) {
+              await send({ type: 'text_replace', text: CLOSEUP_MESSAGE })
+            }
+            break
+          }
+
+          const validToolCalls = toolCalls.filter(Boolean)
+          const assistantMsg: any = { role: 'assistant', content: assistantText || null }
+          if (validToolCalls.length > 0) {
+            assistantMsg.tool_calls = validToolCalls.map((tc: any) => ({
+              id: tc.id, type: 'function',
+              function: { name: tc.function.name, arguments: tc.function.arguments },
+            }))
+          }
+
+          const toolResults: any[] = []
+          for (const tc of validToolCalls) {
+            let args: any = {}
+            try { args = JSON.parse(tc.function.arguments || '{}') } catch {}
+            await send({ type: 'tool_start', id: tc.id, name: tc.function.name, input: args })
+            const result = await executeTool(tc.function.name, args, erpToken, books)
+            await send({ type: 'tool_result', id: tc.id, name: tc.function.name, result })
+            toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
+          }
+          loopMessages = [...loopMessages, assistantMsg, ...toolResults]
         }
-        loopMessages = [...loopMessages, assistantMsg, ...toolResults]
       }
+
       await writer.write(encoder.encode('data: [DONE]\n\n'))
     } catch (e: any) {
       await send({ type: 'error', error: e.message })

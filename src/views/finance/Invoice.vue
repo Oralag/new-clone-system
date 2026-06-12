@@ -1,7 +1,8 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getInvoiceList"
+      <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/finance/Invoice/batchDel"
           export-file-name="发票管理" :params="searchForm">
         <template #search>
@@ -12,10 +13,15 @@
             <el-form-item label="客户名称">
               <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width:180px" />
             </el-form-item>
+            <el-form-item>
+              <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+                <el-option label="未核对" value="unreconciled" />
+              </el-select>
+            </el-form-item>
           </el-form>
           <div class="search-actions">
             <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="Object.assign(searchForm, { invoice_no: '', customer_name: '' }); tableRef?.loadData()">重置</el-button>
+            <el-button @click="Object.assign(searchForm, { invoice_no: '', customer_name: '', reconcile_filter: '' }); tableRef?.loadData()">重置</el-button>
           </div>
         </template>
         <template #toolbar>
@@ -31,6 +37,7 @@
           <template #default="{ row }">
             <el-button type="success" link @click="openView(row)">查看</el-button>
               <el-button type="primary" link @click="openForm(row)">编辑</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
@@ -65,13 +72,16 @@
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import ScForm from '@/components/ScForm.vue'
 import { getInvoiceList, createInvoice, updateInvoice, deleteInvoice } from '@/api/finance'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_invoice', tableRef)
 const formRef = ref<InstanceType<typeof ScForm>>()
 const formTitle = ref('新增')
-const searchForm = reactive<any>({ invoice_no: '', customer_name: '' })
+const searchForm = reactive<any>({ invoice_no: '', customer_name: '', reconcile_filter: '' })
+const reconcileFilteredApi = createFilteredApi(getInvoiceList, 'reconcile_filter')
 
 function openView(row?: any) {
   formRef.value?.openView(row)

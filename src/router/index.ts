@@ -41,6 +41,21 @@ router.beforeEach((to, _from, next) => {
     return next({ path: '/login', query: { redirect: to.fullPath } })
   }
 
+  // Force re-login for trial tokens that still point to the old production backend.
+  // After migration to erp-trial.onrender.com, old trial tokens must be invalidated.
+  const token = auth.token
+  if (token.startsWith('erp_')) {
+    try {
+      // Must use decodeURIComponent(escape(...)) to handle Chinese characters in company names
+      const json = decodeURIComponent(escape(atob(token.slice(4))))
+      const payload = JSON.parse(json)
+      if (payload.trial && payload.b && !payload.b.includes('erp-trial')) {
+        auth.clearAuth()
+        return next({ path: '/login', query: { redirect: to.fullPath, reason: 'token_refresh' } })
+      }
+    } catch { /* malformed token — proceed, login guard above handles re-auth */ }
+  }
+
   // Restore permissions from userInfo on page refresh (pinia store is empty after refresh)
   const permStore = usePermissionStore()
   if (auth.userInfo && permStore.permConfig === null && !permStore.isSubAccount) {

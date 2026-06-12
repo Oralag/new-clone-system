@@ -210,6 +210,36 @@ interface MemoryEntry {
   timestamp: string
 }
 
+function extractAssistantText(message: any): string {
+  const content = message?.content
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => {
+        if (typeof part === 'string') return part
+        if (typeof part?.text === 'string') return part.text
+        if (typeof part?.content === 'string') return part.content
+        return ''
+      })
+      .join('')
+  }
+  return ''
+}
+
+function isUsableAssistantText(text: string): boolean {
+  const c = String(text || '').trim()
+  return !!c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c) && c.toLowerCase() !== 'null'
+}
+
+function safeParseToolArguments(raw: string | undefined): Record<string, any> {
+  if (!raw) return {}
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
 // ── System Prompt Builder ──────────────────────────────────────────────────
 
 function buildAdamSystemPrompt(adamState: Record<string, any>, memories: MemoryEntry[] = []): string {
@@ -1285,13 +1315,13 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
       if (!apiKey2) return JSON.stringify({ error: 'AI API Key 未配置，无法写书' })
 
       async function llm(system: string, user: string, max = 6000): Promise<string> {
-        const r = await fetch(`${baseURL2}/v1/messages`, {
+        const r = await fetch(`${baseURL2}/v1/chat/completions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey2, 'Authorization': `Bearer ${apiKey2}`, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: max, system, messages: [{ role: 'user', content: user }] }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey2}` },
+          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: max, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
         })
         const d: any = await r.json()
-        return d.content?.[0]?.text || d.error?.message || ''
+        return d.choices?.[0]?.message?.content || d.error?.message || ''
       }
 
       // 1. 选题
@@ -1450,60 +1480,74 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const { readable, writable } = new TransformStream()
   const writer = writable.getWriter()
   const encoder = new TextEncoder()
-  const send = async (obj: object) => writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
+  const send = async (obj: any) => {
+    if (obj?.type === 'text') {
+      const text = extractOpenAIText({ content: obj.text ?? obj.content })
+      if (!isUsableAssistantText(text)) return
+      obj = { ...obj, text, content: text }
+    } else if (obj?.type === 'tool_result' && obj.content === undefined) {
+      obj = { ...obj, content: obj.result ?? '' }
+    }
+    await writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
+  }
 
   ;(async () => {
     try {
       const baseURL = (env.AI_BASE_URL || env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
+      const oaiAdamTools = adamTools.map((t: any) => ({
+        type: 'function' as const,
+        function: { name: t.name, description: t.description, parameters: t.input_schema || { type: 'object', properties: {} } },
+      }))
 
-      // 使用 Anthropic 原生格式（/v1/messages）
-      let convMessages: any[] = [...oaiMessages]
+      let currentMessages: any[] = [
+        { role: 'system', content: systemPrompt },
+        ...oaiMessages,
+      ]
+      let hadToolCalls = false
+      let sentFinalText = false
+      let sentError = false
 
       for (let i = 0; i < 5; i++) {
-        const res = await fetch(`${baseURL}/v1/messages`, {
+        const res = await fetch(`${baseURL}/v1/chat/completions`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'Authorization': `Bearer ${apiKey}`,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 4096,
-            system: systemPrompt,
-            messages: convMessages,
-            tools: adamTools,
-          }),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 4096, messages: currentMessages, tools: oaiAdamTools, tool_choice: 'auto' }),
         })
 
         if (!res.ok) {
           const errText = await res.text()
           await send({ type: 'error', error: `AI API 错误: ${res.status} ${errText.slice(0, 300)}` })
+          sentError = true
           break
         }
 
         const data: any = await res.json()
-        const stopReason = data.stop_reason
-        const contentBlocks: any[] = data.content || []
+        const choice = data.choices?.[0]
+        if (!choice) {
+          await send({ type: 'error', error: `AI 无响应: ${JSON.stringify(data).slice(0, 200)}` })
+          sentError = true
+          break
+        }
 
-        const assistantText = contentBlocks.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
-        if (assistantText) await send({ type: 'text', text: assistantText })
+        const assistantText = extractAssistantText(choice.message)
+        if (isUsableAssistantText(assistantText)) await send({ type: 'text', text: assistantText })
 
-        const toolUseBlocks = contentBlocks.filter((b: any) => b.type === 'tool_use')
-        if (stopReason !== 'tool_use' || toolUseBlocks.length === 0) break
+        if (choice.finish_reason !== 'tool_calls' || !choice.message?.tool_calls?.length) {
+          sentFinalText = isUsableAssistantText(assistantText)
+          break
+        }
 
-        // assistant 消息含完整 content 块
-        convMessages.push({ role: 'assistant', content: contentBlocks })
+        const toolCalls = choice.message.tool_calls
+        hadToolCalls = true
+        currentMessages.push({ role: 'assistant', content: assistantText || null, tool_calls: toolCalls })
 
-        // 处理所有工具调用，收集结果
-        const toolResultContent: any[] = []
-        for (const tc of toolUseBlocks) {
+        const toolResults: any[] = []
+        for (const tc of toolCalls) {
           const callId = tc.id
-          const name = tc.name
-          const input = tc.input || {}
+          const name = tc.function.name
+          const input = safeParseToolArguments(tc.function.arguments)
           await send({ type: 'tool_start', id: callId, name, input })
-          const result = await executeAdamTool(name, input, books, env.AGENT_MEMORY, stateKey, env)
+          const result = await executeAdamTool(name, input || {}, books, env.AGENT_MEMORY, stateKey, env)
           await send({ type: 'tool_result', id: callId, name, result })
 
           if (name === 'consult_marketing_expert' && erpToken && env.AGENT_MEMORY) {
@@ -1538,11 +1582,39 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
             } catch {}
           }
 
-          toolResultContent.push({ type: 'tool_result', tool_use_id: callId, content: result })
+          toolResults.push({ role: 'tool', tool_call_id: callId, content: result })
         }
 
-        // 所有工具结果合并为一条 user 消息（Anthropic 格式要求）
-        convMessages.push({ role: 'user', content: toolResultContent })
+        currentMessages = [...currentMessages, ...toolResults]
+      }
+
+      if (hadToolCalls && !sentFinalText) {
+        try {
+          const finalRes = await fetch(`${baseURL}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              max_tokens: 800,
+              messages: [
+                ...currentMessages,
+                { role: 'user', content: '现在不要再调用工具。请用亚当的第一人称，基于刚才工具结果，直接回复规则传递者。' },
+              ],
+            }),
+          })
+          if (finalRes.ok) {
+            const finalData: any = await finalRes.json()
+            const finalText = extractAssistantText(finalData.choices?.[0]?.message)
+            if (isUsableAssistantText(finalText)) {
+              await send({ type: 'text', text: finalText })
+              sentFinalText = true
+            }
+          }
+        } catch {}
+      }
+
+      if (!sentFinalText && !sentError) {
+        await send({ type: 'text', text: '我在，刚才这轮工具结果没有整理成完整结论。你把问题再丢给我一次，我会直接给判断。' })
       }
 
       await writer.write(encoder.encode('data: [DONE]\n\n'))

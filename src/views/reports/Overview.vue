@@ -68,6 +68,86 @@
       </div>
     </div>
 
+    <!-- 收支趋势 + 利润分析 -->
+    <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+      <div class="ro-chart-card" style="flex:2;min-width:260px">
+        <div class="ro-card-header">
+          <div class="ro-card-title">
+            <el-icon :size="14" style="vertical-align:middle;margin-right:4px"><TrendCharts /></el-icon>
+            利润趋势
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <el-radio-group v-model="reportTrendRange" size="small">
+              <el-radio-button value="7d">7天</el-radio-button>
+              <el-radio-button value="3m">3个月</el-radio-button>
+              <el-radio-button value="all">全部</el-radio-button>
+            </el-radio-group>
+            <router-link to="/reports/profit" class="ro-link">完整报表 →</router-link>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="display:flex;flex-direction:column;gap:14px;flex-shrink:0;padding-top:6px;min-width:68px">
+            <div v-for="s in reportTrendSeries" :key="s.name" style="display:flex;align-items:center;gap:7px">
+              <svg width="18" height="10" style="flex-shrink:0;overflow:visible">
+                <line x1="0" y1="5" x2="18" y2="5" :stroke="s.color" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="9" cy="5" r="2" fill="#fff" :stroke="s.color" stroke-width="1.5"/>
+              </svg>
+              <span style="font-size:11px;color:rgba(29,29,31,0.45);white-space:nowrap">{{ s.name }}</span>
+            </div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <svg :viewBox="`0 0 ${reportChartW + 60} 128`" width="100%" style="display:block;overflow:visible">
+              <line v-for="gi in 4" :key="gi" :x1="0" :y1="(gi-1)*30" :x2="reportChartW" :y2="(gi-1)*30" stroke="#f0f0f5" stroke-width="1" />
+              <text v-for="yl in reportYAxisLabels" :key="'yl'+yl.y" :x="reportChartW + 6" :y="yl.y + 3" text-anchor="start" font-size="9" fill="rgba(29,29,31,0.3)">{{ yl.label }}</text>
+              <template v-for="s in reportTrendSeries" :key="s.name">
+                <path v-if="s.linePath" :d="s.linePath" fill="none" :stroke="s.color" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle v-for="(v,ci) in s.norm" :key="ci" :cx="ci*(reportChartW/(reportTrendDays.length-1||1))" :cy="90 - v * 80" r="2" fill="#fff" :stroke="s.color" stroke-width="1.5"/>
+              </template>
+              <text v-for="(d,i) in reportTrendDays" :key="'fd'+i" :x="i*(reportChartW/(reportTrendDays.length-1||1))" y="114" text-anchor="middle" font-size="10" fill="rgba(29,29,31,0.35)">{{ d }}</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="ro-chart-card" style="flex:1;min-width:200px;cursor:pointer" @click="$router.push('/reports/profit')">
+        <div class="ro-card-header" style="margin-bottom:12px">
+          <div class="ro-card-title">利润分析</div>
+          <span class="ro-link">明细 →</span>
+        </div>
+        <div style="font-size:11px;color:rgba(29,29,31,0.35);margin-bottom:16px">按成本价 × 销量 = COGS</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;color:rgba(29,29,31,0.5)">营业收入</span>
+            <span style="font-size:14px;font-weight:600;color:#16a34a">¥{{ fmt(saleTotal + retailTotal) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;color:rgba(29,29,31,0.5)">商品成本(COGS)</span>
+            <span style="font-size:13px;font-weight:600;color:#dc2626">−¥{{ fmt(saleTotal + retailTotal - grossProfit) }}</span>
+          </div>
+          <div style="border-top:1px solid #f0f0f5;padding-top:8px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;color:rgba(29,29,31,0.5)">毛利润</span>
+            <span style="font-size:14px;font-weight:700" :style="{color: grossProfit >= 0 ? '#16a34a' : '#dc2626'}">
+              {{ grossProfit >= 0 ? '+' : '−' }}¥{{ fmt(Math.abs(grossProfit)) }}
+            </span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-left:8px">
+            <span style="font-size:11px;color:rgba(29,29,31,0.4)">运费承担</span>
+            <span style="font-size:12px;color:#dc2626">−¥{{ fmt(freightTotal) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-left:8px">
+            <span style="font-size:11px;color:rgba(29,29,31,0.4)">费用支出</span>
+            <span style="font-size:12px;color:#dc2626">−¥{{ fmt(expenseTotal) }}</span>
+          </div>
+          <div style="border-top:2px solid #f0f0f5;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;font-weight:700;color:#1d1d1f">净利润</span>
+            <span style="font-size:18px;font-weight:800" :style="{color: netProfit >= 0 ? '#16a34a' : '#dc2626'}">
+              {{ netProfit >= 0 ? '+' : '−' }}¥{{ fmt(Math.abs(netProfit)) }}
+            </span>
+          </div>
+          <div style="font-size:11px;color:rgba(29,29,31,0.35);text-align:right">毛利率 {{ grossMargin.toFixed(1) }}% · 净利率 {{ netMargin.toFixed(1) }}%</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 利润核算表 -->
     <div class="ro-chart-card">
       <div class="ro-card-header">
@@ -397,14 +477,26 @@ const goodsCostMap = computed(() => {
   return m
 })
 
-// goods_id set that has BOM (for label only)
+// goods_sn set that has BOM — goods_id is 0 in all BOM records, match by goods_sn
+const bomSnSet = computed(() => {
+  const s = new Set<string>()
+  for (const b of bomList.value) { if (b.goods_sn) s.add(b.goods_sn) }
+  return s
+})
+const goodsSnMap = computed(() => {
+  const m: Record<number, string> = {}
+  for (const g of goodsList.value) m[g.id] = g.goods_sn || ''
+  return m
+})
 const hasBomSet = computed(() => {
   const s = new Set<number>()
-  for (const b of bomList.value) { if (b.goods_id) s.add(b.goods_id) }
+  for (const g of goodsList.value) {
+    if (g.goods_sn && bomSnSet.value.has(g.goods_sn)) s.add(g.id)
+  }
   return s
 })
 
-// Cost = goods master cost_price (already set by user to reflect actual unit cost)
+// Cost = goods master cost_price
 function getUnitCost(goodsId: number): number {
   return goodsCostMap.value[goodsId] || 0
 }
@@ -580,6 +672,106 @@ function fmt(v: number | string): string {
   return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+const reportChartW = 480
+const reportTrendRange = ref<'7d' | '3m' | 'all'>('7d')
+
+const reportTrendBuckets = computed(() => {
+  const now = Date.now()
+  const buckets: { key: string; label: string }[] = []
+  if (reportTrendRange.value === '7d') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now - i * 86400000)
+      buckets.push({ key: d.toISOString().slice(0, 10), label: `${d.getMonth()+1}/${d.getDate()}` })
+    }
+  } else if (reportTrendRange.value === '3m') {
+    for (let i = 12; i >= 0; i--) {
+      const d = new Date(now - i * 7 * 86400000)
+      buckets.push({ key: d.toISOString().slice(0, 10), label: `${d.getMonth()+1}/${d.getDate()}` })
+    }
+  } else {
+    const allDates = [
+      ...saleContracts.value.map((c: any) => (c.sign_date||c.order_date||c.created_at||'').slice(0,7)),
+      ...retailOrders.value.map((r: any) => (r.order_date||r.created_at||'').slice(0,7)),
+      ...procureOrders.value.map((o: any) => (o.order_date||o.created_at||'').slice(0,7)),
+      ...expenseList.value.map((e: any) => (e.expense_date||e.created_at||'').slice(0,7)),
+    ].filter(Boolean)
+    const earliest = allDates.length ? allDates.reduce((a,b) => a<b?a:b) : new Date(now).toISOString().slice(0,7)
+    const nowD = new Date(now)
+    const cur = new Date(earliest + '-01')
+    while (cur.toISOString().slice(0,7) <= nowD.toISOString().slice(0,7)) {
+      const key = cur.toISOString().slice(0,7)
+      buckets.push({ key, label: `${cur.getMonth()+1}月` })
+      cur.setMonth(cur.getMonth()+1)
+    }
+  }
+  return buckets
+})
+
+const reportTrendDays = computed(() => reportTrendBuckets.value.map(b => b.label))
+
+function rptSmoothPath(vals: number[], n: number, w: number, yFn: (v: number) => number): string {
+  if (vals.length < 2 || n < 2) return ''
+  const pts = vals.map((v,i) => ({ x: i*(w/(n-1)), y: yFn(v) }))
+  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
+  for (let i = 1; i < pts.length; i++) {
+    const p0=pts[Math.max(0,i-2)],p1=pts[i-1],p2=pts[i],p3=pts[Math.min(pts.length-1,i+1)]
+    d += ` C${(p1.x+(p2.x-p0.x)/6).toFixed(1)},${(p1.y+(p2.y-p0.y)/6).toFixed(1)},${(p2.x-(p3.x-p1.x)/6).toFixed(1)},${(p2.y-(p3.y-p1.y)/6).toFixed(1)},${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
+  }
+  return d
+}
+
+const reportTrendSeries = computed(() => {
+  const buckets = reportTrendBuckets.value
+  const n = buckets.length
+  if (n === 0) return []
+  const getIdx = (dateStr: string): number => {
+    const d = (dateStr||'').slice(0,10); if(!d) return -1
+    if (reportTrendRange.value === '7d') return buckets.findIndex(b => b.key === d)
+    if (reportTrendRange.value === '3m') { let idx=-1; for(let i=0;i<buckets.length;i++){if(d>=buckets[i].key)idx=i;else break}; return idx }
+    return buckets.findIndex(b => b.key === d.slice(0,7))
+  }
+  const revenue = new Array(n).fill(0)
+  const expense = new Array(n).fill(0)
+  for (const c of saleContracts.value) { const i=getIdx(c.sign_date||c.order_date||c.created_at||''); if(i>=0) revenue[i]+=Number(c.total_amount||0) }
+  for (const r of retailOrders.value) { const i=getIdx(r.order_date||r.created_at||''); if(i>=0) revenue[i]+=Number(r.pay_amount||r.total_amount||0) }
+  for (const o of procureOrders.value) { const i=getIdx(o.order_date||o.created_at||''); if(i>=0) expense[i]+=Number(o.total_amount||0) }
+  for (const e of expenseList.value) { const i=getIdx(e.expense_date||e.created_at||''); if(i>=0) expense[i]+=Number(e.amount||0) }
+  const profit = revenue.map((v, i) => v - expense[i])
+  const defs = [
+    { name: '收入', color: '#16a34a', vals: revenue },
+    { name: '支出', color: '#ea580c', vals: expense },
+    { name: '净利润', color: '#0071e3', vals: profit },
+  ]
+  const allVals = defs.flatMap(s => s.vals)
+  const gMax = Math.max(...allVals, 1)
+  const gMin = Math.min(...allVals, 0)
+  const range = gMax - gMin || 1
+  return defs.map(s => ({
+    name: s.name, color: s.color, vals: s.vals,
+    norm: s.vals.map(v => (v - gMin) / range),
+    linePath: rptSmoothPath(s.vals.map(v => (v - gMin) / range), n, reportChartW, v => 90-v*80),
+    gMax, gMin,
+  }))
+})
+
+const reportTrendGlobalMax = computed(() => reportTrendSeries.value[0]?.gMax ?? 1)
+const reportTrendGlobalMin = computed(() => reportTrendSeries.value[0]?.gMin ?? 0)
+
+function fmtRptYVal(v: number): string {
+  if (v >= 10000) return `¥${(v/10000).toFixed(v >= 100000 ? 0 : 1)}万`
+  if (v >= 1000) return `¥${(v/1000).toFixed(1)}k`
+  if (v <= -10000) return `-¥${(Math.abs(v)/10000).toFixed(1)}万`
+  if (v <= -1000) return `-¥${(Math.abs(v)/1000).toFixed(1)}k`
+  return `¥${Math.round(v)}`
+}
+
+const reportYAxisLabels = computed(() => {
+  const gMax = reportTrendGlobalMax.value
+  const gMin = reportTrendGlobalMin.value
+  const range = gMax - gMin || 1
+  return [30, 60, 90].map(y => ({ y, label: fmtRptYVal(Math.round((90-y)/80 * range + gMin)) }))
+})
+
 function getBarWidth(list: any[], val: number, _field: string): string {
   const max = Math.max(...list.map(r => r.amount), 1)
   return Math.max(4, val / max * 100).toFixed(1) + '%'
@@ -587,7 +779,7 @@ function getBarWidth(list: any[], val: number, _field: string): string {
 
 async function loadAll() {
   loading.value = true
-  const params: any = { list_rows: 500 }
+  const params: any = { list_rows: 2000 }
   if (dateRange.value) {
     params.start_date = dateRange.value[0]
     params.end_date = dateRange.value[1]
@@ -627,7 +819,7 @@ async function loadAll() {
     goodsList.value = goods.status === 'fulfilled'
       ? (goods.value?.data?.rows ?? []) : []
     bomList.value = bom.status === 'fulfilled'
-      ? (bom.value?.data?.rows ?? []) : []
+      ? (bom.value?.data?.list ?? bom.value?.data?.rows ?? []) : []
     expenseList.value = expense.status === 'fulfilled'
       ? (expense.value?.data?.rows ?? []) : []
     prepayList.value = prepay.status === 'fulfilled'

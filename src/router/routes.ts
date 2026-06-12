@@ -39,6 +39,11 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/mini-orders', name: 'MiniOrders', component: () => import('@/views/sale/MiniOrders.vue'), meta: { title: '小程序订单' } },
       { path: 'sale/mini-videos', name: 'MiniVideos', component: () => import('@/views/sale/MiniVideos.vue'), meta: { title: '看看视频管理' } },
       { path: 'sale/mini-qrcode', name: 'MiniQrcode', component: () => import('@/views/sale/MiniQrcode.vue'), meta: { title: '包装二维码' } },
+      { path: 'sale/distributor', name: 'Distributor', component: () => import('@/views/miniprogram/Distributor.vue'), meta: { title: '分销商管理' } },
+      { path: 'sale/refund', name: 'Refund', component: () => import('@/views/miniprogram/Refund.vue'), meta: { title: '退款/售后' } },
+
+      // Online
+      { path: 'online/meituan', name: 'OnlineMeituan', component: () => import('@/views/online/MeituanOrders.vue'), meta: { title: '美团订单' } },
 
       // Retail
       { path: 'retail/overview', name: 'RetailOverview', component: () => import('@/views/retail/RetailOverview.vue'), meta: { title: '零售总览' } },
@@ -213,6 +218,7 @@ const routes: RouteRecordRaw[] = [
           { path: 'brand', name: 'MobileAgentBrand', component: () => import('@/views/agent/BrandDept.vue'), meta: { title: '品牌部' } },
           { path: 'brand-settings', name: 'MobileAgentBrandSettings', component: () => import('@/views/agent/Brand.vue'), meta: { title: '品牌配置' } },
           { path: 'workflow', name: 'MobileAgentWorkflow', component: () => import('@/views/agent/PublishWorkflow.vue'), meta: { title: '一站式发布' } },
+          { path: 'publish', name: 'MobileAgentPublish', component: () => import('@/views/agent/Publish.vue'), meta: { title: '发布部' } },
         ]
       },
       { path: 'investment', name: 'MobileInvestment', component: () => import('@/layouts/InvestmentLayout.vue'), meta: { title: '对外投资' } },
@@ -347,6 +353,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'InvestmentIndex', component: () => import('@/views/investment/Index.vue'), meta: { title: '亚当观测舱' } },
       { path: 'city', name: 'InvestmentCity', component: () => import('@/views/investment/City.vue'), meta: { title: '生态园区' } },
+      { path: 'city/hall/:id', name: 'InvestmentHall', component: () => import('@/views/investment/halls/HallView.vue'), meta: { title: '建筑大厅' } },
       { path: 'market', name: 'InvestmentMarket', component: () => import('@/views/investment/Market.vue'), meta: { title: '市场' } },
       { path: 'marketing', name: 'InvestmentMarketing', component: () => import('@/views/investment/Marketing.vue'), meta: { title: '营销顾问' } },
       { path: 'designer', name: 'InvestmentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },

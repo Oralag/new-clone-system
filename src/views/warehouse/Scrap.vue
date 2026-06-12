@@ -1,12 +1,16 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getScrapList"
+      <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/stock/Scrap/batchDel"
           export-file-name="报废单" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.scrap_no" placeholder="报废单编号" clearable style="width: 180px" />
           <el-input v-model="searchForm.warehouse_name" placeholder="仓库名称" clearable style="width: 180px" />
+          <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+            <el-option label="未核对" value="unreconciled" />
+          </el-select>
         </template>
         <template #toolbar>
           <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
@@ -28,6 +32,7 @@
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button type="success" size="small" link @click="formRef?.openView(row)">查看</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
@@ -98,6 +103,7 @@
 
 <script setup lang="ts">
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import ScForm from '@/components/ScForm.vue'
 
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -108,11 +114,14 @@ import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 const stockRefreshStore = useStockRefreshStore()
 
 const tableRef = ref()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_warehouse_scrap', tableRef)
+const reconcileFilteredApi = createFilteredApi(getScrapList, 'reconcile_filter')
 const formRef = ref()
 
 const searchForm = reactive({
   scrap_no: '',
-  warehouse_name: ''
+  warehouse_name: '',
+  reconcile_filter: ''
 })
 
 // 仓库选项

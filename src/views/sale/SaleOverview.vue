@@ -486,9 +486,11 @@ const kpi = computed(() => {
   let orders = 0
 
   for (const c of contractRows.value) {
+    if (Number(c.status) !== 1) continue
     const d = getContractDate(c)
     if (inPeriod(d)) {
-      sale += Number(c.after_discount || c.total_amount || 0)
+      const afterDisc = Number(c.after_discount)
+      sale += (afterDisc > 0 && afterDisc <= Number(c.total_amount || 0)) ? afterDisc : Number(c.total_amount || 0)
       if (c.freight_bearer === 'seller') sellerFreight += Number(c.freight_amount || 0)
       if (c.customer_id) customerSet.add(c.customer_id)
       orders++

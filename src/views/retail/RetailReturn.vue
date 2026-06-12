@@ -1,7 +1,8 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="scTable" :api-obj="getRetailReturnList"
+      <ScTable ref="scTable"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/retail/return/batchDel"
           export-file-name="零售退货" :params="searchForm">
         <template #search>
@@ -10,6 +11,7 @@
             <el-option label="待审核" :value="0" />
             <el-option label="已审核" :value="1" />
             <el-option label="已驳回" :value="2" />
+            <el-option label="未核对" value="unreconciled" />
           </el-select>
         </template>
         <el-table-column label="退货单号" prop="return_no" min-width="150" />
@@ -34,6 +36,7 @@
           <template #default="{ row }">
             <template v-if="Number(row.status) === 0">
               <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
             </template>
             <el-button v-if="Number(row.status) === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
@@ -50,6 +53,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import { getRetailReturnList, deleteRetailReturn, auditRetailReturn } from '@/api/retail'
 import { adjustFundBalance } from '@/utils/fund'
 import { RETAIL_FUND_NAME } from '@/config'
@@ -58,6 +62,8 @@ import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
 
 const scTable = ref()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_retail_return', scTable)
+const reconcileFilteredApi = createFilteredApi(getRetailReturnList)
 const stockRefreshStore = useStockRefreshStore()
 const searchForm = reactive<any>({ return_no: '', status: '' })
 

@@ -13,6 +13,21 @@ function tokenKey(token: string): string {
   return token.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16) || 'anon'
 }
 
+function isCleanContent(content: unknown): boolean {
+  const c = String(content ?? '').trim()
+  return !!c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c) && c.toLowerCase() !== 'null'
+}
+
+function sanitizeMessages(raw: any[]): any[] {
+  return (Array.isArray(raw) ? raw : [])
+    .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && isCleanContent(m.content))
+    .map((m: any) => ({
+      ...m,
+      content: String(m.content),
+      toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : undefined,
+    }))
+}
+
 const CORS = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +42,11 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
   const key = `adam:chat_history:${tokenKey(token)}`
   try {
     const raw = await env.AGENT_MEMORY.get(key, 'json') as any[] | null
-    return new Response(JSON.stringify({ messages: raw || [] }), { headers: CORS })
+    const messages = sanitizeMessages(raw || []).slice(-MAX_MESSAGES)
+    if (raw && messages.length !== raw.length) {
+      await env.AGENT_MEMORY.put(key, JSON.stringify(messages), { expirationTtl: TTL })
+    }
+    return new Response(JSON.stringify({ messages }), { headers: CORS })
   } catch {
     return new Response(JSON.stringify({ messages: [] }), { headers: CORS })
   }
@@ -42,7 +61,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const key = `adam:chat_history:${tokenKey(token)}`
   try {
     const body = await request.json() as { messages: any[] }
-    const messages = (body.messages || []).slice(-MAX_MESSAGES)
+    const messages = sanitizeMessages(body.messages || []).slice(-MAX_MESSAGES)
     await env.AGENT_MEMORY.put(key, JSON.stringify(messages), { expirationTtl: TTL })
     return new Response(JSON.stringify({ ok: true }), { headers: CORS })
   } catch {

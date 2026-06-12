@@ -111,32 +111,53 @@ function defaultInstitutions(): InstitutionStateRecord[] {
   }))
 }
 
+/** 园区布局版本号：布局表变更时 +1，触发已有存档的坐标迁移 */
+export const CITY_LAYOUT_VERSION = 3
+
+/**
+ * 布局 v3 — 对照参考全景图（雕塑居中 13.5,13.5）：
+ * 投资局/金融机构左上，反应堆/情报站上中，
+ * 研究院/数据仓库/风险实验室右上一排，营销顾问所最左下，
+ * 广告公司/仲裁所下方，图书馆/角落/学院/档案馆右下
+ */
+const LAYOUT_V2: Record<string, { gx: number; gy: number }> = {
+  bureau:                { gx: 4,  gy: 18 },
+  finance_gateway:       { gx: 2,  gy: 11 },
+  reactor:               { gx: 7,  gy: 9 },
+  intel_station:         { gx: 5,  gy: 2 },
+  research_institute:    { gx: 11, gy: 5 },
+  data_center:           { gx: 16, gy: 5 },
+  risk_lab:              { gx: 22, gy: 4 },
+  marketing_consultancy: { gx: 9,  gy: 25 },
+  ad_company:            { gx: 11, gy: 20 },
+  arbitration_hall:      { gx: 18, gy: 21 },
+  library:               { gx: 22, gy: 19 },
+  corner:                { gx: 20, gy: 16 },
+  adam_academy:          { gx: 23, gy: 9 },
+  archive:               { gx: 25, gy: 15 },
+}
+
 /** 把机构预设放到城市网格中 */
 function defaultBuildings(): BuildingRecord[] {
-  // 四大区域散布在 32x32 大世界里，每栋建筑间隔 3-5 格
-  // 指挥中心(command_center): 左上区域 (2~10, 2~12)
-  // 情报研究区(intelligence): 右上区域 (16~26, 1~10)
-  // 商业生态区(commerce): 下方左侧 (6~16, 18~26)
-  // 亚当领地(adam_domain): 下方右侧 (18~26, 18~26)
   const placements: Array<{ id: InvestmentInstitutionId; name: string; category: BuildingRecord['category']; gx: number; gy: number; status: BuildingRecord['status'] }> = [
     // 指挥中心 — 左上
-    { id: 'bureau', name: '投资局', category: 'institutional', gx: 4, gy: 4, status: 'active' },
-    { id: 'finance_gateway', name: '金融机构', category: 'institutional', gx: 8, gy: 2, status: 'active' },
-    { id: 'reactor', name: '反应堆', category: 'functional', gx: 6, gy: 10, status: 'active' },
+    { id: 'bureau', name: '投资局', category: 'institutional', ...LAYOUT_V2.bureau, status: 'active' },
+    { id: 'finance_gateway', name: '金融机构', category: 'institutional', ...LAYOUT_V2.finance_gateway, status: 'active' },
+    { id: 'reactor', name: '反应堆', category: 'functional', ...LAYOUT_V2.reactor, status: 'active' },
     // 情报研究区 — 右上
-    { id: 'intel_station', name: '情报站', category: 'institutional', gx: 18, gy: 2, status: 'active' },
-    { id: 'research_institute', name: '研究院', category: 'institutional', gx: 22, gy: 5, status: 'active' },
-    { id: 'data_center', name: '数据仓库', category: 'functional', gx: 19, gy: 8, status: 'active' },
-    { id: 'risk_lab', name: '风险实验室', category: 'functional', gx: 25, gy: 8, status: 'active' },
+    { id: 'intel_station', name: '情报站', category: 'institutional', ...LAYOUT_V2.intel_station, status: 'active' },
+    { id: 'research_institute', name: '研究院', category: 'institutional', ...LAYOUT_V2.research_institute, status: 'active' },
+    { id: 'data_center', name: '数据仓库', category: 'functional', ...LAYOUT_V2.data_center, status: 'active' },
+    { id: 'risk_lab', name: '风险实验室', category: 'functional', ...LAYOUT_V2.risk_lab, status: 'active' },
     // 商业生态区 — 下方左侧
-    { id: 'marketing_consultancy', name: '营销顾问所', category: 'institutional', gx: 8, gy: 18, status: 'active' },
-    { id: 'ad_company', name: '广告公司', category: 'functional', gx: 12, gy: 22, status: 'planned' },
-    { id: 'arbitration_hall', name: '仲裁所', category: 'institutional', gx: 6, gy: 24, status: 'active' },
+    { id: 'marketing_consultancy', name: '营销顾问所', category: 'institutional', ...LAYOUT_V2.marketing_consultancy, status: 'active' },
+    { id: 'ad_company', name: '广告公司', category: 'functional', ...LAYOUT_V2.ad_company, status: 'planned' },
+    { id: 'arbitration_hall', name: '仲裁所', category: 'institutional', ...LAYOUT_V2.arbitration_hall, status: 'active' },
     // 亚当领地 — 下方右侧
-    { id: 'adam_academy', name: '学院', category: 'institutional', gx: 22, gy: 18, status: 'planned' },
-    { id: 'archive', name: '档案馆', category: 'institutional', gx: 18, gy: 22, status: 'active' },
-    { id: 'corner', name: '亚当的角落', category: 'trace', gx: 24, gy: 22, status: 'active' },
-    { id: 'library', name: '图书馆', category: 'institutional', gx: 20, gy: 20, status: 'active' },
+    { id: 'adam_academy', name: '学院', category: 'institutional', ...LAYOUT_V2.adam_academy, status: 'planned' },
+    { id: 'archive', name: '档案馆', category: 'institutional', ...LAYOUT_V2.archive, status: 'active' },
+    { id: 'corner', name: '亚当的角落', category: 'trace', ...LAYOUT_V2.corner, status: 'active' },
+    { id: 'library', name: '图书馆', category: 'institutional', ...LAYOUT_V2.library, status: 'active' },
   ]
   const now = new Date().toISOString()
   return placements.map((p) => ({
@@ -200,6 +221,13 @@ function loadFromStorage(): {
         for (const d of defaults) {
           if (d.institutionId && !existingBldgIds.has(d.institutionId)) bldgs.push(d)
         }
+        // 布局迁移：旧存档一次性应用新版预设坐标（亚当之后的自主迁移不受影响）
+        if (parsed.layoutVersion !== CITY_LAYOUT_VERSION) {
+          bldgs = bldgs.map((b) => {
+            const pos = b.institutionId ? LAYOUT_V2[b.institutionId] : undefined
+            return pos ? { ...b, position: { gridX: pos.gx, gridY: pos.gy } } : b
+          })
+        }
       }
       return {
         core: { ...defaultCore(), ...parsed.core },
@@ -236,8 +264,8 @@ export interface AdamPosition {
 }
 
 /** 亚当的角落默认坐标 */
-const HOME_GX = 24
-const HOME_GY = 22
+const HOME_GX = LAYOUT_V2.corner.gx
+const HOME_GY = LAYOUT_V2.corner.gy
 
 export const useAdamStore = defineStore('adam', () => {
   const saved = loadFromStorage()
@@ -297,6 +325,7 @@ export const useAdamStore = defineStore('adam', () => {
         ledger: ledger.value,
         reflections: reflections.value,
         books: books.value,
+        layoutVersion: CITY_LAYOUT_VERSION,
       }),
     )
     // 同步 core 到 Cloudflare KV（防抖1.5s）

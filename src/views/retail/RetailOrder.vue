@@ -8,13 +8,20 @@
           :export-columns="{ order_no: '订单编号', member_name: '会员名称', store_name: '门店', order_date: '日期', total_amount: '商品合计', discount_amount: '折扣', pay_amount: '实付金额', pay_method: '支付方式', status: '状态' }">
         <template #search>
           <el-input v-model="searchForm.order_no" placeholder="订单编号" clearable style="width:160px" />
+          <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:140px" />
           <el-input v-model="searchForm.member_name" placeholder="会员名称" clearable style="width:140px" />
           <el-select v-model="searchForm.store_id" placeholder="门店" clearable style="width:130px">
             <el-option v-for="s in storeList" :key="s.id" :label="s.name" :value="s.id" />
           </el-select>
+          <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+            <el-option label="未核对" value="unreconciled" />
+          </el-select>
           <el-date-picker :key="datePickerKey" v-model="dateRange" type="daterange" range-separator="至"
             start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
             style="width:240px" unlink-panels :shortcuts="dateShortcuts" @change="onDateChange" />
+          <el-input v-model="searchForm.min_amount" placeholder="最低金额" clearable style="width:110px" type="number" />
+          <span style="color:rgba(29,29,31,0.35);font-size:13px">—</span>
+          <el-input v-model="searchForm.max_amount" placeholder="最高金额" clearable style="width:110px" type="number" />
         </template>
         <template #toolbar>
           <el-button type="primary" :icon="Plus" @click="openForm()">新增订单</el-button>
@@ -373,10 +380,10 @@ function fmtOrderDate(row: any) {
 }
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const { toggle: toggleReconcile } = useReconcile('reconcile_retail_order', tableRef)
+const { toggle: toggleReconcile, ids: reconciledIds } = useReconcile('reconcile_retail_order', tableRef)
 const stockRefreshStore = useStockRefreshStore()
 // date filter stored locally — backend ignores date params, handled in filteredApi
-const searchForm = reactive<any>({ order_no: '', member_name: '', store_id: '', start_date: '', end_date: '' })
+const searchForm = reactive<any>({ order_no: '', goods_name: '', member_name: '', store_id: '', start_date: '', end_date: '', reconcile_filter: '', min_amount: '', max_amount: '' })
 const dateRange = ref<any>([])
 const dateShortcuts = [
   { text: '最近一个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 1); return [s, e] } },
@@ -411,10 +418,41 @@ const filteredApi = async (params: any) => {
     if (db < da) return -1
     return (b.id || 0) - (a.id || 0)
   })
-  filteredRows.value = filtered
+  let result = filtered
+  if (searchForm.goods_name) {
+    const kw = searchForm.goods_name.trim().toLowerCase()
+    result = result.filter((row: any) => {
+      const items = parseGoods(row.goods_info)
+      return items.some((i: any) => (i.goods_name || i.name || '').toLowerCase().includes(kw))
+    })
+  }
+  if (searchForm.order_no) {
+    const kw = searchForm.order_no.trim().toLowerCase()
+    result = result.filter((row: any) => {
+      const sn = (row.order_sn || `LS${(row.order_date || row.created_at || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3, '0')}`).toLowerCase()
+      return sn.includes(kw)
+    })
+  }
+  if (searchForm.member_name) {
+    const kw = searchForm.member_name.trim().toLowerCase()
+    result = result.filter((row: any) => (row.member_name || '').toLowerCase().includes(kw))
+  }
+  if (searchForm.store_id) {
+    result = result.filter((row: any) => Number(row.store_id) === Number(searchForm.store_id))
+  }
+  if (searchForm.reconcile_filter === 'unreconciled') {
+    result = result.filter((row: any) => !reconciledIds.value.has(Number(row.id)))
+  }
+  if (searchForm.min_amount !== '' && searchForm.min_amount !== null) {
+    result = result.filter((row: any) => Number(row.pay_amount) >= Number(searchForm.min_amount))
+  }
+  if (searchForm.max_amount !== '' && searchForm.max_amount !== null) {
+    result = result.filter((row: any) => Number(row.pay_amount) <= Number(searchForm.max_amount))
+  }
+  filteredRows.value = result
   const page = Number(reqPage) || 1
   const size = Number(reqSize) || 20
-  return { data: { rows: filtered.slice((page - 1) * size, page * size), total: filtered.length } }
+  return { data: { rows: result.slice((page - 1) * size, page * size), total: result.length } }
 }
 
 const summary = computed(() => {

@@ -214,6 +214,10 @@ npm run deploy
 - [2026-04-17] 附加费用付款同时调用 createPayReceipt + createExpense 导致流水重复 → 附加费用付款只调用 createPayReceipt（FK单），禁止再调用 createExpense；两个函数都调用会在资金流水明细里产生两条记录
 - [2026-04-25] 反审核用 OtherOut 抵消库存，流水出现两条脏记录 → **铁律：反审核后库存流水里不可以有任何记录**；反审核 = 找到审核时创建的原始单据直接删除，流水自然清空；禁止用 OtherOut/OtherIn 创建反向单来抵消
 
+- [2026-06-04] 批量写DB时整体替换商品remark字段，导致6个商品品牌图片/SKU数据全部丢失 → **铁律：任何批量DB写操作必须先READ现有字段，在内存中MERGE后再写回，绝不整体覆盖；未经用户明确确认禁止执行任何数据删除或覆盖**
+
+- [2026-06-10] 同一remark覆盖事故再次发生（第3次），根因：bash脚本shell引号截断JSON导致读到空值再写回 → **铁律：禁止用bash/shell脚本对商品remark做任何写操作。** 唯一允许的方式：调用后端 `/goods/ShopGoods/patchBrand` 接口（PostgreSQL jsonb原子合并），该接口在DB层保证只merge指定字段，绝不覆盖其他字段。前端Info.vue保存品牌数据也必须通过此接口。
+
 - [2026-05-29] **铁律：用户有"未提交但已部署"的本地改动时，禁止执行 `git reset --hard` / `git checkout`** → Cloudflare 是纯手动部署（与 GitHub 无连接，push 备份分支完全安全）。真正的危险是：git 操作改变本地源文件 → 之后 build+deploy → 旧版本上线。规则：
   - 做备份前必须先问用户："你有没有未提交但已部署到线上的修改？" 有的话先 `git add -A && git commit` 固化，再做 git 操作
   - `git reset --hard` 是高危操作，执行前必须确认本地文件与最后一次部署一致

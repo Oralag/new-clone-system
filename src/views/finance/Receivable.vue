@@ -396,31 +396,29 @@ async function load() {
     const contractRows: any[] = contractRes.status === 'fulfilled' ? (contractRes.value.data?.rows ?? []) : []
     const receipts: any[] = receiptRes.status === 'fulfilled' ? (receiptRes.value.data?.rows ?? []) : []
 
-    const contractIdSet = new Set(contractRows.map((r: any) => r.id))
+    // 建合同 order_sn/order_no → id 映射（最可靠的匹配方式，系统自动生成不会出错）
+    const audited = contractRows.filter((r: any) => Number(r.status) === 1)
+    const snToId = new Map<string, number>()
+    for (const c of audited) {
+      if (c.order_sn) snToId.set(String(c.order_sn), c.id)
+      if (c.order_no)  snToId.set(String(c.order_no),  c.id)
+    }
 
-    // 策略1：有 #contractId 的收款 → 直接匹配到指定合同
-    // 策略2：无 #contractId 的收款（新方式）→ 按客户 FIFO 分配
-    // 引用已删除合同的孤儿收款 → 忽略（不计入任何合同）
-    const contractDirectPaid = new Map<number, number>()   // 单对单匹配
-    const custUnmatchedPaid = new Map<number, number>()    // 待 FIFO 分配
+    const contractDirectPaid = new Map<number, number>()
+    const custUnmatchedPaid = new Map<number, number>()
 
     for (const r of receipts) {
-      const m = String(r.remark || '').match(/#(\d+)/)
+      if (String(r.remark || '').startsWith('[other]')) continue  // 杂项收入，跳过
       const amount = Number(r.amount || 0)
+      const rSn = String(r.order_sn || '').trim()
       const custId = Number(r.customer_id || 0)
-      if (m) {
-        const cid = Number(m[1])
-        if (contractIdSet.has(cid)) {
-          contractDirectPaid.set(cid, (contractDirectPaid.get(cid) ?? 0) + amount)
-        }
-        // 合同已删除 → 忽略
+      if (rSn && snToId.has(rSn)) {
+        const cid = snToId.get(rSn)!
+        contractDirectPaid.set(cid, (contractDirectPaid.get(cid) ?? 0) + amount)
       } else if (custId > 0) {
         custUnmatchedPaid.set(custId, (custUnmatchedPaid.get(custId) ?? 0) + amount)
       }
     }
-
-    // 已审核合同按客户分组，日期升序
-    const audited = contractRows.filter((r: any) => Number(r.status) === 1)
     const byCustomer = new Map<number, any[]>()
     for (const r of audited) {
       const custId = Number(r.customer_id || 0)
@@ -435,12 +433,24 @@ async function load() {
       )
     }
 
+    // 与 Contract.vue calcContractAmount 保持一致：after_discount + 运费（按承担方）- 收入调整
+    // after_discount > total_amount 说明是编辑后未同步的过期数据，此时用 total_amount
+    const calcAmt = (c: any): number => {
+      const total = Number(c.total_amount || 0)
+      const afterDisc = Number(c.after_discount)
+      const base = Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total ? afterDisc : total
+      const freight = Number(c.freight_amount || 0)
+      const bearer = String(c.freight_bearer || 'seller')
+      const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
+      return Math.max(0, base + fc - Number(c.income_amount || 0))
+    }
+
     // FIFO 分配无合同引用的收款到剩余未付合同
     const contractFifoPaid = new Map<number, number>()
     for (const [custId, contracts] of byCustomer) {
       let remaining = custUnmatchedPaid.get(custId) ?? 0
       for (const c of contracts) {
-        const total = Number(c.after_discount || 0) || Number(c.total_amount || 0)
+        const total = calcAmt(c)
         const directPaid = contractDirectPaid.get(c.id) ?? 0
         const leftover = Math.max(0, total - directPaid)
         const applied = Math.min(remaining, leftover)
@@ -456,13 +466,16 @@ async function load() {
     }
 
     const contractItems = audited.map((r: any) => {
-      const paid = contractPaid.get(r.id) ?? 0
-      const total = Number(r.after_discount || 0) || Number(r.total_amount || 0)
+      const receiptPaid = contractPaid.get(r.id)
+      // 与 Contract.vue getReceivedAmount 一致：收款单有记录优先，否则用合同自身的 receive_amount
+      const paid = receiptPaid !== undefined ? receiptPaid : Number(r.receive_amount || 0)
+      const total = calcAmt(r)
       return {
         ...r,
         source: '销售订单',
         order_sn: r.order_sn || r.order_no || '',
         out_date: r.order_date || r.created_at,
+        total_amount: total,
         paid_amount: paid,
         un_pay_amount: Math.max(0, total - paid),
       }

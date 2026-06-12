@@ -4,7 +4,7 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getProcureReturnList"
+        <ScTable ref="tableRef" :api-obj="reconcileFilteredApi"
           sort-by="return_date" :sort-desc="true"
           export-file-name="采购退货单" :params="searchForm"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''"
@@ -16,6 +16,7 @@
               <el-option label="待审核" :value="0" />
               <el-option label="已审核" :value="1" />
               <el-option label="已驳回" :value="2" />
+              <el-option label="未核对" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
@@ -250,7 +251,8 @@ const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const route = useRoute()
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const { toggle: toggleReconcile } = useReconcile('reconcile_procure_return', tableRef)
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_procure_return', tableRef)
+const reconcileFilteredApi = createFilteredApi(getProcureReturnList)
 
 onMounted(() => {
   if (route.query.return_no) searchForm.return_no = String(route.query.return_no)

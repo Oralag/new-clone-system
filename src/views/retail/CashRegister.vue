@@ -130,14 +130,14 @@
                 <div class="cr-cart-item-price-row">
                   <span class="cr-cart-item-unit-label">单价</span>
                   <el-input-number
-                    :model-value="item.price"
+                    v-model="cartItems[idx].price"
                     :min="0"
                     :precision="2"
                     :step="1"
                     controls-position="right"
                     size="small"
                     style="width:88px"
-                    @change="(v) => { cartItems[idx].price = Number(v); calcTotal() }"
+                    @change="calcTotal"
                     @click.stop
                   />
                 </div>
@@ -255,14 +255,14 @@
                     <div class="cr-cart-item-price-row">
                       <span class="cr-cart-item-unit-label">单价</span>
                       <el-input-number
-                        :model-value="item.price"
+                        v-model="cartItems[idx].price"
                         :min="0"
                         :precision="2"
                         :step="1"
                         controls-position="right"
                         size="small"
                         style="width:88px"
-                        @change="(v) => { cartItems[idx].price = Number(v); calcTotal() }"
+                        @change="calcTotal"
                         @click.stop
                       />
                     </div>
@@ -643,7 +643,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Search, Delete, CircleCheckFilled, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getGoodsList, getGoodsCateList, getUnitConvert, createGoods, getUnitList, readGoods, getSpecList } from '@/api/goods'
+import { getGoodsList, getGoodsCateList, getUnitConvert, createGoods, getUnitList, readGoods, getSpecList, getBomList } from '@/api/goods'
 import { getMemberList, createRetailOrder, getRetailOrderList, getStoreList } from '@/api/retail'
 import { getSaleContractList } from '@/api/reports'
 import { createProcureOrder, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getSupplierList, createSupplier } from '@/api/procure'
@@ -666,6 +666,7 @@ const goodsList = ref<any[]>([])
 const stockRefreshStore = useStockRefreshStore()
 const goodsLoading = ref(false)
 const selectedGoods = ref<any>(null)
+const salesCount = ref<Record<string, number>>({})
 
 // 分类树计算
 const cateRoots = computed(() => cateList.value.filter((c: any) => !c.parent_id || c.parent_id === 0))
@@ -836,6 +837,38 @@ const cateList = ref<any[]>([])
 const searchInputRef = ref<HTMLInputElement>()
 let searchTimer: any
 
+// BOM成品的成本映射：goods_sn → BOM汇总成本
+const bomCostMap = ref<Map<string, number>>(new Map())
+
+async function loadBomCosts() {
+  try {
+    const res = await getBomList({ list_rows: 500 })
+    const entries: any[] = res.data?.list ?? res.data?.rows ?? []
+    if (!entries.length) return
+    const details = await Promise.all(
+      entries.map(b => http.get('/goods/BomGoods/detail', { params: { id: b.id } }).catch(() => null))
+    )
+    const map = new Map<string, number>()
+    entries.forEach((b, i) => {
+      const items: any[] = details[i]?.data?.items ?? []
+      const total = items.reduce((s: number, it: any) => s + Number(it.num || 0) * Number(it.price || 0), 0)
+      if (b.goods_sn) map.set(b.goods_sn, total)
+    })
+    bomCostMap.value = map
+    applyBomCosts()
+  } catch { /* silent */ }
+}
+
+function applyBomCosts() {
+  const map = bomCostMap.value
+  if (!map.size) return
+  for (const g of goodsList.value) {
+    if (g.goods_sn && map.has(g.goods_sn)) {
+      g.cost_price = map.get(g.goods_sn)
+    }
+  }
+}
+
 async function loadGoods() {
   goodsLoading.value = true
   try {
@@ -845,7 +878,19 @@ async function loadGoods() {
       status: 1,
       list_rows: 60,
     })
-    goodsList.value = res.data?.rows ?? []
+    const rows: any[] = res.data?.rows ?? []
+    // 按热销排序，成品(type=1)优先，散装(type=5)最后
+    const typeOrder = (t: number) => t === 1 ? 0 : t === 5 ? 2 : 1
+    rows.sort((a, b) => {
+      const ta = typeOrder(Number(a.goods_type))
+      const tb = typeOrder(Number(b.goods_type))
+      if (ta !== tb) return ta - tb
+      const ca = salesCount.value[String(a.id)] || 0
+      const cb = salesCount.value[String(b.id)] || 0
+      return cb - ca
+    })
+    goodsList.value = rows
+    applyBomCosts()
   } finally {
     goodsLoading.value = false
   }
@@ -865,7 +910,7 @@ async function loadHotGoods() {
     // 仅统计已审核/已完成订单（status === 1）
     const orders: any[] = (retailRes.data?.rows ?? []).filter((o: any) => Number(o.status) === 1)
 
-    const salesCount: Record<string, number> = {}
+    salesCount.value = {}
     for (const order of orders) {
       try {
         const items = typeof order.goods_info === 'string'
@@ -874,19 +919,20 @@ async function loadHotGoods() {
         for (const item of items) {
           if (!item.goods_id) continue
           const gid = String(item.goods_id)
-          salesCount[gid] = (salesCount[gid] || 0) + Math.max(0, Number(item.num || 1))
+          salesCount.value[gid] = (salesCount.value[gid] || 0) + Math.max(0, Number(item.num || 1))
         }
       } catch { /* 单条订单解析失败不影响整体 */ }
     }
 
     // 有销量的排前面（降序），无销量的按商品ID排后面
     allGoods.sort((a, b) => {
-      const ca = salesCount[String(a.id)] || 0
-      const cb = salesCount[String(b.id)] || 0
+      const ca = salesCount.value[String(a.id)] || 0
+      const cb = salesCount.value[String(b.id)] || 0
       if (cb !== ca) return cb - ca
       return a.id - b.id
     })
     goodsList.value = allGoods
+    applyBomCosts()
   } finally {
     goodsLoading.value = false
   }
@@ -1490,7 +1536,7 @@ async function submitQuickAdd() {
 }
 
 onMounted(async () => {
-  const [, mc] = await Promise.all([loadHotGoods(), getGoodsCateList({ list_rows: 200 })])
+  const [, mc] = await Promise.all([loadHotGoods(), getGoodsCateList({ list_rows: 200 }), loadBomCosts()])
   cateList.value = mc.data?.rows ?? []
   const [mr, sr] = await Promise.all([
     getMemberList({ list_rows: 500 }),

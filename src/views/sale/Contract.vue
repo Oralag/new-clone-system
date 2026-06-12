@@ -21,6 +21,7 @@
               <el-option label="已审核" :value="1" />
               <el-option label="未收款" value="unpaid" />
               <el-option label="已收款" value="paid" />
+              <el-option label="未核对" value="unreconciled" />
             </el-select>
             <el-date-picker :key="datePickerKey" v-model="dateRange" type="daterange" range-separator="至"
               start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
@@ -291,7 +292,7 @@
         </div>
       </div>
 
-      <div class="form-body">
+      <div class="form-body" ref="formBodyRef">
 
         <!-- 基本信息：4列面板布局 -->
         <div class="form-section info-header-section">
@@ -571,9 +572,20 @@
                 <span>{{ ((row.num||0) * (row.price_no_tax||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="含税合计" width="110" align="right">
+            <el-table-column width="130" align="right">
+              <template #header>
+                <div class="batch-header">
+                  <span>含税合计</span>
+                  <el-button v-if="!isReadonly" link type="primary" size="small" @click="batchEditField('total_tax')">批量</el-button>
+                </div>
+              </template>
               <template #default="{ row }">
-                <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
+                <el-input-number v-if="!isReadonly"
+                  :model-value="Number(((row.num||0) * (row.price||0)).toFixed(2))"
+                  :min="0" :precision="2" size="small"
+                  controls-position="right" style="width:100%"
+                  @change="(val: number) => onTotalTaxChange(row, val)" />
+                <span v-else style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="备注" min-width="140">
@@ -1327,6 +1339,29 @@ async function fetchGoodsSpecs(goodsId: number) {
   } catch { /* ignore */ }
 }
 
+async function fillMissingSpecs(items: any[]) {
+  const missing = items.filter(i => i.goods_id && !i.spec)
+  if (!missing.length) return
+  const needIds = new Set(missing.map(i => Number(i.goods_id)))
+  const specMap: Record<number, string> = {}
+  for (let page = 1; page <= 20 && needIds.size > 0; page++) {
+    try {
+      const res = await getGoodsList({ page, size: 20 })
+      const rows: any[] = res.data?.rows ?? []
+      if (!rows.length) break
+      for (const g of rows) {
+        if (needIds.has(Number(g.id)) && g.spec) {
+          specMap[Number(g.id)] = g.spec
+          needIds.delete(Number(g.id))
+        }
+      }
+    } catch { break }
+  }
+  for (const item of missing) {
+    if (specMap[Number(item.goods_id)]) item.spec = specMap[Number(item.goods_id)]
+  }
+}
+
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
 
@@ -1381,7 +1416,8 @@ function goToCommissionSetting() {
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const { toggle: toggleReconcile } = useReconcile('reconcile_sale_contract', tableRef)
+const formBodyRef = ref<HTMLElement>()
+const { toggle: toggleReconcile, ids: reconciledIds } = useReconcile('reconcile_sale_contract', tableRef)
 const highlightName = ref('')
 const contractSelectedRows = ref<any[]>([])
 
@@ -1498,6 +1534,7 @@ const filteredContractApi = async (params: any) => {
   // 未收款是客户端筛选，传给后端时转为 status=1（只拉已审核）
   const apiParams = { ...restParams, page: 1, list_rows: 10000 }
   if (restParams.status === 'unpaid' || restParams.status === 'paid') apiParams.status = 1
+  if (restParams.status === 'unreconciled') delete apiParams.status
   const res = await getContractList(apiParams)
   const allRows: any[] = res.data?.rows ?? []
   lastAllRows.value = allRows
@@ -1529,6 +1566,10 @@ const filteredContractApi = async (params: any) => {
   if (searchForm.status === 'paid') {
     filtered = filtered.filter((row: any) => getReceiveStatus(row).label === '已收清')
   }
+  // 未核对：只保留未在本地标记为已核对的行
+  if (searchForm.status === 'unreconciled') {
+    filtered = filtered.filter((row: any) => !reconciledIds.value.has(Number(row.id)))
+  }
   // 按日期降序排列（原先由 sort-by prop 处理，现移至此处）
   filtered.sort((a: any, b: any) => {
     const da = getContractRowDate(a), db = getContractRowDate(b)
@@ -1548,7 +1589,7 @@ const filteredContractApi = async (params: any) => {
   }
 
   // 未收款筛选时不注入分组行；商品关键词筛选穿透分组内部
-  const groupRows = (searchForm.status === 'unpaid' || searchForm.status === 'paid') ? [] : foldedGroups.value.map(g => {
+  const groupRows = (searchForm.status === 'unpaid' || searchForm.status === 'paid' || searchForm.status === 'unreconciled') ? [] : foldedGroups.value.map(g => {
     let rows = allRows
       .filter((r: any) => g.ids.has(r.id))
       .sort((a: any, b: any) => getContractRowDate(b).localeCompare(getContractRowDate(a)) || Number(b.id || 0) - Number(a.id || 0))
@@ -1934,7 +1975,6 @@ async function submitCollect() {
   collectSubmitting.value = true
   try {
     await createCollectReceipt({
-      contact_type: 'customer',
       contact_id: collectForm.customerId,
       contact_name: collectForm.customerName,
       customer_id: collectForm.customerId,
@@ -1971,7 +2011,8 @@ function getReceiveStatus(row: any): { label: string; type: string } {
 const customerOptions = ref<any[]>([])
 async function loadCustomers() {
   const res = await getSaleCustomerList({ list_rows: 500 })
-  customerOptions.value = res.data?.rows ?? []
+  const rc = res.data?.rows ?? []
+  customerOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.id === c.id) === i)
 }
 
 // ── 预付款余额 ────────────────────────────────────────────────────────────────
@@ -2047,6 +2088,7 @@ interface ContractItem {
   goods_id: number; goods_name: string; goods_sn: string
   spec: string; cate_name: string; unit_name: string; unit_ratio: number
   num: number; price_no_tax: number; tax_rate: number; price: number; cost_price: number; remark: string
+  _total_tax?: number
 }
 
 const defaultFd = () => ({
@@ -2412,7 +2454,8 @@ function calcContractAmount(row: any): number {
   const bearer = String(row.freight_bearer || 'seller')
   const income = Number(row.income_amount || 0)
   let base = total
-  if (Number.isFinite(afterDisc) && afterDisc > 0) base = afterDisc
+  // after_discount > total_amount 说明是编辑后未同步的过期数据，此时用 total_amount
+  if (Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total) base = afterDisc
   else if (discType === 'amount' && discVal > 0) base = Math.max(0, total - discVal)
   else if (discType === 'percent' && discVal > 0) base = Math.max(0, total * (1 - discVal / 100))
   const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
@@ -2475,6 +2518,14 @@ function onPriceChange(row: ContractItem) {
     row.price_no_tax = row.price
   }
   calcTotal()
+}
+
+function onTotalTaxChange(row: ContractItem, total: number) {
+  const num = row.num || 0
+  if (num > 0) {
+    row.price = Number((total / num).toFixed(4))
+    onPriceChange(row)
+  }
 }
 
 function removeItem(index: number) {
@@ -2568,12 +2619,19 @@ async function openEdit(row: any, readonly = false) {
     }
   }
   try { fd.items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { fd.items = [] }
-  await ensureItemCosts(fd.items as ContractItem[])
   calcTotal()
   fd.items.forEach(item => { if (item.goods_id) { fetchGoodsSpecs(item.goods_id); fetchGoodsUnits(item.goods_id) } })
   isReadonly.value = readonly
+  // 先立即显示表单，再在后台异步加载成本/规格数据（避免等待大请求才弹出）
   showForm.value = true
+  // keep-alive 会记住上次滚动位置，打开表单时必须重置到顶部
+  nextTick(() => { if (formBodyRef.value) formBodyRef.value.scrollTop = 0 })
+  // 后台异步加载成本数据，加载完成后 goodsCostPriceMap 响应式更新会自动刷新成本列
+  ensureItemCosts(fd.items as ContractItem[]).then(() => calcTotal())
+  fillMissingSpecs(fd.items)
   // 拉取完整详情，补全列表里缺失的字段（如 prepay_amount）
+  // 保留已从列表行解析好的 fee_items，避免详情接口未返回该字段时误清空
+  const feeItemsFromList = fd.fee_items.slice()
   try {
     const detail = await getContractDetail(Number(row.id))
     const full = detail?.data?.row || detail?.data || {}
@@ -2601,9 +2659,12 @@ async function openEdit(row: any, readonly = false) {
         if (fiTag) fd.fee_items = decodeFeeItems(fiTag)
       }
       if (!Array.isArray(fd.fee_items) || !fd.fee_items.length) {
-        fd.fee_items = []
-        if (Number(full.freight_amount || 0) > 0) fd.fee_items.push({ name: '运费', amount: Number(full.freight_amount), bearer: full.freight_bearer || 'buyer', supplier_name: '' })
-        if (Number(full.expense_amount || 0) > 0) fd.fee_items.push({ name: '单据支出', amount: Number(full.expense_amount), bearer: 'buyer', supplier_name: '' })
+        // 详情接口未返回 fee_items，用列表行已解析的数据兜底，避免覆盖为空
+        fd.fee_items = feeItemsFromList.length ? feeItemsFromList : []
+        if (!fd.fee_items.length) {
+          if (Number(full.freight_amount || 0) > 0) fd.fee_items.push({ name: '运费', amount: Number(full.freight_amount), bearer: full.freight_bearer || 'buyer', supplier_name: '' })
+          if (Number(full.expense_amount || 0) > 0) fd.fee_items.push({ name: '单据支出', amount: Number(full.expense_amount), bearer: 'buyer', supplier_name: '' })
+        }
       }
       await ensureItemCosts(fd.items as ContractItem[])
       calcTotal()
@@ -3120,7 +3181,9 @@ async function handleSave(andAudit = false) {
       need_invoice: fd.need_invoice ? 1 : 0,
       installment: fd.installment ? 1 : 0,
       expense_amount: Number(fd.expense_amount || 0),
-      fee_items: JSON.stringify(fd.fee_items),
+      // fee_items 不直接发字段——后端 sale_contracts 表无此列，强制写入会触发
+      // "column fee_items does not exist" 错误，导致降级 legacy 模式丢失 discount/receive 字段。
+      // fee_items 已通过 buildContractRemark() 的 [FI:...] 标签持久化到 remark。
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) payload.id = fd.id
@@ -3233,7 +3296,7 @@ async function autoCreateReceipt(row: any) {
   } catch { /* ignore */ }
 
   const existingPrepay = existingRows.some((item) => isAutoContractReceiptRow(item, orderSn) && String(item?.remark || '').includes('预付款核销'))
-  const existingReceive = existingRows.some((item) => isAutoContractReceiptRow(item, orderSn) && String(item?.remark || '').includes('合同自动收款'))
+  const existingReceive = existingRows.some((item) => isAutoContractReceiptRow(item, orderSn) && !String(item?.remark || '').includes('预付款核销'))
 
   const prepayAmt = Math.min(Math.max(0, Number(row?.prepay_amount || parsePrepayAmount(row?.remark || '') || fd.prepay_amount || 0)), finalAmt)
   const receiveAmt = Math.min(
@@ -3245,7 +3308,6 @@ async function autoCreateReceipt(row: any) {
   if (prepayAmt > 0 && customerId) {
     if (!existingPrepay) {
       await createCollectReceipt({
-        contact_type: 'customer',
         customer_id: customerId, customer_name: customerName,
         contact_id: customerId, contact_name: customerName,
         amount: prepayAmt, order_sn: orderSn, order_no: orderSn,
@@ -3258,7 +3320,6 @@ async function autoCreateReceipt(row: any) {
   if (receiveAmt > 0.01) {
     if (!existingReceive) {
       await createCollectReceipt({
-        contact_type: 'customer',
         customer_id: customerId, customer_name: customerName,
         contact_id: customerId, contact_name: customerName,
         amount: receiveAmt, order_sn: orderSn, order_no: orderSn,
@@ -3396,13 +3457,18 @@ async function autoCreateSaleOut(row: any) {
   }
   const outDate = String(row.sign_date || row.contract_date || row.order_date || '').slice(0, 10) || new Date().toISOString().slice(0, 10)
   const orderSn = getContractSn(row)
-  // 去重：反审核后重新审核时，旧出库单仅被设为 status=0 未删除，若不清理会产生重复
+  // 去重：反审核后重新审核时，旧出库单仅被设为 status=0 未删除，若不清理会产生重复。
+  // 同时检查 status=1 已审核的记录——若已存在则直接跳过，避免列表"审核"和表单"保存并审核"双触发导致重复。
   try {
-    const existOut = await getSaleOutList({ keyword: orderSn, list_rows: 50 })
-    const staleOuts = (existOut?.data?.rows ?? []).filter((o: any) =>
-      String(o.remark || '').includes(orderSn) && Number(o.status) === 0
+    // keyword 搜索不会匹配 remark 字段，必须全量拉取后本地过滤
+    const existOut = await getSaleOutList({ list_rows: 500 })
+    const existRows: any[] = (existOut?.data?.rows ?? []).filter((o: any) =>
+      String(o.remark || '').includes(orderSn)
     )
-    for (const o of staleOuts) {
+    // 已有审核通过的出库单 → 不重复创建
+    if (existRows.some((o: any) => Number(o.status) === 1)) return
+    // 清理未审核的旧出库单
+    for (const o of existRows.filter((o: any) => Number(o.status) === 0)) {
       try { await deleteSaleOut(Number(o.id)) } catch { /* ignore */ }
     }
   } catch { /* ignore */ }
@@ -3617,7 +3683,7 @@ function onGoodsConfirm(goods: any[]) {
     const basePrice = Number(g.sell_price) || 0
     const levelPrice = fd.level_id ? (getLevelPrice(fd.level_id, g.id) ?? basePrice) : basePrice
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
-      spec: '', cate_name: g.cate_name || '', unit_name: g.unit_name || '', unit_ratio: 1,
+      spec: g.spec || '', cate_name: g.cate_name || '', unit_name: g.unit_name || '', unit_ratio: 1,
       num: 1, price_no_tax: Number(levelPrice.toFixed(4)), tax_rate: 0,
       price: Number(levelPrice.toFixed(4)), cost_price: Number(g.cost_price) || 0, remark: '' })
     if (g.multi_spec === 1) fetchGoodsSpecs(g.id)
@@ -3671,6 +3737,7 @@ const fieldLabelMap: Record<string, string> = {
   tax_rate: '税率(%)',
   price: '含税单价',
   subtotal_no_tax: '未税合计',
+  total_tax: '含税合计',
 }
 
 function batchEditField(field: string) {
@@ -3688,11 +3755,15 @@ function confirmBatchEdit() {
     return
   }
   for (const row of fd.items) {
-    ;(row as any)[field] = batchEditValue.value
-    if (field === 'price_no_tax' || field === 'tax_rate') {
-      calcItemTax(row)
-    } else if (field === 'price') {
-      onPriceChange(row)
+    if (field === 'total_tax') {
+      onTotalTaxChange(row, batchEditValue.value)
+    } else {
+      ;(row as any)[field] = batchEditValue.value
+      if (field === 'price_no_tax' || field === 'tax_rate') {
+        calcItemTax(row)
+      } else if (field === 'price') {
+        onPriceChange(row)
+      }
     }
   }
   calcTotal()

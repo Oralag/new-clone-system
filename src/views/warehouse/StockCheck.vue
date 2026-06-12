@@ -4,11 +4,15 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getCheckList"
+        <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           export-file-name="库存盘点" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.order_sn" placeholder="盘点单号" clearable style="width:180px" />
             <el-input v-model="searchForm.warehouse_name" placeholder="仓库名称" clearable style="width:160px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+              <el-option label="未核对" value="unreconciled" />
+            </el-select>
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">新增盘点单</el-button>
@@ -57,6 +61,7 @@
           <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" size="small" link @click="openEdit(row)">查看</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -179,16 +184,19 @@ import { fmtDt } from '@/utils/date'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import { getCheckList, createCheck, deleteCheck } from '@/api/warehouse'
 import http from '@/api/http'
 
 const tableRef = ref()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_stock_check', tableRef)
+const reconcileFilteredApi = createFilteredApi(getCheckList, 'reconcile_filter')
 const formRef = ref()
 const showForm = ref(false)
 const isEdit = ref(false)
 const saving = ref(false)
 
-const searchForm = reactive({ order_sn: '', warehouse_name: '' })
+const searchForm = reactive({ order_sn: '', warehouse_name: '', reconcile_filter: '' })
 
 const warehouseList = ref<any[]>([])
 const goodsList = ref<any[]>([])

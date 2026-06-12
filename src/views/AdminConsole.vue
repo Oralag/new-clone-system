@@ -228,7 +228,7 @@
     <!-- Edit Dialog -->
     <el-dialog v-model="editVisible"
       :title="editForm.is_paid ? '编辑付费配置' : '开通付费账号'"
-      width="460px" append-to-body>
+      width="460px" append-to-body :close-on-click-modal="!provisioning">
 
       <div class="dialog-user-row">
         <div class="dialog-dot" :class="{ paid: editForm.is_paid }">
@@ -240,7 +240,14 @@
         </div>
       </div>
 
-      <el-form :model="editForm" label-width="100px" style="margin-top:20px">
+      <!-- Provisioning progress -->
+      <div v-if="provisioning" class="provision-progress">
+        <div class="provision-spinner" />
+        <div class="provision-text">{{ provisionMessage }}</div>
+        <div class="provision-sub">部署完成后自动完成，无需等待可关闭弹窗</div>
+      </div>
+
+      <el-form v-else :model="editForm" label-width="100px" style="margin-top:20px">
         <el-form-item label="套餐">
           <div class="plan-options">
             <button v-for="p in paidPlanOptions" :key="p.value"
@@ -255,10 +262,28 @@
             到期时间：{{ calcExpireDate(editForm.plan, editForm.paid_until) }}
           </div>
         </el-form-item>
-        <el-form-item label="专属后端">
-          <el-input v-model="editForm.backend_url"
-            placeholder="https://erp-tenant-xxx.up.railway.app" clearable />
-          <div class="field-hint">填写后客户自动路由到专属后端，留空则继续体验模式</div>
+        <el-form-item label="后端服务器">
+          <div class="backend-options">
+            <button :class="['backend-btn', { active: editForm.backendMode === 'shared' }]"
+              type="button" @click="editForm.backendMode = 'shared'">
+              <span class="backend-btn-title">共享版</span>
+              <span class="backend-btn-desc">即刻生效，数据独立</span>
+            </button>
+            <button :class="['backend-btn', { active: editForm.backendMode === 'dedicated' }]"
+              type="button" @click="editForm.backendMode = 'dedicated'">
+              <span class="backend-btn-title">独立部署</span>
+              <span class="backend-btn-desc">自动创建，约3分钟</span>
+            </button>
+            <button :class="['backend-btn', { active: editForm.backendMode === 'custom' }]"
+              type="button" @click="editForm.backendMode = 'custom'">
+              <span class="backend-btn-title">自定义</span>
+              <span class="backend-btn-desc">填写专属地址</span>
+            </button>
+          </div>
+          <el-input v-if="editForm.backendMode === 'custom'"
+            v-model="editForm.backend_url"
+            placeholder="https://erp-tenant-xxx.onrender.com"
+            style="margin-top:8px" clearable />
         </el-form-item>
         <el-form-item label="重置密码">
           <el-input v-model="editForm.new_password"
@@ -267,8 +292,8 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">
+        <el-button @click="editVisible = false">{{ provisioning ? '后台运行' : '取消' }}</el-button>
+        <el-button v-if="!provisioning" type="primary" :loading="saving" @click="handleSave">
           {{ editForm.is_paid ? '保存' : '确认开通' }}
         </el-button>
       </template>
@@ -295,6 +320,9 @@ const searchText = ref('')
 const filterStatus = ref('all')
 const lastRefresh = ref('-')
 const activeTab = ref<'tenants' | 'invites'>('tenants')
+const provisioning = ref(false)
+const provisionMessage = ref('正在创建独立服务器...')
+let provisionTimer: ReturnType<typeof setInterval> | null = null
 
 const filters = [
   { key: 'all', label: '全部' },
@@ -344,7 +372,10 @@ async function loadUsers() {
 }
 
 function openEdit(u: any) {
-  editForm.value = { ...u, new_password: '', plan: '' }
+  editForm.value = { ...u, new_password: '', plan: '', backendMode: 'shared' }
+  provisioning.value = false
+  provisionMessage.value = '正在创建独立服务器...'
+  if (provisionTimer) { clearInterval(provisionTimer); provisionTimer = null }
   editVisible.value = true
 }
 
@@ -370,27 +401,53 @@ function isPaidExpired(paidUntil: string): boolean {
   return new Date(paidUntil) < new Date()
 }
 
+function calcPaidUntil(planValue: string, existingPaidUntil?: string): string {
+  const plan = paidPlanOptions.find(p => p.value === planValue)
+  if (!plan) return ''
+  const base = existingPaidUntil && new Date(existingPaidUntil) > new Date()
+    ? new Date(existingPaidUntil) : new Date()
+  base.setMonth(base.getMonth() + plan.months)
+  return base.toISOString()
+}
+
 async function handleSave() {
   saving.value = true
   try {
+    const mode = editForm.value.backendMode || 'shared'
+    const plan = paidPlanOptions.find(p => p.value === editForm.value.plan)
+    const paid_until = plan ? calcPaidUntil(editForm.value.plan, editForm.value.paid_until) : undefined
+    const plan_label = plan?.label
+
+    // Independent deployment: call provision endpoint
+    if (mode === 'dedicated' && !editForm.value.is_paid) {
+      const payload: any = { mobile: editForm.value.mobile }
+      if (plan_label) payload.plan_label = plan_label
+      if (paid_until) payload.paid_until = paid_until
+
+      const res = await fetch('/api/admin-console?action=provision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': getAdminToken() },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (data.code === 1) {
+        provisioning.value = true
+        provisionMessage.value = '正在创建独立服务器...'
+        startProvisionPolling(editForm.value.mobile)
+      } else {
+        ElMessage.error(data.message || '创建失败')
+      }
+      return
+    }
+
+    // Shared or custom backend
     const payload: any = {
       mobile: editForm.value.mobile,
-      backend_url: editForm.value.backend_url || null,
+      backend_url: mode === 'custom' ? (editForm.value.backend_url || null) : null,
     }
     if (editForm.value.new_password) payload.password = editForm.value.new_password
-
-    // 套餐：计算新到期时间
-    if (editForm.value.plan) {
-      const plan = paidPlanOptions.find(p => p.value === editForm.value.plan)
-      if (plan) {
-        const base = editForm.value.paid_until && new Date(editForm.value.paid_until) > new Date()
-          ? new Date(editForm.value.paid_until)
-          : new Date()
-        base.setMonth(base.getMonth() + plan.months)
-        payload.plan_label = plan.label
-        payload.paid_until = base.toISOString()
-      }
-    }
+    if (plan_label) payload.plan_label = plan_label
+    if (paid_until) payload.paid_until = paid_until
 
     const res = await fetch('/api/admin-console?action=update', {
       method: 'POST',
@@ -408,6 +465,33 @@ async function handleSave() {
   } finally {
     saving.value = false
   }
+}
+
+function startProvisionPolling(mobile: string) {
+  if (provisionTimer) clearInterval(provisionTimer)
+  provisionTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/admin-console?action=provision-status&mobile=${mobile}`, {
+        headers: { 'x-admin-token': getAdminToken() },
+      })
+      const data = await res.json()
+      if (data.code === 1 && data.data?.status === 'live') {
+        clearInterval(provisionTimer!)
+        provisionTimer = null
+        provisioning.value = false
+        editVisible.value = false
+        ElMessage.success('独立服务器部署完成，已开通付费')
+        await loadUsers()
+      } else if (data.code === 1 && data.data?.message) {
+        provisionMessage.value = data.data.message
+      } else if (data.code === 0) {
+        clearInterval(provisionTimer!)
+        provisionTimer = null
+        provisioning.value = false
+        ElMessage.error(data.message || '部署失败')
+      }
+    } catch {}
+  }, 8000)
 }
 
 async function toggleStatus(u: any) {
@@ -957,6 +1041,45 @@ onMounted(() => {
   color: #1d5fce;
   font-weight: 700;
 }
+.backend-options {
+  display: flex;
+  gap: 8px;
+}
+.backend-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border: 1.5px solid #e0e3e8;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.backend-btn:hover { background: #f5f7fa; }
+.backend-btn.active { background: #e8f0fe; border-color: #a5c3ff; color: #1d5fce; }
+.backend-btn-title { font-size: 13px; font-weight: 600; }
+.backend-btn-desc { font-size: 11px; color: #86909c; }
+.backend-btn.active .backend-btn-desc { color: #5b8de9; }
+.provision-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+}
+.provision-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #e0e3e8;
+  border-top-color: #1d5fce;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.provision-text { font-size: 14px; font-weight: 600; color: #1d2129; }
+.provision-sub { font-size: 12px; color: #86909c; }
 .gen-btn {
   display: flex;
   align-items: center;

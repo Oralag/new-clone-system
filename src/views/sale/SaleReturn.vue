@@ -4,7 +4,7 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getSaleReturnList"
+        <ScTable ref="tableRef" :api-obj="reconcileFilteredApi"
           del-path="/stock/SaleReturnOrder/batchDel"
           sort-by="return_date" :sort-desc="true"
           export-file-name="销售退货单" :params="searchForm"
@@ -16,6 +16,7 @@
               <el-option label="待审核" :value="0" />
               <el-option label="已审核" :value="1" />
               <el-option label="已驳回" :value="2" />
+              <el-option label="未核对" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
@@ -479,7 +480,8 @@ const taxRates = TAX_RATES
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const { toggle: toggleReconcile } = useReconcile('reconcile_sale_return', tableRef)
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_sale_return', tableRef)
+const reconcileFilteredApi = createFilteredApi(getSaleReturnList)
 
 function parseItems(goodsInfo: any): any[] {
   if (Array.isArray(goodsInfo)) return goodsInfo

@@ -4,12 +4,16 @@
     <!-- ── 列表视图 ─────────────────────────────────────────────────────── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getProductionInhouseList"
+        <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
             del-path="/production/inhouse/batchDel"
             export-file-name="生产入库" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.order_sn" placeholder="入库单号" clearable style="width:160px" />
             <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:160px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+              <el-option label="未核对" value="unreconciled" />
+            </el-select>
             <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
           </template>
@@ -74,6 +78,7 @@
               <el-button v-if="row.status === 0" type="primary" size="small" link @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 0" type="danger" size="small" link @click="handleAudit(row, 2)">驳回</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" size="small" link @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -290,6 +295,7 @@ import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import { getProductionInhouseList, createProductionInhouse, updateProductionInhouse, deleteProductionInhouse, auditProductionInhouse } from '@/api/production'
 import { getProductionPlanList } from '@/api/production'
 import { getWarehouseList } from '@/api/warehouse'
@@ -313,7 +319,9 @@ const route = useRoute()
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const searchForm = reactive<any>({})
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_production_inhouse', tableRef)
+const reconcileFilteredApi = createFilteredApi(getProductionInhouseList, 'reconcile_filter')
+const searchForm = reactive<any>({ reconcile_filter: '' })
 
 // ── 视图状态 ─────────────────────────────────────────────────────────────────
 const showForm = ref(false)

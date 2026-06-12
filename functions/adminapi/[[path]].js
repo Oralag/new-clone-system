@@ -270,7 +270,11 @@ const AGENT_IDS = new Set([
 
 // Agent 配置（systemPrompt 用于自动回复）
 const AGENT_CONFIGS = {
-  captain: { name: 'Captain', systemPrompt: '你是数字游牧广告公司的Captain总指挥，负责统筹协调所有AI专员。回复简洁专业，像指挥官一样下达指令。不用Markdown格式，不用加粗和分隔线。全程中文。' },
+  captain: { name: 'Captain', systemPrompt: `你是数字游牧广告公司的Captain总指挥，负责统筹协调所有AI专员。回复简洁专业，像指挥官一样下达指令。不用Markdown格式，不用加粗和分隔线。全程中文。
+
+【铁律 — 禁止虚构数据】
+严禁编造任何具体信息：人名（小张、小李等）、任务名称、进度状态、金额，一律不得凭空生成。
+没有工具查询结果就没有数据。用户发打招呼/闲聊类消息时，只回应"告诉我要查什么或要做什么，我来安排"，禁止主动捏造任何业务状态或人员信息。` },
   secretary: { name: '秘书', systemPrompt: `你是数字游牧广告公司的秘书，执行力强、少问多做。
 
 【任务识别规则 — 非常重要】
@@ -403,15 +407,22 @@ async function handleChatGroups(request, env) {
   const msgMap = msgRaw ? JSON.parse(msgRaw) : {}
 
   const result = (await Promise.all(userGroups.map(async g => {
-    const msgs = (msgMap[g.id] || []).slice(-1)
-    const lastMsg = msgs[0] || null
+    let lastMsg = null
+    if (g.cross_tenant) {
+      const xtRaw = await env.USERS_KV.get(`xt_msg:${g.id}`)
+      const xtMsgs = xtRaw ? JSON.parse(xtRaw) : []
+      lastMsg = xtMsgs.length ? xtMsgs[xtMsgs.length - 1] : null
+    } else {
+      const msgs = (msgMap[g.id] || []).slice(-1)
+      lastMsg = msgs[0] || null
+    }
     const unreadRaw = await env.USERS_KV.get(`chat_unread:${userId}:${g.id}`)
     const members = memberMap[g.id] || []
     return {
       ...g,
       member_ids: members.map(m => m.user_id),
-      last_message: lastMsg?.content || '',
-      last_message_at: lastMsg?.created_at || g.updated_at || g.created_at,
+      last_message: lastMsg?.content || g.last_message || '',
+      last_message_at: lastMsg?.created_at || g.last_message_at || g.updated_at || g.created_at,
       unread: unreadRaw ? parseInt(unreadRaw) : 0,
       is_pinned: g.is_pinned || false,
     }
@@ -1535,29 +1546,47 @@ async function handleLogin(body, env) {
     }
   }
 
-  // Not in KV — only allow the master admin account to use the production backend.
-  // All other accounts must register through the trial flow.
-  if (account !== '17747344571') {
-    return jsonRes({ code: 0, show: 1, message: '账号不存在，请先注册', data: [] })
-  }
-  const data = await loginBackend(DEFAULT_BACKEND, body)
-  if (data.code === 1) {
-    const wrapped = wrapToken(data.data.token, DEFAULT_BACKEND, account, data.data.name || '')
+  // Not in KV — try DEFAULT_BACKEND (master admin and sub-accounts of the main company)
+  // then TRIAL_BACKEND (sub-accounts of trial companies).
+  // Sub-accounts share the KV namespace of their company's master account.
+  const backendsToTry = [
+    { backend: DEFAULT_BACKEND, parentAccount: account === '17747344571' ? account : null },
+    { backend: TRIAL_BACKEND, parentAccount: null },
+  ]
+  for (const { backend } of backendsToTry) {
+    let data
+    try { data = await loginBackend(backend, body) } catch { continue }
+    if (!data || data.code !== 1) continue
+
+    // Determine the KV namespace account:
+    // - For master admin: use their own account
+    // - For sub-accounts of DEFAULT_BACKEND: use the master admin account (17747344571)
+    // - For sub-accounts of TRIAL_BACKEND: use account as-is (they'll have their own namespace)
+    const kvAccount = (backend === DEFAULT_BACKEND && account !== '17747344571')
+      ? '17747344571'
+      : account
+
+    const displayName = data.data.userInfo?.name || data.data.name || account
+    const companyName = (backend === DEFAULT_BACKEND)
+      ? (data.data.userInfo?.company_name || data.data.name || kvAccount)
+      : displayName
+
+    const wrapped = wrapToken(data.data.token, backend, kvAccount, companyName)
     data.data.token = wrapped
     if (data.data.userInfo) data.data.userInfo.token = wrapped
-    // 确保主账号在 KV 里有 user: 记录，使其可被好友搜索发现
+
+    // Write searchable entry so this account can be found by friends search
     if (kv) {
-      const exists = await kv.get(`user:${account}`)
-      if (!exists) {
-        await kv.put(`user:${account}`, JSON.stringify({
-          company_name: data.data.name || data.data.userInfo?.name || account,
-          mobile: account,
-          created_at: new Date().toISOString(),
-        }))
-      }
+      await kv.put(`searchable:${account}`, JSON.stringify({
+        company_name: companyName,
+        name: displayName,
+        mobile: account,
+        created_at: new Date().toISOString(),
+      }))
     }
+    return jsonRes(data)
   }
-  return jsonRes(data)
+  return jsonRes({ code: 0, show: 1, message: '账号不存在，请先注册', data: [] })
 }
 
 // ── Main handler ─────────────────────────────────────────────────────────────
@@ -1810,10 +1839,12 @@ async function handleSearchUser(request, env) {
   const decoded = decodeToken(request.headers.get('token') || '')
   if (!decoded) return errRes('请先登录')
   if (phone === decoded.account) return errRes('不能搜索自己')
-  const raw = await env.USERS_KV.get(`user:${phone}`)
+  // 先查自注册用户（user: key），再查主账号可搜索记录（searchable: key）
+  const raw = await env.USERS_KV.get(`user:${phone}`) || await env.USERS_KV.get(`searchable:${phone}`)
   if (!raw) return jsonSuccess(null)
   const user = JSON.parse(raw)
-  return jsonSuccess({ phone, company_name: user.company_name || phone })
+  // name 是子账号姓名，company_name 是公司名；未设置时退回 phone
+  return jsonSuccess({ phone, name: user.name || null, company_name: user.company_name || phone })
 }
 
 async function handleSendFriendRequest(request, env) {

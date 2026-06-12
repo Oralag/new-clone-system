@@ -47,6 +47,14 @@ export const menuData: TopMenuItem[] = [
     ],
   },
   {
+    key: 'online',
+    title: '线上',
+    icon: 'Monitor',
+    children: [
+      { key: 'online-meituan', title: '美团', path: '/online/meituan' },
+    ],
+  },
+  {
     key: 'retail',
     title: '零售',
     icon: 'Shop',
@@ -215,6 +223,18 @@ export const menuData: TopMenuItem[] = [
       { key: 'personnel-contract', title: '劳动合同', path: '/personnel/contract' },
       { key: 'personnel-social', title: '社保管理', path: '/personnel/social' },
       { key: 'personnel-welfare', title: '福利管理', path: '/personnel/welfare' },
+    ],
+  },
+  {
+    key: 'miniapp',
+    title: '小程序',
+    icon: 'Cellphone',
+    children: [
+      { key: 'mini-orders', title: '小程序订单', path: '/sale/mini-orders' },
+      { key: 'mini-videos', title: '看看视频', path: '/sale/mini-videos' },
+      { key: 'mini-qrcode', title: '包装二维码', path: '/sale/mini-qrcode' },
+      { key: 'distributor', title: '分销商管理', path: '/sale/distributor' },
+      { key: 'refund', title: '退款/售后', path: '/sale/refund' },
     ],
   },
 ]

@@ -221,7 +221,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Edit, Delete, Search, Refresh, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getSupplierList, createSupplier, updateSupplier, deleteSupplier, getProcureOrderList } from '@/api/procure'
+import { getSupplierList, createSupplier, updateSupplier, deleteSupplier, getProcureOrderList, updateProcureOrder, getProcureInhouseList, updateProcureInhouse } from '@/api/procure'
 import { getPayableList, getPayReceiptList } from '@/api/finance'
 import http from '@/api/http'
 import { readScopedJson, writeScopedJson } from '@/utils/storageScope'
@@ -481,6 +481,7 @@ const isViewMode = ref(false)
 const formTitle = ref('新增供应商')
 const formSaving = ref(false)
 const formRef = ref()
+let originalSupplierName = ''
 const formData = reactive<any>({
   id: 0, name: '', contact: '', mobile: '', cate_id: null, address: '', remark: '',
 })
@@ -506,6 +507,7 @@ function openView(row: any) {
 }
 
 function openForm(row?: any) {
+  originalSupplierName = row?.name || ''
   isViewMode.value = false
   formTitle.value = row ? '编辑供应商' : '新增供应商'
   const nextData = {
@@ -530,6 +532,30 @@ function openForm(row?: any) {
   }
 }
 
+async function syncSupplierName(supplierId: number, newName: string, oldName: string) {
+  if (!supplierId || !newName || newName === oldName) return
+  const fetchRows = async (fn: Function) => {
+    try {
+      const res = await fn({ list_rows: 2000, supplier_id: supplierId })
+      return (res.data?.rows ?? res.data?.list ?? []) as any[]
+    } catch { return [] }
+  }
+  const updateRows = async (rows: any[], updateFn: Function) => {
+    for (const r of rows) {
+      if (Number(r.supplier_id) !== Number(supplierId)) continue
+      try { await updateFn({ id: r.id, supplier_name: newName }) } catch { /* ignore */ }
+    }
+  }
+  const [orders, inhouses] = await Promise.all([
+    fetchRows(getProcureOrderList),
+    fetchRows(getProcureInhouseList),
+  ])
+  await Promise.all([
+    updateRows(orders, updateProcureOrder),
+    updateRows(inhouses, updateProcureInhouse),
+  ])
+}
+
 async function handleSubmit() {
   try { await formRef.value?.validate() } catch { return }
   formSaving.value = true
@@ -539,6 +565,7 @@ async function handleSubmit() {
     let supplierId = formData.id
     if (supplierId) {
       await updateSupplier(payload)
+      syncSupplierName(supplierId, formData.name, originalSupplierName)
     } else {
       const res = await createSupplier(createPayload)
       // Handle various response shapes

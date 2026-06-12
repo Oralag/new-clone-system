@@ -2,7 +2,7 @@
   <div class="page-container fund-flow-page">
     <div class="page-title">资金明细</div>
     <!-- 顶部汇总卡片 -->
-    <div class="summary-bar" v-loading="summaryLoading">
+    <div v-if="filterType !== 'expense' && filterType !== 'income'" class="summary-bar" v-loading="summaryLoading">
       <div class="summary-card">
         <span class="s-label">资金余额</span>
         <span class="s-value blue">¥{{ summary.balance.toFixed(2) }}</span>
@@ -10,18 +10,67 @@
       </div>
       <div class="summary-card">
         <span class="s-label">累计收入</span>
-        <span class="s-value green">¥{{ summary.income.toFixed(2) }}</span>
+        <span class="s-value green">+¥{{ summary.income.toFixed(2) }}</span>
         <span class="s-formula">按所有资金收入明细汇总</span>
       </div>
       <div class="summary-card">
         <span class="s-label">累计支出</span>
-        <span class="s-value red">¥{{ summary.expense.toFixed(2) }}</span>
+        <span class="s-value red">-¥{{ summary.expense.toFixed(2) }}</span>
         <span class="s-formula">按所有资金支出明细汇总</span>
       </div>
       <div class="summary-card">
         <span class="s-label">未付款</span>
         <span class="s-value orange">¥{{ summary.unpaid.toFixed(2) }}</span>
         <span class="s-formula">来源：应付账款 + 待付款费用</span>
+      </div>
+      <div class="summary-card">
+        <span class="s-label">未收款</span>
+        <span class="s-value red">¥{{ summary.uncollected.toFixed(2) }}</span>
+        <span class="s-formula">来源：已审核销售合同应收账款</span>
+      </div>
+    </div>
+
+    <!-- 收入分类汇总（仅收入视图显示） -->
+    <div v-if="filterType === 'income'" class="income-breakdown-bar">
+      <div class="ib-card total">
+        <span class="ib-label">累计收入</span>
+        <span class="ib-value">+¥{{ incomeBreakdown.total.toFixed(2) }}</span>
+      </div>
+      <div class="ib-card">
+        <span class="ib-label">零售收入</span>
+        <span class="ib-value">+¥{{ incomeBreakdown.retail.toFixed(2) }}</span>
+      </div>
+      <div class="ib-card">
+        <span class="ib-label">销售收款</span>
+        <span class="ib-value">+¥{{ incomeBreakdown.sales.toFixed(2) }}</span>
+      </div>
+      <div class="ib-card">
+        <span class="ib-label">其他收入</span>
+        <span class="ib-value">+¥{{ incomeBreakdown.other.toFixed(2) }}</span>
+      </div>
+    </div>
+
+    <!-- 支出分类汇总（仅支出视图显示） -->
+    <div v-if="filterType === 'expense'" class="expense-breakdown-bar">
+      <div class="eb-card total">
+        <span class="eb-label">累计支出</span>
+        <span class="eb-value">-¥{{ expenseBreakdown.total.toFixed(2) }}</span>
+      </div>
+      <div class="eb-card">
+        <span class="eb-label">采购支出</span>
+        <span class="eb-value">-¥{{ expenseBreakdown.purchase.toFixed(2) }}</span>
+      </div>
+      <div class="eb-card">
+        <span class="eb-label">快递运费</span>
+        <span class="eb-value">-¥{{ expenseBreakdown.delivery.toFixed(2) }}</span>
+      </div>
+      <div class="eb-card">
+        <span class="eb-label">店面支出</span>
+        <span class="eb-value">-¥{{ expenseBreakdown.store.toFixed(2) }}</span>
+      </div>
+      <div class="eb-card">
+        <span class="eb-label">其他支出</span>
+        <span class="eb-value">-¥{{ expenseBreakdown.other.toFixed(2) }}</span>
       </div>
     </div>
 
@@ -124,7 +173,7 @@ import { fmtDt } from '@/utils/date'
 const route = useRoute()
 const summaryLoading = ref(false)
 const tableLoading = ref(false)
-const summary = reactive({ balance: 0, income: 0, expense: 0, unpaid: 0 })
+const summary = reactive({ balance: 0, income: 0, expense: 0, unpaid: 0, uncollected: 0 })
 const purchaseOrdersForLabel = ref<any[]>([])
 const supplierListForLabel = ref<any[]>([])
 
@@ -210,6 +259,32 @@ const sourceOptions = computed(() =>
   Array.from(new Set(allItems.value.map(item => item.source).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN'))
 )
 
+// 收入分类汇总（仅在收入视图下显示）
+const incomeBreakdown = computed(() => {
+  const incomes = allItems.value.filter(i => i.type === 'income')
+  const total = incomes.reduce((s, i) => s + i.amount, 0)
+  const retail = incomes.filter(i => i.source === '零售单').reduce((s, i) => s + i.amount, 0)
+  const sales = incomes.filter(i => i.source === '销售收款').reduce((s, i) => s + i.amount, 0)
+  const other = total - retail - sales
+  return { total, retail, sales, other }
+})
+
+// 支出分类汇总（仅在支出视图下显示）
+const expenseBreakdown = computed(() => {
+  const expenses = allItems.value.filter(i => i.type === 'expense')
+  const total = expenses.reduce((s, i) => s + i.amount, 0)
+  const purchase = expenses.filter(i => i.source === '采购付款').reduce((s, i) => s + i.amount, 0)
+  const isDelivery = (i: FlowItem) =>
+    /快递|运费|跑腿/.test(i.remark || '') || /快递|运费|跑腿/.test(i.name || '')
+  const isStore = (i: FlowItem) =>
+    /店面/.test(i.name || '') || /店面/.test(i.remark || '')
+  const otherExpenses = expenses.filter(i => i.source !== '采购付款')
+  const delivery = otherExpenses.filter(isDelivery).reduce((s, i) => s + i.amount, 0)
+  const store = otherExpenses.filter(i => !isDelivery(i) && isStore(i)).reduce((s, i) => s + i.amount, 0)
+  const other = otherExpenses.filter(i => !isDelivery(i) && !isStore(i)).reduce((s, i) => s + i.amount, 0)
+  return { total, purchase, delivery, store, other }
+})
+
 const pagedItems = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return filteredItems.value.slice(start, start + pageSize.value)
@@ -231,9 +306,10 @@ onMounted(async () => {
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
       http.get('/stock/PurchaseOrder/index', { params: { list_rows: 1000 } }),
       http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
+      http.get('/shop/ContractOrder/index', { params: { list_rows: 3000 } }),
     ])
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
-    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, prepayRes, fundRes, returnRes, saleReturnRes, procureRes, supRes] = settled.map((_, i) => ok(i))
+    const [collectRes, retailRes, payRes, expenseRes, rechargeRes, prepayRes, fundRes, returnRes, saleReturnRes, procureRes, supRes, contractRes] = settled.map((_, i) => ok(i))
     purchaseOrdersForLabel.value = procureRes.data?.rows ?? []
     supplierListForLabel.value = supRes.data?.rows ?? []
 
@@ -241,14 +317,18 @@ onMounted(async () => {
     const fundRows: any[] = fundRes.data?.rows ?? fundRes.data?.list ?? []
     const fundNameMap = new Map<number, string>(fundRows.map((row: any) => [Number(row.id), String(row.name || '')]))
 
-    const collectSourceMap: Record<string, string> = { customer: '销售收款', supplier: '供应商退款', staff: '员工还款', other: '其他收入' }
+    const collectSourceMap: Record<string, string> = { customer: '销售收款', sale: '销售收款', supplier: '供应商退款', staff: '员工还款', other: '其他收入' }
     const collects: any[] = collectRes.data?.rows ?? collectRes.data?.list ?? []
     for (const r of collects) {
+      const ctKey = r.contact_type || r.category || ''
+      // contact_type 为空但有 customer_name 的，视为销售收款
+      const resolvedSource = isCustomerPrepayLike(r) ? '预收款'
+        : (collectSourceMap[ctKey] || (r.customer_name ? '销售收款' : '其他收入'))
       items.push({
         date: fmtDt(r.receipt_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
-        source: isCustomerPrepayLike(r) ? '预收款' : (collectSourceMap[r.contact_type || r.category] || '收款单'),
+        source: resolvedSource,
         name: r.contact_name || r.customer_name || '—',
         order_no: r.receipt_no || r.order_no || '',
         amount: Number(r.amount || 0),
@@ -409,6 +489,70 @@ onMounted(async () => {
       }, 0)
     summary.unpaid = pendingExpenseTotal + purchaseUnpaidTotal
 
+    // 未收款：FIFO 匹配已审核销售合同与收款单
+    const audited = (contractRes.data?.rows ?? []).filter((c: any) => Number(c.status) === 1)
+    const snToContractId = new Map<string, number>()
+    for (const c of audited) {
+      if (c.order_sn) snToContractId.set(String(c.order_sn), c.id)
+    }
+    const contractCalcAmt = (c: any): number => {
+      const total = Number(c.total_amount || 0)
+      const afterDisc = Number(c.after_discount)
+      const base = Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total ? afterDisc : total
+      const freight = Number(c.freight_amount || 0)
+      const bearer = String(c.freight_bearer || 'seller')
+      const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
+      return Math.max(0, base + fc - Number(c.income_amount || 0))
+    }
+    const contractDirectPaid = new Map<number, number>()
+    const custUnmatchedPaid = new Map<number, number>()
+    for (const r of collects) {
+      if (String(r.remark || '').startsWith('[other]')) continue
+      const amount = Number(r.amount || 0)
+      const rsn = String(r.order_sn || '').trim()
+      const custId = Number(r.customer_id || 0)
+      if (rsn && snToContractId.has(rsn)) {
+        const cid = snToContractId.get(rsn)!
+        contractDirectPaid.set(cid, (contractDirectPaid.get(cid) ?? 0) + amount)
+      } else if (custId > 0) {
+        custUnmatchedPaid.set(custId, (custUnmatchedPaid.get(custId) ?? 0) + amount)
+      }
+    }
+    const byCustomer = new Map<number, any[]>()
+    for (const c of audited) {
+      const custId = Number(c.customer_id || 0)
+      if (custId > 0 && custUnmatchedPaid.has(custId)) {
+        if (!byCustomer.has(custId)) byCustomer.set(custId, [])
+        byCustomer.get(custId)!.push(c)
+      }
+    }
+    for (const cl of byCustomer.values()) {
+      cl.sort((a: any, b: any) => String(a.order_date || a.created_at || '').localeCompare(String(b.order_date || b.created_at || '')))
+    }
+    const contractFifoPaid = new Map<number, number>()
+    for (const [custId, cl] of byCustomer) {
+      let remaining = custUnmatchedPaid.get(custId) ?? 0
+      for (const c of cl) {
+        const total = contractCalcAmt(c)
+        const direct = contractDirectPaid.get(c.id) ?? 0
+        const leftover = Math.max(0, total - direct)
+        const applied = Math.min(remaining, leftover)
+        if (applied > 0) contractFifoPaid.set(c.id, applied)
+        remaining = Math.max(0, remaining - applied)
+        if (remaining <= 0) break
+      }
+    }
+    let uncollectedTotal = 0
+    for (const c of audited) {
+      const receiptPaid = contractDirectPaid.has(c.id) || contractFifoPaid.has(c.id)
+        ? (contractDirectPaid.get(c.id) ?? 0) + (contractFifoPaid.get(c.id) ?? 0)
+        : undefined
+      const paid = receiptPaid !== undefined ? receiptPaid : Number(c.receive_amount || 0)
+      const total = contractCalcAmt(c)
+      uncollectedTotal += Math.max(0, total - paid)
+    }
+    summary.uncollected = uncollectedTotal
+
   } catch { /* ignore */ } finally {
     summaryLoading.value = false
     tableLoading.value = false
@@ -422,9 +566,50 @@ onMounted(async () => {
 
 .summary-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
+.income-breakdown-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.ib-card {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ib-card.total {
+  background: #fff;
+  border-color: #16a34a;
+}
+.ib-label { font-size: 11px; color: rgba(29,29,31,0.45); }
+.ib-value { font-size: 16px; font-weight: 700; color: #16a34a; }
+
+.expense-breakdown-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.eb-card {
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.eb-card.total {
+  background: #fff;
+  border-color: #dc2626;
+}
+.eb-label { font-size: 11px; color: rgba(29,29,31,0.45); }
+.eb-value { font-size: 16px; font-weight: 700; color: #dc2626; }
 .summary-card {
   background: #fff;
   border-radius: 12px;

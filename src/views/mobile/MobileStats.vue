@@ -43,8 +43,74 @@
       </div>
     </div>
 
+    <!-- 利润分析趋势 -->
+    <div class="ms-profit-card">
+      <div class="ms-profit-header">
+        <div class="ms-profit-title">💹 利润分析趋势</div>
+        <div class="ms-sale-tabs">
+          <button :class="['ms-tab', profitPeriod === '7d' ? 'active' : '']" @click="profitPeriod = '7d'">7天</button>
+          <button :class="['ms-tab', profitPeriod === '30d' ? 'active' : '']" @click="profitPeriod = '30d'">30天</button>
+        </div>
+      </div>
+      <div class="ms-profit-summary">
+        <div class="ms-profit-sum-item">
+          <div class="ms-profit-sum-label">营收</div>
+          <div class="ms-profit-sum-val" style="color:#0071e3">¥{{ profitChartData.totalRevenue }}</div>
+        </div>
+        <div class="ms-profit-sum-item">
+          <div class="ms-profit-sum-label">支出</div>
+          <div class="ms-profit-sum-val" style="color:#f53f3f">¥{{ profitChartData.totalExpense }}</div>
+        </div>
+        <div class="ms-profit-sum-item">
+          <div class="ms-profit-sum-label">利润</div>
+          <div class="ms-profit-sum-val" :style="{ color: profitChartData.profitPositive ? '#00b42a' : '#f53f3f' }">¥{{ profitChartData.totalProfit }}</div>
+        </div>
+        <div class="ms-profit-sum-item">
+          <div class="ms-profit-sum-label">利润率</div>
+          <div class="ms-profit-sum-val" :style="{ color: profitChartData.profitPositive ? '#00b42a' : '#f53f3f' }">{{ profitChartData.marginPct }}%</div>
+        </div>
+      </div>
+      <!-- SVG 利润柱状图：以零为基准，绿色=正利润，红色=亏损 -->
+      <div class="ms-profit-chart-wrap">
+        <svg class="ms-profit-svg" :viewBox="`0 0 ${profitChartData.bars.length * 8} 60`" preserveAspectRatio="none">
+          <!-- 零基准线 -->
+          <line x1="0" y1="30" :x2="profitChartData.bars.length * 8" y2="30"
+            stroke="rgba(0,0,0,0.12)" stroke-width="0.5" stroke-dasharray="2,2"/>
+          <!-- 复合颜色柱：出库（深色）+ 零售（浅色） -->
+          <template v-for="(b, i) in profitChartData.bars" :key="i">
+            <!-- 出库部分（靠近零线） -->
+            <rect
+              :x="i * 8 + 1" :width="6" rx="1"
+              :y="b.profit >= 0 ? 30 - b.saleH : 30 + b.retailH"
+              :height="Math.max(b.saleH, b.h > 0 && b.saleH === 0 ? 0 : b.saleH)"
+              :fill="b.profit >= 0 ? '#00b42a' : '#f53f3f'"
+              :opacity="b.isToday ? 1 : 0.75"
+            />
+            <!-- 零售部分（远离零线的顶端/底端，浅色） -->
+            <rect
+              :x="i * 8 + 1" :width="6" rx="1"
+              :y="b.profit >= 0 ? 30 - b.h : 30"
+              :height="Math.max(b.retailH, 0)"
+              :fill="b.profit >= 0 ? '#34d399' : '#fca5a5'"
+              :opacity="b.isToday ? 1 : 0.75"
+            />
+          </template>
+        </svg>
+        <!-- X轴日期标签 -->
+        <div class="ms-profit-xlabels">
+          <span v-for="(lb, i) in profitChartData.xLabels" :key="i">{{ lb }}</span>
+        </div>
+      </div>
+      <div class="ms-profit-legend">
+        <span class="ms-legend-dot" style="background:#00b42a"></span><span>出库利润</span>
+        <span class="ms-legend-dot" style="background:#34d399;margin-left:10px"></span><span>零售利润</span>
+        <span class="ms-legend-dot" style="background:#f53f3f;margin-left:10px"></span><span>亏损</span>
+        <span style="margin-left:auto;font-size:10px;color:#c2c8d5">营收 - 成本</span>
+      </div>
+    </div>
+
     <!-- 销售统计 -->
-    <div class="ms-sale-card">
+    <div class="ms-sale-card" style="margin-top:12px">
       <div class="ms-sale-top">
         <div class="ms-sale-title">经营概况</div>
         <div class="ms-sale-tabs">
@@ -154,6 +220,8 @@ const todayExpense = ref('0.00')
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
 const _fundFlowRows = ref<any[]>([])
+const _costPriceMap = ref<Record<number, number>>({})
+const profitPeriod = ref<'7d' | '30d'>('30d')
 
 function getToday() {
   const d = new Date()
@@ -253,6 +321,75 @@ const salesStats = computed(() => {
   }
 })
 
+const profitChartData = computed(() => {
+  const now = new Date()
+  const today = getToday()
+  const days = profitPeriod.value === '7d' ? 7 : 30
+  const dateArr: string[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i)
+    const pad = (x: number) => String(x).padStart(2, '0')
+    dateArr.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`)
+  }
+  const fromDate = dateArr[0]
+
+  const revenueMap: Record<string, number> = Object.fromEntries(dateArr.map(d => [d, 0]))
+  const retailMap: Record<string, number> = Object.fromEntries(dateArr.map(d => [d, 0]))
+  _saleRows.value.filter((r: any) => Number(r.status) === 1).forEach((r: any) => {
+    const d = (r.out_date || '').slice(0, 10)
+    if (revenueMap[d] !== undefined) revenueMap[d] += Number(r.total_amount || 0)
+  })
+  _retailRows.value.filter((r: any) => Number(r.status) === 1).forEach((r: any) => {
+    const d = (r.order_date || '').slice(0, 10)
+    const amt = Number(r.pay_amount || r.total_amount || 0)
+    if (revenueMap[d] !== undefined) revenueMap[d] += amt
+    if (retailMap[d] !== undefined) retailMap[d] += amt
+  })
+
+  // 支出 = COGS（卖出商品的成本价 × 数量），与营收口径一致（都基于订单，不基于现金流）
+  const expenseMap: Record<string, number> = Object.fromEntries(dateArr.map(d => [d, 0]))
+  const getCost = (item: any) => {
+    const gid = Number(item.goods_id || 0)
+    return _costPriceMap.value[gid] || Number(item.cost_price || item.in_price || item.avg_price || 0)
+  }
+  _saleRows.value.filter((r: any) => Number(r.status) === 1).forEach((r: any) => {
+    const d = (r.out_date || '').slice(0, 10)
+    if (expenseMap[d] === undefined) return
+    parseGoodsInfo(r.goods_info).forEach((item: any) => {
+      expenseMap[d] += Number(item.num || 0) * getCost(item)
+    })
+  })
+  _retailRows.value.filter((r: any) => Number(r.status) === 1).forEach((r: any) => {
+    const d = (r.order_date || '').slice(0, 10)
+    if (expenseMap[d] === undefined) return
+    parseGoodsInfo(r.goods_info).forEach((item: any) => {
+      expenseMap[d] += Number(item.num || 0) * getCost(item)
+    })
+  })
+
+  const data = dateArr.map(d => ({
+    date: d, revenue: revenueMap[d], retail: retailMap[d],
+    expense: expenseMap[d], profit: revenueMap[d] - expenseMap[d], isToday: d === today,
+    retailShare: revenueMap[d] > 0 ? retailMap[d] / revenueMap[d] : 0,
+  }))
+  const maxAbs = Math.max(...data.map(d => Math.abs(d.profit)), 1)
+  const bars = data.map(d => {
+    const h = Math.max(Math.round((Math.abs(d.profit) / maxAbs) * 28), d.profit !== 0 ? 1 : 0)
+    const retailH = Math.round(h * d.retailShare)
+    return { ...d, h, retailH, saleH: h - retailH }
+  })
+
+  const skip = days === 7 ? 1 : 6
+  const xLabels = dateArr.filter((_, i) => i % skip === 0 || i === dateArr.length - 1).map(d => d.slice(5))
+
+  const totalRevenue = data.reduce((s, d) => s + d.revenue, 0)
+  const totalExpense = data.reduce((s, d) => s + d.expense, 0)
+  const totalProfit = totalRevenue - totalExpense
+  const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + 'w' : n.toFixed(2)
+  const marginPct = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0.0'
+  return { bars, xLabels, totalRevenue: fmt(totalRevenue), totalExpense: fmt(totalExpense), totalProfit: fmt(Math.abs(totalProfit)), profitPositive: totalProfit >= 0, marginPct }
+})
+
 function buildInsights(data: { todaySale: number, stockWarn: number, customerCount: number, todayOrders: number, pendingReceivable: number }) {
   const items = []
   if (data.todaySale > 0) {
@@ -307,6 +444,31 @@ onMounted(async () => {
   })
   const goodsList = rows(goodsRes)
   stockWarn.value = goodsList.filter((g: any) => (stockMap[g.id] ?? 0) <= 0).length
+
+  // 构建成本价 Map：先从商品档案取 cost_price，再用采购入库加权均价覆盖（更准确）
+  const costMap: Record<number, number> = {}
+  goodsList.forEach((g: any) => {
+    const c = Number(g.cost_price || g.purchase_price || g.avg_price || g.in_price || 0)
+    if (c > 0) costMap[Number(g.id)] = c
+  })
+  const purchaseTotals: Record<number, { cost: number; qty: number }> = {}
+  rows(procureRes).forEach((r: any) => {
+    if (Number(r.status) !== 1) return
+    parseGoodsInfo(r.goods_info).forEach((item: any) => {
+      const gid = Number(item.goods_id || 0)
+      const qty = Number(item.num || 0)
+      const price = Number(item.price || item.cost_price || item.in_price || 0)
+      if (gid > 0 && qty > 0 && price > 0) {
+        if (!purchaseTotals[gid]) purchaseTotals[gid] = { cost: 0, qty: 0 }
+        purchaseTotals[gid].cost += qty * price
+        purchaseTotals[gid].qty += qty
+      }
+    })
+  })
+  Object.entries(purchaseTotals).forEach(([gid, { cost, qty }]) => {
+    if (qty > 0) costMap[Number(gid)] = cost / qty
+  })
+  _costPriceMap.value = costMap
 
   const custData = customerRes.status === 'fulfilled' ? (customerRes.value?.data ?? customerRes.value) : {}
   const customerCount = Number(custData?.total ?? 0)
@@ -378,6 +540,28 @@ onMounted(async () => {
 .ms-insight-item { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 12px; }
 .ms-insight-tag { font-size: 10px; font-weight: 700; color: #0071e3; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
 .ms-insight-text { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.5; }
+
+/* 利润分析趋势 */
+.ms-profit-card {
+  background: #fff;
+  border-radius: 16px;
+  margin: 12px 12px 0;
+  padding: 16px 16px 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.ms-profit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.ms-profit-title { font-size: 14px; font-weight: 700; color: #1d2129; }
+.ms-profit-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+.ms-profit-sum-item { background: #f5f5f7; border-radius: 8px; padding: 8px 6px; text-align: center; }
+.ms-profit-sum-label { font-size: 10px; color: #86909c; margin-bottom: 3px; font-weight: 600; }
+.ms-profit-sum-val { font-size: 13px; font-weight: 800; letter-spacing: -0.03em; }
+.ms-profit-chart-wrap { margin-bottom: 6px; }
+.ms-profit-svg { width: 100%; height: 60px; display: block; }
+.ms-profit-xlabels { display: flex; justify-content: space-between; padding: 2px 0; }
+.ms-profit-xlabels span { font-size: 9px; color: #c2c8d5; }
+.ms-profit-legend { display: flex; align-items: center; gap: 4px; padding-top: 4px; border-top: 1px solid #f2f3f5; margin-top: 4px; }
+.ms-legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.ms-profit-legend span { font-size: 10px; color: #86909c; }
 
 /* 销售统计 */
 .ms-sale-card { background: #fff; border-radius: 16px; margin: 0 12px; padding: 16px 16px 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }

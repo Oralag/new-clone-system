@@ -18,7 +18,7 @@
       </div>
 
       <!-- 表格 -->
-      <el-table :data="pagedRows" v-loading="loading" border stripe style="width:100%">
+      <el-table :data="pagedRows" v-loading="loading" border stripe style="width:100%" :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="receipt_no" label="收款单号" min-width="150" />
         <el-table-column label="类型" width="100" align="center">
@@ -61,11 +61,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <template v-if="!row._isPrepay">
               <el-button v-if="getRowContactType(row) === 'customer'" type="primary" link size="small" @click="goToContract(row)">原单</el-button>
               <el-button v-if="Number(row.status) === 1" type="warning" link size="small" @click="handleUnaudit(row)">反审核</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleCollectReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" link size="small" :disabled="Number(row.status) === 1" @click="handleDelete(row.id)">删除</el-button>
             </template>
             <span v-else style="color:#999;font-size:12px">预付款</span>
@@ -184,6 +185,17 @@ import { applySaleReturnsToCollectReceiptRows, normalizeSaleReturnFinanceRows } 
 import { adjustFundBalance } from '@/utils/fund'
 import { fmtDt } from '@/utils/date'
 
+// ── 核对 ──────────────────────────────────────────────────────────────────────
+const reconcileIds = ref<Set<number>>(new Set(JSON.parse(localStorage.getItem('reconcile_collect_receipt') || '[]')))
+function toggleCollectReconcile(row: any) {
+  const newVal = !row._reconciled
+  if (newVal) reconcileIds.value.add(row.id)
+  else reconcileIds.value.delete(row.id)
+  localStorage.setItem('reconcile_collect_receipt', JSON.stringify([...reconcileIds.value]))
+  const idx = allRows.value.findIndex((r: any) => r.id === row.id)
+  if (idx !== -1) allRows.value.splice(idx, 1, { ...allRows.value[idx], _reconciled: newVal })
+}
+
 // ── 数据加载 ──────────────────────────────────────────────────────────────────
 const router = useRouter()
 
@@ -237,6 +249,10 @@ async function loadAll() {
       return db.localeCompare(da)
     })
     allRows.value = merged
+    reconcileIds.value.forEach((id: number) => {
+      const idx = allRows.value.findIndex((r: any) => r.id === id)
+      if (idx !== -1 && !allRows.value[idx]._reconciled) allRows.value.splice(idx, 1, { ...allRows.value[idx], _reconciled: true })
+    })
   } finally {
     loading.value = false
   }

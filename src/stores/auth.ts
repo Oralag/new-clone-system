@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { loginApi, logoutApi } from '@/api/login'
 import { TOKEN_NAME, USER_INFO_KEY } from '@/config'
 import { usePermissionStore } from './permission'
+import { useBrandStore } from './brand'
 
 const AUTH_STORAGE_KEYS = [
   TOKEN_NAME,
@@ -10,9 +11,12 @@ const AUTH_STORAGE_KEYS = [
   'brand_profile',
   'brand_profile_savedAt',
   'erp_brand_data',
+  'brand_profiles_v2',
+  'brand_active_id',
   'erp_ai_chat_history',
   'agent_history',
   'agent_flow_results',
+  'meeting_session',
 ]
 
 export const useAuthStore = defineStore('auth', {
@@ -52,10 +56,15 @@ export const useAuthStore = defineStore('auth', {
     },
 
     _clearAllState() {
+      // 清除账号专属的 AI 聊天历史
+      const id = this.userInfo?.id || this.userInfo?.account || ''
+      if (id) localStorage.removeItem(`erp_ai_chat_history_${id}`)
+
       this.token = ''
       this.userInfo = null
       AUTH_STORAGE_KEYS.forEach(key => localStorage.removeItem(key))
       usePermissionStore().clear()
+      useBrandStore().reset()
     },
 
     logout() {

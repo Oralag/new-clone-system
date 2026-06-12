@@ -171,12 +171,12 @@ function loadConfig(): BrandPageConfig {
     recommendRate: 99,
     ratingDist: [85, 12, 2, 1, 0],
     reviews: [
-      { id: 'r1', userName: '王建国', rating: 5, comment: '奶皮子真的是我吃过最正宗的，软糯香甜，完全是小时候去内蒙古旅游时吃到的那个味道。一次买了10盒，已经回购三次了！', date: '2026-03-20', avatar: 'https://picsum.photos/seed/user1/100/100' },
-      { id: 'r2', userName: '林晓燕', rating: 5, comment: '送给父母的礼物，老人家吃了说从来没吃过这么香的奶豆腐。包装也很精致，当礼品送特别有面子。', date: '2026-03-15', avatar: 'https://picsum.photos/seed/user2/100/100' },
-      { id: 'r3', userName: '张博文', rating: 5, comment: '作为内蒙古人，在外地很难买到正宗的家乡奶食。这家的奶皮和风干牛肉都很地道，终于解了馋。', date: '2026-03-10', avatar: 'https://picsum.photos/seed/user3/100/100' },
-      { id: 'r4', userName: '刘思远', rating: 4, comment: '马奶酒浓度适中，不太烈，女生也能喝。配上奶酪，周末在家就有了草原感觉。物流也很快，保鲜做得好。', date: '2026-03-05', avatar: 'https://picsum.photos/seed/user4/100/100' },
-      { id: 'r5', userName: '赵丽华', rating: 5, comment: '批发价格实惠，产品质量稳定，我们超市已经合作两年了。每次到货顾客都抢着买，复购率超高。', date: '2026-02-28', avatar: 'https://picsum.photos/seed/user5/100/100' },
-      { id: 'r6', userName: '陈志强', rating: 5, comment: '给公司采购的年货礼盒，同事们都说比普通礼盒有特色，草原特产这个定位很讨喜，明年还会继续选你们。', date: '2026-02-20', avatar: 'https://picsum.photos/seed/user6/100/100' },
+      { id: 'r1', userName: '草原奶茶控🍵', rating: 5, comment: '奶皮子真的是我吃过最正宗的，软糯香甜，完全是小时候去内蒙古旅游时吃到的那个味道。一次买了10盒，已经回购三次了！', date: '2026-03-20', avatar: 'https://picsum.photos/seed/nmry1/100/100' },
+      { id: 'r2', userName: '买买买不停手', rating: 5, comment: '送给父母的礼物，老人家吃了说从来没吃过这么香的奶豆腐。包装也很精致，当礼品送特别有面子。', date: '2026-03-15', avatar: 'https://picsum.photos/seed/nmry2/100/100' },
+      { id: 'r3', userName: '内蒙格桑花🌸', rating: 5, comment: '作为内蒙古人，在外地很难买到正宗的家乡奶食。这家的奶皮和风干牛肉都很地道，终于解了馋。', date: '2026-03-10', avatar: 'https://picsum.photos/seed/nmry3/100/100' },
+      { id: 'r4', userName: '吃货小分队', rating: 4, comment: '马奶酒浓度适中，不太烈，女生也能喝。配上奶酪，周末在家就有了草原感觉。物流也很快，保鲜做得好。', date: '2026-03-05', avatar: 'https://picsum.photos/seed/nmry4/100/100' },
+      { id: 'r5', userName: 'li**hua', rating: 5, comment: '批发价格实惠，产品质量稳定，我们超市已经合作两年了。每次到货顾客都抢着买，复购率超高。', date: '2026-02-28', avatar: 'https://picsum.photos/seed/nmry5/100/100' },
+      { id: 'r6', userName: '年货采购达人', rating: 5, comment: '给公司采购的年货礼盒，同事们都说比普通礼盒有特色，草原特产这个定位很讨喜，明年还会继续选你们。', date: '2026-02-20', avatar: 'https://picsum.photos/seed/nmry6/100/100' },
     ],
     carriers: [
       { name: '顺丰冷链', time: '1-3 工作日', type: '全程冷藏' },
@@ -244,7 +244,16 @@ export const useBrandEditStore = defineStore('brandEdit', () => {
   // 从云端拉取最新配置（登录用户或首次访问时同步）
   async function syncFromCloud() {
     try {
-      const res = await fetch('/api/brand-config')
+      const token = localStorage.getItem('erp_token')
+      const headers: Record<string, string> = {}
+      if (token) headers['x-erp-token'] = token
+      // For public (non-logged-in) brand pages, pass shop code from URL
+      const shopCode = !token
+        ? (new URLSearchParams(window.location.hash.split('?')[1] || '').get('shop')
+          || localStorage.getItem('brand_shop_code') || '')
+        : ''
+      const configUrl = shopCode ? `/api/brand-config?shop=${encodeURIComponent(shopCode)}` : '/api/brand-config'
+      const res = await fetch(configUrl, { headers })
       const json = await res.json()
       if (json.code === 1 && json.data) {
         // 云端数据版本过旧时忽略，用本地最新版本

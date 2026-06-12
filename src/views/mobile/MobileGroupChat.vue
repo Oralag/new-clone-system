@@ -26,7 +26,7 @@
       <!-- 日期分隔线 -->
       <div v-for="(group, date) in groupedMessages" :key="date" class="m-gc-date-group">
         <div class="m-gc-date-divider">{{ formatDateLabel(date) }}</div>
-        <div v-for="msg in group" :key="msg.id" class="m-gc-msg-row" :class="{ own: msg.sender_id === authStore.userInfo?.id }">
+        <div v-for="msg in group" :key="msg.id" class="m-gc-msg-row" :class="{ own: isOwnMessage(msg) }">
           <!-- 系统消息 -->
           <div v-if="msg.type === 'system'" class="m-gc-system">
             <span>{{ msg.content }}</span>
@@ -34,12 +34,12 @@
 
           <!-- 普通消息 -->
           <template v-else>
-            <div v-if="msg.sender_id !== authStore.userInfo?.id" class="m-gc-avatar">
+            <div v-if="String(msg.sender_id) !== String(authStore.userInfo?.id || authStore.userInfo?.admin_id)" class="m-gc-avatar">
               {{ msg.sender_name?.[0] || '?' }}
             </div>
             <div class="m-gc-msg-col">
-              <div v-if="msg.sender_id !== authStore.userInfo?.id" class="m-gc-sender-name">{{ msg.sender_name }}</div>
-              <div class="m-gc-bubble" :class="{ own: msg.sender_id === authStore.userInfo?.id }">
+              <div v-if="String(msg.sender_id) !== String(authStore.userInfo?.id || authStore.userInfo?.admin_id)" class="m-gc-sender-name">{{ msg.sender_name }}</div>
+              <div class="m-gc-bubble" :class="{ own: isOwnMessage(msg) }">
                 <!-- AI 回复卡片 -->
                 <div v-if="msg.type === 'ai_reply'" class="m-gc-ai-card">
                   <div class="m-gc-ai-card-header">
@@ -74,12 +74,16 @@
     <div class="m-gc-input-area">
       <!-- @成员选择器 -->
       <div v-if="showAtPicker" class="m-gc-at-picker">
-        <div class="m-gc-at-header">选择成员</div>
+        <div class="m-gc-at-header">{{ atFilter ? `"${atFilter}"` : '选择成员' }}</div>
         <div class="m-gc-at-list">
-          <div v-for="m in members" :key="m.id" class="m-gc-at-item" @click="insertAt(m)">
+          <div v-for="m in atFilteredMembers" :key="m.id" class="m-gc-at-item" @click="insertAt(m)">
             <div class="m-gc-at-avatar">{{ m.name?.[0] || '?' }}</div>
-            <span>{{ m.name }}</span>
+            <div class="m-gc-at-info">
+              <span class="m-gc-at-name">{{ m.name }}</span>
+              <span v-if="m.position" class="m-gc-at-pos">{{ m.position }}</span>
+            </div>
           </div>
+          <div v-if="atFilteredMembers.length === 0" class="m-gc-at-empty">无匹配成员</div>
         </div>
       </div>
 
@@ -106,7 +110,8 @@
           :placeholder="aiMode ? '@管家 + 描述业务，如：录销售单给老王，奶茶5箱' : '输入消息...'"
           rows="1"
           @keydown.enter.exact.prevent="sendMessage()"
-          @input="autoResize"
+          @keydown.escape="showAtPicker = false"
+          @input="onInputChange"
         />
         <!-- 语音按住说话 -->
         <div
@@ -124,7 +129,7 @@
           <span v-else-if="voiceCancel">松开 取消</span>
           <span v-else>松开 发送 · {{ voiceSeconds }}s</span>
         </div>
-        <button class="m-gc-at-btn" @click="showAtPicker = !showAtPicker">
+        <button class="m-gc-at-btn" @click="triggerAtFromButton">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
             <circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/>
           </svg>
@@ -337,6 +342,21 @@ const messages = ref<any[]>([])
 const group = ref<any>(null)
 const members = ref<any[]>([])
 
+// 当前用户的所有可能 ID（数字id、admin_id、account手机号），用于判断是否自己发的消息
+const currentUserId = computed(() => String(authStore.userInfo?.id || authStore.userInfo?.admin_id || ''))
+function isOwnMessage(msg: any): boolean {
+  const sid = String(msg.sender_id ?? '')
+  if (!sid || sid === 'undefined') return false
+  const u = authStore.userInfo
+  if (!u) return false
+  return (
+    sid === String(u.id ?? '') ||
+    sid === String(u.admin_id ?? '') ||
+    sid === String(u.account ?? '') ||
+    sid === String(u.mobile ?? '')
+  )
+}
+
 // 是否群聊（3人及以上）
 // 去掉群名中的"(X人)"后缀
 function displayName(name?: string) {
@@ -353,6 +373,8 @@ const otherUser = computed(() => {
 
 // 私聊时标题显示对方名字，群聊显示群名
 const chatTitle = computed(() => {
+  // 跨租户聊天：直接用 group.name（已存对方公司名），不走成员查询
+  if (group.value?.cross_tenant) return displayName(group.value?.name) || '好友'
   if (!members.value.length) return displayName(group.value?.name) || '加载中...'
   if (!isGroupChat.value) {
     return otherUser.value?.name || displayName(group.value?.name) || '聊天'
@@ -469,6 +491,15 @@ watch([showGroupInfo, showAddMember, showCleanupConfirm, showMemberAction], ([a,
   if (a || b || c || d) hideTabbar.value = true
 })
 const showAtPicker = ref(false)
+const atFilter = ref('')
+const atStartPos = ref(-1)
+
+const atFilteredMembers = computed(() => {
+  const list = members.value
+  if (!atFilter.value) return list
+  const q = atFilter.value.toLowerCase()
+  return list.filter((m: any) => m.name?.toLowerCase().includes(q))
+})
 const addMemberSearch = ref('')
 const addSelectedIds = ref<Set<string>>(new Set())
 const allContacts = ref<any[]>([])
@@ -620,10 +651,55 @@ function autoResize() {
   inputRef.value.style.height = Math.min(inputRef.value.scrollHeight, 120) + 'px'
 }
 
-function insertAt(member: any) {
-  inputText.value += `@${member.name} `
+function onInputChange() {
+  autoResize()
+  const textarea = inputRef.value
+  if (!textarea) return
+  const text = inputText.value
+  const pos = textarea.selectionStart ?? text.length
+  const textBeforeCursor = text.slice(0, pos)
+  const atIdx = textBeforeCursor.lastIndexOf('@')
+
+  if (atIdx !== -1) {
+    const afterAt = textBeforeCursor.slice(atIdx + 1)
+    if (!afterAt.includes(' ') && !afterAt.includes('\n')) {
+      atFilter.value = afterAt
+      atStartPos.value = atIdx
+      showAtPicker.value = true
+      return
+    }
+  }
   showAtPicker.value = false
-  inputRef.value?.focus()
+  atFilter.value = ''
+  atStartPos.value = -1
+}
+
+function triggerAtFromButton() {
+  const pos = inputRef.value?.selectionStart ?? inputText.value.length
+  inputText.value = inputText.value.slice(0, pos) + '@' + inputText.value.slice(pos)
+  nextTick(() => {
+    if (inputRef.value) {
+      inputRef.value.selectionStart = inputRef.value.selectionEnd = pos + 1
+      inputRef.value.focus()
+    }
+    onInputChange()
+  })
+}
+
+function insertAt(member: any) {
+  const text = inputText.value
+  const pos = inputRef.value?.selectionStart ?? text.length
+  if (atStartPos.value !== -1) {
+    const before = text.slice(0, atStartPos.value)
+    const after = text.slice(pos)
+    inputText.value = `${before}@${member.name} ${after}`
+  } else {
+    inputText.value += `@${member.name} `
+  }
+  showAtPicker.value = false
+  atFilter.value = ''
+  atStartPos.value = -1
+  nextTick(() => { inputRef.value?.focus(); autoResize() })
 }
 
 async function sendMessage() {
@@ -643,7 +719,7 @@ async function sendMessage() {
   const localMsg = {
     id: `local-${Date.now()}`,
     group_id: groupId.value,
-    sender_id: authStore.userInfo?.id,
+    sender_id: authStore.userInfo?.id || authStore.userInfo?.admin_id || authStore.userInfo?.account,
     sender_name: authStore.userInfo?.name || authStore.userInfo?.account,
     content: text,
     type: 'text',
@@ -1310,14 +1386,19 @@ onUnmounted(() => {
 }
 .m-gc-at-item:active { background: #f5f5f7; }
 .m-gc-at-avatar {
-  width: 28px; height: 28px;
+  width: 32px; height: 32px;
   background: #0071e3;
-  border-radius: 50%;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  flex-shrink: 0;
 }
+.m-gc-at-info { display: flex; flex-direction: column; gap: 1px; }
+.m-gc-at-name { font-size: 14px; color: #1d2129; font-weight: 500; }
+.m-gc-at-pos { font-size: 11px; color: #86909c; }
+.m-gc-at-empty { text-align: center; color: #86909c; font-size: 13px; padding: 12px 0; }
 
 /* ── 弹窗通用 ── */
 .m-modal-mask {

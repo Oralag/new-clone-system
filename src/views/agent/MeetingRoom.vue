@@ -1,5 +1,5 @@
 <template>
-  <div class="meeting-room">
+  <div class="meeting-room" ref="roomEl">
 
     <!-- ── 顶部：会议室标题 + 参与者头像 ── -->
     <div class="meeting-header">
@@ -225,7 +225,7 @@
 
     <!-- 完成后跳转按钮（在输入区上方，避免被遮挡） -->
     <div v-if="meetingStore.phase === 'done' && agentStore.flowResults.length > 0" class="goto-publish">
-      <button class="goto-publish-btn" @click="router.push('/agent/publish')">
+      <button class="goto-publish-btn" @click="router.push(publishPath.value)">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M3 7h8M8 4l3 3-3 3"/>
         </svg>
@@ -248,7 +248,7 @@
             @click="brandStore.setActive(b.id)"
           >{{ b.name || '未命名' }}</div>
         </div>
-        <router-link to="/agent/brand" class="brand-selector-link">管理</router-link>
+        <router-link :to="route.path.startsWith('/mobile/') ? '/mobile/agent/brand-settings' : '/agent/brand-settings'" class="brand-selector-link">管理</router-link>
       </div>
 
       <!-- 品牌未配置提示 -->
@@ -256,7 +256,7 @@
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#b45309" stroke-width="1.5" stroke-linecap="round">
           <circle cx="6.5" cy="6.5" r="5.5"/><path d="M6.5 4v3.5M6.5 9v.5"/>
         </svg>
-        <span>建议先<router-link to="/agent/brand" style="color:#0071e3;text-decoration:none;font-weight:600">配置品牌信息</router-link>，获得更精准的会议内容</span>
+        <span>建议先<router-link :to="route.path.startsWith('/mobile/') ? '/mobile/agent/brand-settings' : '/agent/brand-settings'" style="color:#0071e3;text-decoration:none;font-weight:600">配置品牌信息</router-link>，获得更精准的会议内容</span>
       </div>
 
       <!-- 进度条（会议进行中） -->
@@ -315,8 +315,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, nextTick, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useBrandStore } from '@/stores/brand'
 import { useMeetingStore } from '@/stores/meeting'
@@ -325,11 +325,14 @@ import type { MeetingMessage } from '@/stores/meeting'
 import type { FlowResult } from '@/stores/agent'
 
 const router = useRouter()
+const route = useRoute()
+const publishPath = computed(() => route.path.startsWith('/mobile/') ? '/mobile/agent/publish' : '/agent/publish')
 const brandStore = useBrandStore()
 const meetingStore = useMeetingStore()
 const agentStore = useTrendingStore()
 
 const messagesEl = ref<HTMLElement | null>(null)
+const roomEl = ref<HTMLElement | null>(null)
 const topicInput = ref('')
 const typingAgent = ref<string | null>(null)
 const speakingAgent = ref<string | null>(null)
@@ -1034,7 +1037,7 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
       message: `${savedCount} 条内容已存入发布页`,
       type: 'success',
       duration: 3000,
-      onClick: () => router.push('/agent/publish'),
+      onClick: () => router.push(publishPath.value),
     })
   }
 }
@@ -1164,7 +1167,7 @@ async function startBackgroundMeeting(topic: string) {
             message: `✅ 会议完成，${data.flowResults.length} 条内容已存入发布页`,
             type: 'success',
             duration: 4000,
-            onClick: () => router.push('/agent/publish'),
+            onClick: () => router.push(publishPath.value),
           })
         }
 
@@ -1244,9 +1247,38 @@ function handleExport() {
   URL.revokeObjectURL(url)
 }
 
+// 保存父级容器原始样式，离开时还原
+let _savedStyles: Array<{ el: HTMLElement; props: Record<string, string> }> = []
+
+function saveAndSet(el: HTMLElement | null, props: Record<string, string>) {
+  if (!el) return
+  const saved: Record<string, string> = {}
+  for (const k of Object.keys(props)) saved[k] = (el.style as any)[k]
+  _savedStyles.push({ el, props: saved })
+  for (const [k, v] of Object.entries(props)) (el.style as any)[k] = v
+}
+
+onMounted(async () => {
+  await nextTick()
+  if (window.innerWidth <= 768) {
+    requestAnimationFrame(() => {
+      _savedStyles = []
+      saveAndSet(document.querySelector('.wx-content'), { overflow: 'hidden', display: 'flex', flexDirection: 'column' })
+      saveAndSet(document.querySelector('.agent-layout'), { height: '100%', minHeight: 'unset', display: 'flex', flexDirection: 'column' })
+      saveAndSet(document.querySelector('.agent-main'), { flex: '1', minHeight: '0', overflow: 'hidden' })
+      saveAndSet(document.querySelector('.agent-content'), { padding: '0', overflow: 'hidden', flex: '1', minHeight: '0', display: 'flex', flexDirection: 'column' })
+    })
+  }
+})
+
 onUnmounted(() => {
   shouldStop = true
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  // 还原父级容器样式，避免影响其他页面的滚动
+  for (const { el, props } of _savedStyles) {
+    for (const [k, v] of Object.entries(props)) (el.style as any)[k] = v
+  }
+  _savedStyles = []
 })
 </script>
 
@@ -1714,18 +1746,29 @@ onUnmounted(() => {
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .meeting-room { height: 100vh; border-radius: 0; display: flex; flex-direction: column; }
-  .messages-area { min-height: 50vh; }
+  /* 填满父容器（父容器由 JS 约束好 overflow/height） */
+  .meeting-room {
+    flex: 1;
+    height: 100%;
+    min-height: unset;
+    border-radius: 0;
+    border: none;
+    overflow: hidden;
+  }
+  /* 消息区填满中间剩余空间，只有这里可以滚动 */
+  .meeting-body { flex: 1; min-height: 0; overflow: hidden; }
+  .messages-area { flex: 1; min-height: 0; overflow-y: auto; }
   .participants { display: none; }
   .msg-bubble-wrap { max-width: 88%; }
   .summary-panel { display: none; }
   .has-summary .messages-area { flex: 1; }
-  /* 移动端输入框固定底部 */
+  /* 空状态：移动端靠顶部显示，不居中 */
+  .meeting-empty { justify-content: flex-start; padding-top: 28px; }
+  /* 输入区固定在底部，不可滚动出视口 */
   .meeting-input-area {
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     background: #fff;
-    position: sticky;
-    bottom: 0;
+    flex-shrink: 0;
   }
 }
 </style>

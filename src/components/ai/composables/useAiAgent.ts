@@ -24,7 +24,14 @@ export interface ImageItem {
   mediaType: string
 }
 
-const HISTORY_KEY = 'erp_ai_chat_history'
+function getHistoryKey(): string {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('erp_user') || 'null')
+    const id = userInfo?.id || userInfo?.account || ''
+    if (id) return `erp_ai_chat_history_${id}`
+  } catch {}
+  return 'erp_ai_chat_history'
+}
 
 function getNow() {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -42,7 +49,7 @@ export function useAiAgent(messagesRef: ReturnType<typeof ref<HTMLDivElement | u
 
   function loadHistory(): ChatMessage[] {
     try {
-      const raw = localStorage.getItem(HISTORY_KEY)
+      const raw = localStorage.getItem(getHistoryKey())
       if (raw) return JSON.parse(raw) as ChatMessage[]
     } catch {}
     return []
@@ -50,13 +57,13 @@ export function useAiAgent(messagesRef: ReturnType<typeof ref<HTMLDivElement | u
 
   function saveHistory() {
     try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.value.slice(-100)))
+      localStorage.setItem(getHistoryKey(), JSON.stringify(messages.value.slice(-100)))
     } catch {}
   }
 
   function clearMessages() {
     messages.value = []
-    localStorage.removeItem(HISTORY_KEY)
+    localStorage.removeItem(getHistoryKey())
   }
 
   function scrollToBottom() {

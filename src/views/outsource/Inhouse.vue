@@ -2,10 +2,14 @@
   <div class="outsource-inhouse-page">
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getOutsourceInhouseList" del-path="/outsource/inhouse/batchDel" export-file-name="委外入库" :params="searchForm">
+        <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi" del-path="/outsource/inhouse/batchDel" export-file-name="委外入库" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.in_no" placeholder="入库编号" clearable style="width:160px" />
             <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:160px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+              <el-option label="未核对" value="unreconciled" />
+            </el-select>
             <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
           </template>
@@ -36,6 +40,7 @@
               <el-button v-if="row.status===0" type="primary" size="small" link @click="doAudit(row,1)">审核</el-button>
               <el-button v-if="row.status===0" type="danger" size="small" link @click="doAudit(row,2)">驳回</el-button>
               <el-button v-if="row.status===1 && !permStore.isSubAccount" type="warning" size="small" link @click="doAudit(row,0)">反审核</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -153,6 +158,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getOutsourceInhouseList, createOutsourceInhouse, deleteOutsourceInhouse } from '@/api/outsource'
 import { getSupplierList } from '@/api/procure'
@@ -162,8 +168,10 @@ import { usePermissionStore } from '@/stores/permission'
 import { fmtDt } from '@/utils/date'
 
 const tableRef=ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_outsource_inhouse', tableRef)
+const reconcileFilteredApi = createFilteredApi(getOutsourceInhouseList, 'reconcile_filter')
 const permStore = usePermissionStore()
-const searchForm=reactive({in_no:'',goods_name:''})
+const searchForm=reactive({in_no:'',goods_name:'',reconcile_filter:''})
 function resetSearch(){searchForm.in_no='';searchForm.goods_name='';tableRef.value?.loadData()}
 const showForm=ref(false),isView=ref(false),saving=ref(false)
 const supplierOptions=ref<any[]>([]),warehouseOptions=ref<any[]>([])

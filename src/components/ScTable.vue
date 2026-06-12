@@ -366,7 +366,7 @@ async function loadData() {
         tableData.value = rows.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value)
       } else {
         tableData.value = rows
-        total.value = data?.total || 0
+        total.value = props.rowFilter ? rows.length : (data?.total || 0)
       }
     }
   } catch {

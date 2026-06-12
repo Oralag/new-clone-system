@@ -21,15 +21,17 @@
       <div class="stat-card blue">
         <div class="stat-icon"><el-icon><Document /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">合同数量（份）</div>
-          <div class="stat-value">{{ stats.count }}</div>
+          <div class="stat-label">销售合同</div>
+          <div class="stat-value">{{ stats.contractCount }} 份</div>
+          <div class="stat-subline">合同金额 ¥{{ fmt(stats.contractTotal) }}</div>
         </div>
       </div>
       <div class="stat-card orange">
         <div class="stat-icon"><el-icon><Wallet /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">合同总金额</div>
-          <div class="stat-value">¥ {{ fmt(stats.total) }}</div>
+          <div class="stat-label">零售订单</div>
+          <div class="stat-value">{{ stats.retailCount }} 单</div>
+          <div class="stat-subline">零售金额 ¥{{ fmt(stats.retailTotal) }}</div>
         </div>
       </div>
       <div class="stat-card green">
@@ -61,7 +63,14 @@
         <div ref="barRef" style="height:260px"></div>
       </el-card>
       <el-card class="chart-card">
-        <div class="card-title">月度销售趋势</div>
+        <div class="chart-title-row">
+          <div class="card-title">月度销售趋势</div>
+          <el-radio-group v-model="trendType" size="small" @change="renderLine">
+            <el-radio-button label="all">全部</el-radio-button>
+            <el-radio-button label="contract">销售合同</el-radio-button>
+            <el-radio-button label="retail">零售订单</el-radio-button>
+          </el-radio-group>
+        </div>
         <div ref="lineRef" style="height:260px"></div>
       </el-card>
     </div>
@@ -71,8 +80,8 @@
       <el-table :data="summaryData" border stripe size="small" style="width:100%">
         <el-table-column type="index" label="序号" width="55" align="center" />
         <el-table-column label="客户名称" prop="customer_name" min-width="130" />
-        <el-table-column label="合同数" prop="count" width="80" align="center" />
-        <el-table-column label="合同总额" width="120" align="right">
+        <el-table-column label="单据数" prop="count" width="80" align="center" />
+        <el-table-column label="销售总额" width="120" align="right">
           <template #default="{ row }">¥ {{ fmt(row.total) }}</template>
         </el-table-column>
         <el-table-column label="已收金额" width="120" align="right">
@@ -103,7 +112,19 @@ import { BarChart, LineChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { getSaleContractList } from '@/api/reports'
+import { getCollectReceiptList } from '@/api/finance'
+import { getRetailOrderList } from '@/api/retail'
 import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
+import {
+  applySaleReceiptPayments,
+  getSaleContractAmount,
+  getSaleContractOrderNo,
+  getSaleReceiptAmount,
+  getSaleReceiptCustomerName,
+  getSaleReceiptDate,
+  getSaleReceiptOrderNo,
+  isSaleCustomerReceipt,
+} from '@/utils/saleFinance'
 
 echarts.use([BarChart, LineChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer])
 
@@ -111,31 +132,74 @@ const currentYear = new Date().getFullYear()
 const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i)
 const searchYear = ref(currentYear)
 const searchCustomer = ref('')
+const trendType = ref<'all' | 'contract' | 'retail'>('all')
 
 const allRows = ref<any[]>([])
+const receiptRows = ref<any[]>([])
 const barRef = ref<HTMLElement>()
 const lineRef = ref<HTMLElement>()
 let barChart: echarts.ECharts | null = null
 let lineChart: echarts.ECharts | null = null
 
 const fmt = (v: any) => Number(v || 0).toFixed(2)
-const calcUnreceived = (row: any) => Math.max(0, Number(row.total_amount || 0) - Number(row.receive_amount || 0))
+const rowDate = (row: any) => String(
+  row._source === 'retail'
+    ? (row.order_date || row.created_at || row.create_time || '')
+    : (row.contract_date || row.sign_date || row.order_date || row.created_at || row.create_time || ''),
+)
+const contractAmount = (row: any) => Number(
+  row.finance_total_amount
+  ?? (row._source === 'retail' ? (row.pay_amount ?? row.total_amount ?? row.after_discount ?? 0) : getSaleContractAmount(row)),
+)
+const calcUnreceived = (row: any) => Math.max(0, contractAmount(row) - Number(row.receive_amount || 0))
+const isEffectiveSaleRow = (row: any) => row._source === 'retail'
+  ? Number(row.status) === 1
+  : isEffectiveSaleContract(row)
+
+function normalizeRetailRows(rows: any[]) {
+  return (rows || [])
+    .filter((row: any) => Number(row.status) === 1)
+    .map((row: any, index: number) => {
+      const amount = Number(row.pay_amount ?? row.total_amount ?? row.after_discount ?? 0)
+      const date = row.order_date || row.created_at || row.create_time || ''
+      return {
+        ...row,
+        id: row.id ? `retail-${row.id}` : `retail-idx-${index}`,
+        _source: 'retail',
+        customer_name: row.customer_name || row.member_name || '散客',
+        contract_date: date,
+        finance_total_amount: amount,
+        receive_amount: amount,
+        paid_amount: amount,
+        un_pay_amount: 0,
+        status: 1,
+      }
+    })
+}
 
 const filteredRows = computed(() => {
   return allRows.value.filter(r => {
-    const d = r.contract_date || r.created_at || ''
+    const d = rowDate(r)
     const yearOk = d.startsWith(String(searchYear.value))
     const custOk = !searchCustomer.value || (r.customer_name || '').includes(searchCustomer.value)
-    return isEffectiveSaleContract(r) && yearOk && custOk
+    return isEffectiveSaleRow(r) && yearOk && custOk
   })
 })
 
 const stats = computed(() => {
   const rows = filteredRows.value
   const customers = new Set(rows.map(r => r.customer_name)).size
+  const contractRows = rows.filter(r => r._source !== 'retail')
+  const retailRows = rows.filter(r => r._source === 'retail')
+  const contractTotal = contractRows.reduce((s, r) => s + contractAmount(r), 0)
+  const retailTotal = retailRows.reduce((s, r) => s + contractAmount(r), 0)
   return {
     count: rows.length,
-    total: rows.reduce((s, r) => s + Number(r.total_amount || 0), 0),
+    contractCount: contractRows.length,
+    retailCount: retailRows.length,
+    total: contractTotal + retailTotal,
+    contractTotal,
+    retailTotal,
     received: rows.reduce((s, r) => s + Number(r.receive_amount || 0), 0),
     unreceived: rows.reduce((s, r) => s + calcUnreceived(r), 0),
     customers,
@@ -146,9 +210,30 @@ const summaryData = computed(() => {
   const map: Record<string, any> = {}
   for (const r of filteredRows.value) {
     const name = r.customer_name || '未知'
-    if (!map[name]) map[name] = { customer_name: name, count: 0, total: 0, received: 0, unreceived: 0 }
+    if (!map[name]) {
+      map[name] = {
+        customer_name: name,
+        count: 0,
+        contract_count: 0,
+        retail_count: 0,
+        total: 0,
+        contract_total: 0,
+        retail_total: 0,
+        received: 0,
+        unreceived: 0,
+      }
+    }
     map[name].count++
-    map[name].total += Number(r.total_amount || 0)
+    const amount = contractAmount(r)
+    const isRetail = r._source === 'retail'
+    if (isRetail) {
+      map[name].retail_count++
+      map[name].retail_total += amount
+    } else {
+      map[name].contract_count++
+      map[name].contract_total += amount
+    }
+    map[name].total += amount
     map[name].received += Number(r.receive_amount || 0)
     map[name].unreceived += calcUnreceived(r)
   }
@@ -157,8 +242,25 @@ const summaryData = computed(() => {
 
 async function loadAll() {
   try {
-    const res: any = await getSaleContractList({ page: 1, list_rows: 1000 })
-    allRows.value = res?.data?.rows || res?.rows || []
+    const [contractRes, receiptRes, retailRes] = await Promise.allSettled([
+      getSaleContractList({ page: 1, list_rows: 5000 }),
+      getCollectReceiptList({ page: 1, list_rows: 5000 }),
+      getRetailOrderList({ page: 1, list_rows: 5000 }),
+    ])
+    const contracts: any[] = contractRes.status === 'fulfilled'
+      ? (contractRes.value?.data?.rows || contractRes.value?.rows || [])
+      : []
+    const receipts: any[] = receiptRes.status === 'fulfilled'
+      ? (receiptRes.value?.data?.rows || receiptRes.value?.data?.list || receiptRes.value?.rows || [])
+      : []
+    const retailRows: any[] = retailRes.status === 'fulfilled'
+      ? (retailRes.value?.data?.rows || retailRes.value?.data?.list || retailRes.value?.rows || [])
+      : []
+    receiptRows.value = receipts
+    allRows.value = [
+      ...applySaleReceiptPayments(contracts, receipts).map(row => ({ ...row, _source: 'contract' })),
+      ...normalizeRetailRows(retailRows),
+    ]
   } catch { allRows.value = [] }
   nextTick(() => { renderBar(); renderLine() })
 }
@@ -179,7 +281,8 @@ function renderBar() {
     xAxis: { type: 'value', axisLabel: { fontSize: 10 } },
     yAxis: { type: 'category', data: top10.map(r => r.customer_name).reverse(), axisLabel: { fontSize: 11 } },
     series: [
-      { name: '合同金额', type: 'bar', data: top10.map(r => r.total.toFixed(2)).reverse(), itemStyle: { color: '#3b82f6' } },
+      { name: '销售合同', type: 'bar', data: top10.map(r => r.contract_total.toFixed(2)).reverse(), itemStyle: { color: '#3b82f6' } },
+      { name: '零售订单', type: 'bar', data: top10.map(r => r.retail_total.toFixed(2)).reverse(), itemStyle: { color: '#f59e0b' } },
       { name: '已收金额', type: 'bar', data: top10.map(r => r.received.toFixed(2)).reverse(), itemStyle: { color: '#10b981' } },
     ]
   })
@@ -190,17 +293,46 @@ function renderLine() {
   if (!lineChart) lineChart = echarts.init(lineRef.value)
   const months = Array.from({ length: 12 }, (_, i) => `${searchYear.value}-${String(i + 1).padStart(2, '0')}`)
   const rows = filteredRows.value
+  const trendRows = rows.filter(row => {
+    if (trendType.value === 'contract') return row._source !== 'retail'
+    if (trendType.value === 'retail') return row._source === 'retail'
+    return true
+  })
+  const orderNos = new Set(
+    trendRows
+      .filter(r => r._source !== 'retail')
+      .flatMap(r => [getSaleContractOrderNo(r), r.order_sn, r.order_no, r.contract_no].map(v => String(v || '').trim()).filter(Boolean)),
+  )
+  const receiptMatchesFilter = (receipt: any) => {
+    if (!isSaleCustomerReceipt(receipt)) return false
+    if (!searchCustomer.value) return true
+    const receiptCustomer = getSaleReceiptCustomerName(receipt)
+    const receiptOrderNo = getSaleReceiptOrderNo(receipt)
+    return receiptCustomer.includes(searchCustomer.value) || (receiptOrderNo && orderNos.has(receiptOrderNo))
+  }
+  const byReceiptMonth = months.map(m => {
+    const contractReceipts = trendType.value === 'retail'
+      ? 0
+      : receiptRows.value
+        .filter(receipt => getSaleReceiptDate(receipt).startsWith(m) && receiptMatchesFilter(receipt))
+        .reduce((sum, receipt) => sum + getSaleReceiptAmount(receipt), 0)
+    const retailReceipts = trendType.value === 'contract'
+      ? 0
+      : trendRows
+      .filter(row => row._source === 'retail' && rowDate(row).startsWith(m))
+      .reduce((sum, row) => sum + contractAmount(row), 0)
+    return (contractReceipts + retailReceipts).toFixed(2)
+  })
   lineChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['合同金额', '已收金额'], top: 0, right: 10 },
+    legend: { data: ['销售金额', '已收金额'], top: 0, right: 10 },
     grid: { left: 50, right: 20, top: 30, bottom: 30 },
     xAxis: { type: 'category', data: months.map(m => m.slice(5)), axisLabel: { fontSize: 10 } },
     yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
     series: [
-      { name: '合同金额', type: 'line', smooth: true, itemStyle: { color: '#3b82f6' },
-        data: months.map(m => rows.filter(r => (r.contract_date || r.created_at || '').startsWith(m)).reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2)) },
-      { name: '已收金额', type: 'line', smooth: true, itemStyle: { color: '#10b981' },
-        data: months.map(m => rows.filter(r => (r.contract_date || r.created_at || '').startsWith(m)).reduce((s, r) => s + Number(r.receive_amount || 0), 0).toFixed(2)) },
+      { name: '销售金额', type: 'line', smooth: false, itemStyle: { color: '#3b82f6' },
+        data: months.map(m => trendRows.filter(r => rowDate(r).startsWith(m)).reduce((s, r) => s + contractAmount(r), 0).toFixed(2)) },
+      { name: '已收金额', type: 'line', smooth: false, itemStyle: { color: '#10b981' }, data: byReceiptMonth },
     ]
   })
 }
@@ -221,9 +353,11 @@ onMounted(() => { loadAll() })
 .stat-icon { font-size: 28px; opacity: .85; }
 .stat-label { font-size: 13px; opacity: .9; margin-bottom: 4px; }
 .stat-value { font-size: 22px; font-weight: 700; }
+.stat-subline { margin-top: 4px; font-size: 12px; line-height: 1.35; opacity: .9; }
 .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .chart-card :deep(.el-card__body) { padding: 12px 14px; }
 .card-title { font-size: 14px; font-weight: 600; color: #374151; }
+.chart-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .table-card :deep(.el-card__body) { padding: 14px; }
 @media (max-width: 900px) {
   .stat-cards { grid-template-columns: repeat(2, 1fr); }

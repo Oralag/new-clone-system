@@ -19,9 +19,12 @@
           @click="selectBom(item)"
         >
           <div class="goods-item-info">
-            <div class="goods-name">{{ item.goods_name }}</div>
+            <div class="goods-name" :class="{ 'goods-name-empty': !item.goods_name }">
+              {{ item.goods_name || '（未命名）' }}
+            </div>
             <div class="goods-sn" v-if="item.goods_sn">{{ item.goods_sn }}</div>
           </div>
+          <el-icon class="goods-copy" @click.stop="handleCopyBom(item)"><CopyDocument /></el-icon>
           <el-icon class="goods-del" @click.stop="handleDelBom(item)"><Delete /></el-icon>
         </div>
         <div v-if="!goodsLoading && filteredGoodsList.length === 0" class="empty-tip">
@@ -36,7 +39,7 @@
         <div style="display:flex;align-items:center;gap:10px">
           <span class="panel-title">物料清单</span>
           <template v-if="selectedBom">
-            <el-tag type="primary">{{ selectedBom.goods_name }}</el-tag>
+            <el-tag type="primary">{{ selectedBom.goods_name || '（未命名）' }}</el-tag>
             <el-tag v-if="selectedBom.spec" type="info">{{ selectedBom.spec }}</el-tag>
             <el-tag v-if="selectedBom.unit_name">单位：{{ selectedBom.unit_name }}</el-tag>
           </template>
@@ -121,6 +124,24 @@
     <el-dialog v-model="bomDialog.visible" :title="bomDialog.id ? '编辑成品信息' : '新增BOM成品'"
       width="500px" :close-on-click-modal="false" @closed="resetBomDialog">
       <el-form :model="bomDialog" label-width="80px" size="small">
+        <el-form-item v-if="!bomDialog.id" label="选已有商品">
+          <el-select
+            v-model="bomDialog.selectedGoodsId"
+            filterable remote clearable
+            placeholder="搜索已有商品自动填入"
+            :remote-method="searchBomGoods"
+            :loading="bomDialog.searchLoading"
+            style="width:100%"
+            @change="onBomGoodsSelect"
+          >
+            <el-option
+              v-for="g in bomDialog.searchResults"
+              :key="g.id"
+              :label="`${g.goods_name}${g.goods_sn ? ' (' + g.goods_sn + ')' : ''}`"
+              :value="g.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="商品名称" required>
           <el-input v-model="bomDialog.goods_name" placeholder="请输入成品名称" />
         </el-form-item>
@@ -228,7 +249,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Delete, List } from '@element-plus/icons-vue'
+import { Plus, Search, Delete, List, CopyDocument } from '@element-plus/icons-vue'
 import http from '@/api/http'
 
 // ── 左侧成品列表 ──────────────────────────────────────────────────
@@ -363,8 +384,36 @@ async function handleBatchDelItems() {
 // ── BOM成品 新增/编辑弹框 ─────────────────────────────────────────
 const bomDialog = ref({
   visible: false, saving: false,
-  id: 0, goods_name: '', goods_sn: '', spec: '', unit_name: ''
+  id: 0, goods_name: '', goods_sn: '', spec: '', unit_name: '',
+  selectedGoodsId: null as number | null,
+  searchLoading: false,
+  searchResults: [] as any[]
 })
+
+async function searchBomGoods(query: string) {
+  if (!query.trim()) { bomDialog.value.searchResults = []; return }
+  bomDialog.value.searchLoading = true
+  try {
+    const res: any = await http.get('/goods/ShopGoods/index', {
+      params: { page: 1, list_rows: 30, goods_name: query }
+    })
+    bomDialog.value.searchResults = res.data?.rows || res.data?.list || []
+  } catch {
+    bomDialog.value.searchResults = []
+  } finally {
+    bomDialog.value.searchLoading = false
+  }
+}
+
+function onBomGoodsSelect(id: number | null) {
+  if (!id) return
+  const g = bomDialog.value.searchResults.find(x => x.id === id)
+  if (!g) return
+  bomDialog.value.goods_name = g.goods_name || ''
+  bomDialog.value.goods_sn = g.goods_sn || ''
+  bomDialog.value.spec = g.spec || ''
+  bomDialog.value.unit_name = g.unit_name || ''
+}
 
 function openAddGoods() {
   resetBomDialog()
@@ -384,7 +433,11 @@ function openEditBomInfo() {
 }
 
 function resetBomDialog() {
-  Object.assign(bomDialog.value, { visible: false, saving: false, id: 0, goods_name: '', goods_sn: '', spec: '', unit_name: '' })
+  Object.assign(bomDialog.value, {
+    visible: false, saving: false,
+    id: 0, goods_name: '', goods_sn: '', spec: '', unit_name: '',
+    selectedGoodsId: null, searchLoading: false, searchResults: []
+  })
 }
 
 async function saveBomDialog() {
@@ -407,6 +460,28 @@ async function saveBomDialog() {
     ElMessage.error(e.message || '保存失败')
   } finally {
     bomDialog.value.saving = false
+  }
+}
+
+async function handleCopyBom(item: any) {
+  try {
+    // Load items of source BOM
+    const res: any = await http.get('/goods/BomGoods/detail', { params: { id: item.id } })
+    const items = (res.data?.items || []).map((it: any) => ({
+      goods_name: it.goods_name, goods_sn: it.goods_sn,
+      num: it.num, unit_name: it.unit_name, price: it.price
+    }))
+    await http.post('/goods/BomGoods/add', {
+      goods_name: item.goods_name + '_复制',
+      goods_sn: item.goods_sn || '',
+      spec: item.spec || '',
+      unit_name: item.unit_name || '',
+      items
+    })
+    ElMessage.success('复制成功')
+    await loadGoodsList()
+  } catch (e: any) {
+    ElMessage.error(e.message || '复制失败')
   }
 }
 
@@ -602,7 +677,10 @@ function handleGotoProcure() {
 .goods-item.active { background: #ecf5ff; }
 .goods-item-info { flex: 1; min-width: 0; }
 .goods-name { font-size: 13px; color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goods-name-empty { color: #bbb; font-style: italic; }
 .goods-sn { font-size: 11px; color: #999; margin-top: 2px; }
+.goods-copy { color: #ccc; font-size: 14px; flex-shrink: 0; margin-left: 6px; }
+.goods-copy:hover { color: #409eff; }
 .goods-del { color: #ccc; font-size: 14px; flex-shrink: 0; margin-left: 6px; }
 .goods-del:hover { color: #f56c6c; }
 .empty-tip { padding: 24px 12px; color: #bbb; font-size: 13px; text-align: center; }

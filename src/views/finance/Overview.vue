@@ -57,95 +57,80 @@
         </el-card>
       </el-col>
       <el-col :span="14">
-        <el-card shadow="hover">
+        <el-card class="flow-trend-card" shadow="hover">
           <template #header>
-            <div class="card-header">
+            <div class="card-header trend-card-header">
               <el-icon :size="15"><TrendCharts /></el-icon>
-              <span>近期利润趋势</span>
-              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/report/profit')">查看明细</el-button>
+              <span>收支趋势</span>
+              <el-radio-group v-model="flowTrendRange" size="small" class="trend-range-tabs">
+                <el-radio-button value="7d">7天</el-radio-button>
+                <el-radio-button value="3m">3个月</el-radio-button>
+                <el-radio-button value="all">全部</el-radio-button>
+              </el-radio-group>
+              <el-button link type="primary" size="small" class="trend-flow-link" @click="router.push('/finance/fund-flow')">查看流水</el-button>
             </div>
           </template>
           <div class="trend-chart">
-            <svg :width="chartW" height="120" style="overflow:visible">
-              <!-- Y轴参考线 -->
-              <line v-for="i in 4" :key="i" :x1="0" :y1="(i-1)*30" :x2="chartW" :y2="(i-1)*30"
-                class="chart-grid-line" stroke-width="1" />
-              <!-- 收入折线 -->
-              <polyline v-if="trendRevenue.length > 1"
-                :points="trendRevenue.map((v,i) => `${i*(chartW/(trendDays.length-1))},${90 - v * 80}`).join(' ')"
-                fill="none" stroke="#0071e3" stroke-width="2" stroke-linejoin="round" />
-              <!-- 成本折线 -->
-              <polyline v-if="trendCost.length > 1"
-                :points="trendCost.map((v,i) => `${i*(chartW/(trendDays.length-1))},${90 - v * 80}`).join(' ')"
-                fill="none" stroke="#7c3aed" stroke-width="2" stroke-linejoin="round" />
-              <!-- 利润折线 -->
-              <polyline v-if="trendProfit.length > 1"
-                :points="trendProfit.map((v,i) => `${i*(chartW/(trendDays.length-1))},${55 - v * 45}`).join(' ')"
-                fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 3" />
-              <!-- 收入点 -->
-              <circle v-for="(v,i) in trendRevenue" :key="'rv'+i"
-                :cx="i*(chartW/(trendDays.length-1||1))" :cy="90 - v * 80" r="3" fill="#0071e3" />
-              <!-- 成本点 -->
-              <circle v-for="(v,i) in trendCost" :key="'ct'+i"
-                :cx="i*(chartW/(trendDays.length-1||1))" :cy="90 - v * 80" r="3" fill="#7c3aed" />
-              <!-- 利润点 -->
-              <circle v-for="(v,i) in trendProfit" :key="'pf'+i"
-                :cx="i*(chartW/(trendDays.length-1||1))" :cy="55 - v * 45" r="3" fill="#16a34a" />
-              <!-- X轴标签 -->
-              <text v-for="(d,i) in trendDays" :key="'d'+i"
-                :x="i*(chartW/(trendDays.length-1||1))" y="110" text-anchor="middle"
-                font-size="10" class="chart-axis-label">{{ d }}</text>
-            </svg>
-            <!-- 图例 -->
-            <div class="trend-legend">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0071e3;margin-right:4px"></span><span>收入</span>
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7c3aed;margin:0 4px 0 12px"></span><span>成本</span>
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin:0 4px 0 12px"></span><span>利润</span>
+            <div class="trend-kpis">
+              <div class="trend-kpi trend-kpi--income">
+                <span class="trend-kpi-label">收入合计</span>
+                <span class="trend-kpi-value">¥{{ fmtTrendAmount(flowTrendSummary.income) }}</span>
+              </div>
+              <div class="trend-kpi trend-kpi--expense">
+                <span class="trend-kpi-label">支出合计</span>
+                <span class="trend-kpi-value">¥{{ fmtTrendAmount(flowTrendSummary.expense) }}</span>
+              </div>
+              <div :class="['trend-kpi', flowTrendSummary.net >= 0 ? 'trend-kpi--net-in' : 'trend-kpi--net-out']">
+                <span class="trend-kpi-label">{{ flowTrendSummary.net >= 0 ? '净流入' : '净流出' }}</span>
+                <span class="trend-kpi-value">¥{{ fmtTrendAmount(Math.abs(flowTrendSummary.net)) }}</span>
+              </div>
+            </div>
+
+            <div class="trend-legend-row">
+              <div v-for="s in flowTrendSeries" :key="s.name" class="trend-legend-item">
+                <span class="trend-legend-swatch" :style="{ '--series-color': s.color }"></span>
+                <span class="trend-legend-name">{{ s.name }}</span>
+                <span class="trend-legend-value">¥{{ fmtTrendAmount(s.total) }}</span>
+              </div>
+            </div>
+
+            <div class="trend-plot-wrap">
+              <svg :viewBox="`0 0 ${trendChartW} ${trendChartH}`" width="100%" class="trend-svg" role="img" aria-label="收支趋势折线图">
+                <defs>
+                  <linearGradient id="flowTrendPlotFade" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#f8fafc" stop-opacity="0.92" />
+                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <rect :x="trendPadLeft" :y="trendPadTop" :width="trendPlotW" :height="trendPlotH" rx="10" fill="url(#flowTrendPlotFade)" />
+                <text v-for="yl in flowYAxisLabels" :key="'yl'+yl.y"
+                  :x="trendPadLeft + trendPlotW + 10" :y="yl.y + 4" text-anchor="start"
+                  font-size="10" class="chart-axis-label">{{ yl.label }}</text>
+                <line v-for="yl in flowYAxisLabels" :key="'grid'+yl.y"
+                  :x1="trendPadLeft" :y1="yl.y" :x2="trendPadLeft + trendPlotW" :y2="yl.y"
+                  :class="['trend-grid-line', yl.value === 0 ? 'is-zero' : '']" />
+                <template v-for="s in flowTrendSeries" :key="s.name">
+                  <path v-if="s.linePath && s.total > 0" :d="s.linePath" fill="none" :stroke="s.color"
+                    stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="trend-series-line"/>
+                  <template v-for="p in s.points" :key="`${s.name}-${p.label}`">
+                    <circle v-if="p.showMarker" :cx="p.x" :cy="p.y"
+                      r="3.4" fill="#fff" :stroke="s.color" stroke-width="2" class="trend-series-point">
+                      <title>{{ s.name }} {{ p.label }}：¥{{ Number(p.value || 0).toFixed(2) }}</title>
+                    </circle>
+                  </template>
+                </template>
+                <template v-for="(d,i) in flowTrendDays" :key="'fd'+i">
+                  <text v-if="isFlowAxisLabelVisible(i, flowTrendDays.length)"
+                    :x="trendX(i, flowTrendDays.length)" :y="trendAxisLabelY" text-anchor="middle"
+                    font-size="10" class="chart-axis-label">{{ d }}</text>
+                </template>
+              </svg>
+              <div v-if="flowTrendSummary.total === 0" class="trend-empty-overlay">暂无收支数据</div>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
-
-    <!-- ═══════════ 利润分析入口 ═══════════ -->
-    <div class="profit-entry" @click="router.push('/reports/finance')">
-      <div class="profit-entry-left">
-        <div class="profit-entry-icon">
-          <el-icon :size="28"><TrendCharts /></el-icon>
-        </div>
-        <div class="profit-entry-info">
-          <div class="profit-entry-title">利润分析</div>
-          <div class="profit-entry-desc">按单品 · 按单据 · 按月份 · 按客户 多维度利润报表</div>
-        </div>
-      </div>
-      <div class="profit-entry-nums">
-        <div class="profit-entry-item">
-          <span class="profit-entry-label">营业收入</span>
-          <span class="profit-entry-val blue">¥{{ profitFmt(profitSummary.revenue) }}</span>
-        </div>
-        <div class="profit-entry-item">
-          <span class="profit-entry-label">销售成本</span>
-          <span class="profit-entry-val purple">¥{{ profitFmt(profitSummary.cost) }}</span>
-        </div>
-        <div class="profit-entry-item">
-          <span class="profit-entry-label">毛利润</span>
-          <span class="profit-entry-val" :style="{ color: profitSummary.grossProfit >= 0 ? '#16a34a' : '#dc2626' }">
-            {{ profitSummary.grossProfit >= 0 ? '+' : '' }}¥{{ profitFmt(profitSummary.grossProfit) }}
-          </span>
-        </div>
-        <div class="profit-entry-divider"></div>
-        <div class="profit-entry-item profit-entry-item--big">
-          <span class="profit-entry-label" style="font-weight:700">净利润</span>
-          <span class="profit-entry-val" :style="{ color: profitSummary.netProfit >= 0 ? '#16a34a' : '#dc2626', fontSize:'20px' }">
-            {{ profitSummary.netProfit >= 0 ? '+' : '' }}¥{{ profitFmt(profitSummary.netProfit) }}
-          </span>
-          <span class="profit-entry-rate">净利率 {{ profitSummary.netRate.toFixed(1) }}%</span>
-        </div>
-      </div>
-      <div class="profit-entry-arrow">
-        <el-icon :size="20"><ArrowRight /></el-icon>
-      </div>
-    </div>
 
     <!-- 第三行：预收款 + 预付款 + 近期收款 + 近期付款 -->
     <el-row :gutter="14">
@@ -294,7 +279,7 @@
           <div class="inline-list" v-if="saleOutList.length">
             <div class="inline-item clickable" v-for="r in saleOutList.slice(0,6)" :key="r.id" @click="router.push('/sale/out')">
               <div class="inline-name">{{ r.customer_name || '—' }}</div>
-              <div class="inline-value blue">¥{{ Number(r.total_amount||0).toFixed(2) }}</div>
+              <div class="inline-value blue">¥{{ ((r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount||0)).toFixed(2) }}</div>
               <div class="inline-sub">{{ r.order_no || '' }}</div>
             </div>
           </div>
@@ -524,11 +509,176 @@ const purchasePayList = ref<any[]>([])
 const saleOutList = ref<any[]>([])
 const contractList = ref<any[]>([])
 const profitGoodsList = ref<any[]>([])
+
+function calcSaleAmt(c: any): number {
+  const total = Number(c.total_amount || 0)
+  const afterDisc = Number(c.after_discount)
+  return (Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total) ? afterDisc : total
+}
 const profitInhouseList = ref<any[]>([])
 const profitBomList = ref<any[]>([])
 const flowVisible = ref(false)
 const profitViewMode = ref<'goods' | 'order' | 'month'>('goods')
-const chartW = 480
+const trendChartW = 620
+const trendChartH = 170
+const trendPadLeft = 14
+const trendPadRight = 66
+const trendPadTop = 14
+const trendPadBottom = 34
+const trendPlotW = trendChartW - trendPadLeft - trendPadRight
+const trendPlotH = trendChartH - trendPadTop - trendPadBottom
+const trendAxisLabelY = trendPadTop + trendPlotH + 24
+
+const flowTrendRange = ref<'7d' | '3m' | 'all'>('7d')
+
+const flowTrendBuckets = computed(() => {
+  const now = Date.now()
+  const buckets: { key: string; label: string }[] = []
+  if (flowTrendRange.value === '7d') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now - i * 86400000)
+      buckets.push({ key: d.toISOString().slice(0, 10), label: `${d.getMonth()+1}/${d.getDate()}` })
+    }
+  } else if (flowTrendRange.value === '3m') {
+    for (let i = 12; i >= 0; i--) {
+      const d = new Date(now - i * 7 * 86400000)
+      buckets.push({ key: d.toISOString().slice(0, 10), label: `${d.getMonth()+1}/${d.getDate()}` })
+    }
+  } else {
+    // 全部：按月分桶，从最早有数据的月份到现在
+    const allDates = [
+      ...collectList.value.map((r: any) => (r.receipt_date || r.create_time || '').slice(0, 7)),
+      ...retailList.value.map((r: any) => (r.order_date || r.create_time || '').slice(0, 7)),
+      ...payList.value.map((r: any) => (r.pay_date || r.create_time || '').slice(0, 7)),
+      ...expenseList.value.map((r: any) => (r.expense_date || r.create_time || '').slice(0, 7)),
+    ].filter(Boolean)
+    const earliest = allDates.length ? allDates.reduce((a, b) => a < b ? a : b) : new Date(now).toISOString().slice(0, 7)
+    const nowD = new Date(now)
+    const cur = new Date(earliest + '-01')
+    while (cur.toISOString().slice(0, 7) <= nowD.toISOString().slice(0, 7)) {
+      const key = cur.toISOString().slice(0, 7)
+      buckets.push({ key, label: `${cur.getMonth()+1}月` })
+      cur.setMonth(cur.getMonth() + 1)
+    }
+  }
+  return buckets
+})
+
+const flowTrendDays = computed(() => flowTrendBuckets.value.map(b => b.label))
+
+function trendX(index: number, total: number): number {
+  if (total <= 1) return trendPadLeft + trendPlotW / 2
+  return trendPadLeft + index * (trendPlotW / (total - 1))
+}
+
+function trendY(norm: number): number {
+  return trendPadTop + trendPlotH - Math.max(0, Math.min(1, norm)) * trendPlotH
+}
+
+function niceTrendMax(max: number): number {
+  if (!Number.isFinite(max) || max <= 0) return 1
+  const magnitude = 10 ** Math.floor(Math.log10(max))
+  const normalized = max / magnitude
+  const step = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+  return step * magnitude
+}
+
+function isFlowAxisLabelVisible(index: number, total: number): boolean {
+  if (total <= 8) return true
+  const step = Math.ceil(total / 7)
+  return index === 0 || index === total - 1 || index % step === 0
+}
+
+function makeSmoothPath(vals: number[], n: number, w: number, yFn: (v: number) => number): string {
+  if (vals.length < 2 || n < 2) return ''
+  const pts = vals.map((v, i) => ({ x: trendX(i, n), y: yFn(v) }))
+  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
+  for (let i = 1; i < pts.length; i++) {
+    const p0 = pts[Math.max(0, i - 2)], p1 = pts[i - 1], p2 = pts[i], p3 = pts[Math.min(pts.length - 1, i + 1)]
+    const c1x = (p1.x + (p2.x - p0.x) / 6).toFixed(1), c1y = (p1.y + (p2.y - p0.y) / 6).toFixed(1)
+    const c2x = (p2.x - (p3.x - p1.x) / 6).toFixed(1), c2y = (p2.y - (p3.y - p1.y) / 6).toFixed(1)
+    d += ` C${c1x},${c1y},${c2x},${c2y},${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
+  }
+  return d
+}
+
+const flowTrendSeries = computed(() => {
+  const buckets = flowTrendBuckets.value
+  const n = buckets.length
+  if (n === 0) return []
+  const getIdx = (dateStr: string): number => {
+    const d = (dateStr || '').slice(0, 10)
+    if (!d) return -1
+    if (flowTrendRange.value === '7d') return buckets.findIndex(b => b.key === d)
+    if (flowTrendRange.value === '3m') { let idx = -1; for (let i = 0; i < buckets.length; i++) { if (d >= buckets[i].key) idx = i; else break }; return idx }
+    return buckets.findIndex(b => b.key === d.slice(0, 7))
+  }
+  const defs = [
+    { name: '销售收款', color: '#0071e3', vals: new Array(n).fill(0) },
+    { name: '零售收入', color: '#16a34a', vals: new Array(n).fill(0) },
+    { name: '采购支出', color: '#ea580c', vals: new Array(n).fill(0) },
+    { name: '其他支出', color: '#8b5cf6', vals: new Array(n).fill(0) },
+  ]
+  for (const r of collectList.value) { const i=getIdx(r.receipt_date||r.create_time||''); if(i>=0) defs[0].vals[i]+=Number(r.amount||0) }
+  for (const r of retailList.value) { if(r.status!==1)continue; const i=getIdx(r.order_date||r.create_time||''); if(i>=0) defs[1].vals[i]+=Number(r.pay_amount||r.total_amount||0) }
+  for (const r of payList.value) {
+    const i=getIdx(r.pay_date||r.create_time||''); if(i<0) continue
+    if (String(r.contact_type||'') === 'supplier') defs[2].vals[i]+=Number(r.amount||0)
+    else defs[3].vals[i]+=Number(r.amount||0)
+  }
+  for (const r of expenseList.value) { if(r.payment_status==='pending')continue; const i=getIdx(r.expense_date||r.create_time||''); if(i>=0) defs[3].vals[i]+=Number(r.amount||0) }
+  const rawMax = Math.max(...defs.flatMap(s => s.vals), 0)
+  const gMax = niceTrendMax(rawMax)
+  return defs.map(s => ({
+    name: s.name, color: s.color, vals: s.vals,
+    norm: s.vals.map(v => v / gMax),
+    points: s.vals.map((value, i) => ({
+      label: buckets[i]?.label || '',
+      value,
+      x: trendX(i, n),
+      y: trendY(value / gMax),
+      showMarker: value > 0,
+    })),
+    total: s.vals.reduce((sum, value) => sum + value, 0),
+    linePath: makeSmoothPath(s.vals.map(v => v / gMax), n, trendPlotW, trendY),
+    gMax,
+  }))
+})
+
+const flowTrendGlobalMax = computed(() => flowTrendSeries.value[0]?.gMax ?? 1)
+
+const flowTrendSummary = computed(() => {
+  const sales = flowTrendSeries.value.find(s => s.name === '销售收款')?.total || 0
+  const retail = flowTrendSeries.value.find(s => s.name === '零售收入')?.total || 0
+  const procure = flowTrendSeries.value.find(s => s.name === '采购支出')?.total || 0
+  const other = flowTrendSeries.value.find(s => s.name === '其他支出')?.total || 0
+  const income = sales + retail
+  const expense = procure + other
+  return { income, expense, net: income - expense, total: income + expense }
+})
+
+function fmtYVal(v: number): string {
+  if (v <= 0) return '¥0'
+  if (v < 10) return `¥${Number(v.toFixed(1))}`
+  if (v >= 10000) return `¥${(v / 10000).toFixed(v >= 100000 ? 0 : 1)}万`
+  if (v >= 1000) return `¥${(v / 1000).toFixed(1)}k`
+  return `¥${Math.round(v)}`
+}
+
+function fmtTrendAmount(v: number): string {
+  const value = Math.abs(Number(v || 0))
+  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`
+  if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`
+  return Math.round(value).toLocaleString('zh-CN')
+}
+
+const flowYAxisLabels = computed(() => {
+  const gMax = flowTrendGlobalMax.value
+  return [1, 0.5, 0].map(ratio => {
+    const value = gMax * ratio
+    return { y: trendY(ratio), value, label: fmtYVal(value) }
+  })
+})
 
 function isCustomerPrepayLike(row: any) {
   const rawSource = String(
@@ -563,25 +713,25 @@ const allFlowItems = computed(() => {
   for (const r of collectList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const src = isCustomerPrepayLike(r) ? '预收款' : '收款单'
-    items.push({ type: 'income', source: src, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.receipt_date || r.created_at), order_no: r.receipt_no || r.order_sn || '' })
+    items.push({ type: 'income', source: src, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.receipt_date || r.create_time), order_no: r.receipt_no || r.order_sn || '' })
   }
   // 2. 零售单（income）— 真实字段: member_name, pay_amount, order_sn, order_date
   for (const r of retailList.value) {
     if (r.status !== 1) continue
     const amt = Number(r.pay_amount || r.total_amount || 0)
     if (amt <= 0) continue
-    items.push({ type: 'income', source: '零售单', name: r.member_name || r.customer_name || '散客', amount: amt, date: fmtDt(r.order_date || r.created_at), order_no: r.order_sn || '' })
+    items.push({ type: 'income', source: '零售单', name: r.member_name || r.customer_name || '散客', amount: amt, date: fmtDt(r.order_date || r.create_time), order_no: r.order_sn || '' })
   }
   // 3. 会员充值（income）— 真实字段: member_name, amount, recharge_date
   for (const r of rechargeList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'income', source: '会员充值', name: r.member_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.recharge_date || r.created_at), order_no: '' })
+    items.push({ type: 'income', source: '会员充值', name: r.member_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.recharge_date || r.create_time), order_no: '' })
   }
   // 4. 付款单（expense）— 真实字段: contact_name, supplier_name, contact_type, amount, pay_date
   for (const r of payList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const paySourceMap: Record<string, string> = { supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出' }
-    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: getPayReceiptSupplierLabel(r, purchasePayList.value, supplierList.value), amount: Number(r.amount || 0), date: fmtDt(r.pay_date || r.created_at), order_no: r.order_sn || '' })
+    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: getPayReceiptSupplierLabel(r, purchasePayList.value, supplierList.value), amount: Number(r.amount || 0), date: fmtDt(r.pay_date || r.create_time), order_no: r.order_sn || '' })
   }
   // 5. 费用单（expense）— 真实字段: name(非type_name), amount, expense_date, order_sn
   // 注意：「单据支出」类型的费用已在 pay_receipt 中以「付款」口径计入，此处跳过避免重复
@@ -590,7 +740,7 @@ const allFlowItems = computed(() => {
     if (Number(r.amount || 0) <= 0) continue
     // 如果是「单据支出」产生的费用记录，已在 pay_receipt 中展示，此处跳过
     if (/采购单据支出\s*#\d+/.test(r.remark || '')) continue
-    items.push({ type: 'expense', source: r.payment_status === 'paid' ? '费用(已付)' : '费用', name: r.name || '—', amount: Number(r.amount || 0), date: fmtDt(r.expense_date || r.created_at), order_no: r.order_sn || '' })
+    items.push({ type: 'expense', source: r.payment_status === 'paid' ? '费用(已付)' : '费用', name: r.name || '—', amount: Number(r.amount || 0), date: fmtDt(r.expense_date || r.create_time), order_no: r.order_sn || '' })
   }
   // 6. 预收款/预付款 — 客户预收款是收入，供应商预付款是支出
   for (const r of prepayList.value) {
@@ -690,7 +840,10 @@ const purchasePayTotal = computed(() =>
 )
 
 const saleOutTotal = computed(() =>
-  saleOutList.value.reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2)
+  saleOutList.value.reduce((s, r) => {
+    const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
+    return s + amt
+  }, 0).toFixed(2)
 )
 
 const retailTotal = computed(() =>
@@ -811,9 +964,9 @@ const profitTrendData = computed(() => {
     revenueMap[k] = 0; costMap[k] = 0
   }
   for (const c of contractList.value) {
-    const k = getDateKey(c.contract_date || c.create_time || '')
+    const k = getDateKey(c.sign_date || c.order_date || c.created_at || '')
     if (revenueMap[k] === undefined) continue
-    revenueMap[k] += Number(c.after_discount || c.total_amount || 0)
+    revenueMap[k] += calcSaleAmt(c)
     for (const g of parseProfitItems(c.goods_info)) costMap[k] += profitItemQty(g) * getItemUnitCostFromMap(g).unitCost
     costMap[k] += myProfitFreight(c)
   }
@@ -918,7 +1071,7 @@ const profitByGoods = computed(() => {
     } catch {}
   }
   for (const c of contractList.value) {
-    const actualAmount = Number(c.after_discount || c.total_amount || 0)
+    const actualAmount = calcSaleAmt(c)
     let rawTotal = 0
     for (const g of parseProfitItems(c.goods_info)) rawTotal += profitItemQty(g) * profitItemPrice(g)
     add(c.goods_info, '合同', rawTotal > 0 ? actualAmount / rawTotal : 1, actualAmount)
@@ -938,7 +1091,7 @@ const profitByOrder = computed(() => {
   for (const c of contractList.value) {
     let cost_amount = 0
     for (const g of parseProfitItems(c.goods_info)) cost_amount += profitItemQty(g) * getItemUnitCostFromMap(g).unitCost
-    const sale_amount = Number(c.after_discount || c.total_amount || 0)
+    const sale_amount = calcSaleAmt(c)
     const freight = myProfitFreight(c)
     const profit = sale_amount - cost_amount
     const net_profit = profit - freight
@@ -981,10 +1134,10 @@ const profitByMonth = computed(() => {
   const map: Record<string, { month: string; revenue: number; cost: number; expense: number; freight: number }> = {}
   const ensure = (m: string) => { if (!map[m]) map[m] = { month: m, revenue: 0, cost: 0, expense: 0, freight: 0 } }
   for (const c of contractList.value) {
-    const m = (c.contract_date || c.create_time || '').slice(0, 7)
+    const m = (c.sign_date || c.order_date || c.created_at || '').slice(0, 7)
     if (!m) continue
     ensure(m)
-    map[m].revenue += Number(c.after_discount || c.total_amount || 0)
+    map[m].revenue += calcSaleAmt(c)
     for (const g of parseProfitItems(c.goods_info)) map[m].cost += profitItemQty(g) * getItemUnitCostFromMap(g).unitCost
     map[m].freight += myProfitFreight(c)
   }
@@ -1286,8 +1439,8 @@ async function loadAllData() {
       getCollectReceiptList({ list_rows: 1000 }),
       getPayReceiptList({ list_rows: 1000 }),
       http.get('/stock/PurchaseOrder/index', { params: { list_rows: 2000, status: 1 } }),
-      http.get('/stock/SaleOutOrder/index', { params: { list_rows: 50 } }),
-      http.get('/retail/order/index', { params: { list_rows: 200 } }),
+      http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
+      http.get('/retail/order/index', { params: { list_rows: 2000 } }),
       getExpenseList({ list_rows: 1000 }),
       http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
       http.get('/shop/ShopCustomer/index', { params: { list_rows: 500 } }),
@@ -1308,15 +1461,83 @@ async function loadAllData() {
     const rawPayList = payRes.data?.rows ?? payRes.data?.list ?? []
     collectList.value = rawCollectList
     payList.value = rawPayList
-    const rawReceivableList = (contractRes.data?.rows ?? contractRes.data?.list ?? [])
+    // 应收账款：与 Receivable.vue 完全相同的 order_sn 匹配逻辑
+    const auditedContractsForRec = (contractRes.data?.rows ?? contractRes.data?.list ?? [])
       .filter(isEffectiveSaleContract)
-      .map((r: any) => ({
+    const snToIdRec = new Map<string, number>()
+    for (const c of auditedContractsForRec) {
+      if (c.order_sn) snToIdRec.set(String(c.order_sn), c.id)
+      if (c.order_no)  snToIdRec.set(String(c.order_no),  c.id)
+    }
+    const contractDirectPaidRec = new Map<number, number>()
+    const custUnmatchedPaidRec = new Map<number, number>()
+    for (const r of rawCollectList) {
+      if (String(r.remark || '').startsWith('[other]')) continue
+      const amount = Number(r.amount || 0)
+      const rSn = String(r.order_sn || '').trim()
+      const custId = Number(r.customer_id || 0)
+      if (rSn && snToIdRec.has(rSn)) {
+        const cid = snToIdRec.get(rSn)!
+        contractDirectPaidRec.set(cid, (contractDirectPaidRec.get(cid) ?? 0) + amount)
+      } else if (custId > 0) {
+        custUnmatchedPaidRec.set(custId, (custUnmatchedPaidRec.get(custId) ?? 0) + amount)
+      }
+    }
+    const byCustomerRec = new Map<number, any[]>()
+    for (const r of auditedContractsForRec) {
+      const custId = Number(r.customer_id || 0)
+      if (custId > 0 && custUnmatchedPaidRec.has(custId)) {
+        if (!byCustomerRec.has(custId)) byCustomerRec.set(custId, [])
+        byCustomerRec.get(custId)!.push(r)
+      }
+    }
+    for (const contracts of byCustomerRec.values()) {
+      contracts.sort((a: any, b: any) =>
+        new Date(a.order_date || a.created_at).getTime() - new Date(b.order_date || b.created_at).getTime()
+      )
+    }
+    // 与 Contract.vue calcContractAmount 保持一致：after_discount + 运费（按承担方）- 收入调整
+    // after_discount > total_amount 说明是编辑后未同步的过期数据，此时用 total_amount
+    const calcAmtRec = (c: any): number => {
+      const total = Number(c.total_amount || 0)
+      const afterDisc = Number(c.after_discount)
+      const base = Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total ? afterDisc : total
+      const freight = Number(c.freight_amount || 0)
+      const bearer = String(c.freight_bearer || 'seller')
+      const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
+      return Math.max(0, base + fc - Number(c.income_amount || 0))
+    }
+    const contractFifoPaidRec = new Map<number, number>()
+    for (const [custId, contracts] of byCustomerRec) {
+      let remaining = custUnmatchedPaidRec.get(custId) ?? 0
+      for (const c of contracts) {
+        const total = calcAmtRec(c)
+        const directPaid = contractDirectPaidRec.get(c.id) ?? 0
+        const leftover = Math.max(0, total - directPaid)
+        const applied = Math.min(remaining, leftover)
+        if (applied > 0) contractFifoPaidRec.set(c.id, applied)
+        remaining = Math.max(0, remaining - applied)
+        if (remaining <= 0) break
+      }
+    }
+    const contractPaidRec = new Map<number, number>()
+    for (const id of new Set([...contractDirectPaidRec.keys(), ...contractFifoPaidRec.keys()])) {
+      contractPaidRec.set(id, (contractDirectPaidRec.get(id) ?? 0) + (contractFifoPaidRec.get(id) ?? 0))
+    }
+    const rawReceivableList = auditedContractsForRec.map((r: any) => {
+      const receiptPaidRec = contractPaidRec.get(r.id)
+      // 与 Contract.vue getReceivedAmount 一致：收款单有记录优先，否则用合同自身的 receive_amount
+      const paid = receiptPaidRec !== undefined ? receiptPaidRec : Number(r.receive_amount || 0)
+      const total = calcAmtRec(r)
+      return {
         ...r,
-        un_pay_amount: Math.max(0, Number(r.total_amount || 0) - Number(r.pay_amount || 0)),
+        total_amount: total,
+        paid_amount: paid,
+        un_pay_amount: Math.max(0, total - paid),
         order_sn: r.order_sn || r.order_no || '',
         out_date: r.order_date || r.created_at,
-      }))
-      .filter((r: any) => r.un_pay_amount > 0)
+      }
+    }).filter((r: any) => r.un_pay_amount > 0)
     procureReturnFinanceList.value = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [], fundNameMap)
     const normalizedSaleReturns = normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? [])
 
@@ -1330,6 +1551,17 @@ async function loadAllData() {
       const fname = String(r.fund_name || '').trim()
       if (fid > 0) fundIncomeById.set(fid, (fundIncomeById.get(fid) || 0) + amt)
       else if (fname) fundIncomeByName.set(fname, (fundIncomeByName.get(fname) || 0) + amt)
+    }
+    // 零售单收入归到「零售收款账户」
+    const rawRetailRows: any[] = retailRes.data?.rows ?? retailRes.data?.list ?? []
+    const retailFundName = rawFundList.find((f: any) => String(f.name || '').includes('零售收款'))?.name || '零售收款账户'
+    const retailFundId = Number(rawFundList.find((f: any) => String(f.name || '').includes('零售收款'))?.id || 0)
+    for (const r of rawRetailRows) {
+      if (Number(r.status) !== 1) continue
+      const amt = Number(r.pay_amount ?? r.total_amount ?? 0)
+      if (amt <= 0) continue
+      if (retailFundId > 0) fundIncomeById.set(retailFundId, (fundIncomeById.get(retailFundId) || 0) + amt)
+      else fundIncomeByName.set(retailFundName, (fundIncomeByName.get(retailFundName) || 0) + amt)
     }
     const fundExpenseById = new Map<number, number>()
     const fundExpenseByName = new Map<string, number>()
@@ -1346,7 +1578,11 @@ async function loadAllData() {
       const fname = String(row.name || '').trim()
       const income = (fundIncomeById.get(fid) || 0) + (fundIncomeByName.get(fname) || 0)
       const expense = (fundExpenseById.get(fid) || 0) + (fundExpenseByName.get(fname) || 0)
-      const dynamicBalance = Math.round((income - expense) * 100) / 100
+      let dynamicBalance = Math.round((income - expense) * 100) / 100
+      // 零售收款账户：动态计算无法涵盖零售单，用 DB 维护的 balance 字段
+      if (fname.includes('零售收款') && dynamicBalance === 0) {
+        dynamicBalance = Math.round(Number(row.balance ?? 0) * 100) / 100
+      }
       return { ...row, raw_balance: dynamicBalance, balance: dynamicBalance, display_balance: dynamicBalance }
     })
     fundList.value = applyProcureReturnsToFundRows(fundListWithDynamic, procureReturnFinanceList.value)
@@ -1480,13 +1716,25 @@ async function loadAllData() {
     receivableList.value = rawReceivableList
     adjustedCollectList.value = applySaleReturnsToCollectReceiptRows(collectList.value, normalizedSaleReturns, rawReceivableList)
     purchasePayList.value = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
-    saleOutList.value = (saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
+    const auditedContractSns = new Set<string>()
+    for (const c of contractRes.data?.rows ?? contractRes.data?.list ?? []) {
+      if (Number(c.status) === 1) {
+        if (c.order_sn) auditedContractSns.add(String(c.order_sn))
+        if (c.order_no) auditedContractSns.add(String(c.order_no))
+      }
+    }
+    saleOutList.value = (saleOutRes.data?.rows ?? saleOutRes.data?.list ?? []).filter((r: any) => {
+      if (Number(r.status) !== 1) return false
+      const m = String(r.remark || '').match(/(HT[0-9]+|XS[0-9]+)/)
+      if (!m) return false
+      return auditedContractSns.has(m[1])
+    })
     retailList.value = retailRes.data?.rows ?? retailRes.data?.list ?? []
     expenseList.value = expenseRes.data?.rows ?? expenseRes.data?.list ?? []
     rechargeList.value = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
     clientList.value = clientRes.data?.rows ?? clientRes.data?.list ?? []
     supplierList.value = supplierRes.data?.rows ?? supplierRes.data?.list ?? []
-    contractList.value = contractRes.data?.rows ?? contractRes.data?.list ?? []
+    contractList.value = (contractRes.data?.rows ?? contractRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
     profitGoodsList.value = pGoodsRes.data?.rows ?? pGoodsRes.data?.list ?? []
     profitInhouseList.value = (pInhouseRes.data?.rows ?? pInhouseRes.data?.list ?? []).filter((r: any) => r.status === 1)
     profitBomList.value = pBomRes.data?.rows ?? pBomRes.data?.list ?? []
@@ -1641,11 +1889,155 @@ onActivated(() => loadAllData())
 .inline-sub { font-size: 11px; color: var(--faint); }
 
 /* 趋势图 */
-.trend-chart { padding: 4px 0 0; }
-.trend-legend { display: flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--dim); }
-.legend-dot { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
-.legend-dot.income { background: #16a34a; }
-.legend-dot.expense { background: #dc2626; }
+.flow-trend-card :deep(.el-card__body) {
+  padding: 12px 16px 14px;
+}
+.trend-card-header {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.trend-range-tabs {
+  margin-left: 12px;
+}
+.trend-flow-link {
+  margin-left: auto;
+}
+.trend-chart {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.trend-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.trend-kpi {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(29, 29, 31, 0.06);
+  border-radius: 10px;
+  background: #fbfbfd;
+}
+.trend-kpi-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: rgba(29, 29, 31, 0.46);
+}
+.trend-kpi-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 750;
+  color: #1d1d1f;
+}
+.trend-kpi--income {
+  background: linear-gradient(180deg, rgba(22, 163, 74, 0.08), rgba(22, 163, 74, 0.025));
+}
+.trend-kpi--expense {
+  background: linear-gradient(180deg, rgba(234, 88, 12, 0.08), rgba(234, 88, 12, 0.025));
+}
+.trend-kpi--net-in {
+  background: linear-gradient(180deg, rgba(0, 113, 227, 0.08), rgba(0, 113, 227, 0.025));
+}
+.trend-kpi--net-out {
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.08), rgba(220, 38, 38, 0.025));
+}
+.trend-legend-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.trend-legend-item {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  padding: 2px 0;
+  color: rgba(29, 29, 31, 0.52);
+}
+.trend-legend-swatch {
+  position: relative;
+  width: 22px;
+  height: 10px;
+  flex-shrink: 0;
+}
+.trend-legend-swatch::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--series-color);
+}
+.trend-legend-swatch::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--series-color);
+}
+.trend-legend-name {
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.trend-legend-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 650;
+  color: rgba(29, 29, 31, 0.72);
+}
+.trend-plot-wrap {
+  position: relative;
+  min-width: 0;
+}
+.trend-svg {
+  display: block;
+  overflow: visible;
+}
+.trend-grid-line {
+  stroke: rgba(29, 29, 31, 0.08);
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
+}
+.trend-grid-line.is-zero {
+  stroke: rgba(29, 29, 31, 0.14);
+  stroke-dasharray: none;
+}
+.trend-series-line {
+  filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.08));
+}
+.trend-series-point {
+  transition: r 0.15s ease, stroke-width 0.15s ease;
+}
+.trend-series-point:hover {
+  r: 4.6px;
+  stroke-width: 2.4;
+}
+.trend-empty-overlay {
+  position: absolute;
+  inset: 36% 66px auto 14px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(29, 29, 31, 0.38);
+  pointer-events: none;
+}
 
 .empty-tip { font-size: 13px; color: var(--dim); padding: 8px 0; }
 
@@ -1669,7 +2061,7 @@ onActivated(() => loadAllData())
 }
 .flow-toggle:hover { background: var(--gray); }
 .chart-grid-line { stroke: var(--border); }
-.chart-axis-label { fill: var(--dim); }
+.chart-axis-label { fill: rgba(29, 29, 31, 0.38); }
 
 /* 利润分析入口大卡片 */
 .profit-entry {
@@ -1741,6 +2133,30 @@ onActivated(() => loadAllData())
   }
   .quick-action-card {
     flex: 1;
+  }
+
+  .trend-card-header {
+    gap: 8px;
+  }
+  .trend-range-tabs {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+  }
+  .trend-flow-link {
+    margin-left: auto;
+  }
+  .trend-kpis {
+    grid-template-columns: 1fr;
+  }
+  .trend-legend-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .trend-legend-item {
+    gap: 5px;
+  }
+  .trend-legend-value {
+    display: none;
   }
 }
 </style>

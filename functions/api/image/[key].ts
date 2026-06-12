@@ -12,10 +12,16 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
   const data = await env.AGENT_MEMORY.get(key, 'arrayBuffer')
   if (!data) return new Response('Image not found or expired', { status: 404 })
 
+  const bytes = new Uint8Array(data)
+  let contentType = 'image/jpeg'
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) contentType = 'image/png'
+  else if (bytes[0] === 0x47 && bytes[1] === 0x49) contentType = 'image/gif'
+  else if (bytes[0] === 0x52 && bytes[1] === 0x49) contentType = 'image/webp'
+
   return new Response(data, {
     headers: {
-      'Content-Type': 'image/jpeg',
-      'Cache-Control': 'public, max-age=3600',
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=2592000, immutable',
       'Access-Control-Allow-Origin': '*',
     },
   })

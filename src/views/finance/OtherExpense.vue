@@ -1,7 +1,8 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getOtherExpenseList"
+      <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           :import-api="importRow"
           export-file-name="其他支出" :params="searchForm">
         <template #search>
@@ -11,6 +12,11 @@
             </el-form-item>
             <el-form-item label="收款单位">
               <el-input v-model="searchForm.contact" placeholder="请输入收款单位" clearable style="width:160px" />
+            </el-form-item>
+            <el-form-item>
+              <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+                <el-option label="未核对" value="unreconciled" />
+              </el-select>
             </el-form-item>
           </el-form>
           <div class="search-actions">
@@ -58,6 +64,7 @@
             <el-button type="primary" link @click="openView(row)">查看</el-button>
             <el-button v-if="Number(row.status) === 1" type="warning" link @click="handleAudit(row)">反审核</el-button>
             <el-button v-else type="success" link @click="handleAudit(row)">审核</el-button>
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
             <el-button type="danger" link :disabled="Number(row.status) === 1" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -120,12 +127,14 @@ import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import http from '@/api/http'
 import { getPayReceiptList, createPayReceipt, deletePayReceipt, getFundList, createFund, updateFund } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_other_expense', tableRef)
 const formRef = ref<FormInstance>()
 const formVisible = ref(false)
 const submitting = ref(false)
@@ -133,7 +142,8 @@ const viewVisible = ref(false)
 const viewRow = ref<any>(null)
 const fundOptions = ref<any[]>([])
 
-const searchForm = reactive<any>({ keyword: '', contact: '' })
+const searchForm = reactive<any>({ keyword: '', contact: '', reconcile_filter: '' })
+const reconcileFilteredApi = createFilteredApi(getOtherExpenseList, 'reconcile_filter')
 
 const today = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
 
@@ -184,7 +194,7 @@ async function getOtherExpenseList(params?: any) {
 }
 
 function resetSearch() {
-  Object.assign(searchForm, { keyword: '', contact: '' })
+  Object.assign(searchForm, { keyword: '', contact: '', reconcile_filter: '' })
   tableRef.value?.loadData()
 }
 

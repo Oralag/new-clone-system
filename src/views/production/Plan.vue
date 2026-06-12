@@ -32,6 +32,7 @@
           style="width:100%;margin-top:8px"
           @selection-change="selection = $event"
           row-key="id"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''"
         >
           <el-table-column type="selection" width="40" />
           <el-table-column type="expand">
@@ -153,6 +154,7 @@
                 style="color:#c0c4cc;cursor:not-allowed"
                 disabled
               >入库</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleProdPlanReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button link type="danger" size="small" @click="handleDel(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -403,6 +405,17 @@ import { fmtDt } from '@/utils/date'
 import { getBomByGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 
+// ── 核对 ──────────────────────────────────────────────────────────────────────
+const prodPlanReconcileIds = ref<Set<number>>(new Set(JSON.parse(localStorage.getItem('reconcile_production_plan') || '[]')))
+function toggleProdPlanReconcile(row: any) {
+  const newVal = !row._reconciled
+  if (newVal) prodPlanReconcileIds.value.add(row.id)
+  else prodPlanReconcileIds.value.delete(row.id)
+  localStorage.setItem('reconcile_production_plan', JSON.stringify([...prodPlanReconcileIds.value]))
+  const idx = tableData.value.findIndex((r: any) => r.id === row.id)
+  if (idx !== -1) tableData.value.splice(idx, 1, { ...tableData.value[idx], _reconciled: newVal })
+}
+
 const router = useRouter()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
@@ -447,6 +460,7 @@ async function loadData() {
     tableData.value = rows.map((row: any) => ({
       ...row,
       inhouse_num: Number(inhouseMap.get(Number(row.id || 0)) ?? row.inhouse_num ?? 0),
+      _reconciled: prodPlanReconcileIds.value.has(Number(row.id)),
     }))
     total.value = res.data?.total || 0
     // 加载每条计划的领料状态

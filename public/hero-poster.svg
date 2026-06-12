@@ -1,0 +1,200 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <defs>
+    <!-- 天空：黄金时刻，淡蓝→粉橘→暖金 -->
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#1a2d4a"/>
+      <stop offset="30%"  stop-color="#3a5f8a"/>
+      <stop offset="58%"  stop-color="#8ab4d4"/>
+      <stop offset="75%"  stop-color="#e8b87a"/>
+      <stop offset="88%"  stop-color="#f5c84a"/>
+      <stop offset="100%" stop-color="#e07020"/>
+    </linearGradient>
+    <!-- 地平线晕光 -->
+    <radialGradient id="sunhalo" cx="50%" cy="72%" r="40%">
+      <stop offset="0%"   stop-color="#ffe066" stop-opacity="0.75"/>
+      <stop offset="40%"  stop-color="#f5a020" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#e07020" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 太阳光柱 -->
+    <radialGradient id="suncore" cx="50%" cy="71%" r="6%">
+      <stop offset="0%"   stop-color="#fff9c4" stop-opacity="1"/>
+      <stop offset="60%"  stop-color="#ffe566" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ffc020" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 远山渐变 -->
+    <linearGradient id="mtn1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#4a7a5a" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#2a4a30" stop-opacity="0.9"/>
+    </linearGradient>
+    <!-- 中景草地 -->
+    <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#5a8a40"/>
+      <stop offset="100%" stop-color="#2a5020"/>
+    </linearGradient>
+    <!-- 前景草地 -->
+    <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#3d6a28"/>
+      <stop offset="100%" stop-color="#1a3010"/>
+    </linearGradient>
+    <!-- 花朵模糊柔化 -->
+    <filter id="soft">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+    <!-- 云朵柔化 -->
+    <filter id="cloudblur">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <!-- 太阳辉光 -->
+    <filter id="sunblur">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <!-- 天空底色 -->
+  <rect width="1200" height="800" fill="url(#sky)"/>
+
+  <!-- 太阳辉光 -->
+  <rect width="1200" height="800" fill="url(#sunhalo)"/>
+
+  <!-- 太阳核心 -->
+  <ellipse cx="600" cy="572" rx="70" ry="70" fill="url(#suncore)" filter="url(#sunblur)" opacity="0.9"/>
+  <ellipse cx="600" cy="572" rx="28" ry="28" fill="#fffde0" opacity="0.95"/>
+
+  <!-- 薄云（远，左） -->
+  <g filter="url(#cloudblur)" opacity="0.45">
+    <ellipse cx="220"  cy="200" rx="130" ry="28" fill="#fff"/>
+    <ellipse cx="180"  cy="210" rx="80"  ry="20" fill="#fff"/>
+    <ellipse cx="280"  cy="195" rx="70"  ry="18" fill="#fff"/>
+  </g>
+  <!-- 薄云（远，右） -->
+  <g filter="url(#cloudblur)" opacity="0.38">
+    <ellipse cx="940"  cy="160" rx="120" ry="24" fill="#fff"/>
+    <ellipse cx="900"  cy="170" rx="75"  ry="18" fill="#fff"/>
+    <ellipse cx="990"  cy="155" rx="65"  ry="16" fill="#fff"/>
+  </g>
+  <!-- 中云（橘调） -->
+  <g filter="url(#cloudblur)" opacity="0.3">
+    <ellipse cx="400"  cy="320" rx="160" ry="22" fill="#f5c070"/>
+    <ellipse cx="340"  cy="330" rx="90"  ry="16" fill="#f5c070"/>
+    <ellipse cx="480"  cy="315" rx="80"  ry="14" fill="#f5c070"/>
+    <ellipse cx="820"  cy="290" rx="140" ry="20" fill="#f5c070"/>
+    <ellipse cx="760"  cy="300" rx="85"  ry="15" fill="#f5c070"/>
+    <ellipse cx="880"  cy="285" rx="70"  ry="13" fill="#f5c070"/>
+  </g>
+
+  <!-- 远山（最远层，半透明） -->
+  <path d="M0,520 Q80,480 180,500 Q300,520 400,480 Q500,445 580,475 Q660,500 720,460 Q800,420 880,455 Q960,480 1060,440 Q1130,415 1200,430 L1200,580 L0,580 Z"
+        fill="url(#mtn1)" opacity="0.7"/>
+
+  <!-- 远山（第二层） -->
+  <path d="M0,545 Q100,510 220,530 Q380,555 480,515 Q560,488 640,510 Q720,535 830,505 Q920,480 1020,508 Q1110,528 1200,510 L1200,590 L0,590 Z"
+        fill="#3d6040" opacity="0.65"/>
+
+  <!-- 地平线金光 -->
+  <rect x="0" y="570" width="1200" height="4" fill="#f5c84a" opacity="0.6" rx="2"/>
+  <rect x="0" y="572" width="1200" height="2" fill="#ffe066" opacity="0.4"/>
+
+  <!-- 中景草地 -->
+  <path d="M0,580 Q150,560 300,572 Q480,588 600,568 Q720,550 900,572 Q1050,588 1200,568 L1200,800 L0,800 Z"
+        fill="url(#mid)"/>
+
+  <!-- 草地细节：波浪纹 -->
+  <path d="M0,620 Q200,608 400,618 Q600,628 800,614 Q1000,602 1200,614"
+        fill="none" stroke="#6aaa50" stroke-width="1.5" opacity="0.25"/>
+  <path d="M0,650 Q300,638 500,648 Q700,658 1000,642 Q1100,636 1200,642"
+        fill="none" stroke="#6aaa50" stroke-width="1.2" opacity="0.2"/>
+
+  <!-- 野花：黄色（远处点缀） -->
+  <g filter="url(#soft)" opacity="0.7">
+    <!-- 远处小点 -->
+    <circle cx="120"  cy="590" r="3"   fill="#f5d020"/>
+    <circle cx="240"  cy="585" r="2.5" fill="#f5d020"/>
+    <circle cx="380"  cy="592" r="3"   fill="#f5e040"/>
+    <circle cx="480"  cy="587" r="2"   fill="#f5d020"/>
+    <circle cx="650"  cy="583" r="3"   fill="#f5e040"/>
+    <circle cx="760"  cy="590" r="2.5" fill="#f5d020"/>
+    <circle cx="900"  cy="586" r="3"   fill="#f5e040"/>
+    <circle cx="1050" cy="580" r="2"   fill="#f5d020"/>
+    <circle cx="1140" cy="590" r="3"   fill="#f5e040"/>
+    <!-- 白色野花 -->
+    <circle cx="180"  cy="600" r="2.5" fill="#fff" opacity="0.8"/>
+    <circle cx="520"  cy="596" r="2"   fill="#fff" opacity="0.8"/>
+    <circle cx="840"  cy="598" r="2.5" fill="#fff" opacity="0.8"/>
+    <circle cx="1100" cy="595" r="2"   fill="#fff" opacity="0.8"/>
+    <!-- 粉紫小花 -->
+    <circle cx="300"  cy="605" r="2.5" fill="#d4a0d0"/>
+    <circle cx="700"  cy="600" r="2"   fill="#d4a0d0"/>
+    <circle cx="980"  cy="598" r="2.5" fill="#d4a0d0"/>
+  </g>
+
+  <!-- 前景草地 -->
+  <path d="M0,700 Q150,682 350,695 Q550,710 750,692 Q950,675 1200,690 L1200,800 L0,800 Z"
+        fill="url(#fg)"/>
+
+  <!-- 前景草丛（细长草叶） -->
+  <g stroke="#4a8030" stroke-width="2" fill="none" opacity="0.8">
+    <path d="M40,800 Q44,768 42,745"/>
+    <path d="M48,800 Q54,760 58,738"/>
+    <path d="M56,800 Q58,775 55,752"/>
+    <path d="M160,800 Q165,762 163,738"/>
+    <path d="M168,800 Q175,758 180,735"/>
+    <path d="M176,800 Q178,770 174,748"/>
+    <path d="M320,800 Q326,765 330,740"/>
+    <path d="M330,800 Q333,770 329,748"/>
+    <path d="M500,800 Q505,768 509,742"/>
+    <path d="M510,800 Q516,762 520,738"/>
+    <path d="M518,800 Q520,774 516,752"/>
+    <path d="M680,800 Q685,765 690,740"/>
+    <path d="M690,800 Q693,770 689,748"/>
+    <path d="M850,800 Q856,760 862,736"/>
+    <path d="M860,800 Q862,772 858,750"/>
+    <path d="M1000,800 Q1006,762 1012,738"/>
+    <path d="M1010,800 Q1012,774 1008,752"/>
+    <path d="M1150,800 Q1155,765 1160,740"/>
+    <path d="M1160,800 Q1163,770 1159,748"/>
+  </g>
+
+  <!-- 前景野花：近处大朵 -->
+  <g opacity="0.9">
+    <!-- 黄色大花 -->
+    <circle cx="80"  cy="745" r="5"   fill="#f5d820"/>
+    <circle cx="270" cy="748" r="4.5" fill="#f5e030"/>
+    <circle cx="450" cy="742" r="5"   fill="#f5d820"/>
+    <circle cx="720" cy="750" r="4"   fill="#f5e030"/>
+    <circle cx="930" cy="745" r="5"   fill="#f5d820"/>
+    <circle cx="1120" cy="742" r="4.5" fill="#f5e030"/>
+    <!-- 白色大花 -->
+    <circle cx="180" cy="752" r="4"   fill="#fff" opacity="0.9"/>
+    <circle cx="580" cy="748" r="4.5" fill="#fff" opacity="0.9"/>
+    <circle cx="820" cy="755" r="4"   fill="#fff" opacity="0.9"/>
+    <circle cx="1050" cy="750" r="4"  fill="#fff" opacity="0.9"/>
+    <!-- 紫色花 -->
+    <circle cx="350" cy="758" r="3.5" fill="#c090d0"/>
+    <circle cx="650" cy="755" r="3"   fill="#c090d0"/>
+    <circle cx="1000" cy="760" r="3.5" fill="#c090d0"/>
+  </g>
+
+  <!-- 前景蝴蝶（轮廓） -->
+  <g transform="translate(385, 710)" opacity="0.7">
+    <path d="M0,0 Q-18,-20 -25,-8 Q-18,5 0,0" fill="#f5c820" stroke="#d4a010" stroke-width="0.5"/>
+    <path d="M0,0 Q18,-20 25,-8 Q18,5 0,0"  fill="#f5c820" stroke="#d4a010" stroke-width="0.5"/>
+    <path d="M0,0 Q-12,12 -15,4 Q-8,-2 0,0"  fill="#f0b010" stroke="#d4a010" stroke-width="0.5"/>
+    <path d="M0,0 Q12,12 15,4 Q8,-2 0,0"    fill="#f0b010" stroke="#d4a010" stroke-width="0.5"/>
+  </g>
+  <g transform="translate(870, 718)" opacity="0.6">
+    <path d="M0,0 Q-15,-16 -20,-6 Q-14,4 0,0" fill="#e0e8ff" stroke="#a0a8d0" stroke-width="0.5"/>
+    <path d="M0,0 Q15,-16 20,-6 Q14,4 0,0"  fill="#e0e8ff" stroke="#a0a8d0" stroke-width="0.5"/>
+    <path d="M0,0 Q-10,10 -12,3 Q-6,-2 0,0"  fill="#c8d0f0" stroke="#a0a8d0" stroke-width="0.5"/>
+    <path d="M0,0 Q10,10 12,3 Q6,-2 0,0"    fill="#c8d0f0" stroke="#a0a8d0" stroke-width="0.5"/>
+  </g>
+
+  <!-- 飞鸟（远方） -->
+  <g fill="none" stroke="#1a2d4a" stroke-width="1.8" stroke-linecap="round" opacity="0.5">
+    <path d="M340,240 Q348,234 356,240"/>
+    <path d="M360,228 Q368,222 376,228"/>
+    <path d="M380,248 Q388,242 396,248"/>
+    <path d="M820,210 Q828,204 836,210"/>
+    <path d="M844,222 Q852,216 860,222"/>
+  </g>
+
+</svg>

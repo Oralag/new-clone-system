@@ -1,7 +1,8 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getExpenseListForTable"
+      <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="getExpenseListForTable"
           :batch-del-api="handleBatchDel"
           export-file-name="费用记录" :params="searchForm">
         <template #search>
@@ -19,10 +20,15 @@
                 <el-option label="未标记" value="none" />
               </el-select>
             </el-form-item>
+            <el-form-item label="核对状态">
+              <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="全部">
+                <el-option label="未核对" value="unreconciled" />
+              </el-select>
+            </el-form-item>
           </el-form>
           <div class="search-actions">
             <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="Object.assign(searchForm, { expense_no: '', type_name: '', payment_status: '' }); tableRef?.loadData()">重置</el-button>
+            <el-button @click="Object.assign(searchForm, { expense_no: '', type_name: '', payment_status: '', reconcile_filter: '' }); tableRef?.loadData()">重置</el-button>
           </div>
         </template>
         <template #toolbar>
@@ -57,6 +63,7 @@
             <el-button type="primary" link @click="openForm(row)">编辑</el-button>
             <el-button v-if="row.payment_status !== 'paid'" type="success" link @click="openPayDialog(row)">付款</el-button>
             <el-button type="warning" link @click="router.push('/finance/fund-flow')">流水</el-button>
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
             <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
@@ -112,6 +119,7 @@ import { useRouter } from 'vue-router'
 import { Plus, Wallet, CreditCard } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import ScForm from '@/components/ScForm.vue'
 import { getExpenseList, createExpense, updateExpense, deleteExpense, createPayReceipt, getFundList } from '@/api/finance'
 import { adjustFundBalance } from '@/utils/fund'
@@ -119,9 +127,10 @@ import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile, ids: reconciledIds } = useReconcile('reconcile_expense', tableRef)
 const formRef = ref<InstanceType<typeof ScForm>>()
 const formTitle = ref('新增')
-const searchForm = reactive<any>({ expense_no: '', type_name: '', payment_status: '' })
+const searchForm = reactive<any>({ expense_no: '', type_name: '', payment_status: '', reconcile_filter: '' })
 const fundOptions = ref<any[]>([])
 const payVisible = ref(false)
 const paySubmitting = ref(false)
@@ -135,17 +144,29 @@ const payForm = reactive<any>({
 })
 
 async function getExpenseListForTable(params?: any) {
-  const res = await getExpenseList(params)
+  const isUnreconciled = params?.reconcile_filter === 'unreconciled'
+  const fetchParams = isUnreconciled ? { ...params, reconcile_filter: undefined, list_rows: 10000, page: 1 } : params
+  const res = await getExpenseList(fetchParams)
   const paymentStatus = String(params?.payment_status || '')
-  if (!paymentStatus) return res
 
-  const match = (row: any) => {
-    if (paymentStatus === 'none') return !row.payment_status
-    return row.payment_status === paymentStatus
+  let rows = res.data?.rows ?? []
+  let list = res.data?.list ?? []
+
+  if (paymentStatus) {
+    const match = (row: any) => {
+      if (paymentStatus === 'none') return !row.payment_status
+      return row.payment_status === paymentStatus
+    }
+    rows = rows.filter(match)
+    list = list.filter(match)
   }
 
-  const rows = (res.data?.rows ?? []).filter(match)
-  const list = (res.data?.list ?? []).filter(match)
+  if (isUnreconciled) {
+    rows = rows.filter((r: any) => !reconciledIds.value.has(Number(r.id)))
+    list = list.filter((r: any) => !reconciledIds.value.has(Number(r.id)))
+  }
+
+  if (!paymentStatus && !isUnreconciled) return res
   return {
     ...res,
     data: {

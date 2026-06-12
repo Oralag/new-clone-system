@@ -87,7 +87,7 @@
           <div class="cate-search">
             <el-input v-model="bomViewKeyword" placeholder="搜索成品" clearable size="small" />
           </div>
-          <div class="cate-tree" v-loading="bomViewLoading">
+          <div class="cate-tree bom-cate-tree" v-loading="bomViewLoading">
             <div class="cate-item" :class="{ active: bomViewGoodsId === null }" @click="selectBomGoods(null)">
               全部商品
             </div>
@@ -506,7 +506,8 @@
                 <el-table-column label="采购价" width="130" align="center">
                   <template #default="{ row }">
                     <el-input-number v-if="!isView" v-model="row.cost_price" :min="0" :precision="2" :controls="false"
-                      size="small" style="width:100px" placeholder="自动核算" />
+                      size="small" style="width:100px" placeholder="自动核算"
+                      @change="onAuxUnitCostChange(row)" />
                     <span v-else>¥{{ (row.cost_price ?? 0).toFixed(2) }}</span>
                   </template>
                 </el-table-column>
@@ -706,7 +707,7 @@
           <div class="form-section brand-center-section" ref="secBrand" data-sec="brand">
             <div class="sec-title">
               品牌中心
-              <span class="brand-sec-badge">独立存储 · 不上传至ERP服务器</span>
+              <span class="brand-sec-badge">保存到商品备注，小程序直接读取</span>
             </div>
             <el-row :gutter="24">
               <el-col :span="12">
@@ -717,6 +718,28 @@
               <el-col :span="12">
                 <el-form-item label="起订量 (件)">
                   <el-input-number v-model="brandFd.minOrderQuantity" :min="1" :precision="0" controls-position="right" style="width:100%" placeholder="最低起订数量" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="基础销量">
+                  <el-input-number v-model="brandFd.baseSales" :min="0" :precision="0" controls-position="right" style="width:100%" placeholder="显示销量基数（如100）" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="小程序分类">
+                  <div style="display:flex;gap:6px;width:100%">
+                    <el-select
+                      v-model="brandFd.category"
+                      filterable
+                      allow-create
+                      placeholder="选择或输入新分类"
+                      style="flex:1"
+                      @focus="loadBrandCategoryOptions"
+                    >
+                      <el-option v-for="cat in brandCategoryOptions" :key="cat" :value="cat" :label="cat" />
+                    </el-select>
+                    <el-button size="small" @click="openCategoryManager">管理</el-button>
+                  </div>
                 </el-form-item>
               </el-col>
               <el-col :span="24">
@@ -752,6 +775,90 @@
                 <el-form-item label="详情图 URL">
                   <el-input v-model="brandFd.detailImage" placeholder="https://... 长图详情（建议宽 1200px）" />
                   <img v-if="brandFd.detailImage" :src="brandFd.detailImage" class="brand-img-preview" referrerpolicy="no-referrer" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="24">
+                <el-form-item label="规格选项">
+                  <div style="width:100%">
+                    <!-- 规格分组 -->
+                    <div v-for="(group, gi) in brandFd.specGroups" :key="gi" class="spec-brand-group">
+                      <div class="spec-brand-group-header">
+                        <el-input v-model="group.name" placeholder="规格名称（如 口味、数量）"
+                          size="small" style="width:180px;" @blur="generateSkuCombos" />
+                        <el-button size="small" type="danger" link @click="removeBrandSpecGroup(gi)">删除分组</el-button>
+                      </div>
+                      <div v-for="(val, vi) in group.values" :key="vi" class="spec-brand-value-row">
+                        <el-input v-model="val.label" placeholder="选项（如 草莓、1盒）"
+                          size="small" style="width:160px;" @blur="generateSkuCombos" />
+                        <el-tooltip content="规格图片 URL（选填）" placement="top">
+                          <el-button size="small" :type="val.image ? 'primary' : 'default'" link
+                            @click="val.image = val.image === undefined ? '' : undefined">
+                            <el-icon><Picture /></el-icon>
+                          </el-button>
+                        </el-tooltip>
+                        <el-input v-if="val.image !== undefined" v-model="val.image"
+                          placeholder="图片 URL" size="small" style="width:200px;" />
+                        <el-button size="small" type="danger" link @click="removeBrandSpecValue(gi, vi)">×</el-button>
+                      </div>
+                      <el-button size="small" class="spec-brand-add-btn" @click="addBrandSpecValue(gi)">
+                        ⊕ 添加选项
+                      </el-button>
+                    </div>
+
+                    <el-button size="small" class="spec-brand-new-group" @click="addSpecGroup">
+                      ⊕ 创建新规格
+                    </el-button>
+
+                    <!-- SKU 组合表格 -->
+                    <div v-if="brandFd.skuCombos.length > 0" class="spec-brand-combo-wrap">
+                      <div class="spec-brand-combo-title">规格组合 & 价格</div>
+                      <el-table :data="brandFd.skuCombos" size="small" border style="width:100%">
+                        <el-table-column
+                          v-for="(group, gi) in brandFd.specGroups.filter(g => g.name)"
+                          :key="gi" :label="group.name" min-width="90">
+                          <template #default="{ row }">{{ row.combo[gi] }}</template>
+                        </el-table-column>
+                        <el-table-column label="价格" width="120">
+                          <template #default="{ row }">
+                            <el-input-number v-model="row.price" :min="0" :precision="2"
+                              controls-position="right" size="small" style="width:100px;" />
+                          </template>
+                        </el-table-column>
+                        <el-table-column label="ERP商品ID" width="130">
+                          <template #default="{ row }">
+                            <el-input-number v-model="row.erpId" :min="0" :precision="0"
+                              controls-position="right" size="small" style="width:110px;" />
+                          </template>
+                        </el-table-column>
+                      </el-table>
+                    </div>
+
+                    <div style="font-size:12px;color:#999;margin-top:6px;">ERP商品ID 填本商品ID即可；价格是该规格的零售价</div>
+                  </div>
+                </el-form-item>
+              </el-col>
+            <!-- 积分商城 -->
+              <el-col :span="24" style="margin-top:8px">
+                <el-form-item label="积分商城">
+                  <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <el-switch v-model="brandFd.isRedeemable" :disabled="isView" />
+                      <span style="font-size:13px;color:#606266">上架到小程序积分商城</span>
+                    </div>
+                    <div v-if="brandFd.isRedeemable" style="display:flex;align-items:center;gap:8px">
+                      <span style="font-size:13px;color:#606266">所需积分</span>
+                      <el-input-number
+                        v-model="brandFd.pointsCost"
+                        :min="1" :precision="0"
+                        controls-position="right"
+                        style="width:130px"
+                        :disabled="isView"
+                      />
+                    </div>
+                  </div>
+                  <div v-if="brandFd.isRedeemable" style="font-size:12px;color:#999;margin-top:4px">
+                    开启后商品主图将展示在小程序积分商城，用户可用积分兑换
+                  </div>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -896,12 +1003,29 @@
       </template>
     </el-dialog>
 
+    <!-- 小程序分类管理 -->
+    <el-dialog v-model="categoryManagerVisible" title="小程序分类管理" width="380px" append-to-body>
+      <div style="margin-bottom:12px;display:flex;gap:8px">
+        <el-input v-model="newCategoryInput" placeholder="输入新分类名称" @keyup.enter="addMiniCategory" clearable />
+        <el-button type="primary" @click="addMiniCategory">添加</el-button>
+      </div>
+      <div v-if="managedCategories.length === 0" style="color:#999;text-align:center;padding:20px 0">暂无分类</div>
+      <div v-for="cat in managedCategories" :key="cat" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span>{{ cat }}</span>
+        <el-button type="danger" link size="small" @click="removeMiniCategory(cat)">删除</el-button>
+      </div>
+      <template #footer>
+        <el-button @click="categoryManagerVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingCategories" @click="saveMiniCategories">保存并同步</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { Plus, Edit, Delete, ArrowRight, Upload, Download, Camera } from '@element-plus/icons-vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { Plus, Edit, Delete, ArrowRight, Upload, Download, Camera, Picture } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { BrowserMultiFormatReader } from '@zxing/browser'
@@ -913,7 +1037,7 @@ import {
   getBrandList, createBrand,
   getUnitList, createUnit,
   getSpecList, createSpec, deleteSpec,
-  getBomByGoods, getBomList,
+  getBomByGoods, getBomList, updateBom,
   getUnitConvert, saveUnitConvert,
 } from '@/api/goods'
 import { getStockList } from '@/api/warehouse'
@@ -1099,11 +1223,8 @@ function getBrandShow(row: any): boolean {
 
 async function toggleBrandShow(row: any, val: boolean) {
   try {
-    let remark: any = {}
-    try { remark = JSON.parse(row.remark || '{}') } catch { /* ignore */ }
-    remark.__brand__ = { ...(remark.__brand__ || {}), show: val }
-    await http.post('/goods/ShopGoods/edit', { id: row.id, remark: JSON.stringify(remark) })
-    row.remark = JSON.stringify(remark)
+    const res = await http.post('/goods/ShopGoods/patchBrand', { id: row.id, brand_fields: { show: val } })
+    if (res.data?.remark) row.remark = res.data.remark
     ElMessage.success(val ? '已在品牌主页展示' : '已从品牌主页隐藏')
   } catch {
     ElMessage.error('操作失败')
@@ -1472,6 +1593,7 @@ const fd = reactive(defaultFd())
 const formRef = ref()
 const saving = ref(false)
 const savingAndNew = ref(false)
+const originalGoodsName = ref('')
 
 function openCreate() {
   Object.assign(fd, defaultFd())
@@ -1497,6 +1619,7 @@ function genGoodsSn(): string {
 
 function openEdit(row: any) {
   isView.value = false
+  originalGoodsName.value = row.goods_name || ''
   Object.assign(fd, defaultFd(), row, {
     goods_type: getGoodsType(row),
     multi_unit: !!(row.multi_unit),
@@ -1510,7 +1633,48 @@ function openEdit(row: any) {
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
-  if (row.id) loadBrandFd(row.id)
+  if (row.id) {
+    loadBrandFd(row.id)
+    const applyBrandRemark = (remarkStr: string) => {
+      try {
+        const b = JSON.parse(remarkStr || '{}')['__brand__'] || {}
+        if (b.image) brandFd.image = b.image
+        if (b.headerImages?.length) brandFd.headerImages = [...b.headerImages, '', '', ''].slice(0, Math.max(b.headerImages.length + 1, 4))
+        if (b.detailImage) brandFd.detailImage = b.detailImage
+        if (b.detailImages?.length) brandFd.detailImage = b.detailImages[0] || brandFd.detailImage
+        if (b.tags?.length) brandFd.tags = b.tags
+        if (b.wholesalePrice) brandFd.wholesalePrice = b.wholesalePrice
+        if (b.minOrderQuantity) brandFd.minOrderQuantity = b.minOrderQuantity
+        if (b.baseSales !== undefined) brandFd.baseSales = b.baseSales
+        if (b.category !== undefined) brandFd.category = b.category
+        if (b.specGroups) {
+          brandFd.specGroups = b.specGroups
+          if (b.skuCombos) brandFd.skuCombos = b.skuCombos
+        } else if (b.skuVariants?.length) {
+          const validOld = b.skuVariants.filter((v: any) => v.label)
+          if (validOld.length) {
+            brandFd.specGroups = [{ name: '规格', values: validOld.map((v: any) => ({ label: v.label })) }]
+            brandFd.skuCombos = validOld.map((v: any) => ({ combo: [v.label], price: v.price, erpId: v.erpId }))
+          }
+        }
+        if (b.isRedeemable !== undefined) brandFd.isRedeemable = b.isRedeemable
+        if (b.pointsCost !== undefined) brandFd.pointsCost = b.pointsCost
+      } catch {}
+    }
+    applyBrandRemark(row.remark)
+    // Async refresh to avoid stale remark overwriting server-side changes (show, detailImages, etc.)
+    const editingId = row.id
+    http.get('/goods/ShopGoods/detail', { params: { id: row.id } })
+      .then((res: any) => {
+        if (fd.id !== editingId) return // user switched to another record
+        const freshRemark = res.data?.remark
+        if (freshRemark && freshRemark !== fd.remark) {
+          fd.remark = freshRemark
+          applyBrandRemark(freshRemark)
+        }
+      })
+      .catch(() => {})
+  }
 }
 
 function openView(row: any) {
@@ -1605,11 +1769,36 @@ async function handleSave() {
     // Convert boolean multi_unit/multi_spec to 0/1
     payload.multi_unit = fd.multi_unit ? 1 : 0
     payload.multi_spec = fd.multi_spec ? 1 : 0
+    // Save non-brand fields first (remark excluded — brand handled separately via patchBrand)
+    delete payload.remark
     if (fd.id) {
       await updateGoods(payload)
     } else {
       const res = await createGoods(payload)
       fd.id = res.data?.id ?? 0
+    }
+    // Atomically merge brand fields into __brand__ via patchBrand (DB-level jsonb merge, never overwrites other fields)
+    if (fd.id) {
+      await http.post('/goods/ShopGoods/patchBrand', {
+        id: fd.id,
+        brand_fields: {
+          image: brandFd.image,
+          headerImages: brandFd.headerImages.filter(Boolean),
+          detailImage: brandFd.detailImage,
+          tags: brandFd.tags,
+          category: brandFd.category,
+          wholesalePrice: brandFd.wholesalePrice,
+          minOrderQuantity: brandFd.minOrderQuantity,
+          baseSales: brandFd.baseSales,
+          specGroups: brandFd.specGroups,
+          skuCombos: brandFd.skuCombos,
+          skuVariants: brandFd.skuCombos
+            .filter((c: any) => c.combo?.length)
+            .map((c: any) => ({ label: c.combo.join(' / '), price: c.price, erpId: c.erpId })),
+          isRedeemable: brandFd.isRedeemable,
+          pointsCost: brandFd.pointsCost,
+        },
+      })
     }
     // Also persist goods_type locally for display in list
     if (fd.id && fd.goods_type) {
@@ -1618,6 +1807,10 @@ async function handleSave() {
       saveGoodsTypeMap(map)
     }
     ElMessage.success('保存成功')
+    // 商品名有改动时，同步更新所有 BOM 里的对应名称
+    if (fd.id && fd.goods_sn && originalGoodsName.value && fd.goods_name !== originalGoodsName.value) {
+      syncGoodsNameInBom(fd.goods_sn, fd.goods_name).catch(() => {})
+    }
     // Save brand center fields to localStorage
     if (fd.id) saveBrandFd(fd.id)
     // Persist spec data (localStorage + backend sync)
@@ -1627,6 +1820,32 @@ async function handleSave() {
     ElMessage.error(e?.message ?? '保存失败')
   } finally {
     saving.value = false
+  }
+}
+
+async function syncGoodsNameInBom(goodsSn: string, newName: string) {
+  const listRes = await http.get('/goods/BomGoods/index', { params: { page: 1, list_rows: 200 } })
+  const bomList: any[] = listRes.data?.list || []
+  for (const bom of bomList) {
+    const detailRes = await getBomByGoods(bom.id)
+    const detail = detailRes?.data
+    if (!detail) continue
+    let changed = false
+    const update: any = { id: detail.id, goods_name: detail.goods_name, goods_sn: detail.goods_sn, items: detail.items }
+    if (detail.goods_sn === goodsSn && detail.goods_name !== newName) {
+      update.goods_name = newName
+      changed = true
+    }
+    if (Array.isArray(detail.items)) {
+      update.items = detail.items.map((item: any) => {
+        if (item.goods_sn === goodsSn && item.goods_name !== newName) {
+          changed = true
+          return { ...item, goods_name: newName }
+        }
+        return item
+      })
+    }
+    if (changed) await updateBom(update)
   }
 }
 
@@ -2493,9 +2712,11 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
     const baseRow = rows.find(r => r.unit_name === baseUnitName)
     const auxRows = rows.filter(r => r.unit_name !== baseUnitName)
     const ordered = baseRow ? [baseRow, ...auxRows] : rows
+    const savedPrices = loadUnitCostPrices(goodsId)
     return ordered.map((r: any, i: number) => {
       const ratio = Number(r.ratio)
       const linked = unitLinked[r.unit_name]
+      const savedPrice = savedPrices[r.unit_name]
       return {
         is_base: i === 0,
         unit_id: null,
@@ -2505,17 +2726,33 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
         linked_goods_name: linked?.name,
         is_min_sale: i === 0,
         is_default_sale: i === 0,
-        cost_price: i === 0 ? baseCostPrice : Math.round(baseCostPrice * ratio * 100) / 100,
+        cost_price: savedPrice !== undefined ? savedPrice : (i === 0 ? baseCostPrice : 0),
         sell_price: 0,
       }
     })
   } catch { return [] }
 }
 
+const UNIT_COST_KEY = 'erp_unit_cost_prices'
+function loadUnitCostPrices(goodsId: number): Record<string, number> {
+  try { return (JSON.parse(localStorage.getItem(UNIT_COST_KEY) || '{}')[goodsId]) || {} } catch { return {} }
+}
+function saveUnitCostPrices(goodsId: number, prices: Record<string, number>) {
+  try {
+    const all = JSON.parse(localStorage.getItem(UNIT_COST_KEY) || '{}')
+    all[goodsId] = prices
+    localStorage.setItem(UNIT_COST_KEY, JSON.stringify(all))
+  } catch {}
+}
+
 async function saveMultiUnitsToServer(goodsId: number) {
   try {
     const units = multiUnitRows.value.map(r => ({ unit_name: r.unit_name, ratio: r.ratio }))
     await saveUnitConvert({ goods_id: goodsId, units })
+    // Save unit-specific cost prices to localStorage
+    const prices: Record<string, number> = {}
+    multiUnitRows.value.forEach(r => { if (r.unit_name) prices[r.unit_name] = Number(r.cost_price || 0) })
+    saveUnitCostPrices(goodsId, prices)
     // 把关联BOM成品写入 goods.spec
     const unitLinked: Record<string, { id: number; name: string }> = {}
     multiUnitRows.value.forEach(r => {
@@ -2612,6 +2849,27 @@ function onMultiUnitRatioChange(row: MultiUnitRow) {
   row.sell_price = Math.round(baseSell * row.ratio * 100) / 100
 }
 
+// Tracks which aux row last triggered a cost change (prevents circular update)
+let _lastAuxChangedRow: any = null
+
+function onAuxUnitCostChange(row: any) {
+  if (!fd.multi_unit) return
+  const auxPrice = Number(row.cost_price) || 0
+  const ratio = Math.max(0.0001, Number(row.ratio) || 1)
+  const basePrice = Math.round((auxPrice / ratio) * 10000) / 10000
+  _lastAuxChangedRow = row
+  fd.cost_price = basePrice
+  // Sync base unit row
+  if (multiUnitRows.value[0]) multiUnitRows.value[0].cost_price = basePrice
+  // Recalc other aux rows (not this one, not BOM-linked)
+  for (let i = 1; i < multiUnitRows.value.length; i++) {
+    const r = multiUnitRows.value[i]
+    if (r === row || r.linked_goods_id) continue
+    r.cost_price = Math.round(basePrice * r.ratio * 100) / 100
+  }
+  _lastAuxChangedRow = null
+}
+
 // When base cost_price or sell_price changes, recalc all aux unit prices
 watch(() => fd.cost_price, (newCost) => {
   if (!fd.multi_unit) return
@@ -2621,7 +2879,7 @@ watch(() => fd.cost_price, (newCost) => {
   // Recalc aux rows (index 1+)，BOM关联成品跳过（用成品自己的采购价）
   for (let i = 1; i < multiUnitRows.value.length; i++) {
     const row = multiUnitRows.value[i]
-    if (row.linked_goods_id) continue
+    if (row === _lastAuxChangedRow || row.linked_goods_id) continue
     row.cost_price = Math.round(base * row.ratio * 100) / 100
   }
 })
@@ -2660,6 +2918,7 @@ function scrollToSection(key: string) {
   const map: Record<string, any> = { base: secBase, unit: secUnit, spec: secSpec, price: secPrice, remark: secRemark, brand: secBrand }
   map[key]?.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   activeTab.value = key
+  if (key === 'brand') loadBrandCategoryOptions()
 }
 
 function onScroll() {
@@ -2678,13 +2937,22 @@ function onScroll() {
 // ── 品牌中心字段 (localStorage) ───────────────────────────────────────────────
 const BRAND_STORE_KEY = 'erp_brand_center_data'
 
+interface SpecValue { label: string; image?: string }
+interface SpecGroup { name: string; values: SpecValue[] }
+interface SkuCombo { combo: string[]; price: number; erpId: number }
 interface BrandCenterItem {
   wholesalePrice: number
   minOrderQuantity: number
+  baseSales: number
+  category: string
   tags: string[]
   image: string
   headerImages: string[]
   detailImage: string
+  specGroups: SpecGroup[]
+  skuCombos: SkuCombo[]
+  isRedeemable: boolean
+  pointsCost: number
 }
 
 function loadBrandMap(): Record<string, BrandCenterItem> {
@@ -2697,13 +2965,102 @@ function saveBrandMap(map: Record<string, BrandCenterItem>) {
 const defaultBrandFd = (): BrandCenterItem => ({
   wholesalePrice: 0,
   minOrderQuantity: 1,
+  baseSales: 0,
+  category: '',
   tags: [],
   image: '',
   headerImages: ['', '', '', ''],
   detailImage: '',
+  specGroups: [],
+  skuCombos: [],
+  isRedeemable: false,
+  pointsCost: 0,
 })
 
 const brandFd = reactive(defaultBrandFd())
+
+const FIXED_CATEGORIES = ['食品', '文创', '礼装']
+const brandCategoryOptions = ref<string[]>([])
+const categoryManagerVisible = ref(false)
+const managedCategories = ref<string[]>([])
+const newCategoryInput = ref('')
+const savingCategories = ref(false)
+
+async function fetchMiniCategories(): Promise<string[]> {
+  try {
+    const res = await fetch('/api/brand-config')
+    const d = await res.json()
+    return Array.isArray(d?.data?.miniCategories) ? d.data.miniCategories : []
+  } catch { return [] }
+}
+
+async function loadBrandCategoryOptions() {
+  if (brandCategoryOptions.value.length > 0) return
+  const cats = new Set<string>(FIXED_CATEGORIES)
+  const [mini, goodsRes] = await Promise.allSettled([
+    fetchMiniCategories(),
+    http.get('/goods/ShopGoods/index', { params: { list_rows: 1000 } }),
+  ])
+  if (mini.status === 'fulfilled') mini.value.forEach(c => cats.add(c))
+  if (goodsRes.status === 'fulfilled') {
+    const rows: any[] = goodsRes.value.data?.rows ?? []
+    rows.forEach(r => {
+      try {
+        const b = JSON.parse(r.remark || '{}')
+        if (b.__brand__?.category) cats.add(b.__brand__.category)
+      } catch { /* ignore */ }
+    })
+  }
+  brandCategoryOptions.value = [...cats]
+}
+
+async function openCategoryManager() {
+  const saved = await fetchMiniCategories()
+  managedCategories.value = saved.length ? [...saved] : [...FIXED_CATEGORIES]
+  newCategoryInput.value = ''
+  categoryManagerVisible.value = true
+}
+
+function addMiniCategory() {
+  const name = newCategoryInput.value.trim()
+  if (!name || managedCategories.value.includes(name)) return
+  managedCategories.value.push(name)
+  newCategoryInput.value = ''
+}
+
+function removeMiniCategory(cat: string) {
+  managedCategories.value = managedCategories.value.filter(c => c !== cat)
+}
+
+async function saveMiniCategories() {
+  savingCategories.value = true
+  try {
+    const cfgRes = await fetch('/api/brand-config')
+    const cfgJson = await cfgRes.json()
+    const cfg = cfgJson?.data || {}
+    cfg.miniCategories = [...managedCategories.value]
+    const token = localStorage.getItem('erp_token') || ''
+    await fetch('/api/brand-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify(cfg),
+    })
+    brandCategoryOptions.value = []
+    await loadBrandCategoryOptions()
+    categoryManagerVisible.value = false
+    ElMessage.success('分类已同步')
+  } catch {
+    ElMessage.error('保存失败')
+  } finally {
+    savingCategories.value = false
+  }
+}
+
+watch(() => brandFd.category, (val) => {
+  if (val && !brandCategoryOptions.value.includes(val)) {
+    brandCategoryOptions.value.push(val)
+  }
+})
 
 const TAG_OPTIONS = [
   { value: 'new', label: '新品' },
@@ -2717,6 +3074,36 @@ function loadBrandFd(goodsId: number) {
   Object.assign(brandFd, defaultBrandFd(), saved ?? {})
   // Ensure headerImages always has 4 slots
   while (brandFd.headerImages.length < 4) brandFd.headerImages.push('')
+}
+
+function addSpecGroup() {
+  brandFd.specGroups.push({ name: '', values: [{ label: '' }] })
+}
+function removeBrandSpecGroup(gi: number) {
+  brandFd.specGroups.splice(gi, 1)
+  generateSkuCombos()
+}
+function addBrandSpecValue(gi: number) {
+  brandFd.specGroups[gi].values.push({ label: '' })
+}
+function removeBrandSpecValue(gi: number, vi: number) {
+  brandFd.specGroups[gi].values.splice(vi, 1)
+  generateSkuCombos()
+}
+function generateSkuCombos() {
+  const groups = brandFd.specGroups
+    .filter(g => g.values.some(v => v.label.trim()))
+  if (groups.length === 0) { brandFd.skuCombos = []; return }
+  const valueArrays = groups.map(g => g.values.filter(v => v.label.trim()).map(v => v.label.trim()))
+  const cartesian = (arrs: string[][]): string[][] =>
+    arrs.reduce<string[][]>((acc, arr) => acc.flatMap(a => arr.map(b => [...a, b])), [[]])
+  const combos = cartesian(valueArrays)
+  const existingMap = new Map(brandFd.skuCombos.map(c => [c.combo.join('\x00'), c]))
+  brandFd.skuCombos = combos.map(combo => {
+    const key = combo.join('\x00')
+    const ex = existingMap.get(key)
+    return ex ? { ...ex, combo } : { combo, price: 0, erpId: fd.id || 0 }
+  })
 }
 
 function saveBrandFd(goodsId: number) {
@@ -2967,6 +3354,7 @@ function stopListScanner() {
   .cate-arrow, .cate-arrow-placeholder { display: none !important; }
   .goods-list-wrap { overflow: visible !important; min-height: 0 !important; }
   .goods-list-wrap :deep(.sc-table) { min-width: 0 !important; padding: 10px !important; }
+  .bom-cate-tree { max-height: 200px !important; overflow-y: auto !important; }
 }
 
 /* 商品卡片（移动端） */
@@ -3175,6 +3563,24 @@ function stopListScanner() {
   background: #f5f5f7; border-radius: 10px;
 }
 .brand-save-hint.warn { background: #fffbf0; color: #d97706; }
+.spec-brand-group {
+  width: 100%; margin-bottom: 10px;
+  border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;
+  padding: 12px 14px; background: #fafafa;
+}
+.spec-brand-group-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.spec-brand-value-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.spec-brand-add-btn { margin-top: 4px; color: #0071e3; }
+.spec-brand-new-group { color: #0071e3; margin-bottom: 4px; }
+.spec-brand-combo-wrap { margin-top: 14px; }
+.spec-brand-combo-title {
+  font-size: 13px; color: #606266; margin-bottom: 8px; font-weight: 500;
+}
+[data-theme="dark"] .spec-brand-group { background: #2c2c2e; border-color: rgba(255,255,255,0.1); }
 </style>
 
 <style>

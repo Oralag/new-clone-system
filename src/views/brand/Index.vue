@@ -50,6 +50,7 @@
         <div class="brand-hero-btns">
           <button class="brand-btn-primary" @click="$router.push('/brand/products')">立即选购</button>
           <button class="brand-btn-ghost" @click="$router.push('/brand/story')">了解更多</button>
+          <button v-if="shopStore.shopMode !== 'wholesale'" class="brand-btn-partner" @click="partnerVisible = true">成为合作商 →</button>
         </div>
       </div>
       <button class="edit-trigger" @click="openEdit('hero')">
@@ -175,6 +176,36 @@
         </p>
       </div>
     </section>
+  </div>
+
+  <!-- 合作商弹窗 -->
+  <div v-if="partnerVisible" class="bi-edit-overlay" @click.self="partnerVisible = false">
+    <div class="bi-edit-dialog">
+      <div class="bi-edit-header">
+        <h3>成为合作伙伴</h3>
+        <button class="bi-edit-close" @click="partnerVisible = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="bi-edit-body" v-if="!partnerDone">
+        <p style="font-size:13px;color:rgba(26,30,50,0.5);margin-bottom:8px;">留下联系方式，我们会尽快与您对接批发合作详情。</p>
+        <div class="bi-field"><label>姓名 *</label><input v-model="partnerForm.name" class="bi-input" placeholder="您的姓名" /></div>
+        <p style="font-size:12px;color:rgba(26,30,50,0.4);margin:-4px 0 4px;">微信号或手机号填一个即可</p>
+        <div class="bi-field"><label>微信号</label><input v-model="partnerForm.wechat" class="bi-input" placeholder="您的微信号" /></div>
+        <div class="bi-field"><label>手机号</label><input v-model="partnerForm.mobile" class="bi-input" type="tel" placeholder="11位手机号" /></div>
+      </div>
+      <div v-else class="bi-edit-body" style="text-align:center;padding:32px 24px;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2" stroke-linecap="round" style="margin:0 auto 12px;display:block"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <p style="font-size:15px;font-weight:700;color:#1A1E32;margin-bottom:6px;">已收到！</p>
+        <p style="font-size:13px;color:rgba(26,30,50,0.5);">我们会尽快联系您。</p>
+      </div>
+      <div class="bi-edit-footer" v-if="!partnerDone">
+        <button class="bi-cancel" @click="partnerVisible = false">取消</button>
+        <button class="bi-save" :disabled="partnerSubmitting" @click="submitPartner">
+          {{ partnerSubmitting ? '提交中…' : '提交' }}
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- 编辑弹框 -->
@@ -327,6 +358,29 @@ function saveEdit() {
     })
   }
   editVisible.value = false
+}
+
+// 合作商弹窗
+const partnerVisible = ref(false)
+const partnerDone = ref(false)
+const partnerSubmitting = ref(false)
+const partnerForm = reactive({ name: '', wechat: '', mobile: '' })
+
+async function submitPartner() {
+  if (!partnerForm.name || (!partnerForm.wechat && !partnerForm.mobile)) {
+    alert('请填写姓名，以及微信号或手机号至少一项'); return
+  }
+  partnerSubmitting.value = true
+  try {
+    await fetch('https://erp-server-xsji.onrender.com/miniapi/wholesale/inquiry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: partnerForm.name, wechat: partnerForm.wechat, mobile: partnerForm.mobile }),
+    })
+    partnerDone.value = true
+    setTimeout(() => { partnerVisible.value = false; partnerDone.value = false; partnerForm.name = ''; partnerForm.wechat = ''; partnerForm.mobile = '' }, 2500)
+  } catch { alert('提交失败，请稍后重试') }
+  finally { partnerSubmitting.value = false }
 }
 
 const newsletterEmail = ref('')
@@ -483,6 +537,13 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
   border: 2px solid rgba(26,30,50,0.4); cursor: pointer; transition: border-color 0.2s;
 }
 .brand-btn-ghost:hover { border-color: #1A1E32; }
+.brand-btn-partner {
+  padding: 14px 24px; background: transparent; color: rgba(26,30,50,0.55);
+  border-radius: 3px; font-size: 13px; font-weight: 600;
+  border: none; cursor: pointer; letter-spacing: 0.02em;
+  transition: color 0.2s;
+}
+.brand-btn-partner:hover { color: #1A1E32; }
 
 /* Philosophy */
 .brand-philosophy {

@@ -150,7 +150,9 @@ function orderNo(row: any, fallbackPrefix: string) {
 }
 
 function saleAmount(row: any) {
-  return Number(row.after_discount || row.total_amount || row.amount || 0)
+  const total = Number(row.total_amount || row.amount || 0)
+  const afterDisc = Number(row.after_discount)
+  return (Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total) ? afterDisc : total
 }
 
 function procureAmount(row: any) {

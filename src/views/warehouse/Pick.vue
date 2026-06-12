@@ -1,11 +1,15 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getPickList"
+      <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/stock/Pick/batchDel"
           export-file-name="拣货单" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.pick_no" placeholder="拣货单编号" clearable style="width: 180px" />
+          <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+            <el-option label="未核对" value="unreconciled" />
+          </el-select>
         </template>
         <template #toolbar>
           <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
@@ -26,6 +30,7 @@
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button type="success" size="small" link @click="formRef?.openView(row)">查看</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
@@ -53,6 +58,7 @@
 
 <script setup lang="ts">
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import ScForm from '@/components/ScForm.vue'
 
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -60,10 +66,13 @@ import { Plus } from '@element-plus/icons-vue'
 import { getPickList, createPick, deletePick } from '@/api/warehouse'
 
 const tableRef = ref()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_warehouse_pick', tableRef)
+const reconcileFilteredApi = createFilteredApi(getPickList, 'reconcile_filter')
 const formRef = ref()
 
 const searchForm = reactive({
-  pick_no: ''
+  pick_no: '',
+  reconcile_filter: ''
 })
 
 const openForm = () => {

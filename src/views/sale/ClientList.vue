@@ -16,8 +16,8 @@
             全部
           </div>
           <template v-for="item in filteredCates" :key="item.id">
-            <div class="cate-item" :class="{ active: selectedCateId === item.id }" @click="selectCate(item.id)">
-              <span class="cate-item-name">{{ item.name }}</span>
+            <div class="cate-item" :class="{ active: selectedCateId === item.id, 'cate-item-child': !!item.pid }" @click="selectCate(item.id)">
+              <span class="cate-item-name">{{ item.pid ? '└ ' : '' }}{{ item.name }}</span>
               <span class="cate-item-actions">
                 <el-icon class="act-icon" @click.stop="openCateForm(item)"><Edit /></el-icon>
                 <el-icon class="act-icon danger" @click.stop="handleDeleteCate(item.id)"><Delete /></el-icon>
@@ -340,6 +340,11 @@
     <!-- 分类新增/编辑弹框 -->
     <el-dialog v-model="cateFormVisible" :title="cateFormTitle" width="360px" append-to-body>
       <el-form label-width="90px">
+        <el-form-item label="父级分类">
+          <el-select v-model="cateFormPid" placeholder="无（顶级分类）" clearable style="width:100%">
+            <el-option v-for="c in cateOptions.filter(c => !c.pid)" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="分类名称">
           <el-input v-model="cateFormName" placeholder="请输入分类名称" @keyup.enter="handleSaveCate" />
         </el-form-item>
@@ -378,11 +383,11 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Edit, Delete, Search, Refresh, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getSaleCustomerList, getSaleCustomerDetail, createSaleCustomer, updateSaleCustomer, deleteSaleCustomer, getContractList } from '@/api/sale'
+import { getSaleCustomerList, getSaleCustomerDetail, createSaleCustomer, updateSaleCustomer, deleteSaleCustomer, getContractList, updateContract, getOfferList, updateOffer, getSaleOutList, updateSaleOut, getSampleList, updateSample } from '@/api/sale'
 import http from '@/api/http'
 import * as XLSX from 'xlsx'
 import { loadLevels, loadLevelMap, saveLevelMap, type LevelItem } from '@/utils/customerLevel'
-import { getCollectReceiptList, createCollectReceipt, getReceivableList, getFundList, createFund } from '@/api/finance'
+import { getCollectReceiptList, createCollectReceipt, updateCollectReceipt, getReceivableList, getFundList, createFund } from '@/api/finance'
 
 const router = useRouter()
 
@@ -390,13 +395,29 @@ const router = useRouter()
 const CATE_KEY = 'erp_customer_cates'
 const CATE_MAP_KEY = 'erp_customer_cate_map'  // { customerId: cateId }
 
-interface CateItem { id: number; name: string }
+interface CateItem { id: number; name: string; pid?: number }
 
 function loadCatesFromStorage(): CateItem[] {
   try { return JSON.parse(localStorage.getItem(CATE_KEY) || '[]') } catch { return [] }
 }
 function saveCatesToStorage(list: CateItem[]) {
   localStorage.setItem(CATE_KEY, JSON.stringify(list))
+}
+
+function ensureDefaultCates(list: CateItem[]): CateItem[] {
+  let changed = false
+  let onlineId = list.find(c => c.name === '线上' && !c.pid)?.id ?? 0
+  if (!onlineId) {
+    onlineId = Date.now()
+    list = [...list, { id: onlineId, name: '线上' }]
+    changed = true
+  }
+  if (!list.find(c => c.name === '美团' && c.pid === onlineId)) {
+    list = [...list, { id: onlineId + 1, name: '美团', pid: onlineId }]
+    changed = true
+  }
+  if (changed) saveCatesToStorage(list)
+  return list
 }
 function loadCateMap(): Record<number, number> {
   try { return JSON.parse(localStorage.getItem(CATE_MAP_KEY) || '{}') } catch { return {} }
@@ -405,7 +426,7 @@ function saveCateMap(map: Record<number, number>) {
   localStorage.setItem(CATE_MAP_KEY, JSON.stringify(map))
 }
 
-const cateOptions = ref<CateItem[]>(loadCatesFromStorage())
+const cateOptions = ref<CateItem[]>(ensureDefaultCates(loadCatesFromStorage()))
 const cateMap = ref<Record<number, number>>(loadCateMap())
 const cateKeyword = ref('')
 const selectedCateId = ref<number | null>(null)
@@ -438,8 +459,18 @@ function getLevelName(customerId: number): string {
 }
 
 const filteredCates = computed(() => {
-  if (!cateKeyword.value) return cateOptions.value
-  return cateOptions.value.filter(c => c.name.includes(cateKeyword.value))
+  const kw = cateKeyword.value
+  const all = kw ? cateOptions.value.filter(c => c.name.includes(kw)) : cateOptions.value
+  // 按父子顺序排列：顶级→其子分类→顶级→其子分类……
+  const result: CateItem[] = []
+  const roots = all.filter(c => !c.pid)
+  for (const root of roots) {
+    result.push(root)
+    result.push(...all.filter(c => c.pid === root.id))
+  }
+  // 孤儿子分类（父级不在结果里时直接追加）
+  all.filter(c => c.pid && !roots.find(r => r.id === c.pid)).forEach(c => result.push(c))
+  return result
 })
 
 function getCateName(customerId: number): string {
@@ -452,11 +483,13 @@ function getCateName(customerId: number): string {
 const cateFormVisible = ref(false)
 const cateFormTitle = ref('新增分类')
 const cateFormName = ref('')
+const cateFormPid = ref<number | null>(null)
 let editingCateId: number | null = null
 
 function openCateForm(row?: CateItem) {
   editingCateId = row ? row.id : null
   cateFormName.value = row ? row.name : ''
+  cateFormPid.value = row?.pid ?? null
   cateFormTitle.value = row ? '编辑分类' : '新增分类'
   cateFormVisible.value = true
 }
@@ -465,11 +498,13 @@ function handleSaveCate() {
   const name = cateFormName.value.trim()
   if (!name) { ElMessage.warning('请输入分类名称'); return }
   const list = [...cateOptions.value]
+  const item: CateItem = { id: editingCateId ?? Date.now(), name }
+  if (cateFormPid.value) item.pid = cateFormPid.value
   if (editingCateId !== null) {
     const idx = list.findIndex(c => c.id === editingCateId)
-    if (idx !== -1) list[idx] = { id: editingCateId, name }
+    if (idx !== -1) list[idx] = item
   } else {
-    list.push({ id: Date.now(), name })
+    list.push(item)
   }
   cateOptions.value = list
   saveCatesToStorage(list)
@@ -510,10 +545,12 @@ const keyword = ref('')
 const selectedRows = ref<any[]>([])
 const tableRef = ref<any>()
 
-// 按选中分类二次过滤
+// 按选中分类二次过滤（选父级时同时显示其所有子分类的客户）
 const filteredRows = computed(() => {
   if (selectedCateId.value === null) return allRows.value
-  return allRows.value.filter(row => cateMap.value[row.id] === selectedCateId.value)
+  const sid = selectedCateId.value
+  const childIds = new Set<number>([sid, ...cateOptions.value.filter(c => c.pid === sid).map(c => c.id)])
+  return allRows.value.filter(row => childIds.has(cateMap.value[row.id]))
 })
 
 async function loadData() {
@@ -554,11 +591,13 @@ const formVisible = ref(false)
 const formTitle = ref('新增客户')
 const formSaving = ref(false)
 const formRef = ref()
+let originalCustomerName = ''
 const formData = reactive<any>({
   id: 0, nickname: '', mobile: '', cate_id: null, level_id: null, source: null, source_id: null, address: '', remark: '',
 })
 
 function openForm(row?: any) {
+  originalCustomerName = row?.nickname || row?.name || ''
   formTitle.value = row ? '编辑客户' : '新增客户'
   const nextData = {
     id: 0,
@@ -583,8 +622,38 @@ function openForm(row?: any) {
     financeInfo.totalPrepay = 0
     financeInfo.totalConsumed = 0
     financeInfo.unReceived = 0
-    loadFinanceInfo(row.id, row.nickname)
+    loadFinanceInfo(row.id, row.nickname || row.name || '')
   }
+}
+
+async function syncCustomerName(customerId: number, newName: string, oldName: string) {
+  if (!customerId || !newName || newName === oldName) return
+  const fetchRows = async (fn: Function) => {
+    try {
+      const res = await fn({ list_rows: 2000, customer_id: customerId })
+      return (res.data?.rows ?? res.data?.list ?? []) as any[]
+    } catch { return [] }
+  }
+  const updateRows = async (rows: any[], updateFn: Function, extra?: Record<string, any>) => {
+    for (const r of rows) {
+      if (Number(r.customer_id) !== Number(customerId)) continue
+      try { await updateFn({ id: r.id, customer_name: newName, ...extra }) } catch { /* ignore */ }
+    }
+  }
+  const [contracts, offers, saleOuts, samples, receipts] = await Promise.all([
+    fetchRows(getContractList),
+    fetchRows(getOfferList),
+    fetchRows(getSaleOutList),
+    fetchRows(getSampleList),
+    fetchRows(getCollectReceiptList),
+  ])
+  await Promise.all([
+    updateRows(contracts, updateContract),
+    updateRows(offers, updateOffer),
+    updateRows(saleOuts, updateSaleOut),
+    updateRows(samples, updateSample),
+    updateRows(receipts, updateCollectReceipt, { contact_name: newName }),
+  ])
 }
 
 async function handleSubmit() {
@@ -593,6 +662,7 @@ async function handleSubmit() {
   try {
     const payload: any = {
       name: formData.nickname,
+      nickname: formData.nickname,
       mobile: formData.mobile,
       address: formData.address,
       remark: formData.remark,
@@ -601,6 +671,7 @@ async function handleSubmit() {
     let customerId = formData.id
     if (customerId) {
       await updateSaleCustomer(payload)
+      await syncCustomerName(customerId, formData.nickname, originalCustomerName)
     } else {
       const res = await createSaleCustomer(payload)
       customerId = res.data?.id ?? res.data
@@ -627,7 +698,7 @@ async function handleSubmit() {
     }
     ElMessage.success('操作成功')
     formVisible.value = false
-    loadData()
+    loadDataAndBalances()
   } catch (e: any) {
     ElMessage.error(e?.message ?? '操作失败')
   } finally {
@@ -641,6 +712,7 @@ async function handleSubmitAndRecharge() {
   try {
     const payload: any = {
       name: formData.nickname,
+      nickname: formData.nickname,
       mobile: formData.mobile,
       address: formData.address,
       remark: formData.remark,
@@ -660,7 +732,7 @@ async function handleSubmitAndRecharge() {
       customerSourceMap.value = sMap2; saveSourceMap(sMap2)
     }
     formVisible.value = false
-    loadData()
+    loadDataAndBalances()
     await loadFinanceInfo(formData.id, formData.nickname)
     prepayForm.amount = 0
     prepayForm.account_name = ''
@@ -1078,6 +1150,7 @@ onMounted(() => {
 .cate-item.active { background: rgba(0,113,227,0.08); color: #0071e3; font-weight: 500; }
 
 .cate-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cate-item-child { padding-left: 28px; font-size: 12px; color: rgba(29,29,31,0.6); }
 .cate-item-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.12s; flex-shrink: 0; }
 .act-icon { font-size: 13px; color: rgba(29,29,31,0.35); cursor: pointer; padding: 2px; }
 .act-icon:hover { color: #0071e3; }

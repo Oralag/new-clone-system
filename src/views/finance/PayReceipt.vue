@@ -1,7 +1,8 @@
 <template>
   <div class="receipt-page">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getPayReceiptListWithRefund"
+      <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/finance/PayReceipt/batchDel"
           export-file-name="付款记录" :params="searchForm"
           sort-by="pay_date" :sort-desc="true">
@@ -17,6 +18,9 @@
           <el-select v-model="searchForm.source" placeholder="付款来源" clearable style="width:140px">
             <el-option label="应付款付出" value="payable" />
             <el-option label="其他付款" value="other" />
+          </el-select>
+          <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+            <el-option label="未核对" value="unreconciled" />
           </el-select>
         </template>
         <template #toolbar>
@@ -66,6 +70,7 @@
         <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
             <el-button type="danger" link size="small" @click="handleRevoke(row)">撤销付款</el-button>
           </template>
         </el-table-column>
@@ -80,6 +85,7 @@ import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import { getPayReceiptList, deletePayReceipt, unAuditPayReceipt } from '@/api/finance'
 import http from '@/api/http'
 import { applyProcureReturnsToPayReceiptRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
@@ -111,7 +117,9 @@ function getRelatedOrder(row: any) {
 }
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '', source: '' })
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_pay_receipt', tableRef)
+const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '', source: '', reconcile_filter: '' })
+const reconcileFilteredApi = createFilteredApi(getPayReceiptListWithRefund, 'reconcile_filter')
 
 const typeTagMap: Record<string, string> = {
   supplier: 'warning', customer: 'success', staff: 'info', other: ''

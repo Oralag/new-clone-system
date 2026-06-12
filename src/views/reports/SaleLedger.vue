@@ -78,7 +78,7 @@
         <el-table-column label="收款日期" prop="contract_date" width="110" />
         <el-table-column label="客户名称" prop="customer_name" min-width="120" />
         <el-table-column label="合同金额" prop="total_amount" width="110" align="right">
-          <template #default="{ row }">{{ fmt(row.total_amount) }}</template>
+          <template #default="{ row }">{{ fmt(contractAmount(row)) }}</template>
         </el-table-column>
         <el-table-column label="已收金额" width="110" align="right">
           <template #default="{ row }">{{ fmt(row.receive_amount) }}</template>
@@ -130,8 +130,10 @@ import { PieChart, LineChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { getSaleContractList } from '@/api/reports'
+import { getCollectReceiptList } from '@/api/finance'
 import { getSaleCustomerList } from '@/api/sale'
 import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
+import { applySaleReceiptPayments, getSaleContractAmount } from '@/utils/saleFinance'
 
 echarts.use([PieChart, LineChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer])
 
@@ -153,13 +155,14 @@ let pieChart: echarts.ECharts | null = null
 let lineChart: echarts.ECharts | null = null
 
 const fmt = (v: any) => Number(v || 0).toFixed(2)
-const calcUnreceived = (row: any) => Math.max(0, Number(row.total_amount || 0) - Number(row.receive_amount || 0))
+const contractAmount = (row: any) => Number(row.finance_total_amount ?? getSaleContractAmount(row))
+const calcUnreceived = (row: any) => Math.max(0, contractAmount(row) - Number(row.receive_amount || 0))
 
 const stats = computed(() => {
   const rows = allRows.value
   return {
     count: rows.length,
-    total: rows.reduce((s, r) => s + Number(r.total_amount || 0), 0),
+    total: rows.reduce((s, r) => s + contractAmount(r), 0),
     received: rows.reduce((s, r) => s + Number(r.receive_amount || 0), 0),
     unreceived: rows.reduce((s, r) => s + calcUnreceived(r), 0),
     refund: rows.reduce((s, r) => s + Number(r.refund_amount || 0), 0),
@@ -184,9 +187,17 @@ function filterRows(rows: any[]) {
 
 async function loadAll() {
   try {
-    const res: any = await getSaleContractList({ page: 1, list_rows: 1000, customer_id: searchCustomerId.value || undefined })
-    const rows = res?.data?.rows || res?.rows || []
-    allRows.value = filterRows(rows)
+    const [contractRes, receiptRes] = await Promise.allSettled([
+      getSaleContractList({ page: 1, list_rows: 5000, customer_id: searchCustomerId.value || undefined }),
+      getCollectReceiptList({ page: 1, list_rows: 5000 }),
+    ])
+    const contracts: any[] = contractRes.status === 'fulfilled'
+      ? (contractRes.value?.data?.rows || contractRes.value?.rows || [])
+      : []
+    const receipts: any[] = receiptRes.status === 'fulfilled'
+      ? (receiptRes.value?.data?.rows || receiptRes.value?.data?.list || receiptRes.value?.rows || [])
+      : []
+    allRows.value = filterRows(applySaleReceiptPayments(contracts, receipts))
   } catch {
     allRows.value = []
   }
@@ -234,7 +245,7 @@ function renderLine() {
   const months = Array.from({ length: 12 }, (_, i) => `${searchYear.value}-${String(i + 1).padStart(2, '0')}`)
   const byMonth = (field: string) => months.map(m =>
     allRows.value.filter(r => (r.contract_date || r.created_at || '').startsWith(m))
-      .reduce((s, r) => s + Number(r[field] || 0), 0).toFixed(2)
+      .reduce((s, r) => s + (field === 'total_amount' ? contractAmount(r) : Number(r[field] || 0)), 0).toFixed(2)
   )
   lineChart.setOption({
     tooltip: { trigger: 'axis' },

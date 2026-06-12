@@ -23,7 +23,7 @@
       <el-card>
         <ScTable
           ref="tableRef"
-          :api-obj="getSampleList"
+          :api-obj="reconcileFilteredApi"
           export-file-name="样品单"
           sort-by="id"
           :sort-desc="true"
@@ -42,6 +42,7 @@
               <el-option label="待审核" :value="0" />
               <el-option label="已审核" :value="1" />
               <el-option label="已驳回" :value="2" />
+              <el-option label="未核对" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
@@ -104,6 +105,7 @@
               <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 0" type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
@@ -309,6 +311,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ArrowLeft, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getWarehouseList } from '@/api/warehouse'
@@ -320,6 +323,8 @@ import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_sale_sample', tableRef)
+const reconcileFilteredApi = createFilteredApi(getSampleList)
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 const stockRefreshStore = useStockRefreshStore()
 

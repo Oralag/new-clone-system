@@ -139,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import http from '@/api/http'
@@ -249,6 +249,27 @@ async function load() {
 
     const orders: any[] = (orderRes.data?.rows ?? []).filter((o: any) => Number(o.status) === 1)
 
+    // 构建已关联采购单的 order_sn 集合（用于区分"已链接"和"未链接"付款）
+    const orderSnSet = new Set(orders.map(o => String(o.order_sn || '').trim()).filter(Boolean))
+    const orderNoSet = new Set(orders.map(o => String(o.order_no || '').trim()).filter(Boolean))
+
+    // 构建"未链接到具体采购单"的手动付款：按供应商名聚合
+    // 场景：从应付款点"付款"→多订单路径，PayReceipt 没有 order_id，order_sn 为空
+    // 后端无法更新采购单 pay_amount，这里在供应商层面补计
+    const unlinkedPaidBySupplier: Record<string, number> = {}
+    for (const r of manualPayList) {
+      if (String(r.contact_type || '') !== 'supplier') continue
+      const amt = Number(r.amount || 0)
+      if (!amt) continue
+      const sn = String(r.order_sn || '').trim()
+      // 已通过 order_sn 链接到具体采购单的付款 → 已反映在 o.pay_amount 中，跳过
+      if (sn && (orderSnSet.has(sn) || orderNoSet.has(sn))) continue
+      const supplierName = String(r.contact_name || '').trim()
+      if (supplierName) {
+        unlinkedPaidBySupplier[supplierName] = (unlinkedPaidBySupplier[supplierName] || 0) + amt
+      }
+    }
+
     // 按供应商聚合采购订单
     const supplierMap = new Map<string, any>()
     for (const o of orders) {
@@ -269,8 +290,6 @@ async function load() {
       }
       const s = supplierMap.get(key)!
       const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-      const oNo = String(o.order_no || '').trim()
-      const oSn = String(o.order_sn || '').trim()
       const paidAmt = Number(o.pay_amount || 0)
       const feeNeedPay = getProcureFeeNeedPayAmount(o)
       const feePaid = procureFeePaidById[o.id] || 0
@@ -282,9 +301,11 @@ async function load() {
       s.un_pay_amount += unpaid + feeUnpaid
       s.orders.push({
         order_id: o.id,
+        order_sn: String(o.order_sn || '').trim(),
         order_no: o.order_no || o.order_sn || '',
         order_amount: orderAmt + feeNeedPay,
         paid_amount: paidAmt + feePaid,
+        base_pay_amount: paidAmt,  // 原始 pay_amount，用于付款后更新
         un_pay_amount: unpaid + feeUnpaid,
         due_date: fmtDt(o.order_date),
       })
@@ -305,6 +326,16 @@ async function load() {
         s.un_pay_amount = s.orders.reduce((sum: number, o: any) => sum + o.un_pay_amount, 0)
       }
       aggregated = aggregated.filter(s => s.orders.length > 0)
+    }
+
+    // 把"未链接到具体采购单"的手动付款（多订单路径）在供应商层面扣减应付
+    for (const s of aggregated) {
+      const extra = unlinkedPaidBySupplier[s.supplier_name] || 0
+      if (extra > 0) {
+        const deduct = Math.min(extra, s.un_pay_amount)
+        s.paid_amount += deduct
+        s.un_pay_amount -= deduct
+      }
     }
 
     const expensePayables = buildExpensePayableRows(expenseRes.data?.rows ?? expenseRes.data?.list ?? [])
@@ -383,7 +414,7 @@ async function load() {
       .filter(r => !searchForm.supplier_name || r.supplier_name.includes(searchForm.supplier_name))
       .filter(r => r.un_pay_amount > 0.001)
 
-    rawRows.value = [...aggregated.filter(s => s.un_pay_amount !== 0), ...expensePayables, ...contractFeeRows]
+    rawRows.value = [...aggregated.filter(s => s.un_pay_amount > 0), ...expensePayables, ...contractFeeRows]
     procureReturnRows.value = returnRes.data?.rows ?? []
     allPayReceipts.value = rawPayList
     total.value = filteredRows.value.length
@@ -435,6 +466,9 @@ function viewDetail(row: any) {
 function goPay(row: any) {
   const unpaidOrders = (row.orders ?? []).filter((o: any) => Number(o.un_pay_amount) > 0)
   const orderIds = unpaidOrders.map((o: any) => o.order_id).filter(Boolean).join(',')
+  const orderAmounts = unpaidOrders.map((o: any) => Number(o.un_pay_amount).toFixed(2)).join(',')
+  const orderSns = unpaidOrders.map((o: any) => String(o.order_sn || '')).join(',')
+  const orderPayAmounts = unpaidOrders.map((o: any) => Number(o.base_pay_amount || 0).toFixed(2)).join(',')
   router.push({
     path: '/finance/pay-receipt/new',
     query: {
@@ -442,6 +476,9 @@ function goPay(row: any) {
       supplier_name: row.supplier_name,
       un_pay_amount: row.un_pay_amount,
       order_ids: orderIds || undefined,
+      order_amounts: orderAmounts || undefined,
+      order_sns: orderSns || undefined,
+      order_pay_amounts: orderPayAmounts || undefined,
     }
   })
 }
@@ -457,6 +494,8 @@ function goPaySingle(order: any) {
       un_pay_amount: order.un_pay_amount,
       order_id: order.order_id,
       order_no: order.order_no,
+      order_sn: order.order_sn || '',
+      order_pay_amount: Number(order.base_pay_amount || 0).toFixed(2),
     }
   })
 }
@@ -481,6 +520,8 @@ onMounted(async () => {
   await load()
   window.addEventListener('resize', _onResize)
 })
+// keep-alive 下返回此页时重新拉取数据（否则付款后回来数据不更新）
+onActivated(() => { load() })
 onUnmounted(() => window.removeEventListener('resize', _onResize))
 </script>
 

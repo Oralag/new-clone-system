@@ -25,6 +25,36 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           编辑图片
         </button>
+
+        <!-- 桌面端评价（在左侧主图下方，移动端隐藏） -->
+        <div class="bd-reviews-desktop" v-if="brandEdit.config.reviews?.length">
+          <div class="bd-reviews-header">
+            <span class="bd-reviews-title">用户评价</span>
+            <button class="bd-reviews-more-btn" @click="$router.push('/brand/reviews')">
+              全部评价
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+          <div class="bd-review-card" v-for="r in brandEdit.config.reviews" :key="r.id">
+            <div class="bd-review-top">
+              <div class="bd-review-avatar">
+                <img v-if="r.avatar" :src="r.avatar" :alt="r.userName" referrerpolicy="no-referrer" />
+                <span v-else>{{ r.userName?.charAt(0) }}</span>
+              </div>
+              <div class="bd-review-meta">
+                <span class="bd-review-name">{{ r.userName }}</span>
+                <span class="bd-review-date">{{ r.date }}</span>
+              </div>
+              <div class="bd-review-stars">
+                <svg v-for="i in 5" :key="i" width="12" height="12" viewBox="0 0 24 24"
+                  :fill="i <= r.rating ? '#f59e0b' : 'none'" stroke="#f59e0b" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </div>
+            </div>
+            <p class="bd-review-comment">{{ r.comment }}</p>
+          </div>
+        </div>
       </div>
 
       <!-- 信息区 -->
@@ -53,11 +83,39 @@
         </div>
 
         <div class="bd-price-block">
-          <span class="bd-price">¥{{ shopStore.isWholesale ? product.wholesalePrice : product.price }}</span>
-          <span v-if="shopStore.isWholesale" class="bd-moq-info">批发起订量：{{ product.minOrderQuantity }} 件</span>
+          <span class="bd-price">¥{{ displayPrice }}</span>
+        </div>
+
+        <!-- 规格选择：有 skuVariants 时显示文字+价格芯片，否则显示白底图缩略图 -->
+        <div class="bd-sku-section" v-if="skuVariants.length || skuImageList.length">
+          <div class="bd-field-label">规格</div>
+          <!-- 文字规格芯片（优先） -->
+          <div v-if="skuVariants.length" class="bd-sku-chips">
+            <div
+              v-for="(v, i) in skuVariants"
+              :key="i"
+              :class="['bd-sku-chip', { active: selectedSku === i }]"
+              @click="selectedSku = i; if (skuImageList[i]) activeImg = skuImageList[i]"
+            >
+              <span class="bd-chip-label">{{ v.label }}</span>
+              <span class="bd-chip-price">¥{{ v.price }}</span>
+            </div>
+          </div>
+          <!-- 纯图片规格（无 skuVariants 时） -->
+          <div v-else class="bd-sku-grid">
+            <div
+              v-for="(img, i) in skuImageList"
+              :key="i"
+              :class="['bd-sku-item', { active: selectedSku === i }]"
+              @click="selectedSku = i; activeImg = img"
+            >
+              <img :src="img" :alt="product.name" referrerpolicy="no-referrer" />
+            </div>
+          </div>
         </div>
 
         <div class="bd-qty-row">
+          <span class="bd-field-label">数量</span>
           <button class="bd-qty-btn" @click="qty = Math.max(shopStore.isWholesale ? product.minOrderQuantity : 1, qty - (shopStore.isWholesale ? product.minOrderQuantity : 1))">−</button>
           <span class="bd-qty-num">{{ qty }}</span>
           <button class="bd-qty-btn" @click="qty += shopStore.isWholesale ? product.minOrderQuantity : 1">+</button>
@@ -67,6 +125,36 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61H19.4a2 2 0 001.98-1.71l1.62-9.3H6"/></svg>
           加入购物车
         </button>
+
+        <!-- 移动端评价预览（桌面隐藏） -->
+        <div class="bd-reviews-mobile" v-if="brandEdit.config.reviews?.length">
+          <div class="bd-reviews-mobile-header">
+            <span class="bd-reviews-title">用户评价</span>
+            <button class="bd-reviews-more-btn" @click="$router.push('/brand/reviews')">
+              查看更多
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+          <div class="bd-review-card" v-for="r in brandEdit.config.reviews.slice(0, 3)" :key="r.id">
+            <div class="bd-review-top">
+              <div class="bd-review-avatar">
+                <img v-if="r.avatar" :src="r.avatar" :alt="r.userName" referrerpolicy="no-referrer" />
+                <span v-else>{{ r.userName?.charAt(0) }}</span>
+              </div>
+              <div class="bd-review-meta">
+                <span class="bd-review-name">{{ r.userName }}</span>
+                <span class="bd-review-date">{{ r.date }}</span>
+              </div>
+              <div class="bd-review-stars">
+                <svg v-for="i in 5" :key="i" width="12" height="12" viewBox="0 0 24 24"
+                  :fill="i <= r.rating ? '#f59e0b' : 'none'" stroke="#f59e0b" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </div>
+            </div>
+            <p class="bd-review-comment">{{ r.comment }}</p>
+          </div>
+        </div>
 
         <!-- 详情图：多张切片竖排拼成长图效果 -->
         <div class="bd-detail-img-wrap editable-block" style="position:relative"
@@ -90,8 +178,10 @@
             编辑详情图
           </button>
         </div>
+
       </div>
     </div>
+
 
     <!-- 编辑弹窗 -->
     <div v-if="editVisible" class="brand-edit-overlay" @click.self="editVisible = false">
@@ -186,6 +276,17 @@ const router = useRouter()
 const product = computed(() => shopStore.products.find(p => p.id === route.params.id))
 const activeImg = ref('')
 const qty = ref(1)
+const selectedSku = ref(0)
+
+// SKU 白底图列表
+const skuImageList = computed(() => (product.value as any)?.skuImages ?? [])
+// 规格变体列表
+const skuVariants = computed(() => (product.value as any)?.skuVariants ?? [])
+// 当前选中规格的价格（无规格时用商品零售价）
+const displayPrice = computed(() => {
+  const v = skuVariants.value[selectedSku.value]
+  return v ? v.price : (product.value?.price ?? 0)
+})
 
 // 详情图列表：优先用 detailImages 数组，兼容旧的单张 detailImage
 const detailImageList = computed(() => {
@@ -321,7 +422,7 @@ function addAndGo() {
 .bd-price-block { margin-bottom: 24px; }
 .bd-price { font-size: 40px; font-weight: 800; color: #0071e3; }
 .bd-moq-info { display: block; font-size: 12px; color: #d97706; font-weight: 600; margin-top: 6px; }
-.bd-qty-row { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+.bd-qty-row { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
 .bd-qty-btn { width: 40px; height: 40px; border-radius: 12px; background: #f5f5f7; border: none; cursor: pointer; font-size: 20px; font-weight: 700; transition: background 0.2s; }
 .bd-qty-btn:hover { background: #e8e8ed; }
 .bd-qty-num { font-size: 20px; font-weight: 800; min-width: 32px; text-align: center; }
@@ -388,8 +489,67 @@ function addAndGo() {
 .bed-save:disabled { opacity: 0.6; cursor: not-allowed; }
 .bed-save:not(:disabled):hover { background: #6d28d9; }
 
+/* 规格/数量标签 */
+.bd-field-label { font-size: 12px; font-weight: 700; color: rgba(29,29,31,0.45); letter-spacing: 0.04em; margin-bottom: 10px; display: block; }
+.bd-qty-row .bd-field-label { margin-bottom: 0; margin-right: 4px; flex-shrink: 0; }
+
+/* SKU 规格选择 */
+.bd-sku-section { margin-bottom: 20px; }
+.bd-sku-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+.bd-sku-item {
+  width: 72px; height: 72px; border-radius: 14px; overflow: hidden;
+  border: 2px solid transparent; cursor: pointer; background: #f5f5f7;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.bd-sku-item img { width: 100%; height: 100%; object-fit: contain; }
+.bd-sku-item:hover { border-color: rgba(0,113,227,0.4); }
+.bd-sku-item.active { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
+/* 文字规格芯片 */
+.bd-sku-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.bd-sku-chip {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 10px 18px; border-radius: 14px; border: 2px solid rgba(0,0,0,0.1);
+  cursor: pointer; background: #f5f5f7; gap: 3px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; min-width: 72px;
+}
+.bd-sku-chip:hover { border-color: rgba(0,113,227,0.4); background: #f0f6ff; }
+.bd-sku-chip.active { border-color: #0071e3; background: rgba(0,113,227,0.07); box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
+.bd-chip-label { font-size: 13px; font-weight: 700; color: #1d1d1f; }
+.bd-chip-price { font-size: 12px; font-weight: 600; color: #0071e3; }
+
+/* 移动端评价预览（默认隐藏，768px以下显示） */
+.bd-reviews-mobile { display: none; margin-bottom: 32px; }
+.bd-reviews-mobile-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+
+/* 桌面端左列评价（主图下方，移动端隐藏） */
+.bd-reviews-desktop { margin-top: 28px; }
+.bd-reviews-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.bd-reviews-title { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
+.bd-reviews-more-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; color: #0071e3;
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.bd-review-card { padding: 13px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+.bd-review-card:last-child { border-bottom: none; }
+.bd-review-top { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+.bd-review-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #0071e3);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; overflow: hidden;
+}
+.bd-review-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.bd-review-meta { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.bd-review-name { font-size: 12px; font-weight: 700; }
+.bd-review-date { font-size: 10px; color: rgba(29,29,31,0.4); }
+.bd-review-stars { display: flex; gap: 2px; }
+.bd-review-comment { font-size: 12px; color: rgba(29,29,31,0.6); line-height: 1.6; }
+
 @media (max-width: 768px) {
   .brand-detail { padding: 20px; }
   .bd-layout { grid-template-columns: 1fr; gap: 32px; }
+  .bd-reviews-mobile { display: block; }
+  .bd-reviews-desktop { display: none; }
 }
 </style>

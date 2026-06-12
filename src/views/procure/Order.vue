@@ -21,6 +21,7 @@
               <el-option label="待审核" :value="0" />
               <el-option label="已审核" :value="1" />
               <el-option label="已驳回" :value="2" />
+              <el-option label="未核对" value="unreconciled" />
             </el-select>
             <el-date-picker :key="datePickerKey" v-model="dateRange" type="daterange" range-separator="至"
               start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
@@ -416,7 +417,7 @@
                   <span>含税合计</span>
                   <el-input-number
                     v-if="!isReadonly"
-                    :model-value="getLineTotal(row)"
+                    v-model="(row as any)._total"
                     :min="0"
                     :precision="2"
                     size="small"
@@ -582,7 +583,7 @@
                 <template #default="{ row }">
                   <el-input-number
                     v-if="!isReadonly"
-                    :model-value="getLineTotal(row)"
+                    v-model="(row as any)._total"
                     :min="0"
                     :precision="2"
                     size="small"
@@ -1413,7 +1414,7 @@ async function handleBatchReverseAudit() {
 const route = useRoute()
 const highlightSn = ref('')
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const { toggle: toggleReconcile } = useReconcile('reconcile_procure_order', tableRef)
+const { toggle: toggleReconcile, ids: reconciledIds } = useReconcile('reconcile_procure_order', tableRef)
 
 // 合计数据
 const summaryData = reactive({
@@ -1461,8 +1462,10 @@ function hydrateOrderListSortDates(rows: any[]) {
 
 // 包装 API：加载完采购单后，批量查入库单并填充 inhouse_qty
 async function getProcureOrderListWithInhouse(params: any) {
-  const needClientFilter = !!(params.goods_name || params.start_date || params.end_date)
+  const isUnreconciled = params.status === 'unreconciled'
+  const needClientFilter = !!(params.goods_name || params.start_date || params.end_date) || isUnreconciled
   const fetchParams = needClientFilter ? { ...params, list_rows: 10000, page: 1 } : params
+  if (isUnreconciled) delete (fetchParams as any).status
   const res = await getProcureOrderList(fetchParams)
   const rows: any[] = res?.data?.rows ?? res?.data ?? []
   hydrateOrderListSortDates(rows)
@@ -1502,6 +1505,9 @@ async function getProcureOrderListWithInhouse(params: any) {
         if (e && date > e) return false
         return true
       })
+    }
+    if (isUnreconciled) {
+      filtered = filtered.filter((row: any) => !reconciledIds.value.has(Number(row.id)))
     }
     const page = Number(params.page) || 1
     const size = Number(params.list_rows) || 20
@@ -2011,9 +2017,12 @@ async function submitFeePay() {
   if (!feePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
   const needPay = feePayForm.bearer === 'half' ? feePayForm.amount / 2 : feePayForm.amount
   feePaySubmitting.value = true
+  const isSystemSupplier = feePayForm.contact_name
+    ? supplierOptions.value.some(s => s.name === feePayForm.contact_name)
+    : false
   try {
     await createPayReceipt({
-      contact_type: 'other',
+      contact_type: isSystemSupplier ? 'supplier' : 'other',
       contact_name: feePayForm.contact_name,
       order_sn: feePayForm.orderSn,
       order_id: feePayForm.orderId,
@@ -2049,11 +2058,14 @@ async function submitFeeManagePay() {
   feePayForm.amount = Number(fee.amount || 0)
   feePayForm.bearer = fee.bearer || 'buyer'
   feePaySubmitting.value = true
+  const isSystemSupplier = feePayForm.contact_name
+    ? supplierOptions.value.some(s => s.name === feePayForm.contact_name)
+    : false
   try {
     await saveFeeManageItems()
     const needPay = feePayForm.bearer === 'half' ? feePayForm.amount / 2 : feePayForm.amount
     await createPayReceipt({
-      contact_type: 'other',
+      contact_type: isSystemSupplier ? 'supplier' : 'other',
       contact_name: feePayForm.contact_name,
       order_sn: feePayForm.orderSn,
       order_id: feePayForm.orderId,
@@ -2139,21 +2151,28 @@ function onSpecChange(row: any, specVal: string) {
 
 // 商品多单位换算缓存：goods_id -> [{unit_name, ratio, cost_price?}]
 const goodsUnitMap = reactive<Record<number, { unit_name: string; ratio: number; cost_price?: number }[]>>({})
+
+function readUnitCostPrices(goodsId: number): Record<string, number> {
+  try { return (JSON.parse(localStorage.getItem('erp_unit_cost_prices') || '{}')[goodsId]) || {} } catch { return {} }
+}
+
 async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
   if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
   goodsUnitMap[goodsId] = []
   try {
     const res = await getUnitConvert(goodsId)
     const rows: any[] = res.data?.rows ?? []
+    const savedPrices = readUnitCostPrices(goodsId)
     if (rows.length) {
       goodsUnitMap[goodsId] = rows.map(r => ({
         unit_name: r.unit_name,
         ratio: Number(r.ratio),
-        cost_price: Number(r.cost_price || 0),
+        cost_price: savedPrices[r.unit_name] ?? 0,
       }))
     } else {
-      // 没有配置多单位，只有基础单位
-      goodsUnitMap[goodsId] = baseUnitName ? [{ unit_name: baseUnitName, ratio: 1 }] : []
+      goodsUnitMap[goodsId] = baseUnitName
+        ? [{ unit_name: baseUnitName, ratio: 1, cost_price: savedPrices[baseUnitName] ?? 0 }]
+        : []
     }
   } catch { /* ignore */ }
 }
@@ -2405,8 +2424,8 @@ function normalizeOrderItemMoney(item: any) {
   }
 
   item.tax_rate = taxRate
-  item.price_no_tax = Number(priceNoTax.toFixed(4))
-  item.price = Number(price.toFixed(4))
+  item.price_no_tax = Number(priceNoTax.toFixed(6))
+  item.price = Number(price.toFixed(6))
   item.num = toSafeNumber(item.num)
 }
 
@@ -2426,7 +2445,10 @@ const totalTax = computed(() =>
 )
 
 function calcTotal() {
-  fd.items.forEach((item: any) => normalizeOrderItemMoney(item))
+  fd.items.forEach((item: any) => {
+    normalizeOrderItemMoney(item)
+    item._total = getLineTotal(item)
+  })
   fd.total_amount = fd.items.reduce((s, r) => s + (r.num || 0) * (r.price || 0), 0)
   calcSettle()
 }
@@ -2443,7 +2465,7 @@ function calcSettle() {
 
 function calcItemTax(row: OrderItem) {
   const taxRate = row.tax_rate || 0
-  row.price = Number((row.price_no_tax * (1 + taxRate / 100)).toFixed(4))
+  row.price = Number((row.price_no_tax * (1 + taxRate / 100)).toFixed(6))
 }
 
 function onPriceNoTaxChange(row: OrderItem) {
@@ -2461,12 +2483,13 @@ function onTaxRateChange(row: OrderItem) {
 function onPriceChange(row: OrderItem) {
   const taxRate = row.tax_rate || 0
   if (taxRate > 0) {
-    row.price_no_tax = Number((row.price / (1 + taxRate / 100)).toFixed(4))
+    row.price_no_tax = Number((row.price / (1 + taxRate / 100)).toFixed(6))
   } else {
     row.price_no_tax = row.price
   }
   const unitRatio = Math.max(0.0001, Number((row as any).unit_ratio || 1))
   ;(row as any)._base_price_no_tax = Number((Number(row.price_no_tax || 0) / unitRatio).toFixed(6))
+  ;(row as any)._total = getLineTotal(row)
   calcTotal()
 }
 
@@ -2484,7 +2507,7 @@ function onLineTotalChange(row: OrderItem, value: any) {
     calcTotal()
     return
   }
-  row.price = Number((total / qty).toFixed(4))
+  row.price = Number((total / qty).toFixed(6))
   onPriceChange(row)
 }
 
@@ -2557,6 +2580,7 @@ async function openEdit(row: any, readonly = false) {
       spec: sanitizeSpec(specStr),
       cate_name: String(item?.cate_name || ''),
       unit_name: String(item?.unit_name || ''),
+      _current_unit_name: String(item?.unit_name || ''),
       batch_no: String(item?.batch_no || ''),
       num: toSafeNumber(item?.num),
       price_no_tax: toSafeNumber(item?.price_no_tax),
@@ -3189,8 +3213,9 @@ function onGoodsConfirm(goods: any[]) {
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
       spec: '', cate_name: g.cate_name || '', unit_name: isKaoNaiPiGoods(g) ? KAONAIPI_BASE_UNIT : (g.unit_name || ''),
       num: 1, price_no_tax: priceNoTax, tax_rate: 0, unit_ratio: 1, _base_price_no_tax: priceNoTax,
-      price: Number((priceNoTax * 1.13).toFixed(4)), remark: '',
-      supplier_id: null, supplier_name: '' })
+      price: priceNoTax, remark: '',
+      supplier_id: null, supplier_name: '',
+      _current_unit_name: isKaoNaiPiGoods(g) ? KAONAIPI_BASE_UNIT : (g.unit_name || '') })
     if (g.multi_spec) {
       const { options, skus } = parseSpecJson(String(g.spec || ''))
       goodsSpecMap[g.id] = options
@@ -3208,33 +3233,47 @@ function onGoodsConfirm(goods: any[]) {
 // 切换采购单位时，更新 unit_ratio 字段供入库换算使用
 function onUnitChange(row: any, unitName: string) {
   const units = goodsUnitMap[row.goods_id] ?? []
-  const prevRatio = Math.max(0.0001, Number(row.unit_ratio || 1))
+
+  // row.unit_name is already updated to unitName by v-model before @change fires,
+  // so use _current_unit_name to look up the OLD unit's real ratio from the map.
+  const oldUnitName = String((row as any)._current_unit_name || '')
+  const oldUnitEntry = oldUnitName ? units.find(u => u.unit_name === oldUnitName) : null
+  const prevRatio = oldUnitEntry
+    ? Math.max(0.0001, Number(oldUnitEntry.ratio || 1))
+    : Math.max(0.0001, Number(row.unit_ratio || 1))
+
   const found = units.find(u => u.unit_name === unitName)
   const nextRatio = found ? Number(found.ratio || 1) : 1
   row.unit_ratio = nextRatio
+  ;(row as any)._current_unit_name = unitName
 
+  // Keep _base_price_no_tax updated (base unit cost, used by inventory sync on audit)
+  const basePriceFromPrev = Number(row.price_no_tax || 0) / prevRatio
+  if (basePriceFromPrev > 0) {
+    row._base_price_no_tax = Number(basePriceFromPrev.toFixed(6))
+  }
+
+  // Unit-specific cost_price from convert table (currently always null in this ERP)
   let nextPriceNoTax = Number(found?.cost_price || 0)
+
+  // KaoNaiPi goods have hardcoded unit prices — keep special logic
   if (!(nextPriceNoTax > 0) && isKaoNaiPiGoods(row)) {
     nextPriceNoTax = unitName === KAONAIPI_AUX_UNIT
       ? Number((KAONAIPI_BASE_COST * KAONAIPI_AUX_RATIO).toFixed(4))
       : KAONAIPI_BASE_COST
   }
-  if (!(nextPriceNoTax > 0)) {
-    const basePriceNoTax = Number(row._base_price_no_tax || 0) > 0
-      ? Number(row._base_price_no_tax)
-      : Number(row.price_no_tax || 0) / prevRatio
-    if (basePriceNoTax > 0) {
-      row._base_price_no_tax = Number(basePriceNoTax.toFixed(6))
-      nextPriceNoTax = basePriceNoTax * nextRatio
-    }
-  } else {
-    row._base_price_no_tax = Number((nextPriceNoTax / Math.max(0.0001, nextRatio)).toFixed(6))
-  }
 
   if (nextPriceNoTax > 0) {
     row.price_no_tax = Number(nextPriceNoTax.toFixed(4))
+    row._base_price_no_tax = Number((nextPriceNoTax / Math.max(0.0001, nextRatio)).toFixed(6))
     calcItemTax(row)
+  } else {
+    // No price configured for this unit: clear so user enters the actual purchase price.
+    // Purchasing prices are supplier-negotiated and cannot be derived by multiplying ratio.
+    row.price_no_tax = 0
+    row.price = 0
   }
+
   calcTotal()
 }
 

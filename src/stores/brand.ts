@@ -141,20 +141,17 @@ function mergeWithDefault(list: BrandData[]): BrandData[] {
   if (!list.find(b => b.id === DEFAULT_ERP_BRAND.id)) {
     list.unshift(DEFAULT_ERP_BRAND)
   }
-  if (!list.find(b => b.id === DEFAULT_NOMADIC_BRAND.id)) {
-    list.push(DEFAULT_NOMADIC_BRAND)
-  }
   return list
 }
 
 function loadLocal(): { profiles: BrandData[]; activeId: string } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    const profiles = raw ? mergeWithDefault(JSON.parse(raw)) : [DEFAULT_ERP_BRAND, DEFAULT_NOMADIC_BRAND]
+    const profiles = raw ? mergeWithDefault(JSON.parse(raw)) : [DEFAULT_ERP_BRAND]
     const activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ERP_BRAND.id
     return { profiles, activeId }
   } catch {
-    return { profiles: [DEFAULT_ERP_BRAND, DEFAULT_NOMADIC_BRAND], activeId: DEFAULT_ERP_BRAND.id }
+    return { profiles: [DEFAULT_ERP_BRAND], activeId: DEFAULT_ERP_BRAND.id }
   }
 }
 
@@ -315,6 +312,14 @@ export const useBrandStore = defineStore('brand', () => {
     }
   }
 
+  // 退出登录时调用：清空 Pinia 内存状态，避免旧账号数据泄漏给下一个登录的用户
+  function reset() {
+    profiles.value = [DEFAULT_ERP_BRAND]
+    activeId.value = DEFAULT_ERP_BRAND.id
+    savedAt.value = ''
+    synced.value = false
+  }
+
   return {
     profiles,
     activeId,
@@ -329,5 +334,6 @@ export const useBrandStore = defineStore('brand', () => {
     deleteBrand,
     createBrand,
     resetBrand,
+    reset,
   }
 })

@@ -617,15 +617,20 @@ function inferBaseQtyFromSpec(spec?: string): number | null {
 // 将 goods_info item 的数量换算为基础单位数量
 function toBaseQty(goodsId: number, unitName: string, num: number, spec?: string, unitRatio?: any): number {
   const explicitRatio = Number(unitRatio || 0)
-  // 有明确 unit_ratio → 直接使用
-  if (explicitRatio > 0) return num * explicitRatio
-  // 没有 explicit unit_ratio 时，先读 spec 里的"X斤"（旧导入记录 spec 比查表更准确）
-  const specRatio = inferBaseQtyFromSpec(spec)
-  if (specRatio !== null) return num * specRatio
-  // 最后兜底：GoodsUnitConvert 查表或 spec 格式推断
-  const ratio = unitRatioLookup.value[`${goodsId}:${unitName}`]
-    ?? inferRatioFromSpec(unitName, spec)
-  return ratio ? num * ratio : num
+  // unit_ratio > 1：明确的大单位比例，直接用
+  if (explicitRatio > 1) return num * explicitRatio
+  // unit_ratio = 0：未存比例，先读 spec，再查换算表
+  if (explicitRatio === 0) {
+    const specRatio = inferBaseQtyFromSpec(spec)
+    if (specRatio !== null) return num * specRatio
+    const ratio = unitRatioLookup.value[`${goodsId}:${unitName}`] ?? inferRatioFromSpec(unitName, spec)
+    return ratio ? num * ratio : num
+  }
+  // unit_ratio = 1：可能是"基础单位"，也可能是保存时未写入正确比例的 bug
+  // 若换算表说该单位是大单位（ratio > 1），优先用换算表（修正写入 bug）
+  const lookupRatio = unitRatioLookup.value[`${goodsId}:${unitName}`]
+  if (lookupRatio && lookupRatio > 1) return num * lookupRatio
+  return num
 }
 
 // 将小单位数量换算为 "X大单位 Y小单位" 格式
@@ -635,28 +640,34 @@ function formatStockWithUnits(goodsId: number, qty: number, baseUnit: string): s
 
 // 主显示：总基础单位数量
 function formatStockMain(goodsId: number, qty: number, baseUnit: string): string {
-  // 如果是整数直接显示，否则最多2位小数
   const display = Number.isInteger(qty) ? qty.toString() : qty.toFixed(2).replace(/\.?0+$/, '')
-  return `${display} ${baseUnit}`
+  // 只有当 goods.unit_name 在换算表里是大单位（ratio > 1），库存才存在更小基础单位里，才切换标签
+  const units = unitConvertMap.value[goodsId]
+  const tableBase = units?.find(u => u.ratio === 1)
+  const baseUnitRatio = unitRatioLookup.value[`${goodsId}:${baseUnit}`]
+  const label = (tableBase && tableBase.unit_name !== baseUnit && baseUnitRatio && baseUnitRatio > 1)
+    ? tableBase.unit_name : baseUnit
+  return `${display} ${label}`
 }
 
-// 辅助显示：有大单位时显示"X大单位"，有小单位时显示"X小单位"
+// 辅助显示：有大单位时显示"X大单位Y基础单位"，有小单位时显示"X小单位"
 function formatStockSub(goodsId: number, qty: number, baseUnit: string): string {
   const units = unitConvertMap.value[goodsId]
   if (!units || units.length < 2) return ''
-  // 找非基础单位（ratio !== 1）
+  const tableBase = units.find(u => u.ratio === 1)
+  const baseLabel = tableBase ? tableBase.unit_name : baseUnit
   const otherUnits = units.filter(u => u.ratio !== 1)
   if (!otherUnits.length) return ''
-  // 优先显示大单位（ratio > 1）
   const largeUnit = otherUnits.find(u => u.ratio > 1)
   if (largeUnit) {
+    if (largeUnit.unit_name === baseLabel) return ''  // 大单位=基础单位，无意义
     const sign = qty < 0 ? -1 : 1
     const absQty = Math.abs(qty)
     const large = Math.floor(absQty / largeUnit.ratio)
     const small = absQty % largeUnit.ratio
     if (large === 0) return ''
     if (small === 0) return `${sign < 0 ? '-' : ''}${large}${largeUnit.unit_name}`
-    return `${sign < 0 ? '-' : ''}${large}${largeUnit.unit_name}${small.toFixed(0)}${baseUnit}`
+    return `${sign < 0 ? '-' : ''}${large}${largeUnit.unit_name}${small.toFixed(0)}${baseLabel}`
   }
   // 没有大单位，显示小单位换算（如1斤=2袋）
   const smallUnit = otherUnits.reduce((a, b) => a.ratio < b.ratio ? a : b)
@@ -931,8 +942,7 @@ async function loadStockMap(warehouseId = 0) {
       }
     }
 
-    // 当选择了具体仓库时，用 StockAll 的 qty 更新库存数量
-    // 字段名是 goods_id / goods_code（不是 goods_sn）
+    // 选了具体仓库时，用 StockAll 的 qty 做仓库级别覆盖
     if (warehouseId) {
       const idQtyMap: Record<number, number> = {}
       for (const r of filteredRows) {
@@ -1254,7 +1264,7 @@ async function loadActivityMaps() {
     }
     prodOutCountMap.value = pmMap
 
-    // 用流水汇总覆盖库存数量
+    // 用流水汇总覆盖库存数量（toBaseQty 已修正 unit_ratio=1 的写入 bug）
     stockQtyMap.value = fqMap
   } catch { /* ignore */ }
 }
@@ -1353,17 +1363,8 @@ async function openFlowDialog(goods: any) {
           // 每行单独一条记录，保留原始单位和数量
           for (const item of matchedItems) {
             const procureOrder = procureOrderById[Number(r.purchase_order_id || 0)]
-            let displayQty = Number(item.num || 0)
-            let displayUnit = item.unit_name || ''
-            // 老数据：unit_ratio 未配置（≤1），但当前换算表该单位是大单位 → qty 实际是基础单位，改用基础单位label显示
-            const storedRatio = Number(item.unit_ratio || 0)
-            if (storedRatio <= 1 && displayUnit) {
-              const currentRatio = unitRatioLookup.value[`${gid}:${displayUnit}`]
-              if (currentRatio && currentRatio > 1) {
-                const baseUnit = unitConvertMap.value[gid]?.find(u => u.ratio === 1)
-                if (baseUnit) displayUnit = baseUnit.unit_name
-              }
-            }
+            const displayQty = Number(item.num || 0)
+            const displayUnit = item.unit_name || ''
             rows.push({
               _type: 'in',
               _sn: r.in_no || r.inhouse_no || '',

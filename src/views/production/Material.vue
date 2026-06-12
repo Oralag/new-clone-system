@@ -4,7 +4,7 @@
       <el-card>
         <ScTable
           ref="tableRef"
-          :api-obj="getMaterialList"
+          :api-obj="reconcileFilteredApi"
           del-path="/production/material/batchDel"
           export-file-name="生产领料"
           :params="searchForm"
@@ -12,6 +12,9 @@
           <template #search>
             <el-input v-model="searchForm.order_sn" placeholder="领料单号" clearable style="width:160px" />
             <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:160px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+              <el-option label="未核对" value="unreconciled" />
+            </el-select>
             <el-button type="primary" @click="loadSearch">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
           </template>
@@ -214,6 +217,7 @@
           </el-table-column>
           <el-table-column v-if="!isView" label="" width="50" fixed="right">
             <template #default="{ $index }">
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" link size="small" :icon="Delete" @click="fd.items.splice($index, 1)" />
             </template>
           </el-table-column>
@@ -314,6 +318,7 @@ import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getMaterialList, createMaterial, deleteMaterial, auditMaterial, createReturnMaterial } from '@/api/production'
@@ -328,6 +333,8 @@ import { usePermissionStore } from '@/stores/permission'
 const route = useRoute()
 const permStore = usePermissionStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_production_material', tableRef)
+const reconcileFilteredApi = createFilteredApi(getMaterialList, 'reconcile_filter')
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -336,7 +343,7 @@ const toNumber = (value: any) => {
   return Number.isFinite(num) ? num : 0
 }
 
-const searchForm = reactive({ order_sn: '', out_no: '', goods_name: '' })
+const searchForm = reactive({ order_sn: '', out_no: '', goods_name: '', reconcile_filter: '' })
 function loadSearch() {
   searchForm.out_no = searchForm.order_sn
   tableRef.value?.loadData()

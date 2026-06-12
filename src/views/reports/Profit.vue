@@ -69,7 +69,7 @@
       <!-- 数据说明 -->
       <div class="pf-note">
         <el-icon><InfoFilled /></el-icon>
-        成本价优先取库存移动均价(avg_price)，无均价时取商品采购价(cost_price)；运费按合同承担比例扣除；费用来自费用管理模块；净利润 = 毛利润 − 运费 − 费用
+        BOM成品成本 = 各物料采购移动均价之和（无采购记录时用BOM配置价）；非BOM商品成本取采购移动均价，无记录时取商品采购价；运费按合同承担比例扣除；费用来自费用管理模块；净利润 = 毛利润 − 运费 − 费用
       </div>
 
       <!-- 切换Tab -->
@@ -247,6 +247,48 @@
                 <span>销售额 ¥{{ fmt(row.sale_amount) }} / 成本 ¥{{ fmt(row.cost_amount) }} / 毛利 {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}</span>
               </div>
               <el-table :data="row.orders" size="small" border style="width:100%">
+                <el-table-column type="expand" width="32">
+                  <template #default="{ row: o }">
+                    <div style="padding:8px 12px 12px 32px;background:#f8fafc">
+                      <el-table :data="o.items" size="small" border style="width:100%">
+                        <el-table-column prop="goods_name" label="商品名称" min-width="160" show-overflow-tooltip />
+                        <el-table-column prop="goods_sn" label="编码" width="110" show-overflow-tooltip />
+                        <el-table-column prop="unit_name" label="单位" width="60" align="center" />
+                        <el-table-column label="数量" width="80" align="right">
+                          <template #default="{ row: item }">{{ fmtQty(item.qty) }}</template>
+                        </el-table-column>
+                        <el-table-column label="销售额" width="100" align="right">
+                          <template #default="{ row: item }"><span class="blue">¥{{ fmt(item.sale_amount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="单位成本" width="100" align="right">
+                          <template #default="{ row: item }">
+                            <el-tooltip :content="item.cost_source" placement="top">
+                              <span class="purple" style="cursor:help">¥{{ fmt(item.unit_cost) }}</span>
+                            </el-tooltip>
+                          </template>
+                        </el-table-column>
+                        <el-table-column label="总成本" width="100" align="right">
+                          <template #default="{ row: item }"><span class="purple">¥{{ fmt(item.cost_amount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="毛利润" width="100" align="right">
+                          <template #default="{ row: item }">
+                            <span :style="{ color: item.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
+                              {{ item.profit >= 0 ? '+' : '' }}¥{{ fmt(item.profit) }}
+                            </span>
+                          </template>
+                        </el-table-column>
+                        <el-table-column label="毛利率" width="80" align="right">
+                          <template #default="{ row: item }">
+                            <el-tag :type="item.profit_rate >= 20 ? 'success' : item.profit_rate > 0 ? 'warning' : 'danger'" size="small">
+                              {{ item.profit_rate.toFixed(1) }}%
+                            </el-tag>
+                          </template>
+                        </el-table-column>
+                        <template #empty><div style="padding:12px 0;color:#aaa;text-align:center">无商品明细</div></template>
+                      </el-table>
+                    </div>
+                  </template>
+                </el-table-column>
                 <el-table-column label="单据类型" align="center" width="80">
                   <template #default="{ row: o }">
                     <el-tag size="small" :type="o.source === '零售' ? 'success' : o.source === '出库单' ? 'warning' : 'primary'">{{ o.source }}</el-tag>
@@ -356,7 +398,8 @@ const saleContracts = ref<any[]>([])
 const retailOrders = ref<any[]>([])
 const goodsList = ref<any[]>([])
 const procureInhouseList = ref<any[]>([])
-const bomList = ref<any[]>([])
+const bomList = ref<any[]>([])   // BOM 头（成品）
+const bomItemList = ref<{ finished_sn: string; goods_sn: string; num: number; price: number }[]>([])  // BOM 物料（展平）
 const expenseList = ref<any[]>([])
 const unitConvertList = ref<any[]>([])
 
@@ -417,10 +460,23 @@ function itemSn(item: any): string {
 }
 
 // 从 spec 字段解析大单位→基础单位的换算比
-// 格式 "400/箱/0.423/球" 或 "24/盒" → 首段为纯整数时即为换算比
-function parseSpecRatio(spec: string): number {
+// 格式1: "400/箱/0.423/球" 或 "24/盒" → 首段为纯整数
+// 格式2: "450g/25袋" → 某段为 "N+基础单位名"（如 "25袋" 且基础单位=袋）
+function parseSpecRatio(spec: string, baseUnit = ''): number {
   if (!spec) return 1
-  const first = (spec.split('/')[0] || '').trim()
+  const segments = spec.split('/')
+  // 优先：找 "N+baseUnit" 格式（如 "25袋" 且 baseUnit="袋"）
+  if (baseUnit) {
+    for (const seg of segments) {
+      const m = seg.trim().match(/^(\d+)(.+)$/)
+      if (m) {
+        const n = Number(m[1])
+        if (n > 1 && m[2].includes(baseUnit)) return n
+      }
+    }
+  }
+  // 兜底：首段纯整数（原有逻辑）
+  const first = (segments[0] || '').trim()
   const n = Number(first)
   return Number.isInteger(n) && n > 1 ? n : 1
 }
@@ -446,12 +502,49 @@ const unitConvertMap = computed(() => {
 })
 
 // goods_id -> 移动加权平均价（采购入库 + BOM物料成本），兜底商品 cost_price
+// 统一存基础单位（ratio=1）的成本，避免"斤"成本被当成"块儿"成本乘以数量
 const goodsCostMap = computed(() => {
   const m: Record<number, number> = {}
   for (const g of goodsList.value) {
-    m[g.id] = toNum(g.cost_price, g.purchase_price, g.avg_price, g.in_price)
+    const rawCost = toNum(g.cost_price, g.purchase_price, g.avg_price, g.in_price)
+    // 若 goods.unit_name 在换算表中 ratio>1，说明它是大单位，需折算为基础单位
+    const goodsUnitRatio = (g.unit_name && unitConvertMap.value[g.id])
+      ? (unitConvertMap.value[g.id][g.unit_name] ?? 1)
+      : 1
+    m[g.id] = goodsUnitRatio > 1 ? rawCost / goodsUnitRatio : rawCost
   }
   // 采购入库移动均价（含多单位换算）
+  // 预扫描：收集 unit_ratio 明确设置(>1)的记录，计算每个(sn,单位)的显式均价
+  // 目的：给 unit_ratio=null 的老记录提供参考价，过滤单位录错的脏数据
+  const snUnitExplicitAvg: Record<string, Record<string, number>> = {}
+  for (const ih of procureInhouseList.value) {
+    if (Number(ih.status) !== 1) continue
+    try {
+      const snUnitCost: Record<string, Record<string, number>> = {}
+      const snUnitQty: Record<string, Record<string, number>> = {}
+      for (const item of parseItems(ih.goods_info)) {
+        const sn = itemSn(item)
+        if (!sn) continue
+        const explicitRatio = item.unit_ratio != null ? Number(item.unit_ratio) : null
+        if (!explicitRatio || explicitRatio <= 1) continue
+        const unitName = String(item.unit_name || '')
+        const qty = itemQty(item)
+        const price = toNum(item.price, item.price_no_tax, item.cost_price, item.in_price, item.avg_price)
+        if (!unitName || qty <= 0 || price <= 0) continue
+        if (!snUnitCost[sn]) { snUnitCost[sn] = {}; snUnitQty[sn] = {} }
+        snUnitCost[sn][unitName] = (snUnitCost[sn][unitName] || 0) + qty * price
+        snUnitQty[sn][unitName] = (snUnitQty[sn][unitName] || 0) + qty
+      }
+      for (const [sn, units] of Object.entries(snUnitCost)) {
+        if (!snUnitExplicitAvg[sn]) snUnitExplicitAvg[sn] = {}
+        for (const [u, cost] of Object.entries(units)) {
+          const q = snUnitQty[sn][u]
+          if (q > 0) snUnitExplicitAvg[sn][u] = cost / q
+        }
+      }
+    } catch {}
+  }
+
   const snTotalCost: Record<string, number> = {}
   const snTotalQty: Record<string, number> = {}
   for (const ih of procureInhouseList.value) {
@@ -463,54 +556,61 @@ const goodsCostMap = computed(() => {
         const qty = itemQty(item)
         const price = toNum(item.price, item.price_no_tax, item.cost_price, item.in_price, item.avg_price)
         if (qty > 0 && price > 0) {
-          // 多单位换算：1大单位 = ratio 个基础单位
-          // 优先用 GoodsUnitConvert 表，其次 item.unit_ratio，最后从 spec 解析
           const goodsId = Number(item.goods_id || goodsBySnMap.value[sn]?.id || 0)
           const unitName = String(item.unit_name || '')
+          const baseUnit = goodsBySnMap.value[sn]?.unit_name || ''
           const convertRatio = goodsId && unitName ? (unitConvertMap.value[goodsId]?.[unitName] ?? 0) : 0
-          const ratio = Math.max(1, convertRatio > 1
-            ? convertRatio
-            : Number(item.unit_ratio || 1) > 1
-              ? Number(item.unit_ratio)
-              : parseSpecRatio(item.spec || goodsBySnMap.value[sn]?.spec || ''))
+          const explicitRatio = item.unit_ratio != null ? Number(item.unit_ratio) : null
+          let ratio: number
+          if (explicitRatio != null && explicitRatio > 1) {
+            // 明确设置 >1：直接使用
+            ratio = explicitRatio
+          } else if (convertRatio > 1) {
+            // explicit=null 或 explicit≤1（录入错误/老数据）：用显式均价验证
+            // 若价格远低于同单位显式均价 × 0.25，说明是基础单位价格录错了单位 → 跳过
+            const explicitAvg = snUnitExplicitAvg[sn]?.[unitName]
+            if (explicitAvg != null && price < explicitAvg * 0.25) {
+              ratio = 1  // 价格明显是基础单位价，单位名录错了
+            } else {
+              ratio = convertRatio  // 无参考或价格合理：信任 GoodsUnitConvert
+            }
+          } else {
+            ratio = Math.max(1, parseSpecRatio(item.spec || goodsBySnMap.value[sn]?.spec || '', baseUnit))
+          }
+          if (unitName && baseUnit && unitName !== baseUnit && ratio === 1) continue
           snTotalCost[sn] = (snTotalCost[sn] || 0) + qty * price
-          snTotalQty[sn] = (snTotalQty[sn] || 0) + qty * ratio  // 换算为基础单位数量
+          snTotalQty[sn] = (snTotalQty[sn] || 0) + qty * ratio
         }
       }
     } catch {}
   }
-  // BOM产品：成品均价 = 各物料用量 × 物料采购均价 之和
+  // 物料移动均价（用于 BOM 成本计算优先于 BOM 配置价）
   const snAvgPrice: Record<string, number> = {}
   for (const sn in snTotalQty) {
     if (snTotalQty[sn] > 0) snAvgPrice[sn] = snTotalCost[sn] / snTotalQty[sn]
   }
-  const bomMap: Record<number, { material_sn: string; num: number }[]> = {}
-  for (const b of bomList.value) {
-    const gid = Number(b.goods_id || 0)
-    if (!gid) continue
-    if (!bomMap[gid]) bomMap[gid] = []
-    bomMap[gid].push({
-      material_sn: toText(b.material_sn, b.material_goods_sn, b.goods_sn, b.sn),
-      num: itemQty(b),
-    })
-  }
-  for (const gid in bomMap) {
-    const g = goodsList.value.find(x => x.id === Number(gid))
-    const sn = g?.goods_sn
-    if (!sn) continue
-    let bomCost = 0
-    for (const mat of bomMap[Number(gid)]) {
-      bomCost += mat.num * (snAvgPrice[mat.material_sn] || 0)
-    }
-    if (bomCost > 0) {
-      snTotalCost[sn] = bomCost
-      snTotalQty[sn] = 1
-    }
-  }
+  // 非 BOM 商品：用采购均价覆盖 goods.cost_price
   for (const g of goodsList.value) {
     const sn = g.goods_sn
     if (sn && snTotalQty[sn] > 0) {
       m[g.id] = snTotalCost[sn] / snTotalQty[sn]
+    }
+  }
+  // BOM 成品：成本 = sum(物料用量 × 采购移动均价，无采购记录时兜底用BOM配置价)
+  // 单位换算已在 snAvgPrice 计算时折算为基础单位，与 BOM 用量单位一致
+  const bomItemsByFinished: Record<string, typeof bomItemList.value> = {}
+  for (const item of bomItemList.value) {
+    if (!item.finished_sn) continue
+    ;(bomItemsByFinished[item.finished_sn] ??= []).push(item)
+  }
+  for (const [fsn, items] of Object.entries(bomItemsByFinished)) {
+    const cost = items.reduce((s, mat) => {
+      const price = snAvgPrice[mat.goods_sn] || mat.price || 0
+      return s + mat.num * price
+    }, 0)
+    if (cost > 0) {
+      const g = goodsList.value.find(x => x.goods_sn === fsn)
+      if (g) m[g.id] = cost
     }
   }
   return m
@@ -518,16 +618,30 @@ const goodsCostMap = computed(() => {
 
 // goods_id set that has BOM defined (for labeling only)
 const hasBomSet = computed(() => {
+  const snSet = new Set(bomList.value.map((b: any) => b.goods_sn).filter(Boolean))
   const s = new Set<number>()
-  for (const b of bomList.value) {
-    if (b.goods_id) s.add(b.goods_id)
+  for (const g of goodsList.value) {
+    if (g.goods_sn && snSet.has(g.goods_sn)) s.add(Number(g.id))
   }
   return s
 })
 
 // Cost: 优先采购入库移动均价，兜底商品 cost_price
-function getUnitCost(goodsId: number): { unitCost: number; hasBom: boolean; costSource: string } {
-  const c = goodsCostMap.value[goodsId] || 0
+// goodsCostMap 存的是基础单位（ratio=1）的成本；itemUnit 是订单里实际用的单位
+// unitRatioHint: 订单行的 unit_ratio（null=老数据未设置；>1=明确大单位）
+// 只有 hint>1 时才放大；hint=null 且单位是大单位时保守不放大（老数据单位标签可能录错）
+function getUnitCost(goodsId: number, itemUnit = '', unitRatioHint: number | null = null): { unitCost: number; hasBom: boolean; costSource: string } {
+  const baseCost = goodsCostMap.value[goodsId] || 0
+  const convertRatio = (itemUnit && goodsId && unitConvertMap.value[goodsId])
+    ? (unitConvertMap.value[goodsId][itemUnit] ?? 1)
+    : 1
+  // 大单位放大规则：仅当订单行明确设置 unit_ratio>1 时才放大成本
+  // hint=null + 大单位 → 可能是老数据单位录错，保守使用 ratio=1
+  const itemUnitRatio = (unitRatioHint != null && unitRatioHint > 1)
+    ? unitRatioHint
+    : (convertRatio > 1 && unitRatioHint == null) ? 1
+    : convertRatio
+  const c = baseCost * itemUnitRatio
   const hasBom = hasBomSet.value.has(goodsId)
   const g = goodsList.value.find(x => x.id === goodsId)
   const hasAvg = g?.goods_sn && procureInhouseList.value.length > 0
@@ -555,7 +669,9 @@ function resolveGoodsId(item: any): number {
 
 function getItemUnitCost(item: any): ReturnType<typeof getUnitCost> {
   const goodsId = resolveGoodsId(item)
-  const byId = getUnitCost(goodsId)
+  const itemUnit = toText(item?.unit_name, item?.unit)
+  const unitRatioHint = item?.unit_ratio != null ? Number(item.unit_ratio) : null
+  const byId = getUnitCost(goodsId, itemUnit, unitRatioHint)
   // BOM 优先
   if (byId.hasBom && byId.unitCost > 0) return byId
   // 采购均价优先（已含多单位换算，比合同里存的旧 cost_price 更准确）
@@ -584,7 +700,7 @@ const rows = computed(() => {
       for (const g of items) {
         const goodsId = resolveGoodsId(g)
         const goodsName = goodsList.value.find(x => x.id === goodsId)?.goods_name || itemName(g) || '-'
-        const key = `${goodsId || itemSn(g) || goodsName}_${source}`
+        const key = `${goodsId || itemSn(g) || goodsName}`
         const { unitCost, hasBom, costSource } = getItemUnitCost(g)
         if (!map[key]) {
           map[key] = {
@@ -592,6 +708,8 @@ const rows = computed(() => {
             num: 0, sale_amount: 0,
             unit_cost: unitCost, has_bom: hasBom, cost_source: costSource, source,
           }
+        } else if (!map[key].source.includes(source)) {
+          map[key].source += '+' + source
         }
         const qty = itemQty(g)
         const lineAmount = itemLineAmount(g)
@@ -612,13 +730,17 @@ const rows = computed(() => {
       const lineSum = contractItems.reduce((s, g) => s + toNum(g.line_amount), 0)
       if (lineSum > 0) actualAmount = lineSum
     }
+    if (!actualAmount) {
+      const qtyPriceSum = contractItems.reduce((s, g) => s + itemQty(g) * itemPrice(g), 0)
+      if (qtyPriceSum > 0) actualAmount = qtyPriceSum
+    }
     if (!actualAmount) continue
     let rawTotal = 0
     for (const g of contractItems) rawTotal += itemQty(g) * itemPrice(g)
     const ratio = rawTotal > 0 ? actualAmount / rawTotal : 1
     add(c.goods_info, '合同', ratio, actualAmount)
   }
-  for (const r of retailOrders.value) add(r.goods_info, '零售', 1, Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0))
+  for (const r of retailOrders.value) add(r.goods_info, '零售', 1, Number(r.total_amount || 0) - Number(r.discount_amount || 0))
 
   return Object.values(map)
     .map(r => ({
@@ -652,7 +774,7 @@ function buildOrderItems(goodsInfo: any, saleAmount: number) {
       goods_id: goodsId,
       goods_name: goods?.goods_name || itemName(g) || '-',
       goods_sn: goods?.goods_sn || itemSn(g) || '',
-      unit_name: toText(goods?.unit_name, g?.unit_name, g?.unit),
+      unit_name: toText(g?.unit_name, g?.unit, goods?.unit_name),
       qty,
       sale_amount: lineSale,
       unit_cost: cost.unitCost,
@@ -680,6 +802,10 @@ const orderRows = computed(() => {
       const lineSum = parseItems(c.goods_info).reduce((s, g) => s + toNum(g.line_amount), 0)
       if (lineSum > 0) sale_amount = lineSum
     }
+    if (!sale_amount) {
+      const qtyPriceSum = parseItems(c.goods_info).reduce((s, g) => s + itemQty(g) * itemPrice(g), 0)
+      if (qtyPriceSum > 0) sale_amount = qtyPriceSum
+    }
     if (!sale_amount) { skipped++; continue }
     const items = buildOrderItems(c.goods_info, sale_amount)
     const cost_amount = items.reduce((s, item) => s + item.cost_amount, 0)
@@ -700,16 +826,8 @@ const orderRows = computed(() => {
   skippedContractCount.value = skipped
 
   for (const r of retailOrders.value) {
-    let sale_amount = 0
-    try {
-      for (const g of parseItems(r.goods_info)) {
-        const qty = itemQty(g)
-        sale_amount += qty * itemPrice(g)
-      }
-    } catch {}
-    if (sale_amount <= 0) {
-      sale_amount = Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
-    }
+    // 零售单用折后售价（total - discount），避免欠款未付时把实收当销售额
+    let sale_amount = Number(r.total_amount || 0) - Number(r.discount_amount || 0)
     const items = buildOrderItems(r.goods_info, sale_amount)
     const cost_amount = items.reduce((s, item) => s + item.cost_amount, 0)
     const profit = sale_amount - cost_amount
@@ -787,28 +905,63 @@ function fmtQty(v: number | string): string {
 
 async function loadData() {
   loading.value = true
-  const params: any = { list_rows: 500 }
+  const params: any = { list_rows: 2000 }
   if (dateRange.value) {
     params.start_date = dateRange.value[0]
     params.end_date = dateRange.value[1]
   }
   try {
-    const [c, r, g, ih, b, e, uc] = await Promise.allSettled([
+    const [c, r, g, ih, b, e] = await Promise.allSettled([
       getContractList(params),
       getRetailOrderList(params),
       getGoodsList({ list_rows: 3000 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
       getExpenseList(params),
-      http.get('/goods/GoodsUnitConvert/index', { params: { list_rows: 2000 } }),
     ])
     saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []).filter(isEffectiveSaleContract) : []
     retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []).filter((r: any) => Number(r.status) === 1) : []
     goodsList.value          = g.status === 'fulfilled' ? (g.value?.data?.rows  ?? []) : []
     procureInhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []
-    bomList.value            = b.status === 'fulfilled' ? (b.value?.data?.rows  ?? []) : []
+    const bomHeaders         = b.status === 'fulfilled' ? (b.value?.data?.list  ?? []) : []
+    bomList.value            = bomHeaders
     expenseList.value        = e.status === 'fulfilled' ? (e.value?.data?.rows  ?? []) : []
-    unitConvertList.value    = uc.status === 'fulfilled' ? (uc.value?.data?.rows ?? []) : []
+
+    // GoodsUnitConvert API 不支持全量查询（不带 goods_id 返回空），必须按商品逐个查
+    // BOM detail 同理，合并成一批并行请求
+    const multiUnitGoods = goodsList.value.filter((g: any) => g.multi_unit)
+    const [ucResults, detailResults] = await Promise.all([
+      Promise.allSettled(multiUnitGoods.map((g: any) =>
+        http.get('/goods/GoodsUnitConvert/index', { params: { goods_id: g.id, list_rows: 50 } })
+      )),
+      Promise.allSettled(bomHeaders.map((bom: any) =>
+        http.get('/goods/BomGoods/detail', { params: { id: bom.id } })
+      )),
+    ])
+    const allUcRows: any[] = []
+    ucResults.forEach(res => {
+      if (res.status === 'fulfilled') allUcRows.push(...(res.value?.data?.rows ?? []))
+    })
+    unitConvertList.value = allUcRows
+
+    if (bomHeaders.length > 0) {
+      const flatItems: typeof bomItemList.value = []
+      detailResults.forEach((res, i) => {
+        if (res.status !== 'fulfilled') return
+        const header = bomHeaders[i]
+        for (const mat of (res.value?.data?.items ?? [])) {
+          flatItems.push({
+            finished_sn: header.goods_sn,
+            goods_sn: mat.goods_sn || '',
+            num: Number(mat.num || 0),
+            price: Number(mat.price || 0),
+          })
+        }
+      })
+      bomItemList.value = flatItems
+    } else {
+      bomItemList.value = []
+    }
   } finally {
     loading.value = false
   }

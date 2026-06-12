@@ -184,6 +184,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { Plus, Delete, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { createPayReceipt, getFundList, createFund } from '@/api/finance'
+import http from '@/api/http'
 import { getSupplierList, createSupplier } from '@/api/procure'
 import { adjustFundBalance } from '@/utils/fund'
 
@@ -195,11 +196,20 @@ function fmt(v: any) { return Number(v || 0).toFixed(2) }
 // 从路由参数读采购单信息（从应付款页面跳转时携带）
 const routeOrderId = Number(route.query.order_id || 0)
 const routeOrderNo = String(route.query.order_no || '')
-// 多张欠款单时传 order_ids（逗号分隔）
+// 多张欠款单时传 order_ids + order_amounts + order_sns + order_pay_amounts（逗号分隔）
 const routeOrderIds = String(route.query.order_ids || '')
 const parsedOrderIds = routeOrderIds
   ? routeOrderIds.split(',').map(Number).filter(Boolean)
   : routeOrderId ? [routeOrderId] : []
+const routeOrderAmounts = String(route.query.order_amounts || '')
+const parsedOrderAmounts = routeOrderAmounts ? routeOrderAmounts.split(',').map(Number) : []
+const routeOrderSns = String(route.query.order_sns || '')
+const parsedOrderSns = routeOrderSns ? routeOrderSns.split(',') : []
+const routeOrderPayAmounts = String(route.query.order_pay_amounts || '')
+const parsedOrderPayAmounts = routeOrderPayAmounts ? routeOrderPayAmounts.split(',').map(Number) : []
+// 单笔付款专用
+const routeOrderSn = String(route.query.order_sn || '')
+const routeOrderPayAmount = Number(route.query.order_pay_amount || 0)
 const defaultRemark = parsedOrderIds.length > 0
   ? parsedOrderIds.map(id => `采购单付款 #${id}`).join(' ')
   : ''
@@ -273,6 +283,73 @@ async function handleSave() {
 
   saving.value = true
   try {
+    // 多张采购单路径（从应付款供应商行点"付款"）：按单拆分创建付款记录并更新 pay_amount
+    if (parsedOrderIds.length > 1 && parsedOrderAmounts.length === parsedOrderIds.length) {
+      const fundQueue = validPayLines.value
+        .filter(l => Number(l.amount || 0) > 0)
+        .map(l => ({ fund_id: l.fund_id, fund_name: l.fund_name, remaining: Number(l.amount || 0) }))
+
+      // 记录每张单实际分配金额，用于后续更新 pay_amount
+      const allocations: { orderId: number; orderSn: string; oldPay: number; allocated: number }[] = []
+      let totalCreated = 0
+
+      for (let i = 0; i < parsedOrderIds.length; i++) {
+        const orderId = parsedOrderIds[i]
+        const orderSn = parsedOrderSns[i] || ''
+        const oldPay = parsedOrderPayAmounts[i] || 0
+        let orderNeed = parsedOrderAmounts[i] || 0
+        if (orderNeed <= 0) continue
+        let allocated = 0
+
+        while (orderNeed > 0.001 && fundQueue.length > 0) {
+          const fund = fundQueue[0]
+          const take = Math.min(orderNeed, fund.remaining)
+          if (take <= 0.001) { fundQueue.shift(); continue }
+
+          await createPayReceipt({
+            order_sn: orderSn || undefined,
+            pay_date: fd.pay_date,
+            supplier_id: fd.supplier_id,
+            supplier_name: fd.supplier_name,
+            contact_type: 'supplier',
+            contact_name: fd.supplier_name,
+            contact_id: fd.supplier_id,
+            amount: take,
+            fund_id: fund.fund_id ?? 0,
+            fund_name: fund.fund_name || '',
+            pay_type: 'bank',
+            verify_type: fd.verify_type,
+            remark: `采购单付款 #${orderId}`,
+          })
+
+          fund.remaining -= take
+          orderNeed -= take
+          allocated += take
+          totalCreated++
+          if (fund.remaining <= 0.001) fundQueue.shift()
+        }
+
+        if (allocated > 0) allocations.push({ orderId, orderSn, oldPay, allocated })
+      }
+
+      // 统一扣减资金账户余额
+      for (const line of validPayLines.value) {
+        if (Number(line.amount || 0) > 0) {
+          try { await adjustFundBalance({ fundId: line.fund_id, fundName: line.fund_name, delta: -Number(line.amount || 0) }) } catch { /* ignore */ }
+        }
+      }
+
+      // 更新每张采购单的 pay_amount
+      for (const { orderId, oldPay, allocated } of allocations) {
+        try { await http.post('/stock/PurchaseOrder/edit', { id: orderId, pay_amount: oldPay + allocated }) } catch { /* ignore */ }
+      }
+
+      ElMessage.success(`已按 ${parsedOrderIds.length} 张采购单分别记账，共 ${totalCreated} 笔付款`)
+      router.back()
+      return
+    }
+
+    // 单张采购单或无关联单据的原有逻辑
     const totalLines = validPayLines.value.length
     for (const [idx, line] of validPayLines.value.entries()) {
       const payload: Record<string, any> = {
@@ -301,6 +378,10 @@ async function handleSave() {
       try {
         await adjustFundBalance({ fundId: line.fund_id, fundName: line.fund_name, delta: -Number(line.amount || 0) })
       } catch { /* 扣减失败不阻断 */ }
+    }
+    // 更新采购单 pay_amount
+    if (routeOrderId && routeOrderPayAmount >= 0) {
+      try { await http.post('/stock/PurchaseOrder/edit', { id: routeOrderId, pay_amount: routeOrderPayAmount + linesTotal.value }) } catch { /* ignore */ }
     }
     ElMessage.success(totalLines > 1 ? `已按付款账户拆分保存 ${totalLines} 笔付款单` : '付款单保存成功')
     router.back()

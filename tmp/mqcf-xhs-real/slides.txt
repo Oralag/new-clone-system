@@ -1,0 +1,13 @@
+file '/Users/oralagborjigin/new-clone-system/tmp/mqcf-xhs-real/01-cover.png'
+duration 2.8
+file '/Users/oralagborjigin/new-clone-system/tmp/mqcf-xhs-real/02-brand.png'
+duration 2.8
+file '/Users/oralagborjigin/new-clone-system/tmp/mqcf-xhs-real/03-milk-bar.png'
+duration 2.8
+file '/Users/oralagborjigin/new-clone-system/tmp/mqcf-xhs-real/04-rice.png'
+duration 2.8
+file '/Users/oralagborjigin/new-clone-system/tmp/mqcf-xhs-real/05-scene.png'
+duration 2.8
+file '/Users/oralagborjigin/new-clone-system/tmp/mqcf-xhs-real/06-ending.png'
+duration 3.2
+file '/Users/oralagborjigin/new-clone-system/tmp/mqcf-xhs-real/06-ending.png'

@@ -15,7 +15,7 @@
         </div>
       </div>
 
-      <el-table :data="tableData" v-loading="loading" border stripe size="small" style="width:100%;margin-top:8px">
+      <el-table :data="tableData" v-loading="loading" border stripe size="small" style="width:100%;margin-top:8px" :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="order_sn" label="单号" width="160" />
         <el-table-column label="类型" width="110" align="center">
@@ -53,6 +53,7 @@
         <el-table-column prop="remark" label="备注" min-width="100" show-overflow-tooltip />
         <el-table-column label="操作" width="100" align="center" fixed="right">
           <template #default="{ row }">
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
             <el-tooltip v-if="getUsedAmount(row) > 0" content="已核销，无法删除" placement="top">
               <el-button link type="info" size="small" disabled>删除</el-button>
             </el-tooltip>
@@ -125,6 +126,16 @@ const props = defineProps<{ fixedType?: 'customer' | 'supplier' }>()
 const loading = ref(false)
 const saving = ref(false)
 const tableData = ref<any[]>([])
+
+const prepayReconcileIds = ref<Set<number>>(new Set(JSON.parse(localStorage.getItem('reconcile_prepay') || '[]')))
+function toggleReconcile(row: any) {
+  const newVal = !row._reconciled
+  if (newVal) prepayReconcileIds.value.add(row.id)
+  else prepayReconcileIds.value.delete(row.id)
+  localStorage.setItem('reconcile_prepay', JSON.stringify([...prepayReconcileIds.value]))
+  const idx = tableData.value.findIndex((r: any) => r.id === row.id)
+  if (idx !== -1) tableData.value.splice(idx, 1, { ...tableData.value[idx], _reconciled: newVal })
+}
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -193,7 +204,7 @@ async function loadData() {
       http.get('/finance/Prepay/index', { params }),
       http.get('/finance/Prepay/index', { params: allParams }),
     ])
-    tableData.value = pageRes.data?.rows || []
+    tableData.value = (pageRes.data?.rows || []).map((r: any) => ({ ...r, _reconciled: prepayReconcileIds.value.has(Number(r.id)) }))
     total.value = pageRes.data?.total || 0
     allMatchedRows.value = allRes.data?.rows || []
     rebuildRowStats()

@@ -336,6 +336,7 @@ async function saveEdit() {
   saving.value = true
   try {
     await shopStore.saveBrandFields(editingProduct.value.erpId, {
+      show: true,
       description: editForm.description,
       image: editForm.image,
       headerImages: editForm.headerImages.filter(s => s),

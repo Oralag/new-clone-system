@@ -425,34 +425,46 @@ const isLoading = ref(false)
 const pendingImages = ref<ImageItem[]>([])
 let pollTimer: number | undefined
 
+function isCleanContent(content: unknown): boolean {
+  const c = String(content ?? '').trim()
+  return !!c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c) && c.toLowerCase() !== 'null'
+}
+
+function getEventText(ev: any): string {
+  const text = ev?.text ?? ev?.content
+  return isCleanContent(text) ? String(text) : ''
+}
+
+function sanitizeMessages(raw: any[]): ChatMessage[] {
+  return (Array.isArray(raw) ? raw : [])
+    .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && isCleanContent(m.content))
+    .map((m: any) => ({
+      ...m,
+      content: String(m.content),
+      toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : undefined,
+    }))
+}
+
 function loadHistoryFromStorage() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      // 过滤掉 content 为 undefined/null/纯"undefined"字符串的坏消息
-      messages.value = parsed.filter((m: any) => {
-        if (!m.content || !m.role) return false
-        const c = String(m.content).trim()
-        // 过滤掉纯由 "undefined" 重复组成的坏消息（各种变体）
-        if (!c || /^(\s*undefined\s*)+$/i.test(c)) return false
-        // 过滤掉以 "undefined" 开头的消息（未来防污染）
-        if (/^undefined/i.test(c)) return false
-        return true
-      })
+      messages.value = sanitizeMessages(parsed)
     }
   } catch { /* ignore */ }
 }
 
 function persistHistory() {
   try {
-    const trimmed = messages.value.slice(-MAX_HISTORY)
+    const trimmed = sanitizeMessages(messages.value).slice(-MAX_HISTORY)
     localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed))
   } catch { /* ignore */ }
 }
 
 function renderMarkdown(content: string): string {
-  try { return marked(content) as string } catch { return content }
+  const clean = isCleanContent(content) ? String(content) : ''
+  try { return marked(clean) as string } catch { return clean }
 }
 
 function scrollToBottom() {
@@ -475,7 +487,8 @@ async function pollMessages() {
     const data = await res.json() as { messages?: Array<{ content: string; time: string }> }
     if (data.messages?.length) {
       for (const m of data.messages) {
-        messages.value.push({ id: Date.now() + Math.random() + '', role: 'assistant', content: m.content, time: m.time })
+        if (!isCleanContent(m.content)) continue
+        messages.value.push({ id: Date.now() + Math.random() + '', role: 'assistant', content: String(m.content), time: m.time })
       }
       scrollToBottom()
       persistHistory()
@@ -515,12 +528,7 @@ async function handleSend() {
 
   try {
     const cleanHistory = messages.value
-      .filter(m => {
-        if (!m.content || !m.role) return false
-        const c = String(m.content).trim()
-        if (!c || /^(\s*undefined\s*)+$/i.test(c) || /^undefined/i.test(c)) return false
-        return true
-      })
+      .filter(m => (m.role === 'user' || m.role === 'assistant') && isCleanContent(m.content))
       .slice(-20)
       .map(m => ({ role: m.role, content: m.content }))
     const body: any = { message: text, history: cleanHistory }
@@ -553,10 +561,11 @@ async function handleSend() {
         try {
           const ev = JSON.parse(raw)
           if (ev.type === 'text') {
-            // DEBUG: 临时显示原始字段值，用于排查
-            const debugVal = `[t=${JSON.stringify(ev.text)},c=${JSON.stringify(ev.content)}]`
-            assistantMsg.content += debugVal + (ev.text ?? ev.content ?? '')
-            scrollToBottom()
+            const text = getEventText(ev)
+            if (text) {
+              assistantMsg.content += text
+              scrollToBottom()
+            }
           } else if (ev.type === 'tool_start') {
             assistantMsg.toolCalls!.push({ id: ev.id, name: ev.name, input: ev.input, status: 'running' })
             scrollToBottom()
@@ -576,6 +585,11 @@ async function handleSend() {
     if (!assistantMsg.content) assistantMsg.content = `CONNECTION_FAILED: ${e.message}`
     if (!messages.value.includes(assistantMsg)) messages.value.push(assistantMsg)
   } finally {
+    if (!isCleanContent(assistantMsg.content)) {
+      assistantMsg.content = assistantMsg.toolCalls?.length
+        ? '我刚才完成了工具检查，但没有组织出完整回复。请再发一次问题，我会直接给结论。'
+        : '我在，但这次没有生成有效回复。请再发一次。'
+    }
     isLoading.value = false
     previewUrls.forEach(url => URL.revokeObjectURL(url))
     persistHistory()

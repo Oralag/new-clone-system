@@ -4,11 +4,15 @@
     <!-- ══════════════════════ 列表视图 ══════════════════════ -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getTransferList"
+        <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/stock/Allocation/batchDel"
           export-file-name="调拨单" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.keyword" placeholder="调拨单号/仓库" clearable style="width:180px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
+              <el-option label="未核对" value="unreconciled" />
+            </el-select>
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openAdd">新增调拨单</el-button>
@@ -39,6 +43,7 @@
               <el-button v-if="row.status === 0" type="primary" size="small" link @click="openEdit(row)">编辑</el-button>
               <el-button v-if="row.status === 0" type="primary" size="small" link @click="handleAudit(row, 1)">审核</el-button>
               <el-button v-if="row.status === 1" type="warning" size="small" link @click="handleAudit(row, 0)">反审核</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
               <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -229,11 +234,14 @@ import { fmtDt } from '@/utils/date'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getTransferList, createTransfer, updateTransfer, auditTransfer, deleteTransfer, getWarehouseList } from '@/api/warehouse'
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
-const searchForm = reactive({ keyword: '' })
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_warehouse_transfer', tableRef)
+const reconcileFilteredApi = createFilteredApi(getTransferList, 'reconcile_filter')
+const searchForm = reactive({ keyword: '', reconcile_filter: '' })
 
 // ── 视图状态 ──────────────────────────────────────────────────────
 const showForm = ref(false)

@@ -23,6 +23,13 @@
           </button>
         </div>
 
+        <!-- 进入大厅 -->
+        <button
+          v-if="selectedBuilding && selectedBuilding.status !== 'planned'"
+          class="detail-enter-hall"
+          @click="enterHall(selectedInst.institutionId)"
+        >▸ 进入{{ selectedInst.name }}大厅</button>
+
         <!-- 建筑信息 -->
         <div v-if="selectedBuilding" class="detail-section">
           <div class="detail-section-title">BUILDING_INFO</div>
@@ -191,10 +198,10 @@
 
         <!-- 区域浮动标签 -->
         <div class="zone-labels">
-          <div class="zone-float-label command">COMMAND_CENTER</div>
-          <div class="zone-float-label intelligence">INTELLIGENCE</div>
-          <div class="zone-float-label commerce">COMMERCE</div>
-          <div class="zone-float-label adam">ADAM_DOMAIN</div>
+          <div class="zone-float-label command"><b>指挥中心</b><i>Command Center</i></div>
+          <div class="zone-float-label intelligence"><b>情报与生态研究区</b><i>Intelligence &amp; Ecosystem</i></div>
+          <div class="zone-float-label commerce"><b>商业生态区</b><i>Commerce Zone</i></div>
+          <div class="zone-float-label adam"><b>亚当领地</b><i>Adam's Domain</i></div>
         </div>
 
         <!-- ── 等轴测场景 ── -->
@@ -214,56 +221,57 @@
             <div class="tree-trunk"></div>
           </div>
 
-          <!-- 建筑物（深度排序后渲染） -->
+          <!-- 广场周边景观小品：水池 / 绿篱花园 / 雕塑 -->
+          <div v-for="d in plazaDecor" :key="d.key" class="iso-decor" :style="d.style">
+            <!-- 水池 -->
+            <svg v-if="d.kind === 'pond'" viewBox="-40 -22 80 44" width="96" height="53">
+              <ellipse cx="0" cy="0" rx="34" ry="17" fill="#dcd2b2" stroke="#4f4839" stroke-width="1.3"/>
+              <ellipse cx="0" cy="0" rx="27" ry="13" fill="#a9c6c9" stroke="#4f4839" stroke-width="1.1"/>
+              <ellipse cx="-6" cy="-3" rx="10" ry="4" fill="#c3d8da" stroke="none"/>
+              <ellipse cx="10" cy="4" rx="5" ry="2" fill="#c3d8da" stroke="none" opacity="0.7"/>
+            </svg>
+            <!-- 绿篱花园 -->
+            <svg v-else-if="d.kind === 'garden'" viewBox="-42 -26 84 52" width="100" height="62">
+              <polygon points="0,-20 38,-1 0,18 -38,-1" fill="#b9c298" stroke="#4f4839" stroke-width="1.3"/>
+              <polygon points="0,-14 26,-1 0,12 -26,-1" fill="#e9e0c6" stroke="#4f4839" stroke-width="1"/>
+              <polygon points="0,-8 14,-1 0,6 -14,-1" fill="#a3ad80" stroke="#4f4839" stroke-width="1"/>
+              <circle cx="0" cy="-22" r="3.5" fill="#9aa87a" stroke="#4f4839" stroke-width="1"/>
+            </svg>
+            <!-- 白色雕塑小品 -->
+            <svg v-else viewBox="-20 -46 40 52" width="44" height="57">
+              <ellipse cx="0" cy="0" rx="13" ry="6" fill="#dcd2b2" stroke="#4f4839" stroke-width="1.2"/>
+              <rect x="-7" y="-8" width="14" height="7" fill="#ece6d4" stroke="#4f4839" stroke-width="1.1"/>
+              <path d="M-3,-8 q-6,-14 4,-22 q12,-9 6,-22 q14,10 0,26 q-5,8 -1,18 z" fill="#f4f0e2" stroke="#4f4839" stroke-width="1.2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <!-- 中央亚当雕塑广场 -->
+          <div class="iso-statue" :style="statueStyle">
+            <AdamStatue />
+          </div>
+
+          <!-- 建筑物（插画精灵，深度排序后渲染） -->
           <div v-for="b in sortedBuildings" :key="b.key"
-               class="iso-bldg"
-               :class="['bldg-type-' + b.instId, { locked: b.locked, selected: selectedId === b.instId }]"
+               class="iso-bldg illo-mode"
+               :class="{ locked: b.locked, selected: selectedId === b.instId }"
                :style="b.posStyle"
-               @click.stop="selectedId = b.instId; adamSelected = false">
+               @click.stop="selectedId = b.instId; adamSelected = false"
+               @dblclick.stop="enterHall(b.instId)">
 
-            <!-- 屋顶菱形 -->
-            <div class="roof" :style="{ background: b.colorTop }">
-              <!-- 投资局：金色圆顶 -->
-              <div v-if="b.instId === 'bureau'" class="bldg-roof-dome"></div>
-              <!-- 情报站：天线 -->
-              <div v-if="b.instId === 'intel_station'" class="bldg-roof-antenna"></div>
-              <!-- 反应堆：核心 -->
-              <div v-if="b.instId === 'reactor'" class="bldg-roof-core"></div>
-              <!-- 研究院：圆顶观测站 -->
-              <div v-if="b.instId === 'research_institute'" class="bldg-roof-observatory"></div>
-              <!-- 亚当角落：烟囱 -->
-              <div v-if="b.instId === 'corner'" class="bldg-roof-chimney"></div>
+            <IlloBuilding :type="b.instId" :locked="b.locked" :selected="selectedId === b.instId" />
+
+            <!-- 名称+状态标签牌 -->
+            <div class="bldg-callout" :class="{ on: selectedId === b.instId }">
+              <span class="bc-name">{{ b.name }}</span>
+              <span class="bc-status" :class="instStatusOf(b.instId)">{{ instStatusEn(b.instId, b.locked) }}</span>
             </div>
 
-            <!-- 左墙 -->
-            <div class="wall wall-left" :style="{ height: b.wallH + 'px', background: b.colorLeft }">
-              <div class="windows">
-                <div v-for="row in b.windowRows" :key="row" class="win-row">
-                  <div class="win" :class="'win-' + b.instId"></div>
-                  <div class="win" :class="'win-' + b.instId"></div>
-                </div>
-              </div>
-              <!-- 特殊门 -->
-              <div v-if="b.instId === 'bureau'" class="bldg-door-pillars"></div>
-            </div>
-
-            <!-- 右墙 -->
-            <div class="wall wall-right" :style="{ height: b.wallH + 'px', background: b.colorRight }">
-              <div class="windows">
-                <div v-for="row in b.windowRows" :key="row" class="win-row">
-                  <div class="win" :class="'win-' + b.instId"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 图标（浮在屋顶上方） -->
-            <div class="bldg-icon" :style="{ bottom: (b.wallH + 24) + 'px' }">{{ b.emoji }}</div>
-
-            <!-- 名称标签 -->
-            <div class="bldg-name">{{ b.name }}</div>
-
-            <!-- 锁定遮罩 -->
-            <div v-if="b.locked" class="bldg-locked-overlay">🔒</div>
+            <!-- 选中后的进入大厅按钮 -->
+            <button
+              v-if="selectedId === b.instId && !b.locked"
+              class="bldg-enter-btn"
+              @click.stop="enterHall(b.instId)"
+            >▸ 进入大厅</button>
           </div>
 
           <!-- ── 亚当等轴测角色 ── -->
@@ -464,6 +472,12 @@
           </div>
         </div>
       </template>
+    </div>
+
+    <!-- 进入大厅像素转场 -->
+    <div v-if="hallEntering" class="hall-enter-overlay">
+      <div v-for="i in 12" :key="i" class="heo-strip" :style="{ animationDelay: (i % 4) * 0.06 + 's' }"></div>
+      <div class="heo-text">ENTERING...</div>
     </div>
   </div>
 
@@ -759,7 +773,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
+import IlloBuilding from './illo/IlloBuilding.vue'
+import AdamStatue from './illo/AdamStatue.vue'
 import { applyToolResult } from '@/utils/adamToolSync'
 import { marked } from 'marked'
 import type { InvestmentInstitutionId, InvestmentToolId } from '@/types/investment'
@@ -768,6 +785,59 @@ import adamAvatarUrl from '@/assets/adam-avatar.png'
 marked.setOptions({ breaks: true, gfm: true })
 
 const adamStore = useAdamStore()
+const router = useRouter()
+
+// ── 中央雕塑广场（园区几何中心） ──
+const STATUE_GX = 13.5
+const STATUE_GY = 13.5
+const statueStyle = computed(() => {
+  const { x, y } = isoToScreen(STATUE_GX, STATUE_GY)
+  return {
+    left: x + 'px',
+    top: y + 'px',
+    zIndex: String(Math.round(STATUE_GX + STATUE_GY)),
+  }
+})
+
+// ── 广场周边景观小品（参考全景图：水池/花园/雕塑） ──
+const plazaDecor = computed(() => {
+  const items = [
+    { key: 'pond_nw', kind: 'pond', gx: 11.2, gy: 10.6 },
+    { key: 'pond_se', kind: 'pond', gx: 15.8, gy: 16.4 },
+    { key: 'garden_sw', kind: 'garden', gx: 10.6, gy: 15.8 },
+    { key: 'sculpt_ne', kind: 'sculpt', gx: 16.2, gy: 11.0 },
+  ]
+  return items.map((i) => {
+    const { x, y } = isoToScreen(i.gx, i.gy)
+    return { ...i, style: { left: x + 'px', top: y + 'px', zIndex: String(Math.round(i.gx + i.gy)) } }
+  })
+})
+
+// ── 建筑标签牌：机构状态 ──
+function instStatusOf(instId: string): string {
+  return adamStore.institutionMap[instId]?.status || 'idle'
+}
+function instStatusEn(instId: string, locked: boolean): string {
+  if (locked) return 'LOCKED'
+  const map: Record<string, string> = {
+    idle: 'IDLE', active: 'ACTIVE', locked: 'LOCKED',
+    cooldown: 'COOLDOWN', disabled: 'DISABLED', urgent: 'OPERATING',
+  }
+  return map[instStatusOf(instId)] || 'IDLE'
+}
+
+// ── 进入建筑大厅（像素百叶转场后跳转） ──
+const hallEntering = ref(false)
+function enterHall(instId: string) {
+  const bldg = adamStore.buildings.find(b => b.institutionId === instId)
+  if (!bldg || bldg.status === 'planned') return
+  if (hallEntering.value) return
+  hallEntering.value = true
+  setTimeout(() => {
+    router.push(`/investment/city/hall/${instId}`)
+    hallEntering.value = false
+  }, 480)
+}
 
 // ── 右侧对话面板 ──
 const sidebarCollapsed = ref(true)
@@ -793,7 +863,16 @@ function persistChatHistory() {
   try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatMessages.value.slice(-80))) } catch { /* ignore */ }
 }
 function renderChatMarkdown(content: string): string {
-  try { return marked(content) as string } catch { return content }
+  const clean = isCleanChatContent(content) ? String(content) : ''
+  try { return marked(clean) as string } catch { return clean }
+}
+function isCleanChatContent(content: unknown): boolean {
+  const c = String(content ?? '').trim()
+  return !!c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c) && c.toLowerCase() !== 'null'
+}
+function getChatEventText(ev: any): string {
+  const text = ev?.text ?? ev?.content
+  return isCleanChatContent(text) ? String(text) : ''
 }
 function scrollChatToBottom() {
   nextTick(() => { if (chatMessagesDiv.value) chatMessagesDiv.value.scrollTop = chatMessagesDiv.value.scrollHeight })
@@ -838,7 +917,10 @@ async function handleChatSend() {
         if (raw === '[DONE]') break
         try {
           const ev = JSON.parse(raw)
-          if (ev.type === 'text') { assistantMsg.content += ev.content; scrollChatToBottom() }
+          if (ev.type === 'text') {
+            const text = getChatEventText(ev)
+            if (text) { assistantMsg.content += text; scrollChatToBottom() }
+          }
           else if (ev.type === 'tool_start') { assistantMsg.toolCalls!.push({ id: ev.id, name: ev.name, input: ev.input, status: 'running' }); scrollChatToBottom() }
           else if (ev.type === 'tool_result') {
             const tc = assistantMsg.toolCalls!.find(t => t.id === ev.id)
@@ -853,6 +935,11 @@ async function handleChatSend() {
     if (!assistantMsg.content) assistantMsg.content = `连接失败: ${e.message}`
     if (!chatMessages.value.includes(assistantMsg)) chatMessages.value.push(assistantMsg)
   } finally {
+    if (!isCleanChatContent(assistantMsg.content)) {
+      assistantMsg.content = assistantMsg.toolCalls?.length
+        ? '我刚才完成了工具检查，但没有组织出完整回复。请再发一次问题，我会直接给结论。'
+        : '我在，但这次没有生成有效回复。请再发一次。'
+    }
     chatLoading.value = false
     persistChatHistory()
     scrollChatToBottom()
@@ -1021,6 +1108,9 @@ watch(eventCount, () => {
 onMounted(() => {
   startIdleTimer()
   loadChatHistory()
+  // 视口尺寸要等布局稳定，分两次取景
+  nextTick(() => fitToView())
+  setTimeout(fitToView, 400)
 })
 
 onUnmounted(() => {
@@ -1785,7 +1875,7 @@ function isoToScreen(gx: number, gy: number) {
 
 // 地面格子 — 全量铺满整个地图（避免空洞），区分草地/路面
 const groundCells = computed(() => {
-  const cells: Array<{ key: string; style: Record<string, string>; type: 'grass' | 'road' | 'path' }> = []
+  const cells: Array<{ key: string; style: Record<string, string>; type: 'grass' | 'road' | 'path' | 'plaza' }> = []
 
   // 建筑坐标集合
   const bldgCoords = new Set(adamStore.buildings.map(b => `${b.position.gridX},${b.position.gridY}`))
@@ -1818,7 +1908,11 @@ const groundCells = computed(() => {
     for (let gy = minY; gy <= maxY; gy++) {
       const k = `${gx},${gy}`
       const { x, y } = isoToScreen(gx, gy)
-      const type = bldgCoords.has(k) ? 'road' : pathCoords.has(k) ? 'path' : 'grass'
+      // 中央雕塑广场（半径2.5格内全铺石板）
+      const distC = Math.hypot(gx - 13.5, gy - 13.5)
+      // 十字主干道：连接四大区域
+      const isMainRoad = gx === 13 || gx === 14 || gy === 13 || gy === 14
+      const type = distC <= 2.5 ? 'plaza' : bldgCoords.has(k) || isMainRoad ? 'road' : pathCoords.has(k) ? 'path' : 'grass'
       cells.push({
         key: `g${gx}_${gy}`,
         type,
@@ -1903,6 +1997,30 @@ const scale = ref(0.7)
 const centerIso = isoToScreen(14, 13)
 const panX = ref(-centerIso.x)
 const panY = ref(-centerIso.y + 120)
+
+/** 开场自动取景：把所有建筑框进视口 */
+function fitToView() {
+  const vp = viewportRef.value
+  if (!vp || adamStore.buildings.length === 0) return
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  for (const b of adamStore.buildings) {
+    const { x, y } = isoToScreen(b.position.gridX, b.position.gridY)
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x)
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+  }
+  // 余量：建筑精灵向上伸出约 200px，左右各留半栋
+  minX -= 200; maxX += 200
+  minY -= 240; maxY += 80
+  const rect = vp.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+  const s = Math.max(0.3, Math.min(1.4, Math.min(rect.width / (maxX - minX), rect.height / (maxY - minY))))
+  scale.value = s
+  const cx = (minX + maxX) / 2
+  const cy = (minY + maxY) / 2
+  // 场景原点位于视口水平中心、顶部 60px 处
+  panX.value = -cx * s
+  panY.value = rect.height / 2 - 60 - cy * s
+}
 
 const sceneStyle = computed(() => ({
   transform: `translate(${panX.value}px, ${panY.value}px) scale(${scale.value}) rotate(${rotateAngle.value}deg) perspective(800px) rotateX(${tiltAngle.value}deg)`,
@@ -2507,7 +2625,7 @@ onUnmounted(() => {
   cursor: grab;
   user-select: none;
   background:
-    radial-gradient(ellipse at 40% 35%, #deeeff 0%, #e8f4f8 40%, #f0f6ef 100%);
+    radial-gradient(ellipse at 50% 38%, #f7f1df 0%, #f1e9d3 55%, #eae0c6 100%);
 }
 .iso-viewport:active { cursor: grabbing; }
 
@@ -2520,16 +2638,31 @@ onUnmounted(() => {
 }
 .zone-float-label {
   position: absolute;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  opacity: 0.15;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: #f6f0dc;
+  border: 1.5px solid #4f4839;
+  border-radius: 6px;
+  padding: 5px 12px;
+  box-shadow: 3px 3px 0 rgba(79, 72, 57, 0.18);
 }
-.zone-float-label.command { top: 12px; left: 16px; color: #c07000; }
-.zone-float-label.intelligence { top: 12px; right: 16px; color: #0077aa; }
-.zone-float-label.commerce { bottom: 40px; left: 16px; color: #2e7d32; }
-.zone-float-label.adam { bottom: 40px; right: 16px; color: #6a1b9a; }
+.zone-float-label b {
+  font-size: 14px;
+  font-weight: 900;
+  color: #3c362a;
+  letter-spacing: 2px;
+}
+.zone-float-label i {
+  font-style: normal;
+  font-size: 8px;
+  color: #9a8f74;
+  letter-spacing: 1px;
+}
+.zone-float-label.command { top: 14px; left: 18px; }
+.zone-float-label.intelligence { top: 14px; right: 18px; }
+.zone-float-label.commerce { bottom: 44px; left: 18px; }
+.zone-float-label.adam { bottom: 44px; right: 18px; }
 
 .iso-scene {
   position: relative;
@@ -2580,20 +2713,37 @@ onUnmounted(() => {
   transform-origin: top right;
 }
 
-/* 草地配色 */
-.iso-ground.grass .ground-top    { background: #7CB342; }
-.iso-ground.grass .ground-left   { background: #4a7a1e; }
-.iso-ground.grass .ground-right  { background: #5d8f28; }
+/* 草坪 — 柔和灰橄榄绿（低饱和，融入纸色） */
+.iso-ground.grass .ground-top {
+  background: #c6cda8;
+  box-shadow: inset 0 0 0 1px rgba(79, 72, 57, 0.07);
+}
+.iso-ground.grass .ground-left   { background: #a2aa84; }
+.iso-ground.grass .ground-right  { background: #b3ba94; }
 
-/* 路径（建筑周边1格） */
-.iso-ground.path .ground-top    { background: #AED581; }
-.iso-ground.path .ground-left   { background: #6a8f3a; }
-.iso-ground.path .ground-right  { background: #80a848; }
+/* 小径（建筑周边1格）— 暖沙色 */
+.iso-ground.path .ground-top {
+  background: #ddd2b0;
+  box-shadow: inset 0 0 0 1px rgba(79, 72, 57, 0.10);
+}
+.iso-ground.path .ground-left   { background: #b4a780; }
+.iso-ground.path .ground-right  { background: #c6b992; }
 
-/* 道路（建筑正下方） */
-.iso-ground.road .ground-top    { background: #CFD8DC; }
-.iso-ground.road .ground-left   { background: #90A4AE; }
-.iso-ground.road .ground-right  { background: #B0BEC5; }
+/* 道路 — 浅石板 */
+.iso-ground.road .ground-top {
+  background: #e6ddc2;
+  box-shadow: inset 0 0 0 1.5px rgba(79, 72, 57, 0.14);
+}
+.iso-ground.road .ground-left   { background: #bdb190; }
+.iso-ground.road .ground-right  { background: #cfc3a2; }
+
+/* 中央广场 — 亮米色铺装 */
+.iso-ground.plaza .ground-top {
+  background: #efe7cd;
+  box-shadow: inset 0 0 0 1px rgba(79, 72, 57, 0.10);
+}
+.iso-ground.plaza .ground-left   { background: #c8bb9a; }
+.iso-ground.plaza .ground-right  { background: #d9cdab; }
 
 /* ── 等轴测建筑 ── */
 .iso-bldg {
@@ -2610,6 +2760,109 @@ onUnmounted(() => {
           drop-shadow(0 0 8px rgba(255,255,255,0.5));
 }
 .iso-bldg.locked { opacity: 0.4; filter: saturate(0.15) brightness(0.85); }
+
+/* 插画精灵模式：精灵底边对齐地砖中心 */
+.iso-bldg.illo-mode { overflow: visible; }
+.iso-bldg.illo-mode :deep(.illo-bldg) {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  transition: transform 0.18s ease;
+}
+.iso-bldg.illo-mode:hover :deep(.illo-bldg) {
+  transform: translateX(-50%) translateY(-4px);
+}
+.iso-bldg.illo-mode.locked { opacity: 0.9; }
+
+/* 广场景观小品 */
+.iso-decor {
+  position: absolute;
+  pointer-events: none;
+}
+.iso-decor svg {
+  position: absolute;
+  left: 40px;
+  top: 20px;
+  transform: translate(-50%, -50%);
+}
+
+/* 中央雕塑 */
+.iso-statue {
+  position: absolute;
+  pointer-events: none;
+}
+.iso-statue :deep(.adam-statue) {
+  position: absolute;
+  left: 40px; /* 对齐地砖中心（TILE_W/2） */
+  top: 20px;  /* TILE_H/2 */
+  transform: translate(-50%, -82%);
+}
+
+/* 名称+状态标签牌（插画风吊牌） */
+.bldg-callout {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  background: #f6f0dc;
+  border: 1.5px solid #4f4839;
+  border-radius: 5px;
+  padding: 2px 9px 3px;
+  box-shadow: 2px 2px 0 rgba(79, 72, 57, 0.22);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: transform 0.15s ease;
+}
+.bldg-callout.on { transform: translateX(-50%) scale(1.12); }
+.bc-name {
+  font-size: 10px;
+  font-weight: 800;
+  color: #4f4839;
+  letter-spacing: 0.5px;
+}
+.bc-status {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #9a8f74;
+}
+.bc-status.active, .bc-status.urgent { color: #6d8f4e; }
+.bc-status.locked, .bc-status.disabled { color: #b0543e; }
+.bc-status.cooldown { color: #b08a3a; }
+
+/* 进入大厅按钮（建筑上方） */
+.bldg-enter-btn {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 110px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #4f4839;
+  color: #f6f0dc;
+  border: 1.5px solid #4f4839;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  cursor: pointer;
+  z-index: 30;
+  box-shadow: 2.5px 2.5px 0 rgba(79, 72, 57, 0.3);
+  animation: enterBtnBob 1.6s ease-in-out infinite;
+}
+.bldg-enter-btn:hover { background: #6d6450; }
+@keyframes enterBtnBob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-5px); }
+}
 
 /* 墙体公共 */
 .wall {
@@ -3608,49 +3861,76 @@ onUnmounted(() => {
   border-radius: 2px;
 }
 
-/* ── 等轴测地面提升 ── */
-.iso-ground.grass .ground-top {
-  background: radial-gradient(ellipse at 30% 30%, #8BC34A, #6D9E2A);
-}
-.iso-ground.path .ground-top {
-  background: repeating-linear-gradient(
-    45deg,
-    #B5CC8E,
-    #B5CC8E 4px,
-    #C8D9A0 4px,
-    #C8D9A0 8px
-  );
-}
-.iso-ground.road .ground-top {
-  background: repeating-linear-gradient(
-    90deg,
-    #D0D8DC,
-    #D0D8DC 6px,
-    #C4CDD0 6px,
-    #C4CDD0 12px
-  );
-}
 
-/* ── 选中建筑光晕 ── */
-.iso-bldg.selected .roof {
-  filter: brightness(1.3);
-  box-shadow: inset 0 3px 0 rgba(255,255,255,0.8), 0 0 12px rgba(245,166,35,0.6);
-}
-.iso-bldg.selected .bldg-name {
-  color: #F5A623;
-  text-shadow: 0 0 8px rgba(245,166,35,0.6), 0 1px 0 rgba(255,255,255,0.9);
-}
-
-/* ── 树木增强 ── */
+/* ── 插画树（圆冠+描边） ── */
 .tree-top {
-  width: 22px;
-  height: 22px;
-  background: radial-gradient(circle at 40% 30%, #8BC34A, #4CAF50, #2E7D32);
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset -2px -2px 0 rgba(0,0,0,0.1);
+  width: 24px;
+  height: 24px;
+  background: radial-gradient(circle at 36% 30%, #bdc8a0 0%, #9dab7e 55%, #87966c 100%);
+  border: 1.5px solid #4f4839;
+  border-radius: 50% 50% 46% 46%;
+  box-shadow: 2px 3px 0 rgba(79, 72, 57, 0.18);
 }
 .deco-tree.md .tree-top {
-  width: 30px;
-  height: 30px;
-  background: radial-gradient(circle at 35% 30%, #A5D6A7, #66BB6A, #388E3C);
-}</style>
+  width: 32px;
+  height: 32px;
+  background: radial-gradient(circle at 36% 30%, #c6d0ab 0%, #a8b58a 55%, #919f74 100%);
+}
+.tree-trunk {
+  border-radius: 1px;
+  background: #9a7450;
+  border: 1.5px solid #4f4839;
+  border-top: none;
+}
+
+/* ── 详情面板：进入大厅 ── */
+.detail-enter-hall {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 10px 12px 2px;
+  padding: 9px 0;
+  background: #f0c040;
+  color: #1c1812;
+  border: 2px solid #1c1812;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+}
+.detail-enter-hall:hover { background: #ffe070; }
+.detail-enter-hall:active { transform: translate(2px, 2px); box-shadow: none; }
+
+/* ── 进入大厅像素百叶转场 ── */
+.hall-enter-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  pointer-events: all;
+}
+.heo-strip {
+  flex: 1;
+  background: #4f4839;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: heoStrip 0.4s steps(5) forwards;
+}
+@keyframes heoStrip {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+.heo-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #f6f0dc;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 14px;
+  letter-spacing: 4px;
+  opacity: 0;
+  animation: heoText 0.2s steps(1) 0.3s forwards;
+}
+@keyframes heoText { to { opacity: 1; } }</style>

@@ -4,7 +4,8 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getProcurePlanList"
+        <ScTable ref="tableRef"
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/procure/ProcurePlan/batchDel"
           export-file-name="采购计划" :params="searchForm">
           <template #search>
@@ -16,6 +17,7 @@
               <el-option label="已审核" :value="1" />
               <el-option label="已驳回" :value="2" />
               <el-option label="已入库" :value="3" />
+              <el-option label="未核对" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
@@ -83,7 +85,8 @@
               <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
               <template v-if="row.status === 0">
                 <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
+                <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
+              <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
               </template>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
               <el-button v-if="row.status === 1" type="success" link size="small" @click="handleConvertToOrder(row)">转采购订单</el-button>
@@ -418,6 +421,7 @@ import { useRouter } from 'vue-router'
 import { Plus, Delete, ArrowLeft, EditPen, Upload, Paperclip } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
+import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getProcurePlanList, createProcurePlan, deleteProcurePlan, getSupplierList, createSupplier, auditProcurePlan } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
@@ -437,6 +441,8 @@ const router = useRouter()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
+const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_procure_plan', tableRef)
+const reconcileFilteredApi = createFilteredApi(getProcurePlanList)
 
 function parseItems(goodsInfo: any): any[] {
   if (Array.isArray(goodsInfo)) return goodsInfo

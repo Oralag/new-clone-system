@@ -149,6 +149,21 @@ const isLoading = ref(false)
 const pendingImages = ref<ImageItem[]>([])
 const isCollapsed = ref(true)
 
+function isCleanContent(content: unknown) {
+  const c = String(content ?? '').trim()
+  return !!c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c) && c.toLowerCase() !== 'null'
+}
+
+function sanitizeMessages(raw: any[]): ChatMessage[] {
+  return (Array.isArray(raw) ? raw : [])
+    .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && isCleanContent(m.content))
+    .map((m: any) => ({
+      ...m,
+      content: String(m.content),
+      toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : undefined,
+    }))
+}
+
 // 外部触发打开（如 Workspace 点击亚当角色）
 watch(() => adamStore.chatOpen, (val) => {
   if (val) {
@@ -172,11 +187,7 @@ onMounted(async () => {
     const raw = localStorage.getItem(getScopedStorageKey(HISTORY_KEY))
     if (raw) {
       const parsed = JSON.parse(raw)
-      messages.value = parsed.filter((m: any) => {
-        if (!m.content || !m.role) return false
-        const c = String(m.content).trim()
-        return c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c)
-      })
+      messages.value = sanitizeMessages(parsed)
     }
   } catch { /* ignore */ }
 
@@ -200,8 +211,8 @@ async function loadHistoryFromCloud() {
     const data = await res.json() as { messages: ChatMessage[] }
     if (data.messages?.length) {
       // 云端数据覆盖本地（云端是权威来源）
-      messages.value = data.messages
-      localStorage.setItem(getScopedStorageKey(HISTORY_KEY), JSON.stringify(data.messages.slice(-MAX_HISTORY)))
+      messages.value = sanitizeMessages(data.messages)
+      localStorage.setItem(getScopedStorageKey(HISTORY_KEY), JSON.stringify(messages.value.slice(-MAX_HISTORY)))
     }
   } catch { /* 云端不可用时静默降级到本地缓存 */ }
 }
@@ -233,10 +244,11 @@ async function pollMessages() {
     if (!data.messages?.length) return
 
     for (const msg of data.messages) {
+      if (!isCleanContent(msg.content)) continue
       const chatMsg: ChatMessage = {
         id: msg.id,
         role: 'assistant',
-        content: msg.content,
+        content: String(msg.content),
         time: formatMsgTime(msg.timestamp),
         toolCalls: msg.toolCalls?.map(tc => ({
           id: `tc_${Math.random().toString(36).slice(2)}`,
@@ -264,7 +276,7 @@ function formatMsgTime(iso: string): string {
 }
 
 function persistHistory() {
-  const trimmed = messages.value.slice(-MAX_HISTORY)
+  const trimmed = sanitizeMessages(messages.value).slice(-MAX_HISTORY)
   localStorage.setItem(getScopedStorageKey(HISTORY_KEY), JSON.stringify(trimmed))
   // 异步同步到云端，不阻塞 UI
   syncHistoryToCloud(trimmed)
@@ -300,7 +312,7 @@ function nowStr() {
 }
 
 function renderMarkdown(text: string) {
-  return marked.parse(text) as string
+  return marked.parse(isCleanContent(text) ? String(text) : '') as string
 }
 
 async function handleSend() {
@@ -335,7 +347,6 @@ async function handleSend() {
   }
 
   try {
-    const isCleanContent = (c: string) => c && !/^(\s*undefined\s*)+$/i.test(c) && !/^undefined/i.test(c)
     const apiMessages = messages.value
       .filter((m) => (m.role === 'user' || m.role === 'assistant') && isCleanContent(m.content))
       .slice(-20)
@@ -385,7 +396,9 @@ async function handleSend() {
         try {
           const data = JSON.parse(payload)
           if (data.type === 'text') {
-            assistantMsg.content += data.text
+            if (isCleanContent(data.text)) {
+              assistantMsg.content += String(data.text)
+            }
             scrollToBottom()
           } else if (data.type === 'tool_start') {
             if (data.name === 'update_emotion') continue
@@ -421,6 +434,11 @@ async function handleSend() {
       messages.value.push(assistantMsg)
     }
   } finally {
+    if (!isCleanContent(assistantMsg.content)) {
+      assistantMsg.content = assistantMsg.toolCalls?.length
+        ? '我刚才完成了工具检查，但没有组织出完整回复。请再发一次问题，我会直接给结论。'
+        : '我在，但这次没有生成有效回复。请再发一次。'
+    }
     isLoading.value = false
     previewUrls.forEach(url => URL.revokeObjectURL(url))
     persistHistory()

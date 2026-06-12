@@ -104,6 +104,7 @@ export const getReceivableList = (params?: any) => http.get('/finance/CollectAcc
 export const getPayableList = (params?: any) => http.get('/finance/PayAccounts/index', { params })
 export const getCollectReceiptList = (params?: any) => http.get('/finance/CollectReceipt/index', { params })
 export const createCollectReceipt = (data: any) => http.post('/finance/CollectReceipt/add', normalizeCollectReceiptPayload(data))
+export const updateCollectReceipt = (data: any) => http.post('/finance/CollectReceipt/edit', data)
 export const deleteCollectReceipt = (id: number) => http.post('/finance/CollectReceipt/del', { id })
 export const getPayReceiptList = (params?: any) => http.get('/finance/PayReceipt/index', { params })
 export const createPayReceipt = (data: any) => http.post('/finance/PayReceipt/add', data)

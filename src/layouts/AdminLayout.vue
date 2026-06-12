@@ -171,7 +171,7 @@
 
   </div>
 
-  <AiAssistant />
+  <!-- <AiAssistant /> 多租户改造期间暂停 -->
   <OnboardingGuide />
 </template>
 
