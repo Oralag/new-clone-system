@@ -45,6 +45,10 @@
           <span class="pf-sum-label">费用支出</span>
           <span class="pf-sum-val" style="color:#f59e0b">−¥{{ fmt(expenseTotal) }}</span>
         </div>
+        <div class="pf-sum-item">
+          <span class="pf-sum-label">单据附加费</span>
+          <span class="pf-sum-val" style="color:#f59e0b">−¥{{ fmt(docExpenseTotal) }}</span>
+        </div>
         <div class="pf-sum-item pf-sum-divider-v"></div>
         <div class="pf-sum-item">
           <span class="pf-sum-label" style="font-weight:700">净利润</span>
@@ -69,7 +73,7 @@
       <!-- 数据说明 -->
       <div class="pf-note">
         <el-icon><InfoFilled /></el-icon>
-        BOM成品成本 = 各物料采购移动均价之和（无采购记录时用BOM配置价）；非BOM商品成本取采购移动均价，无记录时取商品采购价；运费按合同承担比例扣除；费用来自费用管理模块；净利润 = 毛利润 − 运费 − 费用
+        BOM成品成本 = 各物料采购移动均价之和（无采购记录时用BOM配置价）；非BOM商品成本取采购移动均价，无记录时取商品采购价；运费按合同承担比例扣除；费用来自费用管理模块（已排除未付费用与采购单据货款，防双重扣减）；单据附加费 = 采购单/合同附加费用；净利润 = 毛利润 − 运费 − 费用 − 单据附加费
       </div>
 
       <!-- 切换Tab -->
@@ -384,6 +388,7 @@ import { InfoFilled, Loading } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { getContractList } from '@/api/sale'
 import { getRetailOrderList } from '@/api/retail'
+import { getProcureOrderList } from '@/api/procure'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { getExpenseList } from '@/api/finance'
 import http from '@/api/http'
@@ -408,6 +413,7 @@ const bomList = ref<any[]>([])
 const bomItemList = ref<BomItemFlat[]>([])
 const expenseList = ref<any[]>([])
 const unitConvertList = ref<any[]>([])
+const procureOrders = ref<any[]>([])  // 已审核采购单（取 expense_amount 作单据附加费）
 
 // 成本上下文 — 算法统一在 @/utils/profitCalc
 const costCtx = computed<ProfitCostContext>(() => createProfitCostContext({
@@ -517,7 +523,12 @@ const freightTotal = computed(() => saleContracts.value.reduce((s, r) => s + myF
 const expenseTotal = computed(() =>
   filterProfitExpenses(expenseList.value).reduce((s, r) => s + Number(r.amount || 0), 0)
 )
-const netProfit = computed(() => totalProfit.value - freightTotal.value - expenseTotal.value)
+// 单据附加费（采购单/合同 expense_amount，不在商品成本里，需单独扣）— 与 Finance.vue / reports.Overview 口径一致
+const docExpenseTotal = computed(() =>
+  procureOrders.value.reduce((s, o) => s + Number(o.expense_amount || 0), 0) +
+  saleContracts.value.reduce((s, c) => s + Number(c.expense_amount || 0), 0)
+)
+const netProfit = computed(() => totalProfit.value - freightTotal.value - expenseTotal.value - docExpenseTotal.value)
 const netRate = computed(() => totalSale.value > 0 ? (netProfit.value / totalSale.value * 100) : 0)
 
 function fmt(v: number | string): string {
@@ -538,13 +549,14 @@ async function loadData() {
     params.end_date = dateRange.value[1]
   }
   try {
-    const [c, r, g, ih, b, e] = await Promise.allSettled([
+    const [c, r, g, ih, b, e, po] = await Promise.allSettled([
       getContractList(params),
       getRetailOrderList(params),
       getGoodsList({ list_rows: 3000 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
       getExpenseList(params),
+      getProcureOrderList({ ...params, list_rows: 2000 }),
     ])
     saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []).filter(isEffectiveSaleContract) : []
     retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []).filter((r: any) => Number(r.status) === 1) : []
@@ -553,6 +565,7 @@ async function loadData() {
     const bomHeaders         = b.status === 'fulfilled' ? (b.value?.data?.list  ?? []) : []
     bomList.value            = bomHeaders
     expenseList.value        = e.status === 'fulfilled' ? (e.value?.data?.rows  ?? []) : []
+    procureOrders.value      = po.status === 'fulfilled' ? (po.value?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1) : []
 
     // 多单位换算 + BOM 物料明细（只读接口，按需逐个查）
     const [ucRows, bomItems] = await Promise.all([
