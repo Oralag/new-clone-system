@@ -43,8 +43,7 @@ async function loadCookiesFromKV(site: string, cfToken: string): Promise<any[]> 
   }
 }
 
-async function executeBrowserTool(name: string, input: Record<string, any>): Promise<string> {
-  const cfToken = CF_API_TOKEN_DEFAULT
+async function executeBrowserTool(name: string, input: Record<string, any>, cfToken: string): Promise<string> {
   try {
     if (name === 'browser_navigate' || name === 'browser_get_content') {
       const url = input.url
@@ -718,7 +717,7 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
     default: {
       // 浏览器工具
       if (name.startsWith('browser_')) {
-        return await executeBrowserTool(name, input)
+        return await executeBrowserTool(name, input, env?.CLOUDFLARE_API_TOKEN || CF_API_TOKEN_DEFAULT)
       }
       return JSON.stringify({ error: `未知工具：${name}` })
     }

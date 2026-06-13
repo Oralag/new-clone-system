@@ -7,6 +7,7 @@ export interface TrendingItem {
   hot?: string | number
   category?: string
   url?: string
+  isMock?: boolean
 }
 
 export interface FlowResult {
@@ -15,6 +16,7 @@ export interface FlowResult {
   topic: string
   type: 'video_script' | 'poster' | 'copy'
   content: string
+  createdAt?: number
   videoRequestId?: string
   videoStatus?: 'processing' | 'failed' | 'done' | 'idle' | 'generating'
   videoUrl?: string
@@ -193,10 +195,10 @@ export const useTrendingStore = defineStore('agent-trending', () => {
       if (json.code === 200 && Array.isArray(json.data) && json.data.length > 0) {
         trending.value[key] = json.data
       } else {
-        trending.value[key] = MOCK_TRENDING[key] || []
+        trending.value[key] = (MOCK_TRENDING[key] || []).map(t => ({ ...t, isMock: true }))
       }
     } catch {
-      trending.value[key] = MOCK_TRENDING[key] || []
+      trending.value[key] = (MOCK_TRENDING[key] || []).map(t => ({ ...t, isMock: true }))
     }
     loading.value = false
   }
@@ -223,7 +225,11 @@ export const useTrendingStore = defineStore('agent-trending', () => {
 
   function setFlowResults(results: FlowResult[]) {
     flowResults.value = results || []
-    localStorage.setItem('agent_flow_results', JSON.stringify(flowResults.value))
+    try {
+      localStorage.setItem('agent_flow_results', JSON.stringify(flowResults.value))
+    } catch {
+      // localStorage 配额超限时静默失败，内存状态仍然正常
+    }
   }
 
   function addHistoryItem(item: HistoryItem) {

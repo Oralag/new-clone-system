@@ -225,7 +225,7 @@
 
     <!-- 完成后跳转按钮（在输入区上方，避免被遮挡） -->
     <div v-if="meetingStore.phase === 'done' && agentStore.flowResults.length > 0" class="goto-publish">
-      <button class="goto-publish-btn" @click="router.push('/agent/publish')">
+      <button class="goto-publish-btn" @click="router.push(publishPath)">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M3 7h8M8 4l3 3-3 3"/>
         </svg>
@@ -1002,8 +1002,9 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
         topic,
         type: resultType,
         content: cleanAgentOutput(output),
-        imageUrl: erpShot || generatedMediaUrl || undefined,
-        erpScreenshotUrl: generatedMediaUrl || undefined,
+        createdAt: Date.now(),
+        imageUrl: generatedMediaUrl || undefined,
+        erpScreenshotUrl: erpShot || undefined,
         videoRequestId: generatedVideoTaskId || undefined,
         videoStatus: generatedVideoTaskId ? 'processing' : undefined,
       }
@@ -1051,134 +1052,6 @@ function handleStart() {
   if (!t || meetingStore.isRunning) return
   topicInput.value = ''
   runMeeting(t)
-}
-
-// ── 后台会议：提交给服务端异步跑，前端可离开 ──
-let pollTimer: ReturnType<typeof setInterval> | null = null
-
-async function startBackgroundMeeting(topic: string) {
-  if (!isValidTopic(topic)) {
-    await handleCasualChat(topic)
-    return
-  }
-
-  const brand = brandStore.isConfigured ? brandStore.brand : null
-  const brandContext = brandStore.isConfigured ? brandStore.systemPrompt : undefined
-  const brandInfo = brand
-    ? `品牌「${brand.name}」（${brand.industry}），目标受众：${brand.audienceDesc || '未指定'}`
-    : '（品牌信息未配置，请根据通用内容输出）'
-
-  shouldStop = false
-  meetingStore.startMeeting(topic)
-  addUserMessage(topic)
-  meetingStore.setPhase('opening')
-
-  // 显示"后台运行"提示消息
-  meetingStore.addMessage({
-    id: uid(),
-    agentId: 'captain',
-    agentName: 'Captain',
-    agentEmoji: '🎯',
-    agentColor: '#6366f1',
-    role: 'captain',
-    content: `收到。「${topic}」——团队开始执行，你可以先去做别的事，完成后我会通知你结果已存入发布页。`,
-    timestamp: Date.now(),
-    isStreaming: false,
-  })
-
-  const token = localStorage.getItem('erp_token') || ''
-  let jobId = ''
-  try {
-    const res = await fetch('/api/meeting-run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
-      body: JSON.stringify({ topic, brandInfo, brandContext }),
-    })
-    const data = await res.json() as any
-    jobId = data.jobId
-  } catch (e: any) {
-    ElMessage.error('会议启动失败：' + e.message)
-    meetingStore.endMeeting('')
-    return
-  }
-
-  if (!jobId) {
-    ElMessage.error('会议启动失败')
-    meetingStore.endMeeting('')
-    return
-  }
-
-  const EMOJI_MAP: Record<string, string> = { captain: '🎯', trend: '📈', copywriter: '✍️', poster: '🎨', video: '🎬', publisher: '🚀', marketing: '📊' }
-  const COLOR_MAP: Record<string, string> = { captain: '#6366f1', trend: '#06b6d4', copywriter: '#f59e0b', poster: '#ec4899', video: '#ef4444', publisher: '#10b981', marketing: '#059669' }
-
-  function appendLog(msg: { agentId: string; agentName: string; content: string }) {
-    meetingStore.addMessage({
-      id: uid(),
-      agentId: msg.agentId,
-      agentName: msg.agentName,
-      agentEmoji: EMOJI_MAP[msg.agentId] || '🤖',
-      agentColor: COLOR_MAP[msg.agentId] || '#888',
-      role: msg.agentId === 'captain' ? 'captain' : 'member',
-      content: msg.content,
-      timestamp: Date.now(),
-      isStreaming: false,
-    })
-    scrollToBottom()
-  }
-
-  // 轮询结果（每3秒一次，实时追加新消息）
-  let shownCount = 0
-  let attempts = 0
-  pollTimer = setInterval(async () => {
-    attempts++
-    if (attempts > 200) {
-      clearInterval(pollTimer!)
-      pollTimer = null
-      ElMessage.error('会议超时，请重新发起')
-      meetingStore.endMeeting('')
-      return
-    }
-    try {
-      const res = await fetch(`/api/meeting-run?jobId=${jobId}`)
-      const data = await res.json() as any
-
-      // 实时更新进度阶段
-      if (data.phase && data.phase !== meetingStore.phase) {
-        meetingStore.setPhase(data.phase as any)
-      }
-
-      // 实时追加新增的消息（增量显示）
-      const log: any[] = data.log || []
-      for (let i = shownCount; i < log.length; i++) {
-        appendLog(log[i])
-      }
-      shownCount = log.length
-
-      if (data.status === 'done') {
-        clearInterval(pollTimer!)
-        pollTimer = null
-
-        if (data.flowResults?.length > 0) {
-          agentStore.setFlowResults([...agentStore.flowResults, ...data.flowResults])
-          ElMessage({
-            message: `✅ 会议完成，${data.flowResults.length} 条内容已存入发布页`,
-            type: 'success',
-            duration: 4000,
-            onClick: () => router.push('/agent/publish'),
-          })
-        }
-
-        meetingStore.endMeeting('任务执行完毕，内容已送达发布部。')
-        scrollToBottom()
-
-      } else if (data.status === 'error') {
-        clearInterval(pollTimer!)
-        pollTimer = null
-        ElMessage.error('会议执行失败：' + data.error)
-        meetingStore.endMeeting('')
-      }
-    } catch {}
-  }, 3000)
 }
 
 function handleInterject() {
@@ -1246,7 +1119,11 @@ function handleExport() {
 
 onUnmounted(() => {
   shouldStop = true
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  // 还原父级容器样式，避免影响其他页面的滚动
+  for (const { el, props } of _savedStyles) {
+    for (const [k, v] of Object.entries(props)) (el.style as any)[k] = v
+  }
+  _savedStyles = []
 })
 </script>
 

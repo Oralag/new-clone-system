@@ -360,9 +360,10 @@ function typeLabel(type: string) {
   return { copy: '文案', poster: '图文', video_script: '视频' }[type] ?? type
 }
 
-const BASE_TIME = Date.now() - 30 * 60 * 1000
 function cardTime(idx: number) {
-  const d = new Date(BASE_TIME + idx * 5 * 60 * 1000)
+  const ts = filtered.value[idx]?.createdAt
+  if (!ts) return ''
+  const d = new Date(ts)
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 

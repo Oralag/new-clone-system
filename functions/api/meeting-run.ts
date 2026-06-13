@@ -215,6 +215,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
   const apiKey = env.AI_API_KEY
   if (!apiKey) return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), { status: 500, headers: CORS })
 
+  if (!request.headers.get('x-erp-token')) {
+    return new Response(JSON.stringify({ error: '未授权' }), { status: 401, headers: CORS })
+  }
+
   const { topic, brandInfo, brandContext } = await request.json() as any
   if (!topic) return new Response(JSON.stringify({ error: '缺少 topic' }), { status: 400, headers: CORS })
 
