@@ -2,7 +2,7 @@
   <div class="dashboard">
 
     <!-- ── 品牌配置快捷栏 ── -->
-    <div class="brand-config-bar" :class="{ unconfigured: !brandStore.isConfigured }" @click="$router.push('/agent/brand-settings')">
+    <div class="brand-config-bar" :class="{ unconfigured: !brandStore.isConfigured }" @click="$router.push(ap('/agent/brand-settings'))">
       <div class="bcb-left">
         <div class="bcb-logo" :style="brandStore.isConfigured && brandStore.brand.primaryColor ? { background: brandStore.brand.primaryColor } : {}">
           <span v-if="!brandStore.brand.logo">{{ (brandStore.brand.name || '品')[0] }}</span>
@@ -40,15 +40,15 @@
         <h1 class="hero-title">{{ brandStore.isConfigured ? brandStore.brand.name : '我的公司' }}<br/><span class="hero-title-sub">全流程 AI 驱动</span></h1>
         <p class="hero-desc">Captain 统一调度 · 各部门协同作战 · 内容生产流水线全自动化</p>
         <div class="hero-actions">
-          <button class="hero-btn primary" @click="$router.push('/agent/meeting')">
+          <button class="hero-btn primary" @click="$router.push(ap('/agent/meeting'))">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="12" height="8" rx="2"/><path d="M4.5 13h5M7 10v3"/></svg>
             召开会议
           </button>
-          <button class="hero-btn" @click="$router.push('/agent/trending')">
+          <button class="hero-btn" @click="$router.push(ap('/agent/trending'))">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 10L4.5 6.5L7.5 9.5L13 3"/><path d="M10 3h3v3"/></svg>
             查看热搜
           </button>
-          <button class="hero-btn" @click="$router.push('/agent/publish')">
+          <button class="hero-btn" @click="$router.push(ap('/agent/publish'))">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 1v8M4.5 3.5L7 1l2.5 2.5"/><path d="M1.5 10v2.5h11V10"/></svg>
             发布管理
           </button>
@@ -75,7 +75,7 @@
 
     <!-- ── 快捷工作台入口 ── -->
     <section class="wb-row">
-      <div class="workflow-banner" @click="$router.push('/agent/studio')">
+      <div class="workflow-banner" @click="$router.push(ap('/agent/studio'))">
         <div class="wb-left">
           <div class="wb-badge" style="background:#10b981">HOT</div>
           <div class="wb-text">
@@ -87,7 +87,7 @@
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </div>
       </div>
-      <div class="workflow-banner" @click="$router.push('/agent/workflow')">
+      <div class="workflow-banner" @click="$router.push(ap('/agent/workflow'))">
         <div class="wb-left">
           <div class="wb-badge">NEW</div>
           <div class="wb-text">
@@ -108,7 +108,7 @@
         <span class="section-sub">点击进入对应部门工作间</span>
       </div>
       <div class="depts-row">
-        <div v-for="dept in departments" :key="dept.id" class="dept-card" :style="{ '--dc': dept.color }" @click="$router.push(dept.path)">
+        <div v-for="dept in departments" :key="dept.id" class="dept-card" :style="{ '--dc': dept.color }" @click="$router.push(ap(dept.path))">
           <div class="dept-illus" :style="{ background: dept.color }">
             <svg :viewBox="'0 0 12 12'" width="88" height="88" style="image-rendering:pixelated;opacity:0.28" v-html="deptIllus[dept.id] || deptIllus.content"></svg>
             <span class="dept-illus-label">{{ dept.name }}</span>
@@ -156,7 +156,7 @@
         <div class="co-panel">
           <div class="co-panel-hd">
             <span class="co-panel-title">近期发布计划</span>
-            <router-link to="/agent/calendar" class="co-panel-link">查看全部 →</router-link>
+            <router-link :to="ap('/agent/calendar')" class="co-panel-link">查看全部 →</router-link>
           </div>
           <div class="co-cal-list">
             <div v-for="p in upcomingDashboard" :key="p.id" class="co-cal-item">
@@ -168,7 +168,7 @@
               <span class="co-cal-tag" :class="'cct-' + p.status">{{ STATUS_ZH[p.status] }}</span>
             </div>
             <div v-if="upcomingDashboard.length === 0" class="co-cal-empty">
-              <router-link to="/agent/calendar" class="co-panel-link">+ 新建内容计划</router-link>
+              <router-link :to="ap('/agent/calendar')" class="co-panel-link">+ 新建内容计划</router-link>
             </div>
           </div>
         </div>
@@ -183,7 +183,7 @@
     <div class="trending-panel">
       <div class="panel-hd">
         <span class="panel-title">今日热搜快览</span>
-        <router-link to="/agent/trending" class="panel-link">查看全部 <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5.5h7M6 3l3 2.5L6 8"/></svg></router-link>
+        <router-link :to="ap('/agent/trending')" class="panel-link">查看全部 <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5.5h7M6 3l3 2.5L6 8"/></svg></router-link>
       </div>
       <div class="trending-list" v-if="topTrending.length > 0">
         <div v-for="(item, i) in topTrending" :key="i" class="trending-item">
@@ -196,7 +196,7 @@
       <div class="trending-empty" v-else>
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="opacity:.25"><path d="M2 14h4l3.5-10 5 20 3.5-10H26"/></svg>
         <div>暂无热搜数据</div>
-        <router-link to="/agent/trending" class="panel-link" style="margin-top:6px">去情报部抓取 →</router-link>
+        <router-link :to="ap('/agent/trending')" class="panel-link" style="margin-top:6px">去情报部抓取 →</router-link>
       </div>
     </div>
 
@@ -205,6 +205,7 @@
 
 <script setup lang="ts">
 import { computed, defineComponent, h } from 'vue'
+import { useRoute } from 'vue-router'
 import { useTrendingStore } from '@/stores/agent'
 import { useBrandStore } from '@/stores/brand'
 import { useMeetingStore } from '@/stores/meeting'
@@ -212,6 +213,11 @@ import { useChannels } from '@/composables/useChannels'
 import { useContentCalendar } from '@/composables/useContentCalendar'
 import CaptainBar from '@/components/CaptainBar.vue'
 import AgentLiveFeed from '@/components/agent/AgentLiveFeed.vue'
+
+const route = useRoute()
+function ap(path: string) {
+  return route.path.startsWith('/mobile/') ? path.replace('/agent/', '/mobile/agent/') : path
+}
 
 const { channels } = useChannels()
 const { plans, upcomingPlans } = useContentCalendar()
