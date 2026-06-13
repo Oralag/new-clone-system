@@ -7,40 +7,45 @@ interface Env {
   REPLICATE_API_TOKEN?: string
   AGENT_MEMORY: KVNamespace
   AI: Ai
+  // 以下三项请在 Cloudflare 环境变量中配置，不要硬编码
+  CF_API_TOKEN?: string
+  BROWSERLESS_TOKEN?: string
+  LOCAL_BROWSER_AUTH?: string
 }
 
 // ── 浏览器工具（与 adam-agent 共用同一套本地服务）─────────────────────────
 const LOCAL_BROWSER_URL = 'https://nonabstemiously-uninfixed-neal.ngrok-free.dev'
-const LOCAL_BROWSER_AUTH = 'adam-browser-secret'
-const BROWSERLESS_TOKEN = '2UH2uSuvqJf4yX9b4a49cff588c3dbb4febb96cb284d573fa'
+// ⚠️ 以下为已知泄露的默认值，请在 Cloudflare 环境变量中覆盖并轮换
+const LOCAL_BROWSER_AUTH_DEFAULT = 'adam-browser-secret'
+const BROWSERLESS_TOKEN_DEFAULT = '2UH2uSuvqJf4yX9b4a49cff588c3dbb4febb96cb284d573fa'
 const BROWSERLESS_BASE = 'https://production-sfo.browserless.io'
 const CF_KV_NAMESPACE = '34551c1704904c3ab22463a73fc56f5c'
-const CF_API_TOKEN = 'rdRZlf7zm66MaFQfjUAj08ihpoY10kbOOa9lhw5T'
+const CF_API_TOKEN_DEFAULT = 'rdRZlf7zm66MaFQfjUAj08ihpoY10kbOOa9lhw5T'
 
 let _cfAccountId: string | null = null
-async function getCFAccountId(): Promise<string> {
+async function getCFAccountId(cfToken: string): Promise<string> {
   if (_cfAccountId) return _cfAccountId
   const res = await fetch('https://api.cloudflare.com/client/v4/accounts?per_page=1', {
-    headers: { Authorization: `Bearer ${CF_API_TOKEN}` },
+    headers: { Authorization: `Bearer ${cfToken}` },
   })
   const data: any = await res.json()
   _cfAccountId = data?.result?.[0]?.id || ''
   return _cfAccountId!
 }
 
-async function loadCookiesFromKV(site: string): Promise<any[]> {
+async function loadCookiesFromKV(site: string, cfToken: string): Promise<any[]> {
   try {
-    const accountId = await getCFAccountId()
+    const accountId = await getCFAccountId(cfToken)
     const res = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${CF_KV_NAMESPACE}/values/browser_cookie:${site}`,
-      { headers: { Authorization: `Bearer ${CF_API_TOKEN}` } },
+      { headers: { Authorization: `Bearer ${cfToken}` } },
     )
     if (!res.ok) return []
     return await res.json()
   } catch { return [] }
 }
 
-async function executeBrowserTool(name: string, input: Record<string, any>): Promise<string> {
+async function executeBrowserTool(name: string, input: Record<string, any>, cfToken: string, browserlessToken: string, localBrowserAuth: string): Promise<string> {
   try {
     if (name === 'browser_navigate' || name === 'browser_get_content') {
       const url = input.url
@@ -49,12 +54,12 @@ async function executeBrowserTool(name: string, input: Record<string, any>): Pro
         : url.includes('weibo') ? 'weibo'
         : url.includes('douyin') ? 'douyin'
         : undefined
-      const cookies = site ? await loadCookiesFromKV(site) : []
+      const cookies = site ? await loadCookiesFromKV(site, cfToken) : []
 
       try {
         const resp = await fetch(LOCAL_BROWSER_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-auth-token': LOCAL_BROWSER_AUTH, 'ngrok-skip-browser-warning': 'true' },
+          headers: { 'Content-Type': 'application/json', 'x-auth-token': localBrowserAuth, 'ngrok-skip-browser-warning': 'true' },
           body: JSON.stringify({ action: 'get_content', params: { url }, cookies }),
         })
         if (resp.ok) {
@@ -75,7 +80,7 @@ async function executeBrowserTool(name: string, input: Record<string, any>): Pro
           return { url: page.url(), title, content: text.slice(0, 5000) };
         }
       `
-      const resp2 = await fetch(`${BROWSERLESS_BASE}/function?token=${BROWSERLESS_TOKEN}`, {
+      const resp2 = await fetch(`${BROWSERLESS_BASE}/function?token=${browserlessToken}`, {
         method: 'POST', headers: { 'Content-Type': 'application/javascript' }, body: script,
       })
       if (!resp2.ok) return JSON.stringify({ error: `浏览器访问失败: ${(await resp2.text()).slice(0, 200)}` })
@@ -88,7 +93,7 @@ async function executeBrowserTool(name: string, input: Record<string, any>): Pro
       try {
         const resp = await fetch(LOCAL_BROWSER_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-auth-token': LOCAL_BROWSER_AUTH, 'ngrok-skip-browser-warning': 'true' },
+          headers: { 'Content-Type': 'application/json', 'x-auth-token': localBrowserAuth, 'ngrok-skip-browser-warning': 'true' },
           body: JSON.stringify({ action: 'screenshot', params: { url }, cookies: [] }),
         })
         if (resp.ok) {
@@ -96,7 +101,7 @@ async function executeBrowserTool(name: string, input: Record<string, any>): Pro
           if (data.ok) return JSON.stringify({ status: 'ok', ...data.result })
         }
       } catch {}
-      const resp2 = await fetch(`${BROWSERLESS_BASE}/screenshot?token=${BROWSERLESS_TOKEN}`, {
+      const resp2 = await fetch(`${BROWSERLESS_BASE}/screenshot?token=${browserlessToken}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, options: { type: 'jpeg', quality: 70 } }),
       })
@@ -108,7 +113,7 @@ async function executeBrowserTool(name: string, input: Record<string, any>): Pro
 
     if (name === 'browser_get_credential') {
       const site = input.site || ''
-      const cookies = await loadCookiesFromKV(site)
+      const cookies = await loadCookiesFromKV(site, cfToken)
       if (cookies.length > 0) return JSON.stringify({ site, auth_method: 'cookie', cookie_count: cookies.length, status: '已有登录 Cookie' })
       return JSON.stringify({ error: `未找到 ${site} 的登录凭据` })
     }
@@ -155,7 +160,7 @@ async function erpPost(path: string, body: Record<string, any>, token: string, b
   try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}）`) }
 }
 
-async function executeTool(name: string, input: Record<string, any>, token: string, backend: string, ai?: Ai, kv?: KVNamespace): Promise<string> {
+async function executeTool(name: string, input: Record<string, any>, token: string, backend: string, ai?: Ai, kv?: KVNamespace, cfToken?: string, browserlessToken?: string, localBrowserAuth?: string): Promise<string> {
   try {
     let result: string
     switch (name) {
@@ -309,7 +314,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
       case 'browser_get_content':
       case 'browser_screenshot':
       case 'browser_get_credential': {
-        result = await executeBrowserTool(name, input)
+        result = await executeBrowserTool(name, input, cfToken || CF_API_TOKEN_DEFAULT, browserlessToken || BROWSERLESS_TOKEN_DEFAULT, localBrowserAuth || LOCAL_BROWSER_AUTH_DEFAULT)
         break
       }
       default:
@@ -607,6 +612,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), { status: 500 })
   }
 
+  const erpToken = request.headers.get('x-erp-token') || ''
+  if (!erpToken) {
+    return new Response(JSON.stringify({ error: '未授权' }), { status: 401, headers: { 'Access-Control-Allow-Origin': '*' } })
+  }
+
   const body = await request.json() as any
 
   // 图片取回接口
@@ -616,12 +626,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return new Response(data, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } })
   }
 
-  const { messages, agentId } = body
-  const erpToken = request.headers.get('x-erp-token') || ''
+  const { messages, agentId, brandContext, productContext, productImages } = body
   const { realToken, backend } = decodeErpToken(erpToken)
   const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
   const replicateToken = env.REPLICATE_API_TOKEN || ''
   const cfAI = env.AI
+  const cfToken = env.CF_API_TOKEN || CF_API_TOKEN_DEFAULT
+  const browserlessToken = env.BROWSERLESS_TOKEN || BROWSERLESS_TOKEN_DEFAULT
+  const localBrowserAuth = env.LOCAL_BROWSER_AUTH || LOCAL_BROWSER_AUTH_DEFAULT
 
   const agent = AGENTS[agentId]
   if (!agent) {
@@ -663,7 +675,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           const name = tc.function.name
           const input = JSON.parse(tc.function.arguments || '{}')
           await send({ type: 'tool_start', id: tc.id, name, input })
-          const result = await executeTool(name, input, realToken, backend, cfAI, env.AGENT_MEMORY)
+          const result = await executeTool(name, input, realToken, backend, cfAI, env.AGENT_MEMORY, cfToken, browserlessToken, localBrowserAuth)
           await send({ type: 'tool_result', id: tc.id, name, result })
           toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
         }

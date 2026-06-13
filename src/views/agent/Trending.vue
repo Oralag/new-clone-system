@@ -77,7 +77,8 @@
           </div>
           <div v-if="currentList.length === 0" class="output-empty">暂无数据 · 点击抓取</div>
           <div v-else class="trending-list">
-            <div v-for="(item, i) in currentList.slice(0, 8)" :key="i" class="trending-item" @click="addTopic(item.title)">
+            <div v-if="currentList[0]?.isMock" class="mock-notice">示例数据 · 点击「抓取热搜」获取真实数据</div>
+            <div v-for="(item, i) in currentList.slice(0, 8)" :key="i" class="trending-item" :class="{ 'is-mock': item.isMock }" @click="addTopic(item.title)">
               <span class="t-rank" :class="i < 3 ? 'hot' : ''">{{ i + 1 }}</span>
               <span class="t-title">{{ item.title }}</span>
               <span class="t-heat">{{ item.heat }}</span>
@@ -242,6 +243,8 @@ function sendToContent() {
 .mini-tab { padding: 2px 7px; border-radius: 6px; border: 1px solid #E8E8E8; background: #F8F8F6; font-size: 10px; font-weight: 600; color: #AAAAAA; cursor: pointer; font-family: inherit; transition: all 0.12s; }
 .mini-tab.active { background: #06b6d4; color: #fff; border-color: #06b6d4; }
 
+.mock-notice { font-size: 10px; color: #d97706; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 6px; padding: 4px 8px; margin-bottom: 4px; text-align: center; }
+.trending-item.is-mock .t-title { color: #AAAAAA; }
 .trending-list { display: flex; flex-direction: column; gap: 4px; }
 .trending-item { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 7px; cursor: pointer; transition: background 0.12s; }
 .trending-item:hover { background: rgba(6,182,212,0.06); }

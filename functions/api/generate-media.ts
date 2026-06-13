@@ -45,6 +45,10 @@ async function volcSign(
 }
 
 export const onRequestPost: PagesFunction<{ VOLC_ACCESS_KEY_ID: string; VOLC_SECRET_KEY: string; SILICONFLOW_API_KEY: string }> = async ({ request, env }) => {
+  if (!request.headers.get('x-erp-token')) {
+    return Response.json({ status: 'error', message: '未授权' }, { status: 401 })
+  }
+
   const { type, prompt, ratio } = await request.json() as { type: 'image' | 'video'; prompt: string; ratio?: string }
 
   if (type === 'image') {
