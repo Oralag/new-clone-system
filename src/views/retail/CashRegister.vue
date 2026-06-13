@@ -141,7 +141,16 @@
                     @click.stop
                   />
                 </div>
-                <span class="cr-cart-item-sub">小计 ¥{{ formatMoney(item.line_amount) }}</span>
+                <div class="cr-cart-item-sub">
+                  <span class="cr-cart-item-sub-label">小计</span>
+                  <el-input-number
+                    :model-value="item.line_amount"
+                    :min="0.01" :precision="2" controls-position="right" size="small"
+                    style="width:88px"
+                    @change="(v: number) => changeSubtotal(idx, v)"
+                    @click.stop
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -266,7 +275,16 @@
                         @click.stop
                       />
                     </div>
-                    <span class="cr-cart-item-sub">小计 ¥{{ formatMoney(item.line_amount) }}</span>
+                    <div class="cr-cart-item-sub">
+                      <span class="cr-cart-item-sub-label">小计</span>
+                      <el-input-number
+                        :model-value="item.line_amount"
+                        :min="0.01" :precision="2" controls-position="right" size="small"
+                        style="width:88px"
+                        @change="(v: number) => changeSubtotal(idx, v)"
+                        @click.stop
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1034,6 +1052,13 @@ function changeQty(idx: number, delta: number) {
   calcTotal()
 }
 
+function changeSubtotal(idx: number, newSubtotal: number) {
+  const qty = cartItems[idx]?.num
+  if (!qty || qty <= 0 || !newSubtotal) return
+  cartItems[idx].price = Math.round(newSubtotal / qty * 100) / 100
+  calcTotal()
+}
+
 function removeCartItem(idx: number) {
   cartItems.splice(idx, 1)
   if (pricingTargetIndex.value === null) {
@@ -1768,7 +1793,15 @@ onMounted(async () => {
 }
 .cr-qty-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
 
-.cr-cart-item-sub { font-size: 14px; font-weight: 700; color: #2563eb; line-height: 1.2; }
+.cr-cart-item-sub { display: flex; align-items: center; gap: 4px; }
+.cr-cart-item-sub-label { font-size: 11px; color: #64748b; flex-shrink: 0; }
+:deep(.cr-cart-item-sub .el-input-number .el-input__wrapper) {
+  padding: 0 22px 0 4px; font-size: 12px; font-weight: 700; color: #2563eb;
+}
+:deep(.cr-cart-item-sub .el-input-number__increase),
+:deep(.cr-cart-item-sub .el-input-number__decrease) {
+  width: 18px;
+}
 
 /* ── 结算区 ──────────────────────────────────────────────────────────────── */
 .cr-settle {
@@ -2166,6 +2199,6 @@ onMounted(async () => {
   /* 购物车列表通用（抽屉内） */
   .cr-cart-item { padding: 8px 9px; border-radius: 10px; }
   .cr-cart-item-name { font-size: 12px; }
-  .cr-cart-item-sub { font-size: 13px; }
+  .cr-cart-item-sub-label { font-size: 11px; }
 }
 </style>

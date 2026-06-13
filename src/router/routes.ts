@@ -32,18 +32,10 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/commission-setting', name: 'SaleCommissionSetting', component: () => import('@/views/sale/CommissionSetting.vue'), meta: { title: '提成设置' } },
       { path: 'sale/offer', name: 'SaleOffer', component: () => import('@/views/sale/Offer.vue'), meta: { title: '销售报价' } },
       { path: 'sale/sample', name: 'SaleSample', component: () => import('@/views/sale/Sample.vue'), meta: { title: '样品管理' } },
-      { path: 'sale/contract', name: 'SaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售订单' } },
+      { path: 'sale/contract', name: 'SaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售合同' } },
       { path: 'sale/contract/view/:id', name: 'SaleContractView', component: () => import('@/views/sale/ContractView.vue'), meta: { title: '查看合同' } },
       { path: 'sale/out', name: 'SaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'SaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
-      { path: 'sale/mini-orders', name: 'MiniOrders', component: () => import('@/views/sale/MiniOrders.vue'), meta: { title: '小程序订单' } },
-      { path: 'sale/mini-videos', name: 'MiniVideos', component: () => import('@/views/sale/MiniVideos.vue'), meta: { title: '看看视频管理' } },
-      { path: 'sale/mini-qrcode', name: 'MiniQrcode', component: () => import('@/views/sale/MiniQrcode.vue'), meta: { title: '包装二维码' } },
-      { path: 'sale/distributor', name: 'Distributor', component: () => import('@/views/miniprogram/Distributor.vue'), meta: { title: '分销商管理' } },
-      { path: 'sale/refund', name: 'Refund', component: () => import('@/views/miniprogram/Refund.vue'), meta: { title: '退款/售后' } },
-
-      // Online
-      { path: 'online/meituan', name: 'OnlineMeituan', component: () => import('@/views/online/MeituanOrders.vue'), meta: { title: '美团订单' } },
 
       // Retail
       { path: 'retail/overview', name: 'RetailOverview', component: () => import('@/views/retail/RetailOverview.vue'), meta: { title: '零售总览' } },
@@ -169,25 +161,35 @@ const routes: RouteRecordRaw[] = [
 
     ],
   },
+  // ── 线上渠道 ────────────
+  {
+    path: '/online',
+    component: () => import('@/layouts/AdminLayout.vue'),
+    children: [
+      { path: 'meituan', name: 'OnlineMeituan', component: () => import('@/views/online/MeituanOrders.vue'), meta: { title: '美团订单' } },
+    ],
+  },
   // ── 运营驾驶舱（独立布局）────────────
   {
     path: '/ecommerce',
     component: () => import('@/layouts/EcommerceLayout.vue'),
     redirect: '/ecommerce/overview',
     children: [
-      { path: 'overview', name: 'EcommerceOverview', component: () => import('@/views/ecommerce/Overview.vue'), meta: { title: '运营指挥台' } },
-      { path: 'platforms', name: 'EcommercePlatforms', component: () => import('@/views/ecommerce/Platforms.vue'), meta: { title: '平台接入' } },
-      { path: 'agent', name: 'EcommerceAgent', component: () => import('@/views/ecommerce/Agent.vue'), meta: { title: '运营工作台' } },
-      { path: 'meituan', name: 'MeituanMonitor', component: () => import('@/views/ecommerce/MeituanMonitor.vue'), meta: { title: '美团监控' } },
+      { path: 'overview', name: 'EcommerceOverview', component: () => import('@/views/ecommerce/Overview.vue'), meta: { title: '电商总览' } },
+      { path: 'platforms', name: 'EcommercePlatforms', component: () => import('@/views/ecommerce/Platforms.vue'), meta: { title: '平台管理' } },
+      { path: 'orders', name: 'EcommerceOrders', component: () => import('@/views/ecommerce/Orders.vue'), meta: { title: '订单中心' } },
+      { path: 'stock', name: 'EcommerceStock', component: () => import('@/views/ecommerce/Stock.vue'), meta: { title: '库存同步' } },
+      { path: 'offline', name: 'EcommerceOffline', component: () => import('@/views/ecommerce/Offline.vue'), meta: { title: '线下与私域' } },
+      { path: 'agent', name: 'EcommerceAgent', component: () => import('@/views/ecommerce/Agent.vue'), meta: { title: '运营专员' } },
     ],
   },
   // ── 移动协作模块（独立布局）────────────
   {
     path: '/mobile',
     component: () => import('@/layouts/MobileLayout.vue'),
-    redirect: '/mobile/modules',
+    redirect: '/mobile/dashboard',
     children: [
-      { path: 'workbench', redirect: '/mobile/modules' },
+      { path: 'workbench', redirect: '/mobile/dashboard' },
       { path: 'chat', name: 'MobileChat', component: () => import('@/views/mobile/MobileChat.vue'), meta: { title: '消息' } },
       { path: 'chat/new', name: 'MobileNewChat', component: () => import('@/views/mobile/MobileNewChat.vue'), meta: { title: '发起会话' } },
       { path: 'chat/:id', name: 'MobileGroupChat', component: () => import('@/views/mobile/MobileGroupChat.vue'), meta: { title: '会话详情' } },
@@ -216,9 +218,6 @@ const routes: RouteRecordRaw[] = [
           { path: 'content', name: 'MobileAgentContent', component: () => import('@/views/agent/ContentDept.vue'), meta: { title: '内容部' } },
           { path: 'creative', name: 'MobileAgentCreative', component: () => import('@/views/agent/CreativeDept.vue'), meta: { title: '创意部' } },
           { path: 'brand', name: 'MobileAgentBrand', component: () => import('@/views/agent/BrandDept.vue'), meta: { title: '品牌部' } },
-          { path: 'brand-settings', name: 'MobileAgentBrandSettings', component: () => import('@/views/agent/Brand.vue'), meta: { title: '品牌配置' } },
-          { path: 'workflow', name: 'MobileAgentWorkflow', component: () => import('@/views/agent/PublishWorkflow.vue'), meta: { title: '一站式发布' } },
-          { path: 'publish', name: 'MobileAgentPublish', component: () => import('@/views/agent/Publish.vue'), meta: { title: '发布部' } },
         ]
       },
       { path: 'investment', name: 'MobileInvestment', component: () => import('@/layouts/InvestmentLayout.vue'), meta: { title: '对外投资' } },
@@ -238,7 +237,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/overview', name: 'MobileSaleOverview', component: () => import('@/views/sale/SaleOverview.vue'), meta: { title: '销售总览' } },
       { path: 'sale/client', name: 'MobileSaleClient', component: () => import('@/views/sale/ClientList.vue'), meta: { title: '客户管理' } },
       { path: 'sale/sample', name: 'MobileSaleSample', component: () => import('@/views/mobile/MobileSample.vue'), meta: { title: '样品管理' } },
-      { path: 'sale/contract', name: 'MobileSaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售订单' } },
+      { path: 'sale/contract', name: 'MobileSaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售合同' } },
       { path: 'sale/out', name: 'MobileSaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'MobileSaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
       // Procure
@@ -313,15 +312,10 @@ const routes: RouteRecordRaw[] = [
       { path: 'poster', name: 'AgentPoster', component: () => import('@/views/agent/Poster.vue'), meta: { title: '图文海报' } },
       { path: 'video', name: 'AgentVideo', component: () => import('@/views/agent/Video.vue'), meta: { title: '视频生成' } },
       { path: 'creative-lab', name: 'AgentCreativeLab', component: () => import('@/views/agent/CreativeLab.vue'), meta: { title: 'AI创意实验室' } },
-      { path: 'workflow', name: 'AgentWorkflow', component: () => import('@/views/agent/PublishWorkflow.vue'), meta: { title: '一站式发布' } },
       { path: 'publish', name: 'AgentPublish', component: () => import('@/views/agent/Publish.vue'), meta: { title: '发布管理' } },
       { path: 'history', name: 'AgentHistory', component: () => import('@/views/agent/History.vue'), meta: { title: '历史记录' } },
-      { path: 'studio', name: 'AgentStudio', component: () => import('@/views/agent/ContentStudio.vue'), meta: { title: '内容工作台' } },
-      { path: 'assets', name: 'AgentAssets', component: () => import('@/views/agent/AssetLibrary.vue'), meta: { title: '素材库' } },
       { path: 'marketing', name: 'AgentMarketing', component: () => import('@/views/investment/Marketing.vue'), meta: { title: '营销顾问' } },
       { path: 'designer', name: 'AgentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
-      { path: 'channels', name: 'AgentChannels', component: () => import('@/views/content/Channels.vue'), meta: { title: '渠道管理' } },
-      { path: 'calendar', name: 'AgentCalendar', component: () => import('@/views/content/Calendar.vue'), meta: { title: '内容日历' } },
     ],
   },
   // 品牌主页 & 零售中心（独立布局，公开访问无需ERP登录）
@@ -332,7 +326,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'BrandIndex', component: () => import('@/views/brand/Index.vue'), meta: { title: 'NOMADIC DAIRY', public: true } },
       { path: 'retail', name: 'BrandRetail', component: () => import('@/views/brand/Index.vue'), meta: { title: '零售商城 - NOMADIC DAIRY', public: true } },
-      { path: 'wholesale', name: 'BrandWholesale', component: () => import('@/views/brand/Wholesale.vue'), meta: { title: '批发合作 - NOMADIC DAIRY', public: true } },
+      { path: 'wholesale', name: 'BrandWholesale', component: () => import('@/views/brand/Index.vue'), meta: { title: '采购商主页 - NOMADIC DAIRY', public: true } },
       { path: 'products', name: 'BrandProducts', component: () => import('@/views/brand/Products.vue'), meta: { title: '全部产品 - NOMADIC DAIRY', public: true } },
       { path: 'product/:id', name: 'BrandProductDetail', component: () => import('@/views/brand/ProductDetail.vue'), meta: { title: '产品详情 - NOMADIC DAIRY', public: true } },
       { path: 'cart', name: 'BrandCart', component: () => import('@/views/brand/Cart.vue'), meta: { title: '购物车 - NOMADIC DAIRY', public: true } },
@@ -353,26 +347,13 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'InvestmentIndex', component: () => import('@/views/investment/Index.vue'), meta: { title: '亚当观测舱' } },
       { path: 'city', name: 'InvestmentCity', component: () => import('@/views/investment/City.vue'), meta: { title: '生态园区' } },
-      { path: 'city/hall/:id', name: 'InvestmentHall', component: () => import('@/views/investment/halls/HallView.vue'), meta: { title: '建筑大厅' } },
       { path: 'market', name: 'InvestmentMarket', component: () => import('@/views/investment/Market.vue'), meta: { title: '市场' } },
       { path: 'marketing', name: 'InvestmentMarketing', component: () => import('@/views/investment/Marketing.vue'), meta: { title: '营销顾问' } },
       { path: 'designer', name: 'InvestmentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
       { path: 'archive', name: 'InvestmentArchive', component: () => import('@/views/investment/Archive.vue'), meta: { title: '档案馆' } },
       { path: 'library', name: 'InvestmentLibrary', component: () => import('@/views/investment/Library.vue'), meta: { title: '图书馆' } },
-      { path: 'workspace', name: 'InvestmentWorkspace', component: () => import('@/views/investment/Workspace.vue'), meta: { title: '与亚当对话' } },
+      { path: 'workspace', redirect: '/investment/city' },
     ],
-  },
-  {
-    path: '/share/contract/:id',
-    name: 'ShareContract',
-    component: () => import('@/views/share/ContractShare.vue'),
-    meta: { title: '销售订单', public: true },
-  },
-  {
-    path: '/share/contracts',
-    name: 'ShareContracts',
-    component: () => import('@/views/share/ContractsShare.vue'),
-    meta: { title: '销售订单明细', public: true },
   },
 ]
 

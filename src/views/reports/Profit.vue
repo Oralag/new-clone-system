@@ -389,6 +389,12 @@ import { getExpenseList } from '@/api/finance'
 import http from '@/api/http'
 import { findNaiDoufuGoods } from '@/utils/goodsAlias'
 import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
+import {
+  createProfitCostContext, loadUnitConvertRows, loadBomItems,
+  calcContractSaleAmount, calcRetailSaleAmount, myFreightShare,
+  filterProfitExpenses, aggregateGoodsProfit, buildOrderItems,
+  type ProfitCostContext, type BomItemFlat,
+} from '@/utils/profitCalc'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
@@ -398,394 +404,31 @@ const saleContracts = ref<any[]>([])
 const retailOrders = ref<any[]>([])
 const goodsList = ref<any[]>([])
 const procureInhouseList = ref<any[]>([])
-const bomList = ref<any[]>([])   // BOM 头（成品）
-const bomItemList = ref<{ finished_sn: string; goods_sn: string; num: number; price: number }[]>([])  // BOM 物料（展平）
+const bomList = ref<any[]>([])
+const bomItemList = ref<BomItemFlat[]>([])
 const expenseList = ref<any[]>([])
 const unitConvertList = ref<any[]>([])
 
-function toNum(...values: any[]): number {
-  for (const v of values) {
-    const n = Number(v)
-    if (Number.isFinite(n) && n > 0) return n
-  }
-  return 0
-}
+// 成本上下文 — 算法统一在 @/utils/profitCalc
+const costCtx = computed<ProfitCostContext>(() => createProfitCostContext({
+  goodsList: goodsList.value,
+  inhouseList: procureInhouseList.value,
+  bomHeaders: bomList.value,
+  bomItems: bomItemList.value,
+  unitConvertRows: unitConvertList.value,
+}))
 
-function toText(...values: any[]): string {
-  for (const v of values) {
-    const s = String(v ?? '').trim()
-    if (s) return s
-  }
-  return ''
-}
-
-function parseItems(info: any): any[] {
-  if (!info) return []
-  if (Array.isArray(info)) return info
-  if (typeof info === 'object') {
-    if (Array.isArray(info.goods_info)) return info.goods_info
-    if (Array.isArray(info.items)) return info.items
-    return []
-  }
-  try {
-    const parsed = JSON.parse(info)
-    return typeof parsed === 'string' ? parseItems(parsed) : parseItems(parsed)
-  } catch {
-    return []
-  }
-}
-
-function itemQty(item: any): number {
-  return toNum(item?.num, item?.qty, item?.quantity, item?.goods_num, item?.number, item?.count)
-}
-
-function itemPrice(item: any): number {
-  return toNum(item?.price, item?.sell_price, item?.sale_price, item?.unit_price, item?.retail_price, item?.amount_price)
-}
-
-function itemLineAmount(item: any): number {
-  return toNum(item?.line_amount)
-}
-
-function itemCost(item: any): number {
-  return toNum(item?.cost_price, item?.cost, item?.costPrice, item?.purchase_price, item?.in_price, item?.avg_price)
-}
-
-function itemName(item: any): string {
-  return toText(item?.goods_name, item?.name, item?.product_name, item?.title)
-}
-
-function itemSn(item: any): string {
-  return toText(item?.goods_sn, item?.sn, item?.goods_code, item?.code, item?.barcode)
-}
-
-// 从 spec 字段解析大单位→基础单位的换算比
-// 格式1: "400/箱/0.423/球" 或 "24/盒" → 首段为纯整数
-// 格式2: "450g/25袋" → 某段为 "N+基础单位名"（如 "25袋" 且基础单位=袋）
-function parseSpecRatio(spec: string, baseUnit = ''): number {
-  if (!spec) return 1
-  const segments = spec.split('/')
-  // 优先：找 "N+baseUnit" 格式（如 "25袋" 且 baseUnit="袋"）
-  if (baseUnit) {
-    for (const seg of segments) {
-      const m = seg.trim().match(/^(\d+)(.+)$/)
-      if (m) {
-        const n = Number(m[1])
-        if (n > 1 && m[2].includes(baseUnit)) return n
-      }
-    }
-  }
-  // 兜底：首段纯整数（原有逻辑）
-  const first = (segments[0] || '').trim()
-  const n = Number(first)
-  return Number.isInteger(n) && n > 1 ? n : 1
-}
-
-// goods_sn -> goods 快查表（用于采购成本地图的 spec 换算）
-const goodsBySnMap = computed(() => {
-  const m: Record<string, any> = {}
-  for (const g of goodsList.value) { if (g.goods_sn) m[g.goods_sn] = g }
-  return m
-})
-
-// goods_id -> { unit_name -> ratio } 换算表（来自 GoodsUnitConvert）
-const unitConvertMap = computed(() => {
-  const m: Record<number, Record<string, number>> = {}
-  for (const r of unitConvertList.value) {
-    const gid = Number(r.goods_id)
-    const ratio = Number(r.ratio)
-    if (!gid || !r.unit_name || !ratio) continue
-    if (!m[gid]) m[gid] = {}
-    m[gid][r.unit_name] = ratio
-  }
-  return m
-})
-
-// goods_id -> 移动加权平均价（采购入库 + BOM物料成本），兜底商品 cost_price
-// 统一存基础单位（ratio=1）的成本，避免"斤"成本被当成"块儿"成本乘以数量
-const goodsCostMap = computed(() => {
-  const m: Record<number, number> = {}
-  for (const g of goodsList.value) {
-    const rawCost = toNum(g.cost_price, g.purchase_price, g.avg_price, g.in_price)
-    // 若 goods.unit_name 在换算表中 ratio>1，说明它是大单位，需折算为基础单位
-    const goodsUnitRatio = (g.unit_name && unitConvertMap.value[g.id])
-      ? (unitConvertMap.value[g.id][g.unit_name] ?? 1)
-      : 1
-    m[g.id] = goodsUnitRatio > 1 ? rawCost / goodsUnitRatio : rawCost
-  }
-  // 采购入库移动均价（含多单位换算）
-  // 预扫描：收集 unit_ratio 明确设置(>1)的记录，计算每个(sn,单位)的显式均价
-  // 目的：给 unit_ratio=null 的老记录提供参考价，过滤单位录错的脏数据
-  const snUnitExplicitAvg: Record<string, Record<string, number>> = {}
-  for (const ih of procureInhouseList.value) {
-    if (Number(ih.status) !== 1) continue
-    try {
-      const snUnitCost: Record<string, Record<string, number>> = {}
-      const snUnitQty: Record<string, Record<string, number>> = {}
-      for (const item of parseItems(ih.goods_info)) {
-        const sn = itemSn(item)
-        if (!sn) continue
-        const explicitRatio = item.unit_ratio != null ? Number(item.unit_ratio) : null
-        if (!explicitRatio || explicitRatio <= 1) continue
-        const unitName = String(item.unit_name || '')
-        const qty = itemQty(item)
-        const price = toNum(item.price, item.price_no_tax, item.cost_price, item.in_price, item.avg_price)
-        if (!unitName || qty <= 0 || price <= 0) continue
-        if (!snUnitCost[sn]) { snUnitCost[sn] = {}; snUnitQty[sn] = {} }
-        snUnitCost[sn][unitName] = (snUnitCost[sn][unitName] || 0) + qty * price
-        snUnitQty[sn][unitName] = (snUnitQty[sn][unitName] || 0) + qty
-      }
-      for (const [sn, units] of Object.entries(snUnitCost)) {
-        if (!snUnitExplicitAvg[sn]) snUnitExplicitAvg[sn] = {}
-        for (const [u, cost] of Object.entries(units)) {
-          const q = snUnitQty[sn][u]
-          if (q > 0) snUnitExplicitAvg[sn][u] = cost / q
-        }
-      }
-    } catch {}
-  }
-
-  const snTotalCost: Record<string, number> = {}
-  const snTotalQty: Record<string, number> = {}
-  for (const ih of procureInhouseList.value) {
-    if (Number(ih.status) !== 1) continue
-    try {
-      for (const item of parseItems(ih.goods_info)) {
-        const sn = itemSn(item)
-        if (!sn) continue
-        const qty = itemQty(item)
-        const price = toNum(item.price, item.price_no_tax, item.cost_price, item.in_price, item.avg_price)
-        if (qty > 0 && price > 0) {
-          const goodsId = Number(item.goods_id || goodsBySnMap.value[sn]?.id || 0)
-          const unitName = String(item.unit_name || '')
-          const baseUnit = goodsBySnMap.value[sn]?.unit_name || ''
-          const convertRatio = goodsId && unitName ? (unitConvertMap.value[goodsId]?.[unitName] ?? 0) : 0
-          const explicitRatio = item.unit_ratio != null ? Number(item.unit_ratio) : null
-          let ratio: number
-          if (explicitRatio != null && explicitRatio > 1) {
-            // 明确设置 >1：直接使用
-            ratio = explicitRatio
-          } else if (convertRatio > 1) {
-            // explicit=null 或 explicit≤1（录入错误/老数据）：用显式均价验证
-            // 若价格远低于同单位显式均价 × 0.25，说明是基础单位价格录错了单位 → 跳过
-            const explicitAvg = snUnitExplicitAvg[sn]?.[unitName]
-            if (explicitAvg != null && price < explicitAvg * 0.25) {
-              ratio = 1  // 价格明显是基础单位价，单位名录错了
-            } else {
-              ratio = convertRatio  // 无参考或价格合理：信任 GoodsUnitConvert
-            }
-          } else {
-            ratio = Math.max(1, parseSpecRatio(item.spec || goodsBySnMap.value[sn]?.spec || '', baseUnit))
-          }
-          if (unitName && baseUnit && unitName !== baseUnit && ratio === 1) continue
-          snTotalCost[sn] = (snTotalCost[sn] || 0) + qty * price
-          snTotalQty[sn] = (snTotalQty[sn] || 0) + qty * ratio
-        }
-      }
-    } catch {}
-  }
-  // 物料移动均价（用于 BOM 成本计算优先于 BOM 配置价）
-  const snAvgPrice: Record<string, number> = {}
-  for (const sn in snTotalQty) {
-    if (snTotalQty[sn] > 0) snAvgPrice[sn] = snTotalCost[sn] / snTotalQty[sn]
-  }
-  // 非 BOM 商品：用采购均价覆盖 goods.cost_price
-  for (const g of goodsList.value) {
-    const sn = g.goods_sn
-    if (sn && snTotalQty[sn] > 0) {
-      m[g.id] = snTotalCost[sn] / snTotalQty[sn]
-    }
-  }
-  // BOM 成品：成本 = sum(物料用量 × 采购移动均价，无采购记录时兜底用BOM配置价)
-  // 单位换算已在 snAvgPrice 计算时折算为基础单位，与 BOM 用量单位一致
-  const bomItemsByFinished: Record<string, typeof bomItemList.value> = {}
-  for (const item of bomItemList.value) {
-    if (!item.finished_sn) continue
-    ;(bomItemsByFinished[item.finished_sn] ??= []).push(item)
-  }
-  for (const [fsn, items] of Object.entries(bomItemsByFinished)) {
-    const cost = items.reduce((s, mat) => {
-      const price = snAvgPrice[mat.goods_sn] || mat.price || 0
-      return s + mat.num * price
-    }, 0)
-    if (cost > 0) {
-      const g = goodsList.value.find(x => x.goods_sn === fsn)
-      if (g) m[g.id] = cost
-    }
-  }
-  return m
-})
-
-// goods_id set that has BOM defined (for labeling only)
-const hasBomSet = computed(() => {
-  const snSet = new Set(bomList.value.map((b: any) => b.goods_sn).filter(Boolean))
-  const s = new Set<number>()
-  for (const g of goodsList.value) {
-    if (g.goods_sn && snSet.has(g.goods_sn)) s.add(Number(g.id))
-  }
-  return s
-})
-
-// Cost: 优先采购入库移动均价，兜底商品 cost_price
-// goodsCostMap 存的是基础单位（ratio=1）的成本；itemUnit 是订单里实际用的单位
-// unitRatioHint: 订单行的 unit_ratio（null=老数据未设置；>1=明确大单位）
-// 只有 hint>1 时才放大；hint=null 且单位是大单位时保守不放大（老数据单位标签可能录错）
-function getUnitCost(goodsId: number, itemUnit = '', unitRatioHint: number | null = null): { unitCost: number; hasBom: boolean; costSource: string } {
-  const baseCost = goodsCostMap.value[goodsId] || 0
-  const convertRatio = (itemUnit && goodsId && unitConvertMap.value[goodsId])
-    ? (unitConvertMap.value[goodsId][itemUnit] ?? 1)
-    : 1
-  // 大单位放大规则：仅当订单行明确设置 unit_ratio>1 时才放大成本
-  // hint=null + 大单位 → 可能是老数据单位录错，保守使用 ratio=1
-  const itemUnitRatio = (unitRatioHint != null && unitRatioHint > 1)
-    ? unitRatioHint
-    : (convertRatio > 1 && unitRatioHint == null) ? 1
-    : convertRatio
-  const c = baseCost * itemUnitRatio
-  const hasBom = hasBomSet.value.has(goodsId)
-  const g = goodsList.value.find(x => x.id === goodsId)
-  const hasAvg = g?.goods_sn && procureInhouseList.value.length > 0
-  return {
-    unitCost: c,
-    hasBom,
-    costSource: c > 0 ? `${hasAvg ? '采购均价' : '采购价'} ¥${c.toFixed(2)}${hasBom ? '（含BOM）' : ''}` : '未设置成本价',
-  }
-}
-
-function resolveGoodsId(item: any): number {
-  const id = Number(item?.goods_id || item?.id || item?.product_id || item?.shop_goods_id || 0)
-  const canonical = findNaiDoufuGoods(item, goodsList.value)
-  if (canonical?.id) return Number(canonical.id)
-  if (id > 0) return id
-  const sn = itemSn(item)
-  const name = itemName(item)
-  const matched = goodsList.value.find(g =>
-    (sn && String(g.goods_sn || '').trim() === sn) ||
-    (sn && String(g.barcode || '').trim() === sn) ||
-    (name && String(g.goods_name || '').trim() === name)
-  )
-  return Number(matched?.id || 0)
-}
-
-function getItemUnitCost(item: any): ReturnType<typeof getUnitCost> {
-  const goodsId = resolveGoodsId(item)
-  const itemUnit = toText(item?.unit_name, item?.unit)
-  const unitRatioHint = item?.unit_ratio != null ? Number(item.unit_ratio) : null
-  const byId = getUnitCost(goodsId, itemUnit, unitRatioHint)
-  // BOM 优先
-  if (byId.hasBom && byId.unitCost > 0) return byId
-  // 采购均价优先（已含多单位换算，比合同里存的旧 cost_price 更准确）
-  if (byId.unitCost > 0) return byId
-  // 兜底：合同/单据里存的直接成本价
-  const direct = itemCost(item)
-  if (direct > 0) {
-    return { unitCost: direct, hasBom: false, costSource: `单据成本 ¥${direct.toFixed(2)}` }
-  }
-  return byId
-}
-
+// 单品维度
 const rows = computed(() => {
-  const map: Record<string, {
-    goods_name: string; goods_id: number; num: number; sale_amount: number
-    unit_cost: number; has_bom: boolean; cost_source: string; source: string
-  }> = {}
-
-  const add = (goodsInfo: any, source: string, discountRatio = 1, fallbackAmount = 0) => {
-    if (!goodsInfo) return
-    const items = parseItems(goodsInfo)
-    if (!items.length) return
-    const rawTotal = items.reduce((s, g) => s + itemQty(g) * itemPrice(g), 0)
-    const totalQty = items.reduce((s, g) => s + itemQty(g), 0)
-    try {
-      for (const g of items) {
-        const goodsId = resolveGoodsId(g)
-        const goodsName = goodsList.value.find(x => x.id === goodsId)?.goods_name || itemName(g) || '-'
-        const key = `${goodsId || itemSn(g) || goodsName}`
-        const { unitCost, hasBom, costSource } = getItemUnitCost(g)
-        if (!map[key]) {
-          map[key] = {
-            goods_name: goodsName, goods_id: goodsId,
-            num: 0, sale_amount: 0,
-            unit_cost: unitCost, has_bom: hasBom, cost_source: costSource, source,
-          }
-        } else if (!map[key].source.includes(source)) {
-          map[key].source += '+' + source
-        }
-        const qty = itemQty(g)
-        const lineAmount = itemLineAmount(g)
-        const price = lineAmount > 0
-          ? lineAmount / Math.max(qty, 1)
-          : (rawTotal > 0 ? itemPrice(g) * discountRatio : (totalQty > 0 ? fallbackAmount / totalQty : 0))
-        map[key].num += qty
-        map[key].sale_amount += qty * price
-      }
-    } catch {}
-  }
-
-  for (const c of saleContracts.value) {
-    // 计算优惠比例：实际金额 / 商品原价合计
-    let actualAmount = toNum(c.after_discount, c.total_amount, c.goods_amount, c.contract_amount, c.amount)
-    const contractItems = parseItems(c.goods_info)
-    if (!actualAmount) {
-      const lineSum = contractItems.reduce((s, g) => s + toNum(g.line_amount), 0)
-      if (lineSum > 0) actualAmount = lineSum
-    }
-    if (!actualAmount) {
-      const qtyPriceSum = contractItems.reduce((s, g) => s + itemQty(g) * itemPrice(g), 0)
-      if (qtyPriceSum > 0) actualAmount = qtyPriceSum
-    }
-    if (!actualAmount) continue
-    let rawTotal = 0
-    for (const g of contractItems) rawTotal += itemQty(g) * itemPrice(g)
-    const ratio = rawTotal > 0 ? actualAmount / rawTotal : 1
-    add(c.goods_info, '合同', ratio, actualAmount)
-  }
-  for (const r of retailOrders.value) add(r.goods_info, '零售', 1, Number(r.total_amount || 0) - Number(r.discount_amount || 0))
-
-  return Object.values(map)
-    .map(r => ({
-      ...r,
-      cost_amount: r.num * r.unit_cost,
-      profit: r.sale_amount - r.num * r.unit_cost,
-      profit_rate: r.sale_amount > 0
-        ? ((r.sale_amount - r.num * r.unit_cost) / r.sale_amount * 100) : 0,
-    }))
-    .sort((a, b) => b.profit - a.profit)
+  const docs = [
+    ...saleContracts.value
+      .map(c => ({ goodsInfo: c.goods_info, source: '合同', saleAmount: calcContractSaleAmount(c) }))
+      .filter(d => d.saleAmount > 0),
+    ...retailOrders.value
+      .map(r => ({ goodsInfo: r.goods_info, source: '零售', saleAmount: calcRetailSaleAmount(r) })),
+  ]
+  return aggregateGoodsProfit(docs, costCtx.value, { aliasResolver: findNaiDoufuGoods })
 })
-
-function buildOrderItems(goodsInfo: any, saleAmount: number) {
-  const items = parseItems(goodsInfo)
-  const rawTotal = items.reduce((s, g) => s + itemQty(g) * itemPrice(g), 0)
-  const totalQty = items.reduce((s, g) => s + itemQty(g), 0)
-  const ratio = rawTotal > 0 ? saleAmount / rawTotal : 1
-
-  return items.map((g, index) => {
-    const qty = itemQty(g)
-    const goodsId = resolveGoodsId(g)
-    const goods = goodsList.value.find(x => x.id === goodsId)
-    const cost = getItemUnitCost(g)
-    const lineSale = rawTotal > 0
-      ? qty * itemPrice(g) * ratio
-      : (totalQty > 0 ? saleAmount * qty / totalQty : 0)
-    const costAmount = qty * cost.unitCost
-    const profit = lineSale - costAmount
-    return {
-      key: `${goodsId || itemSn(g) || itemName(g) || index}_${index}`,
-      goods_id: goodsId,
-      goods_name: goods?.goods_name || itemName(g) || '-',
-      goods_sn: goods?.goods_sn || itemSn(g) || '',
-      unit_name: toText(g?.unit_name, g?.unit, goods?.unit_name),
-      qty,
-      sale_amount: lineSale,
-      unit_cost: cost.unitCost,
-      cost_amount: costAmount,
-      profit,
-      profit_rate: lineSale > 0 ? (profit / lineSale * 100) : 0,
-      has_bom: cost.hasBom,
-      cost_source: cost.costSource,
-    }
-  })
-}
 
 // 销售额为0的合同数量（数据不完整，排除出利润报表）
 const skippedContractCount = ref(0)
@@ -796,20 +439,11 @@ const orderRows = computed(() => {
   let skipped = 0
 
   for (const c of saleContracts.value) {
-    // toNum 逐个尝试字段，只接受 > 0 的值，避免 "0.00" 字符串短路 || 链的问题
-    let sale_amount = toNum(c.after_discount, c.total_amount, c.goods_amount, c.contract_amount, c.amount)
-    if (!sale_amount) {
-      const lineSum = parseItems(c.goods_info).reduce((s, g) => s + toNum(g.line_amount), 0)
-      if (lineSum > 0) sale_amount = lineSum
-    }
-    if (!sale_amount) {
-      const qtyPriceSum = parseItems(c.goods_info).reduce((s, g) => s + itemQty(g) * itemPrice(g), 0)
-      if (qtyPriceSum > 0) sale_amount = qtyPriceSum
-    }
+    const sale_amount = calcContractSaleAmount(c)
     if (!sale_amount) { skipped++; continue }
-    const items = buildOrderItems(c.goods_info, sale_amount)
+    const items = buildOrderItems(c.goods_info, sale_amount, costCtx.value, findNaiDoufuGoods)
     const cost_amount = items.reduce((s, item) => s + item.cost_amount, 0)
-    const freight = myFreight(c)
+    const freight = myFreightShare(c)
     const profit = sale_amount - cost_amount
     const net_profit = profit - freight
     result.push({
@@ -826,9 +460,8 @@ const orderRows = computed(() => {
   skippedContractCount.value = skipped
 
   for (const r of retailOrders.value) {
-    // 零售单用折后售价（total - discount），避免欠款未付时把实收当销售额
-    let sale_amount = Number(r.total_amount || 0) - Number(r.discount_amount || 0)
-    const items = buildOrderItems(r.goods_info, sale_amount)
+    const sale_amount = calcRetailSaleAmount(r)
+    const items = buildOrderItems(r.goods_info, sale_amount, costCtx.value, findNaiDoufuGoods)
     const cost_amount = items.reduce((s, item) => s + item.cost_amount, 0)
     const profit = sale_amount - cost_amount
     result.push({
@@ -879,17 +512,11 @@ const overallRate = computed(() =>
   totalSale.value > 0 ? (totalProfit.value / totalSale.value * 100) : 0
 )
 
-// Freight: our share from contracts
-function myFreight(row: any): number {
-  const f = Number(row.freight_amount || 0)
-  if (!f) return 0
-  const b = row.freight_bearer
-  if (b === 'seller') return f
-  if (b === 'half') return f / 2
-  return 0
-}
-const freightTotal = computed(() => saleContracts.value.reduce((s, r) => s + myFreight(r), 0))
-const expenseTotal = computed(() => expenseList.value.reduce((s, r) => s + Number(r.amount || 0), 0))
+const freightTotal = computed(() => saleContracts.value.reduce((s, r) => s + myFreightShare(r), 0))
+// 费用：排除未付(pending)与「采购单据支出」（货款已按商品成本计入，再扣即双重扣减）
+const expenseTotal = computed(() =>
+  filterProfitExpenses(expenseList.value).reduce((s, r) => s + Number(r.amount || 0), 0)
+)
 const netProfit = computed(() => totalProfit.value - freightTotal.value - expenseTotal.value)
 const netRate = computed(() => totalSale.value > 0 ? (netProfit.value / totalSale.value * 100) : 0)
 
@@ -927,41 +554,13 @@ async function loadData() {
     bomList.value            = bomHeaders
     expenseList.value        = e.status === 'fulfilled' ? (e.value?.data?.rows  ?? []) : []
 
-    // GoodsUnitConvert API 不支持全量查询（不带 goods_id 返回空），必须按商品逐个查
-    // BOM detail 同理，合并成一批并行请求
-    const multiUnitGoods = goodsList.value.filter((g: any) => g.multi_unit)
-    const [ucResults, detailResults] = await Promise.all([
-      Promise.allSettled(multiUnitGoods.map((g: any) =>
-        http.get('/goods/GoodsUnitConvert/index', { params: { goods_id: g.id, list_rows: 50 } })
-      )),
-      Promise.allSettled(bomHeaders.map((bom: any) =>
-        http.get('/goods/BomGoods/detail', { params: { id: bom.id } })
-      )),
+    // 多单位换算 + BOM 物料明细（只读接口，按需逐个查）
+    const [ucRows, bomItems] = await Promise.all([
+      loadUnitConvertRows(http, goodsList.value),
+      loadBomItems(http, bomHeaders),
     ])
-    const allUcRows: any[] = []
-    ucResults.forEach(res => {
-      if (res.status === 'fulfilled') allUcRows.push(...(res.value?.data?.rows ?? []))
-    })
-    unitConvertList.value = allUcRows
-
-    if (bomHeaders.length > 0) {
-      const flatItems: typeof bomItemList.value = []
-      detailResults.forEach((res, i) => {
-        if (res.status !== 'fulfilled') return
-        const header = bomHeaders[i]
-        for (const mat of (res.value?.data?.items ?? [])) {
-          flatItems.push({
-            finished_sn: header.goods_sn,
-            goods_sn: mat.goods_sn || '',
-            num: Number(mat.num || 0),
-            price: Number(mat.price || 0),
-          })
-        }
-      })
-      bomItemList.value = flatItems
-    } else {
-      bomItemList.value = []
-    }
+    unitConvertList.value = ucRows
+    bomItemList.value = bomItems
   } finally {
     loading.value = false
   }

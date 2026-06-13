@@ -441,6 +441,13 @@ import { getExpenseList } from '@/api/finance'
 import http from '@/api/http'
 import { buildCustomerPrepayBreakdown } from '@/utils/prepay'
 import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
+import { findNaiDoufuGoods } from '@/utils/goodsAlias'
+import {
+  createProfitCostContext, loadUnitConvertRows, loadBomItems,
+  calcContractSaleAmount, calcRetailSaleAmount, myFreightShare,
+  filterProfitExpenses, aggregateGoodsProfit, calcOrderCost,
+  type ProfitCostContext, type BomItemFlat,
+} from '@/utils/profitCalc'
 
 const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
@@ -451,6 +458,9 @@ const procureOrders = ref<any[]>([])
 const stockRows = ref<any[]>([])
 const goodsList = ref<any[]>([])
 const bomList = ref<any[]>([])
+const procureInhouseList = ref<any[]>([])
+const bomItemList = ref<BomItemFlat[]>([])
+const unitConvertList = ref<any[]>([])
 const expenseList = ref<any[]>([])
 const prepayList = ref<any[]>([])
 const collectReceipts = ref<any[]>([])
@@ -458,10 +468,10 @@ const supplierList = ref<any[]>([])
 
 // --- Totals from raw orders ---
 const saleTotal = computed(() =>
-  saleContracts.value.reduce((s, r) => s + Number(r.total_amount || 0), 0)
+  saleContracts.value.reduce((s, r) => s + calcContractSaleAmount(r), 0)
 )
 const retailTotal = computed(() =>
-  retailOrders.value.reduce((s, r) => s + Number(r.pay_amount || r.total_amount || 0), 0)
+  retailOrders.value.reduce((s, r) => s + calcRetailSaleAmount(r), 0)
 )
 const procureTotal = computed(() =>
   procureOrders.value.reduce((s, r) => s + Number(r.total_amount || 0), 0)
@@ -470,47 +480,18 @@ const stockTotal = computed(() =>
   stockRows.value.reduce((s, r) => s + Number(r.qty || 0) * Number(r.avg_price || 0), 0)
 )
 
-// goods_id -> cost_price from goods master
-const goodsCostMap = computed(() => {
-  const m: Record<number, number> = {}
-  for (const g of goodsList.value) m[g.id] = Number(g.cost_price || 0)
-  return m
-})
-
-// goods_sn set that has BOM — goods_id is 0 in all BOM records, match by goods_sn
-const bomSnSet = computed(() => {
-  const s = new Set<string>()
-  for (const b of bomList.value) { if (b.goods_sn) s.add(b.goods_sn) }
-  return s
-})
-const goodsSnMap = computed(() => {
-  const m: Record<number, string> = {}
-  for (const g of goodsList.value) m[g.id] = g.goods_sn || ''
-  return m
-})
-const hasBomSet = computed(() => {
-  const s = new Set<number>()
-  for (const g of goodsList.value) {
-    if (g.goods_sn && bomSnSet.value.has(g.goods_sn)) s.add(g.id)
-  }
-  return s
-})
-
-// Cost = goods master cost_price
-function getUnitCost(goodsId: number): number {
-  return goodsCostMap.value[goodsId] || 0
-}
+// 成本上下文 — 算法统一在 @/utils/profitCalc（移动均价+多单位换算+BOM物料均价）
+const costCtx = computed<ProfitCostContext>(() => createProfitCostContext({
+  goodsList: goodsList.value,
+  inhouseList: procureInhouseList.value,
+  bomHeaders: bomList.value,
+  bomItems: bomItemList.value,
+  unitConvertRows: unitConvertList.value,
+}))
 
 // --- Freight: our share from contracts ---
 // freight_bearer: 'buyer'(客户全付) | 'seller'(我们全付) | 'half'(各半) | 'free'(免运费)
-function myFreight(row: any): number {
-  const f = Number(row.freight_amount || 0)
-  if (!f) return 0
-  const b = row.freight_bearer
-  if (b === 'seller') return f
-  if (b === 'half') return f / 2
-  return 0  // buyer pays or free
-}
+const myFreight = myFreightShare
 const freightRows = computed(() => saleContracts.value.filter(r => myFreight(r) > 0))
 const freightTotal = computed(() => saleContracts.value.reduce((s, r) => s + myFreight(r), 0))
 function freightLabel(row: any): string {
@@ -520,11 +501,18 @@ function freightLabel(row: any): string {
   return ''
 }
 
-// --- Expense total ---
-const expenseTotal = computed(() => expenseList.value.reduce((s, r) => s + Number(r.amount || 0), 0))
+// --- Expense total ---（利润口径：排除未付与采购单据支出，防双重扣减）
+const expenseTotal = computed(() =>
+  filterProfitExpenses(expenseList.value).reduce((s, r) => s + Number(r.amount || 0), 0)
+)
+// 单据附加费（采购单/合同 expense_amount，不在商品成本里）
+const docExpenseTotal = computed(() =>
+  procureOrders.value.reduce((s, o) => s + Number(o.expense_amount || 0), 0) +
+  saleContracts.value.reduce((s, c) => s + Number(c.expense_amount || 0), 0)
+)
 
-// --- Net profit = gross - freight - expense ---
-const netProfit = computed(() => grossProfit.value - freightTotal.value - expenseTotal.value)
+// --- Net profit = gross - freight - expense - docExpense ---
+const netProfit = computed(() => grossProfit.value - freightTotal.value - expenseTotal.value - docExpenseTotal.value)
 const netMargin = computed(() => {
   const income = saleTotal.value + retailTotal.value
   return income > 0 ? (netProfit.value / income * 100) : 0
@@ -568,18 +556,9 @@ const prepayVerifyRows = computed(() => {
 
 // grossProfit now uses BOM/cost_price based unit cost
 const grossProfit = computed(() => {
-  // income - cost of goods sold
   let cogs = 0
-  const addCogs = (goodsInfo: string | null) => {
-    if (!goodsInfo) return
-    try {
-      for (const g of JSON.parse(goodsInfo)) {
-        cogs += Number(g.num || 0) * getUnitCost(g.goods_id)
-      }
-    } catch {}
-  }
-  for (const c of saleContracts.value) addCogs(c.goods_info)
-  for (const r of retailOrders.value) addCogs(r.goods_info)
+  for (const c of saleContracts.value) cogs += calcOrderCost(c.goods_info, costCtx.value, findNaiDoufuGoods)
+  for (const r of retailOrders.value) cogs += calcOrderCost(r.goods_info, costCtx.value, findNaiDoufuGoods)
   return saleTotal.value + retailTotal.value - cogs
 })
 const grossMargin = computed(() => {
@@ -636,34 +615,11 @@ const saleCustomerRows = computed(() => {
 
 // --- Goods profit using BOM/cost_price ---
 const goodsProfitRows = computed(() => {
-  const map: Record<string, { goods_name: string; num: number; sale_amount: number; cost_amount: number; has_bom: boolean }> = {}
-
-  const add = (goodsInfo: string | null) => {
-    if (!goodsInfo) return
-    try {
-      for (const g of JSON.parse(goodsInfo)) {
-        const key = String(g.goods_id)
-        const unitCost = getUnitCost(g.goods_id)
-        const hasBom = hasBomSet.value.has(g.goods_id)
-        if (!map[key]) map[key] = { goods_name: g.goods_name || '-', num: 0, sale_amount: 0, cost_amount: 0, has_bom: hasBom }
-        const qty = Number(g.num || 0)
-        map[key].num += qty
-        map[key].sale_amount += qty * Number(g.price || 0)
-        map[key].cost_amount += qty * unitCost
-      }
-    } catch {}
-  }
-
-  for (const c of saleContracts.value) add(c.goods_info)
-  for (const r of retailOrders.value) add(r.goods_info)
-
-  return Object.values(map)
-    .map(r => ({
-      ...r,
-      profit: r.sale_amount - r.cost_amount,
-      profit_rate: r.sale_amount > 0 ? ((r.sale_amount - r.cost_amount) / r.sale_amount * 100) : 0,
-    }))
-    .sort((a, b) => b.profit - a.profit)
+  const docs = [
+    ...saleContracts.value.map(c => ({ goodsInfo: c.goods_info, source: '合同', saleAmount: calcContractSaleAmount(c) })),
+    ...retailOrders.value.map(r => ({ goodsInfo: r.goods_info, source: '零售', saleAmount: calcRetailSaleAmount(r) })),
+  ]
+  return aggregateGoodsProfit(docs, costCtx.value, { aliasResolver: findNaiDoufuGoods })
 })
 
 function fmt(v: number | string): string {
@@ -732,15 +688,15 @@ const reportTrendSeries = computed(() => {
   }
   const revenue = new Array(n).fill(0)
   const expense = new Array(n).fill(0)
-  for (const c of saleContracts.value) { const i=getIdx(c.sign_date||c.order_date||c.created_at||''); if(i>=0) revenue[i]+=Number(c.total_amount||0) }
-  for (const r of retailOrders.value) { const i=getIdx(r.order_date||r.created_at||''); if(i>=0) revenue[i]+=Number(r.pay_amount||r.total_amount||0) }
+  for (const c of saleContracts.value) { const i=getIdx(c.sign_date||c.order_date||c.created_at||''); if(i>=0) revenue[i]+=calcContractSaleAmount(c) }
+  for (const r of retailOrders.value) { const i=getIdx(r.order_date||r.created_at||''); if(i>=0) revenue[i]+=calcRetailSaleAmount(r) }
   for (const o of procureOrders.value) { const i=getIdx(o.order_date||o.created_at||''); if(i>=0) expense[i]+=Number(o.total_amount||0) }
   for (const e of expenseList.value) { const i=getIdx(e.expense_date||e.created_at||''); if(i>=0) expense[i]+=Number(e.amount||0) }
   const profit = revenue.map((v, i) => v - expense[i])
   const defs = [
     { name: '收入', color: '#16a34a', vals: revenue },
     { name: '支出', color: '#ea580c', vals: expense },
-    { name: '净利润', color: '#0071e3', vals: profit },
+    { name: '收支差', color: '#0071e3', vals: profit },
   ]
   const allVals = defs.flatMap(s => s.vals)
   const gMax = Math.max(...allVals, 1)
@@ -797,16 +753,17 @@ async function loadAll() {
       prepayParams.end_date = dateRange.value[1]
     }
 
-    const [contracts, retail, procure, stock, goods, bom, expense, prepay, receipts] = await Promise.allSettled([
+    const [contracts, retail, procure, stock, goods, bom, expense, prepay, receipts, inhouse] = await Promise.allSettled([
       getContractList(params),
       getRetailOrderList(params),
       getProcureOrderList(params),
       getStockReportList({ list_rows: 500 }),
-      getGoodsList({ list_rows: 500 }),
+      getGoodsList({ list_rows: 3000 }),
       getBomList({ list_rows: 500 }),
       getExpenseList({ ...params }),
       http.get('/finance/Prepay/index', { params: prepayParams }),
       http.get('/finance/CollectReceipt/index', { params: receiptParams }),
+      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
     ])
     saleContracts.value = contracts.status === 'fulfilled'
       ? (contracts.value?.data?.rows ?? contracts.value?.data?.data ?? []).filter(isEffectiveSaleContract) : []
@@ -826,8 +783,17 @@ async function loadAll() {
       ? (prepay.value?.data?.rows ?? []) : []
     collectReceipts.value = receipts.status === 'fulfilled'
       ? (receipts.value?.data?.rows ?? []) : []
+    procureInhouseList.value = inhouse.status === 'fulfilled'
+      ? ((inhouse.value as any)?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1) : []
     const sup = await http.get('/procure/supplier/index', { params: { list_rows: 500 } }).catch(() => null)
     supplierList.value = sup?.data?.rows ?? []
+    // 多单位换算 + BOM 物料明细（只读接口）
+    const [ucRows, bomItems] = await Promise.all([
+      loadUnitConvertRows(http, goodsList.value),
+      loadBomItems(http, bomList.value),
+    ])
+    unitConvertList.value = ucRows
+    bomItemList.value = bomItems
   } finally {
     loading.value = false
   }

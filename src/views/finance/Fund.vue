@@ -27,6 +27,14 @@
             <el-radio-button value="expense">支出 {{ viewExpenseCount }} 笔 · ¥{{ viewExpenseTotal.toFixed(2) }}</el-radio-button>
           </el-radio-group>
         </div>
+        <!-- Channel breakdown for retail fund -->
+        <div v-if="isRetailDetailFund && channelStats.length" class="channel-stats-row">
+          <div v-for="cs in channelStats" :key="cs.channel" class="channel-stat-item">
+            <div class="channel-stat-label">{{ cs.channel }}</div>
+            <div class="channel-stat-amount">¥{{ cs.total.toFixed(2) }}</div>
+            <div class="channel-stat-count">{{ cs.count }} 笔</div>
+          </div>
+        </div>
         <el-table :data="filteredDetails" v-loading="viewLoading" border stripe style="width:100%">
           <el-table-column type="index" label="序号" width="55" align="center" />
           <el-table-column label="类型" width="90" align="center">
@@ -144,6 +152,14 @@
           <span>支出合计：<b style="color:#dc2626">¥{{ viewExpenseTotal.toFixed(2) }}</b></span>
           <span>共 <b>{{ viewDetails.length }}</b> 笔</span>
         </div>
+        <!-- Channel breakdown for retail fund -->
+        <div v-if="isRetailDetailFund && channelStats.length" class="channel-stats-row">
+          <div v-for="cs in channelStats" :key="cs.channel" class="channel-stat-item">
+            <div class="channel-stat-label">{{ cs.channel }}</div>
+            <div class="channel-stat-amount">¥{{ cs.total.toFixed(2) }}</div>
+            <div class="channel-stat-count">{{ cs.count }} 笔</div>
+          </div>
+        </div>
         <el-table :data="viewDetails" v-loading="viewLoading" border stripe size="small" max-height="400" style="width:100%">
           <el-table-column type="index" label="序号" width="55" align="center" />
           <el-table-column label="类型" width="90" align="center">
@@ -222,6 +238,30 @@ const viewExpenseCount = computed(() => viewDetails.value.filter(r => r._directi
 const sourceMap: Record<string, string> = {
   customer: '客户', supplier: '供应商', other: '其他',
 }
+
+const RETAIL_CHANNELS = ['线下', '美团', '微信小店', '拼多多', '淘宝', '抖音', '小红书']
+const isRetailDetailFund = computed(() => String(viewFund.value?.name || '').includes('零售'))
+
+function extractChannel(row: any): string {
+  const remark = String(row.remark || '')
+  for (const ch of RETAIL_CHANNELS) {
+    if (remark.includes(`[${ch}]`)) return ch
+  }
+  if (row._source === '零售单') return '线下'
+  return '其他'
+}
+
+const channelStats = computed(() => {
+  if (!isRetailDetailFund.value) return []
+  const map: Record<string, { total: number; count: number }> = {}
+  for (const row of viewDetails.value.filter((r: any) => r._direction === 'income')) {
+    const ch = extractChannel(row)
+    if (!map[ch]) map[ch] = { total: 0, count: 0 }
+    map[ch].total += Number(row.amount || 0)
+    map[ch].count++
+  }
+  return [...RETAIL_CHANNELS, '其他'].filter(ch => map[ch]).map(ch => ({ channel: ch, ...map[ch] }))
+})
 
 function typeLabel(type: any) {
   const m: Record<string, string> = { '1': '银行账户', '2': '现金', '3': '第三方' }
@@ -420,5 +460,33 @@ watch(() => route.query.fund_id, syncRouteFundDetail)
   align-items: center;
   gap: 20px;
   margin-bottom: 12px;
+}
+.channel-stats-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.channel-stat-item {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 8px 14px;
+  min-width: 100px;
+  text-align: center;
+}
+.channel-stat-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+.channel-stat-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #16a34a;
+}
+.channel-stat-count {
+  font-size: 11px;
+  color: #c0c4cc;
+  margin-top: 2px;
 }
 </style>

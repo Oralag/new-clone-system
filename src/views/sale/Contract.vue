@@ -1128,6 +1128,7 @@ import { ref, reactive, computed, onMounted, onActivated, nextTick, onUnmounted 
 import { useRouter, useRoute } from 'vue-router'
 import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip, ArrowDown } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
+import { deleteSaleOutStockFlows } from '@/utils/stockEffect'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
@@ -3519,12 +3520,14 @@ async function autoReverseSaleOut(row: any) {
   const orderSn = getContractSn(row)
   if (!orderSn) return
   try {
-    const outListRes = await getSaleOutList({ keyword: orderSn, list_rows: 50 })
+    // keyword 搜索不会匹配 remark 字段，必须全量拉取后本地过滤（与 autoCreateSaleOut 保持一致）
+    const outListRes = await getSaleOutList({ list_rows: 500 })
     const outRows: any[] = (outListRes?.data?.rows ?? []).filter((o: any) =>
       String(o.remark || '').includes(orderSn) && Number(o.status) === 1
     )
     for (const out of outRows) {
       await auditSaleOut(out.id, 0)
+      try { await deleteSaleOutStockFlows(out.id) } catch { /* 库存还原失败不阻塞 */ }
     }
   } catch { /* 反出库失败不阻塞合同反审核 */ }
 }

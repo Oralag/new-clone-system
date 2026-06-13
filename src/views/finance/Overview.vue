@@ -479,14 +479,12 @@ import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList, createCollectReceipt } from '@/api/finance'
 import { getContractList } from '@/api/sale'
-import { getGoodsList, getBomList } from '@/api/goods'
 import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
 import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
-import { findNaiDoufuGoods } from '@/utils/goodsAlias'
 import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
 
 const router = useRouter()
@@ -507,18 +505,7 @@ const procureReturnFinanceList = ref<any[]>([])
 const saleReturnFinanceList = ref<any[]>([])
 const purchasePayList = ref<any[]>([])
 const saleOutList = ref<any[]>([])
-const contractList = ref<any[]>([])
-const profitGoodsList = ref<any[]>([])
-
-function calcSaleAmt(c: any): number {
-  const total = Number(c.total_amount || 0)
-  const afterDisc = Number(c.after_discount)
-  return (Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total) ? afterDisc : total
-}
-const profitInhouseList = ref<any[]>([])
-const profitBomList = ref<any[]>([])
 const flowVisible = ref(false)
-const profitViewMode = ref<'goods' | 'order' | 'month'>('goods')
 const trendChartW = 620
 const trendChartH = 170
 const trendPadLeft = 14
@@ -850,348 +837,6 @@ const retailTotal = computed(() =>
   retailList.value.filter((r: any) => r.status === 1).reduce((s, r) => s + Number(r.pay_amount || r.total_amount || 0), 0).toFixed(2)
 )
 
-// 近7天趋势数据 — 来自 allFlowItems，与 FundFlow.vue 一致
-// ── 利润趋势图：按天计算收入/成本/利润 ───────────────────────────────
-function profitNum(...values: any[]): number {
-  for (const v of values) {
-    const n = Number(v)
-    if (Number.isFinite(n) && n > 0) return n
-  }
-  return 0
-}
-
-function profitText(...values: any[]): string {
-  for (const v of values) {
-    const s = String(v ?? '').trim()
-    if (s) return s
-  }
-  return ''
-}
-
-function parseProfitItems(info: any): any[] {
-  if (!info) return []
-  if (Array.isArray(info)) return info
-  if (typeof info === 'object') {
-    if (Array.isArray(info.goods_info)) return info.goods_info
-    if (Array.isArray(info.items)) return info.items
-    return []
-  }
-  try {
-    const parsed = JSON.parse(info)
-    return typeof parsed === 'string' ? parseProfitItems(parsed) : parseProfitItems(parsed)
-  } catch {
-    return []
-  }
-}
-
-function profitItemQty(item: any): number {
-  return profitNum(item?.num, item?.qty, item?.quantity, item?.goods_num, item?.number, item?.count)
-}
-
-function profitItemPrice(item: any): number {
-  return profitNum(item?.price, item?.sell_price, item?.sale_price, item?.unit_price, item?.retail_price, item?.amount_price)
-}
-
-function profitItemLineAmount(item: any): number {
-  return profitNum(item?.line_amount)
-}
-
-function profitItemCost(item: any): number {
-  return profitNum(item?.cost_price, item?.cost, item?.costPrice, item?.purchase_price, item?.in_price, item?.avg_price)
-}
-
-function profitItemName(item: any): string {
-  return profitText(item?.goods_name, item?.name, item?.product_name, item?.title)
-}
-
-function profitItemSn(item: any): string {
-  return profitText(item?.goods_sn, item?.sn, item?.goods_code, item?.code, item?.barcode)
-}
-
-const profitCostMap = computed(() => {
-  const m: Record<number, number> = {}
-  for (const g of profitGoodsList.value) m[g.id] = profitNum(g.cost_price, g.purchase_price, g.avg_price, g.in_price)
-  const snTC: Record<string, number> = {}, snTQ: Record<string, number> = {}
-  for (const ih of profitInhouseList.value) {
-    if (Number(ih.status) !== 1) continue
-    try { for (const item of parseProfitItems(ih.goods_info)) {
-      const sn = profitItemSn(item); if (!sn) continue
-      const q = profitItemQty(item), p = profitNum(item.price, item.price_no_tax, item.cost_price, item.in_price, item.avg_price)
-      if (q>0&&p>0) { snTC[sn]=(snTC[sn]||0)+q*p; snTQ[sn]=(snTQ[sn]||0)+q }
-    }} catch {}
-  }
-  const snAvg: Record<string,number> = {}
-  for (const sn in snTQ) if (snTQ[sn]>0) snAvg[sn]=snTC[sn]/snTQ[sn]
-  const bomMap: Record<number,{sn:string;num:number}[]> = {}
-  for (const b of profitBomList.value) { const gid=Number(b.goods_id||0); if(!gid)continue; if(!bomMap[gid])bomMap[gid]=[]; bomMap[gid].push({sn:profitText(b.material_sn,b.material_goods_sn,b.goods_sn,b.sn),num:profitItemQty(b)}) }
-  for (const gid in bomMap) { const g=profitGoodsList.value.find(x=>x.id===Number(gid)); if(!g?.goods_sn)continue; let bc=0; for(const mt of bomMap[Number(gid)])bc+=mt.num*(snAvg[mt.sn]||0); if(bc>0){snTC[g.goods_sn]=bc;snTQ[g.goods_sn]=1} }
-  for (const g of profitGoodsList.value) { const sn=g.goods_sn; if(sn&&snTQ[sn]>0)m[g.id]=snTC[sn]/snTQ[sn] }
-  return m
-})
-
-const profitHasBomSet = computed(() => {
-  const s = new Set<number>()
-  for (const b of profitBomList.value) {
-    if (b.goods_id) s.add(Number(b.goods_id))
-  }
-  return s
-})
-
-function getDateKey(dateStr: string) { return (dateStr || '').slice(0, 10) }
-
-function myProfitFreight(row: any): number {
-  const f = Number(row.freight_amount || 0)
-  if (!f) return 0
-  if (row.freight_bearer === 'seller') return f
-  if (row.freight_bearer === 'half') return f / 2
-  return 0
-}
-
-const trendDays = computed(() => {
-  const days: string[] = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000)
-    days.push(`${d.getMonth()+1}/${d.getDate()}`)
-  }
-  return days
-})
-
-const profitTrendData = computed(() => {
-  const revenueMap: Record<string,number> = {}
-  const costMap: Record<string,number> = {}
-  for (let i = 6; i >= 0; i--) {
-    const k = new Date(Date.now() - i*86400000).toISOString().slice(0,10)
-    revenueMap[k] = 0; costMap[k] = 0
-  }
-  for (const c of contractList.value) {
-    const k = getDateKey(c.sign_date || c.order_date || c.created_at || '')
-    if (revenueMap[k] === undefined) continue
-    revenueMap[k] += calcSaleAmt(c)
-    for (const g of parseProfitItems(c.goods_info)) costMap[k] += profitItemQty(g) * getItemUnitCostFromMap(g).unitCost
-    costMap[k] += myProfitFreight(c)
-  }
-  for (const r of retailList.value) {
-    if (r.status !== 1) continue
-    const k = getDateKey(r.order_date || r.create_time || '')
-    if (revenueMap[k] === undefined) continue
-    let itemRevenue = 0
-    try { for (const g of parseProfitItems(r.goods_info)) {
-      const q = profitItemQty(g)
-      itemRevenue += profitItemLineAmount(g) || (q * profitItemPrice(g))
-      costMap[k] += q * getItemUnitCostFromMap(g).unitCost
-    }} catch {}
-    revenueMap[k] += itemRevenue > 0 ? itemRevenue : Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
-  }
-  for (const e of expenseList.value) {
-    const k = getDateKey(e.expense_date || e.create_time || '')
-    if (costMap[k] !== undefined) costMap[k] += Number(e.amount || 0)
-  }
-  const revVals = Object.values(revenueMap)
-  const costVals = Object.values(costMap)
-  const profitVals = revVals.map((r, i) => r - costVals[i])
-  return { revVals, costVals, profitVals }
-})
-
-const trendRevenue = computed(() => {
-  const { revVals, costVals } = profitTrendData.value
-  const max = Math.max(...revVals, ...costVals, 1)
-  return revVals.map(v => v / max)
-})
-const trendCost = computed(() => {
-  const { revVals, costVals } = profitTrendData.value
-  const max = Math.max(...revVals, ...costVals, 1)
-  return costVals.map(v => v / max)
-})
-const trendProfit = computed(() => {
-  const { profitVals } = profitTrendData.value
-  const absMax = Math.max(...profitVals.map(Math.abs), 1)
-  return profitVals.map(v => v / absMax)
-})
-
-// ═══════════ 利润分析 computed ═══════════
-function profitFmt(v: number): string {
-  return isNaN(v) ? '0.00' : v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function getUnitCostFromMap(goodsId: number): { unitCost: number; costSource: string } {
-  const c = profitCostMap.value[goodsId] || 0
-  const hasBom = profitHasBomSet.value.has(goodsId)
-  return {
-    unitCost: c,
-    costSource: c > 0 ? `成本 ¥${c.toFixed(2)}${hasBom ? '（含BOM）' : ''}` : '未设置成本价',
-  }
-}
-
-function resolveProfitGoodsId(item: any): number {
-  const id = Number(item?.goods_id || item?.id || item?.product_id || item?.shop_goods_id || 0)
-  const canonical = findNaiDoufuGoods(item, profitGoodsList.value)
-  if (canonical?.id) return Number(canonical.id)
-  if (id > 0) return id
-  const sn = profitItemSn(item)
-  const name = profitItemName(item)
-  const matched = profitGoodsList.value.find(g =>
-    (sn && String(g.goods_sn || '').trim() === sn) ||
-    (sn && String(g.barcode || '').trim() === sn) ||
-    (name && String(g.goods_name || '').trim() === name)
-  )
-  return Number(matched?.id || 0)
-}
-
-function getItemUnitCostFromMap(item: any): { unitCost: number; costSource: string } {
-  const goodsId = resolveProfitGoodsId(item)
-  const byId = getUnitCostFromMap(goodsId)
-  if (profitHasBomSet.value.has(goodsId) && byId.unitCost > 0) return byId
-  const direct = profitItemCost(item)
-  if (direct > 0) return { unitCost: direct, costSource: `单据成本 ¥${direct.toFixed(2)}` }
-  if (byId.unitCost > 0) return byId
-  return byId
-}
-
-// 按单品
-const profitByGoods = computed(() => {
-  const map: Record<string, any> = {}
-  const add = (goodsInfo: any, source: string, discountRatio = 1, fallbackAmount = 0) => {
-    if (!goodsInfo) return
-    const items = parseProfitItems(goodsInfo)
-    if (!items.length) return
-    const rawTotal = items.reduce((s, g) => s + profitItemQty(g) * profitItemPrice(g), 0)
-    const totalQty = items.reduce((s, g) => s + profitItemQty(g), 0)
-    try {
-      for (const g of items) {
-        const goodsId = resolveProfitGoodsId(g)
-        const goodsName = profitGoodsList.value.find(x => x.id === goodsId)?.goods_name || profitItemName(g) || '-'
-        const key = `${goodsId || profitItemSn(g) || goodsName}_${source}`
-        const { unitCost, costSource } = getItemUnitCostFromMap(g)
-        if (!map[key]) map[key] = { goods_name: goodsName, goods_id: goodsId, num: 0, sale_amount: 0, unit_cost: unitCost, cost_source: costSource, source }
-        const qty = profitItemQty(g)
-        const price = rawTotal > 0 ? profitItemPrice(g) * discountRatio : (totalQty > 0 ? fallbackAmount / totalQty : 0)
-        map[key].num += qty
-        map[key].sale_amount += qty * price
-      }
-    } catch {}
-  }
-  for (const c of contractList.value) {
-    const actualAmount = calcSaleAmt(c)
-    let rawTotal = 0
-    for (const g of parseProfitItems(c.goods_info)) rawTotal += profitItemQty(g) * profitItemPrice(g)
-    add(c.goods_info, '合同', rawTotal > 0 ? actualAmount / rawTotal : 1, actualAmount)
-  }
-  for (const r of retailList.value) { if (r.status !== 1) continue; add(r.goods_info, '零售', 1, Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)) }
-  return Object.values(map).map((r: any) => ({
-    ...r,
-    cost_amount: r.num * r.unit_cost,
-    profit: r.sale_amount - r.num * r.unit_cost,
-    profit_rate: r.sale_amount > 0 ? ((r.sale_amount - r.num * r.unit_cost) / r.sale_amount * 100) : 0,
-  })).sort((a: any, b: any) => b.profit - a.profit)
-})
-
-// 按单据
-const profitByOrder = computed(() => {
-  const result: any[] = []
-  for (const c of contractList.value) {
-    let cost_amount = 0
-    for (const g of parseProfitItems(c.goods_info)) cost_amount += profitItemQty(g) * getItemUnitCostFromMap(g).unitCost
-    const sale_amount = calcSaleAmt(c)
-    const freight = myProfitFreight(c)
-    const profit = sale_amount - cost_amount
-    const net_profit = profit - freight
-    result.push({
-      source: '合同',
-      order_no: ((c.remark || '').match(/^\[NO:([^\]]+)\]/) || [])[1] || c.order_sn || c.contract_no || `HT${String(c.id).padStart(4, '0')}`,
-      customer_name: c.customer_name || '—',
-      order_date: fmtDt(c.contract_date || c.create_time),
-      sale_amount, cost_amount, profit, freight, net_profit,
-      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
-      net_rate: sale_amount > 0 ? (net_profit / sale_amount * 100) : 0,
-    })
-  }
-  for (const r of retailList.value) {
-    if (r.status !== 1) continue
-    let sale_amount = 0, cost_amount = 0
-    for (const g of parseProfitItems(r.goods_info)) {
-      const q = profitItemQty(g)
-      sale_amount += q * profitItemPrice(g)
-      cost_amount += q * getItemUnitCostFromMap(g).unitCost
-    }
-    if (sale_amount <= 0) {
-      sale_amount = Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
-    }
-    const profit = sale_amount - cost_amount
-    result.push({
-      source: '零售', order_no: r.order_sn || r.order_no || r.id,
-      customer_name: r.customer_name || r.member_name || '散客',
-      order_date: fmtDt(r.order_date || r.create_time),
-      sale_amount, cost_amount, profit, freight: 0, net_profit: profit,
-      profit_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
-      net_rate: sale_amount > 0 ? (profit / sale_amount * 100) : 0,
-    })
-  }
-  return result.sort((a, b) => b.profit - a.profit)
-})
-
-// 按月份
-const profitByMonth = computed(() => {
-  const map: Record<string, { month: string; revenue: number; cost: number; expense: number; freight: number }> = {}
-  const ensure = (m: string) => { if (!map[m]) map[m] = { month: m, revenue: 0, cost: 0, expense: 0, freight: 0 } }
-  for (const c of contractList.value) {
-    const m = (c.sign_date || c.order_date || c.created_at || '').slice(0, 7)
-    if (!m) continue
-    ensure(m)
-    map[m].revenue += calcSaleAmt(c)
-    for (const g of parseProfitItems(c.goods_info)) map[m].cost += profitItemQty(g) * getItemUnitCostFromMap(g).unitCost
-    map[m].freight += myProfitFreight(c)
-  }
-  for (const r of retailList.value) {
-    if (r.status !== 1) continue
-    const m = (r.order_date || r.create_time || '').slice(0, 7)
-    if (!m) continue
-    ensure(m)
-    let itemRevenue = 0
-    for (const g of parseProfitItems(r.goods_info)) {
-      const q = profitItemQty(g)
-      itemRevenue += profitItemLineAmount(g) || (q * profitItemPrice(g))
-      map[m].cost += q * getItemUnitCostFromMap(g).unitCost
-    }
-    map[m].revenue += itemRevenue > 0 ? itemRevenue : Number(r.pay_amount ?? r.total_amount ?? r.after_discount ?? 0)
-  }
-  for (const e of expenseList.value) {
-    const m = (e.expense_date || e.create_time || '').slice(0, 7)
-    if (!m) continue
-    ensure(m)
-    map[m].expense += Number(e.amount || 0)
-  }
-  return Object.values(map).map(r => {
-    const grossProfit = r.revenue - r.cost
-    const grossRate = r.revenue > 0 ? (grossProfit / r.revenue * 100) : 0
-    const netProfit = grossProfit - r.expense - r.freight
-    const netRate = r.revenue > 0 ? (netProfit / r.revenue * 100) : 0
-    return { ...r, grossProfit, grossRate, netProfit, netRate }
-  }).sort((a, b) => b.month.localeCompare(a.month))
-})
-
-// 汇总
-const profitSummary = computed(() => {
-  const revenue = profitByMonth.value.reduce((s, r) => s + r.revenue, 0)
-  const cost = profitByMonth.value.reduce((s, r) => s + r.cost, 0)
-  const expense = profitByMonth.value.reduce((s, r) => s + r.expense, 0)
-  const freight = profitByMonth.value.reduce((s, r) => s + r.freight, 0)
-  const grossProfit = revenue - cost
-  const netProfit = grossProfit - expense - freight
-  return {
-    revenue, cost, expense, freight, grossProfit, netProfit,
-    grossRate: revenue > 0 ? (grossProfit / revenue * 100) : 0,
-    netRate: revenue > 0 ? (netProfit / revenue * 100) : 0,
-  }
-})
-
-function getMonthSummary() {
-  const t = profitSummary.value
-  return ['合计', `¥${profitFmt(t.revenue)}`, `¥${profitFmt(t.cost)}`,
-    `${t.grossProfit >= 0 ? '+' : ''}¥${profitFmt(t.grossProfit)}`, `${t.grossRate.toFixed(1)}%`,
-    `¥${profitFmt(t.expense)}`, `¥${profitFmt(t.freight)}`,
-    `${t.netProfit >= 0 ? '+' : ''}¥${profitFmt(t.netProfit)}`, `${t.netRate.toFixed(1)}%`]
-}
-
 const summaryCards = computed(() => {
   const income = Number(collectTotal.value)
   const expense = Number(payTotal.value)
@@ -1448,12 +1093,9 @@ async function loadAllData() {
       http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
       http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
       getContractList({ list_rows: 1000 }),
-      getGoodsList({ list_rows: 3000 }),
-      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
-      getBomList({ list_rows: 500 }),
     ])
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
-    const [fundRes, prepayRes, collectRes, payRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes, pGoodsRes, pInhouseRes, pBomRes] = settled.map((_,i) => ok(i))
+    const [fundRes, prepayRes, collectRes, payRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes] = settled.map((_,i) => ok(i))
     const rawFundList = fundRes.data?.rows ?? fundRes.data?.list ?? []
     const fundNameMap = new Map<number, string>(rawFundList.map((row: any) => [Number(row.id), String(row.name || '')]))
     prepayList.value = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
@@ -1734,10 +1376,6 @@ async function loadAllData() {
     rechargeList.value = rechargeRes.data?.rows ?? rechargeRes.data?.list ?? []
     clientList.value = clientRes.data?.rows ?? clientRes.data?.list ?? []
     supplierList.value = supplierRes.data?.rows ?? supplierRes.data?.list ?? []
-    contractList.value = (contractRes.data?.rows ?? contractRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
-    profitGoodsList.value = pGoodsRes.data?.rows ?? pGoodsRes.data?.list ?? []
-    profitInhouseList.value = (pInhouseRes.data?.rows ?? pInhouseRes.data?.list ?? []).filter((r: any) => r.status === 1)
-    profitBomList.value = pBomRes.data?.rows ?? pBomRes.data?.list ?? []
 
     // 过滤预付款：排除已删除的客户/供应商的记录
     const clientIds = new Set(clientList.value.map((c: any) => c.id))
