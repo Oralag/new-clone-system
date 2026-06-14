@@ -34,6 +34,7 @@
           ref="publishChatRef"
           :context-data="{ flowResults: agentStore.flowResults }"
           @content-published="markPublished"
+          @trigger-publish="publishByRealIdx"
         />
       </section>
 
@@ -591,6 +592,66 @@ function markPublished(realIdx: number) {
   const updated = [...agentStore.flowResults]
   updated[realIdx] = { ...updated[realIdx], published: true }
   agentStore.setFlowResults(updated)
+}
+
+async function publishByRealIdx(realIdx: number) {
+  const item = agentStore.flowResults[realIdx]
+  if (!item) return
+  const publishText = extractPublishContent(item)
+
+  // 尝试本地发布服务
+  const serviceUrl = (localStorage.getItem('publisher_service_url') || 'http://localhost:8765').replace(/\/$/, '')
+  try {
+    const health = await fetch(`${serviceUrl}/health`, { signal: AbortSignal.timeout(1500) })
+    if (health.ok) {
+      const body: Record<string, any> = {
+        platform: item.platform,
+        account: 'default',
+        title: item.topic || '',
+        body: publishText,
+        hashtags: [],
+      }
+      if (item.imageUrl) body.images = [item.imageUrl]
+      const resp = await fetch(`${serviceUrl}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30000),
+      })
+      const data = await resp.json() as any
+      if (data.success) {
+        markPublished(realIdx)
+        ElMessage.success(`✅ 已自动发布到 ${item.platformName}`)
+        return
+      }
+    }
+  } catch {}
+
+  // 降级：复制文案 + 跳转
+  const PLATFORM_URLS: Record<string, string> = {
+    xiaohongshu: 'https://creator.xiaohongshu.com/publish/publish',
+    douyin: 'https://creator.douyin.com/creator-micro/content/upload',
+    weibo: 'https://weibo.com/minipublish',
+    bilibili: 'https://member.bilibili.com/platform/upload/text/edit',
+    kuaishou: 'https://cp.kuaishou.com/article/publish/video',
+  }
+  const url = PLATFORM_URLS[item.platform]
+  if (url && item.imageUrl) {
+    publishGuide.value = {
+      show: true,
+      imageUrl: item.imageUrl,
+      publishText,
+      imageCopied: false,
+      textCopied: false,
+      downloadFallback: false,
+      itemRealIdx: realIdx,
+    }
+    return
+  }
+  await navigator.clipboard.writeText(publishText)
+  if (url) window.open(url, '_blank')
+  markPublished(realIdx)
+  ElMessage.success(`文案已复制，请在 ${item.platformName} 发布页粘贴`)
 }
 
 // ── 视频状态轮询 ──

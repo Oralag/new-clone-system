@@ -146,6 +146,7 @@ const emit = defineEmits<{
   (e: 'streaming-change', v: boolean): void
   (e: 'message-sent'): void
   (e: 'content-published', index: number): void
+  (e: 'trigger-publish', index: number): void
   (e: 'message-complete', payload: { publishCard?: PublishCardData; posterHtml?: string }): void
 }>()
 
@@ -358,6 +359,8 @@ async function sendMessage() {
             lastError.value = ev.error
           } else if (ev.type === 'published') {
             emit('content-published', ev.index)
+          } else if (ev.type === 'publish_trigger') {
+            emit('trigger-publish', ev.index)
           }
         } catch {}
       }

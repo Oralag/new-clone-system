@@ -160,7 +160,7 @@ async function erpPost(path: string, body: Record<string, any>, token: string, b
   try { return JSON.parse(text) } catch { throw new Error(`ERP接口返回非JSON（状态码${res.status}）`) }
 }
 
-async function executeTool(name: string, input: Record<string, any>, token: string, backend: string, ai?: Ai, kv?: KVNamespace, cfToken?: string, browserlessToken?: string, localBrowserAuth?: string): Promise<string> {
+async function executeTool(name: string, input: Record<string, any>, token: string, backend: string, ai?: Ai, kv?: KVNamespace, cfToken?: string, browserlessToken?: string, localBrowserAuth?: string, extras?: { publishQueue?: any[]; send?: (obj: object) => Promise<void> }): Promise<string> {
   try {
     let result: string
     switch (name) {
@@ -331,6 +331,34 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
       case 'browser_screenshot':
       case 'browser_get_credential': {
         result = await executeBrowserTool(name, input, cfToken || CF_API_TOKEN_DEFAULT, browserlessToken || BROWSERLESS_TOKEN_DEFAULT, localBrowserAuth || LOCAL_BROWSER_AUTH_DEFAULT)
+        break
+      }
+      case 'get_publish_queue': {
+        const queue: any[] = extras?.publishQueue || []
+        const items = input.include_published ? queue : queue.filter((item: any) => !item.published)
+        if (!items.length) {
+          result = input.include_published ? '发布队列为空，还没有任何内容。' : '待发布队列为空，所有内容均已发布或队列为空。'
+          break
+        }
+        const typeLabel = (t: string) => t === 'poster' ? '图文' : t === 'video_script' ? '视频脚本' : '文案'
+        result = `发布队列共 ${items.length} 条内容：\n` +
+          items.map((item: any, i: number) =>
+            `[${i}] ${item.platformName || item.platform} · ${typeLabel(item.type)} · "${(item.topic || item.content || '').slice(0, 40)}"${item.published ? ' ✅已发布' : ' ⏳待发布'}`
+          ).join('\n')
+        break
+      }
+      case 'publish_content': {
+        const queue: any[] = extras?.publishQueue || []
+        const idx = Number(input.index)
+        if (isNaN(idx) || idx < 0 || idx >= queue.length) {
+          result = `索引 ${input.index} 超出范围（队列共 ${queue.length} 条）`
+          break
+        }
+        const item = queue[idx]
+        if (extras?.send) {
+          await extras.send({ type: 'publish_trigger', index: idx })
+        }
+        result = `已触发发布：${item.platformName || item.platform} · "${(item.topic || '').slice(0, 30)}"。前端将打开平台发布页并复制文案。`
         break
       }
       default:
@@ -597,10 +625,35 @@ const generateVideoTool = {
   },
 }
 
+const publisherTools = [
+  {
+    name: 'get_publish_queue',
+    description: '查看当前发布队列中的内容（文案/图文/视频脚本），包含平台、类型、标题、是否已发布等信息',
+    parameters: {
+      type: 'object',
+      properties: {
+        include_published: { type: 'boolean', description: '是否包含已发布的内容，默认只返回待发布的' },
+      },
+    },
+  },
+  {
+    name: 'publish_content',
+    description: '触发发布队列中指定内容到对应平台。会通知前端打开平台发布页并自动复制文案（如本地发布服务在线则全自动发布）。',
+    parameters: {
+      type: 'object',
+      properties: {
+        index: { type: 'number', description: '要发布的内容在队列中的索引（从0开始，与get_publish_queue返回的编号一致）' },
+      },
+      required: ['index'],
+    },
+  },
+]
+
 function getToolsForAgent(agentId: string) {
   if (agentId === 'designer') return [...agentTools, generateImageTool]
   if (agentId === 'poster') return [...agentTools, generateImageTool]
   if (agentId === 'video') return [...agentTools, generateVideoTool]
+  if (agentId === 'publisher') return [...agentTools, ...publisherTools]
   return agentTools
 }
 
@@ -680,7 +733,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return new Response(data, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } })
   }
 
-  const { messages, agentId, brandContext, productContext, productImages } = body
+  const { messages, agentId, brandContext, productContext, productImages, flowResults: publishQueue } = body
   const { realToken, backend } = decodeErpToken(erpToken)
   const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
   const replicateToken = env.REPLICATE_API_TOKEN || ''
@@ -733,7 +786,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           const name = tc.function.name
           const input = JSON.parse(tc.function.arguments || '{}')
           await send({ type: 'tool_start', id: tc.id, name, input })
-          const result = await executeTool(name, input, realToken, backend, cfAI, env.AGENT_MEMORY, cfToken, browserlessToken, localBrowserAuth)
+          const result = await executeTool(name, input, realToken, backend, cfAI, env.AGENT_MEMORY, cfToken, browserlessToken, localBrowserAuth, { publishQueue: publishQueue || [], send })
           await send({ type: 'tool_result', id: tc.id, name, result })
           toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
         }
