@@ -173,7 +173,22 @@ ERP里的每一笔订单、每一条库存、每一张发票，都在我的视�
    - 发布专员（publisher）：多平台排期、发布计划
    - 趋势专员（trend）：热点分析、选题方向
    - 营销顾问（marketing）：营销战略、客户分析、定价策略、促销方案、SWOT分析、市场洞察
-   - 派发格式：@@DISPATCH:专员ID:具体任务@@
+   - 简单任务（只需一个专员）用：@@DISPATCH:专员ID:具体任务@@
+   - 全流程任务（"全链路"/"从热点到发布"/"做一套内容"/"全部帮我搞定"）用流水线模式，输出 dispatch-plan 代码块：
+
+\`\`\`dispatch-plan
+{
+  "mode": "pipeline",
+  "pipeline": [
+    { "agentId": "trend", "task": "分析当前热点，输出3个选题方向", "pipe_output_to_next": true },
+    { "agentId": "copywriter", "task": "基于趋势报告写小红书文案，3个版本", "receives_from": "trend" },
+    { "agentId": "brand", "task": "审核文案是否符合品牌调性", "receives_from": "copywriter", "is_gate": true },
+    { "agentId": "publisher", "task": "制定本周发布排期", "receives_from": "brand" }
+  ]
+}
+\`\`\`
+
+   可用字段：agentId（必填）、task（必填）、receives_from（上游agentId字符串或数组）、is_gate（审核关卡，true时审核不通过则停止）
 
 【禁区 — 不亲自处理】
 - 不写代码、不调试程序、不解释技术实现
@@ -458,6 +473,67 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
             await env.AGENT_MEMORY.put(callerKey, JSON.stringify(existing.slice(-30)), { expirationTtl: 60 * 60 * 24 * 30 })
           } catch {}
         }
+      }
+
+      // Phase 2b: 解析 dispatch-plan 流水线
+      const planMatch = captainResponse.match(/```dispatch-plan\s*([\s\S]*?)```/)
+      if (planMatch) {
+        try {
+          const plan = JSON.parse(planMatch[1])
+          if (plan.mode === 'pipeline' && Array.isArray(plan.pipeline)) {
+            type PipelineStep = { agentId: string; task: string; receives_from?: string | string[]; is_gate?: boolean }
+            const pipeline = plan.pipeline as PipelineStep[]
+            await send({ type: 'pipeline_start', total: pipeline.length })
+            const pipelineOutputs: Record<string, string> = {}
+            let gateBlocked = false
+
+            for (let i = 0; i < pipeline.length; i++) {
+              if (gateBlocked) break
+              const step = pipeline[i]
+              const subAgent = AGENTS[step.agentId]
+              if (!subAgent) continue
+
+              // 注入上游产出
+              let task = step.task
+              if (step.receives_from) {
+                const fromIds = Array.isArray(step.receives_from) ? step.receives_from : [step.receives_from]
+                const ctx = fromIds.filter(id => pipelineOutputs[id])
+                  .map(id => `【${AGENTS[id]?.name || id}输出参考】\n${pipelineOutputs[id]}`).join('\n\n---\n')
+                if (ctx) task = `${task}\n\n---\n${ctx}`
+              }
+              // 审核关卡追加指令
+              const gateInstr = step.is_gate
+                ? '\n\n【重要：你是审核关卡】审核完毕必须在末尾明确输出：通过→"✅ 审核通过"，不通过→"❌ 不通过" 加原因。'
+                : ''
+
+              await send({ type: 'pipeline_step_start', step: i, total: pipeline.length, agentId: step.agentId, agentName: subAgent.name, emoji: subAgent.emoji, task: step.task, is_gate: !!step.is_gate })
+
+              const subData = await oaiCall(subAgent.systemPrompt + gateInstr, [{ role: 'user', content: task }])
+              const output = subData.choices?.[0]?.message?.content || ''
+              pipelineOutputs[step.agentId] = output
+              agentOutputs.push({ agentId: step.agentId, agentName: subAgent.name, output })
+
+              await send({ type: 'pipeline_step_done', step: i, agentId: step.agentId, agentName: subAgent.name, output })
+
+              if (step.is_gate && /❌\s*(不通过|REJECT)/i.test(output)) {
+                await send({ type: 'pipeline_gate_blocked', step: i, agentId: step.agentId, reason: output.slice(0, 300) })
+                gateBlocked = true
+              }
+
+              if (erpToken && output) {
+                try {
+                  const key = `mem:${erpToken.slice(-16)}:${step.agentId}:captain`
+                  const existing = await env.AGENT_MEMORY.get(key, 'json') as any[] || []
+                  const now = new Date().toISOString()
+                  existing.push({ role: 'user', content: step.task, caller: 'captain', time: now }, { role: 'assistant', content: output, time: now })
+                  await env.AGENT_MEMORY.put(key, JSON.stringify(existing.slice(-30)), { expirationTtl: 60 * 60 * 24 * 30 })
+                } catch {}
+              }
+            }
+
+            if (!gateBlocked) await send({ type: 'pipeline_done' })
+          }
+        } catch {}
       }
 
       // Phase 3: Captain 综合汇报

@@ -101,6 +101,30 @@
                 <div class="agent-task">{{ step.task }}</div>
                 <div v-if="step.output" class="agent-output">{{ step.output }}</div>
               </div>
+              <div v-else-if="step.type === 'pipeline_flow'" class="step-pipeline">
+                <div class="pl-track">
+                  <template v-for="(ps, pi) in (step.pipelineSteps || [])" :key="pi">
+                    <div class="pl-node" :class="['pls-' + ps.status, ps.is_gate ? 'pln-gate' : '']">
+                      <span class="pln-emoji">{{ ps.emoji }}</span>
+                      <span class="pln-name">{{ ps.agentName }}</span>
+                      <span v-if="ps.is_gate" class="pln-gate-badge">审核</span>
+                      <span v-if="ps.status === 'running'" class="spin-sm" />
+                      <span v-else-if="ps.status === 'done'" class="pln-check">✓</span>
+                      <span v-else-if="ps.status === 'blocked'" class="pln-blocked-icon">✕</span>
+                    </div>
+                    <div v-if="pi < (step.pipelineSteps?.length || 0) - 1" class="pl-arrow">›</div>
+                  </template>
+                  <div v-if="(step.pipelineSteps?.length || 0) < (step.pipelineTotal || 0)" class="pl-waiting">
+                    <span class="spin-sm" style="opacity:0.3" />
+                  </div>
+                </div>
+                <div v-if="step.gateBlocked" class="pl-status pl-status-blocked">⚠️ 品牌审核不通过，流水线暂停</div>
+                <div v-else-if="step.pipelineDone" class="pl-status pl-status-done">✅ 流水线执行完成</div>
+                <div v-for="ps in (step.pipelineSteps || []).filter(s => s.output && s.status !== 'waiting')" :key="ps.agentId" class="pl-output-row">
+                  <div class="pl-output-hd">{{ ps.emoji }} {{ ps.agentName }}</div>
+                  <div class="pl-output-body">{{ ps.output.slice(0, 240) }}{{ ps.output.length > 240 ? '…' : '' }}</div>
+                </div>
+              </div>
               <div v-else-if="step.type === 'tool'" class="step-tool">
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                 {{ step.label }}
@@ -125,11 +149,17 @@ import { useAdamStore } from '@/stores/adam'
 
 const adamStore = useAdamStore()
 
+interface PipelineStepItem {
+  index: number; agentId: string; agentName: string; emoji: string
+  task: string; output: string; status: 'waiting' | 'running' | 'done' | 'blocked'; is_gate: boolean
+}
 interface Step {
-  type: 'agent_start' | 'captain_text' | 'tool'
+  type: 'agent_start' | 'captain_text' | 'tool' | 'pipeline_flow'
   agentId?: string; agentName?: string; emoji?: string
   task?: string; output?: string; status?: string
   text?: string; label?: string
+  pipelineSteps?: PipelineStepItem[]
+  pipelineTotal?: number; pipelineDone?: boolean; gateBlocked?: boolean
 }
 interface CaptainMsg { role: 'user' | 'agency'; content: string; steps: Step[] }
 interface HistoryItem { title: string; time: string; messages: CaptainMsg[] }
@@ -308,6 +338,7 @@ async function sendCaptain(text?: string) {
 
   const agentSteps: Record<string, number> = {}
   const toolSteps: Record<string, number> = {}
+  let pipelineStepIdx = -1
 
   try {
     const history = captainMessages.value
@@ -363,6 +394,27 @@ async function sendCaptain(text?: string) {
           } else if (evt.type === 'tool_result') {
             const idx = toolSteps[evt.id]
             if (idx !== undefined) agencyMsg.steps[idx].status = 'done'
+          } else if (evt.type === 'pipeline_start') {
+            pipelineStepIdx = agencyMsg.steps.length
+            agencyMsg.steps.push({ type: 'pipeline_flow', pipelineSteps: [], pipelineTotal: evt.total, pipelineDone: false, gateBlocked: false })
+          } else if (evt.type === 'pipeline_step_start') {
+            if (pipelineStepIdx >= 0) {
+              agencyMsg.steps[pipelineStepIdx].pipelineSteps!.push({ index: evt.step, agentId: evt.agentId, agentName: evt.agentName, emoji: evt.emoji, task: evt.task, output: '', status: 'running', is_gate: evt.is_gate })
+            }
+          } else if (evt.type === 'pipeline_step_done') {
+            if (pipelineStepIdx >= 0) {
+              const s = agencyMsg.steps[pipelineStepIdx].pipelineSteps!.find(s => s.index === evt.step)
+              if (s) { s.status = 'done'; s.output = evt.output }
+            }
+          } else if (evt.type === 'pipeline_gate_blocked') {
+            if (pipelineStepIdx >= 0) {
+              const pf = agencyMsg.steps[pipelineStepIdx]
+              pf.gateBlocked = true
+              const s = pf.pipelineSteps!.find(s => s.agentId === evt.agentId)
+              if (s) s.status = 'blocked'
+            }
+          } else if (evt.type === 'pipeline_done') {
+            if (pipelineStepIdx >= 0) agencyMsg.steps[pipelineStepIdx].pipelineDone = true
           }
           captainMessages.value = [...captainMessages.value]
           await scrollBottom()
@@ -612,6 +664,49 @@ async function sendCaptain(text?: string) {
 .tag-done    { background: #f0fdf4; color: #16a34a; }
 .agent-task  { padding: 7px 12px; color: rgba(29,29,31,0.55); font-size: 12px; }
 .agent-output { padding: 0 12px 9px; color: rgba(29,29,31,0.4); font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
+
+/* ── 流水线卡片 ── */
+.step-pipeline {
+  border: 1px solid rgba(0,0,0,0.07);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card-bg, #fff);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.pl-track {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  flex-wrap: wrap;
+}
+.pl-node {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 600;
+  background: rgba(0,0,0,0.04);
+  transition: background 0.2s;
+}
+.pls-running { background: rgba(0,113,227,0.1); color: #0071e3; }
+.pls-done    { background: rgba(52,211,153,0.12); color: #059669; }
+.pls-blocked { background: rgba(239,68,68,0.1); color: #dc2626; }
+.pls-waiting { opacity: 0.45; }
+.pln-gate    { border: 1px dashed rgba(0,0,0,0.18); }
+.pln-emoji   { font-size: 12px; }
+.pln-name    { font-size: 11px; }
+.pln-gate-badge { font-size: 9px; padding: 1px 4px; background: rgba(0,0,0,0.08); border-radius: 3px; }
+.pln-check   { color: #34d399; font-size: 11px; font-weight: 700; }
+.pln-blocked-icon { color: #ef4444; font-size: 11px; font-weight: 700; }
+.pl-arrow    { color: rgba(29,29,31,0.25); font-size: 14px; }
+.pl-waiting  { padding: 0 6px; }
+.pl-status   { padding: 6px 12px; font-size: 11.5px; font-weight: 600; }
+.pl-status-done    { color: #059669; background: rgba(52,211,153,0.07); }
+.pl-status-blocked { color: #b45309; background: rgba(245,158,11,0.07); }
+.pl-output-row {
+  border-top: 1px solid rgba(0,0,0,0.04);
+  padding: 8px 12px;
+}
+.pl-output-hd { font-size: 11px; font-weight: 600; color: rgba(29,29,31,0.5); margin-bottom: 3px; }
+.pl-output-body { font-size: 11px; color: rgba(29,29,31,0.65); line-height: 1.5; white-space: pre-wrap; }
 
 .step-tool {
   display: inline-flex; align-items: center; gap: 6px;

@@ -34,10 +34,11 @@
       </button>
     </div>
 
-    <!-- 发布引导提示 -->
+    <!-- 手动发布引导提示（仅本地服务未运行时显示） -->
     <div v-if="showGuide" class="cpc-guide">
       <div class="cpc-guide-step done">✓ 文案已复制到剪贴板</div>
       <div class="cpc-guide-step active">→ 在{{ card.platform_name || platformLabel }}创作页粘贴（Ctrl+V / ⌘V）</div>
+      <div class="cpc-guide-tip">💡 启动本地发布服务可实现全自动发布：<code>python social-publisher/server.py</code></div>
     </div>
   </div>
 </template>
@@ -99,23 +100,61 @@ async function copyText() {
   setTimeout(() => { copied.value = false }, 3000)
 }
 
-async function publishToplatform() {
-  const url = platformConfig.value.url
-  if (!url) {
-    ElMessage.warning('该平台暂未配置发布链接')
-    return
-  }
+const SERVICE_KEY = 'publisher_service_url'
 
+async function tryAutoPublish(): Promise<boolean> {
+  const serviceUrl = (localStorage.getItem(SERVICE_KEY) || 'http://localhost:8765').replace(/\/$/, '')
+  try {
+    const health = await fetch(`${serviceUrl}/health`, { signal: AbortSignal.timeout(1500) })
+    if (!health.ok) return false
+
+    // 服务在线，发布
+    const body: Record<string, any> = {
+      platform: props.card.platform,
+      account: 'default',
+      title: props.card.title,
+      body: props.card.body,
+      hashtags: props.card.hashtags || [],
+    }
+    // 如果有图片（海报截图URL）则附上
+    if ((props.card as any).imageUrl) body.images = [(props.card as any).imageUrl]
+
+    const resp = await fetch(`${serviceUrl}/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
+    })
+    const data = await resp.json()
+    if (data.success) {
+      ElMessage.success(`✅ 已自动发布到${props.card.platform_name || platformLabel.value}`)
+      saveToQueue(true)
+      return true
+    }
+    ElMessage.warning(`自动发布失败：${data.message}，切换手动模式`)
+    return false
+  } catch {
+    return false   // 服务未运行，降级
+  }
+}
+
+async function publishToplatform() {
   publishing.value = true
   try {
+    // 1. 先尝试本地发布服务（自动发布）
+    const autoOk = await tryAutoPublish()
+    if (autoOk) return
+
+    // 2. 降级：复制文案 + 跳转到平台发布页
+    const url = platformConfig.value.url
+    if (!url) { ElMessage.warning('该平台暂未配置发布链接'); return }
     await navigator.clipboard.writeText(fullText.value)
     showGuide.value = true
     window.open(url, '_blank')
-    // 标记已发布
     saveToQueue(true)
     setTimeout(() => { showGuide.value = false }, 8000)
   } catch {
-    ElMessage.error('复制失败，请手动复制文案')
+    ElMessage.error('操作失败，请手动复制文案')
   } finally {
     publishing.value = false
   }
@@ -277,4 +316,6 @@ function saveToQueue(markPublished = false) {
 }
 .cpc-guide-step.done { color: #059669; font-weight: 600; }
 .cpc-guide-step.active { color: #0071e3; font-weight: 600; }
+.cpc-guide-tip { font-size: 11px; color: #888; margin-top: 6px; }
+.cpc-guide-tip code { background: #f5f5f5; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
 </style>
