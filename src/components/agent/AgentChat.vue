@@ -176,9 +176,16 @@ function saveToPublish(msg: ChatMessage, idx: number) {
   const type = agentTypeMap[props.agentId] ?? 'copy'
   const { platform, platformName } = agentPlatformMap[props.agentId] ?? { platform: 'xiaohongshu', platformName: '小红书' }
   const imageUrl = msg.images?.[0] ?? ''
+  const videoTask = msg.videoTasks?.[0]
   agentStore.setFlowResults([
     ...agentStore.flowResults,
-    { platform, platformName, topic: '', type, content: msg.content, imageUrl: imageUrl || undefined },
+    {
+      platform, platformName, topic: '', type, content: msg.content,
+      imageUrl: imageUrl || undefined,
+      videoUrl: videoTask?.videoUrl || undefined,
+      videoRequestId: videoTask?.taskId || undefined,
+      videoStatus: videoTask ? (videoTask.status === 'done' ? 'done' : 'processing') : undefined,
+    },
   ])
   savedIndexes.value = new Set([...savedIndexes.value, idx])
   ElMessage({ message: '已存入发布，前往发布页查看', type: 'success', duration: 2500,
