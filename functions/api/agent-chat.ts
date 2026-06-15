@@ -315,7 +315,7 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const ratio = input.aspect_ratio || '9:16'
         const resp = await fetch('https://nomaderp.pages.dev/api/generate-media', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
           body: JSON.stringify({ type: 'video', prompt, ratio }),
         })
         const data = await resp.json() as any
