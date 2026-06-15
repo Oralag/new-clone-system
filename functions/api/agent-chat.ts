@@ -4,6 +4,7 @@
 interface Env {
   AI_API_KEY: string
   AI_BASE_URL?: string
+  GEMINI_API_KEY?: string
   REPLICATE_API_TOKEN?: string
   AGENT_MEMORY: KVNamespace
   AI: Ai
@@ -714,9 +715,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const apiKey = env.AI_API_KEY
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY' }), { status: 500 })
+  const geminiKey = env.GEMINI_API_KEY
+  const deepseekKey = env.AI_API_KEY
+  if (!geminiKey && !deepseekKey) {
+    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY 或 GEMINI_API_KEY' }), { status: 500 })
   }
 
   const erpToken = request.headers.get('x-erp-token') || ''
@@ -735,7 +737,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const { messages, agentId, brandContext, productContext, productImages, flowResults: publishQueue } = body
   const { realToken, backend } = decodeErpToken(erpToken)
-  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
+
+  // Gemini 优先（免费），降级到 DeepSeek
+  const useGemini = !!geminiKey
+  const apiKey = useGemini ? geminiKey! : deepseekKey!
+  const baseURL = useGemini
+    ? 'https://generativelanguage.googleapis.com/v1beta/openai'
+    : (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
+  const chatModel = useGemini ? 'gemini-2.0-flash' : 'deepseek-chat'
   const replicateToken = env.REPLICATE_API_TOKEN || ''
   const cfAI = env.AI
   const cfToken = env.CF_API_TOKEN || CF_API_TOKEN_DEFAULT
@@ -767,10 +776,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       let fullAssistantText = ''
 
       for (let i = 0; i < 5; i++) {
-        const res = await fetch(`${baseURL}/v1/chat/completions`, {
+        const res = await fetch(`${baseURL}/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 4096, messages: loopMessages, tools: oaiTools, tool_choice: 'auto' }),
+          body: JSON.stringify({ model: chatModel, max_tokens: 4096, messages: loopMessages, tools: oaiTools, tool_choice: 'auto' }),
         })
         if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
         const data: any = await res.json()
