@@ -5,6 +5,7 @@ interface Env {
   AI_API_KEY: string
   AI_BASE_URL?: string
   GEMINI_API_KEY?: string
+  NVIDIA_API_KEY?: string
   REPLICATE_API_TOKEN?: string
   AGENT_MEMORY: KVNamespace
   AI: Ai
@@ -715,10 +716,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const geminiKey = env.GEMINI_API_KEY
+  const nvidiaKey = env.NVIDIA_API_KEY
   const deepseekKey = env.AI_API_KEY
-  if (!geminiKey && !deepseekKey) {
-    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY 或 GEMINI_API_KEY' }), { status: 500 })
+  if (!nvidiaKey && !deepseekKey) {
+    return new Response(JSON.stringify({ error: '未配置 AI_API_KEY 或 NVIDIA_API_KEY' }), { status: 500 })
   }
 
   const erpToken = request.headers.get('x-erp-token') || ''
@@ -738,13 +739,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const { messages, agentId, brandContext, productContext, productImages, flowResults: publishQueue } = body
   const { realToken, backend } = decodeErpToken(erpToken)
 
-  // Gemini 优先（免费），降级到 DeepSeek
-  const useGemini = !!geminiKey
-  const apiKey = useGemini ? geminiKey! : deepseekKey!
-  const baseURL = useGemini
-    ? 'https://generativelanguage.googleapis.com/v1beta/openai'
+  // NVIDIA NIM 优先（免费配额充足），降级到 DeepSeek
+  const useNvidia = !!nvidiaKey
+  const apiKey = useNvidia ? nvidiaKey! : deepseekKey!
+  const baseURL = useNvidia
+    ? 'https://integrate.api.nvidia.com/v1'
     : (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
-  const chatModel = useGemini ? 'gemini-2.0-flash' : 'deepseek-chat'
+  const chatModel = useNvidia ? 'meta/llama-3.3-70b-instruct' : 'deepseek-chat'
   const replicateToken = env.REPLICATE_API_TOKEN || ''
   const cfAI = env.AI
   const cfToken = env.CF_API_TOKEN || CF_API_TOKEN_DEFAULT
