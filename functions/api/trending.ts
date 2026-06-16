@@ -24,10 +24,19 @@ const PLATFORM_SOURCE: Record<string, string> = {
   kuaishou: '今日头条',
 }
 
+// 平台名到 imsyy hot API 的 type 映射
+const IMSYY_TYPES: Record<string, string> = {
+  '微博': 'weibo',
+  '抖音': 'douyin',
+  '哔哩哔哩': 'bilibili',
+  '知乎': 'zhihu',
+  '今日头条': 'toutiao',
+}
+
 async function fetchFromPearktrue(platformTitle: string): Promise<HotItem[]> {
   const res = await fetch(
     `https://api.pearktrue.cn/api/dailyhot/?title=${encodeURIComponent(platformTitle)}`,
-    { headers: { 'User-Agent': 'Mozilla/5.0' } },
+    { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) },
   )
   if (!res.ok) throw new Error(`pearktrue 返回 ${res.status}`)
   const json: any = await res.json()
@@ -40,6 +49,23 @@ async function fetchFromPearktrue(platformTitle: string): Promise<HotItem[]> {
       ? (item.hot >= 10000 ? `${Math.round(item.hot / 10000)}万` : String(item.hot))
       : item.hot || '热门',
     url: item.url || item.mobileUrl || '',
+  })).filter((i: HotItem) => i.title)
+}
+
+async function fetchFromImsyy(platformTitle: string): Promise<HotItem[]> {
+  const type = IMSYY_TYPES[platformTitle]
+  if (!type) throw new Error('imsyy 不支持该平台')
+  const res = await fetch(
+    `https://hot.imsyy.top/${type}`,
+    { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) },
+  )
+  if (!res.ok) throw new Error(`imsyy 返回 ${res.status}`)
+  const json: any = await res.json()
+  const rows: any[] = json.data || []
+  return rows.slice(0, 30).map((item: any) => ({
+    title: item.title || item.word || '',
+    heat: item.hot || item.num || '热门',
+    url: item.url || '',
   })).filter((i: HotItem) => i.title)
 }
 
@@ -64,7 +90,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ request }) => {
   }
 
   try {
-    const items = await fetchFromPearktrue(platformTitle)
+    let items: HotItem[] = []
+    try {
+      items = await fetchFromPearktrue(platformTitle)
+    } catch {
+      items = await fetchFromImsyy(platformTitle)
+    }
     return Response.json(
       {
         code: 200,

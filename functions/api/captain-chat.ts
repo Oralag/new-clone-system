@@ -76,8 +76,10 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const platform = input.platform || 'weibo'
         const trendRes = await fetch(`https://nomaderp.pages.dev/api/trending?platform=${platform}`)
         const trendData: any = await trendRes.json()
-        if (trendData.error) return `⚠️ ${platform}热搜获取失败：${trendData.warning || trendData.error}`
-        const items = trendData.items || []
+        if (trendData.code !== 200 || !Array.isArray(trendData.data) || trendData.data.length === 0) {
+          return `⚠️ ${platform}热搜暂时无法获取（${trendData.message || '数据为空'}）。请根据该平台的常见热门话题方向进行内容创作。`
+        }
+        const items: any[] = trendData.data
         return `【${platform}实时热搜 ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}】\n` +
           items.map((item: any, i: number) => `${i + 1}. ${item.title}${item.heat ? '（' + item.heat + '）' : ''}`).join('\n')
       }
@@ -427,6 +429,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: '' })
       let captainResponse = ''
       let loopMessages = [...apiMessages]
+      let lastWasToolCall = false
 
       for (let i = 0; i < 3; i++) {
         const data = await oaiCall(captain.systemPrompt, loopMessages, captainTools)
@@ -434,7 +437,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         if (!choice) break
         const text = maskIdentity(choice.message?.content || '')
         if (text) { captainResponse += text; await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text }) }
-        if (choice.finish_reason !== 'tool_calls' || !choice.message?.tool_calls?.length) break
+        if (choice.finish_reason !== 'tool_calls' || !choice.message?.tool_calls?.length) { lastWasToolCall = false; break }
+        lastWasToolCall = true
         const toolCalls = choice.message.tool_calls
         loopMessages.push({ role: 'assistant', content: text || null, tool_calls: toolCalls })
         const toolResults: any[] = []
@@ -446,6 +450,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
         }
         loopMessages = [...loopMessages, ...toolResults]
+      }
+
+      // 工具调用后模型未输出调度指令时，强制一次纯文本响应
+      if (lastWasToolCall && !captainResponse.includes('@@DISPATCH:') && !captainResponse.includes('dispatch-plan')) {
+        const followData = await oaiCall(captain.systemPrompt, loopMessages) // 不传 tools，强制输出文本
+        const followText = maskIdentity(followData.choices?.[0]?.message?.content || '')
+        if (followText) { captainResponse += followText; await send({ type: 'agent_thinking', agentId: 'captain', agentName: 'Captain', text: followText }) }
       }
 
       // Phase 2: 解析 @@DISPATCH@@ 并调用子Agent
