@@ -49,7 +49,7 @@ export const onRequestPost: PagesFunction<{ VOLC_ACCESS_KEY_ID: string; VOLC_SEC
     return Response.json({ status: 'error', message: '未授权' }, { status: 401 })
   }
 
-  const { type, prompt, ratio } = await request.json() as { type: 'image' | 'video'; prompt: string; ratio?: string }
+  const { type, prompt, ratio, task_id } = await request.json() as { type: 'image' | 'video' | 'query'; prompt: string; ratio?: string; task_id?: string }
 
   if (type === 'image') {
     const ratioMap: Record<string, { width: number; height: number }> = {
@@ -76,6 +76,29 @@ export const onRequestPost: PagesFunction<{ VOLC_ACCESS_KEY_ID: string; VOLC_SEC
       return Response.json({ status: 'ok', task_id: data.data.task_id })
     }
     return Response.json({ status: 'error', message: data?.message || JSON.stringify(data) }, { status: 500 })
+  }
+
+  if (type === 'query') {
+    const akId = env.VOLC_ACCESS_KEY_ID
+    const akSecret = env.VOLC_SECRET_KEY
+    if (!akId || !akSecret) return Response.json({ status: 'error', message: '未配置密钥' }, { status: 500 })
+    if (!task_id) return Response.json({ status: 'error', message: '缺少 task_id' }, { status: 400 })
+    const reqBody = JSON.stringify({ req_key: 'jimeng_ti2v_v30_pro', task_id })
+    const headers = await volcSign(akId, akSecret, 'POST', '/', 'Action=CVSync2AsyncGetResult&Version=2022-08-31', reqBody, 'visual.volcengineapi.com', 'cv')
+    const resp = await fetch('https://visual.volcengineapi.com/?Action=CVSync2AsyncGetResult&Version=2022-08-31', { method: 'POST', headers, body: reqBody })
+    const data = await resp.json() as any
+    const taskData = data?.data
+    if (!taskData) return Response.json({ status: 'error', message: data?.message || JSON.stringify(data) }, { status: 500 })
+    // Volcengine status: "done"|"succeed" 成功, "failed" 失败, 其他 处理中
+    const rawStatus = taskData.status
+    if (rawStatus === 'done' || rawStatus === 'succeed' || rawStatus === 1) {
+      const videoUrl = taskData.video_url || taskData.video_urls?.[0] || taskData.binary_data_base64?.[0] || ''
+      return Response.json({ status: 'done', videoUrl })
+    }
+    if (rawStatus === 'failed' || rawStatus === 2) {
+      return Response.json({ status: 'error', message: taskData.message || '生成失败' })
+    }
+    return Response.json({ status: 'processing', progress: taskData.progress || 0 })
   }
 
   return Response.json({ status: 'error', message: '不支持的 type' }, { status: 400 })
