@@ -225,7 +225,7 @@
 
     <!-- 完成后跳转按钮（在输入区上方，避免被遮挡） -->
     <div v-if="meetingStore.phase === 'done' && agentStore.flowResults.length > 0" class="goto-publish">
-      <button class="goto-publish-btn" @click="router.push(publishPath)">
+      <button class="goto-publish-btn" @click="goToPublish">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M3 7h8M8 4l3 3-3 3"/>
         </svg>
@@ -327,6 +327,16 @@ import type { FlowResult } from '@/stores/agent'
 const router = useRouter()
 const route = useRoute()
 const publishPath = computed(() => route.path.startsWith('/mobile/') ? '/mobile/agent/publish' : '/agent/publish')
+
+async function goToPublish() {
+  const path = publishPath.value
+  try {
+    await router.push(path)
+  } catch {
+    // 兜底：直接改 hash（hash router 必然生效）
+    window.location.hash = path
+  }
+}
 const brandStore = useBrandStore()
 const meetingStore = useMeetingStore()
 const agentStore = useTrendingStore()
