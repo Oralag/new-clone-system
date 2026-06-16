@@ -937,13 +937,15 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
     const prompt = promptFn ? promptFn(topic, brandInfo, meetingBrief) : `执行任务：${task}。议题：${topic}。${brandInfo}`
 
     const output = await addStreamingMessage(agentId as keyof typeof STAFF, prompt, brandContext)
+    const hasUsableOutput = !!output && !output.includes('网络异常')
 
     // poster / video 专员执行完后，自动调用 AI 生成图片/视频
+    // 即使 LLM 输出为空，仍然用 topic 兜底触发媒体生成
     let generatedMediaUrl = ''
     let generatedVideoTaskId = ''
 
-    if ((agentId === 'poster' || agentId === 'video') && output && !output.includes('网络异常')) {
-      const cleanPrompt = cleanAgentOutput(output).slice(0, 500)
+    if (agentId === 'poster' || agentId === 'video') {
+      const cleanPrompt = (hasUsableOutput ? cleanAgentOutput(output) : `${topic}。${brandInfo}`).slice(0, 500)
       try {
         if (agentId === 'poster') {
           addSystemMessage('poster', '🎨 正在 AI 生成配图…')
@@ -1005,12 +1007,14 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
 
     // 写入 flowResults（发布专员除外，它的产出是计划而非内容）
     // 同一议题下的多个专员产出合并成一条：文案为主，图/视频附加
+    // 即使 LLM 文本为空，只要有图/视频产出就要合并
     const resultType = AGENT_TO_TYPE[agentId]
-    if (resultType && output && !output.includes('网络异常')) {
+    const hasAnything = hasUsableOutput || !!generatedMediaUrl || !!generatedVideoTaskId
+    if (resultType && hasAnything) {
       const activeBrand = brandStore.activeBrand
       const platformId = activeBrand?.mainPlatforms?.[0] || 'xiaohongshu'
       const erpShot = agentId === 'poster' ? ((window as any).__erpScreenshot || undefined) : undefined
-      const cleanedOutput = cleanAgentOutput(output)
+      const cleanedOutput = hasUsableOutput ? cleanAgentOutput(output) : ''
       if (agentId === 'poster') delete (window as any).__erpScreenshot
 
       const existing = [...agentStore.flowResults]
