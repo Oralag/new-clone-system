@@ -131,17 +131,17 @@
 
         <!-- 卡片内容 -->
         <div class="card-body" @click="toggleSelect(idx)">
-          <!-- 视频 -->
-          <div v-if="item.type === 'video_script' && item.videoUrl" class="card-video">
+          <!-- 视频（有 URL 就显示，不卡 type） -->
+          <div v-if="item.videoUrl" class="card-video">
             <video :src="item.videoUrl" controls playsinline preload="metadata" />
           </div>
           <!-- 视频生成中占位 -->
-          <div v-else-if="item.type === 'video_script' && item.videoStatus === 'processing'" class="card-video-placeholder">
+          <div v-else-if="item.videoStatus === 'processing'" class="card-video-placeholder">
             <span class="video-spinner"></span>
             <span>视频生成中，请稍候…</span>
           </div>
-          <!-- 图片 -->
-          <div v-else-if="item.type === 'poster' && item.imageUrl" class="card-image">
+          <!-- 图片（有 URL 就显示） -->
+          <div v-if="item.imageUrl" class="card-image">
             <img :src="item.imageUrl" :alt="item.topic" />
             <!-- ERP 截图备选 -->
             <button v-if="item.erpScreenshotUrl" class="btn-switch-img" @click.stop="switchToErpScreenshot(idx)" title="切换为ERP数据截图">
@@ -149,7 +149,7 @@
             </button>
           </div>
           <!-- 文案 / prompt 文字 -->
-          <div class="card-text" :class="{ compact: (item.type === 'poster' && item.imageUrl) || (item.type === 'video_script' && item.videoUrl) }" v-html="renderPublishMd(item)" />
+          <div class="card-text" :class="{ compact: !!item.imageUrl || !!item.videoUrl }" v-html="renderPublishMd(item)" />
         </div>
 
         <!-- 编辑弹层 -->
@@ -256,10 +256,10 @@
             </button>
           </div>
           <div class="preview-body">
-            <div v-if="filtered[previewIdx]?.type === 'video_script' && filtered[previewIdx]?.videoUrl" class="preview-video">
+            <div v-if="filtered[previewIdx]?.videoUrl" class="preview-video">
               <video :src="filtered[previewIdx].videoUrl" controls playsinline style="width:100%;border-radius:10px;" />
             </div>
-            <div v-else-if="filtered[previewIdx]?.type === 'poster' && filtered[previewIdx]?.imageUrl" class="preview-image">
+            <div v-if="filtered[previewIdx]?.imageUrl" class="preview-image">
               <img :src="filtered[previewIdx].imageUrl" :alt="filtered[previewIdx].topic" />
             </div>
             <div class="preview-content" v-html="renderPublishMd(filtered[previewIdx])" />

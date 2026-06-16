@@ -994,26 +994,44 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
     }
 
     // 写入 flowResults（发布专员除外，它的产出是计划而非内容）
+    // 同一议题下的多个专员产出合并成一条：文案为主，图/视频附加
     const resultType = AGENT_TO_TYPE[agentId]
     if (resultType && output && !output.includes('网络异常')) {
       const activeBrand = brandStore.activeBrand
       const platformId = activeBrand?.mainPlatforms?.[0] || 'xiaohongshu'
       const erpShot = agentId === 'poster' ? ((window as any).__erpScreenshot || undefined) : undefined
-      const result: FlowResult = {
-        platform: platformId,
-        platformName: PLATFORM_NAMES[platformId] || platformId,
-        topic,
-        type: resultType,
-        content: cleanAgentOutput(output),
-        createdAt: Date.now(),
-        imageUrl: generatedMediaUrl || undefined,
-        erpScreenshotUrl: erpShot || undefined,
-        videoRequestId: generatedVideoTaskId || undefined,
-        videoStatus: generatedVideoTaskId ? 'processing' : undefined,
-      }
+      const cleanedOutput = cleanAgentOutput(output)
       if (agentId === 'poster') delete (window as any).__erpScreenshot
+
       const existing = [...agentStore.flowResults]
-      existing.push(result)
+      // 找到同议题未发布的现有条目（本次会议产生的）
+      const bundleIdx = existing.findIndex(r => r.topic === topic && !r.published)
+      if (bundleIdx >= 0) {
+        const cur = existing[bundleIdx]
+        existing[bundleIdx] = {
+          ...cur,
+          // 文案为主体；poster/video 只补充媒体字段，不覆盖文案
+          content: agentId === 'copywriter' ? cleanedOutput : cur.content,
+          type: cur.type === 'copy' || resultType === 'copy' ? 'copy' : cur.type,
+          imageUrl: generatedMediaUrl || cur.imageUrl,
+          erpScreenshotUrl: erpShot || cur.erpScreenshotUrl,
+          videoRequestId: generatedVideoTaskId || cur.videoRequestId,
+          videoStatus: generatedVideoTaskId ? 'processing' : cur.videoStatus,
+        }
+      } else {
+        existing.push({
+          platform: platformId,
+          platformName: PLATFORM_NAMES[platformId] || platformId,
+          topic,
+          type: resultType,
+          content: cleanedOutput,
+          createdAt: Date.now(),
+          imageUrl: generatedMediaUrl || undefined,
+          erpScreenshotUrl: erpShot || undefined,
+          videoRequestId: generatedVideoTaskId || undefined,
+          videoStatus: generatedVideoTaskId ? 'processing' : undefined,
+        })
+      }
       agentStore.setFlowResults(existing)
     }
 
