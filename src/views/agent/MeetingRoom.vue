@@ -503,6 +503,9 @@ async function addStreamingMessage(agentId: keyof typeof STAFF, prompt: string, 
         messages: [...history, { role: 'user', content: prompt }],
         agentId,
         brandContext,
+        // 会议室内 LLM 不调工具：媒体由 MeetingRoom 主动调 generate-media；
+        // 强制 LLM 输出纯文本（设计提案/脚本），避免空 output 导致跳过流程
+        noTools: true,
       }),
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)

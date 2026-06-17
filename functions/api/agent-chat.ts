@@ -736,7 +736,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return new Response(data, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } })
   }
 
-  const { messages, agentId, brandContext, productContext, productImages, flowResults: publishQueue } = body
+  const { messages, agentId, brandContext, productContext, productImages, flowResults: publishQueue, noTools } = body
   const { realToken, backend } = decodeErpToken(erpToken)
 
   // NVIDIA NIM 优先（免费配额充足），降级到 DeepSeek
@@ -777,10 +777,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       let fullAssistantText = ''
 
       for (let i = 0; i < 5; i++) {
+        const reqBody: any = { model: chatModel, max_tokens: 4096, messages: loopMessages }
+        if (!noTools) { reqBody.tools = oaiTools; reqBody.tool_choice = 'auto' }
         const res = await fetch(`${baseURL}/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: chatModel, max_tokens: 4096, messages: loopMessages, tools: oaiTools, tool_choice: 'auto' }),
+          body: JSON.stringify(reqBody),
         })
         if (!res.ok) { await send({ type: 'error', error: `API错误: ${await res.text()}` }); break }
         const data: any = await res.json()
