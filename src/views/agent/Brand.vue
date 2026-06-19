@@ -4,13 +4,13 @@
     <!-- 员工卡 -->
     <DeptEmployeeCard
       name="Iris"
-      role="品牌策略师"
+      :role="t('agentBrand.role')"
       emoji="💎"
-      desc="品牌档案配置 · 调性把控 · 竞品分析"
+      :desc="t('agentBrand.desc')"
       color="#8b5cf6"
       illustId="brand"
       :stats="[
-        { value: store.profiles.length, label: '品牌数' },
+        { value: store.profiles.length, label: t('agentBrand.brandCount') },
       ]"
       style="margin-bottom: 4px"
     />
@@ -25,10 +25,10 @@
         @click="switchBrand(b.id)"
       >
         <span class="brand-tab-dot" :style="{ background: b.id === 'nomaderp_default' ? '#6366f1' : '#10b981' }"></span>
-        {{ b.name || '未命名品牌' }}
+        {{ b.name || t('agentBrand.unnamed') }}
         <span v-if="b.id !== 'nomaderp_default'" class="brand-tab-del" @click.stop="handleDeleteBrand(b.id)">×</span>
       </div>
-      <button class="brand-tab-add" @click="handleNewBrand">+ 新增品牌</button>
+      <button class="brand-tab-add" @click="handleNewBrand">+ {{ t('agentBrand.addBrand') }}</button>
     </div>
 
     <!-- ── 收起态（已保存）── -->
@@ -39,10 +39,10 @@
         <div class="saved-info">
           <span class="saved-name">{{ brand.name }}</span>
           <span class="saved-meta">{{ brand.industry }}{{ brand.subIndustry ? ' · ' + brand.subIndustry : '' }}{{ brand.slogan ? ' · ' + brand.slogan : '' }}</span>
-          <span v-if="store.savedAt" class="saved-time">最近保存：{{ store.savedAt }}</span>
+          <span v-if="store.savedAt" class="saved-time">{{ t('agentBrand.lastSaved') }}：{{ store.savedAt }}</span>
         </div>
       </div>
-      <button class="btn-edit" @click="isCollapsed = false">编辑</button>
+      <button class="btn-edit" @click="isCollapsed = false">{{ t('common.edit') }}</button>
     </div>
 
     <!-- ── 一键工作流（收起态时显示）── -->
@@ -51,14 +51,14 @@
         <div class="autoflow-title-wrap">
           <div class="autoflow-icon">⚡</div>
           <div>
-            <div class="autoflow-title">交给 Agent 团队</div>
-            <div class="autoflow-sub">为「{{ brand.name }}」一键抓取热搜、生成文案并准备发布</div>
+            <div class="autoflow-title">{{ t('agentBrand.autoFlowTitle') }}</div>
+            <div class="autoflow-sub">{{ t('agentBrand.autoFlowDesc', { brand: brand.name }) }}</div>
           </div>
         </div>
       </div>
       <div class="autoflow-options">
         <div class="opt-group">
-          <div class="opt-label">发布平台</div>
+          <div class="opt-label">{{ t('agentBrand.publishPlatform') }}</div>
           <div class="opt-tags">
             <span v-for="p in afPlatforms" :key="p.key" class="opt-tag"
               :class="{ active: autoFlow.platforms.includes(p.key) }"
@@ -66,15 +66,15 @@
           </div>
         </div>
         <div class="opt-group">
-          <div class="opt-label">生成数量</div>
+          <div class="opt-label">{{ t('agentBrand.generateCount') }}</div>
           <div class="opt-tags">
             <span v-for="n in [1, 3, 5]" :key="n" class="opt-tag"
               :class="{ active: autoFlow.count === n }"
-              @click="autoFlow.count = n">{{ n }} 条</span>
+              @click="autoFlow.count = n">{{ n }} {{ t('common.items') }}</span>
           </div>
         </div>
         <div class="opt-group">
-          <div class="opt-label">内容类型（可多选）</div>
+          <div class="opt-label">{{ t('agentBrand.contentTypes') }}</div>
           <div class="opt-tags">
             <span v-for="t in contentTypes" :key="t.key" class="opt-tag"
               :class="{ active: autoFlow.contentTypes.includes(t.key) }"
@@ -82,7 +82,7 @@
           </div>
         </div>
         <div class="opt-group">
-          <div class="opt-label">执行步骤</div>
+          <div class="opt-label">{{ t('agentBrand.steps') }}</div>
           <div class="flow-steps-preview">
             <div v-for="(s, i) in afSteps" :key="i" class="flow-step-chip">
               <div class="flow-step-num">{{ i + 1 }}</div>
@@ -94,14 +94,14 @@
           </div>
         </div>
       </div>
-      <button class="btn-autoflow" @click="startAutoFlow">交给 Captain</button>
+      <button class="btn-autoflow" @click="startAutoFlow">{{ t('agentBrand.giveCaptain') }}</button>
       <div class="workflow-ready-row">
         <span class="ready-chip">{{ autoFlowSummary }}</span>
-        <span v-if="brand.mainPlatforms.length" class="ready-chip muted">主攻平台：{{ mainPlatformSummary }}</span>
+        <span v-if="brand.mainPlatforms.length" class="ready-chip muted">{{ t('agentBrand.mainPlatforms') }}：{{ mainPlatformSummary }}</span>
       </div>
       <div v-if="agentStore.flowResults.length > 0" class="autoflow-prev-row">
-        <span class="prev-hint">上次已生成 {{ agentStore.flowResults.length }} 条内容</span>
-        <button class="btn-view-result" @click="router.push('/agent/publish')">查看结果</button>
+        <span class="prev-hint">{{ t('agentBrand.lastGenerated', { count: agentStore.flowResults.length }) }}</span>
+        <button class="btn-view-result" @click="router.push('/agent/publish')">{{ t('agentBrand.viewResult') }}</button>
       </div>
     </div>
 
@@ -110,11 +110,11 @@
       <div class="flow-panel-header">
         <div class="flow-panel-title">
           <span class="flow-pulse"></span>
-          正在执行 AI 工作流
+          {{ t('agentBrand.brandFlowRunning') }}
         </div>
         <div class="flow-panel-header-right">
           <div class="flow-panel-brand">{{ brand.name }}</div>
-          <button v-if="autoFlow.step < afSteps.length" class="btn-cancel-flow" @click="cancelFlow">取消</button>
+          <button v-if="autoFlow.step < afSteps.length" class="btn-cancel-flow" @click="cancelFlow">{{ t('common.cancel') }}</button>
         </div>
       </div>
 
@@ -145,18 +145,18 @@
 
       <div v-if="autoFlow.step >= afSteps.length" class="flow-panel-done">
         <div class="done-icon">✓</div>
-        <div class="done-title">工作流完成！内容已就绪</div>
+        <div class="done-title">{{ t('agentBrand.brandFlowDoneTitle') }}</div>
         <div class="done-btns">
-          <button class="btn-goto" @click="router.push('/agent/publish')">前往发布管理</button>
-          <button class="btn-secondary" @click="startAutoFlow">重新执行</button>
-          <button class="btn-secondary" @click="autoFlow.running = false">关闭</button>
+          <button class="btn-goto" @click="router.push('/agent/publish')">{{ t('agentBrand.brandGoPublishManage') }}</button>
+          <button class="btn-secondary" @click="startAutoFlow">{{ t('agentBrand.rerun') }}</button>
+          <button class="btn-secondary" @click="autoFlow.running = false">{{ t('common.close') }}</button>
         </div>
-        <div class="done-desc" style="font-size:13px;color:#94a3b8;margin-bottom:12px">建议先预览并编辑内容，再前往发布</div>
+        <div class="done-desc" style="font-size:13px;color:#94a3b8;margin-bottom:12px">{{ t('agentBrand.doneDesc') }}</div>
         <div class="done-btns">
-          <button class="btn-secondary" @click="router.push('/agent/copywriting')">📝 文案</button>
-          <button class="btn-secondary" @click="router.push('/agent/poster')">🖼 图文</button>
-          <button class="btn-secondary" @click="router.push('/agent/video')">🎬 视频脚本</button>
-          <button class="btn-goto" @click="router.push('/agent/publish')">直接发布</button>
+          <button class="btn-secondary" @click="router.push('/agent/copywriting')">📝 {{ t('agentBrand.brandCopywriting') }}</button>
+          <button class="btn-secondary" @click="router.push('/agent/poster')">🖼 {{ t('agentBrand.brandPoster') }}</button>
+          <button class="btn-secondary" @click="router.push('/agent/video')">🎬 {{ t('agentBrand.brandVideoScript') }}</button>
+          <button class="btn-goto" @click="router.push('/agent/publish')">{{ t('agentBrand.brandPublishNow') }}</button>
         </div>
       </div>
     </div>
@@ -166,17 +166,17 @@
     <template v-else>
     <div class="page-header">
       <div>
-        <h2 class="page-title">🏢 品牌 & 行业设置</h2>
-        <p class="page-desc">填写后，AI 将根据你的品牌和行业自动定制内容策略</p>
+        <h2 class="page-title">🏢 {{ t('agentBrand.pageTitle') }}</h2>
+        <p class="page-desc">{{ t('agentBrand.pageDesc') }}</p>
       </div>
       <button class="btn-save" :class="{ saved }" @click="handleSave">
-        {{ saved ? '✓ 已保存' : '💾 保存设置' }}
+        {{ saved ? t('agentBrand.saved') : t('agentBrand.saveSettings') }}
       </button>
     </div>
 
     <!-- 完成度 -->
     <div class="progress-bar-wrap">
-      <div class="progress-label">资料完整度</div>
+      <div class="progress-label">{{ t('agentBrand.completeness') }}</div>
       <div class="progress-track">
         <div class="progress-fill" :style="{ width: completeness + '%' }"></div>
       </div>
@@ -190,71 +190,71 @@
 
         <!-- 公司基本信息 -->
         <div class="section-card">
-          <div class="section-title">📋 公司基本信息</div>
+          <div class="section-title">📋 {{ t('agentBrand.companyInfo') }}</div>
 
           <div class="field-row">
             <div class="field">
-              <label class="field-label">公司 / 品牌名称 <span class="required">*</span></label>
-              <input v-model="brand.name" class="field-input" placeholder="例：游牧乳业" />
+              <label class="field-label">{{ t('agentBrand.companyName') }} <span class="required">*</span></label>
+              <input v-model="brand.name" class="field-input" :placeholder="t('agentBrand.companyNamePlaceholder')" />
             </div>
             <div class="field">
               <AiFieldHelper
-                label="品牌口号 / Slogan"
+                :label="t('agentBrand.sloganLabel')"
                 :context="sloganContext"
-                placeholder="例：来自草原的纯粹"
+                :placeholder="t('agentBrand.sloganPlaceholder')"
                 v-model="brand.slogan"
               />
             </div>
           </div>
 
           <AiFieldHelper
-            label="公司简介"
+            :label="t('agentBrand.introLabel')"
             type="textarea"
             :rows="3"
             :context="introContext"
-            placeholder="简单介绍公司背景、核心产品、品牌故事..."
+            :placeholder="t('agentBrand.introPlaceholder')"
             v-model="brand.intro"
           />
 
           <div class="field-row">
             <div class="field">
-              <label class="field-label">成立年份</label>
-              <input v-model="brand.foundYear" class="field-input" placeholder="例：2015" type="number" />
+              <label class="field-label">{{ t('agentBrand.foundYear') }}</label>
+              <input v-model="brand.foundYear" class="field-input" :placeholder="t('agentBrand.foundYearPlaceholder')" type="number" />
             </div>
             <div class="field">
-              <label class="field-label">公司规模</label>
+              <label class="field-label">{{ t('agentBrand.companySize') }}</label>
               <select v-model="brand.scale" class="field-select">
-                <option value="">请选择</option>
-                <option>1-10人（个人/微型）</option>
-                <option>10-50人（小型）</option>
-                <option>50-200人（中型）</option>
-                <option>200人以上（大型）</option>
+                <option value="">{{ t('common.pleaseSelect') }}</option>
+                <option>{{ t('agentBrand.size1') }}</option>
+                <option>{{ t('agentBrand.size2') }}</option>
+                <option>{{ t('agentBrand.size3') }}</option>
+                <option>{{ t('agentBrand.size4') }}</option>
               </select>
             </div>
           </div>
 
           <div class="field-row">
             <div class="field">
-              <label class="field-label">主要销售区域</label>
-              <input v-model="brand.region" class="field-input" placeholder="例：华北、全国、出口" />
+              <label class="field-label">{{ t('agentBrand.region') }}</label>
+              <input v-model="brand.region" class="field-input" :placeholder="t('agentBrand.regionPlaceholder')" />
             </div>
             <div class="field">
-              <label class="field-label">价格定位</label>
+              <label class="field-label">{{ t('agentBrand.priceLevel') }}</label>
               <div class="price-options">
                 <span v-for="p in priceLevelOptions" :key="p" class="price-tag"
                   :class="{ active: brand.priceLevel === p }" @click="brand.priceLevel = p">{{ p }}</span>
               </div>
-              <input v-model="brand.priceLevel" class="field-input" style="margin-top:6px" placeholder="或自定义输入，例：中高端、高性价比..." />
+              <input v-model="brand.priceLevel" class="field-input" style="margin-top:6px" :placeholder="t('agentBrand.priceLevelPlaceholder')" />
             </div>
           </div>
         </div>
 
         <!-- 行业 & 产品 -->
         <div class="section-card">
-          <div class="section-title">🏭 行业 & 产品分类</div>
+          <div class="section-title">🏭 {{ t('agentBrand.industryProducts') }}</div>
 
           <div class="field">
-            <label class="field-label">所属行业 <span class="required">*</span></label>
+            <label class="field-label">{{ t('agentBrand.industry') }} <span class="required">*</span></label>
             <div class="industry-grid">
               <div v-for="ind in industries" :key="ind.key" class="industry-card"
                 :class="{ active: brand.industry === ind.key }" @click="selectIndustry(ind.key)">
@@ -265,43 +265,43 @@
           </div>
 
           <div v-if="currentSubs.length > 0" class="field">
-            <label class="field-label">细分领域 <span class="required">*</span></label>
+            <label class="field-label">{{ t('agentBrand.subIndustry') }} <span class="required">*</span></label>
             <div class="sub-tags">
               <span v-for="sub in currentSubs" :key="sub" class="sub-tag"
                 :class="{ active: brand.subIndustry === sub }" @click="brand.subIndustry = sub">{{ sub }}</span>
             </div>
-            <input v-model="brand.subIndustry" class="field-input" style="margin-top:8px" placeholder="或手动填写细分领域..." />
+            <input v-model="brand.subIndustry" class="field-input" style="margin-top:8px" :placeholder="t('agentBrand.subIndustryPlaceholder')" />
           </div>
 
           <div class="field">
-            <label class="field-label">核心产品 / 服务</label>
+            <label class="field-label">{{ t('agentBrand.coreProducts') }}</label>
             <div class="product-tags">
               <span v-for="(p, i) in brand.products" :key="i" class="product-chip">
                 {{ p }}<span class="chip-del" @click="brand.products.splice(i, 1)">×</span>
               </span>
             </div>
             <div class="tag-input-row">
-              <input v-model="newProduct" class="tag-input" placeholder="输入产品名，回车添加..." @keydown.enter="addProduct" />
-              <button class="btn-add" @click="addProduct">添加</button>
+              <input v-model="newProduct" class="tag-input" :placeholder="t('agentBrand.addProductPlaceholder')" @keydown.enter="addProduct" />
+              <button class="btn-add" @click="addProduct">{{ t('common.add') }}</button>
               <button class="btn-ai-inline" :class="{ loading: aiLoading.products }" @click="aiSuggestProducts">
-                {{ aiLoading.products ? '⏳' : '✨ AI 推荐' }}
+                {{ aiLoading.products ? '⏳' : t('agentBrand.aiRecommend') }}
               </button>
             </div>
           </div>
 
           <AiFieldHelper
-            label="产品核心卖点（每行一个）"
+            :label="t('agentBrand.sellingPoints')"
             type="textarea"
             :rows="3"
             :context="sellingPointsContext"
-            placeholder="例：&#10;草原纯天然原料&#10;零添加防腐剂&#10;传统工艺发酵48小时"
+            :placeholder="t('agentBrand.sellingPointsPlaceholder')"
             v-model="brand.sellingPoints"
           />
 
           <!-- 产品图片 -->
           <div class="field">
-            <label class="field-label">产品图片（粘贴图片URL）</label>
-            <p class="field-hint">AI生成海报/图文时会参考这些产品图的外观风格</p>
+            <label class="field-label">{{ t('agentBrand.productImages') }}</label>
+            <p class="field-hint">{{ t('agentBrand.productImagesHint') }}</p>
             <div class="product-img-grid" v-if="brand.productImages?.length">
               <div v-for="(url, i) in brand.productImages" :key="i" class="product-img-item">
                 <img :src="url" @error="(e: Event) => (e.target as HTMLImageElement).style.display='none'" />
@@ -309,36 +309,36 @@
               </div>
             </div>
             <div class="tag-input-row">
-              <input v-model="newProductImage" class="tag-input" placeholder="粘贴产品图片URL，回车添加..." @keydown.enter="addProductImage" />
-              <button class="btn-add" @click="addProductImage">添加</button>
+              <input v-model="newProductImage" class="tag-input" :placeholder="t('agentBrand.productImagePlaceholder')" @keydown.enter="addProductImage" />
+              <button class="btn-add" @click="addProductImage">{{ t('common.add') }}</button>
             </div>
           </div>
         </div>
 
         <!-- 竞品参考 -->
         <div class="section-card">
-          <div class="section-title">🔍 竞品 & 对标品牌</div>
+          <div class="section-title">🔍 {{ t('agentBrand.competitors') }}</div>
           <div class="field">
-            <label class="field-label">主要竞品品牌</label>
+            <label class="field-label">{{ t('agentBrand.mainCompetitors') }}</label>
             <div class="product-tags">
               <span v-for="(c, i) in brand.competitors" :key="i" class="product-chip chip-red">
                 {{ c }}<span class="chip-del" @click="brand.competitors.splice(i, 1)">×</span>
               </span>
             </div>
             <div class="tag-input-row">
-              <input v-model="newCompetitor" class="tag-input" placeholder="输入竞品品牌名..." @keydown.enter="addCompetitor" />
-              <button class="btn-add" @click="addCompetitor">添加</button>
+              <input v-model="newCompetitor" class="tag-input" :placeholder="t('agentBrand.competitorPlaceholder')" @keydown.enter="addCompetitor" />
+              <button class="btn-add" @click="addCompetitor">{{ t('common.add') }}</button>
               <button class="btn-ai-inline" :class="{ loading: aiLoading.competitors }" @click="aiSuggestCompetitors">
-                {{ aiLoading.competitors ? '⏳' : '✨ AI 推荐' }}
+                {{ aiLoading.competitors ? '⏳' : t('agentBrand.aiRecommend') }}
               </button>
             </div>
           </div>
           <AiFieldHelper
-            label="对标学习的账号（抖音/小红书/快手）"
+            :label="t('agentBrand.referenceAccounts')"
             type="textarea"
             :rows="2"
             :context="referenceContext"
-            placeholder="例：@伊利官方抖音、@蒙牛乳业，用于学习内容风格"
+            :placeholder="t('agentBrand.referencePlaceholder')"
             v-model="brand.referenceAccounts"
           />
         </div>
@@ -349,18 +349,18 @@
 
         <!-- 目标受众 -->
         <div class="section-card">
-          <div class="section-title">👥 目标受众画像</div>
+          <div class="section-title">👥 {{ t('agentBrand.audience') }}</div>
 
           <div class="field-row">
             <div class="field">
-              <label class="field-label">主要年龄段</label>
+              <label class="field-label">{{ t('agentBrand.ageRange') }}</label>
               <div class="age-options">
                 <span v-for="age in ageGroups" :key="age" class="age-tag"
                   :class="{ active: brand.targetAge.includes(age) }" @click="toggleAge(age)">{{ age }}</span>
               </div>
             </div>
             <div class="field">
-              <label class="field-label">主要性别</label>
+              <label class="field-label">{{ t('agentBrand.gender') }}</label>
               <div class="gender-options">
                 <span v-for="g in genders" :key="g" class="age-tag"
                   :class="{ active: brand.targetGender === g }" @click="brand.targetGender = g">{{ g }}</span>
@@ -369,20 +369,20 @@
           </div>
 
           <AiFieldHelper
-            label="用户画像描述"
+            :label="t('agentBrand.audienceDesc')"
             type="textarea"
             :rows="3"
             :context="audienceDescContext"
-            placeholder="例：25-40岁宝妈群体，注重食品安全，有一定消费能力，关注孩子健康饮食..."
+            :placeholder="t('agentBrand.audienceDescPlaceholder')"
             v-model="brand.audienceDesc"
           />
 
           <AiFieldHelper
-            label="用户痛点 / 关心的问题"
+            :label="t('agentBrand.audiencePain')"
             type="textarea"
             :rows="2"
             :context="audiencePainContext"
-            placeholder="例：担心添加剂、希望了解原料产地、想找性价比高的优质乳品..."
+            :placeholder="t('agentBrand.audiencePainPlaceholder')"
             v-model="brand.audiencePain"
           />
         </div>
@@ -391,11 +391,11 @@
         <div class="section-card tone-section-card">
           <div class="tone-section-header">
             <div>
-              <div class="section-title" style="margin-bottom:4px">🎨 品牌调性 & 内容风格</div>
-              <div class="tone-section-sub">选择后 AI 将按照对应风格生成所有内容</div>
+              <div class="section-title" style="margin-bottom:4px">🎨 {{ t('agentBrand.toneTitle') }}</div>
+              <div class="tone-section-sub">{{ t('agentBrand.toneSubtitle') }}</div>
             </div>
             <button class="btn-ai-label" :class="{ loading: aiLoading.tones }" @click="aiSuggestTones">
-              {{ aiLoading.tones ? '⏳ 分析中...' : '✨ AI 推荐' }}
+              {{ aiLoading.tones ? '⏳ ' + t('agentBrand.analyzing') : t('agentBrand.aiRecommend') }}
             </button>
           </div>
 
@@ -417,32 +417,32 @@
 
           <!-- 已选调性预览 -->
           <div v-if="brand.tones.length" class="tone-selected-row">
-            <span class="tone-selected-label">已选：</span>
+            <span class="tone-selected-label">{{ t('agentBrand.brandSelected') }}：</span>
             <span v-for="t in brand.tones" :key="t" class="tone-selected-chip">{{ t }}</span>
           </div>
         </div>
 
         <!-- 品牌调性补充（禁忌/关键词） -->
         <div class="section-card">
-          <div class="section-title">🔑 内容规范 & 关键词</div>
+          <div class="section-title">🔑 {{ t('agentBrand.contentRules') }}</div>
           <AiFieldHelper
-            label="内容禁忌 / 不想出现的内容"
+            :label="t('agentBrand.taboos')"
             type="textarea"
             :rows="2"
             :context="taboosContext"
-            placeholder="例：不涉及政治敏感、不做价格对比、不提竞品名称..."
+            :placeholder="t('agentBrand.taboosPlaceholder')"
             v-model="brand.taboos"
           />
 
           <!-- 广告违禁词模块 -->
           <div class="field">
             <div class="label-with-ai">
-              <label class="field-label">🚫 广告违禁词</label>
+              <label class="field-label">🚫 {{ t('agentBrand.forbiddenWords') }}</label>
               <button class="btn-ai-label" :class="{ loading: aiLoading.adForbidden }" @click="aiSuggestAdForbidden">
-                {{ aiLoading.adForbidden ? '⏳ AI抓取中...' : '✨ AI 自动抓取' }}
+                {{ aiLoading.adForbidden ? '⏳ ' + t('agentBrand.fetching') : t('agentBrand.autoFetch') }}
               </button>
             </div>
-            <div class="field-hint" style="margin-bottom:8px">AI 根据行业自动识别广告法违禁词，生成内容时自动规避</div>
+            <div class="field-hint" style="margin-bottom:8px">{{ t('agentBrand.forbiddenHint') }}</div>
             <div class="product-tags" v-if="brand.adForbiddenWords.length">
               <span
                 v-for="(w, i) in brand.adForbiddenWords"
@@ -450,29 +450,29 @@
                 class="product-chip chip-red"
               >{{ w }}<span class="chip-del" @click="brand.adForbiddenWords.splice(i, 1)">×</span></span>
             </div>
-            <div v-else-if="!aiLoading.adForbidden" class="empty-hint">暂无违禁词，点击「AI 自动抓取」获取行业常见违禁词</div>
+            <div v-else-if="!aiLoading.adForbidden" class="empty-hint">{{ t('agentBrand.forbiddenEmpty') }}</div>
             <div v-if="aiLoading.adForbidden" class="forbidden-loading">
               <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
-              正在根据「{{ brand.subIndustry || brand.industry || '当前行业' }}」抓取违禁词...
+              {{ t('agentBrand.forbiddenLoading', { industry: brand.subIndustry || brand.industry || t('agentBrand.currentIndustry') }) }}
             </div>
             <div class="tag-input-row" style="margin-top:8px">
-              <input v-model="newForbiddenWord" class="tag-input" placeholder="手动添加违禁词..." @keydown.enter="addForbiddenWord" />
-              <button class="btn-add" @click="addForbiddenWord">添加</button>
+              <input v-model="newForbiddenWord" class="tag-input" :placeholder="t('agentBrand.addForbiddenPlaceholder')" @keydown.enter="addForbiddenWord" />
+              <button class="btn-add" @click="addForbiddenWord">{{ t('common.add') }}</button>
             </div>
           </div>
 
           <div class="field">
-            <label class="field-label">品牌关键词（AI 生成内容时必带）</label>
+            <label class="field-label">{{ t('agentBrand.keywords') }}</label>
             <div class="product-tags">
               <span v-for="(kw, i) in brand.keywords" :key="i" class="product-chip chip-purple">
                 {{ kw }}<span class="chip-del" @click="brand.keywords.splice(i, 1)">×</span>
               </span>
             </div>
             <div class="tag-input-row">
-              <input v-model="newKeyword" class="tag-input" placeholder="例：草原、纯天然、传统工艺..." @keydown.enter="addKeyword" />
-              <button class="btn-add" @click="addKeyword">添加</button>
+              <input v-model="newKeyword" class="tag-input" :placeholder="t('agentBrand.keywordPlaceholder')" @keydown.enter="addKeyword" />
+              <button class="btn-add" @click="addKeyword">{{ t('common.add') }}</button>
               <button class="btn-ai-inline" :class="{ loading: aiLoading.keywords }" @click="aiSuggestKeywords">
-                {{ aiLoading.keywords ? '⏳' : '✨ AI 推荐' }}
+                {{ aiLoading.keywords ? '⏳' : t('agentBrand.aiRecommend') }}
               </button>
             </div>
           </div>
@@ -480,10 +480,10 @@
 
         <!-- 内容策略 -->
         <div class="section-card">
-          <div class="section-title">📱 内容发布策略</div>
+          <div class="section-title">📱 {{ t('agentBrand.contentStrategy') }}</div>
 
           <div class="field">
-            <label class="field-label">发布频率</label>
+            <label class="field-label">{{ t('agentBrand.publishFreq') }}</label>
             <div class="freq-options">
               <span v-for="f in freqOptions" :key="f" class="age-tag"
                 :class="{ active: brand.publishFreq === f }" @click="brand.publishFreq = f">{{ f }}</span>
@@ -491,7 +491,7 @@
           </div>
 
           <div class="field">
-            <label class="field-label">主攻平台（影响内容侧重）</label>
+            <label class="field-label">{{ t('agentBrand.mainPlatforms') }}</label>
             <div class="platform-checks">
               <label v-for="p in platformOptions" :key="p.key" class="plat-label">
                 <input type="checkbox" :checked="brand.mainPlatforms.includes(p.key)" @change="togglePlatform(p.key)" class="hidden-cb" />
@@ -504,9 +504,9 @@
 
           <div class="field">
             <div class="label-with-ai">
-              <label class="field-label">热搜关键词过滤（只抓相关内容）</label>
+              <label class="field-label">{{ t('agentBrand.trendingFilters') }}</label>
               <button class="btn-ai-label" :class="{ loading: aiLoading.filters }" @click="aiSuggestFilters">
-                {{ aiLoading.filters ? '⏳' : '✨ AI 推荐' }}
+                {{ aiLoading.filters ? '⏳' : t('agentBrand.aiRecommend') }}
               </button>
             </div>
             <div class="product-tags">
@@ -515,18 +515,18 @@
               </span>
             </div>
             <div class="tag-input-row">
-              <input v-model="newFilter" class="tag-input" placeholder="例：乳制品、奶粉、健康饮食..." @keydown.enter="addFilter" />
-              <button class="btn-add" @click="addFilter">添加</button>
+              <input v-model="newFilter" class="tag-input" :placeholder="t('agentBrand.filterPlaceholder')" @keydown.enter="addFilter" />
+              <button class="btn-add" @click="addFilter">{{ t('common.add') }}</button>
             </div>
-            <div class="field-hint">💡 留空则抓取全部热搜，填写后只显示相关话题</div>
+            <div class="field-hint">💡 {{ t('agentBrand.trendingFiltersHint') }}</div>
           </div>
         </div>
 
         <!-- AI 提示词预览 -->
         <div class="section-card preview-card">
-          <div class="section-title">🤖 AI 提示词预览</div>
+          <div class="section-title">🤖 {{ t('agentBrand.promptPreview') }}</div>
           <div class="prompt-preview">{{ generatedPrompt }}</div>
-          <div class="prompt-hint">以上信息将自动注入到每次 AI 生成中</div>
+          <div class="prompt-hint">{{ t('agentBrand.promptPreviewHint') }}</div>
         </div>
 
       </div>
@@ -545,7 +545,7 @@
                   <path d="M8 1l1.8 3.6L14 5.6l-3 2.9.7 4.1L8 10.5l-3.7 2.1.7-4.1-3-2.9 4.2-.6z" fill="currentColor"/>
                 </svg>
               </div>
-              <span>AI 优化建议</span>
+              <span>{{ t('agentBrand.aiOptimization') }}</span>
               <span class="ai-modal-label">{{ aiModal.label }}</span>
             </div>
             <button class="modal-close" @click="closeModal">
@@ -560,7 +560,7 @@
             <!-- 加载中 -->
             <div v-if="aiModal.loading" class="loading-area">
               <div class="ai-spinner"></div>
-              <span>正在生成 {{ VARIANTS_COUNT }} 个方案...</span>
+              <span>{{ t('agentBrand.generatingVariants', { count: VARIANTS_COUNT }) }}</span>
             </div>
 
             <!-- 方案列表 -->
@@ -573,11 +573,11 @@
                 @click="selectVariant(i)"
               >
                 <div class="variant-card-top">
-                  <span class="variant-index">方案 {{ i + 1 }}</span>
+                  <span class="variant-index">{{ t('agentBrand.variantNo', { index: i + 1 }) }}</span>
                   <button
                     class="btn-adopt-inline"
                     @click.stop="adoptVariant(i)"
-                  >采纳</button>
+                  >{{ t('agentBrand.adopt') }}</button>
                 </div>
                 <div class="variant-card-text">{{ v }}</div>
               </div>
@@ -586,7 +586,7 @@
 
           <!-- Footer -->
           <div v-if="aiModal.variants.length > 0 && !aiModal.loading" class="ai-modal-footer">
-            <div class="footer-edit-label">编辑后采纳</div>
+            <div class="footer-edit-label">{{ t('agentBrand.editThenAdopt') }}</div>
             <textarea
               v-model="aiModal.editableResult"
               class="editable-result"
@@ -599,11 +599,11 @@
                   <path d="M9.7 1v2.5H7.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <div v-else class="btn-spinner"></div>
-                {{ aiModal.regenLoading ? '生成中...' : '换一批' }}
+                {{ aiModal.regenLoading ? t('agentBrand.generating') : t('agentBrand.switchBatch') }}
               </button>
               <div class="footer-right-btns">
-                <button class="btn-cancel" @click="closeModal">取消</button>
-                <button class="btn-adopt" @click="adoptResult">采纳并填入</button>
+                <button class="btn-cancel" @click="closeModal">{{ t('common.cancel') }}</button>
+                <button class="btn-adopt" @click="adoptResult">{{ t('agentBrand.adoptAndFill') }}</button>
               </div>
             </div>
           </div>
@@ -618,12 +618,14 @@
 <script setup lang="ts">
 import { ref, computed, reactive, defineComponent, h, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 import { useBrandStore } from '@/stores/brand'
 import { useTrendingStore } from '@/stores/agent'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const { t } = useI18n()
 const store = useBrandStore()
 const brand = reactive({ ...store.activeBrand })
 const saved = ref(false)
@@ -645,7 +647,7 @@ function handleNewBrand() {
 }
 
 function handleDeleteBrand(id: string) {
-  if (store.profiles.length <= 1) { ElMessage.warning('至少保留一个品牌'); return }
+  if (store.profiles.length <= 1) { ElMessage.warning(t('agentBrand.keepOneBrand')); return }
   store.deleteBrand(id)
   Object.assign(brand, store.activeBrand)
   isCollapsed.value = store.isConfigured
@@ -653,20 +655,20 @@ function handleDeleteBrand(id: string) {
 
 // ── 一键工作流 ──
 const afPlatforms = [
-  { key: 'douyin', name: '抖音' },
-  { key: 'xiaohongshu', name: '小红书' },
-  { key: 'kuaishou', name: '快手' },
+  { key: 'douyin', name: t('agentBrand.platformDouyin') },
+  { key: 'xiaohongshu', name: t('agentBrand.platformXhs') },
+  { key: 'kuaishou', name: t('agentBrand.platformKuaishou') },
 ]
 const afSteps = computed(() => {
   const labels = autoFlow.contentTypes
     .map(key => contentTypes.find(item => item.key === key)?.name)
     .filter(Boolean)
-  return ['抓取热搜', 'AI 分析选题', labels.length ? `生成${labels.join(' & ')}` : '生成内容', '进入发布']
+  return [t('agentBrand.stepFetchTrends'), t('agentBrand.stepAnalyzeTopics'), labels.length ? t('agentBrand.stepGenerateContentWith', { types: labels.join(' & ') }) : t('agentBrand.stepGenerateContent'), t('agentBrand.stepGoPublish')]
 })
 const contentTypes = [
-  { key: 'video', name: '视频脚本' },
-  { key: 'poster', name: '图文' },
-  { key: 'copy', name: '纯文案' },
+  { key: 'video', name: t('agentBrand.contentTypeVideo') },
+  { key: 'poster', name: t('agentBrand.contentTypePoster') },
+  { key: 'copy', name: t('agentBrand.contentTypeCopy') },
 ]
 const autoFlow = reactive({
   platforms: ['douyin', 'xiaohongshu'] as string[],
@@ -679,9 +681,9 @@ const autoFlow = reactive({
 let flowCancelled = false
 const autoFlowSummary = computed(() => {
   const labels = autoFlow.contentTypes
-    .map(key => ({ video: '视频脚本', poster: '图文海报', copy: '爆款文案' }[key]))
+    .map(key => ({ video: t('agentBrand.contentTypeVideo'), poster: t('agentBrand.contentTypePosterWithPoster'), copy: t('agentBrand.contentTypeCopyHot') }[key]))
     .filter(Boolean)
-  return `计划生成 ${autoFlow.count} 条 ${labels.join(' / ')}`
+  return t('agentBrand.autoFlowSummary', { count: autoFlow.count, types: labels.join(' / ') })
 })
 const mainPlatformSummary = computed(() => brand.mainPlatforms.map(key => platformOptions.find(item => item.key === key)?.name).filter(Boolean).join(' / '))
 
@@ -690,7 +692,7 @@ function cancelFlow() {
   autoFlow.running = false
   autoFlow.step = 0
   autoFlowLog.value = []
-  ElMessage.info('已取消工作流')
+  ElMessage.info(t('agentBrand.flowCancelled'))
 }
 function toggleAfPlatform(key: string) {
   const i = autoFlow.platforms.indexOf(key)
@@ -784,27 +786,27 @@ async function startAutoFlow() {
   const totalSteps = afSteps.value.length
 
   try {
-    autoFlowLog.value[0] = '正在抓取热搜数据...'
+    autoFlowLog.value[0] = t('agentBrand.logFetchingTrends')
     for (const platform of autoFlow.platforms) {
       await agentStore.fetchTrending(platform)
     }
     if (flowCancelled) return
 
     const allItems = autoFlow.platforms.flatMap(platform => (agentStore.trending as any)[platform] || [])
-    autoFlowLog.value[0] = `已抓取 ${allItems.length} 条热搜话题`
+    autoFlowLog.value[0] = t('agentBrand.logFetchedTrends', { count: allItems.length })
     autoFlow.step = 1
 
-    autoFlowLog.value[1] = 'AI 正在分析与品牌相关的话题...'
+    autoFlowLog.value[1] = t('agentBrand.logAnalyzingTopics')
     const topicList = allItems.slice(0, 20).map((item: any) => item.title).join('\n')
-    const productInfo = brand.products?.length ? `核心产品：${brand.products.join('、')}` : ''
-    const sellingInfo = brand.sellingPoints ? `产品卖点：${brand.sellingPoints}` : ''
+    const productInfo = brand.products?.length ? `${t('agentBrand.coreProducts')}：${brand.products.join('、')}` : ''
+    const sellingInfo = brand.sellingPoints ? `${t('agentBrand.sellingPoints')}：${brand.sellingPoints}` : ''
     const selected = await callAgentAI('trend',
       `以下是当前热搜话题列表：
 ${topicList}
 
 品牌信息：
-品牌名：${brand.name}
-行业：${brand.industry} / ${brand.subIndustry}
+${t('agentBrand.brandName')}：${brand.name}
+${t('agentBrand.industry')}：${brand.industry} / ${brand.subIndustry}
 ${productInfo}
 ${sellingInfo}
 
@@ -815,7 +817,7 @@ ${sellingInfo}
 
     const selectedTopics = selected.split('\n').map(line => line.trim()).filter(Boolean).slice(0, autoFlow.count)
     agentStore.setSelectedTopics(selectedTopics)
-    autoFlowLog.value[1] = `已选出 ${selectedTopics.length} 个话题`
+    autoFlowLog.value[1] = t('agentBrand.logSelectedTopics', { count: selectedTopics.length })
     autoFlow.step = 2
 
     const needVideo = autoFlow.contentTypes.includes('video')
@@ -823,15 +825,15 @@ ${sellingInfo}
     const needCopy = autoFlow.contentTypes.includes('copy')
     const hasShortVideoPlatform = autoFlow.platforms.some(platform => ['douyin', 'kuaishou'].includes(platform))
     const hasXiaohongshu = autoFlow.platforms.includes('xiaohongshu')
-    const platformNames: Record<string, string> = { douyin: '抖音', xiaohongshu: '小红书', kuaishou: '快手' }
+    const platformNames: Record<string, string> = { douyin: t('agentBrand.platformDouyin'), xiaohongshu: t('agentBrand.platformXhs'), kuaishou: t('agentBrand.platformKuaishou') }
     const flowItems: any[] = []
-    autoFlowLog.value[2] = '正在生成内容...'
+    autoFlowLog.value[2] = t('agentBrand.logGeneratingContent')
 
     if (needVideo && hasShortVideoPlatform) {
       const videoPlatforms = autoFlow.platforms.filter(platform => ['douyin', 'kuaishou'].includes(platform))
       for (const platform of videoPlatforms) {
         for (const topic of selectedTopics) {
-          autoFlowLog.value[2] = `正在生成视频脚本：${topic}...`
+          autoFlowLog.value[2] = t('agentBrand.logGeneratingVideoScript', { topic })
           const script = await callAgentAI('video',
             `请为话题「${topic}」创作一个适合${platformNames[platform]}的短视频脚本，格式：
 场景描述：xxx
@@ -861,14 +863,14 @@ ${sellingInfo}
       const posterPlatforms = hasXiaohongshu ? ['xiaohongshu'] : autoFlow.platforms.slice(0, 1)
       for (const platform of posterPlatforms) {
         for (const topic of selectedTopics) {
-          autoFlowLog.value[2] = `正在生成图文：${topic}...`
+          autoFlowLog.value[2] = t('agentBrand.logGeneratingPoster', { topic })
           const raw = await callAgentAI('poster',
             `请为话题「${topic}」创作一篇${platformNames[platform] || platform}图文帖子，严格按 JSON 输出：
 {"title":"标题(带emoji,25字内)","body":"正文(排版美观,500字内)","tags":["标签1","标签2","标签3","标签4"]}
 符合品牌「${brand.name}」调性，只输出JSON，不要其他内容。`,
             store.systemPrompt
           )
-          autoFlowLog.value[2] = `正在生成配图：${topic}...`
+          autoFlowLog.value[2] = t('agentBrand.logGeneratingImage', { topic })
           const imagePrompt = `${brand.name} ${brand.industry} product photo, ${topic}, beautiful, professional photography, xiaohongshu style`
           const imageUrl = await generatePosterImage(imagePrompt)
           flowItems.push({
@@ -887,7 +889,7 @@ ${sellingInfo}
     if (needCopy) {
       for (const platform of autoFlow.platforms) {
         for (const topic of selectedTopics) {
-          autoFlowLog.value[2] = `正在生成文案：${topic}（${platformNames[platform] || platform}）...`
+          autoFlowLog.value[2] = t('agentBrand.logGeneratingCopy', { topic, platform: platformNames[platform] || platform })
           const copy = await callAgentAI('copywriter',
             `请为话题「${topic}」创作一条适合${platformNames[platform] || platform}发布的营销文案，200字以内，语言生动有感染力，结尾带行动号召，符合品牌「${brand.name}」（${brand.industry}）调性，直接输出文案内容。`,
             store.systemPrompt
@@ -931,7 +933,7 @@ ${sellingInfo}
     if (firstVideo) agentStore.setVideoScript({ topic: firstVideo.topic, content: firstVideo.content, platform: firstVideo.platform })
     if (firstPoster) agentStore.setPublishContent({ script: firstPoster.content, topic: firstPoster.topic, type: 'poster' })
 
-    autoFlowLog.value[2] = `已生成 ${flowItems.length} 条内容（${autoFlow.contentTypes.map(key => contentTypes.find(item => item.key === key)?.name).filter(Boolean).join(' + ')}）`
+    autoFlowLog.value[2] = t('agentBrand.logGeneratedContent', { count: flowItems.length, types: autoFlow.contentTypes.map(key => contentTypes.find(item => item.key === key)?.name).filter(Boolean).join(' + ') })
     autoFlow.step = 3
 
     const platforms = [...new Set(flowItems.map(item => item.platformName))]
@@ -947,12 +949,12 @@ ${sellingInfo}
       count: flowItems.length,
     })
 
-    autoFlowLog.value[3] = '所有内容就绪，可前往发布'
+    autoFlowLog.value[3] = t('agentBrand.logReadyToPublish')
     autoFlow.step = 4
   } catch (e: any) {
-    autoFlow.error = e.message || 'AI 请求失败'
+    autoFlow.error = e.message || t('agentBrand.aiRequestFailed')
     autoFlow.step = totalSteps
-    ElMessage.error('工作流执行失败：' + autoFlow.error)
+    ElMessage.error(t('agentBrand.flowFailed') + autoFlow.error)
     autoFlow.running = false
   }
 }
@@ -1011,7 +1013,7 @@ const AiFieldHelper = defineComponent({
         h('button', {
           class: ['btn-ai-label', { loading: loading.value }],
           onClick: triggerAi,
-        }, loading.value ? '⏳ 优化中...' : '✨ AI 优化'),
+        }, loading.value ? `⏳ ${t('agentBrand.optimizing')}` : `✨ ${t('agentBrand.aiOptimize')}`),
       ]),
       props.type === 'textarea'
         ? h('textarea', {
@@ -1034,10 +1036,10 @@ const AiFieldHelper = defineComponent({
 // ── Context builders ──────────────────────────────────
 const baseContext = computed(() => {
   const parts = []
-  if (brand.name) parts.push(`品牌名：${brand.name}`)
-  if (brand.industry) parts.push(`行业：${brand.industry}`)
-  if (brand.subIndustry) parts.push(`细分：${brand.subIndustry}`)
-  if (brand.products.length) parts.push(`产品：${brand.products.join('、')}`)
+  if (brand.name) parts.push(`${t('agentBrand.brandName')}：${brand.name}`)
+  if (brand.industry) parts.push(`${t('agentBrand.industry')}：${brand.industry}`)
+  if (brand.subIndustry) parts.push(`${t('agentBrand.subIndustry')}：${brand.subIndustry}`)
+  if (brand.products.length) parts.push(`${t('agentBrand.coreProducts')}：${brand.products.join('、')}`)
   return parts.join('，')
 })
 
@@ -1098,7 +1100,7 @@ async function callAI(prompt: string): Promise<string> {
       systemPrompt: '你是一位专业的品牌策划和内容营销顾问，擅长为各行业品牌提供精准、有创意的文案和策略建议。回复简洁专业，中文。',
     }),
   })
-  if (!response.ok) throw new Error(`AI 请求失败 (${response.status})`)
+  if (!response.ok) throw new Error(`${t('agentBrand.aiRequestFailed')} (${response.status})`)
   const contentType = response.headers.get('content-type') || ''
   if (contentType.includes('text/event-stream')) {
     const reader = response.body?.getReader()
@@ -1132,17 +1134,17 @@ async function callAI(prompt: string): Promise<string> {
 // Build brand context string for AI prompts
 function buildBrandContext(): string {
   const parts: string[] = []
-  if (brand.name) parts.push(`品牌名：${brand.name}`)
-  if (brand.industry) parts.push(`行业：${brand.industry}`)
-  if (brand.subIndustry) parts.push(`细分领域：${brand.subIndustry}`)
-  if (brand.priceLevel) parts.push(`价格定位：${brand.priceLevel}`)
-  if (brand.targetAge.length) parts.push(`目标年龄：${brand.targetAge.join('/')}`)
-  if (brand.targetGender) parts.push(`目标性别：${brand.targetGender}`)
-  if (brand.products.length) parts.push(`核心产品：${brand.products.join('、')}`)
-  if (brand.sellingPoints) parts.push(`卖点：${brand.sellingPoints}`)
-  if (brand.intro) parts.push(`简介：${brand.intro}`)
-  if (brand.slogan) parts.push(`口号：${brand.slogan}`)
-  if (brand.tones.length) parts.push(`内容调性：${brand.tones.join('、')}`)
+    if (brand.name) parts.push(`${t('agentBrand.brandName')}：${brand.name}`)
+    if (brand.industry) parts.push(`${t('agentBrand.industry')}：${brand.industry}`)
+    if (brand.subIndustry) parts.push(`${t('agentBrand.subIndustryDetail')}：${brand.subIndustry}`)
+    if (brand.priceLevel) parts.push(`${t('agentBrand.priceLevel')}：${brand.priceLevel}`)
+    if (brand.targetAge.length) parts.push(`${t('agentBrand.targetAge')}：${brand.targetAge.join('/')}`)
+    if (brand.targetGender) parts.push(`${t('agentBrand.targetGender')}：${brand.targetGender}`)
+    if (brand.products.length) parts.push(`${t('agentBrand.coreProducts')}：${brand.products.join('、')}`)
+    if (brand.sellingPoints) parts.push(`${t('agentBrand.sellingPoints')}：${brand.sellingPoints}`)
+    if (brand.intro) parts.push(`${t('agentBrand.introLabel')}：${brand.intro}`)
+    if (brand.slogan) parts.push(`${t('agentBrand.sloganLabel')}：${brand.slogan}`)
+    if (brand.tones.length) parts.push(`${t('agentBrand.contentTone')}：${brand.tones.join('、')}`)
   return parts.join('；')
 }
 
@@ -1190,8 +1192,8 @@ async function generateVariants(field: keyof typeof brand) {
     aiModal.value.activeVariant = 0
     typeVariant(0)
   } catch (e: any) {
-    ElMessage.error('AI 生成失败：' + e.message)
-    aiModal.value.variants = ['AI 生成失败，请检查 ANTHROPIC_API_KEY 配置后重试。']
+    ElMessage.error(t('agentBrand.aiGenerateFailed') + e.message)
+    aiModal.value.variants = [t('agentBrand.aiGenerateRetry')]
     aiModal.value.activeVariant = 0
     typeVariant(0)
   } finally {
@@ -1243,7 +1245,7 @@ function adoptResult() {
   const val = aiModal.value.editableResult
   if (field && val) {
     ;(brand as any)[field] = val
-    ElMessage.success('已采纳 AI 建议')
+    ElMessage.success(t('agentBrand.aiAdopted'))
   }
   closeModal()
 }
@@ -1256,9 +1258,9 @@ async function aiSuggestProducts() {
     const raw = await callAI(`请为以下品牌推荐5-8个核心产品名称（仅列出产品名，每行一个，不要序号和解释）：\n${ctx}`)
     const suggestions = raw.split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'))
     suggestions.forEach(s => { if (!brand.products.includes(s)) brand.products.push(s) })
-    ElMessage.success(`已添加 ${suggestions.length} 个 AI 推荐产品`)
+    ElMessage.success(t('agentBrand.aiAddedProducts', { count: suggestions.length }))
   } catch (e: any) {
-    ElMessage.error('AI 推荐失败：' + e.message)
+    ElMessage.error(t('agentBrand.aiRecommendFailed') + e.message)
   } finally {
     aiLoading.value.products = false
   }
@@ -1271,9 +1273,9 @@ async function aiSuggestCompetitors() {
     const raw = await callAI(`请为以下品牌推荐5个主要竞品品牌名称（仅列出品牌名，每行一个，不要序号和解释）：\n${ctx}`)
     const suggestions = raw.split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'))
     suggestions.forEach(s => { if (!brand.competitors.includes(s)) brand.competitors.push(s) })
-    ElMessage.success(`已添加 ${suggestions.length} 个 AI 推荐竞品`)
+    ElMessage.success(t('agentBrand.aiAddedCompetitors', { count: suggestions.length }))
   } catch (e: any) {
-    ElMessage.error('AI 推荐失败：' + e.message)
+    ElMessage.error(t('agentBrand.aiRecommendFailed') + e.message)
   } finally {
     aiLoading.value.competitors = false
   }
@@ -1286,9 +1288,9 @@ async function aiSuggestKeywords() {
     const raw = await callAI(`请为以下品牌推荐6-8个适合在社交媒体内容中使用的品牌关键词/标签（仅列出关键词，每行一个，简短精炼，不要序号和解释）：\n${ctx}`)
     const kws = raw.split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'))
     kws.forEach(k => { if (!brand.keywords.includes(k)) brand.keywords.push(k) })
-    ElMessage.success(`已添加 ${kws.length} 个 AI 推荐关键词`)
+    ElMessage.success(t('agentBrand.aiAddedKeywords', { count: kws.length }))
   } catch (e: any) {
-    ElMessage.error('AI 推荐失败：' + e.message)
+    ElMessage.error(t('agentBrand.aiRecommendFailed') + e.message)
   } finally {
     aiLoading.value.keywords = false
   }
@@ -1301,9 +1303,9 @@ async function aiSuggestTones() {
     const raw = await callAI(`请为以下品牌推荐3-4个最适合的内容调性（从这些选项中选：专业权威、温暖亲切、年轻活力、高端大气、接地气、幽默搞笑、情感共鸣、科普知识、故事叙述、简洁直接。仅列出名称，每行一个，不要解释）：\n${ctx}`)
     const recommended = raw.split('\n').map(s => s.trim()).filter(s => s && toneOptions.includes(s))
     recommended.forEach(t => { if (!brand.tones.includes(t)) brand.tones.push(t) })
-    ElMessage.success(`AI 推荐调性：${recommended.join('、')}`)
+    ElMessage.success(t('agentBrand.aiRecommendedTone', { tones: recommended.join('、') }))
   } catch (e: any) {
-    ElMessage.error('AI 推荐失败：' + e.message)
+    ElMessage.error(t('agentBrand.aiRecommendFailed') + e.message)
   } finally {
     aiLoading.value.tones = false
   }
@@ -1316,9 +1318,9 @@ async function aiSuggestFilters() {
     const raw = await callAI(`请为以下品牌推荐6-8个用于抖音/小红书热搜过滤的关键词（贴合行业和产品，每行一个，简短，不要序号和解释）：\n${ctx}`)
     const filters = raw.split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'))
     filters.forEach(f => { if (!brand.trendingFilters.includes(f)) brand.trendingFilters.push(f) })
-    ElMessage.success(`已添加 ${filters.length} 个 AI 推荐过滤词`)
+    ElMessage.success(t('agentBrand.aiAddedFilters', { count: filters.length }))
   } catch (e: any) {
-    ElMessage.error('AI 推荐失败：' + e.message)
+    ElMessage.error(t('agentBrand.aiRecommendFailed') + e.message)
   } finally {
     aiLoading.value.filters = false
   }
@@ -1326,7 +1328,7 @@ async function aiSuggestFilters() {
 
 async function aiSuggestAdForbidden() {
   if (!brand.industry && !brand.subIndustry) {
-    ElMessage.warning('请先选择行业，AI 才能准确抓取对应违禁词')
+    ElMessage.warning(t('agentBrand.selectIndustryFirst'))
     return
   }
   aiLoading.value.adForbidden = true
@@ -1337,9 +1339,9 @@ async function aiSuggestAdForbidden() {
     const words = raw.split('\n').map(s => s.replace(/^[\d\.\-\s]+/, '').trim()).filter(s => s.length > 0 && s.length <= 15)
     const added = words.filter(w => !brand.adForbiddenWords.includes(w))
     added.forEach(w => brand.adForbiddenWords.push(w))
-    ElMessage.success(`已抓取 ${added.length} 个「${industryName}」行业广告违禁词`)
+    ElMessage.success(t('agentBrand.aiFetchedForbiddenWords', { count: added.length, industry: industryName }))
   } catch (e: any) {
-    ElMessage.error('AI 抓取失败：' + e.message)
+    ElMessage.error(t('agentBrand.aiFetchFailed') + e.message)
   } finally {
     aiLoading.value.adForbidden = false
   }
@@ -1353,18 +1355,18 @@ function addForbiddenWord() {
 
 // ── Industries ────────────────────────────────────────
 const industries = [
-  { key: 'food', icon: '🍽', name: '食品饮料' },
-  { key: 'beauty', icon: '💄', name: '美妆护肤' },
-  { key: 'fashion', icon: '👗', name: '服装服饰' },
-  { key: 'ecom', icon: '🛒', name: '电商零售' },
-  { key: 'edu', icon: '📚', name: '教育培训' },
-  { key: 'health', icon: '💊', name: '医疗健康' },
-  { key: 'tech', icon: '💻', name: '科技数码' },
-  { key: 'home', icon: '🏠', name: '家居家装' },
-  { key: 'travel', icon: '✈️', name: '旅游出行' },
-  { key: 'finance', icon: '💰', name: '金融理财' },
-  { key: 'pet', icon: '🐾', name: '宠物' },
-  { key: 'other', icon: '⚙️', name: '其他行业' },
+  { key: 'food', icon: '🍽', name: t('agentBrand.industryFood') },
+  { key: 'beauty', icon: '💄', name: t('agentBrand.industryBeauty') },
+  { key: 'fashion', icon: '👗', name: t('agentBrand.industryFashion') },
+  { key: 'ecom', icon: '🛒', name: t('agentBrand.industryEcom') },
+  { key: 'edu', icon: '📚', name: t('agentBrand.industryEdu') },
+  { key: 'health', icon: '💊', name: t('agentBrand.industryHealth') },
+  { key: 'tech', icon: '💻', name: t('agentBrand.industryTech') },
+  { key: 'home', icon: '🏠', name: t('agentBrand.industryHome') },
+  { key: 'travel', icon: '✈️', name: t('agentBrand.industryTravel') },
+  { key: 'finance', icon: '💰', name: t('agentBrand.industryFinance') },
+  { key: 'pet', icon: '🐾', name: t('agentBrand.industryPet') },
+  { key: 'other', icon: '⚙️', name: t('agentBrand.industryOther') },
 ]
 
 const subIndustries: Record<string, string[]> = {
@@ -1385,38 +1387,38 @@ const subIndustries: Record<string, string[]> = {
 const currentSubs = computed(() => subIndustries[brand.industry] || [])
 function selectIndustry(key: string) { brand.industry = key; brand.subIndustry = '' }
 
-const ageGroups = ['00后', '95后', '90后', '85后', '80后', '70后', '中老年']
-const genders = ['不限', '偏女性', '偏男性', '均衡']
+const ageGroups = [t('agentBrand.age00'), t('agentBrand.age95'), t('agentBrand.age90'), t('agentBrand.age85'), t('agentBrand.age80'), t('agentBrand.age70'), t('agentBrand.ageSenior')]
+const genders = [t('agentBrand.genderAny'), t('agentBrand.genderFemale'), t('agentBrand.genderMale'), t('agentBrand.genderBalanced')]
 function toggleAge(age: string) {
   const i = brand.targetAge.indexOf(age)
   i > -1 ? brand.targetAge.splice(i, 1) : brand.targetAge.push(age)
 }
 
-const toneOptions = ['专业权威', '温暖亲切', '年轻活力', '高端大气', '接地气', '幽默搞笑', '情感共鸣', '科普知识', '故事叙述', '简洁直接']
+const toneOptions = [t('agentBrand.toneProfessional'), t('agentBrand.toneWarm'), t('agentBrand.toneYouthful'), t('agentBrand.tonePremium'), t('agentBrand.toneDownToEarth'), t('agentBrand.toneHumor'), t('agentBrand.toneEmotion'), t('agentBrand.toneKnowledge'), t('agentBrand.toneStory'), t('agentBrand.toneConcise')]
 
 const toneCardOptions = [
-  { name: '专业权威', icon: '🎓', desc: '知识背书，建立信任', color: '#0071e3', bg: 'rgba(0,113,227,0.08)' },
-  { name: '温暖亲切', icon: '🤗', desc: '拉近距离，情感连接', color: '#f97316', bg: 'rgba(249,115,22,0.08)' },
-  { name: '年轻活力', icon: '⚡', desc: '潮流感，适合年轻圈层', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
-  { name: '高端大气', icon: '💎', desc: '品质感，奢华调性', color: '#64748b', bg: 'rgba(100,116,139,0.08)' },
-  { name: '接地气', icon: '🌿', desc: '朴实真实，贴近生活', color: '#16a34a', bg: 'rgba(22,163,74,0.08)' },
-  { name: '幽默搞笑', icon: '😂', desc: '轻松有趣，提升互动', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
-  { name: '情感共鸣', icon: '💝', desc: '触动内心，引发共鸣', color: '#ec4899', bg: 'rgba(236,72,153,0.08)' },
-  { name: '科普知识', icon: '🔬', desc: '干货分享，树立专业形象', color: '#06b6d4', bg: 'rgba(6,182,212,0.08)' },
-  { name: '故事叙述', icon: '📖', desc: '故事化表达，增加代入感', color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
-  { name: '简洁直接', icon: '🎯', desc: '直击痛点，高效传达', color: '#334155', bg: 'rgba(51,65,85,0.08)' },
+  { name: t('agentBrand.toneProfessional'), icon: '🎓', desc: t('agentBrand.toneProfessionalDesc'), color: '#0071e3', bg: 'rgba(0,113,227,0.08)' },
+  { name: t('agentBrand.toneWarm'), icon: '🤗', desc: t('agentBrand.toneWarmDesc'), color: '#f97316', bg: 'rgba(249,115,22,0.08)' },
+  { name: t('agentBrand.toneYouthful'), icon: '⚡', desc: t('agentBrand.toneYouthfulDesc'), color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
+  { name: t('agentBrand.tonePremium'), icon: '💎', desc: t('agentBrand.tonePremiumDesc'), color: '#64748b', bg: 'rgba(100,116,139,0.08)' },
+  { name: t('agentBrand.toneDownToEarth'), icon: '🌿', desc: t('agentBrand.toneDownToEarthDesc'), color: '#16a34a', bg: 'rgba(22,163,74,0.08)' },
+  { name: t('agentBrand.toneHumor'), icon: '😂', desc: t('agentBrand.toneHumorDesc'), color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+  { name: t('agentBrand.toneEmotion'), icon: '💝', desc: t('agentBrand.toneEmotionDesc'), color: '#ec4899', bg: 'rgba(236,72,153,0.08)' },
+  { name: t('agentBrand.toneKnowledge'), icon: '🔬', desc: t('agentBrand.toneKnowledgeDesc'), color: '#06b6d4', bg: 'rgba(6,182,212,0.08)' },
+  { name: t('agentBrand.toneStory'), icon: '📖', desc: t('agentBrand.toneStoryDesc'), color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
+  { name: t('agentBrand.toneConcise'), icon: '🎯', desc: t('agentBrand.toneConciseDesc'), color: '#334155', bg: 'rgba(51,65,85,0.08)' },
 ]
-const priceLevelOptions = ['亲民大众', '中端品质', '中高端', '高端精品', '奢侈顶级']
+const priceLevelOptions = [t('agentBrand.priceLow'), t('agentBrand.priceMid'), t('agentBrand.priceMidHigh'), t('agentBrand.priceHigh'), t('agentBrand.priceLuxury')]
 function toggleTone(tone: string) {
   const i = brand.tones.indexOf(tone)
   i > -1 ? brand.tones.splice(i, 1) : brand.tones.push(tone)
 }
 
-const freqOptions = ['每天1条', '每天2-3条', '每周3-5条', '每周1-2条']
+const freqOptions = [t('agentBrand.freqDaily1'), t('agentBrand.freqDaily2to3'), t('agentBrand.freqWeekly3to5'), t('agentBrand.freqWeekly1to2')]
 const platformOptions = [
-  { key: 'douyin', name: '抖音', icon: '🎵' },
-  { key: 'xiaohongshu', name: '小红书', icon: '📕' },
-  { key: 'kuaishou', name: '快手', icon: '⚡' },
+  { key: 'douyin', name: t('agentBrand.platformDouyin'), icon: '🎵' },
+  { key: 'xiaohongshu', name: t('agentBrand.platformXhs'), icon: '📕' },
+  { key: 'kuaishou', name: t('agentBrand.platformKuaishou'), icon: '⚡' },
 ]
 function togglePlatform(key: string) {
   const i = brand.mainPlatforms.indexOf(key)
@@ -1443,34 +1445,34 @@ const generatedPrompt = computed(() => {
   if (brand.name) p.push(`品牌：${brand.name}`)
   if (brand.slogan) p.push(`口号：${brand.slogan}`)
   const iName = industries.find(i => i.key === brand.industry)?.name || ''
-  if (iName) p.push(`行业：${iName}${brand.subIndustry ? ' / ' + brand.subIndustry : ''}`)
-  if (brand.products.length) p.push(`核心产品：${brand.products.join('、')}`)
+  if (iName) p.push(`${t('agentBrand.industry')}：${iName}${brand.subIndustry ? ' / ' + brand.subIndustry : ''}`)
+  if (brand.products.length) p.push(`${t('agentBrand.coreProducts')}：${brand.products.join('、')}`)
   if (brand.sellingPoints) p.push(`卖点：${brand.sellingPoints.split('\n').filter(Boolean).join('；')}`)
   if (brand.targetAge.length) p.push(`目标用户：${brand.targetAge.join('/')} ${brand.targetGender}`)
   if (brand.tones.length) p.push(`品牌调性：${brand.tones.join('、')}`)
   if (brand.keywords.length) p.push(`必含关键词：${brand.keywords.join('、')}`)
   if (brand.taboos) p.push(`禁忌：${brand.taboos}`)
-  if (brand.adForbiddenWords.length) p.push(`广告违禁词：${brand.adForbiddenWords.join('、')}`)
-  return p.length ? p.join('\n') : '请填写品牌信息后，AI 提示词将自动生成...'
+  if (brand.adForbiddenWords.length) p.push(`${t('agentBrand.adForbiddenWords')}：${brand.adForbiddenWords.join('、')}`)
+  return p.length ? p.join('\n') : t('agentBrand.promptPreviewEmpty')
 })
 
 function handleSave() {
   if (!brand.name?.trim()) {
-    ElMessage.warning('请填写公司 / 品牌名称')
+    ElMessage.warning(t('agentBrand.fillCompanyName'))
     return
   }
   if (!brand.industry?.trim()) {
-    ElMessage.warning('请填写所属行业')
+    ElMessage.warning(t('agentBrand.fillIndustry'))
     return
   }
   if (!brand.subIndustry?.trim()) {
-    ElMessage.warning('请选择细分领域')
+    ElMessage.warning(t('agentBrand.selectSubIndustry'))
     return
   }
   store.saveBrand({ ...brand })
   store.setActive(brand.id)
   saved.value = true
-  ElMessage.success('品牌设置已保存')
+  ElMessage.success(t('agentBrand.brandSaved'))
   setTimeout(() => {
     saved.value = false
     isCollapsed.value = true
