@@ -3,49 +3,49 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getWarehouseList"
           del-path="/stock/WarehouseName/batchDel"
-          export-file-name="仓库管理" :params="searchForm">
+          :export-file-name="$t('warehouse.warehouseName.exportFileName')" :params="searchForm">
         <template #search>
-          <el-input v-model="searchForm.name" placeholder="仓库名称" clearable style="width: 180px" />
+          <el-input v-model="searchForm.name" :placeholder="$t('warehouse.warehouseName.searchName')" clearable style="width: 180px" />
         </template>
         <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
+          <el-button type="primary" :icon="Plus" @click="openForm()">{{ $t('warehouse.warehouseName.btnAdd') }}</el-button>
         </template>
 
-        <el-table-column label="仓库名称" min-width="150">
+        <el-table-column :label="$t('warehouse.warehouseName.colName')" min-width="150">
           <template #default="{ row }">
             <span>{{ row.name }}</span>
-            <el-tag v-if="row.id === defaultWarehouseId" type="success" size="small" style="margin-left: 8px">默认</el-tag>
+            <el-tag v-if="row.id === defaultWarehouseId" type="success" size="small" style="margin-left: 8px">{{ $t('warehouse.warehouseName.tagDefault') }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="address" label="地址" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="address" :label="$t('warehouse.warehouseName.colAddress')" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="remark" :label="$t('warehouse.warehouseName.colRemark')" min-width="160" show-overflow-tooltip />
 
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column :label="$t('warehouse.warehouseName.colActions')" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="openForm(row)">编辑</el-button>
-            <el-button type="success" size="small" link @click="formRef?.openView(row)">查看</el-button>
+            <el-button type="primary" size="small" link @click="openForm(row)">{{ $t('warehouse.warehouseName.btnEdit') }}</el-button>
+            <el-button type="success" size="small" link @click="formRef?.openView(row)">{{ $t('warehouse.warehouseName.btnView') }}</el-button>
             <el-button
               size="small" link
               :type="row.id === defaultWarehouseId ? 'info' : 'warning'"
               :disabled="row.id === defaultWarehouseId"
               @click="setDefault(row)"
-            >{{ row.id === defaultWarehouseId ? '已默认' : '设为默认' }}</el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
+            >{{ row.id === defaultWarehouseId ? $t('warehouse.warehouseName.btnAlreadyDefault') : $t('warehouse.warehouseName.btnSetDefault') }}</el-button>
+            <el-button type="danger" size="small" link @click="handleDelete(row.id)">{{ $t('warehouse.warehouseName.btnDelete') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
     </el-card>
 
-    <ScForm ref="formRef" :title="editingRow ? '编辑仓库' : '新增仓库'" @submit="handleSubmit">
+    <ScForm ref="formRef" :title="editingRow ? $t('warehouse.warehouseName.formTitleEdit') : $t('warehouse.warehouseName.formTitleAdd')" @submit="handleSubmit">
       <template #default="{ form }">
-        <el-form-item label="仓库名称" prop="name" :rules="[{ required: true, message: '请输入仓库名称' }]">
-          <el-input v-model="form.name" placeholder="请输入仓库名称" />
+        <el-form-item :label="$t('warehouse.warehouseName.fieldName')" prop="name" :rules="[{ required: true, message: $t('warehouse.warehouseName.ruleNameRequired') }]">
+          <el-input v-model="form.name" :placeholder="$t('warehouse.warehouseName.placeholderName')" />
         </el-form-item>
-        <el-form-item label="地址" prop="address">
-          <el-input v-model="form.address" placeholder="请输入地址" />
+        <el-form-item :label="$t('warehouse.warehouseName.fieldAddress')" prop="address">
+          <el-input v-model="form.address" :placeholder="$t('warehouse.warehouseName.placeholderAddress')" />
         </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
+        <el-form-item :label="$t('warehouse.warehouseName.fieldRemark')" prop="remark">
+          <el-input v-model="form.remark" type="textarea" :placeholder="$t('warehouse.warehouseName.placeholderRemark')" />
         </el-form-item>
       </template>
     </ScForm>
@@ -53,9 +53,9 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
-
 import { onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -63,6 +63,7 @@ import { getWarehouseList, createWarehouse, updateWarehouse, deleteWarehouse } f
 import http from '@/api/http'
 import { getSyncedDefaultWarehouseId, saveSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 
+const { t } = useI18n()
 const tableRef = ref()
 const formRef = ref()
 const editingRow = ref<any>(null)
@@ -88,25 +89,24 @@ const openForm = (row?: any) => {
 const setDefault = async (row: any) => {
   await saveSyncedDefaultWarehouseId(row.id)
   defaultWarehouseId.value = row.id
-  ElMessage.success(`已将"${row.name}"设为默认仓库`)
+  ElMessage.success(t('warehouse.warehouseName.msgSetDefaultSuccess', { name: row.name }))
 }
 
 const handleSubmit = async (form: any, done: () => void) => {
   try {
     if (editingRow.value) {
       await updateWarehouse({ ...form, id: editingRow.value.id })
-      ElMessage.success('修改成功')
+      ElMessage.success(t('warehouse.warehouseName.msgEditSuccess'))
     } else {
-      // 检查同名仓库
       const res = await getWarehouseList({ name: form.name, page: 1, page_size: 50 })
       const rows: any[] = res?.rows ?? res?.data?.rows ?? []
       const duplicate = rows.find((r: any) => r.name === form.name)
       if (duplicate) {
-        ElMessage.error(`仓库"${form.name}"已存在，不可重复创建`)
+        ElMessage.error(t('warehouse.warehouseName.msgDuplicateName', { name: form.name }))
         return
       }
       await createWarehouse(form)
-      ElMessage.success('操作成功')
+      ElMessage.success(t('warehouse.warehouseName.msgSuccess'))
     }
     done()
     tableRef.value.refresh()
@@ -116,9 +116,9 @@ const handleSubmit = async (form: any, done: () => void) => {
 }
 
 const handleDelete = async (id: number) => {
-  await ElMessageBox.confirm('确定要删除该仓库吗？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('warehouse.warehouseName.msgConfirmDelete'), t('warehouse.warehouseName.msgConfirmTitle'), { type: 'warning' })
   await http.post('/stock/WarehouseName/batchDel', { ids: [id] })
-  ElMessage.success('删除成功')
+  ElMessage.success(t('warehouse.warehouseName.msgDeleteSuccess'))
   if (defaultWarehouseId.value === id) {
     defaultWarehouseId.value = null
     await saveSyncedDefaultWarehouseId(0)

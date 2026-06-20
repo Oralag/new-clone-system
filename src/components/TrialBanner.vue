@@ -4,16 +4,16 @@
     <span class="banner-dot"></span>
     <span class="banner-text">
       <template v-if="trialExpired">
-        <strong>体验已到期</strong> · 升级付费版继续使用全部功能
+        <strong>{{ t('trialBanner.expiredTitle') }}</strong> · {{ t('trialBanner.expiredBannerText') }}
       </template>
       <template v-else-if="trialStarted">
-        <strong>体验版</strong> · 剩余 <strong class="days-highlight">{{ daysLeft }} 天</strong>体验时间 · 数据为演示环境
+        <strong>{{ t('trialBanner.trialTitle') }}</strong> · {{ t('trialBanner.daysLeftPrefix') }} <strong class="days-highlight">{{ daysLeft }} {{ t('trialBanner.daysUnit') }}</strong> {{ t('trialBanner.daysLeftSuffix') }} · {{ t('trialBanner.demoEnv') }}
       </template>
       <template v-else>
-        <strong>体验版</strong> · 数据为演示环境，新增/编辑不可用
+        <strong>{{ t('trialBanner.trialTitle') }}</strong> · {{ t('trialBanner.demoEnv') }} · {{ t('trialBanner.readOnlyHint') }}
       </template>
     </span>
-    <button class="banner-upgrade-btn" @click="upgradeDialog?.open()">升级付费版 →</button>
+    <button class="banner-upgrade-btn" @click="upgradeDialog?.open()">{{ t('trialBanner.upgradeNowArrow') }}</button>
     <button class="banner-close" @click="bannerDismissed = true">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
@@ -29,23 +29,23 @@
       <div class="wb-icon">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
       </div>
-      <div class="wb-title">体验版限制</div>
-      <div class="wb-desc">数据写入、编辑和导入功能仅对付费版开放</div>
+      <div class="wb-title">{{ t('trialBanner.limitTitle') }}</div>
+      <div class="wb-desc">{{ t('trialBanner.limitDesc') }}</div>
 
       <!-- 未领取：显示领取按钮 -->
       <template v-if="!trialStarted && !trialExpired">
         <div class="wb-divider">
-          <span>或者</span>
+          <span>{{ t('trialBanner.or') }}</span>
         </div>
         <div class="wb-trial-card" @click="claimTrial">
           <div class="wb-trial-left">
             <div class="wb-trial-icon">🎁</div>
             <div>
-              <div class="wb-trial-title">领取 15 天免费体验</div>
-              <div class="wb-trial-desc">解锁全部功能，体验付费版完整能力</div>
+              <div class="wb-trial-title">{{ t('trialBanner.claimTitle') }}</div>
+              <div class="wb-trial-desc">{{ t('trialBanner.claimDesc') }}</div>
             </div>
           </div>
-          <div class="wb-trial-btn">立即领取</div>
+          <div class="wb-trial-btn">{{ t('trialBanner.claimNow') }}</div>
         </div>
       </template>
 
@@ -54,8 +54,8 @@
         <div class="wb-trial-active">
           <div class="wb-trial-active-icon">⏳</div>
           <div>
-            <div class="wb-trial-active-title">体验期进行中</div>
-            <div class="wb-trial-active-desc">剩余 <strong>{{ daysLeft }} 天</strong>，到期后需升级付费版</div>
+            <div class="wb-trial-active-title">{{ t('trialBanner.activeTitle') }}</div>
+            <div class="wb-trial-active-desc">{{ t('trialBanner.daysLeftPrefix') }} <strong>{{ daysLeft }} {{ t('trialBanner.daysUnit') }}</strong> · {{ t('trialBanner.expireUpgradeHint') }}</div>
           </div>
         </div>
       </template>
@@ -64,14 +64,14 @@
       <template v-else-if="trialExpired">
         <div class="wb-trial-expired">
           <div class="wb-trial-expired-icon">⌛</div>
-          <div class="wb-trial-expired-text">15 天体验已到期，请升级付费版继续使用</div>
+          <div class="wb-trial-expired-text">{{ t('trialBanner.expiredDialogText') }}</div>
         </div>
       </template>
 
       <button class="wb-upgrade-btn" @click="showWriteBlock = false; upgradeDialog?.open()">
-        {{ trialExpired ? '立即升级付费版 →' : '了解付费版，立即升级' }}
+        {{ trialExpired ? t('trialBanner.upgradeNowArrow') : t('trialBanner.learnAndUpgrade') }}
       </button>
-      <button class="wb-cancel" @click="showWriteBlock = false">关闭</button>
+      <button class="wb-cancel" @click="showWriteBlock = false">{{ t('common.close') }}</button>
     </div>
   </el-dialog>
 
@@ -79,9 +79,9 @@
   <el-dialog v-model="showClaimSuccess" width="360px" append-to-body align-center class="write-block-dialog">
     <div class="wb-body" style="text-align:center">
       <div class="claim-success-icon">🎉</div>
-      <div class="wb-title">体验已激活！</div>
-      <div class="wb-desc">您已成功领取 <strong>15 天</strong>免费体验<br/>到期时间：{{ trialExpireDate }}</div>
-      <button class="wb-upgrade-btn" @click="showClaimSuccess = false">开始体验</button>
+      <div class="wb-title">{{ t('trialBanner.activatedTitle') }}</div>
+      <div class="wb-desc">{{ t('trialBanner.activatedDescPrefix') }} <strong>15 {{ t('trialBanner.daysUnit') }}</strong>{{ t('trialBanner.activatedDescMiddle') }}<br/>{{ t('trialBanner.expireDate') }}: {{ trialExpireDate }}</div>
+      <button class="wb-upgrade-btn" @click="showClaimSuccess = false">{{ t('trialBanner.startTrial') }}</button>
     </div>
   </el-dialog>
 
@@ -90,11 +90,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { trialUpgradeTrigger } from '@/api/http'
 import UpgradeDialog from '@/components/UpgradeDialog.vue'
 
 const auth = useAuthStore()
+const { t, locale } = useI18n()
 const showWriteBlock = ref(false)
 const showClaimSuccess = ref(false)
 const bannerDismissed = ref(false)
@@ -136,7 +138,8 @@ const trialExpired = computed(() => trialStarted.value && daysLeft.value === 0)
 const trialExpireDate = computed(() => {
   if (!trialStartTs.value) return ''
   const d = new Date(trialStartTs.value + TRIAL_DAYS * MS_PER_DAY)
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
+  const dateLocale = locale.value === 'en-US' ? 'en-CA' : 'zh-CN'
+  return new Intl.DateTimeFormat(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
 })
 
 function claimTrial() {

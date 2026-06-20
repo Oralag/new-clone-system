@@ -9,8 +9,8 @@
         <circle cx="14.5" cy="8.5" r="1.3" fill="#6366f1" opacity=".7"/>
       </svg>
     </div>
-    <span class="m-meeting-label">AI会议室</span>
-    <span class="m-meeting-desc">多Agent协同</span>
+    <span class="m-meeting-label">{{ t('mobile.meetingRoom') }}</span>
+    <span class="m-meeting-desc">{{ t('mobile.meetingDesc') }}</span>
     <svg class="m-meeting-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2">
       <path d="M9 18l6-6-6-6"/>
     </svg>
@@ -19,7 +19,9 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 const router = useRouter()
+const { t } = useI18n()
 </script>
 
 <style scoped>

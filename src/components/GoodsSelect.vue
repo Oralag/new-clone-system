@@ -1,10 +1,10 @@
 <template>
   <!-- ── 桌面端：el-dialog ── -->
-  <el-dialog v-if="!isMobile" v-model="visible" title="选择商品" width="1100px" destroy-on-close>
+  <el-dialog v-if="!isMobile" v-model="visible" :title="t('goodsSelect.title')" width="1100px" destroy-on-close>
     <div class="gs-body">
       <!-- 左侧分类树 -->
       <div class="gs-cate">
-        <div class="gs-cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">全部</div>
+        <div class="gs-cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">{{ t('common.all') }}</div>
         <el-tree
           v-if="cateTree.length"
           :data="cateTree"
@@ -22,14 +22,14 @@
       <!-- 右侧内容 -->
       <div class="gs-main">
         <div class="gs-search">
-          <el-input v-model="keyword" placeholder="商品名称/编码" clearable style="width: 220px" @keyup.enter="search" />
-          <el-button type="primary" @click="search">搜索</el-button>
+          <el-input v-model="keyword" :placeholder="t('goodsSelect.searchPlaceholder')" clearable style="width: 220px" @keyup.enter="search" />
+          <el-button type="primary" @click="search">{{ t('common.search') }}</el-button>
           <template v-if="props.filterGoodsIds?.length">
             <el-tag v-if="!showAllGoods" type="success" style="cursor:pointer" @click="showAllGoods = true; page = 1; loadData()">
-              仅显示历史购买商品（{{ props.filterGoodsIds.length }}种）点击显示全部
+              {{ t('goodsSelect.historyOnlyTip', { count: props.filterGoodsIds.length }) }}
             </el-tag>
             <el-tag v-else type="info" style="cursor:pointer" @click="showAllGoods = false; page = 1; loadData()">
-              显示全部商品，点击返回历史
+              {{ t('goodsSelect.showAllTip') }}
             </el-tag>
           </template>
         </div>
@@ -43,14 +43,14 @@
           @selection-change="handleSelect"
         >
           <el-table-column type="selection" width="45" />
-          <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column prop="goods_sn" label="商品编码" width="120" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-          <el-table-column prop="cate_name" label="商品分类" width="110" />
-          <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-          <el-table-column prop="stock_num" label="库存数量" width="90" align="right" />
-          <el-table-column prop="cost_price" label="采购价" width="90" align="right" />
-          <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
+          <el-table-column type="index" :label="t('scTable.index')" width="55" align="center" />
+          <el-table-column prop="goods_sn" :label="t('scTable.goodsCode')" width="120" />
+          <el-table-column prop="goods_name" :label="t('scTable.goodsName')" min-width="150" />
+          <el-table-column prop="cate_name" :label="t('goodsSelect.category')" width="110" />
+          <el-table-column prop="unit_name" :label="t('scTable.unit')" width="70" align="center" />
+          <el-table-column prop="stock_num" :label="t('goodsSelect.stockQty')" width="90" align="right" />
+          <el-table-column prop="cost_price" :label="t('goodsSelect.costPrice')" width="90" align="right" />
+          <el-table-column prop="sell_price" :label="t('goodsSelect.sellPrice')" width="90" align="right" />
         </el-table>
 
         <div class="gs-footer">
@@ -69,8 +69,8 @@
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" @click="confirm">确定 ({{ selected.length }})</el-button>
+      <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" @click="confirm">{{ t('common.confirm') }} ({{ selected.length }})</el-button>
     </template>
   </el-dialog>
 
@@ -79,15 +79,15 @@
     <div v-if="visible" class="mgs-overlay" @click.self="visible = false">
       <div class="mgs-drawer">
         <div class="mgs-head">
-          <span>选择商品</span>
+          <span>{{ t('goodsSelect.title') }}</span>
           <span class="mgs-close" @click="visible = false">✕</span>
         </div>
         <div class="mgs-search-bar">
-          <input v-model="keyword" class="mgs-search-input" placeholder="商品名称 / 编码" @input="search" />
+          <input v-model="keyword" class="mgs-search-input" :placeholder="t('goodsSelect.mobileSearchPlaceholder')" @input="search" />
         </div>
         <div class="mgs-list">
-          <div v-if="loading" class="mgs-empty">加载中…</div>
-          <div v-else-if="list.length === 0" class="mgs-empty">无结果</div>
+          <div v-if="loading" class="mgs-empty">{{ t('common.loading') }}</div>
+          <div v-else-if="list.length === 0" class="mgs-empty">{{ t('goodsSelect.noResults') }}</div>
           <div
             v-for="g in list"
             :key="g.id"
@@ -100,7 +100,7 @@
             </div>
             <div class="mgs-info">
               <div class="mgs-name">{{ g.goods_name }}</div>
-              <div class="mgs-meta">{{ g.goods_sn }}{{ g.unit_name ? ' · ' + g.unit_name : '' }} · 库存{{ g.stock_num ?? 0 }}</div>
+              <div class="mgs-meta">{{ g.goods_sn }}{{ g.unit_name ? ' · ' + g.unit_name : '' }} · {{ t('goodsSelect.stockShort', { count: g.stock_num ?? 0 }) }}</div>
             </div>
             <div class="mgs-price-col">
               <template v-if="getEffectivePrice(g) !== null && getEffectivePrice(g) !== Number(g.sell_price || 0)">
@@ -112,8 +112,8 @@
           </div>
         </div>
         <div class="mgs-foot">
-          <button class="mgs-btn-cancel" @click="visible = false">取消</button>
-          <button class="mgs-btn-confirm" @click="confirm">确定 ({{ selected.length }})</button>
+          <button class="mgs-btn-cancel" @click="visible = false">{{ t('common.cancel') }}</button>
+          <button class="mgs-btn-confirm" @click="confirm">{{ t('common.confirm') }} ({{ selected.length }})</button>
         </div>
       </div>
     </div>
@@ -122,10 +122,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
 import { getGoodsCateList } from '@/api/goods'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 import { getPriceByCustomer } from '@/utils/customerLevel'
+
+const { t } = useI18n()
 
 const props = defineProps<{ customerId?: number | null; filterGoodsIds?: number[] | null }>()
 

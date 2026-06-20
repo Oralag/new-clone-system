@@ -1,7 +1,7 @@
 <template>
   <div class="brand-cs" :class="{ open: isOpen }">
     <!-- 浮动按钮 -->
-    <button class="brand-cs-trigger" @click="toggleOpen" :class="{ pulse: !isOpen && hasUnread }" title="客服">
+    <button class="brand-cs-trigger" @click="toggleOpen" :class="{ pulse: !isOpen && hasUnread }" :title="t('brandCustomerService.customerService')">
       <transition name="cs-icon" mode="out-in">
         <svg v-if="!isOpen" key="chat" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
         <svg v-else key="close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -18,10 +18,10 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           </div>
           <div class="cs-header-info">
-            <p class="cs-header-name">Nova · 客服助手</p>
+            <p class="cs-header-name">{{ t('brandCustomerService.assistantName') }}</p>
             <p class="cs-header-status">
               <span class="cs-status-dot"></span>
-              在线 · 即时回复
+              {{ t('brandCustomerService.onlineStatus') }}
             </p>
           </div>
           <button class="cs-close-btn" @click="isOpen = false">
@@ -55,7 +55,7 @@
           <input
             v-model="inputText"
             class="cs-input"
-            placeholder="请输入您的问题..."
+            :placeholder="t('brandCustomerService.inputPlaceholder')"
             @keyup.enter="sendMessage"
             :disabled="thinking"
           />
@@ -69,10 +69,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { useBrandEditStore } from '@/stores/brandEdit'
+import { useI18n } from 'vue-i18n'
 
 const brandEdit = useBrandEditStore()
+const { t } = useI18n()
 const isOpen = ref(false)
 const hasUnread = ref(true)
 const thinking = ref(false)
@@ -81,15 +83,15 @@ const messagesRef = ref<HTMLElement>()
 
 interface Message { role: 'user' | 'assistant'; content: string }
 const messages = ref<Message[]>([
-  { role: 'assistant', content: '你好！我是 Nova，NOMADIC DAIRY 的专属客服 👋\n\n有什么我可以帮你的吗？无论是产品咨询、采购合作还是订单问题，都可以直接问我。' }
+  { role: 'assistant', content: t('brandCustomerService.welcomeMessage') }
 ])
 
-const quickQuestions = [
-  '批发采购怎么申请？',
-  '物流配送多久？',
-  '如何查询我的订单？',
-  'How to place a wholesale order?',
-]
+const quickQuestions = computed(() => [
+  t('brandCustomerService.quickWholesaleApply'),
+  t('brandCustomerService.quickShippingTime'),
+  t('brandCustomerService.quickOrderLookup'),
+  t('brandCustomerService.quickWholesaleOrder'),
+])
 
 function toggleOpen() {
   isOpen.value = !isOpen.value
@@ -128,7 +130,7 @@ async function sendMessage() {
     })
 
     if (!res.ok || !res.body) {
-      messages.value.push({ role: 'assistant', content: '抱歉，暂时无法连接，请稍后再试。' })
+      messages.value.push({ role: 'assistant', content: t('brandCustomerService.connectionFailed') })
       return
     }
 
@@ -156,9 +158,9 @@ async function sendMessage() {
         } catch { /* ignore */ }
       }
     }
-    if (!reply) messages.value[lastIdx].content = '抱歉，暂时无法回复，请联系人工客服。'
+    if (!reply) messages.value[lastIdx].content = t('brandCustomerService.emptyReply')
   } catch {
-    messages.value.push({ role: 'assistant', content: '网络异常，请稍后再试。' })
+    messages.value.push({ role: 'assistant', content: t('brandCustomerService.networkError') })
   } finally {
     thinking.value = false
     await scrollToBottom()

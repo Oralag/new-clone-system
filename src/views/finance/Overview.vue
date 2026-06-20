@@ -4,11 +4,11 @@
     <div class="quick-action-bar">
       <div class="quick-action-card collect" @click="openQuickCollect">
         <el-icon :size="20"><Plus /></el-icon>
-        <span>快速收款</span>
+        <span>{{ t('finance.overview.quickCollect') }}</span>
       </div>
       <div class="quick-action-card pay" @click="openQuickPay">
         <el-icon :size="20"><Minus /></el-icon>
-        <span>快速付款</span>
+        <span>{{ t('finance.overview.quickPay') }}</span>
       </div>
     </div>
 
@@ -37,23 +37,23 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Wallet /></el-icon>
-              <span>账户余额</span>
-              <el-button link type="primary" size="small" style="margin-left:auto" @click.stop="router.push('/finance/fund')">管理</el-button>
+              <span>{{ t('finance.overview.accountBalance') }}</span>
+              <el-button link type="primary" size="small" style="margin-left:auto" @click.stop="router.push('/finance/fund')">{{ t('finance.overview.accountBalanceManage') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="fundList.length">
             <div class="inline-item clickable" v-for="f in fundList" :key="f.id" @click.stop="openFundDetail(f)">
               <div class="inline-name">{{ f.name }}</div>
               <div class="inline-value" :class="Number(f.display_balance ?? f.balance ?? 0) < 0 ? 'red' : 'green'">¥{{ Number(f.display_balance ?? f.balance ?? 0).toFixed(2) }}</div>
-              <div class="inline-sub">{{ { '1': '银行账户', '2': '现金', '3': '第三方' }[f.type] || '账户' }}</div>
+              <div class="inline-sub">{{ { '1': t('finance.overview.accountTypBank'), '2': t('finance.overview.accountTypCash'), '3': t('finance.overview.accountTypThirdParty') }[f.type] || t('finance.overview.accountTypDefault') }}</div>
             </div>
             <div class="inline-item total-item">
-              <div class="inline-name">合计</div>
+              <div class="inline-name">{{ t('finance.overview.accountTotal') }}</div>
               <div class="inline-value" :class="Number(accountTotal) < 0 ? 'red' : 'green'">¥{{ accountTotal }}</div>
-              <div class="inline-sub">{{ fundList.length }} 个账户</div>
+              <div class="inline-sub">{{ t('finance.overview.accountCount', { count: fundList.length }) }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无账户数据</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.accountNoData') }}</div>
         </el-card>
       </el-col>
       <el-col :span="14">
@@ -61,27 +61,27 @@
           <template #header>
             <div class="card-header trend-card-header">
               <el-icon :size="15"><TrendCharts /></el-icon>
-              <span>收支趋势</span>
+              <span>{{ t('finance.overview.flowTrend') }}</span>
               <el-radio-group v-model="flowTrendRange" size="small" class="trend-range-tabs">
-                <el-radio-button value="7d">7天</el-radio-button>
-                <el-radio-button value="3m">3个月</el-radio-button>
-                <el-radio-button value="all">全部</el-radio-button>
+                <el-radio-button value="7d">{{ t('finance.overview.flowTrendRange7d') }}</el-radio-button>
+                <el-radio-button value="3m">{{ t('finance.overview.flowTrendRange3m') }}</el-radio-button>
+                <el-radio-button value="all">{{ t('finance.overview.flowTrendRangeAll') }}</el-radio-button>
               </el-radio-group>
-              <el-button link type="primary" size="small" class="trend-flow-link" @click="router.push('/finance/fund-flow')">查看流水</el-button>
+              <el-button link type="primary" size="small" class="trend-flow-link" @click="router.push('/finance/fund-flow')">{{ t('finance.overview.flowTrendView') }}</el-button>
             </div>
           </template>
           <div class="trend-chart">
             <div class="trend-kpis">
               <div class="trend-kpi trend-kpi--income">
-                <span class="trend-kpi-label">收入合计</span>
+                <span class="trend-kpi-label">{{ t('finance.overview.flowTrendIncomeTotal') }}</span>
                 <span class="trend-kpi-value">¥{{ fmtTrendAmount(flowTrendSummary.income) }}</span>
               </div>
               <div class="trend-kpi trend-kpi--expense">
-                <span class="trend-kpi-label">支出合计</span>
+                <span class="trend-kpi-label">{{ t('finance.overview.flowTrendExpenseTotal') }}</span>
                 <span class="trend-kpi-value">¥{{ fmtTrendAmount(flowTrendSummary.expense) }}</span>
               </div>
               <div :class="['trend-kpi', flowTrendSummary.net >= 0 ? 'trend-kpi--net-in' : 'trend-kpi--net-out']">
-                <span class="trend-kpi-label">{{ flowTrendSummary.net >= 0 ? '净流入' : '净流出' }}</span>
+                <span class="trend-kpi-label">{{ flowTrendSummary.net >= 0 ? t('finance.overview.flowTrendNetIn') : t('finance.overview.flowTrendNetOut') }}</span>
                 <span class="trend-kpi-value">¥{{ fmtTrendAmount(Math.abs(flowTrendSummary.net)) }}</span>
               </div>
             </div>
@@ -95,7 +95,7 @@
             </div>
 
             <div class="trend-plot-wrap">
-              <svg :viewBox="`0 0 ${trendChartW} ${trendChartH}`" width="100%" class="trend-svg" role="img" aria-label="收支趋势折线图">
+              <svg :viewBox="`0 0 ${trendChartW} ${trendChartH}`" width="100%" class="trend-svg" role="img" :aria-label="t('finance.overview.flowTrendAriaLabel')">
                 <defs>
                   <linearGradient id="flowTrendPlotFade" x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0%" stop-color="#f8fafc" stop-opacity="0.92" />
@@ -125,7 +125,7 @@
                     font-size="10" class="chart-axis-label">{{ d }}</text>
                 </template>
               </svg>
-              <div v-if="flowTrendSummary.total === 0" class="trend-empty-overlay">暂无收支数据</div>
+              <div v-if="flowTrendSummary.total === 0" class="trend-empty-overlay">{{ t('finance.overview.flowTrendNoData') }}</div>
             </div>
           </div>
         </el-card>
@@ -139,19 +139,19 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Money /></el-icon>
-              <span>预收款</span>
+              <span>{{ t('finance.overview.prepayCustomer') }}</span>
               <span class="header-total green">¥{{ prepayTotal }}</span>
-              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/prepay')">更多</el-button>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/prepay')">{{ t('finance.overview.prepayCustomerMore') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="prepayList.filter(r=>r.pay_type==='customer').length">
             <div class="inline-item clickable" v-for="r in prepayList.filter(r=>r.pay_type==='customer').slice(0,4)" :key="r.id" @click="router.push('/finance/prepay')">
               <div class="inline-name">{{ r.customer_name || '—' }}</div>
               <div class="inline-value green">¥{{ Number(r.amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">客户预收</div>
+              <div class="inline-sub">{{ t('finance.overview.prepayCustomerSub') }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无预收款</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.prepayCustomerNoData') }}</div>
         </el-card>
       </el-col>
       <el-col :span="6">
@@ -159,19 +159,19 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Money /></el-icon>
-              <span>预付款</span>
+              <span>{{ t('finance.overview.prepaySupplier') }}</span>
               <span class="header-total blue">¥{{ supplierPrepayTotal }}</span>
-              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/supplier-prepay')">更多</el-button>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/supplier-prepay')">{{ t('finance.overview.prepaySupplierMore') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="prepayList.filter(r=>r.pay_type==='supplier').length">
             <div class="inline-item clickable" v-for="r in prepayList.filter(r=>r.pay_type==='supplier').slice(0,4)" :key="r.id" @click="router.push('/finance/supplier-prepay')">
               <div class="inline-name">{{ r.supplier_name || '—' }}</div>
               <div class="inline-value blue">¥{{ Number(r.amount||0).toFixed(2) }}</div>
-              <div class="inline-sub">供应商预付</div>
+              <div class="inline-sub">{{ t('finance.overview.prepaySupplierSub') }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无预付款</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.prepaySupplierNoData') }}</div>
         </el-card>
       </el-col>
       <el-col :span="6">
@@ -179,8 +179,8 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><TrendCharts /></el-icon>
-              <span>近期收款</span>
-              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/fund-flow')">更多</el-button>
+              <span>{{ t('finance.overview.recentCollect') }}</span>
+              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/fund-flow')">{{ t('finance.overview.recentCollectMore') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="recentCollectItems.length">
@@ -189,11 +189,11 @@
               <div class="inline-value green">¥{{ Number(r.amount||0).toFixed(2) }}</div>
               <div class="inline-sub">
                 {{ r.date }}
-                <span v-if="Number(r.refund_allocated || 0) > 0"> · 已退款 ¥{{ Number(r.refund_allocated || 0).toFixed(2) }}</span>
+                <span v-if="Number(r.refund_allocated || 0) > 0"> · {{ t('finance.overview.recentCollectRefund', { amount: Number(r.refund_allocated || 0).toFixed(2) }) }}</span>
               </div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无收款记录</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.recentCollectNoData') }}</div>
         </el-card>
       </el-col>
       <el-col :span="6">
@@ -201,8 +201,8 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Bottom /></el-icon>
-              <span>近期付款</span>
-              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/pay-receipt')">更多</el-button>
+              <span>{{ t('finance.overview.recentPay') }}</span>
+              <el-button link type="primary" size="small" style="margin-left:auto" @click="router.push('/finance/pay-receipt')">{{ t('finance.overview.recentPayMore') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="adjustedPayList.length">
@@ -211,11 +211,11 @@
               <div class="inline-value red">¥{{ Number(r.net_amount ?? r.amount ?? 0).toFixed(2) }}</div>
               <div class="inline-sub">
                 {{ fmtDt(r.pay_date || r.created_at) }}
-                <span v-if="Number(r.refund_allocated || 0) > 0"> · 已退款 ¥{{ Number(r.refund_allocated || 0).toFixed(2) }}</span>
+                <span v-if="Number(r.refund_allocated || 0) > 0"> · {{ t('finance.overview.recentPayRefund', { amount: Number(r.refund_allocated || 0).toFixed(2) }) }}</span>
               </div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无付款记录</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.recentPayNoData') }}</div>
         </el-card>
       </el-col>
     </el-row>
@@ -227,9 +227,9 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><DocumentChecked /></el-icon>
-              <span>应收账款</span>
+              <span>{{ t('finance.overview.receivable') }}</span>
               <span class="header-total blue">¥{{ receivableTotal }}</span>
-              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/receivable')">更多</el-button>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/finance/receivable')">{{ t('finance.overview.receivableMore') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="receivableList.length">
@@ -239,7 +239,7 @@
               <div class="inline-sub">{{ r.order_sn || r.order_no || '' }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无应收款</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.receivableNoData') }}</div>
         </el-card>
       </el-col>
       <el-col :span="12">
@@ -247,9 +247,9 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Box /></el-icon>
-              <span>采购货款</span>
+              <span>{{ t('finance.overview.purchasePay') }}</span>
               <span class="header-total red">¥{{ purchasePayTotal }}</span>
-              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/procure/order')">更多</el-button>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/procure/order')">{{ t('finance.overview.purchasePayMore') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="purchasePayList.length">
@@ -259,7 +259,7 @@
               <div class="inline-sub">{{ r.order_no || r.order_sn || '' }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无采购货款</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.purchasePayNoData') }}</div>
         </el-card>
       </el-col>
     </el-row>
@@ -271,9 +271,9 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Document /></el-icon>
-              <span>销售出库单</span>
+              <span>{{ t('finance.overview.saleOut') }}</span>
               <span class="header-total blue">¥{{ saleOutTotal }}</span>
-              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/sale/out')">更多</el-button>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/sale/out')">{{ t('finance.overview.saleOutMore') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="saleOutList.length">
@@ -283,7 +283,7 @@
               <div class="inline-sub">{{ r.order_no || '' }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无收款记录</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.saleOutNoData') }}</div>
         </el-card>
       </el-col>
       <el-col :span="12">
@@ -291,19 +291,19 @@
           <template #header>
             <div class="card-header">
               <el-icon :size="15"><Money /></el-icon>
-              <span>零售单款</span>
+              <span>{{ t('finance.overview.retail') }}</span>
               <span class="header-total green">¥{{ retailTotal }}</span>
-              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/retail/order')">更多</el-button>
+              <el-button link type="primary" size="small" style="margin-left:8px" @click="router.push('/retail/order')">{{ t('finance.overview.retailMore') }}</el-button>
             </div>
           </template>
           <div class="inline-list" v-if="retailList.filter((r:any)=>r.status===1).length">
             <div class="inline-item clickable" v-for="r in retailList.filter((r:any)=>r.status===1).slice(0,6)" :key="r.id" @click="router.push('/retail/order')">
-              <div class="inline-name">{{ r.member_name || r.customer_name || '散客' }}</div>
+              <div class="inline-name">{{ r.member_name || r.customer_name || t('finance.overview.retailWalkIn') }}</div>
               <div class="inline-value green">¥{{ Number(r.pay_amount||r.total_amount||0).toFixed(2) }}</div>
               <div class="inline-sub">{{ r.order_sn || '' }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无零售单</div>
+          <div v-else class="empty-tip">{{ t('finance.overview.retailNoData') }}</div>
         </el-card>
       </el-col>
     </el-row>
@@ -312,25 +312,25 @@
     <div class="flow-section">
       <div class="flow-toggle" @click="flowVisible = !flowVisible">
         <el-icon :size="13"><List /></el-icon>
-        <span>资金流水明细（{{ allFlowItems.length }} 条收支记录）</span>
+        <span>{{ t('finance.overview.flowSectionTitle', { count: allFlowItems.length }) }}</span>
         <el-icon :size="12" style="margin-left:auto"><component :is="flowVisible ? 'ArrowUp' : 'ArrowDown'" /></el-icon>
       </div>
       <div v-if="flowVisible">
         <el-table :data="allFlowItems.slice(0, 50)" size="small" border style="width:100%">
-          <el-table-column prop="date" label="日期" width="110" />
-          <el-table-column prop="source" label="来源" width="110">
+          <el-table-column prop="date" :label="t('finance.overview.flowColDate')" width="110" />
+          <el-table-column prop="source" :label="t('finance.overview.flowColSource')" width="110">
             <template #default="{ row }">
               <el-tag :type="row.type === 'income' ? 'success' : 'danger'" size="small">{{ row.source }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="类型" width="80" align="center">
+          <el-table-column :label="t('finance.overview.flowColType')" width="80" align="center">
             <template #default="{ row }">
               <el-tag :type="row.type === 'income' ? 'success' : 'danger'" size="small">
-                {{ row.type === 'income' ? '收入' : '支出' }}
+                {{ row.type === 'income' ? t('finance.overview.flowColTypeIncome') : t('finance.overview.flowColTypeExpense') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="金额" width="120" align="right">
+          <el-table-column :label="t('finance.overview.flowColAmount')" width="120" align="right">
             <template #default="{ row }">
               <span :style="{ color: row.type === 'income' ? '#16a34a' : '#dc2626', fontWeight: '600' }">
                 {{ row.type === 'income' ? '+' : '-' }}¥{{ Number(row.amount||0).toFixed(2) }}
@@ -339,7 +339,7 @@
           </el-table-column>
         </el-table>
         <div style="text-align:center;padding:8px">
-          <el-button link type="primary" @click="router.push('/finance/fund-flow')">查看完整流水</el-button>
+          <el-button link type="primary" @click="router.push('/finance/fund-flow')">{{ t('finance.overview.flowViewAll') }}</el-button>
         </div>
       </div>
     </div>
@@ -347,32 +347,32 @@
   </div>
 
   <!-- 快速收款弹窗 -->
-  <el-dialog v-model="collectDialogVisible" title="快速收款" width="460px" :close-on-click-modal="false">
+  <el-dialog v-model="collectDialogVisible" :title="t('finance.overview.collectDialogTitle')" width="460px" :close-on-click-modal="false">
     <!-- 一键识别 -->
     <div class="ocr-bar">
       <el-input
         v-model="collectOcrText"
-        placeholder="粘贴付款截图文字 / 转账记录，一键识别金额和备注"
+        :placeholder="t('finance.overview.collectOcrPlaceholder')"
         clearable
         @keydown.enter="parseCollectOcr"
       >
         <template #append>
-          <el-button @click="parseCollectOcr">识别</el-button>
+          <el-button @click="parseCollectOcr">{{ t('finance.overview.collectOcrBtn') }}</el-button>
         </template>
       </el-input>
     </div>
     <el-form :model="collectForm" label-width="80px" style="margin-top:12px">
-      <el-form-item label="类型">
+      <el-form-item :label="t('finance.overview.collectFormType')">
         <el-radio-group v-model="collectForm.category" @change="onCollectCategoryChange">
-          <el-radio-button value="receipt">收款单（客户）</el-radio-button>
-          <el-radio-button value="other">其他收入</el-radio-button>
+          <el-radio-button value="receipt">{{ t('finance.overview.collectTypReceipt') }}</el-radio-button>
+          <el-radio-button value="other">{{ t('finance.overview.collectTypOther') }}</el-radio-button>
         </el-radio-group>
       </el-form-item>
-      <el-form-item v-if="collectForm.category === 'receipt'" label="收款对象">
+      <el-form-item v-if="collectForm.category === 'receipt'" :label="t('finance.overview.collectFormContact')">
         <div class="contact-row">
           <el-select
             v-model="collectForm.contact_id"
-            filterable clearable placeholder="选择客户"
+            filterable clearable :placeholder="t('finance.overview.collectContactPlaceholder')"
             style="flex:1"
             @change="onCollectContactChange"
           >
@@ -380,61 +380,61 @@
           </el-select>
         </div>
       </el-form-item>
-      <el-form-item v-if="collectForm.category === 'other'" label="收入说明">
-        <el-input v-model="collectForm.contact_name" placeholder="如：利息收入、赔偿金" />
+      <el-form-item v-if="collectForm.category === 'other'" :label="t('finance.overview.collectFormOtherDesc')">
+        <el-input v-model="collectForm.contact_name" :placeholder="t('finance.overview.collectOtherDescPlaceholder')" />
       </el-form-item>
-      <el-form-item label="收款账户">
+      <el-form-item :label="t('finance.overview.collectFormFund')">
         <div class="contact-row">
-          <el-select v-model="collectForm.fund_id" filterable clearable placeholder="选择账户" style="flex:1" @change="onCollectFundChange">
+          <el-select v-model="collectForm.fund_id" filterable clearable :placeholder="t('finance.overview.collectFundPlaceholder')" style="flex:1" @change="onCollectFundChange">
             <el-option v-for="f in fundList" :key="f.id" :label="f.name" :value="f.id" />
           </el-select>
-          <el-button class="other-btn" :type="collectForm.fund_id === -1 ? 'primary' : 'default'" @click="toggleCollectFundOther">其他</el-button>
+          <el-button class="other-btn" :type="collectForm.fund_id === -1 ? 'primary' : 'default'" @click="toggleCollectFundOther">{{ t('finance.overview.collectFundOtherBtn') }}</el-button>
         </div>
-        <el-input v-if="collectForm.fund_id === -1" v-model="collectForm.fund_name" placeholder="手动输入账户名称" style="margin-top:6px" />
+        <el-input v-if="collectForm.fund_id === -1" v-model="collectForm.fund_name" :placeholder="t('finance.overview.collectFundNamePlaceholder')" style="margin-top:6px" />
       </el-form-item>
-      <el-form-item label="收款金额">
+      <el-form-item :label="t('finance.overview.collectFormAmount')">
         <el-input-number v-model="collectForm.amount" :min="0" :precision="2" style="width:100%" />
       </el-form-item>
-      <el-form-item label="收款日期">
+      <el-form-item :label="t('finance.overview.collectFormDate')">
         <el-date-picker v-model="collectForm.receipt_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
       </el-form-item>
-      <el-form-item label="备注">
-        <el-input v-model="collectForm.remark" placeholder="备注说明" />
+      <el-form-item :label="t('finance.overview.collectFormRemark')">
+        <el-input v-model="collectForm.remark" :placeholder="t('finance.overview.collectRemarkPlaceholder')" />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="collectDialogVisible = false">取消</el-button>
-      <el-button type="success" :loading="collectSaving" @click="saveCollect">确认收款</el-button>
+      <el-button @click="collectDialogVisible = false">{{ t('finance.overview.collectCancel') }}</el-button>
+      <el-button type="success" :loading="collectSaving" @click="saveCollect">{{ t('finance.overview.collectConfirm') }}</el-button>
     </template>
   </el-dialog>
 
   <!-- 快速付款弹窗 -->
-  <el-dialog v-model="payDialogVisible" title="快速付款" width="460px" :close-on-click-modal="false">
+  <el-dialog v-model="payDialogVisible" :title="t('finance.overview.payDialogTitle')" width="460px" :close-on-click-modal="false">
     <!-- 一键识别 -->
     <div class="ocr-bar">
       <el-input
         v-model="payOcrText"
-        placeholder="粘贴付款截图文字 / 转账记录，一键识别金额和备注"
+        :placeholder="t('finance.overview.payOcrPlaceholder')"
         clearable
         @keydown.enter="parsePayOcr"
       >
         <template #append>
-          <el-button @click="parsePayOcr">识别</el-button>
+          <el-button @click="parsePayOcr">{{ t('finance.overview.payOcrBtn') }}</el-button>
         </template>
       </el-input>
     </div>
     <el-form :model="payForm" label-width="80px" style="margin-top:12px">
-      <el-form-item label="类型">
+      <el-form-item :label="t('finance.overview.payFormType')">
         <el-radio-group v-model="payForm.category" @change="onPayCategoryChange">
-          <el-radio-button value="receipt">付款单（供应商）</el-radio-button>
-          <el-radio-button value="other">其他支出</el-radio-button>
+          <el-radio-button value="receipt">{{ t('finance.overview.payTypReceipt') }}</el-radio-button>
+          <el-radio-button value="other">{{ t('finance.overview.payTypOther') }}</el-radio-button>
         </el-radio-group>
       </el-form-item>
-      <el-form-item v-if="payForm.category === 'receipt'" label="付款对象">
+      <el-form-item v-if="payForm.category === 'receipt'" :label="t('finance.overview.payFormContact')">
         <div class="contact-row">
           <el-select
             v-model="payForm.contact_id"
-            filterable clearable placeholder="选择供应商"
+            filterable clearable :placeholder="t('finance.overview.payContactPlaceholder')"
             style="flex:1"
             @change="onPayContactChange"
           >
@@ -442,37 +442,38 @@
           </el-select>
         </div>
       </el-form-item>
-      <el-form-item v-if="payForm.category === 'other'" label="支出说明">
-        <el-input v-model="payForm.contact_name" placeholder="如：办公用品、快递费" />
+      <el-form-item v-if="payForm.category === 'other'" :label="t('finance.overview.payFormOtherDesc')">
+        <el-input v-model="payForm.contact_name" :placeholder="t('finance.overview.payOtherDescPlaceholder')" />
       </el-form-item>
-      <el-form-item label="付款账户">
+      <el-form-item :label="t('finance.overview.payFormFund')">
         <div class="contact-row">
-          <el-select v-model="payForm.fund_id" filterable clearable placeholder="选择账户" style="flex:1" @change="onPayFundChange">
+          <el-select v-model="payForm.fund_id" filterable clearable :placeholder="t('finance.overview.payFundPlaceholder')" style="flex:1" @change="onPayFundChange">
             <el-option v-for="f in fundList" :key="f.id" :label="f.name" :value="f.id" />
           </el-select>
-          <el-button class="other-btn" :type="payForm.fund_id === -1 ? 'primary' : 'default'" @click="togglePayFundOther">其他支出账户</el-button>
+          <el-button class="other-btn" :type="payForm.fund_id === -1 ? 'primary' : 'default'" @click="togglePayFundOther">{{ t('finance.overview.payFundOtherBtn') }}</el-button>
         </div>
-        <el-input v-if="payForm.fund_id === -1" v-model="payForm.fund_name" placeholder="手动输入账户名称" style="margin-top:6px" />
+        <el-input v-if="payForm.fund_id === -1" v-model="payForm.fund_name" :placeholder="t('finance.overview.payFundNamePlaceholder')" style="margin-top:6px" />
       </el-form-item>
-      <el-form-item label="付款金额">
+      <el-form-item :label="t('finance.overview.payFormAmount')">
         <el-input-number v-model="payForm.amount" :min="0" :precision="2" style="width:100%" />
       </el-form-item>
-      <el-form-item label="付款日期">
+      <el-form-item :label="t('finance.overview.payFormDate')">
         <el-date-picker v-model="payForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
       </el-form-item>
-      <el-form-item label="备注">
-        <el-input v-model="payForm.remark" placeholder="备注说明" />
+      <el-form-item :label="t('finance.overview.payFormRemark')">
+        <el-input v-model="payForm.remark" :placeholder="t('finance.overview.payRemarkPlaceholder')" />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="payDialogVisible = false">取消</el-button>
-      <el-button type="danger" :loading="paySaving" @click="savePay">确认付款</el-button>
+      <el-button @click="payDialogVisible = false">{{ t('finance.overview.payCancel') }}</el-button>
+      <el-button type="danger" :loading="paySaving" @click="savePay">{{ t('finance.overview.payConfirm') }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, ArrowUp, ArrowDown, ArrowRight, Box, Plus, Minus, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -486,7 +487,9 @@ import { buildExpensePayableRows } from '@/utils/expensePayable'
 import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
 import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
+import { calcSaleContractReceivable } from '@/utils/saleContractAmount'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const fundList = ref<any[]>([])
@@ -544,7 +547,7 @@ const flowTrendBuckets = computed(() => {
     const cur = new Date(earliest + '-01')
     while (cur.toISOString().slice(0, 7) <= nowD.toISOString().slice(0, 7)) {
       const key = cur.toISOString().slice(0, 7)
-      buckets.push({ key, label: `${cur.getMonth()+1}月` })
+      buckets.push({ key, label: t('finance.overview.chartMonthLabel', { month: cur.getMonth()+1 }) })
       cur.setMonth(cur.getMonth() + 1)
     }
   }
@@ -601,10 +604,10 @@ const flowTrendSeries = computed(() => {
     return buckets.findIndex(b => b.key === d.slice(0, 7))
   }
   const defs = [
-    { name: '销售收款', color: '#0071e3', vals: new Array(n).fill(0) },
-    { name: '零售收入', color: '#16a34a', vals: new Array(n).fill(0) },
-    { name: '采购支出', color: '#ea580c', vals: new Array(n).fill(0) },
-    { name: '其他支出', color: '#8b5cf6', vals: new Array(n).fill(0) },
+    { key: 'saleCollect', name: t('finance.overview.trendSeriesSaleCollect'), color: '#0071e3', vals: new Array(n).fill(0) },
+    { key: 'retailIncome', name: t('finance.overview.trendSeriesRetailIncome'), color: '#16a34a', vals: new Array(n).fill(0) },
+    { key: 'purchaseExpense', name: t('finance.overview.trendSeriesPurchaseExpense'), color: '#ea580c', vals: new Array(n).fill(0) },
+    { key: 'otherExpense', name: t('finance.overview.trendSeriesOtherExpense'), color: '#8b5cf6', vals: new Array(n).fill(0) },
   ]
   for (const r of collectList.value) { const i=getIdx(r.receipt_date||r.create_time||''); if(i>=0) defs[0].vals[i]+=Number(r.amount||0) }
   for (const r of retailList.value) { if(r.status!==1)continue; const i=getIdx(r.order_date||r.create_time||''); if(i>=0) defs[1].vals[i]+=Number(r.pay_amount||r.total_amount||0) }
@@ -617,7 +620,7 @@ const flowTrendSeries = computed(() => {
   const rawMax = Math.max(...defs.flatMap(s => s.vals), 0)
   const gMax = niceTrendMax(rawMax)
   return defs.map(s => ({
-    name: s.name, color: s.color, vals: s.vals,
+    key: s.key, name: s.name, color: s.color, vals: s.vals,
     norm: s.vals.map(v => v / gMax),
     points: s.vals.map((value, i) => ({
       label: buckets[i]?.label || '',
@@ -635,10 +638,10 @@ const flowTrendSeries = computed(() => {
 const flowTrendGlobalMax = computed(() => flowTrendSeries.value[0]?.gMax ?? 1)
 
 const flowTrendSummary = computed(() => {
-  const sales = flowTrendSeries.value.find(s => s.name === '销售收款')?.total || 0
-  const retail = flowTrendSeries.value.find(s => s.name === '零售收入')?.total || 0
-  const procure = flowTrendSeries.value.find(s => s.name === '采购支出')?.total || 0
-  const other = flowTrendSeries.value.find(s => s.name === '其他支出')?.total || 0
+  const sales = flowTrendSeries.value.find(s => s.key === 'saleCollect')?.total || 0
+  const retail = flowTrendSeries.value.find(s => s.key === 'retailIncome')?.total || 0
+  const procure = flowTrendSeries.value.find(s => s.key === 'purchaseExpense')?.total || 0
+  const other = flowTrendSeries.value.find(s => s.key === 'otherExpense')?.total || 0
   const income = sales + retail
   const expense = procure + other
   return { income, expense, net: income - expense, total: income + expense }
@@ -647,16 +650,16 @@ const flowTrendSummary = computed(() => {
 function fmtYVal(v: number): string {
   if (v <= 0) return '¥0'
   if (v < 10) return `¥${Number(v.toFixed(1))}`
-  if (v >= 10000) return `¥${(v / 10000).toFixed(v >= 100000 ? 0 : 1)}万`
+  if (v >= 10000) return `¥${(v / 10000).toFixed(v >= 100000 ? 0 : 1)}${t('finance.overview.unitWan')}`
   if (v >= 1000) return `¥${(v / 1000).toFixed(1)}k`
   return `¥${Math.round(v)}`
 }
 
 function fmtTrendAmount(v: number): string {
   const value = Math.abs(Number(v || 0))
-  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`
+  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}${t('finance.overview.unitWan')}`
   if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`
-  return Math.round(value).toLocaleString('zh-CN')
+  return Math.round(value).toLocaleString()
 }
 
 const flowYAxisLabels = computed(() => {
@@ -699,7 +702,7 @@ const allFlowItems = computed(() => {
   // 1. 收款单（income）— 真实字段: customer_name, amount, receipt_date, pay_type(非contact_type)
   for (const r of collectList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    const src = isCustomerPrepayLike(r) ? '预收款' : '收款单'
+    const src = isCustomerPrepayLike(r) ? t('finance.overview.flowSrcPrepayReceive') : t('finance.overview.flowSrcCollect')
     items.push({ type: 'income', source: src, name: r.customer_name || r.contact_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.receipt_date || r.create_time), order_no: r.receipt_no || r.order_sn || '' })
   }
   // 2. 零售单（income）— 真实字段: member_name, pay_amount, order_sn, order_date
@@ -707,18 +710,23 @@ const allFlowItems = computed(() => {
     if (r.status !== 1) continue
     const amt = Number(r.pay_amount || r.total_amount || 0)
     if (amt <= 0) continue
-    items.push({ type: 'income', source: '零售单', name: r.member_name || r.customer_name || '散客', amount: amt, date: fmtDt(r.order_date || r.create_time), order_no: r.order_sn || '' })
+    items.push({ type: 'income', source: t('finance.overview.flowSrcRetail'), name: r.member_name || r.customer_name || t('finance.overview.retailWalkIn'), amount: amt, date: fmtDt(r.order_date || r.create_time), order_no: r.order_sn || '' })
   }
   // 3. 会员充值（income）— 真实字段: member_name, amount, recharge_date
   for (const r of rechargeList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    items.push({ type: 'income', source: '会员充值', name: r.member_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.recharge_date || r.create_time), order_no: '' })
+    items.push({ type: 'income', source: t('finance.overview.flowSrcRecharge'), name: r.member_name || '—', amount: Number(r.amount || 0), date: fmtDt(r.recharge_date || r.create_time), order_no: '' })
   }
   // 4. 付款单（expense）— 真实字段: contact_name, supplier_name, contact_type, amount, pay_date
   for (const r of payList.value) {
     if (Number(r.amount || 0) <= 0) continue
-    const paySourceMap: Record<string, string> = { supplier: '采购付款', customer: '客户退款', staff: '员工费用', other: '其他支出' }
-    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || '付款', name: getPayReceiptSupplierLabel(r, purchasePayList.value, supplierList.value), amount: Number(r.amount || 0), date: fmtDt(r.pay_date || r.create_time), order_no: r.order_sn || '' })
+    const paySourceMap: Record<string, string> = {
+      supplier: t('finance.overview.flowSrcPurchasePay'),
+      customer: t('finance.overview.flowSrcCustomerRefund'),
+      staff: t('finance.overview.flowSrcStaffExpense'),
+      other: t('finance.overview.flowSrcOtherExpense'),
+    }
+    items.push({ type: 'expense', source: paySourceMap[r.contact_type] || t('finance.overview.flowSrcPay'), name: getPayReceiptSupplierLabel(r, purchasePayList.value, supplierList.value), amount: Number(r.amount || 0), date: fmtDt(r.pay_date || r.create_time), order_no: r.order_sn || '' })
   }
   // 5. 费用单（expense）— 真实字段: name(非type_name), amount, expense_date, order_sn
   // 注意：「单据支出」类型的费用已在 pay_receipt 中以「付款」口径计入，此处跳过避免重复
@@ -727,24 +735,20 @@ const allFlowItems = computed(() => {
     if (Number(r.amount || 0) <= 0) continue
     // 如果是「单据支出」产生的费用记录，已在 pay_receipt 中展示，此处跳过
     if (/采购单据支出\s*#\d+/.test(r.remark || '')) continue
-    items.push({ type: 'expense', source: r.payment_status === 'paid' ? '费用(已付)' : '费用', name: r.name || '—', amount: Number(r.amount || 0), date: fmtDt(r.expense_date || r.create_time), order_no: r.order_sn || '' })
+    items.push({ type: 'expense', source: r.payment_status === 'paid' ? t('finance.overview.flowSrcExpensePaid') : t('finance.overview.flowSrcExpense'), name: r.name || '—', amount: Number(r.amount || 0), date: fmtDt(r.expense_date || r.create_time), order_no: r.order_sn || '' })
   }
   // 6. 预收款/预付款 — 客户预收款是收入，供应商预付款是支出
   for (const r of prepayList.value) {
     if (Number(r.amount || 0) <= 0) continue
     const isCustomer = r.pay_type === 'customer'
-    items.push({ type: isCustomer ? 'income' : 'expense', source: isCustomer ? '客户预收款' : '供应商预付款', name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: fmtDt(r.create_time), order_no: r.prepay_no || '' })
+    items.push({ type: isCustomer ? 'income' : 'expense', source: isCustomer ? t('finance.overview.flowSrcCustomerPrepay') : t('finance.overview.flowSrcSupplierPrepay'), name: isCustomer ? (r.customer_name || '—') : (r.supplier_name || '—'), amount: Number(r.amount || 0), date: fmtDt(r.create_time), order_no: r.prepay_no || '' })
   }
   // 7. 采购退货退款（income）
   for (const r of procureReturnFinanceList.value) {
     if (Number(r.refund_amount || 0) <= 0) continue
-    items.push({ type: 'income', source: '采购退货退款', name: r.supplier_name || '—', amount: Number(r.refund_amount || 0), date: r.date || '', order_no: r.order_no || '' })
+    items.push({ type: 'income', source: t('finance.overview.flowSrcPurchaseReturn'), name: r.supplier_name || '—', amount: Number(r.refund_amount || 0), date: r.date || '', order_no: r.order_no || '' })
   }
-  // 8. 销售退货退款（expense）
-  for (const r of saleReturnFinanceList.value) {
-    if (Number(r.refund_amount || 0) <= 0) continue
-    items.push({ type: 'expense', source: '销售退货退款', name: r.customer_name || '—', amount: Number(r.refund_amount || 0), date: r.date || '', order_no: r.order_no || '' })
-  }
+  // 8. 销售退货退款留在客户余额（非现金流出），不计入资金流水支出
   return items.sort((a, b) => b.date.localeCompare(a.date))
 })
 
@@ -794,11 +798,14 @@ const recentCollectItems = computed(() => {
 const receivableTotal = computed(() =>
   receivableList.value.reduce((s, r) => s + Number(r.un_pay_amount ?? (Number(r.total_amount || r.amount || 0) - Number(r.paid_amount || 0))), 0).toFixed(2)
 )
+const receivableGrossTotal = computed(() =>
+  receivableList.value.reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2)
+)
 function getPurchaseSupplierLabel(row: any): string {
   try {
     const items = typeof row.goods_info === 'string' ? JSON.parse(row.goods_info) : (row.goods_info || [])
     const ids = [...new Set(items.map((i: any) => Number(i.supplier_id)).filter(Boolean))]
-    if (ids.length > 1) return '多供应商'
+    if (ids.length > 1) return t('finance.overview.multiSupplier')
     if (ids.length === 1) {
       const s = supplierList.value.find((x: any) => x.id === ids[0])
       return s?.name || row.supplier_name || '—'
@@ -842,11 +849,11 @@ const summaryCards = computed(() => {
   const expense = Number(payTotal.value)
   const balance = fundTotal.value
   return [
-  { key: 'fund', label: '资金余额', value: balance, sub: `= 收入 ¥${income.toFixed(2)} − 支出 ¥${expense.toFixed(2)}`, color: Number(balance) < 0 ? '#dc2626' : '#16a34a', bg: Number(balance) < 0 ? '#fff0f0' : '#e6f7f0', icon: 'Wallet', route: '/finance/fund-flow' },
-  { key: 'collect', label: '总资金收入', value: collectTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'income').length} 笔收入`, color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow?type=income' },
-  { key: 'pay', label: '总资金支出', value: payTotal.value, sub: `${allFlowItems.value.filter(i => i.type === 'expense').length} 笔支出`, color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow?type=expense' },
-  { key: 'payable', label: '应付总额', value: payableTotal.value, sub: `${payableList.value.filter((r) => getPayableUnpaidAmount(r) > 0).length} 笔欠款`, color: '#ff4d4f', bg: '#fff1f0', icon: 'DocumentChecked', route: '/finance/payable' },
-  { key: 'receivable', label: '应收总额', value: receivableTotal.value, sub: `${receivableList.value.length} 笔待收`, color: '#16a34a', bg: '#e6f7f0', icon: 'DocumentChecked', route: '/finance/receivable' },
+  { key: 'fund', label: t('finance.overview.cardFundBalance'), value: balance, sub: t('finance.overview.cardFundBalanceSub', { income: income.toFixed(2), expense: expense.toFixed(2) }), color: Number(balance) < 0 ? '#dc2626' : '#16a34a', bg: Number(balance) < 0 ? '#fff0f0' : '#e6f7f0', icon: 'Wallet', route: '/finance/fund-flow' },
+  { key: 'collect', label: t('finance.overview.cardTotalIncome'), value: collectTotal.value, sub: t('finance.overview.cardTotalIncomeSub', { count: allFlowItems.value.filter(i => i.type === 'income').length }), color: '#16a34a', bg: '#e6f7f0', icon: 'TrendCharts', route: '/finance/fund-flow?type=income' },
+  { key: 'pay', label: t('finance.overview.cardTotalExpense'), value: payTotal.value, sub: t('finance.overview.cardTotalExpenseSub', { count: allFlowItems.value.filter(i => i.type === 'expense').length }), color: '#dc2626', bg: '#fff0f0', icon: 'Bottom', route: '/finance/fund-flow?type=expense' },
+  { key: 'payable', label: t('finance.overview.cardPayableTotal'), value: payableTotal.value, sub: t('finance.overview.cardPayableSub', { count: payableList.value.filter((r) => getPayableUnpaidAmount(r) > 0).length }), color: '#ff4d4f', bg: '#fff1f0', icon: 'DocumentChecked', route: '/finance/payable' },
+  { key: 'receivable', label: t('finance.overview.cardReceivableTotal'), value: receivableGrossTotal.value, sub: t('finance.overview.cardReceivableSub', { amount: receivableTotal.value }), color: '#16a34a', bg: '#e6f7f0', icon: 'DocumentChecked', route: '/finance/receivable' },
   ]
 })
 
@@ -954,19 +961,19 @@ function parseCollectOcr() {
     collectForm.value.contact_name = remark || ''
   }
   if (amount > 0) {
-    ElMessage.success(`识别完成：金额 ¥${amount}，请确认收款信息`)
+    ElMessage.success(t('finance.overview.msgOcrSuccess', { amount }))
   } else {
-    ElMessage.warning('未能识别到金额，请手动填写')
+    ElMessage.warning(t('finance.overview.msgOcrNoAmount'))
   }
 }
 
 async function saveCollect() {
-  if (!collectForm.value.amount) { ElMessage.warning('请输入收款金额'); return }
+  if (!collectForm.value.amount) { ElMessage.warning(t('finance.overview.msgCollectAmountRequired')); return }
   const isOther = collectForm.value.category === 'other'
   const name = isOther
     ? collectForm.value.contact_name
     : (clientList.value.find((x: any) => x.id === collectForm.value.contact_id)?.name || collectForm.value.contact_name || '')
-  if (isOther && !name) { ElMessage.warning('请输入收入说明'); return }
+  if (isOther && !name) { ElMessage.warning(t('finance.overview.msgCollectDescRequired')); return }
   const fundName = collectForm.value.fund_id === -1 ? collectForm.value.fund_name : (fundList.value.find((x: any) => x.id === collectForm.value.fund_id)?.name || '')
   collectSaving.value = true
   try {
@@ -988,10 +995,10 @@ async function saveCollect() {
       receipt_date: collectForm.value.receipt_date,
       remark: collectForm.value.remark,
     })
-    ElMessage.success(isOther ? '其他收入已保存' : '收款记录已保存')
+    ElMessage.success(isOther ? t('finance.overview.msgOtherIncomeSaved') : t('finance.overview.msgCollectSaved'))
     collectDialogVisible.value = false
     loadAllData()
-  } catch { ElMessage.error('保存失败') } finally { collectSaving.value = false }
+  } catch { ElMessage.error(t('finance.overview.msgSaveFailed')) } finally { collectSaving.value = false }
 }
 
 // 快速付款
@@ -1044,20 +1051,20 @@ function parsePayOcr() {
     payForm.value.contact_name = remark || ''
   }
   if (amount > 0) {
-    const hint = isExpense ? `识别完成：¥${amount}（日常费用，已设为其他支出）` : `识别完成：金额 ¥${amount}，请确认付款信息`
+    const hint = isExpense ? t('finance.overview.msgPayOcrSuccessExpense', { amount }) : t('finance.overview.msgPayOcrSuccess', { amount })
     ElMessage.success(hint)
   } else {
-    ElMessage.warning('未能识别到金额，请手动填写')
+    ElMessage.warning(t('finance.overview.msgOcrNoAmount'))
   }
 }
 
 async function savePay() {
-  if (!payForm.value.amount) { ElMessage.warning('请输入付款金额'); return }
+  if (!payForm.value.amount) { ElMessage.warning(t('finance.overview.msgPayAmountRequired')); return }
   const isOther = payForm.value.category === 'other'
   const name = isOther
     ? payForm.value.contact_name
     : (supplierList.value.find((x: any) => x.id === payForm.value.contact_id)?.name || payForm.value.contact_name || '')
-  if (isOther && !name) { ElMessage.warning('请输入支出说明'); return }
+  if (isOther && !name) { ElMessage.warning(t('finance.overview.msgPayDescRequired')); return }
   const fundName = payForm.value.fund_id === -1 ? payForm.value.fund_name : (fundList.value.find((x: any) => x.id === payForm.value.fund_id)?.name || '')
   paySaving.value = true
   try {
@@ -1070,10 +1077,10 @@ async function savePay() {
       pay_date: payForm.value.pay_date,
       remark: payForm.value.remark,
     })
-    ElMessage.success(isOther ? '其他支出已保存' : '付款记录已保存')
+    ElMessage.success(isOther ? t('finance.overview.msgOtherExpenseSaved') : t('finance.overview.msgPaySaved'))
     payDialogVisible.value = false
     loadAllData()
-  } catch { ElMessage.error('保存失败') } finally { paySaving.value = false }
+  } catch { ElMessage.error(t('finance.overview.msgSaveFailed')) } finally { paySaving.value = false }
 }
 
 async function loadAllData() {
@@ -1103,9 +1110,10 @@ async function loadAllData() {
     const rawPayList = payRes.data?.rows ?? payRes.data?.list ?? []
     collectList.value = rawCollectList
     payList.value = rawPayList
-    // 应收账款：与 Receivable.vue 完全相同的 order_sn 匹配逻辑
+    // 应收账款：与 Receivable.vue 完全相同的 order_sn 匹配逻辑（排除线上电商平台现收现结客户）
+    const ONLINE_CUSTOMER_IDS_REC = new Set([63, 10, 12, 7, 8, 11])
     const auditedContractsForRec = (contractRes.data?.rows ?? contractRes.data?.list ?? [])
-      .filter(isEffectiveSaleContract)
+      .filter((r: any) => isEffectiveSaleContract(r) && !ONLINE_CUSTOMER_IDS_REC.has(Number(r.customer_id)))
     const snToIdRec = new Map<string, number>()
     for (const c of auditedContractsForRec) {
       if (c.order_sn) snToIdRec.set(String(c.order_sn), c.id)
@@ -1138,16 +1146,8 @@ async function loadAllData() {
         new Date(a.order_date || a.created_at).getTime() - new Date(b.order_date || b.created_at).getTime()
       )
     }
-    // 与 Contract.vue calcContractAmount 保持一致：after_discount + 运费（按承担方）- 收入调整
-    // after_discount > total_amount 说明是编辑后未同步的过期数据，此时用 total_amount
     const calcAmtRec = (c: any): number => {
-      const total = Number(c.total_amount || 0)
-      const afterDisc = Number(c.after_discount)
-      const base = Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total ? afterDisc : total
-      const freight = Number(c.freight_amount || 0)
-      const bearer = String(c.freight_bearer || 'seller')
-      const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
-      return Math.max(0, base + fc - Number(c.income_amount || 0))
+      return calcSaleContractReceivable(c)
     }
     const contractFifoPaidRec = new Map<number, number>()
     for (const [custId, contracts] of byCustomerRec) {
@@ -1230,40 +1230,8 @@ async function loadAllData() {
     fundList.value = applyProcureReturnsToFundRows(fundListWithDynamic, procureReturnFinanceList.value)
     saleReturnFinanceList.value = buildSaleReturnSettlementRows(rawReceivableList, normalizedSaleReturns)
     // 按供应商聚合采购订单计算应付（只算已审核 status===1 的单子）
-    // 已付金额从付款单里匹配（3种匹配方式）
-    const procurePaidById: Record<number, number> = {}
-    const procurePaidByKey: Record<string, number> = {}
-    const procurePaidBySn: Record<string, number> = {}
-    const procurePaidBySup: Record<string, number> = {}
+    // 订单本体已付金额直接用后端 o.pay_amount；附加费用已付从付款单匹配
     const procureFeePaidById = buildProcureFeePaidByOrder(rawPayList)
-    for (const r of rawPayList) {
-      const amt = Number(r.amount || 0)
-      if (!amt) continue
-      if (isProcureExtraFeePayment(r)) continue
-      // 审核自动生成的付款单是系统预付记录，不计入应付欠款（与 Payable.vue 逻辑一致）
-      if (/审核自动生成/.test(String(r.remark || ''))) continue
-      const orderSn = String(r.order_sn || '').trim()
-      const supplierName = String(r.supplier_name || r.contact_name || '').trim()
-      let matched = false
-      // 方式1：order_id 直接匹配
-      if (Number(r.order_id)) {
-        const id = Number(r.order_id); procurePaidById[id] = (procurePaidById[id] || 0) + amt; matched = true
-      }
-      // 方式2：备注 "采购单付款 #ID"（单ID直接匹配单据，多ID按供应商维度存储）
-      const m1all = [...String(r.remark || '').matchAll(/采购单(?:自动)?付款\s+#(\d+)/g)]
-      if (m1all.length === 1) {
-        const id = Number(m1all[0][1]); procurePaidById[id] = (procurePaidById[id] || 0) + amt; matched = true
-      } else if (m1all.length > 1) {
-        if (supplierName) procurePaidBySup[supplierName] = (procurePaidBySup[supplierName] || 0) + amt
-        matched = true
-      }
-      // 方式3：order_sn@@supplier_name 精确匹配（兜底）
-      if (!matched && orderSn && supplierName) {
-        const k = `${orderSn}@@${supplierName}`
-        procurePaidByKey[k] = (procurePaidByKey[k] || 0) + amt
-        matched = true
-      }
-    }
     const supplierPayMap = new Map<string, any>()
     for (const o of (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? [])) {
       if (Number(o.status) !== 1) continue
@@ -1273,9 +1241,6 @@ async function loadAllData() {
       }
       const s = supplierPayMap.get(key)!
       const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-      const oSn = String(o.order_sn || '').trim()
-      const oNo = String(o.order_no || '').trim()
-      const supName = String(o.supplier_name || '').trim()
       const paidAmt = Number(o.pay_amount || 0)
       const feeNeedPay = getProcureFeeNeedPayAmount(o)
       const feePaid = procureFeePaidById[o.id] || 0
@@ -1350,12 +1315,50 @@ async function loadAllData() {
       }))
       .filter((r) => r.un_pay_amount > 0.001)
 
+    // 同 Payable.vue：扣减"未链接到具体采购单"的手动付款（多订单路径）
+    {
+      const auditedOrders = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((o: any) => Number(o.status) === 1)
+      const orderSnSet = new Set(auditedOrders.map((o: any) => String(o.order_sn || '').trim()).filter(Boolean))
+      const orderNoSet = new Set(auditedOrders.map((o: any) => String(o.order_no || '').trim()).filter(Boolean))
+      const manualPays = rawPayList.filter((r: any) => !/审核自动生成/.test(String(r.remark || '')))
+      const unlinkedPaid: Record<string, number> = {}
+      for (const r of manualPays) {
+        if (String(r.contact_type || '') !== 'supplier') continue
+        const amt = Number(r.amount || 0)
+        if (!amt) continue
+        const sn = String(r.order_sn || '').trim()
+        if (sn && (orderSnSet.has(sn) || orderNoSet.has(sn))) continue
+        const name = String(r.contact_name || '').trim()
+        if (name) unlinkedPaid[name] = (unlinkedPaid[name] || 0) + amt
+      }
+      for (const s of supplierPayMap.values()) {
+        const extra = unlinkedPaid[s.supplier_name] || 0
+        if (extra > 0) {
+          const deduct = Math.min(extra, s.un_pay_amount)
+          s.paid_amount += deduct
+          s.un_pay_amount -= deduct
+        }
+      }
+    }
     payableList.value = [
       ...applyProcureReturnsToPayableRows(Array.from(supplierPayMap.values()), procureReturnFinanceList.value),
       ...buildExpensePayableRows(expenseRes.data?.rows ?? expenseRes.data?.list ?? []),
       ...contractFeeRows,
     ]
-    receivableList.value = rawReceivableList
+    const returnByCustomerName = new Map<string, number>()
+    for (const sr of normalizedSaleReturns) {
+      const key = sr.customer_name
+      if (key) returnByCustomerName.set(key, (returnByCustomerName.get(key) ?? 0) + sr.return_amount)
+    }
+    const returnRemainder = new Map(returnByCustomerName)
+    receivableList.value = rawReceivableList.map((r: any) => {
+      const key = String(r.customer_name || '').trim()
+      const rem = returnRemainder.get(key) ?? 0
+      if (rem <= 0) return r
+      const deduct = Math.min(rem, Number(r.un_pay_amount || 0))
+      returnRemainder.set(key, rem - deduct)
+      return { ...r, un_pay_amount: Math.max(0, Number(r.un_pay_amount || 0) - deduct) }
+    }).filter((r: any) => r.un_pay_amount > 0)
     adjustedCollectList.value = applySaleReturnsToCollectReceiptRows(collectList.value, normalizedSaleReturns, rawReceivableList)
     purchasePayList.value = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
     const auditedContractSns = new Set<string>()

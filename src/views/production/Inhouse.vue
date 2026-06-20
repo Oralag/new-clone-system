@@ -7,79 +7,79 @@
         <ScTable ref="tableRef"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
             del-path="/production/inhouse/batchDel"
-            export-file-name="生产入库" :params="searchForm">
+            :export-file-name="$t('production.inhouse.exportFileName')" :params="searchForm">
           <template #search>
-            <el-input v-model="searchForm.order_sn" placeholder="入库单号" clearable style="width:160px" />
-            <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:160px" />
-            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
-              <el-option label="未核对" value="unreconciled" />
+            <el-input v-model="searchForm.order_sn" :placeholder="$t('production.inhouse.searchOrderSn')" clearable style="width:160px" />
+            <el-input v-model="searchForm.goods_name" :placeholder="$t('production.inhouse.searchGoodsName')" clearable style="width:160px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="$t('production.inhouse.searchReconcileStatus')">
+              <el-option :label="$t('production.inhouse.searchUnreconciled')" value="unreconciled" />
             </el-select>
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ $t('production.inhouse.btnSearch') }}</el-button>
+            <el-button @click="resetSearch">{{ $t('production.inhouse.btnReset') }}</el-button>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openAdd">新增生产入库</el-button>
+            <el-button type="primary" :icon="Plus" @click="openAdd">{{ $t('production.inhouse.btnAdd') }}</el-button>
           </template>
           <el-table-column type="expand" width="36">
             <template #default="{ row }">
               <div class="expand-cost" :ref="(el: any) => el && triggerExpand(row)">
-                <div v-if="!expandState[row.id] || expandState[row.id]?.loading" style="padding:16px 20px;color:#aaa;font-size:13px">查询领料成本中...</div>
+                <div v-if="!expandState[row.id] || expandState[row.id]?.loading" style="padding:16px 20px;color:#aaa;font-size:13px">{{ $t('production.inhouse.expandLoadingCost') }}</div>
                 <template v-else-if="expandState[row.id]?.loaded">
                   <el-table :data="expandState[row.id].items" border size="small" style="margin:8px 16px;width:calc(100% - 32px)">
-                    <el-table-column prop="goods_name" label="商品名称" min-width="140" />
-                    <el-table-column prop="num" label="入库数量" width="90" align="right" />
-                    <el-table-column label="物料单价" width="110" align="right">
+                    <el-table-column prop="goods_name" :label="$t('production.inhouse.expandColGoodsName')" min-width="140" />
+                    <el-table-column prop="num" :label="$t('production.inhouse.expandColInQty')" width="90" align="right" />
+                    <el-table-column :label="$t('production.inhouse.expandColMaterialPrice')" width="110" align="right">
                       <template #default="{ row: r }">¥{{ fmtN(r.material_price) }}</template>
                     </el-table-column>
-                    <el-table-column label="加工单价" width="110" align="right">
+                    <el-table-column :label="$t('production.inhouse.expandColProcessPrice')" width="110" align="right">
                       <template #default="{ row: r }">¥{{ fmtN(r.process_price) }}</template>
                     </el-table-column>
-                    <el-table-column label="入库单价" width="110" align="right">
+                    <el-table-column :label="$t('production.inhouse.expandColInPrice')" width="110" align="right">
                       <template #default="{ row: r }"><b style="color:#0071e3">¥{{ fmtN(r.in_price) }}</b></template>
                     </el-table-column>
-                    <el-table-column label="总成本" width="120" align="right">
+                    <el-table-column :label="$t('production.inhouse.expandColTotalCost')" width="120" align="right">
                       <template #default="{ row: r }"><b style="color:#16a34a">¥{{ fmtN(Number(r.num||0)*Number(r.in_price||0)) }}</b></template>
                     </el-table-column>
                   </el-table>
                   <div class="expand-total">
-                    领料成本：<b style="color:#f59e0b">¥{{ fmtN(expandState[row.id].materialCost) }}</b>
-                    &nbsp;&nbsp;合计成本：<b style="color:#16a34a">¥{{ fmtN(expandState[row.id].totalCost) }}</b>
-                    &nbsp;&nbsp;入库均价：<b style="color:#0071e3">¥{{ fmtN(expandState[row.id].avgPrice) }}</b>
+                    {{ $t('production.inhouse.expandMaterialCost') }}<b style="color:#f59e0b">¥{{ fmtN(expandState[row.id].materialCost) }}</b>
+                    &nbsp;&nbsp;{{ $t('production.inhouse.expandTotalCost') }}<b style="color:#16a34a">¥{{ fmtN(expandState[row.id].totalCost) }}</b>
+                    &nbsp;&nbsp;{{ $t('production.inhouse.expandAvgPrice') }}<b style="color:#0071e3">¥{{ fmtN(expandState[row.id].avgPrice) }}</b>
                   </div>
                 </template>
-                <div v-else style="padding:16px 20px;color:#aaa;font-size:13px">加载失败</div>
+                <div v-else style="padding:16px 20px;color:#aaa;font-size:13px">{{ $t('production.inhouse.expandLoadFailed') }}</div>
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="order_sn" label="入库单号" min-width="150" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-          <el-table-column prop="inhouse_qty" label="入库数量" width="100" align="right" />
-          <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-          <el-table-column label="入库成本" width="120" align="right">
+          <el-table-column prop="order_sn" :label="$t('production.inhouse.colOrderSn')" min-width="150" />
+          <el-table-column prop="goods_name" :label="$t('production.inhouse.colGoodsName')" min-width="150" />
+          <el-table-column prop="inhouse_qty" :label="$t('production.inhouse.colInQty')" width="100" align="right" />
+          <el-table-column prop="unit_name" :label="$t('production.inhouse.colUnit')" width="70" align="center" />
+          <el-table-column :label="$t('production.inhouse.colInCost')" width="120" align="right">
             <template #default="{ row }">
               <b style="color:#16a34a">¥{{ fmtN(calcTotalCost(row)) }}</b>
             </template>
           </el-table-column>
-          <el-table-column prop="warehouse_name" label="入库仓库" min-width="110" />
-          <el-table-column prop="inhouse_date" label="入库日期" width="110">
+          <el-table-column prop="warehouse_name" :label="$t('production.inhouse.colWarehouse')" min-width="110" />
+          <el-table-column prop="inhouse_date" :label="$t('production.inhouse.colDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.inhouse_date || row.create_time) }}</template>
           </el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column :label="$t('production.inhouse.colStatus')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : '待审核' }}
+                {{ row.status === 1 ? $t('production.inhouse.statusAudited') : row.status === 2 ? $t('production.inhouse.statusRejected') : $t('production.inhouse.statusPending') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220" fixed="right">
+          <el-table-column :label="$t('production.inhouse.colActions')" width="220" fixed="right">
             <template #default="{ row }">
-              <el-button type="success" size="small" link @click="openView(row)">查看</el-button>
-              <el-button v-if="row.status === 0" type="primary" size="small" link @click="openEdit(row)">编辑</el-button>
-              <el-button v-if="row.status === 0" type="primary" size="small" link @click="handleAudit(row, 1)">审核</el-button>
-              <el-button v-if="row.status === 0" type="danger" size="small" link @click="handleAudit(row, 2)">驳回</el-button>
-              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" size="small" link @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="success" size="small" link @click="openView(row)">{{ $t('production.inhouse.actionView') }}</el-button>
+              <el-button v-if="row.status === 0" type="primary" size="small" link @click="openEdit(row)">{{ $t('production.inhouse.actionEdit') }}</el-button>
+              <el-button v-if="row.status === 0" type="primary" size="small" link @click="handleAudit(row, 1)">{{ $t('production.inhouse.actionAudit') }}</el-button>
+              <el-button v-if="row.status === 0" type="danger" size="small" link @click="handleAudit(row, 2)">{{ $t('production.inhouse.actionReject') }}</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" size="small" link @click="handleAudit(row, 0)">{{ $t('production.inhouse.actionUnaudit') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('production.inhouse.actionReconciled') : $t('production.inhouse.actionReconcile') }}</el-button>
+              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? $t('production.inhouse.actionDeleteDisabledTip') : ''" @click="handleDelete(row.id)">{{ $t('production.inhouse.actionDelete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -91,14 +91,14 @@
       <!-- 顶部操作栏 -->
       <div class="form-topbar">
         <div class="form-topbar-left">
-          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ isView ? '查看生产入库' : fd.id ? '编辑生产入库' : '新增生产入库' }}</span>
-          <el-tag v-if="fd.status === 1" type="success" size="small">已审核</el-tag>
-          <el-tag v-else-if="fd.status === 2" type="danger" size="small">已驳回</el-tag>
+          <el-button :icon="ArrowLeft" @click="backToList">{{ $t('production.inhouse.formBtnBack') }}</el-button>
+          <span class="form-title">{{ isView ? $t('production.inhouse.formTitleView') : fd.id ? $t('production.inhouse.formTitleEdit') : $t('production.inhouse.formTitleAdd') }}</span>
+          <el-tag v-if="fd.status === 1" type="success" size="small">{{ $t('production.inhouse.statusAudited') }}</el-tag>
+          <el-tag v-else-if="fd.status === 2" type="danger" size="small">{{ $t('production.inhouse.statusRejected') }}</el-tag>
         </div>
         <div class="form-topbar-right" v-if="!isView">
-          <el-button :loading="saving && !savingAndAuditing" @click="handleSave(false)">保存</el-button>
-          <el-button type="primary" :loading="savingAndAuditing" @click="handleSave(true)">保存并审核</el-button>
+          <el-button :loading="saving && !savingAndAuditing" @click="handleSave(false)">{{ $t('production.inhouse.formBtnSave') }}</el-button>
+          <el-button type="primary" :loading="savingAndAuditing" @click="handleSave(true)">{{ $t('production.inhouse.formBtnSaveAndAudit') }}</el-button>
         </div>
       </div>
 
@@ -109,28 +109,28 @@
             <!-- 生产计划单 -->
             <el-col :span="8">
               <div class="field-row">
-                <span class="field-label required">生产计划单</span>
-                <el-input v-model="fd.plan_name" placeholder="请选择生产计划单" readonly style="flex:1" />
-                <el-button v-if="!isView" type="primary" @click="openPlanPicker">选择生产计划单</el-button>
+                <span class="field-label required">{{ $t('production.inhouse.fieldPlanOrder') }}</span>
+                <el-input v-model="fd.plan_name" :placeholder="$t('production.inhouse.fieldPlanOrderPlaceholder')" readonly style="flex:1" />
+                <el-button v-if="!isView" type="primary" @click="openPlanPicker">{{ $t('production.inhouse.fieldPlanOrderBtn') }}</el-button>
               </div>
             </el-col>
             <el-col :span="8">
               <div class="field-row">
-                <span class="field-label">入库单号</span>
-                <el-input v-model="fd.order_sn" placeholder="入库单号（不填写自动生成）" style="flex:1" :disabled="isView" />
+                <span class="field-label">{{ $t('production.inhouse.fieldOrderSn') }}</span>
+                <el-input v-model="fd.order_sn" :placeholder="$t('production.inhouse.fieldOrderSnPlaceholder')" style="flex:1" :disabled="isView" />
               </div>
             </el-col>
             <el-col :span="8">
               <div class="field-row">
-                <span class="field-label">入库日期</span>
+                <span class="field-label">{{ $t('production.inhouse.fieldInDate') }}</span>
                 <el-date-picker v-model="fd.in_date" type="date" value-format="YYYY-MM-DD"
                   style="flex:1" :disabled="isView" />
               </div>
             </el-col>
             <el-col :span="8">
               <div class="field-row">
-                <span class="field-label">入库仓库</span>
-                <el-select v-model="fd.warehouse_id" placeholder="请选择仓库" style="flex:1"
+                <span class="field-label">{{ $t('production.inhouse.fieldWarehouse') }}</span>
+                <el-select v-model="fd.warehouse_id" :placeholder="$t('production.inhouse.fieldWarehousePlaceholder')" style="flex:1"
                   :disabled="isView" @change="onWarehouseChange">
                   <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
                 </el-select>
@@ -138,10 +138,10 @@
             </el-col>
             <el-col :span="4">
               <div class="field-row">
-                <span class="field-label">倒冲领料</span>
-                <span v-if="isView || fd.status === 1" style="flex:1;color:#666">{{ fd.back_flush ? '已开启' : '未开启' }}</span>
+                <span class="field-label">{{ $t('production.inhouse.fieldBackFlush') }}</span>
+                <span v-if="isView || fd.status === 1" style="flex:1;color:#666">{{ fd.back_flush ? $t('production.inhouse.fieldBackFlushOn') : $t('production.inhouse.fieldBackFlushOff') }}</span>
                 <el-tooltip v-else
-                  :content="hasMaterial ? '该计划已有手工领料单，不可倒冲' : ''"
+                  :content="hasMaterial ? $t('production.inhouse.fieldBackFlushDisabledTip') : ''"
                   :disabled="!hasMaterial"
                   placement="top">
                   <el-switch v-model="fd.back_flush" :disabled="hasMaterial" />
@@ -154,30 +154,30 @@
         <!-- 商品清单 -->
         <div class="goods-section">
           <div class="goods-header">
-            <span>商品清单</span>
+            <span>{{ $t('production.inhouse.goodsSectionTitle') }}</span>
             <span class="goods-summary">
-              成本合计：<b>{{ totalCost.toFixed(2) }}</b>
-              &nbsp;&nbsp;入库总价：<b>{{ totalInPrice.toFixed(2) }}</b>
+              {{ $t('production.inhouse.goodsSummaryCost') }}<b>{{ totalCost.toFixed(2) }}</b>
+              &nbsp;&nbsp;{{ $t('production.inhouse.goodsSummaryInPrice') }}<b>{{ totalInPrice.toFixed(2) }}</b>
             </span>
           </div>
-          <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请先选择生产计划单">
+          <el-table :data="fd.items" border size="small" style="width:100%" :empty-text="$t('production.inhouse.goodsEmptyText')">
             <el-table-column type="index" width="45" align="center" />
-            <el-table-column prop="goods_sn" label="商品编码" width="120" />
-            <el-table-column prop="goods_name" label="商品名称" min-width="140" />
-            <el-table-column prop="spec" label="规格型号" width="110" />
-            <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-            <el-table-column prop="plan_num" label="生产数量" width="90" align="right" />
-            <el-table-column label="可入库数量" width="100" align="right">
+            <el-table-column prop="goods_sn" :label="$t('production.inhouse.colGoodsSn')" width="120" />
+            <el-table-column prop="goods_name" :label="$t('production.inhouse.colGoodsName')" min-width="140" />
+            <el-table-column prop="spec" :label="$t('production.inhouse.colSpec')" width="110" />
+            <el-table-column prop="unit_name" :label="$t('production.inhouse.colUnit')" width="65" align="center" />
+            <el-table-column prop="plan_num" :label="$t('production.inhouse.colPlanNum')" width="90" align="right" />
+            <el-table-column :label="$t('production.inhouse.colAvailableIn')" width="100" align="right">
               <template #default="{ row }">
                 <span :style="{ color: (row.plan_num - row.already_in) > 0 ? '#16a34a' : '#dc2626' }">
                   {{ Math.max(0, (row.plan_num || 0) - (row.already_in || 0)).toFixed(2) }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="本次入库数量" width="130" align="right">
+            <el-table-column :label="$t('production.inhouse.colThisInQty')" width="130" align="right">
               <template #header>
-                本次入库数量
-                <el-button link type="primary" size="small" @click="batchSetNum">批量</el-button>
+                {{ $t('production.inhouse.colThisInQty') }}
+                <el-button link type="primary" size="small" @click="batchSetNum">{{ $t('production.inhouse.btnBatch') }}</el-button>
               </template>
               <template #default="{ row }">
                 <el-input-number v-if="!isView" v-model="row.num" :min="0" :precision="2"
@@ -185,10 +185,10 @@
                 <span v-else>{{ row.num }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="物料单价" width="120" align="right">
+            <el-table-column :label="$t('production.inhouse.colMaterialPrice')" width="120" align="right">
               <template #header>
-                物料单价
-                <el-button v-if="!isView" link type="primary" size="small" @click="batchSetField('material_price')">批量</el-button>
+                {{ $t('production.inhouse.colMaterialPrice') }}
+                <el-button v-if="!isView" link type="primary" size="small" @click="batchSetField('material_price')">{{ $t('production.inhouse.btnBatch') }}</el-button>
               </template>
               <template #default="{ row }">
                 <el-input-number v-if="!isView" v-model="row.material_price" :min="0" :precision="4"
@@ -196,19 +196,19 @@
                 <span v-else>{{ row.material_price }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="物料合计" width="110" align="right">
+            <el-table-column :label="$t('production.inhouse.colMaterialTotal')" width="110" align="right">
               <template #header>
-                物料合计
-                <el-button v-if="!isView" link type="primary" size="small" @click="batchSetField('material_total')">批量</el-button>
+                {{ $t('production.inhouse.colMaterialTotal') }}
+                <el-button v-if="!isView" link type="primary" size="small" @click="batchSetField('material_total')">{{ $t('production.inhouse.btnBatch') }}</el-button>
               </template>
               <template #default="{ row }">
                 <span>{{ ((row.num || 0) * (row.material_price || 0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="加工单价" width="120" align="right">
+            <el-table-column :label="$t('production.inhouse.colProcessPrice')" width="120" align="right">
               <template #header>
-                加工单价
-                <el-button v-if="!isView" link type="primary" size="small" @click="batchSetField('process_price')">批量</el-button>
+                {{ $t('production.inhouse.colProcessPrice') }}
+                <el-button v-if="!isView" link type="primary" size="small" @click="batchSetField('process_price')">{{ $t('production.inhouse.btnBatch') }}</el-button>
               </template>
               <template #default="{ row }">
                 <el-input-number v-if="!isView" v-model="row.process_price" :min="0" :precision="4"
@@ -216,21 +216,21 @@
                 <span v-else>{{ row.process_price }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="加工合计" width="110" align="right">
+            <el-table-column :label="$t('production.inhouse.colProcessTotal')" width="110" align="right">
               <template #header>
-                加工合计
-                <el-button v-if="!isView" link type="primary" size="small" @click="batchSetField('process_total')">批量</el-button>
+                {{ $t('production.inhouse.colProcessTotal') }}
+                <el-button v-if="!isView" link type="primary" size="small" @click="batchSetField('process_total')">{{ $t('production.inhouse.btnBatch') }}</el-button>
               </template>
               <template #default="{ row }">
                 <span>{{ ((row.num || 0) * (row.process_price || 0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="总成本" width="110" align="right">
+            <el-table-column :label="$t('production.inhouse.colTotalCost')" width="110" align="right">
               <template #default="{ row }">
                 <b style="color:#0071e3">{{ row.total_cost?.toFixed(2) ?? '0.00' }}</b>
               </template>
             </el-table-column>
-            <el-table-column label="入库单价" width="120" align="right">
+            <el-table-column :label="$t('production.inhouse.colInPrice')" width="120" align="right">
               <template #default="{ row }">
                 <el-input-number v-if="!isView" v-model="row.in_price" :min="0" :precision="4"
                   controls-position="right" size="small" style="width:100%" @change="calcRow(row)" />
@@ -245,7 +245,7 @@
           <el-row :gutter="16">
             <el-col :span="16">
               <div class="field-row">
-                <span class="field-label">备注</span>
+                <span class="field-label">{{ $t('production.inhouse.fieldRemark') }}</span>
                 <el-input v-model="fd.remark" type="textarea" :rows="2" :disabled="isView" style="flex:1" />
               </div>
             </el-col>
@@ -255,22 +255,22 @@
     </div>
 
     <!-- 生产计划选择弹框 -->
-    <el-dialog v-model="planPickerVisible" title="选择生产计划单" width="800px" append-to-body>
+    <el-dialog v-model="planPickerVisible" :title="$t('production.inhouse.planPickerTitle')" width="800px" append-to-body>
       <el-table :data="planList" border size="small" height="400"
         @row-click="onSelectPlan" style="cursor:pointer">
-        <el-table-column label="计划单号" width="150">
+        <el-table-column :label="$t('production.inhouse.planPickerColSn')" width="150">
           <template #default="{ row }">{{ row.order_sn || `SC${(row.plan_date||row.created_at||'').slice(0,10).replace(/-/g,'')}${String(row.id).padStart(3,'0')}` }}</template>
         </el-table-column>
-        <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-        <el-table-column prop="schedule_num" label="排产数量" width="100" align="right" />
-        <el-table-column prop="actual_num" label="已生产" width="100" align="right" />
-        <el-table-column prop="finish_date" label="完工日期" width="110">
+        <el-table-column prop="goods_name" :label="$t('production.inhouse.planPickerColGoodsName')" min-width="150" />
+        <el-table-column prop="schedule_num" :label="$t('production.inhouse.planPickerColScheduleNum')" width="100" align="right" />
+        <el-table-column prop="actual_num" :label="$t('production.inhouse.planPickerColActualNum')" width="100" align="right" />
+        <el-table-column prop="finish_date" :label="$t('production.inhouse.planPickerColFinishDate')" width="110">
           <template #default="{ row }">{{ fmtDt(row.finish_date) }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
+        <el-table-column :label="$t('production.inhouse.planPickerColStatus')" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-              {{ row.status === 1 ? '已审核' : '待审核' }}
+              {{ row.status === 1 ? $t('production.inhouse.statusAudited') : $t('production.inhouse.statusPending') }}
             </el-tag>
           </template>
         </el-table-column>
@@ -278,11 +278,11 @@
     </el-dialog>
 
     <!-- 批量设置弹框 -->
-    <el-dialog v-model="batchVisible" :title="`批量设置 ${batchLabel}`" width="320px" append-to-body>
+    <el-dialog v-model="batchVisible" :title="$t('production.inhouse.batchSetTitle', { label: batchLabel })" width="320px" append-to-body>
       <el-input-number v-model="batchValue" :min="0" :precision="4" style="width:100%" controls-position="right" />
       <template #footer>
-        <el-button @click="batchVisible = false">取消</el-button>
-        <el-button type="primary" @click="applyBatch">确定</el-button>
+        <el-button @click="batchVisible = false">{{ $t('production.inhouse.batchSetCancel') }}</el-button>
+        <el-button type="primary" @click="applyBatch">{{ $t('production.inhouse.batchSetConfirm') }}</el-button>
       </template>
     </el-dialog>
 
@@ -294,6 +294,7 @@ import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ScTable from '@/components/ScTable.vue'
 import { useReconcile } from '@/composables/useReconcile'
 import { getProductionInhouseList, createProductionInhouse, updateProductionInhouse, deleteProductionInhouse, auditProductionInhouse } from '@/api/production'
@@ -315,6 +316,7 @@ import {
   syncProductionLaborExpense,
 } from '@/utils/productionInhouse'
 
+const { t } = useI18n()
 const route = useRoute()
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
@@ -648,7 +650,7 @@ async function onSelectPlan(plan: any) {
       items.forEach(item => {
         item.material_price = Number(unitMaterialPrice.toFixed(4))
       })
-      ElMessage.success(`已自动带入物料成本：¥${materialTotalPrice.toFixed(2)}`)
+      ElMessage.success(t('production.inhouse.msgAutoMaterialCost', { amount: materialTotalPrice.toFixed(2) }))
     }
 
     items.forEach(r => calcRow(r))
@@ -664,17 +666,17 @@ const batchValue = ref(0)
 
 function batchSetNum() {
   batchField.value = 'num'
-  batchLabel.value = '本次入库数量'
+  batchLabel.value = t('production.inhouse.batchLabelNum')
   batchValue.value = 0
   batchVisible.value = true
 }
 
 function batchSetField(field: string) {
   const labels: Record<string, string> = {
-    material_price: '物料单价',
-    material_total: '物料合计（按数量平摊）',
-    process_price: '加工单价',
-    process_total: '加工合计（按数量平摊）',
+    material_price: t('production.inhouse.batchLabelMaterialPrice'),
+    material_total: t('production.inhouse.batchLabelMaterialTotal'),
+    process_price: t('production.inhouse.batchLabelProcessPrice'),
+    process_total: t('production.inhouse.batchLabelProcessTotal'),
   }
   batchField.value = field
   batchLabel.value = labels[field] || field
@@ -701,11 +703,11 @@ function applyBatch() {
 // ── 保存 ─────────────────────────────────────────────────────────────────────
 async function handleSave(andAudit = false) {
   if (!fd.plan_id) {
-    ElMessage.warning('请选择生产计划单')
+    ElMessage.warning(t('production.inhouse.msgSelectPlan'))
     return
   }
   if (!fd.items.length) {
-    ElMessage.warning('请添加商品')
+    ElMessage.warning(t('production.inhouse.msgAddGoods'))
     return
   }
   saving.value = true
@@ -835,9 +837,9 @@ async function handleSave(andAudit = false) {
               pick_date: fd.in_date || new Date().toISOString().slice(0, 10),
               production_plan_id: fd.plan_id || 0,
               admin_name: fd.admin_name || '',
-              remark: `倒冲领料 - ${fd.items.map((i: any) => i.goods_name).join('、').slice(0, 80)}`,
+              remark: `Back-flush - ${fd.items.map((i: any) => i.goods_name).join(', ').slice(0, 80)}`,
               goods_info: JSON.stringify(matItems),
-              goods_name: matItems.map(i => i.goods_name).join('、').slice(0, 100),
+              goods_name: matItems.map(i => i.goods_name).join(', ').slice(0, 100),
               total_price: matItems.reduce((s, i) => s + i.num * i.out_price, 0),
             })
             const matId = Number(matRes.data?.id || matRes.data?.data?.id || matRes.data)
@@ -850,20 +852,20 @@ async function handleSave(andAudit = false) {
               defaultWarehouseName: fd.warehouse_name || '',
             })
             stockRefreshStore.trigger()
-            ElMessage.success(`倒冲领料完成，已扣减 ${matItems.length} 种原材料`)
+            ElMessage.success(t('production.inhouse.msgBackFlushSuccess', { count: matItems.length }))
           }
         } catch (e: any) {
-          ElMessage.warning(`倒冲领料失败：${e?.message ?? '未知错误'}，请手工补录领料单`)
+          ElMessage.warning(t('production.inhouse.msgBackFlushFailed', { error: e?.message ?? '' }))
         }
       }
-      ElMessage.success(`保存并审核成功，库存已增加 ${changedCount} 项`)
+      ElMessage.success(t('production.inhouse.msgSaveAndAuditSuccess', { count: changedCount }))
       stockRefreshStore.trigger()
     } else {
-      ElMessage.success('保存成功')
+      ElMessage.success(t('production.inhouse.msgSaveSuccess'))
     }
     backToList()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('production.inhouse.msgSaveFailed'))
   } finally {
     saving.value = false
     savingAndAuditing.value = false
@@ -872,12 +874,13 @@ async function handleSave(andAudit = false) {
 
 // ── 审核/删除 ────────────────────────────────────────────────────────────────
 async function handleAudit(row: any, status: number) {
-  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
-  await ElMessageBox.confirm(`确定${action}该生产入库单？`, '提示', { type: 'warning' })
+  const actionKey = status === 1 ? 'auditActionApprove' : status === 2 ? 'auditActionReject' : 'auditActionUnaudit'
+  const action = t(`production.inhouse.${actionKey}`)
+  await ElMessageBox.confirm(t('production.inhouse.msgAuditConfirm', { action }), t('production.inhouse.msgAuditTip'), { type: 'warning' })
   try {
     if (status === 2) {
       await auditProductionInhouse(row.id, status)
-      ElMessage.success(`${action}成功`)
+      ElMessage.success(t('production.inhouse.msgAuditSuccess', { action, count: 0 }))
       tableRef.value?.refresh()
       return
     }
@@ -893,19 +896,19 @@ async function handleAudit(row: any, status: number) {
     stockRefreshStore.trigger()
     ElMessage.success(
       status === 1
-        ? `${action}成功，库存已增加 ${changedCount} 项`
-        : `${action}成功，库存已回滚 ${changedCount} 项`
+        ? t('production.inhouse.msgAuditSuccess', { action, count: changedCount })
+        : t('production.inhouse.msgUnauditSuccess', { action, count: changedCount })
     )
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+    ElMessage.error(e?.message ?? t('production.inhouse.msgActionFailed'))
   }
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该生产入库记录？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('production.inhouse.msgDeleteConfirm'), t('production.inhouse.msgAuditTip'), { type: 'warning' })
   await deleteProductionInhouse(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('production.inhouse.msgDeleteSuccess'))
   stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
@@ -1206,7 +1209,7 @@ async function initFromQuery() {
     calcRow(item)
     fd.items.push(item)
   }
-  if (hasPrice) ElMessage.success('已自动带入物料成本')
+  if (hasPrice) ElMessage.success(t('production.inhouse.msgAutoMaterialCostSimple'))
   isView.value = false
   checkHasMaterial(Number(plan_id), String(plan_name || ''))
   showForm.value = true

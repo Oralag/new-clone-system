@@ -2,11 +2,11 @@
   <div class="new-receipt-page">
     <!-- 页面标题栏 -->
     <div class="page-header">
-      <span class="page-title">新增付款单</span>
+      <span class="page-title">{{ t('finance.payReceiptNew.pageTitle') }}</span>
       <div class="header-actions">
-        <el-button @click="router.back()">返回</el-button>
+        <el-button @click="router.back()">{{ t('finance.payReceiptNew.btnBack') }}</el-button>
         <el-button type="primary" :loading="saving" @click="handleSave">
-          保存 (Ctrl+S)
+          {{ t('finance.payReceiptNew.btnSave') }}
         </el-button>
       </div>
     </div>
@@ -16,13 +16,13 @@
       <el-row :gutter="24" class="info-row">
         <el-col :span="8">
           <div class="field-wrap">
-            <label class="field-label">付款单号</label>
-            <el-input v-model="fd.order_sn" placeholder="付款单号（留空自动生成）" />
+            <label class="field-label">{{ t('finance.payReceiptNew.labelOrderSn') }}</label>
+            <el-input v-model="fd.order_sn" :placeholder="t('finance.payReceiptNew.placeholderOrderSn')" />
           </div>
         </el-col>
         <el-col :span="8">
           <div class="field-wrap">
-            <label class="field-label">付款日期</label>
+            <label class="field-label">{{ t('finance.payReceiptNew.labelPayDate') }}</label>
             <el-date-picker v-model="fd.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
           </div>
         </el-col>
@@ -31,11 +31,11 @@
       <el-row :gutter="24" class="info-row">
         <el-col :span="8">
           <div class="field-wrap required">
-            <label class="field-label">供应商</label>
+            <label class="field-label">{{ t('finance.payReceiptNew.labelSupplier') }}</label>
             <div style="display:flex;gap:6px">
               <el-select
                 v-model="fd.supplier_id"
-                placeholder="请选择供应商"
+                :placeholder="t('finance.payReceiptNew.placeholderSupplier')"
                 filterable
                 clearable
                 style="flex:1"
@@ -49,13 +49,13 @@
         </el-col>
         <el-col :span="8">
           <div class="field-wrap">
-            <label class="field-label">预付款</label>
+            <label class="field-label">{{ t('finance.payReceiptNew.labelPrepay') }}</label>
             <el-input :value="fmt(fd.prepay)" readonly class="readonly-input" />
           </div>
         </el-col>
         <el-col :span="8">
           <div class="field-wrap">
-            <label class="field-label">当前欠款</label>
+            <label class="field-label">{{ t('finance.payReceiptNew.labelUnpayAmount') }}</label>
             <el-input :value="fmt(fd.un_pay_amount)" readonly class="readonly-input" />
           </div>
         </el-col>
@@ -63,19 +63,19 @@
 
       <!-- 付款明细表 -->
       <div class="section-title">
-        <span>付款</span>
+        <span>{{ t('finance.payReceiptNew.sectionPayLines') }}</span>
       </div>
       <div class="pay-lines-table">
         <div class="pay-lines-header">
           <el-button type="primary" :icon="Plus" size="small" circle @click="addLine" />
-          <span class="col-account">付款账户</span>
-          <span class="col-amount">付款金额</span>
+          <span class="col-account">{{ t('finance.payReceiptNew.colFundAccount') }}</span>
+          <span class="col-amount">{{ t('finance.payReceiptNew.colAmount') }}</span>
         </div>
         <div v-for="(line, idx) in payLines" :key="idx" class="pay-line-row">
           <span class="line-index">{{ idx + 1 }}</span>
           <div class="col-account">
             <div style="display:flex;gap:6px;align-items:center">
-              <el-select v-model="line.fund_id" placeholder="选择付款账户" filterable clearable style="flex:1" @change="(v) => onFundChange(v, line)">
+              <el-select v-model="line.fund_id" :placeholder="t('finance.payReceiptNew.placeholderFundAccount')" filterable clearable style="flex:1" @change="(v) => onFundChange(v, line)">
                 <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
               </el-select>
               <el-button type="primary" :icon="Plus" size="small" @click="openAddFund" />
@@ -87,7 +87,7 @@
           <el-button type="danger" link :icon="Delete" @click="removeLine(idx)" style="margin-left:6px" />
         </div>
         <div class="pay-line-total">
-          <span>合计</span>
+          <span>{{ t('finance.payReceiptNew.totalLabel') }}</span>
           <span></span>
           <span class="total-amount">{{ fmt(linesTotal) }}</span>
         </div>
@@ -97,22 +97,22 @@
       <el-row :gutter="24" class="info-row" style="margin-top:16px">
         <el-col :span="8">
           <div class="field-wrap">
-            <label class="field-label">优惠金额</label>
-            <el-input-number v-model="fd.discount_amount" :min="0" :precision="2" :controls="false" style="width:100%" placeholder="优惠金额" />
+            <label class="field-label">{{ t('finance.payReceiptNew.labelDiscountAmount') }}</label>
+            <el-input-number v-model="fd.discount_amount" :min="0" :precision="2" :controls="false" style="width:100%" :placeholder="t('finance.payReceiptNew.placeholderDiscountAmount')" />
           </div>
         </el-col>
         <el-col :span="8">
           <div class="field-wrap">
-            <label class="field-label">合计金额</label>
+            <label class="field-label">{{ t('finance.payReceiptNew.labelTotalAmount') }}</label>
             <el-input :value="fmt(linesTotal)" readonly class="readonly-input" />
           </div>
         </el-col>
         <el-col :span="8">
           <div class="field-wrap">
-            <label class="field-label">预付款抵扣</label>
+            <label class="field-label">{{ t('finance.payReceiptNew.labelPrepayDeduct') }}</label>
             <el-input-number v-model="fd.prepay_deduct" :min="0" :precision="2" :controls="false" style="width:100%">
               <template #suffix>
-                <span style="font-size:11px;color:#dc2626">注意: 多收的金额将会自动转为供应商预付款</span>
+                <span style="font-size:11px;color:#dc2626">{{ t('finance.payReceiptNew.notePrepayDeduct') }}</span>
               </template>
             </el-input-number>
           </div>
@@ -122,10 +122,10 @@
       <el-row :gutter="24" class="info-row">
         <el-col :span="24">
           <div class="field-wrap">
-            <label class="field-label">付款单据核销</label>
+            <label class="field-label">{{ t('finance.payReceiptNew.labelVerifyType') }}</label>
             <el-radio-group v-model="fd.verify_type">
-              <el-radio value="manual">手动核销</el-radio>
-              <el-radio value="auto">自动核销</el-radio>
+              <el-radio value="manual">{{ t('finance.payReceiptNew.radioManual') }}</el-radio>
+              <el-radio value="auto">{{ t('finance.payReceiptNew.radioAuto') }}</el-radio>
             </el-radio-group>
           </div>
         </el-col>
@@ -134,45 +134,45 @@
       <el-row :gutter="24" class="info-row">
         <el-col :span="12">
           <div class="field-wrap">
-            <label class="field-label">备注</label>
-            <el-input v-model="fd.remark" type="textarea" :rows="3" placeholder="备注" />
+            <label class="field-label">{{ t('finance.payReceiptNew.labelRemark') }}</label>
+            <el-input v-model="fd.remark" type="textarea" :rows="3" :placeholder="t('finance.payReceiptNew.placeholderRemark')" />
           </div>
         </el-col>
         <el-col :span="6">
           <div class="field-wrap">
-            <label class="field-label">附件</label>
-            <el-button :icon="UploadFilled" type="default">选择文件</el-button>
+            <label class="field-label">{{ t('finance.payReceiptNew.labelAttachment') }}</label>
+            <el-button :icon="UploadFilled" type="default">{{ t('finance.payReceiptNew.btnSelectFile') }}</el-button>
           </div>
         </el-col>
       </el-row>
     </div>
 
     <!-- 快速新增供应商 -->
-    <el-dialog v-model="quickAddSupplierVisible" title="快速新增供应商" width="360px" append-to-body>
+    <el-dialog v-model="quickAddSupplierVisible" :title="t('finance.payReceiptNew.dialogQuickAddSupplier')" width="360px" append-to-body>
       <el-form label-width="70px">
-        <el-form-item label="名称" required>
-          <el-input v-model="quickSupplierName" placeholder="请输入供应商名称" />
+        <el-form-item :label="t('finance.payReceiptNew.labelSupplierName')" required>
+          <el-input v-model="quickSupplierName" :placeholder="t('finance.payReceiptNew.placeholderSupplierName')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="quickAddSupplierVisible = false">取消</el-button>
-        <el-button type="primary" :loading="quickSaving" @click="confirmQuickSupplier">确认新增</el-button>
+        <el-button @click="quickAddSupplierVisible = false">{{ t('finance.payReceiptNew.btnCancelQuick') }}</el-button>
+        <el-button type="primary" :loading="quickSaving" @click="confirmQuickSupplier">{{ t('finance.payReceiptNew.btnConfirmQuick') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 新增资金账户 -->
-    <el-dialog v-model="addFundVisible" title="新增资金账户" width="360px" append-to-body>
+    <el-dialog v-model="addFundVisible" :title="t('finance.payReceiptNew.dialogAddFund')" width="360px" append-to-body>
       <el-form :model="fundForm" label-width="90px">
-        <el-form-item label="账户名称">
-          <el-input v-model="fundForm.name" placeholder="请输入账户名称" />
+        <el-form-item :label="t('finance.payReceiptNew.labelFundName')">
+          <el-input v-model="fundForm.name" :placeholder="t('finance.payReceiptNew.placeholderFundName')" />
         </el-form-item>
-        <el-form-item label="初始余额">
+        <el-form-item :label="t('finance.payReceiptNew.labelFundBalance')">
           <el-input-number v-model="fundForm.balance" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addFundVisible = false">取消</el-button>
-        <el-button type="primary" :loading="addFundLoading" @click="submitAddFund">确认新增</el-button>
+        <el-button @click="addFundVisible = false">{{ t('finance.payReceiptNew.btnCancelFund') }}</el-button>
+        <el-button type="primary" :loading="addFundLoading" @click="submitAddFund">{{ t('finance.payReceiptNew.btnConfirmFund') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -181,6 +181,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Plus, Delete, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { createPayReceipt, getFundList, createFund } from '@/api/finance'
@@ -188,6 +189,7 @@ import http from '@/api/http'
 import { getSupplierList, createSupplier } from '@/api/procure'
 import { adjustFundBalance } from '@/utils/fund'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
@@ -274,10 +276,10 @@ async function loadFunds() {
 const saving = ref(false)
 
 async function handleSave() {
-  if (!fd.supplier_id) { ElMessage.warning('请选择供应商'); return }
-  if (linesTotal.value <= 0) { ElMessage.warning('请填写付款金额'); return }
+  if (!fd.supplier_id) { ElMessage.warning(t('finance.payReceiptNew.msgSelectSupplier')); return }
+  if (linesTotal.value <= 0) { ElMessage.warning(t('finance.payReceiptNew.msgFillAmount')); return }
   if (validPayLines.value.some(line => !line.fund_id)) {
-    ElMessage.warning('请为每一条付款明细选择付款账户')
+    ElMessage.warning(t('finance.payReceiptNew.msgSelectFundAccount'))
     return
   }
 
@@ -344,7 +346,7 @@ async function handleSave() {
         try { await http.post('/stock/PurchaseOrder/edit', { id: orderId, pay_amount: oldPay + allocated }) } catch { /* ignore */ }
       }
 
-      ElMessage.success(`已按 ${parsedOrderIds.length} 张采购单分别记账，共 ${totalCreated} 笔付款`)
+      ElMessage.success(t('finance.payReceiptNew.msgSaveMultiSuccess', { count: parsedOrderIds.length, total: totalCreated }))
       router.back()
       return
     }
@@ -383,10 +385,10 @@ async function handleSave() {
     if (routeOrderId && routeOrderPayAmount >= 0) {
       try { await http.post('/stock/PurchaseOrder/edit', { id: routeOrderId, pay_amount: routeOrderPayAmount + linesTotal.value }) } catch { /* ignore */ }
     }
-    ElMessage.success(totalLines > 1 ? `已按付款账户拆分保存 ${totalLines} 笔付款单` : '付款单保存成功')
+    ElMessage.success(totalLines > 1 ? t('finance.payReceiptNew.msgSaveSplitSuccess', { count: totalLines }) : t('finance.payReceiptNew.msgSaveSuccess'))
     router.back()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('finance.payReceiptNew.msgSaveFailed'))
   } finally {
     saving.value = false
   }
@@ -398,7 +400,7 @@ const quickSaving = ref(false)
 const quickSupplierName = ref('')
 
 async function confirmQuickSupplier() {
-  if (!quickSupplierName.value.trim()) { ElMessage.warning('请输入名称'); return }
+  if (!quickSupplierName.value.trim()) { ElMessage.warning(t('finance.payReceiptNew.msgSupplierNameRequired')); return }
   quickSaving.value = true
   try {
     const res = await createSupplier({ name: quickSupplierName.value.trim() })
@@ -407,9 +409,9 @@ async function confirmQuickSupplier() {
     supplierOptions.value = sRes.data?.rows ?? []
     const newId = res?.data?.id ?? res?.data
     if (newId) { fd.supplier_id = newId; onSupplierChange(newId) }
-    ElMessage.success('新增成功')
+    ElMessage.success(t('finance.payReceiptNew.msgSupplierAddSuccess'))
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '失败')
+    ElMessage.error(e?.message ?? t('finance.payReceiptNew.msgSaveFailed'))
   } finally {
     quickSaving.value = false
   }
@@ -426,15 +428,15 @@ function openAddFund() {
 }
 
 async function submitAddFund() {
-  if (!fundForm.name.trim()) { ElMessage.warning('请输入账户名称'); return }
+  if (!fundForm.name.trim()) { ElMessage.warning(t('finance.payReceiptNew.msgFundNameRequired')); return }
   addFundLoading.value = true
   try {
     await createFund({ name: fundForm.name.trim(), balance: fundForm.balance })
-    ElMessage.success('新增账户成功')
+    ElMessage.success(t('finance.payReceiptNew.msgFundAddSuccess'))
     addFundVisible.value = false
     await loadFunds()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '失败')
+    ElMessage.error(e?.message ?? t('finance.payReceiptNew.msgSaveFailed'))
   } finally {
     addFundLoading.value = false
   }
@@ -454,10 +456,24 @@ onMounted(async () => {
   supplierOptions.value = sRes.data?.rows ?? []
 
   // 如果从应付账款页面带参数跳转过来，预填供应商
-  if (route.query.supplier_id) {
-    fd.supplier_id = Number(route.query.supplier_id)
-    fd.supplier_name = String(route.query.supplier_name || '')
+  if (route.query.supplier_id !== undefined || route.query.supplier_name) {
+    const rawId = Number(route.query.supplier_id || 0)
+    const rawName = String(route.query.supplier_name || '')
     fd.un_pay_amount = Number(route.query.un_pay_amount || 0)
+    // supplier_id 有效时直接用；为 0 时按名字回查；仍找不到置 null（避免显示 "0"）
+    if (rawId > 0) {
+      fd.supplier_id = rawId
+      fd.supplier_name = rawName
+    } else if (rawName) {
+      const found = supplierOptions.value.find((s: any) => s.name === rawName)
+      if (found) {
+        fd.supplier_id = found.id
+        fd.supplier_name = found.name
+      } else {
+        fd.supplier_id = null
+        fd.supplier_name = rawName
+      }
+    }
   }
   // 预填付款账户（从欠款详情页选好后带过来）
   if (route.query.fund_id) {

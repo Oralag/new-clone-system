@@ -2,7 +2,7 @@
   <div class="share-page">
     <div v-if="loading" class="loading-wrap">
       <div class="spinner"></div>
-      <p>加载中…</p>
+      <p>{{ $t('share.loading') }}</p>
     </div>
 
     <div v-else-if="error" class="error-wrap">
@@ -14,47 +14,50 @@
       <!-- 顶部工具栏 -->
       <div class="topbar no-print">
         <div class="topbar-inner">
-          <span class="topbar-title">数字游牧 · 销售订单</span>
-          <button class="dl-btn" @click="doPrint">⬇ 下载 / 打印 PDF</button>
+          <span class="topbar-title">{{ $t('share.contractSingle.topbarTitle') }}</span>
+          <button class="dl-btn" @click="doPrint">⬇ {{ $t('share.downloadPdf') }}</button>
         </div>
       </div>
 
       <!-- 公司头部 -->
       <div class="doc-header">
-        <div class="company-name">数字游牧</div>
-        <div class="doc-title">销售订单</div>
+        <div class="company-name-wrap">
+          <img v-if="showLogo" src="/brand-logo.png" class="brand-logo" alt="logo" />
+          <div v-else class="company-name">{{ $t('share.companyFallback') }}</div>
+        </div>
+        <div class="doc-title">{{ $t('share.contractSingle.docTitle') }}</div>
         <div class="doc-meta">
-          <span>合同编号：{{ contract.order_sn || contract.contract_no || contract.order_no }}</span>
-          <span>日期：{{ fmtDate(contract.sign_date || contract.order_date) }}</span>
+          <span>{{ $t('share.contractSingle.orderNo') }}: {{ contract.order_sn || contract.contract_no || contract.order_no }}</span>
+          <span>{{ $t('share.contractSingle.date') }}: {{ fmtDate(contract.sign_date || contract.order_date) }}</span>
         </div>
       </div>
 
       <!-- 基本信息 -->
       <div class="section">
-        <div class="section-title">基本信息</div>
+        <div class="section-title">{{ $t('share.contractSingle.sectionBasic') }}</div>
         <div class="field-grid">
           <div class="field">
-            <label>客户名称</label>
-            <span>{{ contract.customer_name || '—' }}</span>
+            <label>{{ $t('share.contractSingle.customerName') }}</label>
+            <span>{{ contract.customer_name || $t('share.customerFallback') }}</span>
           </div>
           <div class="field">
-            <label>经办人</label>
-            <span>{{ contract.admin_name || '—' }}</span>
+            <label>{{ $t('share.contractSingle.handler') }}</label>
+            <span>{{ contract.admin_name || $t('share.customerFallback') }}</span>
           </div>
           <div class="field">
-            <label>签约日期</label>
+            <label>{{ $t('share.contractSingle.signDate') }}</label>
             <span>{{ fmtDate(contract.sign_date || contract.order_date) }}</span>
           </div>
           <div class="field">
-            <label>到期日期</label>
-            <span>{{ contract.expire_date ? fmtDate(contract.expire_date) : '—' }}</span>
+            <label>{{ $t('share.contractSingle.expireDate') }}</label>
+            <span>{{ contract.expire_date ? fmtDate(contract.expire_date) : $t('share.noDate') }}</span>
           </div>
           <div class="field">
-            <label>是否开票</label>
-            <span>{{ contract.need_invoice ? '是' : '否' }}</span>
+            <label>{{ $t('share.contractSingle.invoiceNeeded') }}</label>
+            <span>{{ contract.need_invoice ? $t('share.contractSingle.yes') : $t('share.contractSingle.no') }}</span>
           </div>
           <div v-if="contract.remark" class="field full">
-            <label>备注</label>
+            <label>{{ $t('share.contractSingle.remark') }}</label>
             <span>{{ contract.remark }}</span>
           </div>
         </div>
@@ -62,13 +65,13 @@
 
       <!-- 商品明细 -->
       <div class="section">
-        <div class="section-title">商品明细</div>
+        <div class="section-title">{{ $t('share.contractSingle.sectionGoods') }}</div>
         <div class="goods-list">
           <div class="goods-header">
-            <span class="g-name">商品</span>
-            <span class="g-num">数量</span>
-            <span class="g-price">单价</span>
-            <span class="g-sub">小计</span>
+            <span class="g-name">{{ $t('share.contractSingle.goodsName') }}</span>
+            <span class="g-num">{{ $t('share.contractSingle.qty') }}</span>
+            <span class="g-price">{{ $t('share.contractSingle.unitPrice') }}</span>
+            <span class="g-sub">{{ $t('share.contractSingle.subtotal') }}</span>
           </div>
           <div v-for="(item, i) in goods" :key="i" class="goods-row">
             <div class="g-name">
@@ -85,19 +88,19 @@
       <!-- 金额汇总 -->
       <div class="section summary-section">
         <div class="summary-row">
-          <span class="summary-label">合计金额</span>
+          <span class="summary-label">{{ $t('share.contractSingle.totalAmount') }}</span>
           <span class="summary-amount">¥{{ fmt(contract.total_amount) }}</span>
         </div>
         <div v-if="Number(contract.freight_amount) > 0" class="summary-row sub">
-          <span class="summary-label">运费（{{ contract.freight_bearer === 'seller' ? '我方承担' : '买方承担' }}）</span>
+          <span class="summary-label">{{ $t('share.contractSingle.freight') }} ({{ contract.freight_bearer === 'seller' ? $t('share.contractSingle.sellerPays') : $t('share.contractSingle.buyerPays') }})</span>
           <span>¥{{ fmt(contract.freight_amount) }}</span>
         </div>
         <div v-if="Number(contract.receive_amount) > 0" class="summary-row sub">
-          <span class="summary-label">已收款</span>
+          <span class="summary-label">{{ $t('share.contractSingle.receivedAmount') }}</span>
           <span class="paid">¥{{ fmt(contract.receive_amount) }}</span>
         </div>
         <div class="summary-row sub balance">
-          <span class="summary-label">待收余额</span>
+          <span class="summary-label">{{ $t('share.contractSingle.pendingAmount') }}</span>
           <span class="owed">¥{{ fmt(Math.max(0, Number(contract.total_amount) - Number(contract.receive_amount || 0))) }}</span>
         </div>
       </div>
@@ -105,9 +108,9 @@
       <!-- 底部状态 -->
       <div class="doc-footer no-print">
         <div class="status-badge" :class="contract.status === 1 ? 'audited' : 'pending'">
-          {{ contract.status === 1 ? '已审核' : '待审核' }}
+          {{ contract.status === 1 ? $t('share.contractSingle.approved') : $t('share.contractSingle.pending') }}
         </div>
-        <p class="footer-hint">本合同由数字游牧ERP系统生成</p>
+        <p class="footer-hint">{{ $t('share.contractSingle.footerHint') }}</p>
       </div>
 
     </template>
@@ -117,12 +120,25 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 const route = useRoute()
+const { t } = useI18n()
 const loading = ref(true)
 const error = ref('')
 const contract = ref<any>({})
+
+function decodeToken(token: string): any {
+  try {
+    if (!token?.startsWith('erp_')) return {}
+    const json = decodeURIComponent(escape(atob(token.slice(4))))
+    return JSON.parse(json)
+  } catch { return {} }
+}
+
+const LOGO_ACCOUNTS = ['17747344571']
+const showLogo = computed(() => LOGO_ACCOUNTS.includes(decodeToken(route.query.token as string)?.a))
 
 const goods = computed(() => {
   const raw = contract.value.goods_info
@@ -131,13 +147,13 @@ const goods = computed(() => {
 })
 
 function fmt(v: any) { return Number(v || 0).toFixed(2) }
-function fmtDate(d: any) { return d ? String(d).slice(0, 10) : '—' }
+function fmtDate(d: any) { return d ? String(d).slice(0, 10) : t('share.noDate') }
 function doPrint() { window.print() }
 
 onMounted(async () => {
   const id = route.params.id
   const token = route.query.token as string
-  if (!token) { error.value = '分享链接无效（缺少授权信息）'; loading.value = false; return }
+  if (!token) { error.value = t('share.contractSingle.invalidLink'); loading.value = false; return }
   try {
     const res = await axios.get(`/adminapi/shop/ContractOrder/detail?id=${id}`, {
       headers: { token }
@@ -145,10 +161,10 @@ onMounted(async () => {
     if (res.data?.code === 1) {
       contract.value = res.data?.data?.row || res.data?.data || {}
     } else {
-      error.value = res.data?.message || '合同不存在或无权限查看'
+      error.value = res.data?.message || t('share.contractSingle.noAccess')
     }
   } catch {
-    error.value = '网络错误，请检查链接是否有效'
+    error.value = t('share.contractSingle.networkError')
   } finally {
     loading.value = false
   }
@@ -204,7 +220,9 @@ onMounted(async () => {
   color: #fff; padding: 28px 20px 24px;
   text-align: center;
 }
-.company-name { font-size: 13px; letter-spacing: 3px; opacity: 0.6; margin-bottom: 6px; }
+.company-name-wrap { margin-bottom: 6px; }
+.company-name { font-size: 13px; letter-spacing: 3px; opacity: 0.6; }
+.brand-logo { height: 48px; width: auto; object-fit: contain; opacity: 0.9; filter: brightness(0) invert(1); }
 .doc-title { font-size: 22px; font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; }
 .doc-meta { display: flex; flex-direction: column; gap: 4px; font-size: 12px; opacity: 0.75; }
 

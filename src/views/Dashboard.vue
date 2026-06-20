@@ -525,6 +525,8 @@ import { useGuideStore } from '@/stores/guide'
 import { useAuthStore } from '@/stores/auth'
 import { menuData } from '@/layouts/components/menuData'
 
+const MEITUAN_CUSTOMER_ID = 63
+
 const router = useRouter()
 const route = useRoute()
 const guideStore = useGuideStore()
@@ -1076,9 +1078,10 @@ async function loadDashboardData(force = false) {
 
   // ── 第一阶段：快速拉今日关键指标（小数据量，优先渲染） ──
   try {
-    const [saleRes, retailRes, customerRes, quickFundFlowRes] = await Promise.allSettled([
+    const [saleRes, retailRes, meituanRes, customerRes, quickFundFlowRes] = await Promise.allSettled([
       http.get('/stock/SaleOutOrder/index',  { params: { list_rows: 100, out_date: today } }),
       http.get('/retail/order/index',        { params: { list_rows: 100, order_date: today } }),
+      http.get('/shop/ContractOrder/index',  { params: { list_rows: 100, customer_id: MEITUAN_CUSTOMER_ID } }),
       http.get('/shop/ShopCustomer/index',   { params: { list_rows: 1 } }),
       http.get('/finance/fundFlow/index',    { params: { list_rows: 500 } }),
     ])
@@ -1088,14 +1091,23 @@ async function loadDashboardData(force = false) {
 
     const todaySaleRows   = rows(saleRes).filter((r: any) => Number(r.status) === 1 && (r.out_date   || '').slice(0, 10) === today)
     const todayRetailRows = rows(retailRes).filter((r: any) => Number(r.status) === 1 && (r.order_date || '').slice(0, 10) === today)
+    const todayMeituanRows = rows(meituanRes).filter((r: any) =>
+      Number(r.customer_id) === MEITUAN_CUSTOMER_ID &&
+      Number(r.status) === 1 &&
+      ((r.sign_date || r.order_date || '').slice(0, 10) === today)
+    )
 
     const saleAmt = todaySaleRows.reduce((s: number, r: any) => {
       const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
       return s + amt
     }, 0)
     const retailAmt = todayRetailRows.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
-    const todayOrderCount = todaySaleRows.length + todayRetailRows.length
-    stats.value[0].value = '¥' + (saleAmt + retailAmt).toFixed(2)
+    const meituanAmt = todayMeituanRows.reduce((s: number, r: any) => {
+      const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
+      return s + amt
+    }, 0)
+    const todayOrderCount = todaySaleRows.length + todayRetailRows.length + todayMeituanRows.length
+    stats.value[0].value = '¥' + (saleAmt + retailAmt + meituanAmt).toFixed(2)
     stats.value[0].sub = `今日订单 ${todayOrderCount} 笔`
     stats.value[1].value = '¥' + calcTodayExpense(rows(quickFundFlowRes), today).toFixed(2)
 
@@ -1106,9 +1118,10 @@ async function loadDashboardData(force = false) {
     dashboardLoading.value = false
 
     // ── 第二阶段：异步加载全量数据（图表/排行/库存预警），不阻塞首屏 ──
-    const [saleAllRes, retailAllRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
+    const [saleAllRes, retailAllRes, meituanAllRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
       http.get('/stock/SaleOutOrder/index',     { params: { list_rows: 2000 } }),
       http.get('/retail/order/index',           { params: { list_rows: 2000 } }),
+      http.get('/shop/ContractOrder/index',     { params: { list_rows: 2000, customer_id: MEITUAN_CUSTOMER_ID } }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 200 } }),
       http.get('/goods/ShopGoods/index',        { params: { list_rows: 500, status: 1 } }),
       http.get('/finance/fundFlow/index',       { params: { list_rows: 100 } }),
@@ -1119,17 +1132,25 @@ async function loadDashboardData(force = false) {
 
     const saleRows: any[]   = rowsAll(saleAllRes).filter((r: any) => Number(r.status) === 1)
     const retailRows: any[] = rowsAll(retailAllRes).filter((r: any) => Number(r.status) === 1)
+    const meituanRows: any[] = rowsAll(meituanAllRes).filter((r: any) =>
+      Number(r.customer_id) === MEITUAN_CUSTOMER_ID && Number(r.status) === 1
+    )
 
     // 更新今日指标（全量数据可能更准确，如后端日期参数不精确时）
-    const todaySaleFull   = saleRows.filter((r: any) => (r.out_date   || '').slice(0, 10) === today)
-    const todayRetailFull = retailRows.filter((r: any) => (r.order_date || '').slice(0, 10) === today)
+    const todaySaleFull    = saleRows.filter((r: any) => (r.out_date   || '').slice(0, 10) === today)
+    const todayRetailFull  = retailRows.filter((r: any) => (r.order_date || '').slice(0, 10) === today)
+    const todayMeituanFull = meituanRows.filter((r: any) => ((r.sign_date || r.order_date || '').slice(0, 10) === today))
     const saleAmtFull = todaySaleFull.reduce((s: number, r: any) => {
       const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
       return s + amt
     }, 0)
     const retailAmtFull = todayRetailFull.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
-    const todayOrderCountFull = todaySaleFull.length + todayRetailFull.length
-    stats.value[0].value = '¥' + (saleAmtFull + retailAmtFull).toFixed(2)
+    const meituanAmtFull = todayMeituanFull.reduce((s: number, r: any) => {
+      const amt = (r.after_discount != null && r.after_discount !== '') ? Number(r.after_discount) : Number(r.total_amount || 0)
+      return s + amt
+    }, 0)
+    const todayOrderCountFull = todaySaleFull.length + todayRetailFull.length + todayMeituanFull.length
+    stats.value[0].value = '¥' + (saleAmtFull + retailAmtFull + meituanAmtFull).toFixed(2)
     stats.value[0].sub = `今日订单 ${todayOrderCountFull} 笔`
 
     // 库存预警

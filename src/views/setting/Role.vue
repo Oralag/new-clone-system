@@ -6,24 +6,24 @@
           export-file-name="角色管理" :params="searchForm">
         <template #search>
           <el-form inline>
-            <el-form-item label="角色名称">
+            <el-form-item :label="$t('setting.role.searchName')">
               <el-input v-model="searchForm.name" clearable style="width:180px" />
             </el-form-item>
           </el-form>
           <div class="search-actions">
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ $t('setting.role.btnSearch') }}</el-button>
+            <el-button @click="resetSearch">{{ $t('setting.role.btnReset') }}</el-button>
           </div>
         </template>
         <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
+          <el-button type="primary" :icon="Plus" @click="openForm()">{{ $t('setting.role.btnAdd') }}</el-button>
         </template>
-        <el-table-column prop="name" label="角色名称" min-width="140" />
-        <el-table-column label="权限范围" min-width="280">
+        <el-table-column prop="name" :label="$t('setting.role.colName')" min-width="140" />
+        <el-table-column :label="$t('setting.role.colPerm')" min-width="280">
           <template #default="{ row }">
             <span class="perm-summary-tags">
               <template v-if="getPermMenuKeys(row.remark).length === 0">
-                <span class="all-access">全部模块</span>
+                <span class="all-access">{{ $t('setting.role.tagAllModules') }}</span>
               </template>
               <template v-else>
                 <el-tag
@@ -37,11 +37,11 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column :label="$t('setting.role.colActions')" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="success" size="small" link @click="openView(row)">查看</el-button>
-            <el-button type="primary" size="small" link @click="openForm(row)">编辑</el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="success" size="small" link @click="openView(row)">{{ $t('setting.role.btnView') }}</el-button>
+            <el-button type="primary" size="small" link @click="openForm(row)">{{ $t('setting.role.btnEdit') }}</el-button>
+            <el-button type="danger" size="small" link @click="handleDelete(row.id)">{{ $t('setting.role.btnDelete') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -50,12 +50,12 @@
     <!-- 角色表单对话框 -->
     <el-dialog v-model="dialogVisible" :title="formTitle" :width="dialogWidth" :close-on-click-modal="false">
       <el-form ref="elFormRef" :model="form" label-width="80px">
-        <el-form-item label="角色名称" prop="name" :rules="[{ required: true, message: '请输入角色名称' }]">
+        <el-form-item :label="$t('setting.role.fieldName')" prop="name" :rules="[{ required: true, message: t('setting.role.ruleNameRequired') }]">
           <el-input v-model="form.name" />
         </el-form-item>
 
         <!-- 预设角色快捷套用 -->
-        <el-form-item label="快速套用">
+        <el-form-item :label="$t('setting.role.fieldPreset')">
           <div class="preset-row">
             <el-button
               v-for="(_, name) in PRESET_ROLES"
@@ -66,14 +66,14 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="菜单权限">
+        <el-form-item :label="$t('setting.role.fieldMenu')">
           <div class="perm-panel">
             <div class="perm-header">
-              <el-checkbox v-model="selectAll" :indeterminate="isIndeterminate" @change="onSelectAll">全选</el-checkbox>
+              <el-checkbox v-model="selectAll" :indeterminate="isIndeterminate" @change="onSelectAll">{{ $t('setting.role.permSelectAll') }}</el-checkbox>
               <div class="perm-header-actions">
-                <el-button link size="small" @click="expandAll">展开全部</el-button>
+                <el-button link size="small" @click="expandAll">{{ $t('setting.role.permExpandAll') }}</el-button>
                 <el-divider direction="vertical" />
-                <el-button link size="small" @click="collapseAll">收起全部</el-button>
+                <el-button link size="small" @click="collapseAll">{{ $t('setting.role.permCollapseAll') }}</el-button>
               </div>
             </div>
 
@@ -107,8 +107,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('setting.role.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">{{ $t('setting.role.btnConfirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -116,12 +116,15 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { getRoleList, createRole, updateRole, deleteRole, getAdminList, updateAdmin } from '@/api/setting'
 import { menuData } from '@/layouts/components/menuData'
 import { PERM_PREFIX, type PermConfig } from '@/stores/permission'
+
+const { t } = useI18n()
 
 const allMenuData = menuData
 
@@ -208,7 +211,7 @@ const PRESET_ROLES: Record<string, string[]> = {
 // ── State ─────────────────────────────────────────────────────────────────────
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const elFormRef = ref<any>()
-const formTitle = ref('新增角色')
+const formTitle = ref('')
 const dialogVisible = ref(false)
 const submitting = ref(false)
 const searchForm = reactive<any>({})
@@ -306,7 +309,7 @@ function openView(row: any) {
 }
 
 function openForm(row?: any, readonly = false) {
-  formTitle.value = readonly ? '查看角色' : (row ? '编辑角色' : '新增角色')
+  formTitle.value = readonly ? t('setting.role.formTitleView') : (row ? t('setting.role.formTitleEdit') : t('setting.role.formTitleAdd'))
   form.id = row?.id
   form.name = row?.name || ''
 
@@ -347,7 +350,7 @@ async function handleSubmit() {
       } catch {}
     }
 
-    ElMessage.success('操作成功')
+    ElMessage.success(t('setting.role.msgOpSuccess'))
     dialogVisible.value = false
     tableRef.value?.refresh()
   } finally {
@@ -356,9 +359,9 @@ async function handleSubmit() {
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该角色？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('setting.role.confirmDeleteMsg'), t('setting.role.confirmDeleteTitle'), { type: 'warning' })
   await deleteRole(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('setting.role.msgDeleteSuccess'))
   tableRef.value?.refresh()
 }
 </script>

@@ -1,0 +1,15 @@
+import batch from './warehouse/batch'
+import inOutFlow from './warehouse/inOutFlow'
+import location from './warehouse/location'
+import otherIn from './warehouse/otherIn'
+import otherOut from './warehouse/otherOut'
+import pick from './warehouse/pick'
+import scrap from './warehouse/scrap'
+import serial from './warehouse/serial'
+import stockAll from './warehouse/stockAll'
+import stockCheck from './warehouse/stockCheck'
+import stockWarning from './warehouse/stockWarning'
+import transfer from './warehouse/transfer'
+import warehouseName from './warehouse/warehouseName'
+
+export default { batch, inOutFlow, location, otherIn, otherOut, pick, scrap, serial, stockAll, stockCheck, stockWarning, transfer, warehouseName }

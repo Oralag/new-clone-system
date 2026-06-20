@@ -5,7 +5,7 @@
       <!-- 左侧：等级列表 -->
       <div class="level-panel">
         <div class="panel-header">
-          <span class="panel-title">客户等级</span>
+          <span class="panel-title">{{ $t('sale.level.customerLevel') }}</span>
           <el-button :icon="Plus" size="small" circle @click="openLevelForm()" />
         </div>
         <div class="level-list" v-loading="levelsLoading">
@@ -22,7 +22,7 @@
               <el-icon class="act-icon danger" @click.stop="handleDeleteLevel(lv.id)"><Delete /></el-icon>
             </span>
           </div>
-          <div v-if="!levelsLoading && levels.length === 0" class="panel-empty">暂无等级，点击右上角新增</div>
+          <div v-if="!levelsLoading && levels.length === 0" class="panel-empty">{{ $t('sale.level.emptyLevels') }}</div>
         </div>
       </div>
 
@@ -31,27 +31,27 @@
         <template v-if="selectedLevel">
           <div class="price-header">
             <div style="display:flex;align-items:center;gap:10px">
-              <span class="panel-title">「{{ selectedLevel.name }}」等级价格</span>
-              <span class="price-hint">为该等级下各商品设置专属价格，小程序分销商下单时自动套用</span>
+              <span class="panel-title">{{ $t('sale.level.levelPricesTitle', { name: selectedLevel.name }) }}</span>
+              <span class="price-hint">{{ $t('sale.level.priceHint') }}</span>
             </div>
-            <el-button type="primary" :icon="Plus" size="small" @click="openPriceForm()">添加商品价格</el-button>
+            <el-button type="primary" :icon="Plus" size="small" @click="openPriceForm()">{{ $t('sale.level.btnAddGoodsPrice') }}</el-button>
           </div>
 
           <div class="price-search">
-            <el-input v-model="priceKeyword" placeholder="搜索商品名称/编码" clearable style="width:240px" :prefix-icon="Search" />
+            <el-input v-model="priceKeyword" :placeholder="$t('sale.level.priceSearchPlaceholder')" clearable style="width:240px" :prefix-icon="Search" />
           </div>
 
-          <el-table :data="filteredPriceRows" v-loading="pricesLoading" border style="width:100%" empty-text="暂无价格设置，点击上方添加">
-            <el-table-column type="index" label="序号" width="55" align="center" />
-            <el-table-column prop="goods_sn" label="商品编码" width="130" />
-            <el-table-column prop="goods_name" label="商品名称" min-width="160" />
-            <el-table-column prop="unit_name" label="单位" width="80" align="center" />
-            <el-table-column label="系统销售价" width="110" align="right">
+          <el-table :data="filteredPriceRows" v-loading="pricesLoading" border style="width:100%" :empty-text="$t('sale.level.priceEmpty')">
+            <el-table-column type="index" :label="$t('sale.level.colIndex')" width="55" align="center" />
+            <el-table-column prop="goods_sn" :label="$t('sale.level.colGoodsSn')" width="130" />
+            <el-table-column prop="goods_name" :label="$t('sale.level.colGoodsName')" min-width="160" />
+            <el-table-column prop="unit_name" :label="$t('sale.level.colUnit')" width="80" align="center" />
+            <el-table-column :label="$t('sale.level.colSellPrice')" width="110" align="right">
               <template #default="{ row }">
                 <span style="color:rgba(29,29,31,0.35)">¥{{ Number(row.sell_price || 0).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="折扣" width="200" align="center">
+            <el-table-column :label="$t('sale.level.colDiscount')" width="200" align="center">
               <template #default="{ row }">
                 <div style="display:flex;align-items:center;gap:4px">
                   <el-input-number
@@ -65,13 +65,13 @@
                     @change="applyDiscount(row)"
                   />
                   <el-select v-model="row._discount_mode" size="small" style="width:72px" @change="applyDiscount(row)">
-                    <el-option label="百分比" value="pct" />
-                    <el-option label="折扣" value="fold" />
+                    <el-option :label="$t('sale.level.discountModePct')" value="pct" />
+                    <el-option :label="$t('sale.level.discountModeFold')" value="fold" />
                   </el-select>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="等级专属价" width="140" align="right">
+            <el-table-column :label="$t('sale.level.colLevelPrice')" width="140" align="right">
               <template #default="{ row }">
                 <el-input-number
                   v-model="row.level_price"
@@ -83,15 +83,15 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="70" align="center" fixed="right">
+            <el-table-column :label="$t('sale.level.colAction')" width="70" align="center" fixed="right">
               <template #default="{ row }">
-                <el-button type="danger" link size="small" @click="handleDeletePrice(row.goods_id)">删除</el-button>
+                <el-button type="danger" link size="small" @click="handleDeletePrice(row.goods_id)">{{ $t('sale.level.btnDelete') }}</el-button>
               </template>
             </el-table-column>
           </el-table>
         </template>
         <div v-else class="no-selection">
-          <el-empty description="请从左侧选择一个等级，设置对应的商品价格" />
+          <el-empty :description="$t('sale.level.noSelectionTip')" />
         </div>
       </div>
     </div>
@@ -99,57 +99,57 @@
     <!-- 等级新增/编辑弹框 -->
     <el-dialog v-model="levelFormVisible" :title="levelFormTitle" width="360px" append-to-body>
       <el-form label-width="90px">
-        <el-form-item label="等级名称">
-          <el-input v-model="levelFormName" placeholder="如：分销商、批发商" @keyup.enter="handleSaveLevel" />
+        <el-form-item :label="$t('sale.level.formLevelName')">
+          <el-input v-model="levelFormName" :placeholder="$t('sale.level.formLevelNamePlaceholder')" @keyup.enter="handleSaveLevel" />
         </el-form-item>
-        <el-form-item label="折扣百分比">
+        <el-form-item :label="$t('sale.level.formDiscountPct')">
           <el-input-number
             v-model="levelFormDiscount"
             :min="1" :max="100" :precision="0"
             style="width:100%"
-            placeholder="如：90 表示九折"
+            :placeholder="$t('sale.level.formDiscountPlaceholder')"
           />
-          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-top:4px">1~100，100 = 不打折，90 = 9折</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-top:4px">{{ $t('sale.level.formDiscountHint') }}</div>
         </el-form-item>
-        <el-form-item label="佣金比例">
+        <el-form-item :label="$t('sale.level.formCommissionRate')">
           <el-input-number
             v-model="levelFormCommission"
             :min="0" :max="50" :precision="1"
             style="width:100%"
           />
-          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-top:4px">分销商推广订单的佣金百分比，0 = 不参与分销</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-top:4px">{{ $t('sale.level.formCommissionHint') }}</div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="levelFormVisible = false">取消</el-button>
-        <el-button type="primary" :loading="levelSaving" @click="handleSaveLevel">确定</el-button>
+        <el-button @click="levelFormVisible = false">{{ $t('sale.level.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="levelSaving" @click="handleSaveLevel">{{ $t('sale.level.btnConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 添加商品价格弹框 -->
-    <el-dialog v-model="priceFormVisible" title="选择商品并设置等级价" width="720px" append-to-body>
+    <el-dialog v-model="priceFormVisible" :title="$t('sale.level.dialogPickGoods')" width="720px" append-to-body>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <el-input v-model="pickerKeyword" placeholder="搜索商品名称/编码" clearable style="width:240px"
+        <el-input v-model="pickerKeyword" :placeholder="$t('sale.level.pickerSearchPlaceholder')" clearable style="width:240px"
           :prefix-icon="Search" @input="onPickerSearch" />
-        <el-select v-model="pickerCate" placeholder="商品分类" clearable style="width:150px" @change="loadPickerGoods">
+        <el-select v-model="pickerCate" :placeholder="$t('sale.level.pickerCatePlaceholder')" clearable style="width:150px" @change="loadPickerGoods">
           <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
         </el-select>
       </div>
       <el-table ref="pickerTableRef" :data="pickerGoods" v-loading="pickerLoading"
         border height="340" @selection-change="onPickerSelectionChange">
         <el-table-column type="selection" width="45" />
-        <el-table-column prop="goods_sn" label="商品编码" width="120" />
-        <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-        <el-table-column prop="cate_name" label="分类" width="90" />
-        <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-        <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
+        <el-table-column prop="goods_sn" :label="$t('sale.level.colGoodsSn')" width="120" />
+        <el-table-column prop="goods_name" :label="$t('sale.level.colGoodsName')" min-width="150" />
+        <el-table-column prop="cate_name" :label="$t('sale.level.colCate')" width="90" />
+        <el-table-column prop="unit_name" :label="$t('sale.level.colUnit')" width="65" align="center" />
+        <el-table-column prop="sell_price" :label="$t('sale.level.colPickSellPrice')" width="90" align="right" />
       </el-table>
       <div style="margin-top:14px">
-        <span style="font-size:13px;color:rgba(29,29,31,0.5)">已选 {{ pickerSelected.length }} 件，确认后在价格表里设置具体价格。</span>
+        <span style="font-size:13px;color:rgba(29,29,31,0.5)">{{ $t('sale.level.pickerSelectedTip', { count: pickerSelected.length }) }}</span>
       </div>
       <template #footer>
-        <el-button @click="priceFormVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!pickerSelected.length" :loading="pickerSaving" @click="confirmAddPrices">确认添加</el-button>
+        <el-button @click="priceFormVisible = false">{{ $t('sale.level.btnCancel') }}</el-button>
+        <el-button type="primary" :disabled="!pickerSelected.length" :loading="pickerSaving" @click="confirmAddPrices">{{ $t('sale.level.btnConfirmAdd') }}</el-button>
       </template>
     </el-dialog>
 
@@ -158,6 +158,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, Edit, Delete, Search } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getGoodsList, getGoodsCateList } from '@/api/goods'
@@ -167,6 +168,8 @@ import {
   getLevelPrices, saveLevelPrice, delLevelPrice,
   type LevelItem,
 } from '@/api/customerLevel'
+
+const { t } = useI18n()
 
 // ── 等级列表 ──────────────────────────────────────────────────────────────────
 const levels = ref<LevelItem[]>([])
@@ -190,7 +193,7 @@ function selectLevel(lv: LevelItem) {
 
 // 等级新增/编辑
 const levelFormVisible = ref(false)
-const levelFormTitle = ref('新增等级')
+const levelFormTitle = ref(t('sale.level.dialogAddLevel'))
 const levelFormName = ref('')
 const levelFormDiscount = ref<number>(100)
 const levelFormCommission = ref<number>(0)
@@ -202,13 +205,13 @@ function openLevelForm(lv?: LevelItem) {
   levelFormName.value = lv ? lv.name : ''
   levelFormDiscount.value = lv?.discount ?? 100
   levelFormCommission.value = lv?.commission_rate ?? 0
-  levelFormTitle.value = lv ? '编辑等级' : '新增等级'
+  levelFormTitle.value = lv ? t('sale.level.dialogEditLevel') : t('sale.level.dialogAddLevel')
   levelFormVisible.value = true
 }
 
 async function handleSaveLevel() {
   const name = levelFormName.value.trim()
-  if (!name) { ElMessage.warning('请输入等级名称'); return }
+  if (!name) { ElMessage.warning(t('sale.level.msgInputLevelName')); return }
   levelSaving.value = true
   try {
     if (editingLevelId !== null) {
@@ -218,18 +221,18 @@ async function handleSaveLevel() {
     }
     await loadLevels()
     levelFormVisible.value = false
-    ElMessage.success('操作成功')
+    ElMessage.success(t('sale.level.msgOperationSuccess'))
   } finally {
     levelSaving.value = false
   }
 }
 
 async function handleDeleteLevel(id: number) {
-  await ElMessageBox.confirm('确定删除该等级？该等级下的所有商品价格也会一并删除。', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('sale.level.msgConfirmDeleteLevel'), t('sale.level.msgTipTitle'), { type: 'warning' })
   await delLevel(id)
   if (selectedLevel.value?.id === id) { selectedLevel.value = null; priceRows.value = [] }
   await loadLevels()
-  ElMessage.success('删除成功')
+  ElMessage.success(t('sale.level.msgDeleteSuccess'))
 }
 
 // ── 价格行 ────────────────────────────────────────────────────────────────────
@@ -267,7 +270,7 @@ async function loadPriceRows() {
       const pct = sellPrice > 0 ? Math.round((levelPrice / sellPrice) * 100) : 100
       return {
         goods_id: p.goods_id,
-        goods_name: p.goods_name ?? `商品${p.goods_id}`,
+        goods_name: p.goods_name ?? t('sale.level.defaultGoodsName', { id: p.goods_id }),
         goods_sn: p.goods_sn ?? '',
         unit_name: p.unit_name ?? '',
         sell_price: sellPrice,
@@ -298,10 +301,10 @@ async function handleSavePriceRow(row: PriceRow) {
 
 async function handleDeletePrice(goodsId: number) {
   if (!selectedLevel.value) return
-  await ElMessageBox.confirm('确定删除该商品的等级价格？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('sale.level.msgConfirmDeletePrice'), t('sale.level.msgTipTitle'), { type: 'warning' })
   await delLevelPrice(selectedLevel.value.id, goodsId)
   priceRows.value = priceRows.value.filter(r => r.goods_id !== goodsId)
-  ElMessage.success('已删除')
+  ElMessage.success(t('sale.level.msgDeleted'))
 }
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
@@ -354,7 +357,7 @@ async function confirmAddPrices() {
     }
     priceFormVisible.value = false
     await loadPriceRows()
-    ElMessage.success(`已添加 ${toAdd.length} 件商品，请在价格表中调整专属价格`)
+    ElMessage.success(t('sale.level.msgAddSuccess', { count: toAdd.length }))
   } finally {
     pickerSaving.value = false
   }

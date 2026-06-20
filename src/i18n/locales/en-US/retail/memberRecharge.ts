@@ -1,0 +1,16 @@
+export default {
+  title: 'Member Top-up',
+  memberName: 'Member Name',
+  memberNamePlaceholder: 'Enter member name',
+  date: 'Date',
+  dateStart: 'Start',
+  dateEnd: 'End',
+  dateSeparator: 'to',
+  search: 'Search',
+  reset: 'Reset',
+  rechargeNo: 'Recharge No.',
+  amount: 'Recharge Amount',
+  giftAmount: 'Bonus Amount',
+  payType: 'Payment Method',
+  exportFileName: 'Recharge Records',
+}

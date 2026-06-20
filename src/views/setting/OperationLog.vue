@@ -5,22 +5,22 @@
           export-file-name="None" :params="searchForm">
         <template #search>
           <el-form inline>
-            <el-form-item label="操作人">
+            <el-form-item :label="$t('setting.operationLog.searchOperator')">
               <el-input v-model="searchForm.operator_name" clearable style="width:180px" />
             </el-form-item>
-            <el-form-item label="操作行为">
+            <el-form-item :label="$t('setting.operationLog.searchAction')">
               <el-input v-model="searchForm.action" clearable style="width:180px" />
             </el-form-item>
           </el-form>
           <div class="search-actions">
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ $t('setting.operationLog.btnSearch') }}</el-button>
+            <el-button @click="resetSearch">{{ $t('setting.operationLog.btnReset') }}</el-button>
           </div>
         </template>
-        <el-table-column prop="operator_name" label="操作人" min-width="120" />
-        <el-table-column prop="action" label="操作行为" min-width="200" />
-        <el-table-column prop="ip" label="IP地址" width="140" />
-        <el-table-column prop="create_time" label="操作时间" width="180">
+        <el-table-column prop="operator_name" :label="$t('setting.operationLog.colOperator')" min-width="120" />
+        <el-table-column prop="action" :label="$t('setting.operationLog.colAction')" min-width="200" />
+        <el-table-column prop="ip" :label="$t('setting.operationLog.colIp')" width="140" />
+        <el-table-column prop="create_time" :label="$t('setting.operationLog.colTime')" width="180">
           <template #default="{ row }">{{ fmtDt(row.create_time) }}</template>
         </el-table-column>
       </ScTable>
@@ -30,9 +30,12 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ScTable from '@/components/ScTable.vue'
 import { getOperationLogList } from '@/api/setting'
 import { fmtDt } from '@/utils/date'
+
+const { t: _t } = useI18n()
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({})

@@ -1,47 +1,47 @@
 <template>
   <div class="page-wrap">
     <div class="page-header">
-      <h2 class="page-title">包装二维码</h2>
-      <p class="page-sub">为每批包装生成专属小程序码，扫码直达抽奖页，并追踪扫描数据</p>
+      <h2 class="page-title">{{ $t('sale.miniQrcode.pageTitle') }}</h2>
+      <p class="page-sub">{{ $t('sale.miniQrcode.pageSub') }}</p>
     </div>
 
     <el-row :gutter="24">
       <!-- 左：生成面板 -->
       <el-col :span="10">
         <div class="card">
-          <div class="card-title">生成小程序码</div>
+          <div class="card-title">{{ $t('sale.miniQrcode.genCardTitle') }}</div>
           <el-form label-position="top" @submit.prevent>
-            <el-form-item label="批次编号 (scene)">
-              <el-input v-model="form.scene" placeholder="如 pkg-2026-06、box-A001" clearable />
-              <div class="field-hint">印在哪批包装上就用哪个编号，方便区分扫码来源</div>
+            <el-form-item :label="$t('sale.miniQrcode.sceneLabel')">
+              <el-input v-model="form.scene" :placeholder="$t('sale.miniQrcode.scenePlaceholder')" clearable />
+              <div class="field-hint">{{ $t('sale.miniQrcode.sceneHint') }}</div>
             </el-form-item>
-            <el-form-item label="落地页面">
+            <el-form-item :label="$t('sale.miniQrcode.pageLabel')">
               <el-select v-model="form.page" style="width:100%">
-                <el-option label="每日抽奖页" value="pages/lottery/index" />
-                <el-option label="商城首页" value="pages/index/index" />
+                <el-option :label="$t('sale.miniQrcode.pageLottery')" value="pages/lottery/index" />
+                <el-option :label="$t('sale.miniQrcode.pageMall')" value="pages/index/index" />
               </el-select>
             </el-form-item>
-            <el-form-item label="二维码尺寸">
+            <el-form-item :label="$t('sale.miniQrcode.sizeLabel')">
               <el-select v-model="form.width" style="width:100%">
-                <el-option label="430px（推荐印刷用）" :value="430" />
-                <el-option label="280px（预览用）" :value="280" />
-                <el-option label="1280px（高清大图）" :value="1280" />
+                <el-option :label="$t('sale.miniQrcode.size430')" :value="430" />
+                <el-option :label="$t('sale.miniQrcode.size280')" :value="280" />
+                <el-option :label="$t('sale.miniQrcode.size1280')" :value="1280" />
               </el-select>
             </el-form-item>
             <el-button type="primary" :loading="loading" style="width:100%" @click="generate">
-              生成小程序码
+              {{ $t('sale.miniQrcode.generateBtn') }}
             </el-button>
           </el-form>
 
           <!-- 生成结果 -->
           <div v-if="qrBase64" class="qr-result">
             <img :src="qrBase64" class="qr-img" :alt="form.scene" />
-            <div class="qr-scene">批次：{{ generatedScene }}</div>
+            <div class="qr-scene">{{ $t('sale.miniQrcode.batchLabel') }}{{ generatedScene }}</div>
             <div class="qr-actions">
-              <el-button type="primary" @click="downloadQr">下载图片</el-button>
-              <el-button @click="copyBase64">复制Base64</el-button>
+              <el-button type="primary" @click="downloadQr">{{ $t('sale.miniQrcode.downloadBtn') }}</el-button>
+              <el-button @click="copyBase64">{{ $t('sale.miniQrcode.copyBase64Btn') }}</el-button>
             </div>
-            <div class="qr-tip">提示：下载后发给设计师/印刷厂，直接嵌入包装版式</div>
+            <div class="qr-tip">{{ $t('sale.miniQrcode.qrTip') }}</div>
           </div>
         </div>
       </el-col>
@@ -50,20 +50,20 @@
       <el-col :span="14">
         <div class="card">
           <div class="card-title-row">
-            <span class="card-title">扫码统计</span>
-            <el-button size="small" @click="loadStats">刷新</el-button>
+            <span class="card-title">{{ $t('sale.miniQrcode.statsCardTitle') }}</span>
+            <el-button size="small" @click="loadStats">{{ $t('sale.miniQrcode.refreshBtn') }}</el-button>
           </div>
           <el-table :data="stats" stripe size="small" style="width:100%">
-            <el-table-column prop="scene" label="批次编号" min-width="140" />
-            <el-table-column prop="total" label="总扫码次数" width="110" align="center" />
-            <el-table-column prop="unique_users" label="独立用户" width="90" align="center" />
-            <el-table-column label="最近扫码" min-width="130">
+            <el-table-column prop="scene" :label="$t('sale.miniQrcode.colScene')" min-width="140" />
+            <el-table-column prop="total" :label="$t('sale.miniQrcode.colTotal')" width="110" align="center" />
+            <el-table-column prop="unique_users" :label="$t('sale.miniQrcode.colUniqueUsers')" width="90" align="center" />
+            <el-table-column :label="$t('sale.miniQrcode.colLastScan')" min-width="130">
               <template #default="{ row }">
                 {{ row.last_scan ? new Date(row.last_scan).toLocaleDateString('zh-CN') : '-' }}
               </template>
             </el-table-column>
           </el-table>
-          <div v-if="stats.length === 0" class="empty-tip">暂无数据，生成二维码并投放后这里会有统计</div>
+          <div v-if="stats.length === 0" class="empty-tip">{{ $t('sale.miniQrcode.emptyStats') }}</div>
         </div>
       </el-col>
     </el-row>
@@ -75,6 +75,8 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 
+const { t } = useI18n()
+
 const form = ref({ scene: '', page: 'pages/lottery/index', width: 430 })
 const loading = ref(false)
 const qrBase64 = ref('')
@@ -84,7 +86,7 @@ const stats = ref<any[]>([])
 onMounted(() => loadStats())
 
 async function generate() {
-  if (!form.value.scene.trim()) return ElMessage.warning('请填写批次编号')
+  if (!form.value.scene.trim()) return ElMessage.warning(t('sale.miniQrcode.warnScene'))
   loading.value = true
   try {
     const res = await http.post('/adminapi/mini/qrcode', {
@@ -94,10 +96,10 @@ async function generate() {
     })
     qrBase64.value = res.data.data.base64
     generatedScene.value = res.data.data.scene
-    ElMessage.success('生成成功')
+    ElMessage.success(t('sale.miniQrcode.successGenerate'))
     loadStats()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || '生成失败，请检查微信配置')
+    ElMessage.error(e.response?.data?.message || t('sale.miniQrcode.errorGenerate'))
   } finally {
     loading.value = false
   }
@@ -119,7 +121,7 @@ function downloadQr() {
 
 function copyBase64() {
   navigator.clipboard.writeText(qrBase64.value)
-  ElMessage.success('已复制到剪贴板')
+  ElMessage.success(t('sale.miniQrcode.successCopy'))
 }
 </script>
 

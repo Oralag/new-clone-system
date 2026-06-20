@@ -2,12 +2,12 @@
   <div class="ps-wrap">
     <div class="ps-label">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      内容主角
+      {{ t('productSelector.label') }}
     </div>
 
     <div class="ps-selector" @click="open = !open" ref="selectorRef">
       <span v-if="selected" class="ps-selected-name">{{ selected.name }}</span>
-      <span v-else class="ps-placeholder">选择商品（可选）</span>
+      <span v-else class="ps-placeholder">{{ t('productSelector.placeholder') }}</span>
       <div class="ps-meta" v-if="selected">
         <span v-if="selected.price">¥{{ selected.price }}</span>
         <span v-if="selected.cate_name">{{ selected.cate_name }}</span>
@@ -23,13 +23,13 @@
           ref="searchRef"
           v-model="keyword"
           class="ps-search"
-          placeholder="搜索商品名称…"
+          :placeholder="t('productSelector.searchPlaceholder')"
           @input="onSearch"
         />
       </div>
 
-      <div v-if="loading" class="ps-loading">加载中…</div>
-      <div v-else-if="list.length === 0" class="ps-empty">暂无商品</div>
+      <div v-if="loading" class="ps-loading">{{ t('common.loading') }}</div>
+      <div v-else-if="list.length === 0" class="ps-empty">{{ t('productSelector.empty') }}</div>
       <div v-else class="ps-list">
         <div
           v-for="g in list"
@@ -58,6 +58,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getGoodsList } from '@/api/goods'
 
 export interface SelectedGoods {
@@ -75,6 +76,8 @@ export interface SelectedGoods {
 const emit = defineEmits<{
   (e: 'change', goods: SelectedGoods | null): void
 }>()
+
+const { t } = useI18n()
 
 const open = ref(false)
 const keyword = ref('')

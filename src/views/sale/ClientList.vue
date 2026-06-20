@@ -5,15 +5,15 @@
       <!-- 左侧分类面板 -->
       <div class="cate-panel">
         <div class="cate-header">
-          <span class="cate-title">客户分类</span>
+          <span class="cate-title">{{ $t('sale.client.cateTitle') }}</span>
           <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
         </div>
         <div class="cate-search">
-          <el-input v-model="cateKeyword" placeholder="搜索分类" clearable size="small" />
+          <el-input v-model="cateKeyword" :placeholder="$t('sale.client.cateSearchPlaceholder')" clearable size="small" />
         </div>
         <div class="cate-tree">
           <div class="cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
-            全部
+            {{ $t('sale.client.cateAll') }}
           </div>
           <template v-for="item in filteredCates" :key="item.id">
             <div class="cate-item" :class="{ active: selectedCateId === item.id, 'cate-item-child': !!item.pid }" @click="selectCate(item.id)">
@@ -24,7 +24,7 @@
               </span>
             </div>
           </template>
-          <div v-if="filteredCates.length === 0" class="cate-empty">暂无分类</div>
+          <div v-if="filteredCates.length === 0" class="cate-empty">{{ $t('sale.client.cateEmpty') }}</div>
         </div>
       </div>
 
@@ -33,45 +33,45 @@
         <div class="sc-table">
           <!-- 搜索栏 -->
           <div class="sc-search">
-            <el-input v-model="keyword" placeholder="名称/手机号" clearable style="width:200px"
+            <el-input v-model="keyword" :placeholder="$t('sale.client.searchPlaceholder')" clearable style="width:200px"
               @keyup.enter="handleSearch" />
             <div class="search-actions">
-              <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-              <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+              <el-button type="primary" :icon="Search" @click="handleSearch">{{ $t('sale.client.btnQuery') }}</el-button>
+              <el-button :icon="Refresh" @click="handleReset">{{ $t('sale.client.btnReset') }}</el-button>
             </div>
           </div>
           <!-- 工具栏 -->
           <div class="sc-toolbar">
             <div class="toolbar-left">
-              <el-button type="primary" :icon="Plus" @click="openForm()" data-guide-id="guide-client-create">新增客户</el-button>
+              <el-button type="primary" :icon="Plus" @click="openForm()" data-guide-id="guide-client-create">{{ $t('sale.client.btnAddClient') }}</el-button>
             </div>
             <div class="toolbar-right">
-              <el-tooltip content="导入Excel">
+              <el-tooltip :content="$t('sale.client.tooltipImport')">
                 <el-upload
                   :show-file-list="false"
                   accept=".xlsx,.xls,.csv"
                   :before-upload="handleImport"
                   style="display:inline-block"
                 >
-                  <el-button :icon="Upload" size="small">导入</el-button>
+                  <el-button :icon="Upload" size="small">{{ $t('sale.client.btnImport') }}</el-button>
                 </el-upload>
               </el-tooltip>
-              <el-tooltip content="导出Excel">
-                <el-button :icon="Download" size="small" @click="handleExport">导出</el-button>
+              <el-tooltip :content="$t('sale.client.tooltipExport')">
+                <el-button :icon="Download" size="small" @click="handleExport">{{ $t('sale.client.btnExport') }}</el-button>
               </el-tooltip>
             </div>
           </div>
           <!-- 已选提示 -->
           <div v-if="selectedRows.length > 0" class="selected-bar">
-            已选 <strong>{{ selectedRows.length }}</strong> 条
-            <el-button type="primary" link size="small" @click="selectedRows = []">取消选择</el-button>
+            {{ $t('sale.client.selectedPrefix') }} <strong>{{ selectedRows.length }}</strong> {{ $t('sale.client.selectedSuffix') }}
+            <el-button type="primary" link size="small" @click="selectedRows = []">{{ $t('sale.client.btnCancelSelect') }}</el-button>
             <el-button type="danger" :icon="Delete" size="small" style="margin-left:auto" @click="handleBatchDelete">
-              批量删除({{ selectedRows.length }})
+              {{ $t('sale.client.btnBatchDelete') }}({{ selectedRows.length }})
             </el-button>
           </div>
           <!-- 手机端卡片列表 -->
           <div v-if="isMobile" v-loading="loading" class="mobile-client-list">
-            <div v-if="!filteredRows.length" class="mobile-client-empty">暂无数据</div>
+            <div v-if="!filteredRows.length" class="mobile-client-empty">{{ $t('sale.client.mobileEmpty') }}</div>
             <div v-for="row in filteredRows" :key="row.id" class="mobile-client-card">
               <div class="mcl-top">
                 <span class="mcl-name">{{ row.nickname || row.name }}</span>
@@ -80,13 +80,13 @@
                 </span>
               </div>
               <div class="mcl-mid">
-                <span class="mcl-mobile">{{ row.mobile || '—' }}</span>
-                <span class="mcl-cate">{{ getCateName(row.id) || '—' }}</span>
+                <span class="mcl-mobile">{{ row.mobile || $t('sale.client.dash') }}</span>
+                <span class="mcl-cate">{{ getCateName(row.id) || $t('sale.client.dash') }}</span>
               </div>
               <div class="mcl-actions">
-                <el-button type="primary" link size="small" @click="openView(row)">查看</el-button>
-                <el-button type="primary" link size="small" @click="openForm(row)">编辑</el-button>
-                <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+                <el-button type="primary" link size="small" @click="openView(row)">{{ $t('sale.client.btnView') }}</el-button>
+                <el-button type="primary" link size="small" @click="openForm(row)">{{ $t('sale.client.btnEdit') }}</el-button>
+                <el-button type="danger" link size="small" @click="handleDelete(row.id)">{{ $t('sale.client.btnDelete') }}</el-button>
               </div>
             </div>
           </div>
@@ -95,35 +95,35 @@
           <el-table v-else :data="filteredRows" v-loading="loading" border stripe style="width:100%"
             @selection-change="(val: any[]) => selectedRows = val">
             <el-table-column type="selection" width="50" align="center" />
-            <el-table-column prop="nickname" label="客户名称" min-width="150" />
-            <el-table-column prop="mobile" label="手机号" width="130" />
-            <el-table-column label="客户分类" width="120">
+            <el-table-column prop="nickname" :label="$t('sale.client.colName')" min-width="150" />
+            <el-table-column prop="mobile" :label="$t('sale.client.colMobile')" width="130" />
+            <el-table-column :label="$t('sale.client.colCate')" width="120">
               <template #default="{ row }">
                 {{ getCateName(row.id) }}
               </template>
             </el-table-column>
-            <el-table-column label="客户等级" width="100">
+            <el-table-column :label="$t('sale.client.colLevel')" width="100">
               <template #default="{ row }">
                 {{ getLevelName(row.id) }}
               </template>
             </el-table-column>
-            <el-table-column label="来源" width="100">
+            <el-table-column :label="$t('sale.client.colSource')" width="100">
               <template #default="{ row }">
                 {{ getSourceName(customerSourceMap[row.id] || row.source_id || row.source) }}
               </template>
             </el-table-column>
-            <el-table-column label="余额" width="120" align="right">
+            <el-table-column :label="$t('sale.client.colBalance')" width="120" align="right">
               <template #default="{ row }">
                 <span :style="{ color: getBalance(row.id) > 0 ? '#0071e3' : '#c0c4cc', fontWeight: '600' }">
                   ¥{{ getBalance(row.id).toFixed(2) }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="160" fixed="right">
+            <el-table-column :label="$t('sale.client.colActions')" width="160" fixed="right">
               <template #default="{ row }">
-                <el-button type="primary" size="small" link @click="openView(row)">查看</el-button>
-                <el-button type="primary" size="small" link @click="openForm(row)">编辑</el-button>
-                <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
+                <el-button type="primary" size="small" link @click="openView(row)">{{ $t('sale.client.btnView') }}</el-button>
+                <el-button type="primary" size="small" link @click="openForm(row)">{{ $t('sale.client.btnEdit') }}</el-button>
+                <el-button type="danger" size="small" link @click="handleDelete(row.id)">{{ $t('sale.client.btnDelete') }}</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -145,29 +145,29 @@
     </div>
 
     <!-- 查看客户弹框 -->
-    <el-dialog v-model="viewVisible" title="客户详情" width="480px" append-to-body>
+    <el-dialog v-model="viewVisible" :title="$t('sale.client.dialogViewTitle')" width="480px" append-to-body>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="客户名称">{{ viewRow.nickname || viewRow.name }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{ viewRow.mobile || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="客户分类">{{ getCateName(viewRow.id) || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="客户等级">{{ getLevelName(viewRow.id) || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="来源">{{ getSourceName(customerSourceMap[viewRow.id]) || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="预付款">
+        <el-descriptions-item :label="$t('sale.client.descName')">{{ viewRow.nickname || viewRow.name }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('sale.client.descMobile')">{{ viewRow.mobile || $t('sale.client.dash') }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('sale.client.descCate')">{{ getCateName(viewRow.id) || $t('sale.client.dash') }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('sale.client.descLevel')">{{ getLevelName(viewRow.id) || $t('sale.client.dash') }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('sale.client.descSource')">{{ getSourceName(customerSourceMap[viewRow.id]) || $t('sale.client.dash') }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('sale.client.descPrepay')">
           <span style="color:#16a34a;font-weight:600">¥{{ getPrepay(viewRow.id || 0).toFixed(2) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="销售单金额">
+        <el-descriptions-item :label="$t('sale.client.descSaleAmount')">
           <span style="color:#dc2626">¥{{ getSaleAmount(viewRow.id || 0).toFixed(2) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="余额">
+        <el-descriptions-item :label="$t('sale.client.descBalance')">
           <span style="color:#0071e3;font-weight:600">¥{{ getBalance(viewRow.id || 0).toFixed(2) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="地址" :span="2">{{ viewRow.address || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="备注" :span="2">{{ viewRow.remark || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间" :span="2">{{ viewRow.create_time || viewRow.created_at || '—' }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('sale.client.descAddress')" :span="2">{{ viewRow.address || $t('sale.client.dash') }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('sale.client.descRemark')" :span="2">{{ viewRow.remark || $t('sale.client.dash') }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('sale.client.descCreateTime')" :span="2">{{ viewRow.create_time || viewRow.created_at || $t('sale.client.dash') }}</el-descriptions-item>
       </el-descriptions>
       <template #footer>
-        <el-button @click="viewVisible = false">关闭</el-button>
-        <el-button type="primary" @click="viewVisible = false; openForm(viewRow)">编辑</el-button>
+        <el-button @click="viewVisible = false">{{ $t('sale.client.btnClose') }}</el-button>
+        <el-button type="primary" @click="viewVisible = false; openForm(viewRow)">{{ $t('sale.client.btnEdit') }}</el-button>
       </template>
     </el-dialog>
 
@@ -181,21 +181,21 @@
       <el-form ref="formRef" :model="formData" label-width="90px">
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="客户名称" prop="nickname"
-              :rules="[{ required: true, message: '请输入客户名称' }]"
+            <el-form-item :label="$t('sale.client.formName')" prop="nickname"
+              :rules="[{ required: true, message: t('sale.client.ruleNameRequired') }]"
               data-guide-id="guide-client-form-basic">
-              <el-input v-model="formData.nickname" placeholder="请输入" />
+              <el-input v-model="formData.nickname" :placeholder="$t('sale.client.inputPlaceholder')" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="手机号" prop="mobile">
-              <el-input v-model="formData.mobile" placeholder="请输入" />
+            <el-form-item :label="$t('sale.client.formMobile')" prop="mobile">
+              <el-input v-model="formData.mobile" :placeholder="$t('sale.client.inputPlaceholder')" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="客户分类">
+            <el-form-item :label="$t('sale.client.formCate')">
               <div style="display:flex;gap:4px;width:100%">
-                <el-select v-model="formData.cate_id" placeholder="请选择" clearable style="flex:1">
+                <el-select v-model="formData.cate_id" :placeholder="$t('sale.client.selectPlaceholder')" clearable style="flex:1">
                   <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
                 </el-select>
                 <el-button :icon="Plus" @click="openCateForm()" />
@@ -203,33 +203,33 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="客户等级">
-              <el-select v-model="formData.level_id" placeholder="请选择等级" clearable style="width:100%">
+            <el-form-item :label="$t('sale.client.formLevel')">
+              <el-select v-model="formData.level_id" :placeholder="$t('sale.client.selectLevelPlaceholder')" clearable style="width:100%">
                 <el-option v-for="lv in levelOptions" :key="lv.id" :label="lv.name" :value="lv.id" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="来源">
-              <el-select v-model="formData.source_id" placeholder="请选择来源" clearable style="width:100%">
-                <el-option label="直接拜访" :value="1" />
-                <el-option label="客户转介绍" :value="2" />
-                <el-option label="电话开发" :value="3" />
-                <el-option label="网络平台" :value="4" />
-                <el-option label="展会活动" :value="5" />
-                <el-option label="其他" :value="6" />
-                <el-option label="预收款" value="prepay" />
+            <el-form-item :label="$t('sale.client.formSource')">
+              <el-select v-model="formData.source_id" :placeholder="$t('sale.client.selectSourcePlaceholder')" clearable style="width:100%">
+                <el-option :label="$t('sale.client.sourceDirectVisit')" :value="1" />
+                <el-option :label="$t('sale.client.sourceReferral')" :value="2" />
+                <el-option :label="$t('sale.client.sourcePhone')" :value="3" />
+                <el-option :label="$t('sale.client.sourceOnline')" :value="4" />
+                <el-option :label="$t('sale.client.sourceExhibition')" :value="5" />
+                <el-option :label="$t('sale.client.sourceOther')" :value="6" />
+                <el-option :label="$t('sale.client.sourcePrepay')" value="prepay" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="24">
-            <el-form-item label="地址">
-              <el-input v-model="formData.address" placeholder="请输入" />
+            <el-form-item :label="$t('sale.client.formAddress')">
+              <el-input v-model="formData.address" :placeholder="$t('sale.client.inputPlaceholder')" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
-            <el-form-item label="备注">
-              <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="请输入" />
+            <el-form-item :label="$t('sale.client.formRemark')">
+              <el-input v-model="formData.remark" type="textarea" :rows="2" :placeholder="$t('sale.client.inputPlaceholder')" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -237,128 +237,128 @@
 
       <!-- 财务信息（新增和编辑都显示） -->
       <div class="finance-panel" v-loading="financeLoading">
-        <div class="finance-title">财务信息</div>
+        <div class="finance-title">{{ $t('sale.client.financeTitle') }}</div>
         <div class="finance-grid">
           <div class="finance-item">
-            <span class="fi-label">预付款余额</span>
+            <span class="fi-label">{{ $t('sale.client.financePrepayBalance') }}</span>
             <span class="fi-value green">¥{{ financeInfo.prepayBalance.toFixed(2) }}</span>
           </div>
           <div class="finance-item">
-            <span class="fi-label">累计充值</span>
+            <span class="fi-label">{{ $t('sale.client.financeTotalPrepay') }}</span>
             <span class="fi-value">¥{{ financeInfo.totalPrepay.toFixed(2) }}</span>
           </div>
           <div class="finance-item">
-            <span class="fi-label">累计消费</span>
+            <span class="fi-label">{{ $t('sale.client.financeTotalConsumed') }}</span>
             <span class="fi-value red">¥{{ financeInfo.totalConsumed.toFixed(2) }}</span>
           </div>
           <div class="finance-item">
-            <span class="fi-label">未收款</span>
+            <span class="fi-label">{{ $t('sale.client.financeUnReceived') }}</span>
             <span class="fi-value orange">¥{{ financeInfo.unReceived.toFixed(2) }}</span>
           </div>
         </div>
         <div class="finance-actions">
-          <el-button type="success" size="small" :icon="Plus" @click="openPrepayDialog">充值预付款</el-button>
-          <el-button v-if="formData.id" size="small" @click="viewReceivable">查看应收记录</el-button>
+          <el-button type="success" size="small" :icon="Plus" @click="openPrepayDialog">{{ $t('sale.client.btnRecharge') }}</el-button>
+          <el-button v-if="formData.id" size="small" @click="viewReceivable">{{ $t('sale.client.btnViewReceivable') }}</el-button>
         </div>
         <!-- 预付款明细 -->
         <div v-if="formData.id && prepayRecords.length > 0" style="margin-top:10px">
-          <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:6px">预付款记录</div>
+          <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:6px">{{ $t('sale.client.prepayRecordsTitle') }}</div>
           <el-table :data="prepayRecords" border stripe size="small" max-height="200">
-            <el-table-column prop="pay_date" label="日期" width="100" />
-            <el-table-column label="金额" width="110" align="right">
+            <el-table-column prop="pay_date" :label="$t('sale.client.prepayColDate')" width="100" />
+            <el-table-column :label="$t('sale.client.prepayColAmount')" width="110" align="right">
               <template #default="{ row }">
                 <span style="color:#16a34a;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="fund_name" label="账户" min-width="100" show-overflow-tooltip />
-            <el-table-column prop="remark" label="备注" min-width="100" show-overflow-tooltip />
-            <el-table-column label="操作" width="70" align="center">
+            <el-table-column prop="fund_name" :label="$t('sale.client.prepayColAccount')" min-width="100" show-overflow-tooltip />
+            <el-table-column prop="remark" :label="$t('sale.client.prepayColRemark')" min-width="100" show-overflow-tooltip />
+            <el-table-column :label="$t('sale.client.prepayColActions')" width="70" align="center">
               <template #default="{ row }">
-                <el-button link type="danger" size="small" @click="handleDeletePrepay(row)">删除</el-button>
+                <el-button link type="danger" size="small" @click="handleDeletePrepay(row)">{{ $t('sale.client.btnDelete') }}</el-button>
               </template>
             </el-table-column>
           </el-table>
         </div>
       </div>
       <div v-if="formData.id && formData.create_time" class="create-time-note">
-        创建时间：{{ formData.create_time }}
+        {{ $t('sale.client.createTimeNotePrefix') }}{{ formData.create_time }}
       </div>
 
       <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button type="primary" :loading="formSaving" @click="handleSubmit" data-guide-id="guide-client-form-save">确定</el-button>
+        <el-button @click="formVisible = false">{{ $t('sale.client.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="formSaving" @click="handleSubmit" data-guide-id="guide-client-form-save">{{ $t('sale.client.btnConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 充值预付款弹框 -->
-    <el-dialog v-model="prepayVisible" title="充值预付款" width="380px" append-to-body>
+    <el-dialog v-model="prepayVisible" :title="$t('sale.client.dialogPrepayTitle')" width="380px" append-to-body>
       <el-form :model="prepayForm" label-width="90px">
-        <el-form-item label="客户">
+        <el-form-item :label="$t('sale.client.prepayFormCustomer')">
           <el-input :value="formData.nickname" disabled />
         </el-form-item>
-        <el-form-item label="充值金额" required>
+        <el-form-item :label="$t('sale.client.prepayFormAmount')" required>
           <el-input-number v-model="prepayForm.amount" :min="0.01" :precision="2" style="width:100%" />
         </el-form-item>
-        <el-form-item label="收款账户">
+        <el-form-item :label="$t('sale.client.prepayFormAccount')">
           <div style="display:flex;gap:4px;width:100%">
-            <el-select v-model="prepayForm.account_name" placeholder="请选择账户" style="flex:1">
+            <el-select v-model="prepayForm.account_name" :placeholder="$t('sale.client.prepayFormAccountPlaceholder')" style="flex:1">
               <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.name" />
-              <el-option label="现金" value="现金" />
+              <el-option :label="$t('sale.client.prepayFormCash')" value="现金" />
             </el-select>
             <el-button :icon="Plus" @click="addFundVisible = true" />
           </div>
         </el-form-item>
-        <el-form-item label="收款日期">
+        <el-form-item :label="$t('sale.client.prepayFormDate')">
           <el-date-picker v-model="prepayForm.receipt_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="prepayForm.remark" placeholder="如：预付款充值" />
+        <el-form-item :label="$t('sale.client.prepayFormRemark')">
+          <el-input v-model="prepayForm.remark" :placeholder="$t('sale.client.prepayFormRemarkPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="prepayVisible = false">取消</el-button>
-        <el-button type="primary" :loading="prepaySaving" @click="submitPrepay">确认充值</el-button>
+        <el-button @click="prepayVisible = false">{{ $t('sale.client.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="prepaySaving" @click="submitPrepay">{{ $t('sale.client.btnConfirmRecharge') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 新增资金账户弹框 -->
-    <el-dialog v-model="addFundVisible" title="新增资金账户" width="360px" append-to-body>
+    <el-dialog v-model="addFundVisible" :title="$t('sale.client.dialogAddFundTitle')" width="360px" append-to-body>
       <el-form :model="fundForm" label-width="90px">
-        <el-form-item label="账户名称">
-          <el-input v-model="fundForm.name" placeholder="请输入账户名称" />
+        <el-form-item :label="$t('sale.client.fundFormName')">
+          <el-input v-model="fundForm.name" :placeholder="$t('sale.client.fundFormNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="初始余额">
+        <el-form-item :label="$t('sale.client.fundFormBalance')">
           <el-input-number v-model="fundForm.balance" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addFundVisible = false">取消</el-button>
-        <el-button type="primary" :loading="addFundLoading" @click="submitAddFund">确认新增</el-button>
+        <el-button @click="addFundVisible = false">{{ $t('sale.client.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="addFundLoading" @click="submitAddFund">{{ $t('sale.client.btnConfirmAddFund') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 分类新增/编辑弹框 -->
     <el-dialog v-model="cateFormVisible" :title="cateFormTitle" width="360px" append-to-body>
       <el-form label-width="90px">
-        <el-form-item label="父级分类">
-          <el-select v-model="cateFormPid" placeholder="无（顶级分类）" clearable style="width:100%">
+        <el-form-item :label="$t('sale.client.cateFormParent')">
+          <el-select v-model="cateFormPid" :placeholder="$t('sale.client.cateFormParentPlaceholder')" clearable style="width:100%">
             <el-option v-for="c in cateOptions.filter(c => !c.pid)" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="分类名称">
-          <el-input v-model="cateFormName" placeholder="请输入分类名称" @keyup.enter="handleSaveCate" />
+        <el-form-item :label="$t('sale.client.cateFormName')">
+          <el-input v-model="cateFormName" :placeholder="$t('sale.client.cateFormNamePlaceholder')" @keyup.enter="handleSaveCate" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="cateFormVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveCate">确定</el-button>
+        <el-button @click="cateFormVisible = false">{{ $t('sale.client.btnCancel') }}</el-button>
+        <el-button type="primary" @click="handleSaveCate">{{ $t('sale.client.btnConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 导入预览弹框 -->
-    <el-dialog v-model="importDialogVisible" title="导入预览" width="70%" append-to-body destroy-on-close>
+    <el-dialog v-model="importDialogVisible" :title="$t('sale.client.dialogImportTitle')" width="70%" append-to-body destroy-on-close>
       <div style="margin-bottom:10px;font-size:13px;color:rgba(29,29,31,0.35)">
-        共 {{ importPreviewData.length }} 条数据，确认后导入。
+        {{ $t('sale.client.importTotalPrefix') }}{{ importPreviewData.length }}{{ $t('sale.client.importTotalSuffix') }}
       </div>
       <el-table :data="importPreviewData.slice(0, 10)" border size="small" max-height="320">
         <el-table-column
@@ -367,11 +367,11 @@
         />
       </el-table>
       <div v-if="importPreviewData.length > 10" style="margin-top:8px;font-size:12px;color:rgba(29,29,31,0.35)">
-        仅显示前10条，实际导入全部 {{ importPreviewData.length }} 条。
+        {{ $t('sale.client.importShowOnly10Prefix') }}{{ importPreviewData.length }}{{ $t('sale.client.importShowOnly10Suffix') }}
       </div>
       <template #footer>
-        <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+        <el-button @click="importDialogVisible = false">{{ $t('sale.client.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">{{ $t('sale.client.btnConfirmImport') }}</el-button>
       </template>
     </el-dialog>
 
@@ -381,6 +381,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Plus, Edit, Delete, Search, Refresh, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getSaleCustomerList, getSaleCustomerDetail, createSaleCustomer, updateSaleCustomer, deleteSaleCustomer, getContractList, updateContract, getOfferList, updateOffer, getSaleOutList, updateSaleOut, getSampleList, updateSample } from '@/api/sale'
@@ -390,6 +391,7 @@ import { loadLevels, loadLevelMap, saveLevelMap, type LevelItem } from '@/utils/
 import { getCollectReceiptList, createCollectReceipt, updateCollectReceipt, getReceivableList, getFundList, createFund } from '@/api/finance'
 
 const router = useRouter()
+const { t } = useI18n()
 
 // ── 本地分类（localStorage） ──────────────────────────────────────────────────
 const CATE_KEY = 'erp_customer_cates'
@@ -481,7 +483,7 @@ function getCateName(customerId: number): string {
 
 // 分类新增/编辑
 const cateFormVisible = ref(false)
-const cateFormTitle = ref('新增分类')
+const cateFormTitle = ref(t('sale.client.dialogCateAddTitle'))
 const cateFormName = ref('')
 const cateFormPid = ref<number | null>(null)
 let editingCateId: number | null = null
@@ -490,13 +492,13 @@ function openCateForm(row?: CateItem) {
   editingCateId = row ? row.id : null
   cateFormName.value = row ? row.name : ''
   cateFormPid.value = row?.pid ?? null
-  cateFormTitle.value = row ? '编辑分类' : '新增分类'
+  cateFormTitle.value = row ? t('sale.client.dialogCateEditTitle') : t('sale.client.dialogCateAddTitle')
   cateFormVisible.value = true
 }
 
 function handleSaveCate() {
   const name = cateFormName.value.trim()
-  if (!name) { ElMessage.warning('请输入分类名称'); return }
+  if (!name) { ElMessage.warning(t('sale.client.msgInputCateName')); return }
   const list = [...cateOptions.value]
   const item: CateItem = { id: editingCateId ?? Date.now(), name }
   if (cateFormPid.value) item.pid = cateFormPid.value
@@ -509,11 +511,11 @@ function handleSaveCate() {
   cateOptions.value = list
   saveCatesToStorage(list)
   cateFormVisible.value = false
-  ElMessage.success('操作成功')
+  ElMessage.success(t('sale.client.msgOpSuccess'))
 }
 
 function handleDeleteCate(id: number) {
-  ElMessageBox.confirm('确定删除该分类？已关联客户的分类将被清除。', '提示', { type: 'warning' }).then(() => {
+  ElMessageBox.confirm(t('sale.client.confirmDeleteCate'), t('sale.client.msgTipTitle'), { type: 'warning' }).then(() => {
     const list = cateOptions.value.filter(c => c.id !== id)
     cateOptions.value = list
     saveCatesToStorage(list)
@@ -525,7 +527,7 @@ function handleDeleteCate(id: number) {
     saveCateMap(map)
     if (selectedCateId.value === id) selectCate(null)
     else refilter()   // 刷新当前视图
-    ElMessage.success('删除成功')
+    ElMessage.success(t('sale.client.msgDeleteSuccess'))
   })
 }
 
@@ -588,7 +590,7 @@ function handleReset() {
 
 // ── 客户表单 ──────────────────────────────────────────────────────────────────
 const formVisible = ref(false)
-const formTitle = ref('新增客户')
+const formTitle = ref(t('sale.client.dialogAddTitle'))
 const formSaving = ref(false)
 const formRef = ref()
 let originalCustomerName = ''
@@ -598,7 +600,7 @@ const formData = reactive<any>({
 
 function openForm(row?: any) {
   originalCustomerName = row?.nickname || row?.name || ''
-  formTitle.value = row ? '编辑客户' : '新增客户'
+  formTitle.value = row ? t('sale.client.dialogEditTitle') : t('sale.client.dialogAddTitle')
   const nextData = {
     id: 0,
     nickname: '',
@@ -696,11 +698,11 @@ async function handleSubmit() {
       customerSourceMap.value = sMap
       saveSourceMap(sMap)
     }
-    ElMessage.success('操作成功')
+    ElMessage.success(t('sale.client.msgOpSuccess'))
     formVisible.value = false
     loadDataAndBalances()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+    ElMessage.error(e?.message ?? t('sale.client.msgOpFail'))
   } finally {
     formSaving.value = false
   }
@@ -737,10 +739,10 @@ async function handleSubmitAndRecharge() {
     prepayForm.amount = 0
     prepayForm.account_name = ''
     prepayForm.receipt_date = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
-    prepayForm.remark = '预付款充值'
+    prepayForm.remark = t('sale.client.defaultRechargeRemark')
     prepayVisible.value = true
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+    ElMessage.error(e?.message ?? t('sale.client.msgOpFail'))
   } finally {
     formSaving.value = false
   }
@@ -752,11 +754,11 @@ async function handleDelete(id: number) {
     const res = await http.get('/finance/Prepay/index', { params: { customer_id: id, pay_type: 'customer', list_rows: 1 } })
     const list: any[] = res?.data?.rows ?? res?.data?.list ?? []
     if (list.length > 0) {
-      ElMessage.warning('该客户存在预付款记录，请先到【财务 → 预付款】删除相关记录后再删除客户')
+      ElMessage.warning(t('sale.client.msgDeleteFailDueToPrepay'))
       return
     }
   } catch { /* 查询失败不拦截，由后端兜底 */ }
-  await ElMessageBox.confirm('确定删除该客户吗？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('sale.client.confirmDeleteClient'), t('sale.client.msgTipTitle'), { type: 'warning' })
   await deleteSaleCustomer(id)
   const cMap = { ...cateMap.value }
   delete cMap[id]
@@ -766,31 +768,34 @@ async function handleDelete(id: number) {
   delete lMap[id]
   customerLevelMap.value = lMap
   saveCustomerLevelMap(lMap)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('sale.client.msgDeleteSuccess'))
   loadData()
 }
 
 async function handleBatchDelete() {
   const ids = selectedRows.value.map((r: any) => r.id).filter(Boolean)
   if (!ids.length) return
-  await ElMessageBox.confirm(`确定删除选中的 ${ids.length} 个客户吗？`, '批量删除', { type: 'warning' })
+  await ElMessageBox.confirm(`${t('sale.client.confirmBatchDeletePrefix')}${ids.length}${t('sale.client.confirmBatchDeleteSuffix')}`, t('sale.client.batchDeleteTitle'), { type: 'warning' })
   await http.post('/shop/ShopCustomer/batchDel', { ids })
-  ElMessage.success(`已删除 ${ids.length} 个客户`)
+  ElMessage.success(`${t('sale.client.msgBatchDeletedPrefix')}${ids.length}${t('sale.client.msgBatchDeletedSuffix')}`)
   selectedRows.value = []
   loadData()
 }
 
 function handleExport() {
   const rows = allRows.value
-  if (!rows.length) { ElMessage.warning('暂无数据可导出'); return }
+  if (!rows.length) { ElMessage.warning(t('sale.client.msgNoDataToExport')); return }
   const data = rows.map(r => ({
-    '客户名称': r.nickname || r.name, '手机号': r.mobile, '邮箱': r.email,
-    '地址': r.address, '备注': r.remark,
+    [t('sale.client.exportColName')]: r.nickname || r.name,
+    [t('sale.client.exportColMobile')]: r.mobile,
+    [t('sale.client.exportColEmail')]: r.email,
+    [t('sale.client.exportColAddress')]: r.address,
+    [t('sale.client.exportColRemark')]: r.remark,
   }))
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Sheet1')
-  XLSX.writeFile(wb, `客户列表_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
-  ElMessage.success(`已导出 ${rows.length} 条数据`)
+  XLSX.writeFile(wb, `${t('sale.client.exportFileName')}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+  ElMessage.success(`${t('sale.client.msgExportedPrefix')}${rows.length}${t('sale.client.msgExportedSuffix')}`)
 }
 
 const importDialogVisible = ref(false)
@@ -803,7 +808,7 @@ function handleImport(file: File): boolean {
     const data = new Uint8Array(e.target!.result as ArrayBuffer)
     const wb = XLSX.read(data, { type: 'array' })
     const json: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
-    if (!json.length) { ElMessage.warning('Excel文件无数据'); return }
+    if (!json.length) { ElMessage.warning(t('sale.client.msgExcelEmpty')); return }
     importPreviewData.value = json
     importDialogVisible.value = true
   }
@@ -830,7 +835,7 @@ async function confirmImport() {
   }
   importLoading.value = false
   importDialogVisible.value = false
-  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+  ElMessage.success(`${t('sale.client.msgImportDoneSuccessPrefix')}${success}${t('sale.client.msgImportDoneSuccessSuffix')}${failed > 0 ? `${t('sale.client.msgImportDoneFailedPrefix')}${failed}${t('sale.client.msgImportDoneFailedSuffix')}` : ''}`)
   loadData()
 }
 
@@ -843,12 +848,18 @@ function openView(row: any) {
   viewVisible.value = true
 }
 
-const SOURCE_NAMES: Record<number, string> = {
-  1: '直接拜访', 2: '客户转介绍', 3: '电话开发', 4: '网络平台', 5: '展会活动', 6: '其他',
+const SOURCE_NAME_KEYS: Record<number, string> = {
+  1: 'sale.client.sourceDirectVisit',
+  2: 'sale.client.sourceReferral',
+  3: 'sale.client.sourcePhone',
+  4: 'sale.client.sourceOnline',
+  5: 'sale.client.sourceExhibition',
+  6: 'sale.client.sourceOther',
 }
 function getSourceName(source: any): string {
-  if (source === 'prepay' || source === '预付款充值' || source === '预收款') return '预收款'
-  return SOURCE_NAMES[Number(source)] ?? ''
+  if (source === 'prepay' || source === '预付款充值' || source === '预收款') return t('sale.client.sourcePrepay')
+  const key = SOURCE_NAME_KEYS[Number(source)]
+  return key ? t(key) : ''
 }
 
 // ── 财务信息 ──────────────────────────────────────────────────────────────────
@@ -895,7 +906,7 @@ const prepayForm = reactive({
   amount: 0,
   account_name: '',
   receipt_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
-  remark: '预付款充值',
+  remark: t('sale.client.defaultRechargeRemark'),
 })
 const fundOptions = ref<any[]>([])
 
@@ -911,16 +922,16 @@ const addFundLoading = ref(false)
 const fundForm = reactive({ name: '', balance: 0 })
 
 async function submitAddFund() {
-  if (!fundForm.name.trim()) { ElMessage.warning('请输入账户名称'); return }
+  if (!fundForm.name.trim()) { ElMessage.warning(t('sale.client.msgInputAccountName')); return }
   addFundLoading.value = true
   try {
     await createFund({ name: fundForm.name.trim(), balance: fundForm.balance })
-    ElMessage.success('新增账户成功')
+    ElMessage.success(t('sale.client.msgAddAccountSuccess'))
     addFundVisible.value = false
     await loadFunds()
     prepayForm.account_name = fundForm.name.trim()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '新增失败')
+    ElMessage.error(e?.message ?? t('sale.client.msgAddFail'))
   } finally {
     addFundLoading.value = false
   }
@@ -935,7 +946,7 @@ async function openPrepayDialog() {
       const payload: any = { name: formData.nickname, mobile: formData.mobile, address: formData.address, remark: formData.remark }
       const res = await createSaleCustomer(payload)
       const customerId = res.data?.id ?? res.data
-      if (!customerId) { ElMessage.error('保存客户失败，无法充值'); return }
+      if (!customerId) { ElMessage.error(t('sale.client.msgSaveCustomerFailForRecharge')); return }
       formData.id = customerId
       const cMap = { ...cateMap.value }; if (formData.cate_id) cMap[customerId] = formData.cate_id; cateMap.value = cMap; saveCateMap(cMap)
       const lMap = { ...customerLevelMap.value }; if (formData.level_id) lMap[customerId] = formData.level_id; customerLevelMap.value = lMap; saveCustomerLevelMap(lMap)
@@ -943,7 +954,7 @@ async function openPrepayDialog() {
       loadData()
       await loadFinanceInfo(customerId, formData.nickname)
     } catch (e: any) {
-      ElMessage.error(e?.message ?? '保存失败'); return
+      ElMessage.error(e?.message ?? t('sale.client.msgSaveFail')); return
     } finally {
       formSaving.value = false
     }
@@ -951,13 +962,13 @@ async function openPrepayDialog() {
   prepayForm.amount = 0
   prepayForm.account_name = ''
   prepayForm.receipt_date = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
-  prepayForm.remark = '预付款充值'
+  prepayForm.remark = t('sale.client.defaultRechargeRemark')
   prepayVisible.value = true
 }
 
 async function submitPrepay() {
   if (!prepayForm.amount || prepayForm.amount <= 0) {
-    ElMessage.warning('请输入充值金额'); return
+    ElMessage.warning(t('sale.client.msgInputRechargeAmount')); return
   }
   prepaySaving.value = true
   try {
@@ -971,7 +982,7 @@ async function submitPrepay() {
       fund_id: fundOpt?.id || 0,
       fund_name: prepayForm.account_name || '',
       pay_date: prepayForm.receipt_date,
-      remark: prepayForm.remark || '预付款充值',
+      remark: prepayForm.remark || t('sale.client.defaultRechargeRemark'),
     })
     if (formData.id) {
       const sMap = { ...customerSourceMap.value, [formData.id]: 'prepay' }
@@ -980,7 +991,7 @@ async function submitPrepay() {
       formData.source_id = 'prepay'
       if (viewRow.value?.id === formData.id) viewRow.value = { ...viewRow.value, source_id: 'prepay' }
     }
-    ElMessage.success('充值成功，已更新客户余额')
+    ElMessage.success(t('sale.client.msgRechargeSuccess'))
     prepayVisible.value = false
     await loadData()  // 重新加载列表
     // 把最新余额同步回详情弹框
@@ -991,7 +1002,7 @@ async function submitPrepay() {
     }
     loadFinanceInfo(formData.id, formData.nickname)
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '充值失败')
+    ElMessage.error(e?.message ?? t('sale.client.msgRechargeFail'))
   } finally {
     prepaySaving.value = false
   }
@@ -1004,9 +1015,9 @@ function viewReceivable() {
 async function handleDeletePrepay(row: any) {
   const amount = Number(row.amount || 0)
   await ElMessageBox.confirm(
-    `确定删除该预付款？\n金额：¥${amount.toFixed(2)}\n删除后将回退资金账户余额`,
-    '删除预付款',
-    { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' },
+    `${t('sale.client.confirmDeletePrepayLine1')}\n${t('sale.client.confirmDeletePrepayLine2Prefix')}${amount.toFixed(2)}\n${t('sale.client.confirmDeletePrepayLine3')}`,
+    t('sale.client.deletePrepayTitle'),
+    { type: 'warning', confirmButtonText: t('sale.client.btnConfirmDelete'), cancelButtonText: t('sale.client.btnCancel') },
   )
   await http.post('/finance/Prepay/del', { id: row.id })
   // 回退资金账户余额
@@ -1021,7 +1032,7 @@ async function handleDeletePrepay(row: any) {
       }
     } catch { /* ignore */ }
   }
-  ElMessage.success('删除成功，资金账户已回退')
+  ElMessage.success(t('sale.client.msgPrepayDeletedRefunded'))
   await loadFinanceInfo(formData.id, formData.nickname)
   await loadBalances()
 }

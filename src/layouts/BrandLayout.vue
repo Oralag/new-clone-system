@@ -5,15 +5,15 @@
       <span class="edit-mode-bar-icon">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </span>
-      <span>编辑模式 — 点击页面上的 <strong>✏️</strong> 图标即可编辑内容</span>
-      <button class="edit-mode-bar-exit" @click="brandEdit.exitEditMode()">退出编辑</button>
+      <span>{{ t('brandLayout.editModeHintPrefix') }} <strong>✏️</strong> {{ t('brandLayout.editModeHintSuffix') }}</span>
+      <button class="edit-mode-bar-exit" @click="brandEdit.exitEditMode()">{{ t('brandLayout.exitEdit') }}</button>
     </div>
 
     <!-- 顶部导航栏 -->
     <header class="brand-topnav" :class="{ 'topnav-scrolled': scrolled }">
       <!-- 左：Logo + 返回 -->
       <div class="topnav-left">
-        <button v-if="isFromERP" class="topnav-back" @click="$router.push('/portal')" title="返回ERP">
+        <button v-if="isFromERP" class="topnav-back" @click="$router.push('/portal')" :title="t('brandLayout.backToErp')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
         <div class="topnav-logo" @click="$router.push('/brand')">
@@ -26,24 +26,24 @@
           </div>
           <span class="topnav-brand-name">{{ brandEdit.config.brandName }}</span>
         </div>
-        <span v-if="shopStore.shopMode === 'wholesale'" class="topnav-mode-badge">采购商模式</span>
-        <span v-else-if="shopStore.shopMode === 'retail'" class="topnav-mode-badge retail">零售模式</span>
-        <button v-if="shopStore.shopMode === 'wholesale'" class="topnav-switch-btn" @click="shopStore.setShopMode('retail')" title="切换到零售模式">切换零售</button>
+        <span v-if="shopStore.shopMode === 'wholesale'" class="topnav-mode-badge">{{ t('brandLayout.wholesaleMode') }}</span>
+        <span v-else-if="shopStore.shopMode === 'retail'" class="topnav-mode-badge retail">{{ t('brandLayout.retailMode') }}</span>
+        <button v-if="shopStore.shopMode === 'wholesale'" class="topnav-switch-btn" @click="shopStore.setShopMode('retail')" :title="t('brandLayout.switchToRetail')">{{ t('brandLayout.switchRetail') }}</button>
       </div>
 
       <!-- 中：主导航 -->
       <nav class="topnav-center" v-if="shopStore.shopMode !== null">
-        <router-link to="/brand" class="topnav-link" :class="{ active: isExactBrand }">首页</router-link>
-        <router-link to="/brand/products" class="topnav-link" active-class="active">商店</router-link>
-        <router-link to="/brand/reviews" class="topnav-link" active-class="active">评价</router-link>
-        <router-link to="/brand/story" class="topnav-link" active-class="active">品牌故事</router-link>
-        <router-link to="/brand/shipping" class="topnav-link" active-class="active">物流</router-link>
-        <router-link to="/brand/support" class="topnav-link" active-class="active">支持</router-link>
-        <router-link to="/brand/orders" class="topnav-link" active-class="active">订单查询</router-link>
+        <router-link to="/brand" class="topnav-link" :class="{ active: isExactBrand }">{{ t('brandLayout.home') }}</router-link>
+        <router-link to="/brand/products" class="topnav-link" active-class="active">{{ t('brandLayout.shop') }}</router-link>
+        <router-link to="/brand/reviews" class="topnav-link" active-class="active">{{ t('brandLayout.reviews') }}</router-link>
+        <router-link to="/brand/story" class="topnav-link" active-class="active">{{ t('brandLayout.story') }}</router-link>
+        <router-link to="/brand/shipping" class="topnav-link" active-class="active">{{ t('brandLayout.shipping') }}</router-link>
+        <router-link to="/brand/support" class="topnav-link" active-class="active">{{ t('brandLayout.support') }}</router-link>
+        <router-link to="/brand/orders" class="topnav-link" active-class="active">{{ t('brandLayout.orderLookup') }}</router-link>
       </nav>
       <!-- 未选模式时仍然显示首页导航，引导用户 -->
       <nav v-else class="topnav-center">
-        <router-link to="/brand" class="topnav-link" :class="{ active: isExactBrand }">选择模式</router-link>
+        <router-link to="/brand" class="topnav-link" :class="{ active: isExactBrand }">{{ t('brandLayout.selectMode') }}</router-link>
       </nav>
 
       <!-- 右：搜索 + 购物车 + 编辑 -->
@@ -55,11 +55,11 @@
             v-model="searchKeyword"
             ref="searchInputRef"
             class="topnav-search-input"
-            placeholder="搜索产品..."
+            :placeholder="t('brandLayout.searchPlaceholder')"
             @keyup.enter="doSearch"
             @keyup.esc="closeSearch"
           />
-          <button class="topnav-icon-btn" @click="toggleSearch" title="搜索">
+          <button class="topnav-icon-btn" @click="toggleSearch" :title="t('common.search')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           </button>
         </div>
@@ -78,13 +78,13 @@
           class="topnav-edit-btn"
           :class="{ active: brandEdit.editMode }"
           @click="brandEdit.toggleEditMode()"
-          title="编辑模式"
+          :title="t('brandLayout.editMode')"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          {{ brandEdit.editMode ? '编辑中' : '编辑' }}
+          {{ brandEdit.editMode ? t('brandLayout.editing') : t('common.edit') }}
         </button>
 
-        <router-link to="/brand/settings" class="topnav-settings-btn" title="设置">
+        <router-link to="/brand/settings" class="topnav-settings-btn" :title="t('brandLayout.settings')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         </router-link>
         <!-- 移动端汉堡按钮 -->
@@ -106,8 +106,8 @@
             <router-link v-for="link in mobileLinks" :key="link.to" :to="link.to" class="mobile-drawer-link" active-class="active" @click="mobileMenuOpen = false">{{ link.label }}</router-link>
           </nav>
           <div class="mobile-drawer-footer">
-            <router-link v-if="shopStore.shopMode !== 'retail'" to="/brand/wholesale-apply" class="mobile-drawer-cta" @click="mobileMenuOpen = false">申请成为采购商</router-link>
-            <button v-if="shopStore.shopMode === 'wholesale'" class="mobile-drawer-cta mobile-drawer-cta-switch" @click="shopStore.setShopMode('retail'); mobileMenuOpen = false">切换到零售模式</button>
+            <router-link v-if="shopStore.shopMode !== 'retail'" to="/brand/wholesale-apply" class="mobile-drawer-cta" @click="mobileMenuOpen = false">{{ t('brandLayout.applyWholesale') }}</router-link>
+            <button v-if="shopStore.shopMode === 'wholesale'" class="mobile-drawer-cta mobile-drawer-cta-switch" @click="shopStore.setShopMode('retail'); mobileMenuOpen = false">{{ t('brandLayout.switchToRetail') }}</button>
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@
       <transition name="brand-toast">
         <div v-if="shopStore.checkoutSuccess" class="brand-toast">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          订单提交成功！感谢您的购买。
+          {{ t('brandLayout.orderSuccess') }}
         </div>
       </transition>
       <router-view />
@@ -141,27 +141,27 @@
               <span>{{ brandEdit.config.brandName }}</span>
             </div>
             <p class="brand-footer-slogan">{{ brandEdit.config.brandSlogan }}</p>
-            <p class="brand-footer-tagline">覆盖 120+ 国家 · 50,000+ 数字游民的选择</p>
+            <p class="brand-footer-tagline">{{ t('brandLayout.footerTagline') }}</p>
           </div>
           <div class="brand-footer-col">
-            <h4>商店</h4>
-            <router-link to="/brand/products">所有产品</router-link>
-            <router-link to="/brand/products?tag=new">新品上市</router-link>
-            <router-link to="/brand/products?tag=hot">热销单品</router-link>
-            <router-link to="/brand/products?tag=sale">特惠专区</router-link>
+            <h4>{{ t('brandLayout.shop') }}</h4>
+            <router-link to="/brand/products">{{ t('brandLayout.allProducts') }}</router-link>
+            <router-link to="/brand/products?tag=new">{{ t('brandLayout.newArrivals') }}</router-link>
+            <router-link to="/brand/products?tag=hot">{{ t('brandLayout.bestSellers') }}</router-link>
+            <router-link to="/brand/products?tag=sale">{{ t('brandLayout.saleZone') }}</router-link>
           </div>
           <div class="brand-footer-col">
-            <h4>品牌</h4>
-            <router-link to="/brand/story">品牌故事</router-link>
-            <router-link to="/brand/reviews">用户评价</router-link>
-            <router-link v-if="shopStore.shopMode !== 'retail'" to="/brand/wholesale-apply">采购商申请</router-link>
+            <h4>{{ t('brandLayout.brand') }}</h4>
+            <router-link to="/brand/story">{{ t('brandLayout.story') }}</router-link>
+            <router-link to="/brand/reviews">{{ t('brandLayout.customerReviews') }}</router-link>
+            <router-link v-if="shopStore.shopMode !== 'retail'" to="/brand/wholesale-apply">{{ t('brandLayout.applyWholesale') }}</router-link>
           </div>
           <div class="brand-footer-col">
-            <h4>帮助</h4>
-            <router-link to="/brand/shipping">物流配送</router-link>
-            <router-link to="/brand/support">客户支持</router-link>
-            <router-link to="/brand/orders">订单查询</router-link>
-            <router-link to="/brand/settings">账户设置</router-link>
+            <h4>{{ t('brandLayout.help') }}</h4>
+            <router-link to="/brand/shipping">{{ t('brandLayout.shippingDelivery') }}</router-link>
+            <router-link to="/brand/support">{{ t('brandLayout.customerSupport') }}</router-link>
+            <router-link to="/brand/orders">{{ t('brandLayout.orderLookup') }}</router-link>
+            <router-link to="/brand/settings">{{ t('brandLayout.accountSettings') }}</router-link>
           </div>
         </div>
         <div class="brand-footer-bottom">
@@ -179,6 +179,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useShopStore } from '@/stores/shopStore'
 import { useBrandEditStore } from '@/stores/brandEdit'
 import BrandCustomerService from '@/components/BrandCustomerService.vue'
@@ -187,6 +188,7 @@ const shopStore = useShopStore()
 const brandEdit = useBrandEditStore()
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const scrolled = ref(false)
 const searchOpen = ref(false)
 const searchKeyword = ref('')
@@ -194,34 +196,37 @@ const searchInputRef = ref<HTMLInputElement>()
 
 const mobileMenuOpen = ref(false)
 
-const mobileLinks = [
-  { to: '/brand', label: '首页' },
-  { to: '/brand/products', label: '商店' },
-  { to: '/brand/reviews', label: '用户评价' },
-  { to: '/brand/story', label: '品牌故事' },
-  { to: '/brand/shipping', label: '物流配送' },
-  { to: '/brand/support', label: '客户支持' },
-  { to: '/brand/orders', label: '订单查询' },
-  { to: '/brand/cart', label: '购物车' },
-  { to: '/brand/settings', label: '设置' },
-]
+const mobileLinks = computed(() => ([
+  { to: '/brand', label: t('brandLayout.home') },
+  { to: '/brand/products', label: t('brandLayout.shop') },
+  { to: '/brand/reviews', label: t('brandLayout.customerReviews') },
+  { to: '/brand/story', label: t('brandLayout.story') },
+  { to: '/brand/shipping', label: t('brandLayout.shippingDelivery') },
+  { to: '/brand/support', label: t('brandLayout.customerSupport') },
+  { to: '/brand/orders', label: t('brandLayout.orderLookup') },
+  { to: '/brand/cart', label: t('brandLayout.cart') },
+  { to: '/brand/settings', label: t('brandLayout.settings') },
+]))
 
 // SEO: 动态更新 meta 标签
-const META_MAP: Record<string, { title: string; desc: string }> = {
-  '/brand': { title: 'NOMADIC DAIRY — 专为数字游民设计的装备品牌', desc: '轻巧、耐久、可持续。覆盖 120+ 国家，50,000+ 数字游民的选择。' },
-  '/brand/products': { title: '全部商品 · NOMADIC DAIRY', desc: '探索 NOMADIC DAIRY 全系列装备，筑梦旅途每一站。' },
-  '/brand/story': { title: '品牌故事 · NOMADIC DAIRY', desc: '从一次亚洲之旅诞生的品牌，专为数字游民而生。' },
-  '/brand/reviews': { title: '用户评价 · NOMADIC DAIRY', desc: '来自全球 120+ 国家的数字游民的真实反馈，评分 4.8/5。' },
-  '/brand/shipping': { title: '物流配送 · NOMADIC DAIRY', desc: '全球配送，DHL、FedEx、顺丰速运，30天无忧退换。' },
-  '/brand/support': { title: '客户支持 · NOMADIC DAIRY', desc: '7×24在线客服，随时解答您的问题。' },
-  '/brand/orders': { title: '订单查询 · NOMADIC DAIRY', desc: '输入手机号或订单号，实时查询您的订单状态。' },
-  '/brand/wholesale-apply': { title: '采购商申请 · NOMADIC DAIRY', desc: '申请成为 NOMADIC DAIRY 采购商，享受专属批发价格。' },
-  '/brand/checkout': { title: '结账 · NOMADIC DAIRY', desc: '安全支付，全球配送。' },
+function getMetaMap() {
+  return {
+    '/brand': { title: t('brandLayout.metaHomeTitle'), desc: t('brandLayout.metaHomeDesc') },
+    '/brand/products': { title: t('brandLayout.metaProductsTitle'), desc: t('brandLayout.metaProductsDesc') },
+    '/brand/story': { title: t('brandLayout.metaStoryTitle'), desc: t('brandLayout.metaStoryDesc') },
+    '/brand/reviews': { title: t('brandLayout.metaReviewsTitle'), desc: t('brandLayout.metaReviewsDesc') },
+    '/brand/shipping': { title: t('brandLayout.metaShippingTitle'), desc: t('brandLayout.metaShippingDesc') },
+    '/brand/support': { title: t('brandLayout.metaSupportTitle'), desc: t('brandLayout.metaSupportDesc') },
+    '/brand/orders': { title: t('brandLayout.metaOrdersTitle'), desc: t('brandLayout.metaOrdersDesc') },
+    '/brand/wholesale-apply': { title: t('brandLayout.metaWholesaleTitle'), desc: t('brandLayout.metaWholesaleDesc') },
+    '/brand/checkout': { title: t('brandLayout.metaCheckoutTitle'), desc: t('brandLayout.metaCheckoutDesc') },
+  }
 }
 
 function updateMeta() {
   const cfg = brandEdit.config
-  const meta = META_MAP[route.path] || {
+  const metaMap = getMetaMap()
+  const meta = metaMap[route.path] || {
     title: `${route.meta?.title || 'NOMADIC DAIRY'}`,
     desc: cfg.heroDesc,
   }

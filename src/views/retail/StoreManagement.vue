@@ -3,21 +3,21 @@
     <el-card>
       <el-form :model="searchForm" inline>
         <el-form-item>
-          <el-button type="primary" :icon="Plus" @click="onAdd">新增</el-button>
+          <el-button type="primary" :icon="Plus" @click="onAdd">{{ $t('retail.storeManagement.add') }}</el-button>
         </el-form-item>
       </el-form>
       <ScTable ref="scTable" :api-obj="getStoreList"
           del-path="/retail/store/batchDel"
-          export-file-name="门店列表" :params="searchForm">
-        <el-table-column label="名称" prop="name" />
-        <el-table-column label="地址" prop="address" />
-        <el-table-column label="负责人" prop="manager_name" />
-        <el-table-column label="电话" prop="mobile" />
-        <el-table-column label="状态" prop="status_tag" />
-        <el-table-column label="操作" width="150">
+          :export-file-name="$t('retail.storeManagement.exportFileName')" :params="searchForm">
+        <el-table-column :label="$t('retail.storeManagement.name')" prop="name" />
+        <el-table-column :label="$t('retail.storeManagement.address')" prop="address" />
+        <el-table-column :label="$t('retail.storeManagement.manager')" prop="manager_name" />
+        <el-table-column :label="$t('retail.storeManagement.mobile')" prop="mobile" />
+        <el-table-column :label="$t('retail.storeManagement.status')" prop="status_tag" />
+        <el-table-column :label="$t('retail.storeManagement.operation')" width="150">
           <template #default="{ row }">
-            <el-button type="primary" link @click="onEdit(row)">编辑</el-button>
-            <el-button type="danger" link @click="onDelete(row.id)">删除</el-button>
+            <el-button type="primary" link @click="onEdit(row)">{{ $t('retail.storeManagement.edit') }}</el-button>
+            <el-button type="danger" link @click="onDelete(row.id)">{{ $t('retail.storeManagement.delete') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -25,25 +25,25 @@
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" @closed="onDialogClosed">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
-        <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入名称" />
+        <el-form-item :label="$t('retail.storeManagement.name')" prop="name">
+          <el-input v-model="form.name" :placeholder="$t('retail.storeManagement.namePlaceholder')" />
         </el-form-item>
-        <el-form-item label="地址">
-          <el-input v-model="form.address" placeholder="请输入地址" />
+        <el-form-item :label="$t('retail.storeManagement.address')">
+          <el-input v-model="form.address" :placeholder="$t('retail.storeManagement.addressPlaceholder')" />
         </el-form-item>
-        <el-form-item label="负责人">
-          <el-input v-model="form.manager_name" placeholder="请输入负责人" />
+        <el-form-item :label="$t('retail.storeManagement.manager')">
+          <el-input v-model="form.manager_name" :placeholder="$t('retail.storeManagement.managerPlaceholder')" />
         </el-form-item>
-        <el-form-item label="电话">
-          <el-input v-model="form.mobile" placeholder="请输入电话" />
+        <el-form-item :label="$t('retail.storeManagement.mobile')">
+          <el-input v-model="form.mobile" :placeholder="$t('retail.storeManagement.mobilePlaceholder')" />
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
+        <el-form-item :label="$t('retail.storeManagement.remark')">
+          <el-input v-model="form.remark" type="textarea" :rows="3" :placeholder="$t('retail.storeManagement.remarkPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="onSubmit">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('retail.storeManagement.cancel') }}</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="onSubmit">{{ $t('retail.storeManagement.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -51,15 +51,17 @@
 
 <script setup lang="ts">
 import ScTable from '@/components/ScTable.vue'
-
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getStoreList, createStore, updateStore, deleteStore } from '@/api/retail'
 
+const { t } = useI18n()
+
 const scTable = ref()
 const searchForm = reactive<any>({})
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增门店')
+const dialogTitle = ref('')
 const submitLoading = ref(false)
 const formRef = ref()
 const isEdit = ref(false)
@@ -73,27 +75,27 @@ const form = reactive<any>({
   remark: ''
 })
 
-const rules = {
-  name: [{ required: true, message: '请输入名称', trigger: 'blur' }]
-}
+const rules = computed(() => ({
+  name: [{ required: true, message: t('retail.storeManagement.nameRequired'), trigger: 'blur' }]
+}))
 
 function onAdd() {
   isEdit.value = false
-  dialogTitle.value = '新增门店'
+  dialogTitle.value = t('retail.storeManagement.addStore')
   dialogVisible.value = true
 }
 
 function onEdit(row: any) {
   isEdit.value = true
-  dialogTitle.value = '编辑门店'
+  dialogTitle.value = t('retail.storeManagement.editStore')
   Object.assign(form, row)
   dialogVisible.value = true
 }
 
 async function onDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该记录吗？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('retail.storeManagement.deleteConfirm'), t('retail.storeManagement.deleteTip'), { type: 'warning' })
   await deleteStore(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('retail.storeManagement.deleteSuccess'))
   scTable.value.loadData()
 }
 
@@ -106,7 +108,7 @@ async function onSubmit() {
     } else {
       await createStore(form)
     }
-    ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
+    ElMessage.success(isEdit.value ? t('retail.storeManagement.editSuccess') : t('retail.storeManagement.addSuccess'))
     dialogVisible.value = false
     scTable.value.loadData()
   } finally {

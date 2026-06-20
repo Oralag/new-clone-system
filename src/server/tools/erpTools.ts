@@ -53,7 +53,7 @@ export const opsTools: any[] = [
 export const queryTools: any[] = [
   {
     name: 'query_customers',
-    description: '查询客户列表',
+    description: '查询客户列表。结果含客户ID，可配合 create_sale_order/update_customer/delete_customer 使用',
     parameters: {
       type: 'object',
       properties: {
@@ -64,7 +64,7 @@ export const queryTools: any[] = [
   },
   {
     name: 'query_suppliers',
-    description: '查询供应商列表',
+    description: '查询供应商列表。结果含供应商ID，可配合 create_procure_order/update_supplier/delete_supplier 使用',
     parameters: {
       type: 'object',
       properties: {
@@ -75,7 +75,7 @@ export const queryTools: any[] = [
   },
   {
     name: 'query_goods',
-    description: '查询商品列表',
+    description: '查询商品列表。结果含商品ID，可配合 create_retail_order/update_goods/add_goods_spec/delete_goods 使用',
     parameters: {
       type: 'object',
       properties: {
@@ -159,6 +159,23 @@ export const queryTools: any[] = [
           type: 'string',
           description: '审查范围（可选）：all=全部, payable=应付, receivable=应收。默认 all',
         },
+      },
+    },
+  },
+  {
+    name: 'query_ledger',
+    description: '查询后台流水表（ledger_flow，单一可信财务数据源）。这是2026-06-15新建立的统一财务流水，触发器自动同步所有收款/付款/零售/合同/采购单据。用户问"账户余额"、"今天收入"、"这个月支出"、"流水"、"现金流"时，优先用这个工具而不是 query_finance。',
+    parameters: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['income', 'expense'], description: '收入或支出（可选）' },
+        flow_category: { type: 'string', enum: ['cash', 'receivable', 'payable'], description: 'cash=实收/实付现金, receivable=应收(销售合同), payable=应付(采购单)' },
+        source: { type: 'string', description: '来源类型：零售单/收款单/付款单/销售合同/采购单/其他收入/其他支出' },
+        start_date: { type: 'string', description: '开始日期 YYYY-MM-DD' },
+        end_date: { type: 'string', description: '结束日期 YYYY-MM-DD' },
+        contact_name: { type: 'string', description: '客户/供应商名称（模糊匹配）' },
+        fund_name: { type: 'string', description: '资金账户名称' },
+        limit: { type: 'number', description: '返回条数，默认50' },
       },
     },
   },

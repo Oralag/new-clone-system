@@ -19,12 +19,12 @@
           <line x1="24" y1="22" x2="40" y2="26" stroke="#8B6914" stroke-width="1"/>
           <line x1="40" y1="26" x2="56" y2="20" stroke="#8B6914" stroke-width="1"/>
           <line x1="56" y1="20" x2="68" y2="24" stroke="#8B6914" stroke-width="1"/>
-          <rect x="60" y="24" width="12" height="8" fill="#4A7C59"/>
-          <rect x="62" y="25" width="8" height="6" fill="#3D6B4A"/>
+          <rect x="60" y="24" width="12" height="8" fill="#6f86b6"/>
+          <rect x="62" y="25" width="8" height="6" fill="#5d74a4"/>
           <rect x="12" y="28" width="6" height="4" fill="#7A4F2E"/>
-          <ellipse cx="15" cy="26" rx="6" ry="5" fill="#4A8C3F"/>
-          <ellipse cx="12" cy="24" rx="4" ry="4" fill="#3D7A32"/>
-          <ellipse cx="18" cy="23" rx="4" ry="4" fill="#56A044"/>
+          <ellipse cx="15" cy="26" rx="6" ry="5" fill="#6f86b6"/>
+          <ellipse cx="12" cy="24" rx="4" ry="4" fill="#5d74a4"/>
+          <ellipse cx="18" cy="23" rx="4" ry="4" fill="#7e98ca"/>
         </svg>
         <div class="ws-label">市场分析台</div>
       </div>
@@ -42,8 +42,8 @@
           <rect x="53" y="25" width="8" height="6" fill="#C8A87A"/>
           <rect x="62" y="26" width="3" height="4" fill="#E8E0D0" rx="1"/>
           <rect x="10" y="26" width="6" height="6" fill="#6B4C2A"/>
-          <ellipse cx="13" cy="24" rx="5" ry="5" fill="#4A8C3F"/>
-          <ellipse cx="10" cy="22" rx="3" ry="3" fill="#3D7A32"/>
+          <ellipse cx="13" cy="24" rx="5" ry="5" fill="#6f86b6"/>
+          <ellipse cx="10" cy="22" rx="3" ry="3" fill="#5d74a4"/>
           <rect x="18" y="24" width="8" height="8" fill="#B8743A" rx="1"/>
           <rect x="20" y="22" width="4" height="2" fill="#A06430"/>
         </svg>
@@ -65,19 +65,19 @@
           <circle cx="60" cy="38" r="2" :fill="serverLights[2]" class="blink-light blink-delay-2"/>
           <circle cx="60" cy="48" r="2" :fill="serverLights[3]" class="blink-light blink-delay-1"/>
           <circle cx="60" cy="58" r="2" :fill="serverLights[4]" class="blink-light"/>
-          <rect x="16" y="16" width="20" height="2" fill="#00E5A0" opacity="0.6"/>
+          <rect x="16" y="16" width="20" height="2" fill="#4f79c7" opacity="0.6"/>
           <rect x="16" y="26" width="28" height="2" fill="#F5A623" opacity="0.6"/>
           <rect x="16" y="36" width="16" height="2" fill="#00D4FF" opacity="0.6"/>
-          <rect x="16" y="46" width="24" height="2" fill="#00E5A0" opacity="0.6"/>
+          <rect x="16" y="46" width="24" height="2" fill="#4f79c7" opacity="0.6"/>
           <rect x="16" y="56" width="20" height="2" fill="#F5A623" opacity="0.5"/>
-          <ellipse cx="68" cy="74" rx="8" ry="12" fill="#2D7A1F"/>
-          <ellipse cx="64" cy="70" rx="6" ry="10" fill="#3A9626"/>
+          <ellipse cx="68" cy="74" rx="8" ry="12" fill="#5d74a4"/>
+          <ellipse cx="64" cy="70" rx="6" ry="10" fill="#6f86b6"/>
           <rect x="66" y="78" width="4" height="6" fill="#6B4C2A"/>
         </svg>
         <div v-if="showServerTooltip" class="ws-server-tooltip">
           <div class="tooltip-title">⚡ Agent 集群</div>
           <div v-for="w in workers" :key="w.name" class="tooltip-row">
-            <span class="tooltip-dot" :style="{ background: w.active ? '#00E5A0' : '#555' }"></span>
+            <span class="tooltip-dot" :style="{ background: w.active ? '#4f79c7' : '#555' }"></span>
             <span>{{ w.name }}</span>
           </div>
         </div>
@@ -92,7 +92,7 @@
           <rect x="76" y="52" width="8" height="24" fill="#7A5230"/>
           <rect x="20" y="12" width="48" height="32" fill="#1A1A2E" rx="3"/>
           <rect x="22" y="14" width="44" height="28" fill="#0D0D1A"/>
-          <polyline points="26,36 30,28 34,32 38,22 42,26 46,18 50,22 54,30 58,24 62,28" fill="none" stroke="#00E5A0" stroke-width="1.5"/>
+          <polyline points="26,36 30,28 34,32 38,22 42,26 46,18 50,22 54,30 58,24 62,28" fill="none" stroke="#4f79c7" stroke-width="1.5"/>
           <line x1="26" y1="38" x2="62" y2="38" stroke="#333" stroke-width="0.5"/>
           <rect x="40" y="44" width="8" height="4" fill="#2A2A2A"/>
           <rect x="36" y="48" width="16" height="2" fill="#2A2A2A"/>
@@ -101,7 +101,7 @@
           <rect x="60" y="53" width="10" height="8" fill="#2A2A2A" rx="2"/>
           <line x1="65" y1="53" x2="65" y2="57" stroke="#444" stroke-width="1"/>
           <rect x="72" y="38" width="6" height="6" fill="#7A4F2E" rx="1"/>
-          <ellipse cx="75" cy="36" rx="4" ry="4" fill="#4A8C3F"/>
+          <ellipse cx="75" cy="36" rx="4" ry="4" fill="#6f86b6"/>
         </svg>
         <div class="ws-label">观测舱</div>
       </div>
@@ -141,10 +141,10 @@
           <rect x="6" y="64" width="68" height="4" fill="#6B4C2A"/>
           <rect x="10" y="12" width="8" height="24" fill="#C0392B"/>
           <rect x="19" y="14" width="6" height="22" fill="#2980B9"/>
-          <rect x="26" y="11" width="9" height="25" fill="#27AE60"/>
+          <rect x="26" y="11" width="9" height="25" fill="#5d89d4"/>
           <rect x="36" y="13" width="7" height="23" fill="#8E44AD"/>
           <rect x="44" y="12" width="8" height="24" fill="#E67E22"/>
-          <rect x="53" y="14" width="6" height="22" fill="#16A085"/>
+          <rect x="53" y="14" width="6" height="22" fill="#7b8fb8"/>
           <rect x="60" y="11" width="10" height="25" fill="#2C3E50"/>
           <rect x="10" y="40" width="7" height="24" fill="#E74C3C"/>
           <rect x="18" y="42" width="9" height="22" fill="#3498DB"/>
@@ -152,17 +152,17 @@
           <rect x="35" y="41" width="8" height="23" fill="#1ABC9C"/>
           <rect x="44" y="40" width="7" height="24" fill="#9B59B6"/>
           <rect x="52" y="42" width="10" height="22" fill="#E67E22"/>
-          <rect x="63" y="40" width="7" height="24" fill="#2ECC71"/>
+          <rect x="63" y="40" width="7" height="24" fill="#8aa2d2"/>
           <rect x="10" y="68" width="6" height="20" fill="#C0392B"/>
           <rect x="17" y="70" width="8" height="18" fill="#2980B9"/>
-          <rect x="26" y="68" width="7" height="20" fill="#27AE60"/>
+          <rect x="26" y="68" width="7" height="20" fill="#5d89d4"/>
           <rect x="36" y="72" width="6" height="12" fill="#A0D4F0" rx="1"/>
           <rect x="38" y="70" width="2" height="2" fill="#80B4D0"/>
           <rect x="48" y="80" width="4" height="8" fill="#C8A878"/>
           <ellipse cx="52" cy="76" rx="10" ry="6" fill="#F5E070" opacity="0.9"/>
           <rect x="60" y="78" width="8" height="8" fill="#6B4C2A" rx="1"/>
-          <ellipse cx="64" cy="74" rx="7" ry="7" fill="#4A8C3F"/>
-          <ellipse cx="61" cy="71" rx="5" ry="5" fill="#3D7A32"/>
+          <ellipse cx="64" cy="74" rx="7" ry="7" fill="#6f86b6"/>
+          <ellipse cx="61" cy="71" rx="5" ry="5" fill="#5d74a4"/>
         </svg>
         <div class="ws-label">图书馆</div>
       </div>
@@ -369,8 +369,8 @@ function goTo(path: string) { router.push(path) }
 const serverLights = computed(() => {
   const alive = adamStore.isAlive
   return [
-    alive ? '#00E5A0' : '#334', alive ? '#F5A623' : '#334',
-    alive ? '#00D4FF' : '#334', alive ? '#00E5A0' : '#334',
+    alive ? '#4f79c7' : '#334', alive ? '#F5A623' : '#334',
+    alive ? '#00D4FF' : '#334', alive ? '#4f79c7' : '#334',
     alive ? '#F5A623' : '#334',
   ]
 })
@@ -770,7 +770,7 @@ function removePendingImage(idx: number) {
 }
 .ws-status-dot-wrap { width: 22px; height: 22px; border-radius: 50%; background: #2A1E10; border: 1px solid #4A3020; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ws-status-dot { width: 8px; height: 8px; border-radius: 50%; }
-.dot-alive    { background: #00E5A0; box-shadow: 0 0 6px #00E5A0; animation: pulse-dot 2s infinite; }
+.dot-alive    { background: #4f79c7; box-shadow: 0 0 6px #4f79c7; animation: pulse-dot 2s infinite; }
 .dot-dormant  { background: #888; }
 .dot-survival { background: #F5A623; box-shadow: 0 0 6px #F5A623; animation: pulse-dot 1s infinite; }
 .dot-shutdown { background: #FF4D4D; }
@@ -812,7 +812,7 @@ function removePendingImage(idx: number) {
   margin-left: auto; font-size: 8px; font-weight: 700; letter-spacing: 0.1em;
   padding: 2px 7px; border-radius: 3px; background: #2A1E10; color: #666;
 }
-.wcp-status.online { color: #00E5A0; background: rgba(0,229,160,0.06); }
+.wcp-status.online { color: #4f79c7; background: rgba(79,121,199,0.06); }
 
 .wcp-messages {
   flex: 1; overflow-y: auto; padding: 10px 16px;
@@ -862,12 +862,12 @@ function removePendingImage(idx: number) {
 }
 .wcp-tool-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 .wcp-tool-card.running .wcp-tool-dot  { background: #00D4FF; animation: indicatorPulse 1s infinite; }
-.wcp-tool-card.success .wcp-tool-dot  { background: #00E5A0; }
+.wcp-tool-card.success .wcp-tool-dot  { background: #4f79c7; }
 .wcp-tool-card.error   .wcp-tool-dot  { background: #FF4D4D; }
 .wcp-tool-name { color: #8B7355; }
 .wcp-tool-status { margin-left: auto; font-size: 8px; font-weight: 700; letter-spacing: 0.08em; }
 .wcp-tool-card.running .wcp-tool-status { color: #00D4FF; }
-.wcp-tool-card.success .wcp-tool-status { color: #00E5A0; }
+.wcp-tool-card.success .wcp-tool-status { color: #4f79c7; }
 .wcp-tool-card.error   .wcp-tool-status { color: #FF4D4D; }
 @keyframes indicatorPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
 
@@ -917,4 +917,93 @@ function removePendingImage(idx: number) {
 }
 .wcp-send-btn:hover:not(:disabled) { background: #FFB84D; }
 .wcp-send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── Frosted flat workspace layer ── */
+.workspace-root {
+  background: #eef3fb;
+  font-family: 'Inter', 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.ws-scene {
+  margin: 18px 24px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  box-shadow: inset 0 0 0 1px rgba(42, 52, 65, 0.04);
+}
+.ws-wall-left,
+.ws-wall-right {
+  background: rgba(255, 255, 255, 0.28);
+}
+.ws-floor {
+  background: rgba(79, 121, 199, 0.06);
+}
+.ws-label {
+  color: rgba(23, 32, 39, 0.62);
+  font-family: inherit;
+  font-weight: 600;
+}
+.ws-item:hover .ws-label { color: #4f79c7; }
+.ws-server-tooltip {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(42, 52, 65, 0.1);
+  color: rgba(23, 32, 39, 0.64);
+  border-radius: 12px;
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+.tooltip-title {
+  color: #4f79c7;
+  letter-spacing: 0;
+  font-family: inherit;
+  font-weight: 700;
+}
+.adam-bubble {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(79, 121, 199, 0.22);
+  color: #172027;
+  border-radius: 14px 14px 14px 4px;
+  box-shadow: inset 0 0 0 1px rgba(42, 52, 65, 0.04);
+}
+.adam-bubble::after { border-top-color: rgba(79, 121, 199, 0.22); }
+.ws-statusbar {
+  background: rgba(255, 255, 255, 0.72);
+  border-top: 1px solid rgba(42, 52, 65, 0.1);
+  color: #172027;
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+.ws-status-dot-wrap {
+  background: rgba(79, 121, 199, 0.08);
+  border-color: rgba(79, 121, 199, 0.16);
+}
+.dot-alive {
+  background: #4f79c7;
+  box-shadow: 0 0 0 4px rgba(79, 121, 199, 0.12);
+}
+.dot-survival {
+  background: #ef6f5e;
+  box-shadow: 0 0 0 4px rgba(239, 111, 94, 0.12);
+}
+.dot-shutdown { background: #ef6f5e; }
+.ws-status-name,
+.credit-A,
+.credit-S {
+  color: #4f79c7;
+  border-color: rgba(79, 121, 199, 0.24);
+}
+.credit-B,
+.credit-Bp {
+  color: #5d89d4;
+  border-color: rgba(93, 137, 212, 0.3);
+}
+.ws-status-sep,
+.ws-status-text,
+.ws-stat {
+  color: rgba(23, 32, 39, 0.52);
+}
+.ws-chat-panel {
+  display: none;
+}
 </style>

@@ -3,52 +3,52 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getStatementList"
           del-path="/finance/Statement/batchDel"
-          export-file-name="对账单" :params="searchForm">
+          :export-file-name="t('finance.statement.exportFileName')" :params="searchForm">
         <template #search>
           <el-form inline>
-            <el-form-item label="对账单号">
-              <el-input v-model="searchForm.statement_no" placeholder="请输入对账单号" clearable style="width:180px" />
+            <el-form-item :label="t('finance.statement.statementNo')">
+              <el-input v-model="searchForm.statement_no" :placeholder="t('finance.statement.statementNoPlaceholder')" clearable style="width:180px" />
             </el-form-item>
-            <el-form-item label="客户名称">
-              <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width:180px" />
+            <el-form-item :label="t('finance.statement.customerName')">
+              <el-input v-model="searchForm.customer_name" :placeholder="t('finance.statement.customerNamePlaceholder')" clearable style="width:180px" />
             </el-form-item>
           </el-form>
           <div class="search-actions">
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="Object.assign(searchForm, { statement_no: '', customer_name: '' }); tableRef?.loadData()">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ t('finance.statement.query') }}</el-button>
+            <el-button @click="Object.assign(searchForm, { statement_no: '', customer_name: '' }); tableRef?.loadData()">{{ t('finance.statement.reset') }}</el-button>
           </div>
         </template>
         <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
+          <el-button type="primary" :icon="Plus" @click="openForm()">{{ t('finance.statement.add') }}</el-button>
         </template>
-        <el-table-column prop="statement_no" label="对账单号" min-width="160" />
-        <el-table-column prop="customer_name" label="客户名称" min-width="140" />
-        <el-table-column prop="start_date" label="开始日期" min-width="120" />
-        <el-table-column prop="end_date" label="结束日期" min-width="120" />
-        <el-table-column prop="total_amount" label="总金额" min-width="120" />
-        <el-table-column prop="status_tag" label="状态" min-width="100" />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column prop="statement_no" :label="t('finance.statement.statementNo')" min-width="160" />
+        <el-table-column prop="customer_name" :label="t('finance.statement.customerName')" min-width="140" />
+        <el-table-column prop="start_date" :label="t('finance.statement.startDate')" min-width="120" />
+        <el-table-column prop="end_date" :label="t('finance.statement.endDate')" min-width="120" />
+        <el-table-column prop="total_amount" :label="t('finance.statement.totalAmount')" min-width="120" />
+        <el-table-column prop="status_tag" :label="t('finance.statement.status')" min-width="100" />
+        <el-table-column :label="t('finance.statement.operation')" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button type="success" link @click="openView(row)">查看</el-button>
-              <el-button type="primary" link @click="openForm(row)">编辑</el-button>
-              <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="success" link @click="openView(row)">{{ t('finance.statement.view') }}</el-button>
+              <el-button type="primary" link @click="openForm(row)">{{ t('finance.statement.edit') }}</el-button>
+              <el-button type="danger" link @click="handleDelete(row.id)">{{ t('finance.statement.delete') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
     </el-card>
     <ScForm ref="formRef" :title="formTitle" @submit="handleSubmit">
       <template #default="{ form }">
-        <el-form-item label="客户名称" prop="customer_name">
-          <el-input v-model="form.customer_name" placeholder="请输入客户名称" />
+        <el-form-item :label="t('finance.statement.customerName')" prop="customer_name">
+          <el-input v-model="form.customer_name" :placeholder="t('finance.statement.customerNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="开始日期" prop="start_date">
-          <el-date-picker v-model="form.start_date" type="date" placeholder="请选择开始日期" value-format="YYYY-MM-DD" style="width:100%" />
+        <el-form-item :label="t('finance.statement.startDate')" prop="start_date">
+          <el-date-picker v-model="form.start_date" type="date" :placeholder="t('finance.statement.startDatePlaceholder')" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
-        <el-form-item label="结束日期" prop="end_date">
-          <el-date-picker v-model="form.end_date" type="date" placeholder="请选择结束日期" value-format="YYYY-MM-DD" style="width:100%" />
+        <el-form-item :label="t('finance.statement.endDate')" prop="end_date">
+          <el-date-picker v-model="form.end_date" type="date" :placeholder="t('finance.statement.endDatePlaceholder')" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
+        <el-form-item :label="t('finance.statement.remark')" prop="remark">
+          <el-input v-model="form.remark" type="textarea" :placeholder="t('finance.statement.remarkPlaceholder')" />
         </el-form-item>
       </template>
     </ScForm>
@@ -56,15 +56,17 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
 import { getStatementList, createStatement, updateStatement, deleteStatement } from '@/api/finance'
 
+const { t } = useI18n()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
-const formTitle = ref('新增')
+const formTitle = ref(t('finance.statement.formTitleAdd'))
 const searchForm = reactive<any>({ statement_no: '', customer_name: '' })
 
 function openView(row?: any) {
@@ -72,7 +74,7 @@ function openView(row?: any) {
 }
 
 function openForm(row?: any) {
-  formTitle.value = row ? '编辑' : '新增'
+  formTitle.value = row ? t('finance.statement.formTitleEdit') : t('finance.statement.formTitleAdd')
   formRef.value?.open(row)
 }
 
@@ -84,20 +86,20 @@ async function handleSubmit(data: any) {
     } else {
       await createStatement(data)
     }
-    ElMessage.success('操作成功')
+    ElMessage.success(t('finance.statement.opSuccess'))
     formRef.value?.close()
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message || '操作失败')
+    ElMessage.error(e?.message || t('finance.statement.opFailed'))
   } finally {
     formRef.value?.setSubmitting(false)
   }
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('finance.statement.confirmDelete'), t('finance.statement.confirmDeleteTitle'), { type: 'warning' })
   await deleteStatement(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('finance.statement.deleteSuccess'))
   tableRef.value?.refresh()
 }
 </script>

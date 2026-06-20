@@ -16,32 +16,46 @@
             </defs>
           </svg>
         </div>
-        <span class="nav-logo-text">数字游牧</span>
+        <span class="nav-logo-text">{{ t('portal.brand') }}</span>
         <span class="nav-platform-badge">
           <span class="nav-platform-dot"></span>
-          <span>数字游牧 · 全球化业务管理平台</span>
+          <span>{{ t('portal.platformBadge') }}</span>
         </span>
       </div>
       <div class="nav-links">
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div class="nav-actions">
+        <div class="nav-language-switch" :aria-label="t('layout.language')">
+          <button
+            class="nav-language-btn"
+            :class="{ active: currentLocale === 'zh-CN' }"
+            type="button"
+            @click="switchLocale('zh-CN')"
+          >中文</button>
+          <button
+            class="nav-language-btn"
+            :class="{ active: currentLocale === 'en-US' }"
+            type="button"
+            @click="switchLocale('en-US')"
+          >EN</button>
+        </div>
         <!-- 主题切换 -->
         <div class="nav-theme-btns">
-          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'light' }" title="亮色" @click="appStore.setTheme('light')">
+          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'light' }" :title="t('layout.themeLight')" @click="appStore.setTheme('light')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           </button>
-          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'dark' }" title="暗黑" @click="appStore.setTheme('dark')">
+          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'dark' }" :title="t('layout.themeDark')" @click="appStore.setTheme('dark')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           </button>
-          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'eye' }" title="护眼" @click="appStore.setTheme('eye')">
+          <button class="nav-theme-btn" :class="{ active: appStore.theme === 'eye' }" :title="t('layout.themeEye')" @click="appStore.setTheme('eye')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
-        <button v-if="isTrial && !trialStarted" class="nav-trial-btn" @click="showTrialModal = true">🎁 领取15天体验</button>
-        <button v-if="isTrial" class="nav-upgrade-btn" @click="upgradeDialog?.open()">升级付费版</button>
-        <button class="nav-btn" @click="logout" title="退出登录">
+        <button v-if="isTrial && !trialStarted" class="nav-trial-btn" @click="showTrialModal = true">🎁 {{ t('portal.claimTrialShort') }}</button>
+        <button v-if="isTrial" class="nav-upgrade-btn" @click="upgradeDialog?.open()">{{ t('portal.upgrade') }}</button>
+        <button class="nav-btn" @click="logout" :title="t('portal.logout')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-2px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          退出
+          {{ t('portal.logoutShort') }}
         </button>
       </div>
     </nav>
@@ -52,18 +66,18 @@
         <div class="upgrade-bar-left">
           <span class="upgrade-bar-dot"></span>
           <template v-if="!trialStarted">
-            <span>您正在使用<strong>免费体验版</strong> · 新增/编辑功能不可用</span>
+            <span>{{ t('portal.trialUsing') }}<strong>{{ t('portal.freeTrial') }}</strong> · {{ t('portal.trialRestricted') }}</span>
           </template>
           <template v-else-if="!trialExpired">
-            <span><strong>体验版进行中</strong> · 剩余 <strong style="color:#f5a623">{{ daysLeft }} 天</strong> · 到期后需升级付费版</span>
+            <span><strong>{{ t('portal.trialActive') }}</strong> · {{ t('portal.remainingDays', { days: daysLeft }) }} · {{ t('portal.trialExpiryHint') }}</span>
           </template>
           <template v-else>
-            <span><strong>体验已到期</strong> · 升级付费版继续使用全部功能</span>
+            <span><strong>{{ t('portal.trialExpired') }}</strong> · {{ t('portal.trialExpiredHint') }}</span>
           </template>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0">
-          <button v-if="!trialStarted" class="upgrade-bar-trial-btn" @click="showTrialModal = true">🎁 领取 15 天体验</button>
-          <button class="upgrade-bar-btn" @click="upgradeDialog?.open()">了解付费版，立即升级 →</button>
+          <button v-if="!trialStarted" class="upgrade-bar-trial-btn" @click="showTrialModal = true">🎁 {{ t('portal.claimTrial') }}</button>
+          <button class="upgrade-bar-btn" @click="upgradeDialog?.open()">{{ t('portal.learnUpgrade') }} →</button>
         </div>
       </div>
     </div>
@@ -79,7 +93,7 @@
 
         <!-- 工作空间标题 -->
         <div class="workspace-header">
-          <h2 class="workspace-title">选择您的<span class="hero-title-blue"> 工作空间</span></h2>
+          <h2 class="workspace-title">{{ t('portal.chooseYour') }}&nbsp;<span class="hero-title-blue">{{ t('portal.workspace') }}</span></h2>
         </div>
         <!-- Module Cards — 2×2 grid -->
         <div class="cards-grid">
@@ -98,17 +112,17 @@
             <rect x="14" y="14" width="7" height="7" rx="1.5" fill="white" opacity="0.35"/>
           </svg>
         </div>
-        <h2 class="card-title">游牧 ERP</h2>
-        <p class="card-desc">全链路业务管理中枢。销售、采购、仓库、财务、人事，一套系统全覆盖。</p>
+        <h2 class="card-title">{{ t('portal.erpTitle') }}</h2>
+        <p class="card-desc">{{ t('portal.erpDesc') }}</p>
         <div class="card-tags">
-          <span class="tag">销售</span>
-          <span class="tag">采购</span>
-          <span class="tag">仓库</span>
-          <span class="tag">财务</span>
-          <span class="tag">人事</span>
+          <span class="tag">{{ t('portal.sales') }}</span>
+          <span class="tag">{{ t('portal.procurement') }}</span>
+          <span class="tag">{{ t('portal.warehouse') }}</span>
+          <span class="tag">{{ t('portal.finance') }}</span>
+          <span class="tag">{{ t('portal.hr') }}</span>
         </div>
         <div class="card-arrow">
-          <span>进入管理中心</span>
+          <span>{{ t('portal.enterManagement') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
@@ -119,22 +133,22 @@
         @touchstart.passive="pressedCard = 'agent'"
         @touchend.passive="pressedCard = ''"
         @touchcancel.passive="pressedCard = ''">
-        <div class="card-ai-badge">由 Claude AI 驱动</div>
+        <div class="card-ai-badge">{{ t('portal.poweredByClaude') }}</div>
         <div class="card-icon card-icon-ai">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
             <path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="white" opacity="0.9"/>
           </svg>
         </div>
-        <h2 class="card-title card-title-ai">广告部门</h2>
-        <p class="card-desc">多 Agent 协同作业，热搜抓取、文案生成、海报制作全自动流转。你只需设定目标，其余交给 AI。</p>
+        <h2 class="card-title card-title-ai">{{ t('portal.adDepartment') }}</h2>
+        <p class="card-desc">{{ t('portal.adDepartmentDesc') }}</p>
         <div class="card-tags">
-          <span class="tag tag-ai">多Agent协作</span>
-          <span class="tag tag-ai">自动流转</span>
-          <span class="tag tag-ai">内容生产</span>
-          <span class="tag tag-ai">一键发布</span>
+          <span class="tag tag-ai">{{ t('portal.multiAgent') }}</span>
+          <span class="tag tag-ai">{{ t('portal.autoWorkflow') }}</span>
+          <span class="tag tag-ai">{{ t('portal.contentProduction') }}</span>
+          <span class="tag tag-ai">{{ t('portal.oneClickPublish') }}</span>
         </div>
         <div class="card-arrow">
-          <span>立即体验</span>
+          <span>{{ t('portal.tryNow') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
@@ -152,15 +166,15 @@
             <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
           </svg>
         </div>
-        <h2 class="card-title">实验体</h2>
-        <p class="card-desc">AI 智能投资决策中枢。市场研判、交易指令、资产管理、生命体观测一体化。</p>
+        <h2 class="card-title">{{ t('portal.investmentTitle') }}</h2>
+        <p class="card-desc">{{ t('portal.investmentDesc') }}</p>
         <div class="card-tags">
-          <span class="tag tag-gold">市场分析</span>
-          <span class="tag tag-gold">智能决策</span>
-          <span class="tag tag-gold">资产管理</span>
+          <span class="tag tag-gold">{{ t('portal.marketAnalysis') }}</span>
+          <span class="tag tag-gold">{{ t('portal.smartDecision') }}</span>
+          <span class="tag tag-gold">{{ t('portal.assetManagement') }}</span>
         </div>
         <div class="card-arrow">
-          <span>进入实验体</span>
+          <span>{{ t('portal.enterInvestment') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
@@ -178,16 +192,16 @@
             <path d="M16 10a4 4 0 01-8 0" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
           </svg>
         </div>
-        <h2 class="card-title">品牌主页</h2>
-        <p class="card-desc">面向零售客户与采购商的品牌展示平台。产品商城、批发采购、评价系统一体化。</p>
+        <h2 class="card-title">{{ t('portal.brandHome') }}</h2>
+        <p class="card-desc">{{ t('portal.brandHomeDesc') }}</p>
         <div class="card-tags">
-          <span class="tag tag-brand">品牌展示</span>
-          <span class="tag tag-brand">零售商城</span>
-          <span class="tag tag-brand">批发采购</span>
-          <span class="tag tag-brand">评价系统</span>
+          <span class="tag tag-brand">{{ t('portal.brandShowcase') }}</span>
+          <span class="tag tag-brand">{{ t('portal.retailStore') }}</span>
+          <span class="tag tag-brand">{{ t('portal.wholesale') }}</span>
+          <span class="tag tag-brand">{{ t('portal.reviews') }}</span>
         </div>
         <div class="card-arrow">
-          <span>进入品牌中心</span>
+          <span>{{ t('portal.enterBrand') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
@@ -205,17 +219,17 @@
             <path d="M6 8l4 3-4 3V8z" fill="white" opacity="0.8"/>
           </svg>
         </div>
-        <h2 class="card-title">运营驾驶舱</h2>
-        <p class="card-desc">面向线上电商运营的统一入口。平台管理、订单中心、库存同步与运营专员放在一条主线上，客户与线下作为辅助。</p>
+        <h2 class="card-title">{{ t('portal.opsCockpit') }}</h2>
+        <p class="card-desc">{{ t('portal.opsCockpitDesc') }}</p>
         <div class="card-tags">
-          <span class="tag tag-ops">平台管理</span>
-          <span class="tag tag-ops">订单中心</span>
-          <span class="tag tag-ops">库存同步</span>
-          <span class="tag tag-ops">客户运营</span>
-          <span class="tag tag-ops">运营专员</span>
+          <span class="tag tag-ops">{{ t('portal.platformManagement') }}</span>
+          <span class="tag tag-ops">{{ t('portal.orderCenter') }}</span>
+          <span class="tag tag-ops">{{ t('portal.stockSync') }}</span>
+          <span class="tag tag-ops">{{ t('portal.customerOps') }}</span>
+          <span class="tag tag-ops">{{ t('portal.opsSpecialist') }}</span>
         </div>
         <div class="card-arrow">
-          <span>进入运营中心</span>
+          <span>{{ t('portal.enterOps') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
@@ -422,10 +436,20 @@ import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import UpgradeDialog from '@/components/UpgradeDialog.vue'
 import CaptainBar from '@/components/CaptainBar.vue'
+import { useI18n } from 'vue-i18n'
+import { getStoredLocale, setLocale, type Locale } from '@/i18n'
 
 const router = useRouter()
 const auth = useAuthStore()
 const appStore = useAppStore()
+const { t } = useI18n()
+const currentLocale = ref<Locale>(getStoredLocale())
+
+function switchLocale(locale: Locale) {
+  if (locale === currentLocale.value) return
+  currentLocale.value = locale
+  setLocale(locale)
+}
 
 function go(path: string) { router.push(path) }
 function logout() { auth.logout(); router.push('/login') }
@@ -672,6 +696,43 @@ const TOOL_LABELS: Record<string, string> = {
 .nav-links { display: flex; gap: 40px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: rgba(29,29,31,0.3); }
 .nav-links span { cursor: pointer; transition: color 0.2s; }
 .nav-links span:hover { color: #0071e3; }
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.nav-language-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--gray);
+  flex-shrink: 0;
+}
+
+.nav-language-btn {
+  min-width: 38px;
+  height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mid);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nav-language-btn.active {
+  background: var(--card-bg);
+  color: var(--blue);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
 
 .nav-btn {
   padding: 7px 14px;
@@ -1327,6 +1388,10 @@ const TOOL_LABELS: Record<string, string> = {
   .nav-logo-text { font-size: 15px; }
   .nav-logo-icon svg { width: 26px; height: 26px; }
   .nav-links { display: none; }
+  .nav-platform-badge, .nav-theme-btns { display: none; }
+  .nav-actions { gap: 6px; }
+  .nav-language-switch { padding: 2px; }
+  .nav-language-btn { min-width: 34px; height: 26px; padding: 0 7px; }
   .nav-trial-btn, .nav-upgrade-btn { display: none; }
   .nav-btn { padding: 5px 10px; font-size: 11px; }
   .hero { padding: 36px 20px 28px; }

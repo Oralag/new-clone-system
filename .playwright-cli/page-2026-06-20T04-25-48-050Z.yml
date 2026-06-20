@@ -1,0 +1,191 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - img [ref=e4]:
+      - generic [ref=e6]: "N"
+    - generic [ref=e8]: 数字游牧 ERP
+    - generic [ref=e9]: 正在加载...
+  - generic [ref=e13]:
+    - navigation [ref=e14]:
+      - generic [ref=e15] [cursor=pointer]:
+        - img [ref=e17]:
+          - generic [ref=e19]: "N"
+        - generic [ref=e21]: Nomad
+        - generic [ref=e24]: Nomad · Global Business Management Platform
+      - generic [ref=e25]:
+        - generic "Language" [ref=e26]:
+          - button "中文" [ref=e27] [cursor=pointer]
+          - button "EN" [ref=e28] [cursor=pointer]
+        - generic [ref=e29]:
+          - button "Light" [ref=e30] [cursor=pointer]:
+            - img [ref=e31]
+          - button "Dark" [ref=e37] [cursor=pointer]:
+            - img [ref=e38]
+          - button "Eye-care" [ref=e40] [cursor=pointer]:
+            - img [ref=e41]
+        - button "Sign Out" [ref=e44] [cursor=pointer]:
+          - img [ref=e45]
+          - text: Sign Out
+    - generic [ref=e49]:
+      - generic [ref=e51]:
+        - generic [ref=e52] [cursor=pointer]:
+          - img [ref=e54]
+          - generic [ref=e57]: Captain
+        - generic [ref=e58]:
+          - textbox "AI multi-agent command · Enter a goal for Captain to plan and execute..." [ref=e59]
+          - button "Clear" [ref=e60] [cursor=pointer]:
+            - img [ref=e61]
+          - button "History" [ref=e63] [cursor=pointer]:
+            - img [ref=e64]
+          - button [disabled] [ref=e67]:
+            - img [ref=e68]
+      - heading "Choose YourWorkspace" [level=2] [ref=e71]
+      - generic [ref=e72]:
+        - generic [ref=e73] [cursor=pointer]:
+          - img [ref=e75]
+          - heading "Nomad ERP" [level=2] [ref=e80]
+          - paragraph [ref=e81]: One business hub for sales, procurement, warehouse, finance, and HR.
+          - generic [ref=e82]:
+            - generic [ref=e83]: Sales
+            - generic [ref=e84]: Procurement
+            - generic [ref=e85]: Warehouse
+            - generic [ref=e86]: Finance
+            - generic [ref=e87]: HR
+          - generic [ref=e88]:
+            - generic [ref=e89]: Open Management Center
+            - img [ref=e90]
+        - generic [ref=e92] [cursor=pointer]:
+          - generic [ref=e93]: Powered by Claude AI
+          - img [ref=e95]
+          - heading "Advertising Department" [level=2] [ref=e97]
+          - paragraph [ref=e98]: Multi-agent workflows automate trend research, copywriting, poster production, and publishing.
+          - generic [ref=e99]:
+            - generic [ref=e100]: Multi-Agent
+            - generic [ref=e101]: Automated Workflow
+            - generic [ref=e102]: Content Production
+            - generic [ref=e103]: One-Click Publish
+          - generic [ref=e104]:
+            - generic [ref=e105]: Try Now
+            - img [ref=e106]
+        - generic [ref=e108] [cursor=pointer]:
+          - img [ref=e110]
+          - heading "Investment Lab" [level=2] [ref=e114]
+          - paragraph [ref=e115]: AI-powered investment decisions combining market analysis, trading instructions, asset management, and live observation.
+          - generic [ref=e116]:
+            - generic [ref=e117]: Market Analysis
+            - generic [ref=e118]: Smart Decisions
+            - generic [ref=e119]: Asset Management
+          - generic [ref=e120]:
+            - generic [ref=e121]: Enter Investment Lab
+            - img [ref=e122]
+        - generic [ref=e124] [cursor=pointer]:
+          - img [ref=e126]
+          - heading "Brand Home" [level=2] [ref=e129]
+          - paragraph [ref=e130]: A brand platform for retail customers and buyers, combining products, wholesale purchasing, and reviews.
+          - generic [ref=e131]:
+            - generic [ref=e132]: Brand Showcase
+            - generic [ref=e133]: Retail Store
+            - generic [ref=e134]: Wholesale
+            - generic [ref=e135]: Reviews
+          - generic [ref=e136]:
+            - generic [ref=e137]: Enter Brand Center
+            - img [ref=e138]
+        - generic [ref=e140] [cursor=pointer]:
+          - img [ref=e142]
+          - heading "Operations Cockpit" [level=2] [ref=e146]
+          - paragraph [ref=e147]: A unified e-commerce workspace for platforms, orders, inventory sync, customers, and AI operators.
+          - generic [ref=e148]:
+            - generic [ref=e149]: Platforms
+            - generic [ref=e150]: Order Center
+            - generic [ref=e151]: Inventory Sync
+            - generic [ref=e152]: Customer Ops
+            - generic [ref=e153]: AI Operators
+          - generic [ref=e154]:
+            - generic [ref=e155]: Enter Operations Center
+            - img [ref=e156]
+    - generic [ref=e159]:
+      - heading "全 AI 驱动的业务管理平台 — 从进销存到智能决策" [level=2] [ref=e160]
+      - paragraph [ref=e161]: AI Agent 自动处理内容运营、数据分析、经营预警；14 个业务模块全链路覆盖采购、仓库、销售、财务；每位用户独立数据库实例，数据物理隔离，全球节点部署，99.9% 可用率。
+      - generic [ref=e162]:
+        - generic [ref=e163]:
+          - img [ref=e164]
+          - text: 采购管理
+        - generic [ref=e167]:
+          - img [ref=e168]
+          - text: 仓库管理
+        - generic [ref=e171]:
+          - img [ref=e172]
+          - text: 销售管理
+        - generic [ref=e175]:
+          - img [ref=e176]
+          - text: 财务管理
+        - generic [ref=e179]:
+          - img [ref=e180]
+          - text: 人事协同
+        - generic [ref=e183]:
+          - img [ref=e184]
+          - text: 数据报表
+        - generic [ref=e187]:
+          - img [ref=e188]
+          - text: AI 智能体
+        - generic [ref=e190]:
+          - img [ref=e191]
+          - text: 独立数据库
+      - generic [ref=e193]:
+        - generic [ref=e194]:
+          - img [ref=e196]
+          - generic [ref=e200]: 数据完全隔离
+          - generic [ref=e201]: 专属数据库实例，物理隔离，订单、财务、客户数据只有您能访问。
+        - generic [ref=e202]:
+          - img [ref=e204]
+          - generic [ref=e207]: 永久备份不丢失
+          - generic [ref=e208]: 每日自动备份，支持任意时间点恢复，业务数据零风险。
+        - generic [ref=e209]:
+          - img [ref=e211]
+          - generic [ref=e213]: 性能独享
+          - generic [ref=e214]: 独立计算资源，高峰期不受他人影响，支持百万级 SKU 稳定运行。
+        - generic [ref=e215]:
+          - img [ref=e217]
+          - generic [ref=e221]: 全球低延迟
+          - generic [ref=e222]: 多地区节点，中国、东南亚、欧美团队均可极速访问。
+        - generic [ref=e223]:
+          - img [ref=e225]
+          - generic [ref=e228]: 企业级安全
+          - generic [ref=e229]: DDoS 防护、HTTPS 加密、IP 白名单、操作日志审计全方位保障。
+        - generic [ref=e230]:
+          - generic [ref=e231]: Claude AI 加持
+          - img [ref=e233]
+          - generic [ref=e236]: AI 智能分析
+          - generic [ref=e237]: 内置 Claude AI 自动生成经营洞察与预警，让数据真正为您所用。
+    - generic [ref=e239]:
+      - generic [ref=e240]: 限时优惠
+      - heading "准备好了吗？ 升级专属付费版" [level=2] [ref=e241]:
+        - text: 准备好了吗？
+        - text: 升级专属付费版
+      - paragraph [ref=e242]:
+        - text: 首月特惠 · 独立数据库 · 全功能解锁 · 专属技术支持
+        - text: 付款后 2 小时内为您配置专属实例并激活账号
+      - generic [ref=e243]:
+        - generic [ref=e244] [cursor=pointer]:
+          - generic [ref=e245]: 月付版
+          - generic [ref=e246]: ¥39/月
+        - generic [ref=e247] [cursor=pointer]:
+          - generic [ref=e248]: 最受欢迎
+          - generic [ref=e249]: 年付版
+          - generic [ref=e250]: ¥299/年
+          - generic [ref=e251]: 相当于 ¥25/月，省 ¥169
+        - generic [ref=e252] [cursor=pointer]:
+          - generic [ref=e253]: 买断版
+          - generic [ref=e254]: ¥1599/永久
+          - generic [ref=e255]: 一次付清，永久使用
+      - button "立即升级付费版 →" [ref=e256] [cursor=pointer]
+      - paragraph [ref=e257]:
+        - text: 也可添加微信
+        - strong [ref=e258]: nomad_erp
+        - text: 咨询，或先领取 15 天免费体验
+    - contentinfo [ref=e259]:
+      - generic [ref=e260]:
+        - img [ref=e262]:
+          - generic [ref=e264]: "N"
+        - generic [ref=e266]: 数字游牧
+      - paragraph [ref=e267]: DESIGNED BY NOMAD LABS · GLOBAL CITIZEN PLATFORM
+      - paragraph [ref=e268]: © 2026 数字游牧. All rights reserved.

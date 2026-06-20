@@ -2,24 +2,24 @@
   <div class="top-bar">
     <div class="breadcrumb">
       <el-breadcrumb separator="/">
-        <el-breadcrumb-item>{{ currentTopMenu?.title }}</el-breadcrumb-item>
-        <el-breadcrumb-item>{{ route.meta?.title }}</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ currentTopMenuTitle }}</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ routeTitle }}</el-breadcrumb-item>
       </el-breadcrumb>
     </div>
 
     <div class="top-actions">
       <!-- 当前账号名称 -->
-      <span class="account-label">{{ isSuperAdmin ? '管理员' : authStore.userName }}</span>
+      <span class="account-label">{{ isSuperAdmin ? adminLabel : authStore.userName }}</span>
 
       <!-- 返回选择模块 -->
-      <el-tooltip content="选择模块" placement="bottom">
+      <el-tooltip :content="t('route.Portal')" placement="bottom">
         <button class="action-btn" @click="router.push('/portal')">
           <el-icon :size="17"><Grid /></el-icon>
         </button>
       </el-tooltip>
 
       <!-- 品牌中心预览 -->
-      <el-tooltip content="品牌中心" placement="bottom">
+      <el-tooltip :content="t('layout.brandCenter')" placement="bottom">
         <button class="action-btn action-btn-brand" @click="router.push('/brand?from=erp')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
@@ -30,23 +30,36 @@
       </el-tooltip>
 
       <!-- 主题切换 -->
-      <el-tooltip content="亮色" placement="bottom">
+      <el-tooltip :content="t('layout.themeLight')" placement="bottom">
         <button class="action-btn" :class="{ active: appStore.theme === 'light' }" @click="appStore.setTheme('light')">
           <el-icon :size="16"><Sunny /></el-icon>
         </button>
       </el-tooltip>
-      <el-tooltip content="暗黑" placement="bottom">
+      <el-tooltip :content="t('layout.themeDark')" placement="bottom">
         <button class="action-btn" :class="{ active: appStore.theme === 'dark' }" @click="appStore.setTheme('dark')">
           <el-icon :size="16"><Moon /></el-icon>
         </button>
       </el-tooltip>
-      <el-tooltip content="护眼" placement="bottom">
+      <el-tooltip :content="t('layout.themeEye')" placement="bottom">
         <button class="action-btn" :class="{ active: appStore.theme === 'eye' }" @click="appStore.setTheme('eye')">
           <el-icon :size="16"><View /></el-icon>
         </button>
       </el-tooltip>
 
-      <el-tooltip content="消息通知" placement="bottom">
+      <!-- 语言切换 -->
+      <el-dropdown trigger="click" @command="handleLocaleCmd">
+        <button class="action-btn lang-btn" :title="t('layout.language')">
+          <span class="lang-label">{{ currentLocale === 'en-US' ? 'EN' : '中' }}</span>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="zh-CN" :class="{ 'is-active': currentLocale === 'zh-CN' }">{{ t('layout.languageZh') }}</el-dropdown-item>
+            <el-dropdown-item command="en-US" :class="{ 'is-active': currentLocale === 'en-US' }">{{ t('layout.languageEn') }}</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+
+      <el-tooltip :content="t('layout.notifications')" placement="bottom">
         <el-popover placement="bottom-end" :width="360" trigger="click" v-model:visible="notifVisible">
           <template #reference>
             <button class="action-btn notif-btn" @click="openNotifications">
@@ -56,14 +69,14 @@
           </template>
           <div class="notif-panel">
             <div class="notif-header">
-              <span class="notif-title">智能体通知</span>
-              <el-button v-if="notifications.length > 0" link size="small" @click="notifications = []">清空</el-button>
+              <span class="notif-title">{{ t('layout.agentNotifications') }}</span>
+              <el-button v-if="notifications.length > 0" link size="small" @click="notifications = []">{{ t('common.clear') }}</el-button>
             </div>
-            <div v-if="notifications.length === 0" class="notif-empty">暂无新通知</div>
+            <div v-if="notifications.length === 0" class="notif-empty">{{ t('layout.noNotifications') }}</div>
             <div v-else class="notif-list">
               <div v-for="n in notifications" :key="n.id" class="notif-item">
                 <div class="notif-item-header">
-                  <span class="notif-tag" :class="n.type">{{ { morning: '早报', noon: '午检', evening: '晚结' }[n.type] }}</span>
+                  <span class="notif-tag" :class="n.type">{{ notifTypeLabel(n.type) }}</span>
                   <span class="notif-time">{{ n.time }}</span>
                 </div>
                 <div class="notif-item-title">{{ n.title }}</div>
@@ -84,53 +97,53 @@
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="profile">个人资料</el-dropdown-item>
-            <el-dropdown-item command="password">修改密码</el-dropdown-item>
-            <el-dropdown-item v-if="isSuperAdmin" command="admin-console">🏢 租户管理控制台</el-dropdown-item>
-            <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+            <el-dropdown-item command="profile">{{ t('layout.profile') }}</el-dropdown-item>
+            <el-dropdown-item command="password">{{ t('layout.changePassword') }}</el-dropdown-item>
+            <el-dropdown-item v-if="isSuperAdmin" command="admin-console">🏢 {{ t('layout.tenantConsole') }}</el-dropdown-item>
+            <el-dropdown-item divided command="logout">{{ t('layout.logout') }}</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
     </div>
 
     <!-- 个人资料弹框 -->
-    <el-dialog v-model="profileVisible" title="个人资料" width="400px" append-to-body>
-      <el-form :model="profileForm" label-width="80px">
-        <el-form-item label="账号">
+    <el-dialog v-model="profileVisible" :title="t('layout.profile')" width="400px" append-to-body>
+      <el-form :model="profileForm" label-width="90px">
+        <el-form-item :label="t('login.account')">
           <el-input :value="authStore.userInfo?.account" disabled />
         </el-form-item>
-        <el-form-item label="姓名">
-          <el-input v-model="profileForm.name" placeholder="请输入姓名" />
+        <el-form-item :label="t('profile.name')">
+          <el-input v-model="profileForm.name" :placeholder="t('profile.namePlaceholder')" />
         </el-form-item>
-        <el-form-item label="手机号">
-          <el-input v-model="profileForm.mobile" placeholder="请输入手机号" />
+        <el-form-item :label="t('profile.mobile')">
+          <el-input v-model="profileForm.mobile" :placeholder="t('profile.mobilePlaceholder')" />
         </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="profileForm.email" placeholder="请输入邮箱" />
+        <el-form-item :label="t('profile.email')">
+          <el-input v-model="profileForm.email" :placeholder="t('profile.emailPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="profileVisible = false">取消</el-button>
-        <el-button type="primary" :loading="profileSaving" @click="saveProfile">保存</el-button>
+        <el-button @click="profileVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="profileSaving" @click="saveProfile">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 修改密码弹框 -->
-    <el-dialog v-model="pwdVisible" title="修改密码" width="400px" append-to-body>
-      <el-form :model="pwdForm" label-width="90px">
-        <el-form-item label="当前密码">
-          <el-input v-model="pwdForm.old_password" type="password" show-password placeholder="请输入当前密码" />
+    <el-dialog v-model="pwdVisible" :title="t('layout.changePassword')" width="400px" append-to-body>
+      <el-form :model="pwdForm" label-width="110px">
+        <el-form-item :label="t('profile.oldPassword')">
+          <el-input v-model="pwdForm.old_password" type="password" show-password :placeholder="t('profile.oldPasswordPlaceholder')" />
         </el-form-item>
-        <el-form-item label="新密码">
-          <el-input v-model="pwdForm.new_password" type="password" show-password placeholder="至少6位" />
+        <el-form-item :label="t('profile.newPassword')">
+          <el-input v-model="pwdForm.new_password" type="password" show-password :placeholder="t('profile.newPasswordPlaceholder')" />
         </el-form-item>
-        <el-form-item label="确认新密码">
-          <el-input v-model="pwdForm.confirm_password" type="password" show-password placeholder="再次输入新密码" />
+        <el-form-item :label="t('profile.confirmPassword')">
+          <el-input v-model="pwdForm.confirm_password" type="password" show-password :placeholder="t('profile.confirmPasswordPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="pwdVisible = false">取消</el-button>
-        <el-button type="primary" :loading="pwdSaving" @click="savePassword">确认修改</el-button>
+        <el-button @click="pwdVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="pwdSaving" @click="savePassword">{{ t('profile.confirmChange') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -146,11 +159,45 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { updateAdmin, getCompanyInfo } from '@/api/setting'
 import http from '@/api/http'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { setLocale, getStoredLocale, type Locale } from '@/i18n'
 
+const { t, locale } = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+
+const currentLocale = ref<Locale>(getStoredLocale())
+function handleLocaleCmd(cmd: Locale) {
+  if (cmd === currentLocale.value) return
+  currentLocale.value = cmd
+  setLocale(cmd)
+}
+
+const adminLabel = computed(() => t('layout.admin'))
+const currentTopMenuTitle = computed(() => {
+  const m = menuData.find((m) => m.key === appStore.activeTopMenu)
+  if (!m) return ''
+  // menuData.title now stores i18n key like 'menu.group.dashboard'
+  return m.title?.startsWith('menu.') ? t(m.title) : m.title
+})
+const routeTitle = computed(() => {
+  const meta = route.meta as any
+  if (meta?.titleKey) return t(meta.titleKey)
+  const name = route.name as string | undefined
+  if (name) {
+    const key = `route.${name}`
+    const v = t(key)
+    if (v && v !== key) return v
+  }
+  return meta?.title ?? ''
+})
+
+function notifTypeLabel(type: 'morning' | 'noon' | 'evening') {
+  const map = { morning: t('layout.notifMorning'), noon: t('layout.notifNoon'), evening: t('layout.notifEvening') }
+  return map[type]
+}
 
 // ── 实时时钟 ──────────────────────────────────────────────────────────────────
 const clockStr = ref('')
@@ -158,9 +205,17 @@ let clockTimer: ReturnType<typeof setInterval> | null = null
 
 function updateClock() {
   const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
-  clockStr.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} 星期${weekDays[now.getDay()]} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+  const clockLocale = locale.value === 'en-US' ? 'en-US' : 'zh-CN'
+  clockStr.value = new Intl.DateTimeFormat(clockLocale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(now)
 }
 updateClock()
 clockTimer = setInterval(updateClock, 1000)
@@ -217,10 +272,6 @@ const isSuperAdmin = computed(() => {
   return acc === SUPER_ADMIN
 })
 
-const currentTopMenu = computed(() =>
-  menuData.find((m) => m.key === appStore.activeTopMenu),
-)
-
 // ── 个人资料 ──────────────────────────────────────────────────────────────────
 const profileVisible = ref(false)
 const profileSaving = ref(false)
@@ -244,10 +295,10 @@ async function saveProfile() {
       authStore.userInfo.email = profileForm.email
       localStorage.setItem('erp_user_info', JSON.stringify(authStore.userInfo))
     }
-    ElMessage.success('资料已更新')
+    ElMessage.success(t('profile.updated'))
     profileVisible.value = false
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('common.saveFailed'))
   } finally {
     profileSaving.value = false
   }
@@ -266,21 +317,21 @@ function openPassword() {
 }
 
 async function savePassword() {
-  if (!pwdForm.old_password) { ElMessage.warning('请输入当前密码'); return }
-  if (pwdForm.new_password.length < 6) { ElMessage.warning('新密码至少6位'); return }
-  if (pwdForm.new_password !== pwdForm.confirm_password) { ElMessage.warning('两次输入的密码不一致'); return }
+  if (!pwdForm.old_password) { ElMessage.warning(t('profile.oldPasswordRequired')); return }
+  if (pwdForm.new_password.length < 6) { ElMessage.warning(t('profile.newPasswordTooShort')); return }
+  if (pwdForm.new_password !== pwdForm.confirm_password) { ElMessage.warning(t('profile.passwordMismatch')); return }
   pwdSaving.value = true
   try {
     await http.post('/auth/updatePassword', {
       old_password: pwdForm.old_password,
       new_password: pwdForm.new_password,
     })
-    ElMessage.success('密码已修改，请重新登录')
+    ElMessage.success(t('profile.passwordChanged'))
     pwdVisible.value = false
     authStore.logout()
     router.push('/login')
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '修改失败')
+    ElMessage.error(e?.message ?? t('common.failed'))
   } finally {
     pwdSaving.value = false
   }
@@ -294,9 +345,9 @@ async function handleUserCmd(cmd: string) {
   } else if (cmd === 'admin-console') {
     router.push('/admin-console')
   } else if (cmd === 'logout') {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('layout.confirmLogout'), t('common.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning',
     })
     authStore.logout()
@@ -387,6 +438,12 @@ async function handleUserCmd(cmd: string) {
 .action-btn.active {
   background: var(--blue-light);
   color: var(--blue);
+}
+
+.lang-btn .lang-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .user-info {

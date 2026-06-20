@@ -1,0 +1,17 @@
+export default {
+  goodsName: 'Product Name',
+  goodsNamePlaceholder: 'Enter product name',
+  dateRange: 'Date Range',
+  dateRangeSeparator: 'to',
+  startDate: 'Start Date',
+  endDate: 'End Date',
+  query: 'Search',
+  reset: 'Reset',
+  goodsSn: 'Product Code',
+  costPrice: 'Cost Price',
+  sellPrice: 'Selling Price',
+  profit: 'Profit',
+  profitRate: 'Profit Margin',
+  period: 'Accounting Period',
+  exportFileName: 'Cost Records',
+}

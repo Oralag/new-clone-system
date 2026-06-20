@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="新建商品"
+    :title="t('goodsFormDialog.title')"
     width="800px"
     append-to-body
     destroy-on-close
@@ -10,40 +10,40 @@
     <el-form ref="formRef" :model="fd" label-width="100px" style="max-height:65vh;overflow-y:auto;padding-right:8px">
 
       <!-- 基本信息 -->
-      <div class="sec-title">基本信息</div>
+      <div class="sec-title">{{ t('goodsFormDialog.basicInfo') }}</div>
       <el-row :gutter="16">
         <el-col :span="12">
-          <el-form-item label="商品类型" prop="goods_type">
+          <el-form-item :label="t('goodsFormDialog.goodsType')" prop="goods_type">
             <el-select v-model="fd.goods_type" style="width:100%">
-              <el-option label="成品" :value="1" />
-              <el-option label="半成品" :value="2" />
-              <el-option label="原材料" :value="3" />
-              <el-option label="辅料" :value="4" />
+              <el-option :label="t('goodsFormDialog.typeFinished')" :value="1" />
+              <el-option :label="t('goodsFormDialog.typeSemiFinished')" :value="2" />
+              <el-option :label="t('goodsFormDialog.typeRawMaterial')" :value="3" />
+              <el-option :label="t('goodsFormDialog.typeAuxiliary')" :value="4" />
             </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="商品编码" prop="goods_sn">
+          <el-form-item :label="t('goodsFormDialog.goodsCode')" prop="goods_sn">
             <div style="display:flex;gap:4px;width:100%">
-              <el-input v-model="fd.goods_sn" placeholder="不填写自动生成" style="flex:1" />
-              <el-button @click="fd.goods_sn = genGoodsSn()">自动生成</el-button>
+              <el-input v-model="fd.goods_sn" :placeholder="t('goodsFormDialog.autoGeneratePlaceholder')" style="flex:1" />
+              <el-button @click="fd.goods_sn = genGoodsSn()">{{ t('goodsFormDialog.autoGenerate') }}</el-button>
             </div>
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="商品名称" prop="goods_name" :rules="[{ required: true, message: '请输入商品名称' }]">
-            <el-input v-model="fd.goods_name" placeholder="请输入商品名称" />
+          <el-form-item :label="t('goodsFormDialog.goodsName')" prop="goods_name" :rules="[{ required: true, message: t('goodsFormDialog.goodsNameRequired') }]">
+            <el-input v-model="fd.goods_name" :placeholder="t('goodsFormDialog.goodsNamePlaceholder')" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="英文名称" prop="en_name">
-            <el-input v-model="fd.en_name" placeholder="请输入英文名称（可选）" />
+          <el-form-item :label="t('goodsFormDialog.englishName')" prop="en_name">
+            <el-input v-model="fd.en_name" :placeholder="t('goodsFormDialog.englishNamePlaceholder')" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="商品分类" prop="cate_id" :rules="[{ required: true, message: '请选择商品分类' }]">
+          <el-form-item :label="t('goodsFormDialog.category')" prop="cate_id" :rules="[{ required: true, message: t('goodsFormDialog.categoryRequired') }]">
             <div style="display:flex;gap:4px;width:100%">
-              <el-select v-model="fd.cate_id" placeholder="请选择" clearable style="flex:1">
+              <el-select v-model="fd.cate_id" :placeholder="t('common.select')" clearable style="flex:1">
                 <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
               </el-select>
               <el-button :icon="Plus" @click="quickAddCate" />
@@ -51,9 +51,9 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="品牌" prop="brand_id">
+          <el-form-item :label="t('goodsFormDialog.brand')" prop="brand_id">
             <div style="display:flex;gap:4px;width:100%">
-              <el-select v-model="fd.brand_id" placeholder="请选择（可选）" clearable style="flex:1">
+              <el-select v-model="fd.brand_id" :placeholder="t('goodsFormDialog.optionalSelect')" clearable style="flex:1">
                 <el-option v-for="b in brandOptions" :key="b.id" :label="b.name" :value="b.id" />
               </el-select>
               <el-button :icon="Plus" @click="quickAddBrand" />
@@ -61,9 +61,9 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="商品单位" prop="unit_id" :rules="[{ required: true, message: '请选择单位' }]">
+          <el-form-item :label="t('goodsFormDialog.unit')" prop="unit_id" :rules="[{ required: true, message: t('goodsFormDialog.unitRequired') }]">
             <div style="display:flex;gap:4px;width:100%">
-              <el-select v-model="fd.unit_id" placeholder="请选择单位" style="flex:1" @change="onUnitChange">
+              <el-select v-model="fd.unit_id" :placeholder="t('goodsFormDialog.unitPlaceholder')" style="flex:1" @change="onUnitChange">
                 <el-option v-for="u in unitOptions" :key="u.id" :label="u.name" :value="u.id" />
               </el-select>
               <el-button :icon="Plus" @click="quickAddUnit" />
@@ -71,102 +71,105 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="条形码" prop="barcode">
+          <el-form-item :label="t('goodsFormDialog.barcode')" prop="barcode">
             <div style="display:flex;gap:4px;width:100%">
-              <el-input v-model="fd.barcode" placeholder="请输入或扫描条形码" style="flex:1" />
-              <el-button :icon="Camera" title="摄像头扫码" @click="openScanner" />
+              <el-input v-model="fd.barcode" :placeholder="t('goodsFormDialog.barcodePlaceholder')" style="flex:1" />
+              <el-button :icon="Camera" :title="t('goodsFormDialog.scanBarcode')" @click="openScanner" />
             </div>
           </el-form-item>
         </el-col>
       </el-row>
 
       <!-- 价格 -->
-      <div class="sec-title" style="margin-top:12px">价格</div>
+      <div class="sec-title" style="margin-top:12px">{{ t('goodsFormDialog.price') }}</div>
       <el-row :gutter="16">
         <el-col :span="12">
-          <el-form-item label="采购/成本价" prop="cost_price">
+          <el-form-item :label="t('goodsFormDialog.costPrice')" prop="cost_price">
             <el-input-number v-model="fd.cost_price" :min="0" :precision="2" controls-position="right" style="width:100%" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="销售价" prop="sell_price">
+          <el-form-item :label="t('goodsFormDialog.sellPrice')" prop="sell_price">
             <el-input-number v-model="fd.sell_price" :min="0" :precision="2" controls-position="right" style="width:100%" />
           </el-form-item>
         </el-col>
       </el-row>
 
       <!-- 库存预警 -->
-      <div class="sec-title" style="margin-top:12px">库存预警</div>
+      <div class="sec-title" style="margin-top:12px">{{ t('goodsFormDialog.stockWarning') }}</div>
       <el-row :gutter="16">
         <el-col :span="12">
-          <el-form-item label="安全库存下限">
+          <el-form-item :label="t('goodsFormDialog.safeMin')">
             <el-input-number v-model="fd.safe_min" :min="0" controls-position="right" style="width:100%" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="安全库存上限">
+          <el-form-item :label="t('goodsFormDialog.safeMax')">
             <el-input-number v-model="fd.safe_max" :min="0" controls-position="right" style="width:100%" />
           </el-form-item>
         </el-col>
       </el-row>
 
       <!-- 权限设置 -->
-      <div class="sec-title" style="margin-top:12px">权限设置</div>
+      <div class="sec-title" style="margin-top:12px">{{ t('goodsFormDialog.permissions') }}</div>
       <el-row :gutter="16">
         <el-col :span="6">
-          <el-form-item label="可销售">
+          <el-form-item :label="t('goodsFormDialog.canSale')">
             <el-switch v-model="fd.can_sale" :active-value="1" :inactive-value="0" />
           </el-form-item>
         </el-col>
         <el-col :span="6">
-          <el-form-item label="可采购">
+          <el-form-item :label="t('goodsFormDialog.canBuy')">
             <el-switch v-model="fd.can_buy" :active-value="1" :inactive-value="0" />
           </el-form-item>
         </el-col>
         <el-col :span="6">
-          <el-form-item label="可自制">
+          <el-form-item :label="t('goodsFormDialog.canMake')">
             <el-switch v-model="fd.can_make" :active-value="1" :inactive-value="0" />
           </el-form-item>
         </el-col>
         <el-col :span="6">
-          <el-form-item label="状态">
-            <el-switch v-model="fd.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
+          <el-form-item :label="t('common.status')">
+            <el-switch v-model="fd.status" :active-value="1" :inactive-value="0" :active-text="t('common.enabled')" :inactive-text="t('common.disabled')" />
           </el-form-item>
         </el-col>
       </el-row>
 
       <!-- 备注 -->
-      <el-form-item label="备注" style="margin-top:8px">
-        <el-input v-model="fd.remark" type="textarea" :rows="2" placeholder="可选备注" />
+      <el-form-item :label="t('common.remark')" style="margin-top:8px">
+        <el-input v-model="fd.remark" type="textarea" :rows="2" :placeholder="t('goodsFormDialog.remarkPlaceholder')" />
       </el-form-item>
     </el-form>
 
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" :loading="saving" @click="handleSave">确认新建</el-button>
+      <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :loading="saving" @click="handleSave">{{ t('goodsFormDialog.confirmCreate') }}</el-button>
     </template>
   </el-dialog>
 
   <!-- 扫码对话框 -->
-  <el-dialog v-model="scannerVisible" title="扫描条形码" width="min(420px, 95vw)" append-to-body destroy-on-close :close-on-click-modal="false" @closed="stopScanner">
+  <el-dialog v-model="scannerVisible" :title="t('goodsFormDialog.scanDialogTitle')" width="min(420px, 95vw)" append-to-body destroy-on-close :close-on-click-modal="false" @closed="stopScanner">
     <div style="text-align:center">
       <video ref="videoRef" style="width:100%;max-height:60vh;background:#000;border-radius:8px;display:block" autoplay muted playsinline />
       <div v-if="scanError" style="color:#f56c6c;margin-top:8px;font-size:13px">{{ scanError }}</div>
-      <div v-else-if="!scanning" style="color:#909399;margin-top:8px;font-size:13px">正在启动摄像头...</div>
-      <div v-else style="color:#409eff;margin-top:8px;font-size:13px">对准条形码，自动识别中...</div>
+      <div v-else-if="!scanning" style="color:#909399;margin-top:8px;font-size:13px">{{ t('goodsFormDialog.startingCamera') }}</div>
+      <div v-else style="color:#409eff;margin-top:8px;font-size:13px">{{ t('goodsFormDialog.scanningHint') }}</div>
     </div>
     <template #footer>
-      <el-button @click="scannerVisible = false">取消</el-button>
+      <el-button @click="scannerVisible = false">{{ t('common.cancel') }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, Camera } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { createGoods, getGoodsCateList, createGoodsCate, getBrandList, createBrand, getUnitList, createUnit } from '@/api/goods'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (e: 'created', goods: any): void
@@ -229,7 +232,7 @@ function onUnitChange(id: any) {
 }
 
 async function quickAddCate() {
-  const name = prompt('请输入新分类名称')
+  const name = prompt(t('goodsFormDialog.promptCategoryName'))
   if (!name?.trim()) return
   try {
     await createGoodsCate({ name: name.trim() })
@@ -237,12 +240,12 @@ async function quickAddCate() {
     const rc = res.data?.rows ?? []; cateOptions.value = rc.filter((c: any, i: number) => rc.findIndex((x: any) => x.name === c.name) === i)
     const newOne = cateOptions.value.find(c => c.name === name.trim())
     if (newOne) fd.cate_id = newOne.id
-    ElMessage.success('分类创建成功')
-  } catch (e: any) { ElMessage.error(e?.message ?? '创建失败') }
+    ElMessage.success(t('goodsFormDialog.categoryCreated'))
+  } catch (e: any) { ElMessage.error(e?.message ?? t('common.createFailed')) }
 }
 
 async function quickAddBrand() {
-  const name = prompt('请输入品牌名称')
+  const name = prompt(t('goodsFormDialog.promptBrandName'))
   if (!name?.trim()) return
   try {
     await createBrand({ name: name.trim() })
@@ -250,12 +253,12 @@ async function quickAddBrand() {
     brandOptions.value = res.data?.rows ?? []
     const newOne = brandOptions.value.find(b => b.name === name.trim())
     if (newOne) fd.brand_id = newOne.id
-    ElMessage.success('品牌创建成功')
-  } catch (e: any) { ElMessage.error(e?.message ?? '创建失败') }
+    ElMessage.success(t('goodsFormDialog.brandCreated'))
+  } catch (e: any) { ElMessage.error(e?.message ?? t('common.createFailed')) }
 }
 
 async function quickAddUnit() {
-  const name = prompt('请输入单位名称（如：个、斤、克）')
+  const name = prompt(t('goodsFormDialog.promptUnitName'))
   if (!name?.trim()) return
   try {
     await createUnit({ name: name.trim() })
@@ -263,13 +266,13 @@ async function quickAddUnit() {
     unitOptions.value = res.data?.rows ?? []
     const newOne = unitOptions.value.find(u => u.name === name.trim())
     if (newOne) { fd.unit_id = newOne.id; fd.unit_name = newOne.name }
-    ElMessage.success('单位创建成功')
-  } catch (e: any) { ElMessage.error(e?.message ?? '创建失败') }
+    ElMessage.success(t('goodsFormDialog.unitCreated'))
+  } catch (e: any) { ElMessage.error(e?.message ?? t('common.createFailed')) }
 }
 
 async function handleSave() {
   try { await formRef.value?.validate() } catch {
-    ElMessage.warning('请填写必填项（商品名称、商品分类、商品单位）'); return
+    ElMessage.warning(t('goodsFormDialog.requiredFieldsWarning')); return
   }
   saving.value = true
   try {
@@ -282,11 +285,11 @@ async function handleSave() {
       typeMap[newId] = fd.goods_type
       localStorage.setItem(GOODS_TYPE_KEY, JSON.stringify(typeMap))
     }
-    ElMessage.success('商品创建成功，已同步到商品库')
+    ElMessage.success(t('goodsFormDialog.goodsCreated'))
     visible.value = false
     emit('created', { ...fd, id: newId })
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '创建失败')
+    ElMessage.error(e?.message ?? t('common.createFailed'))
   } finally {
     saving.value = false
   }
@@ -321,12 +324,12 @@ async function startScanner() {
     codeReader.decodeFromStream(stream, videoRef.value!, (result) => {
       if (!result) return
       fd.barcode = result.getText()
-      ElMessage.success(`扫码成功：${fd.barcode}`)
+      ElMessage.success(t('goodsFormDialog.scanSuccess', { barcode: fd.barcode }))
       stopScanner()
       scannerVisible.value = false
     })
   } catch (e: any) {
-    scanError.value = e?.message ?? '摄像头启动失败，请检查浏览器权限'
+    scanError.value = e?.message ?? t('goodsFormDialog.cameraFailed')
     scanning.value = false
   }
 }

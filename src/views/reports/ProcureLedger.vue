@@ -3,17 +3,17 @@
     <!-- 搜索栏 -->
     <el-card class="search-card">
       <el-form inline>
-        <el-form-item label="年份">
+        <el-form-item :label="$t('reports.procureLedger.yearLabel')">
           <el-select v-model="searchYear" style="width:100px" @change="loadAll">
             <el-option v-for="y in yearOptions" :key="y" :label="y+''" :value="y" />
           </el-select>
         </el-form-item>
-        <el-form-item label="供应商">
-          <el-input v-model="searchSupplier" placeholder="供应商名称" clearable style="width:160px" @change="loadAll" />
+        <el-form-item :label="$t('reports.procureLedger.supplierLabel')">
+          <el-input v-model="searchSupplier" :placeholder="$t('reports.procureLedger.supplierPlaceholder')" clearable style="width:160px" @change="loadAll" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="loadAll">搜索</el-button>
-          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="loadAll">{{ $t('reports.procureLedger.search') }}</el-button>
+          <el-button @click="onReset">{{ $t('reports.procureLedger.reset') }}</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -23,35 +23,35 @@
       <div class="stat-card blue">
         <div class="stat-icon"><el-icon><Document /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">采购单数量（份）</div>
+          <div class="stat-label">{{ $t('reports.procureLedger.statCount') }}</div>
           <div class="stat-value">{{ stats.count }}</div>
         </div>
       </div>
       <div class="stat-card orange">
         <div class="stat-icon"><el-icon><Wallet /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">采购总金额</div>
+          <div class="stat-label">{{ $t('reports.procureLedger.statTotal') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.total) }}</div>
         </div>
       </div>
       <div class="stat-card green">
         <div class="stat-icon"><el-icon><CircleCheck /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">已付金额</div>
+          <div class="stat-label">{{ $t('reports.procureLedger.statPaid') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.paid) }}</div>
         </div>
       </div>
       <div class="stat-card red">
         <div class="stat-icon"><el-icon><Clock /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">未付金额</div>
+          <div class="stat-label">{{ $t('reports.procureLedger.statUnpaid') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.unpaid) }}</div>
         </div>
       </div>
       <div class="stat-card purple">
         <div class="stat-icon"><el-icon><Box /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">运费合计</div>
+          <div class="stat-label">{{ $t('reports.procureLedger.statFreight') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.freight) }}</div>
         </div>
       </div>
@@ -60,11 +60,11 @@
     <!-- 图表区 -->
     <div class="chart-row">
       <el-card class="chart-card pie-card">
-        <div class="card-title">累计付款进度</div>
+        <div class="card-title">{{ $t('reports.procureLedger.chartPieTitle') }}</div>
         <div ref="pieRef" style="height:220px"></div>
       </el-card>
       <el-card class="chart-card line-card">
-        <div class="card-title">月度采购金额明细</div>
+        <div class="card-title">{{ $t('reports.procureLedger.chartLineTitle') }}</div>
         <div ref="lineRef" style="height:220px"></div>
       </el-card>
     </div>
@@ -72,43 +72,43 @@
     <!-- 明细表格 -->
     <el-card class="table-card">
       <el-table :data="tableData" border stripe size="small" style="width:100%">
-        <el-table-column type="index" label="序号" width="55" align="center" />
-        <el-table-column label="下单日期" prop="order_date" width="110" />
-        <el-table-column label="供应商名称" min-width="120">
+        <el-table-column type="index" :label="$t('reports.procureLedger.colIndex')" width="55" align="center" />
+        <el-table-column :label="$t('reports.procureLedger.colOrderDate')" prop="order_date" width="110" />
+        <el-table-column :label="$t('reports.procureLedger.colSupplierName')" min-width="120">
           <template #default="{ row }">{{ getSupplierLabel(row) }}</template>
         </el-table-column>
-        <el-table-column label="采购金额" prop="total_amount" width="110" align="right">
+        <el-table-column :label="$t('reports.procureLedger.colTotal')" prop="total_amount" width="110" align="right">
           <template #default="{ row }">{{ fmt(row.total_amount) }}</template>
         </el-table-column>
-        <el-table-column label="已付金额" width="110" align="right">
+        <el-table-column :label="$t('reports.procureLedger.colPaid')" width="110" align="right">
           <template #default="{ row }">{{ fmt(row.pay_amount) }}</template>
         </el-table-column>
-        <el-table-column label="未付金额" width="110" align="right">
+        <el-table-column :label="$t('reports.procureLedger.colUnpaid')" width="110" align="right">
           <template #default="{ row }">
             <span :style="{ color: calcUnpaid(row) > 0 ? '#ef4444' : '#16a34a' }">
               {{ fmt(calcUnpaid(row)) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="运费" prop="freight_amount" width="80" align="right">
+        <el-table-column :label="$t('reports.procureLedger.colFreight')" prop="freight_amount" width="80" align="right">
           <template #default="{ row }">{{ fmt(row.freight_amount) }}</template>
         </el-table-column>
-        <el-table-column label="欠款状态" width="90" align="center">
+        <el-table-column :label="$t('reports.procureLedger.colDebtStatus')" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="calcUnpaid(row) > 0 ? 'danger' : 'success'" size="small">
-              {{ calcUnpaid(row) > 0 ? '未结清' : '已结清' }}
+              {{ calcUnpaid(row) > 0 ? $t('reports.procureLedger.statusUnpaid') : $t('reports.procureLedger.statusPaid') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="采购状态" width="90" align="center">
+        <el-table-column :label="$t('reports.procureLedger.colProcureStatus')" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'primary' : 'info'" size="small">
-              {{ row.status === 1 ? '进行中' : '草稿' }}
+              {{ row.status === 1 ? $t('reports.procureLedger.statusInProgress') : $t('reports.procureLedger.statusDraft') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="仓库" prop="warehouse_name" width="100" />
-        <el-table-column label="备注" prop="remark" min-width="100" />
+        <el-table-column :label="$t('reports.procureLedger.colWarehouse')" prop="warehouse_name" width="100" />
+        <el-table-column :label="$t('reports.procureLedger.colRemark')" prop="remark" min-width="100" />
       </el-table>
       <div style="margin-top:12px;text-align:right">
         <el-pagination
@@ -125,6 +125,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { Search, Document, Wallet, CircleCheck, Clock, Box } from '@element-plus/icons-vue'
 import * as echarts from 'echarts/core'
 import { PieChart, LineChart } from 'echarts/charts'
@@ -168,7 +170,7 @@ function getSupplierLabel(row: any): string {
   try {
     const items = typeof row.goods_info === 'string' ? JSON.parse(row.goods_info) : (row.goods_info || [])
     const ids = [...new Set(items.map((i: any) => Number(i.supplier_id)).filter(Boolean))]
-    if (ids.length > 1) return '多供应商'
+    if (ids.length > 1) return t('reports.procureLedger.multiSupplier')
     if (ids.length === 1) return items.find((i: any) => i.supplier_id)?.supplier_name || row.supplier_name || String(ids[0])
   } catch {}
   return row.supplier_name || '—'
@@ -221,8 +223,8 @@ function renderPie() {
       type: 'pie', radius: ['40%', '70%'], center: ['60%', '50%'],
       label: { formatter: '{b}: {d}%', fontSize: 11 },
       data: [
-        { name: '已付金额', value: paid.toFixed(2), itemStyle: { color: '#f5a623' } },
-        { name: '未付金额', value: unpaid.toFixed(2), itemStyle: { color: '#4ade80' } },
+        { name: t('reports.procureLedger.piePaid'), value: paid.toFixed(2), itemStyle: { color: '#f5a623' } },
+        { name: t('reports.procureLedger.pieUnpaid'), value: unpaid.toFixed(2), itemStyle: { color: '#4ade80' } },
       ].filter(d => Number(d.value) > 0)
     }]
   })
@@ -238,14 +240,14 @@ function renderLine() {
   )
   lineChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['采购金额', '已付金额', '未付金额'], top: 0, right: 10 },
+    legend: { data: [t('reports.procureLedger.seriesProcure'), t('reports.procureLedger.seriesPaid'), t('reports.procureLedger.seriesUnpaid')], top: 0, right: 10 },
     grid: { left: 50, right: 20, top: 30, bottom: 30 },
     xAxis: { type: 'category', data: months.map(m => m.slice(5)), axisLabel: { fontSize: 10 } },
     yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
     series: [
-      { name: '采购金额', type: 'line', smooth: true, data: byMonth('total_amount'), itemStyle: { color: '#3b82f6' } },
-      { name: '已付金额', type: 'line', smooth: true, data: byMonth('pay_amount'), itemStyle: { color: '#10b981' } },
-      { name: '未付金额', type: 'line', smooth: true,
+      { name: t('reports.procureLedger.seriesProcure'), type: 'line', smooth: true, data: byMonth('total_amount'), itemStyle: { color: '#3b82f6' } },
+      { name: t('reports.procureLedger.seriesPaid'), type: 'line', smooth: true, data: byMonth('pay_amount'), itemStyle: { color: '#10b981' } },
+      { name: t('reports.procureLedger.seriesUnpaid'), type: 'line', smooth: true,
         data: months.map(m => allRows.value.filter(r => (r.order_date || r.created_at || '').startsWith(m)).reduce((s, r) => s + calcUnpaid(r), 0).toFixed(2)),
         itemStyle: { color: '#ef4444' }
       },

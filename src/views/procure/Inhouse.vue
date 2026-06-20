@@ -6,74 +6,74 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="reconcileFilteredApi"
           sort-by="in_date" :sort-desc="true"
-          export-file-name="采购入库单" :params="searchForm"
+          :export-file-name="$t('procure.inhouse.exportFileName')" :params="searchForm"
           :row-filter="(row: any) => Number(row.status) === 1"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''"
-          :export-columns="{ in_no: '入库单号', supplier_name: '供应商', warehouse_name: '仓库', in_date: '入库日期', admin_name: '经办人', total_amount: '总金额', status: '状态' }">
+          :export-columns="{ in_no: $t('procure.inhouse.colInNo'), supplier_name: $t('procure.inhouse.colSupplier'), warehouse_name: $t('procure.inhouse.colWarehouse'), in_date: $t('procure.inhouse.colInDate'), admin_name: $t('procure.inhouse.colHandler'), total_amount: $t('procure.inhouse.colTotalAmount'), status: $t('procure.inhouse.colStatus') }">
           <template #search>
-            <el-input v-model="searchForm.in_no" placeholder="入库单号" clearable style="width:160px" />
-            <el-input v-model="searchForm.supplier_name" placeholder="供应商名称" clearable style="width:150px" />
-            <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:150px" />
-            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
-              <el-option label="未核对" value="unreconciled" />
+            <el-input v-model="searchForm.in_no" :placeholder="$t('procure.inhouse.searchInNo')" clearable style="width:160px" />
+            <el-input v-model="searchForm.supplier_name" :placeholder="$t('procure.inhouse.searchSupplierName')" clearable style="width:150px" />
+            <el-input v-model="searchForm.goods_name" :placeholder="$t('procure.inhouse.searchGoodsName')" clearable style="width:150px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="$t('procure.inhouse.searchReconcilePlaceholder')">
+              <el-option :label="$t('procure.inhouse.filterUnreconciled')" value="unreconciled" />
             </el-select>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="expand-detail">
-                <div class="expand-title">商品明细</div>
+                <div class="expand-title">{{ $t('procure.inhouse.expandTitle') }}</div>
                 <el-table :data="parseItems(row.goods_info)" border size="small" class="expand-table">
                   <el-table-column type="index" width="40" align="center" />
-                  <el-table-column prop="goods_name" label="商品名称" min-width="140" />
-                  <el-table-column prop="goods_sn" label="编码" width="110" />
-                  <el-table-column prop="spec" label="规格" width="100" />
-                  <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-                  <el-table-column prop="num" label="入库数量" width="90" align="right" />
-                  <el-table-column label="含税单价" width="110" align="right">
+                  <el-table-column prop="goods_name" :label="$t('procure.inhouse.colExpandGoodsName')" min-width="140" />
+                  <el-table-column prop="goods_sn" :label="$t('procure.inhouse.colExpandCode')" width="110" />
+                  <el-table-column prop="spec" :label="$t('procure.inhouse.colExpandSpec')" width="100" />
+                  <el-table-column prop="unit_name" :label="$t('procure.inhouse.colExpandUnit')" width="65" align="center" />
+                  <el-table-column prop="num" :label="$t('procure.inhouse.colExpandInNum')" width="90" align="right" />
+                  <el-table-column :label="$t('procure.inhouse.colExpandPriceWithTax')" width="110" align="right">
                     <template #default="{ row: item }">¥{{ Number(item.price || 0).toFixed(2) }}</template>
                   </el-table-column>
-                  <el-table-column label="含税合计" width="110" align="right">
+                  <el-table-column :label="$t('procure.inhouse.colExpandTotalWithTax')" width="110" align="right">
                     <template #default="{ row: item }">
                       <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column prop="remark" label="备注" min-width="100" />
+                  <el-table-column prop="remark" :label="$t('procure.inhouse.colExpandRemark')" min-width="100" />
                 </el-table>
               </div>
             </template>
           </el-table-column>
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="in_no" label="入库单号" min-width="150">
+          <el-table-column type="index" :label="$t('procure.inhouse.colIndex')" width="60" align="center" />
+          <el-table-column prop="in_no" :label="$t('procure.inhouse.colInNo')" min-width="150">
             <template #default="{ row }">{{ row.in_no || row.inhouse_no || '—' }}</template>
           </el-table-column>
-          <el-table-column label="供应商" min-width="130">
+          <el-table-column :label="$t('procure.inhouse.colSupplier')" min-width="130">
             <template #default="{ row }">{{ row.supplier_name || supplierOptions.find(s => s.id === row.supplier_id)?.name || '—' }}</template>
           </el-table-column>
-          <el-table-column label="仓库" width="120">
+          <el-table-column :label="$t('procure.inhouse.colWarehouse')" width="120">
             <template #default="{ row }">{{ row.warehouse_name || '—' }}</template>
           </el-table-column>
-          <el-table-column label="入库日期" width="110">
+          <el-table-column :label="$t('procure.inhouse.colInDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.in_date || row.inhouse_date || row.create_time) }}</template>
           </el-table-column>
-          <el-table-column label="经办人" width="90">
+          <el-table-column :label="$t('procure.inhouse.colHandler')" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
           </el-table-column>
-          <el-table-column label="总金额" width="120" align="right">
+          <el-table-column :label="$t('procure.inhouse.colTotalAmount')" width="120" align="right">
             <template #default="{ row }">
               <span style="color:#0071e3;font-weight:500">¥{{ calcRowTotal(row).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column :label="$t('procure.inhouse.colStatus')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : '待审核' }}
+                {{ row.status === 1 ? $t('procure.inhouse.tagAudited') : row.status === 2 ? $t('procure.inhouse.tagRejected') : $t('procure.inhouse.tagPending') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="130" fixed="right">
+          <el-table-column :label="$t('procure.inhouse.colActions')" width="130" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
+              <el-button type="primary" link size="small" @click="openEdit(row, true)">{{ $t('procure.inhouse.actionView') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('procure.inhouse.actionReconciled') : $t('procure.inhouse.actionReconcile') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -85,16 +85,16 @@
       <!-- 顶部操作栏 -->
       <div class="form-topbar">
         <div style="display:flex;align-items:center;gap:12px">
-          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ isReadonly ? '查看采购入库单' : (fd.id ? '编辑采购入库单' : '新增采购入库单') }}</span>
-          <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
+          <el-button :icon="ArrowLeft" @click="backToList">{{ $t('procure.inhouse.btnBack') }}</el-button>
+          <span class="form-title">{{ isReadonly ? $t('procure.inhouse.formTitleView') : (fd.id ? $t('procure.inhouse.formTitleEdit') : $t('procure.inhouse.formTitleCreate')) }}</span>
+          <el-tag v-if="isReadonly" type="success" size="small">{{ $t('procure.inhouse.tagAuditedForm') }}</el-tag>
         </div>
         <div class="form-actions">
           <el-button v-if="!isReadonly" :loading="saving && !savingAndAuditing" :disabled="saving" @click="handleSave(false)">
-            保存
+            {{ $t('procure.inhouse.btnSave') }}
           </el-button>
           <el-button v-if="!isReadonly" type="primary" :loading="savingAndAuditing" :disabled="saving" @click="handleSave(true)">
-            保存并审核
+            {{ $t('procure.inhouse.btnSaveAndAudit') }}
           </el-button>
         </div>
       </div>
@@ -103,20 +103,20 @@
 
         <!-- 基本信息卡片 -->
         <div class="form-section">
-          <div class="sec-title">基本信息</div>
+          <div class="sec-title">{{ $t('procure.inhouse.sectionBasicInfo') }}</div>
           <el-form ref="formRef" :model="fd" label-width="80px" :disabled="isReadonly">
             <el-row :gutter="16">
               <!-- 行1 -->
               <el-col :span="6">
-                <el-form-item label="入库单号">
-                  <el-input :value="fd.id ? fd.in_no : '（保存后自动生成）'" disabled placeholder="自动生成" />
+                <el-form-item :label="$t('procure.inhouse.labelInNo')">
+                  <el-input :value="fd.id ? fd.in_no : $t('procure.inhouse.inNoAutoGenerate')" disabled :placeholder="$t('procure.inhouse.inNoPlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="供应商" prop="supplier_id"
-                  :rules="[{ required: true, message: '请选择供应商' }]">
+                <el-form-item :label="$t('procure.inhouse.labelSupplier')" prop="supplier_id"
+                  :rules="[{ required: true, message: $t('procure.inhouse.supplierRequired') }]">
                   <div style="display:flex;gap:4px;width:100%">
-                    <el-select v-model="fd.supplier_id" placeholder="请选择供应商" filterable style="flex:1"
+                    <el-select v-model="fd.supplier_id" :placeholder="$t('procure.inhouse.supplierPlaceholder')" filterable style="flex:1"
                       @change="onSupplierChange">
                       <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
                     </el-select>
@@ -125,38 +125,38 @@
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="经办人" prop="admin_name">
-                  <StaffSelect v-model="fd.admin_name" placeholder="请选择或输入经办人" />
+                <el-form-item :label="$t('procure.inhouse.labelHandler')" prop="admin_name">
+                  <StaffSelect v-model="fd.admin_name" :placeholder="$t('procure.inhouse.handlerPlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="入库日期" prop="in_date">
+                <el-form-item :label="$t('procure.inhouse.labelInDate')" prop="in_date">
                   <el-date-picker v-model="fd.in_date" type="date" value-format="YYYY-MM-DD"
-                    style="width:100%" placeholder="请选择日期" />
+                    style="width:100%" :placeholder="$t('procure.inhouse.datePlaceholder')" />
                 </el-form-item>
               </el-col>
 
               <!-- 行2 -->
               <el-col :span="6">
-                <el-form-item label="仓库" prop="warehouse_id"
-                  :rules="[{ required: true, message: '请选择仓库' }]">
-                  <el-select v-model="fd.warehouse_id" placeholder="请选择仓库" filterable style="width:100%"
+                <el-form-item :label="$t('procure.inhouse.labelWarehouse')" prop="warehouse_id"
+                  :rules="[{ required: true, message: $t('procure.inhouse.warehouseRequired') }]">
+                  <el-select v-model="fd.warehouse_id" :placeholder="$t('procure.inhouse.warehousePlaceholder')" filterable style="width:100%"
                     @change="onWarehouseChange">
                     <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="是否验收">
-                  <el-switch v-model="fd.is_accept" active-text="是" inactive-text="否" />
+                <el-form-item :label="$t('procure.inhouse.labelIsAccept')">
+                  <el-switch v-model="fd.is_accept" :active-text="$t('procure.inhouse.isAcceptYes')" :inactive-text="$t('procure.inhouse.isAcceptNo')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="付款账户">
+                <el-form-item :label="$t('procure.inhouse.labelPayAccount')">
                   <div style="display:flex;gap:4px;width:100%">
-                    <el-select v-model="fd.pay_account" placeholder="请选择账户" clearable style="flex:1">
+                    <el-select v-model="fd.pay_account" :placeholder="$t('procure.inhouse.payAccountPlaceholder')" clearable style="flex:1">
                       <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.name" />
-                      <el-option label="现金" value="现金" />
+                      <el-option :label="$t('procure.inhouse.optionCash')" value="现金" />
                     </el-select>
                     <el-button :icon="Plus" @click="openAddFund" />
                   </div>
@@ -165,13 +165,13 @@
 
               <!-- 行3 -->
               <el-col :span="18">
-                <el-form-item label="备注">
-                  <el-input v-model="fd.remark" type="textarea" :rows="2" placeholder="请输入备注" />
+                <el-form-item :label="$t('procure.inhouse.labelRemark')">
+                  <el-input v-model="fd.remark" type="textarea" :rows="2" :placeholder="$t('procure.inhouse.remarkPlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="附件">
-                  <el-button :icon="Paperclip">上传附件</el-button>
+                <el-form-item :label="$t('procure.inhouse.labelAttachment')">
+                  <el-button :icon="Paperclip">{{ $t('procure.inhouse.btnUploadAttachment') }}</el-button>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -183,47 +183,47 @@
           <!-- 工具栏 -->
           <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
-              <el-button type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()">选择商品</el-button>
-              <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
-              <el-button :icon="Document" size="small" @click="openPlanPicker">选择采购计划商品</el-button>
-              <el-button :icon="Upload" size="small">导入商品</el-button>
+              <el-button type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()">{{ $t('procure.inhouse.btnSelectGoods') }}</el-button>
+              <el-button :icon="EditPen" size="small" @click="openManualAdd">{{ $t('procure.inhouse.btnAddGoods') }}</el-button>
+              <el-button :icon="Document" size="small" @click="openPlanPicker">{{ $t('procure.inhouse.btnSelectPlanGoods') }}</el-button>
+              <el-button :icon="Upload" size="small">{{ $t('procure.inhouse.btnImportGoods') }}</el-button>
             </div>
-            <span class="goods-count">共 <b>{{ fd.items.length }}</b> 件商品</span>
+            <span class="goods-count">{{ $t('procure.inhouse.goodsCount') }} <b>{{ fd.items.length }}</b> {{ $t('procure.inhouse.goodsCountUnit') }}</span>
           </div>
 
           <!-- 商品表格 -->
-          <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请点击上方按钮添加商品">
+          <el-table :data="fd.items" border size="small" style="width:100%" :empty-text="$t('procure.inhouse.emptyGoods')">
             <el-table-column type="index" width="45" align="center" fixed="left" />
-            <el-table-column label="商品名称" min-width="150" fixed="left">
+            <el-table-column :label="$t('procure.inhouse.colGoodsName')" min-width="150" fixed="left">
               <template #default="{ row }">
-                <el-input v-model="row.goods_name" size="small" placeholder="商品名称" />
+                <el-input v-model="row.goods_name" size="small" :placeholder="$t('procure.inhouse.goodsNamePlaceholder')" />
               </template>
             </el-table-column>
-            <el-table-column label="商品编码" width="120">
+            <el-table-column :label="$t('procure.inhouse.colGoodsSn')" width="120">
               <template #default="{ row }">
-                <el-input v-model="row.goods_sn" size="small" placeholder="编码" />
+                <el-input v-model="row.goods_sn" size="small" :placeholder="$t('procure.inhouse.goodsSnPlaceholder')" />
               </template>
             </el-table-column>
-            <el-table-column label="规格" width="100">
+            <el-table-column :label="$t('procure.inhouse.colSpec')" width="100">
               <template #default="{ row }">
-                <el-input v-model="row.spec" size="small" placeholder="规格" />
+                <el-input v-model="row.spec" size="small" :placeholder="$t('procure.inhouse.specPlaceholder')" />
               </template>
             </el-table-column>
-            <el-table-column label="分类" width="100">
+            <el-table-column :label="$t('procure.inhouse.colCategory')" width="100">
               <template #default="{ row }">
                 <span style="font-size:12px;color:#666">{{ row.cate_name || '—' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="单位" width="70" align="center">
+            <el-table-column :label="$t('procure.inhouse.colUnit')" width="70" align="center">
               <template #default="{ row }">
-                <el-input v-model="row.unit_name" size="small" placeholder="单位" />
+                <el-input v-model="row.unit_name" size="small" :placeholder="$t('procure.inhouse.unitPlaceholder')" />
               </template>
             </el-table-column>
             <el-table-column width="120">
               <template #header>
                 <div class="batch-header">
-                  <span>入库数量</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('num')">批量</el-button>
+                  <span>{{ $t('procure.inhouse.colInNum') }}</span>
+                  <el-button link type="primary" size="small" @click="batchEditField('num')">{{ $t('procure.inhouse.btnBatch') }}</el-button>
                 </div>
               </template>
               <template #default="{ row }">
@@ -234,8 +234,8 @@
             <el-table-column width="130">
               <template #header>
                 <div class="batch-header">
-                  <span>未税单价</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('price_no_tax')">批量</el-button>
+                  <span>{{ $t('procure.inhouse.colPriceNoTax') }}</span>
+                  <el-button link type="primary" size="small" @click="batchEditField('price_no_tax')">{{ $t('procure.inhouse.btnBatch') }}</el-button>
                 </div>
               </template>
               <template #default="{ row }">
@@ -246,8 +246,8 @@
             <el-table-column width="110">
               <template #header>
                 <div class="batch-header">
-                  <span>税率(%)</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('tax_rate')">批量</el-button>
+                  <span>{{ $t('procure.inhouse.colTaxRate') }}</span>
+                  <el-button link type="primary" size="small" @click="batchEditField('tax_rate')">{{ $t('procure.inhouse.btnBatch') }}</el-button>
                 </div>
               </template>
               <template #default="{ row }">
@@ -256,7 +256,7 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="税额" width="100" align="right">
+            <el-table-column :label="$t('procure.inhouse.colTaxAmount')" width="100" align="right">
               <template #default="{ row }">
                 <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
               </template>
@@ -264,8 +264,8 @@
             <el-table-column width="130">
               <template #header>
                 <div class="batch-header">
-                  <span>含税单价</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('price')">批量</el-button>
+                  <span>{{ $t('procure.inhouse.colPriceWithTax') }}</span>
+                  <el-button link type="primary" size="small" @click="batchEditField('price')">{{ $t('procure.inhouse.btnBatch') }}</el-button>
                 </div>
               </template>
               <template #default="{ row }">
@@ -273,19 +273,19 @@
                   controls-position="right" style="width:100%" @change="onPriceChange(row)" />
               </template>
             </el-table-column>
-            <el-table-column label="未税合计" width="110" align="right">
+            <el-table-column :label="$t('procure.inhouse.colNoTaxSubtotal')" width="110" align="right">
               <template #default="{ row }">
                 <span>{{ ((row.num||0) * (row.price_no_tax||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="含税合计" width="110" align="right">
+            <el-table-column :label="$t('procure.inhouse.colWithTaxSubtotal')" width="110" align="right">
               <template #default="{ row }">
                 <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="备注" min-width="110">
+            <el-table-column :label="$t('procure.inhouse.colRemark')" min-width="110">
               <template #default="{ row }">
-                <el-input v-model="row.remark" size="small" placeholder="备注" />
+                <el-input v-model="row.remark" size="small" :placeholder="$t('procure.inhouse.remarkPlaceholder2')" />
               </template>
             </el-table-column>
             <el-table-column width="45" align="center" fixed="right">
@@ -298,44 +298,44 @@
 
         <!-- 结算信息卡片 -->
         <div class="form-section settlement-section">
-          <div class="sec-title">结算信息</div>
+          <div class="sec-title">{{ $t('procure.inhouse.sectionSettle') }}</div>
           <div class="settlement-grid">
             <div class="settle-item">
-              <span class="settle-label">本单应付</span>
+              <span class="settle-label">{{ $t('procure.inhouse.settlePayable') }}</span>
               <span class="settle-value primary">¥{{ fd.total_amount.toFixed(2) }}</span>
             </div>
             <div class="settle-item">
-              <span class="settle-label">折扣方式</span>
+              <span class="settle-label">{{ $t('procure.inhouse.settleDiscountType') }}</span>
               <el-select v-model="fd.discount_type" size="small" style="width:120px" @change="calcSettle">
-                <el-option label="无折扣" value="none" />
-                <el-option label="按金额折扣" value="amount" />
-                <el-option label="按百分比折扣" value="percent" />
+                <el-option :label="$t('procure.inhouse.discountNone')" value="none" />
+                <el-option :label="$t('procure.inhouse.discountAmount')" value="amount" />
+                <el-option :label="$t('procure.inhouse.discountPercent')" value="percent" />
               </el-select>
             </div>
             <div class="settle-item" v-if="fd.discount_type !== 'none'">
-              <span class="settle-label">{{ fd.discount_type === 'percent' ? '折扣(%)' : '折扣金额' }}</span>
+              <span class="settle-label">{{ fd.discount_type === 'percent' ? $t('procure.inhouse.settleDiscountPercent') : $t('procure.inhouse.settleDiscountValue') }}</span>
               <el-input-number v-model="fd.discount_value" :min="0"
                 :max="fd.discount_type === 'percent' ? 100 : fd.total_amount"
                 :precision="2" size="small" style="width:130px" @change="calcSettle" />
             </div>
             <div class="settle-item">
-              <span class="settle-label">折后金额</span>
+              <span class="settle-label">{{ $t('procure.inhouse.settleAfterDiscount') }}</span>
               <span class="settle-value">¥{{ fd.after_discount.toFixed(2) }}</span>
             </div>
             <div class="settle-item">
-              <span class="settle-label">本次付款</span>
+              <span class="settle-label">{{ $t('procure.inhouse.settleCurrentPayment') }}</span>
               <el-input-number v-model="fd.pay_amount" :min="0" :precision="2"
                 size="small" style="width:130px" />
             </div>
             <div class="settle-item">
-              <span class="settle-label">是否分期</span>
-              <el-switch v-model="fd.installment" active-text="是" inactive-text="否" />
+              <span class="settle-label">{{ $t('procure.inhouse.settleInstallment') }}</span>
+              <el-switch v-model="fd.installment" :active-text="$t('procure.inhouse.installmentYes')" :inactive-text="$t('procure.inhouse.installmentNo')" />
             </div>
           </div>
           <div class="settle-summary">
-            <span>未税合计：<b>¥{{ totalNoTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">税额合计：<b style="color:#dc2626">¥{{ totalTax.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">含税合计：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            <span>{{ $t('procure.inhouse.settleNoTaxTotal') }}<b>¥{{ totalNoTax.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">{{ $t('procure.inhouse.settleTaxTotal') }}<b style="color:#dc2626">¥{{ totalTax.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">{{ $t('procure.inhouse.settleWithTaxTotal') }}<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
           </div>
         </div>
 
@@ -345,92 +345,92 @@
     <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
     <!-- 手动新增商品弹框 -->
-    <el-dialog v-model="manualAddVisible" title="新增商品行" width="420px" append-to-body>
+    <el-dialog v-model="manualAddVisible" :title="$t('procure.inhouse.dialogAddGoodsTitle')" width="420px" append-to-body>
       <el-form :model="manualForm" label-width="80px">
-        <el-form-item label="商品名称">
-          <el-input v-model="manualForm.goods_name" placeholder="请输入商品名称" />
+        <el-form-item :label="$t('procure.inhouse.labelGoodsName')">
+          <el-input v-model="manualForm.goods_name" :placeholder="$t('procure.inhouse.goodsNameInputPlaceholder')" />
         </el-form-item>
-        <el-form-item label="商品编码">
-          <el-input v-model="manualForm.goods_sn" placeholder="商品编码（可选）" />
+        <el-form-item :label="$t('procure.inhouse.labelGoodsSn')">
+          <el-input v-model="manualForm.goods_sn" :placeholder="$t('procure.inhouse.goodsSnInputPlaceholder')" />
         </el-form-item>
-        <el-form-item label="规格">
-          <el-input v-model="manualForm.spec" placeholder="规格（可选）" />
+        <el-form-item :label="$t('procure.inhouse.labelSpec')">
+          <el-input v-model="manualForm.spec" :placeholder="$t('procure.inhouse.specInputPlaceholder')" />
         </el-form-item>
-        <el-form-item label="单位">
-          <el-input v-model="manualForm.unit_name" placeholder="如：个、kg" />
+        <el-form-item :label="$t('procure.inhouse.labelUnit')">
+          <el-input v-model="manualForm.unit_name" :placeholder="$t('procure.inhouse.unitInputPlaceholder')" />
         </el-form-item>
-        <el-form-item label="入库数量">
+        <el-form-item :label="$t('procure.inhouse.labelInNum2')">
           <el-input-number v-model="manualForm.num" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
-        <el-form-item label="含税单价">
+        <el-form-item :label="$t('procure.inhouse.labelPriceWithTax')">
           <el-input-number v-model="manualForm.price" :min="0" :precision="4" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="manualAddVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmManualAdd">确认添加</el-button>
+        <el-button @click="manualAddVisible = false">{{ $t('procure.inhouse.btnCancel') }}</el-button>
+        <el-button type="primary" @click="confirmManualAdd">{{ $t('procure.inhouse.btnConfirmAdd') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 批量编辑弹框 -->
-    <el-dialog v-model="batchEditVisible" :title="`批量设置 ${batchEditLabel}`" width="340px" append-to-body>
+    <el-dialog v-model="batchEditVisible" :title="`${$t('procure.inhouse.dialogBatchEditTitle')} ${batchEditLabel}`" width="340px" append-to-body>
       <el-form label-width="80px" style="padding:8px 0">
         <el-form-item :label="batchEditLabel">
           <el-input-number v-model="batchEditValue" :min="0" :precision="4" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="batchEditVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmBatchEdit">确认</el-button>
+        <el-button @click="batchEditVisible = false">{{ $t('procure.inhouse.btnCancel') }}</el-button>
+        <el-button type="primary" @click="confirmBatchEdit">{{ $t('procure.inhouse.btnConfirmBatch') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 快速新增供应商弹框 -->
-    <el-dialog v-model="addSupplierVisible" title="快速新增供应商" width="380px" append-to-body>
+    <el-dialog v-model="addSupplierVisible" :title="$t('procure.inhouse.dialogAddSupplierTitle')" width="380px" append-to-body>
       <el-form :model="supplierForm" label-width="80px">
-        <el-form-item label="供应商名称">
-          <el-input v-model="supplierForm.name" placeholder="请输入供应商名称" />
+        <el-form-item :label="$t('procure.inhouse.labelSupplierName')">
+          <el-input v-model="supplierForm.name" :placeholder="$t('procure.inhouse.supplierNamePlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addSupplierVisible = false">取消</el-button>
-        <el-button type="primary" :loading="addSupplierLoading" @click="submitAddSupplier">确认新增</el-button>
+        <el-button @click="addSupplierVisible = false">{{ $t('procure.inhouse.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="addSupplierLoading" @click="submitAddSupplier">{{ $t('procure.inhouse.btnConfirmAddSupplier') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- BOM 生产建议弹窗 -->
-    <el-dialog v-model="bomSuggestVisible" title="检测到可生产的成品" width="580px" append-to-body :close-on-click-modal="false">
-      <p style="color:#666;margin-bottom:16px;font-size:13px">原料已入库，以下成品可以生产。确认数量后点击「确认生产」，将自动补充成品库存并扣减原料。</p>
+    <el-dialog v-model="bomSuggestVisible" :title="$t('procure.inhouse.dialogBomTitle')" width="580px" append-to-body :close-on-click-modal="false">
+      <p style="color:#666;margin-bottom:16px;font-size:13px">{{ $t('procure.inhouse.bomHint') }}</p>
       <el-table :data="bomSuggestItems" border size="small">
-        <el-table-column prop="goods_name" label="成品名称" min-width="160" />
-        <el-table-column label="最多可生产" width="110">
+        <el-table-column prop="goods_name" :label="$t('procure.inhouse.colBomGoodsName')" min-width="160" />
+        <el-table-column :label="$t('procure.inhouse.colBomMaxQty')" width="110">
           <template #default="{ row }">{{ row.max_qty }} {{ row.unit_name }}</template>
         </el-table-column>
-        <el-table-column label="本次生产数量" width="160">
+        <el-table-column :label="$t('procure.inhouse.colBomProduceQty')" width="160">
           <template #default="{ row }">
             <el-input-number v-model="row.produce_qty" :min="0" :max="row.max_qty" :precision="0" size="small" style="width:130px" />
           </template>
         </el-table-column>
       </el-table>
       <template #footer>
-        <el-button @click="bomSuggestVisible = false">跳过</el-button>
-        <el-button type="primary" :loading="bomSuggestLoading" @click="executeBomProduction">确认生产</el-button>
+        <el-button @click="bomSuggestVisible = false">{{ $t('procure.inhouse.btnSkipBom') }}</el-button>
+        <el-button type="primary" :loading="bomSuggestLoading" @click="executeBomProduction">{{ $t('procure.inhouse.btnConfirmBom') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 新增资金账户弹框 -->
-    <el-dialog v-model="addFundVisible" title="新增资金账户" width="360px" append-to-body>
+    <el-dialog v-model="addFundVisible" :title="$t('procure.inhouse.dialogAddFundTitle')" width="360px" append-to-body>
       <el-form :model="fundForm" label-width="90px">
-        <el-form-item label="账户名称">
-          <el-input v-model="fundForm.name" placeholder="请输入账户名称" />
+        <el-form-item :label="$t('procure.inhouse.labelFundName')">
+          <el-input v-model="fundForm.name" :placeholder="$t('procure.inhouse.fundNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="初始余额">
+        <el-form-item :label="$t('procure.inhouse.labelInitBalance')">
           <el-input-number v-model="fundForm.balance" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addFundVisible = false">取消</el-button>
-        <el-button type="primary" :loading="addFundLoading" @click="submitAddFund">确认新增</el-button>
+        <el-button @click="addFundVisible = false">{{ $t('procure.inhouse.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="addFundLoading" @click="submitAddFund">{{ $t('procure.inhouse.btnConfirmAddFund') }}</el-button>
       </template>
     </el-dialog>
 
@@ -438,6 +438,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -458,6 +459,8 @@ import { stockEffect } from '@/utils/stockEffect'
 import { applyMaterialStockDelta } from '@/utils/materialStock'
 import { getBomByGoods } from '@/api/goods'
 import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
+
+const { t } = useI18n()
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -625,16 +628,16 @@ function backToList() {
 
 async function handleSave(andAudit = false) {
   try { await formRef.value?.validate() } catch {
-    ElMessage.warning('请填写必填项'); return
+    ElMessage.warning(t('procure.inhouse.msgFillRequired')); return
   }
   if (!fd.items.length) {
-    ElMessage.warning('请至少添加一件商品'); return
+    ElMessage.warning(t('procure.inhouse.msgAddAtLeastOne')); return
   }
   // 有付款金额但未选账户时提醒
   if (Number(fd.pay_amount || 0) > 0 && !fd.pay_account) {
     try {
-      await ElMessageBox.confirm('已填写付款金额但未选择付款账户，是否继续保存？', '提示', {
-        confirmButtonText: '继续保存', cancelButtonText: '去选择', type: 'warning'
+      await ElMessageBox.confirm(t('procure.inhouse.msgPayAccountHint'), t('procure.inhouse.msgPayAccountHintTitle'), {
+        confirmButtonText: t('procure.inhouse.msgPayAccountContinue'), cancelButtonText: t('procure.inhouse.msgPayAccountGoSelect'), type: 'warning'
       })
     } catch { return }
   }
@@ -666,17 +669,17 @@ async function handleSave(andAudit = false) {
         await auditProcureInhouse(savedId, 1)
         await handleInhouseStockEffect({ ...payload, id: savedId }, 'audit')
         checkBomAfterInhouse({ ...payload, id: savedId }).catch(() => {})
-        ElMessage.success('保存并审核成功')
+        ElMessage.success(t('procure.inhouse.msgSaveAndAuditSuccess'))
       } catch (e: any) {
-        ElMessage.warning('保存成功，但审核失败：' + (e?.message || ''))
+        ElMessage.warning(t('procure.inhouse.msgSaveSuccessAuditFailed') + (e?.message || ''))
       }
     } else {
-      ElMessage.success('保存成功')
+      ElMessage.success(t('procure.inhouse.msgSaveSuccess'))
     }
     stockRefreshStore.trigger()
     backToList()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('procure.inhouse.msgSaveFailed'))
   } finally {
     saving.value = false
     savingAndAuditing.value = false
@@ -773,20 +776,20 @@ async function executeBomProduction() {
       }))
       await applyMaterialStockDelta(matItems, { direction: 'deduct', ...opts })
     }
-    ElMessage.success(`生产完成，已生产 ${activeItems.length} 种成品`)
+    ElMessage.success(t('procure.inhouse.msgBomProduceSuccess') + ` ${activeItems.length} ` + t('procure.inhouse.msgBomProduceSuccessSuffix'))
     bomSuggestVisible.value = false
     stockRefreshStore.trigger()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '生产失败')
+    ElMessage.error(e?.message ?? t('procure.inhouse.msgBomProduceFailed'))
   } finally {
     bomSuggestLoading.value = false
   }
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该入库单？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('procure.inhouse.msgDeleteConfirm'), t('procure.inhouse.msgPrompt'), { type: 'warning' })
   await deleteProcureInhouse(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('procure.inhouse.msgDeleteSuccess'))
   stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }
@@ -794,12 +797,12 @@ async function handleDelete(id: number) {
 async function handleInhouseStockEffect(row: any, type: 'audit' | 'reverse') {
   const items: any[] = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
   // 采购入库审核=加库存；反审核=扣库存
-  await stockEffect(items, type === 'audit' ? 'restore' : 'deduct', row.warehouse_id, type === 'audit' ? '采购入库' : '采购入库反审核')
+  await stockEffect(items, type === 'audit' ? 'restore' : 'deduct', row.warehouse_id, type === 'audit' ? 'Purchase Inbound' : 'Purchase Inbound Reverse')
 }
 
 async function handleAudit(row: any, status: number) {
-  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
-  await ElMessageBox.confirm(`确定${action}该入库单？`, '提示', { type: 'warning' })
+  const action = status === 1 ? t('procure.inhouse.actionAuditPass') : status === 2 ? t('procure.inhouse.actionReject') : t('procure.inhouse.actionReverseAudit')
+  await ElMessageBox.confirm(`${t('procure.inhouse.msgAuditPrefix')}${action}${t('procure.inhouse.msgAuditSuffix')}`, t('procure.inhouse.msgPrompt'), { type: 'warning' })
   try {
     await auditProcureInhouse(row.id, status)
     if (status === 1) {
@@ -808,11 +811,11 @@ async function handleAudit(row: any, status: number) {
     } else if (status === 0) {
       await handleInhouseStockEffect(row, 'reverse')
     }
-    ElMessage.success(`${action}成功`)
+    ElMessage.success(t('procure.inhouse.msgOperationSuccess'))
     stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+    ElMessage.error(e?.message ?? t('procure.inhouse.msgOperationFailed'))
   }
 }
 
@@ -852,7 +855,7 @@ function openManualAdd() {
 }
 
 function confirmManualAdd() {
-  if (!manualForm.goods_name.trim()) { ElMessage.warning('请输入商品名称'); return }
+  if (!manualForm.goods_name.trim()) { ElMessage.warning(t('procure.inhouse.msgGoodsNameRequired')); return }
   fd.items.push({
     goods_id: 0,
     goods_name: manualForm.goods_name,
@@ -872,7 +875,7 @@ function confirmManualAdd() {
 
 // ── 选择采购计划商品（占位） ──────────────────────────────────────────────────
 function openPlanPicker() {
-  ElMessage.info('选择采购计划商品功能开发中')
+  ElMessage.info(t('procure.inhouse.msgPlanGoodsInDev'))
 }
 
 // ── 批量编辑 ──────────────────────────────────────────────────────────────────
@@ -882,10 +885,10 @@ const batchEditLabel = ref('')
 const batchEditValue = ref(0)
 
 const fieldLabelMap: Record<string, string> = {
-  num: '入库数量',
-  price_no_tax: '未税单价',
-  tax_rate: '税率(%)',
-  price: '含税单价',
+  num: t('procure.inhouse.fieldInNum'),
+  price_no_tax: t('procure.inhouse.fieldPriceNoTax'),
+  tax_rate: t('procure.inhouse.fieldTaxRate'),
+  price: t('procure.inhouse.fieldPriceWithTax'),
 }
 
 function batchEditField(field: string) {
@@ -907,7 +910,7 @@ function confirmBatchEdit() {
   }
   calcTotal()
   batchEditVisible.value = false
-  ElMessage.success(`已批量设置 ${batchEditLabel.value} 为 ${batchEditValue.value}`)
+  ElMessage.success(`${t('procure.inhouse.msgBatchSetSuccess')} ${batchEditLabel.value} ${t('procure.inhouse.msgBatchSetTo')} ${batchEditValue.value}`)
 }
 
 // ── 快速新增供应商 ────────────────────────────────────────────────────────────
@@ -921,11 +924,11 @@ function openAddSupplier() {
 }
 
 async function submitAddSupplier() {
-  if (!supplierForm.name.trim()) { ElMessage.warning('请输入供应商名称'); return }
+  if (!supplierForm.name.trim()) { ElMessage.warning(t('procure.inhouse.msgSupplierRequired')); return }
   addSupplierLoading.value = true
   try {
     const res = await createSupplier({ name: supplierForm.name.trim() })
-    ElMessage.success('新增供应商成功')
+    ElMessage.success(t('procure.inhouse.msgAddSupplierSuccess'))
     addSupplierVisible.value = false
     await loadSuppliers()
     const newId = res.data?.id ?? res.data
@@ -935,7 +938,7 @@ async function submitAddSupplier() {
       if (last) { fd.supplier_id = last.id; onSupplierChange(last.id) }
     }
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '新增失败')
+    ElMessage.error(e?.message ?? t('procure.inhouse.msgAddFailed'))
   } finally {
     addSupplierLoading.value = false
   }
@@ -961,16 +964,16 @@ function openAddFund() {
 }
 
 async function submitAddFund() {
-  if (!fundForm.name.trim()) { ElMessage.warning('请输入账户名称'); return }
+  if (!fundForm.name.trim()) { ElMessage.warning(t('procure.inhouse.msgFundNameRequired')); return }
   addFundLoading.value = true
   try {
     await createFund({ name: fundForm.name.trim(), balance: fundForm.balance })
-    ElMessage.success('新增账户成功')
+    ElMessage.success(t('procure.inhouse.msgAddFundSuccess'))
     addFundVisible.value = false
     await loadFunds()
     fd.pay_account = fundForm.name.trim()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '新增失败')
+    ElMessage.error(e?.message ?? t('procure.inhouse.msgAddFailed'))
   } finally {
     addFundLoading.value = false
   }

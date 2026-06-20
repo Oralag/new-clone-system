@@ -10,7 +10,7 @@
         @click="isExpanded = !isExpanded"
         class="expand-btn"
       >
-        {{ isExpanded ? '收起' : '展开' }}
+        {{ isExpanded ? t('aiToolCallCard.collapse') : t('aiToolCallCard.expand') }}
       </button>
     </div>
 
@@ -23,7 +23,7 @@
 
     <!-- 加载中 -->
     <div v-if="status === 'running'" class="loading-row">
-      <span class="loading-text">工具执行中...</span>
+      <span class="loading-text">{{ t('aiToolCallCard.running') }}</span>
     </div>
 
     <!-- 成功结果 -->
@@ -33,17 +33,17 @@
         <video controls style="max-width:100%; border-radius:6px; margin-top:8px; display:block">
           <source :src="videoSrc" type="video/mp4" />
         </video>
-        <a :href="videoSrc" download="video.mp4" class="video-download-btn">⬇ 下载视频</a>
+        <a :href="videoSrc" download="video.mp4" class="video-download-btn">{{ t('aiToolCallCard.downloadVideo') }}</a>
       </div>
       <!-- 图片显示 -->
       <div v-else-if="isImageResult" class="card-image">
         <img :src="imageSrc" style="max-width:100%; border-radius:6px; margin-top:8px; display:block" />
-        <a :href="imageSrc" download="image.png" class="video-download-btn">⬇ 下载图片</a>
+        <a :href="imageSrc" download="image.png" class="video-download-btn">{{ t('aiToolCallCard.downloadImage') }}</a>
       </div>
       <!-- 普通文本结果 -->
       <div v-else class="card-result" :class="{ collapsed: !isExpanded && result.length > 200 }" v-html="renderResult(result)" @click="onResultClick"></div>
       <div v-if="!isVideoResult && !isImageResult && !isExpanded && result.length > 200" class="collapse-tip" @click="isExpanded = true">
-        内容过长，点击展开查看全部
+        {{ t('aiToolCallCard.longContentHint') }}
       </div>
     </template>
 
@@ -55,6 +55,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   name: string
@@ -64,6 +65,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ pick: [text: string] }>()
+const { t } = useI18n()
 
 const isExpanded = ref(false)
 
@@ -86,9 +88,9 @@ function onResultClick(e: MouseEvent) {
   const name = btn.dataset.name || ''
   const unit = btn.dataset.unit || ''
   const price = btn.dataset.price || ''
-  const priceText = price && Number(price) > 0 ? `单价¥${price}` : ''
+  const priceText = price && Number(price) > 0 ? t('aiToolCallCard.unitPrice', { price }) : ''
   const unitText = unit ? `/${unit}` : ''
-  emit('pick', `商品选「${name}${unitText}」${priceText}，请继续完成刚才的零售录入`)
+  emit('pick', t('aiToolCallCard.pickPrompt', { name: `${name}${unitText}`, priceText }))
 }
 
 // VIDEO_BASE64: prefix detection
@@ -114,34 +116,7 @@ const imageSrc = computed(() => {
   return `data:image/png;base64,${b64}`
 })
 
-const toolLabels: Record<string, string> = {
-  query_customers: '查询客户',
-  query_suppliers: '查询供应商',
-  query_goods: '查询商品',
-  query_inventory: '查询库存',
-  query_sales: '查询销售',
-  query_purchases: '查询采购',
-  query_finance: '查询财务',
-  query_staff: '查询员工',
-  query_warehouses: '查询仓库',
-  create_customer: '新增客户',
-  create_supplier: '新增供应商',
-  create_goods: '新增商品',
-  create_sale_order: '新增销售订单',
-  create_procure_order: '新增采购订单',
-  create_collect_receipt: '新增收款单',
-  create_pay_receipt: '新增付款单',
-  create_prepay: '新增预付款',
-  create_staff: '新增员工',
-  create_warehouse: '新增仓库',
-  create_fund_account: '新增资金账户',
-  navigate_to: '页面跳转',
-  render_video: '渲染视频',
-  render_image: '渲染图片',
-  generate_image: '生成图片',
-}
-
-const toolLabel = computed(() => toolLabels[props.name] || props.name)
+const toolLabel = computed(() => t(`aiToolCallCard.tools.${props.name}`, props.name))
 const statusClass = computed(() => `status-${props.status}`)
 const statusIcon = computed(() => {
   if (props.status === 'running') return Loading
@@ -149,9 +124,9 @@ const statusIcon = computed(() => {
   return CircleClose
 })
 const statusText = computed(() => {
-  if (props.status === 'running') return '执行中...'
-  if (props.status === 'success') return '完成'
-  return '失败'
+  if (props.status === 'running') return t('aiToolCallCard.statusRunning')
+  if (props.status === 'success') return t('aiToolCallCard.statusSuccess')
+  return t('aiToolCallCard.statusError')
 })
 </script>
 

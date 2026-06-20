@@ -2,43 +2,43 @@
   <div class="outsource-payment-page">
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getOutsourcePaymentList" del-path="/outsource/payment/batchDel" export-file-name="委外付款" :params="searchForm">
+        <ScTable ref="tableRef" :api-obj="getOutsourcePaymentList" del-path="/outsource/payment/batchDel" :export-file-name="$t('outsource.payment.exportFileName')" :params="searchForm">
           <template #search>
-            <el-input v-model="searchForm.payment_no" placeholder="付款编号" clearable style="width:160px" />
-            <el-input v-model="searchForm.supplier_name" placeholder="供应商" clearable style="width:160px" />
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-input v-model="searchForm.payment_no" :placeholder="$t('outsource.payment.searchPaymentNoPlaceholder')" clearable style="width:160px" />
+            <el-input v-model="searchForm.supplier_name" :placeholder="$t('outsource.payment.searchSupplierPlaceholder')" clearable style="width:160px" />
+            <el-button type="primary" @click="tableRef?.loadData()">{{ $t('outsource.payment.btnSearch') }}</el-button>
+            <el-button @click="resetSearch">{{ $t('outsource.payment.btnReset') }}</el-button>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openAdd">新增付款</el-button>
+            <el-button type="primary" :icon="Plus" @click="openAdd">{{ $t('outsource.payment.btnAdd') }}</el-button>
           </template>
-          <el-table-column prop="payment_no" label="付款编号" min-width="150" />
-          <el-table-column prop="supplier_name" label="供应商" min-width="130" />
-          <el-table-column prop="payment_date" label="付款日期" width="110">
+          <el-table-column prop="payment_no" :label="$t('outsource.payment.colPaymentNo')" min-width="150" />
+          <el-table-column prop="supplier_name" :label="$t('outsource.payment.colSupplier')" min-width="130" />
+          <el-table-column prop="payment_date" :label="$t('outsource.payment.colPaymentDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.payment_date || row.created_at) }}</template>
           </el-table-column>
-          <el-table-column prop="account_name" label="付款账户" min-width="120" />
-          <el-table-column label="付款金额" width="120" align="right">
+          <el-table-column prop="account_name" :label="$t('outsource.payment.colAccountName')" min-width="120" />
+          <el-table-column :label="$t('outsource.payment.colAmount')" width="120" align="right">
             <template #default="{ row }"><b style="color:#dc2626">{{ Number(row.amount||0).toFixed(2) }}</b></template>
           </el-table-column>
-          <el-table-column label="付款方式" width="100" align="center">
+          <el-table-column :label="$t('outsource.payment.colPayMethod')" width="100" align="center">
             <template #default="{ row }">{{ row.pay_method||'—' }}</template>
           </el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column :label="$t('outsource.payment.colStatus')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status===1?'success':row.status===2?'danger':'info'" size="small">
-                {{ row.status===1?'已审核':row.status===2?'已驳回':'待审核' }}
+                {{ row.status===1?$t('outsource.payment.statusAudited'):row.status===2?$t('outsource.payment.statusRejected'):$t('outsource.payment.statusPending') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220" fixed="right">
+          <el-table-column :label="$t('outsource.payment.colActions')" width="220" fixed="right">
             <template #default="{ row }">
-              <el-button type="success" size="small" link @click="openView(row)">查看</el-button>
-              <el-button v-if="row.status===0" type="primary" size="small" link @click="openEdit(row)">编辑</el-button>
-              <el-button v-if="row.status===0" type="primary" size="small" link @click="doAudit(row,1)">审核</el-button>
-              <el-button v-if="row.status===0" type="danger" size="small" link @click="doAudit(row,2)">驳回</el-button>
-              <el-button v-if="row.status===1 && !permStore.isSubAccount" type="warning" size="small" link @click="doAudit(row,0)">反审核</el-button>
-              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="success" size="small" link @click="openView(row)">{{ $t('outsource.payment.btnView') }}</el-button>
+              <el-button v-if="row.status===0" type="primary" size="small" link @click="openEdit(row)">{{ $t('outsource.payment.btnEdit') }}</el-button>
+              <el-button v-if="row.status===0" type="primary" size="small" link @click="doAudit(row,1)">{{ $t('outsource.payment.btnAudit') }}</el-button>
+              <el-button v-if="row.status===0" type="danger" size="small" link @click="doAudit(row,2)">{{ $t('outsource.payment.btnReject') }}</el-button>
+              <el-button v-if="row.status===1 && !permStore.isSubAccount" type="warning" size="small" link @click="doAudit(row,0)">{{ $t('outsource.payment.btnUnaudit') }}</el-button>
+              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? $t('outsource.payment.titleDeleteDisabled') : ''" @click="handleDelete(row.id)">{{ $t('outsource.payment.btnDelete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -48,57 +48,57 @@
     <div v-else class="form-page">
       <div class="form-topbar">
         <div class="form-topbar-left">
-          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ isView?'查看付款单':fd.id?'编辑付款单':'新增付款单' }}</span>
-          <el-tag v-if="fd.status===1" type="success" size="small">已审核</el-tag>
-          <el-tag v-else-if="fd.status===2" type="danger" size="small">已驳回</el-tag>
+          <el-button :icon="ArrowLeft" @click="backToList">{{ $t('outsource.payment.btnBack') }}</el-button>
+          <span class="form-title">{{ isView?$t('outsource.payment.formTitleView'):fd.id?$t('outsource.payment.formTitleEdit'):$t('outsource.payment.formTitleAdd') }}</span>
+          <el-tag v-if="fd.status===1" type="success" size="small">{{ $t('outsource.payment.statusAudited') }}</el-tag>
+          <el-tag v-else-if="fd.status===2" type="danger" size="small">{{ $t('outsource.payment.statusRejected') }}</el-tag>
         </div>
         <div class="form-topbar-right" v-if="!isView">
-          <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('outsource.payment.btnSave') }}</el-button>
         </div>
       </div>
       <div class="form-body">
         <div class="form-section">
           <el-row :gutter="16">
-            <el-col :span="6"><div class="field-row"><span class="field-label">付款编号</span><el-input v-model="fd.payment_no" placeholder="不填自动生成" style="flex:1" :disabled="isView" /></div></el-col>
+            <el-col :span="6"><div class="field-row"><span class="field-label">{{ $t('outsource.payment.fieldPaymentNo') }}</span><el-input v-model="fd.payment_no" :placeholder="$t('outsource.payment.paymentNoPlaceholder')" style="flex:1" :disabled="isView" /></div></el-col>
             <el-col :span="6">
               <div class="field-row">
-                <span class="field-label required">供应商</span>
-                <el-select v-model="fd.supplier_id" placeholder="选择供应商" style="flex:1" filterable :disabled="isView" @change="onSupplierChange">
+                <span class="field-label required">{{ $t('outsource.payment.fieldSupplier') }}</span>
+                <el-select v-model="fd.supplier_id" :placeholder="$t('outsource.payment.supplierPlaceholder')" style="flex:1" filterable :disabled="isView" @change="onSupplierChange">
                   <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
                 </el-select>
               </div>
             </el-col>
-            <el-col :span="6"><div class="field-row"><span class="field-label required">付款日期</span><el-date-picker v-model="fd.payment_date" type="date" value-format="YYYY-MM-DD" style="flex:1" :disabled="isView" /></div></el-col>
+            <el-col :span="6"><div class="field-row"><span class="field-label required">{{ $t('outsource.payment.fieldPaymentDate') }}</span><el-date-picker v-model="fd.payment_date" type="date" value-format="YYYY-MM-DD" style="flex:1" :disabled="isView" /></div></el-col>
             <el-col :span="6">
               <div class="field-row">
-                <span class="field-label required">付款金额</span>
+                <span class="field-label required">{{ $t('outsource.payment.fieldAmount') }}</span>
                 <el-input-number v-model="fd.amount" :min="0" :precision="2" controls-position="right" style="flex:1" :disabled="isView" />
               </div>
             </el-col>
             <el-col :span="6" style="margin-top:8px">
               <div class="field-row">
-                <span class="field-label">付款方式</span>
+                <span class="field-label">{{ $t('outsource.payment.fieldPayMethod') }}</span>
                 <el-select v-model="fd.pay_method" style="flex:1" :disabled="isView">
-                  <el-option label="银行转账" value="银行转账" />
-                  <el-option label="现金" value="现金" />
-                  <el-option label="支票" value="支票" />
-                  <el-option label="网银" value="网银" />
-                  <el-option label="其他" value="其他" />
+                  <el-option :label="$t('outsource.payment.optionBankTransfer')" value="银行转账" />
+                  <el-option :label="$t('outsource.payment.optionCash')" value="现金" />
+                  <el-option :label="$t('outsource.payment.optionCheque')" value="支票" />
+                  <el-option :label="$t('outsource.payment.optionOnlineBanking')" value="网银" />
+                  <el-option :label="$t('outsource.payment.optionOther')" value="其他" />
                 </el-select>
               </div>
             </el-col>
-            <el-col :span="6" style="margin-top:8px"><div class="field-row"><span class="field-label">付款账户</span><el-input v-model="fd.account_name" placeholder="付款账户" style="flex:1" :disabled="isView" /></div></el-col>
-            <el-col :span="6" style="margin-top:8px"><div class="field-row"><span class="field-label">付款人</span><el-input v-model="fd.payer" placeholder="付款人" style="flex:1" :disabled="isView" /></div></el-col>
+            <el-col :span="6" style="margin-top:8px"><div class="field-row"><span class="field-label">{{ $t('outsource.payment.fieldAccountName') }}</span><el-input v-model="fd.account_name" :placeholder="$t('outsource.payment.accountNamePlaceholder')" style="flex:1" :disabled="isView" /></div></el-col>
+            <el-col :span="6" style="margin-top:8px"><div class="field-row"><span class="field-label">{{ $t('outsource.payment.fieldPayer') }}</span><el-input v-model="fd.payer" :placeholder="$t('outsource.payment.payerPlaceholder')" style="flex:1" :disabled="isView" /></div></el-col>
             <el-col :span="6" style="margin-top:8px">
               <div class="field-row">
-                <span class="field-label">付款用途</span>
+                <span class="field-label">{{ $t('outsource.payment.fieldPayPurpose') }}</span>
                 <el-select v-model="fd.pay_purpose" style="flex:1" :disabled="isView">
-                  <el-option label="委外加工款" value="委外加工款" />
-                  <el-option label="货款" value="货款" />
-                  <el-option label="定金" value="定金" />
-                  <el-option label="尾款" value="尾款" />
-                  <el-option label="其他" value="其他" />
+                  <el-option :label="$t('outsource.payment.optionOutsourceFee')" value="委外加工款" />
+                  <el-option :label="$t('outsource.payment.optionGoodsPayment')" value="货款" />
+                  <el-option :label="$t('outsource.payment.optionDeposit')" value="定金" />
+                  <el-option :label="$t('outsource.payment.optionBalance')" value="尾款" />
+                  <el-option :label="$t('outsource.payment.optionOther')" value="其他" />
                 </el-select>
               </div>
             </el-col>
@@ -106,35 +106,34 @@
           <el-row :gutter="16" style="margin-top:8px">
             <el-col :span="12">
               <div class="field-row">
-                <span class="field-label">收款方账户</span>
-                <el-input v-model="fd.receiver_account" placeholder="供应商收款账户" style="flex:1" :disabled="isView" />
+                <span class="field-label">{{ $t('outsource.payment.fieldReceiverAccount') }}</span>
+                <el-input v-model="fd.receiver_account" :placeholder="$t('outsource.payment.receiverAccountPlaceholder')" style="flex:1" :disabled="isView" />
               </div>
             </el-col>
             <el-col :span="12">
               <div class="field-row">
-                <span class="field-label">备注</span>
-                <el-input v-model="fd.remark" placeholder="备注说明" style="flex:1" :disabled="isView" />
+                <span class="field-label">{{ $t('outsource.payment.fieldRemark') }}</span>
+                <el-input v-model="fd.remark" :placeholder="$t('outsource.payment.remarkPlaceholder')" style="flex:1" :disabled="isView" />
               </div>
             </el-col>
           </el-row>
         </div>
 
-        <!-- 付款汇总 -->
         <div class="payment-summary">
           <div class="summary-card">
-            <div class="summary-label">本次付款</div>
+            <div class="summary-label">{{ $t('outsource.payment.summaryCurrentPayment') }}</div>
             <div class="summary-value red">¥{{ Number(fd.amount||0).toFixed(2) }}</div>
           </div>
           <div class="summary-card">
-            <div class="summary-label">付款方式</div>
+            <div class="summary-label">{{ $t('outsource.payment.summaryPayMethod') }}</div>
             <div class="summary-value">{{ fd.pay_method||'—' }}</div>
           </div>
           <div class="summary-card">
-            <div class="summary-label">付款账户</div>
+            <div class="summary-label">{{ $t('outsource.payment.summaryPayAccount') }}</div>
             <div class="summary-value">{{ fd.account_name||'—' }}</div>
           </div>
           <div class="summary-card">
-            <div class="summary-label">供应商</div>
+            <div class="summary-label">{{ $t('outsource.payment.summarySupplier') }}</div>
             <div class="summary-value">{{ fd.supplier_name||'—' }}</div>
           </div>
         </div>
@@ -145,6 +144,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -154,6 +154,7 @@ import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { fmtDt } from '@/utils/date'
 
+const { t } = useI18n()
 const tableRef=ref<InstanceType<typeof ScTable>>()
 const permStore = usePermissionStore()
 const searchForm=reactive({payment_no:'',supplier_name:''})
@@ -169,13 +170,17 @@ async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});isVie
 async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});isView.value=true;showForm.value=true;await loadSuppliers()}
 function backToList(){showForm.value=false;tableRef.value?.refresh()}
 async function handleSave(){
-  if(!fd.supplier_id){ElMessage.warning('请选择供应商');return}
-  if(!fd.amount||fd.amount<=0){ElMessage.warning('请输入付款金额');return}
+  if(!fd.supplier_id){ElMessage.warning(t('outsource.payment.msgSelectSupplier'));return}
+  if(!fd.amount||fd.amount<=0){ElMessage.warning(t('outsource.payment.msgInputAmount'));return}
   saving.value=true
-  try{await createOutsourcePayment(fd);ElMessage.success('保存成功');backToList()}catch{}finally{saving.value=false}
+  try{await createOutsourcePayment(fd);ElMessage.success(t('outsource.payment.msgSaveSuccess'));backToList()}catch{}finally{saving.value=false}
 }
-async function doAudit(row:any,status:number){const labels:Record<number,string>={1:'审核',2:'驳回',0:'反审核'};await ElMessageBox.confirm(`确定${labels[status]}该付款单？`,'提示',{type:'warning'});try{await http.post('/outsource/payment/audit',{id:row.id,status});ElMessage.success('操作成功');tableRef.value?.refresh()}catch{}}
-async function handleDelete(id:number){await ElMessageBox.confirm('确定删除？','提示',{type:'warning'});await deleteOutsourcePayment(id);ElMessage.success('删除成功');tableRef.value?.refresh()}
+async function doAudit(row:any,status:number){
+  const labels:Record<number,string>={1:t('outsource.payment.btnAudit'),2:t('outsource.payment.btnReject'),0:t('outsource.payment.btnUnaudit')}
+  await ElMessageBox.confirm(t('outsource.payment.msgConfirmAudit',{action:labels[status]}),t('outsource.payment.msgTip'),{type:'warning'})
+  try{await http.post('/outsource/payment/audit',{id:row.id,status});ElMessage.success(t('outsource.payment.msgSuccess'));tableRef.value?.refresh()}catch{}
+}
+async function handleDelete(id:number){await ElMessageBox.confirm(t('outsource.payment.msgConfirmDelete'),t('outsource.payment.msgTip'),{type:'warning'});await deleteOutsourcePayment(id);ElMessage.success(t('outsource.payment.msgDeleteSuccess'));tableRef.value?.refresh()}
 onMounted(loadSuppliers)
 </script>
 

@@ -1,7 +1,7 @@
 <template>
   <div class="share-root">
     <div v-if="loading" class="state-wrap">
-      <div class="spinner"></div><p>加载中…</p>
+      <div class="spinner"></div><p>{{ $t('share.loading') }}</p>
     </div>
     <div v-else-if="error" class="state-wrap">
       <div style="font-size:36px">⚠️</div><p>{{ error }}</p>
@@ -10,27 +10,30 @@
     <div v-else class="doc">
       <!-- ── 文档头部 ── -->
       <div class="doc-header no-print">
-        <div class="brand">数字游牧 DIGITAL NOMAD</div>
-        <div class="doc-title">销售订单</div>
-        <div class="doc-sub">共 {{ contracts.length }} 份 · {{ today }}</div>
+        <div class="brand-wrap">
+          <img v-if="showLogo" src="/brand-logo.png" class="brand-logo" alt="logo" />
+          <div v-else class="brand">{{ $t('share.companyFull') }}</div>
+        </div>
+        <div class="doc-title">{{ $t('share.contractBatch.docTitle') }}</div>
+        <div class="doc-sub">{{ $t('share.contractBatch.footerTotal', { count: contracts.length }) }} · {{ today }}</div>
         <div class="doc-total-wrap">
-          <div class="doc-total-label">合计金额</div>
+          <div class="doc-total-label">{{ $t('share.contractBatch.totalLabel') }}</div>
           <div class="doc-total">¥{{ totalAmount }}</div>
-          <div v-if="Number(totalPending) > 0" class="doc-pending">待收 ¥{{ totalPending }}</div>
-          <div v-else class="doc-clear">全部已收清</div>
+          <div v-if="Number(totalPending) > 0" class="doc-pending">{{ $t('share.contractBatch.pendingLabel') }} ¥{{ totalPending }}</div>
+          <div v-else class="doc-clear">{{ $t('share.contractBatch.cleared') }}</div>
         </div>
       </div>
       <!-- 打印版头部 -->
       <div class="doc-header-print print-only">
         <div class="ph-left">
-          <div class="ph-brand">数字游牧 DIGITAL NOMAD</div>
-          <div class="ph-title">销售订单</div>
-          <div class="ph-sub">共 {{ contracts.length }} 份 · 生成日期：{{ today }}</div>
+          <div class="ph-brand">{{ $t('share.companyFallback') }}</div>
+          <div class="ph-title">{{ $t('share.contractBatch.docTitle') }}</div>
+          <div class="ph-sub">{{ $t('share.contractBatch.footerTotal', { count: contracts.length }) }} · {{ $t('share.contractBatch.generatedOn') }}: {{ today }}</div>
         </div>
         <div class="ph-right">
-          <div class="ph-total-label">合计金额</div>
+          <div class="ph-total-label">{{ $t('share.contractBatch.totalLabel') }}</div>
           <div class="ph-total">¥{{ totalAmount }}</div>
-          <div class="ph-pending">待收 ¥{{ totalPending }}</div>
+          <div class="ph-pending">{{ $t('share.contractBatch.pendingLabel') }} ¥{{ totalPending }}</div>
         </div>
       </div>
 
@@ -58,8 +61,8 @@
             <!-- 金额列 -->
             <div class="row-amounts">
               <div class="amt-total">¥{{ fmt(c.total_amount) }}</div>
-              <div v-if="pendingAmt(c) > 0" class="amt-pending">待收 ¥{{ fmt(pendingAmt(c)) }}</div>
-              <div v-else class="amt-clear">已收清</div>
+              <div v-if="pendingAmt(c) > 0" class="amt-pending">{{ $t('share.contractBatch.pendingLabel') }} ¥{{ fmt(pendingAmt(c)) }}</div>
+              <div v-else class="amt-clear">{{ $t('share.contractBatch.cleared') }}</div>
             </div>
           </div>
         </div>
@@ -68,19 +71,19 @@
       <!-- ── 底部汇总 ── -->
       <div class="doc-footer">
         <div class="footer-row">
-          <span>订单合计（{{ contracts.length }} 份）</span>
+          <span>{{ $t('share.contractBatch.footerTotal', { count: contracts.length }) }}</span>
           <span class="f-total">¥{{ totalAmount }}</span>
         </div>
         <div class="footer-row sub">
-          <span>累计待收余额</span>
+          <span>{{ $t('share.contractBatch.footerPending') }}</span>
           <span class="f-pending">¥{{ totalPending }}</span>
         </div>
-        <div class="footer-hint">本单据由数字游牧ERP系统生成 · {{ today }}</div>
+        <div class="footer-hint">{{ $t('share.contractBatch.footerHint', { date: today }) }}</div>
       </div>
 
       <!-- ── 下载按钮 ── -->
       <div class="dl-wrap no-print">
-        <button class="dl-btn" @click="window.print()">⬇ 下载 / 打印 PDF</button>
+        <button class="dl-btn" @click="window.print()">⬇ {{ $t('share.downloadPdf') }}</button>
       </div>
     </div>
   </div>
@@ -89,16 +92,29 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 const route = useRoute()
+const { t, locale } = useI18n()
 const loading = ref(true)
 const error = ref('')
 const contracts = ref<any[]>([])
-const today = new Date().toLocaleDateString('zh-CN')
+const today = new Date().toLocaleDateString(locale.value === 'en-US' ? 'en-CA' : 'zh-CN')
+
+function decodeToken(token: string): any {
+  try {
+    if (!token?.startsWith('erp_')) return {}
+    const json = decodeURIComponent(escape(atob(token.slice(4))))
+    return JSON.parse(json)
+  } catch { return {} }
+}
+
+const LOGO_ACCOUNTS = ['17747344571']
+const showLogo = computed(() => LOGO_ACCOUNTS.includes(decodeToken(route.query.token as string)?.a))
 
 function fmt(v: any) { return Number(v || 0).toFixed(2) }
-function fmtDate(d: any) { return d ? String(d).slice(0, 10) : '—' }
+function fmtDate(d: any) { return d ? String(d).slice(0, 10) : t('share.noDate') }
 function parseGoods(raw: any): any[] {
   if (!raw) return []
   try { return Array.isArray(raw) ? raw : JSON.parse(raw) } catch { return [] }
@@ -116,9 +132,9 @@ const totalPending = computed(() =>
 onMounted(async () => {
   const idsRaw = route.query.ids as string
   const token = route.query.token as string
-  if (!token || !idsRaw) { error.value = '分享链接无效'; loading.value = false; return }
+  if (!token || !idsRaw) { error.value = t('share.contractBatch.invalidLink'); loading.value = false; return }
   const ids = idsRaw.split(',').map(s => s.trim()).filter(Boolean)
-  if (!ids.length) { error.value = '没有有效的订单 ID'; loading.value = false; return }
+  if (!ids.length) { error.value = t('share.contractBatch.invalidIds'); loading.value = false; return }
   try {
     const results = await Promise.all(
       ids.map(id =>
@@ -128,9 +144,9 @@ onMounted(async () => {
       )
     )
     contracts.value = results.filter(Boolean)
-    if (!contracts.value.length) error.value = '订单不存在或无权限查看'
+    if (!contracts.value.length) error.value = t('share.contractBatch.noAccess')
   } catch {
-    error.value = '网络错误，请检查链接是否有效'
+    error.value = t('share.contractBatch.networkError')
   } finally {
     loading.value = false
   }
@@ -171,7 +187,9 @@ onMounted(async () => {
   border-radius: 16px; padding: 28px 32px 24px;
   margin-bottom: 16px; color: #fff;
 }
-.brand { font-size: 11px; letter-spacing: 3px; opacity: 0.5; margin-bottom: 6px; }
+.brand-wrap { margin-bottom: 6px; }
+.brand { font-size: 11px; letter-spacing: 3px; opacity: 0.5; }
+.brand-logo { height: 48px; width: auto; object-fit: contain; opacity: 0.9; filter: brightness(0) invert(1); }
 .doc-title { font-size: 30px; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
 .doc-sub { font-size: 13px; opacity: 0.55; margin-bottom: 20px; }
 .doc-total-wrap { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }

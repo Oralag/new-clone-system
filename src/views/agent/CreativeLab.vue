@@ -5,13 +5,13 @@
       <div class="header-left">
         <div class="header-badge">
           <span class="header-badge-dot"></span>
-          <span>Experimental AI Features</span>
+          <span>{{ t('agentCreativeLab.badge') }}</span>
         </div>
-        <h1 class="page-title">AI 创意实验室</h1>
-        <p class="page-sub">实验性 AI 能力 · 创意无限可能</p>
+        <h1 class="page-title">{{ t('agentCreativeLab.title') }}</h1>
+        <p class="page-sub">{{ t('agentCreativeLab.subtitle') }}</p>
       </div>
       <div class="header-right">
-        <span class="new-badge">NEW</span>
+        <span class="new-badge">{{ t('agentCreativeLab.newBadge') }}</span>
       </div>
     </div>
 
@@ -34,8 +34,8 @@
       <div class="workshop-panel apple-card">
         <div class="card-header">
           <div>
-            <div class="card-micro">Creative Engine</div>
-            <div class="card-title">创意工坊</div>
+            <div class="card-micro">{{ t('agentCreativeLab.cardMicroWorkshop') }}</div>
+            <div class="card-title">{{ t('agentCreativeLab.workshop') }}</div>
           </div>
         </div>
 
@@ -57,7 +57,7 @@
           <textarea
             v-model="inputText"
             class="creative-textarea"
-            placeholder="描述你的创意需求...输入品牌关键词、场景或灵感..."
+            :placeholder="t('agentCreativeLab.inputPlaceholder')"
             rows="4"
           ></textarea>
         </div>
@@ -65,7 +65,7 @@
         <!-- Params Row -->
         <div class="params-row">
           <div class="param-group">
-            <label class="param-label">平台</label>
+            <label class="param-label">{{ t('agentCreativeLab.platformLabel') }}</label>
             <div class="param-options">
               <button
                 v-for="p in platforms"
@@ -79,7 +79,7 @@
             </div>
           </div>
           <div class="param-group">
-            <label class="param-label">风格</label>
+            <label class="param-label">{{ t('agentCreativeLab.styleLabel') }}</label>
             <div class="param-options">
               <button
                 v-for="s in styles"
@@ -103,20 +103,20 @@
         >
           <span v-if="!generating" class="generate-icon">✨</span>
           <span v-else class="spinner"></span>
-          {{ generating ? '创意引擎运行中...' : '启动创意引擎' }}
+          {{ generating ? t('agentCreativeLab.generating') : t('agentCreativeLab.startEngine') }}
         </button>
 
         <!-- Output Area -->
         <div class="output-area" :class="{ 'output-area--active': output }">
           <div v-if="!output" class="output-placeholder">
             <div class="placeholder-icon">🎯</div>
-            <div class="placeholder-title">等待创意启动</div>
-            <div class="placeholder-desc">填写需求，选择参数，点击「启动创意引擎」，AI 将为你生成专属创意内容。支持爆款标题、角色文案、剧情脚本、多平台变体等多种创作模式。</div>
+            <div class="placeholder-title">{{ t('agentCreativeLab.placeholderTitle') }}</div>
+            <div class="placeholder-desc">{{ t('agentCreativeLab.placeholderDesc') }}</div>
           </div>
           <div v-else class="output-content">
             <div class="output-header">
               <span class="output-tag">{{ currentTabLabel }} · {{ currentPlatformLabel }} · {{ currentStyleLabel }}</span>
-              <button class="copy-btn" @click="copyOutput">复制</button>
+              <button class="copy-btn" @click="copyOutput">{{ t('common.copy') }}</button>
             </div>
             <div class="output-text">{{ output }}</div>
           </div>
@@ -127,8 +127,8 @@
       <div class="inspiration-panel apple-card">
         <div class="card-header">
           <div>
-            <div class="card-micro">Inspiration Vault</div>
-            <div class="card-title">🌟 创意灵感库</div>
+            <div class="card-micro">{{ t('agentCreativeLab.cardMicroVault') }}</div>
+            <div class="card-title">🌟 {{ t('agentCreativeLab.inspirationVault') }}</div>
           </div>
         </div>
         <div class="inspiration-list">
@@ -140,10 +140,10 @@
           >
             <div class="inspiration-num">{{ String(index + 1).padStart(2, '0') }}</div>
             <div class="inspiration-text">{{ tip }}</div>
-            <div class="inspiration-apply">用这个 →</div>
+            <div class="inspiration-apply">{{ t('agentCreativeLab.useThis') }} →</div>
           </div>
         </div>
-      </div>
+    </div>
     </div>
 
     <!-- Bottom Stats Row -->
@@ -158,6 +158,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const activeTab = ref<string>('title')
 const inputText = ref<string>('')
@@ -167,48 +170,48 @@ const generating = ref<boolean>(false)
 const output = ref<string>('')
 
 const features = [
-  { emoji: '🎭', title: '角色扮演文案', desc: '让 AI 扮演 KOL 身份创作', color: '#7c3aed' },
-  { emoji: '🔥', title: '爆款标题机器', desc: 'AI 生成100%爆款标题公式', color: '#f97316' },
-  { emoji: '🎨', title: '视觉脚本生成', desc: '镜头画面 + 文字 + 音效全描述', color: '#ec4899' },
-  { emoji: '🧠', title: '竞品内容分析', desc: '分析竞品账号内容策略', color: '#0071e3' },
-  { emoji: '✨', title: '内容变体生成', desc: '一稿多版，覆盖不同平台风格', color: '#34d399' },
-  { emoji: '🎬', title: '剧情脚本工坊', desc: 'AI 创作完整短剧剧本', color: '#f59e0b' },
+  { emoji: '🎭', title: t('agentCreativeLab.feature1Title'), desc: t('agentCreativeLab.feature1Desc'), color: '#7c3aed' },
+  { emoji: '🔥', title: t('agentCreativeLab.feature2Title'), desc: t('agentCreativeLab.feature2Desc'), color: '#f97316' },
+  { emoji: '🎨', title: t('agentCreativeLab.feature3Title'), desc: t('agentCreativeLab.feature3Desc'), color: '#ec4899' },
+  { emoji: '🧠', title: t('agentCreativeLab.feature4Title'), desc: t('agentCreativeLab.feature4Desc'), color: '#0071e3' },
+  { emoji: '✨', title: t('agentCreativeLab.feature5Title'), desc: t('agentCreativeLab.feature5Desc'), color: '#34d399' },
+  { emoji: '🎬', title: t('agentCreativeLab.feature6Title'), desc: t('agentCreativeLab.feature6Desc'), color: '#f59e0b' },
 ]
 
 const tabs = [
-  { key: 'title', label: '爆款标题' },
-  { key: 'role', label: '角色创作' },
-  { key: 'script', label: '剧情脚本' },
-  { key: 'variant', label: '变体生成' },
+  { key: 'title', label: t('agentCreativeLab.tabTitle') },
+  { key: 'role', label: t('agentCreativeLab.tabRole') },
+  { key: 'script', label: t('agentCreativeLab.tabScript') },
+  { key: 'variant', label: t('agentCreativeLab.tabVariant') },
 ]
 
 const platforms = [
-  { key: 'douyin', label: '抖音' },
-  { key: 'xiaohongshu', label: '小红书' },
-  { key: 'kuaishou', label: '快手' },
+  { key: 'douyin', label: t('agentCreativeLab.platformDouyin') },
+  { key: 'xiaohongshu', label: t('agentCreativeLab.platformXhs') },
+  { key: 'kuaishou', label: t('agentCreativeLab.platformKuaishou') },
 ]
 
 const styles = [
-  { key: 'creative', label: '创意实验' },
-  { key: 'professional', label: '专业严肃' },
-  { key: 'humor', label: '幽默搞笑' },
-  { key: 'emotional', label: '情感共鸣' },
+  { key: 'creative', label: t('agentCreativeLab.styleCreative') },
+  { key: 'professional', label: t('agentCreativeLab.styleProfessional') },
+  { key: 'humor', label: t('agentCreativeLab.styleHumor') },
+  { key: 'emotional', label: t('agentCreativeLab.styleEmotional') },
 ]
 
 const inspirationTips = [
-  '如果你的产品会说话，它会说什么？',
-  '用一句话让陌生人立刻想买你的产品',
-  '从用户最痛的痛点出发，反向讲故事',
-  '借用热门影视台词，植入你的品牌场景',
-  '用「第一次…的感觉」开头，触发情感共鸣',
-  '假设你只有3秒钟，你会说什么？',
+  t('agentCreativeLab.tip1'),
+  t('agentCreativeLab.tip2'),
+  t('agentCreativeLab.tip3'),
+  t('agentCreativeLab.tip4'),
+  t('agentCreativeLab.tip5'),
+  t('agentCreativeLab.tip6'),
 ]
 
 const bottomStats = [
-  { value: '128', label: '今日生成次数' },
-  { value: '2,841', label: '创意实验总数' },
-  { value: '94%', label: '用户满意度' },
-  { value: '6', label: '实验模块数' },
+  { value: '128', label: t('agentCreativeLab.stat1') },
+  { value: '2,841', label: t('agentCreativeLab.stat2') },
+  { value: '94%', label: t('agentCreativeLab.stat3') },
+  { value: '6', label: t('agentCreativeLab.stat4') },
 ]
 
 const currentTabLabel = computed(() => tabs.find(t => t.key === activeTab.value)?.label ?? '')

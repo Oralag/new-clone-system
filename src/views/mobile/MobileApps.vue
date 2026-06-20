@@ -3,10 +3,10 @@
 
     <!-- 顶部 -->
     <div class="apps-header">
-      <div class="apps-title">应用</div>
+      <div class="apps-title">{{ t('mobileApps.title') }}</div>
       <div class="apps-search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input v-model="searchKeyword" class="apps-search-input" placeholder="搜索应用" />
+        <input v-model="searchKeyword" class="apps-search-input" :placeholder="t('mobileApps.searchPlaceholder')" />
         <button v-if="searchKeyword" class="apps-search-clear" @click="searchKeyword = ''">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -18,7 +18,7 @@
       <div v-for="section in filteredSections" :key="section.key" class="apps-section">
         <div class="section-header">
           <div class="section-dot" :style="{ background: getColor(section.key) }"></div>
-          <span class="section-title">{{ section.title }}</span>
+          <span class="section-title">{{ t(section.title) }}</span>
         </div>
         <div class="apps-grid">
           <div
@@ -34,13 +34,13 @@
             <div class="app-icon" :style="{ background: getColor(section.key) }">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" v-html="getIcon(item.key)" />
             </div>
-            <span class="app-label">{{ item.title }}</span>
+            <span class="app-label">{{ t(item.title) }}</span>
           </div>
         </div>
       </div>
 
       <div v-if="filteredSections.length === 0" class="apps-empty">
-        未找到"{{ searchKeyword }}"相关应用
+        {{ t('mobileApps.noResults', { keyword: searchKeyword }) }}
       </div>
     </div>
 
@@ -51,8 +51,10 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { menuData } from '@/layouts/components/menuData'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 const searchKeyword = ref('')
 const pressedKey = ref<string | null>(null)
 
@@ -62,7 +64,10 @@ const filteredSections = computed(() => {
   const kw = searchKeyword.value.trim()
   if (!kw) return appSections
   return appSections
-    .map(s => ({ ...s, children: s.children.filter((c: any) => c.title.includes(kw)) }))
+    .map(s => ({
+      ...s,
+      children: s.children.filter((c: any) => t(c.title).toLocaleLowerCase().includes(kw.toLocaleLowerCase())),
+    }))
     .filter(s => s.children.length > 0)
 })
 

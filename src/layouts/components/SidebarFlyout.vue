@@ -7,7 +7,7 @@
       @mouseenter="appStore.cancelHideTimer()"
       @mouseleave="appStore.scheduleHide()"
     >
-      <div class="flyout-header">{{ flyoutMenu.title }}</div>
+      <div class="flyout-header">{{ tt(flyoutMenu.title) }}</div>
       <div
         v-for="item in flyoutMenu.children"
         :key="item.key"
@@ -15,7 +15,7 @@
         :class="{ active: route.path === item.path }"
         @click="navigate(item.path!)"
       >
-        {{ item.title }}
+        {{ tt(item.title) }}
       </div>
     </div>
   </Transition>
@@ -27,6 +27,10 @@ import { useAppStore } from '@/stores/app'
 import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
 import { menuData } from './menuData'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tt = (key: string) => (key && key.startsWith('menu.') ? t(key) : key)
 
 const appStore = useAppStore()
 const permStore = usePermissionStore()

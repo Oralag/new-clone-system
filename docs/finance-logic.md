@@ -1,6 +1,6 @@
 # 财务模块逻辑文档
 
-> 最后更新：2026-04-12（修复多采购单付款金额双重计数问题）  
+> 最后更新：2026-06-17（补 4 个退货/预付/充值触发器，ledger_flow 触发器扩到 10 个）  
 > 用途：排查财务数据问题、修改计算逻辑时的参考手册
 
 ---
@@ -387,6 +387,34 @@ getBomList()                                     → pBomRes
 
 ---
 
+### 3.6 Dashboard.vue / MobileTodaySale.vue — 今日销售统计
+
+**文件**：`src/views/Dashboard.vue`、`src/views/mobile/MobileTodaySale.vue`
+
+#### 今日总销售额 / 今日订单数 数据来源
+```
+今日销售 = 销售出库(SaleOutOrder) + 零售订单(retail/order) + 美团订单(ContractOrder, customer_id=63)
+
+逐项规则：
+1. 销售出库：/stock/SaleOutOrder/index
+   - 过滤：status===1 且 out_date===today
+   - 金额：after_discount (空则 total_amount)
+2. 零售订单：/retail/order/index
+   - 过滤：status===1 且 order_date===today
+   - 金额：pay_amount (空则 total_amount)
+3. 美团订单：/shop/ContractOrder/index?customer_id=63
+   - 过滤：customer_id===63 且 status===1 且 (sign_date||order_date)===today
+   - 金额：after_discount (空则 total_amount)
+
+⚠️ 美团订单不生成 SaleOutOrder（审核时只调 stockEffect 扣库存 + CollectReceipt 收款），
+所以必须单独查 ContractOrder 才能进今日销售统计。
+
+⚠️ 普通销售合同（customer_id≠63）不在此统计内，避免与 SaleOutOrder 重复计算
+   （普通合同审核会生成 SaleOutOrder，已被销售出库分支统计）。
+```
+
+---
+
 ### 4.1 procureReturnFinance.ts（采购退货财务处理）
 
 **文件**：`src/utils/procureReturnFinance.ts`
@@ -581,6 +609,27 @@ getPayReceiptSupplierLabel(payRow, purchaseOrders, supplierList):
    - 原因3：只查 `order_sn`（内部编号），未查 `order_no`（展示单号），审核自动生成的付款记录存的是 order_no
    - 修复：改为互斥 matched 标志分配 Map，paidAmt 改用 `+` 累加，同时匹配 oSn 和 oNo
    - 同步：Payable.vue 和 Overview.vue 两处逻辑同时修复，保持一致
+
+---
+
+## 六点五、ledger_flow 触发器全量清单（2026-06-17 更新）
+
+`ledger_flow` 是后台单一可信财务数据源，由 10 个触发器自动维护，禁止手工写入。
+
+| 触发器 | 监听表 | source | type | flow_category | 说明 |
+|---|---|---|---|---|---|
+| trg_collect_receipt_ledger | collect_receipt | 收款单 / 其他收入 | income | cash | remark 前缀 `[other]` → 其他收入 |
+| trg_pay_receipt_ledger | pay_receipt | 付款单 / 其他支出 | expense | cash | remark 前缀 `[other]` → 其他支出 |
+| trg_purchase_order_ledger | purchase_order | 采购单 | expense | payable | 审核后挂应付 |
+| trg_sale_contract_ledger | sale_contracts | 销售合同 | income | receivable | 审核后挂应收 |
+| trg_retail_orders_ledger | retail_orders | 零售单 | income | cash | 审核后入流水 |
+| trg_finance_expenses_ledger | finance_expenses | 其他支出 | expense | cash | 附加费用 |
+| **trg_sale_return_ledger** | sale_return_order | **销售退货** | expense | cash/receivable | fund_id 有→cash，无→冲应收 |
+| **trg_procure_return_ledger** | procure_return | **采购退货** | income | cash/payable | fund_id 有→cash，无→冲应付 |
+| **trg_prepay_record_ledger** | prepay_record | **客户预收 / 供应商预付** | income/expense | cash | pay_type 决定方向 |
+| **trg_retail_recharge_ledger** | retail_recharge | **会员充值** | income | cash | 会员充值入账 |
+
+统一规则：仅 `status=1` 写流水；DELETE 清流水；UPDATE 跟随 status 切换增删。
 
 ---
 

@@ -373,6 +373,7 @@ const otherUser = computed(() => {
 
 // 私聊时标题显示对方名字，群聊显示群名
 const chatTitle = computed(() => {
+  if (String(route.params.id) === 'adam-virtual') return '亚当'
   // 跨租户聊天：直接用 group.name（已存对方公司名），不走成员查询
   if (group.value?.cross_tenant) return displayName(group.value?.name) || '好友'
   if (!members.value.length) return displayName(group.value?.name) || '加载中...'
@@ -949,6 +950,135 @@ async function scrollToBottom() {
   })
 }
 
+// 亚当虚拟会话专用加载——直接拉 history + inbox，不经过普通群聊API
+async function loadAdamDirect() {
+  messages.value = []
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    const myId = String(authStore.userInfo?.id || authStore.userInfo?.admin_id || authStore.userInfo?.account || 'me')
+    const myName = authStore.userInfo?.name || authStore.userInfo?.account || '我'
+
+    const [histRes, inboxRes] = await Promise.all([
+      fetch('/api/adam/history', { headers: { 'x-erp-token': token } }),
+      fetch('/api/adam/messages?peek=1', { headers: { 'x-erp-token': token } }),
+    ])
+
+    const converted: any[] = []
+
+    if (histRes.ok) {
+      const data = await histRes.json() as { messages?: any[] }
+      const history = data.messages || []
+      history.forEach((m: any, i: number) => {
+        const isUser = m.role === 'user'
+        const ts = m.timestamp || m.created_at || new Date(Date.now() - (history.length - i) * 1000).toISOString()
+        converted.push({
+          id: `adam_hist_${m.id || i}`,
+          content: m.content,
+          created_at: ts,
+          sender_id: isUser ? myId : 'adam',
+          sender_name: isUser ? myName : '亚当',
+          type: 'text',
+        })
+      })
+    }
+
+    if (inboxRes.ok) {
+      const data = await inboxRes.json() as { messages?: any[] }
+      const inbox = data.messages || []
+      inbox.forEach((m: any) => {
+        if (!converted.some(c => c.id === `adam_inbox_${m.id}`)) {
+          converted.push({
+            id: `adam_inbox_${m.id}`,
+            content: m.content,
+            created_at: m.timestamp,
+            sender_id: 'adam',
+            sender_name: '亚当',
+            type: 'text',
+          })
+        }
+      })
+    }
+
+    messages.value = converted.sort((a: any, b: any) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )
+  } catch { /* 静默 */ }
+}
+
+// 是不是亚当会话（虚拟路由或群名/对方名字匹配）
+function isAdamChat(): boolean {
+  if (String(route.params.id) === 'adam-virtual') return true
+  const name = group.value?.name || ''
+  const other = otherUser.value?.name || ''
+  return [name, other].some(n => n === '亚当' || n === 'Adam' || n === 'ADAM')
+}
+
+// 把亚当 KV inbox + 历史对话合并到消息列表
+async function mergeAdamInbox(reset: boolean) {
+  if (!isAdamChat()) return
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    const myId = String(authStore.userInfo?.id || authStore.userInfo?.admin_id || authStore.userInfo?.account || 'me')
+    const myName = authStore.userInfo?.name || authStore.userInfo?.account || '我'
+
+    // 并行拉两个来源：
+    // 1. chat_history — 用户和亚当的对话历史（含 role:user/assistant）
+    // 2. inbox?peek=1 — 亚当主动推送的消息（不标记已读）
+    const [histRes, inboxRes] = await Promise.all([
+      fetch('/api/adam/history', { headers: { 'x-erp-token': token } }),
+      fetch('/api/adam/messages?peek=1', { headers: { 'x-erp-token': token } }),
+    ])
+
+    const converted: any[] = []
+
+    if (histRes.ok) {
+      const data = await histRes.json() as { messages?: Array<{ id?: string; role?: string; content: string; timestamp?: string; created_at?: string }> }
+      const history = data.messages || []
+      history.forEach((m, i) => {
+        const isUser = m.role === 'user'
+        const ts = m.timestamp || m.created_at || new Date(Date.now() - (history.length - i) * 1000).toISOString()
+        converted.push({
+          id: `adam_hist_${m.id || i}_${ts}`,
+          content: m.content,
+          created_at: ts,
+          sender_id: isUser ? myId : 'adam',
+          sender_name: isUser ? myName : '亚当',
+          type: 'text',
+          _from_adam: true,
+        })
+      })
+    }
+
+    if (inboxRes.ok) {
+      const data = await inboxRes.json() as { messages?: Array<{ id: string; content: string; timestamp: string }> }
+      const inbox = data.messages || []
+      inbox.forEach((m) => {
+        converted.push({
+          id: `adam_inbox_${m.id}`,
+          content: m.content,
+          created_at: m.timestamp,
+          sender_id: 'adam',
+          sender_name: '亚当',
+          type: 'text',
+          _from_adam: true,
+        })
+      })
+    }
+
+    if (converted.length === 0) return
+
+    if (reset) {
+      const seen = new Set(messages.value.map((m: any) => String(m.id)))
+      const newOnes = converted.filter(m => !seen.has(m.id))
+      messages.value = [...messages.value, ...newOnes].sort((a: any, b: any) => {
+        const ta = new Date(a.created_at).getTime()
+        const tb = new Date(b.created_at).getTime()
+        return ta - tb
+      })
+    }
+  } catch { /* 静默 */ }
+}
+
 async function loadMessages(reset = false) {
   if (reset) {
     messages.value = []
@@ -966,6 +1096,8 @@ async function loadMessages(reset = false) {
     }
     if (rows.length > 0) lastMessageId = rows[rows.length - 1].id
   } catch { /* 忽略 */ }
+  // 亚当会话：拉 KV inbox 合并
+  await mergeAdamInbox(reset)
 }
 
 // ── 新消息提示音（Web Audio API 合成）──
@@ -1058,13 +1190,32 @@ function onScroll() {
 }
 
 onMounted(async () => {
+  // 亚当虚拟会话：完全跳过普通群聊逻辑，直接走独立加载路径
+  if (String(route.params.id) === 'adam-virtual') {
+    await loadAdamDirect()
+    await scrollToBottom()
+    setTimeout(() => scrollToBottom(), 200)
+    pollTimer = setInterval(() => fetchNewMessages(), 2000)
+    localStorage.setItem('adam_chat_last_read', String(Date.now()))
+    try {
+      const token = localStorage.getItem('erp_token') || ''
+      await fetch('/api/adam/messages', { headers: { 'x-erp-token': token } })
+    } catch { /* 忽略 */ }
+    return
+  }
+
   await Promise.all([loadGroup(), loadMessages(true)])
   await scrollToBottom()
-  // 延迟二次滚动（等待图片等内容渲染）
   setTimeout(() => scrollToBottom(), 100)
-
-  // 轮询新消息（每 5 秒）
   pollTimer = setInterval(() => fetchNewMessages(), 2000)
+
+  if (isAdamChat()) {
+    localStorage.setItem('adam_chat_last_read', String(Date.now()))
+    try {
+      const token = localStorage.getItem('erp_token') || ''
+      await fetch('/api/adam/messages', { headers: { 'x-erp-token': token } })
+    } catch { /* 忽略 */ }
+  }
 })
 
 onUnmounted(() => {

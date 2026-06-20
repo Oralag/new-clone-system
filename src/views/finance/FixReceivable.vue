@@ -1,23 +1,22 @@
 <template>
   <div style="max-width: 800px; margin: 40px auto; padding: 24px;">
-    <h2>旧数据修复：销售出库单收款</h2>
+    <h2>{{ t('finance.fixReceivable.pageTitle') }}</h2>
     <p style="color: #909399; font-size: 14px; line-height: 1.8;">
-      扫描所有已审核（status=1）且 receive_amount &gt; 0 的销售出库单，<br>
-      若对应 order_sn 在收款单里不存在，则自动补建收款单。
+      {{ t('finance.fixReceivable.pageDesc') }}
     </p>
     <div style="margin-top: 16px; display: flex; gap: 12px;">
-      <el-button type="primary" :loading="running" @click="run">开始修复</el-button>
-      <el-button @click="logs = []">清空日志</el-button>
+      <el-button type="primary" :loading="running" @click="run">{{ t('finance.fixReceivable.startFix') }}</el-button>
+      <el-button @click="logs = []">{{ t('finance.fixReceivable.clearLogs') }}</el-button>
     </div>
 
     <div v-if="summary" style="margin-top: 16px; padding: 12px 16px; background: #f0f9eb; border-radius: 10px; font-size: 13px;">
-      执行完毕：扫描 <b>{{ summary.total }}</b> 条，需补录 <b>{{ summary.need }}</b> 条，
-      成功 <span style="color: #67c23a">{{ summary.ok }}</span>，
-      失败 <span style="color: #f56c6c">{{ summary.fail }}</span>
+      {{ t('finance.fixReceivable.summaryText') }} <b>{{ summary.total }}</b> {{ t('finance.fixReceivable.summaryScanned') }} <b>{{ summary.need }}</b> {{ t('finance.fixReceivable.summaryNeed') }}
+      {{ t('finance.fixReceivable.summarySuccess') }} <span style="color: #67c23a">{{ summary.ok }}</span>，
+      {{ t('finance.fixReceivable.summaryFail') }} <span style="color: #f56c6c">{{ summary.fail }}</span>
     </div>
 
     <div style="margin-top: 20px; background: #1a1a2e; border-radius: 12px; padding: 16px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px;">
-      <div v-if="logs.length === 0" style="color: #666;">暂无日志</div>
+      <div v-if="logs.length === 0" style="color: #666;">{{ t('finance.fixReceivable.noLogs') }}</div>
       <div v-for="(log, i) in logs" :key="i" style="margin-bottom: 4px;">
         <span style="color: #555;">{{ log.time }}</span>
         <span :style="{ color: log.type === 'success' ? '#67c23a' : log.type === 'error' ? '#f56c6c' : '#aaa' }">
@@ -30,8 +29,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import axios from '@/api/http'
 
+const { t } = useI18n()
 const running = ref(false)
 const logs = ref<{ type: string; msg: string; time: string }[]>([])
 const summary = ref<{ total: number; need: number; ok: number; fail: number } | null>(null)

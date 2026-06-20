@@ -925,7 +925,7 @@ async function handleChatSend() {
           else if (ev.type === 'tool_result') {
             const tc = assistantMsg.toolCalls!.find(t => t.id === ev.id)
             if (tc) { tc.status = ev.isError ? 'error' : 'success' }
-            if (!ev.isError) applyToolResult(ev.name, ev.input, ev.content, adamStore)
+            if (!ev.isError) applyToolResult(adamStore, ev.name, ev.result ?? ev.content ?? '')
             scrollChatToBottom()
           }
         } catch { /* ignore */ }

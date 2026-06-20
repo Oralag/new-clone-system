@@ -6,7 +6,7 @@
         :class="{ active: route.path === '/dashboard' }"
         @click="router.push('/dashboard')"
       >
-        工作台
+        {{ t('route.Dashboard') }}
       </div>
       <div
         v-for="tab in tabsStore.tabs"
@@ -16,7 +16,7 @@
         @click="router.push(tab.path)"
         @contextmenu.prevent="showContextMenu($event, tab.path)"
       >
-        {{ tab.title }}
+        {{ tab.titleKey ? t(tab.titleKey) : tab.title }}
         <span class="tag-close" @click.stop="tabsStore.closeTab(tab.path)">
           <el-icon><Close /></el-icon>
         </span>
@@ -31,8 +31,8 @@
     :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
     @mouseleave="contextMenu.visible = false"
   >
-    <div class="ctx-item" @click="closeOther">关闭其他</div>
-    <div class="ctx-item" @click="tabsStore.closeAllTabs(); router.push('/dashboard'); contextMenu.visible = false">关闭所有</div>
+    <div class="ctx-item" @click="closeOther">{{ t('layout.closeOthers') }}</div>
+    <div class="ctx-item" @click="tabsStore.closeAllTabs(); router.push('/dashboard'); contextMenu.visible = false">{{ t('layout.closeAll') }}</div>
   </div>
 </template>
 
@@ -40,7 +40,9 @@
 import { Close } from '@element-plus/icons-vue'
 import { useTabsStore } from '@/stores/tabs'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const tabsStore = useTabsStore()
 const route = useRoute()
 const router = useRouter()

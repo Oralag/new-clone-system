@@ -9,46 +9,46 @@
           del-path="/stock/OtherIn/batchDel"
           export-file-name="其他入库" :params="searchForm">
           <template #search>
-            <el-input v-model="searchForm.in_no" placeholder="入库单号" clearable style="width:160px" />
-            <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:160px" />
-            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
-              <el-option label="未核对" value="unreconciled" />
+            <el-input v-model="searchForm.in_no" :placeholder="$t('warehouse.otherIn.searchInNo')" clearable style="width:160px" />
+            <el-input v-model="searchForm.goods_name" :placeholder="$t('warehouse.otherIn.searchGoodsName')" clearable style="width:160px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="$t('warehouse.otherIn.searchReconcileStatus')">
+              <el-option :label="$t('warehouse.otherIn.filterUnreconciled')" value="unreconciled" />
             </el-select>
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ $t('warehouse.otherIn.btnSearch') }}</el-button>
+            <el-button @click="resetSearch">{{ $t('warehouse.otherIn.btnReset') }}</el-button>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openAdd">新增其他入库</el-button>
+            <el-button type="primary" :icon="Plus" @click="openAdd">{{ $t('warehouse.otherIn.btnAdd') }}</el-button>
           </template>
 
-          <el-table-column prop="in_no" label="入库单号" min-width="150" />
-          <el-table-column prop="in_man" label="入库人" width="110" />
-          <el-table-column prop="in_date" label="入库日期" width="110">
+          <el-table-column prop="in_no" :label="$t('warehouse.otherIn.colInNo')" min-width="150" />
+          <el-table-column prop="in_man" :label="$t('warehouse.otherIn.colInMan')" width="110" />
+          <el-table-column prop="in_date" :label="$t('warehouse.otherIn.colInDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.in_date || row.created_at) }}</template>
           </el-table-column>
-          <el-table-column prop="warehouse_name" label="入库仓库" min-width="110" />
-          <el-table-column label="入库总价" width="110" align="right">
+          <el-table-column prop="warehouse_name" :label="$t('warehouse.otherIn.colWarehouseName')" min-width="110" />
+          <el-table-column :label="$t('warehouse.otherIn.colTotalPrice')" width="110" align="right">
             <template #default="{ row }">
               <b>{{ Number(row.total_price || 0).toFixed(2) }}</b>
             </template>
           </el-table-column>
-          <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column prop="remark" :label="$t('warehouse.otherIn.colRemark')" min-width="130" show-overflow-tooltip />
+          <el-table-column :label="$t('warehouse.otherIn.colStatus')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : '待审核' }}
+                {{ row.status === 1 ? $t('warehouse.otherIn.statusAudited') : row.status === 2 ? $t('warehouse.otherIn.statusRejected') : $t('warehouse.otherIn.statusPending') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="230" fixed="right">
+          <el-table-column :label="$t('warehouse.otherIn.colActions')" width="230" fixed="right">
             <template #default="{ row }">
-              <el-button type="success" size="small" link @click="openView(row)">查看</el-button>
-              <el-button v-if="row.status === 0" type="primary" size="small" link @click="openEdit(row)">编辑</el-button>
-              <el-button v-if="row.status === 0" type="primary" size="small" link @click="handleAudit(row, 1)">审核</el-button>
-              <el-button v-if="row.status === 0" type="danger" size="small" link @click="handleAudit(row, 2)">驳回</el-button>
-              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" size="small" link @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="success" size="small" link @click="openView(row)">{{ $t('warehouse.otherIn.btnView') }}</el-button>
+              <el-button v-if="row.status === 0" type="primary" size="small" link @click="openEdit(row)">{{ $t('warehouse.otherIn.btnEdit') }}</el-button>
+              <el-button v-if="row.status === 0" type="primary" size="small" link @click="handleAudit(row, 1)">{{ $t('warehouse.otherIn.btnAudit') }}</el-button>
+              <el-button v-if="row.status === 0" type="danger" size="small" link @click="handleAudit(row, 2)">{{ $t('warehouse.otherIn.btnReject') }}</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" size="small" link @click="handleAudit(row, 0)">{{ $t('warehouse.otherIn.btnUnaudit') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('warehouse.otherIn.btnReconciled') : $t('warehouse.otherIn.btnReconcile') }}</el-button>
+              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? $t('warehouse.otherIn.titleAuditedCannotDelete') : ''" @click="handleDelete(row.id)">{{ $t('warehouse.otherIn.btnDelete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -60,13 +60,13 @@
       <!-- 顶部操作栏 -->
       <div class="form-topbar">
         <div class="form-topbar-left">
-          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ isView ? '查看其他入库' : fd.id ? '编辑其他入库' : '新增其他入库' }}</span>
-          <el-tag v-if="fd.status === 1" type="success" size="small">已审核</el-tag>
-          <el-tag v-else-if="fd.status === 2" type="danger" size="small">已驳回</el-tag>
+          <el-button :icon="ArrowLeft" @click="backToList">{{ $t('warehouse.otherIn.btnBack') }}</el-button>
+          <span class="form-title">{{ isView ? $t('warehouse.otherIn.formTitleView') : fd.id ? $t('warehouse.otherIn.formTitleEdit') : $t('warehouse.otherIn.formTitleAdd') }}</span>
+          <el-tag v-if="fd.status === 1" type="success" size="small">{{ $t('warehouse.otherIn.statusAudited') }}</el-tag>
+          <el-tag v-else-if="fd.status === 2" type="danger" size="small">{{ $t('warehouse.otherIn.statusRejected') }}</el-tag>
         </div>
         <div class="form-topbar-right" v-if="!isView">
-          <el-button type="primary" :loading="saving" @click="handleSave">保存（Ctrl+S）</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('warehouse.otherIn.btnSave') }}</el-button>
         </div>
       </div>
 
@@ -76,27 +76,27 @@
           <el-row :gutter="16">
             <el-col :span="6">
               <div class="field-row">
-                <span class="field-label">入库单号</span>
-                <el-input v-model="fd.in_no" placeholder="不填写自动生成" style="flex:1" :disabled="isView" />
+                <span class="field-label">{{ $t('warehouse.otherIn.fieldInNo') }}</span>
+                <el-input v-model="fd.in_no" :placeholder="$t('warehouse.otherIn.placeholderInNo')" style="flex:1" :disabled="isView" />
               </div>
             </el-col>
             <el-col :span="6">
               <div class="field-row">
-                <span class="field-label">入库人</span>
-                <el-input v-model="fd.in_man" placeholder="入库人" style="flex:1" :disabled="isView" />
+                <span class="field-label">{{ $t('warehouse.otherIn.fieldInMan') }}</span>
+                <el-input v-model="fd.in_man" :placeholder="$t('warehouse.otherIn.placeholderInMan')" style="flex:1" :disabled="isView" />
               </div>
             </el-col>
             <el-col :span="6">
               <div class="field-row">
-                <span class="field-label required">入库日期</span>
+                <span class="field-label required">{{ $t('warehouse.otherIn.fieldInDate') }}</span>
                 <el-date-picker v-model="fd.in_date" type="date" value-format="YYYY-MM-DD"
                   style="flex:1" :disabled="isView" />
               </div>
             </el-col>
             <el-col :span="6">
               <div class="field-row">
-                <span class="field-label required">入库仓库</span>
-                <el-select v-model="fd.warehouse_id" placeholder="选择仓库" style="flex:1"
+                <span class="field-label required">{{ $t('warehouse.otherIn.fieldWarehouse') }}</span>
+                <el-select v-model="fd.warehouse_id" :placeholder="$t('warehouse.otherIn.placeholderWarehouse')" style="flex:1"
                   :disabled="isView" @change="onWarehouseChange">
                   <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
                 </el-select>
@@ -107,46 +107,46 @@
 
         <!-- 商品明细工具栏 -->
         <div class="goods-toolbar" v-if="!isView">
-          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">选择商品</el-button>
-          <el-button size="small" :icon="Plus" @click="addEmptyRow">手动添加行</el-button>
-          <span class="goods-summary">入库总价：<b>{{ totalPrice.toFixed(2) }}</b></span>
+          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">{{ $t('warehouse.otherIn.btnSelectGoods') }}</el-button>
+          <el-button size="small" :icon="Plus" @click="addEmptyRow">{{ $t('warehouse.otherIn.btnAddRow') }}</el-button>
+          <span class="goods-summary">{{ $t('warehouse.otherIn.totalPriceLabel') }}<b>{{ totalPrice.toFixed(2) }}</b></span>
         </div>
         <div class="goods-summary-view" v-else>
-          入库总价：<b>{{ totalPrice.toFixed(2) }}</b>
+          {{ $t('warehouse.otherIn.totalPriceLabel') }}<b>{{ totalPrice.toFixed(2) }}</b>
         </div>
 
         <!-- 商品明细表 -->
         <div class="goods-table-wrap">
-          <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请点击「选择商品」添加明细">
-            <el-table-column type="index" label="#" width="45" align="center" />
-            <el-table-column label="商品名称" min-width="150">
+          <el-table :data="fd.items" border size="small" style="width:100%" :empty-text="$t('warehouse.otherIn.emptyTableText')">
+            <el-table-column type="index" :label="$t('warehouse.otherIn.colIndex')" width="45" align="center" />
+            <el-table-column :label="$t('warehouse.otherIn.colGoodsName')" min-width="150">
               <template #default="{ row }">
                 <span v-if="isView">{{ row.goods_name }}</span>
-                <el-input v-else v-model="row.goods_name" size="small" placeholder="商品名称" />
+                <el-input v-else v-model="row.goods_name" size="small" :placeholder="$t('warehouse.otherIn.placeholderGoodsName')" />
               </template>
             </el-table-column>
-            <el-table-column prop="goods_sn" label="商品编码" width="120">
+            <el-table-column prop="goods_sn" :label="$t('warehouse.otherIn.colGoodsSn')" width="120">
               <template #default="{ row }">
                 <span v-if="isView">{{ row.goods_sn }}</span>
-                <el-input v-else v-model="row.goods_sn" size="small" placeholder="编码" />
+                <el-input v-else v-model="row.goods_sn" size="small" :placeholder="$t('warehouse.otherIn.placeholderGoodsSn')" />
               </template>
             </el-table-column>
-            <el-table-column label="分类" width="100">
+            <el-table-column :label="$t('warehouse.otherIn.colCate')" width="100">
               <template #default="{ row }">{{ row.cate_name || '—' }}</template>
             </el-table-column>
-            <el-table-column label="规格型号" width="110">
+            <el-table-column :label="$t('warehouse.otherIn.colSpec')" width="110">
               <template #default="{ row }">
                 <span v-if="isView">{{ row.spec || '—' }}</span>
-                <el-input v-else v-model="row.spec" size="small" placeholder="规格" />
+                <el-input v-else v-model="row.spec" size="small" :placeholder="$t('warehouse.otherIn.placeholderSpec')" />
               </template>
             </el-table-column>
-            <el-table-column label="单位" width="75" align="center">
+            <el-table-column :label="$t('warehouse.otherIn.colUnit')" width="75" align="center">
               <template #default="{ row }">{{ row.unit_name || '—' }}</template>
             </el-table-column>
-            <el-table-column label="数量" width="110" align="right">
+            <el-table-column :label="$t('warehouse.otherIn.colNum')" width="110" align="right">
               <template #header>
-                数量
-                <el-button v-if="!isView" link type="primary" size="small" @click="batchSet('num','数量')">批量</el-button>
+                {{ $t('warehouse.otherIn.colNum') }}
+                <el-button v-if="!isView" link type="primary" size="small" @click="batchSet('num', t('warehouse.otherIn.colNum'))">{{ $t('warehouse.otherIn.colBatchNum') }}</el-button>
               </template>
               <template #default="{ row }">
                 <el-input-number v-if="!isView" v-model="row.num" :min="0" :precision="2"
@@ -154,10 +154,10 @@
                 <span v-else>{{ row.num }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="入库单价" width="120" align="right">
+            <el-table-column :label="$t('warehouse.otherIn.colInPrice')" width="120" align="right">
               <template #header>
-                入库单价
-                <el-button v-if="!isView" link type="primary" size="small" @click="batchSet('in_price','入库单价')">批量</el-button>
+                {{ $t('warehouse.otherIn.colInPrice') }}
+                <el-button v-if="!isView" link type="primary" size="small" @click="batchSet('in_price', t('warehouse.otherIn.colInPrice'))">{{ $t('warehouse.otherIn.colInPriceBatch') }}</el-button>
               </template>
               <template #default="{ row }">
                 <el-input-number v-if="!isView" v-model="row.in_price" :min="0" :precision="4"
@@ -165,29 +165,29 @@
                 <span v-else>{{ row.in_price }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="入库总金额" width="120" align="right">
+            <el-table-column :label="$t('warehouse.otherIn.colInTotal')" width="120" align="right">
               <template #default="{ row }">
                 <b style="color:#0071e3">{{ ((row.num||0)*(row.in_price||0)).toFixed(2) }}</b>
               </template>
             </el-table-column>
-            <el-table-column label="批次号" width="110">
+            <el-table-column :label="$t('warehouse.otherIn.colBatchNo')" width="110">
               <template #default="{ row }">
-                <el-input v-if="!isView" v-model="row.batch_no" size="small" placeholder="批次号" />
+                <el-input v-if="!isView" v-model="row.batch_no" size="small" :placeholder="$t('warehouse.otherIn.placeholderBatchNo')" />
                 <span v-else>{{ row.batch_no || '—' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="仓库" width="120">
+            <el-table-column :label="$t('warehouse.otherIn.colWarehouse')" width="120">
               <template #default="{ row }">
-                <el-select v-if="!isView" v-model="row.warehouse_id" size="small" placeholder="仓库"
+                <el-select v-if="!isView" v-model="row.warehouse_id" size="small" :placeholder="$t('warehouse.otherIn.placeholderWarehouse')"
                   style="width:100%" @change="(v:any) => onRowWarehouse(row, v)">
                   <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
                 </el-select>
                 <span v-else>{{ row.warehouse_name || fd.warehouse_name || '—' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="备注" min-width="110">
+            <el-table-column :label="$t('warehouse.otherIn.colItemRemark')" min-width="110">
               <template #default="{ row }">
-                <el-input v-if="!isView" v-model="row.remark" size="small" placeholder="备注" />
+                <el-input v-if="!isView" v-model="row.remark" size="small" :placeholder="$t('warehouse.otherIn.placeholderItemRemark')" />
                 <span v-else>{{ row.remark || '' }}</span>
               </template>
             </el-table-column>
@@ -202,12 +202,12 @@
         <!-- 合计行 + 备注 -->
         <div class="form-footer">
           <div class="footer-summary">
-            <span>合计：</span>
-            <span>数量 <b>{{ totalNum.toFixed(2) }}</b></span>
-            <span style="margin-left:20px">入库总价 <b style="color:#0071e3">{{ totalPrice.toFixed(2) }}</b></span>
+            <span>{{ $t('warehouse.otherIn.summaryTotal') }}</span>
+            <span>{{ $t('warehouse.otherIn.summaryNum') }} <b>{{ totalNum.toFixed(2) }}</b></span>
+            <span style="margin-left:20px">{{ $t('warehouse.otherIn.summaryTotalPrice') }} <b style="color:#0071e3">{{ totalPrice.toFixed(2) }}</b></span>
           </div>
           <div class="field-row" style="margin-top:10px">
-            <span class="field-label">备注</span>
+            <span class="field-label">{{ $t('warehouse.otherIn.fieldRemark') }}</span>
             <el-input v-model="fd.remark" type="textarea" :rows="2" :disabled="isView" style="flex:1" />
           </div>
         </div>
@@ -217,11 +217,11 @@
     <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
     <!-- 批量设置弹窗 -->
-    <el-dialog v-model="batchVisible" :title="`批量设置：${batchLabel}`" width="300px" append-to-body>
+    <el-dialog v-model="batchVisible" :title="`${$t('warehouse.otherIn.batchSetTitle').replace('{label}', batchLabel)}`" width="300px" append-to-body>
       <el-input-number v-model="batchValue" :min="0" :precision="4" style="width:100%" controls-position="right" />
       <template #footer>
-        <el-button @click="batchVisible = false">取消</el-button>
-        <el-button type="primary" @click="applyBatch">确定</el-button>
+        <el-button @click="batchVisible = false">{{ $t('warehouse.otherIn.btnBatchCancel') }}</el-button>
+        <el-button type="primary" @click="applyBatch">{{ $t('warehouse.otherIn.btnBatchConfirm') }}</el-button>
       </template>
     </el-dialog>
 
@@ -233,6 +233,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { fmtDt } from '@/utils/date'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import ScTable from '@/components/ScTable.vue'
 import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
@@ -241,6 +242,7 @@ import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 
+const { t } = useI18n()
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
@@ -361,9 +363,9 @@ function applyBatch() {
 
 // ── 保存 ────────────────────────────────────────────────────────
 async function handleSave() {
-  if (!fd.in_date) { ElMessage.warning('请选择入库日期'); return }
-  if (!fd.warehouse_id) { ElMessage.warning('请选择入库仓库'); return }
-  if (!fd.items.length) { ElMessage.warning('请添加商品明细'); return }
+  if (!fd.in_date) { ElMessage.warning(t('warehouse.otherIn.warnSelectDate')); return }
+  if (!fd.warehouse_id) { ElMessage.warning(t('warehouse.otherIn.warnSelectWarehouse')); return }
+  if (!fd.items.length) { ElMessage.warning(t('warehouse.otherIn.warnAddGoods')); return }
   saving.value = true
   try {
     const payload = {
@@ -377,7 +379,7 @@ async function handleSave() {
     } else {
       await createOtherIn(payload)
     }
-    ElMessage.success('保存成功')
+    ElMessage.success(t('warehouse.otherIn.msgSaveSuccess'))
     stockRefreshStore.trigger()
     backToList()
   } catch { } finally { saving.value = false }
@@ -385,11 +387,11 @@ async function handleSave() {
 
 // ── 审核 ────────────────────────────────────────────────────────
 async function handleAudit(row: any, status: number) {
-  const labels: Record<number, string> = { 1: '审核', 2: '驳回', 0: '反审核' }
-  await ElMessageBox.confirm(`确定要${labels[status]}该入库单吗？`, '提示', { type: 'warning' })
+  const labels: Record<number, string> = { 1: t('warehouse.otherIn.auditLabel'), 2: t('warehouse.otherIn.rejectLabel'), 0: t('warehouse.otherIn.unauditLabel') }
+  await ElMessageBox.confirm(t('warehouse.otherIn.msgAuditConfirm').replace('{action}', labels[status]), t('warehouse.otherIn.msgConfirmTitle'), { type: 'warning' })
   try {
     await http.post('/stock/OtherIn/audit', { id: row.id, status })
-    ElMessage.success('操作成功')
+    ElMessage.success(t('warehouse.otherIn.msgSuccess'))
     stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch {}
@@ -397,9 +399,9 @@ async function handleAudit(row: any, status: number) {
 
 // ── 删除 ────────────────────────────────────────────────────────
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该入库单吗？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('warehouse.otherIn.msgConfirmDelete'), t('warehouse.otherIn.msgConfirmTitle'), { type: 'warning' })
   await deleteOtherIn(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('warehouse.otherIn.msgDeleteSuccess'))
   stockRefreshStore.trigger()
   tableRef.value?.refresh()
 }

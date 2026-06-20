@@ -4,8 +4,31 @@ export interface ProcureFeeItem {
   bearer: string
 }
 
+const PROCURE_FEE_NAME_MAP: Record<string, string> = {
+  freight: 'freight',
+  '运费': 'freight',
+  loading: 'loading',
+  '装卸费': 'loading',
+  inspection: 'inspection',
+  '检测费': 'inspection',
+  packing: 'packing',
+  '包装费': 'packing',
+  storage: 'storage',
+  '仓储费': 'storage',
+  document_expense: 'document_expense',
+  document: 'document_expense',
+  '单据支出': 'document_expense',
+  other: 'other',
+  '其他费用': 'other',
+}
+
+function normalizeProcureFeeName(name: any): string {
+  const raw = String(name || '').trim()
+  return PROCURE_FEE_NAME_MAP[raw] || raw
+}
+
 export function isProcureExtraFeePayment(row: any): boolean {
-  return /采购单据支出|采购运费|采购附加费用/.test(String(row?.remark || ''))
+  return /采购单据支出|采购运费|采购附加费用|Purchase Document Expense|Purchase Freight|Purchase Addon Fee/.test(String(row?.remark || ''))
 }
 
 export function parseProcureFeeItems(row: any): ProcureFeeItem[] {
@@ -18,12 +41,12 @@ export function parseProcureFeeItems(row: any): ProcureFeeItem[] {
   if (!items.length) {
     const freight = Number(row?.freight_amount || 0)
     const expense = Number(row?.expense_amount || 0)
-    if (freight > 0) items.push({ name: '运费', amount: freight, bearer: row?.freight_bearer || 'buyer' })
-    if (expense > 0) items.push({ name: '单据支出', amount: expense, bearer: 'buyer' })
+    if (freight > 0) items.push({ name: 'freight', amount: freight, bearer: row?.freight_bearer || 'buyer' })
+    if (expense > 0) items.push({ name: 'document_expense', amount: expense, bearer: 'buyer' })
   }
   return items
     .map((fee) => ({
-      name: String(fee?.name || '').trim(),
+      name: normalizeProcureFeeName(fee?.name),
       amount: Number(fee?.amount || 0),
       bearer: fee?.bearer || 'buyer',
     }))
@@ -44,9 +67,9 @@ export function buildProcureFeePaidByOrder(payRows: any[]): Record<number, numbe
     const amount = Number(row?.amount || 0)
     if (amount <= 0) continue
     const remark = String(row?.remark || '')
-    const match = remark.match(/采购附加费用\s*#(\d+):/)
-      || remark.match(/采购运费\s*#(\d+)/)
-      || remark.match(/采购单据支出\s*#(\d+)/)
+    const match = remark.match(/(?:采购附加费用|Purchase Addon Fee)\s*#(\d+):/)
+      || remark.match(/(?:采购运费|Purchase Freight)\s*#(\d+)/)
+      || remark.match(/(?:采购单据支出|Purchase Document Expense)\s*#(\d+)/)
     if (!match) continue
     const orderId = Number(match[1])
     if (!orderId) continue
@@ -57,4 +80,3 @@ export function buildProcureFeePaidByOrder(payRows: any[]): Record<number, numbe
   }
   return paid
 }
-

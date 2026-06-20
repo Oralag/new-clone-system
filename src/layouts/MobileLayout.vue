@@ -8,7 +8,7 @@
         </svg>
       </button>
       <div v-else class="wx-nav-placeholder"></div>
-      <span class="wx-nav-title">{{ route.meta?.title || '数字游牧' }}</span>
+      <span class="wx-nav-title">{{ routeTitle }}</span>
       <div class="wx-nav-right"></div>
     </div>
 
@@ -59,27 +59,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, provide } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
+import { useI18n } from 'vue-i18n'
 import MobileMeetingPinned from './MobileMeetingPinned.vue'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
-const tabs = [
-  { key: 'chat', label: '消息', path: '/mobile/chat' },
-  { key: 'contacts', label: '通讯录', path: '/mobile/contacts' },
-  { key: 'workbench', label: '首页', path: '/mobile/dashboard' },
-  { key: 'stats', label: '统计', path: '/mobile/stats' },
-  { key: 'modules', label: '模块', path: '/mobile/modules' },
-]
+const tabs = computed(() => ([
+  { key: 'chat', label: t('mobile.chat'), path: '/mobile/chat' },
+  { key: 'contacts', label: t('mobile.contacts'), path: '/mobile/contacts' },
+  { key: 'workbench', label: t('mobile.home'), path: '/mobile/dashboard' },
+  { key: 'stats', label: t('mobile.stats'), path: '/mobile/stats' },
+  { key: 'modules', label: t('mobile.modules'), path: '/mobile/modules' },
+]))
+
+const routeTitle = computed(() => {
+  const meta = route.meta as { title?: string; titleKey?: string }
+  if (meta?.titleKey) return t(meta.titleKey)
+  const name = route.name as string | undefined
+  if (name) {
+    const key = `route.${name}`
+    const value = t(key)
+    if (value !== key) return value
+  }
+  return meta?.title || t('app.name')
+})
 
 // 判断当前是否为 Tab 主页面
 const isMainTab = computed(() => {
-  return tabs.some(t => t.path === route.path)
+  return tabs.value.some(t => t.path === route.path)
 })
 
 // 根据路由判断是否隐藏 TabBar（非主tab页面隐藏）
@@ -90,6 +104,7 @@ const activeTab = ref('chat')
 const unreadCount = ref(0)
 const pendingCount = ref(0)
 let unreadPoll: ReturnType<typeof setInterval> | null = null
+
 const taskCount = ref(0)
 const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileModules']
 
@@ -135,16 +150,16 @@ function goBack() {
 
 watch(() => route.path, (path) => {
   // 先精确匹配，再前缀匹配（chat/:id 也算 chat tab）
-  const exact = tabs.find(t => t.path === path)
+  const exact = tabs.value.find(t => t.path === path)
   if (exact) {
     activeTab.value = exact.key
   } else {
-    const prefix = tabs.find(t => path.startsWith(t.path + '/') || path === t.path)
+    const prefix = tabs.value.find(t => path.startsWith(t.path + '/') || path === t.path)
     if (prefix) activeTab.value = prefix.key
   }
 }, { immediate: true })
 
-function switchTab(tab: typeof tabs[0]) {
+function switchTab(tab: (typeof tabs.value)[number]) {
   if (tab.key === activeTab.value) return
   activeTab.value = tab.key
   router.push(tab.path)
@@ -161,7 +176,7 @@ watch(unreadCount, (n) => {
 
 onMounted(async () => {
   // 默认跳工作台
-  if (route.path === '/' || !tabs.find(t => route.path.startsWith(t.path))) {
+  if (route.path === '/' || !tabs.value.find(t => route.path.startsWith(t.path))) {
     router.replace('/mobile/dashboard')
   }
 
@@ -180,6 +195,7 @@ onMounted(async () => {
       unreadCount.value = newCount
     } catch { /* 忽略 */ }
   }, 30000)
+
 })
 
 onUnmounted(() => {
@@ -358,4 +374,5 @@ export default { name: 'MobileLayout' }
   line-height: 1;
   font-weight: 500;
 }
+
 </style>

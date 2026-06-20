@@ -1,18 +1,18 @@
 <template>
-  <el-dialog v-model="visible" title="选择客户" width="800px" destroy-on-close>
+  <el-dialog v-model="visible" :title="t('customerSelect.title')" width="800px" destroy-on-close>
     <div class="select-search">
-      <el-input v-model="keyword" placeholder="客户名称/手机号" clearable style="width: 220px" @keyup.enter="search" />
-      <el-button type="primary" @click="search">搜索</el-button>
+      <el-input v-model="keyword" :placeholder="t('customerSelect.searchPlaceholder')" clearable style="width: 220px" @keyup.enter="search" />
+      <el-button type="primary" @click="search">{{ t('common.search') }}</el-button>
     </div>
 
     <el-table v-loading="loading" :data="list" border stripe @row-click="rowClick">
-      <el-table-column prop="nickname" label="客户名称" min-width="150" />
-      <el-table-column prop="mobile" label="手机号" width="130" />
-      <el-table-column prop="address" label="地址" min-width="200" />
-      <el-table-column prop="level_name" label="客户等级" width="100" />
-      <el-table-column label="操作" width="80">
+      <el-table-column prop="nickname" :label="t('customerSelect.customerName')" min-width="150" />
+      <el-table-column prop="mobile" :label="t('customerSelect.mobile')" width="130" />
+      <el-table-column prop="address" :label="t('customerSelect.address')" min-width="200" />
+      <el-table-column prop="level_name" :label="t('customerSelect.customerLevel')" width="100" />
+      <el-table-column :label="t('common.operation')" width="80">
         <template #default="{ row }">
-          <el-button type="primary" size="small" link @click="selectRow(row)">选择</el-button>
+          <el-button type="primary" size="small" link @click="selectRow(row)">{{ t('common.select') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -30,7 +30,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (e: 'confirm', val: any): void

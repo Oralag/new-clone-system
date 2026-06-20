@@ -2,81 +2,83 @@
   <div class="receivable-page">
     <!-- 顶部汇总 -->
     <div :class="['summary-bar', isMobile ? 'summary-bar--mobile' : '']">
-      <span class="summary-item">应收总金额：<strong class="blue">{{ fmt(summaryTotal) }}</strong></span>
-      <span class="summary-item">已收总金额：<strong class="green">{{ fmt(summaryPaid) }}</strong></span>
-      <span class="summary-item">退货总金额：<strong class="orange">{{ fmt(summaryReturn) }}</strong></span>
-      <span class="summary-item">待收欠款：<strong class="red">{{ fmt(summaryUnpaid) }}</strong></span>
+      <span class="summary-item">{{ $t('finance.receivable.summaryTotal') }}：<strong class="blue">{{ fmt(summaryTotal) }}</strong></span>
+      <span class="summary-item">{{ $t('finance.receivable.summaryPaid') }}：<strong class="green">{{ fmt(summaryPaid) }}</strong></span>
+      <span class="summary-item">{{ $t('finance.receivable.summaryReturn') }}：<strong class="orange">{{ fmt(summaryReturn) }}</strong></span>
+      <span class="summary-item">{{ $t('finance.receivable.summaryUnpaid') }}：<strong class="red">{{ fmt(summaryUnpaid) }}</strong></span>
     </div>
 
     <el-card class="table-card" data-guide-id="guide-receivable-card">
       <div class="toolbar">
         <div class="search-area">
-          <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:180px" />
-          <el-input v-model="searchForm.order_sn" placeholder="出库单号" clearable style="width:180px" />
-          <el-date-picker v-model="searchForm.date_from" type="date" placeholder="开始日期" value-format="YYYY-MM-DD" style="width:140px" />
-          <span style="color:rgba(29,29,31,0.35)">至</span>
-          <el-date-picker v-model="searchForm.date_to" type="date" placeholder="结束日期" value-format="YYYY-MM-DD" style="width:140px" />
-          <el-button type="primary" :icon="Search" @click="load">查询</el-button>
-          <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
+          <el-input v-model="searchForm.customer_name" :placeholder="$t('finance.receivable.searchCustomerPlaceholder')" clearable style="width:180px" />
+          <el-input v-model="searchForm.order_sn" :placeholder="$t('finance.receivable.searchOrderSnPlaceholder')" clearable style="width:180px" />
+          <el-date-picker v-model="searchForm.date_from" type="date" :placeholder="$t('finance.receivable.searchDateFrom')" value-format="YYYY-MM-DD" style="width:140px" />
+          <span style="color:rgba(29,29,31,0.35)">{{ $t('finance.receivable.searchDateSeparator') }}</span>
+          <el-date-picker v-model="searchForm.date_to" type="date" :placeholder="$t('finance.receivable.searchDateTo')" value-format="YYYY-MM-DD" style="width:140px" />
+          <el-button type="primary" :icon="Search" @click="load">{{ $t('finance.receivable.btnSearch') }}</el-button>
+          <el-button :icon="Refresh" @click="resetSearch">{{ $t('finance.receivable.btnReset') }}</el-button>
         </div>
       </div>
 
       <!-- 手机端：卡片列表 -->
       <div v-if="isMobile" v-loading="loading" class="mobile-rec-list">
-        <div v-if="!displayRows.length" class="mobile-rec-empty">暂无数据</div>
+        <div v-if="!displayRows.length" class="mobile-rec-empty">{{ $t('finance.receivable.mobileNoData') }}</div>
         <div v-for="row in displayRows" :key="row.customer_name" class="mobile-rec-card">
           <div class="mrc-top">
             <span class="mrc-name">{{ row.customer_name || '—' }}</span>
             <span class="mrc-unpaid" :style="{ color: row.un_pay_amount > 0 ? '#dc2626' : '#16a34a' }">
-              欠款 ¥{{ fmt(row.un_pay_amount) }}
+              {{ $t('finance.receivable.mobileDebt') }} ¥{{ fmt(row.un_pay_amount) }}
             </span>
           </div>
           <div class="mrc-row">
-            <span class="mrc-label">应收</span><span class="mrc-val blue">¥{{ fmt(row.total_amount) }}</span>
-            <span class="mrc-label">已收</span><span class="mrc-val green">¥{{ fmt(row.paid_amount) }}</span>
-            <span class="mrc-label">单数</span><span class="mrc-val">{{ row.orders.length }}</span>
+            <span class="mrc-label">{{ $t('finance.receivable.mobileReceivable') }}</span><span class="mrc-val blue">¥{{ fmt(row.total_amount) }}</span>
+            <span class="mrc-label">{{ $t('finance.receivable.mobilePaid') }}</span><span class="mrc-val green">¥{{ fmt(row.paid_amount) }}</span>
+            <span class="mrc-label">{{ $t('finance.receivable.mobileOrderCount') }}</span><span class="mrc-val">{{ row.orders.length }}</span>
           </div>
           <div class="mrc-actions">
-            <el-button size="small" @click="openDetail(row)">欠款详情</el-button>
-            <el-button size="small" type="primary" @click="openCollect(row)">收款</el-button>
+            <el-button size="small" @click="openDetail(row)">{{ $t('finance.receivable.mobileBtnDetail') }}</el-button>
+            <el-button size="small" type="primary" @click="openCollect(row)">{{ $t('finance.receivable.mobileBtnCollect') }}</el-button>
           </div>
         </div>
-        <div class="mobile-rec-total">共 {{ total }} 位客户 · 待收合计 ¥{{ fmt(summaryUnpaid) }}</div>
+        <div class="mobile-rec-total">{{ $t('finance.receivable.mobileSummaryText', { total }) }} ¥{{ fmt(summaryUnpaid) }}</div>
       </div>
 
       <!-- PC端：表格（按客户聚合，一客户一行） -->
       <el-table v-else :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="customer_name" label="客户名称" min-width="150" />
-        <el-table-column label="欠款单数" width="90" align="center">
+        <el-table-column type="index" :label="$t('finance.receivable.colIndex')" width="60" align="center" />
+        <el-table-column prop="customer_name" :label="$t('finance.receivable.colCustomer')" min-width="150" />
+        <el-table-column :label="$t('finance.receivable.colOrderCount')" width="90" align="center">
           <template #default="{ row }">{{ row.orders.length }}</template>
         </el-table-column>
-        <el-table-column label="应收金额" min-width="120" align="right">
+        <el-table-column :label="$t('finance.receivable.colTotalAmount')" min-width="120" align="right">
           <template #default="{ row }">
             <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.total_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="已收金额" min-width="120" align="right">
+        <el-table-column :label="$t('finance.receivable.colPaidAmount')" min-width="120" align="right">
           <template #default="{ row }">
             <span style="color:#16a34a">¥{{ fmt(row.paid_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="退货金额" min-width="120" align="right">
-          <template #default>
-            <span style="color:rgba(29,29,31,0.25);font-weight:600">¥0.00</span>
+        <el-table-column :label="$t('finance.receivable.colReturnAmount')" min-width="120" align="right">
+          <template #default="{ row }">
+            <span :style="{ color: row.return_amount > 0 ? '#f97316' : 'rgba(29,29,31,0.25)', fontWeight: '600' }">
+              ¥{{ fmt(row.return_amount || 0) }}
+            </span>
           </template>
         </el-table-column>
-        <el-table-column label="待收欠款" min-width="120" align="right">
+        <el-table-column :label="$t('finance.receivable.colUnpaidAmount')" min-width="120" align="right">
           <template #default="{ row }">
             <span :style="{ color: row.un_pay_amount > 0 ? '#dc2626' : '#16a34a', fontWeight: '600' }">
               ¥{{ fmt(row.un_pay_amount) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right" align="center">
+        <el-table-column :label="$t('finance.receivable.colActions')" width="160" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="openDetail(row)">欠款详情</el-button>
-            <el-button type="success" link size="small" @click="openCollect(row)">收款</el-button>
+            <el-button type="primary" link size="small" @click="openDetail(row)">{{ $t('finance.receivable.btnDetail') }}</el-button>
+            <el-button type="success" link size="small" @click="openCollect(row)">{{ $t('finance.receivable.btnCollect') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -95,100 +97,100 @@
     </el-card>
 
     <!-- 欠款详情弹窗 -->
-    <el-dialog v-model="detailVisible" :title="`${detailCustomer?.customer_name} · 欠款详情`" width="820px" destroy-on-close>
+    <el-dialog v-model="detailVisible" :title="`${detailCustomer?.customer_name} · ${$t('finance.receivable.btnDetail')}`" width="820px" destroy-on-close>
       <div class="detail-summary">
-        <span>应收合计：<strong class="blue">¥{{ fmt(detailCustomer?.total_amount) }}</strong></span>
-        <span>已收合计：<strong class="green">¥{{ fmt(detailCustomer?.paid_amount) }}</strong></span>
-        <span>待收欠款：<strong class="red">¥{{ fmt(detailCustomer?.un_pay_amount) }}</strong></span>
+        <span>{{ $t('finance.receivable.detailSummaryTotal') }}：<strong class="blue">¥{{ fmt(detailCustomer?.total_amount) }}</strong></span>
+        <span>{{ $t('finance.receivable.detailSummaryPaid') }}：<strong class="green">¥{{ fmt(detailCustomer?.paid_amount) }}</strong></span>
+        <span>{{ $t('finance.receivable.detailSummaryUnpaid') }}：<strong class="red">¥{{ fmt(detailCustomer?.un_pay_amount) }}</strong></span>
       </div>
       <el-table :data="detailCustomer?.orders ?? []" border stripe size="small" style="width:100%">
-        <el-table-column type="index" label="序号" width="55" align="center" />
-        <el-table-column prop="source" label="来源" width="90" />
-        <el-table-column label="单据号" min-width="160">
+        <el-table-column type="index" :label="$t('finance.receivable.detailColIndex')" width="55" align="center" />
+        <el-table-column prop="source" :label="$t('finance.receivable.detailColSource')" width="90" />
+        <el-table-column :label="$t('finance.receivable.detailColOrderNo')" min-width="160">
           <template #default="{ row }">{{ row.order_sn || row.order_no || '—' }}</template>
         </el-table-column>
-        <el-table-column label="应收金额" min-width="110" align="right">
+        <el-table-column :label="$t('finance.receivable.detailColTotalAmount')" min-width="110" align="right">
           <template #default="{ row }">
             <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.total_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="已收金额" min-width="110" align="right">
+        <el-table-column :label="$t('finance.receivable.detailColPaidAmount')" min-width="110" align="right">
           <template #default="{ row }">
             <span style="color:#16a34a">¥{{ fmt(row.paid_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="待收欠款" min-width="110" align="right">
+        <el-table-column :label="$t('finance.receivable.detailColUnpaidAmount')" min-width="110" align="right">
           <template #default="{ row }">
             <span :style="{ color: row.un_pay_amount > 0 ? '#dc2626' : '#16a34a', fontWeight: '600' }">
               ¥{{ fmt(row.un_pay_amount) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="签单日期" min-width="145">
+        <el-table-column :label="$t('finance.receivable.detailColDate')" min-width="145">
           <template #default="{ row }">{{ fmtDt(row.out_date) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="80" align="center">
+        <el-table-column :label="$t('finance.receivable.detailColActions')" width="80" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="router.push(row.source === '样品单' ? '/sale/sample' : '/sale/out')">查看单据</el-button>
+            <el-button type="primary" link size="small" @click="router.push(row.source === '样品单' ? '/sale/sample' : '/sale/out')">{{ $t('finance.receivable.detailBtnViewOrder') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
       <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-        <el-button type="primary" @click="detailVisible = false; openCollect(detailCustomer)">去收款</el-button>
+        <el-button @click="detailVisible = false">{{ $t('finance.receivable.detailBtnClose') }}</el-button>
+        <el-button type="primary" @click="detailVisible = false; openCollect(detailCustomer)">{{ $t('finance.receivable.detailBtnCollect') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 新增收款单抽屉 -->
-    <el-drawer v-model="collectVisible" title="新增收款单" size="520px" destroy-on-close>
+    <el-drawer v-model="collectVisible" :title="$t('finance.receivable.drawerTitle')" size="520px" destroy-on-close>
       <el-form ref="formRef" :model="fd" label-width="90px" style="padding:0 8px">
-        <el-form-item label="收款对象" prop="contact_id" :rules="[{ required: true, message: '请选择客户' }]">
+        <el-form-item :label="$t('finance.receivable.formContact')" prop="contact_id" :rules="[{ required: true, message: $t('finance.receivable.ruleContactRequired') }]">
           <div style="display:flex;gap:6px;width:100%">
-            <el-select v-model="fd.contact_id" placeholder="请选择客户" filterable style="flex:1" @change="onContactChange">
+            <el-select v-model="fd.contact_id" :placeholder="$t('finance.receivable.formContact')" filterable style="flex:1" @change="onContactChange">
               <el-option v-for="c in contactOptions" :key="c.id" :label="c.name" :value="c.id" />
             </el-select>
           </div>
         </el-form-item>
-        <el-form-item label="当前欠款">
+        <el-form-item :label="$t('finance.receivable.formCurrentDebt')">
           <el-input :model-value="fmt(fd.un_pay_amount)" readonly />
         </el-form-item>
-        <el-form-item label="收款金额" prop="amount" :rules="[{ required: true, message: '请输入收款金额' }]">
+        <el-form-item :label="$t('finance.receivable.formAmount')" prop="amount" :rules="[{ required: true, message: $t('finance.receivable.ruleAmountRequired') }]">
           <el-input-number v-model="fd.amount" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
-        <el-form-item label="收款账户" prop="fund_id" :rules="[{ required: true, message: '请选择收款账户' }]">
+        <el-form-item :label="$t('finance.receivable.formFundAccount')" prop="fund_id" :rules="[{ required: true, message: $t('finance.receivable.ruleFundRequired') }]">
           <div style="display:flex;gap:4px;width:100%">
-            <el-select v-model="fd.fund_id" placeholder="请选择账户" style="flex:1" @change="onFundChange">
+            <el-select v-model="fd.fund_id" :placeholder="$t('finance.receivable.formFundPlaceholder')" style="flex:1" @change="onFundChange">
               <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
             </el-select>
             <el-button :icon="Plus" @click="openAddFund" />
           </div>
         </el-form-item>
-        <el-form-item label="收款日期" prop="receipt_date">
+        <el-form-item :label="$t('finance.receivable.formDate')" prop="receipt_date">
           <el-date-picker v-model="fd.receipt_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="fd.remark" type="textarea" :rows="3" placeholder="备注" />
+        <el-form-item :label="$t('finance.receivable.formRemark')" prop="remark">
+          <el-input v-model="fd.remark" type="textarea" :rows="3" :placeholder="$t('finance.receivable.formRemarkPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="collectVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+        <el-button @click="collectVisible = false">{{ $t('finance.receivable.drawerBtnCancel') }}</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('finance.receivable.drawerBtnSave') }}</el-button>
       </template>
     </el-drawer>
 
     <!-- 新增资金账户弹框 -->
-    <el-dialog v-model="addFundVisible" title="新增资金账户" width="360px" append-to-body>
+    <el-dialog v-model="addFundVisible" :title="$t('finance.receivable.addFundTitle')" width="360px" append-to-body>
       <el-form :model="fundForm" label-width="90px">
-        <el-form-item label="账户名称">
-          <el-input v-model="fundForm.name" placeholder="请输入账户名称" />
+        <el-form-item :label="$t('finance.receivable.addFundName')">
+          <el-input v-model="fundForm.name" :placeholder="$t('finance.receivable.addFundNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="初始余额">
+        <el-form-item :label="$t('finance.receivable.addFundBalance')">
           <el-input-number v-model="fundForm.balance" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addFundVisible = false">取消</el-button>
-        <el-button type="primary" :loading="addFundLoading" @click="submitAddFund">确认新增</el-button>
+        <el-button @click="addFundVisible = false">{{ $t('finance.receivable.addFundBtnCancel') }}</el-button>
+        <el-button type="primary" :loading="addFundLoading" @click="submitAddFund">{{ $t('finance.receivable.addFundBtnConfirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -197,6 +199,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
@@ -204,7 +207,10 @@ import { fmtDt } from '@/utils/date'
 import { createCollectReceipt, getFundList, createFund } from '@/api/finance'
 import { getSaleCustomerList } from '@/api/sale'
 import { adjustFundBalance } from '@/utils/fund'
+import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
+import { calcSaleContractReceivable } from '@/utils/saleContractAmount'
 
+const { t } = useI18n()
 const router = useRouter()
 const loading = ref(false)
 const allRows = ref<any[]>([])
@@ -252,18 +258,24 @@ const groupedRows = computed(() => {
         customer_id: r.customer_id || null,
         total_amount: 0,
         paid_amount: 0,
+        return_amount: 0,
         un_pay_amount: 0,
         orders: [],
+        _returnAdded: false,
       })
     }
     const g = map.get(key)!
     g.total_amount += Number(r.total_amount || 0)
     g.paid_amount += Number(r.paid_amount || 0)
     g.un_pay_amount += Number(r.un_pay_amount || 0)
+    if (!g._returnAdded && r._return_amount) { g.return_amount = r._return_amount; g._returnAdded = true }
     if (!g.customer_id && r.customer_id) g.customer_id = r.customer_id
     g.orders.push(r)
   }
-  return Array.from(map.values()).filter(g => g.un_pay_amount > 0)
+  return Array.from(map.values()).map(g => ({
+    ...g,
+    un_pay_amount: Math.max(0, g.un_pay_amount - (g.return_amount || 0)),
+  })).filter(g => g.un_pay_amount > 0)
 })
 
 const total = computed(() => groupedRows.value.length)
@@ -275,7 +287,7 @@ const displayRows = computed(() => {
 
 const summaryTotal = computed(() => groupedRows.value.reduce((s, r) => s + r.total_amount, 0))
 const summaryPaid = computed(() => groupedRows.value.reduce((s, r) => s + r.paid_amount, 0))
-const summaryReturn = computed(() => 0)
+const summaryReturn = computed(() => groupedRows.value.reduce((s, r) => s + (r.return_amount || 0), 0))
 const summaryUnpaid = computed(() => groupedRows.value.reduce((s, r) => s + r.un_pay_amount, 0))
 
 function openDetail(row: any) {
@@ -319,7 +331,7 @@ function onFundChange(id: any) {
 }
 
 async function handleSave() {
-  try { await formRef.value?.validate() } catch { ElMessage.warning('请填写必填项'); return }
+  try { await formRef.value?.validate() } catch { ElMessage.warning(t('finance.receivable.msgRequiredFields')); return }
   saving.value = true
   try {
     const payload: any = {
@@ -341,11 +353,11 @@ async function handleSave() {
         await adjustFundBalance({ fundId: fd.fund_id, fundName: fd.fund_name, delta: fd.amount })
       } catch { /* 余额更新失败不阻断主流程 */ }
     }
-    ElMessage.success('收款成功')
+    ElMessage.success(t('finance.receivable.msgCollectSuccess'))
     collectVisible.value = false
     await load()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('finance.receivable.msgSaveFailed'))
   } finally {
     saving.value = false
   }
@@ -365,17 +377,17 @@ function openAddFund() {
 }
 
 async function submitAddFund() {
-  if (!fundForm.name.trim()) { ElMessage.warning('请输入账户名称'); return }
+  if (!fundForm.name.trim()) { ElMessage.warning(t('finance.receivable.msgAccountNameRequired')); return }
   addFundLoading.value = true
   try {
     await createFund({ name: fundForm.name.trim(), balance: fundForm.balance })
-    ElMessage.success('新增账户成功')
+    ElMessage.success(t('finance.receivable.msgAddFundSuccess'))
     addFundVisible.value = false
     await loadFunds()
     const newFund = fundOptions.value.find(f => f.name === fundForm.name.trim())
     if (newFund) { fd.fund_id = newFund.id; fd.fund_name = newFund.name }
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '新增失败')
+    ElMessage.error(e?.message ?? t('finance.receivable.msgAddFundFailed'))
   } finally {
     addFundLoading.value = false
   }
@@ -388,16 +400,30 @@ async function load() {
     if (searchForm.customer_name) params.customer_name = searchForm.customer_name
     if (searchForm.order_sn) params.order_sn = searchForm.order_sn
 
-    const [contractRes, receiptRes] = await Promise.allSettled([
-      http.get('/shop/ContractOrder/index', { params: { ...params, status: 1 } }),
+    const [contractRes, receiptRes, saleReturnRes] = await Promise.allSettled([
+      http.get('/shop/ContractOrder/index', { params: { ...params, list_rows: 2000 } }),
       http.get('/finance/CollectReceipt/index', { params: { list_rows: 5000 } }),
+      http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 2000 } }),
     ])
 
     const contractRows: any[] = contractRes.status === 'fulfilled' ? (contractRes.value.data?.rows ?? []) : []
     const receipts: any[] = receiptRes.status === 'fulfilled' ? (receiptRes.value.data?.rows ?? []) : []
+    const saleReturns: any[] = saleReturnRes.status === 'fulfilled' ? (saleReturnRes.value.data?.rows ?? []) : []
 
-    // 建合同 order_sn/order_no → id 映射（最可靠的匹配方式，系统自动生成不会出错）
-    const audited = contractRows.filter((r: any) => Number(r.status) === 1)
+    // 建退货金额按客户名汇总（status=1 已审核）
+    const returnAmtByCustomer = new Map<string, number>()
+    for (const r of saleReturns) {
+      if (Number(r.status) !== 1) continue
+      const key = String(r.customer_name || '').trim()
+      if (!key) continue
+      const amt = Number(r.return_amount ?? r.total_amount ?? 0)
+      returnAmtByCustomer.set(key, (returnAmtByCustomer.get(key) ?? 0) + amt)
+    }
+
+    // 与 Overview.vue 口径一致：status=1 已审核 + status=4 已转单（均有应收）
+    // 排除线上电商平台（现收现结，不走应收账款）
+    const ONLINE_CUSTOMER_IDS = new Set([63, 10, 12, 7, 8, 11])
+    const audited = contractRows.filter(r => isEffectiveSaleContract(r) && !ONLINE_CUSTOMER_IDS.has(Number(r.customer_id)))
     const snToId = new Map<string, number>()
     for (const c of audited) {
       if (c.order_sn) snToId.set(String(c.order_sn), c.id)
@@ -433,16 +459,8 @@ async function load() {
       )
     }
 
-    // 与 Contract.vue calcContractAmount 保持一致：after_discount + 运费（按承担方）- 收入调整
-    // after_discount > total_amount 说明是编辑后未同步的过期数据，此时用 total_amount
     const calcAmt = (c: any): number => {
-      const total = Number(c.total_amount || 0)
-      const afterDisc = Number(c.after_discount)
-      const base = Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total ? afterDisc : total
-      const freight = Number(c.freight_amount || 0)
-      const bearer = String(c.freight_bearer || 'seller')
-      const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
-      return Math.max(0, base + fc - Number(c.income_amount || 0))
+      return calcSaleContractReceivable(c)
     }
 
     // FIFO 分配无合同引用的收款到剩余未付合同
@@ -478,6 +496,7 @@ async function load() {
         total_amount: total,
         paid_amount: paid,
         un_pay_amount: Math.max(0, total - paid),
+        _return_amount: returnAmtByCustomer.get(String(r.customer_name || '').trim()) ?? 0,
       }
     })
 

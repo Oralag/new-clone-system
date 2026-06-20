@@ -16,8 +16,8 @@
     <div v-else-if="$slots.search" class="sc-search">
       <slot name="search" />
       <div class="search-actions">
-        <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-        <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+        <el-button type="primary" :icon="Search" @click="handleSearch">{{ t('common.query') }}</el-button>
+        <el-button :icon="Refresh" @click="handleReset">{{ t('common.reset') }}</el-button>
       </div>
     </div>
 
@@ -32,7 +32,7 @@
           <slot name="toolbar-right" />
         </div>
         <div class="toolbar-right-btns">
-        <el-tooltip content="导入Excel">
+        <el-tooltip :content="t('scTable.importExcel')">
           <el-upload
             v-if="importApi || importPath"
             :show-file-list="false"
@@ -40,12 +40,12 @@
             :before-upload="handleImport"
             style="display:inline-block"
           >
-            <el-button :icon="Upload" size="small">导入</el-button>
+            <el-button :icon="Upload" size="small">{{ t('common.import') }}</el-button>
           </el-upload>
         </el-tooltip>
-        <el-tooltip :content="selectedRows.length > 0 ? `导出已选 ${selectedRows.length} 条` : '导出全部数据'">
+        <el-tooltip :content="selectedRows.length > 0 ? t('scTable.exportSelected', { count: selectedRows.length }) : t('scTable.exportAll')">
           <el-button :icon="Download" size="small" @click="handleExport">
-            导出{{ selectedRows.length > 0 ? `(${selectedRows.length})` : '' }}
+            {{ t('common.export') }}{{ selectedRows.length > 0 ? `(${selectedRows.length})` : '' }}
           </el-button>
         </el-tooltip>
         <slot
@@ -61,8 +61,8 @@
           :icon="Delete"
           size="small"
           @click="handleBatchDelete"
-        >批量删除({{ selectedRows.length }})</el-button>
-        <el-tooltip content="刷新">
+        >{{ t('scTable.batchDelete', { count: selectedRows.length }) }}</el-button>
+        <el-tooltip :content="t('common.refresh')">
           <el-button :icon="Refresh" circle size="small" @click="refresh" style="margin-left:4px" />
         </el-tooltip>
         </div>
@@ -76,7 +76,7 @@
         <slot name="mobile" :rows="tableData" :loading="loading" />
       </template>
       <template v-else>
-        <div v-if="!loading && !tableData.length" class="mobile-empty">暂无数据</div>
+        <div v-if="!loading && !tableData.length" class="mobile-empty">{{ t('common.noData') }}</div>
         <div v-for="row in tableData" :key="row.id ?? row.goods_id ?? JSON.stringify(row)" class="m-auto-card">
           <!-- 标题行：第一个有 prop 的列 -->
           <div class="m-auto-card__title">
@@ -121,8 +121,8 @@
 
     <!-- Selected info bar — shown only when rows are selected -->
     <div v-if="selectedRows.length > 0" class="selected-bar">
-      已选 <strong>{{ selectedRows.length }}</strong> 条
-      <el-button type="primary" link size="small" @click="clearSelection">取消选择</el-button>
+      {{ t('scTable.selectedPrefix') }} <strong>{{ selectedRows.length }}</strong> {{ t('common.items') }}
+      <el-button type="primary" link size="small" @click="clearSelection">{{ t('scTable.cancelSelection') }}</el-button>
     </div>
 
     <!-- Pagination -->
@@ -143,13 +143,13 @@
     <!-- Import preview dialog -->
     <el-dialog
       v-model="importDialogVisible"
-      title="导入预览"
+      :title="t('scTable.importPreview')"
       width="80%"
       append-to-body
       destroy-on-close
     >
       <div style="margin-bottom:12px;font-size:13px;color:#86909c">
-        共 {{ importPreviewData.length }} 条数据，请确认后点击确认导入。
+        {{ t('scTable.importPreviewTip', { count: importPreviewData.length }) }}
       </div>
       <el-table :data="importPreviewData.slice(0, 20)" border size="small" max-height="400">
         <el-table-column
@@ -162,11 +162,11 @@
         />
       </el-table>
       <div v-if="importPreviewData.length > 20" style="margin-top:8px;font-size:12px;color:#86909c">
-        仅显示前20条，实际导入全部 {{ importPreviewData.length }} 条。
+        {{ t('scTable.importPreviewLimit', { count: importPreviewData.length }) }}
       </div>
       <template #footer>
-        <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+        <el-button @click="importDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">{{ t('scTable.confirmImport') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -174,9 +174,12 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, onActivated, useSlots, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Search, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
+
+const { t, locale } = useI18n()
 
 const checkMobile = () => window.innerWidth < 768
 const isMobile = ref(checkMobile())
@@ -208,7 +211,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   params: () => ({}),
   defaultPageSize: 20,
-  exportFileName: '导出数据',
+  exportFileName: '',
 })
 
 const emit = defineEmits<{
@@ -217,6 +220,7 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
+const exportBaseName = computed(() => props.exportFileName || t('scTable.exportFileName'))
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -242,7 +246,7 @@ function getColumnMap(): Record<string, string> {
           // Skip special columns
           const t = p.type
           if (t === 'index' || t === 'selection' || t === 'expand') continue
-          if (p.label === '操作' || p.label === '序号') continue
+          if (isActionLabel(p.label) || isIndexLabel(p.label)) continue
           if (p.prop) {
             map[p.prop] = p.label
           } else if (p['export-key']) {
@@ -273,12 +277,12 @@ const mobileColumns = computed<ColDef[]>(() => {
         const p = vn.props
         // 跳过 selection / index 列
         if (p?.type === 'selection' || p?.type === 'index') continue
-        if (p?.label === '序号') continue
+        if (isIndexLabel(p?.label)) continue
         if (p?.label) {
           result.push({
             prop: p.prop ?? '',
             label: p.label,
-            isAction: p.label === '相关操作' || p.label === '操作',
+            isAction: isActionLabel(p.label),
             vnode: vn,
           })
         }
@@ -323,6 +327,14 @@ function getCellValue(row: any, prop: string): any {
   const val = prop.split('.').reduce((o, k) => o?.[k], row)
   if (val === null || val === undefined || val === '') return '-'
   return val
+}
+
+function isActionLabel(label: any) {
+  return label === '相关操作' || label === '操作' || label === t('common.operation') || label === t('scTable.relatedActions')
+}
+
+function isIndexLabel(label: any) {
+  return label === '序号' || label === t('scTable.index')
 }
 
 // ── Data loading ─────────────────────────────────────────────────────────────
@@ -417,19 +429,19 @@ function clearSelection() {
 // ── Batch delete ──────────────────────────────────────────────────────────────
 async function handleBatchDelete() {
   const ids = selectedRows.value.map((r: any) => r.id).filter(Boolean)
-  if (!ids.length) { ElMessage.warning('请先勾选要删除的记录'); return }
+  if (!ids.length) { ElMessage.warning(t('scTable.selectRowsToDelete')); return }
   // 拦截已审核记录（仅限有审核流的模块）
   if (props.hasAudit) {
     const auditedRows = selectedRows.value.filter((r: any) => Number(r.status) === 1)
     if (auditedRows.length) {
-      ElMessage.error(`选中的 ${auditedRows.length} 条记录已审核，请先反审核后再删除`)
+      ElMessage.error(t('scTable.auditedRowsDeleteBlocked', { count: auditedRows.length }))
       return
     }
   }
   await ElMessageBox.confirm(
-    `确定要删除选中的 ${ids.length} 条记录吗？此操作不可恢复。`,
-    '批量删除',
-    { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
+    t('scTable.confirmBatchDeleteMessage', { count: ids.length }),
+    t('scTable.batchDeleteTitle'),
+    { type: 'warning', confirmButtonText: t('scTable.confirmDelete'), cancelButtonText: t('common.cancel'), confirmButtonClass: 'el-button--danger' }
   )
   try {
     if (props.batchDelApi) {
@@ -437,11 +449,11 @@ async function handleBatchDelete() {
     } else if (props.delPath) {
       await http.post(props.delPath, { ids })
     }
-    ElMessage.success(`已删除 ${ids.length} 条记录`)
+    ElMessage.success(t('scTable.deleteSuccess', { count: ids.length }))
     clearSelection()
     refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '删除失败')
+    ElMessage.error(e?.message ?? t('common.deleteFailed'))
   }
 }
 
@@ -469,12 +481,12 @@ async function handleExport() {
       const data = res?.data || res
       rows = Array.isArray(data) ? data : (data?.rows || data?.list || data?.data || [])
     } catch {
-      ElMessage.error('获取导出数据失败')
+      ElMessage.error(t('scTable.exportFetchFailed'))
       return
     }
   }
 
-  if (!rows.length) { ElMessage.warning('暂无数据可导出'); return }
+  if (!rows.length) { ElMessage.warning(t('scTable.noExportData')); return }
 
   // Determine columns: use detected map keys (in order), or fall back to all row keys
   const detectedCols = Object.keys(colMap)
@@ -485,10 +497,17 @@ async function handleExport() {
   // Check if rows contain goods_info — expand each item as a separate row
   const hasGoods = rows.some(r => r.goods_info)
   const goodsCols = hasGoods
-    ? [['goods_name', '商品名称'], ['goods_sn', '商品编码'], ['spec', '规格'], ['unit_name', '单位'], ['num', '数量'], ['price', '单价']]
+    ? [
+        ['goods_name', t('scTable.goodsName')],
+        ['goods_sn', t('scTable.goodsCode')],
+        ['spec', t('scTable.spec')],
+        ['unit_name', t('scTable.unit')],
+        ['num', t('scTable.quantity')],
+        ['price', t('scTable.unitPrice')],
+      ]
     : []
 
-  // Build sheet with Chinese headers
+  // Build sheet with localized headers
   const sheetData: Record<string, any>[] = []
   for (const row of rows) {
     const base: Record<string, any> = {}
@@ -496,7 +515,7 @@ async function handleExport() {
       if (k === 'goods_info') return
       const header = colMap[k] || k
       let val = row[k] ?? ''
-      if (k === 'status') val = val == 1 ? '已审核' : val == 2 ? '已驳回' : val == 4 ? '已转单' : '待审核'
+      if (k === 'status') val = val == 1 ? t('common.audited') : val == 2 ? t('scTable.rejected') : val == 4 ? t('scTable.converted') : t('common.pending')
       base[header] = val
     })
     if (hasGoods && row.goods_info) {
@@ -508,7 +527,7 @@ async function handleExport() {
             for (const [key, label] of goodsCols) {
               line[label] = item[key] ?? ''
             }
-            line['小计'] = ((Number(item.num) || 0) * (Number(item.price) || 0)).toFixed(2)
+            line[t('common.subtotal')] = ((Number(item.num) || 0) * (Number(item.price) || 0)).toFixed(2)
             sheetData.push(line)
           }
           continue
@@ -516,16 +535,16 @@ async function handleExport() {
       } catch {}
     }
     if (hasGoods) goodsCols.forEach(([, label]) => { base[label] = '' })
-    if (hasGoods) base['小计'] = ''
+    if (hasGoods) base[t('common.subtotal')] = ''
     sheetData.push(base)
   }
 
   const wb = XLSX.utils.book_new()
   const ws = XLSX.utils.json_to_sheet(sheetData)
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
-  const suffix = selectedRows.value.length > 0 ? `(已选${selectedRows.value.length}条)` : ''
-  XLSX.writeFile(wb, `${props.exportFileName}${suffix}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
-  ElMessage.success(`已导出 ${rows.length} 条数据`)
+  const suffix = selectedRows.value.length > 0 ? t('scTable.exportSelectedSuffix', { count: selectedRows.value.length }) : ''
+  XLSX.writeFile(wb, `${exportBaseName.value}${suffix}_${new Date().toLocaleDateString(locale.value === 'en-US' ? 'en-US' : 'zh-CN').replace(/\//g, '-')}.xlsx`)
+  ElMessage.success(t('scTable.exportSuccess', { count: rows.length }))
 }
 
 // ── Import ────────────────────────────────────────────────────────────────────
@@ -541,7 +560,7 @@ function handleImport(file: File): boolean {
     const wb = XLSX.read(data, { type: 'array' })
     const ws = wb.Sheets[wb.SheetNames[0]]
     const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' })
-    if (!json.length) { ElMessage.warning('Excel文件无数据'); return }
+    if (!json.length) { ElMessage.warning(t('scTable.emptyExcel')); return }
     importPreviewData.value = json
     importColumns.value = Object.keys(json[0])
     importDialogVisible.value = true
@@ -569,7 +588,7 @@ async function confirmImport() {
   }
   importLoading.value = false
   importDialogVisible.value = false
-  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
+  ElMessage.success(t('scTable.importComplete', { success, failed, failedText: failed > 0 ? t('scTable.importFailedPart', { failed }) : '' }))
   refresh()
 }
 

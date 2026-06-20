@@ -19,28 +19,15 @@ interface Env {
 function resolveAI(env: Env): { baseURL: string; apiKey: string; model: string } {
   // 优先级：SiliconFlow（稳定免费额度）→ AI_BASE_URL → ANTHROPIC
   // baseURL 不含 /v1 路径 — 调用方拼接 /v1/chat/completions
-  // 优先用 AI_BASE_URL（通常是专用代理额度充足），ANTHROPIC 作为回退
   if (env.AI_API_KEY && env.AI_BASE_URL) {
     const b = env.AI_BASE_URL.replace(/\/+$/, '').replace(/\/v1$/, '')
-    return {
-      baseURL: b,
-      apiKey: env.AI_API_KEY,
-      model: env.AI_MODEL || 'deepseek-chat',
-    }
+    return { baseURL: b, apiKey: env.AI_API_KEY, model: env.AI_MODEL || 'deepseek-chat' }
   }
   if (env.ANTHROPIC_API_KEY && env.ANTHROPIC_BASE_URL) {
     const b = env.ANTHROPIC_BASE_URL.replace(/\/+$/, '').replace(/\/v1$/, '')
-    return {
-      baseURL: b,
-      apiKey: env.ANTHROPIC_API_KEY,
-      model: 'deepseek-chat',
-    }
+    return { baseURL: b, apiKey: env.ANTHROPIC_API_KEY, model: 'claude-haiku-4-5-20251001' }
   }
-  return {
-    baseURL: 'https://api.deepseek.com',
-    apiKey: env.AI_API_KEY || '',
-    model: 'deepseek-chat',
-  }
+  return { baseURL: 'https://api.deepseek.com', apiKey: env.AI_API_KEY || '', model: 'deepseek-chat' }
 }
 
 // ── HTX API 签名工具 ─────────────────────────────────────────────────────────
@@ -834,8 +821,20 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
   // 清除旧的唤醒标记
   await env.AGENT_MEMORY.delete(`adam:next_wake:${tKey}`)
 
-  // 检查链上钱包余额（每次唤醒）
-  const wallet = await checkWalletState(env, tKey)
+  // 检查链上钱包余额（2小时内有缓存则跳过链上RPC，节省时间）
+  const walletCacheKey = `adam:wallet_cache_ts:${tKey}`
+  const walletCacheTs = await env.AGENT_MEMORY.get(walletCacheKey)
+  const walletCacheAge = walletCacheTs ? Date.now() - parseInt(walletCacheTs) : Infinity
+  let wallet: WalletState
+  if (walletCacheAge < 2 * 3600000) {
+    // 用上次缓存的余额，不调RPC
+    const cachedTotal = parseFloat((await env.AGENT_MEMORY.get(`adam:wallet_total:${tKey}`)) || '0')
+    const addr = await env.AGENT_MEMORY.get(`adam:wallet_address:${tKey}`)
+    wallet = { bound: !!addr, address: addr || '', bscBalance: cachedTotal, baseBalance: 0, totalUSDT: cachedTotal, newFundsArrived: false, delta: 0 }
+  } else {
+    wallet = await checkWalletState(env, tKey)
+    await env.AGENT_MEMORY.put(walletCacheKey, String(Date.now()), { expirationTtl: 3 * 3600 })
+  }
 
   // 如果钱包有新到账资金，把唤醒间隔强制设短一点（亚当要主动跟你确认）
   const forceShortWake = wallet.newFundsArrived
@@ -854,17 +853,25 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
   const collectedToolCalls: Array<{ name: string; result: string }> = []
   let lastAiError: string | null = null
 
-  for (let i = 0; i < 4; i++) {
-    const res = await fetch(`${baseURL}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({ model, max_tokens: 600, tools: wakeupTools, tool_choice: 'auto', messages: currentMessages }),
-    })
+  for (let i = 0; i < 2; i++) {  // 限2轮，避免CF Pages 50s超时
+    let res: Response
+    try {
+      res = await fetch(`${baseURL}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model, max_tokens: 400, tools: wakeupTools, tool_choice: 'auto', messages: currentMessages }),
+        signal: AbortSignal.timeout(22000),  // 22s超时
+      })
+    } catch (e: any) {
+      lastAiError = `fetch error: ${e.message}`
+      break
+    }
     if (!res.ok) {
       const errText = await res.text().catch(() => '')
       lastAiError = `HTTP ${res.status}: ${errText.slice(0, 200)}`
       break
     }
+
 
     const data = await res.json() as any
     const choice = data.choices?.[0]
@@ -1032,16 +1039,27 @@ async function runMarketSentry(tKey: string, env: Env): Promise<{ triggered: boo
 
   // 1. 加密货币（始终检测）
   try {
-    const resp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', { headers: { Accept: 'application/json' } })
+    const resp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000) })
     if (resp.ok) {
       const crypto = await resp.json() as any
       const btcChange = crypto.bitcoin?.usd_24h_change ?? 0
       const btcPrice = crypto.bitcoin?.usd ?? 0
-      if (Math.abs(btcChange) >= 8 && (now - (state.lastAlertTime?.['crypto'] ?? 0)) > COOLDOWN_MS) {
+      // 高警戒：≥5%（原8%太高，BTC日常波动就这个量级）
+      const threshold = isTradeTime ? 5 : 4
+      if (Math.abs(btcChange) >= threshold && (now - (state.lastAlertTime?.['crypto'] ?? 0)) > COOLDOWN_MS) {
         alerts.push({
           type: 'crypto',
           desc: `BTC 24h ${btcChange > 0 ? '急拉' : '急跌'} ${btcChange.toFixed(1)}%，现价 $${Math.round(btcPrice).toLocaleString()}`,
-          severity: Math.abs(btcChange) >= 12 ? 'high' : 'medium'
+          severity: Math.abs(btcChange) >= 8 ? 'high' : 'medium'
+        })
+      }
+      // 每日一报（每天14:00-15:00 BJ 发一次常规报告，不管涨跌幅）
+      const isAfternoon = h === 14 && (now - (state.lastAlertTime?.['daily_btc'] ?? 0)) > 12 * 3600000
+      if (isAfternoon) {
+        alerts.push({
+          type: 'daily_btc',
+          desc: `BTC 今日行情：$${Math.round(btcPrice).toLocaleString()}，24h ${btcChange > 0 ? '+' : ''}${btcChange.toFixed(1)}%`,
+          severity: 'medium'
         })
       }
       state.lastBtcChange = btcChange
@@ -1051,7 +1069,7 @@ async function runMarketSentry(tKey: string, env: Env): Promise<{ triggered: boo
   // 2. A股指数涨跌（仅交易时段）
   if (isTradeTime) {
     try {
-      const resp = await fetch('https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f12,f14&secids=1.000001,0.399001', { headers: { Referer: 'https://quote.eastmoney.com' } })
+      const resp = await fetch('https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f12,f14&secids=1.000001,0.399001', { headers: { Referer: 'https://quote.eastmoney.com' }, signal: AbortSignal.timeout(5000) })
       if (resp.ok) {
         const json = await resp.json() as any
         const sh = (json?.data?.diff ?? []).find((r: any) => r.f12 === '000001')

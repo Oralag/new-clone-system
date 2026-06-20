@@ -9,11 +9,11 @@
           <img src="/nomad-logo.png" alt="N" class="logo-img" />
         </div>
         <div class="logo-text-wrap">
-          <span class="logo-text">{{ brandStore.isConfigured ? brandStore.brand.name : '我的公司' }}</span>
-          <span class="logo-sub" v-if="brandStore.isConfigured">智能广告部门</span>
-          <span class="logo-sub dim" v-else>未配置品牌</span>
+          <span class="logo-text">{{ brandStore.isConfigured ? brandStore.brand.name : t('agentLayout.defaultCompany') }}</span>
+          <span class="logo-sub" v-if="brandStore.isConfigured">{{ t('agentLayout.logoSub') }}</span>
+          <span class="logo-sub dim" v-else>{{ t('agentLayout.brandNotConfigured') }}</span>
         </div>
-        <span class="ai-dot" title="AI在线"></span>
+        <span class="ai-dot" :title="t('agentLayout.aiOnline')"></span>
       </div>
 
       <!-- 品牌未配置时的黄色警告条 -->
@@ -21,14 +21,14 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="warn-icon">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
-        <span>请先配置品牌信息</span>
+        <span>{{ t('agentLayout.configureBrandFirst') }}</span>
         <span class="warn-arrow">→</span>
       </div>
 
       <!-- 导航 -->
       <nav class="sidebar-nav">
         <!-- 总部 -->
-        <div class="nav-section-label">总部</div>
+        <div class="nav-section-label">{{ t('agentLayout.sectionHeadquarters') }}</div>
         <router-link to="/agent" class="nav-item" active-class="nav-item--active" exact>
           <span class="nav-item-icon">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -38,7 +38,7 @@
               <rect x="8" y="8" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
             </svg>
           </span>
-          <span class="nav-item-label">工作台</span>
+          <span class="nav-item-label">{{ t('agentLayout.workbench') }}</span>
         </router-link>
         <router-link to="/agent/meeting" class="nav-item" active-class="nav-item--active">
           <span class="nav-item-icon">
@@ -50,7 +50,7 @@
               <circle cx="10.5" cy="6.5" r="1.2" fill="currentColor" opacity="0.7"/>
             </svg>
           </span>
-          <span class="nav-item-label">会议室</span>
+          <span class="nav-item-label">{{ t('agentLayout.meetingRoom') }}</span>
           <!-- 会议进行中的脉冲指示 -->
           <span v-if="meetingStore.isRunning" class="wf-badge wf-active">
             <span class="active-pulse"></span>
@@ -63,7 +63,7 @@
               <path d="M4 5h7M4 8h7M4 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">任务中心</span>
+          <span class="nav-item-label">{{ t('agentLayout.taskCenter') }}</span>
         </router-link>
         <router-link to="/agent/triggers" class="nav-item" active-class="nav-item--active">
           <span class="nav-item-icon">
@@ -71,11 +71,11 @@
               <path d="M8.5 1.5L4 8h5.5L6.5 13.5L12 7H6.5L8.5 1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">触发器</span>
+          <span class="nav-item-label">{{ t('agentLayout.triggers') }}</span>
         </router-link>
 
         <!-- 各部门 -->
-        <div class="nav-section-label" style="margin-top:10px">各部门</div>
+        <div class="nav-section-label" style="margin-top:10px">{{ t('agentLayout.sectionDepartments') }}</div>
 
         <!-- 内容部 -->
         <router-link to="/agent/content" class="nav-item" active-class="nav-item--active">
@@ -85,7 +85,7 @@
               <path d="M4.5 4.5h6M4.5 7h6M4.5 9.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">内容部</span>
+          <span class="nav-item-label">{{ t('agentLayout.contentDept') }}</span>
         </router-link>
 
         <!-- 创意部 -->
@@ -96,7 +96,7 @@
               <path d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">创意部</span>
+          <span class="nav-item-label">{{ t('agentLayout.creativeDept') }}</span>
         </router-link>
 
         <!-- 品牌部 -->
@@ -106,7 +106,7 @@
               <path d="M7.5 1.5l1.8 4h4l-3.3 2.4 1.3 4-3.8-2.8-3.8 2.8 1.3-4L1.7 5.5h4l1.8-4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">品牌部</span>
+          <span class="nav-item-label">{{ t('agentLayout.brandDept') }}</span>
         </router-link>
         <!-- 品牌配置（独立入口） -->
         <router-link to="/agent/brand-settings" class="nav-item nav-item-settings" active-class="nav-item--active">
@@ -116,7 +116,7 @@
               <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M2.6 2.6l1 1M11.4 11.4l1 1M11.4 2.6l-1 1M2.6 11.4l1-1"/>
             </svg>
           </span>
-          <span class="nav-item-label">品牌配置</span>
+          <span class="nav-item-label">{{ t('agentLayout.brandSettings') }}</span>
         </router-link>
 
         <!-- 情报部 -->
@@ -127,7 +127,7 @@
               <path d="M11 3h3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">情报部</span>
+          <span class="nav-item-label">{{ t('agentLayout.trendingDept') }}</span>
         </router-link>
 
         <!-- 发布部 -->
@@ -138,11 +138,11 @@
               <path d="M2 11v2h11v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">发布部</span>
+          <span class="nav-item-label">{{ t('agentLayout.publishDept') }}</span>
         </router-link>
 
         <!-- 外聘 -->
-        <div class="nav-section-label" style="margin-top:10px">外聘</div>
+        <div class="nav-section-label" style="margin-top:10px">{{ t('agentLayout.sectionOutsource') }}</div>
 
         <!-- 营销顾问 -->
         <router-link to="/agent/marketing" class="nav-item" active-class="nav-item--active">
@@ -153,8 +153,8 @@
               <circle cx="3" cy="12" r="1.5" fill="currentColor" opacity="0.6"/>
             </svg>
           </span>
-          <span class="nav-item-label">营销顾问</span>
-          <span class="nav-item-outsource">外聘</span>
+          <span class="nav-item-label">{{ t('agentLayout.marketingAdvisor') }}</span>
+          <span class="nav-item-outsource">{{ t('agentLayout.outsourceTag') }}</span>
         </router-link>
 
         <!-- 平面设计师 -->
@@ -166,8 +166,8 @@
               <path d="M11 8l2 2-1 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">平面设计师</span>
-          <span class="nav-item-outsource">外聘</span>
+          <span class="nav-item-label">{{ t('agentLayout.designer') }}</span>
+          <span class="nav-item-outsource">{{ t('agentLayout.outsourceTag') }}</span>
         </router-link>
       </nav>
 
@@ -175,8 +175,8 @@
       <div class="sidebar-bulletin">
         <div class="bulletin-hd">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1 3h10v7H1zM3 3V1.5h6V3"/><path d="M4 6h4M4 8h2"/></svg>
-          <span>公告</span>
-          <button class="bulletin-edit-btn" @click="editingBulletin = !editingBulletin" :title="editingBulletin ? '完成' : '编辑'">
+          <span>{{ t('agentLayout.bulletin') }}</span>
+          <button class="bulletin-edit-btn" @click="editingBulletin = !editingBulletin" :title="editingBulletin ? t('agentLayout.done') : t('agentLayout.edit')">
             <svg v-if="!editingBulletin" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M8.5 1.5l2 2L4 10H2v-2l6.5-6.5z"/></svg>
             <svg v-else width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6l3 3 5-5"/></svg>
           </button>
@@ -185,19 +185,19 @@
           v-if="editingBulletin"
           v-model="bulletinText"
           class="bulletin-textarea"
-          placeholder="输入公告内容..."
+          :placeholder="t('agentLayout.bulletinPlaceholder')"
           rows="3"
           @blur="saveBulletin"
         />
         <div v-else class="bulletin-body">
           <span v-if="bulletinText">{{ bulletinText }}</span>
-          <span v-else class="bulletin-empty">暂无公告</span>
+          <span v-else class="bulletin-empty">{{ t('agentLayout.noBulletin') }}</span>
         </div>
       </div>
 
       <!-- 底部 -->
       <div class="sidebar-footer">
-        <div class="nav-section-label" style="margin-bottom:4px">其他</div>
+        <div class="nav-section-label" style="margin-bottom:4px">{{ t('agentLayout.sectionOther') }}</div>
         <router-link to="/agent/history" class="nav-item" active-class="nav-item--active">
           <span class="nav-item-icon">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -206,7 +206,7 @@
               <path d="M7.5 5v3l2 1.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">历史记录</span>
+          <span class="nav-item-label">{{ t('agentLayout.history') }}</span>
         </router-link>
         <router-link to="/portal" class="nav-item nav-item--back">
           <span class="nav-item-icon">
@@ -214,7 +214,7 @@
               <path d="M9.5 2.5L5 7.5l4.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">返回ERP</span>
+          <span class="nav-item-label">{{ t('agentLayout.backToErp') }}</span>
         </router-link>
       </div>
     </aside>
@@ -236,14 +236,14 @@
         <div class="drawer-logo">
           <img src="/nomad-logo.png" alt="N" style="width:28px;height:28px;border-radius:7px;object-fit:contain" />
           <span style="font-size:14px;font-weight:700;margin-left:8px;color:#1d1d1f">
-            {{ brandStore.isConfigured ? brandStore.brand.name : '我的公司' }}
+            {{ brandStore.isConfigured ? brandStore.brand.name : t('agentLayout.defaultCompany') }}
           </span>
         </div>
         <router-link v-for="item in mobileNavItems" :key="item.path" :to="item.path" class="nav-item" active-class="nav-item--active" @click="drawerOpen = false">
           <span class="nav-item-label">{{ item.label }}</span>
         </router-link>
         <router-link to="/portal" class="nav-item nav-item--back" @click="drawerOpen = false">
-          <span class="nav-item-label">← 返回ERP</span>
+          <span class="nav-item-label">{{ t('agentLayout.backToErpArrow') }}</span>
         </router-link>
       </div>
     </el-drawer>
@@ -258,23 +258,23 @@
             <span class="brand-dot"></span>{{ brandStore.brand.name }}
           </div>
           <div v-else class="topbar-brand-warn" @click="router.push('/agent/brand')">
-            ⚠ 未配置品牌
+            {{ t('agentLayout.brandWarnCompact') }}
           </div>
         </div>
         <div class="topbar-right">
           <!-- 主题切换 -->
           <div class="topbar-theme-btns">
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'light' }" title="亮色" @click="appStore.setTheme('light')">
+            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'light' }" :title="t('agentLayout.themeLight')" @click="appStore.setTheme('light')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
               </svg>
             </button>
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'dark' }" title="暗黑" @click="appStore.setTheme('dark')">
+            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'dark' }" :title="t('agentLayout.themeDark')" @click="appStore.setTheme('dark')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
               </svg>
             </button>
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'eye' }" title="护眼" @click="appStore.setTheme('eye')">
+            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'eye' }" :title="t('agentLayout.themeEye')" @click="appStore.setTheme('eye')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
               </svg>
@@ -282,7 +282,7 @@
           </div>
           <div class="ai-status">
             <span class="ai-status-dot"></span>
-            <span class="ai-status-text">AI 在线</span>
+            <span class="ai-status-text">{{ t('agentLayout.aiOnline') }}</span>
           </div>
         </div>
       </header>
@@ -301,12 +301,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { useBrandStore } from '@/stores/brand'
 import { useAppStore } from '@/stores/app'
 import { useMeetingStore } from '@/stores/meeting'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
 const brandStore = useBrandStore()
 const appStore = useAppStore()
 const meetingStore = useMeetingStore()
+const { t } = useI18n()
 
 const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
@@ -325,40 +327,40 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
 function handleResize() { isMobile.value = window.innerWidth < 768 }
 
 // 移动端导航项
-const mobileNavItems = [
-  { path: '/agent',          label: '工作台' },
-  { path: '/agent/meeting',  label: '会议室' },
-  { path: '/agent/content',  label: '内容部' },
-  { path: '/agent/creative', label: '创意部' },
-  { path: '/agent/brand',    label: '品牌部' },
-  { path: '/agent/trending',   label: '情报部' },
-  { path: '/agent/publish',    label: '发布部' },
-  { path: '/agent/tasks',      label: '任务中心' },
-  { path: '/agent/triggers',   label: '触发器' },
-  { path: '/agent/marketing',  label: '营销顾问' },
-  { path: '/agent/designer',   label: '平面设计师' },
-  { path: '/agent/history',    label: '历史记录' },
-]
+const mobileNavItems = computed(() => [
+  { path: '/agent', label: t('agentLayout.workbench') },
+  { path: '/agent/meeting', label: t('agentLayout.meetingRoom') },
+  { path: '/agent/content', label: t('agentLayout.contentDept') },
+  { path: '/agent/creative', label: t('agentLayout.creativeDept') },
+  { path: '/agent/brand', label: t('agentLayout.brandDept') },
+  { path: '/agent/trending', label: t('agentLayout.trendingDept') },
+  { path: '/agent/publish', label: t('agentLayout.publishDept') },
+  { path: '/agent/tasks', label: t('agentLayout.taskCenter') },
+  { path: '/agent/triggers', label: t('agentLayout.triggers') },
+  { path: '/agent/marketing', label: t('agentLayout.marketingAdvisor') },
+  { path: '/agent/designer', label: t('agentLayout.designer') },
+  { path: '/agent/history', label: t('agentLayout.history') },
+])
 
 // 页面标题映射
-const pageTitleMap: Record<string, string> = {
-  '/agent':           '工作台',
-  '/agent/meeting':   '会议室',
-  '/agent/content':   '内容部',
-  '/agent/creative':  '创意部',
-  '/agent/brand':     '品牌部',
-  '/agent/trending':  '情报部',
-  '/agent/publish':     '发布部',
-  '/agent/tasks':       '任务中心',
-  '/agent/triggers':    '触发器',
-  '/agent/marketing':   '营销顾问',
-  '/agent/designer':    '平面设计师',
-  '/agent/history':     '历史记录',
-  '/agent/copywriting': '文案生成',
-  '/agent/poster':    '图文海报',
-  '/agent/video':     '视频生成',
-}
-const currentPageTitle = computed(() => pageTitleMap[route.path] || '智能广告部门')
+const pageTitleMap = computed<Record<string, string>>(() => ({
+  '/agent': t('agentLayout.workbench'),
+  '/agent/meeting': t('agentLayout.meetingRoom'),
+  '/agent/content': t('agentLayout.contentDept'),
+  '/agent/creative': t('agentLayout.creativeDept'),
+  '/agent/brand': t('agentLayout.brandDept'),
+  '/agent/trending': t('agentLayout.trendingDept'),
+  '/agent/publish': t('agentLayout.publishDept'),
+  '/agent/tasks': t('agentLayout.taskCenter'),
+  '/agent/triggers': t('agentLayout.triggers'),
+  '/agent/marketing': t('agentLayout.marketingAdvisor'),
+  '/agent/designer': t('agentLayout.designer'),
+  '/agent/history': t('agentLayout.history'),
+  '/agent/copywriting': t('agentLayout.copywriting'),
+  '/agent/poster': t('agentLayout.poster'),
+  '/agent/video': t('agentLayout.video'),
+}))
+const currentPageTitle = computed(() => pageTitleMap.value[route.path] || t('agentLayout.defaultPageTitle'))
 </script>
 
 <style scoped>

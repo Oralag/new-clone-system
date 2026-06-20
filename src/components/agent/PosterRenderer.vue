@@ -1,15 +1,15 @@
 <template>
   <div class="pr-wrap">
     <div class="pr-header">
-      <span class="pr-label">🎨 海报预览</span>
+      <span class="pr-label">🎨 {{ t('posterRenderer.title') }}</span>
       <div class="pr-btns">
         <button class="pr-btn" @click="downloadPng" :disabled="downloading">
           <svg v-if="!downloading" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v14M8 12l4 4 4-4M3 20h18"/></svg>
           <span class="pr-spin" v-else />
-          {{ downloading ? '生成中…' : '下载PNG' }}
+          {{ downloading ? t('posterRenderer.downloading') : t('posterRenderer.downloadPng') }}
         </button>
         <button class="pr-btn secondary" @click="handleSave" :disabled="saving || saved">
-          {{ saved ? '✓ 已存入发布' : '存入发布队列' }}
+          {{ saved ? t('posterRenderer.saved') : t('posterRenderer.saveQueue') }}
         </button>
       </div>
     </div>
@@ -26,6 +26,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import html2canvas from 'html2canvas'
 import { useTrendingStore } from '@/stores/agent'
 import { ElMessage } from 'element-plus'
@@ -40,6 +41,7 @@ const emit = defineEmits<{
 }>()
 
 const agentStore = useTrendingStore()
+const { t } = useI18n()
 const containerRef = ref<HTMLDivElement>()
 const posterRef = ref<HTMLDivElement>()
 const downloading = ref(false)
@@ -135,10 +137,10 @@ async function downloadPng() {
     link.download = `poster-${Date.now()}.png`
     link.href = canvas.toDataURL('image/png')
     link.click()
-    ElMessage.success('海报已下载')
+    ElMessage.success(t('posterRenderer.downloadSuccess'))
   } catch (e: any) {
-    downloadError.value = '下载失败，请重试'
-    ElMessage.error('海报下载失败')
+    downloadError.value = t('posterRenderer.downloadFailed')
+    ElMessage.error(t('posterRenderer.downloadError'))
   } finally {
     downloading.value = false
   }
@@ -159,7 +161,11 @@ async function handleSave() {
       ...agentStore.flowResults,
       {
         platform: props.platform || 'xiaohongshu',
-        platformName: props.platform === 'douyin' ? '抖音' : props.platform === 'weibo' ? '微博' : '小红书',
+        platformName: props.platform === 'douyin'
+          ? t('posterRenderer.platformDouyin')
+          : props.platform === 'weibo'
+            ? t('posterRenderer.platformWeibo')
+            : t('posterRenderer.platformXhs'),
         topic: '',
         type: 'poster',
         content: props.posterHtml,
@@ -168,7 +174,7 @@ async function handleSave() {
     ])
     saved.value = true
     emit('saved', dataUrl)
-    ElMessage({ message: '已存入发布队列', type: 'success', duration: 2500 })
+    ElMessage({ message: t('posterRenderer.savedToast'), type: 'success', duration: 2500 })
   } finally {
     saving.value = false
   }

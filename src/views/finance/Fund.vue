@@ -4,27 +4,27 @@
     <!-- 明细模式：带 fund_id 跳转进来时直接展示该账户流水 -->
     <template v-if="detailMode">
       <div class="detail-header">
-        <el-button :icon="ArrowLeft" @click="exitDetail">返回账户列表</el-button>
-        <div class="detail-title">{{ viewFund?.name }} — 账户明细</div>
+        <el-button :icon="ArrowLeft" @click="exitDetail">{{ $t('finance.fund.btnBackToList') }}</el-button>
+        <div class="detail-title">{{ viewFund?.name }} {{ $t('finance.fund.detailTitleSuffix') }}</div>
       </div>
       <el-card shadow="never" class="detail-meta-card">
         <el-descriptions :column="4" border size="small">
-          <el-descriptions-item label="账户名称">{{ viewFund?.name }}</el-descriptions-item>
-          <el-descriptions-item label="账户类型">{{ viewFund?.type_name || typeLabel(viewFund?.type) }}</el-descriptions-item>
-          <el-descriptions-item label="余额">
+          <el-descriptions-item :label="$t('finance.fund.descAccountName')">{{ viewFund?.name }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('finance.fund.descAccountType')">{{ viewFund?.type_name || typeLabel(viewFund?.type) }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('finance.fund.descBalance')">
             <span :style="{ fontWeight: 600, color: Number(viewFund?.display_balance ?? viewFund?.balance ?? 0) < 0 ? '#dc2626' : '#16a34a' }">
               ¥{{ Number(viewFund?.display_balance ?? viewFund?.balance ?? 0).toFixed(2) }}
             </span>
           </el-descriptions-item>
-          <el-descriptions-item label="备注">{{ viewFund?.remark || '—' }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('finance.fund.descRemark')">{{ viewFund?.remark || '—' }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
       <el-card shadow="never">
         <div class="detail-toolbar">
           <el-radio-group v-model="detailFilter" size="small">
-            <el-radio-button value="all">全部 {{ viewDetails.length }} 笔</el-radio-button>
-            <el-radio-button value="income">收入 {{ viewIncomeCount }} 笔 · ¥{{ viewIncomeTotal.toFixed(2) }}</el-radio-button>
-            <el-radio-button value="expense">支出 {{ viewExpenseCount }} 笔 · ¥{{ viewExpenseTotal.toFixed(2) }}</el-radio-button>
+            <el-radio-button value="all">{{ $t('finance.fund.filterAll') }} {{ viewDetails.length }} {{ $t('finance.fund.filterCountSuffix') }}</el-radio-button>
+            <el-radio-button value="income">{{ $t('finance.fund.filterIncome') }} {{ viewIncomeCount }} {{ $t('finance.fund.filterCountSuffix') }} · ¥{{ viewIncomeTotal.toFixed(2) }}</el-radio-button>
+            <el-radio-button value="expense">{{ $t('finance.fund.filterExpense') }} {{ viewExpenseCount }} {{ $t('finance.fund.filterCountSuffix') }} · ¥{{ viewExpenseTotal.toFixed(2) }}</el-radio-button>
           </el-radio-group>
         </div>
         <!-- Channel breakdown for retail fund -->
@@ -32,35 +32,35 @@
           <div v-for="cs in channelStats" :key="cs.channel" class="channel-stat-item">
             <div class="channel-stat-label">{{ cs.channel }}</div>
             <div class="channel-stat-amount">¥{{ cs.total.toFixed(2) }}</div>
-            <div class="channel-stat-count">{{ cs.count }} 笔</div>
+            <div class="channel-stat-count">{{ cs.count }} {{ $t('finance.fund.filterCountSuffix') }}</div>
           </div>
         </div>
         <el-table :data="filteredDetails" v-loading="viewLoading" border stripe style="width:100%">
-          <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column label="类型" width="90" align="center">
+          <el-table-column type="index" :label="$t('finance.fund.colIndex')" width="55" align="center" />
+          <el-table-column :label="$t('finance.fund.colType')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row._direction === 'income' ? 'success' : 'danger'" size="small">
-                {{ row._direction === 'income' ? '收入' : '支出' }}
+                {{ row._direction === 'income' ? $t('finance.fund.tagIncome') : $t('finance.fund.tagExpense') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="日期" width="150">
+          <el-table-column :label="$t('finance.fund.colDate')" width="150">
             <template #default="{ row }">{{ fmtDt(row.receipt_date || row.pay_date || row.create_time) }}</template>
           </el-table-column>
-          <el-table-column label="对方单位" min-width="130">
+          <el-table-column :label="$t('finance.fund.colCounterpart')" min-width="130">
             <template #default="{ row }">{{ row.contact_name || row.customer_name || row.supplier_name || '—' }}</template>
           </el-table-column>
-          <el-table-column label="来源" width="90">
+          <el-table-column :label="$t('finance.fund.colSource')" width="90">
             <template #default="{ row }">{{ row._source || '—' }}</template>
           </el-table-column>
-          <el-table-column label="金额" width="110" align="right">
+          <el-table-column :label="$t('finance.fund.colAmount')" width="110" align="right">
             <template #default="{ row }">
               <span :style="{ fontWeight: 600, color: row._direction === 'income' ? '#16a34a' : '#dc2626' }">
                 {{ row._direction === 'income' ? '+' : '-' }}¥{{ Number(row.amount || 0).toFixed(2) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="备注" min-width="160" show-overflow-tooltip>
+          <el-table-column :label="$t('finance.fund.colRemark')" min-width="160" show-overflow-tooltip>
             <template #default="{ row }">{{ row.remark || '—' }}</template>
           </el-table-column>
         </el-table>
@@ -72,125 +72,125 @@
       <el-card>
         <ScTable ref="tableRef" :api-obj="getFundListWithRefund"
             del-path="/finance/Fund/batchDel"
-            export-file-name="资金账户" :params="searchForm"
-            :export-columns="{ name: '账户名称', type_name: '账户类型', refund_amount: '采购退货退款', balance: '余额', remark: '备注' }">
+            :export-file-name="$t('finance.fund.exportFileName')" :params="searchForm"
+            :export-columns="{ name: $t('finance.fund.colName'), type_name: $t('finance.fund.colTypeName'), refund_amount: $t('finance.fund.colRefundAmount'), balance: $t('finance.fund.colBalanceAmount'), remark: $t('finance.fund.colRemarkList') }">
           <template #search>
             <el-form inline>
-              <el-form-item label="账户名称">
-                <el-input v-model="searchForm.name" placeholder="请输入账户名称" clearable style="width:180px" />
+              <el-form-item :label="$t('finance.fund.searchAccountName')">
+                <el-input v-model="searchForm.name" :placeholder="$t('finance.fund.searchAccountNamePlaceholder')" clearable style="width:180px" />
               </el-form-item>
             </el-form>
             <div class="search-actions">
-              <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-              <el-button @click="Object.assign(searchForm, { name: '' }); tableRef?.loadData()">重置</el-button>
+              <el-button type="primary" @click="tableRef?.loadData()">{{ $t('finance.fund.btnSearch') }}</el-button>
+              <el-button @click="Object.assign(searchForm, { name: '' }); tableRef?.loadData()">{{ $t('finance.fund.btnReset') }}</el-button>
             </div>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
+            <el-button type="primary" :icon="Plus" @click="openForm()">{{ $t('finance.fund.btnAdd') }}</el-button>
           </template>
-          <el-table-column prop="name" label="账户名称" min-width="140" />
-          <el-table-column prop="type_name" label="账户类型" min-width="120" />
-          <el-table-column label="采购退货退款" min-width="120" align="right">
+          <el-table-column prop="name" :label="$t('finance.fund.colName')" min-width="140" />
+          <el-table-column prop="type_name" :label="$t('finance.fund.colTypeName')" min-width="120" />
+          <el-table-column :label="$t('finance.fund.colRefundAmount')" min-width="120" align="right">
             <template #default="{ row }">
               <span :style="{ color: Number(row.refund_amount || 0) > 0 ? '#16a34a' : 'rgba(29,29,31,0.25)', fontWeight: 600 }">
                 ¥{{ Number(row.refund_amount || 0).toFixed(2) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="余额" min-width="120" align="right">
+          <el-table-column :label="$t('finance.fund.colBalanceAmount')" min-width="120" align="right">
             <template #default="{ row }">
               <span style="font-weight:600">¥{{ Number(row.display_balance ?? row.balance ?? 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="remark" label="备注" min-width="160" />
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column prop="remark" :label="$t('finance.fund.colRemarkList')" min-width="160" />
+          <el-table-column :label="$t('finance.fund.colActions')" width="200" fixed="right">
             <template #default="{ row }">
-              <el-button type="success" link @click="openView(row)">查看</el-button>
-              <el-button type="primary" link @click="openForm(row)">编辑</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+              <el-button type="success" link @click="openView(row)">{{ $t('finance.fund.btnView') }}</el-button>
+              <el-button type="primary" link @click="openForm(row)">{{ $t('finance.fund.btnEdit') }}</el-button>
+              <el-button type="danger" link @click="handleDelete(row)">{{ $t('finance.fund.btnDelete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
       </el-card>
       <ScForm ref="formRef" :title="formTitle" @submit="handleSubmit">
         <template #default="{ form }">
-          <el-form-item label="账户名称" prop="name" :rules="[{ required: true, message: '请输入账户名称' }]">
-            <el-input v-model="form.name" placeholder="请输入账户名称" />
+          <el-form-item :label="$t('finance.fund.formName')" prop="name" :rules="[{ required: true, message: $t('finance.fund.ruleNameRequired') }]">
+            <el-input v-model="form.name" :placeholder="$t('finance.fund.formNamePlaceholder')" />
           </el-form-item>
-          <el-form-item label="账户类型" prop="type">
-            <el-select v-model="form.type" placeholder="请选择账户类型" style="width:100%">
-              <el-option label="银行账户" value="1" />
-              <el-option label="现金" value="2" />
-              <el-option label="第三方" value="3" />
+          <el-form-item :label="$t('finance.fund.formType')" prop="type">
+            <el-select v-model="form.type" :placeholder="$t('finance.fund.formTypePlaceholder')" style="width:100%">
+              <el-option :label="$t('finance.fund.typeBank')" value="1" />
+              <el-option :label="$t('finance.fund.typeCash')" value="2" />
+              <el-option :label="$t('finance.fund.typeThirdParty')" value="3" />
             </el-select>
           </el-form-item>
-          <el-form-item label="余额" prop="balance">
+          <el-form-item :label="$t('finance.fund.formBalance')" prop="balance">
             <el-input-number v-model="form.balance" :min="0" :precision="2" style="width:100%" />
           </el-form-item>
-          <el-form-item label="备注" prop="remark">
-            <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
+          <el-form-item :label="$t('finance.fund.formRemark')" prop="remark">
+            <el-input v-model="form.remark" type="textarea" :placeholder="$t('finance.fund.formRemarkPlaceholder')" />
           </el-form-item>
         </template>
       </ScForm>
 
       <!-- 查看弹窗（直接在列表点查看时使用） -->
-      <el-dialog v-model="viewVisible" :title="`${viewFund?.name || ''} — 账户明细`" width="900px" destroy-on-close>
+      <el-dialog v-model="viewVisible" :title="`${viewFund?.name || ''} ${$t('finance.fund.viewTitleSuffix')}`" width="900px" destroy-on-close>
         <div class="view-header">
           <el-descriptions :column="4" border size="small">
-            <el-descriptions-item label="账户名称">{{ viewFund?.name }}</el-descriptions-item>
-            <el-descriptions-item label="账户类型">{{ viewFund?.type_name || typeLabel(viewFund?.type) }}</el-descriptions-item>
-            <el-descriptions-item label="余额">
+            <el-descriptions-item :label="$t('finance.fund.descAccountName')">{{ viewFund?.name }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('finance.fund.descAccountType')">{{ viewFund?.type_name || typeLabel(viewFund?.type) }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('finance.fund.descBalance')">
               <span :style="{ fontWeight: 600, color: Number(viewFund?.display_balance ?? viewFund?.balance ?? 0) < 0 ? '#dc2626' : '#16a34a' }">
                 ¥{{ Number(viewFund?.display_balance ?? viewFund?.balance ?? 0).toFixed(2) }}
               </span>
             </el-descriptions-item>
-            <el-descriptions-item label="备注">{{ viewFund?.remark || '—' }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('finance.fund.descRemark')">{{ viewFund?.remark || '—' }}</el-descriptions-item>
           </el-descriptions>
         </div>
         <div class="view-summary">
-          <span>收入合计：<b style="color:#16a34a">¥{{ viewIncomeTotal.toFixed(2) }}</b></span>
-          <span>支出合计：<b style="color:#dc2626">¥{{ viewExpenseTotal.toFixed(2) }}</b></span>
-          <span>共 <b>{{ viewDetails.length }}</b> 笔</span>
+          <span>{{ $t('finance.fund.viewIncomeTotal') }}<b style="color:#16a34a">¥{{ viewIncomeTotal.toFixed(2) }}</b></span>
+          <span>{{ $t('finance.fund.viewExpenseTotal') }}<b style="color:#dc2626">¥{{ viewExpenseTotal.toFixed(2) }}</b></span>
+          <span>{{ $t('finance.fund.viewCountPrefix') }}<b>{{ viewDetails.length }}</b> {{ $t('finance.fund.viewCountSuffix') }}</span>
         </div>
         <!-- Channel breakdown for retail fund -->
         <div v-if="isRetailDetailFund && channelStats.length" class="channel-stats-row">
           <div v-for="cs in channelStats" :key="cs.channel" class="channel-stat-item">
             <div class="channel-stat-label">{{ cs.channel }}</div>
             <div class="channel-stat-amount">¥{{ cs.total.toFixed(2) }}</div>
-            <div class="channel-stat-count">{{ cs.count }} 笔</div>
+            <div class="channel-stat-count">{{ cs.count }} {{ $t('finance.fund.filterCountSuffix') }}</div>
           </div>
         </div>
         <el-table :data="viewDetails" v-loading="viewLoading" border stripe size="small" max-height="400" style="width:100%">
-          <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column label="类型" width="90" align="center">
+          <el-table-column type="index" :label="$t('finance.fund.colIndex')" width="55" align="center" />
+          <el-table-column :label="$t('finance.fund.colType')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row._direction === 'income' ? 'success' : 'danger'" size="small">
-                {{ row._direction === 'income' ? '收入' : '支出' }}
+                {{ row._direction === 'income' ? $t('finance.fund.tagIncome') : $t('finance.fund.tagExpense') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="日期" width="150">
+          <el-table-column :label="$t('finance.fund.colDate')" width="150">
             <template #default="{ row }">{{ fmtDt(row.receipt_date || row.pay_date || row.create_time) }}</template>
           </el-table-column>
-          <el-table-column label="对方单位" min-width="130">
+          <el-table-column :label="$t('finance.fund.colCounterpart')" min-width="130">
             <template #default="{ row }">{{ row.contact_name || row.customer_name || row.supplier_name || '—' }}</template>
           </el-table-column>
-          <el-table-column label="来源" width="90">
+          <el-table-column :label="$t('finance.fund.colSource')" width="90">
             <template #default="{ row }">{{ row._source || '—' }}</template>
           </el-table-column>
-          <el-table-column label="金额" width="110" align="right">
+          <el-table-column :label="$t('finance.fund.colAmount')" width="110" align="right">
             <template #default="{ row }">
               <span :style="{ fontWeight: 600, color: row._direction === 'income' ? '#16a34a' : '#dc2626' }">
                 {{ row._direction === 'income' ? '+' : '-' }}¥{{ Number(row.amount || 0).toFixed(2) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="备注" min-width="160" :show-overflow-tooltip="{ appendTo: 'body' }">
+          <el-table-column :label="$t('finance.fund.colRemark')" min-width="160" :show-overflow-tooltip="{ appendTo: 'body' }">
             <template #default="{ row }">{{ row.remark || '—' }}</template>
           </el-table-column>
         </el-table>
         <template #footer>
-          <el-button @click="viewVisible = false">关闭</el-button>
+          <el-button @click="viewVisible = false">{{ $t('finance.fund.btnClose') }}</el-button>
         </template>
       </el-dialog>
     </template>
@@ -201,6 +201,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -210,9 +211,11 @@ import { getFundList, createFund, updateFund, deleteFund, getPayReceiptList, get
 import { applyProcureReturnsToFundRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { fmtDt } from '@/utils/date'
 
+const { t } = useI18n()
+
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
-const formTitle = ref('新增')
+const formTitle = ref(t('finance.fund.formTitle'))
 const searchForm = reactive<any>({ name: '' })
 const route = useRoute()
 const router = useRouter()
@@ -235,8 +238,11 @@ const viewExpenseTotal = computed(() => viewDetails.value.filter(r => r._directi
 const viewIncomeCount = computed(() => viewDetails.value.filter(r => r._direction === 'income').length)
 const viewExpenseCount = computed(() => viewDetails.value.filter(r => r._direction === 'expense').length)
 
+// sourceMap: display labels for the Source column, keyed by contact_type
 const sourceMap: Record<string, string> = {
-  customer: '客户', supplier: '供应商', other: '其他',
+  customer: t('finance.fund.sourceCustomer'),
+  supplier: t('finance.fund.sourceSupplier'),
+  other: t('finance.fund.sourceOther'),
 }
 
 const RETAIL_CHANNELS = ['线下', '美团', '微信小店', '拼多多', '淘宝', '抖音', '小红书']
@@ -264,8 +270,12 @@ const channelStats = computed(() => {
 })
 
 function typeLabel(type: any) {
-  const m: Record<string, string> = { '1': '银行账户', '2': '现金', '3': '第三方' }
-  return m[String(type)] || ''
+  const m: Record<string, () => string> = {
+    '1': () => t('finance.fund.typeBank'),
+    '2': () => t('finance.fund.typeCash'),
+    '3': () => t('finance.fund.typeThirdParty'),
+  }
+  return m[String(type)]?.() || ''
 }
 
 function exitDetail() {
@@ -357,7 +367,7 @@ async function openFundById(fundId: number) {
 }
 
 function openForm(row?: any) {
-  formTitle.value = row ? '编辑' : '新增'
+  formTitle.value = row ? t('finance.fund.formTitleEdit') : t('finance.fund.formTitle')
   formRef.value?.open(normalizeFundRow(row))
 }
 
@@ -394,7 +404,7 @@ async function handleSubmit(data: any) {
     } else {
       await createFund(payload)
     }
-    ElMessage.success('操作成功')
+    ElMessage.success(t('finance.fund.msgOpSuccess'))
     formRef.value?.close()
     tableRef.value?.refresh()
   } finally {
@@ -413,13 +423,13 @@ async function handleDelete(row: any) {
   const total = payCount + collectCount
 
   if (total > 0) {
-    ElMessage.warning(`该账户下有 ${total} 笔收支记录（${payCount}笔支出、${collectCount}笔收入），无法删除。请先清空关联记录`)
+    ElMessage.warning(`${t('finance.fund.msgCannotDeleteHasRecords')} ${total} ${t('finance.fund.msgCannotDeleteRecordsSuffix')}${payCount}${t('finance.fund.msgCannotDeletePaySuffix')}${collectCount}${t('finance.fund.msgCannotDeleteCollectSuffix')}`)
     return
   }
 
-  await ElMessageBox.confirm(`确定删除账户"${row.name}"？`, '提示', { type: 'warning' })
+  await ElMessageBox.confirm(`${t('finance.fund.confirmDeletePrefix')}${row.name}${t('finance.fund.confirmDeleteSuffix')}`, t('finance.fund.confirmDeleteTitle'), { type: 'warning' })
   await deleteFund(row.id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('finance.fund.msgDeleteSuccess'))
   tableRef.value?.refresh()
 }
 

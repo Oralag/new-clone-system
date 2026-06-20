@@ -2,17 +2,17 @@
   <div class="ledger-page">
     <el-card class="search-card">
       <el-form inline>
-        <el-form-item label="年份">
+        <el-form-item :label="$t('reports.saleRate.yearLabel')">
           <el-select v-model="searchYear" style="width:100px" @change="loadAll">
             <el-option v-for="y in yearOptions" :key="y" :label="y+''" :value="y" />
           </el-select>
         </el-form-item>
-        <el-form-item label="客户">
-          <el-input v-model="searchCustomer" placeholder="客户名称" clearable style="width:160px" />
+        <el-form-item :label="$t('reports.saleRate.customerLabel')">
+          <el-input v-model="searchCustomer" :placeholder="$t('reports.saleRate.customerPlaceholder')" clearable style="width:160px" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="loadAll">搜索</el-button>
-          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="loadAll">{{ $t('reports.saleRate.search') }}</el-button>
+          <el-button @click="onReset">{{ $t('reports.saleRate.reset') }}</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -21,37 +21,37 @@
       <div class="stat-card blue">
         <div class="stat-icon"><el-icon><Document /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">销售合同</div>
-          <div class="stat-value">{{ stats.contractCount }} 份</div>
-          <div class="stat-subline">合同金额 ¥{{ fmt(stats.contractTotal) }}</div>
+          <div class="stat-label">{{ $t('reports.saleRate.statContract') }}</div>
+          <div class="stat-value">{{ stats.contractCount }} {{ $t('reports.saleRate.statContractUnit') }}</div>
+          <div class="stat-subline">{{ $t('reports.saleRate.statContractAmount') }} ¥{{ fmt(stats.contractTotal) }}</div>
         </div>
       </div>
       <div class="stat-card orange">
         <div class="stat-icon"><el-icon><Wallet /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">零售订单</div>
-          <div class="stat-value">{{ stats.retailCount }} 单</div>
-          <div class="stat-subline">零售金额 ¥{{ fmt(stats.retailTotal) }}</div>
+          <div class="stat-label">{{ $t('reports.saleRate.statRetail') }}</div>
+          <div class="stat-value">{{ stats.retailCount }} {{ $t('reports.saleRate.statRetailUnit') }}</div>
+          <div class="stat-subline">{{ $t('reports.saleRate.statRetailAmount') }} ¥{{ fmt(stats.retailTotal) }}</div>
         </div>
       </div>
       <div class="stat-card green">
         <div class="stat-icon"><el-icon><CircleCheck /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">已收金额</div>
+          <div class="stat-label">{{ $t('reports.saleRate.statReceived') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.received) }}</div>
         </div>
       </div>
       <div class="stat-card red">
         <div class="stat-icon"><el-icon><Clock /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">未收金额</div>
+          <div class="stat-label">{{ $t('reports.saleRate.statUnreceived') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.unreceived) }}</div>
         </div>
       </div>
       <div class="stat-card purple">
         <div class="stat-icon"><el-icon><User /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">客户数量</div>
+          <div class="stat-label">{{ $t('reports.saleRate.statCustomers') }}</div>
           <div class="stat-value">{{ stats.customers }}</div>
         </div>
       </div>
@@ -59,16 +59,16 @@
 
     <div class="chart-row">
       <el-card class="chart-card">
-        <div class="card-title">按客户统计（金额 Top10）</div>
+        <div class="card-title">{{ $t('reports.saleRate.chartBarTitle') }}</div>
         <div ref="barRef" style="height:260px"></div>
       </el-card>
       <el-card class="chart-card">
         <div class="chart-title-row">
-          <div class="card-title">月度销售趋势</div>
+          <div class="card-title">{{ $t('reports.saleRate.chartLineTitle') }}</div>
           <el-radio-group v-model="trendType" size="small" @change="renderLine">
-            <el-radio-button label="all">全部</el-radio-button>
-            <el-radio-button label="contract">销售合同</el-radio-button>
-            <el-radio-button label="retail">零售订单</el-radio-button>
+            <el-radio-button label="all">{{ $t('reports.saleRate.trendAll') }}</el-radio-button>
+            <el-radio-button label="contract">{{ $t('reports.saleRate.trendContract') }}</el-radio-button>
+            <el-radio-button label="retail">{{ $t('reports.saleRate.trendRetail') }}</el-radio-button>
           </el-radio-group>
         </div>
         <div ref="lineRef" style="height:260px"></div>
@@ -76,25 +76,25 @@
     </div>
 
     <el-card class="table-card">
-      <div class="card-title" style="margin-bottom:10px">按客户汇总</div>
+      <div class="card-title" style="margin-bottom:10px">{{ $t('reports.saleRate.tableTitle') }}</div>
       <el-table :data="summaryData" border stripe size="small" style="width:100%">
-        <el-table-column type="index" label="序号" width="55" align="center" />
-        <el-table-column label="客户名称" prop="customer_name" min-width="130" />
-        <el-table-column label="单据数" prop="count" width="80" align="center" />
-        <el-table-column label="销售总额" width="120" align="right">
+        <el-table-column type="index" :label="$t('reports.saleRate.colIndex')" width="55" align="center" />
+        <el-table-column :label="$t('reports.saleRate.colCustomerName')" prop="customer_name" min-width="130" />
+        <el-table-column :label="$t('reports.saleRate.colCount')" prop="count" width="80" align="center" />
+        <el-table-column :label="$t('reports.saleRate.colTotal')" width="120" align="right">
           <template #default="{ row }">¥ {{ fmt(row.total) }}</template>
         </el-table-column>
-        <el-table-column label="已收金额" width="120" align="right">
+        <el-table-column :label="$t('reports.saleRate.colReceived')" width="120" align="right">
           <template #default="{ row }">¥ {{ fmt(row.received) }}</template>
         </el-table-column>
-        <el-table-column label="未收金额" width="120" align="right">
+        <el-table-column :label="$t('reports.saleRate.colUnreceived')" width="120" align="right">
           <template #default="{ row }">
             <span :style="{ color: row.unreceived > 0 ? '#ef4444' : '#16a34a' }">
               ¥ {{ fmt(row.unreceived) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="收款率" width="90" align="center">
+        <el-table-column :label="$t('reports.saleRate.colReceiveRate')" width="90" align="center">
           <template #default="{ row }">
             {{ row.total > 0 ? ((row.received / row.total) * 100).toFixed(1) + '%' : '-' }}
           </template>
@@ -106,6 +106,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { Search, Document, Wallet, CircleCheck, Clock, User } from '@element-plus/icons-vue'
 import * as echarts from 'echarts/core'
 import { BarChart, LineChart } from 'echarts/charts'
@@ -281,9 +283,9 @@ function renderBar() {
     xAxis: { type: 'value', axisLabel: { fontSize: 10 } },
     yAxis: { type: 'category', data: top10.map(r => r.customer_name).reverse(), axisLabel: { fontSize: 11 } },
     series: [
-      { name: '销售合同', type: 'bar', data: top10.map(r => r.contract_total.toFixed(2)).reverse(), itemStyle: { color: '#3b82f6' } },
-      { name: '零售订单', type: 'bar', data: top10.map(r => r.retail_total.toFixed(2)).reverse(), itemStyle: { color: '#f59e0b' } },
-      { name: '已收金额', type: 'bar', data: top10.map(r => r.received.toFixed(2)).reverse(), itemStyle: { color: '#10b981' } },
+      { name: t('reports.saleRate.seriesContract'), type: 'bar', data: top10.map(r => r.contract_total.toFixed(2)).reverse(), itemStyle: { color: '#3b82f6' } },
+      { name: t('reports.saleRate.seriesRetail'), type: 'bar', data: top10.map(r => r.retail_total.toFixed(2)).reverse(), itemStyle: { color: '#f59e0b' } },
+      { name: t('reports.saleRate.seriesReceived'), type: 'bar', data: top10.map(r => r.received.toFixed(2)).reverse(), itemStyle: { color: '#10b981' } },
     ]
   })
 }
@@ -325,14 +327,14 @@ function renderLine() {
   })
   lineChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['销售金额', '已收金额'], top: 0, right: 10 },
+    legend: { data: [t('reports.saleRate.seriesSaleAmount'), t('reports.saleRate.seriesReceived')], top: 0, right: 10 },
     grid: { left: 50, right: 20, top: 30, bottom: 30 },
     xAxis: { type: 'category', data: months.map(m => m.slice(5)), axisLabel: { fontSize: 10 } },
     yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
     series: [
-      { name: '销售金额', type: 'line', smooth: false, itemStyle: { color: '#3b82f6' },
+      { name: t('reports.saleRate.seriesSaleAmount'), type: 'line', smooth: false, itemStyle: { color: '#3b82f6' },
         data: months.map(m => trendRows.filter(r => rowDate(r).startsWith(m)).reduce((s, r) => s + contractAmount(r), 0).toFixed(2)) },
-      { name: '已收金额', type: 'line', smooth: false, itemStyle: { color: '#10b981' }, data: byReceiptMonth },
+      { name: t('reports.saleRate.seriesReceived'), type: 'line', smooth: false, itemStyle: { color: '#10b981' }, data: byReceiptMonth },
     ]
   })
 }

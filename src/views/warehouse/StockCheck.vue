@@ -6,63 +6,63 @@
       <el-card>
         <ScTable ref="tableRef"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
-          export-file-name="库存盘点" :params="searchForm">
+          :export-file-name="$t('warehouse.stockCheck.exportFileName')" :params="searchForm">
           <template #search>
-            <el-input v-model="searchForm.order_sn" placeholder="盘点单号" clearable style="width:180px" />
-            <el-input v-model="searchForm.warehouse_name" placeholder="仓库名称" clearable style="width:160px" />
-            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
-              <el-option label="未核对" value="unreconciled" />
+            <el-input v-model="searchForm.order_sn" :placeholder="$t('warehouse.stockCheck.searchOrderSn')" clearable style="width:180px" />
+            <el-input v-model="searchForm.warehouse_name" :placeholder="$t('warehouse.stockCheck.searchWarehouseName')" clearable style="width:160px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="$t('warehouse.stockCheck.searchReconcileStatus')">
+              <el-option :label="$t('warehouse.stockCheck.filterUnreconciled')" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">新增盘点单</el-button>
+            <el-button type="primary" :icon="Plus" @click="openCreate">{{ $t('warehouse.stockCheck.btnAdd') }}</el-button>
           </template>
 
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="expand-detail">
-                <div class="expand-title">盘点明细</div>
+                <div class="expand-title">{{ $t('warehouse.stockCheck.expandTitle') }}</div>
                 <el-table :data="parseItems(row.goods_info)" border size="small" class="expand-table">
                   <el-table-column type="index" width="40" align="center" />
-                  <el-table-column prop="goods_name" label="商品名称" min-width="140" />
-                  <el-table-column prop="goods_sn" label="编码" width="110" />
-                  <el-table-column prop="spec" label="规格" width="100" />
-                  <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-                  <el-table-column prop="system_qty" label="系统库存" width="90" align="right" />
-                  <el-table-column prop="check_qty" label="盘点数量" width="90" align="right" />
-                  <el-table-column label="差异数量" width="90" align="right">
+                  <el-table-column prop="goods_name" :label="$t('warehouse.stockCheck.expandColGoodsName')" min-width="140" />
+                  <el-table-column prop="goods_sn" :label="$t('warehouse.stockCheck.expandColGoodsSn')" width="110" />
+                  <el-table-column prop="spec" :label="$t('warehouse.stockCheck.expandColSpec')" width="100" />
+                  <el-table-column prop="unit_name" :label="$t('warehouse.stockCheck.expandColUnit')" width="65" align="center" />
+                  <el-table-column prop="system_qty" :label="$t('warehouse.stockCheck.expandColSystemQty')" width="90" align="right" />
+                  <el-table-column prop="check_qty" :label="$t('warehouse.stockCheck.expandColCheckQty')" width="90" align="right" />
+                  <el-table-column :label="$t('warehouse.stockCheck.expandColDiffQty')" width="90" align="right">
                     <template #default="{ row: item }">
                       <span :style="{ color: (item.check_qty - item.system_qty) !== 0 ? '#dc2626' : '#16a34a' }">
                         {{ (Number(item.check_qty||0) - Number(item.system_qty||0)).toFixed(2) }}
                       </span>
                     </template>
                   </el-table-column>
-                  <el-table-column prop="remark" label="备注" min-width="100" />
+                  <el-table-column prop="remark" :label="$t('warehouse.stockCheck.expandColRemark')" min-width="100" />
                 </el-table>
               </div>
             </template>
           </el-table-column>
 
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="order_sn" label="盘点单号" min-width="160" />
-          <el-table-column prop="warehouse_name" label="盘点仓库" min-width="130" />
-          <el-table-column label="盘点日期" width="110">
+          <el-table-column type="index" :label="$t('warehouse.stockCheck.colIndex')" width="60" align="center" />
+          <el-table-column prop="order_sn" :label="$t('warehouse.stockCheck.colOrderSn')" min-width="160" />
+          <el-table-column prop="warehouse_name" :label="$t('warehouse.stockCheck.colWarehouseName')" min-width="130" />
+          <el-table-column :label="$t('warehouse.stockCheck.colCheckDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.check_date) || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="admin_name" label="盘点人" width="90" />
-          <el-table-column label="状态" width="90">
+          <el-table-column prop="admin_name" :label="$t('warehouse.stockCheck.colAdminName')" width="90" />
+          <el-table-column :label="$t('warehouse.stockCheck.colStatus')" width="90">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-                {{ row.status === 1 ? '已完成' : '草稿' }}
+                {{ row.status === 1 ? $t('warehouse.stockCheck.statusDone') : $t('warehouse.stockCheck.statusDraft') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
-          <el-table-column label="操作" width="160" fixed="right">
+          <el-table-column prop="remark" :label="$t('warehouse.stockCheck.colRemark')" min-width="120" show-overflow-tooltip />
+          <el-table-column :label="$t('warehouse.stockCheck.colActions')" width="160" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" size="small" link @click="openEdit(row)">查看</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="primary" size="small" link @click="openEdit(row)">{{ $t('warehouse.stockCheck.btnView') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('warehouse.stockCheck.btnReconciled') : $t('warehouse.stockCheck.btnReconcile') }}</el-button>
+              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? $t('warehouse.stockCheck.titleAuditedCannotDelete') : ''" @click="handleDelete(row.id)">{{ $t('warehouse.stockCheck.btnDelete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -72,101 +72,99 @@
     <!-- ── 新增/编辑页 ── -->
     <div v-else class="form-page">
       <div class="form-header">
-        <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-        <span class="form-title">{{ isEdit ? '盘点单详情' : '新增盘点单' }}</span>
+        <el-button :icon="ArrowLeft" @click="backToList">{{ $t('warehouse.stockCheck.btnBack') }}</el-button>
+        <span class="form-title">{{ isEdit ? $t('warehouse.stockCheck.formTitleEdit') : $t('warehouse.stockCheck.formTitleAdd') }}</span>
         <div class="form-header-actions">
-          <el-button @click="backToList">取消</el-button>
-          <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          <el-button @click="backToList">{{ $t('warehouse.stockCheck.btnCancel') }}</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('warehouse.stockCheck.btnSave') }}</el-button>
         </div>
       </div>
 
       <el-form ref="formRef" :model="fd" label-width="90px" class="form-body">
-        <!-- 基本信息 -->
         <el-card class="form-card">
-          <div class="form-section-title">基本信息</div>
+          <div class="form-section-title">{{ $t('warehouse.stockCheck.sectionBasicInfo') }}</div>
           <el-row :gutter="24">
             <el-col :span="8">
-              <el-form-item label="盘点单号">
-                <el-input v-model="fd.order_sn" placeholder="自动生成" disabled />
+              <el-form-item :label="$t('warehouse.stockCheck.fieldOrderSn')">
+                <el-input v-model="fd.order_sn" :placeholder="$t('warehouse.stockCheck.placeholderOrderSn')" disabled />
               </el-form-item>
             </el-col>
             <el-col :span="8">
-              <el-form-item label="盘点日期" prop="check_date" :rules="[{ required: true, message: '请选择' }]">
+              <el-form-item :label="$t('warehouse.stockCheck.fieldCheckDate')" prop="check_date" :rules="[{ required: true, message: $t('warehouse.stockCheck.ruleCheckDateRequired') }]">
                 <el-date-picker v-model="fd.check_date" type="date" value-format="YYYY-MM-DD"
-                  placeholder="请选择日期" style="width:100%" />
+                  :placeholder="$t('warehouse.stockCheck.placeholderCheckDate')" style="width:100%" />
               </el-form-item>
             </el-col>
             <el-col :span="8">
-              <el-form-item label="盘点仓库" prop="warehouse_name" :rules="[{ required: true, message: '请选择' }]">
-                <el-select v-model="fd.warehouse_name" placeholder="请选择仓库" style="width:100%"
+              <el-form-item :label="$t('warehouse.stockCheck.fieldWarehouse')" prop="warehouse_name" :rules="[{ required: true, message: $t('warehouse.stockCheck.ruleWarehouseRequired') }]">
+                <el-select v-model="fd.warehouse_name" :placeholder="$t('warehouse.stockCheck.placeholderWarehouse')" style="width:100%"
                   @change="onWarehouseChange">
                   <el-option v-for="w in warehouseList" :key="w.id" :label="w.name" :value="w.name" />
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="8">
-              <el-form-item label="盘点人">
-                <el-input v-model="fd.admin_name" placeholder="请输入盘点人" />
+              <el-form-item :label="$t('warehouse.stockCheck.fieldAdminName')">
+                <el-input v-model="fd.admin_name" :placeholder="$t('warehouse.stockCheck.placeholderAdminName')" />
               </el-form-item>
             </el-col>
             <el-col :span="16">
-              <el-form-item label="备注">
-                <el-input v-model="fd.remark" placeholder="请输入备注" />
+              <el-form-item :label="$t('warehouse.stockCheck.fieldRemark')">
+                <el-input v-model="fd.remark" :placeholder="$t('warehouse.stockCheck.placeholderRemark')" />
               </el-form-item>
             </el-col>
           </el-row>
         </el-card>
 
-        <!-- 商品明细 -->
         <el-card class="form-card" style="margin-top:16px">
           <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center">
-            <span>盘点明细</span>
-            <el-button type="primary" size="small" :icon="Plus" @click="addItem">添加商品</el-button>
+            <span>{{ $t('warehouse.stockCheck.sectionItems') }}</span>
+            <el-button type="primary" size="small" :icon="Plus" @click="addItem">{{ $t('warehouse.stockCheck.btnAddItem') }}</el-button>
           </div>
           <el-table :data="fd.items" border size="small" style="margin-top:12px">
-            <el-table-column type="index" label="序号" width="55" align="center" />
-            <el-table-column label="商品名称" min-width="160">
+            <el-table-column type="index" :label="$t('warehouse.stockCheck.colItemIndex')" width="55" align="center" />
+            <el-table-column :label="$t('warehouse.stockCheck.colItemGoods')" min-width="160">
               <template #default="{ row, $index }">
-                <el-select v-model="row.goods_id" filterable placeholder="请选择商品"
+                <el-select v-model="row.goods_id" filterable :placeholder="$t('warehouse.stockCheck.placeholderSelectGoods')"
                   style="width:100%" @change="(v) => onGoodsChange(v, $index)">
                   <el-option v-for="g in goodsList" :key="g.id"
                     :label="`${g.goods_name}${g.goods_sn ? ' ['+g.goods_sn+']' : ''}`" :value="g.id" />
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="规格" width="100">
+            <el-table-column :label="$t('warehouse.stockCheck.colItemSpec')" width="100">
               <template #default="{ row }">
-                <el-input v-model="row.spec" placeholder="规格" />
+                <el-input v-model="row.spec" :placeholder="$t('warehouse.stockCheck.placeholderItemSpec')" />
               </template>
             </el-table-column>
-            <el-table-column label="单位" width="80">
+            <el-table-column :label="$t('warehouse.stockCheck.colItemUnit')" width="80">
               <template #default="{ row }">
-                <el-input v-model="row.unit_name" placeholder="单位" />
+                <el-input v-model="row.unit_name" :placeholder="$t('warehouse.stockCheck.placeholderItemUnit')" />
               </template>
             </el-table-column>
-            <el-table-column label="系统库存" width="110" align="right">
+            <el-table-column :label="$t('warehouse.stockCheck.colItemSystemQty')" width="110" align="right">
               <template #default="{ row }">
                 <el-input-number v-model="row.system_qty" :min="0" :precision="2" size="small" style="width:95px" disabled />
               </template>
             </el-table-column>
-            <el-table-column label="盘点数量" width="110" align="right">
+            <el-table-column :label="$t('warehouse.stockCheck.colItemCheckQty')" width="110" align="right">
               <template #default="{ row }">
                 <el-input-number v-model="row.check_qty" :min="0" :precision="2" size="small" style="width:95px" />
               </template>
             </el-table-column>
-            <el-table-column label="差异数量" width="90" align="right">
+            <el-table-column :label="$t('warehouse.stockCheck.colItemDiffQty')" width="90" align="right">
               <template #default="{ row }">
                 <span :style="{ color: (row.check_qty - row.system_qty) !== 0 ? '#dc2626' : '#16a34a', fontWeight: 500 }">
                   {{ (Number(row.check_qty||0) - Number(row.system_qty||0)).toFixed(2) }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="备注" min-width="120">
+            <el-table-column :label="$t('warehouse.stockCheck.colItemRemark')" min-width="120">
               <template #default="{ row }">
-                <el-input v-model="row.remark" placeholder="备注" />
+                <el-input v-model="row.remark" :placeholder="$t('warehouse.stockCheck.placeholderItemRemark')" />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="60" align="center">
+            <el-table-column :label="$t('warehouse.stockCheck.colItemActions')" width="60" align="center">
               <template #default="{ $index }">
                 <el-button type="danger" size="small" link :icon="Delete" @click="removeItem($index)" />
               </template>
@@ -179,7 +177,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { fmtDt } from '@/utils/date'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
@@ -188,6 +187,7 @@ import { useReconcile } from '@/composables/useReconcile'
 import { getCheckList, createCheck, deleteCheck } from '@/api/warehouse'
 import http from '@/api/http'
 
+const { t } = useI18n()
 const tableRef = ref()
 const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_stock_check', tableRef)
 const reconcileFilteredApi = createFilteredApi(getCheckList, 'reconcile_filter')
@@ -200,7 +200,7 @@ const searchForm = reactive({ order_sn: '', warehouse_name: '', reconcile_filter
 
 const warehouseList = ref<any[]>([])
 const goodsList = ref<any[]>([])
-const stockMap = ref<Record<number, number>>({})  // goods_id -> system qty
+const stockMap = ref<Record<number, number>>({})
 
 const fd = reactive({
   id: 0,
@@ -235,7 +235,6 @@ async function loadStock(warehouseName: string) {
   const map: Record<number, number> = {}
   for (const r of rows) map[r.goods_id] = Number(r.qty || 0)
   stockMap.value = map
-  // 更新已有行的系统库存
   for (const item of fd.items) {
     if (item.goods_id) item.system_qty = map[item.goods_id] || 0
   }
@@ -325,19 +324,19 @@ async function handleSave() {
     } else {
       await createCheck(payload)
     }
-    ElMessage.success('保存成功')
+    ElMessage.success(t('warehouse.stockCheck.msgSaveSuccess'))
     backToList()
   } catch (e: any) {
-    ElMessage.error(e?.message || '保存失败')
+    ElMessage.error(e?.message || t('warehouse.stockCheck.msgSaveFailed'))
   } finally {
     saving.value = false
   }
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定要删除该盘点单吗？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('warehouse.stockCheck.msgConfirmDelete'), t('warehouse.stockCheck.msgConfirmTitle'), { type: 'warning' })
   await deleteCheck(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('warehouse.stockCheck.msgDeleteSuccess'))
   tableRef.value?.refresh()
 }
 </script>

@@ -7,93 +7,93 @@
         <ScTable ref="tableRef" :api-obj="reconcileFilteredApi"
           del-path="/shop/offerOrder/batchDel"
           sort-by="offer_date" :sort-desc="true"
-          export-file-name="报价单" :params="searchForm"
+          :export-file-name="$t('sale.offer.exportFileName')" :params="searchForm"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : (row.status === 4 ? 'row-converted' : '')"
-          :export-columns="{ remark: '报价单号', customer_name: '客户名称', offer_date: '报价日期', expire_date: '有效期至', admin_name: '经办人', total_amount: '报价金额', discount_amount: '优惠金额', after_offer: '实付金额', status: '状态' }">>
+          :export-columns="{ remark: $t('sale.offer.exportColumns.remark'), customer_name: $t('sale.offer.exportColumns.customer_name'), offer_date: $t('sale.offer.exportColumns.offer_date'), expire_date: $t('sale.offer.exportColumns.expire_date'), admin_name: $t('sale.offer.exportColumns.admin_name'), total_amount: $t('sale.offer.exportColumns.total_amount'), discount_amount: $t('sale.offer.exportColumns.discount_amount'), after_offer: $t('sale.offer.exportColumns.after_offer'), status: $t('sale.offer.exportColumns.status') }">>
           <template #search>
-            <el-input v-model="searchForm.offer_no" placeholder="报价单号" clearable style="width:160px" />
-            <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
-            <el-select v-model="searchForm.status" placeholder="状态" clearable style="width:110px">
-              <el-option label="待审核" :value="0" />
-              <el-option label="已审核" :value="1" />
-              <el-option label="已驳回" :value="2" />
-              <el-option label="未核对" value="unreconciled" />
+            <el-input v-model="searchForm.offer_no" :placeholder="$t('sale.offer.search.offerNoPlaceholder')" clearable style="width:160px" />
+            <el-input v-model="searchForm.customer_name" :placeholder="$t('sale.offer.search.customerNamePlaceholder')" clearable style="width:150px" />
+            <el-select v-model="searchForm.status" :placeholder="$t('sale.offer.search.statusPlaceholder')" clearable style="width:110px">
+              <el-option :label="$t('sale.offer.status.pending')" :value="0" />
+              <el-option :label="$t('sale.offer.status.approved')" :value="1" />
+              <el-option :label="$t('sale.offer.status.rejected')" :value="2" />
+              <el-option :label="$t('sale.offer.status.unreconciled')" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate" data-guide-id="guide-offer-create">新增报价</el-button>
+            <el-button type="primary" :icon="Plus" @click="openCreate" data-guide-id="guide-offer-create">{{ $t('sale.offer.toolbar.create') }}</el-button>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="expand-detail">
-                <div class="expand-title">商品明细</div>
+                <div class="expand-title">{{ $t('sale.offer.expand.title') }}</div>
                 <el-table :data="parseItems(row.goods_info)" border size="small" class="expand-table">
                   <el-table-column type="index" width="40" align="center" />
-                  <el-table-column prop="goods_name" label="商品名称" min-width="140" />
-                  <el-table-column prop="goods_sn" label="编码" width="110" />
-                  <el-table-column prop="spec" label="规格" width="100" />
-                  <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-                  <el-table-column prop="num" label="数量" width="80" align="right" />
-                  <el-table-column label="含税单价" width="110" align="right">
+                  <el-table-column prop="goods_name" :label="$t('sale.offer.expand.goodsName')" min-width="140" />
+                  <el-table-column prop="goods_sn" :label="$t('sale.offer.expand.goodsSn')" width="110" />
+                  <el-table-column prop="spec" :label="$t('sale.offer.expand.spec')" width="100" />
+                  <el-table-column prop="unit_name" :label="$t('sale.offer.expand.unit')" width="65" align="center" />
+                  <el-table-column prop="num" :label="$t('sale.offer.expand.num')" width="80" align="right" />
+                  <el-table-column :label="$t('sale.offer.expand.priceWithTax')" width="110" align="right">
                     <template #default="{ row: item }">¥{{ Number(item.price || 0).toFixed(2) }}</template>
                   </el-table-column>
-                  <el-table-column label="含税合计" width="110" align="right">
+                  <el-table-column :label="$t('sale.offer.expand.totalWithTax')" width="110" align="right">
                     <template #default="{ row: item }">
                       <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column prop="remark" label="备注" min-width="100" />
+                  <el-table-column prop="remark" :label="$t('sale.offer.expand.remark')" min-width="100" />
                 </el-table>
               </div>
             </template>
           </el-table-column>
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column label="报价单号" min-width="150">
+          <el-table-column type="index" :label="$t('sale.offer.columns.index')" width="60" align="center" />
+          <el-table-column :label="$t('sale.offer.columns.offerNo')" min-width="150">
             <template #default="{ row }">{{ parseOfferNo(row) }}</template>
           </el-table-column>
-          <el-table-column label="客户名称" min-width="140">
+          <el-table-column :label="$t('sale.offer.columns.customerName')" min-width="140">
             <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
           </el-table-column>
-          <el-table-column label="报价日期" width="110">
+          <el-table-column :label="$t('sale.offer.columns.offerDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.offer_date || row.create_time) }}</template>
           </el-table-column>
-          <el-table-column label="有效期至" width="110">
+          <el-table-column :label="$t('sale.offer.columns.expireDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.expire_date) || '—' }}</template>
           </el-table-column>
-          <el-table-column label="经办人" width="90">
+          <el-table-column :label="$t('sale.offer.columns.admin')" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="total_amount" label="报价金额" width="120" align="right">
+          <el-table-column prop="total_amount" :label="$t('sale.offer.columns.totalAmount')" width="120" align="right">
             <template #default="{ row }">
               <span style="color:#0071e3;font-weight:500">¥{{ Number(row.total_amount).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="优惠/实付" width="140" align="right">
+          <el-table-column :label="$t('sale.offer.columns.discountActual')" width="140" align="right">
             <template #default="{ row }">
               <template v-if="Number(row.discount_amount) > 0">
-                <span style="font-size:11px;color:#f59e0b">优惠¥{{ Number(row.discount_amount).toFixed(2) }}</span>
+                <span style="font-size:11px;color:#f59e0b">{{ $t('sale.offer.discountActual.discount', { amount: Number(row.discount_amount).toFixed(2) }) }}</span>
                 <br />
-                <span style="color:#16a34a;font-weight:600">实付¥{{ Number(row.after_offer || (row.total_amount - row.discount_amount)).toFixed(2) }}</span>
+                <span style="color:#16a34a;font-weight:600">{{ $t('sale.offer.discountActual.actual', { amount: Number(row.after_offer || (row.total_amount - row.discount_amount)).toFixed(2) }) }}</span>
               </template>
-              <span v-else style="color:#94a3b8;font-size:12px">无优惠</span>
+              <span v-else style="color:#94a3b8;font-size:12px">{{ $t('sale.offer.discountActual.none') }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" min-width="200" fixed="right">
+          <el-table-column :label="$t('sale.offer.columns.actions')" min-width="200" fixed="right">
             <template #default="{ row }">
               <span v-if="row.status === 4" style="color:#16a34a;margin-right:4px;font-weight:700">✓</span>
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : row.status === 4 ? 'warning' : 'info'" size="small" style="margin-right:8px">
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : row.status === 4 ? '已转单' : '待审核' }}
+                {{ row.status === 1 ? $t('sale.offer.status.approved') : row.status === 2 ? $t('sale.offer.status.rejected') : row.status === 4 ? $t('sale.offer.status.converted') : $t('sale.offer.status.pending') }}
               </el-tag>
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
-              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">{{ $t('sale.offer.actions.view') }}</el-button>
+              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">{{ $t('sale.offer.actions.edit') }}</el-button>
               <template v-if="row.status === 0">
-                <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
+                <el-button type="primary" link size="small" @click="handleAudit(row, 1)">{{ $t('sale.offer.actions.audit') }}</el-button>
+                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">{{ $t('sale.offer.actions.reject') }}</el-button>
               </template>
-              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button v-if="row.status === 1" type="success" link size="small" @click="handleConvertToContract(row)">转销售订单</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">{{ $t('sale.offer.actions.unaudit') }}</el-button>
+              <el-button v-if="row.status === 1" type="success" link size="small" @click="handleConvertToContract(row)">{{ $t('sale.offer.actions.convert') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('sale.offer.actions.reconciled') : $t('sale.offer.actions.reconcile') }}</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" :title="row.status === 1 ? $t('sale.offer.actions.deleteDisabledTitle') : ''" @click="handleDelete(row.id)">{{ $t('sale.offer.actions.delete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -104,14 +104,14 @@
     <div v-else class="form-page">
       <div class="form-topbar">
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="form-title">{{ isReadonly ? '查看报价单' : (fd.id ? '编辑报价单' : '新增报价') }}</div>
-          <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
+          <div class="form-title">{{ isReadonly ? $t('sale.offer.form.titleView') : (fd.id ? $t('sale.offer.form.titleEdit') : $t('sale.offer.form.titleCreate')) }}</div>
+          <el-tag v-if="isReadonly" type="success" size="small">{{ $t('sale.offer.form.approvedTag') }}</el-tag>
         </div>
         <div class="form-actions">
-          <el-button @click="backToList">返回</el-button>
-          <el-button v-if="isReadonly" :icon="Printer" @click="handlePrint">打印</el-button>
-          <el-button v-if="isReadonly" :icon="Download" @click="handleExportPdf">导出PDF</el-button>
-          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-offer-save">保存</el-button>
+          <el-button @click="backToList">{{ $t('sale.offer.form.back') }}</el-button>
+          <el-button v-if="isReadonly" :icon="Printer" @click="handlePrint">{{ $t('sale.offer.form.print') }}</el-button>
+          <el-button v-if="isReadonly" :icon="Download" @click="handleExportPdf">{{ $t('sale.offer.form.exportPdf') }}</el-button>
+          <el-button v-if="!isReadonly" type="primary" :loading="saving" @click="handleSave" data-guide-id="guide-offer-save">{{ $t('sale.offer.form.save') }}</el-button>
         </div>
       </div>
 
@@ -120,14 +120,14 @@
 
           <!-- 基本信息 -->
           <div class="form-section">
-            <div class="sec-title">基本信息</div>
+            <div class="sec-title">{{ $t('sale.offer.form.sectionBasic') }}</div>
             <el-row :gutter="20">
               <el-col :span="8">
-                <el-form-item label="客户名称" prop="customer_id"
-                  :rules="[{ required: true, message: '请选择客户' }]"
+                <el-form-item :label="$t('sale.offer.form.customerLabel')" prop="customer_id"
+                  :rules="[{ required: true, message: $t('sale.offer.form.customerRequired') }]"
                   data-guide-id="guide-offer-customer">
                   <div style="display:flex;gap:4px;width:100%">
-                    <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
+                    <el-select v-model="fd.customer_id" :placeholder="$t('sale.offer.form.customerPlaceholder')" filterable style="flex:1"
                       @change="onCustomerChange">
                       <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
                     </el-select>
@@ -136,27 +136,27 @@
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="客户等级">
-                  <el-select v-model="fd.level_id" placeholder="请选择等级（可选）" clearable style="width:100%"
+                <el-form-item :label="$t('sale.offer.form.levelLabel')">
+                  <el-select v-model="fd.level_id" :placeholder="$t('sale.offer.form.levelPlaceholder')" clearable style="width:100%"
                     @change="onLevelChange">
                     <el-option v-for="lv in levelOptions" :key="lv.id" :label="lv.name" :value="lv.id" />
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="报价日期" prop="offer_date">
-                  <el-date-picker v-model="fd.offer_date" type="date" value-format="YYYY-MM-DD" style="width:100%" placeholder="请选择日期" />
+                <el-form-item :label="$t('sale.offer.form.offerDateLabel')" prop="offer_date">
+                  <el-date-picker v-model="fd.offer_date" type="date" value-format="YYYY-MM-DD" style="width:100%" :placeholder="$t('sale.offer.form.datePlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="报价单号">
-                  <el-input v-model="fd.offer_no" readonly placeholder="生成中..." />
+                <el-form-item :label="$t('sale.offer.form.offerNoLabel')">
+                  <el-input v-model="fd.offer_no" readonly :placeholder="$t('sale.offer.form.offerNoPlaceholder')" />
                 </el-form-item>
               </el-col>
               <!-- 大写金额展示 -->
               <el-col :span="24">
                 <div style="background:#fff5f5;border:1px solid #ffcdd2;border-radius:6px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap">
-                  <span style="font-size:13px;color:rgba(29,29,31,0.35)">报价金额：</span>
+                  <span style="font-size:13px;color:rgba(29,29,31,0.35)">{{ $t('sale.offer.form.amountLabel') }}</span>
                   <span style="font-size:22px;font-weight:700;color:#dc2626;letter-spacing:1px">
                     ¥{{ fd.total_amount.toFixed(2) }}
                   </span>
@@ -164,7 +164,7 @@
                     （{{ amountToChinese(fd.after_offer) || amountToChinese(fd.total_amount) }}）
                   </span>
                   <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-                    <span style="font-size:13px;color:rgba(29,29,31,0.35);white-space:nowrap">优惠金额：</span>
+                    <span style="font-size:13px;color:rgba(29,29,31,0.35);white-space:nowrap">{{ $t('sale.offer.form.discountLabel') }}</span>
                     <el-input-number
                       v-model="fd.discount_amount"
                       :min="0" :max="fd.total_amount" :precision="2"
@@ -174,7 +174,7 @@
                     />
                     <template v-if="fd.discount_amount > 0 && fd.total_amount > 0">
                       <span style="font-size:12px;color:#16a34a;white-space:nowrap">
-                        优惠后：¥{{ fd.after_offer.toFixed(2) }}
+                        {{ $t('sale.offer.form.afterDiscount', { amount: fd.after_offer.toFixed(2) }) }}
                       </span>
                       <span style="font-size:12px;color:#f59e0b;white-space:nowrap;background:#fef3c7;padding:2px 8px;border-radius:10px">
                         {{ discountLabel }}
@@ -184,18 +184,18 @@
                 </div>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="有效期至" prop="expire_date">
-                  <el-date-picker v-model="fd.expire_date" type="date" value-format="YYYY-MM-DD" style="width:100%" placeholder="请选择日期" />
+                <el-form-item :label="$t('sale.offer.form.expireDateLabel')" prop="expire_date">
+                  <el-date-picker v-model="fd.expire_date" type="date" value-format="YYYY-MM-DD" style="width:100%" :placeholder="$t('sale.offer.form.datePlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="经办人" prop="admin_name">
-                  <StaffSelect v-model="fd.admin_name" placeholder="请选择或输入经办人" />
+                <el-form-item :label="$t('sale.offer.form.adminLabel')" prop="admin_name">
+                  <StaffSelect v-model="fd.admin_name" :placeholder="$t('sale.offer.form.adminPlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="16">
-                <el-form-item label="备注" prop="remark">
-                  <el-input v-model="fd.remark" placeholder="请输入备注" />
+                <el-form-item :label="$t('sale.offer.form.remarkLabel')" prop="remark">
+                  <el-input v-model="fd.remark" :placeholder="$t('sale.offer.form.remarkPlaceholder')" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -204,40 +204,40 @@
           <!-- 商品明细 -->
           <div class="form-section">
             <div class="sec-title-row">
-              <span class="sec-title">商品明细</span>
-              <el-button v-if="!isReadonly" type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()" data-guide-id="guide-offer-goods">选择商品</el-button>
+              <span class="sec-title">{{ $t('sale.offer.form.sectionGoods') }}</span>
+              <el-button v-if="!isReadonly" type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()" data-guide-id="guide-offer-goods">{{ $t('sale.offer.form.selectGoods') }}</el-button>
             </div>
 
-            <el-table :data="fd.items" border style="width:100%" empty-text="请点击添加商品">
-              <el-table-column type="index" label="序号" width="55" align="center" />
-              <el-table-column label="商品名称" min-width="160">
+            <el-table :data="fd.items" border style="width:100%" :empty-text="$t('sale.offer.form.emptyGoods')">
+              <el-table-column type="index" :label="$t('sale.offer.form.colIndex')" width="55" align="center" />
+              <el-table-column :label="$t('sale.offer.form.colGoodsName')" min-width="160">
                 <template #default="{ row }">
-                  <el-input v-model="row.goods_name" placeholder="商品名称" />
+                  <el-input v-model="row.goods_name" :placeholder="$t('sale.offer.form.colGoodsNamePlaceholder')" />
                 </template>
               </el-table-column>
-              <el-table-column label="商品编码" width="130">
+              <el-table-column :label="$t('sale.offer.form.colGoodsSn')" width="130">
                 <template #default="{ row }">
-                  <el-input v-model="row.goods_sn" placeholder="编码" />
+                  <el-input v-model="row.goods_sn" :placeholder="$t('sale.offer.form.colGoodsSnPlaceholder')" />
                 </template>
               </el-table-column>
-            <el-table-column label="规格" width="140">
+            <el-table-column :label="$t('sale.offer.form.colSpec')" width="140">
                 <template #default="{ row }">
                   <el-select
                     v-if="row.goods_id && goodsSpecMap[row.goods_id]?.length"
                     v-model="row.spec"
                     size="small"
-                    placeholder="请选择规格"
+                    :placeholder="$t('sale.offer.form.colSpecPlaceholder')"
                     clearable
                     style="width:100%"
                     @focus="fetchGoodsSpecs(row.goods_id)"
                   >
                     <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
                   </el-select>
-                  <el-input v-else v-model="row.spec" placeholder="规格"
+                  <el-input v-else v-model="row.spec" :placeholder="$t('sale.offer.form.colSpecInputPlaceholder')"
                     @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)" />
                 </template>
               </el-table-column>
-              <el-table-column label="单位" width="90">
+              <el-table-column :label="$t('sale.offer.form.colUnit')" width="90">
                 <template #default="{ row }">
                   <el-select
                     v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
@@ -247,33 +247,33 @@
                   >
                     <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u" :label="u" :value="u" />
                   </el-select>
-                  <el-input v-else v-model="row.unit_name" placeholder="单位"
+                  <el-input v-else v-model="row.unit_name" :placeholder="$t('sale.offer.form.colUnitPlaceholder')"
                     @focus="row.goods_id && fetchGoodsUnits(row.goods_id, row.unit_name)" />
                 </template>
               </el-table-column>
-              <el-table-column label="数量" width="110">
+              <el-table-column :label="$t('sale.offer.form.colNum')" width="110">
                 <template #default="{ row }">
                   <el-input-number v-model="row.num" :min="0" :precision="2" controls-position="right"
                     style="width:100%" @change="calcTotal" />
                 </template>
               </el-table-column>
-              <el-table-column label="单价" width="120">
+              <el-table-column :label="$t('sale.offer.form.colPrice')" width="120">
                 <template #default="{ row }">
                   <el-input-number v-model="row.price" :min="0" :precision="2" controls-position="right"
                     style="width:100%" @change="calcTotal" />
                 </template>
               </el-table-column>
-              <el-table-column label="小计" width="110" align="right">
+              <el-table-column :label="$t('sale.offer.form.colSubtotal')" width="110" align="right">
                 <template #default="{ row }">
                   <span style="color:#0071e3">¥{{ ((row.num || 0) * (row.price || 0)).toFixed(2) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="备注" min-width="120">
+              <el-table-column :label="$t('sale.offer.form.colRemark')" min-width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.remark" placeholder="备注" />
+                  <el-input v-model="row.remark" :placeholder="$t('sale.offer.form.colRemarkPlaceholder')" />
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="60" align="center" fixed="right">
+              <el-table-column :label="$t('sale.offer.form.colActions')" width="60" align="center" fixed="right">
                 <template #default="{ $index }">
                   <el-button type="danger" link :icon="Delete" @click="removeItem($index)" />
                 </template>
@@ -282,8 +282,8 @@
 
             <!-- 合计行 -->
             <div class="total-bar">
-              <span>共 <b>{{ fd.items.length }}</b> 件商品</span>
-              <span>合计金额：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+              <span>{{ $t('sale.offer.form.totalCount', { count: fd.items.length }) }}</span>
+              <span>{{ $t('sale.offer.form.totalAmount') }}<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
             </div>
           </div>
 
@@ -292,18 +292,18 @@
     </div>
 
     <!-- 快速新增客户弹框 -->
-    <el-dialog v-model="addCustomerVisible" title="快速新增客户" width="380px" append-to-body>
+    <el-dialog v-model="addCustomerVisible" :title="$t('sale.offer.customerDialog.title')" width="380px" append-to-body>
       <el-form :model="customerForm" label-width="80px">
-        <el-form-item label="客户名称">
-          <el-input v-model="customerForm.nickname" placeholder="请输入客户名称" />
+        <el-form-item :label="$t('sale.offer.customerDialog.nameLabel')">
+          <el-input v-model="customerForm.nickname" :placeholder="$t('sale.offer.customerDialog.namePlaceholder')" />
         </el-form-item>
-        <el-form-item label="手机号">
-          <el-input v-model="customerForm.mobile" placeholder="手机号（可选）" />
+        <el-form-item :label="$t('sale.offer.customerDialog.mobileLabel')">
+          <el-input v-model="customerForm.mobile" :placeholder="$t('sale.offer.customerDialog.mobilePlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addCustomerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="addCustomerLoading" @click="submitAddCustomer">确认新增</el-button>
+        <el-button @click="addCustomerVisible = false">{{ $t('sale.offer.customerDialog.cancel') }}</el-button>
+        <el-button type="primary" :loading="addCustomerLoading" @click="submitAddCustomer">{{ $t('sale.offer.customerDialog.confirm') }}</el-button>
       </template>
     </el-dialog>
 
@@ -315,6 +315,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Plus, Delete, Printer, Download } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -328,6 +329,8 @@ import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { usePermissionStore } from '@/stores/permission'
+
+const { t } = useI18n()
 
 // ── 列表 ─────────────────────────────────────────────────────────────────────
 const permStore = usePermissionStore()
@@ -518,7 +521,7 @@ function buildPrintHtml() {
       <td>${item.remark || ''}</td>
     </tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>报价单 ${fd.offer_no || ''}</title><link rel="icon" href="data:,">
+  <title>${t('sale.offer.print.docTitle', { no: fd.offer_no || '' })}</title><link rel="icon" href="data:,">
   <style>
     body{font-family:SimSun,"Microsoft YaHei",Arial;font-size:12px;color:#000;margin:20px}
     h2{text-align:center;font-size:18px;margin-bottom:4px}
@@ -532,32 +535,32 @@ function buildPrintHtml() {
     .footer{margin-top:30px;display:flex;justify-content:space-between;font-size:12px}
     @media print{body{margin:0}}
   </style></head><body>
-  <h2>报 价 单</h2>
-  <div class="sub">数字游牧ERP</div>
+  <h2>${t('sale.offer.print.title')}</h2>
+  <div class="sub">${t('sale.offer.print.brand')}</div>
   <div class="info">
-    <span>报价单号：${fd.offer_no || ''}</span>
-    <span>客户名称：${fd.customer_name || ''}</span>
-    <span>报价日期：${fd.offer_date || ''}</span>
-    <span>有效期至：${fd.expire_date || ''}</span>
-    <span>经办人：${fd.admin_name || ''}</span>
+    <span>${t('sale.offer.print.offerNo')}${fd.offer_no || ''}</span>
+    <span>${t('sale.offer.print.customerName')}${fd.customer_name || ''}</span>
+    <span>${t('sale.offer.print.offerDate')}${fd.offer_date || ''}</span>
+    <span>${t('sale.offer.print.expireDate')}${fd.expire_date || ''}</span>
+    <span>${t('sale.offer.print.admin')}${fd.admin_name || ''}</span>
   </div>
   <table>
-    <thead><tr><th>序号</th><th>商品名称</th><th>编码</th><th>规格</th><th>单位</th><th>数量</th><th>单价</th><th>合计</th><th>备注</th></tr></thead>
+    <thead><tr><th>${t('sale.offer.print.colIndex')}</th><th>${t('sale.offer.print.colGoodsName')}</th><th>${t('sale.offer.print.colSn')}</th><th>${t('sale.offer.print.colSpec')}</th><th>${t('sale.offer.print.colUnit')}</th><th>${t('sale.offer.print.colNum')}</th><th>${t('sale.offer.print.colPrice')}</th><th>${t('sale.offer.print.colTotal')}</th><th>${t('sale.offer.print.colRemark')}</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <div class="total">报价合计：¥${Number(fd.total_amount || 0).toFixed(2)}</div>
-  ${fd.remark ? `<div style="margin-top:10px;font-size:12px">备注：${fd.remark}</div>` : ''}
+  <div class="total">${t('sale.offer.print.totalLine', { amount: Number(fd.total_amount || 0).toFixed(2) })}</div>
+  ${fd.remark ? `<div style="margin-top:10px;font-size:12px">${t('sale.offer.print.remarkLine', { remark: fd.remark })}</div>` : ''}
   <div class="footer">
-    <span>供应方签章：_______________</span>
-    <span>采购方签章：_______________</span>
-    <span>日期：___________</span>
+    <span>${t('sale.offer.print.supplierSign')}</span>
+    <span>${t('sale.offer.print.buyerSign')}</span>
+    <span>${t('sale.offer.print.dateLine')}</span>
   </div>
   </body></html>`
 }
 
 function handlePrint() {
   const w = window.open('', '_blank', 'width=900,height=700')
-  if (!w) { ElMessage.warning('请允许弹窗'); return }
+  if (!w) { ElMessage.warning(t('sale.offer.print.allowPopup')); return }
   w.document.write(buildPrintHtml())
   w.document.close()
   w.focus()
@@ -574,10 +577,10 @@ function handleExportPdf() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `报价单_${fd.offer_no || fd.customer_name || ''}.html`
+  a.download = t('sale.offer.print.exportFileName', { name: fd.offer_no || fd.customer_name || '' })
   a.click()
   URL.revokeObjectURL(url)
-  ElMessage.success('已导出HTML文件，用浏览器打开后可另存为PDF')
+  ElMessage.success(t('sale.offer.print.exportSuccess'))
 }
 
 function onCustomerChange(id: any) {
@@ -599,7 +602,7 @@ function onLevelChange() {
     if (lp !== null) row.price = lp
   }
   calcTotal()
-  ElMessage.info('已按新等级刷新商品价格')
+  ElMessage.info(t('sale.offer.message.levelPriceRefreshed'))
 }
 
 // 金额转大写
@@ -641,7 +644,7 @@ const discountLabel = computed(() => {
   const ratio = fd.after_offer / fd.total_amount
   const pct = ((1 - ratio) * 100).toFixed(1)
   const zhekouVal = (ratio * 10).toFixed(1)
-  return `${zhekouVal}折 (优惠${pct}%)`
+  return t('sale.offer.form.discountTag', { value: zhekouVal, pct })
 })
 
 function removeItem(index: number) {
@@ -651,10 +654,10 @@ function removeItem(index: number) {
 
 async function handleSave() {
   try { await formRef.value?.validate() } catch {
-    ElMessage.warning('请填写必填项'); return
+    ElMessage.warning(t('sale.offer.message.fillRequired')); return
   }
   if (!fd.items.length) {
-    ElMessage.warning('请至少添加一件商品'); return
+    ElMessage.warning(t('sale.offer.message.needGoods')); return
   }
   saving.value = true
   try {
@@ -674,37 +677,37 @@ async function handleSave() {
     if (fd.expire_date) payload.expire_date = fd.expire_date
     if (fd.level_id) payload.level_id = fd.level_id
     fd.id ? await updateOffer(payload) : await createOffer(payload)
-    ElMessage.success('保存成功')
+    ElMessage.success(t('sale.offer.message.saveSuccess'))
     backToList()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('sale.offer.message.saveFailed'))
   } finally {
     saving.value = false
   }
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该报价单？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('sale.offer.message.deleteConfirm'), t('sale.offer.message.confirmTitle'), { type: 'warning' })
   await deleteOffer(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('sale.offer.message.deleteSuccess'))
   tableRef.value?.refresh()
 }
 
 async function handleAudit(row: any, status: number) {
-  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
-  await ElMessageBox.confirm(`确定${action}该报价单？`, '提示', { type: 'warning' })
+  const action = status === 1 ? t('sale.offer.message.auditApprove') : status === 2 ? t('sale.offer.message.auditReject') : t('sale.offer.message.auditUnaudit')
+  await ElMessageBox.confirm(t('sale.offer.message.auditConfirm', { action }), t('sale.offer.message.confirmTitle'), { type: 'warning' })
   try {
     await auditOffer(row.id, status)
-    ElMessage.success(`${action}成功`)
+    ElMessage.success(t('sale.offer.message.auditSuccess', { action }))
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+    ElMessage.error(e?.message ?? t('sale.offer.message.auditFailed'))
   }
 }
 
 async function handleConvertToContract(row: any) {
   const offerNo = parseOfferNo(row)
-  await ElMessageBox.confirm(`确定将报价单「${offerNo}」转为销售订单？`, '转销售订单', { type: 'info' })
+  await ElMessageBox.confirm(t('sale.offer.message.convertConfirm', { no: offerNo }), t('sale.offer.message.convertTitle'), { type: 'info' })
   let items: any[] = []
   try { items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch {}
   sessionStorage.setItem('sale_contract_draft_from_offer', JSON.stringify({
@@ -760,11 +763,11 @@ function openAddCustomer() {
 }
 
 async function submitAddCustomer() {
-  if (!customerForm.nickname.trim()) { ElMessage.warning('请输入客户名称'); return }
+  if (!customerForm.nickname.trim()) { ElMessage.warning(t('sale.offer.message.needCustomerName')); return }
   addCustomerLoading.value = true
   try {
     const res = await createSaleCustomer({ name: customerForm.nickname.trim(), mobile: customerForm.mobile.trim() })
-    ElMessage.success('新增客户成功')
+    ElMessage.success(t('sale.offer.customerDialog.addCustomerSuccess'))
     addCustomerVisible.value = false
     await loadCustomers()
     const newId = res.data?.id ?? res.data
@@ -774,7 +777,7 @@ async function submitAddCustomer() {
       if (last) { fd.customer_id = last.id; onCustomerChange(last.id) }
     }
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '新增失败')
+    ElMessage.error(e?.message ?? t('sale.offer.customerDialog.addCustomerFailed'))
   } finally {
     addCustomerLoading.value = false
   }

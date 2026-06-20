@@ -3,39 +3,39 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getBrandList"
           del-path="/goods/ShopBrand/batchDel"
-          export-file-name="品牌列表" :params="searchForm">
+          :export-file-name="$t('goods.brand.exportFileName')" :params="searchForm">
         <template #search>
           <el-form inline>
-            <el-form-item label="品牌名称">
-              <el-input v-model="searchForm.name" placeholder="请输入品牌名称" clearable style="width:180px" />
+            <el-form-item :label="$t('goods.brand.searchNameLabel')">
+              <el-input v-model="searchForm.name" :placeholder="$t('goods.brand.searchNamePlaceholder')" clearable style="width:180px" />
             </el-form-item>
           </el-form>
           <div class="search-actions">
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="Object.assign(searchForm, { name: '' }); tableRef?.loadData()">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ $t('goods.brand.btnSearch') }}</el-button>
+            <el-button @click="Object.assign(searchForm, { name: '' }); tableRef?.loadData()">{{ $t('goods.brand.btnReset') }}</el-button>
           </div>
         </template>
         <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
+          <el-button type="primary" :icon="Plus" @click="openForm()">{{ $t('goods.brand.btnAdd') }}</el-button>
         </template>
-        <el-table-column prop="name" label="品牌名称" min-width="160" />
-        <el-table-column prop="remark" label="备注" min-width="200" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column prop="name" :label="$t('goods.brand.colName')" min-width="160" />
+        <el-table-column prop="remark" :label="$t('goods.brand.colRemark')" min-width="200" />
+        <el-table-column :label="$t('goods.brand.colActions')" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="success" link @click="openView(row)">查看</el-button>
-              <el-button type="primary" link @click="openForm(row)">编辑</el-button>
-            <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="success" link @click="openView(row)">{{ $t('goods.brand.btnView') }}</el-button>
+              <el-button type="primary" link @click="openForm(row)">{{ $t('goods.brand.btnEdit') }}</el-button>
+            <el-button type="danger" link @click="handleDelete(row.id)">{{ $t('goods.brand.btnDelete') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
     </el-card>
     <ScForm ref="formRef" :title="formTitle" @submit="handleSubmit">
       <template #default="{ form }">
-        <el-form-item label="品牌名称" prop="name" :rules="[{ required: true, message: '请输入品牌名称' }]">
-          <el-input v-model="form.name" placeholder="请输入品牌名称" />
+        <el-form-item :label="$t('goods.brand.formNameLabel')" prop="name" :rules="[{ required: true, message: $t('goods.brand.formNameRequired') }]">
+          <el-input v-model="form.name" :placeholder="$t('goods.brand.formNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
+        <el-form-item :label="$t('goods.brand.formRemarkLabel')" prop="remark">
+          <el-input v-model="form.remark" type="textarea" :placeholder="$t('goods.brand.formRemarkPlaceholder')" />
         </el-form-item>
       </template>
     </ScForm>
@@ -43,15 +43,17 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import ScForm from '@/components/ScForm.vue'
 import { getBrandList, createBrand, updateBrand, deleteBrand } from '@/api/goods'
 
+const { t } = useI18n()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const formRef = ref<InstanceType<typeof ScForm>>()
-const formTitle = ref('新增')
+const formTitle = ref(t('goods.brand.formTitleAdd'))
 const searchForm = reactive<any>({ name: '' })
 
 function openView(row?: any) {
@@ -59,7 +61,7 @@ function openView(row?: any) {
 }
 
 function openForm(row?: any) {
-  formTitle.value = row ? '编辑' : '新增'
+  formTitle.value = row ? t('goods.brand.formTitleEdit') : t('goods.brand.formTitleAdd')
   formRef.value?.open(row)
 }
 
@@ -67,7 +69,7 @@ async function handleSubmit(data: any) {
   formRef.value?.setSubmitting(true)
   try {
     data.id ? await updateBrand(data) : await createBrand(data)
-    ElMessage.success('操作成功')
+    ElMessage.success(t('goods.brand.msgSuccess'))
     formRef.value?.close()
     tableRef.value?.refresh()
   } finally {
@@ -76,9 +78,9 @@ async function handleSubmit(data: any) {
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('goods.brand.msgConfirmDelete'), t('goods.brand.msgTip'), { type: 'warning' })
   await deleteBrand(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('goods.brand.msgDeleteSuccess'))
   tableRef.value?.refresh()
 }
 </script>

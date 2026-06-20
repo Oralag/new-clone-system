@@ -25,6 +25,8 @@ export interface SaleReturnFinanceRow {
   return_amount: number
   date: string
   remark: string
+  fund_id: number
+  fund_name: string
 }
 
 export interface SaleReturnSettlementRow extends SaleReturnFinanceRow {
@@ -58,6 +60,8 @@ export function normalizeSaleReturnFinanceRows(rows: AnyRow[]) {
       return_amount: returnAmount,
       date: fmtDt(text(row.return_date || row.create_time)),
       remark: text(row.remark || row.reason),
+      fund_id: Number(row.fund_id || 0),
+      fund_name: text(row.fund_name),
     })
   }
 
@@ -243,4 +247,34 @@ export function applySaleReturnsToCollectReceiptRows(
   }
 
   return result
+}
+
+// 将销售退货退款从对应资金账户余额中扣减（退款=支出）
+export function applySaleReturnsToFundRows(fundRows: AnyRow[], returnRows: SaleReturnFinanceRow[]) {
+  const refundByFundId = new Map<number, number>()
+  const refundByFundName = new Map<string, number>()
+
+  for (const row of returnRows) {
+    const amt = roundMoney(row.return_amount)
+    if (amt <= 0) continue
+    if (row.fund_id > 0) {
+      refundByFundId.set(row.fund_id, roundMoney((refundByFundId.get(row.fund_id) || 0) + amt))
+    } else if (row.fund_name) {
+      refundByFundName.set(row.fund_name, roundMoney((refundByFundName.get(row.fund_name) || 0) + amt))
+    }
+  }
+
+  return (fundRows || []).map((row) => {
+    const currentBalance = roundMoney(toNumber(row.display_balance ?? row.balance))
+    const fid = Number(row.id || 0)
+    const fname = String(row.name || '').trim()
+    const deduct = roundMoney(
+      (fid > 0 ? (refundByFundId.get(fid) || 0) : 0) +
+      (fname ? (refundByFundName.get(fname) || 0) : 0)
+    )
+    return {
+      ...row,
+      display_balance: roundMoney(currentBalance - deduct),
+    }
+  })
 }

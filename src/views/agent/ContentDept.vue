@@ -4,16 +4,16 @@
     <!-- ── 顶部：员工卡 + 今日任务栏 ── -->
     <DeptEmployeeCard
       name="Maya"
-      role="文案专员"
+      :role="t('agentContentDept.role')"
       emoji="✍️"
-      desc="文案 · 视频全链路内容生产"
+      :desc="t('agentContentDept.desc')"
       color="#f59e0b"
       illustId="content"
       :busy="false"
       :stats="[
-        { value: copywritingResults.length, label: '已生文案' },
-        { value: videoResults.length, label: '已生脚本' },
-        { value: publishCount, label: '已发布' },
+        { value: copywritingResults.length, label: t('agentContentDept.kpiCopy') },
+        { value: videoResults.length, label: t('agentContentDept.kpiVideo') },
+        { value: publishCount, label: t('agentContentDept.kpiPublished') },
       ]"
     />
 
@@ -27,13 +27,13 @@
         <div class="panel-card">
           <div class="panel-hd">
             <span class="panel-dot" style="background:#f59e0b"></span>
-            今日目标
+            {{ t('agentContentDept.todayGoalTitle') }}
           </div>
           <div class="goal-input-wrap">
             <textarea
               v-model="todayGoal"
               class="goal-input"
-              placeholder="设定今日内容目标..."
+              :placeholder="t('agentContentDept.goalPlaceholder')"
               rows="3"
               @blur="saveGoal"
             />
@@ -44,7 +44,7 @@
         <div class="panel-card">
           <div class="panel-hd">
             <span class="panel-dot" style="background:#6366f1"></span>
-            快捷指令
+            {{ t('agentContentDept.quickPromptsTitle') }}
           </div>
           <div class="quick-list">
             <button
@@ -67,16 +67,16 @@
           </div>
           <div class="status-list">
             <div class="status-row">
-              <span class="status-label">文案专员</span>
-              <span class="status-badge green">待命</span>
+            <span class="status-label">{{ t('agentContentDept.copywriter') }}</span>
+              <span class="status-badge green">{{ t('agentContentDept.standby') }}</span>
             </div>
             <div class="status-row">
-              <span class="status-label">视频脚本</span>
-              <span class="status-badge green">待命</span>
+              <span class="status-label">{{ t('agentContentDept.videoScript') }}</span>
+              <span class="status-badge green">{{ t('agentContentDept.standby') }}</span>
             </div>
             <div class="status-row">
-              <span class="status-label">今日产出</span>
-              <span class="status-badge blue">{{ copywritingResults.length + videoResults.length }} 件</span>
+              <span class="status-label">{{ t('agentContentDept.todayOutput') }}</span>
+              <span class="status-badge blue">{{ t('agentContentDept.outputCount', { count: copywritingResults.length + videoResults.length }) }}</span>
             </div>
           </div>
         </div>
@@ -85,8 +85,8 @@
         <div class="panel-card">
           <div class="panel-hd">
             <span class="panel-dot" style="background:#7c3aed"></span>
-            近期发布计划
-            <router-link to="/agent/calendar" class="panel-link-sm">查看全部</router-link>
+            {{ t('agentContentDept.recentPlansTitle') }}
+            <router-link to="/agent/calendar" class="panel-link-sm">{{ t('common.view') }} {{ t('common.all') }}</router-link>
           </div>
           <div class="cal-mini-list">
             <div v-for="p in upcomingPlans(3)" :key="p.id" class="cal-mini-item">
@@ -97,7 +97,7 @@
               </div>
               <span class="cal-mini-status" :class="'cms-' + p.status">{{ STATUS_LABEL[p.status] }}</span>
             </div>
-            <div v-if="upcomingPlans(3).length === 0" class="cal-mini-empty">暂无待发布内容</div>
+            <div v-if="upcomingPlans(3).length === 0" class="cal-mini-empty">{{ t('agentContentDept.noUpcoming') }}</div>
           </div>
         </div>
 
@@ -109,13 +109,13 @@
           <div class="chat-header-left">
             <span class="chat-agent-emoji">✍️</span>
             <div>
-              <div class="chat-agent-name">Maya · 文案专员</div>
-              <div class="chat-agent-sub">内容部 · 文案 & 视频脚本</div>
+              <div class="chat-agent-name">Maya · {{ t('agentContentDept.role') }}</div>
+              <div class="chat-agent-sub">{{ t('agentLayout.contentDept') }} · {{ t('agentContentDept.copywriting') }} & {{ t('agentContentDept.videoScript') }}</div>
             </div>
           </div>
           <div class="chat-chips">
-            <button class="chip-btn" @click="$router.push('/agent/copywriting')">文案生成</button>
-            <button class="chip-btn" @click="$router.push('/agent/video')">视频脚本</button>
+            <button class="chip-btn" @click="$router.push('/agent/copywriting')">{{ t('agentContentDept.copywriting') }}</button>
+            <button class="chip-btn" @click="$router.push('/agent/video')">{{ t('agentContentDept.videoScript') }}</button>
           </div>
         </div>
         <div class="product-selector-row">
@@ -131,11 +131,11 @@
         <div class="panel-card output-card">
           <div class="panel-hd">
             <span class="panel-dot" style="background:#f59e0b"></span>
-            今日文案
+            {{ t('agentContentDept.todayCopy') }}
             <span class="panel-count">{{ copywritingResults.length }}</span>
           </div>
           <div v-if="copywritingResults.length === 0" class="output-empty">
-            <span>暂无产出</span>
+            <span>{{ t('agentContentDept.noOutput') }}</span>
           </div>
           <div v-else class="output-list">
             <div
@@ -145,10 +145,10 @@
               @click="previewIdx = i; previewType = 'copy'"
             >
               <div class="output-item-top">
-                <span class="output-type copy">文案</span>
-                <span class="output-time">{{ r.platform || '通用' }}</span>
+                <span class="output-type copy">{{ t('agentContentDept.copywriting') }}</span>
+                <span class="output-time">{{ r.platform || t('agentContentDept.generic') }}</span>
               </div>
-              <div class="output-title">{{ r.topic || r.content?.slice(0, 30) || '无标题' }}{{ (r.topic || r.content || '').length > 30 ? '…' : '' }}</div>
+              <div class="output-title">{{ r.topic || r.content?.slice(0, 30) || t('agentContentDept.noTitle') }}{{ (r.topic || r.content || '').length > 30 ? '…' : '' }}</div>
             </div>
           </div>
           <button
@@ -160,7 +160,7 @@
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
               <path d="M2 5.5h7M6 3l3 2.5L6 8"/>
             </svg>
-            {{ sentToCreative ? '已发给创意部 ✓' : '发给创意部 →' }}
+            {{ sentToCreative ? t('agentContentDept.sentToCreativeDone') : t('agentContentDept.sentToCreative') }}
           </button>
         </div>
 
@@ -168,11 +168,11 @@
         <div class="panel-card output-card" style="margin-top:10px">
           <div class="panel-hd">
             <span class="panel-dot" style="background:#ef4444"></span>
-            今日脚本
+            {{ t('agentContentDept.todayVideo') }}
             <span class="panel-count">{{ videoResults.length }}</span>
           </div>
           <div v-if="videoResults.length === 0" class="output-empty">
-            <span>暂无产出</span>
+            <span>{{ t('agentContentDept.noOutput') }}</span>
           </div>
           <div v-else class="output-list">
             <div
@@ -181,10 +181,10 @@
               class="output-item"
             >
               <div class="output-item-top">
-                <span class="output-type video">脚本</span>
-                <span class="output-time">视频</span>
+                <span class="output-type video">{{ t('agentContentDept.videoScript') }}</span>
+                <span class="output-time">{{ t('agentContentDept.video') }}</span>
               </div>
-              <div class="output-title">{{ r.topic || r.title || '无标题' }}</div>
+              <div class="output-title">{{ r.topic || r.title || t('agentContentDept.noTitle') }}</div>
             </div>
           </div>
         </div>
@@ -193,17 +193,17 @@
         <div class="panel-card" style="margin-top:10px">
           <div class="panel-hd">
             <span class="panel-dot" style="background:#10b981"></span>
-            准确率
+            {{ t('agentContentDept.accuracyTitle') }}
           </div>
           <div class="accuracy-bar">
-            <div class="accuracy-label">内容质量</div>
+            <div class="accuracy-label">{{ t('agentContentDept.contentQuality') }}</div>
             <div class="accuracy-track">
               <div class="accuracy-fill" style="width:88%"></div>
             </div>
             <span class="accuracy-pct">88%</span>
           </div>
           <div class="accuracy-bar" style="margin-top:8px">
-            <div class="accuracy-label">按时产出</div>
+            <div class="accuracy-label">{{ t('agentContentDept.onTimeOutput') }}</div>
             <div class="accuracy-track">
               <div class="accuracy-fill" style="width:96%"></div>
             </div>
@@ -219,6 +219,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useTrendingStore } from '@/stores/agent'
 import { usePipelineStore } from '@/stores/pipeline'
 import AgentChat from '@/components/agent/AgentChat.vue'
@@ -229,13 +230,17 @@ import { ElMessage } from 'element-plus'
 import { useContentCalendar } from '@/composables/useContentCalendar'
 
 const { upcomingPlans } = useContentCalendar()
+const { t } = useI18n()
 
 const CH_EMOJI: Record<string, string> = {
   '公众号': '📗', '微信公众号': '📗', '视频号': '📹',
   '抖音号': '🎵', '小红书': '📕', '快手号': '📱', '微博': '🌐',
 }
 const STATUS_LABEL: Record<string, string> = {
-  idea: '选题中', draft: '创作中', scheduled: '待发布', published: '已发布',
+  idea: t('agentDashboard.statusIdea'),
+  draft: t('agentDashboard.statusDraft'),
+  scheduled: t('agentDashboard.statusScheduled'),
+  published: t('agentDashboard.statusPublished'),
 }
 
 const agentStore = useTrendingStore()
@@ -274,11 +279,11 @@ const previewType = ref<'copy' | 'video'>('copy')
 
 // 快捷指令
 const quickPrompts = [
-  { emoji: '🔥', text: '根据今日热搜写一篇小红书爆款文案' },
-  { emoji: '📱', text: '写一条抖音视频开场白，吸引眼球' },
-  { emoji: '✍️', text: '帮我写3个标题，选题：新品上线' },
-  { emoji: '🎬', text: '写一个60秒短视频脚本框架' },
-  { emoji: '💡', text: '分析最近爆款内容的共同规律' },
+  { emoji: '🔥', text: t('agentContentDept.prompt1') },
+  { emoji: '📱', text: t('agentContentDept.prompt2') },
+  { emoji: '✍️', text: t('agentContentDept.prompt3') },
+  { emoji: '🎬', text: t('agentContentDept.prompt4') },
+  { emoji: '💡', text: t('agentContentDept.prompt5') },
 ]
 
 function sendPrompt(text: string) {
@@ -289,7 +294,7 @@ function sendToCreative() {
   const results = copywritingResults.value
   if (results.length === 0) return
   const latest = results[results.length - 1]
-  const title = latest.topic || latest.content?.slice(0, 20) || '内容文案'
+  const title = latest.topic || latest.content?.slice(0, 20) || t('agentContentDept.contentCopy')
   // 找到 intel 阶段完成的任务，推进到 creative
   const task = pipelineStore.tasks.find(t => t.currentStage === 1 && t.status === 'running')
   if (task) {
@@ -304,7 +309,7 @@ function sendToCreative() {
     pipelineStore.advanceStage(newTask.id) // content→creative
   }
   sentToCreative.value = true
-  ElMessage.success('已发给创意部，可在任务中心查看')
+  ElMessage.success(t('agentContentDept.sentToast'))
   setTimeout(() => { sentToCreative.value = false }, 3000)
 }
 </script>

@@ -611,6 +611,8 @@ export function aggregateMonthProfit(
     expenses: any[]
     /** 已审核采购单（expense_amount 计入 docExpense），可空 */
     procureOrders?: any[]
+    /** 已审核换货单，可空 */
+    exchanges?: any[]
   },
   ctx: ProfitCostContext,
   aliasResolver?: (item: any, goodsList: any[]) => any,
@@ -645,6 +647,22 @@ export function aggregateMonthProfit(
     if (!m) continue
     ensure(m)
     map[m].docExpense += Number(o.expense_amount || 0)
+  }
+  for (const ex of input.exchanges || []) {
+    const m = String(ex.exchange_date || ex.created_at || '').slice(0, 7)
+    if (!m) continue
+    ensure(m)
+    // 换货净收入 = 换出金额 - 退货金额
+    map[m].revenue += Number(ex.exchange_amount || 0) - Number(ex.return_amount || 0)
+    // 换出商品成本（净额：换出成本，退回成本在原合同里已计入，这里不重复扣回）
+    map[m].cost += calcOrderCost(ex.exchange_goods_info, ctx, aliasResolver)
+    map[m].freight += myFreightShare(ex)
+    // 只计我方承担的费用项，对方承担的是应收不是我方成本
+    const feeItems: any[] = Array.isArray(ex.fee_items) ? ex.fee_items : []
+    const myFees = feeItems.length > 0
+      ? feeItems.filter((f: any) => f.bearer === 'buyer').reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0)
+      : Number(ex.expense_amount || 0)
+    map[m].docExpense += myFees
   }
   return Object.values(map).map(r => {
     const grossProfit = r.revenue - r.cost

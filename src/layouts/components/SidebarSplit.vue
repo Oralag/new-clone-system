@@ -15,7 +15,7 @@
           </defs>
         </svg>
       </div>
-      <div class="logo-name">数字游牧</div>
+      <div class="logo-name">{{ logoName }}</div>
     </div>
 
     <!-- Menu -->
@@ -30,7 +30,7 @@
         @click="onClick(item.key)"
       >
         <el-icon class="menu-icon"><component :is="item.icon" /></el-icon>
-        <span class="menu-label">{{ item.title }}</span>
+        <span class="menu-label">{{ tt(item.title) }}</span>
       </div>
     </div>
 
@@ -50,6 +50,11 @@ import { useAuthStore } from '@/stores/auth'
 import { usePermissionStore } from '@/stores/permission'
 import { useRouter, useRoute } from 'vue-router'
 import { Promotion } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tt = (key: string) => (key && key.startsWith('menu.') ? t(key) : key)
+const logoName = computed(() => t('app.name'))
 
 const appStore = useAppStore()
 const authStore = useAuthStore()

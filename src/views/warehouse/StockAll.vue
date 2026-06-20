@@ -2,10 +2,10 @@
   <div class="stock-page">
 
     <!-- 手机端：分类筛选 drawer -->
-    <el-drawer v-if="isMobile" v-model="drawerVisible" title="分类筛选" direction="ltr" size="260px">
+    <el-drawer v-if="isMobile" v-model="drawerVisible" :title="$t('warehouse.stockAll.drawerTitle')" direction="ltr" size="260px">
       <div class="sidebar-col" style="padding:0 8px">
         <div class="sidebar-label-row">
-          <span class="sidebar-label">分类</span>
+          <span class="sidebar-label">{{ $t('warehouse.stockAll.sidebarLabel') }}</span>
           <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
         </div>
         <el-select
@@ -14,11 +14,11 @@
           style="width:100%;margin-bottom:8px"
           @change="(val: any) => selectWarehouse(val)"
         >
-          <el-option label="全部仓库" :value="0" />
+          <el-option :label="$t('warehouse.stockAll.allWarehouses')" :value="0" />
           <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
         </el-select>
         <div class="sidebar-section" v-loading="cateLoading">
-          <div :class="['sidebar-item', selectedCate === 0 ? 'active' : '']" @click="selectCate(0); drawerVisible = false">全部</div>
+          <div :class="['sidebar-item', selectedCate === 0 ? 'active' : '']" @click="selectCate(0); drawerVisible = false">{{ $t('warehouse.stockAll.allCategories') }}</div>
           <el-tree
             :data="cateTree"
             :props="{ label: 'name', children: 'children' }"
@@ -48,7 +48,7 @@
 
       <div class="sidebar-col">
         <div class="sidebar-label-row">
-          <span class="sidebar-label">分类</span>
+          <span class="sidebar-label">{{ $t('warehouse.stockAll.sidebarLabel') }}</span>
           <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
         </div>
 
@@ -59,12 +59,12 @@
           style="width:100%;margin-bottom:8px"
           @change="(val) => selectWarehouse(val)"
         >
-          <el-option label="全部仓库" :value="0" />
+          <el-option :label="$t('warehouse.stockAll.allWarehouses')" :value="0" />
           <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
         </el-select>
 
         <div class="sidebar-section" v-loading="cateLoading">
-          <div :class="['sidebar-item', selectedCate === 0 ? 'active' : '']" @click="selectCate(0)">全部</div>
+          <div :class="['sidebar-item', selectedCate === 0 ? 'active' : '']" @click="selectCate(0)">{{ $t('warehouse.stockAll.allCategories') }}</div>
           <el-tree
             :data="cateTree"
             :props="{ label: 'name', children: 'children' }"
@@ -97,14 +97,14 @@
             <!-- 手机端：分类筛选入口按钮 -->
             <el-button v-if="isMobile" size="small" @click="drawerVisible = true">
               <el-icon><Filter /></el-icon>
-              {{ selectedCate === 0 ? '全部分类' : cateOptions.find(c => c.id === selectedCate)?.name || '分类' }}
+              {{ selectedCate === 0 ? $t('warehouse.stockAll.allCategories') : cateOptions.find(c => c.id === selectedCate)?.name || $t('warehouse.stockAll.filterCategory') }}
             </el-button>
             <span v-for="item in overviewStats" :key="item.label" class="stat-label">
               {{ item.label }}
-              <strong :class="item.label === '库存不足' && item.value > 0 ? 'stat-orange' : 'stat-blue'">{{ item.value }}</strong>
+              <strong :class="item.isLowStock && item.value > 0 ? 'stat-orange' : 'stat-blue'">{{ item.value }}</strong>
             </span>
             <span v-if="negativeStockItems.length > 0" class="stat-label">
-              负库存
+              {{ $t('warehouse.stockAll.statNegativeStock') }}
               <template v-for="(item, idx) in negativeStockItems" :key="idx">
                 <strong class="stat-red">{{ item.qty % 1 === 0 ? item.qty.toFixed(0) : item.qty.toFixed(2).replace(/\.?0+$/, '') }}{{ item.unit }}</strong>
                 <span v-if="idx < negativeStockItems.length - 1" style="color:#999;margin:0 2px">·</span>
@@ -114,14 +114,14 @@
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span :title="selectionScopeText" style="font-size:12px;color:#999">{{ stockHealthHint }}</span>
             <el-select v-model="statusFilter" size="small" style="width:110px" @change="refreshWithFirstPage">
-              <el-option label="全部" value="all" />
-              <el-option label="库存不足" value="low" />
-              <el-option label="零库存" value="zero" />
-              <el-option label="正常" value="normal" />
+              <el-option :label="$t('warehouse.stockAll.filterAll')" value="all" />
+              <el-option :label="$t('warehouse.stockAll.filterLow')" value="low" />
+              <el-option :label="$t('warehouse.stockAll.filterZero')" value="zero" />
+              <el-option :label="$t('warehouse.stockAll.filterNormal')" value="normal" />
             </el-select>
             <el-input
               v-model="keyword"
-              placeholder="商品名称/编码"
+              :placeholder="$t('warehouse.stockAll.searchPlaceholder')"
               clearable
               size="small"
               style="width:200px"
@@ -135,13 +135,13 @@
         </div>
 
         <div v-if="isMobile" v-loading="loading" class="mobile-stock-list">
-          <div v-if="!tableData.length" class="mobile-stock-empty">暂无数据</div>
+          <div v-if="!tableData.length" class="mobile-stock-empty">{{ $t('warehouse.stockAll.mobileEmpty') }}</div>
           <div v-for="row in tableData" :key="row.id" :class="['mobile-stock-card', bomGoodsSet.has(row.goods_sn) ? 'is-bom' : '']">
             <div class="mobile-stock-card__head">
               <div class="mobile-stock-card__title-wrap">
                 <div class="mobile-stock-card__title">{{ row.goods_name || '—' }}</div>
                 <div class="mobile-stock-card__meta">
-                  <span>{{ row.goods_sn || '无编码' }}</span>
+                  <span>{{ row.goods_sn || $t('warehouse.stockAll.colNoCode') }}</span>
                   <span v-if="row.cate_name">{{ row.cate_name }}</span>
                 </div>
               </div>
@@ -151,18 +151,18 @@
               </div>
             </div>
             <div class="mobile-stock-card__inline">
-              <span class="mobile-stock-card__label">单位</span>
+              <span class="mobile-stock-card__label">{{ $t('warehouse.stockAll.mobileUnitLabel') }}</span>
               <span class="mobile-stock-card__value">{{ row.unit_name || '—' }}</span>
               <span class="mobile-stock-card__sep">·</span>
-              <span class="mobile-stock-card__label">库存</span>
+              <span class="mobile-stock-card__label">{{ $t('warehouse.stockAll.mobileStockLabel') }}</span>
               <el-tag :type="stockStatusType(row)" size="small" effect="plain">
                 {{ getStockQty(row).toFixed(0) }}
               </el-tag>
             </div>
             <div class="mobile-stock-card__actions">
-              <el-button type="info" link size="small" @click="openFlowDialog(row)">流水</el-button>
-              <el-button type="success" link size="small" @click="router.push('/procure/inhouse')">采购</el-button>
-              <el-button type="warning" link size="small" @click="router.push('/sale/contract')">销售</el-button>
+              <el-button type="info" link size="small" @click="openFlowDialog(row)">{{ $t('warehouse.stockAll.btnFlow') }}</el-button>
+              <el-button type="success" link size="small" @click="router.push('/procure/inhouse')">{{ $t('warehouse.stockAll.btnPurchase') }}</el-button>
+              <el-button type="warning" link size="small" @click="router.push('/sale/contract')">{{ $t('warehouse.stockAll.btnSale') }}</el-button>
             </div>
           </div>
         </div>
@@ -170,22 +170,22 @@
         <el-table v-else v-loading="loading" :data="tableData" border stripe size="small" style="width:100%;margin-top:8px"
           :row-class-name="({ row }: any) => bomGoodsSet.has(row.goods_sn) ? 'bom-row' : ''"
           @sort-change="handleSortChange">
-          <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column prop="goods_name" label="商品名称" min-width="120" sortable="custom">
+          <el-table-column type="index" :label="$t('warehouse.stockAll.colIndex')" width="55" align="center" />
+          <el-table-column prop="goods_name" :label="$t('warehouse.stockAll.colGoodsName')" min-width="120" sortable="custom">
             <template #default="{ row }">
               <span>{{ row.goods_name }}</span>
               <el-tag v-if="bomGoodsSet.has(row.goods_sn)" size="small" style="margin-left:6px;vertical-align:middle;background:#e6a23c;color:#fff;border-color:#e6a23c">BOM</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="goods_sn" label="商品编码" width="130" />
-          <el-table-column prop="cate_name" label="分类" width="100" sortable="custom" />
-          <el-table-column label="规格" width="90">
+          <el-table-column prop="goods_sn" :label="$t('warehouse.stockAll.colGoodsSn')" width="130" />
+          <el-table-column prop="cate_name" :label="$t('warehouse.stockAll.colCate')" width="100" sortable="custom" />
+          <el-table-column :label="$t('warehouse.stockAll.colSpec')" width="90">
             <template #default="{ row }">
               <span>{{ formatSpecDisplay(row.spec) }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-          <el-table-column label="库存" width="140" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
+          <el-table-column prop="unit_name" :label="$t('warehouse.stockAll.colUnit')" width="65" align="center" />
+          <el-table-column :label="$t('warehouse.stockAll.colStock')" width="140" align="center" sortable="custom" prop="__stock_qty" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small" effect="plain">
                 <div style="line-height:1.3;text-align:center">
@@ -195,12 +195,12 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="库存状态" width="100" align="center">
+          <el-table-column :label="$t('warehouse.stockAll.colStockStatus')" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="stockStatusType(row)" size="small">{{ stockStatusLabel(row) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="移动均价" width="130" align="right">
+          <el-table-column :label="$t('warehouse.stockAll.colAvgPrice')" width="130" align="right">
             <template #default="{ row }">
               <div>¥{{ getAvgPrice(row).toFixed(3) }}/{{ row.unit_name }}</div>
               <div v-if="getLargeUnitPrice(row.id, getAvgPrice(row))" style="font-size:11px;color:#999">
@@ -208,66 +208,66 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="库存货值" width="110" align="right" sortable="custom" prop="__stock_value" :sort-orders="['descending','ascending',null]">
+          <el-table-column :label="$t('warehouse.stockAll.colStockValue')" width="110" align="right" sortable="custom" prop="__stock_value" :sort-orders="['descending','ascending',null]">
             <template #default="{ row }">
               <span style="color:#0071e3;font-weight:500">¥{{ (getStockQty(row) * getAvgPrice(row)).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="出入库记录" width="280" align="center">
+          <el-table-column :label="$t('warehouse.stockAll.colInOutRecord')" width="280" align="center">
             <template #default="{ row }">
               <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
                 <el-tag v-if="inhouseCountMap[row.id] > 0" type="success" size="small" effect="plain">
-                  采购入库 {{ inhouseCountMap[row.id] }}次
+                  {{ $t('warehouse.stockAll.tagInhouse') }} {{ inhouseCountMap[row.id] }}{{ $t('warehouse.stockAll.tagTimes') }}
                 </el-tag>
                 <el-tag v-if="returnCountMap[row.id] > 0" type="warning" size="small" effect="plain">
-                  退货 {{ returnCountMap[row.id] }}次
+                  {{ $t('warehouse.stockAll.tagReturn') }} {{ returnCountMap[row.id] }}{{ $t('warehouse.stockAll.tagTimes') }}
                 </el-tag>
                 <el-tag v-if="saleCountMap[row.id] > 0" type="danger" size="small" effect="plain">
-                  销售出库 {{ saleCountMap[row.id] }}次
+                  {{ $t('warehouse.stockAll.tagSaleOut') }} {{ saleCountMap[row.id] }}{{ $t('warehouse.stockAll.tagTimes') }}
                 </el-tag>
                 <el-tag v-if="retailCountMap[row.id] > 0" type="primary" size="small" effect="plain">
-                  零售 {{ retailCountMap[row.id] }}次
+                  {{ $t('warehouse.stockAll.tagRetail') }} {{ retailCountMap[row.id] }}{{ $t('warehouse.stockAll.tagTimes') }}
                 </el-tag>
                 <el-tag v-if="otherInCountMap[row.id] > 0" type="success" size="small" effect="plain">
-                  其他入库 {{ otherInCountMap[row.id] }}次
+                  {{ $t('warehouse.stockAll.tagOtherIn') }} {{ otherInCountMap[row.id] }}{{ $t('warehouse.stockAll.tagTimes') }}
                 </el-tag>
                 <el-tag v-if="otherOutCountMap[row.id] > 0" type="danger" size="small" effect="plain">
-                  其他出库 {{ otherOutCountMap[row.id] }}次
+                  {{ $t('warehouse.stockAll.tagOtherOut') }} {{ otherOutCountMap[row.id] }}{{ $t('warehouse.stockAll.tagTimes') }}
                 </el-tag>
                 <el-tag v-if="prodInCountMap[row.id] > 0" type="success" size="small" effect="plain">
-                  生产入库 {{ prodInCountMap[row.id] }}次
+                  {{ $t('warehouse.stockAll.tagProdIn') }} {{ prodInCountMap[row.id] }}{{ $t('warehouse.stockAll.tagTimes') }}
                 </el-tag>
                 <el-tag v-if="prodOutCountMap[row.id] > 0" type="warning" size="small" effect="plain">
-                  生产领料 {{ prodOutCountMap[row.id] }}次
+                  {{ $t('warehouse.stockAll.tagProdOut') }} {{ prodOutCountMap[row.id] }}{{ $t('warehouse.stockAll.tagTimes') }}
                 </el-tag>
-                <span v-if="!inhouseCountMap[row.id] && !returnCountMap[row.id] && !saleCountMap[row.id] && !retailCountMap[row.id] && !otherInCountMap[row.id] && !otherOutCountMap[row.id] && !prodInCountMap[row.id] && !prodOutCountMap[row.id]" style="color:#c0c4cc;font-size:12px">无记录</span>
+                <span v-if="!inhouseCountMap[row.id] && !returnCountMap[row.id] && !saleCountMap[row.id] && !retailCountMap[row.id] && !otherInCountMap[row.id] && !otherOutCountMap[row.id] && !prodInCountMap[row.id] && !prodOutCountMap[row.id]" style="color:#c0c4cc;font-size:12px">{{ $t('warehouse.stockAll.tagNoRecord') }}</span>
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="安全库存" width="130" align="center">
+          <el-table-column :label="$t('warehouse.stockAll.colSafeSetting')" width="130" align="center">
             <template #default="{ row }">
               <span v-if="Number(row.safe_min) > 0 || Number(row.safe_max) > 0"
                 style="font-size:12px;color:#6b7280;cursor:pointer" @click="openSafeSetting(row)">
                 {{ safeRangeText(row) }}
               </span>
-              <el-button v-else type="primary" link size="small" @click="openSafeSetting(row)">设置</el-button>
+              <el-button v-else type="primary" link size="small" @click="openSafeSetting(row)">{{ $t('warehouse.stockAll.btnSet') }}</el-button>
             </template>
           </el-table-column>
-          <el-table-column label="流水" width="60" align="center">
+          <el-table-column :label="$t('warehouse.stockAll.colFlowBtn')" width="60" align="center">
             <template #default="{ row }">
-              <el-button type="info" link size="small" @click="openFlowDialog(row)">流水</el-button>
+              <el-button type="info" link size="small" @click="openFlowDialog(row)">{{ $t('warehouse.stockAll.colFlowBtn') }}</el-button>
             </template>
           </el-table-column>
-          <el-table-column label="快捷跳转" width="120" align="center" fixed="right" class-name="col-white-bg">
+          <el-table-column :label="$t('warehouse.stockAll.colQuickJump')" width="120" align="center" fixed="right" class-name="col-white-bg">
             <template #default="{ row }">
-              <el-button type="success" link size="small" @click="router.push('/procure/inhouse')">采购</el-button>
-              <el-button type="warning" link size="small" @click="router.push('/sale/contract')">销售</el-button>
+              <el-button type="success" link size="small" @click="router.push('/procure/inhouse')">{{ $t('warehouse.stockAll.btnPurchase') }}</el-button>
+              <el-button type="warning" link size="small" @click="router.push('/sale/contract')">{{ $t('warehouse.stockAll.btnSale') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
 
         <div class="pager-row">
-          <span>共 {{ total }} 条</span>
+          <span>{{ $t('warehouse.stockAll.pagerTotal', { total }) }}</span>
           <span v-if="tableSummaryText" style="color:#999">{{ tableSummaryText }}</span>
           <el-pagination
             v-model:current-page="page"
@@ -284,99 +284,100 @@
   </div>
 
   <!-- 安全库存设置弹窗 -->
-  <el-dialog v-model="safeDialogVisible" title="设置安全库存" width="360px" :close-on-click-modal="false">
+  <el-dialog v-model="safeDialogVisible" :title="$t('warehouse.stockAll.safeDialogTitle')" width="360px" :close-on-click-modal="false">
     <div style="font-size:13px;color:#666;margin-bottom:12px">{{ safeForm.goods_name }}</div>
     <el-form label-width="80px">
-      <el-form-item label="最低库存">
-        <el-input-number v-model="safeForm.safe_min" :min="0" :precision="0" style="width:100%" placeholder="低于此值触发不足预警" />
+      <el-form-item :label="$t('warehouse.stockAll.fieldSafeMin')">
+        <el-input-number v-model="safeForm.safe_min" :min="0" :precision="0" style="width:100%" :placeholder="$t('warehouse.stockAll.placeholderSafeMin')" />
       </el-form-item>
-      <el-form-item label="最高库存">
-        <el-input-number v-model="safeForm.safe_max" :min="0" :precision="0" style="width:100%" placeholder="0表示不限" />
+      <el-form-item :label="$t('warehouse.stockAll.fieldSafeMax')">
+        <el-input-number v-model="safeForm.safe_max" :min="0" :precision="0" style="width:100%" :placeholder="$t('warehouse.stockAll.placeholderSafeMax')" />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="safeDialogVisible = false">取消</el-button>
-      <el-button type="primary" :loading="safeSaving" @click="saveSafeSetting">保存</el-button>
+      <el-button @click="safeDialogVisible = false">{{ $t('warehouse.stockAll.btnCancel') }}</el-button>
+      <el-button type="primary" :loading="safeSaving" @click="saveSafeSetting">{{ $t('warehouse.stockAll.btnSave') }}</el-button>
     </template>
   </el-dialog>
 
   <!-- 出入库流水弹窗 -->
-  <el-dialog v-model="flowDialogVisible" :title="`出入库流水 — ${flowGoodsName}`" width="750px" append-to-body>
+  <el-dialog v-model="flowDialogVisible" :title="$t('warehouse.stockAll.flowDialogTitle', { name: flowGoodsName })" width="750px" append-to-body>
     <div v-loading="flowLoading">
       <el-table :data="flowRows" border size="small" style="width:100%" max-height="440">
         <el-table-column type="index" width="45" align="center" />
-        <el-table-column label="类型" width="90" align="center">
+        <el-table-column :label="$t('warehouse.stockAll.flowColType')" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="(flowTypeMap[row._type]?.tag as any) || 'info'" size="small">
               {{ flowTypeMap[row._type]?.label || row._type }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="单据编号" min-width="130">
+        <el-table-column :label="$t('warehouse.stockAll.flowColOrderSn')" min-width="130">
           <template #default="{ row }">
             <span style="font-size:13px;color:#555">{{ row._sn || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="跳转" width="70" align="center">
+        <el-table-column :label="$t('warehouse.stockAll.flowColView')" width="70" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="goToDoc(row)">查看</el-button>
+            <el-button type="primary" link size="small" @click="goToDoc(row)">{{ $t('warehouse.stockAll.btnViewDoc') }}</el-button>
           </template>
         </el-table-column>
-        <el-table-column label="数量" width="110" align="right">
+        <el-table-column :label="$t('warehouse.stockAll.flowColQty')" width="110" align="right">
           <template #default="{ row }">
             <span :style="{ color: flowTypeMap[row._type]?.direction === '+' ? '#16a34a' : '#dc2626', fontWeight: 600 }">
               {{ flowTypeMap[row._type]?.direction || '+' }}{{ row._qty }}<span v-if="row._unit" style="font-weight:400;margin-left:2px">{{ row._unit }}</span>
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="单价" width="90" align="right">
+        <el-table-column :label="$t('warehouse.stockAll.flowColPrice')" width="90" align="right">
           <template #default="{ row }">¥{{ Number(row._price || 0).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column label="日期" width="100">
+        <el-table-column :label="$t('warehouse.stockAll.flowColDate')" width="100">
           <template #default="{ row }">{{ fmtDt(row._date) }}</template>
         </el-table-column>
-        <el-table-column label="备注/对方" min-width="110" :show-overflow-tooltip="{ appendTo: 'body' }">
+        <el-table-column :label="$t('warehouse.stockAll.flowColPartner')" min-width="110" :show-overflow-tooltip="{ appendTo: 'body' }">
           <template #default="{ row }">{{ row._partner || '—' }}</template>
         </el-table-column>
       </el-table>
       <div v-if="!flowLoading && flowRows.length" style="display:flex;gap:20px;margin-top:10px;font-size:13px;color:#606266">
         <template v-if="!flowHasMultiUnit">
-          <span>入库合计：<b style="color:#16a34a">+{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '+').reduce((s, r) => s + r._qty, 0) }}</b></span>
-          <span>出库合计：<b style="color:#dc2626">-{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '-').reduce((s, r) => s + r._qty, 0) }}</b></span>
-          <span>净变动：<b>{{ flowRows.reduce((s, r) => s + (flowTypeMap[r._type]?.direction === '+' ? r._qty : -r._qty), 0) }}</b></span>
+          <span>{{ $t('warehouse.stockAll.flowTotalIn') }}<b style="color:#16a34a">+{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '+').reduce((s, r) => s + r._qty, 0) }}</b></span>
+          <span>{{ $t('warehouse.stockAll.flowTotalOut') }}<b style="color:#dc2626">-{{ flowRows.filter(r => flowTypeMap[r._type]?.direction === '-').reduce((s, r) => s + r._qty, 0) }}</b></span>
+          <span>{{ $t('warehouse.stockAll.flowNetChange') }}<b>{{ flowRows.reduce((s, r) => s + (flowTypeMap[r._type]?.direction === '+' ? r._qty : -r._qty), 0) }}</b></span>
         </template>
-        <span>共 <b>{{ flowRows.length }}</b> 笔</span>
+        <span>{{ $t('warehouse.stockAll.flowRecordCount', { count: flowRows.length }) }}</span>
       </div>
-      <div v-if="!flowLoading && !flowRows.length" style="text-align:center;color:#c0c4cc;padding:20px">暂无记录</div>
+      <div v-if="!flowLoading && !flowRows.length" style="text-align:center;color:#c0c4cc;padding:20px">{{ $t('warehouse.stockAll.flowEmpty') }}</div>
     </div>
     <template #footer>
-      <el-button @click="flowDialogVisible = false">关闭</el-button>
+      <el-button @click="flowDialogVisible = false">{{ $t('warehouse.stockAll.btnClose') }}</el-button>
     </template>
   </el-dialog>
 
   <el-dialog v-model="cateFormVisible" :title="cateFormTitle" width="400px" append-to-body>
     <el-form :model="cateForm" label-width="90px">
-      <el-form-item label="分类名称" :rules="[{ required: true }]">
-        <el-input v-model="cateForm.name" placeholder="请输入分类名称" />
+      <el-form-item :label="$t('warehouse.stockAll.fieldCateName')" :rules="[{ required: true }]">
+        <el-input v-model="cateForm.name" :placeholder="$t('warehouse.stockAll.placeholderCateName')" />
       </el-form-item>
-      <el-form-item label="上级分类">
-        <el-select v-model="cateForm.parent_id" placeholder="请选择（可选）" clearable style="width:100%">
+      <el-form-item :label="$t('warehouse.stockAll.fieldCateParent')">
+        <el-select v-model="cateForm.parent_id" :placeholder="$t('warehouse.stockAll.placeholderCateParent')" clearable style="width:100%">
           <el-option v-for="c in cateTree" :key="c.id" :label="c.name" :value="c.id" />
         </el-select>
       </el-form-item>
-      <el-form-item label="排序">
+      <el-form-item :label="$t('warehouse.stockAll.fieldCateSort')">
         <el-input-number v-model="cateForm.sort" :min="0" style="width:100%" />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="cateFormVisible = false">取消</el-button>
-      <el-button type="primary" :loading="cateSaving" @click="handleSaveCate">确定</el-button>
+      <el-button @click="cateFormVisible = false">{{ $t('warehouse.stockAll.btnCateCancel') }}</el-button>
+      <el-button type="primary" :loading="cateSaving" @click="handleSaveCate">{{ $t('warehouse.stockAll.btnCateConfirm') }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, onActivated, onMounted, onUnmounted, ref, reactive, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { fmtDt } from '@/utils/date'
 import { useRouter } from 'vue-router'
 import { Search, Plus, Edit, Delete, Filter } from '@element-plus/icons-vue'
@@ -386,6 +387,7 @@ import { getGoodsList, getGoodsCateList, createGoodsCate, updateGoodsCate, delet
 import http from '@/api/http'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 
+const { t } = useI18n()
 const router = useRouter()
 const stockRefreshStore = useStockRefreshStore()
 
@@ -476,33 +478,33 @@ async function loadCates() {
 
 // 分类新增/编辑弹框
 const cateFormVisible = ref(false)
-const cateFormTitle = ref('新增分类')
+const cateFormTitle = ref('')
 const cateSaving = ref(false)
 const cateForm = reactive({ id: 0, name: '', parent_id: null as any, sort: 0 })
 
 function openCateForm(row?: any) {
   if (row) {
     Object.assign(cateForm, { id: row.id, name: row.name, parent_id: row.parent_id ?? null, sort: row.sort ?? 0 })
-    cateFormTitle.value = '编辑分类'
+    cateFormTitle.value = t('warehouse.stockAll.cateFormTitleEdit')
   } else {
     Object.assign(cateForm, { id: 0, name: '', parent_id: null, sort: 0 })
-    cateFormTitle.value = '新增分类'
+    cateFormTitle.value = t('warehouse.stockAll.cateFormTitleAdd')
   }
   cateFormVisible.value = true
 }
 
 async function handleSaveCate() {
-  if (!cateForm.name.trim()) { ElMessage.warning('请输入分类名称'); return }
+  if (!cateForm.name.trim()) { ElMessage.warning(t('warehouse.stockAll.msgWarnCateName')); return }
   const sameLevelDup = cateOptions.value.find(c =>
     c.name.trim() === cateForm.name.trim() &&
     String(c.parent_id ?? '0') === String(cateForm.parent_id ?? '0') &&
     c.id !== cateForm.id
   )
-  if (sameLevelDup) { ElMessage.warning(`同级分类下已存在"${cateForm.name}"，请使用其他名称`); return }
+  if (sameLevelDup) { ElMessage.warning(t('warehouse.stockAll.msgWarnDupCate', { name: cateForm.name })); return }
   cateSaving.value = true
   try {
     cateForm.id ? await updateGoodsCate(cateForm) : await createGoodsCate(cateForm)
-    ElMessage.success('操作成功')
+    ElMessage.success(t('warehouse.stockAll.msgCateSuccess'))
     cateFormVisible.value = false
     await loadCates()
   } finally {
@@ -511,9 +513,9 @@ async function handleSaveCate() {
 }
 
 async function handleDeleteCate(id: number) {
-  await ElMessageBox.confirm('确定删除该分类？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('warehouse.stockAll.msgDeleteCateConfirm'), t('warehouse.stockAll.msgConfirmTitle'), { type: 'warning' })
   await deleteGoodsCate(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('warehouse.stockAll.msgCateSuccess'))
   if (selectedCate.value === id) selectedCate.value = 0
   await loadCates()
 }
@@ -795,11 +797,11 @@ const zeroStockCount = computed(() => filteredGoods.value.filter(r => getStockQt
 const highStockCount = computed(() => filteredGoods.value.filter(r => Number(r.safe_max) > 0 && getStockQty(r) > Number(r.safe_max)).length)
 
 const overviewStats = computed(() => [
-  { label: '商品总数', value: filteredGoods.value.length },
-  { label: '总库存', value: totalQty.value.toFixed(2) },
-  { label: '库存总值', value: '¥' + totalStockValue.value.toFixed(2) },
-  { label: '库存不足', value: lowStockCount.value },
-  { label: '零库存', value: zeroStockCount.value },
+  { label: t('warehouse.stockAll.statGoodsTotal'), value: filteredGoods.value.length, isLowStock: false },
+  { label: t('warehouse.stockAll.statTotalQty'), value: totalQty.value.toFixed(2), isLowStock: false },
+  { label: t('warehouse.stockAll.statTotalValue'), value: '¥' + totalStockValue.value.toFixed(2), isLowStock: false },
+  { label: t('warehouse.stockAll.statLowStock'), value: lowStockCount.value, isLowStock: true },
+  { label: t('warehouse.stockAll.statZeroStock'), value: zeroStockCount.value, isLowStock: false },
 ])
 
 const tableSummaryText = computed(() => {
@@ -809,26 +811,26 @@ const tableSummaryText = computed(() => {
     if (cate?.name) filters.push(cate.name)
   }
   if (statusFilter.value !== 'all') filters.push(stockFilterLabel(statusFilter.value))
-  if (keyword.value.trim()) filters.push(`关键词：${keyword.value.trim()}`)
+  if (keyword.value.trim()) filters.push(t('warehouse.stockAll.scopeKeyword', { kw: keyword.value.trim() }))
   return filters.join(' / ')
 })
 
 const stockHealthHint = computed(() => {
   const healthy = Math.max(filteredGoods.value.length - negativeStockCount.value - lowStockCount.value - zeroStockCount.value, 0)
-  return `正常 ${healthy} / 负库存 ${negativeStockCount.value} / 零库存 ${zeroStockCount.value} / 不足 ${lowStockCount.value}`
+  return t('warehouse.stockAll.healthHint', { healthy, neg: negativeStockCount.value, zero: zeroStockCount.value, low: lowStockCount.value })
 })
 
 const selectionScopeText = computed(() => {
   const labels = []
   if (selectedWarehouse.value) {
     const w = warehouses.value.find(item => item.id === selectedWarehouse.value)
-    if (w?.name) labels.push(`仓库：${w.name}`)
+    if (w?.name) labels.push(t('warehouse.stockAll.scopeWarehouse', { name: w.name }))
   }
   if (selectedCate.value) {
     const cate = cateOptions.value.find(item => item.id === selectedCate.value)
-    if (cate?.name) labels.push(`分类：${cate.name}`)
+    if (cate?.name) labels.push(t('warehouse.stockAll.scopeCategory', { name: cate.name }))
   }
-  return labels.join(' / ') || '当前范围：全部'
+  return labels.join(' / ') || t('warehouse.stockAll.scopeAll')
 })
 
 function stockStatusType(row: any) {
@@ -846,15 +848,20 @@ function stockStatusLabel(row: any) {
   const stock = getStockQty(row)
   const safeMin = Number(row.safe_min || 0)
   const safeMax = Number(row.safe_max || 0)
-  if (stock < 0) return '负库存'
-  if (stock === 0) return '零库存'
-  if (safeMin > 0 && stock < safeMin) return '库存不足'
-  if (safeMax > 0 && stock > safeMax) return '库存过高'
-  return '正常'
+  if (stock < 0) return t('warehouse.stockAll.statusNegative')
+  if (stock === 0) return t('warehouse.stockAll.statusZero')
+  if (safeMin > 0 && stock < safeMin) return t('warehouse.stockAll.statusLow')
+  if (safeMax > 0 && stock > safeMax) return t('warehouse.stockAll.statusHigh')
+  return t('warehouse.stockAll.statusNormal')
 }
 
 function stockFilterLabel(value: 'all' | 'low' | 'zero' | 'normal') {
-  return ({ all: '全部', low: '库存不足', zero: '零库存', normal: '正常' } as const)[value]
+  return {
+    all: t('warehouse.stockAll.filterAll'),
+    low: t('warehouse.stockAll.filterLow'),
+    zero: t('warehouse.stockAll.filterZero'),
+    normal: t('warehouse.stockAll.filterNormal'),
+  }[value]
 }
 
 function safeRangeText(row: any) {
@@ -886,9 +893,9 @@ async function saveSafeSetting() {
     const row = allGoods.value.find((r: any) => r.id === safeForm.value.id)
     if (row) { row.safe_min = safeForm.value.safe_min; row.safe_max = safeForm.value.safe_max }
     safeDialogVisible.value = false
-    ElMessage.success('设置成功')
+    ElMessage.success(t('warehouse.stockAll.msgSafeSuccess'))
   } catch {
-    ElMessage.error('设置失败')
+    ElMessage.error(t('warehouse.stockAll.msgSafeFail'))
   } finally {
     safeSaving.value = false
   }
@@ -1281,16 +1288,24 @@ const flowGoodsName = ref('')
 const flowRows = ref<any[]>([])
 const flowHasMultiUnit = ref(false)
 
-const flowTypeMap: Record<string, { label: string; tag: string; direction: '+' | '-' }> = {
-  in: { label: '采购入库', tag: 'success', direction: '+' },
-  return_in: { label: '采购退货', tag: 'warning', direction: '-' },
-  out: { label: '销售出库', tag: 'danger', direction: '-' },
-  retail: { label: '零售出库', tag: 'primary', direction: '-' },
-  other_in: { label: '其他入库', tag: 'success', direction: '+' },
-  other_out: { label: '其他出库', tag: 'danger', direction: '-' },
-  prod_in: { label: '生产入库', tag: 'success', direction: '+' },
-  prod_out: { label: '生产领料', tag: 'warning', direction: '-' },
-}
+const flowTypeMap = computed<Record<string, { label: string; tag: string; direction: '+' | '-' }>>(() => ({
+  in: { label: t('warehouse.stockAll.tagInhouse'), tag: 'success', direction: '+' },
+  return_in: { label: t('warehouse.stockAll.tagReturn'), tag: 'warning', direction: '-' },
+  out: { label: t('warehouse.stockAll.tagSaleOut'), tag: 'danger', direction: '-' },
+  retail: { label: t('warehouse.stockAll.tagRetail'), tag: 'primary', direction: '-' },
+  other_in: { label: t('warehouse.stockAll.tagOtherIn'), tag: 'success', direction: '+' },
+  other_out: { label: t('warehouse.stockAll.tagOtherOut'), tag: 'danger', direction: '-' },
+  prod_in: { label: t('warehouse.stockAll.tagProdIn'), tag: 'success', direction: '+' },
+  prod_out: { label: t('warehouse.stockAll.tagProdOut'), tag: 'warning', direction: '-' },
+  sale_return: { label: t('warehouse.stockAll.tagReturn'), tag: 'warning', direction: '+' },
+  sale_return_reverse: { label: t('warehouse.stockAll.tagSaleOut') + ' (Reversed)', tag: 'info', direction: '-' },
+  sale_out: { label: t('warehouse.stockAll.tagSaleOut'), tag: 'danger', direction: '-' },
+  sale_out_reverse: { label: t('warehouse.stockAll.tagSaleOut') + ' (Reversed)', tag: 'info', direction: '+' },
+  exchange_return_in: { label: 'Exchange Return In', tag: 'success', direction: '+' },
+  exchange_return_in_reverse: { label: 'Exchange Return In (Reversed)', tag: 'info', direction: '-' },
+  exchange_out: { label: 'Exchange Out', tag: 'danger', direction: '-' },
+  exchange_out_reverse: { label: 'Exchange Out (Reversed)', tag: 'info', direction: '+' },
+}))
 
 function goToDoc(row: any) {
   flowDialogVisible.value = false
@@ -1310,6 +1325,12 @@ function goToDoc(row: any) {
     router.push('/production/inhouse')
   } else if (row._type === 'prod_out') {
     router.push('/production/material')
+  } else if (['sale_return', 'sale_return_reverse'].includes(row._type)) {
+    router.push('/sale/return')
+  } else if (['sale_out', 'sale_out_reverse'].includes(row._type)) {
+    router.push('/sale/out')
+  } else if (row._type?.startsWith('exchange')) {
+    router.push('/sale/exchange')
   }
 }
 
@@ -1446,7 +1467,7 @@ async function openFlowDialog(goods: any) {
               _unit: matched.unit_name || '',
               _price: Number(matched.price || 0),
               _date: r.order_date || r.created_at || r.create_time || '',
-              _partner: r.member_name || '散客',
+              _partner: r.member_name || t('warehouse.stockAll.partnerGuest'),
             })
           }
         } catch { /* ignore */ }

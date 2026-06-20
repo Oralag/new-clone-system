@@ -3,49 +3,49 @@
     <el-card>
       <template #header>
         <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:15px;font-weight:600">提成报表</span>
-          <el-button link type="primary" @click="router.push('/sale/commission-setting')">提成设置</el-button>
+          <span style="font-size:15px;font-weight:600">{{ $t('reports.commission.title') }}</span>
+          <el-button link type="primary" @click="router.push('/sale/commission-setting')">{{ $t('reports.commission.commissionSetting') }}</el-button>
         </div>
       </template>
 
       <el-form inline style="margin-bottom:12px">
-        <el-form-item label="员工">
-          <el-select v-model="filterStaff" placeholder="全部员工" clearable style="width:150px">
+        <el-form-item :label="$t('reports.commission.filterStaff')">
+          <el-select v-model="filterStaff" :placeholder="$t('reports.commission.allStaff')" clearable style="width:150px">
             <el-option v-for="s in staffInContracts" :key="s.id" :label="s.name" :value="s.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="时间范围">
+        <el-form-item :label="$t('reports.commission.dateRange')">
           <el-date-picker
             v-model="dateRange"
             type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
+            :range-separator="$t('reports.commission.rangeSeparator')"
+            :start-placeholder="$t('reports.commission.startDate')"
+            :end-placeholder="$t('reports.commission.endDate')"
             value-format="YYYY-MM-DD"
             style="width:240px"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadContracts">查询</el-button>
-          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="loadContracts">{{ $t('reports.commission.query') }}</el-button>
+          <el-button @click="onReset">{{ $t('reports.commission.reset') }}</el-button>
         </el-form-item>
       </el-form>
 
       <el-table :data="reportRows" border stripe v-loading="loading" style="width:100%">
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="staffName" label="员工姓名" min-width="120" />
-        <el-table-column prop="orderCount" label="合同数" width="90" align="center" />
-        <el-table-column label="销售金额" width="130" align="right">
+        <el-table-column type="index" :label="$t('reports.commission.index')" width="60" align="center" />
+        <el-table-column prop="staffName" :label="$t('reports.commission.staffName')" min-width="120" />
+        <el-table-column prop="orderCount" :label="$t('reports.commission.orderCount')" width="90" align="center" />
+        <el-table-column :label="$t('reports.commission.saleAmount')" width="130" align="right">
           <template #default="{ row }">
             <span style="color:#0071e3;font-weight:500">¥{{ row.saleAmount.toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="提成比例" width="100" align="center">
+        <el-table-column :label="$t('reports.commission.commissionRate')" width="100" align="center">
           <template #default="{ row }">
             {{ row.commissionRate }}%
           </template>
         </el-table-column>
-        <el-table-column label="提成金额" width="130" align="right">
+        <el-table-column :label="$t('reports.commission.commissionAmount')" width="130" align="right">
           <template #default="{ row }">
             <span style="color:#16a34a;font-weight:600">¥{{ row.commissionAmount.toFixed(2) }}</span>
           </template>
@@ -54,14 +54,14 @@
 
       <div v-if="reportRows.length === 0 && !loading"
         style="text-align:center;color:rgba(29,29,31,0.35);padding:40px 0;font-size:14px">
-        暂无提成数据。请先在「提成设置」中配置员工提成比例，并在销售订单中选择经办人。
+        {{ $t('reports.commission.emptyHint') }}
       </div>
 
-      <!-- 汇总行 -->
+      <!-- Summary row -->
       <div v-if="reportRows.length > 0" class="summary-bar">
-        <span>共 <b>{{ reportRows.length }}</b> 名员工</span>
-        <span>总销售额：<b style="color:#0071e3">¥{{ totalSale.toFixed(2) }}</b></span>
-        <span>总提成：<b style="color:#16a34a">¥{{ totalCommission.toFixed(2) }}</b></span>
+        <span>{{ $t('reports.commission.staffCount', { n: reportRows.length }) }}</span>
+        <span>{{ $t('reports.commission.totalSale') }}<b style="color:#0071e3">¥{{ totalSale.toFixed(2) }}</b></span>
+        <span>{{ $t('reports.commission.totalCommission') }}<b style="color:#16a34a">¥{{ totalCommission.toFixed(2) }}</b></span>
       </div>
     </el-card>
   </div>
@@ -69,18 +69,20 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { getContractList } from '@/api/sale'
 import { getStaffList } from '@/api/personnel'
 import { loadCommissionRates } from '@/utils/commission'
 
+const { t: _t } = useI18n()
 const router = useRouter()
 
 const loading = ref(false)
 const allContracts = ref<any[]>([])
 const filterStaff = ref<any>(null)
 const dateRange = ref<[string, string] | null>(null)
-const staffList = ref<any[]>([])  // 员工档案
+const staffList = ref<any[]>([])
 
 async function loadContracts() {
   loading.value = true
@@ -103,12 +105,9 @@ onMounted(async () => {
   staffList.value = res.data?.rows ?? []
 })
 
-// 合同里出现过的经办人（有 admin_id 的），合并员工档案
 const staffInContracts = computed(() => {
   const map = new Map<number, string>()
-  // 优先从员工档案
   for (const s of staffList.value) map.set(s.id, s.name)
-  // 补充合同里有但档案里没有的
   for (const c of allContracts.value) {
     if (c.admin_id && c.admin_name && !map.has(c.admin_id)) map.set(c.admin_id, c.admin_name)
   }
@@ -119,7 +118,6 @@ const reportRows = computed(() => {
   const rates = loadCommissionRates()
   const rateMap = new Map(rates.map(r => [r.staffId, r]))
 
-  // 按 admin_id 聚合
   const groups = new Map<number, { staffName: string; saleAmount: number; orderCount: number }>()
 
   for (const c of allContracts.value) {

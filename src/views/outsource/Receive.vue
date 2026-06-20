@@ -3,44 +3,44 @@
     <div v-if="!showForm">
       <el-card>
         <ScTable ref="tableRef"
-          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi" del-path="/outsource/receive/batchDel" export-file-name="委外收货" :params="searchForm">
+          :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi" del-path="/outsource/receive/batchDel" :export-file-name="$t('outsource.receive.exportFileName')" :params="searchForm">
           <template #search>
-            <el-input v-model="searchForm.receive_no" placeholder="收货编号" clearable style="width:160px" />
-            <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:160px" />
-            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
-              <el-option label="未核对" value="unreconciled" />
+            <el-input v-model="searchForm.receive_no" :placeholder="$t('outsource.receive.searchReceiveNoPlaceholder')" clearable style="width:160px" />
+            <el-input v-model="searchForm.goods_name" :placeholder="$t('outsource.receive.searchGoodsNamePlaceholder')" clearable style="width:160px" />
+            <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="$t('outsource.receive.searchReconcileFilterPlaceholder')">
+              <el-option :label="$t('outsource.receive.optionUnreconciled')" value="unreconciled" />
             </el-select>
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ $t('outsource.receive.btnSearch') }}</el-button>
+            <el-button @click="resetSearch">{{ $t('outsource.receive.btnReset') }}</el-button>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openAdd">新增收货</el-button>
+            <el-button type="primary" :icon="Plus" @click="openAdd">{{ $t('outsource.receive.btnAdd') }}</el-button>
           </template>
-          <el-table-column prop="receive_no" label="收货编号" min-width="150" />
-          <el-table-column prop="supplier_name" label="供应商" min-width="130" />
-          <el-table-column prop="receive_date" label="收货日期" width="110">
+          <el-table-column prop="receive_no" :label="$t('outsource.receive.colReceiveNo')" min-width="150" />
+          <el-table-column prop="supplier_name" :label="$t('outsource.receive.colSupplier')" min-width="130" />
+          <el-table-column prop="receive_date" :label="$t('outsource.receive.colReceiveDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.receive_date || row.created_at) }}</template>
           </el-table-column>
-          <el-table-column prop="receiver" label="收货人" width="90" />
-          <el-table-column label="收货总价" width="110" align="right">
+          <el-table-column prop="receiver" :label="$t('outsource.receive.colReceiver')" width="90" />
+          <el-table-column :label="$t('outsource.receive.colTotalPrice')" width="110" align="right">
             <template #default="{ row }">{{ Number(row.total_price||0).toFixed(2) }}</template>
           </el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column :label="$t('outsource.receive.colStatus')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status===1?'success':row.status===2?'danger':'info'" size="small">
-                {{ row.status===1?'已审核':row.status===2?'已驳回':'待审核' }}
+                {{ row.status===1?$t('outsource.receive.statusAudited'):row.status===2?$t('outsource.receive.statusRejected'):$t('outsource.receive.statusPending') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220" fixed="right">
+          <el-table-column :label="$t('outsource.receive.colActions')" width="220" fixed="right">
             <template #default="{ row }">
-              <el-button type="success" size="small" link @click="openView(row)">查看</el-button>
-              <el-button v-if="row.status===0" type="primary" size="small" link @click="openEdit(row)">编辑</el-button>
-              <el-button v-if="row.status===0" type="primary" size="small" link @click="doAudit(row,1)">审核</el-button>
-              <el-button v-if="row.status===0" type="danger" size="small" link @click="doAudit(row,2)">驳回</el-button>
-              <el-button v-if="row.status===1 && !permStore.isSubAccount" type="warning" size="small" link @click="doAudit(row,0)">反审核</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? '请先反审核再删除' : ''" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="success" size="small" link @click="openView(row)">{{ $t('outsource.receive.btnView') }}</el-button>
+              <el-button v-if="row.status===0" type="primary" size="small" link @click="openEdit(row)">{{ $t('outsource.receive.btnEdit') }}</el-button>
+              <el-button v-if="row.status===0" type="primary" size="small" link @click="doAudit(row,1)">{{ $t('outsource.receive.btnAudit') }}</el-button>
+              <el-button v-if="row.status===0" type="danger" size="small" link @click="doAudit(row,2)">{{ $t('outsource.receive.btnReject') }}</el-button>
+              <el-button v-if="row.status===1 && !permStore.isSubAccount" type="warning" size="small" link @click="doAudit(row,0)">{{ $t('outsource.receive.btnUnaudit') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('outsource.receive.btnReconciled') : $t('outsource.receive.btnReconcile') }}</el-button>
+              <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? $t('outsource.receive.titleDeleteDisabled') : ''" @click="handleDelete(row.id)">{{ $t('outsource.receive.btnDelete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -50,38 +50,38 @@
     <div v-else class="form-page">
       <div class="form-topbar">
         <div class="form-topbar-left">
-          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ isView?'查看收货单':fd.id?'编辑收货单':'新增收货单' }}</span>
-          <el-tag v-if="fd.status===1" type="success" size="small">已审核</el-tag>
-          <el-tag v-else-if="fd.status===2" type="danger" size="small">已驳回</el-tag>
+          <el-button :icon="ArrowLeft" @click="backToList">{{ $t('outsource.receive.btnBack') }}</el-button>
+          <span class="form-title">{{ isView?$t('outsource.receive.formTitleView'):fd.id?$t('outsource.receive.formTitleEdit'):$t('outsource.receive.formTitleAdd') }}</span>
+          <el-tag v-if="fd.status===1" type="success" size="small">{{ $t('outsource.receive.statusAudited') }}</el-tag>
+          <el-tag v-else-if="fd.status===2" type="danger" size="small">{{ $t('outsource.receive.statusRejected') }}</el-tag>
         </div>
         <div class="form-topbar-right" v-if="!isView">
-          <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('outsource.receive.btnSave') }}</el-button>
         </div>
       </div>
       <div class="form-body">
         <div class="form-section">
           <el-row :gutter="16">
-            <el-col :span="6"><div class="field-row"><span class="field-label">收货编号</span><el-input v-model="fd.receive_no" placeholder="不填自动生成" style="flex:1" :disabled="isView" /></div></el-col>
+            <el-col :span="6"><div class="field-row"><span class="field-label">{{ $t('outsource.receive.fieldReceiveNo') }}</span><el-input v-model="fd.receive_no" :placeholder="$t('outsource.receive.receiveNoPlaceholder')" style="flex:1" :disabled="isView" /></div></el-col>
             <el-col :span="6">
               <div class="field-row">
-                <span class="field-label required">供应商</span>
-                <el-select v-model="fd.supplier_id" placeholder="选择供应商" style="flex:1" filterable :disabled="isView" @change="onSupplierChange">
+                <span class="field-label required">{{ $t('outsource.receive.fieldSupplier') }}</span>
+                <el-select v-model="fd.supplier_id" :placeholder="$t('outsource.receive.supplierPlaceholder')" style="flex:1" filterable :disabled="isView" @change="onSupplierChange">
                   <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
                 </el-select>
               </div>
             </el-col>
-            <el-col :span="6"><div class="field-row"><span class="field-label required">收货日期</span><el-date-picker v-model="fd.receive_date" type="date" value-format="YYYY-MM-DD" style="flex:1" :disabled="isView" /></div></el-col>
-            <el-col :span="6"><div class="field-row"><span class="field-label">收货人</span><el-input v-model="fd.receiver" placeholder="收货人" style="flex:1" :disabled="isView" /></div></el-col>
-            <el-col :span="6" style="margin-top:8px"><div class="field-row"><span class="field-label">联系电话</span><el-input v-model="fd.contact_phone" placeholder="供应商电话" style="flex:1" :disabled="isView" /></div></el-col>
+            <el-col :span="6"><div class="field-row"><span class="field-label required">{{ $t('outsource.receive.fieldReceiveDate') }}</span><el-date-picker v-model="fd.receive_date" type="date" value-format="YYYY-MM-DD" style="flex:1" :disabled="isView" /></div></el-col>
+            <el-col :span="6"><div class="field-row"><span class="field-label">{{ $t('outsource.receive.fieldReceiver') }}</span><el-input v-model="fd.receiver" :placeholder="$t('outsource.receive.receiverPlaceholder')" style="flex:1" :disabled="isView" /></div></el-col>
+            <el-col :span="6" style="margin-top:8px"><div class="field-row"><span class="field-label">{{ $t('outsource.receive.fieldContactPhone') }}</span><el-input v-model="fd.contact_phone" :placeholder="$t('outsource.receive.contactPhonePlaceholder')" style="flex:1" :disabled="isView" /></div></el-col>
             <el-col :span="6" style="margin-top:8px">
               <div class="field-row">
-                <span class="field-label">结算方式</span>
+                <span class="field-label">{{ $t('outsource.receive.fieldSettleType') }}</span>
                 <el-select v-model="fd.settle_type" style="flex:1" :disabled="isView">
-                  <el-option label="现付" value="现付" />
-                  <el-option label="月结" value="月结" />
-                  <el-option label="账期" value="账期" />
-                  <el-option label="预付" value="预付" />
+                  <el-option :label="$t('outsource.receive.optionCashOnDelivery')" value="现付" />
+                  <el-option :label="$t('outsource.receive.optionMonthly')" value="月结" />
+                  <el-option :label="$t('outsource.receive.optionCreditTerm')" value="账期" />
+                  <el-option :label="$t('outsource.receive.optionPrepaid')" value="预付" />
                 </el-select>
               </div>
             </el-col>
@@ -89,32 +89,32 @@
         </div>
 
         <div class="goods-toolbar" v-if="!isView">
-          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">选择商品</el-button>
-          <el-button size="small" @click="addEmptyRow">手动添加行</el-button>
-          <span class="goods-summary">收货总价：<b>{{ totalPrice.toFixed(2) }}</b></span>
+          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">{{ $t('outsource.receive.btnSelectGoods') }}</el-button>
+          <el-button size="small" @click="addEmptyRow">{{ $t('outsource.receive.btnAddRow') }}</el-button>
+          <span class="goods-summary">{{ $t('outsource.receive.totalPriceLabel') }}<b>{{ totalPrice.toFixed(2) }}</b></span>
         </div>
-        <div class="goods-summary-view" v-else>收货总价：<b>{{ totalPrice.toFixed(2) }}</b></div>
+        <div class="goods-summary-view" v-else>{{ $t('outsource.receive.totalPriceLabel') }}<b>{{ totalPrice.toFixed(2) }}</b></div>
 
-        <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请添加商品">
+        <el-table :data="fd.items" border size="small" style="width:100%" :empty-text="$t('outsource.receive.emptyText')">
           <el-table-column type="index" label="#" width="45" align="center" />
-          <el-table-column label="商品名称" min-width="140">
+          <el-table-column :label="$t('outsource.receive.colGoodsName')" min-width="140">
             <template #default="{ row }"><el-input v-if="!isView" v-model="row.goods_name" size="small" /><span v-else>{{ row.goods_name }}</span></template>
           </el-table-column>
-          <el-table-column label="商品编码" width="110"><template #default="{ row }">{{ row.goods_sn||'—' }}</template></el-table-column>
-          <el-table-column label="规格" width="100"><template #default="{ row }">{{ row.spec||'—' }}</template></el-table-column>
-          <el-table-column label="单位" width="70" align="center"><template #default="{ row }">{{ row.unit_name||'—' }}</template></el-table-column>
-          <el-table-column label="收货数量" width="110">
-            <template #header>收货数量<el-button v-if="!isView" link type="primary" size="small" @click="batchSet('num','收货数量')">批量</el-button></template>
+          <el-table-column :label="$t('outsource.receive.colGoodsSn')" width="110"><template #default="{ row }">{{ row.goods_sn||'—' }}</template></el-table-column>
+          <el-table-column :label="$t('outsource.receive.colSpec')" width="100"><template #default="{ row }">{{ row.spec||'—' }}</template></el-table-column>
+          <el-table-column :label="$t('outsource.receive.colUnit')" width="70" align="center"><template #default="{ row }">{{ row.unit_name||'—' }}</template></el-table-column>
+          <el-table-column width="110">
+            <template #header>{{ $t('outsource.receive.colReceiveQty') }}<el-button v-if="!isView" link type="primary" size="small" @click="batchSet('num', $t('outsource.receive.colReceiveQty'))">{{ $t('outsource.receive.colReceiveQtyBatch') }}</el-button></template>
             <template #default="{ row }"><el-input-number v-if="!isView" v-model="row.num" :min="0" :precision="2" controls-position="right" size="small" style="width:100%" @change="calcRow(row)" /><span v-else>{{ row.num }}</span></template>
           </el-table-column>
-          <el-table-column label="单价" width="110">
-            <template #header>单价<el-button v-if="!isView" link type="primary" size="small" @click="batchSet('unit_price','单价')">批量</el-button></template>
+          <el-table-column width="110">
+            <template #header>{{ $t('outsource.receive.colUnitPrice') }}<el-button v-if="!isView" link type="primary" size="small" @click="batchSet('unit_price', $t('outsource.receive.colUnitPrice'))">{{ $t('outsource.receive.colUnitPriceBatch') }}</el-button></template>
             <template #default="{ row }"><el-input-number v-if="!isView" v-model="row.unit_price" :min="0" :precision="4" controls-position="right" size="small" style="width:100%" @change="calcRow(row)" /><span v-else>{{ row.unit_price }}</span></template>
           </el-table-column>
-          <el-table-column label="小计" width="100" align="right">
+          <el-table-column :label="$t('outsource.receive.colSubtotal')" width="100" align="right">
             <template #default="{ row }"><b style="color:#0071e3">{{ ((row.num||0)*(row.unit_price||0)).toFixed(2) }}</b></template>
           </el-table-column>
-          <el-table-column label="备注" min-width="100">
+          <el-table-column :label="$t('outsource.receive.colRemark')" min-width="100">
             <template #default="{ row }"><el-input v-if="!isView" v-model="row.remark" size="small" /><span v-else>{{ row.remark||'' }}</span></template>
           </el-table-column>
           <el-table-column v-if="!isView" label="" width="50" fixed="right">
@@ -123,22 +123,23 @@
         </el-table>
 
         <div class="form-footer">
-          <div class="footer-summary">合计：数量 <b>{{ totalNum.toFixed(2) }}</b>&nbsp;&nbsp;总价 <b style="color:#0071e3">{{ totalPrice.toFixed(2) }}</b></div>
-          <div class="field-row" style="margin-top:8px"><span class="field-label">备注</span><el-input v-model="fd.remark" type="textarea" :rows="2" :disabled="isView" style="flex:1" /></div>
+          <div class="footer-summary">{{ $t('outsource.receive.footerTotal') }} <b>{{ totalNum.toFixed(2) }}</b>&nbsp;&nbsp;{{ $t('outsource.receive.footerTotalPrice') }} <b style="color:#0071e3">{{ totalPrice.toFixed(2) }}</b></div>
+          <div class="field-row" style="margin-top:8px"><span class="field-label">{{ $t('outsource.receive.fieldRemark') }}</span><el-input v-model="fd.remark" type="textarea" :rows="2" :disabled="isView" style="flex:1" /></div>
         </div>
       </div>
     </div>
 
     <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
-    <el-dialog v-model="batchVisible" :title="`批量设置：${batchLabel}`" width="280px" append-to-body>
+    <el-dialog v-model="batchVisible" :title="$t('outsource.receive.batchDialogTitle', { label: batchLabel })" width="280px" append-to-body>
       <el-input-number v-model="batchValue" :min="0" :precision="4" style="width:100%" controls-position="right" />
-      <template #footer><el-button @click="batchVisible=false">取消</el-button><el-button type="primary" @click="applyBatch">确定</el-button></template>
+      <template #footer><el-button @click="batchVisible=false">{{ $t('outsource.receive.btnBatchCancel') }}</el-button><el-button type="primary" @click="applyBatch">{{ $t('outsource.receive.btnBatchConfirm') }}</el-button></template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -150,6 +151,7 @@ import http from '@/api/http'
 import { usePermissionStore } from '@/stores/permission'
 import { fmtDt } from '@/utils/date'
 
+const { t } = useI18n()
 const tableRef=ref<InstanceType<typeof ScTable>>()
 const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_outsource_receive', tableRef)
 const reconcileFilteredApi = createFilteredApi(getReceiveList, 'reconcile_filter')
@@ -178,14 +180,18 @@ const batchVisible=ref(false),batchField=ref(''),batchLabel=ref(''),batchValue=r
 function batchSet(f:string,l:string){batchField.value=f;batchLabel.value=l;batchValue.value=0;batchVisible.value=true}
 function applyBatch(){fd.items.forEach(r=>{r[batchField.value]=batchValue.value;calcRow(r)});batchVisible.value=false}
 async function handleSave(){
-  if(!fd.supplier_id){ElMessage.warning('请选择供应商');return}
-  if(!fd.receive_date){ElMessage.warning('请选择收货日期');return}
-  if(!fd.items.length){ElMessage.warning('请添加商品');return}
+  if(!fd.supplier_id){ElMessage.warning(t('outsource.receive.msgSelectSupplier'));return}
+  if(!fd.receive_date){ElMessage.warning(t('outsource.receive.msgSelectReceiveDate'));return}
+  if(!fd.items.length){ElMessage.warning(t('outsource.receive.msgAddGoods'));return}
   saving.value=true
-  try{await createReceive({...fd,goods_info:JSON.stringify(fd.items),total_price:totalPrice.value});ElMessage.success('保存成功');backToList()}catch{}finally{saving.value=false}
+  try{await createReceive({...fd,goods_info:JSON.stringify(fd.items),total_price:totalPrice.value});ElMessage.success(t('outsource.receive.msgSaveSuccess'));backToList()}catch{}finally{saving.value=false}
 }
-async function doAudit(row:any,status:number){const labels:Record<number,string>={1:'审核',2:'驳回',0:'反审核'};await ElMessageBox.confirm(`确定${labels[status]}该收货单？`,'提示',{type:'warning'});try{await http.post('/outsource/receive/audit',{id:row.id,status});ElMessage.success('操作成功');tableRef.value?.refresh()}catch{}}
-async function handleDelete(id:number){await ElMessageBox.confirm('确定删除？','提示',{type:'warning'});await deleteReceive(id);ElMessage.success('删除成功');tableRef.value?.refresh()}
+async function doAudit(row:any,status:number){
+  const labels:Record<number,string>={1:t('outsource.receive.btnAudit'),2:t('outsource.receive.btnReject'),0:t('outsource.receive.btnUnaudit')}
+  await ElMessageBox.confirm(t('outsource.receive.msgConfirmAudit',{action:labels[status]}),t('outsource.receive.msgTip'),{type:'warning'})
+  try{await http.post('/outsource/receive/audit',{id:row.id,status});ElMessage.success(t('outsource.receive.msgSuccess'));tableRef.value?.refresh()}catch{}
+}
+async function handleDelete(id:number){await ElMessageBox.confirm(t('outsource.receive.msgConfirmDelete'),t('outsource.receive.msgTip'),{type:'warning'});await deleteReceive(id);ElMessage.success(t('outsource.receive.msgDeleteSuccess'));tableRef.value?.refresh()}
 onMounted(loadSuppliers)
 </script>
 

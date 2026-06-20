@@ -4,110 +4,110 @@
       <ScTable ref="tableRef"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="getExpenseListForTable"
           :batch-del-api="handleBatchDel"
-          export-file-name="费用记录" :params="searchForm">
+          :export-file-name="$t('finance.expense.exportFileName')" :params="searchForm">
         <template #search>
           <el-form inline>
-            <el-form-item label="费用单号">
-              <el-input v-model="searchForm.expense_no" placeholder="请输入费用单号" clearable style="width:180px" />
+            <el-form-item :label="$t('finance.expense.expenseNo')">
+              <el-input v-model="searchForm.expense_no" :placeholder="$t('finance.expense.expenseNoPlaceholder')" clearable style="width:180px" />
             </el-form-item>
-            <el-form-item label="费用类型">
-              <el-input v-model="searchForm.type_name" placeholder="请输入费用类型" clearable style="width:180px" />
+            <el-form-item :label="$t('finance.expense.expenseType')">
+              <el-input v-model="searchForm.type_name" :placeholder="$t('finance.expense.expenseTypePlaceholder')" clearable style="width:180px" />
             </el-form-item>
-            <el-form-item label="付款状态">
-              <el-select v-model="searchForm.payment_status" clearable style="width:140px" placeholder="全部">
-                <el-option label="待付款" value="pending" />
-                <el-option label="已付款" value="paid" />
-                <el-option label="未标记" value="none" />
+            <el-form-item :label="$t('finance.expense.paymentStatus')">
+              <el-select v-model="searchForm.payment_status" clearable style="width:140px" :placeholder="$t('finance.expense.all')">
+                <el-option :label="$t('finance.expense.paymentStatusPending')" value="pending" />
+                <el-option :label="$t('finance.expense.paymentStatusPaid')" value="paid" />
+                <el-option :label="$t('finance.expense.paymentStatusNone')" value="none" />
               </el-select>
             </el-form-item>
-            <el-form-item label="核对状态">
-              <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="全部">
-                <el-option label="未核对" value="unreconciled" />
+            <el-form-item :label="$t('finance.expense.reconcileStatus')">
+              <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="$t('finance.expense.all')">
+                <el-option :label="$t('finance.expense.unreconciled')" value="unreconciled" />
               </el-select>
             </el-form-item>
           </el-form>
           <div class="search-actions">
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="Object.assign(searchForm, { expense_no: '', type_name: '', payment_status: '', reconcile_filter: '' }); tableRef?.loadData()">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ $t('common.query') }}</el-button>
+            <el-button @click="Object.assign(searchForm, { expense_no: '', type_name: '', payment_status: '', reconcile_filter: '' }); tableRef?.loadData()">{{ $t('common.reset') }}</el-button>
           </div>
         </template>
         <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
-          <el-button :icon="Wallet" @click="router.push('/finance/fund-flow')">资金流水</el-button>
-          <el-button :icon="CreditCard" @click="router.push('/finance/pay-receipt')">付款单</el-button>
+          <el-button type="primary" :icon="Plus" @click="openForm()">{{ $t('common.add') }}</el-button>
+          <el-button :icon="Wallet" @click="router.push('/finance/fund-flow')">{{ $t('finance.expense.fundFlow') }}</el-button>
+          <el-button :icon="CreditCard" @click="router.push('/finance/pay-receipt')">{{ $t('finance.expense.payReceipt') }}</el-button>
         </template>
-        <el-table-column label="费用单号" min-width="160">
+        <el-table-column :label="$t('finance.expense.expenseNo')" min-width="160">
           <template #default="{ row }">{{ row.expense_no || row.order_sn || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="type_name" label="费用类型" min-width="120" />
-        <el-table-column label="金额" min-width="120" align="right">
+        <el-table-column prop="type_name" :label="$t('finance.expense.expenseType')" min-width="120" />
+        <el-table-column :label="$t('finance.expense.amount')" min-width="120" align="right">
           <template #default="{ row }">
             <span style="color:#dc2626;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="applicant_name" label="申请人" min-width="120" />
-        <el-table-column label="申请日期" min-width="150">
+        <el-table-column prop="applicant_name" :label="$t('finance.expense.applicant')" min-width="120" />
+        <el-table-column :label="$t('finance.expense.applyDate')" min-width="150">
           <template #default="{ row }">{{ fmtDt(row.apply_date || row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="付款状态" min-width="100" align="center">
+        <el-table-column :label="$t('finance.expense.paymentStatus')" min-width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.payment_status_tag" size="small">{{ row.payment_status_text }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="备注" min-width="180" show-overflow-tooltip>
+        <el-table-column :label="$t('finance.expense.remark')" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ row.remark_clean || '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
+        <el-table-column :label="$t('finance.expense.operation')" width="300" fixed="right">
           <template #default="{ row }">
-            <el-button type="success" link @click="openView(row)">查看</el-button>
-            <el-button type="primary" link @click="openForm(row)">编辑</el-button>
-            <el-button v-if="row.payment_status !== 'paid'" type="success" link @click="openPayDialog(row)">付款</el-button>
-            <el-button type="warning" link @click="router.push('/finance/fund-flow')">流水</el-button>
-            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-            <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="success" link @click="openView(row)">{{ $t('finance.expense.view') }}</el-button>
+            <el-button type="primary" link @click="openForm(row)">{{ $t('finance.expense.edit') }}</el-button>
+            <el-button v-if="row.payment_status !== 'paid'" type="success" link @click="openPayDialog(row)">{{ $t('finance.expense.pay') }}</el-button>
+            <el-button type="warning" link @click="router.push('/finance/fund-flow')">{{ $t('finance.expense.flow') }}</el-button>
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('finance.expense.reconciled') : $t('finance.expense.reconcile') }}</el-button>
+            <el-button type="danger" link @click="handleDelete(row.id)">{{ $t('finance.expense.delete') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
     </el-card>
     <ScForm ref="formRef" :title="formTitle" @submit="handleSubmit">
       <template #default="{ form }">
-        <el-form-item label="费用类型" prop="type_name">
-          <el-input v-model="form.type_name" placeholder="请输入费用类型" />
+        <el-form-item :label="$t('finance.expense.formExpenseType')" prop="type_name">
+          <el-input v-model="form.type_name" :placeholder="$t('finance.expense.expenseTypePlaceholder')" />
         </el-form-item>
-        <el-form-item label="金额" prop="amount">
+        <el-form-item :label="$t('finance.expense.formAmount')" prop="amount">
           <el-input-number v-model="form.amount" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
-        <el-form-item label="申请日期" prop="apply_date">
-          <el-date-picker v-model="form.apply_date" type="date" placeholder="请选择申请日期" value-format="YYYY-MM-DD" style="width:100%" />
+        <el-form-item :label="$t('finance.expense.formApplyDate')" prop="apply_date">
+          <el-date-picker v-model="form.apply_date" type="date" :placeholder="$t('finance.expense.formApplyDatePlaceholder')" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
+        <el-form-item :label="$t('finance.expense.formRemark')" prop="remark">
+          <el-input v-model="form.remark" type="textarea" :placeholder="$t('finance.expense.formRemarkPlaceholder')" />
         </el-form-item>
       </template>
     </ScForm>
-    <el-dialog v-model="payVisible" title="费用付款" width="460px" destroy-on-close>
+    <el-dialog v-model="payVisible" :title="$t('finance.expense.payDialogTitle')" width="460px" destroy-on-close>
       <el-form label-width="90px">
-        <el-form-item label="费用类型">
+        <el-form-item :label="$t('finance.expense.payFormExpenseType')">
           <el-input :value="payRow?.type_name || payRow?.name || ''" readonly />
         </el-form-item>
-        <el-form-item label="付款日期">
+        <el-form-item :label="$t('finance.expense.payFormDate')">
           <el-date-picker v-model="payForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
-        <el-form-item label="付款账户">
-          <el-select v-model="payForm.fund_id" filterable clearable placeholder="请选择账户" style="width:100%" @change="onPayFundChange">
+        <el-form-item :label="$t('finance.expense.payFormAccount')">
+          <el-select v-model="payForm.fund_id" filterable clearable :placeholder="$t('finance.expense.payFormAccountPlaceholder')" style="width:100%" @change="onPayFundChange">
             <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="付款金额">
+        <el-form-item :label="$t('finance.expense.payFormAmount')">
           <el-input-number v-model="payForm.amount" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="payForm.remark" type="textarea" :rows="3" placeholder="请输入备注" />
+        <el-form-item :label="$t('finance.expense.payFormRemark')">
+          <el-input v-model="payForm.remark" type="textarea" :rows="3" :placeholder="$t('finance.expense.payFormRemarkPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="payVisible = false">取消</el-button>
-        <el-button type="primary" :loading="paySubmitting" @click="submitPay">确认付款</el-button>
+        <el-button @click="payVisible = false">{{ $t('finance.expense.cancel') }}</el-button>
+        <el-button type="primary" :loading="paySubmitting" @click="submitPay">{{ $t('finance.expense.confirmPay') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -116,6 +116,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Plus, Wallet, CreditCard } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -125,11 +126,12 @@ import { getExpenseList, createExpense, updateExpense, deleteExpense, createPayR
 import { adjustFundBalance } from '@/utils/fund'
 import { fmtDt } from '@/utils/date'
 
+const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const { toggle: toggleReconcile, ids: reconciledIds } = useReconcile('reconcile_expense', tableRef)
 const formRef = ref<InstanceType<typeof ScForm>>()
-const formTitle = ref('新增')
+const formTitle = ref('')
 const searchForm = reactive<any>({ expense_no: '', type_name: '', payment_status: '', reconcile_filter: '' })
 const fundOptions = ref<any[]>([])
 const payVisible = ref(false)
@@ -183,7 +185,7 @@ function openView(row?: any) {
 }
 
 function openForm(row?: any) {
-  formTitle.value = row ? '编辑' : '新增'
+  formTitle.value = row ? t('finance.expense.editTitle') : t('finance.expense.addTitle')
   formRef.value?.open(row ? { ...row, remark: row.remark_clean ?? row.remark ?? '' } : {
     apply_date: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
     payment_status: 'pending',
@@ -196,7 +198,7 @@ async function handleSubmit(data: any) {
   try {
     if (data?.id) await updateExpense(data)
     else await createExpense(data)
-    ElMessage.success('操作成功')
+    ElMessage.success(t('finance.expense.opSuccess'))
     formRef.value?.close()
     tableRef.value?.refresh()
   } finally {
@@ -228,11 +230,11 @@ async function submitPay() {
   const row = payRow.value
   if (!row) return
   if (!payForm.fund_id) {
-    ElMessage.warning('请选择付款账户')
+    ElMessage.warning(t('finance.expense.selectAccount'))
     return
   }
   if (Number(payForm.amount || 0) <= 0) {
-    ElMessage.warning('请填写付款金额')
+    ElMessage.warning(t('finance.expense.fillAmount'))
     return
   }
   paySubmitting.value = true
@@ -266,7 +268,7 @@ async function submitPay() {
       })
     } catch { /* 扣减失败不阻塞 */ }
     payVisible.value = false
-    ElMessage.success('付款成功')
+    ElMessage.success(t('finance.expense.paySuccess'))
     tableRef.value?.refresh()
   } finally {
     paySubmitting.value = false
@@ -274,9 +276,9 @@ async function submitPay() {
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('finance.expense.deleteConfirm'), t('finance.expense.deleteTip'), { type: 'warning' })
   await deleteExpense(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('finance.expense.deleteSuccess'))
   tableRef.value?.refresh()
 }
 

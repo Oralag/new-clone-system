@@ -5,24 +5,24 @@
     <!-- 今日核心指标 -->
     <div class="ms-kpi-grid">
       <div class="ms-kpi-card" @click="router.push('/mobile/sale/today')">
-        <div class="ms-kpi-label">今日销售额</div>
+        <div class="ms-kpi-label">{{ t('mobileStats.todayRevenue') }}</div>
         <div class="ms-kpi-value">¥{{ todayStats.saleAmt }}</div>
-        <div class="ms-kpi-sub">今日订单 {{ todayStats.orderCount }} 笔</div>
+        <div class="ms-kpi-sub">{{ t('mobileStats.todayOrders', { count: todayStats.orderCount }) }}</div>
       </div>
       <div class="ms-kpi-card" @click="router.push('/finance/fund-flow?type=expense&date=today')">
-        <div class="ms-kpi-label">今日支出</div>
+        <div class="ms-kpi-label">{{ t('mobileStats.todayExpense') }}</div>
         <div class="ms-kpi-value">¥{{ todayExpense }}</div>
-        <div class="ms-kpi-sub">付款+费用支出</div>
+        <div class="ms-kpi-sub">{{ t('mobileStats.paymentAndExpense') }}</div>
       </div>
       <div class="ms-kpi-card" @click="router.push('/mobile/sale/client')">
-        <div class="ms-kpi-label">客户总数</div>
+        <div class="ms-kpi-label">{{ t('mobileStats.totalCustomers') }}</div>
         <div class="ms-kpi-value">{{ customerTotal }}</div>
-        <div class="ms-kpi-sub">全部客户</div>
+        <div class="ms-kpi-sub">{{ t('mobileStats.allCustomers') }}</div>
       </div>
       <div class="ms-kpi-card" @click="router.push('/mobile/warehouse/stock')">
-        <div class="ms-kpi-label">库存预警</div>
+        <div class="ms-kpi-label">{{ t('mobileStats.stockWarning') }}</div>
         <div class="ms-kpi-value" :style="{ color: stockWarn > 0 ? '#f53f3f' : '#00b42a' }">{{ stockWarn }}</div>
-        <div class="ms-kpi-sub">负库存+零库存</div>
+        <div class="ms-kpi-sub">{{ t('mobileStats.negativeAndZeroStock') }}</div>
       </div>
     </div>
 
@@ -32,8 +32,8 @@
         <div class="ms-insights-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2"/></svg>
         </div>
-        <div class="ms-insights-title">智能洞察</div>
-        <div class="ms-insights-sub">AI 数据引擎</div>
+        <div class="ms-insights-title">{{ t('mobileStats.insightsTitle') }}</div>
+        <div class="ms-insights-sub">{{ t('mobileStats.insightsSub') }}</div>
       </div>
       <div class="ms-insights-list">
         <div v-for="item in insightItems" :key="item.tag" class="ms-insight-item">
@@ -46,27 +46,29 @@
     <!-- 利润分析趋势 -->
     <div class="ms-profit-card">
       <div class="ms-profit-header">
-        <div class="ms-profit-title">💹 利润分析趋势</div>
+        <div class="ms-profit-title">💹 {{ t('mobileStats.profitTrend') }}</div>
         <div class="ms-sale-tabs">
-          <button :class="['ms-tab', profitPeriod === '7d' ? 'active' : '']" @click="profitPeriod = '7d'">7天</button>
-          <button :class="['ms-tab', profitPeriod === '30d' ? 'active' : '']" @click="profitPeriod = '30d'">30天</button>
+          <button :class="['ms-tab', profitPeriod === 'today' ? 'active' : '']" @click="profitPeriod = 'today'">{{ t('mobileStats.today') }}</button>
+          <button :class="['ms-tab', profitPeriod === '7d' ? 'active' : '']" @click="profitPeriod = '7d'">{{ t('mobileStats.days7') }}</button>
+          <button :class="['ms-tab', profitPeriod === '30d' ? 'active' : '']" @click="profitPeriod = '30d'">{{ t('mobileStats.days30') }}</button>
+          <button :class="['ms-tab', profitPeriod === '3m' ? 'active' : '']" @click="profitPeriod = '3m'">{{ t('mobileStats.months3') }}</button>
         </div>
       </div>
       <div class="ms-profit-summary">
         <div class="ms-profit-sum-item">
-          <div class="ms-profit-sum-label">营收</div>
+          <div class="ms-profit-sum-label">{{ t('mobileStats.revenue') }}</div>
           <div class="ms-profit-sum-val" style="color:#0071e3">¥{{ profitChartData.totalRevenue }}</div>
         </div>
         <div class="ms-profit-sum-item">
-          <div class="ms-profit-sum-label">支出</div>
+          <div class="ms-profit-sum-label">{{ t('mobileStats.cost') }}</div>
           <div class="ms-profit-sum-val" style="color:#f53f3f">¥{{ profitChartData.totalExpense }}</div>
         </div>
         <div class="ms-profit-sum-item">
-          <div class="ms-profit-sum-label">利润</div>
+          <div class="ms-profit-sum-label">{{ t('mobileStats.profit') }}</div>
           <div class="ms-profit-sum-val" :style="{ color: profitChartData.profitPositive ? '#00b42a' : '#f53f3f' }">¥{{ profitChartData.totalProfit }}</div>
         </div>
         <div class="ms-profit-sum-item">
-          <div class="ms-profit-sum-label">利润率</div>
+          <div class="ms-profit-sum-label">{{ t('mobileStats.margin') }}</div>
           <div class="ms-profit-sum-val" :style="{ color: profitChartData.profitPositive ? '#00b42a' : '#f53f3f' }">{{ profitChartData.marginPct }}%</div>
         </div>
       </div>
@@ -102,67 +104,67 @@
         </div>
       </div>
       <div class="ms-profit-legend">
-        <span class="ms-legend-dot" style="background:#00b42a"></span><span>出库利润</span>
-        <span class="ms-legend-dot" style="background:#34d399;margin-left:10px"></span><span>零售利润</span>
-        <span class="ms-legend-dot" style="background:#f53f3f;margin-left:10px"></span><span>亏损</span>
-        <span style="margin-left:auto;font-size:10px;color:#c2c8d5">营收 - 成本</span>
+        <span class="ms-legend-dot" style="background:#00b42a"></span><span>{{ t('mobileStats.outboundProfit') }}</span>
+        <span class="ms-legend-dot" style="background:#34d399;margin-left:10px"></span><span>{{ t('mobileStats.retailProfit') }}</span>
+        <span class="ms-legend-dot" style="background:#f53f3f;margin-left:10px"></span><span>{{ t('mobileStats.loss') }}</span>
+        <span style="margin-left:auto;font-size:10px;color:#c2c8d5">{{ t('mobileStats.revenueMinusCost') }}</span>
       </div>
     </div>
 
     <!-- 销售统计 -->
     <div class="ms-sale-card" style="margin-top:12px">
       <div class="ms-sale-top">
-        <div class="ms-sale-title">经营概况</div>
+        <div class="ms-sale-title">{{ t('mobileStats.businessOverview') }}</div>
         <div class="ms-sale-tabs">
-          <button :class="['ms-tab', statPeriod === 'today' ? 'active' : '']" @click="statPeriod = 'today'">今天</button>
-          <button :class="['ms-tab', statPeriod === '7d' ? 'active' : '']" @click="statPeriod = '7d'">7天</button>
-          <button :class="['ms-tab', statPeriod === '30d' ? 'active' : '']" @click="statPeriod = '30d'">30天</button>
-          <button :class="['ms-tab', statPeriod === '3m' ? 'active' : '']" @click="statPeriod = '3m'">3月</button>
+          <button :class="['ms-tab', statPeriod === 'today' ? 'active' : '']" @click="statPeriod = 'today'">{{ t('mobileStats.today') }}</button>
+          <button :class="['ms-tab', statPeriod === '7d' ? 'active' : '']" @click="statPeriod = '7d'">{{ t('mobileStats.days7') }}</button>
+          <button :class="['ms-tab', statPeriod === '30d' ? 'active' : '']" @click="statPeriod = '30d'">{{ t('mobileStats.days30') }}</button>
+          <button :class="['ms-tab', statPeriod === '3m' ? 'active' : '']" @click="statPeriod = '3m'">{{ t('mobileStats.months3') }}</button>
         </div>
       </div>
       <div class="ms-main-row">
         <div class="ms-main-item">
-          <div class="ms-main-label">销售总额</div>
+          <div class="ms-main-label">{{ t('mobileStats.totalSales') }}</div>
           <div class="ms-main-value">¥{{ salesStats.totalAmt }}</div>
         </div>
         <div class="ms-main-item">
-          <div class="ms-main-label">订单数</div>
+          <div class="ms-main-label">{{ t('mobileStats.orderCount') }}</div>
           <div class="ms-main-value">{{ salesStats.orderCount }}</div>
         </div>
         <div class="ms-main-item">
-          <div class="ms-main-label">支出金额</div>
+          <div class="ms-main-label">{{ t('mobileStats.expenseAmt') }}</div>
           <div class="ms-main-value">¥{{ salesStats.expenseAmt }}</div>
         </div>
       </div>
       <div class="ms-sub-row">
         <div class="ms-sub-item">
-          <div class="ms-sub-label">销售出库</div>
+          <div class="ms-sub-label">{{ t('mobileStats.salesOutbound') }}</div>
           <div class="ms-sub-val">¥{{ salesStats.saleAmt }}</div>
         </div>
         <div class="ms-sub-item">
-          <div class="ms-sub-label">零售收款</div>
+          <div class="ms-sub-label">{{ t('mobileStats.retailIncome') }}</div>
           <div class="ms-sub-val">¥{{ salesStats.retailAmt }}</div>
         </div>
         <div class="ms-sub-item">
-          <div class="ms-sub-label">销售单数</div>
+          <div class="ms-sub-label">{{ t('mobileStats.salesOrders') }}</div>
           <div class="ms-sub-val">{{ salesStats.saleCount }}</div>
         </div>
         <div class="ms-sub-item">
-          <div class="ms-sub-label">零售单数</div>
+          <div class="ms-sub-label">{{ t('mobileStats.retailOrders') }}</div>
           <div class="ms-sub-val">{{ salesStats.retailCount }}</div>
         </div>
         <div class="ms-sub-item">
-          <div class="ms-sub-label">涉及客户</div>
+          <div class="ms-sub-label">{{ t('mobileStats.customersInvolved') }}</div>
           <div class="ms-sub-val">{{ salesStats.customerCount }}</div>
         </div>
         <div class="ms-sub-item">
-          <div class="ms-sub-label">库存预警</div>
+          <div class="ms-sub-label">{{ t('mobileStats.stockWarning') }}</div>
           <div class="ms-sub-val" :style="{ color: stockWarn > 0 ? '#f53f3f' : '#00b42a' }">{{ stockWarn }}</div>
         </div>
       </div>
       <!-- 趋势 -->
       <div v-if="salesStats.sparkData.length > 1" class="ms-spark">
-        <div class="ms-spark-label">趋势</div>
+        <div class="ms-spark-label">{{ t('mobileStats.trend') }}</div>
         <div class="ms-spark-bars">
           <div
             v-for="(bar, i) in salesStats.sparkData"
@@ -174,28 +176,28 @@
           />
         </div>
       </div>
-      <div class="ms-report-btn" @click="router.push('/mobile/sale/today')">查看完整销售报表 →</div>
+      <div class="ms-report-btn" @click="router.push('/mobile/sale/today')">{{ t('mobileStats.viewFullReport') }} →</div>
     </div>
 
     <!-- 快捷跳转 -->
     <div class="ms-quick-links">
-      <div class="ms-ql-title">报表中心</div>
+      <div class="ms-ql-title">{{ t('mobileStats.reportCenter') }}</div>
       <div class="ms-ql-grid">
         <div class="ms-ql-item" @click="router.push('/mobile/sale/today')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          <span>销售统计</span>
+          <span>{{ t('mobileStats.salesReport') }}</span>
         </div>
         <div class="ms-ql-item" @click="router.push('/mobile/finance/overview')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          <span>财务总览</span>
+          <span>{{ t('mobileStats.financeOverview') }}</span>
         </div>
         <div class="ms-ql-item" @click="router.push('/mobile/finance/receivable')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-          <span>应收账款</span>
+          <span>{{ t('mobileStats.receivable') }}</span>
         </div>
         <div class="ms-ql-item" @click="router.push('/mobile/warehouse/stock')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-          <span>库存总览</span>
+          <span>{{ t('mobileStats.stockOverview') }}</span>
         </div>
       </div>
     </div>
@@ -207,11 +209,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
 
 const router = useRouter()
+const { t } = useI18n()
 
-const insightItems = ref([{ tag: '加载中...', text: 'AI 正在分析您的业务数据...' }])
+const MEITUAN_CUSTOMER_ID = 63
+
+const insightItems = ref([{ tag: t('mobileStats.loadingTag'), text: t('mobileStats.loadingText') }])
 const statPeriod = ref<'today' | '7d' | '30d' | '3m'>('today')
 const stockWarn = ref(0)
 const customerTotal = ref(0)
@@ -219,9 +225,20 @@ const todayExpense = ref('0.00')
 
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
+const _meituanRows = ref<any[]>([])
 const _fundFlowRows = ref<any[]>([])
 const _costPriceMap = ref<Record<number, number>>({})
-const profitPeriod = ref<'7d' | '30d'>('30d')
+const profitPeriod = ref<'today' | '7d' | '30d' | '3m'>('today')
+
+function meituanDate(r: any) {
+  return (r.sign_date || r.order_date || '').slice(0, 10)
+}
+function meituanAmount(r: any) {
+  return Number(r.after_discount || r.total_amount || 0)
+}
+function isMeituan(r: any) {
+  return Number(r.customer_id) === MEITUAN_CUSTOMER_ID && Number(r.status) === 1
+}
 
 function getToday() {
   const d = new Date()
@@ -267,10 +284,12 @@ const todayStats = computed(() => {
   const today = getToday()
   const fSale = _saleRows.value.filter((r: any) => Number(r.status) === 1 && (r.out_date||'').slice(0,10) === today)
   const fRetail = _retailRows.value.filter((r: any) => Number(r.status) === 1 && (r.order_date||'').slice(0,10) === today)
+  const fMeituan = _meituanRows.value.filter((r: any) => isMeituan(r) && meituanDate(r) === today)
   const saleAmt = fSale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
   const retailAmt = fRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
+  const meituanAmt = fMeituan.reduce((s: number, r: any) => s + meituanAmount(r), 0)
   const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + 'w' : n.toFixed(2)
-  return { saleAmt: fmt(saleAmt + retailAmt), orderCount: fSale.length + fRetail.length }
+  return { saleAmt: fmt(saleAmt + retailAmt + meituanAmt), orderCount: fSale.length + fRetail.length + fMeituan.length }
 })
 
 const salesStats = computed(() => {
@@ -288,14 +307,17 @@ const salesStats = computed(() => {
 
   const fSale = _saleRows.value.filter((r: any) => Number(r.status) === 1 && (() => { const d = (r.out_date||'').slice(0,10); return d >= fromDate && d <= today })())
   const fRetail = _retailRows.value.filter((r: any) => Number(r.status) === 1 && (() => { const d = (r.order_date||'').slice(0,10); return d >= fromDate && d <= today })())
+  const fMeituan = _meituanRows.value.filter((r: any) => isMeituan(r) && (() => { const d = meituanDate(r); return d >= fromDate && d <= today })())
   const saleAmt = fSale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
   const retailAmt = fRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
-  const totalAmt = saleAmt + retailAmt
-  const orderCount = fSale.length + fRetail.length
+  const meituanAmt = fMeituan.reduce((s: number, r: any) => s + meituanAmount(r), 0)
+  const totalAmt = saleAmt + retailAmt + meituanAmt
+  const orderCount = fSale.length + fRetail.length + fMeituan.length
   const avgAmt = orderCount > 0 ? totalAmt / orderCount : 0
   const custSet = new Set<string>()
   fSale.forEach((r: any) => { if (r.customer_id) custSet.add(String(r.customer_id)) })
   fRetail.forEach((r: any) => { if (r.customer_id) custSet.add(String(r.customer_id)) })
+  fMeituan.forEach((r: any) => { if (r.customer_id) custSet.add(String(r.customer_id)) })
 
   const days: string[] = []
   for (let i = periodDays - 1; i >= 0; i--) {
@@ -306,6 +328,7 @@ const salesStats = computed(() => {
   const dayMap: Record<string, number> = Object.fromEntries(days.map(d => [d, 0]))
   fSale.forEach((r: any) => { const d = (r.out_date||'').slice(0,10); if (dayMap[d] !== undefined) dayMap[d] += Number(r.total_amount||0) })
   fRetail.forEach((r: any) => { const d = (r.order_date||'').slice(0,10); if (dayMap[d] !== undefined) dayMap[d] += Number(r.pay_amount||r.total_amount||0) })
+  fMeituan.forEach((r: any) => { const d = meituanDate(r); if (dayMap[d] !== undefined) dayMap[d] += meituanAmount(r) })
   const sparkData = days.map(d => ({ date: d.slice(5), amt: dayMap[d], isToday: d === today }))
   const sparkMax = Math.max(...sparkData.map(b => b.amt), 1)
   const expenseAmt = _fundFlowRows.value
@@ -324,7 +347,7 @@ const salesStats = computed(() => {
 const profitChartData = computed(() => {
   const now = new Date()
   const today = getToday()
-  const days = profitPeriod.value === '7d' ? 7 : 30
+  const days = profitPeriod.value === 'today' ? 1 : profitPeriod.value === '7d' ? 7 : profitPeriod.value === '30d' ? 30 : 90
   const dateArr: string[] = []
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now); d.setDate(d.getDate() - i)
@@ -342,6 +365,12 @@ const profitChartData = computed(() => {
   _retailRows.value.filter((r: any) => Number(r.status) === 1).forEach((r: any) => {
     const d = (r.order_date || '').slice(0, 10)
     const amt = Number(r.pay_amount || r.total_amount || 0)
+    if (revenueMap[d] !== undefined) revenueMap[d] += amt
+    if (retailMap[d] !== undefined) retailMap[d] += amt
+  })
+  _meituanRows.value.filter(isMeituan).forEach((r: any) => {
+    const d = meituanDate(r)
+    const amt = meituanAmount(r)
     if (revenueMap[d] !== undefined) revenueMap[d] += amt
     if (retailMap[d] !== undefined) retailMap[d] += amt
   })
@@ -366,6 +395,13 @@ const profitChartData = computed(() => {
       expenseMap[d] += Number(item.num || 0) * getCost(item)
     })
   })
+  _meituanRows.value.filter(isMeituan).forEach((r: any) => {
+    const d = meituanDate(r)
+    if (expenseMap[d] === undefined) return
+    parseGoodsInfo(r.goods_info).forEach((item: any) => {
+      expenseMap[d] += Number(item.num || 0) * getCost(item)
+    })
+  })
 
   const data = dateArr.map(d => ({
     date: d, revenue: revenueMap[d], retail: retailMap[d],
@@ -379,7 +415,7 @@ const profitChartData = computed(() => {
     return { ...d, h, retailH, saleH: h - retailH }
   })
 
-  const skip = days === 7 ? 1 : 6
+  const skip = days <= 7 ? 1 : days <= 30 ? 6 : 15
   const xLabels = dateArr.filter((_, i) => i % skip === 0 || i === dateArr.length - 1).map(d => d.slice(5))
 
   const totalRevenue = data.reduce((s, d) => s + d.revenue, 0)
@@ -393,43 +429,48 @@ const profitChartData = computed(() => {
 function buildInsights(data: { todaySale: number, stockWarn: number, customerCount: number, todayOrders: number, pendingReceivable: number }) {
   const items = []
   if (data.todaySale > 0) {
-    items.push({ tag: '今日销售', text: `今日已完成销售 ¥${data.todaySale.toFixed(2)}，共 ${data.todayOrders} 笔订单。` })
+    items.push({ tag: t('mobileStats.insightTodaySales'), text: t('mobileStats.insightTodaySalesText', { amount: data.todaySale.toFixed(2), count: data.todayOrders }) })
   } else {
-    items.push({ tag: '营业提醒', text: '今日暂无销售记录，可前往收银台或新建销售订单开始营业。' })
+    items.push({ tag: t('mobileStats.insightReminder'), text: t('mobileStats.insightReminderText') })
   }
   if (data.stockWarn > 0) {
-    items.push({ tag: '⚠️ 库存预警', text: `当前有 ${data.stockWarn} 种商品库存不足或为零，建议及时采购补货。` })
+    items.push({ tag: t('mobileStats.insightStockWarning'), text: t('mobileStats.insightStockWarningText', { count: data.stockWarn }) })
   } else {
-    items.push({ tag: '库存正常', text: '库存状态良好，暂无缺货或预警商品。' })
+    items.push({ tag: t('mobileStats.insightStockOk'), text: t('mobileStats.insightStockOkText') })
   }
   if (data.pendingReceivable > 0) {
-    items.push({ tag: '应收提醒', text: `当前待收款金额 ¥${data.pendingReceivable.toFixed(2)}，请及时跟进客户回款。` })
+    items.push({ tag: t('mobileStats.insightReceivable'), text: t('mobileStats.insightReceivableText', { amount: data.pendingReceivable.toFixed(2) }) })
   } else {
-    items.push({ tag: '客户概览', text: `系统共有 ${data.customerCount} 位客户，当前应收款状态良好。` })
+    items.push({ tag: t('mobileStats.insightCustomers'), text: t('mobileStats.insightCustomersText', { count: data.customerCount }) })
   }
   insightItems.value = items
 }
 
 onMounted(async () => {
   const today = getToday()
-  const [saleRes, retailRes, customerRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
+  const [saleRes, retailRes, customerRes, procureRes, goodsRes, fundFlowRes, meituanRes] = await Promise.allSettled([
     http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
     http.get('/retail/order/index', { params: { list_rows: 2000 } }),
     http.get('/shop/ShopCustomer/index', { params: { list_rows: 1 } }),
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 2000 } }),
     http.get('/goods/ShopGoods/index', { params: { list_rows: 2000, status: 1 } }),
     http.get('/finance/fundFlow/index', { params: { list_rows: 500 } }),
+    http.get('/shop/ContractOrder/index', { params: { list_rows: 2000, customer_id: MEITUAN_CUSTOMER_ID } }),
   ])
   const rows = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
   const saleRows = rows(saleRes)
   const retailRows = rows(retailRes)
+  const meituanRowsAll = rows(meituanRes)
   _saleRows.value = saleRows
   _retailRows.value = retailRows
+  _meituanRows.value = meituanRowsAll
 
   const todaySale = saleRows.filter((r: any) => Number(r.status) === 1 && (r.out_date||'').slice(0,10) === today)
   const todayRetail = retailRows.filter((r: any) => Number(r.status) === 1 && (r.order_date||'').slice(0,10) === today)
+  const todayMeituan = meituanRowsAll.filter((r: any) => isMeituan(r) && meituanDate(r) === today)
   const saleAmt = todaySale.reduce((s: number, r: any) => s + Number(r.total_amount||0), 0)
   const retailAmt = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount||r.total_amount||0), 0)
+  const meituanAmt = todayMeituan.reduce((s: number, r: any) => s + meituanAmount(r), 0)
   _fundFlowRows.value = rows(fundFlowRes)
   todayExpense.value = calcTodayExpense(_fundFlowRows.value, today).toFixed(2)
 
@@ -480,9 +521,9 @@ onMounted(async () => {
     const pendingReceivable = recRows
       .filter((r: any) => Number(r.status) === 1 && Number(r.un_collect || 0) > 0)
       .reduce((s: number, r: any) => s + Number(r.un_collect || 0), 0)
-    buildInsights({ todaySale: saleAmt + retailAmt, stockWarn: stockWarn.value, customerCount, todayOrders: todaySale.length + todayRetail.length, pendingReceivable })
+    buildInsights({ todaySale: saleAmt + retailAmt + meituanAmt, stockWarn: stockWarn.value, customerCount, todayOrders: todaySale.length + todayRetail.length + todayMeituan.length, pendingReceivable })
   } catch {
-    buildInsights({ todaySale: saleAmt + retailAmt, stockWarn: stockWarn.value, customerCount, todayOrders: todaySale.length + todayRetail.length, pendingReceivable: 0 })
+    buildInsights({ todaySale: saleAmt + retailAmt + meituanAmt, stockWarn: stockWarn.value, customerCount, todayOrders: todaySale.length + todayRetail.length + todayMeituan.length, pendingReceivable: 0 })
   }
 })
 </script>

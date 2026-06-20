@@ -8,8 +8,8 @@
           <path d="M8 21h8M12 17v4" stroke="#0f766e" stroke-width="1.8" stroke-linecap="round" />
         </svg>
         <div class="ecom-logo-text">
-          <span class="ecom-logo-name">电商运营中心</span>
-          <span class="ecom-logo-sub">AI 专员 + 多平台 + ERP</span>
+          <span class="ecom-logo-name">{{ $t('ecommerce.centerTitle') }}</span>
+          <span class="ecom-logo-sub">{{ $t('ecommerce.centerSubtitle') }}</span>
         </div>
       </div>
 
@@ -19,7 +19,7 @@
             <rect x="3" y="3" width="18" height="18" rx="3" />
             <path d="M7 15l3-3 2 2 5-5" />
           </svg>
-          <span>运营指挥台</span>
+          <span>{{ $t('ecommerce.navOverview') }}</span>
         </router-link>
         <router-link to="/ecommerce/agent" class="ecom-nav-item" active-class="ecom-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -27,7 +27,7 @@
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
             <path d="M18 6l3 3-3 3" />
           </svg>
-          <span>运营工作台</span>
+          <span>{{ $t('ecommerce.navAgent') }}</span>
         </router-link>
         <router-link to="/ecommerce/platforms" class="ecom-nav-item" active-class="ecom-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -35,7 +35,7 @@
             <path d="M2 17l10 5 10-5" />
             <path d="M2 12l10 5 10-5" />
           </svg>
-          <span>平台接入</span>
+          <span>{{ $t('ecommerce.navPlatforms') }}</span>
         </router-link>
         <router-link to="/ecommerce/meituan" class="ecom-nav-item" active-class="ecom-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -43,20 +43,20 @@
             <rect x="9" y="3" width="6" height="4" rx="1" />
             <path d="M9 12h6M9 16h4" />
           </svg>
-          <span>美团监控</span>
+          <span>{{ $t('ecommerce.navMeituan') }}</span>
         </router-link>
       </nav>
 
       <div class="ecom-sidebar-footer">
         <div class="ecom-foot-card">
-          <div class="ecom-foot-title">AI 运营专员随时待命</div>
-          <div class="ecom-foot-desc">数据官、补货、客户、活动四个专员，基于 ERP 数据立即可用。</div>
+          <div class="ecom-foot-title">{{ $t('ecommerce.footTitle') }}</div>
+          <div class="ecom-foot-desc">{{ $t('ecommerce.footDesc') }}</div>
         </div>
         <div class="ecom-back-btn" @click="router.push('/portal')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 5l-7 7 7 7" />
           </svg>
-          <span>返回主页</span>
+          <span>{{ $t('ecommerce.backHome') }}</span>
         </div>
       </div>
     </aside>
@@ -64,8 +64,8 @@
     <main class="ecom-main">
       <div class="ecom-topbar">
         <div class="ecom-topbar-copy">
-          <div class="ecom-topbar-title">{{ (route.meta.title as string) || '电商运营中心' }}</div>
-          <div class="ecom-topbar-sub">AI 运营专员团队 + 多平台数据 + ERP 管家，一站式管理电商业务</div>
+          <div class="ecom-topbar-title">{{ routeTitle }}</div>
+          <div class="ecom-topbar-sub">{{ $t('ecommerce.topbarSub') }}</div>
         </div>
         <CaptainBar class="ecom-captain" />
       </div>
@@ -77,11 +77,22 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import CaptainBar from '@/components/CaptainBar.vue'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
+
+const routeTitle = computed(() => {
+  const routeName = String(route.name || '')
+  if (routeName && ['EcommerceOverview', 'EcommercePlatforms', 'EcommerceOrders', 'EcommerceStock', 'EcommerceOffline', 'EcommerceAgent'].includes(routeName)) {
+    return t(`ecommerce.routeTitle.${routeName}`)
+  }
+  return (route.meta.title as string) || t('ecommerce.centerTitle')
+})
 </script>
 
 <style scoped>

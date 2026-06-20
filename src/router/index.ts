@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import routes from './routes'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissionStore } from '@/stores/permission'
+import { t } from '@/i18n'
 
 const SUPER_ADMIN = '17747344571'
 
@@ -18,7 +19,14 @@ function isMobileDevice(): boolean {
 }
 
 router.beforeEach((to, _from, next) => {
-  document.title = `${to.meta?.title || '页面'} - 数字游牧ERP`
+  // Title: prefer i18n key derived from route.name, fall back to meta.title
+  const routeKey = to.name ? `route.${String(to.name)}` : ''
+  const i18nTitle = routeKey ? t(routeKey) : ''
+  // If t() returns the key unchanged, the key wasn't defined — use meta.title fallback
+  const pageTitle = (i18nTitle && i18nTitle !== routeKey)
+    ? i18nTitle
+    : ((to.meta?.title as string) || t('layout.pageNotFound'))
+  document.title = `${pageTitle} - ${t('app.name')}`
 
   // 移动端：根路径 / portal → 模块选择页（第一落地页）
   if (isMobileDevice() && (to.path === '/' || to.path === '/portal')) {

@@ -7,80 +7,80 @@
         <ScTable ref="tableRef" :api-obj="reconcileFilteredApi"
           del-path="/stock/SaleReturnOrder/batchDel"
           sort-by="return_date" :sort-desc="true"
-          export-file-name="销售退货单" :params="searchForm"
+          :export-file-name="$t('sale.return.exportFileName')" :params="searchForm"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''">
           <template #search>
-            <el-input v-model="searchForm.order_no" placeholder="退货单号" clearable style="width:160px" />
-            <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
-            <el-select v-model="searchForm.status" placeholder="状态" clearable style="width:110px">
-              <el-option label="待审核" :value="0" />
-              <el-option label="已审核" :value="1" />
-              <el-option label="已驳回" :value="2" />
-              <el-option label="未核对" value="unreconciled" />
+            <el-input v-model="searchForm.order_no" :placeholder="$t('sale.return.searchOrderNoPlaceholder')" clearable style="width:160px" />
+            <el-input v-model="searchForm.customer_name" :placeholder="$t('sale.return.searchCustomerNamePlaceholder')" clearable style="width:150px" />
+            <el-select v-model="searchForm.status" :placeholder="$t('sale.return.searchStatusPlaceholder')" clearable style="width:110px">
+              <el-option :label="$t('sale.return.statusPending')" :value="0" />
+              <el-option :label="$t('sale.return.statusAudited')" :value="1" />
+              <el-option :label="$t('sale.return.statusRejected')" :value="2" />
+              <el-option :label="$t('sale.return.statusUnreconciled')" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">新增退货</el-button>
+            <el-button type="primary" :icon="Plus" @click="openCreate">{{ $t('sale.return.btnAddReturn') }}</el-button>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="expand-detail">
-                <div class="expand-title">商品明细</div>
+                <div class="expand-title">{{ $t('sale.return.expandTitle') }}</div>
                 <el-table :data="parseItems(row.goods_info)" border size="small" class="expand-table">
                   <el-table-column type="index" width="40" align="center" />
-                  <el-table-column prop="goods_name" label="商品名称" min-width="140" />
-                  <el-table-column prop="goods_sn" label="编码" width="110" />
-                  <el-table-column prop="spec" label="规格" width="100" />
-                  <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-                  <el-table-column prop="num" label="数量" width="80" align="right" />
-                  <el-table-column label="含税单价" width="110" align="right">
+                  <el-table-column prop="goods_name" :label="$t('sale.return.colGoodsName')" min-width="140" />
+                  <el-table-column prop="goods_sn" :label="$t('sale.return.colGoodsSn')" width="110" />
+                  <el-table-column prop="spec" :label="$t('sale.return.colSpec')" width="100" />
+                  <el-table-column prop="unit_name" :label="$t('sale.return.colUnit')" width="65" align="center" />
+                  <el-table-column prop="num" :label="$t('sale.return.colQty')" width="80" align="right" />
+                  <el-table-column :label="$t('sale.return.colTaxPrice')" width="110" align="right">
                     <template #default="{ row: item }">¥{{ Number(item.price || 0).toFixed(2) }}</template>
                   </el-table-column>
-                  <el-table-column label="含税合计" width="110" align="right">
+                  <el-table-column :label="$t('sale.return.colTaxTotal')" width="110" align="right">
                     <template #default="{ row: item }">
                       <span style="color:#0071e3;font-weight:500">¥{{ ((item.num||0)*(item.price||0)).toFixed(2) }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column prop="remark" label="备注" min-width="100" />
+                  <el-table-column prop="remark" :label="$t('sale.return.colRemark')" min-width="100" />
                 </el-table>
               </div>
             </template>
           </el-table-column>
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column prop="order_no" label="退货单号" min-width="150" />
-          <el-table-column label="客户名称" min-width="140">
+          <el-table-column type="index" :label="$t('sale.return.colIndex')" width="60" align="center" />
+          <el-table-column prop="order_no" :label="$t('sale.return.colReturnOrderNo')" min-width="150" />
+          <el-table-column :label="$t('sale.return.colCustomerName')" min-width="140">
             <template #default="{ row }">{{ row.customer_name || customerOptions.find(c => c.id === row.customer_id)?.name || '—' }}</template>
           </el-table-column>
-          <el-table-column label="退货日期" width="110">
+          <el-table-column :label="$t('sale.return.colReturnDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.created_at || row.return_date) }}</template>
           </el-table-column>
-          <el-table-column label="退货人" width="90">
+          <el-table-column :label="$t('sale.return.colReturnUser')" width="90">
             <template #default="{ row }">{{ row.admin_name || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="return_amount" label="退货金额" width="120" align="right">
+          <el-table-column prop="return_amount" :label="$t('sale.return.colReturnAmount')" width="120" align="right">
             <template #default="{ row }">
               <span style="color:#0071e3;font-weight:500">¥{{ calcRowAmount(row).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="reason" label="退货原因" min-width="140" show-overflow-tooltip />
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column prop="reason" :label="$t('sale.return.colReason')" min-width="140" show-overflow-tooltip />
+          <el-table-column :label="$t('sale.return.colStatus')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'" size="small">
-                {{ row.status === 1 ? '已审核' : row.status === 2 ? '已驳回' : '待审核' }}
+                {{ row.status === 1 ? $t('sale.return.statusAudited') : row.status === 2 ? $t('sale.return.statusRejected') : $t('sale.return.statusPending') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="250" fixed="right">
+          <el-table-column :label="$t('sale.return.colAction')" width="250" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">查看</el-button>
-              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">编辑</el-button>
+              <el-button v-if="row.status === 1" type="primary" link size="small" @click="openEdit(row, true)">{{ $t('sale.return.btnView') }}</el-button>
+              <el-button v-else type="success" link size="small" @click="openEdit(row, false)">{{ $t('sale.return.btnEdit') }}</el-button>
               <template v-if="row.status === 0">
-                <el-button type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
+                <el-button type="primary" link size="small" @click="handleAudit(row, 1)">{{ $t('sale.return.btnAudit') }}</el-button>
+                <el-button type="danger" link size="small" @click="handleAudit(row, 2)">{{ $t('sale.return.btnReject') }}</el-button>
               </template>
-              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-              <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning('请先执行【反审核】，再删除该退货单') : handleDelete(row.id)">删除</el-button>
+              <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleAudit(row, 0)">{{ $t('sale.return.btnUnaudit') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('sale.return.btnReconciled') : $t('sale.return.btnReconcile') }}</el-button>
+              <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning($t('sale.return.warnUnauditBeforeDelete')) : handleDelete(row.id)">{{ $t('sale.return.btnDelete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -92,16 +92,16 @@
       <!-- 顶部操作栏 -->
       <div class="form-topbar">
         <div style="display:flex;align-items:center;gap:12px">
-          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ isReadonly ? '查看退货单' : (fd.id ? '编辑退货单' : '新增退货') }}</span>
-          <el-tag v-if="isReadonly" type="success" size="small">已审核</el-tag>
+          <el-button :icon="ArrowLeft" @click="backToList">{{ $t('sale.return.btnBack') }}</el-button>
+          <span class="form-title">{{ isReadonly ? $t('sale.return.formTitleView') : (fd.id ? $t('sale.return.formTitleEdit') : $t('sale.return.formTitleCreate')) }}</span>
+          <el-tag v-if="isReadonly" type="success" size="small">{{ $t('sale.return.statusAudited') }}</el-tag>
         </div>
         <div class="form-actions">
           <el-button v-if="!isReadonly" :loading="saving && !savingAndAuditing" @click="handleSave(false)">
-            保存 <span style="font-size:11px;opacity:0.7">(Ctrl+S)</span>
+            {{ $t('sale.return.btnSave') }} <span style="font-size:11px;opacity:0.7">{{ $t('sale.return.saveShortcut') }}</span>
           </el-button>
           <el-button v-if="!isReadonly" type="primary" :loading="savingAndAuditing" @click="handleSave(true)">
-            保存并审核
+            {{ $t('sale.return.btnSaveAndAudit') }}
           </el-button>
         </div>
       </div>
@@ -110,39 +110,39 @@
 
         <!-- 关联销售出库单 -->
         <div class="form-section">
-          <div class="sec-title">关联销售出库单</div>
+          <div class="sec-title">{{ $t('sale.return.secLinkedSaleOut') }}</div>
           <div v-if="fd.order_id" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
             <el-tag type="success" size="large">{{ fd.order_sn }}</el-tag>
-            <span style="color:rgba(29,29,31,0.5);font-size:13px">客户：{{ fd.customer_name }}</span>
-            <span style="color:rgba(29,29,31,0.5);font-size:13px">仓库：{{ fd.warehouse_name }}</span>
+            <span style="color:rgba(29,29,31,0.5);font-size:13px">{{ $t('sale.return.labelCustomer') }}{{ fd.customer_name }}</span>
+            <span style="color:rgba(29,29,31,0.5);font-size:13px">{{ $t('sale.return.labelWarehouse') }}{{ fd.warehouse_name }}</span>
             <span style="font-size:13px">
-              出库总额：<b style="color:#0071e3">¥{{ Number(fd.order_total_amount||0).toFixed(2) }}</b>
+              {{ $t('sale.return.labelOrderTotal') }}<b style="color:#0071e3">¥{{ Number(fd.order_total_amount||0).toFixed(2) }}</b>
             </span>
             <span style="font-size:13px">
-              已收款：<b style="color:#16a34a">¥{{ Number(fd.order_collected_amount||0).toFixed(2) }}</b>
+              {{ $t('sale.return.labelCollected') }}<b style="color:#16a34a">¥{{ Number(fd.order_collected_amount||0).toFixed(2) }}</b>
             </span>
-            <el-button v-if="!isReadonly" size="small" @click="openSaleOutPicker">重新选择</el-button>
+            <el-button v-if="!isReadonly" size="small" @click="openSaleOutPicker">{{ $t('sale.return.btnReselect') }}</el-button>
           </div>
-          <el-button v-else-if="!isReadonly" type="primary" @click="openSaleOutPicker">选择销售出库单</el-button>
-          <div v-else style="color:rgba(29,29,31,0.35)">—</div>
+          <el-button v-else-if="!isReadonly" type="primary" @click="openSaleOutPicker">{{ $t('sale.return.btnSelectSaleOut') }}</el-button>
+          <div v-else style="color:rgba(29,29,31,0.35)">{{ $t('sale.return.emptyDash') }}</div>
         </div>
 
         <!-- 基本信息卡片 -->
         <div class="form-section">
-          <div class="sec-title">基本信息</div>
+          <div class="sec-title">{{ $t('sale.return.secBasicInfo') }}</div>
           <el-form ref="formRef" :model="fd" label-width="80px" :disabled="isReadonly">
             <el-row :gutter="16">
               <!-- 行1 -->
               <el-col :span="6">
-                <el-form-item label="退货单号">
-                  <el-input :value="fd.id ? fd.order_no : '（保存后自动生成）'" disabled placeholder="自动生成" />
+                <el-form-item :label="$t('sale.return.labelReturnOrderNo')">
+                  <el-input :value="fd.id ? fd.order_no : $t('sale.return.returnOrderNoAutoTip')" disabled :placeholder="$t('sale.return.returnOrderNoAutoPlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="客户名称" prop="customer_id"
-                  :rules="[{ required: true, message: '请选择客户' }]">
+                <el-form-item :label="$t('sale.return.labelCustomerName')" prop="customer_id"
+                  :rules="[{ required: true, message: t('sale.return.msgSelectCustomer') }]">
                   <div style="display:flex;gap:4px;width:100%">
-                    <el-select v-model="fd.customer_id" placeholder="请选择客户" filterable style="flex:1"
+                    <el-select v-model="fd.customer_id" :placeholder="$t('sale.return.placeholderSelectCustomer')" filterable style="flex:1"
                       @change="onCustomerChange">
                       <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
                     </el-select>
@@ -151,54 +151,54 @@
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="客户等级">
-                  <el-select v-model="fd.level_id" placeholder="等级（可选）" clearable style="width:100%" :disabled="isReadonly" @change="onLevelChange">
+                <el-form-item :label="$t('sale.return.labelCustomerLevel')">
+                  <el-select v-model="fd.level_id" :placeholder="$t('sale.return.placeholderLevel')" clearable style="width:100%" :disabled="isReadonly" @change="onLevelChange">
                     <el-option v-for="lv in levelOptions" :key="lv.id" :label="lv.name" :value="lv.id" />
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="退货人" prop="admin_name">
-                  <StaffSelect v-model="fd.admin_name" placeholder="请选择或输入退货人" />
+                <el-form-item :label="$t('sale.return.labelReturnUser')" prop="admin_name">
+                  <StaffSelect v-model="fd.admin_name" :placeholder="$t('sale.return.placeholderReturnUser')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="退货日期" prop="return_date">
+                <el-form-item :label="$t('sale.return.labelReturnDate')" prop="return_date">
                   <el-date-picker v-model="fd.return_date" type="date" value-format="YYYY-MM-DD"
-                    style="width:100%" placeholder="请选择日期" />
+                    style="width:100%" :placeholder="$t('sale.return.placeholderDate')" />
                 </el-form-item>
               </el-col>
 
               <!-- 行2 -->
               <el-col :span="6">
-                <el-form-item label="退货原因" prop="reason">
-                  <el-input v-model="fd.reason" placeholder="请输入退货原因" />
+                <el-form-item :label="$t('sale.return.labelReason')" prop="reason">
+                  <el-input v-model="fd.reason" :placeholder="$t('sale.return.placeholderReason')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="仓库" prop="warehouse_id">
-                  <el-select v-model="fd.warehouse_id" placeholder="请选择仓库" filterable style="width:100%"
+                <el-form-item :label="$t('sale.return.labelWarehouseField')" prop="warehouse_id">
+                  <el-select v-model="fd.warehouse_id" :placeholder="$t('sale.return.placeholderSelectWarehouse')" filterable style="width:100%"
                     @change="onWarehouseChange">
                     <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="是否开票">
-                  <el-switch v-model="fd.need_invoice" active-text="是" inactive-text="否" />
+                <el-form-item :label="$t('sale.return.labelNeedInvoice')">
+                  <el-switch v-model="fd.need_invoice" :active-text="$t('sale.return.switchYes')" :inactive-text="$t('sale.return.switchNo')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6" />
 
               <!-- 行3 -->
               <el-col :span="18">
-                <el-form-item label="备注">
-                  <el-input v-model="fd.remark" type="textarea" :rows="2" placeholder="请输入备注" />
+                <el-form-item :label="$t('sale.return.labelRemark')">
+                  <el-input v-model="fd.remark" type="textarea" :rows="2" :placeholder="$t('sale.return.placeholderRemark')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="附件">
-                  <el-button :icon="Paperclip">上传附件</el-button>
+                <el-form-item :label="$t('sale.return.labelAttachment')">
+                  <el-button :icon="Paperclip">{{ $t('sale.return.btnUploadAttachment') }}</el-button>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -211,57 +211,57 @@
           <div v-if="!isReadonly" class="goods-toolbar">
             <div class="toolbar-left">
               <template v-if="!fd.order_id">
-                <el-button type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()">选择商品</el-button>
-                <el-button :icon="EditPen" size="small" @click="openManualAdd">新增商品</el-button>
+                <el-button type="primary" :icon="Plus" size="small" @click="goodsSelectRef?.open()">{{ $t('sale.return.btnSelectGoods') }}</el-button>
+                <el-button :icon="EditPen" size="small" @click="openManualAdd">{{ $t('sale.return.btnAddGoodsManual') }}</el-button>
               </template>
-              <span v-else style="font-size:13px;color:rgba(29,29,31,0.5)">已从出库单导入商品，填写退货数量即可</span>
+              <span v-else style="font-size:13px;color:rgba(29,29,31,0.5)">{{ $t('sale.return.goodsImportedTip') }}</span>
             </div>
-            <span class="goods-count">共 <b>{{ fd.items.length }}</b> 件商品</span>
+            <span class="goods-count">{{ $t('sale.return.goodsCountPrefix') }} <b>{{ fd.items.length }}</b> {{ $t('sale.return.goodsCountSuffix') }}</span>
           </div>
 
           <!-- 商品表格 -->
-          <el-table :data="fd.items" border size="small" style="width:100%" empty-text="请点击上方按钮添加商品">
+          <el-table :data="fd.items" border size="small" style="width:100%" :empty-text="$t('sale.return.emptyGoodsTip')">
             <el-table-column type="index" width="45" align="center" fixed="left" />
-            <el-table-column label="商品名称" min-width="150" fixed="left">
+            <el-table-column :label="$t('sale.return.colGoodsName')" min-width="150" fixed="left">
               <template #default="{ row }">
-                <el-input v-model="row.goods_name" size="small" placeholder="商品名称" />
+                <el-input v-model="row.goods_name" size="small" :placeholder="$t('sale.return.placeholderGoodsName')" />
               </template>
             </el-table-column>
-            <el-table-column label="商品编码" width="120">
+            <el-table-column :label="$t('sale.return.colGoodsSn')" width="120">
               <template #default="{ row }">
-                <el-input v-model="row.goods_sn" size="small" placeholder="编码" />
+                <el-input v-model="row.goods_sn" size="small" :placeholder="$t('sale.return.placeholderGoodsSn')" />
               </template>
             </el-table-column>
-            <el-table-column label="规格" width="140">
+            <el-table-column :label="$t('sale.return.colSpec')" width="140">
               <template #default="{ row }">
                 <el-select
                   v-if="row.goods_id && goodsSpecMap[row.goods_id]?.length"
                   v-model="row.spec"
                   size="small"
-                  placeholder="请选择规格"
+                  :placeholder="$t('sale.return.placeholderSelectSpec')"
                   clearable
                   style="width:100%"
                   @focus="fetchGoodsSpecs(row.goods_id)"
                 >
                   <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
                 </el-select>
-                <el-input v-else v-model="row.spec" size="small" placeholder="规格"
+                <el-input v-else v-model="row.spec" size="small" :placeholder="$t('sale.return.placeholderSpec')"
                   @focus="row.goods_id && fetchGoodsSpecs(row.goods_id)" />
               </template>
             </el-table-column>
-            <el-table-column label="单位" width="70" align="center">
+            <el-table-column :label="$t('sale.return.colUnit')" width="70" align="center">
               <template #default="{ row }">
-                <el-input v-model="row.unit_name" size="small" placeholder="单位" />
+                <el-input v-model="row.unit_name" size="small" :placeholder="$t('sale.return.placeholderUnit')" />
               </template>
             </el-table-column>
-            <el-table-column v-if="fd.order_id" label="出库数量" width="90" align="right">
+            <el-table-column v-if="fd.order_id" :label="$t('sale.return.colOutQty')" width="90" align="right">
               <template #default="{ row }">{{ row.origin_num ?? '—' }}</template>
             </el-table-column>
             <el-table-column width="120">
               <template #header>
                 <div class="batch-header">
-                  <span>退货数量</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('num')">批量</el-button>
+                  <span>{{ $t('sale.return.colReturnQty') }}</span>
+                  <el-button link type="primary" size="small" @click="batchEditField('num')">{{ $t('sale.return.btnBatch') }}</el-button>
                 </div>
               </template>
               <template #default="{ row }">
@@ -272,8 +272,8 @@
             <el-table-column width="130">
               <template #header>
                 <div class="batch-header">
-                  <span>未税单价</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('price_no_tax')">批量</el-button>
+                  <span>{{ $t('sale.return.colNoTaxPrice') }}</span>
+                  <el-button link type="primary" size="small" @click="batchEditField('price_no_tax')">{{ $t('sale.return.btnBatch') }}</el-button>
                 </div>
               </template>
               <template #default="{ row }">
@@ -284,8 +284,8 @@
             <el-table-column width="110">
               <template #header>
                 <div class="batch-header">
-                  <span>税率(%)</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('tax_rate')">批量</el-button>
+                  <span>{{ $t('sale.return.colTaxRate') }}</span>
+                  <el-button link type="primary" size="small" @click="batchEditField('tax_rate')">{{ $t('sale.return.btnBatch') }}</el-button>
                 </div>
               </template>
               <template #default="{ row }">
@@ -294,7 +294,7 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="税额" width="100" align="right">
+            <el-table-column :label="$t('sale.return.colTaxAmount')" width="100" align="right">
               <template #default="{ row }">
                 <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
               </template>
@@ -302,8 +302,8 @@
             <el-table-column width="130">
               <template #header>
                 <div class="batch-header">
-                  <span>含税单价</span>
-                  <el-button link type="primary" size="small" @click="batchEditField('price')">批量</el-button>
+                  <span>{{ $t('sale.return.colTaxPriceShort') }}</span>
+                  <el-button link type="primary" size="small" @click="batchEditField('price')">{{ $t('sale.return.btnBatch') }}</el-button>
                 </div>
               </template>
               <template #default="{ row }">
@@ -311,18 +311,18 @@
                   controls-position="right" style="width:100%" @change="onPriceChange(row)" />
               </template>
             </el-table-column>
-            <el-table-column label="含税合计" width="110" align="right">
+            <el-table-column :label="$t('sale.return.colTaxTotalShort')" width="110" align="right">
               <template #default="{ row }">
                 <span style="color:#0071e3;font-weight:500">{{ ((row.num||0) * (row.price||0)).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="备注" min-width="140">
+            <el-table-column :label="$t('sale.return.colRemark')" min-width="140">
               <template #default="{ row }">
                 <div style="display:flex;gap:4px;align-items:center">
-                  <el-input v-model="row.remark" size="small" placeholder="备注" style="flex:1" />
+                  <el-input v-model="row.remark" size="small" :placeholder="$t('sale.return.placeholderRemarkShort')" style="flex:1" />
                   <el-tooltip v-if="fd.level_id && row.goods_id > 0 && !hasLevelPrice(row.goods_id)"
-                    content="此商品无代理价，点击将当前价格记录为固定代理价" placement="top">
-                    <el-button type="warning" link size="small" @click="saveAsLevelPrice(row)">记录代理价</el-button>
+                    :content="$t('sale.return.tooltipNoLevelPrice')" placement="top">
+                    <el-button type="warning" link size="small" @click="saveAsLevelPrice(row)">{{ $t('sale.return.btnRecordLevelPrice') }}</el-button>
                   </el-tooltip>
                 </div>
               </template>
@@ -337,34 +337,41 @@
 
         <!-- 结算信息卡片 -->
         <div class="form-section settlement-section">
-          <div class="sec-title">结算信息</div>
+          <div class="sec-title">{{ $t('sale.return.secSettlement') }}</div>
           <div class="settlement-grid">
             <div class="settle-item">
-              <span class="settle-label">退货金额合计</span>
+              <span class="settle-label">{{ $t('sale.return.labelTotalReturnAmount') }}</span>
               <span class="settle-value primary">¥{{ fd.total_amount.toFixed(2) }}</span>
             </div>
             <div class="settle-item">
-              <span class="settle-label">折扣方式</span>
+              <span class="settle-label">{{ $t('sale.return.labelDiscountType') }}</span>
               <el-select v-model="fd.discount_type" size="small" style="width:120px" @change="calcSettle">
-                <el-option label="无折扣" value="none" />
-                <el-option label="按金额折扣" value="amount" />
-                <el-option label="按百分比折扣" value="percent" />
+                <el-option :label="$t('sale.return.discountNone')" value="none" />
+                <el-option :label="$t('sale.return.discountAmount')" value="amount" />
+                <el-option :label="$t('sale.return.discountPercent')" value="percent" />
               </el-select>
             </div>
             <div class="settle-item" v-if="fd.discount_type !== 'none'">
-              <span class="settle-label">{{ fd.discount_type === 'percent' ? '折扣(%)' : '折扣金额' }}</span>
+              <span class="settle-label">{{ fd.discount_type === 'percent' ? $t('sale.return.labelDiscountPercent') : $t('sale.return.labelDiscountAmount') }}</span>
               <el-input-number v-model="fd.discount_value" :min="0"
                 :max="fd.discount_type === 'percent' ? 100 : fd.total_amount"
                 :precision="2" size="small" style="width:130px" @change="calcSettle" />
             </div>
             <div class="settle-item">
-              <span class="settle-label">实退金额</span>
+              <span class="settle-label">{{ $t('sale.return.labelActualReturnAmount') }}</span>
               <span class="settle-value">¥{{ fd.return_amount.toFixed(2) }}</span>
+            </div>
+            <div class="settle-item">
+              <span class="settle-label">{{ $t('sale.return.labelRefundAccount') }}</span>
+              <el-select v-model="fd.fund_id" :placeholder="$t('sale.return.placeholderRefundAccount')" clearable style="width:200px"
+                :disabled="isReadonly" @change="(id: any) => { const f = fundOptions.find((x: any) => x.id === id); fd.fund_name = f?.name || '' }">
+                <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
+              </el-select>
             </div>
           </div>
           <div class="settle-summary">
-            <span>含税合计：<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
-            <span style="margin-left:24px">实退金额：<b style="color:#dc2626;font-size:16px">¥{{ fd.return_amount.toFixed(2) }}</b></span>
+            <span>{{ $t('sale.return.summaryTaxTotal') }}<b style="color:#0071e3;font-size:16px">¥{{ fd.total_amount.toFixed(2) }}</b></span>
+            <span style="margin-left:24px">{{ $t('sale.return.summaryActualReturn') }}<b style="color:#dc2626;font-size:16px">¥{{ fd.return_amount.toFixed(2) }}</b></span>
           </div>
         </div>
 
@@ -374,79 +381,79 @@
     <GoodsSelect ref="goodsSelectRef" :customer-id="fd.customer_id" :filter-goods-ids="customerGoodsIds" @confirm="onGoodsConfirm" />
 
     <!-- 手动新增商品弹框 -->
-    <el-dialog v-model="manualAddVisible" title="新增商品行" width="420px" append-to-body>
+    <el-dialog v-model="manualAddVisible" :title="$t('sale.return.dialogManualAddTitle')" width="420px" append-to-body>
       <el-form :model="manualForm" label-width="80px">
-        <el-form-item label="商品名称" :rules="[{ required: true }]">
-          <el-input v-model="manualForm.goods_name" placeholder="请输入商品名称" />
+        <el-form-item :label="$t('sale.return.colGoodsName')" :rules="[{ required: true }]">
+          <el-input v-model="manualForm.goods_name" :placeholder="$t('sale.return.manualGoodsNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="商品编码">
-          <el-input v-model="manualForm.goods_sn" placeholder="商品编码（可选）" />
+        <el-form-item :label="$t('sale.return.colGoodsSn')">
+          <el-input v-model="manualForm.goods_sn" :placeholder="$t('sale.return.manualGoodsSnPlaceholder')" />
         </el-form-item>
-        <el-form-item label="规格">
-          <el-input v-model="manualForm.spec" placeholder="规格（可选）" />
+        <el-form-item :label="$t('sale.return.colSpec')">
+          <el-input v-model="manualForm.spec" :placeholder="$t('sale.return.manualSpecPlaceholder')" />
         </el-form-item>
-        <el-form-item label="单位">
-          <el-input v-model="manualForm.unit_name" placeholder="如：个、kg" />
+        <el-form-item :label="$t('sale.return.colUnit')">
+          <el-input v-model="manualForm.unit_name" :placeholder="$t('sale.return.manualUnitPlaceholder')" />
         </el-form-item>
-        <el-form-item label="退货数量">
+        <el-form-item :label="$t('sale.return.manualLabelReturnQty')">
           <el-input-number v-model="manualForm.num" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
-        <el-form-item label="含税单价">
+        <el-form-item :label="$t('sale.return.manualLabelTaxPrice')">
           <el-input-number v-model="manualForm.price" :min="0" :precision="4" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="manualAddVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmManualAdd">确认添加</el-button>
+        <el-button @click="manualAddVisible = false">{{ $t('sale.return.btnCancel') }}</el-button>
+        <el-button type="primary" @click="confirmManualAdd">{{ $t('sale.return.btnConfirmAdd') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 批量编辑弹框 -->
-    <el-dialog v-model="batchEditVisible" :title="`批量设置 ${batchEditLabel}`" width="340px" append-to-body>
+    <el-dialog v-model="batchEditVisible" :title="$t('sale.return.dialogBatchEditTitle', { label: batchEditLabel })" width="340px" append-to-body>
       <el-form label-width="80px" style="padding:8px 0">
         <el-form-item :label="batchEditLabel">
           <el-input-number v-model="batchEditValue" :min="0" :precision="4" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="batchEditVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmBatchEdit">确认</el-button>
+        <el-button @click="batchEditVisible = false">{{ $t('sale.return.btnCancel') }}</el-button>
+        <el-button type="primary" @click="confirmBatchEdit">{{ $t('sale.return.btnConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 快速新增客户弹框 -->
-    <el-dialog v-model="quickAddCustomerVisible" title="快速新增客户" width="360px" append-to-body>
+    <el-dialog v-model="quickAddCustomerVisible" :title="$t('sale.return.dialogQuickAddCustomerTitle')" width="360px" append-to-body>
       <el-form :model="quickCustomerForm" label-width="70px">
-        <el-form-item label="客户名称" required>
-          <el-input v-model="quickCustomerForm.nickname" placeholder="请输入客户名称" />
+        <el-form-item :label="$t('sale.return.labelCustomerName')" required>
+          <el-input v-model="quickCustomerForm.nickname" :placeholder="$t('sale.return.quickCustomerNamePlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="quickAddCustomerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="quickCustomerSaving" @click="confirmQuickAddCustomer">确认创建</el-button>
+        <el-button @click="quickAddCustomerVisible = false">{{ $t('sale.return.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="quickCustomerSaving" @click="confirmQuickAddCustomer">{{ $t('sale.return.btnConfirmCreate') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 选择销售出库单弹框 -->
-    <el-dialog v-model="saleOutPickerVisible" title="选择销售出库单" width="780px" append-to-body>
+    <el-dialog v-model="saleOutPickerVisible" :title="$t('sale.return.dialogPickSaleOutTitle')" width="780px" append-to-body>
       <div style="margin-bottom:10px;display:flex;gap:8px">
-        <el-input v-model="saleOutPickerKeyword" placeholder="搜索出库单号/客户名称" clearable style="width:260px" />
+        <el-input v-model="saleOutPickerKeyword" :placeholder="$t('sale.return.saleOutSearchPlaceholder')" clearable style="width:260px" />
       </div>
       <el-table :data="filteredSaleOutOrders" v-loading="saleOutPickerLoading" border height="380"
         highlight-current-row @current-change="onSaleOutSelect">
-        <el-table-column prop="order_sn" label="出库单号" min-width="160" />
-        <el-table-column prop="customer_name" label="客户" min-width="120" />
-        <el-table-column prop="warehouse_name" label="仓库" width="110" />
-        <el-table-column label="出库金额" width="110" align="right">
+        <el-table-column prop="order_sn" :label="$t('sale.return.colSaleOutOrderSn')" min-width="160" />
+        <el-table-column prop="customer_name" :label="$t('sale.return.colPickCustomer')" min-width="120" />
+        <el-table-column prop="warehouse_name" :label="$t('sale.return.colPickWarehouse')" width="110" />
+        <el-table-column :label="$t('sale.return.colOutAmount')" width="110" align="right">
           <template #default="{ row }">¥{{ Number(row.total_amount||0).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column label="出库日期" width="110">
+        <el-table-column :label="$t('sale.return.colOutDate')" width="110">
           <template #default="{ row }">{{ fmtDt(row.out_date || row.create_time) }}</template>
         </el-table-column>
       </el-table>
       <template #footer>
-        <el-button @click="saleOutPickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedSaleOut" @click="confirmSaleOutSelect">确认选择</el-button>
+        <el-button @click="saleOutPickerVisible = false">{{ $t('sale.return.btnCancel') }}</el-button>
+        <el-button type="primary" :disabled="!selectedSaleOut" @click="confirmSaleOutSelect">{{ $t('sale.return.btnConfirmSelect') }}</el-button>
       </template>
     </el-dialog>
 
@@ -463,6 +470,7 @@ import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getSaleReturnList, createSaleReturn, updateSaleReturn, deleteSaleReturn, auditSaleReturn, getSaleOutList } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
+import { getFundList, updateFund, createPayReceipt } from '@/api/finance'
 import { getSpecList } from '@/api/goods'
 import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
@@ -472,6 +480,8 @@ import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
 import { loadLevels, loadLevelMap, getLevelPrice, setLevelPrice, hasCustomLevelPrice, type LevelItem } from '@/utils/customerLevel'
+
+const { t } = useI18n()
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -545,7 +555,13 @@ async function loadWarehouses() {
   warehouseOptions.value = res.data?.rows ?? []
 }
 
-onMounted(() => { loadCustomers(); loadWarehouses() })
+const fundOptions = ref<any[]>([])
+async function loadFunds() {
+  const res = await getFundList({ list_rows: 200 })
+  fundOptions.value = res.data?.rows ?? []
+}
+
+onMounted(() => { loadCustomers(); loadWarehouses(); loadFunds() })
 
 // ── 表单数据 ──────────────────────────────────────────────────────────────────
 interface SaleReturnItem {
@@ -575,6 +591,8 @@ const defaultFd = () => ({
   discount_type: 'none' as string,
   discount_value: 0,
   return_amount: 0,
+  fund_id: null as any,
+  fund_name: '',
   items: [] as SaleReturnItem[],
 })
 
@@ -652,7 +670,7 @@ function saveAsLevelPrice(row: any) {
   if (!fd.level_id || !row.goods_id) return
   setLevelPrice(Number(fd.level_id), row.goods_id, row.price)
   savedLevelPriceIds.value = new Set([...savedLevelPriceIds.value, row.goods_id])
-  ElMessage.success(`已记录：${row.goods_name} 代理价 ¥${row.price}`)
+  ElMessage.success(t('sale.return.msgLevelPriceSaved', { name: row.goods_name, price: row.price }))
 }
 
 function onLevelChange() {
@@ -709,10 +727,10 @@ function backToList() {
 
 async function handleSave(andAudit = false) {
   try { await formRef.value?.validate() } catch {
-    ElMessage.warning('请填写必填项'); return
+    ElMessage.warning(t('sale.return.msgRequiredFields')); return
   }
   if (!fd.items.length) {
-    ElMessage.warning('请至少添加一件商品'); return
+    ElMessage.warning(t('sale.return.msgAtLeastOneItem')); return
   }
   saving.value = true
   if (andAudit) savingAndAuditing.value = true
@@ -732,6 +750,8 @@ async function handleSave(andAudit = false) {
       remark: fd.remark,
       total_amount: fd.total_amount,
       level_id: fd.level_id || 0,
+      fund_id: fd.fund_id || null,
+      fund_name: fd.fund_name || '',
       goods_info: JSON.stringify(filteredItems),
     }
     let savedId = fd.id
@@ -746,27 +766,21 @@ async function handleSave(andAudit = false) {
     if (andAudit && savedId) {
       try {
         await auditSaleReturn(savedId, 1)
-        // 库存加回
-        await stockEffect(filteredItems, 'restore', fd.warehouse_id, '销售退货入库')
-        // 客户余额增加
-        if (fd.customer_id) {
-          try {
-            const res = await http.get('/shop/ShopCustomer/detail', { params: { id: fd.customer_id } })
-            const cur = Number(res.data?.balance || 0)
-            await http.post('/shop/ShopCustomer/edit', { id: fd.customer_id, balance: cur + fd.total_amount })
-          } catch (e: any) { console.warn('客户余额更新失败', e?.message) }
-        }
+        // 库存加回（带唯一标记，反审核时按标记找单撤销）
+        await stockEffect(filteredItems, 'restore', fd.warehouse_id, `销售退货入库#${savedId}`)
+        // 自动退款：有欠款→冲抵应收，无欠款→退现金付款单
+        await handleReturnRefund({ ...fd, id: savedId }, 'audit')
         stockRefreshStore.trigger()
-        ElMessage.success('保存并审核成功')
+        ElMessage.success(t('sale.return.msgSaveAndAuditSuccess'))
       } catch (e: any) {
-        ElMessage.warning(`保存成功，但审核失败：${e?.message || ''}，请手动审核`)
+        ElMessage.warning(t('sale.return.msgSaveOkAuditFailed', { error: e?.message || '' }))
       }
     } else {
-      ElMessage.success('保存成功')
+      ElMessage.success(t('sale.return.msgSaveSuccess'))
     }
     backToList()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('sale.return.msgSaveFailed'))
   } finally {
     saving.value = false
     savingAndAuditing.value = false
@@ -774,56 +788,118 @@ async function handleSave(andAudit = false) {
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该退货单？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('sale.return.confirmDeleteReturn'), t('sale.return.confirmTitle'), { type: 'warning' })
   await deleteSaleReturn(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('sale.return.msgDeleted'))
   tableRef.value?.refresh()
 }
 
 async function handleAudit(row: any, status: number) {
-  const action = status === 1 ? '审核通过' : status === 2 ? '驳回' : '反审核'
-  await ElMessageBox.confirm(`确定${action}该退货单？`, '提示', { type: 'warning' })
+  const action = status === 1 ? t('sale.return.actionApprove') : status === 2 ? t('sale.return.actionReject') : t('sale.return.actionUnaudit')
+  await ElMessageBox.confirm(t('sale.return.confirmAuditAction', { action }), t('sale.return.confirmTitle'), { type: 'warning' })
   try {
     await auditSaleReturn(row.id, status)
 
-    // 审核通过：退货=库存加回 + 增加客户余额（退款）
+    // 审核通过：库存加回 + 自动退款（有欠款→冲抵应收；无欠款→退现金）
     if (status === 1) {
       await handleReturnStockEffect(row, 'audit')
-      if (row.customer_id) {
-        try {
-          const res = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
-          const cur = Number(res.data?.balance || 0)
-          const amt = Number(row.total_amount || 0)
-          await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: cur + amt })
-        } catch (e: any) { console.warn('客户余额更新失败', e?.message) }
-      }
+      await handleReturnRefund(row, 'audit')
     }
-    // 反审核：撤销库存加回 + 撤销客户余额增加
+    // 反审核：撤销库存加回 + 撤销退款
     if (status === 0) {
       await handleReturnStockEffect(row, 'reverse')
-      if (row.customer_id) {
-        try {
-          const res = await http.get('/shop/ShopCustomer/detail', { params: { id: row.customer_id } })
-          const cur = Number(res.data?.balance || 0)
-          const amt = Number(row.total_amount || 0)
-          await http.post('/shop/ShopCustomer/edit', { id: row.customer_id, balance: cur - amt })
-        } catch (e: any) { console.warn('客户余额更新失败', e?.message) }
-      }
+      await handleReturnRefund(row, 'reverse')
     }
 
-    ElMessage.success(`${action}成功`)
+    ElMessage.success(t('sale.return.msgActionSuccess', { action }))
     stockRefreshStore.trigger()
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+    ElMessage.error(e?.message ?? t('sale.return.msgActionFailed'))
+  }
+}
+
+async function annulSaleReturnStockIn(returnOrderId: number) {
+  const marker = `销售退货入库#${returnOrderId}`
+  const res = await http.get('/stock/OtherIn/index', { params: { list_rows: 500 } })
+  const rows: any[] = res.data?.rows ?? []
+  const targets = rows.filter((r: any) => String(r.remark) === marker)
+  for (const r of targets) {
+    await http.post('/stock/OtherIn/annul', { id: r.id })
+  }
+}
+
+// 自动判断退款方式：有应收欠款→冲抵（加客户余额）；无欠款+有账户→直接退现金（创建付款单）
+async function handleReturnRefund(returnData: any, type: 'audit' | 'reverse') {
+  const customerId = returnData.customer_id
+  const amount = Number(returnData.return_amount ?? returnData.total_amount ?? fd.return_amount ?? 0)
+  const fundId = Number(returnData.fund_id || fd.fund_id || 0)
+  const fundName = returnData.fund_name || fd.fund_name || ''
+  const orderNo = returnData.order_no || ''
+  if (!customerId || amount <= 0) return
+
+  if (type === 'reverse') {
+    // 反审核：撤销客户余额增加（无论当时走了哪条路，都尝试回滚）
+    // 付款单反审核需要单独处理，这里只回滚客户余额
+    try {
+      const res = await http.get('/shop/ShopCustomer/detail', { params: { id: customerId } })
+      const cur = Number(res.data?.balance || 0)
+      await http.post('/shop/ShopCustomer/edit', { id: customerId, balance: Math.max(0, cur - amount) })
+    } catch (e: any) { console.warn('客户余额回滚失败', e?.message) }
+    return
+  }
+
+  // 查客户合同应收余额
+  let outstanding = 0
+  try {
+    const res = await http.get('/shop/ContractOrder/index', { params: { customer_id: customerId, status: 1, list_rows: 500 } })
+    const contracts: any[] = res.data?.rows ?? []
+    for (const c of contracts) {
+      const base = Number(c.after_discount) > 0 && Number(c.after_discount) <= Number(c.total_amount)
+        ? Number(c.after_discount) : Number(c.total_amount || 0)
+      outstanding += Math.max(0, base - Number(c.income_amount || 0))
+    }
+  } catch { /* 查不到时 fallback 加余额 */ }
+
+  if (outstanding > 0 || !fundId) {
+    // 有欠款 or 未指定账户：加到客户余额冲抵应收
+    try {
+      const res = await http.get('/shop/ShopCustomer/detail', { params: { id: customerId } })
+      const cur = Number(res.data?.balance || 0)
+      await http.post('/shop/ShopCustomer/edit', { id: customerId, balance: cur + amount })
+    } catch (e: any) { console.warn('客户余额更新失败', e?.message) }
+  } else {
+    // 无欠款 + 有指定账户：直接退现金，创建付款单
+    try {
+      const funds: any[] = fundOptions.value
+      const fund = funds.find((f: any) => f.id === fundId)
+      await createPayReceipt({
+        amount,
+        fund_id: fundId,
+        fund_name: fund?.name || fundName,
+        contact_type: 'customer',
+        customer_id: customerId,
+        customer_name: returnData.customer_name || fd.customer_name,
+        pay_date: new Date().toISOString().slice(0, 10),
+        remark: `销售退货退款 ${orderNo}`.trim(),
+      })
+      if (fund) {
+        await updateFund({ id: fund.id, name: fund.name, balance: Number(fund.balance || 0) - amount })
+      }
+      ElMessage.info(t('sale.return.msgRefundOrderCreated'))
+    } catch (e: any) { console.warn('退款付款单创建失败', e?.message) }
   }
 }
 
 async function handleReturnStockEffect(row: any, type: 'audit' | 'reverse') {
   const items = parseItems(row.goods_info)
   try {
-    // 退货审核通过=库存加回；反审核=扣减
-    await stockEffect(items, type === 'audit' ? 'restore' : 'deduct', row.warehouse_id, type === 'audit' ? '销售退货入库' : '销售退货反审核')
+    if (type === 'audit') {
+      await stockEffect(items, 'restore', row.warehouse_id, `销售退货入库#${row.id}`)
+    } else {
+      // 反审核：直接撤销审核时创建的入库单，不创建新出库单
+      await annulSaleReturnStockIn(row.id)
+    }
   } catch (e: any) {
     console.warn('销售退货库存变动失败', e?.message)
   }
@@ -866,7 +942,7 @@ function openManualAdd() {
 }
 
 function confirmManualAdd() {
-  if (!manualForm.goods_name.trim()) { ElMessage.warning('请输入商品名称'); return }
+  if (!manualForm.goods_name.trim()) { ElMessage.warning(t('sale.return.placeholderGoodsName')); return }
   fd.items.push({
     goods_id: 0,
     goods_name: manualForm.goods_name,
@@ -890,10 +966,10 @@ const batchEditLabel = ref('')
 const batchEditValue = ref(0)
 
 const fieldLabelMap: Record<string, string> = {
-  num: '退货数量',
-  price_no_tax: '未税单价',
-  tax_rate: '税率(%)',
-  price: '含税单价',
+  num: t('sale.return.fieldNum'),
+  price_no_tax: t('sale.return.fieldPriceNoTax'),
+  tax_rate: t('sale.return.fieldTaxRate'),
+  price: t('sale.return.fieldPrice'),
 }
 
 function batchEditField(field: string) {
@@ -915,7 +991,7 @@ function confirmBatchEdit() {
   }
   calcTotal()
   batchEditVisible.value = false
-  ElMessage.success(`已批量设置 ${batchEditLabel.value} 为 ${batchEditValue.value}`)
+  ElMessage.success(t('sale.return.msgBatchSetDone', { label: batchEditLabel.value, value: batchEditValue.value }))
 }
 
 // ── 快速新增客户 ──────────────────────────────────────────────────────────────
@@ -925,7 +1001,7 @@ const quickCustomerForm = reactive({ nickname: '' })
 
 async function confirmQuickAddCustomer() {
   if (!quickCustomerForm.nickname.trim()) {
-    ElMessage.warning('请输入客户名称'); return
+    ElMessage.warning(t('sale.return.quickCustomerNamePlaceholder')); return
   }
   quickCustomerSaving.value = true
   try {
@@ -936,9 +1012,9 @@ async function confirmQuickAddCustomer() {
     onCustomerChange(newId)
     quickCustomerForm.nickname = ''
     quickAddCustomerVisible.value = false
-    ElMessage.success('客户创建成功')
+    ElMessage.success(t('sale.return.msgCustomerCreated'))
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '创建失败')
+    ElMessage.error(e?.message ?? t('sale.return.msgCreateFailed'))
   } finally {
     quickCustomerSaving.value = false
   }

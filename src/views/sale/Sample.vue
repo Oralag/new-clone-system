@@ -3,19 +3,19 @@
     <div v-if="!showForm">
       <div class="sample-summary">
         <div class="sum-item">
-          <span>样品单</span>
+          <span>{{ $t('sale.sample.summarySamples') }}</span>
           <b>{{ summary.count }}</b>
         </div>
         <div class="sum-item">
-          <span>待审核</span>
+          <span>{{ $t('sale.sample.summaryPending') }}</span>
           <b>{{ summary.pending }}</b>
         </div>
         <div class="sum-item">
-          <span>样品费用</span>
+          <span>{{ $t('sale.sample.summarySampleCost') }}</span>
           <b class="orange">¥{{ fmt(summary.companyCost) }}</b>
         </div>
         <div class="sum-item">
-          <span>客户应收</span>
+          <span>{{ $t('sale.sample.summaryReceivable') }}</span>
           <b class="blue">¥{{ fmt(summary.receivable) }}</b>
         </div>
       </div>
@@ -24,89 +24,89 @@
         <ScTable
           ref="tableRef"
           :api-obj="reconcileFilteredApi"
-          export-file-name="样品单"
+          :export-file-name="$t('sale.sample.exportFileName')"
           sort-by="id"
           :sort-desc="true"
           :params="searchForm"
           @selection-change="() => {}"
         >
           <template #search>
-            <el-input v-model="searchForm.keyword" placeholder="样品单号/客户/运单号" clearable style="width:210px" />
-            <el-input v-model="searchForm.customer_name" placeholder="客户名称" clearable style="width:150px" />
-            <el-select v-model="searchForm.sample_type" placeholder="样品类型" clearable style="width:120px">
-              <el-option label="免费" value="free" />
-              <el-option label="收费" value="paid" />
-              <el-option label="借样" value="borrow" />
+            <el-input v-model="searchForm.keyword" :placeholder="$t('sale.sample.searchKeyword')" clearable style="width:210px" />
+            <el-input v-model="searchForm.customer_name" :placeholder="$t('sale.sample.searchCustomerName')" clearable style="width:150px" />
+            <el-select v-model="searchForm.sample_type" :placeholder="$t('sale.sample.sampleType')" clearable style="width:120px">
+              <el-option :label="$t('sale.sample.typeFree')" value="free" />
+              <el-option :label="$t('sale.sample.typePaid')" value="paid" />
+              <el-option :label="$t('sale.sample.typeBorrow')" value="borrow" />
             </el-select>
-            <el-select v-model="searchForm.status" placeholder="状态" clearable style="width:110px">
-              <el-option label="待审核" :value="0" />
-              <el-option label="已审核" :value="1" />
-              <el-option label="已驳回" :value="2" />
-              <el-option label="未核对" value="unreconciled" />
+            <el-select v-model="searchForm.status" :placeholder="$t('sale.sample.status')" clearable style="width:110px">
+              <el-option :label="$t('sale.sample.statusPending')" :value="0" />
+              <el-option :label="$t('sale.sample.statusApproved')" :value="1" />
+              <el-option :label="$t('sale.sample.statusRejected')" :value="2" />
+              <el-option :label="$t('sale.sample.statusUnreconciled')" value="unreconciled" />
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">新增样品单</el-button>
+            <el-button type="primary" :icon="Plus" @click="openCreate">{{ $t('sale.sample.createSample') }}</el-button>
           </template>
 
           <el-table-column type="expand">
             <template #default="{ row }">
               <el-table :data="parseItems(row.goods_info)" border size="small" class="expand-table">
                 <el-table-column type="index" width="48" />
-                <el-table-column prop="goods_name" label="商品名称" min-width="150" />
-                <el-table-column prop="goods_sn" label="编码" width="120" />
-                <el-table-column prop="spec" label="规格" width="120" />
-                <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-                <el-table-column prop="num" label="数量" width="90" align="right" />
-                <el-table-column label="成本单价" width="110" align="right">
+                <el-table-column prop="goods_name" :label="$t('sale.sample.goodsName')" min-width="150" />
+                <el-table-column prop="goods_sn" :label="$t('sale.sample.goodsSn')" width="120" />
+                <el-table-column prop="spec" :label="$t('sale.sample.spec')" width="120" />
+                <el-table-column prop="unit_name" :label="$t('sale.sample.unit')" width="70" align="center" />
+                <el-table-column prop="num" :label="$t('sale.sample.qty')" width="90" align="right" />
+                <el-table-column :label="$t('sale.sample.costUnitPrice')" width="110" align="right">
                   <template #default="{ row: item }">¥{{ fmt(item.cost_price || item.out_price) }}</template>
                 </el-table-column>
-                <el-table-column prop="remark" label="备注" min-width="120" />
+                <el-table-column prop="remark" :label="$t('sale.sample.remark')" min-width="120" />
               </el-table>
             </template>
           </el-table-column>
-          <el-table-column prop="sample_no" label="样品单号" min-width="150" />
-          <el-table-column label="类型" width="90">
+          <el-table-column prop="sample_no" :label="$t('sale.sample.sampleNo')" min-width="150" />
+          <el-table-column :label="$t('sale.sample.colType')" width="90">
             <template #default="{ row }">
               <el-tag :type="sampleTypeMeta(row.sample_type).type" size="small">{{ sampleTypeMeta(row.sample_type).label }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="customer_name" label="客户" min-width="150">
+          <el-table-column prop="customer_name" :label="$t('sale.sample.customer')" min-width="150">
             <template #default="{ row }">{{ row.customer_name || row.contact_name || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="sample_date" label="发样日期" width="110">
+          <el-table-column prop="sample_date" :label="$t('sale.sample.sampleDate')" width="110">
             <template #default="{ row }">{{ fmtDt(row.sample_date || row.created_at) }}</template>
           </el-table-column>
-          <el-table-column prop="warehouse_name" label="仓库" width="120" />
-          <el-table-column label="运费" width="135" align="right">
+          <el-table-column prop="warehouse_name" :label="$t('sale.sample.warehouse')" width="120" />
+          <el-table-column :label="$t('sale.sample.freight')" width="135" align="right">
             <template #default="{ row }">
               ¥{{ fmt(row.freight_amount) }} / {{ freightLabel(row.freight_bearer) }}
             </template>
           </el-table-column>
-          <el-table-column label="应收" width="100" align="right">
+          <el-table-column :label="$t('sale.sample.receivable')" width="100" align="right">
             <template #default="{ row }"><span class="blue">¥{{ fmt(row.receivable_amount) }}</span></template>
           </el-table-column>
-          <el-table-column label="公司费用" width="110" align="right">
+          <el-table-column :label="$t('sale.sample.companyCost')" width="110" align="right">
             <template #default="{ row }"><span class="orange">¥{{ fmt(row.company_cost) }}</span></template>
           </el-table-column>
-          <el-table-column label="费用状态" width="100">
-            <template #default="{ row }">{{ row.expense_payment_status === 'paid' ? '已付款' : '待付款' }}</template>
+          <el-table-column :label="$t('sale.sample.expenseStatus')" width="100">
+            <template #default="{ row }">{{ row.expense_payment_status === 'paid' ? $t('sale.sample.expensePaid') : $t('sale.sample.expensePending') }}</template>
           </el-table-column>
-          <el-table-column prop="tracking_no" label="运单号" min-width="140" show-overflow-tooltip />
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column prop="tracking_no" :label="$t('sale.sample.trackingNo')" min-width="140" show-overflow-tooltip />
+          <el-table-column :label="$t('sale.sample.colStatus')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="statusMeta(row.status).type" size="small">{{ statusMeta(row.status).label }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="260" fixed="right">
+          <el-table-column :label="$t('sale.sample.operation')" width="260" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" link size="small" @click="openView(row)">查看</el-button>
-              <el-button v-if="row.status !== 1" type="success" link size="small" @click="openEdit(row)">编辑</el-button>
-              <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-              <el-button v-if="row.status === 0" type="danger" link size="small" @click="handleAudit(row, 2)">驳回</el-button>
-              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-              <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row)">删除</el-button>
+              <el-button type="primary" link size="small" @click="openView(row)">{{ $t('sale.sample.view') }}</el-button>
+              <el-button v-if="row.status !== 1" type="success" link size="small" @click="openEdit(row)">{{ $t('sale.sample.edit') }}</el-button>
+              <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">{{ $t('sale.sample.approve') }}</el-button>
+              <el-button v-if="row.status === 0" type="danger" link size="small" @click="handleAudit(row, 2)">{{ $t('sale.sample.reject') }}</el-button>
+              <el-button v-if="row.status === 1" type="warning" link size="small" @click="handleAudit(row, 0)">{{ $t('sale.sample.unapprove') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('sale.sample.reconciled') : $t('sale.sample.reconcile') }}</el-button>
+              <el-button type="danger" link size="small" :disabled="row.status === 1" @click="handleDelete(row)">{{ $t('sale.sample.delete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -116,64 +116,64 @@
     <div v-else class="form-page">
       <div class="form-topbar">
         <div class="form-title-wrap">
-          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ isView ? '查看样品单' : fd.id ? '编辑样品单' : '新增样品单' }}</span>
-          <el-tag v-if="fd.status === 1" type="success" size="small">已审核</el-tag>
+          <el-button :icon="ArrowLeft" @click="backToList">{{ $t('sale.sample.back') }}</el-button>
+          <span class="form-title">{{ isView ? $t('sale.sample.viewSample') : fd.id ? $t('sale.sample.editSample') : $t('sale.sample.newSample') }}</span>
+          <el-tag v-if="fd.status === 1" type="success" size="small">{{ $t('sale.sample.approved') }}</el-tag>
         </div>
         <div v-if="!isView">
-          <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('sale.sample.save') }}</el-button>
         </div>
       </div>
 
       <div class="form-body">
         <div class="form-section">
-          <div class="sec-title">基本信息</div>
+          <div class="sec-title">{{ $t('sale.sample.basicInfo') }}</div>
           <el-form label-width="84px" :disabled="isView">
             <el-row :gutter="16">
               <el-col :span="6">
-                <el-form-item label="样品单号">
-                  <el-input v-model="fd.sample_no" placeholder="保存后自动生成" disabled />
+                <el-form-item :label="$t('sale.sample.sampleNo')">
+                  <el-input v-model="fd.sample_no" :placeholder="$t('sale.sample.sampleNoPlaceholder')" disabled />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="样品类型">
+                <el-form-item :label="$t('sale.sample.sampleType')">
                   <el-select v-model="fd.sample_type" style="width:100%" @change="calcTotals">
-                    <el-option label="免费样品" value="free" />
-                    <el-option label="收费样品" value="paid" />
-                    <el-option label="借样" value="borrow" />
+                    <el-option :label="$t('sale.sample.typeFreeSample')" value="free" />
+                    <el-option :label="$t('sale.sample.typePaidSample')" value="paid" />
+                    <el-option :label="$t('sale.sample.typeBorrowSample')" value="borrow" />
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="客户">
+                <el-form-item :label="$t('sale.sample.customer')">
                   <el-select v-model="fd.customer_id" filterable clearable style="width:100%" @change="onCustomerChange">
-                    <el-option label="内部领用" :value="INTERNAL_CUSTOMER_VALUE" />
+                    <el-option :label="$t('sale.sample.internalUse')" :value="INTERNAL_CUSTOMER_VALUE" />
                     <el-option v-for="c in customerOptions" :key="c.id" :label="c.name || c.nickname" :value="c.id" />
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="客户名称">
-                  <el-input v-model="fd.customer_name" placeholder="可直接录入潜在客户" />
+                <el-form-item :label="$t('sale.sample.searchCustomerName')">
+                  <el-input v-model="fd.customer_name" :placeholder="$t('sale.sample.customerNamePlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="经办人">
-                  <StaffSelect v-model="fd.admin_name" placeholder="请选择或输入经办人" />
+                <el-form-item :label="$t('sale.sample.staff')">
+                  <StaffSelect v-model="fd.admin_name" :placeholder="$t('sale.sample.staffPlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="发样日期">
+                <el-form-item :label="$t('sale.sample.sampleDate')">
                   <el-date-picker v-model="fd.sample_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="预计退回">
+                <el-form-item :label="$t('sale.sample.expectedReturn')">
                   <el-date-picker v-model="fd.return_date" type="date" value-format="YYYY-MM-DD" style="width:100%" :disabled="fd.sample_type !== 'borrow'" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="仓库">
+                <el-form-item :label="$t('sale.sample.warehouse')">
                   <el-select v-model="fd.warehouse_id" filterable style="width:100%" @change="onWarehouseChange">
                     <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
                   </el-select>
@@ -184,42 +184,42 @@
         </div>
 
         <div class="form-section">
-          <div class="sec-title">样品明细</div>
+          <div class="sec-title">{{ $t('sale.sample.sampleDetail') }}</div>
           <div v-if="!isView" class="goods-toolbar">
-            <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">选择商品</el-button>
-            <el-button size="small" :icon="Plus" @click="addEmptyRow">手动添加行</el-button>
-            <span>共 <b>{{ fd.items.length }}</b> 行</span>
+            <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">{{ $t('sale.sample.selectGoods') }}</el-button>
+            <el-button size="small" :icon="Plus" @click="addEmptyRow">{{ $t('sale.sample.addManualRow') }}</el-button>
+            <span>{{ $t('sale.sample.rowCount', { count: fd.items.length }) }}</span>
           </div>
-          <el-table :data="fd.items" border size="small" empty-text="请选择样品商品">
+          <el-table :data="fd.items" border size="small" :empty-text="$t('sale.sample.emptyGoods')">
             <el-table-column type="index" width="45" />
-            <el-table-column label="商品名称" min-width="150">
+            <el-table-column :label="$t('sale.sample.goodsName')" min-width="150">
               <template #default="{ row }"><el-input v-model="row.goods_name" size="small" :disabled="isView" /></template>
             </el-table-column>
-            <el-table-column label="编码" width="120">
+            <el-table-column :label="$t('sale.sample.goodsSn')" width="120">
               <template #default="{ row }"><el-input v-model="row.goods_sn" size="small" :disabled="isView" /></template>
             </el-table-column>
-            <el-table-column label="规格" width="120">
+            <el-table-column :label="$t('sale.sample.spec')" width="120">
               <template #default="{ row }"><el-input v-model="row.spec" size="small" :disabled="isView" /></template>
             </el-table-column>
-            <el-table-column label="单位" width="80">
+            <el-table-column :label="$t('sale.sample.unit')" width="80">
               <template #default="{ row }"><el-input v-model="row.unit_name" size="small" :disabled="isView" /></template>
             </el-table-column>
-            <el-table-column label="数量" width="120" align="right">
+            <el-table-column :label="$t('sale.sample.qty')" width="120" align="right">
               <template #default="{ row }">
                 <el-input-number v-model="row.num" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" :disabled="isView" @change="calcTotals" />
               </template>
             </el-table-column>
-            <el-table-column label="成本单价" width="130" align="right">
+            <el-table-column :label="$t('sale.sample.costUnitPrice')" width="130" align="right">
               <template #default="{ row }">
                 <el-input-number v-model="row.cost_price" :min="0" :precision="4" size="small" controls-position="right" style="width:100%" :disabled="isView" @change="calcTotals" />
               </template>
             </el-table-column>
-            <el-table-column label="收费单价" width="130" align="right">
+            <el-table-column :label="$t('sale.sample.chargeUnitPrice')" width="130" align="right">
               <template #default="{ row }">
                 <el-input-number v-model="row.price" :min="0" :precision="4" size="small" controls-position="right" style="width:100%" :disabled="isView || fd.sample_type !== 'paid'" @change="calcTotals" />
               </template>
             </el-table-column>
-            <el-table-column label="备注" min-width="120">
+            <el-table-column :label="$t('sale.sample.remark')" min-width="120">
               <template #default="{ row }"><el-input v-model="row.remark" size="small" :disabled="isView" /></template>
             </el-table-column>
             <el-table-column v-if="!isView" width="50">
@@ -231,71 +231,71 @@
         </div>
 
         <div class="form-section">
-          <div class="sec-title">物流与结算</div>
+          <div class="sec-title">{{ $t('sale.sample.logisticsSettle') }}</div>
           <div class="settle-grid">
             <div class="settle-item">
-              <span>样品收费</span>
+              <span>{{ $t('sale.sample.sampleCharge') }}</span>
               <b>¥{{ fmt(chargeAmount) }}</b>
             </div>
             <div class="settle-item">
-              <span>样品成本</span>
+              <span>{{ $t('sale.sample.sampleCostLabel') }}</span>
               <b>¥{{ fmt(goodsCost) }}</b>
             </div>
             <div class="settle-item">
-              <span>运费</span>
+              <span>{{ $t('sale.sample.freightLabel') }}</span>
               <el-input-number v-model="fd.freight_amount" :min="0" :precision="2" size="small" :disabled="isView" @change="calcTotals" />
             </div>
             <div class="settle-item">
-              <span>承担方</span>
+              <span>{{ $t('sale.sample.freightBearer') }}</span>
               <el-select v-model="fd.freight_bearer" size="small" :disabled="isView" @change="calcTotals">
-                <el-option label="公司承担" value="seller" />
-                <el-option label="客户承担" value="buyer" />
-                <el-option label="各半" value="half" />
-                <el-option label="免运费" value="free" />
+                <el-option :label="$t('sale.sample.bearerCompany')" value="seller" />
+                <el-option :label="$t('sale.sample.bearerCustomer')" value="buyer" />
+                <el-option :label="$t('sale.sample.bearerHalf')" value="half" />
+                <el-option :label="$t('sale.sample.bearerFree')" value="free" />
               </el-select>
             </div>
             <div class="settle-item">
-              <span>客户应收</span>
+              <span>{{ $t('sale.sample.customerReceivable') }}</span>
               <b class="blue">¥{{ fmt(fd.receivable_amount) }}</b>
             </div>
             <div class="settle-item">
-              <span>已收金额</span>
+              <span>{{ $t('sale.sample.paidAmount') }}</span>
               <el-input-number v-model="fd.paid_amount" :min="0" :max="fd.receivable_amount" :precision="2" size="small" :disabled="isView" />
             </div>
             <div class="settle-item" v-if="fd.paid_amount > 0">
-              <span>收款账户</span>
+              <span>{{ $t('sale.sample.receiptFund') }}</span>
               <el-select v-model="fd.receipt_fund_id" size="small" filterable :disabled="isView" @change="onReceiptFundChange">
                 <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
               </el-select>
             </div>
             <div class="settle-item">
-              <span>公司费用</span>
+              <span>{{ $t('sale.sample.companyCostLabel') }}</span>
               <b class="orange">¥{{ fmt(fd.company_cost) }}</b>
             </div>
             <div class="settle-item" v-if="fd.company_cost > 0">
-              <span>费用状态</span>
+              <span>{{ $t('sale.sample.expenseStatusLabel') }}</span>
               <el-select v-model="fd.expense_payment_status" size="small" :disabled="isView">
-                <el-option label="待付款" value="pending" />
-                <el-option label="已付款" value="paid" />
+                <el-option :label="$t('sale.sample.expensePending')" value="pending" />
+                <el-option :label="$t('sale.sample.expensePaid')" value="paid" />
               </el-select>
             </div>
             <div class="settle-item" v-if="fd.company_cost > 0 && fd.expense_payment_status === 'paid'">
-              <span>付款账户</span>
+              <span>{{ $t('sale.sample.expenseFund') }}</span>
               <el-select v-model="fd.expense_fund_id" size="small" filterable :disabled="isView" @change="onExpenseFundChange">
                 <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
               </el-select>
             </div>
             <div class="settle-item">
-              <span>快递公司</span>
+              <span>{{ $t('sale.sample.courier') }}</span>
               <el-input v-model="fd.courier" size="small" :disabled="isView" />
             </div>
             <div class="settle-item wide">
-              <span>运单号</span>
+              <span>{{ $t('sale.sample.trackingNoLabel') }}</span>
               <el-input v-model="fd.tracking_no" size="small" :disabled="isView" />
             </div>
           </div>
           <div class="remark-row">
-            <span>备注</span>
+            <span>{{ $t('sale.sample.remarkLabel') }}</span>
             <el-input v-model="fd.remark" type="textarea" :rows="2" :disabled="isView" />
           </div>
         </div>
@@ -321,6 +321,8 @@ import { getFundList } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
+
+const { t } = useI18n()
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_sale_sample', tableRef)
@@ -385,24 +387,30 @@ function parseItems(goodsInfo: any) {
 
 function sampleTypeMeta(type: string) {
   const map: Record<string, any> = {
-    free: { label: '免费', type: 'success' },
-    paid: { label: '收费', type: 'primary' },
-    borrow: { label: '借样', type: 'warning' },
+    free: { label: t('sale.sample.typeFree'), type: 'success' },
+    paid: { label: t('sale.sample.typePaid'), type: 'primary' },
+    borrow: { label: t('sale.sample.typeBorrow'), type: 'warning' },
   }
   return map[type] || map.free
 }
 
 function statusMeta(status: number) {
   const map: Record<number, any> = {
-    0: { label: '待审核', type: 'info' },
-    1: { label: '已审核', type: 'success' },
-    2: { label: '已驳回', type: 'danger' },
+    0: { label: t('sale.sample.statusPending'), type: 'info' },
+    1: { label: t('sale.sample.statusApproved'), type: 'success' },
+    2: { label: t('sale.sample.statusRejected'), type: 'danger' },
   }
   return map[Number(status)] || map[0]
 }
 
 function freightLabel(value: string) {
-  return ({ seller: '公司', buyer: '客户', half: '各半', free: '免运费' } as Record<string, string>)[value] || '公司'
+  const map: Record<string, string> = {
+    seller: t('sale.sample.freightCompany'),
+    buyer: t('sale.sample.freightCustomer'),
+    half: t('sale.sample.bearerHalf'),
+    free: t('sale.sample.bearerFree'),
+  }
+  return map[value] || t('sale.sample.freightCompany')
 }
 
 const goodsCost = computed(() =>
@@ -492,7 +500,7 @@ function backToList() {
 
 function onCustomerChange(id: any) {
   if (id === INTERNAL_CUSTOMER_VALUE) {
-    fd.customer_name = '内部'
+    fd.customer_name = t('sale.sample.internalLabel')
     fd.contact_name = ''
     return
   }
@@ -593,7 +601,58 @@ async function resolveGoodsCost(goods: any) {
 }
 
 async function onGoodsConfirm(goods: any[]) {
+  if (!bomListCache.value) {
+    try {
+      const res = await getBomList({ list_rows: 2000 })
+      bomListCache.value = res.data?.rows ?? res.data?.list ?? []
+    } catch { bomListCache.value = [] }
+  }
+
   for (const g of goods) {
+    const bom = bomListCache.value!.find((item: any) =>
+      (g.id && Number(item.goods_id) === Number(g.id)) ||
+      (g.goods_sn && item.goods_sn === g.goods_sn) ||
+      (g.goods_name && item.goods_name === g.goods_name)
+    )
+
+    if (bom?.id) {
+      let expand = false
+      try {
+        await ElMessageBox.confirm(
+          t('sale.sample.bomExpandConfirmContent', { name: g.goods_name || g.name }),
+          t('sale.sample.bomExpandTitle'),
+          { confirmButtonText: t('sale.sample.bomExpandConfirm'), cancelButtonText: t('sale.sample.bomExpandCancel'), type: 'info', closeOnClickModal: false }
+        )
+        expand = true
+      } catch { expand = false }
+
+      if (expand) {
+        try {
+          const detailRes = await getBomByGoods(bom.id)
+          const bomItems: any[] = detailRes.data?.items ?? []
+          if (bomItems.length > 0) {
+            for (const item of bomItems) {
+              const costPrice = await resolveGoodsCost(item)
+              fd.items.push({
+                goods_id: item.goods_id || 0,
+                goods_name: item.goods_name || '',
+                goods_sn: item.goods_sn || '',
+                spec: item.spec || '',
+                unit_name: item.unit_name || '',
+                num: Number(item.num || 1),
+                cost_price: costPrice || Number(item.price || 0),
+                out_price: costPrice || Number(item.price || 0),
+                price: 0,
+                remark: '',
+              })
+            }
+            calcTotals()
+            continue
+          }
+        } catch {}
+      }
+    }
+
     const costPrice = await resolveGoodsCost(g)
     fd.items.push({
       goods_id: g.id,
@@ -622,24 +681,24 @@ function removeRow(index: number) {
 }
 
 async function handleSave() {
-  if (!fd.customer_name && !fd.customer_id) { ElMessage.warning('请选择或填写客户'); return }
-  if (!fd.sample_date) { ElMessage.warning('请选择发样日期'); return }
-  if (!fd.warehouse_id) { ElMessage.warning('请选择仓库'); return }
-  if (!fd.items.length) { ElMessage.warning('请添加样品明细'); return }
+  if (!fd.customer_name && !fd.customer_id) { ElMessage.warning(t('sale.sample.msgPickCustomer')); return }
+  if (!fd.sample_date) { ElMessage.warning(t('sale.sample.msgPickSampleDate')); return }
+  if (!fd.warehouse_id) { ElMessage.warning(t('sale.sample.msgPickWarehouse')); return }
+  if (!fd.items.length) { ElMessage.warning(t('sale.sample.msgAddItems')); return }
   calcTotals()
-  if (fd.paid_amount > 0 && !fd.receipt_fund_id) { ElMessage.warning('已收金额大于0时请选择收款账户'); return }
-  if (fd.company_cost > 0 && fd.expense_payment_status === 'paid' && !fd.expense_fund_id) { ElMessage.warning('公司费用已付款时请选择付款账户'); return }
+  if (fd.paid_amount > 0 && !fd.receipt_fund_id) { ElMessage.warning(t('sale.sample.msgReceiptFundRequired')); return }
+  if (fd.company_cost > 0 && fd.expense_payment_status === 'paid' && !fd.expense_fund_id) { ElMessage.warning(t('sale.sample.msgExpenseFundRequired')); return }
   saving.value = true
   try {
     const payload = {
       ...fd,
       customer_id: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? null : fd.customer_id,
-      customer_name: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? (fd.customer_name || '内部') : fd.customer_name,
+      customer_name: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? (fd.customer_name || t('sale.sample.internalLabel')) : fd.customer_name,
       goods_info: JSON.stringify(fd.items),
     }
     if (fd.id) await updateSample(payload)
     else await createSample(payload)
-    ElMessage.success('保存成功')
+    ElMessage.success(t('sale.sample.msgSaveSuccess'))
     backToList()
   } finally {
     saving.value = false
@@ -647,29 +706,29 @@ async function handleSave() {
 }
 
 async function handleAudit(row: any, status: number) {
-  const label = status === 1 ? '审核' : status === 0 ? '反审核' : '驳回'
+  const label = status === 1 ? t('sale.sample.approve') : status === 0 ? t('sale.sample.unapprove') : t('sale.sample.reject')
   if (status === 1) {
     if (Number(row.paid_amount || 0) > 0 && !Number(row.receipt_fund_id || 0)) {
-      ElMessage.warning('该样品单已收金额大于0，请先编辑选择收款账户')
+      ElMessage.warning(t('sale.sample.auditPaidNeedFund'))
       return
     }
     if (Number(row.company_cost || 0) > 0 && row.expense_payment_status === 'paid' && !Number(row.expense_fund_id || 0)) {
-      ElMessage.warning('该样品单费用为已付款，请先编辑选择付款账户')
+      ElMessage.warning(t('sale.sample.auditExpenseNeedFund'))
       return
     }
   }
-  await ElMessageBox.confirm(`确定${label}该样品单？`, '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('sale.sample.auditConfirm', { action: label }), t('sale.sample.promptTitle'), { type: 'warning' })
   await auditSample(row.id, status)
-  ElMessage.success('操作成功')
+  ElMessage.success(t('sale.sample.msgOpSuccess'))
   stockRefreshStore.trigger()
   tableRef.value?.refresh()
   loadSummary()
 }
 
 async function handleDelete(row: any) {
-  await ElMessageBox.confirm('确定删除该样品单？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('sale.sample.deleteConfirm'), t('sale.sample.promptTitle'), { type: 'warning' })
   await deleteSample(row.id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('sale.sample.msgDeleteSuccess'))
   tableRef.value?.refresh()
   loadSummary()
 }

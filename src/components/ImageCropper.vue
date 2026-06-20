@@ -2,12 +2,12 @@
   <div v-if="visible" class="ic-overlay" @click.self="cancel">
     <div class="ic-dialog">
       <div class="ic-header">
-        <span class="ic-title">裁剪图片</span>
+        <span class="ic-title">{{ t('imageCropper.title') }}</span>
         <div class="ic-header-actions">
           <button class="ic-ratio-btn" :class="{ active: aspectRatio === 16/9 }" @click="setRatio(16/9)">16:9</button>
           <button class="ic-ratio-btn" :class="{ active: aspectRatio === 1 }" @click="setRatio(1)">1:1</button>
           <button class="ic-ratio-btn" :class="{ active: aspectRatio === 4/3 }" @click="setRatio(4/3)">4:3</button>
-          <button class="ic-ratio-btn" :class="{ active: aspectRatio === 0 }" @click="setRatio(0)">自由</button>
+          <button class="ic-ratio-btn" :class="{ active: aspectRatio === 0 }" @click="setRatio(0)">{{ t('imageCropper.free') }}</button>
         </div>
         <button class="ic-close" @click="cancel">✕</button>
       </div>
@@ -17,9 +17,9 @@
         </div>
       </div>
       <div class="ic-footer">
-        <button class="ic-cancel" @click="cancel">取消</button>
+        <button class="ic-cancel" @click="cancel">{{ t('common.cancel') }}</button>
         <button class="ic-confirm" @click="confirm">
-          确认裁剪
+          {{ t('imageCropper.confirm') }}
         </button>
       </div>
     </div>
@@ -28,9 +28,12 @@
 
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 const ready = ref(false)
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   visible: boolean

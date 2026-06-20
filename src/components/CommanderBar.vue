@@ -9,9 +9,9 @@
           <el-icon :size="15"><Cpu /></el-icon>
         </div>
         <div class="bar-status-dot" :class="isLoading ? 'dot-loading' : 'dot-online'" />
-        <span class="bar-label">指挥官</span>
+        <span class="bar-label">{{ t('commanderBar.label') }}</span>
         <span v-if="lastMsg" class="bar-preview">{{ lastMsg }}</span>
-        <span v-else class="bar-hint">用自然语言指挥 ERP 系统...</span>
+        <span v-else class="bar-hint">{{ t('commanderBar.hint') }}</span>
       </div>
 
       <!-- Right: quick send + expand toggle -->
@@ -21,7 +21,7 @@
           ref="quickInputRef"
           v-model="quickText"
           class="bar-quick-input"
-          placeholder="输入指令..."
+          :placeholder="t('commanderBar.quickPlaceholder')"
           @keydown.enter.exact.prevent="sendQuick"
           @click.stop
         />
@@ -29,7 +29,7 @@
           <el-icon v-if="!isLoading"><Promotion /></el-icon>
           <span v-else class="mini-spinner" />
         </button>
-        <button class="bar-expand-btn" @click.stop="toggleExpand" :title="isExpanded ? '收起' : '展开详情'">
+        <button class="bar-expand-btn" @click.stop="toggleExpand" :title="isExpanded ? t('common.collapse') : t('commanderBar.expandDetail')">
           <el-icon :size="13"><ArrowDown v-if="!isExpanded" /><ArrowUp v-else /></el-icon>
         </button>
       </div>
@@ -43,12 +43,12 @@
           <div class="panel-header-info">
             <div class="panel-avatar"><el-icon :size="16"><Cpu /></el-icon></div>
             <div>
-              <div class="panel-title">数字游牧 AI 助手</div>
-              <div class="panel-status">{{ isLoading ? '正在处理...' : '在线 · 随时响应' }}</div>
+              <div class="panel-title">{{ t('commanderBar.panelTitle') }}</div>
+              <div class="panel-status">{{ isLoading ? t('aiAssistant.processing') : t('commanderBar.onlineStatus') }}</div>
             </div>
           </div>
           <div class="panel-actions">
-            <el-tooltip content="清空对话">
+            <el-tooltip :content="t('common.clear')">
               <button class="panel-icon-btn" @click="clearMessages">
                 <el-icon :size="14"><Delete /></el-icon>
               </button>
@@ -64,8 +64,8 @@
           <!-- Welcome -->
           <div v-if="messages.length === 0" class="panel-welcome">
             <el-icon :size="32" color="#165dff"><Cpu /></el-icon>
-            <p class="welcome-title">你好！我是数字游牧 AI 助手</p>
-            <p class="welcome-sub">用自然语言描述业务需求，我来帮你录入和查询数据</p>
+            <p class="welcome-title">{{ t('commanderBar.welcomeTitle') }}</p>
+            <p class="welcome-sub">{{ t('commanderBar.welcomeSub') }}</p>
             <div class="quick-prompts">
               <span v-for="p in quickPrompts" :key="p" class="quick-tag" @click="sendQuickPrompt(p)">{{ p }}</span>
             </div>
@@ -92,7 +92,7 @@
               />
               <div class="msg-text" v-html="renderMarkdown(msg.content)" />
               <div v-if="msg.navRoute" class="msg-nav">
-                <el-button type="primary" size="small" @click="navigateTo(msg.navRoute!)">立即查看 →</el-button>
+                <el-button type="primary" size="small" @click="navigateTo(msg.navRoute!)">{{ t('aiAssistant.viewNowArrow') }}</el-button>
               </div>
               <div class="msg-time">{{ msg.time }}</div>
             </div>
@@ -125,18 +125,18 @@
               v-model="inputText"
               class="panel-textarea"
               rows="2"
-              :placeholder="isRecording ? '正在聆听，请说话...' : '输入业务描述，Enter 发送...'"
+              :placeholder="isRecording ? t('aiAssistant.listeningPlaceholder') : t('commanderBar.inputPlaceholder')"
               :disabled="isLoading"
               @keydown.enter.exact.prevent="sendMessage"
               @keydown.enter.shift.exact="inputText += '\n'"
             />
             <div class="input-btns">
-              <el-tooltip content="上传图片">
+              <el-tooltip :content="t('commanderBar.uploadImage')">
                 <button class="input-icon-btn" @click="openImagePicker" :disabled="isLoading">
                   <el-icon :size="14"><Picture /></el-icon>
                 </button>
               </el-tooltip>
-              <el-tooltip v-if="voiceSupported" :content="isRecording ? '停止' : '语音'">
+              <el-tooltip v-if="voiceSupported" :content="isRecording ? t('commanderBar.stop') : t('commanderBar.voice')">
                 <button class="input-icon-btn" :class="{ 'mic-on': isRecording }" @click="toggleVoice" :disabled="isLoading">
                   <el-icon :size="14"><Microphone /></el-icon>
                 </button>
@@ -154,31 +154,31 @@
   </div>
 
   <!-- BOM dialog -->
-  <el-dialog v-model="bomDialogVisible" title="一键设置 BOM 物料清单" width="500px" append-to-body>
-    <div style="margin-bottom:12px;font-size:13px;color:#64748b">请选择成品和组成材料，系统将自动创建BOM清单。</div>
+  <el-dialog v-model="bomDialogVisible" :title="t('commanderBar.bomTitle')" width="500px" append-to-body>
+    <div style="margin-bottom:12px;font-size:13px;color:#64748b">{{ t('commanderBar.bomDesc') }}</div>
     <el-form label-width="80px">
-      <el-form-item label="成品">
-        <el-select v-model="bomFinished" placeholder="请选择成品" filterable style="width:100%" @focus="loadBomGoods">
+      <el-form-item :label="t('commanderBar.finishedGood')">
+        <el-select v-model="bomFinished" :placeholder="t('commanderBar.selectFinishedGood')" filterable style="width:100%" @focus="loadBomGoods">
           <el-option v-for="g in bomGoodsList" :key="g.id" :label="g.goods_name" :value="g.id" />
         </el-select>
       </el-form-item>
-      <el-form-item label="组成材料">
+      <el-form-item :label="t('commanderBar.materials')">
         <div style="display:flex;flex-direction:column;gap:8px">
           <div v-for="(item, idx) in bomMaterials" :key="idx" style="display:flex;gap:8px;align-items:center">
-            <el-select v-model="item.goods_id" placeholder="选择材料" filterable style="flex:1">
+            <el-select v-model="item.goods_id" :placeholder="t('commanderBar.selectMaterial')" filterable style="flex:1">
               <el-option v-for="g in bomGoodsList" :key="g.id" :label="g.goods_name" :value="g.id" />
             </el-select>
-            <el-input-number v-model="item.num" :min="0.01" :precision="2" style="width:110px" placeholder="用量" />
-            <el-input v-model="item.unit_name" placeholder="单位" style="width:70px" />
+            <el-input-number v-model="item.num" :min="0.01" :precision="2" style="width:110px" :placeholder="t('commanderBar.usage')" />
+            <el-input v-model="item.unit_name" :placeholder="t('scTable.unit')" style="width:70px" />
             <el-button type="danger" link :icon="Delete" @click="bomMaterials.splice(idx, 1)" />
           </div>
-          <el-button type="primary" link @click="bomMaterials.push({ goods_id: null, num: 1, unit_name: '' })">+ 添加材料</el-button>
+          <el-button type="primary" link @click="bomMaterials.push({ goods_id: null, num: 1, unit_name: '' })">+ {{ t('commanderBar.addMaterial') }}</el-button>
         </div>
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="bomDialogVisible = false">取消</el-button>
-      <el-button type="primary" :loading="bomSaving" @click="submitBom">一键创建BOM</el-button>
+      <el-button @click="bomDialogVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :loading="bomSaving" @click="submitBom">{{ t('commanderBar.createBom') }}</el-button>
     </template>
   </el-dialog>
 </template>
@@ -187,11 +187,14 @@
 import { Cpu, Delete, Close, User, Promotion, Picture, Microphone, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
 import { fmtDt } from '@/utils/date'
 import AiToolCallCard from './ai/AiToolCallCard.vue'
 import type { ToolCallState } from './ai/composables/useAiAgent'
 import { getGoodsList, createBom } from '@/api/goods'
+
+const { t, locale } = useI18n()
 
 interface Message {
   role: 'user' | 'assistant'
@@ -256,7 +259,13 @@ const lastMsg = computed(() => {
   return ''
 })
 
-const quickPrompts = ['新增一个客户', '本月销售总额', '查询库存', '录入采购订单', '录入预付款']
+const quickPrompts = computed(() => [
+  t('aiAssistant.quickAddCustomer'),
+  t('aiAssistant.quickMonthlySales'),
+  t('aiAssistant.quickStockList'),
+  t('aiAssistant.quickCreateProcureOrder'),
+  t('aiAssistant.quickCreatePrepay'),
+])
 
 // ── BOM ────────────────────────────────────────────────────────────────────────
 const bomDialogVisible = ref(false)
@@ -274,9 +283,9 @@ async function loadBomGoods() {
 }
 
 async function submitBom() {
-  if (!bomFinished.value) { ElMessage.warning('请选择成品'); return }
+  if (!bomFinished.value) { ElMessage.warning(t('commanderBar.selectFinishedWarning')); return }
   const valid = bomMaterials.value.filter(m => m.goods_id && m.num > 0)
-  if (!valid.length) { ElMessage.warning('请至少添加一种材料'); return }
+  if (!valid.length) { ElMessage.warning(t('commanderBar.addMaterialWarning')); return }
   bomSaving.value = true
   try {
     const finished = bomGoodsList.value.find(g => g.id === bomFinished.value)
@@ -284,12 +293,12 @@ async function submitBom() {
       const matG = bomGoodsList.value.find(g => g.id === mat.goods_id)
       await createBom({ goods_id: bomFinished.value, goods_name: finished?.goods_name || '', material_id: mat.goods_id, material_name: matG?.goods_name || '', num: mat.num, unit_name: mat.unit_name || matG?.unit_name || '' })
     }
-    ElMessage.success(`BOM 创建成功！${finished?.goods_name} 包含 ${valid.length} 种材料`)
+    ElMessage.success(t('commanderBar.bomCreated', { name: finished?.goods_name, count: valid.length }))
     bomDialogVisible.value = false
     bomFinished.value = null
     bomMaterials.value = [{ goods_id: null, num: 1, unit_name: '' }]
   } catch (e: any) {
-    ElMessage.error(e?.message ?? 'BOM 创建失败')
+    ElMessage.error(e?.message ?? t('commanderBar.bomCreateFailed'))
   } finally {
     bomSaving.value = false
   }
@@ -425,7 +434,7 @@ async function sendMessage() {
 
   messages.value.push({
     role: 'user',
-    content: text || '请识别这张单据图片，提取所有关键信息并帮我录入系统。',
+    content: text || t('aiAssistant.recognizeDocumentPrompt'),
     time: getNow(),
     images: previewUrls.length ? previewUrls : undefined,
   })
@@ -473,7 +482,7 @@ async function sendMessage() {
     if (contentType.includes('text/event-stream')) {
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
-      if (!reader) throw new Error('无法读取响应流')
+      if (!reader) throw new Error(t('aiAssistant.streamReadFailed'))
       let buffer = ''
       while (true) {
         const { done, value } = await reader.read()
@@ -517,7 +526,7 @@ async function sendMessage() {
       nextTick(() => scrollToBottom())
     }
   } catch (e: any) {
-    assistantMsg.content = `抱歉，出现了错误：${e.message}`
+    assistantMsg.content = t('aiAssistant.errorMessage', { message: e.message })
   } finally {
     previewUrls.forEach(url => URL.revokeObjectURL(url))
     isLoading.value = false
@@ -546,7 +555,7 @@ function navigateTo(route: string) {
 }
 
 function getNow() {
-  return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  return new Date().toLocaleTimeString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
 function renderMarkdown(text: string): string {
@@ -578,7 +587,7 @@ function startVoice() {
   }
   recognition.onerror = (e: any) => {
     isRecording.value = false
-    if (e.error !== 'aborted') messages.value.push({ role: 'assistant', content: e.error === 'not-allowed' ? '⚠️ 麦克风权限被拒绝' : `⚠️ 语音识别失败：${e.error}`, time: getNow() })
+    if (e.error !== 'aborted') messages.value.push({ role: 'assistant', content: e.error === 'not-allowed' ? `⚠️ ${t('aiAssistant.micPermissionDenied')}` : `⚠️ ${t('aiAssistant.speechFailed', { error: e.error })}`, time: getNow() })
   }
   recognition.onend = () => { isRecording.value = false }
   recognition.start()

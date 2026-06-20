@@ -79,6 +79,12 @@ export const updateSaleReturn = (data: any) => http.post('/stock/SaleReturnOrder
 export const deleteSaleReturn = (id: number) => http.post('/stock/SaleReturnOrder/del', { id })
 export const auditSaleReturn = (id: number, status: number) => http.post('/stock/SaleReturnOrder/audit', { id, status })
 
+export const getSaleExchangeList = (params?: any) => http.get('/stock/SaleExchangeOrder/index', { params })
+export const createSaleExchange = (data: any) => http.post('/stock/SaleExchangeOrder/add', data)
+export const updateSaleExchange = (data: any) => http.post('/stock/SaleExchangeOrder/edit', data)
+export const deleteSaleExchange = (id: number) => http.post('/stock/SaleExchangeOrder/del', { id })
+export const auditSaleExchange = (id: number, status: number) => http.post('/stock/SaleExchangeOrder/audit', { id, status })
+
 export const getSampleList = (params?: any) => http.get('/shop/SampleOrder/index', { params })
 export const createSample = (data: any) => http.post('/shop/SampleOrder/add', data)
 export const updateSample = (data: any) => http.post('/shop/SampleOrder/edit', data)

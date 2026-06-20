@@ -1,9 +1,13 @@
 <template>
   <div class="panel panel-chat" :class="{ collapsed: isCollapsed }">
     <div class="panel-head" @click="isCollapsed = !isCollapsed" style="cursor:pointer">
-      <span class="panel-icon chat-icon">⟐</span>
-      <span class="panel-title">COMM_CHANNEL</span>
-      <span class="panel-desc">与亚当通讯</span>
+      <span class="chat-avatar">
+        <img :src="adamAvatarUrl" class="chat-avatar-img" :alt="t('adamChat.name')" />
+      </span>
+      <span class="chat-heading">
+        <span class="panel-title">{{ t('adamChat.name') }}</span>
+        <span class="panel-desc">{{ t('adamChat.panelDesc') }}</span>
+      </span>
       <span class="comm-status" :class="{ online: adamStore.isAlive }">
         {{ adamStore.isAlive ? 'CONNECTED' : 'OFFLINE' }}
       </span>
@@ -21,14 +25,14 @@
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
         </div>
-        <p class="chat-empty-title">通讯通道已就绪</p>
-        <p class="chat-empty-text">亚当是决策者，你是操作手。他会主动找你，你也可以找他。</p>
+        <p class="chat-empty-title">{{ t('adamChat.emptyTitle') }}</p>
+        <p class="chat-empty-text">{{ t('adamChat.emptyText') }}</p>
       </div>
 
       <div v-for="msg in messages" :key="msg.id" class="msg" :class="msg.role">
         <div class="msg-header">
           <span class="msg-avatar" :class="msg.role">
-            <img v-if="msg.role === 'assistant'" :src="adamAvatarUrl" class="adam-msg-img" alt="亚当" />
+            <img v-if="msg.role === 'assistant'" :src="adamAvatarUrl" class="adam-msg-img" :alt="t('adamChat.name')" />
             <template v-else>U</template>
           </span>
           <span class="msg-sender">{{ msg.role === 'user' ? 'OPERATOR' : 'ADAM' }}</span>
@@ -56,7 +60,7 @@
       <div v-if="isLoading" class="msg assistant">
         <div class="msg-header">
           <span class="msg-avatar assistant">
-            <img :src="adamAvatarUrl" class="adam-msg-img" alt="亚当" />
+            <img :src="adamAvatarUrl" class="adam-msg-img" :alt="t('adamChat.name')" />
           </span>
           <span class="msg-sender">ADAM</span>
         </div>
@@ -67,7 +71,7 @@
     </div>
 
     <div v-show="!isCollapsed" class="chat-input-area">
-      <div class="disclaimer">AI ANALYSIS · NOT INVESTMENT ADVICE · RISK ASSUMED</div>
+      <div class="disclaimer">{{ t('adamChat.disclaimer') }}</div>
       <div v-if="pendingImages.length" class="pending-images">
         <div v-for="(img, idx) in pendingImages" :key="idx" class="pending-img-wrap">
           <img :src="img.previewUrl" class="pending-img" />
@@ -75,7 +79,7 @@
         </div>
       </div>
       <div class="input-row">
-        <button class="img-btn" title="发送图片" @click="openImagePicker" :disabled="isLoading">
+        <button class="img-btn" :title="t('adamChat.sendImage')" @click="openImagePicker" :disabled="isLoading">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
             <polyline points="21 15 16 10 5 21"/>
@@ -85,7 +89,7 @@
           ref="inputRef"
           v-model="inputText"
           class="chat-input"
-          placeholder="对亚当说话...（可粘贴图片）"
+          :placeholder="t('adamChat.inputPlaceholder')"
           rows="1"
           @keydown.enter.exact.prevent="handleSend"
           @input="autoResize"
@@ -109,10 +113,12 @@ import { applyToolResult } from '@/utils/adamToolSync'
 import { marked } from 'marked'
 import adamAvatarUrl from '@/assets/adam-avatar.png'
 import { getScopedStorageKey } from '@/utils/storageScope'
+import { useI18n } from 'vue-i18n'
 
 marked.setOptions({ breaks: true, gfm: true })
 
 const adamStore = useAdamStore()
+const { t } = useI18n()
 
 interface ToolCallState {
   id: string
@@ -147,7 +153,7 @@ const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const isLoading = ref(false)
 const pendingImages = ref<ImageItem[]>([])
-const isCollapsed = ref(true)
+const isCollapsed = ref(false)
 
 function isCleanContent(content: unknown) {
   const c = String(content ?? '').trim()
@@ -325,7 +331,7 @@ async function handleSend() {
   const userMsg: ChatMessage = {
     id: `u_${Date.now()}`,
     role: 'user',
-    content: text || '请分析这张图片。',
+    content: text || t('adamChat.analyzeImagePrompt'),
     time: nowStr(),
     images: previewUrls.length ? previewUrls : undefined,
   }
@@ -373,6 +379,10 @@ async function handleSend() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
     messages.value.push(assistantMsg)
+    const msgIdx = messages.value.length - 1
+    const patchMsg = (patch: Partial<ChatMessage>) => {
+      messages.value[msgIdx] = { ...messages.value[msgIdx], ...patch }
+    }
     scrollToBottom()
 
     const reader = res.body?.getReader()
@@ -397,47 +407,43 @@ async function handleSend() {
           const data = JSON.parse(payload)
           if (data.type === 'text') {
             if (isCleanContent(data.text)) {
-              assistantMsg.content += String(data.text)
+              const cur = messages.value[msgIdx]
+              patchMsg({ content: cur.content + String(data.text) })
             }
             scrollToBottom()
           } else if (data.type === 'tool_start') {
             if (data.name === 'update_emotion') continue
-            assistantMsg.toolCalls!.push({
-              id: data.id,
-              name: data.name,
-              input: data.input || {},
-              status: 'running',
-            })
+            const cur = messages.value[msgIdx]
+            patchMsg({ toolCalls: [...(cur.toolCalls || []), { id: data.id, name: data.name, input: data.input || {}, status: 'running' }] })
             scrollToBottom()
           } else if (data.type === 'tool_result') {
-            const call = assistantMsg.toolCalls!.find((c) => c.id === data.id)
-            if (call) {
-              call.result = data.result
-              call.status = 'success'
-            }
+            const cur = messages.value[msgIdx]
+            patchMsg({ toolCalls: (cur.toolCalls || []).map(c => c.id === data.id ? { ...c, result: data.result, status: 'success' } : c) })
             if (data.result) {
               applyToolResult(adamStore, data.name, data.result)
             }
             scrollToBottom()
           } else if (data.type === 'error') {
-            assistantMsg.content += `\n[ERROR: ${data.error}]`
+            const cur = messages.value[msgIdx]
+            patchMsg({ content: cur.content + `\n[ERROR: ${data.error}]` })
             scrollToBottom()
           }
         } catch { /* ignore parse error */ }
       }
     }
   } catch (e: any) {
-    if (!assistantMsg.content) {
-      assistantMsg.content = `CONNECTION_FAILED: ${e.message}`
-    }
-    if (!messages.value.includes(assistantMsg)) {
+    if (!messages.value[msgIdx]) {
       messages.value.push(assistantMsg)
     }
+    if (!messages.value[msgIdx]?.content) {
+      messages.value[msgIdx] = { ...(messages.value[msgIdx] || assistantMsg), content: `CONNECTION_FAILED: ${e.message}` }
+    }
   } finally {
-    if (!isCleanContent(assistantMsg.content)) {
-      assistantMsg.content = assistantMsg.toolCalls?.length
-        ? '我刚才完成了工具检查，但没有组织出完整回复。请再发一次问题，我会直接给结论。'
-        : '我在，但这次没有生成有效回复。请再发一次。'
+    const finalMsg = messages.value[msgIdx]
+    if (!isCleanContent(finalMsg?.content)) {
+      messages.value[msgIdx] = { ...finalMsg, content: finalMsg?.toolCalls?.length
+        ? t('adamChat.toolOnlyFallback')
+        : t('adamChat.emptyReplyFallback') }
     }
     isLoading.value = false
     previewUrls.forEach(url => URL.revokeObjectURL(url))
@@ -519,10 +525,10 @@ function removePendingImage(idx: number) {
   gap: 8px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(245,166,35,0.02) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(79,121,199,0.03) 0%, transparent 100%);
 }
-.panel-icon { font-size: 10px; color: #F5A623; opacity: 0.6; }
-.chat-icon { color: #00D4FF; }
+.panel-icon { font-size: 10px; color: #4f79c7; opacity: 0.7; }
+.chat-icon { color: #5d89d4; }
 .panel-title {
   font-size: 10px;
   font-weight: 700;
@@ -542,7 +548,7 @@ function removePendingImage(idx: number) {
   background: var(--faint);
   color: var(--dim);
 }
-.comm-status.online { color: #00E5A0; background: rgba(0,229,160,0.06); }
+.comm-status.online { color: #4f79c7; background: rgba(79,121,199,0.1); }
 
 .collapse-btn {
   margin-left: 8px;
@@ -584,11 +590,11 @@ function removePendingImage(idx: number) {
   flex-shrink: 0;
 }
 .msg-avatar.user { background: var(--faint); color: var(--mid); border: 1px solid var(--border); }
-.msg-avatar.assistant { background: rgba(245,166,35,0.10); color: #F5A623; border: 1px solid rgba(245,166,35,0.20); overflow: hidden; padding: 0; }
+.msg-avatar.assistant { background: rgba(79,121,199,0.10); color: #4f79c7; border: 1px solid rgba(79,121,199,0.20); overflow: hidden; padding: 0; }
 .adam-msg-img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .msg-sender { font-size: 10px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; letter-spacing: 0.06em; }
 .msg.user .msg-sender { color: var(--mid); }
-.msg.assistant .msg-sender { color: #F5A623; }
+.msg.assistant .msg-sender { color: #4f79c7; }
 .msg-time { font-size: 8px; color: var(--dim); font-family: 'SF Mono', 'Fira Code', monospace; opacity: 0.5; }
 .msg-content { font-size: 13px; line-height: 1.65; color: var(--dark); padding-left: 28px; }
 .msg.user .msg-content { color: var(--mid); }
@@ -597,13 +603,13 @@ function removePendingImage(idx: number) {
 .msg-content :deep(p:last-child) { margin-bottom: 0; }
 .msg-content :deep(ul), .msg-content :deep(ol) { margin: 4px 0; padding-left: 20px; }
 .msg-content :deep(li) { margin: 2px 0; }
-.msg-content :deep(code) { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; background: var(--faint); padding: 1px 4px; border-radius: 3px; color: #F5A623; }
+.msg-content :deep(code) { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; background: var(--faint); padding: 1px 4px; border-radius: 3px; color: #4f79c7; }
 .msg-content :deep(pre) { background: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; overflow-x: auto; margin: 6px 0; }
 .msg-content :deep(pre code) { background: none; padding: 0; }
 .msg-content :deep(strong) { color: var(--dark); }
-.msg-content :deep(a) { color: #00D4FF; text-decoration: none; }
+.msg-content :deep(a) { color: #5d89d4; text-decoration: none; }
 .msg-content :deep(a:hover) { text-decoration: underline; }
-.msg-content :deep(blockquote) { border-left: 2px solid #F5A623; margin: 6px 0; padding: 4px 10px; color: var(--dim); }
+.msg-content :deep(blockquote) { border-left: 2px solid #4f79c7; margin: 6px 0; padding: 4px 10px; color: var(--dim); }
 
 .msg-images { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .msg-img-thumb { max-width: 200px; max-height: 160px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); }
@@ -612,18 +618,18 @@ function removePendingImage(idx: number) {
 .tool-card { background: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; font-family: 'SF Mono', 'Fira Code', monospace; }
 .tool-header { display: flex; align-items: center; gap: 6px; }
 .tool-status-indicator { width: 5px; height: 5px; border-radius: 50%; }
-.tool-card.running .tool-status-indicator { background: #00D4FF; animation: indicatorPulse 1s infinite; }
-.tool-card.success .tool-status-indicator { background: #00E5A0; }
-.tool-card.error .tool-status-indicator { background: #FF4D4D; }
+.tool-card.running .tool-status-indicator { background: #5d89d4; animation: indicatorPulse 1s infinite; }
+.tool-card.success .tool-status-indicator { background: #4f79c7; }
+.tool-card.error .tool-status-indicator { background: #ef6f5e; }
 @keyframes indicatorPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
 .tool-fn { font-size: 10px; font-weight: 600; color: var(--mid); }
 .tool-status-label { font-size: 8px; font-weight: 700; letter-spacing: 0.08em; margin-left: auto; }
-.tool-card.running .tool-status-label { color: #00D4FF; }
-.tool-card.success .tool-status-label { color: #00E5A0; }
-.tool-card.error .tool-status-label { color: #FF4D4D; }
+.tool-card.running .tool-status-label { color: #5d89d4; }
+.tool-card.success .tool-status-label { color: #4f79c7; }
+.tool-card.error .tool-status-label { color: #ef6f5e; }
 
 .typing-indicator { display: flex; gap: 4px; padding: 6px 0 6px 28px; }
-.typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: #F5A623; animation: typing 1.2s ease-in-out infinite; }
+.typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: #4f79c7; animation: typing 1.2s ease-in-out infinite; }
 .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
 .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes typing {
@@ -634,7 +640,7 @@ function removePendingImage(idx: number) {
 .chat-input-area {
   border-top: 1px solid var(--border);
   padding: 10px 16px;
-  background: linear-gradient(180deg, transparent 0%, rgba(245,166,35,0.01) 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(79,121,199,0.02) 100%);
 }
 .disclaimer { font-size: 8px; color: var(--dim); text-align: center; margin-bottom: 8px; font-family: 'SF Mono', 'Fira Code', monospace; letter-spacing: 0.12em; opacity: 0.4; }
 .input-row { display: flex; align-items: flex-end; gap: 8px; }
@@ -643,7 +649,7 @@ function removePendingImage(idx: number) {
   border: 1px solid var(--border); background: var(--faint); color: var(--mid);
   cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.15s;
 }
-.img-btn:hover:not(:disabled) { color: #F5A623; border-color: #F5A623; }
+.img-btn:hover:not(:disabled) { color: #4f79c7; border-color: #4f79c7; }
 .img-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .pending-images { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .pending-img-wrap { position: relative; }
@@ -659,16 +665,204 @@ function removePendingImage(idx: number) {
   resize: none; outline: none; transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.5;
 }
 .chat-input::placeholder { color: var(--dim); opacity: 0.5; }
-.chat-input:focus { border-color: rgba(245,166,35,0.25); box-shadow: 0 0 0 2px rgba(245,166,35,0.06); }
+.chat-input:focus { border-color: rgba(79,121,199,0.25); box-shadow: 0 0 0 2px rgba(79,121,199,0.06); }
 .send-btn {
-  width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(245,166,35,0.25);
-  background: transparent; color: #F5A623; display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(79,121,199,0.25);
+  background: transparent; color: #4f79c7; display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: all 0.2s; flex-shrink: 0;
 }
-.send-btn:hover:not(:disabled) { background: #F5A623; color: var(--card-bg); box-shadow: 0 0 12px rgba(245,166,35,0.2); }
+.send-btn:hover:not(:disabled) { background: #4f79c7; color: var(--card-bg); box-shadow: none; }
 .send-btn:disabled { opacity: 0.2; cursor: not-allowed; }
 
 @media (max-width: 767px) {
   .chat-messages { max-height: 280px; }
 }
+/* Frosted dialog presentation */
+.panel.panel-chat {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 22px;
+  overflow: hidden;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: inset 0 0 0 1px rgba(42, 52, 65, 0.05);
+}
+.panel.panel-chat.collapsed { border-radius: 999px; }
+.panel.panel-chat .panel-head {
+  padding: 12px 14px;
+  gap: 10px;
+  border-bottom: 1px solid rgba(42, 52, 65, 0.08);
+  background: rgba(255, 255, 255, 0.34);
+}
+.chat-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #dfe9fb;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.chat-avatar-img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+.chat-heading {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+.panel.panel-chat .panel-title {
+  font-size: 15px;
+  line-height: 1.1;
+  color: #172027;
+  letter-spacing: 0;
+  font-family: inherit;
+}
+.panel.panel-chat .panel-desc {
+  font-size: 11px;
+  color: rgba(23, 32, 39, 0.46);
+  opacity: 1;
+}
+.panel.panel-chat .comm-status {
+  margin-left: 0;
+  border-radius: 999px;
+  background: rgba(23, 32, 39, 0.06);
+  color: rgba(23, 32, 39, 0.48);
+}
+.panel.panel-chat .comm-status.online {
+  color: #4f79c7;
+  background: rgba(79, 121, 199, 0.12);
+}
+.panel.panel-chat .collapse-btn {
+  color: rgba(23, 32, 39, 0.42);
+  opacity: 1;
+}
+.panel.panel-chat .chat-messages {
+  min-height: 260px;
+  max-height: min(48vh, 460px);
+  padding: 16px;
+  background: rgba(248, 250, 247, 0.22);
+}
+.panel.panel-chat .chat-empty { padding: 42px 16px; }
+.panel.panel-chat .chat-empty-title {
+  font-size: 14px;
+  color: #172027;
+}
+.panel.panel-chat .chat-empty-text {
+  color: rgba(23, 32, 39, 0.54);
+  opacity: 1;
+}
+.panel.panel-chat .msg {
+  display: flex;
+  flex-direction: column;
+  border-top: none;
+  padding: 8px 0;
+}
+.panel.panel-chat .msg + .msg { border-top: none; }
+.panel.panel-chat .msg-header { margin-bottom: 5px; }
+.panel.panel-chat .msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+}
+.panel.panel-chat .msg-avatar.assistant {
+  background: #dfe9fb;
+  border-color: rgba(79, 121, 199, 0.16);
+}
+.panel.panel-chat .msg-avatar.user {
+  background: #5d89d4;
+  color: #fff;
+  border-color: transparent;
+}
+.panel.panel-chat .msg-sender {
+  font-size: 10px;
+  color: rgba(23, 32, 39, 0.48) !important;
+}
+.panel.panel-chat .msg-content {
+  width: fit-content;
+  max-width: calc(100% - 44px);
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(42, 52, 65, 0.08);
+  color: #172027;
+  margin-left: 36px;
+  line-height: 1.65;
+}
+.panel.panel-chat .msg.user { align-items: flex-end; }
+.panel.panel-chat .msg.user .msg-header { flex-direction: row-reverse; }
+.panel.panel-chat .msg.user .msg-content {
+  margin-left: 0;
+  margin-right: 36px;
+  background: #4f79c7;
+  color: #fff;
+  border-color: transparent;
+}
+.panel.panel-chat .chat-input-area {
+  padding: 12px 14px 14px;
+  border-top: 1px solid rgba(42, 52, 65, 0.08);
+  background: rgba(255, 255, 255, 0.42);
+}
+.panel.panel-chat .disclaimer { display: none; }
+.panel.panel-chat .input-row {
+  align-items: flex-end;
+  gap: 8px;
+}
+.panel.panel-chat .img-btn,
+.panel.panel-chat .send-btn {
+  border-radius: 14px;
+  border: 1px solid rgba(42, 52, 65, 0.1);
+  background: rgba(255, 255, 255, 0.62);
+  color: rgba(23, 32, 39, 0.58);
+}
+.panel.panel-chat .img-btn:hover:not(:disabled) {
+  color: #4f79c7;
+  border-color: rgba(79, 121, 199, 0.24);
+}
+.panel.panel-chat .chat-input {
+  min-height: 42px;
+  border-radius: 16px;
+  border: 1px solid rgba(42, 52, 65, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  color: #172027;
+  box-shadow: none;
+}
+.panel.panel-chat .chat-input:focus {
+  border-color: rgba(79, 121, 199, 0.28);
+  box-shadow: 0 0 0 3px rgba(79, 121, 199, 0.08);
+}
+.panel.panel-chat .send-btn {
+  width: 42px;
+  height: 42px;
+  background: #4f79c7;
+  color: #fff;
+  border-color: transparent;
+}
+.panel.panel-chat .send-btn:hover:not(:disabled) {
+  background: #3f67aa;
+  color: #fff;
+  box-shadow: none;
+}
+.panel.panel-chat .typing-indicator span { background: #4f79c7; }
+.panel.panel-chat .tool-card {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(42, 52, 65, 0.08);
+}
+.panel.panel-chat .tool-card.running .tool-status-indicator { background: #5d89d4; }
+.panel.panel-chat .tool-card.success .tool-status-indicator { background: #4f79c7; }
+.panel.panel-chat .tool-card.error .tool-status-indicator { background: #ef6f5e; }
+@media (max-width: 767px) {
+  .panel.panel-chat { border-radius: 20px; }
+  .panel.panel-chat.collapsed { border-radius: 20px; }
+  .panel.panel-chat .chat-messages { min-height: 170px; max-height: 38vh; }
+  .panel.panel-chat .comm-status { display: none; }
+  .panel.panel-chat .msg-content { max-width: calc(100% - 28px); }
+}
+
 </style>

@@ -6,24 +6,24 @@
     <!-- 员工卡 -->
     <DeptEmployeeCard
       name="Nova"
-      role="发布专员"
+      :role="t('agentPublish.role')"
       emoji="🚀"
-      desc="多平台排期 · 发布计划 · 数据复盘"
+      :desc="t('agentPublish.desc')"
       color="#10b981"
       illustId="publish"
       :stats="[
-        { value: publishedCount, label: '已发布' },
-        { value: pendingCount, label: '待发布' },
+        { value: publishedCount, label: t('agentPublish.kpiPublished') },
+        { value: pendingCount, label: t('agentPublish.kpiPending') },
       ]"
     />
 
     <!-- ── 发布专员指挥台 + 今日数据 ── -->
     <div class="mid-grid">
       <section class="command-section" :style="{ '--ac': '#10b981' }">
-        <div class="command-header">
+          <div class="command-header">
           <div class="command-title-group">
-            <span class="agent-label">🚀 发布部</span>
-            <p class="command-desc">多平台排期 · 发布计划 · 数据复盘</p>
+            <span class="agent-label">🚀 {{ t('agentLayout.publishDept') }}</span>
+            <p class="command-desc">{{ t('agentPublish.desc') }}</p>
           </div>
           <div class="command-chips">
             <button v-for="p in agentPrompts" :key="p" class="chip-btn" @click="publishChatRef?.sendQuickPrompt(p)">{{ p }}</button>
@@ -39,17 +39,17 @@
       </section>
 
       <aside class="stats-aside">
-        <div class="stats-aside-title">今日数据</div>
+        <div class="stats-aside-title">{{ t('agentPublish.todayData') }}</div>
         <div class="stats-cards">
           <div class="stat-card">
             <div class="stat-card-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 2v10M6 5l3-3 3 3"/><path d="M2 13v3h14v-3"/></svg></div>
             <div class="stat-card-value">{{ publishedCount }}</div>
-            <div class="stat-card-label">已发布</div>
+            <div class="stat-card-label">{{ t('agentPublish.kpiPublished') }}</div>
           </div>
           <div class="stat-card">
             <div class="stat-card-icon icon-pending"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="9" r="7"/><path d="M9 6v4l2.5 2.5"/></svg></div>
             <div class="stat-card-value">{{ pendingCount }}</div>
-            <div class="stat-card-label">待发布</div>
+            <div class="stat-card-label">{{ t('agentPublish.kpiPending') }}</div>
           </div>
         </div>
       </aside>
@@ -58,17 +58,17 @@
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <div class="toolbar-left">
-        <span class="result-count" v-if="filtered.length">共 {{ filtered.length }} 条内容</span>
+        <span class="result-count" v-if="filtered.length">{{ t('agentPublish.totalCount', { count: filtered.length }) }}</span>
       </div>
       <div class="toolbar-right">
         <button class="btn-filter" @click="showFilter = !showFilter">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          筛选
+          {{ t('common.filter') }}
           <span v-if="activeFilters" class="filter-badge">{{ activeFilters }}</span>
         </button>
         <button class="btn-batch" :disabled="selected.length === 0" @click="batchPublish">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          批量发布{{ selected.length > 0 ? ` (${selected.length})` : '' }}
+          {{ t('agentPublish.batchPublish') }}{{ selected.length > 0 ? ` (${selected.length})` : '' }}
         </button>
       </div>
     </div>
@@ -76,14 +76,14 @@
     <!-- 筛选面板 -->
     <div v-if="showFilter" class="filter-panel">
       <div class="filter-group">
-        <span class="filter-label">类型</span>
-        <span v-for="t in typeOptions" :key="t.key" class="filter-tag"
-          :class="{ active: filterType === t.key }" @click="filterType = filterType === t.key ? '' : t.key">
-          {{ t.name }}
+        <span class="filter-label">{{ t('agentPublish.filterType') }}</span>
+        <span v-for="opt in typeOptions" :key="opt.key" class="filter-tag"
+          :class="{ active: filterType === opt.key }" @click="filterType = filterType === opt.key ? '' : opt.key">
+          {{ opt.name }}
         </span>
       </div>
       <div class="filter-group">
-        <span class="filter-label">平台</span>
+        <span class="filter-label">{{ t('agentPublish.filterPlatform') }}</span>
         <span v-for="p in platformOptions" :key="p.key" class="filter-tag"
           :class="{ active: filterPlatform === p.key }" @click="filterPlatform = filterPlatform === p.key ? '' : p.key">
           {{ p.name }}
@@ -94,9 +94,9 @@
     <!-- 空状态 -->
     <div v-if="agentStore.flowResults.length === 0" class="empty-state">
       <div class="empty-icon">🚀</div>
-      <div class="empty-title">暂无待发布内容</div>
-      <div class="empty-desc">在品牌配置页点击「交给 Captain」生成内容后，这里会显示待发布的内容卡片</div>
-      <button class="btn-goto-brand" @click="router.push('/agent/brand')">前往生成内容</button>
+      <div class="empty-title">{{ t('agentPublish.emptyTitle') }}</div>
+      <div class="empty-desc">{{ t('agentPublish.emptyDesc') }}</div>
+      <button class="btn-goto-brand" @click="router.push('/agent/brand')">{{ t('agentPublish.gotoBrand') }}</button>
     </div>
 
     <!-- 卡片网格 -->
@@ -109,10 +109,10 @@
         <div class="card-header">
           <div class="card-header-left">
             <span class="type-badge" :class="item.type">{{ typeLabel(item.type) }}</span>
-            <span v-if="item.published" class="published-badge">✅ 已发布</span>
-            <span v-else-if="item.videoStatus === 'processing'" class="video-status-badge processing">⏳ 视频生成中</span>
-            <span v-else-if="item.videoStatus === 'done'" class="video-status-badge done">🎬 视频已生成</span>
-            <span v-else-if="item.videoStatus === 'failed'" class="video-status-badge failed">❌ 视频失败</span>
+            <span v-if="item.published" class="published-badge">✅ {{ t('agentPublish.published') }}</span>
+            <span v-else-if="item.videoStatus === 'processing'" class="video-status-badge processing">⏳ {{ t('agentPublish.videoProcessing') }}</span>
+            <span v-else-if="item.videoStatus === 'done'" class="video-status-badge done">🎬 {{ t('agentPublish.videoDone') }}</span>
+            <span v-else-if="item.videoStatus === 'failed'" class="video-status-badge failed">❌ {{ t('agentPublish.videoFailed') }}</span>
             <span v-else class="card-time">{{ cardTime(idx) }}</span>
           </div>
           <div class="card-menu" @click.stop="toggleMenu(idx)">
@@ -122,9 +122,9 @@
               <circle cx="9" cy="14" r="1.2" fill="currentColor"/>
             </svg>
             <div v-if="menuOpen === idx" class="dropdown-menu">
-              <div class="dropdown-item" @click="editCard(idx)">编辑</div>
-              <div class="dropdown-item" @click="copyContent(item)">复制文案</div>
-              <div class="dropdown-item danger" @click="removeCard(idx)">删除</div>
+              <div class="dropdown-item" @click="editCard(idx)">{{ t('common.edit') }}</div>
+              <div class="dropdown-item" @click="copyContent(item)">{{ t('agentPublish.copyText') }}</div>
+              <div class="dropdown-item danger" @click="removeCard(idx)">{{ t('common.delete') }}</div>
             </div>
           </div>
         </div>
@@ -138,14 +138,14 @@
           <!-- 视频生成中占位 -->
           <div v-else-if="item.videoStatus === 'processing'" class="card-video-placeholder">
             <span class="video-spinner"></span>
-            <span>视频生成中，请稍候…</span>
+            <span>{{ t('agentPublish.videoPleaseWait') }}</span>
           </div>
           <!-- 图片（有 URL 就显示） -->
           <div v-if="item.imageUrl" class="card-image">
             <img :src="item.imageUrl" :alt="item.topic" />
             <!-- ERP 截图备选 -->
-            <button v-if="item.erpScreenshotUrl" class="btn-switch-img" @click.stop="switchToErpScreenshot(idx)" title="切换为ERP数据截图">
-              📊 用ERP截图
+            <button v-if="item.erpScreenshotUrl" class="btn-switch-img" @click.stop="switchToErpScreenshot(idx)" :title="t('agentPublish.switchErpTitle')">
+              📊 {{ t('agentPublish.useErp') }}
             </button>
           </div>
           <!-- 文案 / prompt 文字 -->
@@ -156,8 +156,8 @@
         <div v-if="editingIdx === idx" class="edit-overlay" @click.self="editingIdx = -1">
           <textarea class="edit-textarea" v-model="editContent" rows="8" />
           <div class="edit-actions">
-            <button class="btn-cancel-edit" @click="editingIdx = -1">取消</button>
-            <button class="btn-save-edit" @click="saveEdit(idx)">保存</button>
+            <button class="btn-cancel-edit" @click="editingIdx = -1">{{ t('common.cancel') }}</button>
+            <button class="btn-save-edit" @click="saveEdit(idx)">{{ t('common.save') }}</button>
           </div>
         </div>
 
@@ -171,11 +171,11 @@
           <div class="card-footer-actions">
             <button class="btn-preview" @click="previewCard(idx)">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7s2.5-4.5 6-4.5S13 7 13 7s-2.5 4.5-6 4.5S1 7 1 7z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.3"/></svg>
-              查看
+              {{ t('common.view') }}
             </button>
             <button class="btn-publish" @click="publishOne(idx)">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              发布
+              {{ t('common.submit') }}
             </button>
           </div>
         </div>
@@ -189,7 +189,7 @@
         <div class="preview-modal publish-guide-modal">
           <div class="preview-header">
             <div class="preview-header-left">
-              <span class="type-badge poster">发布到小红书</span>
+              <span class="type-badge poster">{{ t('agentPublish.publishToXhs') }}</span>
             </div>
             <button class="preview-close" @click="cancelPublish">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -198,44 +198,44 @@
           <div class="preview-body">
             <!-- 图片预览 -->
             <div v-if="publishGuide.imageUrl" class="publish-guide-image">
-              <img :src="publishGuide.imageUrl" alt="配图" />
+              <img :src="publishGuide.imageUrl" :alt="t('agentPublish.imageAlt')" />
             </div>
             <!-- 分步操作 -->
             <div class="publish-steps">
               <div class="publish-step" :class="{ done: publishGuide.imageCopied, active: !publishGuide.imageCopied }">
                 <div class="step-num">1</div>
                 <div class="step-body">
-                  <div class="step-title">{{ publishGuide.imageCopied ? '✅ 图片已复制' : '复制图片' }}</div>
-                  <div class="step-desc">{{ publishGuide.imageCopied ? '去小红书创作页 Ctrl+V 粘贴图片' : '点击后可在小红书创作页直接粘贴' }}</div>
+                  <div class="step-title">{{ publishGuide.imageCopied ? t('agentPublish.imageCopied') : t('agentPublish.copyImage') }}</div>
+                  <div class="step-desc">{{ publishGuide.imageCopied ? t('agentPublish.pasteImage') : t('agentPublish.copyImageHint') }}</div>
                 </div>
-                <button v-if="!publishGuide.imageCopied" class="step-btn" @click="copyPublishImage">复制图片</button>
-                <button v-else class="step-btn step-btn-done" disabled>已复制</button>
+                <button v-if="!publishGuide.imageCopied" class="step-btn" @click="copyPublishImage">{{ t('agentPublish.copyImage') }}</button>
+                <button v-else class="step-btn step-btn-done" disabled>{{ t('agentPublish.copied') }}</button>
               </div>
               <div class="publish-step" :class="{ done: publishGuide.textCopied, active: publishGuide.imageCopied && !publishGuide.textCopied }">
                 <div class="step-num">2</div>
                 <div class="step-body">
-                  <div class="step-title">{{ publishGuide.textCopied ? '✅ 文案已复制' : '复制文案' }}</div>
-                  <div v-if="publishGuide.publishText" class="step-desc">{{ publishGuide.textCopied ? '去小红书标题/正文框粘贴' : '复制图片后再复制文案' }}</div>
-                  <div v-else class="step-desc step-desc-hint">海报无配套文案 — 请在文案部生成后一并发布，或在小红书自行填写</div>
+                  <div class="step-title">{{ publishGuide.textCopied ? t('agentPublish.textCopied') : t('agentPublish.copyText') }}</div>
+                  <div v-if="publishGuide.publishText" class="step-desc">{{ publishGuide.textCopied ? t('agentPublish.pasteText') : t('agentPublish.copyTextHint') }}</div>
+                  <div v-else class="step-desc step-desc-hint">{{ t('agentPublish.noCopyHint') }}</div>
                 </div>
                 <button v-if="publishGuide.publishText" class="step-btn" :class="{ 'step-btn-secondary': !publishGuide.imageCopied }" @click="copyPublishText">
-                  {{ publishGuide.textCopied ? '重新复制' : '复制文案' }}
+                  {{ publishGuide.textCopied ? t('agentPublish.copyAgain') : t('agentPublish.copyText') }}
                 </button>
-                <span v-else class="step-btn step-btn-na">跳过</span>
+                <span v-else class="step-btn step-btn-na">{{ t('common.skip') }}</span>
               </div>
               <div class="publish-step" :class="{ active: publishGuide.textCopied }">
                 <div class="step-num">3</div>
                 <div class="step-body">
-                  <div class="step-title">打开小红书发布页</div>
-                  <div class="step-desc">粘贴图片和文案后点发布</div>
+                  <div class="step-title">{{ t('agentPublish.openXhsTitle') }}</div>
+                  <div class="step-desc">{{ t('agentPublish.openXhsDesc') }}</div>
                 </div>
-                <button class="step-btn step-btn-primary" @click="openXhs">打开 →</button>
+                <button class="step-btn step-btn-primary" @click="openXhs">{{ t('agentPublish.openXhs') }} →</button>
               </div>
             </div>
             <!-- 图片不支持复制时的降级提示 -->
             <div v-if="publishGuide.downloadFallback" class="download-fallback">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#f59e0b" stroke-width="1.3"/><path d="M7 4v3.5M7 9.5v.5" stroke="#f59e0b" stroke-width="1.3" stroke-linecap="round"/></svg>
-              浏览器不支持直接复制图片，已自动下载到本地，请手动上传
+              {{ t('agentPublish.downloadFallback') }}
             </div>
           </div>
         </div>
@@ -265,14 +265,14 @@
             <div class="preview-content" v-html="renderPublishMd(filtered[previewIdx])" />
           </div>
           <div class="preview-footer">
-            <button class="btn-cancel-edit" @click="previewIdx = -1">关闭</button>
-            <button class="btn-cancel-edit" @click="copyContent(filtered[previewIdx])">
+              <button class="btn-cancel-edit" @click="previewIdx = -1">{{ t('common.close') }}</button>
+              <button class="btn-cancel-edit" @click="copyContent(filtered[previewIdx])">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 10V2.5A.5.5 0 012.5 2H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-              复制
+              {{ t('common.copy') }}
             </button>
             <button class="btn-publish" @click="publishOne(previewIdx); previewIdx = -1">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              发布
+              {{ t('common.submit') }}
             </button>
           </div>
         </div>
@@ -285,6 +285,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useTrendingStore } from '@/stores/agent'
 import { marked } from 'marked'
@@ -294,14 +295,10 @@ import DeptBulletin from '@/components/agent/DeptBulletin.vue'
 
 // 发布专员
 const publishChatRef = ref<InstanceType<typeof AgentChat>>()
-const agentPrompts = [
-  '帮我制定本周发布计划',
-  '这批内容应该什么时间发效果最好？',
-  '各平台发布频率建议',
-]
 
 const router = useRouter()
 const agentStore = useTrendingStore()
+const { t } = useI18n()
 
 const publishedCount = computed(() => agentStore.flowResults.filter(r => r.published).length)
 const pendingCount = computed(() => agentStore.flowResults.filter(r => !r.published).length)
@@ -326,11 +323,17 @@ const publishGuide = ref({
   itemRealIdx: -1,
 })
 
-const typeOptions = [
-  { key: 'copy', name: '文案' },
-  { key: 'poster', name: '图文' },
-  { key: 'video_script', name: '视频脚本' },
-]
+const typeOptions = computed(() => [
+  { key: 'copy', name: t('agentPublish.typeCopy') },
+  { key: 'poster', name: t('agentPublish.typePoster') },
+  { key: 'video_script', name: t('agentPublish.typeVideoScript') },
+])
+
+const agentPrompts = computed(() => [
+  t('agentPublish.prompt1'),
+  t('agentPublish.prompt2'),
+  t('agentPublish.prompt3'),
+])
 
 const platformOptions = computed(() => {
   const seen = new Set<string>()
@@ -360,7 +363,11 @@ const filtered = computed(() => {
 })
 
 function typeLabel(type: string) {
-  return { copy: '文案', poster: '图文', video_script: '视频' }[type] ?? type
+  return {
+    copy: t('agentPublish.typeCopy'),
+    poster: t('agentPublish.typePoster'),
+    video_script: t('agentPublish.typeVideoScript'),
+  }[type] ?? type
 }
 
 function cardTime(idx: number) {
@@ -460,18 +467,18 @@ function saveEdit(idx: number) {
     agentStore.setFlowResults(updated)
   }
   editingIdx.value = -1
-  ElMessage.success('已保存')
+  ElMessage.success(t('agentPublish.saved'))
 }
 
 async function copyContent(item: any) {
   menuOpen.value = -1
   await navigator.clipboard.writeText(extractPublishContent(item))
-  ElMessage.success('已复制到剪贴板')
+  ElMessage.success(t('agentPublish.copiedToClipboard'))
 }
 
 async function removeCard(idx: number) {
   menuOpen.value = -1
-  await ElMessageBox.confirm('确定删除这条内容？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('agentPublish.deleteConfirm'), t('common.tip'), { type: 'warning' })
   const realIdx = agentStore.flowResults.indexOf(filtered.value[idx])
   if (realIdx >= 0) {
     const updated = [...agentStore.flowResults]
@@ -503,12 +510,12 @@ async function publishOne(idx: number) {
     // 无图片：原有逻辑，直接复制文案跳转
     await navigator.clipboard.writeText(publishText)
     window.open('https://creator.xiaohongshu.com/publish/publish', '_blank')
-    ElMessage({ message: '文案已复制，在小红书发布页粘贴即可 📋', type: 'success', duration: 4000 })
+    ElMessage({ message: t('agentPublish.xhsTextCopied'), type: 'success', duration: 4000 })
     markPublished(realIdx)
     return
   }
 
-  ElMessage.warning(`「${item.platformName}」暂未接入自动发布，请手动复制内容发布`)
+  ElMessage.warning(t('agentPublish.autoPublishUnavailable', { platform: item.platformName }))
 }
 
 function switchToErpScreenshot(idx: number) {
@@ -520,7 +527,7 @@ function switchToErpScreenshot(idx: number) {
   const prev = updated[realIdx].imageUrl
   updated[realIdx] = { ...updated[realIdx], imageUrl: item.erpScreenshotUrl, erpScreenshotUrl: prev }
   agentStore.setFlowResults(updated)
-  ElMessage.success('已切换为ERP数据截图')
+  ElMessage.success(t('agentPublish.switchedErpScreenshot'))
 }
 
 function cancelPublish() {
@@ -535,7 +542,7 @@ async function copyPublishImage() {
     img.crossOrigin = 'anonymous'
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve()
-      img.onerror = () => reject(new Error('图片加载失败'))
+      img.onerror = () => reject(new Error(t('agentPublish.imageLoadFailed')))
       img.src = url
     })
     const canvas = document.createElement('canvas')
@@ -544,11 +551,11 @@ async function copyPublishImage() {
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(img, 0, 0)
     const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('转换失败')), 'image/png')
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error(t('agentPublish.imageConvertFailed'))), 'image/png')
     })
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
     publishGuide.value.imageCopied = true
-    ElMessage.success('图片已复制，去小红书粘贴')
+    ElMessage.success(t('agentPublish.imageCopiedToast'))
   } catch {
     // 降级：触发下载
     publishGuide.value.downloadFallback = true
@@ -558,21 +565,21 @@ async function copyPublishImage() {
     a.target = '_blank'
     a.click()
     publishGuide.value.imageCopied = true
-    ElMessage({ message: '图片已下载，请手动上传到小红书', type: 'warning', duration: 5000 })
+    ElMessage({ message: t('agentPublish.imageDownloadedFallback'), type: 'warning', duration: 5000 })
   }
 }
 
 async function copyPublishText() {
   await navigator.clipboard.writeText(publishGuide.value.publishText)
   publishGuide.value.textCopied = true
-  ElMessage.success('文案已复制')
+  ElMessage.success(t('agentPublish.textCopiedToast'))
 }
 
 function openXhs() {
   window.open('https://creator.xiaohongshu.com/publish/publish', '_blank')
   if (publishGuide.value.itemRealIdx >= 0) markPublished(publishGuide.value.itemRealIdx)
   publishGuide.value.show = false
-  ElMessage.success('发布引导完成 ✅')
+  ElMessage.success(t('agentPublish.publishGuideDone'))
 }
 
 function previewCard(idx: number) {
@@ -621,7 +628,7 @@ async function publishByRealIdx(realIdx: number) {
       const data = await resp.json() as any
       if (data.success) {
         markPublished(realIdx)
-        ElMessage.success(`✅ 已自动发布到 ${item.platformName}`)
+        ElMessage.success(t('agentPublish.autoPublished', { platform: item.platformName }))
         return
       }
     }
@@ -651,7 +658,7 @@ async function publishByRealIdx(realIdx: number) {
   await navigator.clipboard.writeText(publishText)
   if (url) window.open(url, '_blank')
   markPublished(realIdx)
-  ElMessage.success(`文案已复制，请在 ${item.platformName} 发布页粘贴`)
+  ElMessage.success(t('agentPublish.copyPasteToPlatform', { platform: item.platformName }))
 }
 
 // ── 视频状态轮询 ──
@@ -677,7 +684,7 @@ async function pollVideoStatuses() {
         const updated = [...agentStore.flowResults]
         updated[i] = { ...updated[i], videoStatus: 'done', videoUrl: data.video_url }
         agentStore.setFlowResults(updated)
-        ElMessage({ message: '🎬 视频已生成完成，可以发布了！', type: 'success', duration: 5000 })
+        ElMessage({ message: t('agentPublish.videoReady'), type: 'success', duration: 5000 })
       } else if (data.status === 'failed') {
         const updated = [...agentStore.flowResults]
         updated[i] = { ...updated[i], videoStatus: 'failed' }
@@ -687,7 +694,34 @@ async function pollVideoStatuses() {
   }
 }
 
+async function pullStagedBundles() {
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    if (!token) return
+    const resp = await fetch('/api/publish-stage', {
+      method: 'GET',
+      headers: { 'x-erp-token': token },
+    })
+    const data = await resp.json() as any
+    const items = data?.items || []
+    if (!items.length) return
+    // 与现有 flowResults 合并（按 topic 去重）
+    const existing = [...agentStore.flowResults]
+    let added = 0
+    for (const item of items) {
+      const dup = existing.some(r => r.topic === item.topic && r.content === item.content && !r.published)
+      if (!dup) { existing.push(item); added++ }
+    }
+    if (added) {
+      agentStore.setFlowResults(existing)
+      ElMessage({ message: t('agentPublish.bundleReceived', { count: added }), type: 'success', duration: 3000 })
+    }
+  } catch {}
+}
+
 onMounted(() => {
+  // 先拉取服务端暂存的 bundle
+  pullStagedBundles()
   // 页面加载时立即查一次，之后每30秒轮询
   pollVideoStatuses()
   videoPoller = setInterval(pollVideoStatuses, 30000)

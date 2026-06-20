@@ -2,8 +2,8 @@
   <div class="dept-bulletin">
     <div class="dept-bulletin-hd">
       <span class="db-dot"></span>
-      <span>今日任务</span>
-      <button class="dept-bulletin-edit" @click="editing = !editing" :title="editing ? '完成' : '编辑'">
+      <span>{{ t('deptBulletin.title') }}</span>
+      <button class="dept-bulletin-edit" @click="editing = !editing" :title="editing ? t('deptBulletin.done') : t('common.edit')">
         <svg v-if="!editing" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M8.5 1.5l2 2L4 10H2v-2l6.5-6.5z"/></svg>
         <svg v-else width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6l3 3 5-5"/></svg>
       </button>
@@ -12,21 +12,23 @@
       v-if="editing"
       v-model="text"
       class="dept-bulletin-input"
-      placeholder="输入本部门工作任务..."
+      :placeholder="t('deptBulletin.placeholder')"
       rows="2"
       @blur="save"
     />
     <div v-else class="dept-bulletin-body">
       <span v-if="text">{{ text }}</span>
-      <span v-else class="dept-bulletin-empty">暂无工作任务 · 点击右上角编辑</span>
+      <span v-else class="dept-bulletin-empty">{{ t('deptBulletin.empty') }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ deptId: string }>()
+const { t } = useI18n()
 
 const KEY_PREFIX = 'dept_bulletin_'
 const editing = ref(false)

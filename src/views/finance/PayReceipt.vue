@@ -4,74 +4,82 @@
       <ScTable ref="tableRef"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/finance/PayReceipt/batchDel"
-          export-file-name="付款记录" :params="searchForm"
+          :export-file-name="t('finance.payReceipt.exportFileName')" :params="searchForm"
           sort-by="pay_date" :sort-desc="true">
         <template #search>
-          <el-input v-model="searchForm.receipt_no" placeholder="付款单号" clearable style="width:160px" />
-          <el-input v-model="searchForm.contact_name" placeholder="付款对象" clearable style="width:150px" />
-          <el-select v-model="searchForm.contact_type" placeholder="类型" clearable style="width:110px">
-            <el-option label="供应商" value="supplier" />
-            <el-option label="客户" value="customer" />
-            <el-option label="员工" value="staff" />
-            <el-option label="其他" value="other" />
+          <el-input v-model="searchForm.receipt_no" :placeholder="t('finance.payReceipt.receiptNoPlaceholder')" clearable style="width:160px" />
+          <el-input v-model="searchForm.contact_name" :placeholder="t('finance.payReceipt.contactNamePlaceholder')" clearable style="width:150px" />
+          <el-select v-model="searchForm.contact_type" :placeholder="t('finance.payReceipt.contactTypePlaceholder')" clearable style="width:110px">
+            <el-option :label="t('finance.payReceipt.supplier')" value="supplier" />
+            <el-option :label="t('finance.payReceipt.customer')" value="customer" />
+            <el-option :label="t('finance.payReceipt.staff')" value="staff" />
+            <el-option :label="t('finance.payReceipt.other')" value="other" />
           </el-select>
-          <el-select v-model="searchForm.source" placeholder="付款来源" clearable style="width:140px">
-            <el-option label="应付款付出" value="payable" />
-            <el-option label="其他付款" value="other" />
+          <el-select v-model="searchForm.source" :placeholder="t('finance.payReceipt.sourcePlaceholder')" clearable style="width:140px">
+            <el-option :label="t('finance.payReceipt.sourcePayable')" value="payable" />
+            <el-option :label="t('finance.payReceipt.sourceOther')" value="other" />
           </el-select>
-          <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
-            <el-option label="未核对" value="unreconciled" />
+          <el-input v-model="searchForm.remark_kw" :placeholder="t('finance.payReceipt.remarkKwPlaceholder')" clearable style="width:140px" />
+          <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="t('finance.payReceipt.reconcileStatusPlaceholder')">
+            <el-option :label="t('finance.payReceipt.unreconciled')" value="unreconciled" />
           </el-select>
+          <el-date-picker
+            :model-value="searchForm.start_date && searchForm.end_date ? [searchForm.start_date, searchForm.end_date] : null"
+            type="daterange" :range-separator="t('finance.payReceipt.dateRangeSeparator')" :start-placeholder="t('finance.payReceipt.startDate')" :end-placeholder="t('finance.payReceipt.endDate')"
+            value-format="YYYY-MM-DD" style="width:240px"
+            @update:model-value="(v: any) => { searchForm.start_date = v?.[0] || ''; searchForm.end_date = v?.[1] || '' }"
+          />
         </template>
         <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="router.push('/finance/pay-receipt/new')">新增付款单</el-button>
+          <el-button type="primary" :icon="Plus" @click="router.push('/finance/pay-receipt/new')">{{ t('finance.payReceipt.addPayReceipt') }}</el-button>
+          <span class="toolbar-summary">{{ t('finance.payReceipt.toolbarSummary') }}<b>{{ summaryCount }}</b> {{ t('finance.payReceipt.toolbarCount') }}&emsp;{{ t('finance.payReceipt.toolbarPayTotal') }}<b style="color:#dc2626">¥{{ summaryTotal }}</b>&emsp;{{ t('finance.payReceipt.toolbarNetPay') }}<b style="color:#0071e3">¥{{ summaryNet }}</b></span>
         </template>
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="receipt_no" label="付款单号" min-width="150" />
-        <el-table-column label="类型" width="80" align="center">
+        <el-table-column type="index" :label="t('finance.payReceipt.indexNo')" width="60" align="center" />
+        <el-table-column prop="receipt_no" :label="t('finance.payReceipt.receiptNo')" min-width="150" />
+        <el-table-column :label="t('finance.payReceipt.type')" width="80" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="typeTagMap[row.contact_type] ?? ''">{{ typeLabel(row.contact_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="付款对象" min-width="130">
+        <el-table-column :label="t('finance.payReceipt.payTarget')" min-width="130">
           <template #default="{ row }">{{ getPaySupplierLabel(row) }}</template>
         </el-table-column>
-        <el-table-column label="关联采购单" min-width="140">
+        <el-table-column :label="t('finance.payReceipt.relatedOrder')" min-width="140">
           <template #default="{ row }">
             <span :style="{ color: getRelatedOrder(row) !== '—' ? '#0071e3' : 'rgba(29,29,31,0.25)' }">
               {{ getRelatedOrder(row) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="amount" label="付款金额" width="120" align="right">
+        <el-table-column prop="amount" :label="t('finance.payReceipt.payAmount')" width="120" align="right">
           <template #default="{ row }">
             <span style="color:#dc2626;font-weight:600">¥{{ Number(row.amount || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="退款金额" width="120" align="right">
+        <el-table-column :label="t('finance.payReceipt.refundAmount')" width="120" align="right">
           <template #default="{ row }">
             <span :style="{ color: Number(row.refund_allocated || 0) > 0 ? '#16a34a' : 'rgba(29,29,31,0.25)', fontWeight: 600 }">
               ¥{{ Number(row.refund_allocated || 0).toFixed(2) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="净付款" width="120" align="right">
+        <el-table-column :label="t('finance.payReceipt.netAmount')" width="120" align="right">
           <template #default="{ row }">
             <span style="color:#0071e3;font-weight:600">¥{{ Number(row.net_amount ?? row.amount ?? 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="付款账户" width="130">
+        <el-table-column :label="t('finance.payReceipt.payAccount')" width="130">
           <template #default="{ row }">{{ row.fund_name || row.account_name || '—' }}</template>
         </el-table-column>
-        <el-table-column label="付款日期" width="150">
+        <el-table-column :label="t('finance.payReceipt.payDate')" width="150">
           <template #default="{ row }">{{ fmtDt(row.pay_date || row.created_at) }}</template>
         </el-table-column>
-        <el-table-column prop="pay_method" label="付款方式" width="100" align="center" />
-        <el-table-column prop="remark" label="备注" min-width="130" show-overflow-tooltip />
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column prop="pay_method" :label="t('finance.payReceipt.payMethod')" width="100" align="center" />
+        <el-table-column prop="remark" :label="t('finance.payReceipt.remark')" min-width="130" show-overflow-tooltip />
+        <el-table-column :label="t('finance.payReceipt.operation')" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-            <el-button type="danger" link size="small" @click="handleRevoke(row)">撤销付款</el-button>
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? t('finance.payReceipt.reconciled') : t('finance.payReceipt.reconcile') }}</el-button>
+            <el-button type="danger" link size="small" @click="handleRevoke(row)">{{ t('finance.payReceipt.revokePayment') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
@@ -80,8 +88,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -93,6 +102,7 @@ import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { adjustFundBalance } from '@/utils/fund'
 import { fmtDt } from '@/utils/date'
 
+const { t } = useI18n()
 const router = useRouter()
 const purchaseOrders = ref<any[]>([])
 const supplierList = ref<any[]>([])
@@ -118,16 +128,27 @@ function getRelatedOrder(row: any) {
 
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_pay_receipt', tableRef)
-const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '', source: '', reconcile_filter: '' })
+const searchForm = reactive<any>({ receipt_no: '', contact_name: '', contact_type: '', source: '', remark_kw: '', reconcile_filter: '', start_date: '', end_date: '' })
 const reconcileFilteredApi = createFilteredApi(getPayReceiptListWithRefund, 'reconcile_filter')
+
+const allRows = ref<any[]>([])
+const summaryCount = computed(() => allRows.value.length)
+const summaryTotal = computed(() => allRows.value.reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2))
+const summaryNet = computed(() => allRows.value.reduce((s, r) => s + Number(r.net_amount ?? r.amount ?? 0), 0).toFixed(2))
 
 const typeTagMap: Record<string, string> = {
   supplier: 'warning', customer: 'success', staff: 'info', other: ''
 }
 
+const typeLabelMap = computed<Record<string, string>>(() => ({
+  supplier: t('finance.payReceipt.supplier'),
+  customer: t('finance.payReceipt.customer'),
+  staff: t('finance.payReceipt.staff'),
+  other: t('finance.payReceipt.other'),
+}))
+
 function typeLabel(type: string) {
-  const map: Record<string, string> = { supplier: '供应商', customer: '客户', staff: '员工', other: '其他' }
-  return map[type] ?? type
+  return typeLabelMap.value[type] ?? type
 }
 
 async function getPayReceiptListWithRefund(params: any) {
@@ -158,7 +179,14 @@ async function getPayReceiptListWithRefund(params: any) {
   if (params.contact_type) rows = rows.filter(r => r.contact_type === params.contact_type)
   if (params.contact_name) rows = rows.filter(r => (r.contact_name ?? '').includes(params.contact_name))
   if (params.receipt_no) rows = rows.filter(r => (r.receipt_no ?? '').includes(params.receipt_no))
+  if (params.start_date) rows = rows.filter(r => (r.pay_date || r.created_at || '').slice(0, 10) >= params.start_date)
+  if (params.end_date) rows = rows.filter(r => (r.pay_date || r.created_at || '').slice(0, 10) <= params.end_date)
+  if (params.remark_kw) {
+    const kw = String(params.remark_kw).toLowerCase()
+    rows = rows.filter(r => String(r.remark || '').toLowerCase().includes(kw))
+  }
 
+  allRows.value = rows
   return {
     ...payRes,
     data: {
@@ -171,8 +199,8 @@ async function getPayReceiptListWithRefund(params: any) {
 
 async function handleRevoke(row: any) {
   await ElMessageBox.confirm(
-    `确定撤销付款单 ${row.receipt_no || row.order_sn || ''} ？\n\n将自动反审核并删除该付款单，¥${Number(row.amount || 0).toFixed(2)} 将回流至「${row.fund_name || row.account_name || '对应账户'}」，对应采购单恢复为未付款状态。`,
-    '撤销付款', { type: 'warning', confirmButtonText: '确定撤销', cancelButtonText: '取消' }
+    `${t('finance.payReceipt.revokeConfirmTitle')} ${row.receipt_no || row.order_sn || ''} ？\n\n${t('finance.payReceipt.revokePayment')}：¥${Number(row.amount || 0).toFixed(2)} → 「${row.fund_name || row.account_name || '—'}」`,
+    t('finance.payReceipt.revokeConfirmTitle'), { type: 'warning', confirmButtonText: t('finance.payReceipt.revokeConfirmOk'), cancelButtonText: t('finance.payReceipt.revokeConfirmCancel') }
   )
   try {
     await deletePayReceipt(row.id)
@@ -181,14 +209,15 @@ async function handleRevoke(row: any) {
         await adjustFundBalance({ fundId: row.fund_id, fundName: row.fund_name || row.account_name, delta: Number(row.amount) })
       } catch { /* 回退失败不阻塞 */ }
     }
-    ElMessage.success('已撤销，资金已回流，请重新付款')
+    ElMessage.success(t('finance.payReceipt.revokeSuccess'))
     tableRef.value?.refresh()
   } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(e?.message ?? '撤销失败')
+    if (e !== 'cancel') ElMessage.error(e?.message ?? t('finance.payReceipt.revokeFailed'))
   }
 }
 </script>
 
 <style scoped>
 .receipt-page { min-height: 100%; }
+.toolbar-summary { margin-left: 16px; font-size: 14px; line-height: 32px; color: #606266; }
 </style>

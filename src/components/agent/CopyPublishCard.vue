@@ -4,7 +4,7 @@
     <div class="cpc-platform-bar">
       <span class="cpc-platform-icon">{{ platformEmoji }}</span>
       <span class="cpc-platform-name">{{ card.platform_name || platformLabel }}</span>
-      <span class="cpc-badge">可发布</span>
+      <span class="cpc-badge">{{ t('copyPublishCard.publishable') }}</span>
     </div>
 
     <!-- 内容预览 -->
@@ -24,21 +24,21 @@
     <div class="cpc-footer">
       <button class="cpc-publish-btn" @click="publishToplatform" :disabled="publishing">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-        发布到{{ card.platform_name || platformLabel }}
+        {{ t('copyPublishCard.publishTo', { platform: card.platform_name || platformLabel }) }}
       </button>
       <button class="cpc-copy-btn" @click="copyText" :class="{ copied }">
-        {{ copied ? '✓ 已复制' : '复制文案' }}
+        {{ copied ? t('copyPublishCard.copied') : t('copyPublishCard.copyText') }}
       </button>
       <button class="cpc-save-btn" @click="saveToQueue" :class="{ saved }">
-        {{ saved ? '✓ 已入队' : '存入发布' }}
+        {{ saved ? t('copyPublishCard.saved') : t('agentChat.saveToPublish') }}
       </button>
     </div>
 
     <!-- 手动发布引导提示（仅本地服务未运行时显示） -->
     <div v-if="showGuide" class="cpc-guide">
-      <div class="cpc-guide-step done">✓ 文案已复制到剪贴板</div>
-      <div class="cpc-guide-step active">→ 在{{ card.platform_name || platformLabel }}创作页粘贴（Ctrl+V / ⌘V）</div>
-      <div class="cpc-guide-tip">💡 启动本地发布服务可实现全自动发布：<code>python social-publisher/server.py</code></div>
+      <div class="cpc-guide-step done">✓ {{ t('copyPublishCard.copiedGuide') }}</div>
+      <div class="cpc-guide-step active">→ {{ t('copyPublishCard.pasteGuide', { platform: card.platform_name || platformLabel }) }}</div>
+      <div class="cpc-guide-tip">💡 {{ t('copyPublishCard.serviceGuide') }}<code>python social-publisher/server.py</code></div>
     </div>
   </div>
 </template>
@@ -46,6 +46,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { useTrendingStore } from '@/stores/agent'
 
 export interface PublishCardData {
@@ -59,6 +60,7 @@ export interface PublishCardData {
 
 const props = defineProps<{ card: PublishCardData }>()
 const emit = defineEmits<{ (e: 'saved'): void }>()
+const { t } = useI18n()
 
 const agentStore = useTrendingStore()
 const copying = ref(false)
@@ -96,7 +98,7 @@ const charCount = computed(() => (props.card.title + props.card.body).length)
 async function copyText() {
   await navigator.clipboard.writeText(fullText.value)
   copied.value = true
-  ElMessage.success('文案已复制')
+  ElMessage.success(t('copyPublishCard.copiedToast'))
   setTimeout(() => { copied.value = false }, 3000)
 }
 
@@ -127,11 +129,11 @@ async function tryAutoPublish(): Promise<boolean> {
     })
     const data = await resp.json()
     if (data.success) {
-      ElMessage.success(`✅ 已自动发布到${props.card.platform_name || platformLabel.value}`)
+      ElMessage.success(t('copyPublishCard.autoPublished', { platform: props.card.platform_name || platformLabel.value }))
       saveToQueue(true)
       return true
     }
-    ElMessage.warning(`自动发布失败：${data.message}，切换手动模式`)
+    ElMessage.warning(t('copyPublishCard.autoPublishFailed', { message: data.message }))
     return false
   } catch {
     return false   // 服务未运行，降级
@@ -147,14 +149,14 @@ async function publishToplatform() {
 
     // 2. 降级：复制文案 + 跳转到平台发布页
     const url = platformConfig.value.url
-    if (!url) { ElMessage.warning('该平台暂未配置发布链接'); return }
+    if (!url) { ElMessage.warning(t('copyPublishCard.noPublishUrl')); return }
     await navigator.clipboard.writeText(fullText.value)
     showGuide.value = true
     window.open(url, '_blank')
     saveToQueue(true)
     setTimeout(() => { showGuide.value = false }, 8000)
   } catch {
-    ElMessage.error('操作失败，请手动复制文案')
+    ElMessage.error(t('copyPublishCard.publishFailed'))
   } finally {
     publishing.value = false
   }
@@ -175,7 +177,7 @@ function saveToQueue(markPublished = false) {
   ])
   saved.value = true
   emit('saved')
-  if (!markPublished) ElMessage({ message: '已存入发布队列', type: 'success', duration: 2500 })
+  if (!markPublished) ElMessage({ message: t('copyPublishCard.savedQueue'), type: 'success', duration: 2500 })
 }
 </script>
 

@@ -1,0 +1,17 @@
+export default {
+  goodsName: '商品名称',
+  goodsNamePlaceholder: '请输入商品名称',
+  dateRange: '日期范围',
+  dateRangeSeparator: '至',
+  startDate: '开始日期',
+  endDate: '结束日期',
+  query: '查询',
+  reset: '重置',
+  goodsSn: '商品编码',
+  costPrice: '成本价',
+  sellPrice: '销售价',
+  profit: '利润',
+  profitRate: '利润率',
+  period: '核算周期',
+  exportFileName: '成本记录',
+}

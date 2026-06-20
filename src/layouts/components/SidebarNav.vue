@@ -1,7 +1,7 @@
 <template>
   <div class="sidebar-nav">
     <div class="nav-header">
-      <span class="nav-title">{{ currentMenu?.title }}</span>
+      <span class="nav-title">{{ tt(currentMenu?.title) }}</span>
     </div>
     <div class="nav-body">
       <div
@@ -11,7 +11,7 @@
         :class="{ active: route.path === item.path }"
         @click="navigate(item.path!)"
       >
-        {{ item.title }}
+        {{ tt(item.title) }}
       </div>
     </div>
   </div>
@@ -22,6 +22,10 @@ import { menuData } from './menuData'
 import { useAppStore } from '@/stores/app'
 import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tt = (key?: string) => (key && key.startsWith('menu.') ? t(key) : key ?? '')
 
 const appStore = useAppStore()
 const permStore = usePermissionStore()

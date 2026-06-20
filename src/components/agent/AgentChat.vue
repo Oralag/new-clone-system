@@ -14,7 +14,7 @@
           ref="inputRef"
           v-model="inputText"
           class="bar-input"
-          :placeholder="`和 ${agent.name} 对话...`"
+          :placeholder="t('agentChat.placeholder', { name: agent.name })"
           :disabled="streaming"
           autocomplete="off"
           autocorrect="off"
@@ -24,15 +24,15 @@
           @keydown.enter.prevent="sendMessage"
           @focus="isCollapsed = false"
         />
-        <button v-if="messages.length > 0" class="bar-tool-btn" @click="clearChat" title="清空对话">
+        <button v-if="messages.length > 0" class="bar-tool-btn" @click="clearChat" :title="t('common.clear')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
         </button>
         <!-- 收起按钮 -->
-        <button v-if="(messages.length > 0 || streaming) && !isCollapsed" class="bar-tool-btn" @click="isCollapsed = true" title="收起">
+        <button v-if="(messages.length > 0 || streaming) && !isCollapsed" class="bar-tool-btn" @click="isCollapsed = true" :title="t('common.collapse')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>
         </button>
         <!-- 展开按钮 -->
-        <button v-if="messages.length > 0 && isCollapsed" class="bar-tool-btn" @click="isCollapsed = false" title="展开">
+        <button v-if="messages.length > 0 && isCollapsed" class="bar-tool-btn" @click="isCollapsed = false" :title="t('common.expand')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <button class="bar-send" :disabled="streaming || !inputText.trim()" @click="sendMessage">
@@ -48,7 +48,7 @@
       <!-- 查看更多 -->
       <div v-if="messages.length > 4 && !showAllMessages" class="feed-more-btn" @click.stop="showAllMessages = true">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-        查看更多 {{ messages.length - 4 }} 条历史
+        {{ t('agentChat.viewMoreHistory', { count: messages.length - 4 }) }}
       </div>
 
       <template v-for="(msg, idx) in displayMessages" :key="idx">
@@ -78,13 +78,13 @@
               <div v-for="(vt, vi) in msg.videoTasks" :key="vi" class="video-task-card">
                 <template v-if="vt.status === 'done' && vt.videoUrl">
                   <video :src="vt.videoUrl" controls class="step-video" />
-                  <a :href="vt.videoUrl" target="_blank" class="video-dl">下载视频</a>
+                  <a :href="vt.videoUrl" target="_blank" class="video-dl">{{ t('agentChat.downloadVideo') }}</a>
                 </template>
                 <template v-else-if="vt.status === 'failed'">
-                  <span class="video-status failed">视频生成失败</span>
+                  <span class="video-status failed">{{ t('agentChat.videoFailed') }}</span>
                 </template>
                 <template v-else>
-                  <span class="video-status pending">🎬 视频生成中{{ vt.status === 'processing' ? '...' : '（排队中）' }}</span>
+                  <span class="video-status pending">🎬 {{ t('agentChat.videoGenerating') }}{{ vt.status === 'processing' ? '...' : t('agentChat.videoQueued') }}</span>
                 </template>
               </div>
             </div>
@@ -104,9 +104,9 @@
             <div v-if="msg.content && !msg.streaming && !msg.publishCard && !msg.posterHtml" class="step-actions">
               <button class="btn-save-publish" @click="saveToPublish(msg, idx)">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v10M8 8l4 4 4-4M3 16v4h18v-4"/></svg>
-                存入发布
+                {{ t('agentChat.saveToPublish') }}
               </button>
-              <span v-if="savedIndexes.has(idx)" class="saved-hint">✓ 已存入</span>
+              <span v-if="savedIndexes.has(idx)" class="saved-hint">✓ {{ t('agentChat.saved') }}</span>
             </div>
           </div>
         </div>
@@ -127,6 +127,7 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { AGENTS } from '@/server/agents/agentRegistry'
 import { useTrendingStore } from '@/stores/agent'
 import { useBrandStore } from '@/stores/brand'
@@ -151,6 +152,7 @@ const emit = defineEmits<{
 }>()
 
 const agent = computed(() => AGENTS[props.agentId] ?? AGENTS.copywriter)
+const { t } = useI18n()
 const agentStore = useTrendingStore()
 const brandStore = useBrandStore()
 const router = useRouter()
@@ -188,7 +190,7 @@ function saveToPublish(msg: ChatMessage, idx: number) {
     },
   ])
   savedIndexes.value = new Set([...savedIndexes.value, idx])
-  ElMessage({ message: '已存入发布，前往发布页查看', type: 'success', duration: 2500,
+  ElMessage({ message: t('agentChat.savedToPublishMessage'), type: 'success', duration: 2500,
     onClick: () => router.push('/agent/publish') })
 }
 

@@ -2,7 +2,7 @@
   <div class="live-feed">
     <div class="lf-hd">
       <span class="lf-dot"></span>
-      <span class="lf-title">实时动态</span>
+      <span class="lf-title">{{ t('agentLiveFeed.title') }}</span>
       <span class="lf-live-badge" v-if="storeItems.length > 0">LIVE</span>
     </div>
     <div class="lf-list" ref="listEl">
@@ -19,13 +19,14 @@
           </div>
         </div>
       </TransitionGroup>
-      <div v-if="displayItems.length === 0" class="lf-empty">等待团队动态…</div>
+      <div v-if="displayItems.length === 0" class="lf-empty">{{ t('agentLiveFeed.empty') }}</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useMeetingStore } from '@/stores/meeting'
 import { useTrendingStore } from '@/stores/agent'
 import { usePipelineStore, PIPELINE_STAGES } from '@/stores/pipeline'
@@ -33,13 +34,14 @@ import { usePipelineStore, PIPELINE_STAGES } from '@/stores/pipeline'
 const meetingStore = useMeetingStore()
 const agentStore   = useTrendingStore()
 const pipelineStore = usePipelineStore()
+const { t } = useI18n()
 
 const AGENT_MAP: Record<string, { name: string; color: string }> = {
-  trend:      { name: 'Rex · 情报', color: '#06b6d4' },
-  copywriter: { name: 'Maya · 内容', color: '#f59e0b' },
-  poster:     { name: 'Leo · 创意', color: '#ec4899' },
-  publisher:  { name: 'Nova · 发布', color: '#10b981' },
-  captain:    { name: 'Captain', color: '#6366f1' },
+  trend:      { name: `Rex · ${t('agentLiveFeed.agentTrend')}`, color: '#06b6d4' },
+  copywriter: { name: `Maya · ${t('agentLiveFeed.agentCopywriter')}`, color: '#f59e0b' },
+  poster:     { name: `Leo · ${t('agentLiveFeed.agentPoster')}`, color: '#ec4899' },
+  publisher:  { name: `Nova · ${t('agentLiveFeed.agentPublisher')}`, color: '#10b981' },
+  captain:    { name: t('agentLiveFeed.agentCaptain'), color: '#6366f1' },
 }
 
 const storeItems = computed(() => {
@@ -76,7 +78,7 @@ const storeItems = computed(() => {
         time: fmtTs(task.createdAt),
         ts: task.createdAt,
         type: 'handoff',
-        stage: nextStage ? `→ ${nextStage.label}` : '已完成',
+        stage: nextStage ? `→ ${nextStage.label}` : t('common.done'),
       })
     }
   }
@@ -89,13 +91,13 @@ const storeItems = computed(() => {
       video: { emoji: '🎬', color: '#ef4444' },
       summary: { emoji: '📋', color: '#6366f1' },
     }
-    const t = typeMap[r.type] || { emoji: '📄', color: '#999' }
+    const typeInfo = typeMap[r.type] || { emoji: '📄', color: '#999' }
     items.push({
       id: 'r_' + (r.id || Math.random()),
-      agent: t.emoji + ' ' + (r.title?.slice(0, 12) || r.type),
-      color: t.color,
-      text: '已生成',
-      time: '刚刚',
+      agent: typeInfo.emoji + ' ' + (r.title?.slice(0, 12) || r.type),
+      color: typeInfo.color,
+      text: t('agentLiveFeed.generated'),
+      time: t('agentLiveFeed.justNow'),
       ts: 1,
       type: 'output',
     })
@@ -105,9 +107,9 @@ const storeItems = computed(() => {
 })
 
 const placeholders = [
-  { id: 'p1', agent: '🎯 Captain', color: '#6366f1', text: '等待新议题', time: '待命中', ts: 0, type: 'idle' },
-  { id: 'p2', agent: '📈 Rex', color: '#06b6d4', text: '已就绪，等待抓取热搜', time: '待命中', ts: 0, type: 'idle' },
-  { id: 'p3', agent: '✍️ Maya', color: '#f59e0b', text: '等待文案任务', time: '待命中', ts: 0, type: 'idle' },
+  { id: 'p1', agent: `🎯 ${t('agentLiveFeed.agentCaptain')}`, color: '#6366f1', text: t('agentLiveFeed.idle1'), time: t('agentLiveFeed.idleTime'), ts: 0, type: 'idle' },
+  { id: 'p2', agent: `📈 Rex · ${t('agentLiveFeed.agentTrend')}`, color: '#06b6d4', text: t('agentLiveFeed.idle2'), time: t('agentLiveFeed.idleTime'), ts: 0, type: 'idle' },
+  { id: 'p3', agent: `✍️ Maya · ${t('agentLiveFeed.agentCopywriter')}`, color: '#f59e0b', text: t('agentLiveFeed.idle3'), time: t('agentLiveFeed.idleTime'), ts: 0, type: 'idle' },
 ]
 
 const displayItems = computed(() =>
@@ -118,8 +120,8 @@ function fmtTs(ts: number) {
   if (!ts) return ''
   const d = new Date(ts)
   const diff = Date.now() - ts
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return Math.floor(diff / 60000) + 'm前'
+  if (diff < 60000) return t('agentLiveFeed.justNow')
+  if (diff < 3600000) return t('agentLiveFeed.minutesAgo', { count: Math.floor(diff / 60000) })
   return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
 }
 

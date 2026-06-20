@@ -14,13 +14,13 @@
           </svg>
         </div>
         <div class="meeting-meta">
-          <h2 class="meeting-title">会议室</h2>
+          <h2 class="meeting-title">{{ t('meetingRoom.title') }}</h2>
           <div class="meeting-topic" v-if="meetingStore.topic">
-            <span class="topic-label">议题：</span>
+            <span class="topic-label">{{ t('meetingRoom.topicLabel') }}</span>
             <span class="topic-text">{{ meetingStore.topic }}</span>
             <span class="phase-badge" :class="'phase-' + meetingStore.phase">{{ phaseLabel }}</span>
           </div>
-          <div class="meeting-topic empty" v-else>等待开始会议…</div>
+          <div class="meeting-topic empty" v-else>{{ t('meetingRoom.waiting') }}</div>
         </div>
       </div>
 
@@ -41,13 +41,13 @@
         v-if="meetingStore.phase === 'done' && meetingStore.summary"
         class="summary-toggle-btn"
         @click="showSummaryPanel = !showSummaryPanel"
-        :title="showSummaryPanel ? '收起纪要' : '展开纪要'"
+        :title="showSummaryPanel ? t('meetingRoom.collapseSummary') : t('meetingRoom.expandSummary')"
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
           <rect x="1" y="1" width="12" height="12" rx="2"/>
           <path d="M4 4.5h6M4 7h6M4 9.5h4"/>
         </svg>
-        会议纪要
+        {{ t('meetingRoom.summary') }}
         <span class="summary-badge">●</span>
       </button>
     </div>
@@ -92,8 +92,8 @@
                 :title="s.title"
               >{{ s.emoji }}</div>
             </div>
-            <div class="empty-title">数字广告部门全员就绪</div>
-            <div class="empty-desc">输入会议议题，Captain 将主持，各专员依次发言讨论内容策略</div>
+          <div class="empty-title">{{ t('meetingRoom.emptyTitle') }}</div>
+          <div class="empty-desc">{{ t('meetingRoom.emptyDesc') }}</div>
           </div>
           <div class="empty-steps">
             <div class="empty-step" v-for="(s, i) in meetingSteps" :key="i">
@@ -115,7 +115,7 @@
             <div class="msg-bubble-wrap user-wrap">
               <div class="msg-meta" style="justify-content:flex-end">
                 <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
-                <span class="msg-name" style="color:#0071e3">你</span>
+                <span class="msg-name" style="color:#0071e3">{{ t('meetingRoom.you') }}</span>
               </div>
               <div class="msg-bubble bubble-user">
                 <div class="msg-content" v-html="renderContent(msg.content)"></div>
@@ -159,7 +159,7 @@
             <span class="typing-dot"></span>
             <span class="typing-dot"></span>
             <span class="typing-dot"></span>
-            <span class="typing-name">{{ STAFF[typingAgent as keyof typeof STAFF]?.title }} 正在输入…</span>
+            <span class="typing-name">{{ STAFF[typingAgent as keyof typeof STAFF]?.title }} {{ t('meetingRoom.typing') }}</span>
           </div>
         </div>
 
@@ -169,13 +169,13 @@
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round">
               <circle cx="7" cy="7" r="5.5"/><path d="M7 4v3l2 1"/>
             </svg>
-            <span>任务执行中</span>
+            <span>{{ t('meetingRoom.executing') }}</span>
           </div>
           <div v-for="(status, agentId) in meetingStore.executionStatus" :key="agentId" class="exec-row">
             <span class="exec-emoji">{{ STAFF[agentId as keyof typeof STAFF]?.emoji || '⚙️' }}</span>
             <span class="exec-name">{{ STAFF[agentId as keyof typeof STAFF]?.title || agentId }}</span>
             <span class="exec-status" :class="'exec-' + status">
-              {{ status === 'pending' ? '排队中' : status === 'running' ? '执行中' : status === 'done' ? '完成' : '出错' }}
+              {{ status === 'pending' ? t('meetingRoom.statusPending') : status === 'running' ? t('meetingRoom.statusRunning') : status === 'done' ? t('meetingRoom.statusDone') : t('meetingRoom.statusError') }}
             </span>
           </div>
         </div>
@@ -190,7 +190,7 @@
               <rect x="1" y="1" width="11" height="11" rx="1.5"/>
               <path d="M3.5 4.5h6M3.5 7h6M3.5 9.5h4"/>
             </svg>
-            会议纪要
+            {{ t('meetingRoom.summary') }}
           </span>
           <button class="panel-close-btn" @click="showSummaryPanel = false">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
@@ -204,7 +204,7 @@
         <div class="summary-panel-content">{{ meetingStore.summary }}</div>
         <!-- 任务分配 -->
         <div v-if="Object.keys(meetingStore.assignedTasks).length > 0" class="summary-tasks">
-          <div class="summary-tasks-title">任务分配</div>
+          <div class="summary-tasks-title">{{ t('meetingRoom.taskAssignments') }}</div>
           <div v-for="(task, agentId) in meetingStore.assignedTasks" :key="agentId" class="summary-task-item">
             <span class="summary-task-who" :style="{ color: STAFF[agentId as keyof typeof STAFF]?.color }">
               {{ STAFF[agentId as keyof typeof STAFF]?.emoji }}
@@ -218,7 +218,7 @@
             <path d="M6.5 1v8M4 6l2.5 3L9 6"/>
             <path d="M1.5 10v2h10v-2"/>
           </svg>
-          导出纪要
+          {{ t('meetingRoom.exportSummary') }}
         </button>
       </div>
     </div>
@@ -229,7 +229,7 @@
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M3 7h8M8 4l3 3-3 3"/>
         </svg>
-        前往发布部 · 查看内容
+        {{ t('meetingRoom.goPublish') }}
       </button>
     </div>
 
@@ -237,18 +237,18 @@
     <div class="meeting-input-area">
       <!-- 品牌选择器 -->
       <div class="brand-selector-row">
-        <span class="brand-selector-label">品牌档案：</span>
+        <span class="brand-selector-label">{{ t('meetingRoom.brandArchive') }}</span>
         <div class="brand-selector-tabs">
-          <span v-if="brandStore.profiles.length === 0" class="brand-selector-empty">暂无品牌档案</span>
+          <span v-if="brandStore.profiles.length === 0" class="brand-selector-empty">{{ t('meetingRoom.noBrand') }}</span>
           <div
             v-for="b in brandStore.profiles"
             :key="b.id"
             class="brand-selector-tab"
             :class="{ active: brandStore.activeId === b.id }"
             @click="brandStore.setActive(b.id)"
-          >{{ b.name || '未命名' }}</div>
+          >{{ b.name || t('meetingRoom.unnamed') }}</div>
         </div>
-        <router-link :to="route.path.startsWith('/mobile/') ? '/mobile/agent/brand-settings' : '/agent/brand-settings'" class="brand-selector-link">管理</router-link>
+        <router-link :to="route.path.startsWith('/mobile/') ? '/mobile/agent/brand-settings' : '/agent/brand-settings'" class="brand-selector-link">{{ t('meetingRoom.manage') }}</router-link>
       </div>
 
       <!-- 品牌未配置提示 -->
@@ -256,12 +256,12 @@
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#b45309" stroke-width="1.5" stroke-linecap="round">
           <circle cx="6.5" cy="6.5" r="5.5"/><path d="M6.5 4v3.5M6.5 9v.5"/>
         </svg>
-        <span>建议先<router-link :to="route.path.startsWith('/mobile/') ? '/mobile/agent/brand-settings' : '/agent/brand-settings'" style="color:#0071e3;text-decoration:none;font-weight:600">配置品牌信息</router-link>，获得更精准的会议内容</span>
+        <span>{{ t('meetingRoom.brandHintPrefix') }}<router-link :to="route.path.startsWith('/mobile/') ? '/mobile/agent/brand-settings' : '/agent/brand-settings'" style="color:#0071e3;text-decoration:none;font-weight:600">{{ t('meetingRoom.configureBrand') }}</router-link>{{ t('meetingRoom.brandHintSuffix') }}</span>
       </div>
 
       <!-- 进度条（会议进行中） -->
       <div v-if="meetingStore.isRunning" class="meeting-progress">
-        <div class="progress-label">会议进行中 · {{ phaseLabel }}</div>
+      <div class="progress-label">{{ t('meetingRoom.inProgress') }} · {{ phaseLabel }}</div>
         <div class="progress-bar">
           <div class="progress-fill" :style="{ width: progressPct + '%' }"></div>
         </div>
@@ -271,7 +271,7 @@
         <textarea
           v-model="topicInput"
           class="topic-input"
-          :placeholder="meetingStore.isRunning ? '会议进行中，输入内容可插话补充…' : meetingStore.phase === 'done' ? '输入新议题，重新开始会议…' : '输入会议议题，例如：策划新品上线内容方案'"
+          :placeholder="meetingStore.isRunning ? t('meetingRoom.placeholderInterject') : meetingStore.phase === 'done' ? t('meetingRoom.placeholderRestart') : t('meetingRoom.placeholderTopic')"
           :disabled="meetingStore.phase === 'executing'"
           rows="2"
           @keydown.enter.exact.prevent="meetingStore.isRunning ? handleInterject() : handleStart()"
@@ -286,26 +286,26 @@
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <path d="M3 7h8M8 4l3 3-3 3"/>
             </svg>
-            召开会议
+            {{ t('meetingRoom.startMeeting') }}
           </button>
           <!-- 会议进行中：发送 + 结束 -->
           <button v-if="meetingStore.isRunning && topicInput.trim()" class="interject-btn" @click="handleInterject">
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
             </svg>
-            发送
+            {{ t('meetingRoom.send') }}
           </button>
           <button v-if="meetingStore.isRunning" class="stop-btn" @click="handleStop">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
               <rect x="2" y="2" width="9" height="9" rx="1.5"/>
             </svg>
-            结束会议
+            {{ t('meetingRoom.endMeeting') }}
           </button>
           <button v-if="meetingStore.phase === 'done'" class="new-meeting-btn" @click="handleNewMeeting">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
               <path d="M1.5 6.5A5 5 0 116.5 11.5"/><path d="M1.5 3.5v3h3"/>
             </svg>
-            新会议
+            {{ t('meetingRoom.newMeeting') }}
           </button>
         </div>
       </div>
@@ -318,6 +318,7 @@
 import { ref, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { useBrandStore } from '@/stores/brand'
 import { useMeetingStore } from '@/stores/meeting'
 import { useTrendingStore } from '@/stores/agent'
@@ -326,6 +327,7 @@ import type { FlowResult } from '@/stores/agent'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const publishPath = computed(() => route.path.startsWith('/mobile/') ? '/mobile/agent/publish' : '/agent/publish')
 
 async function goToPublish() {
@@ -353,28 +355,28 @@ const interjections = ref<string[]>([]) // 用户插话队列
 // 各专员定义（职位，不用实名）
 const STAFF = {
   captain:    { title: 'Captain',  emoji: '🎯', color: '#6366f1' },
-  briefer:    { title: '秘书',     emoji: '🗂️', color: '#64748b' },
-  copywriter: { title: '文案专员', emoji: '✍️', color: '#f59e0b' },
-  video:      { title: '视频专员', emoji: '🎬', color: '#ef4444' },
-  poster:     { title: '设计专员', emoji: '🎨', color: '#ec4899' },
-  brand:      { title: '品牌专员', emoji: '💎', color: '#8b5cf6' },
-  trend:      { title: '情报专员', emoji: '📈', color: '#06b6d4' },
-  publisher:  { title: '发布专员', emoji: '🚀', color: '#10b981' },
+  briefer:    { title: t('meetingRoom.staffBriefer'), emoji: '🗂️', color: '#64748b' },
+  copywriter: { title: t('meetingRoom.staffCopywriter'), emoji: '✍️', color: '#f59e0b' },
+  video:      { title: t('meetingRoom.staffVideo'), emoji: '🎬', color: '#ef4444' },
+  poster:     { title: t('meetingRoom.staffPoster'), emoji: '🎨', color: '#ec4899' },
+  brand:      { title: t('meetingRoom.staffBrand'), emoji: '💎', color: '#8b5cf6' },
+  trend:      { title: t('meetingRoom.staffTrend'), emoji: '📈', color: '#06b6d4' },
+  publisher:  { title: t('meetingRoom.staffPublisher'), emoji: '🚀', color: '#10b981' },
 } as const
 
 // 会议步骤说明（空状态用）
 const meetingSteps = [
-  'Captain 开场介绍议题与会议目标',
-  '情报专员分析相关热点趋势',
-  '文案专员给出内容创作方向',
-  '视频专员补充视频内容策略',
-  'Captain 汇总并向各专员分配任务',
+  t('meetingRoom.step1'),
+  t('meetingRoom.step2'),
+  t('meetingRoom.step3'),
+  t('meetingRoom.step4'),
+  t('meetingRoom.step5'),
 ]
 
 // 阶段中文标签
 const phaseLabel = computed(() => {
   const map: Record<string, string> = {
-    idle: '待机', opening: '开场中', discussing: '讨论中', summarizing: '总结中', executing: '执行中', done: '已完成',
+    idle: t('meetingRoom.phaseIdle'), opening: t('meetingRoom.phaseOpening'), discussing: t('meetingRoom.phaseDiscussing'), summarizing: t('meetingRoom.phaseSummarizing'), executing: t('meetingRoom.phaseExecuting'), done: t('meetingRoom.phaseDone'),
   }
   return map[meetingStore.phase] || ''
 })
@@ -394,11 +396,11 @@ function formatTime(ts: number) {
 
 // 流水线步骤条数据
 const pipelineSteps = [
-  { label: '情报' },
-  { label: '文案' },
-  { label: '海报' },
-  { label: '审核' },
-  { label: '发布' },
+  { label: t('meetingRoom.pipelineTrend') },
+  { label: t('meetingRoom.pipelineCopy') },
+  { label: t('meetingRoom.pipelinePoster') },
+  { label: t('meetingRoom.pipelineAudit') },
+  { label: t('meetingRoom.pipelinePublish') },
 ]
 const pipelineCurrentStep = computed(() => {
   const status = meetingStore.executionStatus as Record<string, string>
@@ -600,7 +602,7 @@ function addUserMessage(text: string) {
   meetingStore.addMessage({
     id: uid(),
     agentId: 'user',
-    agentName: '你',
+    agentName: t('meetingRoom.you'),
     agentEmoji: '👤',
     agentColor: '#0071e3',
     role: 'user',
@@ -611,7 +613,7 @@ function addUserMessage(text: string) {
 }
 
 function addSystemMessage(agentId: keyof typeof STAFF, text: string) {
-  const staff = STAFF[agentId] || { title: '系统', emoji: '⚙️', color: '#888' }
+  const staff = STAFF[agentId] || { title: t('meetingRoom.system'), emoji: '⚙️', color: '#888' }
   meetingStore.addMessage({
     id: uid(),
     agentId,

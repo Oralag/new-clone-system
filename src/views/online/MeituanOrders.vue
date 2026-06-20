@@ -45,19 +45,23 @@
           </div>
         </el-card>
         <el-card>
-          <el-table :data="filteredRows" v-loading="loading" border size="small" style="width:100%" row-key="order_sn">
+          <el-table :data="pagedRows" v-loading="loading" border size="small" style="width:100%" row-key="order_sn">
             <el-table-column type="expand">
               <template #default="{ row }">
-                <div style="padding:8px 20px">
-                  <div v-if="getProducts(row.remark).length" style="display:flex;flex-wrap:wrap;gap:8px">
-                    <div v-for="(p, i) in getProducts(row.remark)" :key="i"
-                      style="background:#f5f5f7;border-radius:8px;padding:6px 12px;font-size:12px;color:#1d1d1f">
-                      <span style="font-weight:500">{{ p.name }}</span>
-                      <span style="color:rgba(29,29,31,0.5);margin-left:6px">x{{ p.count }}</span>
-                      <span style="color:#0071e3;margin-left:6px">¥{{ p.price }}</span>
-                    </div>
-                  </div>
-                  <div v-else style="color:rgba(29,29,31,0.4);font-size:12px">暂无商品明细</div>
+                <div style="padding:8px 48px 12px">
+                  <el-table :data="getExpandItems(row)" size="small" border style="width:100%">
+                    <el-table-column prop="goods_name" label="商品名称" min-width="140" />
+                    <el-table-column prop="unit_name" label="单位" width="70" align="center" />
+                    <el-table-column prop="num" label="数量" width="80" align="right" />
+                    <el-table-column label="单价" width="100" align="right">
+                      <template #default="{ row: item }">¥{{ Number(item.price).toFixed(2) }}</template>
+                    </el-table-column>
+                    <el-table-column label="小计" width="100" align="right">
+                      <template #default="{ row: item }">
+                        <span style="color:#0071e3">¥{{ (Number(item.num) * Number(item.price)).toFixed(2) }}</span>
+                      </template>
+                    </el-table-column>
+                  </el-table>
                   <div v-if="isEstimated(row.remark)" style="margin-top:6px;color:#f59e0b;font-size:11px">
                     ⚠ 收入为估算值（实际以美团结算报告为准）
                   </div>
@@ -100,8 +104,16 @@
               </template>
             </el-table-column>
           </el-table>
-          <div style="margin-top:10px;text-align:right;color:rgba(29,29,31,0.5);font-size:12px">
-            共 {{ filteredRows.length }} 条
+          <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between">
+            <span style="color:rgba(29,29,31,0.5);font-size:12px">共 {{ filteredRows.length }} 条</span>
+            <el-pagination
+              v-model:current-page="currentPage"
+              :page-size="20"
+              :total="filteredRows.length"
+              layout="prev, pager, next"
+              background
+              small
+            />
           </div>
         </el-card>
       </div>
@@ -117,15 +129,15 @@
           </template>
           <el-table :data="expenses" v-loading="expenseLoading" border size="small" style="width:100%">
             <el-table-column label="日期" width="90">
-              <template #default="{ row }">{{ fmtDate(row.expense_date) }}</template>
+              <template #default="{ row }">{{ fmtDate(row.pay_date || row.created_at) }}</template>
             </el-table-column>
             <el-table-column label="类型" width="90">
               <template #default="{ row }">
-                <el-tag size="small" type="info">{{ getExpenseType(row.name) }}</el-tag>
+                <el-tag size="small" type="info">{{ getExpenseType(row.contact_name || row.name || '') }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="备注" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.remark?.replace('[美团平台]', '').trim() }}</template>
+              <template #default="{ row }">{{ (row.remark || '').replace('[美团平台]', '').trim() }}</template>
             </el-table-column>
             <el-table-column label="金额" align="right" width="90">
               <template #default="{ row }">
@@ -223,6 +235,11 @@
             <el-option label="其他" value="其他" />
           </el-select>
         </el-form-item>
+        <el-form-item label="支出账户" required>
+          <el-select v-model="expenseForm.fund_id" style="width:100%" placeholder="选择支出账户">
+            <el-option v-for="f in fundList" :key="f.id" :label="f.name" :value="f.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="金额(¥)" required>
           <el-input-number v-model="expenseForm.amount" :precision="2" :min="0" style="width:100%" />
         </el-form-item>
@@ -269,6 +286,11 @@ const filteredRows = computed(() => {
     return d >= start && d <= end
   })
 })
+const currentPage = ref(1)
+const pagedRows = computed(() => {
+  const start = (currentPage.value - 1) * 20
+  return filteredRows.value.slice(start, start + 20)
+})
 
 // ── 支出统计 ──
 const expenses = ref<any[]>([])
@@ -300,9 +322,14 @@ function getProductSummary(remark: string): string {
 function isEstimated(remark: string): boolean {
   return (remark || '').includes('估算值')
 }
+function getExpandItems(row: any): any[] {
+  const gi: any[] = Array.isArray(row.goods_info) ? row.goods_info : []
+  if (gi.length) return gi.map(i => ({ goods_name: i.goods_name, unit_name: i.unit_name || '', num: i.num, price: i.price }))
+  return getProducts(row.remark).map(p => ({ goods_name: p.name, unit_name: '', num: p.count, price: p.price }))
+}
 function getExpenseType(name: string): string {
   const types = ['广告推广', '平台佣金', '退款损失', '包装耗材']
-  return types.find(t => (name || '').includes(t)) || '其他'
+  return types.find(t => (name || '').includes(t)) || '其他支出'
 }
 
 async function loadData() {
@@ -333,14 +360,13 @@ async function loadData() {
 async function loadExpenses() {
   expenseLoading.value = true
   try {
-    const PAGE_SIZE = 100
-    const first: any = await http.get('/finance/Expense/index', { params: { page: 1, size: PAGE_SIZE } })
+    const first: any = await http.get('/finance/PayReceipt/index', { params: { page: 1, size: 100 } })
     const firstData = first?.data || first
     const total: number = firstData?.total || 0
     const allRows: any[] = [...(firstData?.rows || firstData?.list || [])]
-    const totalPages = Math.ceil(total / PAGE_SIZE)
+    const totalPages = Math.ceil(total / 100)
     const remaining = Array.from({ length: totalPages - 1 }, (_, i) =>
-      http.get('/finance/Expense/index', { params: { page: i + 2, size: PAGE_SIZE } })
+      http.get('/finance/PayReceipt/index', { params: { page: i + 2, size: 100 } })
     )
     const results = await Promise.all(remaining)
     for (const res of results) {
@@ -349,13 +375,13 @@ async function loadExpenses() {
     }
     expenses.value = allRows
       .filter((e: any) => (e.remark || '').includes(MEITUAN_TAG))
-      .sort((a: any, b: any) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime())
+      .sort((a: any, b: any) => new Date(b.pay_date || b.created_at).getTime() - new Date(a.pay_date || a.created_at).getTime())
   } finally {
     expenseLoading.value = false
   }
 }
 
-function resetFilter() { dateRange.value = null }
+function resetFilter() { dateRange.value = null; currentPage.value = 1 }
 
 // ── 审核 ──
 const RETAIL_FUND_ID = 59
@@ -493,10 +519,18 @@ async function handleSave() {
 // ── 支出 ──
 const expenseVisible = ref(false)
 const expenseSaving = ref(false)
-const expenseForm = ref({ expense_date: '', type: '广告推广', amount: 0, remark: '' })
+const fundList = ref<{ id: number; name: string }[]>([])
+const expenseForm = ref({ expense_date: '', type: '广告推广', fund_id: 7, amount: 0, remark: '' })
+
+async function ensureFundList() {
+  if (fundList.value.length) return
+  const res: any = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
+  fundList.value = (res?.data?.rows || []).map((f: any) => ({ id: f.id, name: f.name }))
+}
 
 function openExpenseForm() {
-  expenseForm.value = { expense_date: new Date().toISOString().slice(0, 10), type: '广告推广', amount: 0, remark: '' }
+  ensureFundList()
+  expenseForm.value = { expense_date: new Date().toISOString().slice(0, 10), type: '广告推广', fund_id: 7, amount: 0, remark: '' }
   expenseVisible.value = true
 }
 
@@ -505,15 +539,18 @@ async function handleSaveExpense() {
   if (!expenseForm.value.amount) { ElMessage.warning('请填写金额'); return }
   expenseSaving.value = true
   try {
-    await http.post('/finance/Expense/add', {
-      name: `美团-${expenseForm.value.type}`,
+    const selectedFund = fundList.value.find(f => f.id === expenseForm.value.fund_id)
+    await http.post('/finance/PayReceipt/add', {
+      contact_type: 'other',
+      contact_name: `美团-${expenseForm.value.type}`,
       amount: expenseForm.value.amount,
-      expense_date: expenseForm.value.expense_date,
-      fund_id: 0,
+      fund_id: expenseForm.value.fund_id,
+      fund_name: selectedFund?.name || '',
+      pay_date: expenseForm.value.expense_date,
       remark: `${MEITUAN_TAG} ${expenseForm.value.remark}`.trim(),
-      status: 1
+      status: 1,
     })
-    ElMessage.success('录入成功')
+    ElMessage.success('录入成功，已计入其他支出')
     expenseVisible.value = false
     loadExpenses()
   } finally {
@@ -522,8 +559,8 @@ async function handleSaveExpense() {
 }
 
 async function handleDeleteExpense(row: any) {
-  await ElMessageBox.confirm(`确认删除「${row.name}」¥${fmt(Number(row.amount))}？`, '删除支出', { type: 'warning' })
-  await http.post('/finance/Expense/del', { id: row.id })
+  await ElMessageBox.confirm(`确认删除「${row.contact_name || row.name}」¥${fmt(Number(row.amount))}？`, '删除支出', { type: 'warning' })
+  await http.post('/finance/PayReceipt/del', { id: row.id })
   ElMessage.success('已删除')
   loadExpenses()
 }
@@ -544,4 +581,8 @@ onMounted(() => { loadData(); loadExpenses() })
 .kpi-val.blue { color: #0071e3; }
 .kpi-val.green { color: #16a34a; }
 .kpi-val.red { color: #dc2626; }
+
+.main-columns { display: flex; gap: 14px; align-items: flex-start; }
+.col-orders { flex: 1 1 0; min-width: 0; }
+.col-expense { width: 400px; flex-shrink: 0; }
 </style>

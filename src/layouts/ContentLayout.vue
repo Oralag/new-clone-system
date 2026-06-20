@@ -8,8 +8,8 @@
           <path d="M8 21h8M12 17v4" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
         <div class="cnt-logo-text">
-          <span class="cnt-logo-name">内容运营中心</span>
-          <span class="cnt-logo-sub">AI 专员 + 多渠道 + 内容日历</span>
+          <span class="cnt-logo-name">{{ t('contentLayout.centerName') }}</span>
+          <span class="cnt-logo-sub">{{ t('contentLayout.logoSub') }}</span>
         </div>
       </div>
 
@@ -19,7 +19,7 @@
             <rect x="3" y="3" width="18" height="18" rx="3"/>
             <path d="M7 15l3-3 2 2 5-5"/>
           </svg>
-          <span>运营大屏</span>
+          <span>{{ t('contentLayout.overview') }}</span>
         </router-link>
         <router-link to="/content/channels" class="cnt-nav-item" active-class="cnt-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -27,14 +27,14 @@
             <path d="M3 12a9 9 0 0 1 9-9M21 12a9 9 0 0 1-9 9"/>
             <path d="M12 3v2M12 19v2M3 12H1M23 12h-2"/>
           </svg>
-          <span>渠道管理</span>
+          <span>{{ t('contentLayout.channels') }}</span>
         </router-link>
         <router-link to="/content/calendar" class="cnt-nav-item" active-class="cnt-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <rect x="3" y="4" width="18" height="18" rx="2"/>
             <path d="M16 2v4M8 2v4M3 10h18"/>
           </svg>
-          <span>内容日历</span>
+          <span>{{ t('contentLayout.calendar') }}</span>
         </router-link>
         <router-link to="/content/agent" class="cnt-nav-item" active-class="cnt-nav-active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -42,20 +42,20 @@
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
             <path d="M18 6l3 3-3 3"/>
           </svg>
-          <span>内容工作台</span>
+          <span>{{ t('contentLayout.agent') }}</span>
         </router-link>
       </nav>
 
       <div class="cnt-sidebar-footer">
         <div class="cnt-foot-card">
-          <div class="cnt-foot-title">AI 内容专员随时待命</div>
-          <div class="cnt-foot-desc">策略师、文案、创意三位专员，帮你产出各渠道内容。</div>
+          <div class="cnt-foot-title">{{ t('contentLayout.footerTitle') }}</div>
+          <div class="cnt-foot-desc">{{ t('contentLayout.footerDesc') }}</div>
         </div>
         <div class="cnt-back-btn" @click="router.push('/portal')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
-          <span>返回主页</span>
+          <span>{{ t('contentLayout.backHome') }}</span>
         </div>
       </div>
     </aside>
@@ -63,8 +63,8 @@
     <main class="cnt-main">
       <div class="cnt-topbar">
         <div class="cnt-topbar-copy">
-          <div class="cnt-topbar-title">{{ (route.meta.title as string) || '内容运营中心' }}</div>
-          <div class="cnt-topbar-sub">AI 内容专员团队 + 多渠道管理 + 内容日历，一站式运营内容业务</div>
+          <div class="cnt-topbar-title">{{ routeTitle }}</div>
+          <div class="cnt-topbar-sub">{{ t('contentLayout.topbarSub') }}</div>
         </div>
         <CaptainBar class="cnt-captain" />
       </div>
@@ -76,11 +76,26 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import CaptainBar from '@/components/CaptainBar.vue'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
+
+const routeTitle = computed(() => {
+  const meta = route.meta as { title?: string; titleKey?: string }
+  if (meta?.titleKey) return t(meta.titleKey)
+  const name = route.name as string | undefined
+  if (name) {
+    const key = `route.${name}`
+    const value = t(key)
+    if (value !== key) return value
+  }
+  return meta?.title || t('contentLayout.centerName')
+})
 </script>
 
 <style scoped>

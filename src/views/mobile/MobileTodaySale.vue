@@ -2,32 +2,39 @@
   <div class="today-sale">
     <div class="ts-header">
       <span class="ts-back" @click="router.back()">‹</span>
-      <span class="ts-title">今日销售</span>
+      <span class="ts-title">{{ t('mobileTodaySale.title') }}</span>
     </div>
 
     <!-- 顶部汇总 -->
     <div class="ts-summary">
       <div class="ts-sum-card main">
-        <div class="ts-sum-label">今日总销售额</div>
+        <div class="ts-sum-label">{{ t('mobileTodaySale.totalToday') }}</div>
         <div class="ts-sum-value blue">¥{{ fmt(totalAmt) }}</div>
       </div>
       <div class="ts-sum-card">
-        <div class="ts-sum-label">销售出库金额</div>
+        <div class="ts-sum-label">{{ t('mobileTodaySale.outboundAmount') }}</div>
         <div class="ts-sum-value blue">¥{{ fmt(saleAmt) }}</div>
       </div>
       <div class="ts-sum-card">
-        <div class="ts-sum-label">零售订单金额</div>
+        <div class="ts-sum-label">{{ t('mobileTodaySale.retailAmount') }}</div>
         <div class="ts-sum-value orange">¥{{ fmt(retailAmt) }}</div>
+      </div>
+      <div class="ts-sum-card">
+        <div class="ts-sum-label">{{ t('mobileTodaySale.onlineAmount') }}</div>
+        <div class="ts-sum-value orange">¥{{ fmt(meituanAmt) }}</div>
       </div>
     </div>
 
     <!-- Tab -->
     <div class="ts-tabs">
       <div :class="['ts-tab', activeTab === 'sale' ? 'active' : '']" @click="activeTab = 'sale'">
-        销售出库 ({{ saleRows.length }})
+        {{ t('mobileTodaySale.salesOutbound') }} ({{ saleRows.length }})
       </div>
       <div :class="['ts-tab', activeTab === 'retail' ? 'active' : '']" @click="activeTab = 'retail'">
-        零售订单 ({{ retailRows.length }})
+        {{ t('mobileTodaySale.retailOrders') }} ({{ retailRows.length }})
+      </div>
+      <div :class="['ts-tab', activeTab === 'meituan' ? 'active' : '']" @click="activeTab = 'meituan'">
+        {{ t('mobileTodaySale.online') }} ({{ meituanRows.length }})
       </div>
     </div>
 
@@ -35,33 +42,33 @@
     <div class="ts-list" v-if="!loading">
       <!-- 销售出库 -->
       <template v-if="activeTab === 'sale'">
-        <div v-if="saleRows.length === 0" class="ts-empty">暂无数据</div>
+        <div v-if="saleRows.length === 0" class="ts-empty">{{ t('common.noData') }}</div>
         <div v-for="row in saleRows" :key="row.id" class="ts-row">
           <div class="ts-row-top" @click="toggleSale(row)">
             <span class="ts-order-no">{{ row.out_order_no || row.order_no || '-' }}</span>
-            <button class="ts-detail-btn" type="button">{{ isSaleExpanded(row) ? '收起' : '明细' }}</button>
+            <button class="ts-detail-btn" type="button">{{ isSaleExpanded(row) ? t('mobileTodaySale.collapse') : t('mobileTodaySale.details') }}</button>
           </div>
           <div class="ts-row-mid">
             <span class="ts-customer">{{ row.customer_name || '-' }}</span>
             <span class="ts-date">{{ (row.out_date || '').slice(0, 10) }}</span>
           </div>
           <div class="ts-row-bot">
-            <span class="ts-label">应收</span>
+            <span class="ts-label">{{ t('mobileTodaySale.receivable') }}</span>
             <span class="ts-amount">¥{{ fmt(saleTotal(row)) }}</span>
-            <span class="ts-label" style="margin-left:12px">已收</span>
+            <span class="ts-label" style="margin-left:12px">{{ t('mobileTodaySale.received') }}</span>
             <span class="ts-pay-type" :style="{ color: '#00b42a', fontWeight: 600 }">
               ¥{{ fmt(salePaid(row)) }}
             </span>
-            <span class="ts-label" style="margin-left:12px">未收款</span>
+            <span class="ts-label" style="margin-left:12px">{{ t('mobileTodaySale.unreceived') }}</span>
             <span class="ts-pay-type" :style="{ color: saleUnpaid(row) > 0 ? '#f53f3f' : '#00b42a', fontWeight: 600 }">
               ¥{{ fmt(saleUnpaid(row)) }}
             </span>
           </div>
           <div v-if="isSaleExpanded(row)" class="ts-detail">
-            <div v-if="parseGoods(row.goods_info).length === 0" class="ts-detail-empty">暂无商品明细</div>
+            <div v-if="parseGoods(row.goods_info).length === 0" class="ts-detail-empty">{{ t('mobileTodaySale.noGoods') }}</div>
             <div v-for="(item, idx) in parseGoods(row.goods_info)" :key="idx" class="ts-detail-row">
               <div class="ts-detail-main">
-                <div class="ts-detail-name">{{ item.goods_name || '未命名商品' }}</div>
+                <div class="ts-detail-name">{{ item.goods_name || t('mobileTodaySale.unnamedProduct') }}</div>
                 <div class="ts-detail-meta">
                   {{ item.goods_sn || '-' }} · {{ item.unit_name || '-' }} · {{ Number(item.num || item.quantity || 0) }}
                 </div>
@@ -71,33 +78,33 @@
           </div>
         </div>
         <div class="ts-foot-total">
-          应收合计 ¥{{ fmt(saleAmt) }} ｜ 已收合计 ¥{{ fmt(salePaidAmt) }} ｜ 未收款合计 ¥{{ fmt(saleUnpaidAmt) }}
+          {{ t('mobileTodaySale.salesTotals', { receivable: fmt(saleAmt), received: fmt(salePaidAmt), unreceived: fmt(saleUnpaidAmt) }) }}
         </div>
       </template>
 
       <!-- 零售订单 -->
       <template v-if="activeTab === 'retail'">
-        <div v-if="retailRows.length === 0" class="ts-empty">暂无数据</div>
+        <div v-if="retailRows.length === 0" class="ts-empty">{{ t('common.noData') }}</div>
         <div v-for="row in retailRows" :key="row.id" class="ts-row">
           <div class="ts-row-top" @click="toggleRetail(row)">
             <span class="ts-order-no">{{ retailOrderNo(row) }}</span>
-            <button class="ts-detail-btn" type="button">{{ isRetailExpanded(row) ? '收起' : '明细' }}</button>
+            <button class="ts-detail-btn" type="button">{{ isRetailExpanded(row) ? t('mobileTodaySale.collapse') : t('mobileTodaySale.details') }}</button>
           </div>
           <div class="ts-row-mid">
-            <span class="ts-customer">{{ row.member_name || row.customer_name || '散客' }}</span>
+            <span class="ts-customer">{{ row.member_name || row.customer_name || t('mobileTodaySale.walkInCustomer') }}</span>
             <span class="ts-date">{{ fmtDateTime(row.created_at || row.order_date) }}</span>
           </div>
           <div class="ts-row-bot">
-            <span class="ts-label">实付</span>
+            <span class="ts-label">{{ t('mobileTodaySale.paid') }}</span>
             <span class="ts-amount">¥{{ fmt(row.pay_amount || row.total_amount) }}</span>
-            <span class="ts-label" style="margin-left:12px">支付</span>
+            <span class="ts-label" style="margin-left:12px">{{ t('mobileTodaySale.payment') }}</span>
             <span class="ts-pay-type">{{ fmtPayType(row.pay_type || row.pay_method) }}</span>
           </div>
           <div v-if="isRetailExpanded(row)" class="ts-detail">
-            <div v-if="parseGoods(row.goods_info).length === 0" class="ts-detail-empty">暂无商品明细</div>
+            <div v-if="parseGoods(row.goods_info).length === 0" class="ts-detail-empty">{{ t('mobileTodaySale.noGoods') }}</div>
             <div v-for="(item, idx) in parseGoods(row.goods_info)" :key="idx" class="ts-detail-row">
               <div class="ts-detail-main">
-                <div class="ts-detail-name">{{ item.goods_name || '未命名商品' }}</div>
+                <div class="ts-detail-name">{{ item.goods_name || t('mobileTodaySale.unnamedProduct') }}</div>
                 <div class="ts-detail-meta">
                   {{ item.goods_sn || '-' }} · {{ item.unit_name || '-' }} · {{ Number(item.num || item.quantity || 0) }}
                 </div>
@@ -106,10 +113,42 @@
             </div>
           </div>
         </div>
-        <div class="ts-foot-total">实付合计 ¥{{ fmt(retailAmt) }}</div>
+        <div class="ts-foot-total">{{ t('mobileTodaySale.paidTotal', { amount: fmt(retailAmt) }) }}</div>
+      </template>
+
+      <!-- 美团订单 -->
+      <template v-if="activeTab === 'meituan'">
+        <div v-if="meituanRows.length === 0" class="ts-empty">{{ t('common.noData') }}</div>
+        <div v-for="row in meituanRows" :key="row.id" class="ts-row">
+          <div class="ts-row-top" @click="toggleMeituan(row)">
+            <span class="ts-order-no">{{ row.order_sn || row.contract_no || '-' }}</span>
+            <button class="ts-detail-btn" type="button">{{ isMeituanExpanded(row) ? t('mobileTodaySale.collapse') : t('mobileTodaySale.details') }}</button>
+          </div>
+          <div class="ts-row-mid">
+            <span class="ts-customer">{{ row.customer_name || t('mobileTodaySale.meituanPlatform') }}</span>
+            <span class="ts-date">{{ (row.sign_date || row.order_date || '').slice(0, 10) }}</span>
+          </div>
+          <div class="ts-row-bot">
+            <span class="ts-label">{{ t('mobileTodaySale.actualReceived') }}</span>
+            <span class="ts-amount">¥{{ fmt(row.after_discount || row.total_amount) }}</span>
+          </div>
+          <div v-if="isMeituanExpanded(row)" class="ts-detail">
+            <div v-if="parseGoods(row.goods_info).length === 0" class="ts-detail-empty">{{ t('mobileTodaySale.noGoods') }}</div>
+            <div v-for="(item, idx) in parseGoods(row.goods_info)" :key="idx" class="ts-detail-row">
+              <div class="ts-detail-main">
+                <div class="ts-detail-name">{{ item.goods_name || t('mobileTodaySale.unnamedProduct') }}</div>
+                <div class="ts-detail-meta">
+                  {{ item.goods_sn || '-' }} · {{ item.unit_name || '-' }} · {{ Number(item.num || item.quantity || 0) }}
+                </div>
+              </div>
+              <div class="ts-detail-price">¥{{ fmt(lineAmount(item)) }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="ts-foot-total">{{ t('mobileTodaySale.receivedTotal', { amount: fmt(meituanAmt) }) }}</div>
       </template>
     </div>
-    <div v-else class="ts-loading">加载中...</div>
+    <div v-else class="ts-loading">{{ t('common.loading') }}</div>
   </div>
 </template>
 
@@ -117,15 +156,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '@/api/http'
+import { useI18n } from 'vue-i18n'
+
+const MEITUAN_CUSTOMER_ID = 63
 
 const router = useRouter()
+const { t } = useI18n()
 const loading = ref(true)
-const activeTab = ref<'sale' | 'retail'>('sale')
+const activeTab = ref<'sale' | 'retail' | 'meituan'>('sale')
 
 const _saleRows = ref<any[]>([])
 const _retailRows = ref<any[]>([])
+const _meituanRows = ref<any[]>([])
 const expandedSaleIds = ref<any[]>([])
 const expandedRetailIds = ref<any[]>([])
+const expandedMeituanIds = ref<any[]>([])
 
 function getToday() {
   const d = new Date()
@@ -145,12 +190,11 @@ function fmtDateTime(val: any) {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-const PAY_TYPE_MAP: Record<string, string> = {
-  cash: '现金', wechat: '微信', alipay: '支付宝', balance: '余额', card: '银行卡',
-}
 function fmtPayType(val: any) {
   if (!val) return '-'
-  return PAY_TYPE_MAP[val] || val
+  const key = `mobileTodaySale.payType.${val}`
+  const translated = t(key)
+  return translated === key ? val : translated
 }
 
 function parseGoods(info: any): any[] {
@@ -211,6 +255,21 @@ function toggleRetail(row: any) {
     : [...expandedRetailIds.value, key]
 }
 
+function meituanExpandKey(row: any) {
+  return row.id ?? row.order_sn
+}
+
+function isMeituanExpanded(row: any) {
+  return expandedMeituanIds.value.includes(meituanExpandKey(row))
+}
+
+function toggleMeituan(row: any) {
+  const key = meituanExpandKey(row)
+  expandedMeituanIds.value = isMeituanExpanded(row)
+    ? expandedMeituanIds.value.filter(id => id !== key)
+    : [...expandedMeituanIds.value, key]
+}
+
 const today = getToday()
 
 const saleRows = computed(() =>
@@ -218,6 +277,13 @@ const saleRows = computed(() =>
 )
 const retailRows = computed(() =>
   _retailRows.value.filter((r: any) => (r.order_date || '').slice(0, 10) === today && Number(r.status) === 1)
+)
+const meituanRows = computed(() =>
+  _meituanRows.value.filter((r: any) =>
+    Number(r.customer_id) === MEITUAN_CUSTOMER_ID &&
+    Number(r.status) === 1 &&
+    (r.sign_date || r.order_date || '').slice(0, 10) === today
+  )
 )
 
 const saleAmt = computed(() =>
@@ -232,7 +298,10 @@ const saleUnpaidAmt = computed(() =>
 const retailAmt = computed(() =>
   retailRows.value.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
 )
-const totalAmt = computed(() => saleAmt.value + retailAmt.value)
+const meituanAmt = computed(() =>
+  meituanRows.value.reduce((s: number, r: any) => s + Number(r.after_discount || r.total_amount || 0), 0)
+)
+const totalAmt = computed(() => saleAmt.value + retailAmt.value + meituanAmt.value)
 
 function saleTotal(row: any) {
   return Number(row.after_discount ?? row.total_amount ?? 0)
@@ -248,14 +317,16 @@ function saleUnpaid(row: any) {
 }
 
 onMounted(async () => {
-  const [saleRes, retailRes] = await Promise.allSettled([
+  const [saleRes, retailRes, meituanRes] = await Promise.allSettled([
     http.get('/stock/SaleOutOrder/index', { params: { list_rows: 500 } }),
     http.get('/retail/order/index', { params: { list_rows: 500 } }),
+    http.get('/shop/ContractOrder/index', { params: { list_rows: 500, customer_id: MEITUAN_CUSTOMER_ID } }),
   ])
   const rows = (r: PromiseSettledResult<any>) =>
     r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
   _saleRows.value = rows(saleRes)
   _retailRows.value = rows(retailRes)
+  _meituanRows.value = rows(meituanRes)
   loading.value = false
 })
 </script>
@@ -302,6 +373,9 @@ onMounted(async () => {
   background: #fff;
   padding: 16px 10px;
   text-align: center;
+}
+.ts-sum-card.main {
+  grid-column: 1 / -1;
 }
 .ts-sum-label {
   font-size: 11px;

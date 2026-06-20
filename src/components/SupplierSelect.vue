@@ -1,17 +1,17 @@
 <template>
-  <el-dialog v-model="visible" title="选择供应商" width="800px" destroy-on-close>
+  <el-dialog v-model="visible" :title="t('supplierSelect.title')" width="800px" destroy-on-close>
     <div class="select-search">
-      <el-input v-model="keyword" placeholder="供应商名称" clearable style="width: 220px" @keyup.enter="search" />
-      <el-button type="primary" @click="search">搜索</el-button>
+      <el-input v-model="keyword" :placeholder="t('supplierSelect.keywordPlaceholder')" clearable style="width: 220px" @keyup.enter="search" />
+      <el-button type="primary" @click="search">{{ t('common.search') }}</el-button>
     </div>
 
     <el-table v-loading="loading" :data="list" border stripe @row-click="rowClick">
-      <el-table-column prop="name" label="供应商名称" min-width="180" />
-      <el-table-column prop="mobile" label="联系电话" width="130" />
-      <el-table-column prop="address" label="地址" min-width="200" />
-      <el-table-column label="操作" width="80">
+      <el-table-column prop="name" :label="t('supplierSelect.name')" min-width="180" />
+      <el-table-column prop="mobile" :label="t('supplierSelect.mobile')" width="130" />
+      <el-table-column prop="address" :label="t('supplierSelect.address')" min-width="200" />
+      <el-table-column :label="t('common.operation')" width="80">
         <template #default="{ row }">
-          <el-button type="primary" size="small" link @click="selectRow(row)">选择</el-button>
+          <el-button type="primary" size="small" link @click="selectRow(row)">{{ t('supplierSelect.select') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -24,8 +24,10 @@
 
 <script setup lang="ts">
 import http from '@/api/http'
+import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits<{ (e: 'confirm', val: any): void }>()
+const { t } = useI18n()
 
 const visible = ref(false)
 const loading = ref(false)

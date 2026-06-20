@@ -2,68 +2,68 @@
   <div class="page-container">
     <el-card>
       <el-form inline style="margin-bottom:8px">
-        <el-form-item label="日期">
+        <el-form-item :label="$t('reports.profit.dateLabel')">
           <el-date-picker
             v-model="dateRange"
             type="daterange"
-            range-separator="至"
-            start-placeholder="开始"
-            end-placeholder="结束"
+            :range-separator="$t('reports.profit.rangeSeparator')"
+            :start-placeholder="$t('reports.profit.startPlaceholder')"
+            :end-placeholder="$t('reports.profit.endPlaceholder')"
             value-format="YYYY-MM-DD"
             style="width:240px"
             @change="loadData"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" @click="loadData">查询</el-button>
-          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" :loading="loading" @click="loadData">{{ $t('reports.profit.query') }}</el-button>
+          <el-button @click="onReset">{{ $t('reports.profit.reset') }}</el-button>
         </el-form-item>
       </el-form>
 
       <!-- 汇总栏 -->
       <div class="pf-summary" v-if="rows.length > 0">
         <div class="pf-sum-item">
-          <span class="pf-sum-label">总销售额</span>
+          <span class="pf-sum-label">{{ $t('reports.profit.totalSale') }}</span>
           <span class="pf-sum-val blue">¥{{ fmt(totalSale) }}</span>
         </div>
         <div class="pf-sum-item">
-          <span class="pf-sum-label">商品成本</span>
+          <span class="pf-sum-label">{{ $t('reports.profit.goodsCost') }}</span>
           <span class="pf-sum-val purple">¥{{ fmt(totalCost) }}</span>
         </div>
         <div class="pf-sum-item">
-          <span class="pf-sum-label">毛利润</span>
+          <span class="pf-sum-label">{{ $t('reports.profit.grossProfit') }}</span>
           <span class="pf-sum-val" :style="{ color: totalProfit >= 0 ? '#16a34a' : '#dc2626' }">
             {{ totalProfit >= 0 ? '+' : '' }}¥{{ fmt(totalProfit) }}
           </span>
         </div>
         <div class="pf-sum-item pf-sum-divider-v"></div>
         <div class="pf-sum-item">
-          <span class="pf-sum-label">我方运费</span>
+          <span class="pf-sum-label">{{ $t('reports.profit.myFreight') }}</span>
           <span class="pf-sum-val" style="color:#f59e0b">−¥{{ fmt(freightTotal) }}</span>
         </div>
         <div class="pf-sum-item">
-          <span class="pf-sum-label">费用支出</span>
+          <span class="pf-sum-label">{{ $t('reports.profit.expenseOut') }}</span>
           <span class="pf-sum-val" style="color:#f59e0b">−¥{{ fmt(expenseTotal) }}</span>
         </div>
         <div class="pf-sum-item">
-          <span class="pf-sum-label">单据附加费</span>
+          <span class="pf-sum-label">{{ $t('reports.profit.docExpense') }}</span>
           <span class="pf-sum-val" style="color:#f59e0b">−¥{{ fmt(docExpenseTotal) }}</span>
         </div>
         <div class="pf-sum-item pf-sum-divider-v"></div>
         <div class="pf-sum-item">
-          <span class="pf-sum-label" style="font-weight:700">净利润</span>
+          <span class="pf-sum-label" style="font-weight:700">{{ $t('reports.profit.netProfit') }}</span>
           <span class="pf-sum-val" :style="{ color: netProfit >= 0 ? '#16a34a' : '#dc2626' }">
             {{ netProfit >= 0 ? '+' : '' }}¥{{ fmt(netProfit) }}
           </span>
         </div>
         <div class="pf-sum-item">
-          <span class="pf-sum-label">毛利率</span>
+          <span class="pf-sum-label">{{ $t('reports.profit.grossRate') }}</span>
           <el-tag :type="overallRate >= 20 ? 'success' : overallRate > 0 ? 'warning' : 'danger'">
             {{ overallRate.toFixed(1) }}%
           </el-tag>
         </div>
         <div class="pf-sum-item">
-          <span class="pf-sum-label">净利率</span>
+          <span class="pf-sum-label">{{ $t('reports.profit.netRate') }}</span>
           <el-tag :type="netRate >= 20 ? 'success' : netRate > 0 ? 'warning' : 'danger'">
             {{ netRate.toFixed(1) }}%
           </el-tag>
@@ -73,14 +73,14 @@
       <!-- 数据说明 -->
       <div class="pf-note">
         <el-icon><InfoFilled /></el-icon>
-        BOM成品成本 = 各物料采购移动均价之和（无采购记录时用BOM配置价）；非BOM商品成本取采购移动均价，无记录时取商品采购价；运费按合同承担比例扣除；费用来自费用管理模块（已排除未付费用与采购单据货款，防双重扣减）；单据附加费 = 采购单/合同附加费用；净利润 = 毛利润 − 运费 − 费用 − 单据附加费
+        {{ $t('reports.profit.note') }}
       </div>
 
       <!-- 切换Tab -->
       <el-tabs v-model="viewMode" style="margin-bottom:4px">
-        <el-tab-pane label="按单品" name="goods" />
-        <el-tab-pane label="按单据" name="order" />
-        <el-tab-pane label="按客户" name="customer" />
+        <el-tab-pane :label="$t('reports.profit.tabGoods')" name="goods" />
+        <el-tab-pane :label="$t('reports.profit.tabOrder')" name="order" />
+        <el-tab-pane :label="$t('reports.profit.tabCustomer')" name="customer" />
       </el-tabs>
 
       <div v-if="loading" style="text-align:center;padding:40px 0">
@@ -89,52 +89,52 @@
 
       <!-- 单品维度 -->
       <el-table v-else-if="viewMode === 'goods'" :data="rows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
-        <el-table-column prop="goods_name" label="商品名称" min-width="140" show-overflow-tooltip />
-        <el-table-column label="销售数量" prop="num" align="right" width="80" />
-        <el-table-column label="销售额" align="right" width="110">
+        <el-table-column prop="goods_name" :label="$t('reports.profit.colGoodsName')" min-width="140" show-overflow-tooltip />
+        <el-table-column :label="$t('reports.profit.colSaleQty')" prop="num" align="right" width="80" />
+        <el-table-column :label="$t('reports.profit.colSaleAmount')" align="right" width="110">
           <template #default="{ row }">
             <span style="color:#0071e3">¥{{ fmt(row.sale_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="单位成本" align="right" width="100">
+        <el-table-column :label="$t('reports.profit.colUnitCost')" align="right" width="100">
           <template #default="{ row }">
             <el-tooltip :content="row.cost_source" placement="top">
               <span style="color:#7c3aed;cursor:help">¥{{ fmt(row.unit_cost) }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column label="总成本" align="right" width="110">
+        <el-table-column :label="$t('reports.profit.colTotalCost')" align="right" width="110">
           <template #default="{ row }">
             <span style="color:#7c3aed;font-weight:600">¥{{ fmt(row.cost_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="毛利润" align="right" width="110" sortable prop="profit">
+        <el-table-column :label="$t('reports.profit.colGrossProfit')" align="right" width="110" sortable prop="profit">
           <template #default="{ row }">
             <span :style="{ color: row.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
               {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="毛利率" align="right" width="80">
+        <el-table-column :label="$t('reports.profit.colGrossRate')" align="right" width="80">
           <template #default="{ row }">
             <el-tag :type="row.profit_rate >= 20 ? 'success' : row.profit_rate > 0 ? 'warning' : 'danger'" size="small">
               {{ row.profit_rate.toFixed(1) }}%
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="成本来源" align="center" width="80">
+        <el-table-column :label="$t('reports.profit.colCostSource')" align="center" width="80">
           <template #default="{ row }">
             <el-tag size="small" :type="row.has_bom ? 'warning' : 'info'">
-              {{ row.has_bom ? 'BOM' : (row.cost_source?.includes('采购均价') ? '采购均价' : '采购价') }}
+              {{ row.has_bom ? $t('reports.profit.costSourceBom') : (row.cost_source?.includes('采购均价') ? $t('reports.profit.costSourceAvgPrice') : $t('reports.profit.costSourcePrice')) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="来源" align="center" width="70">
+        <el-table-column :label="$t('reports.profit.colSource')" align="center" width="70">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
+            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '换货' ? 'danger' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
           </template>
         </el-table-column>
-        <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
+        <template #empty><div style="padding:40px 0;color:#aaa">{{ $t('reports.profit.noData') }}</div></template>
       </el-table>
 
       <!-- 单据维度 -->
@@ -147,98 +147,98 @@
                 <span>销售额 ¥{{ fmt(row.sale_amount) }} / 成本 ¥{{ fmt(row.cost_amount) }} / 毛利 {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}</span>
               </div>
               <el-table :data="row.items" size="small" border style="width:100%">
-                <el-table-column prop="goods_name" label="商品名称" min-width="160" show-overflow-tooltip />
-                <el-table-column prop="goods_sn" label="编码" min-width="110" show-overflow-tooltip />
-                <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-                <el-table-column label="数量" width="90" align="right">
+                <el-table-column prop="goods_name" :label="$t('reports.profit.colGoodsName')" min-width="160" show-overflow-tooltip />
+                <el-table-column prop="goods_sn" :label="$t('reports.profit.colCode')" min-width="110" show-overflow-tooltip />
+                <el-table-column prop="unit_name" :label="$t('reports.profit.colUnit')" width="70" align="center" />
+                <el-table-column :label="$t('reports.profit.colQty')" width="90" align="right">
                   <template #default="{ row: item }">{{ fmtQty(item.qty) }}</template>
                 </el-table-column>
-                <el-table-column label="销售额" width="110" align="right">
+                <el-table-column :label="$t('reports.profit.colSaleAmount')" width="110" align="right">
                   <template #default="{ row: item }"><span class="blue">¥{{ fmt(item.sale_amount) }}</span></template>
                 </el-table-column>
-                <el-table-column label="单位成本" width="110" align="right">
+                <el-table-column :label="$t('reports.profit.colUnitCost')" width="110" align="right">
                   <template #default="{ row: item }">
                     <el-tooltip :content="item.cost_source" placement="top">
                       <span class="purple" style="cursor:help">¥{{ fmt(item.unit_cost) }}</span>
                     </el-tooltip>
                   </template>
                 </el-table-column>
-                <el-table-column label="总成本" width="110" align="right">
+                <el-table-column :label="$t('reports.profit.colTotalCost')" width="110" align="right">
                   <template #default="{ row: item }"><span class="purple">¥{{ fmt(item.cost_amount) }}</span></template>
                 </el-table-column>
-                <el-table-column label="毛利润" width="110" align="right">
+                <el-table-column :label="$t('reports.profit.colGrossProfit')" width="110" align="right">
                   <template #default="{ row: item }">
                     <span :style="{ color: item.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
                       {{ item.profit >= 0 ? '+' : '' }}¥{{ fmt(item.profit) }}
                     </span>
                   </template>
                 </el-table-column>
-                <el-table-column label="毛利率" width="90" align="right">
+                <el-table-column :label="$t('reports.profit.colGrossRate')" width="90" align="right">
                   <template #default="{ row: item }">
                     <el-tag :type="item.profit_rate >= 20 ? 'success' : item.profit_rate > 0 ? 'warning' : 'danger'" size="small">
                       {{ item.profit_rate.toFixed(1) }}%
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="成本来源" width="120" align="center" show-overflow-tooltip>
+                <el-table-column :label="$t('reports.profit.colCostSource')" width="120" align="center" show-overflow-tooltip>
                   <template #default="{ row: item }">
                     <el-tag size="small" :type="item.has_bom ? 'warning' : item.unit_cost > 0 ? 'info' : 'danger'">
-                      {{ item.has_bom ? 'BOM' : item.unit_cost > 0 ? '成本价' : '缺成本' }}
+                      {{ item.has_bom ? $t('reports.profit.costSourceBom') : item.unit_cost > 0 ? $t('reports.profit.costSourceCostPrice') : $t('reports.profit.costSourceMissing') }}
                     </el-tag>
                   </template>
                 </el-table-column>
-                <template #empty><div style="padding:20px 0;color:#aaa">这张单没有可解析的商品明细</div></template>
+                <template #empty><div style="padding:20px 0;color:#aaa">{{ $t('reports.profit.noGoodsDetail') }}</div></template>
               </el-table>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="单据类型" align="center" width="80">
+        <el-table-column :label="$t('reports.profit.colOrderType')" align="center" width="80">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
+            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '换货' ? 'danger' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="order_no" label="单号" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="customer_name" label="客户" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="order_date" label="日期" width="100" />
-        <el-table-column label="销售额" align="right" width="120">
+        <el-table-column prop="order_no" :label="$t('reports.profit.colOrderNo')" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="customer_name" :label="$t('reports.profit.colCustomer')" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="order_date" :label="$t('reports.profit.colDate')" width="100" />
+        <el-table-column :label="$t('reports.profit.colSaleAmount')" align="right" width="120">
           <template #default="{ row }">
             <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.sale_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="成本" align="right" width="120">
+        <el-table-column :label="$t('reports.profit.colCost')" align="right" width="120">
           <template #default="{ row }">
             <span style="color:#7c3aed">¥{{ fmt(row.cost_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="毛利润" align="right" width="120" sortable prop="profit">
+        <el-table-column :label="$t('reports.profit.colGrossProfit')" align="right" width="120" sortable prop="profit">
           <template #default="{ row }">
             <span :style="{ color: row.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
               {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="毛利率" align="right" width="80">
+        <el-table-column :label="$t('reports.profit.colGrossRate')" align="right" width="80">
           <template #default="{ row }">
             <el-tag :type="row.profit_rate >= 20 ? 'success' : row.profit_rate > 0 ? 'warning' : 'danger'" size="small">
               {{ row.profit_rate.toFixed(1) }}%
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="净利润" align="right" width="120" sortable prop="net_profit">
+        <el-table-column :label="$t('reports.profit.colNetProfit')" align="right" width="120" sortable prop="net_profit">
           <template #default="{ row }">
             <span :style="{ color: row.net_profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
               {{ row.net_profit >= 0 ? '+' : '' }}¥{{ fmt(row.net_profit) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="净利率" align="right" width="80">
+        <el-table-column :label="$t('reports.profit.colNetRate')" align="right" width="80">
           <template #default="{ row }">
             <el-tag :type="row.net_rate >= 20 ? 'success' : row.net_rate > 0 ? 'warning' : 'danger'" size="small">
               {{ row.net_rate.toFixed(1) }}%
             </el-tag>
           </template>
         </el-table-column>
-        <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
+        <template #empty><div style="padding:40px 0;color:#aaa">{{ $t('reports.profit.noData') }}</div></template>
       </el-table>
 
       <!-- 客户维度 -->
@@ -255,128 +255,128 @@
                   <template #default="{ row: o }">
                     <div style="padding:8px 12px 12px 32px;background:#f8fafc">
                       <el-table :data="o.items" size="small" border style="width:100%">
-                        <el-table-column prop="goods_name" label="商品名称" min-width="160" show-overflow-tooltip />
-                        <el-table-column prop="goods_sn" label="编码" width="110" show-overflow-tooltip />
-                        <el-table-column prop="unit_name" label="单位" width="60" align="center" />
-                        <el-table-column label="数量" width="80" align="right">
+                        <el-table-column prop="goods_name" :label="$t('reports.profit.colGoodsName')" min-width="160" show-overflow-tooltip />
+                        <el-table-column prop="goods_sn" :label="$t('reports.profit.colCode')" width="110" show-overflow-tooltip />
+                        <el-table-column prop="unit_name" :label="$t('reports.profit.colUnit')" width="60" align="center" />
+                        <el-table-column :label="$t('reports.profit.colQty')" width="80" align="right">
                           <template #default="{ row: item }">{{ fmtQty(item.qty) }}</template>
                         </el-table-column>
-                        <el-table-column label="销售额" width="100" align="right">
+                        <el-table-column :label="$t('reports.profit.colSaleAmount')" width="100" align="right">
                           <template #default="{ row: item }"><span class="blue">¥{{ fmt(item.sale_amount) }}</span></template>
                         </el-table-column>
-                        <el-table-column label="单位成本" width="100" align="right">
+                        <el-table-column :label="$t('reports.profit.colUnitCost')" width="100" align="right">
                           <template #default="{ row: item }">
                             <el-tooltip :content="item.cost_source" placement="top">
                               <span class="purple" style="cursor:help">¥{{ fmt(item.unit_cost) }}</span>
                             </el-tooltip>
                           </template>
                         </el-table-column>
-                        <el-table-column label="总成本" width="100" align="right">
+                        <el-table-column :label="$t('reports.profit.colTotalCost')" width="100" align="right">
                           <template #default="{ row: item }"><span class="purple">¥{{ fmt(item.cost_amount) }}</span></template>
                         </el-table-column>
-                        <el-table-column label="毛利润" width="100" align="right">
+                        <el-table-column :label="$t('reports.profit.colGrossProfit')" width="100" align="right">
                           <template #default="{ row: item }">
                             <span :style="{ color: item.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
                               {{ item.profit >= 0 ? '+' : '' }}¥{{ fmt(item.profit) }}
                             </span>
                           </template>
                         </el-table-column>
-                        <el-table-column label="毛利率" width="80" align="right">
+                        <el-table-column :label="$t('reports.profit.colGrossRate')" width="80" align="right">
                           <template #default="{ row: item }">
                             <el-tag :type="item.profit_rate >= 20 ? 'success' : item.profit_rate > 0 ? 'warning' : 'danger'" size="small">
                               {{ item.profit_rate.toFixed(1) }}%
                             </el-tag>
                           </template>
                         </el-table-column>
-                        <template #empty><div style="padding:12px 0;color:#aaa;text-align:center">无商品明细</div></template>
+                        <template #empty><div style="padding:12px 0;color:#aaa;text-align:center">{{ $t('reports.profit.noGoodsDetailInner') }}</div></template>
                       </el-table>
                     </div>
                   </template>
                 </el-table-column>
-                <el-table-column label="单据类型" align="center" width="80">
+                <el-table-column :label="$t('reports.profit.colOrderType')" align="center" width="80">
                   <template #default="{ row: o }">
-                    <el-tag size="small" :type="o.source === '零售' ? 'success' : o.source === '出库单' ? 'warning' : 'primary'">{{ o.source }}</el-tag>
+                    <el-tag size="small" :type="o.source === '零售' ? 'success' : o.source === '换货' ? 'danger' : o.source === '出库单' ? 'warning' : 'primary'">{{ o.source }}</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="order_no" label="单号" min-width="150" show-overflow-tooltip />
-                <el-table-column prop="order_date" label="日期" width="100" />
-                <el-table-column label="销售额" width="110" align="right">
+                <el-table-column prop="order_no" :label="$t('reports.profit.colOrderNo')" min-width="150" show-overflow-tooltip />
+                <el-table-column prop="order_date" :label="$t('reports.profit.colDate')" width="100" />
+                <el-table-column :label="$t('reports.profit.colSaleAmount')" width="110" align="right">
                   <template #default="{ row: o }"><span class="blue">¥{{ fmt(o.sale_amount) }}</span></template>
                 </el-table-column>
-                <el-table-column label="成本" width="110" align="right">
+                <el-table-column :label="$t('reports.profit.colCost')" width="110" align="right">
                   <template #default="{ row: o }"><span class="purple">¥{{ fmt(o.cost_amount) }}</span></template>
                 </el-table-column>
-                <el-table-column label="毛利润" width="110" align="right">
+                <el-table-column :label="$t('reports.profit.colGrossProfit')" width="110" align="right">
                   <template #default="{ row: o }">
                     <span :style="{ color: o.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
                       {{ o.profit >= 0 ? '+' : '' }}¥{{ fmt(o.profit) }}
                     </span>
                   </template>
                 </el-table-column>
-                <el-table-column label="毛利率" width="80" align="right">
+                <el-table-column :label="$t('reports.profit.colGrossRate')" width="80" align="right">
                   <template #default="{ row: o }">
                     <el-tag :type="o.profit_rate >= 20 ? 'success' : o.profit_rate > 0 ? 'warning' : 'danger'" size="small">
                       {{ o.profit_rate.toFixed(1) }}%
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="净利润" width="110" align="right">
+                <el-table-column :label="$t('reports.profit.colNetProfit')" width="110" align="right">
                   <template #default="{ row: o }">
                     <span :style="{ color: o.net_profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
                       {{ o.net_profit >= 0 ? '+' : '' }}¥{{ fmt(o.net_profit) }}
                     </span>
                   </template>
                 </el-table-column>
-                <template #empty><div style="padding:20px 0;color:#aaa">无单据数据</div></template>
+                <template #empty><div style="padding:20px 0;color:#aaa">{{ $t('reports.profit.noOrderData') }}</div></template>
               </el-table>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="customer_name" label="客户" min-width="140" show-overflow-tooltip />
-        <el-table-column label="单据数" align="right" width="70">
+        <el-table-column prop="customer_name" :label="$t('reports.profit.colCustomer')" min-width="140" show-overflow-tooltip />
+        <el-table-column :label="$t('reports.profit.colOrderCount')" align="right" width="70">
           <template #default="{ row }">
             <span style="color:#64748b">{{ row.orders.length }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="销售额" align="right" width="130">
+        <el-table-column :label="$t('reports.profit.colSaleAmount')" align="right" width="130">
           <template #default="{ row }">
             <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.sale_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="成本" align="right" width="130">
+        <el-table-column :label="$t('reports.profit.colCost')" align="right" width="130">
           <template #default="{ row }">
             <span style="color:#7c3aed">¥{{ fmt(row.cost_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="毛利润" align="right" width="130" sortable prop="profit">
+        <el-table-column :label="$t('reports.profit.colGrossProfit')" align="right" width="130" sortable prop="profit">
           <template #default="{ row }">
             <span :style="{ color: row.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
               {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="毛利率" align="right" width="80">
+        <el-table-column :label="$t('reports.profit.colGrossRate')" align="right" width="80">
           <template #default="{ row }">
             <el-tag :type="row.profit_rate >= 20 ? 'success' : row.profit_rate > 0 ? 'warning' : 'danger'" size="small">
               {{ row.profit_rate.toFixed(1) }}%
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="净利润" align="right" width="130" sortable prop="net_profit">
+        <el-table-column :label="$t('reports.profit.colNetProfit')" align="right" width="130" sortable prop="net_profit">
           <template #default="{ row }">
             <span :style="{ color: row.net_profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
               {{ row.net_profit >= 0 ? '+' : '' }}¥{{ fmt(row.net_profit) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="净利率" align="right" width="80">
+        <el-table-column :label="$t('reports.profit.colNetRate')" align="right" width="80">
           <template #default="{ row }">
             <el-tag :type="row.net_rate >= 20 ? 'success' : row.net_rate > 0 ? 'warning' : 'danger'" size="small">
               {{ row.net_rate.toFixed(1) }}%
             </el-tag>
           </template>
         </el-table-column>
-        <template #empty><div style="padding:40px 0;color:#aaa">暂无数据</div></template>
+        <template #empty><div style="padding:40px 0;color:#aaa">{{ $t('reports.profit.noData') }}</div></template>
       </el-table>
     </el-card>
   </div>
@@ -384,9 +384,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { InfoFilled, Loading } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
-import { getContractList } from '@/api/sale'
+import { getContractList, getSaleExchangeList } from '@/api/sale'
 import { getRetailOrderList } from '@/api/retail'
 import { getProcureOrderList } from '@/api/procure'
 import { getGoodsList, getBomList } from '@/api/goods'
@@ -407,6 +409,7 @@ const viewMode = ref<'goods' | 'order' | 'customer'>('goods')
 
 const saleContracts = ref<any[]>([])
 const retailOrders = ref<any[]>([])
+const exchangeOrders = ref<any[]>([])
 const goodsList = ref<any[]>([])
 const procureInhouseList = ref<any[]>([])
 const bomList = ref<any[]>([])
@@ -432,6 +435,10 @@ const rows = computed(() => {
       .filter(d => d.saleAmount > 0),
     ...retailOrders.value
       .map(r => ({ goodsInfo: r.goods_info, source: '零售', saleAmount: calcRetailSaleAmount(r) })),
+    // 换货：仅换出商品计入单品维度（退货冲减在单据维度体现，负向数量会导致聚合成本错误）
+    ...exchangeOrders.value
+      .filter(ex => Number(ex.exchange_amount || 0) > 0)
+      .map(ex => ({ goodsInfo: ex.exchange_goods_info, source: '换货', saleAmount: Number(ex.exchange_amount || 0) })),
   ]
   return aggregateGoodsProfit(docs, costCtx.value, { aliasResolver: findNaiDoufuGoods })
 })
@@ -482,6 +489,43 @@ const orderRows = computed(() => {
     })
   }
 
+  // 换货单：净收入 = 换出金额 - 退货金额；净成本 = 换出成本 - 退回成本（退回商品成本归还）
+  for (const ex of exchangeOrders.value) {
+    const exchangeAmt = Number(ex.exchange_amount || 0)
+    const returnAmt = Number(ex.return_amount || 0)
+    const sale_amount = exchangeAmt - returnAmt  // 差价（净收入）
+    const exchangeItems = buildOrderItems(ex.exchange_goods_info, exchangeAmt, costCtx.value, findNaiDoufuGoods)
+    const returnItems = buildOrderItems(ex.return_goods_info, returnAmt, costCtx.value, findNaiDoufuGoods)
+    const exchangeCost = exchangeItems.reduce((s, i) => s + i.cost_amount, 0)
+    const returnCost = returnItems.reduce((s, i) => s + i.cost_amount, 0)
+    const cost_amount = exchangeCost - returnCost  // 净成本（退回商品成本归还）
+    const freight = myFreightShare(ex)
+    const profit = sale_amount - cost_amount
+    const net_profit = profit - freight
+    // 合并展示：换出商品正向 + 退回商品标注负向
+    const allItems = [
+      ...exchangeItems.map(i => ({ ...i, goods_name: `[换出] ${i.goods_name}` })),
+      ...returnItems.map(i => ({
+        ...i,
+        goods_name: `[退回] ${i.goods_name}`,
+        qty: -i.qty,
+        sale_amount: -i.sale_amount,
+        cost_amount: -i.cost_amount,
+        profit: -i.profit,
+      })),
+    ]
+    result.push({
+      source: '换货',
+      order_no: ex.order_no,
+      customer_name: ex.customer_name || '—',
+      order_date: fmtDt(ex.exchange_date || ex.created_at),
+      sale_amount, cost_amount, profit, freight, net_profit,
+      profit_rate: exchangeAmt > 0 ? (profit / exchangeAmt * 100) : 0,
+      net_rate: exchangeAmt > 0 ? (net_profit / exchangeAmt * 100) : 0,
+      items: allItems,
+    })
+  }
+
   return result.sort((a, b) => b.profit - a.profit)
 })
 
@@ -518,15 +562,19 @@ const overallRate = computed(() =>
   totalSale.value > 0 ? (totalProfit.value / totalSale.value * 100) : 0
 )
 
-const freightTotal = computed(() => saleContracts.value.reduce((s, r) => s + myFreightShare(r), 0))
+const freightTotal = computed(() =>
+  saleContracts.value.reduce((s, r) => s + myFreightShare(r), 0) +
+  exchangeOrders.value.reduce((s, ex) => s + myFreightShare(ex), 0)
+)
 // 费用：排除未付(pending)与「采购单据支出」（货款已按商品成本计入，再扣即双重扣减）
 const expenseTotal = computed(() =>
   filterProfitExpenses(expenseList.value).reduce((s, r) => s + Number(r.amount || 0), 0)
 )
-// 单据附加费（采购单/合同 expense_amount，不在商品成本里，需单独扣）— 与 Finance.vue / reports.Overview 口径一致
+// 单据附加费（采购单/合同/换货单 expense_amount，不在商品成本里，需单独扣）
 const docExpenseTotal = computed(() =>
   procureOrders.value.reduce((s, o) => s + Number(o.expense_amount || 0), 0) +
-  saleContracts.value.reduce((s, c) => s + Number(c.expense_amount || 0), 0)
+  saleContracts.value.reduce((s, c) => s + Number(c.expense_amount || 0), 0) +
+  exchangeOrders.value.reduce((s, ex) => s + Number(ex.expense_amount || 0), 0)
 )
 const netProfit = computed(() => totalProfit.value - freightTotal.value - expenseTotal.value - docExpenseTotal.value)
 const netRate = computed(() => totalSale.value > 0 ? (netProfit.value / totalSale.value * 100) : 0)
@@ -549,9 +597,10 @@ async function loadData() {
     params.end_date = dateRange.value[1]
   }
   try {
-    const [c, r, g, ih, b, e, po] = await Promise.allSettled([
+    const [c, r, ex, g, ih, b, e, po] = await Promise.allSettled([
       getContractList(params),
       getRetailOrderList(params),
+      getSaleExchangeList({ ...params, list_rows: 2000 }),
       getGoodsList({ list_rows: 3000 }),
       http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
       getBomList({ list_rows: 500 }),
@@ -560,6 +609,7 @@ async function loadData() {
     ])
     saleContracts.value      = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []).filter(isEffectiveSaleContract) : []
     retailOrders.value       = r.status === 'fulfilled' ? (r.value?.data?.rows  ?? []).filter((r: any) => Number(r.status) === 1) : []
+    exchangeOrders.value     = ex.status === 'fulfilled' ? (ex.value?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1) : []
     goodsList.value          = g.status === 'fulfilled' ? (g.value?.data?.rows  ?? []) : []
     procureInhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []
     const bomHeaders         = b.status === 'fulfilled' ? (b.value?.data?.list  ?? []) : []

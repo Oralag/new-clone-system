@@ -6,7 +6,7 @@
     <div class="main-container">
       <!-- 移动端顶部栏：仅在非底部Tab页时显示页面标题 -->
       <div v-if="isMobile" class="mobile-topbar">
-        <span class="mobile-title">{{ mobilePageTitle }}</span>
+        <span class="mobile-title">{{ tt(mobilePageTitle) }}</span>
         <div class="mobile-topbar-actions">
           <button class="mobile-theme-btn-wrap" @click="cycleTheme">
             <el-icon :size="17" v-if="appStore.theme === 'dark'"><Moon /></el-icon>
@@ -32,9 +32,9 @@
           </keep-alive>
         </router-view>
         <div class="page-footer" v-if="!isMobile">
-          版权所有 © {{ new Date().getFullYear() }} &nbsp;·&nbsp;
-          <span class="footer-brand">游牧观文化传媒出品</span>
-          &nbsp;·&nbsp; 数字游牧 ERP 系统 &nbsp;·&nbsp; 保留所有权利
+          {{ t('app.copyright') }} © {{ new Date().getFullYear() }} &nbsp;·&nbsp;
+          <span class="footer-brand">{{ t('app.brand') }}</span>
+          &nbsp;·&nbsp; {{ t('app.footer') }}
         </div>
         <!-- 移动端底部占位，防止内容被底部导航遮挡 -->
         <div v-if="isMobile" class="mobile-scroll-spacer" />
@@ -53,7 +53,7 @@
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
-        <span class="nav-label">首页</span>
+        <span class="nav-label">{{ t('layout.home') }}</span>
       </div>
 
       <!-- 工作（应用） -->
@@ -68,7 +68,7 @@
           <rect x="3" y="14" width="7" height="7" rx="1.5"/>
           <rect x="14" y="14" width="7" height="7" rx="1.5"/>
         </svg>
-        <span class="nav-label">工作</span>
+        <span class="nav-label">{{ t('layout.work') }}</span>
       </div>
 
       <!-- 新建（中间突出按钮） -->
@@ -79,7 +79,7 @@
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </div>
-        <span class="nav-label">新建</span>
+        <span class="nav-label">{{ t('layout.add') }}</span>
       </div>
 
       <!-- 报表 -->
@@ -93,7 +93,7 @@
           <line x1="12" y1="20" x2="12" y2="4"/>
           <line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
-        <span class="nav-label">报表</span>
+        <span class="nav-label">{{ t('layout.report') }}</span>
       </div>
 
       <!-- 我的 -->
@@ -106,7 +106,7 @@
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
         </svg>
-        <span class="nav-label">我的</span>
+        <span class="nav-label">{{ t('layout.me') }}</span>
       </div>
     </div>
 
@@ -114,64 +114,64 @@
     <div v-if="isMobile && showQuickCreate" class="quick-create-mask" @click.self="showQuickCreate = false">
       <div class="quick-create-sheet">
         <div class="qc-handle" />
-        <div class="qc-title">快速新建</div>
+        <div class="qc-title">{{ t('layout.quickCreate') }}</div>
         <div class="qc-grid">
           <div class="qc-item" @click="goCreate('/sale/out')">
             <div class="qc-icon" style="background:rgba(0,113,227,0.1)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </div>
-            <span>销售出库</span>
+            <span>{{ t('route.SaleOut') }}</span>
           </div>
           <div class="qc-item" @click="goCreate('/procure/order')">
             <div class="qc-icon" style="background:rgba(124,58,237,0.1)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </div>
-            <span>采购订单</span>
+            <span>{{ t('route.ProcureOrder') }}</span>
           </div>
           <div class="qc-item" @click="goCreate('/finance/collect-receipt')">
             <div class="qc-icon" style="background:rgba(5,150,105,0.1)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             </div>
-            <span>收款单</span>
+            <span>{{ t('route.FinanceCollectReceipt') }}</span>
           </div>
           <div class="qc-item" @click="goCreate('/finance/pay-receipt')">
             <div class="qc-icon" style="background:rgba(217,119,6,0.1)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
             </div>
-            <span>付款单</span>
+            <span>{{ t('route.FinancePayReceipt') }}</span>
           </div>
           <div class="qc-item" @click="goCreate('/sale/contract')">
             <div class="qc-icon" style="background:rgba(0,113,227,0.08)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             </div>
-            <span>销售订单</span>
+            <span>{{ t('route.SaleContract') }}</span>
           </div>
           <div class="qc-item" @click="goCreate('/procure/inhouse')">
             <div class="qc-icon" style="background:rgba(8,145,178,0.1)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </div>
-            <span>采购入库</span>
+            <span>{{ t('route.ProcureInhouse') }}</span>
           </div>
           <div class="qc-item" @click="goCreate('/office/expense')">
             <div class="qc-icon" style="background:rgba(220,38,38,0.08)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
-            <span>报销申请</span>
+            <span>{{ t('menu.item.office-expense') }}</span>
           </div>
           <div class="qc-item" @click="goCreate('/cashregister')">
             <div class="qc-icon" style="background:rgba(249,115,22,0.1)">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h2M10 15h4"/></svg>
             </div>
-            <span>零售收银</span>
+            <span>{{ t('layout.cashRegister') }}</span>
           </div>
         </div>
-        <button class="qc-cancel" @click="showQuickCreate = false">取消</button>
+        <button class="qc-cancel" @click="showQuickCreate = false">{{ t('common.cancel') }}</button>
       </div>
     </div>
 
   </div>
 
-  <!-- <AiAssistant /> 多租户改造期间暂停 -->
+  <AiAssistant />
   <OnboardingGuide />
 </template>
 
@@ -189,6 +189,10 @@ import { useAuthStore } from '@/stores/auth'
 import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
 import { Sunny, Moon, View } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tt = (key: string) => (key && (key.startsWith('route.') || key.startsWith('menu.') || key.startsWith('app.')) ? t(key) : key)
 
 const route = useRoute()
 const router = useRouter()
@@ -212,8 +216,15 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 const TAB_PATHS = ['/dashboard', '/mobile/apps', '/mobile/stats', '/mobile/profile']
 const isLegacyMode = computed(() => String(route.query?.legacy || '') === '1')
 const mobilePageTitle = computed(() => {
-  if (TAB_PATHS.includes(route.path)) return '数字游牧 ERP'
-  return (route.meta?.title as string) || '数字游牧 ERP'
+  if (TAB_PATHS.includes(route.path)) return t('app.name')
+  // Prefer i18n key from route.name (e.g. 'route.SaleClient'); fall back to meta.title
+  const name = route.name as string | undefined
+  const key = name ? `route.${name}` : ''
+  if (key) {
+    const v = t(key)
+    if (v && v !== key) return v
+  }
+  return (route.meta?.title as string) || t('app.name')
 })
 
 function cycleTheme() {

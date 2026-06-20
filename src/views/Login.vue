@@ -16,7 +16,7 @@
             </defs>
           </svg>
         </div>
-        <span class="logo-text">数字游牧 ERP</span>
+        <span class="logo-text">{{ t('app.name') }}</span>
       </div>
 
       <!-- 手机端广告文案条 -->
@@ -29,10 +29,10 @@
             <span>NEXT-GEN PLATFORM</span>
           </div>
           <h2 class="hero-title" style="font-size:32px;margin-bottom:8px">
-            <span class="line-white">构建数字</span>
-            <span class="line-light">未来。</span>
+            <span class="line-white">{{ t('login.heroLine1') }}</span>
+            <span class="line-light">{{ t('login.heroLine2') }}</span>
           </h2>
-          <p class="hero-sub" style="font-size:13px;margin:0 0 16px">为现代数字游牧企业打造的终极管理工作台</p>
+          <p class="hero-sub" style="font-size:13px;margin:0 0 16px">{{ t('login.heroSub') }}</p>
           <div class="feature-cards" style="margin-bottom:0">
             <div class="feat-card" v-for="f in features" :key="f.title">
               <div class="feat-arrow">
@@ -52,13 +52,13 @@
       <!-- Form area -->
       <div class="form-area">
         <div class="form-heading">
-          <h1>{{ activeTab === 'login' ? 'Sign In' : 'Join Us' }}</h1>
-          <p class="form-heading-cn">{{ activeTab === 'login' ? '欢迎回来，请登录您的账户' : '创建账户，开启数字游牧之旅' }}</p>
+          <h1>{{ activeTab === 'login' ? t('login.signIn') : t('login.joinUs') }}</h1>
+          <p class="form-heading-cn">{{ activeTab === 'login' ? t('login.welcomeBack') : t('login.welcomeNew') }}</p>
           <p v-if="activeTab === 'login'">
-            New here? <a href="#" @click.prevent="switchTab('register')">Create account</a>
+            {{ t('login.newHere') }} <a href="#" @click.prevent="switchTab('register')">{{ t('login.createAccount') }}</a>
           </p>
           <p v-else>
-            Already a member? <a href="#" @click.prevent="switchTab('login')">Sign In</a>
+            {{ t('login.alreadyMember') }} <a href="#" @click.prevent="switchTab('login')">{{ t('login.signIn') }}</a>
           </p>
         </div>
 
@@ -72,14 +72,14 @@
           label-position="top"
           @keydown.enter="handleLogin"
         >
-          <el-form-item label="ACCOUNT" prop="account">
-            <el-input v-model="loginForm.account" placeholder="Phone / Username" clearable />
+          <el-form-item :label="t('login.accountUpper')" prop="account">
+            <el-input v-model="loginForm.account" :placeholder="t('login.accountPlaceholder')" clearable />
           </el-form-item>
-          <el-form-item label="ACCESS KEY" prop="password">
+          <el-form-item :label="t('login.passwordUpper')" prop="password">
             <el-input v-model="loginForm.password" type="password" placeholder="••••••••" show-password clearable />
           </el-form-item>
           <button class="submit-btn" :disabled="loginLoading" @click.prevent="handleLogin">
-            <span v-if="!loginLoading">SIGN IN</span>
+            <span v-if="!loginLoading">{{ t('login.signInUpper') }}</span>
             <span v-else class="loading-dots"><span></span><span></span><span></span></span>
           </button>
         </el-form>
@@ -93,40 +93,40 @@
           size="large"
           label-position="top"
         >
-          <el-form-item label="COMPANY NAME" prop="company_name">
-            <el-input v-model="registerForm.company_name" placeholder="Your Company" clearable />
+          <el-form-item :label="t('login.companyName')" prop="company_name">
+            <el-input v-model="registerForm.company_name" :placeholder="t('login.companyPlaceholder')" clearable />
           </el-form-item>
-          <el-form-item label="MOBILE" prop="mobile">
-            <el-input v-model="registerForm.mobile" placeholder="Phone number" clearable />
+          <el-form-item :label="t('login.mobile')" prop="mobile">
+            <el-input v-model="registerForm.mobile" :placeholder="t('login.mobilePlaceholder')" clearable />
           </el-form-item>
-          <el-form-item label="ACCESS KEY" prop="password">
+          <el-form-item :label="t('login.passwordUpper')" prop="password">
             <el-input v-model="registerForm.password" type="password" placeholder="••••••••" show-password clearable />
           </el-form-item>
-          <el-form-item label="CONFIRM KEY" prop="confirmPassword">
+          <el-form-item :label="t('login.confirmKey')" prop="confirmPassword">
             <el-input v-model="registerForm.confirmPassword" type="password" placeholder="••••••••" show-password clearable />
           </el-form-item>
-          <el-form-item label="INVITE CODE（选填）" prop="inviteCode">
-            <el-input v-model="registerForm.inviteCode" placeholder="输入邀请码可直接激活付费权限" clearable>
+          <el-form-item :label="t('login.inviteCode')" prop="inviteCode">
+            <el-input v-model="registerForm.inviteCode" :placeholder="t('login.invitePlaceholder')" clearable>
               <template #prefix>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               </template>
             </el-input>
             <div v-if="inviteCodeStatus === 'valid'" class="invite-hint invite-valid">
-              ✓ 有效邀请码 · {{ inviteCodeInfo }}
+              ✓ {{ t('login.inviteValid') }} · {{ inviteCodeInfo }}
             </div>
             <div v-else-if="inviteCodeStatus === 'invalid'" class="invite-hint invite-invalid">
-              ✗ 邀请码无效或已使用
+              ✗ {{ t('login.inviteInvalid') }}
             </div>
           </el-form-item>
-          <el-form-item label="VERIFY" prop="captcha">
+          <el-form-item :label="t('login.verify')" prop="captcha">
             <div class="captcha-row">
-              <el-input v-model="registerForm.captcha" placeholder="输入右侧验证码" clearable style="flex:1" />
+              <el-input v-model="registerForm.captcha" :placeholder="t('login.captchaPlaceholder')" clearable style="flex:1" />
               <captcha-canvas ref="captchaRef" v-model:code="captchaCode" :width="110" :height="36" />
             </div>
           </el-form-item>
           <el-alert v-if="registerTip" :title="registerTip" :type="registerTipType" :closable="false" show-icon style="margin-bottom:16px;border-radius:12px" />
           <button class="submit-btn" :disabled="registerLoading" @click.prevent="handleRegister">
-            <span v-if="!registerLoading">JOIN NOW</span>
+            <span v-if="!registerLoading">{{ t('login.joinNow') }}</span>
             <span v-else class="loading-dots"><span></span><span></span><span></span></span>
           </button>
         </el-form>
@@ -137,12 +137,12 @@
         <div class="status-row">
           <span class="status-dot" :class="serverStatus"></span>
           <span class="status-label">SYSTEM STATUS</span>
-          <span v-if="serverStatus === 'checking'" class="status-checking">Waking up...</span>
-          <span v-else-if="serverStatus === 'online'" class="status-ok">Operational</span>
-          <span v-else class="status-sleeping">Starting (~30s)</span>
+          <span v-if="serverStatus === 'checking'" class="status-checking">{{ t('login.statusChecking') }}</span>
+          <span v-else-if="serverStatus === 'online'" class="status-ok">{{ t('login.statusOnline') }}</span>
+          <span v-else class="status-sleeping">{{ t('login.statusSleeping') }}</span>
         </div>
         <div class="footer-meta">
-          <span>数字游牧 ERP</span>
+          <span>{{ t('app.name') }}</span>
           <span class="dot-sep">·</span>
           <span>V3.0 STABLE BUILD</span>
         </div>
@@ -161,11 +161,11 @@
         </div>
 
         <h2 class="hero-title">
-          <span class="line-white">构建数字</span><br />
-          <span class="line-light">未来。</span>
+          <span class="line-white">{{ t('login.heroLine1') }}</span><br />
+          <span class="line-light">{{ t('login.heroLine2') }}</span>
         </h2>
 
-        <p class="hero-sub">为现代数字游牧企业打造的终极管理工作台</p>
+        <p class="hero-sub">{{ t('login.heroSub') }}</p>
 
         <div class="feature-cards">
           <div class="feat-card" v-for="f in features" :key="f.title">
@@ -202,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted, computed } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -210,7 +210,9 @@ import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import CaptchaCanvas from '@/components/CaptchaCanvas.vue'
 import { fmtDt } from '@/utils/date'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
@@ -228,11 +230,11 @@ onMounted(async () => {
   }
 })
 
-const features = [
-  { title: '全球化架构', desc: '让您的业务在无国界的世界中自由流动' },
-  { title: 'AI 智能驱动', desc: '从创意生成到全球投放，一键触达目标受众' },
-  { title: '极速响应', desc: '毫秒级数据同步，掌控全球业务动态' },
-]
+const features = computed(() => [
+  { title: t('login.feat1Title'), desc: t('login.feat1Desc') },
+  { title: t('login.feat2Title'), desc: t('login.feat2Desc') },
+  { title: t('login.feat3Title'), desc: t('login.feat3Desc') },
+])
 
 const avatarColors = ['#f87171', '#fb923c', '#a78bfa', '#60a5fa', '#34d399']
 
@@ -251,10 +253,10 @@ function switchTab(tab: 'login' | 'register') {
 const loginFormRef = ref<FormInstance>()
 const loginLoading = ref(false)
 const loginForm = reactive({ account: '', password: '' })
-const loginRules: FormRules = {
-  account: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-}
+const loginRules = computed<FormRules>(() => ({
+  account: [{ required: true, message: t('login.accountRequired'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.passwordRequired'), trigger: 'blur' }],
+}))
 
 async function handleLogin() {
   if (!loginFormRef.value) return
@@ -263,23 +265,24 @@ async function handleLogin() {
   loginLoading.value = true
   try {
     await authStore.login(loginForm.account, loginForm.password)
-    ElMessage.success('登录成功')
+    ElMessage.success(t('login.loginSuccess'))
     const savedRedirect = route.query.redirect as string
     const redirect = savedRedirect || (isMobile() ? '/mobile/modules' : '/portal')
     router.push(redirect)
   } catch (e: any) {
-    const message = e?.message || '账号或密码错误，请重试'
-    if (message.includes('账号不存在')) {
+    const rawMessage = e?.message || ''
+    const fallback = t('login.invalidCredentials')
+    if (rawMessage.includes('账号不存在') || rawMessage.toLowerCase().includes('account not found')) {
       registerForm.mobile = loginForm.account.trim()
-      registerTip.value = '该账号尚未注册，请先创建账户'
+      registerTip.value = t('login.accountNotRegistered')
       registerTipType.value = 'info'
       try {
         await ElMessageBox.confirm(
-          '该账号尚未注册，是否立即切换到注册页？',
-          '未找到账号',
+          t('login.accountNotRegisteredConfirm'),
+          t('login.accountNotFoundTitle'),
           {
-            confirmButtonText: '去注册',
-            cancelButtonText: '取消',
+            confirmButtonText: t('login.goRegister'),
+            cancelButtonText: t('common.cancel'),
             type: 'warning',
           },
         )
@@ -288,7 +291,7 @@ async function handleLogin() {
         // User cancelled the prompt.
       }
     } else {
-      ElMessage.error(message)
+      ElMessage.error(rawMessage || fallback)
     }
   } finally {
     loginLoading.value = false
@@ -319,7 +322,7 @@ watch(() => registerForm.inviteCode, (code) => {
   const found = codes.find((c: any) => c.code === code.trim().toUpperCase() && !c.usedBy && new Date(c.expiresAt) > new Date())
   if (found) {
     inviteCodeStatus.value = 'valid'
-    inviteCodeInfo.value = `${found.planLabel}，有效至 ${fmtDt(found.expiresAt)}`
+    inviteCodeInfo.value = `${found.planLabel} · ${t('login.validUntil')} ${fmtDt(found.expiresAt)}`
   } else {
     inviteCodeStatus.value = 'invalid'
     inviteCodeInfo.value = ''
@@ -327,27 +330,27 @@ watch(() => registerForm.inviteCode, (code) => {
 })
 
 const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
-  if (value === '') { callback(new Error('请再次输入密码')) }
-  else if (value !== registerForm.password) { callback(new Error('两次输入的密码不一致')) }
+  if (value === '') { callback(new Error(t('login.confirmPasswordRequired'))) }
+  else if (value !== registerForm.password) { callback(new Error(t('profile.passwordMismatch'))) }
   else { callback() }
 }
 
 const validateCaptcha = (_rule: any, value: string, callback: any) => {
-  if (!value) { callback(new Error('请输入验证码')) }
+  if (!value) { callback(new Error(t('login.captchaRequired'))) }
   else if (value.toUpperCase() !== captchaCode.value.toUpperCase()) {
     captchaRef.value?.refresh()
-    callback(new Error('验证码错误，已刷新'))
+    callback(new Error(t('login.captchaWrong')))
   }
   else { callback() }
 }
 
-const registerRules: FormRules = {
-  company_name: [{ required: true, message: '请输入企业名称', trigger: 'blur' }],
-  mobile: [{ required: true, message: '请输入手机号', trigger: 'blur' }, { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号', trigger: 'blur' }],
-  password: [{ required: true, message: '请设置密码', trigger: 'blur' }, { min: 6, message: '密码至少 6 位', trigger: 'blur' }],
-  confirmPassword: [{ required: true, message: '请确认密码', trigger: 'blur' }, { validator: validateConfirmPassword, trigger: 'blur' }],
+const registerRules = computed<FormRules>(() => ({
+  company_name: [{ required: true, message: t('login.companyRequired'), trigger: 'blur' }],
+  mobile: [{ required: true, message: t('login.mobileRequired'), trigger: 'blur' }, { pattern: /^1[3-9]\d{9}$/, message: t('login.mobileInvalid'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.passwordSetRequired'), trigger: 'blur' }, { min: 6, message: t('login.passwordTooShort'), trigger: 'blur' }],
+  confirmPassword: [{ required: true, message: t('login.confirmPasswordRequired'), trigger: 'blur' }, { validator: validateConfirmPassword, trigger: 'blur' }],
   captcha: [{ required: true, validator: validateCaptcha, trigger: 'blur' }],
-}
+}))
 
 async function handleRegister() {
   if (!registerFormRef.value) return
@@ -373,14 +376,14 @@ async function handleRegister() {
           paidUntil: codes[idx].paidUntil,
         }))
       }
-      registerTip.value = '注册成功，邀请码已激活付费权限，请登录'
+      registerTip.value = t('login.registerSuccessActivated')
     } else {
-      registerTip.value = '注册成功，请登录'
+      registerTip.value = t('login.registerSuccess')
     }
     registerTipType.value = 'success'
     setTimeout(() => { switchTab('login'); loginForm.account = registerForm.mobile }, 1500)
   } catch (e: any) {
-    registerTip.value = e?.message || '注册失败，请重试'
+    registerTip.value = e?.message || t('login.registerFailed')
     registerTipType.value = 'error'
     captchaRef.value?.refresh()
   } finally {

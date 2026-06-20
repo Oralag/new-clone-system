@@ -20,14 +20,14 @@
 
     <template #footer>
       <div class="form-footer">
-        <div class="create-time-note" v-if="formData.create_time">创建时间：{{ fmtDt(formData.create_time) }}</div>
+        <div class="create-time-note" v-if="formData.create_time">{{ t('scForm.createdAt') }}: {{ fmtDt(formData.create_time) }}</div>
         <div class="footer-btns">
-          <el-button @click="handleClose">关 闭</el-button>
+          <el-button @click="handleClose">{{ t('common.close') }}</el-button>
           <template v-if="isView">
-            <el-button type="primary" @click="isView = false">编 辑</el-button>
+            <el-button type="primary" @click="isView = false">{{ t('common.edit') }}</el-button>
           </template>
           <template v-else>
-            <el-button type="primary" :loading="submitting" @click="handleSubmit">确 认</el-button>
+            <el-button type="primary" :loading="submitting" @click="handleSubmit">{{ t('common.confirm') }}</el-button>
           </template>
         </div>
       </div>
@@ -37,6 +37,8 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { fmtDt } from '@/utils/date'
 
 interface Props {
@@ -46,8 +48,9 @@ interface Props {
   rules?: FormRules
 }
 
+const { t } = useI18n()
 const props = withDefaults(defineProps<Props>(), {
-  title: '表单',
+  title: '',
   size: '500px',
   labelWidth: '100px',
   rules: () => ({}),
@@ -63,9 +66,16 @@ const isView = ref(false)
 const formData = ref<Record<string, any>>({})
 const formRef = ref<FormInstance>()
 
+const normalizedTitle = computed(() => props.title || t('scForm.defaultTitle'))
 const drawerTitle = computed(() => {
-  if (isView.value) return props.title.replace(/^编辑|^新增/, '查看')
-  return props.title
+  if (isView.value) {
+    return normalizedTitle.value
+      .replace(/^编辑/, t('common.view'))
+      .replace(/^新增/, t('common.view'))
+      .replace(/^Edit/, t('common.view'))
+      .replace(/^New/, t('common.view'))
+  }
+  return normalizedTitle.value
 })
 
 function open(data?: Record<string, any>) {

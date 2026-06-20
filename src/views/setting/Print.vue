@@ -3,13 +3,13 @@
     <el-card>
       <template #header>
         <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:15px;font-weight:600">打印模板管理</span>
-          <el-tag type="info" size="small">模板控制打印/导出的格式布局</el-tag>
+          <span style="font-size:15px;font-weight:600">{{ $t('setting.print.pageTitle') }}</span>
+          <el-tag type="info" size="small">{{ $t('setting.print.pageSubtitle') }}</el-tag>
         </div>
       </template>
 
       <!-- 内置模板 -->
-      <div class="section-label">内置模板</div>
+      <div class="section-label">{{ $t('setting.print.sectionBuiltin') }}</div>
       <div class="tpl-grid">
         <div
           v-for="tpl in builtinTemplates"
@@ -23,43 +23,43 @@
             <div class="tpl-desc">{{ tpl.desc }}</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-            <el-tag size="small" type="success">内置</el-tag>
+            <el-tag size="small" type="success">{{ $t('setting.print.tagBuiltin') }}</el-tag>
             <div style="display:flex;gap:6px">
-              <el-button size="small" @click="previewTpl(tpl)">预览</el-button>
-              <el-button size="small" type="primary" @click="editTpl(tpl)">编辑</el-button>
+              <el-button size="small" @click="previewTpl(tpl)">{{ $t('setting.print.btnPreview') }}</el-button>
+              <el-button size="small" type="primary" @click="editTpl(tpl)">{{ $t('setting.print.btnEdit') }}</el-button>
             </div>
           </div>
         </div>
       </div>
 
-      <el-divider>自定义模板</el-divider>
+      <el-divider>{{ $t('setting.print.dividerCustom') }}</el-divider>
 
       <ScTable ref="tableRef" :api-obj="getPrintList" del-path="/setting/print/batchDel"
           export-file-name="打印模板" :params="searchForm">
         <template #search>
-          <el-input v-model="searchForm.name" placeholder="模板名称" clearable style="width:180px" />
-          <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-          <el-button @click="resetSearch">重置</el-button>
+          <el-input v-model="searchForm.name" :placeholder="$t('setting.print.searchPlaceholder')" clearable style="width:180px" />
+          <el-button type="primary" @click="tableRef?.loadData()">{{ $t('setting.print.btnSearch') }}</el-button>
+          <el-button @click="resetSearch">{{ $t('setting.print.btnReset') }}</el-button>
         </template>
-        <el-table-column prop="name" label="模板名称" min-width="180" />
-        <el-table-column prop="type_name" label="模板类型" min-width="140" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column prop="name" :label="$t('setting.print.colName')" min-width="180" />
+        <el-table-column prop="type_name" :label="$t('setting.print.colType')" min-width="140" />
+        <el-table-column :label="$t('setting.print.colActions')" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="ElMessage.info(`模板「${row.name}」`)">查看</el-button>
-            <el-button type="warning" link size="small" @click="editCustomTpl(row)">编辑</el-button>
+            <el-button type="primary" link size="small" @click="ElMessage.info(`模板「${row.name}」`)">{{ $t('setting.print.btnView') }}</el-button>
+            <el-button type="warning" link size="small" @click="editCustomTpl(row)">{{ $t('setting.print.btnEditCustom') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
     </el-card>
 
     <!-- 预览弹框 -->
-    <el-dialog v-model="previewVisible" :title="`预览：${currentTpl?.name}`" width="780px">
+    <el-dialog v-model="previewVisible" :title="`${$t('setting.print.previewTitlePrefix')}${currentTpl?.name}`" width="780px">
       <div v-if="currentTpl">
         <div class="preview-toolbar">
           <span class="preview-hint">{{ currentTpl.desc }}</span>
           <div style="display:flex;gap:8px">
-            <el-button size="small" @click="printSample">打印示例</el-button>
-            <el-button size="small" type="primary" @click="goToPage(currentTpl.navPath)">前往使用 →</el-button>
+            <el-button size="small" @click="printSample">{{ $t('setting.print.btnPrintSample') }}</el-button>
+            <el-button size="small" type="primary" @click="goToPage(currentTpl.navPath)">{{ $t('setting.print.btnGoToPage') }}</el-button>
           </div>
         </div>
         <div class="tpl-preview" v-html="currentTpl.sampleHtml" />
@@ -67,32 +67,32 @@
     </el-dialog>
 
     <!-- 编辑弹框 -->
-    <el-dialog v-model="editVisible" :title="`编辑模板：${editForm.name}`" width="820px" destroy-on-close>
+    <el-dialog v-model="editVisible" :title="`${$t('setting.print.editTitlePrefix')}${editForm.name}`" width="820px" destroy-on-close>
       <el-form :model="editForm" label-width="90px" size="small">
-        <el-form-item label="模板名称">
+        <el-form-item :label="$t('setting.print.formFieldName')">
           <el-input v-model="editForm.name" style="width:260px" />
         </el-form-item>
-        <el-form-item label="模板说明">
+        <el-form-item :label="$t('setting.print.formFieldDesc')">
           <el-input v-model="editForm.desc" style="width:420px" />
         </el-form-item>
-        <el-form-item label="显示字段">
+        <el-form-item :label="$t('setting.print.formFieldFields')">
           <el-checkbox-group v-model="editForm.fields">
             <el-checkbox v-for="f in allFields" :key="f.key" :label="f.key">{{ f.label }}</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
-        <el-form-item label="表头 HTML">
-          <el-input v-model="editForm.headerHtml" type="textarea" :rows="3" placeholder="可填写公司 logo / 标题 HTML，留空使用默认" style="width:100%" />
+        <el-form-item :label="$t('setting.print.formFieldHeader')">
+          <el-input v-model="editForm.headerHtml" type="textarea" :rows="3" :placeholder="$t('setting.print.formFieldHeaderPlaceholder')" style="width:100%" />
         </el-form-item>
-        <el-form-item label="表尾 HTML">
-          <el-input v-model="editForm.footerHtml" type="textarea" :rows="3" placeholder="可填写签章行、备注等 HTML，留空使用默认" style="width:100%" />
+        <el-form-item :label="$t('setting.print.formFieldFooter')">
+          <el-input v-model="editForm.footerHtml" type="textarea" :rows="3" :placeholder="$t('setting.print.formFieldFooterPlaceholder')" style="width:100%" />
         </el-form-item>
-        <el-form-item label="实时预览">
+        <el-form-item :label="$t('setting.print.formFieldPreview')">
           <div class="tpl-preview" style="width:100%;min-height:160px" v-html="editPreviewHtml" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveTpl">保存模板</el-button>
+        <el-button @click="editVisible = false">{{ $t('setting.print.btnCancel') }}</el-button>
+        <el-button type="primary" @click="saveTpl">{{ $t('setting.print.btnSave') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -100,11 +100,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getPrintList } from '@/api/setting'
 
+const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const searchForm = reactive<any>({})
@@ -117,12 +119,12 @@ function resetSearch() {
   tableRef.value?.loadData()
 }
 
-const builtinTemplates = [
+const builtinTemplates = computed(() => [
   {
     key: 'offer',
-    name: '销售报价单',
+    name: t('setting.print.tplOfferName'),
     icon: '📋',
-    desc: '「销售 > 销售报价」审核后点"打印"按钮输出',
+    desc: t('setting.print.tplOfferDesc'),
     navPath: '/sale/offer',
     sampleHtml: `<div style="font-family:SimSun,Arial;padding:16px;border:1px solid #e0e0e0;border-radius:8px;font-size:12px">
       <h3 style="text-align:center;margin:0 0 6px;font-size:16px">报 价 单</h3>
@@ -145,9 +147,9 @@ const builtinTemplates = [
   },
   {
     key: 'contract',
-    name: '销售订单',
+    name: t('setting.print.tplContractName'),
     icon: '📄',
-    desc: '「销售 > 销售订单」审核后点"打印"按钮输出',
+    desc: t('setting.print.tplContractDesc'),
     navPath: '/sale/contract',
     sampleHtml: `<div style="font-family:SimSun,Arial;padding:16px;border:1px solid #e0e0e0;border-radius:8px;font-size:12px">
       <h3 style="text-align:center;margin:0 0 6px;font-size:16px">销 售 合 同</h3>
@@ -166,7 +168,7 @@ const builtinTemplates = [
       </div>
     </div>`,
   },
-]
+])
 
 function previewTpl(tpl: any) {
   currentTpl.value = tpl
@@ -177,7 +179,7 @@ function previewTpl(tpl: any) {
 function printSample() {
   if (!currentTpl.value) return
   const w = window.open('', '_blank', 'width=800,height=600')
-  if (!w) { ElMessage.warning('请允许弹窗'); return }
+  if (!w) { ElMessage.warning(t('setting.print.msgPopupBlocked')); return }
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${currentTpl.value.name}</title><link rel="icon" href="data:,"><style>body{margin:20px;font-family:SimSun,Arial}@media print{body{margin:0}}</style></head><body>${currentTpl.value.sampleHtml}</body></html>`)
   w.document.close()
   setTimeout(() => { w.print() }, 300)
@@ -194,28 +196,28 @@ const editForm = reactive<any>({
   name: '', desc: '', fields: [], headerHtml: '', footerHtml: '', key: '', _isBuiltin: false
 })
 
-const allFields = [
-  { key: 'code', label: '单据编号' },
-  { key: 'client', label: '客户名称' },
-  { key: 'date', label: '日期' },
-  { key: 'handler', label: '经办人' },
-  { key: 'goods_name', label: '商品名称' },
-  { key: 'spec', label: '规格型号' },
-  { key: 'unit', label: '单位' },
-  { key: 'qty', label: '数量' },
-  { key: 'price', label: '单价' },
-  { key: 'amount', label: '合计金额' },
-  { key: 'tax_rate', label: '税率' },
-  { key: 'tax_amount', label: '税额' },
-  { key: 'remark', label: '备注' },
-  { key: 'sign', label: '签章行' },
-]
+const allFields = computed(() => [
+  { key: 'code', label: t('setting.print.fieldCode') },
+  { key: 'client', label: t('setting.print.fieldClient') },
+  { key: 'date', label: t('setting.print.fieldDate') },
+  { key: 'handler', label: t('setting.print.fieldHandler') },
+  { key: 'goods_name', label: t('setting.print.fieldGoodsName') },
+  { key: 'spec', label: t('setting.print.fieldSpec') },
+  { key: 'unit', label: t('setting.print.fieldUnit') },
+  { key: 'qty', label: t('setting.print.fieldQty') },
+  { key: 'price', label: t('setting.print.fieldPrice') },
+  { key: 'amount', label: t('setting.print.fieldAmount') },
+  { key: 'tax_rate', label: t('setting.print.fieldTaxRate') },
+  { key: 'tax_amount', label: t('setting.print.fieldTaxAmount') },
+  { key: 'remark', label: t('setting.print.fieldRemark') },
+  { key: 'sign', label: t('setting.print.fieldSign') },
+])
 
 const editPreviewHtml = computed(() => {
   const header = editForm.headerHtml || `<h3 style="text-align:center;margin:0 0 8px;font-size:15px">${editForm.name || '单据标题'}</h3>`
-  const visibleFields = allFields.filter(f => editForm.fields.includes(f.key))
+  const visibleFields = allFields.value.filter(f => editForm.fields.includes(f.key))
   const ths = visibleFields.map(f => `<th style="border:1px solid #ccc;padding:4px 8px">${f.label}</th>`).join('')
-  const tds = visibleFields.map(f => `<td style="border:1px solid #ccc;padding:4px 8px;color:#aaa">示例</td>`).join('')
+  const tds = visibleFields.map(_f => `<td style="border:1px solid #ccc;padding:4px 8px;color:#aaa">示例</td>`).join('')
   const footer = editForm.footerHtml || `<div style="display:flex;justify-content:space-between;margin-top:24px"><span>签章：__________</span><span>日期：__________</span></div>`
   return `<div style="font-family:SimSun,Arial;font-size:12px;padding:12px">
     ${header}
@@ -252,7 +254,7 @@ function editCustomTpl(row: any) {
 }
 
 function saveTpl() {
-  ElMessage.success(`模板「${editForm.name}」已保存`)
+  ElMessage.success(`模板「${editForm.name}」${t('setting.print.msgTplSaved')}`)
   editVisible.value = false
 }
 </script>

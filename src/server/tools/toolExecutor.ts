@@ -279,6 +279,45 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         result = `${input.type} 共 ${rows.length} 条：${JSON.stringify(rows.slice(0, 20))}`
         break
       }
+      case 'query_ledger': {
+        // 直查 Cloudflare Pages /adminapi/finance/ledger 接口（绕过 erp-server，直连 Neon）
+        const params: any = { limit: input.limit || 50 }
+        if (input.type) params.type = input.type
+        if (input.flow_category) params.flow_category = input.flow_category
+        if (input.source) params.source = input.source
+        if (input.start_date) params.start_date = input.start_date
+        if (input.end_date) params.end_date = input.end_date
+        if (input.contact_name) params.contact_name = input.contact_name
+        if (input.fund_name) params.fund_name = input.fund_name
+        const url = new URL('https://nomaderp.pages.dev/adminapi/finance/ledger')
+        Object.entries(params).forEach(([k, v]) => v !== undefined && url.searchParams.set(k, String(v)))
+        try {
+          const res = await fetch(url.toString(), { headers: { 'Content-Type': 'application/json' } })
+          const data: any = await res.json()
+          if (data?.code !== 1) { result = `❌ 流水查询失败：${data?.msg || JSON.stringify(data)}`; break }
+          const rows = data.data?.rows || []
+          const s = data.data?.summary || {}
+          result = `📊 后台流水查询结果（共 ${data.data?.total || 0} 条）：
+实收：¥${Number(s.cash_income || 0).toFixed(2)}
+实付：¥${Number(s.cash_expense || 0).toFixed(2)}
+现金净额：¥${Number(s.cash_balance || 0).toFixed(2)}
+应收待收：¥${Number(s.receivable || 0).toFixed(2)}
+应付待付：¥${Number(s.payable || 0).toFixed(2)}
+
+明细前${Math.min(rows.length, 20)}条：${JSON.stringify(rows.slice(0, 20).map((r: any) => ({
+  日期: String(r.date).slice(0, 10),
+  类别: r.flow_category,
+  来源: r.source,
+  金额: Number(r.amount).toFixed(2),
+  对象: r.contact_name || '-',
+  账户: r.fund_name || '-',
+  单号: r.order_sn || '-',
+})))}`
+        } catch (e: any) {
+          result = `❌ 流水查询出错：${e.message}`
+        }
+        break
+      }
       case 'audit_finance': {
         // 财务数据逻辑审查：7条完整审查框架
         const issues: string[] = []
@@ -1496,6 +1535,6 @@ export async function executeTool(name: string, input: Record<string, any>, toke
 
     return result
   } catch (e: any) {
-    return `工具执行出错：${e.message}`
+    return `❌ 工具执行出错（${name}）：${e.message}`
   }
 }

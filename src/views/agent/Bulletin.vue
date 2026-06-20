@@ -11,8 +11,8 @@
           </svg>
         </div>
         <div>
-          <h2 class="bulletin-title">公告栏</h2>
-          <div class="bulletin-subtitle">会议决议 · 任务跟踪 · 内容产出</div>
+          <h2 class="bulletin-title">{{ t('agentBulletin.title') }}</h2>
+          <div class="bulletin-subtitle">{{ t('agentBulletin.subtitle') }}</div>
         </div>
       </div>
       <div class="bulletin-actions">
@@ -20,13 +20,13 @@
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
             <rect x="1" y="2" width="11" height="9" rx="2"/><path d="M4 7h5"/>
           </svg>
-          返回会议室
+          {{ t('agentBulletin.backMeeting') }}
         </button>
         <button v-if="agentStore.flowResults.length > 0" class="action-btn primary" @click="router.push('/agent/publish')">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
             <path d="M6.5 1v9M3.5 4L6.5 1l3 3"/><path d="M1 10v2h11v-2"/>
           </svg>
-          前往发布
+          {{ t('agentBulletin.goPublish') }}
         </button>
       </div>
     </div>
@@ -34,9 +34,9 @@
     <!-- 空状态 -->
     <div v-if="!meetingStore.topic && agentStore.flowResults.length === 0" class="empty-state">
       <div class="empty-icon">📋</div>
-      <div class="empty-title">暂无公告</div>
-      <div class="empty-desc">在会议室召开会议后，决议和任务产出会自动显示在这里</div>
-      <button class="goto-meeting-btn" @click="router.push('/agent/meeting')">前往会议室</button>
+      <div class="empty-title">{{ t('agentBulletin.emptyTitle') }}</div>
+      <div class="empty-desc">{{ t('agentBulletin.emptyDesc') }}</div>
+      <button class="goto-meeting-btn" @click="router.push('/agent/meeting')">{{ t('agentBulletin.gotoMeeting') }}</button>
     </div>
 
     <template v-else>
@@ -46,7 +46,7 @@
         <div class="section-hd">
           <div class="section-hd-left">
             <span class="section-icon">🎯</span>
-            <span class="section-title">最近会议决议</span>
+            <span class="section-title">{{ t('agentBulletin.recentDecision') }}</span>
             <span class="phase-pill" :class="'pill-' + meetingStore.phase">{{ phaseLabel }}</span>
           </div>
           <span class="section-topic">{{ meetingStore.topic }}</span>
@@ -74,7 +74,7 @@
 
         <!-- 会议纪要 -->
         <div v-if="meetingStore.summary" class="summary-block">
-          <div class="summary-label">会议纪要</div>
+          <div class="summary-label">{{ t('agentBulletin.summary') }}</div>
           <div class="summary-text">{{ meetingStore.summary }}</div>
         </div>
       </div>
@@ -84,11 +84,11 @@
         <div class="section-hd">
           <div class="section-hd-left">
             <span class="section-icon">📦</span>
-            <span class="section-title">内容产出</span>
-            <span class="count-badge">{{ agentStore.flowResults.length }} 条</span>
+            <span class="section-title">{{ t('agentBulletin.output') }}</span>
+            <span class="count-badge">{{ agentStore.flowResults.length }} {{ t('common.items') }}</span>
           </div>
           <button class="goto-publish-link" @click="router.push('/agent/publish')">
-            前往发布部 →
+            {{ t('agentBulletin.goPublishDept') }} →
           </button>
         </div>
 
@@ -109,10 +109,10 @@
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
                   <rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><path d="M2 8.5V1.5h7"/>
                 </svg>
-                复制
+                {{ t('common.copy') }}
               </button>
               <button class="output-btn primary" @click="router.push('/agent/publish')">
-                查看
+                {{ t('common.view') }}
               </button>
             </div>
           </div>
@@ -127,6 +127,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useMeetingStore } from '@/stores/meeting'
 import { useTrendingStore } from '@/stores/agent'
@@ -134,21 +135,26 @@ import { useTrendingStore } from '@/stores/agent'
 const router = useRouter()
 const meetingStore = useMeetingStore()
 const agentStore = useTrendingStore()
+const { t } = useI18n()
 
 const STAFF: Record<string, { title: string; emoji: string; color: string }> = {
-  captain:    { title: 'Captain',  emoji: '🎯', color: '#6366f1' },
-  copywriter: { title: '文案专员', emoji: '✍️', color: '#f59e0b' },
-  video:      { title: '视频专员', emoji: '🎬', color: '#ef4444' },
-  poster:     { title: '设计专员', emoji: '🎨', color: '#ec4899' },
-  brand:      { title: '品牌专员', emoji: '💎', color: '#8b5cf6' },
-  trend:      { title: '情报专员', emoji: '📈', color: '#06b6d4' },
-  publisher:  { title: '发布专员', emoji: '🚀', color: '#10b981' },
+  captain:    { title: t('agentBulletin.staffCaptain'), emoji: '🎯', color: '#6366f1' },
+  copywriter: { title: t('agentBulletin.staffCopywriter'), emoji: '✍️', color: '#f59e0b' },
+  video:      { title: t('agentBulletin.staffVideo'), emoji: '🎬', color: '#ef4444' },
+  poster:     { title: t('agentBulletin.staffPoster'), emoji: '🎨', color: '#ec4899' },
+  brand:      { title: t('agentBulletin.staffBrand'), emoji: '💎', color: '#8b5cf6' },
+  trend:      { title: t('agentBulletin.staffTrend'), emoji: '📈', color: '#06b6d4' },
+  publisher:  { title: t('agentBulletin.staffPublisher'), emoji: '🚀', color: '#10b981' },
 }
 
 const phaseLabel = computed(() => {
   const map: Record<string, string> = {
-    idle: '待机', opening: '开场中', discussing: '讨论中',
-    summarizing: '总结中', executing: '执行中', done: '已完成',
+    idle: t('agentBulletin.phaseIdle'),
+    opening: t('agentBulletin.phaseOpening'),
+    discussing: t('agentBulletin.phaseDiscussing'),
+    summarizing: t('agentBulletin.phaseSummarizing'),
+    executing: t('agentBulletin.phaseExecuting'),
+    done: t('agentBulletin.phaseDone'),
   }
   return map[meetingStore.phase] || ''
 })
@@ -160,19 +166,23 @@ function execClass(agentId: string) {
 
 function execLabel(agentId: string) {
   const s = meetingStore.executionStatus[agentId]
-  if (!s || s === 'pending') return '待执行'
-  if (s === 'running') return '执行中'
-  if (s === 'done') return '已完成'
-  return '出错'
+  if (!s || s === 'pending') return t('agentBulletin.execPending')
+  if (s === 'running') return t('agentBulletin.execRunning')
+  if (s === 'done') return t('agentBulletin.execDone')
+  return t('agentBulletin.execError')
 }
 
 function typeLabel(type: string) {
-  return { copy: '文案', poster: '图文', video_script: '视频脚本' }[type] ?? type
+  return {
+    copy: t('agentBulletin.typeCopy'),
+    poster: t('agentBulletin.typePoster'),
+    video_script: t('agentBulletin.typeVideoScript'),
+  }[type] ?? type
 }
 
 async function copyText(text: string) {
   await navigator.clipboard.writeText(text)
-  ElMessage.success('已复制')
+  ElMessage.success(t('agentBulletin.copied'))
 }
 </script>
 

@@ -2,10 +2,10 @@
   <div class="payable-page">
     <!-- 顶部汇总 -->
     <div class="summary-bar">
-      <span class="summary-item">应付总金额：<strong class="red">{{ fmt(summaryUnpaid) }}</strong></span>
-      <span class="summary-item">已付总金额：<strong class="blue">{{ fmt(summaryPaid) }}</strong></span>
-      <span class="summary-item">业务总额：<strong class="orange">{{ fmt(summaryOrder) }}</strong></span>
-      <span class="summary-item">退货总金额：<strong>{{ fmt(summaryReturn) }}</strong></span>
+      <span class="summary-item">{{ $t('finance.payable.summaryUnpaid') }}：<strong class="red">{{ fmt(summaryUnpaid) }}</strong></span>
+      <span class="summary-item">{{ $t('finance.payable.summaryPaid') }}：<strong class="blue">{{ fmt(summaryPaid) }}</strong></span>
+      <span class="summary-item">{{ $t('finance.payable.summaryOrder') }}：<strong class="orange">{{ fmt(summaryOrder) }}</strong></span>
+      <span class="summary-item">{{ $t('finance.payable.summaryReturn') }}：<strong>{{ fmt(summaryReturn) }}</strong></span>
     </div>
 
     <el-card class="table-card">
@@ -14,7 +14,7 @@
         <div class="search-area">
           <el-select
             v-model="searchForm.supplier_name"
-            placeholder="请选择供应商"
+            :placeholder="$t('finance.payable.searchSupplierPlaceholder')"
             clearable
             filterable
             style="width:200px"
@@ -24,65 +24,65 @@
           <el-date-picker
             v-model="searchForm.date_from"
             type="date"
-            placeholder="开始日期"
+            :placeholder="$t('finance.payable.searchDateFrom')"
             value-format="YYYY-MM-DD"
             style="width:140px"
           />
-          <span style="color:rgba(29,29,31,0.35)">至</span>
+          <span style="color:rgba(29,29,31,0.35)">{{ $t('finance.payable.searchDateSeparator') }}</span>
           <el-date-picker
             v-model="searchForm.date_to"
             type="date"
-            placeholder="结束日期"
+            :placeholder="$t('finance.payable.searchDateTo')"
             value-format="YYYY-MM-DD"
             style="width:140px"
           />
-          <el-button type="primary" :icon="Search" @click="load">查询</el-button>
-          <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="load">{{ $t('finance.payable.btnSearch') }}</el-button>
+          <el-button :icon="Refresh" @click="resetSearch">{{ $t('finance.payable.btnReset') }}</el-button>
         </div>
       </div>
 
       <!-- 表格 -->
       <el-table :data="displayRows" v-loading="loading" border stripe style="width:100%" size="default">
         <el-table-column type="selection" width="44" />
-        <el-table-column v-if="!isMobile" type="index" label="序号" width="60" align="center" />
-        <el-table-column v-if="!isMobile" label="来源" width="100" align="center">
+        <el-table-column v-if="!isMobile" type="index" :label="$t('finance.payable.colIndex')" width="60" align="center" />
+        <el-table-column v-if="!isMobile" :label="$t('finance.payable.colSource')" width="100" align="center">
           <template #default="{ row }">
             <el-tag
-              :type="row.__payable_source === 'expense' ? 'warning' : row.__payable_source === 'contract_fee' ? 'info' : 'primary'"
+              :type="row.__payable_source === 'expense' ? 'warning' : row.__payable_source === 'contract_fee' ? 'info' : row.__payable_source === 'retail_fee' ? 'success' : 'primary'"
               size="small"
             >
-              {{ row.source_name || (row.__payable_source === 'expense' ? '生产成本' : row.__payable_source === 'contract_fee' ? '合同附加费' : '采购') }}
+              {{ row.source_name || (row.__payable_source === 'expense' ? $t('finance.payable.sourceProduction') : row.__payable_source === 'contract_fee' ? $t('finance.payable.sourceContractFee') : row.__payable_source === 'retail_fee' ? $t('finance.payable.sourceRetailFee') : $t('finance.payable.sourcePurchase')) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="supplier_name" label="供应商" min-width="150" />
-        <el-table-column v-if="!isMobile" prop="contact_name" label="联系人" min-width="100" />
-        <el-table-column v-if="!isMobile" prop="contact_mobile" label="联系电话" min-width="130" />
-        <el-table-column v-if="!isMobile" label="预付款" min-width="110" align="right">
+        <el-table-column prop="supplier_name" :label="$t('finance.payable.colSupplier')" min-width="150" />
+        <el-table-column v-if="!isMobile" prop="contact_name" :label="$t('finance.payable.colContact')" min-width="100" />
+        <el-table-column v-if="!isMobile" prop="contact_mobile" :label="$t('finance.payable.colMobile')" min-width="130" />
+        <el-table-column v-if="!isMobile" :label="$t('finance.payable.colPrepay')" min-width="110" align="right">
           <template #default="{ row }">{{ fmt(row.prepay || 0) }}</template>
         </el-table-column>
-        <el-table-column label="业务金额" min-width="120" align="right">
+        <el-table-column :label="$t('finance.payable.colOrderAmount')" min-width="120" align="right">
           <template #default="{ row }">
             <span style="font-weight:600">{{ fmt(row.order_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column v-if="!isMobile" label="已付欠款" min-width="120" align="right">
+        <el-table-column v-if="!isMobile" :label="$t('finance.payable.colPaidAmount')" min-width="120" align="right">
           <template #default="{ row }">
             <span style="color:#0071e3">{{ fmt(row.paid_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="应付欠款" min-width="120" align="right">
+        <el-table-column :label="$t('finance.payable.colUnpaidAmount')" min-width="120" align="right">
           <template #default="{ row }">
             <span :style="{ color: Number(row.un_pay_amount) > 0 ? '#dc2626' : Number(row.un_pay_amount) < 0 ? '#d97706' : '#16a34a', fontWeight: '600' }">
               {{ fmt(row.un_pay_amount) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="130" fixed="right" align="center">
+        <el-table-column :label="$t('finance.payable.colActions')" width="130" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="viewDetail(row)">欠款详情</el-button>
-            <el-button v-if="row.__payable_source !== 'expense'" type="warning" link size="small" @click="goPay(row)">付款</el-button>
-            <el-button v-else type="warning" link size="small" @click="router.push('/finance/expense')">费用</el-button>
+            <el-button type="primary" link size="small" @click="viewDetail(row)">{{ $t('finance.payable.btnDebtDetail') }}</el-button>
+            <el-button v-if="row.__payable_source !== 'expense'" type="warning" link size="small" @click="goPay(row)">{{ $t('finance.payable.btnPay') }}</el-button>
+            <el-button v-else type="warning" link size="small" @click="router.push('/finance/expense')">{{ $t('finance.payable.btnExpense') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -102,23 +102,23 @@
     </el-card>
 
     <!-- 欠款详情弹框 -->
-    <el-dialog v-model="detailVisible" :title="`${detailSupplier} - 欠款详情`" width="min(960px, 95vw)" destroy-on-close>
+    <el-dialog v-model="detailVisible" :title="`${detailSupplier} - ${$t('finance.payable.btnDebtDetail')}`" width="min(960px, 95vw)" destroy-on-close>
       <el-table :data="detailRows" border size="small">
-        <el-table-column type="index" label="序号" width="56" align="center" />
-        <el-table-column prop="source_name" label="来源" min-width="100">
-          <template #default="{ row }">{{ row.source_name || '采购' }}</template>
+        <el-table-column type="index" :label="$t('finance.payable.detailColIndex')" width="56" align="center" />
+        <el-table-column prop="source_name" :label="$t('finance.payable.detailColSource')" min-width="100">
+          <template #default="{ row }">{{ row.source_name || $t('finance.payable.detailSourceFallback') }}</template>
         </el-table-column>
-        <el-table-column prop="order_no" label="单号" min-width="150" />
-        <el-table-column label="订单金额" min-width="110" align="right">
+        <el-table-column prop="order_no" :label="$t('finance.payable.detailColOrderNo')" min-width="150" />
+        <el-table-column :label="$t('finance.payable.detailColOrderAmount')" min-width="110" align="right">
           <template #default="{ row }">{{ fmt(row.order_amount) }}</template>
         </el-table-column>
-        <el-table-column label="已付金额" min-width="110" align="right">
+        <el-table-column :label="$t('finance.payable.detailColPaidAmount')" min-width="110" align="right">
           <template #default="{ row }"><span style="color:#0071e3">{{ fmt(row.paid_amount) }}</span></template>
         </el-table-column>
-        <el-table-column label="应付金额" min-width="110" align="right">
+        <el-table-column :label="$t('finance.payable.detailColUnpaidAmount')" min-width="110" align="right">
           <template #default="{ row }"><span :style="{ color: Number(row.un_pay_amount) < 0 ? '#d97706' : '#dc2626', fontWeight: '600' }">{{ fmt(row.un_pay_amount) }}</span></template>
         </el-table-column>
-        <el-table-column label="付款账户" min-width="120">
+        <el-table-column :label="$t('finance.payable.detailColPayAccount')" min-width="120">
           <template #default="{ row }">
             <span v-if="Number(row.paid_amount) > 0 && row.fund_names && row.fund_names.length" style="color:rgba(29,29,31,0.7);font-size:12px">
               {{ row.fund_names.join('、') }}
@@ -126,11 +126,11 @@
             <span v-else style="color:rgba(29,29,31,0.3);font-size:12px">—</span>
           </template>
         </el-table-column>
-        <el-table-column prop="due_date" label="订单日期" min-width="110" />
-        <el-table-column label="操作" width="110" align="center">
+        <el-table-column prop="due_date" :label="$t('finance.payable.detailColOrderDate')" min-width="110" />
+        <el-table-column :label="$t('finance.payable.detailColActions')" width="110" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="goToOrder(row)">查看原单</el-button>
-            <el-button v-if="Number(row.un_pay_amount) > 0" type="warning" link size="small" @click="goPaySingle(row)">付款</el-button>
+            <el-button type="primary" link size="small" @click="goToOrder(row)">{{ $t('finance.payable.detailBtnViewOrder') }}</el-button>
+            <el-button v-if="Number(row.un_pay_amount) > 0" type="warning" link size="small" @click="goPaySingle(row)">{{ $t('finance.payable.detailBtnPay') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -141,16 +141,19 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import http from '@/api/http'
 import { getExpenseList, getPayReceiptList } from '@/api/finance'
+import { getRetailOrderList } from '@/api/retail'
 import { getSupplierList } from '@/api/procure'
 import { applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
-import { getProcureOrderSupplierLabel } from '@/utils/supplierLabel'
+import { getProcureOrderSupplierLabel, getProcureOrderSupplierId } from '@/utils/supplierLabel'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
 import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const isMobile = ref(window.innerWidth < 768)
@@ -212,9 +215,10 @@ async function load() {
       getExpenseList({ list_rows: 1000 }),
       getPayReceiptList({ list_rows: 2000 }),
       http.get('/shop/ContractOrder/index', { params: { list_rows: 2000 } }),
+      getRetailOrderList({ list_rows: 2000 }),
     ])
     const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
-    const [orderRes, returnRes, supplierRes, expenseRes, payReceiptRes, contractRes] = settled.map((_, i) => ok(i))
+    const [orderRes, returnRes, supplierRes, expenseRes, payReceiptRes, contractRes, retailRes] = settled.map((_, i) => ok(i))
 
     // 构建资金账户 id→name 映射，用于付款单 fund_name 缺失时的回退
     const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 200 } }).catch(() => ({ data: { rows: [] } }))
@@ -227,25 +231,6 @@ async function load() {
     )
     const procureFeePaidById = buildProcureFeePaidByOrder(manualPayList)
 
-    // 构建手动付款匹配 map（按 order_id 优先，其次 order_sn）
-    const manualPaidById: Record<number, number> = {}
-    const manualPaidBySn: Record<string, number> = {}
-    for (const r of manualPayList) {
-      if (String(r.contact_type || '') !== 'supplier') continue
-      const amt = Number(r.amount || 0)
-      if (!amt) continue
-      if (Number(r.order_id)) {
-        manualPaidById[Number(r.order_id)] = (manualPaidById[Number(r.order_id)] || 0) + amt
-      } else {
-        const sn = String(r.order_sn || '').trim()
-        if (sn) manualPaidBySn[sn] = (manualPaidBySn[sn] || 0) + amt
-        const m = String(r.remark || '').match(/采购单(?:自动)?付款\s*#(\d+)/)
-        if (m) {
-          const rid = Number(m[1])
-          if (rid) manualPaidById[rid] = (manualPaidById[rid] || 0) + amt
-        }
-      }
-    }
 
     const orders: any[] = (orderRes.data?.rows ?? []).filter((o: any) => Number(o.status) === 1)
 
@@ -274,10 +259,11 @@ async function load() {
     const supplierMap = new Map<string, any>()
     for (const o of orders) {
       const displayName = getProcureOrderSupplierLabel(o, supplierRes.data?.rows ?? [])
-      const key = displayName === '多供应商' ? `order:${o.id}` : (o.supplier_id ? `id:${o.supplier_id}` : `name:${String(o.supplier_name || '').trim()}`)
+      const resolvedSupplierId = getProcureOrderSupplierId(o)
+      const key = displayName === '多供应商' ? `order:${o.id}` : (resolvedSupplierId ? `id:${resolvedSupplierId}` : `name:${String(displayName || '').trim()}`)
       if (!supplierMap.has(key)) {
         supplierMap.set(key, {
-          supplier_id: displayName === '多供应商' ? 0 : (o.supplier_id || 0),
+          supplier_id: displayName === '多供应商' ? 0 : resolvedSupplierId,
           supplier_name: displayName,
           contact_name: o.contact_name || '',
           contact_mobile: o.contact_mobile || '',
@@ -414,7 +400,71 @@ async function load() {
       .filter(r => !searchForm.supplier_name || r.supplier_name.includes(searchForm.supplier_name))
       .filter(r => r.un_pay_amount > 0.001)
 
-    rawRows.value = [...aggregated.filter(s => s.un_pay_amount > 0), ...expensePayables, ...contractFeeRows]
+    // 零售附加费用：按费用名聚合未付金额
+    const retailFeePaidMap: Record<string, number> = {}
+    for (const r of manualPayList) {
+      const m = String(r.remark || '').match(/零售附加费用\s*#(\d+):(.+?)(?:\s|$)/)
+      if (m) {
+        const key = `${m[1]}:${m[2].trim()}`
+        retailFeePaidMap[key] = (retailFeePaidMap[key] || 0) + Number(r.amount || 0)
+      }
+    }
+    // 后端列表接口不返回 fee_items，从 RetailOrder 页面写入的 localStorage 缓存读取
+    let retailFeeCache: Record<string, any[]> = {}
+    try { retailFeeCache = JSON.parse(localStorage.getItem('retail_fee_items_cache_v1') || '{}') } catch {}
+
+    const retailOrders: any[] = (retailRes.data?.rows ?? []).filter((o: any) => Number(o.status) === 1)
+    const retailFeeMap = new Map<string, { order_amount: number; paid_amount: number; orders: any[] }>()
+    for (const o of retailOrders) {
+      let feeItems: any[] = []
+      try {
+        if (o.fee_items !== undefined && o.fee_items !== null) {
+          feeItems = Array.isArray(o.fee_items) ? o.fee_items : JSON.parse(o.fee_items || '[]')
+        } else {
+          feeItems = retailFeeCache[String(o.id)] ?? []
+        }
+      } catch { feeItems = [] }
+      for (const f of feeItems) {
+        // 只有明确标记为 buyer（我方承担）才进应付；老数据未标记或其他值一律不算
+        if (f.bearer !== 'buyer') continue
+        const amt = Number(f.amount || 0)
+        if (!amt) continue
+        const feeName = String(f.name || '费用').trim()
+        const paid = retailFeePaidMap[`${o.id}:${feeName}`] || 0
+        const unpaid = amt - paid
+        if (unpaid <= 0.001) continue
+        if (!retailFeeMap.has(feeName)) retailFeeMap.set(feeName, { order_amount: 0, paid_amount: 0, orders: [] })
+        const entry = retailFeeMap.get(feeName)!
+        entry.order_amount += amt
+        entry.paid_amount += paid
+        entry.orders.push({
+          order_id: o.id,
+          order_no: o.order_sn || `LS${String(o.id).padStart(3, '0')}`,
+          order_amount: amt,
+          paid_amount: paid,
+          un_pay_amount: unpaid,
+          due_date: o.order_date || '',
+          source_name: `零售-${feeName}`,
+        })
+      }
+    }
+    const retailFeeRows = Array.from(retailFeeMap.entries())
+      .map(([feeName, entry]) => ({
+        supplier_id: 0,
+        supplier_name: feeName,
+        contact_name: '',
+        contact_mobile: '',
+        order_amount: entry.order_amount,
+        paid_amount: entry.paid_amount,
+        un_pay_amount: entry.order_amount - entry.paid_amount,
+        prepay: 0,
+        orders: entry.orders,
+        __payable_source: 'retail_fee',
+        source_name: '零售附加费',
+      }))
+      .filter(r => r.un_pay_amount > 0.001)
+
+    rawRows.value = [...aggregated.filter(s => s.un_pay_amount > 0), ...expensePayables, ...contractFeeRows, ...retailFeeRows]
     procureReturnRows.value = returnRes.data?.rows ?? []
     allPayReceipts.value = rawPayList
     total.value = filteredRows.value.length

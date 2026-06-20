@@ -3,22 +3,22 @@
     <!-- Header -->
     <div class="ro-header">
       <div>
-        <div class="ro-badge">Reports Dashboard</div>
-        <h2 class="ro-title">报表总览</h2>
-        <p class="ro-sub">基于销售订单 · 零售订单 · 采购订单的实时核算</p>
+        <div class="ro-badge">{{ $t('reports.overview.badge') }}</div>
+        <h2 class="ro-title">{{ $t('reports.overview.title') }}</h2>
+        <p class="ro-sub">{{ $t('reports.overview.subtitle') }}</p>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <el-date-picker
           v-model="dateRange"
           type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
+          :range-separator="$t('reports.overview.rangeSeparator')"
+          :start-placeholder="$t('reports.overview.startDate')"
+          :end-placeholder="$t('reports.overview.endDate')"
           value-format="YYYY-MM-DD"
           style="width:240px"
           @change="loadAll"
         />
-        <el-button :icon="Refresh" :loading="loading" @click="loadAll">刷新</el-button>
+        <el-button :icon="Refresh" :loading="loading" @click="loadAll">{{ $t('reports.overview.refresh') }}</el-button>
       </div>
     </div>
 
@@ -29,9 +29,9 @@
           <el-icon :size="22" color="#16a34a"><Money /></el-icon>
         </div>
         <div>
-          <div class="ro-kpi-label">销售订单收入</div>
+          <div class="ro-kpi-label">{{ $t('reports.overview.kpiSaleIncome') }}</div>
           <div class="ro-kpi-value" style="color:#16a34a">¥{{ fmt(saleTotal) }}</div>
-          <div class="ro-kpi-sub">{{ saleContracts.length }} 笔合同 · 点击查看</div>
+          <div class="ro-kpi-sub">{{ $t('reports.overview.kpiSaleSub', { n: saleContracts.length }) }}</div>
         </div>
       </div>
       <div class="ro-kpi-card ro-kpi-clickable" @click="$router.push('/retail/order')">
@@ -39,9 +39,9 @@
           <el-icon :size="22" color="#16a34a"><Shop /></el-icon>
         </div>
         <div>
-          <div class="ro-kpi-label">零售订单收入</div>
+          <div class="ro-kpi-label">{{ $t('reports.overview.kpiRetailIncome') }}</div>
           <div class="ro-kpi-value" style="color:#16a34a">¥{{ fmt(retailTotal) }}</div>
-          <div class="ro-kpi-sub">{{ retailOrders.length }} 笔订单 · 点击查看</div>
+          <div class="ro-kpi-sub">{{ $t('reports.overview.kpiRetailSub', { n: retailOrders.length }) }}</div>
         </div>
       </div>
       <div class="ro-kpi-card ro-kpi-clickable" @click="$router.push('/procure/order')">
@@ -49,9 +49,9 @@
           <el-icon :size="22" color="#dc2626"><ShoppingCart /></el-icon>
         </div>
         <div>
-          <div class="ro-kpi-label">采购总支出</div>
+          <div class="ro-kpi-label">{{ $t('reports.overview.kpiProcureExpense') }}</div>
           <div class="ro-kpi-value" style="color:#dc2626">¥{{ fmt(procureTotal) }}</div>
-          <div class="ro-kpi-sub">{{ procureOrders.length }} 笔采购 · 点击查看</div>
+          <div class="ro-kpi-sub">{{ $t('reports.overview.kpiProcureSub', { n: procureOrders.length }) }}</div>
         </div>
       </div>
       <div class="ro-kpi-card ro-kpi-clickable" @click="$router.push('/reports/profit')">
@@ -59,11 +59,11 @@
           <el-icon :size="22" :color="netProfit >= 0 ? '#16a34a' : '#dc2626'"><TrendCharts /></el-icon>
         </div>
         <div>
-          <div class="ro-kpi-label">净利润</div>
+          <div class="ro-kpi-label">{{ $t('reports.overview.kpiNetProfit') }}</div>
           <div class="ro-kpi-value" :style="{ color: netProfit >= 0 ? '#16a34a' : '#dc2626' }">
             {{ netProfit >= 0 ? '' : '-' }}¥{{ fmt(Math.abs(netProfit)) }}
           </div>
-          <div class="ro-kpi-sub">毛利率 {{ grossMargin.toFixed(1) }}% · 净利率 {{ netMargin.toFixed(1) }}%</div>
+          <div class="ro-kpi-sub">{{ $t('reports.overview.kpiMargin', { gross: grossMargin.toFixed(1), net: netMargin.toFixed(1) }) }}</div>
         </div>
       </div>
     </div>
@@ -74,15 +74,15 @@
         <div class="ro-card-header">
           <div class="ro-card-title">
             <el-icon :size="14" style="vertical-align:middle;margin-right:4px"><TrendCharts /></el-icon>
-            利润趋势
+            {{ $t('reports.overview.trendTitle') }}
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <el-radio-group v-model="reportTrendRange" size="small">
-              <el-radio-button value="7d">7天</el-radio-button>
-              <el-radio-button value="3m">3个月</el-radio-button>
-              <el-radio-button value="all">全部</el-radio-button>
+              <el-radio-button value="7d">{{ $t('reports.overview.trend7d') }}</el-radio-button>
+              <el-radio-button value="3m">{{ $t('reports.overview.trend3m') }}</el-radio-button>
+              <el-radio-button value="all">{{ $t('reports.overview.trendAll') }}</el-radio-button>
             </el-radio-group>
-            <router-link to="/reports/profit" class="ro-link">完整报表 →</router-link>
+            <router-link to="/reports/profit" class="ro-link">{{ $t('reports.overview.fullReport') }} →</router-link>
           </div>
         </div>
         <div style="display:flex;gap:16px;align-items:flex-start">
@@ -110,40 +110,40 @@
       </div>
       <div class="ro-chart-card" style="flex:1;min-width:200px;cursor:pointer" @click="$router.push('/reports/profit')">
         <div class="ro-card-header" style="margin-bottom:12px">
-          <div class="ro-card-title">利润分析</div>
-          <span class="ro-link">明细 →</span>
+          <div class="ro-card-title">{{ $t('reports.overview.profitAnalysis') }}</div>
+          <span class="ro-link">{{ $t('reports.overview.profitDetail') }} →</span>
         </div>
-        <div style="font-size:11px;color:rgba(29,29,31,0.35);margin-bottom:16px">按成本价 × 销量 = COGS</div>
+        <div style="font-size:11px;color:rgba(29,29,31,0.35);margin-bottom:16px">{{ $t('reports.overview.cogsSub') }}</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;color:rgba(29,29,31,0.5)">营业收入</span>
+            <span style="font-size:12px;color:rgba(29,29,31,0.5)">{{ $t('reports.overview.totalRevenue') }}</span>
             <span style="font-size:14px;font-weight:600;color:#16a34a">¥{{ fmt(saleTotal + retailTotal) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;color:rgba(29,29,31,0.5)">商品成本(COGS)</span>
+            <span style="font-size:12px;color:rgba(29,29,31,0.5)">{{ $t('reports.overview.cogsLabel') }}</span>
             <span style="font-size:13px;font-weight:600;color:#dc2626">−¥{{ fmt(saleTotal + retailTotal - grossProfit) }}</span>
           </div>
           <div style="border-top:1px solid #f0f0f5;padding-top:8px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;color:rgba(29,29,31,0.5)">毛利润</span>
+            <span style="font-size:12px;color:rgba(29,29,31,0.5)">{{ $t('reports.overview.grossProfit') }}</span>
             <span style="font-size:14px;font-weight:700" :style="{color: grossProfit >= 0 ? '#16a34a' : '#dc2626'}">
               {{ grossProfit >= 0 ? '+' : '−' }}¥{{ fmt(Math.abs(grossProfit)) }}
             </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding-left:8px">
-            <span style="font-size:11px;color:rgba(29,29,31,0.4)">运费承担</span>
+            <span style="font-size:11px;color:rgba(29,29,31,0.4)">{{ $t('reports.overview.freightBearing') }}</span>
             <span style="font-size:12px;color:#dc2626">−¥{{ fmt(freightTotal) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding-left:8px">
-            <span style="font-size:11px;color:rgba(29,29,31,0.4)">费用支出</span>
+            <span style="font-size:11px;color:rgba(29,29,31,0.4)">{{ $t('reports.overview.expenseOut') }}</span>
             <span style="font-size:12px;color:#dc2626">−¥{{ fmt(expenseTotal) }}</span>
           </div>
           <div style="border-top:2px solid #f0f0f5;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;font-weight:700;color:#1d1d1f">净利润</span>
+            <span style="font-size:13px;font-weight:700;color:#1d1d1f">{{ $t('reports.overview.netProfitLabel') }}</span>
             <span style="font-size:18px;font-weight:800" :style="{color: netProfit >= 0 ? '#16a34a' : '#dc2626'}">
               {{ netProfit >= 0 ? '+' : '−' }}¥{{ fmt(Math.abs(netProfit)) }}
             </span>
           </div>
-          <div style="font-size:11px;color:rgba(29,29,31,0.35);text-align:right">毛利率 {{ grossMargin.toFixed(1) }}% · 净利率 {{ netMargin.toFixed(1) }}%</div>
+          <div style="font-size:11px;color:rgba(29,29,31,0.35);text-align:right">{{ $t('reports.overview.marginLine', { gross: grossMargin.toFixed(1), net: netMargin.toFixed(1) }) }}</div>
         </div>
       </div>
     </div>
@@ -152,140 +152,140 @@
     <div class="ro-chart-card">
       <div class="ro-card-header">
         <div class="ro-card-title">
-          利润核算表
-          <span class="ro-card-hint">收入（合同+零售）− 采购支出 = 毛利润</span>
+          {{ $t('reports.overview.accountingTitle') }}
+          <span class="ro-card-hint">{{ $t('reports.overview.accountingHint') }}</span>
         </div>
-        <router-link to="/reports/profit" class="ro-link">查看完整利润报表 →</router-link>
+        <router-link to="/reports/profit" class="ro-link">{{ $t('reports.overview.viewFullProfit') }} →</router-link>
       </div>
 
       <div class="ro-profit-body">
         <!-- 收入 -->
         <div class="ro-profit-col">
           <div class="ro-col-header green-header">
-            <span>收入来源</span>
+            <span>{{ $t('reports.overview.incomeSource') }}</span>
             <span>¥{{ fmt(saleTotal + retailTotal) }}</span>
           </div>
-          <div class="ro-section-label">销售订单（{{ saleContracts.length }} 单）</div>
-          <div v-if="saleContracts.length === 0 && !loading" class="ro-empty-sm">暂无已审核合同</div>
+          <div class="ro-section-label">{{ $t('reports.overview.saleSection', { n: saleContracts.length }) }}</div>
+          <div v-if="saleContracts.length === 0 && !loading" class="ro-empty-sm">{{ $t('reports.overview.noAuditedContract') }}</div>
           <div v-for="row in saleContracts.slice(0, 6)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.customer_name || row.order_sn || '-' }}</span>
             <span class="ro-dr-date">{{ fmtDt(row.sign_date || row.created_at) }}</span>
             <span class="ro-dr-amt green">+¥{{ fmt(row.total_amount || 0) }}</span>
           </div>
-          <div v-if="saleContracts.length > 6" class="ro-more">还有 {{ saleContracts.length - 6 }} 笔合同...</div>
+          <div v-if="saleContracts.length > 6" class="ro-more">{{ $t('reports.overview.moreContracts', { n: saleContracts.length - 6 }) }}</div>
 
-          <div class="ro-section-label" style="margin-top:12px">零售订单（{{ retailOrders.length }} 单）</div>
-          <div v-if="retailOrders.length === 0 && !loading" class="ro-empty-sm">暂无零售订单</div>
+          <div class="ro-section-label" style="margin-top:12px">{{ $t('reports.overview.retailSection', { n: retailOrders.length }) }}</div>
+          <div v-if="retailOrders.length === 0 && !loading" class="ro-empty-sm">{{ $t('reports.overview.noRetailOrder') }}</div>
           <div v-for="row in retailOrders.slice(0, 6)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.member_name || row.customer_name || '散客' }}</span>
             <span class="ro-dr-date">{{ fmtDt(row.order_date || row.created_at) }}</span>
             <span class="ro-dr-amt green">+¥{{ fmt(row.pay_amount || row.total_amount || 0) }}</span>
           </div>
-          <div v-if="retailOrders.length > 6" class="ro-more">还有 {{ retailOrders.length - 6 }} 笔订单...</div>
+          <div v-if="retailOrders.length > 6" class="ro-more">{{ $t('reports.overview.moreOrders', { n: retailOrders.length - 6 }) }}</div>
         </div>
 
         <!-- 支出 -->
         <div class="ro-profit-col">
           <div class="ro-col-header red-header">
-            <span>支出明细</span>
+            <span>{{ $t('reports.overview.expenseDetail') }}</span>
             <span>¥{{ fmt(procureTotal + freightTotal + expenseTotal) }}</span>
           </div>
-          <div class="ro-section-label">采购订单（{{ procureOrders.length }} 单）</div>
-          <div v-if="procureOrders.length === 0 && !loading" class="ro-empty-sm">暂无采购订单</div>
+          <div class="ro-section-label">{{ $t('reports.overview.procureSection', { n: procureOrders.length }) }}</div>
+          <div v-if="procureOrders.length === 0 && !loading" class="ro-empty-sm">{{ $t('reports.overview.noProcureOrder') }}</div>
           <div v-for="row in procureOrders.slice(0, 8)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ getProcureSupplierLabel(row) || row.order_sn || '-' }}</span>
             <span class="ro-dr-date">{{ fmtDt(row.order_date || row.created_at) }}</span>
             <span class="ro-dr-amt red">−¥{{ fmt(row.total_amount || 0) }}</span>
           </div>
-          <div v-if="procureOrders.length > 8" class="ro-more">还有 {{ procureOrders.length - 8 }} 笔采购...</div>
+          <div v-if="procureOrders.length > 8" class="ro-more">{{ $t('reports.overview.moreProcure', { n: procureOrders.length - 8 }) }}</div>
 
-          <div class="ro-section-label" style="margin-top:12px">我方承担运费</div>
-          <div v-if="freightTotal === 0 && !loading" class="ro-empty-sm">无运费承担</div>
+          <div class="ro-section-label" style="margin-top:12px">{{ $t('reports.overview.freightSection') }}</div>
+          <div v-if="freightTotal === 0 && !loading" class="ro-empty-sm">{{ $t('reports.overview.noFreight') }}</div>
           <div v-for="row in freightRows" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.customer_name || '-' }}（{{ freightLabel(row) }}）</span>
             <span class="ro-dr-date">{{ fmtDt(row.sign_date || row.created_at) }}</span>
             <span class="ro-dr-amt red">−¥{{ fmt(myFreight(row)) }}</span>
           </div>
 
-          <div class="ro-section-label" style="margin-top:12px">费用支出（{{ expenseList.length }} 笔）</div>
-          <div v-if="expenseList.length === 0 && !loading" class="ro-empty-sm">暂无费用记录</div>
+          <div class="ro-section-label" style="margin-top:12px">{{ $t('reports.overview.expenseSection', { n: expenseList.length }) }}</div>
+          <div v-if="expenseList.length === 0 && !loading" class="ro-empty-sm">{{ $t('reports.overview.noExpense') }}</div>
           <div v-for="row in expenseList.slice(0, 6)" :key="row.id" class="ro-detail-row">
             <span class="ro-dr-name">{{ row.title || row.expense_type || '-' }}</span>
             <span class="ro-dr-date">{{ fmtDt(row.expense_date || row.created_at) }}</span>
             <span class="ro-dr-amt red">−¥{{ fmt(row.amount || 0) }}</span>
           </div>
-          <div v-if="expenseList.length > 6" class="ro-more">还有 {{ expenseList.length - 6 }} 笔费用...</div>
+          <div v-if="expenseList.length > 6" class="ro-more">{{ $t('reports.overview.moreExpense', { n: expenseList.length - 6 }) }}</div>
         </div>
 
         <!-- 汇总 -->
         <div class="ro-summary-col">
           <div class="ro-col-header ro-col-header-summary">
-            <span>核算汇总</span>
+            <span>{{ $t('reports.overview.summaryTitle') }}</span>
           </div>
           <div class="ro-sum-block">
             <div class="ro-sum-row">
-              <span class="ro-sum-label">合同收入</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.contractIncome') }}</span>
               <span style="color:#16a34a;font-weight:600">¥{{ fmt(saleTotal) }}</span>
             </div>
             <div class="ro-sum-row">
-              <span class="ro-sum-label">零售收入</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.retailIncome') }}</span>
               <span style="color:#16a34a;font-weight:600">¥{{ fmt(retailTotal) }}</span>
             </div>
             <div class="ro-sum-row ro-sum-total">
-              <span class="ro-sum-label">总收入</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.totalIncome') }}</span>
               <span style="color:#16a34a;font-size:17px;font-weight:800">¥{{ fmt(saleTotal + retailTotal) }}</span>
             </div>
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row">
-              <span class="ro-sum-label">采购支出</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.procureExpense') }}</span>
               <span style="color:#dc2626;font-weight:600">−¥{{ fmt(procureTotal) }}</span>
             </div>
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row ro-sum-total">
-              <span class="ro-sum-label">毛利润</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.grossProfitLabel') }}</span>
               <span :style="{ color: grossProfit >= 0 ? '#16a34a' : '#dc2626', fontSize:'18px', fontWeight:800 }">
                 {{ grossProfit >= 0 ? '+' : '-' }}¥{{ fmt(Math.abs(grossProfit)) }}
               </span>
             </div>
-            <div class="ro-sum-row ro-sum-hint">毛利率 {{ grossMargin.toFixed(1) }}%</div>
+            <div class="ro-sum-row ro-sum-hint">{{ $t('reports.overview.grossMargin') }} {{ grossMargin.toFixed(1) }}%</div>
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row">
-              <span class="ro-sum-label">我方运费</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.myFreight') }}</span>
               <span style="color:#dc2626;font-weight:600">−¥{{ fmt(freightTotal) }}</span>
             </div>
             <div class="ro-sum-row">
-              <span class="ro-sum-label">费用支出</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.expenses') }}</span>
               <span style="color:#dc2626;font-weight:600">−¥{{ fmt(expenseTotal) }}</span>
             </div>
             <div class="ro-sum-divider"></div>
             <div class="ro-sum-row ro-sum-total">
-              <span class="ro-sum-label" style="font-weight:700">净利润</span>
+              <span class="ro-sum-label" style="font-weight:700">{{ $t('reports.overview.netProfitSummary') }}</span>
               <span :style="{ color: netProfit >= 0 ? '#16a34a' : '#dc2626', fontSize:'20px', fontWeight:800 }">
                 {{ netProfit >= 0 ? '+' : '-' }}¥{{ fmt(Math.abs(netProfit)) }}
               </span>
             </div>
-            <div class="ro-sum-row ro-sum-hint">净利率 {{ netMargin.toFixed(1) }}%</div>
+            <div class="ro-sum-row ro-sum-hint">{{ $t('reports.overview.netMargin') }} {{ netMargin.toFixed(1) }}%</div>
           </div>
 
           <!-- 客户预收款余额（单独展示，不计入利润） -->
           <div class="ro-sum-block ro-prepay-block" style="margin-top:16px">
             <div class="ro-sum-row" style="cursor:pointer" @click="$router.push('/finance/prepay')">
-              <span class="ro-sum-label" style="color:#92400e;font-weight:600">客户预收款</span>
+              <span class="ro-sum-label" style="color:#92400e;font-weight:600">{{ $t('reports.overview.prepayTitle') }}</span>
               <span style="color:#d97706;font-size:15px;font-weight:800">¥{{ fmt(prepayTotalAmount) }}</span>
             </div>
             <div class="ro-sum-row">
-              <span class="ro-sum-label" style="color:#a16207">已核销</span>
+              <span class="ro-sum-label" style="color:#a16207">{{ $t('reports.overview.prepayVerified') }}</span>
               <span style="color:#d97706;font-weight:600">−¥{{ fmt(prepayUsedAmount) }}</span>
             </div>
             <div class="ro-sum-divider" style="background:#fde68a"></div>
             <div class="ro-sum-row">
-              <span class="ro-sum-label" style="color:#92400e;font-weight:700">待核销余额</span>
+              <span class="ro-sum-label" style="color:#92400e;font-weight:700">{{ $t('reports.overview.prepayBalance') }}</span>
               <span style="color:#d97706;font-size:17px;font-weight:800">¥{{ fmt(prepayBalance) }}</span>
             </div>
             <!-- 核销明细：按客户展示已核销合同 -->
             <div v-if="prepayVerifyRows.length > 0" style="margin-top:10px">
               <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#a16207;margin-bottom:6px">
-                核销明细
+                {{ $t('reports.overview.verifyDetail') }}
               </div>
               <div v-for="item in prepayVerifyRows" :key="item.customer_id" class="ro-prepay-verify-row">
                 <div style="display:flex;justify-content:space-between;align-items:center">
@@ -300,24 +300,24 @@
                   <span style="font-size:11px;color:#0071e3;font-weight:600">¥{{ fmt(c.total_amount||0) }}</span>
                 </div>
                 <div v-if="item.contracts.length === 0" style="font-size:11px;color:rgba(29,29,31,0.35);padding:2px 0">
-                  暂无关联合同
+                  {{ $t('reports.overview.noLinkedContract') }}
                 </div>
               </div>
             </div>
             <div style="font-size:11px;color:#a16207;margin-top:8px;display:flex;align-items:center;gap:4px;cursor:pointer"
                  @click="$router.push('/finance/prepay')">
-              <span>{{ prepayList.length }} 笔预收款 · 点击查看完整明细 →</span>
+              <span>{{ $t('reports.overview.prepayFooter', { n: prepayList.length }) }}</span>
             </div>
           </div>
 
           <!-- 库存总值 -->
           <div class="ro-sum-block" style="margin-top:16px">
             <div class="ro-sum-row ro-kpi-clickable" style="cursor:pointer" @click="$router.push('/warehouse/stock')">
-              <span class="ro-sum-label">库存总值</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.stockTotal') }}</span>
               <span style="color:#ca8a04;font-weight:700">¥{{ fmt(stockTotal) }}</span>
             </div>
             <div class="ro-sum-row ro-kpi-clickable" style="cursor:pointer" @click="$router.push('/warehouse/stock')">
-              <span class="ro-sum-label">库存SKU数</span>
+              <span class="ro-sum-label">{{ $t('reports.overview.stockSku') }}</span>
               <span style="color:#ca8a04;font-weight:600">{{ stockRows.length }}</span>
             </div>
           </div>
@@ -328,35 +328,35 @@
     <!-- 商品利润明细（从合同+零售明细中解析） -->
     <div class="ro-chart-card">
       <div class="ro-card-header">
-        <div class="ro-card-title">商品销售利润明细 <span class="ro-card-hint">（有BOM → BOM物料成本；无BOM → 商品采购价）</span></div>
-        <router-link to="/reports/profit" class="ro-link">完整报表 →</router-link>
+        <div class="ro-card-title">{{ $t('reports.overview.goodsProfitTitle') }} <span class="ro-card-hint">{{ $t('reports.overview.goodsProfitHint') }}</span></div>
+        <router-link to="/reports/profit" class="ro-link">{{ $t('reports.overview.fullReport') }} →</router-link>
       </div>
-      <div v-if="goodsProfitRows.length === 0 && !loading" class="ro-empty">暂无商品销售数据</div>
+      <div v-if="goodsProfitRows.length === 0 && !loading" class="ro-empty">{{ $t('reports.overview.noGoodsData') }}</div>
       <el-table v-else :data="goodsProfitRows" size="small" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
-        <el-table-column prop="goods_name" label="商品" min-width="130" show-overflow-tooltip />
-        <el-table-column label="销售数量" align="right" width="80">
+        <el-table-column prop="goods_name" :label="$t('reports.overview.colGoods')" min-width="130" show-overflow-tooltip />
+        <el-table-column :label="$t('reports.overview.colSaleQty')" align="right" width="80">
           <template #default="{ row }">{{ row.num }}</template>
         </el-table-column>
-        <el-table-column label="销售额" align="right" width="100">
+        <el-table-column :label="$t('reports.overview.colSaleAmount')" align="right" width="100">
           <template #default="{ row }">
             <span style="color:#16a34a">¥{{ fmt(row.sale_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="成本" align="right" width="110">
+        <el-table-column :label="$t('reports.overview.colCost')" align="right" width="110">
           <template #default="{ row }">
-            <el-tooltip :content="row.has_bom ? 'BOM物料成本' : '商品采购价'" placement="top">
+            <el-tooltip :content="row.has_bom ? $t('reports.overview.bomCost') : $t('reports.overview.purchaseCost')" placement="top">
               <span style="color:#dc2626">¥{{ fmt(row.cost_amount) }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column label="毛利润" align="right" width="100" sortable prop="profit">
+        <el-table-column :label="$t('reports.overview.colGrossProfit')" align="right" width="100" sortable prop="profit">
           <template #default="{ row }">
             <span :style="{ color: row.profit >= 0 ? '#16a34a' : '#dc2626', fontWeight:600 }">
               {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="毛利率" align="right" width="80">
+        <el-table-column :label="$t('reports.overview.colGrossRate')" align="right" width="80">
           <template #default="{ row }">
             <el-tag :type="row.profit_rate >= 20 ? 'success' : row.profit_rate > 0 ? 'warning' : 'danger'" size="small">
               {{ row.profit_rate.toFixed(1) }}%
@@ -370,10 +370,10 @@
     <div class="ro-charts-row">
       <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
         <div class="ro-card-header">
-          <div class="ro-card-title">零售客户排行</div>
-          <router-link to="/retail/order" class="ro-link">查看零售 →</router-link>
+          <div class="ro-card-title">{{ $t('reports.overview.retailRanking') }}</div>
+          <router-link to="/retail/order" class="ro-link">{{ $t('reports.overview.viewRetail') }} →</router-link>
         </div>
-        <div v-if="retailCustomerRows.length === 0 && !loading" class="ro-empty">暂无零售数据</div>
+        <div v-if="retailCustomerRows.length === 0 && !loading" class="ro-empty">{{ $t('reports.overview.noRetailData') }}</div>
         <div v-else class="ro-sale-list">
           <div v-for="row in retailCustomerRows.slice(0, 8)" :key="row.customer_name" class="ro-sale-row">
             <span class="ro-sale-name">{{ row.customer_name || '散客' }}</span>
@@ -388,10 +388,10 @@
 
       <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
         <div class="ro-card-header">
-          <div class="ro-card-title">销售订单客户排行</div>
-          <router-link to="/sale/contract" class="ro-link">查看销售 →</router-link>
+          <div class="ro-card-title">{{ $t('reports.overview.saleRanking') }}</div>
+          <router-link to="/sale/contract" class="ro-link">{{ $t('reports.overview.viewSale') }} →</router-link>
         </div>
-        <div v-if="saleCustomerRows.length === 0 && !loading" class="ro-empty">暂无销售数据</div>
+        <div v-if="saleCustomerRows.length === 0 && !loading" class="ro-empty">{{ $t('reports.overview.noSaleData') }}</div>
         <div v-else class="ro-sale-list">
           <div v-for="row in saleCustomerRows.slice(0, 8)" :key="row.customer_name" class="ro-sale-row">
             <span class="ro-sale-name">{{ row.customer_name || '—' }}</span>
@@ -406,13 +406,13 @@
 
       <div class="ro-chart-card" style="flex:1;min-width:0;overflow:hidden">
         <div class="ro-card-header">
-          <div class="ro-card-title">供应商采购排行</div>
-          <router-link to="/procure/order" class="ro-link">查看采购 →</router-link>
+          <div class="ro-card-title">{{ $t('reports.overview.supplierRanking') }}</div>
+          <router-link to="/procure/order" class="ro-link">{{ $t('reports.overview.viewProcure') }} →</router-link>
         </div>
-        <div v-if="supplierRows.length === 0 && !loading" class="ro-empty">暂无采购数据</div>
+        <div v-if="supplierRows.length === 0 && !loading" class="ro-empty">{{ $t('reports.overview.noProcureData') }}</div>
         <div v-else class="ro-sale-list">
           <div v-for="row in supplierRows.slice(0, 8)" :key="row.supplier_name" class="ro-sale-row">
-            <span class="ro-sale-name">{{ row.supplier_name || '无供应商' }}</span>
+            <span class="ro-sale-name">{{ row.supplier_name || $t('reports.overview.noSupplier') }}</span>
             <div class="ro-sale-bar-wrap">
               <div class="ro-sale-bar" style="background:linear-gradient(to right,#dc2626,#f87171)"
                    :style="{ width: getBarWidth(supplierRows, row.amount, 'amount') }" />
@@ -427,6 +427,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { Refresh, Money, ShoppingCart, TrendCharts, Shop } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -694,9 +696,9 @@ const reportTrendSeries = computed(() => {
   for (const e of expenseList.value) { const i=getIdx(e.expense_date||e.created_at||''); if(i>=0) expense[i]+=Number(e.amount||0) }
   const profit = revenue.map((v, i) => v - expense[i])
   const defs = [
-    { name: '收入', color: '#16a34a', vals: revenue },
-    { name: '支出', color: '#ea580c', vals: expense },
-    { name: '收支差', color: '#0071e3', vals: profit },
+    { name: t('reports.overview.contractIncome'), color: '#16a34a', vals: revenue },
+    { name: t('reports.overview.procureExpense'), color: '#ea580c', vals: expense },
+    { name: t('reports.overview.netProfitLabel'), color: '#0071e3', vals: profit },
   ]
   const allVals = defs.flatMap(s => s.vals)
   const gMax = Math.max(...allVals, 1)

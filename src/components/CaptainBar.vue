@@ -8,7 +8,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2L4 7v6c0 5 4.5 9.7 8 11 3.5-1.3 8-6 8-11V7L12 2z"/></svg>
         </div>
         <div class="bar-live-dot" :class="captainLoading ? 'dot-busy' : 'dot-live'" />
-        <span class="bar-name">Captain 指挥官</span>
+        <span class="bar-name">{{ t('captainBar.name') }}</span>
       </div>
 
       <div class="bar-actions" @click.stop>
@@ -16,7 +16,7 @@
           ref="inputRef"
           v-model="quickText"
           class="bar-input"
-          :placeholder="lastPreview || 'AI 多智能体总调度 · 输入目标让 Captain 自动规划执行…'"
+          :placeholder="lastPreview || t('captainBar.placeholder')"
           :disabled="captainLoading"
           autocomplete="off"
           autocorrect="off"
@@ -26,20 +26,20 @@
           @keydown.enter.prevent="sendQuick"
           @focus="isCollapsed = false"
         />
-        <button class="bar-tool-btn" @click="clearCurrent" title="清空对话">
+        <button class="bar-tool-btn" @click="clearCurrent" :title="t('common.clear')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
         </button>
-        <button ref="historyBtnRef" class="bar-tool-btn" @click.stop="toggleHistory" title="历史会话">
+        <button ref="historyBtnRef" class="bar-tool-btn" @click.stop="toggleHistory" :title="t('captainBar.history')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         </button>
         <!-- 历史会话下拉面板：Teleport 到 body 避免被父容器裁切 -->
         <Teleport to="body">
           <div v-if="showHistory" class="history-dropdown-portal" :style="dropdownStyle" @click.stop>
             <div class="history-header">
-              <span class="history-title">历史会话</span>
-              <button v-if="historyList.length > 0" class="history-clear-btn" @click="clearAllHistory">清空</button>
+              <span class="history-title">{{ t('captainBar.history') }}</span>
+              <button v-if="historyList.length > 0" class="history-clear-btn" @click="clearAllHistory">{{ t('common.clear') }}</button>
             </div>
-            <div v-if="historyList.length === 0" class="history-empty">暂无历史会话</div>
+            <div v-if="historyList.length === 0" class="history-empty">{{ t('captainBar.noHistory') }}</div>
             <div v-else class="history-list">
               <div
                 v-for="(item, idx) in historyList"
@@ -54,15 +54,15 @@
             </div>
           </div>
         </Teleport>
-        <button v-if="captainMessages.length > 0" class="bar-tool-btn" @click="newSession" title="新建对话">
+        <button v-if="captainMessages.length > 0" class="bar-tool-btn" @click="newSession" :title="t('captainBar.newSession')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         </button>
         <!-- 收起按钮：有消息且未收起时显示 -->
-        <button v-if="(captainMessages.length > 0 || captainLoading) && !isCollapsed" class="bar-tool-btn" @click="isCollapsed = true" title="收起">
+        <button v-if="(captainMessages.length > 0 || captainLoading) && !isCollapsed" class="bar-tool-btn" @click="isCollapsed = true" :title="t('common.collapse')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>
         </button>
         <!-- 展开按钮：有消息且已收起时显示 -->
-        <button v-if="captainMessages.length > 0 && isCollapsed" class="bar-tool-btn" @click="isCollapsed = false" title="展开">
+        <button v-if="captainMessages.length > 0 && isCollapsed" class="bar-tool-btn" @click="isCollapsed = false" :title="t('common.expand')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <button class="bar-send" :disabled="captainLoading || !quickText.trim()" @click="sendQuick">
@@ -78,7 +78,7 @@
       <!-- 查看更多：折叠的旧消息 -->
       <div v-if="captainMessages.length > 2 && !showAllMessages" class="feed-more-btn" @click.stop="showAllMessages = true">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-        查看更多 {{ captainMessages.length - 2 }} 条历史
+        {{ t('captainBar.viewMoreHistory', { count: captainMessages.length - 2 }) }}
       </div>
 
       <template v-for="(msg, idx) in (showAllMessages ? captainMessages : captainMessages.slice(-2))" :key="idx">
@@ -95,7 +95,7 @@
                   <span class="agent-name">{{ step.agentName }}</span>
                   <div class="agent-tag" :class="step.status === 'running' ? 'tag-running' : 'tag-done'">
                     <span v-if="step.status === 'running'" class="spin-sm" />
-                    <span>{{ step.status === 'running' ? '执行中' : '完成' }}</span>
+                    <span>{{ step.status === 'running' ? t('common.running') : t('common.done') }}</span>
                   </div>
                 </div>
                 <div class="agent-task">{{ step.task }}</div>
@@ -107,7 +107,7 @@
                     <div class="pl-node" :class="['pls-' + ps.status, ps.is_gate ? 'pln-gate' : '']">
                       <span class="pln-emoji">{{ ps.emoji }}</span>
                       <span class="pln-name">{{ ps.agentName }}</span>
-                      <span v-if="ps.is_gate" class="pln-gate-badge">审核</span>
+                      <span v-if="ps.is_gate" class="pln-gate-badge">{{ t('common.audit') }}</span>
                       <span v-if="ps.status === 'running'" class="spin-sm" />
                       <span v-else-if="ps.status === 'done'" class="pln-check">✓</span>
                       <span v-else-if="ps.status === 'blocked'" class="pln-blocked-icon">✕</span>
@@ -118,8 +118,8 @@
                     <span class="spin-sm" style="opacity:0.3" />
                   </div>
                 </div>
-                <div v-if="step.gateBlocked" class="pl-status pl-status-blocked">⚠️ 品牌审核不通过，流水线暂停</div>
-                <div v-else-if="step.pipelineDone" class="pl-status pl-status-done">✅ 流水线执行完成</div>
+                <div v-if="step.gateBlocked" class="pl-status pl-status-blocked">⚠️ {{ t('captainBar.gateBlocked') }}</div>
+                <div v-else-if="step.pipelineDone" class="pl-status pl-status-done">✅ {{ t('captainBar.pipelineDone') }}</div>
                 <div v-for="ps in (step.pipelineSteps || []).filter(s => s.output && s.status !== 'waiting')" :key="ps.agentId" class="pl-output-row">
                   <div class="pl-output-hd">{{ ps.emoji }} {{ ps.agentName }}</div>
                   <div class="pl-output-body">{{ ps.output.slice(0, 240) }}{{ ps.output.length > 240 ? '…' : '' }}</div>
@@ -145,8 +145,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAdamStore } from '@/stores/adam'
 
+const { t, locale } = useI18n()
 const adamStore = useAdamStore()
 
 interface PipelineStepItem {
@@ -165,11 +168,11 @@ interface CaptainMsg { role: 'user' | 'agency'; content: string; steps: Step[] }
 interface HistoryItem { title: string; time: string; messages: CaptainMsg[] }
 
 const HISTORY_KEY = 'captain_chat_history'
-const TOOL_LABELS: Record<string, string> = {
-  query_customers: '查询客户', query_suppliers: '查询供应商', query_goods: '查询商品',
-  query_inventory: '查询库存', query_sales: '查询销售', query_purchases: '查询采购',
-  query_finance: '查询财务', query_staff: '查询员工', query_warehouses: '查询仓库',
-  navigate_to: '页面导航',
+const toolLabelKeys: Record<string, string> = {
+  query_customers: 'query_customers', query_suppliers: 'query_suppliers', query_goods: 'query_goods',
+  query_inventory: 'query_inventory', query_sales: 'query_sales', query_purchases: 'query_purchases',
+  query_finance: 'query_finance', query_staff: 'query_staff', query_warehouses: 'query_warehouses',
+  navigate_to: 'navigate_to',
 }
 const agentList = [
   { id: 'copywriter', color: '#f59e0b' }, { id: 'poster', color: '#ec4899' },
@@ -177,11 +180,11 @@ const agentList = [
   { id: 'publisher', color: '#10b981' },  { id: 'trend', color: '#06b6d4' },
   { id: 'marketing', color: '#059669' },
 ]
-const quickPrompts = [
-  '分析本月销售数据，生成小红书推广文案',
-  '帮我规划一个新品上市的内容发布计划',
-  '追踪当前热点，给出3个选题方向',
-]
+const quickPrompts = computed(() => [
+  t('captainBar.quickSalesCopy'),
+  t('captainBar.quickLaunchPlan'),
+  t('captainBar.quickTrendTopics'),
+])
 
 const isExpanded = ref(false)
 const isCollapsed = ref(true)
@@ -247,8 +250,8 @@ function loadAllHistory(): HistoryItem[] {
 function saveCurrentToHistory() {
   if (captainMessages.value.length === 0) return
   const firstUser = captainMessages.value.find(m => m.role === 'user')
-  const title = firstUser?.content.slice(0, 30) || '对话记录'
-  const now = new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const title = firstUser?.content.slice(0, 30) || t('captainBar.chatRecord')
+  const now = new Date().toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
   const item: HistoryItem = { title, time: now, messages: JSON.parse(JSON.stringify(captainMessages.value)) }
   // 更新当前活跃 index 或新增
   if (historyActiveIdx.value !== null) {
@@ -390,7 +393,8 @@ async function sendCaptain(text?: string) {
             if (idx !== undefined) agencyMsg.steps[idx].status = 'done'
           } else if (evt.type === 'tool_start') {
             toolSteps[evt.id] = agencyMsg.steps.length
-            agencyMsg.steps.push({ type: 'tool', label: TOOL_LABELS[evt.name] ?? evt.name, status: 'running' })
+            const labelKey = toolLabelKeys[evt.name]
+            agencyMsg.steps.push({ type: 'tool', label: labelKey ? t(`aiToolCallCard.tools.${labelKey}`) : evt.name, status: 'running' })
           } else if (evt.type === 'tool_result') {
             const idx = toolSteps[evt.id]
             if (idx !== undefined) agencyMsg.steps[idx].status = 'done'
@@ -422,7 +426,7 @@ async function sendCaptain(text?: string) {
       }
     }
   } catch (e: any) {
-    agencyMsg.steps.push({ type: 'captain_text', text: `❌ 出错：${e.message}` })
+    agencyMsg.steps.push({ type: 'captain_text', text: `❌ ${t('captainBar.errorPrefix')}${e.message}` })
   } finally {
     captainLoading.value = false
     captainMessages.value = [...captainMessages.value]

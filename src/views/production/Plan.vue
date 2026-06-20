@@ -7,23 +7,23 @@
         <!-- 状态筛选 + 搜索 -->
         <div class="status-bar">
           <el-button-group size="small">
-            <el-button :type="searchForm.status === '' ? 'primary' : ''" @click="setStatus('')">全部</el-button>
-            <el-button :type="searchForm.status === 0 ? 'primary' : ''" @click="setStatus(0)">待开始</el-button>
-            <el-button :type="searchForm.status === 1 ? 'primary' : ''" @click="setStatus(1)">进行中</el-button>
-            <el-button :type="searchForm.status === 2 ? 'primary' : ''" @click="setStatus(2)">已完成</el-button>
+            <el-button :type="searchForm.status === '' ? 'primary' : ''" @click="setStatus('')">{{ $t('production.plan.statusAll') }}</el-button>
+            <el-button :type="searchForm.status === 0 ? 'primary' : ''" @click="setStatus(0)">{{ $t('production.plan.statusNotStarted') }}</el-button>
+            <el-button :type="searchForm.status === 1 ? 'primary' : ''" @click="setStatus(1)">{{ $t('production.plan.statusInProgress') }}</el-button>
+            <el-button :type="searchForm.status === 2 ? 'primary' : ''" @click="setStatus(2)">{{ $t('production.plan.statusDone') }}</el-button>
           </el-button-group>
           <div class="status-bar-right">
-            <el-input v-model="searchForm.order_sn" placeholder="生产单号" clearable size="small" style="width:160px" @change="loadData" />
-            <el-button size="small" type="primary" @click="loadData">查询</el-button>
-            <el-button size="small" @click="resetSearch">重置</el-button>
+            <el-input v-model="searchForm.order_sn" :placeholder="$t('production.plan.searchOrderSn')" clearable size="small" style="width:160px" @change="loadData" />
+            <el-button size="small" type="primary" @click="loadData">{{ $t('production.plan.btnSearch') }}</el-button>
+            <el-button size="small" @click="resetSearch">{{ $t('production.plan.btnReset') }}</el-button>
           </div>
         </div>
 
         <!-- 工具栏 -->
         <div class="toolbar">
-          <el-button type="primary" size="small" @click="openCreate">新增 (F9)</el-button>
-          <el-button size="small" type="danger" :disabled="!selection.length" @click="handleBatchDel">删除</el-button>
-          <el-button size="small" @click="handleExport">导出</el-button>
+          <el-button type="primary" size="small" @click="openCreate">{{ $t('production.plan.btnAdd') }}</el-button>
+          <el-button size="small" type="danger" :disabled="!selection.length" @click="handleBatchDel">{{ $t('production.plan.btnDelete') }}</el-button>
+          <el-button size="small" @click="handleExport">{{ $t('production.plan.btnExport') }}</el-button>
         </div>
 
         <!-- 表格 -->
@@ -39,47 +39,47 @@
             <template #default="{ row }">
               <div style="padding:8px 24px 12px">
                 <el-table :data="parseItems(row.goods_info)" border size="small" style="width:100%">
-                  <el-table-column prop="goods_sn" label="编码" width="120" />
-                  <el-table-column prop="goods_name" label="商品名称" min-width="160" />
-                  <el-table-column prop="spec" label="规格" width="120">
+                  <el-table-column prop="goods_sn" :label="$t('production.plan.expandColCode')" width="120" />
+                  <el-table-column prop="goods_name" :label="$t('production.plan.expandColGoodsName')" min-width="160" />
+                  <el-table-column prop="spec" :label="$t('production.plan.expandColSpec')" width="120">
                     <template #default="{ row: r }">{{ r.spec || '—' }}</template>
                   </el-table-column>
-                  <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-                  <el-table-column prop="num" label="计划数量" width="90" align="right" />
+                  <el-table-column prop="unit_name" :label="$t('production.plan.expandColUnit')" width="65" align="center" />
+                  <el-table-column prop="num" :label="$t('production.plan.expandColPlanNum')" width="90" align="right" />
                 </el-table>
               </div>
             </template>
           </el-table-column>
-          <el-table-column type="index" label="序号" width="55" align="center" />
-          <el-table-column label="生产单号" width="150">
+          <el-table-column type="index" :label="$t('production.plan.colIndex')" width="55" align="center" />
+          <el-table-column :label="$t('production.plan.colOrderSn')" width="150">
             <template #default="{ row }">{{ row.order_sn || `SC${(row.plan_date||row.created_at||'').slice(0,10).replace(/-/g,'')}${String(row.id).padStart(3,'0')}` }}</template>
           </el-table-column>
-          <el-table-column label="销售编号" width="130">
+          <el-table-column :label="$t('production.plan.colSaleOrderSn')" width="130">
             <template #default="{ row }">{{ row.sale_order_sn || '—' }}</template>
           </el-table-column>
-          <el-table-column label="开单日期" width="105">
+          <el-table-column :label="$t('production.plan.colPlanDate')" width="105">
             <template #default="{ row }">{{ fmtDt(row.plan_date || row.created_at) }}</template>
           </el-table-column>
-          <el-table-column label="交货日期" width="105">
+          <el-table-column :label="$t('production.plan.colFinishDate')" width="105">
             <template #default="{ row }">{{ row.finish_date || '—' }}</template>
           </el-table-column>
-          <el-table-column label="优先级" width="80" align="center">
+          <el-table-column :label="$t('production.plan.colPriority')" width="80" align="center">
             <template #default="{ row }">
               <el-tag :type="row.priority === '紧急' ? 'danger' : row.priority === '高' ? 'warning' : ''" size="small">
-                {{ row.priority || '正常' }}
+                {{ row.priority || $t('production.plan.priorityNormal') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="排产数量" width="90" align="right">
+          <el-table-column :label="$t('production.plan.colScheduleNum')" width="90" align="right">
             <template #default="{ row }">{{ row.schedule_num || 0 }}</template>
           </el-table-column>
-          <el-table-column label="生产数量" width="90" align="right">
+          <el-table-column :label="$t('production.plan.colPlanNum')" width="90" align="right">
             <template #default="{ row }">{{ row.plan_num || 0 }}</template>
           </el-table-column>
-          <el-table-column label="入库数量" width="90" align="right">
+          <el-table-column :label="$t('production.plan.colInhouseNum')" width="90" align="right">
             <template #default="{ row }">{{ row.inhouse_num || 0 }}</template>
           </el-table-column>
-          <el-table-column label="排产进度" width="120">
+          <el-table-column :label="$t('production.plan.colSchedulePct')" width="120">
             <template #default="{ row }">
               <div style="display:flex;align-items:center;gap:4px">
                 <el-progress :percentage="calcPct(row.schedule_num, row.plan_num)" :stroke-width="6" style="flex:1" :show-text="false" />
@@ -87,7 +87,7 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="生产进度" width="120">
+          <el-table-column :label="$t('production.plan.colPlanPct')" width="120">
             <template #default="{ row }">
               <div style="display:flex;align-items:center;gap:4px">
                 <el-progress :percentage="calcPct(row.actual_num, row.plan_num)" :stroke-width="6" style="flex:1" :show-text="false" />
@@ -95,7 +95,7 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="入库进度" width="120">
+          <el-table-column :label="$t('production.plan.colInhousePct')" width="120">
             <template #default="{ row }">
               <div style="display:flex;align-items:center;gap:4px">
                 <el-progress :percentage="calcPct(row.inhouse_num, row.plan_num)" :stroke-width="6" style="flex:1" :show-text="false" color="#16a34a" />
@@ -103,7 +103,7 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="流程状态" width="220" align="center">
+          <el-table-column :label="$t('production.plan.colFlowStatus')" width="220" align="center">
             <template #default="{ row }">
               <div class="flow-steps">
                 <!-- 步骤1: 领料 -->
@@ -120,57 +120,57 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220" fixed="right" align="center">
+          <el-table-column :label="$t('production.plan.colActions')" width="220" fixed="right" align="center">
             <template #default="{ row }">
-              <el-button link type="primary" size="small" @click="openView(row)">查看</el-button>
-              <el-button link type="success" size="small" @click="openEdit(row)">编辑</el-button>
+              <el-button link type="primary" size="small" @click="openView(row)">{{ $t('production.plan.actionView') }}</el-button>
+              <el-button link type="success" size="small" @click="openEdit(row)">{{ $t('production.plan.actionEdit') }}</el-button>
               <!-- 领料按钮：已领料显示完成态，否则激活 -->
               <el-button
                 v-if="!hasMaterial(row)"
                 link type="warning" size="small"
                 @click="goPickMaterial(row)"
-              >领料</el-button>
+              >{{ $t('production.plan.actionPickMaterial') }}</el-button>
               <el-button
                 v-else
                 link size="small"
                 style="color:#16a34a;cursor:default"
                 disabled
-              >已领料✓</el-button>
+              >{{ $t('production.plan.actionMaterialDone') }}</el-button>
               <!-- 入库按钮：有领料才激活 -->
               <el-button
                 v-if="row.inhouse_num > 0 || row.status === 2"
                 link size="small"
                 style="color:#16a34a;cursor:default"
                 disabled
-              >已入库✓</el-button>
+              >{{ $t('production.plan.actionInhouseDone') }}</el-button>
               <el-button
                 v-else-if="hasMaterial(row)"
                 link size="small" style="color:#9333ea"
                 @click="goInhouse(row)"
-              >入库</el-button>
+              >{{ $t('production.plan.actionInhouse') }}</el-button>
               <el-button
                 v-else
                 link size="small"
                 style="color:#c0c4cc;cursor:not-allowed"
                 disabled
-              >入库</el-button>
-              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleProdPlanReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-              <el-button link type="danger" size="small" @click="handleDel(row.id)">删除</el-button>
+              >{{ $t('production.plan.actionInhouse') }}</el-button>
+              <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleProdPlanReconcile(row)">{{ row._reconciled ? $t('production.plan.actionReconciled') : $t('production.plan.actionReconcile') }}</el-button>
+              <el-button link type="danger" size="small" @click="handleDel(row.id)">{{ $t('production.plan.actionDelete') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
 
         <!-- 汇总行 -->
         <div class="summary-bar">
-          <span>合计</span>
-          <span style="margin-left:32px">排产: <b>{{ totalSchedule.toFixed(2) }}</b></span>
-          <span style="margin-left:16px">生产: <b>{{ totalPlan.toFixed(2) }}</b></span>
-          <span style="margin-left:16px">入库: <b>{{ totalInhouse.toFixed(2) }}</b></span>
+          <span>{{ $t('production.plan.summaryTotal') }}</span>
+          <span style="margin-left:32px">{{ $t('production.plan.summarySchedule', { value: totalSchedule.toFixed(2) }) }}</span>
+          <span style="margin-left:16px">{{ $t('production.plan.summaryPlan', { value: totalPlan.toFixed(2) }) }}</span>
+          <span style="margin-left:16px">{{ $t('production.plan.summaryInhouse', { value: totalInhouse.toFixed(2) }) }}</span>
         </div>
 
         <!-- 分页 -->
         <div style="margin-top:10px;display:flex;justify-content:flex-end;align-items:center;gap:8px">
-          <span style="font-size:13px;color:#666">共 {{ total }} 条</span>
+          <span style="font-size:13px;color:#666">{{ $t('production.plan.paginationTotal', { total }) }}</span>
           <el-pagination
             v-model:current-page="page" v-model:page-size="pageSize"
             :page-sizes="[20,50,100]" layout="sizes,prev,pager,next,jumper"
@@ -185,11 +185,11 @@
     <div v-else class="form-page">
       <div class="form-topbar">
         <div style="display:flex;align-items:center;gap:12px">
-          <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
-          <span class="form-title">{{ isView ? '查看生产计划' : (fd.id ? '编辑生产计划' : '新增生产计划') }}</span>
+          <el-button :icon="ArrowLeft" @click="backToList">{{ $t('production.plan.formBtnBack') }}</el-button>
+          <span class="form-title">{{ isView ? $t('production.plan.formTitleView') : (fd.id ? $t('production.plan.formTitleEdit') : $t('production.plan.formTitleAdd')) }}</span>
         </div>
         <div v-if="!isView">
-          <el-button type="primary" :loading="saving" @click="handleSave">保存 (Ctrl+S)</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('production.plan.formBtnSave') }}</el-button>
         </div>
       </div>
 
@@ -197,37 +197,37 @@
         <el-form :model="fd" label-width="90px" :disabled="isView">
           <el-row :gutter="20">
             <el-col :span="10">
-              <el-form-item label="关联销售">
+              <el-form-item :label="$t('production.plan.fieldSaleOrder')">
                 <div style="display:flex;gap:8px">
-                  <el-input v-model="fd.sale_order_sn" placeholder="销售单号" readonly style="flex:1" />
-                  <el-button size="small" type="primary" @click="salePickerVisible = true" :disabled="isView">选择销售单</el-button>
+                  <el-input v-model="fd.sale_order_sn" :placeholder="$t('production.plan.fieldSaleOrderPlaceholder')" readonly style="flex:1" />
+                  <el-button size="small" type="primary" @click="salePickerVisible = true" :disabled="isView">{{ $t('production.plan.fieldSaleOrderBtn') }}</el-button>
                 </div>
               </el-form-item>
             </el-col>
             <el-col :span="7">
-              <el-form-item label="生产单号">
-                <el-input v-model="fd.order_sn" placeholder="不填写自动生成" />
+              <el-form-item :label="$t('production.plan.fieldOrderSn')">
+                <el-input v-model="fd.order_sn" :placeholder="$t('production.plan.fieldOrderSnPlaceholder')" />
               </el-form-item>
             </el-col>
             <el-col :span="7">
-              <el-form-item label="开单日期">
+              <el-form-item :label="$t('production.plan.fieldPlanDate')">
                 <el-date-picker v-model="fd.plan_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="20">
             <el-col :span="7">
-              <el-form-item label="交货日期">
+              <el-form-item :label="$t('production.plan.fieldFinishDate')">
                 <el-date-picker v-model="fd.finish_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
               </el-form-item>
             </el-col>
             <el-col :span="7">
-              <el-form-item label="优先级">
+              <el-form-item :label="$t('production.plan.fieldPriority')">
                 <el-select v-model="fd.priority" style="width:100%">
-                  <el-option label="正常" value="正常" />
-                  <el-option label="高" value="高" />
-                  <el-option label="紧急" value="紧急" />
-                  <el-option label="低" value="低" />
+                  <el-option :label="$t('production.plan.priorityNormal')" value="正常" />
+                  <el-option :label="$t('production.plan.priorityHigh')" value="高" />
+                  <el-option :label="$t('production.plan.priorityUrgent')" value="紧急" />
+                  <el-option :label="$t('production.plan.priorityLow')" value="低" />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -237,23 +237,23 @@
         <!-- 商品清单 -->
         <div class="goods-section">
           <div class="goods-header">
-            <span class="goods-title">商品清单</span>
-            <el-button v-if="!isView" size="small" type="primary" @click="goodsSelectRef?.open()">+ 选择商品</el-button>
+            <span class="goods-title">{{ $t('production.plan.goodsSectionTitle') }}</span>
+            <el-button v-if="!isView" size="small" type="primary" @click="goodsSelectRef?.open()">{{ $t('production.plan.goodsBtnSelect') }}</el-button>
           </div>
           <el-table :data="fd.items" border size="small" style="width:100%">
-            <el-table-column prop="goods_sn" label="商品编码" width="120" />
-            <el-table-column prop="goods_name" label="商品名称" min-width="160" />
-            <el-table-column label="属性" width="90">
+            <el-table-column prop="goods_sn" :label="$t('production.plan.goodsColCode')" width="120" />
+            <el-table-column prop="goods_name" :label="$t('production.plan.goodsColName')" min-width="160" />
+            <el-table-column :label="$t('production.plan.goodsColAttr')" width="90">
               <template #default="{ row }">{{ row.attr || '—' }}</template>
             </el-table-column>
-            <el-table-column label="规格型号" width="100">
+            <el-table-column :label="$t('production.plan.goodsColSpec')" width="100">
               <template #default="{ row }">{{ row.spec || '—' }}</template>
             </el-table-column>
-            <el-table-column prop="unit_name" label="单位" width="65" align="center" />
-            <el-table-column label="已生产数量" width="100" align="right">
+            <el-table-column prop="unit_name" :label="$t('production.plan.goodsColUnit')" width="65" align="center" />
+            <el-table-column :label="$t('production.plan.goodsColActualNum')" width="100" align="right">
               <template #default="{ row }">{{ row.actual_num || 0 }}</template>
             </el-table-column>
-            <el-table-column label="本次生产数量" width="130" align="center">
+            <el-table-column :label="$t('production.plan.goodsColThisNum')" width="130" align="center">
               <template #default="{ row, $index }">
                 <el-input-number
                   v-if="!isView"
@@ -263,22 +263,22 @@
                 <span v-else>{{ row.num }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="库存数量" width="90" align="center">
+            <el-table-column :label="$t('production.plan.goodsColStock')" width="90" align="center">
               <template #default="{ row }">
                 <el-tag :type="(row.stock_qty || 0) > 0 ? 'success' : 'danger'" size="small" effect="plain">
                   {{ row.stock_qty || 0 }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column v-if="!isView" label="操作" width="140" align="center">
+            <el-table-column v-if="!isView" :label="$t('production.plan.goodsColActions')" width="140" align="center">
               <template #default="{ row, $index }">
-                <el-button link type="primary" size="small" @click="showBomConsume(row)">BOM消耗</el-button>
-                <el-button link type="danger" size="small" @click="fd.items.splice($index, 1)">删除</el-button>
+                <el-button link type="primary" size="small" @click="showBomConsume(row)">{{ $t('production.plan.goodsColBomConsume') }}</el-button>
+                <el-button link type="danger" size="small" @click="fd.items.splice($index, 1)">{{ $t('production.plan.goodsColDelete') }}</el-button>
               </template>
             </el-table-column>
-            <el-table-column v-else label="操作" width="90" align="center">
+            <el-table-column v-else :label="$t('production.plan.goodsColActions')" width="90" align="center">
               <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="showBomConsume(row)">BOM消耗</el-button>
+                <el-button link type="primary" size="small" @click="showBomConsume(row)">{{ $t('production.plan.goodsColBomConsume') }}</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -287,8 +287,8 @@
         <el-form :model="fd" label-width="90px" :disabled="isView" style="margin-top:16px">
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="备注">
-                <el-input v-model="fd.remark" type="textarea" :rows="3" placeholder="备注（可选）" />
+              <el-form-item :label="$t('production.plan.fieldRemark')">
+                <el-input v-model="fd.remark" type="textarea" :rows="3" :placeholder="$t('production.plan.fieldRemarkPlaceholder')" />
               </el-form-item>
             </el-col>
           </el-row>
@@ -297,33 +297,33 @@
         <!-- BOM 物料需求 -->
         <div class="goods-section" v-if="fd.items.length">
           <div class="goods-header">
-            <span class="goods-title">BOM 物料需求</span>
-            <el-button size="small" type="warning" @click="goPickMaterial(fd)" v-if="fd.id">去领料</el-button>
+            <span class="goods-title">{{ $t('production.plan.bomSectionTitle') }}</span>
+            <el-button size="small" type="warning" @click="goPickMaterial(fd)" v-if="fd.id">{{ $t('production.plan.bomBtnPickMaterial') }}</el-button>
           </div>
-          <div v-if="planBomLoading" style="text-align:center;padding:24px;color:#999">加载中...</div>
+          <div v-if="planBomLoading" style="text-align:center;padding:24px;color:#999">{{ $t('production.plan.bomLoading') }}</div>
           <el-table v-else :data="planBomList" border size="small" style="width:100%">
-            <el-table-column prop="material_name" label="物料名称" min-width="140" />
-            <el-table-column prop="material_sn" label="物料编码" width="110" />
-            <el-table-column prop="_spec" label="规格" width="120">
+            <el-table-column prop="material_name" :label="$t('production.plan.bomColMaterialName')" min-width="140" />
+            <el-table-column prop="material_sn" :label="$t('production.plan.bomColMaterialSn')" width="110" />
+            <el-table-column prop="_spec" :label="$t('production.plan.bomColSpec')" width="120">
               <template #default="{ row }">{{ row._spec || '—' }}</template>
             </el-table-column>
-            <el-table-column label="单位用量" width="90" align="center">
+            <el-table-column :label="$t('production.plan.bomColUnitUsage')" width="90" align="center">
               <template #default="{ row }">{{ row.num }} {{ row.unit_name }}</template>
             </el-table-column>
-            <el-table-column label="需求数量" width="100" align="center">
+            <el-table-column :label="$t('production.plan.bomColNeedQty')" width="100" align="center">
               <template #default="{ row }">
                 <b style="color:#0071e3">{{ row._need }}</b> {{ row.unit_name }}
               </template>
             </el-table-column>
-            <el-table-column label="库存" width="90" align="center">
+            <el-table-column :label="$t('production.plan.bomColStock')" width="90" align="center">
               <template #default="{ row }">
                 <el-tag :type="row._stock >= row._need ? 'success' : 'danger'" size="small" effect="plain">{{ row._stock }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="缺口" width="90" align="center">
+            <el-table-column :label="$t('production.plan.bomColGap')" width="90" align="center">
               <template #default="{ row }">
                 <span v-if="row._need > row._stock" style="color:#f56c6c;font-weight:600">{{ (row._need - row._stock).toFixed(2).replace(/\.?0+$/,'') }}</span>
-                <span v-else style="color:#16a34a">充足</span>
+                <span v-else style="color:#16a34a">{{ $t('production.plan.bomGapSufficient') }}</span>
               </template>
             </el-table-column>
           </el-table>
@@ -334,58 +334,58 @@
     <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
     <!-- 销售单选择器 -->
-    <el-dialog v-model="salePickerVisible" title="选择销售单" width="700px" append-to-body>
+    <el-dialog v-model="salePickerVisible" :title="$t('production.plan.salePickerTitle')" width="700px" append-to-body>
       <el-table :data="saleOrders" v-loading="saleLoading" border height="360"
         highlight-current-row @current-change="currentSaleRow = $event">
-        <el-table-column prop="order_sn" label="销售单号" width="160" />
-        <el-table-column prop="customer_name" label="客户" min-width="120" />
-        <el-table-column label="日期" width="110">
+        <el-table-column prop="order_sn" :label="$t('production.plan.salePickerColOrderSn')" width="160" />
+        <el-table-column prop="customer_name" :label="$t('production.plan.salePickerColCustomer')" min-width="120" />
+        <el-table-column :label="$t('production.plan.salePickerColDate')" width="110">
           <template #default="{ row }">{{ fmtDt(row.sign_date || row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="金额" width="110" align="right">
+        <el-table-column :label="$t('production.plan.salePickerColAmount')" width="110" align="right">
           <template #default="{ row }">¥{{ Number(row.total_amount||0).toFixed(2) }}</template>
         </el-table-column>
       </el-table>
       <template #footer>
-        <el-button @click="salePickerVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!currentSaleRow" @click="confirmSale">确认选择</el-button>
+        <el-button @click="salePickerVisible = false">{{ $t('production.plan.salePickerBtnCancel') }}</el-button>
+        <el-button type="primary" :disabled="!currentSaleRow" @click="confirmSale">{{ $t('production.plan.salePickerBtnConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- BOM 消耗弹窗 -->
-    <el-dialog v-model="bomVisible" :title="`BOM消耗 - ${bomGoodsName}`" width="750px" append-to-body>
+    <el-dialog v-model="bomVisible" :title="$t('production.plan.goodsColBomConsume') + ' - ' + bomGoodsName" width="750px" append-to-body>
       <div v-if="bomConsumeList.length === 0 && !bomLoading" style="text-align:center;padding:32px 0;color:rgba(29,29,31,0.35)">
-        该商品暂未配置BOM清单，请先在「商品 > BOM清单」中添加
+        {{ $t('production.plan.bomConsumeEmptyTip') }}
       </div>
       <template v-else>
         <div style="margin-bottom:12px;font-size:13px;color:rgba(29,29,31,0.5)">
-          生产数量: <b style="color:#0071e3;font-size:15px">{{ bomPlanNum }}</b>，以下为物料需求：
+          {{ $t('production.plan.bomConsumeQtyInfo', { qty: bomPlanNum }) }}
         </div>
         <el-table :data="bomConsumeList" v-loading="bomLoading" border size="small" show-summary :summary-method="bomSummary">
-          <el-table-column prop="material_name" label="物料名称" min-width="140" />
-          <el-table-column prop="material_sn" label="物料编码" width="110" />
-          <el-table-column label="单位用量" width="100" align="center">
+          <el-table-column prop="material_name" :label="$t('production.plan.bomConsumeColMaterialName')" min-width="140" />
+          <el-table-column prop="material_sn" :label="$t('production.plan.bomConsumeColMaterialSn')" width="110" />
+          <el-table-column :label="$t('production.plan.bomConsumeColUnitUsage')" width="100" align="center">
             <template #default="{ row }">{{ row.num }} {{ row.unit_name }}</template>
           </el-table-column>
-          <el-table-column label="需求数量" width="110" align="center">
+          <el-table-column :label="$t('production.plan.bomConsumeColNeedQty')" width="110" align="center">
             <template #default="{ row }">
               <span style="font-weight:600;color:#0071e3">{{ row._need }}</span>
               <span style="color:rgba(29,29,31,0.35);margin-left:2px">{{ row.unit_name }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="库存" width="90" align="center">
+          <el-table-column :label="$t('production.plan.bomConsumeColStock')" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row._stock >= row._need ? 'success' : 'danger'" size="small" effect="plain">
                 {{ row._stock }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="缺口" width="90" align="center">
+          <el-table-column :label="$t('production.plan.bomConsumeColGap')" width="90" align="center">
             <template #default="{ row }">
               <span v-if="row._need > row._stock" style="color:#f56c6c;font-weight:600">
                 {{ (row._need - row._stock).toFixed(2).replace(/\.?0+$/, '') }}
               </span>
-              <span v-else style="color:#16a34a">充足</span>
+              <span v-else style="color:#16a34a">{{ $t('production.plan.bomConsumeGapSufficient') }}</span>
             </template>
           </el-table-column>
         </el-table>
@@ -397,6 +397,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -404,6 +405,8 @@ import http from '@/api/http'
 import { fmtDt } from '@/utils/date'
 import { getBomByGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
+
+const { t } = useI18n()
 
 // ── 核对 ──────────────────────────────────────────────────────────────────────
 const prodPlanReconcileIds = ref<Set<number>>(new Set(JSON.parse(localStorage.getItem('reconcile_production_plan') || '[]')))
@@ -514,13 +517,12 @@ function getStepClass(row: any, step: 'material' | 'inhouse') {
 }
 
 function getMaterialLabel(row: any) {
-  return hasMaterial(row) ? '已领料' : '待领料'
+  return hasMaterial(row) ? t('production.plan.stepMaterialDone') : t('production.plan.stepMaterialPending')
 }
 
 function getInhouseLabel(row: any) {
-  if (row.inhouse_num > 0 || row.status === 2) return '已入库'
-  if (hasMaterial(row)) return '待入库'
-  return '待入库'
+  if (row.inhouse_num > 0 || row.status === 2) return t('production.plan.stepInhouseDone')
+  return t('production.plan.stepInhousePending')
 }
 
 // ── 跳转领料/入库 ─────────────────────────────────────────────────────────────
@@ -536,17 +538,17 @@ function goInhouse(row: any) {
 async function handleDel(id: number) {
   if (materialMap.value[id]) {
     ElMessageBox.alert(
-      '该生产计划已有审核通过的领料单，无法直接删除。<br/>请先前往「<b>生产 → 领料管理</b>」对领料单执行<b>反审核</b>，再删除计划。',
-      '无法删除',
-      { type: 'warning', dangerouslyUseHTMLString: true, confirmButtonText: '去领料管理' }
+      t('production.plan.msgCannotDeleteHasMaterial'),
+      t('production.plan.msgCannotDeleteTitle'),
+      { type: 'warning', dangerouslyUseHTMLString: true, confirmButtonText: t('production.plan.msgCannotDeleteConfirm') }
     ).then(() => {
       router.push({ name: 'ProductionMaterial' })
     }).catch(() => {})
     return
   }
-  await ElMessageBox.confirm('确定删除该生产计划？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('production.plan.msgDeleteConfirm'), t('production.plan.msgDeleteTip'), { type: 'warning' })
   await http.post('/production/plan/del', { id })
-  ElMessage.success('删除成功')
+  ElMessage.success(t('production.plan.msgDeleteSuccess'))
   loadData()
 }
 
@@ -554,21 +556,21 @@ async function handleBatchDel() {
   const blockedIds = selection.value.map(r => r.id).filter(id => materialMap.value[id])
   if (blockedIds.length) {
     ElMessageBox.alert(
-      `选中的 ${blockedIds.length} 条计划已有审核通过的领料单，无法删除。<br/>请先前往「<b>生产 → 领料管理</b>」对相关领料单执行<b>反审核</b>，再删除计划。`,
-      '无法删除',
-      { type: 'warning', dangerouslyUseHTMLString: true, confirmButtonText: '去领料管理' }
+      t('production.plan.msgCannotBatchDeleteHasMaterial', { count: blockedIds.length }),
+      t('production.plan.msgCannotDeleteTitle'),
+      { type: 'warning', dangerouslyUseHTMLString: true, confirmButtonText: t('production.plan.msgCannotDeleteConfirm') }
     ).then(() => {
       router.push({ name: 'ProductionMaterial' })
     }).catch(() => {})
     return
   }
-  await ElMessageBox.confirm(`确定删除选中的 ${selection.value.length} 条记录？`, '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('production.plan.msgBatchDeleteConfirm', { count: selection.value.length }), t('production.plan.msgDeleteTip'), { type: 'warning' })
   await http.post('/production/plan/batchDel', { ids: selection.value.map(r => r.id) })
-  ElMessage.success('删除成功')
+  ElMessage.success(t('production.plan.msgDeleteSuccess'))
   loadData()
 }
 
-function handleExport() { ElMessage.info('导出功能开发中') }
+function handleExport() { ElMessage.info(t('production.plan.msgExportDev')) }
 
 const itemsVisible = ref(false)
 const itemsRow = ref<any>(null)
@@ -621,7 +623,7 @@ function openView(row: any) {
 function backToList() { showForm.value = false; loadData() }
 
 async function handleSave() {
-  if (!fd.items.length) { ElMessage.warning('请添加商品'); return }
+  if (!fd.items.length) { ElMessage.warning(t('production.plan.msgAddGoods')); return }
   saving.value = true
   try {
     const totalNum = fd.items.reduce((s: number, i: any) => s + Number(i.num || 0), 0)
@@ -636,10 +638,10 @@ async function handleSave() {
     } else {
       await http.post('/production/plan/add', payload)
     }
-    ElMessage.success('保存成功')
+    ElMessage.success(t('production.plan.msgSaveSuccess'))
     backToList()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('production.plan.msgSaveFailed', { error: '' }))
   } finally { saving.value = false }
 }
 
@@ -728,7 +730,7 @@ async function showBomConsume(item: any) {
         return { ...r, _need: need, _stock: stock }
       })
   } catch (e: any) {
-    ElMessage.error('获取BOM数据失败')
+    ElMessage.error(t('production.plan.msgGetBomFailed'))
   } finally {
     bomLoading.value = false
   }
@@ -736,7 +738,7 @@ async function showBomConsume(item: any) {
 
 function bomSummary({ columns, data }: any) {
   return columns.map((_: any, idx: number) => {
-    if (idx === 0) return '合计'
+    if (idx === 0) return t('production.plan.bomConsumeSummaryTotal')
     if (idx === 3) return data.reduce((s: number, r: any) => s + (r._need || 0), 0).toFixed(2).replace(/\.?0+$/, '')
     return ''
   })

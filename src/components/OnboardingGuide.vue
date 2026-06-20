@@ -25,12 +25,12 @@
     >
       <div class="guide-panel-head">
         <div>
-          <div class="guide-badge">新手向导 · Step {{ guide.currentStep + 1 }}/{{ guide.steps.length }}</div>
+          <div class="guide-badge">{{ t('guideOverlay.userGuide') }} · Step {{ guide.currentStep + 1 }}/{{ guide.steps.length }}</div>
           <div class="guide-title">{{ step.title }}</div>
           <p class="guide-desc">{{ step.desc }}</p>
-          <div class="guide-sub-badge">操作 {{ guide.currentAction + 1 }}/{{ guide.currentActionCount }}</div>
+          <div class="guide-sub-badge">{{ t('guideOverlay.action') }} {{ guide.currentAction + 1 }}/{{ guide.currentActionCount }}</div>
         </div>
-        <button class="guide-close-btn" @click="guide.pauseGuide" title="稍后继续">
+        <button class="guide-close-btn" @click="guide.pauseGuide" :title="t('guideOverlay.continueLater')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
@@ -42,14 +42,14 @@
       </div>
 
       <div v-if="!targetRect" class="guide-status guide-status-warn">
-        已进入目标页面，但暂时没定位到高亮区域；你可以先按提示手动操作，或点击“重新定位”。
+        {{ t('guideOverlay.targetMissing') }}
       </div>
       <div v-else class="guide-status guide-status-success">
-        页面中的高亮区域就是你当前需要操作的位置。
+        {{ t('guideOverlay.targetReady') }}
       </div>
 
       <div class="guide-section">
-        <div class="guide-section-title">建议按这个顺序操作</div>
+        <div class="guide-section-title">{{ t('guideOverlay.suggestedOrder') }}</div>
         <div class="guide-action-list">
           <div
             v-for="(action, index) in actions"
@@ -64,22 +64,22 @@
       </div>
 
       <div class="guide-result-box">
-        <div class="guide-section-title">完成标准</div>
+        <div class="guide-section-title">{{ t('guideOverlay.completionCriteria') }}</div>
         <div class="guide-result-text">{{ step.result }}</div>
-        <div v-if="step.tip" class="guide-tip-text">提示：{{ step.tip }}</div>
+        <div v-if="step.tip" class="guide-tip-text">{{ t('guideOverlay.tipPrefix') }}{{ step.tip }}</div>
       </div>
 
       <div class="guide-panel-actions">
-        <el-button text @click="guide.pauseGuide">稍后继续</el-button>
-        <el-button @click="guide.goPrevActionOrStep">上一步</el-button>
-        <el-button v-if="!targetRect" @click="refreshPosition">重新定位</el-button>
+        <el-button text @click="guide.pauseGuide">{{ t('guideOverlay.continueLater') }}</el-button>
+        <el-button @click="guide.goPrevActionOrStep">{{ t('guideOverlay.previous') }}</el-button>
+        <el-button v-if="!targetRect" @click="refreshPosition">{{ t('guideOverlay.relocate') }}</el-button>
         <el-button
           v-if="!currentAction.autoAdvance && !isLastAction"
           type="primary"
           @click="guide.completeCurrentAndNext()"
-        >已完成，下一步</el-button>
+        >{{ t('guideOverlay.doneNext') }}</el-button>
         <el-button @click="guide.skipCurrentAndNext()">
-          {{ isLastStep ? '跳过并结束' : '跳过此步' }}
+          {{ isLastStep ? t('guideOverlay.skipAndFinish') : t('guideOverlay.skipStep') }}
         </el-button>
       </div>
     </div>
@@ -91,10 +91,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGuideStore } from '@/stores/guide'
+import { useI18n } from 'vue-i18n'
 
 const guide = useGuideStore()
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const targetRect = ref<DOMRect | null>(null)
 const panelRef = ref<HTMLElement | null>(null)

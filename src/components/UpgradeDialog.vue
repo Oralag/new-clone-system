@@ -12,11 +12,8 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
 
-      <!-- ══════════ STEP 1: 选套餐 ══════════ -->
       <template v-if="step === 'plan'">
         <div class="ud-layout">
-
-          <!-- Left: plans -->
           <div class="ud-left">
             <div class="ud-brand">
               <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
@@ -25,12 +22,11 @@
                 <circle cx="27" cy="8" r="4" fill="#F19D38"/>
                 <defs><linearGradient id="udg" x1="0" y1="0" x2="0" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#1C2B48"/><stop offset="100%" stop-color="#1D3974"/></linearGradient></defs>
               </svg>
-              <span>数字游牧 · 付费版</span>
+              <span>{{ t('upgradeDialog.brand') }}</span>
             </div>
-            <h2 class="ud-headline">选择适合您的方案</h2>
-            <p class="ud-sub">独立数据库 · 按需解锁 · 专属技术支持</p>
+            <h2 class="ud-headline">{{ t('upgradeDialog.headline') }}</h2>
+            <p class="ud-sub">{{ t('upgradeDialog.subline') }}</p>
 
-            <!-- 级别切换 Tab -->
             <div class="tier-tabs">
               <button
                 class="tier-tab"
@@ -45,11 +41,10 @@
                 @click="activeTier = 'svip'; selectedBilling = 'monthly'"
               >
                 <span class="tier-icon">👑</span> SVIP
-                <span class="tier-badge">推荐</span>
+                <span class="tier-badge">{{ t('upgradeDialog.recommended') }}</span>
               </button>
             </div>
 
-            <!-- 三个价格卡片同时展示 -->
             <div class="price-cards">
               <div
                 v-for="b in billingOptions"
@@ -72,9 +67,8 @@
             </div>
           </div>
 
-          <!-- Right: perms comparison -->
           <div class="ud-right">
-            <div class="ud-perm-title">功能对比</div>
+            <div class="ud-perm-title">{{ t('upgradeDialog.featureCompare') }}</div>
             <div class="ud-perms">
               <div v-for="g in currentPermGroups" :key="g.label" class="perm-group">
                 <div class="perm-group-label">{{ g.label }}</div>
@@ -89,26 +83,25 @@
               </div>
             </div>
             <button class="ud-cta" :class="activeTier === 'svip' ? 'ud-cta-svip' : ''" @click="step = 'pay'">
-              确认套餐，去付款
+              {{ t('upgradeDialog.confirmPlan') }}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
-            <p class="ud-cta-note">付款后我们 2 小时内为您配置专属实例并激活账号</p>
+            <p class="ud-cta-note">{{ t('upgradeDialog.ctaNote') }}</p>
           </div>
         </div>
       </template>
 
-      <!-- ══════════ STEP 2: 扫码付款 ══════════ -->
       <template v-if="step === 'pay'">
         <div class="pay-wrap">
           <button class="pay-back" @click="step = 'plan'">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            返回
+            {{ t('common.back') }}
           </button>
 
           <div class="pay-header">
-            <div class="pay-title">扫码完成付款</div>
+            <div class="pay-title">{{ t('upgradeDialog.scanToPay') }}</div>
             <div class="pay-plan-info">
-              已选：<strong>{{ activeTier === 'svip' ? 'SVIP' : 'VIP' }} · {{ currentPrice.label }}</strong>
+              {{ t('upgradeDialog.selectedPlan') }}: <strong>{{ activeTier === 'svip' ? 'SVIP' : 'VIP' }} · {{ currentPrice.label }}</strong>
               <span class="pay-price">¥{{ currentPrice.price }} / {{ currentPrice.period }}</span>
             </div>
           </div>
@@ -121,157 +114,160 @@
                   <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/>
                   <rect x="14" y="14" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="14" width="3" height="3" fill="currentColor" stroke="none"/><rect x="14" y="18" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="18" width="3" height="3" fill="currentColor" stroke="none"/>
                 </svg>
-                <div class="qr-placeholder-text">微信收款码</div>
-                <div class="qr-placeholder-hint">请替换为实际二维码</div>
+                <div class="qr-placeholder-text">{{ t('upgradeDialog.wechatQr') }}</div>
+                <div class="qr-placeholder-hint">{{ t('upgradeDialog.replaceQrHint') }}</div>
               </div>
             </div>
             <div class="qr-wechat-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="#07C160"><path d="M9.5 4C5.36 4 2 6.91 2 10.5c0 1.99 1.03 3.78 2.66 4.97L4 18l2.74-1.37C7.72 16.87 8.6 17 9.5 17c.17 0 .33 0 .5-.01A5.97 5.97 0 009.5 15c0-3.31 2.91-6 6.5-6 .17 0 .33 0 .5.01C15.79 6.64 12.94 4 9.5 4zm-1.75 3.5a1 1 0 110 2 1 1 0 010-2zm3.5 0a1 1 0 110 2 1 1 0 010-2zM16 11c-2.76 0-5 1.79-5 4s2.24 4 5 4c.66 0 1.29-.1 1.87-.3L20 20l-.57-2.28A3.92 3.92 0 0021 15c0-2.21-2.24-4-5-4zm-1.25 2.5a.75.75 0 110 1.5.75.75 0 010-1.5zm2.5 0a.75.75 0 110 1.5.75.75 0 010-1.5z"/></svg>
-              微信扫码付款
+              {{ t('upgradeDialog.wechatPay') }}
             </div>
           </div>
 
           <div class="pay-steps">
-            <div class="pay-step"><span class="ps-num">1</span>微信扫描上方二维码</div>
-            <div class="pay-step"><span class="ps-num">2</span>按提示完成付款</div>
-            <div class="pay-step"><span class="ps-num">3</span>付款后点击下方按钮</div>
+            <div class="pay-step"><span class="ps-num">1</span>{{ t('upgradeDialog.payStep1') }}</div>
+            <div class="pay-step"><span class="ps-num">2</span>{{ t('upgradeDialog.payStep2') }}</div>
+            <div class="pay-step"><span class="ps-num">3</span>{{ t('upgradeDialog.payStep3') }}</div>
           </div>
 
           <button class="pay-confirm-btn" @click="step = 'done'">
-            我已完成付款 →
+            {{ t('upgradeDialog.paidConfirm') }}
           </button>
 
           <div class="pay-alt">
-            也可添加微信 <strong>nomad_erp</strong> 或发邮件至 <strong>contact@nomaderp.com</strong> 由我们协助完成
+            {{ t('upgradeDialog.altContactPrefix') }} <strong>nomad_erp</strong> {{ t('upgradeDialog.altContactMiddle') }} <strong>contact@nomaderp.com</strong> {{ t('upgradeDialog.altContactSuffix') }}
           </div>
         </div>
       </template>
 
-      <!-- ══════════ STEP 3: 完成 ══════════ -->
       <template v-if="step === 'done'">
         <div class="done-wrap">
           <div class="done-icon">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <div class="done-title">付款信息已提交</div>
-          <div class="done-desc">我们将在 <strong>2 小时内</strong>核实付款并为您激活专属实例<br/>激活后会通过微信 / 邮件通知您</div>
+          <div class="done-title">{{ t('upgradeDialog.doneTitle') }}</div>
+          <div class="done-desc">{{ t('upgradeDialog.doneDescPrefix') }} <strong>{{ t('upgradeDialog.twoHours') }}</strong> {{ t('upgradeDialog.doneDescMiddle') }}<br/>{{ t('upgradeDialog.doneDescSuffix') }}</div>
           <div class="done-contact">
-            如需加急，请联系：<strong>nomad_erp</strong>（微信）
+            {{ t('upgradeDialog.urgentContact') }} <strong>nomad_erp</strong>{{ t('upgradeDialog.wechatLabel') }}
           </div>
-          <button class="done-close-btn" @click="visible = false">好的，知道了</button>
+          <button class="done-close-btn" @click="visible = false">{{ t('upgradeDialog.doneClose') }}</button>
         </div>
       </template>
-
     </div>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const visible = ref(false)
 const step = ref<'plan' | 'pay' | 'done'>('plan')
 const activeTier = ref<'vip' | 'svip'>('vip')
 const selectedBilling = ref<'monthly' | 'annual' | 'lifetime'>('monthly')
 
-const billingOptions: { id: 'monthly' | 'annual' | 'lifetime'; label: string; tag?: string }[] = [
-  { id: 'monthly', label: '月付' },
-  { id: 'annual',  label: '年付', tag: '省钱' },
-  { id: 'lifetime', label: '买断' },
-]
+type BillingId = 'monthly' | 'annual' | 'lifetime'
+type TierId = 'vip' | 'svip'
 
-const pricing = {
+const billingOptions = computed<{ id: BillingId; label: string; tag?: string }[]>(() => [
+  { id: 'monthly', label: t('upgradeDialog.billingMonthly') },
+  { id: 'annual', label: t('upgradeDialog.billingAnnual'), tag: t('upgradeDialog.billingAnnualTag') },
+  { id: 'lifetime', label: t('upgradeDialog.billingLifetime') },
+])
+
+const pricing = computed<Record<TierId, Record<BillingId, { price: string; period: string; label: string; note: string }>>>(() => ({
   vip: {
-    monthly:  { price: '39',   period: '月', label: '月付',  note: '' },
-    annual:   { price: '299',  period: '年', label: '年付',  note: '相当于 ¥25/月，省 ¥169' },
-    lifetime: { price: '1599',  period: '永久', label: '买断', note: '一次付清，永久使用' },
+    monthly: { price: '39', period: t('upgradeDialog.periodMonth'), label: t('upgradeDialog.billingMonthly'), note: '' },
+    annual: { price: '299', period: t('upgradeDialog.periodYear'), label: t('upgradeDialog.billingAnnual'), note: t('upgradeDialog.vipAnnualNote') },
+    lifetime: { price: '1599', period: t('upgradeDialog.periodLifetime'), label: t('upgradeDialog.billingLifetime'), note: t('upgradeDialog.vipLifetimeNote') },
   },
   svip: {
-    monthly:  { price: '129',  period: '月', label: '月付',  note: '' },
-    annual:   { price: '999',  period: '年', label: '年付',  note: '相当于 ¥83/月，省 ¥549' },
-    lifetime: { price: '3999', period: '永久', label: '买断', note: '一次付清，含3年专属支持' },
+    monthly: { price: '129', period: t('upgradeDialog.periodMonth'), label: t('upgradeDialog.billingMonthly'), note: '' },
+    annual: { price: '999', period: t('upgradeDialog.periodYear'), label: t('upgradeDialog.billingAnnual'), note: t('upgradeDialog.svipAnnualNote') },
+    lifetime: { price: '3999', period: t('upgradeDialog.periodLifetime'), label: t('upgradeDialog.billingLifetime'), note: t('upgradeDialog.svipLifetimeNote') },
   },
-}
+}))
 
-const currentPrice = computed(() => pricing[activeTier.value][selectedBilling.value])
+const currentPrice = computed(() => pricing.value[activeTier.value][selectedBilling.value])
 
-const vipPerms = [
+const vipPerms = computed(() => [
   {
-    label: '核心业务',
+    label: t('upgradeDialog.vipGroupCore'),
     items: [
-      { text: '客户 / 销售 / 采购管理', included: true },
-      { text: '仓库 / 零售管理', included: true },
-      { text: '财务管理', included: true },
-      { text: '生产 / 委外管理', included: false },
-      { text: '人事管理', included: false },
+      { text: t('upgradeDialog.permCustomerSalesProcure'), included: true },
+      { text: t('upgradeDialog.permWarehouseRetail'), included: true },
+      { text: t('upgradeDialog.permFinance'), included: true },
+      { text: t('upgradeDialog.permProductionOutsource'), included: false },
+      { text: t('upgradeDialog.permPersonnel'), included: false },
     ],
   },
   {
-    label: '数据与安全',
+    label: t('upgradeDialog.groupDataSecurity'),
     items: [
-      { text: '专属独立数据库', included: true },
-      { text: '数据永久保存', included: true },
-      { text: '定期自动备份', included: true },
-      { text: '多账号协作（10人）', included: true },
+      { text: t('upgradeDialog.permDedicatedDb'), included: true },
+      { text: t('upgradeDialog.permDataRetention'), included: true },
+      { text: t('upgradeDialog.permAutoBackup'), included: true },
+      { text: t('upgradeDialog.permCollab10'), included: true },
     ],
   },
   {
-    label: 'AI 与分析',
+    label: t('upgradeDialog.groupAiAnalytics'),
     items: [
-      { text: '报表 / 数据分析', included: true },
-      { text: 'AI 智能助手', included: false },
-      { text: 'AI 工作流自动化', included: false },
+      { text: t('upgradeDialog.permReportsAnalytics'), included: true },
+      { text: t('upgradeDialog.permAiAssistant'), included: false },
+      { text: t('upgradeDialog.permAiAutomation'), included: false },
     ],
   },
   {
-    label: '服务保障',
+    label: t('upgradeDialog.groupService'),
     items: [
-      { text: '使用培训文档', included: true },
-      { text: '标准技术支持', included: true },
-      { text: '优先专属支持', included: false },
+      { text: t('upgradeDialog.permTrainingDocs'), included: true },
+      { text: t('upgradeDialog.permStandardSupport'), included: true },
+      { text: t('upgradeDialog.permPrioritySupport'), included: false },
     ],
   },
-]
+])
 
-const svipPerms = [
+const svipPerms = computed(() => [
   {
-    label: '全功能业务',
+    label: t('upgradeDialog.svipGroupCore'),
     items: [
-      { text: '客户 / 销售 / 采购管理', included: true },
-      { text: '仓库 / 零售管理', included: true },
-      { text: '财务管理', included: true },
-      { text: '生产 / 委外管理', included: true },
-      { text: '人事管理', included: true },
+      { text: t('upgradeDialog.permCustomerSalesProcure'), included: true },
+      { text: t('upgradeDialog.permWarehouseRetail'), included: true },
+      { text: t('upgradeDialog.permFinance'), included: true },
+      { text: t('upgradeDialog.permProductionOutsource'), included: true },
+      { text: t('upgradeDialog.permPersonnel'), included: true },
     ],
   },
   {
-    label: '数据与安全',
+    label: t('upgradeDialog.groupDataSecurity'),
     items: [
-      { text: '专属独立数据库', included: true },
-      { text: '数据永久保存', included: true },
-      { text: '定期自动备份', included: true },
-      { text: '多账号协作（无限）', included: true },
+      { text: t('upgradeDialog.permDedicatedDb'), included: true },
+      { text: t('upgradeDialog.permDataRetention'), included: true },
+      { text: t('upgradeDialog.permAutoBackup'), included: true },
+      { text: t('upgradeDialog.permCollabUnlimited'), included: true },
     ],
   },
   {
-    label: 'AI 与分析',
+    label: t('upgradeDialog.groupAiAnalytics'),
     items: [
-      { text: '报表 / 数据分析', included: true },
-      { text: 'AI 智能助手无限用', included: true },
-      { text: 'AI 工作流自动化', included: true },
+      { text: t('upgradeDialog.permReportsAnalytics'), included: true },
+      { text: t('upgradeDialog.permAiUnlimited'), included: true },
+      { text: t('upgradeDialog.permAiAutomation'), included: true },
     ],
   },
   {
-    label: '服务保障',
+    label: t('upgradeDialog.groupService'),
     items: [
-      { text: '使用培训文档', included: true },
-      { text: '2小时响应专属支持', included: true },
-      { text: '数据迁移 + 专属配置', included: true },
+      { text: t('upgradeDialog.permTrainingDocs'), included: true },
+      { text: t('upgradeDialog.permTwoHourSupport'), included: true },
+      { text: t('upgradeDialog.permMigrationConfig'), included: true },
     ],
   },
-]
+])
 
-const currentPermGroups = computed(() => activeTier.value === 'svip' ? svipPerms : vipPerms)
+const currentPermGroups = computed(() => activeTier.value === 'svip' ? svipPerms.value : vipPerms.value)
 
 function open() {
   step.value = 'plan'
@@ -318,235 +314,237 @@ defineExpose({ open })
 .ud-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 520px;
+  min-height: 560px;
 }
-
-/* Left */
 .ud-left {
-  padding: 36px 32px;
-  border-right: 1px solid rgba(0,0,0,0.06);
-  display: flex; flex-direction: column;
+  padding: 34px 30px 28px;
+  background: #fff;
+}
+.ud-right {
+  padding: 34px 28px 28px;
+  background: #f8f8fa;
+  border-left: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
 }
 .ud-brand {
-  display: flex; align-items: center; gap: 9px;
-  font-size: 13px; font-weight: 700; color: rgba(29,29,31,0.45);
-  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 700; color: #1d3974;
+  margin-bottom: 18px;
 }
-.ud-headline { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 6px; }
-.ud-sub { font-size: 13px; color: rgba(29,29,31,0.42); font-weight: 500; margin: 0 0 20px; }
+.ud-headline {
+  font-size: 30px; line-height: 1.12; letter-spacing: 0;
+  margin: 0 0 10px; font-weight: 800;
+}
+.ud-sub {
+  margin: 0 0 24px;
+  color: rgba(29,29,31,0.45);
+  font-size: 13px; line-height: 1.5;
+}
 
-/* Tier Tabs */
 .tier-tabs {
-  display: flex; gap: 8px; margin-bottom: 16px;
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 .tier-tab {
-  flex: 1; padding: 10px 14px;
-  border: 1.5px solid rgba(0,0,0,0.1);
-  border-radius: 12px; cursor: pointer;
+  position: relative;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid rgba(0,0,0,0.08);
   background: #fff;
-  font-size: 14px; font-weight: 700; color: rgba(29,29,31,0.5);
-  display: flex; align-items: center; justify-content: center; gap: 5px;
-  transition: all 0.2s; position: relative;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
 }
-.tier-tab:hover { border-color: rgba(0,0,0,0.2); color: #1d1d1f; }
 .tier-tab.active {
-  border-color: #1d1d1f; background: #1d1d1f; color: #fff;
+  background: #111827;
+  color: white;
+  border-color: #111827;
 }
 .svip-tab.active {
-  border-color: #7c3aed;
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  border-color: transparent;
 }
-.tier-icon { font-size: 15px; }
 .tier-badge {
-  position: absolute; top: -8px; right: 8px;
-  font-size: 9px; font-weight: 800;
-  background: #f59e0b; color: #fff;
-  padding: 2px 6px; border-radius: 999px;
-  letter-spacing: 0.04em;
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 700;
 }
 
-/* Price Cards */
 .price-cards {
-  display: flex; flex-direction: column; gap: 8px; flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 .price-card {
-  border: 1.5px solid rgba(0,0,0,0.09);
-  border-radius: 12px; padding: 12px 14px;
-  cursor: pointer; background: #fff;
-  transition: all 0.15s;
+  border: 1.5px solid rgba(0,0,0,0.08);
+  border-radius: 18px;
+  padding: 16px 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
-.price-card:hover { border-color: rgba(0,0,0,0.2); }
-.price-card-active { border-color: #1d1d1f; background: #f5f5f7; }
-.price-card-svip { border-color: #7c3aed; background: linear-gradient(135deg, #f5f3ff, #ede9fe); }
+.price-card:hover { transform: translateY(-1px); border-color: rgba(0,0,0,0.14); }
+.price-card-active {
+  border-color: #1d1d1f;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+.price-card-svip.price-card-active {
+  border-color: #7c3aed;
+  box-shadow: 0 12px 30px rgba(124,58,237,0.18);
+}
 .pc-tag-row {
-  display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 6px; margin-bottom: 12px;
 }
-.pc-label { font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.5); }
-.price-card-active .pc-label { color: #1d1d1f; }
-.price-card-svip .pc-label { color: #7c3aed; }
+.pc-label {
+  font-size: 12px; font-weight: 700; color: #1d1d1f;
+}
 .pc-badge {
-  font-size: 9px; font-weight: 700;
-  background: #34d399; color: #fff;
-  padding: 1px 6px; border-radius: 999px;
+  font-size: 10px; font-weight: 700; color: #b45309;
+  background: #fef3c7; padding: 2px 6px; border-radius: 999px;
 }
-.pc-price {
-  display: flex; align-items: baseline; gap: 2px;
-}
-.pc-currency { font-size: 13px; font-weight: 700; color: #1d1d1f; }
-.pc-num { font-size: 26px; font-weight: 900; letter-spacing: -0.04em; color: #1d1d1f; line-height: 1; }
-.price-card-svip .pc-num { color: #7c3aed; }
-.pc-period { font-size: 12px; color: rgba(29,29,31,0.4); font-weight: 500; margin-left: 2px; }
-.pc-note { font-size: 11px; color: rgba(29,29,31,0.4); margin-top: 3px; }
-.price-card-svip .pc-note { color: rgba(124,58,237,0.55); }
+.pc-price { display: flex; align-items: flex-end; gap: 2px; flex-wrap: wrap; }
+.pc-currency { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.pc-num { font-size: 28px; line-height: 1; font-weight: 800; }
+.pc-period { font-size: 12px; color: rgba(29,29,31,0.45); margin-bottom: 3px; }
+.pc-note { margin-top: 10px; font-size: 11px; color: rgba(29,29,31,0.5); line-height: 1.4; }
 
-/* Right */
-.ud-right {
-  padding: 36px 32px;
-  display: flex; flex-direction: column;
-  background: #fafafa;
-}
 .ud-perm-title {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.1em; color: rgba(29,29,31,0.35);
-  margin-bottom: 16px;
+  font-size: 14px; font-weight: 800; margin-bottom: 14px;
 }
-.ud-perms { display: flex; flex-direction: column; gap: 16px; flex: 1; }
-.perm-group {}
+.ud-perms {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 2px;
+}
+.perm-group {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+}
 .perm-group-label {
-  font-size: 11px; font-weight: 700; color: rgba(29,29,31,0.5);
-  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
+  font-size: 12px; font-weight: 800; margin-bottom: 10px;
 }
-.perm-items { display: flex; flex-direction: column; gap: 3px; }
-.perm-item { font-size: 12.5px; color: #1d1d1f; font-weight: 500; display: flex; align-items: center; gap: 7px; }
-.perm-check { font-weight: 800; font-size: 11px; flex-shrink: 0; width: 14px; }
-.check-yes { color: #0071e3; }
-.check-no { color: rgba(29,29,31,0.2); }
-.perm-dim { color: rgba(29,29,31,0.3); }
-
+.perm-items { display: flex; flex-direction: column; gap: 8px; }
+.perm-item {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 12px; line-height: 1.45; color: #1d1d1f;
+}
+.perm-check {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; flex-shrink: 0; margin-top: 1px;
+}
+.check-yes { background: rgba(16,185,129,0.12); color: #059669; }
+.check-no { background: rgba(0,0,0,0.06); color: rgba(29,29,31,0.35); }
+.perm-dim { color: rgba(29,29,31,0.35); }
 .ud-cta {
-  display: flex; align-items: center; justify-content: center; gap: 7px;
-  width: 100%; padding: 14px;
-  background: #1d1d1f; color: #fff;
-  border: none; border-radius: 12px;
-  font-size: 14px; font-weight: 700; cursor: pointer;
-  margin-top: 20px;
-  transition: background 0.2s, transform 0.2s;
+  margin-top: 16px;
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  background: #111827;
+  color: white;
+  font-size: 14px; font-weight: 800;
+  padding: 14px 18px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  cursor: pointer;
 }
-.ud-cta:hover { background: #3a3a3a; transform: scale(0.98); }
-.ud-cta-svip {
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
-}
-.ud-cta-svip:hover { background: linear-gradient(135deg, #6d28d9, #9333ea); }
+.ud-cta-svip { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); }
 .ud-cta-note {
-  font-size: 11px; color: rgba(29,29,31,0.35);
-  text-align: center; margin-top: 10px; line-height: 1.5;
+  margin: 10px 0 0;
+  font-size: 11px; color: rgba(29,29,31,0.4); text-align: center;
 }
 
-/* ── Pay step ── */
 .pay-wrap {
-  padding: 36px 40px 28px;
-  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 32px 28px;
+  text-align: center;
 }
 .pay-back {
-  align-self: flex-start;
-  display: flex; align-items: center; gap: 5px;
-  background: none; border: none; cursor: pointer;
-  font-size: 13px; color: rgba(29,29,31,0.4); font-weight: 600;
-  margin-bottom: 20px; padding: 0;
-  transition: color 0.15s;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: none; background: transparent; cursor: pointer;
+  color: rgba(29,29,31,0.55); font-size: 12px; font-weight: 700;
+  margin-bottom: 16px; align-self: flex-start;
 }
-.pay-back:hover { color: #1d1d1f; }
-.pay-header { text-align: center; margin-bottom: 24px; width: 100%; }
-.pay-title { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px; }
-.pay-plan-info { font-size: 13px; color: rgba(29,29,31,0.45); }
+.pay-header { margin-bottom: 18px; }
+.pay-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.pay-plan-info { font-size: 13px; color: rgba(29,29,31,0.45); line-height: 1.5; }
 .pay-plan-info strong { color: #1d1d1f; }
-.pay-price { margin-left: 8px; font-weight: 700; color: #1d1d1f; font-size: 14px; }
-
-.qr-area { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+.pay-price { display: block; font-size: 18px; color: #1d1d1f; font-weight: 800; margin-top: 4px; }
+.qr-area { margin: 0 auto 18px; }
 .qr-box {
-  width: 180px; height: 180px;
-  border: 1.5px solid rgba(0,0,0,0.09);
-  border-radius: 16px;
+  width: 232px; height: 232px; margin: 0 auto 14px;
+  border-radius: 24px; background: #f5f5f7;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 10px; background: #fff;
-  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.06);
 }
-.qr-placeholder {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-}
-.qr-placeholder-text { font-size: 12px; font-weight: 700; color: rgba(29,29,31,0.35); }
-.qr-placeholder-hint { font-size: 10px; color: rgba(29,29,31,0.2); }
-.qr-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
-
+.qr-placeholder { color: rgba(0,0,0,0.28); display: flex; flex-direction: column; align-items: center; }
+.qr-placeholder-text { margin-top: 12px; font-size: 13px; font-weight: 700; color: rgba(29,29,31,0.55); }
+.qr-placeholder-hint { font-size: 11px; margin-top: 4px; }
 .qr-wechat-icon {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 12px; font-weight: 600; color: #07C160;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: #07C160;
 }
-
 .pay-steps {
-  display: flex; gap: 20px; margin-bottom: 24px;
-  width: 100%;
+  display: flex; flex-direction: column; gap: 8px;
+  text-align: left; margin: 0 auto 18px; max-width: 280px;
 }
 .pay-step {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;
-  font-size: 12px; color: rgba(29,29,31,0.5); text-align: center; line-height: 1.4;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: rgba(29,29,31,0.65);
 }
 .ps-num {
-  width: 24px; height: 24px; border-radius: 50%;
-  background: #1d1d1f; color: #fff;
-  font-size: 11px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #111827; color: white; font-size: 11px; font-weight: 700;
   flex-shrink: 0;
 }
-
 .pay-confirm-btn {
-  width: 100%; padding: 15px;
-  background: #1d1d1f; color: #fff;
-  border: none; border-radius: 12px;
-  font-size: 15px; font-weight: 700; cursor: pointer;
-  margin-bottom: 14px;
-  transition: background 0.2s;
+  width: 100%; border: none; border-radius: 16px;
+  background: #111827; color: white;
+  font-size: 14px; font-weight: 800; padding: 14px 18px;
+  cursor: pointer; margin-bottom: 12px;
 }
-.pay-confirm-btn:hover { background: #3a3a3a; }
-
 .pay-alt {
-  font-size: 11px; color: rgba(29,29,31,0.35);
-  text-align: center; line-height: 1.6;
+  font-size: 12px; color: rgba(29,29,31,0.45); line-height: 1.6;
 }
-.pay-alt strong { color: rgba(29,29,31,0.6); }
 
-/* ── Done step ── */
 .done-wrap {
-  padding: 48px 40px 36px;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 46px 34px 36px;
+  text-align: center;
 }
 .done-icon {
   width: 64px; height: 64px; border-radius: 50%;
-  background: #1d1d1f;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 20px;
+  margin: 0 auto 18px;
 }
-.done-title { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 10px; }
-.done-desc { font-size: 14px; color: rgba(29,29,31,0.5); line-height: 1.7; margin-bottom: 16px; }
-.done-desc strong { color: #1d1d1f; }
-.done-contact {
-  font-size: 12px; color: rgba(29,29,31,0.38);
-  background: #f5f5f7; padding: 10px 18px; border-radius: 10px;
-  margin-bottom: 24px;
-}
-.done-contact strong { color: #1d1d1f; }
+.done-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
+.done-desc { font-size: 13px; color: rgba(29,29,31,0.55); line-height: 1.7; margin-bottom: 14px; }
+.done-contact { font-size: 12px; color: rgba(29,29,31,0.45); margin-bottom: 18px; }
 .done-close-btn {
-  width: 280px; padding: 14px;
-  background: #1d1d1f; color: #fff;
-  border: none; border-radius: 12px;
-  font-size: 14px; font-weight: 700; cursor: pointer;
-  transition: background 0.2s;
+  border: none; border-radius: 16px; background: #111827; color: white;
+  font-size: 14px; font-weight: 800; padding: 14px 24px; cursor: pointer;
 }
-.done-close-btn:hover { background: #3a3a3a; }
 
-/* ── Responsive ── */
-@media (max-width: 640px) {
+@media (max-width: 920px) {
   .ud-layout { grid-template-columns: 1fr; }
-  .ud-left { border-right: none; border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .ud-right { border-left: none; border-top: 1px solid rgba(0,0,0,0.05); }
+}
+@media (max-width: 680px) {
+  .ud-left, .ud-right, .pay-wrap, .done-wrap { padding-left: 20px; padding-right: 20px; }
+  .price-cards { grid-template-columns: 1fr; }
 }
 </style>

@@ -3,6 +3,7 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 export interface TabItem {
   title: string
+  titleKey?: string // i18n key, e.g. 'route.SaleClient'
   path: string
   name?: string
 }
@@ -19,8 +20,11 @@ export const useTabsStore = defineStore('tabs', {
       if (path === '/dashboard' || path === '/') return
       const exists = this.tabs.find((t) => t.path === path)
       if (!exists) {
+        const metaKey = (route.meta as any)?.titleKey as string | undefined
+        const titleKey = metaKey || (route.name ? `route.${String(route.name)}` : undefined)
         this.tabs.push({
           title: (route.meta?.title as string) || route.name as string || path,
+          titleKey,
           path,
           name: route.name as string,
         })

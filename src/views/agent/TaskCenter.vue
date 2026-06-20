@@ -9,22 +9,22 @@
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
               <circle cx="6.5" cy="6.5" r="5"/><path d="M6.5 4v3l2 1.2"/>
             </svg>
-            今日重点
+            {{ t('agentTaskCenter.focusTitle') }}
           </div>
           <textarea
             v-if="editingFocus"
             v-model="todayFocus"
             class="bb-textarea"
-            placeholder="写下今天最重要的事..."
+            :placeholder="t('agentTaskCenter.focusPlaceholder')"
             rows="3"
             @blur="saveFocus"
             autofocus
           />
           <div v-else class="bb-focus-text" @click="editingFocus = true">
             <span v-if="todayFocus">{{ todayFocus }}</span>
-            <span v-else class="bb-placeholder">点击写下今日重点...</span>
+            <span v-else class="bb-placeholder">{{ t('agentTaskCenter.focusClickHint') }}</span>
           </div>
-          <button v-if="!editingFocus" class="bb-edit-btn" @click="editingFocus = true">编辑</button>
+          <button v-if="!editingFocus" class="bb-edit-btn" @click="editingFocus = true">{{ t('common.edit') }}</button>
         </div>
 
         <div class="bb-divider"></div>
@@ -34,9 +34,9 @@
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
               <path d="M2 6.5l3 3 6-6"/>
             </svg>
-            进行中
+            {{ t('agentTaskCenter.runningTitle') }}
           </div>
-          <div v-if="activeTasks.length === 0" class="bb-empty">暂无运行中的任务</div>
+          <div v-if="activeTasks.length === 0" class="bb-empty">{{ t('agentTaskCenter.noRunningTasks') }}</div>
           <div v-for="t in activeTasks" :key="t.id" class="bb-running-item">
             <span class="bb-running-dot"></span>
             <span>{{ t.title }}</span>
@@ -53,21 +53,21 @@
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
               <path d="M6.5 2v9M2 6.5h9"/>
             </svg>
-            新建任务
+            {{ t('agentTaskCenter.newTaskTitle') }}
           </div>
           <div class="bb-new-wrap">
             <input
               v-model="newTaskTitle"
               class="bb-input"
-              placeholder="任务名称..."
+              :placeholder="t('agentTaskCenter.taskNamePlaceholder')"
               @keydown.enter="createTask"
             />
-            <button class="bb-create-btn" @click="createTask" :disabled="!newTaskTitle.trim()">创建</button>
+            <button class="bb-create-btn" @click="createTask" :disabled="!newTaskTitle.trim()">{{ t('common.create') }}</button>
           </div>
           <div class="bb-stats">
-            <span>共 {{ pipelineStore.tasks.length }} 条</span>
+            <span>{{ t('agentTaskCenter.totalTasks', { count: pipelineStore.tasks.length }) }}</span>
             <span>·</span>
-            <span>完成 {{ doneTasks.length }}</span>
+            <span>{{ t('agentTaskCenter.doneTasks', { count: doneTasks.length }) }}</span>
           </div>
         </div>
       </div>
@@ -75,16 +75,16 @@
 
     <!-- 流水线任务列表 -->
     <div class="section-hd">
-      <h3 class="section-title">流水线任务</h3>
-      <span class="section-sub">{{ pipelineStore.tasks.length }} 条记录</span>
-      <button v-if="doneTasks.length > 0" class="clear-done-btn" @click="clearDone">清除已完成</button>
+      <h3 class="section-title">{{ t('agentTaskCenter.pipelineTitle') }}</h3>
+      <span class="section-sub">{{ t('agentTaskCenter.pipelineCount', { count: pipelineStore.tasks.length }) }}</span>
+      <button v-if="doneTasks.length > 0" class="clear-done-btn" @click="clearDone">{{ t('agentTaskCenter.clearDone') }}</button>
     </div>
 
     <div v-if="pipelineStore.tasks.length === 0" class="empty-state">
       <div class="empty-icon">⚡</div>
-      <div class="empty-title">暂无流水线任务</div>
-      <div class="empty-desc">在会议室发起工作流，或在上方创建任务</div>
-      <button class="btn-goto" @click="$router.push('/agent/meeting')">前往会议室 →</button>
+      <div class="empty-title">{{ t('agentTaskCenter.noPipelineTasks') }}</div>
+      <div class="empty-desc">{{ t('agentTaskCenter.noPipelineHint') }}</div>
+      <button class="btn-goto" @click="$router.push('/agent/meeting')">{{ t('agentTaskCenter.gotoMeeting') }}</button>
     </div>
 
     <div v-else class="pipeline-list">
@@ -96,13 +96,13 @@
           </div>
           <div class="pipeline-card-actions">
             <span class="pipeline-status" :class="task.status">{{ statusLabel(task.status) }}</span>
-            <button v-if="task.status !== 'done'" class="advance-btn" @click="pipelineStore.advanceStage(task.id)" title="推进到下一阶段">
+            <button v-if="task.status !== 'done'" class="advance-btn" @click="pipelineStore.advanceStage(task.id)" :title="t('agentTaskCenter.advanceTitle')">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
                 <path d="M2 6h8M7 3l3 3-3 3"/>
               </svg>
-              推进
+              {{ t('agentTaskCenter.advance') }}
             </button>
-            <button class="del-btn" @click="pipelineStore.removeTask(task.id)" title="删除">
+            <button class="del-btn" @click="pipelineStore.removeTask(task.id)" :title="t('common.delete')">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
                 <path d="M2 2l7 7M9 2l-7 7"/>
               </svg>
@@ -152,9 +152,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePipelineStore, PIPELINE_STAGES } from '@/stores/pipeline'
 
 const pipelineStore = usePipelineStore()
+const { t } = useI18n()
 
 // 今日重点
 const FOCUS_KEY = 'agent_today_focus'
@@ -193,15 +195,20 @@ function hasOutputs(task: typeof pipelineStore.tasks[0]) {
 }
 
 function statusLabel(s: string) {
-  return { running: '运行中', done: '已完成', pending: '等待中', blocked: '已阻塞' }[s] || s
+  return {
+    running: t('agentTaskCenter.statusRunning'),
+    done: t('agentTaskCenter.statusDone'),
+    pending: t('agentTaskCenter.statusPending'),
+    blocked: t('agentTaskCenter.statusBlocked'),
+  }[s] || s
 }
 
 function fmtTime(ts: number) {
   const d = new Date(ts)
   const now = new Date()
   const diff = now.getTime() - ts
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前'
+  if (diff < 60000) return t('agentTaskCenter.justNow')
+  if (diff < 3600000) return t('agentTaskCenter.minutesAgo', { count: Math.floor(diff / 60000) })
   if (d.toDateString() === now.toDateString()) return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
   return `${d.getMonth()+1}/${d.getDate()}`
 }

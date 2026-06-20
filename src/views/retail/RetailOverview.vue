@@ -6,27 +6,27 @@
         <div class="quick-card quick-card-main" @click="openCashRegister">
           <el-icon :size="28"><ShoppingCart /></el-icon>
           <div class="quick-card-text">
-            <div class="quick-card-title">收银台</div>
-            <div class="quick-card-sub">扫码 → 选商品 → 快速结账收款</div>
+            <div class="quick-card-title">{{ $t('retail.retailOverview.cashRegister') }}</div>
+            <div class="quick-card-sub">{{ $t('retail.retailOverview.cashRegisterSub') }}</div>
           </div>
         </div>
       </el-col>
       <el-col :span="5">
         <div class="quick-card quick-card-blue" @click="router.push('/retail/order')">
           <el-icon :size="20"><Document /></el-icon>
-          <span>零售订单</span>
+          <span>{{ $t('retail.retailOverview.retailOrder') }}</span>
         </div>
       </el-col>
       <el-col :span="5">
         <div class="quick-card quick-card-green" @click="router.push('/retail/customer')">
           <el-icon :size="20"><User /></el-icon>
-          <span>会员管理</span>
+          <span>{{ $t('retail.retailOverview.memberManagement') }}</span>
         </div>
       </el-col>
       <el-col :span="6">
         <div class="quick-card quick-card-orange" @click="router.push('/retail/return')">
           <el-icon :size="20"><RefreshLeft /></el-icon>
-          <span>零售退货</span>
+          <span>{{ $t('retail.retailOverview.retailReturn') }}</span>
         </div>
       </el-col>
     </el-row>
@@ -41,31 +41,31 @@
         >{{ p.label }}</span>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}营业额</div>
+        <div class="kpi-label">{{ periodLabel }}{{ $t('retail.retailOverview.kpiRevenue') }}</div>
         <div class="kpi-val blue">¥{{ fmt(kpi.revenue) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}订单数</div>
+        <div class="kpi-label">{{ periodLabel }}{{ $t('retail.retailOverview.kpiOrders') }}</div>
         <div class="kpi-val purple">{{ kpi.orderCount }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">客单价</div>
+        <div class="kpi-label">{{ $t('retail.retailOverview.kpiAvgOrder') }}</div>
         <div class="kpi-val green">¥{{ fmt(kpi.avgOrder) }}</div>
       </div>
       <div class="kpi-divider"></div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}会员消费</div>
+        <div class="kpi-label">{{ periodLabel }}{{ $t('retail.retailOverview.kpiMemberRevenue') }}</div>
         <div class="kpi-val blue">¥{{ fmt(kpi.memberRevenue) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}退货</div>
+        <div class="kpi-label">{{ periodLabel }}{{ $t('retail.retailOverview.kpiReturns') }}</div>
         <div class="kpi-val orange">{{ kpi.returnCount }}</div>
       </div>
     </div>
 
     <!-- 收款方式明细 -->
     <div class="pay-breakdown-row" v-if="kpi.payBreakdown.length">
-      <div class="pay-breakdown-title">收款方式汇总</div>
+      <div class="pay-breakdown-title">{{ $t('retail.retailOverview.payBreakdownTitle') }}</div>
       <div class="pay-breakdown-cards">
         <div v-for="m in kpi.payBreakdown" :key="m.method" class="pay-breakdown-card">
           <div class="pay-bd-icon" :style="{ background: m.color }">{{ m.icon }}</div>
@@ -74,7 +74,7 @@
             <div class="pay-bd-amount">¥{{ fmt(m.amount) }}</div>
           </div>
           <div class="pay-bd-meta">
-            <span class="pay-bd-count">{{ m.count }}笔</span>
+            <span class="pay-bd-count">{{ $t('retail.retailOverview.payCount', { count: m.count }) }}</span>
             <span class="pay-bd-pct">{{ m.pct }}%</span>
           </div>
           <div class="pay-bd-bar"><div class="pay-bd-bar-fill" :style="{ width: m.pct + '%', background: m.color }"></div></div>
@@ -85,120 +85,120 @@
     <!-- Tab 数据表格 -->
     <el-card style="margin-top:14px">
       <el-tabs v-model="activeTab">
-        <el-tab-pane label="最近订单" name="order">
+        <el-tab-pane :label="$t('retail.retailOverview.tabRecentOrders')" name="order">
           <el-table :data="orderRows" style="width:100%" size="small" max-height="400">
-            <el-table-column label="单号" min-width="160" show-overflow-tooltip>
+            <el-table-column :label="$t('retail.retailOverview.colOrderNo')" min-width="160" show-overflow-tooltip>
               <template #default="{ row }">{{ row.order_sn || `LS${(row.order_date || row.created_at || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
             </el-table-column>
-            <el-table-column prop="member_name" label="会员" min-width="120" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.member_name || '散客' }}</template>
+            <el-table-column prop="member_name" :label="$t('retail.retailOverview.colMember')" min-width="120" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.member_name || $t('retail.retailOverview.noGoods') }}</template>
             </el-table-column>
-            <el-table-column label="实付" align="right" width="100">
+            <el-table-column :label="$t('retail.retailOverview.colPaid')" align="right" width="100">
               <template #default="{ row }">
                 <span style="color:#0071e3;font-weight:600">¥{{ fmt(Number(row.pay_amount || 0)) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="支付方式" align="center" width="90">
+            <el-table-column :label="$t('retail.retailOverview.colPayMethod')" align="center" width="90">
               <template #default="{ row }">
                 <el-tag size="small" :type="payTagType(row.pay_method || row.pay_type)">{{ payLabel(row.pay_method || row.pay_type) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="日期" width="100">
+            <el-table-column :label="$t('retail.retailOverview.colDate')" width="100">
               <template #default="{ row }">{{ fmtDt(row.order_date || row.created_at || row.create_time) }}</template>
             </el-table-column>
-            <el-table-column label="商品明细" min-width="200" show-overflow-tooltip>
+            <el-table-column :label="$t('retail.retailOverview.colGoodsDetail')" min-width="200" show-overflow-tooltip>
               <template #default="{ row }">
                 <span class="goods-detail">{{ parseGoodsInfo(row.goods_info) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" align="center" width="80">
+            <el-table-column :label="$t('retail.retailOverview.colOperation')" align="center" width="80">
               <template #default="{ row }">
-                <el-button link size="small" @click="showOrderDetail(row)">详情</el-button>
+                <el-button link size="small" @click="showOrderDetail(row)">{{ $t('retail.retailOverview.detail') }}</el-button>
               </template>
             </el-table-column>
-            <template #empty><div style="padding:20px 0;color:#aaa">暂无订单</div></template>
+            <template #empty><div style="padding:20px 0;color:#aaa">{{ $t('retail.retailOverview.emptyOrders') }}</div></template>
           </el-table>
         </el-tab-pane>
 
-        <el-tab-pane label="最近退货" name="return">
+        <el-tab-pane :label="$t('retail.retailOverview.tabRecentReturns')" name="return">
           <el-table :data="returnRows" style="width:100%" size="small" max-height="400">
-            <el-table-column label="单号" min-width="140" show-overflow-tooltip>
+            <el-table-column :label="$t('retail.retailOverview.colReturnNo')" min-width="140" show-overflow-tooltip>
               <template #default="{ row }">{{ row.return_no || row.order_no || `TH${String(row.id).padStart(4,'0')}` }}</template>
             </el-table-column>
-            <el-table-column prop="store_name" label="门店" min-width="120" show-overflow-tooltip />
-            <el-table-column label="金额" align="right" width="100">
+            <el-table-column prop="store_name" :label="$t('retail.retailOverview.colStore')" min-width="120" show-overflow-tooltip />
+            <el-table-column :label="$t('retail.retailOverview.colAmount')" align="right" width="100">
               <template #default="{ row }">
                 <span style="color:#dc2626;font-weight:600">¥{{ fmt(Number(row.amount || row.total_amount || 0)) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="状态" align="center" width="80">
+            <el-table-column :label="$t('retail.retailOverview.colStatus')" align="center" width="80">
               <template #default="{ row }">
                 <el-tag :type="row.status == 1 ? 'success' : row.status == 2 ? 'danger' : 'warning'" size="small">
-                  {{ row.status == 1 ? '已审核' : row.status == 2 ? '已驳回' : '待审核' }}
+                  {{ row.status == 1 ? $t('retail.retailOverview.statusAudited') : row.status == 2 ? $t('retail.retailOverview.statusRejected') : $t('retail.retailOverview.statusPending') }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="日期" width="100">
+            <el-table-column :label="$t('retail.retailOverview.colDate')" width="100">
               <template #default="{ row }">{{ fmtDt(row.create_time) }}</template>
             </el-table-column>
-            <template #empty><div style="padding:20px 0;color:#aaa">暂无退货</div></template>
+            <template #empty><div style="padding:20px 0;color:#aaa">{{ $t('retail.retailOverview.emptyReturns') }}</div></template>
           </el-table>
         </el-tab-pane>
 
-        <el-tab-pane label="热销商品" name="hotGoods">
+        <el-tab-pane :label="$t('retail.retailOverview.tabHotGoods')" name="hotGoods">
           <el-table :data="hotGoodsRows" style="width:100%" size="small" max-height="400">
-            <el-table-column type="index" label="排名" width="60" align="center">
+            <el-table-column type="index" :label="$t('retail.retailOverview.colRank')" width="60" align="center">
               <template #default="{ $index }">
                 <span :class="['rank-badge', { top3: $index < 3 }]">{{ $index + 1 }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="goods_name" label="商品名称" min-width="160" show-overflow-tooltip />
-            <el-table-column label="销量" align="right" width="100">
+            <el-table-column prop="goods_name" :label="$t('retail.retailOverview.colGoodsName')" min-width="160" show-overflow-tooltip />
+            <el-table-column :label="$t('retail.retailOverview.colSalesQty')" align="right" width="100">
               <template #default="{ row }">
                 <span style="font-weight:600">{{ row.totalQty }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="销售额" align="right" width="120">
+            <el-table-column :label="$t('retail.retailOverview.colSalesAmount')" align="right" width="120">
               <template #default="{ row }">
                 <span style="color:#0071e3;font-weight:600">¥{{ fmt(row.totalAmount) }}</span>
               </template>
             </el-table-column>
-            <template #empty><div style="padding:20px 0;color:#aaa">暂无数据</div></template>
+            <template #empty><div style="padding:20px 0;color:#aaa">{{ $t('retail.retailOverview.emptyData') }}</div></template>
           </el-table>
         </el-tab-pane>
       </el-tabs>
     </el-card>
 
     <!-- 订单详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="订单详情" width="560px" destroy-on-close>
+    <el-dialog v-model="detailVisible" :title="$t('retail.retailOverview.orderDetail')" width="560px" destroy-on-close>
       <div v-if="detailRow" class="order-detail">
         <div class="detail-header">
-          <div class="detail-kv"><span class="detail-k">单号</span><span class="detail-v">{{ detailRow.order_sn || `LS${(detailRow.order_date || detailRow.created_at || '').slice(0, 10).replace(/-/g, '')}${String(detailRow.id).padStart(3,'0')}` }}</span></div>
-          <div class="detail-kv"><span class="detail-k">日期</span><span class="detail-v">{{ fmtDt(detailRow.order_date || detailRow.created_at || detailRow.create_time) }}</span></div>
-          <div class="detail-kv"><span class="detail-k">会员</span><span class="detail-v">{{ detailRow.member_name || '散客' }}</span></div>
-          <div class="detail-kv"><span class="detail-k">支付方式</span><span class="detail-v">{{ payLabel(detailRow.pay_method || detailRow.pay_type) }}</span></div>
+          <div class="detail-kv"><span class="detail-k">{{ $t('retail.retailOverview.detailOrderNo') }}</span><span class="detail-v">{{ detailRow.order_sn || `LS${(detailRow.order_date || detailRow.created_at || '').slice(0, 10).replace(/-/g, '')}${String(detailRow.id).padStart(3,'0')}` }}</span></div>
+          <div class="detail-kv"><span class="detail-k">{{ $t('retail.retailOverview.detailDate') }}</span><span class="detail-v">{{ fmtDt(detailRow.order_date || detailRow.created_at || detailRow.create_time) }}</span></div>
+          <div class="detail-kv"><span class="detail-k">{{ $t('retail.retailOverview.detailMember') }}</span><span class="detail-v">{{ detailRow.member_name || $t('retail.retailOverview.noGoods') }}</span></div>
+          <div class="detail-kv"><span class="detail-k">{{ $t('retail.retailOverview.detailPayMethod') }}</span><span class="detail-v">{{ payLabel(detailRow.pay_method || detailRow.pay_type) }}</span></div>
         </div>
         <el-table :data="detailGoods" size="small" border style="margin:12px 0">
-          <el-table-column prop="goods_name" label="商品" min-width="140" show-overflow-tooltip />
-          <el-table-column prop="unit_name" label="单位" width="60" align="center" />
-          <el-table-column prop="num" label="数量" width="70" align="right" />
-          <el-table-column label="单价" width="90" align="right">
+          <el-table-column prop="goods_name" :label="$t('retail.retailOverview.detailGoods')" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="unit_name" :label="$t('retail.retailOverview.detailUnit')" width="60" align="center" />
+          <el-table-column prop="num" :label="$t('retail.retailOverview.detailQty')" width="70" align="right" />
+          <el-table-column :label="$t('retail.retailOverview.detailUnitPrice')" width="90" align="right">
             <template #default="{ row }">¥{{ Number(row.price || 0).toFixed(2) }}</template>
           </el-table-column>
-          <el-table-column label="小计" width="100" align="right">
+          <el-table-column :label="$t('retail.retailOverview.detailSubtotal')" width="100" align="right">
             <template #default="{ row }">
               <span style="color:#0071e3;font-weight:600">¥{{ (Number(row.num || 0) * Number(row.price || 0)).toFixed(2) }}</span>
             </template>
           </el-table-column>
         </el-table>
         <div class="detail-footer">
-          <span>商品合计：¥{{ fmt(Number(detailRow.total_amount || 0)) }}</span>
-          <span>折扣：¥{{ fmt(Number(detailRow.discount_amount || 0)) }}</span>
-          <span class="detail-pay">实付：¥{{ fmt(Number(detailRow.pay_amount || 0)) }}</span>
+          <span>{{ $t('retail.retailOverview.detailGoodsTotal') }}：¥{{ fmt(Number(detailRow.total_amount || 0)) }}</span>
+          <span>{{ $t('retail.retailOverview.detailDiscount') }}：¥{{ fmt(Number(detailRow.discount_amount || 0)) }}</span>
+          <span class="detail-pay">{{ $t('retail.retailOverview.detailPaid') }}：¥{{ fmt(Number(detailRow.pay_amount || 0)) }}</span>
         </div>
       </div>
       <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
+        <el-button @click="detailVisible = false">{{ $t('retail.retailOverview.close') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -207,11 +207,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ShoppingCart, Document, User, RefreshLeft } from '@element-plus/icons-vue'
 import { getRetailOrderList, getRetailReturnList } from '@/api/retail'
 import { fmtDt } from '@/utils/date'
 
 const router = useRouter()
+const { t } = useI18n()
 
 // ── 数据 ─────────────────────────────────────────────────────────────────────
 const orderRows = ref<any[]>([])
@@ -219,17 +221,22 @@ const returnRows = ref<any[]>([])
 const activeTab = ref('order')
 
 // ── 时间维度切换 ──────────────────────────────────────────────────────────────
-const periods = [
-  { key: 'month', label: '本月' },
-  { key: 'quarter', label: '本季' },
-  { key: 'year', label: '本年' },
-  { key: 'all', label: '全部' },
-] as const
-type PeriodKey = typeof periods[number]['key']
+type PeriodKey = 'month' | 'quarter' | 'year' | 'all'
+const periods = computed(() => [
+  { key: 'month' as PeriodKey, label: t('retail.retailOverview.periodMonth') },
+  { key: 'quarter' as PeriodKey, label: t('retail.retailOverview.periodQuarter') },
+  { key: 'year' as PeriodKey, label: t('retail.retailOverview.periodYear') },
+  { key: 'all' as PeriodKey, label: t('retail.retailOverview.periodAll') },
+])
 const activePeriod = ref<PeriodKey>('all')
 
 const periodLabel = computed(() => {
-  const map: Record<PeriodKey, string> = { month: '本月', quarter: '本季', year: '本年', all: '' }
+  const map: Record<PeriodKey, string> = {
+    month: t('retail.retailOverview.periodMonth'),
+    quarter: t('retail.retailOverview.periodQuarter'),
+    year: t('retail.retailOverview.periodYear'),
+    all: '',
+  }
   return map[activePeriod.value]
 })
 
@@ -260,10 +267,14 @@ function inPeriod(dateStr: string): boolean {
 }
 
 // ── 支付方式映射 ──────────────────────────────────────────────────────────────
-const payMethodMap: Record<string, string> = {
-  cash: '现金', wechat: '微信', alipay: '支付宝', balance: '会员余额', card: '银行卡',
-}
-function payLabel(method: string) { return payMethodMap[method] || method || '现金' }
+const payMethodMap = computed<Record<string, string>>(() => ({
+  cash: t('retail.retailOverview.payMethodCash'),
+  wechat: t('retail.retailOverview.payMethodWechat'),
+  alipay: t('retail.retailOverview.payMethodAlipay'),
+  balance: t('retail.retailOverview.payMethodBalance'),
+  card: t('retail.retailOverview.payMethodCard'),
+}))
+function payLabel(method: string) { return payMethodMap.value[method] || method || t('retail.retailOverview.payMethodCash') }
 function payTagType(method: string): '' | 'success' | 'warning' | 'danger' | 'info' {
   const map: Record<string, any> = { cash: '', wechat: 'success', alipay: 'primary', balance: 'warning', card: 'info' }
   return map[method] || ''
@@ -313,7 +324,7 @@ const kpi = computed(() => {
     .sort((a, b) => b[1] - a[1])
     .map(([method, amount]) => ({
       method,
-      label: payMethodMap[method] || method,
+      label: payMethodMap.value[method] || method,
       amount,
       count: payCountMap[method] || 0,
       pct: revenue > 0 ? Math.round(amount / revenue * 100) : 0,
@@ -335,7 +346,7 @@ const hotGoodsRows = computed(() => {
       const items = JSON.parse(o.goods_info || '[]')
       for (const item of items) {
         const key = String(item.goods_id || item.goods_name)
-        if (!map[key]) map[key] = { goods_name: item.goods_name || '未知商品', totalQty: 0, totalAmount: 0 }
+        if (!map[key]) map[key] = { goods_name: item.goods_name || t('retail.retailOverview.unknownGoods'), totalQty: 0, totalAmount: 0 }
         map[key].totalQty += Number(item.num || 0)
         map[key].totalAmount += Number(item.num || 0) * Number(item.price || 0)
       }

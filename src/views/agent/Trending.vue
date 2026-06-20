@@ -3,15 +3,15 @@
 
     <DeptEmployeeCard
       name="Rex"
-      role="情报专员"
+      :role="t('agentTrending.role')"
       emoji="📈"
-      desc="热点追踪 · 趋势分析 · 选题方向"
+      :desc="t('agentTrending.desc')"
       color="#06b6d4"
       illustId="intel"
       :busy="loading"
       :stats="[
-        { value: trendingCount, label: '已抓热搜' },
-        { value: trendingStore.selectedTopics.length, label: '已选话题' },
+        { value: trendingCount, label: t('agentTrending.kpiTrending') },
+        { value: trendingStore.selectedTopics.length, label: t('agentTrending.kpiSelected') },
       ]"
     />
 
@@ -20,12 +20,12 @@
       <!-- 左侧 -->
       <aside class="left-panel">
         <div class="panel-card">
-          <div class="panel-hd"><span class="panel-dot" style="background:#06b6d4"></span>今日目标</div>
-          <textarea v-model="todayGoal" class="goal-input" placeholder="今日情报目标..." rows="3" @blur="saveGoal"/>
+          <div class="panel-hd"><span class="panel-dot" style="background:#06b6d4"></span>{{ t('agentTrending.todayGoal') }}</div>
+          <textarea v-model="todayGoal" class="goal-input" :placeholder="t('agentTrending.goalPlaceholder')" rows="3" @blur="saveGoal"/>
         </div>
 
         <div class="panel-card">
-          <div class="panel-hd"><span class="panel-dot" style="background:#6366f1"></span>快捷指令</div>
+          <div class="panel-hd"><span class="panel-dot" style="background:#6366f1"></span>{{ t('agentTrending.quickPrompts') }}</div>
           <div class="quick-list">
             <button v-for="q in quickPrompts" :key="q.text" class="quick-item" @click="chatRef?.sendQuickPrompt(q.text)">
               <span class="quick-emoji">{{ q.emoji }}</span>
@@ -35,18 +35,18 @@
         </div>
 
         <div class="panel-card">
-          <div class="panel-hd"><span class="panel-dot" style="background:#10b981"></span>平台监控</div>
+          <div class="panel-hd"><span class="panel-dot" style="background:#10b981"></span>{{ t('agentTrending.platformMonitor') }}</div>
           <div class="status-list">
             <div v-for="p in platforms" :key="p.key" class="status-row">
               <span class="status-label">{{ p.name }}</span>
               <span class="status-badge" :class="trendingStore.trending[p.key]?.length ? 'green' : 'gray'">
-                {{ trendingStore.trending[p.key]?.length || 0 }} 条
+                {{ trendingStore.trending[p.key]?.length || 0 }} {{ t('common.items') }}
               </span>
             </div>
           </div>
           <button class="fetch-btn" :class="{ loading }" @click="fetchAll" style="margin-top:12px">
             <svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11 6.5a4.5 4.5 0 11-1.3-3.2"/><path d="M9.7 1v2.5H7.2"/></svg>
-            {{ loading ? '抓取中...' : '抓取热搜' }}
+            {{ loading ? t('agentTrending.fetching') : t('agentTrending.fetchHot') }}
           </button>
         </div>
       </aside>
@@ -57,8 +57,8 @@
           <div class="chat-header-left">
             <span class="chat-agent-emoji">📈</span>
             <div>
-              <div class="chat-agent-name">Rex · 情报专员</div>
-              <div class="chat-agent-sub">情报部 · 热点追踪 & 趋势分析</div>
+              <div class="chat-agent-name">Rex · {{ t('agentTrending.role') }}</div>
+              <div class="chat-agent-sub">{{ t('agentLayout.trendingDept') }} · {{ t('agentTrending.desc') }}</div>
             </div>
           </div>
         </div>
@@ -70,14 +70,14 @@
         <div class="panel-card output-card">
           <div class="panel-hd">
             <span class="panel-dot" style="background:#06b6d4"></span>
-            热搜快览
+            {{ t('agentTrending.previewTitle') }}
             <div class="platform-mini-tabs">
               <button v-for="p in platforms" :key="p.key" class="mini-tab" :class="{ active: activePlatform === p.key }" @click="activePlatform = p.key">{{ p.name }}</button>
             </div>
           </div>
-          <div v-if="currentList.length === 0" class="output-empty">暂无数据 · 点击抓取</div>
+          <div v-if="currentList.length === 0" class="output-empty">{{ t('agentTrending.noData') }}</div>
           <div v-else class="trending-list">
-            <div v-if="currentList[0]?.isMock" class="mock-notice">示例数据 · 点击「抓取热搜」获取真实数据</div>
+            <div v-if="currentList[0]?.isMock" class="mock-notice">{{ t('agentTrending.mockNotice') }}</div>
             <div v-for="(item, i) in currentList.slice(0, 8)" :key="i" class="trending-item" :class="{ 'is-mock': item.isMock }" @click="addTopic(item.title)">
               <span class="t-rank" :class="i < 3 ? 'hot' : ''">{{ i + 1 }}</span>
               <span class="t-title">{{ item.title }}</span>
@@ -87,8 +87,8 @@
         </div>
 
         <div class="panel-card" style="margin-top:10px">
-          <div class="panel-hd"><span class="panel-dot" style="background:#f59e0b"></span>已选话题 <span class="panel-count">{{ trendingStore.selectedTopics.length }}</span></div>
-          <div v-if="trendingStore.selectedTopics.length === 0" class="output-empty">点击热搜条目加入</div>
+          <div class="panel-hd"><span class="panel-dot" style="background:#f59e0b"></span>{{ t('agentTrending.selectedTitle') }} <span class="panel-count">{{ trendingStore.selectedTopics.length }}</span></div>
+          <div v-if="trendingStore.selectedTopics.length === 0" class="output-empty">{{ t('agentTrending.selectedEmpty') }}</div>
           <div v-else class="topic-list">
             <div v-for="(t, i) in trendingStore.selectedTopics" :key="i" class="topic-item">
               <span class="topic-text">{{ t }}</span>
@@ -104,7 +104,7 @@
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
               <path d="M2 5.5h7M6 3l3 2.5L6 8"/>
             </svg>
-            {{ sentToContent ? '已发给内容部 ✓' : '发给内容部 →' }}
+            {{ sentToContent ? t('agentTrending.sentDone') : t('agentTrending.sent') }}
           </button>
         </div>
       </aside>
@@ -115,6 +115,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AgentChat from '@/components/agent/AgentChat.vue'
 import DeptEmployeeCard from '@/components/agent/DeptEmployeeCard.vue'
 import { useTrendingStore } from '@/stores/agent'
@@ -123,6 +124,7 @@ import { ElMessage } from 'element-plus'
 
 const trendingStore = useTrendingStore()
 const pipelineStore = usePipelineStore()
+const { t } = useI18n()
 const sentToContent = ref(false)
 const chatRef = ref<InstanceType<typeof AgentChat>>()
 const streaming = ref(false)
@@ -130,10 +132,10 @@ const loading = ref(false)
 const activePlatform = ref('douyin')
 
 const platforms = [
-  { key: 'douyin', name: '抖音' },
-  { key: 'xiaohongshu', name: '小红书' },
-  { key: 'weibo', name: '微博' },
-  { key: 'bilibili', name: 'B站' },
+  { key: 'douyin', name: t('agentTrending.platformDouyin') },
+  { key: 'xiaohongshu', name: t('agentTrending.platformXhs') },
+  { key: 'weibo', name: t('agentTrending.platformWeibo') },
+  { key: 'bilibili', name: t('agentTrending.platformBilibili') },
 ]
 
 const trendingCount = computed(() => Object.values(trendingStore.trending).reduce((s: number, a: any[]) => s + a.length, 0))
@@ -143,10 +145,10 @@ const todayGoal = ref(localStorage.getItem('intel_dept_goal') || '')
 function saveGoal() { localStorage.setItem('intel_dept_goal', todayGoal.value) }
 
 const quickPrompts = [
-  { emoji: '🔥', text: '分析当前热搜，找出与品牌相关的话题' },
-  { emoji: '📊', text: '帮我找3个适合蹭热点的选题方向' },
-  { emoji: '🎯', text: '抖音最近什么类型视频最火？' },
-  { emoji: '💡', text: '分析热搜背后的用户情绪和需求' },
+  { emoji: '🔥', text: t('agentTrending.prompt1') },
+  { emoji: '📊', text: t('agentTrending.prompt2') },
+  { emoji: '🎯', text: t('agentTrending.prompt3') },
+  { emoji: '💡', text: t('agentTrending.prompt4') },
 ]
 
 async function fetchAll() {
@@ -157,9 +159,9 @@ async function fetchAll() {
     if (!res.ok) throw new Error('HTTP ' + res.status)
     const data = await res.json() as any
     if (data.trending) trendingStore.setTrending(data.trending)
-    ElMessage.success('热搜抓取成功')
+    ElMessage.success(t('agentTrending.fetchSuccess'))
   } catch (e: any) {
-    ElMessage.error('抓取失败：' + e.message)
+    ElMessage.error(t('agentTrending.fetchFailed') + e.message)
   } finally {
     loading.value = false
   }
@@ -170,7 +172,7 @@ function addTopic(title: string) {
   if (!topics.includes(title)) {
     topics.push(title)
     trendingStore.setSelectedTopics(topics)
-    ElMessage.success('已加入选题')
+    ElMessage.success(t('agentTrending.added'))
   }
 }
 
@@ -183,11 +185,11 @@ function removeTopic(i: number) {
 function sendToContent() {
   const topics = trendingStore.selectedTopics
   if (topics.length === 0) return
-  const title = topics[0].slice(0, 20) + (topics.length > 1 ? ` 等${topics.length}个话题` : '')
+  const title = topics[0].slice(0, 20) + (topics.length > 1 ? ` ${t('agentTrending.topicsTitle', { count: topics.length })}` : '')
   const existing = pipelineStore.tasks.find(t => t.title === title)
   if (existing) {
     pipelineStore.recordOutput(existing.id, 'intel', topics.join('、'))
-    ElMessage.success('已更新情报产出')
+    ElMessage.success(t('agentTrending.updated'))
   } else {
     pipelineStore.createTask(title)
     const task = pipelineStore.tasks[0]
@@ -195,7 +197,7 @@ function sendToContent() {
     pipelineStore.advanceStage(task.id)
   }
   sentToContent.value = true
-  ElMessage.success('已发给内容部，可在任务中心查看')
+  ElMessage.success(t('agentTrending.sentToast'))
   setTimeout(() => { sentToContent.value = false }, 3000)
 }
 </script>

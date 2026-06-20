@@ -7,9 +7,9 @@
     @mousedown="onTriggerDragStart"
     @touchstart.passive="onTriggerTouchStart"
     @click="onTriggerClick"
-    :title="isOpen ? '关闭ERP管家' : '打开ERP管家'"
+    :title="isOpen ? t('aiAssistant.closeAssistant') : t('aiAssistant.openAssistant')"
   >
-    <span class="ai-trigger-label">ERP管家</span>
+    <span class="ai-trigger-label">{{ t('aiAssistant.name') }}</span>
     <el-badge v-if="unread > 0" :value="unread" class="ai-badge" />
   </div>
 
@@ -25,22 +25,22 @@
       <div class="chat-header" @mousedown="onPanelDragStart" @touchstart.passive="onPanelTouchStart">
         <div class="chat-header-info">
           <div>
-            <div class="chat-name">ERP 管家</div>
-            <div class="chat-status">{{ isLoading ? '正在处理...' : '在线 · ERP 数据专属' }}</div>
+            <div class="chat-name">{{ t('aiAssistant.nameSpaced') }}</div>
+            <div class="chat-status">{{ isLoading ? t('aiAssistant.processing') : t('aiAssistant.onlineStatus') }}</div>
           </div>
         </div>
         <div class="chat-header-actions">
-          <el-tooltip content="语音通话">
+          <el-tooltip :content="t('aiAssistant.voiceCall')">
             <el-button :icon="Phone" circle size="small" plain @click="voiceCallActive = true" />
           </el-tooltip>
-          <el-tooltip content="历史会话">
+          <el-tooltip :content="t('aiAssistant.history')">
             <el-button :icon="Clock" circle size="small" plain @click="showHistory = !showHistory; showMemory = false" />
           </el-tooltip>
-          <el-tooltip content="偏好记忆">
+          <el-tooltip :content="t('aiAssistant.memory')">
             <el-button :icon="Setting" circle size="small" plain @click="showMemory = !showMemory; showHistory = false" />
           </el-tooltip>
-          <el-tooltip content="清空对话">
-            <el-button :icon="Delete" size="small" plain @click="clearMessages" style="font-size:12px;padding:4px 8px;">清空</el-button>
+          <el-tooltip :content="t('aiAssistant.clearChat')">
+            <el-button :icon="Delete" size="small" plain @click="clearMessages" style="font-size:12px;padding:4px 8px;">{{ t('common.clear') }}</el-button>
           </el-tooltip>
           <el-button :icon="Close" circle size="small" plain @click="isOpen = false" />
         </div>
@@ -53,10 +53,10 @@
         <transition name="slide-down">
           <div v-if="showHistory" class="history-panel">
             <div class="history-panel-header">
-              <span>历史会话</span>
-              <el-button link size="small" @click="showHistory = false">收起</el-button>
+              <span>{{ t('aiAssistant.historySessions') }}</span>
+              <el-button link size="small" @click="showHistory = false">{{ t('aiAssistant.collapse') }}</el-button>
             </div>
-            <div v-if="sessions.length === 0" class="history-empty">暂无历史会话</div>
+            <div v-if="sessions.length === 0" class="history-empty">{{ t('aiAssistant.noHistory') }}</div>
             <div
               v-for="(s, i) in sessions"
               :key="s.time"
@@ -64,7 +64,7 @@
               @click="restoreSession(i)"
             >
               <div class="history-item-title">{{ s.summary }}</div>
-              <div class="history-item-meta">{{ s.time }} · {{ s.count }}条消息</div>
+              <div class="history-item-meta">{{ s.time }} · {{ t('aiAssistant.messageCount', { count: s.count }) }}</div>
             </div>
           </div>
         </transition>
@@ -74,8 +74,8 @@
 
         <!-- Welcome message -->
         <div class="chat-welcome" v-if="messages.length === 0">
-          <p class="welcome-title">你好！我是 ERP 管家</p>
-          <p class="welcome-sub">负责 ERP 数据录入、查询、导航，直接告诉我你要做什么</p>
+          <p class="welcome-title">{{ t('aiAssistant.welcomeTitle') }}</p>
+          <p class="welcome-sub">{{ t('aiAssistant.welcomeSub') }}</p>
           <div class="quick-prompts">
             <el-tag
               v-for="p in quickPrompts"
@@ -88,7 +88,7 @@
           <!-- BOM生产计划 -->
           <div class="bom-quick-btn" @click="openBomDialog">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10M7 12h6"/></svg>
-            一键生产BOM
+            {{ t('aiAssistant.oneClickBom') }}
           </div>
         </div>
 
@@ -139,7 +139,7 @@
             />
             <div class="message-content" v-html="renderMarkdown(msg.content)" @click="onMessageClick($event)" />
             <div v-if="msg.navRoute" class="message-nav-btn">
-              <el-button type="primary" size="small" @click="navigateTo(msg.navRoute!)">立即查看 →</el-button>
+              <el-button type="primary" size="small" @click="navigateTo(msg.navRoute!)">{{ t('aiAssistant.viewNowArrow') }}</el-button>
             </div>
             <div class="message-time">{{ msg.time }}</div>
           </div>
@@ -160,7 +160,7 @@
       <div v-if="pendingAction" class="action-preview">
         <div class="action-preview-title">
           <el-icon><Loading /></el-icon>
-          正在录入数据...
+          {{ t('aiAssistant.enteringData') }}
         </div>
         <div class="action-preview-content">{{ JSON.stringify(pendingAction.data, null, 2) }}</div>
       </div>      <!-- Input area -->
@@ -178,7 +178,7 @@
           v-model="inputText"
           class="chat-native-textarea"
           rows="2"
-          :placeholder="isRecording ? '正在聆听，请说话...' : '输入业务描述，或上传/粘贴单据图片让AI识别录入...'"
+          :placeholder="isRecording ? t('aiAssistant.listeningPlaceholder') : t('aiAssistant.inputPlaceholder')"
           :disabled="isLoading"
           autocomplete="off"
           autocorrect="off"
@@ -190,7 +190,7 @@
           @paste="onPaste"
         />
         <div class="input-footer">
-          <el-tooltip content="上传单据图片">
+          <el-tooltip :content="t('aiAssistant.uploadDocumentImage')">
             <el-button :icon="Picture" circle size="small" plain @click="openImagePicker" :disabled="isLoading" />
           </el-tooltip>
           <button
@@ -205,11 +205,11 @@
             @touchcancel.prevent="onMicCancel"
           >
             <el-icon><Microphone /></el-icon>
-            <span>{{ isCancelling ? '松手取消' : isRecording ? '松手发送' : '按住说话' }}</span>
+            <span>{{ isCancelling ? t('aiAssistant.releaseCancel') : isRecording ? t('aiAssistant.releaseSend') : t('aiAssistant.holdToTalk') }}</span>
           </button>
           <button v-if="isIOS" class="mic-hold-btn" @click="showIOSVoiceTip" :disabled="isLoading">
             <el-icon><Microphone /></el-icon>
-            <span>按住说话</span>
+            <span>{{ t('aiAssistant.holdToTalk') }}</span>
           </button>
 
           <!-- 长按录音遮罩 -->
@@ -218,9 +218,9 @@
               <div class="voice-wave">
                 <span></span><span></span><span></span><span></span><span></span>
               </div>
-              <p>正在聆听，松手发送</p>
+              <p>{{ t('aiAssistant.listeningReleaseSend') }}</p>
               <div class="voice-cancel-hint" :class="{ 'voice-cancel-hint--active': isCancelling }">
-                ↑ 上滑取消
+                {{ t('aiAssistant.slideUpCancel') }}
               </div>
             </div>
           </transition>
@@ -232,14 +232,14 @@
             style="display:none"
             @change="onFileChange"
           />
-          <span class="input-hint">Enter 发送 · Shift+Enter 换行</span>
+          <span class="input-hint">{{ t('aiAssistant.inputHint') }}</span>
           <el-button
             type="primary"
             :icon="Promotion"
             :loading="isLoading"
             :disabled="!inputText.trim() && !pendingImages.length"
             @click="sendMessage"
-          >发送</el-button>
+          >{{ t('aiAssistant.send') }}</el-button>
         </div>
       </div>
     </div>
@@ -251,17 +251,17 @@
   <VoiceCallOverlay v-model:visible="voiceCallActive" />
 
   <!-- 一键生产BOM弹框 -->
-  <el-dialog v-model="bomDialogVisible" title="一键生产成品BOM计划" width="760px" append-to-body :close-on-click-modal="false">
+  <el-dialog v-model="bomDialogVisible" :title="t('aiAssistant.bomDialogTitle')" width="760px" append-to-body :close-on-click-modal="false">
     <div class="gen-dialog">
       <!-- Step 1: 选择产品 -->
       <div class="gen-section">
         <div class="gen-section-title">
-          <el-icon><GoodsFilled /></el-icon> 选择要生产的产品
+          <el-icon><GoodsFilled /></el-icon> {{ t('aiAssistant.selectProductsToProduce') }}
         </div>
         <div class="gen-search-row">
-          <el-input v-model="genSearch" placeholder="搜索产品名称…" clearable style="width:220px" @input="filterGenGoods" />
-          <span class="gen-hint">共 {{ filteredGenGoods.length }} 个有BOM的产品</span>
-          <el-button size="small" :loading="bomLoading" @click="loadBomProducts">{{ bomLoading ? '加载中…' : '刷新' }}</el-button>
+          <el-input v-model="genSearch" :placeholder="t('aiAssistant.searchProductName')" clearable style="width:220px" @input="filterGenGoods" />
+          <span class="gen-hint">{{ t('aiAssistant.bomProductCount', { count: filteredGenGoods.length }) }}</span>
+          <el-button size="small" :loading="bomLoading" @click="loadBomProducts">{{ bomLoading ? t('common.loading') : t('common.refresh') }}</el-button>
         </div>
         <div class="gen-goods-grid">
           <div
@@ -271,43 +271,43 @@
           >
             <div class="gen-goods-name">{{ g.goods_name }}</div>
             <div class="gen-goods-meta">
-              <span class="gen-canmake" :class="g.canMake > 0 ? 'ok' : 'lack'">可生产: {{ g.canMake }}</span>
+              <span class="gen-canmake" :class="g.canMake > 0 ? 'ok' : 'lack'">{{ t('aiAssistant.canProduce') }}: {{ g.canMake }}</span>
             </div>
             <div v-if="selectedGenGoods.has(g.goods_id)" class="gen-qty-row" @click.stop>
-              <span class="gen-qty-label">数量</span>
+              <span class="gen-qty-label">{{ t('aiAssistant.quantity') }}</span>
               <el-input-number v-model="genQtyMap[g.goods_id]" :min="1" :max="g.canMake || 9999" size="small" controls-position="right" style="width:110px" />
               <span class="gen-unit">{{ g.unit_name || '' }}</span>
             </div>
             <el-icon v-if="selectedGenGoods.has(g.goods_id)" class="gen-check"><Select /></el-icon>
           </div>
         </div>
-        <div v-if="filteredGenGoods.length === 0 && !bomLoading" class="empty-tip">没有找到有BOM配置的产品</div>
+        <div v-if="filteredGenGoods.length === 0 && !bomLoading" class="empty-tip">{{ t('aiAssistant.noBomProducts') }}</div>
       </div>
 
       <!-- Step 2: 仓库 + 日期 -->
       <div class="gen-section" v-if="selectedGenGoods.size > 0">
-        <div class="gen-section-title"><el-icon><SetUp /></el-icon> 配置生产参数</div>
+        <div class="gen-section-title"><el-icon><SetUp /></el-icon> {{ t('aiAssistant.configureProductionParams') }}</div>
         <el-row :gutter="16">
           <el-col :span="12">
             <div class="field-row">
-              <span class="field-label required">成品入库仓库</span>
-              <el-select v-model="genWarehouse" placeholder="选择仓库" style="flex:1">
+              <span class="field-label required">{{ t('aiAssistant.finishedGoodsWarehouse') }}</span>
+              <el-select v-model="genWarehouse" :placeholder="t('aiAssistant.selectWarehouse')" style="flex:1">
                 <el-option v-for="w in warehouseList" :key="w.id" :label="w.name" :value="w.id" />
               </el-select>
             </div>
           </el-col>
           <el-col :span="12">
             <div class="field-row">
-              <span class="field-label">计划日期</span>
-              <el-date-picker v-model="genDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="flex:1" />
+              <span class="field-label">{{ t('aiAssistant.planDate') }}</span>
+              <el-date-picker v-model="genDate" type="date" value-format="YYYY-MM-DD" :placeholder="t('aiAssistant.selectDate')" style="flex:1" />
             </div>
           </el-col>
         </el-row>
         <el-row style="margin-top:10px">
           <el-col :span="24">
             <div class="field-row">
-              <span class="field-label">备注</span>
-              <el-input v-model="genRemark" placeholder="可选备注" style="flex:1" />
+              <span class="field-label">{{ t('common.remark') }}</span>
+              <el-input v-model="genRemark" :placeholder="t('aiAssistant.optionalRemark')" style="flex:1" />
             </div>
           </el-col>
         </el-row>
@@ -315,17 +315,17 @@
 
       <!-- 预览 -->
       <div class="gen-section" v-if="genPreviewList.length > 0">
-        <div class="gen-section-title"><el-icon><Document /></el-icon> 生产预览（BOM原料消耗）</div>
+        <div class="gen-section-title"><el-icon><Document /></el-icon> {{ t('aiAssistant.productionPreview') }}</div>
         <el-table :data="genPreviewList" size="small" border style="width:100%">
-          <el-table-column prop="goods_name" label="成品" min-width="120" />
-          <el-table-column prop="qty" label="生产数量" width="90" align="right" />
-          <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-          <el-table-column prop="materials" label="消耗原料" min-width="200">
+          <el-table-column prop="goods_name" :label="t('aiAssistant.finishedGoods')" min-width="120" />
+          <el-table-column prop="qty" :label="t('aiAssistant.productionQty')" width="90" align="right" />
+          <el-table-column prop="unit_name" :label="t('aiAssistant.unit')" width="70" align="center" />
+          <el-table-column prop="materials" :label="t('aiAssistant.consumedMaterials')" min-width="200">
             <template #default="{ row }">
               <div v-for="m in row.materials" :key="m._matGoodsId || m.material_id" class="mat-row">
                 <span class="mat-name">{{ m.material_name || m.goods_name }}</span>
                 <span class="mat-qty">×{{ m.num * row.qty }}</span>
-                <el-tag size="small" :type="m.stockOk ? 'success' : 'danger'" style="margin-left:4px">库存{{ m.stock_num ?? '?' }}</el-tag>
+                <el-tag size="small" :type="m.stockOk ? 'success' : 'danger'" style="margin-left:4px">{{ t('aiAssistant.stock') }}{{ m.stock_num ?? '?' }}</el-tag>
               </div>
             </template>
           </el-table-column>
@@ -343,11 +343,11 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="bomDialogVisible = false" :disabled="generating">取消</el-button>
+      <el-button @click="bomDialogVisible = false" :disabled="generating">{{ t('common.cancel') }}</el-button>
       <el-button type="primary" :icon="MagicStick" :loading="generating"
         :disabled="selectedGenGoods.size === 0 || !genWarehouse"
         @click="doGenerate">
-        {{ generating ? '生成中…' : '确认一键生成' }}
+        {{ generating ? t('aiAssistant.generating') : t('aiAssistant.confirmGenerate') }}
       </el-button>
     </template>
   </el-dialog>
@@ -373,6 +373,9 @@ import { useChatContextStore } from '@/stores/chatContext'
 import { extractAndMerge } from './ai/composables/useMemoryExtractor'
 import adamAvatarUrl from '@/assets/adam-avatar.png'
 import { getScopedStorageKey } from '@/utils/storageScope'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 function getResponseId(res: any) {
   return Number(res?.data?.id || res?.data?.data?.id || res?.data || 0)
@@ -449,7 +452,7 @@ function archiveSession() {
   const msgs = messages.value
   if (msgs.length < 2) return
   const first = msgs.find(m => m.role === 'user')
-  const summary = first ? first.content.slice(0, 30) + (first.content.length > 30 ? '...' : '') : '对话记录'
+  const summary = first ? first.content.slice(0, 30) + (first.content.length > 30 ? '...' : '') : t('aiAssistant.chatRecord')
   const s: Session = { time: getNow(), summary, count: msgs.length, messages: [...msgs] }
   sessions.value = [...sessions.value, s]
   saveSessions(sessions.value)
@@ -629,13 +632,13 @@ function onTriggerClick() {
   toggleChat()
 }
 
-const quickPrompts = [
-  '新增一个客户',
-  '本月销售总额是多少',
-  '查询库存商品列表',
-  '录入一条采购订单',
-  '录入一笔预付款',
-]
+const quickPrompts = computed(() => [
+  t('aiAssistant.quickAddCustomer'),
+  t('aiAssistant.quickMonthlySales'),
+  t('aiAssistant.quickStockList'),
+  t('aiAssistant.quickCreateProcureOrder'),
+  t('aiAssistant.quickCreatePrepay'),
+])
 
 // ── 一键生产BOM ───────────────────────────────────────────────────────────────
 const bomDialogVisible = ref(false)
@@ -733,35 +736,35 @@ function toggleGenGoods(g: any) {
 
 async function doGenerate() {
   if (!selectedGenGoods.value.size) return
-  if (!genWarehouse.value) { ElMessage.warning('请选择入库仓库'); return }
+  if (!genWarehouse.value) { ElMessage.warning(t('aiAssistant.selectInboundWarehouseWarning')); return }
   const items = genPreviewList.value as any[]
   const lacking = items.filter(i => i.canMake < i.qty)
   if (lacking.length) {
     try {
-      await ElMessageBox.confirm(`以下产品物料库存不足：${lacking.map((l: any) => l.goods_name).join('、')}，是否继续？`, '库存不足确认', { type: 'warning' })
+      await ElMessageBox.confirm(t('aiAssistant.stockInsufficientConfirm', { names: lacking.map((l: any) => l.goods_name).join('、') }), t('aiAssistant.stockInsufficientTitle'), { type: 'warning' })
     } catch { return }
   }
   generating.value = true
   genLogs.value = []
   const today = genDate.value || new Date().toISOString().slice(0, 10)
   for (const item of items) {
-    genLogs.value.push({ text: `开始生成：${item.goods_name} × ${item.qty}`, type: 'info' })
+    genLogs.value.push({ text: t('aiAssistant.logStartGenerate', { name: item.goods_name, qty: item.qty }), type: 'info' })
     try {
       const planRes = await createProductionPlan({
         plan_date: today, finish_date: today,
-        remark: genRemark.value || '一键生成BOM计划',
+        remark: genRemark.value || t('aiAssistant.defaultBomPlanRemark'),
         goods_name: item.goods_name,
         goods_info: JSON.stringify([{ goods_id: item.goods_id, goods_name: item.goods_name, num: item.qty, unit_name: item.unit_name }]),
         plan_num: item.qty, schedule_num: item.qty,
       })
       const planId = getResponseId(planRes)
       const planNo = getResponseOrderSn(planRes)
-      genLogs.value.push({ text: `  ✓ 生产计划已创建（ID: ${planId}）`, type: 'success' })
-      if (planId) { await auditProductionPlan(planId, 1); genLogs.value.push({ text: `  ✓ 生产计划已审核通过`, type: 'success' }) }
+      genLogs.value.push({ text: t('aiAssistant.logPlanCreated', { id: planId }), type: 'success' })
+      if (planId) { await auditProductionPlan(planId, 1); genLogs.value.push({ text: t('aiAssistant.logPlanAudited'), type: 'success' }) }
       try {
         const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
         const matItems = item.materials.map((mat: any) => ({ goods_id: mat._matGoodsId, goods_name: mat.material_name || mat.goods_name, goods_sn: mat.material_sn || mat.goods_sn || '', unit_name: mat.unit_name || '', num: Number(mat.num) * item.qty, out_price: 0, row_total: 0, remark: '' }))
-        const matRes = await createMaterial({ pick_date: today, warehouse_id: genWarehouse.value, warehouse_name: warehouseName, production_plan_id: planId, plan_name: planNo, remark: `一键生成 - ${item.goods_name}`, goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))), total_price: 0 })
+        const matRes = await createMaterial({ pick_date: today, warehouse_id: genWarehouse.value, warehouse_name: warehouseName, production_plan_id: planId, plan_name: planNo, remark: t('aiAssistant.defaultMaterialRemark', { name: item.goods_name }), goods_info: JSON.stringify(matItems.map((mat: any) => ({ ...mat, warehouse_id: genWarehouse.value, warehouse_name: warehouseName }))), total_price: 0 })
         const matId = getResponseId(matRes)
         if (matId) {
           await auditMaterial(matId, 1)
@@ -771,8 +774,8 @@ async function doGenerate() {
             defaultWarehouseName: warehouseName,
           })
         }
-        genLogs.value.push({ text: `  ✓ 领料单已创建并审核（共 ${matItems.length} 种原料）`, type: 'success' })
-      } catch { genLogs.value.push({ text: `  ⚠ 领料失败（可继续）`, type: 'error' }) }
+        genLogs.value.push({ text: t('aiAssistant.logMaterialCreated', { count: matItems.length }), type: 'success' })
+      } catch { genLogs.value.push({ text: t('aiAssistant.logMaterialFailed'), type: 'error' }) }
       const warehouseName = warehouseList.value.find((w: any) => Number(w.id) === Number(genWarehouse.value))?.name || ''
       const inhouseRes = await createProductionInhouseAndAutoAudit({
         plan_id: planId,
@@ -780,15 +783,15 @@ async function doGenerate() {
         inhouse_date: today,
         warehouse_id: Number(genWarehouse.value || 0),
         warehouse_name: warehouseName,
-        remark: genRemark.value || '一键生成BOM入库',
+        remark: genRemark.value || t('aiAssistant.defaultBomInhouseRemark'),
         items: [{ goods_id: item.goods_id, goods_name: item.goods_name, goods_sn: item.goods_sn || '', num: item.qty, unit_name: item.unit_name }],
       })
       const inhouseId = inhouseRes.rows?.[0]?.id
-      genLogs.value.push({ text: `  ✓ 生产入库单已创建并审核（ID: ${inhouseId || '—'}）`, type: 'success' })
-    } catch (e: any) { genLogs.value.push({ text: `  ✗ 失败：${e?.message || '接口错误'}`, type: 'error' }) }
+      genLogs.value.push({ text: t('aiAssistant.logInhouseCreated', { id: inhouseId || '—' }), type: 'success' })
+    } catch (e: any) { genLogs.value.push({ text: t('aiAssistant.logFailed', { message: e?.message || t('aiAssistant.apiError') }), type: 'error' }) }
   }
   generating.value = false
-  ElMessage.success('一键生成完成！')
+  ElMessage.success(t('aiAssistant.generateComplete'))
 }
 
 const SYSTEM_PROMPT = `你是数字游牧ERP系统的内置AI助手。你运行在该ERP系统内部，拥有直接调用系统API的能力，可以真实地录入、查询、汇总业务数据。
@@ -1024,7 +1027,7 @@ async function sendMessage() {
 
   messages.value.push({
     role: 'user',
-    content: text || '请识别这张单据图片，提取所有关键信息并帮我录入系统。',
+    content: text || t('aiAssistant.recognizeDocumentPrompt'),
     time: getNow(),
     images: previewUrls.length ? previewUrls : undefined,
   })
@@ -1083,7 +1086,7 @@ async function sendMessage() {
     if (contentType.includes('text/event-stream')) {
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
-      if (!reader) throw new Error('无法读取响应流')
+      if (!reader) throw new Error(t('aiAssistant.streamReadFailed'))
       let buffer = ''
       while (true) {
         const { done, value } = await reader.read()
@@ -1109,7 +1112,7 @@ async function sendMessage() {
               // 员工接令消息 — 单独气泡，简短
               const ackMsg: Message = {
                 role: 'assistant',
-                content: parsed.text || '收到，开始执行。',
+                content: parsed.text || t('aiAssistant.agentAckFallback'),
                 time: getNow(),
                 toolCalls: [],
                 agentId: parsed.agentId,
@@ -1179,7 +1182,7 @@ async function sendMessage() {
       nextTick(() => scrollToBottom())
     }
   } catch (e: any) {
-    assistantMsg.content = `抱歉，出现了错误：${e.message}`
+    assistantMsg.content = t('aiAssistant.errorMessage', { message: e.message })
     if (!isOpen.value) unread.value++
   } finally {
     previewUrls.forEach(url => URL.revokeObjectURL(url))
@@ -1196,21 +1199,21 @@ async function executeAction() {
     // http interceptor already unwraps code=1 responses; res = { code, data, message }
     const orderSn = res?.data?.order_sn || res?.data?.id
     const navRoute = getListRoute(actionType)
-    const extra = orderSn ? `单号：${orderSn}。` : ''
-    ElMessage.success('数据录入成功！')
+    const extra = orderSn ? t('aiAssistant.orderNoSentence', { orderSn }) : ''
+    ElMessage.success(t('aiAssistant.dataEntrySuccess'))
     messages.value.push({
       role: 'assistant',
-      content: `✅ 数据已成功录入系统！${extra}如需继续操作，请告诉我。`,
+      content: t('aiAssistant.dataEntrySuccessMessage', { extra }),
       time: getNow(),
       navRoute,
     })
     pendingAction.value = null
   } catch (e: any) {
     const errMsg = e.message || e.msg || JSON.stringify(e)
-    ElMessage.error('录入失败：' + errMsg)
+    ElMessage.error(t('aiAssistant.dataEntryFailedToast', { message: errMsg }))
     messages.value.push({
       role: 'assistant',
-      content: `❌ 录入失败：${errMsg}\n\n请告诉我正确信息，我重新帮您录入。`,
+      content: t('aiAssistant.dataEntryFailedMessage', { message: errMsg }),
       time: getNow(),
     })
     pendingAction.value = null
@@ -1373,7 +1376,7 @@ function onMicDown(e: MouseEvent | TouchEvent) {
     window.removeEventListener('pointermove', onPointerMove as any)
     window.removeEventListener('touchmove', onPointerMove as any)
     if (e.error !== 'aborted') {
-      const msg = e.error === 'not-allowed' ? '麦克风权限被拒绝' : `语音识别失败：${e.error}`
+      const msg = e.error === 'not-allowed' ? t('aiAssistant.micPermissionDenied') : t('aiAssistant.speechFailed', { error: e.error })
       messages.value = [...messages.value, { role: 'assistant', content: msg, time: getNow() }]
     }
   }
@@ -1418,7 +1421,7 @@ function onMicCancel() {
 }
 
 function showIOSVoiceTip() {
-  ElMessage.info('请点击输入框唤起键盘，再点击键盘右下角🎤语音键说话')
+  ElMessage.info(t('aiAssistant.iosVoiceTip'))
 }
 
 function openImagePicker() {

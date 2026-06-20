@@ -4,117 +4,120 @@
       <ScTable ref="tableRef"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           :import-api="importRow"
-          export-file-name="其他收入" :params="searchForm">
+          :export-file-name="t('finance.otherIncome.exportFileName')" :params="searchForm">
         <template #search>
           <el-form inline>
-            <el-form-item label="编号">
-              <el-input v-model="searchForm.keyword" placeholder="请输入编号" clearable style="width:160px" />
+            <el-form-item :label="t('finance.otherIncome.labelNo')">
+              <el-input v-model="searchForm.keyword" :placeholder="t('finance.otherIncome.placeholderNo')" clearable style="width:160px" />
             </el-form-item>
-            <el-form-item label="付款单位">
-              <el-input v-model="searchForm.contact" placeholder="请输入付款单位" clearable style="width:160px" />
+            <el-form-item :label="t('finance.otherIncome.labelPayer')">
+              <el-input v-model="searchForm.contact" :placeholder="t('finance.otherIncome.placeholderPayer')" clearable style="width:160px" />
+            </el-form-item>
+            <el-form-item :label="t('finance.otherIncome.labelIncomeType')">
+              <el-input v-model="searchForm.income_type" :placeholder="t('finance.otherIncome.placeholderIncomeType')" clearable style="width:140px" />
             </el-form-item>
             <el-form-item>
-              <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
-                <el-option label="未核对" value="unreconciled" />
+              <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="t('finance.otherIncome.placeholderReconcileStatus')">
+                <el-option :label="t('finance.otherIncome.optionUnreconciled')" value="unreconciled" />
               </el-select>
             </el-form-item>
           </el-form>
           <div class="search-actions">
-            <el-button type="primary" @click="tableRef?.loadData()">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-button type="primary" @click="tableRef?.loadData()">{{ t('common.query') }}</el-button>
+            <el-button @click="resetSearch">{{ t('common.reset') }}</el-button>
           </div>
         </template>
         <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openForm()">新增</el-button>
-          <span class="toolbar-summary">总笔数：<b>{{ summaryCount }}</b>&emsp;总金额：<b style="color:#16a34a">{{ summaryTotal }}</b></span>
+          <el-button type="primary" :icon="Plus" @click="openForm()">{{ t('finance.otherIncome.btnAdd') }}</el-button>
+          <span class="toolbar-summary">{{ t('finance.otherIncome.summaryCount') }}<b>{{ summaryCount }}</b>&emsp;{{ t('finance.otherIncome.summaryTotal') }}<b style="color:#16a34a">{{ summaryTotal }}</b></span>
         </template>
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column label="编号" min-width="140">
+        <el-table-column type="index" :label="t('finance.otherIncome.colSeq')" width="60" align="center" />
+        <el-table-column :label="t('finance.otherIncome.colNo')" min-width="140">
           <template #default="{ row }">{{ row.receipt_no || row.order_sn || row.order_no || '—' }}</template>
         </el-table-column>
-        <el-table-column label="单据日期" min-width="150">
+        <el-table-column :label="t('finance.otherIncome.colDate')" min-width="150">
           <template #default="{ row }">{{ fmtDt(row.receipt_date || row.create_time) }}</template>
         </el-table-column>
-        <el-table-column label="付款单位" min-width="160">
+        <el-table-column :label="t('finance.otherIncome.colPayer')" min-width="160">
           <template #default="{ row }">{{ row.contact_name || '—' }}</template>
         </el-table-column>
-        <el-table-column label="收入类型" min-width="110">
-          <template #default="{ row }">{{ row.income_type_name || cleanRemark(row.remark) || '—' }}</template>
+        <el-table-column :label="t('finance.otherIncome.colIncomeType')" min-width="110">
+          <template #default="{ row }">{{ extractIncomeType(row.remark) || cleanRemarkType(row.remark) || '—' }}</template>
         </el-table-column>
-        <el-table-column label="结算账户" min-width="140">
+        <el-table-column :label="t('finance.otherIncome.colFundAccount')" min-width="140">
           <template #default="{ row }">{{ row.fund_name || '—' }}</template>
         </el-table-column>
-        <el-table-column label="收款金额" min-width="120" align="right">
+        <el-table-column :label="t('finance.otherIncome.colAmount')" min-width="120" align="right">
           <template #default="{ row }">
             <span style="font-weight:600">{{ Number(row.amount || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="审核状态" min-width="90" align="center">
+        <el-table-column :label="t('finance.otherIncome.colAuditStatus')" min-width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="Number(row.status) === 1 ? 'success' : 'info'" size="small" style="cursor:pointer" @click="handleAudit(row)">
-              {{ Number(row.status) === 1 ? '已审核' : '未审核' }}
+              {{ Number(row.status) === 1 ? t('finance.otherIncome.statusAudited') : t('finance.otherIncome.statusPending') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="备注" min-width="180" show-overflow-tooltip>
+        <el-table-column :label="t('finance.otherIncome.colRemark')" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ cleanRemark(row.remark) || '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column :label="t('finance.otherIncome.colAction')" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="openView(row)">查看</el-button>
-            <el-button v-if="Number(row.status) === 1" type="warning" link @click="handleAudit(row)">反审核</el-button>
-            <el-button v-else type="success" link @click="handleAudit(row)">审核</el-button>
-            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-            <el-button type="danger" link :disabled="Number(row.status) === 1" @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link @click="openView(row)">{{ t('finance.otherIncome.btnView') }}</el-button>
+            <el-button v-if="Number(row.status) === 1" type="warning" link @click="handleAudit(row)">{{ t('finance.otherIncome.btnReverseAudit') }}</el-button>
+            <el-button v-else type="success" link @click="handleAudit(row)">{{ t('finance.otherIncome.btnAudit') }}</el-button>
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? t('finance.otherIncome.btnReconciled') : t('finance.otherIncome.btnReconcile') }}</el-button>
+            <el-button type="danger" link :disabled="Number(row.status) === 1" @click="handleDelete(row)">{{ t('finance.otherIncome.btnDelete') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
     </el-card>
 
     <!-- 新增弹窗 -->
-    <el-dialog v-model="formVisible" title="新增其他收入" width="520px" destroy-on-close>
+    <el-dialog v-model="formVisible" :title="t('finance.otherIncome.dialogAddTitle')" width="520px" destroy-on-close>
       <el-form ref="formRef" :model="fd" label-width="90px" :rules="rules">
-        <el-form-item label="单据日期" prop="receipt_date">
-          <el-date-picker v-model="fd.receipt_date" type="date" value-format="YYYY-MM-DD" placeholder="请选择日期" style="width:100%" />
+        <el-form-item :label="t('finance.otherIncome.labelDocDate')" prop="receipt_date">
+          <el-date-picker v-model="fd.receipt_date" type="date" value-format="YYYY-MM-DD" :placeholder="t('finance.otherIncome.placeholderDate')" style="width:100%" />
         </el-form-item>
-        <el-form-item label="付款单位" prop="contact_name">
-          <el-input v-model="fd.contact_name" placeholder="如：某某公司、张三" />
+        <el-form-item :label="t('finance.otherIncome.labelPayerForm')" prop="contact_name">
+          <el-input v-model="fd.contact_name" :placeholder="t('finance.otherIncome.placeholderPayerForm')" />
         </el-form-item>
-        <el-form-item label="收入类型" prop="income_type_name">
-          <el-input v-model="fd.income_type_name" placeholder="如：利息收入、赔偿金、退款" />
+        <el-form-item :label="t('finance.otherIncome.labelIncomeTypeForm')" prop="income_type_name">
+          <el-input v-model="fd.income_type_name" :placeholder="t('finance.otherIncome.placeholderIncomeTypeForm')" />
         </el-form-item>
-        <el-form-item label="结算账户" prop="fund_id">
-          <el-select v-model="fd.fund_id" filterable placeholder="请选择账户" style="width:100%" @change="onFundChange">
+        <el-form-item :label="t('finance.otherIncome.labelFundAccountForm')" prop="fund_id">
+          <el-select v-model="fd.fund_id" filterable :placeholder="t('finance.otherIncome.placeholderFundAccount')" style="width:100%" @change="onFundChange">
             <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="收款金额" prop="amount">
+        <el-form-item :label="t('finance.otherIncome.labelAmountForm')" prop="amount">
           <el-input-number v-model="fd.amount" :min="0.01" :precision="2" style="width:100%" />
         </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="fd.remark" type="textarea" :rows="2" placeholder="请输入备注" />
+        <el-form-item :label="t('finance.otherIncome.labelRemarkForm')" prop="remark">
+          <el-input v-model="fd.remark" type="textarea" :rows="2" :placeholder="t('finance.otherIncome.placeholderRemark')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <el-button @click="formVisible = false">{{ t('finance.otherIncome.btnCancel') }}</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">{{ t('finance.otherIncome.btnConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 查看弹窗 -->
-    <el-dialog v-model="viewVisible" title="查看其他收入" width="520px">
+    <el-dialog v-model="viewVisible" :title="t('finance.otherIncome.dialogViewTitle')" width="520px">
       <el-descriptions :column="1" border>
-        <el-descriptions-item label="编号">{{ viewRow?.receipt_no || viewRow?.order_sn || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="单据日期">{{ fmtDt(viewRow?.receipt_date) }}</el-descriptions-item>
-        <el-descriptions-item label="付款单位">{{ viewRow?.contact_name || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="收入类型">{{ viewRow?.income_type_name || cleanRemark(viewRow?.remark) || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="结算账户">{{ viewRow?.fund_name || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="收款金额">¥{{ Number(viewRow?.amount || 0).toFixed(2) }}</el-descriptions-item>
-        <el-descriptions-item label="审核状态">{{ Number(viewRow?.status) === 1 ? '已审核' : '未审核' }}</el-descriptions-item>
-        <el-descriptions-item label="备注">{{ cleanRemark(viewRow?.remark) || '—' }}</el-descriptions-item>
+        <el-descriptions-item :label="t('finance.otherIncome.colNo')">{{ viewRow?.receipt_no || viewRow?.order_sn || '—' }}</el-descriptions-item>
+        <el-descriptions-item :label="t('finance.otherIncome.labelDocDate')">{{ fmtDt(viewRow?.receipt_date) }}</el-descriptions-item>
+        <el-descriptions-item :label="t('finance.otherIncome.labelPayerForm')">{{ viewRow?.contact_name || '—' }}</el-descriptions-item>
+        <el-descriptions-item :label="t('finance.otherIncome.labelIncomeTypeForm')">{{ extractIncomeType(viewRow?.remark) || cleanRemarkType(viewRow?.remark) || '—' }}</el-descriptions-item>
+        <el-descriptions-item :label="t('finance.otherIncome.labelFundAccountForm')">{{ viewRow?.fund_name || '—' }}</el-descriptions-item>
+        <el-descriptions-item :label="t('finance.otherIncome.labelAmountForm')">¥{{ Number(viewRow?.amount || 0).toFixed(2) }}</el-descriptions-item>
+        <el-descriptions-item :label="t('finance.otherIncome.colAuditStatus')">{{ Number(viewRow?.status) === 1 ? t('finance.otherIncome.statusAudited') : t('finance.otherIncome.statusPending') }}</el-descriptions-item>
+        <el-descriptions-item :label="t('finance.otherIncome.labelRemarkForm')">{{ cleanRemark(viewRow?.remark) || '—' }}</el-descriptions-item>
       </el-descriptions>
       <template #footer>
-        <el-button @click="viewVisible = false">关闭</el-button>
+        <el-button @click="viewVisible = false">{{ t('finance.otherIncome.btnClose') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -123,6 +126,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -132,6 +136,7 @@ import http from '@/api/http'
 import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund, updateFund } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
 
+const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_other_income', tableRef)
@@ -142,12 +147,26 @@ const viewVisible = ref(false)
 const viewRow = ref<any>(null)
 const fundOptions = ref<any[]>([])
 
-const searchForm = reactive<any>({ keyword: '', contact: '', reconcile_filter: '' })
+const searchForm = reactive<any>({ keyword: '', contact: '', income_type: '', reconcile_filter: '' })
 const reconcileFilteredApi = createFilteredApi(getOtherIncomeList, 'reconcile_filter')
 
-/** 去除 remark 中的 [other] 前缀，返回干净的备注文本 */
-function cleanRemark(remark: string): string {
-  return String(remark || '').replace(/^\[other\]\s*/, '').trim()
+function extractIncomeType(remark?: string): string {
+  const s = String(remark || '').replace(/^\[other\]\s*/i, '').trim()
+  const m = s.match(/^\[([^\]]+)\]/)
+  return m ? m[1] : ''
+}
+
+/** 去除 remark 中的 [other] 前缀以及 [type] 前缀，返回干净的备注文本 */
+function cleanRemark(remark?: string): string {
+  return String(remark || '')
+    .replace(/^\[other\]\s*/i, '')
+    .replace(/^\[[^\]]+\]\s*/, '')
+    .trim()
+}
+
+/** 仅去除 [other] 前缀，保留首段文本（用于没有独立 remark 时显示收入类型） */
+function cleanRemarkType(remark?: string): string {
+  return String(remark || '').replace(/^\[other\]\s*/i, '').trim()
 }
 
 const today = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
@@ -162,12 +181,12 @@ const fd = reactive({
   remark: '',
 })
 
-const rules: FormRules = {
-  receipt_date: [{ required: true, message: '请选择日期', trigger: 'change' }],
-  contact_name: [{ required: true, message: '请输入付款单位', trigger: 'blur' }],
-  amount: [{ required: true, message: '请输入金额', trigger: 'blur' }],
-  fund_id: [{ required: true, message: '请选择结算账户', trigger: 'change' }],
-}
+const rules = computed<FormRules>(() => ({
+  receipt_date: [{ required: true, message: t('finance.otherIncome.ruleDate'), trigger: 'change' }],
+  contact_name: [{ required: true, message: t('finance.otherIncome.rulePayer'), trigger: 'blur' }],
+  amount: [{ required: true, message: t('finance.otherIncome.ruleAmount'), trigger: 'blur' }],
+  fund_id: [{ required: true, message: t('finance.otherIncome.ruleFundAccount'), trigger: 'change' }],
+}))
 
 const allRows = ref<any[]>([])
 const summaryCount = computed(() => allRows.value.length)
@@ -177,8 +196,10 @@ async function getOtherIncomeList(params?: any) {
   const safeParams = { ...(params || {}), list_rows: 2000, page: 1 }
   const keyword = String(safeParams.keyword || '').trim()
   const contact = String(safeParams.contact || '').trim()
+  const incomeType = String(safeParams.income_type || '').trim()
   delete safeParams.keyword
   delete safeParams.contact
+  delete safeParams.income_type
   const res = await getCollectReceiptList(safeParams)
   let rows = res.data?.rows ?? res.data?.list ?? []
   // 后端 CollectReceipt 不存 contact_type，用 remark 前缀 [other] 或无 customer_id 来识别
@@ -199,12 +220,19 @@ async function getOtherIncomeList(params?: any) {
     const ct = contact.toLowerCase()
     rows = rows.filter((r: any) => String(r.contact_name || '').toLowerCase().includes(ct))
   }
+  if (incomeType) {
+    const it = incomeType.toLowerCase()
+    rows = rows.filter((r: any) => {
+      const typeStr = (extractIncomeType(r.remark) || cleanRemarkType(r.remark)).toLowerCase()
+      return typeStr.includes(it)
+    })
+  }
   allRows.value = rows
   return { ...res, data: { ...(res.data || {}), rows, total: rows.length } }
 }
 
 function resetSearch() {
-  Object.assign(searchForm, { keyword: '', contact: '', reconcile_filter: '' })
+  Object.assign(searchForm, { keyword: '', contact: '', income_type: '', reconcile_filter: '' })
   tableRef.value?.loadData()
 }
 
@@ -236,10 +264,10 @@ function openView(row: any) {
 
 async function handleAudit(row: any) {
   const isAudited = Number(row.status) === 1
-  const action = isAudited ? '反审核' : '审核'
-  await ElMessageBox.confirm(`确定${action}该收入记录？`, '提示', { type: 'warning' })
+  const action = isAudited ? t('finance.otherIncome.btnReverseAudit') : t('finance.otherIncome.btnAudit')
+  await ElMessageBox.confirm(t('finance.otherIncome.msgAuditConfirm', { action }), t('finance.otherIncome.msgAuditTip'), { type: 'warning' })
   await http.post('/finance/CollectReceipt/edit', { id: row.id, status: isAudited ? 0 : 1 })
-  ElMessage.success(`${action}成功`)
+  ElMessage.success(t('finance.otherIncome.msgAuditSuccess', { action }))
   tableRef.value?.refresh()
 }
 
@@ -265,7 +293,7 @@ async function handleSubmit() {
         balance: Number(fund.balance || 0) + Number(fd.amount),
       })
     }
-    ElMessage.success('新增成功')
+    ElMessage.success(t('finance.otherIncome.msgAddSuccess'))
     formVisible.value = false
     tableRef.value?.refresh()
     loadFunds()
@@ -276,10 +304,10 @@ async function handleSubmit() {
 
 async function handleDelete(row: any) {
   if (Number(row.status) === 1) {
-    ElMessage.warning('请先反审核再删除')
+    ElMessage.warning(t('finance.otherIncome.msgAuditFirst'))
     return
   }
-  await ElMessageBox.confirm(`确定删除"${row.contact_name || ''}"的收入记录？`, '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('finance.otherIncome.msgDeleteConfirm', { name: row.contact_name || '' }), t('finance.otherIncome.msgDeleteTip'), { type: 'warning' })
   await deleteCollectReceipt(row.id)
   const amount = Number(row.amount || 0)
   if (row.fund_id && amount > 0) {
@@ -293,7 +321,7 @@ async function handleDelete(row: any) {
       })
     }
   }
-  ElMessage.success('删除成功')
+  ElMessage.success(t('finance.otherIncome.msgDeleteSuccess'))
   tableRef.value?.refresh()
   loadFunds()
 }
@@ -367,7 +395,7 @@ async function importRow(row: any) {
   const contactName = (g.nameCol ? String(row[g.nameCol] || '').trim() : '') || resolveField(row, '收支类型', '收入说明', '说明', '摘要', '来源', '项目', '名称', '收款单位', 'contact_name', 'name', 'description')
   const rawAmount = g.amountCol ? row[g.amountCol] : resolveField(row, '收款金额', '金额', '收入金额', 'amount', 'money')
   const amount = Number(String(rawAmount).replace(/[,，¥￥]/g, '')) || 0
-  if (amount <= 0) throw new Error('金额无效')
+  if (amount <= 0) throw new Error(t('finance.otherIncome.msgAmountInvalid'))
   const dateStr = (g.dateCol ? String(row[g.dateCol] || '').trim() : '') || resolveField(row, '单据日期', '日期', '收入日期', '收款日期', 'date', 'receipt_date') || today()
   const remark = (g.remarkCol ? String(row[g.remarkCol] || '').trim() : '') || resolveField(row, '备注', 'remark', 'note')
   const fundName = (g.fundCol ? String(row[g.fundCol] || '').trim() : '') || resolveField(row, '结算账户', '资金账户', '账户', 'fund_name', 'account')

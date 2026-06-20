@@ -2,17 +2,17 @@
   <div class="ledger-page">
     <el-card class="search-card">
       <el-form inline>
-        <el-form-item label="年份">
+        <el-form-item :label="$t('reports.procure.yearLabel')">
           <el-select v-model="searchYear" style="width:100px" @change="loadAll">
             <el-option v-for="y in yearOptions" :key="y" :label="y+''" :value="y" />
           </el-select>
         </el-form-item>
-        <el-form-item label="供应商">
-          <el-input v-model="searchSupplier" placeholder="供应商名称" clearable style="width:160px" />
+        <el-form-item :label="$t('reports.procure.supplierLabel')">
+          <el-input v-model="searchSupplier" :placeholder="$t('reports.procure.supplierPlaceholder')" clearable style="width:160px" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="loadAll">搜索</el-button>
-          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="loadAll">{{ $t('reports.procure.search') }}</el-button>
+          <el-button @click="onReset">{{ $t('reports.procure.reset') }}</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -21,35 +21,35 @@
       <div class="stat-card blue">
         <div class="stat-icon"><el-icon><Document /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">采购单数量（份）</div>
+          <div class="stat-label">{{ $t('reports.procure.statCount') }}</div>
           <div class="stat-value">{{ stats.count }}</div>
         </div>
       </div>
       <div class="stat-card orange">
         <div class="stat-icon"><el-icon><Wallet /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">采购总金额</div>
+          <div class="stat-label">{{ $t('reports.procure.statTotal') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.total) }}</div>
         </div>
       </div>
       <div class="stat-card green">
         <div class="stat-icon"><el-icon><CircleCheck /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">已付金额</div>
+          <div class="stat-label">{{ $t('reports.procure.statPaid') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.paid) }}</div>
         </div>
       </div>
       <div class="stat-card red">
         <div class="stat-icon"><el-icon><Clock /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">未付金额</div>
+          <div class="stat-label">{{ $t('reports.procure.statUnpaid') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.unpaid) }}</div>
         </div>
       </div>
       <div class="stat-card purple">
         <div class="stat-icon"><el-icon><OfficeBuilding /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">供应商数量</div>
+          <div class="stat-label">{{ $t('reports.procure.statSuppliers') }}</div>
           <div class="stat-value">{{ stats.suppliers }}</div>
         </div>
       </div>
@@ -57,35 +57,35 @@
 
     <div class="chart-row">
       <el-card class="chart-card">
-        <div class="card-title">按供应商统计（金额 Top10）</div>
+        <div class="card-title">{{ $t('reports.procure.chartBarTitle') }}</div>
         <div ref="barRef" style="height:260px"></div>
       </el-card>
       <el-card class="chart-card">
-        <div class="card-title">月度采购趋势</div>
+        <div class="card-title">{{ $t('reports.procure.chartLineTitle') }}</div>
         <div ref="lineRef" style="height:260px"></div>
       </el-card>
     </div>
 
     <el-card class="table-card">
-      <div class="card-title" style="margin-bottom:10px">按供应商汇总</div>
+      <div class="card-title" style="margin-bottom:10px">{{ $t('reports.procure.tableTitle') }}</div>
       <el-table :data="summaryData" border stripe size="small" style="width:100%">
-        <el-table-column type="index" label="序号" width="55" align="center" />
-        <el-table-column label="供应商名称" prop="supplier_name" min-width="130" />
-        <el-table-column label="采购单数" prop="count" width="80" align="center" />
-        <el-table-column label="采购总额" width="120" align="right">
+        <el-table-column type="index" :label="$t('reports.procure.colIndex')" width="55" align="center" />
+        <el-table-column :label="$t('reports.procure.colSupplierName')" prop="supplier_name" min-width="130" />
+        <el-table-column :label="$t('reports.procure.colCount')" prop="count" width="80" align="center" />
+        <el-table-column :label="$t('reports.procure.colTotal')" width="120" align="right">
           <template #default="{ row }">¥ {{ fmt(row.total) }}</template>
         </el-table-column>
-        <el-table-column label="已付金额" width="120" align="right">
+        <el-table-column :label="$t('reports.procure.colPaid')" width="120" align="right">
           <template #default="{ row }">¥ {{ fmt(row.paid) }}</template>
         </el-table-column>
-        <el-table-column label="未付金额" width="120" align="right">
+        <el-table-column :label="$t('reports.procure.colUnpaid')" width="120" align="right">
           <template #default="{ row }">
             <span :style="{ color: row.unpaid > 0 ? '#ef4444' : '#16a34a' }">
               ¥ {{ fmt(row.unpaid) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="付款率" width="90" align="center">
+        <el-table-column :label="$t('reports.procure.colPayRate')" width="90" align="center">
           <template #default="{ row }">
             {{ row.total > 0 ? ((row.paid / row.total) * 100).toFixed(1) + '%' : '-' }}
           </template>
@@ -97,6 +97,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { Search, Document, Wallet, CircleCheck, Clock, OfficeBuilding } from '@element-plus/icons-vue'
 import * as echarts from 'echarts/core'
 import { BarChart, LineChart } from 'echarts/charts'
@@ -188,8 +190,8 @@ function renderBar() {
     xAxis: { type: 'value', axisLabel: { fontSize: 10 } },
     yAxis: { type: 'category', data: top10.map(r => r.supplier_name).reverse(), axisLabel: { fontSize: 11 } },
     series: [
-      { name: '采购金额', type: 'bar', data: top10.map(r => r.total.toFixed(2)).reverse(), itemStyle: { color: '#3b82f6' } },
-      { name: '已付金额', type: 'bar', data: top10.map(r => r.paid.toFixed(2)).reverse(), itemStyle: { color: '#10b981' } },
+      { name: t('reports.procure.seriesProcure'), type: 'bar', data: top10.map(r => r.total.toFixed(2)).reverse(), itemStyle: { color: '#3b82f6' } },
+      { name: t('reports.procure.seriesPaid'), type: 'bar', data: top10.map(r => r.paid.toFixed(2)).reverse(), itemStyle: { color: '#10b981' } },
     ]
   })
 }
@@ -201,14 +203,14 @@ function renderLine() {
   const rows = filteredRows.value
   lineChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['采购金额', '已付金额'], top: 0, right: 10 },
+    legend: { data: [t('reports.procure.seriesProcure'), t('reports.procure.seriesPaid')], top: 0, right: 10 },
     grid: { left: 50, right: 20, top: 30, bottom: 30 },
     xAxis: { type: 'category', data: months.map(m => m.slice(5)), axisLabel: { fontSize: 10 } },
     yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
     series: [
-      { name: '采购金额', type: 'line', smooth: true, itemStyle: { color: '#3b82f6' },
+      { name: t('reports.procure.seriesProcure'), type: 'line', smooth: true, itemStyle: { color: '#3b82f6' },
         data: months.map(m => rows.filter(r => (r.order_date || r.created_at || '').startsWith(m)).reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2)) },
-      { name: '已付金额', type: 'line', smooth: true, itemStyle: { color: '#10b981' },
+      { name: t('reports.procure.seriesPaid'), type: 'line', smooth: true, itemStyle: { color: '#10b981' },
         data: months.map(m => rows.filter(r => (r.order_date || r.created_at || '').startsWith(m)).reduce((s, r) => s + Number(r.pay_amount || 0), 0).toFixed(2)) },
     ]
   })

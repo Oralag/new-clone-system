@@ -1,51 +1,51 @@
 <template>
   <div class="page-container fund-flow-page">
-    <div class="page-title">资金明细</div>
+    <div class="page-title">{{ $t('finance.fundFlow.pageTitle') }}</div>
     <!-- 顶部汇总卡片 -->
     <div v-if="filterType !== 'expense' && filterType !== 'income'" class="summary-bar" v-loading="summaryLoading">
       <div class="summary-card">
-        <span class="s-label">资金余额</span>
+        <span class="s-label">{{ $t('finance.fundFlow.summaryBalance') }}</span>
         <span class="s-value blue">¥{{ summary.balance.toFixed(2) }}</span>
-        <span class="s-formula">收入 ¥{{ summary.income.toFixed(2) }} − 支出 ¥{{ summary.expense.toFixed(2) }} = ¥{{ summary.balance.toFixed(2) }}</span>
+        <span class="s-formula">{{ $t('finance.fundFlow.summaryBalanceFormula', { income: summary.income.toFixed(2), expense: summary.expense.toFixed(2), balance: summary.balance.toFixed(2) }) }}</span>
       </div>
       <div class="summary-card">
-        <span class="s-label">累计收入</span>
+        <span class="s-label">{{ $t('finance.fundFlow.summaryIncome') }}</span>
         <span class="s-value green">+¥{{ summary.income.toFixed(2) }}</span>
-        <span class="s-formula">按所有资金收入明细汇总</span>
+        <span class="s-formula">{{ $t('finance.fundFlow.summaryIncomeDesc') }}</span>
       </div>
       <div class="summary-card">
-        <span class="s-label">累计支出</span>
+        <span class="s-label">{{ $t('finance.fundFlow.summaryExpense') }}</span>
         <span class="s-value red">-¥{{ summary.expense.toFixed(2) }}</span>
-        <span class="s-formula">按所有资金支出明细汇总</span>
+        <span class="s-formula">{{ $t('finance.fundFlow.summaryExpenseDesc') }}</span>
       </div>
       <div class="summary-card">
-        <span class="s-label">未付款</span>
+        <span class="s-label">{{ $t('finance.fundFlow.summaryUnpaid') }}</span>
         <span class="s-value orange">¥{{ summary.unpaid.toFixed(2) }}</span>
-        <span class="s-formula">来源：应付账款 + 待付款费用</span>
+        <span class="s-formula">{{ $t('finance.fundFlow.summaryUnpaidDesc') }}</span>
       </div>
       <div class="summary-card">
-        <span class="s-label">未收款</span>
+        <span class="s-label">{{ $t('finance.fundFlow.summaryUncollected') }}</span>
         <span class="s-value red">¥{{ summary.uncollected.toFixed(2) }}</span>
-        <span class="s-formula">来源：已审核销售合同应收账款</span>
+        <span class="s-formula">{{ $t('finance.fundFlow.summaryUncollectedDesc') }}</span>
       </div>
     </div>
 
     <!-- 收入分类汇总（仅收入视图显示） -->
     <div v-if="filterType === 'income'" class="income-breakdown-bar">
       <div class="ib-card total">
-        <span class="ib-label">累计收入</span>
+        <span class="ib-label">{{ $t('finance.fundFlow.incomeBreakdownTotal') }}</span>
         <span class="ib-value">+¥{{ incomeBreakdown.total.toFixed(2) }}</span>
       </div>
       <div class="ib-card">
-        <span class="ib-label">零售收入</span>
+        <span class="ib-label">{{ $t('finance.fundFlow.incomeBreakdownRetail') }}</span>
         <span class="ib-value">+¥{{ incomeBreakdown.retail.toFixed(2) }}</span>
       </div>
       <div class="ib-card">
-        <span class="ib-label">销售收款</span>
+        <span class="ib-label">{{ $t('finance.fundFlow.incomeBreakdownSales') }}</span>
         <span class="ib-value">+¥{{ incomeBreakdown.sales.toFixed(2) }}</span>
       </div>
       <div class="ib-card">
-        <span class="ib-label">其他收入</span>
+        <span class="ib-label">{{ $t('finance.fundFlow.incomeBreakdownOther') }}</span>
         <span class="ib-value">+¥{{ incomeBreakdown.other.toFixed(2) }}</span>
       </div>
     </div>
@@ -53,23 +53,23 @@
     <!-- 支出分类汇总（仅支出视图显示） -->
     <div v-if="filterType === 'expense'" class="expense-breakdown-bar">
       <div class="eb-card total">
-        <span class="eb-label">累计支出</span>
+        <span class="eb-label">{{ $t('finance.fundFlow.expenseBreakdownTotal') }}</span>
         <span class="eb-value">-¥{{ expenseBreakdown.total.toFixed(2) }}</span>
       </div>
       <div class="eb-card">
-        <span class="eb-label">采购支出</span>
+        <span class="eb-label">{{ $t('finance.fundFlow.expenseBreakdownPurchase') }}</span>
         <span class="eb-value">-¥{{ expenseBreakdown.purchase.toFixed(2) }}</span>
       </div>
       <div class="eb-card">
-        <span class="eb-label">快递运费</span>
+        <span class="eb-label">{{ $t('finance.fundFlow.expenseBreakdownDelivery') }}</span>
         <span class="eb-value">-¥{{ expenseBreakdown.delivery.toFixed(2) }}</span>
       </div>
       <div class="eb-card">
-        <span class="eb-label">店面支出</span>
+        <span class="eb-label">{{ $t('finance.fundFlow.expenseBreakdownStore') }}</span>
         <span class="eb-value">-¥{{ expenseBreakdown.store.toFixed(2) }}</span>
       </div>
       <div class="eb-card">
-        <span class="eb-label">其他支出</span>
+        <span class="eb-label">{{ $t('finance.fundFlow.expenseBreakdownOther') }}</span>
         <span class="eb-value">-¥{{ expenseBreakdown.other.toFixed(2) }}</span>
       </div>
     </div>
@@ -78,50 +78,50 @@
     <el-card class="flow-list-card">
       <div class="table-toolbar">
         <div class="toolbar-filters">
-          <el-input v-model="filterKeyword" placeholder="搜索名称/单号" clearable style="width:180px" />
-          <el-select v-model="filterType" placeholder="收支类型" clearable style="width:120px">
-            <el-option label="收入" value="income" />
-            <el-option label="支出" value="expense" />
+          <el-input v-model="filterKeyword" :placeholder="$t('finance.fundFlow.filterKeywordPlaceholder')" clearable style="width:180px" />
+          <el-select v-model="filterType" :placeholder="$t('finance.fundFlow.filterTypePlaceholder')" clearable style="width:120px">
+            <el-option :label="$t('finance.fundFlow.filterTypeIncome')" value="income" />
+            <el-option :label="$t('finance.fundFlow.filterTypeExpense')" value="expense" />
           </el-select>
-          <el-select v-model="filterSource" placeholder="来源" clearable style="width:130px">
+          <el-select v-model="filterSource" :placeholder="$t('finance.fundFlow.filterSourcePlaceholder')" clearable style="width:130px">
             <el-option v-for="item in sourceOptions" :key="item" :label="item" :value="item" />
           </el-select>
           <el-tag v-if="dateScopeLabel" class="date-scope-tag" type="info" effect="plain">{{ dateScopeLabel }}</el-tag>
         </div>
-        <span class="table-count">共 {{ filteredItems.length }} 条</span>
+        <span class="table-count">{{ $t('finance.fundFlow.tableCount', { count: filteredItems.length }) }}</span>
       </div>
       <el-table class="desktop-flow-table" :data="pagedItems" v-loading="tableLoading" border stripe style="width:100%">
-        <el-table-column label="日期" width="150">
+        <el-table-column :label="$t('finance.fundFlow.colDate')" width="150">
           <template #default="{ row }">{{ row.date }}</template>
         </el-table-column>
-        <el-table-column label="账户" width="120">
+        <el-table-column :label="$t('finance.fundFlow.colAccount')" width="120">
           <template #default="{ row }">{{ row.fund_name || '—' }}</template>
         </el-table-column>
-        <el-table-column label="来源" width="100">
+        <el-table-column :label="$t('finance.fundFlow.colSource')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.type === 'income' ? 'success' : 'danger'" size="small">{{ row.source }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="对象" min-width="140">
+        <el-table-column :label="$t('finance.fundFlow.colObject')" min-width="140">
           <template #default="{ row }">{{ row.name }}</template>
         </el-table-column>
-        <el-table-column label="单号" min-width="150" show-overflow-tooltip>
+        <el-table-column :label="$t('finance.fundFlow.colOrderNo')" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ row.order_no || '—' }}</template>
         </el-table-column>
-        <el-table-column label="金额" width="130" align="right">
+        <el-table-column :label="$t('finance.fundFlow.colAmount')" width="130" align="right">
           <template #default="{ row }">
             <span :style="{ color: row.type === 'income' ? '#16a34a' : '#dc2626', fontWeight: '600' }">
               {{ row.type === 'income' ? '+' : '-' }}¥{{ Number(row.amount).toFixed(2) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="备注" min-width="150" show-overflow-tooltip>
+        <el-table-column :label="$t('finance.fundFlow.colRemark')" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ row.remark || '—' }}</template>
         </el-table-column>
       </el-table>
 
       <div v-loading="tableLoading" class="mobile-flow-list">
-        <div v-if="pagedItems.length === 0 && !tableLoading" class="mobile-flow-empty">暂无资金流水</div>
+        <div v-if="pagedItems.length === 0 && !tableLoading" class="mobile-flow-empty">{{ $t('finance.fundFlow.mobileNoData') }}</div>
         <div
           v-for="row in pagedItems"
           :key="`${row.type}-${row.source}-${row.order_no}-${row.date}-${row.amount}-${row.name}`"
@@ -138,10 +138,10 @@
           </div>
           <div class="mf-name">{{ row.name || '—' }}</div>
           <div class="mf-meta">
-            <span>账户：{{ row.fund_name || '—' }}</span>
-            <span v-if="row.order_no">单号：{{ row.order_no }}</span>
+            <span>{{ $t('finance.fundFlow.mobileAccount') }}：{{ row.fund_name || '—' }}</span>
+            <span v-if="row.order_no">{{ $t('finance.fundFlow.mobileOrderNo') }}：{{ row.order_no }}</span>
           </div>
-          <div v-if="row.remark" class="mf-remark">备注：{{ row.remark }}</div>
+          <div v-if="row.remark" class="mf-remark">{{ $t('finance.fundFlow.mobileRemark') }}：{{ row.remark }}</div>
         </div>
       </div>
 
@@ -162,6 +162,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList } from '@/api/finance'
 import http from '@/api/http'
 import { normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
@@ -169,7 +170,9 @@ import { buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
 import { fmtDt } from '@/utils/date'
+import { calcSaleContractReceivable } from '@/utils/saleContractAmount'
 
+const { t } = useI18n()
 const route = useRoute()
 const summaryLoading = ref(false)
 const tableLoading = ref(false)
@@ -201,7 +204,7 @@ watchEffect(() => {
 })
 const currentPage = ref(1)
 const pageSize = ref(20)
-const dateScopeLabel = computed(() => filterDate.value === getTodayKey() ? '今日' : '')
+const dateScopeLabel = computed(() => filterDate.value === getTodayKey() ? t('finance.fundFlow.dateScopeToday') : '')
 
 interface FlowItem {
   date: string
@@ -318,25 +321,33 @@ onMounted(async () => {
     const fundNameMap = new Map<number, string>(fundRows.map((row: any) => [Number(row.id), String(row.name || '')]))
 
     const collectSourceMap: Record<string, string> = { customer: '销售收款', sale: '销售收款', supplier: '供应商退款', staff: '员工还款', other: '其他收入' }
+    const PLATFORM_REMARK_MAP: [string, string][] = [
+      ['[微信小店]', '微信小店'], ['[拼多多]', '拼多多'], ['[小红书]', '小红书'],
+      ['[抖音]', '抖音'], ['[美团]', '美团'], ['[淘宝]', '淘宝'],
+    ]
     const collects: any[] = collectRes.data?.rows ?? collectRes.data?.list ?? []
     for (const r of collects) {
       const ctKey = r.contact_type || r.category || ''
+      const remark = String(r.remark || '')
+      const platformEntry = PLATFORM_REMARK_MAP.find(([tag]) => remark.includes(tag))
       // contact_type 为空但有 customer_name 的，视为销售收款
       const resolvedSource = isCustomerPrepayLike(r) ? '预收款'
+        : platformEntry ? platformEntry[1]
         : (collectSourceMap[ctKey] || (r.customer_name ? '销售收款' : '其他收入'))
+      const resolvedName = r.contact_name || r.customer_name || (platformEntry ? platformEntry[1] : '—')
       items.push({
         date: fmtDt(r.receipt_date || r.create_time),
         fund_name: r.fund_name || r.account_name || '—',
         type: 'income',
         source: resolvedSource,
-        name: r.contact_name || r.customer_name || '—',
+        name: resolvedName,
         order_no: r.receipt_no || r.order_no || '',
         amount: Number(r.amount || 0),
         remark: r.remark || '',
       })
     }
 
-    const retails: any[] = (retailRes.data?.rows ?? retailRes.data?.list ?? []).filter((r: any) => r.status === 1)
+    const retails: any[] = (retailRes.data?.rows ?? retailRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
     for (const r of retails) {
       items.push({
         date: fmtDt(r.order_date || r.create_time),
@@ -426,23 +437,7 @@ onMounted(async () => {
       })
     }
 
-    const saleReturnFinanceRows = buildSaleReturnSettlementRows(
-      [],
-      normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? saleReturnRes.data?.list ?? [])
-    )
-    for (const r of saleReturnFinanceRows) {
-      if (r.refund_amount <= 0) continue
-      items.push({
-        date: r.date,
-        fund_name: '—',
-        type: 'expense',
-        source: '销售退货退款',
-        name: r.customer_name || '—',
-        order_no: r.order_no || '',
-        amount: Number(r.refund_amount || 0),
-        remark: r.remark || '销售退货退款',
-      })
-    }
+    // 销售退货退款留在客户余额（非现金流出），不计入资金流水支出
 
     const validItems = items.filter(i => i.amount > 0)
     validItems.sort((a, b) => b.date.localeCompare(a.date))
@@ -466,12 +461,11 @@ onMounted(async () => {
       const amt = Number(r.amount || 0)
       if (!amt) continue
       if (isProcureExtraFeePayment(r)) continue
+      if (/审核自动生成/.test(String(r.remark || ''))) continue
       const orderSn = String(r.order_sn || '').trim()
       const supplierName = String(r.supplier_name || r.contact_name || '').trim()
       const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
-      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
       if (m1) { const id = Number(m1[1]); procurePaidById[id] = (procurePaidById[id] || 0) + amt }
-      else if (m2) { const sn = m2[1].trim(); procurePaidBySn[sn] = (procurePaidBySn[sn] || 0) + amt }
       else if (orderSn && supplierName) procurePaidByKey[`${orderSn}@@${supplierName}`] = (procurePaidByKey[`${orderSn}@@${supplierName}`] || 0) + amt
     }
     const purchaseUnpaidTotal = (procureRes.data?.rows ?? [])
@@ -496,13 +490,7 @@ onMounted(async () => {
       if (c.order_sn) snToContractId.set(String(c.order_sn), c.id)
     }
     const contractCalcAmt = (c: any): number => {
-      const total = Number(c.total_amount || 0)
-      const afterDisc = Number(c.after_discount)
-      const base = Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total ? afterDisc : total
-      const freight = Number(c.freight_amount || 0)
-      const bearer = String(c.freight_bearer || 'seller')
-      const fc = bearer === 'buyer' ? freight : bearer === 'half' ? freight / 2 : 0
-      return Math.max(0, base + fc - Number(c.income_amount || 0))
+      return calcSaleContractReceivable(c)
     }
     const contractDirectPaid = new Map<number, number>()
     const custUnmatchedPaid = new Map<number, number>()

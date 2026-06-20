@@ -2,32 +2,32 @@
   <div class="page-container">
     <div class="flow-header">
       <div>
-        <div class="page-title">收支流水</div>
-        <div class="flow-sub">仅统计销售订单收入与采购订单支出，不包含收款单、付款单、费用、零售或其他流水。</div>
+        <div class="page-title">{{ $t('finance.incomeExpenseFlow.pageTitle') }}</div>
+        <div class="flow-sub">{{ $t('finance.incomeExpenseFlow.pageSub') }}</div>
       </div>
-      <el-button :loading="loading" type="primary" @click="loadData">刷新</el-button>
+      <el-button :loading="loading" type="primary" @click="loadData">{{ $t('finance.incomeExpenseFlow.refresh') }}</el-button>
     </div>
 
     <el-row :gutter="12" class="summary-row">
       <el-col :xs="24" :sm="8">
         <el-card shadow="never" class="summary-card">
-          <div class="summary-label">销售收入</div>
+          <div class="summary-label">{{ $t('finance.incomeExpenseFlow.salesIncome') }}</div>
           <div class="summary-value green">¥{{ fmt(incomeTotal) }}</div>
-          <div class="summary-sub">{{ incomeCount }} 笔销售订单</div>
+          <div class="summary-sub">{{ $t('finance.incomeExpenseFlow.salesOrders', { n: incomeCount }) }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="8">
         <el-card shadow="never" class="summary-card">
-          <div class="summary-label">采购支出</div>
+          <div class="summary-label">{{ $t('finance.incomeExpenseFlow.purchaseExpense') }}</div>
           <div class="summary-value red">¥{{ fmt(expenseTotal) }}</div>
-          <div class="summary-sub">{{ expenseCount }} 笔采购订单</div>
+          <div class="summary-sub">{{ $t('finance.incomeExpenseFlow.purchaseOrders', { n: expenseCount }) }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="8">
         <el-card shadow="never" class="summary-card">
-          <div class="summary-label">收支净额</div>
+          <div class="summary-label">{{ $t('finance.incomeExpenseFlow.netAmount') }}</div>
           <div class="summary-value" :class="netAmount >= 0 ? 'green' : 'red'">{{ netAmount >= 0 ? '+' : '-' }}¥{{ fmt(Math.abs(netAmount)) }}</div>
-          <div class="summary-sub">销售收入 - 采购支出</div>
+          <div class="summary-sub">{{ $t('finance.incomeExpenseFlow.netFormula') }}</div>
         </el-card>
       </el-col>
     </el-row>
@@ -35,54 +35,54 @@
     <el-card shadow="never">
       <div class="toolbar">
         <div class="toolbar-filters">
-          <el-input v-model="keyword" placeholder="搜索对象/单号/备注" clearable style="width:220px" />
-          <el-select v-model="flowType" placeholder="收支类型" clearable style="width:130px">
-            <el-option label="收入" value="income" />
-            <el-option label="支出" value="expense" />
+          <el-input v-model="keyword" :placeholder="$t('finance.incomeExpenseFlow.searchPlaceholder')" clearable style="width:220px" />
+          <el-select v-model="flowType" :placeholder="$t('finance.incomeExpenseFlow.flowTypePlaceholder')" clearable style="width:130px">
+            <el-option :label="$t('finance.incomeExpenseFlow.flowTypeIncome')" value="income" />
+            <el-option :label="$t('finance.incomeExpenseFlow.flowTypeExpense')" value="expense" />
           </el-select>
           <el-date-picker
             v-model="dateRange"
             type="daterange"
             value-format="YYYY-MM-DD"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
+            :range-separator="$t('finance.incomeExpenseFlow.rangeSeparator')"
+            :start-placeholder="$t('finance.incomeExpenseFlow.startDate')"
+            :end-placeholder="$t('finance.incomeExpenseFlow.endDate')"
             style="width:240px"
           />
         </div>
-        <span class="table-count">共 {{ filteredRows.length }} 条</span>
+        <span class="table-count">{{ $t('finance.incomeExpenseFlow.totalCount', { n: filteredRows.length }) }}</span>
       </div>
 
       <el-table :data="pagedRows" v-loading="loading" border stripe style="width:100%">
-        <el-table-column label="日期" width="120">
+        <el-table-column :label="$t('finance.incomeExpenseFlow.date')" width="120">
           <template #default="{ row }">{{ row.date }}</template>
         </el-table-column>
-        <el-table-column label="类型" width="90" align="center">
+        <el-table-column :label="$t('finance.incomeExpenseFlow.type')" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.type === 'income' ? 'success' : 'danger'" size="small">
-              {{ row.type === 'income' ? '收入' : '支出' }}
+              {{ row.type === 'income' ? $t('finance.incomeExpenseFlow.income') : $t('finance.incomeExpenseFlow.expense') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="source" label="来源单据" width="110" />
-        <el-table-column prop="name" label="对象" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="order_no" label="单号" min-width="150" show-overflow-tooltip />
-        <el-table-column label="金额" width="140" align="right">
+        <el-table-column prop="source" :label="$t('finance.incomeExpenseFlow.source')" width="110" />
+        <el-table-column prop="name" :label="$t('finance.incomeExpenseFlow.counterpart')" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="order_no" :label="$t('finance.incomeExpenseFlow.orderNo')" min-width="150" show-overflow-tooltip />
+        <el-table-column :label="$t('finance.incomeExpenseFlow.amount')" width="140" align="right">
           <template #default="{ row }">
             <span class="amount" :class="row.type === 'income' ? 'green' : 'red'">
               {{ row.type === 'income' ? '+' : '-' }}¥{{ fmt(row.amount) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
+        <el-table-column :label="$t('finance.incomeExpenseFlow.status')" width="90" align="center">
           <template #default="{ row }">
             <el-tag type="success" size="small">{{ row.statusText }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
-        <el-table-column label="操作" width="90" align="center" fixed="right">
+        <el-table-column prop="remark" :label="$t('finance.incomeExpenseFlow.remark')" min-width="160" show-overflow-tooltip />
+        <el-table-column :label="$t('finance.incomeExpenseFlow.operation')" width="90" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="router.push(row.link)">查看</el-button>
+            <el-button link type="primary" size="small" @click="router.push(row.link)">{{ $t('finance.incomeExpenseFlow.view') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -104,6 +104,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { getContractList } from '@/api/sale'
 import { getProcureOrderList } from '@/api/procure'
 import { getSaleContractStatusText, isEffectiveSaleContract } from '@/utils/saleContractStatus'
@@ -121,6 +122,7 @@ interface FlowRow {
   link: string
 }
 
+const { t } = useI18n()
 const router = useRouter()
 const loading = ref(false)
 const keyword = ref('')
@@ -163,7 +165,7 @@ function getProcureSupplierLabel(row: any) {
   try {
     const items = typeof row.goods_info === 'string' ? JSON.parse(row.goods_info) : (Array.isArray(row.goods_info) ? row.goods_info : [])
     const names = [...new Set(items.map((item: any) => String(item.supplier_name || '').trim()).filter(Boolean))]
-    if (names.length > 1) return '多供应商'
+    if (names.length > 1) return t('finance.incomeExpenseFlow.multiSupplier')
     if (names.length === 1) return names[0]
   } catch {}
   return row.supplier_name || row.customer_name || '—'
@@ -218,7 +220,7 @@ async function loadData() {
         id: `sale-${row.id || orderNo(row, 'XS')}`,
         date: fmtDate(row.sign_date || row.contract_date || row.order_date || row.created_at || row.create_time),
         type: 'income',
-        source: '销售订单',
+        source: t('finance.incomeExpenseFlow.sourceIncome'),
         name: row.customer_name || '—',
         order_no: orderNo(row, 'XS'),
         amount: saleAmount(row),
@@ -233,11 +235,11 @@ async function loadData() {
         id: `procure-${row.id || orderNo(row, 'CG')}`,
         date: fmtDate(row.order_date || row.created_at || row.create_time),
         type: 'expense',
-        source: '采购订单',
+        source: t('finance.incomeExpenseFlow.sourceExpense'),
         name: getProcureSupplierLabel(row),
         order_no: orderNo(row, 'CG'),
         amount: procureAmount(row),
-        statusText: '已审核',
+        statusText: t('finance.incomeExpenseFlow.approved'),
         remark: row.remark || '',
         link: '/procure/order',
       }))

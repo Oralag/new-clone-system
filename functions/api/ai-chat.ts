@@ -666,7 +666,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
   const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
   // Anthropic proxies: not a known OpenAI-compatible provider → use /v1/messages + Anthropic format
-  const isAnthropic = !/deepseek|openai\.com|groq\.com|together\.ai|mistral\.ai/.test(baseURL)
+  const isAnthropic = !/deepseek|openai\.com|groq\.com|together\.ai|mistral\.ai|nvidia\.com/.test(baseURL)
   const erpToken = request.headers.get('x-erp-token') || ''
   const { messages, images, books, userMemory } = await request.json() as any
 

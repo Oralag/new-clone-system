@@ -33,6 +33,26 @@ export function getProcureOrderSupplierLabel(
 }
 
 /**
+ * 取采购订单的供应商 ID：优先用订单级 supplier_id，其次从 goods_info 明细中提取（单一供应商时）
+ */
+export function getProcureOrderSupplierId(row: any): number {
+  if (row.supplier_id) return Number(row.supplier_id)
+  try {
+    const items: any[] =
+      typeof row.goods_info === 'string'
+        ? JSON.parse(row.goods_info)
+        : row.goods_info || []
+    const ids = [
+      ...new Set(
+        items.map((i: any) => Number(i.supplier_id)).filter(Boolean)
+      ),
+    ]
+    if (ids.length === 1) return ids[0]
+  } catch {}
+  return 0
+}
+
+/**
  * 付款单 → 反查对应采购订单 → 取供应商显示名
  * payRow: 付款单行；purchaseOrders: 已加载的采购订单列表；supplierList: 供应商列表
  */

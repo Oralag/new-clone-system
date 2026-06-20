@@ -1,0 +1,185 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]:
+      - img [ref=e7]:
+        - generic [ref=e9]: "N"
+      - generic [ref=e11]: 数字游牧
+      - generic [ref=e14]: 数字游牧 · 全球化业务管理平台
+    - generic [ref=e15]:
+      - generic "语言" [ref=e16]:
+        - button "中文" [ref=e17] [cursor=pointer]
+        - button "EN" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - button "亮色" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+        - button "暗黑" [ref=e27] [cursor=pointer]:
+          - img [ref=e28]
+        - button "护眼" [ref=e30] [cursor=pointer]:
+          - img [ref=e31]
+      - button "退出" [ref=e34] [cursor=pointer]:
+        - img [ref=e35]
+        - text: 退出
+  - generic [ref=e39]:
+    - generic [ref=e41]:
+      - generic [ref=e42] [cursor=pointer]:
+        - img [ref=e44]
+        - generic [ref=e47]: Captain 指挥官
+      - generic [ref=e48]:
+        - textbox "AI 多智能体总调度 · 输入目标让 Captain 自动规划执行…" [ref=e49]
+        - button "清空" [ref=e50] [cursor=pointer]:
+          - img [ref=e51]
+        - button "历史会话" [ref=e53] [cursor=pointer]:
+          - img [ref=e54]
+        - button [disabled] [ref=e57]:
+          - img [ref=e58]
+    - heading "选择您的 工作空间" [level=2] [ref=e61]
+    - generic [ref=e62]:
+      - generic [ref=e63] [cursor=pointer]:
+        - img [ref=e65]
+        - heading "游牧 ERP" [level=2] [ref=e70]
+        - paragraph [ref=e71]: 全链路业务管理中枢。销售、采购、仓库、财务、人事，一套系统全覆盖。
+        - generic [ref=e72]:
+          - generic [ref=e73]: 销售
+          - generic [ref=e74]: 采购
+          - generic [ref=e75]: 仓库
+          - generic [ref=e76]: 财务
+          - generic [ref=e77]: 人事
+        - generic [ref=e78]:
+          - generic [ref=e79]: 进入管理中心
+          - img [ref=e80]
+      - generic [ref=e82] [cursor=pointer]:
+        - generic [ref=e83]: 由 Claude AI 驱动
+        - img [ref=e85]
+        - heading "广告部门" [level=2] [ref=e87]
+        - paragraph [ref=e88]: 多 Agent 协同作业，热搜抓取、文案生成、海报制作全自动流转。你只需设定目标，其余交给 AI。
+        - generic [ref=e89]:
+          - generic [ref=e90]: 多Agent协作
+          - generic [ref=e91]: 自动流转
+          - generic [ref=e92]: 内容生产
+          - generic [ref=e93]: 一键发布
+        - generic [ref=e94]:
+          - generic [ref=e95]: 立即体验
+          - img [ref=e96]
+      - generic [ref=e98] [cursor=pointer]:
+        - img [ref=e100]
+        - heading "实验体" [level=2] [ref=e104]
+        - paragraph [ref=e105]: AI 智能投资决策中枢。市场研判、交易指令、资产管理、生命体观测一体化。
+        - generic [ref=e106]:
+          - generic [ref=e107]: 市场分析
+          - generic [ref=e108]: 智能决策
+          - generic [ref=e109]: 资产管理
+        - generic [ref=e110]:
+          - generic [ref=e111]: 进入实验体
+          - img [ref=e112]
+      - generic [ref=e114] [cursor=pointer]:
+        - img [ref=e116]
+        - heading "品牌主页" [level=2] [ref=e119]
+        - paragraph [ref=e120]: 面向零售客户与采购商的品牌展示平台。产品商城、批发采购、评价系统一体化。
+        - generic [ref=e121]:
+          - generic [ref=e122]: 品牌展示
+          - generic [ref=e123]: 零售商城
+          - generic [ref=e124]: 批发采购
+          - generic [ref=e125]: 评价系统
+        - generic [ref=e126]:
+          - generic [ref=e127]: 进入品牌中心
+          - img [ref=e128]
+      - generic [ref=e130] [cursor=pointer]:
+        - img [ref=e132]
+        - heading "运营驾驶舱" [level=2] [ref=e136]
+        - paragraph [ref=e137]: 面向线上电商运营的统一入口。平台管理、订单中心、库存同步与运营专员放在一条主线上，客户与线下作为辅助。
+        - generic [ref=e138]:
+          - generic [ref=e139]: 平台管理
+          - generic [ref=e140]: 订单中心
+          - generic [ref=e141]: 库存同步
+          - generic [ref=e142]: 客户运营
+          - generic [ref=e143]: 运营专员
+        - generic [ref=e144]:
+          - generic [ref=e145]: 进入运营中心
+          - img [ref=e146]
+  - generic [ref=e149]:
+    - heading "全 AI 驱动的业务管理平台 — 从进销存到智能决策" [level=2] [ref=e150]
+    - paragraph [ref=e151]: AI Agent 自动处理内容运营、数据分析、经营预警；14 个业务模块全链路覆盖采购、仓库、销售、财务；每位用户独立数据库实例，数据物理隔离，全球节点部署，99.9% 可用率。
+    - generic [ref=e152]:
+      - generic [ref=e153]:
+        - img [ref=e154]
+        - text: 采购管理
+      - generic [ref=e157]:
+        - img [ref=e158]
+        - text: 仓库管理
+      - generic [ref=e161]:
+        - img [ref=e162]
+        - text: 销售管理
+      - generic [ref=e165]:
+        - img [ref=e166]
+        - text: 财务管理
+      - generic [ref=e169]:
+        - img [ref=e170]
+        - text: 人事协同
+      - generic [ref=e173]:
+        - img [ref=e174]
+        - text: 数据报表
+      - generic [ref=e177]:
+        - img [ref=e178]
+        - text: AI 智能体
+      - generic [ref=e180]:
+        - img [ref=e181]
+        - text: 独立数据库
+    - generic [ref=e183]:
+      - generic [ref=e184]:
+        - img [ref=e186]
+        - generic [ref=e190]: 数据完全隔离
+        - generic [ref=e191]: 专属数据库实例，物理隔离，订单、财务、客户数据只有您能访问。
+      - generic [ref=e192]:
+        - img [ref=e194]
+        - generic [ref=e197]: 永久备份不丢失
+        - generic [ref=e198]: 每日自动备份，支持任意时间点恢复，业务数据零风险。
+      - generic [ref=e199]:
+        - img [ref=e201]
+        - generic [ref=e203]: 性能独享
+        - generic [ref=e204]: 独立计算资源，高峰期不受他人影响，支持百万级 SKU 稳定运行。
+      - generic [ref=e205]:
+        - img [ref=e207]
+        - generic [ref=e211]: 全球低延迟
+        - generic [ref=e212]: 多地区节点，中国、东南亚、欧美团队均可极速访问。
+      - generic [ref=e213]:
+        - img [ref=e215]
+        - generic [ref=e218]: 企业级安全
+        - generic [ref=e219]: DDoS 防护、HTTPS 加密、IP 白名单、操作日志审计全方位保障。
+      - generic [ref=e220]:
+        - generic [ref=e221]: Claude AI 加持
+        - img [ref=e223]
+        - generic [ref=e226]: AI 智能分析
+        - generic [ref=e227]: 内置 Claude AI 自动生成经营洞察与预警，让数据真正为您所用。
+  - generic [ref=e229]:
+    - generic [ref=e230]: 限时优惠
+    - heading "准备好了吗？ 升级专属付费版" [level=2] [ref=e231]:
+      - text: 准备好了吗？
+      - text: 升级专属付费版
+    - paragraph [ref=e232]:
+      - text: 首月特惠 · 独立数据库 · 全功能解锁 · 专属技术支持
+      - text: 付款后 2 小时内为您配置专属实例并激活账号
+    - generic [ref=e233]:
+      - generic [ref=e234] [cursor=pointer]:
+        - generic [ref=e235]: 月付版
+        - generic [ref=e236]: ¥39/月
+      - generic [ref=e237] [cursor=pointer]:
+        - generic [ref=e238]: 最受欢迎
+        - generic [ref=e239]: 年付版
+        - generic [ref=e240]: ¥299/年
+        - generic [ref=e241]: 相当于 ¥25/月，省 ¥169
+      - generic [ref=e242] [cursor=pointer]:
+        - generic [ref=e243]: 买断版
+        - generic [ref=e244]: ¥1599/永久
+        - generic [ref=e245]: 一次付清，永久使用
+    - button "立即升级付费版 →" [ref=e246] [cursor=pointer]
+    - paragraph [ref=e247]:
+      - text: 也可添加微信
+      - strong [ref=e248]: nomad_erp
+      - text: 咨询，或先领取 15 天免费体验
+  - contentinfo [ref=e249]:
+    - generic [ref=e250]:
+      - img [ref=e252]:
+        - generic [ref=e254]: "N"
+      - generic [ref=e256]: 数字游牧
+    - paragraph [ref=e257]: DESIGNED BY NOMAD LABS · GLOBAL CITIZEN PLATFORM
+    - paragraph [ref=e258]: © 2026 数字游牧. All rights reserved.

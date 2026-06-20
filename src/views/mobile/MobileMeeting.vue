@@ -5,26 +5,26 @@
       <button class="m-meeting-back-btn" @click="router.back()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <span class="m-meeting-back-title">立即开会</span>
+      <span class="m-meeting-back-title">{{ t('mobileMeeting.instantMeeting') }}</span>
     </div>
 
     <!-- 立即开会全屏界面 -->
     <div v-if="isInstant" class="m-instant-meeting">
       <div class="m-instant-hero">
         <div class="m-instant-icon">🎙️</div>
-        <div class="m-instant-title">发起视频会议</div>
-        <div class="m-instant-sub">快速发起，链接一键分享</div>
+        <div class="m-instant-title">{{ t('mobileMeeting.startVideoMeeting') }}</div>
+        <div class="m-instant-sub">{{ t('mobileMeeting.instantSubtitle') }}</div>
       </div>
 
       <!-- 会议名称 -->
       <div class="m-instant-form">
         <div class="m-form-item">
-          <label>会议名称</label>
-          <input v-model="form.title" class="m-input" placeholder="如：销售部周会" />
+          <label>{{ t('mobileMeeting.meetingName') }}</label>
+          <input v-model="form.title" class="m-input" :placeholder="t('mobileMeeting.namePlaceholder')" />
         </div>
         <!-- 参会人 -->
         <div class="m-form-item">
-          <label>邀请参会人</label>
+          <label>{{ t('mobileMeeting.inviteParticipants') }}</label>
           <div class="m-participant-tags">
             <span
               v-for="p in form.participants"
@@ -34,7 +34,7 @@
             >
               {{ p.name }} ×
             </span>
-            <span class="m-participant-add" @click="showPicker = true">+ 添加</span>
+            <span class="m-participant-add" @click="showPicker = true">+ {{ t('common.add') }}</span>
           </div>
         </div>
       </div>
@@ -46,7 +46,7 @@
           :disabled="loading || !form.title.trim()"
           @click="createInstant"
         >
-          {{ loading ? '创建中...' : '发起会议' }}
+          {{ loading ? t('mobileMeeting.creating') : t('mobileMeeting.startMeeting') }}
         </button>
       </div>
     </div>
@@ -55,8 +55,8 @@
     <div v-if="!isInstant">
       <div class="m-meeting-hero">
         <div class="m-meeting-hero-icon">🎙️</div>
-        <div class="m-meeting-hero-title">会议室</div>
-        <div class="m-meeting-hero-sub">随时随地，发起或加入会议</div>
+        <div class="m-meeting-hero-title">{{ t('mobileMeeting.meetingRoom') }}</div>
+        <div class="m-meeting-hero-sub">{{ t('mobileMeeting.roomSubtitle') }}</div>
       </div>
 
       <!-- 三个主入口 -->
@@ -68,8 +68,8 @@
           </svg>
         </div>
         <div class="m-meeting-card-content">
-          <div class="m-meeting-card-title">立即开会</div>
-          <div class="m-meeting-card-sub">快速发起，邀人加入</div>
+          <div class="m-meeting-card-title">{{ t('mobileMeeting.instantMeeting') }}</div>
+          <div class="m-meeting-card-sub">{{ t('mobileMeeting.instantCardSubtitle') }}</div>
         </div>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" opacity="0.6">
           <polyline points="9 18 15 12 9 6"/>
@@ -83,8 +83,8 @@
           </svg>
         </div>
         <div class="m-meeting-card-content">
-          <div class="m-meeting-card-title">预约会议</div>
-          <div class="m-meeting-card-sub">设置时间，提前通知</div>
+          <div class="m-meeting-card-title">{{ t('mobileMeeting.scheduleMeeting') }}</div>
+          <div class="m-meeting-card-sub">{{ t('mobileMeeting.scheduleSubtitle') }}</div>
         </div>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" opacity="0.6">
           <polyline points="9 18 15 12 9 6"/>
@@ -98,8 +98,8 @@
           </svg>
         </div>
         <div class="m-meeting-card-content">
-          <div class="m-meeting-card-title">输入码加入</div>
-          <div class="m-meeting-card-sub">外部人员，输入6位码加入</div>
+          <div class="m-meeting-card-title">{{ t('mobileMeeting.joinByCode') }}</div>
+          <div class="m-meeting-card-sub">{{ t('mobileMeeting.joinByCodeSubtitle') }}</div>
         </div>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" opacity="0.6">
           <polyline points="9 18 15 12 9 6"/>
@@ -109,42 +109,42 @@
 
     <!-- 进行中会议 -->
     <div v-if="activeMeetings.length > 0" class="m-meeting-section">
-      <div class="m-meeting-section-title">🔴 进行中</div>
+      <div class="m-meeting-section-title">🔴 {{ t('mobileMeeting.active') }}</div>
       <div v-for="m in activeMeetings" :key="m.id" class="m-meeting-active-item" @click="router.push(`/mobile/meeting/${m.id}`)">
         <div class="m-meeting-active-dot" />
         <div class="m-meeting-active-info">
           <div class="m-meeting-active-title">{{ m.title }}</div>
           <div class="m-meeting-active-meta">
-            主持人：{{ m.host_name }} · {{ m.participant_count || 0 }} 人参与
+            {{ t('mobileMeeting.hostAndParticipants', { host: m.host_name, count: m.participant_count || 0 }) }}
           </div>
         </div>
-        <button class="m-meeting-join-btn">进入</button>
+        <button class="m-meeting-join-btn">{{ t('mobileMeeting.enter') }}</button>
       </div>
     </div>
 
     <!-- 即将开始 -->
     <div v-if="upcomingMeetings.length > 0" class="m-meeting-section">
-      <div class="m-meeting-section-title">🟡 即将开始</div>
+      <div class="m-meeting-section-title">🟡 {{ t('mobileMeeting.upcoming') }}</div>
       <div v-for="m in upcomingMeetings" :key="m.id" class="m-meeting-upcoming-item" @click="viewMeeting(m)">
         <div class="m-meeting-upcoming-time">{{ formatMeetingTime(m.scheduled_at) }}</div>
         <div class="m-meeting-upcoming-info">
           <div class="m-meeting-upcoming-title">{{ m.title }}</div>
           <div class="m-meeting-upcoming-meta">
-            {{ m.participant_count || 0 }} 人参与 · {{ m.duration_minutes || 60 }}分钟
+            {{ t('mobileMeeting.participantsAndDuration', { count: m.participant_count || 0, minutes: m.duration_minutes || 60 }) }}
           </div>
         </div>
         <div class="m-meeting-upcoming-action">
-          <button v-if="canStartEarly(m)" class="m-meeting-early-btn">提前进入</button>
+          <button v-if="canStartEarly(m)" class="m-meeting-early-btn">{{ t('mobileMeeting.enterEarly') }}</button>
         </div>
       </div>
     </div>
 
     <!-- 最近会议记录 -->
     <div class="m-meeting-section">
-      <div class="m-meeting-section-title">📋 最近会议</div>
+      <div class="m-meeting-section-title">📋 {{ t('mobileMeeting.recent') }}</div>
       <div v-if="recentMeetings.length === 0" class="m-meeting-empty">
         <div class="m-meeting-empty-icon">📹</div>
-        <div class="m-meeting-empty-text">暂无会议记录</div>
+        <div class="m-meeting-empty-text">{{ t('mobileMeeting.noRecords') }}</div>
       </div>
       <div v-else class="m-meeting-recent-list">
         <div v-for="m in recentMeetings" :key="m.id" class="m-meeting-recent-item" @click="viewMeeting(m)">
@@ -162,37 +162,37 @@
     <div v-if="showSchedule" class="m-modal-mask" @click.self="showSchedule = false">
       <div class="m-modal-sheet">
         <div class="m-modal-header">
-          <span>预约会议</span>
-          <button class="m-modal-close" @click="showSchedule = false">取消</button>
+          <span>{{ t('mobileMeeting.scheduleMeeting') }}</span>
+          <button class="m-modal-close" @click="showSchedule = false">{{ t('common.cancel') }}</button>
         </div>
         <div class="m-modal-body">
           <div class="m-form-item">
-            <label>会议名称</label>
-            <input v-model="form.title" class="m-input" placeholder="如：销售部周会" />
+            <label>{{ t('mobileMeeting.meetingName') }}</label>
+            <input v-model="form.title" class="m-input" :placeholder="t('mobileMeeting.namePlaceholder')" />
           </div>
           <div class="m-form-item">
-            <label>开始时间</label>
+            <label>{{ t('mobileMeeting.startTime') }}</label>
             <input v-model="form.scheduled_at" class="m-input" type="datetime-local" />
           </div>
           <div class="m-form-item">
-            <label>时长</label>
+            <label>{{ t('mobileMeeting.duration') }}</label>
             <div class="m-form-tags">
               <span v-for="d in durations" :key="d.value" :class="['m-form-tag', form.duration === d.value ? 'active' : '']" @click="form.duration = d.value">{{ d.label }}</span>
             </div>
           </div>
           <div class="m-form-item">
-            <label>参与人</label>
+            <label>{{ t('mobileMeeting.participants') }}</label>
             <div class="m-participant-list">
               <div v-for="p in form.participants" :key="p.id" class="m-participant-chip">
                 {{ p.name }}<button @click="removeParticipant(p.id)">×</button>
               </div>
-              <button class="m-participant-add" @click="showPicker = true">+ 添加</button>
+              <button class="m-participant-add" @click="showPicker = true">+ {{ t('common.add') }}</button>
             </div>
           </div>
         </div>
         <div class="m-modal-footer">
           <button class="m-btn-primary" :disabled="!form.title || !form.scheduled_at || loading" @click="createSchedule">
-            {{ loading ? '创建中...' : '创建会议' }}
+            {{ loading ? t('mobileMeeting.creating') : t('mobileMeeting.createMeeting') }}
           </button>
         </div>
       </div>
@@ -202,11 +202,11 @@
     <div v-if="showPicker" class="m-modal-mask" @click.self="showPicker = false">
       <div class="m-modal-sheet">
         <div class="m-modal-header">
-          <span>选择参与人</span>
-          <button class="m-modal-close" @click="showPicker = false">确定</button>
+          <span>{{ t('mobileMeeting.selectParticipants') }}</span>
+          <button class="m-modal-close" @click="showPicker = false">{{ t('common.confirm') }}</button>
         </div>
         <div class="m-modal-body">
-          <div class="m-pick-search"><input v-model="pickSearch" class="m-input" placeholder="搜索成员..." /></div>
+          <div class="m-pick-search"><input v-model="pickSearch" class="m-input" :placeholder="t('mobileMeeting.searchMembers')" /></div>
           <div class="m-pick-list">
             <div v-for="m in filteredMembers" :key="m.id" class="m-pick-item" @click="toggleParticipant(m)">
               <div class="m-pick-check">
@@ -215,7 +215,7 @@
               <div class="m-pick-avatar">{{ m.name?.[0] }}</div>
               <div class="m-pick-info">
                 <div class="m-pick-name">{{ m.name }}</div>
-                <div class="m-pick-sub">{{ m.position || '成员' }}</div>
+                <div class="m-pick-sub">{{ m.position || t('mobileMeeting.member') }}</div>
               </div>
             </div>
           </div>
@@ -227,17 +227,17 @@
     <div v-if="showJoinByCode" class="m-modal-mask" @click.self="showJoinByCode = false">
       <div class="m-modal-sheet">
         <div class="m-modal-header">
-          <span>输入码加入</span>
-          <button class="m-modal-close" @click="showJoinByCode = false">取消</button>
+          <span>{{ t('mobileMeeting.joinByCode') }}</span>
+          <button class="m-modal-close" @click="showJoinByCode = false">{{ t('common.cancel') }}</button>
         </div>
         <div class="m-modal-body">
           <div class="m-code-input-wrap">
-            <input v-model="joinCode" class="m-code-input" type="text" placeholder="输入6位会议码" maxlength="6" />
+            <input v-model="joinCode" class="m-code-input" type="text" :placeholder="t('mobileMeeting.codePlaceholder')" maxlength="6" />
           </div>
         </div>
         <div class="m-modal-footer">
           <button class="m-btn-primary" :disabled="joinCode.length < 6 || joining" @click="joinByCode">
-            {{ joining ? '加入中...' : '加入会议' }}
+            {{ joining ? t('mobileMeeting.joining') : t('mobileMeeting.joinMeeting') }}
           </button>
         </div>
       </div>
@@ -252,10 +252,12 @@ import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const isInstant = computed(() => route.path.endsWith('/instant'))
 
 const showSchedule = ref(false)
@@ -270,11 +272,11 @@ const recentMeetings = ref<any[]>([])
 const activeMeetings = ref<any[]>([])
 const upcomingMeetings = ref<any[]>([])
 
-const durations = [
-  { label: '30分钟', value: 30 },
-  { label: '1小时', value: 60 },
-  { label: '2小时', value: 120 },
-]
+const durations = computed(() => [
+  { label: t('mobileMeeting.minutes', { count: 30 }), value: 30 },
+  { label: t('mobileMeeting.hours', { count: 1 }), value: 60 },
+  { label: t('mobileMeeting.hours', { count: 2 }), value: 120 },
+])
 
 const form = ref({
   title: '',
@@ -309,19 +311,19 @@ async function createInstant() {
   loading.value = true
   try {
     const res = await http.post('/meeting/create', {
-      title: form.value.title || `${authStore.userName}的会议`,
+      title: form.value.title || t('mobileMeeting.defaultMeetingName', { name: authStore.userName }),
       type: 'instant',
       participants: form.value.participants.map((p: any) => p.id),
     })
     const meetingId = res?.data?.id ?? res?.data?.meeting?.id
     if (meetingId) {
-      ElMessage.success('会议已创建')
+      ElMessage.success(t('mobileMeeting.created'))
       router.push(`/mobile/meeting/${meetingId}`)
     } else {
-      ElMessage.error('创建失败')
+      ElMessage.error(t('mobileMeeting.createFailed'))
     }
   } catch (e: any) {
-    ElMessage.error(e?.message || '创建会议失败')
+    ElMessage.error(e?.message || t('mobileMeeting.createMeetingFailed'))
   } finally {
     loading.value = false
   }
@@ -336,12 +338,12 @@ async function createSchedule() {
       duration_minutes: form.value.duration,
       participants: form.value.participants.map((p: any) => p.id),
     })
-    ElMessage.success('预约成功')
+    ElMessage.success(t('mobileMeeting.scheduled'))
     showSchedule.value = false
     form.value = { title: '', scheduled_at: '', duration: 60, participants: [] }
     loadMeetings()
   } catch (e: any) {
-    ElMessage.error(e?.message || '预约失败')
+    ElMessage.error(e?.message || t('mobileMeeting.scheduleFailed'))
   } finally {
     loading.value = false
   }
@@ -354,10 +356,10 @@ async function joinByCode() {
     if (res?.data?.meeting) {
       router.push(`/mobile/meeting/${res.data.meeting.id}`)
     } else {
-      ElMessage.error('会议码无效')
+      ElMessage.error(t('mobileMeeting.invalidCode'))
     }
   } catch {
-    ElMessage.error('加入失败')
+    ElMessage.error(t('mobileMeeting.joinFailed'))
   } finally {
     joining.value = false
   }
@@ -378,8 +380,8 @@ function formatMeetingTime(ts: string) {
   const d = new Date(ts)
   const now = new Date()
   const diff = d.getTime() - now.getTime()
-  if (diff < 0) return '已过期'
-  if (diff < 3600000) return `${Math.ceil(diff / 60000)}分钟后`
+  if (diff < 0) return t('mobileMeeting.expired')
+  if (diff < 3600000) return t('mobileMeeting.minutesLater', { count: Math.ceil(diff / 60000) })
   return `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
@@ -388,12 +390,17 @@ function formatTime(ts: string) {
   const d = new Date(ts)
   const now = new Date()
   const diff = now.getTime() - d.getTime()
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 86400000) return t('mobileMeeting.hoursAgo', { count: Math.floor(diff / 3600000) })
   return `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 function getStatusText(status: string) {
-  const map: Record<string, string> = { active: '进行中', ended: '已结束', scheduled: '已预约', cancelled: '已取消' }
+  const map: Record<string, string> = {
+    active: t('mobileMeeting.active'),
+    ended: t('mobileMeeting.ended'),
+    scheduled: t('mobileMeeting.statusScheduled'),
+    cancelled: t('mobileMeeting.cancelled'),
+  }
   return map[status] || status
 }
 

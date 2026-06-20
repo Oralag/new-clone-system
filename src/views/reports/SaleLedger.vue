@@ -3,19 +3,19 @@
     <!-- 搜索栏 -->
     <el-card class="search-card">
       <el-form inline>
-        <el-form-item label="年份">
+        <el-form-item :label="$t('reports.saleLedger.yearLabel')">
           <el-select v-model="searchYear" style="width:100px" @change="loadAll">
             <el-option v-for="y in yearOptions" :key="y" :label="y+''" :value="y" />
           </el-select>
         </el-form-item>
-        <el-form-item label="客户">
-          <el-select v-model="searchCustomerId" clearable placeholder="请选择客户" style="width:160px" @change="loadAll">
+        <el-form-item :label="$t('reports.saleLedger.customerLabel')">
+          <el-select v-model="searchCustomerId" clearable :placeholder="$t('reports.saleLedger.customerPlaceholder')" style="width:160px" @change="loadAll">
             <el-option v-for="c in customerOptions" :key="c.id" :label="c.customer_name" :value="c.id" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="loadAll">搜索</el-button>
-          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="loadAll">{{ $t('reports.saleLedger.search') }}</el-button>
+          <el-button @click="onReset">{{ $t('reports.saleLedger.reset') }}</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -25,35 +25,35 @@
       <div class="stat-card blue">
         <div class="stat-icon"><el-icon><Document /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">合同数量（份）</div>
+          <div class="stat-label">{{ $t('reports.saleLedger.statCount') }}</div>
           <div class="stat-value">{{ stats.count }}</div>
         </div>
       </div>
       <div class="stat-card orange">
         <div class="stat-icon"><el-icon><Wallet /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">合同金额</div>
+          <div class="stat-label">{{ $t('reports.saleLedger.statTotal') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.total) }}</div>
         </div>
       </div>
       <div class="stat-card green">
         <div class="stat-icon"><el-icon><CircleCheck /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">已收金额</div>
+          <div class="stat-label">{{ $t('reports.saleLedger.statReceived') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.received) }}</div>
         </div>
       </div>
       <div class="stat-card red">
         <div class="stat-icon"><el-icon><Clock /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">未收金额</div>
+          <div class="stat-label">{{ $t('reports.saleLedger.statUnreceived') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.unreceived) }}</div>
         </div>
       </div>
       <div class="stat-card pink">
         <div class="stat-icon"><el-icon><RefreshLeft /></el-icon></div>
         <div class="stat-body">
-          <div class="stat-label">退款金额</div>
+          <div class="stat-label">{{ $t('reports.saleLedger.statRefund') }}</div>
           <div class="stat-value">¥ {{ fmt(stats.refund) }}</div>
         </div>
       </div>
@@ -62,11 +62,11 @@
     <!-- 图表区 -->
     <div class="chart-row">
       <el-card class="chart-card pie-card">
-        <div class="card-title">累计收款进度</div>
+        <div class="card-title">{{ $t('reports.saleLedger.chartPieTitle') }}</div>
         <div ref="pieRef" style="height:220px"></div>
       </el-card>
       <el-card class="chart-card line-card">
-        <div class="card-title">月度合同金额明细</div>
+        <div class="card-title">{{ $t('reports.saleLedger.chartLineTitle') }}</div>
         <div ref="lineRef" style="height:220px"></div>
       </el-card>
     </div>
@@ -74,40 +74,40 @@
     <!-- 明细表格 -->
     <el-card class="table-card">
       <el-table :data="tableData" border stripe size="small" style="width:100%">
-        <el-table-column type="index" label="序号" width="55" align="center" />
-        <el-table-column label="收款日期" prop="contract_date" width="110" />
-        <el-table-column label="客户名称" prop="customer_name" min-width="120" />
-        <el-table-column label="合同金额" prop="total_amount" width="110" align="right">
+        <el-table-column type="index" :label="$t('reports.saleLedger.colIndex')" width="55" align="center" />
+        <el-table-column :label="$t('reports.saleLedger.colReceiptDate')" prop="contract_date" width="110" />
+        <el-table-column :label="$t('reports.saleLedger.colCustomerName')" prop="customer_name" min-width="120" />
+        <el-table-column :label="$t('reports.saleLedger.colContractAmount')" prop="total_amount" width="110" align="right">
           <template #default="{ row }">{{ fmt(contractAmount(row)) }}</template>
         </el-table-column>
-        <el-table-column label="已收金额" width="110" align="right">
+        <el-table-column :label="$t('reports.saleLedger.colReceived')" width="110" align="right">
           <template #default="{ row }">{{ fmt(row.receive_amount) }}</template>
         </el-table-column>
-        <el-table-column label="未收金额" width="110" align="right">
+        <el-table-column :label="$t('reports.saleLedger.colUnreceived')" width="110" align="right">
           <template #default="{ row }">
             <span :style="{ color: calcUnreceived(row) > 0 ? '#ef4444' : '#16a34a' }">
               {{ fmt(calcUnreceived(row)) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="退款金额" width="90" align="right">
+        <el-table-column :label="$t('reports.saleLedger.colRefund')" width="90" align="right">
           <template #default="{ row }">{{ fmt(row.refund_amount) }}</template>
         </el-table-column>
-        <el-table-column label="欠款状态" width="90" align="center">
+        <el-table-column :label="$t('reports.saleLedger.colDebtStatus')" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="calcUnreceived(row) > 0 ? 'danger' : 'success'" size="small">
-              {{ calcUnreceived(row) > 0 ? '未结清' : '已结清' }}
+              {{ calcUnreceived(row) > 0 ? $t('reports.saleLedger.statusUnpaid') : $t('reports.saleLedger.statusPaid') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="合同状态" width="90" align="center">
+        <el-table-column :label="$t('reports.saleLedger.colContractStatus')" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'primary' : 'info'" size="small">
-              {{ row.status === 1 ? '进行中' : '已完成' }}
+              {{ row.status === 1 ? $t('reports.saleLedger.statusInProgress') : $t('reports.saleLedger.statusCompleted') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="120" />
+        <el-table-column :label="$t('reports.saleLedger.colRemark')" prop="remark" min-width="120" />
       </el-table>
       <div style="margin-top:12px;text-align:right">
         <el-pagination
@@ -124,6 +124,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { Search, Document, Wallet, CircleCheck, Clock, RefreshLeft } from '@element-plus/icons-vue'
 import * as echarts from 'echarts/core'
 import { PieChart, LineChart } from 'echarts/charts'
@@ -231,9 +233,9 @@ function renderPie() {
       type: 'pie', radius: ['40%', '70%'], center: ['60%', '50%'],
       label: { formatter: '{b}: {d}%', fontSize: 11 },
       data: [
-        { name: '已收金额', value: received.toFixed(2), itemStyle: { color: '#f5a623' } },
-        { name: '未收金额', value: unreceived.toFixed(2), itemStyle: { color: '#4ade80' } },
-        { name: '退款金额', value: refund.toFixed(2), itemStyle: { color: '#f87171' } },
+        { name: t('reports.saleLedger.pieReceived'), value: received.toFixed(2), itemStyle: { color: '#f5a623' } },
+        { name: t('reports.saleLedger.pieUnreceived'), value: unreceived.toFixed(2), itemStyle: { color: '#4ade80' } },
+        { name: t('reports.saleLedger.pieRefund'), value: refund.toFixed(2), itemStyle: { color: '#f87171' } },
       ].filter(d => Number(d.value) > 0)
     }]
   })
@@ -249,14 +251,14 @@ function renderLine() {
   )
   lineChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['合同金额', '已收金额', '未收金额'], top: 0, right: 10 },
+    legend: { data: [t('reports.saleLedger.seriesContract'), t('reports.saleLedger.seriesReceived'), t('reports.saleLedger.seriesUnreceived')], top: 0, right: 10 },
     grid: { left: 50, right: 20, top: 30, bottom: 30 },
     xAxis: { type: 'category', data: months.map(m => m.slice(5)), axisLabel: { fontSize: 10 } },
     yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
     series: [
-      { name: '合同金额', type: 'line', smooth: true, data: byMonth('total_amount'), itemStyle: { color: '#3b82f6' } },
-      { name: '已收金额', type: 'line', smooth: true, data: byMonth('receive_amount'), itemStyle: { color: '#10b981' } },
-      { name: '未收金额', type: 'line', smooth: true,
+      { name: t('reports.saleLedger.seriesContract'), type: 'line', smooth: true, data: byMonth('total_amount'), itemStyle: { color: '#3b82f6' } },
+      { name: t('reports.saleLedger.seriesReceived'), type: 'line', smooth: true, data: byMonth('receive_amount'), itemStyle: { color: '#10b981' } },
+      { name: t('reports.saleLedger.seriesUnreceived'), type: 'line', smooth: true,
         data: months.map(m => allRows.value.filter(r => (r.contract_date || r.created_at || '').startsWith(m)).reduce((s, r) => s + calcUnreceived(r), 0).toFixed(2)),
         itemStyle: { color: '#ef4444' }
       },

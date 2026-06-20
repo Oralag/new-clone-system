@@ -10,23 +10,23 @@
       <div class="cate-panel" :style="{ width: catePanelWidth + 'px' }">
         <!-- 视图切换 tab -->
         <div class="cate-view-tabs">
-          <span class="cate-view-tab" :class="{ active: leftView === 'cate' }" @click="switchLeftView('cate')">商品分类</span>
-          <span class="cate-view-tab" :class="{ active: leftView === 'bom' }" @click="switchLeftView('bom')">BOM视图</span>
+          <span class="cate-view-tab" :class="{ active: leftView === 'cate' }" @click="switchLeftView('cate')">{{ $t('goods.info.goodsCategory') }}</span>
+          <span class="cate-view-tab" :class="{ active: leftView === 'bom' }" @click="switchLeftView('bom')">{{ $t('goods.info.bomView') }}</span>
         </div>
 
         <!-- 商品分类模式 -->
         <template v-if="leftView === 'cate'">
           <div class="cate-header">
-            <span class="cate-title">商品分类</span>
+            <span class="cate-title">{{ $t('goods.info.goodsCategory') }}</span>
             <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
           </div>
           <div class="cate-search">
-            <el-input v-model="cateKeyword" placeholder="搜索分类" clearable size="small" />
+            <el-input v-model="cateKeyword" :placeholder="$t('goods.info.searchCategory')" clearable size="small" />
           </div>
           <div class="cate-tree" v-loading="cateLoading">
             <!-- PC端：树形结构 -->
             <div class="cate-item pc-only" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
-              全部
+              {{ $t('goods.info.all') }}
             </div>
             <el-tree
               class="pc-only"
@@ -48,12 +48,12 @@
                 </span>
               </template>
             </el-tree>
-            <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty pc-only">暂无分类</div>
+            <div v-if="!cateLoading && cateTree.length === 0" class="cate-empty pc-only">{{ $t('goods.info.noCategory') }}</div>
             <!-- 移动端：两行 chip，第一行根分类，第二行子分类 -->
             <div class="mobile-cate-chips">
               <!-- 第一行：全部 + 根节点 -->
               <div class="mobile-chip-row">
-                <span class="cate-chip" :class="{ active: selectedCateId === null }" @click="selectCate(null)">全部</span>
+                <span class="cate-chip" :class="{ active: selectedCateId === null }" @click="selectCate(null)">{{ $t('goods.info.all') }}</span>
                 <span
                   v-for="c in cateTree"
                   :key="c.id"
@@ -82,14 +82,14 @@
         <!-- BOM视图模式 -->
         <template v-else>
           <div class="cate-header">
-            <span class="cate-title">按成品筛选</span>
+            <span class="cate-title">{{ $t('goods.info.filterByProduct') }}</span>
           </div>
           <div class="cate-search">
-            <el-input v-model="bomViewKeyword" placeholder="搜索成品" clearable size="small" />
+            <el-input v-model="bomViewKeyword" :placeholder="$t('goods.info.searchProduct')" clearable size="small" />
           </div>
           <div class="cate-tree bom-cate-tree" v-loading="bomViewLoading">
             <div class="cate-item" :class="{ active: bomViewGoodsId === null }" @click="selectBomGoods(null)">
-              全部商品
+              {{ $t('goods.info.allGoods') }}
             </div>
             <div
               v-for="g in filteredBomGoodsList"
@@ -100,10 +100,10 @@
             >
               <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.goods_name }}</span>
               <span class="goods-count" style="flex-shrink:0;font-size:11px;color:#0071e3;background:rgba(0,113,227,0.08);border-radius:3px;padding:0 4px;margin-left:4px">
-                {{ g.material_count }}种
+                {{ g.material_count }}{{ $t('goods.info.typesLabel') }}
               </span>
             </div>
-            <div v-if="!bomViewLoading && filteredBomGoodsList.length === 0" class="cate-empty">暂无BOM成品</div>
+            <div v-if="!bomViewLoading && filteredBomGoodsList.length === 0" class="cate-empty">{{ $t('goods.info.noBomProduct') }}</div>
           </div>
         </template>
       </div>
@@ -113,35 +113,35 @@
       <div class="goods-list-wrap">
         <ScTable ref="tableRef" :api-obj="getGoodsList"
           del-path="/goods/ShopGoods/batchDel"
-          export-file-name="商品列表" :params="searchForm" :row-filter="rowFilter"
-          :export-columns="{ goods_sn: '商品编码', goods_name: '商品名称', goods_type: '类型', en_name: '英文名称', unit_name: '商品单位', cate_name: '商品分类', cost_price: '采购价', sell_price: '销售价', brand_name: '商品品牌', barcode: '商品条码', status: '状态' }">
+          export-file-name="goods-list" :params="searchForm" :row-filter="rowFilter"
+          :export-columns="exportColumns">
           <template #search>
             <el-input
               v-model="searchForm.keyword"
-              placeholder="输入关键字进行过滤"
+              :placeholder="$t('goods.info.filterKeyword')"
               clearable
               :style="{ width: isMobileList ? '100%' : '200px' }"
             />
             <el-select
               v-model="filterType"
-              placeholder="商品类型"
+              :placeholder="$t('goods.info.goodsType')"
               clearable
               :style="{ width: isMobileList ? '100%' : '120px' }"
               @change="tableRef?.refresh()"
             >
-              <el-option label="成品" :value="1" />
-              <el-option label="半成品" :value="2" />
-              <el-option label="原材料" :value="3" />
-              <el-option label="辅料" :value="4" />
-              <el-option label="散装" :value="5" />
+              <el-option :label="$t('goods.info.typeFinished')" :value="1" />
+              <el-option :label="$t('goods.info.typeSemi')" :value="2" />
+              <el-option :label="$t('goods.info.typeRaw')" :value="3" />
+              <el-option :label="$t('goods.info.typeAux')" :value="4" />
+              <el-option :label="$t('goods.info.typeBulk')" :value="5" />
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
+            <el-button type="primary" :icon="Plus" @click="openCreate">{{ $t('goods.info.addGoods') }}</el-button>
             <template v-if="!isMobileList">
-              <el-button :icon="Camera" @click="openListScanner">扫码录入</el-button>
-              <el-button :icon="Upload" @click="triggerImport">导入</el-button>
-              <el-button :icon="Download" @click="downloadTemplate">下载模板</el-button>
+              <el-button :icon="Camera" @click="openListScanner">{{ $t('goods.info.scanEntry') }}</el-button>
+              <el-button :icon="Upload" @click="triggerImport">{{ $t('goods.info.importGoods') }}</el-button>
+              <el-button :icon="Download" @click="downloadTemplate">{{ $t('goods.info.downloadTemplate') }}</el-button>
             </template>
             <input ref="importFileRef" type="file" accept=".xlsx,.xls" style="display:none" @change="handleImportFile" />
           </template>
@@ -152,75 +152,75 @@
               :disabled="!cateOptions.length"
               @click="openBatchMoveDialog(selectedRows, clearSelection, refresh)"
             >
-              移动
+              {{ $t('goods.info.move') }}
             </el-button>
           </template>
 
           <!-- 移动端卡片列表 -->
           <template #mobile="{ rows, loading: listLoading }">
-            <div v-if="listLoading" style="text-align:center;padding:24px;color:#86909c">加载中...</div>
-            <div v-else-if="!rows.length" style="text-align:center;padding:24px;color:#86909c">暂无数据</div>
+            <div v-if="listLoading" style="text-align:center;padding:24px;color:#86909c">{{ $t('goods.info.loading') }}</div>
+            <div v-else-if="!rows.length" style="text-align:center;padding:24px;color:#86909c">{{ $t('goods.info.noData') }}</div>
             <template v-else>
               <div v-for="row in rows" :key="row.id" class="goods-card" @click="openEdit(row)">
                 <div class="goods-card-title">
                   <span>{{ row.goods_name }}</span>
                   <el-tag v-if="bomProductSns.has(row.goods_sn)" type="danger" size="small">BOM</el-tag>
-                  <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
-                  <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">原材料</el-tag>
-                  <el-tag v-else-if="getGoodsType(row) === 4" size="small">辅料</el-tag>
-                  <el-tag v-else-if="getGoodsType(row) === 5" type="danger" size="small">散装</el-tag>
-                  <el-tag v-else-if="getGoodsType(row) === 1" type="success" size="small">成品</el-tag>
-                  <el-tag v-else type="info" size="small">未指定</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">{{ $t('goods.info.typeSemi') }}</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">{{ $t('goods.info.typeRaw') }}</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 4" size="small">{{ $t('goods.info.typeAux') }}</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 5" type="danger" size="small">{{ $t('goods.info.typeBulk') }}</el-tag>
+                  <el-tag v-else-if="getGoodsType(row) === 1" type="success" size="small">{{ $t('goods.info.typeFinished') }}</el-tag>
+                  <el-tag v-else type="info" size="small">{{ $t('goods.info.typeUnspecified') }}</el-tag>
                 </div>
                 <div class="goods-card-row">
-                  <span class="goods-card-label">分类</span>
+                  <span class="goods-card-label">{{ $t('goods.info.cardCategory') }}</span>
                   <span class="goods-card-value">{{ getCatePathText(row) || '-' }}</span>
                 </div>
                 <div class="goods-card-row">
-                  <span class="goods-card-label">销售价</span>
+                  <span class="goods-card-label">{{ $t('goods.info.cardSellPrice') }}</span>
                   <span class="goods-card-value blue">{{ row.sell_price ?? '-' }}</span>
                 </div>
                 <div class="goods-card-footer">
                   <span class="goods-card-sn">{{ row.goods_sn || '' }}</span>
                   <div style="display:flex;gap:8px">
-                    <el-button type="primary" link size="small" @click.stop="openEdit(row)">编辑</el-button>
-                    <el-button type="danger" link size="small" @click.stop="handleDelete(row.id)">删除</el-button>
+                    <el-button type="primary" link size="small" @click.stop="openEdit(row)">{{ $t('goods.info.edit') }}</el-button>
+                    <el-button type="danger" link size="small" @click.stop="handleDelete(row.id)">{{ $t('goods.info.delete') }}</el-button>
                   </div>
                 </div>
               </div>
             </template>
           </template>
-          <el-table-column v-if="!isMobileList" type="index" label="序号" width="60" align="center" />
-          <el-table-column v-if="!isMobileList" prop="goods_sn" label="商品编码" min-width="120" />
-          <el-table-column prop="goods_name" label="商品名称" :min-width="isMobileList ? 140 : 150" />
-          <el-table-column label="类型" width="80" align="center">
+          <el-table-column v-if="!isMobileList" type="index" :label="$t('goods.info.seqNo')" width="60" align="center" />
+          <el-table-column v-if="!isMobileList" prop="goods_sn" :label="$t('goods.info.goodsSn')" min-width="120" />
+          <el-table-column prop="goods_name" :label="$t('goods.info.goodsName')" :min-width="isMobileList ? 140 : 150" />
+          <el-table-column :label="$t('goods.info.typeCol')" width="80" align="center">
             <template #default="{ row }">
               <el-tag v-if="bomProductSns.has(row.goods_sn)" type="danger" size="small">BOM</el-tag>
-              <el-tag v-else-if="getGoodsType(row) === 0" type="info" size="small">未指定</el-tag>
-              <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">半成品</el-tag>
-              <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">原材料</el-tag>
-              <el-tag v-else-if="getGoodsType(row) === 4" size="small">辅料</el-tag>
-              <el-tag v-else-if="getGoodsType(row) === 5" type="danger" size="small">散装</el-tag>
-              <el-tag v-else type="success" size="small">成品</el-tag>
+              <el-tag v-else-if="getGoodsType(row) === 0" type="info" size="small">{{ $t('goods.info.typeUnspecified') }}</el-tag>
+              <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">{{ $t('goods.info.typeSemi') }}</el-tag>
+              <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">{{ $t('goods.info.typeRaw') }}</el-tag>
+              <el-tag v-else-if="getGoodsType(row) === 4" size="small">{{ $t('goods.info.typeAux') }}</el-tag>
+              <el-tag v-else-if="getGoodsType(row) === 5" type="danger" size="small">{{ $t('goods.info.typeBulk') }}</el-tag>
+              <el-tag v-else type="success" size="small">{{ $t('goods.info.typeFinished') }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobileList" prop="en_name" label="英文名称" min-width="120" />
-          <el-table-column v-if="!isMobileList" prop="unit_name" label="商品单位" width="90" align="center" />
-          <el-table-column label="商品分类" :min-width="isMobileList ? 140 : 160">
+          <el-table-column v-if="!isMobileList" prop="en_name" :label="$t('goods.info.enName')" min-width="120" />
+          <el-table-column v-if="!isMobileList" prop="unit_name" :label="$t('goods.info.unitName')" width="90" align="center" />
+          <el-table-column :label="$t('goods.info.categoryCol')" :min-width="isMobileList ? 140 : 160">
             <template #default="{ row }">
               {{ getCatePathText(row) }}
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobileList" prop="cost_price" label="采购价" width="90" align="right" />
-          <el-table-column prop="sell_price" label="销售价" width="90" align="right" />
-          <el-table-column v-if="!isMobileList" prop="brand_name" label="商品品牌" min-width="100" />
-          <el-table-column v-if="!isMobileList" prop="barcode" label="商品条码" min-width="120" />
-          <el-table-column v-if="!isMobileList" label="状态" width="80" align="center">
+          <el-table-column v-if="!isMobileList" prop="cost_price" :label="$t('goods.info.costPrice')" width="90" align="right" />
+          <el-table-column prop="sell_price" :label="$t('goods.info.sellPrice')" width="90" align="right" />
+          <el-table-column v-if="!isMobileList" prop="brand_name" :label="$t('goods.info.brandName')" min-width="100" />
+          <el-table-column v-if="!isMobileList" prop="barcode" :label="$t('goods.info.barcode')" min-width="120" />
+          <el-table-column v-if="!isMobileList" :label="$t('goods.info.statusCol')" width="80" align="center">
             <template #default="{ row }">
               <el-switch :model-value="row.status === 1" disabled size="small" />
             </template>
           </el-table-column>
-          <el-table-column v-if="!isMobileList" label="品牌展示" width="90" align="center">
+          <el-table-column v-if="!isMobileList" :label="$t('goods.info.brandShow')" width="90" align="center">
             <template #default="{ row }">
               <el-switch
                 :model-value="getBrandShow(row)"
@@ -230,25 +230,25 @@
             </template>
           </el-table-column>
           <!-- BOM视图：显示用量 -->
-          <el-table-column v-if="leftView === 'bom' && bomViewGoodsId !== null" label="用量" width="110" align="center">
+          <el-table-column v-if="leftView === 'bom' && bomViewGoodsId !== null" :label="$t('goods.info.usageCol')" width="110" align="center">
             <template #default="{ row }">
               <span v-if="getBomUsage(row)" style="color:#0071e3;font-weight:500">
                 {{ getBomUsage(row) }}
               </span>
-              <el-tag v-else type="success" size="small">成品</el-tag>
+              <el-tag v-else type="success" size="small">{{ $t('goods.info.typeFinished') }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column
-            label="相关操作"
+            :label="$t('goods.info.operations')"
             :width="isMobileList ? 120 : 220"
             :fixed="isMobileList ? false : 'right'"
             :align="isMobileList ? 'center' : 'right'"
           >
             <template #default="{ row }">
-              <el-button type="primary" link size="small" @click="openEdit(row)">编辑</el-button>
-              <el-button v-if="!isMobileList" type="success" link size="small" @click="openView(row)">查看</el-button>
-              <el-button v-if="!isMobileList" type="warning" link size="small" @click="openCopy(row)">复制</el-button>
-              <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+              <el-button type="primary" link size="small" @click="openEdit(row)">{{ $t('goods.info.edit') }}</el-button>
+              <el-button v-if="!isMobileList" type="success" link size="small" @click="openView(row)">{{ $t('goods.info.view') }}</el-button>
+              <el-button v-if="!isMobileList" type="warning" link size="small" @click="openCopy(row)">{{ $t('goods.info.copy') }}</el-button>
+              <el-button type="danger" link size="small" @click="handleDelete(row.id)">{{ $t('goods.info.delete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -267,12 +267,12 @@
             @click="scrollToSection(tab.key)">{{ tab.label }}</span>
         </div>
         <div class="form-actions">
-          <el-button @click="backToList">返回</el-button>
+          <el-button @click="backToList">{{ $t('goods.info.back') }}</el-button>
           <template v-if="!isView">
-            <el-button type="primary" :loading="saving && !savingAndNew" @click="handleSave">保存 (Ctrl+S)</el-button>
-            <el-button type="success" :loading="savingAndNew" @click="handleSaveAndNew">保存并继续新增</el-button>
+            <el-button type="primary" :loading="saving && !savingAndNew" @click="handleSave">{{ $t('goods.info.save') }}</el-button>
+            <el-button type="success" :loading="savingAndNew" @click="handleSaveAndNew">{{ $t('goods.info.saveAndNew') }}</el-button>
           </template>
-          <el-button v-else type="primary" @click="isView = false">编辑</el-button>
+          <el-button v-else type="primary" @click="isView = false">{{ $t('goods.info.edit') }}</el-button>
         </div>
       </div>
 
@@ -282,46 +282,46 @@
 
           <!-- ① 基本信息 -->
           <div class="form-section" ref="secBase" data-sec="base">
-            <div class="sec-title">基本信息</div>
+            <div class="sec-title">{{ $t('goods.info.secBase') }}</div>
             <el-row :gutter="24">
               <el-col :span="12">
-                <el-form-item label="商品类型" prop="goods_type">
+                <el-form-item :label="$t('goods.info.goodsTypeField')" prop="goods_type">
                   <el-select v-model="fd.goods_type" style="width:100%">
-                    <el-option label="成品" :value="1" />
-                    <el-option label="半成品" :value="2" />
-                    <el-option label="原材料" :value="3" />
-                    <el-option label="辅料" :value="4" />
-                    <el-option label="散装" :value="5" />
+                    <el-option :label="$t('goods.info.typeFinished')" :value="1" />
+                    <el-option :label="$t('goods.info.typeSemi')" :value="2" />
+                    <el-option :label="$t('goods.info.typeRaw')" :value="3" />
+                    <el-option :label="$t('goods.info.typeAux')" :value="4" />
+                    <el-option :label="$t('goods.info.typeBulk')" :value="5" />
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="商品编码" prop="goods_sn">
+                <el-form-item :label="$t('goods.info.goodsSnField')" prop="goods_sn">
                   <div style="display:flex;gap:4px;width:100%">
-                    <el-input v-model="fd.goods_sn" placeholder="不填写自动生成" style="flex:1" />
-                    <el-button @click="fd.goods_sn = genGoodsSn()">自动生成</el-button>
+                    <el-input v-model="fd.goods_sn" :placeholder="$t('goods.info.snPlaceholder')" style="flex:1" />
+                    <el-button @click="fd.goods_sn = genGoodsSn()">{{ $t('goods.info.autoGenerate') }}</el-button>
                   </div>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="商品名称" prop="goods_name"
-                  :rules="[{ required: true, message: '请输入商品名称' }]">
-                  <el-input v-model="fd.goods_name" placeholder="请输入商品名称" />
+                <el-form-item :label="$t('goods.info.goodsNameField')" prop="goods_name"
+                  :rules="[{ required: true, message: $t('goods.info.goodsNameRequired') }]">
+                  <el-input v-model="fd.goods_name" :placeholder="$t('goods.info.goodsNamePlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="英文名称" prop="en_name">
-                  <el-input v-model="fd.en_name" placeholder="请输入英文名称" />
+                <el-form-item :label="$t('goods.info.enNameField')" prop="en_name">
+                  <el-input v-model="fd.en_name" :placeholder="$t('goods.info.enNamePlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="商品助记码" prop="goods_memo">
-                  <el-input v-model="fd.goods_memo" placeholder="商品助记码" />
+                <el-form-item :label="$t('goods.info.goodsMemoField')" prop="goods_memo">
+                  <el-input v-model="fd.goods_memo" :placeholder="$t('goods.info.goodsMemoPh')" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="商品分类" prop="cate_id"
-                  :rules="[{ required: true, message: '请选择商品分类' }]">
+                <el-form-item :label="$t('goods.info.categoryField')" prop="cate_id"
+                  :rules="[{ required: true, message: $t('goods.info.categoryRequired') }]">
                   <div class="row-with-add">
                     <el-tree-select
                       v-model="fd.cate_id"
@@ -330,7 +330,7 @@
                       check-strictly
                       clearable
                       filterable
-                      placeholder="请选择商品分类"
+                      :placeholder="$t('goods.info.categoryPlaceholder')"
                       style="flex:1"
                       @change="onCateChange"
                     />
@@ -339,14 +339,14 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="商品规格" prop="spec">
-                  <el-input v-model="fd.spec" placeholder="如：500g、1L、XL" />
+                <el-form-item :label="$t('goods.info.specField')" prop="spec">
+                  <el-input v-model="fd.spec" :placeholder="$t('goods.info.specPlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="品牌" prop="brand_id">
+                <el-form-item :label="$t('goods.info.brandField')" prop="brand_id">
                   <div class="row-with-add">
-                    <el-select v-model="fd.brand_id" placeholder="请选择" clearable style="flex:1" @change="onBrandChange">
+                    <el-select v-model="fd.brand_id" :placeholder="$t('goods.info.brandPlaceholder')" clearable style="flex:1" @change="onBrandChange">
                       <el-option v-for="b in brandOptions" :key="b.id" :label="b.name" :value="b.id" />
                     </el-select>
                     <el-button :icon="Plus" @click="quickAdd('brand')" />
@@ -354,75 +354,75 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="安全库存上限" prop="safe_max">
+                <el-form-item :label="$t('goods.info.safeMax')" prop="safe_max">
                   <el-input-number v-model="fd.safe_max" :min="0" controls-position="right" style="width:100%" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="安全库存下限" prop="safe_min">
+                <el-form-item :label="$t('goods.info.safeMin')" prop="safe_min">
                   <el-input-number v-model="fd.safe_min" :min="0" controls-position="right" style="width:100%" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="制造工时" prop="make_time">
+                <el-form-item :label="$t('goods.info.makeTime')" prop="make_time">
                   <el-input v-model.number="fd.make_time" placeholder="0">
-                    <template #append>秒</template>
+                    <template #append>{{ $t('goods.info.makeTimeUnit') }}</template>
                   </el-input>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="排序" prop="sort">
+                <el-form-item :label="$t('goods.info.sort')" prop="sort">
                   <el-input-number v-model="fd.sort" :min="0" controls-position="right" style="width:100%" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="状态" prop="status">
-                  <el-switch v-model="fd.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
+                <el-form-item :label="$t('goods.info.statusField')" prop="status">
+                  <el-switch v-model="fd.status" :active-value="1" :inactive-value="0" :active-text="$t('goods.info.statusEnable')" :inactive-text="$t('goods.info.statusDisable')" />
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="24">
               <el-col :span="6">
-                <el-form-item label="可销售">
+                <el-form-item :label="$t('goods.info.canSale')">
                   <div>
                     <el-radio-group v-model="fd.can_sale">
-                      <el-radio-button :value="1">可以</el-radio-button>
-                      <el-radio-button :value="0">不可以</el-radio-button>
+                      <el-radio-button :value="1">{{ $t('goods.info.yes') }}</el-radio-button>
+                      <el-radio-button :value="0">{{ $t('goods.info.no') }}</el-radio-button>
                     </el-radio-group>
-                    <div class="field-hint">设置在销售模块中是否可选择到此商品</div>
+                    <div class="field-hint">{{ $t('goods.info.canSaleHint') }}</div>
                   </div>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="可采购">
+                <el-form-item :label="$t('goods.info.canBuy')">
                   <div>
                     <el-radio-group v-model="fd.can_buy">
-                      <el-radio-button :value="1">可以</el-radio-button>
-                      <el-radio-button :value="0">不可以</el-radio-button>
+                      <el-radio-button :value="1">{{ $t('goods.info.yes') }}</el-radio-button>
+                      <el-radio-button :value="0">{{ $t('goods.info.no') }}</el-radio-button>
                     </el-radio-group>
-                    <div class="field-hint">设置在采购模块中是否可选择到此商品</div>
+                    <div class="field-hint">{{ $t('goods.info.canBuyHint') }}</div>
                   </div>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="可自制">
+                <el-form-item :label="$t('goods.info.canMake')">
                   <div>
                     <el-radio-group v-model="fd.can_make">
-                      <el-radio-button :value="1">可以</el-radio-button>
-                      <el-radio-button :value="0">不可以</el-radio-button>
+                      <el-radio-button :value="1">{{ $t('goods.info.yes') }}</el-radio-button>
+                      <el-radio-button :value="0">{{ $t('goods.info.no') }}</el-radio-button>
                     </el-radio-group>
-                    <div class="field-hint">设置是否可用于创建自制加工任务</div>
+                    <div class="field-hint">{{ $t('goods.info.canMakeHint') }}</div>
                   </div>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item label="可委外">
+                <el-form-item :label="$t('goods.info.canOutsource')">
                   <div>
                     <el-radio-group v-model="fd.can_outsource">
-                      <el-radio-button :value="1">可以</el-radio-button>
-                      <el-radio-button :value="0">不可以</el-radio-button>
+                      <el-radio-button :value="1">{{ $t('goods.info.yes') }}</el-radio-button>
+                      <el-radio-button :value="0">{{ $t('goods.info.no') }}</el-radio-button>
                     </el-radio-group>
-                    <div class="field-hint">设置是否可用于创建委外加工任务</div>
+                    <div class="field-hint">{{ $t('goods.info.canOutsourceHint') }}</div>
                   </div>
                 </el-form-item>
               </el-col>
@@ -433,18 +433,18 @@
           <div class="form-section" ref="secUnit" data-sec="unit">
             <div class="sec-title-row">
               <div style="display:flex;align-items:center;gap:12px">
-                <span class="sec-title-text">计量单位</span>
+                <span class="sec-title-text">{{ $t('goods.info.secUnit') }}</span>
                 <el-checkbox v-model="fd.multi_unit" @change="onMultiUnitChange">
-                  <span :style="fd.multi_unit ? 'color:#0071e3;font-weight:500' : ''">启用多单位</span>
+                  <span :style="fd.multi_unit ? 'color:#0071e3;font-weight:500' : ''">{{ $t('goods.info.enableMultiUnit') }}</span>
                 </el-checkbox>
               </div>
             </div>
             <el-row :gutter="24">
               <el-col :span="12">
-                <el-form-item label="商品单位" prop="unit_id"
-                  :rules="[{ required: true, message: '请选择单位' }]">
+                <el-form-item :label="$t('goods.info.unitField')" prop="unit_id"
+                  :rules="[{ required: true, message: $t('goods.info.unitRequired') }]">
                   <div class="row-with-add">
-                    <el-select v-model="fd.unit_id" placeholder="请选择单位" style="flex:1" @change="onUnitChange">
+                    <el-select v-model="fd.unit_id" :placeholder="$t('goods.info.unitPlaceholder')" style="flex:1" @change="onUnitChange">
                       <el-option v-for="u in unitOptions" :key="u.id" :label="u.name" :value="u.id" />
                     </el-select>
                     <el-button :icon="Plus" @click="quickAdd('unit')" />
@@ -457,87 +457,87 @@
             <div v-if="fd.multi_unit" style="margin-top:4px">
               <!-- 基础单位说明行 -->
               <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae0ff;border-radius:6px;margin-bottom:8px;font-size:13px">
-                <el-tag type="primary" size="small">基础单位</el-tag>
+                <el-tag type="primary" size="small">{{ $t('goods.info.baseUnitTag') }}</el-tag>
                 <span style="font-weight:600;color:#0071e3">{{ fd.unit_name || '—' }}</span>
-                <span style="color:rgba(29,29,31,0.35)">（换算基准：1 {{ fd.unit_name || '单位' }} = 1）</span>
-                <span v-if="fd.cost_price" style="margin-left:8px;color:#52c41a">采购价：¥{{ Number(fd.cost_price).toFixed(2) }}</span>
-                <span v-if="fd.sell_price" style="margin-left:8px;color:#0071e3">销售价：¥{{ Number(fd.sell_price).toFixed(2) }}</span>
+                <span style="color:rgba(29,29,31,0.35)">{{ $t('goods.info.baseUnitHint', { unit: fd.unit_name || $t('goods.info.unitField') }) }}</span>
+                <span v-if="fd.cost_price" style="margin-left:8px;color:#52c41a">{{ $t('goods.info.baseCostPrice') }}：¥{{ Number(fd.cost_price).toFixed(2) }}</span>
+                <span v-if="fd.sell_price" style="margin-left:8px;color:#0071e3">{{ $t('goods.info.baseSellPrice') }}：¥{{ Number(fd.sell_price).toFixed(2) }}</span>
               </div>
               <!-- 辅助单位表格 -->
               <el-table :data="auxUnitRows" border size="small" style="width:100%">
-                <el-table-column type="index" label="序号" width="55" align="center" />
-                <el-table-column label="辅助单位" min-width="180">
+                <el-table-column type="index" :label="$t('goods.info.auxUnitTable')" width="55" align="center" />
+                <el-table-column :label="$t('goods.info.auxUnitCol')" min-width="180">
                   <template #default="{ row, $index }">
                     <el-select v-if="!isView" v-model="row.unit_name" filterable allow-create default-first-option
-                      placeholder="选BOM成品或输入单位名" size="small" style="width:100%"
+                      :placeholder="$t('goods.info.auxUnitPh')" size="small" style="width:100%"
                       @focus="ensureBomGoods"
                       @change="(v:string) => onUnitNameOrBomChange(row, v, $index + 1)">
-                      <el-option-group label="BOM成品（选后自动关联库存）">
+                      <el-option-group :label="$t('goods.info.auxUnitBomGroup')">
                         <el-option v-for="g in bomAllGoods" :key="'g'+g.id" :label="g.goods_name" :value="g.goods_name">
                           <span>{{ g.goods_name }}</span>
                           <span style="color:#94a3b8;font-size:12px;float:right">¥{{ Number(g.cost_price||0).toFixed(2) }}</span>
                         </el-option>
                       </el-option-group>
-                      <el-option-group label="已有单位名">
+                      <el-option-group :label="$t('goods.info.auxUnitSelectGroup')">
                         <el-option v-for="u in auxUnitSelectOptions" :key="'u'+u" :label="u" :value="u" />
                       </el-option-group>
                     </el-select>
                     <span v-else>{{ row.unit_name || '—' }}</span>
-                    <div v-if="row.linked_goods_id" style="font-size:11px;color:#0071e3;margin-top:2px">BOM成品已关联</div>
+                    <div v-if="row.linked_goods_id" style="font-size:11px;color:#0071e3;margin-top:2px">{{ $t('goods.info.bomLinked') }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="换算关系" min-width="260" align="center">
+                <el-table-column :label="$t('goods.info.conversionCol')" min-width="260" align="center">
                   <template #default="{ row }">
                     <div style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;flex-wrap:wrap">
-                      <span>1 {{ row.unit_name || '辅助单位' }}</span>
-                      <span>=</span>
+                      <span>{{ $t('goods.info.conversionPrefix') }} {{ row.unit_name || $t('goods.info.auxUnitCol') }}</span>
+                      <span>{{ $t('goods.info.equals') }}</span>
                       <el-input-number v-if="!isView" v-model="row.ratio" :min="0.0001" :precision="4" :controls="false"
                         size="small" style="width:75px" @change="onMultiUnitRatioChange(row)" />
                       <span v-else>{{ row.ratio }}</span>
-                      <span style="color:#0071e3;font-weight:500">{{ fd.unit_name || '基础单位' }}</span>
-                      <span v-if="!isView" style="color:#94a3b8;margin-left:4px">或填</span>
+                      <span style="color:#0071e3;font-weight:500">{{ fd.unit_name || $t('goods.info.baseUnitTag') }}</span>
+                      <span v-if="!isView" style="color:#94a3b8;margin-left:4px">{{ $t('goods.info.orFill') }}</span>
                       <el-input-number v-if="!isView" v-model="row._grams" :min="1" :precision="0" :controls="false"
-                        placeholder="克数" size="small" style="width:60px"
+                        :placeholder="$t('goods.info.gramsPh')" size="small" style="width:60px"
                         @change="(v:number) => { if(v>0){ row.ratio = Math.round(v/500*10000)/10000; onMultiUnitRatioChange(row) } }" />
-                      <span v-if="!isView" style="color:#94a3b8">克</span>
+                      <span v-if="!isView" style="color:#94a3b8">{{ $t('goods.info.gramsUnit') }}</span>
                     </div>
                   </template>
                 </el-table-column>
-                <el-table-column label="采购价" width="130" align="center">
+                <el-table-column :label="$t('goods.info.costPriceCol')" width="130" align="center">
                   <template #default="{ row }">
                     <el-input-number v-if="!isView" v-model="row.cost_price" :min="0" :precision="2" :controls="false"
-                      size="small" style="width:100px" placeholder="自动核算"
+                      size="small" style="width:100px" :placeholder="$t('goods.info.costPriceAutoCalc')"
                       @change="onAuxUnitCostChange(row)" />
                     <span v-else>¥{{ (row.cost_price ?? 0).toFixed(2) }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="销售价" width="130" align="center">
+                <el-table-column :label="$t('goods.info.sellPriceCol')" width="130" align="center">
                   <template #default="{ row }">
                     <el-input-number v-if="!isView" v-model="row.sell_price" :min="0" :precision="2" :controls="false"
-                      size="small" style="width:100px" placeholder="自动核算" />
+                      size="small" style="width:100px" :placeholder="$t('goods.info.costPriceAutoCalc')" />
                     <span v-else>¥{{ (row.sell_price ?? 0).toFixed(2) }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="最小销售单位" width="120" align="center">
+                <el-table-column :label="$t('goods.info.minSaleUnit')" width="120" align="center">
                   <template #default="{ row, $index }">
                     <el-radio v-model="minSaleUnitIdx" :value="$index + 1" :disabled="isView" size="small">{{ '' }}</el-radio>
                   </template>
                 </el-table-column>
-                <el-table-column label="默认销售单位" width="120" align="center">
+                <el-table-column :label="$t('goods.info.defaultSaleUnit')" width="120" align="center">
                   <template #default="{ row, $index }">
                     <el-radio v-model="defaultSaleUnitIdx" :value="$index + 1" :disabled="isView" size="small">{{ '' }}</el-radio>
                   </template>
                 </el-table-column>
-                <el-table-column v-if="!isView" label="操作" width="70" align="center">
+                <el-table-column v-if="!isView" :label="$t('goods.info.operationCol')" width="70" align="center">
                   <template #default="{ row, $index }">
-                    <el-button type="danger" link size="small" @click="removeMultiUnitRow($index + 1)">删除</el-button>
+                    <el-button type="danger" link size="small" @click="removeMultiUnitRow($index + 1)">{{ $t('goods.info.delete') }}</el-button>
                   </template>
                 </el-table-column>
               </el-table>
               <div v-if="auxUnitRows.length === 0 && !isView" style="text-align:center;color:rgba(29,29,31,0.35);font-size:13px;padding:12px 0">
-                暂无辅助单位，点击下方添加
+                {{ $t('goods.info.noAuxUnit') }}
               </div>
-              <el-button v-if="!isView" size="small" :icon="Plus" style="margin-top:8px" @click="addMultiUnitRow">添加辅助单位</el-button>
+              <el-button v-if="!isView" size="small" :icon="Plus" style="margin-top:8px" @click="addMultiUnitRow">{{ $t('goods.info.addAuxUnit') }}</el-button>
             </div>
           </div>
 
@@ -545,18 +545,18 @@
           <div class="form-section" ref="secSpec" data-sec="spec">
             <div class="sec-title-row">
               <div style="display:flex;align-items:center;gap:12px">
-                <span class="sec-title-text">规格设置</span>
+                <span class="sec-title-text">{{ $t('goods.info.secSpec') }}</span>
                 <el-checkbox v-model="fd.multi_spec" @change="onMultiSpecChange">
-                  <span :style="fd.multi_spec ? 'color:#0071e3;font-weight:500' : ''">启用多规格</span>
+                  <span :style="fd.multi_spec ? 'color:#0071e3;font-weight:500' : ''">{{ $t('goods.info.enableMultiSpec') }}</span>
                 </el-checkbox>
               </div>
-              <el-button v-if="fd.multi_spec && !isView" size="small" type="primary" @click="addSpecAttr">+ 添加规格属性</el-button>
-              <el-button v-if="fd.multi_spec && fd.id && specAttrs.filter(a=>a.values.length>0).length>0" size="small" type="success" :loading="specSyncing" @click="manualSyncSpec">同步到云端</el-button>
+              <el-button v-if="fd.multi_spec && !isView" size="small" type="primary" @click="addSpecAttr">{{ $t('goods.info.addSpecAttr') }}</el-button>
+              <el-button v-if="fd.multi_spec && fd.id && specAttrs.filter(a=>a.values.length>0).length>0" size="small" type="success" :loading="specSyncing" @click="manualSyncSpec">{{ $t('goods.info.syncToCloud') }}</el-button>
             </div>
 
             <!-- 单规格模式 -->
             <div v-if="!fd.multi_spec" style="color:rgba(29,29,31,0.35);font-size:13px;padding:12px 0">
-              未启用多规格，该商品只有一种规格。如需设置颜色、尺寸等多种规格，请勾选"启用多规格"。
+              {{ $t('goods.info.singleSpecHint') }}
             </div>
 
             <!-- 多规格模式 -->
@@ -565,19 +565,19 @@
               <div v-for="(attr, aIdx) in specAttrs" :key="aIdx" class="spec-attr-row">
                 <div class="spec-attr-header">
                   <div class="spec-attr-name-wrap">
-                    <span class="spec-attr-label">规格名称：</span>
+                    <span class="spec-attr-label">{{ $t('goods.info.specAttrName') }}</span>
                     <el-input
                       v-model="attr.name"
                       :disabled="isView"
-                      placeholder="如：颜色、尺寸、材质"
+                      :placeholder="$t('goods.info.specAttrNamePh')"
                       style="width:160px"
                       size="small"
                     />
                   </div>
-                  <el-button v-if="!isView" type="danger" link size="small" @click="removeSpecAttr(aIdx)">删除该规格</el-button>
+                  <el-button v-if="!isView" type="danger" link size="small" @click="removeSpecAttr(aIdx)">{{ $t('goods.info.deleteThisSpec') }}</el-button>
                 </div>
                 <div class="spec-attr-values">
-                  <span class="spec-attr-label">规格值：</span>
+                  <span class="spec-attr-label">{{ $t('goods.info.specAttrValues') }}</span>
                   <div class="spec-tags-wrap">
                     <el-tag
                       v-for="(val, vIdx) in attr.values"
@@ -597,65 +597,65 @@
                         @keyup.enter="confirmAddValue(aIdx)"
                         @blur="confirmAddValue(aIdx)"
                       />
-                      <el-button v-else size="small" @click="showValueInput(aIdx)">+ 添加值</el-button>
+                      <el-button v-else size="small" @click="showValueInput(aIdx)">{{ $t('goods.info.addValue') }}</el-button>
                     </template>
                   </div>
                 </div>
               </div>
 
               <div v-if="specAttrs.length === 0" style="color:rgba(29,29,31,0.35);font-size:13px;padding:8px 0">
-                点击右上角"添加规格属性"开始设置规格，如：颜色（红/蓝/绿）、尺寸（S/M/L/XL）
+                {{ $t('goods.info.specAttrEmptyHint') }}
               </div>
 
               <!-- SKU 组合表格 -->
               <div v-if="skuList.length > 0" style="margin-top:16px">
                 <div style="font-size:13px;font-weight:600;color:#1d1d1f;margin-bottom:8px">
-                  SKU 明细（共 {{ skuList.length }} 种组合）
+                  {{ $t('goods.info.skuTitle', { count: skuList.length }) }}
                 </div>
                 <el-table :data="skuList" border size="small" style="width:100%">
                   <el-table-column
                     v-for="(attr, idx) in specAttrs"
                     :key="idx"
-                    :label="attr.name || `规格${idx+1}`"
+                    :label="attr.name || $t('goods.info.specN', { n: idx+1 })"
                     :prop="`vals[${idx}]`"
                     min-width="90"
                     align="center"
                   >
                     <template #default="{ row }">{{ row.vals[idx] }}</template>
                   </el-table-column>
-                  <el-table-column label="SKU编码" min-width="140">
+                  <el-table-column :label="$t('goods.info.skuCode')" min-width="140">
                     <template #default="{ row }">
-                      <el-input v-if="!isView" v-model="row.sku_sn" size="small" placeholder="选填" />
+                      <el-input v-if="!isView" v-model="row.sku_sn" size="small" :placeholder="$t('goods.info.skuOptional')" />
                       <span v-else>{{ row.sku_sn || '—' }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column label="销售价" width="110">
+                  <el-table-column :label="$t('goods.info.skuSellPrice')" width="110">
                     <template #default="{ row }">
                       <el-input-number v-if="!isView" v-model="row.sell_price" :min="0" :precision="2" controls-position="right" size="small" style="width:100%" />
                       <span v-else>¥{{ row.sell_price?.toFixed(2) ?? '0.00' }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column label="成本价" width="110">
+                  <el-table-column :label="$t('goods.info.skuCostPrice')" width="110">
                     <template #default="{ row }">
                       <el-input-number v-if="!isView" v-model="row.cost_price" :min="0" :precision="2" controls-position="right" size="small" style="width:100%" />
                       <span v-else>¥{{ row.cost_price?.toFixed(2) ?? '0.00' }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column label="库存" width="90">
+                  <el-table-column :label="$t('goods.info.skuStock')" width="90">
                     <template #default="{ row }">
                       <el-input-number v-if="!isView" v-model="row.stock" :min="0" :precision="0" controls-position="right" size="small" style="width:100%" />
                       <span v-else>{{ row.stock ?? 0 }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column label="条形码" min-width="130">
+                  <el-table-column :label="$t('goods.info.skuBarcode')" min-width="130">
                     <template #default="{ row }">
-                      <el-input v-if="!isView" v-model="row.barcode" size="small" placeholder="选填" />
+                      <el-input v-if="!isView" v-model="row.barcode" size="small" :placeholder="$t('goods.info.skuOptional')" />
                       <span v-else>{{ row.barcode || '—' }}</span>
                     </template>
                   </el-table-column>
                 </el-table>
                 <div style="margin-top:8px;display:flex;gap:8px" v-if="!isView">
-                  <el-button size="small" type="primary" @click="batchFillSkuPrice">批量填写价格</el-button>
+                  <el-button size="small" type="primary" @click="batchFillSkuPrice">{{ $t('goods.info.batchFillPrice') }}</el-button>
                 </div>
               </div>
             </div>
@@ -663,15 +663,15 @@
 
           <!-- ④ 价格&条码 -->
           <div class="form-section" ref="secPrice" data-sec="price">
-            <div class="sec-title">价格&条码</div>
+            <div class="sec-title">{{ $t('goods.info.secPrice') }}</div>
             <el-row :gutter="24">
               <el-col :span="12">
-                <el-form-item label="销售价" prop="sell_price">
+                <el-form-item :label="$t('goods.info.sellPriceField')" prop="sell_price">
                   <el-input-number v-model="fd.sell_price" :min="0" :precision="2" controls-position="right" style="width:100%" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="成本价" prop="cost_price">
+                <el-form-item :label="$t('goods.info.costPriceField')" prop="cost_price">
                   <div style="display:flex;gap:6px;width:100%;align-items:center">
                     <el-input-number v-model="fd.cost_price" :min="0" :precision="2" controls-position="right" style="flex:1" />
                     <el-button
@@ -680,7 +680,7 @@
                       :disabled="false"
                       :loading="bomCostLoading"
                       @click="calcCostFromBom"
-                    >从BOM核算</el-button>
+                    >{{ $t('goods.info.calcFromBom') }}</el-button>
                   </div>
                   <div v-if="bomCostDetail" style="font-size:11px;color:rgba(29,29,31,0.35);margin-top:4px;line-height:1.6">
                     {{ bomCostDetail }}
@@ -688,8 +688,8 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="条形码" prop="barcode">
-                  <el-input v-model="fd.barcode" placeholder="请输入条形码" />
+                <el-form-item :label="$t('goods.info.barcodeField')" prop="barcode">
+                  <el-input v-model="fd.barcode" :placeholder="$t('goods.info.barcodePh')" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -697,56 +697,56 @@
 
           <!-- ⑤ 备注信息 -->
           <div class="form-section" ref="secRemark" data-sec="remark">
-            <div class="sec-title">备注信息</div>
-            <el-form-item label="备注" prop="remark">
-              <el-input v-model="fd.remark" type="textarea" :rows="4" placeholder="请输入备注" />
+            <div class="sec-title">{{ $t('goods.info.secRemark') }}</div>
+            <el-form-item :label="$t('goods.info.remarkField')" prop="remark">
+              <el-input v-model="fd.remark" type="textarea" :rows="4" :placeholder="$t('goods.info.remarkPh')" />
             </el-form-item>
           </div>
 
           <!-- ⑥ 品牌中心 -->
           <div class="form-section brand-center-section" ref="secBrand" data-sec="brand">
             <div class="sec-title">
-              品牌中心
-              <span class="brand-sec-badge">保存到商品备注，小程序直接读取</span>
+              {{ $t('goods.info.secBrand') }}
+              <span class="brand-sec-badge">{{ $t('goods.info.brandBadge') }}</span>
             </div>
             <el-row :gutter="24">
               <el-col :span="12">
-                <el-form-item label="批发价 (¥)">
-                  <el-input-number v-model="brandFd.wholesalePrice" :min="0" :precision="2" controls-position="right" style="width:100%" placeholder="批发价格" />
+                <el-form-item :label="$t('goods.info.wholesalePrice')">
+                  <el-input-number v-model="brandFd.wholesalePrice" :min="0" :precision="2" controls-position="right" style="width:100%" :placeholder="$t('goods.info.wholesalePricePh')" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="起订量 (件)">
-                  <el-input-number v-model="brandFd.minOrderQuantity" :min="1" :precision="0" controls-position="right" style="width:100%" placeholder="最低起订数量" />
+                <el-form-item :label="$t('goods.info.minOrderQty')">
+                  <el-input-number v-model="brandFd.minOrderQuantity" :min="1" :precision="0" controls-position="right" style="width:100%" :placeholder="$t('goods.info.minOrderQtyPh')" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="基础销量">
-                  <el-input-number v-model="brandFd.baseSales" :min="0" :precision="0" controls-position="right" style="width:100%" placeholder="显示销量基数（如100）" />
+                <el-form-item :label="$t('goods.info.baseSales')">
+                  <el-input-number v-model="brandFd.baseSales" :min="0" :precision="0" controls-position="right" style="width:100%" :placeholder="$t('goods.info.baseSalesPh')" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="小程序分类">
+                <el-form-item :label="$t('goods.info.miniCategory')">
                   <div style="display:flex;gap:6px;width:100%">
                     <el-select
                       v-model="brandFd.category"
                       filterable
                       allow-create
-                      placeholder="选择或输入新分类"
+                      :placeholder="$t('goods.info.miniCategoryPh')"
                       style="flex:1"
                       @focus="loadBrandCategoryOptions"
                     >
                       <el-option v-for="cat in brandCategoryOptions" :key="cat" :value="cat" :label="cat" />
                     </el-select>
-                    <el-button size="small" @click="openCategoryManager">管理</el-button>
+                    <el-button size="small" @click="openCategoryManager">{{ $t('goods.info.manageCate') }}</el-button>
                   </div>
                 </el-form-item>
               </el-col>
               <el-col :span="24">
-                <el-form-item label="分类标签">
+                <el-form-item :label="$t('goods.info.tagLabel')">
                   <div class="brand-tag-row">
                     <label
-                      v-for="opt in TAG_OPTIONS"
+                      v-for="opt in tagOptions"
                       :key="opt.value"
                       class="brand-tag-check"
                       :class="{ active: brandFd.tags.includes(opt.value) }"
@@ -756,75 +756,75 @@
                 </el-form-item>
               </el-col>
               <el-col :span="24">
-                <el-form-item label="主图 URL">
-                  <el-input v-model="brandFd.image" placeholder="https://... 主展示图（建议 800×600）" />
+                <el-form-item :label="$t('goods.info.mainImageUrl')">
+                  <el-input v-model="brandFd.image" :placeholder="$t('goods.info.mainImagePh')" />
                   <img v-if="brandFd.image" :src="brandFd.image" class="brand-img-preview" referrerpolicy="no-referrer" />
                 </el-form-item>
               </el-col>
               <el-col :span="24">
-                <el-form-item label="轮播图">
+                <el-form-item :label="$t('goods.info.carouselImages')">
                   <div class="brand-carousel-grid">
                     <div v-for="(_, idx) in brandFd.headerImages" :key="idx" class="brand-carousel-item">
-                      <el-input v-model="brandFd.headerImages[idx]" :placeholder="`轮播图 ${idx + 1} URL`" size="small" />
+                      <el-input v-model="brandFd.headerImages[idx]" :placeholder="$t('goods.info.carouselItemPh', { n: idx + 1 })" size="small" />
                       <img v-if="brandFd.headerImages[idx]" :src="brandFd.headerImages[idx]" class="brand-img-preview-sm" referrerpolicy="no-referrer" />
                     </div>
                   </div>
                 </el-form-item>
               </el-col>
               <el-col :span="24">
-                <el-form-item label="详情图 URL">
-                  <el-input v-model="brandFd.detailImage" placeholder="https://... 长图详情（建议宽 1200px）" />
+                <el-form-item :label="$t('goods.info.detailImageUrl')">
+                  <el-input v-model="brandFd.detailImage" :placeholder="$t('goods.info.detailImagePh')" />
                   <img v-if="brandFd.detailImage" :src="brandFd.detailImage" class="brand-img-preview" referrerpolicy="no-referrer" />
                 </el-form-item>
               </el-col>
               <el-col :span="24">
-                <el-form-item label="规格选项">
+                <el-form-item :label="$t('goods.info.specOptions')">
                   <div style="width:100%">
                     <!-- 规格分组 -->
                     <div v-for="(group, gi) in brandFd.specGroups" :key="gi" class="spec-brand-group">
                       <div class="spec-brand-group-header">
-                        <el-input v-model="group.name" placeholder="规格名称（如 口味、数量）"
+                        <el-input v-model="group.name" :placeholder="$t('goods.info.specGroupNamePh')"
                           size="small" style="width:180px;" @blur="generateSkuCombos" />
-                        <el-button size="small" type="danger" link @click="removeBrandSpecGroup(gi)">删除分组</el-button>
+                        <el-button size="small" type="danger" link @click="removeBrandSpecGroup(gi)">{{ $t('goods.info.deleteGroup') }}</el-button>
                       </div>
                       <div v-for="(val, vi) in group.values" :key="vi" class="spec-brand-value-row">
-                        <el-input v-model="val.label" placeholder="选项（如 草莓、1盒）"
+                        <el-input v-model="val.label" :placeholder="$t('goods.info.specValuePh')"
                           size="small" style="width:160px;" @blur="generateSkuCombos" />
-                        <el-tooltip content="规格图片 URL（选填）" placement="top">
+                        <el-tooltip :content="$t('goods.info.specImageTooltip')" placement="top">
                           <el-button size="small" :type="val.image ? 'primary' : 'default'" link
                             @click="val.image = val.image === undefined ? '' : undefined">
                             <el-icon><Picture /></el-icon>
                           </el-button>
                         </el-tooltip>
                         <el-input v-if="val.image !== undefined" v-model="val.image"
-                          placeholder="图片 URL" size="small" style="width:200px;" />
+                          placeholder="Image URL" size="small" style="width:200px;" />
                         <el-button size="small" type="danger" link @click="removeBrandSpecValue(gi, vi)">×</el-button>
                       </div>
                       <el-button size="small" class="spec-brand-add-btn" @click="addBrandSpecValue(gi)">
-                        ⊕ 添加选项
+                        {{ $t('goods.info.addOption') }}
                       </el-button>
                     </div>
 
                     <el-button size="small" class="spec-brand-new-group" @click="addSpecGroup">
-                      ⊕ 创建新规格
+                      {{ $t('goods.info.createNewSpec') }}
                     </el-button>
 
                     <!-- SKU 组合表格 -->
                     <div v-if="brandFd.skuCombos.length > 0" class="spec-brand-combo-wrap">
-                      <div class="spec-brand-combo-title">规格组合 & 价格</div>
+                      <div class="spec-brand-combo-title">{{ $t('goods.info.specComboTitle') }}</div>
                       <el-table :data="brandFd.skuCombos" size="small" border style="width:100%">
                         <el-table-column
                           v-for="(group, gi) in brandFd.specGroups.filter(g => g.name)"
                           :key="gi" :label="group.name" min-width="90">
                           <template #default="{ row }">{{ row.combo[gi] }}</template>
                         </el-table-column>
-                        <el-table-column label="价格" width="120">
+                        <el-table-column :label="$t('goods.info.comboPrice')" width="120">
                           <template #default="{ row }">
                             <el-input-number v-model="row.price" :min="0" :precision="2"
                               controls-position="right" size="small" style="width:100px;" />
                           </template>
                         </el-table-column>
-                        <el-table-column label="ERP商品ID" width="130">
+                        <el-table-column :label="$t('goods.info.erpGoodsId')" width="130">
                           <template #default="{ row }">
                             <el-input-number v-model="row.erpId" :min="0" :precision="0"
                               controls-position="right" size="small" style="width:110px;" />
@@ -833,20 +833,20 @@
                       </el-table>
                     </div>
 
-                    <div style="font-size:12px;color:#999;margin-top:6px;">ERP商品ID 填本商品ID即可；价格是该规格的零售价</div>
+                    <div style="font-size:12px;color:#999;margin-top:6px;">{{ $t('goods.info.erpIdHint') }}</div>
                   </div>
                 </el-form-item>
               </el-col>
             <!-- 积分商城 -->
               <el-col :span="24" style="margin-top:8px">
-                <el-form-item label="积分商城">
+                <el-form-item :label="$t('goods.info.pointsMall')">
                   <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
                     <div style="display:flex;align-items:center;gap:8px">
                       <el-switch v-model="brandFd.isRedeemable" :disabled="isView" />
-                      <span style="font-size:13px;color:#606266">上架到小程序积分商城</span>
+                      <span style="font-size:13px;color:#606266">{{ $t('goods.info.listOnMall') }}</span>
                     </div>
                     <div v-if="brandFd.isRedeemable" style="display:flex;align-items:center;gap:8px">
-                      <span style="font-size:13px;color:#606266">所需积分</span>
+                      <span style="font-size:13px;color:#606266">{{ $t('goods.info.pointsCost') }}</span>
                       <el-input-number
                         v-model="brandFd.pointsCost"
                         :min="1" :precision="0"
@@ -857,18 +857,18 @@
                     </div>
                   </div>
                   <div v-if="brandFd.isRedeemable" style="font-size:12px;color:#999;margin-top:4px">
-                    开启后商品主图将展示在小程序积分商城，用户可用积分兑换
+                    {{ $t('goods.info.pointsMallHint') }}
                   </div>
                 </el-form-item>
               </el-col>
             </el-row>
             <div class="brand-save-hint" v-if="fd.id">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              品牌中心数据保存在此设备本地，点击顶部「保存」后生效。
+              {{ $t('goods.info.brandSaveHint') }}
             </div>
             <div class="brand-save-hint warn" v-else>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              请先保存商品基本信息，再填写品牌中心字段。
+              {{ $t('goods.info.brandSaveWarn') }}
             </div>
           </div>
 
@@ -881,30 +881,30 @@
     ══════════════════════════════════════════════════════════ -->
     <el-dialog v-model="cateFormVisible" :title="cateFormTitle" width="400px" append-to-body>
       <el-form :model="cateForm" label-width="90px">
-        <el-form-item label="分类名称" :rules="[{ required: true }]">
-          <el-input v-model="cateForm.name" placeholder="请输入分类名称" />
+        <el-form-item :label="$t('goods.info.cateName')" :rules="[{ required: true }]">
+          <el-input v-model="cateForm.name" :placeholder="$t('goods.info.cateNamePh')" />
         </el-form-item>
-        <el-form-item label="上级分类">
-          <el-select v-model="cateForm.parent_id" placeholder="请选择（可选）" clearable style="width:100%">
+        <el-form-item :label="$t('goods.info.cateParent')">
+          <el-select v-model="cateForm.parent_id" :placeholder="$t('goods.info.cateParentPh')" clearable style="width:100%">
             <el-option v-for="c in cateTree" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="排序">
+        <el-form-item :label="$t('goods.info.cateSort')">
           <el-input-number v-model="cateForm.sort" :min="0" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="cateFormVisible = false">取消</el-button>
-        <el-button type="primary" :loading="cateSaving" @click="handleSaveCate">确定</el-button>
+        <el-button @click="cateFormVisible = false">{{ $t('goods.info.cancel') }}</el-button>
+        <el-button type="primary" :loading="cateSaving" @click="handleSaveCate">{{ $t('goods.info.confirm') }}</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="batchMoveDialogVisible" title="批量移动商品分类" width="420px" append-to-body>
+    <el-dialog v-model="batchMoveDialogVisible" :title="$t('goods.info.batchMoveTitle')" width="420px" append-to-body>
       <el-form label-width="90px">
-        <el-form-item label="已选商品">
-          <div>{{ batchMoveRows.length }} 个</div>
+        <el-form-item :label="$t('goods.info.batchMoveSelected')">
+          <div>{{ $t('goods.info.batchMoveCount', { count: batchMoveRows.length }) }}</div>
         </el-form-item>
-        <el-form-item label="目标分类" required>
+        <el-form-item :label="$t('goods.info.batchMoveTarget')" required>
           <el-tree-select
             v-model="batchMoveCateId"
             :data="allCateTreeSelectData"
@@ -912,111 +912,111 @@
             check-strictly
             clearable
             filterable
-            placeholder="请选择目标分类"
+            :placeholder="$t('goods.info.batchMoveTargetPh')"
             style="width:100%"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="closeBatchMoveDialog">取消</el-button>
-        <el-button type="primary" :loading="batchMoveLoading" @click="confirmBatchMove">确定移动</el-button>
+        <el-button @click="closeBatchMoveDialog">{{ $t('goods.info.cancel') }}</el-button>
+        <el-button type="primary" :loading="batchMoveLoading" @click="confirmBatchMove">{{ $t('goods.info.batchMoveConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 快速新增（品牌/单位） -->
     <el-dialog v-model="quickDialogVisible" :title="quickDialogTitle" width="360px" append-to-body>
       <el-form label-width="80px">
-        <el-form-item label="名称">
-          <el-input v-model="quickName" :placeholder="`请输入名称`" />
+        <el-form-item :label="$t('goods.info.quickName')">
+          <el-input v-model="quickName" :placeholder="$t('goods.info.quickNamePh')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="quickDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitQuick">确定</el-button>
+        <el-button @click="quickDialogVisible = false">{{ $t('goods.info.cancel') }}</el-button>
+        <el-button type="primary" @click="submitQuick">{{ $t('goods.info.confirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 批量填写价格对话框 -->
-    <el-dialog v-model="batchPriceVisible" title="批量填写SKU价格" width="360px" append-to-body>
+    <el-dialog v-model="batchPriceVisible" :title="$t('goods.info.batchPriceTitle')" width="360px" append-to-body>
       <el-form label-width="80px">
-        <el-form-item label="销售价">
+        <el-form-item :label="$t('goods.info.batchSellPrice')">
           <el-input-number v-model="batchSellPrice" :min="0" :precision="2" controls-position="right" style="width:100%" />
         </el-form-item>
-        <el-form-item label="成本价">
+        <el-form-item :label="$t('goods.info.batchCostPrice')">
           <el-input-number v-model="batchCostPrice" :min="0" :precision="2" controls-position="right" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="batchPriceVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmBatchPrice">确定填写</el-button>
+        <el-button @click="batchPriceVisible = false">{{ $t('goods.info.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmBatchPrice">{{ $t('goods.info.batchPriceConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 商品导入预览弹框 -->
-    <el-dialog v-model="importDialogVisible" title="导入商品预览" width="85%" append-to-body destroy-on-close>
+    <el-dialog v-model="importDialogVisible" :title="$t('goods.info.importPreviewTitle')" width="85%" append-to-body destroy-on-close>
       <div style="margin-bottom:12px;font-size:13px;color:#86909c">
-        共 {{ importRows.length }} 条数据，请确认后点击确认导入。
-        <span v-if="importRows.length > 20">（下方仅预览前20条，实际导入全部）</span>
+        {{ $t('goods.info.importCount', { count: importRows.length }) }}
+        <span v-if="importRows.length > 20">{{ $t('goods.info.importPreviewNote') }}</span>
       </div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div style="font-size:13px;color:#606266">
-          缺少商品类型的行：<b>{{ importRows.filter(row => row._missingGoodsType).length }}</b>
+          {{ $t('goods.info.missingTypeLabel') }}<b>{{ importRows.filter(row => row._missingGoodsType).length }}</b>
         </div>
       </div>
       <el-table :data="importRows.slice(0, 20)" border size="small" max-height="400">
-        <el-table-column prop="goods_name" label="商品名称" min-width="130" />
-        <el-table-column prop="goods_sn" label="商品编码" min-width="120" />
-        <el-table-column prop="goods_type_text" label="商品类型" width="90" />
-        <el-table-column prop="cate_name" label="商品分类" min-width="120" />
-        <el-table-column prop="en_name" label="英文名称" min-width="120" />
-        <el-table-column prop="barcode" label="条码" min-width="120" />
-        <el-table-column prop="sell_price" label="销售价" width="80" align="right" />
-        <el-table-column prop="cost_price" label="采购价" width="80" align="right" />
-        <el-table-column prop="remark" label="备注" min-width="120" />
-        <el-table-column label="状态" width="70" align="center">
+        <el-table-column prop="goods_name" :label="$t('goods.info.importGoodsName')" min-width="130" />
+        <el-table-column prop="goods_sn" :label="$t('goods.info.importGoodsSn')" min-width="120" />
+        <el-table-column prop="goods_type_text" :label="$t('goods.info.importGoodsType')" width="90" />
+        <el-table-column prop="cate_name" :label="$t('goods.info.importCateName')" min-width="120" />
+        <el-table-column prop="en_name" :label="$t('goods.info.importEnName')" min-width="120" />
+        <el-table-column prop="barcode" :label="$t('goods.info.importBarcode')" min-width="120" />
+        <el-table-column prop="sell_price" :label="$t('goods.info.importSellPrice')" width="80" align="right" />
+        <el-table-column prop="cost_price" :label="$t('goods.info.importCostPrice')" width="80" align="right" />
+        <el-table-column prop="remark" :label="$t('goods.info.importRemark')" min-width="120" />
+        <el-table-column :label="$t('goods.info.importStatus')" width="70" align="center">
           <template #default="{ row }">
-            <el-tooltip :content="row._errorText || '校验通过'" placement="top">
+            <el-tooltip :content="row._errorText || $t('goods.info.importValidPass')" placement="top">
               <el-tag :type="row._error ? 'danger' : 'success'" size="small">
-                {{ row._error ? '异常' : '正常' }}
+                {{ row._error ? $t('goods.info.importError') : $t('goods.info.importNormal') }}
               </el-tag>
             </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
       <template #footer>
-        <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入 ({{ importRows.length }} 条)</el-button>
+        <el-button @click="importDialogVisible = false">{{ $t('goods.info.cancel') }}</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">{{ $t('goods.info.importConfirm', { count: importRows.length }) }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 扫码录入对话框 -->
-    <el-dialog v-model="listScannerVisible" title="扫码录入商品" width="min(420px, 95vw)" append-to-body destroy-on-close :close-on-click-modal="false" @closed="stopListScanner">
+    <el-dialog v-model="listScannerVisible" :title="$t('goods.info.scanTitle')" width="min(420px, 95vw)" append-to-body destroy-on-close :close-on-click-modal="false" @closed="stopListScanner">
       <div style="text-align:center">
         <video ref="listVideoRef" style="width:100%;max-height:60vh;background:#000;border-radius:8px;display:block" autoplay muted playsinline />
         <div v-if="listScanError" style="color:#f56c6c;margin-top:8px;font-size:13px">{{ listScanError }}</div>
-        <div v-else-if="listScanLooking" style="color:#e6a23c;margin-top:8px;font-size:13px">正在查询条码信息...</div>
-        <div v-else-if="!listScanning" style="color:#909399;margin-top:8px;font-size:13px">正在启动摄像头...</div>
-        <div v-else style="color:#409eff;margin-top:8px;font-size:13px">对准商品条形码，识别后自动打开录入页面...</div>
+        <div v-else-if="listScanLooking" style="color:#e6a23c;margin-top:8px;font-size:13px">{{ $t('goods.info.scanLooking') }}</div>
+        <div v-else-if="!listScanning" style="color:#909399;margin-top:8px;font-size:13px">{{ $t('goods.info.scanStarting') }}</div>
+        <div v-else style="color:#409eff;margin-top:8px;font-size:13px">{{ $t('goods.info.scanReady') }}</div>
       </div>
       <template #footer>
-        <el-button @click="listScannerVisible = false">取消</el-button>
+        <el-button @click="listScannerVisible = false">{{ $t('goods.info.cancel') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 小程序分类管理 -->
-    <el-dialog v-model="categoryManagerVisible" title="小程序分类管理" width="380px" append-to-body>
+    <el-dialog v-model="categoryManagerVisible" :title="$t('goods.info.miniCateManagerTitle')" width="380px" append-to-body>
       <div style="margin-bottom:12px;display:flex;gap:8px">
-        <el-input v-model="newCategoryInput" placeholder="输入新分类名称" @keyup.enter="addMiniCategory" clearable />
-        <el-button type="primary" @click="addMiniCategory">添加</el-button>
+        <el-input v-model="newCategoryInput" :placeholder="$t('goods.info.miniCateInputPh')" @keyup.enter="addMiniCategory" clearable />
+        <el-button type="primary" @click="addMiniCategory">{{ $t('goods.info.addCate') }}</el-button>
       </div>
-      <div v-if="managedCategories.length === 0" style="color:#999;text-align:center;padding:20px 0">暂无分类</div>
+      <div v-if="managedCategories.length === 0" style="color:#999;text-align:center;padding:20px 0">{{ $t('goods.info.noMiniCate') }}</div>
       <div v-for="cat in managedCategories" :key="cat" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">
         <span>{{ cat }}</span>
-        <el-button type="danger" link size="small" @click="removeMiniCategory(cat)">删除</el-button>
+        <el-button type="danger" link size="small" @click="removeMiniCategory(cat)">{{ $t('goods.info.delete') }}</el-button>
       </div>
       <template #footer>
-        <el-button @click="categoryManagerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingCategories" @click="saveMiniCategories">保存并同步</el-button>
+        <el-button @click="categoryManagerVisible = false">{{ $t('goods.info.cancel') }}</el-button>
+        <el-button type="primary" :loading="savingCategories" @click="saveMiniCategories">{{ $t('goods.info.saveAndSync') }}</el-button>
       </template>
     </el-dialog>
 
@@ -1025,6 +1025,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, Edit, Delete, ArrowRight, Upload, Download, Camera, Picture } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -1041,6 +1042,8 @@ import {
   getUnitConvert, saveUnitConvert,
 } from '@/api/goods'
 import { getStockList } from '@/api/warehouse'
+
+const { t } = useI18n()
 
 const KAONAIPI_SN = 'SP0000053'
 const KAONAIPI_BASE_UNIT = '斤'
@@ -1138,34 +1141,34 @@ function selectCate(id: number | null) {
 
 // 分类新增/编辑
 const cateFormVisible = ref(false)
-const cateFormTitle = ref('新增分类')
+const cateFormTitle = ref('')
 const cateSaving = ref(false)
 const cateForm = reactive({ id: 0, name: '', parent_id: null as any, sort: 0 })
 
 function openCateForm(row?: any) {
   if (row) {
     Object.assign(cateForm, { id: row.id, name: row.name, parent_id: row.parent_id ?? null, sort: row.sort ?? 0 })
-    cateFormTitle.value = '编辑分类'
+    cateFormTitle.value = t('goods.info.cateDialogEdit')
   } else {
     Object.assign(cateForm, { id: 0, name: '', parent_id: null, sort: 0 })
-    cateFormTitle.value = '新增分类'
+    cateFormTitle.value = t('goods.info.cateDialogAdd')
   }
   cateFormVisible.value = true
 }
 
 async function handleSaveCate() {
-  if (!cateForm.name.trim()) { ElMessage.warning('请输入分类名称'); return }
+  if (!cateForm.name.trim()) { ElMessage.warning(t('goods.info.msgCateNameRequired')); return }
   // 同级重名校验
   const sameLevelDup = cateOptions.value.find(c =>
     c.name.trim() === cateForm.name.trim() &&
     String(c.parent_id ?? '0') === String(cateForm.parent_id ?? '0') &&
     c.id !== cateForm.id
   )
-  if (sameLevelDup) { ElMessage.warning(`同级分类下已存在"${cateForm.name}"，请使用其他名称`); return }
+  if (sameLevelDup) { ElMessage.warning(t('goods.info.msgSameLevelCateDup', { name: cateForm.name })); return }
   cateSaving.value = true
   try {
     cateForm.id ? await updateGoodsCate(cateForm) : await createGoodsCate(cateForm)
-    ElMessage.success('操作成功')
+    ElMessage.success(t('goods.info.msgOperationSuccess'))
     cateFormVisible.value = false
     await loadCates()
   } finally {
@@ -1174,9 +1177,9 @@ async function handleSaveCate() {
 }
 
 async function handleDeleteCate(id: number) {
-  await ElMessageBox.confirm('确定删除该分类？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('goods.info.msgConfirmDeleteCate'), t('goods.info.msgConfirmTitle'), { type: 'warning' })
   await deleteGoodsCate(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('goods.info.msgDeleteSuccess'))
   if (selectedCateId.value === id) selectCate(null)
   await loadCates()
 }
@@ -1225,9 +1228,9 @@ async function toggleBrandShow(row: any, val: boolean) {
   try {
     const res = await http.post('/goods/ShopGoods/patchBrand', { id: row.id, brand_fields: { show: val } })
     if (res.data?.remark) row.remark = res.data.remark
-    ElMessage.success(val ? '已在品牌主页展示' : '已从品牌主页隐藏')
+    ElMessage.success(val ? t('goods.info.msgBrandShowOn') : t('goods.info.msgBrandShowOff'))
   } catch {
-    ElMessage.error('操作失败')
+    ElMessage.error(t('goods.info.msgBrandOpFailed'))
   }
 }
 
@@ -1394,13 +1397,27 @@ const rowFilter = computed(() => {
   }
 })
 
+const exportColumns = computed(() => ({
+  goods_sn: t('goods.info.goodsSn'),
+  goods_name: t('goods.info.goodsName'),
+  goods_type: t('goods.info.typeCol'),
+  en_name: t('goods.info.enName'),
+  unit_name: t('goods.info.unitName'),
+  cate_name: t('goods.info.categoryCol'),
+  cost_price: t('goods.info.costPrice'),
+  sell_price: t('goods.info.sellPrice'),
+  brand_name: t('goods.info.brandName'),
+  barcode: t('goods.info.barcode'),
+  status: t('goods.info.statusCol'),
+}))
+
 function openBatchMoveDialog(rows: any[], clearSelection?: () => void, refresh?: () => void) {
   if (!rows.length) {
-    ElMessage.warning('请先勾选要移动的商品')
+    ElMessage.warning(t('goods.info.msgNoGoodsSelected'))
     return
   }
   if (!cateOptions.value.length) {
-    ElMessage.warning('请先创建商品分类')
+    ElMessage.warning(t('goods.info.msgNoCateCreated'))
     return
   }
   batchMoveRows.value = [...rows]
@@ -1419,27 +1436,27 @@ function closeBatchMoveDialog() {
 async function confirmBatchMove() {
   const targetCateId = Number(batchMoveCateId.value || 0)
   if (!targetCateId) {
-    ElMessage.warning('请选择目标分类')
+    ElMessage.warning(t('goods.info.msgSelectTargetCate'))
     return
   }
 
   const targetCate = cateOptions.value.find(item => Number(item.id) === targetCateId)
   if (!targetCate) {
-    ElMessage.warning('目标分类不存在，请重新选择')
+    ElMessage.warning(t('goods.info.msgTargetCateNotExist'))
     return
   }
 
   const rowsToMove = batchMoveRows.value.filter(row => Number(row.cate_id ?? 0) !== targetCateId)
   if (!rowsToMove.length) {
-    ElMessage.warning('所选商品已经在该分类下')
+    ElMessage.warning(t('goods.info.msgAlreadyInCate'))
     return
   }
 
   try {
     await ElMessageBox.confirm(
-      `确定将 ${rowsToMove.length} 个商品移动到“${targetCate.name}”吗？`,
-      '批量移动商品分类',
-      { type: 'warning', confirmButtonText: '确定移动', cancelButtonText: '取消' },
+      t('goods.info.msgConfirmBatchMove', { count: rowsToMove.length, name: targetCate.name }),
+      t('goods.info.msgBatchMoveTitle'),
+      { type: 'warning', confirmButtonText: t('goods.info.msgBatchMoveConfirmBtn'), cancelButtonText: t('goods.info.cancel') },
     )
   } catch {
     return
@@ -1464,8 +1481,8 @@ async function confirmBatchMove() {
       await loadCates()
     }
 
-    if (success > 0) ElMessage.success(`移动完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`)
-    else ElMessage.error('移动失败，请重试')
+    if (success > 0) ElMessage.success(t('goods.info.msgMoveSuccess', { success }) + (failed > 0 ? t('goods.info.msgImportFailed', { failed }) : ''))
+    else ElMessage.error(t('goods.info.msgMoveFailed'))
     closeBatchMoveDialog()
   } finally {
     batchMoveLoading.value = false
@@ -1519,10 +1536,10 @@ async function ensureKaoNaiPiMasterUnitOnGoodsPage() {
         ],
       })
       tableRef.value?.refresh()
-      ElMessage.success('已修复烤奶皮主数据：基础单位=斤，采购价=22')
+      ElMessage.success('KaoNaiPi master data fixed: base unit=jin, cost=22')
     }
   } catch (e: any) {
-    console.warn('修复烤奶皮主数据失败', e?.message)
+    console.warn('KaoNaiPi master data fix failed', e?.message)
   }
 }
 
@@ -1725,7 +1742,7 @@ async function calcCostFromBom() {
     const res = await getBomByGoods(fd.id)
     const rows: any[] = res.data?.rows ?? []
     if (!rows.length) {
-      ElMessage.warning('该商品暂无BOM物料清单，请先在BOM计划里添加物料')
+      ElMessage.warning(t('goods.info.msgBomNoItems'))
       return
     }
     // 从 localStorage 读取各物料单价
@@ -1743,10 +1760,10 @@ async function calcCostFromBom() {
       }
     }
     fd.cost_price = Number(total.toFixed(2))
-    bomCostDetail.value = details.join('；')
-    ElMessage.success(`BOM核算成本：¥${total.toFixed(2)}，已填入成本价`)
+    bomCostDetail.value = details.join('; ')
+    ElMessage.success(t('goods.info.msgBomCostDone', { cost: total.toFixed(2) }))
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '核算失败')
+    ElMessage.error(e?.message ?? t('goods.info.msgBomCalcFailed'))
   } finally {
     bomCostLoading.value = false
   }
@@ -1754,14 +1771,14 @@ async function calcCostFromBom() {
 
 async function handleSave() {
   try { await formRef.value?.validate() } catch {
-    ElMessage.warning('请填写必填项（商品名称、商品分类、商品单位）'); return
+    ElMessage.warning(t('goods.info.msgMissingRequired')); return
   }
   // 新增时检查商品名是否已存在
   if (!fd.id) {
     const checkRes = await getGoodsList({ keyword: fd.goods_name, list_rows: 50 })
     const existRows = checkRes?.data?.rows ?? []
     const dup = existRows.find((r: any) => r.goods_name?.trim() === fd.goods_name?.trim())
-    if (dup) { ElMessage.warning(`商品"${fd.goods_name}"已存在，请勿重复添加`); return }
+    if (dup) { ElMessage.warning(t('goods.info.msgDuplicateGoods', { name: fd.goods_name })); return }
   }
   saving.value = true
   try {
@@ -1806,7 +1823,7 @@ async function handleSave() {
       goodsTypeMap.value = map
       saveGoodsTypeMap(map)
     }
-    ElMessage.success('保存成功')
+    ElMessage.success(t('goods.info.msgSaveSuccess'))
     // 商品名有改动时，同步更新所有 BOM 里的对应名称
     if (fd.id && fd.goods_sn && originalGoodsName.value && fd.goods_name !== originalGoodsName.value) {
       syncGoodsNameInBom(fd.goods_sn, fd.goods_name).catch(() => {})
@@ -1817,7 +1834,7 @@ async function handleSave() {
     if (fd.id) await persistSpecData(fd.id)
     backToList()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('goods.info.msgSaveFailed'))
   } finally {
     saving.value = false
   }
@@ -1851,7 +1868,7 @@ async function syncGoodsNameInBom(goodsSn: string, newName: string) {
 
 async function handleSaveAndNew() {
   try { await formRef.value?.validate() } catch {
-    ElMessage.warning('请填写必填项'); return
+    ElMessage.warning(t('goods.info.msgMissingRequiredShort')); return
   }
   saving.value = true
   savingAndNew.value = true
@@ -1860,12 +1877,12 @@ async function handleSaveAndNew() {
     payload.multi_unit = fd.multi_unit ? 1 : 0
     payload.multi_spec = fd.multi_spec ? 1 : 0
     fd.id ? await updateGoods(payload) : await createGoods(payload)
-    ElMessage.success('保存成功，已进入新增')
+    ElMessage.success(t('goods.info.msgSaveAndNew'))
     Object.assign(fd, defaultFd())
     specList.value = []
     nextTick(() => scrollRef.value?.scrollTo({ top: 0 }))
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? t('goods.info.msgSaveFailed'))
   } finally {
     saving.value = false
     savingAndNew.value = false
@@ -1874,21 +1891,21 @@ async function handleSaveAndNew() {
 
 async function handleClearAll() {
   await ElMessageBox.confirm(
-    '确定清空全部商品？此操作不可撤销！所有商品数据将被永久删除。',
-    '危险操作确认',
-    { type: 'error', confirmButtonText: '确认清空', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
+    'Delete all products? This action cannot be undone! All product data will be permanently deleted.',
+    'Danger: Confirm Clear All',
+    { type: 'error', confirmButtonText: 'Confirm Clear', cancelButtonText: t('goods.info.cancel'), confirmButtonClass: 'el-button--danger' }
   )
   try {
     // 先获取全部商品 ID
     const res = await http.get('/goods/ShopGoods/index', { params: { list_rows: 1000 } })
     const rows: any[] = res?.data?.rows ?? []
-    if (!rows.length) { ElMessage.info('商品列表已经是空的'); return }
+    if (!rows.length) { ElMessage.info(t('goods.info.msgGoodsListEmpty')); return }
     const ids = rows.map((r: any) => r.id).filter(Boolean)
     await http.post('/goods/ShopGoods/batchDel', { ids })
-    ElMessage.success(`已删除 ${ids.length} 条商品`)
+    ElMessage.success(t('goods.info.msgDeletedCount', { count: ids.length }))
     tableRef.value?.loadData()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '删除失败，请手动全选后批量删除')
+    ElMessage.error(e?.message ?? t('goods.info.msgDeleteFailed'))
   }
 }
 
@@ -1898,15 +1915,15 @@ async function handleDelete(id: number) {
     const rows = res?.data?.rows ?? res?.data ?? []
     const totalStock = rows.reduce((sum: number, r: any) => sum + (Number(r.stock_num) || Number(r.stock) || 0), 0)
     if (totalStock > 0) {
-      ElMessage.warning(`该商品当前有库存（${totalStock}），无法删除。如需下架请在编辑中关闭状态。`)
+      ElMessage.warning(t('goods.info.msgStockExists', { stock: totalStock }))
       return
     }
   } catch {
     // 查库存失败，允许继续删除流程
   }
-  await ElMessageBox.confirm('确定删除该商品？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('goods.info.msgConfirmDelete'), t('goods.info.msgConfirmTitle'), { type: 'warning' })
   await deleteGoods(id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('goods.info.msgDeleteSuccess'))
   tableRef.value?.refresh()
 }
 
@@ -1938,7 +1955,7 @@ const IMPORT_COL_ALIASES: Record<string, string[]> = {
   goods_name: ['商品名称', '品名', '名称', 'goods_name'],
   goods_sn: ['商品编码', '商品编号', '编码', '编号', '货号', 'goods_sn'],
   en_name: ['英文名称', '英文名', 'en_name'],
-  goods_type: ['商品类型', '类型', 'goods_type'],
+  goods_type: ['商品类型', '类型', 'goods_type', 'Product Type', 'product_type'],
   barcode: ['条码', '商品条码', '条形码', 'barcode'],
   sell_price: ['销售价', '售价', '零售价', 'sell_price'],
   cost_price: ['采购价', '成本价', '进价', 'cost_price'],
@@ -1972,6 +1989,7 @@ const IMPORT_REQUIRED_FIELDS = ['goods_name', 'cate_name', 'unit_name'] as const
 
 const GOODS_TYPE_TEXT_MAP: Record<string, number> = {
   '成品': 1, '半成品': 2, '原材料': 3, '辅料': 4, '散装': 5,
+  Finished: 1, 'Semi-finished': 2, 'Semi Finished': 2, 'Raw Material': 3, Auxiliary: 4, Bulk: 5,
 }
 
 const IMPORT_ALIAS_TO_FIELD = Object.entries(IMPORT_COL_ALIASES).reduce<Record<string, string>>((acc, [field, aliases]) => {
@@ -2112,9 +2130,10 @@ function buildImportRow(cells: any[], fieldKeys: string[], rowNo: number) {
     }
   }
   mapped._missingGoodsType = !mapped.goods_type
+  const goodsTypeLabels = ['', t('goods.info.typeFinished'), t('goods.info.typeSemi'), t('goods.info.typeRaw'), t('goods.info.typeAux'), t('goods.info.typeBulk')]
   mapped.goods_type_text = mapped.goods_type
-    ? (['', '成品', '半成品', '原材料', '辅料'][mapped.goods_type] ?? '未指定')
-    : '未指定'
+    ? (goodsTypeLabels[mapped.goods_type] ?? t('goods.info.typeUnspecified'))
+    : t('goods.info.typeUnspecified')
 
   fillImportRelationFields(mapped)
 
@@ -2122,7 +2141,7 @@ function buildImportRow(cells: any[], fieldKeys: string[], rowNo: number) {
   mapped._rowNo = rowNo
   mapped._error = missingFields.length > 0
   mapped._errorText = mapped._error
-    ? `第 ${rowNo} 行缺少：${missingFields.map(field => IMPORT_FIELD_LABELS[field]).join('、')}`
+    ? `Row ${rowNo} missing: ${missingFields.map(field => IMPORT_FIELD_LABELS[field]).join(', ')}`
     : ''
 
   return mapped
@@ -2184,7 +2203,7 @@ async function ensureImportCategory(path: any) {
     // 后端返回已存在，重新加载后复用
     await loadCates()
     current = findImportCategoryByNameAndParent(segment, parentId)
-    if (!current) throw new Error(`分类创建失败：${segment}`)
+    if (!current) throw new Error(`Category creation failed: ${segment}`)
     parentId = current.id
   }
 
@@ -2236,7 +2255,7 @@ function handleImportFile(e: Event) {
     const wb = XLSX.read(data, { type: 'array' })
     const bestSheet = pickImportSheet(wb)
     if (!bestSheet || bestSheet.score <= 0 || bestSheet.headerRowIndex < 0) {
-      ElMessage.warning('未识别到可导入的表头，请检查模板或表头名称')
+      ElMessage.warning(t('goods.info.msgNoTemplate'))
       return
     }
 
@@ -2245,7 +2264,7 @@ function handleImportFile(e: Event) {
     const headerRow = rows[bestSheet.headerRowIndex] ?? []
     const fieldKeys = headerRow.map(cell => resolveImportField(cell))
     const bodyRows = rows.slice(bestSheet.headerRowIndex + 1).filter(hasImportRowData)
-    if (!bodyRows.length) { ElMessage.warning('Excel文件无数据'); return }
+    if (!bodyRows.length) { ElMessage.warning(t('goods.info.msgNoExcelData')); return }
 
     importRows.value = bodyRows.map((row, index) => buildImportRow(row, fieldKeys, bestSheet.headerRowIndex + index + 2))
     importDialogVisible.value = true
@@ -2271,13 +2290,13 @@ async function confirmImport() {
       return String(row?.goods_name ?? '')
     }).filter(Boolean)
     const messages: string[] = []
-    if (duplicatedInFile.size > 0) messages.push(`Excel 内有 ${duplicatedInFile.size} 个重名商品${importExamples.length ? `：${importExamples.join('、')}` : ''}`)
-    if (existingNameSet.size > 0) messages.push(`系统内已存在 ${existingNameSet.size} 个同名商品${existingExamples.length ? `：${existingExamples.join('、')}` : ''}`)
+    if (duplicatedInFile.size > 0) messages.push(`Excel has ${duplicatedInFile.size} duplicate products${importExamples.length ? `: ${importExamples.join(', ')}` : ''}`)
+    if (existingNameSet.size > 0) messages.push(`${existingNameSet.size} products already exist in system${existingExamples.length ? `: ${existingExamples.join(', ')}` : ''}`)
 
     // 自动跳过所有重名，不再询问
     duplicatedInFile.forEach((_rows, key) => skippedNameSet.add(key))
     existingNameSet.forEach(key => skippedNameSet.add(key))
-    ElMessage.warning(`${messages.join('；')}，已自动跳过`)
+    ElMessage.warning(`${messages.join('; ')} — auto-skipped`)
   }
 
   importLoading.value = true
@@ -2338,32 +2357,32 @@ async function confirmImport() {
   if (cateChanged) await loadCates()
   importLoading.value = false
   importDialogVisible.value = false
-  ElMessage.success(`导入完成：成功 ${success} 条${failed > 0 ? `，失败 ${failed} 条` : ''}${skipped > 0 ? `，跳过 ${skipped} 条异常数据` : ''}`)
+  ElMessage.success(t('goods.info.msgImportDone', { success }) + (failed > 0 ? t('goods.info.msgImportFailed', { failed }) : '') + (skipped > 0 ? t('goods.info.msgImportSkipped', { skipped }) : ''))
   tableRef.value?.refresh()
 }
 
 function downloadTemplate() {
   const headers = Object.keys(IMPORT_COL_MAP)
   const example: Record<string, any> = {
-    '商品名称': '示例商品A',
+    '商品名称': 'Sample Product A',
     '商品编码': 'SP001',
     '英文名称': 'Sample Product A',
-    '商品类型': '成品',
+    '商品类型': 'Finished',
     '条码': '6901234567890',
     '销售价': 99.9,
     '采购价': 60,
-    '商品分类': '一级分类>二级分类',
-    '规格型号': '500g/袋',
-    '商品单位': '袋',
-    '品牌': '示例品牌',
+    '商品分类': 'Category A>Category B',
+    '规格型号': '500g/bag',
+    '商品单位': 'bag',
+    '品牌': 'Sample Brand',
     '安全库存下限': 10,
     '安全库存上限': 100,
     '备注': '',
   }
   const ws = XLSX.utils.json_to_sheet([example], { header: headers })
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, '商品导入模板')
-  XLSX.writeFile(wb, '商品导入模板.xlsx')
+  XLSX.utils.book_append_sheet(wb, ws, 'goods-import-template')
+  XLSX.writeFile(wb, 'goods-import-template.xlsx')
 }
 
 // Ctrl+S
@@ -2386,7 +2405,7 @@ let quickType = ''
 function quickAdd(type: string) {
   quickType = type
   quickName.value = ''
-  quickDialogTitle.value = type === 'cate' ? '快速新增分类' : type === 'brand' ? '快速新增品牌' : '快速新增单位'
+  quickDialogTitle.value = type === 'cate' ? t('goods.info.quickAddCate') : type === 'brand' ? t('goods.info.quickAddBrand') : t('goods.info.quickAddUnit')
   quickDialogVisible.value = true
 }
 
@@ -2395,7 +2414,7 @@ async function submitQuick() {
   let res: any
   if (quickType === 'cate') {
     const dup = cateOptions.value.find(c => c.name.trim() === quickName.value.trim() && !Number(c.parent_id ?? 0))
-    if (dup) { ElMessage.warning(`根级分类下已存在"${quickName.value}"，请使用其他名称`); return }
+    if (dup) { ElMessage.warning(t('goods.info.msgRootCateDuplicate', { name: quickName.value })); return }
     res = await createGoodsCate({ name: quickName.value }); await loadCates()
   }
   else if (quickType === 'brand') { res = await createBrand({ name: quickName.value }); await loadOptions() }
@@ -2405,7 +2424,7 @@ async function submitQuick() {
   else if (quickType === 'brand') { fd.brand_id = id; onBrandChange(id) }
   else { fd.unit_id = id; onUnitChange(id) }
   quickDialogVisible.value = false
-  ElMessage.success('添加成功')
+  ElMessage.success(t('goods.info.msgAddSuccess'))
 }
 
 // ── 规格（多规格编辑器） ────────────────────────────────────────────────────
@@ -2424,9 +2443,9 @@ async function manualSyncSpec() {
   specSyncing.value = true
   try {
     await syncSpecToBackend(fd.id)
-    ElMessage.success('规格已同步到云端')
+    ElMessage.success(t('goods.info.msgSpecSyncSuccess'))
   } catch {
-    ElMessage.error('同步失败，请重试')
+    ElMessage.error(t('goods.info.msgSpecSyncFailed'))
   } finally {
     specSyncing.value = false
   }
@@ -2590,7 +2609,7 @@ function confirmBatchPrice() {
     row.cost_price = batchCostPrice.value
   }
   batchPriceVisible.value = false
-  ElMessage.success('已批量填写价格')
+  ElMessage.success(t('goods.info.msgBatchPriceDone'))
 }
 
 // Save spec data along with goods save
@@ -2897,14 +2916,14 @@ watch(() => fd.sell_price, (newSell) => {
 
 
 // ── 标签页滚动高亮 ────────────────────────────────────────────────────────────
-const tabs = [
-  { key: 'base', label: '基本信息' },
-  { key: 'unit', label: '计量单位' },
-  { key: 'spec', label: '规格设置' },
-  { key: 'price', label: '价格&条码' },
-  { key: 'remark', label: '备注信息' },
-  { key: 'brand', label: '品牌中心' },
-]
+const tabs = computed(() => [
+  { key: 'base', label: t('goods.info.tabBase') },
+  { key: 'unit', label: t('goods.info.tabUnit') },
+  { key: 'spec', label: t('goods.info.tabSpec') },
+  { key: 'price', label: t('goods.info.tabPrice') },
+  { key: 'remark', label: t('goods.info.tabRemark') },
+  { key: 'brand', label: t('goods.info.tabBrand') },
+])
 const activeTab = ref('base')
 const scrollRef = ref<HTMLDivElement>()
 const secBase = ref<HTMLDivElement>()
@@ -3048,9 +3067,9 @@ async function saveMiniCategories() {
     brandCategoryOptions.value = []
     await loadBrandCategoryOptions()
     categoryManagerVisible.value = false
-    ElMessage.success('分类已同步')
+    ElMessage.success(t('goods.info.msgCateSyncSuccess'))
   } catch {
-    ElMessage.error('保存失败')
+    ElMessage.error(t('goods.info.msgCateSaveFailed'))
   } finally {
     savingCategories.value = false
   }
@@ -3063,10 +3082,15 @@ watch(() => brandFd.category, (val) => {
 })
 
 const TAG_OPTIONS = [
-  { value: 'new', label: '新品' },
-  { value: 'hot', label: '热销' },
-  { value: 'sale', label: '特惠' },
+  { value: 'new', label: 'New' },
+  { value: 'hot', label: 'Hot' },
+  { value: 'sale', label: 'Sale' },
 ]
+const tagOptions = computed(() => [
+  { value: 'new', label: t('goods.info.tagNew') },
+  { value: 'hot', label: t('goods.info.tagHot') },
+  { value: 'sale', label: t('goods.info.tagSale') },
+])
 
 function loadBrandFd(goodsId: number) {
   const map = loadBrandMap()
@@ -3165,7 +3189,7 @@ async function startListScanner() {
         if (match) {
           listScannerVisible.value = false
           listScanLooking.value = false
-          ElMessage.info('该条码商品已存在，已打开编辑页面')
+          ElMessage.info(t('goods.info.msgScanExisting'))
           openEdit(match)
           return
         }
@@ -3191,13 +3215,13 @@ async function startListScanner() {
       openCreate()
       Object.assign(fd, prefill)
       if (prefill.goods_name) {
-        ElMessage.success(`已识别：${prefill.goods_name}，请补充完整信息`)
+        ElMessage.success(t('goods.info.msgScanSuccess', { name: prefill.goods_name }))
       } else {
-        ElMessage.success(`条码已识别：${code}，请填写商品信息`)
+        ElMessage.success(t('goods.info.msgScanBarcode', { code }))
       }
     })
   } catch (e: any) {
-    listScanError.value = e?.message ?? '摄像头启动失败，请检查浏览器权限'
+    listScanError.value = e?.message ?? 'Camera failed to start. Please check browser permissions.'
     listScanning.value = false
   }
 }

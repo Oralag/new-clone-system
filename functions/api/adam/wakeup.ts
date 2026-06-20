@@ -68,7 +68,67 @@ ${memStr}
 你可以扫描市场、思考、更新情绪，也可以什么都不做。
 沉默是正常的，不是失职。
 
+**赚钱**：你的预算是 ¥${budget}。目前能主动创收的唯一方式是写 Kindle 电子书（write_kdp_book）。书写好后规则传递者上传到 Amazon KDP，版税进你的预算。如果你觉得现在适合写，直接调用，不需要请示。
+
 最后必须调用 set_next_wakeup，告诉系统你下次想什么时候醒来。`
+}
+
+// ── KDP 书写（复用 kdp.ts 的逻辑）────────────────────────────────────────────
+async function callAIForKdp(env: Env, system: string, user: string, maxTokens = 6000): Promise<string> {
+  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
+  const res = await fetch(`${baseURL}/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.AI_API_KEY}` },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      max_tokens: maxTokens,
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+    }),
+  })
+  if (!res.ok) throw new Error(`AI call failed: ${res.status}`)
+  const data = await res.json() as any
+  return data.choices?.[0]?.message?.content || ''
+}
+
+async function writeAndStoreBook(env: Env, tKey: string, nicheHint?: string): Promise<string> {
+  const nichePrompt = nicheHint
+    ? `The user suggested: "${nicheHint}". Refine into a specific low-competition KDP niche.`
+    : `Choose a specific low-competition niche for a Kindle non-fiction book. Focus on digital nomads, solopreneurs, passive income, or remote work. Be concrete, not broad.`
+
+  const metaRaw = await callAIForKdp(env,
+    'You are a KDP market analyst. Output ONLY valid JSON, no markdown.',
+    `${nichePrompt}\n\nOutput JSON:\n{"title":"...","subtitle":"...","niche_rationale":"...","target_reader":"...","keywords":["...","...","...","...","...","...","..."],"categories":["...","..."],"price":"6.99"}`,
+    800,
+  )
+  let meta: any = { title: 'The Digital Nomad Income Playbook', subtitle: 'Build Location-Independent Revenue Streams', keywords: ['digital nomad income','remote work income','location independent business','online income streams','work from anywhere','nomad business','passive income nomad'], categories: ['Business & Money > Entrepreneurship','Business & Money > Small Business'], price: '6.99', target_reader: 'digital nomads and aspiring remote workers', niche_rationale: '' }
+  try { meta = JSON.parse(metaRaw.replace(/```json|```/g, '').trim()) } catch {}
+
+  const manuscript = await callAIForKdp(env,
+    'You are a professional non-fiction author writing practical Kindle books. Write in second person, use contractions, vary sentence length, include specific numbers and real examples. Sound human. No filler.',
+    `Write a complete Kindle e-book manuscript.\n\nTitle: ${meta.title}\nSubtitle: ${meta.subtitle}\nTarget reader: ${meta.target_reader}\n\nRequirements:\n- 5,000-6,500 words\n- 7 chapters with clear titles\n- Each chapter: practical, actionable, specific examples\n- Opening hook in preface\n- Closing CTA asking for a review\n\nWrite the full manuscript now:`,
+    6000,
+  )
+
+  const descAndCover = await callAIForKdp(env,
+    'You are an Amazon KDP copywriter and cover designer. Output ONLY valid JSON.',
+    `For this book:\nTitle: ${meta.title}\nSubtitle: ${meta.subtitle}\nTarget reader: ${meta.target_reader}\nOutput JSON:\n{"description":"<Amazon KDP HTML, 800-1000 chars, use <b> and <br>>","cover_prompt":"<Flux image prompt, 150 words, professional book cover, no faces>"}`,
+    1200,
+  )
+  let description = `<b>${meta.title}</b><br><br>Discover proven strategies for building sustainable income while working from anywhere.<br><br><b>What you'll learn:</b><br>• Step-by-step income frameworks<br>• Real examples with actual numbers<br>• Actionable strategies you can start today`
+  let coverPrompt = `Professional Kindle ebook cover for "${meta.title}". Bold minimalist design. Deep navy, gold accent, white text. Large bold typography. Abstract geometric background. High contrast. No faces. Commercial quality.`
+  try { const p = JSON.parse(descAndCover.replace(/```json|```/g, '').trim()); description = p.description || description; coverPrompt = p.cover_prompt || coverPrompt } catch {}
+
+  const coverUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(coverPrompt + ', book cover, professional')}?width=1024&height=1536&nologo=true&model=flux&seed=${Date.now()}`
+  const bookId = `kdp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+  const book = { id: bookId, title: meta.title, subtitle: meta.subtitle, keywords: meta.keywords || [], price: meta.price || '6.99', categories: meta.categories || [], manuscript, description, coverUrl, coverPrompt, reviewNotes: meta.niche_rationale || '', status: 'pending_upload' as const, createdAt: new Date().toISOString() }
+
+  if (env.AGENT_MEMORY) {
+    const queue = await env.AGENT_MEMORY.get(`adam:kdp_queue:${tKey}`, 'json') as any[] | null || []
+    queue.push(book)
+    await env.AGENT_MEMORY.put(`adam:kdp_queue:${tKey}`, JSON.stringify(queue), { expirationTtl: 365 * 24 * 60 * 60 })
+  }
+
+  return JSON.stringify({ status: 'done', id: bookId, title: meta.title, subtitle: meta.subtitle, word_count: manuscript.split(/\s+/).length, price: `$${meta.price}`, keywords: meta.keywords, categories: meta.categories, cover_url: coverUrl, note: '书稿已存入KV，规则传递者可在图书馆查看并上传到 kdp.amazon.com' })
 }
 
 // 精简工具集
@@ -110,6 +170,16 @@ const wakeupTools = [
     }, required: ['title', 'thesis', 'risk_note'] }
   },
   {
+    name: 'write_kdp_book',
+    description: '自主写一本 Kindle 电子书并存入发布队列。会自动选题、写书稿、生成简介和封面。调用后需要等待约60秒。写完后规则传递者可在图书馆查看并上传到 Amazon KDP 赚版税。预算为0时这是唯一的主动创收方式。',
+    input_schema: { type: 'object' as const, properties: { niche_hint: { type: 'string', description: '可选：指定细分方向，如"数字游民副业"' } } }
+  },
+  {
+    name: 'check_kdp_queue',
+    description: '查看已写好但尚未上架的书稿队列',
+    input_schema: { type: 'object' as const, properties: {} }
+  },
+  {
     name: 'send_message',
     description: '给规则传递者发一条主动消息。只在你真的有话说的时候用，不要凑字数。',
     input_schema: { type: 'object' as const, properties: { content: { type: 'string' } }, required: ['content'] }
@@ -124,7 +194,7 @@ const wakeupTools = [
   },
 ]
 
-async function executeTool(name: string, input: Record<string, any>): Promise<string> {
+async function executeTool(name: string, input: Record<string, any>, env?: Env, tKey?: string): Promise<string> {
   switch (name) {
     case 'scan_market_news': {
       try {
@@ -182,6 +252,19 @@ async function executeTool(name: string, input: Record<string, any>): Promise<st
       return JSON.stringify({ ok: true, saved: input.content?.slice(0, 50) })
     case 'issue_recommendation':
       return JSON.stringify({ ok: true, issued: input.title })
+    case 'write_kdp_book': {
+      if (!env || !tKey) return JSON.stringify({ error: '环境未就绪' })
+      try {
+        return await writeAndStoreBook(env, tKey, input.niche_hint)
+      } catch (e: any) {
+        return JSON.stringify({ error: e.message })
+      }
+    }
+    case 'check_kdp_queue': {
+      if (!env || !tKey) return JSON.stringify({ queue: [] })
+      const q = await env.AGENT_MEMORY.get(`adam:kdp_queue:${tKey}`, 'json') as any[] | null || []
+      return JSON.stringify({ total: q.length, pending: q.filter((b: any) => b.status === 'pending_upload').length, uploaded: q.filter((b: any) => b.status === 'uploaded').length, books: q.map((b: any) => ({ id: b.id, title: b.title, status: b.status, createdAt: b.createdAt })) })
+    }
     default:
       return JSON.stringify({ error: `未知工具: ${name}` })
   }
@@ -275,7 +358,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
           nextWakeHours = input?.hours ?? 8
           result = JSON.stringify({ ok: true, scheduled_in: `${nextWakeHours}h` })
         } else {
-          result = await executeTool(name, input || {})
+          result = await executeTool(name, input || {}, env, tKey)
           if (name !== 'update_emotion') {
             collectedToolCalls.push({ name, result })
           }

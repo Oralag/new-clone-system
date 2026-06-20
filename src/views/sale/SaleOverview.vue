@@ -5,25 +5,25 @@
       <div class="quick-card quick-card-main" @click="openQuickSale">
         <el-icon :size="28"><ShoppingCart /></el-icon>
         <div class="quick-card-text">
-          <div class="quick-card-title">一键销售</div>
-          <div class="quick-card-sub">选客户 → 选商品 → 自动生成合同+出库</div>
+          <div class="quick-card-title">{{ $t('sale.overview.quickSaleTitle') }}</div>
+          <div class="quick-card-sub">{{ $t('sale.overview.quickSaleSub') }}</div>
         </div>
       </div>
       <div class="quick-card quick-card-blue" @click="router.push('/sale/offer')">
         <el-icon :size="20"><Document /></el-icon>
-        <span>新增报价</span>
+        <span>{{ $t('sale.overview.quickAddOffer') }}</span>
       </div>
       <div class="quick-card quick-card-green" @click="router.push('/sale/contract')">
         <el-icon :size="20"><DocumentChecked /></el-icon>
-        <span>新增合同</span>
+        <span>{{ $t('sale.overview.quickAddContract') }}</span>
       </div>
       <div class="quick-card quick-card-orange" @click="router.push('/sale/out')">
         <el-icon :size="20"><Box /></el-icon>
-        <span>新增出库</span>
+        <span>{{ $t('sale.overview.quickAddOut') }}</span>
       </div>
       <div class="quick-card quick-card-cyan" @click="router.push('/sale/sample')">
         <el-icon :size="20"><Plus /></el-icon>
-        <span>样品单</span>
+        <span>{{ $t('sale.overview.quickAddSample') }}</span>
       </div>
     </div>
 
@@ -37,39 +37,39 @@
         >{{ p.label }}</span>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}销售额</div>
+        <div class="kpi-label">{{ $t('sale.overview.kpiSale', { period: periodLabel }) }}</div>
         <div class="kpi-val blue">¥{{ fmt(kpi.sale) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}成本</div>
+        <div class="kpi-label">{{ $t('sale.overview.kpiCost', { period: periodLabel }) }}</div>
         <div class="kpi-val purple">¥{{ fmt(kpi.cost) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}毛利润</div>
+        <div class="kpi-label">{{ $t('sale.overview.kpiGrossProfit', { period: periodLabel }) }}</div>
         <div class="kpi-val" :style="{ color: kpi.profit >= 0 ? '#16a34a' : '#dc2626' }">
           {{ kpi.profit >= 0 ? '+' : '' }}¥{{ fmt(kpi.profit) }}
         </div>
-        <div class="kpi-sub">毛利率 {{ kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }}%</div>
+        <div class="kpi-sub">{{ $t('sale.overview.kpiGrossMargin', { rate: kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}净利润</div>
+        <div class="kpi-label">{{ $t('sale.overview.kpiNetProfit', { period: periodLabel }) }}</div>
         <div class="kpi-val" :style="{ color: kpi.netProfit >= 0 ? '#0071e3' : '#dc2626' }">
           {{ kpi.netProfit >= 0 ? '+' : '' }}¥{{ fmt(kpi.netProfit) }}
         </div>
-        <div class="kpi-sub">扣运费 ¥{{ fmt(kpi.sellerFreight) }}</div>
+        <div class="kpi-sub">{{ $t('sale.overview.kpiFreightDeduct', { amount: fmt(kpi.sellerFreight) }) }}</div>
       </div>
       <div class="kpi-divider"></div>
       <div class="kpi-card">
-        <div class="kpi-label">待审核</div>
+        <div class="kpi-label">{{ $t('sale.overview.kpiPending') }}</div>
         <div class="kpi-val orange">{{ kpi.pendingCount }}</div>
-        <div class="kpi-sub">报价{{ kpi.pendingOffer }} / 合同{{ kpi.pendingContract }}</div>
+        <div class="kpi-sub">{{ $t('sale.overview.kpiPendingDetail', { offer: kpi.pendingOffer, contract: kpi.pendingContract }) }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}客户</div>
+        <div class="kpi-label">{{ $t('sale.overview.kpiCustomers', { period: periodLabel }) }}</div>
         <div class="kpi-val blue">{{ kpi.customers }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">{{ periodLabel }}订单</div>
+        <div class="kpi-label">{{ $t('sale.overview.kpiOrders', { period: periodLabel }) }}</div>
         <div class="kpi-val blue">{{ kpi.orders }}</div>
       </div>
     </div>
@@ -77,181 +77,181 @@
     <!-- Tab 数据表格 -->
     <el-card style="margin-top:14px">
       <el-tabs v-model="activeTab">
-        <el-tab-pane label="最近合同" name="contract">
+        <el-tab-pane :label="$t('sale.overview.tabContracts')" name="contract">
           <el-table :data="contractRows" style="width:100%" size="small" max-height="400">
-            <el-table-column label="单号" min-width="160" show-overflow-tooltip>
+            <el-table-column :label="$t('sale.overview.colOrderNo')" min-width="160" show-overflow-tooltip>
               <template #default="{ row }">{{ getContractSn(row) }}</template>
             </el-table-column>
-            <el-table-column prop="customer_name" label="客户" min-width="120" show-overflow-tooltip />
-            <el-table-column label="金额" align="right" width="100">
+            <el-table-column prop="customer_name" :label="$t('sale.overview.colCustomer')" min-width="120" show-overflow-tooltip />
+            <el-table-column :label="$t('sale.overview.colAmount')" align="right" width="100">
               <template #default="{ row }">
                 <span style="color:#0071e3;font-weight:600">¥{{ fmt(Number(row.after_discount || row.total_amount || 0)) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="日期" width="100">
+            <el-table-column :label="$t('sale.overview.colDate')" width="100">
               <template #default="{ row }">{{ fmtDt(getContractDate(row)) }}</template>
             </el-table-column>
-            <el-table-column label="状态" align="center" width="80">
+            <el-table-column :label="$t('sale.overview.colStatus')" align="center" width="80">
               <template #default="{ row }">
                 <el-tag :type="getContractStatusType(row)" size="small">
                   {{ getContractStatusLabel(row) }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" align="center" width="140">
+            <el-table-column :label="$t('sale.overview.colAction')" align="center" width="140">
               <template #default="{ row }">
-                <el-button v-if="row.status == 0" type="primary" link size="small" @click="quickAuditContract(row)">审核</el-button>
-                <el-button v-if="canConvertToOut(row)" type="success" link size="small" @click="quickConvertToOut(row)">转出库</el-button>
-                <el-button link size="small" @click="router.push('/sale/contract')">查看</el-button>
+                <el-button v-if="row.status == 0" type="primary" link size="small" @click="quickAuditContract(row)">{{ $t('sale.overview.btnAudit') }}</el-button>
+                <el-button v-if="canConvertToOut(row)" type="success" link size="small" @click="quickConvertToOut(row)">{{ $t('sale.overview.btnConvertToOut') }}</el-button>
+                <el-button link size="small" @click="router.push('/sale/contract')">{{ $t('sale.overview.btnView') }}</el-button>
               </template>
             </el-table-column>
-            <template #empty><div style="padding:20px 0;color:#aaa">暂无合同</div></template>
+            <template #empty><div style="padding:20px 0;color:#aaa">{{ $t('sale.overview.emptyContract') }}</div></template>
           </el-table>
         </el-tab-pane>
 
-        <el-tab-pane label="最近报价" name="offer">
+        <el-tab-pane :label="$t('sale.overview.tabOffers')" name="offer">
           <el-table :data="offerRows" style="width:100%" size="small" max-height="400">
-            <el-table-column label="单号" min-width="120" show-overflow-tooltip>
+            <el-table-column :label="$t('sale.overview.colOrderNo')" min-width="120" show-overflow-tooltip>
               <template #default="{ row }">{{ getOfferSn(row) }}</template>
             </el-table-column>
-            <el-table-column prop="customer_name" label="客户" min-width="120" show-overflow-tooltip />
-            <el-table-column label="金额" align="right" width="100">
+            <el-table-column prop="customer_name" :label="$t('sale.overview.colCustomer')" min-width="120" show-overflow-tooltip />
+            <el-table-column :label="$t('sale.overview.colAmount')" align="right" width="100">
               <template #default="{ row }">
                 <span style="color:#0071e3">¥{{ fmt(Number(row.after_offer) || Number(row.total_amount) || 0) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="日期" width="100">
+            <el-table-column :label="$t('sale.overview.colDate')" width="100">
               <template #default="{ row }">{{ fmtDt(getOfferDate(row)) }}</template>
             </el-table-column>
-            <el-table-column label="状态" align="center" width="80">
+            <el-table-column :label="$t('sale.overview.colStatus')" align="center" width="80">
               <template #default="{ row }">
                 <el-tag :type="row.status == 1 ? 'success' : row.status == 2 ? 'danger' : row.status == 4 ? 'warning' : 'info'" size="small">
-                  {{ row.status == 1 ? '已审核' : row.status == 2 ? '已驳回' : row.status == 4 ? '已转单' : '待审核' }}
+                  {{ row.status == 1 ? $t('sale.overview.offerStatusAudited') : row.status == 2 ? $t('sale.overview.offerStatusRejected') : row.status == 4 ? $t('sale.overview.offerStatusConverted') : $t('sale.overview.offerStatusPending') }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" align="center" width="120">
+            <el-table-column :label="$t('sale.overview.colAction')" align="center" width="120">
               <template #default="{ row }">
-                <el-button v-if="row.status == 1" type="primary" link size="small" @click="quickOfferToContract(row)">转合同</el-button>
-                <el-button link size="small" @click="router.push('/sale/offer')">查看</el-button>
+                <el-button v-if="row.status == 1" type="primary" link size="small" @click="quickOfferToContract(row)">{{ $t('sale.overview.btnConvertToContract') }}</el-button>
+                <el-button link size="small" @click="router.push('/sale/offer')">{{ $t('sale.overview.btnView') }}</el-button>
               </template>
             </el-table-column>
-            <template #empty><div style="padding:20px 0;color:#aaa">暂无报价</div></template>
+            <template #empty><div style="padding:20px 0;color:#aaa">{{ $t('sale.overview.emptyOffer') }}</div></template>
           </el-table>
         </el-tab-pane>
 
-        <el-tab-pane label="最近出库" name="saleout">
+        <el-tab-pane :label="$t('sale.overview.tabSaleOuts')" name="saleout">
           <el-table :data="saleOutRows" style="width:100%" size="small" max-height="400">
-            <el-table-column label="单号" min-width="120" show-overflow-tooltip>
+            <el-table-column :label="$t('sale.overview.colOrderNo')" min-width="120" show-overflow-tooltip>
               <template #default="{ row }">{{ getSaleOutSn(row) }}</template>
             </el-table-column>
-            <el-table-column prop="customer_name" label="客户" min-width="120" show-overflow-tooltip />
-            <el-table-column label="金额" align="right" width="100">
+            <el-table-column prop="customer_name" :label="$t('sale.overview.colCustomer')" min-width="120" show-overflow-tooltip />
+            <el-table-column :label="$t('sale.overview.colAmount')" align="right" width="100">
               <template #default="{ row }">
                 <span style="color:#0071e3">¥{{ fmt(Number(row.after_discount) || Number(row.total_amount) || 0) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="日期" width="100">
+            <el-table-column :label="$t('sale.overview.colDate')" width="100">
               <template #default="{ row }">{{ fmtDt(getSaleOutDate(row)) }}</template>
             </el-table-column>
-            <el-table-column label="状态" align="center" width="80">
+            <el-table-column :label="$t('sale.overview.colStatus')" align="center" width="80">
               <template #default="{ row }">
                 <el-tag :type="row.status == 1 ? 'success' : 'warning'" size="small">
-                  {{ row.status == 1 ? '已审核' : '待审核' }}
+                  {{ row.status == 1 ? $t('sale.overview.saleOutStatusAudited') : $t('sale.overview.saleOutStatusPending') }}
                 </el-tag>
               </template>
             </el-table-column>
-            <template #empty><div style="padding:20px 0;color:#aaa">暂无出库单</div></template>
+            <template #empty><div style="padding:20px 0;color:#aaa">{{ $t('sale.overview.emptySaleOut') }}</div></template>
           </el-table>
         </el-tab-pane>
       </el-tabs>
     </el-card>
 
     <!-- 一键销售弹窗 -->
-    <el-dialog v-model="qsVisible" title="一键销售" width="720px" destroy-on-close>
+    <el-dialog v-model="qsVisible" :title="$t('sale.overview.qsDialogTitle')" width="720px" destroy-on-close>
       <el-form label-width="80px" :disabled="qsSubmitting">
-        <el-form-item label="客户">
-          <el-select v-model="qs.customer_id" filterable placeholder="选择客户" style="width:100%" @change="onQsCustomerChange">
+        <el-form-item :label="$t('sale.overview.qsCustomerLabel')">
+          <el-select v-model="qs.customer_id" filterable :placeholder="$t('sale.overview.qsSelectCustomer')" style="width:100%" @change="onQsCustomerChange">
             <el-option v-for="c in customerList" :key="c.id" :label="c.customer_name || c.name" :value="c.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="仓库">
-          <el-select v-model="qs.warehouse_id" filterable placeholder="选择仓库" style="width:100%" @change="onQsWarehouseChange">
+        <el-form-item :label="$t('sale.overview.qsWarehouseLabel')">
+          <el-select v-model="qs.warehouse_id" filterable :placeholder="$t('sale.overview.qsSelectWarehouse')" style="width:100%" @change="onQsWarehouseChange">
             <el-option v-for="w in warehouseList" :key="w.id" :label="w.name" :value="w.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="商品">
-          <el-button type="primary" size="small" :icon="Plus" @click="qsGoodsRef?.open()">选择商品</el-button>
+        <el-form-item :label="$t('sale.overview.qsGoodsLabel')">
+          <el-button type="primary" size="small" :icon="Plus" @click="qsGoodsRef?.open()">{{ $t('sale.overview.qsSelectGoods') }}</el-button>
         </el-form-item>
         <el-table v-if="qs.items.length" :data="qs.items" size="small" style="margin-bottom:12px" border>
-          <el-table-column prop="goods_name" label="商品" min-width="140" show-overflow-tooltip />
-          <el-table-column prop="spec" label="规格" width="80" />
-          <el-table-column prop="unit_name" label="单位" width="60" />
-          <el-table-column label="数量" width="100">
+          <el-table-column prop="goods_name" :label="$t('sale.overview.qsColGoods')" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="spec" :label="$t('sale.overview.qsColSpec')" width="80" />
+          <el-table-column prop="unit_name" :label="$t('sale.overview.qsColUnit')" width="60" />
+          <el-table-column :label="$t('sale.overview.qsColQty')" width="100">
             <template #default="{ row }">
               <el-input-number v-model="row.num" :min="1" size="small" style="width:80px" @change="calcQsTotal" />
             </template>
           </el-table-column>
-          <el-table-column label="单价" width="110">
+          <el-table-column :label="$t('sale.overview.qsColPrice')" width="110">
             <template #default="{ row }">
               <el-input-number v-model="row.price" :min="0" :precision="2" size="small" style="width:90px" @change="calcQsTotal" />
             </template>
           </el-table-column>
-          <el-table-column label="小计" align="right" width="90">
+          <el-table-column :label="$t('sale.overview.qsColSubtotal')" align="right" width="90">
             <template #default="{ row }">¥{{ (row.num * row.price).toFixed(2) }}</template>
           </el-table-column>
           <el-table-column label="" width="50">
             <template #default="{ $index }">
-              <el-button type="danger" link size="small" @click="qs.items.splice($index, 1); calcQsTotal()">删</el-button>
+              <el-button type="danger" link size="small" @click="qs.items.splice($index, 1); calcQsTotal()">{{ $t('sale.overview.qsColDelete') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
         <div style="display:flex;gap:16px;margin-bottom:12px">
-          <el-form-item label="优惠" style="flex:1;margin-bottom:0">
-            <el-input-number v-model="qs.discount" :min="0" :precision="2" size="default" style="width:100%" placeholder="优惠金额" @change="calcQsTotal" />
+          <el-form-item :label="$t('sale.overview.qsDiscountLabel')" style="flex:1;margin-bottom:0">
+            <el-input-number v-model="qs.discount" :min="0" :precision="2" size="default" style="width:100%" :placeholder="$t('sale.overview.qsDiscountPlaceholder')" @change="calcQsTotal" />
           </el-form-item>
-          <el-form-item label="运费" style="flex:1;margin-bottom:0">
+          <el-form-item :label="$t('sale.overview.qsFreightLabel')" style="flex:1;margin-bottom:0">
             <div style="display:flex;gap:8px;align-items:center;width:100%">
-              <el-input-number v-model="qs.freight" :min="0" :precision="2" size="default" style="flex:1" placeholder="运费" @change="calcQsTotal" />
+              <el-input-number v-model="qs.freight" :min="0" :precision="2" size="default" style="flex:1" :placeholder="$t('sale.overview.qsFreightPlaceholder')" @change="calcQsTotal" />
               <el-select v-model="qs.freightPayer" size="default" style="width:100px" @change="calcQsTotal">
-                <el-option label="对方承担" value="buyer" />
-                <el-option label="我方承担" value="seller" />
+                <el-option :label="$t('sale.overview.qsPayerBuyer')" value="buyer" />
+                <el-option :label="$t('sale.overview.qsPayerSeller')" value="seller" />
               </el-select>
             </div>
           </el-form-item>
         </div>
-        <el-form-item label="备注">
-          <el-input v-model="qs.remark" placeholder="选填" />
+        <el-form-item :label="$t('sale.overview.qsRemarkLabel')">
+          <el-input v-model="qs.remark" :placeholder="$t('sale.overview.qsRemarkPlaceholder')" />
         </el-form-item>
         <div class="qs-total">
           <div v-if="qs.discount > 0 || qs.freight > 0" style="font-size:13px;color:#999;margin-bottom:4px">
-            商品合计：¥{{ fmt(qs.goodsTotal) }}
-            <span v-if="qs.discount > 0" style="margin-left:12px">优惠：-¥{{ fmt(qs.discount) }}</span>
-            <span v-if="qs.freight > 0" style="margin-left:12px">运费：+¥{{ fmt(qs.freight) }}（{{ qs.freightPayer === 'seller' ? '我方承担' : '对方承担' }}）</span>
+            {{ $t('sale.overview.qsGoodsTotal', { amount: fmt(qs.goodsTotal) }) }}
+            <span v-if="qs.discount > 0" style="margin-left:12px">{{ $t('sale.overview.qsDiscountOff', { amount: fmt(qs.discount) }) }}</span>
+            <span v-if="qs.freight > 0" style="margin-left:12px">{{ $t('sale.overview.qsFreightAdd', { amount: fmt(qs.freight), payer: qs.freightPayer === 'seller' ? $t('sale.overview.qsPayerSeller') : $t('sale.overview.qsPayerBuyer') }) }}</span>
           </div>
-          合计：<span style="color:#0071e3;font-size:18px;font-weight:700">¥{{ fmt(qs.total) }}</span>
+          {{ $t('sale.overview.qsTotal') }}<span style="color:#0071e3;font-size:18px;font-weight:700">¥{{ fmt(qs.total) }}</span>
         </div>
         <el-divider style="margin:12px 0" />
-        <div style="font-weight:600;margin-bottom:8px">本次收款</div>
+        <div style="font-weight:600;margin-bottom:8px">{{ $t('sale.overview.qsCollectTitle') }}</div>
         <div style="display:flex;gap:16px;margin-bottom:8px">
-          <el-form-item label="收款金额" style="flex:1;margin-bottom:0">
+          <el-form-item :label="$t('sale.overview.qsCollectAmountLabel')" style="flex:1;margin-bottom:0">
             <el-input-number v-model="qs.collectAmount" :min="0" :max="qs.total" :precision="2" size="default" style="width:100%" @change="calcQsOwed" />
           </el-form-item>
-          <el-form-item label="收款账户" style="flex:1;margin-bottom:0">
-            <el-select v-model="qs.fundId" filterable placeholder="选择账户" style="width:100%" @change="onQsFundChange">
+          <el-form-item :label="$t('sale.overview.qsCollectFundLabel')" style="flex:1;margin-bottom:0">
+            <el-select v-model="qs.fundId" filterable :placeholder="$t('sale.overview.qsSelectFund')" style="width:100%" @change="onQsFundChange">
               <el-option v-for="f in fundList" :key="f.id" :label="f.name" :value="f.id" />
             </el-select>
           </el-form-item>
         </div>
         <div style="display:flex;justify-content:flex-end;font-size:13px;color:#999">
-          <span v-if="qs.owed > 0" style="color:#e6a23c">本次欠款：¥{{ fmt(qs.owed) }}</span>
-          <span v-else style="color:#67c23a">全额收款</span>
+          <span v-if="qs.owed > 0" style="color:#e6a23c">{{ $t('sale.overview.qsOwed', { amount: fmt(qs.owed) }) }}</span>
+          <span v-else style="color:#67c23a">{{ $t('sale.overview.qsFullPaid') }}</span>
         </div>
       </el-form>
       <template #footer>
-        <el-button @click="qsVisible = false">取消</el-button>
+        <el-button @click="qsVisible = false">{{ $t('sale.overview.qsCancelBtn') }}</el-button>
         <el-button type="primary" :loading="qsSubmitting" @click="submitQuickSale">
-          确认生成（合同+出库）
+          {{ $t('sale.overview.qsConfirmBtn') }}
         </el-button>
       </template>
     </el-dialog>
@@ -277,6 +277,7 @@ import GoodsSelect from '@/components/GoodsSelect.vue'
 import { stockEffect } from '@/utils/stockEffect'
 
 const router = useRouter()
+const { t } = useI18n()
 
 // ── 数据 ─────────────────────────────────────────────────────────────────────
 const offerRows = ref<any[]>([])
@@ -322,10 +323,10 @@ function hasLinkedSaleOut(contractRow: any): boolean {
 
 function getContractStatusLabel(contractRow: any): string {
   const status = Number(contractRow?.status)
-  if (status === 4) return '✓ 已转单'
-  if (status === 1) return hasLinkedSaleOut(contractRow) ? '已审核并出库' : '已审核'
-  if (status === 2) return '已驳回'
-  return '待审核'
+  if (status === 4) return t('sale.overview.statusConverted')
+  if (status === 1) return hasLinkedSaleOut(contractRow) ? t('sale.overview.statusAuditedWithOut') : t('sale.overview.statusAudited')
+  if (status === 2) return t('sale.overview.statusRejected')
+  return t('sale.overview.statusPending')
 }
 
 function getContractStatusType(contractRow: any): string {
@@ -447,17 +448,23 @@ const stockAvgCostMap = computed(() => {
 })
 
 // ── 时间维度切换 ──────────────────────────────────────────────────────────────
-const periods = [
-  { key: 'month', label: '本月' },
-  { key: 'quarter', label: '本季' },
-  { key: 'year', label: '本年' },
-  { key: 'all', label: '全部' },
-] as const
-type PeriodKey = typeof periods[number]['key']
+type PeriodKey = 'month' | 'quarter' | 'year' | 'all'
 const activePeriod = ref<PeriodKey>('month')
 
+const periods = computed(() => [
+  { key: 'month' as PeriodKey, label: t('sale.overview.periodMonth') },
+  { key: 'quarter' as PeriodKey, label: t('sale.overview.periodQuarter') },
+  { key: 'year' as PeriodKey, label: t('sale.overview.periodYear') },
+  { key: 'all' as PeriodKey, label: t('sale.overview.periodAll') },
+])
+
 const periodLabel = computed(() => {
-  const map: Record<PeriodKey, string> = { month: '本月', quarter: '本季', year: '本年', all: '' }
+  const map: Record<PeriodKey, string> = {
+    month: t('sale.overview.periodMonth'),
+    quarter: t('sale.overview.periodQuarter'),
+    year: t('sale.overview.periodYear'),
+    all: '',
+  }
   return map[activePeriod.value]
 })
 
@@ -540,9 +547,9 @@ const kpi = computed(() => {
 
 // ── 快捷操作 ──────────────────────────────────────────────────────────────────
 async function quickAuditContract(row: any) {
-  await ElMessageBox.confirm(`确定审核通过合同「${getContractSn(row)}」？`, '审核', { type: 'warning' })
+  await ElMessageBox.confirm(t('sale.overview.confirmAuditContract', { sn: getContractSn(row) }), t('sale.overview.confirmAuditTitle'), { type: 'warning' })
   await auditContract(row.id, 1)
-  ElMessage.success('审核成功')
+  ElMessage.success(t('sale.overview.msgAuditSuccess'))
   loadData()
 }
 
@@ -650,9 +657,9 @@ function calcQsTotal() {
 }
 
 async function submitQuickSale() {
-  if (!qs.customer_id) return ElMessage.warning('请选择客户')
-  if (!qs.warehouse_id) return ElMessage.warning('请选择仓库')
-  if (!qs.items.length) return ElMessage.warning('请选择商品')
+  if (!qs.customer_id) return ElMessage.warning(t('sale.overview.warnSelectCustomer'))
+  if (!qs.warehouse_id) return ElMessage.warning(t('sale.overview.warnSelectWarehouse'))
+  if (!qs.items.length) return ElMessage.warning(t('sale.overview.warnSelectGoods'))
 
   qsSubmitting.value = true
   try {
@@ -681,7 +688,7 @@ async function submitQuickSale() {
       goods_info: goodsInfo,
     })
     const contractId = contractRes?.data?.id || contractRes?.data?.lastId
-    if (!contractId) throw new Error('合同创建失败')
+    if (!contractId) throw new Error(t('sale.overview.errContractCreate'))
 
     // 2. 审核合同
     await auditContractSilent(contractId, 1).catch(() => {})
@@ -703,7 +710,7 @@ async function submitQuickSale() {
       goods_info: goodsInfo,
     })
     const saleOutId = saleOutRes?.data?.id || saleOutRes?.data?.lastId
-    if (!saleOutId) throw new Error('出库单创建失败')
+    if (!saleOutId) throw new Error(t('sale.overview.errSaleOutCreate'))
 
     // 4. 审核出库单
     await auditSaleOutSilent(saleOutId, 1).catch(() => {})
@@ -751,13 +758,15 @@ async function submitQuickSale() {
     }
 
     const msg = qs.collectAmount > 0 && qs.fundId
-      ? `一键销售完成！收款 ¥${qs.collectAmount.toFixed(2)}${qs.owed > 0 ? '，欠款 ¥' + qs.owed.toFixed(2) : ''}`
-      : '一键销售完成！合同+出库单已生成并审核'
+      ? qs.owed > 0
+        ? t('sale.overview.msgQuickSaleDoneCollectedOwed', { amount: qs.collectAmount.toFixed(2), owed: qs.owed.toFixed(2) })
+        : t('sale.overview.msgQuickSaleDoneCollected', { amount: qs.collectAmount.toFixed(2) })
+      : t('sale.overview.msgQuickSaleDoneSimple')
     ElMessage.success(msg)
     qsVisible.value = false
     loadData()
   } catch (e: any) {
-    ElMessage.error(e?.message || '操作失败，请重试')
+    ElMessage.error(e?.message || t('sale.overview.errOperationFailed'))
   } finally {
     qsSubmitting.value = false
   }
@@ -782,9 +791,13 @@ async function loadData() {
     http.get('/finance/Fund/index', { params: { list_rows: 200 } }),
     http.get('/stock/StockAll/index', { params: { list_rows: 5000 } }),
   ])
-  contractRows.value = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
-  offerRows.value = o.status === 'fulfilled' ? (o.value?.data?.rows ?? []) : []
-  saleOutRows.value = s.status === 'fulfilled' ? (s.value?.data?.rows ?? []) : []
+  const ONLINE_CUST_IDS = new Set([7, 8, 10, 11, 12, 63])
+  const allContracts: any[] = c.status === 'fulfilled' ? (c.value?.data?.rows ?? []) : []
+  const allOffers: any[] = o.status === 'fulfilled' ? (o.value?.data?.rows ?? []) : []
+  const allSaleOuts: any[] = s.status === 'fulfilled' ? (s.value?.data?.rows ?? []) : []
+  contractRows.value = allContracts.filter((r: any) => !ONLINE_CUST_IDS.has(Number(r.customer_id)))
+  offerRows.value = allOffers.filter((r: any) => !ONLINE_CUST_IDS.has(Number(r.customer_id)))
+  saleOutRows.value = allSaleOuts.filter((r: any) => !ONLINE_CUST_IDS.has(Number(r.customer_id)))
   customerList.value = cust.status === 'fulfilled' ? (cust.value?.data?.rows ?? []) : []
   warehouseList.value = wh.status === 'fulfilled' ? (wh.value?.data?.rows ?? []) : []
   goodsList.value = g.status === 'fulfilled' ? (g.value?.data?.rows ?? []) : []

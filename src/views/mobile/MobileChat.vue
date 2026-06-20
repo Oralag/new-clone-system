@@ -84,7 +84,7 @@
           <div
             class="chat-item"
             :class="{ 'chat-item--pinned': g.is_pinned }"
-            @click="swipeMoved ? (swipeMoved = false) : (closeSwipe(), g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`))"
+            @click="swipeMoved ? (swipeMoved = false) : (closeSwipe(), g.id === 'adam-virtual' ? openAdamChat() : (g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`)))"
             @touchstart.passive="onSwipeStart($event, g)"
             @touchend.passive="onSwipeEnd"
             @touchmove.passive="onSwipeMove"
@@ -561,10 +561,47 @@
       </svg>
     </div>
   </Teleport>
+
+  <!-- ── 亚当聊天全屏面板 ── -->
+  <Teleport to="body">
+    <div v-if="showAdamChat" class="adam-panel">
+      <div class="adam-panel-topbar">
+        <button class="adam-panel-back" @click="closeAdamChat">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+        </button>
+        <div class="adam-panel-title">亚当</div>
+        <div style="width:40px"></div>
+      </div>
+      <div ref="adamListRef" class="adam-panel-messages">
+        <div v-if="adamLoading" class="adam-panel-hint">加载中...</div>
+        <div v-else-if="adamMessages.length === 0" class="adam-panel-hint">暂无消息</div>
+        <template v-else>
+          <div v-for="msg in adamMessages" :key="msg.id" class="adam-panel-row" :class="{ own: msg.isOwn }">
+            <div v-if="!msg.isOwn" class="adam-panel-avatar">亚</div>
+            <div class="adam-panel-col">
+              <div v-if="!msg.isOwn" class="adam-panel-name">亚当</div>
+              <div class="adam-panel-bubble" :class="{ own: msg.isOwn }">
+                <span v-if="msg.typing" class="adam-typing"><span></span><span></span><span></span></span>
+                <span v-else v-html="adamRender(msg.content)"></span>
+              </div>
+              <div v-if="!msg.typing" class="adam-panel-time">{{ adamFormatTime(msg.created_at) }}</div>
+            </div>
+          </div>
+        </template>
+        <div ref="adamBottomRef"></div>
+      </div>
+      <div class="adam-panel-input-bar">
+        <textarea v-model="adamInput" class="adam-panel-input" placeholder="发消息给亚当..." rows="1" @keydown.enter.prevent="adamSend" />
+        <button class="adam-panel-send" :disabled="!adamInput.trim() || adamSending" @click="adamSend">发送</button>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, onActivated, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
 import { getAdminList } from '@/api/setting'
@@ -1075,6 +1112,76 @@ function findContactName(id: string): string | null {
   return null
 }
 
+// 亚当 inbox 注入：把链上钱包检测 / 主动消息合并到亚当会话条目
+async function mergeAdamInbox() {
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    const [histRes, inboxRes] = await Promise.all([
+      fetch('/api/adam/history', { headers: { 'x-erp-token': token } }),
+      fetch('/api/adam/messages?peek=1', { headers: { 'x-erp-token': token } }),
+    ])
+
+    // 收集所有"亚当发出的消息"（chat_history 里 role=assistant + inbox 全部）
+    const adamMessages: Array<{ content: string; timestamp: string }> = []
+
+    if (histRes.ok) {
+      const d = await histRes.json() as { messages?: Array<{ role?: string; content: string; timestamp?: string }> }
+      ;(d.messages || []).forEach(m => {
+        if (m.role === 'assistant' && m.content) {
+          adamMessages.push({ content: m.content, timestamp: m.timestamp || new Date().toISOString() })
+        }
+      })
+    }
+    if (inboxRes.ok) {
+      const d = await inboxRes.json() as { messages?: Array<{ content: string; timestamp: string }> }
+      ;(d.messages || []).forEach(m => {
+        adamMessages.push({ content: m.content, timestamp: m.timestamp })
+      })
+    }
+
+    if (adamMessages.length === 0) return
+
+    // 按时间排序，取最新一条
+    adamMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    const latest = adamMessages[adamMessages.length - 1]
+    const latestTs = new Date(latest.timestamp).getTime()
+
+    // 已读时间戳：本地记录"上次进亚当聊天的时间"
+    const lastReadTs = parseInt(localStorage.getItem('adam_chat_last_read') || '0', 10)
+    // 新于 lastReadTs 的亚当消息才算未读
+    const unread = adamMessages.filter(m => new Date(m.timestamp).getTime() > lastReadTs).length
+
+    const idx = groups.value.findIndex(g => g.name === '亚当' || g.name === 'Adam' || g.name === 'ADAM')
+    if (idx >= 0) {
+      // 不累加，直接覆盖（避免越叠越多）
+      groups.value[idx] = {
+        ...groups.value[idx],
+        route: '/mobile/chat/adam',
+        last_msg: latest.content.slice(0, 80),
+        last_time: latest.timestamp ? formatTime(latest.timestamp) : groups.value[idx].last_time,
+        last_message_at: latest.timestamp || groups.value[idx].last_message_at,
+        unread,
+      }
+    } else {
+      groups.value.unshift({
+        id: 'adam-virtual',
+        route: '/mobile/chat/adam',
+        name: '亚当',
+        avatar_text: '亚',
+        last_msg: latest.content.slice(0, 80),
+        last_time: latest.timestamp ? formatTime(latest.timestamp) : '',
+        unread,
+        is_pinned: false,
+        last_message_at: latest.timestamp || '',
+        member_count: 2,
+        member_ids: [],
+        is_private: true,
+        type: 'dm',
+      })
+    }
+  } catch { /* 忽略 */ }
+}
+
 async function loadGroups() {
   try {
     const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
@@ -1114,6 +1221,8 @@ async function loadGroups() {
     const totalUnread = rows.reduce((s: number, r: any) => s + (r.unread ?? 0), 0)
     if (typeof uni !== 'undefined') uni.$emit('update:unread', totalUnread)
   } catch { groups.value = [] }
+  // 注入亚当主动消息到对应会话
+  await mergeAdamInbox()
 }
 
 // 加载内部员工通讯录
@@ -1263,6 +1372,156 @@ function createGroupChat() {
 
 watch(searchKeyword, (v) => { if (v) doSearch() })
 
+// ── 亚当聊天面板（内联，不依赖路由跳转）──────────────────────────────
+const showAdamChat = ref(false)
+const adamLoading = ref(false)
+const adamSending = ref(false)
+const adamMessages = ref<any[]>([])
+const adamInput = ref('')
+const adamListRef = ref<HTMLElement | null>(null)
+const adamBottomRef = ref<HTMLElement | null>(null)
+
+function adamRender(content: string) {
+  return (content || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
+}
+function adamFormatTime(ts: string) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (isNaN(d.getTime())) return ''
+  const h = d.getHours().toString().padStart(2, '0')
+  const m = d.getMinutes().toString().padStart(2, '0')
+  const now = new Date()
+  return d.toDateString() === now.toDateString() ? `${h}:${m}` : `${d.getMonth()+1}/${d.getDate()} ${h}:${m}`
+}
+async function adamScrollBottom() {
+  await nextTick()
+  if (adamListRef.value) adamListRef.value.scrollTop = adamListRef.value.scrollHeight
+}
+
+async function openAdamChat() {
+  showAdamChat.value = true
+  adamLoading.value = true
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    const myId = String(authStore.userInfo?.id || authStore.userInfo?.admin_id || 'me')
+    const [histRes, inboxRes] = await Promise.all([
+      fetch('/api/adam/history', { headers: { 'x-erp-token': token } }),
+      fetch('/api/adam/messages?peek=1', { headers: { 'x-erp-token': token } }),
+    ])
+    const all: any[] = []
+    const seen = new Set<string>()
+    if (histRes.ok) {
+      const d = await histRes.json() as { messages?: any[] }
+      ;(d.messages || []).forEach((m: any, i: number) => {
+        const id = `h_${m.id || i}`
+        if (seen.has(id)) return; seen.add(id)
+        const ts = m.timestamp || m.created_at || new Date(Date.now() - i * 1000).toISOString()
+        all.push({ id, content: m.content, created_at: ts, isOwn: m.role === 'user' })
+      })
+    }
+    if (inboxRes.ok) {
+      const d = await inboxRes.json() as { messages?: any[] }
+      ;(d.messages || []).forEach((m: any) => {
+        const id = `i_${m.id}`
+        if (seen.has(id)) return; seen.add(id)
+        all.push({ id, content: m.content, created_at: m.timestamp, isOwn: false })
+      })
+    }
+    adamMessages.value = all.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    // 标已读
+    localStorage.setItem('adam_chat_last_read', String(Date.now()))
+    fetch('/api/adam/messages', { headers: { 'x-erp-token': token } }).catch(() => {})
+    // 刷新列表未读数
+    mergeAdamInbox()
+  } catch (e) { console.error(e) }
+  finally {
+    adamLoading.value = false
+    await adamScrollBottom()
+  }
+}
+
+function closeAdamChat() {
+  showAdamChat.value = false
+  mergeAdamInbox()
+}
+
+async function adamSend() {
+  const text = adamInput.value.trim()
+  if (!text || adamSending.value) return
+  adamInput.value = ''
+  adamSending.value = true
+  const ts = new Date().toISOString()
+  const token = localStorage.getItem('erp_token') || ''
+
+  adamMessages.value.push({ id: `u_${Date.now()}`, content: text, created_at: ts, isOwn: true })
+  await adamScrollBottom()
+
+  adamMessages.value.push({ id: `a_${Date.now()}`, content: '', created_at: new Date().toISOString(), isOwn: false, typing: true })
+  const replyIdx = adamMessages.value.length - 1
+  const setReply = (patch: Record<string, any>) => {
+    adamMessages.value[replyIdx] = { ...adamMessages.value[replyIdx], ...patch }
+  }
+  await adamScrollBottom()
+
+  try {
+    const apiMessages = adamMessages.value
+      .filter(m => m.content && !m.typing)
+      .map(m => ({ role: m.isOwn ? 'user' : 'assistant', content: m.content }))
+
+    const res = await fetch('/api/adam-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({ messages: apiMessages }),
+    })
+    if (!res.ok) throw new Error(`${res.status}`)
+
+    const reader = res.body?.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    while (reader) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const lines = buf.split('\n')
+      buf = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6).trim()
+        if (raw === '[DONE]') break
+        try {
+          const d = JSON.parse(raw)
+          if (d.type === 'text' && d.text) {
+            const cur = adamMessages.value[replyIdx]
+            setReply({ content: cur.content + d.text, typing: false })
+            await adamScrollBottom()
+          } else if (d.type === 'error' && d.error) {
+            setReply({ content: `[ERR] ${d.error}`, typing: false })
+            await adamScrollBottom()
+          }
+        } catch {}
+      }
+    }
+  } catch {
+    setReply({ content: '连接失败，请重试。', typing: false })
+  } finally {
+    const cur = adamMessages.value[replyIdx]
+    if (!cur?.content) setReply({ content: '我在，但没有生成回复，请再说一次。', typing: false })
+    adamSending.value = false
+    const msgs = adamMessages.value
+      .filter(m => m.content)
+      .map(m => ({ role: m.isOwn ? 'user' : 'assistant', content: m.content, timestamp: m.created_at }))
+    fetch('/api/adam/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({ messages: msgs }),
+    }).catch(() => {})
+    await adamScrollBottom()
+  }
+}
+
 let listPollTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
@@ -1287,6 +1546,11 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (listPollTimer) clearInterval(listPollTimer)
+})
+
+// keep-alive 激活时（从亚当聊天返回）重新计算亚当未读数
+onActivated(() => {
+  mergeAdamInbox()
 })
 </script>
 
@@ -2345,6 +2609,155 @@ export default { name: 'MobileChat' }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* ── 亚当聊天全屏面板 ── */
+.adam-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+}
+.adam-panel-topbar {
+  height: 52px;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-bottom: 1px solid #e5e6eb;
+  flex-shrink: 0;
+}
+.adam-panel-back {
+  width: 40px; height: 40px;
+  border: none; background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #4e5969;
+  -webkit-tap-highlight-color: transparent;
+}
+.adam-panel-title {
+  font-size: 16px; font-weight: 600; color: #1d2129;
+}
+.adam-panel-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.adam-panel-hint {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  margin: 40px 0;
+}
+.adam-panel-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.adam-panel-row.own {
+  flex-direction: row-reverse;
+}
+.adam-panel-avatar {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7B61FF, #5B3FD8);
+  color: #fff;
+  font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.adam-panel-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 72%;
+}
+.adam-panel-name {
+  font-size: 11px; color: #86909c; padding-left: 2px;
+}
+.adam-panel-bubble {
+  padding: 10px 13px;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #1d2129;
+  word-break: break-word;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+}
+.adam-panel-bubble.own {
+  background: #165DFF;
+  color: #fff;
+}
+.adam-panel-time {
+  font-size: 10px;
+  color: #c9cdd4;
+  padding: 0 2px;
+}
+.adam-panel-row.own .adam-panel-time {
+  text-align: right;
+}
+.adam-panel-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-top: 1px solid #e5e6eb;
+  flex-shrink: 0;
+}
+.adam-panel-input {
+  flex: 1;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  line-height: 1.4;
+  max-height: 90px;
+  overflow-y: auto;
+}
+.adam-panel-send {
+  padding: 8px 14px;
+  background: #165DFF;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  height: 36px;
+  -webkit-tap-highlight-color: transparent;
+}
+.adam-panel-send:disabled { opacity: 0.4; }
+.adam-typing {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 0;
+}
+.adam-typing span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #86909c;
+  animation: adamDot 1.2s ease-in-out infinite;
+}
+.adam-typing span:nth-child(2) { animation-delay: 0.2s; }
+.adam-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes adamDot {
+  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
 </style>
 
 /* ── 新建计划弹窗样式 ── */

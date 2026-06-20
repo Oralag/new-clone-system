@@ -36,6 +36,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/contract/view/:id', name: 'SaleContractView', component: () => import('@/views/sale/ContractView.vue'), meta: { title: '查看合同' } },
       { path: 'sale/out', name: 'SaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'SaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
+      { path: 'sale/exchange', name: 'SaleExchange', component: () => import('@/views/sale/SaleExchange.vue'), meta: { title: '换货单' } },
 
       // Retail
       { path: 'retail/overview', name: 'RetailOverview', component: () => import('@/views/retail/RetailOverview.vue'), meta: { title: '零售总览' } },
@@ -166,7 +167,12 @@ const routes: RouteRecordRaw[] = [
     path: '/online',
     component: () => import('@/layouts/AdminLayout.vue'),
     children: [
+      { path: 'overview', name: 'OnlineOverview', component: () => import('@/views/online/OnlineOverview.vue'), meta: { title: '线上总览' } },
       { path: 'meituan', name: 'OnlineMeituan', component: () => import('@/views/online/MeituanOrders.vue'), meta: { title: '美团订单' } },
+      { path: 'wechat', name: 'OnlineWechat', component: () => import('@/views/online/OnlineOrders.vue'), meta: { title: '微信小店', platformName: '微信小店', customerId: 10, customerName: '电商/微信小店', channelTag: '[微信小店]', platformColor: '#07C160' } },
+      { path: 'pinduoduo', name: 'OnlinePinduoduo', component: () => import('@/views/online/OnlineOrders.vue'), meta: { title: '拼多多', platformName: '拼多多', customerId: 12, customerName: '电商/拼多多', channelTag: '[拼多多]', platformColor: '#E02E2E' } },
+      { path: 'douyin', name: 'OnlineDouyin', component: () => import('@/views/online/OnlineOrders.vue'), meta: { title: '抖音', platformName: '抖音', customerId: 7, customerName: '电商/抖音专用', channelTag: '[抖音]', platformColor: '#000000' } },
+      { path: 'xiaohongshu', name: 'OnlineXiaohongshu', component: () => import('@/views/online/OnlineOrders.vue'), meta: { title: '小红书', platformName: '小红书', customerId: 11, customerName: '电商/小红书', channelTag: '[小红书]', platformColor: '#FF2442' } },
     ],
   },
   // ── 运营驾驶舱（独立布局）────────────
@@ -192,6 +198,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'workbench', redirect: '/mobile/dashboard' },
       { path: 'chat', name: 'MobileChat', component: () => import('@/views/mobile/MobileChat.vue'), meta: { title: '消息' } },
       { path: 'chat/new', name: 'MobileNewChat', component: () => import('@/views/mobile/MobileNewChat.vue'), meta: { title: '发起会话' } },
+      { path: 'chat/adam', name: 'MobileAdamChat', component: () => import('@/views/mobile/MobileAdamChat.vue'), meta: { title: '亚当' } },
       { path: 'chat/:id', name: 'MobileGroupChat', component: () => import('@/views/mobile/MobileGroupChat.vue'), meta: { title: '会话详情' } },
       { path: 'contacts', name: 'MobileContacts', component: () => import('@/views/mobile/MobileContacts.vue'), meta: { title: '通讯录' } },
       { path: 'activity', name: 'MobileActivity', component: () => import('@/views/mobile/MobileActivity.vue'), meta: { title: '工作动态' } },
@@ -240,6 +247,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/contract', name: 'MobileSaleContract', component: () => import('@/views/sale/Contract.vue'), meta: { title: '销售合同' } },
       { path: 'sale/out', name: 'MobileSaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'MobileSaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
+      { path: 'sale/exchange', name: 'MobileSaleExchange', component: () => import('@/views/sale/SaleExchange.vue'), meta: { title: '换货单' } },
       // Procure
       { path: 'procure/supplier', name: 'MobileProcureSupplier', component: () => import('@/views/procure/SupplierList.vue'), meta: { title: '供应商管理' } },
       { path: 'procure/order', name: 'MobileProcureOrder', component: () => import('@/views/procure/Order.vue'), meta: { title: '采购订单' } },
@@ -266,6 +274,20 @@ const routes: RouteRecordRaw[] = [
       // Investment
       { path: 'investment/overview', name: 'MobileInvestmentOverview', component: () => import('@/views/investment/Index.vue'), meta: { title: '投资管理' } },
     ],
+  },
+
+  // 采购单分享（公开访问，无需登录）
+  {
+    path: '/share/purchase-order/:id',
+    name: 'PurchaseOrderShare',
+    component: () => import('@/views/share/PurchaseOrderShare.vue'),
+    meta: { title: '采购订单', public: true },
+  },
+  {
+    path: '/share/purchase-orders',
+    name: 'PurchaseOrdersShare',
+    component: () => import('@/views/share/PurchaseOrdersShare.vue'),
+    meta: { title: '采购订单', public: true },
   },
 
   // Catch-all redirect

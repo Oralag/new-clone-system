@@ -1,0 +1,58 @@
+// Translations for src/views/sale/miniVideos.vue
+export default {
+  // Header
+  pageTitle: '看看 · 视频管理',
+  uploadBtn: '+ 上传视频',
+
+  // Table columns
+  colCover: '封面',
+  noCover: '无封面',
+  colTitle: '标题',
+  colVideoUrl: '视频链接',
+  previewLink: '预览',
+  colLike: '点赞',
+  colComment: '评论',
+  colView: '浏览',
+  colSort: '排序',
+  colStatus: '状态',
+  statusOnShelf: '上架',
+  statusOffShelf: '下架',
+  colAction: '操作',
+  editBtn: '编辑',
+  deleteBtn: '删除',
+
+  // Dialog
+  dialogTitleAdd: '上传视频',
+  dialogTitleEdit: '编辑视频',
+  formTitle: '标题',
+  titlePlaceholder: '视频标题',
+  formDesc: '描述',
+  descPlaceholder: '简短描述',
+  formVideo: '视频文件',
+  currentVideo: '当前视频：点击预览',
+  reupload: '重新上传',
+  uploading: '上传中 {progress}%',
+  selectVideo: '选择视频文件',
+  formCover: '封面图',
+  reuploadCover: '重新上传',
+  uploadingCover: '上传中...',
+  selectCover: '选择封面图',
+  formGoods: '关联商品',
+  goodsPlaceholder: '选择商品（选填）',
+  formSort: '排序',
+  sortHint: '数字越大越靠前',
+  formStatus: '状态',
+  cancelBtn: '取消',
+  saveBtn: '保存',
+
+  // Messages
+  warnNoVideo: '请先上传视频',
+  successSave: '保存成功',
+  successDelete: '已删除',
+  confirmDeleteTitle: '提示',
+  confirmDeleteMsg: '确认删除「{title}」？',
+  errorCoverUpload: '封面上传失败',
+  errorUploadFailed: '上传失败',
+  errorParseResponse: '响应解析失败',
+  errorNetworkUpload: '上传失败，请检查网络连接后重试',
+}

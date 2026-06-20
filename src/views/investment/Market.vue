@@ -106,7 +106,7 @@
         <!-- 跌幅榜 -->
         <div class="panel">
           <div class="panel-head">
-            <span class="panel-icon" style="color:#00E5A0">▼</span>
+            <span class="panel-icon" style="color:#4f79c7">▼</span>
             <span class="panel-title">TOP_LOSERS</span>
             <span class="panel-desc">跌幅榜</span>
           </div>
@@ -210,7 +210,7 @@
       <!-- 北向资金 -->
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-icon" style="color:#00E5A0">◉</span>
+          <span class="panel-icon" style="color:#4f79c7">◉</span>
           <span class="panel-title">NORTHBOUND_FLOW</span>
           <span class="panel-desc">北向资金</span>
         </div>
@@ -645,11 +645,11 @@ function klineRender(crossX?: number, crossY?: number) {
   const ctx = canvas.getContext('2d')!
   ctx.scale(dpr, dpr)
 
-  const upColor = '#FF4D4D'
-  const downColor = '#00C979'
-  const gridColor = 'rgba(255,255,255,0.06)'
-  const textColor = 'rgba(255,255,255,0.32)'
-  const crossColor = 'rgba(255,255,255,0.4)'
+  const upColor = '#ef6f5e'
+  const downColor = '#4f79c7'
+  const gridColor = 'rgba(42,52,65,0.08)'
+  const textColor = 'rgba(23,32,39,0.42)'
+  const crossColor = 'rgba(79,121,199,0.36)'
 
   ctx.clearRect(0, 0, W, H)
 
@@ -705,7 +705,7 @@ function klineRender(crossX?: number, crossY?: number) {
   bars.forEach((bar, i) => {
     const cx = padL + i * barSlot + barSlot / 2
     const vh = (bar.volume / maxVol) * volH
-    ctx.fillStyle = bar.close >= bar.open ? 'rgba(255,77,77,0.5)' : 'rgba(0,201,121,0.5)'
+    ctx.fillStyle = bar.close >= bar.open ? 'rgba(239,111,94,0.5)' : 'rgba(79,121,199,0.5)'
     ctx.fillRect(cx - barW / 2, volTop + volH - vh, barW, vh)
   })
   // 成交量分隔线
@@ -745,9 +745,9 @@ function klineRender(crossX?: number, crossY?: number) {
 
       // 价格标签（右侧）
       const priceAtCross = minL + (1 - (crossY - padT) / mainH) * range
-      ctx.fillStyle = 'rgba(245,166,35,0.9)'
+      ctx.fillStyle = 'rgba(79,121,199,0.92)'
       ctx.fillRect(W - padR, crossY - 8, padR - 2, 16)
-      ctx.fillStyle = '#000'
+      ctx.fillStyle = '#fff'
       ctx.font = `bold 9px 'SF Mono', monospace`
       ctx.textAlign = 'left'
       ctx.fillText(priceAtCross.toFixed(2), W - padR + 3, crossY + 3)
@@ -1069,15 +1069,15 @@ onMounted(() => {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #00E5A0;
-  box-shadow: 0 0 5px rgba(0,229,160,0.5);
+  background: #4f79c7;
+  box-shadow: 0 0 5px rgba(79,121,199,0.5);
   animation: livePulse 2s ease-in-out infinite;
   margin-left: auto;
 }
 .live-text {
   font-size: 8px;
   font-weight: 700;
-  color: #00E5A0;
+  color: #4f79c7;
   font-family: 'SF Mono', 'Fira Code', monospace;
   letter-spacing: 0.1em;
 }
@@ -1128,7 +1128,7 @@ onMounted(() => {
 
 /* ── 涨跌颜色 ── */
 .up { color: #FF4D4D; }
-.down { color: #00E5A0; }
+.down { color: #4f79c7; }
 .flat { color: var(--dim); }
 
 /* ── 涨跌榜 ── */
@@ -1295,7 +1295,7 @@ onMounted(() => {
   font-weight: 700;
 }
 .flow-val-sm.positive { color: #FF4D4D; }
-.flow-val-sm.negative { color: #00E5A0; }
+.flow-val-sm.negative { color: #4f79c7; }
 .rank-no {
   width: 16px;
   font-size: 9px;
@@ -1416,7 +1416,7 @@ onMounted(() => {
 }
 .sector-card.hot .sector-fill { background: linear-gradient(90deg, #FF4D4D, #FF6B35); }
 .sector-card.warm .sector-fill { background: linear-gradient(90deg, #F5A623, #FFD93D); }
-.sector-card.cool .sector-fill { background: linear-gradient(90deg, #00D4FF, #00E5A0); }
+.sector-card.cool .sector-fill { background: linear-gradient(90deg, #00D4FF, #4f79c7); }
 
 /* ── 北向资金 ── */
 .flow-grid {
@@ -1462,7 +1462,7 @@ onMounted(() => {
   letter-spacing: -0.02em;
 }
 .flow-val.positive { color: #FF4D4D; }
-.flow-val.negative { color: #00E5A0; }
+.flow-val.negative { color: #4f79c7; }
 .flow-unit {
   font-size: 12px;
   opacity: 0.5;
@@ -1485,8 +1485,8 @@ onMounted(() => {
   opacity: 0.5;
 }
 .flow-status-dot.active {
-  background: #00E5A0;
-  box-shadow: 0 0 6px rgba(0,229,160,0.4);
+  background: #4f79c7;
+  box-shadow: 0 0 6px rgba(79,121,199,0.4);
   animation: livePulse 2s ease-in-out infinite;
 }
 .flow-status-text {
@@ -1496,7 +1496,7 @@ onMounted(() => {
   font-family: 'SF Mono', 'Fira Code', monospace;
   letter-spacing: 0.1em;
 }
-.flow-status-dot.active + .flow-status-text { color: #00E5A0; }
+.flow-status-dot.active + .flow-status-text { color: #4f79c7; }
 
 /* ── 市场信号 ── */
 .signal-list {
@@ -1664,7 +1664,7 @@ onMounted(() => {
   padding: 2px 6px;
   border-radius: 4px;
 }
-.rec-status.issued { color: #00E5A0; background: rgba(0,229,160,0.1); }
+.rec-status.issued { color: #4f79c7; background: rgba(79,121,199,0.1); }
 .rec-status.adopted { color: #F5A623; background: rgba(245,166,35,0.1); }
 .rec-status.settled { color: var(--dim); background: var(--faint); }
 .rec-status.drafted { color: var(--dim); background: var(--faint); }
@@ -1931,6 +1931,255 @@ onMounted(() => {
   font-size: 11px;
   color: var(--dim);
   opacity: 0.35;
+}
+
+/* ── Frosted flat restyle ── */
+.market-page {
+  --mk-ink: #172027;
+  --mk-soft: rgba(23, 32, 39, 0.64);
+  --mk-muted: rgba(23, 32, 39, 0.42);
+  --mk-line: rgba(42, 52, 65, 0.1);
+  --mk-glass: rgba(255, 255, 255, 0.64);
+  --mk-glass-strong: rgba(255, 255, 255, 0.76);
+  --mk-blue: #4f79c7;
+  --mk-blue-soft: rgba(79, 121, 199, 0.12);
+  --mk-coral: #ef6f5e;
+  --mk-sun: #f3b451;
+  --mk-sky: #5d89d4;
+  gap: 18px;
+}
+
+.market-page .tab-bar {
+  gap: 6px;
+  padding: 4px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.46);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+.market-page .tab-btn {
+  bottom: 0;
+  padding: 9px 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--mk-soft);
+  background: transparent;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.market-page .tab-btn:hover {
+  color: var(--mk-ink);
+  background: rgba(255, 255, 255, 0.5);
+}
+.market-page .tab-btn.active {
+  color: #fff;
+  background: var(--mk-blue);
+  border-bottom-color: transparent;
+}
+.market-page .tab-code {
+  color: currentColor;
+  opacity: 0.58;
+  letter-spacing: 0.02em;
+}
+.market-page .tab-btn.active .tab-code { opacity: 0.82; }
+.market-page .tab-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: currentColor;
+  border-radius: 999px;
+}
+
+.market-page .panel,
+.market-page .modal-box {
+  background: var(--mk-glass);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
+  overflow: hidden;
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  box-shadow: inset 0 0 0 1px rgba(42, 52, 65, 0.04);
+}
+.market-page .panel-head,
+.market-page .modal-head,
+.market-page .modal-foot {
+  border-color: var(--mk-line);
+  background: rgba(255, 255, 255, 0.24);
+}
+.market-page .panel-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  color: #fff !important;
+  background: var(--mk-blue);
+  opacity: 1;
+}
+.market-page .panel-title {
+  color: rgba(23, 32, 39, 0.68);
+  letter-spacing: 0.03em;
+  font-family: inherit;
+  font-size: 12px;
+}
+.market-page .panel-desc,
+.market-page .panel-count,
+.market-page .empty-text,
+.market-page .empty-sub {
+  color: var(--mk-muted);
+  opacity: 1;
+}
+.market-page .live-dot,
+.market-page .flow-status-dot.active {
+  background: var(--mk-blue);
+  box-shadow: 0 0 0 4px rgba(79, 121, 199, 0.12);
+}
+.market-page .live-text,
+.market-page .flow-status-dot.active + .flow-status-text {
+  color: var(--mk-blue);
+}
+
+.market-page .indices-row,
+.market-page .breadth-grid,
+.market-page .sector-grid,
+.market-page .flow-grid,
+.market-page .discovery-list,
+.market-page .rec-list,
+.market-page .watchlist {
+  gap: 8px;
+  padding: 12px;
+  background: transparent;
+}
+.market-page .index-card,
+.market-page .breadth-card,
+.market-page .sector-card,
+.market-page .flow-card,
+.market-page .discovery-card,
+.market-page .rec-card,
+.market-page .watch-card {
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid var(--mk-line);
+  border-radius: 14px;
+}
+.market-page .index-card:hover,
+.market-page .rank-table tbody tr:hover,
+.market-page .news-item:hover {
+  background: rgba(79, 121, 199, 0.08);
+}
+.market-page .index-card.selected {
+  background: var(--mk-blue-soft);
+  border: 1px solid rgba(79, 121, 199, 0.24);
+}
+.market-page .index-name,
+.market-page .sector-name,
+.market-page .rank-name,
+.market-page .news-title,
+.market-page .rec-title,
+.market-page .watch-name,
+.market-page .modal-title {
+  color: var(--mk-ink);
+}
+.market-page .index-code,
+.market-page .breadth-label,
+.market-page .flow-label,
+.market-page .rank-code,
+.market-page .code-cell,
+.market-page .news-time,
+.market-page .rec-time,
+.market-page .watch-code,
+.market-page .watch-time,
+.market-page .form-label {
+  color: var(--mk-muted) !important;
+  opacity: 1;
+}
+.market-page .up,
+.market-page .flow-val.positive,
+.market-page .flow-val-sm.positive,
+.market-page .sector-card.hot .sector-val {
+  color: var(--mk-coral);
+}
+.market-page .down,
+.market-page .flow-val.negative,
+.market-page .flow-val-sm.negative {
+  color: var(--mk-blue);
+}
+.market-page .sector-card.warm .sector-val,
+.market-page .rec-confidence {
+  color: #8a5b09;
+}
+.market-page .sector-card.cool .sector-val,
+.market-page .rec-symbol,
+.market-page .watch-type-tag,
+.market-page .discovery-symbol {
+  color: #325d9b;
+  background: rgba(93, 137, 212, 0.12);
+}
+.market-page .sector-bar,
+.market-page .form-input,
+.market-page .type-btn,
+.market-page .btn-cancel {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: var(--mk-line);
+}
+.market-page .sector-fill,
+.market-page .sector-card.hot .sector-fill,
+.market-page .sector-card.warm .sector-fill,
+.market-page .sector-card.cool .sector-fill {
+  background: var(--mk-blue);
+}
+.market-page .flow-card.main-flow::before,
+.market-page .signal-dot {
+  background: var(--mk-blue);
+  box-shadow: none;
+}
+.market-page .discovery-type-tag,
+.market-page .rec-status.adopted,
+.market-page .add-btn,
+.market-page .type-btn.active {
+  color: var(--mk-blue);
+  background: var(--mk-blue-soft);
+  border-color: rgba(79, 121, 199, 0.24);
+}
+.market-page .rec-status.issued {
+  color: var(--mk-blue);
+  background: var(--mk-blue-soft);
+}
+.market-page .form-input:focus {
+  border-color: rgba(79, 121, 199, 0.28);
+  box-shadow: 0 0 0 3px rgba(79, 121, 199, 0.08);
+}
+.market-page .required { color: var(--mk-coral); }
+.market-page .btn-confirm {
+  color: #fff;
+  background: var(--mk-blue);
+  border-radius: 999px;
+}
+.market-page .btn-cancel,
+.market-page .add-btn,
+.market-page .type-btn {
+  border-radius: 999px;
+}
+.market-page .kline-wrap {
+  background: rgba(255, 255, 255, 0.34);
+}
+.market-page .kline-tooltip {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(42, 52, 65, 0.1);
+  border-radius: 12px;
+}
+.market-page .ktooltip-date,
+.market-page .ktooltip-item {
+  color: var(--mk-soft);
+}
+.market-page .kline-period-btn {
+  border-radius: 999px;
+  border-color: var(--mk-line);
+  background: rgba(255, 255, 255, 0.44);
+}
+.market-page .kline-period-btn:hover,
+.market-page .kline-period-btn.active {
+  color: var(--mk-blue);
+  border-color: rgba(79, 121, 199, 0.28);
+  background: var(--mk-blue-soft);
 }
 
 /* ── 响应式 ── */

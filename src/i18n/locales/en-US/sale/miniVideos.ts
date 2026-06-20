@@ -1,0 +1,58 @@
+// Translations for src/views/sale/miniVideos.vue
+export default {
+  // Header
+  pageTitle: 'Videos · Management',
+  uploadBtn: '+ Upload Video',
+
+  // Table columns
+  colCover: 'Cover',
+  noCover: 'No Cover',
+  colTitle: 'Title',
+  colVideoUrl: 'Video Link',
+  previewLink: 'Preview',
+  colLike: 'Likes',
+  colComment: 'Comments',
+  colView: 'Views',
+  colSort: 'Sort',
+  colStatus: 'Status',
+  statusOnShelf: 'Published',
+  statusOffShelf: 'Unpublished',
+  colAction: 'Actions',
+  editBtn: 'Edit',
+  deleteBtn: 'Delete',
+
+  // Dialog
+  dialogTitleAdd: 'Upload Video',
+  dialogTitleEdit: 'Edit Video',
+  formTitle: 'Title',
+  titlePlaceholder: 'Video title',
+  formDesc: 'Description',
+  descPlaceholder: 'Short description',
+  formVideo: 'Video File',
+  currentVideo: 'Current video: click to preview',
+  reupload: 'Re-upload',
+  uploading: 'Uploading {progress}%',
+  selectVideo: 'Select Video File',
+  formCover: 'Cover Image',
+  reuploadCover: 'Re-upload',
+  uploadingCover: 'Uploading...',
+  selectCover: 'Select Cover Image',
+  formGoods: 'Link Product',
+  goodsPlaceholder: 'Select product (optional)',
+  formSort: 'Sort',
+  sortHint: 'Higher number = higher position',
+  formStatus: 'Status',
+  cancelBtn: 'Cancel',
+  saveBtn: 'Save',
+
+  // Messages
+  warnNoVideo: 'Please upload a video first',
+  successSave: 'Saved successfully',
+  successDelete: 'Deleted',
+  confirmDeleteTitle: 'Confirm',
+  confirmDeleteMsg: 'Delete "{title}"?',
+  errorCoverUpload: 'Cover upload failed',
+  errorUploadFailed: 'Upload failed',
+  errorParseResponse: 'Failed to parse response',
+  errorNetworkUpload: 'Upload failed, please check your network connection and retry',
+}

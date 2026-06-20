@@ -5,15 +5,15 @@
       <!-- 左侧分类面板 -->
       <div class="cate-panel">
         <div class="cate-header">
-          <span class="cate-title">供应商分类</span>
+          <span class="cate-title">{{ $t('procure.supplier.catePanelTitle') }}</span>
           <el-button :icon="Plus" size="small" circle @click="openCateForm()" />
         </div>
         <div class="cate-search">
-          <el-input v-model="cateKeyword" placeholder="搜索分类" clearable size="small" />
+          <el-input v-model="cateKeyword" :placeholder="$t('procure.supplier.cateSearchPlaceholder')" clearable size="small" />
         </div>
         <div class="cate-tree">
           <div class="cate-item" :class="{ active: selectedCateId === null }" @click="selectCate(null)">
-            全部
+            {{ $t('procure.supplier.cateAll') }}
           </div>
           <template v-for="item in filteredCates" :key="item.id">
             <div class="cate-item" :class="{ active: selectedCateId === item.id }" @click="selectCate(item.id)">
@@ -24,7 +24,7 @@
               </span>
             </div>
           </template>
-          <div v-if="filteredCates.length === 0" class="cate-empty">暂无分类</div>
+          <div v-if="filteredCates.length === 0" class="cate-empty">{{ $t('procure.supplier.cateEmpty') }}</div>
         </div>
       </div>
 
@@ -33,64 +33,64 @@
         <div class="sc-table">
           <!-- 搜索栏 -->
           <div class="sc-search">
-            <el-input v-model="keyword" placeholder="名称/手机号" clearable style="width:200px"
+            <el-input v-model="keyword" :placeholder="$t('procure.supplier.searchPlaceholder')" clearable style="width:200px"
               @keyup.enter="handleSearch" />
             <div class="search-actions">
-              <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-              <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+              <el-button type="primary" :icon="Search" @click="handleSearch">{{ $t('procure.supplier.btnSearch') }}</el-button>
+              <el-button :icon="Refresh" @click="handleReset">{{ $t('procure.supplier.btnReset') }}</el-button>
             </div>
           </div>
           <!-- 工具栏 -->
           <div class="sc-toolbar">
             <div class="toolbar-left">
-              <el-button type="primary" :icon="Plus" @click="openForm()">新增供应商</el-button>
+              <el-button type="primary" :icon="Plus" @click="openForm()">{{ $t('procure.supplier.btnAdd') }}</el-button>
             </div>
             <div class="toolbar-right">
               <el-upload :show-file-list="false" accept=".xlsx,.xls,.csv" :before-upload="handleImport" style="display:inline-block">
-                <el-button :icon="Upload" size="small">导入</el-button>
+                <el-button :icon="Upload" size="small">{{ $t('procure.supplier.btnImport') }}</el-button>
               </el-upload>
-              <el-button :icon="Download" size="small" @click="handleExport">导出</el-button>
+              <el-button :icon="Download" size="small" @click="handleExport">{{ $t('procure.supplier.btnExport') }}</el-button>
             </div>
           </div>
           <!-- 已选提示 -->
           <div v-if="selectedRows.length > 0" class="selected-bar">
-            已选 <strong>{{ selectedRows.length }}</strong> 条
-            <el-button type="primary" link size="small" @click="tableRef?.clearSelection()">取消选择</el-button>
+            {{ $t('procure.supplier.selectedCount') }} <strong>{{ selectedRows.length }}</strong> {{ $t('procure.supplier.selectedUnit') }}
+            <el-button type="primary" link size="small" @click="tableRef?.clearSelection()">{{ $t('procure.supplier.btnClearSelection') }}</el-button>
             <el-button type="danger" :icon="Delete" size="small" style="margin-left:auto" @click="handleBatchDelete">
-              批量删除({{ selectedRows.length }})
+              {{ $t('procure.supplier.btnBatchDelete') }}({{ selectedRows.length }})
             </el-button>
           </div>
           <!-- 表格 -->
           <el-table ref="tableRef" :data="filteredRows" v-loading="loading" border stripe style="width:100%"
             @selection-change="(v: any[]) => selectedRows = v">
             <el-table-column type="selection" width="50" align="center" />
-            <el-table-column prop="name" label="供应商名称" min-width="150" />
-            <el-table-column prop="contact" label="联系人" width="120" />
-            <el-table-column prop="mobile" label="手机号" width="130" />
-            <el-table-column label="供应商分类" width="120">
+            <el-table-column prop="name" :label="$t('procure.supplier.colSupplierName')" min-width="150" />
+            <el-table-column prop="contact" :label="$t('procure.supplier.colContact')" width="120" />
+            <el-table-column prop="mobile" :label="$t('procure.supplier.colMobile')" width="130" />
+            <el-table-column :label="$t('procure.supplier.colCategory')" width="120">
               <template #default="{ row }">
                 {{ getCateName(row.id) }}
               </template>
             </el-table-column>
-            <el-table-column prop="address" label="地址" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="bank" label="银行账户" min-width="160" show-overflow-tooltip />
-            <el-table-column label="欠款" width="110" align="right">
+            <el-table-column prop="address" :label="$t('procure.supplier.colAddress')" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="bank" :label="$t('procure.supplier.colBankAccount')" min-width="160" show-overflow-tooltip />
+            <el-table-column :label="$t('procure.supplier.colDebt')" width="110" align="right">
               <template #default="{ row }">
                 <span :style="getDebtBalance(row.id) > 0 ? 'color:#dc2626;font-weight:600' : getDebtBalance(row.id) < 0 ? 'color:#d97706;font-weight:600' : ''">
                   ¥{{ getDebtBalance(row.id).toFixed(2) }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="累计采购" width="110" align="right">
+            <el-table-column :label="$t('procure.supplier.colTotalPurchase')" width="110" align="right">
               <template #default="{ row }">
                 <span style="color:rgba(29,29,31,0.35)">¥{{ getTotalPurchase(row.id).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="160" fixed="right">
+            <el-table-column :label="$t('procure.supplier.colActions')" width="160" fixed="right">
               <template #default="{ row }">
-                <el-button type="success" size="small" link @click="openView(row)">查看</el-button>
-                <el-button type="primary" size="small" link @click="openForm(row)">编辑</el-button>
-                <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
+                <el-button type="success" size="small" link @click="openView(row)">{{ $t('procure.supplier.actionView') }}</el-button>
+                <el-button type="primary" size="small" link @click="openForm(row)">{{ $t('procure.supplier.actionEdit') }}</el-button>
+                <el-button type="danger" size="small" link @click="handleDelete(row.id)">{{ $t('procure.supplier.actionDelete') }}</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -116,15 +116,15 @@
       <el-form ref="formRef" :model="formData" label-width="90px" :disabled="isViewMode">
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="供应商名称" prop="name"
-              :rules="[{ required: true, message: '请输入供应商名称' }]">
-              <el-input v-model="formData.name" placeholder="请输入" />
+            <el-form-item :label="$t('procure.supplier.labelSupplierName')" prop="name"
+              :rules="[{ required: true, message: $t('procure.supplier.supplierNameRequired') }]">
+              <el-input v-model="formData.name" :placeholder="$t('procure.supplier.supplierNamePlaceholder')" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="供应商分类">
+            <el-form-item :label="$t('procure.supplier.labelCategory')">
               <div style="display:flex;gap:4px;width:100%">
-                <el-select v-model="formData.cate_id" placeholder="请选择" clearable style="flex:1">
+                <el-select v-model="formData.cate_id" :placeholder="$t('procure.supplier.categoryPlaceholder')" clearable style="flex:1">
                   <el-option v-for="c in cateOptions" :key="c.id" :label="c.name" :value="c.id" />
                 </el-select>
                 <el-button :icon="Plus" @click="openCateForm()" />
@@ -132,23 +132,23 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="联系人" prop="contact">
-              <el-input v-model="formData.contact" placeholder="请输入" />
+            <el-form-item :label="$t('procure.supplier.labelContact')" prop="contact">
+              <el-input v-model="formData.contact" :placeholder="$t('procure.supplier.contactPlaceholder')" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="手机号" prop="mobile">
-              <el-input v-model="formData.mobile" placeholder="请输入" />
+            <el-form-item :label="$t('procure.supplier.labelMobile')" prop="mobile">
+              <el-input v-model="formData.mobile" :placeholder="$t('procure.supplier.mobilePlaceholder')" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
-            <el-form-item label="地址" prop="address">
-              <el-input v-model="formData.address" placeholder="请输入" />
+            <el-form-item :label="$t('procure.supplier.labelAddress')" prop="address">
+              <el-input v-model="formData.address" :placeholder="$t('procure.supplier.addressPlaceholder')" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
-            <el-form-item label="备注" prop="remark">
-              <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入" />
+            <el-form-item :label="$t('procure.supplier.labelRemark')" prop="remark">
+              <el-input v-model="formData.remark" type="textarea" :rows="3" :placeholder="$t('procure.supplier.remarkPlaceholder')" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -156,35 +156,35 @@
 
       <!-- 财务信息（编辑模式显示） -->
       <div v-if="formData.id" class="finance-panel" v-loading="financeLoading">
-        <div class="finance-title">往来账目</div>
+        <div class="finance-title">{{ $t('procure.supplier.financePanelTitle') }}</div>
         <div class="finance-grid">
           <div class="finance-item">
-            <span class="fi-label">欠款金额</span>
+            <span class="fi-label">{{ $t('procure.supplier.financeDebt') }}</span>
             <span class="fi-value red">¥{{ financeInfo.debtBalance.toFixed(2) }}</span>
           </div>
           <div class="finance-item">
-            <span class="fi-label">累计采购</span>
+            <span class="fi-label">{{ $t('procure.supplier.financeTotalPurchase') }}</span>
             <span class="fi-value">¥{{ financeInfo.totalPurchase.toFixed(2) }}</span>
           </div>
           <div class="finance-item">
-            <span class="fi-label">累计付款</span>
+            <span class="fi-label">{{ $t('procure.supplier.financeTotalPaid') }}</span>
             <span class="fi-value green">¥{{ financeInfo.totalPaid.toFixed(2) }}</span>
           </div>
           <div class="finance-item">
-            <span class="fi-label">预付款</span>
+            <span class="fi-label">{{ $t('procure.supplier.financePrepaid') }}</span>
             <span class="fi-value orange">¥{{ financeInfo.prepaid.toFixed(2) }}</span>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <div v-if="formData.id && formData.create_time" class="create-time-note">创建时间：{{ formData.create_time }}</div>
-        <el-button @click="formVisible = false">关闭</el-button>
+        <div v-if="formData.id && formData.create_time" class="create-time-note">{{ $t('procure.supplier.createTimeNote') }}{{ formData.create_time }}</div>
+        <el-button @click="formVisible = false">{{ $t('procure.supplier.btnClose') }}</el-button>
         <template v-if="isViewMode">
-          <el-button type="primary" @click="isViewMode = false">编辑</el-button>
+          <el-button type="primary" @click="isViewMode = false">{{ $t('procure.supplier.btnStartEdit') }}</el-button>
         </template>
         <template v-else>
-          <el-button type="primary" :loading="formSaving" @click="handleSubmit">确定</el-button>
+          <el-button type="primary" :loading="formSaving" @click="handleSubmit">{{ $t('procure.supplier.btnConfirm') }}</el-button>
         </template>
       </template>
     </el-dialog>
@@ -192,25 +192,25 @@
     <!-- 分类新增/编辑弹框 -->
     <el-dialog v-model="cateFormVisible" :title="cateFormTitle" width="360px" append-to-body>
       <el-form label-width="90px">
-        <el-form-item label="分类名称">
-          <el-input v-model="cateFormName" placeholder="请输入分类名称" @keyup.enter="handleSaveCate" />
+        <el-form-item :label="$t('procure.supplier.labelCateName')">
+          <el-input v-model="cateFormName" :placeholder="$t('procure.supplier.cateNamePlaceholder')" @keyup.enter="handleSaveCate" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="cateFormVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveCate">确定</el-button>
+        <el-button @click="cateFormVisible = false">{{ $t('procure.supplier.btnCancel') }}</el-button>
+        <el-button type="primary" @click="handleSaveCate">{{ $t('procure.supplier.btnCateConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 导入预览弹框 -->
-    <el-dialog v-model="importDialogVisible" title="导入预览" width="70%" append-to-body>
-      <div style="margin-bottom:10px;font-size:13px;color:rgba(29,29,31,0.35)">共 {{ importPreviewData.length }} 条，确认后导入。</div>
+    <el-dialog v-model="importDialogVisible" :title="$t('procure.supplier.dialogImportTitle')" width="70%" append-to-body>
+      <div style="margin-bottom:10px;font-size:13px;color:rgba(29,29,31,0.35)">{{ importPreviewData.length }} {{ $t('procure.supplier.importPreviewCount') }}</div>
       <el-table :data="importPreviewData.slice(0, 10)" border size="small" max-height="320">
         <el-table-column v-for="col in (importPreviewData[0] ? Object.keys(importPreviewData[0]) : [])" :key="col" :prop="col" :label="col" min-width="120" show-overflow-tooltip />
       </el-table>
       <template #footer>
-        <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+        <el-button @click="importDialogVisible = false">{{ $t('procure.supplier.btnImportCancel') }}</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">{{ $t('procure.supplier.btnConfirmImport') }}</el-button>
       </template>
     </el-dialog>
 
@@ -219,6 +219,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, Edit, Delete, Search, Refresh, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getSupplierList, createSupplier, updateSupplier, deleteSupplier, getProcureOrderList, updateProcureOrder, getProcureInhouseList, updateProcureInhouse } from '@/api/procure'
@@ -226,6 +227,8 @@ import { getPayableList, getPayReceiptList } from '@/api/finance'
 import http from '@/api/http'
 import { readScopedJson, writeScopedJson } from '@/utils/storageScope'
 import * as XLSX from 'xlsx'
+
+const { t } = useI18n()
 
 // ── 本地分类（localStorage） ──────────────────────────────────────────────────
 const CATE_KEY = 'erp_supplier_cates'
@@ -283,6 +286,7 @@ async function loadSupplierFinance() {
     for (const r of payments) {
       const amt = Number(r.amount || 0)
       if (!amt) continue
+      if (/审核自动生成/.test(String(r.remark || ''))) continue
       const sn = String(r.order_sn || '').trim()
       const sup = String(r.supplier_name || r.contact_name || '').trim()
       let matched = false
@@ -296,8 +300,6 @@ async function loadSupplierFinance() {
         if (sup) paidMultiBySup[sup] = (paidMultiBySup[sup] || 0) + amt
         matched = true
       }
-      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
-      if (m2) { const s = m2[1].trim(); paidBySn[s] = (paidBySn[s] || 0) + amt; matched = true }
       if (!matched && sn && sup) paidByKey[`${sn}@@${sup}`] = (paidByKey[`${sn}@@${sup}`] || 0) + amt
     }
     // 按已审核采购单汇总每个供应商的已付金额
@@ -383,20 +385,20 @@ function getCateName(supplierId: number): string {
 
 // 分类新增/编辑
 const cateFormVisible = ref(false)
-const cateFormTitle = ref('新增分类')
+const cateFormTitle = ref('')
 const cateFormName = ref('')
 let editingCateId: number | null = null
 
 function openCateForm(row?: CateItem) {
   editingCateId = row ? row.id : null
   cateFormName.value = row ? row.name : ''
-  cateFormTitle.value = row ? '编辑分类' : '新增分类'
+  cateFormTitle.value = row ? t('procure.supplier.cateFormTitleEdit') : t('procure.supplier.cateFormTitleAdd')
   cateFormVisible.value = true
 }
 
 function handleSaveCate() {
   const name = cateFormName.value.trim()
-  if (!name) { ElMessage.warning('请输入分类名称'); return }
+  if (!name) { ElMessage.warning(t('procure.supplier.msgCateNameRequired')); return }
   const list = [...cateOptions.value]
   if (editingCateId !== null) {
     const idx = list.findIndex(c => c.id === editingCateId)
@@ -407,11 +409,11 @@ function handleSaveCate() {
   cateOptions.value = list
   saveCatesToStorage(list)
   cateFormVisible.value = false
-  ElMessage.success('操作成功')
+  ElMessage.success(t('procure.supplier.msgCateOpSuccess'))
 }
 
 function handleDeleteCate(id: number) {
-  ElMessageBox.confirm('确定删除该分类？已关联供应商的分类将被清除。', '提示', { type: 'warning' }).then(() => {
+  ElMessageBox.confirm(t('procure.supplier.msgCateDeleteConfirm'), t('procure.supplier.msgPrompt'), { type: 'warning' }).then(() => {
     const list = cateOptions.value.filter(c => c.id !== id)
     cateOptions.value = list
     saveCatesToStorage(list)
@@ -423,7 +425,7 @@ function handleDeleteCate(id: number) {
     saveCateMap(map)
     if (selectedCateId.value === id) selectCate(null)
     else { currentPage.value = 1; loadData() }
-    ElMessage.success('删除成功')
+    ElMessage.success(t('procure.supplier.msgDeleteSuccess'))
   })
 }
 
@@ -478,7 +480,7 @@ function handleReset() {
 // ── 供应商表单 ────────────────────────────────────────────────────────────────
 const formVisible = ref(false)
 const isViewMode = ref(false)
-const formTitle = ref('新增供应商')
+const formTitle = ref('')
 const formSaving = ref(false)
 const formRef = ref()
 let originalSupplierName = ''
@@ -488,7 +490,7 @@ const formData = reactive<any>({
 
 function openView(row: any) {
   isViewMode.value = true
-  formTitle.value = '查看供应商'
+  formTitle.value = t('procure.supplier.formTitleView')
   const nextData = {
     id: 0,
     name: '',
@@ -509,7 +511,7 @@ function openView(row: any) {
 function openForm(row?: any) {
   originalSupplierName = row?.name || ''
   isViewMode.value = false
-  formTitle.value = row ? '编辑供应商' : '新增供应商'
+  formTitle.value = row ? t('procure.supplier.formTitleEdit') : t('procure.supplier.formTitleAdd')
   const nextData = {
     id: 0,
     name: '',
@@ -579,48 +581,53 @@ async function handleSubmit() {
       cateMap.value = map
       saveCateMap(map)
     }
-    ElMessage.success('操作成功')
+    ElMessage.success(t('procure.supplier.msgOpSuccess'))
     formVisible.value = false
     loadData()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '操作失败')
+    ElMessage.error(e?.message ?? t('procure.supplier.msgOpFailed'))
   } finally {
     formSaving.value = false
   }
 }
 
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定删除该供应商吗？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('procure.supplier.msgDeleteConfirm'), t('procure.supplier.msgPrompt'), { type: 'warning' })
   await deleteSupplier(id)
   const map = { ...cateMap.value }
   delete map[id]
   cateMap.value = map
   saveCateMap(map)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('procure.supplier.msgDeleteSuccess'))
   loadData()
 }
 
 async function handleBatchDelete() {
   const ids = selectedRows.value.map((r: any) => r.id).filter(Boolean)
   if (!ids.length) return
-  await ElMessageBox.confirm(`确定删除选中的 ${ids.length} 个供应商吗？`, '批量删除', { type: 'warning' })
+  await ElMessageBox.confirm(`${t('procure.supplier.msgBatchDeleteConfirmPrefix')} ${ids.length} ${t('procure.supplier.msgBatchDeleteConfirmSuffix')}`, t('procure.supplier.msgBatchDeleteTitle'), { type: 'warning' })
   await http.post('/procure/supplier/batchDel', { ids })
-  ElMessage.success(`已删除 ${ids.length} 个供应商`)
+  ElMessage.success(`${t('procure.supplier.msgBatchDeleteSuccess')} ${ids.length} ${t('procure.supplier.msgBatchDeleteSuccessSuffix')}`)
   selectedRows.value = []
   loadData()
 }
 
 function handleExport() {
   const rows = allRows.value
-  if (!rows.length) { ElMessage.warning('暂无数据可导出'); return }
+  if (!rows.length) { ElMessage.warning(t('procure.supplier.msgNoDataExport')); return }
   const data = rows.map(r => ({
-    '供应商名称': r.name, '供应商分类': getCateName(r.id), '联系人': r.contact, '手机号': r.mobile,
-    '地址': r.address, '银行账户': r.bank, '备注': r.remark,
+    [t('procure.supplier.exportSupplierName')]: r.name,
+    [t('procure.supplier.exportCategory')]: getCateName(r.id),
+    [t('procure.supplier.exportContact')]: r.contact,
+    [t('procure.supplier.exportMobile')]: r.mobile,
+    [t('procure.supplier.exportAddress')]: r.address,
+    [t('procure.supplier.exportBank')]: r.bank,
+    [t('procure.supplier.exportRemark')]: r.remark,
   }))
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Sheet1')
-  XLSX.writeFile(wb, `供应商列表_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
-  ElMessage.success(`已导出 ${rows.length} 条数据`)
+  XLSX.writeFile(wb, `${t('procure.supplier.exportFilePrefix')}${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+  ElMessage.success(`${t('procure.supplier.msgExportSuccess')} ${rows.length} ${t('procure.supplier.msgExportSuccessSuffix')}`)
 }
 
 const importDialogVisible = ref(false)
@@ -633,7 +640,7 @@ function handleImport(file: File): boolean {
     const data = new Uint8Array(e.target!.result as ArrayBuffer)
     const wb = XLSX.read(data, { type: 'array' })
     const json: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
-    if (!json.length) { ElMessage.warning('Excel文件无数据'); return }
+    if (!json.length) { ElMessage.warning(t('procure.supplier.msgExcelEmpty')); return }
     importPreviewData.value = json
     importDialogVisible.value = true
   }
@@ -689,9 +696,9 @@ async function confirmImport() {
   saveCateMap(updatedMap)
   importLoading.value = false
   importDialogVisible.value = false
-  const msgs = [`导入完成：成功 ${success} 条`]
-  if (failed > 0) msgs[0] += `，失败 ${failed} 条`
-  if (newCateCount > 0) msgs.push(`自动新建 ${newCateCount} 个分类`)
+  const msgs = [`${t('procure.supplier.msgImportDonePrefix')} ${success} ${t('procure.supplier.msgImportDoneUnit')}`]
+  if (failed > 0) msgs[0] += `${t('procure.supplier.msgImportDoneFailed')} ${failed} ${t('procure.supplier.msgImportDoneUnit')}`
+  if (newCateCount > 0) msgs.push(`${t('procure.supplier.msgImportNewCate')} ${newCateCount} ${t('procure.supplier.msgImportNewCateSuffix')}`)
   ElMessage.success(msgs.join('；'))
   loadData()
 }

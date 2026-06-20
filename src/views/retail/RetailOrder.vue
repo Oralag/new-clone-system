@@ -3,40 +3,40 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="filteredApi"
           :batch-del-api="batchDelRetailOrders"
-          export-file-name="零售订单" :params="searchForm" @reset="onSearchReset"
+          :export-file-name="$t('retail.retailOrder.exportFileName')" :params="searchForm" @reset="onSearchReset"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''"
-          :export-columns="{ order_no: '订单编号', member_name: '会员名称', store_name: '门店', order_date: '日期', total_amount: '商品合计', discount_amount: '折扣', pay_amount: '实付金额', pay_method: '支付方式', status: '状态' }">
+          :export-columns="{ order_no: $t('retail.retailOrder.colOrderNo'), member_name: $t('retail.retailOrder.colMember'), store_name: $t('retail.retailOrder.colStore'), order_date: $t('retail.retailOrder.colDate'), total_amount: $t('retail.retailOrder.colGoodsTotal'), discount_amount: $t('retail.retailOrder.colDiscount'), pay_amount: $t('retail.retailOrder.colPaid'), pay_method: $t('retail.retailOrder.colPayMethod'), status: $t('retail.retailOrder.colStatus') }">
         <template #search>
-          <el-input v-model="searchForm.order_no" placeholder="订单编号" clearable style="width:160px" />
-          <el-input v-model="searchForm.goods_name" placeholder="商品名称" clearable style="width:140px" />
-          <el-input v-model="searchForm.member_name" placeholder="会员名称" clearable style="width:140px" />
-          <el-select v-model="searchForm.store_id" placeholder="门店" clearable style="width:130px">
+          <el-input v-model="searchForm.order_no" :placeholder="$t('retail.retailOrder.searchOrderNo')" clearable style="width:160px" />
+          <el-input v-model="searchForm.goods_name" :placeholder="$t('retail.retailOrder.searchGoodsName')" clearable style="width:140px" />
+          <el-input v-model="searchForm.member_name" :placeholder="$t('retail.retailOrder.searchMemberName')" clearable style="width:140px" />
+          <el-select v-model="searchForm.store_id" :placeholder="$t('retail.retailOrder.searchStore')" clearable style="width:130px">
             <el-option v-for="s in storeList" :key="s.id" :label="s.name" :value="s.id" />
           </el-select>
-          <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" placeholder="核对状态">
-            <el-option label="未核对" value="unreconciled" />
+          <el-select v-model="searchForm.reconcile_filter" clearable style="width:100px" :placeholder="$t('retail.retailOrder.searchReconcile')">
+            <el-option :label="$t('retail.retailOrder.searchUnreconciled')" value="unreconciled" />
           </el-select>
-          <el-date-picker :key="datePickerKey" v-model="dateRange" type="daterange" range-separator="至"
-            start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
+          <el-date-picker :key="datePickerKey" v-model="dateRange" type="daterange" :range-separator="$t('retail.retailOrder.searchDateSep')"
+            :start-placeholder="$t('retail.retailOrder.searchDateStart')" :end-placeholder="$t('retail.retailOrder.searchDateEnd')" value-format="YYYY-MM-DD"
             style="width:240px" unlink-panels :shortcuts="dateShortcuts" @change="onDateChange" />
-          <el-input v-model="searchForm.min_amount" placeholder="最低金额" clearable style="width:110px" type="number" />
+          <el-input v-model="searchForm.min_amount" :placeholder="$t('retail.retailOrder.searchMinAmount')" clearable style="width:110px" type="number" />
           <span style="color:rgba(29,29,31,0.35);font-size:13px">—</span>
-          <el-input v-model="searchForm.max_amount" placeholder="最高金额" clearable style="width:110px" type="number" />
+          <el-input v-model="searchForm.max_amount" :placeholder="$t('retail.retailOrder.searchMaxAmount')" clearable style="width:110px" type="number" />
         </template>
         <template #toolbar>
-          <el-button type="primary" :icon="Plus" @click="openForm()">新增订单</el-button>
+          <el-button type="primary" :icon="Plus" @click="openForm()">{{ $t('retail.retailOrder.addOrder') }}</el-button>
         </template>
         <el-table-column type="expand">
           <template #default="{ row }">
             <div style="padding:8px 48px 12px">
               <el-table :data="parseGoods(row.goods_info)" size="small" border style="width:100%">
-                <el-table-column prop="goods_name" label="商品名称" min-width="140" />
-                <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-                <el-table-column prop="num" label="数量" width="80" align="right" />
-                <el-table-column label="单价" width="100" align="right">
+                <el-table-column prop="goods_name" :label="$t('retail.retailOrder.colGoodsName')" min-width="140" />
+                <el-table-column prop="unit_name" :label="$t('retail.retailOrder.colUnit')" width="70" align="center" />
+                <el-table-column prop="num" :label="$t('retail.retailOrder.colQty')" width="80" align="right" />
+                <el-table-column :label="$t('retail.retailOrder.colUnitPrice')" width="100" align="right">
                   <template #default="{ row: item }">¥{{ Number(item.price).toFixed(2) }}</template>
                 </el-table-column>
-                <el-table-column label="小计" width="100" align="right">
+                <el-table-column :label="$t('retail.retailOrder.colSubtotal')" width="100" align="right">
                   <template #default="{ row: item }">
                     <span style="color:#0071e3">¥{{ (Number(item.num) * Number(item.price)).toFixed(2) }}</span>
                   </template>
@@ -45,139 +45,139 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column label="订单编号" min-width="160">
+        <el-table-column type="index" :label="$t('retail.retailOrder.colIndex')" width="60" align="center" />
+        <el-table-column :label="$t('retail.retailOrder.colOrderNo')" min-width="160">
           <template #default="{ row }">{{ row.order_sn || `LS${(row.order_date || row.created_at || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3,'0')}` }}</template>
         </el-table-column>
-        <el-table-column prop="member_name" label="会员名称" min-width="100" />
-        <el-table-column prop="store_name" label="门店" min-width="100" />
-        <el-table-column prop="total_amount" label="商品合计" width="110" align="right">
+        <el-table-column prop="member_name" :label="$t('retail.retailOrder.colMember')" min-width="100" />
+        <el-table-column prop="store_name" :label="$t('retail.retailOrder.colStore')" min-width="100" />
+        <el-table-column prop="total_amount" :label="$t('retail.retailOrder.colGoodsTotal')" width="110" align="right">
           <template #default="{ row }">¥{{ Number(row.total_amount).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column prop="discount_amount" label="折扣/加价" width="100" align="right">
+        <el-table-column prop="discount_amount" :label="$t('retail.retailOrder.colDiscount')" width="100" align="right">
           <template #default="{ row }">
             <span :style="Number(row.discount_amount) > 0 ? 'color:#67c23a' : Number(row.discount_amount) < 0 ? 'color:#f56c6c' : ''">
               {{ Number(row.discount_amount) > 0 ? '-' : Number(row.discount_amount) < 0 ? '+' : '' }}¥{{ Math.abs(Number(row.discount_amount || 0)).toFixed(2) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="pay_amount" label="实付金额" width="110" align="right">
+        <el-table-column prop="pay_amount" :label="$t('retail.retailOrder.colPaid')" width="110" align="right">
           <template #default="{ row }">
             <span style="color:#0071e3;font-weight:600">¥{{ Number(row.pay_amount).toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="pay_method" label="支付方式" width="100" align="center" />
-        <el-table-column label="订单日期" width="160">
+        <el-table-column prop="pay_method" :label="$t('retail.retailOrder.colPayMethod')" width="100" align="center" />
+        <el-table-column :label="$t('retail.retailOrder.colDate')" width="160">
           <template #default="{ row }">{{ fmtOrderDate(row) }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
+        <el-table-column :label="$t('retail.retailOrder.colStatus')" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 0 ? 'warning' : 'success'" size="small">
-              {{ row.status === 0 ? '未审核' : '已审核' }}
+              {{ row.status === 0 ? $t('retail.retailOrder.statusPending') : $t('retail.retailOrder.statusAudited') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="附加费用" width="220" align="right">
+        <el-table-column :label="$t('retail.retailOrder.colFees')" width="220" align="right">
           <template #default="{ row }">
             <template v-if="getFeeItemsForRow(row).length > 0">
               <div v-for="(fee, idx) in getFeeItemsForRow(row)" :key="idx" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;line-height:1.6">
                 <span style="font-size:11px;color:rgba(29,29,31,0.5)">{{ fee.name }}</span>
                 <span style="color:#8b5cf6;font-weight:600">¥{{ Number(fee.amount).toFixed(2) }}</span>
                 <el-tag :type="getFeeItemPayStatus(row, idx).type" size="small">{{ getFeeItemPayStatus(row, idx).label }}</el-tag>
-                <el-button v-if="getFeeItemPayStatus(row, idx).label === '待付'" type="warning" link size="small" style="font-size:11px;padding:0" @click="openFeePayDialog(row, idx)">付款</el-button>
+                <el-button v-if="getFeeItemPayStatus(row, idx).status === 'pending'" type="warning" link size="small" style="font-size:11px;padding:0" @click="openFeePayDialog(row, idx)">{{ $t('retail.retailOrder.feeManagePayBtn') }}</el-button>
               </div>
             </template>
             <span v-else style="color:rgba(29,29,31,0.2)">—</span>
             <div v-if="row.status === 1 && getFeeItemsForRow(row).length === 0" style="margin-top:2px;text-align:right">
-              <el-button type="primary" link size="small" style="font-size:11px;padding:0" @click="openFeeManageDialog(row)">+ 补充费用</el-button>
+              <el-button type="primary" link size="small" style="font-size:11px;padding:0" @click="openFeeManageDialog(row)">{{ $t('retail.retailOrder.supplementFee') }}</el-button>
             </div>
             <div v-if="row.status === 1 && getFeeItemsForRow(row).length > 0" style="margin-top:2px;text-align:right">
-              <el-button type="primary" link size="small" style="font-size:11px;padding:0" @click="openFeeManageDialog(row)">管理费用</el-button>
+              <el-button type="primary" link size="small" style="font-size:11px;padding:0" @click="openFeeManageDialog(row)">{{ $t('retail.retailOrder.manageFee') }}</el-button>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column :label="$t('retail.retailOrder.colOperation')" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">审核</el-button>
-            <el-button v-else type="warning" link size="small" @click="handleAudit(row, 0)">反审核</el-button>
-            <el-button v-if="row.status === 0" type="success" link size="small" @click="openForm(row)">编辑</el-button>
-            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? '已核对' : '核对' }}</el-button>
-            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
+            <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">{{ $t('retail.retailOrder.audit') }}</el-button>
+            <el-button v-else type="warning" link size="small" @click="handleAudit(row, 0)">{{ $t('retail.retailOrder.unaudit') }}</el-button>
+            <el-button v-if="row.status === 0" type="success" link size="small" @click="openForm(row)">{{ $t('retail.retailOrder.edit') }}</el-button>
+            <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('retail.retailOrder.reconciled') : $t('retail.retailOrder.reconcile') }}</el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">{{ $t('retail.retailOrder.delete') }}</el-button>
           </template>
         </el-table-column>
       </ScTable>
       <div v-if="filteredRows.length" style="display:flex;gap:24px;padding:10px 4px 0;font-size:13px;color:#666;border-top:1px solid #f0f0f0;margin-top:2px">
-        <span>共 <b>{{ summary.count }}</b> 单</span>
-        <span>商品合计：<b>¥{{ summary.total_amount.toFixed(2) }}</b></span>
-        <span>折扣合计：<b :style="summary.discount_amount > 0 ? 'color:#67c23a' : summary.discount_amount < 0 ? 'color:#f56c6c' : ''">{{ summary.discount_amount > 0 ? '-' : summary.discount_amount < 0 ? '+' : '' }}¥{{ Math.abs(summary.discount_amount).toFixed(2) }}</b></span>
-        <span>实付合计：<b style="color:#0071e3;font-size:14px">¥{{ summary.pay_amount.toFixed(2) }}</b></span>
+        <span>{{ $t('retail.retailOrder.summaryCount', { count: summary.count }) }}</span>
+        <span>{{ $t('retail.retailOrder.summaryGoodsTotal') }}：<b>¥{{ summary.total_amount.toFixed(2) }}</b></span>
+        <span>{{ $t('retail.retailOrder.summaryDiscount') }}：<b :style="summary.discount_amount > 0 ? 'color:#67c23a' : summary.discount_amount < 0 ? 'color:#f56c6c' : ''">{{ summary.discount_amount > 0 ? '-' : summary.discount_amount < 0 ? '+' : '' }}¥{{ Math.abs(summary.discount_amount).toFixed(2) }}</b></span>
+        <span>{{ $t('retail.retailOrder.summaryPaid') }}：<b style="color:#0071e3;font-size:14px">¥{{ summary.pay_amount.toFixed(2) }}</b></span>
       </div>
     </el-card>
 
-    <!-- 新增/编辑订单抽屉 -->
-    <el-drawer v-model="drawerVisible" :title="editId ? '编辑零售订单' : '新增零售订单'" size="720px" destroy-on-close>
+    <!-- Add / Edit order drawer -->
+    <el-drawer v-model="drawerVisible" :title="editId ? $t('retail.retailOrder.drawerEditTitle') : $t('retail.retailOrder.drawerAddTitle')" size="720px" destroy-on-close>
       <el-form ref="formRef" :model="form" label-width="90px" style="padding:0 4px">
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="门店" prop="store_id">
-              <el-select v-model="form.store_id" placeholder="选择门店（可选）" clearable filterable style="width:100%"
+            <el-form-item :label="$t('retail.retailOrder.formStore')" prop="store_id">
+              <el-select v-model="form.store_id" :placeholder="$t('retail.retailOrder.formStorePlaceholder')" clearable filterable style="width:100%"
                 @change="onStoreChange">
                 <el-option v-for="s in storeList" :key="s.id" :label="s.name" :value="s.id" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="会员" prop="member_id">
-              <el-select v-model="form.member_id" placeholder="选择会员（可选）" clearable filterable style="width:100%"
+            <el-form-item :label="$t('retail.retailOrder.formMember')" prop="member_id">
+              <el-select v-model="form.member_id" :placeholder="$t('retail.retailOrder.formMemberPlaceholder')" clearable filterable style="width:100%"
                 @change="onMemberChange">
                 <el-option v-for="m in memberList" :key="m.id" :label="`${m.name} ${m.mobile}`" :value="m.id" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="订单日期" prop="order_date">
+            <el-form-item :label="$t('retail.retailOrder.formOrderDate')" prop="order_date">
               <el-date-picker v-model="form.order_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="支付方式" prop="pay_method">
+            <el-form-item :label="$t('retail.retailOrder.formPayMethod')" prop="pay_method">
               <el-select v-model="form.pay_method" style="width:100%">
-                <el-option label="现金" value="cash" />
-                <el-option label="微信" value="wechat" />
-                <el-option label="支付宝" value="alipay" />
-                <el-option label="会员余额" value="balance" />
-                <el-option label="银行卡" value="card" />
+                <el-option :label="$t('retail.retailOrder.payMethodCash')" value="cash" />
+                <el-option :label="$t('retail.retailOrder.payMethodWechat')" value="wechat" />
+                <el-option :label="$t('retail.retailOrder.payMethodAlipay')" value="alipay" />
+                <el-option :label="$t('retail.retailOrder.payMethodBalance')" value="balance" />
+                <el-option :label="$t('retail.retailOrder.payMethodCard')" value="card" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="备注">
-              <el-input v-model="form.remark" placeholder="备注" />
+            <el-form-item :label="$t('retail.retailOrder.formRemark')">
+              <el-input v-model="form.remark" :placeholder="$t('retail.retailOrder.formRemarkPlaceholder')" />
             </el-form-item>
           </el-col>
         </el-row>
 
-        <!-- 商品明细 -->
+        <!-- Goods section -->
         <div style="margin:8px 0 10px;display:flex;align-items:center;justify-content:space-between">
-          <span style="font-weight:600;font-size:13px">商品明细</span>
-          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">添加商品</el-button>
+          <span style="font-weight:600;font-size:13px">{{ $t('retail.retailOrder.formGoodsSection') }}</span>
+          <el-button type="primary" size="small" :icon="Plus" @click="goodsSelectRef?.open()">{{ $t('retail.retailOrder.formAddGoods') }}</el-button>
         </div>
-        <el-table :data="form.items" border size="small" empty-text="请添加商品">
-          <el-table-column prop="goods_name" label="商品" min-width="130" />
-          <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-          <el-table-column label="数量" width="100">
+        <el-table :data="form.items" border size="small" :empty-text="$t('retail.retailOrder.formEmptyGoods')">
+          <el-table-column prop="goods_name" :label="$t('retail.retailOrder.colGoodsName')" min-width="130" />
+          <el-table-column prop="unit_name" :label="$t('retail.retailOrder.colUnit')" width="70" align="center" />
+          <el-table-column :label="$t('retail.retailOrder.colQty')" width="100">
             <template #default="{ row }">
               <el-input-number v-model="row.num" :min="1" size="small" controls-position="right"
                 style="width:90px" @change="calcFormTotal" />
             </template>
           </el-table-column>
-          <el-table-column label="单价" width="110">
+          <el-table-column :label="$t('retail.retailOrder.colUnitPrice')" width="110">
             <template #default="{ row }">
               <el-input-number v-model="row.price" :min="0" :precision="2" size="small"
                 controls-position="right" style="width:100px" @change="calcFormTotal" />
             </template>
           </el-table-column>
-          <el-table-column label="小计" width="90" align="right">
+          <el-table-column :label="$t('retail.retailOrder.colSubtotal')" width="90" align="right">
             <template #default="{ row }">
               <span style="color:#0071e3">¥{{ (row.num * row.price).toFixed(2) }}</span>
             </template>
@@ -190,156 +190,141 @@
         </el-table>
 
         <div style="display:flex;justify-content:flex-end;gap:20px;padding:10px 4px;font-size:13px">
-          <span>合计：<b>¥{{ form.total_amount.toFixed(2) }}</b></span>
-          <span>折扣：<el-input-number v-model="form.discount_amount" :precision="2" size="small"
+          <span>{{ $t('retail.retailOrder.formTotal') }}：<b>¥{{ form.total_amount.toFixed(2) }}</b></span>
+          <span>{{ $t('retail.retailOrder.formDiscount') }}：<el-input-number v-model="form.discount_amount" :precision="2" size="small"
             controls-position="right" style="width:100px" @change="calcFormTotal" /></span>
-          <span>实付：<b style="color:#dc2626;font-size:15px">¥{{ form.pay_amount.toFixed(2) }}</b></span>
+          <span>{{ $t('retail.retailOrder.formPaid') }}：<b style="color:#dc2626;font-size:15px">¥{{ form.pay_amount.toFixed(2) }}</b></span>
         </div>
 
-        <!-- 附加费用 -->
+        <!-- Additional fees -->
         <div style="margin-top:4px;border-top:1px dashed #e5e7eb;padding-top:10px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <span style="font-size:13px;color:rgba(29,29,31,0.6)">附加费用（可选）</span>
-            <el-button type="primary" link size="small" :icon="Plus" @click="form.fee_items.push({ name: '运费', amount: 0, bearer: 'buyer' })">添加费用项</el-button>
+            <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ $t('retail.retailOrder.formFeeSection') }}</span>
+            <el-button type="primary" link size="small" :icon="Plus" @click="form.fee_items.push({ name: '运费', amount: 0, bearer: 'buyer' })">{{ $t('retail.retailOrder.formAddFee') }}</el-button>
           </div>
           <div v-for="(fee, idx) in form.fee_items" :key="idx" style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-            <el-select v-model="fee.name" size="small" style="width:120px" filterable allow-create default-first-option placeholder="费用类型">
-              <el-option label="运费" value="运费" />
-              <el-option label="装卸费" value="装卸费" />
-              <el-option label="检测费" value="检测费" />
-              <el-option label="包装费" value="包装费" />
-              <el-option label="仓储费" value="仓储费" />
-              <el-option label="其他费用" value="其他费用" />
+            <el-select v-model="fee.name" size="small" style="width:120px" filterable allow-create default-first-option :placeholder="$t('retail.retailOrder.formFeeTypePlaceholder')">
+              <el-option :label="$t('retail.retailOrder.formFeeShipping')" value="运费" />
+              <el-option :label="$t('retail.retailOrder.formFeeHandling')" value="装卸费" />
+              <el-option :label="$t('retail.retailOrder.formFeeInspection')" value="检测费" />
+              <el-option :label="$t('retail.retailOrder.formFeePackaging')" value="包装费" />
+              <el-option :label="$t('retail.retailOrder.formFeeStorage')" value="仓储费" />
+              <el-option :label="$t('retail.retailOrder.formFeeOther')" value="其他费用" />
             </el-select>
-            <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:110px" placeholder="金额" />
-            <el-select v-model="fee.bearer" size="small" style="width:110px">
-              <el-option label="我方承担" value="buyer" />
-              <el-option label="客户承担" value="seller" />
-              <el-option label="各半" value="half" />
-              <el-option label="免费" value="free" />
-            </el-select>
+            <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:110px" :placeholder="$t('retail.retailOrder.formFeeAmountPlaceholder')" />
+            <span style="font-size:12px;color:rgba(29,29,31,0.5);width:70px">{{ $t('retail.retailOrder.formFeeOurBear') }}</span>
             <el-button type="danger" link :icon="Delete" size="small" @click="form.fee_items.splice(idx, 1)" />
           </div>
         </div>
       </el-form>
 
       <template #footer>
-        <el-button @click="drawerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+        <el-button @click="drawerVisible = false">{{ $t('retail.retailOrder.cancel') }}</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('retail.retailOrder.save') }}</el-button>
       </template>
     </el-drawer>
 
     <GoodsSelect ref="goodsSelectRef" @confirm="onGoodsConfirm" />
 
-    <!-- 附加费用管理弹窗 -->
-    <el-dialog v-model="feeManageVisible" :title="feeManageRow?.status === 1 ? '查看/付款附加费用' : '管理附加费用'" width="620px" append-to-body>
+    <!-- Additional fees management dialog -->
+    <el-dialog v-model="feeManageVisible" :title="feeManageRow?.status === 1 ? $t('retail.retailOrder.feeManageTitle') : $t('retail.retailOrder.feeManageTitle2')" width="620px" append-to-body>
       <div style="margin-bottom:8px;font-size:13px;color:rgba(29,29,31,0.5)">
         {{ feeManageRow?.order_sn || `LS${(feeManageRow?.order_date||'').slice(0,10).replace(/-/g,'')}${String(feeManageRow?.id||'').padStart(3,'0')}` }}
         <template v-if="feeManageRow?.member_name"> · {{ feeManageRow?.member_name }}</template>
       </div>
 
-      <!-- 已审核：只读模式，只能付款不能改费用 -->
-      <template v-if="feeManageRow?.status === 1">
-        <el-alert v-if="!feeManageItems.length" title="暂无附加费用，如需添加请先反审核" type="info" :closable="false" show-icon style="margin-bottom:8px" />
-        <div v-for="(fee, idx) in feeManageItems" :key="idx" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:#fafafa;border-radius:6px">
-          <span style="font-size:13px;font-weight:600;min-width:80px">{{ fee.name }}</span>
-          <span style="color:#8b5cf6;font-weight:700">¥{{ Number(fee.amount).toFixed(2) }}</span>
-          <span style="font-size:12px;color:rgba(29,29,31,0.4)">{{ fee.bearer === 'buyer' ? '我方承担' : fee.bearer === 'seller' ? '客户承担' : fee.bearer === 'half' ? '各半' : '免费' }}</span>
+      <!-- Fee list (all editable; paid fees cannot be deleted) -->
+      <div v-for="(fee, idx) in feeManageItems" :key="idx" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <el-select v-model="fee.name" size="small" style="width:130px" filterable allow-create default-first-option :placeholder="$t('retail.retailOrder.formFeeTypePlaceholder')"
+          :disabled="getFeeItemPayStatus(feeManageRow, idx).status === 'paid'">
+          <el-option :label="$t('retail.retailOrder.formFeeShipping')" value="运费" />
+          <el-option :label="$t('retail.retailOrder.formFeeHandling')" value="装卸费" />
+          <el-option :label="$t('retail.retailOrder.formFeeInspection')" value="检测费" />
+          <el-option :label="$t('retail.retailOrder.formFeePackaging')" value="包装费" />
+          <el-option :label="$t('retail.retailOrder.formFeeStorage')" value="仓储费" />
+          <el-option :label="$t('retail.retailOrder.formFeeOther')" value="其他费用" />
+        </el-select>
+        <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:120px" :placeholder="$t('retail.retailOrder.formFeeAmountPlaceholder')"
+          :disabled="getFeeItemPayStatus(feeManageRow, idx).status === 'paid'" />
+        <span style="font-size:12px;color:rgba(29,29,31,0.5);width:55px">{{ $t('retail.retailOrder.formFeeOurBear') }}</span>
+        <template v-if="feeManageRow?.status === 1">
           <el-tag :type="getFeeItemPayStatus(feeManageRow, idx).type" size="small">{{ getFeeItemPayStatus(feeManageRow, idx).label }}</el-tag>
-          <el-button v-if="getFeeItemPayStatus(feeManageRow, idx).label === '待付'" type="warning" link size="small" @click="openFeeManagePay(idx)">付款</el-button>
-        </div>
-        <div v-if="feeManageItems.length" style="font-size:12px;color:rgba(29,29,31,0.35);margin-top:4px">如需修改费用项，请先执行反审核</div>
-      </template>
-
-      <!-- 未审核：可编辑模式 -->
-      <template v-else>
-        <div v-for="(fee, idx) in feeManageItems" :key="idx" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          <el-select v-model="fee.name" size="small" style="width:130px" filterable allow-create default-first-option placeholder="费用类型">
-            <el-option label="运费" value="运费" />
-            <el-option label="装卸费" value="装卸费" />
-            <el-option label="检测费" value="检测费" />
-            <el-option label="包装费" value="包装费" />
-            <el-option label="仓储费" value="仓储费" />
-            <el-option label="其他费用" value="其他费用" />
-          </el-select>
-          <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:120px" placeholder="金额" />
-          <el-select v-model="fee.bearer" size="small" style="width:110px">
-            <el-option label="我方承担" value="buyer" />
-            <el-option label="客户承担" value="seller" />
-            <el-option label="各半" value="half" />
-            <el-option label="免费" value="free" />
-          </el-select>
-          <el-button type="danger" link :icon="Delete" size="small" @click="removeFeeManageItem(idx)" />
-        </div>
-        <el-button type="primary" link size="small" :icon="Plus" @click="feeManageItems.push({ name: '运费', amount: 0, bearer: 'buyer' })">
-          添加费用项
-        </el-button>
-      </template>
+          <el-button v-if="getFeeItemPayStatus(feeManageRow, idx).status === 'pending'" type="warning" link size="small" @click="openFeeManagePay(idx)">{{ $t('retail.retailOrder.feeManagePayBtn') }}</el-button>
+        </template>
+        <el-button
+          v-if="getFeeItemPayStatus(feeManageRow, idx).status !== 'paid'"
+          type="danger" link :icon="Delete" size="small"
+          @click="removeFeeManageItem(idx)"
+        />
+      </div>
+      <el-button type="primary" link size="small" :icon="Plus" @click="feeManageItems.push({ name: '运费', amount: 0, bearer: 'buyer' })">
+        {{ $t('retail.retailOrder.formAddFee') }}
+      </el-button>
       <div v-if="feeManagePayIndex >= 0" style="margin-top:12px;padding:12px;background:#f9f9f9;border-radius:6px;border:1px solid #e5e7eb">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;font-weight:600">
-          <span>{{ feePayForm.feeName }}付款</span>
-          <el-button link size="small" @click="feeManagePayIndex = -1">收起</el-button>
+          <span>{{ $t('retail.retailOrder.feePayTitle', { name: feePayForm.feeName }) }}</span>
+          <el-button link size="small" @click="feeManagePayIndex = -1">{{ $t('retail.retailOrder.feeManageCollapseBtn') }}</el-button>
         </div>
         <el-form :model="feePayForm" label-width="90px">
-          <el-form-item label="费用金额">
+          <el-form-item :label="$t('retail.retailOrder.feePayAmount')">
             <span style="font-size:15px;font-weight:700;color:#8b5cf6">¥{{ feePayForm.amount.toFixed(2) }}</span>
           </el-form-item>
-          <el-form-item label="付款账户">
-            <el-select v-model="feePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onFeePayFundChange">
+          <el-form-item :label="$t('retail.retailOrder.feePayAccount')">
+            <el-select v-model="feePayForm.fund_id" :placeholder="$t('retail.retailOrder.feePayAccountPlaceholder')" filterable style="width:100%" @change="onFeePayFundChange">
               <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="付款对象">
-            <el-input v-model="feePayForm.contact_name" placeholder="可选，如：快递公司等" clearable />
+          <el-form-item :label="$t('retail.retailOrder.feePayContact')">
+            <el-input v-model="feePayForm.contact_name" :placeholder="$t('retail.retailOrder.feePayContactPlaceholder')" clearable />
           </el-form-item>
-          <el-form-item label="付款日期">
+          <el-form-item :label="$t('retail.retailOrder.feePayDate')">
             <el-date-picker v-model="feePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
           </el-form-item>
-          <el-form-item label="备注">
-            <el-input v-model="feePayForm.remark" placeholder="可选" />
+          <el-form-item :label="$t('retail.retailOrder.feePayRemark')">
+            <el-input v-model="feePayForm.remark" :placeholder="$t('retail.retailOrder.feePayRemarkPlaceholder')" />
           </el-form-item>
         </el-form>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
-          <el-button @click="feeManagePayIndex = -1">取消付款</el-button>
-          <el-button type="primary" :loading="feePaySubmitting" @click="submitFeeManagePay">确认付款</el-button>
+          <el-button @click="feeManagePayIndex = -1">{{ $t('retail.retailOrder.feePayCancel') }}</el-button>
+          <el-button type="primary" :loading="feePaySubmitting" @click="submitFeeManagePay">{{ $t('retail.retailOrder.feePayConfirm') }}</el-button>
         </div>
       </div>
       <template #footer>
-        <el-button @click="feeManageVisible = false">关闭</el-button>
-        <el-button v-if="feeManageRow?.status !== 1" type="primary" :loading="feeManageSaving" @click="submitFeeManage">保存</el-button>
+        <el-button @click="feeManageVisible = false">{{ $t('retail.retailOrder.feeManageCloseBtn') }}</el-button>
+        <el-button type="primary" :loading="feeManageSaving" @click="submitFeeManage">{{ $t('retail.retailOrder.feeManageSaveBtn') }}</el-button>
       </template>
     </el-dialog>
 
-    <!-- 费用付款弹窗 -->
-    <el-dialog v-model="feePayVisible" :title="`${feePayForm.feeName} 付款`" width="420px" append-to-body>
+    <!-- Fee payment dialog -->
+    <el-dialog v-model="feePayVisible" :title="$t('retail.retailOrder.feePayTitle', { name: feePayForm.feeName })" width="420px" append-to-body>
       <el-form :model="feePayForm" label-width="90px">
-        <el-form-item label="零售单">
+        <el-form-item :label="$t('retail.retailOrder.feePayRetailOrder')">
           <span style="font-size:13px;color:rgba(29,29,31,0.6)">{{ feePayForm.orderSn }}</span>
         </el-form-item>
-        <el-form-item label="费用类型">
+        <el-form-item :label="$t('retail.retailOrder.feePayType')">
           <span style="font-weight:600">{{ feePayForm.feeName }}</span>
         </el-form-item>
-        <el-form-item label="费用金额">
+        <el-form-item :label="$t('retail.retailOrder.feePayAmount')">
           <span style="font-size:15px;font-weight:700;color:#8b5cf6">¥{{ feePayForm.amount.toFixed(2) }}</span>
         </el-form-item>
-        <el-form-item label="付款账户">
-          <el-select v-model="feePayForm.fund_id" placeholder="请选择账户" filterable style="width:100%" @change="onFeePayFundChange">
+        <el-form-item :label="$t('retail.retailOrder.feePayAccount')">
+          <el-select v-model="feePayForm.fund_id" :placeholder="$t('retail.retailOrder.feePayAccountPlaceholder')" filterable style="width:100%" @change="onFeePayFundChange">
             <el-option v-for="f in fundOptions" :key="f.id" :label="f.name" :value="f.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="付款对象">
-          <el-input v-model="feePayForm.contact_name" placeholder="可选，如：快递公司等" clearable />
+        <el-form-item :label="$t('retail.retailOrder.feePayContact')">
+          <el-input v-model="feePayForm.contact_name" :placeholder="$t('retail.retailOrder.feePayContactPlaceholder')" clearable />
         </el-form-item>
-        <el-form-item label="付款日期">
+        <el-form-item :label="$t('retail.retailOrder.feePayDate')">
           <el-date-picker v-model="feePayForm.pay_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="feePayForm.remark" placeholder="可选" />
+        <el-form-item :label="$t('retail.retailOrder.feePayRemark')">
+          <el-input v-model="feePayForm.remark" :placeholder="$t('retail.retailOrder.feePayRemarkPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="feePayVisible = false">取消</el-button>
-        <el-button type="primary" :loading="feePaySubmitting" @click="submitFeePay">确认付款</el-button>
+        <el-button @click="feePayVisible = false">{{ $t('retail.retailOrder.cancel') }}</el-button>
+        <el-button type="primary" :loading="feePaySubmitting" @click="submitFeePay">{{ $t('retail.retailOrder.feePayConfirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -348,17 +333,20 @@
 <script setup lang="ts">
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getRetailOrderList, createRetailOrder, updateRetailOrder, deleteRetailOrder, getMemberList, getStoreList } from '@/api/retail'
-import { getFundList, getPayReceiptList, createPayReceipt } from '@/api/finance'
+import { getFundList, getPayReceiptList, createPayReceipt, deletePayReceipt } from '@/api/finance'
 import http from '@/api/http'
 import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect, deleteRetailStockFlows } from '@/utils/stockEffect'
 import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
+
+const { t } = useI18n()
 
 function fmtDt(val: string) {
   if (!val) return '-'
@@ -385,13 +373,13 @@ const stockRefreshStore = useStockRefreshStore()
 // date filter stored locally — backend ignores date params, handled in filteredApi
 const searchForm = reactive<any>({ order_no: '', goods_name: '', member_name: '', store_id: '', start_date: '', end_date: '', reconcile_filter: '', min_amount: '', max_amount: '' })
 const dateRange = ref<any>([])
-const dateShortcuts = [
-  { text: '最近一个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 1); return [s, e] } },
-  { text: '最近三个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 3); return [s, e] } },
-  { text: '最近六个月', value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 6); return [s, e] } },
-  { text: '今年', value: () => { const e = new Date(); const s = new Date(e.getFullYear(), 0, 1); return [s, e] } },
-  { text: '去年', value: () => { const y = new Date().getFullYear() - 1; return [new Date(y, 0, 1), new Date(y, 11, 31)] } },
-]
+const dateShortcuts = computed(() => [
+  { text: t('retail.retailOrder.shortcutLastMonth'), value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 1); return [s, e] } },
+  { text: t('retail.retailOrder.shortcutLast3Months'), value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 3); return [s, e] } },
+  { text: t('retail.retailOrder.shortcutLast6Months'), value: () => { const e = new Date(); const s = new Date(); s.setMonth(s.getMonth() - 6); return [s, e] } },
+  { text: t('retail.retailOrder.shortcutThisYear'), value: () => { const e = new Date(); const s = new Date(e.getFullYear(), 0, 1); return [s, e] } },
+  { text: t('retail.retailOrder.shortcutLastYear'), value: () => { const y = new Date().getFullYear() - 1; return [new Date(y, 0, 1), new Date(y, 11, 31)] } },
+])
 const datePickerKey = ref(0)
 
 // all rows after date filtering — used for summary totals
@@ -586,7 +574,7 @@ async function generateRetailNo(): Promise<string> {
 }
 
 async function handleSave() {
-  if (!form.items.length) { ElMessage.warning('请添加商品'); return }
+  if (!form.items.length) { ElMessage.warning(t('retail.retailOrder.warnAddGoods')); return }
   saving.value = true
   try {
     const storeIdNum = Number(form.store_id)
@@ -623,10 +611,13 @@ async function handleSave() {
     }
     if (editId.value) {
       await updateRetailOrder({ ...payload, id: editId.value })
-      ElMessage.success('修改成功')
+      if (cleanFeeItems.length) saveFeeCache(editId.value, cleanFeeItems)
+      ElMessage.success(t('retail.retailOrder.editSuccess'))
     } else {
-      await createRetailOrder(payload)
-      ElMessage.success('保存成功，请审核后生效库存和财务')
+      const createRes = await createRetailOrder(payload)
+      const newId = createRes?.data?.id || createRes?.data?.rows?.id
+      if (newId && cleanFeeItems.length) saveFeeCache(Number(newId), cleanFeeItems)
+      ElMessage.success(t('retail.retailOrder.saveSuccess'))
     }
     drawerVisible.value = false
     // 清除日期筛选，确保新订单可见
@@ -635,7 +626,7 @@ async function handleSave() {
     searchForm.end_date = ''
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message || '保存失败')
+    ElMessage.error(e?.message || 'Save failed')
   } finally { saving.value = false }
 }
 
@@ -655,7 +646,7 @@ async function handleAudit(row: any, status: number) {
   const payAmount = Number(row.pay_amount || 0)
   if (status === 1) {
     await http.post('/retail/order/audit', { id: row.id, status: 1 })
-    try { await retailStockEffect(items, 'deduct', row.id) } catch (e: any) { ElMessage.warning('库存扣减失败，请手动处理') }
+    try { await retailStockEffect(items, 'deduct', row.id) } catch (e: any) { ElMessage.warning(t('retail.retailOrder.auditStockFail')) }
     try {
       const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
       const funds: any[] = fundRes.data?.rows ?? []
@@ -663,30 +654,45 @@ async function handleAudit(row: any, status: number) {
       if (retailFund) {
         await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: Number(retailFund.balance || 0) + payAmount })
       } else {
-        await http.post('/finance/Fund/add', { name: RETAIL_FUND_NAME, type: 2, balance: payAmount, remark: '零售单自动累计' })
+        await http.post('/finance/Fund/add', { name: RETAIL_FUND_NAME, type: 2, balance: payAmount, remark: 'Retail Sale Out' })
       }
-    } catch (e: any) { ElMessage.warning('财务更新失败，请手动处理') }
-    const stockDesc = items.map((i: any) => `${i.goods_name || '商品'} ×${i.num}`).join('、')
-    ElNotification({ title: '审核成功', dangerouslyUseHTMLString: true, type: 'success', duration: 5000,
-      message: `<div style="font-size:12px;line-height:2">📦 库存已扣减：${stockDesc}<br>💰 ${RETAIL_FUND_NAME} +¥${payAmount.toFixed(2)}</div>` })
+    } catch (e: any) { ElMessage.warning(t('retail.retailOrder.auditFundFail')) }
+    const stockDesc = items.map((i: any) => `${i.goods_name || 'item'} ×${i.num}`).join(', ')
+    ElNotification({ title: t('retail.retailOrder.auditSuccessTitle'), dangerouslyUseHTMLString: true, type: 'success', duration: 5000,
+      message: `<div style="font-size:12px;line-height:2">📦 ${t('retail.retailOrder.auditStockDeducted')}: ${stockDesc}<br>💰 ${RETAIL_FUND_NAME} +¥${payAmount.toFixed(2)}</div>` })
   } else {
     await http.post('/retail/order/audit', { id: row.id, status: 0 })
-    try { await deleteRetailStockFlows(row.id) } catch { /* 找不到流水静默跳过，库存由审核流程保证 */ }
-    try { await deductRetailFund(payAmount) } catch (e: any) { ElMessage.warning('财务回滚失败，请手动处理') }
-    const stockDesc = items.map((i: any) => `${i.goods_name || '商品'} ×${i.num}`).join('、')
-    ElNotification({ title: '反审核成功', dangerouslyUseHTMLString: true, type: 'warning', duration: 5000,
-      message: `<div style="font-size:12px;line-height:2">📦 库存已恢复：${stockDesc}<br>💰 ${RETAIL_FUND_NAME} -¥${payAmount.toFixed(2)}</div>` })
+    try { await deleteRetailStockFlows(row.id) } catch { /* silent skip if no stock flow found */ }
+    try { await deductRetailFund(payAmount) } catch (e: any) { ElMessage.warning(t('retail.retailOrder.unauditFundFail')) }
+    const stockDesc = items.map((i: any) => `${i.goods_name || 'item'} ×${i.num}`).join(', ')
+    ElNotification({ title: t('retail.retailOrder.unauditSuccessTitle'), dangerouslyUseHTMLString: true, type: 'warning', duration: 5000,
+      message: `<div style="font-size:12px;line-height:2">📦 ${t('retail.retailOrder.unauditStockRestored')}: ${stockDesc}<br>💰 ${RETAIL_FUND_NAME} -¥${payAmount.toFixed(2)}</div>` })
   }
   stockRefreshStore.trigger()
   tableRef.value?.refresh()
   loadFeePayMap()
 }
 
+// 删除订单前清理其费用付款单（PayReceipt/del 会自动退款到对应资金账户）
+async function cleanupRetailFeePayReceipts(orderId: number) {
+  try {
+    const res = await getPayReceiptList({ list_rows: 2000 })
+    const rows: any[] = res.data?.rows ?? []
+    const prefix = `零售附加费用 #${orderId}:`
+    const matched = rows.filter((r: any) => String(r.remark || '').startsWith(prefix))
+    for (const r of matched) {
+      try { await deletePayReceipt(r.id) } catch (e: any) { console.warn('费用付款单删除失败', r.id, e?.message) }
+    }
+  } catch (e: any) { console.warn('查询费用付款单失败', e?.message) }
+}
+
 async function handleDelete(row: any) {
-  if (row.status === 1) { ElMessage.warning('请先反审核再删除'); return }
-  await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
+  if (row.status === 1) { ElMessage.warning(t('retail.retailOrder.deleteAuditedFirst')); return }
+  await ElMessageBox.confirm(t('retail.retailOrder.deleteConfirm'), t('retail.retailOrder.deleteConfirmTip'), { type: 'warning' })
+  await cleanupRetailFeePayReceipts(row.id)
   await deleteRetailOrder(row.id)
-  ElMessage.success('删除成功')
+  removeFeeCache(row.id)
+  ElMessage.success(t('retail.retailOrder.deleteSuccess'))
   tableRef.value?.refresh()
 }
 
@@ -707,11 +713,15 @@ async function batchDelRetailOrders({ ids }: { ids: number[] }) {
     }
     stockRefreshStore.trigger()
   }
+  for (const id of ids) {
+    await cleanupRetailFeePayReceipts(id)
+    removeFeeCache(id)
+  }
   return http.post('/retail/order/batchDel', { ids })
 }
 
 async function retailStockEffect(items: any[], mode: 'deduct' | 'restore', orderId?: number) {
-  const remark = mode === 'deduct' ? (orderId ? `零售出库#${orderId}` : '零售出库') : '零售退货入库'
+  const remark = mode === 'deduct' ? (orderId ? `Retail Sale Out#${orderId}` : 'Retail Sale Out') : 'Retail Return In'
   await stockEffect(items, mode, undefined, remark)
 }
 
@@ -732,6 +742,40 @@ function onGoodsConfirm(goods: any[]) {
 }
 
 // ── 附加费用 ─────────────────────────────────────────────────────────────────
+// 本地缓存：后端列表接口不返回 fee_items 字段，用 localStorage 持久化
+const FEE_CACHE_KEY = 'retail_fee_items_cache_v1'
+const feeItemsCache = ref(new Map<number, any[]>())
+
+;(() => {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FEE_CACHE_KEY) || '{}')
+    const map = new Map<number, any[]>()
+    for (const [k, v] of Object.entries(raw as Record<string, any>)) {
+      if (Array.isArray(v)) map.set(Number(k), v)
+    }
+    feeItemsCache.value = map
+  } catch {}
+})()
+
+function saveFeeCache(orderId: number, items: any[]) {
+  feeItemsCache.value.set(orderId, items)
+  try {
+    const obj: Record<string, any> = {}
+    for (const [k, v] of feeItemsCache.value) obj[String(k)] = v
+    localStorage.setItem(FEE_CACHE_KEY, JSON.stringify(obj))
+  } catch {}
+}
+
+function removeFeeCache(orderId: number) {
+  if (!feeItemsCache.value.has(orderId)) return
+  feeItemsCache.value.delete(orderId)
+  try {
+    const obj: Record<string, any> = {}
+    for (const [k, v] of feeItemsCache.value) obj[String(k)] = v
+    localStorage.setItem(FEE_CACHE_KEY, JSON.stringify(obj))
+  } catch {}
+}
+
 const fundOptions = ref<any[]>([])
 const feeItemPaidMap = ref<Record<string, number>>({})
 
@@ -764,23 +808,26 @@ async function loadFeePayMap() {
 
 function getFeeItemsForRow(row: any): { name: string; amount: number; bearer: string }[] {
   if (!row) return []
-  let items: any[] = []
-  try { items = Array.isArray(row.fee_items) ? row.fee_items : JSON.parse(row.fee_items || '[]') } catch { items = [] }
-  return items
+  // 后端为真相源；缓存仅在后端字段缺失时兜底（旧版后端）
+  if (row.fee_items !== undefined && row.fee_items !== null) {
+    try { return Array.isArray(row.fee_items) ? row.fee_items : JSON.parse(row.fee_items || '[]') } catch { return [] }
+  }
+  if (feeItemsCache.value.has(row.id)) return feeItemsCache.value.get(row.id)!
+  return []
 }
 
-function getFeeItemPayStatus(row: any, idx: number): { label: string; type: string } {
-  if (!row || Number(row.status) !== 1) return { label: '—', type: 'info' }
+function getFeeItemPayStatus(row: any, idx: number): { label: string; type: string; status: string } {
+  if (!row || Number(row.status) !== 1) return { label: '—', type: 'info', status: 'none' }
   const items = getFeeItemsForRow(row)
   const fee = items[idx]
-  if (!fee || Number(fee.amount || 0) <= 0) return { label: '—', type: 'info' }
+  if (!fee || Number(fee.amount || 0) <= 0) return { label: '—', type: 'info', status: 'none' }
   const bearer = fee.bearer || 'buyer'
-  if (bearer === 'seller') return { label: '客户承担', type: 'info' }
-  if (bearer === 'free') return { label: '免费', type: 'info' }
+  if (bearer === 'seller') return { label: t('retail.retailOrder.feeStatusCustomerBear'), type: 'info', status: 'customer' }
+  if (bearer === 'free') return { label: t('retail.retailOrder.feeStatusFree'), type: 'info', status: 'free' }
   const needPay = bearer === 'half' ? Number(fee.amount) / 2 : Number(fee.amount)
   const paid = feeItemPaidMap.value[`${row.id}:${fee.name}`] || 0
-  if (paid >= needPay - 0.01) return { label: '已付', type: 'success' }
-  return { label: '待付', type: 'warning' }
+  if (paid >= needPay - 0.01) return { label: t('retail.retailOrder.feeStatusPaid'), type: 'success', status: 'paid' }
+  return { label: t('retail.retailOrder.feeStatusPending'), type: 'warning', status: 'pending' }
 }
 
 // 附加费用管理弹窗
@@ -804,30 +851,15 @@ function removeFeeManageItem(idx: number) {
 }
 
 async function saveFeeManageItems() {
-  if (!feeManageRow.value?.id) throw new Error('零售单不存在')
-  if (Number(feeManageRow.value.status) === 1) throw new Error('已审核订单不可修改费用，请先反审核')
+  if (!feeManageRow.value?.id) throw new Error('Retail order not found')
   const items = feeManageItems.value
     .map(f => ({ name: String(f.name || '').trim(), amount: Number(f.amount || 0), bearer: f.bearer || 'buyer' }))
     .filter(f => f.name && f.amount > 0)
   const row = feeManageRow.value
-  await updateRetailOrder({
-    id: row.id,
-    store_id: row.store_id || 0,
-    store_name: row.store_name || '',
-    member_id: row.member_id || 0,
-    member_name: row.member_name || '',
-    order_date: row.order_date || '',
-    pay_type: row.pay_type || row.pay_method || 'cash',
-    remark: row.remark || '',
-    total_amount: row.total_amount || 0,
-    discount_amount: row.discount_amount || 0,
-    pay_amount: row.pay_amount || 0,
-    status: 0,
-    goods_info: typeof row.goods_info === 'string' ? row.goods_info : JSON.stringify(row.goods_info || []),
-    fee_items: JSON.stringify(items),
-  })
+  await http.post('/retail/order/saveFees', { id: row.id, fee_items: items })
   feeManageItems.value = items
   feeManageRow.value = { ...feeManageRow.value, fee_items: items }
+  saveFeeCache(row.id, items)
   return items
 }
 
@@ -835,12 +867,12 @@ async function submitFeeManage() {
   feeManageSaving.value = true
   try {
     await saveFeeManageItems()
-    ElMessage.success('费用保存成功')
+    ElMessage.success(t('retail.retailOrder.feeSaveSuccess'))
     feeManageVisible.value = false
     tableRef.value?.refresh()
     loadFeePayMap()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '保存失败')
+    ElMessage.error(e?.message ?? 'Save failed')
   } finally {
     feeManageSaving.value = false
   }
@@ -866,10 +898,10 @@ const feePayForm = reactive({
 function openFeePayDialog(row: any, idx: number) {
   const items = getFeeItemsForRow(row)
   const fee = items[idx]
-  if (!fee) { ElMessage.warning('费用项不存在'); return }
-  if (Number(fee.amount || 0) <= 0) { ElMessage.warning('费用金额必须大于 0'); return }
-  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning('该费用无需我方付款'); return }
-  if (getFeeItemPayStatus(row, idx).label !== '待付') { ElMessage.warning('该费用当前不需要付款'); return }
+  if (!fee) { ElMessage.warning(t('retail.retailOrder.warnFeeNotExist')); return }
+  if (Number(fee.amount || 0) <= 0) { ElMessage.warning(t('retail.retailOrder.warnFeeAmountZero')); return }
+  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning(t('retail.retailOrder.warnFeeNoNeedPay')); return }
+  if (getFeeItemPayStatus(row, idx).status !== 'pending') { ElMessage.warning(t('retail.retailOrder.warnFeeNotPending')); return }
   feePayForm.orderId = row.id
   feePayForm.orderSn = row.order_sn || `LS${(row.order_date || '').slice(0, 10).replace(/-/g, '')}${String(row.id).padStart(3, '0')}`
   feePayForm.feeName = fee.name
@@ -887,8 +919,8 @@ function openFeePayDialog(row: any, idx: number) {
 function openFeeManagePay(idx: number) {
   if (!feeManageRow.value) return
   const fee = feeManageItems.value[idx]
-  if (!fee || Number(fee.amount || 0) <= 0) { ElMessage.warning('费用金额必须大于 0'); return }
-  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning('该费用无需我方付款'); return }
+  if (!fee || Number(fee.amount || 0) <= 0) { ElMessage.warning(t('retail.retailOrder.warnFeeAmountZero')); return }
+  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning(t('retail.retailOrder.warnFeeNoNeedPay')); return }
   feePayForm.feeName = String(fee.name || '').trim()
   feePayForm.amount = Number(fee.amount || 0)
   feePayForm.bearer = fee.bearer || 'buyer'
@@ -906,7 +938,7 @@ function onFeePayFundChange(id: number) {
 }
 
 async function submitFeePay() {
-  if (!feePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  if (!feePayForm.fund_id) { ElMessage.warning(t('retail.retailOrder.warnSelectAccount')); return }
   const needPay = feePayForm.bearer === 'half' ? feePayForm.amount / 2 : feePayForm.amount
   feePaySubmitting.value = true
   try {
@@ -921,12 +953,12 @@ async function submitFeePay() {
       fund_name: feePayForm.fund_name,
       remark: `零售附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
     })
-    ElMessage.success('付款成功')
+    ElMessage.success(t('retail.retailOrder.paySuccess'))
     feePayVisible.value = false
     loadFeePayMap()
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '付款失败')
+    ElMessage.error(e?.message ?? t('retail.retailOrder.payFailed'))
   } finally {
     feePaySubmitting.value = false
   }
@@ -934,10 +966,10 @@ async function submitFeePay() {
 
 async function submitFeeManagePay() {
   if (feeManagePayIndex.value < 0) return
-  if (!feePayForm.fund_id) { ElMessage.warning('请选择付款账户'); return }
+  if (!feePayForm.fund_id) { ElMessage.warning(t('retail.retailOrder.warnSelectAccount')); return }
   const fee = feeManageItems.value[feeManagePayIndex.value]
-  if (!fee || Number(fee.amount || 0) <= 0) { ElMessage.warning('费用金额必须大于 0'); return }
-  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning('该费用无需我方付款'); return }
+  if (!fee || Number(fee.amount || 0) <= 0) { ElMessage.warning(t('retail.retailOrder.warnFeeAmountZero')); return }
+  if (fee.bearer === 'seller' || fee.bearer === 'free') { ElMessage.warning(t('retail.retailOrder.warnFeeNoNeedPay')); return }
   feePayForm.feeName = String(fee.name || '').trim()
   feePayForm.amount = Number(fee.amount || 0)
   feePayForm.bearer = fee.bearer || 'buyer'
@@ -958,13 +990,13 @@ async function submitFeeManagePay() {
       fund_name: feePayForm.fund_name,
       remark: `零售附加费用 #${feePayForm.orderId}:${feePayForm.feeName}${feePayForm.remark ? ' ' + feePayForm.remark : ''}`,
     })
-    ElMessage.success('付款成功')
+    ElMessage.success(t('retail.retailOrder.paySuccess'))
     feeManagePayIndex.value = -1
     feeManageVisible.value = false
     loadFeePayMap()
     tableRef.value?.refresh()
   } catch (e: any) {
-    ElMessage.error(e?.message ?? '付款失败')
+    ElMessage.error(e?.message ?? t('retail.retailOrder.payFailed'))
   } finally {
     feePaySubmitting.value = false
   }

@@ -1,15 +1,17 @@
 <template>
   <div class="captcha-wrap" @click="refresh">
     <canvas ref="canvasRef" :width="width" :height="height" class="captcha-canvas" />
-    <span class="captcha-refresh" title="点击刷新">↻</span>
+    <span class="captcha-refresh" :title="t('captchaCanvas.refresh')">↻</span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ width?: number; height?: number }>()
 const emit = defineEmits<{ (e: 'update:code', val: string): void }>()
+const { t } = useI18n()
 
 const canvasRef = ref<HTMLCanvasElement>()
 const width = props.width ?? 110

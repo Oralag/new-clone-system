@@ -1,109 +1,109 @@
 <template>
   <div class="contract-view-page">
     <div class="page-header">
-      <el-button link :icon="ArrowLeft" @click="router.back()">返回</el-button>
-      <span class="page-title">查看销售订单</span>
-      <el-tag v-if="contract.status === 1" type="success" size="small">已审核</el-tag>
-      <el-tag v-else type="warning" size="small">待审核</el-tag>
+      <el-button link :icon="ArrowLeft" @click="router.back()">{{ $t('sale.contractView.back') }}</el-button>
+      <span class="page-title">{{ $t('sale.contractView.pageTitle') }}</span>
+      <el-tag v-if="contract.status === 1" type="success" size="small">{{ $t('sale.contractView.statusAudited') }}</el-tag>
+      <el-tag v-else type="warning" size="small">{{ $t('sale.contractView.statusPending') }}</el-tag>
     </div>
 
     <div v-if="loading" v-loading="true" style="height:200px" />
 
     <template v-else-if="contract.id">
       <el-card class="info-card">
-        <div class="section-title">基本信息</div>
+        <div class="section-title">{{ $t('sale.contractView.basicInfo') }}</div>
         <el-row :gutter="24">
           <el-col :span="6">
-            <div class="field-item"><label>合同编号</label><span>{{ contract.order_sn || contract.order_no }}</span></div>
+            <div class="field-item"><label>{{ $t('sale.contractView.contractNo') }}</label><span>{{ contract.order_sn || contract.order_no }}</span></div>
           </el-col>
           <el-col :span="6">
-            <div class="field-item"><label>客户名称</label><span>{{ contract.customer_name }}</span></div>
+            <div class="field-item"><label>{{ $t('sale.contractView.customerName') }}</label><span>{{ contract.customer_name }}</span></div>
           </el-col>
           <el-col :span="6">
-            <div class="field-item"><label>经办人</label><span>{{ contract.admin_name || '—' }}</span></div>
+            <div class="field-item"><label>{{ $t('sale.contractView.handler') }}</label><span>{{ contract.admin_name || $t('sale.contractView.emptyDash') }}</span></div>
           </el-col>
           <el-col :span="6">
-            <div class="field-item"><label>签约日期</label><span>{{ fmtDate(contract.sign_date || contract.order_date) }}</span></div>
+            <div class="field-item"><label>{{ $t('sale.contractView.signDate') }}</label><span>{{ fmtDate(contract.sign_date || contract.order_date) }}</span></div>
           </el-col>
           <el-col :span="6">
-            <div class="field-item"><label>到期日期</label><span>{{ contract.expire_date ? fmtDate(contract.expire_date) : '—' }}</span></div>
+            <div class="field-item"><label>{{ $t('sale.contractView.expireDate') }}</label><span>{{ contract.expire_date ? fmtDate(contract.expire_date) : $t('sale.contractView.emptyDash') }}</span></div>
           </el-col>
           <el-col :span="6">
-            <div class="field-item"><label>收款账户</label><span>{{ contract.receive_account || '—' }}</span></div>
+            <div class="field-item"><label>{{ $t('sale.contractView.receiveAccount') }}</label><span>{{ contract.receive_account || $t('sale.contractView.emptyDash') }}</span></div>
           </el-col>
           <el-col :span="6">
-            <div class="field-item"><label>是否开票</label><span>{{ contract.need_invoice ? '是' : '否' }}</span></div>
+            <div class="field-item"><label>{{ $t('sale.contractView.needInvoice') }}</label><span>{{ contract.need_invoice ? $t('sale.contractView.yes') : $t('sale.contractView.no') }}</span></div>
           </el-col>
           <el-col :span="24">
-            <div class="field-item"><label>备注</label><span>{{ contract.remark || '—' }}</span></div>
+            <div class="field-item"><label>{{ $t('sale.contractView.remark') }}</label><span>{{ contract.remark || $t('sale.contractView.emptyDash') }}</span></div>
           </el-col>
         </el-row>
       </el-card>
 
       <el-card class="info-card">
-        <div class="section-title">商品明细</div>
+        <div class="section-title">{{ $t('sale.contractView.goodsDetail') }}</div>
         <el-table :data="goods" border size="small">
-          <el-table-column type="index" label="序号" width="56" align="center" />
-          <el-table-column label="商品名称" min-width="160">
+          <el-table-column type="index" :label="$t('sale.contractView.colIndex')" width="56" align="center" />
+          <el-table-column :label="$t('sale.contractView.colGoodsName')" min-width="160">
             <template #default="{ row }">{{ row.goods_name }}</template>
           </el-table-column>
-          <el-table-column label="商品编码" width="120">
+          <el-table-column :label="$t('sale.contractView.colGoodsSn')" width="120">
             <template #default="{ row }">{{ row.goods_sn }}</template>
           </el-table-column>
-          <el-table-column label="规格" width="100">
+          <el-table-column :label="$t('sale.contractView.colSpec')" width="100">
             <template #default="{ row }">{{ row.spec }}</template>
           </el-table-column>
-          <el-table-column label="单位" width="70" align="center">
+          <el-table-column :label="$t('sale.contractView.colUnit')" width="70" align="center">
             <template #default="{ row }">{{ row.unit_name }}</template>
           </el-table-column>
-          <el-table-column label="数量" width="90" align="right">
+          <el-table-column :label="$t('sale.contractView.colQty')" width="90" align="right">
             <template #default="{ row }">{{ row.num }}</template>
           </el-table-column>
-          <el-table-column label="单价" width="110" align="right">
+          <el-table-column :label="$t('sale.contractView.colPrice')" width="110" align="right">
             <template #default="{ row }">{{ fmt(row.price) }}</template>
           </el-table-column>
-          <el-table-column label="小计" width="120" align="right">
+          <el-table-column :label="$t('sale.contractView.colSubtotal')" width="120" align="right">
             <template #default="{ row }"><span style="color:#0071e3;font-weight:600">{{ fmt(Number(row.price) * Number(row.num)) }}</span></template>
           </el-table-column>
         </el-table>
       </el-card>
 
       <el-card v-if="feeItems.length" class="info-card">
-        <div class="section-title">附加费用</div>
+        <div class="section-title">{{ $t('sale.contractView.extraFees') }}</div>
         <el-table :data="feeItems" border size="small">
-          <el-table-column label="费用名称" min-width="100">
+          <el-table-column :label="$t('sale.contractView.colFeeName')" min-width="100">
             <template #default="{ row }">{{ row.name }}</template>
           </el-table-column>
-          <el-table-column label="金额" width="110" align="right">
+          <el-table-column :label="$t('sale.contractView.colAmount')" width="110" align="right">
             <template #default="{ row }">{{ fmt(row.amount) }}</template>
           </el-table-column>
-          <el-table-column label="承担方" width="100">
-            <template #default="{ row }">{{ row.bearer === 'seller' ? '卖方' : '买方' }}</template>
+          <el-table-column :label="$t('sale.contractView.colBearer')" width="100">
+            <template #default="{ row }">{{ row.bearer === 'seller' ? $t('sale.contractView.bearerSeller') : $t('sale.contractView.bearerBuyer') }}</template>
           </el-table-column>
-          <el-table-column label="供应商" min-width="130">
-            <template #default="{ row }">{{ row.supplier_name || '—' }}</template>
+          <el-table-column :label="$t('sale.contractView.colSupplier')" min-width="130">
+            <template #default="{ row }">{{ row.supplier_name || $t('sale.contractView.emptyDash') }}</template>
           </el-table-column>
-          <el-table-column label="原始单号" min-width="130">
-            <template #default="{ row }">{{ row.receipt_no || '—' }}</template>
+          <el-table-column :label="$t('sale.contractView.colReceiptNo')" min-width="130">
+            <template #default="{ row }">{{ row.receipt_no || $t('sale.contractView.emptyDash') }}</template>
           </el-table-column>
-          <el-table-column label="业务日期" width="110">
-            <template #default="{ row }">{{ row.order_date || '—' }}</template>
+          <el-table-column :label="$t('sale.contractView.colOrderDate')" width="110">
+            <template #default="{ row }">{{ row.order_date || $t('sale.contractView.emptyDash') }}</template>
           </el-table-column>
         </el-table>
       </el-card>
 
       <el-card class="info-card settle-card">
-        <div class="section-title">结算信息</div>
+        <div class="section-title">{{ $t('sale.contractView.settleInfo') }}</div>
         <div class="settle-row">
-          <span>合同金额 <strong class="blue">¥{{ fmt(contract.total_amount) }}</strong></span>
-          <span>已收金额 <strong class="blue">¥{{ fmt(contract.receive_amount) }}</strong></span>
-          <span>已付款 <strong>¥{{ fmt(contract.pay_amount) }}</strong></span>
-          <span>预付款 <strong>¥{{ fmt(contract.prepay_amount) }}</strong></span>
+          <span>{{ $t('sale.contractView.totalAmount') }} <strong class="blue">¥{{ fmt(contract.total_amount) }}</strong></span>
+          <span>{{ $t('sale.contractView.receiveAmount') }} <strong class="blue">¥{{ fmt(contract.receive_amount) }}</strong></span>
+          <span>{{ $t('sale.contractView.payAmount') }} <strong>¥{{ fmt(contract.pay_amount) }}</strong></span>
+          <span>{{ $t('sale.contractView.prepayAmount') }} <strong>¥{{ fmt(contract.prepay_amount) }}</strong></span>
         </div>
       </el-card>
     </template>
 
-    <el-empty v-else description="合同不存在" />
+    <el-empty v-else :description="$t('sale.contractView.contractNotFound')" />
   </div>
 </template>
 
@@ -113,6 +113,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import http from '@/api/http'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
@@ -137,7 +138,7 @@ const feeItems = computed(() => {
 })
 
 function fmt(v: any) { return Number(v || 0).toFixed(2) }
-function fmtDate(d: any) { return d ? String(d).slice(0, 10) : '—' }
+function fmtDate(d: any) { return d ? String(d).slice(0, 10) : t('sale.contractView.emptyDash') }
 
 onMounted(async () => {
   try {

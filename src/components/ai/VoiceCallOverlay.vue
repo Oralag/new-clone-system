@@ -5,7 +5,7 @@
         <div class="voice-call-container">
           <!-- 顶部信息 -->
           <div class="voice-call-header">
-            <div class="voice-call-title">ERP 管家</div>
+            <div class="voice-call-title">{{ t('aiAssistant.nameSpaced') }}</div>
             <div class="voice-call-status">
               {{ error || statusText }}
             </div>
@@ -32,13 +32,13 @@
           <!-- 转写区域 -->
           <div class="voice-transcripts" ref="transcriptRef">
             <div
-              v-for="(t, i) in transcripts"
+              v-for="(item, i) in transcripts"
               :key="i"
               class="voice-transcript-item"
-              :class="'voice-transcript--' + t.role"
+              :class="'voice-transcript--' + item.role"
             >
-              <span class="voice-transcript-role">{{ t.role === 'user' ? '你' : '管家' }}:</span>
-              <span class="voice-transcript-text">{{ t.text }}</span>
+              <span class="voice-transcript-role">{{ item.role === 'user' ? t('voiceCallOverlay.you') : t('voiceCallOverlay.assistant') }}:</span>
+              <span class="voice-transcript-text">{{ item.text }}</span>
             </div>
             <!-- 工具调用 -->
             <div v-for="(tc, j) in toolCalls" :key="'tc-' + j" class="voice-tool-call">
@@ -63,7 +63,7 @@
               <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
               </svg>
-              <span>{{ isUserSpeaking ? '松手发送' : isProcessing ? '处理中...' : '按住说话' }}</span>
+              <span>{{ isUserSpeaking ? t('voiceCallOverlay.releaseSend') : isProcessing ? t('voiceCallOverlay.processing') : t('voiceCallOverlay.holdToTalk') }}</span>
             </button>
 
             <!-- 挂断按钮 -->
@@ -82,9 +82,11 @@
 <script setup lang="ts">
 import { watch, ref, nextTick, computed } from 'vue'
 import { useRealtimeVoice } from './composables/useRealtimeVoice'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits<{ 'update:visible': [val: boolean] }>()
+const { t } = useI18n()
 
 const {
   isInCall, isUserSpeaking, isAiSpeaking, isProcessing, audioLevel,
@@ -95,10 +97,10 @@ const {
 const transcriptRef = ref<HTMLElement>()
 
 const statusText = computed(() => {
-  if (isAiSpeaking.value) return '管家正在说话...'
-  if (isProcessing.value) return '思考中...'
-  if (isUserSpeaking.value) return '正在聆听...'
-  return '按住下方按钮说话'
+  if (isAiSpeaking.value) return t('voiceCallOverlay.aiSpeaking')
+  if (isProcessing.value) return t('voiceCallOverlay.thinking')
+  if (isUserSpeaking.value) return t('voiceCallOverlay.listening')
+  return t('voiceCallOverlay.idleHint')
 })
 
 // 打开时自动开始通话
@@ -128,15 +130,7 @@ function formatDuration(s: number): string {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
 
-const TOOL_LABELS: Record<string, string> = {
-  query_customers: '查询客户', query_suppliers: '查询供应商', query_goods: '查询商品',
-  query_inventory: '查询库存', query_sales: '查询销售', query_purchases: '查询采购',
-  query_finance: '查询财务', query_staff: '查询员工', query_warehouses: '查询仓库',
-  create_customer: '新增客户', create_supplier: '新增供应商', create_goods: '新增商品',
-  create_sale_order: '新增销售单', create_procure_order: '新增采购单',
-  quick_sale: '一键销售', create_collect_receipt: '新增收款单', create_pay_receipt: '新增付款单',
-}
-function toolLabel(name: string) { return TOOL_LABELS[name] || name }
+function toolLabel(name: string) { return t(`aiToolCallCard.tools.${name}`, name) }
 </script>
 
 <style scoped>

@@ -3,12 +3,12 @@
     <el-card>
       <ScTable ref="scTable" :api-obj="getPointsList"
           del-path="/retail/points/batchDel"
-          export-file-name="积分记录" :params="searchForm">
-        <el-table-column label="会员名称" prop="member_name" />
-        <el-table-column label="类型" prop="type_name" />
-        <el-table-column label="积分" prop="points" />
-        <el-table-column label="余额" prop="balance" />
-        <el-table-column label="备注" prop="remark" />
+          :export-file-name="$t('retail.pointsRecord.exportFileName')" :params="searchForm">
+        <el-table-column :label="$t('retail.pointsRecord.memberName')" prop="member_name" />
+        <el-table-column :label="$t('retail.pointsRecord.type')" prop="type_name" />
+        <el-table-column :label="$t('retail.pointsRecord.points')" prop="points" />
+        <el-table-column :label="$t('retail.pointsRecord.balance')" prop="balance" />
+        <el-table-column :label="$t('retail.pointsRecord.remark')" prop="remark" />
       </ScTable>
     </el-card>
   </div>

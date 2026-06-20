@@ -1,0 +1,16 @@
+export default {
+  title: '会员充值',
+  memberName: '会员名称',
+  memberNamePlaceholder: '请输入会员名称',
+  date: '日期',
+  dateStart: '开始',
+  dateEnd: '结束',
+  dateSeparator: '至',
+  search: '查询',
+  reset: '重置',
+  rechargeNo: '充值单号',
+  amount: '充值金额',
+  giftAmount: '赠送金额',
+  payType: '支付方式',
+  exportFileName: '充值记录',
+}

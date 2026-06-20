@@ -3,12 +3,12 @@
 
     <!-- ── 顶栏 ── -->
     <div class="cr-topbar">
-      <div class="cr-home-btn" @click="$router.push('/dashboard')" title="返回首页">
+      <div class="cr-home-btn" @click="$router.push('/dashboard')" :title="$t('retail.cashRegister.backHome')">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
           <path d="M6 15v-5h4v5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
         </svg>
-        <span class="cr-home-text">返回首页</span>
+        <span class="cr-home-text">{{ $t('retail.cashRegister.backHome') }}</span>
       </div>
       <div class="cr-brand">
         <div class="cr-brand-icon">
@@ -24,17 +24,17 @@
             </defs>
           </svg>
         </div>
-        <span class="cr-brand-name">数字游牧收银台</span>
+        <span class="cr-brand-name">{{ $t('retail.cashRegister.title') }}</span>
       </div>
       <div class="cr-top-right">
         <!-- 克重计算器按钮 -->
-        <div class="cr-calc-btn" @click="openWeightCalc()" title="散装计价">
+        <div class="cr-calc-btn" @click="openWeightCalc()" :title="$t('retail.cashRegister.weightCalcBtn')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg>
-          <span class="cr-calc-text">克重计算</span>
+          <span class="cr-calc-text">{{ $t('retail.cashRegister.weightCalcBtn') }}</span>
         </div>
         <el-select
           v-model="selectedStoreId"
-          placeholder="选择门店"
+          :placeholder="$t('retail.cashRegister.storePlaceholder')"
           clearable
           filterable
           size="small"
@@ -45,7 +45,7 @@
         </el-select>
         <el-select
           v-model="selectedMemberId"
-          placeholder="会员登录"
+          :placeholder="$t('retail.cashRegister.memberLoginPlaceholder')"
           clearable
           filterable
           size="small"
@@ -61,11 +61,11 @@
             ref="searchInputRef"
             v-model="keyword"
             class="cr-search-input"
-            placeholder="请输入条码/商品首字母缩写"
+            :placeholder="$t('retail.cashRegister.searchPlaceholder')"
             @input="onSearch"
             @keydown.enter="onBarcodeEnter"
           />
-          <div class="cr-scan-icon" title="条形码扫描" @click="focusSearch">
+          <div class="cr-scan-icon" :title="$t('retail.cashRegister.barcodeScanTooltip')" @click="focusSearch">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/>
               <rect x="3" y="16" width="5" height="5"/>
@@ -73,9 +73,9 @@
             </svg>
           </div>
         </div>
-        <div class="cr-new-goods-btn" @click="openQuickAdd" title="新建商品（可同时录入采购入库）">
+        <div class="cr-new-goods-btn" @click="openQuickAdd" :title="$t('retail.cashRegister.newGoods')">
           <el-icon><Plus /></el-icon>
-          <span class="cr-new-goods-text">新建商品</span>
+          <span class="cr-new-goods-text">{{ $t('retail.cashRegister.newGoods') }}</span>
         </div>
       </div>
     </div>
@@ -90,16 +90,16 @@
       </div>
       <div class="cr-drawer-inner">
         <div class="cr-drawer-header">
-          <span class="cr-drawer-title">购物车</span>
+          <span class="cr-drawer-title">{{ $t('retail.cashRegister.cartTitle') }}</span>
           <div class="cr-drawer-actions">
-            <div class="cr-action-btn" @click="() => {}">存单</div>
-            <div class="cr-action-btn" @click="() => {}">取单</div>
-            <div class="cr-action-btn danger" @click="clearCart">清空</div>
+            <div class="cr-action-btn" @click="() => {}">{{ $t('retail.cashRegister.saveOrder') }}</div>
+            <div class="cr-action-btn" @click="() => {}">{{ $t('retail.cashRegister.takeOrder') }}</div>
+            <div class="cr-action-btn danger" @click="clearCart">{{ $t('retail.cashRegister.clearCart') }}</div>
           </div>
         </div>
         <div class="cr-drawer-list">
           <div v-if="cartItems.length === 0" class="cr-drawer-empty">
-            <span>🛒</span> 还没有商品，点击下方商品加入
+            <span>🛒</span> {{ $t('retail.cashRegister.cartEmpty') }}
           </div>
           <div
             v-for="(item, idx) in displayCartItems"
@@ -112,7 +112,7 @@
               <div class="cr-cart-item-title">
                 <span class="cr-cart-item-name">{{ item.goods_name }}</span>
                 <span v-if="item.original_price !== item.price" class="cr-cart-item-price-note">
-                  原价 ¥{{ formatMoney(item.original_price) }} → 成交 ¥{{ formatMoney(item.price) }}
+                  {{ $t('retail.cashRegister.originalPrice') }} ¥{{ formatMoney(item.original_price) }} → {{ $t('retail.cashRegister.dealPrice') }} ¥{{ formatMoney(item.price) }}
                 </span>
               </div>
               <el-button type="danger" link size="small" :icon="Delete"
@@ -120,15 +120,22 @@
             </div>
             <div class="cr-cart-item-bottom">
               <div class="cr-qty-ctrl">
-                <button class="cr-qty-btn" @click.stop="changeQty(idx,-1)">−</button>
-                <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
-                  controls-position="right" size="small" style="width:72px"
-                  @change="calcTotal" />
-                <button class="cr-qty-btn" @click.stop="changeQty(idx,1)">+</button>
+                <template v-if="item.is_bulk || / \d+\.?\d*g$/.test(item.goods_name)">
+                  <button class="cr-gram-chip" @click.stop="openWeightCalcEdit(idx)">
+                    {{ ((cartItems[idx].num) * (item.bulk_grams_per_base ?? 500)).toFixed(1) }}g ✎
+                  </button>
+                </template>
+                <template v-else>
+                  <button class="cr-qty-btn" @click.stop="changeQty(idx,-1)">−</button>
+                  <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
+                    controls-position="right" size="small" style="width:72px"
+                    @change="calcTotal" />
+                  <button class="cr-qty-btn" @click.stop="changeQty(idx,1)">+</button>
+                </template>
               </div>
               <div class="cr-cart-item-amounts">
                 <div class="cr-cart-item-price-row">
-                  <span class="cr-cart-item-unit-label">单价</span>
+                  <span class="cr-cart-item-unit-label">{{ $t('retail.cashRegister.unitPrice') }}</span>
                   <el-input-number
                     v-model="cartItems[idx].price"
                     :min="0"
@@ -142,7 +149,7 @@
                   />
                 </div>
                 <div class="cr-cart-item-sub">
-                  <span class="cr-cart-item-sub-label">小计</span>
+                  <span class="cr-cart-item-sub-label">{{ $t('retail.cashRegister.subtotal') }}</span>
                   <el-input-number
                     :model-value="item.line_amount"
                     :min="0.01" :precision="2" controls-position="right" size="small"
@@ -158,12 +165,12 @@
         <!-- 汇总 + 支付 -->
         <div class="cr-settle cr-drawer-settle">
           <div class="cr-settle-row">
-            <span>单据日期</span>
+            <span>{{ $t('retail.cashRegister.orderDate') }}</span>
             <el-date-picker v-model="orderDate" type="date" value-format="YYYY-MM-DD"
               size="small" style="width:130px" :clearable="false" />
           </div>
           <div class="cr-settle-row">
-            <span>商品合计</span>
+            <span>{{ $t('retail.cashRegister.goodsTotal') }}</span>
             <span>¥{{ formatMoney(totalAmount) }}</span>
           </div>
           <div class="cr-settle-row">
@@ -172,7 +179,7 @@
               controls-position="right" size="small" style="width:100px" @change="calcPay" />
           </div>
           <div class="cr-settle-row">
-            <span>结账金额</span>
+            <span>{{ $t('retail.cashRegister.checkoutAmount') }}</span>
             <el-input-number
               v-model="payAmount"
               :min="0"
@@ -191,8 +198,8 @@
           </div>
           <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
             @click="handleCheckout">
-            <span v-if="paying">处理中…</span>
-            <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ formatMoney(payAmount) }}</span>
+            <span v-if="paying">{{ $t('retail.cashRegister.processing') }}</span>
+            <span v-else>{{ $t('retail.cashRegister.checkout') }}&nbsp;&nbsp;¥{{ formatMoney(payAmount) }}</span>
           </button>
         </div>
       </div>
@@ -208,13 +215,13 @@
         <span v-if="cartItems.length" class="cr-float-badge">{{ cartItems.length }}</span>
       </div>
       <div class="cr-float-info">
-        <span v-if="!cartItems.length" class="cr-float-empty">点击商品加入购物车</span>
+        <span v-if="!cartItems.length" class="cr-float-empty">{{ $t('retail.cashRegister.floatCartEmpty') }}</span>
         <span v-else class="cr-float-total">¥{{ formatMoney(payAmount) }}</span>
-        <span v-if="cartItems.length" class="cr-float-count">共 {{ cartItems.reduce((s,i)=>s+i.num,0) }} 件</span>
+        <span v-if="cartItems.length" class="cr-float-count">{{ $t('retail.cashRegister.floatCartCount', { count: cartItems.reduce((s,i)=>s+i.num,0) }) }}</span>
       </div>
       <button v-if="cartItems.length" class="cr-float-checkout" :disabled="paying"
         @click.stop="handleCheckout">
-        {{ paying ? '处理中' : '结算' }}
+        {{ paying ? $t('retail.cashRegister.processingShort') : $t('retail.cashRegister.checkoutShort') }}
       </button>
     </div>
 
@@ -225,14 +232,14 @@
         <!-- 左：购物车（桌面端） -->
         <div class="cr-left">
           <div class="cr-left-actions">
-            <div class="cr-action-btn" @click="() => {}">存单</div>
-            <div class="cr-action-btn" @click="() => {}">取单</div>
-            <div class="cr-action-btn danger" @click="clearCart">清空</div>
+            <div class="cr-action-btn" @click="() => {}">{{ $t('retail.cashRegister.saveOrder') }}</div>
+            <div class="cr-action-btn" @click="() => {}">{{ $t('retail.cashRegister.takeOrder') }}</div>
+            <div class="cr-action-btn danger" @click="clearCart">{{ $t('retail.cashRegister.clearCart') }}</div>
           </div>
           <div class="cr-cart-area">
             <div v-if="cartItems.length === 0" class="cr-cart-empty">
               <div class="cr-empty-icon">🛒</div>
-              <div class="cr-empty-text">扫码/点选右侧商品，加入购物车结账</div>
+              <div class="cr-empty-text">{{ $t('retail.cashRegister.cartEmptyDesktop') }}</div>
             </div>
             <div v-else class="cr-cart-list">
               <div
@@ -246,7 +253,7 @@
                   <div class="cr-cart-item-title">
                     <span class="cr-cart-item-name">{{ item.goods_name }}</span>
                     <span v-if="item.original_price !== item.price" class="cr-cart-item-price-note">
-                      原价 ¥{{ formatMoney(item.original_price) }} → 成交 ¥{{ formatMoney(item.price) }}
+                      {{ $t('retail.cashRegister.originalPrice') }} ¥{{ formatMoney(item.original_price) }} → {{ $t('retail.cashRegister.dealPrice') }} ¥{{ formatMoney(item.price) }}
                     </span>
                   </div>
                   <el-button type="danger" link size="small" :icon="Delete"
@@ -254,15 +261,22 @@
                 </div>
                 <div class="cr-cart-item-bottom">
                   <div class="cr-qty-ctrl">
-                    <button class="cr-qty-btn" @click.stop="changeQty(idx,-1)">−</button>
-                    <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
-                      controls-position="right" size="small" style="width:72px"
-                      @change="calcTotal" />
-                    <button class="cr-qty-btn" @click.stop="changeQty(idx,1)">+</button>
+                    <template v-if="item.is_bulk || / \d+\.?\d*g$/.test(item.goods_name)">
+                      <button class="cr-gram-chip" @click.stop="openWeightCalcEdit(idx)">
+                        {{ ((cartItems[idx].num) * (item.bulk_grams_per_base ?? 500)).toFixed(1) }}g ✎
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button class="cr-qty-btn" @click.stop="changeQty(idx,-1)">−</button>
+                      <el-input-number v-model="cartItems[idx].num" :min="0.001" :step="0.001" :precision="3"
+                        controls-position="right" size="small" style="width:72px"
+                        @change="calcTotal" />
+                      <button class="cr-qty-btn" @click.stop="changeQty(idx,1)">+</button>
+                    </template>
                   </div>
                   <div class="cr-cart-item-amounts">
                     <div class="cr-cart-item-price-row">
-                      <span class="cr-cart-item-unit-label">单价</span>
+                      <span class="cr-cart-item-unit-label">{{ $t('retail.cashRegister.unitPrice') }}</span>
                       <el-input-number
                         v-model="cartItems[idx].price"
                         :min="0"
@@ -276,7 +290,7 @@
                       />
                     </div>
                     <div class="cr-cart-item-sub">
-                      <span class="cr-cart-item-sub-label">小计</span>
+                      <span class="cr-cart-item-sub-label">{{ $t('retail.cashRegister.subtotal') }}</span>
                       <el-input-number
                         :model-value="item.line_amount"
                         :min="0.01" :precision="2" controls-position="right" size="small"
@@ -294,12 +308,12 @@
           <!-- 汇总 + 支付 -->
           <div class="cr-settle">
             <div class="cr-settle-row">
-              <span>单据日期</span>
+              <span>{{ $t('retail.cashRegister.orderDate') }}</span>
               <el-date-picker v-model="orderDate" type="date" value-format="YYYY-MM-DD"
                 size="small" style="width:130px" :clearable="false" />
             </div>
             <div class="cr-settle-row">
-              <span>商品合计</span>
+              <span>{{ $t('retail.cashRegister.goodsTotal') }}</span>
               <span>¥{{ formatMoney(totalAmount) }}</span>
             </div>
             <div class="cr-settle-row">
@@ -308,7 +322,7 @@
                 controls-position="right" size="small" style="width:100px" @change="calcPay" />
             </div>
             <div class="cr-settle-row">
-              <span>结账金额</span>
+              <span>{{ $t('retail.cashRegister.checkoutAmount') }}</span>
               <el-input-number
                 v-model="payAmount"
                 :min="0"
@@ -321,24 +335,24 @@
             </div>
             <!-- 附加费用 -->
             <div class="cr-settle-row" style="align-items:flex-start;padding-top:4px">
-              <span style="padding-top:6px">附加费用</span>
+              <span style="padding-top:6px">{{ $t('retail.cashRegister.extraFees') }}</span>
               <div style="flex:1">
                 <div v-for="(fee, idx) in feeItems" :key="idx" style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
-                  <el-select v-model="fee.name" size="small" style="width:100px" filterable allow-create default-first-option placeholder="类型">
-                    <el-option label="运费" value="运费" />
-                    <el-option label="跑腿费" value="跑腿费" />
-                    <el-option label="装卸费" value="装卸费" />
-                    <el-option label="其他费用" value="其他费用" />
+                  <el-select v-model="fee.name" size="small" style="width:100px" filterable allow-create default-first-option :placeholder="$t('retail.cashRegister.feeTypePlaceholder')">
+                    <el-option :label="$t('retail.cashRegister.feeTypeShipping')" value="shipping" />
+                    <el-option :label="$t('retail.cashRegister.feeTypeDelivery')" value="delivery" />
+                    <el-option :label="$t('retail.cashRegister.feeTypeHandling')" value="handling" />
+                    <el-option :label="$t('retail.cashRegister.feeTypeOther')" value="other" />
                   </el-select>
-                  <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:88px" placeholder="金额" />
+                  <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:88px" :placeholder="$t('retail.cashRegister.feeAmountPlaceholder')" />
                   <el-button type="danger" link size="small" @click="feeItems.splice(idx,1)" style="padding:0;min-width:20px">×</el-button>
                 </div>
-                <el-button type="primary" link size="small" style="padding:0;font-size:12px" @click="feeItems.push({ name: '运费', amount: 0, bearer: 'buyer' })">+ 添加</el-button>
+                <el-button type="primary" link size="small" style="padding:0;font-size:12px" @click="feeItems.push(createDefaultRetailFeeItem())">{{ $t('retail.cashRegister.addFeeBtn') }}</el-button>
               </div>
             </div>
             <div v-if="feeItems.filter(f=>f.amount>0).length" class="cr-settle-row" style="font-weight:700;border-top:1px solid rgba(255,255,255,0.15);padding-top:8px;margin-top:4px">
-              <span>实付合计</span>
-              <span style="font-size:15px">¥{{ formatMoney(payAmount + feeItems.filter(f=>f.amount>0).reduce((s,f)=>s+Number(f.amount),0)) }}</span>
+              <span>{{ $t('retail.cashRegister.totalActual') }}</span>
+              <span style="font-size:15px">¥{{ formatMoney(payAmount) }}</span>
             </div>
             <div class="cr-pay-methods">
               <div v-for="m in payMethods" :key="m.value" class="cr-pay-btn"
@@ -348,8 +362,8 @@
             </div>
             <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
               @click="handleCheckout">
-              <span v-if="paying">处理中…</span>
-              <span v-else>结&nbsp;&nbsp;算&nbsp;&nbsp;¥{{ formatMoney(payAmount + feeItems.filter(f=>f.amount>0).reduce((s,f)=>s+Number(f.amount),0)) }}</span>
+              <span v-if="paying">{{ $t('retail.cashRegister.processing') }}</span>
+              <span v-else>{{ $t('retail.cashRegister.checkout') }}&nbsp;&nbsp;¥{{ formatMoney(payAmount) }}</span>
             </button>
           </div>
         </div>
@@ -361,10 +375,10 @@
             <div class="cr-cate-tab" :class="{ active: activeCate === 'hot' }"
               @click="selectParentCate('hot')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:3px"><path d="M12 2c0 0-6 6-6 12a6 6 0 0012 0c0-6-6-12-6-12z"/></svg>
-              热销产品
+              {{ $t('retail.cashRegister.hotProducts') }}
             </div>
             <div class="cr-cate-tab" :class="{ active: activeCate === '' && activePCate === '' }"
-              @click="selectParentCate('')">全部分类</div>
+              @click="selectParentCate('')">{{ $t('retail.cashRegister.allCategories') }}</div>
             <div v-for="c in cateRoots" :key="c.id" class="cr-cate-tab"
               :class="{ active: activePCate === c.id || activeCate === c.id }"
               @click="selectParentCate(c.id)">
@@ -377,7 +391,7 @@
               class="cr-cate-tab cr-cate-sub-tab"
               :class="{ active: activeCate === activePCate }"
               @click="activeCate = activePCate; loadGoods()"
-            >全部</div>
+            >{{ $t('retail.cashRegister.allSubcategories') }}</div>
             <div v-for="sub in activePCateChildren" :key="sub.id" class="cr-cate-tab cr-cate-sub-tab"
               :class="{ active: activeCate === sub.id }"
               @click="activeCate = sub.id; loadGoods()">
@@ -392,17 +406,17 @@
               <div class="cr-goods-prices">
                 <span class="cr-goods-price">¥{{ Number(g.sell_price).toFixed(2) }}</span>
                 <span v-if="Number(g.member_price) > 0" class="cr-goods-member-price">
-                  ¥{{ Number(g.member_price).toFixed(2) }}会员价
+                  ¥{{ Number(g.member_price).toFixed(2) }}{{ $t('retail.cashRegister.memberPrice') }}
                 </span>
                 <span v-if="isAdmin && Number(g.cost_price) > 0" class="cr-goods-cost-price">
-                  成本¥{{ Number(g.cost_price).toFixed(2) }}
+                  {{ $t('retail.cashRegister.costPrice') }}¥{{ Number(g.cost_price).toFixed(2) }}
                 </span>
               </div>
             </div>
             <div v-if="!goodsLoading && goodsList.length === 0" class="cr-goods-empty">
-              <div>暂无商品</div>
+              <div>{{ $t('retail.cashRegister.noGoods') }}</div>
               <div class="cr-goods-empty-add" @click="openQuickAdd">
-                <el-icon><Plus /></el-icon> 新建商品并加入购物车
+                <el-icon><Plus /></el-icon> {{ $t('retail.cashRegister.addNewGoods') }}
               </div>
             </div>
           </div>
@@ -412,50 +426,50 @@
     </div>
 
     <!-- 结算成功弹框 -->
-    <el-dialog v-model="successVisible" title="结算成功" width="360px" align-center>
+    <el-dialog v-model="successVisible" :title="$t('retail.cashRegister.successTitle')" width="360px" align-center>
       <div style="text-align:center;padding:16px 0">
         <el-icon style="font-size:56px;color:#16a34a"><CircleCheckFilled /></el-icon>
         <div style="font-size:26px;font-weight:700;margin:14px 0 6px;color:#1d1d1f">
           ¥{{ formatMoney(lastPayAmount) }}
         </div>
-        <div style="color:rgba(29,29,31,0.35);font-size:13px">订单号：{{ lastOrderNo }}</div>
+        <div style="color:rgba(29,29,31,0.35);font-size:13px">{{ $t('retail.cashRegister.successOrderNo') }}{{ lastOrderNo }}</div>
       </div>
       <template #footer>
         <el-button type="primary" style="width:100%" @click="successVisible = false">
-          继续收银
+          {{ $t('retail.cashRegister.continueCashier') }}
         </el-button>
       </template>
     </el-dialog>
 
     <!-- 新建商品（含可选采购入库） -->
-    <el-dialog v-model="quickAddVisible" title="新建商品" width="500px" align-center :close-on-click-modal="false">
+    <el-dialog v-model="quickAddVisible" :title="$t('retail.cashRegister.newGoodsTitle')" width="500px" align-center :close-on-click-modal="false">
       <div style="display:flex;flex-direction:column;gap:0;padding:4px 0">
 
         <!-- ── 商品信息 ── -->
         <el-form label-width="72px">
-          <el-form-item label="商品名称" required>
-            <el-input v-model="quickAddForm.goods_name" placeholder="请输入商品名称" clearable />
+          <el-form-item :label="$t('retail.cashRegister.goodsName')" required>
+            <el-input v-model="quickAddForm.goods_name" :placeholder="$t('retail.cashRegister.goodsNamePlaceholder')" clearable />
           </el-form-item>
-          <el-form-item label="售价" required>
+          <el-form-item :label="$t('retail.cashRegister.sellPrice')" required>
             <el-input-number v-model="quickAddForm.sell_price" :min="0" :precision="2" :step="1"
               controls-position="right" style="width:100%" />
           </el-form-item>
-          <el-form-item label="成本价">
+          <el-form-item :label="$t('retail.cashRegister.costPriceLabel')">
             <el-input-number v-model="quickAddForm.cost_price" :min="0" :precision="2" :step="1"
-              controls-position="right" style="width:100%" placeholder="可不填" />
+              controls-position="right" style="width:100%" :placeholder="$t('retail.cashRegister.costPricePlaceholder')" />
           </el-form-item>
-          <el-form-item label="单位" required>
-            <el-select v-model="quickAddForm.unit_id" placeholder="请选择单位" style="width:100%">
+          <el-form-item :label="$t('retail.cashRegister.unit')" required>
+            <el-select v-model="quickAddForm.unit_id" :placeholder="$t('retail.cashRegister.unitPlaceholder')" style="width:100%">
               <el-option v-for="u in unitList" :key="u.id" :label="u.name" :value="u.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="商品分类">
-            <el-select v-model="quickAddForm.cate_id" placeholder="可不选" clearable style="width:100%">
+          <el-form-item :label="$t('retail.cashRegister.category')">
+            <el-select v-model="quickAddForm.cate_id" :placeholder="$t('retail.cashRegister.categoryPlaceholder')" clearable style="width:100%">
               <el-option v-for="c in cateTreeOptions" :key="c.id" :label="c.label" :value="c.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="条形码">
-            <el-input v-model="quickAddForm.barcode" placeholder="可不填" clearable />
+          <el-form-item :label="$t('retail.cashRegister.barcode')">
+            <el-input v-model="quickAddForm.barcode" :placeholder="$t('retail.cashRegister.barcodePlaceholder')" clearable />
           </el-form-item>
         </el-form>
 
@@ -467,8 +481,8 @@
                 <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/>
                 <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
               </svg>
-              <span>同时录入采购入库</span>
-              <span class="qa-optional-badge">可选</span>
+              <span>{{ $t('retail.cashRegister.procureSection') }}</span>
+              <span class="qa-optional-badge">{{ $t('retail.cashRegister.procureOptional') }}</span>
             </div>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               :style="quickAddForm.showProcure ? 'transform:rotate(180deg)' : ''" style="transition:0.2s">
@@ -478,84 +492,84 @@
 
           <div v-if="quickAddForm.showProcure" class="qa-procure-body">
             <el-form label-width="72px">
-              <el-form-item label="采购数量" required>
+              <el-form-item :label="$t('retail.cashRegister.procureQty')" required>
                 <el-input-number v-model="quickAddForm.procure_qty" :min="0" :precision="3" :step="1"
-                  controls-position="right" style="width:100%" placeholder="填0或留空=不录采购" />
+                  controls-position="right" style="width:100%" :placeholder="$t('retail.cashRegister.procureQtyPlaceholder')" />
               </el-form-item>
-              <el-form-item label="采购单价">
+              <el-form-item :label="$t('retail.cashRegister.procurePrice')">
                 <el-input-number v-model="quickAddForm.procure_price" :min="0" :precision="2" :step="1"
                   controls-position="right" style="width:100%"
                   @change="(v: number) => { quickAddForm.cost_price = v || 0 }" />
               </el-form-item>
-              <el-form-item label="供应商">
+              <el-form-item :label="$t('retail.cashRegister.procureSupplier')">
                 <el-autocomplete
                   v-model="quickAddForm.procure_supplier"
                   :fetch-suggestions="(q: string, cb: any) => cb(supplierOptions.filter((s: any) => s.name.includes(q)).map((s: any) => ({ value: s.name })))"
-                  placeholder="手输或选已有供应商，可不填"
+                  :placeholder="$t('retail.cashRegister.procureSupplierPlaceholder')"
                   clearable style="width:100%"
                 />
               </el-form-item>
-              <el-form-item label="入库仓库">
-                <el-select v-model="quickAddForm.procure_warehouse_id" placeholder="请选择仓库" style="width:100%"
+              <el-form-item :label="$t('retail.cashRegister.procureWarehouse')">
+                <el-select v-model="quickAddForm.procure_warehouse_id" :placeholder="$t('retail.cashRegister.procureWarehousePlaceholder')" style="width:100%"
                   @change="(id: number) => { const w = warehouseList.find((w: any) => w.id === id); quickAddForm.procure_warehouse_name = w?.name ?? '' }">
                   <el-option v-for="w in warehouseList" :key="w.id" :label="w.name" :value="w.id" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="采购日期">
+              <el-form-item :label="$t('retail.cashRegister.procureDate')">
                 <el-date-picker v-model="quickAddForm.procure_date" type="date" value-format="YYYY-MM-DD"
                   style="width:100%" :clearable="false" />
               </el-form-item>
             </el-form>
             <div class="qp-tip" style="margin-top:4px">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-              填写采购数量后提交，系统自动审核入库、更新库存；付款后续在采购管理录入
+              {{ $t('retail.cashRegister.procureTip') }}
             </div>
           </div>
         </div>
 
       </div>
       <template #footer>
-        <el-button @click="quickAddVisible = false">取消</el-button>
+        <el-button @click="quickAddVisible = false">{{ $t('retail.cashRegister.cancel') }}</el-button>
         <el-button type="primary" :loading="quickAddSaving" @click="submitQuickAdd">
-          建档并加入购物车
+          {{ $t('retail.cashRegister.createAndAdd') }}
         </el-button>
       </template>
     </el-dialog>
 
     <!-- 克重计算器 -->
-    <el-dialog v-model="weightCalcVisible" title="散装克重计价" width="340px" align-center>
+    <el-dialog v-model="weightCalcVisible" :title="$t('retail.cashRegister.weightCalcTitle')" width="340px" align-center @closed="wcEditIndex = null">
       <div style="display:flex;flex-direction:column;gap:16px;padding:8px 0">
         <!-- 当前商品信息 -->
         <div v-if="wcGoodsName" style="background:#f8fafc;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:13px;font-weight:600;color:#1e293b">{{ wcGoodsName }}{{ wcSpecLabel ? ' · ' + wcSpecLabel : '' }}</span>
-          <span style="font-size:13px;color:#2563eb;font-weight:700">¥{{ wcPricePerJin }}/斤</span>
+          <span style="font-size:13px;color:#2563eb;font-weight:700">¥{{ wcPricePerJin }}/{{ wcGoodsUnit }}</span>
         </div>
         <!-- 无商品时提示 -->
         <div v-else style="font-size:12px;color:#94a3b8;text-align:center">
-          请从右侧商品列表选择散装产品
+          {{ $t('retail.cashRegister.wcNoGoods') }}
         </div>
         <!-- 模式切换 -->
         <div style="display:flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
           <div @click="wcMode='weight'"
             style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
             :style="wcMode==='weight' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
-            输入克数
+            {{ $t('retail.cashRegister.wcModeWeight') }}
           </div>
           <div @click="wcMode='unit'"
             style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
             :style="wcMode==='unit' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
-            输入{{ wcGoodsUnit }}数
+            {{ $t('retail.cashRegister.wcModeUnit', { unit: wcGoodsUnit }) }}
           </div>
           <div @click="wcMode='amount'"
             style="flex:1;padding:7px 0;text-align:center;font-size:13px;cursor:pointer;transition:all 0.15s"
             :style="wcMode==='amount' ? 'background:#2563eb;color:#fff;font-weight:600' : 'color:#64748b;background:#f8fafc'">
-            输入金额
+            {{ $t('retail.cashRegister.wcModeAmount') }}
           </div>
         </div>
         <!-- 输入框 -->
         <div style="display:flex;align-items:center;gap:12px">
           <span style="width:64px;font-size:13px;color:#64748b;flex-shrink:0">
-            {{ wcMode === 'weight' ? '称重（克）' : wcMode === 'unit' ? wcGoodsUnit : '金额（元）' }}
+            {{ wcMode === 'weight' ? $t('retail.cashRegister.wcLabelWeight') : wcMode === 'unit' ? wcGoodsUnit : $t('retail.cashRegister.wcLabelAmount') }}
           </span>
           <el-input-number v-if="wcMode==='weight'" v-model="wcWeightGrams"
             :min="0" :precision="1" controls-position="right" style="flex:1" />
@@ -578,23 +592,23 @@
         <!-- 结果展示 -->
         <div style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
           <template v-if="wcMode==='weight'">
-            <div style="font-size:12px;color:#64748b;margin-bottom:4px">应付金额</div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">{{ $t('retail.cashRegister.wcDueAmount') }}</div>
             <div style="font-size:28px;font-weight:700;color:#2563eb">¥{{ wcAmount.toFixed(2) }}</div>
-            <div style="font-size:12px;color:#94a3b8;margin-top:4px">{{ wcWeightGrams }}克 ÷ {{ wcGramsPerBaseUnit }} × ¥{{ wcPricePerJin }}/{{ wcGoodsUnit }}</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:4px">{{ wcWeightGrams }}g ÷ {{ wcGramsPerBaseUnit }} × ¥{{ wcPricePerJin }}/{{ wcGoodsUnit }}</div>
           </template>
           <template v-else-if="wcMode==='unit'">
-            <div style="font-size:12px;color:#64748b;margin-bottom:4px">应付金额</div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">{{ $t('retail.cashRegister.wcDueAmount') }}</div>
             <div style="font-size:28px;font-weight:700;color:#2563eb">¥{{ (wcDirectUnit * wcPricePerJin).toFixed(2) }}</div>
           </template>
           <template v-else>
-            <div style="font-size:12px;color:#64748b;margin-bottom:4px">需要称重</div>
-            <div style="font-size:28px;font-weight:700;color:#059669">{{ wcReverseGrams.toFixed(1) }} 克</div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:4px">{{ $t('retail.cashRegister.wcNeedWeight') }}</div>
+            <div style="font-size:28px;font-weight:700;color:#059669">{{ wcReverseGrams.toFixed(1) }} g</div>
             <div style="font-size:12px;color:#94a3b8;margin-top:4px">¥{{ wcTargetAmount }} ÷ ¥{{ wcPricePerJin }}/{{ wcGoodsUnit }} × {{ wcGramsPerBaseUnit }}</div>
           </template>
         </div>
         <!-- 桶装快捷选项 -->
         <div v-if="wcAuxUnits.length" style="display:flex;flex-direction:column;gap:8px">
-          <div style="font-size:12px;color:#64748b;font-weight:500">按包装出售</div>
+          <div style="font-size:12px;color:#64748b;font-weight:500">{{ $t('retail.cashRegister.wcPackageSell') }}</div>
           <div style="display:flex;flex-wrap:wrap;gap:8px">
             <div v-for="u in wcAuxUnits" :key="u.unit_name"
               @click="addPackageToCart(u)"
@@ -609,13 +623,13 @@
         <el-button type="primary"
           :disabled="(wcMode==='weight' ? wcAmount : wcMode==='unit' ? wcDirectUnit * wcPricePerJin : wcTargetAmount) <= 0 || !wcGoodsName"
           @click="addWeightItemToCart" style="width:100%">
-          散装加入购物车
+          {{ wcEditIndex !== null ? $t('retail.cashRegister.wcUpdateWeight') : $t('retail.cashRegister.wcAddToCart') }}
         </el-button>
       </div>
     </el-dialog>
 
     <!-- 规格选择弹窗 -->
-    <el-dialog v-model="specSelectVisible" title="选择规格" width="340px" align-center>
+    <el-dialog v-model="specSelectVisible" :title="$t('retail.cashRegister.specSelectTitle')" width="340px" align-center>
       <div style="display:flex;flex-direction:column;gap:16px;padding:8px 0">
         <!-- 商品名 -->
         <div style="background:#f8fafc;border-radius:10px;padding:12px 14px">
@@ -637,7 +651,7 @@
         </div>
         <!-- 无规格数据提示 -->
         <div v-if="!ssSpecAttrs.length" style="font-size:13px;color:#94a3b8;text-align:center;padding:12px 0">
-          该商品未配置规格，请先在商品管理中设置
+          {{ $t('retail.cashRegister.specNoConfig') }}
         </div>
         <!-- 价格预览 -->
         <div v-if="ssSpecLabel" style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
@@ -649,7 +663,7 @@
         <el-button type="primary"
           :disabled="ssSelectedVals.some(v => !v) || !ssSpecAttrs.length"
           @click="addSpecItemToCart" style="width:100%">
-          加入购物车
+          {{ $t('retail.cashRegister.specAddToCart') }}
         </el-button>
       </div>
     </el-dialog>
@@ -659,6 +673,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Search, Delete, CircleCheckFilled, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getGoodsList, getGoodsCateList, getUnitConvert, createGoods, getUnitList, readGoods, getSpecList, getBomList } from '@/api/goods'
@@ -673,6 +688,8 @@ import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
 import { usePermissionStore } from '@/stores/permission'
 import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
+
+const { t } = useI18n()
 
 const isAdmin = computed(() => !usePermissionStore().isSubAccount)
 
@@ -849,7 +866,7 @@ function addSpecItemToCart() {
   } as any)
   pricingTargetIndex.value = cartItems.length - 1
   calcTotal()
-  ElMessage.success(`已加入：${goodsName}`)
+  ElMessage.success(t('retail.cashRegister.specAdded', { name: goodsName }))
 }
 const cateList = ref<any[]>([])
 const searchInputRef = ref<HTMLInputElement>()
@@ -977,7 +994,7 @@ function onBarcodeEnter() {
   if (match) {
     addToCart(match)
     keyword.value = ''
-    ElMessage.success(`已添加：${match.goods_name}`)
+    ElMessage.success(t('retail.cashRegister.barcodeAdded', { name: match.goods_name }))
     return
   }
   // Try search
@@ -986,7 +1003,7 @@ function onBarcodeEnter() {
 }
 
 // ── 购物车 ────────────────────────────────────────────────────────────────────
-interface CartItem { goods_id: number; goods_name: string; goods_sn: string; unit_name: string; price: number; num: number; cost_price?: number; unit_ratio?: number }
+interface CartItem { goods_id: number; goods_name: string; goods_sn: string; unit_name: string; price: number; num: number; cost_price?: number; unit_ratio?: number; is_bulk?: boolean; bulk_grams_per_base?: number }
 
 const cartItems = reactive<CartItem[]>([])
 
@@ -1000,13 +1017,45 @@ function onStoreChange(id: number) {
 const totalAmount = ref(0)
 const discountAmount = ref(0)
 const payAmount = ref(0)
+const RETAIL_FEE_TYPE_MAP: Record<string, string> = {
+  shipping: 'shipping',
+  '运费': 'shipping',
+  delivery: 'delivery',
+  '跑腿费': 'delivery',
+  handling: 'handling',
+  '装卸费': 'handling',
+  other: 'other',
+  '其他费用': 'other',
+}
+
+function normalizeRetailFeeTypeName(name: any): string {
+  const raw = String(name || '').trim()
+  return RETAIL_FEE_TYPE_MAP[raw] || raw
+}
+
+function createDefaultRetailFeeItem() {
+  return { name: 'shipping', amount: 0, bearer: 'buyer' }
+}
+
 const feeItems = reactive<{ name: string; amount: number; bearer: string }[]>([])
+
+function normalizedRetailFeeItems() {
+  return feeItems
+    .filter(fee => fee.name && fee.amount > 0)
+    .map(fee => ({
+      ...fee,
+      name: normalizeRetailFeeTypeName(fee.name),
+    }))
+}
 const pricingTargetIndex = ref<number | null>(null)
 const displayCartItems = computed(() => distributeRetailItems(cartItems, payAmount.value, {
   targetIndex: pricingTargetIndex.value,
 }).items)
-const adjustmentLabel = computed(() => discountAmount.value < 0 ? '加价' : '折扣')
-const adjustmentScopeLabel = computed(() => `${adjustmentLabel.value}（${pricingTargetIndex.value === null ? '整单' : '当前商品'}）`)
+const adjustmentLabel = computed(() => discountAmount.value < 0 ? t('retail.cashRegister.markupLabel') : t('retail.cashRegister.discountLabel'))
+const adjustmentScopeLabel = computed(() => t('retail.cashRegister.adjustmentLabel', {
+  type: adjustmentLabel.value,
+  scope: pricingTargetIndex.value === null ? t('retail.cashRegister.wholeOrder') : t('retail.cashRegister.currentGoods'),
+}))
 const adjustmentAmount = computed({
   get: () => Math.abs(Number(discountAmount.value || 0)),
   set: (value: number) => {
@@ -1121,13 +1170,13 @@ function onMemberChange(id: any) {
 const orderDate = ref(new Date().toLocaleDateString('sv-SE'))
 
 // ── 支付方式 ──────────────────────────────────────────────────────────────────
-const payMethods = [
-  { label: '现金', value: 'cash' },
-  { label: '微信', value: 'wechat' },
-  { label: '支付宝', value: 'alipay' },
-  { label: '会员余额', value: 'balance' },
-  { label: '银行卡', value: 'card' },
-]
+const payMethods = computed(() => [
+  { label: t('retail.cashRegister.payMethodCash'), value: 'cash' },
+  { label: t('retail.cashRegister.payMethodWechat'), value: 'wechat' },
+  { label: t('retail.cashRegister.payMethodAlipay'), value: 'alipay' },
+  { label: t('retail.cashRegister.payMethodBalance'), value: 'balance' },
+  { label: t('retail.cashRegister.payMethodCard'), value: 'card' },
+])
 const payMethod = ref('cash')
 
 // ── 结算 ──────────────────────────────────────────────────────────────────────
@@ -1138,7 +1187,7 @@ const lastOrderNo = ref('')
 
 // 零售库存变动：deduct=扣减，restore=加回
 async function retailStockEffect(items: any[], mode: 'deduct' | 'restore', orderId?: number) {
-  const remark = mode === 'deduct' ? (orderId ? `零售出库#${orderId}` : '零售出库') : '零售退货入库'
+  const remark = mode === 'deduct' ? (orderId ? `Retail outbound#${orderId}` : 'Retail outbound') : 'Retail return inbound'
   await stockEffect(items, mode, undefined, remark)
 }
 
@@ -1153,16 +1202,16 @@ function extractRows(res: any): any[] {
 }
 
 async function handleCheckout() {
-  if (!cartItems.length) { ElMessage.warning('购物车为空'); return }
+  if (!cartItems.length) { ElMessage.warning(t('retail.cashRegister.cartEmptyWarning')); return }
   // 会员余额支付验证
   if (payMethod.value === 'balance') {
     if (!selectedMemberId.value || !selectedMember.value) {
-      ElMessage.warning('请先选择会员')
+      ElMessage.warning(t('retail.cashRegister.memberRequired'))
       return
     }
     const memberBalance = Number(selectedMember.value.balance || 0)
     if (memberBalance < payAmount.value) {
-      ElMessage.warning(`会员余额不足（余额：¥${memberBalance.toFixed(2)}，应付：¥${payAmount.value.toFixed(2)}）`)
+      ElMessage.warning(t('retail.cashRegister.memberBalanceInsufficient', { balance: memberBalance.toFixed(2), required: payAmount.value.toFixed(2) }))
       return
     }
   }
@@ -1185,11 +1234,11 @@ async function handleCheckout() {
       pay_method: payMethod.value,
       pay_type: payMethod.value,
       goods_info: JSON.stringify(settled.items),
-      fee_items: JSON.stringify(feeItems.filter(f => f.name && f.amount > 0)),
+      fee_items: JSON.stringify(normalizedRetailFeeItems()),
       status: 1,
     })
     if (!res?.data?.id && !res?.data?.order_no && !res?.data?.order_sn) {
-      throw new Error('订单创建返回异常，请重试')
+      throw new Error('Order creation returned unexpected result, please retry')
     }
     const createdId = Number(res.data?.id || 0)
     const check = await getRetailOrderList({ list_rows: 200 })
@@ -1198,22 +1247,22 @@ async function handleCheckout() {
       (createdId > 0 && Number(r.id) === createdId)
     )
     if (!created) {
-      throw new Error('收银失败：系统未找到新零售单，请重试')
+      throw new Error('Checkout failed: new retail order not found, please retry')
     }
-    const feesTotal = feeItems.filter(f => f.name && f.amount > 0).reduce((s, f) => s + Number(f.amount), 0)
-    lastPayAmount.value = settled.payAmount + feesTotal
+    const feesTotal = normalizedRetailFeeItems().reduce((s, f) => s + Number(f.amount), 0)
+    lastPayAmount.value = settled.payAmount
     lastOrderNo.value = created.order_sn || created.id || res.data?.order_no || res.data?.id || ''
     // 收银台扣减库存
     try {
       await retailStockEffect(cartItems, 'deduct', createdId || 0)
     } catch {
-      ElMessage.warning('库存扣减失败，请手动更新')
+      ElMessage.warning(t('retail.cashRegister.stockDeductFail'))
     }
-    // 更新资金账户：商品实付 + 客户附加费用（如跑腿费）
+    // 更新资金账户：商品实付（附加费用由我方承担，不计入客户收款）
     try {
       await adjustFundBalance({
         fundName: RETAIL_FUND_NAME,
-        delta: settled.payAmount + feesTotal,
+        delta: settled.payAmount,
         allowCreate: true,
       })
     } catch { /* 资金更新失败不阻塞 */ }
@@ -1224,7 +1273,7 @@ async function handleCheckout() {
     const msg = e?.message ?? ''
     // 503 already shows a warning toast from http.ts — don't duplicate
     if (!msg.includes('503') && !msg.includes('正在启动')) {
-      ElMessage.error(msg || '结算失败')
+      ElMessage.error(msg || t('retail.cashRegister.checkoutFailed'))
     }
   } finally {
     paying.value = false
@@ -1248,6 +1297,7 @@ const wcMode = ref<'weight' | 'unit' | 'amount'>('weight')
 const wcWeightGrams = ref(0)    // 正向：输入克数
 const wcDirectUnit = ref(0)     // 直接输斤数
 const wcTargetAmount = ref(0)   // 反向：输入金额
+const wcEditIndex = ref<number | null>(null)  // 编辑已有散装购物车项时的 index
 // 正向：克数 → 金额
 const wcAmount = computed(() => {
   if (!wcPricePerJin.value || !wcWeightGrams.value) return 0
@@ -1262,12 +1312,12 @@ const wcReverseGrams = computed(() => {
 const wcJinPresets = computed(() => {
   const base = wcGramsPerBaseUnit.value || 500
   return [
-    { label: '半斤', grams: base * 0.5 },
-    { label: '1斤', grams: base * 1 },
-    { label: '2斤', grams: base * 2 },
-    { label: '3斤', grams: base * 3 },
-    { label: '4斤', grams: base * 4 },
-    { label: '5斤', grams: base * 5 },
+    { label: t('retail.cashRegister.wcPresetHalfJin'), grams: base * 0.5 },
+    { label: t('retail.cashRegister.wcPreset1Jin'), grams: base * 1 },
+    { label: t('retail.cashRegister.wcPreset2Jin'), grams: base * 2 },
+    { label: t('retail.cashRegister.wcPreset3Jin'), grams: base * 3 },
+    { label: t('retail.cashRegister.wcPreset4Jin'), grams: base * 4 },
+    { label: t('retail.cashRegister.wcPreset5Jin'), grams: base * 5 },
   ]
 })
 
@@ -1316,6 +1366,35 @@ async function openWeightCalc(g?: any, specLabel?: string, overridePrice?: numbe
   weightCalcVisible.value = true
 }
 
+// 重新编辑购物车里某个散装商品的克重
+async function openWeightCalcEdit(idx: number) {
+  const item = cartItems[idx]
+  const gramsPerBase = item.bulk_grams_per_base ?? 500
+  wcGoodsId.value = item.goods_id
+  wcGoodsName.value = item.goods_name.replace(/ \d+\.?\d*g$/, '')
+  wcSpecLabel.value = ''
+  wcGoodsUnit.value = item.unit_name || '斤'
+  wcGramsPerBaseUnit.value = gramsPerBase
+  wcPricePerJin.value = item.price
+  wcWeightGrams.value = parseFloat((item.num * gramsPerBase).toFixed(1))
+  wcDirectUnit.value = 0
+  wcTargetAmount.value = 0
+  wcMode.value = 'weight'
+  wcAuxUnits.value = []
+  wcEditIndex.value = idx
+  // 加载换算单位
+  if (item.goods_id && item.goods_id > 0) {
+    try {
+      const res = await getUnitConvert(item.goods_id)
+      const units: any[] = res.data?.rows ?? []
+      wcAuxUnits.value = units
+        .filter((u: any) => u.unit_name !== 'g')
+        .map((u: any) => ({ unit_name: u.unit_name, ratio: Number(u.ratio), sell_price: Number(u.sell_price) || 0, cost_price: Number(u.cost_price) || 0 }))
+    } catch {}
+  }
+  weightCalcVisible.value = true
+}
+
 function addWeightItemToCart() {
   let finalAmount: number, finalGrams: number
   if (wcMode.value === 'weight') {
@@ -1329,18 +1408,34 @@ function addWeightItemToCart() {
     finalGrams = wcReverseGrams.value
   }
   if (finalAmount <= 0) return
-  const baseName = wcGoodsName.value || '散装商品'
+  const baseName = wcGoodsName.value || 'Bulk Item'
   const name = wcSpecLabel.value ? `${baseName} · ${wcSpecLabel.value}` : baseName
-  cartItems.push({
-    goods_id: wcGoodsId.value ?? -1,
-    goods_name: `${name} ${finalGrams.toFixed(1)}g`,
-    goods_sn: '',
-    unit_name: wcGoodsUnit.value,
-    price: wcPricePerJin.value,
-    cost_price: Number(goodsList.value.find((g: any) => g.id === wcGoodsId.value)?.cost_price || 0),
-    num: parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4)),
-  })
-  pricingTargetIndex.value = cartItems.length - 1
+  const newNum = parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4))
+  if (wcEditIndex.value !== null) {
+    // 更新已有购物车项
+    const item = cartItems[wcEditIndex.value]
+    item.goods_name = `${name} ${finalGrams.toFixed(1)}g`
+    item.price = wcPricePerJin.value
+    item.num = newNum
+    item.bulk_grams_per_base = wcGramsPerBaseUnit.value
+    pricingTargetIndex.value = wcEditIndex.value
+    wcEditIndex.value = null
+    ElMessage.success(t('retail.cashRegister.weightUpdated'))
+  } else {
+    cartItems.push({
+      goods_id: wcGoodsId.value ?? -1,
+      goods_name: `${name} ${finalGrams.toFixed(1)}g`,
+      goods_sn: '',
+      unit_name: wcGoodsUnit.value,
+      price: wcPricePerJin.value,
+      cost_price: Number(goodsList.value.find((g: any) => g.id === wcGoodsId.value)?.cost_price || 0),
+      num: newNum,
+      is_bulk: true,
+      bulk_grams_per_base: wcGramsPerBaseUnit.value,
+    })
+    pricingTargetIndex.value = cartItems.length - 1
+    ElMessage.success(t('retail.cashRegister.weightAdded'))
+  }
   calcTotal()
   weightCalcVisible.value = false
   wcGoodsId.value = null
@@ -1351,7 +1446,6 @@ function addWeightItemToCart() {
   wcPricePerJin.value = 0
   wcWeightGrams.value = 0
   wcTargetAmount.value = 0
-  ElMessage.success('已加入购物车')
 }
 
 // 按桶装单位加购物车
@@ -1381,7 +1475,7 @@ function addPackageToCart(unit: { unit_name: string; ratio: number; sell_price?:
   pricingTargetIndex.value = cartItems.length - 1
   calcTotal()
   weightCalcVisible.value = false
-  ElMessage.success(`已加入：${wcGoodsName.value} · ${unit.unit_name}`)
+  ElMessage.success(t('retail.cashRegister.packageAdded', { name: `${wcGoodsName.value} · ${unit.unit_name}` }))
 }
 
 // ── 新建商品（含可选采购入库）────────────────────────────────────────────────
@@ -1439,20 +1533,20 @@ async function openQuickAdd() {
 
 async function submitQuickAdd() {
   const name = quickAddForm.goods_name.trim()
-  if (!name) { ElMessage.warning('请输入商品名称'); return }
-  if (!quickAddForm.sell_price || quickAddForm.sell_price <= 0) { ElMessage.warning('请输入售价'); return }
-  if (!quickAddForm.unit_id) { ElMessage.warning('请选择单位'); return }
+  if (!name) { ElMessage.warning(t('retail.cashRegister.goodsNameRequired')); return }
+  if (!quickAddForm.sell_price || quickAddForm.sell_price <= 0) { ElMessage.warning(t('retail.cashRegister.sellPriceRequired')); return }
+  if (!quickAddForm.unit_id) { ElMessage.warning(t('retail.cashRegister.unitRequired')); return }
 
   const doProcure = quickAddForm.showProcure && quickAddForm.procure_qty > 0
   if (doProcure && !quickAddForm.procure_warehouse_id) {
-    ElMessage.warning('录入采购需要选择入库仓库'); return
+    ElMessage.warning(t('retail.cashRegister.warehouseRequired')); return
   }
 
   // 防止重名
   const dupCheck = await getGoodsList({ keyword: name, status: 1, list_rows: 10 })
   const dupRows: any[] = dupCheck.data?.rows ?? []
   if (dupRows.some((g: any) => g.goods_name === name)) {
-    ElMessage.warning(`商品「${name}」已存在，请直接从列表选择`)
+    ElMessage.warning(t('retail.cashRegister.goodsDuplicate', { name }))
     return
   }
   quickAddSaving.value = true
@@ -1471,7 +1565,7 @@ async function submitQuickAdd() {
       goods_type: 1,
     })
     const newId = res?.data?.id
-    if (!newId) throw new Error('商品创建失败，请重试')
+    if (!newId) throw new Error('Failed to create product, please retry')
     const unit = unitList.value.find((u: any) => u.id === quickAddForm.unit_id)
 
     // 2. 采购入库（可选）
@@ -1512,12 +1606,12 @@ async function submitQuickAdd() {
         total_amount: totalAmount,
         after_discount: totalAmount,
         pay_amount: 0,
-        remark: '收银台建档采购入库',
+        remark: 'POS quick-add purchase receipt',
         goods_info: JSON.stringify(goodsInfo),
         status: 0,
       })
       const orderId = orderRes?.data?.id ?? orderRes?.data?.data?.id
-      if (!orderId) throw new Error('创建采购单失败')
+      if (!orderId) throw new Error('Failed to create purchase order')
       // 审核采购单
       await auditProcureOrder(orderId, 1)
       // 创建入库单并审核（新单不可能已有入库单，直接建）
@@ -1529,7 +1623,7 @@ async function submitQuickAdd() {
         warehouse_name: quickAddForm.procure_warehouse_name,
         in_date: procureDate,
         total_amount: totalAmount,
-        remark: '收银台建档采购入库',
+        remark: 'POS quick-add purchase receipt',
         goods_info: goodsInfo,
       })
       const inhouseId = inhouseRes?.data?.id ?? inhouseRes?.data
@@ -1551,10 +1645,10 @@ async function submitQuickAdd() {
     quickAddVisible.value = false
     keyword.value = ''
     ElMessage.success(doProcure
-      ? `「${name}」已建档、采购入库并加入购物车`
-      : `「${name}」已建档并加入购物车`)
+      ? t('retail.cashRegister.goodsCreatedWithProcure', { name })
+      : t('retail.cashRegister.goodsCreatedOnly', { name }))
   } catch (e: any) {
-    ElMessage.error(e?.message || '操作失败，请重试')
+    ElMessage.error(e?.message || t('retail.cashRegister.operationFailed'))
   } finally {
     quickAddSaving.value = false
   }
@@ -1792,6 +1886,15 @@ onMounted(async () => {
   color: #64748b; transition: all 0.1s;
 }
 .cr-qty-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+.cr-gram-chip {
+  padding: 4px 12px; border-radius: 20px;
+  border: 1.5px solid #3b82f6; background: #eff6ff;
+  color: #2563eb; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.12s;
+}
+.cr-gram-chip:active { background: #dbeafe; transform: scale(0.96); }
 
 .cr-cart-item-sub { display: flex; align-items: center; gap: 4px; }
 .cr-cart-item-sub-label { font-size: 11px; color: #64748b; flex-shrink: 0; }

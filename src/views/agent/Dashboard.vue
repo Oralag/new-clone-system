@@ -3,25 +3,25 @@
 
     <!-- ── 品牌配置快捷栏 ── -->
     <div class="brand-config-bar" :class="{ unconfigured: !brandStore.isConfigured }" @click="$router.push(ap('/agent/brand-settings'))">
-      <div class="bcb-left">
-        <div class="bcb-logo" :style="brandStore.isConfigured && brandStore.brand.primaryColor ? { background: brandStore.brand.primaryColor } : {}">
-          <span v-if="!brandStore.brand.logo">{{ (brandStore.brand.name || '品')[0] }}</span>
-          <img v-else :src="brandStore.brand.logo" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" />
+        <div class="bcb-left">
+          <div class="bcb-logo" :style="brandStore.isConfigured && brandStore.brand.primaryColor ? { background: brandStore.brand.primaryColor } : {}">
+            <span v-if="!brandStore.brand.logo">{{ (brandStore.brand.name || t('agentDashboard.brandInitial'))[0] }}</span>
+            <img v-else :src="brandStore.brand.logo" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" />
+          </div>
+          <div>
+          <div class="bcb-name">{{ brandStore.isConfigured ? brandStore.brand.name : t('agentDashboard.brandNotConfigured') }}</div>
+          <div class="bcb-hint">{{ brandStore.isConfigured ? (brandStore.brand.slogan || t('agentDashboard.editBrandHint')) : t('agentDashboard.configureHint') }}</div>
+          </div>
         </div>
-        <div>
-          <div class="bcb-name">{{ brandStore.isConfigured ? brandStore.brand.name : '未配置品牌' }}</div>
-          <div class="bcb-hint">{{ brandStore.isConfigured ? (brandStore.brand.slogan || '点击编辑品牌信息') : '配置品牌信息后，AI将生成更精准的内容' }}</div>
-        </div>
-      </div>
-      <button class="bcb-btn">{{ brandStore.isConfigured ? '编辑品牌' : '立即配置' }}</button>
+      <button class="bcb-btn">{{ brandStore.isConfigured ? t('agentDashboard.editBrand') : t('agentDashboard.configureBrand') }}</button>
     </div>
 
     <!-- ── Captain 指令台 ── -->
     <section class="command-section">
       <div class="command-header">
         <div class="command-title-group">
-          <span class="captain-label">🎯 Captain 总指挥</span>
-          <p class="command-desc">输入指令，Captain 将协调各部门完成任务</p>
+          <span class="captain-label">🎯 {{ t('agentDashboard.captainLabel') }}</span>
+          <p class="command-desc">{{ t('agentDashboard.captainDesc') }}</p>
         </div>
         <div class="command-chips">
           <button v-for="p in quickPrompts" :key="p" class="chip-btn" @click="fillCaptain(p)">{{ p }}</button>
@@ -35,22 +35,22 @@
       <div class="hero-left">
         <div class="hero-eyebrow">
           <span class="hero-dot"></span>
-          智能广告指挥中心
+          {{ t('agentDashboard.heroEyebrow') }}
         </div>
-        <h1 class="hero-title">{{ brandStore.isConfigured ? brandStore.brand.name : '我的公司' }}<br/><span class="hero-title-sub">全流程 AI 驱动</span></h1>
-        <p class="hero-desc">Captain 统一调度 · 各部门协同作战 · 内容生产流水线全自动化</p>
+        <h1 class="hero-title">{{ brandStore.isConfigured ? brandStore.brand.name : t('agentDashboard.defaultCompany') }}<br/><span class="hero-title-sub">{{ t('agentDashboard.heroTitleSub') }}</span></h1>
+        <p class="hero-desc">{{ t('agentDashboard.heroDesc') }}</p>
         <div class="hero-actions">
           <button class="hero-btn primary" @click="$router.push(ap('/agent/meeting'))">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="12" height="8" rx="2"/><path d="M4.5 13h5M7 10v3"/></svg>
-            召开会议
+            {{ t('agentDashboard.meetingAction') }}
           </button>
           <button class="hero-btn" @click="$router.push(ap('/agent/trending'))">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 10L4.5 6.5L7.5 9.5L13 3"/><path d="M10 3h3v3"/></svg>
-            查看热搜
+            {{ t('agentDashboard.trendingAction') }}
           </button>
           <button class="hero-btn" @click="$router.push(ap('/agent/publish'))">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 1v8M4.5 3.5L7 1l2.5 2.5"/><path d="M1.5 10v2.5h11V10"/></svg>
-            发布管理
+            {{ t('agentDashboard.publishAction') }}
           </button>
         </div>
       </div>
@@ -58,17 +58,17 @@
       <div class="hero-kpi">
         <div class="kpi-item">
           <div class="kpi-value">{{ stats[0].value }}</div>
-          <div class="kpi-label">已抓热搜</div>
+          <div class="kpi-label">{{ t('agentDashboard.kpiTrending') }}</div>
         </div>
         <div class="kpi-divider"></div>
         <div class="kpi-item">
           <div class="kpi-value">{{ stats[1].value }}</div>
-          <div class="kpi-label">已生文案</div>
+          <div class="kpi-label">{{ t('agentDashboard.kpiCopy') }}</div>
         </div>
         <div class="kpi-divider"></div>
         <div class="kpi-item">
           <div class="kpi-value" :class="{ 'kpi-running': companyStatus.running > 0 }">{{ companyStatus.running > 0 ? companyStatus.running : stats[2].value }}</div>
-          <div class="kpi-label">{{ companyStatus.running > 0 ? '流水线运行中' : '已发布' }}</div>
+          <div class="kpi-label">{{ companyStatus.running > 0 ? t('agentDashboard.kpiRunning') : t('agentDashboard.kpiPublished') }}</div>
         </div>
       </div>
     </section>
@@ -79,8 +79,8 @@
         <div class="wb-left">
           <div class="wb-badge" style="background:#10b981">HOT</div>
           <div class="wb-text">
-            <div class="wb-title">🖼️ 内容工作台</div>
-            <div class="wb-desc">上传产品图 · 自动裁切 · AI生文案 · 多平台打包下载</div>
+            <div class="wb-title">🖼️ {{ t('agentDashboard.workbenchContentTitle') }}</div>
+            <div class="wb-desc">{{ t('agentDashboard.workbenchContentDesc') }}</div>
           </div>
         </div>
         <div class="wb-arrow">
@@ -91,8 +91,8 @@
         <div class="wb-left">
           <div class="wb-badge">NEW</div>
           <div class="wb-text">
-            <div class="wb-title">一站式发布工作台</div>
-            <div class="wb-desc">选品 → 生成文案 → 生成海报 → 一键发布，全流程不离开此页面</div>
+            <div class="wb-title">{{ t('agentDashboard.workbenchPublishTitle') }}</div>
+            <div class="wb-desc">{{ t('agentDashboard.workbenchPublishDesc') }}</div>
           </div>
         </div>
         <div class="wb-arrow">
@@ -104,15 +104,15 @@
     <!-- ── 部门卡片（首屏主角） ── -->
     <section class="depts-section">
       <div class="section-hd">
-        <h3 class="section-title">各部门</h3>
-        <span class="section-sub">点击进入对应部门工作间</span>
+        <h3 class="section-title">{{ t('agentLayout.sectionDepartments') }}</h3>
+        <span class="section-sub">{{ t('agentDashboard.departmentsHint') }}</span>
       </div>
       <div class="depts-row">
         <div v-for="dept in departments" :key="dept.id" class="dept-card" :style="{ '--dc': dept.color }" @click="$router.push(ap(dept.path))">
           <div class="dept-illus" :style="{ background: dept.color }">
             <svg :viewBox="'0 0 12 12'" width="88" height="88" style="image-rendering:pixelated;opacity:0.28" v-html="deptIllus[dept.id] || deptIllus.content"></svg>
             <span class="dept-illus-label">{{ dept.name }}</span>
-            <span v-if="dept.outsource" class="dept-illus-outsource">外聘</span>
+            <span v-if="dept.outsource" class="dept-illus-outsource">{{ t('agentLayout.outsourceTag') }}</span>
           </div>
           <div class="dept-body">
             <div class="dept-card-top">
@@ -121,7 +121,7 @@
             </div>
             <div class="dept-name">{{ dept.name }}</div>
             <div class="dept-desc">{{ dept.desc }}</div>
-            <div class="dept-enter-btn">进入 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6h8M7 3l3 3-3 3"/></svg></div>
+            <div class="dept-enter-btn">{{ t('agentDashboard.enterDept') }} <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6h8M7 3l3 3-3 3"/></svg></div>
           </div>
         </div>
       </div>
@@ -130,23 +130,23 @@
     <!-- ── 内容运营 ── -->
     <section class="content-ops-section">
       <div class="section-hd">
-        <h3 class="section-title">内容运营</h3>
-        <span class="section-sub">{{ connectedCount }} 个渠道已登记 · {{ pendingCount }} 条待发布</span>
+        <h3 class="section-title">{{ t('agentDashboard.contentOpsTitle') }}</h3>
+        <span class="section-sub">{{ t('agentDashboard.contentOpsHint', { connected: connectedCount, pending: pendingCount }) }}</span>
       </div>
       <div class="co-panel-row">
 
         <!-- 渠道状态 -->
         <div class="co-panel">
           <div class="co-panel-hd">
-            <span class="co-panel-title">渠道接入状态</span>
-            <router-link to="/agent/channels" class="co-panel-link">管理 →</router-link>
+            <span class="co-panel-title">{{ t('agentDashboard.channelState') }}</span>
+            <router-link to="/agent/channels" class="co-panel-link">{{ t('agentDashboard.manage') }} →</router-link>
           </div>
           <div class="co-channels-grid">
             <div v-for="c in channels" :key="c.id" class="co-ch-item">
               <div class="co-ch-icon" :style="{ background: c.connected ? c.color : '#e2e8f0' }">{{ c.emoji }}</div>
               <div class="co-ch-name">{{ c.name }}</div>
               <div class="co-ch-status" :class="c.connected ? 'chs-on' : 'chs-off'">
-                {{ c.connected ? '已登记' : '未登记' }}
+                {{ c.connected ? t('agentDashboard.registered') : t('agentDashboard.unregistered') }}
               </div>
             </div>
           </div>
@@ -155,8 +155,8 @@
         <!-- 近期发布计划 -->
         <div class="co-panel">
           <div class="co-panel-hd">
-            <span class="co-panel-title">近期发布计划</span>
-            <router-link :to="ap('/agent/calendar')" class="co-panel-link">查看全部 →</router-link>
+            <span class="co-panel-title">{{ t('agentDashboard.recentPlans') }}</span>
+            <router-link :to="ap('/agent/calendar')" class="co-panel-link">{{ t('common.view') }} {{ t('common.all') }} →</router-link>
           </div>
           <div class="co-cal-list">
             <div v-for="p in upcomingDashboard" :key="p.id" class="co-cal-item">
@@ -168,7 +168,7 @@
               <span class="co-cal-tag" :class="'cct-' + p.status">{{ STATUS_ZH[p.status] }}</span>
             </div>
             <div v-if="upcomingDashboard.length === 0" class="co-cal-empty">
-              <router-link :to="ap('/agent/calendar')" class="co-panel-link">+ 新建内容计划</router-link>
+              <router-link :to="ap('/agent/calendar')" class="co-panel-link">+ {{ t('agentDashboard.newPlan') }}</router-link>
             </div>
           </div>
         </div>
@@ -182,8 +182,8 @@
     <!-- ── 今日热搜快览 ── -->
     <div class="trending-panel">
       <div class="panel-hd">
-        <span class="panel-title">今日热搜快览</span>
-        <router-link :to="ap('/agent/trending')" class="panel-link">查看全部 <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5.5h7M6 3l3 2.5L6 8"/></svg></router-link>
+        <span class="panel-title">{{ t('agentDashboard.todayTrending') }}</span>
+        <router-link :to="ap('/agent/trending')" class="panel-link">{{ t('common.view') }} {{ t('common.all') }} <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5.5h7M6 3l3 2.5L6 8"/></svg></router-link>
       </div>
       <div class="trending-list" v-if="topTrending.length > 0">
         <div v-for="(item, i) in topTrending" :key="i" class="trending-item">
@@ -195,8 +195,8 @@
       </div>
       <div class="trending-empty" v-else>
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="opacity:.25"><path d="M2 14h4l3.5-10 5 20 3.5-10H26"/></svg>
-        <div>暂无热搜数据</div>
-        <router-link :to="ap('/agent/trending')" class="panel-link" style="margin-top:6px">去情报部抓取 →</router-link>
+        <div>{{ t('agentDashboard.noTrending') }}</div>
+        <router-link :to="ap('/agent/trending')" class="panel-link" style="margin-top:6px">{{ t('agentDashboard.fetchTrending') }} →</router-link>
       </div>
     </div>
 
@@ -213,8 +213,10 @@ import { useChannels } from '@/composables/useChannels'
 import { useContentCalendar } from '@/composables/useContentCalendar'
 import CaptainBar from '@/components/CaptainBar.vue'
 import AgentLiveFeed from '@/components/agent/AgentLiveFeed.vue'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
+const { t } = useI18n()
 function ap(path: string) {
   return route.path.startsWith('/mobile/') ? path.replace('/agent/', '/mobile/agent/') : path
 }
@@ -230,7 +232,10 @@ const CH_EMOJI: Record<string, string> = {
   '抖音号': '🎵', '小红书': '📕', '快手号': '📱', '微博': '🌐',
 }
 const STATUS_ZH: Record<string, string> = {
-  idea: '选题中', draft: '创作中', scheduled: '待发布', published: '已发布',
+  idea: t('agentDashboard.statusIdea'),
+  draft: t('agentDashboard.statusDraft'),
+  scheduled: t('agentDashboard.statusScheduled'),
+  published: t('agentDashboard.statusPublished'),
 }
 
 const agentStore = useTrendingStore()
@@ -244,7 +249,11 @@ const todayLabel = computed(() => {
 })
 
 // Captain 快捷指令
-const quickPrompts = ['策划新品上线方案', '分析热搜生成推广方向', '制定本周内容计划']
+const quickPrompts = [
+  t('agentDashboard.quickPrompt1'),
+  t('agentDashboard.quickPrompt2'),
+  t('agentDashboard.quickPrompt3'),
+]
 
 function fillCaptain(text: string) {
   window.dispatchEvent(new CustomEvent('captain-fill', { detail: text }))
@@ -252,9 +261,9 @@ function fillCaptain(text: string) {
 
 // 今日数据
 const stats = computed(() => [
-  { type: 'trending', value: Object.values(agentStore.trending).reduce((s, a) => s + a.length, 0), label: '已抓热搜' },
-  { type: 'copy',    value: agentStore.copywritingResults.length, label: '已生文案' },
-  { type: 'publish', value: agentStore.history.filter(h => h.status === 'published').length, label: '已发布' },
+  { type: 'trending', value: Object.values(agentStore.trending).reduce((s, a) => s + a.length, 0), label: t('agentDashboard.kpiTrending') },
+  { type: 'copy',    value: agentStore.copywritingResults.length, label: t('agentDashboard.kpiCopy') },
+  { type: 'publish', value: agentStore.history.filter(h => h.status === 'published').length, label: t('agentDashboard.kpiPublished') },
 ])
 
 // 部门图标组件（内联SVG细线条）
@@ -301,8 +310,8 @@ const companyStatus = computed(() => {
 const departments = [
   {
     id: 'content',
-    name: '内容部',
-    desc: '文案·视频全链路内容生产',
+    name: t('agentLayout.contentDept'),
+    desc: t('agentDashboard.deptContentDesc'),
     emoji: '✍️',
     color: '#f59e0b',
     path: '/agent/content',
@@ -310,8 +319,8 @@ const departments = [
   },
   {
     id: 'creative',
-    name: '创意部',
-    desc: '海报·视觉设计·创意策略',
+    name: t('agentLayout.creativeDept'),
+    desc: t('agentDashboard.deptCreativeDesc'),
     emoji: '🎨',
     color: '#ec4899',
     path: '/agent/creative',
@@ -319,8 +328,8 @@ const departments = [
   },
   {
     id: 'brand',
-    name: '品牌部',
-    desc: '品牌战略·调性把控·竞品分析',
+    name: t('agentLayout.brandDept'),
+    desc: t('agentDashboard.deptBrandDesc'),
     emoji: '💎',
     color: '#8b5cf6',
     path: '/agent/brand',
@@ -328,8 +337,8 @@ const departments = [
   },
   {
     id: 'intel',
-    name: '情报部',
-    desc: '热点追踪·趋势分析·选题建议',
+    name: t('agentLayout.trendingDept'),
+    desc: t('agentDashboard.deptIntelDesc'),
     emoji: '📈',
     color: '#06b6d4',
     path: '/agent/trending',
@@ -337,8 +346,8 @@ const departments = [
   },
   {
     id: 'publish',
-    name: '发布部',
-    desc: '多平台排期·发布计划·数据复盘',
+    name: t('agentLayout.publishDept'),
+    desc: t('agentDashboard.deptPublishDesc'),
     emoji: '🚀',
     color: '#10b981',
     path: '/agent/publish',
@@ -346,8 +355,8 @@ const departments = [
   },
   {
     id: 'marketing',
-    name: '营销顾问',
-    desc: '营销战略·客户分析·定价策略·SWOT',
+    name: t('agentLayout.marketingAdvisor'),
+    desc: t('agentDashboard.deptMarketingDesc'),
     emoji: '📊',
     color: '#059669',
     path: '/agent/marketing',
@@ -356,8 +365,8 @@ const departments = [
   },
   {
     id: 'designer',
-    name: '平面设计师',
-    desc: '海报·Banner·Logo·包装·社媒图',
+    name: t('agentLayout.designer'),
+    desc: t('agentDashboard.deptDesignerDesc'),
     emoji: '🎨',
     color: '#e11d48',
     path: '/agent/designer',
