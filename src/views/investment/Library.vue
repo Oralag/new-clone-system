@@ -18,6 +18,12 @@
           <button :class="['tab-btn', activeTab === 'books' ? 'active' : '']" @click="activeTab = 'books'">
             📖 藏书架
           </button>
+          <button :class="['tab-btn', activeTab === 'kdp' ? 'active' : '']" @click="activeTab = 'kdp'; loadKdpQueue()">
+            📦 KDP出版
+            <span v-if="kdpBooks.filter(b => b.status === 'pending_upload').length" class="tab-badge">
+              {{ kdpBooks.filter(b => b.status === 'pending_upload').length }}
+            </span>
+          </button>
         </div>
         <button v-if="activeTab === 'books'" class="add-btn" @click="showForm = !showForm">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -244,6 +250,61 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- ===== KDP出版 Tab ===== -->
+    <div v-if="activeTab === 'kdp'" class="kdp-panel">
+      <div v-if="kdpLoading" class="kdp-loading">加载中…</div>
+      <div v-else-if="kdpBooks.length === 0" class="kdp-empty">
+        <div class="kdp-empty-icon">📝</div>
+        <div class="kdp-empty-title">队列为空</div>
+        <div class="kdp-empty-sub">亚当尚未写完任何书稿。在对话中对亚当说"帮我写一本 Kindle 书"即可触发。</div>
+      </div>
+      <div v-else class="kdp-list">
+        <div v-for="book in kdpBooks" :key="book.id" class="kdp-card" :class="book.status">
+          <div class="kdp-card-left">
+            <img v-if="book.coverUrl" :src="book.coverUrl" class="kdp-cover" alt="cover" />
+            <div v-else class="kdp-cover-placeholder">📖</div>
+          </div>
+          <div class="kdp-card-body">
+            <div class="kdp-status-badge" :class="book.status">
+              {{ book.status === 'pending_upload' ? '待上架' : book.status === 'uploaded' ? '已上传' : '已上线' }}
+            </div>
+            <div class="kdp-title">{{ book.title }}</div>
+            <div v-if="book.subtitle" class="kdp-subtitle">{{ book.subtitle }}</div>
+            <div class="kdp-meta">
+              {{ book.wordCount?.toLocaleString() }} 词 · 定价 ${{ book.price || '6.99' }} · {{ formatDate(book.createdAt) }}
+            </div>
+            <div v-if="book.keywords?.length" class="kdp-keywords">
+              <span v-for="kw in book.keywords.slice(0, 4)" :key="kw" class="kdp-kw">{{ kw }}</span>
+            </div>
+            <div class="kdp-actions">
+              <button class="kdp-btn kdp-btn-download" @click="downloadManuscript(book)">⬇ 下载书稿</button>
+              <button class="kdp-btn kdp-btn-copy" @click="copyDescription(book)">📋 复制简介</button>
+              <a v-if="book.coverUrl" :href="book.coverUrl" target="_blank" class="kdp-btn kdp-btn-cover">🖼 封面</a>
+              <button v-if="book.status === 'pending_upload'"
+                      class="kdp-btn kdp-btn-mark"
+                      @click="markUploaded(book.id)">✅ 标记已上传</button>
+              <span v-if="book.asin" class="kdp-asin">ASIN: {{ book.asin }}</span>
+            </div>
+          </div>
+        </div>
+        <!-- KDP 上架指南 -->
+        <div class="kdp-guide">
+          <div class="guide-title">📋 Amazon KDP 上架步骤</div>
+          <ol class="guide-steps">
+            <li>访问 <a href="https://kdp.amazon.com" target="_blank">kdp.amazon.com</a> 登录账号</li>
+            <li>点击「+ Kindle eBook」创建新书</li>
+            <li>粘贴书名、副标题、简介（已复制）</li>
+            <li>上传书稿（.txt 或 .docx，KDP 会自动格式化）</li>
+            <li>上传封面图（点「封面」按钮查看原图）</li>
+            <li>设置关键词（书稿里附有7个关键词）</li>
+            <li>定价 $6.99，选择 KDP Select 获得额外推广</li>
+            <li>提交审核（通常1-3个工作日上线）</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -251,6 +312,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useAdamStore } from '@/stores/adam'
 import type { BookRecord } from '@/types/investment'
+import { TOKEN_NAME } from '@/config'
 
 const adamStore = useAdamStore()
 
@@ -452,9 +514,62 @@ onMounted(() => {
   }
 })
 
-const activeTab = ref<'knowledge' | 'books'>('knowledge')
+const activeTab = ref<'knowledge' | 'books' | 'kdp'>('knowledge')
 const expandedId = ref<string | null>(null)
 const showForm = ref(false)
+
+// ── KDP 出版队列 ─────────────────────────────────────────────────────────────
+interface KdpBookMeta {
+  id: string; title: string; subtitle?: string; coverUrl?: string
+  description?: string; keywords?: string[]; price?: string
+  status: 'pending_upload' | 'uploaded' | 'live'
+  wordCount?: number; createdAt: string; asin?: string
+}
+const kdpBooks = ref<KdpBookMeta[]>([])
+const kdpLoading = ref(false)
+
+async function loadKdpQueue() {
+  kdpLoading.value = true
+  try {
+    const token = localStorage.getItem(TOKEN_NAME) || ''
+    const res = await fetch('/api/adam/kdp/queue', { headers: { 'x-erp-token': token } })
+    const data = await res.json() as { books: KdpBookMeta[] }
+    kdpBooks.value = data.books || []
+  } catch {} finally { kdpLoading.value = false }
+}
+
+async function markUploaded(id: string) {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  await fetch('/api/adam/kdp/queue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+    body: JSON.stringify({ id, status: 'uploaded' })
+  })
+  const book = kdpBooks.value.find(b => b.id === id)
+  if (book) book.status = 'uploaded'
+}
+
+function copyDescription(book: KdpBookMeta) {
+  const text = book.description || book.title
+  navigator.clipboard.writeText(text).then(() => {
+    alert('简介已复制到剪贴板')
+  }).catch(() => { prompt('请手动复制：', text) })
+}
+
+async function downloadManuscript(book: KdpBookMeta) {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  try {
+    const res = await fetch(`/api/adam/kdp/manuscript?id=${book.id}`, { headers: { 'x-erp-token': token } })
+    if (!res.ok) { alert('下载失败：' + res.status); return }
+    const text = await res.text()
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = (book.title || 'manuscript') + '.txt'; a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) { alert('下载出错') }
+}
+
 const selectedBook = ref<BookRecord | null>(null)
 const isSearching = ref(false)
 const searchError = ref('')
@@ -1426,6 +1541,42 @@ function handleAddBook() {
 .reader-fade-enter-active { transition: opacity 0.25s ease; }
 .reader-fade-leave-active { transition: opacity 0.2s ease; }
 .reader-fade-enter-from, .reader-fade-leave-to { opacity: 0; }
+
+/* ===== KDP 出版面板 ===== */
+.tab-badge { background: #c9a84c; color: #000; border-radius: 8px; padding: 1px 5px; font-size: 10px; margin-left: 4px; }
+.kdp-panel { padding: 20px; }
+.kdp-loading, .kdp-empty { text-align: center; padding: 48px 20px; color: #888; }
+.kdp-empty-icon { font-size: 36px; margin-bottom: 12px; }
+.kdp-empty-title { font-size: 16px; font-weight: 600; color: #ccc; margin-bottom: 8px; }
+.kdp-empty-sub { font-size: 13px; line-height: 1.6; max-width: 400px; margin: 0 auto; }
+.kdp-list { display: flex; flex-direction: column; gap: 16px; }
+.kdp-card { display: flex; gap: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; }
+.kdp-card.uploaded { border-color: rgba(93,184,93,0.3); }
+.kdp-card.live { border-color: rgba(201,168,76,0.4); }
+.kdp-cover { width: 64px; height: 96px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.kdp-cover-placeholder { width: 64px; height: 96px; background: rgba(255,255,255,0.06); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+.kdp-card-body { flex: 1; min-width: 0; }
+.kdp-status-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; margin-bottom: 6px; font-weight: 600; letter-spacing: 0.05em; }
+.kdp-status-badge.pending_upload { background: rgba(201,168,76,0.15); color: #c9a84c; }
+.kdp-status-badge.uploaded { background: rgba(93,184,93,0.15); color: #5db85d; }
+.kdp-status-badge.live { background: rgba(93,184,93,0.25); color: #5db85d; }
+.kdp-title { font-size: 15px; font-weight: 700; color: #e8e0cc; margin-bottom: 4px; }
+.kdp-subtitle { font-size: 12px; color: #999; margin-bottom: 6px; }
+.kdp-meta { font-size: 11px; color: #666; margin-bottom: 8px; }
+.kdp-keywords { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.kdp-kw { font-size: 10px; padding: 2px 6px; background: rgba(255,255,255,0.05); border-radius: 3px; color: #888; }
+.kdp-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.kdp-btn { font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer; border: none; text-decoration: none; display: inline-block; }
+.kdp-btn-download { background: rgba(93,130,220,0.2); color: #7db0f0; }
+.kdp-btn-copy { background: rgba(255,255,255,0.07); color: #ccc; }
+.kdp-btn-cover { background: rgba(255,255,255,0.07); color: #ccc; }
+.kdp-btn-mark { background: rgba(93,184,93,0.2); color: #5db85d; }
+.kdp-asin { font-size: 10px; color: #666; font-family: monospace; }
+.kdp-guide { margin-top: 24px; padding: 16px 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; }
+.guide-title { font-size: 13px; font-weight: 600; color: #c9a84c; margin-bottom: 10px; }
+.guide-steps { padding-left: 20px; margin: 0; }
+.guide-steps li { font-size: 12px; color: #999; line-height: 1.8; }
+.guide-steps a { color: #7db0f0; }
 
 /* 移动端 */
 @media (max-width: 640px) {

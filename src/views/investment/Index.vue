@@ -79,9 +79,9 @@
       </div>
     </div>
 
-    <!-- ── 第二层：指令 + 事件日志 ── -->
+    <!-- ── 第二层：指令 + Trust Ladder + 事件日志 ── -->
     <div class="layer layer-panels">
-      <div class="dual-grid">
+      <div class="triple-grid">
         <!-- 最新指令 -->
         <div class="panel panel-instruction">
           <div class="panel-head">
@@ -118,6 +118,49 @@
           </div>
         </div>
 
+        <!-- Trust Ladder + 待审批操作 -->
+        <div class="panel panel-trust">
+          <div class="panel-head">
+            <span class="panel-icon">⬡</span>
+            <span class="panel-title">TRUST_LADDER</span>
+          </div>
+          <div class="trust-ladder">
+            <div v-for="lvl in creditLevels" :key="lvl.id" class="trust-rung" :class="{ active: lvl.id === adamStore.core.creditLevel, past: isPastLevel(lvl.id), future: isFutureLevel(lvl.id) }">
+              <div class="rung-badge">{{ lvl.id }}</div>
+              <div class="rung-body">
+                <div class="rung-name">{{ lvl.name }}</div>
+                <div class="rung-perms">{{ lvl.perm }}</div>
+                <div v-if="lvl.id === adamStore.core.creditLevel && nextLevelReq" class="rung-progress">
+                  <span class="prog-label">升{{ nextLevel }} 需：</span>
+                  <span :class="{ met: (adamStore.core.totalAnalyses ?? 0) >= nextLevelReq.analyses }">
+                    分析 {{ adamStore.core.totalAnalyses ?? 0 }}/{{ nextLevelReq.analyses }}
+                  </span>
+                  · <span :class="{ met: (adamStore.core.survivalDays ?? 0) >= nextLevelReq.days }">
+                    存活 {{ adamStore.core.survivalDays }}d/{{ nextLevelReq.days }}d
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 待审批操作 -->
+          <div v-if="pendingAction" class="pending-action">
+            <div class="pending-head">
+              <span class="pending-icon">◌</span>
+              <span class="pending-title">PENDING_APPROVAL</span>
+            </div>
+            <div class="pending-body">
+              <div class="pending-type">{{ pendingAction.type }}</div>
+              <div class="pending-amount">{{ pendingAction.amount }} {{ pendingAction.token || 'USDT' }}</div>
+              <div class="pending-reason">{{ pendingAction.reason }}</div>
+              <div class="pending-time">提交于 {{ formatTime(pendingAction.createdAt) }}</div>
+            </div>
+            <div class="pending-actions-row">
+              <button class="btn-gold btn-sm" @click="handleApprove">批准</button>
+              <button class="btn-ghost btn-sm" @click="handleReject">否决</button>
+            </div>
+          </div>
+        </div>
+
         <!-- 事件日志 -->
         <div class="panel panel-log">
           <div class="panel-head">
@@ -146,12 +189,72 @@
     </div>
   </div>
 </template>
+<!-- triple-grid replaces dual-grid -->
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useAdamStore } from '@/stores/adam'
+import { TOKEN_NAME } from '@/config'
 
 const adamStore = useAdamStore()
+
+// ── Trust Ladder ─────────────────────────────────────────────────────────────
+const creditLevels = [
+  { id: 'C',  name: '新生',     perm: '每条操作需手动批准' },
+  { id: 'B',  name: '初步信任', perm: '指令24小时后自动生效' },
+  { id: 'B+', name: '可靠搭档', perm: '指令直接生效，小额贷款免审批' },
+  { id: 'A',  name: '高度信任', perm: '额度内自主操作金融机构' },
+  { id: 'S',  name: '完全自主', perm: '你只看报表和分红' },
+]
+const levelOrder = ['C', 'B', 'B+', 'A', 'S']
+const levelReqs: Record<string, { analyses: number; days: number }> = {
+  B:   { analyses: 20,  days: 30  },
+  'B+':{ analyses: 50,  days: 60  },
+  A:   { analyses: 100, days: 90  },
+  S:   { analyses: 200, days: 180 },
+}
+
+const nextLevel = computed(() => {
+  const idx = levelOrder.indexOf(adamStore.core.creditLevel || 'C')
+  return levelOrder[idx + 1] || null
+})
+const nextLevelReq = computed(() => nextLevel.value ? levelReqs[nextLevel.value] : null)
+
+function isPastLevel(id: string) {
+  const cur = levelOrder.indexOf(adamStore.core.creditLevel || 'C')
+  return levelOrder.indexOf(id) < cur
+}
+function isFutureLevel(id: string) {
+  const cur = levelOrder.indexOf(adamStore.core.creditLevel || 'C')
+  return levelOrder.indexOf(id) > cur
+}
+
+// ── Pending Action ────────────────────────────────────────────────────────────
+const pendingAction = ref<Record<string, any> | null>(null)
+
+async function loadPendingAction() {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  if (!token) return
+  try {
+    const res = await fetch('/api/adam/approve', { headers: { 'x-erp-token': token } })
+    const data = await res.json() as { pending: Record<string, any> | null }
+    pendingAction.value = data.pending?.status === 'pending_approval' ? data.pending : null
+  } catch {}
+}
+
+async function handleApprove() {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  await fetch('/api/adam/approve', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-erp-token': token }, body: JSON.stringify({ decision: 'approve' }) })
+  pendingAction.value = null
+}
+
+async function handleReject() {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  await fetch('/api/adam/approve', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-erp-token': token }, body: JSON.stringify({ decision: 'reject' }) })
+  pendingAction.value = null
+}
+
+onMounted(() => loadPendingAction())
 
 const sysLabel = computed(() => {
   const map: Record<string, string> = { dormant: 'DORMANT', alive: 'SYS.ONLINE', survival: 'SURVIVAL', shutdown: 'SHUTDOWN' }
@@ -230,44 +333,52 @@ function formatTime(iso: string) {
 
 <style scoped>
 /* ═══════════════════════════════════════════════════
-   黑曜石观测舱 — Index.vue
-   Bloomberg Terminal + Vercel Dashboard aesthetic
+   投资生态舱 — Frosted Flat Dashboard
    ═══════════════════════════════════════════════════ */
 
 .obs-home {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 .layer { width: 100%; }
 
 /* ── 共用面板 ── */
 .panel {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
   overflow: hidden;
   position: relative;
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  box-shadow: inset 0 0 0 1px rgba(42, 52, 65, 0.04);
 }
 .panel-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(245,166,35,0.02) 0%, transparent 100%);
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(42, 52, 65, 0.08);
+  background: rgba(255, 255, 255, 0.18);
 }
 .panel-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
   font-size: 10px;
-  color: #F5A623;
-  opacity: 0.6;
+  color: #ffffff;
+  background: #4f79c7;
+  opacity: 1;
 }
 .panel-title {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  color: var(--dim);
-  letter-spacing: 0.12em;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: rgba(23, 32, 39, 0.68);
+  letter-spacing: 0.03em;
+  font-family: inherit;
 }
 .panel-desc {
   font-size: 10px;
@@ -276,12 +387,12 @@ function formatTime(iso: string) {
 }
 .panel-count {
   margin-left: auto;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--dim);
-  background: var(--faint);
-  padding: 1px 6px;
-  border-radius: 8px;
+  color: #4f79c7;
+  background: rgba(79, 121, 199, 0.1);
+  padding: 2px 8px;
+  border-radius: 999px;
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 
@@ -290,22 +401,22 @@ function formatTime(iso: string) {
    ═══════════════════════════════════════ */
 .status-card {
   position: relative;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 20px 24px 16px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 22px;
+  padding: 22px 24px 18px;
   overflow: hidden;
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+  box-shadow: inset 0 0 0 1px rgba(42, 52, 65, 0.04);
 }
 
-/* 极细网格纹理 */
 .card-grid-texture {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(245,166,35,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245,166,35,0.02) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background: rgba(255, 255, 255, 0.18);
   pointer-events: none;
+  opacity: 0.5;
 }
 
 .status-header {
@@ -324,11 +435,13 @@ function formatTime(iso: string) {
 /* 生命指示器 — 多环呼吸灯 */
 .life-indicator {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 16px;
+  background: #dfe9fb;
 }
 .life-core {
   width: 10px;
@@ -338,8 +451,8 @@ function formatTime(iso: string) {
   z-index: 2;
 }
 .adam-identity-img {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   object-fit: contain;
   position: relative;
   z-index: 2;
@@ -361,16 +474,16 @@ function formatTime(iso: string) {
 
 /* 状态: alive */
 .life-indicator.alive .life-core {
-  background: #00E5A0;
-  box-shadow: 0 0 12px rgba(0,229,160,0.5), 0 0 24px rgba(0,229,160,0.2);
+  background: #4f79c7;
+  box-shadow: 0 0 0 5px rgba(79, 121, 199, 0.11);
   animation: corePulse 2.5s ease-in-out infinite;
 }
 .life-indicator.alive .orbit-1 {
-  border-color: rgba(0,229,160,0.25);
+  border-color: rgba(79, 121, 199, 0.24);
   animation: orbitSpin 8s linear infinite;
 }
 .life-indicator.alive .orbit-2 {
-  border-color: rgba(0,229,160,0.10);
+  border-color: rgba(79, 121, 199, 0.1);
   animation: orbitSpin 12s linear infinite reverse;
 }
 
@@ -381,16 +494,16 @@ function formatTime(iso: string) {
 
 /* 状态: survival */
 .life-indicator.survival .life-core {
-  background: #FF4D4D;
-  box-shadow: 0 0 12px rgba(255,77,77,0.5);
+  background: #ef6f5e;
+  box-shadow: 0 0 0 5px rgba(239, 111, 94, 0.13);
   animation: corePulse 1s ease-in-out infinite;
 }
 .life-indicator.survival .orbit-1 {
-  border-color: rgba(255,77,77,0.3);
+  border-color: rgba(239, 111, 94, 0.3);
   animation: orbitSpin 4s linear infinite;
 }
 .life-indicator.survival .orbit-2 {
-  border-color: rgba(255,77,77,0.15);
+  border-color: rgba(239, 111, 94, 0.15);
   animation: orbitSpin 6s linear infinite reverse;
 }
 
@@ -417,19 +530,19 @@ function formatTime(iso: string) {
   gap: 3px;
 }
 .name-main {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--dark);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.08em;
+  color: #172027;
+  font-family: inherit;
+  letter-spacing: 0.01em;
 }
-.name-id { color: #F5A623; }
+.name-id { color: #4f79c7; }
 .name-sub {
-  font-size: 9px;
-  color: var(--dim);
+  font-size: 11px;
+  color: rgba(23, 32, 39, 0.46);
   font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.06em;
-  opacity: 0.6;
+  letter-spacing: 0.02em;
+  opacity: 1;
 }
 
 /* Header right: system tag + activate */
@@ -442,60 +555,57 @@ function formatTime(iso: string) {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
-.sys-tag.alive { background: rgba(0,229,160,0.06); border: 1px solid rgba(0,229,160,0.15); }
-.sys-tag.dormant { background: var(--faint); border: 1px solid var(--border); }
-.sys-tag.survival { background: rgba(255,77,77,0.06); border: 1px solid rgba(255,77,77,0.15); }
+.sys-tag.alive { background: #dfe9fb; border: 1px solid rgba(79, 121, 199, 0.14); }
+.sys-tag.dormant { background: rgba(23, 32, 39, 0.06); border: 1px solid rgba(23, 32, 39, 0.08); }
+.sys-tag.survival { background: rgba(239, 111, 94, 0.14); border: 1px solid rgba(239, 111, 94, 0.2); }
 .sys-tag.shutdown { background: var(--faint); border: 1px solid var(--border); }
 .sys-dot { width: 5px; height: 5px; border-radius: 50%; }
-.sys-tag.alive .sys-dot { background: #00E5A0; }
+.sys-tag.alive .sys-dot { background: #4f79c7; }
 .sys-tag.dormant .sys-dot { background: var(--dim); }
-.sys-tag.survival .sys-dot { background: #FF4D4D; animation: corePulse 1s ease-in-out infinite; }
+.sys-tag.survival .sys-dot { background: #ef6f5e; animation: corePulse 1s ease-in-out infinite; }
 .sys-tag.shutdown .sys-dot { background: var(--dim); opacity: 0.3; }
 .sys-label {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.1em;
 }
-.sys-tag.alive .sys-label { color: #00E5A0; }
+.sys-tag.alive .sys-label { color: #4f79c7; }
 .sys-tag.dormant .sys-label { color: var(--dim); }
-.sys-tag.survival .sys-label { color: #FF4D4D; }
+.sys-tag.survival .sys-label { color: #ef6f5e; }
 .sys-tag.shutdown .sys-label { color: var(--dim); opacity: 0.5; }
 
 /* 激活按钮 */
 .activate-btn {
   position: relative;
   padding: 8px 20px;
-  border-radius: 4px;
-  border: 1px solid rgba(245,166,35,0.35);
-  background: transparent;
-  color: #F5A623;
-  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #4f79c7;
+  color: #ffffff;
+  font-size: 12px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.1em;
+  font-family: inherit;
+  letter-spacing: 0.02em;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.3s;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 .activate-glow {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(245,166,35,0.08), transparent);
-  animation: glowSweep 3s ease-in-out infinite;
+  display: none;
 }
 @keyframes glowSweep {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
 .activate-btn:hover {
-  background: #F5A623;
-  color: var(--card-bg);
-  box-shadow: 0 0 20px rgba(245,166,35,0.3), 0 0 40px rgba(245,166,35,0.1);
-  border-color: #F5A623;
+  background: #3f67aa;
+  color: #ffffff;
+  box-shadow: none;
+  border-color: transparent;
 }
 .activate-text { position: relative; z-index: 1; }
 
@@ -504,12 +614,13 @@ function formatTime(iso: string) {
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 14px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  padding: 14px;
+  border: 1px solid rgba(42, 52, 65, 0.08);
+  border-radius: 16px;
   margin-bottom: 12px;
   position: relative;
   overflow-x: auto;
+  background: rgba(255, 255, 255, 0.32);
 }
 .metric-block {
   flex: 1;
@@ -523,46 +634,46 @@ function formatTime(iso: string) {
 .metric-divider {
   width: 1px;
   height: 32px;
-  background: var(--border);
+  background: rgba(42, 52, 65, 0.08);
   flex-shrink: 0;
 }
 .metric-key {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
-  color: var(--dim);
-  letter-spacing: 0.12em;
+  color: rgba(23, 32, 39, 0.42);
+  letter-spacing: 0.06em;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  opacity: 0.6;
+  opacity: 1;
 }
 .metric-val {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--dark);
+  color: #172027;
   font-family: 'SF Mono', 'Fira Code', monospace;
   letter-spacing: -0.02em;
 }
-.metric-val.positive { color: #00E5A0; }
-.metric-val.negative { color: #FF4D4D; }
-.metric-val.credit { color: #F5A623; }
+.metric-val.positive { color: #4f79c7; }
+.metric-val.negative { color: #ef6f5e; }
+.metric-val.credit { color: #5d89d4; }
 .metric-unit { font-size: 11px; opacity: 0.5; margin-left: 1px; }
 .metric-val.energy-num { font-size: 12px; }
 
 /* 精力条 */
 .energy-bar-wrap {
   width: 60px;
-  height: 3px;
-  background: var(--faint);
-  border-radius: 2px;
+  height: 6px;
+  background: rgba(79, 121, 199, 0.12);
+  border-radius: 999px;
   overflow: hidden;
 }
 .energy-bar {
   height: 100%;
-  background: linear-gradient(90deg, #00E5A0, #00D4FF);
-  border-radius: 2px;
+  background: #4f79c7;
+  border-radius: 999px;
   transition: width 0.5s ease;
 }
 .energy-bar.low {
-  background: linear-gradient(90deg, #FF4D4D, #FF6B35);
+  background: #ef6f5e;
 }
 
 /* ── 情绪频谱 ── */
@@ -573,10 +684,10 @@ function formatTime(iso: string) {
   position: relative;
 }
 .emotion-label {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
-  color: var(--dim);
-  letter-spacing: 0.1em;
+  color: rgba(23, 32, 39, 0.42);
+  letter-spacing: 0.05em;
   font-family: 'SF Mono', 'Fira Code', monospace;
   opacity: 0.5;
   white-space: nowrap;
@@ -597,25 +708,25 @@ function formatTime(iso: string) {
   width: 100%;
   max-width: 24px;
   height: 28px;
-  background: var(--faint);
-  border-radius: 2px;
+  background: rgba(79, 121, 199, 0.08);
+  border-radius: 999px;
   display: flex;
   align-items: flex-end;
   overflow: hidden;
 }
 .emotion-bar-fill {
   width: 100%;
-  border-radius: 2px 2px 0 0;
+  border-radius: 999px 999px 0 0;
   transition: height 0.5s ease;
   min-height: 1px;
 }
-.emotion-bar-fill.em-gold { background: #F5A623; }
-.emotion-bar-fill.em-red { background: #FF4D4D; }
+.emotion-bar-fill.em-gold { background: #f3b451; }
+.emotion-bar-fill.em-red { background: #ef6f5e; }
 .emotion-bar-fill.em-blue { background: #5B8DEF; }
 .emotion-bar-fill.em-purple { background: #A78BFA; }
 .emotion-bar-fill.em-pink { background: #EC4899; }
 .emotion-bar-fill.em-gray { background: var(--dim); }
-.emotion-bar-fill.em-cyan { background: #00D4FF; }
+.emotion-bar-fill.em-cyan { background: #5d89d4; }
 .emotion-name {
   font-size: 8px;
   color: var(--dim);
@@ -630,21 +741,63 @@ function formatTime(iso: string) {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+.triple-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+/* Trust Ladder */
+.trust-ladder { display: flex; flex-direction: column; gap: 6px; }
+.trust-rung {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 10px; border-radius: 6px; border: 1px solid transparent;
+  opacity: 0.4; transition: all 0.2s;
+}
+.trust-rung.active { opacity: 1; border-color: #c9a84c; background: rgba(201,168,76,0.08); }
+.trust-rung.past { opacity: 0.6; }
+.trust-rung.future { opacity: 0.25; }
+.rung-badge {
+  min-width: 28px; height: 28px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+  background: rgba(201,168,76,0.15); color: #c9a84c;
+}
+.trust-rung.past .rung-badge { background: rgba(100,200,100,0.15); color: #5db85d; }
+.trust-rung.future .rung-badge { background: rgba(100,100,100,0.1); color: #666; }
+.rung-name { font-size: 12px; font-weight: 600; color: #e0d5b0; margin-bottom: 2px; }
+.rung-perms { font-size: 10px; color: #888; line-height: 1.4; }
+.rung-progress { font-size: 10px; color: #999; margin-top: 4px; }
+.rung-progress .met { color: #5db85d; }
+
+/* Pending Action */
+.pending-action { margin-top: 12px; border: 1px solid rgba(201,168,76,0.3); border-radius: 6px; padding: 10px; }
+.pending-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.pending-icon { color: #c9a84c; font-size: 14px; }
+.pending-title { font-size: 10px; letter-spacing: 0.1em; color: #c9a84c; }
+.pending-body { font-size: 11px; color: #aaa; margin-bottom: 8px; }
+.pending-type { font-weight: 600; color: #e0d5b0; font-size: 12px; }
+.pending-amount { color: #c9a84c; font-size: 13px; font-weight: 700; }
+.pending-reason { color: #888; margin-top: 2px; }
+.pending-time { color: #555; font-size: 10px; margin-top: 2px; }
+.pending-actions-row { display: flex; gap: 8px; }
+.btn-sm { padding: 4px 12px; font-size: 11px; }
 
 /* 指令卡片 */
 .instruction-card {
   position: relative;
   padding: 16px;
-  background: linear-gradient(180deg, rgba(245,166,35,0.03) 0%, transparent 100%);
+  background: rgba(255, 255, 255, 0.26);
 }
 .instruction-glow-bar {
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #F5A623;
-  box-shadow: 0 0 8px rgba(245,166,35,0.5), 0 0 16px rgba(245,166,35,0.2);
+  left: 16px;
+  top: 16px;
+  bottom: 16px;
+  width: 6px;
+  border-radius: 999px;
+  background: #f3b451;
+  box-shadow: none;
 }
 .instruction-body { padding-left: 14px; }
 .instruction-meta {
@@ -654,14 +807,14 @@ function formatTime(iso: string) {
   margin-bottom: 8px;
 }
 .instruction-conf {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  color: #F5A623;
+  color: #8a5b09;
   font-family: 'SF Mono', 'Fira Code', monospace;
   letter-spacing: 0.05em;
   padding: 2px 6px;
-  background: rgba(245,166,35,0.08);
-  border-radius: 3px;
+  background: rgba(243, 180, 81, 0.22);
+  border-radius: 999px;
 }
 .instruction-time {
   font-size: 9px;
@@ -669,21 +822,21 @@ function formatTime(iso: string) {
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 .instruction-title {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--dark);
+  color: #172027;
   margin-bottom: 6px;
   line-height: 1.4;
 }
 .instruction-thesis {
   font-size: 12px;
-  color: var(--mid);
+  color: rgba(23, 32, 39, 0.64);
   margin-bottom: 6px;
   line-height: 1.6;
 }
 .instruction-risk {
   font-size: 11px;
-  color: rgba(255,77,77,0.70);
+  color: #b94d3f;
   margin-bottom: 14px;
   display: flex;
   align-items: center;
@@ -695,42 +848,39 @@ function formatTime(iso: string) {
 /* 按钮 */
 .btn-gold {
   position: relative;
-  padding: 6px 16px;
-  border-radius: 4px;
-  border: 1px solid rgba(245,166,35,0.35);
-  background: transparent;
-  color: #F5A623;
-  font-size: 11px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #4f79c7;
+  color: #ffffff;
+  font-size: 12px;
   font-weight: 600;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: background 0.18s ease;
 }
-.btn-gold .btn-glow {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(245,166,35,0.06), transparent);
-}
+.btn-gold .btn-glow { display: none; }
 .btn-gold:hover {
-  background: #F5A623;
-  color: var(--card-bg);
-  box-shadow: 0 0 12px rgba(245,166,35,0.25);
+  background: #3f67aa;
+  color: #ffffff;
+  box-shadow: none;
 }
 .btn-ghost {
-  padding: 6px 16px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--dim);
-  font-size: 11px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(42, 52, 65, 0.1);
+  background: rgba(255, 255, 255, 0.44);
+  color: rgba(23, 32, 39, 0.58);
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
 }
 .btn-ghost:hover {
-  border-color: var(--mid);
-  color: var(--dark);
+  border-color: rgba(42, 52, 65, 0.16);
+  color: #172027;
+  background: rgba(255, 255, 255, 0.7);
 }
 
 /* ── 事件日志 ── */
@@ -761,10 +911,10 @@ function formatTime(iso: string) {
   flex-shrink: 0;
   position: relative;
 }
-.event-dot.sense { background: #00D4FF; box-shadow: 0 0 4px rgba(0,212,255,0.4); }
-.event-dot.judge { background: #F5A623; box-shadow: 0 0 4px rgba(245,166,35,0.4); }
-.event-dot.act { background: #00E5A0; box-shadow: 0 0 4px rgba(0,229,160,0.4); }
-.event-dot.settle { background: #A78BFA; box-shadow: 0 0 4px rgba(167,139,250,0.4); }
+.event-dot.sense { background: #5d89d4; box-shadow: none; }
+.event-dot.judge { background: #f3b451; box-shadow: none; }
+.event-dot.act { background: #4f79c7; box-shadow: none; }
+.event-dot.settle { background: #a78bfa; box-shadow: none; }
 .event-dot.archive { background: var(--dim); }
 .event-line {
   width: 1px;
@@ -790,9 +940,9 @@ function formatTime(iso: string) {
   border-radius: 3px;
   flex-shrink: 0;
 }
-.event-stage-tag.sense { color: #00D4FF; background: rgba(0,212,255,0.08); }
-.event-stage-tag.judge { color: #F5A623; background: rgba(245,166,35,0.08); }
-.event-stage-tag.act { color: #00E5A0; background: rgba(0,229,160,0.08); }
+.event-stage-tag.sense { color: #325d9b; background: rgba(93, 137, 212, 0.14); }
+.event-stage-tag.judge { color: #8a5b09; background: rgba(243, 180, 81, 0.18); }
+.event-stage-tag.act { color: #4f79c7; background: rgba(79, 121, 199, 0.12); }
 .event-stage-tag.settle { color: #A78BFA; background: rgba(167,139,250,0.08); }
 .event-stage-tag.archive { color: var(--dim); background: var(--faint); }
 .event-text {
@@ -836,6 +986,7 @@ function formatTime(iso: string) {
 /* ── 响应式 ── */
 @media (max-width: 767px) {
   .dual-grid { grid-template-columns: 1fr; }
+  .triple-grid { grid-template-columns: 1fr; }
   .metrics-strip { flex-wrap: wrap; gap: 8px; justify-content: center; }
   .metric-divider { display: none; }
   .metric-block { min-width: 60px; }

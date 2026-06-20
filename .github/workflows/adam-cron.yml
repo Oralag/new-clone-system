@@ -1,0 +1,26 @@
+name: ADAM Autonomous Wakeup
+
+on:
+  schedule:
+    # 每小时整点触发（UTC，北京时间 = UTC+8）
+    # 交易时段（北京 9:00-15:30）对应 UTC 1:00-7:30，加密实际每小时都跑，亚当自己决定是否行动
+    - cron: '0 * * * *'
+  workflow_dispatch:  # 支持手动触发测试
+
+jobs:
+  wakeup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger ADAM wakeup
+        run: |
+          RESPONSE=$(curl -sf --max-time 60 \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${{ secrets.ADAM_CRON_SECRET }}" \
+            https://nomaderp.pages.dev/api/adam/cron \
+            || echo '{"error":"curl failed"}')
+          echo "Response: $RESPONSE"
+          # 提取结果摘要
+          PROCESSED=$(echo "$RESPONSE" | grep -o '"processed":[0-9]*' | grep -o '[0-9]*' || echo '?')
+          echo "Processed $PROCESSED users"

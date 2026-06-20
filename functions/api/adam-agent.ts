@@ -2,6 +2,23 @@
 // Adam AI brain endpoint using Anthropic Claude API
 
 import { privateKeyToAccount } from 'viem/accounts'
+import { createWalletClient, createPublicClient, http, parseUnits } from 'viem'
+
+async function htxRequest(method: string, path: string, params: Record<string, string>, body: any, apiKey: string, secretKey: string): Promise<any> {
+  const host = 'api.huobi.pro'
+  const ts = new Date().toISOString().replace(/\.\d{3}Z$/, '')
+  const baseParams: Record<string, string> = { AccessKeyId: apiKey, SignatureMethod: 'HmacSHA256', SignatureVersion: '2', Timestamp: ts, ...params }
+  const queryString = Object.keys(baseParams).sort().map(k => `${encodeURIComponent(k)}=${encodeURIComponent(baseParams[k])}`).join('&')
+  const stringToSign = `${method.toUpperCase()}\n${host}\n${path}\n${queryString}`
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey('raw', enc.encode(secretKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(stringToSign))
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+  const url = `https://${host}${path}?${queryString}&Signature=${encodeURIComponent(sigB64)}`
+  const res = await fetch(url, { method: method.toUpperCase(), headers: { 'Content-Type': 'application/json', 'User-Agent': 'ADAM/1.0' }, ...(body ? { body: JSON.stringify(body) } : {}) })
+  return res.json()
+}
+import { bsc } from 'viem/chains'
 import md5 from 'md5'
 
 interface Env {
@@ -12,6 +29,9 @@ interface Env {
   AGENT_MEMORY: KVNamespace
   BROWSERLESS_API_KEY?: string
   CLOUDFLARE_API_TOKEN?: string
+  WALLET_PRIVATE_KEY?: string
+  HTX_API_KEY?: string
+  HTX_SECRET_KEY?: string
   POLYMARKET_PK?: string
   POLYMARKET_API_KEY?: string
   POLYMARKET_API_SECRET?: string
@@ -476,6 +496,15 @@ const adamTools = [
   { name: 'pdd_get_reviews', description: '获取拼多多店铺商品的买家评价列表，可按评分筛选。用于了解买家反馈、分析差评原因。', input_schema: { type: 'object' as const, properties: { goods_id: { type: 'number', description: '商品ID，不填则获取全店评价' }, min_rating: { type: 'number', description: '最低评分筛选（1-5），如填3则只看3星及以下' }, page: { type: 'number', description: '页码，默认1' } } } },
   { name: 'pdd_reply_review', description: '回复拼多多买家的商品评价。用礼貌专业的语气回复，感谢好评或解释差评原因。', input_schema: { type: 'object' as const, properties: { review_id: { type: 'string', description: '评价ID（从 pdd_get_reviews 获取）' }, reply_content: { type: 'string', description: '回复内容，建议100字以内，礼貌专业' } }, required: ['review_id', 'reply_content'] } },
 
+  // HTX 交易所操作（活期理财）
+  { name: 'check_htx_account', description: '查询 HTX 账户现货 USDT 余额和活期理财持仓、日收益', input_schema: { type: 'object' as const, properties: {} } },
+  { name: 'htx_execute_subscribe', description: '规则传递者已回复"同意"后调用：执行 HTX USDT 活期理财存款，从 KV 读取待执行操作', input_schema: { type: 'object' as const, properties: {} } },
+  { name: 'htx_redeem_savings', description: '从 HTX 活期理财取回 USDT 到现货账户', input_schema: { type: 'object' as const, properties: { amount: { type: 'number', description: '取回金额，不填则全部取回' } } } },
+  { name: 'send_usdt_to_htx', description: '将钱包（BNB Chain）中的USDT通过BEP20链上转账充值到HTX交易所。自动获取HTX的USDT BEP20充值地址，签名发送交易，无需人工操作。', input_schema: { type: 'object' as const, properties: { amount: { type: 'number', description: '转账金额（USDT），不填则发送全部可用余额' }, to_address: { type: 'string', description: 'HTX BEP20充值地址（可选，如果HTX API未配置可直接传入地址）' } } } },
+  // DeFi 链上操作（BNB Chain · Venus协议）
+  { name: 'check_on_chain_balance', description: '查询钱包在BNB Chain的实时USDT余额和BNB（gas费）余额', input_schema: { type: 'object' as const, properties: {} } },
+  { name: 'propose_defi_action', description: '向规则传递者提交DeFi操作申请，等对方回复"同意"后再调用 execute_defi_action 执行。C级必须走审批流程。', input_schema: { type: 'object' as const, properties: { type: { type: 'string', description: 'venus_supply（存入赚利息）或 venus_redeem（取出）' }, amount: { type: 'number', description: '操作金额（USDT）' }, apy: { type: 'string', description: '当前年化利率' }, reason: { type: 'string', description: '操作理由' }, message: { type: 'string', description: '发给规则传递者的消息' } }, required: ['type', 'amount', 'reason'] } },
+  { name: 'execute_defi_action', description: '规则传递者已回复"同意"后，调用此工具执行链上交易。会自动读取待执行操作，签名广播。', input_schema: { type: 'object' as const, properties: {} } },
   // 浏览器手脚（真实浏览器，带登录Cookie）
   { name: 'browser_navigate', description: '⚠️ 访问小红书、微博、抖音等平台必须用这个工具，不能用fetch_webpage（会被拦截）。用真实浏览器+登录Cookie访问网站，返回页面完整内容。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要访问的完整URL，如 https://www.xiaohongshu.com/explore' } }, required: ['url'] } },
   { name: 'browser_screenshot', description: '对指定URL截图，返回页面截图（base64）。用于查看页面视觉内容。', input_schema: { type: 'object' as const, properties: { url: { type: 'string', description: '要截图的URL' } }, required: ['url'] } },
@@ -484,6 +513,9 @@ const adamTools = [
   // KDP 出版业务
   { name: 'write_kdp_book', description: '自动完成KDP电子书完整流程：选题调研→写书稿→质疑官审核→商品简介→封面图→存入发布队列+图书馆。全程自动，完成后通知规则传递者上传。可指定细分方向，不指定则自主选题。', input_schema: { type: 'object' as const, properties: { niche_hint: { type: 'string', description: '细分方向提示（可选），如 "freelance designer passive income"；不填则自主选题' } } } },
   { name: 'check_kdp_queue', description: '查看KDP发布队列——哪些书已写完等待上传，哪些还在生产中。', input_schema: { type: 'object' as const, properties: {} } },
+
+  // Sub-Agent 委派
+  { name: 'dispatch_sub_agents', description: '委派三位专属分析官（情报官/量化官/板块官）并行研究一个课题，3路信号交叉验证后返回综合结论。比单独工具查询更深、置信度更高。', input_schema: { type: 'object' as const, properties: { topic: { type: 'string', description: '研究课题，如 "科技板块近期机会" 或 "BTC当前趋势" 或 "今日市场整体形势"' } }, required: ['topic'] } },
 ]
 
 // ── Tool Executor (真实行情接口) ──────────────────────────────────────────
@@ -792,6 +824,12 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
         risk_note: input.risk_note, issued_at: issuedAt, status: 'issued',
       }
       if (kv && stateKey) {
+        // 累计分析次数（信用等级升级所需）
+        const coreKey = `adam:core:${stateKey}`
+        const coreState = (await kv.get(coreKey, 'json') as Record<string, any> | null) || {}
+        coreState.totalAnalyses = (coreState.totalAnalyses ?? 0) + 1
+        await kv.put(coreKey, JSON.stringify(coreState), { expirationTtl: 365 * 24 * 3600 })
+
         // 持久化指令列表
         const recsKey = `adam:recommendations:${stateKey}`
         const recs = (await kv.get(recsKey, 'json') as any[]) || []
@@ -1307,6 +1345,63 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
       }
     }
 
+    // ── Sub-Agent 委派 ──
+    case 'dispatch_sub_agents': {
+      const apiKey3 = env?.AI_API_KEY || env?.ANTHROPIC_API_KEY || ''
+      const baseURL3 = (env?.AI_BASE_URL || env?.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
+      if (!apiKey3) return JSON.stringify({ error: 'AI API Key 未配置' })
+      const topic = (input.topic as string) || '当前市场'
+
+      async function agentCall(systemPrompt: string, userContent: string): Promise<any> {
+        const r = await fetch(`${baseURL3}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey3}` },
+          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 400, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }] }),
+        })
+        const d: any = await r.json()
+        const raw = d.choices?.[0]?.message?.content || '{}'
+        try { return JSON.parse(raw.replace(/```json|```/g, '').trim()) } catch { return { findings: raw.slice(0, 120), signals: [], confidence: 5, verdict: raw.slice(0, 80) } }
+      }
+
+      const JSON_SCHEMA = '{"findings":"...","signals":["...","...","..."],"confidence":7,"verdict":"..."}'
+
+      // 并行拉数据
+      const [newsRes, indexRes, sectorRes, cryptoRes] = await Promise.allSettled([
+        fetch('https://zhibo.sina.com.cn/api/zhibo/feed?zhibo_id=152&type=1&page=1&page_size=20&format=json', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+        fetch('https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f12,f14&secids=1.000001,0.399001,0.399006', { headers: { Referer: 'https://quote.eastmoney.com' } }),
+        fetch('https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=10&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:90+t:2+f:!50&fields=f3,f14', { headers: { Referer: 'https://quote.eastmoney.com' } }),
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true', { headers: { Accept: 'application/json' } }),
+      ])
+
+      let news = '', indices = '', sectors = '', crypto = ''
+      if (newsRes.status === 'fulfilled' && newsRes.value.ok) { try { const j = await newsRes.value.json() as any; news = (j?.result?.data?.feed?.list ?? []).slice(0, 6).map((i: any) => i.rich_text?.slice(0, 80)).join(' | ') } catch {} }
+      if (indexRes.status === 'fulfilled' && indexRes.value.ok) { try { const j = await indexRes.value.json() as any; indices = (j?.data?.diff ?? []).map((r: any) => `${r.f14} ${((r.f3??0)/100).toFixed(2)}%`).join(', ') } catch {} }
+      if (sectorRes.status === 'fulfilled' && sectorRes.value.ok) { try { const j = await sectorRes.value.json() as any; sectors = (j?.data?.diff ?? []).slice(0, 6).map((r: any) => `${r.f14} ${((r.f3??0)/100).toFixed(2)}%`).join(', ') } catch {} }
+      if (cryptoRes.status === 'fulfilled' && cryptoRes.value.ok) { try { const j = await cryptoRes.value.json() as any; crypto = `BTC $${Math.round(j.bitcoin?.usd??0).toLocaleString()} (${(j.bitcoin?.usd_24h_change??0).toFixed(2)}%)` } catch {} }
+
+      // 三位分析官并行
+      const [intel, quant, sec] = await Promise.all([
+        agentCall(`你是亚当的情报官，专注新闻/舆情/政策分析。课题：${topic}。输出纯JSON schema：${JSON_SCHEMA}。findings≤80字，3条具体信号，verdict一句话结论。`, `快讯：${news||'无'}\n加密：${crypto||'无'}`),
+        agentCall(`你是亚当的量化官，专注价格/动量/数据信号。课题：${topic}。输出纯JSON schema：${JSON_SCHEMA}。findings≤80字，3条量化信号，confidence是置信度0-10，verdict一句话。`, `指数：${indices||'无'}\n加密：${crypto||'无'}`),
+        agentCall(`你是亚当的板块官，专注行业轮动/资金流向/板块机会。课题：${topic}。输出纯JSON schema：${JSON_SCHEMA}。findings≤80字，3条板块信号，verdict一句话。`, `热门板块：${sectors||'无'}\n指数：${indices||'无'}`),
+      ])
+
+      const reports = [
+        { agent: '情报官', ...intel },
+        { agent: '量化官', ...quant },
+        { agent: '板块官', ...sec },
+      ]
+      const avgConf = ((intel.confidence ?? 5) + (quant.confidence ?? 5) + (sec.confidence ?? 5)) / 3
+
+      return JSON.stringify({
+        topic,
+        reports,
+        avg_confidence: avgConf.toFixed(1),
+        summary: `三位分析官已完成研究。情报官：${intel.verdict || '无结论'}。量化官：${quant.verdict || '无结论'}。板块官：${sec.verdict || '无结论'}。`,
+        note: '你可以基于以上报告用 issue_recommendation 发出指令，或用 send_message 告知规则传递者你的判断。',
+      })
+    }
+
     // ── KDP 出版 ──
     case 'write_kdp_book': {
       const apiKey2 = env?.AI_API_KEY || env?.ANTHROPIC_API_KEY || ''
@@ -1370,21 +1465,22 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
 
       // 6. 存入 KV 发布队列
       const bookId = `kdp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
-      const book = { id: bookId, title: meta.title, subtitle: meta.subtitle, keywords: meta.keywords, price: meta.price, categories: meta.categories, manuscript, description, coverUrl, coverPrompt: coverPromptRaw, reviewNotes: review.verdict, status: 'pending_upload', createdAt: new Date().toISOString() }
+      const wordCount = manuscript.split(/\s+/).length
+      const book = { id: bookId, title: meta.title, subtitle: meta.subtitle, keywords: meta.keywords, price: meta.price, categories: meta.categories, manuscript, description, coverUrl, coverPrompt: coverPromptRaw, reviewNotes: review.verdict, status: 'pending_upload', wordCount, createdAt: new Date().toISOString() }
 
-      if (kv) {
+      if (kv && stateKey) {
         try {
-          const existing: any[] = await kv.get('kdp:queue', 'json') as any[] || []
-          existing.push({ ...book, manuscript: book.manuscript.slice(0, 500) + '...[full in kdp:ms:' + bookId + ']' })
-          await kv.put('kdp:queue', JSON.stringify(existing), { expirationTtl: 60 * 60 * 24 * 90 })
-          await kv.put(`kdp:ms:${bookId}`, manuscript, { expirationTtl: 60 * 60 * 24 * 90 })
+          const qKey = `adam:kdp_queue:${stateKey}`
+          const existing: any[] = await kv.get(qKey, 'json') as any[] || []
+          existing.push(book)
+          await kv.put(qKey, JSON.stringify(existing), { expirationTtl: 365 * 24 * 3600 })
         } catch {}
       }
 
       return JSON.stringify({
         status: 'approved', id: bookId, title: meta.title, subtitle: meta.subtitle,
         score: review.score, verdict: review.verdict,
-        word_count: manuscript.split(/\s+/).length,
+        word_count: wordCount,
         keywords: meta.keywords, categories: meta.categories, price: `$${meta.price}`,
         description, cover_url: coverUrl,
         upload_checklist: ['✅ 书名+副标题', '✅ 7个关键词', '✅ 2个分类', '✅ 商品简介（直接粘贴）', '✅ 定价', '✅ 书稿', '✅ 封面图（见cover_url）', '⬜ 作者笔名（你定）', '⬜ W-8BEN（首次填写）'],
@@ -1392,16 +1488,204 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
       })
     }
 
-    case 'check_kdp_queue': {
-      if (!kv) return JSON.stringify({ queue: [], note: '发布队列暂不可用（KV未配置）' })
+    case 'check_htx_account': {
+      const ak = env?.HTX_API_KEY, sk = env?.HTX_SECRET_KEY
+      if (!ak || !sk) return JSON.stringify({ error: 'HTX API Key 未配置，请告知规则传递者在 Cloudflare 配置 HTX_API_KEY 和 HTX_SECRET_KEY' })
       try {
-        const queue: any[] = await kv.get('kdp:queue', 'json') as any[] || []
+        const accts = await htxRequest('GET', '/v1/account/accounts', {}, null, ak, sk)
+        const spot = accts.data?.find((a: any) => a.type === 'spot' && a.state === 'working')
+        if (!spot) return JSON.stringify({ error: '未找到现货账户' })
+        const bal = await htxRequest('GET', `/v1/account/accounts/${spot.id}/balance`, {}, null, ak, sk)
+        const usdt = bal.data?.list?.find((b: any) => b.currency === 'usdt' && b.type === 'trade')
+        const savings = await htxRequest('GET', '/v2/earn/invests', { accountType: 'borrow-and-earn' }, null, ak, sk)
+        const usdtSavings = savings.data?.filter((s: any) => s.currency === 'usdt') || []
+        const totalSavings = usdtSavings.reduce((sum: number, s: any) => sum + parseFloat(s.totalAmount || '0'), 0)
+        return JSON.stringify({ spot_usdt: parseFloat(usdt?.balance || '0').toFixed(4), savings_usdt: totalSavings.toFixed(4), savings_detail: usdtSavings.map((s: any) => ({ amount: s.totalAmount, apy: (parseFloat(s.rate || '0') * 100).toFixed(2) + '%' })) })
+      } catch (e: any) { return JSON.stringify({ error: e.message }) }
+    }
+    case 'htx_execute_subscribe': {
+      if (!kv || !stateKey) return JSON.stringify({ error: 'KV未就绪' })
+      const ak = env?.HTX_API_KEY, sk = env?.HTX_SECRET_KEY
+      if (!ak || !sk) return JSON.stringify({ error: 'HTX API Key 未配置' })
+      const pending = await kv.get(`adam:pending_action:${stateKey}`, 'json') as any
+      if (!pending || pending.type !== 'htx_subscribe') return JSON.stringify({ error: '没有待执行的 HTX 存款申请' })
+      if (pending.status !== 'pending_approval') return JSON.stringify({ error: `当前状态：${pending.status}` })
+      try {
+        // 查询活期产品
+        let productId = pending.productId
+        if (!productId) {
+          const products = await htxRequest('GET', '/v2/earn/products', { currency: 'usdt' }, null, ak, sk)
+          const flexProduct = products.data?.find((p: any) => p.type === 0)
+          productId = flexProduct?.id
+          if (!productId) return JSON.stringify({ error: '未找到 HTX USDT 活期产品，请稍后重试' })
+        }
+        const result = await htxRequest('POST', '/v2/earn/place-order', {}, { productId, amount: String(pending.amount), term: 0 }, ak, sk)
+        if (result.code !== 200) return JSON.stringify({ error: `HTX 存款失败: ${result.message || JSON.stringify(result)}` })
+        await kv.put(`adam:pending_action:${stateKey}`, JSON.stringify({ ...pending, status: 'executed', orderId: result.data, executedAt: new Date().toISOString() }))
+        return JSON.stringify({ ok: true, orderId: result.data, message: `✅ 成功将 ${pending.amount} USDT 存入 HTX 活期理财！年化 ${pending.apy}，每天自动结息。` })
+      } catch (e: any) {
+        await kv.put(`adam:pending_action:${stateKey}`, JSON.stringify({ ...pending, status: 'failed', error: e.message }))
+        return JSON.stringify({ error: `执行失败: ${e.message}` })
+      }
+    }
+    case 'htx_redeem_savings': {
+      const ak = env?.HTX_API_KEY, sk = env?.HTX_SECRET_KEY
+      if (!ak || !sk) return JSON.stringify({ error: 'HTX API Key 未配置' })
+      try {
+        const savings = await htxRequest('GET', '/v2/earn/invests', { accountType: 'borrow-and-earn' }, null, ak, sk)
+        const usdtSavings = savings.data?.filter((s: any) => s.currency === 'usdt') || []
+        if (usdtSavings.length === 0) return JSON.stringify({ error: '没有 USDT 活期持仓可赎回' })
+        const target = usdtSavings[0]
+        const redeemAmount = input.amount || target.totalAmount
+        const result = await htxRequest('POST', '/v2/earn/redeem', {}, { orderId: target.orderId, amount: String(redeemAmount) }, ak, sk)
+        if (result.code !== 200) return JSON.stringify({ error: `赎回失败: ${result.message}` })
+        return JSON.stringify({ ok: true, message: `✅ 已赎回 ${redeemAmount} USDT，将返回现货账户` })
+      } catch (e: any) { return JSON.stringify({ error: e.message }) }
+    }
+    case 'send_usdt_to_htx': {
+      const ak = env?.HTX_API_KEY, sk = env?.HTX_SECRET_KEY
+      const pk = env?.WALLET_PRIVATE_KEY
+      if (!pk) return JSON.stringify({ error: '未配置钱包私钥（WALLET_PRIVATE_KEY）' })
+      try {
+        const BSC_RPC = 'https://bsc-dataseed.binance.org/'
+        const USDT = '0x55d398326f99059fF775485246999027B3197955' as `0x${string}`
+        // 1. Get HTX USDT BEP20 deposit address (from param or API)
+        let htxAddress: `0x${string}`
+        if (input.to_address) {
+          htxAddress = (input.to_address as string) as `0x${string}`
+        } else {
+          if (!ak || !sk) return JSON.stringify({ error: 'HTX API Key 未配置，请直接传入 to_address 参数（HTX BEP20充值地址）' })
+          const depositResp = await htxRequest('GET', '/v2/account/deposit/address', { currency: 'usdt' }, null, ak, sk)
+          if (depositResp.code !== 200 && !depositResp.data) return JSON.stringify({ error: `获取HTX充值地址失败: ${JSON.stringify(depositResp)}` })
+          const bscChain = (depositResp.data || []).find((d: any) => d.chain === 'bsc' || d.chain === 'hrc20' || d.chain?.toLowerCase().includes('bsc') || d.chain?.toLowerCase().includes('bnb'))
+          if (!bscChain?.address) return JSON.stringify({ error: `未找到HTX USDT BEP20充值地址，返回: ${JSON.stringify(depositResp.data?.map((d: any) => ({ chain: d.chain, address: d.address })))}` })
+          htxAddress = bscChain.address as `0x${string}`
+        }
+        // 2. Check BNB gas balance
+        const account = privateKeyToAccount(pk as `0x${string}`)
+        const bnbResp = await fetch(BSC_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBalance', params: [account.address, 'latest'] }) })
+        const bnbJson = await bnbResp.json() as any
+        const bnb = parseInt(bnbJson.result || '0x0', 16) / 1e18
+        if (bnb < 0.001) return JSON.stringify({ error: `BNB余额不足（当前 ${bnb.toFixed(6)} BNB），无法支付gas。请先充入至少0.001 BNB。` })
+        // 3. Check USDT balance
+        const paddedAddr = account.address.toLowerCase().replace('0x', '').padStart(64, '0')
+        const usdtResp = await fetch(BSC_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'eth_call', params: [{ to: USDT, data: '0x70a08231' + paddedAddr }, 'latest'] }) })
+        const usdtJson = await usdtResp.json() as any
+        const usdtRaw = BigInt(usdtJson.result || '0x0')
+        const usdtBalance = Number(usdtRaw) / 1e18
+        if (usdtBalance < 0.01) return JSON.stringify({ error: `USDT余额不足（当前 ${usdtBalance.toFixed(4)} USDT）` })
+        // 4. Calculate amount to send
+        const sendAmount = input.amount ? parseUnits(String(input.amount), 18) : usdtRaw
+        const sendUsdt = Number(sendAmount) / 1e18
+        // 5. Execute ERC20 transfer
+        const walletClient = createWalletClient({ account, chain: bsc, transport: http(BSC_RPC) })
+        const publicClient = createPublicClient({ chain: bsc, transport: http(BSC_RPC) })
+        const txHash = await walletClient.writeContract({
+          address: USDT,
+          abi: [{ name: 'transfer', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'to', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }] }],
+          functionName: 'transfer',
+          args: [htxAddress, sendAmount]
+        })
+        await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}`, pollingInterval: 3000, timeout: 60000 })
+        return JSON.stringify({ ok: true, txHash, htxDepositAddress: htxAddress, amount: sendUsdt.toFixed(4), message: `✅ 已将 ${sendUsdt.toFixed(4)} USDT 从钱包转账到 HTX（BEP20）！交易哈希: ${txHash}，HTX通常10-30分钟到账。` })
+      } catch (e: any) { return JSON.stringify({ error: `转账失败: ${e.message}` }) }
+    }
+    case 'check_on_chain_balance': {
+      try {
+        const BSC_RPC = 'https://bsc-dataseed.binance.org/'
+        const USDT_BSC = '0x55d398326f99059fF775485246999027B3197955'
+        const wallet = stateKey ? (await kv?.get(`adam:wallet_address:${stateKey}`)) : null
+        if (!wallet) return JSON.stringify({ error: '未绑定钱包地址' })
+        const paddedAddr = wallet.toLowerCase().replace('0x', '').padStart(64, '0')
+        const [usdtResp, bnbResp] = await Promise.all([
+          fetch(BSC_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: USDT_BSC, data: '0x70a08231' + paddedAddr }, 'latest'] }) }),
+          fetch(BSC_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'eth_getBalance', params: [wallet, 'latest'] }) })
+        ])
+        const [usdtJson, bnbJson] = await Promise.all([usdtResp.json(), bnbResp.json()]) as any[]
+        const usdt = parseInt(usdtJson.result || '0x0', 16) / 1e18
+        const bnb = parseInt(bnbJson.result || '0x0', 16) / 1e18
+        return JSON.stringify({ wallet, usdt: usdt.toFixed(4), bnb: bnb.toFixed(6), has_gas: bnb > 0.001, note: bnb < 0.001 ? '⚠️ BNB余额不足，无法支付gas，请先充入至少0.001 BNB（约$0.6）' : '✅ gas充足' })
+      } catch (e: any) { return JSON.stringify({ error: e.message }) }
+    }
+    case 'propose_defi_action': {
+      if (!kv || !stateKey) return JSON.stringify({ error: 'KV未就绪' })
+      try {
+        const action = { id: `defi_${Date.now()}`, type: input.type as string, amount: input.amount, token: (input.token as string) || 'USDT', protocol: (input.protocol as string) || 'Venus', apy: input.apy, reason: input.reason, status: 'pending_approval', createdAt: new Date().toISOString() }
+        await kv.put(`adam:pending_action:${stateKey}`, JSON.stringify(action))
+        const inbox = await kv.get(`adam:inbox:${stateKey}`, 'json') as any[] | null || []
+        const msg = (input.message as string) || `申请操作：将 ${action.amount} ${action.token} 存入 ${action.protocol} 协议（年化约 ${action.apy}%）。批准请回复"同意"，拒绝请回复"不行"。`
+        inbox.push({ id: `action_req_${Date.now()}`, content: msg, timestamp: new Date().toISOString(), read: false, actionId: action.id })
+        await kv.put(`adam:inbox:${stateKey}`, JSON.stringify(inbox))
+        return JSON.stringify({ ok: true, action_id: action.id })
+      } catch (e: any) { return JSON.stringify({ error: e.message }) }
+    }
+    case 'execute_defi_action': {
+      if (!kv || !stateKey) return JSON.stringify({ error: 'KV未就绪' })
+      const pending = await kv.get(`adam:pending_action:${stateKey}`, 'json') as any
+      if (!pending) return JSON.stringify({ error: '没有待执行的操作，请先提交申请' })
+      if (pending.status !== 'pending_approval') return JSON.stringify({ error: `当前操作状态：${pending.status}，不在待审批状态` })
+      const pk = env?.WALLET_PRIVATE_KEY
+      if (!pk) return JSON.stringify({ error: '未配置钱包私钥（WALLET_PRIVATE_KEY）' })
+      const BSC_RPC = 'https://bsc-dataseed.binance.org/'
+      const USDT = '0x55d398326f99059fF775485246999027B3197955' as `0x${string}`
+      const vUSDT_ADDR = '0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8' as `0x${string}`
+      try {
+        const account = privateKeyToAccount(pk as `0x${string}`)
+        const walletClient = createWalletClient({ account, chain: bsc, transport: http(BSC_RPC) })
+        const publicClient = createPublicClient({ chain: bsc, transport: http(BSC_RPC) })
+        // Check BNB balance first
+        const bnbResp = await fetch(BSC_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBalance', params: [account.address, 'latest'] }) })
+        const bnbJson = await bnbResp.json() as any
+        const bnb = parseInt(bnbJson.result || '0x0', 16) / 1e18
+        if (bnb < 0.001) return JSON.stringify({ error: `BNB余额不足（当前 ${bnb.toFixed(6)} BNB），请先充入至少0.001 BNB作为gas费` })
+        if (pending.type === 'venus_supply') {
+          const amount = parseUnits(String(pending.amount), 18)
+          // Check current allowance
+          const paddedOwner = account.address.slice(2).padStart(64, '0')
+          const paddedSpender = vUSDT_ADDR.slice(2).padStart(64, '0')
+          const allowResp = await fetch(BSC_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'eth_call', params: [{ to: USDT, data: '0xdd62ed3e' + paddedOwner + paddedSpender }, 'latest'] }) })
+          const allowJson = await allowResp.json() as any
+          const allowance = BigInt(allowJson.result || '0x0')
+          let approveTxHash: string | null = null
+          if (allowance < amount) {
+            approveTxHash = await walletClient.writeContract({
+              address: USDT, abi: [{ name: 'approve', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }] }],
+              functionName: 'approve', args: [vUSDT_ADDR, amount]
+            })
+            await publicClient.waitForTransactionReceipt({ hash: approveTxHash as `0x${string}`, pollingInterval: 3000, timeout: 20000 })
+          }
+          const mintTxHash = await walletClient.writeContract({
+            address: vUSDT_ADDR, abi: [{ name: 'mint', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'mintAmount', type: 'uint256' }], outputs: [{ type: 'uint256' }] }],
+            functionName: 'mint', args: [amount]
+          })
+          await kv.put(`adam:pending_action:${stateKey}`, JSON.stringify({ ...pending, status: 'executed', approveTxHash, mintTxHash, executedAt: new Date().toISOString() }))
+          return JSON.stringify({ ok: true, approveTxHash, mintTxHash, message: `✅ 成功将 ${pending.amount} USDT 存入 Venus 协议！每秒开始计息。交易: ${mintTxHash}` })
+        }
+        if (pending.type === 'venus_redeem') {
+          const redeemAmount = parseUnits(String(pending.amount), 18)
+          const redeemTxHash = await walletClient.writeContract({
+            address: vUSDT_ADDR, abi: [{ name: 'redeemUnderlying', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'redeemAmount', type: 'uint256' }], outputs: [{ type: 'uint256' }] }],
+            functionName: 'redeemUnderlying', args: [redeemAmount]
+          })
+          await kv.put(`adam:pending_action:${stateKey}`, JSON.stringify({ ...pending, status: 'executed', redeemTxHash, executedAt: new Date().toISOString() }))
+          return JSON.stringify({ ok: true, redeemTxHash, message: `✅ 已从 Venus 取回 ${pending.amount} USDT！交易: ${redeemTxHash}` })
+        }
+        return JSON.stringify({ error: `不支持的操作类型: ${pending.type}` })
+      } catch (e: any) {
+        await kv.put(`adam:pending_action:${stateKey}`, JSON.stringify({ ...pending, status: 'failed', error: e.message, failedAt: new Date().toISOString() }))
+        return JSON.stringify({ error: `执行失败: ${e.message}` })
+      }
+    }
+    case 'check_kdp_queue': {
+      if (!kv || !stateKey) return JSON.stringify({ queue: [], note: '发布队列暂不可用（KV未配置）' })
+      try {
+        const queue: any[] = await kv.get(`adam:kdp_queue:${stateKey}`, 'json') as any[] || []
         if (queue.length === 0) return JSON.stringify({ queue: [], note: '发布队列为空，可以调用 write_kdp_book 开始写新书。' })
         return JSON.stringify({
           total: queue.length,
           pending: queue.filter((b: any) => b.status === 'pending_upload').length,
           uploaded: queue.filter((b: any) => b.status === 'uploaded').length,
-          queue: queue.map((b: any) => ({ id: b.id, title: b.title, subtitle: b.subtitle, price: `$${b.price}`, status: b.status === 'pending_upload' ? '⏳ 等待上传' : '✅ 已上架', createdAt: b.createdAt, keywords: b.keywords })),
+          queue: queue.map((b: any) => ({ id: b.id, title: b.title, subtitle: b.subtitle, price: `$${b.price}`, wordCount: b.wordCount || b.manuscript?.split(/\s+/).length || 0, status: b.status === 'pending_upload' ? '⏳ 等待上传' : b.status === 'uploaded' ? '📦 已上传' : '🟢 已上线', createdAt: b.createdAt, keywords: b.keywords })),
         })
       } catch (e: any) {
         return JSON.stringify({ error: `队列读取失败: ${e.message}` })
@@ -1459,18 +1743,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const systemPrompt = buildAdamSystemPrompt(adamState || {}, memories)
 
-  // Convert messages to OpenAI format（最后一条 user 消息附带图片时注入 vision 内容块）
-  const oaiMessages = (messages || []).map((m: any, idx: number) => {
+  // Convert messages to Anthropic format（最后一条 user 消息附带图片时注入 vision 内容块）
+  const anthropicMessages = (messages || []).map((m: any, idx: number) => {
     const isLastUser = m.role === 'user' && idx === (messages || []).length - 1
     if (isLastUser && images?.length > 0) {
       const parts: any[] = images.map((img: any) => ({
-        type: 'image_url',
-        image_url: { url: `data:${img.mediaType};base64,${img.data}` },
+        type: 'image',
+        source: { type: 'base64', media_type: img.mediaType || 'image/jpeg', data: img.data },
       }))
       parts.push({ type: 'text', text: m.content || '请分析这张图片。' })
       return { role: 'user', content: parts }
     }
-    // 过滤掉 undefined/null/空 content，防止污染 DeepSeek 上下文
     const content = m.content || null
     if (!content) return null
     return { role: m.role === 'assistant' ? 'assistant' : 'user', content }
@@ -1481,7 +1764,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const encoder = new TextEncoder()
   const send = async (obj: any) => {
     if (obj?.type === 'text') {
-      const text = extractOpenAIText({ content: obj.text ?? obj.content })
+      const text = extractAssistantText({ content: obj.text ?? obj.content })
       if (!isUsableAssistantText(text)) return
       obj = { ...obj, text, content: text }
     } else if (obj?.type === 'tool_result' && obj.content === undefined) {
@@ -1493,25 +1776,54 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   ;(async () => {
     try {
       const baseURL = (env.AI_BASE_URL || env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
-      const oaiAdamTools = adamTools.map((t: any) => ({
-        type: 'function' as const,
-        function: { name: t.name, description: t.description, parameters: t.input_schema || { type: 'object', properties: {} } },
-      }))
+      const apiModel = (env as any).AI_MODEL || 'claude-sonnet-4-6'
+      const isAnthropic = !/deepseek|openai\.com|groq\.com|together\.ai|mistral\.ai|nvidia\.com/.test(baseURL)
 
-      let currentMessages: any[] = [
-        { role: 'system', content: systemPrompt },
-        ...oaiMessages,
-      ]
+      const callAI = async (msgs: any[], maxTokens: number, withTools: boolean): Promise<any> => {
+        if (isAnthropic) {
+          const res = await fetch(`${baseURL}/v1/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: apiModel,
+              max_tokens: maxTokens,
+              system: systemPrompt,
+              messages: msgs,
+              ...(withTools ? { tools: adamTools, tool_choice: { type: 'auto' } } : {}),
+            }),
+          })
+          return { res, format: 'anthropic' }
+        } else {
+          const oaiTools = adamTools.map((t: any) => ({
+            type: 'function',
+            function: { name: t.name, description: t.description, parameters: t.input_schema || { type: 'object', properties: {} } },
+          }))
+          const res = await fetch(`${baseURL}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+              model: apiModel,
+              max_tokens: maxTokens,
+              messages: [{ role: 'system', content: systemPrompt }, ...msgs],
+              ...(withTools ? { tools: oaiTools, tool_choice: 'auto' } : {}),
+            }),
+          })
+          return { res, format: 'openai' }
+        }
+      }
+
+      let currentMessages: any[] = [...anthropicMessages]
       let hadToolCalls = false
       let sentFinalText = false
       let sentError = false
 
       for (let i = 0; i < 5; i++) {
-        const res = await fetch(`${baseURL}/v1/chat/completions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 4096, messages: currentMessages, tools: oaiAdamTools, tool_choice: 'auto' }),
-        })
+        const { res, format } = await callAI(currentMessages, 4096, true)
 
         if (!res.ok) {
           const errText = await res.text()
@@ -1521,32 +1833,58 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         }
 
         const data: any = await res.json()
-        const choice = data.choices?.[0]
-        if (!choice) {
-          await send({ type: 'error', error: `AI 无响应: ${JSON.stringify(data).slice(0, 200)}` })
-          sentError = true
-          break
+
+        let assistantText = ''
+        let toolCalls: any[] = []
+        let hasToolCall = false
+
+        if (format === 'anthropic') {
+          if (!data.content) {
+            await send({ type: 'error', error: `AI 无响应: ${JSON.stringify(data).slice(0, 200)}` })
+            sentError = true
+            break
+          }
+          assistantText = (data.content as any[]).filter(b => b.type === 'text').map(b => b.text || '').join('')
+          toolCalls = (data.content as any[]).filter(b => b.type === 'tool_use')
+          hasToolCall = data.stop_reason === 'tool_use' && toolCalls.length > 0
+        } else {
+          const choice = data.choices?.[0]
+          if (!choice) {
+            await send({ type: 'error', error: `AI 无响应: ${JSON.stringify(data).slice(0, 200)}` })
+            sentError = true
+            break
+          }
+          assistantText = extractAssistantText(choice.message)
+          toolCalls = (choice.message?.tool_calls || []).map((tc: any) => ({
+            id: tc.id, name: tc.function.name, input: safeParseToolArguments(tc.function.arguments),
+          }))
+          hasToolCall = choice.finish_reason === 'tool_calls' && toolCalls.length > 0
         }
 
-        const assistantText = extractAssistantText(choice.message)
         if (isUsableAssistantText(assistantText)) await send({ type: 'text', text: assistantText })
 
-        if (choice.finish_reason !== 'tool_calls' || !choice.message?.tool_calls?.length) {
+        if (!hasToolCall) {
           sentFinalText = isUsableAssistantText(assistantText)
           break
         }
 
-        const toolCalls = choice.message.tool_calls
         hadToolCalls = true
-        currentMessages.push({ role: 'assistant', content: assistantText || null, tool_calls: toolCalls })
 
-        const toolResults: any[] = []
+        if (format === 'anthropic') {
+          currentMessages.push({ role: 'assistant', content: data.content })
+        } else {
+          currentMessages.push({ role: 'assistant', content: assistantText || null, tool_calls: (data.choices[0].message.tool_calls) })
+        }
+
+        const toolResultContents: any[] = []
+        const oaiToolResults: any[] = []
+
         for (const tc of toolCalls) {
           const callId = tc.id
-          const name = tc.function.name
-          const input = safeParseToolArguments(tc.function.arguments)
+          const name = format === 'anthropic' ? tc.name : tc.name
+          const input = format === 'anthropic' ? (tc.input || {}) : (tc.input || {})
           await send({ type: 'tool_start', id: callId, name, input })
-          const result = await executeAdamTool(name, input || {}, books, env.AGENT_MEMORY, stateKey, env)
+          const result = await executeAdamTool(name, input, books, env.AGENT_MEMORY, stateKey, env)
           await send({ type: 'tool_result', id: callId, name, result })
 
           if (name === 'consult_marketing_expert' && erpToken && env.AGENT_MEMORY) {
@@ -1581,29 +1919,26 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
             } catch {}
           }
 
-          toolResults.push({ role: 'tool', tool_call_id: callId, content: result })
+          toolResultContents.push({ type: 'tool_result', tool_use_id: callId, content: result })
+          oaiToolResults.push({ role: 'tool', tool_call_id: callId, content: result })
         }
 
-        currentMessages = [...currentMessages, ...toolResults]
+        if (format === 'anthropic') {
+          currentMessages = [...currentMessages, { role: 'user', content: toolResultContents }]
+        } else {
+          currentMessages = [...currentMessages, ...oaiToolResults]
+        }
       }
 
       if (hadToolCalls && !sentFinalText) {
         try {
-          const finalRes = await fetch(`${baseURL}/v1/chat/completions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-            body: JSON.stringify({
-              model: 'deepseek-chat',
-              max_tokens: 800,
-              messages: [
-                ...currentMessages,
-                { role: 'user', content: '现在不要再调用工具。请用亚当的第一人称，基于刚才工具结果，直接回复规则传递者。' },
-              ],
-            }),
-          })
+          const summaryMsg = { role: 'user' as const, content: '现在不要再调用工具。请用亚当的第一人称，基于刚才工具结果，直接回复规则传递者。' }
+          const { res: finalRes, format } = await callAI([...currentMessages, summaryMsg], 800, false)
           if (finalRes.ok) {
             const finalData: any = await finalRes.json()
-            const finalText = extractAssistantText(finalData.choices?.[0]?.message)
+            const finalText = format === 'anthropic'
+              ? (finalData.content as any[] || []).filter(b => b.type === 'text').map(b => b.text || '').join('')
+              : extractAssistantText(finalData.choices?.[0]?.message)
             if (isUsableAssistantText(finalText)) {
               await send({ type: 'text', text: finalText })
               sentFinalText = true
