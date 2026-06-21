@@ -4,12 +4,16 @@
     <!-- ── 列表页 ── -->
     <div v-if="!showForm">
       <el-card>
-        <ScTable ref="tableRef" :api-obj="getSaleExchangeList"
+        <ScTable ref="tableRef" :api-obj="fetchSaleExchangeListWithTypeFilter"
           sort-by="created_at" :sort-desc="true"
           :export-file-name="$t('sale.exchange.exportFileName')" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.order_no" :placeholder="$t('sale.exchange.searchOrderNo')" clearable style="width:160px" />
             <el-input v-model="searchForm.customer_name" :placeholder="$t('sale.exchange.searchCustomerName')" clearable style="width:150px" />
+            <el-select v-model="searchForm.order_type" :placeholder="$t('sale.exchange.typeFilterPlaceholder')" clearable style="width:110px">
+              <el-option :label="$t('sale.exchange.typeExchange')" value="exchange" />
+              <el-option :label="$t('sale.exchange.typeReissue')" value="reissue" />
+            </el-select>
             <el-select v-model="searchForm.status" :placeholder="$t('sale.exchange.status')" clearable style="width:110px">
               <el-option :label="$t('sale.exchange.statusPending')" :value="0" />
               <el-option :label="$t('sale.exchange.statusApproved')" :value="1" />
@@ -17,12 +21,22 @@
             </el-select>
           </template>
           <template #toolbar>
-            <el-button type="primary" :icon="Plus" @click="openCreate">{{ $t('sale.exchange.createExchange') }}</el-button>
+            <el-dropdown @command="(cmd: OrderType) => openCreate(cmd)">
+              <el-button type="primary" :icon="Plus">
+                {{ $t('sale.exchange.createDropdown') }} <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="exchange">{{ $t('sale.exchange.createExchange') }}</el-dropdown-item>
+                  <el-dropdown-item command="reissue">{{ $t('sale.exchange.createReissue') }}</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="expand-detail">
-                <div class="expand-section">
+                <div v-if="parseOrderTypeFromRow(row) !== 'reissue'" class="expand-section">
                   <div class="expand-title">{{ $t('sale.exchange.expandReturnGoods') }}</div>
                   <el-table :data="parseItems(row.return_goods_info)" border size="small" class="expand-table">
                     <el-table-column type="index" width="40" align="center" />
@@ -41,8 +55,8 @@
                     </el-table-column>
                   </el-table>
                 </div>
-                <div class="expand-section" style="margin-top:12px">
-                  <div class="expand-title">{{ $t('sale.exchange.expandExchangeGoods') }}</div>
+                <div class="expand-section" :style="{ marginTop: parseOrderTypeFromRow(row) === 'reissue' ? '0' : '12px' }">
+                  <div class="expand-title">{{ parseOrderTypeFromRow(row) === 'reissue' ? $t('sale.exchange.reissueGoodsSection') : $t('sale.exchange.expandExchangeGoods') }}</div>
                   <el-table :data="parseItems(row.exchange_goods_info)" border size="small" class="expand-table">
                     <el-table-column type="index" width="40" align="center" />
                     <el-table-column prop="goods_name" :label="$t('sale.exchange.goodsName')" min-width="140" />
@@ -64,6 +78,13 @@
             </template>
           </el-table-column>
           <el-table-column type="index" :label="$t('sale.exchange.seqNo')" width="60" align="center" />
+          <el-table-column :label="$t('sale.exchange.colType')" width="75" align="center">
+            <template #default="{ row }">
+              <el-tag :type="parseOrderTypeFromRow(row) === 'reissue' ? 'warning' : 'info'" size="small" effect="plain">
+                {{ parseOrderTypeFromRow(row) === 'reissue' ? $t('sale.exchange.typeReissue') : $t('sale.exchange.typeExchange') }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="order_no" :label="$t('sale.exchange.orderNo')" min-width="150" />
           <el-table-column :label="$t('sale.exchange.customerName')" min-width="140">
             <template #default="{ row }">{{ row.customer_name || '—' }}</template>
@@ -76,17 +97,20 @@
           </el-table-column>
           <el-table-column :label="$t('sale.exchange.returnAmount')" width="110" align="right">
             <template #default="{ row }">
-              <span style="color:#dc2626">¥{{ Number(row.return_amount || 0).toFixed(2) }}</span>
+              <span v-if="parseOrderTypeFromRow(row) === 'reissue'" style="color:rgba(29,29,31,0.2)">—</span>
+              <span v-else style="color:#dc2626">¥{{ Number(row.return_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column :label="$t('sale.exchange.exchangeAmount')" width="110" align="right">
             <template #default="{ row }">
-              <span style="color:#0071e3;font-weight:500">¥{{ Number(row.exchange_amount || 0).toFixed(2) }}</span>
+              <span v-if="parseOrderTypeFromRow(row) === 'reissue'" style="color:rgba(29,29,31,0.2)">—</span>
+              <span v-else style="color:#0071e3;font-weight:500">¥{{ Number(row.exchange_amount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column :label="$t('sale.exchange.diffAmount')" width="110" align="right">
             <template #default="{ row }">
-              <span :style="{ color: Number(row.diff_amount||0) > 0 ? '#dc2626' : Number(row.diff_amount||0) < 0 ? '#16a34a' : '' }">
+              <span v-if="parseOrderTypeFromRow(row) === 'reissue'" style="color:rgba(29,29,31,0.2)">—</span>
+              <span v-else :style="{ color: Number(row.diff_amount||0) > 0 ? '#dc2626' : Number(row.diff_amount||0) < 0 ? '#16a34a' : '' }">
                 {{ Number(row.diff_amount||0) > 0 ? '+' : '' }}¥{{ Number(row.diff_amount||0).toFixed(2) }}
               </span>
             </template>
@@ -95,7 +119,7 @@
             <template #default="{ row }">
               <template v-if="parseFeeItemsFromRow(row).length > 0">
                 <div v-for="(fee, idx) in parseFeeItemsFromRow(row)" :key="idx" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;line-height:1.6">
-                  <span style="font-size:11px;color:rgba(29,29,31,0.5)">{{ fee.name }}</span>
+                  <span style="font-size:11px;color:rgba(29,29,31,0.5)">{{ getFeeDisplayName(fee.name) }}</span>
                   <span style="color:#8b5cf6;font-weight:600">¥{{ Number(fee.amount).toFixed(2) }}</span>
                 </div>
               </template>
@@ -136,7 +160,14 @@
       <div class="form-topbar">
         <div style="display:flex;align-items:center;gap:12px">
           <el-button :icon="ArrowLeft" @click="backToList">{{ $t('sale.exchange.back') }}</el-button>
-          <span class="form-title">{{ isReadonly ? $t('sale.exchange.viewExchange') : (fd.id ? $t('sale.exchange.editExchange') : $t('sale.exchange.newExchange')) }}</span>
+          <span class="form-title">{{
+            isReissue
+              ? (isReadonly ? $t('sale.exchange.viewReissue') : (fd.id ? $t('sale.exchange.editReissue') : $t('sale.exchange.newReissue')))
+              : (isReadonly ? $t('sale.exchange.viewExchange') : (fd.id ? $t('sale.exchange.editExchange') : $t('sale.exchange.newExchange')))
+          }}</span>
+          <el-tag :type="isReissue ? 'warning' : 'info'" size="small" effect="plain">
+            {{ isReissue ? $t('sale.exchange.typeReissue') : $t('sale.exchange.typeExchange') }}
+          </el-tag>
           <el-tag v-if="isReadonly" type="success" size="small">{{ $t('sale.exchange.approved') }}</el-tag>
         </div>
         <div class="form-actions">
@@ -193,7 +224,7 @@
               </el-col>
               <el-col :span="6">
                 <el-form-item :label="$t('sale.exchange.reason')">
-                  <el-input v-model="fd.reason" :placeholder="$t('sale.exchange.exchangeReasonPlaceholder')" />
+                  <el-input v-model="fd.reason" :placeholder="isReissue ? $t('sale.exchange.reissueReasonPlaceholder') : $t('sale.exchange.exchangeReasonPlaceholder')" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
@@ -205,8 +236,8 @@
           </el-form>
         </div>
 
-        <!-- 退回商品 -->
-        <div class="form-section">
+        <!-- 退回商品（补发单不显示） -->
+        <div v-if="!isReissue" class="form-section">
           <div class="sec-header">
             <div class="sec-title">{{ $t('sale.exchange.returnGoodsSection') }} <span class="sec-subtitle">{{ $t('sale.exchange.returnGoodsSubtitle') }}</span></div>
             <div v-if="!isReadonly" style="display:flex;gap:8px;align-items:center">
@@ -255,10 +286,13 @@
           </el-table>
         </div>
 
-        <!-- 换出商品 -->
+        <!-- 换出商品 / 补发商品 -->
         <div class="form-section">
           <div class="sec-header">
-            <div class="sec-title">{{ $t('sale.exchange.exchangeGoodsSection') }} <span class="sec-subtitle">{{ $t('sale.exchange.exchangeGoodsSubtitle') }}</span></div>
+            <div class="sec-title">
+              {{ isReissue ? $t('sale.exchange.reissueGoodsSection') : $t('sale.exchange.exchangeGoodsSection') }}
+              <span class="sec-subtitle">{{ isReissue ? $t('sale.exchange.reissueGoodsSubtitle') : $t('sale.exchange.exchangeGoodsSubtitle') }}</span>
+            </div>
             <div v-if="!isReadonly" style="display:flex;gap:8px;align-items:center">
               <el-button size="small" @click="openExchangeOutPicker">{{ fd.exchange_source_order_no ? $t('sale.exchange.reselectSource', { no: fd.exchange_source_order_no }) : $t('sale.exchange.importFromOutOrder') }}</el-button>
               <el-button type="primary" :icon="Plus" size="small" @click="openGoodsPicker('exchange')">{{ $t('sale.exchange.selectGoods') }}</el-button>
@@ -266,7 +300,7 @@
               <span class="goods-count">{{ $t('sale.exchange.goodsCount', { count: fd.exchangeItems.length }) }}</span>
             </div>
           </div>
-          <el-table :data="fd.exchangeItems" border size="small" style="width:100%" :empty-text="$t('sale.exchange.emptyExchangeGoods')">
+          <el-table :data="fd.exchangeItems" border size="small" style="width:100%" :empty-text="isReissue ? $t('sale.exchange.emptyReissueGoods') : $t('sale.exchange.emptyExchangeGoods')">
             <el-table-column type="index" width="45" align="center" />
             <el-table-column :label="$t('sale.exchange.goodsName')" min-width="150">
               <template #default="{ row }"><el-input v-model="row.goods_name" size="small" :disabled="isReadonly" /></template>
@@ -277,7 +311,7 @@
             <el-table-column :label="$t('sale.exchange.unit')" width="70" align="center">
               <template #default="{ row }"><el-input v-model="row.unit_name" size="small" :disabled="isReadonly" /></template>
             </el-table-column>
-            <el-table-column :label="$t('sale.exchange.exchangeQty')" width="120">
+            <el-table-column :label="isReissue ? $t('sale.exchange.qty') : $t('sale.exchange.exchangeQty')" width="120">
               <template #default="{ row }">
                 <el-input-number v-model="row.num" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" :disabled="isReadonly" @change="calcTotals" />
               </template>
@@ -304,7 +338,14 @@
         <!-- 结算信息 -->
         <div class="form-section settlement-section">
           <div class="sec-title">{{ $t('sale.exchange.settlementInfo') }}</div>
-          <div class="settlement-grid">
+          <div v-if="isReissue" class="settlement-grid">
+            <div class="settle-item">
+              <span class="settle-label">{{ $t('sale.exchange.reissueAmountTotal') }}</span>
+              <span class="settle-value" style="color:#8b5cf6">¥{{ fd.exchange_amount.toFixed(2) }}</span>
+              <span class="settle-label" style="font-size:11px;color:rgba(29,29,31,0.5);margin-left:8px">{{ $t('sale.exchange.reissueAmountHint') }}</span>
+            </div>
+          </div>
+          <div v-else class="settlement-grid">
             <div class="settle-item">
               <span class="settle-label">{{ $t('sale.exchange.returnAmountTotal') }}</span>
               <span class="settle-value" style="color:#dc2626">¥{{ fd.return_amount.toFixed(2) }}</span>
@@ -342,12 +383,7 @@
                   <div style="width:100%">
                     <div v-for="(fee, idx) in fd.fee_items" :key="idx" style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
                       <el-select v-model="fee.name" size="small" style="width:120px" filterable allow-create default-first-option :placeholder="$t('sale.exchange.feePlaceholder')" :disabled="isReadonly">
-                        <el-option :label="$t('sale.exchange.feeExpress')" value="快递/物流" />
-                        <el-option :label="$t('sale.exchange.feePacking')" value="包装支出" />
-                        <el-option :label="$t('sale.exchange.feeInspection')" value="检测费" />
-                        <el-option :label="$t('sale.exchange.feeRepair')" value="维修费" />
-                        <el-option :label="$t('sale.exchange.feeToll')" value="路费/收费站" />
-                        <el-option :label="$t('sale.exchange.feeOther')" value="其他支出" />
+                        <el-option v-for="opt in feeTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
                       </el-select>
                       <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:110px" controls-position="right" :disabled="isReadonly" :placeholder="$t('sale.exchange.feeAmountPlaceholder')" />
                       <el-select v-model="fee.bearer" size="small" style="width:100px" :disabled="isReadonly">
@@ -358,7 +394,7 @@
                       <el-button v-if="!isReadonly" type="danger" link :icon="Delete" size="small" @click="fd.fee_items.splice(idx, 1)" />
                     </div>
                     <el-button v-if="!isReadonly" type="primary" link size="small" :icon="Plus" style="margin-top:2px"
-                      @click="fd.fee_items.push({ name: '快递/物流', amount: 0, bearer: 'buyer', supplier_name: '' })">
+                      @click="fd.fee_items.push({ name: 'express', amount: 0, bearer: 'buyer', supplier_name: '' })">
                       {{ $t('sale.exchange.addFeeItem') }}
                     </el-button>
                   </div>
@@ -426,12 +462,7 @@
       </div>
       <div v-for="(fee, idx) in feeManageItems" :key="idx" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
         <el-select v-model="fee.name" size="small" style="width:130px" filterable allow-create default-first-option :placeholder="$t('sale.exchange.feePlaceholder')">
-          <el-option :label="$t('sale.exchange.feeExpress')" value="快递/物流" />
-          <el-option :label="$t('sale.exchange.feePacking')" value="包装支出" />
-          <el-option :label="$t('sale.exchange.feeInspection')" value="检测费" />
-          <el-option :label="$t('sale.exchange.feeRepair')" value="维修费" />
-          <el-option :label="$t('sale.exchange.feeToll')" value="路费/收费站" />
-          <el-option :label="$t('sale.exchange.feeOther')" value="其他支出" />
+          <el-option v-for="opt in feeTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
         </el-select>
         <el-input-number v-model="fee.amount" :min="0" :precision="2" size="small" style="width:110px" controls-position="right" :placeholder="$t('sale.exchange.feeAmountPlaceholder')" />
         <el-select v-model="fee.bearer" size="small" style="width:100px">
@@ -442,7 +473,7 @@
         <el-button type="danger" link :icon="Delete" size="small" @click="feeManageItems.splice(idx, 1)" />
       </div>
       <el-button type="primary" link size="small" :icon="Plus" style="margin-top:4px"
-        @click="feeManageItems.push({ name: '快递/物流', amount: 0, bearer: 'buyer', supplier_name: '' })">
+        @click="feeManageItems.push({ name: 'express', amount: 0, bearer: 'buyer', supplier_name: '' })">
         {{ $t('sale.exchange.addFeeItem') }}
       </el-button>
       <template #footer>
@@ -452,7 +483,7 @@
     </el-dialog>
 
     <!-- 手动添加商品弹框 -->
-    <el-dialog v-model="manualAddVisible" :title="manualTarget === 'return' ? $t('sale.exchange.manualAddReturnTitle') : $t('sale.exchange.manualAddExchangeTitle')" width="420px" append-to-body>
+    <el-dialog v-model="manualAddVisible" :title="manualTarget === 'return' ? $t('sale.exchange.manualAddReturnTitle') : (isReissue ? $t('sale.exchange.manualAddReissueTitle') : $t('sale.exchange.manualAddExchangeTitle'))" width="420px" append-to-body>
       <el-form :model="manualForm" label-width="80px">
         <el-form-item :label="$t('sale.exchange.manualGoodsName')" required><el-input v-model="manualForm.goods_name" :placeholder="$t('sale.exchange.manualGoodsNamePlaceholder')" /></el-form-item>
         <el-form-item :label="$t('sale.exchange.manualGoodsSn')"><el-input v-model="manualForm.goods_sn" :placeholder="$t('sale.exchange.manualGoodsSnPlaceholder')" /></el-form-item>
@@ -472,7 +503,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Plus, Delete, ArrowLeft, EditPen } from '@element-plus/icons-vue'
+import { Plus, Delete, ArrowLeft, ArrowDown, EditPen } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -493,7 +524,45 @@ function parseItems(v: any): any[] {
   try { return JSON.parse(v || '[]') } catch { return [] }
 }
 
-const searchForm = reactive<any>({ order_no: '', customer_name: '', status: '' })
+const feeTypeOptions = computed(() => ([
+  { value: 'express', label: t('sale.exchange.feeExpress') },
+  { value: 'packing', label: t('sale.exchange.feePacking') },
+  { value: 'inspection', label: t('sale.exchange.feeInspection') },
+  { value: 'repair', label: t('sale.exchange.feeRepair') },
+  { value: 'toll', label: t('sale.exchange.feeToll') },
+  { value: 'other', label: t('sale.exchange.feeOther') },
+]))
+
+const legacyFeeNameMap: Record<string, string> = {
+  '快递/物流': 'express',
+  '包装支出': 'packing',
+  '检测费': 'inspection',
+  '维修费': 'repair',
+  '路费/收费站': 'toll',
+  '其他支出': 'other',
+}
+
+function normalizeFeeName(name: string) {
+  const raw = String(name || '').trim()
+  return legacyFeeNameMap[raw] || raw
+}
+
+function getFeeDisplayName(name: string) {
+  const normalized = normalizeFeeName(name)
+  return feeTypeOptions.value.find(opt => opt.value === normalized)?.label || name || ''
+}
+
+const searchForm = reactive<any>({ order_no: '', customer_name: '', status: '', order_type: '' })
+
+// 后端没有 order_type 字段，类型藏在 remark 里 → 客户端过滤
+// 注意：开启类型过滤时分页 total 会不准（属于已知限制，V1 接受）
+async function fetchSaleExchangeListWithTypeFilter(params: any) {
+  const { order_type, ...rest } = params || {}
+  const res: any = await getSaleExchangeList(rest)
+  if (!order_type) return res
+  const rows = (res?.data?.rows || []).filter((r: any) => parseOrderTypeFromRow(r) === order_type)
+  return { ...res, data: { ...res.data, rows, total: rows.length } }
+}
 const showForm = ref(false)
 const isReadonly = ref(false)
 
@@ -516,6 +585,18 @@ interface GoodsItem {
 }
 interface FeeItem { name: string; amount: number; bearer: string; supplier_name: string }
 
+type OrderType = 'exchange' | 'reissue'
+
+// 类型存储：单据 remark 里加 [TY:reissue] 标记；缺省 = exchange
+function parseOrderTypeFromRow(row: any): OrderType {
+  if (row?.order_type === 'reissue') return 'reissue'
+  if (/\[TY:reissue\]/.test(String(row?.remark || ''))) return 'reissue'
+  return 'exchange'
+}
+function stripTypeTag(remark: string): string {
+  return String(remark || '').replace(/\[TY:(?:reissue|exchange)\]\s*/g, '').trim()
+}
+
 function encodeFeeItems(items: FeeItem[]): string {
   return btoa(encodeURIComponent(JSON.stringify(items)))
 }
@@ -526,17 +607,24 @@ function parseFeeItemsFromRow(row: any): FeeItem[] {
   try {
     const raw = row.fee_items
     if (raw && (Array.isArray(raw) ? raw.length : raw !== '[]' && raw !== '' && raw !== 'null')) {
-      return Array.isArray(raw) ? raw : JSON.parse(raw)
+      return (Array.isArray(raw) ? raw : JSON.parse(raw)).map((item: any) => ({
+        ...item,
+        name: normalizeFeeName(item?.name),
+      }))
     }
   } catch {}
   const fiMatch = String(row.remark || '').match(/\[FI:([^\]]+)\]/)
-  if (fiMatch) return decodeFeeItems(fiMatch[1])
+  if (fiMatch) return decodeFeeItems(fiMatch[1]).map((item: any) => ({
+    ...item,
+    name: normalizeFeeName(item?.name),
+  }))
   return []
 }
 
 const defaultFd = () => ({
   id: 0,
   order_no: '',
+  order_type: 'exchange' as OrderType,
   customer_id: null as any,
   customer_name: '',
   warehouse_id: null as any,
@@ -580,21 +668,26 @@ function onWarehouseChange(val: any) {
   fd.warehouse_name = w?.name || ''
 }
 
-function openCreate() {
+function openCreate(orderType: OrderType = 'exchange') {
   Object.assign(fd, defaultFd())
+  fd.order_type = orderType
   isReadonly.value = false
   showForm.value = true
 }
 function openEdit(row: any, readonly: boolean) {
   Object.assign(fd, defaultFd(), row, {
+    order_type: parseOrderTypeFromRow(row),
     returnItems: parseItems(row.return_goods_info),
     exchangeItems: parseItems(row.exchange_goods_info),
     fee_items: parseFeeItemsFromRow(row),
+    remark: stripTypeTag(row.remark || ''),  // 显示时去掉 [TY:...] 标记
   })
   calcTotals()
   isReadonly.value = readonly
   showForm.value = true
 }
+
+const isReissue = computed(() => fd.order_type === 'reissue')
 function backToList() {
   showForm.value = false
   tableRef.value?.reload()
@@ -602,20 +695,38 @@ function backToList() {
 
 async function handleSave(andAudit: boolean) {
   await formRef.value?.validate()
+  // 补发单：发出商品列表必填，但退回商品强制清空（不计应收）
+  if (isReissue.value) {
+    if (!fd.exchangeItems.length) {
+      ElMessage.warning(t('sale.exchange.emptyReissueGoods'))
+      return
+    }
+    fd.returnItems = []
+  }
   calcTotals()
   if (andAudit) { saving.value = true; savingAndAuditing.value = true }
   else saving.value = true
   try {
-    const expenseTotal = fd.fee_items.reduce((s, f) => s + (Number(f.amount) || 0), 0)
-    const baseRemark = String(fd.remark || '').replace(/\[FI:[^\]]+\]\s*/g, '').trim()
-    const fiTag = fd.fee_items.length > 0 ? `[FI:${encodeFeeItems(fd.fee_items)}]` : ''
+    const normalizedFeeItems = fd.fee_items.map(f => ({ ...f, name: normalizeFeeName(f.name) }))
+    const expenseTotal = normalizedFeeItems.reduce((s, f) => s + (Number(f.amount) || 0), 0)
+    const baseRemark = String(fd.remark || '')
+      .replace(/\[FI:[^\]]+\]\s*/g, '')
+      .replace(/\[TY:(?:reissue|exchange)\]\s*/g, '')
+      .trim()
+    const fiTag = normalizedFeeItems.length > 0 ? `[FI:${encodeFeeItems(normalizedFeeItems)}]` : ''
+    const tyTag = isReissue.value ? '[TY:reissue]' : ''
+    // 补发：return/exchange/diff 三个金额强制 0（不计应收，不进 Profit.vue 销售额）
+    const isReissueSave = isReissue.value
     const payload = {
       ...fd,
       return_goods_info: fd.returnItems,
       exchange_goods_info: fd.exchangeItems,
+      return_amount: isReissueSave ? 0 : fd.return_amount,
+      exchange_amount: isReissueSave ? 0 : fd.exchange_amount,
+      diff_amount: isReissueSave ? 0 : fd.diff_amount,
       expense_amount: expenseTotal,
-      fee_items: fd.fee_items,
-      remark: [fiTag, baseRemark].filter(Boolean).join(' '),
+      fee_items: normalizedFeeItems,
+      remark: [tyTag, fiTag, baseRemark].filter(Boolean).join(' '),
     }
     delete (payload as any).returnItems
     delete (payload as any).exchangeItems
@@ -702,9 +813,8 @@ function confirmSaleOutSelect() {
   fd.customer_name = order.customer_name || ''
   fd.warehouse_id = order.warehouse_id
   fd.warehouse_name = order.warehouse_name || ''
-  // 自动导入原单商品到退回商品列表
   const goods = parseItems(order.goods_info)
-  fd.returnItems = goods.map((g: any) => ({
+  const mapped = goods.map((g: any) => ({
     goods_id: g.goods_id || 0,
     goods_name: g.goods_name || '',
     goods_sn: g.goods_sn || '',
@@ -715,6 +825,10 @@ function confirmSaleOutSelect() {
     cost_price: Number(g.cost_price || 0),
     remark: '',
   }))
+  // 补发：导入到补发商品列表（用户自行调整数量为实际补发的量）
+  // 换货：导入到退回商品列表
+  if (isReissue.value) fd.exchangeItems = mapped
+  else fd.returnItems = mapped
   calcTotals()
   saleOutPickerVisible.value = false
 }
@@ -780,7 +894,9 @@ function openFeeManageDialog(row: any) {
 async function submitFeeManage() {
   const row = feeManageRow.value
   if (!row?.id) return
-  const items = feeManageItems.value.filter(f => f.name && Number(f.amount) > 0)
+  const items = feeManageItems.value
+    .map(f => ({ ...f, name: normalizeFeeName(f.name) }))
+    .filter(f => f.name && Number(f.amount) > 0)
   const baseRemark = String(row.remark || '').replace(/\[FI:[^\]]+\]\s*/g, '').trim()
   const fiTag = items.length > 0 ? `[FI:${encodeFeeItems(items)}]` : ''
   const newRemark = [fiTag, baseRemark].filter(Boolean).join(' ')
