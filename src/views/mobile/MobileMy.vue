@@ -2,11 +2,11 @@
   <div class="m-my">
     <!-- 顶部用户卡片 -->
     <div class="m-my-hero">
-      <div class="m-my-avatar">{{ (authStore.userName || '我').charAt(0) }}</div>
-      <div class="m-my-name">{{ authStore.userName || '用户' }}</div>
+      <div class="m-my-avatar">{{ (authStore.userName || t('mobileMy.defaultAvatar')).charAt(0) }}</div>
+      <div class="m-my-name">{{ authStore.userName || t('mobileMy.unknownUser') }}</div>
       <div class="m-my-meta">
-        <span>{{ authStore.userInfo?.dept || authStore.userInfo?.position || '成员' }}</span>
-        <span v-if="authStore.userInfo?.shop_id"> · 企业ID {{ authStore.userInfo.shop_id }}</span>
+        <span>{{ authStore.userInfo?.dept || authStore.userInfo?.position || t('mobileMy.member') }}</span>
+        <span v-if="authStore.userInfo?.shop_id"> · {{ t('mobileMy.shopId') }}{{ authStore.userInfo.shop_id }}</span>
       </div>
     </div>
 
@@ -14,70 +14,70 @@
     <div class="m-my-stats">
       <div class="m-my-stat" @click="router.push('/mobile/sale/client')">
         <div class="m-my-stat-val">{{ stats.customerCount }}</div>
-        <div class="m-my-stat-label">客户</div>
+        <div class="m-my-stat-label">{{ t('mobileMy.customerCount') }}</div>
       </div>
       <div class="m-my-stat-divider" />
       <div class="m-my-stat" @click="router.push('/mobile/finance/receivable')">
         <div class="m-my-stat-val">¥{{ stats.receivable }}</div>
-        <div class="m-my-stat-label">应收款</div>
+        <div class="m-my-stat-label">{{ t('mobileMy.receivable') }}</div>
       </div>
       <div class="m-my-stat-divider" />
       <div class="m-my-stat" :class="{ warn: Number(stats.stockWarn) > 0 }" @click="router.push('/mobile/warehouse/warning')">
         <div class="m-my-stat-val">{{ stats.stockWarn }}</div>
-        <div class="m-my-stat-label">库存预警</div>
+        <div class="m-my-stat-label">{{ t('mobileMy.stockWarning') }}</div>
       </div>
     </div>
 
     <!-- 新功能快捷入口 -->
     <div class="m-my-section">
-      <div class="m-my-section-title">协作工具</div>
+      <div class="m-my-section-title">{{ t('mobileMy.collaborationGroup') }}</div>
       <div class="m-my-feature-grid">
         <div class="m-my-feature-item" @click="router.push('/mobile/activity')">
           <div class="m-my-feature-icon" style="background:rgba(0,113,227,0.1)">📰</div>
-          <div class="m-my-feature-name">工作动态</div>
-          <div class="m-my-feature-desc">查看团队操作记录</div>
+          <div class="m-my-feature-name">{{ t('mobileMy.features.activityName') }}</div>
+          <div class="m-my-feature-desc">{{ t('mobileMy.features.activityDesc') }}</div>
         </div>
         <div class="m-my-feature-item" @click="router.push('/mobile/ai')">
           <div class="m-my-feature-icon" style="background:rgba(124,58,237,0.1)">🦢</div>
-          <div class="m-my-feature-name">AI 管家</div>
-          <div class="m-my-feature-desc">动嘴就能录单</div>
+          <div class="m-my-feature-name">{{ t('mobileMy.features.aiName') }}</div>
+          <div class="m-my-feature-desc">{{ t('mobileMy.features.aiDesc') }}</div>
         </div>
         <div class="m-my-feature-item" @click="router.push('/mobile/meeting')">
           <div class="m-my-feature-icon" style="background:rgba(5,150,105,0.1)">🎙️</div>
-          <div class="m-my-feature-name">会议室</div>
-          <div class="m-my-feature-desc">随时发起或加入</div>
+          <div class="m-my-feature-name">{{ t('mobileMy.features.meetingName') }}</div>
+          <div class="m-my-feature-desc">{{ t('mobileMy.features.meetingDesc') }}</div>
         </div>
         <div class="m-my-feature-item" @click="router.push('/mobile/contacts')">
           <div class="m-my-feature-icon" style="background:rgba(249,115,22,0.1)">👥</div>
-          <div class="m-my-feature-name">通讯录</div>
-          <div class="m-my-feature-desc">快速找到同事</div>
+          <div class="m-my-feature-name">{{ t('mobileMy.features.contactsName') }}</div>
+          <div class="m-my-feature-desc">{{ t('mobileMy.features.contactsDesc') }}</div>
         </div>
       </div>
     </div>
 
     <!-- PC端跳转入口 -->
     <div class="m-my-section">
-      <div class="m-my-section-title">业务管理</div>
+      <div class="m-my-section-title">{{ t('mobileMy.businessGroup') }}</div>
       <div class="m-my-menu-list">
         <div class="m-my-menu-item" @click="router.push('/dashboard')">
           <div class="m-my-menu-icon" style="background:rgba(0,113,227,0.1)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
           </div>
-          <span class="m-my-menu-label">首页工作台</span>
+          <span class="m-my-menu-label">{{ t('mobileMy.homeWorkbench') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
         <div class="m-my-menu-item" @click="router.push('/portal')">
           <div class="m-my-menu-icon" style="background:rgba(124,58,237,0.1)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           </div>
-          <span class="m-my-menu-label">切换工作台</span>
+          <span class="m-my-menu-label">{{ t('mobileMy.switchWorkbench') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
         <div class="m-my-menu-item" @click="router.push('/mobile/stats')">
           <div class="m-my-menu-icon" style="background:rgba(5,150,105,0.1)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           </div>
-          <span class="m-my-menu-label">数据报表</span>
+          <span class="m-my-menu-label">{{ t('mobileMy.reports') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
@@ -85,20 +85,20 @@
 
     <!-- 系统工具 -->
     <div class="m-my-section">
-      <div class="m-my-section-title">系统</div>
+      <div class="m-my-section-title">{{ t('mobileMy.systemGroup') }}</div>
       <div class="m-my-menu-list">
         <div class="m-my-menu-item" @click="router.push('/setting')">
           <div class="m-my-menu-icon" style="background:rgba(8,145,178,0.1)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </div>
-          <span class="m-my-menu-label">系统设置</span>
+          <span class="m-my-menu-label">{{ t('mobileMy.systemSettings') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
         <div class="m-my-menu-item" @click="handleTheme">
           <div class="m-my-menu-icon" style="background:rgba(0,113,227,0.08)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           </div>
-          <span class="m-my-menu-label">切换主题</span>
+          <span class="m-my-menu-label">{{ t('mobileMy.switchTheme') }}</span>
           <div class="m-my-theme-btns">
             <span class="m-my-theme-btn" :class="{ active: appStore.theme === 'light' }" @click.stop="appStore.setTheme('light')">☀️</span>
             <span class="m-my-theme-btn" :class="{ active: appStore.theme === 'dark' }" @click.stop="appStore.setTheme('dark')">🌙</span>
@@ -109,14 +109,14 @@
           <div class="m-my-menu-icon" style="background:rgba(217,119,6,0.1)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           </div>
-          <span class="m-my-menu-label">复制链接</span>
+          <span class="m-my-menu-label">{{ t('mobileMy.copyLink') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
         <div class="m-my-menu-item" @click="checkUpdate">
           <div class="m-my-menu-icon" style="background:rgba(5,150,105,0.1)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
           </div>
-          <span class="m-my-menu-label">检查更新</span>
+          <span class="m-my-menu-label">{{ t('mobileMy.checkUpdate') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
@@ -124,13 +124,13 @@
 
     <!-- 版本信息 -->
     <div class="m-my-footer">
-      <div class="m-my-version">数字游牧 ERP v3.0</div>
-      <div class="m-my-copyright">© {{ new Date().getFullYear() }} 游牧观文化传媒出品</div>
+      <div class="m-my-version">{{ t('mobileMy.versionText') }}</div>
+      <div class="m-my-copyright">{{ t('mobileMy.copyright', { year: new Date().getFullYear() }) }}</div>
     </div>
 
     <!-- 退出登录 -->
     <div class="m-my-logout-wrap">
-      <button class="m-my-logout-btn" @click="handleLogout">退出登录</button>
+      <button class="m-my-logout-btn" @click="handleLogout">{{ t('mobileMy.logout') }}</button>
     </div>
   </div>
 </template>
@@ -138,6 +138,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import http from '@/api/http'
@@ -146,6 +147,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const router = useRouter()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+const { t } = useI18n()
 
 const stats = ref({ customerCount: 0, receivable: '0', stockWarn: 0 })
 const myStats = ref({ todaySale: 0, todayOrders: 0, pendingCount: 0, receivable: 0 })
@@ -155,19 +157,19 @@ function handleTheme() { /* 由内联按钮处理 */ }
 function copyLink() {
   const url = window.location.href
   navigator.clipboard.writeText(url).then(() => {
-    ElMessage.success('链接已复制')
+    ElMessage.success(t('mobileMy.linkCopied'))
   }).catch(() => {
     ElMessage.info(url)
   })
 }
 
 function checkUpdate() {
-  ElMessage.info('当前已是最新版本')
+  ElMessage.info(t('mobileMy.latestVersion'))
 }
 
 async function handleLogout() {
   try {
-    await ElMessageBox.confirm('确定退出登录吗？', '退出', { type: 'warning' })
+    await ElMessageBox.confirm(t('mobileMy.logoutConfirm'), t('mobileMy.logoutTitle'), { type: 'warning' })
     await http.post('/login/logout')
   } catch { /* 忽略API错误 */ }
   authStore._clearAllState()
