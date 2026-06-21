@@ -46,19 +46,6 @@
         </button>
       </el-tooltip>
 
-      <!-- 语言切换 -->
-      <el-dropdown trigger="click" @command="handleLocaleCmd">
-        <button class="action-btn lang-btn" :title="t('layout.language')">
-          <span class="lang-label">{{ currentLocale === 'en-US' ? 'EN' : '中' }}</span>
-        </button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item command="zh-CN" :class="{ 'is-active': currentLocale === 'zh-CN' }">{{ t('layout.languageZh') }}</el-dropdown-item>
-            <el-dropdown-item command="en-US" :class="{ 'is-active': currentLocale === 'en-US' }">{{ t('layout.languageEn') }}</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-
       <el-tooltip :content="t('layout.notifications')" placement="bottom">
         <el-popover placement="bottom-end" :width="360" trigger="click" v-model:visible="notifVisible">
           <template #reference>
@@ -160,20 +147,12 @@ import { updateAdmin, getCompanyInfo } from '@/api/setting'
 import http from '@/api/http'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { setLocale, getStoredLocale, type Locale } from '@/i18n'
 
 const { t, locale } = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-
-const currentLocale = ref<Locale>(getStoredLocale())
-function handleLocaleCmd(cmd: Locale) {
-  if (cmd === currentLocale.value) return
-  currentLocale.value = cmd
-  setLocale(cmd)
-}
 
 const adminLabel = computed(() => t('layout.admin'))
 const currentTopMenuTitle = computed(() => {

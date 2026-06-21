@@ -11,8 +11,8 @@
           </svg>
         </div>
         <div class="wb-cashier-info">
-          <div class="wb-cashier-title">收银台</div>
-          <div class="wb-cashier-sub">扫码收款 · 订单结算 · 会员核销</div>
+          <div class="wb-cashier-title">{{ t('mobileWorkbench.cashierTitle') }}</div>
+          <div class="wb-cashier-sub">{{ t('mobileWorkbench.cashierSubtitle') }}</div>
         </div>
       </div>
       <div class="wb-cashier-arrow">
@@ -28,7 +28,7 @@
             <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
           </svg>
         </div>
-        <div class="wb-quick-label">快速收款</div>
+        <div class="wb-quick-label">{{ t('mobileWorkbench.quickReceive') }}</div>
       </div>
       <div class="wb-quick-card" @click="openQuickPay">
         <div class="wb-quick-icon wb-icon-expense">
@@ -36,7 +36,7 @@
             <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
           </svg>
         </div>
-        <div class="wb-quick-label">快速支出</div>
+        <div class="wb-quick-label">{{ t('mobileWorkbench.quickPay') }}</div>
       </div>
     </div>
 
@@ -45,59 +45,59 @@
       <div v-if="collectDialogVisible" class="wb-drawer-overlay" @click.self="collectDialogVisible = false">
         <div class="wb-drawer">
           <div class="wb-drawer-head">
-            <span>快速收款</span>
+            <span>{{ t('mobileWorkbench.quickReceive') }}</span>
             <span class="wb-drawer-close" @click="collectDialogVisible = false">✕</span>
           </div>
           <div class="wb-drawer-body">
             <!-- 类型切换 -->
             <div class="wb-form-group">
               <div class="wb-type-tabs">
-                <button :class="['wb-tab', collectForm.category === 'receipt' ? 'active' : '']" @click="collectForm.category = 'receipt'; collectForm.contact_id = null">收款单</button>
-                <button :class="['wb-tab', collectForm.category === 'other' ? 'active' : '']" @click="collectForm.category = 'other'; collectForm.contact_id = null">其他收入</button>
+                <button :class="['wb-tab', collectForm.category === 'receipt' ? 'active' : '']" @click="collectForm.category = 'receipt'; collectForm.contact_id = null">{{ t('mobileWorkbench.receiveTab') }}</button>
+                <button :class="['wb-tab', collectForm.category === 'other' ? 'active' : '']" @click="collectForm.category = 'other'; collectForm.contact_id = null">{{ t('mobileWorkbench.otherIncomeTab') }}</button>
               </div>
             </div>
             <!-- 收款对象（收款单时） -->
             <div v-if="collectForm.category === 'receipt'" class="wb-form-group">
-              <label class="wb-form-label">收款对象</label>
+              <label class="wb-form-label">{{ t('mobileWorkbench.receiveTarget') }}</label>
               <select v-model="collectForm.contact_id" class="wb-form-select">
-                <option value="">选择客户</option>
+                <option value="">{{ t('mobileWorkbench.chooseCustomer') }}</option>
                 <option v-for="c in clientList" :key="c.id" :value="c.id">{{ c.name }}</option>
               </select>
             </div>
             <!-- 收入说明（其他收入时） -->
             <div v-if="collectForm.category === 'other'" class="wb-form-group">
-              <label class="wb-form-label">收入说明</label>
-              <input v-model="collectForm.contact_name" class="wb-form-input" placeholder="如：利息收入、赔偿金" />
+              <label class="wb-form-label">{{ t('mobileWorkbench.incomeDesc') }}</label>
+              <input v-model="collectForm.contact_name" class="wb-form-input" :placeholder="t('mobileWorkbench.incomePlaceholder')" />
             </div>
             <!-- 收款账户 -->
             <div class="wb-form-group">
-              <label class="wb-form-label">收款账户</label>
+              <label class="wb-form-label">{{ t('mobileWorkbench.receiveFund') }}</label>
               <select v-model="collectForm.fund_id" class="wb-form-select">
-                <option value="">选择账户</option>
+                <option value="">{{ t('mobileWorkbench.chooseFund') }}</option>
                 <option v-for="f in fundList" :key="f.id" :value="f.id">{{ f.name }}</option>
               </select>
             </div>
             <!-- 收款金额 -->
             <div class="wb-form-group">
-              <label class="wb-form-label">收款金额</label>
+              <label class="wb-form-label">{{ t('mobileWorkbench.receiveAmount') }}</label>
               <input v-model.number="collectForm.amount" type="number" class="wb-form-input wb-form-input-money" placeholder="0.00" />
             </div>
             <!-- 收款日期 -->
             <div class="wb-form-group">
-              <label class="wb-form-label">收款日期</label>
+              <label class="wb-form-label">{{ t('mobileWorkbench.receiveDate') }}</label>
               <input v-model="collectForm.receipt_date" type="date" class="wb-form-input" />
             </div>
             <!-- 备注 -->
             <div class="wb-form-group">
-              <label class="wb-form-label">备注</label>
-              <input v-model="collectForm.remark" class="wb-form-input" placeholder="备注说明（选填）" />
+              <label class="wb-form-label">{{ t('mobileWorkbench.remark') }}</label>
+              <input v-model="collectForm.remark" class="wb-form-input" :placeholder="t('mobileWorkbench.remarkPlaceholder')" />
             </div>
           </div>
           <div class="wb-drawer-foot">
-            <button class="wb-btn wb-btn-cancel" @click="collectDialogVisible = false">取消</button>
+            <button class="wb-btn wb-btn-cancel" @click="collectDialogVisible = false">{{ t('mobileWorkbench.cancel') }}</button>
             <button class="wb-btn wb-btn-confirm" :disabled="collectSaving" @click="saveCollect">
-              <span v-if="collectSaving">保存中…</span>
-              <span v-else>确认收款</span>
+              <span v-if="collectSaving">{{ t('mobileWorkbench.saving') }}</span>
+              <span v-else>{{ t('mobileWorkbench.confirmReceive') }}</span>
             </button>
           </div>
         </div>
@@ -109,59 +109,59 @@
       <div v-if="payDialogVisible" class="wb-drawer-overlay" @click.self="payDialogVisible = false">
         <div class="wb-drawer">
           <div class="wb-drawer-head">
-            <span>快速支出</span>
+            <span>{{ t('mobileWorkbench.quickPay') }}</span>
             <span class="wb-drawer-close" @click="payDialogVisible = false">✕</span>
           </div>
           <div class="wb-drawer-body">
             <!-- 类型切换 -->
             <div class="wb-form-group">
               <div class="wb-type-tabs">
-                <button :class="['wb-tab', payForm.category === 'receipt' ? 'active' : '']" @click="payForm.category = 'receipt'; payForm.contact_id = null">付款单</button>
-                <button :class="['wb-tab', payForm.category === 'other' ? 'active' : '']" @click="payForm.category = 'other'; payForm.contact_id = null">其他支出</button>
+                <button :class="['wb-tab', payForm.category === 'receipt' ? 'active' : '']" @click="payForm.category = 'receipt'; payForm.contact_id = null">{{ t('mobileWorkbench.payTab') }}</button>
+                <button :class="['wb-tab', payForm.category === 'other' ? 'active' : '']" @click="payForm.category = 'other'; payForm.contact_id = null">{{ t('mobileWorkbench.otherExpenseTab') }}</button>
               </div>
             </div>
             <!-- 付款对象（付款单时） -->
             <div v-if="payForm.category === 'receipt'" class="wb-form-group">
-              <label class="wb-form-label">付款对象</label>
+              <label class="wb-form-label">{{ t('mobileWorkbench.payTarget') }}</label>
               <select v-model="payForm.contact_id" class="wb-form-select">
-                <option value="">选择供应商</option>
+                <option value="">{{ t('mobileWorkbench.chooseSupplier') }}</option>
                 <option v-for="s in supplierList" :key="s.id" :value="s.id">{{ s.name }}</option>
               </select>
             </div>
             <!-- 支出说明（其他支出时） -->
             <div v-if="payForm.category === 'other'" class="wb-form-group">
-              <label class="wb-form-label">支出说明</label>
-              <input v-model="payForm.contact_name" class="wb-form-input" placeholder="如：办公用品、快递费" />
+              <label class="wb-form-label">{{ t('mobileWorkbench.expenseDesc') }}</label>
+              <input v-model="payForm.contact_name" class="wb-form-input" :placeholder="t('mobileWorkbench.expensePlaceholder')" />
             </div>
             <!-- 付款账户 -->
             <div class="wb-form-group">
-              <label class="wb-form-label">付款账户</label>
+              <label class="wb-form-label">{{ t('mobileWorkbench.payFund') }}</label>
               <select v-model="payForm.fund_id" class="wb-form-select">
-                <option value="">选择账户</option>
+                <option value="">{{ t('mobileWorkbench.chooseFund') }}</option>
                 <option v-for="f in fundList" :key="f.id" :value="f.id">{{ f.name }}</option>
               </select>
             </div>
             <!-- 付款金额 -->
             <div class="wb-form-group">
-              <label class="wb-form-label">付款金额</label>
+              <label class="wb-form-label">{{ t('mobileWorkbench.payAmount') }}</label>
               <input v-model.number="payForm.amount" type="number" class="wb-form-input wb-form-input-money" placeholder="0.00" />
             </div>
             <!-- 付款日期 -->
             <div class="wb-form-group">
-              <label class="wb-form-label">付款日期</label>
+              <label class="wb-form-label">{{ t('mobileWorkbench.payDate') }}</label>
               <input v-model="payForm.pay_date" type="date" class="wb-form-input" />
             </div>
             <!-- 备注 -->
             <div class="wb-form-group">
-              <label class="wb-form-label">备注</label>
-              <input v-model="payForm.remark" class="wb-form-input" placeholder="备注说明（选填）" />
+              <label class="wb-form-label">{{ t('mobileWorkbench.remark') }}</label>
+              <input v-model="payForm.remark" class="wb-form-input" :placeholder="t('mobileWorkbench.remarkPlaceholder')" />
             </div>
           </div>
           <div class="wb-drawer-foot">
-            <button class="wb-btn wb-btn-cancel" @click="payDialogVisible = false">取消</button>
+            <button class="wb-btn wb-btn-cancel" @click="payDialogVisible = false">{{ t('mobileWorkbench.cancel') }}</button>
             <button class="wb-btn wb-btn-danger" :disabled="paySaving" @click="savePay">
-              <span v-if="paySaving">保存中…</span>
-              <span v-else>确认支出</span>
+              <span v-if="paySaving">{{ t('mobileWorkbench.saving') }}</span>
+              <span v-else>{{ t('mobileWorkbench.confirmPay') }}</span>
             </button>
           </div>
         </div>
@@ -172,10 +172,10 @@
     <div class="wb-section">
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #52C41A"></span>
-        <span class="wb-section-title">团队动态</span>
-        <button class="wb-section-more" @click="go('/mobile/activity')">更多 ›</button>
+        <span class="wb-section-title">{{ t('mobileWorkbench.teamActivity') }}</span>
+        <button class="wb-section-more" @click="go('/mobile/activity')">{{ t('mobileWorkbench.more') }}</button>
       </div>
-      <div v-if="activities.length === 0" class="wb-empty">暂无动态</div>
+      <div v-if="activities.length === 0" class="wb-empty">{{ t('mobileWorkbench.noActivity') }}</div>
       <div v-else class="wb-feed-list">
         <div
           v-for="a in activities"
@@ -200,8 +200,8 @@
     <div class="wb-section">
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #F5A623"></span>
-        <span class="wb-section-title">常用功能</span>
-        <button class="wb-section-more" @click="showPicker = true">管理 ›</button>
+        <span class="wb-section-title">{{ t('mobileWorkbench.commonTools') }}</span>
+        <button class="wb-section-more" @click="showPicker = true">{{ t('mobileWorkbench.manage') }}</button>
       </div>
       <div class="wb-fav-scroll">
         <div
@@ -222,8 +222,8 @@
     <div v-show="showPicker" class="picker-overlay" @click.self="showPicker = false">
       <div class="picker-sheet">
         <div class="picker-hd">
-          <span class="picker-title">管理常用功能</span>
-          <button class="picker-close" @click="showPicker = false">完成</button>
+          <span class="picker-title">{{ t('mobileWorkbench.manageCommon') }}</span>
+          <button class="picker-close" @click="showPicker = false">{{ t('mobileWorkbench.done') }}</button>
         </div>
         <div class="picker-grid">
           <div
@@ -251,8 +251,8 @@
     <div class="wb-section">
       <div class="wb-section-hd">
         <span class="wb-section-dot" style="background: #2E6BE6"></span>
-        <span class="wb-section-title">快捷操作</span>
-        <button class="wb-section-more" @click="showPicker = true">管理 ›</button>
+        <span class="wb-section-title">{{ t('mobileWorkbench.quickActions') }}</span>
+        <button class="wb-section-more" @click="showPicker = true">{{ t('mobileWorkbench.manage') }}</button>
       </div>
       <div class="wb-quick-grid">
         <div
@@ -277,6 +277,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessageBox } from 'element-plus'
 import http from '@/api/http'
@@ -286,6 +287,7 @@ import { getSupplierList } from '@/api/procure'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 function parseGoodsInfo(g: any) {
   if (Array.isArray(g)) return g
@@ -299,25 +301,25 @@ const activities = ref<any[]>([])
 const showPicker = ref(false)
 
 // 所有可用模块
-const allModuleApps = [
-  { name: '销售订单', path: '/mobile/sale/contract', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
-  { name: '样品单', path: '/mobile/sale/sample', bg: 'rgba(236,72,153,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>' },
-  { name: '商品资料', path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
-  { name: '库存总览', path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
-  { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
-  { name: '采购订单', path: '/mobile/procure/order', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
-  { name: '采购入库', path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
-  { name: '财务总览', path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
-  { name: '应收账款', path: '/mobile/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
-  { name: '客户管理', path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
-  { name: '品牌管理', path: '/mobile/goods/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
-  { name: '人事管理', path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-  { name: '生产计划', path: '/mobile/production/plan', bg: 'rgba(5,150,105,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
-  { name: '实验体', path: '/mobile/investment/overview', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
-  { name: '消息中心', path: '/mobile/message', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
-  { name: '任务中心', path: '/mobile/task', bg: 'rgba(8,145,178,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
-  { name: 'AI 助手', path: '/mobile/ai', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4l3 3"/></svg>' },
-]
+const allModuleApps = computed(() => [
+  { name: t('mobileWorkbench.modules.salesOrder'), path: '/mobile/sale/contract', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+  { name: t('mobileWorkbench.modules.sampleOrder'), path: '/mobile/sale/sample', bg: 'rgba(236,72,153,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>' },
+  { name: t('mobileWorkbench.modules.goodsInfo'), path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+  { name: t('mobileWorkbench.modules.stockOverview'), path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
+  { name: t('mobileWorkbench.modules.salesOutbound'), path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+  { name: t('mobileWorkbench.modules.procureOrder'), path: '/mobile/procure/order', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
+  { name: t('mobileWorkbench.modules.procureInhouse'), path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
+  { name: t('mobileWorkbench.modules.financeOverview'), path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
+  { name: t('mobileWorkbench.modules.receivable'), path: '/mobile/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
+  { name: t('mobileWorkbench.modules.customerManage'), path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
+  { name: t('mobileWorkbench.modules.brandManage'), path: '/mobile/goods/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
+  { name: t('mobileWorkbench.modules.hrManage'), path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+  { name: t('mobileWorkbench.modules.productionPlan'), path: '/mobile/production/plan', bg: 'rgba(5,150,105,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+  { name: t('mobileWorkbench.modules.investmentLab'), path: '/mobile/investment/overview', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+  { name: t('mobileWorkbench.modules.messageCenter'), path: '/mobile/message', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { name: t('mobileWorkbench.modules.taskCenter'), path: '/mobile/task', bg: 'rgba(8,145,178,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+  { name: t('mobileWorkbench.modules.aiAssistant'), path: '/mobile/ai', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4l3 3"/></svg>' },
+])
 
 function loadFavs() {
   try {
@@ -346,40 +348,48 @@ function toggleFav(app: any) {
 
 const greeting = computed(() => {
   const h = new Date().getHours()
-  if (h < 12) return '早上好'
-  if (h < 18) return '下午好'
-  return '晚上好'
+  if (h < 12) return t('mobileWorkbench.greetingMorning')
+  if (h < 18) return t('mobileWorkbench.greetingAfternoon')
+  return t('mobileWorkbench.greetingEvening')
 })
 
 const today = computed(() => {
   const d = new Date()
-  return `${d.getMonth() + 1}月${d.getDate()}日`
+  return t('mobileWorkbench.dateText', { month: d.getMonth() + 1, day: d.getDate() })
 })
 
 const weekday = computed(() => {
-  const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const days = [
+    t('mobileWorkbench.weekdays.sun'),
+    t('mobileWorkbench.weekdays.mon'),
+    t('mobileWorkbench.weekdays.tue'),
+    t('mobileWorkbench.weekdays.wed'),
+    t('mobileWorkbench.weekdays.thu'),
+    t('mobileWorkbench.weekdays.fri'),
+    t('mobileWorkbench.weekdays.sat'),
+  ]
   return days[new Date().getDay()]
 })
 
-const quickApps = [
-  { name: '销售订单', path: '/mobile/sale/contract', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
-  { name: '样品单', path: '/mobile/sale/sample', bg: 'rgba(236,72,153,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>' },
-  { name: '商品资料', path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
-  { name: '库存总览', path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
-  { name: '销售出库', path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
-  { name: '采购订单', path: '/mobile/procure/order', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
-  { name: '采购入库', path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
-  { name: '财务总览', path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
-  { name: '应收账款', path: '/mobile/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
-  { name: '客户管理', path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
-  { name: '品牌管理', path: '/mobile/goods/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
-  { name: '人事管理', path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-  { name: '生产计划', path: '/mobile/production/plan', bg: 'rgba(5,150,105,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
-  { name: '实验体', path: '/mobile/investment/overview', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
-  { name: '消息中心', path: '/mobile/message', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
-  { name: '任务中心', path: '/mobile/task', bg: 'rgba(8,145,178,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
-  { name: 'AI 助手', path: '/mobile/ai', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
-]
+const quickApps = computed(() => [
+  { name: t('mobileWorkbench.modules.salesOrder'), path: '/mobile/sale/contract', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+  { name: t('mobileWorkbench.modules.sampleOrder'), path: '/mobile/sale/sample', bg: 'rgba(236,72,153,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>' },
+  { name: t('mobileWorkbench.modules.goodsInfo'), path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+  { name: t('mobileWorkbench.modules.stockOverview'), path: '/mobile/warehouse/stock', bg: 'rgba(5,150,105,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>' },
+  { name: t('mobileWorkbench.modules.salesOutbound'), path: '/mobile/sale/out', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' },
+  { name: t('mobileWorkbench.modules.procureOrder'), path: '/mobile/procure/order', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>' },
+  { name: t('mobileWorkbench.modules.procureInhouse'), path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
+  { name: t('mobileWorkbench.modules.financeOverview'), path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
+  { name: t('mobileWorkbench.modules.receivable'), path: '/mobile/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
+  { name: t('mobileWorkbench.modules.customerManage'), path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
+  { name: t('mobileWorkbench.modules.brandManage'), path: '/mobile/goods/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
+  { name: t('mobileWorkbench.modules.hrManage'), path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+  { name: t('mobileWorkbench.modules.productionPlan'), path: '/mobile/production/plan', bg: 'rgba(5,150,105,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+  { name: t('mobileWorkbench.modules.investmentLab'), path: '/mobile/investment/overview', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+  { name: t('mobileWorkbench.modules.messageCenter'), path: '/mobile/message', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { name: t('mobileWorkbench.modules.taskCenter'), path: '/mobile/task', bg: 'rgba(8,145,178,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
+  { name: t('mobileWorkbench.modules.aiAssistant'), path: '/mobile/ai', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
+])
 
 function go(path: string) { router.push(path) }
 
@@ -406,13 +416,13 @@ function openQuickPay() {
 }
 
 async function saveCollect() {
-  if (!collectForm.value.amount) { ElMessageBox.alert('请输入收款金额', '提示'); return }
+  if (!collectForm.value.amount) { ElMessageBox.alert(t('mobileWorkbench.enterReceiveAmount'), t('mobileWorkbench.prompt')); return }
   const isOther = collectForm.value.category === 'other'
   const name = isOther
     ? collectForm.value.contact_name
     : (clientList.value.find((x: any) => x.id == collectForm.value.contact_id)?.name || collectForm.value.contact_name || '')
-  if (isOther && !name) { ElMessageBox.alert('请输入收入说明', '提示'); return }
-  if (!collectForm.value.fund_id) { ElMessageBox.alert('请选择收款账户', '提示'); return }
+  if (isOther && !name) { ElMessageBox.alert(t('mobileWorkbench.enterIncomeDesc'), t('mobileWorkbench.prompt')); return }
+  if (!collectForm.value.fund_id) { ElMessageBox.alert(t('mobileWorkbench.chooseReceiveFund'), t('mobileWorkbench.prompt')); return }
   const fundName = collectForm.value.fund_id ? (fundList.value.find((x: any) => x.id == collectForm.value.fund_id)?.name || '') : ''
   collectSaving.value = true
   try {
@@ -428,19 +438,19 @@ async function saveCollect() {
       remark: collectForm.value.remark,
     })
     collectDialogVisible.value = false
-  } catch { ElMessageBox.alert('保存失败，请重试', '错误'); }
+  } catch { ElMessageBox.alert(t('mobileWorkbench.saveFailedRetry'), t('mobileWorkbench.error')); }
   finally { collectSaving.value = false }
 }
 
 async function savePay() {
-  if (!payForm.value.amount) { ElMessageBox.alert('请输入付款金额', '提示'); return }
+  if (!payForm.value.amount) { ElMessageBox.alert(t('mobileWorkbench.enterPayAmount'), t('mobileWorkbench.prompt')); return }
   const isOther = payForm.value.category === 'other'
   const name = isOther
     ? payForm.value.contact_name
     : (supplierList.value.find((x: any) => x.id == payForm.value.contact_id)?.name || payForm.value.contact_name || '')
-  if (isOther && !name) { ElMessageBox.alert('请输入支出说明', '提示'); return }
-  if (!isOther && !payForm.value.contact_id) { ElMessageBox.alert('请选择供应商', '提示'); return }
-  if (!payForm.value.fund_id) { ElMessageBox.alert('请选择付款账户', '提示'); return }
+  if (isOther && !name) { ElMessageBox.alert(t('mobileWorkbench.enterExpenseDesc'), t('mobileWorkbench.prompt')); return }
+  if (!isOther && !payForm.value.contact_id) { ElMessageBox.alert(t('mobileWorkbench.chooseSupplier'), t('mobileWorkbench.prompt')); return }
+  if (!payForm.value.fund_id) { ElMessageBox.alert(t('mobileWorkbench.choosePayFund'), t('mobileWorkbench.prompt')); return }
   const fundName = payForm.value.fund_id ? (fundList.value.find((x: any) => x.id == payForm.value.fund_id)?.name || '') : ''
   paySaving.value = true
   try {
@@ -454,7 +464,7 @@ async function savePay() {
       remark: payForm.value.remark,
     })
     payDialogVisible.value = false
-  } catch { ElMessageBox.alert('保存失败，请重试', '错误'); }
+  } catch { ElMessageBox.alert(t('mobileWorkbench.saveFailedRetry'), t('mobileWorkbench.error')); }
   finally { paySaving.value = false }
 }
 
@@ -463,9 +473,9 @@ function formatTime(ts: string) {
   const d = new Date(ts)
   const now = new Date()
   const diff = now.getTime() - d.getTime()
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 60000) return t('mobileWorkbench.justNow')
+  if (diff < 3600000) return t('mobileWorkbench.minutesAgo', { count: Math.floor(diff / 60000) })
+  if (diff < 86400000) return t('mobileWorkbench.hoursAgo', { count: Math.floor(diff / 3600000) })
   return `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
