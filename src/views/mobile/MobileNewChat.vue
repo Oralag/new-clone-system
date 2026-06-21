@@ -21,7 +21,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input v-model="keyword" class="contacts-search-input" placeholder="搜索联系人" />
+          <input v-model="keyword" class="contacts-search-input" :placeholder="t('mobileNewChat.searchPlaceholder')" />
         </div>
       </div>
       <div class="new-chat-list">
@@ -40,7 +40,7 @@
           </div>
         </div>
         <div v-if="filteredContacts.length === 0 && keyword" class="contacts-empty-text" style="padding:20px;text-align:center;color:#999">
-          未找到联系人
+          {{ t('mobileNewChat.noContacts') }}
         </div>
       </div>
     </div>
@@ -48,8 +48,8 @@
     <!-- 发起会话按钮 -->
     <div class="new-chat-footer" v-if="targetUser">
       <button class="new-chat-btn" :disabled="loading" @click="startChat">
-        <span v-if="loading">创建中...</span>
-        <span v-else>发起会话</span>
+        <span v-if="loading">{{ t('mobileNewChat.creating') }}</span>
+        <span v-else>{{ t('mobileNewChat.startChat') }}</span>
       </button>
     </div>
   </div>
@@ -58,12 +58,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
 import { getAdminList } from '@/api/setting'
 import { createChatGroup } from '@/api/chat'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 
 const keyword = ref('')
 const contacts = ref<any[]>([])
@@ -106,14 +108,14 @@ async function startChat() {
     }
     // 2. 没有则创建私聊群
     const newGroup = await createChatGroup({
-      name: targetUser.value.name || '私聊',
+      name: targetUser.value.name || t('mobileNewChat.privateChat'),
       member_ids: [targetUser.value.id],
     })
     const groupId = newGroup?.data?.id ?? newGroup?.id
     router.replace(`/mobile/chat/${groupId}`)
   } catch (e) {
     console.error('创建私聊失败', e)
-    alert('创建私聊失败，请重试')
+    alert(t('mobileNewChat.createFailed'))
   } finally {
     loading.value = false
   }
@@ -124,14 +126,14 @@ onMounted(async () => {
     if (isAgent) {
       // Agent 虚拟用户，不需要从后端查
       const botMap: Record<string, { name: string; avatar: string; color: string }> = {
-        'captain': { name: 'Captain 总指挥', avatar: '🎯', color: '#722ED1' },
-        'content': { name: '内容部', avatar: '✍️', color: '#f59e0b' },
-        'creative': { name: '创意部', avatar: '🎨', color: '#ec4899' },
-        'brand': { name: '品牌部', avatar: '💎', color: '#8b5cf6' },
-        'intel': { name: '情报部', avatar: '📈', color: '#06b6d4' },
-        'publish': { name: '发布部', avatar: '🚀', color: '#10b981' },
-        'marketing': { name: '营销顾问', avatar: '📊', color: '#059669' },
-        'designer': { name: '平面设计师', avatar: '🖼️', color: '#e11d48' },
+        'captain': { name: t('mobileNewChat.agents.captain'), avatar: '🎯', color: '#722ED1' },
+        'content': { name: t('mobileNewChat.agents.content'), avatar: '✍️', color: '#f59e0b' },
+        'creative': { name: t('mobileNewChat.agents.creative'), avatar: '🎨', color: '#ec4899' },
+        'brand': { name: t('mobileNewChat.agents.brand'), avatar: '💎', color: '#8b5cf6' },
+        'intel': { name: t('mobileNewChat.agents.intel'), avatar: '📈', color: '#06b6d4' },
+        'publish': { name: t('mobileNewChat.agents.publish'), avatar: '🚀', color: '#10b981' },
+        'marketing': { name: t('mobileNewChat.agents.marketing'), avatar: '📊', color: '#059669' },
+        'designer': { name: t('mobileNewChat.agents.designer'), avatar: '🖼️', color: '#e11d48' },
       }
       const bot = botMap[userId as string]
       targetUser.value = {
@@ -150,7 +152,7 @@ onMounted(async () => {
       if (user) {
         targetUser.value = user
       } else {
-        targetUser.value = { id: userId, name: decodeURIComponent(userName || '未知') }
+        targetUser.value = { id: userId, name: decodeURIComponent(userName || t('mobileNewChat.unknown')) }
       }
     }
   }

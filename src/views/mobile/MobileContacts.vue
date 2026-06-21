@@ -6,7 +6,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        <input v-model="keyword" class="contacts-search-input" placeholder="搜索联系人" />
+        <input v-model="keyword" class="contacts-search-input" :placeholder="t('mobileContacts.searchPlaceholder')" />
       </div>
     </div>
 
@@ -17,8 +17,8 @@
         <div class="contacts-robot-title" @click="robotExpanded = !robotExpanded">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#722ED1" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="8.5" cy="16" r="1.5"/><circle cx="15.5" cy="16" r="1.5"/><path d="M12 2v6"/></svg>
           <div class="contacts-robot-title-text">
-            <span>机器人Agent</span>
-            <span class="contacts-robot-subtitle">AI 智能助手团队，随时为您服务</span>
+            <span>{{ t('mobileContacts.robotGroup') }}</span>
+            <span class="contacts-robot-subtitle">{{ t('mobileContacts.robotSubtitle') }}</span>
           </div>
           <span class="contacts-robot-count">{{ robotAgents.length }}</span>
           <span class="contacts-section-arrow" :class="{ collapsed: !robotExpanded }">▾</span>
@@ -48,8 +48,8 @@
         <div class="contacts-robot-title" @click="friendsExpanded = !friendsExpanded">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#07c160" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <div class="contacts-robot-title-text">
-            <span>好友</span>
-            <span class="contacts-robot-subtitle">跨公司联系人</span>
+            <span>{{ t('mobileContacts.friendsGroup') }}</span>
+            <span class="contacts-robot-subtitle">{{ t('mobileContacts.friendsSubtitle') }}</span>
           </div>
           <span class="contacts-robot-count">{{ friends.length }}</span>
           <span class="contacts-section-arrow" :class="{ collapsed: !friendsExpanded }">▾</span>
@@ -79,8 +79,8 @@
             <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
           <div class="contacts-robot-title-text">
-            <span>组织框架</span>
-            <span class="contacts-robot-subtitle">子账号、部门架构</span>
+            <span>{{ t('mobileContacts.orgGroup') }}</span>
+            <span class="contacts-robot-subtitle">{{ t('mobileContacts.orgSubtitle') }}</span>
           </div>
           <span class="contacts-robot-count">{{ filteredEmployees.length }}</span>
           <span class="contacts-section-arrow" :class="{ collapsed: !orgExpanded }">▾</span>
@@ -88,7 +88,7 @@
         <template v-if="orgExpanded">
           <!-- 子账号列表 -->
           <div v-if="filteredEmployees.length === 0 && !keyword" class="contacts-empty" style="padding: 24px;">
-            <div class="contacts-empty-text">暂无子账号</div>
+            <div class="contacts-empty-text">{{ t('mobileContacts.noSubAccounts') }}</div>
           </div>
           <div
             v-for="c in filteredEmployees"
@@ -131,8 +131,8 @@
     </button>
       <div class="chat-new-sheet">
         <div class="chat-new-header">
-          <span>发起群聊</span>
-          <button @click="showNewGroup = false">取消</button>
+          <span>{{ t('mobileContacts.startGroupChat') }}</span>
+          <button @click="showNewGroup = false">{{ t('mobileContacts.cancel') }}</button>
         </div>
         <div class="chat-new-body">
           <div class="chat-new-item" @click="createGroup">
@@ -143,8 +143,8 @@
               </svg>
             </div>
             <div class="chat-new-info">
-              <div class="chat-new-title">选择成员创建群聊</div>
-              <div class="chat-new-sub">邀请通讯录成员加入</div>
+              <div class="chat-new-title">{{ t('mobileContacts.createGroupTitle') }}</div>
+              <div class="chat-new-sub">{{ t('mobileContacts.createGroupSub') }}</div>
             </div>
             <span class="contacts-arrow">›</span>
           </div>
@@ -157,6 +157,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import { getAdminList } from '@/api/setting'
 import { createChatGroup } from '@/api/chat'
 import http from '@/api/http'
@@ -164,6 +166,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const currentUserId = computed(() => authStore.userInfo?.id || authStore.userInfo?.admin_id)
 const keyword = ref('')
 const employees = ref<any[]>([])
@@ -179,21 +182,21 @@ const friendsExpanded = ref(true)
 const friends = ref<any[]>([])
 
 // ERP 系统真实 Agent（来自 agentRegistry.ts）
-const robotAgents = [
-  { id: 'ai-assistant-fixed', name: 'ERP管家', avatar: '🦢', color: '#0071e3', desc: 'ERP智能管家·动嘴就能录单' },
-  { id: 'captain', name: 'Captain 总指挥', avatar: '🎯', color: '#6366f1', desc: '统一调度，协调各部门完成任务' },
-  { id: 'secretary', name: '秘书', avatar: '👩‍💼', color: '#f97316', desc: '广告部门秘书，协助处理广告事务' },
-  { id: 'copywriter', name: '文案Agent', avatar: '✍️', color: '#f59e0b', desc: '各平台爆款文案·标题·推广内容' },
-  { id: 'poster', name: '海报Agent', avatar: '🎨', color: '#ec4899', desc: '海报创意·视觉设计·Remotion出图' },
-  { id: 'video', name: '视频Agent', avatar: '🎬', color: '#ef4444', desc: '短视频脚本·分镜·Remotion视频' },
-  { id: 'brand', name: '品牌Agent', avatar: '💎', color: '#8b5cf6', desc: '品牌策略·调性审核·品牌守门人' },
-  { id: 'trend', name: '趋势Agent', avatar: '📈', color: '#06b6d4', desc: '热点追踪·选题建议·趋势洞察' },
-  { id: 'publisher', name: '发布Agent', avatar: '🚀', color: '#10b981', desc: '多平台排期·内容发布·数据复盘' },
-  { id: 'designer', name: '平面设计师', avatar: '🖼️', color: '#e11d48', desc: '海报·Banner·Logo·包装·社媒图' },
-  { id: 'marketing', name: '营销顾问', avatar: '📊', color: '#059669', desc: '营销战略·STP·4P·消费者行为' },
-  { id: 'adam', name: '亚当', avatar: '🌱', color: '#b45309', desc: '投资决策中枢·商业分析·市场判断' },
-  { id: 'nova', name: 'Nova', avatar: '✨', color: '#7c3aed', desc: '品牌主页形象·品牌故事·对外表达' },
-]
+const robotAgents = computed(() => [
+  { id: 'ai-assistant-fixed', name: t('mobileContacts.agents.erpName'), avatar: '🦢', color: '#0071e3', desc: t('mobileContacts.agents.erpDesc') },
+  { id: 'captain', name: t('mobileContacts.agents.captainName'), avatar: '🎯', color: '#6366f1', desc: t('mobileContacts.agents.captainDesc') },
+  { id: 'secretary', name: t('mobileContacts.agents.secretaryName'), avatar: '👩‍💼', color: '#f97316', desc: t('mobileContacts.agents.secretaryDesc') },
+  { id: 'copywriter', name: t('mobileContacts.agents.copywriterName'), avatar: '✍️', color: '#f59e0b', desc: t('mobileContacts.agents.copywriterDesc') },
+  { id: 'poster', name: t('mobileContacts.agents.posterName'), avatar: '🎨', color: '#ec4899', desc: t('mobileContacts.agents.posterDesc') },
+  { id: 'video', name: t('mobileContacts.agents.videoName'), avatar: '🎬', color: '#ef4444', desc: t('mobileContacts.agents.videoDesc') },
+  { id: 'brand', name: t('mobileContacts.agents.brandName'), avatar: '💎', color: '#8b5cf6', desc: t('mobileContacts.agents.brandDesc') },
+  { id: 'trend', name: t('mobileContacts.agents.trendName'), avatar: '📈', color: '#06b6d4', desc: t('mobileContacts.agents.trendDesc') },
+  { id: 'publisher', name: t('mobileContacts.agents.publisherName'), avatar: '🚀', color: '#10b981', desc: t('mobileContacts.agents.publisherDesc') },
+  { id: 'designer', name: t('mobileContacts.agents.designerName'), avatar: '🖼️', color: '#e11d48', desc: t('mobileContacts.agents.designerDesc') },
+  { id: 'marketing', name: t('mobileContacts.agents.marketingName'), avatar: '📊', color: '#059669', desc: t('mobileContacts.agents.marketingDesc') },
+  { id: 'adam', name: t('mobileContacts.agents.adamName'), avatar: '🌱', color: '#b45309', desc: t('mobileContacts.agents.adamDesc') },
+  { id: 'nova', name: t('mobileContacts.agents.novaName'), avatar: '✨', color: '#7c3aed', desc: t('mobileContacts.agents.novaDesc') },
+])
 
 const filteredEmployees = computed(() => {
   const kw = keyword.value.toLowerCase().trim()
@@ -215,7 +218,7 @@ async function viewEmployee(c: any) {
     }
   } catch (e: any) {
     console.error('发起私聊失败', e)
-    ElMessage.error(e?.message || '发起私聊失败')
+    ElMessage.error(e?.message || t('mobileContacts.startPrivateFailed'))
   }
 }
 
@@ -235,7 +238,7 @@ async function openAgent(bot: any) {
     }
   } catch (e: any) {
     console.error('打开Agent聊天失败', e)
-    ElMessage.error(e?.message || '打开聊天失败')
+    ElMessage.error(e?.message || t('mobileContacts.openChatFailed'))
   }
 }
 
@@ -254,7 +257,7 @@ async function loadEmployees() {
     const rows = res?.data?.rows ?? res?.rows ?? []
     employees.value = rows.map((r: any) => ({
       id: r.id,
-      name: r.name || r.admin_name || '未知用户',
+      name: r.name || r.admin_name || t('mobileContacts.unknownUser'),
       phone: r.phone || '',
       role_name: r.role_name || '',
       dept_name: r.dept_name || '',
