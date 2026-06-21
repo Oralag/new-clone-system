@@ -36,7 +36,7 @@
             :class="{ selected: klineTarget?.code === idx.code }"
             @click="selectKline(idx)"
           >
-            <div class="index-name">{{ idx.name }}</div>
+            <div class="index-name">{{ displayIndexName(idx) }}</div>
             <div class="index-code">{{ idx.code }}</div>
             <div class="index-price" :class="idx.change >= 0 ? 'up' : 'down'">{{ idx.price }}</div>
             <div class="index-change" :class="idx.change >= 0 ? 'up' : 'down'">
@@ -51,7 +51,7 @@
         <div class="panel-head">
           <span class="panel-icon" style="color:#F5A623">▥</span>
           <span class="panel-title">{{ t('investmentMarket.klineTitle') }}</span>
-          <span class="panel-desc">{{ klineTarget.name }} · {{ t('investmentMarket.dailyK') }}</span>
+          <span class="panel-desc">{{ displayIndexName(klineTarget) }} · {{ t('investmentMarket.dailyK') }}</span>
           <span class="kline-period-group" style="margin-left:auto">
             <button
               v-for="p in klinePeriods"
@@ -418,6 +418,37 @@
         </div>
       </div>
 
+      <!-- 信用 + 分红/赔付结算 -->
+      <div class="panel" v-if="settlement">
+        <div class="panel-head">
+          <span class="panel-icon" style="color:#F5A623">⬢</span>
+          <span class="panel-title">{{ t('investmentMarket.creditSettlementTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.creditSettlementDesc') }}</span>
+        </div>
+        <div class="credit-grid">
+          <div class="credit-card">
+            <div class="credit-card-label">{{ t('investmentMarket.creditCurrentLevel') }}</div>
+            <div class="credit-card-value" :class="'level-' + settlement.credit.level.replace('+','plus')">{{ settlement.credit.level }}</div>
+            <div class="credit-card-sub">{{ t('investmentMarket.creditLimitSub', { limit: settlement.credit.max_trade_usdt, ratio: (settlement.credit.dividend_ratio*100).toFixed(0) }) }}</div>
+          </div>
+          <div class="credit-card">
+            <div class="credit-card-label">{{ t('investmentMarket.creditDividend') }}</div>
+            <div class="credit-card-value" style="color:#28C76F">+{{ settlement.settlement_summary.total_dividend_owed }}</div>
+            <div class="credit-card-sub">{{ t('investmentMarket.creditDividendSub') }}</div>
+          </div>
+          <div class="credit-card">
+            <div class="credit-card-label">{{ t('investmentMarket.creditCompensation') }}</div>
+            <div class="credit-card-value" style="color:#FF6B6B">+{{ settlement.settlement_summary.total_compensation_owed }}</div>
+            <div class="credit-card-sub">{{ t('investmentMarket.creditCompensationSub') }}</div>
+          </div>
+          <div class="credit-card">
+            <div class="credit-card-label">{{ t('investmentMarket.creditTotalOwed') }}</div>
+            <div class="credit-card-value" style="color:#F5A623">{{ settlement.settlement_summary.net_owed_to_user }}</div>
+            <div class="credit-card-sub">{{ t('investmentMarket.creditTotalOwedSub') }}</div>
+          </div>
+        </div>
+      </div>
+
       <!-- 档案馆反思日志 -->
       <div class="panel" v-if="reflections?.length">
         <div class="panel-head">
@@ -517,7 +548,7 @@ import { useI18n } from 'vue-i18n'
 import { useAdamStore } from '@/stores/adam'
 
 const adamStore = useAdamStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // ── Tab 配置 ──
 const activeTab = ref<'stocks' | 'intel' | 'adam' | 'mine'>('stocks')
@@ -557,6 +588,19 @@ const marketSignals = computed(() =>
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 20),
 )
+
+const indexNameMap: Record<string, { zh: string; en: string }> = {
+  '000001.SH': { zh: '上证指数', en: 'SSE Composite' },
+  '399001.SZ': { zh: '深证成指', en: 'SZSE Component' },
+  '399006.SZ': { zh: '创业板指', en: 'ChiNext Index' },
+  '000688.SH': { zh: '科创50', en: 'STAR 50' },
+  '000300.SH': { zh: '沪深300', en: 'CSI 300' },
+}
+
+function displayIndexName(idx: { name: string; code: string }) {
+  const mapped = indexNameMap[idx.code]
+  return mapped ? (locale.value.startsWith('en') ? mapped.en : mapped.zh) : idx.name
+}
 
 // ── Tab 3: 亚当探索 ──
 const typeMap: Record<string, string> = {
@@ -601,17 +645,20 @@ function recStatusLabel(status: string) {
 const htxBalance = ref<any>(null)
 const tradeStats = ref<any>(null)
 const reflections = ref<any[]>([])
+const settlement = ref<any>(null)
 
 async function loadTradingData() {
   try {
-    const [bRes, sRes, rRes] = await Promise.all([
+    const [bRes, sRes, rRes, stRes] = await Promise.all([
       fetch('/api/adam/htx-balance').then(r => r.json()),
       fetch('/api/adam/trade-stats').then(r => r.json()),
       fetch('/api/adam/reflections').then(r => r.json()).catch(() => ({ reflections: [] })),
+      fetch('/api/adam/settlement').then(r => r.json()).catch(() => null),
     ])
     htxBalance.value = bRes
     tradeStats.value = sRes
     reflections.value = rRes.reflections || []
+    settlement.value = stRes
   } catch (e) { console.error('load trading data failed', e) }
 }
 
@@ -1088,7 +1135,7 @@ async function loadNews() {
     newsItems.value = (filtered.length >= 5 ? filtered : items).slice(0, 15).map((i: any) => ({
       title: i.rich_text?.replace(/<[^>]+>/g, '').slice(0, 120) || '',
       time: i.create_time?.slice(11, 16) || '',
-      source: '新浪快讯',
+      source: t('investmentMarket.sinaFlash'),
     }))
   } catch {}
   newsLoading.value = false
@@ -1957,6 +2004,42 @@ onMounted(() => {
 }
 .signal-stats .win { color: #28C76F; }
 .signal-stats .loss { color: #FF4D4F; }
+
+.credit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 12px 16px;
+}
+.credit-card {
+  padding: 12px 14px;
+  background: rgba(245, 166, 35, 0.05);
+  border: 1px solid rgba(245, 166, 35, 0.15);
+  border-radius: 6px;
+}
+.credit-card-label {
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.credit-card-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'Monaco', monospace;
+  color: #F5A623;
+}
+.credit-card-value.level-C { color: #888; }
+.credit-card-value.level-B { color: #4A90E2; }
+.credit-card-value.level-Bplus { color: #28C76F; }
+.credit-card-value.level-A { color: #F5A623; }
+.credit-card-value.level-S { color: #9B59B6; }
+.credit-card-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #999;
+}
 
 .refl-list { padding: 8px 16px 14px; }
 .refl-row {
