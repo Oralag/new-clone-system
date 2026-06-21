@@ -6,27 +6,27 @@
       <!-- 顶部摘要 -->
       <div class="ms-summary">
         <div class="ms-sum-item">
-          <div class="ms-sum-label">样品单</div>
+          <div class="ms-sum-label">{{ t('mobileSample.summaryOrder') }}</div>
           <div class="ms-sum-val">{{ summary.count }}</div>
         </div>
         <div class="ms-sum-item">
-          <div class="ms-sum-label">待审核</div>
+          <div class="ms-sum-label">{{ t('mobileSample.pendingReview') }}</div>
           <div class="ms-sum-val warn">{{ summary.pending }}</div>
         </div>
         <div class="ms-sum-item">
-          <div class="ms-sum-label">样品费用</div>
+          <div class="ms-sum-label">{{ t('mobileSample.sampleCost') }}</div>
           <div class="ms-sum-val orange">¥{{ fmt(summary.companyCost) }}</div>
         </div>
         <div class="ms-sum-item">
-          <div class="ms-sum-label">客户应收</div>
+          <div class="ms-sum-label">{{ t('mobileSample.customerReceivable') }}</div>
           <div class="ms-sum-val blue">¥{{ fmt(summary.receivable) }}</div>
         </div>
       </div>
 
       <!-- 搜索栏 -->
       <div class="ms-search-bar">
-        <input v-model="keyword" class="ms-search-input" placeholder="样品单号 / 客户" @input="onSearch" />
-        <button class="ms-btn-primary ms-btn-sm" @click="openCreate">+ 新增</button>
+        <input v-model="keyword" class="ms-search-input" :placeholder="t('mobileSample.searchPlaceholder')" @input="onSearch" />
+        <button class="ms-btn-primary ms-btn-sm" @click="openCreate">+ {{ t('mobileSample.addNew') }}</button>
       </div>
 
       <!-- 状态筛选 -->
@@ -36,7 +36,7 @@
 
       <!-- 列表 -->
       <div class="ms-list" v-if="!listLoading">
-        <div v-if="filteredList.length === 0" class="ms-empty">暂无样品单</div>
+        <div v-if="filteredList.length === 0" class="ms-empty">{{ t('mobileSample.noData') }}</div>
         <div v-for="row in filteredList" :key="row.id" class="ms-card" @click="openView(row)">
           <div class="ms-card-top">
             <span class="ms-order-no">{{ row.sample_no || '—' }}</span>
@@ -51,91 +51,91 @@
             <span class="ms-meta">{{ row.warehouse_name || '' }}</span>
           </div>
           <div class="ms-card-amounts">
-            <span class="ms-amount orange">成本 ¥{{ fmt(row.company_cost) }}</span>
-            <span class="ms-amount blue">应收 ¥{{ fmt(row.receivable_amount) }}</span>
+            <span class="ms-amount orange">{{ t('mobileSample.costLabel') }} ¥{{ fmt(row.company_cost) }}</span>
+            <span class="ms-amount blue">{{ t('mobileSample.receivableLabel') }} ¥{{ fmt(row.receivable_amount) }}</span>
           </div>
           <!-- 操作按钮 -->
           <div class="ms-card-actions" @click.stop>
-            <button v-if="row.status !== 1" class="ms-act-btn" @click="openEdit(row)">编辑</button>
-            <button v-if="row.status === 0" class="ms-act-btn green" @click="doAudit(row, 1)">审核</button>
-            <button v-if="row.status === 0" class="ms-act-btn red" @click="doAudit(row, 2)">驳回</button>
-            <button v-if="row.status === 1" class="ms-act-btn orange" @click="doAudit(row, 0)">反审核</button>
-            <button v-if="row.status !== 1" class="ms-act-btn red" @click="doDelete(row)">删除</button>
+            <button v-if="row.status !== 1" class="ms-act-btn" @click="openEdit(row)">{{ t('mobileSample.edit') }}</button>
+            <button v-if="row.status === 0" class="ms-act-btn green" @click="doAudit(row, 1)">{{ t('mobileSample.audit') }}</button>
+            <button v-if="row.status === 0" class="ms-act-btn red" @click="doAudit(row, 2)">{{ t('mobileSample.reject') }}</button>
+            <button v-if="row.status === 1" class="ms-act-btn orange" @click="doAudit(row, 0)">{{ t('mobileSample.unaudit') }}</button>
+            <button v-if="row.status !== 1" class="ms-act-btn red" @click="doDelete(row)">{{ t('mobileSample.delete') }}</button>
           </div>
         </div>
       </div>
-      <div v-else class="ms-empty">加载中…</div>
+      <div v-else class="ms-empty">{{ t('mobileSample.loading') }}</div>
     </template>
 
     <!-- 表单页 -->
     <template v-else>
       <div class="ms-form-topbar">
-        <button class="ms-back-btn" @click="backToList">‹ 返回</button>
-        <span class="ms-form-title">{{ isView ? '查看样品单' : fd.id ? '编辑样品单' : '新增样品单' }}</span>
+        <button class="ms-back-btn" @click="backToList">‹ {{ t('mobileSample.back') }}</button>
+        <span class="ms-form-title">{{ isView ? t('mobileSample.viewTitle') : fd.id ? t('mobileSample.editTitle') : t('mobileSample.addTitle') }}</span>
         <button v-if="!isView" class="ms-btn-primary ms-btn-sm" :disabled="saving" @click="handleSave">
-          {{ saving ? '保存中…' : '保存' }}
+          {{ saving ? t('mobileSample.saving') : t('mobileSample.save') }}
         </button>
         <div v-else style="width:56px"></div>
       </div>
 
       <div class="ms-form-body">
         <!-- 基本信息 -->
-        <div class="ms-section-title">基本信息</div>
+        <div class="ms-section-title">{{ t('mobileSample.basicInfo') }}</div>
         <div class="ms-field">
-          <label>样品单号</label>
-          <input :value="fd.sample_no || '保存后自动生成'" disabled class="ms-input ms-input-disabled" />
+          <label>{{ t('mobileSample.sampleNo') }}</label>
+          <input :value="fd.sample_no || t('mobileSample.autoGeneratedAfterSave')" disabled class="ms-input ms-input-disabled" />
         </div>
         <div class="ms-field">
-          <label>样品类型</label>
+          <label>{{ t('mobileSample.sampleType') }}</label>
           <select v-model="fd.sample_type" class="ms-input" :disabled="isView" @change="calcTotals">
-            <option value="free">免费样品</option>
-            <option value="paid">收费样品</option>
-            <option value="borrow">借样</option>
+            <option value="free">{{ t('mobileSample.typeFree') }}</option>
+            <option value="paid">{{ t('mobileSample.typePaid') }}</option>
+            <option value="borrow">{{ t('mobileSample.typeBorrow') }}</option>
           </select>
         </div>
         <div class="ms-field">
-          <label>客户</label>
+          <label>{{ t('mobileSample.customer') }}</label>
           <select v-model="fd.customer_id" class="ms-input" :disabled="isView" @change="onCustomerChange">
-            <option value="">请选择客户</option>
-            <option :value="INTERNAL_CUSTOMER_VALUE">内部领用</option>
+            <option value="">{{ t('mobileSample.chooseCustomer') }}</option>
+            <option :value="INTERNAL_CUSTOMER_VALUE">{{ t('mobileSample.internalUse') }}</option>
             <option v-for="c in customerOptions" :key="c.id" :value="c.id">{{ c.name || c.nickname }}</option>
           </select>
         </div>
         <div class="ms-field">
-          <label>客户名称</label>
-          <input v-model="fd.customer_name" class="ms-input" placeholder="可直接录入潜在客户" :disabled="isView" />
+          <label>{{ t('mobileSample.customerName') }}</label>
+          <input v-model="fd.customer_name" class="ms-input" :placeholder="t('mobileSample.customerNamePlaceholder')" :disabled="isView" />
         </div>
         <div class="ms-field">
-          <label>发样日期</label>
+          <label>{{ t('mobileSample.sampleDate') }}</label>
           <input v-model="fd.sample_date" type="date" class="ms-input" :disabled="isView" />
         </div>
         <div class="ms-field">
-          <label>仓库</label>
+          <label>{{ t('mobileSample.warehouse') }}</label>
           <select v-model="fd.warehouse_id" class="ms-input" :disabled="isView" @change="onWarehouseChange">
-            <option value="">请选择仓库</option>
+            <option value="">{{ t('mobileSample.chooseWarehouse') }}</option>
             <option v-for="w in warehouseOptions" :key="w.id" :value="w.id">{{ w.name }}</option>
           </select>
         </div>
         <div v-if="fd.sample_type === 'borrow'" class="ms-field">
-          <label>预计退回</label>
+          <label>{{ t('mobileSample.expectedReturn') }}</label>
           <input v-model="fd.return_date" type="date" class="ms-input" :disabled="isView" />
         </div>
 
         <!-- 样品明细 -->
         <div class="ms-section-title" style="margin-top:16px">
-          样品明细
-          <span v-if="!isView" class="ms-add-link" @click="openGoodsPicker">+ 选择商品</span>
+          {{ t('mobileSample.sampleDetail') }}
+          <span v-if="!isView" class="ms-add-link" @click="openGoodsPicker">+ {{ t('mobileSample.chooseGoods') }}</span>
         </div>
-        <div v-if="fd.items.length === 0" class="ms-empty-sm">请添加样品商品</div>
+        <div v-if="fd.items.length === 0" class="ms-empty-sm">{{ t('mobileSample.addGoodsHint') }}</div>
         <div v-for="(item, idx) in fd.items" :key="idx" class="ms-goods-card">
           <div class="ms-goods-top">
-            <span class="ms-goods-name">{{ item.goods_name || '未命名' }}</span>
+            <span class="ms-goods-name">{{ item.goods_name || t('mobileSample.unnamed') }}</span>
             <button v-if="!isView" class="ms-del-btn" @click="removeRow(idx)">✕</button>
           </div>
           <div class="ms-goods-meta">{{ item.goods_sn }} · {{ item.spec }} · {{ item.unit_name }}</div>
           <div class="ms-goods-nums">
             <div class="ms-goods-field">
-              <span>数量</span>
+              <span>{{ t('mobileSample.qty') }}</span>
               <div class="ms-stepper" :class="{ disabled: isView }">
                 <button class="ms-stepper-btn" :disabled="isView" @click="adjustItemNum(item, -1)">−</button>
                 <input
@@ -152,75 +152,75 @@
               </div>
             </div>
             <div class="ms-goods-field">
-              <span>成本价</span>
+              <span>{{ t('mobileSample.costPrice') }}</span>
               <span class="ms-cost-val">¥{{ Number(item.cost_price || 0).toFixed(2) }}</span>
             </div>
             <div v-if="fd.sample_type === 'paid'" class="ms-goods-field">
-              <span>收费价</span>
+              <span>{{ t('mobileSample.chargePrice') }}</span>
               <input v-model.number="item.price" type="number" class="ms-mini-input" :disabled="isView" @change="calcTotals" />
             </div>
           </div>
         </div>
 
         <!-- 物流与结算 -->
-        <div class="ms-section-title" style="margin-top:16px">物流与结算</div>
+        <div class="ms-section-title" style="margin-top:16px">{{ t('mobileSample.settlementTitle') }}</div>
         <div class="ms-settle-cards">
-          <div class="ms-settle-row"><span>样品收费</span><b>¥{{ fmt(chargeAmount) }}</b></div>
-          <div class="ms-settle-row"><span>样品成本</span><b>¥{{ fmt(goodsCost) }}</b></div>
+          <div class="ms-settle-row"><span>{{ t('mobileSample.sampleCharge') }}</span><b>¥{{ fmt(chargeAmount) }}</b></div>
+          <div class="ms-settle-row"><span>{{ t('mobileSample.sampleCost') }}</span><b>¥{{ fmt(goodsCost) }}</b></div>
         </div>
         <div class="ms-field">
-          <label>运费</label>
+          <label>{{ t('mobileSample.freight') }}</label>
           <input v-model.number="fd.freight_amount" type="number" class="ms-input" :disabled="isView" @change="calcTotals" />
         </div>
         <div class="ms-field">
-          <label>运费承担</label>
+          <label>{{ t('mobileSample.freightBearer') }}</label>
           <select v-model="fd.freight_bearer" class="ms-input" :disabled="isView" @change="calcTotals">
-            <option value="seller">公司承担</option>
-            <option value="buyer">客户承担</option>
-            <option value="half">各半</option>
-            <option value="free">免运费</option>
+            <option value="seller">{{ t('mobileSample.freightSeller') }}</option>
+            <option value="buyer">{{ t('mobileSample.freightBuyer') }}</option>
+            <option value="half">{{ t('mobileSample.freightHalf') }}</option>
+            <option value="free">{{ t('mobileSample.freightFree') }}</option>
           </select>
         </div>
         <div class="ms-settle-cards">
-          <div class="ms-settle-row"><span>客户应收</span><b class="blue">¥{{ fmt(fd.receivable_amount) }}</b></div>
-          <div class="ms-settle-row"><span>公司费用</span><b class="orange">¥{{ fmt(fd.company_cost) }}</b></div>
+          <div class="ms-settle-row"><span>{{ t('mobileSample.customerReceivable') }}</span><b class="blue">¥{{ fmt(fd.receivable_amount) }}</b></div>
+          <div class="ms-settle-row"><span>{{ t('mobileSample.companyCost') }}</span><b class="orange">¥{{ fmt(fd.company_cost) }}</b></div>
         </div>
         <div class="ms-field">
-          <label>已收金额</label>
+          <label>{{ t('mobileSample.receivedAmount') }}</label>
           <input v-model.number="fd.paid_amount" type="number" class="ms-input" :disabled="isView" />
         </div>
         <div v-if="fd.paid_amount > 0" class="ms-field">
-          <label>收款账户</label>
+          <label>{{ t('mobileSample.receiptAccount') }}</label>
           <select v-model="fd.receipt_fund_id" class="ms-input" :disabled="isView" @change="onReceiptFundChange">
-            <option value="">请选择账户</option>
+            <option value="">{{ t('mobileSample.chooseAccount') }}</option>
             <option v-for="f in fundOptions" :key="f.id" :value="f.id">{{ f.name }}</option>
           </select>
         </div>
         <div v-if="fd.company_cost > 0" class="ms-field">
-          <label>费用状态</label>
+          <label>{{ t('mobileSample.expenseStatus') }}</label>
           <select v-model="fd.expense_payment_status" class="ms-input" :disabled="isView" @change="onExpenseStatusChange">
-            <option value="pending">待收款</option>
-            <option value="paid">已收款</option>
-            <option value="free">无需付款</option>
+            <option value="pending">{{ t('mobileSample.statusPending') }}</option>
+            <option value="paid">{{ t('mobileSample.statusPaid') }}</option>
+            <option value="free">{{ t('mobileSample.statusFree') }}</option>
           </select>
         </div>
         <div v-if="fd.company_cost > 0 && fd.expense_payment_status === 'paid'" class="ms-field">
-          <label>收款账户</label>
+          <label>{{ t('mobileSample.payAccount') }}</label>
           <select v-model="fd.expense_fund_id" class="ms-input" :disabled="isView" @change="onExpenseFundChange">
-            <option value="">请选择账户</option>
+            <option value="">{{ t('mobileSample.chooseAccount') }}</option>
             <option v-for="f in fundOptions" :key="f.id" :value="f.id">{{ f.name }}</option>
           </select>
         </div>
         <div class="ms-field">
-          <label>快递公司</label>
+          <label>{{ t('mobileSample.courierCompany') }}</label>
           <input v-model="fd.courier" class="ms-input" :disabled="isView" />
         </div>
         <div class="ms-field">
-          <label>运单号</label>
+          <label>{{ t('mobileSample.trackingNo') }}</label>
           <input v-model="fd.tracking_no" class="ms-input" :disabled="isView" />
         </div>
         <div class="ms-field">
-          <label>备注</label>
+          <label>{{ t('mobileSample.remark') }}</label>
           <textarea v-model="fd.remark" class="ms-input ms-textarea" rows="2" :disabled="isView" />
         </div>
 
@@ -233,15 +233,15 @@
       <div v-if="goodsPickerVisible" class="ms-drawer-overlay" @click.self="goodsPickerVisible = false">
         <div class="ms-drawer">
           <div class="ms-drawer-head">
-            <span>选择商品</span>
+            <span>{{ t('mobileSample.chooseGoodsTitle') }}</span>
             <span class="ms-drawer-close" @click="goodsPickerVisible = false">✕</span>
           </div>
           <div class="ms-drawer-search">
-            <input v-model="goodsKeyword" class="ms-search-input" placeholder="商品名称 / 编码" @input="searchGoods" />
+            <input v-model="goodsKeyword" class="ms-search-input" :placeholder="t('mobileSample.goodsSearchPlaceholder')" @input="searchGoods" />
           </div>
           <div class="ms-drawer-list">
-            <div v-if="goodsLoading" class="ms-empty">加载中…</div>
-            <div v-else-if="goodsList.length === 0" class="ms-empty">无结果</div>
+            <div v-if="goodsLoading" class="ms-empty">{{ t('mobileSample.loading') }}</div>
+            <div v-else-if="goodsList.length === 0" class="ms-empty">{{ t('mobileSample.noResult') }}</div>
             <div
               v-for="g in goodsList"
               :key="g.id"
@@ -254,14 +254,14 @@
               </div>
               <div class="ms-goods-row-info">
                 <div class="ms-goods-row-name">{{ g.goods_name }}</div>
-                <div class="ms-goods-row-meta">{{ g.goods_sn }} · {{ g.unit_name }} · 库存{{ g.stock_num ?? 0 }}</div>
+                <div class="ms-goods-row-meta">{{ g.goods_sn }} · {{ g.unit_name }} · {{ t('mobileSample.stock') }}{{ g.stock_num ?? 0 }}</div>
               </div>
               <div class="ms-goods-row-price">¥{{ fmt(getDisplayCost(g)) }}</div>
             </div>
           </div>
           <div class="ms-drawer-foot">
-            <button class="ms-btn-cancel" @click="goodsPickerVisible = false">取消</button>
-            <button class="ms-btn-primary" @click="confirmGoods">确定 ({{ pickerSelected.length }})</button>
+            <button class="ms-btn-cancel" @click="goodsPickerVisible = false">{{ t('mobileSample.cancel') }}</button>
+            <button class="ms-btn-primary" @click="confirmGoods">{{ t('mobileSample.confirm') }} ({{ pickerSelected.length }})</button>
           </div>
         </div>
       </div>
@@ -273,6 +273,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
 import { getWarehouseList } from '@/api/warehouse'
 import { auditSample, createSample, deleteSample, getSampleList, updateSample, getSaleCustomerList } from '@/api/sale'
@@ -282,6 +283,8 @@ import { fmtDt } from '@/utils/date'
 import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 import { fuzzyFilterGoods } from '@/utils/fuzzyMatch'
 
+const { t } = useI18n()
+
 // ── 列表 ──
 const listLoading = ref(false)
 const allRows = ref<any[]>([])
@@ -289,12 +292,12 @@ const keyword = ref('')
 const filterStatus = ref<string | number>('')
 const summary = reactive({ count: 0, pending: 0, receivable: 0, companyCost: 0 })
 
-const statusTabs = [
-  { val: '', label: '全部' },
-  { val: 0, label: '待审核' },
-  { val: 1, label: '已审核' },
-  { val: 2, label: '已驳回' },
-]
+const statusTabs = computed(() => [
+  { val: '', label: t('mobileSample.all') },
+  { val: 0, label: t('mobileSample.pendingReview') },
+  { val: 1, label: t('mobileSample.reviewed') },
+  { val: 2, label: t('mobileSample.rejected') },
+])
 
 const filteredList = computed(() => {
   let rows = allRows.value
@@ -307,10 +310,10 @@ const filteredList = computed(() => {
 function onSearch() { /* filteredList is computed */ }
 
 function statusMeta(s: number) {
-  return ({ 0: { label: '待审核', cls: 'badge-warn' }, 1: { label: '已审核', cls: 'badge-ok' }, 2: { label: '已驳回', cls: 'badge-err' } } as any)[Number(s)] || { label: '—', cls: '' }
+  return ({ 0: { label: t('mobileSample.pendingReview'), cls: 'badge-warn' }, 1: { label: t('mobileSample.reviewed'), cls: 'badge-ok' }, 2: { label: t('mobileSample.rejected'), cls: 'badge-err' } } as any)[Number(s)] || { label: '—', cls: '' }
 }
-function typeMeta(t: string) {
-  return ({ free: { label: '免费', cls: 'type-free' }, paid: { label: '收费', cls: 'type-paid' }, borrow: { label: '借样', cls: 'type-borrow' } } as any)[t] || { label: '—', cls: '' }
+function typeMeta(key: string) {
+  return ({ free: { label: t('mobileSample.typeFree'), cls: 'type-free' }, paid: { label: t('mobileSample.typePaid'), cls: 'type-paid' }, borrow: { label: t('mobileSample.typeBorrow'), cls: 'type-borrow' } } as any)[key] || { label: '—', cls: '' }
 }
 
 async function loadList() {
@@ -387,7 +390,7 @@ function calcTotals() {
 function onCustomerChange(e: any) {
   const id = e.target?.value ?? e
   if (id === INTERNAL_CUSTOMER_VALUE) {
-    fd.customer_name = '内部'
+    fd.customer_name = t('mobileSample.internalUse')
     fd.contact_name = ''
     return
   }
@@ -492,19 +495,19 @@ function parseItems(v: any) {
 }
 
 async function handleSave() {
-  if (!fd.customer_name && !fd.customer_id) { ElMessage.warning('请选择或填写客户'); return }
-  if (!fd.sample_date) { ElMessage.warning('请选择发样日期'); return }
-  if (!fd.warehouse_id) { ElMessage.warning('请选择仓库'); return }
-  if (!fd.items.length) { ElMessage.warning('请添加样品明细'); return }
+  if (!fd.customer_name && !fd.customer_id) { ElMessage.warning(t('mobileSample.warnCustomer')); return }
+  if (!fd.sample_date) { ElMessage.warning(t('mobileSample.warnSampleDate')); return }
+  if (!fd.warehouse_id) { ElMessage.warning(t('mobileSample.warnWarehouse')); return }
+  if (!fd.items.length) { ElMessage.warning(t('mobileSample.warnItems')); return }
   calcTotals()
-  if (fd.paid_amount > 0 && !fd.receipt_fund_id) { ElMessage.warning('已收金额大于0时请选择收款账户'); return }
-  if (fd.company_cost > 0 && fd.expense_payment_status === 'paid' && !fd.expense_fund_id) { ElMessage.warning('公司费用已付款时请选择付款账户'); return }
+  if (fd.paid_amount > 0 && !fd.receipt_fund_id) { ElMessage.warning(t('mobileSample.warnReceiptFund')); return }
+  if (fd.company_cost > 0 && fd.expense_payment_status === 'paid' && !fd.expense_fund_id) { ElMessage.warning(t('mobileSample.warnExpenseFund')); return }
   saving.value = true
   try {
     const payload = {
       ...fd,
       customer_id: fd.customer_id && fd.customer_id !== INTERNAL_CUSTOMER_VALUE ? fd.customer_id : null,
-      customer_name: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? (fd.customer_name || '内部') : fd.customer_name,
+      customer_name: fd.customer_id === INTERNAL_CUSTOMER_VALUE ? (fd.customer_name || t('mobileSample.internalUse')) : fd.customer_name,
       receipt_fund_id: fd.receipt_fund_id || null,
       expense_fund_id: fd.expense_fund_id || null,
       return_date: fd.return_date || null,
@@ -512,23 +515,23 @@ async function handleSave() {
     }
     if (fd.id) await updateSample(payload)
     else await createSample(payload)
-    ElMessage.success('保存成功')
+    ElMessage.success(t('mobileSample.saveSuccess'))
     backToList()
   } finally { saving.value = false }
 }
 
 async function doAudit(row: any, status: number) {
-  const label = status === 1 ? '审核' : status === 0 ? '反审核' : '驳回'
-  await ElMessageBox.confirm(`确定${label}该样品单？`, '提示', { type: 'warning' })
+  const label = status === 1 ? t('mobileSample.audit') : status === 0 ? t('mobileSample.unaudit') : t('mobileSample.reject')
+  await ElMessageBox.confirm(t('mobileSample.confirmAudit', { label }), t('mobileSample.prompt'), { type: 'warning' })
   await auditSample(row.id, status)
-  ElMessage.success('操作成功')
+  ElMessage.success(t('common.success'))
   loadList()
 }
 
 async function doDelete(row: any) {
-  await ElMessageBox.confirm('确定删除该样品单？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('mobileSample.confirmDelete'), t('mobileSample.prompt'), { type: 'warning' })
   await deleteSample(row.id)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('common.deleteSuccess'))
   loadList()
 }
 
@@ -684,9 +687,14 @@ async function confirmGoods() {
       let expand = false
       try {
         await ElMessageBox.confirm(
-          `「${g.goods_name || g.name}」有BOM配置，是否展开BOM明细加入样品？\n（礼盒组装选"展开"，普通成品选"不展开"）`,
-          '展开BOM',
-          { confirmButtonText: '展开', cancelButtonText: '不展开', type: 'info', closeOnClickModal: false }
+          t('mobileSample.bomExpandConfirm', { name: g.goods_name || g.name }),
+          t('mobileSample.bomExpandTitle'),
+          {
+            confirmButtonText: t('common.expand'),
+            cancelButtonText: t('common.skip'),
+            type: 'info',
+            closeOnClickModal: false,
+          }
         )
         expand = true
       } catch { expand = false }
