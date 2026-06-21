@@ -12,7 +12,7 @@
           </svg>
         </button>
         <div class="mh-banner-left">
-          <div class="mh-greet">你好，{{ authStore.userName || '用户' }}</div>
+          <div class="mh-greet">{{ t('dashboard.mobileGreeting', { name: authStore.userName || t('dashboard.user') }) }}</div>
           <div class="mh-date">{{ mobileToday }}</div>
         </div>
         <button class="mh-refresh" @click="loadDashboardData(true)" :class="{ spinning: dashboardLoading }">
@@ -23,7 +23,7 @@
       <!-- 今日核心指标卡片 -->
       <div class="mh-kpi-row">
         <div class="mh-kpi-card mh-kpi-main" @click="router.push('/dashboard/today-sales')">
-          <div class="mh-kpi-label">今日销售额</div>
+          <div class="mh-kpi-label">{{ t('dashboard.todayRevenue') }}</div>
           <div class="mh-kpi-value">{{ stats[0].value }}</div>
           <div class="mh-kpi-sub">{{ stats[0].sub }}</div>
           <svg class="mh-kpi-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
@@ -36,8 +36,8 @@
               <path d="M2 10h20M6 15h2M10 15h4"/>
             </svg>
           </div>
-          <div class="mh-crb-label">零售收银台</div>
-          <div class="mh-crb-desc">快速开单 · 扫码结账</div>
+          <div class="mh-crb-label">{{ t('dashboard.cashierTitle') }}</div>
+          <div class="mh-crb-desc">{{ t('dashboard.cashierSubtitle') }}</div>
           <svg class="mh-crb-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
       </div>
@@ -45,15 +45,15 @@
       <!-- 三个小指标 -->
       <div class="mh-kpi-mini-row">
         <div class="mh-kpi-small" @click="router.push('/finance/fund-flow?type=expense&date=today')">
-          <div class="mh-kpi-small-label">今日支出</div>
+          <div class="mh-kpi-small-label">{{ t('dashboard.todayExpense') }}</div>
           <div class="mh-kpi-small-value">{{ stats[1].value }}</div>
         </div>
         <div class="mh-kpi-small" :class="{ warn: Number(stats[3].value) > 0 }" @click="router.push('/warehouse/stock')">
-          <div class="mh-kpi-small-label">库存预警</div>
+          <div class="mh-kpi-small-label">{{ t('dashboard.stockWarning') }}</div>
           <div class="mh-kpi-small-value" :style="{ color: Number(stats[3].value) > 0 ? '#f53f3f' : '' }">{{ stats[3].value }}</div>
         </div>
         <div class="mh-kpi-small" @click="router.push('/sale/client')">
-          <div class="mh-kpi-small-label">客户总数</div>
+          <div class="mh-kpi-small-label">{{ t('dashboard.totalCustomers') }}</div>
           <div class="mh-kpi-small-value">{{ stats[2].value }}</div>
         </div>
       </div>
@@ -61,9 +61,9 @@
       <!-- 快捷操作 -->
       <div class="mh-section-card">
         <div class="mh-section-header">
-          <span class="mh-section-title">快捷操作</span>
+          <span class="mh-section-title">{{ t('dashboard.quickActions') }}</span>
           <span class="mh-section-more" @click="router.push('/cashregister')">
-            去收银台
+            {{ t('dashboard.goCashier') }}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
           </span>
         </div>
@@ -80,15 +80,15 @@
       <!-- 常用应用 -->
       <div class="mh-section-card">
         <div class="mh-section-header">
-          <span class="mh-section-title">常用应用</span>
+          <span class="mh-section-title">{{ t('dashboard.commonApps') }}</span>
           <span class="mh-section-more" @click="editMode ? saveCustom() : (editMode = true)">
-            {{ editMode ? '完成' : '自定义' }}
+            {{ editMode ? t('dashboard.complete') : t('dashboard.customize') }}
           </span>
         </div>
 
         <!-- 编辑模式 -->
         <template v-if="editMode">
-          <div class="m-edit-hint">勾选要展示的应用（最多8个）</div>
+          <div class="m-edit-hint">{{ t('dashboard.editHint') }}</div>
           <div v-for="section in allAppSections" :key="section.key" class="m-edit-section">
             <div class="m-edit-section-title">{{ section.title }}</div>
             <div class="m-edit-grid">
@@ -127,8 +127,8 @@
           <div class="mh-insight-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2"/></svg>
           </div>
-          <span class="mh-insight-title">AI 智能洞察</span>
-          <span class="mh-insight-badge">实时分析</span>
+          <span class="mh-insight-title">{{ t('dashboard.aiInsightsTitle') }}</span>
+          <span class="mh-insight-badge">{{ t('dashboard.realTimeAnalysis') }}</span>
         </div>
         <div class="mh-insight-list">
           <div v-for="item in insightItems" :key="item.tag" class="mh-insight-item">
@@ -151,7 +151,7 @@
       <div class="header-left">
         <div class="header-badge">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2"/></svg>
-          <span>Global Operations Center</span>
+          <span>{{ t('dashboard.globalOperationsCenter') }}</span>
         </div>
         <h1 class="page-title" style="display:none">数字游牧概览</h1>
       </div>
@@ -168,8 +168,8 @@
           </svg>
         </div>
         <div class="crb-info">
-          <div class="crb-label">零售收银台</div>
-          <div class="crb-desc">快速开单 · 扫码结账</div>
+          <div class="crb-label">{{ t('dashboard.cashierTitle') }}</div>
+          <div class="crb-desc">{{ t('dashboard.cashierSubtitle') }}</div>
         </div>
         <svg class="crb-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </div>
@@ -210,7 +210,7 @@
           </div>
           <div class="metric-trend" :class="idx === 3 && stat.value !== '--' && Number(stat.value) > 0 ? 'trend-warn' : 'trend-up'">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-            <span>实时</span>
+            <span>{{ t('dashboard.realTime') }}</span>
           </div>
         </div>
         <div class="metric-label">{{ stat.label }}</div>
@@ -227,11 +227,11 @@
         <div class="chart-header">
           <div>
             <div class="card-micro">Performance Metrics</div>
-            <h3 class="card-title">近{{ trendDays }}天销售趋势</h3>
+            <h3 class="card-title">{{ t('dashboard.salesTrendTitle', { days: trendDays }) }}</h3>
           </div>
           <div class="chart-tabs">
-            <button :class="['chart-tab', trendDays === 7 ? 'active' : '']" @click="setTrendDays(7)">7天</button>
-            <button :class="['chart-tab', trendDays === 30 ? 'active' : '']" @click="setTrendDays(30)">30天</button>
+            <button :class="['chart-tab', trendDays === 7 ? 'active' : '']" @click="setTrendDays(7)">{{ t('dashboard.days7') }}</button>
+            <button :class="['chart-tab', trendDays === 30 ? 'active' : '']" @click="setTrendDays(30)">{{ t('dashboard.days30') }}</button>
           </div>
         </div>
         <div ref="saleTrendRef" class="chart-area" />
@@ -241,15 +241,15 @@
       <div class="rank-card">
         <div class="card-header-row">
           <div>
-            <div class="card-micro">Top Products</div>
-            <h3 class="card-title">商品销售排行</h3>
+            <div class="card-micro">{{ t('dashboard.topProducts') }}</div>
+            <h3 class="card-title">{{ t('dashboard.goodsRanking') }}</h3>
           </div>
           <div class="chart-tabs">
-            <button :class="['chart-tab', rankMode === 'qty' ? 'active' : '']" @click="rankMode = 'qty'">销售数量</button>
-            <button :class="['chart-tab', rankMode === 'amt' ? 'active' : '']" @click="rankMode = 'amt'">销售金额</button>
+            <button :class="['chart-tab', rankMode === 'qty' ? 'active' : '']" @click="rankMode = 'qty'">{{ t('dashboard.salesQty') }}</button>
+            <button :class="['chart-tab', rankMode === 'amt' ? 'active' : '']" @click="rankMode = 'amt'">{{ t('dashboard.salesAmount') }}</button>
           </div>
         </div>
-        <div v-if="rankList.length === 0" class="rank-empty">暂无销售数据</div>
+        <div v-if="rankList.length === 0" class="rank-empty">{{ t('dashboard.noSalesData') }}</div>
         <div v-else class="rank-list">
           <div v-for="(item, idx) in rankList" :key="item.key" class="rank-row">
             <div class="rank-no" :class="idx < 3 ? `rank-top${idx+1}` : ''">{{ idx + 1 }}</div>
@@ -276,16 +276,16 @@
           <div class="guide-side-header">
             <div class="guide-side-title">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-              新手向导
-              <a v-if="!guideStore.isFinished" class="guide-skip-all" @click="guideStore.skipAll()">全部跳过</a>
+              {{ t('dashboard.userGuide') }}
+              <a v-if="!guideStore.isFinished" class="guide-skip-all" @click="guideStore.skipAll()">{{ t('dashboard.skipAll') }}</a>
             </div>
             <div class="guide-side-actions">
               <div class="gmp-bar-wrap">
                 <div class="gmp-bar" :style="{ width: guideStore.progressPercent + '%' }" />
               </div>
-              <span class="gmp-label">{{ guideStore.handledCount }}/{{ guideStore.steps.length }} 已处理</span>
-              <span class="gmp-time">约 15 分钟</span>
-              <button class="guide-hide-btn" @click="hideGuide" title="收起向导">
+              <span class="gmp-label">{{ t('dashboard.handledSteps', { done: guideStore.handledCount, total: guideStore.steps.length }) }}</span>
+              <span class="gmp-time">{{ t('dashboard.estimatedTime') }}</span>
+              <button class="guide-hide-btn" @click="hideGuide" :title="t('dashboard.collapseGuide')">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
@@ -310,11 +310,11 @@
           </div>
 
           <div class="guide-step-num">
-            Step {{ guideStore.currentStep + 1 }}
-            <span v-if="guideStore.isStepCompleted(guideStore.currentStep)" class="guide-tag guide-tag--done">✓ 已完成</span>
-            <span v-else-if="guideStore.isStepSkipped(guideStore.currentStep)" class="guide-tag guide-tag--skipped">已跳过</span>
-            <span v-else class="guide-tag guide-tag--active">进行中</span>
-            <span class="guide-tag guide-tag--action">操作 {{ guideStore.currentAction + 1 }}/{{ guideStore.currentActionCount }}</span>
+            {{ t('dashboard.stepPrefix', { step: guideStore.currentStep + 1 }) }}
+            <span v-if="guideStore.isStepCompleted(guideStore.currentStep)" class="guide-tag guide-tag--done">{{ t('dashboard.completed') }}</span>
+            <span v-else-if="guideStore.isStepSkipped(guideStore.currentStep)" class="guide-tag guide-tag--skipped">{{ t('dashboard.skipped') }}</span>
+            <span v-else class="guide-tag guide-tag--active">{{ t('dashboard.inProgress') }}</span>
+            <span class="guide-tag guide-tag--action">{{ t('dashboard.actionProgress', { current: guideStore.currentAction + 1, total: guideStore.currentActionCount }) }}</span>
           </div>
           <div class="guide-step-name">{{ currentGuideStep.title }}</div>
           <p class="guide-step-desc">{{ currentGuideStep.desc }}</p>
@@ -324,12 +324,12 @@
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
             </div>
             <div>
-              <strong class="guide-celebrate-title">恭喜完成全部链路!</strong>
-              <div>可以随时重新开始演示。</div>
+              <strong class="guide-celebrate-title">{{ t('dashboard.guideCompleteTitle') }}</strong>
+              <div>{{ t('dashboard.guideCompleteText') }}</div>
             </div>
           </div>
           <div v-else class="guide-banner guide-banner--info">
-            当前步骤会自动跳转页面并弹出指引弹窗，只有"完成此步"或"跳过此步"后才会进入下一步。
+            {{ t('dashboard.guideInfo') }}
           </div>
 
           <div class="guide-action-list">
@@ -345,7 +345,7 @@
               <path d="M12 16v-4M12 8h.01" />
             </svg>
             <div>
-              <strong style="display:block;color:#0f172a;margin-bottom:4px">完成标准</strong>
+              <strong style="display:block;color:#0f172a;margin-bottom:4px">{{ t('dashboard.completionCriteria') }}</strong>
               {{ currentGuideStep.result }}
               <template v-if="currentGuideStep.tip">
                 <br />
@@ -355,20 +355,20 @@
           </div>
 
           <button class="guide-goto-btn" @click="guideStore.startGuide(guideStore.currentStep)">
-            {{ guideStore.active ? '继续当前步骤' : `前往 ${currentGuideStep.title}` }}
+            {{ guideStore.active ? t('dashboard.continueCurrentStep') : t('dashboard.goToStep', { title: currentGuideStep.title }) }}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
 
           <div class="guide-nav-btns">
-            <button class="gnb-prev" :disabled="guideStore.currentStep <= 0" @click="guideStore.setCurrentStep(guideStore.currentStep - 1)">← 上一步</button>
-            <button v-if="!guideStore.isFinished" class="gnb-skip" @click="guideStore.skipCurrentAndNext()">跳过此步</button>
-            <button v-else class="gnb-finish" @click="guideStore.restartGuide()">重新开始</button>
+            <button class="gnb-prev" :disabled="guideStore.currentStep <= 0" @click="guideStore.setCurrentStep(guideStore.currentStep - 1)">{{ t('dashboard.previousStep') }}</button>
+            <button v-if="!guideStore.isFinished" class="gnb-skip" @click="guideStore.skipCurrentAndNext()">{{ t('dashboard.skipStep') }}</button>
+            <button v-else class="gnb-finish" @click="guideStore.restartGuide()">{{ t('dashboard.restartGuide') }}</button>
           </div>
         </div>
         <!-- 收起后的小入口 -->
         <div v-else class="guide-collapsed" @click="showGuide">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          <span>新手向导</span>
+          <span>{{ t('dashboard.userGuide') }}</span>
           <span class="guide-collapsed-progress">{{ guideStore.handledCount }}/{{ guideStore.steps.length }}</span>
         </div>
 
@@ -384,8 +384,8 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2"/></svg>
             </div>
             <div>
-              <div class="insights-title">智能洞察</div>
-              <div class="insights-sub">AI 数据引擎</div>
+              <div class="insights-title">{{ t('dashboard.insightsTitle') }}</div>
+              <div class="insights-sub">{{ t('dashboard.insightsSub') }}</div>
             </div>
           </div>
           <div class="insights-list">
@@ -397,32 +397,32 @@
               <p class="insight-text">"{{ item.text }}"</p>
             </div>
           </div>
-          <button class="insights-btn" @click="router.push('/finance/overview')">查看财务总览 →</button>
+          <button class="insights-btn" @click="router.push('/finance/overview')">{{ t('dashboard.viewFinanceOverview') }}</button>
         </div>
 
         <!-- 销售统计总览 -->
         <div class="sale-stat-card">
           <div class="ssc-header">
             <div>
-              <div class="card-micro">Sales Overview</div>
-              <h3 class="card-title">销售统计</h3>
+              <div class="card-micro">{{ t('dashboard.salesOverview') }}</div>
+              <h3 class="card-title">{{ t('dashboard.salesStatistics') }}</h3>
             </div>
             <div class="ssc-tabs">
-              <button :class="['ssc-tab', statPeriod === 'today' ? 'active' : '']" @click="statPeriod = 'today'">今天</button>
-              <button :class="['ssc-tab', statPeriod === '7d' ? 'active' : '']" @click="statPeriod = '7d'">近7天</button>
-              <button :class="['ssc-tab', statPeriod === '30d' ? 'active' : '']" @click="statPeriod = '30d'">近30天</button>
-              <button :class="['ssc-tab', statPeriod === '3m' ? 'active' : '']" @click="statPeriod = '3m'">近3月</button>
+              <button :class="['ssc-tab', statPeriod === 'today' ? 'active' : '']" @click="statPeriod = 'today'">{{ t('dashboard.today') }}</button>
+              <button :class="['ssc-tab', statPeriod === '7d' ? 'active' : '']" @click="statPeriod = '7d'">{{ t('dashboard.days7') }}</button>
+              <button :class="['ssc-tab', statPeriod === '30d' ? 'active' : '']" @click="statPeriod = '30d'">{{ t('dashboard.days30') }}</button>
+              <button :class="['ssc-tab', statPeriod === '3m' ? 'active' : '']" @click="statPeriod = '3m'">{{ t('dashboard.months3') }}</button>
             </div>
           </div>
 
           <!-- 主指标 -->
           <div class="ssc-main-row">
             <div class="ssc-main-item">
-              <div class="ssc-main-label">销售总额</div>
+              <div class="ssc-main-label">{{ t('dashboard.totalSales') }}</div>
               <div class="ssc-main-value">¥{{ salesStats.totalAmt }}</div>
             </div>
             <div class="ssc-main-item">
-              <div class="ssc-main-label">订单数</div>
+              <div class="ssc-main-label">{{ t('dashboard.orderCount') }}</div>
               <div class="ssc-main-value">{{ salesStats.orderCount }}</div>
             </div>
           </div>
@@ -430,34 +430,34 @@
           <!-- 次级指标 -->
           <div class="ssc-sub-grid">
             <div class="ssc-sub-item">
-              <div class="ssc-sub-label">销售出库</div>
+              <div class="ssc-sub-label">{{ t('dashboard.salesOutbound') }}</div>
               <div class="ssc-sub-value">¥{{ salesStats.saleAmt }}</div>
             </div>
             <div class="ssc-sub-item">
-              <div class="ssc-sub-label">零售收款</div>
+              <div class="ssc-sub-label">{{ t('dashboard.retailIncome') }}</div>
               <div class="ssc-sub-value">¥{{ salesStats.retailAmt }}</div>
             </div>
             <div class="ssc-sub-item">
-              <div class="ssc-sub-label">均单金额</div>
+              <div class="ssc-sub-label">{{ t('dashboard.avgOrderAmount') }}</div>
               <div class="ssc-sub-value">¥{{ salesStats.avgAmt }}</div>
             </div>
             <div class="ssc-sub-item">
-              <div class="ssc-sub-label">销售单数</div>
+              <div class="ssc-sub-label">{{ t('dashboard.salesOrders') }}</div>
               <div class="ssc-sub-value">{{ salesStats.saleCount }}</div>
             </div>
             <div class="ssc-sub-item">
-              <div class="ssc-sub-label">零售单数</div>
+              <div class="ssc-sub-label">{{ t('dashboard.retailOrders') }}</div>
               <div class="ssc-sub-value">{{ salesStats.retailCount }}</div>
             </div>
             <div class="ssc-sub-item">
-              <div class="ssc-sub-label">涉及客户</div>
+              <div class="ssc-sub-label">{{ t('dashboard.customersInvolved') }}</div>
               <div class="ssc-sub-value">{{ salesStats.customerCount }}</div>
             </div>
           </div>
 
           <!-- 迷你柱状趋势（按天，最近 periodDays 天） -->
           <div v-if="salesStats.sparkData.length > 1" class="ssc-spark">
-            <div class="ssc-spark-label">趋势</div>
+            <div class="ssc-spark-label">{{ t('dashboard.trend') }}</div>
             <div class="ssc-spark-bars">
               <div
                 v-for="(bar, i) in salesStats.sparkData"
@@ -474,7 +474,7 @@
             </div>
           </div>
 
-          <button class="ssc-link-btn" @click="router.push('/reports/sale-rate')">查看销售报表 →</button>
+          <button class="ssc-link-btn" @click="router.push('/reports/sale-rate')">{{ t('dashboard.viewSalesReport') }}</button>
         </div>
 
       </div>
@@ -484,31 +484,31 @@
     <div v-if="flowVisible" class="flow-card">
       <div class="card-header-row">
         <div>
-          <div class="card-micro">Finance</div>
-          <h3 class="card-title">资金流水明细</h3>
+          <div class="card-micro">{{ t('dashboard.finance') }}</div>
+          <h3 class="card-title">{{ t('dashboard.fundFlowDetail') }}</h3>
         </div>
         <button class="btn-close-sm" @click="flowVisible = false">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
       </div>
       <el-table :data="fundFlowList" size="small" style="width:100%">
-        <el-table-column prop="fund_name" label="账户" width="120" />
-        <el-table-column label="类型" width="80" align="center">
+        <el-table-column prop="fund_name" :label="t('dashboard.account')" width="120" />
+        <el-table-column :label="t('dashboard.type')" width="80" align="center">
           <template #default="{ row }">
             <span class="flow-tag" :class="row.flow_type === 'income' ? 'tag-green' : row.flow_type === 'refund' ? 'tag-blue' : 'tag-red'">
-              {{ row.flow_type === 'income' ? '收入' : row.flow_type === 'refund' ? '冲红' : '支出' }}
+              {{ row.flow_type === 'income' ? t('dashboard.income') : row.flow_type === 'refund' ? t('dashboard.refund') : t('dashboard.expense') }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="金额" width="120" align="right">
+        <el-table-column :label="t('dashboard.amount')" width="120" align="right">
           <template #default="{ row }">
             <span :style="{ fontWeight: 600, color: row.flow_type === 'income' ? '#16a34a' : '#dc2626' }">
               {{ row.flow_type === 'income' ? '+' : '-' }}¥{{ Number(row.amount||0).toFixed(2) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="摘要" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="created_at" label="时间" width="160" />
+        <el-table-column prop="remark" :label="t('dashboard.summary')" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="created_at" :label="t('dashboard.time')" width="160" />
       </el-table>
     </div>
 
@@ -520,6 +520,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, onDeactivated, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
 import { useGuideStore } from '@/stores/guide'
 import { useAuthStore } from '@/stores/auth'
@@ -531,6 +532,7 @@ const router = useRouter()
 const route = useRoute()
 const guideStore = useGuideStore()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const currentGuideStep = computed(() => guideStore.currentStepData)
 const isFirstVisit = ref(false)
 
@@ -549,34 +551,50 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 // 手机端今日日期显示
 const mobileToday = computed(() => {
   const d = new Date()
-  const week = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]
-  return `${d.getMonth()+1}月${d.getDate()}日 ${week}`
+  const week = [
+    t('dashboard.weekdays.sun'),
+    t('dashboard.weekdays.mon'),
+    t('dashboard.weekdays.tue'),
+    t('dashboard.weekdays.wed'),
+    t('dashboard.weekdays.thu'),
+    t('dashboard.weekdays.fri'),
+    t('dashboard.weekdays.sat'),
+  ][d.getDay()]
+  return t('dashboard.dateText', { month: d.getMonth() + 1, day: d.getDate(), week })
 })
 const isLegacyFromModules = computed(() =>
   isMobile.value && String(route.query?.legacy || '') === '1'
 )
 
 // 手机端快捷操作（4+4=8个，比常用应用更高频）
-const mobileQuickActions = [
-  { label: '销售出库', path: '/sale/out',      bg: 'rgba(0,113,227,0.1)',  color: '#0071e3', svg: '<path d="M5 12h14M12 5l7 7-7 7"/>' },
-  { label: '采购入库', path: '/procure/inhouse', bg: 'rgba(8,145,178,0.1)', color: '#0891b2', svg: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>' },
-  { label: '收款单',  path: '/finance/collect-receipt', bg: 'rgba(5,150,105,0.1)',  color: '#059669', svg: '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>' },
-  { label: '库存总览', path: '/warehouse/stock', bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', svg: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
-  { label: '销售订单', path: '/sale/contract',  bg: 'rgba(0,113,227,0.08)', color: '#0071e3', svg: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
-  { label: '应收账款', path: '/finance/receivable', bg: 'rgba(5,150,105,0.08)', color: '#059669', svg: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
-  { label: '报销申请', path: '/office/expense', bg: 'rgba(220,38,38,0.08)',  color: '#dc2626', svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' },
-  { label: '零售收银', path: '/cashregister',   bg: 'rgba(249,115,22,0.1)', color: '#f97316', svg: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h2M10 15h4"/>' },
-]
+const mobileQuickActions = computed(() => [
+  { label: t('dashboard.salesOutbound'), path: '/sale/out',      bg: 'rgba(0,113,227,0.1)',  color: '#0071e3', svg: '<path d="M5 12h14M12 5l7 7-7 7"/>' },
+  { label: t('dashboard.procureInhouse'), path: '/procure/inhouse', bg: 'rgba(8,145,178,0.1)', color: '#0891b2', svg: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>' },
+  { label: t('dashboard.collectReceipt'),  path: '/finance/collect-receipt', bg: 'rgba(5,150,105,0.1)',  color: '#059669', svg: '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>' },
+  { label: t('dashboard.stockOverview'), path: '/warehouse/stock', bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', svg: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
+  { label: t('dashboard.salesOrder'), path: '/sale/contract',  bg: 'rgba(0,113,227,0.08)', color: '#0071e3', svg: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
+  { label: t('dashboard.receivable'), path: '/finance/receivable', bg: 'rgba(5,150,105,0.08)', color: '#059669', svg: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
+  { label: t('dashboard.expenseApply'), path: '/office/expense', bg: 'rgba(220,38,38,0.08)',  color: '#dc2626', svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' },
+  { label: t('dashboard.cashierShort'), path: '/cashregister',   bg: 'rgba(249,115,22,0.1)', color: '#f97316', svg: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h2M10 15h4"/>' },
+])
 
-const stats = ref([
-  { key: 'sale',     label: '今日销售额', value: '--', sub: '今日订单 -- 笔',   icon: 'Money',         link: '/dashboard/today-sales' },
-  { key: 'expense',  label: '今日支出',   value: '--', sub: '付款+费用支出',   icon: 'Wallet',        link: '/finance/fund-flow?type=expense&date=today' },
-  { key: 'customer', label: '客户总数',   value: '--', sub: '全部客户',      icon: 'User',          link: '/sale/client' },
-  { key: 'stock',    label: '库存预警',   value: '--', sub: '负库存+零库存', icon: 'WarningFilled', link: '/warehouse/stock' },
+const metricState = {
+  sale: ref('--'),
+  saleOrders: ref(0),
+  expense: ref('--'),
+  customer: ref('--'),
+  stock: ref('--'),
+}
+
+const stats = computed(() => [
+  { key: 'sale',     label: t('dashboard.todayRevenue'), value: metricState.sale.value, sub: t('dashboard.todayOrders', { count: metricState.saleOrders.value }), icon: 'Money',         link: '/dashboard/today-sales' },
+  { key: 'expense',  label: t('dashboard.todayExpense'), value: metricState.expense.value, sub: t('dashboard.paymentAndExpense'), icon: 'Wallet',        link: '/finance/fund-flow?type=expense&date=today' },
+  { key: 'customer', label: t('dashboard.totalCustomers'), value: metricState.customer.value, sub: t('dashboard.allCustomers'), icon: 'User',          link: '/sale/client' },
+  { key: 'stock',    label: t('dashboard.stockWarning'), value: metricState.stock.value, sub: t('dashboard.negativeAndZeroStock'), icon: 'WarningFilled', link: '/warehouse/stock' },
 ])
 
 const insightItems = ref([
-  { tag: 'Loading...', text: 'AI 正在分析您的业务数据...' },
+  { tag: t('dashboard.loadingTag'), text: t('dashboard.loadingText') },
 ])
 
 // ── 销售统计 ──
@@ -655,65 +673,65 @@ function buildInsights(data: {
 }) {
   const items = []
   if (data.todaySale > 0) {
-    items.push({ tag: '今日销售', text: `今日已完成销售 ¥${data.todaySale.toFixed(2)}，共 ${data.todayOrders} 笔订单。` })
+    items.push({ tag: t('dashboard.insightTodaySales'), text: t('dashboard.insightTodaySalesText', { amount: data.todaySale.toFixed(2), count: data.todayOrders }) })
   } else {
-    items.push({ tag: '营业提醒', text: '今日暂无销售记录，可前往收银台或新建销售订单开始营业。' })
+    items.push({ tag: t('dashboard.insightReminder'), text: t('dashboard.insightReminderText') })
   }
   if (data.stockWarn > 0) {
-    items.push({ tag: '⚠️ 库存预警', text: `当前有 ${data.stockWarn} 种商品库存不足或为零，建议及时采购补货。` })
+    items.push({ tag: t('dashboard.insightStockWarning'), text: t('dashboard.insightStockWarningText', { count: data.stockWarn }) })
   } else {
-    items.push({ tag: '库存正常', text: '库存状态良好，暂无缺货或预警商品。' })
+    items.push({ tag: t('dashboard.insightStockOk'), text: t('dashboard.insightStockOkText') })
   }
   if (data.pendingReceivable > 0) {
-    items.push({ tag: '应收提醒', text: `当前待收款金额 ¥${data.pendingReceivable.toFixed(2)}，请及时跟进客户回款。` })
+    items.push({ tag: t('dashboard.insightReceivable'), text: t('dashboard.insightReceivableText', { amount: data.pendingReceivable.toFixed(2) }) })
   } else if (data.customerCount > 0) {
-    items.push({ tag: '客户概览', text: `系统共有 ${data.customerCount} 位客户，当前应收款状态良好。` })
+    items.push({ tag: t('dashboard.insightCustomers'), text: t('dashboard.insightCustomersText', { count: data.customerCount }) })
   }
   insightItems.value = items
 }
 
-const quickItems = [
+const quickItems = computed(() => [
   {
-    label: '客户管理', path: '/sale/client',
+    label: t('dashboard.customerManage'), path: '/sale/client',
     bg: 'rgba(52,211,153,0.12)', color: '#16a34a',
     svg: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   },
   {
-    label: '销售报价', path: '/sale/offer',
+    label: t('dashboard.salesQuote'), path: '/sale/offer',
     bg: 'rgba(249,115,22,0.1)', color: '#ea580c',
     svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>',
   },
   {
-    label: '采购订单', path: '/procure/order',
+    label: t('dashboard.procureOrder'), path: '/procure/order',
     bg: 'rgba(139,92,246,0.1)', color: '#7c3aed',
     svg: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
   },
   {
-    label: '库存总览', path: '/warehouse/stock',
+    label: t('dashboard.stockOverview'), path: '/warehouse/stock',
     bg: 'rgba(236,72,153,0.1)', color: '#db2777',
     svg: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   },
   {
-    label: '应收账款', path: '/finance/receivable',
+    label: t('dashboard.receivable'), path: '/finance/receivable',
     bg: 'rgba(0,113,227,0.08)', color: '#0071e3',
     svg: '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M6 15h2M12 15h4"/>',
   },
   {
-    label: '商品管理', path: '/goods/info',
+    label: t('dashboard.goodsManage'), path: '/goods/info',
     bg: 'rgba(234,179,8,0.1)', color: '#ca8a04',
     svg: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
   },
   {
-    label: '员工档案', path: '/personnel/staff',
+    label: t('dashboard.staffArchive'), path: '/personnel/staff',
     bg: 'rgba(20,184,166,0.1)', color: '#0d9488',
     svg: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   },
   {
-    label: '销售统计', path: '/reports/sale-rate',
+    label: t('dashboard.salesStatistics'), path: '/reports/sale-rate',
     bg: 'rgba(71,85,105,0.1)', color: '#475569',
     svg: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
   },
-]
+])
 
 function openNewWindow() { router.push('/cashregister') }
 
@@ -932,7 +950,7 @@ const rankList = computed(() => {
   return sorted.map(i => ({
     key: i.key,
     name: i.name,
-    specLabel: i.specs.size > 1 ? `已合并 ${i.specs.size} 个规格` : (Array.from(i.specs)[0] || ''),
+    specLabel: i.specs.size > 1 ? t('dashboard.mergedSpecs', { count: i.specs.size }) : (Array.from(i.specs)[0] || ''),
     unit: i.unit,
     qty: parseFloat(i.qty.toFixed(4)),
     amount: parseFloat(i.amount.toFixed(2)),
@@ -1107,12 +1125,12 @@ async function loadDashboardData(force = false) {
       return s + amt
     }, 0)
     const todayOrderCount = todaySaleRows.length + todayRetailRows.length + todayMeituanRows.length
-    stats.value[0].value = '¥' + (saleAmt + retailAmt + meituanAmt).toFixed(2)
-    stats.value[0].sub = `今日订单 ${todayOrderCount} 笔`
-    stats.value[1].value = '¥' + calcTodayExpense(rows(quickFundFlowRes), today).toFixed(2)
+    metricState.sale.value = '¥' + (saleAmt + retailAmt + meituanAmt).toFixed(2)
+    metricState.saleOrders.value = todayOrderCount
+    metricState.expense.value = '¥' + calcTodayExpense(rows(quickFundFlowRes), today).toFixed(2)
 
     const custData = customerRes.status === 'fulfilled' ? (customerRes.value?.data ?? customerRes.value) : {}
-    stats.value[2].value = String(custData?.total ?? 0)
+    metricState.customer.value = String(custData?.total ?? 0)
 
     // 第一阶段完成，关键指标已渲染，解锁 loading
     dashboardLoading.value = false
@@ -1150,8 +1168,8 @@ async function loadDashboardData(force = false) {
       return s + amt
     }, 0)
     const todayOrderCountFull = todaySaleFull.length + todayRetailFull.length + todayMeituanFull.length
-    stats.value[0].value = '¥' + (saleAmtFull + retailAmtFull + meituanAmtFull).toFixed(2)
-    stats.value[0].sub = `今日订单 ${todayOrderCountFull} 笔`
+    metricState.sale.value = '¥' + (saleAmtFull + retailAmtFull + meituanAmtFull).toFixed(2)
+    metricState.saleOrders.value = todayOrderCountFull
 
     // 库存预警
     const stockMap: Record<number, number> = {}
@@ -1167,11 +1185,11 @@ async function loadDashboardData(force = false) {
     })
     const goodsList: any[] = rowsAll(goodsRes)
     const stockWarnCount = goodsList.filter(g => (stockMap[g.id] ?? 0) <= 0).length
-    stats.value[3].value = String(stockWarnCount)
+    metricState.stock.value = String(stockWarnCount)
 
     if (fundFlowRes.status === 'fulfilled') {
       fundFlowList.value = fundFlowRes.value?.data?.rows ?? fundFlowRes.value?.rows ?? []
-      stats.value[1].value = '¥' + calcTodayExpense(fundFlowList.value, today).toFixed(2)
+      metricState.expense.value = '¥' + calcTodayExpense(fundFlowList.value, today).toFixed(2)
     }
 
     _saleRows.value = saleRows
@@ -1182,7 +1200,7 @@ async function loadDashboardData(force = false) {
     buildInsights({
       todaySale: saleAmtFull + retailAmtFull,
       stockWarn: stockWarnCount,
-      customerCount: Number(stats.value[2].value) || 0,
+      customerCount: Number(metricState.customer.value) || 0,
       todayOrders: todayOrderCountFull,
       pendingReceivable: 0,
     })
@@ -1244,7 +1262,7 @@ function drawTrendChart(n: number) {
   const maxVal = Math.max(...values, 1)
 
   if (values.every(v => v === 0)) {
-    saleTrendRef.value.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:rgba(29,29,31,0.25);font-size:13px;font-weight:500;letter-spacing:-0.01em">近${n}天暂无销售数据</div>`
+    saleTrendRef.value.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:rgba(29,29,31,0.25);font-size:13px;font-weight:500;letter-spacing:-0.01em">${t('dashboard.noTrendData', { days: n })}</div>`
     return
   }
 
