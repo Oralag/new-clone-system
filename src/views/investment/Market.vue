@@ -16,17 +16,17 @@
     </div>
 
     <!-- ══════════════════════════════════════
-         TAB 1: 股票市场
+         TAB 1: Stock Market
          ══════════════════════════════════════ -->
     <div v-show="activeTab === 'stocks'" class="tab-content">
       <!-- 指数行情 Ticker -->
       <div class="panel">
         <div class="panel-head">
           <span class="panel-icon" style="color:#F5A623">◈</span>
-          <span class="panel-title">INDICES</span>
-          <span class="panel-desc">指数行情</span>
+          <span class="panel-title">{{ t('investmentMarket.indicesTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.indicesDesc') }}</span>
           <span class="live-dot"></span>
-          <span class="live-text">LIVE</span>
+          <span class="live-text">{{ t('investmentMarket.live') }}</span>
         </div>
         <div class="indices-row">
           <div
@@ -50,8 +50,8 @@
       <div class="panel kline-panel" v-if="klineTarget">
         <div class="panel-head">
           <span class="panel-icon" style="color:#F5A623">▥</span>
-          <span class="panel-title">K_LINE</span>
-          <span class="panel-desc">{{ klineTarget.name }} · 日K</span>
+          <span class="panel-title">{{ t('investmentMarket.klineTitle') }}</span>
+          <span class="panel-desc">{{ klineTarget.name }} · {{ t('investmentMarket.dailyK') }}</span>
           <span class="kline-period-group" style="margin-left:auto">
             <button
               v-for="p in klinePeriods"
@@ -63,16 +63,16 @@
           </span>
         </div>
         <div class="kline-wrap">
-          <div v-if="klineLoading" class="kline-loading">加载中...</div>
+          <div v-if="klineLoading" class="kline-loading">{{ t('common.loading') }}</div>
           <template v-else>
             <canvas ref="klineCanvas" class="kline-canvas"></canvas>
             <!-- OHLC tooltip -->
             <div v-if="klineTooltip" class="kline-tooltip">
               <span class="ktooltip-date">{{ klineTooltip.bar.date }}</span>
-              <span class="ktooltip-item up">开 {{ klineTooltip.bar.open }}</span>
-              <span class="ktooltip-item">收 <b :class="klineTooltip.bar.close >= klineTooltip.bar.open ? 'up' : 'down'">{{ klineTooltip.bar.close }}</b></span>
-              <span class="ktooltip-item">高 {{ klineTooltip.bar.high }}</span>
-              <span class="ktooltip-item">低 {{ klineTooltip.bar.low }}</span>
+              <span class="ktooltip-item up">{{ t('investmentMarket.open') }} {{ klineTooltip.bar.open }}</span>
+              <span class="ktooltip-item">{{ t('investmentMarket.close') }} <b :class="klineTooltip.bar.close >= klineTooltip.bar.open ? 'up' : 'down'">{{ klineTooltip.bar.close }}</b></span>
+              <span class="ktooltip-item">{{ t('investmentMarket.high') }} {{ klineTooltip.bar.high }}</span>
+              <span class="ktooltip-item">{{ t('investmentMarket.low') }} {{ klineTooltip.bar.low }}</span>
               <span class="ktooltip-item" :class="klineTooltip.bar.change >= 0 ? 'up' : 'down'">{{ klineTooltip.bar.change >= 0 ? '+' : '' }}{{ klineTooltip.bar.change.toFixed(2) }}%</span>
             </div>
           </template>
@@ -85,12 +85,12 @@
         <div class="panel">
           <div class="panel-head">
             <span class="panel-icon" style="color:#FF4D4D">▲</span>
-            <span class="panel-title">TOP_GAINERS</span>
-            <span class="panel-desc">涨幅榜</span>
+            <span class="panel-title">{{ t('investmentMarket.topGainersTitle') }}</span>
+            <span class="panel-desc">{{ t('investmentMarket.gainersDesc') }}</span>
           </div>
           <table class="rank-table" v-if="topGainers.length">
             <thead>
-              <tr><th>名称</th><th>代码</th><th>最新价</th><th>涨幅</th></tr>
+              <tr><th>{{ t('investmentMarket.name') }}</th><th>{{ t('investmentMarket.code') }}</th><th>{{ t('investmentMarket.latestPrice') }}</th><th>{{ t('investmentMarket.change') }}</th></tr>
             </thead>
             <tbody>
               <tr v-for="(s, i) in topGainers" :key="s.code">
@@ -101,18 +101,18 @@
               </tr>
             </tbody>
           </table>
-          <div v-else class="rank-empty">非交易时段暂无数据</div>
+          <div v-else class="rank-empty">{{ t('investmentMarket.offHoursNoData') }}</div>
         </div>
         <!-- 跌幅榜 -->
         <div class="panel">
           <div class="panel-head">
             <span class="panel-icon" style="color:#4f79c7">▼</span>
-            <span class="panel-title">TOP_LOSERS</span>
-            <span class="panel-desc">跌幅榜</span>
+            <span class="panel-title">{{ t('investmentMarket.topLosersTitle') }}</span>
+            <span class="panel-desc">{{ t('investmentMarket.losersDesc') }}</span>
           </div>
           <table class="rank-table" v-if="topLosers.length">
             <thead>
-              <tr><th>名称</th><th>代码</th><th>最新价</th><th>跌幅</th></tr>
+              <tr><th>{{ t('investmentMarket.name') }}</th><th>{{ t('investmentMarket.code') }}</th><th>{{ t('investmentMarket.latestPrice') }}</th><th>{{ t('investmentMarket.change') }}</th></tr>
             </thead>
             <tbody>
               <tr v-for="(s, i) in topLosers" :key="s.code">
@@ -123,7 +123,7 @@
               </tr>
             </tbody>
           </table>
-          <div v-else class="rank-empty">非交易时段暂无数据</div>
+          <div v-else class="rank-empty">{{ t('investmentMarket.offHoursNoData') }}</div>
         </div>
       </div>
 
@@ -131,29 +131,29 @@
       <div class="panel">
         <div class="panel-head">
           <span class="panel-icon" style="color:#00D4FF">◉</span>
-          <span class="panel-title">MARKET_BREADTH</span>
-          <span class="panel-desc">市场宽度</span>
+          <span class="panel-title">{{ t('investmentMarket.breadthTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.breadthDesc') }}</span>
         </div>
         <div class="breadth-grid">
           <div class="breadth-card">
-            <span class="breadth-label">UP_COUNT</span>
+            <span class="breadth-label">{{ t('investmentMarket.upCountLabel') }}</span>
             <span class="breadth-val up">{{ breadth.up }}</span>
-            <span class="breadth-sub">上涨家数</span>
+            <span class="breadth-sub">{{ t('investmentMarket.upCountSub') }}</span>
           </div>
           <div class="breadth-card">
-            <span class="breadth-label">FLAT_COUNT</span>
+            <span class="breadth-label">{{ t('investmentMarket.flatCountLabel') }}</span>
             <span class="breadth-val flat">{{ breadth.flat }}</span>
-            <span class="breadth-sub">平盘家数</span>
+            <span class="breadth-sub">{{ t('investmentMarket.flatCountSub') }}</span>
           </div>
           <div class="breadth-card">
-            <span class="breadth-label">DOWN_COUNT</span>
+            <span class="breadth-label">{{ t('investmentMarket.downCountLabel') }}</span>
             <span class="breadth-val down">{{ breadth.down }}</span>
-            <span class="breadth-sub">下跌家数</span>
+            <span class="breadth-sub">{{ t('investmentMarket.downCountSub') }}</span>
           </div>
           <div class="breadth-card">
-            <span class="breadth-label">TOTAL_VOL</span>
+            <span class="breadth-label">{{ t('investmentMarket.totalVolLabel') }}</span>
             <span class="breadth-val" style="color:var(--dark)">{{ breadth.volume }}</span>
-            <span class="breadth-sub">成交额（亿）</span>
+            <span class="breadth-sub">{{ t('investmentMarket.totalVolSub') }}</span>
           </div>
         </div>
       </div>
@@ -162,32 +162,32 @@
       <div class="panel">
         <div class="panel-head">
           <span class="panel-icon" style="color:#F5A623">⚡</span>
-          <span class="panel-title">NEWS_FEED</span>
-          <span class="panel-desc">市场快讯</span>
+          <span class="panel-title">{{ t('investmentMarket.newsFeedTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.newsFeedDesc') }}</span>
           <span class="live-dot" style="margin-left:auto"></span>
-          <span class="live-text">LIVE</span>
+          <span class="live-text">{{ t('investmentMarket.live') }}</span>
         </div>
-        <div v-if="newsLoading && !newsItems.length" class="news-loading">加载中...</div>
+        <div v-if="newsLoading && !newsItems.length" class="news-loading">{{ t('common.loading') }}</div>
         <div v-else-if="newsItems.length" class="news-list">
           <div v-for="(item, i) in newsItems" :key="i" class="news-item">
             <span class="news-time">{{ item.time }}</span>
             <span class="news-title">{{ item.title }}</span>
           </div>
         </div>
-        <div v-else class="rank-empty">暂无快讯</div>
+        <div v-else class="rank-empty">{{ t('investmentMarket.noNews') }}</div>
       </div>
     </div>
 
     <!-- ══════════════════════════════════════
-         TAB 2: 情报
+         TAB 2: Intel
          ══════════════════════════════════════ -->
     <div v-show="activeTab === 'intel'" class="tab-content">
       <!-- 板块热度 -->
       <div class="panel">
         <div class="panel-head">
           <span class="panel-icon" style="color:#F5A623">◈</span>
-          <span class="panel-title">SECTOR_HEAT</span>
-          <span class="panel-desc">板块热度</span>
+          <span class="panel-title">{{ t('investmentMarket.sectorHeatTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.sectorHeatDesc') }}</span>
         </div>
         <div class="sector-grid" v-if="sectorData.length">
           <div v-for="sector in sectorData" :key="sector.name" class="sector-card" :class="sector.level">
@@ -202,8 +202,8 @@
         </div>
         <div v-else class="empty-state">
           <div class="empty-icon">◇</div>
-          <span class="empty-text">AWAITING_SCAN</span>
-          <span class="empty-sub">亚当尚未扫描板块数据</span>
+          <span class="empty-text">{{ t('investmentMarket.awaitingScan') }}</span>
+          <span class="empty-sub">{{ t('investmentMarket.awaitingScanSub') }}</span>
         </div>
       </div>
 
@@ -211,31 +211,31 @@
       <div class="panel">
         <div class="panel-head">
           <span class="panel-icon" style="color:#4f79c7">◉</span>
-          <span class="panel-title">NORTHBOUND_FLOW</span>
-          <span class="panel-desc">北向资金</span>
+          <span class="panel-title">{{ t('investmentMarket.northboundTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.northboundDesc') }}</span>
         </div>
         <div class="flow-grid">
           <div class="flow-card main-flow">
             <span class="flow-label">TODAY_NET</span>
             <span class="flow-val" :class="{ positive: northboundNet > 0, negative: northboundNet < 0 }">
               {{ northboundNet > 0 ? '+' : '' }}{{ northboundNet.toFixed(2) }}
-              <span class="flow-unit">亿</span>
+              <span class="flow-unit">{{ t('investmentMarket.yiUnit') }}</span>
             </span>
           </div>
           <div class="flow-card">
-            <span class="flow-label">沪股通</span>
+            <span class="flow-label">{{ t('investmentMarket.shConnect') }}</span>
             <span class="flow-val-sm" :class="{ positive: Number(northboundSh) > 0, negative: Number(northboundSh) < 0 }">
-              {{ northboundSh }}亿
+              {{ northboundSh }}{{ t('investmentMarket.yiUnit') }}
             </span>
           </div>
           <div class="flow-card">
-            <span class="flow-label">深股通</span>
+            <span class="flow-label">{{ t('investmentMarket.szConnect') }}</span>
             <span class="flow-val-sm" :class="{ positive: Number(northboundSz) > 0, negative: Number(northboundSz) < 0 }">
-              {{ northboundSz }}亿
+              {{ northboundSz }}{{ t('investmentMarket.yiUnit') }}
             </span>
           </div>
           <div class="flow-card">
-            <span class="flow-label">DATA_SOURCE</span>
+            <span class="flow-label">{{ t('investmentMarket.dataSourceLabel') }}</span>
             <span class="flow-source">{{ northboundSource }}</span>
           </div>
         </div>
@@ -245,8 +245,8 @@
       <div class="panel">
         <div class="panel-head">
           <span class="panel-icon" style="color:#00D4FF">⟐</span>
-          <span class="panel-title">MARKET_SIGNALS</span>
-          <span class="panel-desc">市场信号</span>
+          <span class="panel-title">{{ t('investmentMarket.marketSignalsTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.marketSignalsDesc') }}</span>
           <span class="panel-count" v-if="marketSignals.length">{{ marketSignals.length }}</span>
         </div>
         <div class="signal-list">
@@ -263,25 +263,25 @@
               <span class="signal-summary">{{ signal.summary }}</span>
             </div>
           </div>
-          <div v-if="marketSignals.length === 0" class="empty-state">
-            <div class="empty-icon">○</div>
-            <span class="empty-text">NO_SIGNALS</span>
-            <span class="empty-sub">等待亚当的情报站开始工作</span>
-          </div>
+        <div v-if="marketSignals.length === 0" class="empty-state">
+          <div class="empty-icon">○</div>
+          <span class="empty-text">{{ t('investmentMarket.noSignals') }}</span>
+          <span class="empty-sub">{{ t('investmentMarket.noSignalsSub') }}</span>
         </div>
       </div>
     </div>
+    </div>
 
     <!-- ══════════════════════════════════════
-         TAB 3: 亚当探索
+         TAB 3: Adam Discovery
          ══════════════════════════════════════ -->
     <div v-show="activeTab === 'adam'" class="tab-content">
       <!-- 亚当发现的机会 -->
       <div class="panel">
         <div class="panel-head">
           <span class="panel-icon" style="color:#F5A623">◈</span>
-          <span class="panel-title">ADAM_DISCOVERIES</span>
-          <span class="panel-desc">亚当探索的市场机会</span>
+          <span class="panel-title">{{ t('investmentMarket.adamDiscoveriesTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.adamDiscoveriesDesc') }}</span>
           <span class="panel-count" v-if="adamDiscoveries.length">{{ adamDiscoveries.length }}</span>
         </div>
         <div class="discovery-list" v-if="adamDiscoveries.length">
@@ -299,8 +299,8 @@
         </div>
         <div v-else class="empty-state tall">
           <div class="empty-icon">◎</div>
-          <span class="empty-text">AWAITING_EXPLORATION</span>
-          <span class="empty-sub">亚当正在探索市场机会，请等待情报站工作...</span>
+          <span class="empty-text">{{ t('investmentMarket.awaitingExploration') }}</span>
+          <span class="empty-sub">{{ t('investmentMarket.awaitingExplorationSub') }}</span>
         </div>
       </div>
 
@@ -308,8 +308,8 @@
       <div class="panel" v-if="recommendations.length">
         <div class="panel-head">
           <span class="panel-icon" style="color:#00D4FF">⟐</span>
-          <span class="panel-title">RECOMMENDATIONS</span>
-          <span class="panel-desc">亚当推荐</span>
+          <span class="panel-title">{{ t('investmentMarket.recommendationsTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.recommendationsDesc') }}</span>
           <span class="panel-count">{{ recommendations.length }}</span>
         </div>
         <div class="rec-list">
@@ -322,7 +322,7 @@
             <div class="rec-thesis">{{ rec.thesis }}</div>
             <div class="rec-footer">
               <span class="rec-time">{{ formatTime(rec.issuedAt) }}</span>
-              <span v-if="rec.confidence" class="rec-confidence">置信度 {{ Math.round(rec.confidence * 100) }}%</span>
+              <span v-if="rec.confidence" class="rec-confidence">{{ t('investmentMarket.confidence') }} {{ Math.round(rec.confidence * 100) }}%</span>
             </div>
           </div>
         </div>
@@ -330,16 +330,120 @@
     </div>
 
     <!-- ══════════════════════════════════════
-         TAB 4: 我的市场
+         TAB 4: My Market
          ══════════════════════════════════════ -->
     <div v-show="activeTab === 'mine'" class="tab-content">
+      <!-- HTX 自动交易 -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-icon" style="color:#28C76F">◉</span>
+          <span class="panel-title">{{ t('investmentMarket.htxAutoTradingTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.htxAutoTradingDesc') }}</span>
+          <button class="add-btn" @click="loadTradingData">{{ t('investmentMarket.refresh') }}</button>
+        </div>
+        <div class="htx-grid">
+          <!-- 余额 -->
+          <div class="htx-card">
+            <div class="htx-card-label">{{ t('investmentMarket.spotUsdt') }}</div>
+            <div class="htx-card-value">{{ htxBalance?.spot_usdt ?? '—' }}</div>
+            <div class="htx-card-sub">{{ t('investmentMarket.tradableBalance') }}</div>
+          </div>
+          <div class="htx-card">
+            <div class="htx-card-label">{{ t('investmentMarket.savingsUsdt') }}</div>
+            <div class="htx-card-value">{{ htxBalance?.savings_usdt ?? '—' }}</div>
+            <div class="htx-card-sub">{{ t('investmentMarket.savingsHint') }}</div>
+          </div>
+          <div class="htx-card">
+            <div class="htx-card-label">{{ t('investmentMarket.currentPosition') }}</div>
+            <div class="htx-card-value" v-if="tradeStats?.current_position">
+              {{ tradeStats.current_position.symbol.toUpperCase() }}
+            </div>
+            <div class="htx-card-value" v-else style="color:#999">{{ t('investmentMarket.emptyPosition') }}</div>
+            <div class="htx-card-sub" v-if="tradeStats?.current_position">
+              ${{ tradeStats.current_position.bought_at }} · {{ tradeStats.current_position.amount_usdt }} USDT
+            </div>
+          </div>
+        </div>
+
+        <div class="htx-stats-row">
+          <div class="htx-stat">
+            <span class="htx-stat-label">{{ t('investmentMarket.totalTrades') }}</span>
+            <span class="htx-stat-value">{{ tradeStats?.summary?.total_trades ?? 0 }} {{ t('investmentMarket.tradeCountUnit') }}</span>
+          </div>
+          <div class="htx-stat">
+            <span class="htx-stat-label">{{ t('investmentMarket.winRate') }}</span>
+            <span class="htx-stat-value">{{ tradeStats?.summary?.win_rate ?? '0%' }}</span>
+          </div>
+          <div class="htx-stat">
+            <span class="htx-stat-label">{{ t('investmentMarket.netPnl') }}</span>
+            <span class="htx-stat-value" :style="{ color: pnlColor }">
+              {{ pnlText }}
+            </span>
+          </div>
+          <div class="htx-stat">
+            <span class="htx-stat-label">{{ t('investmentMarket.feeExpense') }}</span>
+            <span class="htx-stat-value">{{ tradeStats?.summary?.total_fees_paid ?? '0.0000' }}</span>
+          </div>
+        </div>
+
+        <!-- 按信号胜率 -->
+        <div v-if="tradeStats?.by_signal?.length" class="htx-signals">
+          <div class="htx-trades-title">{{ t('investmentMarket.signalWinRateTitle') }}</div>
+          <div class="htx-signal-grid">
+            <div v-for="s in tradeStats.by_signal" :key="s.signal" class="htx-signal-card">
+              <div class="signal-name">{{ s.signal }}</div>
+              <div class="signal-stats">
+                <span>{{ s.wins }}/{{ s.total }} = <b>{{ s.win_rate }}</b></span>
+                <span :class="{ win: parseFloat(s.net_pnl) > 0, loss: parseFloat(s.net_pnl) < 0 }">
+                  {{ parseFloat(s.net_pnl) > 0 ? '+' : '' }}{{ s.net_pnl }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="tradeStats?.recent_trades?.length" class="htx-trades">
+          <div class="htx-trades-title">{{ t('investmentMarket.recentTradesTitle') }}</div>
+          <div v-for="(trade, i) in tradeStats.recent_trades.slice().reverse()" :key="i" class="htx-trade-row">
+            <span class="trade-time">{{ formatTradeTime(trade.ts) }}</span>
+            <span class="trade-side" :class="trade.side">{{ trade.side === 'buy' ? t('investmentMarket.buy') : t('investmentMarket.sell') }}</span>
+            <span class="trade-symbol">{{ trade.symbol.toUpperCase() }}</span>
+            <span class="trade-price">@{{ trade.price }}</span>
+            <span class="trade-pnl" v-if="trade.pnl" :class="{ win: trade.pnl.startsWith('+'), loss: !trade.pnl.startsWith('+') }">{{ trade.pnl }} ({{ trade.pnl_pct }})</span>
+            <span class="trade-reason">{{ trade.reason }}</span>
+          </div>
+        </div>
+        <div v-else class="empty-state">
+          <span class="empty-text">{{ t('investmentMarket.noTrades') }}</span>
+        </div>
+      </div>
+
+      <!-- 档案馆反思日志 -->
+      <div class="panel" v-if="reflections?.length">
+        <div class="panel-head">
+          <span class="panel-icon" style="color:#9B59B6">◐</span>
+          <span class="panel-title">{{ t('investmentMarket.archiveReflectionsTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.archiveReflectionsDesc') }}</span>
+        </div>
+        <div class="refl-list">
+          <div v-for="r in reflections" :key="r.id" class="refl-row">
+            <div class="refl-head">
+              <span class="refl-outcome" :class="r.outcome">{{ r.outcome === 'win' ? '✓' : '✗' }}</span>
+              <span class="refl-summary">{{ r.summary }}</span>
+              <span class="refl-time">{{ formatTradeTime(r.ts) }}</span>
+            </div>
+            <div class="refl-lesson">「{{ r.lesson }}」</div>
+          </div>
+        </div>
+      </div>
+
       <!-- 添加按钮 -->
       <div class="panel">
         <div class="panel-head">
           <span class="panel-icon" style="color:#F5A623">◈</span>
-          <span class="panel-title">MY_WATCHLIST</span>
-          <span class="panel-desc">我关注的市场</span>
-          <button class="add-btn" @click="showAddDialog = true">+ 添加</button>
+          <span class="panel-title">{{ t('investmentMarket.watchlistTitle') }}</span>
+          <span class="panel-desc">{{ t('investmentMarket.watchlistDesc') }}</span>
+          <button class="add-btn" @click="showAddDialog = true">{{ t('investmentMarket.add') }}</button>
         </div>
         <div class="watchlist" v-if="watchlist.length">
           <div v-for="item in watchlist" :key="item.id" class="watch-card">
@@ -352,15 +456,15 @@
             </div>
             <div class="watch-note" v-if="item.note">{{ item.note }}</div>
             <div class="watch-actions">
-              <span class="watch-time">添加于 {{ formatDate(item.addedAt) }}</span>
-              <button class="del-btn" @click="removeWatchItem(item.id)">移除</button>
+              <span class="watch-time">{{ t('investmentMarket.addedAt') }} {{ formatDate(item.addedAt) }}</span>
+              <button class="del-btn" @click="removeWatchItem(item.id)">{{ t('investmentMarket.remove') }}</button>
             </div>
           </div>
         </div>
         <div v-else class="empty-state tall">
           <div class="empty-icon">◇</div>
-          <span class="empty-text">NO_WATCHLIST</span>
-          <span class="empty-sub">点击右上角「+ 添加」来关注市场或标的</span>
+          <span class="empty-text">{{ t('investmentMarket.noWatchlist') }}</span>
+          <span class="empty-sub">{{ t('investmentMarket.noWatchlistSub') }}</span>
         </div>
       </div>
 
@@ -368,38 +472,38 @@
       <div v-if="showAddDialog" class="modal-overlay" @click.self="showAddDialog = false">
         <div class="modal-box">
           <div class="modal-head">
-            <span class="modal-title">添加关注</span>
+            <span class="modal-title">{{ t('investmentMarket.addWatchTitle') }}</span>
             <button class="modal-close" @click="showAddDialog = false">✕</button>
           </div>
           <div class="modal-body">
             <div class="form-row">
-              <label class="form-label">名称 <span class="required">*</span></label>
-              <input v-model="newItem.name" class="form-input" placeholder="如：沪深300、比特币、原油期货" />
+              <label class="form-label">{{ t('investmentMarket.name') }} <span class="required">*</span></label>
+              <input v-model="newItem.name" class="form-input" :placeholder="t('investmentMarket.namePlaceholder')" />
             </div>
             <div class="form-row">
-              <label class="form-label">代码/标识（可选）</label>
-              <input v-model="newItem.code" class="form-input" placeholder="如：000300、BTC/USDT" />
+              <label class="form-label">{{ t('investmentMarket.codeOptional') }}</label>
+              <input v-model="newItem.code" class="form-input" :placeholder="t('investmentMarket.codePlaceholder')" />
             </div>
             <div class="form-row">
-              <label class="form-label">类型</label>
+              <label class="form-label">{{ t('investmentMarket.type') }}</label>
               <div class="type-selector">
                 <button
-                  v-for="t in marketTypes"
-                  :key="t.value"
+                  v-for="mt in marketTypes"
+                  :key="mt.value"
                   class="type-btn"
-                  :class="{ active: newItem.type === t.value }"
-                  @click="newItem.type = t.value"
-                >{{ t.label }}</button>
+                  :class="{ active: newItem.type === mt.value }"
+                  @click="newItem.type = mt.value"
+                >{{ mt.label }}</button>
               </div>
             </div>
             <div class="form-row">
-              <label class="form-label">备注（可选）</label>
-              <input v-model="newItem.note" class="form-input" placeholder="为什么关注这个市场？" />
+              <label class="form-label">{{ t('investmentMarket.noteOptional') }}</label>
+              <input v-model="newItem.note" class="form-input" :placeholder="t('investmentMarket.notePlaceholder')" />
             </div>
           </div>
           <div class="modal-foot">
-            <button class="btn-cancel" @click="showAddDialog = false">取消</button>
-            <button class="btn-confirm" :disabled="!newItem.name.trim()" @click="addWatchItem">确认添加</button>
+            <button class="btn-cancel" @click="showAddDialog = false">{{ t('common.cancel') }}</button>
+            <button class="btn-confirm" :disabled="!newItem.name.trim()" @click="addWatchItem">{{ t('investmentMarket.confirmAdd') }}</button>
           </div>
         </div>
       </div>
@@ -409,18 +513,20 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAdamStore } from '@/stores/adam'
 
 const adamStore = useAdamStore()
+const { t } = useI18n()
 
 // ── Tab 配置 ──
 const activeTab = ref<'stocks' | 'intel' | 'adam' | 'mine'>('stocks')
 
 const tabs = computed(() => [
-  { id: 'stocks' as const, code: '01', label: '股票市场', badge: null },
-  { id: 'intel' as const, code: '02', label: '情报', badge: marketSignals.value.length || null },
-  { id: 'adam' as const, code: '03', label: '亚当探索', badge: adamDiscoveries.value.length || null },
-  { id: 'mine' as const, code: '04', label: '我的市场', badge: watchlist.value.length || null },
+  { id: 'stocks' as const, code: '01', label: t('investmentMarket.tabStocks'), badge: null },
+  { id: 'intel' as const, code: '02', label: t('investmentMarket.tabIntel'), badge: marketSignals.value.length || null },
+  { id: 'adam' as const, code: '03', label: t('investmentMarket.tabAdam'), badge: adamDiscoveries.value.length || null },
+  { id: 'mine' as const, code: '04', label: t('investmentMarket.tabMine'), badge: watchlist.value.length || null },
 ])
 
 // ── Tab 1: 股票市场 ──
@@ -441,7 +547,7 @@ const sectorData = ref<Array<{ name: string; heat: number; level: string; change
 const northboundNet = ref(0)
 const northboundSh = ref('--')
 const northboundSz = ref('--')
-const northboundSource = ref('等待数据')
+const northboundSource = computed(() => t('investmentMarket.eastMoneyRealtime'))
 const newsItems = ref<Array<{ title: string; time: string; source: string }>>([])
 const newsLoading = ref(false)
 
@@ -454,10 +560,10 @@ const marketSignals = computed(() =>
 
 // ── Tab 3: 亚当探索 ──
 const typeMap: Record<string, string> = {
-  market_signal_detected: '市场信号',
-  recommendation_issued: '推荐',
-  research_completed: '研究',
-  research_started: '在研',
+  market_signal_detected: t('investmentMarket.marketSignalType'),
+  recommendation_issued: t('investmentMarket.recommendationType'),
+  research_completed: t('investmentMarket.researchCompletedType'),
+  research_started: t('investmentMarket.researchStartedType'),
 }
 
 const adamDiscoveries = computed(() => {
@@ -480,11 +586,61 @@ const recommendations = computed(() => adamStore.recommendations.slice(0, 10))
 
 function recStatusLabel(status: string) {
   const map: Record<string, string> = {
-    drafted: '草稿', issued: '已发布', adopted: '采纳', executed: '已执行',
-    settled: '已结算', disputed: '争议', archived: '归档',
+    drafted: t('investmentMarket.statusDrafted'),
+    issued: t('investmentMarket.statusIssued'),
+    adopted: t('investmentMarket.statusAdopted'),
+    executed: t('investmentMarket.statusExecuted'),
+    settled: t('investmentMarket.statusSettled'),
+    disputed: t('investmentMarket.statusDisputed'),
+    archived: t('investmentMarket.statusArchived'),
   }
   return map[status] || status
 }
+
+// ── HTX 自动交易数据 ──
+const htxBalance = ref<any>(null)
+const tradeStats = ref<any>(null)
+const reflections = ref<any[]>([])
+
+async function loadTradingData() {
+  try {
+    const [bRes, sRes, rRes] = await Promise.all([
+      fetch('/api/adam/htx-balance').then(r => r.json()),
+      fetch('/api/adam/trade-stats').then(r => r.json()),
+      fetch('/api/adam/reflections').then(r => r.json()).catch(() => ({ reflections: [] })),
+    ])
+    htxBalance.value = bRes
+    tradeStats.value = sRes
+    reflections.value = rRes.reflections || []
+  } catch (e) { console.error('load trading data failed', e) }
+}
+
+const pnlColor = computed(() => {
+  const v = parseFloat(tradeStats.value?.summary?.net_pnl_usdt || '0')
+  if (v > 0) return '#28C76F'
+  if (v < 0) return '#FF4D4F'
+  return '#666'
+})
+
+const pnlText = computed(() => {
+  const v = parseFloat(tradeStats.value?.summary?.net_pnl_usdt || '0')
+  return (v > 0 ? '+' : '') + v.toFixed(4) + ' USDT'
+})
+
+function formatTradeTime(ts: string) {
+  const d = new Date(ts)
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  return `${m}/${day} ${h}:${mi}`
+}
+
+// 进入 mine tab 时自动拉数据；每 60 秒刷新一次
+watch(activeTab, (v) => { if (v === 'mine') loadTradingData() }, { immediate: true })
+let _tradingTimer: any = null
+onMounted(() => { _tradingTimer = setInterval(() => { if (activeTab.value === 'mine') loadTradingData() }, 60000) })
+onUnmounted(() => { if (_tradingTimer) clearInterval(_tradingTimer) })
 
 // ── Tab 4: 我的市场 ──
 const WATCHLIST_KEY = 'adam_market_watchlist'
@@ -516,13 +672,13 @@ const showAddDialog = ref(false)
 const newItem = reactive({ name: '', code: '', type: 'stock', note: '' })
 
 const marketTypes = [
-  { value: 'stock', label: 'A股' },
-  { value: 'hk', label: '港股' },
-  { value: 'us', label: '美股' },
-  { value: 'crypto', label: '加密货币' },
-  { value: 'futures', label: '期货/大宗' },
-  { value: 'fund', label: '基金/ETF' },
-  { value: 'other', label: '其他' },
+  { value: 'stock', label: t('investmentMarket.marketTypeStock') },
+  { value: 'hk', label: t('investmentMarket.marketTypeHk') },
+  { value: 'us', label: t('investmentMarket.marketTypeUs') },
+  { value: 'crypto', label: t('investmentMarket.marketTypeCrypto') },
+  { value: 'futures', label: t('investmentMarket.marketTypeFutures') },
+  { value: 'fund', label: t('investmentMarket.marketTypeFund') },
+  { value: 'other', label: t('investmentMarket.marketTypeOther') },
 ]
 
 function marketTypeLabel(type: string) {
@@ -918,7 +1074,6 @@ async function loadMarketData() {
     northboundSh.value = northD.sh_net ?? '--'
     northboundSz.value = northD.sz_net ?? '--'
     northboundNet.value = Number(northD.total_net ?? 0)
-    northboundSource.value = '东方财富实时'
   }
 }
 
@@ -1688,6 +1843,152 @@ onMounted(() => {
   font-size: 10px;
   font-weight: 600;
   color: #F5A623;
+}
+
+/* ── HTX 自动交易 ── */
+.htx-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 12px 16px;
+}
+.htx-card {
+  padding: 12px 14px;
+  background: rgba(40, 199, 111, 0.06);
+  border: 1px solid rgba(40, 199, 111, 0.18);
+  border-radius: 6px;
+}
+.htx-card-label {
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.htx-card-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: #28C76F;
+  font-family: 'Monaco', monospace;
+}
+.htx-card-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #999;
+}
+.htx-stats-row {
+  display: flex;
+  gap: 24px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.htx-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.htx-stat-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.htx-stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: 'Monaco', monospace;
+}
+.htx-trades {
+  padding: 12px 16px;
+}
+.htx-trades-title {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.htx-trade-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-family: 'Monaco', monospace;
+}
+.trade-time { color: #888; width: 90px; }
+.trade-side { width: 24px; text-align: center; font-weight: 600; padding: 2px 4px; border-radius: 3px; }
+.trade-side.buy { color: #28C76F; background: rgba(40,199,111,0.1); }
+.trade-side.sell { color: #FF4D4F; background: rgba(255,77,79,0.1); }
+.trade-symbol { color: #fff; width: 70px; font-weight: 600; }
+.trade-price { color: #ccc; width: 90px; }
+.trade-pnl { width: 130px; font-weight: 600; }
+.trade-pnl.win { color: #28C76F; }
+.trade-pnl.loss { color: #FF4D4F; }
+.trade-reason { color: #888; flex: 1; }
+
+.htx-signals {
+  padding: 0 16px 12px;
+}
+.htx-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.htx-signal-card {
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px;
+}
+.signal-name {
+  font-family: 'Monaco', monospace;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+.signal-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-family: 'Monaco', monospace;
+}
+.signal-stats .win { color: #28C76F; }
+.signal-stats .loss { color: #FF4D4F; }
+
+.refl-list { padding: 8px 16px 14px; }
+.refl-row {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: rgba(155, 89, 182, 0.05);
+  border-left: 2px solid rgba(155, 89, 182, 0.4);
+  border-radius: 4px;
+}
+.refl-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 4px;
+  font-family: 'Monaco', monospace;
+}
+.refl-outcome {
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+}
+.refl-outcome.win { color: #28C76F; }
+.refl-outcome.loss { color: #FF4D4F; }
+.refl-summary { color: #ccc; flex: 1; }
+.refl-time { color: #777; font-size: 11px; }
+.refl-lesson {
+  font-size: 12px;
+  color: #aaa;
+  font-style: italic;
+  padding-left: 26px;
+  line-height: 1.5;
 }
 
 /* ── 我的市场 ── */
