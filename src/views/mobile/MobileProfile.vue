@@ -3,9 +3,9 @@
 
     <!-- 顶部用户卡片 -->
     <div class="profile-hero">
-      <div class="profile-avatar">{{ (authStore.userName || '用').charAt(0) }}</div>
-      <div class="profile-user-name">{{ authStore.userName || '用户' }}</div>
-      <div class="profile-user-meta">企业ID：{{ authStore.userInfo?.shop_id || '——' }}</div>
+      <div class="profile-avatar">{{ (authStore.userName || t('mobileProfile.defaultAvatar')).charAt(0) }}</div>
+      <div class="profile-user-name">{{ authStore.userName || t('mobileProfile.unknownUser') }}</div>
+      <div class="profile-user-meta">{{ t('mobileProfile.shopId') }}{{ authStore.userInfo?.shop_id || t('mobileProfile.emptyDash') }}</div>
     </div>
 
     <div class="profile-body">
@@ -14,55 +14,55 @@
       <div class="profile-stats-row">
         <div class="profile-stat" @click="router.push('/sale/client')">
           <div class="pstat-val">{{ statData.customerCount }}</div>
-          <div class="pstat-label">客户数</div>
+          <div class="pstat-label">{{ t('mobileProfile.customerCount') }}</div>
         </div>
         <div class="profile-stat-divider" />
         <div class="profile-stat" @click="router.push('/finance/receivable')">
           <div class="pstat-val">¥{{ statData.receivable }}</div>
-          <div class="pstat-label">待收款</div>
+          <div class="pstat-label">{{ t('mobileProfile.receivable') }}</div>
         </div>
         <div class="profile-stat-divider" />
         <div class="profile-stat" @click="router.push('/warehouse/warning')">
           <div class="pstat-val" :style="{ color: Number(statData.stockWarn) > 0 ? '#f53f3f' : '' }">{{ statData.stockWarn }}</div>
-          <div class="pstat-label">库存预警</div>
+          <div class="pstat-label">{{ t('mobileProfile.stockWarning') }}</div>
         </div>
       </div>
 
       <!-- 功能入口 -->
       <div class="profile-menu-card">
-        <div class="pmenu-group-title">工作台</div>
+        <div class="pmenu-group-title">{{ t('mobileProfile.workbenchGroup') }}</div>
         <div class="pmenu-item" @click="router.push(withLegacy('/dashboard'))">
           <div class="pmenu-icon" style="background:rgba(0,113,227,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
-          <span class="pmenu-label">首页工作台</span>
+          <span class="pmenu-label">{{ t('mobileProfile.homeWorkbench') }}</span>
           <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
         <div class="pmenu-item" @click="router.push(withLegacy('/mobile/modules'))">
           <div class="pmenu-icon" style="background:rgba(124,58,237,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           </div>
-          <span class="pmenu-label">切换工作台</span>
+          <span class="pmenu-label">{{ t('mobileProfile.switchWorkbench') }}</span>
           <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
         <div class="pmenu-item pmenu-item--last" @click="router.push(withLegacy('/dashboard/today-sales'))">
           <div class="pmenu-icon" style="background:rgba(5,150,105,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           </div>
-          <span class="pmenu-label">数据报表</span>
+          <span class="pmenu-label">{{ t('mobileProfile.reports') }}</span>
           <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
       </div>
 
       <div class="profile-menu-card">
-        <div class="pmenu-group-title">系统</div>
+        <div class="pmenu-group-title">{{ t('mobileProfile.systemGroup') }}</div>
         <div class="pmenu-item" @click="router.push('/setting/admin')">
           <div class="pmenu-icon" style="background:rgba(245,158,11,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div class="pmenu-label-wrap">
-            <span class="pmenu-label">子账户管理</span>
-            <span class="pmenu-sublabel">添加成员·共享通讯录·分配权限</span>
+            <span class="pmenu-label">{{ t('mobileProfile.subAccount') }}</span>
+            <span class="pmenu-sublabel">{{ t('mobileProfile.subAccountDesc') }}</span>
           </div>
           <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
@@ -70,23 +70,23 @@
           <div class="pmenu-icon" style="background:rgba(8,145,178,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           </div>
-          <span class="pmenu-label">电脑端网址</span>
-          <span class="pmenu-right-text">复制</span>
+          <span class="pmenu-label">{{ t('mobileProfile.desktopUrl') }}</span>
+          <span class="pmenu-right-text">{{ t('mobileProfile.copy') }}</span>
           <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
         <div class="pmenu-item pmenu-item--last" @click="router.push('/setting/company')">
           <div class="pmenu-icon" style="background:rgba(71,85,105,0.1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </div>
-          <span class="pmenu-label">系统设置</span>
+          <span class="pmenu-label">{{ t('mobileProfile.systemSettings') }}</span>
           <svg class="pmenu-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
       </div>
 
-      <div class="profile-support-text">技术支持：数字游牧 ERP · v2.0</div>
+      <div class="profile-support-text">{{ t('mobileProfile.supportText') }}</div>
 
       <!-- 退出按钮 -->
-      <button class="profile-logout-btn" @click="handleLogout">安全退出</button>
+      <button class="profile-logout-btn" @click="handleLogout">{{ t('mobileProfile.logout') }}</button>
 
     </div>
   </div>
@@ -95,6 +95,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
@@ -102,6 +103,7 @@ import http from '@/api/http'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const statData = ref({ customerCount: '--', receivable: '--', stockWarn: '--' })
 
@@ -136,17 +138,17 @@ function withLegacy(path: string) {
 function copyUrl() {
   const url = 'https://nomaderp.pages.dev'
   navigator.clipboard.writeText(url).then(() => {
-    ElMessage.success('网址已复制到剪贴板')
+    ElMessage.success(t('mobileProfile.urlCopied'))
   }).catch(() => {
-    ElMessage.info('电脑端地址：' + url)
+    ElMessage.info(`${t('mobileProfile.desktopAddress')}${url}`)
   })
 }
 
 async function handleLogout() {
   try {
-    await ElMessageBox.confirm('确认退出登录？', '提示', {
-      confirmButtonText: '退出',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('mobileProfile.logoutConfirm'), t('mobileProfile.prompt'), {
+      confirmButtonText: t('mobileProfile.logout'),
+      cancelButtonText: t('mobileProfile.cancel'),
       type: 'warning',
     })
     authStore.logout()
