@@ -328,7 +328,6 @@ export default {
     error: '错误',
     enterPayAmount: '请输入付款金额',
     enterExpenseDesc: '请输入支出说明',
-    chooseSupplier: '请选择供应商',
     choosePayFund: '请选择付款账户',
     justNow: '刚刚',
     minutesAgo: '{count}分钟前',

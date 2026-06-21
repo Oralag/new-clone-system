@@ -78,7 +78,6 @@ export default {
   placeholderGoodsSn: 'Code',
   placeholderSpec: 'Spec',
   placeholderBatchNo: 'Batch No.',
-  placeholderWarehouse: 'Warehouse',
   placeholderItemRemark: 'Remark',
   emptyTableText: 'Click "Select Products" to add items',
 

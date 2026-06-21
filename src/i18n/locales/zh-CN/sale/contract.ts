@@ -206,8 +206,6 @@ export default {
   importManualGoods: '手动选商品',
   colGoodsShort: '商品',
   colPrice: '单价',
-  colAmount: '金额',
-
   // ── 结算信息 ──
   secTitleSettlement: '结算信息',
   labelGoodsTotalWithTax: '商品含税合计',

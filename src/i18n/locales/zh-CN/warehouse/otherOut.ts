@@ -81,7 +81,6 @@ export default {
   placeholderGoodsSn: '编码',
   placeholderSpec: '规格',
   placeholderBatchNo: '批次号',
-  placeholderWarehouse: '仓库',
   placeholderItemRemark: '备注',
   emptyTableText: '请点击「选择商品」添加明细',
 

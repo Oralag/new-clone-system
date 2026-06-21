@@ -328,7 +328,6 @@ export default {
     error: 'Error',
     enterPayAmount: 'Please enter the payment amount',
     enterExpenseDesc: 'Please enter an expense description',
-    chooseSupplier: 'Please choose a supplier',
     choosePayFund: 'Please choose a payment account',
     justNow: 'Just now',
     minutesAgo: '{count} minutes ago',

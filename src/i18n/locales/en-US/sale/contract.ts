@@ -206,8 +206,6 @@ export default {
   importManualGoods: 'Select Manually',
   colGoodsShort: 'Product',
   colPrice: 'Unit Price',
-  colAmount: 'Amount',
-
   // ── Settlement info ──
   secTitleSettlement: 'Settlement Info',
   labelGoodsTotalWithTax: 'Goods Total (Inc-Tax)',
