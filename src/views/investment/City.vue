@@ -2,7 +2,7 @@
   <div class="city-page">
     <!-- 左侧状态栏 -->
     <aside class="city-sidebar" :class="{ collapsed: sidebarCollapsed }">
-      <button class="city-sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? '展开机构栏' : '收起机构栏'">
+      <button class="city-sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? t('city.expandSidebar') : t('city.collapseSidebar')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path v-if="sidebarCollapsed" d="M9 18l6-6-6-6"/>
           <path v-else d="M15 18l-6-6 6-6"/>
@@ -13,7 +13,7 @@
         <div class="detail-header">
           <span class="detail-emoji">{{ getEmoji(selectedInst.institutionId) }}</span>
           <div class="detail-title-wrap">
-            <span class="detail-name">{{ selectedInst.name }}</span>
+            <span class="detail-name">{{ displayInstitutionName(selectedInst.institutionId, selectedInst.name) }}</span>
             <span class="detail-status-tag" :class="selectedInst.status">{{ statusLabel(selectedInst.status) }}</span>
           </div>
           <button class="detail-close" @click="selectedId = null">
@@ -28,25 +28,25 @@
           v-if="selectedBuilding && selectedBuilding.status !== 'planned'"
           class="detail-enter-hall"
           @click="enterHall(selectedInst.institutionId)"
-        >▸ 进入{{ selectedInst.name }}大厅</button>
+        >▸ {{ t('city.enterHallPrefix') }}{{ displayInstitutionName(selectedInst.institutionId, selectedInst.name) }}{{ t('city.hallSuffix') }}</button>
 
         <!-- 建筑信息 -->
         <div v-if="selectedBuilding" class="detail-section">
-          <div class="detail-section-title">BUILDING_INFO</div>
+          <div class="detail-section-title">{{ t('city.buildingInfo') }}</div>
           <div class="detail-row">
-            <span class="detail-label">状态</span>
+            <span class="detail-label">{{ t('city.status') }}</span>
             <span class="detail-value" :class="selectedBuilding.status">{{ buildingStatusLabel(selectedBuilding.status) }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">坐标</span>
+            <span class="detail-label">{{ t('city.coordinates') }}</span>
             <span class="detail-value mono">({{ selectedBuilding.position.gridX }}, {{ selectedBuilding.position.gridY }})</span>
           </div>
           <div v-if="selectedBuilding.upgradeHistory?.length" class="detail-row">
-            <span class="detail-label">升级</span>
+            <span class="detail-label">{{ t('city.upgrade') }}</span>
             <span class="detail-value mono">LV.{{ selectedBuilding.upgradeHistory.length }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">建造</span>
+            <span class="detail-label">{{ t('city.constructedAt') }}</span>
             <span class="detail-value mono">{{ formatDate(selectedBuilding.constructedAt) }}</span>
           </div>
         </div>
@@ -54,43 +54,43 @@
         <!-- 投资局专属：资金账户 -->
         <div v-if="selectedInst.institutionId === 'bureau'" class="detail-section fund-section">
           <div class="detail-section-title">
-            FUND_ACCOUNT
-            <button class="fund-deposit-btn" @click="showDepositDialog = true">+ 充值</button>
+            {{ t('city.fundAccount') }}
+            <button class="fund-deposit-btn" @click="showDepositDialog = true">{{ t('city.deposit') }}</button>
           </div>
           <div class="fund-balance-row">
             <div class="fund-balance-block">
-              <span class="fund-balance-label">可用余额</span>
+              <span class="fund-balance-label">{{ t('city.availableBalance') }}</span>
               <span class="fund-balance-val">¥{{ adamStore.core.budget.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}</span>
             </div>
             <div class="fund-balance-block">
-              <span class="fund-balance-label">累计入账</span>
+              <span class="fund-balance-label">{{ t('city.totalIn') }}</span>
               <span class="fund-balance-val positive">¥{{ adamStore.totalEarned.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}</span>
             </div>
             <div class="fund-balance-block">
-              <span class="fund-balance-label">累计支出</span>
+              <span class="fund-balance-label">{{ t('city.totalOut') }}</span>
               <span class="fund-balance-val negative">¥{{ adamStore.totalCost.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}</span>
             </div>
           </div>
 
           <!-- 待执行转账指令 -->
           <div v-if="pendingTransfers.length > 0" class="fund-pending">
-            <div class="fund-sub-title">⚡ 待执行指令</div>
-            <div v-for="t in pendingTransfers" :key="t.id" class="transfer-card">
+            <div class="fund-sub-title">⚡ {{ t('city.pendingTransfers') }}</div>
+            <div v-for="transfer in pendingTransfers" :key="transfer.id" class="transfer-card">
               <div class="transfer-info">
-                <span class="transfer-to">→ {{ t.to }}</span>
-                <span class="transfer-amount">¥{{ t.amount.toLocaleString() }}</span>
-                <span class="transfer-note">{{ t.note }}</span>
+                <span class="transfer-to">→ {{ transfer.to }}</span>
+                <span class="transfer-amount">¥{{ transfer.amount.toLocaleString() }}</span>
+                <span class="transfer-note">{{ transfer.note }}</span>
               </div>
               <div class="transfer-actions">
-                <button class="btn-gold btn-sm" @click="confirmTransfer(t.id)">已执行</button>
-                <button class="btn-ghost btn-sm" @click="rejectTransfer(t.id)">拒绝</button>
+                <button class="btn-gold btn-sm" @click="confirmTransfer(transfer.id)">{{ t('city.executed') }}</button>
+                <button class="btn-ghost btn-sm" @click="rejectTransfer(transfer.id)">{{ t('city.reject') }}</button>
               </div>
             </div>
           </div>
 
           <!-- 资金流水 -->
-          <div class="fund-sub-title" style="margin-top:8px">资金流水</div>
-          <div v-if="adamStore.ledger.length === 0" class="detail-empty">暂无流水</div>
+          <div class="fund-sub-title" style="margin-top:8px">{{ t('city.ledger') }}</div>
+          <div v-if="adamStore.ledger.length === 0" class="detail-empty">{{ t('city.noLedger') }}</div>
           <div v-for="entry in [...adamStore.ledger].reverse().slice(0, 8)" :key="entry.id" class="ledger-row">
             <span class="ledger-dir" :class="entry.direction">{{ entry.direction === 'in' ? '↑' : '↓' }}</span>
             <span class="ledger-desc">{{ entry.title }}</span>
@@ -99,9 +99,33 @@
           </div>
         </div>
 
+        <!-- 机构状态控制 -->
+        <div class="detail-section">
+          <div class="detail-section-title">{{ t('city.statusControl') }}</div>
+          <div class="inst-status-control">
+            <span class="cur-status" :class="selectedInst.status">{{ statusLabel(selectedInst.status) }}</span>
+            <div class="status-btns">
+              <button
+                v-if="selectedInst.status !== 'active'"
+                class="status-btn activate"
+                :disabled="selectedInst.status === 'locked'"
+                @click="adamStore.setInstitutionStatus(selectedInst.institutionId, 'active')"
+              >{{ t('city.activate') }}</button>
+              <button
+                v-if="selectedInst.status === 'active'"
+                class="status-btn deactivate"
+                @click="adamStore.setInstitutionStatus(selectedInst.institutionId, 'idle')"
+              >{{ t('city.deactivate') }}</button>
+            </div>
+          </div>
+          <div class="status-hint" v-if="selectedInst.status !== 'active'">
+            {{ t('city.inactiveHint') }}
+          </div>
+        </div>
+
         <!-- 工具列表 -->
         <div class="detail-section">
-          <div class="detail-section-title">TOOLS <span class="tool-count">{{ selectedInst.toolIds.length }}</span></div>
+          <div class="detail-section-title">{{ t('city.tools') }} <span class="tool-count">{{ selectedInst.toolIds.length }}</span></div>
           <div v-if="selectedInst.toolIds.length" class="tool-grid">
             <button
               v-for="tid in selectedInst.toolIds"
@@ -112,14 +136,14 @@
               @click="executeTool(tid)"
             >
               <span class="tool-indicator" :class="{ spin: toolRunning === tid }"></span>
-              {{ toolNameMap[tid] || tid }}
+              {{ toolDisplayName(tid) }}
             </button>
           </div>
-          <span v-else class="detail-empty">NO_TOOLS_AVAILABLE</span>
+          <span v-else class="detail-empty">{{ t('city.noTools') }}</span>
           <!-- 工具执行结果 -->
           <div v-if="toolResultDisplay" class="tool-result-panel">
             <div class="tool-result-head">
-              <span class="tool-result-name">{{ toolNameMap[toolResultId] || toolResultId }}</span>
+              <span class="tool-result-name">{{ toolDisplayName(toolResultId) }}</span>
               <button class="tool-result-close" @click="toolResultDisplay = ''">×</button>
             </div>
             <pre class="tool-result-body">{{ toolResultDisplay }}</pre>
@@ -128,27 +152,27 @@
 
         <!-- 贷款审批（仅金融机构显示） -->
         <div v-if="selectedId === 'finance_gateway' && pendingLoans.length" class="detail-section">
-          <div class="detail-section-title">PENDING_LOANS <span class="tool-count">{{ pendingLoans.length }}</span></div>
+          <div class="detail-section-title">{{ t('city.pendingLoans') }} <span class="tool-count">{{ pendingLoans.length }}</span></div>
           <div v-for="loan in pendingLoans" :key="loan.id" class="loan-item">
             <div class="loan-info">
               <span class="loan-amount">¥{{ loan.metadata?.amount }}</span>
               <span class="loan-purpose">{{ loan.metadata?.purpose }}</span>
             </div>
             <div class="loan-actions">
-              <button class="loan-btn approve" @click="approveLoan(loan)">批准</button>
-              <button class="loan-btn reject" @click="rejectLoan(loan)">拒绝</button>
+              <button class="loan-btn approve" @click="approveLoan(loan)">{{ t('city.approve') }}</button>
+              <button class="loan-btn reject" @click="rejectLoan(loan)">{{ t('city.reject') }}</button>
             </div>
           </div>
         </div>
 
         <!-- 最近活动 -->
         <div class="detail-section">
-          <div class="detail-section-title">RECENT_ACTIVITY</div>
+          <div class="detail-section-title">{{ t('city.recentActivity') }}</div>
           <div v-if="selectedInst.recentTrace" class="detail-trace">
             <span class="trace-indicator"></span>
             {{ selectedInst.recentTrace }}
           </div>
-          <div v-else class="detail-empty">IDLE</div>
+          <div v-else class="detail-empty">{{ t('city.idle') }}</div>
           <div v-if="relatedEvents.length" class="detail-events">
             <div v-for="ev in relatedEvents" :key="ev.id" class="detail-event-item">
               <span class="detail-event-dot" :class="ev.stage"></span>
@@ -162,7 +186,7 @@
       <!-- 机构列表（未选中时） -->
       <div v-show="!sidebarCollapsed && !selectedInst" class="inst-list-wrap">
         <div class="sidebar-title-bar">
-          <span class="sidebar-title">INSTITUTIONS</span>
+          <span class="sidebar-title">{{ t('city.institutions') }}</span>
           <span class="sidebar-count">{{ adamStore.institutions.length }}</span>
         </div>
         <div class="sidebar-section" v-for="zone in zoneList" :key="zone.key">
@@ -179,8 +203,8 @@
           >
             <span class="inst-emoji">{{ getEmoji(inst.institutionId) }}</span>
             <div class="inst-info">
-              <span class="inst-name">{{ inst.name }}</span>
-              <span class="inst-status-label">{{ statusLabel(inst.status) }}</span>
+            <span class="inst-name">{{ displayInstitutionName(inst.institutionId, inst.name) }}</span>
+            <span class="inst-status-label">{{ statusLabel(inst.status) }}</span>
             </div>
             <span class="inst-dot" :class="inst.status"></span>
           </div>
@@ -191,17 +215,31 @@
     <!-- 右侧城市等轴测地图 -->
     <div class="city-main">
       <div class="iso-viewport" ref="viewportRef"
+           :class="['mood-' + moodLevel]"
            @wheel.prevent="onWheel"
            @mousedown="onDragStart"
            @contextmenu.prevent
            @touchstart.prevent="onTouchStart">
 
+        <!-- 氛围指示徽章（右上角） -->
+        <div class="mood-badge" :class="moodLevel" :title="moodTitle">
+          <span class="mood-emoji">{{ moodEmoji }}</span>
+          <span class="mood-text">{{ moodText }}</span>
+          <span class="mood-pnl">{{ moodPnlText }}</span>
+        </div>
+
+        <!-- 雨/雪/雾效果（亏损时） -->
+        <div v-if="moodLevel === 'rain' || moodLevel === 'storm'" class="weather-rain">
+          <div v-for="i in (moodLevel === 'storm' ? 60 : 30)" :key="i" class="raindrop"
+               :style="{ left: ((i * 17) % 100) + '%', animationDelay: ((i * 0.13) % 1.5) + 's' }"></div>
+        </div>
+
         <!-- 区域浮动标签 -->
         <div class="zone-labels">
-          <div class="zone-float-label command"><b>指挥中心</b><i>Command Center</i></div>
-          <div class="zone-float-label intelligence"><b>情报与生态研究区</b><i>Intelligence &amp; Ecosystem</i></div>
-          <div class="zone-float-label commerce"><b>商业生态区</b><i>Commerce Zone</i></div>
-          <div class="zone-float-label adam"><b>亚当领地</b><i>Adam's Domain</i></div>
+          <div class="zone-float-label command"><b>{{ t('city.commandCenterZh') }}</b><i>{{ t('city.commandCenterEn') }}</i></div>
+          <div class="zone-float-label intelligence"><b>{{ t('city.intelligenceZoneZh') }}</b><i>{{ t('city.intelligenceZoneEn') }}</i></div>
+          <div class="zone-float-label commerce"><b>{{ t('city.commerceZoneZh') }}</b><i>{{ t('city.commerceZoneEn') }}</i></div>
+          <div class="zone-float-label adam"><b>{{ t('city.adamDomainZh') }}</b><i>{{ t('city.adamDomainEn') }}</i></div>
         </div>
 
         <!-- ── 等轴测场景 ── -->
@@ -215,8 +253,8 @@
           </div>
 
           <!-- 装饰树木 -->
-          <div v-for="t in decorTrees" :key="t.key" class="deco-tree" :class="t.size"
-               :style="{ left: t.x + 'px', top: t.y + 'px', zIndex: 50 }">
+          <div v-for="tree in decorTrees" :key="tree.key" class="deco-tree" :class="tree.size"
+               :style="{ left: tree.x + 'px', top: tree.y + 'px', zIndex: 50 }">
             <div class="tree-top"></div>
             <div class="tree-trunk"></div>
           </div>
@@ -262,7 +300,7 @@
 
             <!-- 名称+状态标签牌 -->
             <div class="bldg-callout" :class="{ on: selectedId === b.instId }">
-              <span class="bc-name">{{ b.name }}</span>
+              <span class="bc-name">{{ displayBuildingName(b.instId, b.name) }}</span>
               <span class="bc-status" :class="instStatusOf(b.instId)">{{ instStatusEn(b.instId, b.locked) }}</span>
             </div>
 
@@ -271,7 +309,7 @@
               v-if="selectedId === b.instId && !b.locked"
               class="bldg-enter-btn"
               @click.stop="enterHall(b.instId)"
-            >▸ 进入大厅</button>
+              >▸ {{ t('city.enterHall') }}</button>
           </div>
 
           <!-- ── 亚当等轴测角色 ── -->
@@ -343,40 +381,40 @@
               </div>
               <div class="adam-popup-metrics">
                 <div class="adam-metric">
-                  <span class="adam-metric-label">预算</span>
+                  <span class="adam-metric-label">{{ t('city.budget') }}</span>
                   <span class="adam-metric-val" :class="{ warn: adamStore.core.budget <= 0 }">¥{{ adamStore.core.budget.toLocaleString() }}</span>
                 </div>
                 <div class="adam-metric">
-                  <span class="adam-metric-label">信用</span>
+                  <span class="adam-metric-label">{{ t('city.credit') }}</span>
                   <span class="adam-metric-val" :style="{ color: creditColorMap[adamStore.core.creditLevel] }">{{ adamStore.core.creditLevel }}</span>
                 </div>
                 <div class="adam-metric">
-                  <span class="adam-metric-label">能量</span>
+                  <span class="adam-metric-label">{{ t('city.energy') }}</span>
                   <span class="adam-metric-val">{{ adamStore.core.energy }}%</span>
                 </div>
                 <div class="adam-metric">
-                  <span class="adam-metric-label">存活</span>
-                  <span class="adam-metric-val">{{ adamStore.core.survivalDays }}天</span>
+                  <span class="adam-metric-label">{{ t('city.survival') }}</span>
+                  <span class="adam-metric-val">{{ adamStore.core.survivalDays }}{{ t('city.daysUnit') }}</span>
                 </div>
               </div>
               <div class="adam-popup-section">
-                <span class="adam-popup-section-title">EMOTION</span>
+                <span class="adam-popup-section-title">{{ t('city.emotion') }}</span>
                 <div class="adam-popup-emotions">
                   <div v-for="(val, key) in adamStore.core.emotionState" :key="key" class="adam-emo-item">
-                    <span class="adam-emo-label">{{ emotionLabelMap[key] }}</span>
+                    <span class="adam-emo-label">{{ emotionLabel(key) }}</span>
                     <div class="adam-emo-track"><div class="adam-emo-fill" :style="{ width: val + '%', background: emotionColorMap[key] }"></div></div>
                   </div>
                 </div>
               </div>
               <div class="adam-popup-section">
-                <span class="adam-popup-section-title">MESSAGES</span>
+                <span class="adam-popup-section-title">{{ t('city.messages') }}</span>
                 <div v-if="latestReflections.length" class="adam-popup-messages">
                   <div v-for="r in latestReflections" :key="r.id" class="adam-msg-item">
                     <span class="adam-msg-time">{{ formatTime(r.at) }}</span>
                     <span class="adam-msg-text">{{ r.content }}</span>
                   </div>
                 </div>
-                <div v-else class="adam-msg-empty">还没有留言...</div>
+                <div v-else class="adam-msg-empty">{{ t('city.noMessages') }}</div>
               </div>
             </div>
           </div>
@@ -391,9 +429,9 @@
           </div>
         </div>
         <div class="iso-controls">
-          <span>滚轮缩放</span>
-          <span>拖拽平移</span>
-          <span>右键旋转</span>
+            <span>{{ t('city.zoomHint') }}</span>
+            <span>{{ t('city.panHint') }}</span>
+            <span>{{ t('city.rotateHint') }}</span>
         </div>
 
       </div>
@@ -402,11 +440,11 @@
     <!-- ═══ 右侧对话面板 ═══ -->
     <div class="city-chat" :class="{ collapsed: chatCollapsed }">
       <!-- 折叠/展开按钮 -->
-      <button class="city-chat-toggle" @click="chatCollapsed = !chatCollapsed" :title="chatCollapsed ? '展开对话' : '收起对话'">
+      <button class="city-chat-toggle" @click="chatCollapsed = !chatCollapsed" :title="chatCollapsed ? t('city.expandChat') : t('city.collapseChat')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
-        <span v-if="!chatCollapsed" class="chat-toggle-label">COMM</span>
+        <span v-if="!chatCollapsed" class="chat-toggle-label">{{ t('city.chatLabel') }}</span>
         <span v-if="!chatCollapsed" class="chat-unread-dot" :class="{ visible: chatStore.isAlive }"></span>
       </button>
 
@@ -414,38 +452,38 @@
         <!-- 头部 -->
         <div class="city-chat-head">
           <span class="cch-icon">⟐</span>
-          <span class="cch-title">COMM_CHANNEL</span>
-          <span class="cch-status" :class="{ online: adamStore.isAlive }">{{ adamStore.isAlive ? 'CONNECTED' : 'OFFLINE' }}</span>
+          <span class="cch-title">{{ t('city.commChannel') }}</span>
+          <span class="cch-status" :class="{ online: adamStore.isAlive }">{{ adamStore.isAlive ? t('city.connected') : t('city.offline') }}</span>
         </div>
 
         <!-- 消息区 -->
         <div ref="chatMessagesDiv" class="city-chat-messages">
           <div v-if="chatMessages.length === 0" class="city-chat-empty">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <p>可以描述任务或提问任何问题...</p>
+            <p>{{ t('city.chatEmptyPrompt') }}</p>
           </div>
           <div v-for="msg in chatMessages" :key="msg.id" class="cc-msg" :class="msg.role">
             <span class="cc-avatar" :class="msg.role">
-              <img v-if="msg.role === 'assistant'" :src="adamAvatarUrl" class="cc-avatar-img" alt="亚当"/>
+              <img v-if="msg.role === 'assistant'" :src="adamAvatarUrl" class="cc-avatar-img" :alt="t('city.adamAlt')"/>
               <template v-else>U</template>
             </span>
             <div class="cc-body">
               <div class="cc-meta">
-                <span class="cc-sender">{{ msg.role === 'user' ? 'OPERATOR' : 'ADAM' }}</span>
+                <span class="cc-sender">{{ msg.role === 'user' ? t('city.operator') : t('city.adam') }}</span>
                 <span class="cc-time">{{ msg.time }}</span>
               </div>
               <div class="cc-content" v-html="renderChatMarkdown(msg.content)"></div>
               <div v-if="msg.toolCalls?.length" class="cc-tools">
                 <div v-for="call in msg.toolCalls" :key="call.id" class="cc-tool-card" :class="call.status">
                   <span class="cc-tool-dot"></span>
-                  <span class="cc-tool-name">{{ call.name }}</span>
-                  <span class="cc-tool-status">{{ call.status === 'running' ? 'EXEC' : call.status === 'success' ? 'DONE' : 'ERR' }}</span>
+                  <span class="cc-tool-name">{{ toolDisplayName(call.name) }}</span>
+                  <span class="cc-tool-status">{{ call.status === 'running' ? t('city.exec') : call.status === 'success' ? t('city.done') : t('city.err') }}</span>
                 </div>
               </div>
             </div>
           </div>
           <div v-if="chatLoading" class="cc-msg assistant">
-            <span class="cc-avatar assistant"><img :src="adamAvatarUrl" class="cc-avatar-img" alt="亚当"/></span>
+            <span class="cc-avatar assistant"><img :src="adamAvatarUrl" class="cc-avatar-img" :alt="t('city.adamAlt')"/></span>
             <div class="cc-body">
               <div class="cc-typing"><span></span><span></span><span></span></div>
             </div>
@@ -459,7 +497,7 @@
               ref="chatInputRef"
               v-model="chatInputText"
               class="cci-textarea"
-              placeholder="可以描述任务或提问任何问题，按 Enter 发送..."
+              :placeholder="t('city.chatInputPlaceholder')"
               rows="1"
               @keydown.enter.exact.prevent="handleChatSend"
               @input="chatAutoResize"
@@ -477,20 +515,20 @@
     <!-- 进入大厅像素转场 -->
     <div v-if="hallEntering" class="hall-enter-overlay">
       <div v-for="i in 12" :key="i" class="heo-strip" :style="{ animationDelay: (i % 4) * 0.06 + 's' }"></div>
-      <div class="heo-text">ENTERING...</div>
+      <div class="heo-text">{{ t('city.entering') }}</div>
     </div>
   </div>
 
   <!-- 充值弹窗 -->
   <div v-if="showDepositDialog" class="dialog-mask" @click.self="showDepositDialog = false">
     <div class="dialog-box">
-      <div class="dialog-title">充值到亚当账户</div>
-      <div class="dialog-desc">线下转账后，在此确认入账金额</div>
-      <input v-model="depositAmount" type="number" class="dialog-input" placeholder="金额（元）" min="0" />
-      <input v-model="depositNote" type="text" class="dialog-input" placeholder="备注（可选）" />
+      <div class="dialog-title">{{ t('city.depositTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.depositDesc') }}</div>
+      <input v-model="depositAmount" type="number" class="dialog-input" :placeholder="t('city.amountPlaceholder')" min="0" />
+      <input v-model="depositNote" type="text" class="dialog-input" :placeholder="t('city.noteOptional')" />
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showDepositDialog = false">取消</button>
-        <button class="btn-gold" @click="handleDeposit">确认入账</button>
+        <button class="btn-ghost" @click="showDepositDialog = false">{{ t('city.cancel') }}</button>
+        <button class="btn-gold" @click="handleDeposit">{{ t('city.confirmDeposit') }}</button>
       </div>
     </div>
   </div>
@@ -498,20 +536,20 @@
   <!-- 记录投资弹窗 -->
   <div v-if="showRecordInvestmentDialog" class="dialog-mask" @click.self="showRecordInvestmentDialog = false">
     <div class="dialog-box">
-      <div class="dialog-title">📈 记录投资</div>
-      <div class="dialog-desc">手动记录一笔投资操作，写入资金流水</div>
-      <input v-model="riForm.symbol" type="text" class="dialog-input" placeholder="标的（如 000001 或 黄金）" />
+      <div class="dialog-title">{{ t('city.recordInvestmentTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.recordInvestmentDesc') }}</div>
+      <input v-model="riForm.symbol" type="text" class="dialog-input" :placeholder="t('city.symbolPlaceholder')" />
       <div class="dialog-row-2col">
         <select v-model="riForm.direction" class="dialog-select">
-          <option value="buy">买入</option>
-          <option value="sell">卖出</option>
+          <option value="buy">{{ t('city.buy') }}</option>
+          <option value="sell">{{ t('city.sell') }}</option>
         </select>
-        <input v-model="riForm.amount" type="number" class="dialog-input" placeholder="金额（元）" min="0" />
+        <input v-model="riForm.amount" type="number" class="dialog-input" :placeholder="t('city.amountPlaceholder')" min="0" />
       </div>
-      <input v-model="riForm.note" type="text" class="dialog-input" placeholder="备注（可选）" />
+      <input v-model="riForm.note" type="text" class="dialog-input" :placeholder="t('city.noteOptional')" />
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showRecordInvestmentDialog = false">取消</button>
-        <button class="btn-gold" @click="handleRecordInvestment">记录</button>
+        <button class="btn-ghost" @click="showRecordInvestmentDialog = false">{{ t('city.cancel') }}</button>
+        <button class="btn-gold" @click="handleRecordInvestment">{{ t('city.record') }}</button>
       </div>
     </div>
   </div>
@@ -519,20 +557,18 @@
   <!-- 结算分红弹窗 -->
   <div v-if="showDividendDialog" class="dialog-mask" @click.self="showDividendDialog = false">
     <div class="dialog-box">
-      <div class="dialog-title">💰 结算分红</div>
+      <div class="dialog-title">{{ t('city.dividendTitle') }}</div>
       <div class="dialog-desc">
-        当前信用等级 <strong>{{ adamStore.core.creditLevel }}</strong>，
-        分红比例：你 <strong>{{ dividendRatio * 100 }}%</strong> / 亚当 {{ (1 - dividendRatio) * 100 }}%
+        {{ t('city.dividendDesc', { credit: adamStore.core.creditLevel, userShare: dividendRatio * 100, adamShare: (1 - dividendRatio) * 100 }) }}
       </div>
-      <input v-model="dvForm.totalProfit" type="number" class="dialog-input" placeholder="本期总利润（元）" min="0" />
+      <input v-model="dvForm.totalProfit" type="number" class="dialog-input" :placeholder="t('city.dividendProfitPlaceholder')" min="0" />
       <div v-if="dvForm.totalProfit" class="dialog-calc-hint">
-        → 你获得：¥{{ (parseFloat(dvForm.totalProfit) * dividendRatio).toFixed(2) }}
-        　亚当留存：¥{{ (parseFloat(dvForm.totalProfit) * (1 - dividendRatio)).toFixed(2) }}
+        {{ t('city.dividendCalc', { userShare: (parseFloat(dvForm.totalProfit) * dividendRatio).toFixed(2), adamShare: (parseFloat(dvForm.totalProfit) * (1 - dividendRatio)).toFixed(2) }) }}
       </div>
-      <input v-model="dvForm.note" type="text" class="dialog-input" placeholder="备注（可选）" />
+      <input v-model="dvForm.note" type="text" class="dialog-input" :placeholder="t('city.noteOptional')" />
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showDividendDialog = false">取消</button>
-        <button class="btn-gold" @click="handleSettleDividend">结算</button>
+        <button class="btn-ghost" @click="showDividendDialog = false">{{ t('common.cancel') }}</button>
+        <button class="btn-gold" @click="handleSettleDividend">{{ t('city.settle') }}</button>
       </div>
     </div>
   </div>
@@ -540,26 +576,26 @@
   <!-- 执行赔付弹窗 -->
   <div v-if="showPenaltyDialog" class="dialog-mask" @click.self="showPenaltyDialog = false">
     <div class="dialog-box">
-      <div class="dialog-title">⚖️ 执行赔付</div>
-      <div class="dialog-desc">赔付公式：客观置信度 × 损失金额 × 0.1</div>
-      <input v-model="penForm.lossAmount" type="number" class="dialog-input" placeholder="实际损失金额（元）" min="0" />
+      <div class="dialog-title">{{ t('city.penaltyTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.penaltyDesc') }}</div>
+      <input v-model="penForm.lossAmount" type="number" class="dialog-input" :placeholder="t('city.lossAmountPlaceholder')" min="0" />
       <div class="dialog-row-2col">
         <div class="dialog-label-input">
-          <label class="dialog-field-label">亚当自报置信度</label>
-          <input v-model="penForm.selfConfidence" type="number" class="dialog-input" placeholder="0-100" min="0" max="100" />
+          <label class="dialog-field-label">{{ t('city.selfConfidenceLabel') }}</label>
+          <input v-model="penForm.selfConfidence" type="number" class="dialog-input" :placeholder="t('city.percentPlaceholder')" min="0" max="100" />
         </div>
         <div class="dialog-label-input">
-          <label class="dialog-field-label">客观置信度（你评）</label>
-          <input v-model="penForm.objConfidence" type="number" class="dialog-input" placeholder="0-100" min="0" max="100" />
+          <label class="dialog-field-label">{{ t('city.objectiveConfidenceLabel') }}</label>
+          <input v-model="penForm.objConfidence" type="number" class="dialog-input" :placeholder="t('city.percentPlaceholder')" min="0" max="100" />
         </div>
       </div>
       <div v-if="penForm.lossAmount && penForm.objConfidence" class="dialog-calc-hint">
-        → 赔付金额：¥{{ penaltyAmount.toFixed(2) }}（亚当账户扣除）
+        {{ t('city.penaltyCalc', { amount: penaltyAmount.toFixed(2) }) }}
       </div>
-      <input v-model="penForm.note" type="text" class="dialog-input" placeholder="事件说明（可选）" />
+      <input v-model="penForm.note" type="text" class="dialog-input" :placeholder="t('city.noteOptional')" />
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showPenaltyDialog = false">取消</button>
-        <button class="btn-gold" @click="handleApplyPenalty">确认赔付</button>
+        <button class="btn-ghost" @click="showPenaltyDialog = false">{{ t('common.cancel') }}</button>
+        <button class="btn-gold" @click="handleApplyPenalty">{{ t('city.confirmPenalty') }}</button>
       </div>
     </div>
   </div>
@@ -567,31 +603,31 @@
   <!-- 发出指令弹窗 -->
   <div v-if="showIssueRecommDialog" class="dialog-mask" @click.self="showIssueRecommDialog = false">
     <div class="dialog-box dialog-box-wide">
-      <div class="dialog-title">📋 发出投资指令</div>
-      <div class="dialog-desc">亚当代表你发出一份正式投资建议</div>
-      <input v-model="recForm.title" type="text" class="dialog-input" placeholder="标题（如：买入比亚迪）" />
+      <div class="dialog-title">{{ t('city.recommendationTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.recommendationDesc') }}</div>
+      <input v-model="recForm.title" type="text" class="dialog-input" :placeholder="t('city.recommendationTitlePlaceholder')" />
       <div class="dialog-row-2col">
-        <input v-model="recForm.symbol" type="text" class="dialog-input" placeholder="标的代码（可选）" />
+        <input v-model="recForm.symbol" type="text" class="dialog-input" :placeholder="t('city.symbolPlaceholder')" />
         <select v-model="recForm.direction" class="dialog-select">
-          <option value="long">做多/买入</option>
-          <option value="short">做空/卖出</option>
-          <option value="hold">持有观望</option>
-          <option value="exit">止盈离场</option>
+          <option value="long">{{ t('city.directionLong') }}</option>
+          <option value="short">{{ t('city.directionShort') }}</option>
+          <option value="hold">{{ t('city.directionHold') }}</option>
+          <option value="exit">{{ t('city.directionExit') }}</option>
         </select>
       </div>
       <div class="dialog-row-2col">
-        <input v-model="recForm.targetPrice" type="number" class="dialog-input" placeholder="目标价（元，可选）" min="0" />
-        <input v-model="recForm.stopLoss" type="number" class="dialog-input" placeholder="止损价（元，可选）" min="0" />
+        <input v-model="recForm.targetPrice" type="number" class="dialog-input" :placeholder="t('city.targetPricePlaceholder')" min="0" />
+        <input v-model="recForm.stopLoss" type="number" class="dialog-input" :placeholder="t('city.stopLossPlaceholder')" min="0" />
       </div>
       <div class="dialog-label-input" style="margin-bottom:6px">
-        <label class="dialog-field-label">亚当置信度：{{ recForm.confidence }}%</label>
+        <label class="dialog-field-label">{{ t('city.confidenceLabel', { value: recForm.confidence }) }}</label>
         <input v-model="recForm.confidence" type="range" min="0" max="100" style="width:100%;accent-color:#00D4FF" />
       </div>
-      <textarea v-model="recForm.thesis" class="dialog-textarea" placeholder="核心逻辑（必填）" rows="3"></textarea>
-      <textarea v-model="recForm.riskNote" class="dialog-textarea" placeholder="风险提示（必填）" rows="2"></textarea>
+      <textarea v-model="recForm.thesis" class="dialog-textarea" :placeholder="t('city.thesisPlaceholder')" rows="3"></textarea>
+      <textarea v-model="recForm.riskNote" class="dialog-textarea" :placeholder="t('city.riskPlaceholder')" rows="2"></textarea>
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showIssueRecommDialog = false">取消</button>
-        <button class="btn-gold" @click="handleIssueRecommendation">发出指令</button>
+        <button class="btn-ghost" @click="showIssueRecommDialog = false">{{ t('common.cancel') }}</button>
+        <button class="btn-gold" @click="handleIssueRecommendation">{{ t('city.sendInstruction') }}</button>
       </div>
     </div>
   </div>
@@ -611,12 +647,12 @@
       />
       <!-- 工具运行中显示loading -->
       <div v-if="toolRunning === taskDialogToolId" class="dialog-running">
-        <span class="tool-indicator spin"></span> 亚当正在执行…
+        <span class="tool-indicator spin"></span> {{ t('city.taskRunning') }}
       </div>
       <div v-if="taskResultText" class="task-result-box">{{ taskResultText }}</div>
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showTaskDialog = false">关闭</button>
-        <button class="btn-gold" :disabled="!!toolRunning" @click="handleRunTask">下达任务</button>
+        <button class="btn-ghost" @click="showTaskDialog = false">{{ t('common.close') }}</button>
+        <button class="btn-gold" :disabled="!!toolRunning" @click="handleRunTask">{{ t('city.dispatchTask') }}</button>
       </div>
     </div>
   </div>
@@ -624,21 +660,21 @@
   <!-- 保险箱弹窗 -->
   <div v-if="showVaultDialog" class="dialog-mask" @click.self="showVaultDialog = false">
     <div class="dialog-box">
-      <div class="dialog-title">🔒 保险箱管理</div>
+      <div class="dialog-title">{{ t('city.vaultTitle') }}</div>
       <div class="dialog-desc">
-        当前保险箱余额：<strong>¥{{ adamStore.core.survivalDays >= 7 ? vaultBalance.toLocaleString() : '未解锁' }}</strong>
-        <span v-if="adamStore.core.survivalDays < 7" style="color:#888;display:block;margin-top:4px">（存活满7天后解锁，当前第{{ adamStore.core.survivalDays }}天）</span>
+        {{ t('city.vaultDesc', { balance: adamStore.core.survivalDays >= 7 ? vaultBalance.toLocaleString() : t('city.vaultLocked') }) }}
+        <span v-if="adamStore.core.survivalDays < 7" style="color:#888;display:block;margin-top:4px">{{ t('city.vaultUnlockHint', { days: adamStore.core.survivalDays }) }}</span>
       </div>
       <div v-if="adamStore.core.survivalDays >= 7">
         <div class="dialog-row-2col" style="margin-bottom:8px">
-          <button class="btn-ghost" :class="{ active: vaultAction === 'deposit' }" style="flex:1" @click="vaultAction = 'deposit'">存入</button>
-          <button class="btn-ghost" :class="{ active: vaultAction === 'withdraw' }" style="flex:1" @click="vaultAction = 'withdraw'">取出</button>
+          <button class="btn-ghost" :class="{ active: vaultAction === 'deposit' }" style="flex:1" @click="vaultAction = 'deposit'">{{ t('city.deposit') }}</button>
+          <button class="btn-ghost" :class="{ active: vaultAction === 'withdraw' }" style="flex:1" @click="vaultAction = 'withdraw'">{{ t('city.withdraw') }}</button>
         </div>
-        <input v-model="vaultAmount" type="number" class="dialog-input" :placeholder="`${vaultAction === 'deposit' ? '存入' : '取出'}金额（元）`" min="0" />
+        <input v-model="vaultAmount" type="number" class="dialog-input" :placeholder="vaultAction === 'deposit' ? t('city.depositAmountPlaceholder') : t('city.withdrawAmountPlaceholder')" min="0" />
       </div>
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showVaultDialog = false">取消</button>
-        <button v-if="adamStore.core.survivalDays >= 7" class="btn-gold" @click="handleVault">确认</button>
+        <button class="btn-ghost" @click="showVaultDialog = false">{{ t('common.cancel') }}</button>
+        <button v-if="adamStore.core.survivalDays >= 7" class="btn-gold" @click="handleVault">{{ t('common.confirm') }}</button>
       </div>
     </div>
   </div>
@@ -646,14 +682,14 @@
   <!-- 图书馆书架弹窗 -->
   <div v-if="showLibraryDialog" class="dialog-mask" @click.self="showLibraryDialog = false">
     <div class="dialog-box dialog-box-wide">
-      <div class="dialog-title">📖 图书馆书架</div>
-      <input v-model="librarySearch" type="text" class="dialog-input" placeholder="搜索书名或标签…" style="margin-bottom:8px" />
-      <div v-if="filteredBooks.length === 0" class="detail-empty" style="padding:16px 0">书架空空，亚当还没有写过书</div>
+      <div class="dialog-title">{{ t('city.libraryTitle') }}</div>
+      <input v-model="librarySearch" type="text" class="dialog-input" :placeholder="t('city.librarySearchPlaceholder')" style="margin-bottom:8px" />
+      <div v-if="filteredBooks.length === 0" class="detail-empty" style="padding:16px 0">{{ t('city.libraryEmpty') }}</div>
       <div v-else class="library-list">
         <div v-for="b in filteredBooks" :key="b.id" class="library-item">
           <div class="library-item-title">{{ b.title }}</div>
           <div class="library-item-meta">
-            <span>{{ b.author === 'adam' ? '亚当著' : '用户投喂' }}</span>
+            <span>{{ b.author === 'adam' ? t('city.libraryAuthorAdam') : t('city.libraryAuthorUser') }}</span>
             <span v-if="b.tags?.length">· {{ b.tags.join(' / ') }}</span>
             <span>· {{ formatTime(b.createdAt) }}</span>
           </div>
@@ -661,8 +697,8 @@
         </div>
       </div>
       <div class="dialog-actions" style="margin-top:8px">
-        <button class="btn-ghost" @click="showLibraryDialog = false">关闭</button>
-        <button class="btn-gold" @click="showAddBookDialog = true; showLibraryDialog = false">+ 投喂书籍</button>
+        <button class="btn-ghost" @click="showLibraryDialog = false">{{ t('common.close') }}</button>
+        <button class="btn-gold" @click="showAddBookDialog = true; showLibraryDialog = false">{{ t('city.addBook') }}</button>
       </div>
     </div>
   </div>
@@ -670,14 +706,14 @@
   <!-- 添加书籍弹窗 -->
   <div v-if="showAddBookDialog" class="dialog-mask" @click.self="showAddBookDialog = false">
     <div class="dialog-box dialog-box-wide">
-      <div class="dialog-title">📝 投喂书籍给亚当</div>
-      <div class="dialog-desc">你可以把书籍内容投喂给亚当，丰富他的知识库</div>
-      <input v-model="bookForm.title" type="text" class="dialog-input" placeholder="书名（必填）" />
-      <input v-model="bookForm.tags" type="text" class="dialog-input" placeholder="标签，逗号分隔（如：投资,价值,巴菲特）" />
-      <textarea v-model="bookForm.content" class="dialog-textarea" placeholder="书籍内容或摘要（必填）" rows="5"></textarea>
+      <div class="dialog-title">{{ t('city.addBookTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.addBookDesc') }}</div>
+      <input v-model="bookForm.title" type="text" class="dialog-input" :placeholder="t('city.bookTitlePlaceholder')" />
+      <input v-model="bookForm.tags" type="text" class="dialog-input" :placeholder="t('city.bookTagsPlaceholder')" />
+      <textarea v-model="bookForm.content" class="dialog-textarea" :placeholder="t('city.bookContentPlaceholder')" rows="5"></textarea>
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showAddBookDialog = false">取消</button>
-        <button class="btn-gold" @click="handleAddBook">投喂</button>
+        <button class="btn-ghost" @click="showAddBookDialog = false">{{ t('common.cancel') }}</button>
+        <button class="btn-gold" @click="handleAddBook">{{ t('city.feedBook') }}</button>
       </div>
     </div>
   </div>
@@ -685,24 +721,24 @@
   <!-- 写日记弹窗（触发亚当反思） -->
   <div v-if="showReflectionDialog" class="dialog-mask" @click.self="showReflectionDialog = false">
     <div class="dialog-box dialog-box-wide">
-      <div class="dialog-title">📓 档案馆 · 触发亚当反思</div>
-      <div class="dialog-desc">给亚当一个提示，让他写下今天的反思日记</div>
-      <textarea v-model="reflectionPrompt" class="dialog-textarea" placeholder="今天发生了什么？你想让亚当反思哪些事？（可选，留空让他自由发挥）" rows="3"></textarea>
+      <div class="dialog-title">{{ t('city.reflectionTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.reflectionDesc') }}</div>
+      <textarea v-model="reflectionPrompt" class="dialog-textarea" :placeholder="t('city.reflectionPromptPlaceholder')" rows="3"></textarea>
       <div v-if="toolRunning === 'write_reflection'" class="dialog-running">
-        <span class="tool-indicator spin"></span> 亚当正在写日记…
+        <span class="tool-indicator spin"></span> {{ t('city.taskRunning') }}
       </div>
       <div v-if="reflectionResultText" class="task-result-box">{{ reflectionResultText }}</div>
       <!-- 历史日记 -->
       <div v-if="adamStore.reflections.length" style="margin-top:12px">
-        <div class="dialog-field-label" style="margin-bottom:6px">历史日记（最近5篇）</div>
+        <div class="dialog-field-label" style="margin-bottom:6px">{{ t('city.reflectionHistory') }}</div>
         <div v-for="r in [...adamStore.reflections].reverse().slice(0,5)" :key="r.id" class="reflection-item">
           <div class="reflection-time">{{ formatTime(r.at) }}</div>
           <div class="reflection-content">{{ r.content }}</div>
         </div>
       </div>
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showReflectionDialog = false">关闭</button>
-        <button class="btn-gold" :disabled="!!toolRunning" @click="handleWriteReflection">触发反思</button>
+        <button class="btn-ghost" @click="showReflectionDialog = false">{{ t('common.close') }}</button>
+        <button class="btn-gold" :disabled="!!toolRunning" @click="handleWriteReflection">{{ t('city.startReflection') }}</button>
       </div>
     </div>
   </div>
@@ -710,22 +746,22 @@
   <!-- 迁移建筑弹窗 -->
   <div v-if="showRelocateDialog" class="dialog-mask" @click.self="showRelocateDialog = false">
     <div class="dialog-box">
-      <div class="dialog-title">🏗️ 迁移建筑</div>
-      <div class="dialog-desc">选择要迁移的建筑，填入新坐标</div>
+      <div class="dialog-title">{{ t('city.relocateTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.relocateDesc') }}</div>
       <select v-model="relocateForm.buildingId" class="dialog-select">
-        <option value="">选择建筑…</option>
+        <option value="">{{ t('city.buildingSelectPlaceholder') }}</option>
         <option v-for="b in adamStore.buildings.filter(b => b.status === 'active')" :key="b.id" :value="b.id">
-          {{ b.name }}（{{ b.position.gridX }}, {{ b.position.gridY }}）
+          {{ displayBuildingName(b.institutionId || b.type, b.name) }}（{{ b.position.gridX }}, {{ b.position.gridY }}）
         </option>
       </select>
       <div class="dialog-row-2col" style="margin-top:8px">
-        <input v-model="relocateForm.newX" type="number" class="dialog-input" placeholder="新 X 坐标" min="0" max="31" />
-        <input v-model="relocateForm.newY" type="number" class="dialog-input" placeholder="新 Y 坐标" min="0" max="31" />
+        <input v-model="relocateForm.newX" type="number" class="dialog-input" :placeholder="t('city.newXPlaceholder')" min="0" max="31" />
+        <input v-model="relocateForm.newY" type="number" class="dialog-input" :placeholder="t('city.newYPlaceholder')" min="0" max="31" />
       </div>
-      <input v-model="relocateForm.reason" type="text" class="dialog-input" placeholder="迁移原因（可选）" />
+      <input v-model="relocateForm.reason" type="text" class="dialog-input" :placeholder="t('city.reasonPlaceholder')" />
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showRelocateDialog = false">取消</button>
-        <button class="btn-gold" @click="handleRelocate">确认迁移</button>
+        <button class="btn-ghost" @click="showRelocateDialog = false">{{ t('common.cancel') }}</button>
+        <button class="btn-gold" @click="handleRelocate">{{ t('city.confirmRelocate') }}</button>
       </div>
     </div>
   </div>
@@ -733,19 +769,19 @@
   <!-- 升级建筑弹窗 -->
   <div v-if="showUpgradeDialog" class="dialog-mask" @click.self="showUpgradeDialog = false">
     <div class="dialog-box">
-      <div class="dialog-title">⬆️ 升级建筑</div>
-      <div class="dialog-desc">为建筑记录一次升级</div>
+      <div class="dialog-title">{{ t('city.upgradeTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.upgradeDesc') }}</div>
       <select v-model="upgradeForm.buildingId" class="dialog-select">
-        <option value="">选择建筑…</option>
+        <option value="">{{ t('city.buildingSelectPlaceholder') }}</option>
         <option v-for="b in adamStore.buildings.filter(b => b.status === 'active')" :key="b.id" :value="b.id">
-          {{ b.name }}（LV.{{ b.upgradeHistory?.length || 0 }}）
+          {{ displayBuildingName(b.institutionId || b.type, b.name) }}（LV.{{ b.upgradeHistory?.length || 0 }}）
         </option>
       </select>
-      <input v-model="upgradeForm.newType" type="text" class="dialog-input" placeholder="升级后类型描述（如：超算中心）" style="margin-top:8px" />
-      <input v-model="upgradeForm.reason" type="text" class="dialog-input" placeholder="升级原因（可选）" />
+      <input v-model="upgradeForm.newType" type="text" class="dialog-input" :placeholder="t('city.newTypePlaceholder')" style="margin-top:8px" />
+      <input v-model="upgradeForm.reason" type="text" class="dialog-input" :placeholder="t('city.reasonPlaceholder')" />
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showUpgradeDialog = false">取消</button>
-        <button class="btn-gold" @click="handleUpgrade">确认升级</button>
+        <button class="btn-ghost" @click="showUpgradeDialog = false">{{ t('common.cancel') }}</button>
+        <button class="btn-gold" @click="handleUpgrade">{{ t('city.confirmUpgrade') }}</button>
       </div>
     </div>
   </div>
@@ -753,19 +789,19 @@
   <!-- ERP权限申请弹窗 -->
   <div v-if="showErpAccessDialog" class="dialog-mask" @click.self="showErpAccessDialog = false">
     <div class="dialog-box">
-      <div class="dialog-title">🔑 申请ERP数据权限</div>
-      <div class="dialog-desc">亚当申请访问你的ERP业务数据，用于市场分析</div>
+      <div class="dialog-title">{{ t('city.erpAccessTitle') }}</div>
+      <div class="dialog-desc">{{ t('city.erpAccessDesc') }}</div>
       <select v-model="erpAccessForm.dataType" class="dialog-select">
-        <option value="sales">销售数据</option>
-        <option value="inventory">库存数据</option>
-        <option value="finance">财务数据</option>
-        <option value="customers">客户数据</option>
-        <option value="all">全部数据</option>
+        <option value="sales">{{ t('city.erpDataTypes.sales') }}</option>
+        <option value="inventory">{{ t('city.erpDataTypes.inventory') }}</option>
+        <option value="finance">{{ t('city.erpDataTypes.finance') }}</option>
+        <option value="customers">{{ t('city.erpDataTypes.customers') }}</option>
+        <option value="all">{{ t('city.erpDataTypes.all') }}</option>
       </select>
-      <input v-model="erpAccessForm.reason" type="text" class="dialog-input" placeholder="申请原因（可选）" style="margin-top:8px" />
+      <input v-model="erpAccessForm.reason" type="text" class="dialog-input" :placeholder="t('city.reasonPlaceholder')" style="margin-top:8px" />
       <div class="dialog-actions">
-        <button class="btn-ghost" @click="showErpAccessDialog = false">拒绝</button>
-        <button class="btn-gold" @click="handleErpAccess(true)">批准授权</button>
+        <button class="btn-ghost" @click="showErpAccessDialog = false">{{ t('city.rejectAccess') }}</button>
+        <button class="btn-gold" @click="handleErpAccess(true)">{{ t('city.approveAccess') }}</button>
       </div>
     </div>
   </div>
@@ -774,7 +810,40 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAdamStore } from '@/stores/adam'
+
+// ── P&L 驱动的城市氛围 ──
+const tradeStatsForMood = ref<any>(null)
+async function loadMoodStats() {
+  try {
+    const r = await fetch('/api/adam/trade-stats').then(r => r.json())
+    tradeStatsForMood.value = r
+  } catch {}
+}
+const moodLevel = computed(() => {
+  const v = parseFloat(tradeStatsForMood.value?.summary?.net_pnl_usdt || '0')
+  if (v >= 5) return 'sunny'      // 大赚 - 阳光
+  if (v >= 1) return 'bright'     // 小赚 - 明亮
+  if (v >= -1) return 'normal'    // 持平 - 正常
+  if (v >= -5) return 'rain'      // 小亏 - 阴雨
+  return 'storm'                  // 巨亏 - 暴雨
+})
+const moodEmoji = computed(() => ({ sunny: '☀️', bright: '🌤️', normal: '⛅', rain: '🌧️', storm: '⛈️' }[moodLevel.value]))
+const moodText = computed(() => t(`city.moods.${moodLevel.value}`))
+const moodPnlText = computed(() => {
+  const v = parseFloat(tradeStatsForMood.value?.summary?.net_pnl_usdt || '0')
+  return (v > 0 ? '+' : '') + v.toFixed(2) + ' USDT'
+})
+const moodTitle = computed(() =>
+  t('city.moodTitle', {
+    pnl: moodPnlText.value,
+    trades: tradeStatsForMood.value?.summary?.total_trades || 0,
+  }),
+)
+let _moodTimer: any = null
+onMounted(() => { loadMoodStats(); _moodTimer = setInterval(loadMoodStats, 60000) })
+onUnmounted(() => { if (_moodTimer) clearInterval(_moodTimer) })
 import IlloBuilding from './illo/IlloBuilding.vue'
 import AdamStatue from './illo/AdamStatue.vue'
 import { applyToolResult } from '@/utils/adamToolSync'
@@ -784,6 +853,7 @@ import adamAvatarUrl from '@/assets/adam-avatar.png'
 
 marked.setOptions({ breaks: true, gfm: true })
 
+const { t } = useI18n()
 const adamStore = useAdamStore()
 const router = useRouter()
 
@@ -820,10 +890,14 @@ function instStatusOf(instId: string): string {
 function instStatusEn(instId: string, locked: boolean): string {
   if (locked) return 'LOCKED'
   const map: Record<string, string> = {
-    idle: 'IDLE', active: 'ACTIVE', locked: 'LOCKED',
-    cooldown: 'COOLDOWN', disabled: 'DISABLED', urgent: 'OPERATING',
+    idle: t('city.statusLabels.idle'),
+    active: t('city.statusLabels.active'),
+    locked: t('city.statusLabels.locked'),
+    cooldown: t('city.statusLabels.cooldown'),
+    disabled: t('city.statusLabels.disabled'),
+    urgent: t('city.statusLabels.urgent'),
   }
-  return map[instStatusOf(instId)] || 'IDLE'
+  return map[instStatusOf(instId)] || t('city.statusLabels.idle')
 }
 
 // ── 进入建筑大厅（像素百叶转场后跳转） ──
@@ -932,13 +1006,13 @@ async function handleChatSend() {
       }
     }
   } catch (e: any) {
-    if (!assistantMsg.content) assistantMsg.content = `连接失败: ${e.message}`
+    if (!assistantMsg.content) assistantMsg.content = t('city.connectionFailed', { message: e.message })
     if (!chatMessages.value.includes(assistantMsg)) chatMessages.value.push(assistantMsg)
   } finally {
     if (!isCleanChatContent(assistantMsg.content)) {
       assistantMsg.content = assistantMsg.toolCalls?.length
-        ? '我刚才完成了工具检查，但没有组织出完整回复。请再发一次问题，我会直接给结论。'
-        : '我在，但这次没有生成有效回复。请再发一次。'
+        ? t('city.chatFallbackWithTools')
+        : t('city.chatFallbackSimple')
     }
     chatLoading.value = false
     persistChatHistory()
@@ -1007,21 +1081,17 @@ const adamMouth = computed(() => {
 
 const adamHudText = computed(() => {
   const status = adamStore.core.status
-  if (status === 'dormant') return 'COGNITIVE: DORMANT'
-  if (status === 'shutdown') return 'COGNITIVE: SHUTDOWN'
-  if (adamStore.adamPosition.isMoving) return 'COGNITIVE: MOVING'
-  if (adamWorking.value) return 'COGNITIVE: WORKING'
-  return 'COGNITIVE: OBSERVING'
+  if (status === 'dormant') return t('city.hud.dormant')
+  if (status === 'shutdown') return t('city.hud.shutdown')
+  if (adamStore.adamPosition.isMoving) return t('city.hud.moving')
+  if (adamWorking.value) return t('city.hud.working')
+  return t('city.hud.observing')
 })
 
-const adamStatusLabel = computed(() => {
-  const map: Record<string, string> = { dormant: 'DORMANT', alive: 'ALIVE', survival: 'SURVIVAL', shutdown: 'SHUTDOWN' }
-  return map[adamStore.core.status] || adamStore.core.status.toUpperCase()
-})
+const adamStatusLabel = computed(() => t(`city.statusLabels.${adamStore.core.status}`) || adamStore.core.status.toUpperCase())
 
-const emotionLabelMap: Record<string, string> = {
-  joy: '喜悦', anger: '愤怒', sorrow: '悲伤', fear: '恐惧',
-  love: '热爱', disgust: '厌恶', desire: '渴望',
+function emotionLabel(key: string) {
+  return t(`city.emotions.${key}`)
 }
 const emotionColorMap: Record<string, string> = {
   joy: '#00E5A0', anger: '#FF4D4D', sorrow: '#5B8DEF', fear: '#F5A623',
@@ -1129,21 +1199,70 @@ const taskDialogFields = ref<TaskField[]>([])
 const taskParams = ref<Record<string, string>>({})
 const taskResultText = ref('')
 
-// 工具参数配置表
-const toolTaskConfig: Record<string, { title: string; desc: string; fields: TaskField[] }> = {
-  scan_market_news:         { title: '📡 扫描市场新闻', desc: '亚当将为你抓取相关新闻资讯', fields: [{ key: 'keywords', placeholder: '关键词（如：新能源、AI、比亚迪）' }] },
-  get_sector_heat:          { title: '🌡️ 板块热度', desc: '亚当查询当前市场各板块热度', fields: [{ key: 'top_n', placeholder: '显示前N个板块（默认10）', type: 'number' }] },
-  get_northbound_flow:      { title: '🌊 北向资金', desc: '亚当查询北向资金流入流出情况', fields: [] },
-  get_stock_realtime:       { title: '📈 实时行情', desc: '亚当查询指定股票实时价格', fields: [{ key: 'symbol', placeholder: '股票代码（如：000001）' }] },
-  get_stock_history:        { title: '📊 历史K线', desc: '亚当查询股票历史K线数据', fields: [{ key: 'symbol', placeholder: '股票代码（如：000001）' }, { key: 'period', placeholder: '周期：daily/weekly/monthly（默认daily）' }, { key: 'count', placeholder: '条数（默认30，最多90）', type: 'number' }] },
-  analyze_fundamentals:     { title: '🔬 基本面分析', desc: '亚当查询股票基本面数据（PE/PB/市值等）', fields: [{ key: 'symbol', placeholder: '股票代码（如：600519）' }] },
-  screen_stocks:            { title: '🔍 选股筛选', desc: '亚当从A股涨幅榜筛选机会', fields: [{ key: 'criteria', placeholder: '筛选条件说明（如：低PE高ROE）' }] },
-  generate_research_report: { title: '📋 生成研报', desc: '亚当结合实时行情撰写研究报告', fields: [{ key: 'symbol', placeholder: '股票代码（可选，留空则写宏观报告）' }, { key: 'subject', placeholder: '研究主题（如：AI算力赛道分析）' }, { key: 'focus', placeholder: '关注重点（如：技术面/基本面/催化剂）' }] },
-  consult_marketing_expert: { title: '📊 咨询营销顾问', desc: '亚当代你向营销专家提问，结合ERP数据分析', fields: [{ key: 'question', placeholder: '你的问题（如：如何提高客户复购率？）' }, { key: 'context', placeholder: '补充背景（可选）' }] },
+function getToolTaskConfig(tid: string): { title: string; desc: string; fields: TaskField[] } | null {
+  const cfg: Record<string, { title: string; desc: string; fields: TaskField[] }> = {
+    scan_market_news: {
+      title: t('city.taskTools.scan_market_news.title'),
+      desc: t('city.taskTools.scan_market_news.desc'),
+      fields: [{ key: 'keywords', placeholder: t('city.taskTools.scan_market_news.keywords') }],
+    },
+    get_sector_heat: {
+      title: t('city.taskTools.get_sector_heat.title'),
+      desc: t('city.taskTools.get_sector_heat.desc'),
+      fields: [{ key: 'top_n', placeholder: t('city.taskTools.get_sector_heat.top_n'), type: 'number' }],
+    },
+    get_northbound_flow: {
+      title: t('city.taskTools.get_northbound_flow.title'),
+      desc: t('city.taskTools.get_northbound_flow.desc'),
+      fields: [],
+    },
+    get_stock_realtime: {
+      title: t('city.taskTools.get_stock_realtime.title'),
+      desc: t('city.taskTools.get_stock_realtime.desc'),
+      fields: [{ key: 'symbol', placeholder: t('city.taskTools.get_stock_realtime.symbol') }],
+    },
+    get_stock_history: {
+      title: t('city.taskTools.get_stock_history.title'),
+      desc: t('city.taskTools.get_stock_history.desc'),
+      fields: [
+        { key: 'symbol', placeholder: t('city.taskTools.get_stock_history.symbol') },
+        { key: 'period', placeholder: t('city.taskTools.get_stock_history.period') },
+        { key: 'count', placeholder: t('city.taskTools.get_stock_history.count'), type: 'number' },
+      ],
+    },
+    analyze_fundamentals: {
+      title: t('city.taskTools.analyze_fundamentals.title'),
+      desc: t('city.taskTools.analyze_fundamentals.desc'),
+      fields: [{ key: 'symbol', placeholder: t('city.taskTools.analyze_fundamentals.symbol') }],
+    },
+    screen_stocks: {
+      title: t('city.taskTools.screen_stocks.title'),
+      desc: t('city.taskTools.screen_stocks.desc'),
+      fields: [{ key: 'criteria', placeholder: t('city.taskTools.screen_stocks.criteria') }],
+    },
+    generate_research_report: {
+      title: t('city.taskTools.generate_research_report.title'),
+      desc: t('city.taskTools.generate_research_report.desc'),
+      fields: [
+        { key: 'symbol', placeholder: t('city.taskTools.generate_research_report.symbol') },
+        { key: 'subject', placeholder: t('city.taskTools.generate_research_report.subject') },
+        { key: 'focus', placeholder: t('city.taskTools.generate_research_report.focus') },
+      ],
+    },
+    consult_marketing_expert: {
+      title: t('city.taskTools.consult_marketing_expert.title'),
+      desc: t('city.taskTools.consult_marketing_expert.desc'),
+      fields: [
+        { key: 'question', placeholder: t('city.taskTools.consult_marketing_expert.question') },
+        { key: 'context', placeholder: t('city.taskTools.consult_marketing_expert.context') },
+      ],
+    },
+  }
+  return cfg[tid] || null
 }
 
 function openTaskDialog(tid: string) {
-  const cfg = toolTaskConfig[tid]
+  const cfg = getToolTaskConfig(tid)
   if (!cfg) return
   taskDialogTitle.value = cfg.title
   taskDialogDesc.value = cfg.desc
@@ -1168,8 +1287,8 @@ async function handleRunTask() {
       .map(([k, v]) => `${k}="${v}"`)
       .join('，')
     const content = paramStr
-      ? `请执行工具: ${tid}，参数：${paramStr}`
-      : `请执行工具: ${tid}`
+      ? t('city.executeToolWithParams', { tool: tid, params: paramStr })
+      : t('city.executeToolPrompt', { tool: tid })
 
     const res = await fetch('/api/adam-agent', {
       method: 'POST',
@@ -1206,13 +1325,13 @@ async function handleRunTask() {
         } catch { /* ignore */ }
       }
     }
-    taskResultText.value = result || '执行完成，亚当未返回内容'
+    taskResultText.value = result || t('city.taskDoneNoResult')
     // 同步到主工具结果显示
-    toolResults.value[tid] = result || '执行完成'
-    toolResultDisplay.value = result || '执行完成'
+    toolResults.value[tid] = result || t('city.toolDone')
+    toolResultDisplay.value = result || t('city.toolDone')
     toolResultId.value = tid
   } catch (e: any) {
-    taskResultText.value = `执行失败：${e.message}`
+    taskResultText.value = t('city.executionFailed', { message: e.message })
   } finally {
     toolRunning.value = null
   }
@@ -1238,18 +1357,18 @@ function handleVault() {
       kind: 'vault_deposit',
       amount,
       direction: 'out',
-      title: `存入保险箱 ¥${amount}`,
+      title: t('city.vaultDeposit', { amount }),
       linkedEventIds: [],
     })
   } else {
-    if (amount > vaultBalance.value) { alert('取出金额超过保险箱余额'); return }
+    if (amount > vaultBalance.value) { alert(t('city.vaultOverBalance')); return }
     adamStore.addLedgerEntry({
       id: `led_vault_${Date.now()}`,
       at: new Date().toISOString(),
       kind: 'vault_release',
       amount,
       direction: 'in',
-      title: `从保险箱取出 ¥${amount}`,
+      title: t('city.vaultWithdraw', { amount }),
       linkedEventIds: [],
     })
   }
@@ -1299,8 +1418,8 @@ async function handleWriteReflection() {
   try {
     const token = localStorage.getItem('erp_token') || ''
     const content = reflectionPrompt.value
-      ? `请执行工具: write_reflection，今天的提示：${reflectionPrompt.value}`
-      : '请执行工具: write_reflection，自由发挥，写下今天的反思日记'
+      ? t('city.executeReflectionPrompt', { prompt: reflectionPrompt.value })
+      : t('city.executeReflectionFree')
     const res = await fetch('/api/adam-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
@@ -1342,10 +1461,10 @@ async function handleWriteReflection() {
         } catch { /* ignore */ }
       }
     }
-    reflectionResultText.value = result || '亚当已完成日记'
+    reflectionResultText.value = result || t('city.reflectionDone')
     reflectionPrompt.value = ''
   } catch (e: any) {
-    reflectionResultText.value = `执行失败：${e.message}`
+    reflectionResultText.value = t('city.executionFailed', { message: e.message })
   } finally {
     toolRunning.value = null
   }
@@ -1367,7 +1486,11 @@ function handleRelocate() {
     id: `ev_relocate_${Date.now()}`,
     type: 'building_relocated',
     stage: 'act',
-    title: `迁移「${bldg.name}」到 (${newX}, ${newY})`,
+    title: t('city.buildingRelocated', {
+      name: displayBuildingName(bldg.institutionId || bldg.type, bldg.name),
+      x: newX,
+      y: newY,
+    }),
     summary: relocateForm.value.reason || '',
     at: new Date().toISOString(),
     institutionId: (bldg.institutionId as any) || undefined,
@@ -1394,7 +1517,11 @@ function handleUpgrade() {
     id: `ev_upgrade_${Date.now()}`,
     type: 'building_upgraded',
     stage: 'act',
-    title: `升级「${bldg.name}」→ ${upgradeForm.value.newType}（LV.${bldg.upgradeHistory.length}）`,
+    title: t('city.buildingUpgraded', {
+      name: displayBuildingName(bldg.institutionId || bldg.type, bldg.name),
+      type: upgradeForm.value.newType,
+      level: bldg.upgradeHistory.length,
+    }),
     summary: upgradeForm.value.reason || '',
     at: new Date().toISOString(),
     institutionId: (bldg.institutionId as any) || undefined,
@@ -1414,7 +1541,7 @@ function handleErpAccess(approved: boolean) {
       id: `ev_erp_${Date.now()}`,
       type: 'institution_unlocked',
       stage: 'act',
-      title: `批准ERP数据权限：${erpAccessForm.value.dataType}`,
+      title: t('city.erpAccessApproved', { type: erpAccessForm.value.dataType }),
       summary: erpAccessForm.value.reason || '',
       at: new Date().toISOString(),
       institutionId: 'finance_gateway',
@@ -1431,20 +1558,29 @@ function handleRecordInvestment() {
   const amount = parseFloat(riForm.value.amount)
   if (!amount || amount <= 0) return
   const isBuy = riForm.value.direction === 'buy'
+  const tradeNote = riForm.value.note ? `：${riForm.value.note}` : ''
   adamStore.addLedgerEntry({
     id: `led_invest_${Date.now()}`,
     at: new Date().toISOString(),
     kind: 'cost',
     amount,
     direction: isBuy ? 'out' : 'in',
-    title: `${isBuy ? '买入' : '卖出'} ${riForm.value.symbol || '（未填标的）'}${riForm.value.note ? '：' + riForm.value.note : ''}`,
+    title: t('city.investTradeLedger', {
+      side: isBuy ? t('city.buy') : t('city.sell'),
+      symbol: riForm.value.symbol || t('city.unknownSymbol'),
+      note: tradeNote,
+    }),
     linkedEventIds: [],
   })
   adamStore.addEvent({
     id: `ev_invest_${Date.now()}`,
     type: 'trade_result_recorded',
     stage: 'act',
-    title: `${isBuy ? '买入' : '卖出'} ${riForm.value.symbol || '未知标的'} ¥${amount}`,
+    title: t('city.investTradeEvent', {
+      side: isBuy ? t('city.buy') : t('city.sell'),
+      symbol: riForm.value.symbol || t('city.unknownSymbol'),
+      amount,
+    }),
     summary: riForm.value.note || '',
     at: new Date().toISOString(),
     institutionId: 'bureau',
@@ -1472,14 +1608,14 @@ function handleSettleDividend() {
     kind: 'dividend',
     amount: userShare,
     direction: 'out',
-    title: `分红给用户（${dividendRatio.value * 100}%）：¥${userShare}${dvForm.value.note ? ' — ' + dvForm.value.note : ''}`,
+    title: t('city.dividendLedger', { ratio: dividendRatio.value * 100, amount: userShare, note: dvForm.value.note ? ` — ${dvForm.value.note}` : '' }),
     linkedEventIds: [],
   })
   adamStore.addEvent({
     id: `ev_div_${Date.now()}`,
     type: 'ledger_entry_created',
     stage: 'settle',
-    title: `结算分红 — 总利润¥${total}，你获得¥${userShare}，亚当留存¥${adamShare}`,
+    title: t('city.dividendEvent', { total, userShare, adamShare }),
     summary: dvForm.value.note || '',
     at: new Date().toISOString(),
     institutionId: 'bureau',
@@ -1509,14 +1645,14 @@ function handleApplyPenalty() {
     kind: 'penalty',
     amount: penalty,
     direction: 'out',
-    title: `赔付损失¥${loss}（客观置信度${obj}%）：¥${penalty}${penForm.value.note ? ' — ' + penForm.value.note : ''}`,
+    title: t('city.penaltyLedger', { loss, confidence: obj, penalty, note: penForm.value.note ? ` — ${penForm.value.note}` : '' }),
     linkedEventIds: [],
   })
   adamStore.addEvent({
     id: `ev_pen_${Date.now()}`,
     type: 'dispute_resolved',
     stage: 'settle',
-    title: `执行赔付 ¥${penalty}（损失¥${loss} × 置信度${obj}% × 0.1）`,
+    title: t('city.penaltyEvent', { penalty, loss, confidence: obj }),
     summary: penForm.value.note || '',
     at: new Date().toISOString(),
     institutionId: 'bureau',
@@ -1547,8 +1683,8 @@ function handleIssueRecommendation() {
     id: `ev_rec_${Date.now()}`,
     type: 'recommendation_issued',
     stage: 'act',
-    title: `发出指令：${rec.title}`,
-    summary: `置信度${rec.confidence}%。${rec.thesis.slice(0, 60)}`,
+    title: t('city.recommendationEvent', { title: rec.title }),
+    summary: t('city.recommendationSummary', { confidence: rec.confidence, thesis: rec.thesis.slice(0, 60) }),
     at: new Date().toISOString(),
     institutionId: 'bureau',
   })
@@ -1576,7 +1712,7 @@ async function executeTool(tid: string) {
   if (tid === 'upgrade_structure') { showUpgradeDialog.value = true; return }
   if (tid === 'request_erp_access') { showErpAccessDialog.value = true; return }
   // 需要参数的 AI 工具 → 下达任务弹窗
-  if (toolTaskConfig[tid]) { openTaskDialog(tid); return }
+  if (getToolTaskConfig(tid)) { openTaskDialog(tid); return }
 
   if (toolRunning.value) return
   toolRunning.value = tid
@@ -1589,7 +1725,7 @@ async function executeTool(tid: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
       body: JSON.stringify({
-        messages: [{ role: 'user', content: `请执行工具: ${tid}` }],
+        messages: [{ role: 'user', content: t('city.executeToolPrompt', { tool: tid }) }],
         adamState: { ...adamStore.core },
         books: adamStore.books,
       }),
@@ -1633,11 +1769,11 @@ async function executeTool(tid: string) {
       }
     }
 
-    toolResults.value[tid] = result || '执行完成'
-    toolResultDisplay.value = result || '执行完成'
+    toolResults.value[tid] = result || t('city.toolDone')
+    toolResultDisplay.value = result || t('city.toolDone')
   } catch (e: any) {
-    toolResults.value[tid] = `错误: ${e.message}`
-    toolResultDisplay.value = `错误: ${e.message}`
+    toolResults.value[tid] = t('city.toolError', { message: e.message })
+    toolResultDisplay.value = t('city.toolError', { message: e.message })
   } finally {
     toolRunning.value = null
   }
@@ -1683,7 +1819,7 @@ function approveLoan(event: any) {
     kind: 'loan',
     amount,
     direction: 'in',
-    title: `贷款到账 ¥${amount}（${event.metadata?.purpose || ''}）`,
+    title: t('city.loanReceived', { amount, purpose: event.metadata?.purpose || '' }),
     linkedEventIds: [event.id],
   })
   // 标记已审批
@@ -1698,10 +1834,10 @@ function rejectLoan(event: any) {
 
 // ── 左侧状态栏：按区域分组的机构 ──
 const zoneList = computed(() => [
-  { key: 'command', label: '指挥中心', items: adamStore.institutions.filter((i) => i.zone === 'command_center') },
-  { key: 'intelligence', label: '情报研究区', items: adamStore.institutions.filter((i) => i.zone === 'intelligence') },
-  { key: 'commerce', label: '商业生态区', items: adamStore.institutions.filter((i) => i.zone === 'commerce') },
-  { key: 'adam', label: '亚当领地', items: adamStore.institutions.filter((i) => i.zone === 'adam_domain') },
+  { key: 'command', label: t('city.zoneLabels.command'), items: adamStore.institutions.filter((i) => i.zone === 'command_center') },
+  { key: 'intelligence', label: t('city.zoneLabels.intelligence'), items: adamStore.institutions.filter((i) => i.zone === 'intelligence') },
+  { key: 'commerce', label: t('city.zoneLabels.commerce'), items: adamStore.institutions.filter((i) => i.zone === 'commerce') },
+  { key: 'adam', label: t('city.zoneLabels.adam'), items: adamStore.institutions.filter((i) => i.zone === 'adam_domain') },
 ])
 
 const emojiMap: Record<string, string> = {
@@ -1714,39 +1850,23 @@ const emojiMap: Record<string, string> = {
 function getEmoji(id: string) { return emojiMap[id] || '🏗️' }
 
 function statusLabel(status: string) {
-  const map: Record<string, string> = { idle: 'IDLE', active: 'ACTIVE', locked: 'LOCKED', cooldown: 'COOLDOWN', disabled: 'DISABLED', urgent: 'URGENT' }
-  return map[status] || status.toUpperCase()
+  return t(`city.statusLabels.${status}`) || status.toUpperCase()
 }
 
 function buildingStatusLabel(status: string) {
-  const map: Record<string, string> = { planned: '规划中', active: '已建成', upgrading: '升级中', disabled: '停用', memorial: '纪念碑' }
-  return map[status] || status
+  return t(`city.buildingStatuses.${status}`) || status
 }
 
-const toolNameMap: Record<string, string> = {
-  scan_market_news: '扫描市场新闻',
-  get_stock_realtime: '实时行情',
-  get_stock_history: '历史行情',
-  analyze_fundamentals: '基本面分析',
-  screen_stocks: '选股筛选',
-  get_northbound_flow: '北向资金',
-  get_sector_heat: '板块热度',
-  generate_research_report: '研报生成',
-  record_investment: '记录投资',
-  settle_dividend: '结算分红',
-  apply_penalty: '执行赔付',
-  request_loan: '申请贷款',
-  manage_vault: '保险箱管理',
-  build_structure: '建造',
-  relocate_structure: '迁移',
-  upgrade_structure: '升级建筑',
-  request_erp_access: '请求ERP权限',
-  issue_recommendation: '发出指令',
-  write_reflection: '写日记',
-  consult_marketing_expert: '咨询营销顾问',
-  browse_books: '查阅书架',
-  add_book: '写书',
-  recommend_book: '推荐书',
+function toolDisplayName(tid: string) {
+  return t(`city.toolNames.${tid}`) || tid
+}
+
+function displayInstitutionName(instId: string, fallback?: string) {
+  return t(`city.institutionNames.${instId}`) || fallback || instId
+}
+
+function displayBuildingName(instId: string, fallback?: string) {
+  return t(`city.buildingNames.${instId}`) || displayInstitutionName(instId, fallback)
 }
 
 function formatTime(iso: string) {
@@ -1781,7 +1901,7 @@ function handleDeposit() {
     id: `ledger_${Date.now()}`,
     direction: 'in',
     amount,
-    title: depositNote.value || '手动充值',
+    title: depositNote.value || t('city.manualDeposit'),
     kind: 'earning',
     at: new Date().toISOString(),
     linkedEventIds: [],
@@ -1792,13 +1912,13 @@ function handleDeposit() {
 }
 
 function confirmTransfer(id: string) {
-  const t = pendingTransfers.value.find(x => x.id === id)
-  if (!t) return
+  const transfer = pendingTransfers.value.find(x => x.id === id)
+  if (!transfer) return
   adamStore.addLedgerEntry({
     id: `ledger_${Date.now()}`,
     direction: 'out',
-    amount: t.amount,
-    title: `转账给 ${t.to}：${t.note}`,
+    amount: transfer.amount,
+    title: t('city.transferTo', { to: transfer.to, note: transfer.note }),
     kind: 'cost',
     at: new Date().toISOString(),
     linkedEventIds: [],
@@ -2332,6 +2452,55 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
 }
+.inst-status-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--faint);
+  border-radius: 4px;
+}
+.cur-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-family: 'SF Mono', monospace;
+}
+.cur-status.active { color: #28C76F; background: rgba(40,199,111,0.12); }
+.cur-status.idle { color: #999; background: rgba(255,255,255,0.08); }
+.cur-status.locked { color: #FF9F43; background: rgba(255,159,67,0.12); }
+.status-btns { display: flex; gap: 6px; }
+.status-btn {
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: 'SF Mono', monospace;
+  letter-spacing: 0.05em;
+}
+.status-btn.activate {
+  color: #28C76F;
+  background: rgba(40,199,111,0.12);
+  border: 1px solid rgba(40,199,111,0.25);
+}
+.status-btn.activate:hover:not(:disabled) { background: rgba(40,199,111,0.22); }
+.status-btn.activate:disabled { opacity: 0.4; cursor: not-allowed; }
+.status-btn.deactivate {
+  color: #FF6B6B;
+  background: rgba(255,107,107,0.12);
+  border: 1px solid rgba(255,107,107,0.25);
+}
+.status-btn.deactivate:hover { background: rgba(255,107,107,0.22); }
+.status-hint {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--dim);
+  font-style: italic;
+}
 .tool-count {
   background: var(--faint);
   padding: 0 4px;
@@ -2626,6 +2795,75 @@ onUnmounted(() => {
   user-select: none;
   background:
     radial-gradient(ellipse at 50% 38%, #f7f1df 0%, #f1e9d3 55%, #eae0c6 100%);
+  transition: background 1.5s ease;
+}
+.iso-viewport.mood-sunny {
+  background:
+    radial-gradient(ellipse at 50% 35%, #fff9d6 0%, #ffe9a8 55%, #f9d57a 100%);
+}
+.iso-viewport.mood-bright {
+  background:
+    radial-gradient(ellipse at 50% 36%, #fdf5e1 0%, #f6ead0 55%, #ebd8b2 100%);
+}
+.iso-viewport.mood-normal {
+  background:
+    radial-gradient(ellipse at 50% 38%, #f7f1df 0%, #f1e9d3 55%, #eae0c6 100%);
+}
+.iso-viewport.mood-rain {
+  background:
+    radial-gradient(ellipse at 50% 38%, #c4ccd6 0%, #a8b3c0 55%, #8b97a6 100%);
+}
+.iso-viewport.mood-storm {
+  background:
+    radial-gradient(ellipse at 50% 38%, #6a7280 0%, #4d5560 55%, #353c47 100%);
+}
+/* 氛围徽章 */
+.mood-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-family: 'SF Mono', monospace;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  background: rgba(255,255,255,0.85);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+}
+.mood-badge.sunny { background: rgba(255, 232, 130, 0.9); color: #6b4f00; }
+.mood-badge.bright { background: rgba(255,255,255,0.9); color: #444; }
+.mood-badge.normal { background: rgba(255,255,255,0.85); color: #555; }
+.mood-badge.rain { background: rgba(120,130,145,0.85); color: #fff; }
+.mood-badge.storm { background: rgba(40,46,56,0.9); color: #ff8a8a; }
+.mood-emoji { font-size: 14px; }
+.mood-text { font-size: 11px; }
+.mood-pnl { font-size: 10px; opacity: 0.8; padding-left: 4px; border-left: 1px solid rgba(0,0,0,0.15); }
+.mood-badge.rain .mood-pnl, .mood-badge.storm .mood-pnl { border-left-color: rgba(255,255,255,0.2); }
+/* 雨效果 */
+.weather-rain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 45;
+  overflow: hidden;
+}
+.raindrop {
+  position: absolute;
+  top: -20px;
+  width: 2px;
+  height: 14px;
+  background: linear-gradient(to bottom, transparent, rgba(180, 200, 230, 0.7));
+  animation: fall 1.5s linear infinite;
+}
+@keyframes fall {
+  to { transform: translateY(110vh); }
 }
 .iso-viewport:active { cursor: grabbing; }
 
