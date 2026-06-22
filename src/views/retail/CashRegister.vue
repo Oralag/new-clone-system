@@ -1244,7 +1244,7 @@ async function handleCheckout() {
       status: 1,
     })
     if (!res?.data?.id && !res?.data?.order_no && !res?.data?.order_sn) {
-      throw new Error('Order creation returned unexpected result, please retry')
+      throw new Error(t('retail.cashRegister.orderCreateUnexpected'))
     }
     const createdId = Number(res.data?.id || 0)
     const check = await getRetailOrderList({ list_rows: 200 })
@@ -1253,7 +1253,7 @@ async function handleCheckout() {
       (createdId > 0 && Number(r.id) === createdId)
     )
     if (!created) {
-      throw new Error('Checkout failed: new retail order not found, please retry')
+      throw new Error(t('retail.cashRegister.checkoutOrderMissing'))
     }
     const feesTotal = normalizedRetailFeeItems().reduce((s, f) => s + Number(f.amount), 0)
     lastPayAmount.value = settled.payAmount
@@ -1414,7 +1414,7 @@ function addWeightItemToCart() {
     finalGrams = wcReverseGrams.value
   }
   if (finalAmount <= 0) return
-  const baseName = wcGoodsName.value || 'Bulk Item'
+  const baseName = wcGoodsName.value || t('retail.cashRegister.bulkItem')
   const name = wcSpecLabel.value ? `${baseName} · ${wcSpecLabel.value}` : baseName
   const newNum = parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4))
   if (wcEditIndex.value !== null) {
