@@ -13,6 +13,14 @@ export default {
 
   // Toolbar
   createExchange: 'New Exchange',
+  createReissue: 'New Reissue',
+  createDropdown: 'New',
+
+  // Order type (exchange vs reissue)
+  colType: 'Type',
+  typeExchange: 'Exchange',
+  typeReissue: 'Reissue',
+  typeFilterPlaceholder: 'Type',
 
   // Expand sections
   expandReturnGoods: 'Returned Products',
@@ -52,13 +60,16 @@ export default {
   reject: 'Reject',
   unapprove: 'Unapprove',
   delete: 'Delete',
-  deleteAuditedWarning: 'Please unapprove this exchange order before deleting it.',
+  deleteAuditedWarning: 'Please unapprove this order before deleting it.',
 
   // Form topbar
   back: 'Back',
   viewExchange: 'View Exchange Order',
   editExchange: 'Edit Exchange Order',
   newExchange: 'New Exchange',
+  viewReissue: 'View Reissue Order',
+  editReissue: 'Edit Reissue Order',
+  newReissue: 'New Reissue',
   approved: 'Approved',
   save: 'Save',
   saveAndAudit: 'Save & Approve',
@@ -69,7 +80,11 @@ export default {
   returnGoodsSubtitle: '(Products returned by customer — will be received into stock on approval)',
   exchangeGoodsSection: 'Exchange Products',
   exchangeGoodsSubtitle: '(New products sent to customer — will be shipped out on approval)',
+  reissueGoodsSection: 'Reissue Products',
+  reissueGoodsSubtitle: '(Reissue items to customer — shipped out on approval, cost borne by seller)',
   settlementInfo: 'Settlement',
+  reissueAmountTotal: 'Total Reissue Amount',
+  reissueAmountHint: '(Not added to receivable; cost borne by seller)',
 
   // Form fields
   orderNoPlaceholder: '(Auto-generated on save)',
@@ -85,6 +100,7 @@ export default {
   staffPlaceholder: 'Select or enter handler',
   selectDate: 'Select date',
   exchangeReasonPlaceholder: 'Enter reason for exchange',
+  reissueReasonPlaceholder: 'Enter reason for reissue (damaged / missing, etc.)',
   remarkPlaceholder: 'Remark (optional)',
 
   // Return goods toolbar
@@ -94,6 +110,7 @@ export default {
   goodsCount: '{count} item(s)',
   emptyReturnGoods: 'Please add returned products',
   emptyExchangeGoods: 'Please add exchange products',
+  emptyReissueGoods: 'Please add reissue products',
 
   // Exchange goods toolbar
   importFromOutOrder: 'Import from Outbound Order',
@@ -157,6 +174,7 @@ export default {
   // Manual add dialog
   manualAddReturnTitle: 'Add Returned Product Manually',
   manualAddExchangeTitle: 'Add Exchange Product Manually',
+  manualAddReissueTitle: 'Add Reissue Product Manually',
   manualGoodsName: 'Product Name',
   manualGoodsNameRequired: 'Please enter product name',
   manualGoodsNamePlaceholder: 'Enter product name',
@@ -170,7 +188,7 @@ export default {
   manualConfirm: 'Add',
 
   // Audit
-  auditConfirm: 'Confirm {action} this exchange order?',
+  auditConfirm: 'Confirm {action} this order?',
   promptTitle: 'Notice',
   auditSuccess: '{action} successful',
   auditLabel1: 'Approve',
@@ -178,7 +196,7 @@ export default {
   auditLabel2: 'Reject',
 
   // Delete
-  deleteConfirm: 'Delete this exchange order?',
+  deleteConfirm: 'Delete this order?',
   deleteSuccess: 'Deleted successfully',
 
   // Save
