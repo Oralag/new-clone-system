@@ -236,10 +236,10 @@
 
         <!-- 区域浮动标签 -->
         <div class="zone-labels">
-          <div class="zone-float-label command"><b>{{ t('city.commandCenterZh') }}</b><i>{{ t('city.commandCenterEn') }}</i></div>
-          <div class="zone-float-label intelligence"><b>{{ t('city.intelligenceZoneZh') }}</b><i>{{ t('city.intelligenceZoneEn') }}</i></div>
-          <div class="zone-float-label commerce"><b>{{ t('city.commerceZoneZh') }}</b><i>{{ t('city.commerceZoneEn') }}</i></div>
-          <div class="zone-float-label adam"><b>{{ t('city.adamDomainZh') }}</b><i>{{ t('city.adamDomainEn') }}</i></div>
+          <div class="zone-float-label command"><b>{{ t('city.zoneLabels.command') }}</b></div>
+          <div class="zone-float-label intelligence"><b>{{ t('city.zoneLabels.intelligence') }}</b></div>
+          <div class="zone-float-label commerce"><b>{{ t('city.zoneLabels.commerce') }}</b></div>
+          <div class="zone-float-label adam"><b>{{ t('city.zoneLabels.adam') }}</b></div>
         </div>
 
         <!-- ── 等轴测场景 ── -->
@@ -927,14 +927,45 @@ interface ChatToolCall { id: string; name: string; input: Record<string, any>; s
 interface ChatMsg { id: string; role: 'user' | 'assistant'; content: string; time: string; toolCalls?: ChatToolCall[] }
 const chatMessages = ref<ChatMsg[]>([])
 
-function loadChatHistory() {
+async function loadChatHistory() {
+  // 1. 先用 localStorage 快速渲染（避免空白）
   try {
     const raw = localStorage.getItem(CHAT_HISTORY_KEY)
     if (raw) chatMessages.value = JSON.parse(raw)
   } catch { /* ignore */ }
+  // 2. 再从 KV 拉权威版本，跨设备同步
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    if (!token) return
+    const res = await fetch('/api/adam/history', { headers: { 'x-erp-token': token } })
+    if (!res.ok) return
+    const data = await res.json() as { messages?: Array<{ role: string; content: string; timestamp?: string }> }
+    if (Array.isArray(data.messages) && data.messages.length > 0) {
+      chatMessages.value = data.messages.map((m, i) => ({
+        id: `srv_${i}`,
+        role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.content,
+        time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '',
+      }))
+      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatMessages.value.slice(-80)))
+    }
+  } catch { /* 网络失败用 localStorage 兜底 */ }
 }
 function persistChatHistory() {
   try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatMessages.value.slice(-80))) } catch { /* ignore */ }
+  // 同步到 KV（跨设备）
+  try {
+    const token = localStorage.getItem('erp_token') || ''
+    if (!token) return
+    const msgs = chatMessages.value
+      .filter(m => m.content)
+      .map(m => ({ role: m.role, content: m.content, timestamp: new Date().toISOString() }))
+    fetch('/api/adam/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+      body: JSON.stringify({ messages: msgs }),
+    }).catch(() => {})
+  } catch { /* ignore */ }
 }
 function renderChatMarkdown(content: string): string {
   const clean = isCleanChatContent(content) ? String(content) : ''
@@ -968,11 +999,15 @@ async function handleChatSend() {
   scrollChatToBottom()
   const token = localStorage.getItem('erp_token') || ''
   const assistantMsg: ChatMsg = { id: Date.now() + '_a', role: 'assistant', content: '', time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }), toolCalls: [] }
+  // 30s 兜底：超时强制终止
+  const abortCtrl = new AbortController()
+  const timeoutId = setTimeout(() => abortCtrl.abort(), 30000)
   try {
     const res = await fetch('/api/adam-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
       body: JSON.stringify({ message: text, history: chatMessages.value.slice(-20).map(m => ({ role: m.role, content: m.content })) }),
+      signal: abortCtrl.signal,
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     chatMessages.value.push(assistantMsg)
@@ -1014,6 +1049,7 @@ async function handleChatSend() {
         ? t('city.chatFallbackWithTools')
         : t('city.chatFallbackSimple')
     }
+    clearTimeout(timeoutId)
     chatLoading.value = false
     persistChatHistory()
     scrollChatToBottom()

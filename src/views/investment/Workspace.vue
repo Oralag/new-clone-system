@@ -9,7 +9,7 @@
       <div class="ws-floor"></div>
 
       <!-- 左上：分析台 -->
-      <div class="ws-item ws-desk-map" @click="goTo('/investment/market')" title="市场分析台">
+      <div class="ws-item ws-desk-map" @click="goTo('/investment/market')" :title="t('investmentWorkspace.marketDesk')">
         <svg width="96" height="80" viewBox="0 0 96 80" class="pixel-svg">
           <rect x="8" y="32" width="80" height="8" fill="#6B4C2A"/>
           <rect x="8" y="40" width="8" height="32" fill="#5A3D20"/>
@@ -26,11 +26,11 @@
           <ellipse cx="12" cy="24" rx="4" ry="4" fill="#5d74a4"/>
           <ellipse cx="18" cy="23" rx="4" ry="4" fill="#7e98ca"/>
         </svg>
-        <div class="ws-label">市场分析台</div>
+        <div class="ws-label">{{ t('investmentWorkspace.marketDesk') }}</div>
       </div>
 
       <!-- 中上：咖啡角（点击唤起对话） -->
-      <div class="ws-item ws-coffee ws-item--clickable" @click="handleTalkToAdam" title="和亚当说话">
+      <div class="ws-item ws-coffee ws-item--clickable" @click="handleTalkToAdam" :title="t('investmentWorkspace.talkToAdam')">
         <svg width="80" height="72" viewBox="0 0 80 72" class="pixel-svg">
           <rect x="4" y="32" width="72" height="8" fill="#8B6340"/>
           <rect x="4" y="40" width="72" height="4" fill="#7A5230"/>
@@ -47,11 +47,11 @@
           <rect x="18" y="24" width="8" height="8" fill="#B8743A" rx="1"/>
           <rect x="20" y="22" width="4" height="2" fill="#A06430"/>
         </svg>
-        <div class="ws-label">☕ 点击与亚当对话</div>
+        <div class="ws-label">☕ {{ t('investmentWorkspace.talkToAdam') }}</div>
       </div>
 
       <!-- 右上：服务器 -->
-      <div class="ws-item ws-server" @mouseenter="showServerTooltip = true" @mouseleave="showServerTooltip = false" title="Agent 集群">
+      <div class="ws-item ws-server" @mouseenter="showServerTooltip = true" @mouseleave="showServerTooltip = false" :title="t('investmentWorkspace.agentCluster')">
         <svg width="80" height="88" viewBox="0 0 80 88" class="pixel-svg">
           <rect x="8" y="8" width="64" height="72" fill="#1A1A2E" rx="2"/>
           <rect x="10" y="10" width="60" height="68" fill="#16213E" rx="1"/>
@@ -75,17 +75,17 @@
           <rect x="66" y="78" width="4" height="6" fill="#6B4C2A"/>
         </svg>
         <div v-if="showServerTooltip" class="ws-server-tooltip">
-          <div class="tooltip-title">⚡ Agent 集群</div>
+          <div class="tooltip-title">⚡ {{ t('investmentWorkspace.agentCluster') }}</div>
           <div v-for="w in workers" :key="w.name" class="tooltip-row">
             <span class="tooltip-dot" :style="{ background: w.active ? '#4f79c7' : '#555' }"></span>
             <span>{{ w.name }}</span>
           </div>
         </div>
-        <div class="ws-label">Agent 集群</div>
+        <div class="ws-label">{{ t('investmentWorkspace.agentCluster') }}</div>
       </div>
 
       <!-- 左下：电脑桌 -->
-      <div class="ws-item ws-computer" @click="goTo('/investment')" title="观测舱">
+      <div class="ws-item ws-computer" @click="goTo('/investment')" :title="t('investmentWorkspace.observatory')">
         <svg width="88" height="80" viewBox="0 0 88 80" class="pixel-svg">
           <rect x="4" y="44" width="80" height="8" fill="#8B6340"/>
           <rect x="4" y="52" width="8" height="24" fill="#7A5230"/>
@@ -103,7 +103,7 @@
           <rect x="72" y="38" width="6" height="6" fill="#7A4F2E" rx="1"/>
           <ellipse cx="75" cy="36" rx="4" ry="4" fill="#6f86b6"/>
         </svg>
-        <div class="ws-label">观测舱</div>
+        <div class="ws-label">{{ t('investmentWorkspace.observatory') }}</div>
       </div>
 
       <!-- 中间：水晶球 -->
@@ -133,7 +133,7 @@
       </div>
 
       <!-- 右下：书架 -->
-      <div class="ws-item ws-bookshelf" @click="goTo('/investment/library')" title="图书馆">
+      <div class="ws-item ws-bookshelf" @click="goTo('/investment/library')" :title="t('investmentWorkspace.library')">
         <svg width="80" height="96" viewBox="0 0 80 96" class="pixel-svg">
           <rect x="4" y="4" width="72" height="88" fill="#6B4C2A" rx="2"/>
           <rect x="8" y="8" width="64" height="80" fill="#8B6340"/>
@@ -164,11 +164,11 @@
           <ellipse cx="64" cy="74" rx="7" ry="7" fill="#6f86b6"/>
           <ellipse cx="61" cy="71" rx="5" ry="5" fill="#5d74a4"/>
         </svg>
-        <div class="ws-label">图书馆</div>
+        <div class="ws-label">{{ t('investmentWorkspace.library') }}</div>
       </div>
 
       <!-- 亚当像素小人 -->
-      <div class="ws-adam" :class="[`adam-anim-${adamAnim}`, `adam-pos-${adamPos}`]" @click="handleTalkToAdam" title="点击和亚当对话">
+      <div class="ws-adam" :class="[`adam-anim-${adamAnim}`, `adam-pos-${adamPos}`]" @click="handleTalkToAdam" :title="t('investmentWorkspace.talkToAdam')">
         <svg width="32" height="48" viewBox="0 0 32 48" class="pixel-svg adam-sprite">
           <rect x="10" y="2" width="12" height="4" fill="#2A1A08"/>
           <rect x="8" y="4" width="16" height="2" fill="#2A1A08"/>
@@ -202,7 +202,7 @@
         <div class="ws-status-dot-wrap">
           <span class="ws-status-dot" :class="statusDotClass"></span>
         </div>
-        <span class="ws-status-name">亚当</span>
+        <span class="ws-status-name">{{ t('investmentWorkspace.adam') }}</span>
         <span class="ws-status-sep">|</span>
         <span class="ws-status-text">{{ statusLabel }}</span>
         <div class="ws-status-right">
@@ -218,10 +218,10 @@
       <!-- 头部：标签 + 状态 -->
       <div class="wcp-head">
         <span class="wcp-icon">⟐</span>
-        <span class="wcp-title">COMM_CHANNEL</span>
-        <span class="wcp-desc">与亚当通讯</span>
+        <span class="wcp-title">{{ t('investmentWorkspace.commChannel') }}</span>
+        <span class="wcp-desc">{{ t('investmentWorkspace.commSubtitle') }}</span>
         <span class="wcp-status" :class="{ online: adamStore.isAlive }">
-          {{ adamStore.isAlive ? 'CONNECTED' : 'OFFLINE' }}
+          {{ adamStore.isAlive ? t('investmentWorkspace.connected') : t('investmentWorkspace.offline') }}
         </span>
       </div>
 
@@ -229,7 +229,7 @@
       <div ref="messagesDiv" class="wcp-messages">
         <div v-if="messages.length === 0" class="wcp-empty">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.25"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <p>可以描述任务或提问任何问题...</p>
+          <p>{{ t('investmentWorkspace.emptyPrompt') }}</p>
         </div>
         <div v-for="msg in messages" :key="msg.id" class="wcp-msg" :class="msg.role">
           <span class="wcp-avatar" :class="msg.role">
@@ -238,7 +238,7 @@
           </span>
           <div class="wcp-msg-body">
             <div class="wcp-msg-meta">
-              <span class="wcp-sender">{{ msg.role === 'user' ? 'OPERATOR' : 'ADAM' }}</span>
+              <span class="wcp-sender">{{ msg.role === 'user' ? t('investmentWorkspace.operator') : t('investmentWorkspace.adam') }}</span>
               <span class="wcp-time">{{ msg.time }}</span>
             </div>
             <div class="wcp-content" v-html="renderMarkdown(msg.content)"></div>
@@ -249,7 +249,7 @@
               <div v-for="call in msg.toolCalls" :key="call.id" class="wcp-tool-card" :class="call.status">
                 <span class="wcp-tool-dot"></span>
                 <span class="wcp-tool-name">{{ call.name }}</span>
-                <span class="wcp-tool-status">{{ call.status === 'running' ? 'EXECUTING' : call.status === 'success' ? 'DONE' : 'FAILED' }}</span>
+                <span class="wcp-tool-status">{{ call.status === 'running' ? t('investmentWorkspace.executing') : call.status === 'success' ? t('investmentWorkspace.done') : t('investmentWorkspace.failed') }}</span>
               </div>
             </div>
           </div>
@@ -273,7 +273,7 @@
           </div>
         </div>
         <div class="wcp-input-row">
-          <button class="wcp-img-btn" title="发送图片" @click="openImagePicker" :disabled="isLoading">
+          <button class="wcp-img-btn" :title="t('investmentWorkspace.sendImage')" @click="openImagePicker" :disabled="isLoading">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
               <polyline points="21 15 16 10 5 21"/>
@@ -283,7 +283,7 @@
             ref="inputRef"
             v-model="inputText"
             class="wcp-input"
-            placeholder="可以描述任务或提问任何问题，按 Enter 发送..."
+            :placeholder="t('investmentWorkspace.inputPlaceholder')"
             rows="1"
             @keydown.enter.exact.prevent="handleSend"
             @input="autoResize"
@@ -296,7 +296,7 @@
           </button>
         </div>
         <input ref="fileInputRef" type="file" accept="image/*" multiple style="display:none" @change="onFileChange"/>
-        <div style="font-size:9px;color:#888;text-align:right;padding:2px 8px 0;opacity:0.5;">v2026-06-08c</div>
+        <div style="font-size:9px;color:#888;text-align:right;padding:2px 8px 0;opacity:0.5;">{{ t('investmentWorkspace.version') }}</div>
       </div>
     </div>
 
@@ -305,6 +305,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
 import { applyToolResult } from '@/utils/adamToolSync'
@@ -315,6 +316,7 @@ marked.setOptions({ breaks: true, gfm: true })
 
 const router = useRouter()
 const adamStore = useAdamStore()
+const { t } = useI18n()
 
 // ── 场景状态 ──
 const showServerTooltip = ref(false)
@@ -323,7 +325,15 @@ const bubbleText = ref('')
 const adamAnim = ref<'idle' | 'working' | 'walk'>('idle')
 const adamPos = ref<'coffee' | 'center' | 'desk'>('coffee')
 
-const bubbles = ['分析中...', '市场有异动', '发现机会', '在看数据', '研报更新了', '嗯...', '这个值得关注']
+const bubbles = computed(() => [
+  t('investmentWorkspace.bubbles.analyzing'),
+  t('investmentWorkspace.bubbles.anomaly'),
+  t('investmentWorkspace.bubbles.opportunity'),
+  t('investmentWorkspace.bubbles.reviewing'),
+  t('investmentWorkspace.bubbles.research'),
+  t('investmentWorkspace.bubbles.hmm'),
+  t('investmentWorkspace.bubbles.watch'),
+])
 let bubbleTimer: number | undefined
 let animTimer: number | undefined
 
@@ -333,7 +343,7 @@ onMounted(() => {
 
   bubbleTimer = window.setInterval(() => {
     if (Math.random() > 0.6) {
-      bubbleText.value = bubbles[Math.floor(Math.random() * bubbles.length)]
+      bubbleText.value = bubbles.value[Math.floor(Math.random() * bubbles.value.length)]
       showBubble.value = true
       setTimeout(() => { showBubble.value = false }, 2800)
     }
@@ -353,7 +363,7 @@ onUnmounted(() => {
 
 function handleTalkToAdam() {
   showBubble.value = true
-  bubbleText.value = '嗯，说吧。'
+  bubbleText.value = t('investmentWorkspace.bubblePrompt')
   setTimeout(() => { showBubble.value = false }, 2500)
   nextTick(() => inputRef.value?.focus())
 }
@@ -384,7 +394,13 @@ const workers = [
 
 const statusLabel = computed(() => {
   const s = adamStore.core.status
-  return s === 'dormant' ? '待命中...' : s === 'alive' ? '运行中' : s === 'survival' ? '存活模式' : '已关闭'
+  return s === 'dormant'
+    ? t('investmentWorkspace.statusDormant')
+    : s === 'alive'
+      ? t('investmentWorkspace.statusAlive')
+      : s === 'survival'
+        ? t('investmentWorkspace.statusSurvival')
+        : t('investmentWorkspace.statusShutdown')
 })
 const statusDotClass = computed(() => {
   const s = adamStore.core.status
@@ -395,7 +411,7 @@ const orbStatusText = computed(() => {
     const r = adamStore.latestRecommendation
     return `${r.ticker || ''} ${r.action || ''}`
   }
-  return adamStore.core.status === 'alive' ? '观察中' : '沉眠'
+  return adamStore.core.status === 'alive' ? t('investmentWorkspace.orbIdle') : t('investmentWorkspace.orbSleep')
 })
 function formatBudget(v: number) {
   return v >= 10000 ? `${(v / 10000).toFixed(1)}w` : `${v}`
@@ -582,7 +598,7 @@ async function handleSend() {
       }
     }
   } catch (e: any) {
-    if (!assistantMsg.content) assistantMsg.content = `CONNECTION_FAILED: ${e.message}`
+    if (!assistantMsg.content) assistantMsg.content = `${t('investmentWorkspace.connectionFailed')}: ${e.message}`
     if (!messages.value.includes(assistantMsg)) messages.value.push(assistantMsg)
   } finally {
     if (!isCleanContent(assistantMsg.content)) {

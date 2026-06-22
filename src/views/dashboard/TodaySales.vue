@@ -3,19 +3,19 @@
     <el-row :gutter="12" style="margin-bottom:16px">
       <el-col :xs="24" :sm="8">
         <el-card shadow="never" style="text-align:center">
-          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">今日总销售额</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">{{ t('dashboard.todaySales.totalSales') }}</div>
           <div style="font-size:24px;font-weight:700;color:#0071e3">¥{{ totalAmount.toFixed(2) }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="8">
         <el-card shadow="never" style="text-align:center">
-          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">销售出库金额</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">{{ t('dashboard.todaySales.saleAmount') }}</div>
           <div style="font-size:22px;font-weight:700;color:#16a34a">¥{{ saleAmount.toFixed(2) }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="8">
         <el-card shadow="never" style="text-align:center">
-          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">零售订单金额</div>
+          <div style="font-size:12px;color:rgba(29,29,31,0.35);margin-bottom:4px">{{ t('dashboard.todaySales.retailAmount') }}</div>
           <div style="font-size:22px;font-weight:700;color:#ea580c">¥{{ retailAmount.toFixed(2) }}</div>
         </el-card>
       </el-col>
@@ -25,66 +25,66 @@
       <el-tabs v-model="activeTab">
 
         <!-- 销售出库 -->
-        <el-tab-pane :label="`销售出库 (${saleRows.length})`" name="sale">
+        <el-tab-pane :label="`${t('dashboard.todaySales.saleOut')} (${saleRows.length})`" name="sale">
           <!-- 桌面端表格 -->
           <template v-if="!isMobile">
             <el-table :data="saleRows" v-loading="loading" border size="small" style="width:100%" :max-height="400">
               <el-table-column type="index" width="40" align="center" />
-              <el-table-column prop="order_no" label="单号" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="customer_name" label="客户" min-width="100" show-overflow-tooltip />
-              <el-table-column label="金额" width="110" align="right">
+              <el-table-column prop="order_no" :label="t('dashboard.todaySales.orderNo')" min-width="120" show-overflow-tooltip />
+              <el-table-column prop="customer_name" :label="t('dashboard.todaySales.customer')" min-width="100" show-overflow-tooltip />
+              <el-table-column :label="t('dashboard.todaySales.amount')" width="110" align="right">
                 <template #default="{ row }">
                   <span style="color:#0071e3;font-weight:600">¥{{ ((row.after_discount != null && row.after_discount !== '') ? Number(row.after_discount) : Number(row.total_amount||0)).toFixed(2) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="out_date" label="日期" width="100" />
-              <el-table-column label="状态" width="70" align="center">
+              <el-table-column prop="out_date" :label="t('dashboard.todaySales.date')" width="100" />
+              <el-table-column :label="t('dashboard.todaySales.status')" width="70" align="center">
                 <template #default="{ row }">
-                  <el-tag :type="row.status==1?'success':'info'" size="small">{{ row.status==1?'已审核':'待审核' }}</el-tag>
+                  <el-tag :type="row.status==1?'success':'info'" size="small">{{ row.status==1?t('dashboard.todaySales.auditPassed'):t('dashboard.todaySales.auditPending') }}</el-tag>
                 </template>
               </el-table-column>
             </el-table>
           </template>
           <!-- 手机端卡片列表 -->
           <template v-else>
-            <div v-if="loading" style="padding:20px;text-align:center;color:#999">加载中...</div>
-            <div v-else-if="saleRows.length === 0" style="padding:20px;text-align:center;color:#999">今日暂无销售出库</div>
+            <div v-if="loading" style="padding:20px;text-align:center;color:#999">{{ t('dashboard.todaySales.loading') }}</div>
+            <div v-else-if="saleRows.length === 0" style="padding:20px;text-align:center;color:#999">{{ t('dashboard.todaySales.noSaleOut') }}</div>
             <div v-else class="mobile-list">
               <div v-for="(row, i) in saleRows" :key="i" class="mobile-card">
                 <div class="mobile-card-header">
                   <span class="mobile-card-no">{{ row.order_no || ('—') }}</span>
-                  <el-tag :type="row.status==1?'success':'info'" size="small">{{ row.status==1?'已审核':'待审核' }}</el-tag>
+                  <el-tag :type="row.status==1?'success':'info'" size="small">{{ row.status==1?t('dashboard.todaySales.auditPassed'):t('dashboard.todaySales.auditPending') }}</el-tag>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">客户</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.customer') }}</span>
                   <span class="mobile-card-val">{{ row.customer_name || '—' }}</span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">日期</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.date') }}</span>
                   <span class="mobile-card-val">{{ row.out_date || '—' }}</span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">仓库</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.warehouse') }}</span>
                   <span class="mobile-card-val">{{ row.warehouse_name || '—' }}</span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">经手人</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.handler') }}</span>
                   <span class="mobile-card-val">{{ row.handler_name || row.staff_name || '—' }}</span>
                 </div>
                 <div class="mobile-card-footer">
-                  <span class="mobile-card-label">金额</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.amount') }}</span>
                   <span class="mobile-card-amount">¥{{ ((row.after_discount != null && row.after_discount !== '') ? Number(row.after_discount) : Number(row.total_amount||0)).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
           </template>
           <div style="margin-top:8px;text-align:right;font-size:13px;color:rgba(29,29,31,0.5)">
-            合计 <b style="color:#0071e3">¥{{ saleAmount.toFixed(2) }}</b>
+            {{ t('dashboard.todaySales.total') }} <b style="color:#0071e3">¥{{ saleAmount.toFixed(2) }}</b>
           </div>
         </el-tab-pane>
 
         <!-- 零售订单 -->
-        <el-tab-pane :label="`零售订单 (${retailRows.length})`" name="retail">
+        <el-tab-pane :label="`${t('dashboard.todaySales.retailOrder')} (${retailRows.length})`" name="retail">
           <!-- 桌面端表格 -->
           <template v-if="!isMobile">
             <el-table :data="retailRows" v-loading="loading" border size="small" style="width:100%" :max-height="400">
@@ -92,95 +92,95 @@
                 <template #default="{ row }">
                   <div class="detail-panel">
                     <div class="detail-title">
-                      <span>商品明细</span>
+                      <span>{{ t('dashboard.todaySales.goodsDetail') }}</span>
                       <span class="detail-summary">
-                        {{ retailOrderNo(row) }} · {{ row.member_name || row.customer_name || '散客' }}
+                        {{ retailOrderNo(row) }} · {{ row.member_name || row.customer_name || t('dashboard.todaySales.walkIn') }}
                       </span>
                     </div>
-                    <el-table :data="parseGoods(row.goods_info)" size="small" border style="width:100%" empty-text="暂无商品明细">
-                      <el-table-column prop="goods_name" label="商品名称" min-width="160" show-overflow-tooltip />
-                      <el-table-column prop="goods_sn" label="编码" min-width="110" show-overflow-tooltip />
-                      <el-table-column prop="unit_name" label="单位" width="70" align="center" />
-                      <el-table-column label="数量" width="80" align="right">
+                    <el-table :data="parseGoods(row.goods_info)" size="small" border style="width:100%" :empty-text="t('dashboard.todaySales.noGoodsDetail')">
+                      <el-table-column prop="goods_name" :label="t('dashboard.todaySales.goodsName')" min-width="160" show-overflow-tooltip />
+                      <el-table-column prop="goods_sn" :label="t('dashboard.todaySales.code')" min-width="110" show-overflow-tooltip />
+                      <el-table-column prop="unit_name" :label="t('dashboard.todaySales.unit')" width="70" align="center" />
+                      <el-table-column :label="t('dashboard.todaySales.qty')" width="80" align="right">
                         <template #default="{ row: item }">{{ Number(item.num || item.quantity || 0) }}</template>
                       </el-table-column>
-                      <el-table-column label="单价" width="100" align="right">
+                      <el-table-column :label="t('dashboard.todaySales.unitPrice')" width="100" align="right">
                         <template #default="{ row: item }">¥{{ itemPrice(item).toFixed(2) }}</template>
                       </el-table-column>
-                      <el-table-column label="小计" width="110" align="right">
+                      <el-table-column :label="t('dashboard.todaySales.subtotal')" width="110" align="right">
                         <template #default="{ row: item }">
                           <span style="color:#0071e3;font-weight:600">¥{{ lineAmount(item).toFixed(2) }}</span>
                         </template>
                       </el-table-column>
                     </el-table>
                     <div class="detail-footer">
-                      <span>商品合计 ¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
-                      <span>优惠 ¥{{ Number(row.discount_amount || 0).toFixed(2) }}</span>
-                      <b>实付 ¥{{ Number(row.pay_amount || row.total_amount || 0).toFixed(2) }}</b>
+                      <span>{{ t('dashboard.todaySales.goodsTotal') }} ¥{{ Number(row.total_amount || 0).toFixed(2) }}</span>
+                      <span>{{ t('dashboard.todaySales.discount') }} ¥{{ Number(row.discount_amount || 0).toFixed(2) }}</span>
+                      <b>{{ t('dashboard.todaySales.paid') }} ¥{{ Number(row.pay_amount || row.total_amount || 0).toFixed(2) }}</b>
                     </div>
                   </div>
                 </template>
               </el-table-column>
               <el-table-column type="index" width="40" align="center" />
-              <el-table-column label="单号" min-width="120" show-overflow-tooltip>
+              <el-table-column :label="t('dashboard.todaySales.orderNo')" min-width="120" show-overflow-tooltip>
                 <template #default="{ row }">{{ retailOrderNo(row) }}</template>
               </el-table-column>
-              <el-table-column label="会员" min-width="100" show-overflow-tooltip>
-                <template #default="{ row }">{{ row.member_name || row.customer_name || '散客' }}</template>
+              <el-table-column :label="t('dashboard.todaySales.member')" min-width="100" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.member_name || row.customer_name || t('dashboard.todaySales.walkIn') }}</template>
               </el-table-column>
-              <el-table-column label="商品数" width="80" align="center">
+              <el-table-column :label="t('dashboard.todaySales.goodsCount')" width="80" align="center">
                 <template #default="{ row }">{{ parseGoods(row.goods_info).length }}</template>
               </el-table-column>
-              <el-table-column label="实付" width="110" align="right">
+              <el-table-column :label="t('dashboard.todaySales.paid')" width="110" align="right">
                 <template #default="{ row }">
                   <span style="color:#0071e3;font-weight:600">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="支付" width="80" align="center">
+              <el-table-column :label="t('dashboard.todaySales.payType')" width="80" align="center">
                 <template #default="{ row }">{{ fmtPayType(row.pay_type || row.pay_method) }}</template>
               </el-table-column>
-              <el-table-column prop="order_date" label="日期" width="100" />
+              <el-table-column prop="order_date" :label="t('dashboard.todaySales.date')" width="100" />
             </el-table>
           </template>
           <!-- 手机端卡片列表 -->
           <template v-else>
-            <div v-if="loading" style="padding:20px;text-align:center;color:#999">加载中...</div>
-            <div v-else-if="retailRows.length === 0" style="padding:20px;text-align:center;color:#999">今日暂无零售订单</div>
+            <div v-if="loading" style="padding:20px;text-align:center;color:#999">{{ t('dashboard.todaySales.loading') }}</div>
+            <div v-else-if="retailRows.length === 0" style="padding:20px;text-align:center;color:#999">{{ t('dashboard.todaySales.noRetail') }}</div>
             <div v-else class="mobile-list">
               <div v-for="(row, i) in retailRows" :key="i" class="mobile-card">
                 <div class="mobile-card-header" @click="toggleRetail(row)">
                   <span class="mobile-card-no">{{ retailOrderNo(row) }}</span>
-                  <el-button link type="primary" size="small">{{ isRetailExpanded(row) ? '收起' : '明细' }}</el-button>
+                  <el-button link type="primary" size="small">{{ isRetailExpanded(row) ? t('dashboard.todaySales.collapse') : t('dashboard.todaySales.detail') }}</el-button>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">会员</span>
-                  <span class="mobile-card-val">{{ row.member_name || '散客' }}</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.member') }}</span>
+                  <span class="mobile-card-val">{{ row.member_name || t('dashboard.todaySales.walkIn') }}</span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">日期</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.date') }}</span>
                   <span class="mobile-card-val">{{ row.order_date || '—' }}</span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">支付方式</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.payType') }}</span>
                   <span class="mobile-card-val">{{ row.pay_type || '—' }}</span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">收银员</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.cashier') }}</span>
                   <span class="mobile-card-val">{{ row.cashier_name || row.staff_name || '—' }}</span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label">门店</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.store') }}</span>
                   <span class="mobile-card-val">{{ row.store_name || '—' }}</span>
                 </div>
                 <div class="mobile-card-footer">
-                  <span class="mobile-card-label">实付</span>
+                  <span class="mobile-card-label">{{ t('dashboard.todaySales.paid') }}</span>
                   <span class="mobile-card-amount">¥{{ Number(row.pay_amount||0).toFixed(2) }}</span>
                 </div>
                 <div v-if="isRetailExpanded(row)" class="mobile-detail">
-                  <div v-if="parseGoods(row.goods_info).length === 0" class="mobile-detail-empty">暂无商品明细</div>
+                  <div v-if="parseGoods(row.goods_info).length === 0" class="mobile-detail-empty">{{ t('dashboard.todaySales.noGoodsDetail') }}</div>
                   <div v-for="(item, idx) in parseGoods(row.goods_info)" :key="idx" class="mobile-detail-row">
                     <div>
-                      <div class="mobile-detail-name">{{ item.goods_name || '未命名商品' }}</div>
+                      <div class="mobile-detail-name">{{ item.goods_name || t('dashboard.todaySales.unnamedGoods') }}</div>
                       <div class="mobile-detail-meta">
                         {{ item.goods_sn || '—' }} · {{ item.unit_name || '—' }} · {{ Number(item.num || item.quantity || 0) }}
                       </div>
@@ -192,7 +192,7 @@
             </div>
           </template>
           <div style="margin-top:8px;text-align:right;font-size:13px;color:rgba(29,29,31,0.5)">
-            实付合计 <b style="color:#0071e3">¥{{ retailAmount.toFixed(2) }}</b>
+            {{ t('dashboard.todaySales.retailPaidTotal') }} <b style="color:#0071e3">¥{{ retailAmount.toFixed(2) }}</b>
           </div>
         </el-tab-pane>
 
@@ -203,7 +203,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const activeTab = ref('sale')
@@ -244,16 +247,16 @@ function retailOrderNo(row: any) {
 }
 
 const PAY_TYPE_MAP: Record<string, string> = {
-  cash: '现金',
-  wechat: '微信',
-  alipay: '支付宝',
-  balance: '余额',
-  card: '银行卡',
+  cash: 'dashboard.payType.cash',
+  wechat: 'dashboard.payType.wechat',
+  alipay: 'dashboard.payType.alipay',
+  balance: 'dashboard.payType.balance',
+  card: 'dashboard.payType.card',
 }
 
 function fmtPayType(val: any) {
   if (!val) return '—'
-  return PAY_TYPE_MAP[val] || val
+  return PAY_TYPE_MAP[val] ? t(PAY_TYPE_MAP[val]) : val
 }
 
 function itemPrice(item: any) {

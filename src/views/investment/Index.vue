@@ -26,7 +26,7 @@
             </div>
             <button v-if="adamStore.core.status === 'dormant'" class="activate-btn" @click="handleActivate">
               <span class="activate-glow"></span>
-              <span class="activate-text">ACTIVATE</span>
+              <span class="activate-text">{{ t('investmentHome.activate') }}</span>
             </button>
           </div>
         </div>
@@ -34,29 +34,29 @@
         <!-- 核心指标条 -->
         <div class="metrics-strip">
           <div class="metric-block">
-            <span class="metric-key">NET_WORTH</span>
+            <span class="metric-key">{{ t('investmentHome.netWorth') }}</span>
             <span class="metric-val" :class="{ positive: adamStore.core.netWorth > 0, negative: adamStore.core.netWorth < 0 }">
               ¥{{ adamStore.core.netWorth.toLocaleString() }}
             </span>
           </div>
           <div class="metric-divider"></div>
           <div class="metric-block">
-            <span class="metric-key">BUDGET</span>
+            <span class="metric-key">{{ t('investmentHome.budget') }}</span>
             <span class="metric-val">¥{{ adamStore.core.budget.toLocaleString() }}</span>
           </div>
           <div class="metric-divider"></div>
           <div class="metric-block">
-            <span class="metric-key">CREDIT</span>
+            <span class="metric-key">{{ t('investmentHome.credit') }}</span>
             <span class="metric-val credit">{{ adamStore.core.creditLevel }}</span>
           </div>
           <div class="metric-divider"></div>
           <div class="metric-block">
-            <span class="metric-key">ALIVE</span>
+            <span class="metric-key">{{ t('investmentHome.alive') }}</span>
             <span class="metric-val">{{ adamStore.core.survivalDays }}<span class="metric-unit">d</span></span>
           </div>
           <div class="metric-divider"></div>
           <div class="metric-block">
-            <span class="metric-key">ENERGY</span>
+            <span class="metric-key">{{ t('investmentHome.energy') }}</span>
             <div class="energy-bar-wrap">
               <div class="energy-bar" :style="{ width: adamStore.core.energy + '%' }" :class="{ low: adamStore.core.energy < 30 }"></div>
             </div>
@@ -66,7 +66,7 @@
 
         <!-- 情绪频谱条 -->
         <div class="emotion-strip">
-          <span class="emotion-label">EMOTION_SPECTRUM</span>
+          <span class="emotion-label">{{ t('investmentHome.emotionSpectrum') }}</span>
           <div class="emotion-bars">
             <div v-for="(val, key) in adamStore.core.emotionState" :key="key" class="emotion-item" :title="emotionLabels[key] || key">
               <div class="emotion-bar-bg">
@@ -86,14 +86,14 @@
         <div class="panel panel-instruction">
           <div class="panel-head">
             <span class="panel-icon">◈</span>
-            <span class="panel-title">LATEST_DIRECTIVE</span>
+            <span class="panel-title">{{ t('investmentHome.latestDirective') }}</span>
           </div>
           <div v-if="adamStore.latestRecommendation" class="instruction-card">
             <div class="instruction-glow-bar"></div>
             <div class="instruction-body">
               <div class="instruction-meta">
                 <span class="instruction-conf" v-if="adamStore.latestRecommendation.confidence">
-                  CONF: {{ (adamStore.latestRecommendation.confidence * 100).toFixed(0) }}%
+                  {{ t('investmentHome.confidencePrefix') }}: {{ (adamStore.latestRecommendation.confidence * 100).toFixed(0) }}%
                 </span>
                 <span class="instruction-time">{{ formatTime(adamStore.latestRecommendation.issuedAt) }}</span>
               </div>
@@ -105,16 +105,16 @@
               <div class="instruction-actions">
                 <button class="btn-gold" @click="handleAdoptRecommendation">
                   <span class="btn-glow"></span>
-                  已执行
+                  {{ t('investmentHome.executed') }}
                 </button>
-                <button class="btn-ghost" @click="handleSkipRecommendation">跳过</button>
+                <button class="btn-ghost" @click="handleSkipRecommendation">{{ t('investmentHome.skip') }}</button>
               </div>
             </div>
           </div>
           <div v-else class="empty-state">
             <div class="empty-icon">◇</div>
-            <span class="empty-text">AWAITING_DIRECTIVE</span>
-            <span class="empty-sub">亚当尚未发出指令</span>
+            <span class="empty-text">{{ t('investmentHome.awaitingDirective') }}</span>
+            <span class="empty-sub">{{ t('investmentHome.awaitingDirectiveSub') }}</span>
           </div>
         </div>
 
@@ -122,7 +122,7 @@
         <div class="panel panel-trust">
           <div class="panel-head">
             <span class="panel-icon">⬡</span>
-            <span class="panel-title">TRUST_LADDER</span>
+            <span class="panel-title">{{ t('investmentHome.trustLadder') }}</span>
           </div>
           <div class="trust-ladder">
             <div v-for="lvl in creditLevels" :key="lvl.id" class="trust-rung" :class="{ active: lvl.id === adamStore.core.creditLevel, past: isPastLevel(lvl.id), future: isFutureLevel(lvl.id) }">
@@ -146,17 +146,17 @@
           <div v-if="pendingAction" class="pending-action">
             <div class="pending-head">
               <span class="pending-icon">◌</span>
-              <span class="pending-title">PENDING_APPROVAL</span>
+              <span class="pending-title">{{ t('investmentHome.pendingApproval') }}</span>
             </div>
             <div class="pending-body">
               <div class="pending-type">{{ pendingAction.type }}</div>
               <div class="pending-amount">{{ pendingAction.amount }} {{ pendingAction.token || 'USDT' }}</div>
               <div class="pending-reason">{{ pendingAction.reason }}</div>
-              <div class="pending-time">提交于 {{ formatTime(pendingAction.createdAt) }}</div>
+              <div class="pending-time">{{ t('investmentHome.submittedAt') }} {{ formatTime(pendingAction.createdAt) }}</div>
             </div>
             <div class="pending-actions-row">
-              <button class="btn-gold btn-sm" @click="handleApprove">批准</button>
-              <button class="btn-ghost btn-sm" @click="handleReject">否决</button>
+              <button class="btn-gold btn-sm" @click="handleApprove">{{ t('investmentHome.approve') }}</button>
+              <button class="btn-ghost btn-sm" @click="handleReject">{{ t('investmentHome.reject') }}</button>
             </div>
           </div>
         </div>
@@ -165,7 +165,7 @@
         <div class="panel panel-log">
           <div class="panel-head">
             <span class="panel-icon">◉</span>
-            <span class="panel-title">EVENT_LOG</span>
+            <span class="panel-title">{{ t('investmentHome.eventLog') }}</span>
             <span class="panel-count" v-if="adamStore.recentEvents.length">{{ adamStore.recentEvents.length }}</span>
           </div>
           <div class="event-list">
@@ -180,8 +180,8 @@
             </div>
             <div v-if="adamStore.recentEvents.length === 0" class="empty-state">
               <div class="empty-icon">○</div>
-              <span class="empty-text">NO_EVENTS</span>
-              <span class="empty-sub">等待亚当的第一个动作</span>
+              <span class="empty-text">{{ t('investmentHome.noEvents') }}</span>
+              <span class="empty-sub">{{ t('investmentHome.noEventsSub') }}</span>
             </div>
           </div>
         </div>
@@ -193,19 +193,21 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAdamStore } from '@/stores/adam'
 import { TOKEN_NAME } from '@/config'
 
+const { t } = useI18n()
 const adamStore = useAdamStore()
 
 // ── Trust Ladder ─────────────────────────────────────────────────────────────
-const creditLevels = [
-  { id: 'C',  name: '新生',     perm: '每条操作需手动批准' },
-  { id: 'B',  name: '初步信任', perm: '指令24小时后自动生效' },
-  { id: 'B+', name: '可靠搭档', perm: '指令直接生效，小额贷款免审批' },
-  { id: 'A',  name: '高度信任', perm: '额度内自主操作金融机构' },
-  { id: 'S',  name: '完全自主', perm: '你只看报表和分红' },
-]
+const creditLevels = computed(() => [
+  { id: 'C',  name: t('investmentHome.creditLevels.C'),     perm: t('investmentHome.creditPerms.C') },
+  { id: 'B',  name: t('investmentHome.creditLevels.B'),     perm: t('investmentHome.creditPerms.B') },
+  { id: 'B+', name: t('investmentHome.creditLevels.B+'),    perm: t('investmentHome.creditPerms.B+') },
+  { id: 'A',  name: t('investmentHome.creditLevels.A'),     perm: t('investmentHome.creditPerms.A') },
+  { id: 'S',  name: t('investmentHome.creditLevels.S'),     perm: t('investmentHome.creditPerms.S') },
+])
 const levelOrder = ['C', 'B', 'B+', 'A', 'S']
 const levelReqs: Record<string, { analyses: number; days: number }> = {
   B:   { analyses: 20,  days: 30  },
@@ -257,14 +259,24 @@ async function handleReject() {
 onMounted(() => loadPendingAction())
 
 const sysLabel = computed(() => {
-  const map: Record<string, string> = { dormant: 'DORMANT', alive: 'SYS.ONLINE', survival: 'SURVIVAL', shutdown: 'SHUTDOWN' }
-  return map[adamStore.core.status] || 'UNKNOWN'
+  const map: Record<string, string> = {
+    dormant: t('investmentHome.statuses.dormant'),
+    alive: t('investmentHome.statuses.alive'),
+    survival: t('investmentHome.statuses.survival'),
+    shutdown: t('investmentHome.statuses.shutdown'),
+  }
+  return map[adamStore.core.status] || t('investmentHome.statuses.unknown')
 })
 
-const emotionLabels: Record<string, string> = {
-  joy: '喜悦', anger: '愤怒', sorrow: '悲伤', fear: '恐惧',
-  love: '热爱', disgust: '厌恶', desire: '渴望',
-}
+const emotionLabels = computed<Record<string, string>>(() => ({
+  joy: t('investmentHome.emotionLabels.joy'),
+  anger: t('investmentHome.emotionLabels.anger'),
+  sorrow: t('investmentHome.emotionLabels.sorrow'),
+  fear: t('investmentHome.emotionLabels.fear'),
+  love: t('investmentHome.emotionLabels.love'),
+  disgust: t('investmentHome.emotionLabels.disgust'),
+  desire: t('investmentHome.emotionLabels.desire'),
+}))
 
 function emotionColor(key: string) {
   const map: Record<string, string> = {
@@ -275,7 +287,13 @@ function emotionColor(key: string) {
 }
 
 function stageLabel(stage: string) {
-  const map: Record<string, string> = { sense: 'SENSE', judge: 'JUDGE', act: 'ACT', settle: 'SETTLE', archive: 'ARCHIVE' }
+  const map: Record<string, string> = {
+    sense: t('investmentHome.stageLabels.sense'),
+    judge: t('investmentHome.stageLabels.judge'),
+    act: t('investmentHome.stageLabels.act'),
+    settle: t('investmentHome.stageLabels.settle'),
+    archive: t('investmentHome.stageLabels.archive'),
+  }
   return map[stage] || stage.toUpperCase()
 }
 
@@ -293,7 +311,7 @@ function handleAdoptRecommendation() {
     id: evtId,
     type: 'recommendation_adopted',
     stage: 'act',
-    title: `已执行指令: ${rec.title}`,
+    title: t('investmentHome.adoptionSuccess', { title: rec.title }),
     summary: rec.thesis?.slice(0, 60) || '',
     at: now,
     institutionId: 'bureau',
@@ -311,8 +329,8 @@ function handleSkipRecommendation() {
     id: `evt_skip_${Date.now()}`,
     type: 'archive_recorded',
     stage: 'archive',
-    title: `跳过指令: ${rec.title}`,
-    summary: '规则传递者选择跳过',
+    title: t('investmentHome.skipSuccess', { title: rec.title }),
+    summary: t('investmentHome.skipSuccess', { title: rec.title }),
     at: now,
     institutionId: 'bureau',
   })

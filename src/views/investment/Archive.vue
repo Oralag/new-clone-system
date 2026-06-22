@@ -5,17 +5,17 @@
     <div class="panel" style="margin-bottom: 16px;">
       <div class="panel-head">
         <span class="panel-icon">🧠</span>
-        <span class="panel-title">KNOWLEDGE BASE — 共享知识库</span>
-        <span class="panel-badge">{{ knowledgeEntries.length }} 条</span>
+        <span class="panel-title">{{ t('investmentArchive.knowledgeBase') }} — {{ t('investmentArchive.sharedKnowledge') }}</span>
+        <span class="panel-badge">{{ knowledgeEntries.length }} {{ t('investmentArchive.entries') }}</span>
       </div>
 
       <div v-if="kbLoading" class="empty-state">
-        <p class="empty-text">加载中...</p>
+        <p class="empty-text">{{ t('investmentArchive.loading') }}</p>
       </div>
       <div v-else-if="knowledgeEntries.length === 0" class="empty-state">
         <span class="empty-icon">📖</span>
-        <p class="empty-text">知识库是空的。</p>
-        <p class="empty-sub">亚当或 Captain 使用 add_knowledge 工具后，内容会出现在这里。</p>
+        <p class="empty-text">{{ t('investmentArchive.emptyKnowledge') }}</p>
+        <p class="empty-sub">{{ t('investmentArchive.emptyKnowledgeSub') }}</p>
       </div>
       <div v-else class="kb-grid">
         <div
@@ -35,8 +35,8 @@
             <span v-for="tag in entry.tags" :key="tag" class="kb-tag">{{ tag }}</span>
           </div>
           <div class="kb-card-footer">
-            <span class="kb-source mono">by {{ entry.source }}</span>
-            <span class="kb-expand-hint mono">{{ expandedKb === entry.id ? '收起 ↑' : '展开 ↓' }}</span>
+            <span class="kb-source mono">{{ t('investmentArchive.by') }} {{ entry.source }}</span>
+            <span class="kb-expand-hint mono">{{ expandedKb === entry.id ? t('investmentArchive.collapse') + ' ↑' : t('investmentArchive.expand') + ' ↓' }}</span>
           </div>
           <div v-if="expandedKb === entry.id" class="kb-content">{{ entry.fullContent || entry.summary }}</div>
         </div>
@@ -47,14 +47,14 @@
     <div class="panel">
       <div class="panel-head">
         <span class="panel-icon">📚</span>
-        <span class="panel-title">ARCHIVE — 亚当的日记</span>
-        <span class="panel-badge">{{ reflections.length }} 篇</span>
+        <span class="panel-title">{{ t('investmentArchive.archiveDiary') }}</span>
+        <span class="panel-badge">{{ reflections.length }} {{ t('investmentArchive.pages') }}</span>
       </div>
 
       <div v-if="reflections.length === 0" class="empty-state">
         <span class="empty-icon">📝</span>
-        <p class="empty-text">档案馆空空如也。</p>
-        <p class="empty-sub">亚当还没有写过日记。当他使用 write_reflection 工具时，日记会出现在这里。</p>
+        <p class="empty-text">{{ t('investmentArchive.emptyDiary') }}</p>
+        <p class="empty-sub">{{ t('investmentArchive.emptyDiarySub') }}</p>
       </div>
 
       <div v-else class="reflection-list">
@@ -65,7 +65,7 @@
           </div>
           <div class="reflection-content">{{ r.content }}</div>
           <div v-if="r.linkedEventIds.length" class="reflection-links">
-            <span class="link-label">LINKED_EVENTS</span>
+            <span class="link-label">{{ t('investmentArchive.linkedEvents') }}</span>
             <span v-for="eid in r.linkedEventIds" :key="eid" class="link-tag mono">{{ eid.slice(0, 12) }}</span>
           </div>
         </div>
@@ -77,8 +77,10 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAdamStore } from '@/stores/adam'
 
+const { t } = useI18n()
 const adamStore = useAdamStore()
 const reflections = computed(() => adamStore.reflections)
 const sortedReflections = computed(() =>
