@@ -31,13 +31,13 @@
             :class="{ active: currentLocale === 'zh-CN' }"
             type="button"
             @click="switchLocale('zh-CN')"
-          >中文</button>
+          >{{ t('layout.languageZh') }}</button>
           <button
             class="nav-language-btn"
             :class="{ active: currentLocale === 'en-US' }"
             type="button"
             @click="switchLocale('en-US')"
-          >EN</button>
+          >{{ t('layout.languageEn') }}</button>
         </div>
         <!-- 主题切换 -->
         <div class="nav-theme-btns">
@@ -243,42 +243,42 @@
     <section class="overview-section">
       <div class="overview-inner">
 
-        <h2 class="section-title">全 AI 驱动的业务管理平台 —<span class="section-title-blue"> 从进销存到智能决策</span></h2>
-        <p class="section-sub">AI Agent 自动处理内容运营、数据分析、经营预警；14 个业务模块全链路覆盖采购、仓库、销售、财务；每位用户独立数据库实例，数据物理隔离，全球节点部署，99.9% 可用率。</p>
+        <h2 class="section-title">{{ t('portal.overviewTitle') }} <span class="section-title-blue">{{ t('portal.overviewTitleHighlight') }}</span></h2>
+        <p class="section-sub">{{ t('portal.overviewSub') }}</p>
 
         <!-- 核心卖点 -->
         <div class="feature-pills">
           <div class="feature-pill">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8L6 7h12l-2-4z" stroke-linejoin="round"/></svg>
-            采购管理
+            {{ t('portal.procurementManagement') }}
           </div>
           <div class="feature-pill">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M2 9h6M2 15h6" stroke-linecap="round"/></svg>
-            仓库管理
+            {{ t('portal.warehouseManagement') }}
           </div>
           <div class="feature-pill">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><circle cx="12" cy="14" r="2"/></svg>
-            销售管理
+            {{ t('portal.salesManagement') }}
           </div>
           <div class="feature-pill">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" stroke-linecap="round"/></svg>
-            财务管理
+            {{ t('portal.financeManagement') }}
           </div>
           <div class="feature-pill">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><circle cx="9" cy="7" r="3"/><path d="M3 21c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke-linecap="round"/></svg>
-            人事协同
+            {{ t('portal.hrCollaboration') }}
           </div>
           <div class="feature-pill">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 17v-4M12 17V8M17 17v-6" stroke-linecap="round"/></svg>
-            数据报表
+            {{ t('portal.dataReports') }}
           </div>
           <div class="feature-pill feature-pill-ai">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="#f59e0b"/></svg>
-            AI 智能体
+            {{ t('portal.aiAgents') }}
           </div>
           <div class="feature-pill feature-pill-safe">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><path d="M12 2l-8 4v6c0 4.4 3.4 8.5 8 9.9 4.6-1.4 8-5.5 8-9.9V6L12 2z" stroke-linejoin="round"/></svg>
-            独立数据库
+            {{ t('portal.dedicatedDatabase') }}
           </div>
         </div>
 
@@ -292,8 +292,8 @@
                 <circle cx="12" cy="16" r="1.5" fill="#0071e3"/>
               </svg>
             </div>
-            <div class="server-card-title">数据完全隔离</div>
-            <div class="server-card-desc">专属数据库实例，物理隔离，订单、财务、客户数据只有您能访问。</div>
+            <div class="server-card-title">{{ t('portal.dataIsolationTitle') }}</div>
+            <div class="server-card-desc">{{ t('portal.dataIsolationDesc') }}</div>
           </div>
           <div class="server-card server-card-green">
             <div class="server-card-icon-svg server-icon-green">
@@ -302,8 +302,8 @@
                 <path d="M8 12l3 3 5-5" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <div class="server-card-title">永久备份不丢失</div>
-            <div class="server-card-desc">每日自动备份，支持任意时间点恢复，业务数据零风险。</div>
+            <div class="server-card-title">{{ t('portal.backupTitle') }}</div>
+            <div class="server-card-desc">{{ t('portal.backupDesc') }}</div>
           </div>
           <div class="server-card server-card-purple">
             <div class="server-card-icon-svg server-icon-purple">
@@ -311,8 +311,8 @@
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <div class="server-card-title">性能独享</div>
-            <div class="server-card-desc">独立计算资源，高峰期不受他人影响，支持百万级 SKU 稳定运行。</div>
+            <div class="server-card-title">{{ t('portal.performanceTitle') }}</div>
+            <div class="server-card-desc">{{ t('portal.performanceDesc') }}</div>
           </div>
           <div class="server-card server-card-orange">
             <div class="server-card-icon-svg server-icon-orange">
@@ -322,8 +322,8 @@
                 <path d="M12 3c-2.5 2.5-4 5.6-4 9s1.5 6.5 4 9" stroke="#ea580c" stroke-width="1.5"/>
               </svg>
             </div>
-            <div class="server-card-title">全球低延迟</div>
-            <div class="server-card-desc">多地区节点，中国、东南亚、欧美团队均可极速访问。</div>
+            <div class="server-card-title">{{ t('portal.globalLatencyTitle') }}</div>
+            <div class="server-card-desc">{{ t('portal.globalLatencyDesc') }}</div>
           </div>
           <div class="server-card server-card-red">
             <div class="server-card-icon-svg server-icon-red">
@@ -332,19 +332,19 @@
                 <path d="M9 12l2 2 4-4" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <div class="server-card-title">企业级安全</div>
-            <div class="server-card-desc">DDoS 防护、HTTPS 加密、IP 白名单、操作日志审计全方位保障。</div>
+            <div class="server-card-title">{{ t('portal.securityTitle') }}</div>
+            <div class="server-card-desc">{{ t('portal.securityDesc') }}</div>
           </div>
           <div class="server-card server-card-ai-feature">
-            <div class="server-card-ai-badge">Claude AI 加持</div>
+            <div class="server-card-ai-badge">{{ t('portal.claudeAiBadge') }}</div>
             <div class="server-card-icon-svg server-icon-ai">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="3" fill="#f59e0b"/>
                 <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
             </div>
-            <div class="server-card-title">AI 智能分析</div>
-            <div class="server-card-desc">内置 Claude AI 自动生成经营洞察与预警，让数据真正为您所用。</div>
+            <div class="server-card-title">{{ t('portal.aiAnalysisTitle') }}</div>
+            <div class="server-card-desc">{{ t('portal.aiAnalysisDesc') }}</div>
           </div>
         </div>
 
@@ -354,28 +354,28 @@
     <!-- ── 升级 CTA ── -->
     <section class="cta-section">
       <div class="cta-inner">
-        <div class="cta-badge">限时优惠</div>
-        <h2 class="cta-title">准备好了吗？<br/>升级专属付费版</h2>
-        <p class="cta-sub">首月特惠 · 独立数据库 · 全功能解锁 · 专属技术支持<br/>付款后 2 小时内为您配置专属实例并激活账号</p>
+        <div class="cta-badge">{{ t('portal.ctaBadge') }}</div>
+        <h2 class="cta-title">{{ t('portal.ctaTitleLine1') }}<br/>{{ t('portal.ctaTitleLine2') }}</h2>
+        <p class="cta-sub">{{ t('portal.ctaSubLine1') }}<br/>{{ t('portal.ctaSubLine2') }}</p>
         <div class="cta-plans">
           <div class="cta-plan" @click="upgradeDialog?.open()">
-            <div class="cta-plan-name">月付版</div>
-            <div class="cta-plan-price">¥<span>39</span>/月</div>
+            <div class="cta-plan-name">{{ t('portal.monthlyPlan') }}</div>
+            <div class="cta-plan-price">¥<span>39</span>{{ t('portal.perMonth') }}</div>
           </div>
           <div class="cta-plan cta-plan-popular" @click="upgradeDialog?.open()">
-            <div class="cta-plan-tag">最受欢迎</div>
-            <div class="cta-plan-name">年付版</div>
-            <div class="cta-plan-price">¥<span>299</span>/年</div>
-            <div class="cta-plan-note">相当于 ¥25/月，省 ¥169</div>
+            <div class="cta-plan-tag">{{ t('portal.mostPopular') }}</div>
+            <div class="cta-plan-name">{{ t('portal.yearlyPlan') }}</div>
+            <div class="cta-plan-price">¥<span>299</span>{{ t('portal.perYear') }}</div>
+            <div class="cta-plan-note">{{ t('portal.yearlyPlanNote') }}</div>
           </div>
           <div class="cta-plan" @click="upgradeDialog?.open()">
-            <div class="cta-plan-name">买断版</div>
-            <div class="cta-plan-price">¥<span>1599</span>/永久</div>
-            <div class="cta-plan-note">一次付清，永久使用</div>
+            <div class="cta-plan-name">{{ t('portal.lifetimePlan') }}</div>
+            <div class="cta-plan-price">¥<span>1599</span>{{ t('portal.lifetimeUnit') }}</div>
+            <div class="cta-plan-note">{{ t('portal.lifetimePlanNote') }}</div>
           </div>
         </div>
-        <button class="cta-btn" @click="upgradeDialog?.open()">立即升级付费版 →</button>
-        <p class="cta-hint">也可添加微信 <strong>nomad_erp</strong> 咨询，或先<span class="cta-trial-link" @click="showTrialModal = true">领取 15 天免费体验</span></p>
+        <button class="cta-btn" @click="upgradeDialog?.open()">{{ t('portal.upgradeNow') }} →</button>
+        <p class="cta-hint">{{ t('portal.ctaHintPrefix') }} <strong>nomad_erp</strong> {{ t('portal.ctaHintMiddle') }}<span class="cta-trial-link" @click="showTrialModal = true">{{ t('portal.ctaTrialLink') }}</span></p>
       </div>
     </section>
 
@@ -386,10 +386,10 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
         <div class="wb-icon">🎁</div>
-        <div class="wb-title">领取 15 天免费体验</div>
-        <div class="wb-desc">解锁全部功能，体验付费版完整能力<br/>到期后需升级才能继续使用</div>
-        <button class="wb-upgrade-btn" @click="claimTrial">立即领取体验资格</button>
-        <button class="wb-cancel" @click="showTrialModal = false">稍后再说</button>
+        <div class="wb-title">{{ t('portal.claimTrialTitle') }}</div>
+        <div class="wb-desc">{{ t('portal.claimTrialDescLine1') }}<br/>{{ t('portal.claimTrialDescLine2') }}</div>
+        <button class="wb-upgrade-btn" @click="claimTrial">{{ t('portal.claimTrialAction') }}</button>
+        <button class="wb-cancel" @click="showTrialModal = false">{{ t('portal.later') }}</button>
       </div>
     </el-dialog>
 
@@ -397,9 +397,9 @@
     <el-dialog v-model="showClaimSuccess" width="340px" append-to-body align-center class="write-block-dialog">
       <div class="wb-body" style="text-align:center">
         <div style="font-size:44px;margin-bottom:14px">🎉</div>
-        <div class="wb-title">体验已激活！</div>
-        <div class="wb-desc">您已成功领取 <strong>15 天</strong>免费体验<br/>到期时间：{{ trialExpireDate }}</div>
-        <button class="wb-upgrade-btn" @click="showClaimSuccess = false">开始体验</button>
+        <div class="wb-title">{{ t('portal.trialActivatedTitle') }}</div>
+        <div class="wb-desc">{{ t('portal.trialActivatedPrefix') }} <strong>{{ t('portal.trialDays') }}</strong>{{ t('portal.trialActivatedSuffix') }}<br/>{{ t('portal.expireDate') }}{{ t('portal.labelSeparator') }}{{ trialExpireDate }}</div>
+        <button class="wb-upgrade-btn" @click="showClaimSuccess = false">{{ t('portal.startTrial') }}</button>
       </div>
     </el-dialog>
 
@@ -421,10 +421,10 @@
             </defs>
           </svg>
         </div>
-        <span>数字游牧</span>
+        <span>{{ t('portal.brand') }}</span>
       </div>
       <p class="footer-sub">DESIGNED BY NOMAD LABS · GLOBAL CITIZEN PLATFORM</p>
-      <p class="footer-copy">© 2026 数字游牧. All rights reserved.</p>
+      <p class="footer-copy">{{ t('portal.footerCopy') }}</p>
     </footer>
   </div>
 </template>
@@ -511,9 +511,9 @@ async function sendPortalAi() {
         } catch { /* ignore */ }
       }
     }
-    if (!aiText) portalAiMessages.value[idx].content = '好的，请问还有什么需要帮助的？'
+    if (!aiText) portalAiMessages.value[idx].content = t('portal.aiFallback')
   } catch {
-    portalAiMessages.value.push({ role: 'ai', content: '连接 AI 服务失败，请稍后重试。' })
+    portalAiMessages.value.push({ role: 'ai', content: t('portal.aiError') })
   } finally {
     portalAiLoading.value = false
     await nextTick(); scrollPortalAi()
@@ -605,29 +605,6 @@ onMounted(async () => {
   } catch {}
 })
 
-// ── Agent 团队定义（前端展示用）─────────────────────────────────────────────
-const agentList = [
-  { id: 'copywriter', name: '文案Agent', emoji: '✍️', color: '#f59e0b', specialty: '内容创作' },
-  { id: 'poster',     name: '海报Agent', emoji: '🎨', color: '#ec4899', specialty: '视觉设计' },
-  { id: 'video',      name: '视频Agent', emoji: '🎬', color: '#ef4444', specialty: '视频脚本' },
-  { id: 'brand',      name: '品牌Agent', emoji: '💎', color: '#8b5cf6', specialty: '品牌策略' },
-  { id: 'publisher',  name: '发布Agent', emoji: '🚀', color: '#10b981', specialty: '多平台发布' },
-  { id: 'trend',      name: '趋势Agent', emoji: '📈', color: '#06b6d4', specialty: '热点追踪' },
-]
-
-const aboutItems = [
-  { emoji: '🧠', title: '自主任务拆解', desc: '理解你的目标，自动拆解成子任务分配给专项 Agent', color: '#6366f1' },
-  { emoji: '⚡', title: '并行调度执行', desc: '同时调动多个 Agent 协作，效率最大化', color: '#f59e0b' },
-  { emoji: '🔗', title: '跨系统数据联动', desc: '直接调取 ERP 业务数据，驱动内容创作决策', color: '#10b981' },
-  { emoji: '🎯', title: '综合汇报产出', desc: '汇总所有 Agent 结果，给出清晰的最终方案', color: '#ec4899' },
-]
-
-const TOOL_LABELS: Record<string, string> = {
-  query_customers: '查询客户', query_suppliers: '查询供应商', query_goods: '查询商品',
-  query_inventory: '查询库存', query_sales: '查询销售', query_purchases: '查询采购',
-  query_finance: '查询财务', query_staff: '查询员工', query_warehouses: '查询仓库',
-  navigate_to: '页面导航',
-}
 </script>
 
 <style scoped>
