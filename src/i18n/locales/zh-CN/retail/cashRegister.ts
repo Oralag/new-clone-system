@@ -22,7 +22,7 @@ export default {
   extraFees: '附加费用',
   totalActual: '实付合计',
   processing: '处理中…',
-  checkout: '结&nbsp;&nbsp;算',
+  checkout: '结算',
   processingShort: '处理中',
   checkoutShort: '结算',
   hotProducts: '热销产品',

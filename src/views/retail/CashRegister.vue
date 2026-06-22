@@ -199,7 +199,10 @@
           <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
             @click="handleCheckout">
             <span v-if="paying">{{ $t('retail.cashRegister.processing') }}</span>
-            <span v-else>{{ $t('retail.cashRegister.checkout') }}&nbsp;&nbsp;¥{{ formatMoney(payAmount) }}</span>
+            <span v-else class="cr-checkout-label">
+              <span>{{ $t('retail.cashRegister.checkout') }}</span>
+              <span class="cr-checkout-price">¥{{ formatMoney(payAmount) }}</span>
+            </span>
           </button>
         </div>
       </div>
@@ -363,7 +366,10 @@
             <button class="cr-checkout-btn" :disabled="!cartItems.length || paying"
               @click="handleCheckout">
               <span v-if="paying">{{ $t('retail.cashRegister.processing') }}</span>
-              <span v-else>{{ $t('retail.cashRegister.checkout') }}&nbsp;&nbsp;¥{{ formatMoney(payAmount) }}</span>
+              <span v-else class="cr-checkout-label">
+                <span>{{ $t('retail.cashRegister.checkout') }}</span>
+                <span class="cr-checkout-price">¥{{ formatMoney(payAmount) }}</span>
+              </span>
             </button>
           </div>
         </div>
@@ -1939,6 +1945,16 @@ onMounted(async () => {
   font-size: 17px; font-weight: 700; cursor: pointer;
   transition: all 0.15s; letter-spacing: 1px;
   box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+}
+.cr-checkout-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.cr-checkout-price {
+  letter-spacing: 0;
 }
 .cr-checkout-btn:hover:not(:disabled) { background: linear-gradient(135deg, #1d4ed8, #1e40af); box-shadow: 0 6px 20px rgba(37,99,235,0.4); }
 .cr-checkout-btn:disabled { opacity: 0.45; cursor: not-allowed; }
