@@ -1193,7 +1193,9 @@ const lastOrderNo = ref('')
 
 // 零售库存变动：deduct=扣减，restore=加回
 async function retailStockEffect(items: any[], mode: 'deduct' | 'restore', orderId?: number) {
-  const remark = mode === 'deduct' ? (orderId ? `Retail outbound#${orderId}` : 'Retail outbound') : 'Retail return inbound'
+  const remark = mode === 'deduct'
+    ? (orderId ? t('retail.cashRegister.retailOutboundRemarkWithId', { id: orderId }) : t('retail.cashRegister.retailOutboundRemark'))
+    : t('retail.cashRegister.retailReturnRemark')
   await stockEffect(items, mode, undefined, remark)
 }
 
@@ -1571,7 +1573,7 @@ async function submitQuickAdd() {
       goods_type: 1,
     })
     const newId = res?.data?.id
-    if (!newId) throw new Error('Failed to create product, please retry')
+    if (!newId) throw new Error(t('retail.cashRegister.goodsCreateFail'))
     const unit = unitList.value.find((u: any) => u.id === quickAddForm.unit_id)
 
     // 2. 采购入库（可选）
@@ -1612,12 +1614,12 @@ async function submitQuickAdd() {
         total_amount: totalAmount,
         after_discount: totalAmount,
         pay_amount: 0,
-        remark: 'POS quick-add purchase receipt',
+        remark: t('retail.cashRegister.quickAddPurchaseRemark'),
         goods_info: JSON.stringify(goodsInfo),
         status: 0,
       })
       const orderId = orderRes?.data?.id ?? orderRes?.data?.data?.id
-      if (!orderId) throw new Error('Failed to create purchase order')
+      if (!orderId) throw new Error(t('retail.cashRegister.createOrderFail'))
       // 审核采购单
       await auditProcureOrder(orderId, 1)
       // 创建入库单并审核（新单不可能已有入库单，直接建）
@@ -1629,7 +1631,7 @@ async function submitQuickAdd() {
         warehouse_name: quickAddForm.procure_warehouse_name,
         in_date: procureDate,
         total_amount: totalAmount,
-        remark: 'POS quick-add purchase receipt',
+        remark: t('retail.cashRegister.quickAddPurchaseRemark'),
         goods_info: goodsInfo,
       })
       const inhouseId = inhouseRes?.data?.id ?? inhouseRes?.data
