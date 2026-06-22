@@ -3,7 +3,7 @@
     <!-- 顶部栏：企业微信风格 -->
     <div class="wx-nav-bar">
       <div class="wx-nav-left">
-        <button class="nav-icon-btn" @click="showDrawer = !showDrawer" title="菜单">
+        <button class="nav-icon-btn" @click="showDrawer = !showDrawer" :title="t('mobileChat.menu')">
           <svg width="18" height="18" viewBox="0 0 20 18" fill="#333">
             <rect y="1" width="16" height="2" rx="1"/>
             <rect y="8" width="12" height="2" rx="1"/>
@@ -11,14 +11,14 @@
           </svg>
         </button>
       </div>
-      <div class="wx-nav-title">消息</div>
+      <div class="wx-nav-title">{{ t('mobileChat.messages') }}</div>
       <div class="wx-nav-right">
-        <button class="nav-icon-btn" @click="showSearch = !showSearch" title="搜索">
+        <button class="nav-icon-btn" @click="showSearch = !showSearch" :title="t('mobileChat.search')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
         </button>
-        <button class="nav-icon-btn" @click="showChatPlus = !showChatPlus; showFabPlus = false" title="新建">
+        <button class="nav-icon-btn" @click="showChatPlus = !showChatPlus; showFabPlus = false" :title="t('mobileChat.create')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
@@ -32,7 +32,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        <span class="chat-search-placeholder">搜索</span>
+        <span class="chat-search-placeholder">{{ t('mobileChat.search') }}</span>
       </div>
     </div>
 
@@ -60,7 +60,7 @@
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </div>
-          <div class="chat-empty-text">暂无消息</div>
+          <div class="chat-empty-text">{{ t('mobileChat.noMessages') }}</div>
         </div>
         <div
           v-for="g in displayedGroups"
@@ -71,13 +71,13 @@
           <!-- 左滑操作按钮 -->
           <div class="chat-item-actions" v-if="!!swipedId && swipedId === g.id && !!g.id">
             <div v-if="canClearGroup(g)" class="action-btn clear-btn" @click.stop="clearAiHistory(); closeSwipe()">
-              清空
+              {{ t('mobileChat.clear') }}
             </div>
             <div v-if="canManageGroup(g)" class="action-btn pin-btn" @click.stop="togglePin(g)">
-              {{ g.is_pinned ? '取消置顶' : '置顶' }}
+              {{ g.is_pinned ? t('mobileChat.unpin') : t('mobileChat.pin') }}
             </div>
             <div v-if="canManageGroup(g)" class="action-btn delete-btn" @click.stop="deleteGroup(g)">
-              删除
+              {{ t('mobileChat.delete') }}
             </div>
           </div>
           <!-- 聊天项主体 -->
@@ -90,12 +90,12 @@
             @touchmove.passive="onSwipeMove"
           >
             <div class="chat-avatar-wrap">
-              <div class="chat-avatar" :style="avatarStyle(g)">{{ g.avatar_text || g.name?.[0] || '群' }}</div>
+              <div class="chat-avatar" :style="avatarStyle(g)">{{ g.avatar_text || g.name?.[0] || t('mobileChat.groupShort') }}</div>
               <span v-if="g.unread > 0" class="chat-unread-dot"></span>
             </div>
             <div class="chat-body">
               <div class="chat-top">
-                <span class="chat-name">{{ g.name }}<span v-if="!g.is_private && (g.type === 'group' || g.member_count > 2)" class="group-badge">群</span></span>
+                <span class="chat-name">{{ g.name }}<span v-if="!g.is_private && (g.type === 'group' || g.member_count > 2)" class="group-badge">{{ t('mobileChat.groupShort') }}</span></span>
                 <span class="chat-time">{{ g.last_time }}</span>
               </div>
               <div class="chat-bottom">
@@ -113,7 +113,7 @@
 
       <!-- 好友申请 -->
       <div v-if="friendRequests.length > 0" class="fr-section">
-        <div class="fr-section-title">好友申请</div>
+        <div class="fr-section-title">{{ t('mobileChat.friendRequests') }}</div>
         <div v-for="req in friendRequests" :key="req.id" class="fr-row">
           <div class="fr-avatar">{{ req.from_name?.[0] || req.from_company?.[0] || '?' }}</div>
           <div class="fr-info">
@@ -121,8 +121,8 @@
             <div class="fr-sub">{{ req.from_company }} · {{ req.from_account }}</div>
           </div>
           <div class="fr-actions">
-            <button class="fr-btn fr-reject" @click="rejectFriendRequest(req)">拒绝</button>
-            <button class="fr-btn fr-accept" @click="acceptFriendRequest(req)">同意</button>
+            <button class="fr-btn fr-reject" @click="rejectFriendRequest(req)">{{ t('mobileChat.reject') }}</button>
+            <button class="fr-btn fr-accept" @click="acceptFriendRequest(req)">{{ t('mobileChat.accept') }}</button>
           </div>
         </div>
       </div>
@@ -132,7 +132,7 @@
         <div v-for="item in pendingItems" :key="item.key" class="pending-row" @click="item.onClick?.()">
           <div class="pending-dot" :style="{ background: item.color }"></div>
           <span class="pending-label">{{ item.label }}</span>
-          <span class="pending-count">{{ item.count }}条待审</span>
+          <span class="pending-count">{{ item.count }}{{ t('mobileChat.pendingCountSuffix') }}</span>
           <span style="color:#ccc;font-size:16px">›</span>
         </div>
       </div>
@@ -152,7 +152,7 @@
       <div class="task-list-body">
         <div v-if="filteredTodoPlans.length === 0" class="task-empty-state">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d8d8d8" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          <span>暂无任务</span>
+          <span>{{ t('mobileChat.noTasks') }}</span>
         </div>
 
         <div
@@ -162,8 +162,8 @@
           :class="{ swiped: swipedTaskId === plan.id }"
         >
           <div class="task-row-actions" v-if="swipedTaskId === plan.id">
-            <div class="task-row-btn btn-start" @click.stop="updatePlanStatus(plan, plan.status === 'doing' ? 'todo' : 'doing')">{{ plan.status === 'doing' ? '暂停' : '开始' }}</div>
-            <div class="task-row-btn btn-done" @click.stop="updatePlanStatus(plan, plan.status === 'done' ? 'todo' : 'done')">{{ plan.status === 'done' ? '撤销' : '完成' }}</div>
+            <div class="task-row-btn btn-start" @click.stop="updatePlanStatus(plan, plan.status === 'doing' ? 'todo' : 'doing')">{{ plan.status === 'doing' ? t('mobileChat.pause') : t('mobileChat.start') }}</div>
+            <div class="task-row-btn btn-done" @click.stop="updatePlanStatus(plan, plan.status === 'done' ? 'todo' : 'done')">{{ plan.status === 'done' ? t('mobileChat.undo') : t('mobileChat.complete') }}</div>
           </div>
           <div
             class="task-row"
@@ -181,9 +181,9 @@
               </div>
             </div>
             <span class="task-row-status-tag" :class="'stag-' + plan.status">
-              <span v-if="plan.status==='todo'">待办</span>
-              <span v-if="plan.status==='doing'">进行中</span>
-              <span v-if="plan.status==='done'">完成</span>
+              <span v-if="plan.status==='todo'">{{ t('mobileChat.filterTodo') }}</span>
+              <span v-if="plan.status==='doing'">{{ t('mobileChat.filterDoing') }}</span>
+              <span v-if="plan.status==='done'">{{ t('mobileChat.statusDone') }}</span>
             </span>
           </div>
         </div>
@@ -193,7 +193,7 @@
       <div class="task-add-row">
         <button class="task-add-btn" @click="openAddPlan">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          新建任务
+          {{ t('mobileChat.newTask') }}
         </button>
       </div>
     </div>
@@ -203,8 +203,8 @@
       <div class="ai-banner">
         <div class="ai-avatar">🤖</div>
         <div class="ai-info">
-          <div class="ai-title">AI 管家</div>
-          <div class="ai-sub">智能助手，随时为您服务 →</div>
+          <div class="ai-title">{{ t('mobileChat.aiButler') }}</div>
+          <div class="ai-sub">{{ t('mobileChat.aiSub') }}</div>
         </div>
       </div>
     </div>
@@ -220,19 +220,19 @@
             <input
               v-model="searchKeyword"
               class="chat-search-input"
-              placeholder="搜索聊天记录"
+              :placeholder="t('mobileChat.searchChatPlaceholder')"
               autofocus
             />
             <button v-if="searchKeyword" @click="searchKeyword = ''" class="chat-search-clear">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <button class="chat-search-cancel" @click="showSearch = false; searchKeyword = ''">取消</button>
+          <button class="chat-search-cancel" @click="showSearch = false; searchKeyword = ''">{{ t('mobileChat.cancel') }}</button>
         </div>
       </div>
       <div class="chat-search-result">
         <div class="chat-search-hint" v-if="searchResults.length === 0 && !searchLoading && searchKeyword">
-          未找到 "{{ searchKeyword }}" 相关结果
+          {{ t('mobileChat.noSearchResult', { keyword: searchKeyword }) }}
         </div>
         <div v-for="r in searchResults" :key="r.id" class="chat-search-item" @click="openSearchResult(r); showSearch = false">
           <div class="chat-avatar chat-avatar--sm">{{ r.name?.[0] || '?' }}</div>
@@ -252,74 +252,74 @@
       <div class="drawer-scroll">
         <!-- 用户卡片 -->
         <div class="drawer-hero">
-          <div class="drawer-avatar">{{ authStore.userName?.[0] || '我' }}</div>
-          <div class="drawer-name">{{ authStore.userName || '用户' }}</div>
-          <div class="drawer-company">{{ authStore.userInfo?.dept || authStore.userInfo?.position || '成员' }}</div>
+          <div class="drawer-avatar">{{ authStore.userName?.[0] || t('mobileChat.me') }}</div>
+          <div class="drawer-name">{{ authStore.userName || t('mobileChat.user') }}</div>
+          <div class="drawer-company">{{ authStore.userInfo?.dept || authStore.userInfo?.position || t('mobileChat.member') }}</div>
         </div>
 
         <!-- 数据卡片 -->
         <div class="drawer-stats">
           <div class="drawer-stat" @click="router.push('/mobile/sale/client'); showDrawer = false">
             <div class="drawer-stat-val">{{ myStats.customerCount }}</div>
-            <div class="drawer-stat-label">客户</div>
+            <div class="drawer-stat-label">{{ t('mobileChat.customerCount') }}</div>
           </div>
           <div class="drawer-stat-divider" />
           <div class="drawer-stat" @click="router.push('/mobile/finance/receivable'); showDrawer = false">
             <div class="drawer-stat-val">¥{{ myStats.receivable }}</div>
-            <div class="drawer-stat-label">应收款</div>
+            <div class="drawer-stat-label">{{ t('mobileChat.receivable') }}</div>
           </div>
           <div class="drawer-stat-divider" />
           <div class="drawer-stat" @click="router.push('/mobile/warehouse/stock'); showDrawer = false">
             <div class="drawer-stat-val" :style="{ color: Number(myStats.stockWarn) > 0 ? '#f53f3f' : '#1d2129' }">{{ myStats.stockWarn }}</div>
-            <div class="drawer-stat-label">库存预警</div>
+            <div class="drawer-stat-label">{{ t('mobileChat.stockWarning') }}</div>
           </div>
         </div>
 
         <!-- 协作工具 -->
-        <div class="drawer-section-title">协作工具</div>
+        <div class="drawer-section-title">{{ t('mobileChat.collaborationGroup') }}</div>
         <div class="drawer-grid">
-          <div class="drawer-grid-item" @click="router.push('/mobile/activity'); showDrawer = false">工作动态</div>
-          <div class="drawer-grid-item" @click="router.push('/mobile/ai'); showDrawer = false">AI 管家</div>
-          <div class="drawer-grid-item" @click="router.push('/mobile/meeting'); showDrawer = false">会议室</div>
-          <div class="drawer-grid-item" @click="router.push('/mobile/contacts'); showDrawer = false">通讯录</div>
+          <div class="drawer-grid-item" @click="router.push('/mobile/activity'); showDrawer = false">{{ t('mobileChat.activity') }}</div>
+          <div class="drawer-grid-item" @click="router.push('/mobile/ai'); showDrawer = false">{{ t('mobileChat.aiButler') }}</div>
+          <div class="drawer-grid-item" @click="router.push('/mobile/meeting'); showDrawer = false">{{ t('mobileChat.meetingRoom') }}</div>
+          <div class="drawer-grid-item" @click="router.push('/mobile/contacts'); showDrawer = false">{{ t('mobileChat.contacts') }}</div>
         </div>
 
         <!-- 业务管理 -->
-        <div class="drawer-section-title">业务管理</div>
+        <div class="drawer-section-title">{{ t('mobileChat.businessGroup') }}</div>
         <div class="drawer-menu-list">
           <div class="drawer-menu-item" @click="router.push('/dashboard'); showDrawer = false">
-            <span>首页工作台</span>
+            <span>{{ t('mobileChat.homeWorkbench') }}</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
           <div class="drawer-menu-item" @click="router.push('/portal'); showDrawer = false">
-            <span>切换工作台</span>
+            <span>{{ t('mobileChat.switchWorkbench') }}</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
           <div class="drawer-menu-item" @click="router.push('/mobile/stats'); showDrawer = false">
-            <span>数据报表</span>
+            <span>{{ t('mobileChat.reports') }}</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
         </div>
 
         <!-- 系统 -->
-        <div class="drawer-section-title">系统</div>
+        <div class="drawer-section-title">{{ t('mobileChat.systemGroup') }}</div>
         <div class="drawer-menu-list">
           <div class="drawer-menu-item" @click="router.push('/setting'); showDrawer = false">
-            <span>系统设置</span>
+            <span>{{ t('mobileChat.systemSettings') }}</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
           <div class="drawer-menu-item" @click="copyDrawerLink">
-            <span>复制链接</span>
+            <span>{{ t('mobileChat.copyLink') }}</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
         </div>
 
         <!-- 退出 -->
         <div class="drawer-logout-wrap">
-          <button class="drawer-logout-btn" @click="handleLogout">退出登录</button>
+          <button class="drawer-logout-btn" @click="handleLogout">{{ t('mobileChat.logout') }}</button>
         </div>
 
-        <div class="drawer-version">数字游牧 ERP v3.0</div>
+        <div class="drawer-version">{{ t('mobileChat.versionText') }}</div>
       </div>
     </div>
 
@@ -330,11 +330,11 @@
   <div v-if="contextGroup" class="context-menu" :style="contextMenuStyle">
     <div class="ctx-item" @click="togglePin(contextGroup)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-      {{ contextGroup.is_pinned ? '取消置顶' : '置顶聊天' }}
+      {{ contextGroup.is_pinned ? t('mobileChat.unpin') : t('mobileChat.pinChat') }}
     </div>
     <div class="ctx-item ctx-item--danger" @click="deleteGroup(contextGroup)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-      删除会话
+      {{ t('mobileChat.deleteChat') }}
     </div>
   </div>
 
@@ -344,16 +344,16 @@
     <div v-if="showAddPlan" class="m-modal-mask" @click.self="showAddPlan = false">
       <div class="m-modal-sheet add-plan-sheet" @touchmove.stop>
         <div class="m-modal-header">
-          <span>新建工作计划</span>
-          <button class="m-modal-close" @click="showAddPlan = false">取消</button>
+          <span>{{ t('mobileChat.newWorkPlan') }}</span>
+          <button class="m-modal-close" @click="showAddPlan = false">{{ t('mobileChat.cancel') }}</button>
         </div>
         <div class="m-modal-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-          <input v-model="newPlan.title" class="plan-input" placeholder="计划标题（必填）" autofocus />
-          <textarea v-model="newPlan.description" class="plan-textarea" placeholder="描述（选填）" rows="2" />
+          <input v-model="newPlan.title" class="plan-input" :placeholder="t('mobileChat.planTitlePlaceholder')" autofocus />
+          <textarea v-model="newPlan.description" class="plan-textarea" :placeholder="t('mobileChat.planDescriptionPlaceholder')" rows="2" />
           <div class="plan-field-row">
-            <label>负责人</label>
+            <label>{{ t('mobileChat.owner') }}</label>
             <div class="plan-assignee-wrap">
-              <div v-if="newPlan.mentions.length === 0" class="plan-assignee-placeholder" @click="showAssigneePicker = !showAssigneePicker">点击选择（可选）</div>
+              <div v-if="newPlan.mentions.length === 0" class="plan-assignee-placeholder" @click="showAssigneePicker = !showAssigneePicker">{{ t('mobileChat.chooseOptional') }}</div>
               <div v-else class="plan-assignee-chips" @click="showAssigneePicker = !showAssigneePicker">
                 <span v-for="m in newPlan.mentions" :key="m.id" class="plan-chip">
                   {{ m.name }}
@@ -364,7 +364,7 @@
           </div>
           <!-- 负责人选择器 -->
           <div v-if="showAssigneePicker" class="plan-assignee-picker">
-            <div v-if="contacts.length === 0" style="font-size:13px;color:#999;padding:8px">加载中...</div>
+            <div v-if="contacts.length === 0" style="font-size:13px;color:#999;padding:8px">{{ t('mobileChat.loading') }}</div>
             <div
               v-for="c in contacts"
               :key="c.id"
@@ -378,21 +378,21 @@
             </div>
           </div>
           <div class="plan-field-row">
-            <label>优先级</label>
+            <label>{{ t('mobileChat.priority') }}</label>
             <div class="plan-priority-btns">
-              <button :class="['plan-priority-btn', { active: newPlan.priority === 'high' }]" @click="newPlan.priority = 'high'">🔴 紧急</button>
-              <button :class="['plan-priority-btn', { active: newPlan.priority === 'normal' }]" @click="newPlan.priority = 'normal'">📋 普通</button>
-              <button :class="['plan-priority-btn', { active: newPlan.priority === 'low' }]" @click="newPlan.priority = 'low'">📌 低优</button>
+              <button :class="['plan-priority-btn', { active: newPlan.priority === 'high' }]" @click="newPlan.priority = 'high'">🔴 {{ t('mobileChat.priorityHigh') }}</button>
+              <button :class="['plan-priority-btn', { active: newPlan.priority === 'normal' }]" @click="newPlan.priority = 'normal'">📋 {{ t('mobileChat.priorityNormal') }}</button>
+              <button :class="['plan-priority-btn', { active: newPlan.priority === 'low' }]" @click="newPlan.priority = 'low'">📌 {{ t('mobileChat.priorityLow') }}</button>
             </div>
           </div>
           <div class="plan-field-row">
-            <label>截止日期</label>
+            <label>{{ t('mobileChat.dueDate') }}</label>
             <input v-model="newPlan.due_date" type="date" class="plan-input-sm" />
           </div>
         </div>
         <div class="m-modal-footer">
           <button class="plan-submit-btn" @click="createPlanFromChat" :disabled="!newPlan.title.trim() || planSubmitting">
-            {{ planSubmitting ? '创建中...' : '创建任务' }}
+            {{ planSubmitting ? t('mobileChat.creating') : t('mobileChat.createTask') }}
           </button>
         </div>
       </div>
@@ -402,31 +402,31 @@
     <div v-if="selectedPlan" class="m-modal-mask" @click.self="selectedPlan = null">
       <div class="m-modal-sheet add-plan-sheet" @touchmove.stop>
         <div class="m-modal-header">
-          <span>任务详情</span>
-          <button class="m-modal-close" @click="selectedPlan = null">关闭</button>
+          <span>{{ t('mobileChat.taskDetail') }}</span>
+          <button class="m-modal-close" @click="selectedPlan = null">{{ t('mobileChat.close') }}</button>
         </div>
         <div class="m-modal-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
           <div style="font-size:17px;font-weight:600;color:#1d2129;line-height:1.4">{{ selectedPlan.title }}</div>
           <div v-if="selectedPlan.description" style="font-size:14px;color:#4e5969;background:#f5f5f7;padding:10px;border-radius:8px">{{ selectedPlan.description }}</div>
           <div class="plan-field-row">
-            <label>状态</label>
+            <label>{{ t('mobileChat.status') }}</label>
             <div class="plan-priority-btns">
-              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'todo' }]" @click="updatePlanStatus(selectedPlan, 'todo')">待开始</button>
-              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'doing' }]" @click="updatePlanStatus(selectedPlan, 'doing')">进行中</button>
-              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'done' }]" @click="updatePlanStatus(selectedPlan, 'done')">已完成</button>
+              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'todo' }]" @click="updatePlanStatus(selectedPlan, 'todo')">{{ t('mobileChat.statusTodo') }}</button>
+              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'doing' }]" @click="updatePlanStatus(selectedPlan, 'doing')">{{ t('mobileChat.statusDoing') }}</button>
+              <button :class="['plan-priority-btn', { active: selectedPlan.status === 'done' }]" @click="updatePlanStatus(selectedPlan, 'done')">{{ t('mobileChat.statusDone') }}</button>
             </div>
           </div>
           <div v-if="selectedPlan.due_date" class="plan-field-row">
-            <label>截止日期</label>
+            <label>{{ t('mobileChat.dueDate') }}</label>
             <span style="font-size:14px">{{ selectedPlan.due_date }}</span>
           </div>
           <div v-if="selectedPlan.mentions?.length" class="plan-field-row">
-            <label>执行人</label>
+            <label>{{ t('mobileChat.executors') }}</label>
             <span style="font-size:14px;color:#2E6BE6">{{ selectedPlan.mentions.map((m: any) => m.name).join('、') }}</span>
           </div>
         </div>
         <div class="m-modal-footer" style="display:flex;gap:10px">
-          <button class="plan-delete-btn" style="flex:1" @click="deletePlan(selectedPlan)">删除任务</button>
+          <button class="plan-delete-btn" style="flex:1" @click="deletePlan(selectedPlan)">{{ t('mobileChat.deleteTask') }}</button>
         </div>
       </div>
     </div>
@@ -435,14 +435,14 @@
     <div v-if="showCreateGroup" class="m-modal-mask" @click.self="showCreateGroup = false">
       <div class="m-modal-sheet m-modal-sheet-tall" @touchmove.stop>
         <div class="m-modal-header">
-          <span>发起群聊</span>
-          <button class="m-modal-close" @click="showCreateGroup = false">取消</button>
+          <span>{{ t('mobileChat.startGroupChat') }}</span>
+          <button class="m-modal-close" @click="showCreateGroup = false">{{ t('mobileChat.cancel') }}</button>
         </div>
         <div style="padding: 8px 16px; border-bottom: 1px solid #f2f3f5; flex-shrink: 0;">
-          <input v-model="newGroupName" placeholder="群聊名称（选填）" class="group-name-input" />
+          <input v-model="newGroupName" :placeholder="t('mobileChat.groupNameOptional')" class="group-name-input" />
           <div class="group-search-input">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input v-model="groupSearchKeyword" placeholder="搜索联系人" />
+            <input v-model="groupSearchKeyword" :placeholder="t('mobileChat.searchContacts')" />
           </div>
         </div>
         <!-- 已选成员 -->
@@ -468,7 +468,7 @@
         <!-- 底部确认 -->
         <div class="m-modal-footer">
           <button class="group-create-btn" :disabled="selectedMembers.length === 0 || creatingGroup" @click="doCreateGroup">
-            {{ creatingGroup ? '创建中...' : `确定（${selectedMembers.length}）` }}
+            {{ creatingGroup ? t('mobileChat.creating') : t('mobileChat.confirmCount', { count: selectedMembers.length }) }}
           </button>
         </div>
       </div>
@@ -478,22 +478,22 @@
     <div v-if="showAddFriend" class="m-modal-mask" @click.self="closeAddFriend">
       <div class="m-modal-sheet" @touchmove.stop>
         <div class="m-modal-header">
-          <span>添加朋友</span>
-          <button class="m-modal-close" @click="closeAddFriend">取消</button>
+          <span>{{ t('mobileChat.addFriend') }}</span>
+          <button class="m-modal-close" @click="closeAddFriend">{{ t('mobileChat.cancel') }}</button>
         </div>
         <div class="add-friend-body">
-          <p class="add-friend-hint">输入对方在系统中注册的手机号</p>
+          <p class="add-friend-hint">{{ t('mobileChat.addFriendHint') }}</p>
           <div class="add-friend-input-row">
             <input
               v-model="addFriendPhone"
               type="tel"
               maxlength="11"
-              placeholder="请输入手机号"
+              :placeholder="t('mobileChat.phonePlaceholder')"
               class="add-friend-input"
               @keyup.enter="searchFriend"
             />
             <button class="add-friend-search-btn" :disabled="addFriendLoading" @click="searchFriend">
-              {{ addFriendLoading ? '搜索中…' : '搜索' }}
+              {{ addFriendLoading ? t('mobileChat.searching') : t('mobileChat.search') }}
             </button>
           </div>
           <!-- 搜索结果 -->
@@ -504,10 +504,10 @@
                 <div class="add-friend-name">{{ addFriendResult.name || addFriendResult.company_name }}</div>
                 <div class="add-friend-role">{{ addFriendResult.name ? addFriendResult.company_name : addFriendPhone }}</div>
               </div>
-              <button v-if="!addFriendSent" class="add-friend-chat-btn" @click="sendFriendRequest">发送申请</button>
-              <span v-else style="color:#07c160;font-size:13px;font-weight:500">已发送</span>
+              <button v-if="!addFriendSent" class="add-friend-chat-btn" @click="sendFriendRequest">{{ t('mobileChat.sendRequest') }}</button>
+              <span v-else style="color:#07c160;font-size:13px;font-weight:500">{{ t('mobileChat.sent') }}</span>
             </div>
-            <div v-else class="add-friend-empty">未找到该手机号对应的用户</div>
+            <div v-else class="add-friend-empty">{{ t('mobileChat.noUserByPhone') }}</div>
           </div>
         </div>
       </div>
@@ -518,33 +518,33 @@
     <div v-if="showChatPlus" class="plus-menu chat-plus-menu">
       <div class="plus-menu-item" @click="showCreateGroup = true; showChatPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#07c160" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        发起群聊
+        {{ t('mobileChat.startGroupChat') }}
       </div>
       <div class="plus-menu-item" @click="router.push('/mobile/chat/new'); showChatPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        新的聊天
+        {{ t('mobileChat.newChat') }}
       </div>
       <div class="plus-menu-item" @click="showAddFriend = true; showChatPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-        添加朋友
+        {{ t('mobileChat.addFriend') }}
       </div>
     </div>
 
     <!-- ── 底部FAB+菜单：业务快捷操作 ── -->
     <div v-if="showFabPlus" class="plus-menu-mask" @click="showFabPlus = false"></div>
     <div v-if="showFabPlus" class="plus-menu fab-plus-menu" :style="{ left: Math.min(fabPos.x, winWidth - 160) + 'px', bottom: (winHeight - fabPos.y + 10) + 'px' }">
-      <div class="fab-plus-title">快捷操作</div>
+      <div class="fab-plus-title">{{ t('mobileChat.quickActions') }}</div>
       <div class="plus-menu-item" @click="router.push('/mobile/procure/order'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E6BE6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="10" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
-        扫码入库
+        {{ t('mobileChat.scanInStock') }}
       </div>
       <div class="plus-menu-item" @click="router.push('/mobile/sale/out'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        新建销售出库
+        {{ t('mobileChat.newSaleOut') }}
       </div>
       <div class="plus-menu-item" @click="router.push('/cashregister'); showFabPlus = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="14" x2="12" y2="14"/><line x1="6" y1="17" x2="10" y2="17"/></svg>
-        快捷收款
+        {{ t('mobileChat.quickReceive') }}
       </div>
     </div>
 
@@ -571,17 +571,17 @@
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
         </button>
-        <div class="adam-panel-title">亚当</div>
+        <div class="adam-panel-title">{{ t('mobileChat.adam') }}</div>
         <div style="width:40px"></div>
       </div>
       <div ref="adamListRef" class="adam-panel-messages">
-        <div v-if="adamLoading" class="adam-panel-hint">加载中...</div>
-        <div v-else-if="adamMessages.length === 0" class="adam-panel-hint">暂无消息</div>
+        <div v-if="adamLoading" class="adam-panel-hint">{{ t('mobileChat.loading') }}</div>
+        <div v-else-if="adamMessages.length === 0" class="adam-panel-hint">{{ t('mobileChat.noMessages') }}</div>
         <template v-else>
           <div v-for="msg in adamMessages" :key="msg.id" class="adam-panel-row" :class="{ own: msg.isOwn }">
-            <div v-if="!msg.isOwn" class="adam-panel-avatar">亚</div>
+            <div v-if="!msg.isOwn" class="adam-panel-avatar">{{ t('mobileChat.adamAvatar') }}</div>
             <div class="adam-panel-col">
-              <div v-if="!msg.isOwn" class="adam-panel-name">亚当</div>
+              <div v-if="!msg.isOwn" class="adam-panel-name">{{ t('mobileChat.adam') }}</div>
               <div class="adam-panel-bubble" :class="{ own: msg.isOwn }">
                 <span v-if="msg.typing" class="adam-typing"><span></span><span></span><span></span></span>
                 <span v-else v-html="adamRender(msg.content)"></span>
@@ -593,8 +593,8 @@
         <div ref="adamBottomRef"></div>
       </div>
       <div class="adam-panel-input-bar">
-        <textarea v-model="adamInput" class="adam-panel-input" placeholder="发消息给亚当..." rows="1" @keydown.enter.prevent="adamSend" />
-        <button class="adam-panel-send" :disabled="!adamInput.trim() || adamSending" @click="adamSend">发送</button>
+        <textarea v-model="adamInput" class="adam-panel-input" :placeholder="t('mobileChat.adamPlaceholder')" rows="1" @keydown.enter.prevent="adamSend" />
+        <button class="adam-panel-send" :disabled="!adamInput.trim() || adamSending" @click="adamSend">{{ t('mobileChat.send') }}</button>
       </div>
     </div>
   </Teleport>
@@ -603,6 +603,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, onActivated, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
 import { getAdminList } from '@/api/setting'
 import { useAuthStore } from '@/stores/auth'
@@ -610,6 +611,7 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 // 是否在消息页（控制FAB和弹窗只在消息页显示）
 const isChatPage = computed(() => route.path === '/mobile/chat')
@@ -619,10 +621,10 @@ const winWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 375)
 const winHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 667)
 
 // 固定置顶项（如 AI 管家）
-const pinnedSessions = ref([
-  { id: 'ai-assistant-fixed', name: 'ERP管家', avatar_text: '🤖', last_msg: 'AI 智能管家，随时为您服务', last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
-  { id: 'meeting-fixed', name: 'AI会议室', avatar_text: '🏛', last_msg: '多Agent协同 · Captain主持', last_time: '', type: 'meeting', unread: 0, is_pinned: true, route: '/mobile/meeting' },
-])
+const pinnedSessions = computed(() => ([
+  { id: 'ai-assistant-fixed', name: t('mobileChat.aiButler'), avatar_text: '🤖', last_msg: t('mobileChat.aiButlerSubtitle'), last_time: '', type: 'ai', unread: 0, is_pinned: true, route: '/mobile/ai' },
+  { id: 'meeting-fixed', name: t('mobileChat.aiMeetingRoom'), avatar_text: '🏛', last_msg: t('mobileChat.aiMeetingSubtitle'), last_time: '', type: 'meeting', unread: 0, is_pinned: true, route: '/mobile/meeting' },
+]))
 
 const groups = ref<any[]>([])
 const contacts = ref<any[]>([])
@@ -639,7 +641,7 @@ const myStats = ref({ customerCount: 0, receivable: '0', stockWarn: 0 })
 function copyDrawerLink() {
   const url = window.location.href
   navigator.clipboard.writeText(url).then(() => {
-    ElMessage.success('链接已复制')
+    ElMessage.success(t('mobileChat.linkCopied'))
   }).catch(() => { ElMessage.info(url) })
   showDrawer.value = false
 }
@@ -683,18 +685,18 @@ const groupFilteredContacts = computed(() => {
   const kw = groupSearchKeyword.value.toLowerCase().trim()
   // 合并 AI助手 + 机器人Agent + 员工
   const aiBot = pinnedSessions.value.find(s => s.type === 'ai')
-  const botContacts = aiBot ? [{ id: aiBot.id, name: aiBot.name, role_name: 'AI助手', _isBot: true }] : []
+  const botContacts = aiBot ? [{ id: aiBot.id, name: aiBot.name, role_name: t('mobileChat.aiAssistant'), _isBot: true }] : []
   // 通讯录中的机器人Agent
   const robotAgents = [
-    { id: 'captain', name: 'Captain 总指挥', role_name: '机器人' },
-    { id: 'copywriter', name: '文案Agent', role_name: '机器人' },
-    { id: 'poster', name: '海报Agent', role_name: '机器人' },
-    { id: 'video', name: '视频Agent', role_name: '机器人' },
-    { id: 'brand', name: '品牌Agent', role_name: '机器人' },
-    { id: 'trend', name: '趋势Agent', role_name: '机器人' },
-    { id: 'publisher', name: '发布Agent', role_name: '机器人' },
-    { id: 'designer', name: '平面设计师', role_name: '机器人' },
-    { id: 'marketing', name: '营销顾问', role_name: '机器人' },
+    { id: 'captain', name: t('mobileContacts.agents.captainName'), role_name: t('mobileChat.robot') },
+    { id: 'copywriter', name: t('mobileContacts.agents.copywriterName'), role_name: t('mobileChat.robot') },
+    { id: 'poster', name: t('mobileContacts.agents.posterName'), role_name: t('mobileChat.robot') },
+    { id: 'video', name: t('mobileContacts.agents.videoName'), role_name: t('mobileChat.robot') },
+    { id: 'brand', name: t('mobileContacts.agents.brandName'), role_name: t('mobileChat.robot') },
+    { id: 'trend', name: t('mobileContacts.agents.trendName'), role_name: t('mobileChat.robot') },
+    { id: 'publisher', name: t('mobileContacts.agents.publisherName'), role_name: t('mobileChat.robot') },
+    { id: 'designer', name: t('mobileContacts.agents.designerName'), role_name: t('mobileChat.robot') },
+    { id: 'marketing', name: t('mobileContacts.agents.marketingName'), role_name: t('mobileChat.robot') },
   ]
   const all = [...botContacts, ...robotAgents, ...contacts.value]
   if (!kw) return all
@@ -718,8 +720,8 @@ async function doCreateGroup() {
     let name = newGroupName.value.trim()
     if (!name) {
       name = memberIds.length === 1
-        ? `与${selectedMembers.value[0].name}的群聊`
-        : `群聊`
+        ? t('mobileChat.groupChatWith', { name: selectedMembers.value[0].name })
+        : t('mobileChat.groupChat')
     }
     const res = await http.post('/chat/groups', {
       name,
@@ -737,7 +739,7 @@ async function doCreateGroup() {
       loadGroups()
     }
   } catch (e) {
-    alert('创建群聊失败：' + (e?.message || '未知错误'))
+    alert(t('mobileChat.createGroupFailed', { message: e?.message || t('mobileChat.unknownError') }))
     showCreateGroup.value = false
     selectedMembers.value = []
     groupSearchKeyword.value = ''
@@ -776,9 +778,9 @@ async function sendFriendRequest() {
   try {
     await http.post('/chat/friend-requests', { to_phone: addFriendPhone.value.trim() })
     addFriendSent.value = true
-    ElMessage.success('好友申请已发送')
+    ElMessage.success(t('mobileChat.friendRequestSent'))
   } catch (e: any) {
-    ElMessage.error(e?.message || '发送失败')
+    ElMessage.error(e?.message || t('mobileChat.sendFailed'))
   }
 }
 
@@ -794,13 +796,13 @@ async function loadFriendRequests() {
 async function acceptFriendRequest(req: any) {
   try {
     const res = await http.post(`/chat/friend-requests/${req.id}/accept`)
-    ElMessage.success('已同意好友申请')
+    ElMessage.success(t('mobileChat.friendRequestAccepted'))
     friendRequests.value = friendRequests.value.filter(r => r.id !== req.id)
     loadGroups()
     const groupId = res?.data?.group_id
     if (groupId) router.push(`/mobile/chat/${groupId}`)
   } catch (e: any) {
-    ElMessage.error(e?.message || '操作失败')
+    ElMessage.error(e?.message || t('mobileChat.operationFailed'))
   }
 }
 
@@ -809,7 +811,7 @@ async function rejectFriendRequest(req: any) {
     await http.post(`/chat/friend-requests/${req.id}/reject`)
     friendRequests.value = friendRequests.value.filter(r => r.id !== req.id)
   } catch (e: any) {
-    ElMessage.error(e?.message || '操作失败')
+    ElMessage.error(e?.message || t('mobileChat.operationFailed'))
   }
 }
 
@@ -887,11 +889,11 @@ async function clearAiHistory() {
     // 清空前端本地缓存
     localStorage.removeItem('erp_ai_chat_history')
     localStorage.setItem('_ai_clear_flag', '1')
-    ElMessage.success('ERP管家对话已清空')
+    ElMessage.success(t('mobileChat.clearAiSuccess'))
     // 用整页跳转强制刷新，绕过缓存和 keep-alive 问题
     setTimeout(() => { window.location.href = '/mobile/ai' }, 300)
   } catch (e: any) {
-    ElMessage.error('清空失败：' + (e.message || '未知错误'))
+    ElMessage.error(t('mobileChat.clearAiFail', { message: e.message || t('mobileChat.unknownError') }))
   }
 }
 
@@ -911,7 +913,7 @@ async function togglePin(g: any) {
 async function deleteGroup(g: any) {
   closeSwipe()
   // 确认对话框
-  if (!confirm(`确定要删除与 "${g.name}" 的聊天吗？\n\n删除后聊天记录将无法恢复。`)) {
+  if (!confirm(t('mobileChat.deleteChatConfirm', { name: g.name }))) {
     return
   }
   try {
@@ -941,10 +943,10 @@ function openAddPlan() {
 }
 const taskFilter = ref('all')
 const taskFilters = computed(() => [
-  { key: 'all', label: '全部', count: todoPlans.value.length },
-  { key: 'todo', label: '待办', count: todoPlans.value.filter(p => p.status === 'todo').length },
-  { key: 'doing', label: '进行中', count: todoPlans.value.filter(p => p.status === 'doing').length },
-  { key: 'done', label: '已完成', count: todoPlans.value.filter(p => p.status === 'done').length },
+  { key: 'all', label: t('mobileChat.filterAll'), count: todoPlans.value.length },
+  { key: 'todo', label: t('mobileChat.filterTodo'), count: todoPlans.value.filter(p => p.status === 'todo').length },
+  { key: 'doing', label: t('mobileChat.filterDoing'), count: todoPlans.value.filter(p => p.status === 'doing').length },
+  { key: 'done', label: t('mobileChat.filterDone'), count: todoPlans.value.filter(p => p.status === 'done').length },
 ])
 const filteredTodoPlans = computed(() => {
   if (taskFilter.value === 'all') return todoPlans.value
@@ -996,19 +998,19 @@ async function sendPlanRemind(plan: any) {
     const res = await http.get('/chat/groups/private/secretary')
     const groupId = res?.data?.id ?? res?.id
     if (!groupId) return
-    const msg = `🔔 请跟进任务：「${plan.title}」${plan.due_date ? '，截止 ' + plan.due_date : ''}`
+    const msg = t('mobileChat.taskReminder', { title: plan.title, due: plan.due_date || '' })
     await http.post('/chat/messages', { group_id: groupId, content: msg })
-    alert('已通知秘书跟进')
-  } catch { alert('通知失败') }
+    alert(t('mobileChat.secretaryNotified'))
+  } catch { alert(t('mobileChat.notifyFailed')) }
 }
 
 async function deletePlan(plan: any) {
-  if (!confirm(`确定删除「${plan.title}」？`)) return
+  if (!confirm(t('mobileChat.deleteTaskConfirm', { title: plan.title }))) return
   try {
     await http.delete(`/work/plans/${plan.id}`)
     todoPlans.value = todoPlans.value.filter(p => p.id !== plan.id)
     selectedPlan.value = null
-  } catch { alert('删除失败') }
+  } catch { alert(t('mobileChat.deleteFailed')) }
 }
 
 async function createPlanFromChat() {
@@ -1026,15 +1028,15 @@ async function createPlanFromChat() {
       const secRes = await http.get('/chat/groups/private/secretary')
       const gid = secRes?.data?.id ?? secRes?.id
       if (gid) {
-        const due = created.due_date ? `，截止 ${created.due_date}` : ''
+        const due = created.due_date ? t('mobileChat.withDueDate', { date: created.due_date }) : ''
         const assignees = newPlan.value.mentions.length
-          ? `，负责人：${newPlan.value.mentions.map(m => m.name).join('、')}`
+          ? t('mobileChat.withAssignees', { names: newPlan.value.mentions.map(m => m.name).join('、') })
           : ''
-        await http.post('/chat/messages', { group_id: gid, content: `📋 新任务已创建：「${created.title || newPlan.value.title}」${assignees}${due}。请跟进。` })
+        await http.post('/chat/messages', { group_id: gid, content: t('mobileChat.taskCreatedNotify', { title: created.title || newPlan.value.title, assignees, due }) })
       }
     } catch { /* 通知失败不阻断 */ }
   } catch (e: any) {
-    alert('创建失败：' + (e?.message || '未知错误'))
+    alert(t('mobileChat.createFailedWithReason', { message: e?.message || t('mobileChat.unknownError') }))
   } finally {
     planSubmitting.value = false
   }
@@ -1050,11 +1052,11 @@ async function loadTodoPlans() {
   }
 }
 
-const subTabs = [
-  { key: 'all', label: '全部' },
-  { key: 'todo', label: '待办' },
-  { key: 'ai', label: 'AI管家' },
-]
+const subTabs = computed(() => ([
+  { key: 'all', label: t('mobileChat.tabAll') },
+  { key: 'todo', label: t('mobileChat.tabTodo') },
+  { key: 'ai', label: t('mobileChat.tabAi') },
+]))
 
 function avatarStyle(g: any) {
   const colors = ['#2E6BE6', '#52C41A', '#F5A623', '#F53F3F', '#722ED1', '#0FC6C2', '#EB6F29']
@@ -1080,32 +1082,32 @@ async function loadPendingItems() {
     const pendingRetail = retailRows.filter((r: any) => Number(r.status) === 0)
     const items: any[] = []
     if (pendingProc.length > 0) {
-      items.push({ key: 'procure', label: '采购单待审核', icon: '📦', color: '#2E6BE6', count: pendingProc.length, onClick: () => router.push('/mobile/procure/order') })
+      items.push({ key: 'procure', label: t('mobileChat.procurePendingReview'), icon: '📦', color: '#2E6BE6', count: pendingProc.length, onClick: () => router.push('/mobile/procure/order') })
     }
     if (pendingRetail.length > 0) {
-      items.push({ key: 'retail', label: '零售单待审核', icon: '🛒', color: '#FF6B35', count: pendingRetail.length, onClick: () => router.push('/mobile/sale/out') })
+      items.push({ key: 'retail', label: t('mobileChat.retailPendingReview'), icon: '🛒', color: '#FF6B35', count: pendingRetail.length, onClick: () => router.push('/mobile/sale/out') })
     }
     pendingItems.value = items
   } catch { pendingItems.value = [] }
 }
 
 // 从通讯录/Agent列表中查找用户名
-const AGENT_NAMES: Record<string, string> = {
-  'captain': 'Captain 总指挥',
-  'copywriter': '文案Agent',
-  'poster': '海报Agent',
-  'video': '视频Agent',
-  'brand': '品牌Agent',
-  'trend': '趋势Agent',
-  'publisher': '发布Agent',
-  'designer': '平面设计师',
-  'marketing': '营销顾问',
-  'ai-assistant-fixed': 'ERP管家',
-  'meeting-fixed': 'AI会议室',
-}
+const AGENT_NAMES = computed<Record<string, string>>(() => ({
+  captain: t('mobileContacts.agents.captainName'),
+  copywriter: t('mobileContacts.agents.copywriterName'),
+  poster: t('mobileContacts.agents.posterName'),
+  video: t('mobileContacts.agents.videoName'),
+  brand: t('mobileContacts.agents.brandName'),
+  trend: t('mobileContacts.agents.trendName'),
+  publisher: t('mobileContacts.agents.publisherName'),
+  designer: t('mobileContacts.agents.designerName'),
+  marketing: t('mobileContacts.agents.marketingName'),
+  'ai-assistant-fixed': t('mobileChat.aiButler'),
+  'meeting-fixed': t('mobileChat.aiMeetingRoom'),
+}))
 function findContactName(id: string): string | null {
   // 1. Agent名
-  if (AGENT_NAMES[id]) return AGENT_NAMES[id]
+  if (AGENT_NAMES.value[id]) return AGENT_NAMES.value[id]
   // 2. 员工通讯录
   const emp = contacts.value.find((c: any) => String(c.id) === id)
   if (emp) return emp.name
@@ -1121,14 +1123,17 @@ async function mergeAdamInbox() {
       fetch('/api/adam/messages?peek=1', { headers: { 'x-erp-token': token } }),
     ])
 
-    // 收集所有"亚当发出的消息"（chat_history 里 role=assistant + inbox 全部）
-    const adamMessages: Array<{ content: string; timestamp: string }> = []
+    // 收集消息：亚当说的(assistant) + 用户说的(user) + inbox 主动消息
+    const adamMessages: Array<{ content: string; timestamp: string; role?: string }> = []
 
     if (histRes.ok) {
       const d = await histRes.json() as { messages?: Array<{ role?: string; content: string; timestamp?: string }> }
       ;(d.messages || []).forEach(m => {
-        if (m.role === 'assistant' && m.content) {
-          adamMessages.push({ content: m.content, timestamp: m.timestamp || new Date().toISOString() })
+        if (!m.content) return
+        if (m.role === 'assistant') {
+          adamMessages.push({ content: m.content, timestamp: m.timestamp || new Date().toISOString(), role: 'assistant' })
+        } else if (m.role === 'user') {
+          adamMessages.push({ content: t('mobileChat.youPrefix') + m.content, timestamp: m.timestamp || new Date().toISOString(), role: 'user' })
         }
       })
     }
@@ -1151,23 +1156,30 @@ async function mergeAdamInbox() {
     // 新于 lastReadTs 的亚当消息才算未读
     const unread = adamMessages.filter(m => new Date(m.timestamp).getTime() > lastReadTs).length
 
-    const idx = groups.value.findIndex(g => g.name === '亚当' || g.name === 'Adam' || g.name === 'ADAM')
+    const adamNames = [t('mobileChat.adam'), 'Adam', 'ADAM']
+    const idx = groups.value.findIndex(g => adamNames.includes(g.name))
     if (idx >= 0) {
-      // 不累加，直接覆盖（避免越叠越多）
+      // 内容不变就跳过，避免闪烁
+      const cur = groups.value[idx]
+      const newMsg = latest.content.slice(0, 80)
+      const newTs = latest.timestamp || cur.last_message_at
+      if (cur.last_msg === newMsg && cur.last_message_at === newTs && cur.unread === unread) {
+        return
+      }
       groups.value[idx] = {
-        ...groups.value[idx],
+        ...cur,
         route: '/mobile/chat/adam',
-        last_msg: latest.content.slice(0, 80),
-        last_time: latest.timestamp ? formatTime(latest.timestamp) : groups.value[idx].last_time,
-        last_message_at: latest.timestamp || groups.value[idx].last_message_at,
+        last_msg: newMsg,
+        last_time: latest.timestamp ? formatTime(latest.timestamp) : cur.last_time,
+        last_message_at: newTs,
         unread,
       }
     } else {
       groups.value.unshift({
         id: 'adam-virtual',
         route: '/mobile/chat/adam',
-        name: '亚当',
-        avatar_text: '亚',
+        name: t('mobileChat.adam'),
+        avatar_text: t('mobileChat.adamAvatar'),
         last_msg: latest.content.slice(0, 80),
         last_time: latest.timestamp ? formatTime(latest.timestamp) : '',
         unread,
@@ -1190,7 +1202,7 @@ async function loadGroups() {
       const memberIds = r.member_ids ?? []
       const isPrivate = !!r.is_private || (memberIds.length === 2)
       // 私聊显示对方名字（去掉"私聊:"前缀）
-      let displayName = r.name || '会话'
+      let displayName = r.name || t('mobileChat.session')
       if (isPrivate && memberIds.length === 2) {
         const otherId = memberIds.find((id: any) => String(id) !== String(authStore.userInfo?.id))
         if (otherId) {
@@ -1207,7 +1219,7 @@ async function loadGroups() {
         id: r.id,
         name: displayName,
         avatar_text: displayName?.[0],
-        last_msg: r.last_message || r.last_msg || (r.cross_tenant ? '发消息打个招呼～' : ''),
+        last_msg: r.last_message || r.last_msg || (r.cross_tenant ? t('mobileChat.sayHello') : ''),
         last_time: formatTime(r.last_message_at || r.last_time || ''),
         unread: r.unread ?? 0,
         is_pinned: r.is_pinned ?? false,
@@ -1232,7 +1244,7 @@ async function loadContacts() {
     const rows = res?.data?.rows ?? res?.rows ?? []
     contacts.value = rows.map((r: any) => ({
       id: r.id,
-      name: r.name || r.admin_name || '未知用户',
+      name: r.name || r.admin_name || t('mobileChat.unknownUser'),
       role_name: r.role_name || '',
     }))
   } catch { contacts.value = [] }
@@ -1267,12 +1279,12 @@ async function doSearch() {
     const results: any[] = []
     if (custRes.status === 'fulfilled') {
       (custRes.value?.data?.rows ?? custRes.value?.rows ?? []).forEach((r: any) => {
-        results.push({ id: r.id, type: 'customer', name: r.name || r.customer_name, sub: `客户 | ${r.phone || '无电话'}` })
+        results.push({ id: r.id, type: 'customer', name: r.name || r.customer_name, sub: `${t('mobileChat.customer')} | ${r.phone || t('mobileChat.noPhone')}` })
       })
     }
     if (saleRes.status === 'fulfilled') {
       (saleRes.value?.data?.rows ?? saleRes.value?.rows ?? []).forEach((r: any) => {
-        results.push({ id: r.id, type: 'order', name: `#${r.id} ${r.customer_name || '客户'}`, sub: `销售单 | ¥${r.total_amount || 0}` })
+        results.push({ id: r.id, type: 'order', name: `#${r.id} ${r.customer_name || t('mobileChat.customer')}`, sub: `${t('mobileChat.salesOrder')} | ¥${r.total_amount || 0}` })
       })
     }
     searchResults.value = results
@@ -1505,10 +1517,10 @@ async function adamSend() {
       }
     }
   } catch {
-    setReply({ content: '连接失败，请重试。', typing: false })
+    setReply({ content: t('mobileChat.adamConnectFailed'), typing: false })
   } finally {
     const cur = adamMessages.value[replyIdx]
-    if (!cur?.content) setReply({ content: '我在，但没有生成回复，请再说一次。', typing: false })
+    if (!cur?.content) setReply({ content: t('mobileChat.adamNoReply'), typing: false })
     adamSending.value = false
     const msgs = adamMessages.value
       .filter(m => m.content)
