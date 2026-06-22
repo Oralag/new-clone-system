@@ -423,7 +423,7 @@
         </div>
         <span>{{ t('portal.brand') }}</span>
       </div>
-      <p class="footer-sub">DESIGNED BY NOMAD LABS · GLOBAL CITIZEN PLATFORM</p>
+      <p class="footer-sub">{{ t('portal.footerSub') }}</p>
       <p class="footer-copy">{{ t('portal.footerCopy') }}</p>
     </footer>
   </div>

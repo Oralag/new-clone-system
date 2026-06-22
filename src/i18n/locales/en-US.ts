@@ -865,6 +865,7 @@ export default {
     expireDate: 'Expires on',
     labelSeparator: ': ',
     startTrial: 'Start Trial',
+    footerSub: 'Designed by Nomad Labs · Global Citizen Platform',
     footerCopy: '© 2026 Nomad. All rights reserved.',
     aiFallback: 'Sure. What else can I help with?',
     aiError: 'Unable to connect to the AI service. Please try again later.',

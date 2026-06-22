@@ -865,6 +865,7 @@ export default {
     expireDate: '到期时间',
     labelSeparator: '：',
     startTrial: '开始体验',
+    footerSub: '由 Nomad Labs 设计 · 全球公民平台',
     footerCopy: '© 2026 数字游牧. All rights reserved.',
     aiFallback: '好的，请问还有什么需要帮助的？',
     aiError: '连接 AI 服务失败，请稍后重试。',
