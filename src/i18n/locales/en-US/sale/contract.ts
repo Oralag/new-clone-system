@@ -58,6 +58,7 @@ export default {
   colRemark: 'Remark',
   businessExchange: 'Exchange',
   businessNormal: 'Normal',
+  businessGift: 'Gift',
   colReceived: 'Received',
 
   // ── Action buttons ──
@@ -138,6 +139,10 @@ export default {
   btnImportGoods: 'Import Products',
   btnExchangeGroupCollapse: 'Collapse Exchange',
   btnExchangeGroup: 'Exchange Group',
+  btnSelectGift: 'Select Gift',
+  giftTitle: 'Gifts',
+  giftHint: 'Not counted in amount, but stock is still deducted',
+  giftEmpty: 'No gifts. Click "Select Gift" above to add.',
   goodsCount: 'Total',
   goodsCountUnit: 'items',
   emptyGoodsHint: 'Click buttons above to add products',
