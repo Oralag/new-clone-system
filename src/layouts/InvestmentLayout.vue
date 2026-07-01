@@ -188,38 +188,13 @@
       <div class="inv-body" :class="{ 'inv-body--workspace': route.path === '/investment/workspace' || route.path === '/investment/city' }">
         <section class="inv-content" :class="{ 'inv-content--workspace': route.path === '/investment/workspace' || route.path === '/investment/city' }">
           <router-view />
-          <div v-if="!isMobile && route.path === '/investment'" class="inv-campus-map" aria-label="Adam campus quick map">
-            <router-link class="campus-map-card campus-map-card--city" to="/investment/city">
-              <span class="campus-map-kicker">园区地图</span>
-              <strong>Adam Campus</strong>
-              <small>点击进入完整地图</small>
-            </router-link>
-            <span class="campus-path campus-path--main"></span>
-            <span class="campus-path campus-path--market"></span>
-            <span class="campus-path campus-path--studio"></span>
-            <router-link class="campus-node campus-node--bureau" to="/investment/city">
-              <b>投资局</b>
-              <span>预算 / 审批</span>
-            </router-link>
-            <router-link class="campus-node campus-node--market" to="/investment/market">
-              <b>市场塔</b>
-              <span>行情 / 研究</span>
-            </router-link>
-            <router-link class="campus-node campus-node--studio" to="/investment/designer">
-              <b>设计室</b>
-              <span>视觉资产</span>
-            </router-link>
-            <router-link class="campus-node campus-node--advisor" to="/investment/marketing">
-              <b>顾问所</b>
-              <span>营销动作</span>
-            </router-link>
-            <router-link class="campus-node campus-node--archive" to="/investment/archive">
-              <b>档案馆</b>
-              <span>记忆沉淀</span>
-            </router-link>
-            <router-link class="campus-node campus-node--desk" to="/investment/workspace">
-              <b>工作室</b>
-              <span>Adam 指令</span>
+          <div v-if="!isMobile && route.path === '/investment'" class="inv-campus-map" aria-label="Adam campus map preview">
+            <div class="inv-campus-real-map" aria-hidden="true">
+              <CampusMapPreview />
+            </div>
+            <router-link class="campus-map-open" to="/investment/city" aria-label="打开完整园区地图">
+              <span>园区地图</span>
+              <b>打开完整视图</b>
             </router-link>
           </div>
         </section>
@@ -233,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
 import { useAppStore } from '@/stores/app'
@@ -241,6 +216,8 @@ import { useI18n } from 'vue-i18n'
 import { Eye, TrendingUp, ChevronLeft, Menu, Map, BarChart3, BookOpen, Library, Palette, Home } from 'lucide-vue-next'
 import CaptainBar from '@/components/CaptainBar.vue'
 import AdamChat from '@/components/AdamChat.vue'
+
+const CampusMapPreview = defineAsyncComponent(() => import('@/views/investment/City.vue'))
 
 const route = useRoute()
 const adamStore = useAdamStore()
@@ -1669,193 +1646,112 @@ const statusLabel = computed(() => {
 
   .inv-campus-map {
     position: absolute;
-    z-index: 7;
-    top: 108px;
-    left: clamp(190px, 23vw, 310px);
-    right: clamp(96px, 12vw, 190px);
-    height: min(310px, calc(100% - 316px));
-    min-height: 238px;
+    z-index: 3;
+    inset: 0;
+    border-radius: 36px;
+    overflow: hidden;
     pointer-events: none;
   }
 
-  .campus-map-card,
-  .campus-node {
-    pointer-events: auto;
-    text-decoration: none;
-    color: #11110f;
-    box-sizing: border-box;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  .inv-campus-real-map {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    opacity: 0.72;
+    filter: saturate(0.74) contrast(0.94) brightness(1.05);
+    pointer-events: none;
   }
 
-  .campus-map-card {
+  .inv-campus-real-map::after {
+    content: "";
     position: absolute;
-    left: 50%;
-    top: 52%;
-    width: 164px;
-    min-height: 128px;
-    padding: 20px 18px;
-    border-radius: 38px;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 48% 47%, rgba(255, 255, 255, 0.26), transparent 0 26%),
+      linear-gradient(90deg, rgba(199, 221, 214, 0.3), rgba(199, 221, 214, 0.2));
+  }
+
+  .inv-campus-real-map .city-page {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    display: block !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    background: transparent !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+
+  .inv-campus-real-map :is(.city-sidebar, .city-chat, .mood-badge, .zone-labels, .iso-hud, .iso-controls, .dialog-mask, .hall-enter-overlay, .bldg-callout, .bldg-enter-btn, .adam-popup, .adam-bubble, .weather-rain) {
+    display: none !important;
+  }
+
+  .inv-campus-real-map .city-main,
+  .inv-campus-real-map .iso-viewport {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    display: block !important;
+    border-radius: inherit !important;
+    background: transparent !important;
+    overflow: hidden !important;
+    cursor: default !important;
+  }
+
+  .inv-campus-real-map .iso-scene {
+    top: 50% !important;
+    left: 50% !important;
+    transition: none !important;
+  }
+
+  .inv-campus-real-map :is(.iso-ground, .iso-bldg, .deco-tree, .iso-decor, .iso-statue, .adam-character) {
+    pointer-events: none !important;
+  }
+
+  .campus-map-open {
+    position: absolute;
+    z-index: 9;
+    right: 28px;
+    bottom: 28px;
+    min-width: 138px;
+    padding: 12px 15px;
+    border-radius: 18px;
+    background: rgba(17, 17, 15, 0.9);
+    color: #fff;
+    text-decoration: none;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.38);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 22px 45px rgba(32, 64, 82, 0.12);
-    transform: translate(-50%, -50%) rotate(-4deg);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    gap: 3px;
+    pointer-events: auto;
+    transition: transform 0.16s ease, background 0.16s ease;
   }
 
-  .campus-map-card::after {
-    content: "";
-    position: absolute;
-    inset: 17px;
-    border: 1px dashed rgba(17, 17, 15, 0.18);
-    border-radius: 28px;
-    pointer-events: none;
-  }
-
-  .campus-map-kicker,
-  .campus-map-card small,
-  .campus-node span {
+  .campus-map-open span {
+    color: rgba(255, 255, 255, 0.64);
     font-size: 10px;
-    line-height: 1.25;
-    color: rgba(17, 17, 15, 0.56);
+    line-height: 1;
   }
 
-  .campus-map-card strong {
-    max-width: 118px;
-    font-size: 20px;
-    line-height: 0.96;
-    letter-spacing: -0.06em !important;
-    font-weight: 900;
-  }
-
-  .campus-path {
-    position: absolute;
-    left: 50%;
-    top: 52%;
-    height: 2px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, rgba(47, 111, 237, 0.58), rgba(47, 111, 237, 0));
-    transform-origin: left center;
-    pointer-events: none;
-  }
-
-  .campus-path--main {
-    width: 38%;
-    transform: rotate(-18deg);
-  }
-
-  .campus-path--market {
-    width: 34%;
-    transform: rotate(28deg);
-  }
-
-  .campus-path--studio {
-    width: 31%;
-    transform: rotate(162deg);
-  }
-
-  .campus-node {
-    position: absolute;
-    min-width: 118px;
-    padding: 10px 12px 10px 34px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.52);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-  }
-
-  .campus-node::before {
-    content: "";
-    position: absolute;
-    left: 12px;
-    top: 13px;
-    width: 12px;
-    height: 12px;
-    border-radius: 999px;
-    background: #2f6fed;
-    box-shadow: 0 0 0 5px rgba(47, 111, 237, 0.14);
-  }
-
-  .campus-node b {
-    display: block;
+  .campus-map-open b {
+    color: #fff;
     font-size: 12px;
     line-height: 1.1;
     font-weight: 900;
     letter-spacing: -0.03em !important;
   }
 
-  .campus-node span {
-    display: block;
-    margin-top: 4px;
-    white-space: nowrap;
-  }
-
-  .campus-map-card:hover,
-  .campus-map-card:focus-visible,
-  .campus-node:hover,
-  .campus-node:focus-visible {
-    transform: translateY(-3px);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32), 0 16px 34px rgba(47, 111, 237, 0.18);
-    outline: none;
-  }
-
-  .campus-map-card:hover,
-  .campus-map-card:focus-visible {
-    transform: translate(-50%, calc(-50% - 3px)) rotate(-4deg);
-  }
-
-  .campus-node--bureau {
-    left: 5%;
-    top: 44%;
-    background: #11110f;
-    color: #fff;
-  }
-
-  .campus-node--bureau span,
-  .campus-node--market span {
-    color: rgba(255, 255, 255, 0.72);
-  }
-
-  .campus-node--bureau::before {
-    background: #c7ddd6;
-    box-shadow: 0 0 0 5px rgba(199, 221, 214, 0.18);
-  }
-
-  .campus-node--market {
-    right: 2%;
-    top: 12%;
+  .campus-map-open:hover,
+  .campus-map-open:focus-visible {
+    transform: translateY(-2px);
     background: #2f6fed;
-    color: #fff;
-  }
-
-  .campus-node--market::before {
-    background: #fff;
-    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.2);
-  }
-
-  .campus-node--studio {
-    left: 12%;
-    top: 8%;
-  }
-
-  .campus-node--advisor {
-    right: 7%;
-    top: 54%;
-    background: rgba(199, 221, 214, 0.78);
-  }
-
-  .campus-node--archive {
-    left: 22%;
-    bottom: 1%;
-    background: rgba(169, 201, 223, 0.62);
-  }
-
-  .campus-node--desk {
-    right: 22%;
-    bottom: 2%;
-    background: rgba(255, 255, 255, 0.62);
+    outline: none;
   }
 
   /* 首页：把 Index 里的三层卡片摆成参考图比例 */
