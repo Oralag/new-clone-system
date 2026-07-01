@@ -100,12 +100,30 @@
 
     <!-- ── 主内容区 ── -->
     <main class="inv-main">
-      <div v-if="!isMobile && route.path !== '/investment/city'" class="inv-color-rail" aria-hidden="true">
+      <div v-if="!isMobile && route.path !== '/investment/city'" class="inv-color-rail" aria-label="Theme quick switcher">
         <span class="rail-chevron">⌃</span>
-        <span class="rail-dot rail-dot--paper"></span>
-        <span class="rail-dot rail-dot--aqua"></span>
-        <span class="rail-dot rail-dot--ink"></span>
-        <span class="rail-dot rail-dot--blue"></span>
+        <button
+          type="button"
+          class="rail-dot rail-dot--paper"
+          :class="{ active: appStore.theme === 'light' }"
+          title="Light"
+          @click="appStore.setTheme('light')"
+        ></button>
+        <button
+          type="button"
+          class="rail-dot rail-dot--aqua"
+          :class="{ active: appStore.theme === 'eye' }"
+          title="Soft"
+          @click="appStore.setTheme('eye')"
+        ></button>
+        <button
+          type="button"
+          class="rail-dot rail-dot--ink"
+          :class="{ active: appStore.theme === 'dark' }"
+          title="Dark"
+          @click="appStore.setTheme('dark')"
+        ></button>
+        <router-link class="rail-dot rail-dot--blue" to="/investment/city" title="Open campus map" aria-label="Open campus map"></router-link>
         <span class="rail-chevron">⌄</span>
       </div>
 
@@ -123,10 +141,10 @@
           <strong>Today</strong>
         </h2>
         <div class="hero-actions">
-          <button class="hero-primary" type="button">
+          <router-link class="hero-primary" to="/investment/workspace">
             <span>↗</span>
             Open Desk
-          </button>
+          </router-link>
           <router-link class="hero-link" to="/investment/market">View Market</router-link>
         </div>
       </div>
@@ -170,6 +188,40 @@
       <div class="inv-body" :class="{ 'inv-body--workspace': route.path === '/investment/workspace' || route.path === '/investment/city' }">
         <section class="inv-content" :class="{ 'inv-content--workspace': route.path === '/investment/workspace' || route.path === '/investment/city' }">
           <router-view />
+          <div v-if="!isMobile && route.path === '/investment'" class="inv-campus-map" aria-label="Adam campus quick map">
+            <router-link class="campus-map-card campus-map-card--city" to="/investment/city">
+              <span class="campus-map-kicker">园区地图</span>
+              <strong>Adam Campus</strong>
+              <small>点击进入完整地图</small>
+            </router-link>
+            <span class="campus-path campus-path--main"></span>
+            <span class="campus-path campus-path--market"></span>
+            <span class="campus-path campus-path--studio"></span>
+            <router-link class="campus-node campus-node--bureau" to="/investment/city">
+              <b>投资局</b>
+              <span>预算 / 审批</span>
+            </router-link>
+            <router-link class="campus-node campus-node--market" to="/investment/market">
+              <b>市场塔</b>
+              <span>行情 / 研究</span>
+            </router-link>
+            <router-link class="campus-node campus-node--studio" to="/investment/designer">
+              <b>设计室</b>
+              <span>视觉资产</span>
+            </router-link>
+            <router-link class="campus-node campus-node--advisor" to="/investment/marketing">
+              <b>顾问所</b>
+              <span>营销动作</span>
+            </router-link>
+            <router-link class="campus-node campus-node--archive" to="/investment/archive">
+              <b>档案馆</b>
+              <span>记忆沉淀</span>
+            </router-link>
+            <router-link class="campus-node campus-node--desk" to="/investment/workspace">
+              <b>工作室</b>
+              <span>Adam 指令</span>
+            </router-link>
+          </div>
         </section>
 
         <aside v-if="route.path !== '/investment/city'" class="inv-adam-wrap">
@@ -280,7 +332,7 @@ const statusLabel = computed(() => {
   --inv-line: rgba(23, 23, 21, 0.1);
   --inv-line-strong: rgba(23, 23, 21, 0.18);
   --inv-aqua: #c7ddd6;
-  --inv-orange: #f0602d;
+  --inv-accent-blue: #2f6fed;
   --inv-mint: #99c49f;
   --inv-black: #080806;
   --inv-blue: #a9c9df;
@@ -293,7 +345,7 @@ const statusLabel = computed(() => {
   --faint: rgba(23, 23, 21, 0.055);
   --border: var(--inv-line);
   --card-bg: var(--inv-panel);
-  --accent: var(--inv-orange);
+  --accent: var(--inv-accent-blue);
   display: flex;
   height: 100vh;
   padding: 28px;
@@ -552,8 +604,8 @@ const statusLabel = computed(() => {
   border: 1px solid var(--border);
 }
 .status-tag.survival {
-  background: rgba(240, 96, 45, 0.16);
-  border: 1px solid rgba(240, 96, 45, 0.22);
+  background: rgba(47, 111, 237, 0.14);
+  border: 1px solid rgba(47, 111, 237, 0.2);
 }
 .status-tag.shutdown {
   background: var(--faint);
@@ -566,7 +618,7 @@ const statusLabel = computed(() => {
 }
 .alive .status-dot { background: var(--inv-mint); box-shadow: none; }
 .dormant .status-dot { background: var(--dim); opacity: 0.5; }
-.survival .status-dot { background: var(--inv-orange); animation: survPulse 1.2s ease-in-out infinite; }
+.survival .status-dot { background: var(--inv-accent-blue); animation: survPulse 1.2s ease-in-out infinite; }
 .shutdown .status-dot { background: var(--dim); opacity: 0.3; }
 @keyframes survPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 .status-text {
@@ -577,7 +629,7 @@ const statusLabel = computed(() => {
 }
 .alive .status-text { color: #3f7a48; }
 .dormant .status-text { color: var(--dim); opacity: 0.6; }
-.survival .status-text { color: var(--inv-orange); }
+.survival .status-text { color: var(--inv-accent-blue); }
 .shutdown .status-text { color: var(--dim); opacity: 0.4; }
 
 /* 内容区 */
@@ -809,7 +861,7 @@ const statusLabel = computed(() => {
 .inv-layout .name-id,
 .inv-layout .metric-val.positive,
 .inv-layout .metric-val.credit {
-  color: var(--inv-orange) !important;
+  color: var(--inv-accent-blue) !important;
 }
 
 .inv-layout .metrics-strip {
@@ -960,7 +1012,7 @@ const statusLabel = computed(() => {
 .inv-layout .breadth-card:nth-child(2),
 .inv-layout .knowledge-card:nth-child(2),
 .inv-layout .prompt-card:nth-child(2) {
-  background: var(--inv-orange) !important;
+  background: var(--inv-accent-blue) !important;
 }
 
 .inv-layout .index-card:nth-child(3),
@@ -1230,7 +1282,7 @@ const statusLabel = computed(() => {
 
 /* ═══════════════════════════════════════════════════
    Reference chase — desktop composition closer to IMG_5912
-   顶部横向导航 + 左标题 + 中央黄色主视觉 + 右橙色 Adam 卡
+   顶部横向导航 + 左标题 + 中央薄荷主视觉 + 右蓝色 Adam 卡
    ═══════════════════════════════════════════════════ */
 @media (min-width: 1180px) {
   .inv-layout {
@@ -1470,12 +1522,28 @@ const statusLabel = computed(() => {
     height: 25px;
     border-radius: 50%;
     display: block;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .rail-dot:hover,
+  .rail-dot:focus-visible {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.14);
+    outline: none;
+  }
+
+  .rail-dot.active {
+    box-shadow: 0 0 0 3px #f4f3f1, 0 0 0 5px rgba(17, 17, 15, 0.16);
   }
 
   .rail-dot--paper { background: #dcdcd9; }
   .rail-dot--aqua { background: #c7ddd6; }
   .rail-dot--ink { background: #242729; }
-  .rail-dot--blue { background: #a9c9df; }
+  .rail-dot--blue { background: #2f6fed; }
 
   .inv-hero-copy {
     position: absolute;
@@ -1550,6 +1618,19 @@ const statusLabel = computed(() => {
     font-size: 11px;
     font-weight: 800;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    line-height: 1;
+    transition: transform 0.16s ease, background 0.16s ease;
+  }
+
+  .hero-primary:hover,
+  .hero-primary:focus-visible {
+    transform: translateY(-1px);
+    background: #2f6fed;
+    outline: none;
   }
 
   .hero-primary span {
@@ -1583,6 +1664,198 @@ const statusLabel = computed(() => {
 
   .inv-body:not(.inv-body--workspace) .inv-content {
     align-self: stretch !important;
+    position: relative !important;
+  }
+
+  .inv-campus-map {
+    position: absolute;
+    z-index: 7;
+    top: 108px;
+    left: clamp(190px, 23vw, 310px);
+    right: clamp(96px, 12vw, 190px);
+    height: min(310px, calc(100% - 316px));
+    min-height: 238px;
+    pointer-events: none;
+  }
+
+  .campus-map-card,
+  .campus-node {
+    pointer-events: auto;
+    text-decoration: none;
+    color: #11110f;
+    box-sizing: border-box;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+
+  .campus-map-card {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: 164px;
+    min-height: 128px;
+    padding: 20px 18px;
+    border-radius: 38px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.38);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 22px 45px rgba(32, 64, 82, 0.12);
+    transform: translate(-50%, -50%) rotate(-4deg);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .campus-map-card::after {
+    content: "";
+    position: absolute;
+    inset: 17px;
+    border: 1px dashed rgba(17, 17, 15, 0.18);
+    border-radius: 28px;
+    pointer-events: none;
+  }
+
+  .campus-map-kicker,
+  .campus-map-card small,
+  .campus-node span {
+    font-size: 10px;
+    line-height: 1.25;
+    color: rgba(17, 17, 15, 0.56);
+  }
+
+  .campus-map-card strong {
+    max-width: 118px;
+    font-size: 20px;
+    line-height: 0.96;
+    letter-spacing: -0.06em !important;
+    font-weight: 900;
+  }
+
+  .campus-path {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(47, 111, 237, 0.58), rgba(47, 111, 237, 0));
+    transform-origin: left center;
+    pointer-events: none;
+  }
+
+  .campus-path--main {
+    width: 38%;
+    transform: rotate(-18deg);
+  }
+
+  .campus-path--market {
+    width: 34%;
+    transform: rotate(28deg);
+  }
+
+  .campus-path--studio {
+    width: 31%;
+    transform: rotate(162deg);
+  }
+
+  .campus-node {
+    position: absolute;
+    min-width: 118px;
+    padding: 10px 12px 10px 34px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.52);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  }
+
+  .campus-node::before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 13px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: #2f6fed;
+    box-shadow: 0 0 0 5px rgba(47, 111, 237, 0.14);
+  }
+
+  .campus-node b {
+    display: block;
+    font-size: 12px;
+    line-height: 1.1;
+    font-weight: 900;
+    letter-spacing: -0.03em !important;
+  }
+
+  .campus-node span {
+    display: block;
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+
+  .campus-map-card:hover,
+  .campus-map-card:focus-visible,
+  .campus-node:hover,
+  .campus-node:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32), 0 16px 34px rgba(47, 111, 237, 0.18);
+    outline: none;
+  }
+
+  .campus-map-card:hover,
+  .campus-map-card:focus-visible {
+    transform: translate(-50%, calc(-50% - 3px)) rotate(-4deg);
+  }
+
+  .campus-node--bureau {
+    left: 5%;
+    top: 44%;
+    background: #11110f;
+    color: #fff;
+  }
+
+  .campus-node--bureau span,
+  .campus-node--market span {
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .campus-node--bureau::before {
+    background: #c7ddd6;
+    box-shadow: 0 0 0 5px rgba(199, 221, 214, 0.18);
+  }
+
+  .campus-node--market {
+    right: 2%;
+    top: 12%;
+    background: #2f6fed;
+    color: #fff;
+  }
+
+  .campus-node--market::before {
+    background: #fff;
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.2);
+  }
+
+  .campus-node--studio {
+    left: 12%;
+    top: 8%;
+  }
+
+  .campus-node--advisor {
+    right: 7%;
+    top: 54%;
+    background: rgba(199, 221, 214, 0.78);
+  }
+
+  .campus-node--archive {
+    left: 22%;
+    bottom: 1%;
+    background: rgba(169, 201, 223, 0.62);
+  }
+
+  .campus-node--desk {
+    right: 22%;
+    bottom: 2%;
+    background: rgba(255, 255, 255, 0.62);
   }
 
   /* 首页：把 Index 里的三层卡片摆成参考图比例 */
@@ -1697,7 +1970,7 @@ const statusLabel = computed(() => {
   }
 
   .inv-layout .obs-home .name-id {
-    color: #f04f23 !important;
+    color: #2f6fed !important;
   }
 
   .inv-layout .obs-home .name-sub {
@@ -1739,7 +2012,7 @@ const statusLabel = computed(() => {
     height: 48px !important;
     padding: 0 18px !important;
     border-radius: 999px !important;
-    background: #f04f23 !important;
+    background: #2f6fed !important;
     color: #fff !important;
     border: 0 !important;
   }
@@ -1771,7 +2044,7 @@ const statusLabel = computed(() => {
   }
 
   .inv-layout .obs-home .metric-block:nth-of-type(1) {
-    background: #f04f23 !important;
+    background: #2f6fed !important;
     color: #fff !important;
   }
 
@@ -1821,7 +2094,7 @@ const statusLabel = computed(() => {
     padding: 8px 12px !important;
     box-sizing: border-box !important;
     border-radius: 24px !important;
-    background: #f04f23 !important;
+    background: #2f6fed !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 6px !important;
@@ -1982,7 +2255,7 @@ const statusLabel = computed(() => {
     white-space: nowrap !important;
   }
 
-  /* 右侧 Adam：压成参考图的橙色手机卡 */
+  /* 右侧 Adam：压成参考图的蓝色手机卡 */
   .inv-adam-wrap {
     width: 178px !important;
     flex: 0 0 178px !important;
@@ -1998,7 +2271,7 @@ const statusLabel = computed(() => {
     min-height: 392px !important;
     max-height: 392px !important;
     border-radius: 32px !important;
-    background: #f04f23 !important;
+    background: #2f6fed !important;
     border: 0 !important;
     color: #fff !important;
     box-shadow: none !important;
@@ -2017,7 +2290,7 @@ const statusLabel = computed(() => {
     display: grid;
     place-items: center;
     background: #fff;
-    color: #f04f23;
+    color: #2f6fed;
     font-size: 26px;
     line-height: 1;
   }
@@ -2167,7 +2440,7 @@ const statusLabel = computed(() => {
     border: 0 !important;
     border-radius: 50% !important;
     background: #fff !important;
-    color: #f04f23 !important;
+    color: #2f6fed !important;
   }
 }
 
