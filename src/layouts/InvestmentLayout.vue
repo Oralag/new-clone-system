@@ -100,6 +100,37 @@
 
     <!-- ── 主内容区 ── -->
     <main class="inv-main">
+      <div v-if="!isMobile && route.path !== '/investment/city'" class="inv-color-rail" aria-hidden="true">
+        <span class="rail-chevron">⌃</span>
+        <span class="rail-dot rail-dot--paper"></span>
+        <span class="rail-dot rail-dot--aqua"></span>
+        <span class="rail-dot rail-dot--ink"></span>
+        <span class="rail-dot rail-dot--blue"></span>
+        <span class="rail-chevron">⌄</span>
+      </div>
+
+      <div v-if="!isMobile && route.path === '/investment'" class="inv-hero-copy" aria-label="Adam investment hero">
+        <div class="hero-count">
+          <span></span>
+          <span class="active"></span>
+          <span></span>
+          <span></span>
+          <b>01/03</b>
+        </div>
+        <h2>
+          <span>Adam</span>
+          <span>Invest,</span>
+          <strong>Today</strong>
+        </h2>
+        <div class="hero-actions">
+          <button class="hero-primary" type="button">
+            <span>↗</span>
+            Open Desk
+          </button>
+          <router-link class="hero-link" to="/investment/market">View Market</router-link>
+        </div>
+      </div>
+
       <header v-if="!isMobile" class="inv-topbar">
         <div class="topbar-left">
           <h1 class="topbar-title">{{ currentPageTitle }}</h1>
@@ -248,7 +279,7 @@ const statusLabel = computed(() => {
   --inv-ink-muted: rgba(23, 23, 21, 0.42);
   --inv-line: rgba(23, 23, 21, 0.1);
   --inv-line-strong: rgba(23, 23, 21, 0.18);
-  --inv-yellow: #ffea1f;
+  --inv-aqua: #c7ddd6;
   --inv-orange: #f0602d;
   --inv-mint: #99c49f;
   --inv-black: #080806;
@@ -307,10 +338,10 @@ const statusLabel = computed(() => {
   place-items: center;
   border-radius: 12px;
   background: var(--inv-black);
-  color: var(--inv-yellow);
+  color: var(--inv-aqua);
 }
 .logo-icon svg circle:first-child { stroke: rgba(255, 255, 255, 0.72); }
-.logo-icon svg circle:nth-child(2) { fill: var(--inv-yellow); opacity: 0.95; }
+.logo-icon svg circle:nth-child(2) { fill: var(--inv-aqua); opacity: 0.95; }
 .logo-icon svg circle:nth-child(3) { fill: var(--inv-black); }
 .logo-text-wrap { flex: 1; min-width: 0; }
 .logo-text {
@@ -399,7 +430,7 @@ const statusLabel = computed(() => {
   top: 50%;
   width: 6px;
   height: 6px;
-  background: var(--inv-yellow);
+  background: var(--inv-aqua);
   border-radius: 999px;
   transform: translateY(-50%);
 }
@@ -486,7 +517,7 @@ const statusLabel = computed(() => {
   gap: 6px;
   padding: 6px 11px;
   border-radius: 999px;
-  background: var(--inv-yellow);
+  background: var(--inv-aqua);
   border: 1px solid transparent;
 }
 .budget-label {
@@ -747,7 +778,7 @@ const statusLabel = computed(() => {
 }
 
 .inv-layout .obs-home .status-card {
-  background: var(--inv-yellow) !important;
+  background: var(--inv-aqua) !important;
   border-radius: 34px !important;
   padding: 28px !important;
   min-height: 250px;
@@ -841,7 +872,7 @@ const statusLabel = computed(() => {
 }
 
 .inv-layout .panel-instruction .instruction-glow-bar {
-  background: var(--inv-yellow) !important;
+  background: var(--inv-aqua) !important;
 }
 
 .inv-layout .panel-trust {
@@ -855,7 +886,7 @@ const statusLabel = computed(() => {
 }
 
 .inv-layout .trust-rung.active {
-  background: var(--inv-yellow) !important;
+  background: var(--inv-aqua) !important;
   border-color: transparent !important;
 }
 
@@ -892,7 +923,7 @@ const statusLabel = computed(() => {
 }
 
 .inv-layout .market-page .tab-btn.active .tab-code {
-  color: var(--inv-yellow) !important;
+  color: var(--inv-aqua) !important;
 }
 
 .inv-layout .indices-row,
@@ -922,7 +953,7 @@ const statusLabel = computed(() => {
 .inv-layout .breadth-card:nth-child(1),
 .inv-layout .knowledge-card:nth-child(1),
 .inv-layout .prompt-card:nth-child(1) {
-  background: var(--inv-yellow) !important;
+  background: var(--inv-aqua) !important;
 }
 
 .inv-layout .index-card:nth-child(2),
@@ -1004,7 +1035,7 @@ const statusLabel = computed(() => {
 }
 
 .inv-layout :is(.marketing-dept, .designer-dept) .dec-illus {
-  background: var(--inv-yellow) !important;
+  background: var(--inv-aqua) !important;
 }
 
 .inv-layout :is(.marketing-dept, .designer-dept) :is(.dec-name, .dec-role, .dec-desc, .dec-stat-value, .dec-stat-label) {
@@ -1043,7 +1074,7 @@ const statusLabel = computed(() => {
 }
 
 .inv-layout .user .msg-bubble {
-  background: var(--inv-yellow) !important;
+  background: var(--inv-aqua) !important;
   border-color: transparent !important;
 }
 
@@ -1078,7 +1109,7 @@ const statusLabel = computed(() => {
 
 .inv-layout .kb-card:nth-child(3n + 1),
 .inv-layout .reflection-card:nth-child(3n + 1) {
-  background: var(--inv-yellow) !important;
+  background: var(--inv-aqua) !important;
 }
 
 .inv-layout .kb-card:nth-child(3n + 2),
@@ -1168,7 +1199,7 @@ const statusLabel = computed(() => {
 }
 
 .inv-layout .panel-tab.on {
-  background: var(--inv-yellow) !important;
+  background: var(--inv-aqua) !important;
   color: var(--inv-ink) !important;
 }
 
@@ -1194,6 +1225,983 @@ const statusLabel = computed(() => {
 
   .inv-layout .indices-row {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   Reference chase — desktop composition closer to IMG_5912
+   顶部横向导航 + 左标题 + 中央黄色主视觉 + 右橙色 Adam 卡
+   ═══════════════════════════════════════════════════ */
+@media (min-width: 1180px) {
+  .inv-layout {
+    padding: 34px !important;
+    display: block !important;
+    background: #d7d7d4 !important;
+    overflow: hidden !important;
+  }
+
+  .inv-main {
+    position: relative !important;
+    width: 100% !important;
+    height: calc(100vh - 68px) !important;
+    min-height: 760px !important;
+    border-radius: 32px !important;
+    background: #f4f3f1 !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+  }
+
+  /* 把原左侧栏重排成参考图顶部导航 */
+  .inv-sidebar {
+    position: absolute !important;
+    z-index: 30 !important;
+    top: 48px !important;
+    left: 82px !important;
+    right: 82px !important;
+    width: auto !important;
+    height: 48px !important;
+    display: grid !important;
+    grid-template-columns: 190px minmax(0, 1fr) 110px !important;
+    align-items: center !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .inv-sidebar .sidebar-logo {
+    padding: 0 !important;
+    border: 0 !important;
+    gap: 0 !important;
+  }
+
+  .inv-sidebar .logo-icon,
+  .inv-sidebar .logo-sub,
+  .inv-sidebar .life-dot {
+    display: none !important;
+  }
+
+  .inv-sidebar .logo-text {
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.04em !important;
+    color: #11110f !important;
+  }
+
+  .inv-sidebar .logo-text::after {
+    content: ".";
+  }
+
+  .inv-sidebar .sidebar-nav {
+    height: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .inv-sidebar .nav-section-title {
+    display: none !important;
+  }
+
+  .inv-sidebar .nav-item {
+    height: 32px !important;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    color: rgba(18, 18, 16, 0.62) !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    gap: 0 !important;
+    transition: color 0.18s ease, background 0.18s ease !important;
+  }
+
+  .inv-sidebar .nav-item svg {
+    display: none !important;
+  }
+
+  .inv-sidebar .nav-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 10px;
+    width: 1px;
+    height: 12px;
+    background: rgba(18, 18, 16, 0.34);
+  }
+
+  .inv-sidebar .nav-item:hover {
+    background: rgba(255, 255, 255, 0.54) !important;
+    color: #11110f !important;
+  }
+
+  .inv-sidebar .nav-item--active {
+    background: transparent !important;
+    color: #11110f !important;
+    font-weight: 800 !important;
+  }
+
+  .inv-sidebar .nav-item--active::before {
+    display: none !important;
+  }
+
+  .inv-sidebar .sidebar-footer {
+    padding: 0 !important;
+    border: 0 !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
+
+  .inv-sidebar .nav-item--back {
+    width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    background: transparent !important;
+    color: #11110f !important;
+  }
+
+  .inv-sidebar .nav-item--back .nav-item-label {
+    display: none !important;
+  }
+
+  .inv-sidebar .nav-item--back svg {
+    display: block !important;
+    transform: rotate(180deg);
+  }
+
+  /* 顶部右侧操作，模拟参考图的黑色 CTA + 小状态胶囊 */
+  .inv-topbar {
+    position: absolute !important;
+    z-index: 32 !important;
+    top: 48px !important;
+    right: 112px !important;
+    width: auto !important;
+    height: 48px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    gap: 12px !important;
+  }
+
+  .inv-topbar .topbar-left,
+  .inv-topbar .inv-clock,
+  .inv-topbar .topbar-theme-btns {
+    display: none !important;
+  }
+
+  .inv-topbar .topbar-right {
+    gap: 10px !important;
+  }
+
+  .inv-topbar .budget-tag {
+    min-height: 42px !important;
+    padding: 0 20px !important;
+    border-radius: 10px !important;
+    background: #11110f !important;
+    color: #fff !important;
+  }
+
+  .inv-topbar .budget-label {
+    display: none !important;
+  }
+
+  .inv-topbar .budget-val {
+    color: #fff !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+  }
+
+  .inv-topbar .budget-val::before {
+    content: "Budget ";
+    font-weight: 700;
+  }
+
+  .inv-topbar .status-tag {
+    min-height: 42px !important;
+    padding: 0 14px !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.64) !important;
+    border: 0 !important;
+  }
+
+  .inv-topbar .status-text {
+    color: #11110f !important;
+  }
+
+  /* 左侧颜色控制条，追参考图的装饰比例 */
+  .inv-color-rail {
+    position: absolute;
+    z-index: 24;
+    left: 82px;
+    top: 126px;
+    width: 40px;
+    height: 194px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    color: #11110f;
+  }
+
+  .inv-color-rail::before {
+    content: "Colors";
+    position: absolute;
+    left: 0;
+    top: -30px;
+    font-size: 11px;
+    color: rgba(17, 17, 15, 0.72);
+  }
+
+  .rail-chevron {
+    font-size: 13px;
+    line-height: 1;
+    color: rgba(17, 17, 15, 0.8);
+  }
+
+  .rail-dot {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    display: block;
+  }
+
+  .rail-dot--paper { background: #dcdcd9; }
+  .rail-dot--aqua { background: #c7ddd6; }
+  .rail-dot--ink { background: #242729; }
+  .rail-dot--blue { background: #a9c9df; }
+
+  .inv-hero-copy {
+    position: absolute;
+    z-index: 25;
+    left: 82px;
+    top: 360px;
+    width: 190px;
+    color: #11110f;
+  }
+
+  .hero-count {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 28px;
+    color: #11110f;
+  }
+
+  .hero-count span {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(17, 17, 15, 0.16);
+  }
+
+  .hero-count span.active {
+    width: 10px;
+    height: 10px;
+    background: #11110f;
+    box-shadow: 0 0 0 3px #f4f3f1, 0 0 0 4px rgba(17, 17, 15, 0.18);
+  }
+
+  .hero-count b {
+    margin-left: auto;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .inv-hero-copy h2 {
+    margin: 0;
+    font-size: clamp(45px, 4.2vw, 64px);
+    line-height: 0.94;
+    letter-spacing: -0.08em !important;
+    font-weight: 260;
+  }
+
+  .inv-hero-copy h2 span,
+  .inv-hero-copy h2 strong {
+    display: block;
+  }
+
+  .inv-hero-copy h2 strong {
+    margin-top: 8px;
+    font-weight: 900;
+    letter-spacing: -0.07em !important;
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin-top: 30px;
+  }
+
+  .hero-primary {
+    height: 40px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 8px;
+    background: #11110f;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .hero-primary span {
+    margin-right: 8px;
+  }
+
+  .hero-link {
+    color: rgba(17, 17, 15, 0.72);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  /* 内容区在参考图里从标题右侧开始 */
+  .inv-body:not(.inv-body--workspace) {
+    position: relative !important;
+    height: 100% !important;
+    padding: 132px 78px 54px 280px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 178px !important;
+    gap: 34px !important;
+    overflow: hidden !important;
+    background: transparent !important;
+  }
+
+  .inv-content:not(.inv-content--workspace) {
+    overflow: visible !important;
+    min-height: 0 !important;
+  }
+
+  .inv-body:not(.inv-body--workspace) .inv-content {
+    align-self: stretch !important;
+  }
+
+  /* 首页：把 Index 里的三层卡片摆成参考图比例 */
+  .inv-layout .obs-home {
+    height: 100% !important;
+    max-width: none !important;
+    display: grid !important;
+    grid-template-columns: minmax(360px, 1.15fr) minmax(230px, 0.72fr) minmax(220px, 0.62fr) !important;
+    grid-template-rows: minmax(380px, 1fr) 150px !important;
+    gap: 24px 28px !important;
+    align-items: stretch !important;
+  }
+
+  .inv-layout .obs-home .layer {
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  .inv-layout .obs-home .layer-status {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .inv-layout .obs-home .layer-panels,
+  .inv-layout .obs-home .triple-grid {
+    display: contents !important;
+  }
+
+  .inv-layout .obs-home .status-card {
+    height: 100% !important;
+    min-height: 380px !important;
+    border-radius: 36px !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #c7ddd6 !important;
+    box-shadow: none !important;
+  }
+
+  .inv-layout .obs-home .card-grid-texture {
+    border-radius: inherit !important;
+    opacity: 0.28 !important;
+    background:
+      radial-gradient(circle at 78% 70%, rgba(17, 17, 15, 0.13) 0 2px, transparent 2px 11px),
+      repeating-linear-gradient(135deg, transparent 0 8px, rgba(17, 17, 15, 0.08) 8px 11px, transparent 11px 18px) !important;
+    mask-image: radial-gradient(circle at 72% 74%, #000 0 22%, transparent 23% 100%);
+  }
+
+  .inv-layout .obs-home .status-header {
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    z-index: 2 !important;
+  }
+
+  .inv-layout .obs-home .adam-identity {
+    position: static !important;
+    display: block !important;
+  }
+
+  .inv-layout .obs-home .life-indicator {
+    position: absolute !important;
+    left: 50% !important;
+    top: 54% !important;
+    width: min(34vw, 340px) !important;
+    height: min(34vw, 340px) !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    transform: translate(-50%, -50%) !important;
+    filter: drop-shadow(0 24px 24px rgba(76, 55, 22, 0.2)) !important;
+  }
+
+  .inv-layout .obs-home .life-indicator::before {
+    content: "";
+    position: absolute;
+    left: 17%;
+    top: 22%;
+    width: 68%;
+    height: 68%;
+    border-radius: 44% 56% 54% 46%;
+    background: rgba(255, 255, 255, 0.32);
+    transform: rotate(-14deg);
+  }
+
+  .inv-layout .obs-home .adam-identity-img {
+    position: relative !important;
+    z-index: 2 !important;
+    width: 82% !important;
+    height: 82% !important;
+    object-fit: contain !important;
+  }
+
+  .inv-layout .obs-home .life-orbit {
+    display: none !important;
+  }
+
+  .inv-layout .obs-home .adam-name {
+    position: absolute !important;
+    left: 30px !important;
+    bottom: 30px !important;
+    z-index: 3 !important;
+    max-width: 230px !important;
+    gap: 5px !important;
+  }
+
+  .inv-layout .obs-home .name-main {
+    font-size: 28px !important;
+    line-height: 0.95 !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.06em !important;
+  }
+
+  .inv-layout .obs-home .name-id {
+    color: #f04f23 !important;
+  }
+
+  .inv-layout .obs-home .name-sub {
+    color: rgba(17, 17, 15, 0.58) !important;
+    font-family: inherit !important;
+    font-size: 11px !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  .inv-layout .obs-home .header-right {
+    position: absolute !important;
+    top: 26px !important;
+    left: 26px !important;
+    z-index: 4 !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .inv-layout .obs-home .sys-tag {
+    height: 80px !important;
+    width: 170px !important;
+    box-sizing: border-box !important;
+    align-items: flex-start !important;
+    padding: 14px !important;
+    border-radius: 22px !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    border: 0 !important;
+    color: #11110f !important;
+    font-family: inherit !important;
+  }
+
+  .inv-layout .obs-home .sys-label {
+    color: #11110f !important;
+    letter-spacing: 0 !important;
+  }
+
+  .inv-layout .obs-home .activate-btn {
+    height: 48px !important;
+    padding: 0 18px !important;
+    border-radius: 999px !important;
+    background: #f04f23 !important;
+    color: #fff !important;
+    border: 0 !important;
+  }
+
+  .inv-layout .obs-home .metrics-strip {
+    position: absolute !important;
+    top: 26px !important;
+    right: 28px !important;
+    z-index: 4 !important;
+    width: auto !important;
+    display: flex !important;
+    gap: 14px !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .inv-layout .obs-home .metric-block {
+    width: 62px !important;
+    height: 62px !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+    padding: 8px !important;
+    border-radius: 50% !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    background: rgba(255, 255, 255, 0.36) !important;
+    overflow: hidden !important;
+  }
+
+  .inv-layout .obs-home .metric-block:nth-of-type(1) {
+    background: #f04f23 !important;
+    color: #fff !important;
+  }
+
+  .inv-layout .obs-home .metric-block:nth-of-type(3) {
+    background: #11110f !important;
+    color: #fff !important;
+  }
+
+  .inv-layout .obs-home .metric-block:nth-of-type(5) {
+    background: #a9c9df !important;
+  }
+
+  .inv-layout .obs-home .metric-key {
+    display: none !important;
+  }
+
+  .inv-layout .obs-home .metric-val {
+    max-width: 52px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 11px !important;
+    line-height: 1.08 !important;
+    color: currentColor !important;
+  }
+
+  .inv-layout .obs-home .metric-unit {
+    font-size: 9px !important;
+  }
+
+  .inv-layout .obs-home .energy-bar-wrap {
+    width: 42px !important;
+    height: 5px !important;
+    background: rgba(17, 17, 15, 0.14) !important;
+  }
+
+  .inv-layout .obs-home .energy-num {
+    font-size: 10px !important;
+  }
+
+  .inv-layout .obs-home .emotion-strip {
+    position: absolute !important;
+    left: 50% !important;
+    bottom: -24px !important;
+    z-index: 6 !important;
+    width: 190px !important;
+    min-height: 58px !important;
+    padding: 8px 12px !important;
+    box-sizing: border-box !important;
+    border-radius: 24px !important;
+    background: #f04f23 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    transform: translateX(-50%) !important;
+  }
+
+  .inv-layout .obs-home .emotion-label {
+    color: rgba(255, 255, 255, 0.82) !important;
+    font-size: 9px !important;
+  }
+
+  .inv-layout .obs-home .emotion-bars {
+    gap: 5px !important;
+    align-items: flex-end !important;
+  }
+
+  .inv-layout .obs-home .emotion-bar-bg {
+    width: 12px !important;
+    height: 24px !important;
+    background: rgba(255, 255, 255, 0.22) !important;
+    border-radius: 999px !important;
+  }
+
+  .inv-layout .obs-home .emotion-bar-fill {
+    background: #c7ddd6 !important;
+  }
+
+  .inv-layout .obs-home .emotion-name {
+    display: none !important;
+  }
+
+  .inv-layout .obs-home .panel-instruction {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    align-self: end !important;
+    min-height: 126px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    color: #11110f !important;
+    overflow: visible !important;
+  }
+
+  .inv-layout .obs-home .panel-instruction .panel-head {
+    display: none !important;
+  }
+
+  .inv-layout .obs-home .panel-instruction .instruction-card,
+  .inv-layout .obs-home .panel-instruction .empty-state {
+    min-height: 112px !important;
+    padding: 16px 18px !important;
+    border-radius: 24px !important;
+    background: #11110f !important;
+    color: #fff !important;
+  }
+
+  .inv-layout .obs-home .panel-instruction :is(.instruction-title, .instruction-thesis, .instruction-conf, .instruction-time, .empty-text, .empty-sub) {
+    color: rgba(255, 255, 255, 0.86) !important;
+  }
+
+  .inv-layout .obs-home .panel-instruction .instruction-actions {
+    margin-top: 12px !important;
+  }
+
+  .inv-layout .obs-home .panel-instruction .btn-gold,
+  .inv-layout .obs-home .panel-instruction .btn-ghost {
+    min-height: 34px !important;
+    border-radius: 999px !important;
+  }
+
+  .inv-layout .obs-home .panel-instruction .btn-gold {
+    background: #c7ddd6 !important;
+    color: #11110f !important;
+  }
+
+  .inv-layout .obs-home .panel-trust,
+  .inv-layout .obs-home .panel-log {
+    grid-row: 2 !important;
+    min-height: 126px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .inv-layout .obs-home .panel-trust {
+    grid-column: 2 !important;
+  }
+
+  .inv-layout .obs-home .panel-log {
+    grid-column: 3 !important;
+    justify-self: stretch !important;
+    width: auto !important;
+    transform: none !important;
+  }
+
+  .inv-layout .obs-home .panel-trust .panel-head,
+  .inv-layout .obs-home .panel-log .panel-head {
+    padding: 0 0 10px !important;
+    border: 0 !important;
+  }
+
+  .inv-layout .obs-home .panel-trust .panel-icon,
+  .inv-layout .obs-home .panel-log .panel-icon {
+    display: none !important;
+  }
+
+  .inv-layout .obs-home .panel-trust .panel-title,
+  .inv-layout .obs-home .panel-log .panel-title {
+    color: #11110f !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+  }
+
+  .inv-layout .obs-home .trust-ladder,
+  .inv-layout .obs-home .event-list {
+    max-height: 96px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+
+  .inv-layout .obs-home .trust-rung {
+    min-height: 28px !important;
+    margin-bottom: 5px !important;
+    padding: 6px 8px !important;
+    border-radius: 999px !important;
+    background: rgba(17, 17, 15, 0.06) !important;
+  }
+
+  .inv-layout .obs-home .trust-rung:not(.active) {
+    display: none !important;
+  }
+
+  .inv-layout .obs-home .trust-rung.active {
+    display: flex !important;
+    background: #99c49f !important;
+  }
+
+  .inv-layout .obs-home .rung-perms,
+  .inv-layout .obs-home .rung-progress,
+  .inv-layout .obs-home .event-stage-tag {
+    display: none !important;
+  }
+
+  .inv-layout .obs-home .event-item {
+    grid-template-columns: 42px 1fr !important;
+    gap: 8px !important;
+    min-height: 24px !important;
+  }
+
+  .inv-layout .obs-home .event-timeline {
+    display: none !important;
+  }
+
+  .inv-layout .obs-home .event-text {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* 右侧 Adam：压成参考图的橙色手机卡 */
+  .inv-adam-wrap {
+    width: 178px !important;
+    flex: 0 0 178px !important;
+    min-height: 0 !important;
+    margin-top: 74px !important;
+    align-self: start !important;
+    display: block !important;
+  }
+
+  .inv-adam-wrap .panel.panel-chat {
+    position: relative !important;
+    height: 392px !important;
+    min-height: 392px !important;
+    max-height: 392px !important;
+    border-radius: 32px !important;
+    background: #f04f23 !important;
+    border: 0 !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  .inv-adam-wrap .panel.panel-chat::before {
+    content: "›";
+    position: absolute;
+    z-index: 8;
+    right: 16px;
+    bottom: 18px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: #f04f23;
+    font-size: 26px;
+    line-height: 1;
+  }
+
+  .inv-adam-wrap .panel.panel-chat::after {
+    content: "Adam\A Smart";
+    white-space: pre;
+    position: absolute;
+    z-index: 8;
+    left: 18px;
+    bottom: 20px;
+    color: #fff;
+    font-size: 20px;
+    line-height: 0.92;
+    font-weight: 800;
+    letter-spacing: -0.06em !important;
+  }
+
+  .inv-adam-wrap .panel.panel-chat .panel-head {
+    position: relative !important;
+    z-index: 5 !important;
+    height: 26px !important;
+    margin: 14px 14px 0 !important;
+    padding: 0 8px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    color: #11110f !important;
+    gap: 6px !important;
+  }
+
+  .inv-adam-wrap .chat-avatar {
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50% !important;
+    background: #11110f !important;
+  }
+
+  .inv-adam-wrap .chat-avatar-img {
+    width: 17px !important;
+    height: 17px !important;
+  }
+
+  .inv-adam-wrap .chat-heading {
+    min-width: 0 !important;
+  }
+
+  .inv-adam-wrap .panel.panel-chat .panel-title {
+    font-size: 8px !important;
+    color: rgba(17, 17, 15, 0.82) !important;
+    white-space: nowrap !important;
+  }
+
+  .inv-adam-wrap .panel.panel-chat .panel-desc {
+    display: none !important;
+  }
+
+  .inv-adam-wrap .comm-status,
+  .inv-adam-wrap .collapse-btn {
+    display: none !important;
+  }
+
+  .inv-adam-wrap .panel.panel-chat .chat-messages {
+    position: relative !important;
+    z-index: 2 !important;
+    min-height: 252px !important;
+    max-height: 252px !important;
+    padding: 22px 12px 0 !important;
+    background: transparent !important;
+    overflow: hidden !important;
+  }
+
+  .inv-adam-wrap .panel.panel-chat .chat-empty {
+    position: relative !important;
+    min-height: 230px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+
+  .inv-adam-wrap .chat-empty-icon {
+    width: 118px !important;
+    height: 118px !important;
+    border-radius: 26px !important;
+    display: grid !important;
+    place-items: center !important;
+    background: rgba(17, 17, 15, 0.12) !important;
+    color: #fff !important;
+    transform: rotate(4deg);
+  }
+
+  .inv-adam-wrap .chat-empty-title,
+  .inv-adam-wrap .chat-empty-text {
+    display: none !important;
+  }
+
+  .inv-adam-wrap .msg-content {
+    max-width: 132px !important;
+    margin-left: 0 !important;
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #fff !important;
+    font-size: 10px !important;
+    line-height: 1.45 !important;
+  }
+
+  .inv-adam-wrap .msg-header {
+    display: none !important;
+  }
+
+  .inv-adam-wrap .chat-input-area {
+    position: absolute !important;
+    z-index: 7 !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 72px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .inv-adam-wrap .input-row {
+    gap: 5px !important;
+  }
+
+  .inv-adam-wrap .img-btn {
+    display: none !important;
+  }
+
+  .inv-adam-wrap .chat-input {
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 7px 10px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.24) !important;
+    color: #fff !important;
+    font-size: 10px !important;
+  }
+
+  .inv-adam-wrap .chat-input::placeholder {
+    color: rgba(255, 255, 255, 0.72) !important;
+  }
+
+  .inv-adam-wrap .send-btn {
+    width: 30px !important;
+    height: 30px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    color: #f04f23 !important;
+  }
+}
+
+@media (min-width: 1180px) and (max-width: 1360px) {
+  .inv-sidebar {
+    left: 58px !important;
+    right: 58px !important;
+    grid-template-columns: 140px minmax(0, 1fr) 80px !important;
+  }
+
+  .inv-sidebar .nav-item {
+    padding: 0 10px !important;
+    font-size: 10px !important;
+  }
+
+  .inv-topbar {
+    right: 82px !important;
+  }
+
+  .inv-color-rail,
+  .inv-hero-copy {
+    left: 58px !important;
+  }
+
+  .inv-body:not(.inv-body--workspace) {
+    padding-left: 238px !important;
+    padding-right: 56px !important;
+    gap: 24px !important;
+    grid-template-columns: minmax(0, 1fr) 164px !important;
+  }
+
+  .inv-adam-wrap {
+    width: 164px !important;
+    flex-basis: 164px !important;
   }
 }
 </style>
