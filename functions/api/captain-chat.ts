@@ -416,7 +416,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const baseURL = useNvidia
     ? 'https://integrate.api.nvidia.com/v1'
     : (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
-  const model = useNvidia ? 'meta/llama-3.3-70b-instruct' : 'deepseek-chat'
+  const model = (env as any).AI_MODEL || (useNvidia ? 'deepseek-ai/deepseek-v4-flash' : 'deepseek-chat')
 
   const { readable, writable } = new TransformStream()
   const writer = writable.getWriter()

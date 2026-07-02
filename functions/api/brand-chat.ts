@@ -65,7 +65,7 @@ ${brandContext || 'NOMADIC DAIRY — 专为数字游民设计的装备品牌，�
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
           body: JSON.stringify({
-            model: 'deepseek-chat',
+            model: (env as any).AI_MODEL || 'deepseek-chat',
             max_tokens: 1024,
             messages: [
               { role: 'system', content: systemPrompt },

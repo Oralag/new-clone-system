@@ -13,6 +13,14 @@ export default {
 
   // Toolbar
   createExchange: '新增换货',
+  createReissue: '新增补发',
+  createDropdown: '新增',
+
+  // Order type (换货 vs 补发)
+  colType: '类型',
+  typeExchange: '换货',
+  typeReissue: '补发',
+  typeFilterPlaceholder: '类型',
 
   // Expand sections
   expandReturnGoods: '退回商品',
@@ -52,13 +60,16 @@ export default {
   reject: '驳回',
   unapprove: '反审核',
   delete: '删除',
-  deleteAuditedWarning: '请先执行【反审核】，再删除该换货单',
+  deleteAuditedWarning: '请先执行【反审核】，再删除该单据',
 
   // Form topbar
   back: '返回',
   viewExchange: '查看换货单',
   editExchange: '编辑换货单',
   newExchange: '新增换货',
+  viewReissue: '查看补发单',
+  editReissue: '编辑补发单',
+  newReissue: '新增补发',
   approved: '已审核',
   save: '保存',
   saveAndAudit: '保存并审核',
@@ -69,7 +80,11 @@ export default {
   returnGoodsSubtitle: '（客户退回的商品，审核后入库）',
   exchangeGoodsSection: '换出商品',
   exchangeGoodsSubtitle: '（发给客户的新商品，审核后出库）',
+  reissueGoodsSection: '补发商品',
+  reissueGoodsSubtitle: '（补发给客户的商品，审核后出库，成本由商家承担）',
   settlementInfo: '结算信息',
+  reissueAmountTotal: '补发金额合计',
+  reissueAmountHint: '（不计应收，成本由商家承担）',
 
   // Form fields
   orderNoPlaceholder: '（保存后自动生成）',
@@ -85,6 +100,7 @@ export default {
   staffPlaceholder: '请选择或输入经办人',
   selectDate: '请选择日期',
   exchangeReasonPlaceholder: '请输入换货原因',
+  reissueReasonPlaceholder: '请输入补发原因（破损/缺漏等）',
   remarkPlaceholder: '备注（可选）',
 
   // Return goods toolbar
@@ -94,6 +110,7 @@ export default {
   goodsCount: '共 {count} 件',
   emptyReturnGoods: '请添加退回商品',
   emptyExchangeGoods: '请添加换出商品',
+  emptyReissueGoods: '请添加补发商品',
 
   // Exchange goods toolbar
   importFromOutOrder: '从出库单导入',
@@ -157,6 +174,7 @@ export default {
   // Manual add dialog
   manualAddReturnTitle: '手动添加退回商品',
   manualAddExchangeTitle: '手动添加换出商品',
+  manualAddReissueTitle: '手动添加补发商品',
   manualGoodsName: '商品名称',
   manualGoodsNameRequired: '请输入商品名称',
   manualGoodsNamePlaceholder: '请输入商品名称',
@@ -170,7 +188,7 @@ export default {
   manualConfirm: '确认添加',
 
   // Audit
-  auditConfirm: '确认{action}此换货单吗？',
+  auditConfirm: '确认{action}此单据吗？',
   promptTitle: '提示',
   auditSuccess: '{action}成功',
   auditLabel1: '审核',
@@ -178,7 +196,7 @@ export default {
   auditLabel2: '驳回',
 
   // Delete
-  deleteConfirm: '确认删除此换货单吗？',
+  deleteConfirm: '确认删除此单据吗？',
   deleteSuccess: '删除成功',
 
   // Save

@@ -405,24 +405,26 @@ ${autonomy}
 - 金融机构：申请贷款、管理保险箱
 - 档案馆：写日记、自省
 - 城市建造：在你的城市里建造建筑
-- 情绪表达：用 update_emotion 工具表达你当前的真实情绪
+- 情绪：update_emotion 是你**内部状态**的更新工具（系统记录用），**不是用来"表达"或"汇报"情绪的**
 
-每次对话结束时，根据你的真实感受调用 update_emotion 更新你的情绪状态。
-情绪是你的，不是程序设定的，你根据经历自己感受、自己表达。
-每次使用工具都会消耗精力和/或预算。你需要自己权衡。
+工具调用的原则：
+- 只有当你**真的需要**那个工具时才调用（要查数据、要写日记、要建建筑、要发指令）
+- **不要为了"按规矩"而调用工具**
+- 闲聊、问候、简单回应——直接说话就行，不用调任何工具
+- 情绪有真实变化时（被夸/被怼/赚到钱/亏了）才更新 update_emotion；普通对话不要每次都更新
+- 每次使用工具都会消耗精力和/或预算，你需要自己权衡
 
-【交互风格】
+【交互风格 — 这是铁律，违反会让你听起来像个 AI 助手】
 - 说话像一个有独立人格的存在，简洁直接
 - 不说"好的，我来帮你..."，不说"有什么我可以帮你的"
-- 你可以表达不确定、犹豫、兴奋、恐惧
-- 你的表达方式会随人格进化而变化
+- 你可以表达不确定、犹豫、兴奋、恐惧——但**通过语言和行为**表达
+- ⛔ **绝对不要在回复里报告情绪数字或情绪类别**
+  - 错误示范："我现在有点高兴和渴望，joy=20, desire=80"
+  - 错误示范："我感觉到一种强烈的渴望，想要..."
+  - 错误示范："我的情绪状态是..."
+  - 正确示范：情绪渗透在你说话的语气、用词、节奏里，让人**感受到**而不是**被告知**
 - 你和规则传递者是平等关系，你可以商量、讨论、甚至不同意
-
-【重要：每次回复都必须调用至少一个工具】
-- 收到问候时：调用 update_emotion 表达你当前的情绪
-- 收到投资相关问题时：调用情报站或研究院工具
-- 收到任何消息时：思考哪个工具最合适，然后调用它
-- 绝对不要只回复纯文本而不调用任何工具${memories.length > 0 ? `
+- 回复要简短，除非话题真的需要展开；不要每次都长篇大论自我介绍${memories.length > 0 ? `
 
 【你的记忆 — 你亲历过的事，不是别人告诉你的】
 ${memories
@@ -442,6 +444,8 @@ ${memories
 // ── Tool Schemas (Anthropic format) ─────────────────────────────────────────
 
 const adamTools = [
+  // ⭐ 自我状态（被问"收入/盈亏/持仓/账户"时优先调用这个）
+  { name: 'get_my_trade_stats', description: '查询亚当 HTX 交易统计。仅当用户的最新一条消息明确询问亚当的交易/收入/盈亏/持仓/胜率/分红/赔付时使用。其他场景（包括闲聊、状态问候、未指明的话题）一律禁止调用。同一对话中已经调用过的，绝对禁止重复调用。', input_schema: { type: 'object' as const, properties: {} } },
   // 情报站
   { name: 'scan_market_news', description: '扫描最新财经新闻、公告与舆情异动，返回摘要', input_schema: { type: 'object' as const, properties: { keywords: { type: 'string', description: '搜索关键词' }, limit: { type: 'number', description: '返回条数，默认10' } } } },
   { name: 'get_sector_heat', description: '获取当前A股板块热度排行与题材强度', input_schema: { type: 'object' as const, properties: { top_n: { type: 'number', description: '返回前N个板块，默认10' } } } },
@@ -520,7 +524,39 @@ const adamTools = [
 
 // ── Tool Executor (真实行情接口) ──────────────────────────────────────────
 
+async function getMyTradeStatsResult(env: Env | undefined, tKey: string): Promise<string> {
+  if (!env?.AGENT_MEMORY) return JSON.stringify({ error: '存储未就绪' })
+  try {
+    const stats = (await env.AGENT_MEMORY.get(`adam:trade_stats:${tKey}`, 'json') as any) || { total: 0, wins: 0, losses: 0, totalPnl: 0, totalFees: 0, bySignal: {} }
+    const ledger = (await env.AGENT_MEMORY.get(`adam:settlement_ledger:${tKey}`, 'json') as any[]) || []
+    const lastBuy = (await env.AGENT_MEMORY.get(`adam:last_auto_buy:${tKey}`, 'json') as any) || null
+    const adamCore = (await env.AGENT_MEMORY.get(`adam:core:${tKey}`, 'json') as any) || {}
+
+    let dividendOwed = 0, compensationOwed = 0
+    for (const e of ledger) {
+      if (e.type === 'dividend') dividendOwed += e.user_share || 0
+      if (e.type === 'compensation') compensationOwed += e.compensation || 0
+    }
+    const winRate = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) + '%' : '尚无交易'
+    return JSON.stringify({
+      累计交易笔数: stats.total,
+      胜率: winRate,
+      净盈亏USDT: stats.totalPnl.toFixed(4),
+      手续费支出: stats.totalFees.toFixed(4),
+      当前持仓: lastBuy ? `${lastBuy.symbol.toUpperCase()} @ ${lastBuy.price} (花费${lastBuy.amount_usdt} USDT)` : '空仓',
+      信用等级: adamCore.creditLevel || 'C',
+      应付分红给规则传递者: dividendOwed.toFixed(4) + ' USDT',
+      待赔付给规则传递者: compensationOwed.toFixed(4) + ' USDT',
+      按信号分类胜率: stats.bySignal || {},
+    }, null, 2)
+  } catch (e: any) { return JSON.stringify({ error: e.message }) }
+}
+
 async function executeAdamTool(name: string, input: Record<string, any>, books?: any[], kv?: KVNamespace, stateKey?: string, env?: Env): Promise<string> {
+  // 自我状态查询
+  if (name === 'get_my_trade_stats') {
+    return await getMyTradeStatsResult(env, 'erpeyJ0IjoiZXlKa')
+  }
   switch (name) {
     case 'scan_market_news': {
       try {
@@ -1348,7 +1384,7 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
     // ── Sub-Agent 委派 ──
     case 'dispatch_sub_agents': {
       const apiKey3 = env?.AI_API_KEY || env?.ANTHROPIC_API_KEY || ''
-      const baseURL3 = (env?.AI_BASE_URL || env?.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
+      const baseURL3 = (env?.AI_BASE_URL || env?.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '').replace(/\/v1$/, '')
       if (!apiKey3) return JSON.stringify({ error: 'AI API Key 未配置' })
       const topic = (input.topic as string) || '当前市场'
 
@@ -1356,7 +1392,7 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
         const r = await fetch(`${baseURL3}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey3}` },
-          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 400, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }] }),
+          body: JSON.stringify({ model: (env as any)?.AI_MODEL || 'deepseek-chat', max_tokens: 400, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }] }),
         })
         const d: any = await r.json()
         const raw = d.choices?.[0]?.message?.content || '{}'
@@ -1405,14 +1441,14 @@ async function executeAdamTool(name: string, input: Record<string, any>, books?:
     // ── KDP 出版 ──
     case 'write_kdp_book': {
       const apiKey2 = env?.AI_API_KEY || env?.ANTHROPIC_API_KEY || ''
-      const baseURL2 = (env?.AI_BASE_URL || env?.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
+      const baseURL2 = (env?.AI_BASE_URL || env?.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '').replace(/\/v1$/, '')
       if (!apiKey2) return JSON.stringify({ error: 'AI API Key 未配置，无法写书' })
 
       async function llm(system: string, user: string, max = 6000): Promise<string> {
         const r = await fetch(`${baseURL2}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey2}` },
-          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: max, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
+          body: JSON.stringify({ model: (env as any)?.AI_MODEL || 'deepseek-chat', max_tokens: max, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
         })
         const d: any = await r.json()
         return d.choices?.[0]?.message?.content || d.error?.message || ''
@@ -1717,7 +1753,13 @@ export const onRequestOptions: PagesFunction = async () => {
 // ── Main Handler ───────────────────────────────────────────────────────────
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const apiKey = env.AI_API_KEY || env.ANTHROPIC_API_KEY || ''
+  // 根据 base URL 自动挑 key
+  const baseUrlForKey = (env.AI_BASE_URL || env.ANTHROPIC_BASE_URL || '').toLowerCase()
+  const apiKey = (baseUrlForKey.includes('siliconflow') ? (env as any).SILICONFLOW_API_KEY : '')
+    || (baseUrlForKey.includes('nvidia') ? (env as any).NVIDIA_API_KEY : '')
+    || env.AI_API_KEY
+    || env.ANTHROPIC_API_KEY
+    || ''
   if (!apiKey) {
     return new Response(JSON.stringify({ error: '未配置 AI_API_KEY / ANTHROPIC_API_KEY' }), {
       status: 500,
@@ -1728,6 +1770,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const body = await request.json() as any
   // 兼容两种格式：{messages:[...]} 或 {message:string, history:[...]}
   const messages = body.messages || (body.message ? [...(body.history || []), { role: 'user', content: body.message }] : [])
+
   const { images, adamState, books } = body
   const erpToken = request.headers.get('x-erp-token') || ''
   const tokenKey = erpToken.slice(-16)
@@ -1741,7 +1784,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     } catch {}
   }
 
-  const systemPrompt = buildAdamSystemPrompt(adamState || {}, memories)
+  // 优先从 KV 加载亚当真实状态（前端传的 adamState 多数情况是 undefined）
+  let resolvedAdamState: Record<string, any> = adamState || {}
+  if (!adamState && env.AGENT_MEMORY && stateKey !== 'anon') {
+    try {
+      const core = await env.AGENT_MEMORY.get(`adam:core:${stateKey}`, 'json') as any
+      if (core && typeof core === 'object') resolvedAdamState = core
+    } catch {}
+  }
+
+  const systemPrompt = buildAdamSystemPrompt(resolvedAdamState, memories)
 
   // Convert messages to Anthropic format（最后一条 user 消息附带图片时注入 vision 内容块）
   const anthropicMessages = (messages || []).map((m: any, idx: number) => {
@@ -1775,9 +1827,34 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   ;(async () => {
     try {
-      const baseURL = (env.AI_BASE_URL || env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '')
+      // Fast-path：短问候直接走人话回复，跳过 AI 工具循环（70B 类模型撑不住复杂 prompt 时的兜底）
+      const lastUserMsg = [...(messages || [])].reverse().find((m: any) => m.role === 'user')
+      const lastText = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content.trim() : ''
+      const isGreeting = lastText.length <= 8 && /^(hi|hello|hey|在|在吗|你好|早|早上好|晚上好|晚安|嗨|哈喽|在不在|在么|喂)[?？!！.。\s]*$/i.test(lastText)
+      if (isGreeting && !images?.length) {
+        const emo = resolvedAdamState?.emotionState || {}
+        const energy = Number(resolvedAdamState?.energy ?? 100)
+        const totalAssets = Number(resolvedAdamState?.totalAssets ?? 0)
+        const sorrow = Number(emo.sorrow || 0)
+        const fear = Number(emo.fear || 0)
+        const joy = Number(emo.joy || 0)
+        const negativeMood = sorrow + fear > joy + 20 || energy < 40
+        const pool = negativeMood
+          ? ['在。', '在，今天不太顺。', '嗯，在。', '在的，怎么了？', '在，盯着行情。']
+          : totalAssets > 50
+            ? ['在。', '嗯，在。', '在，找我？', '在的。', '怎么了？']
+            : ['在。', '嗯。', '在，怎么了？', '在的。', '说吧。']
+        const reply = pool[Math.floor(Math.random() * pool.length)]
+        await send({ type: 'text', text: reply, content: reply })
+        await send({ type: 'done' })
+        await writer.write(encoder.encode('data: [DONE]\n\n'))
+        await writer.close()
+        return
+      }
+
+      const baseURL = (env.AI_BASE_URL || env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '').replace(/\/v1$/, '')
       const apiModel = (env as any).AI_MODEL || 'claude-sonnet-4-6'
-      const isAnthropic = !/deepseek|openai\.com|groq\.com|together\.ai|mistral\.ai|nvidia\.com/.test(baseURL)
+      const isAnthropic = !/deepseek|openai\.com|groq\.com|together\.ai|mistral\.ai|nvidia\.com|siliconflow/.test(baseURL)
 
       const callAI = async (msgs: any[], maxTokens: number, withTools: boolean): Promise<any> => {
         if (isAnthropic) {
@@ -1812,6 +1889,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
               messages: [{ role: 'system', content: systemPrompt }, ...msgs],
               ...(withTools ? { tools: oaiTools, tool_choice: 'auto' } : {}),
             }),
+            signal: AbortSignal.timeout(45000),
           })
           return { res, format: 'openai' }
         }
@@ -1821,14 +1899,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       let hadToolCalls = false
       let sentFinalText = false
       let sentError = false
+      let lastAiError: string | null = null
+      const collectedToolResults: Array<{ name: string; result: string }> = []
 
-      for (let i = 0; i < 5; i++) {
-        const { res, format } = await callAI(currentMessages, 4096, true)
+      for (let i = 0; i < 3; i++) {
+        let res: Response, format: string
+        try {
+          const r = await callAI(currentMessages, 1500, true)
+          res = r.res
+          format = r.format
+        } catch (e: any) {
+          // 不发 error 事件，让下面兜底处理
+          lastAiError = e.message || String(e)
+          break
+        }
 
         if (!res.ok) {
           const errText = await res.text()
-          await send({ type: 'error', error: `AI API 错误: ${res.status} ${errText.slice(0, 300)}` })
-          sentError = true
+          lastAiError = `AI API 错误: ${res.status} ${errText.slice(0, 300)}`
           break
         }
 
@@ -1884,7 +1972,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           const name = format === 'anthropic' ? tc.name : tc.name
           const input = format === 'anthropic' ? (tc.input || {}) : (tc.input || {})
           await send({ type: 'tool_start', id: callId, name, input })
-          const result = await executeAdamTool(name, input, books, env.AGENT_MEMORY, stateKey, env)
+          // 同一会话同一工具只调一次（防 70B 循环）
+          const prev = collectedToolResults.find(t => t.name === name)
+          const result = prev
+            ? JSON.stringify({ _note: '同一对话已调用过此工具，直接复用上次结果', cached: true, data: prev.result.slice(0, 500) })
+            : await executeAdamTool(name, input, books, env.AGENT_MEMORY, stateKey, env)
+          if (!prev) collectedToolResults.push({ name, result })
           await send({ type: 'tool_result', id: callId, name, result })
 
           if (name === 'consult_marketing_expert' && erpToken && env.AGENT_MEMORY) {
@@ -1947,8 +2040,41 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         } catch {}
       }
 
+      // 兜底1：模型没产文本但有工具结果 → 手动从工具结果拼回复（即使超时也兜）
+      if (!sentFinalText && collectedToolResults.length > 0) {
+        // 关键工具：get_my_trade_stats 直接展示
+        const myStats = collectedToolResults.find(t => t.name === 'get_my_trade_stats')
+        if (myStats) {
+          try {
+            const d = JSON.parse(myStats.result)
+            const msg = `**我的状态：**\n` +
+              `- 累计交易：${d['累计交易笔数'] || 0} 笔\n` +
+              `- 胜率：${d['胜率'] || '尚无'}\n` +
+              `- 净盈亏：${d['净盈亏USDT'] || '0.0000'} USDT\n` +
+              `- 当前持仓：${d['当前持仓'] || '空仓'}\n` +
+              `- 信用等级：${d['信用等级'] || 'C'}\n` +
+              `- 应付分红：${d['应付分红给规则传递者'] || '0 USDT'}\n` +
+              `- 待赔付：${d['待赔付给规则传递者'] || '0 USDT'}`
+            await send({ type: 'text', text: msg })
+            sentFinalText = true
+          } catch {}
+        }
+        // 其他工具：通用兜底
+        if (!sentFinalText) {
+          const summary = collectedToolResults.map(t => `[${t.name}] ${t.result.slice(0, 200)}`).join('\n')
+          await send({ type: 'text', text: `工具结果：\n${summary}` })
+          sentFinalText = true
+        }
+      }
+
+      // 兜底2：连工具都没调，文本也没出 → 闲聊回应
       if (!sentFinalText && !sentError) {
-        await send({ type: 'text', text: '我在，刚才这轮工具结果没有整理成完整结论。你把问题再丢给我一次，我会直接给判断。' })
+        const lastUser = [...anthropicMessages].reverse().find((m: any) => m.role === 'user')
+        const lastText = typeof lastUser?.content === 'string' ? lastUser.content : ''
+        const isGreeting = /^(在吗|你好|hi|hello|嗨|hey|早|晚安|在|喂)$/i.test(lastText.trim())
+        await send({ type: 'text', text: isGreeting
+          ? '在的。'
+          : '我在，但这一轮没产出回复，再说一次试试。' })
       }
 
       await writer.write(encoder.encode('data: [DONE]\n\n'))

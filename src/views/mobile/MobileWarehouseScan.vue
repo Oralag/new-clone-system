@@ -7,7 +7,7 @@
           <path d="M19 12H5M12 5l-7 7 7 7"/>
         </svg>
       </button>
-      <div class="scan-nav-title">扫码查库存</div>
+      <div class="scan-nav-title">{{ t('mobileWarehouseScan.title') }}</div>
       <div style="width:40px" />
     </div>
 
@@ -16,12 +16,12 @@
       <div v-if="scanError" class="scan-error">
         <div class="scan-err-icon">⚠️</div>
         <div class="scan-err-msg">{{ scanError }}</div>
-        <button class="scan-action-btn" @click="initCamera">重试</button>
+        <button class="scan-action-btn" @click="initCamera">{{ t('mobileWarehouseScan.retry') }}</button>
       </div>
       <div v-else class="scan-viewfinder">
         <div v-if="!cameraReady" class="scan-loading">
           <div class="scan-spinner" />
-          <div>正在启动摄像头...</div>
+          <div>{{ t('mobileWarehouseScan.startingCamera') }}</div>
         </div>
         <video ref="videoEl" class="scan-video" :class="{ ready: cameraReady }" autoplay playsinline muted />
         <!-- 扫描框 -->
@@ -31,10 +31,10 @@
           <div class="scan-corner bl" />
           <div class="scan-corner br" />
         </div>
-        <div class="scan-hint">将条形码对准扫描框</div>
+        <div class="scan-hint">{{ t('mobileWarehouseScan.alignBarcode') }}</div>
       </div>
       <div class="scan-camera-footer">
-        <button class="scan-switch-btn" @click="mode = 'manual'">手动输入</button>
+        <button class="scan-switch-btn" @click="mode = 'manual'">{{ t('mobileWarehouseScan.manualInput') }}</button>
       </div>
     </div>
 
@@ -44,15 +44,15 @@
         <input
           v-model="manualBarcode"
           class="scan-input"
-          placeholder="请输入商品条码"
+          :placeholder="t('mobileWarehouseScan.barcodePlaceholder')"
           @keydown.enter="doSearch"
         />
-        <button class="scan-search-btn" @click="doSearch">查询</button>
+        <button class="scan-search-btn" @click="doSearch">{{ t('mobileWarehouseScan.search') }}</button>
       </div>
-      <div class="scan-mode-tip">没有条码？试试手动搜索</div>
+      <div class="scan-mode-tip">{{ t('mobileWarehouseScan.manualTip') }}</div>
       <div class="scan-camera-tip">
         <button class="scan-switch-link" @click="mode = 'camera'; initCamera()">
-          📷 打开摄像头扫描
+          📷 {{ t('mobileWarehouseScan.openCamera') }}
         </button>
       </div>
     </div>
@@ -61,8 +61,8 @@
     <div v-if="result" class="scan-result">
       <div class="scan-result-header">
         <div class="scan-result-icon">📦</div>
-        <div class="scan-result-name">{{ result.goods_name || result.name || result.goods?.name || '未知商品' }}</div>
-        <div v-if="result.barcode" class="scan-result-barcode">条码: {{ result.barcode }}</div>
+        <div class="scan-result-name">{{ result.goods_name || result.name || result.goods?.name || t('mobileWarehouseScan.unknownProduct') }}</div>
+        <div v-if="result.barcode" class="scan-result-barcode">{{ t('mobileWarehouseScan.barcodeLabel') }}: {{ result.barcode }}</div>
       </div>
 
       <!-- 规格列表 -->
@@ -70,11 +70,11 @@
         <div v-for="sku in result.skus" :key="sku.id" class="scan-sku-row">
           <div class="scan-sku-info">
             <div class="scan-sku-name">{{ sku.name || result.goods_name }}</div>
-            <div class="scan-sku-spec">{{ sku.spec || sku.sku || '默认规格' }}</div>
+            <div class="scan-sku-spec">{{ sku.spec || sku.sku || t('mobileWarehouseScan.defaultSpec') }}</div>
           </div>
           <div class="scan-sku-stock" :class="{ low: Number(sku.stock_num || 0) <= 0 }">
             <div class="scan-stock-num">{{ sku.stock_num ?? sku.stock ?? 0 }}</div>
-            <div class="scan-stock-label">库存</div>
+            <div class="scan-stock-label">{{ t('mobileWarehouseScan.stock') }}</div>
           </div>
         </div>
       </div>
@@ -83,20 +83,20 @@
       <div v-else class="scan-single-stock">
         <div class="scan-stock-big" :class="{ zero: Number(result.stock_num || result.stock || 0) <= 0 }">
           <div class="scan-stock-val">{{ result.stock_num ?? result.stock ?? 0 }}</div>
-          <div class="scan-stock-unit">当前库存</div>
+          <div class="scan-stock-unit">{{ t('mobileWarehouseScan.currentStock') }}</div>
         </div>
       </div>
 
       <div class="scan-result-actions">
-        <button class="scan-action-btn" @click="mode = 'camera'; initCamera()">继续扫码</button>
+        <button class="scan-action-btn" @click="mode = 'camera'; initCamera()">{{ t('mobileWarehouseScan.continueScan') }}</button>
       </div>
     </div>
 
     <!-- 无结果 -->
     <div v-else-if="searched && !result" class="scan-empty">
       <div class="scan-empty-icon">🔍</div>
-      <div class="scan-empty-msg">未找到该条码对应的商品</div>
-      <button class="scan-action-btn" @click="mode = 'camera'; initCamera()">重新扫码</button>
+      <div class="scan-empty-msg">{{ t('mobileWarehouseScan.noProduct') }}</div>
+      <button class="scan-action-btn" @click="mode = 'camera'; initCamera()">{{ t('mobileWarehouseScan.scanAgain') }}</button>
     </div>
 
     <!-- 加载中 -->
@@ -109,11 +109,13 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { scanGoodsStock } from '@/api/mobile'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const { t } = useI18n()
 const mode = ref<'camera' | 'manual'>('manual')  // 默认手动，避免移动端权限弹窗
 const manualBarcode = ref('')
 const loading = ref(false)
@@ -145,11 +147,11 @@ async function initCamera() {
     scanLoop()
   } catch (e: any) {
     if (e.name === 'NotAllowedError') {
-      scanError.value = '请允许摄像头权限'
+      scanError.value = t('mobileWarehouseScan.allowCamera')
     } else if (e.name === 'NotFoundError') {
-      scanError.value = '未找到摄像头设备'
+      scanError.value = t('mobileWarehouseScan.cameraNotFound')
     } else {
-      scanError.value = e.message || '摄像头启动失败'
+      scanError.value = e.message || t('mobileWarehouseScan.cameraStartFailed')
     }
     mode.value = 'manual'
   }
@@ -159,7 +161,7 @@ async function scanLoop() {
   if (!codeReader || !videoEl.value) return
   // 超时停止，避免无限循环
   if (scanFrameCount >= SCAN_MAX_FRAMES) {
-    scanError.value = '扫描超时，请重试'
+    scanError.value = t('mobileWarehouseScan.scanTimeout')
     stopCamera()
     mode.value = 'manual'
     return
@@ -194,7 +196,7 @@ function stopCamera() {
 
 async function doSearch() {
   if (!manualBarcode.value.trim()) {
-    ElMessage.warning('请输入条码')
+    ElMessage.warning(t('mobileWarehouseScan.enterBarcode'))
     return
   }
   await doSearchByBarcode(manualBarcode.value.trim())
@@ -208,7 +210,7 @@ async function doSearchByBarcode(barcode: string) {
     const res = await scanGoodsStock(barcode)
     result.value = res?.data ?? res ?? null
   } catch (e: any) {
-    ElMessage.error(e?.message || '查询失败')
+    ElMessage.error(e?.message || t('mobileWarehouseScan.searchFailed'))
   } finally {
     loading.value = false
   }

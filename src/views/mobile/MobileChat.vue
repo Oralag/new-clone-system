@@ -627,6 +627,8 @@ const pinnedSessions = computed(() => ([
 ]))
 
 const groups = ref<any[]>([])
+// 亚当条目独立维护，不参与 loadGroups 的覆盖，永不闪烁
+const adamGroup = ref<any | null>(null)
 const contacts = ref<any[]>([])
 const searchKeyword = ref('')
 const searchResults = ref<any[]>([])
@@ -823,7 +825,12 @@ watch(activeTab, (v) => { if (v === 'todo') loadFriendRequests() })
 const displayedGroups = computed(() => {
   const fixedIds = new Set(pinnedSessions.value.map(p => p.id))
   const seen = new Set<string>()
-  const filtered = groups.value.filter(g => {
+  // 把亚当条目合并进来（如果有）
+  const merged = [...groups.value]
+  if (adamGroup.value && !merged.find(g => g.id === adamGroup.value!.id || g.name === adamGroup.value!.name)) {
+    merged.unshift(adamGroup.value)
+  }
+  const filtered = merged.filter(g => {
     if (!g.id) return false
     if (seen.has(g.id)) return false
     seen.add(g.id)
@@ -1153,43 +1160,30 @@ async function mergeAdamInbox() {
 
     // 已读时间戳：本地记录"上次进亚当聊天的时间"
     const lastReadTs = parseInt(localStorage.getItem('adam_chat_last_read') || '0', 10)
-    // 新于 lastReadTs 的亚当消息才算未读
-    const unread = adamMessages.filter(m => new Date(m.timestamp).getTime() > lastReadTs).length
+    // 只有亚当说的话（assistant + inbox）才算未读，自己发的不算
+    const unread = adamMessages.filter(m => m.role !== 'user' && new Date(m.timestamp).getTime() > lastReadTs).length
 
-    const adamNames = [t('mobileChat.adam'), 'Adam', 'ADAM']
-    const idx = groups.value.findIndex(g => adamNames.includes(g.name))
-    if (idx >= 0) {
-      // 内容不变就跳过，避免闪烁
-      const cur = groups.value[idx]
-      const newMsg = latest.content.slice(0, 80)
-      const newTs = latest.timestamp || cur.last_message_at
-      if (cur.last_msg === newMsg && cur.last_message_at === newTs && cur.unread === unread) {
-        return
-      }
-      groups.value[idx] = {
-        ...cur,
-        route: '/mobile/chat/adam',
-        last_msg: newMsg,
-        last_time: latest.timestamp ? formatTime(latest.timestamp) : cur.last_time,
-        last_message_at: newTs,
-        unread,
-      }
-    } else {
-      groups.value.unshift({
-        id: 'adam-virtual',
-        route: '/mobile/chat/adam',
-        name: t('mobileChat.adam'),
-        avatar_text: t('mobileChat.adamAvatar'),
-        last_msg: latest.content.slice(0, 80),
-        last_time: latest.timestamp ? formatTime(latest.timestamp) : '',
-        unread,
-        is_pinned: false,
-        last_message_at: latest.timestamp || '',
-        member_count: 2,
-        member_ids: [],
-        is_private: true,
-        type: 'dm',
-      })
+    const newMsg = latest.content.slice(0, 80)
+    const newTs = latest.timestamp || ''
+    // 内容、时间、未读都没变 → 跳过更新，避免触发 reactivity
+    const cur = adamGroup.value
+    if (cur && cur.last_msg === newMsg && cur.last_message_at === newTs && cur.unread === unread) {
+      return
+    }
+    adamGroup.value = {
+      id: 'adam-virtual',
+      route: '/mobile/chat/adam',
+      name: t('mobileChat.adam'),
+      avatar_text: t('mobileChat.adamAvatar'),
+      last_msg: newMsg,
+      last_time: latest.timestamp ? formatTime(latest.timestamp) : '',
+      unread,
+      is_pinned: false,
+      last_message_at: newTs,
+      member_count: 2,
+      member_ids: [],
+      is_private: true,
+      type: 'dm',
     }
   } catch { /* 忽略 */ }
 }
@@ -1198,7 +1192,7 @@ async function loadGroups() {
   try {
     const res = await http.get('/chat/groups', { params: { list_rows: 200 } })
     const rows = res?.data?.rows ?? res?.rows ?? []
-    groups.value = rows.map((r: any) => {
+    const mapped = rows.map((r: any) => {
       const memberIds = r.member_ids ?? []
       const isPrivate = !!r.is_private || (memberIds.length === 2)
       // 私聊显示对方名字（去掉"私聊:"前缀）
@@ -1209,9 +1203,12 @@ async function loadGroups() {
           const found = findContactName(String(otherId))
           if (found) {
             displayName = found
-          } else if (displayName.startsWith('私聊:')) {
-            // 去掉"私聊:"前缀
-            displayName = displayName.slice(3)
+          } else {
+            const privatePrefixes = ['私聊:', 'Direct:', 'DM:', 'Private:', 'Direct Chat:']
+            const matchedPrefix = privatePrefixes.find(prefix => displayName.startsWith(prefix))
+            if (matchedPrefix) {
+              displayName = displayName.slice(matchedPrefix.length)
+            }
           }
         }
       }
@@ -1230,10 +1227,11 @@ async function loadGroups() {
         type: memberIds.length > 2 ? 'group' : 'dm',
       }
     })
+    groups.value = mapped
     const totalUnread = rows.reduce((s: number, r: any) => s + (r.unread ?? 0), 0)
     if (typeof uni !== 'undefined') uni.$emit('update:unread', totalUnread)
   } catch { groups.value = [] }
-  // 注入亚当主动消息到对应会话
+  // 注入亚当条目（独立 ref，不会被覆盖）
   await mergeAdamInbox()
 }
 

@@ -80,7 +80,7 @@ async function callAIForKdp(env: Env, system: string, user: string, maxTokens = 
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.AI_API_KEY}` },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: (env as any).AI_MODEL || 'deepseek-chat',
       max_tokens: maxTokens,
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     }),
@@ -333,7 +333,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       const res = await fetch(`${baseURL}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 600, tools: oaiWakeupTools, tool_choice: 'auto', messages: currentMessages }),
+        body: JSON.stringify({ model: (env as any).AI_MODEL || 'deepseek-chat', max_tokens: 600, tools: oaiWakeupTools, tool_choice: 'auto', messages: currentMessages }),
       })
 
       if (!res.ok) break

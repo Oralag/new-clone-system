@@ -30,6 +30,9 @@ export default {
   colQty: '数量',
   colPrice: '单价',
   colSubtotal: '小计',
+  colReturnPrice: '退回价',
+  colGiftRemark: '备注',
+  exchangeTag: '换',
 
   // 附加费用
   extraFees: '附加费用',
@@ -45,7 +48,12 @@ export default {
   // 结算信息
   settleInfo: '结算信息',
   totalAmount: '合同金额',
+  exchangeDeduct: '换货折抵',
   receiveAmount: '已收金额',
   payAmount: '已付款',
   prepayAmount: '预付款',
+  exchangeReturnTitle: '换货退回明细',
+  exchangeReturnHint: '（已折抵合计金额）',
+  giftTitle: '赠品',
+  giftHint: '（不计金额）',
 }

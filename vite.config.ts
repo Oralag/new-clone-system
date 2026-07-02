@@ -84,7 +84,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/adminapi': {
-        target: 'https://erp-server-production-b1b6.up.railway.app',
+        target: 'https://erp-server-xsji.onrender.com',
         changeOrigin: true,
         secure: true,
       },

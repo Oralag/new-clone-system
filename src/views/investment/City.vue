@@ -1885,24 +1885,29 @@ const emojiMap: Record<string, string> = {
 }
 function getEmoji(id: string) { return emojiMap[id] || '🏗️' }
 
+function translated(key: string, fallback: string) {
+  const value = t(key)
+  return value && value !== key ? value : fallback
+}
+
 function statusLabel(status: string) {
-  return t(`city.statusLabels.${status}`) || status.toUpperCase()
+  return translated(`city.statusLabels.${status}`, status.toUpperCase())
 }
 
 function buildingStatusLabel(status: string) {
-  return t(`city.buildingStatuses.${status}`) || status
+  return translated(`city.buildingStatuses.${status}`, status)
 }
 
 function toolDisplayName(tid: string) {
-  return t(`city.toolNames.${tid}`) || tid
+  return translated(`city.toolNames.${tid}`, tid)
 }
 
 function displayInstitutionName(instId: string, fallback?: string) {
-  return t(`city.institutionNames.${instId}`) || fallback || instId
+  return translated(`city.institutionNames.${instId}`, fallback || instId)
 }
 
 function displayBuildingName(instId: string, fallback?: string) {
-  return t(`city.buildingNames.${instId}`) || displayInstitutionName(instId, fallback)
+  return translated(`city.buildingNames.${instId}`, displayInstitutionName(instId, fallback))
 }
 
 function formatTime(iso: string) {

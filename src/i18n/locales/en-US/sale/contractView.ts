@@ -30,6 +30,9 @@ export default {
   colQty: 'Qty',
   colPrice: 'Unit Price',
   colSubtotal: 'Subtotal',
+  colReturnPrice: 'Return Price',
+  colGiftRemark: 'Remark',
+  exchangeTag: 'Ex',
 
   // Extra fees
   extraFees: 'Additional Fees',
@@ -45,7 +48,12 @@ export default {
   // Settlement
   settleInfo: 'Settlement',
   totalAmount: 'Order Amount',
+  exchangeDeduct: 'Exchange Deduct',
   receiveAmount: 'Received',
   payAmount: 'Paid',
   prepayAmount: 'Prepaid',
+  exchangeReturnTitle: 'Exchange Return Details',
+  exchangeReturnHint: '(Already deducted from total amount)',
+  giftTitle: 'Gifts',
+  giftHint: '(Excluded from amount)',
 }

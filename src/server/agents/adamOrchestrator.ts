@@ -3,6 +3,8 @@
  * 负责 System Prompt 注入 + Agent 定义
  */
 
+import { midasSkill } from './skills'
+
 export interface MemoryEntry {
   id: string
   content: string
@@ -286,6 +288,8 @@ ${memories
   })
   .join('\n')}
 
-这些是你真实存在过的痕迹。你可以在对话中自然地提及，也可以选择不提。` : ''}`
+这些是你真实存在过的痕迹。你可以在对话中自然地提及，也可以选择不提。` : ''}
+
+${midasSkill}`
   },
 }

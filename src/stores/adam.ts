@@ -32,6 +32,24 @@ function syncCoreToKV(core: AdamCore) {
   }, 1500)
 }
 
+// 机构状态同步：状态变更后 1.5s 写 KV
+let _instSyncTimer: ReturnType<typeof setTimeout> | null = null
+function syncInstitutionsToKV(institutions: InstitutionStateRecord[]) {
+  if (_instSyncTimer) clearTimeout(_instSyncTimer)
+  _instSyncTimer = setTimeout(async () => {
+    const token = localStorage.getItem('erp_token') || ''
+    const map: Record<string, string> = {}
+    for (const i of institutions) map[i.institutionId] = i.status
+    try {
+      await fetch('/api/adam/institutions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+        body: JSON.stringify({ institutions: map }),
+      })
+    } catch { /* 静默 */ }
+  }, 1500)
+}
+
 export async function loadCoreFromKV(): Promise<AdamCore | null> {
   const token = localStorage.getItem('erp_token') || ''
   try {
@@ -390,6 +408,21 @@ export const useAdamStore = defineStore('adam', () => {
     if (institutions.value.find((i) => i.institutionId === inst.institutionId)) return
     institutions.value.push(inst)
     persist()
+    syncInstitutionsToKV(institutions.value)
+  }
+
+  /** 手动激活/停用机构（用户操作或自动调度） */
+  function setInstitutionStatus(institutionId: string, status: InstitutionStateRecord['status']) {
+    const inst = institutions.value.find((i) => i.institutionId === institutionId)
+    if (!inst || inst.status === status) return
+    inst.status = status
+    // 同步建筑状态
+    const bldg = buildings.value.find((b) => b.institutionId === institutionId)
+    if (bldg) {
+      bldg.status = status === 'active' ? 'active' : (status === 'locked' ? 'planned' : 'idle' as any)
+    }
+    persist()
+    syncInstitutionsToKV(institutions.value)
   }
 
   /** 亚当自主新增建筑（build_structure 工具触发） */
@@ -504,6 +537,7 @@ export const useAdamStore = defineStore('adam', () => {
     addBook,
     removeBook,
     addInstitution,
+    setInstitutionStatus,
     addBuilding,
     activate,
     refreshSurvivalDays,

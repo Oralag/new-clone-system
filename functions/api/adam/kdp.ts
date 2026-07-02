@@ -42,7 +42,7 @@ async function callAI(env: Env, system: string, user: string, maxTokens = 6000):
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.AI_API_KEY}` },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: (env as any).AI_MODEL || 'deepseek-chat',
       max_tokens: maxTokens,
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     }),

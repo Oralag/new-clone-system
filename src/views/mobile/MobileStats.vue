@@ -14,15 +14,27 @@
         <div class="ms-kpi-value">¥{{ todayExpense }}</div>
         <div class="ms-kpi-sub">{{ t('mobileStats.paymentAndExpense') }}</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/mobile/sale/client')">
-        <div class="ms-kpi-label">{{ t('mobileStats.totalCustomers') }}</div>
-        <div class="ms-kpi-value">{{ customerTotal }}</div>
-        <div class="ms-kpi-sub">{{ t('mobileStats.allCustomers') }}</div>
+    </div>
+
+    <!-- 销售入口 -->
+    <div class="ms-entry-grid">
+      <div class="ms-entry-card" @click="router.push('/mobile/sale/contract')">
+        <div class="ms-entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d2129" stroke-width="1.6"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="ms-entry-text">{{ t('mobileTodaySale.entrySaleOrders') }}</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/mobile/warehouse/stock')">
-        <div class="ms-kpi-label">{{ t('mobileStats.stockWarning') }}</div>
-        <div class="ms-kpi-value" :style="{ color: stockWarn > 0 ? '#f53f3f' : '#00b42a' }">{{ stockWarn }}</div>
-        <div class="ms-kpi-sub">{{ t('mobileStats.negativeAndZeroStock') }}</div>
+      <div class="ms-entry-card" @click="router.push('/mobile/retail/order')">
+        <div class="ms-entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d2129" stroke-width="1.6"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        </div>
+        <div class="ms-entry-text">{{ t('mobileTodaySale.entryRetailOrders') }}</div>
+      </div>
+      <div class="ms-entry-card" @click="router.push('/mobile/online/overview')">
+        <div class="ms-entry-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d2129" stroke-width="1.6"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="ms-entry-text">{{ t('mobileTodaySale.entryOnlineOrders') }}</div>
       </div>
     </div>
 
@@ -564,6 +576,42 @@ onMounted(async () => {
 .ms-kpi-label { font-size: 11px; color: #86909c; font-weight: 600; margin-bottom: 6px; }
 .ms-kpi-value { font-size: 22px; font-weight: 800; color: #1d2129; letter-spacing: -0.03em; margin-bottom: 4px; }
 .ms-kpi-sub { font-size: 11px; color: #c2c8d5; }
+
+/* 销售入口（3 列） */
+.ms-entry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 10px 12px 0;
+}
+.ms-entry-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.ms-entry-card:active { background: #f0f5ff; }
+.ms-entry-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f5f5f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.ms-entry-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d2129;
+}
 
 /* 智能洞察 */
 .ms-insights-card {

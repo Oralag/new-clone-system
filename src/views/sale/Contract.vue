@@ -90,6 +90,7 @@
                           <el-table-column :label="$t('sale.contract.colBusiness')" width="80" align="center">
                             <template #default="{row:item}">
                               <el-tag v-if="item.line_type === 'exchange'" type="warning" size="small">{{ $t('sale.contract.businessExchange') }}</el-tag>
+                              <el-tag v-else-if="item.line_type === 'gift'" type="danger" size="small" effect="plain">{{ $t('sale.contract.businessGift') }}</el-tag>
                               <span v-else style="color:#6b7280">{{ $t('sale.contract.businessNormal') }}</span>
                             </template>
                           </el-table-column>
@@ -304,7 +305,7 @@
         </div>
       </div>
 
-      <div class="form-body" ref="formBodyRef">
+      <div class="form-body" ref="formBodyRef" v-loading="loadingDetail" element-loading-text="加载中..." element-loading-background="rgba(255,255,255,0.85)">
 
         <!-- 基本信息：4列面板布局 -->
         <div class="form-section info-header-section">
@@ -467,12 +468,13 @@
               <el-button size="small" :type="showExchangeGroup ? 'warning' : ''" @click="showExchangeGroup = !showExchangeGroup">
                 {{ showExchangeGroup ? $t('sale.contract.btnExchangeGroupCollapse') : $t('sale.contract.btnExchangeGroup') }}
               </el-button>
+              <el-button type="warning" plain :icon="Present" size="small" @click="openGiftGoodsPicker">{{ $t('sale.contract.btnSelectGift') }}</el-button>
             </div>
-            <span class="goods-count">{{ $t('sale.contract.goodsCount') }} <b>{{ fd.items.length }}</b> {{ $t('sale.contract.goodsCountUnit') }}</span>
+            <span class="goods-count">{{ $t('sale.contract.goodsCount') }} <b>{{ normalItems.length }}</b> {{ $t('sale.contract.goodsCountUnit') }}</span>
           </div>
 
           <!-- 商品表格（桌面） -->
-          <el-table v-if="!isMobile" :data="fd.items" border size="small" style="width:100%" :empty-text="$t('sale.contract.emptyGoodsHint')">
+          <el-table v-if="!isMobile" :data="normalItems" border size="small" style="width:100%" :empty-text="$t('sale.contract.emptyGoodsHint')">
             <el-table-column type="index" width="45" align="center" fixed="left" />
             <el-table-column :label="$t('sale.contract.colGoodsName')" min-width="150" fixed="left">
               <template #default="{ row }">
@@ -638,21 +640,21 @@
               </template>
             </el-table-column>
             <el-table-column v-if="!isReadonly" width="45" align="center" fixed="right">
-              <template #default="{ $index }">
-                <el-button type="danger" link :icon="Delete" @click="removeItem($index)" />
+              <template #default="{ row }">
+                <el-button type="danger" link :icon="Delete" @click="removeItem(row)" />
               </template>
             </el-table-column>
           </el-table>
 
           <!-- 商品卡片列表（手机端） -->
           <div v-else class="mobile-goods-list">
-            <div v-if="fd.items.length === 0" class="mobile-goods-empty">{{ $t('sale.contract.mobileEmptyGoods') }}</div>
-            <div v-for="(row, idx) in fd.items" :key="idx" class="mobile-goods-card">
+            <div v-if="normalItems.length === 0" class="mobile-goods-empty">{{ $t('sale.contract.mobileEmptyGoods') }}</div>
+            <div v-for="(row, idx) in normalItems" :key="idx" class="mobile-goods-card">
               <div class="mgc-header">
                 <span class="mgc-index">{{ idx + 1 }}</span>
                 <span class="mgc-name">{{ row.goods_name || $t('sale.contract.mobileUnnamed') }}</span>
                 <el-tag v-if="row.line_type === 'exchange'" type="warning" size="small">{{ getExchangeGroupLabel(row.exchange_group_key) }}</el-tag>
-                <el-button v-if="!isReadonly" type="danger" link :icon="Delete" size="small" @click="removeItem(idx)" />
+                <el-button v-if="!isReadonly" type="danger" link :icon="Delete" size="small" @click="removeItem(row)" />
               </div>
               <div class="mgc-row" v-if="!isReadonly">
                 <span class="mgc-label">{{ $t('sale.contract.mobileLabelBiz') }}</span>
@@ -715,6 +717,103 @@
               <div class="mgc-row" v-else-if="row.remark">
                 <span class="mgc-label">{{ $t('sale.contract.mobileLabelRemark') }}</span>
                 <span style="flex:1;font-size:13px;color:#555">{{ row.remark }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 赠品（折叠） -->
+          <div v-if="!isReadonly || giftItems.length > 0" class="gift-block">
+            <div class="gift-divider"></div>
+            <div class="gift-head" @click="giftExpanded = !giftExpanded">
+              <el-icon class="gift-arrow" :class="{ open: giftExpanded }"><ArrowDown /></el-icon>
+              <el-icon class="gift-head-icon"><Present /></el-icon>
+              <span class="gift-head-title">{{ $t('sale.contract.giftTitle') }}</span>
+              <el-tag size="small" type="warning" effect="plain" class="gift-head-count">{{ giftItems.length }}</el-tag>
+              <span class="gift-head-hint">{{ $t('sale.contract.giftHint') }}</span>
+              <el-button v-if="!isReadonly" type="warning" plain :icon="Plus" size="small"
+                class="gift-head-btn" @click.stop="openGiftGoodsPicker">{{ $t('sale.contract.btnSelectGift') }}</el-button>
+            </div>
+            <div v-show="giftExpanded" class="gift-body">
+              <el-table v-if="!isMobile" :data="giftItems" border size="small" style="width:100%"
+                :empty-text="$t('sale.contract.giftEmpty')">
+                <el-table-column type="index" width="45" align="center" />
+                <el-table-column :label="$t('sale.contract.colGoodsName')" min-width="160">
+                  <template #default="{ row }">
+                    <el-input v-model="row.goods_name" size="small" :placeholder="$t('sale.contract.placeholderGoodsName2')" :disabled="isReadonly" />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('sale.contract.colGoodsCode')" width="120">
+                  <template #default="{ row }">
+                    <el-input v-model="row.goods_sn" size="small" :placeholder="$t('sale.contract.placeholderCode')" :disabled="isReadonly" />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('sale.contract.colSpecModel')" width="140">
+                  <template #default="{ row }">
+                    <el-select
+                      v-if="row.goods_id && goodsSpecMap[row.goods_id]?.length"
+                      v-model="row.spec"
+                      size="small"
+                      :placeholder="$t('sale.contract.placeholderSelectSpec')"
+                      clearable
+                      :disabled="isReadonly"
+                      style="width:100%"
+                    >
+                      <el-option v-for="s in goodsSpecMap[row.goods_id]" :key="s" :label="s" :value="s" />
+                    </el-select>
+                    <el-input v-else v-model="row.spec" size="small" :placeholder="$t('sale.contract.placeholderSpec')" :disabled="isReadonly" />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('sale.contract.colUnit')" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-select v-if="row.goods_id && goodsUnitMap[row.goods_id]?.length > 1"
+                      v-model="row.unit_name" size="small" :disabled="isReadonly" style="width:100%"
+                      @change="(v: string) => onItemUnitChange(row, v)">
+                      <el-option v-for="u in goodsUnitMap[row.goods_id]" :key="u.unit_name" :label="u.unit_name" :value="u.unit_name" />
+                    </el-select>
+                    <el-input v-else v-model="row.unit_name" size="small" :placeholder="$t('sale.contract.placeholderUnit')" :disabled="isReadonly" />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('sale.contract.colBatchQty')" width="120">
+                  <template #default="{ row }">
+                    <el-input-number v-model="row.num" :min="0" :precision="4" size="small"
+                      controls-position="right" style="width:100%" :disabled="isReadonly" @change="calcTotal" />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('sale.contract.colRemark')" min-width="140">
+                  <template #default="{ row }">
+                    <el-input v-model="row.remark" size="small" :placeholder="$t('sale.contract.colRemark')" :disabled="isReadonly" />
+                  </template>
+                </el-table-column>
+                <el-table-column v-if="!isReadonly" width="45" align="center">
+                  <template #default="{ row }">
+                    <el-button type="danger" link :icon="Delete" @click="removeItem(row)" />
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <div v-else class="mobile-goods-list">
+                <div v-if="giftItems.length === 0" class="mobile-goods-empty">{{ $t('sale.contract.giftEmpty') }}</div>
+                <div v-for="(row, idx) in giftItems" :key="idx" class="mobile-goods-card">
+                  <div class="mgc-header">
+                    <span class="mgc-index">{{ idx + 1 }}</span>
+                    <span class="mgc-name">{{ row.goods_name || $t('sale.contract.mobileUnnamed') }}</span>
+                    <el-tag type="warning" size="small">{{ $t('sale.contract.giftTitle') }}</el-tag>
+                    <el-button v-if="!isReadonly" type="danger" link :icon="Delete" size="small" @click="removeItem(row)" />
+                  </div>
+                  <div class="mgc-row" v-if="row.spec || !isReadonly">
+                    <span class="mgc-label">{{ $t('sale.contract.mobileLabelSpec') }}</span>
+                    <el-input v-model="row.spec" size="small" :placeholder="$t('sale.contract.placeholderSpecModel')" :disabled="isReadonly" style="flex:1" />
+                  </div>
+                  <div class="mgc-row">
+                    <span class="mgc-label">{{ $t('sale.contract.mobileLabelUnit') }}</span>
+                    <el-input v-model="row.unit_name" size="small" :placeholder="$t('sale.contract.placeholderUnit')" :disabled="isReadonly" style="flex:1" />
+                  </div>
+                  <div class="mgc-row">
+                    <span class="mgc-label">{{ $t('sale.contract.mobileLabelQty') }}</span>
+                    <el-input-number v-model="row.num" :min="0" :precision="4" size="small"
+                      controls-position="right" style="flex:1" :disabled="isReadonly" @change="calcTotal" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1309,7 +1408,7 @@
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted, onActivated, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip, ArrowDown } from '@element-plus/icons-vue'
+import { Plus, Delete, Search, ArrowLeft, EditPen, Document, Upload, Paperclip, ArrowDown, Present } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { deleteSaleOutStockFlows } from '@/utils/stockEffect'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -1842,6 +1941,7 @@ const filteredContractApi = async (params: any) => {
 }
 if (route.query.customer_name) highlightName.value = String(route.query.customer_name)
 const showForm = ref(false)
+const loadingDetail = ref(false)
 const isReadonly = ref(false)
 const showExchangeGroup = ref(false)
 
@@ -2381,7 +2481,7 @@ interface ContractItem {
   goods_id: number; goods_name: string; goods_sn: string
   spec: string; cate_name: string; goods_type: number; unit_name: string; unit_ratio: number
   num: number; price_no_tax: number; tax_rate: number; price: number; cost_price: number; remark: string
-  line_type?: 'normal' | 'exchange'
+  line_type?: 'normal' | 'exchange' | 'gift'
   exchange_group_key?: string
   _total_tax?: number
 }
@@ -2741,8 +2841,12 @@ const netProfit = computed(() =>
   - feeBuyerCost.value
 )
 const profitRate = computed(() => fd.after_discount > 0 ? (netProfit.value / fd.after_discount * 100) : 0)
-const goodsKindCount = computed(() => fd.items.length)
-const totalGoodsNum = computed(() => fd.items.reduce((s: number, r: any) => s + Number(r.num || 0), 0))
+// 赠品：line_type === 'gift'，不计入金额，但仍按数量扣库存
+const normalItems = computed(() => fd.items.filter((i: any) => i.line_type !== 'gift'))
+const giftItems = computed(() => fd.items.filter((i: any) => i.line_type === 'gift'))
+const giftExpanded = ref(false)
+const goodsKindCount = computed(() => normalItems.value.length)
+const totalGoodsNum = computed(() => normalItems.value.reduce((s: number, r: any) => s + Number(r.num || 0), 0))
 
 function normalizeReceiptAllocation() {
   const currentPrepay = Math.max(0, Number(fd.prepay_amount || 0))
@@ -2825,8 +2929,14 @@ function onTotalTaxChange(row: ContractItem, total: number) {
   }
 }
 
-function removeItem(index: number) {
-  fd.items.splice(index, 1)
+function removeItem(rowOrIndex: any) {
+  // 兼容两种调用：传 row（来自过滤后的表格）或 index（兜底）
+  if (typeof rowOrIndex === 'number') {
+    fd.items.splice(rowOrIndex, 1)
+  } else {
+    const idx = fd.items.indexOf(rowOrIndex)
+    if (idx >= 0) fd.items.splice(idx, 1)
+  }
   calcTotal()
 }
 
@@ -2946,6 +3056,7 @@ function onLevelChange() {
   if (!fd.items.length || !fd.level_id) return
   for (const row of fd.items) {
     if (!row.goods_id) continue
+    if (row.line_type === 'gift') continue
     const lp = getLevelPrice(fd.level_id, row.goods_id)
     if (lp !== null) {
       row.price = lp
@@ -3020,6 +3131,8 @@ async function openEdit(row: any, readonly = false) {
   isReadonly.value = readonly
   // 先立即显示表单，再在后台异步加载成本/规格数据（避免等待大请求才弹出）
   showForm.value = true
+  // 异步加载详情期间显示 loading 遮罩，避免列表数据 → 详情数据替换时的闪白
+  loadingDetail.value = !!row.id
   // keep-alive 会记住上次滚动位置，打开表单时必须重置到顶部
   nextTick(() => { if (formBodyRef.value) formBodyRef.value.scrollTop = 0 })
   // 后台异步加载成本数据，加载完成后 goodsCostPriceMap 响应式更新会自动刷新成本列
@@ -3075,11 +3188,25 @@ async function openEdit(row: any, readonly = false) {
     }
     normalizeReceiptAllocation()
   }
+  loadingDetail.value = false
 }
 
 function backToList() {
   showForm.value = false
   nextTick(() => tableRef.value?.refresh())
+}
+
+function exportBizLabel(lineType?: string) {
+  if (lineType === 'exchange') return t('sale.contract.exportBizExchange')
+  if (lineType === 'gift') return t('sale.contract.exportBizGift')
+  return t('sale.contract.exportBizNormal')
+}
+
+function exportFreightBearerLabel(bearer?: string) {
+  if (bearer === 'buyer') return t('sale.contract.exportFreightBearerBuyer')
+  if (bearer === 'seller') return t('sale.contract.exportFreightBearerSeller')
+  if (bearer === 'half') return t('sale.contract.exportFreightBearerHalf')
+  return t('sale.contract.exportFreightBearerFree')
 }
 
 function buildContractHtml() {
@@ -3088,7 +3215,7 @@ function buildContractHtml() {
     <tr>
       <td style="text-align:center">${i + 1}</td>
       <td>${item.goods_name || ''}</td>
-      <td style="text-align:center">${item.line_type === 'exchange' ? '换货' : '正常'}</td>
+      <td style="text-align:center">${exportBizLabel(item.line_type)}</td>
       <td>${item.goods_sn || ''}</td>
       <td>${item.spec || ''}</td>
       <td style="text-align:center">${item.unit_name || ''}</td>
@@ -3102,7 +3229,7 @@ function buildContractHtml() {
       <td>${item.remark || ''}</td>
     </tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>销售订单 ${(fd as any).contract_no || ''}</title><link rel="icon" href="data:,">
+  <title>${t('sale.contract.exportDocTitle')} ${(fd as any).contract_no || ''}</title><link rel="icon" href="data:,">
   <style>
     *{box-sizing:border-box}
     body{font-family:SimSun,"Microsoft YaHei",Arial;font-size:12px;color:#000;margin:0;padding:12px 20px}
@@ -3119,15 +3246,15 @@ function buildContractHtml() {
     .footer{margin-top:24px;display:flex;justify-content:space-between;font-size:11px}
     @media print{body{padding:8px 14px}@page{margin:8mm;size:A4 landscape}}
   </style></head><body>
-  <h2>销 售 合 同</h2>
-  <div class="sub">数字游牧ERP &nbsp;·&nbsp; 合同编号：${(fd as any).contract_no || ''}</div>
+  <h2>${t('sale.contract.exportTitle')}</h2>
+  <div class="sub">${t('sale.contract.exportBrandLine', { contractNo: (fd as any).contract_no || '' })}</div>
   <div class="info">
-    <span>客户名称：${(fd as any).customer_name || ''}</span>
-    <span>签订日期：${(fd as any).sign_date || ''}</span>
-    <span>合同到期：${fd.expire_date || ''}</span>
-    <span>经办人：${fd.admin_name || ''}</span>
+    <span>${t('sale.contract.exportCustomerName')}：${(fd as any).customer_name || ''}</span>
+    <span>${t('sale.contract.exportSignDate')}：${(fd as any).sign_date || ''}</span>
+    <span>${t('sale.contract.exportExpireDate')}：${fd.expire_date || ''}</span>
+    <span>${t('sale.contract.exportHandler')}：${fd.admin_name || ''}</span>
   </div>
-  <div class="section-title">商品明细</div>
+  <div class="section-title">${t('sale.contract.exportGoodsDetail')}</div>
   <table>
     <thead><tr>
       <th style="text-align:center">序号</th>
@@ -3148,10 +3275,10 @@ function buildContractHtml() {
     <tbody>${rows}</tbody>
   </table>
   <div class="total-row">
-    <span>合同总额：<b>¥${Number(fd.total_amount || 0).toFixed(2)}</b></span>
-    ${fd.freight_amount ? `&nbsp;&nbsp;运费：¥${Number(fd.freight_amount).toFixed(2)}（${fd.freight_bearer === 'buyer' ? '买方承担' : fd.freight_bearer === 'seller' ? '卖方承担' : fd.freight_bearer === 'half' ? '各付一半' : '免运费'}）` : ''}
+    <span>${t('sale.contract.exportContractTotal')}：<b>¥${Number(fd.total_amount || 0).toFixed(2)}</b></span>
+    ${fd.freight_amount ? `&nbsp;&nbsp;${t('sale.contract.exportFreight')}：¥${Number(fd.freight_amount).toFixed(2)}（${exportFreightBearerLabel(fd.freight_bearer)}）` : ''}
   </div>
-  <div class="section-title" style="margin-top:10px">结算信息</div>
+  <div class="section-title" style="margin-top:10px">${t('sale.contract.exportSettlement')}</div>
   <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px">
     <colgroup><col style="width:14%"><col style="width:22%"><col style="width:14%"><col style="width:22%"><col style="width:14%"><col style="width:14%"></colgroup>
     <tbody>
@@ -3166,12 +3293,12 @@ function buildContractHtml() {
         <td class="sl">折后金额</td><td><b>¥${Number(fd.after_discount||0).toFixed(2)}</b></td>
       </tr>
       <tr>
-        <td class="sl">物流费用</td><td style="color:#7c3aed">${fd.freight_amount?'¥'+Number(fd.freight_amount).toFixed(2)+'（'+(fd.freight_bearer==='buyer'?'买方承担':fd.freight_bearer==='seller'?'卖方承担':fd.freight_bearer==='half'?'各付一半':'免运费')+'）':'—'}</td>
+        <td class="sl">${t('sale.contract.exportFreightCost')}</td><td style="color:#7c3aed">${fd.freight_amount?'¥'+Number(fd.freight_amount).toFixed(2)+'（'+exportFreightBearerLabel(fd.freight_bearer)+'）':'—'}</td>
         <td class="sl">其他收支</td><td>${Number(fd.income_amount||0)!==0?(Number(fd.income_amount)>0?'-':'+')+'¥'+Math.abs(Number(fd.income_amount)).toFixed(2):'—'}</td>
         <td class="sl">换货折抵</td><td style="color:#d97706">${Number(fd.exchange_deduct||0)>0?'-¥'+Number(fd.exchange_deduct||0).toFixed(2):'—'}</td>
       </tr>
       <tr>
-        <td class="sl">最终应收</td><td style="color:#0071e3"><b>¥${finalReceivable.value.toFixed(2)}</b></td>
+        <td class="sl">${t('sale.contract.exportFinalReceivable')}</td><td style="color:#0071e3"><b>¥${finalReceivable.value.toFixed(2)}</b></td>
         <td class="sl">预付款核销</td><td style="color:#16a34a">${Number(fd.prepay_amount||0)>0?'-¥'+Number(fd.prepay_amount).toFixed(2):'—'}</td>
         <td class="sl">实际待收</td><td style="color:#dc2626"><b>¥${finalPending.value.toFixed(2)}</b></td>
         <td class="sl">本次收款</td><td>¥${Number(fd.receive_amount||0).toFixed(2)}</td>
@@ -3179,15 +3306,15 @@ function buildContractHtml() {
       <tr>
         <td class="sl">是否开票</td><td>${fd.need_invoice?'是':'否'}</td>
         <td class="sl">收款账户</td><td>${fd.receive_account||'—'}</td>
-        <td class="sl">分期付款</td><td>${Number(fd.installment)?'<span style="color:#0071e3">是</span>':'否'}</td>
+        <td class="sl">${t('sale.contract.exportInstallment')}</td><td>${Number(fd.installment)?'<span style="color:#0071e3">'+t('sale.contract.yes')+'</span>':t('sale.contract.no')}</td>
       </tr>
     </tbody>
   </table>
   ${fd.remark ? `<div style="margin-top:6px;font-size:11px">备注：${fd.remark}</div>` : ''}
   <div class="footer">
-    <span>甲方（买方）签章：_______________</span>
-    <span>乙方（卖方）签章：_______________</span>
-    <span>日期：___________</span>
+    <span>${t('sale.contract.exportBuyerSeal')}</span>
+    <span>${t('sale.contract.exportSellerSeal')}</span>
+    <span>${t('sale.contract.exportDate')}：___________</span>
   </div>
   </body></html>`
 }
@@ -3216,42 +3343,101 @@ async function handleBatchSharePdf(selRows: any[]) {
     const coverBlock = `
       <div style="background:#1d1d1f;border-radius:12px;padding:32px 40px;margin-bottom:36px;color:#fff">
         ${brandHeaderHtmlPdf(_useLogo, 'dark')}
-        <div style="font-size:32px;font-weight:700;letter-spacing:1px;margin-bottom:6px">销售订单</div>
-        <div style="font-size:13px;opacity:0.55;margin-bottom:24px">客户：${customerName} &nbsp;·&nbsp; 共 ${rows.length} 份 &nbsp;·&nbsp; ${dateStr}</div>
+        <div style="font-size:32px;font-weight:700;letter-spacing:1px;margin-bottom:6px">${t('sale.contract.exportDocTitle')}</div>
+        <div style="font-size:13px;opacity:0.55;margin-bottom:24px">${t('sale.contract.exportCustomerName')}：${customerName} &nbsp;·&nbsp; ${t('sale.contract.exportOrderCount', { count: rows.length })} &nbsp;·&nbsp; ${dateStr}</div>
         <div style="display:flex;gap:40px;align-items:baseline">
           <div>
-            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">合计金额</div>
+            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">${t('sale.contract.exportTotalAmount')}</div>
             <div style="font-size:36px;font-weight:700;color:#5ac8fa">¥${fmt2(grandTotal)}</div>
           </div>
           <div>
-            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">待收余额</div>
-            <div style="font-size:22px;font-weight:700;color:${grandPending > 0 ? '#ff9f9f' : '#7ddf9e'}">${grandPending > 0 ? '¥' + fmt2(grandPending) : '全部已收清'}</div>
+            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">${t('sale.contract.exportPendingBalance')}</div>
+            <div style="font-size:22px;font-weight:700;color:${grandPending > 0 ? '#ff9f9f' : '#7ddf9e'}">${grandPending > 0 ? '¥' + fmt2(grandPending) : t('sale.contract.exportAllReceived')}</div>
           </div>
           <div>
-            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">单据数量</div>
-            <div style="font-size:22px;font-weight:700;color:#fff">${rows.length} 份</div>
+            <div style="font-size:12px;opacity:0.55;margin-bottom:4px">${t('sale.contract.exportOrderCountLabel')}</div>
+            <div style="font-size:22px;font-weight:700;color:#fff">${t('sale.contract.exportOrderCount', { count: rows.length })}</div>
           </div>
         </div>
       </div>`
 
+    const exTag2 = `<span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:10px;padding:1px 6px;border-radius:3px;margin-right:4px;vertical-align:middle">${t('sale.contract.exportBizExchange')}</span>`
     const contractBlocks = rows.map((row: any, idx: number) => {
       const items: any[] = (() => { try { return Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]') } catch { return [] } })()
+      const normalItemsR = items.filter((i: any) => i.line_type !== 'gift')
+      const giftItemsR = items.filter((i: any) => i.line_type === 'gift')
+      const exchangeGroupsR: any[] = (() => {
+        const raw = row.exchange_groups
+        if (Array.isArray(raw)) return raw
+        try { return JSON.parse(raw || '[]') } catch { return [] }
+      })()
+      const returnGroupsR = exchangeGroupsR
+        .map((g: any) => ({ return_items: Array.isArray(g.return_items) ? g.return_items : [] }))
+        .filter((g: any) => g.return_items.length > 0)
       const totalAmt = Number(row.total_amount || 0)
       const receivedAmt = Number(row.receive_amount || 0)
-      const balance = Math.max(0, totalAmt - receivedAmt)
-      const goodsRows = items.map((item: any, i: number) => `
+      const exchangeDeductR = Number(row.exchange_deduct || 0)
+      const finalAmtR = Math.max(0, totalAmt - exchangeDeductR)
+      const balance = Math.max(0, finalAmtR - receivedAmt)
+      const goodsRows = normalItemsR.map((item: any, i: number) => `
         <tr style="background:${i % 2 === 0 ? '#f9f9fb' : '#fff'}">
-          <td style="padding:7px 6px">${item.goods_name || ''}</td>
+          <td style="padding:7px 6px">${item.line_type === 'exchange' ? exTag2 : ''}${item.goods_name || ''}</td>
           <td style="padding:7px 6px;text-align:center">${item.spec || '—'}</td>
           <td style="padding:7px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
           <td style="padding:7px 6px;text-align:right">¥${fmt2(item.price)}</td>
           <td style="padding:7px 6px;text-align:right;font-weight:600;color:#0071e3">¥${fmt2(Number(item.price) * Number(item.num))}</td>
         </tr>`).join('')
+      const giftRowsHtml = giftItemsR.map((item: any, i: number) => `
+        <tr style="background:${i % 2 === 0 ? '#fffaf0' : '#fff'}">
+          <td style="padding:7px 6px">${item.goods_name || ''}</td>
+          <td style="padding:7px 6px;text-align:center">${item.spec || '—'}</td>
+          <td style="padding:7px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
+          <td style="padding:7px 6px">${item.remark || '—'}</td>
+        </tr>`).join('')
+      const giftBlock = giftItemsR.length > 0 ? `
+        <div style="margin-bottom:12px">
+          <div style="font-weight:600;font-size:12px;margin-bottom:6px;color:#d97706">🎁 ${t('sale.contract.giftTitle')}${t('sale.contract.giftHint')}</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:#fef3c7;color:#92400e">
+                <th style="padding:7px 6px;text-align:left">${t('sale.contract.colGoodsName')}</th>
+                <th style="padding:7px 6px;text-align:center">${t('sale.contract.colSpecModel')}</th>
+                <th style="padding:7px 6px;text-align:center">${t('sale.contract.colBatchQty')}</th>
+                <th style="padding:7px 6px;text-align:left">${t('sale.contract.labelRemark')}</th>
+              </tr>
+            </thead>
+            <tbody>${giftRowsHtml}</tbody>
+          </table>
+        </div>` : ''
+      const returnRowsHtmlR = returnGroupsR.flatMap((g: any) => g.return_items).map((item: any, i: number) => `
+        <tr style="background:${i % 2 === 0 ? '#eff6ff' : '#fff'}">
+          <td style="padding:7px 6px">${item.goods_name || ''}</td>
+          <td style="padding:7px 6px;text-align:center">${item.spec || '—'}</td>
+          <td style="padding:7px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
+          <td style="padding:7px 6px;text-align:right">¥${fmt2(item.price)}</td>
+          <td style="padding:7px 6px;text-align:right;font-weight:600;color:#1e40af">¥${fmt2(Number(item.price) * Number(item.num))}</td>
+        </tr>`).join('')
+      const exchangeBlock = returnGroupsR.length > 0 ? `
+        <div style="margin-bottom:12px">
+          <div style="font-weight:600;font-size:12px;margin-bottom:6px;color:#1e40af">🔄 ${t('sale.contract.exportReturnTitle')}${t('sale.contract.exportReturnHint')}</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:#dbeafe;color:#1e40af">
+                <th style="padding:7px 6px;text-align:left">${t('sale.contract.exportReturnGoods')}</th>
+                <th style="padding:7px 6px;text-align:center">${t('sale.contract.colSpecModel')}</th>
+                <th style="padding:7px 6px;text-align:center">${t('sale.contract.colBatchQty')}</th>
+                <th style="padding:7px 6px;text-align:right">${t('sale.contract.exportReturnPrice')}</th>
+                <th style="padding:7px 6px;text-align:right">${t('sale.contract.colTotalWithTaxHeader')}</th>
+              </tr>
+            </thead>
+            <tbody>${returnRowsHtmlR}</tbody>
+          </table>
+        </div>` : ''
       const divider = idx > 0 ? '<div style="border-top:2px dashed #e5e5ea;margin:32px 0"></div>' : ''
       return `${divider}
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
           <div>
-            <div style="font-size:13px;color:#86868b;margin-bottom:3px">合同编号：${row.order_sn || row.contract_no || ''}</div>
+            <div style="font-size:13px;color:#86868b;margin-bottom:3px">${t('sale.contract.colContractNo2')}：${row.order_sn || row.contract_no || ''}</div>
             <div style="font-size:15px;font-weight:700;color:#1d1d1f">${row.customer_name || '—'}</div>
           </div>
           <div style="text-align:right">
@@ -3262,24 +3448,27 @@ async function handleBatchSharePdf(selRows: any[]) {
         <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px">
           <thead>
             <tr style="background:#1d1d1f;color:#fff">
-              <th style="padding:8px 6px;text-align:left">商品名称</th>
-              <th style="padding:8px 6px;text-align:center">规格</th>
-              <th style="padding:8px 6px;text-align:center">数量</th>
-              <th style="padding:8px 6px;text-align:right">单价</th>
-              <th style="padding:8px 6px;text-align:right">小计</th>
+              <th style="padding:8px 6px;text-align:left">${t('sale.contract.colGoodsName')}</th>
+              <th style="padding:8px 6px;text-align:center">${t('sale.contract.colSpecModel')}</th>
+              <th style="padding:8px 6px;text-align:center">${t('sale.contract.colBatchQty')}</th>
+              <th style="padding:8px 6px;text-align:right">${t('sale.contract.colPrice')}</th>
+              <th style="padding:8px 6px;text-align:right">${t('sale.contract.colTotalWithTaxHeader')}</th>
             </tr>
           </thead>
           <tbody>${goodsRows}</tbody>
         </table>
-        <div style="text-align:right;padding-top:10px;border-top:1px solid #f2f2f7">
-          <div style="font-size:18px;font-weight:700;color:#0071e3;margin-bottom:3px">合计 ¥${fmt2(totalAmt)}</div>
-          ${receivedAmt > 0 ? `<div style="font-size:12px;color:#86868b">已收款 <span style="color:#34c759;font-weight:600">¥${fmt2(receivedAmt)}</span> &nbsp; 待收 <span style="color:#ff3b30;font-weight:700">¥${fmt2(balance)}</span></div>` : ''}
-        </div>`
+        <div style="text-align:right;padding-top:10px;border-top:1px solid #f2f2f7;margin-bottom:14px">
+          <div style="font-size:18px;font-weight:700;color:#0071e3;margin-bottom:3px">${t('sale.contract.exportTotalAmount')} ¥${fmt2(totalAmt)}</div>
+          ${exchangeDeductR > 0 ? `<div style="font-size:12px;color:#86868b;margin-bottom:3px">${t('sale.contract.labelExchangeDeduct')} <span style="color:#d97706;font-weight:600">-¥${fmt2(exchangeDeductR)}</span> &nbsp; ${t('sale.contract.exportReceivable')} <span style="color:#1d1d1f;font-weight:700">¥${fmt2(finalAmtR)}</span></div>` : ''}
+          ${receivedAmt > 0 ? `<div style="font-size:12px;color:#86868b">${t('sale.contract.exportReceivedAmount')} <span style="color:#34c759;font-weight:600">¥${fmt2(receivedAmt)}</span> &nbsp; ${t('sale.contract.exportPendingAmount')} <span style="color:#ff3b30;font-weight:700">¥${fmt2(balance)}</span></div>` : ''}
+        </div>
+        ${exchangeBlock}
+        ${giftBlock}`
     }).join('')
 
     const wrap = document.createElement('div')
     wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:PingFang SC,Microsoft YaHei,sans-serif;color:#1d1d1f;padding:40px 50px;box-sizing:border-box;'
-    wrap.innerHTML = coverBlock + contractBlocks + `<div style="margin-top:32px;padding-top:14px;border-top:1px solid #e5e5ea;font-size:11px;color:#c7c7cc;text-align:center">本文件由数字游牧ERP系统生成 · ${dateStr}</div>`
+    wrap.innerHTML = coverBlock + contractBlocks + `<div style="margin-top:32px;padding-top:14px;border-top:1px solid #e5e5ea;font-size:11px;color:#c7c7cc;text-align:center">${t('sale.contract.exportGeneratedBy')} · ${dateStr}</div>`
     document.body.appendChild(wrap)
 
     const canvas = await (html2canvas as any).default(wrap, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false })
@@ -3301,7 +3490,7 @@ async function handleBatchSharePdf(selRows: any[]) {
     }
 
     msg.close()
-    const filename = `销售订单_${customerName}_共${rows.length}份_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.pdf`
+    const filename = `${t('sale.contract.exportDocTitle')}_${customerName}_${t('sale.contract.exportOrderCount', { count: rows.length })}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.pdf`
     const blob = doc.output('blob')
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
@@ -3344,8 +3533,8 @@ async function handleShareLink() {
   if (navigator.share) {
     try {
       await navigator.share({
-        title: `销售订单 ${(fd as any).contract_no || (fd as any).order_sn || ''}`,
-        text: `客户：${(fd as any).customer_name || ''}\n合同金额：¥${Number((fd as any).total_amount || 0).toFixed(2)}`,
+        title: `${t('sale.contract.exportDocTitle')} ${(fd as any).contract_no || (fd as any).order_sn || ''}`,
+        text: `${t('sale.contract.exportCustomerName')}：${(fd as any).customer_name || ''}\n${t('sale.contract.exportContractTotal')}：¥${Number((fd as any).total_amount || 0).toFixed(2)}`,
         url,
       })
       return
@@ -3372,63 +3561,133 @@ async function handleSharePdf() {
     const customerName = (fd as any).customer_name || customerOptions.value.find((c: any) => c.id === (fd as any).customer_id)?.name || ''
     const signDate = fmtD((fd as any).sign_date || (fd as any).order_date)
     const items: any[] = Array.isArray((fd as any).items) ? (fd as any).items : []
+    const normalRows = items.filter((i: any) => i.line_type !== 'gift')
+    const giftRows = items.filter((i: any) => i.line_type === 'gift')
     const totalAmt = Number((fd as any).total_amount || 0)
     const receivedAmt = Number((fd as any).receive_amount || 0)
-    const balance = Math.max(0, totalAmt - receivedAmt)
+    const exchangeDeduct = Number((fd as any).exchange_deduct || 0)
+    const finalAmt = Math.max(0, totalAmt - exchangeDeduct)
+    const balance = Math.max(0, finalAmt - receivedAmt)
+    const exchangeGroupsArr: any[] = Array.isArray((fd as any).exchange_groups)
+      ? (fd as any).exchange_groups
+      : []
+    const returnGroups = exchangeGroupsArr
+      .map((g: any) => ({
+        key: g.key,
+        return_items: Array.isArray(g.return_items) ? g.return_items : [],
+      }))
+      .filter((g: any) => g.return_items.length > 0)
 
     // ── 构建隐藏 HTML 渲染层 ──
     const wrap = document.createElement('div')
     wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:PingFang SC,Microsoft YaHei,sans-serif;color:#1d1d1f;font-size:13px;padding:40px 50px;box-sizing:border-box;'
 
-    const goodsRows = items.map((item: any, i: number) => `
+    const exTag = `<span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:10px;padding:1px 6px;border-radius:3px;margin-right:4px;vertical-align:middle">${t('sale.contract.exportBizExchange')}</span>`
+    const goodsRows = normalRows.map((item: any, i: number) => `
       <tr style="background:${i % 2 === 0 ? '#f9f9fb' : '#fff'}">
-        <td style="padding:8px 6px">${item.goods_name || ''}</td>
+        <td style="padding:8px 6px">${item.line_type === 'exchange' ? exTag : ''}${item.goods_name || ''}</td>
         <td style="padding:8px 6px;text-align:center">${item.spec || '—'}</td>
         <td style="padding:8px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
         <td style="padding:8px 6px;text-align:right">¥${fmt2(item.price)}</td>
         <td style="padding:8px 6px;text-align:right;font-weight:600;color:#0071e3">¥${fmt2(Number(item.price) * Number(item.num))}</td>
       </tr>`).join('')
 
+    const returnRowsHtml = returnGroups.flatMap((g: any) => g.return_items).map((item: any, i: number) => `
+      <tr style="background:${i % 2 === 0 ? '#eff6ff' : '#fff'}">
+        <td style="padding:8px 6px">${item.goods_name || ''}</td>
+        <td style="padding:8px 6px;text-align:center">${item.spec || '—'}</td>
+        <td style="padding:8px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
+        <td style="padding:8px 6px;text-align:right">¥${fmt2(item.price)}</td>
+        <td style="padding:8px 6px;text-align:right;font-weight:600;color:#1e40af">¥${fmt2(Number(item.price) * Number(item.num))}</td>
+      </tr>`).join('')
+
+    const exchangeSection = returnGroups.length > 0 ? `
+      <div style="margin-top:20px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#1e40af;letter-spacing:0.5px">🔄 ${t('sale.contract.exportReturnTitle')}${t('sale.contract.exportReturnHint')}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#dbeafe;color:#1e40af">
+              <th style="padding:9px 6px;text-align:left;font-weight:600">${t('sale.contract.exportReturnGoods')}</th>
+              <th style="padding:9px 6px;text-align:center;font-weight:600">${t('sale.contract.colSpecModel')}</th>
+              <th style="padding:9px 6px;text-align:center;font-weight:600">${t('sale.contract.colBatchQty')}</th>
+              <th style="padding:9px 6px;text-align:right;font-weight:600">${t('sale.contract.exportReturnPrice')}</th>
+              <th style="padding:9px 6px;text-align:right;font-weight:600">${t('sale.contract.colTotalWithTaxHeader')}</th>
+            </tr>
+          </thead>
+          <tbody>${returnRowsHtml}</tbody>
+        </table>
+      </div>` : ''
+
+    const giftRowsHtml = giftRows.map((item: any, i: number) => `
+      <tr style="background:${i % 2 === 0 ? '#fffaf0' : '#fff'}">
+        <td style="padding:8px 6px">${item.goods_name || ''}</td>
+        <td style="padding:8px 6px;text-align:center">${item.spec || '—'}</td>
+        <td style="padding:8px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
+        <td style="padding:8px 6px">${item.remark || '—'}</td>
+      </tr>`).join('')
+
+    const giftSection = giftRows.length > 0 ? `
+      <div style="margin-top:20px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#d97706;letter-spacing:0.5px">🎁 ${t('sale.contract.giftTitle')}${t('sale.contract.giftHint')}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#fef3c7;color:#92400e">
+              <th style="padding:9px 6px;text-align:left;font-weight:600">${t('sale.contract.colGoodsName')}</th>
+              <th style="padding:9px 6px;text-align:center;font-weight:600">${t('sale.contract.colSpecModel')}</th>
+              <th style="padding:9px 6px;text-align:center;font-weight:600">${t('sale.contract.colBatchQty')}</th>
+              <th style="padding:9px 6px;text-align:left;font-weight:600">${t('sale.contract.labelRemark')}</th>
+            </tr>
+          </thead>
+          <tbody>${giftRowsHtml}</tbody>
+        </table>
+      </div>` : ''
+
     const _useLogo2 = showLogoForCurrentUser()
     wrap.innerHTML = `
       <div style="text-align:center;margin-bottom:28px">
         ${brandHeaderHtmlPdf(_useLogo2, 'light')}
-        <div style="font-size:26px;font-weight:700;letter-spacing:1px;margin-bottom:8px">销售订单</div>
-        <div style="font-size:12px;color:#86868b">合同编号：${contractNo}</div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:1px;margin-bottom:8px">${t('sale.contract.exportDocTitle')}</div>
+        <div style="font-size:12px;color:#86868b">${t('sale.contract.colContractNo2')}：${contractNo}</div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:20px;font-size:13px">
-        <div><span style="color:#86868b">客户名称：</span><strong>${customerName}</strong></div>
-        <div><span style="color:#86868b">签约日期：</span>${signDate}</div>
-        <div><span style="color:#86868b">经办人：</span>${(fd as any).admin_name || '—'}</div>
-        <div><span style="color:#86868b">到期日期：</span>${fmtD((fd as any).expire_date)}</div>
-        <div><span style="color:#86868b">是否开票：</span>${(fd as any).need_invoice ? '是' : '否'}</div>
-        ${(fd as any).remark ? `<div style="grid-column:1/-1"><span style="color:#86868b">备注：</span>${(fd as any).remark}</div>` : ''}
+        <div><span style="color:#86868b">${t('sale.contract.exportCustomerName')}：</span><strong>${customerName}</strong></div>
+        <div><span style="color:#86868b">${t('sale.contract.exportSignDate')}：</span>${signDate}</div>
+        <div><span style="color:#86868b">${t('sale.contract.exportHandler')}：</span>${(fd as any).admin_name || '—'}</div>
+        <div><span style="color:#86868b">${t('sale.contract.exportExpireDate')}：</span>${fmtD((fd as any).expire_date)}</div>
+        <div><span style="color:#86868b">${t('sale.contract.labelNeedInvoice')}：</span>${(fd as any).need_invoice ? t('sale.contract.yes') : t('sale.contract.no')}</div>
+        ${(fd as any).remark ? `<div style="grid-column:1/-1"><span style="color:#86868b">${t('sale.contract.labelRemark')}：</span>${(fd as any).remark}</div>` : ''}
       </div>
 
-      <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#86868b;letter-spacing:0.5px">商品明细</div>
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#86868b;letter-spacing:0.5px">${t('sale.contract.exportGoodsDetail')}</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
           <tr style="background:#1d1d1f;color:#fff">
-            <th style="padding:9px 6px;text-align:left;font-weight:600">商品名称</th>
-            <th style="padding:9px 6px;text-align:center;font-weight:600">规格</th>
-            <th style="padding:9px 6px;text-align:center;font-weight:600">数量</th>
-            <th style="padding:9px 6px;text-align:right;font-weight:600">单价</th>
-            <th style="padding:9px 6px;text-align:right;font-weight:600">小计</th>
+            <th style="padding:9px 6px;text-align:left;font-weight:600">${t('sale.contract.colGoodsName')}</th>
+            <th style="padding:9px 6px;text-align:center;font-weight:600">${t('sale.contract.colSpecModel')}</th>
+            <th style="padding:9px 6px;text-align:center;font-weight:600">${t('sale.contract.colBatchQty')}</th>
+            <th style="padding:9px 6px;text-align:right;font-weight:600">${t('sale.contract.colPrice')}</th>
+            <th style="padding:9px 6px;text-align:right;font-weight:600">${t('sale.contract.colTotalWithTaxHeader')}</th>
           </tr>
         </thead>
         <tbody>${goodsRows}</tbody>
       </table>
 
       <div style="margin-top:20px;padding-top:16px;border-top:2px solid #f2f2f7;text-align:right">
-        <div style="font-size:22px;font-weight:700;color:#0071e3;margin-bottom:6px">合计 ¥${fmt2(totalAmt)}</div>
-        ${receivedAmt > 0 ? `<div style="font-size:13px;color:#86868b;margin-bottom:4px">已收款 <span style="color:#34c759;font-weight:600">¥${fmt2(receivedAmt)}</span></div>
-        <div style="font-size:15px;font-weight:700;color:#ff3b30">待收余额 ¥${fmt2(balance)}</div>` : ''}
+        <div style="font-size:22px;font-weight:700;color:#0071e3;margin-bottom:6px">${t('sale.contract.exportTotalAmount')} ¥${fmt2(totalAmt)}</div>
+        ${exchangeDeduct > 0 ? `<div style="font-size:13px;color:#86868b;margin-bottom:4px">${t('sale.contract.labelExchangeDeduct')} <span style="color:#d97706;font-weight:600">-¥${fmt2(exchangeDeduct)}</span></div>
+        <div style="font-size:15px;font-weight:600;color:#1d1d1f;margin-bottom:4px">${t('sale.contract.exportReceivable')} ¥${fmt2(finalAmt)}</div>` : ''}
+        ${receivedAmt > 0 ? `<div style="font-size:13px;color:#86868b;margin-bottom:4px">${t('sale.contract.exportReceivedAmount')} <span style="color:#34c759;font-weight:600">¥${fmt2(receivedAmt)}</span></div>
+        <div style="font-size:15px;font-weight:700;color:#ff3b30">${t('sale.contract.exportPendingBalance')} ¥${fmt2(balance)}</div>` : ''}
       </div>
 
+      ${exchangeSection}
+
+      ${giftSection}
+
       <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e5ea;display:flex;justify-content:space-between;align-items:flex-end">
-        <div style="font-size:11px;color:#c7c7cc">本合同由数字游牧ERP系统生成 · ${new Date().toLocaleDateString('zh-CN')}</div>
-        <div style="font-size:11px;color:#c7c7cc">状态：${(fd as any).status === 1 ? '✓ 已审核' : '待审核'}</div>
+        <div style="font-size:11px;color:#c7c7cc">${t('sale.contract.exportGeneratedContract')} · ${new Date().toLocaleDateString('zh-CN')}</div>
+        <div style="font-size:11px;color:#c7c7cc">${t('sale.contract.exportStatus')}：${(fd as any).status === 1 ? t('sale.contract.exportStatusAudited') : t('sale.contract.exportStatusPending')}</div>
       </div>`
 
     document.body.appendChild(wrap)
@@ -3552,7 +3811,8 @@ async function handleSave(andAudit = false) {
   if (!fd.items.length) {
     ElMessage.warning(t('sale.contract.msgAddGoods')); return
   }
-  if (Number(fd.receive_amount || 0) <= 0 && Number(fd.prepay_amount || 0) <= 0 && finalReceivable.value > 0) {
+  // 只有"保存并审核"才提示未填收款；纯"保存"是草稿，不打扰
+  if (andAudit && Number(fd.receive_amount || 0) <= 0 && Number(fd.prepay_amount || 0) <= 0 && finalReceivable.value > 0) {
     try {
       await ElMessageBox.confirm(t('sale.contract.msgNoReceiptConfirm'), t('sale.contract.msgNoReceiptTitle'), {
         confirmButtonText: t('sale.contract.msgContinueSave'), cancelButtonText: t('sale.contract.msgGoFill'), type: 'warning'
@@ -3822,7 +4082,7 @@ function normalizeItem(t: any): ContractItem {
     price,
     cost_price: Number(t?.cost_price || 0),
     remark: t?.remark || '',
-    line_type: t?.line_type === 'exchange' ? 'exchange' : 'normal',
+    line_type: t?.line_type === 'exchange' ? 'exchange' : (t?.line_type === 'gift' ? 'gift' : 'normal'),
     exchange_group_key: t?.exchange_group_key || '',
   }
 }
@@ -4274,7 +4534,7 @@ function handleReturnPickerCmd(cmd: string, groupIndex: number) {
 
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
-const goodsPickerMode = ref<'normal' | 'exchangeReturn' | 'exchangeOut'>('normal')
+const goodsPickerMode = ref<'normal' | 'exchangeReturn' | 'exchangeOut' | 'gift'>('normal')
 const goodsPickerExchangeGroupIndex = ref(-1)
 
 function openNormalGoodsPicker() {
@@ -4286,6 +4546,13 @@ function openNormalGoodsPicker() {
 function openExchangeGoodsPicker(mode: 'return' | 'out', groupIndex: number) {
   goodsPickerMode.value = mode === 'return' ? 'exchangeReturn' : 'exchangeOut'
   goodsPickerExchangeGroupIndex.value = groupIndex
+  goodsSelectRef.value?.open()
+}
+
+function openGiftGoodsPicker() {
+  goodsPickerMode.value = 'gift'
+  goodsPickerExchangeGroupIndex.value = -1
+  giftExpanded.value = true
   goodsSelectRef.value?.open()
 }
 
@@ -4319,13 +4586,25 @@ function onGoodsConfirm(goods: any[]) {
     const item = normalizeGoodsPickerItem(g)
     if (mode === 'exchangeReturn' && group) {
       group.return_items.push(item)
+    } else if (mode === 'gift') {
+      // 赠品：金额清零，仍保留 cost_price 用于成本核算与库存扣减
+      if (fd.items.some(i => Number(i.goods_id) === Number(item.goods_id) && i.line_type === 'gift')) continue
+      item.line_type = 'gift'
+      item.exchange_group_key = ''
+      item.price = 0
+      item.price_no_tax = 0
+      item.tax_rate = 0
+      fd.items.push(item)
+      if (g.multi_spec === 1) fetchGoodsSpecs(item.goods_id)
+      else goodsSpecMap[item.goods_id] = []
+      fetchGoodsUnits(item.goods_id)
     } else {
-      if (mode === 'normal' && fd.items.some(i => Number(i.goods_id) === Number(item.goods_id) && i.line_type !== 'exchange')) continue
+      if (mode === 'normal' && fd.items.some(i => Number(i.goods_id) === Number(item.goods_id) && i.line_type !== 'exchange' && i.line_type !== 'gift')) continue
       if (mode === 'exchangeOut' && group) {
         item.line_type = 'exchange'
         item.exchange_group_key = group.key
         // 优先使用合同里同款商品的合同价，而不是目录价
-        const existingNormal = fd.items.find(i => Number(i.goods_id) === Number(item.goods_id) && i.line_type !== 'exchange')
+        const existingNormal = fd.items.find(i => Number(i.goods_id) === Number(item.goods_id) && i.line_type !== 'exchange' && i.line_type !== 'gift')
         if (existingNormal) {
           item.price = existingNormal.price
           item.price_no_tax = existingNormal.price_no_tax
@@ -4591,6 +4870,49 @@ function applyOfferToForm(offer: any) {
 
 @media (max-width: 900px) {
   .exchange-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 赠品折叠区 ── */
+.gift-block {
+  margin-top: 10px;
+}
+.gift-divider {
+  border-top: 1px dashed #e5e7eb;
+  margin: 4px 0 8px;
+}
+.gift-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  user-select: none;
+}
+.gift-head:hover { background: #fafafa; }
+.gift-arrow {
+  font-size: 12px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+.gift-arrow.open { transform: rotate(180deg); }
+.gift-head-icon { width: 14px; height: 14px; color: #d97706; }
+.gift-head-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+.gift-head-count { margin-left: 2px; }
+.gift-head-hint {
+  font-size: 12px;
+  color: rgba(29,29,31,0.45);
+}
+.gift-head-btn { margin-left: auto; }
+.gift-body {
+  margin-top: 8px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #fffbf2;
 }
 
 :deep(.row-converted) {

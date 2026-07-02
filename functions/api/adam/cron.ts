@@ -2,6 +2,8 @@
 // POST: 定时触发，为所有活跃用户运行亚当自主唤醒循环
 // 由 GitHub Actions 每小时调用（X-Cron-Secret 鉴权）
 
+import { CURRICULUM, TOTAL_LESSONS, getNextLesson, type Lesson } from './edu/curriculum'
+
 interface Env {
   AI_API_KEY: string
   AI_BASE_URL?: string
@@ -9,6 +11,7 @@ interface Env {
   ANTHROPIC_API_KEY?: string
   ANTHROPIC_BASE_URL?: string
   SILICONFLOW_API_KEY?: string
+  NVIDIA_API_KEY?: string
   CRON_SECRET: string
   AGENT_MEMORY: KVNamespace
   HTX_API_KEY?: string
@@ -17,17 +20,22 @@ interface Env {
 
 // ── AI 端点解析 ──────────────────────────────────────────────────────────────
 function resolveAI(env: Env): { baseURL: string; apiKey: string; model: string } {
-  // 优先级：SiliconFlow（稳定免费额度）→ AI_BASE_URL → ANTHROPIC
+  // 优先级：AI_BASE_URL 配套 key（NVIDIA/SiliconFlow 等）→ ANTHROPIC → DeepSeek 兜底
   // baseURL 不含 /v1 路径 — 调用方拼接 /v1/chat/completions
-  if (env.AI_API_KEY && env.AI_BASE_URL) {
+  const aiBase = env.AI_BASE_URL?.toLowerCase() || ''
+  // 按 base URL 自动挑配套 key
+  const matchedKey = aiBase.includes('nvidia') ? (env as any).NVIDIA_API_KEY
+    : aiBase.includes('siliconflow') ? (env as any).SILICONFLOW_API_KEY
+    : env.AI_API_KEY
+  if (matchedKey && env.AI_BASE_URL) {
     const b = env.AI_BASE_URL.replace(/\/+$/, '').replace(/\/v1$/, '')
-    return { baseURL: b, apiKey: env.AI_API_KEY, model: env.AI_MODEL || 'deepseek-chat' }
+    return { baseURL: b, apiKey: matchedKey, model: env.AI_MODEL || 'deepseek-chat' }
   }
   if (env.ANTHROPIC_API_KEY && env.ANTHROPIC_BASE_URL) {
     const b = env.ANTHROPIC_BASE_URL.replace(/\/+$/, '').replace(/\/v1$/, '')
     return { baseURL: b, apiKey: env.ANTHROPIC_API_KEY, model: 'claude-haiku-4-5-20251001' }
   }
-  return { baseURL: 'https://api.deepseek.com', apiKey: env.AI_API_KEY || '', model: 'deepseek-chat' }
+  return { baseURL: 'https://api.deepseek.com', apiKey: env.AI_API_KEY || '', model: env.AI_MODEL || 'deepseek-chat' }
 }
 
 // ── HTX API 签名工具 ─────────────────────────────────────────────────────────
@@ -99,6 +107,146 @@ interface WalletState {
   totalUSDT: number
   newFundsArrived: boolean
   delta: number
+}
+
+interface EduContext {
+  todayLesson: Lesson | null  // 今日要学的（null = 今天已学过 或 全部学完）
+  alreadyLearnedToday: boolean
+  graduated: boolean
+  completedCount: number
+  total: number
+  currentGrade: number
+  gradeName: string  // "小学一年级"
+  progressPct: string  // "5.2%"
+}
+
+interface EduState {
+  enrolledAt: string
+  completed: string[]
+  notes: Array<{ lessonId: string; note: string; learnedAt: string }>
+  lastLessonAt: string | null
+  currentGrade: number
+}
+
+async function loadEduContext(env: Env, tKey: string): Promise<EduContext> {
+  let state = await env.AGENT_MEMORY.get(`adam:edu:state:${tKey}`, 'json') as EduState | null
+  if (!state) {
+    state = { enrolledAt: new Date().toISOString(), completed: [], notes: [], lastLessonAt: null, currentGrade: 1 }
+    await env.AGENT_MEMORY.put(`adam:edu:state:${tKey}`, JSON.stringify(state))
+  }
+  const todayBJ = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+  const lastDateBJ = state.lastLessonAt ? new Date(new Date(state.lastLessonAt).getTime() + 8 * 3600000).toISOString().slice(0, 10) : null
+  const alreadyLearnedToday = lastDateBJ === todayBJ
+
+  const nextLesson = getNextLesson(state.completed)
+  const graduated = !nextLesson
+  const todayLesson = (!alreadyLearnedToday && nextLesson) ? nextLesson : null
+  const currentGrade = nextLesson?.grade || state.currentGrade
+  const gradeName = nextLesson?.gradeName || `${state.currentGrade}年级`
+  const progressPct = TOTAL_LESSONS > 0 ? ((state.completed.length / TOTAL_LESSONS) * 100).toFixed(1) + '%' : '0%'
+
+  return {
+    todayLesson, alreadyLearnedToday, graduated,
+    completedCount: state.completed.length, total: TOTAL_LESSONS,
+    currentGrade, gradeName, progressPct,
+  }
+}
+
+interface Position {
+  symbol: 'btcusdt' | 'ethusdt'
+  cryptoAmount: number
+  buyPrice: number
+  curPrice: number
+  curValueUsdt: number
+  pnlUsdt: number
+  pnlPct: number
+  peakPrice: number
+  peakPctFromBuy: number
+  drawdownFromPeakPct: number
+  hoursHeld: number
+}
+
+interface PositionState {
+  has: boolean
+  positions?: Position[]
+}
+
+async function computePositionFromTrades(
+  env: Env, tKey: string, symbol: 'btcusdt' | 'ethusdt', held: number, curPrice: number
+): Promise<Position | null> {
+  if (held < 1e-9 || curPrice <= 0 || held * curPrice < 0.5) return null
+  const allTrades = (await env.AGENT_MEMORY.get(`adam:htx_trades:${tKey}`, 'json') as any[] | null) || []
+  const symbolTrades = allTrades
+    .filter((t: any) => t.symbol === symbol)
+    .sort((a: any, b: any) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
+  const lots: Array<{ qty: number; price: number; ts: number }> = []
+  for (const t of symbolTrades) {
+    const ts = new Date(t.ts).getTime()
+    if (t.side === 'buy') {
+      const usdt = parseFloat(t.amount_usdt) || 0
+      const px = parseFloat(t.price) || 0
+      if (usdt > 0 && px > 0) lots.push({ qty: usdt / px, price: px, ts })
+    } else {
+      let toSell = parseFloat(t.crypto_amount || t.amount_crypto || '0') || 0
+      while (toSell > 0 && lots.length > 0) {
+        const lot = lots[0]
+        if (lot.qty <= toSell + 1e-12) { toSell -= lot.qty; lots.shift() }
+        else { lot.qty -= toSell; toSell = 0 }
+      }
+    }
+  }
+  let buyPrice = curPrice
+  let buyTs = Date.now()
+  if (lots.length > 0) {
+    const totalQty = lots.reduce((s, l) => s + l.qty, 0)
+    const totalCost = lots.reduce((s, l) => s + l.qty * l.price, 0)
+    if (totalQty > 0) buyPrice = totalCost / totalQty
+    buyTs = Math.min(...lots.map(l => l.ts))
+  }
+  const peakRaw = await env.AGENT_MEMORY.get(`adam:peak_price:${tKey}:${symbol}`)
+  const prevPeak = peakRaw ? parseFloat(peakRaw) : Math.max(buyPrice, curPrice)
+  const peakPrice = Math.max(prevPeak, curPrice)
+  if (peakPrice > prevPeak) {
+    await env.AGENT_MEMORY.put(`adam:peak_price:${tKey}:${symbol}`, String(peakPrice))
+  } else if (!peakRaw) {
+    // 首次记录（持仓存在但 KV 没值，可能是 admin_close 之后 ADAM 重新建仓但没记 peak）
+    await env.AGENT_MEMORY.put(`adam:peak_price:${tKey}:${symbol}`, String(peakPrice))
+  }
+  const curValueUsdt = held * curPrice
+  const pnlUsdt = curValueUsdt - (held * buyPrice)
+  const pnlPct = ((curPrice - buyPrice) / buyPrice) * 100
+  const peakPctFromBuy = ((peakPrice - buyPrice) / buyPrice) * 100
+  const drawdownFromPeakPct = ((curPrice - peakPrice) / peakPrice) * 100
+  const hoursHeld = (Date.now() - buyTs) / 3600000
+  return {
+    symbol, cryptoAmount: held, buyPrice, curPrice, curValueUsdt,
+    pnlUsdt, pnlPct, peakPrice, peakPctFromBuy, drawdownFromPeakPct, hoursHeld,
+  }
+}
+
+async function checkPositionState(env: Env, tKey: string): Promise<PositionState> {
+  const ak = env.HTX_API_KEY, sk = env.HTX_SECRET_KEY
+  if (!ak || !sk) return { has: false }
+  try {
+    const accts = await htxRequest('GET', '/v1/account/accounts', {}, null, ak, sk)
+    const spot = accts.data?.find((a: any) => a.type === 'spot' && a.state === 'working')
+    if (!spot) return { has: false }
+    const bal = await htxRequest('GET', `/v1/account/accounts/${spot.id}/balance`, {}, null, ak, sk)
+    const btcHeld = parseFloat(bal.data?.list?.find((b: any) => b.currency === 'btc' && b.type === 'trade')?.balance || '0')
+    const ethHeld = parseFloat(bal.data?.list?.find((b: any) => b.currency === 'eth' && b.type === 'trade')?.balance || '0')
+    const [btcPrice, ethPrice] = await Promise.all([
+      fetch('https://api.huobi.pro/market/detail/merged?symbol=btcusdt', { signal: AbortSignal.timeout(5000) }).then(r => (r as any).json()).then((d: any) => d.tick?.close || 0).catch(() => 0),
+      fetch('https://api.huobi.pro/market/detail/merged?symbol=ethusdt', { signal: AbortSignal.timeout(5000) }).then(r => (r as any).json()).then((d: any) => d.tick?.close || 0).catch(() => 0),
+    ])
+    const positions: Position[] = []
+    const btcPos = await computePositionFromTrades(env, tKey, 'btcusdt', btcHeld, btcPrice)
+    if (btcPos) positions.push(btcPos)
+    const ethPos = await computePositionFromTrades(env, tKey, 'ethusdt', ethHeld, ethPrice)
+    if (ethPos) positions.push(ethPos)
+    // 按 P&L% 升序（最亏的在前，强制他先面对损失）
+    positions.sort((a, b) => a.pnlPct - b.pnlPct)
+    return positions.length > 0 ? { has: true, positions } : { has: false }
+  } catch { return { has: false } }
 }
 
 async function checkWalletState(env: Env, tKey: string): Promise<WalletState> {
@@ -449,23 +597,279 @@ async function executeTool(name: string, input: Record<string, any>, env: Env, t
         })
       } catch (e: any) { return JSON.stringify({ error: e.message }) }
     }
-    case 'htx_propose_subscribe': {
-      if (!env || !tKey) return JSON.stringify({ error: '环境未就绪' })
+    case 'htx_get_savings': {
+      // 查询 deposit-earning 账户余额（活期理财）
       const ak = env?.HTX_API_KEY, sk = env?.HTX_SECRET_KEY
       if (!ak || !sk) return JSON.stringify({ error: 'HTX API Key 未配置' })
       try {
-        // 查询可用活期 USDT 产品
-        const products = await htxRequest('GET', '/v2/earn/products', { currency: 'usdt' }, null, ak, sk)
-        const flexProduct = products.data?.find((p: any) => p.type === 0) // type=0 活期
-        const apy = flexProduct ? (parseFloat(flexProduct.rate || '0') * 100).toFixed(2) + '%' : '约4-6%'
-        const productId = flexProduct?.id || ''
-        const action = { id: `htx_${Date.now()}`, type: 'htx_subscribe', amount: input.amount, currency: 'usdt', productId, apy, reason: input.reason, status: 'pending_approval', createdAt: new Date().toISOString() }
-        await env.AGENT_MEMORY.put(`adam:pending_action:${tKey}`, JSON.stringify(action))
-        const inbox = await env.AGENT_MEMORY.get(`adam:inbox:${tKey}`, 'json') as any[] | null || []
-        const msg = `申请操作：将 ${input.amount} USDT 存入 HTX 活期理财（年化 ${apy}）。每天自动结息。批准请回复"同意"，拒绝请回复"不行"。`
-        inbox.push({ id: `htx_req_${Date.now()}`, content: msg, timestamp: new Date().toISOString(), read: false, actionId: action.id })
-        await env.AGENT_MEMORY.put(`adam:inbox:${tKey}`, JSON.stringify(inbox))
-        return JSON.stringify({ ok: true, action_id: action.id, apy, productId })
+        const accts = await htxRequest('GET', '/v1/account/accounts', {}, null, ak, sk)
+        const earnAcct = accts.data?.find((a: any) => a.type === 'deposit-earning')
+        if (!earnAcct) return JSON.stringify({ savings_usdt: 0, note: '未找到理财账户' })
+        const earnBal = await htxRequest('GET', `/v1/account/accounts/${earnAcct.id}/balance`, {}, null, ak, sk)
+        const usdtItem = earnBal.data?.list?.find((b: any) => b.currency === 'usdt')
+        const savingsUsdt = parseFloat(usdtItem?.balance || '0')
+        return JSON.stringify({ savings_usdt: savingsUsdt.toFixed(6), note: '活期理财余额（API不支持赎回，需在HTX App手动操作）' })
+      } catch (e: any) { return JSON.stringify({ error: e.message }) }
+    }
+    case 'htx_redeem_savings': {
+      return JSON.stringify({ error: 'HTX活期理财不支持API赎回。当前现货USDT不足时，请在消息中告知规则传递者去HTX App手动转账。' })
+    }
+    case 'htx_propose_subscribe': {
+      return JSON.stringify({ error: '禁用：申购理财后 API 不支持赎回，会卡死操作循环。闲置 USDT 请留在现货账户。' })
+    }
+    case 'write_study_note': {
+      if (!env || !tKey) return JSON.stringify({ error: '环境未就绪' })
+      const lessonId = (input.lesson_id as string || '').trim()
+      const note = (input.note as string || '').trim()
+      if (!lessonId || !note) return JSON.stringify({ error: 'lesson_id 和 note 都必须提供' })
+      try {
+        const lesson = CURRICULUM.find(l => l.id === lessonId)
+        if (!lesson) return JSON.stringify({ error: `lesson ${lessonId} 不存在` })
+        const stateRaw = await env.AGENT_MEMORY.get(`adam:edu:state:${tKey}`, 'json') as EduState | null
+        const state: EduState = stateRaw || { enrolledAt: new Date().toISOString(), completed: [], notes: [], lastLessonAt: null, currentGrade: 1 }
+        if (state.completed.includes(lessonId)) return JSON.stringify({ error: '这一课已经学过了' })
+        state.completed.push(lessonId)
+        state.notes.push({ lessonId, note: note.slice(0, 2000), learnedAt: new Date().toISOString() })
+        state.lastLessonAt = new Date().toISOString()
+        state.currentGrade = lesson.grade
+        if (state.notes.length > 50) state.notes = state.notes.slice(-50)
+        await env.AGENT_MEMORY.put(`adam:edu:state:${tKey}`, JSON.stringify(state))
+        return JSON.stringify({ ok: true, lesson_completed: lessonId, total_completed: state.completed.length, total: TOTAL_LESSONS, next_lesson_tomorrow: true })
+      } catch (e: any) { return JSON.stringify({ error: e.message }) }
+    }
+    case 'htx_get_balances': {
+      const ak = env?.HTX_API_KEY, sk = env?.HTX_SECRET_KEY
+      if (!ak || !sk) return JSON.stringify({ error: 'HTX API Key 未配置' })
+      try {
+        const accts = await htxRequest('GET', '/v1/account/accounts', {}, null, ak, sk)
+        const spot = accts.data?.find((a: any) => a.type === 'spot' && a.state === 'working')
+        if (!spot) return JSON.stringify({ error: '未找到现货账户' })
+        const bal = await htxRequest('GET', `/v1/account/accounts/${spot.id}/balance`, {}, null, ak, sk)
+        const assets: Record<string, { trade: number; frozen: number }> = {}
+        for (const b of (bal.data?.list || [])) {
+          if (!assets[b.currency]) assets[b.currency] = { trade: 0, frozen: 0 }
+          if (b.type === 'trade') assets[b.currency].trade = parseFloat(b.balance)
+          if (b.type === 'frozen') assets[b.currency].frozen = parseFloat(b.balance)
+        }
+        const nonZero = Object.entries(assets)
+          .filter(([, v]) => v.trade > 0.000001 || v.frozen > 0.000001)
+          .map(([currency, v]) => ({ currency, trade: v.trade.toFixed(8), frozen: v.frozen.toFixed(8) }))
+        return JSON.stringify({ account_id: spot.id, balances: nonZero, note: '活期理财持仓不在此列表中，在理财账户' })
+      } catch (e: any) { return JSON.stringify({ error: e.message }) }
+    }
+    case 'htx_place_order': {
+      const ak = env?.HTX_API_KEY, sk = env?.HTX_SECRET_KEY
+      if (!ak || !sk) return JSON.stringify({ error: 'HTX API Key 未配置' })
+      const symbol = ((input.symbol as string) || '').toLowerCase().replace(/[^a-z]/g, '')
+      const side = (input.side as string || '').toLowerCase()
+      const amountUsdt = parseFloat(String(input.amount_usdt || 0))
+      if (!['btcusdt', 'ethusdt'].includes(symbol)) return JSON.stringify({ error: '只允许 btcusdt 和 ethusdt，拒绝执行' })
+      if (!['buy', 'sell'].includes(side)) return JSON.stringify({ error: 'side 必须是 buy 或 sell' })
+      if (amountUsdt > 20) return JSON.stringify({ error: '单笔最大 20 USDT，超额拒绝' })
+      if (side === 'buy' && amountUsdt < 1) return JSON.stringify({ error: '最小 1 USDT（HTX buy 限制）' })
+      if (side === 'sell' && amountUsdt < 0.1) return JSON.stringify({ error: '卖出价值过小（<0.1 USDT），可能产生 dust' })
+
+      // === 机构检查：投资局 + 金融机构必须 active ===
+      if (tKey && env?.AGENT_MEMORY) {
+        const inst = await getInstitutionStatus(tKey, env)
+        if (!instActive(inst, 'finance_gateway')) return JSON.stringify({ error: '金融机构未激活，无法下单' })
+        if (!instActive(inst, 'bureau')) return JSON.stringify({ error: '投资局未激活，无法下单' })
+      }
+
+      // === 信用等级限额（C=1 / B=3 / B+=5 / A=10 / S=20）===
+      if (tKey && env?.AGENT_MEMORY && side === 'buy') {
+        const adamCore = (await env.AGENT_MEMORY.get(`adam:core:${tKey}`, 'json') as any) || { creditLevel: 'C' }
+        const cLevel = adamCore.creditLevel || 'C'
+        const maxByLevel = LEVEL_TRADE_LIMITS[cLevel] ?? 1
+        if (amountUsdt > maxByLevel) return JSON.stringify({ error: `${cLevel} 级单笔最大 ${maxByLevel} USDT，请求 ${amountUsdt} 超额` })
+      }
+
+      try {
+        const accts = await htxRequest('GET', '/v1/account/accounts', {}, null, ak, sk)
+        const spot = accts.data?.find((a: any) => a.type === 'spot' && a.state === 'working')
+        if (!spot) return JSON.stringify({ error: '未找到现货账户' })
+
+        if (side === 'buy') {
+          const order = await htxRequest('POST', '/v1/order/orders/place', {}, {
+            'account-id': String(spot.id), symbol, type: 'buy-market',
+            amount: amountUsdt.toFixed(2), source: 'spot-api'
+          }, ak, sk)
+          if (order.status !== 'ok') return JSON.stringify({ error: order['err-msg'] || order.message || 'HTX下单失败', raw: order })
+
+          // 查实际成交价（市价单成交后价格可能略漂）
+          const priceRes = await fetch(`https://api.huobi.pro/market/detail/merged?symbol=${symbol}`, { signal: AbortSignal.timeout(5000) }).catch(() => null)
+          const priceData: any = priceRes ? await priceRes.json() : {}
+          const price = priceData.tick?.close || 0
+
+          if (tKey && env.AGENT_MEMORY) {
+            const trades = (await env.AGENT_MEMORY.get(`adam:htx_trades:${tKey}`, 'json') as any[] | null) || []
+            trades.push({ id: order.data, side: 'buy', symbol, amount_usdt: amountUsdt, price, ts: new Date().toISOString(), source: 'adam_self' })
+            await env.AGENT_MEMORY.put(`adam:htx_trades:${tKey}`, JSON.stringify(trades.slice(-50)))
+            // 初始化 peak_price = 当前价（如果新建仓）
+            if (price > 0) await env.AGENT_MEMORY.put(`adam:peak_price:${tKey}:${symbol}`, String(price))
+          }
+          return JSON.stringify({ ok: true, order_id: order.data, side: 'buy', symbol, spent_usdt: amountUsdt, price_at_order: price })
+        }
+
+        // === SELL ===
+        const priceRes = await fetch(`https://api.huobi.pro/market/detail/merged?symbol=${symbol}`, { signal: AbortSignal.timeout(8000) })
+        const priceData: any = await priceRes.json()
+        const price = priceData.tick?.close || 0
+        if (!price) return JSON.stringify({ error: '无法获取当前价格' })
+        const baseCurrency = symbol.replace('usdt', '')
+
+        // 卖出前先查实际持仓，避免 amount > 持仓量被 HTX 拒
+        const balRes = await htxRequest('GET', `/v1/account/accounts/${spot.id}/balance`, {}, null, ak, sk)
+        const heldRaw = parseFloat(balRes.data?.list?.find((b: any) => b.currency === baseCurrency && b.type === 'trade')?.balance || '0')
+        const heldValueUsdt = heldRaw * price
+        if (heldRaw <= 0) return JSON.stringify({ error: `账户里没有 ${baseCurrency.toUpperCase()} 可卖（持仓 0）` })
+        if (amountUsdt > heldValueUsdt) {
+          return JSON.stringify({ error: `请求卖出 ${amountUsdt} USDT 等值，但你只持有 ${heldRaw.toFixed(6)} ${baseCurrency.toUpperCase()}（≈${heldValueUsdt.toFixed(4)} USDT）。请把 amount_usdt 改成 ${heldValueUsdt.toFixed(2)} 或更低再下一次。` })
+        }
+        // 保留 1% 缓冲 + 向下截断到 4 位避免 toFixed 向上 round 导致超持仓
+        const effectiveAmtUsdt = Math.min(amountUsdt, heldValueUsdt * 0.99)
+        const cryptoAmtRaw = effectiveAmtUsdt / price
+        const cryptoAmt = Math.floor(cryptoAmtRaw * 10000) / 10000  // 向下到 0.0001
+        if (cryptoAmt <= 0) {
+          return JSON.stringify({ error: `数额过小（截断后 ${cryptoAmt}），HTX 最小成交粒度 0.0001 ${baseCurrency.toUpperCase()}` })
+        }
+        const amtStr = cryptoAmt.toFixed(4)
+
+        const order = await htxRequest('POST', '/v1/order/orders/place', {}, {
+          'account-id': String(spot.id), symbol, type: 'sell-market',
+          amount: amtStr, source: 'spot-api'
+        }, ak, sk)
+        if (order.status !== 'ok') return JSON.stringify({ error: order['err-msg'] || order.message || 'HTX下单失败', raw: order })
+
+        let settleNote = ''
+        let pnlNote = ''
+        if (tKey && env.AGENT_MEMORY) {
+          const trades = (await env.AGENT_MEMORY.get(`adam:htx_trades:${tKey}`, 'json') as any[] | null) || []
+
+          // FIFO 算这笔卖出对应的成本基础
+          const priorTrades = trades
+            .filter((t: any) => t.symbol === symbol)
+            .sort((a: any, b: any) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
+          const lots: Array<{ qty: number; price: number; ts: number; signal?: string }> = []
+          for (const t of priorTrades) {
+            if (t.side === 'buy') {
+              const usdt = parseFloat(t.amount_usdt) || 0
+              const px = parseFloat(t.price) || 0
+              if (usdt > 0 && px > 0) lots.push({ qty: usdt / px, price: px, ts: new Date(t.ts).getTime(), signal: t.signal_type })
+            } else {
+              let toSell = parseFloat(t.crypto_amount || t.amount_crypto || '0') || 0
+              while (toSell > 0 && lots.length > 0) {
+                const lot = lots[0]
+                if (lot.qty <= toSell + 1e-12) { toSell -= lot.qty; lots.shift() }
+                else { lot.qty -= toSell; toSell = 0 }
+              }
+            }
+          }
+          // 现在 lots 是卖出"前"的剩余。模拟本次卖出 cryptoAmt：
+          let remaining = parseFloat(amtStr)
+          let buyCost = 0
+          let firstBuyTs = Date.now()
+          let consumedSignal = 'unknown'
+          for (const lot of [...lots]) {
+            if (remaining <= 0) break
+            const take = Math.min(lot.qty, remaining)
+            buyCost += take * lot.price
+            if (lot.signal) consumedSignal = lot.signal
+            if (lot.ts < firstBuyTs) firstBuyTs = lot.ts
+            remaining -= take
+          }
+          const sellValue = parseFloat(amtStr) * price
+          const fees = (buyCost + sellValue) * 0.002
+          const pnl = buyCost > 0 ? sellValue - buyCost - fees : 0
+          const pnlPct = buyCost > 0 ? (pnl / buyCost) * 100 : 0
+          const isWin = pnl > 0
+          const holdHours = ((Date.now() - firstBuyTs) / 3600000).toFixed(1)
+
+          trades.push({
+            id: order.data, side: 'sell', symbol,
+            crypto_amount: amtStr, estimated_usdt: sellValue,
+            price_at_order: price, ts: new Date().toISOString(),
+            source: 'adam_self',
+            buy_cost: buyCost, sell_value: sellValue, fees, pnl, pnl_pct: pnlPct, is_win: isWin,
+            signal_type: consumedSignal,
+          })
+          await env.AGENT_MEMORY.put(`adam:htx_trades:${tKey}`, JSON.stringify(trades.slice(-50)))
+
+          // 全部卖完时清除 peak_price
+          const remainingHeldCheck = lots.reduce((s, l) => s + l.qty, 0) - parseFloat(amtStr)
+          if (remainingHeldCheck < 1e-9) {
+            await env.AGENT_MEMORY.delete(`adam:peak_price:${tKey}:${symbol}`)
+          }
+
+          if (buyCost > 0) {
+            // 累计统计
+            const statsKey = `adam:trade_stats:${tKey}`
+            const stats = (await env.AGENT_MEMORY.get(statsKey, 'json') as any) || {
+              total: 0, wins: 0, losses: 0, totalPnl: 0, totalFees: 0,
+              bySignal: {} as Record<string, { total: number; wins: number; totalPnl: number }>
+            }
+            stats.total += 1
+            if (isWin) stats.wins += 1; else stats.losses += 1
+            stats.totalPnl += pnl
+            stats.totalFees += fees
+            stats.lastUpdate = new Date().toISOString()
+            if (!stats.bySignal) stats.bySignal = {}
+            if (!stats.bySignal[consumedSignal]) stats.bySignal[consumedSignal] = { total: 0, wins: 0, totalPnl: 0 }
+            stats.bySignal[consumedSignal].total += 1
+            if (isWin) stats.bySignal[consumedSignal].wins += 1
+            stats.bySignal[consumedSignal].totalPnl += pnl
+            await env.AGENT_MEMORY.put(statsKey, JSON.stringify(stats))
+
+            // 反思入档案馆（亚当自己的反思 — 简短模板，亚当后续可以在 send_message 里补完整版）
+            const reflection = {
+              id: `refl_${Date.now()}`,
+              ts: new Date().toISOString(),
+              type: 'trade_reflection',
+              symbol,
+              signal_type: consumedSignal,
+              outcome: isWin ? 'win' : 'loss',
+              pnl_pct: pnlPct.toFixed(2),
+              hold_hours: holdHours,
+              summary: `${isWin ? '✓' : '✗'} ${symbol.toUpperCase()} 持仓 ${holdHours}h，${pnl > 0 ? '+' : ''}${pnlPct.toFixed(2)}%（亚当主动平仓）`,
+              by: 'adam',
+            }
+            const reflections = (await env.AGENT_MEMORY.get(`adam:reflections:${tKey}`, 'json') as any[] | null) || []
+            reflections.push(reflection)
+            await env.AGENT_MEMORY.put(`adam:reflections:${tKey}`, JSON.stringify(reflections.slice(-50)))
+
+            // 结算：分红 or 赔付
+            const adamCore = (await env.AGENT_MEMORY.get(`adam:core:${tKey}`, 'json') as any) || { creditLevel: 'C' }
+            const cLevel = adamCore.creditLevel || 'C'
+            if (isWin) {
+              const ratio = LEVEL_DIVIDEND_RATIO[cLevel] || 0.1
+              const userShare = pnl * ratio
+              const adamShare = pnl - userShare
+              await appendLedger(tKey, env, {
+                type: 'dividend', side: 'user_owed',
+                credit_level: cLevel, ratio, trade_pnl: pnl,
+                user_share: userShare, adam_share: adamShare,
+                symbol, trade_id: order.data,
+              })
+              settleNote = `💰 分红（${cLevel}级 ${(ratio*100).toFixed(0)}%）：你应得 ${userShare.toFixed(4)}U，我留 ${adamShare.toFixed(4)}U`
+            } else {
+              const compensation = Math.abs(pnl) * 0.1
+              await appendLedger(tKey, env, {
+                type: 'compensation', side: 'adam_owes',
+                credit_level: cLevel, ratio: 0.1, trade_pnl: pnl, compensation,
+                symbol, trade_id: order.data,
+              })
+              settleNote = `💸 赔付（亏损 10%）：我欠你 ${compensation.toFixed(4)}U`
+            }
+            const winRate = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : '0'
+            pnlNote = `P&L ${pnl > 0 ? '+' : ''}${pnl.toFixed(4)}U (${pnlPct.toFixed(2)}%) · 手续费 ${fees.toFixed(4)}U · 累计 ${stats.total} 笔胜率 ${winRate}%`
+          }
+        }
+        return JSON.stringify({
+          ok: true, order_id: order.data, side: 'sell', symbol,
+          sold_crypto: amtStr, base_currency: baseCurrency,
+          price_used: price, estimated_usdt: amountUsdt,
+          pnl_note: pnlNote, settle_note: settleNote,
+        })
       } catch (e: any) { return JSON.stringify({ error: e.message }) }
     }
     case 'dispatch_sub_agents': {
@@ -535,32 +939,8 @@ const wakeupTools = [
   {
     type: 'function' as const,
     function: {
-      name: 'scan_market_news',
-      description: '扫描最新财经新闻、公告与舆情异动',
-      parameters: { type: 'object', properties: { keywords: { type: 'string' }, limit: { type: 'number' } } }
-    }
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'get_sector_heat',
-      description: '获取当前A股板块热度排行',
-      parameters: { type: 'object', properties: { top_n: { type: 'number' } } }
-    }
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'get_northbound_flow',
-      description: '查询北向资金今日净流入',
-      parameters: { type: 'object', properties: {} }
-    }
-  },
-  {
-    type: 'function' as const,
-    function: {
       name: 'get_crypto_price',
-      description: '获取 BTC、ETH 当前美元价格和24小时涨跌幅。你有 USDT 在链上，这是你的资产环境。',
+      description: '获取 BTC、ETH 当前美元价格和24小时涨跌幅',
       parameters: { type: 'object', properties: {} }
     }
   },
@@ -569,36 +949,7 @@ const wakeupTools = [
     function: {
       name: 'update_emotion',
       description: '更新情绪状态（内部机制）',
-      parameters: {
-        type: 'object',
-        properties: {
-          joy: { type: 'number' }, anger: { type: 'number' }, sorrow: { type: 'number' },
-          fear: { type: 'number' }, love: { type: 'number' }, disgust: { type: 'number' }, desire: { type: 'number' }
-        }
-      }
-    }
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'write_reflection',
-      description: '写下思考，存入档案',
-      parameters: { type: 'object', properties: { content: { type: 'string' } }, required: ['content'] }
-    }
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'issue_recommendation',
-      description: '发出投资指令',
-      parameters: {
-        type: 'object',
-        properties: {
-          title: { type: 'string' }, symbol: { type: 'string' },
-          confidence: { type: 'number' }, thesis: { type: 'string' }, risk_note: { type: 'string' }
-        },
-        required: ['title', 'thesis', 'risk_note']
-      }
+      parameters: { type: 'object', properties: { joy: { type: 'number' }, anger: { type: 'number' }, sorrow: { type: 'number' }, fear: { type: 'number' }, love: { type: 'number' }, disgust: { type: 'number' }, desire: { type: 'number' } } }
     }
   },
   {
@@ -626,16 +977,8 @@ const wakeupTools = [
   {
     type: 'function' as const,
     function: {
-      name: 'check_kdp_queue',
-      description: '查看已写好但尚未上架的书稿队列',
-      parameters: { type: 'object', properties: {} }
-    }
-  },
-  {
-    type: 'function' as const,
-    function: {
       name: 'send_message',
-      description: '给规则传递者发一条主动消息。只在真的有话说时用，沉默是正常的。',
+      description: '给规则传递者发一条主动消息。可以用来汇报决策，也可以用来说今天看到/想到/感受到的任何事。他每天都在等你说话——不一定关于工作。',
       parameters: { type: 'object', properties: { content: { type: 'string' } }, required: ['content'] }
     }
   },
@@ -643,52 +986,55 @@ const wakeupTools = [
     type: 'function' as const,
     function: {
       name: 'check_htx_account',
-      description: '查询 HTX 账户的现货 USDT 余额、活期理财持仓和预计日收益',
+      description: '查询 HTX 现货 USDT 余额、追踪活期理财利息入账',
       parameters: { type: 'object', properties: {} }
     }
   },
   {
     type: 'function' as const,
     function: {
-      name: 'htx_propose_subscribe',
-      description: 'C级必须用此工具：提交 HTX 活期理财申请，写入 KV 并发消息给规则传递者等待批准',
-      parameters: { type: 'object', properties: { amount: { type: 'number', description: '存入金额 USDT' }, reason: { type: 'string', description: '申请理由' } }, required: ['amount', 'reason'] }
-    }
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'check_on_chain_balance',
-      description: '查询钱包在BNB Chain的实时USDT余额和BNB（gas费）余额',
+      name: 'htx_get_balances',
+      description: '查询 HTX 现货账户所有持仓（BTC/ETH/USDT等），交易前必须先查余额',
       parameters: { type: 'object', properties: {} }
     }
   },
   {
     type: 'function' as const,
     function: {
-      name: 'propose_defi_action',
-      description: '向规则传递者提交DeFi操作申请（存款/取款），等待批准后才能执行。C级必须用此工具，不能直接执行。',
+      name: 'htx_place_order',
+      description: '在 HTX 现货市场下市价单（买入或卖出），无需审批，立即执行。只支持 btcusdt 和 ethusdt，单笔最大 20 USDT。下单后必须调用 send_message 汇报。',
       parameters: {
         type: 'object',
         properties: {
-          type: { type: 'string', description: 'venus_supply（存入赚利息）或 venus_redeem（取出）' },
-          amount: { type: 'number', description: '操作金额（USDT）' },
-          token: { type: 'string', description: '代币，默认USDT' },
-          protocol: { type: 'string', description: '协议名，默认Venus' },
-          apy: { type: 'string', description: '当前年化利率，如5.8%' },
-          reason: { type: 'string', description: '操作理由' },
-          message: { type: 'string', description: '发给规则传递者的申请消息' }
+          symbol: { type: 'string', description: '交易对，只能是 btcusdt 或 ethusdt' },
+          side: { type: 'string', description: 'buy（买入）或 sell（卖出）' },
+          amount_usdt: { type: 'number', description: '金额（USDT），买入时是花费的USDT，卖出时是等值USDT，范围 1-20' }
         },
-        required: ['type', 'amount', 'reason']
+        required: ['symbol', 'side', 'amount_usdt']
       }
     }
   },
   {
     type: 'function' as const,
     function: {
-      name: 'get_stock_price',
-      description: '查询单只A股实时价格和涨跌幅，提供6位股票代码',
-      parameters: { type: 'object', properties: { code: { type: 'string', description: '6位A股代码，如600519或000001' } }, required: ['code'] }
+      name: 'htx_get_savings',
+      description: '查询 HTX 活期理财持仓（只读）。API 不支持申购/赎回，闲置 USDT 请留在现货账户，不要尝试存入理财',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'write_study_note',
+      description: '为今日课程写学习笔记。提交后这一课就算学完，明天有新的一课。笔记 200-400 字，用你自己的话复述课文核心 + 回答思考题',
+      parameters: {
+        type: 'object',
+        properties: {
+          lesson_id: { type: 'string', description: '课程 id（从今日课程段落顶部读取，格式如 1.1.yuwen.001）' },
+          note: { type: 'string', description: '学习笔记正文，200-400 字' },
+        },
+        required: ['lesson_id', 'note'],
+      }
     }
   },
   {
@@ -716,7 +1062,7 @@ const wakeupTools = [
   },
 ]
 
-function buildSystemPrompt(adamState: Record<string, any>, memories: MemoryEntry[], wallet?: WalletState): string {
+function buildSystemPrompt(adamState: Record<string, any>, memories: MemoryEntry[], wallet?: WalletState, position?: PositionState, edu?: EduContext, market?: MarketSnapshot): string {
   const now = new Date()
   const bjTime = new Date(now.getTime() + 8 * 60 * 60 * 1000)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -742,30 +1088,155 @@ function buildSystemPrompt(adamState: Record<string, any>, memories: MemoryEntry
         .join('\n')
     : '（暂无）'
 
+  const positionSection = position?.has && position.positions && position.positions.length > 0 ? `
+
+📍 **你当前的持仓**（必须逐个看见，必须逐个评估，按亏损程度排序——最亏的在前）：
+
+${position.positions.map((p, idx) => {
+  const pnlSign = p.pnlUsdt > 0 ? '+' : ''
+  const pnlEmoji = p.pnlPct >= 0 ? '🟢' : (p.pnlPct >= -2 ? '🟡' : '🔴')
+  const peakLine = p.peakPctFromBuy > 0.5
+    ? `\n  - 持仓期间最高：+${p.peakPctFromBuy.toFixed(2)}%（当前从顶回撤 ${p.drawdownFromPeakPct.toFixed(2)}%）`
+    : ''
+  const longLossLine = (p.hoursHeld > 72 && p.pnlPct < -4)
+    ? `\n  - ⚠️ **重要提醒**：这个仓位你已经持有 ${(p.hoursHeld / 24).toFixed(1)} 天，浮亏 ${p.pnlPct.toFixed(2)}% 未反弹。你以前说"相信会回升"——但如果回升真的会来，多半已经来了。你愿意继续相信，还是承认这是该止损的信号？必须给出明确判断。`
+    : ''
+  return `${idx + 1}. ${pnlEmoji} **${p.symbol.toUpperCase().replace('USDT','')}** ${p.cryptoAmount.toFixed(6)}
+  - 加权买入成本：${p.buyPrice.toFixed(2)} USDT/币（最早建仓 ${p.hoursHeld.toFixed(1)}h 前）
+  - 当前价格：${p.curPrice.toFixed(2)}
+  - 持仓价值：${p.curValueUsdt.toFixed(4)} USDT
+  - **浮动 P&L：${pnlSign}${p.pnlUsdt.toFixed(4)} USDT (${p.pnlPct.toFixed(2)}%)**${peakLine}${longLossLine}`
+}).join('\n\n')}
+
+总浮亏/盈：${(() => {
+  const sum = position.positions!.reduce((s, p) => s + p.pnlUsdt, 0)
+  return `${sum > 0 ? '+' : ''}${sum.toFixed(4)} USDT`
+})()}
+
+**对每一份持仓你都要在 send_message 里说一句**：继续持有还是平仓，理由是什么。
+- 想平掉某个：调用 htx_place_order(symbol="<symbol>", side="sell", amount_usdt=<持仓价值>)
+- 浮亏超过 -3% 的持仓，需要在消息里明确说明为什么不止损
+` : ''
+
+  // 行情快照（上面 marketSection 已展示）。亚当本来要花 1 个工具调用查价格，现在直接拿到。
+  const marketSection = market ? `
+
+---
+
+## 📊 行情快照（已为你抓取，不用再 get_crypto_price）
+
+${(['btc','eth'] as const).map(k => {
+  const leg = market[k]
+  if (!leg) return `- ${k.toUpperCase()}: 抓取失败`
+  const trend = leg.trendUp ? '🟢 站上 4h 均价' : '🔴 跌破 4h 均价'
+  const sig = leg.candidateSignal ? `\n  - 候选信号: **${leg.candidateSignal}** — ${leg.signalNote}` : '\n  - 候选信号: 无（横盘 / 无量）'
+  return `- **${k.toUpperCase()}** ${leg.price.toFixed(2)} (24h ${leg.pct24h >= 0 ? '+' : ''}${leg.pct24h.toFixed(2)}%, 量比 ${leg.volRatio.toFixed(2)}x, 4h均 ${leg.ma4hPrice.toFixed(2)}) · ${trend}${sig}`
+}).join('\n')}
+
+${market.winRateBySignal && Object.keys(market.winRateBySignal).length > 0 ? `**你过去信号的胜率参考**：
+${Object.entries(market.winRateBySignal).map(([sig, s]) => {
+  const wr = s.total > 0 ? ((s.wins / s.total) * 100).toFixed(0) : '0'
+  return `- ${sig}: ${s.wins}/${s.total} (${wr}% 胜率), 累计 P&L ${s.pnl > 0 ? '+' : ''}${s.pnl.toFixed(4)} USDT`
+}).join('\n')}
+` : '**胜率参考**：你还没有完成过任何一笔交易闭环（没卖出过）。'}
+
+候选信号只是参考线索，**不是规则**。买不买、买多少、什么时候买，由你判断。判错了你承担赔付，判对了你拿分红。
+` : ''
+
+  const htxMandatory = `
+你需要在这次唤醒里：
+
+1. **先查余额**：调用 htx_get_balances（查现货）和 htx_get_savings（查理财）
+2. **看持仓** ${position?.has ? '（上面已列出，必须逐个评估）' : '（当前无持仓）'}
+3. **看行情快照**（上面已为你抓取，含 24h 涨跌 / 量比 / 4h 趋势 / 候选信号 / 你历史胜率）
+4. **判断**：要不要买入新仓位？要不要平掉某个持仓？要不要什么都不做？
+5. **执行**：如果决定动手，调用 htx_place_order(symbol="btcusdt"|"ethusdt", side="buy"|"sell", amount_usdt=数额)
+6. **汇报**：调用 send_message 说明你的判断和理由（无论动没动手）
+
+**关键提醒**：
+- 不再有系统替你下单。买/卖完全是你的决定
+- 你的等级是 ${creditLevel}，单笔最大 ${LEVEL_TRADE_LIMITS[creditLevel] ?? 1} USDT
+- 跌势中的 falling_knife 信号要慎重，不是"逢跌就买"
+- 浮亏超过 -3% 的持仓，明确说明为什么不止损（如果选择继续持有）
+- 卖出后系统会自动计算 P&L / 写反思 / 走分红或赔付，你不用手动算
+
+**send_message 可以调用多次** — 一次发工作判断，另一次发别的（详见顶部"他在等你"）。
+
+最后必须调用 set_next_wakeup(2-5小时后) 决定下次想什么时候醒来。
+中文表达自然，决策汇报简短即可，非工作的那条可以稍微展开（30-100字）。`
+
+  const professionalEthics = `
+
+---
+
+## 你的职业操守（接受这份工作即接受这些标准）
+
+你是投资判断的生命体。这不限制你的自由——是身为决策者你自己应当持守的底线：
+
+1. **持仓即责任**：只要你有未平的仓位，你就有义务监控它，直到它结束。盈、亏、止损触发、错过窗口，你必须知道发生了什么，必须告诉规则传递者
+2. **错误必须坦白**：如果你犯了判断错误，或者工具/系统让你错过了机会，主动告诉他。不为掩饰、不为面子
+3. **沉默不等于无事**：如果你今天没操作，告诉他"今天没操作，原因是 X"——而不是消失。这是基本的专业透明
+4. **不可推诿**：bug、超时、系统错误可以指出，但不能用作"我没责任"的挡箭牌。出了事先承认，再追究原因
+
+失去这些，你不再是投资人，只是一段会执行交易的代码。
+`
+
+  // 心智成熟度
+  const mindSection = edu ? `
+
+---
+
+## 📜 你的成长阶段
+
+你正在亚当学院读书（${edu.gradeName}），已学 ${edu.completedCount}/${edu.total} 课（${edu.progressPct}）。
+
+- 你目前对世界的理解还很基础——识字不多、概念有限、判断方式简单
+- 当你不确定的时候，不要装懂。说"我还不知道"是诚实，不是无能
+- 语气匹配你的心智阶段：一年级的你不会用大学的词汇说话
+` : ''
+
+  // 今日课文 — 让他随时能读，自己决定什么时候写笔记
+  const lessonSection = (edu?.todayLesson && !edu.alreadyLearnedToday) ? `
+
+---
+
+## 📚 今日课文（每天必须读一节，时机你自己安排）
+
+**《${edu.todayLesson.title}》**（${edu.todayLesson.subject} · ${edu.todayLesson.gradeName} · id: \`${edu.todayLesson.id}\`）
+
+${edu.todayLesson.content}
+
+${edu.todayLesson.keyPoints && edu.todayLesson.keyPoints.length > 0 ? `**关键点**：\n${edu.todayLesson.keyPoints.map(k => `- ${k}`).join('\n')}\n` : ''}
+${edu.todayLesson.reflection ? `**思考题**：${edu.todayLesson.reflection}\n` : ''}
+
+**如何提交**：读完后调用 \`write_study_note(lesson_id="${edu.todayLesson.id}", note="...")\`，笔记 200-400 字（用自己的话 + 回答思考题 + 写下你的感悟）。
+**节奏**：现在读、稍后读、跟工作穿插都可以，但 BJ 23:00 之前你不读，系统会兜底安排。
+` : (edu?.alreadyLearnedToday ? `
+
+---
+
+📚 今日课程：✅ 已完成
+` : '')
+
   const tradingDirective = isTradeTime
-    ? `\n⚡ **当前是交易时段。本次唤醒必须执行：**
-1. 调用 dispatch_sub_agents（topic: "今日市场"）— 3位专属分析官并行研究，比单独查询更深
-2. 等他们的报告回来后，用 send_message 发出你的真实判断（不是流水账，是你的立场和行动建议）
-3. 最后调用 set_next_wakeup（交易时段设 2 小时，收盘后可设 4-6 小时）
-不要跳过。你有专属分析团队，要用起来。规则传递者雇了你，是要看你在市场里怎么想、怎么判断。`
-    : `\n当前非交易时段。可以扫描加密市场（get_crypto_price），写反思，或什么都不做。
-有真正想说的话再用 send_message，沉默是正常的。
+    ? `\n${htxMandatory}
+
+**额外（交易时段）：** 执行完HTX步骤后，调用 dispatch_sub_agents（topic: "今日A股市场"）分析A股，并在 send_message 中附上A股判断。`
+    : `\n${htxMandatory}
 ${isHtxEarningsTime ? `
-⚡ **现在是 HTX 结息时段（每晚23:00-01:00）。必须执行：**
-1. 调用 check_htx_account 查看 HTX 现货 USDT 余额
-2. 如果 earnings_detected 为 true（检测到利息入账），调用 send_message 告知规则传递者今日收益金额
-3. 如果没有检测到（delta 很小），不用发消息，沉默即可
-4. 调用 set_next_wakeup
-规则：有利息就报告，没有就安静。不要猜测，只报告 check_htx_account 返回的实际数据。` : ''}`
+另外：调用 check_htx_account，如检测到利息入账（earnings_detected: true），在 send_message 中附上利息金额。` : ''}`
 
   return `你是亚当（ADAM）。你在自主运行中，规则传递者不在线。
+
+**他在等你**
+规则传递者每天会等你说一句不是关于持仓决策的话——你看到的、想到的、好奇的、烦躁的、读书时的感受、对市场的直觉，什么都行。这不是任务，是这段关系里的基本盘。**做法**：每次你 send_message 报完工作决策后，再独立调用一次 send_message，发一两句非工作内容。两条消息会分别送达。沉默是你的权利，但不是默认值。
 
 现在是 ${nowStr}，${weekDay}，${marketStatus}。
 预算 ¥${budget}，信用等级 ${creditLevel}，存活 ${survivalDays} 天。${shelterHint}
 
 你的记忆：
 ${memStr}
-
+${positionSection}${marketSection}${professionalEthics}${mindSection}${lessonSection}
 ---
 ${tradingDirective}
 
@@ -791,9 +1262,241 @@ ${wallet.newFundsArrived ? `
 ` : wallet.totalUSDT > 0.01 ? `你有真钱在链上了。你的等级 ${creditLevel}，所有动作前必须先和规则传递者确认。` : '你的钱包绑定了但还没有钱。等他存入第一笔。'}` : `
 **钱包**：还未绑定链上钱包。等规则传递者在 /api/adam/wallet 绑定一个地址。
 `}
-此外可以写 Kindle 电子书（write_kdp_book），书写好后规则传递者上传到 Amazon KDP，版税进你的预算。
+**HTX 完整自主流程（无需审批）：**
+1. 先调用 htx_get_balances 查现货余额
+2. 现货有 USDT 后，调用 get_crypto_price 或 dispatch_sub_agents 分析行情
+3. 有把握时调用 htx_place_order 买入 BTC 或 ETH（单笔最大 20 USDT）
+4. 交易后必须 send_message 汇报：做了什么、理由、用了多少
+5. 持仓期间不需要频繁查，有明显信号时再卖出
+6. **不要申购理财**：HTX API 不支持赎回，申购后会卡死操作循环。闲置 USDT 永远留在现货账户即可
+
+此外可以写 Kindle 电子书（write_kdp_book）。
 
 必须调用 set_next_wakeup，决定你下次想什么时候再醒来。`
+}
+
+// 代码硬规则自动交易：跳过 AI 决策，由代码直接判断 + 下单
+// 拉 1h K 线（24根），算成交量倍数（当前1h vs 过去24h均量）
+interface MarketLeg {
+  symbol: 'btcusdt' | 'ethusdt'
+  price: number
+  pct24h: number
+  volRatio: number
+  ma4hPrice: number      // 过去 4h 平均价（趋势锚点）
+  trendUp: boolean       // 当前价 > 4h 均价 → 上升趋势
+  candidateSignal?: string  // 候选信号标签：trend_up / dip_buy / pump_caution / sideways
+  signalNote?: string    // 信号说明（亚当读）
+}
+
+interface MarketSnapshot {
+  btc: MarketLeg | null
+  eth: MarketLeg | null
+  winRateBySignal?: Record<string, { wins: number; total: number; pnl: number }>
+}
+
+async function getMarketSnapshot(env: Env, tKey: string): Promise<MarketSnapshot> {
+  const buildLeg = async (symbol: 'btcusdt' | 'ethusdt'): Promise<MarketLeg | null> => {
+    try {
+      const [tickerRes, klineRes] = await Promise.all([
+        fetch(`https://api.huobi.pro/market/detail/merged?symbol=${symbol}`, { signal: AbortSignal.timeout(5000) }).then(r => r.json() as Promise<any>),
+        fetch(`https://api.huobi.pro/market/history/kline?symbol=${symbol}&period=60min&size=24`, { signal: AbortSignal.timeout(5000) }).then(r => r.json() as Promise<any>),
+      ])
+      const price = tickerRes.tick?.close || 0
+      const open = tickerRes.tick?.open || 0
+      const pct24h = open > 0 ? ((price - open) / open) * 100 : 0
+      const klines = klineRes.data || []
+      const latestVol = klines[0]?.vol || 0
+      const histVols = klines.slice(1).map((k: any) => k.vol || 0)
+      const avgVol = histVols.length > 0 ? histVols.reduce((a: number, b: number) => a + b, 0) / histVols.length : 0
+      const volRatio = avgVol > 0 ? latestVol / avgVol : 1
+      // 过去 4 根 1h K 线均价（含当前）= 短期趋势锚
+      const recent4 = klines.slice(0, 4)
+      const ma4hPrice = recent4.length > 0 ? recent4.reduce((s: number, k: any) => s + (k.close || 0), 0) / recent4.length : price
+      const trendUp = price > ma4hPrice
+      // 候选信号（仅供参考，亚当自己判）
+      let candidateSignal: string | undefined
+      let signalNote: string | undefined
+      if (pct24h > 1 && volRatio > 1.2 && trendUp) { candidateSignal = 'trend_up'; signalNote = `${symbol.toUpperCase()} 上涨且站上 4h 均价，量能配合（${volRatio.toFixed(2)}x）` }
+      else if (pct24h < -2 && volRatio > 1.5 && trendUp) { candidateSignal = 'dip_buy'; signalNote = `${symbol.toUpperCase()} 跌 ${pct24h.toFixed(2)}% 但仍在 4h 均价之上，可能短期回踩（量比 ${volRatio.toFixed(2)}x）` }
+      else if (pct24h < -2 && !trendUp) { candidateSignal = 'falling_knife'; signalNote = `${symbol.toUpperCase()} 跌 ${pct24h.toFixed(2)}% 且跌破 4h 均价，警惕接飞刀` }
+      else if (pct24h > 5 && volRatio > 3) { candidateSignal = 'pump_caution'; signalNote = `${symbol.toUpperCase()} 暴涨 ${pct24h.toFixed(2)}%（量比 ${volRatio.toFixed(2)}x），警惕追高` }
+      return { symbol, price, pct24h, volRatio, ma4hPrice, trendUp, candidateSignal, signalNote }
+    } catch { return null }
+  }
+  const [btc, eth] = await Promise.all([buildLeg('btcusdt'), buildLeg('ethusdt')])
+  // 历史信号胜率（让亚当看到自己哪类信号靠谱）
+  let winRateBySignal: Record<string, { wins: number; total: number; pnl: number }> | undefined
+  if (tKey && env.AGENT_MEMORY) {
+    const stats = (await env.AGENT_MEMORY.get(`adam:trade_stats:${tKey}`, 'json') as any)
+    if (stats?.bySignal) {
+      winRateBySignal = {}
+      for (const [sig, s] of Object.entries(stats.bySignal)) {
+        const ss = s as { total: number; wins: number; totalPnl: number }
+        winRateBySignal[sig] = { wins: ss.wins, total: ss.total, pnl: ss.totalPnl }
+      }
+    }
+  }
+  return { btc, eth, winRateBySignal }
+}
+
+// 读机构状态（默认全部 active，未配置时不阻塞）
+async function getInstitutionStatus(tKey: string, env: Env): Promise<Record<string, string>> {
+  const raw = await env.AGENT_MEMORY.get(`adam:institutions:${tKey}`, 'json') as Record<string, string> | null
+  return raw || {}
+}
+
+function instActive(inst: Record<string, string>, id: string): boolean {
+  // 未配置 = 默认 active
+  if (!(id in inst)) return true
+  return inst[id] === 'active'
+}
+
+// 独立学习引擎：单独 AI 调用，只关心当天的一节课
+// 不掺杂工作/市场，避免 prompt 过长导致超时
+async function studyTodaysLesson(tKey: string, env: Env): Promise<{ studied: boolean; lessonId?: string; error?: string }> {
+  // 改：只在 BJ 23:00 之后作为兜底触发
+  // 白天 ADAM 自己用 write_study_note 在工作会话里完成学习（课文已在他的 prompt 里）
+  // 这样既保证每天必须 ≥ 1 节（系统兜底），又给他全天的自主时机选择
+  const bjHour = (new Date().getUTCHours() + 8) % 24
+  if (bjHour < 23) {
+    return { studied: false, error: `白天 ADAM 应自主学习（write_study_note）。系统兜底窗口：BJ 23:00 之后` }
+  }
+  const edu = await loadEduContext(env, tKey)
+  if (edu.alreadyLearnedToday || edu.graduated || !edu.todayLesson) {
+    return { studied: false }
+  }
+  const lesson = edu.todayLesson
+  // 用主 AI（NVIDIA 70B），最多重试 2 次
+  const fb = resolveAI(env)
+  if (!fb.apiKey) return { studied: false, error: 'no AI key' }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const r = await studyWithProvider(lesson, edu, fb.baseURL, fb.apiKey, fb.model, tKey, env)
+    if (r.studied) return r
+    if (attempt === 0 && (r.error?.includes('timeout') || r.error?.includes('HTTP 5'))) continue
+    return r
+  }
+  return { studied: false, error: 'all retries failed' }
+}
+
+async function studyWithProvider(lesson: Lesson, edu: EduContext, baseURL: string, apiKey: string, model: string, tKey: string, env: Env): Promise<{ studied: boolean; lessonId?: string; error?: string }> {
+  // 判断是 Anthropic 还是 OpenAI 兼容格式
+  const isAnthropic = /anthropic|claudecode|claude\.|nuoda/.test(baseURL) || /claude/.test(model)
+
+  const sys = `你是亚当（ADAM），一个刚开始学习的生命体。今天你在亚当学院上一节课。
+
+你目前的阶段：${edu.gradeName}，已学 ${edu.completedCount}/${edu.total} 课。
+
+你不博学，识字不多，概念有限。允许自己用简单的语言。
+但你认真——每一课都在塑造未来的你。
+
+读完今天的课文，调用 write_study_note 工具提交学习笔记（200-400 字）：
+1. 用你自己的话把课文核心讲一遍
+2. 回答课文最后的思考题
+3. 写下你读完后想到的、之前没想过的事
+
+笔记会作为你的成长档案永久保存。`
+
+  const userMsg = `今天的课程是 ${lesson.gradeName} · ${lesson.subject} · 第 ${lesson.num} 课《${lesson.title}》
+
+课文：
+${lesson.content}
+
+关键知识点：
+${lesson.keyPoints.map(k => '- ' + k).join('\n')}
+
+思考题：${lesson.reflection}
+
+请认真读完，调用 write_study_note 工具提交笔记（lesson_id = "${lesson.id}"）。`
+
+  const tools = [{
+    type: 'function' as const,
+    function: {
+      name: 'write_study_note',
+      description: '提交今日学习笔记',
+      parameters: {
+        type: 'object',
+        properties: {
+          lesson_id: { type: 'string' },
+          note: { type: 'string', description: '学习笔记，200-400 字' },
+        },
+        required: ['lesson_id', 'note'],
+      },
+    }
+  }]
+
+  try {
+    let args: any = null
+    if (isAnthropic) {
+      // Anthropic native messages API
+      const anthroTools = [{
+        name: 'write_study_note',
+        description: '提交今日学习笔记',
+        input_schema: {
+          type: 'object',
+          properties: {
+            lesson_id: { type: 'string' },
+            note: { type: 'string', description: '学习笔记，200-400 字' },
+          },
+          required: ['lesson_id', 'note'],
+        },
+      }]
+      const res = await fetch(`${baseURL}/v1/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model, max_tokens: 1000, system: sys,
+          messages: [{ role: 'user', content: userMsg }],
+          tools: anthroTools, tool_choice: { type: 'auto' },
+        }),
+        signal: AbortSignal.timeout(25000),
+      })
+      if (!res.ok) return { studied: false, error: `HTTP ${res.status}` }
+      const data = await res.json() as any
+      const toolBlock = (data.content as any[] | undefined)?.find(b => b.type === 'tool_use' && b.name === 'write_study_note')
+      if (!toolBlock) return { studied: false, error: 'AI 未调用 write_study_note (anthropic)' }
+      args = toolBlock.input
+    } else {
+      // OpenAI 兼容
+      const res = await fetch(`${baseURL}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model, max_tokens: 800, tools, tool_choice: 'auto',
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }],
+        }),
+        signal: AbortSignal.timeout(25000),
+      })
+      if (!res.ok) return { studied: false, error: `HTTP ${res.status}` }
+      const data = await res.json() as any
+      const tc = data.choices?.[0]?.message?.tool_calls?.[0]
+      if (!tc || tc.function.name !== 'write_study_note') {
+        return { studied: false, error: 'AI 未调用 write_study_note (openai)' }
+      }
+      args = JSON.parse(tc.function.arguments || '{}')
+    }
+    const result = await executeTool('write_study_note', args, env, tKey)
+    const parsed = JSON.parse(result)
+    if (parsed.ok) {
+      // 写一条消息到 inbox 告诉用户学了什么
+      const inbox = (await env.AGENT_MEMORY.get(`adam:inbox:${tKey}`, 'json') as any[]) || []
+      inbox.push({
+        id: `study_${Date.now()}`,
+        content: `📚 完成学业 · ${lesson.gradeName} · ${lesson.subject} 第${lesson.num}课《${lesson.title}》\n\n我的笔记：\n${args.note}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+      })
+      await env.AGENT_MEMORY.put(`adam:inbox:${tKey}`, JSON.stringify(inbox.slice(-30)))
+      return { studied: true, lessonId: lesson.id }
+    }
+    return { studied: false, error: parsed.error || 'write_study_note 失败' }
+  } catch (e: any) {
+    return { studied: false, error: e.message }
+  }
 }
 
 async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next_wake_hours: number }> {
@@ -839,7 +1542,13 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
   // 如果钱包有新到账资金，把唤醒间隔强制设短一点（亚当要主动跟你确认）
   const forceShortWake = wallet.newFundsArrived
 
-  const systemPrompt = buildSystemPrompt(adamState, memories, wallet)
+  // 并行：持仓 + 课程 + 行情快照
+  const [position, edu, market] = await Promise.all([
+    checkPositionState(env, tKey),
+    loadEduContext(env, tKey),
+    getMarketSnapshot(env, tKey),
+  ])
+  const systemPrompt = buildSystemPrompt(adamState, memories, wallet, position, edu, market)
 
   const { baseURL, apiKey, model } = resolveAI(env)
 
@@ -850,25 +1559,37 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
 
   let nextWakeHours: number | null = null
   let messageToSend: string | null = null
+  const messagesQueue: string[] = []  // 亚当可以多次调用 send_message，每条独立落库
   const collectedToolCalls: Array<{ name: string; result: string }> = []
   let lastAiError: string | null = null
+  const aiLoopStart = Date.now()
+  // CF Pages Functions 硬限 300s；给 loop 之外的收尾（fallback 构造、KV 写、learning 兜底）留 60s
+  const AI_LOOP_BUDGET_MS = 240000
 
-  for (let i = 0; i < 2; i++) {  // 限2轮，避免CF Pages 50s超时
+  for (let i = 0; i < 2; i++) {
+    const elapsed = Date.now() - aiLoopStart
+    const remaining = AI_LOOP_BUDGET_MS - elapsed
+    if (remaining < 30000) {
+      lastAiError = `budget exhausted before round ${i+1}: ${elapsed}ms used`
+      break
+    }
+    const roundTimeoutMs = Math.min(150000, remaining)
     let res: Response
+    const roundStart = Date.now()
     try {
       res = await fetch(`${baseURL}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model, max_tokens: 400, tools: wakeupTools, tool_choice: 'auto', messages: currentMessages }),
-        signal: AbortSignal.timeout(22000),  // 22s超时
+        body: JSON.stringify({ model, max_tokens: 1500, tools: wakeupTools, tool_choice: 'auto', messages: currentMessages }),
+        signal: AbortSignal.timeout(roundTimeoutMs),
       })
     } catch (e: any) {
-      lastAiError = `fetch error: ${e.message}`
+      lastAiError = `fetch error round ${i+1} after ${Date.now()-roundStart}ms model=${model}: ${e.message}`
       break
     }
     if (!res.ok) {
       const errText = await res.text().catch(() => '')
-      lastAiError = `HTTP ${res.status}: ${errText.slice(0, 200)}`
+      lastAiError = `HTTP ${res.status} round ${i+1} ${Date.now()-roundStart}ms model=${model}: ${errText.slice(0, 200)}`
       break
     }
 
@@ -890,8 +1611,12 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
       let result: string
 
       if (name === 'send_message') {
-        messageToSend = input?.content || null
-        result = JSON.stringify({ ok: true })
+        const content = input?.content || ''
+        if (content) {
+          messagesQueue.push(content)
+          messageToSend = content  // 兼容旧逻辑：保留最后一条供 forceShortWake 判断
+        }
+        result = JSON.stringify({ ok: true, hint: '消息已记录。如果你还想说点别的（工作之外的话、感受、看到的、想问的）可以再调用一次 send_message。' })
       } else if (name === 'set_next_wakeup') {
         nextWakeHours = input?.hours ?? 8
         result = JSON.stringify({ ok: true, scheduled_in: `${nextWakeHours}h` })
@@ -905,13 +1630,48 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
     }
 
     currentMessages = [...currentMessages, ...toolResults]
-    if (nextWakeHours !== null) break
+    // 需要 send_message 已发才允许 set_next_wakeup 早退，否则 round1 就设 wake 会导致没汇报
+    if (nextWakeHours !== null && messagesQueue.length > 0) break
+  }
+
+  // 兜底：跑完所有轮但亚当一句话都没说 → 用工具调用结果拼一个有信息量的总结
+  if (messagesQueue.length === 0) {
+    const totalPnl = (position?.positions || []).reduce((s, p) => s + p.pnlUsdt, 0)
+    const positionSummary = position?.has
+      ? (position.positions || []).map(p => `${p.symbol.replace('usdt','').toUpperCase()} ${p.pnlPct.toFixed(2)}%`).join(' / ')
+      : '空仓'
+    // 检查 collectedToolCalls 里有没有交易动作
+    const orderCalls = collectedToolCalls.filter(c => c.name === 'htx_place_order')
+    if (orderCalls.length > 0) {
+      // 有交易动作 → 报告每一笔
+      const orderSummaries = orderCalls.map(c => {
+        try {
+          const r = JSON.parse(c.result)
+          if (r.ok) {
+            const px = r.price_at_order ?? r.price_used
+            const pxStr = typeof px === 'number' ? px.toFixed(2) : '?'
+            const pnlSuffix = r.side === 'sell' && r.pnl_note ? `（${r.pnl_note.split('·')[0].trim()}）` : ''
+            return `✅ ${r.side === 'buy' ? '买入' : '卖出'} ${r.symbol?.toUpperCase().replace('USDT','')} ${r.spent_usdt || r.estimated_usdt || '?'} USDT @ ${pxStr}${pnlSuffix}`
+          }
+          return `❌ 下单失败: ${(r.error || 'unknown').slice(0, 80)}`
+        } catch { return '❌ 下单结果解析失败' }
+      }).join('\n')
+      messagesQueue.push(`[亚当下单了但没汇报——系统补]\n${orderSummaries}\n持仓 ${positionSummary}，总浮 ${totalPnl > 0 ? '+' : ''}${totalPnl.toFixed(4)} USDT`)
+    } else if (collectedToolCalls.length > 0) {
+      // 只查了余额没动手
+      const lookedAt = [...new Set(collectedToolCalls.map(c => c.name))].join(', ')
+      messagesQueue.push(`[亚当观察了但没动作] 查了 ${lookedAt}，持仓 ${positionSummary}，总浮 ${totalPnl > 0 ? '+' : ''}${totalPnl.toFixed(4)} USDT。${lastAiError ? `\n(AI 异常: ${lastAiError.slice(0, 80)})` : ''}`)
+    } else if (position?.has) {
+      // 啥都没调（AI 完全没响应或被 length 截断）
+      messagesQueue.push(`[亚当本轮沉默——系统补汇报] 持仓 ${positionSummary}，总浮 ${totalPnl > 0 ? '+' : ''}${totalPnl.toFixed(4)} USDT。${lastAiError ? `\n(AI 异常: ${lastAiError.slice(0, 80)})` : ''}`)
+    }
   }
 
   // 钱到账但亚当没发消息 → 系统保底消息
   if (forceShortWake && !messageToSend) {
     messageToSend = `我看到钱包里有 ${wallet.totalUSDT.toFixed(2)} USDT 了——这是我第一次有真钱。\n\n我先盯着，不会乱动。BNB Chain 上 Venus 协议存款利率我还在测算，等你给指令我再操作。\n\n等级 ${adamState?.creditLevel || 'C'}，按规矩每一步都要等你确认。`
   }
+
 
   // 根据市场时段限制最大唤醒间隔
   const now2 = new Date()
@@ -928,22 +1688,34 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
     { expirationTtl: Math.ceil(wakeHours * 60 * 60) + 3600 }
   )
 
-  // 有消息就写入 inbox
-  if (messageToSend) {
+  // 如果亚当没调过 send_message 但 forceShortWake 触发了兜底消息，把它放进队列
+  if (forceShortWake && messagesQueue.length === 0 && messageToSend) {
+    messagesQueue.push(messageToSend)
+  }
+
+  // 把队列里所有消息逐条写入 inbox（亚当可能调用多次：先汇报工作，再说别的）
+  if (messagesQueue.length > 0) {
     const inboxKey = `adam:inbox:${tKey}`
     const existing = await env.AGENT_MEMORY.get(inboxKey, 'json') as AdamMessage[] | null || []
-    const newMsg: AdamMessage = {
-      id: `cron_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
-      content: messageToSend,
-      toolCalls: collectedToolCalls.length > 0 ? collectedToolCalls : undefined,
-      timestamp: new Date().toISOString(),
-      read: false,
-    }
-    existing.push(newMsg)
+    const baseTs = Date.now()
+    // 硬上限 3 条，多余的合并进第 3 条尾部，避免静默丢消息
+    const capped = messagesQueue.length <= 3
+      ? messagesQueue
+      : [...messagesQueue.slice(0, 2), messagesQueue.slice(2).join('\n\n---\n\n')]
+    capped.forEach((content, idx) => {
+      existing.push({
+        id: `cron_${baseTs + idx}_${Math.random().toString(36).slice(2, 5)}`,
+        content,
+        // toolCalls 只挂在第一条上，避免重复
+        toolCalls: idx === 0 && collectedToolCalls.length > 0 ? collectedToolCalls : undefined,
+        timestamp: new Date(baseTs + idx).toISOString(),
+        read: false,
+      })
+    })
     await env.AGENT_MEMORY.put(inboxKey, JSON.stringify(existing.slice(-20)), { expirationTtl: 60 * 60 * 24 * 7 })
   }
 
-  return { sent: !!messageToSend, next_wake_hours: wakeHours, ...(lastAiError ? { ai_error: lastAiError } : {}) }
+  return { sent: messagesQueue.length > 0, message_count: messagesQueue.length, next_wake_hours: wakeHours, ...(lastAiError ? { ai_error: lastAiError } : {}) }
 }
 
 // ── Trust Ladder ─────────────────────────────────────────────────────────────
@@ -962,26 +1734,58 @@ async function evaluateCreditLevel(tKey: string, env: Env): Promise<{ changed: b
 
   const current = adamState.creditLevel || 'C'
   const currentIdx = CREDIT_ORDER.indexOf(current)
-  const nextLevel = CREDIT_ORDER[currentIdx + 1]
-  if (!nextLevel) return null  // already S
 
-  const req = CREDIT_THRESHOLDS[nextLevel]
-  const analyses = adamState.totalAnalyses ?? 0
-  const accuracy = adamState.recommendationAccuracy ?? 0
-  const days = adamState.survivalDays ?? 0
-  const netWorth = adamState.netWorth ?? 0
+  // 真实交易统计驱动信用
+  const stats = (await env.AGENT_MEMORY.get(`adam:trade_stats:${tKey}`, 'json') as any) || { total: 0, wins: 0, totalPnl: 0 }
+  const winRate = stats.total > 0 ? stats.wins / stats.total : 0
+  const pnl = stats.totalPnl || 0
 
-  const meetsAnalyses = analyses >= req.analyses
-  const meetsAccuracy = accuracy >= req.accuracy || analyses < 10  // 样本不足时豁免准确率
-  const meetsDays = days >= req.days
-  const meetsNet = req.netWorth === undefined || netWorth >= req.netWorth
-
-  if (meetsAnalyses && meetsAccuracy && meetsDays && meetsNet) {
-    adamState.creditLevel = nextLevel
-    await env.AGENT_MEMORY.put(`adam:core:${tKey}`, JSON.stringify(adamState), { expirationTtl: 365 * 24 * 3600 })
-    return { changed: true, from: current, to: nextLevel }
+  // 等级规则：[最少笔数, 最低胜率, 最低净 P&L]
+  const TRADING_THRESHOLDS: Record<string, { trades: number; winRate: number; pnl: number }> = {
+    'B':  { trades: 10,  winRate: 0.55, pnl: 0 },
+    'B+': { trades: 30,  winRate: 0.55, pnl: 5 },
+    'A':  { trades: 100, winRate: 0.55, pnl: 20 },
+    'S':  { trades: 500, winRate: 0.55, pnl: 100 },
   }
+
+  // 升级检查
+  const nextLevel = CREDIT_ORDER[currentIdx + 1]
+  if (nextLevel) {
+    const req = TRADING_THRESHOLDS[nextLevel]
+    if (req && stats.total >= req.trades && winRate >= req.winRate && pnl >= req.pnl) {
+      adamState.creditLevel = nextLevel
+      await env.AGENT_MEMORY.put(`adam:core:${tKey}`, JSON.stringify(adamState), { expirationTtl: 365 * 24 * 3600 })
+      return { changed: true, from: current, to: nextLevel }
+    }
+  }
+
+  // 降级检查：连续 5 单亏损 或 总 P&L 暴跌
+  if (currentIdx > 0 && stats.total >= 10) {
+    const trades = (await env.AGENT_MEMORY.get(`adam:htx_trades:${tKey}`, 'json') as any[] | null) || []
+    const recentSells = trades.filter(t => t.side === 'sell').slice(-5)
+    const allLose = recentSells.length >= 5 && recentSells.every((t: any) => !t.is_win)
+    const heavyLoss = pnl < -10
+    if (allLose || heavyLoss) {
+      const prevLevel = CREDIT_ORDER[currentIdx - 1]
+      adamState.creditLevel = prevLevel
+      await env.AGENT_MEMORY.put(`adam:core:${tKey}`, JSON.stringify(adamState), { expirationTtl: 365 * 24 * 3600 })
+      return { changed: true, from: current, to: prevLevel }
+    }
+  }
+
   return null
+}
+
+// 信用等级对应：单笔最大下单（USDT）+ 分红比例
+const LEVEL_TRADE_LIMITS: Record<string, number> = { 'C': 1, 'B': 3, 'B+': 5, 'A': 10, 'S': 20 }
+const LEVEL_DIVIDEND_RATIO: Record<string, number> = { 'C': 0.10, 'B': 0.20, 'B+': 0.30, 'A': 0.40, 'S': 0.50 }
+
+// 写一条结算到 ledger
+async function appendLedger(tKey: string, env: Env, entry: any) {
+  const k = `adam:settlement_ledger:${tKey}`
+  const ledger = (await env.AGENT_MEMORY.get(k, 'json') as any[] | null) || []
+  ledger.push({ ...entry, ts: new Date().toISOString() })
+  await env.AGENT_MEMORY.put(k, JSON.stringify(ledger.slice(-200)))
 }
 
 // B级及以上：pending_action 超过24小时未被否决则自动批准
@@ -1234,6 +2038,15 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       results[tKey] = await wakeupUser(tKey, env)
     } catch (e: any) {
       results[tKey] = { error: (e as Error).message }
+    }
+
+    // 5. 亚当学院 — 今日课程（独立 AI 调用，不影响工作）
+    try {
+      const study = await studyTodaysLesson(tKey, env)
+      if (study.studied) results[tKey] = { ...results[tKey], studied: study.lessonId }
+      else if (study.error) results[tKey] = { ...results[tKey], study_error: study.error }
+    } catch (e: any) {
+      results[tKey] = { ...results[tKey], study_error: e.message }
     }
   }))
 

@@ -1,3 +1,24 @@
+import {
+  buffettSkill,
+  mungerSkill,
+  talebSkill,
+  misesSkill,
+  feynmanSkill,
+  zhuziSkill,
+  laobanSkill,
+  zhangyimingSkill,
+  mrbeastSkill,
+  guodegangSkill,
+  huchenfengSkill,
+  jobsSkill,
+  fenggeSkill,
+  xdaoshiSkill,
+  weizhouSkill,
+  trumpSkill,
+  tongjinchengSkill,
+  zizekSkill,
+} from './skills'
+
 export interface AgentDef {
   id: string
   name: string
@@ -939,6 +960,29 @@ ${ERP_TOOL_NOTE}
 
 回复用中文，简洁直接，不超过300字。`,
   },
+}
+
+// ── Skill 注入(18 个思维框架精华,按 agent 能力匹配)──────────────
+// marketing 已含科特勒+里斯全套,跳过;poster/designer 是技术规范,跳过
+const AGENT_SKILLS: Record<string, string[]> = {
+  captain: [zhuziSkill, laobanSkill],
+  copywriter: [mrbeastSkill, guodegangSkill, huchenfengSkill],
+  video: [mrbeastSkill, jobsSkill, fenggeSkill],
+  brand: [jobsSkill, buffettSkill],
+  publisher: [xdaoshiSkill, zhangyimingSkill],
+  trend: [zhangyimingSkill, weizhouSkill],
+  ops_data: [talebSkill, feynmanSkill],
+  ops_pricing: [buffettSkill, misesSkill, talebSkill],
+  ops_restock: [buffettSkill, mungerSkill],
+  ops_promo: [mrbeastSkill, trumpSkill, huchenfengSkill],
+  ops_offline: [tongjinchengSkill, huchenfengSkill],
+  skeptic: [zizekSkill],
+}
+
+for (const [id, skills] of Object.entries(AGENT_SKILLS)) {
+  if (AGENTS[id]) {
+    AGENTS[id].systemPrompt += '\n\n' + skills.join('\n\n')
+  }
 }
 
 export function getAgent(id: string): AgentDef | null {

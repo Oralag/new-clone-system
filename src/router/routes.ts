@@ -248,6 +248,15 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/out', name: 'MobileSaleOut', component: () => import('@/views/sale/SaleOut.vue'), meta: { title: '销售出库' } },
       { path: 'sale/return', name: 'MobileSaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
       { path: 'sale/exchange', name: 'MobileSaleExchange', component: () => import('@/views/sale/SaleExchange.vue'), meta: { title: '换货单' } },
+      // Retail
+      { path: 'retail/order', name: 'MobileRetailOrder', component: () => import('@/views/retail/RetailOrder.vue'), meta: { title: '零售订单' } },
+      // Online channels
+      { path: 'online/overview', name: 'MobileOnlineOverview', component: () => import('@/views/online/OnlineOverview.vue'), meta: { title: '线上总览' } },
+      { path: 'online/meituan', name: 'MobileOnlineMeituan', component: () => import('@/views/online/MeituanOrders.vue'), meta: { title: '美团订单' } },
+      { path: 'online/wechat', name: 'MobileOnlineWechat', component: () => import('@/views/online/OnlineOrders.vue'), meta: { title: '微信小店', platformName: '微信小店', customerId: 10, customerName: '电商/微信小店', channelTag: '[微信小店]', platformColor: '#07C160' } },
+      { path: 'online/pinduoduo', name: 'MobileOnlinePinduoduo', component: () => import('@/views/online/OnlineOrders.vue'), meta: { title: '拼多多', platformName: '拼多多', customerId: 12, customerName: '电商/拼多多', channelTag: '[拼多多]', platformColor: '#E02E2E' } },
+      { path: 'online/douyin', name: 'MobileOnlineDouyin', component: () => import('@/views/online/OnlineOrders.vue'), meta: { title: '抖音', platformName: '抖音', customerId: 7, customerName: '电商/抖音专用', channelTag: '[抖音]', platformColor: '#000000' } },
+      { path: 'online/xiaohongshu', name: 'MobileOnlineXiaohongshu', component: () => import('@/views/online/OnlineOrders.vue'), meta: { title: '小红书', platformName: '小红书', customerId: 11, customerName: '电商/小红书', channelTag: '[小红书]', platformColor: '#FF2442' } },
       // Procure
       { path: 'procure/supplier', name: 'MobileProcureSupplier', component: () => import('@/views/procure/SupplierList.vue'), meta: { title: '供应商管理' } },
       { path: 'procure/order', name: 'MobileProcureOrder', component: () => import('@/views/procure/Order.vue'), meta: { title: '采购订单' } },

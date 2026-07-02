@@ -2763,7 +2763,8 @@ async function handleSave(andAudit = false) {
       return
     }
   }
-  if (!fd.pay_amount || fd.pay_amount <= 0) {
+  // 只有"保存并审核"才提示未填付款；纯"保存"是草稿，不打扰
+  if (andAudit && (!fd.pay_amount || fd.pay_amount <= 0)) {
     try {
       await ElMessageBox.confirm(t('procure.order.msgConfirmPayAmountEmpty'), t('procure.order.msgPrompt'), {
         confirmButtonText: t('procure.order.msgConfirmPayAmountEmptyConfirm'), cancelButtonText: t('procure.order.msgConfirmPayAmountEmptyCancel'), type: 'warning'

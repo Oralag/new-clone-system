@@ -9,6 +9,7 @@ const VERSION_KEY = 'brand_content_version'
 export interface BrandPageConfig {
   // 首页
   heroImage: string
+  heroImages: string[]
   heroTitle: string
   heroSubtitle: string
   heroDesc: string
@@ -46,6 +47,7 @@ export interface BrandPageConfig {
 
 const DEFAULT_CONFIG: BrandPageConfig = {
   heroImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&q=80&w=2070',
+  heroImages: [],
   heroTitle: '重新定义数字游民生活',
   heroSubtitle: 'Live & Work Anywhere',
   heroDesc: '专为数字游民打造的一站式生活方式品牌，让自由工作变得更美好。',
@@ -121,6 +123,14 @@ const DEFAULT_CONFIG: BrandPageConfig = {
   },
 }
 
+// 老数据只有 heroImage 字符串；如果没有 heroImages 数组，自动迁移为 [heroImage]
+function migrateHeroImages(cfg: BrandPageConfig): BrandPageConfig {
+  if (!Array.isArray(cfg.heroImages) || cfg.heroImages.length === 0) {
+    cfg.heroImages = cfg.heroImage ? [cfg.heroImage] : []
+  }
+  return cfg
+}
+
 function loadConfig(): BrandPageConfig {
   // 版本号变化时强制重置为最新文案
   const savedVersion = parseInt(localStorage.getItem(VERSION_KEY) || '0')
@@ -131,12 +141,17 @@ function loadConfig(): BrandPageConfig {
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...DEFAULT_CONFIG, ...JSON.parse(raw) }
+    if (raw) return migrateHeroImages({ ...DEFAULT_CONFIG, ...JSON.parse(raw) })
   } catch { /* ignore */ }
 
   // 首次加载或版本重置后写入内蒙古奶食品文案
   const INITIAL_CONTENT: Partial<BrandPageConfig> = {
     heroImage: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=2070',
+    heroImages: [
+      'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=2070',
+      'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&q=80&w=2070',
+      'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?auto=format&fit=crop&q=80&w=2070',
+    ],
     heroTitle: '来自草原深处的纯粹味道',
     heroSubtitle: 'Pure from the Steppe',
     heroDesc: '内蒙古千里草原，世代牧民的匠心传承。每一口奶食，都是对这片土地最真实的致敬。',
@@ -208,7 +223,7 @@ function loadConfig(): BrandPageConfig {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_CONTENT))
   } catch { /* ignore */ }
-  return { ...DEFAULT_CONFIG, ...INITIAL_CONTENT }
+  return migrateHeroImages({ ...DEFAULT_CONFIG, ...INITIAL_CONTENT })
 }
 
 export const useBrandEditStore = defineStore('brandEdit', () => {
@@ -271,7 +286,7 @@ export const useBrandEditStore = defineStore('brandEdit', () => {
           }
           return
         }
-        const merged = { ...DEFAULT_CONFIG, ...json.data }
+        const merged = migrateHeroImages({ ...DEFAULT_CONFIG, ...json.data })
         config.value = merged
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)) } catch { /* ignore */ }
       }

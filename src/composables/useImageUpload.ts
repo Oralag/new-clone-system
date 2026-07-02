@@ -1,6 +1,7 @@
 // 本地图片上传 → 裁剪 → 上传到 KV → 返回 URL
 import { createApp, defineComponent, ref, h } from 'vue'
 import ImageCropper from '@/components/ImageCropper.vue'
+import i18n from '@/i18n'
 import { TOKEN_NAME } from '@/config'
 
 function openCropper(src: string, ratio?: number): Promise<string | null> {
@@ -27,6 +28,8 @@ function openCropper(src: string, ratio?: number): Promise<string | null> {
         return () => h(ImageCropper, { visible: visible.value, src, ratio, onConfirm, onCancel })
       }
     }))
+    // ImageCropper 内部用 useI18n()，子 app 必须装上 i18n 插件
+    app.use(i18n)
     app.mount(mount)
   })
 }

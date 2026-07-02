@@ -10,10 +10,10 @@
               <path d="M8 12l3 3 5-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <span class="mod-brand">数字游牧</span>
+          <span class="mod-brand">{{ t('mobileModules.brand') }}</span>
         </div>
-        <div class="mod-headline">选择你需要的功能模块</div>
-        <div class="mod-subline">覆盖销售、采购、仓库、财务、AI 等全业务场景</div>
+        <div class="mod-headline">{{ t('mobileModules.headline') }}</div>
+        <div class="mod-subline">{{ t('mobileModules.subline') }}</div>
       </div>
 
       <div class="mod-content">
@@ -28,8 +28,8 @@
             <span v-html="m.icon" />
           </div>
           <div class="mod-big-info">
-            <div class="mod-big-title">{{ m.label }}</div>
-            <div class="mod-big-sub">{{ m.sub }}</div>
+            <div class="mod-big-title">{{ t(m.labelKey) }}</div>
+            <div class="mod-big-sub">{{ t(m.subKey) }}</div>
           </div>
           <span class="mod-big-arrow">›</span>
         </div>
@@ -39,44 +39,49 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+
 const router = useRouter()
+const { t } = useI18n()
+
 function go(path: string) { router.push(path) }
 
-const modules = [
+const modules = computed(() => [
   {
-    label: '游牧 ERP',
-    sub: '销售 · 采购 · 仓库 · 财务 · 人事',
+    labelKey: 'mobileModules.erpTitle',
+    subKey: 'mobileModules.erpSub',
     path: '/dashboard?legacy=1&from=modules',
     color: '#2E6BE6',
     bg: 'rgba(46,107,230,0.1)',
     icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="#2E6BE6"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="#2E6BE6" opacity="0.6"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="#2E6BE6" opacity="0.6"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="#2E6BE6" opacity="0.35"/></svg>',
   },
   {
-    label: '智能体工作流',
-    sub: '多Agent协作 · 内容生产 · 自动流转',
+    labelKey: 'mobileModules.agentTitle',
+    subKey: 'mobileModules.agentSub',
     path: '/mobile/agent',
     color: '#722ED1',
     bg: 'rgba(114,46,209,0.1)',
     icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2L9 9H2l5.5 4-2 7L12 16l6.5 4-2-7L22 9h-7z" fill="#722ED1" opacity="0.9"/></svg>',
   },
   {
-    label: '实验体',
-    sub: '市场分析 · 智能决策 · 资产管理',
+    labelKey: 'mobileModules.investmentTitle',
+    subKey: 'mobileModules.investmentSub',
     path: '/mobile/investment',
     color: '#F5A623',
     bg: 'rgba(245,166,35,0.1)',
     icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#F5A623" stroke-width="1.5" opacity="0.6"/><circle cx="12" cy="12" r="4" fill="#F5A623" opacity="0.9"/></svg>',
   },
   {
-    label: '品牌主页 & 零售',
-    sub: '品牌展示 · 零售商城 · 采购商入口',
+    labelKey: 'mobileModules.brandTitle',
+    subKey: 'mobileModules.brandSub',
     path: '/mobile/brand',
     color: '#52C41A',
     bg: 'rgba(82,196,26,0.1)',
     icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#52C41A" stroke-width="1.8" stroke-linejoin="round"/><line x1="3" y1="6" x2="21" y2="6" stroke="#52C41A" stroke-width="1.8"/><path d="M16 10a4 4 0 01-8 0" stroke="#52C41A" stroke-width="1.8" stroke-linecap="round"/></svg>',
   },
-]
+])
 </script>
 
 <style scoped>

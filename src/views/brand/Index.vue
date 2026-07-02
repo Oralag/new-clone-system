@@ -32,7 +32,19 @@
 
     <!-- Hero -->
     <section class="brand-hero editable-block" style="margin-top:0">
-      <img :src="cfg.heroImage" alt="Brand Hero" class="brand-hero-img" referrerpolicy="no-referrer" />
+      <el-carousel
+        v-if="heroImagesList.length > 1"
+        :interval="5000"
+        arrow="hover"
+        indicator-position="inside"
+        height="100%"
+        class="brand-hero-carousel"
+      >
+        <el-carousel-item v-for="(img, i) in heroImagesList" :key="i">
+          <img :src="img" alt="Brand Hero" class="brand-hero-img" referrerpolicy="no-referrer" />
+        </el-carousel-item>
+      </el-carousel>
+      <img v-else :src="heroImagesList[0] || cfg.heroImage" alt="Brand Hero" class="brand-hero-img" referrerpolicy="no-referrer" />
       <div class="brand-hero-overlay"></div>
       <div class="brand-hero-content">
         <span class="hero-badge">{{ shopStore.shopMode === 'wholesale' ? '批发中心' : '数字游牧 ERP' }}</span>
@@ -220,7 +232,22 @@
       <div class="bi-edit-body">
         <!-- Hero 编辑 -->
         <template v-if="editType === 'hero'">
-          <div class="bi-field"><label>Hero 大图 URL</label><div class="bi-input-row"><input v-model="editData.heroImage" class="bi-input" placeholder="https://... 或点击上传" /><button class="bi-upload-btn" @click="upload(v => editData.heroImage = v)">上传</button></div><img v-if="editData.heroImage" :src="editData.heroImage" class="bi-preview" referrerpolicy="no-referrer" /></div>
+          <div class="bi-field">
+            <label>Hero 轮播图（5秒自动切换，比例 16:9 推荐）</label>
+            <div v-for="(_img, i) in editData.heroImages" :key="i" class="bi-hero-img-row">
+              <div class="bi-input-row" style="flex:1">
+                <input v-model="editData.heroImages[i]" class="bi-input" placeholder="https://... 或点击上传" />
+                <button class="bi-upload-btn" @click="upload(v => editData.heroImages[i] = v)">上传</button>
+              </div>
+              <button class="bi-img-action" :disabled="i === 0" @click="moveHeroImage(i, -1)" title="上移">↑</button>
+              <button class="bi-img-action" :disabled="i === editData.heroImages.length - 1" @click="moveHeroImage(i, 1)" title="下移">↓</button>
+              <button class="bi-img-action danger" @click="removeHeroImage(i)" title="删除">×</button>
+            </div>
+            <div class="bi-hero-img-thumbs">
+              <img v-for="(img, i) in editData.heroImages.filter(Boolean)" :key="i" :src="img" class="bi-preview-thumb" referrerpolicy="no-referrer" />
+            </div>
+            <button class="bi-add-img" :disabled="editData.heroImages.length >= 5" @click="editData.heroImages.push('')">{{ editData.heroImages.length >= 5 ? '最多 5 张' : '+ 添加图片' }}</button>
+          </div>
           <div class="bi-field"><label>副标题标签（英文）</label><input v-model="editData.heroSubtitle" class="bi-input" placeholder="Future of Work" /></div>
           <div class="bi-field"><label>主标题</label><textarea v-model="editData.heroTitle" class="bi-textarea" placeholder="重新定义数字游民生活" rows="2"></textarea></div>
           <div class="bi-field"><label>描述文字</label><textarea v-model="editData.heroDesc" class="bi-textarea"></textarea></div>
@@ -281,6 +308,11 @@ const shopStore = useShopStore()
 const brandEdit = useBrandEditStore()
 const router = useRouter()
 const cfg = computed(() => brandEdit.config)
+const heroImagesList = computed(() => {
+  const arr = cfg.value.heroImages
+  if (Array.isArray(arr) && arr.length) return arr.filter(Boolean)
+  return cfg.value.heroImage ? [cfg.value.heroImage] : []
+})
 const { triggerUpload } = useImageUpload()
 
 function upload(setter: (v: string) => void) {
@@ -299,11 +331,25 @@ const editType = ref('')
 const editCatIdx = ref(0)
 const editTitle = ref('')
 const editData = reactive({
-  heroImage: '', heroSubtitle: '', heroTitle: '', heroDesc: '',
+  heroImage: '', heroImages: [] as string[], heroSubtitle: '', heroTitle: '', heroDesc: '',
   storyImage: '', storyText: '',
   catName: '', catImg: '',
   themeCream: '#EDE6D5', themeNavy: '#1A1E32', themeOrange: '#D14B0A', themeBlue: '#8BBDD6',
 })
+
+function moveHeroImage(idx: number, dir: number) {
+  const arr = editData.heroImages
+  const target = idx + dir
+  if (target < 0 || target >= arr.length) return
+  const tmp = arr[idx]
+  arr[idx] = arr[target]
+  arr[target] = tmp
+}
+
+function removeHeroImage(idx: number) {
+  editData.heroImages.splice(idx, 1)
+  if (editData.heroImages.length === 0) editData.heroImages.push('')
+}
 
 function openEdit(type: string, idx?: number) {
   if (!brandEdit.editMode) return
@@ -311,6 +357,8 @@ function openEdit(type: string, idx?: number) {
   if (type === 'hero') {
     editTitle.value = '编辑 Hero 区域'
     editData.heroImage = cfg.value.heroImage
+    const imgs = Array.isArray(cfg.value.heroImages) ? [...cfg.value.heroImages] : []
+    editData.heroImages = imgs.length ? imgs : (cfg.value.heroImage ? [cfg.value.heroImage] : [''])
     editData.heroSubtitle = cfg.value.heroSubtitle
     editData.heroTitle = cfg.value.heroTitle
     editData.heroDesc = cfg.value.heroDesc
@@ -335,8 +383,10 @@ function openEdit(type: string, idx?: number) {
 
 function saveEdit() {
   if (editType.value === 'hero') {
+    const cleaned = editData.heroImages.filter(Boolean).slice(0, 5)
     brandEdit.updateConfig({
-      heroImage: editData.heroImage,
+      heroImage: cleaned[0] || editData.heroImage,
+      heroImages: cleaned,
       heroSubtitle: editData.heroSubtitle,
       heroTitle: editData.heroTitle,
       heroDesc: editData.heroDesc,
@@ -479,6 +529,15 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 }
 .brand-hero-img { width: 100%; height: 100%; object-fit: cover; transition: transform 3s ease-out; }
 .brand-hero:hover .brand-hero-img { transform: scale(1.04); }
+.brand-hero-carousel { position: absolute; inset: 0; }
+.brand-hero-carousel :deep(.el-carousel__container) { height: 100% !important; }
+.brand-hero-carousel :deep(.el-carousel__item) { width: 100%; height: 100%; }
+.brand-hero-carousel :deep(.el-carousel__item img) { width: 100%; height: 100%; object-fit: cover; }
+.brand-hero-carousel :deep(.el-carousel__indicators) { z-index: 4; }
+.brand-hero-carousel :deep(.el-carousel__arrow) { z-index: 4; }
+.brand-hero-overlay { z-index: 2; pointer-events: none; }
+.brand-hero-content { z-index: 5; pointer-events: none; }
+.brand-hero-content button, .brand-hero-content a { pointer-events: auto; }
 .brand-hero-overlay {
   position: absolute; inset: 0;
   /* 蓝色调遮罩，保留照片质感，去掉黑色压暗感 */
@@ -709,6 +768,16 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 .bi-textarea { padding: 9px 12px; border: 1.5px solid rgba(26,30,50,0.15); border-radius: 4px; font-size: 13px; outline: none; min-height: 80px; resize: vertical; background: #fff; }
 .bi-textarea:focus { border-color: var(--orange); }
 .bi-preview { width: 100%; max-height: 120px; object-fit: cover; border-radius: 4px; margin-top: 4px; }
+.bi-hero-img-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.bi-img-action { width: 30px; height: 32px; border-radius: 4px; background: rgba(26,30,50,0.07); border: 1.5px solid rgba(26,30,50,0.15); font-size: 14px; cursor: pointer; }
+.bi-img-action:disabled { opacity: 0.35; cursor: not-allowed; }
+.bi-img-action.danger { color: #d14b0a; }
+.bi-img-action.danger:hover { background: rgba(209,75,10,0.1); }
+.bi-hero-img-thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.bi-preview-thumb { width: 80px; height: 48px; object-fit: cover; border-radius: 3px; border: 1px solid rgba(26,30,50,0.15); }
+.bi-add-img { margin-top: 8px; padding: 8px 14px; background: rgba(209,75,10,0.08); border: 1.5px dashed rgba(209,75,10,0.4); color: #d14b0a; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; align-self: flex-start; }
+.bi-add-img:hover:not(:disabled) { background: rgba(209,75,10,0.15); }
+.bi-add-img:disabled { opacity: 0.5; cursor: not-allowed; }
 .bi-edit-footer { display: flex; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid rgba(26,30,50,0.1); }
 .bi-cancel { flex: 1; padding: 12px; border-radius: 4px; background: rgba(26,30,50,0.08); color: var(--navy); font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
 .bi-save { flex: 2; padding: 12px; border-radius: 4px; background: var(--orange); color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
@@ -736,11 +805,22 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 }
 
 @media (max-width: 768px) {
-  .brand-hero { height: auto; min-height: 380px; }
-  .brand-hero-content { padding: 40px 28px; }
-  .brand-hero-title { font-size: 28px; }
+  /* 手机端 Hero 改为竖版封面：按 1041:2000 竖向比例（接近 iPhone 屏幕比） */
+  .brand-hero { height: auto; aspect-ratio: 1041 / 2000; min-height: 0; max-height: 100svh; }
+  .brand-hero-content { padding: 0 24px 44px; justify-content: flex-end; }
+  .brand-hero-title { font-size: 32px; line-height: 1.15; }
   .brand-hero-desc { font-size: 14px; }
   .brand-hero-btns { flex-direction: column; gap: 10px; }
+  /* 手机端 Hero 遮罩改为底部渐变，突出图片主体、保证底部文字对比度 */
+  .brand-hero-overlay {
+    background: linear-gradient(
+      to top,
+      rgba(26,30,50,0.75) 0%,
+      rgba(26,30,50,0.35) 45%,
+      rgba(26,30,50,0.05) 75%,
+      rgba(26,30,50,0) 100%
+    );
+  }
   .brand-cat-grid { grid-template-columns: 1fr; }
   .brand-product-grid { grid-template-columns: 1fr 1fr; }
   .brand-categories { padding: 40px 20px; }

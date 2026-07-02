@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if jq -e '.tool_input.command // \"\" | test(\"git push\")' > /dev/null 2>&1; then printf '{\"systemMessage\":\"⚠️ git push已拦截！会触发Cloudflare Pages自动部署覆盖线上版本（2026-05-29事故教训）。如确认要push，请告知用户让其手动在终端执行。\"}\\n'; exit 2; fi",
+            "statusMessage": "检查是否有危险的 git push..."
+          },
+          {
+            "type": "command",
+            "command": "if jq -e '.tool_input.command // \"\" | test(\"wrangler\")' > /dev/null 2>&1; then printf '{\"systemMessage\":\"⚠️ Wrangler部署命令已拦截！执行前必须明确告知用户并获得确认，不能自行部署线上。\"}\\n'; exit 2; fi",
+            "statusMessage": "检查是否有部署命令..."
+          },
+          {
+            "type": "command",
+            "command": "if jq -e '.tool_input.command // \"\" | test(\"psql.*DELETE|psql.*DROP|psql.*TRUNCATE|DROP TABLE|TRUNCATE TABLE\"; \"i\")' > /dev/null 2>&1; then printf '{\"systemMessage\":\"⚠️ 数据库危险操作已拦截！执行前必须先READ当前数据，并得到用户明确确认后方可操作。\"}\\n'; exit 2; fi",
+            "statusMessage": "检查是否有危险数据库操作..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if jq -e '.tool_input.file_path // .tool_input.path // \"\" | test(\"finance|Payable|Receivable|FundFlow|Overview\"; \"i\")' > /dev/null 2>&1; then printf '{\"systemMessage\":\"⚠️ 正在编辑财务文件！请确认：1.已读finance-logic.md 2.改完同步更新文档 3.改动数据已验证正确\"}\\n'; fi",
+            "statusMessage": "财务文件安全检查..."
+          }
+        ]
+      }
+    ]
+  }
+}

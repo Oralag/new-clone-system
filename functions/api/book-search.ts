@@ -34,7 +34,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: (env as any).AI_MODEL || 'deepseek-chat',
         max_tokens: 4096,
         messages: [
           { role: 'system', content: `你是一个专业的书籍知识提炼师。用户给你一本书的书名，你要提炼出这本书真正有价值的知识内容。

@@ -4,6 +4,7 @@
 interface Env {
   AI_API_KEY: string
   AI_BASE_URL?: string
+  AI_MODEL?: string
   AGENT_MEMORY: KVNamespace
 }
 
@@ -17,12 +18,12 @@ export const onRequestOptions: PagesFunction = async () =>
   new Response(null, { headers: CORS })
 
 // ── Simple AI call (no streaming, returns full text) ──
-async function aiCall(apiKey: string, baseURL: string, systemPrompt: string, messages: any[]): Promise<string> {
+async function aiCall(apiKey: string, baseURL: string, systemPrompt: string, messages: any[], model = 'deepseek-chat'): Promise<string> {
   const res = await fetch(`${baseURL}/v1/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model,
       max_tokens: 1500,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
     }),
@@ -93,6 +94,7 @@ async function runMeetingJob(
   apiKey: string,
   baseURL: string,
   kv: KVNamespace,
+  model = 'deepseek-chat',
 ) {
   const log: Array<{ agentId: string; agentName: string; content: string }> = []
   const flowResults: any[] = []
@@ -113,7 +115,7 @@ async function runMeetingJob(
     const sys = (context ? context + '\n\n' : '') + (AGENT_PROMPTS[agentId] || AGENT_PROMPTS.captain)
     const historyContext = log.slice(-6).map(m => `【${m.agentName}】：${m.content}`).join('\n\n')
     const fullPrompt = historyContext ? `会议历史（最近几轮）：\n${historyContext}\n\n当前任务：${prompt}` : prompt
-    const text = await aiCall(apiKey, baseURL, sys, [{ role: 'user', content: fullPrompt }])
+    const text = await aiCall(apiKey, baseURL, sys, [{ role: 'user', content: fullPrompt }], model)
     const name = { captain: 'Captain', trend: '情报专员', copywriter: '文案专员', poster: '设计专员', video: '视频专员', publisher: '发布专员', marketing: '营销顾问' }[agentId] || agentId
     log.push({ agentId, agentName: name, content: text })
     // 每条发言完成后立即保存，让前端轮询能实时看到
@@ -170,7 +172,7 @@ async function runMeetingJob(
       if (!promptFn) continue
       const sys = AGENT_PROMPTS[agentId] || ''
       const prompt = promptFn(topic, brandInfo, historyStr)
-      const output = await aiCall(apiKey, baseURL, sys, [{ role: 'user', content: prompt }])
+      const output = await aiCall(apiKey, baseURL, sys, [{ role: 'user', content: prompt }], model)
       const name = { copywriter: '文案专员', poster: '设计专员', video: '视频专员', publisher: '发布专员' }[agentId] || agentId
       log.push({ agentId, agentName: name, content: output })
 
@@ -232,7 +234,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
 
   // 用 waitUntil 确保后台任务在响应返回后继续运行
   waitUntil(
-    runMeetingJob(jobId, topic, brandInfo || '', brandContext || '', apiKey, baseURL, env.AGENT_MEMORY)
+    runMeetingJob(jobId, topic, brandInfo || '', brandContext || '', apiKey, baseURL, env.AGENT_MEMORY, env.AI_MODEL || 'deepseek-chat')
       .catch(() => {})
   )
 

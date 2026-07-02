@@ -240,7 +240,7 @@ function updateMeta() {
   const ogMap: Record<string, string> = {
     'og:title': meta.title,
     'og:description': meta.desc,
-    'og:image': cfg.heroImage,
+    'og:image': cfg.heroImages?.[0] || cfg.heroImage,
     'og:type': 'website',
   }
   for (const [prop, content] of Object.entries(ogMap)) {

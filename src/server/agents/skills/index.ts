@@ -1,0 +1,23 @@
+// 思维框架精华(20 个),每个 agent 按需 import 对应的 1-3 个拼到 system prompt 末尾
+// 设计原则:L1 核心原则 + L2 判断模板 + L3 失败警示三层结构
+
+export { midasSkill } from './midas'
+export { buffettSkill } from './buffett'
+export { mungerSkill } from './munger'
+export { talebSkill } from './taleb'
+export { navalSkill } from './naval'
+export { misesSkill } from './mises'
+export { feynmanSkill } from './feynman'
+export { zhuziSkill } from './zhuzi'
+export { laobanSkill } from './laoban'
+export { zhangyimingSkill } from './zhangyiming'
+export { mrbeastSkill } from './mrbeast'
+export { guodegangSkill } from './guodegang'
+export { huchenfengSkill } from './huchenfeng'
+export { jobsSkill } from './jobs'
+export { fenggeSkill } from './fengge'
+export { xdaoshiSkill } from './xdaoshi'
+export { weizhouSkill } from './weizhou'
+export { trumpSkill } from './trump'
+export { tongjinchengSkill } from './tongjincheng'
+export { zizekSkill } from './zizek'

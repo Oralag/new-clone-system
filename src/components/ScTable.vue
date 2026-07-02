@@ -699,11 +699,33 @@ watch(
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
   .mobile-search-row :deep(.el-input),
-  .mobile-search-row :deep(.el-select) {
+  .mobile-search-row :deep(.el-select),
+  .mobile-search-row :deep(.el-date-editor),
+  .mobile-search-row :deep(.el-date-editor.el-input__wrapper),
+  .mobile-search-row :deep(.el-date-editor--daterange) {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    width: auto !important;
+  }
+  /* daterange 在窄屏：缩小图标和间距，避免前缀日历图标堆叠 */
+  .mobile-search-row :deep(.el-date-editor--daterange) {
+    flex: 1 1 100%;
+    padding: 0 8px;
+  }
+  .mobile-search-row :deep(.el-date-editor--daterange .el-range__icon) {
+    margin-right: 4px;
+  }
+  .mobile-search-row :deep(.el-date-editor--daterange .el-range-input) {
     flex: 1;
     min-width: 0;
+    font-size: 13px;
+  }
+  .mobile-search-row :deep(.el-date-editor--daterange .el-range-separator) {
+    padding: 0 4px;
+    line-height: 30px;
   }
   .mobile-toolbar-row {
     display: flex;
