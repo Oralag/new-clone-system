@@ -132,13 +132,38 @@
         </div>
       </header>
 
-      <div class="inv-body" :class="{ 'inv-body--workspace': isWorkspaceLike, 'inv-body--campus': isCampusHome }">
-        <section class="inv-content" :class="{ 'inv-content--workspace': isWorkspaceLike, 'inv-content--campus': isCampusHome }">
-          <CampusMapPreview v-if="isCampusHome" class="inv-campus-live" />
+      <template v-if="isCampusHome && !isMobile">
+        <div class="inv-color-rail" aria-label="Investment shortcuts">
+          <span class="rail-chevron">⌃</span>
+          <router-link to="/investment" class="rail-dot rail-dot--aqua active" :title="t('investment.cityMap')" />
+          <router-link to="/investment/market" class="rail-dot rail-dot--blue" :title="t('investment.market')" />
+          <router-link to="/investment/archive" class="rail-dot rail-dot--ink" :title="t('investment.archive')" />
+          <router-link to="/investment/workspace" class="rail-dot rail-dot--paper" :title="t('investment.workspace')" />
+          <span class="rail-chevron">⌄</span>
+        </div>
+
+        <section class="inv-hero-copy" aria-label="Adam investment home">
+          <div class="hero-count"><span></span><span class="active"></span><span></span><span></span><b>01/03</b></div>
+          <h2><span>Adam</span><span>Invest,</span><strong>Today</strong></h2>
+          <div class="hero-actions">
+            <router-link to="/investment/workspace" class="hero-primary"><span>↗</span>Open<br />Desk</router-link>
+            <router-link to="/investment/market" class="hero-link">View<br />Market</router-link>
+          </div>
+        </section>
+      </template>
+
+      <div class="inv-body" :class="{ 'inv-body--workspace': isWorkspaceLike, 'inv-body--home': isCampusHome }">
+        <section class="inv-content" :class="{ 'inv-content--workspace': isWorkspaceLike, 'inv-content--home': isCampusHome }">
+          <template v-if="isCampusHome">
+            <router-view />
+            <div class="inv-campus-card" aria-label="Interactive campus map">
+              <CampusMapPreview class="inv-campus-live" />
+            </div>
+          </template>
           <router-view v-else />
         </section>
 
-        <aside v-if="route.path !== '/investment/city' && !isCampusHome" class="inv-adam-wrap">
+        <aside v-if="route.path !== '/investment/city'" class="inv-adam-wrap">
           <AdamChat />
         </aside>
       </div>
@@ -166,7 +191,7 @@ const { t, locale } = useI18n()
 const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
 const isCampusHome = computed(() => route.path === '/investment')
-const isWorkspaceLike = computed(() => isCampusHome.value || route.path === '/investment/workspace' || route.path === '/investment/city')
+const isWorkspaceLike = computed(() => route.path === '/investment/workspace' || route.path === '/investment/city')
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
@@ -1582,6 +1607,91 @@ const statusLabel = computed(() => {
   .inv-body:not(.inv-body--workspace) .inv-content {
     align-self: stretch !important;
     position: relative !important;
+  }
+
+  .inv-campus-card {
+    position: absolute;
+    z-index: 8;
+    inset: 0 0 174px;
+    min-height: 380px;
+    border-radius: 36px;
+    overflow: hidden;
+    background: #c7ddd6;
+    box-shadow: none;
+  }
+
+  .inv-campus-live {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .inv-campus-card .city-page {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 10px !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+    background:
+      radial-gradient(circle at 48% 42%, rgba(255, 255, 255, 0.2), transparent 0 36%),
+      linear-gradient(90deg, rgba(199, 221, 214, 0.36), rgba(199, 221, 214, 0.08)) !important;
+  }
+
+  .inv-campus-card .city-main,
+  .inv-campus-card .iso-viewport {
+    min-height: 0 !important;
+    height: 100% !important;
+    border-radius: 28px !important;
+    background: transparent !important;
+  }
+
+  .inv-campus-card .iso-viewport {
+    cursor: grab !important;
+  }
+
+  .inv-campus-card .city-sidebar,
+  .inv-campus-card .city-chat {
+    border-radius: 24px !important;
+    background: rgba(255, 255, 255, 0.74) !important;
+    border: 0 !important;
+    box-shadow: 0 18px 42px rgba(17, 17, 15, 0.08) !important;
+  }
+
+  .inv-campus-card .city-sidebar {
+    width: 220px !important;
+    margin-right: 8px !important;
+  }
+
+  .inv-campus-card .city-sidebar.collapsed {
+    width: 42px !important;
+    margin-right: 8px !important;
+  }
+
+  .inv-campus-card .city-chat {
+    width: 250px !important;
+    margin-left: 8px !important;
+  }
+
+  .inv-campus-card .city-chat.collapsed {
+    width: 42px !important;
+  }
+
+  .inv-campus-card :is(.city-sidebar-toggle, .city-chat-toggle) {
+    min-height: 42px !important;
+    color: #2f6fed !important;
+    background: rgba(255, 255, 255, 0.44) !important;
+    border-color: rgba(17, 17, 15, 0.08) !important;
+  }
+
+  .inv-campus-card :is(.mood-badge, .zone-float-label, .bldg-callout, .adam-popup, .bldg-enter-btn) {
+    box-shadow: 0 10px 22px rgba(17, 17, 15, 0.1) !important;
+  }
+
+  .inv-campus-card .iso-controls {
+    right: 16px !important;
+    bottom: 12px !important;
+    color: rgba(17, 17, 15, 0.42) !important;
   }
 
   .inv-campus-map {
