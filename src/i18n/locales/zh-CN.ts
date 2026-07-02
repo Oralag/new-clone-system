@@ -821,6 +821,9 @@ export default {
     meituanPlatform: '美团平台',
     actualReceived: '实收',
     receivedTotal: '实收合计 ¥{amount}',
+    entrySaleOrders: '销售订单',
+    entryRetailOrders: '零售订单',
+    entryOnlineOrders: '线上订单',
     payType: {
       cash: '现金',
       wechat: '微信',
@@ -991,6 +994,8 @@ export default {
     skip: '跳过',
     adoptionSuccess: '已执行指令：{title}',
     skipSuccess: '跳过指令：{title}',
+    enterMarket: '进入市场',
+    viewArchive: '查看档案',
     bubbles: {
       analyzing: '分析中...',
       anomaly: '市场有异动',

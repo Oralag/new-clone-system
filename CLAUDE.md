@@ -222,3 +222,11 @@ npm run deploy
   - 做备份前必须先问用户："你有没有未提交但已部署到线上的修改？" 有的话先 `git add -A && git commit` 固化，再做 git 操作
   - `git reset --hard` 是高危操作，执行前必须确认本地文件与最后一次部署一致
   - push 到 GitHub 备份分支完全安全，不会触发 Cloudflare 自动部署
+
+- [2026-07-02] 排查"上传没反应"时，用 `{__probe__:true}` POST `/api/brand-config` 覆盖了 KV 里整个 `brand_page_config:17747344571` 和 `brand_page_config_v1`（品牌页 25 个字段全丢，包括 heroTitle/reviews/categories/chapters/stats/values/carriers/policies/channels/faqs/theme/heroImages 等） → **铁律再次强调：任何"测试/探测"KV 写请求禁止用于生产端点。** 就算是"看一眼能不能写"也不行，因为 brand-config POST 是整对象覆盖。正确做法：
+  - 想验证端点是否可写？先 GET 读一份，改一个 `__version__` 之类的次要字段，再 POST 回去，绝不能发 probe payload
+  - 更好的做法：用 curl 打 KV 的 GET 端点看返回结构就够了，不要写测试
+  - 排查功能问题：优先看 Network 面板 / Console，不要发合成请求
+  - 事故恢复：localStorage `brand_page_config_v1` 有客户端最近一次同步的完整快照，可以整份 POST 回去恢复
+
+- [2026-07-02] 投资部门改版被做成在 `InvestmentLayout.vue` 里堆约 1700 行不带 scoped 的全局 CSS，用 `!important` + `nth-child` 强行覆盖所有子页面样式，还把 4200 行的 City.vue 异步加载进首页当背景装饰、模板引用了未 import 的 `adamAvatarUrl` → **铁律：视觉改版必须改组件本身的模板和 scoped 样式，禁止在布局文件里用全局 `!important` 批量覆盖子页面；禁止为了装饰引入整个业务页面组件。** 另注意：投资子页面（Market/City/Library/Archive/AdamChat）依赖 `.inv-layout` 上定义的 `--dark/--mid/--dim/--faint/--border/--card-bg/--accent/--gray` 兼容变量，重写布局时必须保留这组变量

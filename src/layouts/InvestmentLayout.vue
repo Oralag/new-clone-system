@@ -1,81 +1,15 @@
 <template>
   <div class="inv-layout">
 
-    <!-- ── 侧边栏（桌面端） ── -->
-    <aside v-if="!isMobile" class="inv-sidebar">
-      <div class="sidebar-logo">
-        <div class="logo-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
-            <circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.8"/>
-            <circle cx="12" cy="12" r="1.5" fill="var(--card-bg)"/>
-          </svg>
-        </div>
-        <div class="logo-text-wrap">
-          <span class="logo-text">ADAM</span>
-          <span class="logo-sub">{{ t('investment.subtitle') }}</span>
-        </div>
-        <span class="life-dot" :class="{ alive: adamStore.isAlive, dormant: !adamStore.isAlive }"></span>
-      </div>
-
-      <nav class="sidebar-nav">
-        <router-link to="/investment" class="nav-item" active-class="nav-item--active" exact>
-          <Eye :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.overview') }}</span>
-        </router-link>
-        <router-link to="/investment/city" class="nav-item" active-class="nav-item--active">
-          <Map :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.cityMap') }}</span>
-        </router-link>
-
-        <div class="nav-section-title">{{ t('investment.sectionResearch') }}</div>
-        <router-link to="/investment/market" class="nav-item" active-class="nav-item--active">
-          <BarChart3 :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.market') }}</span>
-        </router-link>
-
-        <div class="nav-section-title">{{ t('investment.sectionEcosystem') }}</div>
-        <router-link to="/investment/marketing" class="nav-item" active-class="nav-item--active">
-          <TrendingUp :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.marketing') }}</span>
-        </router-link>
-        <router-link to="/investment/designer" class="nav-item" active-class="nav-item--active">
-          <Palette :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.designer') }}</span>
-        </router-link>
-
-        <div class="nav-section-title">{{ t('investment.sectionAdam') }}</div>
-        <router-link to="/investment/archive" class="nav-item" active-class="nav-item--active">
-          <BookOpen :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.archive') }}</span>
-        </router-link>
-        <router-link to="/investment/library" class="nav-item" active-class="nav-item--active">
-          <Library :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.library') }}</span>
-        </router-link>
-        <router-link to="/investment/workspace" class="nav-item" active-class="nav-item--active">
-          <Home :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.workspace') }}</span>
-        </router-link>
-      </nav>
-
-      <div class="sidebar-footer">
-        <router-link to="/portal" class="nav-item nav-item--back">
-          <ChevronLeft :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.backToPortal') }}</span>
-        </router-link>
-      </div>
-    </aside>
-
     <!-- ── 移动端顶栏 ── -->
     <div v-if="isMobile" class="mobile-topbar">
       <button class="mobile-menu-btn" @click="drawerOpen = true">
         <Menu :size="18" :stroke-width="1.5" />
       </button>
       <span class="mobile-title">{{ currentPageTitle }}</span>
-      <span class="budget-tag">
-        <span class="budget-label">BUDGET</span>
-        <span class="budget-val">¥{{ adamStore.core.budget.toLocaleString() }}</span>
+      <span class="budget-cta budget-cta--sm">
+        <span class="budget-cta-label">BUDGET</span>
+        <span class="budget-cta-val">¥{{ adamStore.core.budget.toLocaleString() }}</span>
       </span>
     </div>
 
@@ -83,66 +17,81 @@
     <el-drawer v-if="isMobile" v-model="drawerOpen" direction="ltr" size="260px" :with-header="false" class="inv-drawer">
       <div class="drawer-inner">
         <div class="drawer-logo">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
-            <circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.8"/>
-          </svg>
-          <span class="drawer-logo-text">ADAM</span>
+          <span class="drawer-logo-text">ADAM<i>.</i></span>
+          <span class="life-dot" :class="{ alive: adamStore.isAlive, dormant: !adamStore.isAlive }"></span>
         </div>
-        <router-link v-for="item in mobileNavItems" :key="item.path" :to="item.path" class="nav-item" active-class="nav-item--active" @click="drawerOpen = false">
-          <span class="nav-item-label">{{ item.label }}</span>
+        <router-link v-for="item in navItems" :key="item.path" :to="item.path" class="drawer-item" active-class="drawer-item--active" @click="drawerOpen = false">
+          {{ item.label }}
         </router-link>
-        <router-link to="/portal" class="nav-item nav-item--back" @click="drawerOpen = false">
-          <span class="nav-item-label">{{ t('investment.backToPortalArrow') }}</span>
+        <router-link to="/portal" class="drawer-item drawer-item--back" @click="drawerOpen = false">
+          {{ t('investment.backToPortalArrow') }}
         </router-link>
       </div>
     </el-drawer>
 
-    <!-- ── 主内容区 ── -->
-    <main class="inv-main">
-      <header v-if="!isMobile" class="inv-topbar">
-        <div class="topbar-left">
-          <h1 class="topbar-title">{{ currentPageTitle }}</h1>
-        </div>
-        <div class="topbar-right">
-          <!-- 实时时钟 -->
-          <div class="inv-clock">{{ clockStr }}</div>
-          <!-- 主题切换 -->
-          <div class="topbar-theme-btns">
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'light' }" :title="t('layout.themeLight')" @click="appStore.setTheme('light')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <!-- ── 主容器（图1：灰色背景上的大圆角浅色卡） ── -->
+    <main class="inv-shell">
+
+      <!-- 顶部导航（桌面端，图1 式：LOGO. | 链接管道分隔 | 黑色 CTA） -->
+      <header v-if="!isMobile" class="inv-nav">
+        <router-link to="/investment" class="nav-logo">
+          ADAM<i>.</i>
+          <span class="life-dot" :class="{ alive: adamStore.isAlive, dormant: !adamStore.isAlive }"></span>
+        </router-link>
+
+        <nav class="nav-links">
+          <router-link
+            v-for="item in navItems"
+            :key="item.path"
+            :to="item.path"
+            class="nav-link"
+            :class="{ 'nav-link--active': isActiveNav(item.path) }"
+          >{{ item.label }}</router-link>
+        </nav>
+
+        <div class="nav-right">
+          <span class="nav-clock">{{ clockStr }}</span>
+          <div class="nav-theme-btns">
+            <button class="nav-theme-btn" :class="{ active: appStore.theme === 'light' }" :title="t('layout.themeLight')" @click="appStore.setTheme('light')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
               </svg>
             </button>
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'dark' }" :title="t('layout.themeDark')" @click="appStore.setTheme('dark')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <button class="nav-theme-btn" :class="{ active: appStore.theme === 'dark' }" :title="t('layout.themeDark')" @click="appStore.setTheme('dark')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
               </svg>
             </button>
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'eye' }" :title="t('layout.themeEye')" @click="appStore.setTheme('eye')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <button class="nav-theme-btn" :class="{ active: appStore.theme === 'eye' }" :title="t('layout.themeEye')" @click="appStore.setTheme('eye')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
               </svg>
             </button>
           </div>
-          <div class="budget-tag">
-            <span class="budget-label">BUDGET</span>
-            <span class="budget-val">¥{{ adamStore.core.budget.toLocaleString() }}</span>
-          </div>
-          <div class="status-tag" :class="adamStore.core.status">
+          <span class="status-pill" :class="adamStore.core.status">
             <span class="status-dot"></span>
             <span class="status-text">{{ statusLabel }}</span>
-          </div>
+          </span>
+          <span class="budget-cta">
+            <span class="budget-cta-label">BUDGET</span>
+            <span class="budget-cta-val">¥{{ adamStore.core.budget.toLocaleString() }}</span>
+          </span>
+          <router-link to="/portal" class="nav-back" :title="t('investment.backToPortal')">
+            <ChevronLeft :size="16" :stroke-width="2" />
+          </router-link>
         </div>
       </header>
 
-      <div v-if="route.path !== '/investment/city'" class="inv-adam-wrap">
-        <AdamChat />
-      </div>
+      <!-- 内容区 -->
+      <div class="inv-body" :class="{ 'inv-body--full': isFullBleed }">
+        <section class="inv-content" :class="{ 'inv-content--full': isFullBleed }">
+          <router-view />
+        </section>
 
-      <section class="inv-content" :class="{ 'inv-content--workspace': route.path === '/investment/workspace' || route.path === '/investment/city' }">
-        <router-view />
-      </section>
+        <aside v-if="showChat" class="inv-chat" :class="{ 'inv-chat--hero': isHome }">
+          <AdamChat />
+        </aside>
+      </div>
     </main>
   </div>
 </template>
@@ -153,8 +102,7 @@ import { useRoute } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
 import { useAppStore } from '@/stores/app'
 import { useI18n } from 'vue-i18n'
-import { Eye, TrendingUp, ChevronLeft, Menu, Map, BarChart3, BookOpen, Library, Palette, Home } from 'lucide-vue-next'
-import CaptainBar from '@/components/CaptainBar.vue'
+import { ChevronLeft, Menu } from 'lucide-vue-next'
 import AdamChat from '@/components/AdamChat.vue'
 
 const route = useRoute()
@@ -164,6 +112,9 @@ const { t, locale } = useI18n()
 
 const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
+const isHome = computed(() => route.path === '/investment')
+const isFullBleed = computed(() => route.path === '/investment/city' || route.path === '/investment/workspace')
+const showChat = computed(() => route.path !== '/investment/city')
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
@@ -184,22 +135,19 @@ function updateClock() {
   const now = new Date()
   const clockLocale = locale.value === 'en-US' ? 'en-US' : 'zh-CN'
   clockStr.value = new Intl.DateTimeFormat(clockLocale, {
-    year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     weekday: 'short',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
     hour12: false,
   }).format(now)
 }
 updateClock()
-clockTimer = setInterval(updateClock, 1000)
+clockTimer = setInterval(updateClock, 30_000)
 
-const mobileNavItems = computed(() => ([
-  { path: '/investment', label: t('investment.overview') },
-  { path: '/investment/city', label: t('investment.cityMap') },
+const navItems = computed(() => ([
+  { path: '/investment', label: t('investment.cityMap') },
   { path: '/investment/market', label: t('investment.market') },
   { path: '/investment/marketing', label: t('investment.marketing') },
   { path: '/investment/designer', label: t('investment.designer') },
@@ -207,6 +155,11 @@ const mobileNavItems = computed(() => ([
   { path: '/investment/library', label: t('investment.library') },
   { path: '/investment/workspace', label: t('investment.workspace') },
 ]))
+
+function isActiveNav(path: string) {
+  if (path === '/investment') return route.path === '/investment'
+  return route.path.startsWith(path)
+}
 
 const pageTitleMap = computed<Record<string, string>>(() => ({
   '/investment': t('investment.pageOverview'),
@@ -233,100 +186,79 @@ const statusLabel = computed(() => {
 
 <style scoped>
 /* ═══════════════════════════════════════════════════
-   投资生态舱 — Frosted Flat Shell
+   投资部门 — 参考图1（FROGSOUND）式布局
+   灰色画布 + 大圆角浅色容器 + 顶部管道分隔导航
    ═══════════════════════════════════════════════════ */
 
 .inv-layout {
-  --inv-canvas: #eef3fb;
-  --inv-canvas-2: #f8efe6;
-  --inv-ink: #172027;
-  --inv-ink-soft: rgba(23, 32, 39, 0.64);
-  --inv-ink-muted: rgba(23, 32, 39, 0.42);
-  --inv-line: rgba(42, 52, 65, 0.12);
-  --inv-line-strong: rgba(42, 52, 65, 0.18);
-  --inv-glass: rgba(255, 255, 255, 0.68);
-  --inv-glass-strong: rgba(255, 255, 255, 0.82);
-  --inv-blue: #4f79c7;
-  --inv-blue-soft: #dfe9fb;
-  --inv-coral: #ef6f5e;
-  --inv-sun: #f3b451;
-  --inv-sky: #5d89d4;
-  --gray: transparent;
+  --inv-canvas: #e2e1dd;
+  --inv-shell: #f5f4f0;
+  --inv-ink: #131311;
+  --inv-ink-soft: rgba(19, 19, 17, 0.66);
+  --inv-ink-muted: rgba(19, 19, 17, 0.4);
+  --inv-line: rgba(19, 19, 17, 0.1);
+  --inv-yellow: #f6df3e;
+  --inv-orange: #f4502e;
+  --inv-blue: #adc9dc;
+  --inv-mint: #99c49f;
+  --inv-black: #131311;
+
+  /* 兼容变量：投资子页面（Market/City/Library/Archive/AdamChat）大量使用，
+     固定为本模块浅色调，避免全局主题切换造成模块内明暗错乱 */
+  --gray: #eceae4;
   --dark: var(--inv-ink);
   --mid: var(--inv-ink-soft);
   --dim: var(--inv-ink-muted);
-  --faint: rgba(79, 121, 199, 0.08);
+  --faint: rgba(19, 19, 17, 0.055);
   --border: var(--inv-line);
-  --card-bg: var(--inv-glass);
-  display: flex;
+  --card-bg: #ffffff;
+  --accent: var(--inv-orange);
+
   height: 100vh;
+  box-sizing: border-box;
+  padding: 26px;
   background: var(--inv-canvas);
   font-family: 'Inter', 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--dark);
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
+  color: var(--inv-ink);
+  display: flex;
 }
-/* ── 侧边栏 ── */
-.inv-sidebar {
-  width: 260px;
-  background: rgba(255, 255, 255, 0.58);
-  border-right: 1px solid rgba(255, 255, 255, 0.62);
-  box-shadow: inset -1px 0 0 rgba(42, 52, 65, 0.08);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
+
+/* ── 主容器 ── */
+.inv-shell {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
-  position: relative;
+  background: var(--inv-shell);
+  border-radius: 34px;
+  overflow: hidden;
 }
-.inv-sidebar::-webkit-scrollbar { display: none; }
 
-/* Logo */
-.sidebar-logo {
+/* ── 顶部导航 ── */
+.inv-nav {
+  flex-shrink: 0;
+  height: 76px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 18px 16px 16px;
-  border-bottom: 1px solid rgba(42, 52, 65, 0.1);
-  position: relative;
-}
-.logo-icon {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: var(--inv-blue);
-  color: white;
-}
-.logo-icon svg circle:first-child { stroke: rgba(255, 255, 255, 0.72); }
-.logo-icon svg circle:nth-child(2) { fill: #ffffff; opacity: 0.95; }
-.logo-icon svg circle:nth-child(3) { fill: var(--inv-blue); }
-.logo-text-wrap { flex: 1; min-width: 0; }
-.logo-text {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--inv-ink);
-  font-family: inherit;
-  letter-spacing: 0.02em;
-}
-.logo-sub {
-  display: block;
-  font-size: 11px;
-  color: var(--inv-ink-muted);
-  margin-top: 2px;
-  font-family: inherit;
-  letter-spacing: 0;
-  text-transform: none;
-  opacity: 1;
+  gap: 24px;
+  padding: 0 44px;
 }
 
-/* 生命指示灯 */
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--inv-ink);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.nav-logo i {
+  font-style: normal;
+  color: var(--inv-orange);
+}
 .life-dot {
   width: 7px;
   height: 7px;
@@ -334,132 +266,82 @@ const statusLabel = computed(() => {
   flex-shrink: 0;
 }
 .life-dot.alive {
-  background: var(--inv-blue);
-  box-shadow: 0 0 0 4px rgba(79, 121, 199, 0.13);
+  background: var(--inv-mint);
+  box-shadow: 0 0 0 4px rgba(153, 196, 159, 0.22);
   animation: lifepulse 2.5s ease-in-out infinite;
 }
-.life-dot.dormant {
-  background: var(--dim);
-  opacity: 0.5;
-}
+.life-dot.dormant { background: var(--inv-ink-muted); opacity: 0.5; }
 @keyframes lifepulse {
-  0%,100% { box-shadow: 0 0 0 4px rgba(79, 121, 199, 0.13); }
-  50% { box-shadow: 0 0 0 7px rgba(79, 121, 199, 0.06); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(153, 196, 159, 0.22); }
+  50% { box-shadow: 0 0 0 8px rgba(153, 196, 159, 0.08); }
 }
 
-/* 导航 */
-.sidebar-nav { padding: 12px 10px 0; flex: 1; }
-.nav-section-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(23, 32, 39, 0.38);
-  letter-spacing: 0.02em;
-  font-family: inherit;
-  padding: 15px 12px 6px;
-  text-transform: none;
-  opacity: 1;
-}
-.nav-item {
+/* 中央链接：管道分隔 */
+.nav-links {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  text-decoration: none;
-  color: rgba(23, 32, 39, 0.62);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-  margin-bottom: 3px;
-  border: 1px solid transparent;
+  justify-content: center;
+}
+.nav-link {
   position: relative;
+  padding: 6px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--inv-ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.16s ease;
 }
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.46);
-  color: var(--inv-ink);
-  border-color: rgba(255, 255, 255, 0.74);
-}
-.nav-item--active {
-  background: var(--inv-blue) !important;
-  color: #ffffff !important;
-  font-weight: 600;
-  border-color: transparent !important;
-}
-.nav-item--active::before {
+.nav-link:not(:last-child)::after {
   content: '';
   position: absolute;
-  right: 10px;
+  right: 0;
   top: 50%;
-  width: 6px;
-  height: 6px;
-  background: #ffffff;
-  border-radius: 999px;
+  width: 1px;
+  height: 12px;
   transform: translateY(-50%);
+  background: rgba(19, 19, 17, 0.28);
+}
+.nav-link:hover { color: var(--inv-ink); }
+.nav-link--active {
+  color: var(--inv-ink);
+  font-weight: 800;
+}
+.nav-link--active::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: -2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--inv-ink);
 }
 
-/* 底部 */
-.sidebar-footer {
-  padding: 10px 10px 16px;
-  border-top: 1px solid rgba(42, 52, 65, 0.1);
-}
-.nav-item--back { color: var(--dim); font-size: 11px; }
-.nav-item--back:hover { color: var(--mid); }
-
-/* ── 主内容 ── */
-.inv-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 0;
-}
-
-/* 顶栏 */
-.inv-topbar {
-  height: 56px;
-  background: rgba(255, 255, 255, 0.54);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+/* 右侧：时钟 / 主题 / 状态 / 黑色 CTA / 返回 */
+.nav-right {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
+  gap: 12px;
   flex-shrink: 0;
 }
-.topbar-left { display: flex; align-items: center; gap: 10px; }
-.topbar-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--dark);
-  margin: 0;
-  letter-spacing: 0;
-}
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-
-/* 实时时钟 */
-.inv-clock {
+.nav-clock {
   font-size: 11px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  color: rgba(23, 32, 39, 0.46);
-  letter-spacing: 0;
-  opacity: 1;
+  color: var(--inv-ink-muted);
 }
-
-/* 主题切换按钮 */
-.topbar-theme-btns {
+.nav-theme-btns {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: rgba(79, 121, 199, 0.08);
-  border-radius: 999px;
   padding: 2px 4px;
-  border: 1px solid rgba(79, 121, 199, 0.1);
+  border-radius: 999px;
+  background: rgba(19, 19, 17, 0.06);
 }
-.topbar-theme-btn {
-  width: 26px;
-  height: 26px;
+.nav-theme-btn {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -467,112 +349,151 @@ const statusLabel = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--mid);
+  color: var(--inv-ink-soft);
   transition: background 0.15s, color 0.15s;
 }
-.topbar-theme-btn:hover { background: rgba(255, 255, 255, 0.7); color: var(--dark); }
-.topbar-theme-btn.active { background: var(--inv-blue); color: #ffffff; box-shadow: none; }
+.nav-theme-btn:hover { background: rgba(255, 255, 255, 0.8); color: var(--inv-ink); }
+.nav-theme-btn.active { background: var(--inv-black); color: #fff; }
 
-/* 预算标签 */
-.budget-tag {
+.status-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 11px;
+  padding: 8px 13px;
   border-radius: 999px;
-  background: var(--inv-sun);
-  border: 1px solid transparent;
+  background: rgba(19, 19, 17, 0.05);
 }
-.budget-label {
-  font-size: 8px;
-  font-weight: 700;
-  color: rgba(23, 32, 39, 0.52);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.1em;
-}
-.budget-val {
-  font-size: 12px;
-  font-weight: 700;
-  color: #172027;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: -0.01em;
-}
-
-/* 状态标签 */
-.status-tag {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 11px;
-  border-radius: 999px;
-}
-.status-tag.alive {
-  background: var(--inv-blue-soft);
-  border: 1px solid rgba(79, 121, 199, 0.16);
-}
-.status-tag.dormant {
-  background: var(--faint);
-  border: 1px solid var(--border);
-}
-.status-tag.survival {
-  background: rgba(239, 111, 94, 0.14);
-  border: 1px solid rgba(239, 111, 94, 0.2);
-}
-.status-tag.shutdown {
-  background: var(--faint);
-  border: 1px solid var(--border);
-}
-.status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-}
-.alive .status-dot { background: var(--inv-blue); box-shadow: none; }
-.dormant .status-dot { background: var(--dim); opacity: 0.5; }
-.survival .status-dot { background: var(--inv-coral); animation: survPulse 1.2s ease-in-out infinite; }
-.shutdown .status-dot { background: var(--dim); opacity: 0.3; }
-@keyframes survPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.status-pill.alive { background: rgba(153, 196, 159, 0.3); }
+.status-pill.survival { background: rgba(244, 80, 46, 0.14); }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--inv-ink-muted); }
+.alive .status-dot { background: #3f7a48; }
+.survival .status-dot { background: var(--inv-orange); animation: survPulse 1.2s ease-in-out infinite; }
+.shutdown .status-dot { opacity: 0.3; }
+@keyframes survPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 .status-text {
   font-size: 9px;
+  font-weight: 800;
+  color: var(--inv-ink-soft);
+}
+.alive .status-text { color: #3f7a48; }
+.survival .status-text { color: var(--inv-orange); }
+
+/* 黑色 CTA（图1 的 Get Started Free 位） */
+.budget-cta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: var(--inv-black);
+}
+.budget-cta-label {
+  font-size: 9px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.05em;
 }
-.alive .status-text { color: var(--inv-blue); }
-.dormant .status-text { color: var(--dim); opacity: 0.6; }
-.survival .status-text { color: var(--inv-coral); }
-.shutdown .status-text { color: var(--dim); opacity: 0.4; }
-
-/* Adam 对话框 */
-.inv-adam-wrap {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 40;
-  width: min(430px, calc(100vw - 320px));
-  background: transparent;
+.budget-cta-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
 }
+.budget-cta--sm { height: 30px; padding: 0 12px; border-radius: 9px; }
+.budget-cta--sm .budget-cta-val { font-size: 11px; }
 
-/* 内容区 */
+.nav-back {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--inv-ink-soft);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-back:hover { background: rgba(19, 19, 17, 0.06); color: var(--inv-ink); }
+.nav-back svg { transform: rotate(180deg); }
+
+/* ── 内容区 ── */
+.inv-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 20px;
+  padding: 8px 44px 32px;
+}
+.inv-body--full { padding: 0; gap: 0; }
+
 .inv-content {
   flex: 1;
+  min-width: 0;
   overflow-y: auto;
-  padding: 20px 24px;
-  background: transparent;
   scrollbar-width: thin;
 }
-.inv-content--workspace {
-  padding: 0;
+.inv-content--full { overflow: hidden; }
+
+/* 右侧 Adam 对话卡 */
+.inv-chat {
+  width: 340px;
+  flex: 0 0 340px;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+.inv-chat :deep(.panel-chat) {
+  width: 100%;
+  max-height: 100%;
   overflow: hidden;
+  border-radius: 28px;
+}
+
+/* 首页：右侧卡按图1 的橙红竖长卡处理（仅换壳，不动结构） */
+.inv-chat--hero { width: 300px; flex-basis: 300px; }
+.inv-chat--hero :deep(.panel-chat) {
+  background: var(--inv-orange);
+  border: none;
+  border-radius: 30px;
+}
+.inv-chat--hero :deep(.panel-head) {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  margin: 14px 14px 6px;
+  padding: 6px 12px;
+  border-bottom: none;
+}
+.inv-chat--hero :deep(.chat-messages) { background: transparent; }
+.inv-chat--hero :deep(.chat-empty-title),
+.inv-chat--hero :deep(.chat-empty-text) { color: rgba(255, 255, 255, 0.85); }
+.inv-chat--hero :deep(.chat-empty-icon) { color: rgba(255, 255, 255, 0.7); }
+.inv-chat--hero :deep(.msg-content) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: transparent;
+  color: #fff;
+}
+.inv-chat--hero :deep(.msg-sender),
+.inv-chat--hero :deep(.msg-time),
+.inv-chat--hero :deep(.disclaimer) { color: rgba(255, 255, 255, 0.66); }
+.inv-chat--hero :deep(.chat-input-area) {
+  background: transparent;
+  border-top-color: rgba(255, 255, 255, 0.24);
+}
+.inv-chat--hero :deep(.chat-input) {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: transparent;
+  color: var(--inv-ink);
+}
+.inv-chat--hero :deep(.send-btn) {
+  background: var(--inv-black);
+  color: #fff;
+  border-color: transparent;
 }
 
 /* ── 移动端 ── */
 .mobile-topbar {
   height: 52px;
-  background: rgba(255, 255, 255, 0.64);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  background: rgba(255, 255, 255, 0.86);
+  border-bottom: 1px solid var(--inv-line);
   display: flex;
   align-items: center;
   padding: 0 14px;
@@ -587,58 +508,83 @@ const statusLabel = computed(() => {
   border: none;
   padding: 6px;
   cursor: pointer;
-  color: var(--mid);
+  color: var(--inv-ink-soft);
   display: flex;
   align-items: center;
 }
 .mobile-title {
   flex: 1;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--dark);
+  font-weight: 700;
+  color: var(--inv-ink);
 }
 
-/* 抽屉内部 */
 .drawer-inner {
-  padding: 10px 8px 14px;
-  background: rgba(255, 255, 255, 0.72);
+  padding: 12px 10px 16px;
+  background: var(--inv-shell);
   min-height: 100%;
 }
 .drawer-logo {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 6px 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 8px 8px 14px;
+  border-bottom: 1px solid var(--inv-line);
   margin-bottom: 8px;
 }
 .drawer-logo-text {
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--inv-ink);
+}
+.drawer-logo-text i { font-style: normal; color: var(--inv-orange); }
+.drawer-item {
+  display: block;
+  padding: 11px 12px;
+  border-radius: 14px;
+  margin-bottom: 3px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--inv-ink-soft);
+}
+.drawer-item--active {
+  background: var(--inv-black);
+  color: #fff;
   font-weight: 700;
-  color: var(--inv-blue);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.1em;
+}
+.drawer-item--back {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--inv-ink-muted);
 }
 
 @media (max-width: 767px) {
-  .inv-layout { display: block; height: auto; min-height: 100vh; }
-  .inv-main { min-height: calc(100vh - 48px); }
-  .inv-adam-wrap {
+  .inv-layout { display: block; height: auto; min-height: 100vh; padding: 0; }
+  .inv-shell { border-radius: 0; min-height: calc(100vh - 52px); }
+  .inv-body {
+    display: block;
+    padding: 14px 12px 132px;
+    overflow: visible;
+  }
+  .inv-body--full { padding: 0; }
+  .inv-chat,
+  .inv-chat--hero {
+    position: fixed;
     left: 12px;
     right: 12px;
     bottom: 12px;
     width: auto;
+    z-index: 40;
+    display: block;
   }
-  .inv-content { padding: 14px 12px 132px; }
 }
 </style>
 
 <style>
 /* 全局覆盖 el-drawer 在投资模块的样式 */
 .inv-drawer .el-drawer {
-  background: rgba(255, 255, 255, 0.76) !important;
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: #f5f4f0 !important;
 }
 .inv-drawer .el-drawer__body {
   padding: 0 !important;

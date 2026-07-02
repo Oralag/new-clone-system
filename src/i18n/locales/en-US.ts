@@ -821,6 +821,9 @@ export default {
     meituanPlatform: 'Meituan',
     actualReceived: 'Received',
     receivedTotal: 'Total Received ¥{amount}',
+    entrySaleOrders: 'Sales Orders',
+    entryRetailOrders: 'Retail Orders',
+    entryOnlineOrders: 'Online Orders',
     payType: {
       cash: 'Cash',
       wechat: 'WeChat Pay',
@@ -991,6 +994,8 @@ export default {
     skip: 'Skip',
     adoptionSuccess: 'Executed instruction: {title}',
     skipSuccess: 'Skipped instruction: {title}',
+    enterMarket: 'Enter Market',
+    viewArchive: 'View Archive',
     bubbles: {
       analyzing: 'Analyzing...',
       anomaly: 'Market is shifting',
