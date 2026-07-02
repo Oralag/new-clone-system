@@ -20,10 +20,6 @@
 
       <nav class="sidebar-nav">
         <router-link to="/investment" class="nav-item" active-class="nav-item--active" exact>
-          <Eye :size="15" :stroke-width="1.5" />
-          <span class="nav-item-label">{{ t('investment.overview') }}</span>
-        </router-link>
-        <router-link to="/investment/city" class="nav-item" active-class="nav-item--active">
           <Map :size="15" :stroke-width="1.5" />
           <span class="nav-item-label">{{ t('investment.cityMap') }}</span>
         </router-link>
@@ -100,55 +96,6 @@
 
     <!-- ── 主内容区 ── -->
     <main class="inv-main">
-      <div v-if="!isMobile && route.path !== '/investment/city'" class="inv-color-rail" aria-label="Theme quick switcher">
-        <span class="rail-chevron">⌃</span>
-        <button
-          type="button"
-          class="rail-dot rail-dot--paper"
-          :class="{ active: appStore.theme === 'light' }"
-          title="Light"
-          @click="appStore.setTheme('light')"
-        ></button>
-        <button
-          type="button"
-          class="rail-dot rail-dot--aqua"
-          :class="{ active: appStore.theme === 'eye' }"
-          title="Soft"
-          @click="appStore.setTheme('eye')"
-        ></button>
-        <button
-          type="button"
-          class="rail-dot rail-dot--ink"
-          :class="{ active: appStore.theme === 'dark' }"
-          title="Dark"
-          @click="appStore.setTheme('dark')"
-        ></button>
-        <router-link class="rail-dot rail-dot--blue" to="/investment/city" title="Open campus map" aria-label="Open campus map"></router-link>
-        <span class="rail-chevron">⌄</span>
-      </div>
-
-      <div v-if="!isMobile && route.path === '/investment'" class="inv-hero-copy" aria-label="Adam investment hero">
-        <div class="hero-count">
-          <span></span>
-          <span class="active"></span>
-          <span></span>
-          <span></span>
-          <b>01/03</b>
-        </div>
-        <h2>
-          <span>Adam</span>
-          <span>Invest,</span>
-          <strong>Today</strong>
-        </h2>
-        <div class="hero-actions">
-          <router-link class="hero-primary" to="/investment/workspace">
-            <span>↗</span>
-            Open Desk
-          </router-link>
-          <router-link class="hero-link" to="/investment/market">View Market</router-link>
-        </div>
-      </div>
-
       <header v-if="!isMobile" class="inv-topbar">
         <div class="topbar-left">
           <h1 class="topbar-title">{{ currentPageTitle }}</h1>
@@ -185,21 +132,13 @@
         </div>
       </header>
 
-      <div class="inv-body" :class="{ 'inv-body--workspace': route.path === '/investment/workspace' || route.path === '/investment/city' }">
-        <section class="inv-content" :class="{ 'inv-content--workspace': route.path === '/investment/workspace' || route.path === '/investment/city' }">
-          <router-view />
-          <div v-if="!isMobile && route.path === '/investment'" class="inv-campus-map" aria-label="Adam campus map preview">
-            <div class="inv-campus-real-map" aria-hidden="true">
-              <CampusMapPreview />
-            </div>
-            <router-link class="campus-map-open" to="/investment/city" aria-label="打开完整园区地图">
-              <span>园区地图</span>
-              <b>打开完整视图</b>
-            </router-link>
-          </div>
+      <div class="inv-body" :class="{ 'inv-body--workspace': isWorkspaceLike, 'inv-body--campus': isCampusHome }">
+        <section class="inv-content" :class="{ 'inv-content--workspace': isWorkspaceLike, 'inv-content--campus': isCampusHome }">
+          <CampusMapPreview v-if="isCampusHome" class="inv-campus-live" />
+          <router-view v-else />
         </section>
 
-        <aside v-if="route.path !== '/investment/city'" class="inv-adam-wrap">
+        <aside v-if="route.path !== '/investment/city' && !isCampusHome" class="inv-adam-wrap">
           <AdamChat />
         </aside>
       </div>
@@ -213,7 +152,7 @@ import { useRoute } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
 import { useAppStore } from '@/stores/app'
 import { useI18n } from 'vue-i18n'
-import { Eye, TrendingUp, ChevronLeft, Menu, Map, BarChart3, BookOpen, Library, Palette, Home } from 'lucide-vue-next'
+import { TrendingUp, ChevronLeft, Menu, Map, BarChart3, BookOpen, Library, Palette, Home } from 'lucide-vue-next'
 import CaptainBar from '@/components/CaptainBar.vue'
 import AdamChat from '@/components/AdamChat.vue'
 
@@ -226,6 +165,8 @@ const { t, locale } = useI18n()
 
 const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
+const isCampusHome = computed(() => route.path === '/investment')
+const isWorkspaceLike = computed(() => isCampusHome.value || route.path === '/investment/workspace' || route.path === '/investment/city')
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
@@ -260,8 +201,7 @@ updateClock()
 clockTimer = setInterval(updateClock, 1000)
 
 const mobileNavItems = computed(() => ([
-  { path: '/investment', label: t('investment.overview') },
-  { path: '/investment/city', label: t('investment.cityMap') },
+  { path: '/investment', label: t('investment.cityMap') },
   { path: '/investment/market', label: t('investment.market') },
   { path: '/investment/marketing', label: t('investment.marketing') },
   { path: '/investment/designer', label: t('investment.designer') },
@@ -271,7 +211,7 @@ const mobileNavItems = computed(() => ([
 ]))
 
 const pageTitleMap = computed<Record<string, string>>(() => ({
-  '/investment': t('investment.pageOverview'),
+  '/investment': t('investment.cityMap'),
   '/investment/city': t('investment.pageCity'),
   '/investment/market': t('investment.market'),
   '/investment/marketing': t('investment.marketing'),
