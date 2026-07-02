@@ -1646,8 +1646,8 @@ const statusLabel = computed(() => {
 
   .inv-campus-map {
     position: absolute;
-    z-index: 3;
-    inset: 0;
+    z-index: 1;
+    inset: 0 0 174px;
     border-radius: 36px;
     overflow: hidden;
     pointer-events: none;
@@ -1658,8 +1658,8 @@ const statusLabel = computed(() => {
     inset: 0;
     border-radius: inherit;
     overflow: hidden;
-    opacity: 0.72;
-    filter: saturate(0.74) contrast(0.94) brightness(1.05);
+    opacity: 0.88;
+    filter: saturate(0.86) contrast(0.98) brightness(1.02);
     pointer-events: none;
   }
 
@@ -1669,8 +1669,8 @@ const statusLabel = computed(() => {
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(circle at 48% 47%, rgba(255, 255, 255, 0.26), transparent 0 26%),
-      linear-gradient(90deg, rgba(199, 221, 214, 0.3), rgba(199, 221, 214, 0.2));
+      radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.18), transparent 0 32%),
+      linear-gradient(90deg, rgba(199, 221, 214, 0.18), rgba(199, 221, 214, 0.08));
   }
 
   .inv-campus-real-map .city-page {
@@ -1706,7 +1706,7 @@ const statusLabel = computed(() => {
   }
 
   .inv-campus-real-map .iso-scene {
-    top: 50% !important;
+    top: 60px !important;
     left: 50% !important;
     transition: none !important;
   }
@@ -1814,27 +1814,7 @@ const statusLabel = computed(() => {
   }
 
   .inv-layout .obs-home .life-indicator {
-    position: absolute !important;
-    left: 50% !important;
-    top: 54% !important;
-    width: min(34vw, 340px) !important;
-    height: min(34vw, 340px) !important;
-    border-radius: 50% !important;
-    background: transparent !important;
-    transform: translate(-50%, -50%) !important;
-    filter: drop-shadow(0 24px 24px rgba(76, 55, 22, 0.2)) !important;
-  }
-
-  .inv-layout .obs-home .life-indicator::before {
-    content: "";
-    position: absolute;
-    left: 17%;
-    top: 22%;
-    width: 68%;
-    height: 68%;
-    border-radius: 44% 56% 54% 46%;
-    background: rgba(255, 255, 255, 0.32);
-    transform: rotate(-14deg);
+    display: none !important;
   }
 
   .inv-layout .obs-home .adam-identity-img {
