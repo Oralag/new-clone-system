@@ -84,10 +84,16 @@
             </div>
           </div>
 
-          <!-- 中央插画：亚当雕像 -->
-          <div class="fh-illo" :class="adamStore.core.status">
-            <AdamStatue class="fh-statue" />
+          <!-- 中央：互动园区地图（内嵌 City embed 模式） -->
+          <div class="fh-map" :class="adamStore.core.status">
+            <CityEmbed embed />
           </div>
+
+          <!-- 右下：直达全屏地图 -->
+          <router-link to="/investment/city" class="fh-map-open">
+            <span>{{ t('investment.cityMap') }}</span>
+            <b>→</b>
+          </router-link>
 
           <!-- 底左：身份签名 -->
           <div class="fh-identity">
@@ -215,12 +221,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, defineAsyncComponent, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAdamStore } from '@/stores/adam'
 import { TOKEN_NAME } from '@/config'
 import adamAvatarUrl from '@/assets/adam-avatar.png'
-import AdamStatue from './illo/AdamStatue.vue'
+
+const CityEmbed = defineAsyncComponent(() => import('./City.vue'))
 
 const { t } = useI18n()
 const adamStore = useAdamStore()
@@ -552,23 +559,43 @@ function formatTime(iso: string) {
 /* 黄色大卡 */
 .fh-hero {
   position: relative;
-  min-height: 380px;
+  min-height: 440px;
   border-radius: 32px;
   background: var(--yellow);
   overflow: visible;
 }
-.fh-hero.dormant { filter: saturate(0.72); }
 
-/* 中央插画 */
-.fh-illo {
+/* 中央：内嵌互动园区地图 */
+.fh-map {
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding-top: 34px;
+  z-index: 1;
+  inset: 96px 18px 18px;
+  border-radius: 24px;
+  overflow: hidden;
 }
-.fh-statue { transform: scale(1.06); }
-.fh-illo.dormant .fh-statue { opacity: 0.82; }
+.fh-map.dormant { filter: saturate(0.8); }
+
+/* 右下：直达全屏地图 */
+.fh-map-open {
+  position: absolute;
+  z-index: 6;
+  right: 30px;
+  bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.fh-map-open:hover { transform: translateY(-1px); background: var(--orange); }
+.fh-map-open b { font-weight: 900; }
 
 /* 悬浮组件通用 */
 .fw {
@@ -673,12 +700,16 @@ function formatTime(iso: string) {
 /* 底左身份 */
 .fh-identity {
   position: absolute;
-  z-index: 3;
-  left: 26px;
-  bottom: 24px;
+  z-index: 6;
+  left: 30px;
+  bottom: 30px;
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 7px 14px 7px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 26px rgba(19, 19, 17, 0.1);
 }
 .fh-idimg {
   width: 38px;
@@ -1005,7 +1036,8 @@ function formatTime(iso: string) {
   .fw-circles { top: auto; bottom: 70px; right: 14px; padding: 8px 10px; gap: 8px; }
   .ci { width: 32px; height: 32px; font-size: 11px; }
   .circle-item { min-width: 42px; }
-  .fh-identity { left: 14px; bottom: 14px; }
-  .fh-statue { transform: scale(0.8); }
+  .fh-identity { left: 12px; bottom: 12px; }
+  .fh-map { inset: 74px 10px 10px; }
+  .fh-map-open { right: 12px; bottom: 60px; }
 }
 </style>

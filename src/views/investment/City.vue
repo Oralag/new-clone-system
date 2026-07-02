@@ -1,7 +1,7 @@
 <template>
-  <div class="city-page">
+  <div class="city-page" :class="{ 'city-page--embed': embed }">
     <!-- 左侧状态栏 -->
-    <aside class="city-sidebar" :class="{ collapsed: sidebarCollapsed }">
+    <aside v-if="!embed" class="city-sidebar" :class="{ collapsed: sidebarCollapsed }">
       <button class="city-sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? t('city.expandSidebar') : t('city.collapseSidebar')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path v-if="sidebarCollapsed" d="M9 18l6-6-6-6"/>
@@ -438,7 +438,7 @@
     </div>
 
     <!-- ═══ 右侧对话面板 ═══ -->
-    <div class="city-chat" :class="{ collapsed: chatCollapsed }">
+    <div v-if="!embed" class="city-chat" :class="{ collapsed: chatCollapsed }">
       <!-- 折叠/展开按钮 -->
       <button class="city-chat-toggle" @click="chatCollapsed = !chatCollapsed" :title="chatCollapsed ? t('city.expandChat') : t('city.collapseChat')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -812,6 +812,9 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAdamStore } from '@/stores/adam'
+
+// embed 模式：仅渲染互动地图（供首页黄卡内嵌），隐藏侧栏与对话面板
+defineProps<{ embed?: boolean }>()
 
 // ── P&L 驱动的城市氛围 ──
 const tradeStatsForMood = ref<any>(null)
@@ -2303,6 +2306,16 @@ onUnmounted(() => {
   display: flex;
   gap: 0;
 }
+
+/* ── embed 模式（首页黄卡内嵌）── */
+.city-page--embed { height: 100%; min-height: 0; }
+.city-page--embed .city-main { border-radius: inherit; }
+.city-page--embed .iso-viewport {
+  min-height: 0;
+  border-radius: inherit;
+}
+.city-page--embed .iso-controls { display: none; }
+.city-page--embed .iso-hud { display: none; }
 
 /* ── 左侧状态栏 ── */
 .city-sidebar {

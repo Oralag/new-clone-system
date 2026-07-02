@@ -147,13 +147,13 @@ updateClock()
 clockTimer = setInterval(updateClock, 30_000)
 
 const navItems = computed(() => ([
-  { path: '/investment', label: t('investment.cityMap') },
+  { path: '/investment', label: t('investment.overview') },
+  { path: '/investment/city', label: t('investment.cityMap') },
   { path: '/investment/market', label: t('investment.market') },
   { path: '/investment/marketing', label: t('investment.marketing') },
   { path: '/investment/designer', label: t('investment.designer') },
   { path: '/investment/archive', label: t('investment.archive') },
   { path: '/investment/library', label: t('investment.library') },
-  { path: '/investment/workspace', label: t('investment.workspace') },
 ]))
 
 function isActiveNav(path: string) {
@@ -162,7 +162,7 @@ function isActiveNav(path: string) {
 }
 
 const pageTitleMap = computed<Record<string, string>>(() => ({
-  '/investment': t('investment.pageOverview'),
+  '/investment': t('investment.overview'),
   '/investment/city': t('investment.pageCity'),
   '/investment/market': t('investment.market'),
   '/investment/marketing': t('investment.marketing'),
