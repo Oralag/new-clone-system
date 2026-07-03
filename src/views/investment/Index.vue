@@ -18,17 +18,6 @@
           </div>
         </div>
 
-        <div class="fh-count">
-          <span></span><span class="on"></span><span></span><span></span>
-          <b>01<i>/03</i></b>
-        </div>
-
-        <h2 class="fh-title">
-          <span>Adam</span>
-          <span>Invest,</span>
-          <strong>Today</strong>
-        </h2>
-
         <div class="fh-actions">
           <button v-if="adamStore.core.status === 'dormant'" class="fh-buy" @click="handleActivate">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -445,8 +434,8 @@ function formatTime(iso: string) {
 /* ── 上半屏 ── */
 .fh-top {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 30px;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 22px;
   align-items: stretch;
 }
 
@@ -495,63 +484,13 @@ function formatTime(iso: string) {
 .rail-dot--blue { background: var(--blue); }
 .rail-dot.active { box-shadow: 0 0 0 3px #fff, 0 0 0 4.5px rgba(19, 19, 17, 0.35); }
 
-/* 页码点 */
-.fh-count {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 34px 0 14px;
-}
-.fh-count span {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(19, 19, 17, 0.18);
-}
-.fh-count span.on {
-  width: 10px;
-  height: 10px;
-  background: var(--ink);
-  box-shadow: 0 0 0 3px #f5f4f0, 0 0 0 4px rgba(19, 19, 17, 0.2);
-}
-.fh-count b {
-  margin-left: 8px;
-  font-size: 15px;
-  font-weight: 600;
-}
-.fh-count b i {
-  font-style: normal;
-  font-weight: 400;
-  color: var(--ink-muted);
-  font-size: 12px;
-}
-
-/* 大标题 */
-.fh-title {
-  margin: 0;
-  font-size: clamp(42px, 4vw, 58px);
-  line-height: 1.02;
-  letter-spacing: -0.045em;
-  font-weight: 300;
-}
-.fh-title span {
-  display: block;
-  font-style: italic;
-}
-.fh-title strong {
-  display: block;
-  margin-top: 4px;
-  font-style: normal;
-  font-weight: 900;
-  letter-spacing: -0.04em;
-}
-
-/* 行动按钮 */
+/* 行动按钮（纵向排布） */
 .fh-actions {
   display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-top: 30px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 28px;
 }
 .fh-buy {
   display: inline-flex;
@@ -589,8 +528,8 @@ function formatTime(iso: string) {
 /* 黄色大卡 = 地图 */
 .fh-hero {
   position: relative;
-  height: 62vh;
-  min-height: 500px;
+  height: 74vh;
+  min-height: 580px;
   border-radius: 32px;
   background: var(--yellow);
 }
@@ -1087,9 +1026,9 @@ function formatTime(iso: string) {
 /* ── 响应式 ── */
 @media (max-width: 1240px) {
   .fh-top { grid-template-columns: 1fr; gap: 20px; }
-  .fh-left { padding-top: 0; }
+  .fh-left { padding-top: 0; flex-direction: row; align-items: center; }
   .fh-colors { display: none; }
-  .fh-count { margin-top: 0; }
+  .fh-actions { flex-direction: row; margin-top: 0; }
   .fh-under { grid-template-columns: 1fr; gap: 14px; padding: 0; margin-top: 14px; }
   .fh-emotion { max-width: 320px; }
   .fh-blurb { padding-top: 0; }
@@ -1097,8 +1036,7 @@ function formatTime(iso: string) {
 }
 
 @media (max-width: 767px) {
-  .fh-title { font-size: 38px; }
-  .fh-hero { height: auto; min-height: 420px; }
+  .fh-hero { height: auto; min-height: 460px; }
   .fh-map { inset: 74px 10px 10px; }
   .fw-networth { width: 168px; top: 12px; left: 12px; }
   .fw-circles { top: 12px; right: 12px; padding: 8px 10px; gap: 8px; }
