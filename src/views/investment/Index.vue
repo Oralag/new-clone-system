@@ -1,94 +1,160 @@
 <template>
-  <div class="dash">
+  <div class="fh">
 
-    <!-- ── 页头：标题 + 身份 + 激活 ── -->
-    <header class="dash-head">
-      <h1 class="dh-title">{{ t('investment.pageOverview') }}</h1>
-      <div class="dh-right">
-        <div class="dh-id">
-          <img :src="adamAvatarUrl" class="dh-avatar" alt="ADAM" />
-          <span class="dh-idtext">
-            <b>ADAM <i>#1</i></b>
-            <small>DIGITAL_LIFE · ENTITY_001</small>
-          </span>
-        </div>
-        <button v-if="adamStore.core.status === 'dormant'" class="dh-activate" @click="handleActivate">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          {{ t('investmentHome.activate') }}
-        </button>
-      </div>
-    </header>
+    <!-- ── 上半屏：图1 构图（左标题列 + 中央黄色地图大卡） ── -->
+    <div class="fh-top">
 
-    <!-- ── 第一行：三张彩色指标卡 ── -->
-    <div class="dash-cards">
-
-      <!-- 资产（黄） -->
-      <div class="dc dc--yellow">
-        <div class="dc-pattern dc-pattern--dots"></div>
-        <span class="dc-label">{{ t('investmentHome.netWorth') }}</span>
-        <span class="dc-big" :class="{ neg: adamStore.core.netWorth < 0 }">¥{{ adamStore.core.netWorth.toLocaleString() }}</span>
-        <div class="dc-foot">
-          <div class="dc-sub">
-            <span>{{ t('investmentHome.energy') }}</span>
-            <b>{{ adamStore.core.energy }}%</b>
+      <!-- 左列：色彩条 + 页码点 + 大标题 + 行动按钮 -->
+      <aside class="fh-left">
+        <div class="fh-colors">
+          <span class="fh-colors-label">Colors</span>
+          <div class="fh-rail">
+            <span class="rail-chevron">⌃</span>
+            <router-link to="/investment/market" class="rail-dot rail-dot--gray" :title="t('investment.market')" />
+            <span class="rail-dot rail-dot--yellow active" :title="t('investment.pageOverview')"></span>
+            <router-link to="/investment/archive" class="rail-dot rail-dot--black" :title="t('investment.archive')" />
+            <router-link to="/investment/library" class="rail-dot rail-dot--blue" :title="t('investment.library')" />
+            <span class="rail-chevron">⌄</span>
           </div>
         </div>
-        <div class="dc-bar">
-          <i :class="{ low: adamStore.core.energy < 30 }" :style="{ width: adamStore.core.energy + '%' }"></i>
-        </div>
-      </div>
 
-      <!-- 生命体征（橙） -->
-      <div class="dc dc--orange">
-        <div class="dc-pattern dc-pattern--stripes"></div>
-        <span class="dc-label">{{ t('investmentHome.alive') }}</span>
-        <span class="dc-big">{{ adamStore.core.survivalDays }}<i class="dc-unit">d</i></span>
-        <div class="dc-emotions">
-          <span class="dc-emo-label">{{ t('investmentHome.emotionSpectrum') }}</span>
-          <div class="dc-emo-bars">
-            <div v-for="(val, key) in adamStore.core.emotionState" :key="key" class="dc-emo-item" :title="`${emotionLabels[key] || key} ${val}`">
-              <span class="dc-emo-track"><i :style="{ height: Math.max(val, 6) + '%' }"></i></span>
-              <small>{{ (emotionLabels[key] || key).slice(0, 1) }}</small>
+        <div class="fh-count">
+          <span></span><span class="on"></span><span></span><span></span>
+          <b>01<i>/03</i></b>
+        </div>
+
+        <h2 class="fh-title">
+          <span>Adam</span>
+          <span>Invest,</span>
+          <strong>Today</strong>
+        </h2>
+
+        <div class="fh-actions">
+          <button v-if="adamStore.core.status === 'dormant'" class="fh-buy" @click="handleActivate">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            {{ t('investmentHome.activate') }}
+          </button>
+          <router-link v-else to="/investment/market" class="fh-buy">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            {{ t('investmentHome.enterMarket') }}
+          </router-link>
+          <router-link to="/investment/archive" class="fh-detail">{{ t('investmentHome.viewArchive') }}</router-link>
+        </div>
+      </aside>
+
+      <!-- 中央舞台：黄色大卡 = 园区地图（最大模块） -->
+      <div class="fh-stage">
+        <div class="fh-hero">
+          <!-- 顶左：净资产播放器组件 -->
+          <div class="fw fw-networth">
+            <div class="fw-row">
+              <span class="fw-ic">◔</span>
+              <span class="fw-label">{{ t('investmentHome.netWorth') }}</span>
+              <span class="fw-right">{{ t('investmentHome.energy') }} {{ adamStore.core.energy }}%</span>
+            </div>
+            <div class="fw-track">
+              <div class="fw-fill" :class="{ low: adamStore.core.energy < 30 }" :style="{ width: adamStore.core.energy + '%' }"></div>
+            </div>
+            <div class="fw-value" :class="{ positive: adamStore.core.netWorth > 0, negative: adamStore.core.netWorth < 0 }">
+              ¥{{ adamStore.core.netWorth.toLocaleString() }}
+            </div>
+          </div>
+
+          <!-- 顶右：圆形指标排 -->
+          <div class="fw fw-circles">
+            <div class="circle-item">
+              <span class="ci ci--orange">¥</span>
+              <span class="ci-label">{{ t('investmentHome.budget') }}</span>
+              <span class="ci-val">{{ shortNum(adamStore.core.budget) }}</span>
+            </div>
+            <div class="circle-item">
+              <span class="ci ci--black">{{ adamStore.core.creditLevel }}</span>
+              <span class="ci-label">{{ t('investmentHome.credit') }}</span>
+              <span class="ci-val">{{ creditName }}</span>
+            </div>
+            <div class="circle-item">
+              <span class="ci ci--white">{{ adamStore.core.survivalDays }}<i>d</i></span>
+              <span class="ci-label">{{ t('investmentHome.alive') }}</span>
+              <span class="ci-val">{{ sysLabel }}</span>
+            </div>
+          </div>
+
+          <!-- 中央：互动园区地图 -->
+          <div class="fh-map" :class="adamStore.core.status">
+            <CityEmbed embed />
+          </div>
+
+          <!-- 底左：身份签名 -->
+          <div class="fh-identity">
+            <img :src="adamAvatarUrl" class="fh-idimg" alt="亚当" />
+            <span class="fh-idtext">
+              <b>ADAM <i>#1</i></b>
+              <small>DIGITAL_LIFE · ENTITY_001</small>
+            </span>
+          </div>
+
+          <!-- 底右：直达全屏地图 -->
+          <router-link to="/investment/city" class="fh-map-open">
+            <span>{{ t('investment.cityMap') }}</span>
+            <b>→</b>
+          </router-link>
+        </div>
+
+        <!-- 卡下横排：情绪频谱药丸 + 指令 / 待审批 -->
+        <div class="fh-under">
+          <div class="fh-emotion">
+            <div class="emo-top">
+              <div v-for="(val, key) in adamStore.core.emotionState" :key="key" class="emo-item" :title="`${emotionLabels[key] || key} ${val}`">
+                <span class="emo-track"><i :style="{ height: Math.max(val, 4) + '%' }"></i></span>
+                <span class="emo-name">{{ (emotionLabels[key] || key).slice(0, 1) }}</span>
+              </div>
+            </div>
+            <div class="emo-strip">{{ t('investmentHome.emotionSpectrum') }}</div>
+          </div>
+
+          <!-- 最新指令（业务：采纳 / 跳过） -->
+          <div class="fh-blurb">
+            <template v-if="adamStore.latestRecommendation">
+              <h4 class="blurb-title">{{ t('investmentHome.latestDirective') }}</h4>
+              <p class="blurb-strong">{{ adamStore.latestRecommendation.title }}</p>
+              <p class="blurb-text">{{ adamStore.latestRecommendation.thesis }}</p>
+              <p v-if="adamStore.latestRecommendation.riskNote" class="blurb-risk">⚠ {{ adamStore.latestRecommendation.riskNote }}</p>
+              <div class="blurb-meta">
+                <span v-if="adamStore.latestRecommendation.confidence">{{ t('investmentHome.confidencePrefix') }} {{ (adamStore.latestRecommendation.confidence * 100).toFixed(0) }}%</span>
+                <span>{{ formatTime(adamStore.latestRecommendation.issuedAt) }}</span>
+              </div>
+              <div class="blurb-actions">
+                <button class="b-btn b-btn--solid" @click="handleAdoptRecommendation">{{ t('investmentHome.executed') }}</button>
+                <button class="b-btn" @click="handleSkipRecommendation">{{ t('investmentHome.skip') }}</button>
+              </div>
+            </template>
+            <template v-else>
+              <h4 class="blurb-title">{{ t('investmentHome.latestDirective') }}</h4>
+              <p class="blurb-strong">{{ t('investmentHome.awaitingDirective') }}</p>
+              <p class="blurb-text">{{ t('investmentHome.awaitingDirectiveSub') }}</p>
+            </template>
+          </div>
+
+          <!-- 待审批（业务：批准 / 否决），仅有待审批时显示 -->
+          <div v-if="pendingAction" class="fh-blurb">
+            <h4 class="blurb-title blurb-title--hot">{{ t('investmentHome.pendingApproval') }}</h4>
+            <p class="blurb-strong">{{ pendingAction.type }} · {{ pendingAction.amount }} {{ pendingAction.token || 'USDT' }}</p>
+            <p class="blurb-text">{{ pendingAction.reason }}</p>
+            <div class="blurb-meta">
+              <span>{{ t('investmentHome.submittedAt') }} {{ formatTime(pendingAction.createdAt) }}</span>
+            </div>
+            <div class="blurb-actions">
+              <button class="b-btn b-btn--solid" @click="handleApprove">{{ t('investmentHome.approve') }}</button>
+              <button class="b-btn" @click="handleReject">{{ t('investmentHome.reject') }}</button>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- 指令 / 待审批（黑） -->
-      <div class="dc dc--black">
-        <template v-if="pendingAction">
-          <span class="dc-label dc-label--hot">{{ t('investmentHome.pendingApproval') }}</span>
-          <p class="dc-strong">{{ pendingAction.type }} · {{ pendingAction.amount }} {{ pendingAction.token || 'USDT' }}</p>
-          <p class="dc-text">{{ pendingAction.reason }}</p>
-          <p class="dc-meta">{{ t('investmentHome.submittedAt') }} {{ formatTime(pendingAction.createdAt) }}</p>
-          <div class="dc-actions">
-            <button class="dc-btn dc-btn--solid" @click="handleApprove">{{ t('investmentHome.approve') }}</button>
-            <button class="dc-btn" @click="handleReject">{{ t('investmentHome.reject') }}</button>
-          </div>
-        </template>
-        <template v-else-if="adamStore.latestRecommendation">
-          <span class="dc-label">{{ t('investmentHome.latestDirective') }}</span>
-          <p class="dc-strong">{{ adamStore.latestRecommendation.title }}</p>
-          <p class="dc-text">{{ adamStore.latestRecommendation.thesis }}</p>
-          <p class="dc-meta">
-            <template v-if="adamStore.latestRecommendation.confidence">{{ t('investmentHome.confidencePrefix') }} {{ (adamStore.latestRecommendation.confidence * 100).toFixed(0) }}% · </template>{{ formatTime(adamStore.latestRecommendation.issuedAt) }}
-          </p>
-          <p v-if="adamStore.latestRecommendation.riskNote" class="dc-risk">⚠ {{ adamStore.latestRecommendation.riskNote }}</p>
-          <div class="dc-actions">
-            <button class="dc-btn dc-btn--solid" @click="handleAdoptRecommendation">{{ t('investmentHome.executed') }}</button>
-            <button class="dc-btn" @click="handleSkipRecommendation">{{ t('investmentHome.skip') }}</button>
-          </div>
-        </template>
-        <template v-else>
-          <span class="dc-label">{{ t('investmentHome.latestDirective') }}</span>
-          <p class="dc-strong">{{ t('investmentHome.awaitingDirective') }}</p>
-          <p class="dc-text">{{ t('investmentHome.awaitingDirectiveSub') }}</p>
-        </template>
-      </div>
     </div>
 
-    <!-- ── 第二行：机构列表（白面板）+ 生态园区大地图 ── -->
-    <div class="dash-mid">
+    <!-- ── 下半屏：机构列表 + 信任阶梯 + 事件日志 ── -->
+    <div class="fh-panels">
+
       <section class="panel panel--inst">
         <div class="panel-head">
           <span class="panel-title">{{ t('city.institutions') }}</span>
@@ -117,21 +183,6 @@
         </div>
       </section>
 
-      <section class="panel panel--city">
-        <div class="panel-head">
-          <span class="panel-title">{{ t('investment.pageCity') }}</span>
-          <router-link to="/investment/city" class="panel-expand" :title="t('investment.cityMap')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-          </router-link>
-        </div>
-        <div class="city-body">
-          <CityEmbed embed />
-        </div>
-      </section>
-    </div>
-
-    <!-- ── 第三行：信任阶梯 + 事件日志 ── -->
-    <div class="dash-bottom">
       <section class="panel panel--trust">
         <div class="panel-head">
           <span class="panel-title">{{ t('investmentHome.trustLadder') }}</span>
@@ -163,16 +214,16 @@
       </section>
 
       <section class="panel panel--log">
-      <div class="panel-head">
-        <span class="panel-title">{{ t('investmentHome.eventLog') }}</span>
-        <span v-if="adamStore.recentEvents.length" class="panel-tag panel-tag--count">{{ adamStore.recentEvents.length }}</span>
-      </div>
-      <div class="log-table">
-        <div v-for="event in adamStore.recentEvents.slice(0, 15)" :key="event.id" class="log-row">
-          <span class="lr-time">{{ formatTime(event.at) }}</span>
-          <span class="lr-stage" :class="event.stage">{{ stageLabel(event.stage) }}</span>
-          <span class="lr-text">{{ event.title }}</span>
+        <div class="panel-head">
+          <span class="panel-title">{{ t('investmentHome.eventLog') }}</span>
+          <span v-if="adamStore.recentEvents.length" class="panel-tag panel-tag--count">{{ adamStore.recentEvents.length }}</span>
         </div>
+        <div class="log-table">
+          <div v-for="event in adamStore.recentEvents.slice(0, 15)" :key="event.id" class="log-row">
+            <span class="lr-time">{{ formatTime(event.at) }}</span>
+            <span class="lr-stage" :class="event.stage">{{ stageLabel(event.stage) }}</span>
+            <span class="lr-text">{{ event.title }}</span>
+          </div>
           <div v-if="adamStore.recentEvents.length === 0" class="log-empty">
             <b>{{ t('investmentHome.noEvents') }}</b>
             <small>{{ t('investmentHome.noEventsSub') }}</small>
@@ -216,38 +267,12 @@ const nextLevel = computed(() => {
   return levelOrder[idx + 1] || null
 })
 const nextLevelReq = computed(() => nextLevel.value ? levelReqs[nextLevel.value] : null)
+const creditName = computed(() => t(`investmentHome.creditLevels.${adamStore.core.creditLevel || 'C'}`))
 
 function isPastLevel(id: string) {
   const cur = levelOrder.indexOf(adamStore.core.creditLevel || 'C')
   return levelOrder.indexOf(id) < cur
 }
-
-// ── Pending Action ────────────────────────────────────────────────────────────
-const pendingAction = ref<Record<string, any> | null>(null)
-
-async function loadPendingAction() {
-  const token = localStorage.getItem(TOKEN_NAME) || ''
-  if (!token) return
-  try {
-    const res = await fetch('/api/adam/approve', { headers: { 'x-erp-token': token } })
-    const data = await res.json() as { pending: Record<string, any> | null }
-    pendingAction.value = data.pending?.status === 'pending_approval' ? data.pending : null
-  } catch {}
-}
-
-async function handleApprove() {
-  const token = localStorage.getItem(TOKEN_NAME) || ''
-  await fetch('/api/adam/approve', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-erp-token': token }, body: JSON.stringify({ decision: 'approve' }) })
-  pendingAction.value = null
-}
-
-async function handleReject() {
-  const token = localStorage.getItem(TOKEN_NAME) || ''
-  await fetch('/api/adam/approve', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-erp-token': token }, body: JSON.stringify({ decision: 'reject' }) })
-  pendingAction.value = null
-}
-
-onMounted(() => loadPendingAction())
 
 // ── 机构列表（与园区地图共用 adamStore.institutions） ──
 const zoneList = computed(() => [
@@ -277,6 +302,43 @@ function displayInstitutionName(instId: string, fallback?: string) {
   return translated(`city.institutionNames.${instId}`, fallback || instId)
 }
 
+// ── Pending Action ────────────────────────────────────────────────────────────
+const pendingAction = ref<Record<string, any> | null>(null)
+
+async function loadPendingAction() {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  if (!token) return
+  try {
+    const res = await fetch('/api/adam/approve', { headers: { 'x-erp-token': token } })
+    const data = await res.json() as { pending: Record<string, any> | null }
+    pendingAction.value = data.pending?.status === 'pending_approval' ? data.pending : null
+  } catch {}
+}
+
+async function handleApprove() {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  await fetch('/api/adam/approve', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-erp-token': token }, body: JSON.stringify({ decision: 'approve' }) })
+  pendingAction.value = null
+}
+
+async function handleReject() {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  await fetch('/api/adam/approve', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-erp-token': token }, body: JSON.stringify({ decision: 'reject' }) })
+  pendingAction.value = null
+}
+
+onMounted(() => loadPendingAction())
+
+const sysLabel = computed(() => {
+  const map: Record<string, string> = {
+    dormant: t('investmentHome.statuses.dormant'),
+    alive: t('investmentHome.statuses.alive'),
+    survival: t('investmentHome.statuses.survival'),
+    shutdown: t('investmentHome.statuses.shutdown'),
+  }
+  return map[adamStore.core.status] || t('investmentHome.statuses.unknown')
+})
+
 const emotionLabels = computed<Record<string, string>>(() => ({
   joy: t('investmentHome.emotionLabels.joy'),
   anger: t('investmentHome.emotionLabels.anger'),
@@ -296,6 +358,13 @@ function stageLabel(stage: string) {
     archive: t('investmentHome.stageLabels.archive'),
   }
   return map[stage] || stage.toUpperCase()
+}
+
+function shortNum(n: number) {
+  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (Math.abs(n) >= 10_000) return (n / 10_000).toFixed(1) + 'w'
+  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(1) + 'k'
+  return String(n)
 }
 
 function handleActivate() {
@@ -353,284 +422,478 @@ function formatTime(iso: string) {
 
 <style scoped>
 /* ═══════════════════════════════════════════════════
-   投资总览 — 仪表盘构图（参考图2 Inventory）
-   彩色指标卡 + 大地图面板 + 表格化事件日志
+   投资首页 — FROGSOUND 构图
+   左：标题列；中：黄色大卡 = 互动园区地图（最大模块）
    ═══════════════════════════════════════════════════ */
 
-.dash {
+.fh {
   --ink: #131311;
-  --ink-soft: rgba(19, 19, 17, 0.64);
+  --ink-soft: rgba(19, 19, 17, 0.66);
   --ink-muted: rgba(19, 19, 17, 0.4);
-  --yellow: #f2df4e;
-  --orange: #f5904e;
-  --line: rgba(19, 19, 17, 0.08);
+  --yellow: #f6df3e;
+  --orange: #f4502e;
+  --blue: #adc9dc;
+  --line: rgba(19, 19, 17, 0.1);
 
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 22px;
   color: var(--ink);
   padding-bottom: 4px;
 }
 
-/* ── 页头 ── */
-.dash-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 2px 4px 0;
+/* ── 上半屏 ── */
+.fh-top {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 30px;
+  align-items: stretch;
 }
-.dh-title {
-  margin: 0;
-  font-size: 32px;
-  font-weight: 400;
-  letter-spacing: -0.02em;
-}
-.dh-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.dh-id {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 14px 6px 7px;
-  border-radius: 999px;
-  background: #fff;
-}
-.dh-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--ink);
-}
-.dh-idtext {
+
+/* 左列 */
+.fh-left {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  padding-top: 4px;
+  min-width: 0;
 }
-.dh-idtext b {
+
+.fh-colors-label {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.fh-rail {
+  width: 40px;
+  padding: 10px 0;
+  border-radius: 999px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  box-shadow: 0 6px 18px rgba(19, 19, 17, 0.05);
+}
+.rail-chevron {
   font-size: 12px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink-soft);
 }
-.dh-idtext b i { font-style: normal; color: #e2542e; }
-.dh-idtext small { font-size: 8px; color: var(--ink-muted); }
-.dh-activate {
-  display: inline-flex;
+.rail-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: block;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+.rail-dot:hover { transform: scale(1.12); }
+.rail-dot--gray { background: #d5d4d0; }
+.rail-dot--yellow { background: var(--yellow); }
+.rail-dot--black { background: var(--ink); }
+.rail-dot--blue { background: var(--blue); }
+.rail-dot.active { box-shadow: 0 0 0 3px #fff, 0 0 0 4.5px rgba(19, 19, 17, 0.35); }
+
+/* 页码点 */
+.fh-count {
+  display: flex;
   align-items: center;
   gap: 7px;
-  height: 40px;
+  margin: 34px 0 14px;
+}
+.fh-count span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(19, 19, 17, 0.18);
+}
+.fh-count span.on {
+  width: 10px;
+  height: 10px;
+  background: var(--ink);
+  box-shadow: 0 0 0 3px #f5f4f0, 0 0 0 4px rgba(19, 19, 17, 0.2);
+}
+.fh-count b {
+  margin-left: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.fh-count b i {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+/* 大标题 */
+.fh-title {
+  margin: 0;
+  font-size: clamp(42px, 4vw, 58px);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  font-weight: 300;
+}
+.fh-title span {
+  display: block;
+  font-style: italic;
+}
+.fh-title strong {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+/* 行动按钮 */
+.fh-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 30px;
+}
+.fh-buy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
   padding: 0 18px;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--ink);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
+  text-decoration: none;
   transition: transform 0.15s ease, background 0.15s ease;
 }
-.dh-activate:hover { transform: translateY(-1px); background: #e2542e; }
-
-/* ── 第一行：彩色指标卡 ── */
-.dash-cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+.fh-buy:hover { transform: translateY(-1px); background: var(--orange); }
+.fh-detail {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-style: italic;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
-.dc {
-  position: relative;
-  min-height: 168px;
-  border-radius: 24px;
-  padding: 18px 20px;
-  overflow: hidden;
+.fh-detail:hover { color: var(--ink); }
+
+/* ── 中央舞台 ── */
+.fh-stage {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
-.dc--yellow { background: var(--yellow); }
-.dc--orange { background: var(--orange); }
-.dc--black { background: var(--ink); color: #fff; }
 
-/* 装饰纹理（参考图2 的半调点/斜纹） */
-.dc-pattern {
+/* 黄色大卡 = 地图 */
+.fh-hero {
+  position: relative;
+  height: 62vh;
+  min-height: 500px;
+  border-radius: 32px;
+  background: var(--yellow);
+}
+
+/* 内嵌互动地图（占满卡身，黄色作边框） */
+.fh-map {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.dc-pattern--dots {
-  background: radial-gradient(circle at 86% 78%, rgba(19, 19, 17, 0.16) 0 1.6px, transparent 1.6px 9px);
-  background-size: 18px 18px;
-  mask-image: radial-gradient(circle at 88% 82%, #000 0 26%, transparent 44%);
-  -webkit-mask-image: radial-gradient(circle at 88% 82%, #000 0 26%, transparent 44%);
-}
-.dc-pattern--stripes {
-  background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(19, 19, 17, 0.1) 7px 9px);
-  mask-image: radial-gradient(circle at 90% 20%, #000 0 24%, transparent 42%);
-  -webkit-mask-image: radial-gradient(circle at 90% 20%, #000 0 24%, transparent 42%);
-}
-
-.dc-label {
-  position: relative;
-  font-size: 11px;
-  font-weight: 800;
-  color: rgba(19, 19, 17, 0.6);
-  margin-bottom: 6px;
-}
-.dc--black .dc-label { color: rgba(255, 255, 255, 0.55); }
-.dc-label--hot { color: #f5904e !important; }
-
-.dc-big {
-  position: relative;
-  font-size: 34px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-}
-.dc-big.neg { color: #b3350f; }
-.dc-unit {
-  font-style: normal;
-  font-size: 15px;
-  font-weight: 700;
-  margin-left: 2px;
-  color: rgba(19, 19, 17, 0.55);
-}
-
-.dc-foot {
-  position: relative;
-  display: flex;
-  gap: 22px;
-  margin-top: auto;
-  padding-top: 12px;
-}
-.dc-sub {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.dc-sub span { font-size: 9.5px; color: rgba(19, 19, 17, 0.55); font-weight: 700; }
-.dc-sub b { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
-.dc-bar {
-  position: relative;
-  height: 5px;
-  margin-top: 8px;
-  border-radius: 999px;
-  background: rgba(19, 19, 17, 0.14);
+  z-index: 1;
+  inset: 92px 16px 16px;
+  border-radius: 24px;
   overflow: hidden;
 }
-.dc-bar i {
-  display: block;
+.fh-map.dormant { filter: saturate(0.8); }
+
+/* 悬浮组件通用 */
+.fw {
+  position: absolute;
+  z-index: 3;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(19, 19, 17, 0.1);
+}
+
+/* 顶左：净资产 */
+.fw-networth {
+  top: 20px;
+  left: 20px;
+  width: 200px;
+  padding: 13px 15px;
+}
+.fw-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fw-ic { font-size: 11px; color: var(--orange); }
+.fw-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.fw-right {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+.fw-track {
+  height: 5px;
+  margin: 9px 0 10px;
+  border-radius: 999px;
+  background: rgba(19, 19, 17, 0.1);
+  overflow: hidden;
+}
+.fw-fill {
   height: 100%;
   border-radius: 999px;
   background: var(--ink);
   transition: width 0.4s ease;
 }
-.dc-bar i.low { background: #b3350f; }
+.fw-fill.low { background: var(--orange); }
+.fw-value {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+.fw-value.positive { color: #2f7a3c; }
+.fw-value.negative { color: var(--orange); }
 
-/* 情绪频谱（橙卡内） */
-.dc-emotions {
-  position: relative;
-  margin-top: auto;
-  padding-top: 10px;
-}
-.dc-emo-label {
-  display: block;
-  font-size: 9.5px;
-  font-weight: 700;
-  color: rgba(19, 19, 17, 0.55);
-  margin-bottom: 6px;
-}
-.dc-emo-bars {
+/* 顶右：圆形指标排 */
+.fw-circles {
+  top: 20px;
+  right: 20px;
+  padding: 11px 14px;
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
+  gap: 14px;
 }
-.dc-emo-item {
+.circle-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
+  min-width: 52px;
 }
-.dc-emo-track {
-  width: 8px;
-  height: 26px;
+.ci {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 900;
+  overflow: hidden;
+}
+.ci i { font-style: normal; font-size: 9px; font-weight: 700; margin-left: 1px; }
+.ci--orange { background: rgba(244, 80, 46, 0.14); color: var(--orange); box-shadow: inset 0 0 0 1.5px var(--orange); }
+.ci--black { background: var(--ink); color: var(--yellow); }
+.ci--white { background: rgba(19, 19, 17, 0.06); color: var(--ink); }
+.ci-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.ci-val {
+  font-size: 9px;
+  color: var(--ink-muted);
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 底左身份 */
+.fh-identity {
+  position: absolute;
+  z-index: 6;
+  left: 28px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px 7px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 26px rgba(19, 19, 17, 0.1);
+}
+.fh-idimg {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--ink);
+}
+.fh-idtext { display: flex; flex-direction: column; gap: 1px; }
+.fh-idtext b {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+.fh-idtext b i {
+  font-style: normal;
+  color: var(--orange);
+}
+.fh-idtext small {
+  font-size: 9px;
+  color: rgba(19, 19, 17, 0.5);
+}
+
+/* 底右：直达全屏地图 */
+.fh-map-open {
+  position: absolute;
+  z-index: 6;
+  right: 28px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.fh-map-open:hover { transform: translateY(-1px); background: var(--orange); }
+.fh-map-open b { font-weight: 900; }
+
+/* ── 卡下横排 ── */
+.fh-under {
+  display: grid;
+  grid-template-columns: 210px repeat(auto-fit, minmax(240px, 1fr));
+  gap: 26px;
+  align-items: start;
+  margin-top: -26px;
+  padding: 0 12px;
+}
+
+/* 情绪频谱药丸（叠压黄卡下缘） */
+.fh-emotion {
+  position: relative;
+  z-index: 7;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(19, 19, 17, 0.1);
+}
+.emo-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+}
+.emo-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.emo-track {
+  width: 9px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(19, 19, 17, 0.07);
   display: flex;
   align-items: flex-end;
   overflow: hidden;
 }
-.dc-emo-track i {
+.emo-track i {
   display: block;
   width: 100%;
   border-radius: 999px;
   background: var(--ink);
   transition: height 0.4s ease;
 }
-.dc-emo-item small { font-size: 9px; color: rgba(19, 19, 17, 0.6); }
-
-/* 黑卡：指令 / 待审批 */
-.dc-strong {
-  position: relative;
-  margin: 0 0 4px;
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.35;
+.emo-name {
+  font-size: 9px;
+  color: var(--ink-muted);
 }
-.dc-text {
-  position: relative;
+.emo-strip {
+  background: var(--orange);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  padding: 5px 0 6px;
+  letter-spacing: 0.06em;
+}
+
+/* 信息栏 */
+.fh-blurb {
+  padding-top: 34px;
+  min-width: 0;
+}
+.blurb-title {
+  margin: 0 0 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.blurb-title--hot { color: var(--orange); }
+.blurb-strong {
+  margin: 0 0 5px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.blurb-text {
   margin: 0;
-  font-size: 11px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.66);
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--ink-soft);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.dc-meta {
-  position: relative;
+.blurb-risk {
   margin: 6px 0 0;
-  font-size: 9.5px;
-  color: rgba(255, 255, 255, 0.44);
+  font-size: 10.5px;
+  color: var(--orange);
 }
-.dc-risk {
-  position: relative;
-  margin: 4px 0 0;
+.blurb-meta {
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   font-size: 10px;
-  color: #f5904e;
+  color: var(--ink-muted);
 }
-.dc-actions {
-  position: relative;
+.blurb-actions {
   display: flex;
   gap: 8px;
-  margin-top: auto;
-  padding-top: 12px;
+  margin-top: 12px;
 }
-.dc-btn {
+.b-btn {
   height: 30px;
-  padding: 0 15px;
+  padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(19, 19, 17, 0.2);
   background: transparent;
-  color: #fff;
+  color: var(--ink);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
-.dc-btn:hover { background: rgba(255, 255, 255, 0.12); }
-.dc-btn--solid {
-  background: var(--yellow);
-  border-color: var(--yellow);
-  color: var(--ink);
+.b-btn:hover { transform: translateY(-1px); }
+.b-btn--solid {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
 }
-.dc-btn--solid:hover { background: #fff; border-color: #fff; }
+.b-btn--solid:hover { background: var(--orange); border-color: var(--orange); }
 
-/* ── 面板通用 ── */
+/* ── 下半屏三面板 ── */
+.fh-panels {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(240px, 1fr) minmax(0, 1.3fr);
+  gap: 16px;
+  align-items: stretch;
+}
 .panel {
   background: #fff;
   border-radius: 24px;
@@ -642,7 +905,7 @@ function formatTime(iso: string) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 18px 10px;
+  padding: 15px 18px 10px;
   flex-shrink: 0;
 }
 .panel-title {
@@ -658,31 +921,13 @@ function formatTime(iso: string) {
   background: var(--yellow);
   color: var(--ink);
 }
-.panel-tag--count { background: rgba(226, 84, 46, 0.12); color: #e2542e; }
-.panel-expand {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--ink-soft);
-  background: rgba(19, 19, 17, 0.05);
-  transition: background 0.15s, color 0.15s;
-}
-.panel-expand:hover { background: var(--ink); color: #fff; }
+.panel-tag--count { background: rgba(244, 80, 46, 0.12); color: var(--orange); }
 
-/* ── 第二行：机构列表 + 生态园区大地图 ── */
-.dash-mid {
-  display: grid;
-  grid-template-columns: minmax(210px, 0.75fr) minmax(0, 2.8fr);
-  gap: 14px;
-  align-items: stretch;
-}
-.panel--inst { min-height: 0; }
+/* 机构列表 */
 .inst-list {
   flex: 1;
   min-height: 0;
+  max-height: 360px;
   overflow-y: auto;
   scrollbar-width: thin;
   padding: 0 10px 12px;
@@ -739,25 +984,9 @@ function formatTime(iso: string) {
   flex-shrink: 0;
 }
 .il-dot.active { background: #3f9a4c; box-shadow: 0 0 0 3px rgba(63, 154, 76, 0.16); }
-.il-dot.urgent { background: #e2542e; }
+.il-dot.urgent { background: var(--orange); }
 
-.city-body {
-  height: 64vh;
-  min-height: 520px;
-  margin: 0 10px 10px;
-  border-radius: 18px;
-  overflow: hidden;
-}
-
-/* ── 第三行：信任阶梯 + 事件日志 ── */
-.dash-bottom {
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(0, 1.6fr);
-  gap: 14px;
-  align-items: stretch;
-}
-
-/* 信任阶梯（纵向五档） */
+/* 信任阶梯 */
 .trust-list {
   display: flex;
   flex-direction: column;
@@ -807,25 +1036,25 @@ function formatTime(iso: string) {
   font-weight: 700;
   color: rgba(19, 19, 17, 0.55);
 }
-.ti-progress em.met { color: #3f7a48; }
+.ti-progress em.met { color: #2f7a3c; }
 
-/* ── 第三行：事件日志 ── */
+/* 事件日志 */
 .log-table {
   padding: 0 10px 12px;
-  max-height: 300px;
+  max-height: 360px;
   overflow-y: auto;
   scrollbar-width: thin;
+  flex: 1;
 }
 .log-row {
   display: grid;
-  grid-template-columns: 46px 52px minmax(0, 1fr);
+  grid-template-columns: 42px 48px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 9px 8px;
   border-radius: 12px;
 }
 .log-row:hover { background: rgba(19, 19, 17, 0.03); }
-.log-row + .log-row { border-top: 1px solid var(--line); border-radius: 0; }
 .lr-time { font-size: 10px; color: var(--ink-muted); }
 .lr-stage {
   font-size: 9px;
@@ -836,9 +1065,9 @@ function formatTime(iso: string) {
   background: rgba(19, 19, 17, 0.06);
   color: var(--ink-soft);
 }
-.lr-stage.act { background: rgba(226, 84, 46, 0.12); color: #e2542e; }
+.lr-stage.act { background: rgba(244, 80, 46, 0.12); color: var(--orange); }
 .lr-stage.judge { background: rgba(77, 127, 176, 0.14); color: #3d6a96; }
-.lr-stage.settle { background: rgba(63, 122, 72, 0.12); color: #3f7a48; }
+.lr-stage.settle { background: rgba(63, 122, 72, 0.12); color: #2f7a3c; }
 .lr-text {
   font-size: 11.5px;
   overflow: hidden;
@@ -857,18 +1086,25 @@ function formatTime(iso: string) {
 
 /* ── 响应式 ── */
 @media (max-width: 1240px) {
-  .dash-cards { grid-template-columns: 1fr 1fr; }
-  .dc--black { grid-column: 1 / -1; min-height: 140px; }
-  .dash-mid { grid-template-columns: 1fr; }
-  .panel--inst .inst-list { max-height: 280px; }
-  .dash-bottom { grid-template-columns: 1fr; }
+  .fh-top { grid-template-columns: 1fr; gap: 20px; }
+  .fh-left { padding-top: 0; }
+  .fh-colors { display: none; }
+  .fh-count { margin-top: 0; }
+  .fh-under { grid-template-columns: 1fr; gap: 14px; padding: 0; margin-top: 14px; }
+  .fh-emotion { max-width: 320px; }
+  .fh-blurb { padding-top: 0; }
+  .fh-panels { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 767px) {
-  .dh-title { font-size: 24px; }
-  .dh-id { display: none; }
-  .dash-cards { grid-template-columns: 1fr; }
-  .dc { min-height: 0; }
-  .city-body { height: auto; min-height: 420px; }
+  .fh-title { font-size: 38px; }
+  .fh-hero { height: auto; min-height: 420px; }
+  .fh-map { inset: 74px 10px 10px; }
+  .fw-networth { width: 168px; top: 12px; left: 12px; }
+  .fw-circles { top: 12px; right: 12px; padding: 8px 10px; gap: 8px; }
+  .ci { width: 30px; height: 30px; font-size: 11px; }
+  .circle-item { min-width: 40px; }
+  .fh-identity { left: 12px; bottom: 12px; }
+  .fh-map-open { right: 12px; bottom: 12px; }
 }
 </style>
