@@ -144,39 +144,36 @@ function formatDate(iso: string) {
 </script>
 
 <style scoped>
-.archive-page { max-width: 720px; }
+.archive-page { max-width: 1100px; }
 
 .panel {
   background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: none;
+  border-radius: 24px;
   overflow: hidden;
 }
 .panel-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--faint);
+  padding: 15px 18px 10px;
+  border-bottom: none;
+  background: transparent;
 }
 .panel-icon { font-size: 14px; }
 .panel-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--mid);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--dark);
 }
 .panel-badge {
   margin-left: auto;
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--dim);
-  background: var(--gray);
-  padding: 2px 8px;
-  border-radius: 99px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  font-weight: 800;
+  color: #e2542e;
+  background: rgba(226, 84, 46, 0.1);
+  padding: 3px 10px;
+  border-radius: 999px;
 }
 
 /* Empty */
@@ -207,17 +204,17 @@ function formatDate(iso: string) {
 }
 .kb-card {
   background: var(--faint);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px;
+  border: none;
+  border-radius: 18px;
+  padding: 15px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: background 0.15s, box-shadow 0.15s;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.kb-card:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--faint)); }
-.kb-card.expanded { border-color: var(--accent); }
+.kb-card:hover { background: rgba(242, 223, 78, 0.35); }
+.kb-card.expanded { background: rgba(242, 223, 78, 0.45); box-shadow: inset 0 0 0 1.5px var(--dark); }
 .kb-card-top {
   display: flex;
   align-items: center;
@@ -225,12 +222,12 @@ function formatDate(iso: string) {
 }
 .kb-category {
   font-size: 9px;
-  font-weight: 700;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  padding: 2px 7px;
-  border-radius: 3px;
-  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--dark);
+  background: #f2df4e;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: none;
 }
 .kb-time {
   font-size: 9px;
@@ -323,20 +320,18 @@ function formatDate(iso: string) {
   flex-wrap: wrap;
 }
 .link-label {
-  font-size: 8px;
-  font-weight: 700;
+  font-size: 9px;
+  font-weight: 800;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.08em;
 }
 .link-tag {
   font-size: 9px;
   color: var(--mid);
   background: var(--faint);
-  padding: 1px 6px;
-  border-radius: 3px;
-  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: none;
 }
 
-.mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+.mono { font-family: inherit; }
 </style>

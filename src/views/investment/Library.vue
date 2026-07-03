@@ -822,10 +822,10 @@ function handleAddBook() {
 
 <style scoped>
 .library-page {
-  max-width: 800px;
+  max-width: 1100px;
   background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: none;
+  border-radius: 24px;
   overflow: hidden;
 }
 
@@ -834,21 +834,19 @@ function handleAddBook() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(139,111,71,0.04) 0%, transparent 100%);
+  background: transparent;
   flex-wrap: wrap;
   gap: 10px;
 }
 .header-left { display: flex; align-items: center; gap: 12px; }
 .header-emoji { font-size: 24px; }
 .header-info { display: flex; flex-direction: column; gap: 2px; }
-.header-title { font-size: 14px; font-weight: 700; color: var(--dark); margin: 0; }
+.header-title { font-size: 14px; font-weight: 800; color: var(--dark); margin: 0; }
 .header-sub {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.06em;
 }
 .header-right {
   display: flex;
@@ -856,18 +854,22 @@ function handleAddBook() {
   gap: 10px;
 }
 
-/* Tab 切换 */
+/* Tab 切换（胶囊组） */
 .tab-switch {
   display: flex;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  gap: 3px;
+  border: none;
+  border-radius: 999px;
+  padding: 3px;
+  background: rgba(19, 19, 17, 0.05);
   overflow: hidden;
 }
 .tab-btn {
-  padding: 5px 12px;
+  padding: 6px 14px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
+  border-radius: 999px;
   background: transparent;
   color: var(--mid);
   cursor: pointer;
@@ -875,29 +877,29 @@ function handleAddBook() {
   transition: all 0.15s;
   white-space: nowrap;
 }
-.tab-btn:hover { background: var(--faint); }
+.tab-btn:hover { background: rgba(255, 255, 255, 0.8); }
 .tab-btn.active {
-  background: rgba(139,111,71,0.1);
-  color: #8B6F47;
+  background: #131311;
+  color: #fff;
 }
 
 .add-btn {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 12px;
-  border-radius: 5px;
-  border: 1px solid rgba(139, 111, 71, 0.3);
-  background: rgba(139, 111, 71, 0.06);
-  color: #8B6F47;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #131311;
+  color: #fff;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.15s;
+  transition: background 0.15s, transform 0.15s;
   white-space: nowrap;
 }
-.add-btn:hover { background: rgba(139, 111, 71, 0.12); border-color: rgba(139, 111, 71, 0.5); }
+.add-btn:hover { background: #e2542e; transform: translateY(-1px); }
 
 /* ===== 知识图谱面板 ===== */
 .knowledge-panel {
@@ -909,8 +911,8 @@ function handleAddBook() {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(139,111,71,0.04);
-  border: 1px solid rgba(139,111,71,0.1);
+  background: rgba(226,84,46,0.04);
+  border: 1px solid rgba(226,84,46,0.1);
   border-radius: 6px;
   margin-bottom: 16px;
 }
@@ -929,18 +931,18 @@ function handleAddBook() {
 
 .knowledge-card {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
   transition: box-shadow 0.15s, border-color 0.15s;
   background: var(--card-bg);
 }
 .knowledge-card:hover {
-  border-color: rgba(139,111,71,0.3);
+  border-color: rgba(226,84,46,0.3);
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .knowledge-card.expanded {
-  border-color: rgba(139,111,71,0.4);
+  border-color: rgba(226,84,46,0.4);
 }
 
 .card-header {
@@ -974,7 +976,7 @@ function handleAddBook() {
 .card-domain {
   font-size: 10px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   letter-spacing: 0.04em;
 }
 
@@ -999,7 +1001,7 @@ function handleAddBook() {
 .conf-num {
   font-size: 11px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   min-width: 32px;
   text-align: right;
 }
@@ -1072,10 +1074,10 @@ function handleAddBook() {
 .search-input { flex: 1; }
 .search-btn {
   padding: 8px 16px;
-  border: 1px solid rgba(139, 111, 71, 0.3);
+  border: 1px solid rgba(226,84,46, 0.3);
   border-radius: 5px;
-  background: rgba(139, 111, 71, 0.08);
-  color: #8B6F47;
+  background: rgba(226,84,46, 0.08);
+  color: #e2542e;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1086,13 +1088,13 @@ function handleAddBook() {
   align-items: center;
   gap: 4px;
 }
-.search-btn:hover:not(:disabled) { background: rgba(139, 111, 71, 0.15); }
+.search-btn:hover:not(:disabled) { background: rgba(226,84,46, 0.15); }
 .search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .searching-dot {
   display: inline-block;
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: #8B6F47;
+  background: #e2542e;
   animation: pulse 1s ease-in-out infinite;
 }
 @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
@@ -1123,11 +1125,11 @@ function handleAddBook() {
 .preview-tags { display: flex; gap: 4px; }
 .preview-tag {
   font-size: 9px;
-  color: #8B6F47;
-  background: rgba(139,111,71,0.08);
+  color: #e2542e;
+  background: rgba(226,84,46,0.08);
   padding: 1px 6px;
   border-radius: 3px;
-  border: 1px solid rgba(139,111,71,0.15);
+  border: 1px solid rgba(226,84,46,0.15);
 }
 .preview-content {
   padding: 10px 12px;
@@ -1153,7 +1155,7 @@ function handleAddBook() {
   padding: 6px 14px;
   border: none;
   border-radius: 5px;
-  background: #8B6F47;
+  background: #e2542e;
   color: #fff;
   font-size: 12px;
   font-weight: 600;
@@ -1172,7 +1174,7 @@ function handleAddBook() {
   outline: none;
   box-sizing: border-box;
 }
-.form-input:focus { border-color: #8B6F47; }
+.form-input:focus { border-color: #e2542e; }
 
 /* ===== 书架 ===== */
 .bookcase {
@@ -1182,8 +1184,8 @@ function handleAddBook() {
       180deg,
       transparent 0px,
       transparent 198px,
-      rgba(139,111,71,0.08) 198px,
-      rgba(139,111,71,0.08) 200px
+      rgba(226,84,46,0.08) 198px,
+      rgba(226,84,46,0.08) 200px
     );
 }
 .shelf { position: relative; margin-bottom: 8px; }
@@ -1277,9 +1279,9 @@ function handleAddBook() {
   top: 0; left: 0; right: 0;
   height: 2px;
   background: linear-gradient(90deg,
-    rgba(139,111,71,0.2) 0%, rgba(139,111,71,0.05) 20%,
-    rgba(139,111,71,0.1) 50%, rgba(139,111,71,0.05) 80%,
-    rgba(139,111,71,0.2) 100%
+    rgba(226,84,46,0.2) 0%, rgba(226,84,46,0.05) 20%,
+    rgba(226,84,46,0.1) 50%, rgba(226,84,46,0.05) 80%,
+    rgba(226,84,46,0.2) 100%
   );
 }
 .shelf-shadow {

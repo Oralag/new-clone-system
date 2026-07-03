@@ -100,10 +100,9 @@
               <span class="il-zone-dot" :class="zone.key"></span>
               {{ zone.label }}
             </div>
-            <router-link
+            <div
               v-for="inst in zone.items"
               :key="inst.institutionId"
-              to="/investment/city"
               class="il-item"
               :class="inst.status"
             >
@@ -113,7 +112,7 @@
                 <small>{{ statusLabel(inst.status) }}</small>
               </span>
               <span class="il-dot" :class="inst.status"></span>
-            </router-link>
+            </div>
           </template>
         </div>
       </section>
@@ -713,11 +712,8 @@ function formatTime(iso: string) {
   gap: 9px;
   padding: 8px;
   border-radius: 12px;
-  text-decoration: none;
   color: var(--ink);
-  transition: background 0.14s ease;
 }
-.il-item:hover { background: rgba(19, 19, 17, 0.045); }
 .il-item.locked { opacity: 0.45; }
 .il-emoji { font-size: 15px; flex-shrink: 0; }
 .il-info {

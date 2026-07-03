@@ -22,7 +22,7 @@
       <!-- 指数行情 Ticker -->
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-icon" style="color:#F5A623">◈</span>
+          <span class="panel-icon" style="color:#e2542e">◈</span>
           <span class="panel-title">{{ t('investmentMarket.indicesTitle') }}</span>
           <span class="panel-desc">{{ t('investmentMarket.indicesDesc') }}</span>
           <span class="live-dot"></span>
@@ -49,7 +49,7 @@
       <!-- K线图 -->
       <div class="panel kline-panel" v-if="klineTarget">
         <div class="panel-head">
-          <span class="panel-icon" style="color:#F5A623">▥</span>
+          <span class="panel-icon" style="color:#e2542e">▥</span>
           <span class="panel-title">{{ t('investmentMarket.klineTitle') }}</span>
           <span class="panel-desc">{{ displayIndexName(klineTarget) }} · {{ t('investmentMarket.dailyK') }}</span>
           <span class="kline-period-group" style="margin-left:auto">
@@ -161,7 +161,7 @@
       <!-- 资讯快讯流 -->
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-icon" style="color:#F5A623">⚡</span>
+          <span class="panel-icon" style="color:#e2542e">⚡</span>
           <span class="panel-title">{{ t('investmentMarket.newsFeedTitle') }}</span>
           <span class="panel-desc">{{ t('investmentMarket.newsFeedDesc') }}</span>
           <span class="live-dot" style="margin-left:auto"></span>
@@ -185,7 +185,7 @@
       <!-- 板块热度 -->
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-icon" style="color:#F5A623">◈</span>
+          <span class="panel-icon" style="color:#e2542e">◈</span>
           <span class="panel-title">{{ t('investmentMarket.sectorHeatTitle') }}</span>
           <span class="panel-desc">{{ t('investmentMarket.sectorHeatDesc') }}</span>
         </div>
@@ -279,7 +279,7 @@
       <!-- 亚当发现的机会 -->
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-icon" style="color:#F5A623">◈</span>
+          <span class="panel-icon" style="color:#e2542e">◈</span>
           <span class="panel-title">{{ t('investmentMarket.adamDiscoveriesTitle') }}</span>
           <span class="panel-desc">{{ t('investmentMarket.adamDiscoveriesDesc') }}</span>
           <span class="panel-count" v-if="adamDiscoveries.length">{{ adamDiscoveries.length }}</span>
@@ -421,7 +421,7 @@
       <!-- 信用 + 分红/赔付结算 -->
       <div class="panel" v-if="settlement">
         <div class="panel-head">
-          <span class="panel-icon" style="color:#F5A623">⬢</span>
+          <span class="panel-icon" style="color:#e2542e">⬢</span>
           <span class="panel-title">{{ t('investmentMarket.creditSettlementTitle') }}</span>
           <span class="panel-desc">{{ t('investmentMarket.creditSettlementDesc') }}</span>
         </div>
@@ -443,7 +443,7 @@
           </div>
           <div class="credit-card">
             <div class="credit-card-label">{{ t('investmentMarket.creditTotalOwed') }}</div>
-            <div class="credit-card-value" style="color:#F5A623">{{ settlement.settlement_summary.net_owed_to_user }}</div>
+            <div class="credit-card-value" style="color:#e2542e">{{ settlement.settlement_summary.net_owed_to_user }}</div>
             <div class="credit-card-sub">{{ t('investmentMarket.creditTotalOwedSub') }}</div>
           </div>
         </div>
@@ -471,7 +471,7 @@
       <!-- 添加按钮 -->
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-icon" style="color:#F5A623">◈</span>
+          <span class="panel-icon" style="color:#e2542e">◈</span>
           <span class="panel-title">{{ t('investmentMarket.watchlistTitle') }}</span>
           <span class="panel-desc">{{ t('investmentMarket.watchlistDesc') }}</span>
           <button class="add-btn" @click="showAddDialog = true">{{ t('investmentMarket.add') }}</button>
@@ -1165,10 +1165,15 @@ onMounted(() => {
 
 /* ── Tab Bar ── */
 .tab-bar {
-  display: flex;
-  gap: 0;
+  display: inline-flex;
+  gap: 3px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(19, 19, 17, 0.05);
+  width: fit-content;
+  max-width: 100%;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -1178,27 +1183,26 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 18px 9px;
+  padding: 8px 15px;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: 999px;
   cursor: pointer;
-  color: var(--dim);
+  color: var(--mid);
   white-space: nowrap;
   transition: all 0.15s;
   position: relative;
-  bottom: -1px;
 }
-.tab-btn:hover { color: var(--dark); }
+.tab-btn:hover { color: var(--dark); background: rgba(255, 255, 255, 0.8); }
 .tab-btn.active {
-  color: var(--dark);
-  border-bottom-color: #F5A623;
+  color: #fff;
+  background: #131311;
 }
 .tab-code {
   font-size: 8px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  color: #F5A623;
+  font-family: inherit;
+  color: #e2542e;
   opacity: 0.5;
   letter-spacing: 0.05em;
 }
@@ -1211,9 +1215,9 @@ onMounted(() => {
 .tab-badge {
   font-size: 9px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  background: rgba(245, 166, 35, 0.15);
-  color: #F5A623;
+  font-family: inherit;
+  background: rgba(226,84,46, 0.15);
+  color: #e2542e;
   border-radius: 8px;
   padding: 1px 5px;
   line-height: 1.4;
@@ -1229,28 +1233,26 @@ onMounted(() => {
 /* ── 共用面板 ── */
 .panel {
   background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: none;
+  border-radius: 20px;
   overflow: hidden;
 }
 .panel-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(245,166,35,0.02) 0%, transparent 100%);
+  padding: 13px 16px 9px;
+  border-bottom: none;
+  background: transparent;
 }
 .panel-icon {
   font-size: 10px;
   opacity: 0.7;
 }
 .panel-title {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--dim);
-  letter-spacing: 0.12em;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--dark);
 }
 .panel-desc {
   font-size: 10px;
@@ -1265,7 +1267,7 @@ onMounted(() => {
   background: var(--faint);
   padding: 1px 6px;
   border-radius: 8px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
 }
 .live-dot {
   width: 5px;
@@ -1280,7 +1282,7 @@ onMounted(() => {
   font-size: 8px;
   font-weight: 700;
   color: #4f79c7;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   letter-spacing: 0.1em;
 }
 @keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -1289,20 +1291,22 @@ onMounted(() => {
 .indices-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 1px;
-  background: var(--border);
+  gap: 10px;
+  background: transparent;
+  padding: 0 12px 12px;
 }
 .index-card {
   padding: 14px 16px;
-  background: var(--card-bg);
+  background: var(--faint);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   gap: 3px;
   cursor: pointer;
   transition: background 0.15s;
 }
-.index-card:hover { background: rgba(245,166,35,0.06); }
-.index-card.selected { background: rgba(245,166,35,0.1); border-bottom: 2px solid #F5A623; }
+.index-card:hover { background: rgba(242, 223, 78, 0.4); }
+.index-card.selected { background: #f2df4e; border-bottom: none; }
 .index-name {
   font-size: 11px;
   font-weight: 600;
@@ -1311,13 +1315,13 @@ onMounted(() => {
 .index-code {
   font-size: 9px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.5;
 }
 .index-price {
   font-size: 18px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   color: var(--dark);
   letter-spacing: -0.02em;
   margin-top: 4px;
@@ -1325,7 +1329,7 @@ onMounted(() => {
 .index-change {
   font-size: 11px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
 }
 
 /* ── 涨跌颜色 ── */
@@ -1385,7 +1389,7 @@ onMounted(() => {
   padding: 4px 10px;
   pointer-events: none;
   font-size: 11px;
-  font-family: 'SF Mono', monospace;
+  font-family: inherit;
 }
 .ktooltip-date {
   color: rgba(255,255,255,0.5);
@@ -1400,7 +1404,7 @@ onMounted(() => {
 .kline-period-btn {
   padding: 2px 8px;
   font-size: 10px;
-  font-family: 'SF Mono', monospace;
+  font-family: inherit;
   font-weight: 600;
   background: none;
   border: 1px solid var(--border);
@@ -1409,8 +1413,8 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.15s;
 }
-.kline-period-btn:hover { color: var(--dark); border-color: #F5A623; }
-.kline-period-btn.active { background: rgba(245,166,35,0.15); color: #F5A623; border-color: #F5A623; }
+.kline-period-btn:hover { color: var(--dark); border-color: #e2542e; }
+.kline-period-btn.active { background: rgba(226,84,46,0.15); color: #e2542e; border-color: #e2542e; }
 
 /* 涨跌榜表格 */
 .rank-table {
@@ -1424,7 +1428,7 @@ onMounted(() => {
   font-size: 9px;
   font-weight: 700;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border);
   opacity: 0.5;
@@ -1444,7 +1448,7 @@ onMounted(() => {
 .code-cell {
   font-size: 10px;
   color: var(--dim) !important;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.5;
 }
 .price-cell { font-weight: 600; }
@@ -1480,7 +1484,7 @@ onMounted(() => {
   flex-shrink: 0;
   font-size: 10px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.5;
   padding-top: 1px;
   min-width: 36px;
@@ -1503,7 +1507,7 @@ onMounted(() => {
   font-size: 9px;
   font-weight: 700;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.4;
   flex-shrink: 0;
 }
@@ -1520,14 +1524,14 @@ onMounted(() => {
 .rank-code {
   font-size: 9px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.4;
   flex-shrink: 0;
 }
 .rank-val {
   font-size: 11px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   flex-shrink: 0;
 }
 .rank-empty {
@@ -1557,13 +1561,13 @@ onMounted(() => {
   font-weight: 700;
   color: var(--dim);
   letter-spacing: 0.12em;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.5;
 }
 .breadth-val {
   font-size: 22px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   letter-spacing: -0.02em;
 }
 .breadth-sub {
@@ -1598,11 +1602,11 @@ onMounted(() => {
 .sector-val {
   font-size: 11px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   letter-spacing: 0.03em;
 }
 .sector-card.hot .sector-val { color: #FF4D4D; }
-.sector-card.warm .sector-val { color: #F5A623; }
+.sector-card.warm .sector-val { color: #e2542e; }
 .sector-card.cool .sector-val { color: #00D4FF; }
 .sector-bar {
   height: 3px;
@@ -1613,11 +1617,11 @@ onMounted(() => {
 .sector-fill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, #F5A623, #FF6B35);
+  background: linear-gradient(90deg, #e2542e, #FF6B35);
   transition: width 0.5s ease;
 }
 .sector-card.hot .sector-fill { background: linear-gradient(90deg, #FF4D4D, #FF6B35); }
-.sector-card.warm .sector-fill { background: linear-gradient(90deg, #F5A623, #FFD93D); }
+.sector-card.warm .sector-fill { background: linear-gradient(90deg, #e2542e, #FFD93D); }
 .sector-card.cool .sector-fill { background: linear-gradient(90deg, #00D4FF, #4f79c7); }
 
 /* ── 北向资金 ── */
@@ -1644,7 +1648,7 @@ onMounted(() => {
   top: 12px;
   bottom: 12px;
   width: 2px;
-  background: #F5A623;
+  background: #e2542e;
   opacity: 0.3;
   border-radius: 1px;
 }
@@ -1653,13 +1657,13 @@ onMounted(() => {
   font-weight: 700;
   color: var(--dim);
   letter-spacing: 0.12em;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.6;
 }
 .flow-val {
   font-size: 24px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   color: var(--dark);
   letter-spacing: -0.02em;
 }
@@ -1695,7 +1699,7 @@ onMounted(() => {
   font-size: 10px;
   font-weight: 700;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   letter-spacing: 0.1em;
 }
 .flow-status-dot.active + .flow-status-text { color: #4f79c7; }
@@ -1741,7 +1745,7 @@ onMounted(() => {
 .signal-time {
   font-size: 9px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   min-width: 72px;
   display: block;
 }
@@ -1786,16 +1790,16 @@ onMounted(() => {
 .discovery-type-tag {
   font-size: 9px;
   font-weight: 700;
-  color: #F5A623;
-  background: rgba(245,166,35,0.12);
+  color: #e2542e;
+  background: rgba(226,84,46,0.12);
   padding: 1px 6px;
   border-radius: 4px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
 }
 .discovery-time {
   font-size: 9px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.4;
   margin-left: auto;
 }
@@ -1818,7 +1822,7 @@ onMounted(() => {
   font-size: 10px;
   font-weight: 700;
   color: #00D4FF;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   background: rgba(0,212,255,0.08);
   padding: 2px 6px;
   border-radius: 4px;
@@ -1854,7 +1858,7 @@ onMounted(() => {
   font-size: 10px;
   font-weight: 700;
   color: #00D4FF;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   background: rgba(0,212,255,0.08);
   padding: 2px 6px;
   border-radius: 4px;
@@ -1862,12 +1866,12 @@ onMounted(() => {
 .rec-status {
   font-size: 9px;
   font-weight: 700;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   padding: 2px 6px;
   border-radius: 4px;
 }
 .rec-status.issued { color: #4f79c7; background: rgba(79,121,199,0.1); }
-.rec-status.adopted { color: #F5A623; background: rgba(245,166,35,0.1); }
+.rec-status.adopted { color: #e2542e; background: rgba(226,84,46,0.1); }
 .rec-status.settled { color: var(--dim); background: var(--faint); }
 .rec-status.drafted { color: var(--dim); background: var(--faint); }
 .rec-thesis {
@@ -1883,13 +1887,13 @@ onMounted(() => {
 .rec-time {
   font-size: 9px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.4;
 }
 .rec-confidence {
   font-size: 10px;
   font-weight: 600;
-  color: #F5A623;
+  color: #e2542e;
 }
 
 /* ── HTX 自动交易 ── */
@@ -2013,8 +2017,8 @@ onMounted(() => {
 }
 .credit-card {
   padding: 12px 14px;
-  background: rgba(245, 166, 35, 0.05);
-  border: 1px solid rgba(245, 166, 35, 0.15);
+  background: rgba(226,84,46, 0.05);
+  border: 1px solid rgba(226,84,46, 0.15);
   border-radius: 6px;
 }
 .credit-card-label {
@@ -2028,12 +2032,12 @@ onMounted(() => {
   font-size: 22px;
   font-weight: 700;
   font-family: 'Monaco', monospace;
-  color: #F5A623;
+  color: #e2542e;
 }
 .credit-card-value.level-C { color: #888; }
 .credit-card-value.level-B { color: #4A90E2; }
 .credit-card-value.level-Bplus { color: #28C76F; }
-.credit-card-value.level-A { color: #F5A623; }
+.credit-card-value.level-A { color: #e2542e; }
 .credit-card-value.level-S { color: #9B59B6; }
 .credit-card-sub {
   margin-top: 4px;
@@ -2080,15 +2084,15 @@ onMounted(() => {
   padding: 3px 10px;
   font-size: 11px;
   font-weight: 600;
-  color: #F5A623;
-  background: rgba(245,166,35,0.1);
-  border: 1px solid rgba(245,166,35,0.25);
+  color: #e2542e;
+  background: rgba(226,84,46,0.1);
+  border: 1px solid rgba(226,84,46,0.25);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .add-btn:hover {
-  background: rgba(245,166,35,0.2);
+  background: rgba(226,84,46,0.2);
 }
 .watchlist {
   display: flex;
@@ -2121,7 +2125,7 @@ onMounted(() => {
 }
 .watch-code {
   font-size: 10px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   color: var(--dim);
   opacity: 0.5;
 }
@@ -2132,7 +2136,7 @@ onMounted(() => {
   background: rgba(0,212,255,0.08);
   padding: 2px 7px;
   border-radius: 4px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
 }
 .watch-note {
   font-size: 11px;
@@ -2147,7 +2151,7 @@ onMounted(() => {
 .watch-time {
   font-size: 9px;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   opacity: 0.35;
   flex: 1;
 }
@@ -2232,7 +2236,7 @@ onMounted(() => {
   transition: border-color 0.15s;
   font-family: inherit;
 }
-.form-input:focus { border-color: #F5A623; }
+.form-input:focus { border-color: #e2542e; }
 .type-selector {
   display: flex;
   flex-wrap: wrap;
@@ -2251,9 +2255,9 @@ onMounted(() => {
 }
 .type-btn:hover { color: var(--dark); }
 .type-btn.active {
-  color: #F5A623;
-  background: rgba(245,166,35,0.1);
-  border-color: rgba(245,166,35,0.4);
+  color: #e2542e;
+  background: rgba(226,84,46,0.1);
+  border-color: rgba(226,84,46,0.4);
 }
 .modal-foot {
   padding: 14px 18px;
@@ -2279,7 +2283,7 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 700;
   color: var(--card-bg);
-  background: #F5A623;
+  background: #e2542e;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -2307,7 +2311,7 @@ onMounted(() => {
   font-size: 10px;
   font-weight: 700;
   color: var(--dim);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: inherit;
   letter-spacing: 0.1em;
   opacity: 0.4;
 }
@@ -2315,255 +2319,6 @@ onMounted(() => {
   font-size: 11px;
   color: var(--dim);
   opacity: 0.35;
-}
-
-/* ── Frosted flat restyle ── */
-.market-page {
-  --mk-ink: #172027;
-  --mk-soft: rgba(23, 32, 39, 0.64);
-  --mk-muted: rgba(23, 32, 39, 0.42);
-  --mk-line: rgba(42, 52, 65, 0.1);
-  --mk-glass: rgba(255, 255, 255, 0.64);
-  --mk-glass-strong: rgba(255, 255, 255, 0.76);
-  --mk-blue: #4f79c7;
-  --mk-blue-soft: rgba(79, 121, 199, 0.12);
-  --mk-coral: #ef6f5e;
-  --mk-sun: #f3b451;
-  --mk-sky: #5d89d4;
-  gap: 18px;
-}
-
-.market-page .tab-bar {
-  gap: 6px;
-  padding: 4px;
-  margin-bottom: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.68);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.46);
-  backdrop-filter: blur(18px) saturate(145%);
-  -webkit-backdrop-filter: blur(18px) saturate(145%);
-}
-.market-page .tab-btn {
-  bottom: 0;
-  padding: 9px 14px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  color: var(--mk-soft);
-  background: transparent;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-.market-page .tab-btn:hover {
-  color: var(--mk-ink);
-  background: rgba(255, 255, 255, 0.5);
-}
-.market-page .tab-btn.active {
-  color: #fff;
-  background: var(--mk-blue);
-  border-bottom-color: transparent;
-}
-.market-page .tab-code {
-  color: currentColor;
-  opacity: 0.58;
-  letter-spacing: 0.02em;
-}
-.market-page .tab-btn.active .tab-code { opacity: 0.82; }
-.market-page .tab-badge {
-  background: rgba(255, 255, 255, 0.22);
-  color: currentColor;
-  border-radius: 999px;
-}
-
-.market-page .panel,
-.market-page .modal-box {
-  background: var(--mk-glass);
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 18px;
-  overflow: hidden;
-  backdrop-filter: blur(20px) saturate(145%);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
-  box-shadow: inset 0 0 0 1px rgba(42, 52, 65, 0.04);
-}
-.market-page .panel-head,
-.market-page .modal-head,
-.market-page .modal-foot {
-  border-color: var(--mk-line);
-  background: rgba(255, 255, 255, 0.24);
-}
-.market-page .panel-icon {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  color: #fff !important;
-  background: var(--mk-blue);
-  opacity: 1;
-}
-.market-page .panel-title {
-  color: rgba(23, 32, 39, 0.68);
-  letter-spacing: 0.03em;
-  font-family: inherit;
-  font-size: 12px;
-}
-.market-page .panel-desc,
-.market-page .panel-count,
-.market-page .empty-text,
-.market-page .empty-sub {
-  color: var(--mk-muted);
-  opacity: 1;
-}
-.market-page .live-dot,
-.market-page .flow-status-dot.active {
-  background: var(--mk-blue);
-  box-shadow: 0 0 0 4px rgba(79, 121, 199, 0.12);
-}
-.market-page .live-text,
-.market-page .flow-status-dot.active + .flow-status-text {
-  color: var(--mk-blue);
-}
-
-.market-page .indices-row,
-.market-page .breadth-grid,
-.market-page .sector-grid,
-.market-page .flow-grid,
-.market-page .discovery-list,
-.market-page .rec-list,
-.market-page .watchlist {
-  gap: 8px;
-  padding: 12px;
-  background: transparent;
-}
-.market-page .index-card,
-.market-page .breadth-card,
-.market-page .sector-card,
-.market-page .flow-card,
-.market-page .discovery-card,
-.market-page .rec-card,
-.market-page .watch-card {
-  background: rgba(255, 255, 255, 0.46);
-  border: 1px solid var(--mk-line);
-  border-radius: 14px;
-}
-.market-page .index-card:hover,
-.market-page .rank-table tbody tr:hover,
-.market-page .news-item:hover {
-  background: rgba(79, 121, 199, 0.08);
-}
-.market-page .index-card.selected {
-  background: var(--mk-blue-soft);
-  border: 1px solid rgba(79, 121, 199, 0.24);
-}
-.market-page .index-name,
-.market-page .sector-name,
-.market-page .rank-name,
-.market-page .news-title,
-.market-page .rec-title,
-.market-page .watch-name,
-.market-page .modal-title {
-  color: var(--mk-ink);
-}
-.market-page .index-code,
-.market-page .breadth-label,
-.market-page .flow-label,
-.market-page .rank-code,
-.market-page .code-cell,
-.market-page .news-time,
-.market-page .rec-time,
-.market-page .watch-code,
-.market-page .watch-time,
-.market-page .form-label {
-  color: var(--mk-muted) !important;
-  opacity: 1;
-}
-.market-page .up,
-.market-page .flow-val.positive,
-.market-page .flow-val-sm.positive,
-.market-page .sector-card.hot .sector-val {
-  color: var(--mk-coral);
-}
-.market-page .down,
-.market-page .flow-val.negative,
-.market-page .flow-val-sm.negative {
-  color: var(--mk-blue);
-}
-.market-page .sector-card.warm .sector-val,
-.market-page .rec-confidence {
-  color: #8a5b09;
-}
-.market-page .sector-card.cool .sector-val,
-.market-page .rec-symbol,
-.market-page .watch-type-tag,
-.market-page .discovery-symbol {
-  color: #325d9b;
-  background: rgba(93, 137, 212, 0.12);
-}
-.market-page .sector-bar,
-.market-page .form-input,
-.market-page .type-btn,
-.market-page .btn-cancel {
-  background: rgba(255, 255, 255, 0.5);
-  border-color: var(--mk-line);
-}
-.market-page .sector-fill,
-.market-page .sector-card.hot .sector-fill,
-.market-page .sector-card.warm .sector-fill,
-.market-page .sector-card.cool .sector-fill {
-  background: var(--mk-blue);
-}
-.market-page .flow-card.main-flow::before,
-.market-page .signal-dot {
-  background: var(--mk-blue);
-  box-shadow: none;
-}
-.market-page .discovery-type-tag,
-.market-page .rec-status.adopted,
-.market-page .add-btn,
-.market-page .type-btn.active {
-  color: var(--mk-blue);
-  background: var(--mk-blue-soft);
-  border-color: rgba(79, 121, 199, 0.24);
-}
-.market-page .rec-status.issued {
-  color: var(--mk-blue);
-  background: var(--mk-blue-soft);
-}
-.market-page .form-input:focus {
-  border-color: rgba(79, 121, 199, 0.28);
-  box-shadow: 0 0 0 3px rgba(79, 121, 199, 0.08);
-}
-.market-page .required { color: var(--mk-coral); }
-.market-page .btn-confirm {
-  color: #fff;
-  background: var(--mk-blue);
-  border-radius: 999px;
-}
-.market-page .btn-cancel,
-.market-page .add-btn,
-.market-page .type-btn {
-  border-radius: 999px;
-}
-.market-page .kline-wrap {
-  background: rgba(255, 255, 255, 0.34);
-}
-.market-page .kline-tooltip {
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(42, 52, 65, 0.1);
-  border-radius: 12px;
-}
-.market-page .ktooltip-date,
-.market-page .ktooltip-item {
-  color: var(--mk-soft);
-}
-.market-page .kline-period-btn {
-  border-radius: 999px;
-  border-color: var(--mk-line);
-  background: rgba(255, 255, 255, 0.44);
-}
-.market-page .kline-period-btn:hover,
-.market-page .kline-period-btn.active {
-  color: var(--mk-blue);
-  border-color: rgba(79, 121, 199, 0.28);
-  background: var(--mk-blue-soft);
 }
 
 /* ── 响应式 ── */

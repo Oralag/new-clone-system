@@ -6,7 +6,7 @@
       role="平面设计师"
       emoji="🎨"
       desc="海报 · Banner · Logo · 包装 · 社媒图"
-      color="#e11d48"
+      color="#e2542e"
       illustId="designer"
       :busy="isLoading"
       :stats="[
@@ -20,12 +20,12 @@
       <!-- 左侧 -->
       <aside class="left-panel">
         <div class="panel-card">
-          <div class="panel-hd"><span class="panel-dot" style="background:#e11d48"></span>今日目标</div>
+          <div class="panel-hd"><span class="panel-dot" style="background:#e2542e"></span>今日目标</div>
           <textarea v-model="todayGoal" class="goal-input" placeholder="今日设计目标..." rows="3" @blur="saveGoal"/>
         </div>
 
         <div class="panel-card">
-          <div class="panel-hd"><span class="panel-dot" style="background:#6366f1"></span>快捷指令</div>
+          <div class="panel-hd"><span class="panel-dot" style="background:#131311"></span>快捷指令</div>
           <div class="quick-list">
             <button v-for="q in quickPrompts" :key="q.label" class="quick-item" @click="sendMessage(q.prompt)">
               <span class="quick-emoji">{{ q.icon }}</span>
@@ -35,7 +35,7 @@
         </div>
 
         <div class="panel-card">
-          <div class="panel-hd"><span class="panel-dot" style="background:#10b981"></span>部门状态</div>
+          <div class="panel-hd"><span class="panel-dot" style="background:#e0b32c"></span>部门状态</div>
           <div class="status-list">
             <div class="status-row"><span class="status-label">设计专员</span><span class="status-badge green">待命</span></div>
             <div class="status-row"><span class="status-label">今日生图</span><span class="status-badge red">{{ designData.filter(d=>d.type==='image').length }} 张</span></div>
@@ -46,7 +46,7 @@
       </aside>
 
       <!-- 中间：对话 -->
-      <section class="chat-panel" :style="{ '--ac': '#e11d48' }">
+      <section class="chat-panel" :style="{ '--ac': '#e2542e' }">
         <div class="chat-header">
           <div class="chat-header-left">
             <span class="chat-agent-emoji">🎨</span>
@@ -97,7 +97,7 @@
       <aside class="right-panel">
         <div class="panel-card output-card">
           <div class="panel-hd">
-            <span class="panel-dot" style="background:#e11d48"></span>
+            <span class="panel-dot" style="background:#e2542e"></span>
             设计产出
             <span class="panel-count">{{ designData.length }}</span>
             <button v-if="designData.length" class="clear-canvas-btn" @click="designData = []">清空</button>
@@ -287,22 +287,22 @@ async function sendMessage(text: string) {
 </script>
 
 <style scoped>
-.designer-dept { display: flex; flex-direction: column; gap: 14px; padding-bottom: 40px; max-width: 1400px; }
+.designer-dept { display: flex; flex-direction: column; gap: 14px; padding-bottom: 40px; max-width: 1400px; --ink: #131311; --ink-soft: rgba(19,19,17,0.64); --ink-muted: rgba(19,19,17,0.4); --yellow: #f2df4e; --accent: #e2542e; }
 .three-col { display: grid; grid-template-columns: 220px 1fr 260px; gap: 14px; align-items: start; }
 
-.panel-card { background: #fff; border: 1px solid #E8E8E8; border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.04); }
-.panel-hd { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #AAAAAA; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; flex-wrap: wrap; }
-.panel-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.panel-count { margin-left: auto; background: #F0F0EE; color: #666; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+.panel-card { background: #fff; border: none; border-radius: 20px; padding: 15px 16px; box-shadow: none; }
+.panel-hd { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; color: var(--ink); margin-bottom: 10px; flex-wrap: wrap; }
+.panel-dot { width: 6px; height: 6px; border-radius: 2px; flex-shrink: 0; }
+.panel-count { margin-left: auto; background: rgba(226,84,46,0.1); color: var(--accent); font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
 
 .left-panel { display: flex; flex-direction: column; gap: 10px; }
-.goal-input { width: 100%; border: 1px solid #E8E8E8; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #333; background: #F8F8F6; resize: none; outline: none; font-family: inherit; line-height: 1.5; box-sizing: border-box; }
-.goal-input:focus { border-color: #e11d48; }
+.goal-input { width: 100%; border: none; border-radius: 12px; padding: 9px 11px; font-size: 12px; color: var(--ink); background: rgba(19,19,17,0.04); resize: none; outline: none; font-family: inherit; line-height: 1.5; box-sizing: border-box; }
+.goal-input:focus { box-shadow: 0 0 0 1.5px var(--ink); }
 .quick-list { display: flex; flex-direction: column; gap: 6px; }
-.quick-item { display: flex; align-items: flex-start; gap: 7px; padding: 8px 10px; border-radius: 8px; background: #F8F8F6; border: 1px solid transparent; cursor: pointer; text-align: left; font-family: inherit; transition: all 0.15s; }
-.quick-item:hover { background: rgba(225,29,72,0.06); border-color: rgba(225,29,72,0.2); }
+.quick-item { display: flex; align-items: flex-start; gap: 7px; padding: 8px 10px; border-radius: 12px; background: rgba(19,19,17,0.035); border: none; cursor: pointer; text-align: left; font-family: inherit; transition: background 0.15s; }
+.quick-item:hover { background: var(--ink); } .quick-item:hover .quick-text { color: #fff; }
 .quick-emoji { font-size: 13px; flex-shrink: 0; }
-.quick-text { font-size: 11px; color: #555; line-height: 1.4; }
+.quick-text { font-size: 11px; color: var(--ink-soft); line-height: 1.4; transition: color 0.15s; }
 .status-list { display: flex; flex-direction: column; gap: 7px; }
 .status-row { display: flex; align-items: center; justify-content: space-between; }
 .status-label { font-size: 12px; color: #555; }
@@ -311,46 +311,46 @@ async function sendMessage(text: string) {
 .status-badge.red   { background: rgba(225,29,72,0.1);  color: #e11d48; }
 .status-badge.blue  { background: rgba(0,113,227,0.08); color: #0071e3; }
 .clear-btn { width: 100%; margin-top: 10px; padding: 7px; border: 1px solid #E8E8E8; border-radius: 8px; background: #F8F8F6; font-size: 11px; color: #999; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-.clear-btn:hover { border-color: #e11d48; color: #e11d48; }
+.clear-btn:hover { border-color: var(--ink); color: var(--ink); }
 
-.chat-panel { background: #fff; border: 1px solid #E8E8E8; border-left: 3px solid var(--ac, #e11d48); border-radius: 14px; padding: 16px 16px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.05); overflow: hidden; min-height: 500px; display: flex; flex-direction: column; }
-.chat-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-shrink: 0; }
+.chat-panel { background: #fff; border: none; border-radius: 24px; padding: 16px 16px 0; box-shadow: none; overflow: hidden; min-height: 520px; display: flex; flex-direction: column; }
+.chat-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -16px -16px 14px; padding: 14px 18px; background: var(--ink); flex-shrink: 0; }
 .chat-header-left { display: flex; align-items: center; gap: 10px; }
 .chat-agent-emoji { font-size: 24px; }
-.chat-agent-name { font-size: 14px; font-weight: 800; color: #1A1A1A; letter-spacing: -0.02em; }
-.chat-agent-sub { font-size: 11px; color: #AAAAAA; margin-top: 1px; }
-.outsource-tag { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px dashed rgba(225,29,72,0.4); color: #e11d48; flex-shrink: 0; }
+.chat-agent-name { font-size: 13px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+.chat-agent-sub { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+.outsource-tag { font-size: 9px; font-weight: 800; padding: 3px 9px; border-radius: 999px; border: none; background: var(--yellow); color: var(--ink); flex-shrink: 0; }
 
 .quick-prompts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 0 16px; flex-shrink: 0; }
-.prompt-card { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid #E8E8E8; background: #F8F8F6; cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit; }
-.prompt-card:hover { border-color: rgba(225,29,72,0.3); background: rgba(225,29,72,0.04); }
+.prompt-card { display: flex; align-items: center; gap: 8px; padding: 11px 13px; border-radius: 14px; border: none; background: rgba(19,19,17,0.035); cursor: pointer; transition: background 0.15s; text-align: left; font-family: inherit; }
+.prompt-card:hover { background: var(--yellow); }
 .prompt-card:disabled { opacity: 0.5; cursor: not-allowed; }
 .prompt-icon { font-size: 16px; flex-shrink: 0; }
-.prompt-label { font-size: 11px; color: #444; font-weight: 500; line-height: 1.3; }
+.prompt-label { font-size: 11px; color: var(--ink); font-weight: 600; line-height: 1.3; }
 
 .chat-area { flex: 1; overflow-y: auto; padding: 4px 0 12px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; }
 .chat-msg { max-width: 88%; }
 .chat-msg.user { align-self: flex-end; }
 .chat-msg.assistant { align-self: flex-start; }
-.msg-bubble { font-size: 13px; line-height: 1.6; color: #333; padding: 10px 14px; border-radius: 10px; word-break: break-word; }
-.user .msg-bubble { background: rgba(225,29,72,0.07); border: 1px solid rgba(225,29,72,0.14); }
-.assistant .msg-bubble { background: #F8F8F6; border: 1px solid #E8E8E8; }
+.msg-bubble { font-size: 13px; line-height: 1.6; color: var(--ink); padding: 10px 14px; border-radius: 16px; word-break: break-word; }
+.user .msg-bubble { background: var(--yellow); border: none; border-bottom-right-radius: 6px; }
+.assistant .msg-bubble { background: rgba(19,19,17,0.045); border: none; border-bottom-left-radius: 6px; }
 .msg-bubble :deep(p) { margin: 4px 0; }
 .msg-bubble :deep(ul), .msg-bubble :deep(ol) { padding-left: 18px; margin: 4px 0; }
 .msg-bubble :deep(li) { margin: 2px 0; }
 
 .typing { display: flex; gap: 4px; }
-.typing-dot { width: 5px; height: 5px; border-radius: 50%; background: #e11d48; opacity: 0.4; animation: typingBounce 1.4s ease-in-out infinite; }
+.typing-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: 0.4; animation: typingBounce 1.4s ease-in-out infinite; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 @keyframes typingBounce { 0%,100% { opacity: 0.4; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
 
 .chat-bar { display: flex; align-items: flex-end; gap: 8px; padding: 10px 0 14px; border-top: 1px solid rgba(0,0,0,0.06); flex-shrink: 0; }
-.bar-input { flex: 1; border: 1px solid #E8E8E8; border-radius: 10px; padding: 9px 12px; font-size: 13px; font-family: inherit; color: #333; background: #F8F8F6; resize: none; outline: none; max-height: 120px; transition: border-color 0.15s; }
-.bar-input:focus { border-color: rgba(225,29,72,0.4); }
-.bar-input::placeholder { color: #AAAAAA; }
-.bar-send { width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(225,29,72,0.2); background: rgba(225,29,72,0.06); color: #e11d48; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
-.bar-send:hover:not(:disabled) { background: #e11d48; color: white; border-color: #e11d48; }
+.bar-input { flex: 1; border: none; border-radius: 999px; padding: 10px 15px; font-size: 13px; font-family: inherit; color: var(--ink); background: rgba(19,19,17,0.045); resize: none; outline: none; max-height: 120px; transition: box-shadow 0.15s; }
+.bar-input:focus { box-shadow: 0 0 0 1.5px var(--ink); }
+.bar-input::placeholder { color: var(--ink-muted); }
+.bar-send { width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--ink); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s, transform 0.15s; }
+.bar-send:hover:not(:disabled) { background: var(--accent); transform: translateY(-1px); }
 .bar-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .right-panel { display: flex; flex-direction: column; gap: 0; }
@@ -365,7 +365,7 @@ async function sendMessage(text: string) {
 .prompt-block { position: relative; }
 .prompt-text { background: #F8F8F6; border: 1px solid #E8E8E8; border-radius: 7px; padding: 9px 10px; font-size: 11px; line-height: 1.5; font-family: monospace; color: #444; white-space: pre-wrap; word-break: break-word; margin: 0; }
 .copy-btn { position: absolute; top: 5px; right: 5px; font-size: 10px; padding: 2px 7px; border-radius: 4px; border: 1px solid #E8E8E8; background: #fff; color: #999; cursor: pointer; font-family: inherit; }
-.copy-btn:hover { color: #e11d48; border-color: rgba(225,29,72,0.3); }
+.copy-btn:hover { color: var(--ink); border-color: var(--ink); }
 .image-block { }
 .generated-image { width: 100%; border-radius: 8px; cursor: pointer; border: 1px solid #E8E8E8; transition: transform 0.15s; }
 .generated-image:hover { transform: scale(1.02); }
@@ -374,7 +374,7 @@ async function sendMessage(text: string) {
 .image-link { display: block; margin-top: 5px; font-size: 10px; color: #0071e3; text-decoration: none; }
 .image-link:hover { opacity: 0.75; }
 .clear-canvas-btn { margin-left: auto; background: none; border: none; font-size: 10px; color: #CCCCCC; cursor: pointer; font-family: inherit; padding: 0 2px; }
-.clear-canvas-btn:hover { color: #e11d48; }
+.clear-canvas-btn:hover { color: var(--accent); }
 
 @media (max-width: 1100px) { .three-col { grid-template-columns: 1fr; } .left-panel, .right-panel { display: none; } }
 </style>
