@@ -29,57 +29,68 @@
           </router-link>
           <router-link to="/investment/archive" class="fh-detail">{{ t('investmentHome.viewArchive') }}</router-link>
         </div>
+
+        <!-- 净资产 -->
+        <div class="lcard">
+          <div class="fw-row">
+            <span class="fw-ic">◔</span>
+            <span class="fw-label">{{ t('investmentHome.netWorth') }}</span>
+            <span class="fw-right">{{ t('investmentHome.energy') }} {{ adamStore.core.energy }}%</span>
+          </div>
+          <div class="fw-track">
+            <div class="fw-fill" :class="{ low: adamStore.core.energy < 30 }" :style="{ width: adamStore.core.energy + '%' }"></div>
+          </div>
+          <div class="fw-value" :class="{ positive: adamStore.core.netWorth > 0, negative: adamStore.core.netWorth < 0 }">
+            ¥{{ adamStore.core.netWorth.toLocaleString() }}
+          </div>
+        </div>
+
+        <!-- 圆形指标排 -->
+        <div class="lcard lcard--circles">
+          <div class="circle-item">
+            <span class="ci ci--orange">¥</span>
+            <span class="ci-label">{{ t('investmentHome.budget') }}</span>
+            <span class="ci-val">{{ shortNum(adamStore.core.budget) }}</span>
+          </div>
+          <div class="circle-item">
+            <span class="ci ci--black">{{ adamStore.core.creditLevel }}</span>
+            <span class="ci-label">{{ t('investmentHome.credit') }}</span>
+            <span class="ci-val">{{ creditName }}</span>
+          </div>
+          <div class="circle-item">
+            <span class="ci ci--white">{{ adamStore.core.survivalDays }}<i>d</i></span>
+            <span class="ci-label">{{ t('investmentHome.alive') }}</span>
+            <span class="ci-val">{{ sysLabel }}</span>
+          </div>
+        </div>
+
+        <!-- 情绪频谱 -->
+        <div class="fh-emotion">
+          <div class="emo-top">
+            <div v-for="(val, key) in adamStore.core.emotionState" :key="key" class="emo-item" :title="`${emotionLabels[key] || key} ${val}`">
+              <span class="emo-track"><i :style="{ height: Math.max(val, 4) + '%' }"></i></span>
+              <span class="emo-name">{{ (emotionLabels[key] || key).slice(0, 1) }}</span>
+            </div>
+          </div>
+          <div class="emo-strip">{{ t('investmentHome.emotionSpectrum') }}</div>
+        </div>
+
+        <!-- 身份签名 -->
+        <div class="fh-identity">
+          <img :src="adamAvatarUrl" class="fh-idimg" alt="亚当" />
+          <span class="fh-idtext">
+            <b>ADAM <i>#1</i></b>
+            <small>DIGITAL_LIFE · ENTITY_001</small>
+          </span>
+        </div>
       </aside>
 
-      <!-- 中央舞台：黄色大卡 = 园区地图（最大模块） -->
+      <!-- 中央舞台：黄色大卡 = 园区地图（最大模块，无叠压组件） -->
       <div class="fh-stage">
         <div class="fh-hero">
-          <!-- 顶左：净资产播放器组件 -->
-          <div class="fw fw-networth">
-            <div class="fw-row">
-              <span class="fw-ic">◔</span>
-              <span class="fw-label">{{ t('investmentHome.netWorth') }}</span>
-              <span class="fw-right">{{ t('investmentHome.energy') }} {{ adamStore.core.energy }}%</span>
-            </div>
-            <div class="fw-track">
-              <div class="fw-fill" :class="{ low: adamStore.core.energy < 30 }" :style="{ width: adamStore.core.energy + '%' }"></div>
-            </div>
-            <div class="fw-value" :class="{ positive: adamStore.core.netWorth > 0, negative: adamStore.core.netWorth < 0 }">
-              ¥{{ adamStore.core.netWorth.toLocaleString() }}
-            </div>
-          </div>
-
-          <!-- 顶右：圆形指标排 -->
-          <div class="fw fw-circles">
-            <div class="circle-item">
-              <span class="ci ci--orange">¥</span>
-              <span class="ci-label">{{ t('investmentHome.budget') }}</span>
-              <span class="ci-val">{{ shortNum(adamStore.core.budget) }}</span>
-            </div>
-            <div class="circle-item">
-              <span class="ci ci--black">{{ adamStore.core.creditLevel }}</span>
-              <span class="ci-label">{{ t('investmentHome.credit') }}</span>
-              <span class="ci-val">{{ creditName }}</span>
-            </div>
-            <div class="circle-item">
-              <span class="ci ci--white">{{ adamStore.core.survivalDays }}<i>d</i></span>
-              <span class="ci-label">{{ t('investmentHome.alive') }}</span>
-              <span class="ci-val">{{ sysLabel }}</span>
-            </div>
-          </div>
-
-          <!-- 中央：互动园区地图 -->
+          <!-- 互动园区地图 -->
           <div class="fh-map" :class="adamStore.core.status">
             <CityEmbed embed />
-          </div>
-
-          <!-- 底左：身份签名 -->
-          <div class="fh-identity">
-            <img :src="adamAvatarUrl" class="fh-idimg" alt="亚当" />
-            <span class="fh-idtext">
-              <b>ADAM <i>#1</i></b>
-              <small>DIGITAL_LIFE · ENTITY_001</small>
-            </span>
           </div>
 
           <!-- 底右：直达全屏地图 -->
@@ -89,18 +100,8 @@
           </router-link>
         </div>
 
-        <!-- 卡下横排：情绪频谱药丸 + 指令 / 待审批 -->
+        <!-- 卡下横排：指令 / 待审批 -->
         <div class="fh-under">
-          <div class="fh-emotion">
-            <div class="emo-top">
-              <div v-for="(val, key) in adamStore.core.emotionState" :key="key" class="emo-item" :title="`${emotionLabels[key] || key} ${val}`">
-                <span class="emo-track"><i :style="{ height: Math.max(val, 4) + '%' }"></i></span>
-                <span class="emo-name">{{ (emotionLabels[key] || key).slice(0, 1) }}</span>
-              </div>
-            </div>
-            <div class="emo-strip">{{ t('investmentHome.emotionSpectrum') }}</div>
-          </div>
-
           <!-- 最新指令（业务：采纳 / 跳过） -->
           <div class="fh-blurb">
             <template v-if="adamStore.latestRecommendation">
@@ -434,17 +435,31 @@ function formatTime(iso: string) {
 /* ── 上半屏 ── */
 .fh-top {
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
-  gap: 22px;
-  align-items: stretch;
+  grid-template-columns: 208px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }
 
-/* 左列 */
+/* 左列：数据卡竖排栈 */
 .fh-left {
   display: flex;
   flex-direction: column;
+  gap: 12px;
   padding-top: 4px;
   min-width: 0;
+}
+
+/* 左列白卡通用 */
+.lcard {
+  background: #fff;
+  border-radius: 18px;
+  padding: 13px 15px;
+  box-shadow: 0 6px 18px rgba(19, 19, 17, 0.05);
+}
+.lcard--circles {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
 }
 
 .fh-colors-label {
@@ -489,8 +504,8 @@ function formatTime(iso: string) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 14px;
-  margin-top: 28px;
+  gap: 12px;
+  margin: 10px 0 4px;
 }
 .fh-buy {
   display: inline-flex;
@@ -534,32 +549,17 @@ function formatTime(iso: string) {
   background: var(--yellow);
 }
 
-/* 内嵌互动地图（占满卡身，黄色作边框） */
+/* 内嵌互动地图（占满卡身，黄色作细边框） */
 .fh-map {
   position: absolute;
   z-index: 1;
-  inset: 92px 16px 16px;
+  inset: 14px;
   border-radius: 24px;
   overflow: hidden;
 }
 .fh-map.dormant { filter: saturate(0.8); }
 
-/* 悬浮组件通用 */
-.fw {
-  position: absolute;
-  z-index: 3;
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 14px 34px rgba(19, 19, 17, 0.1);
-}
-
-/* 顶左：净资产 */
-.fw-networth {
-  top: 20px;
-  left: 20px;
-  width: 200px;
-  padding: 13px 15px;
-}
+/* 净资产卡内部 */
 .fw-row {
   display: flex;
   align-items: center;
@@ -599,14 +599,7 @@ function formatTime(iso: string) {
 .fw-value.positive { color: #2f7a3c; }
 .fw-value.negative { color: var(--orange); }
 
-/* 顶右：圆形指标排 */
-.fw-circles {
-  top: 20px;
-  right: 20px;
-  padding: 11px 14px;
-  display: flex;
-  gap: 14px;
-}
+/* 圆形指标 */
 .circle-item {
   display: flex;
   flex-direction: column;
@@ -642,19 +635,15 @@ function formatTime(iso: string) {
   white-space: nowrap;
 }
 
-/* 底左身份 */
+/* 身份签名（左列） */
 .fh-identity {
-  position: absolute;
-  z-index: 6;
-  left: 28px;
-  bottom: 28px;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 7px 14px 7px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 10px 26px rgba(19, 19, 17, 0.1);
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(19, 19, 17, 0.05);
 }
 .fh-idimg {
   width: 36px;
@@ -703,21 +692,19 @@ function formatTime(iso: string) {
 /* ── 卡下横排 ── */
 .fh-under {
   display: grid;
-  grid-template-columns: 210px repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 26px;
   align-items: start;
-  margin-top: -26px;
-  padding: 0 12px;
+  margin-top: 18px;
+  padding: 0 8px;
 }
 
-/* 情绪频谱药丸（叠压黄卡下缘） */
+/* 情绪频谱药丸（左列） */
 .fh-emotion {
-  position: relative;
-  z-index: 7;
   border-radius: 18px;
   overflow: hidden;
   background: #fff;
-  box-shadow: 0 14px 34px rgba(19, 19, 17, 0.1);
+  box-shadow: 0 6px 18px rgba(19, 19, 17, 0.05);
 }
 .emo-top {
   display: flex;
@@ -763,7 +750,7 @@ function formatTime(iso: string) {
 
 /* 信息栏 */
 .fh-blurb {
-  padding-top: 34px;
+  padding-top: 0;
   min-width: 0;
 }
 .blurb-title {
@@ -1026,23 +1013,21 @@ function formatTime(iso: string) {
 /* ── 响应式 ── */
 @media (max-width: 1240px) {
   .fh-top { grid-template-columns: 1fr; gap: 20px; }
-  .fh-left { padding-top: 0; flex-direction: row; align-items: center; }
+  .fh-left {
+    padding-top: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    align-items: stretch;
+  }
   .fh-colors { display: none; }
-  .fh-actions { flex-direction: row; margin-top: 0; }
+  .fh-actions { flex-direction: row; align-items: center; margin: 0; }
   .fh-under { grid-template-columns: 1fr; gap: 14px; padding: 0; margin-top: 14px; }
-  .fh-emotion { max-width: 320px; }
-  .fh-blurb { padding-top: 0; }
   .fh-panels { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 767px) {
   .fh-hero { height: auto; min-height: 460px; }
-  .fh-map { inset: 74px 10px 10px; }
-  .fw-networth { width: 168px; top: 12px; left: 12px; }
-  .fw-circles { top: 12px; right: 12px; padding: 8px 10px; gap: 8px; }
-  .ci { width: 30px; height: 30px; font-size: 11px; }
-  .circle-item { min-width: 40px; }
-  .fh-identity { left: 12px; bottom: 12px; }
-  .fh-map-open { right: 12px; bottom: 12px; }
+  .fh-map { inset: 10px; }
+  .fh-map-open { right: 18px; bottom: 18px; }
 }
 </style>
