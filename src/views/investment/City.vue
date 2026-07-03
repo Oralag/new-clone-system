@@ -2316,6 +2316,8 @@ onUnmounted(() => {
 }
 .city-page--embed .iso-controls { display: none; }
 .city-page--embed .iso-hud { display: none; }
+.city-page--embed .zone-labels { display: none; }
+.city-page--embed .mood-badge { top: 12px; right: 12px; transform: scale(0.9); transform-origin: top right; }
 
 /* ── 左侧状态栏 ── */
 .city-sidebar {

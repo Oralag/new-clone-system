@@ -443,10 +443,20 @@ const statusLabel = computed(() => {
 }
 .inv-chat :deep(.panel-chat) {
   width: 100%;
+  height: 100%;
   max-height: 100%;
   overflow: hidden;
   border-radius: 28px;
+  display: flex;
+  flex-direction: column;
 }
+.inv-chat :deep(.panel-chat.collapsed) { height: auto; }
+.inv-chat :deep(.chat-messages) {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.inv-chat :deep(.chat-input-area) { margin-top: auto; flex-shrink: 0; }
 
 /* 首页：右侧卡按图1 的橙红竖长卡处理（仅换壳，不动结构） */
 .inv-chat--hero { width: 300px; flex-basis: 300px; }
