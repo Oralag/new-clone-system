@@ -3088,6 +3088,7 @@ export default {
       noAccess: 'Purchase orders not found or access denied',
       networkError: 'Network error. Please verify the link and try again.',
     },
+  },
   city: {
     expandSidebar: 'Expand sidebar',
     collapseSidebar: 'Collapse sidebar',
@@ -3415,7 +3416,6 @@ export default {
         context: 'Additional context (optional)',
       },
     },
-  },
   },
   route: {
     Login: 'Login',

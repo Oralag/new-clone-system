@@ -3088,6 +3088,7 @@ export default {
       noAccess: '采购单不存在或无权限查看',
       networkError: '网络错误，请检查链接是否有效',
     },
+  },
   city: {
     expandSidebar: '展开侧栏',
     collapseSidebar: '收起侧栏',
@@ -3415,7 +3416,6 @@ export default {
         context: '补充背景（可选）',
       },
     },
-  },
   },
   // Page titles — keyed by route name
   route: {
