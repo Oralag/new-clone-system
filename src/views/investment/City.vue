@@ -2319,7 +2319,14 @@ onUnmounted(() => {
 .city-page--embed .iso-controls { display: none; }
 .city-page--embed .iso-hud { display: none; }
 .city-page--embed .zone-labels { display: none; }
-.city-page--embed .mood-badge { top: 12px; right: 12px; transform: scale(0.9); transform-origin: top right; }
+/* 顶部两角被首页悬浮组件占用，天气徽章居中放 */
+.city-page--embed .mood-badge {
+  top: 12px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  transform-origin: top center;
+}
 
 /* ── 左侧状态栏 ── */
 .city-sidebar {
