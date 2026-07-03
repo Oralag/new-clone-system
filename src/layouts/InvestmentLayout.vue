@@ -113,9 +113,10 @@ const { t, locale } = useI18n()
 const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
 const isHome = computed(() => route.path === '/investment')
-const isFullBleed = computed(() => route.path === '/investment/city' || route.path === '/investment/workspace')
-// 园区页自带通信频道，不重复渲染右侧对话卡
-const showChat = computed(() => route.path !== '/investment/city')
+// 园区页与机构大厅全出血展示
+const isFullBleed = computed(() => route.path.startsWith('/investment/city') || route.path === '/investment/workspace')
+// 园区页（含大厅）自带通信频道，不重复渲染右侧对话卡
+const showChat = computed(() => !route.path.startsWith('/investment/city'))
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)

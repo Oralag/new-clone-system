@@ -72,22 +72,6 @@
             </div>
           </div>
 
-          <!-- 待执行转账指令 -->
-          <div v-if="pendingTransfers.length > 0" class="fund-pending">
-            <div class="fund-sub-title">⚡ {{ t('city.pendingTransfers') }}</div>
-            <div v-for="transfer in pendingTransfers" :key="transfer.id" class="transfer-card">
-              <div class="transfer-info">
-                <span class="transfer-to">→ {{ transfer.to }}</span>
-                <span class="transfer-amount">¥{{ transfer.amount.toLocaleString() }}</span>
-                <span class="transfer-note">{{ transfer.note }}</span>
-              </div>
-              <div class="transfer-actions">
-                <button class="btn-gold btn-sm" @click="confirmTransfer(transfer.id)">{{ t('city.executed') }}</button>
-                <button class="btn-ghost btn-sm" @click="rejectTransfer(transfer.id)">{{ t('city.reject') }}</button>
-              </div>
-            </div>
-          </div>
-
           <!-- 资金流水 -->
           <div class="fund-sub-title" style="margin-top:8px">{{ t('city.ledger') }}</div>
           <div v-if="adamStore.ledger.length === 0" class="detail-empty">{{ t('city.noLedger') }}</div>
@@ -1216,15 +1200,19 @@ watch(eventCount, () => {
 // ── 页面加载时启动空闲行为 ──
 onMounted(async () => {
   startIdleTimer()
+  window.addEventListener('resize', onWindowResize)
   await loadChatHistory()
   // 打开时定位到最新一条消息
   scrollChatToBottom()
-  // 视口尺寸要等布局稳定，分两次取景
+  // 视口尺寸要等布局稳定，分多次取景（异步内嵌时容器出现更晚）
   nextTick(() => fitToView())
   setTimeout(fitToView, 400)
+  setTimeout(fitToView, 1000)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', onWindowResize)
+  if (_fitTimer) clearTimeout(_fitTimer)
   if (workTimer) clearTimeout(workTimer)
   if (idleTimer) clearTimeout(idleTimer)
   if (moveDoneTimer) clearTimeout(moveDoneTimer)
@@ -1927,18 +1915,9 @@ function formatTime(iso: string) {
 }
 
 // ── 资金账户 ──────────────────────────────────────────
-interface PendingTransfer {
-  id: string
-  to: string
-  amount: number
-  note: string
-  createdAt: string
-}
-
 const showDepositDialog = ref(false)
 const depositAmount = ref('')
 const depositNote = ref('')
-const pendingTransfers = ref<PendingTransfer[]>([])
 
 function handleDeposit() {
   const amount = parseFloat(depositAmount.value)
@@ -1955,25 +1934,6 @@ function handleDeposit() {
   depositAmount.value = ''
   depositNote.value = ''
   showDepositDialog.value = false
-}
-
-function confirmTransfer(id: string) {
-  const transfer = pendingTransfers.value.find(x => x.id === id)
-  if (!transfer) return
-  adamStore.addLedgerEntry({
-    id: `ledger_${Date.now()}`,
-    direction: 'out',
-    amount: transfer.amount,
-    title: t('city.transferTo', { to: transfer.to, note: transfer.note }),
-    kind: 'cost',
-    at: new Date().toISOString(),
-    linkedEventIds: [],
-  })
-  pendingTransfers.value = pendingTransfers.value.filter(x => x.id !== id)
-}
-
-function rejectTransfer(id: string) {
-  pendingTransfers.value = pendingTransfers.value.filter(x => x.id !== id)
 }
 
 function formatDate(iso: string) {
@@ -2187,6 +2147,15 @@ function fitToView() {
   panX.value = -cx * s
   panY.value = rect.height / 2 - 60 - cy * s
 }
+
+// 容器尺寸变化（窗口缩放/侧栏折叠）后重新取景
+let _fitTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleFit(delay = 280) {
+  if (_fitTimer) clearTimeout(_fitTimer)
+  _fitTimer = setTimeout(fitToView, delay)
+}
+function onWindowResize() { scheduleFit() }
+watch([sidebarCollapsed, chatCollapsed], () => scheduleFit())
 
 const sceneStyle = computed(() => ({
   transform: `translate(${panX.value}px, ${panY.value}px) scale(${scale.value}) rotate(${rotateAngle.value}deg) perspective(800px) rotateX(${tiltAngle.value}deg)`,
@@ -2975,6 +2944,7 @@ onUnmounted(() => {
   height: 0;
   transform-origin: 0 0;
   transition: transform 0.05s linear;
+  will-change: transform;
 }
 
 /* ── 地面三面立体地砖 ── */

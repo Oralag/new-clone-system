@@ -229,4 +229,6 @@ npm run deploy
   - 排查功能问题：优先看 Network 面板 / Console，不要发合成请求
   - 事故恢复：localStorage `brand_page_config_v1` 有客户端最近一次同步的完整快照，可以整份 POST 回去恢复
 
+- [2026-07-03] 园区地图"进入大厅"跳转 `/investment/city/hall/:id`，但路由表从未注册该路由，HallView（1234行）写完从未可达；另有"待执行转账"面板无任何生产端、永远为空 → **凡是新增页面/跳转，写完必须在路由表注册并实际点一遍；凡是审批类 UI，必须确认有对应的生产端数据源，否则删掉**
+
 - [2026-07-02] 投资部门改版被做成在 `InvestmentLayout.vue` 里堆约 1700 行不带 scoped 的全局 CSS，用 `!important` + `nth-child` 强行覆盖所有子页面样式，还把 4200 行的 City.vue 异步加载进首页当背景装饰、模板引用了未 import 的 `adamAvatarUrl` → **铁律：视觉改版必须改组件本身的模板和 scoped 样式，禁止在布局文件里用全局 `!important` 批量覆盖子页面；禁止为了装饰引入整个业务页面组件。** 另注意：投资子页面（Market/City/Library/Archive/AdamChat）依赖 `.inv-layout` 上定义的 `--dark/--mid/--dim/--faint/--border/--card-bg/--accent/--gray` 兼容变量，重写布局时必须保留这组变量
