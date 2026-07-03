@@ -87,20 +87,21 @@
       </div>
     </div>
 
-    <!-- ── 第二行：园区地图（宽）+ 信任阶梯（窄） ── -->
-    <div class="dash-mid">
-      <section class="panel panel--map">
-        <div class="panel-head">
-          <span class="panel-title">{{ t('investment.pageCity') }}</span>
-          <router-link to="/investment/city" class="panel-expand" :title="t('investment.cityMap')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-          </router-link>
-        </div>
-        <div class="map-body">
-          <CityEmbed embed />
-        </div>
-      </section>
+    <!-- ── 第二行：生态园区（最大模块：机构列表 + 地图 + 园区对话 全量合并） ── -->
+    <section class="panel panel--city">
+      <div class="panel-head">
+        <span class="panel-title">{{ t('investment.pageCity') }}</span>
+        <router-link to="/investment/city" class="panel-expand" :title="t('investment.cityMap')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </router-link>
+      </div>
+      <div class="city-body">
+        <CityEmbed />
+      </div>
+    </section>
 
+    <!-- ── 第三行：信任阶梯 + 事件日志 ── -->
+    <div class="dash-bottom">
       <section class="panel panel--trust">
         <div class="panel-head">
           <span class="panel-title">{{ t('investmentHome.trustLadder') }}</span>
@@ -130,10 +131,8 @@
           </div>
         </div>
       </section>
-    </div>
 
-    <!-- ── 第三行：事件日志表格 ── -->
-    <section class="panel panel--log">
+      <section class="panel panel--log">
       <div class="panel-head">
         <span class="panel-title">{{ t('investmentHome.eventLog') }}</span>
         <span v-if="adamStore.recentEvents.length" class="panel-tag panel-tag--count">{{ adamStore.recentEvents.length }}</span>
@@ -144,12 +143,13 @@
           <span class="lr-stage" :class="event.stage">{{ stageLabel(event.stage) }}</span>
           <span class="lr-text">{{ event.title }}</span>
         </div>
-        <div v-if="adamStore.recentEvents.length === 0" class="log-empty">
-          <b>{{ t('investmentHome.noEvents') }}</b>
-          <small>{{ t('investmentHome.noEventsSub') }}</small>
+          <div v-if="adamStore.recentEvents.length === 0" class="log-empty">
+            <b>{{ t('investmentHome.noEvents') }}</b>
+            <small>{{ t('investmentHome.noEventsSub') }}</small>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -614,20 +614,21 @@ function formatTime(iso: string) {
 }
 .panel-expand:hover { background: var(--ink); color: #fff; }
 
-/* ── 第二行：地图 + 信任阶梯 ── */
-.dash-mid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(240px, 1fr);
-  gap: 14px;
-  align-items: stretch;
-}
-.panel--map { min-height: 420px; }
-.map-body {
-  flex: 1;
-  min-height: 0;
+/* ── 第二行：生态园区（最大模块） ── */
+.city-body {
+  height: 64vh;
+  min-height: 520px;
   margin: 0 10px 10px;
   border-radius: 18px;
   overflow: hidden;
+}
+
+/* ── 第三行：信任阶梯 + 事件日志 ── */
+.dash-bottom {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 1.6fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
 /* 信任阶梯（纵向五档） */
@@ -732,8 +733,7 @@ function formatTime(iso: string) {
 @media (max-width: 1240px) {
   .dash-cards { grid-template-columns: 1fr 1fr; }
   .dc--black { grid-column: 1 / -1; min-height: 140px; }
-  .dash-mid { grid-template-columns: 1fr; }
-  .panel--map { min-height: 360px; }
+  .dash-bottom { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 767px) {
@@ -741,6 +741,6 @@ function formatTime(iso: string) {
   .dh-id { display: none; }
   .dash-cards { grid-template-columns: 1fr; }
   .dc { min-height: 0; }
-  .panel--map { min-height: 300px; }
+  .city-body { height: auto; min-height: 420px; }
 }
 </style>

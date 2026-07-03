@@ -88,7 +88,7 @@
           <router-view />
         </section>
 
-        <aside v-if="showChat" class="inv-chat" :class="{ 'inv-chat--hero': isHome }">
+        <aside v-if="showChat" class="inv-chat">
           <AdamChat />
         </aside>
       </div>
@@ -112,9 +112,9 @@ const { t, locale } = useI18n()
 
 const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
-const isHome = computed(() => route.path === '/investment')
 const isFullBleed = computed(() => route.path === '/investment/city' || route.path === '/investment/workspace')
-const showChat = computed(() => route.path !== '/investment/city')
+// 首页与园区页自带通信频道，不再重复渲染右侧对话卡
+const showChat = computed(() => route.path !== '/investment/city' && route.path !== '/investment')
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
@@ -451,53 +451,13 @@ const statusLabel = computed(() => {
   flex-direction: column;
 }
 .inv-chat :deep(.panel-chat.collapsed) { height: auto; }
-.inv-chat :deep(.chat-messages) {
+/* 提高优先级，确保盖过 AdamChat 组件内的 max-height: 380px */
+.inv-chat :deep(.panel-chat .chat-messages) {
   flex: 1;
   min-height: 0;
   max-height: none;
 }
-.inv-chat :deep(.chat-input-area) { margin-top: auto; flex-shrink: 0; }
-
-/* 首页：右侧卡按图1 的橙红竖长卡处理（仅换壳，不动结构） */
-.inv-chat--hero { width: 300px; flex-basis: 300px; }
-.inv-chat--hero :deep(.panel-chat) {
-  background: var(--inv-orange);
-  border: none;
-  border-radius: 30px;
-}
-.inv-chat--hero :deep(.panel-head) {
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 999px;
-  margin: 14px 14px 6px;
-  padding: 6px 12px;
-  border-bottom: none;
-}
-.inv-chat--hero :deep(.chat-messages) { background: transparent; }
-.inv-chat--hero :deep(.chat-empty-title),
-.inv-chat--hero :deep(.chat-empty-text) { color: rgba(255, 255, 255, 0.85); }
-.inv-chat--hero :deep(.chat-empty-icon) { color: rgba(255, 255, 255, 0.7); }
-.inv-chat--hero :deep(.msg-content) {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: transparent;
-  color: #fff;
-}
-.inv-chat--hero :deep(.msg-sender),
-.inv-chat--hero :deep(.msg-time),
-.inv-chat--hero :deep(.disclaimer) { color: rgba(255, 255, 255, 0.66); }
-.inv-chat--hero :deep(.chat-input-area) {
-  background: transparent;
-  border-top-color: rgba(255, 255, 255, 0.24);
-}
-.inv-chat--hero :deep(.chat-input) {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: transparent;
-  color: var(--inv-ink);
-}
-.inv-chat--hero :deep(.send-btn) {
-  background: var(--inv-black);
-  color: #fff;
-  border-color: transparent;
-}
+.inv-chat :deep(.panel-chat .chat-input-area) { margin-top: auto; flex-shrink: 0; }
 
 /* ── 移动端 ── */
 .mobile-topbar {
@@ -578,8 +538,7 @@ const statusLabel = computed(() => {
     overflow: visible;
   }
   .inv-body--full { padding: 0; }
-  .inv-chat,
-  .inv-chat--hero {
+  .inv-chat {
     position: fixed;
     left: 12px;
     right: 12px;

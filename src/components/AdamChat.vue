@@ -200,6 +200,9 @@ onMounted(async () => {
   // 从云端拉取（跨设备同步）
   await loadHistoryFromCloud()
 
+  // 打开时定位到最新一条消息
+  scrollToBottom()
+
   if (adamStore.core.status === 'alive') {
     triggerWakeup()
     pollTimer = window.setInterval(pollMessages, 30 * 1000)

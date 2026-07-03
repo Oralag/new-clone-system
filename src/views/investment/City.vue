@@ -1214,9 +1214,11 @@ watch(eventCount, () => {
 })
 
 // ── 页面加载时启动空闲行为 ──
-onMounted(() => {
+onMounted(async () => {
   startIdleTimer()
-  loadChatHistory()
+  await loadChatHistory()
+  // 打开时定位到最新一条消息
+  scrollChatToBottom()
   // 视口尺寸要等布局稳定，分两次取景
   nextTick(() => fitToView())
   setTimeout(fitToView, 400)
