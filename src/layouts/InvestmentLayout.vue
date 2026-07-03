@@ -88,7 +88,7 @@
           <router-view />
         </section>
 
-        <aside v-if="showChat" class="inv-chat">
+        <aside v-if="showChat" class="inv-chat" :class="{ 'inv-chat--hero': isHome }">
           <AdamChat />
         </aside>
       </div>
@@ -112,9 +112,10 @@ const { t, locale } = useI18n()
 
 const drawerOpen = ref(false)
 const isMobile = ref(window.innerWidth < 768)
+const isHome = computed(() => route.path === '/investment')
 const isFullBleed = computed(() => route.path === '/investment/city' || route.path === '/investment/workspace')
-// 首页与园区页自带通信频道，不再重复渲染右侧对话卡
-const showChat = computed(() => route.path !== '/investment/city' && route.path !== '/investment')
+// 园区页自带通信频道，不重复渲染右侧对话卡
+const showChat = computed(() => route.path !== '/investment/city')
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
@@ -458,6 +459,48 @@ const statusLabel = computed(() => {
   max-height: none;
 }
 .inv-chat :deep(.panel-chat .chat-input-area) { margin-top: auto; flex-shrink: 0; }
+
+/* 首页：对话卡橙色强调壳（仅换配色，不动结构） */
+.inv-chat--hero { width: 300px; flex-basis: 300px; }
+.inv-chat--hero :deep(.panel-chat) {
+  background: var(--inv-orange);
+  border: none;
+  border-radius: 30px;
+}
+.inv-chat--hero :deep(.panel-head) {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  margin: 14px 14px 6px;
+  padding: 6px 12px;
+  border-bottom: none;
+}
+.inv-chat--hero :deep(.chat-messages) { background: transparent; }
+.inv-chat--hero :deep(.chat-empty-title),
+.inv-chat--hero :deep(.chat-empty-text) { color: rgba(255, 255, 255, 0.85); }
+.inv-chat--hero :deep(.chat-empty-icon) { color: rgba(255, 255, 255, 0.7); }
+.inv-chat--hero :deep(.msg-content) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: transparent;
+  color: #fff;
+}
+.inv-chat--hero :deep(.msg-content :is(strong, code, a)) { color: #fff; }
+.inv-chat--hero :deep(.msg-sender),
+.inv-chat--hero :deep(.msg-time),
+.inv-chat--hero :deep(.disclaimer) { color: rgba(255, 255, 255, 0.66); }
+.inv-chat--hero :deep(.chat-input-area) {
+  background: transparent;
+  border-top-color: rgba(255, 255, 255, 0.24);
+}
+.inv-chat--hero :deep(.chat-input) {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: transparent;
+  color: var(--inv-ink);
+}
+.inv-chat--hero :deep(.send-btn) {
+  background: var(--inv-black);
+  color: #fff;
+  border-color: transparent;
+}
 
 /* ── 移动端 ── */
 .mobile-topbar {

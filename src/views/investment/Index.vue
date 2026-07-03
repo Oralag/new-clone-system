@@ -87,18 +87,49 @@
       </div>
     </div>
 
-    <!-- ── 第二行：生态园区（最大模块：机构列表 + 地图 + 园区对话 全量合并） ── -->
-    <section class="panel panel--city">
-      <div class="panel-head">
-        <span class="panel-title">{{ t('investment.pageCity') }}</span>
-        <router-link to="/investment/city" class="panel-expand" :title="t('investment.cityMap')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-        </router-link>
-      </div>
-      <div class="city-body">
-        <CityEmbed />
-      </div>
-    </section>
+    <!-- ── 第二行：机构列表（白面板）+ 生态园区大地图 ── -->
+    <div class="dash-mid">
+      <section class="panel panel--inst">
+        <div class="panel-head">
+          <span class="panel-title">{{ t('city.institutions') }}</span>
+          <span class="panel-tag panel-tag--count">{{ adamStore.institutions.length }}</span>
+        </div>
+        <div class="inst-list">
+          <template v-for="zone in zoneList" :key="zone.key">
+            <div v-if="zone.items.length" class="il-zone">
+              <span class="il-zone-dot" :class="zone.key"></span>
+              {{ zone.label }}
+            </div>
+            <router-link
+              v-for="inst in zone.items"
+              :key="inst.institutionId"
+              to="/investment/city"
+              class="il-item"
+              :class="inst.status"
+            >
+              <span class="il-emoji">{{ getEmoji(inst.institutionId) }}</span>
+              <span class="il-info">
+                <b>{{ displayInstitutionName(inst.institutionId, inst.name) }}</b>
+                <small>{{ statusLabel(inst.status) }}</small>
+              </span>
+              <span class="il-dot" :class="inst.status"></span>
+            </router-link>
+          </template>
+        </div>
+      </section>
+
+      <section class="panel panel--city">
+        <div class="panel-head">
+          <span class="panel-title">{{ t('investment.pageCity') }}</span>
+          <router-link to="/investment/city" class="panel-expand" :title="t('investment.cityMap')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </router-link>
+        </div>
+        <div class="city-body">
+          <CityEmbed embed />
+        </div>
+      </section>
+    </div>
 
     <!-- ── 第三行：信任阶梯 + 事件日志 ── -->
     <div class="dash-bottom">
@@ -218,6 +249,34 @@ async function handleReject() {
 }
 
 onMounted(() => loadPendingAction())
+
+// ── 机构列表（与园区地图共用 adamStore.institutions） ──
+const zoneList = computed(() => [
+  { key: 'command', label: t('city.zoneLabels.command'), items: adamStore.institutions.filter((i) => i.zone === 'command_center') },
+  { key: 'intelligence', label: t('city.zoneLabels.intelligence'), items: adamStore.institutions.filter((i) => i.zone === 'intelligence') },
+  { key: 'commerce', label: t('city.zoneLabels.commerce'), items: adamStore.institutions.filter((i) => i.zone === 'commerce') },
+  { key: 'adam', label: t('city.zoneLabels.adam'), items: adamStore.institutions.filter((i) => i.zone === 'adam_domain') },
+])
+
+const emojiMap: Record<string, string> = {
+  bureau: '🏛', finance_gateway: '🏦', reactor: '⚡',
+  intel_station: '📡', research_institute: '🔬', adam_academy: '🎓',
+  data_center: '💾', risk_lab: '⚗️', arbitration_hall: '⚖️',
+  ad_company: '📺', archive: '📚', corner: '🏠',
+  marketing_consultancy: '📊', library: '📖',
+}
+function getEmoji(id: string) { return emojiMap[id] || '🏗️' }
+
+function translated(key: string, fallback: string) {
+  const value = t(key)
+  return value && value !== key ? value : fallback
+}
+function statusLabel(status: string) {
+  return translated(`city.statusLabels.${status}`, status.toUpperCase())
+}
+function displayInstitutionName(instId: string, fallback?: string) {
+  return translated(`city.institutionNames.${instId}`, fallback || instId)
+}
 
 const emotionLabels = computed<Record<string, string>>(() => ({
   joy: t('investmentHome.emotionLabels.joy'),
@@ -614,7 +673,78 @@ function formatTime(iso: string) {
 }
 .panel-expand:hover { background: var(--ink); color: #fff; }
 
-/* ── 第二行：生态园区（最大模块） ── */
+/* ── 第二行：机构列表 + 生态园区大地图 ── */
+.dash-mid {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.75fr) minmax(0, 2.8fr);
+  gap: 14px;
+  align-items: stretch;
+}
+.panel--inst { min-height: 0; }
+.inst-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 0 10px 12px;
+}
+.il-zone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--ink-muted);
+  padding: 12px 8px 5px;
+}
+.il-zone-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--ink-muted);
+}
+.il-zone-dot.command { background: #e0b32c; }
+.il-zone-dot.intelligence { background: #4d7fb0; }
+.il-zone-dot.commerce { background: #6aa872; }
+.il-zone-dot.adam { background: #9b7fd4; }
+.il-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: background 0.14s ease;
+}
+.il-item:hover { background: rgba(19, 19, 17, 0.045); }
+.il-item.locked { opacity: 0.45; }
+.il-emoji { font-size: 15px; flex-shrink: 0; }
+.il-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  flex: 1;
+}
+.il-info b {
+  font-size: 11.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-info small { font-size: 9px; color: var(--ink-muted); }
+.il-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(19, 19, 17, 0.16);
+  flex-shrink: 0;
+}
+.il-dot.active { background: #3f9a4c; box-shadow: 0 0 0 3px rgba(63, 154, 76, 0.16); }
+.il-dot.urgent { background: #e2542e; }
+
 .city-body {
   height: 64vh;
   min-height: 520px;
@@ -733,6 +863,8 @@ function formatTime(iso: string) {
 @media (max-width: 1240px) {
   .dash-cards { grid-template-columns: 1fr 1fr; }
   .dc--black { grid-column: 1 / -1; min-height: 140px; }
+  .dash-mid { grid-template-columns: 1fr; }
+  .panel--inst .inst-list { max-height: 280px; }
   .dash-bottom { grid-template-columns: 1fr; }
 }
 
