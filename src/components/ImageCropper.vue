@@ -7,6 +7,7 @@
           <button class="ic-ratio-btn" :class="{ active: aspectRatio === 16/9 }" @click="setRatio(16/9)">16:9</button>
           <button class="ic-ratio-btn" :class="{ active: aspectRatio === 1 }" @click="setRatio(1)">1:1</button>
           <button class="ic-ratio-btn" :class="{ active: aspectRatio === 4/3 }" @click="setRatio(4/3)">4:3</button>
+          <button class="ic-ratio-btn" :class="{ active: Math.abs(aspectRatio - 9/19.5) < 0.001 }" @click="setRatio(9/19.5)">小程序首页</button>
           <button class="ic-ratio-btn" :class="{ active: aspectRatio === 0 }" @click="setRatio(0)">{{ t('imageCropper.free') }}</button>
         </div>
         <button class="ic-close" @click="cancel">✕</button>
