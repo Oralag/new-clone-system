@@ -29,6 +29,63 @@
 
   <!-- 品牌主页内容 -->
   <div v-else class="brand-home">
+    <!-- 手机端同步小程序首页 -->
+    <div class="brand-mini-home">
+      <section class="mini-hero editable-block">
+        <div class="mini-hero-bg-wrap">
+          <img :src="heroImagesList[0] || cfg.heroImage" alt="Brand Hero" class="mini-hero-bg" referrerpolicy="no-referrer" />
+        </div>
+        <div class="mini-hero-mask"></div>
+        <div class="mini-shelf">
+          <div class="mini-shelf-scroll">
+            <div class="mini-shelf-row">
+              <div
+                v-for="product in shopStore.products.slice(0, 8)"
+                :key="product.id"
+                class="mini-shelf-card"
+                @click="goDetail(product.id)"
+              >
+                <img :src="product.image || 'https://picsum.photos/seed/placeholder/400/400'" :alt="product.name" class="mini-shelf-thumb" referrerpolicy="no-referrer" />
+                <div class="mini-shelf-body">
+                  <div class="mini-shelf-name">{{ product.name }}</div>
+                  <div class="mini-shelf-price">¥{{ shopStore.shopMode === 'wholesale' ? product.wholesalePrice : product.price }}</div>
+                </div>
+                <span class="mini-shelf-arrow">→</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="edit-trigger" @click="openEdit('hero')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </section>
+
+      <button class="mini-explore-bar" @click="$router.push('/brand/products')">
+        <span>浏览全部商品</span>
+        <span>→</span>
+      </button>
+
+      <section class="mini-stats-row">
+        <div v-for="item in cfg.stats" :key="item.label" class="mini-stat">
+          <div class="mini-stat-num">{{ item.num }}</div>
+          <div class="mini-stat-label">{{ item.label }}</div>
+        </div>
+      </section>
+
+      <section v-if="cfg.homeStoryImages?.filter(Boolean).length" class="mini-story-section editable-block">
+        <img
+          v-for="(img, i) in cfg.homeStoryImages.filter(Boolean)"
+          :key="i"
+          :src="img"
+          class="mini-story-img"
+          alt="Brand Story"
+          referrerpolicy="no-referrer"
+        />
+        <button class="edit-trigger" @click="openEdit('story')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </section>
+    </div>
 
     <!-- Hero -->
     <section class="brand-hero editable-block" style="margin-top:0">
@@ -256,6 +313,22 @@
         <template v-if="editType === 'story'">
           <div class="bi-field"><label>品牌故事图 URL</label><div class="bi-input-row"><input v-model="editData.storyImage" class="bi-input" placeholder="https://... 或点击上传" /><button class="bi-upload-btn" @click="upload(v => editData.storyImage = v)">上传</button></div><img v-if="editData.storyImage" :src="editData.storyImage" class="bi-preview" referrerpolicy="no-referrer" /></div>
           <div class="bi-field"><label>故事简介文字</label><textarea v-model="editData.storyText" class="bi-textarea"></textarea></div>
+          <div class="bi-field">
+            <label>小程序首页下方长图（按顺序显示）</label>
+            <div v-for="(_img, i) in editData.homeStoryImages" :key="i" class="bi-hero-img-row">
+              <div class="bi-input-row" style="flex:1">
+                <input v-model="editData.homeStoryImages[i]" class="bi-input" placeholder="https://... 或点击上传" />
+                <button class="bi-upload-btn" @click="upload(v => editData.homeStoryImages[i] = v, 0)">上传</button>
+              </div>
+              <button class="bi-img-action" :disabled="i === 0" @click="moveHomeStoryImage(i, -1)" title="上移">↑</button>
+              <button class="bi-img-action" :disabled="i === editData.homeStoryImages.length - 1" @click="moveHomeStoryImage(i, 1)" title="下移">↓</button>
+              <button class="bi-img-action danger" @click="removeHomeStoryImage(i)" title="删除">×</button>
+            </div>
+            <div class="bi-hero-img-thumbs">
+              <img v-for="(img, i) in editData.homeStoryImages.filter(Boolean)" :key="i" :src="img" class="bi-preview-thumb story" referrerpolicy="no-referrer" />
+            </div>
+            <button class="bi-add-img" :disabled="editData.homeStoryImages.length >= 12" @click="editData.homeStoryImages.push('')">{{ editData.homeStoryImages.length >= 12 ? '最多 12 张' : '+ 添加图片' }}</button>
+          </div>
         </template>
         <!-- 分类卡片编辑 -->
         <template v-if="editType === 'cat'">
@@ -315,8 +388,8 @@ const heroImagesList = computed(() => {
 })
 const { triggerUpload } = useImageUpload()
 
-function upload(setter: (v: string) => void) {
-  triggerUpload(setter)
+function upload(setter: (v: string) => void, ratio?: number) {
+  triggerUpload(setter, ratio)
 }
 
 const philosophy = [
@@ -332,7 +405,7 @@ const editCatIdx = ref(0)
 const editTitle = ref('')
 const editData = reactive({
   heroImage: '', heroImages: [] as string[], heroSubtitle: '', heroTitle: '', heroDesc: '',
-  storyImage: '', storyText: '',
+  storyImage: '', homeStoryImages: [] as string[], storyText: '',
   catName: '', catImg: '',
   themeCream: '#EDE6D5', themeNavy: '#1A1E32', themeOrange: '#D14B0A', themeBlue: '#8BBDD6',
 })
@@ -351,6 +424,20 @@ function removeHeroImage(idx: number) {
   if (editData.heroImages.length === 0) editData.heroImages.push('')
 }
 
+function moveHomeStoryImage(idx: number, dir: number) {
+  const arr = editData.homeStoryImages
+  const target = idx + dir
+  if (target < 0 || target >= arr.length) return
+  const tmp = arr[idx]
+  arr[idx] = arr[target]
+  arr[target] = tmp
+}
+
+function removeHomeStoryImage(idx: number) {
+  editData.homeStoryImages.splice(idx, 1)
+  if (editData.homeStoryImages.length === 0) editData.homeStoryImages.push('')
+}
+
 function openEdit(type: string, idx?: number) {
   if (!brandEdit.editMode) return
   editType.value = type
@@ -365,6 +452,8 @@ function openEdit(type: string, idx?: number) {
   } else if (type === 'story') {
     editTitle.value = '编辑品牌故事图'
     editData.storyImage = cfg.value.storyImage
+    const imgs = Array.isArray(cfg.value.homeStoryImages) ? [...cfg.value.homeStoryImages] : []
+    editData.homeStoryImages = imgs.length ? imgs : ['']
     editData.storyText = cfg.value.storyText
   } else if (type === 'cat' && idx !== undefined) {
     editCatIdx.value = idx
@@ -392,7 +481,11 @@ function saveEdit() {
       heroDesc: editData.heroDesc,
     })
   } else if (editType.value === 'story') {
-    brandEdit.updateConfig({ storyImage: editData.storyImage, storyText: editData.storyText })
+    brandEdit.updateConfig({
+      storyImage: editData.storyImage,
+      homeStoryImages: editData.homeStoryImages.filter(Boolean).slice(0, 12),
+      storyText: editData.storyText,
+    })
   } else if (editType.value === 'cat') {
     const cats = [...cfg.value.categories]
     cats[editCatIdx.value] = { name: editData.catName, img: editData.catImg }
@@ -520,6 +613,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 
 /* ── 品牌主页 ── */
 .brand-home { background: var(--cream); }
+.brand-mini-home { display: none; }
 
 /* Hero */
 .brand-hero {
@@ -775,6 +869,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 .bi-img-action.danger:hover { background: rgba(209,75,10,0.1); }
 .bi-hero-img-thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .bi-preview-thumb { width: 80px; height: 48px; object-fit: cover; border-radius: 3px; border: 1px solid rgba(26,30,50,0.15); }
+.bi-preview-thumb.story { width: 62px; height: 86px; }
 .bi-add-img { margin-top: 8px; padding: 8px 14px; background: rgba(209,75,10,0.08); border: 1.5px dashed rgba(209,75,10,0.4); color: #d14b0a; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; align-self: flex-start; }
 .bi-add-img:hover:not(:disabled) { background: rgba(209,75,10,0.15); }
 .bi-add-img:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -793,6 +888,7 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
   opacity: 0; transition: opacity 0.2s;
 }
 .editable-block:hover .edit-trigger { opacity: 1; }
+:global(.edit-mode-active) .edit-trigger { opacity: 1; }
 
 /* 响应式 */
 @media (max-width: 900px) {
@@ -805,6 +901,164 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 }
 
 @media (max-width: 768px) {
+  .brand-mini-home {
+    display: block;
+    background: var(--cream);
+    min-height: 100svh;
+  }
+  .brand-home > .brand-hero,
+  .brand-philosophy,
+  .brand-categories,
+  .brand-hot,
+  .brand-newsletter {
+    display: none;
+  }
+  .mini-hero {
+    position: relative;
+    height: calc(100svh - 108px);
+    min-height: 620px;
+    overflow: hidden;
+    background: #1a1814;
+  }
+  .mini-hero-bg-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .mini-hero-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .mini-hero-mask {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 180px;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(17,17,17,0) 0%, rgba(17,17,17,0.55) 58%, rgba(17,17,17,0.82) 100%);
+  }
+  .mini-shelf {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .mini-shelf-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mini-shelf-scroll::-webkit-scrollbar { display: none; }
+  .mini-shelf-row {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px;
+  }
+  .mini-shelf-card {
+    width: 280px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: pointer;
+  }
+  .mini-shelf-thumb {
+    width: 55px;
+    height: 55px;
+    flex: 0 0 auto;
+    object-fit: cover;
+    background: var(--cream);
+  }
+  .mini-shelf-body { flex: 1; min-width: 0; }
+  .mini-shelf-name {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mini-shelf-price {
+    margin-top: 4px;
+    color: #fff;
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 900;
+  }
+  .mini-shelf-arrow {
+    color: rgba(255,255,255,0.45);
+    font-size: 15px;
+    flex: 0 0 auto;
+  }
+  .mini-explore-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px;
+    background: var(--cream);
+    border: 0;
+    border-bottom: 1px solid rgba(17,17,17,0.08);
+    color: #111;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+  }
+  .mini-explore-bar span:last-child {
+    color: rgba(17,17,17,0.35);
+    font-size: 16px;
+  }
+  .mini-stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    padding: 28px 12px;
+    background: var(--cream);
+  }
+  .mini-stat {
+    min-width: 0;
+    text-align: center;
+  }
+  .mini-stat-num {
+    color: #111;
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .mini-stat-label {
+    margin-top: 7px;
+    color: rgba(17,17,17,0.42);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .mini-story-section {
+    position: relative;
+    background: #F3EDE6;
+  }
+  .mini-story-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #F3EDE6;
+  }
+  :global(.edit-mode-active) .brand-mini-home .edit-trigger {
+    opacity: 1;
+  }
   /* 手机端 Hero 改为竖版封面：按 1041:2000 竖向比例（接近 iPhone 屏幕比） */
   .brand-hero { height: auto; aspect-ratio: 1041 / 2000; min-height: 0; max-height: 100svh; }
   .brand-hero-content { padding: 0 24px 44px; justify-content: flex-end; }

@@ -14,6 +14,7 @@ export interface BrandPageConfig {
   heroSubtitle: string
   heroDesc: string
   storyImage: string
+  homeStoryImages: string[]
   storyText: string
   categories: { name: string; img: string }[]
   // 品牌故事页
@@ -52,6 +53,7 @@ const DEFAULT_CONFIG: BrandPageConfig = {
   heroSubtitle: 'Live & Work Anywhere',
   heroDesc: '专为数字游民打造的一站式生活方式品牌，让自由工作变得更美好。',
   storyImage: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=800',
+  homeStoryImages: ['/images/grassland-story.jpg'],
   storyText: '我们相信工作不应该被地点束缚。数字游牧精选全球最适合远程工作的目的地与生活方式产品，让每一次移动都成为一次探索。',
   categories: [
     { name: '工作装备', img: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&q=80&w=600' },
@@ -123,10 +125,13 @@ const DEFAULT_CONFIG: BrandPageConfig = {
   },
 }
 
-// 老数据只有 heroImage 字符串；如果没有 heroImages 数组，自动迁移为 [heroImage]
-function migrateHeroImages(cfg: BrandPageConfig): BrandPageConfig {
+// 老配置缺少数组字段时补齐，避免覆盖已有云端配置。
+function migrateConfig(cfg: BrandPageConfig): BrandPageConfig {
   if (!Array.isArray(cfg.heroImages) || cfg.heroImages.length === 0) {
     cfg.heroImages = cfg.heroImage ? [cfg.heroImage] : []
+  }
+  if (!Array.isArray(cfg.homeStoryImages)) {
+    cfg.homeStoryImages = ['/images/grassland-story.jpg']
   }
   return cfg
 }
@@ -141,7 +146,7 @@ function loadConfig(): BrandPageConfig {
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return migrateHeroImages({ ...DEFAULT_CONFIG, ...JSON.parse(raw) })
+    if (raw) return migrateConfig({ ...DEFAULT_CONFIG, ...JSON.parse(raw) })
   } catch { /* ignore */ }
 
   // 首次加载或版本重置后写入内蒙古奶食品文案
@@ -156,6 +161,7 @@ function loadConfig(): BrandPageConfig {
     heroSubtitle: 'Pure from the Steppe',
     heroDesc: '内蒙古千里草原，世代牧民的匠心传承。每一口奶食，都是对这片土地最真实的致敬。',
     storyImage: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&q=80&w=800',
+    homeStoryImages: ['/images/grassland-story.jpg'],
     storyText: '扎根内蒙古锡林郭勒草原，坚守传统奶食制作工艺，用最纯净的牧场鲜奶，做最地道的草原味道。',
     categories: [
       { name: '奶皮 · 奶酪', img: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?auto=format&fit=crop&q=80&w=600' },
@@ -223,7 +229,7 @@ function loadConfig(): BrandPageConfig {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_CONTENT))
   } catch { /* ignore */ }
-  return migrateHeroImages({ ...DEFAULT_CONFIG, ...INITIAL_CONTENT })
+  return migrateConfig({ ...DEFAULT_CONFIG, ...INITIAL_CONTENT })
 }
 
 export const useBrandEditStore = defineStore('brandEdit', () => {
@@ -286,7 +292,7 @@ export const useBrandEditStore = defineStore('brandEdit', () => {
           }
           return
         }
-        const merged = migrateHeroImages({ ...DEFAULT_CONFIG, ...json.data })
+        const merged = migrateConfig({ ...DEFAULT_CONFIG, ...json.data })
         config.value = merged
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)) } catch { /* ignore */ }
       }
