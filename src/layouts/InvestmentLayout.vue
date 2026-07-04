@@ -115,8 +115,8 @@ const isMobile = ref(window.innerWidth < 768)
 const isHome = computed(() => route.path === '/investment')
 // 园区页与机构大厅全出血展示
 const isFullBleed = computed(() => route.path.startsWith('/investment/city') || route.path === '/investment/workspace')
-// 园区页（含大厅）自带通信频道，不重复渲染右侧对话卡
-const showChat = computed(() => !route.path.startsWith('/investment/city'))
+// 亚当对话卡只在首页出现；园区（含大厅）自带通信频道，其余子页不再渲染
+const showChat = computed(() => route.path === '/investment')
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
