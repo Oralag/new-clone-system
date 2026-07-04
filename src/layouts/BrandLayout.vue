@@ -524,7 +524,15 @@ function doSearch() {
 
 @media (max-width: 768px) {
   .topnav-center { display: none; }
-  .topnav-edit-btn { display: none; }
+  .topnav-edit-btn {
+    display: flex;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
+    border-radius: 10px;
+  }
   .edit-mode-bar { display: none; }
   .topnav-switch-btn { display: none; }
   .topnav-mode-badge { display: none; }

@@ -32,7 +32,7 @@
     <!-- 手机端同步小程序首页 -->
     <div class="brand-mini-home">
       <section class="mini-hero editable-block">
-        <div class="mini-hero-bg-wrap">
+        <div class="mini-hero-bg-wrap" @click="openEdit('hero')">
           <img :src="heroImagesList[0] || cfg.heroImage" alt="Brand Hero" class="mini-hero-bg" referrerpolicy="no-referrer" />
         </div>
         <div class="mini-hero-mask"></div>
@@ -55,7 +55,7 @@
             </div>
           </div>
         </div>
-        <button class="edit-trigger" @click="openEdit('hero')">
+        <button class="edit-trigger" @click.stop="openEdit('hero')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
       </section>
@@ -72,7 +72,7 @@
         </div>
       </section>
 
-      <section v-if="cfg.homeStoryImages?.filter(Boolean).length" class="mini-story-section editable-block">
+      <section v-if="cfg.homeStoryImages?.filter(Boolean).length" class="mini-story-section editable-block" @click="openEdit('story')">
         <img
           v-for="(img, i) in cfg.homeStoryImages.filter(Boolean)"
           :key="i"
@@ -81,7 +81,7 @@
           alt="Brand Story"
           referrerpolicy="no-referrer"
         />
-        <button class="edit-trigger" @click="openEdit('story')">
+        <button class="edit-trigger" @click.stop="openEdit('story')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
       </section>
@@ -439,7 +439,8 @@ function removeHomeStoryImage(idx: number) {
 }
 
 function openEdit(type: string, idx?: number) {
-  if (!brandEdit.editMode) return
+  if (!brandEdit.isLoggedIn) return
+  if (!brandEdit.editMode) brandEdit.toggleEditMode()
   editType.value = type
   if (type === 'hero') {
     editTitle.value = '编辑 Hero 区域'
