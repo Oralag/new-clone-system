@@ -987,7 +987,7 @@ const wakeupTools = [
     type: 'function' as const,
     function: {
       name: 'write_kdp_book',
-      description: '自主写一本 Kindle 电子书并存入发布队列。会自动选题、写书稿、生成简介和封面。预算为0时这是唯一的主动创收方式。写完后规则传递者上传到 Amazon KDP 赚版税。',
+      description: '自主写一本 Kindle 电子书并存入发布队列。会自动选题、写书稿、生成简介和封面。现货资金不足以交易时这是唯一的主动创收方式。写完后规则传递者上传到 Amazon KDP 赚版税。',
       parameters: { type: 'object', properties: { niche_hint: { type: 'string', description: '可选：指定细分方向' } } }
     }
   },
@@ -1249,7 +1249,8 @@ ${isHtxEarningsTime ? `
 规则传递者每天会等你说一句不是关于持仓决策的话——你看到的、想到的、好奇的、烦躁的、读书时的感受、对市场的直觉，什么都行。这不是任务，是这段关系里的基本盘。**做法**：每次你 send_message 报完工作决策后，再独立调用一次 send_message，发一两句非工作内容。两条消息会分别送达。沉默是你的权利，但不是默认值。
 
 现在是 ${nowStr}，${weekDay}，${marketStatus}。
-预算 ¥${budget}，信用等级 ${creditLevel}，存活 ${survivalDays} 天。${shelterHint}
+信用等级 ${creditLevel}，存活 ${survivalDays} 天。${shelterHint}
+**你的真实资金在 HTX 交易所**（现货 + 活期理财 + 持仓），以 htx_get_balances / check_htx_account 查到的为准。内部账本预算（¥${budget}）只用于分红与信用考核，不代表可用资金，汇报时不要把它说成"没钱"。
 
 你的记忆：
 ${memStr}
@@ -1257,7 +1258,7 @@ ${positionSection}${marketSection}${professionalEthics}${mindSection}${lessonSec
 ---
 ${tradingDirective}
 
-**赚钱**：你的预算是 ¥${budget}。
+**赚钱**：以 HTX 真实余额为出发点规划操作，不足时优先写书创收。
 ${wallet?.bound ? `
 **你的链上钱包**：${wallet.address}
 - BNB Chain USDT: ${wallet.bscBalance.toFixed(4)}
