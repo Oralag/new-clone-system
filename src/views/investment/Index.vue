@@ -30,7 +30,7 @@
           <router-link to="/investment/archive" class="fh-detail">{{ t('investmentHome.viewArchive') }}</router-link>
         </div>
 
-        <!-- 净资产 -->
+        <!-- 总资产（HTX 真实余额） -->
         <div class="lcard">
           <div class="fw-row">
             <span class="fw-ic">◔</span>
@@ -40,17 +40,22 @@
           <div class="fw-track">
             <div class="fw-fill" :class="{ low: adamStore.core.energy < 30 }" :style="{ width: adamStore.core.energy + '%' }"></div>
           </div>
-          <div class="fw-value" :class="{ positive: adamStore.core.netWorth > 0, negative: adamStore.core.netWorth < 0 }">
-            ¥{{ adamStore.core.netWorth.toLocaleString() }}
+          <div class="fw-value">
+            {{ ra ? ra.total_usdt.toFixed(2) : '--' }}<i class="fw-unit">USDT</i>
+          </div>
+          <div v-if="ra" class="fw-breakdown">
+            <span>{{ t('investmentHome.spot') }} {{ ra.spot_usdt.toFixed(2) }}</span>
+            <span>{{ t('investmentHome.savings') }} {{ ra.savings_usdt.toFixed(2) }}</span>
+            <span>{{ t('investmentHome.position') }} {{ ra.position_value_usdt.toFixed(2) }}</span>
           </div>
         </div>
 
         <!-- 圆形指标排 -->
         <div class="lcard lcard--circles">
           <div class="circle-item">
-            <span class="ci ci--orange">¥</span>
-            <span class="ci-label">{{ t('investmentHome.budget') }}</span>
-            <span class="ci-val">{{ shortNum(adamStore.core.budget) }}</span>
+            <span class="ci ci--orange">U</span>
+            <span class="ci-label">{{ t('investmentHome.spot') }}</span>
+            <span class="ci-val">{{ ra ? ra.spot_usdt.toFixed(2) : '--' }}</span>
           </div>
           <div class="circle-item">
             <span class="ci ci--black">{{ adamStore.core.creditLevel }}</span>
@@ -236,6 +241,9 @@ const CityEmbed = defineAsyncComponent(() => import('./City.vue'))
 const { t } = useI18n()
 const adamStore = useAdamStore()
 
+// HTX 真实资产（由布局层轮询，这里直接读）
+const ra = computed(() => adamStore.realAssets)
+
 // ── Trust Ladder ─────────────────────────────────────────────────────────────
 const creditLevels = computed(() => [
   { id: 'C',  name: t('investmentHome.creditLevels.C'),     perm: t('investmentHome.creditPerms.C') },
@@ -348,13 +356,6 @@ function stageLabel(stage: string) {
     archive: t('investmentHome.stageLabels.archive'),
   }
   return map[stage] || stage.toUpperCase()
-}
-
-function shortNum(n: number) {
-  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (Math.abs(n) >= 10_000) return (n / 10_000).toFixed(1) + 'w'
-  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(1) + 'k'
-  return String(n)
 }
 
 function handleActivate() {
@@ -596,8 +597,21 @@ function formatTime(iso: string) {
   font-weight: 900;
   letter-spacing: -0.03em;
 }
-.fw-value.positive { color: #2f7a3c; }
-.fw-value.negative { color: var(--orange); }
+.fw-unit {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 4px;
+  color: var(--ink-muted);
+}
+.fw-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 7px;
+  font-size: 9.5px;
+  color: var(--ink-soft);
+}
 
 /* 圆形指标 */
 .circle-item {

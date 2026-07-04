@@ -51,36 +51,36 @@
           </div>
         </div>
 
-        <!-- 投资局专属：资金账户 -->
+        <!-- 投资局专属：真实资产（HTX） -->
         <div v-if="selectedInst.institutionId === 'bureau'" class="detail-section fund-section">
-          <div class="detail-section-title">
-            {{ t('city.fundAccount') }}
-            <button class="fund-deposit-btn" @click="showDepositDialog = true">{{ t('city.deposit') }}</button>
-          </div>
-          <div class="fund-balance-row">
-            <div class="fund-balance-block">
-              <span class="fund-balance-label">{{ t('city.availableBalance') }}</span>
-              <span class="fund-balance-val">¥{{ adamStore.core.budget.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}</span>
+          <div class="detail-section-title">{{ t('city.fundAccount') }}</div>
+          <template v-if="adamStore.realAssets">
+            <div class="fund-balance-row">
+              <div class="fund-balance-block">
+                <span class="fund-balance-label">{{ t('city.spotAvail') }}</span>
+                <span class="fund-balance-val">{{ adamStore.realAssets.spot_usdt.toFixed(2) }} U</span>
+              </div>
+              <div class="fund-balance-block">
+                <span class="fund-balance-label">{{ t('city.savingsBal') }}</span>
+                <span class="fund-balance-val">{{ adamStore.realAssets.savings_usdt.toFixed(2) }} U</span>
+              </div>
+              <div class="fund-balance-block">
+                <span class="fund-balance-label">{{ t('city.positionVal') }}</span>
+                <span class="fund-balance-val">{{ adamStore.realAssets.position_value_usdt.toFixed(2) }} U</span>
+              </div>
+              <div class="fund-balance-block">
+                <span class="fund-balance-label">{{ t('city.totalAssets') }}</span>
+                <span class="fund-balance-val positive">{{ adamStore.realAssets.total_usdt.toFixed(2) }} U</span>
+              </div>
             </div>
-            <div class="fund-balance-block">
-              <span class="fund-balance-label">{{ t('city.totalIn') }}</span>
-              <span class="fund-balance-val positive">¥{{ adamStore.totalEarned.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}</span>
+            <div v-for="p in adamStore.realAssets.positions" :key="p.symbol" class="ledger-row">
+              <span class="ledger-dir in">◆</span>
+              <span class="ledger-desc">{{ p.symbol }} × {{ p.qty }}</span>
+              <span class="ledger-amount in">{{ p.value_usdt.toFixed(2) }} U</span>
+              <span class="ledger-time">@{{ p.price }}</span>
             </div>
-            <div class="fund-balance-block">
-              <span class="fund-balance-label">{{ t('city.totalOut') }}</span>
-              <span class="fund-balance-val negative">¥{{ adamStore.totalCost.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}</span>
-            </div>
-          </div>
-
-          <!-- 资金流水 -->
-          <div class="fund-sub-title" style="margin-top:8px">{{ t('city.ledger') }}</div>
-          <div v-if="adamStore.ledger.length === 0" class="detail-empty">{{ t('city.noLedger') }}</div>
-          <div v-for="entry in [...adamStore.ledger].reverse().slice(0, 8)" :key="entry.id" class="ledger-row">
-            <span class="ledger-dir" :class="entry.direction">{{ entry.direction === 'in' ? '↑' : '↓' }}</span>
-            <span class="ledger-desc">{{ entry.title }}</span>
-            <span class="ledger-amount" :class="entry.direction">{{ entry.direction === 'in' ? '+' : '-' }}¥{{ entry.amount.toLocaleString() }}</span>
-            <span class="ledger-time">{{ formatTime(entry.at) }}</span>
-          </div>
+          </template>
+          <div v-else class="detail-empty">{{ t('city.assetsLoading') }}</div>
         </div>
 
         <!-- 机构状态控制 -->
@@ -503,19 +503,6 @@
     </div>
   </div>
 
-  <!-- 充值弹窗 -->
-  <div v-if="showDepositDialog" class="dialog-mask" @click.self="showDepositDialog = false">
-    <div class="dialog-box">
-      <div class="dialog-title">{{ t('city.depositTitle') }}</div>
-      <div class="dialog-desc">{{ t('city.depositDesc') }}</div>
-      <input v-model="depositAmount" type="number" class="dialog-input" :placeholder="t('city.amountPlaceholder')" min="0" />
-      <input v-model="depositNote" type="text" class="dialog-input" :placeholder="t('city.noteOptional')" />
-      <div class="dialog-actions">
-        <button class="btn-ghost" @click="showDepositDialog = false">{{ t('city.cancel') }}</button>
-        <button class="btn-gold" @click="handleDeposit">{{ t('city.confirmDeposit') }}</button>
-      </div>
-    </div>
-  </div>
 
   <!-- 记录投资弹窗 -->
   <div v-if="showRecordInvestmentDialog" class="dialog-mask" @click.self="showRecordInvestmentDialog = false">
@@ -1201,6 +1188,7 @@ watch(eventCount, () => {
 onMounted(async () => {
   startIdleTimer()
   window.addEventListener('resize', onWindowResize)
+  adamStore.fetchRealAssets()
   await loadChatHistory()
   // 打开时定位到最新一条消息
   scrollChatToBottom()
@@ -1912,28 +1900,6 @@ function formatTime(iso: string) {
     const min = d.getMinutes().toString().padStart(2, '0')
     return `${month}/${day} ${hour}:${min}`
   } catch { return '--/-- --:--' }
-}
-
-// ── 资金账户 ──────────────────────────────────────────
-const showDepositDialog = ref(false)
-const depositAmount = ref('')
-const depositNote = ref('')
-
-function handleDeposit() {
-  const amount = parseFloat(depositAmount.value)
-  if (!amount || amount <= 0) return
-  adamStore.addLedgerEntry({
-    id: `ledger_${Date.now()}`,
-    direction: 'in',
-    amount,
-    title: depositNote.value || t('city.manualDeposit'),
-    kind: 'earning',
-    at: new Date().toISOString(),
-    linkedEventIds: [],
-  })
-  depositAmount.value = ''
-  depositNote.value = ''
-  showDepositDialog.value = false
 }
 
 function formatDate(iso: string) {
@@ -3695,8 +3661,6 @@ onUnmounted(() => {
 
 /* ── 资金账户 ── */
 .fund-section { display: flex; flex-direction: column; gap: 8px; }
-.fund-deposit-btn { margin-left: auto; padding: 2px 8px; font-size: 10px; background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3); border-radius: 4px; color: #F5A623; cursor: pointer; }
-.fund-deposit-btn:hover { background: rgba(245,166,35,0.2); }
 .fund-balance-row { display: flex; gap: 16px; flex-wrap: wrap; }
 .fund-balance-block { display: flex; flex-direction: column; gap: 2px; }
 .fund-balance-label { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; }

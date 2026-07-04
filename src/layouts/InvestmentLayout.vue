@@ -8,8 +8,8 @@
       </button>
       <span class="mobile-title">{{ currentPageTitle }}</span>
       <span class="budget-cta budget-cta--sm">
-        <span class="budget-cta-label">BUDGET</span>
-        <span class="budget-cta-val">¥{{ adamStore.core.budget.toLocaleString() }}</span>
+        <span class="budget-cta-label">ASSETS</span>
+        <span class="budget-cta-val">{{ assetsStr }}</span>
       </span>
     </div>
 
@@ -72,9 +72,9 @@
             <span class="status-dot"></span>
             <span class="status-text">{{ statusLabel }}</span>
           </span>
-          <span class="budget-cta">
-            <span class="budget-cta-label">BUDGET</span>
-            <span class="budget-cta-val">¥{{ adamStore.core.budget.toLocaleString() }}</span>
+          <span class="budget-cta" :title="assetsTitle">
+            <span class="budget-cta-label">ASSETS</span>
+            <span class="budget-cta-val">{{ assetsStr }}</span>
           </span>
           <router-link to="/portal" class="nav-back" :title="t('investment.backToPortal')">
             <ChevronLeft :size="16" :stroke-width="2" />
@@ -118,15 +118,31 @@ const isFullBleed = computed(() => route.path.startsWith('/investment/city') || 
 // 亚当对话卡只在首页出现；园区（含大厅）自带通信频道，其余子页不再渲染
 const showChat = computed(() => route.path === '/investment')
 
+let assetsTimer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   // 从 Cloudflare KV 拉回亚当 core 状态，覆盖本地缓存
   // 防止 localStorage 被清空后 defaultCore() 把 KV 里的 alive 反向覆盖成 dormant
   adamStore.syncCoreFromKV()
+  // 真实资产（HTX）：进入即拉，60s 轮询
+  adamStore.fetchRealAssets()
+  assetsTimer = setInterval(() => adamStore.fetchRealAssets(true), 60_000)
 })
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   if (clockTimer) clearInterval(clockTimer)
+  if (assetsTimer) clearInterval(assetsTimer)
+})
+
+// 顶栏真实总资产
+const assetsStr = computed(() => {
+  const ra = adamStore.realAssets
+  return ra ? `${ra.total_usdt.toFixed(2)} USDT` : '-- USDT'
+})
+const assetsTitle = computed(() => {
+  const ra = adamStore.realAssets
+  if (!ra) return ''
+  return `现货 ${ra.spot_usdt.toFixed(2)} · 理财 ${ra.savings_usdt.toFixed(2)} · 持仓 ${ra.position_value_usdt.toFixed(2)} USDT`
 })
 function handleResize() { isMobile.value = window.innerWidth < 768 }
 

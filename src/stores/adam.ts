@@ -350,6 +350,30 @@ export const useAdamStore = defineStore('adam', () => {
     syncCoreToKV({ ...core })
   }
 
+  // ── 真实资产（HTX 现货/理财/持仓，替代虚拟账本对外展示） ──
+  interface RealAssets {
+    spot_usdt: number
+    frozen_usdt: number
+    savings_usdt: number
+    positions: Array<{ symbol: string; qty: number; price: number; value_usdt: number }>
+    position_value_usdt: number
+    total_usdt: number
+    updated_at: string
+  }
+  const realAssets = ref<RealAssets | null>(null)
+  let _assetsFetchedAt = 0
+  async function fetchRealAssets(force = false) {
+    if (!force && realAssets.value && Date.now() - _assetsFetchedAt < 30_000) return
+    try {
+      const res = await fetch('/api/adam/assets')
+      const data = await res.json() as RealAssets & { error?: string }
+      if (!data.error && typeof data.total_usdt === 'number') {
+        realAssets.value = data
+        _assetsFetchedAt = Date.now()
+      }
+    } catch { /* 网络失败保留上次数据 */ }
+  }
+
   /** 从远端 KV 加载 core 并覆盖本地状态（在 Index.vue onMounted 调用） */
   async function syncCoreFromKV() {
     const remote = await loadCoreFromKV()
@@ -551,5 +575,7 @@ export const useAdamStore = defineStore('adam', () => {
     reset,
     persist,
     syncCoreFromKV,
+    realAssets,
+    fetchRealAssets,
   }
 })
