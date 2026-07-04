@@ -30,3 +30,6 @@ dist.bak
 .adam-credentials/
 .agent-memory.json
 .claude/settings.local.json
+
+# 含生产DB连接串的本地维修脚本，禁止入库
+retail_repair_commands.txt
