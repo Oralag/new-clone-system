@@ -690,9 +690,22 @@ async function executeTool(name: string, input: Record<string, any>, env: Env, t
         if (!spot) return JSON.stringify({ error: '未找到现货账户' })
 
         if (side === 'buy') {
+          // 买入前查现货 USDT 可用余额，自动收缩金额，杜绝 "Order total cannot be lower than 1 USDT" 空转
+          const balPre = await htxRequest('GET', `/v1/account/accounts/${spot.id}/balance`, {}, null, ak, sk)
+          const usdtAvail = parseFloat(balPre.data?.list?.find((b: any) => b.currency === 'usdt' && b.type === 'trade')?.balance || '0')
+          // 留 0.5% 手续费缓冲，向下截断到分
+          const usable = Math.floor(usdtAvail * 0.995 * 100) / 100
+          const effectiveBuy = Math.min(amountUsdt, usable)
+          if (effectiveBuy < 1) {
+            return JSON.stringify({
+              error: `现货 USDT 不足：可用 ${usdtAvail.toFixed(4)}，扣手续费缓冲后 ${usable.toFixed(2)}，低于 HTX 最低下单额 1 USDT。不要重试下单。`,
+              action_hint: '请在 send_message 中告知规则传递者：去 HTX App 从活期理财赎回部分 USDT 到现货，或在投资局充值预算。',
+            })
+          }
+          const clamped = effectiveBuy < amountUsdt
           const order = await htxRequest('POST', '/v1/order/orders/place', {}, {
             'account-id': String(spot.id), symbol, type: 'buy-market',
-            amount: amountUsdt.toFixed(2), source: 'spot-api'
+            amount: effectiveBuy.toFixed(2), source: 'spot-api'
           }, ak, sk)
           if (order.status !== 'ok') return JSON.stringify({ error: order['err-msg'] || order.message || 'HTX下单失败', raw: order })
 
@@ -703,12 +716,16 @@ async function executeTool(name: string, input: Record<string, any>, env: Env, t
 
           if (tKey && env.AGENT_MEMORY) {
             const trades = (await env.AGENT_MEMORY.get(`adam:htx_trades:${tKey}`, 'json') as any[] | null) || []
-            trades.push({ id: order.data, side: 'buy', symbol, amount_usdt: amountUsdt, price, ts: new Date().toISOString(), source: 'adam_self' })
+            trades.push({ id: order.data, side: 'buy', symbol, amount_usdt: effectiveBuy, price, ts: new Date().toISOString(), source: 'adam_self' })
             await env.AGENT_MEMORY.put(`adam:htx_trades:${tKey}`, JSON.stringify(trades.slice(-50)))
             // 初始化 peak_price = 当前价（如果新建仓）
             if (price > 0) await env.AGENT_MEMORY.put(`adam:peak_price:${tKey}:${symbol}`, String(price))
           }
-          return JSON.stringify({ ok: true, order_id: order.data, side: 'buy', symbol, spent_usdt: amountUsdt, price_at_order: price })
+          return JSON.stringify({
+            ok: true, order_id: order.data, side: 'buy', symbol,
+            spent_usdt: effectiveBuy, price_at_order: price,
+            ...(clamped ? { note: `余额不足请求额，已自动收缩：请求 ${amountUsdt} → 实际 ${effectiveBuy.toFixed(2)} USDT` } : {}),
+          })
         }
 
         // === SELL ===
@@ -1777,7 +1794,9 @@ async function evaluateCreditLevel(tKey: string, env: Env): Promise<{ changed: b
 }
 
 // 信用等级对应：单笔最大下单（USDT）+ 分红比例
-const LEVEL_TRADE_LIMITS: Record<string, number> = { 'C': 1, 'B': 3, 'B+': 5, 'A': 10, 'S': 20 }
+// C 级从 1 提到 1.5：HTX 买入最低 1 USDT，限额=最低额时手续费导致零容错死锁
+// （现货 1.002 USDT 下 1.00 的单永远失败 "Order total cannot be lower than 1 USDT"）
+const LEVEL_TRADE_LIMITS: Record<string, number> = { 'C': 1.5, 'B': 3, 'B+': 5, 'A': 10, 'S': 20 }
 const LEVEL_DIVIDEND_RATIO: Record<string, number> = { 'C': 0.10, 'B': 0.20, 'B+': 0.30, 'A': 0.40, 'S': 0.50 }
 
 // 写一条结算到 ledger
