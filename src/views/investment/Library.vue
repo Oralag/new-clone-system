@@ -277,10 +277,18 @@
             <div v-if="book.keywords?.length" class="kdp-keywords">
               <span v-for="kw in book.keywords.slice(0, 4)" :key="kw" class="kdp-kw">{{ kw }}</span>
             </div>
+            <!-- 逐字段复制：对准 KDP 后台表单，一项一贴 -->
+            <div class="kdp-fields">
+              <button class="kdp-field" @click="copyField(book.id, 'title', book.title)">{{ copied === book.id + 'title' ? '✓ 已复制' : '书名' }}</button>
+              <button v-if="book.subtitle" class="kdp-field" @click="copyField(book.id, 'subtitle', book.subtitle)">{{ copied === book.id + 'subtitle' ? '✓ 已复制' : '副标题' }}</button>
+              <button class="kdp-field" @click="copyField(book.id, 'desc', book.description || '')">{{ copied === book.id + 'desc' ? '✓ 已复制' : '简介' }}</button>
+              <button v-if="book.keywords?.length" class="kdp-field" @click="copyField(book.id, 'kw', (book.keywords || []).join('; '))">{{ copied === book.id + 'kw' ? '✓ 已复制' : `关键词×${book.keywords.length}` }}</button>
+              <button v-if="book.categories?.length" class="kdp-field" @click="copyField(book.id, 'cat', (book.categories || []).join(' / '))">{{ copied === book.id + 'cat' ? '✓ 已复制' : '分类' }}</button>
+              <button class="kdp-field" @click="copyField(book.id, 'price', String(book.price || '6.99'))">{{ copied === book.id + 'price' ? '✓ 已复制' : `定价 $${book.price || '6.99'}` }}</button>
+            </div>
             <div class="kdp-actions">
               <button class="kdp-btn kdp-btn-download" @click="downloadManuscript(book)">⬇ 下载书稿</button>
-              <button class="kdp-btn kdp-btn-copy" @click="copyDescription(book)">📋 复制简介</button>
-              <a v-if="book.coverUrl" :href="book.coverUrl" target="_blank" class="kdp-btn kdp-btn-cover">🖼 封面</a>
+              <a v-if="book.coverUrl" :href="book.coverUrl" target="_blank" download class="kdp-btn kdp-btn-cover">🖼 封面</a>
               <button v-if="book.status === 'pending_upload'"
                       class="kdp-btn kdp-btn-mark"
                       @click="markUploaded(book.id)">✅ 标记已上传</button>
@@ -521,7 +529,7 @@ const showForm = ref(false)
 // ── KDP 出版队列 ─────────────────────────────────────────────────────────────
 interface KdpBookMeta {
   id: string; title: string; subtitle?: string; coverUrl?: string
-  description?: string; keywords?: string[]; price?: string
+  description?: string; keywords?: string[]; price?: string; categories?: string[]
   status: 'pending_upload' | 'uploaded' | 'live'
   wordCount?: number; createdAt: string; asin?: string
 }
@@ -549,10 +557,14 @@ async function markUploaded(id: string) {
   if (book) book.status = 'uploaded'
 }
 
-function copyDescription(book: KdpBookMeta) {
-  const text = book.description || book.title
+// 逐字段复制（按钮短暂显示"已复制"，无弹窗打断）
+const copied = ref('')
+let _copiedTimer: ReturnType<typeof setTimeout> | null = null
+function copyField(bookId: string, field: string, text: string) {
   navigator.clipboard.writeText(text).then(() => {
-    alert('简介已复制到剪贴板')
+    copied.value = bookId + field
+    if (_copiedTimer) clearTimeout(_copiedTimer)
+    _copiedTimer = setTimeout(() => { copied.value = '' }, 1600)
   }).catch(() => { prompt('请手动复制：', text) })
 }
 
@@ -1568,6 +1580,13 @@ function handleAddBook() {
 .kdp-keywords { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
 .kdp-kw { font-size: 10px; padding: 2px 6px; background: rgba(255,255,255,0.05); border-radius: 3px; color: #888; }
 .kdp-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.kdp-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 2px; }
+.kdp-field {
+  font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid rgba(19,19,17,0.16); background: transparent; color: #131311;
+  cursor: pointer; font-family: inherit; transition: background 0.14s, color 0.14s;
+}
+.kdp-field:hover { background: #131311; color: #fff; }
 .kdp-btn { font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer; border: none; text-decoration: none; display: inline-block; }
 .kdp-btn-download { background: rgba(93,130,220,0.2); color: #7db0f0; }
 .kdp-btn-copy { background: rgba(255,255,255,0.07); color: #ccc; }
