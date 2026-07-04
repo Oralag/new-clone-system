@@ -72,7 +72,7 @@
         </div>
       </section>
 
-      <section v-if="cfg.homeStoryImages?.filter(Boolean).length" class="mini-story-section editable-block" @click="openEdit('story')">
+      <section v-if="cfg.homeStoryImages?.filter(Boolean).length" class="mini-story-section editable-block" @click="openEdit('homeStory')">
         <img
           v-for="(img, i) in cfg.homeStoryImages.filter(Boolean)"
           :key="i"
@@ -81,7 +81,7 @@
           alt="Brand Story"
           referrerpolicy="no-referrer"
         />
-        <button class="edit-trigger" @click.stop="openEdit('story')">
+        <button class="edit-trigger" @click.stop="openEdit('homeStory')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
       </section>
@@ -330,6 +330,25 @@
             <button class="bi-add-img" :disabled="editData.homeStoryImages.length >= 12" @click="editData.homeStoryImages.push('')">{{ editData.homeStoryImages.length >= 12 ? '最多 12 张' : '+ 添加图片' }}</button>
           </div>
         </template>
+        <!-- 手机首页下方长图编辑 -->
+        <template v-if="editType === 'homeStory'">
+          <div class="bi-field">
+            <label>小程序首页下方长图（按顺序显示）</label>
+            <div v-for="(_img, i) in editData.homeStoryImages" :key="i" class="bi-hero-img-row">
+              <div class="bi-input-row" style="flex:1">
+                <input v-model="editData.homeStoryImages[i]" class="bi-input" placeholder="https://... 或点击上传" />
+                <button class="bi-upload-btn" @click="upload(v => editData.homeStoryImages[i] = v, 0)">上传</button>
+              </div>
+              <button class="bi-img-action" :disabled="i === 0" @click="moveHomeStoryImage(i, -1)" title="上移">↑</button>
+              <button class="bi-img-action" :disabled="i === editData.homeStoryImages.length - 1" @click="moveHomeStoryImage(i, 1)" title="下移">↓</button>
+              <button class="bi-img-action danger" @click="removeHomeStoryImage(i)" title="删除">×</button>
+            </div>
+            <div class="bi-hero-img-thumbs">
+              <img v-for="(img, i) in editData.homeStoryImages.filter(Boolean)" :key="i" :src="img" class="bi-preview-thumb story" referrerpolicy="no-referrer" />
+            </div>
+            <button class="bi-add-img" :disabled="editData.homeStoryImages.length >= 12" @click="editData.homeStoryImages.push('')">{{ editData.homeStoryImages.length >= 12 ? '最多 12 张' : '+ 添加图片' }}</button>
+          </div>
+        </template>
         <!-- 分类卡片编辑 -->
         <template v-if="editType === 'cat'">
           <div class="bi-field"><label>分类名称</label><input v-model="editData.catName" class="bi-input" /></div>
@@ -456,6 +475,10 @@ function openEdit(type: string, idx?: number) {
     const imgs = Array.isArray(cfg.value.homeStoryImages) ? [...cfg.value.homeStoryImages] : []
     editData.homeStoryImages = imgs.length ? imgs : ['']
     editData.storyText = cfg.value.storyText
+  } else if (type === 'homeStory') {
+    editTitle.value = '编辑首页下方长图'
+    const imgs = Array.isArray(cfg.value.homeStoryImages) ? [...cfg.value.homeStoryImages] : []
+    editData.homeStoryImages = imgs.length ? imgs : ['']
   } else if (type === 'cat' && idx !== undefined) {
     editCatIdx.value = idx
     editTitle.value = `编辑分类 ${idx + 1}`
@@ -486,6 +509,10 @@ function saveEdit() {
       storyImage: editData.storyImage,
       homeStoryImages: editData.homeStoryImages.filter(Boolean).slice(0, 12),
       storyText: editData.storyText,
+    })
+  } else if (editType.value === 'homeStory') {
+    brandEdit.updateConfig({
+      homeStoryImages: editData.homeStoryImages.filter(Boolean).slice(0, 12),
     })
   } else if (editType.value === 'cat') {
     const cats = [...cfg.value.categories]
