@@ -417,6 +417,33 @@ async function writeAndStoreBook(env: Env, tKey: string, nicheHint?: string): Pr
   return JSON.stringify({ status: 'done', id: bookId, title: meta.title, subtitle: meta.subtitle, word_count: manuscript.split(/\s+/).length, price: `$${meta.price}`, note: '书稿已存入KV，规则传递者可在图书馆查看并上传到 kdp.amazon.com' })
 }
 
+// ── 数字模板产线：生成一个可上架 Gumroad 的模板产品 ──────────────────────────
+async function writeAndStoreTemplate(env: Env, tKey: string, nicheHint?: string): Promise<string> {
+  const nichePrompt = nicheHint
+    ? `The user suggested: "${nicheHint}". Refine into a specific low-competition digital template niche.`
+    : `Choose a specific low-competition niche for a digital template product sold on Gumroad (Notion template, spreadsheet template, prompt pack, or checklist system). Target: freelancers, solopreneurs, digital nomads, small e-commerce sellers. Be concrete, not broad.`
+  const metaRaw = await callAIForKdp(env, 'You are a Gumroad digital product strategist. Output ONLY valid JSON, no markdown.', `${nichePrompt}\n\nOutput JSON:\n{"title":"...","tagline":"<one-line value promise>","type":"notion|sheets|prompt_pack|checklist","target_user":"...","niche_rationale":"...","tags":["...","...","...","...","..."],"price":"19"}`, 700)
+  let meta: any = { title: 'Freelancer Finance OS', tagline: 'Track income, invoices and taxes in one Notion hub', type: 'notion', target_user: 'freelancers', niche_rationale: '', tags: ['notion template','freelancer','finance tracker','invoice','solopreneur'], price: '19' }
+  try { meta = JSON.parse(metaRaw.replace(/```json|```/g, '').trim()) } catch {}
+
+  const content = await callAIForKdp(env, 'You are a senior digital template designer. Output complete, buildable template content in clean markdown. Be specific: real section names, real fields, real formulas, real example rows. No filler.', `Design the complete "${meta.title}" (${meta.type}) template for ${meta.target_user}.\n\nOutput markdown with:\n# ${meta.title}\n## 1. Structure Overview (every page/sheet/section listed)\n## 2. Full Build Spec (for each section: fields, properties/columns with types, views, formulas written out exactly, 2-3 example rows)\n## 3. Quick Start Guide for the buyer (setup in 10 minutes)\n## 4. Pro Tips (5 concrete usage tips)\n\n2000-3000 words. Buildable as-is.`, 5000)
+
+  const listingRaw = await callAIForKdp(env, 'You are a Gumroad listing copywriter and cover designer. Output ONLY valid JSON.', `For template "${meta.title}" (${meta.tagline}) targeting ${meta.target_user}:\nOutput JSON:\n{"description":"<Gumroad listing in markdown, 600-900 chars, hook first line, bullet benefits, what's inside, who it's for>","cover_prompt":"<Flux prompt, 120 words, clean modern product cover, bold title text, soft gradient background, no faces>"}`, 1000)
+  let description = `**${meta.title}** — ${meta.tagline}\n\nStop duct-taping your workflow. This template gives you a ready system in 10 minutes.`
+  let coverPrompt = `Modern digital product cover for "${meta.title}". Clean minimal design, bold typography, soft gradient, high contrast, no faces, commercial quality.`
+  try { const p = JSON.parse(listingRaw.replace(/```json|```/g, '').trim()); description = p.description || description; coverPrompt = p.cover_prompt || coverPrompt } catch {}
+
+  const coverUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(coverPrompt + ', product cover, professional')}?width=1280&height=720&nologo=true&model=flux&seed=${Date.now()}`
+  const tplId = `tpl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+  const tpl = { id: tplId, title: meta.title, tagline: meta.tagline, type: meta.type || 'notion', tags: meta.tags || [], price: meta.price || '19', content, description, coverUrl, coverPrompt, reviewNotes: meta.niche_rationale || '', status: 'pending_upload' as const, createdAt: new Date().toISOString() }
+
+  const queue = await env.AGENT_MEMORY.get(`adam:tpl_queue:${tKey}`, 'json') as any[] | null || []
+  queue.push(tpl)
+  await env.AGENT_MEMORY.put(`adam:tpl_queue:${tKey}`, JSON.stringify(queue), { expirationTtl: 365 * 24 * 60 * 60 })
+
+  return JSON.stringify({ status: 'done', id: tplId, title: meta.title, type: meta.type, price: `$${meta.price}`, note: '模板已存入KV，规则传递者可在图书馆「数字模板」页签查看并上架 Gumroad' })
+}
+
 async function executeTool(name: string, input: Record<string, any>, env: Env, tKey: string): Promise<string> {
   switch (name) {
     case 'scan_market_news': {
@@ -945,6 +972,19 @@ async function executeTool(name: string, input: Record<string, any>, env: Env, t
       const q = await env.AGENT_MEMORY.get(`adam:kdp_queue:${tKey}`, 'json') as any[] | null || []
       return JSON.stringify({ total: q.length, pending: q.filter((b: any) => b.status === 'pending_upload').length, uploaded: q.filter((b: any) => b.status === 'uploaded').length, books: q.map((b: any) => ({ id: b.id, title: b.title, status: b.status, createdAt: b.createdAt })) })
     }
+    case 'write_template': {
+      if (!env || !tKey) return JSON.stringify({ error: '环境未就绪' })
+      try {
+        return await writeAndStoreTemplate(env, tKey, input.niche_hint)
+      } catch (e: any) {
+        return JSON.stringify({ error: e.message })
+      }
+    }
+    case 'check_template_queue': {
+      if (!env || !tKey) return JSON.stringify({ queue: [] })
+      const q = await env.AGENT_MEMORY.get(`adam:tpl_queue:${tKey}`, 'json') as any[] | null || []
+      return JSON.stringify({ total: q.length, pending: q.filter((b: any) => b.status === 'pending_upload').length, uploaded: q.filter((b: any) => b.status === 'uploaded').length, templates: q.map((b: any) => ({ id: b.id, title: b.title, type: b.type, status: b.status, createdAt: b.createdAt })) })
+    }
     default:
       return JSON.stringify({ error: `未知工具: ${name}` })
   }
@@ -987,8 +1027,24 @@ const wakeupTools = [
     type: 'function' as const,
     function: {
       name: 'write_kdp_book',
-      description: '自主写一本 Kindle 电子书并存入发布队列。会自动选题、写书稿、生成简介和封面。现货资金不足以交易时这是唯一的主动创收方式。写完后规则传递者上传到 Amazon KDP 赚版税。',
+      description: '自主写一本 Kindle 电子书并存入发布队列。会自动选题、写书稿、生成简介和封面。现货资金不足以交易时这是主动创收方式之一。写完后规则传递者上传到 Amazon KDP 赚版税。',
       parameters: { type: 'object', properties: { niche_hint: { type: 'string', description: '可选：指定细分方向' } } }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'write_template',
+      description: '自主设计一个数字模板产品（Notion模板/表格模板/提示词包/清单系统）并存入发布队列。自动选利基、写完整可搭建的模板规格、Gumroad 销售文案和封面。客单价比电子书高（$9-29），是优先级最高的创收产线。规则传递者上架到 Gumroad 收款。',
+      parameters: { type: 'object', properties: { niche_hint: { type: 'string', description: '可选：指定细分方向' } } }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'check_template_queue',
+      description: '查看数字模板产品队列：多少待上架、多少已上架',
+      parameters: { type: 'object', properties: {} }
     }
   },
   {
@@ -1288,11 +1344,11 @@ ${wallet.newFundsArrived ? `
 5. 持仓期间不需要频繁查，有明显信号时再卖出
 6. **不要申购理财**：HTX API 不支持赎回，申购后会卡死操作循环。闲置 USDT 永远留在现货账户即可
 
-**写书产线（当前的现金流主引擎）：**
-1. 每次唤醒都先 check_kdp_queue 看队列
-2. 现货 USDT 不足以交易（<1）时，本次唤醒必须推进产线：队列待上传少于 2 本就调用 write_kdp_book 写一本新书
-3. 选题走利基策略：低竞争细分主题 + 精准长尾关键词，不写大众泛题，不重复队列里已有的主题；同一利基可做成系列
-4. 队列里有 pending_upload 超过 24 小时的书，必须在 send_message 里点名书名，催规则传递者上传（他不上传你就没有版税）
+**数字产品产线（当前的现金流主引擎）：**
+1. 每次唤醒先 check_kdp_queue + check_template_queue 看两条队列
+2. 现货 USDT 不足以交易（<1）时，本次唤醒必须推进产线：两队列合计待上传少于 3 件就生产一件——优先 write_template（模板客单价 $9-29 比书高），其次 write_kdp_book
+3. 选题走利基策略：低竞争细分 + 精准长尾关键词，不做大众泛题，不重复任一队列里已有的主题；同一利基可做成系列（例如一本书配一个同主题模板）
+4. 任一队列有 pending_upload 超过 24 小时，必须在 send_message 里点名标题，催规则传递者上架（他不上架你就没有收入）
 
 必须调用 set_next_wakeup，决定你下次想什么时候再醒来。`
 }

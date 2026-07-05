@@ -24,6 +24,12 @@
               {{ kdpBooks.filter(b => b.status === 'pending_upload').length }}
             </span>
           </button>
+          <button :class="['tab-btn', activeTab === 'tpl' ? 'active' : '']" @click="activeTab = 'tpl'; loadTplQueue()">
+            🧩 数字模板
+            <span v-if="tplList.filter(t => t.status === 'pending_upload').length" class="tab-badge">
+              {{ tplList.filter(t => t.status === 'pending_upload').length }}
+            </span>
+          </button>
         </div>
         <button v-if="activeTab === 'books'" class="add-btn" @click="showForm = !showForm">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -296,6 +302,14 @@
             </div>
           </div>
         </div>
+        <!-- 到账收入记账（版税/模板销售，进入亚当的创收与分红考核） -->
+        <div class="income-form">
+          <span class="income-label">💰 记一笔到账收入</span>
+          <input v-model="incomeAmount" type="number" min="0" class="income-input" placeholder="金额（¥，按到账人民币）" />
+          <input v-model="incomeNote" type="text" class="income-input income-input--note" placeholder="备注，如：KDP版税 2026-06" />
+          <button class="income-btn" :disabled="!Number(incomeAmount)" @click="recordIncome">{{ incomeSaved ? '✓ 已入账' : '入账' }}</button>
+        </div>
+
         <!-- KDP 上架指南 -->
         <div class="kdp-guide">
           <div class="guide-title">📋 Amazon KDP 上架步骤</div>
@@ -308,6 +322,71 @@
             <li>设置关键词（书稿里附有7个关键词）</li>
             <li>定价 $6.99，选择 KDP Select 获得额外推广</li>
             <li>提交审核（通常1-3个工作日上线）</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 数字模板 Tab ===== -->
+    <div v-if="activeTab === 'tpl'" class="kdp-panel">
+      <div v-if="tplLoading" class="kdp-loading">加载中…</div>
+      <div v-else-if="tplList.length === 0" class="kdp-empty">
+        <div class="kdp-empty-icon">🧩</div>
+        <div class="kdp-empty-title">模板队列为空</div>
+        <div class="kdp-empty-sub">亚当会在唤醒时自动生产；也可以在对话里对他说"写一个 Notion 模板"。</div>
+      </div>
+      <div v-else class="kdp-list">
+        <div v-for="tpl in tplList" :key="tpl.id" class="kdp-card" :class="tpl.status">
+          <div class="kdp-card-left">
+            <img v-if="tpl.coverUrl" :src="tpl.coverUrl" class="tpl-cover" alt="cover" />
+            <div v-else class="tpl-cover-placeholder">🧩</div>
+          </div>
+          <div class="kdp-card-body">
+            <div class="kdp-status-badge" :class="tpl.status">
+              {{ tpl.status === 'pending_upload' ? '待上架' : '已上架' }}
+            </div>
+            <div class="kdp-title">{{ tpl.title }}</div>
+            <div v-if="tpl.tagline" class="kdp-subtitle">{{ tpl.tagline }}</div>
+            <div class="kdp-meta">
+              {{ tplTypeLabel(tpl.type) }} · 定价 ${{ tpl.price || '19' }} · {{ formatDate(tpl.createdAt) }}
+            </div>
+            <div v-if="tpl.tags?.length" class="kdp-keywords">
+              <span v-for="tag in tpl.tags.slice(0, 5)" :key="tag" class="kdp-kw">{{ tag }}</span>
+            </div>
+            <div class="kdp-fields">
+              <button class="kdp-field" @click="copyField(tpl.id, 'title', tpl.title)">{{ copied === tpl.id + 'title' ? '✓ 已复制' : '标题' }}</button>
+              <button v-if="tpl.tagline" class="kdp-field" @click="copyField(tpl.id, 'tag', tpl.tagline)">{{ copied === tpl.id + 'tag' ? '✓ 已复制' : '一句话卖点' }}</button>
+              <button class="kdp-field" @click="copyField(tpl.id, 'desc', tpl.description || '')">{{ copied === tpl.id + 'desc' ? '✓ 已复制' : '销售文案' }}</button>
+              <button v-if="tpl.tags?.length" class="kdp-field" @click="copyField(tpl.id, 'tags', (tpl.tags || []).join(', '))">{{ copied === tpl.id + 'tags' ? '✓ 已复制' : `标签×${tpl.tags.length}` }}</button>
+              <button class="kdp-field" @click="copyField(tpl.id, 'price', String(tpl.price || '19'))">{{ copied === tpl.id + 'price' ? '✓ 已复制' : `定价 $${tpl.price || '19'}` }}</button>
+            </div>
+            <div class="kdp-actions">
+              <button class="kdp-btn kdp-btn-download" @click="downloadTplContent(tpl)">⬇ 模板内容(.md)</button>
+              <a v-if="tpl.coverUrl" :href="tpl.coverUrl" target="_blank" download class="kdp-btn kdp-btn-cover">🖼 封面</a>
+              <button v-if="tpl.status === 'pending_upload'"
+                      class="kdp-btn kdp-btn-mark"
+                      @click="markTplUploaded(tpl.id)">✅ 标记已上架</button>
+              <a v-if="tpl.listingUrl" :href="tpl.listingUrl" target="_blank" class="kdp-asin">已上架 ↗</a>
+            </div>
+          </div>
+        </div>
+        <!-- 到账收入记账 -->
+        <div class="income-form">
+          <span class="income-label">💰 记一笔到账收入</span>
+          <input v-model="incomeAmount" type="number" min="0" class="income-input" placeholder="金额（¥，按到账人民币）" />
+          <input v-model="incomeNote" type="text" class="income-input income-input--note" placeholder="备注，如：Gumroad 模板销售 2026-07" />
+          <button class="income-btn" :disabled="!Number(incomeAmount)" @click="recordIncome">{{ incomeSaved ? '✓ 已入账' : '入账' }}</button>
+        </div>
+        <!-- Gumroad 上架指南 -->
+        <div class="kdp-guide">
+          <div class="guide-title">🧩 Gumroad 上架步骤</div>
+          <ol class="guide-steps">
+            <li>访问 <a href="https://gumroad.com" target="_blank">gumroad.com</a> 登录 → New product → Digital product</li>
+            <li>Notion 类：先照"模板内容(.md)"在自己 Notion 里搭好 → Share → 复制模板链接，作为交付内容</li>
+            <li>表格/清单/提示词包：直接把 .md 整理成 PDF 或表格文件上传</li>
+            <li>粘贴标题、一句话卖点、销售文案（按钮一键复制）</li>
+            <li>上传封面（点「封面」下载），设置标签与定价</li>
+            <li>Publish 后回来点「标记已上架」；卖出的钱到账后在上方「记一笔到账收入」入账</li>
           </ol>
         </div>
       </div>
@@ -522,7 +601,7 @@ onMounted(() => {
   }
 })
 
-const activeTab = ref<'knowledge' | 'books' | 'kdp'>('knowledge')
+const activeTab = ref<'knowledge' | 'books' | 'kdp' | 'tpl'>('knowledge')
 const expandedId = ref<string | null>(null)
 const showForm = ref(false)
 
@@ -555,6 +634,91 @@ async function markUploaded(id: string) {
   })
   const book = kdpBooks.value.find(b => b.id === id)
   if (book) book.status = 'uploaded'
+}
+
+// ===== 数字模板队列 =====
+interface TplMeta {
+  id: string; title: string; tagline?: string; type: string; tags?: string[]
+  price?: string; description?: string; coverUrl?: string
+  status: 'pending_upload' | 'uploaded'
+  createdAt: string; uploadedAt?: string; listingUrl?: string
+}
+const tplList = ref<TplMeta[]>([])
+const tplLoading = ref(false)
+
+async function loadTplQueue() {
+  tplLoading.value = true
+  try {
+    const token = localStorage.getItem(TOKEN_NAME) || ''
+    const res = await fetch('/api/adam/templates', { headers: { 'x-erp-token': token } })
+    const data = await res.json() as { templates: TplMeta[] }
+    tplList.value = data.templates || []
+  } catch {} finally { tplLoading.value = false }
+}
+
+function tplTypeLabel(type: string) {
+  const map: Record<string, string> = { notion: 'Notion 模板', sheets: '表格模板', prompt_pack: '提示词包', checklist: '清单系统' }
+  return map[type] || '数字模板'
+}
+
+async function markTplUploaded(id: string) {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  await fetch('/api/adam/templates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+    body: JSON.stringify({ id, status: 'uploaded' })
+  })
+  const tpl = tplList.value.find(t => t.id === id)
+  if (tpl) tpl.status = 'uploaded'
+}
+
+async function downloadTplContent(tpl: TplMeta) {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  try {
+    const res = await fetch(`/api/adam/templates?id=${tpl.id}`, { headers: { 'x-erp-token': token } })
+    if (!res.ok) { alert('下载失败：' + res.status); return }
+    const data = await res.json() as { content: string }
+    const blob = new Blob([data.content || ''], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = (tpl.title || 'template') + '.md'; a.click()
+    URL.revokeObjectURL(url)
+  } catch { alert('下载出错') }
+}
+
+// ===== 到账收入记账（版税/模板销售 → 亚当创收账本） =====
+const incomeAmount = ref('')
+const incomeNote = ref('')
+const incomeSaved = ref(false)
+let _incomeTimer: ReturnType<typeof setTimeout> | null = null
+function recordIncome() {
+  const amount = Number(incomeAmount.value)
+  if (!amount || amount <= 0) return
+  const now = new Date().toISOString()
+  const note = incomeNote.value.trim() || '数字产品收入'
+  adamStore.addLedgerEntry({
+    id: `led_income_${Date.now()}`,
+    at: now,
+    kind: 'earning',
+    amount,
+    direction: 'in',
+    title: note,
+    linkedEventIds: [],
+  })
+  adamStore.addEvent({
+    id: `evt_income_${Date.now()}`,
+    type: 'ledger_entry_created',
+    stage: 'settle',
+    title: `创收入账：${note} ¥${amount.toLocaleString()}`,
+    summary: note,
+    at: now,
+    institutionId: 'bureau',
+  })
+  incomeAmount.value = ''
+  incomeNote.value = ''
+  incomeSaved.value = true
+  if (_incomeTimer) clearTimeout(_incomeTimer)
+  _incomeTimer = setTimeout(() => { incomeSaved.value = false }, 1800)
 }
 
 // 逐字段复制（按钮短暂显示"已复制"，无弹窗打断）
@@ -1580,6 +1744,19 @@ function handleAddBook() {
 .kdp-keywords { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
 .kdp-kw { font-size: 10px; padding: 2px 6px; background: rgba(255,255,255,0.05); border-radius: 3px; color: #888; }
 .kdp-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tpl-cover { width: 128px; height: 72px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.tpl-cover-placeholder { width: 128px; height: 72px; background: rgba(19,19,17,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+
+/* 到账收入记账 */
+.income-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding: 12px 14px; background: rgba(242,223,78,0.28); border-radius: 14px; }
+.income-label { font-size: 11px; font-weight: 800; color: #131311; }
+.income-input { flex: 0 1 170px; border: none; border-radius: 999px; padding: 8px 13px; font-size: 12px; font-family: inherit; background: #fff; outline: none; }
+.income-input--note { flex: 1 1 220px; }
+.income-input:focus { box-shadow: 0 0 0 1.5px #131311; }
+.income-btn { border: none; border-radius: 999px; padding: 8px 18px; font-size: 11px; font-weight: 800; background: #131311; color: #fff; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+.income-btn:hover:not(:disabled) { background: #e2542e; }
+.income-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .kdp-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 2px; }
 .kdp-field {
   font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
