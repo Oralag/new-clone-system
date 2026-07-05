@@ -62,7 +62,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const { request, env } = context
   const key = tKey(request.headers.get('x-erp-token') || '')
 
-  const body = await request.json() as { id: string; status: 'uploaded' | 'live'; asin?: string }
+  const body = await request.json() as { id: string; status: 'uploaded' | 'live' | 'pending_upload'; asin?: string }
   if (!body.id) return new Response(JSON.stringify({ error: 'missing id' }), { status: 400, headers: CORS })
 
   const queueKey = `adam:kdp_queue:${key}`
@@ -74,6 +74,10 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   if (body.asin) queue[idx].asin = body.asin
   if (body.status === 'uploaded' || body.status === 'live') {
     queue[idx].uploadedAt = new Date().toISOString()
+  }
+  if (body.status === 'pending_upload') {
+    // 撤销自动标记
+    delete queue[idx].uploadedAt
   }
 
   await env.AGENT_MEMORY.put(queueKey, JSON.stringify(queue), { expirationTtl: 365 * 24 * 3600 })

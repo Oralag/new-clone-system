@@ -298,6 +298,9 @@
               <button v-if="book.status === 'pending_upload'"
                       class="kdp-btn kdp-btn-mark"
                       @click="markUploaded(book.id)">✅ 标记已上传</button>
+              <span v-if="autoMarked.includes(book.id)" class="kdp-auto-hint">
+                ⚡ 已随下载自动标记 <button class="kdp-undo" @click="revertUploaded(book.id)">撤销</button>
+              </span>
               <span v-if="book.asin" class="kdp-asin">ASIN: {{ book.asin }}</span>
             </div>
           </div>
@@ -366,6 +369,9 @@
               <button v-if="tpl.status === 'pending_upload'"
                       class="kdp-btn kdp-btn-mark"
                       @click="markTplUploaded(tpl.id)">✅ 标记已上架</button>
+              <span v-if="autoMarked.includes(tpl.id)" class="kdp-auto-hint">
+                ⚡ 已随下载自动标记 <button class="kdp-undo" @click="revertTplUploaded(tpl.id)">撤销</button>
+              </span>
               <a v-if="tpl.listingUrl" :href="tpl.listingUrl" target="_blank" class="kdp-asin">已上架 ↗</a>
             </div>
           </div>
@@ -636,6 +642,21 @@ async function markUploaded(id: string) {
   if (book) book.status = 'uploaded'
 }
 
+// 撤销自动标记（下载了但实际没上传时用）
+async function revertUploaded(id: string) {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  await fetch('/api/adam/kdp/queue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+    body: JSON.stringify({ id, status: 'pending_upload' })
+  })
+  const book = kdpBooks.value.find(b => b.id === id)
+  if (book) book.status = 'pending_upload'
+  autoMarked.value = autoMarked.value.filter(x => x !== id)
+}
+
+const autoMarked = ref<string[]>([])
+
 // ===== 数字模板队列 =====
 interface TplMeta {
   id: string; title: string; tagline?: string; type: string; tags?: string[]
@@ -672,6 +693,18 @@ async function markTplUploaded(id: string) {
   if (tpl) tpl.status = 'uploaded'
 }
 
+async function revertTplUploaded(id: string) {
+  const token = localStorage.getItem(TOKEN_NAME) || ''
+  await fetch('/api/adam/templates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+    body: JSON.stringify({ id, status: 'pending_upload' })
+  })
+  const tpl = tplList.value.find(t => t.id === id)
+  if (tpl) tpl.status = 'pending_upload'
+  autoMarked.value = autoMarked.value.filter(x => x !== id)
+}
+
 async function downloadTplContent(tpl: TplMeta) {
   const token = localStorage.getItem(TOKEN_NAME) || ''
   try {
@@ -683,6 +716,11 @@ async function downloadTplContent(tpl: TplMeta) {
     const a = document.createElement('a')
     a.href = url; a.download = (tpl.title || 'template') + '.md'; a.click()
     URL.revokeObjectURL(url)
+    // 下载内容 = 进入上架流程 → 自动标记，免手动
+    if (tpl.status === 'pending_upload') {
+      await markTplUploaded(tpl.id)
+      autoMarked.value.push(tpl.id)
+    }
   } catch { alert('下载出错') }
 }
 
@@ -743,6 +781,11 @@ async function downloadManuscript(book: KdpBookMeta) {
     const a = document.createElement('a')
     a.href = url; a.download = (book.title || 'manuscript') + '.txt'; a.click()
     URL.revokeObjectURL(url)
+    // 下载书稿 = 进入上传流程 → 自动标记，免手动
+    if (book.status === 'pending_upload') {
+      await markUploaded(book.id)
+      autoMarked.value.push(book.id)
+    }
   } catch (e) { alert('下载出错') }
 }
 
@@ -1744,6 +1787,10 @@ function handleAddBook() {
 .kdp-keywords { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
 .kdp-kw { font-size: 10px; padding: 2px 6px; background: rgba(255,255,255,0.05); border-radius: 3px; color: #888; }
 .kdp-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.kdp-auto-hint { font-size: 10px; color: #3f7a48; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.kdp-undo { border: none; background: none; font-size: 10px; color: rgba(19,19,17,0.45); text-decoration: underline; cursor: pointer; font-family: inherit; padding: 0; }
+.kdp-undo:hover { color: #e2542e; }
+
 .tpl-cover { width: 128px; height: 72px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
 .tpl-cover-placeholder { width: 128px; height: 72px; background: rgba(19,19,17,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
 

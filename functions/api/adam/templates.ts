@@ -80,9 +80,15 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const idx = queue.findIndex(t => t.id === body.id)
   if (idx === -1) return new Response(JSON.stringify({ error: 'template not found' }), { status: 404, headers: CORS })
 
-  queue[idx].status = body.status === 'uploaded' ? 'uploaded' : queue[idx].status
+  if (body.status === 'uploaded') {
+    queue[idx].status = 'uploaded'
+    queue[idx].uploadedAt = new Date().toISOString()
+  } else if (body.status === 'pending_upload') {
+    // 撤销自动标记
+    queue[idx].status = 'pending_upload'
+    delete queue[idx].uploadedAt
+  }
   if (body.listingUrl) queue[idx].listingUrl = body.listingUrl
-  if (body.status === 'uploaded') queue[idx].uploadedAt = new Date().toISOString()
 
   await env.AGENT_MEMORY.put(queueKey, JSON.stringify(queue), { expirationTtl: 365 * 24 * 3600 })
   return new Response(JSON.stringify({ ok: true, template: { id: queue[idx].id, status: queue[idx].status } }), { headers: CORS })
