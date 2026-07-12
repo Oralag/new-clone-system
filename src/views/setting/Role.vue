@@ -32,7 +32,7 @@
                   size="small"
                   type="info"
                   style="margin:2px"
-                >{{ group.title }}({{ group.count }})</el-tag>
+                >{{ t(group.title) }}({{ group.count }})</el-tag>
               </template>
             </span>
           </template>
@@ -90,7 +90,7 @@
                     @change="(v: boolean) => onGroupSelectAll(menu, v)"
                     @click.stop
                   >
-                    {{ menu.title }}
+                    {{ t(menu.title) }}
                   </el-checkbox>
                   <span class="group-count">{{ getGroupCheckedCount(menu) }}/{{ menu.children.length }}</span>
                 </div>
@@ -99,7 +99,7 @@
                     v-for="child in menu.children"
                     :key="child.key"
                     v-model="selectedMenus[child.key]"
-                  >{{ child.title }}</el-checkbox>
+                  >{{ t(child.title) }}</el-checkbox>
                 </div>
               </div>
             </div>
