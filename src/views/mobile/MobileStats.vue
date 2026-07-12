@@ -223,6 +223,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
+import {
+  createProfitCostContext,
+  getItemUnitCost,
+  loadBomItems,
+  loadUnitConvertRows,
+  type ProfitCostContext,
+} from '@/utils/profitCalc'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -240,6 +247,7 @@ const _retailRows = ref<any[]>([])
 const _meituanRows = ref<any[]>([])
 const _fundFlowRows = ref<any[]>([])
 const _costPriceMap = ref<Record<number, number>>({})
+const _profitCostContext = ref<ProfitCostContext | null>(null)
 const profitPeriod = ref<'today' | '7d' | '30d' | '3m'>('today')
 
 function meituanDate(r: any) {
@@ -390,6 +398,7 @@ const profitChartData = computed(() => {
   // 支出 = COGS（卖出商品的成本价 × 数量），与营收口径一致（都基于订单，不基于现金流）
   const expenseMap: Record<string, number> = Object.fromEntries(dateArr.map(d => [d, 0]))
   const getCost = (item: any) => {
+    if (_profitCostContext.value) return getItemUnitCost(item, _profitCostContext.value).unitCost
     const gid = Number(item.goods_id || 0)
     return _costPriceMap.value[gid] || Number(item.cost_price || item.in_price || item.avg_price || 0)
   }
@@ -460,7 +469,7 @@ function buildInsights(data: { todaySale: number, stockWarn: number, customerCou
 
 onMounted(async () => {
   const today = getToday()
-  const [saleRes, retailRes, customerRes, procureRes, goodsRes, fundFlowRes, meituanRes] = await Promise.allSettled([
+  const [saleRes, retailRes, customerRes, procureRes, goodsRes, fundFlowRes, meituanRes, bomRes] = await Promise.allSettled([
     http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
     http.get('/retail/order/index', { params: { list_rows: 2000 } }),
     http.get('/shop/ShopCustomer/index', { params: { list_rows: 1 } }),
@@ -468,6 +477,7 @@ onMounted(async () => {
     http.get('/goods/ShopGoods/index', { params: { list_rows: 2000, status: 1 } }),
     http.get('/finance/fundFlow/index', { params: { list_rows: 500 } }),
     http.get('/shop/ContractOrder/index', { params: { list_rows: 2000, customer_id: MEITUAN_CUSTOMER_ID } }),
+    http.get('/goods/BomGoods/index', { params: { list_rows: 1000 } }),
   ])
   const rows = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
   const saleRows = rows(saleRes)
@@ -522,6 +532,21 @@ onMounted(async () => {
     if (qty > 0) costMap[Number(gid)] = cost / qty
   })
   _costPriceMap.value = costMap
+
+  // 利润必须使用全系统统一口径：采购移动均价（含多单位折算）+ BOM 物料成本。
+  // 上面的简易 costMap 仅保留作接口异常时的兜底，避免统计页完全无成本。
+  const bomHeaders = rows(bomRes)
+  const [unitConvertRows, bomItems] = await Promise.all([
+    loadUnitConvertRows(http, goodsList),
+    loadBomItems(http, bomHeaders),
+  ])
+  _profitCostContext.value = createProfitCostContext({
+    goodsList,
+    inhouseList: rows(procureRes),
+    bomHeaders,
+    bomItems,
+    unitConvertRows,
+  })
 
   const custData = customerRes.status === 'fulfilled' ? (customerRes.value?.data ?? customerRes.value) : {}
   const customerCount = Number(custData?.total ?? 0)
